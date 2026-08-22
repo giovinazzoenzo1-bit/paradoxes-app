@@ -73,8 +73,8 @@ h1,h2,h3{font-family:'Quicksand',sans-serif; margin:0;}
 }
 .card:hover{background:var(--card-hover); transform:translateY(-2px);}
 .card .icon{
-  width:52px; height:52px;
-  border-radius:14px;
+  width:84px; height:84px;
+  border-radius:18px;
   display:flex; align-items:center; justify-content:center;
   font-size:26px;
   margin-bottom:14px;
@@ -3062,12 +3062,16 @@ applyAdsState();
 function renderHome(){
   const grid = document.getElementById('cardGrid');
   grid.innerHTML = '';
+  const noProperIcon = new Set(['tuesday']); // en attente d'une icône dédiée (le triangle est réservé au logo de l'app)
   puzzles.forEach(p=>{
     const card = document.createElement('div');
     card.className = 'card';
     card.onclick = ()=>openGame(p.id);
+    const iconInner = noProperIcon.has(p.id)
+      ? `<div class="icon" style="background:${p.color}22; color:${p.color};">${p.icon}</div>`
+      : `<div class="icon" style="background:${p.color}22; padding:0; overflow:hidden;"><img src="icons/paradox_${p.id}.png" alt="${p.title}" style="width:100%; height:100%; object-fit:cover;"></div>`;
     card.innerHTML = `
-      <div class="icon" style="background:${p.color}22; padding:0; overflow:hidden;"><img src="icons/paradox_${p.id}.png" alt="${p.title}" style="width:100%; height:100%; object-fit:cover;"></div>
+      ${iconInner}
       <h3>${p.title}</h3>
       <div class="hook">${p.hook}</div>
       <span class="odds">${p.odds}</span>
