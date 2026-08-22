@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paradoxes-v14';
+const CACHE_NAME = 'paradoxes-v15';
 const ASSETS = [
   './',
   './index.html',
@@ -16,7 +16,27 @@ const ASSETS = [
   './icons/quiz_paradoxes.png',
   './icons/wordle.png',
   './icons/quiz_general.png',
-  './icons/morpion.png'
+  './icons/morpion.png',
+  './icons/paradox_monty.png',
+  './icons/paradox_bday.png',
+  './icons/paradox_twokids.png',
+  './icons/paradox_tuesday.png',
+  './icons/paradox_simpson.png',
+  './icons/paradox_stpete.png',
+  './icons/paradox_parrondo.png',
+  './icons/paradox_toscane.png',
+  './icons/paradox_franccarreau.png',
+  './icons/paradox_zenon.png',
+  './icons/paradox_prisonniers.png',
+  './icons/paradox_bus.png',
+  './icons/paradox_ruine.png',
+  './icons/paradox_braess.png',
+  './icons/paradox_taxi.png',
+  './icons/paradox_corde.png',
+  './icons/paradox_benford.png',
+  './icons/paradox_condorcet.png',
+  './icons/paradox_hilbert.png',
+  './icons/paradox_enveloppes.png'
 ];
 
 self.addEventListener('message', (event) => {
