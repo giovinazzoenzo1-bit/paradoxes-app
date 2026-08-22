@@ -781,6 +781,11 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <button id="removeAdsBtn" onclick="toggleAds()">2,99 €</button>
     </div>
     <div class="panel">
+      <h2>🔔 Retour sensoriel</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5;">Trophées, records battus, défaites — choisis comment tu veux le ressentir.</p>
+      <div class="btn-row" style="flex-direction:column;" id="feedback-buttons"></div>
+    </div>
+    <div class="panel">
       <h2>À propos</h2>
       <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">Paradoxes & Probabilités — fait avec 💛 pour que les maths donnent le sourire.</p>
     </div>
@@ -1773,6 +1778,7 @@ function trophiesCheck(){
   if(newOnes.length && document.getElementById('trophyGrid')){
     const t = trophyList.find(t=>t.id===newOnes[0]);
     showToast(`🏆 Trophée débloqué : ${t.name}`);
+    playFeedback('trophy');
   }
   renderTrophies();
 }
@@ -1923,6 +1929,7 @@ function wordleSubmit(){
   } else if(wordleRow>=6){
     wordleOver = true;
     document.getElementById('wordle-status').textContent = `🟥 Perdu — le mot était ${wordleTarget}.`;
+    playFeedback('lose');
   }
 }
 
@@ -2404,6 +2411,7 @@ function g2048Move(dir){
     statsRecord2048();
   } else if(!g2048CanMove()){
     document.getElementById('g2048-status').textContent = '🟥 Plus de coup possible.';
+    playFeedback('lose');
   }
 }
 function g2048CanMove(){
@@ -2510,6 +2518,7 @@ function memoryFlip(i){
         if(!best || memorySeconds < parseInt(best)){
           localStorage.setItem('memoryBest:'+memorySize, memorySeconds);
           document.getElementById('memory-best').textContent = memoryFormatTime(memorySeconds);
+          playFeedback('record');
         }
         if(memorySize===14) statsRecordMemoryHard();
       }
@@ -2689,6 +2698,7 @@ function snakeTick(){
     clearInterval(snakeInterval);
     document.getElementById('snake-status').textContent = `PERDU — SCORE : ${snakeScore}`;
     statsRecordSnakeScore(snakeScore);
+    playFeedback('lose');
     return;
   }
   snakeBody.unshift(head);
@@ -2711,6 +2721,7 @@ function snakeFlashRecord(){
   const body = document.getElementById('gameboy-body');
   body.classList.add('flash');
   showToast('🎉 Nouveau record : '+snakeHighScore+' !');
+  playFeedback('record');
   setTimeout(()=>body.classList.remove('flash'), 1600);
 }
 function snakeDraw(){
@@ -2826,6 +2837,90 @@ function nbTap(i){
   nbRender();
 }
 
+/* ================= SON & VIBRATION ================= */
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    audioCtx = new AC();
+  }
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+// Débloque l'audio dès la première interaction (règle des navigateurs mobiles)
+document.addEventListener('click', () => getAudioCtx(), {once:true});
+
+function playTone(freq, duration, type, startOffset, gainVal){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.value = freq;
+  const t0 = ctx.currentTime + (startOffset||0);
+  gain.gain.setValueAtTime(gainVal||0.15, t0);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0+duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0+duration);
+}
+function soundTrophy(){
+  // petit feu d'artifice : arpège montant + éclat final
+  playTone(523,0.12,'triangle',0,0.18);
+  playTone(659,0.12,'triangle',0.1,0.18);
+  playTone(784,0.12,'triangle',0.2,0.18);
+  playTone(1047,0.3,'triangle',0.32,0.2);
+  playTone(1568,0.35,'sine',0.35,0.1);
+}
+function soundRecord(){
+  // ding-ding ascendant, distinct du trophée
+  playTone(880,0.12,'sine',0,0.16);
+  playTone(1174,0.22,'sine',0.12,0.16);
+}
+function soundLose(){
+  // descente triste
+  playTone(400,0.15,'sawtooth',0,0.12);
+  playTone(300,0.15,'sawtooth',0.13,0.12);
+  playTone(200,0.28,'sawtooth',0.26,0.12);
+}
+const vibrationPatterns = {
+  trophy:[100,50,100,50,200],
+  record:[80,40,80],
+  lose:[300],
+};
+function playFeedback(type){
+  const mode = localStorage.getItem('feedbackMode') || 'sound';
+  if(mode === 'silent') return;
+  if(mode === 'vibrate'){
+    if(navigator.vibrate) navigator.vibrate(vibrationPatterns[type] || [100]);
+    return;
+  }
+  if(type==='trophy') soundTrophy();
+  else if(type==='record') soundRecord();
+  else if(type==='lose') soundLose();
+}
+
+const feedbackModes = [
+  {id:'sound', icon:'🔊', label:'Sons'},
+  {id:'vibrate', icon:'📳', label:'Vibreur'},
+  {id:'silent', icon:'🔇', label:'Silencieux'},
+];
+function renderFeedbackButtons(){
+  const el = document.getElementById('feedback-buttons');
+  if(!el) return;
+  const current = localStorage.getItem('feedbackMode') || 'sound';
+  el.innerHTML = feedbackModes.map(m => `
+    <button class="btn ${m.id===current?'primary':''}" onclick="setFeedbackMode('${m.id}')">${m.icon} ${m.label}</button>
+  `).join('');
+}
+function setFeedbackMode(mode){
+  localStorage.setItem('feedbackMode', mode);
+  renderFeedbackButtons();
+  if(mode !== 'silent') playFeedback('record');
+}
+
 /* ================= ADS TOGGLE (mock — vraie transaction viendra avec l'app native) ================= */
 let adsRemoved = localStorage.getItem('adsRemoved') === '1';
 function applyAdsState(){
@@ -2905,6 +3000,7 @@ function openProgres(){
 function openOptions(){
   switchScreen('game-options');
   setActiveTab('tab-options');
+  renderFeedbackButtons();
   trackPage('/options');
 }
 function setActiveTab(tabId){
