@@ -23,7 +23,7 @@
 <meta name="twitter:description" content="6 énigmes qui trompent ton instinct.">
 <meta name="twitter:image" content="https://giovinazzoenzo1-bit.github.io/paradoxes-app/share-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#11131c;
@@ -43,10 +43,10 @@ body{
   margin:0;
   background:var(--bg);
   color:var(--text);
-  font-family:'Inter',sans-serif;
+  font-family:'Nunito',sans-serif;
   -webkit-font-smoothing:antialiased;
 }
-h1,h2,h3{font-family:'Fraunces',serif; margin:0;}
+h1,h2,h3{font-family:'Quicksand',sans-serif; margin:0;}
 .screen{display:none; min-height:100vh;}
 .screen.active{display:block;}
 
@@ -101,7 +101,7 @@ h1,h2,h3{font-family:'Fraunces',serif; margin:0;}
   color:var(--muted);
   font-size:13px;
   font-weight:700;
-  font-family:'Fraunces',serif;
+  font-family:'Quicksand',sans-serif;
   display:flex; align-items:center; justify-content:center;
   cursor:pointer;
 }
@@ -125,7 +125,7 @@ h1,h2,h3{font-family:'Fraunces',serif; margin:0;}
   padding:20px;
   margin-bottom:16px;
 }
-.panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:14px; font-family:'Inter',sans-serif; font-weight:600;}
+.panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:14px; font-family:'Nunito',sans-serif; font-weight:600;}
 
 button.btn{
   background:var(--bg2);
@@ -786,13 +786,50 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row" style="flex-direction:column;" id="feedback-buttons"></div>
     </div>
     <div class="panel">
+      <h2>🎵 Musique de fond</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5;">Une petite ambiance douce en fond, désactivable à tout moment.</p>
+      <div class="btn-row" id="music-buttons"></div>
+    </div>
+    <div class="panel">
+      <h2>🌍 Langue</h2>
+      <div class="btn-row" style="flex-direction:column;" id="language-buttons"></div>
+      <div class="footnote">L'app est actuellement en français uniquement. Les autres langues arrivent progressivement.</div>
+    </div>
+    <div class="panel">
+      <h2>🔒 Confidentialité</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5;">Comment tes données sont utilisées dans cette app.</p>
+      <div class="btn-row"><button class="btn" onclick="openPrivacy()">Voir les détails</button></div>
+    </div>
+    <div class="panel">
       <h2>À propos</h2>
       <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">Paradoxes & Probabilités — fait avec 💛 pour que les maths donnent le sourire.</p>
     </div>
   </div>
 </div>
 
+<!-- ============ CONFIDENTIALITÉ ============ -->
+<div class="screen" id="game-privacy">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="openOptions()">← Retour</button>
+    </div>
+    <div class="game-title">🔒 Confidentialité</div>
+    <div class="panel">
+      <h2>Ce que cette app collecte aujourd'hui</h2>
+      <p style="font-size:13px; color:var(--text); margin:0 0 12px; line-height:1.6;">🟩 Des statistiques de visite anonymes (GoatCounter) : quelles pages sont ouvertes, depuis quel pays approximatif, sur quel type d'appareil. Aucun cookie, aucune donnée personnelle, aucun identifiant publicitaire.</p>
+      <p style="font-size:13px; color:var(--text); margin:0 0 12px; line-height:1.6;">🟩 Ta progression (trophées, scores, meilleurs temps, joueurs de "Qui suis-je") est stockée uniquement sur TON téléphone (localStorage). Rien n'est envoyé sur un serveur.</p>
+      <p style="font-size:13px; color:var(--text); margin:0; line-height:1.6;">🟨 Aucune publicité active pour l'instant. Le jour où ce sera le cas, cet écran sera mis à jour avec un vrai bandeau de consentement RGPD avant toute activation.</p>
+    </div>
+    <div class="panel">
+      <h2>Tes droits</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.6;">Tu peux effacer toutes tes données locales (progression, trophées, réglages) à tout moment en désinstallant l'app ou en vidant le cache de ton navigateur pour ce site.</p>
+    </div>
+  </div>
+</div>
+
 <div class="ad-banner" id="adBanner"><span class="tag">Pub</span> Emplacement publicitaire — ton app grandit grâce à ça</div>
+
+<audio id="bgMusic" src="bgmusic.mp3" loop preload="none"></audio>
 
 <nav class="bottom-nav" id="bottomNav">
   <button class="tab active" id="tab-home" onclick="goHome()">
@@ -2921,6 +2958,52 @@ function setFeedbackMode(mode){
   if(mode !== 'silent') playFeedback('record');
 }
 
+/* ================= MUSIQUE DE FOND ================= */
+let musicEnabled = localStorage.getItem('musicEnabled') === '1';
+function renderMusicButtons(){
+  const el = document.getElementById('music-buttons');
+  if(!el) return;
+  el.innerHTML = `
+    <button class="btn ${musicEnabled?'primary':''}" style="flex:1;" onclick="setMusic(true)">🎵 Activée</button>
+    <button class="btn ${!musicEnabled?'primary':''}" style="flex:1;" onclick="setMusic(false)">🔇 Désactivée</button>
+  `;
+}
+function setMusic(on){
+  musicEnabled = on;
+  localStorage.setItem('musicEnabled', on ? '1':'0');
+  renderMusicButtons();
+  applyMusicState();
+}
+function applyMusicState(){
+  const audio = document.getElementById('bgMusic');
+  if(!audio) return;
+  if(musicEnabled){
+    audio.volume = 0.4;
+    audio.play().catch(()=>{ /* nécessite un geste utilisateur, se relance au prochain tap */ });
+  } else {
+    audio.pause();
+  }
+}
+// La lecture audio a besoin d'un premier geste utilisateur (règle des navigateurs mobiles)
+document.addEventListener('click', () => { if(musicEnabled) applyMusicState(); }, {once:true});
+
+/* ================= LANGUE ================= */
+const languages = [
+  {code:'fr', label:'🇫🇷 Français', available:true},
+  {code:'en', label:'🇬🇧 English', available:false},
+  {code:'es', label:'🇪🇸 Español', available:false},
+  {code:'de', label:'🇩🇪 Deutsch', available:false},
+];
+function renderLanguageButtons(){
+  const el = document.getElementById('language-buttons');
+  if(!el) return;
+  el.innerHTML = languages.map(l => `
+    <button class="btn ${l.code==='fr'?'primary':''}" ${l.available?'':'disabled'} style="${l.available?'':'opacity:.4;'}">
+      ${l.label}${l.available?'':' — bientôt'}
+    </button>
+  `).join('');
+}
+
 /* ================= ADS TOGGLE (mock — vraie transaction viendra avec l'app native) ================= */
 let adsRemoved = localStorage.getItem('adsRemoved') === '1';
 function applyAdsState(){
@@ -3001,7 +3084,14 @@ function openOptions(){
   switchScreen('game-options');
   setActiveTab('tab-options');
   renderFeedbackButtons();
+  renderMusicButtons();
+  renderLanguageButtons();
   trackPage('/options');
+}
+function openPrivacy(){
+  switchScreen('game-privacy');
+  setActiveTab(null);
+  trackPage('/privacy');
 }
 function setActiveTab(tabId){
   document.querySelectorAll('.bottom-nav .tab').forEach(t=>t.classList.remove('active'));
@@ -3036,6 +3126,7 @@ function restoreLastScreen(){
   if(last==='game-nutsbolts'){ openNutsBolts(); return; }
   if(last==='game-progres'){ openProgres(); return; }
   if(last==='game-options'){ openOptions(); return; }
+  if(last==='game-privacy'){ openPrivacy(); return; }
   if(last.startsWith('game-')){
     const id = last.replace('game-','');
     const exists = puzzles.some(p=>p.id===id);
@@ -3043,6 +3134,7 @@ function restoreLastScreen(){
   }
 }
 restoreLastScreen();
+applyMusicState();
 
 /* ---- Nav bar : disparaît en scrollant vers le bas, revient en remontant ---- */
 (function(){

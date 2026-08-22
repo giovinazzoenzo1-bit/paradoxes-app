@@ -1,10 +1,11 @@
-const CACHE_NAME = 'paradoxes-v12';
+const CACHE_NAME = 'paradoxes-v13';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './bgmusic.mp3'
 ];
 
 self.addEventListener('message', (event) => {
