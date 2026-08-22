@@ -127,6 +127,12 @@ h1,h2,h3{font-family:'Quicksand',sans-serif; margin:0;}
 }
 .panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:14px; font-family:'Nunito',sans-serif; font-weight:600;}
 
+.game-panel-header{display:flex; align-items:center; gap:14px; margin-bottom:10px;}
+.game-panel-icon{width:56px; height:56px; border-radius:14px; flex-shrink:0;}
+.game-panel-header .txt{flex:1;}
+.game-panel-header h3{font-size:16px; font-weight:700; margin:0 0 3px; font-family:'Quicksand',sans-serif;}
+.game-panel-header p{font-size:12.5px; color:var(--muted); margin:0; line-height:1.4;}
+
 button.btn{
   background:var(--bg2);
   color:var(--text);
@@ -536,8 +542,10 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="game-title">🎮 Jeux</div>
     </div>
     <div class="panel">
-      <h2>Quiz</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">5 questions, réponse expliquée à chaque fois.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/quiz_paradoxes.png" alt="Quiz">
+        <div class="txt"><h3>Quiz</h3><p>10 questions, réponse expliquée à chaque fois.</p></div>
+      </div>
       <div class="btn-row">
         <button class="btn primary" style="flex:1;" onclick="quizStart('paradoxes')">🧠 Quiz Paradoxes</button>
         <button class="btn" style="flex:1;" onclick="quizStart('general')">🎓 Quiz Général</button>
@@ -545,48 +553,66 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div id="quiz-area" style="margin-top:14px;"></div>
     </div>
     <div class="panel">
-      <h2>🔤 Wordle</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Devine le mot de 5 lettres en 6 essais.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/wordle.png" alt="Wordle">
+        <div class="txt"><h3>Wordle</h3><p>Devine le mot de 5 lettres en 6 essais.</p></div>
+      </div>
       <div class="btn-row"><button class="btn primary" onclick="openWordle()">Jouer</button></div>
     </div>
     <div class="panel">
-      <h2>🎭 Qui suis-je ?</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Jeu en groupe, un seul téléphone qui tourne. Chacun devine son personnage grâce aux indices des autres.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/quisuisje.png" alt="Qui suis-je">
+        <div class="txt"><h3>Qui suis-je ?</h3><p>Jeu en groupe, un seul téléphone qui tourne.</p></div>
+      </div>
       <div class="btn-row"><button class="btn primary" onclick="openQuisuisje()">Jouer</button></div>
     </div>
     <div class="panel">
-      <h2>🔢 2048</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Fusionne les tuiles jusqu'à atteindre 2048.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/g2048.png" alt="2048">
+        <div class="txt"><h3>2048</h3><p>Fusionne les tuiles jusqu'à atteindre 2048.</p></div>
+      </div>
       <div class="btn-row"><button class="btn primary" onclick="open2048()">Jouer</button></div>
     </div>
     <div class="panel">
-      <h2>🃏 Memory</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Retrouve les paires de paradoxes.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/memory.png" alt="Memory">
+        <div class="txt"><h3>Memory</h3><p>Retrouve les paires, 4 niveaux de difficulté.</p></div>
+      </div>
       <div class="btn-row"><button class="btn primary" onclick="openMemory()">Jouer</button></div>
     </div>
     <div class="panel">
-      <h2>🧩 Puzzle 15</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Remets les nombres 1 à 15 dans l'ordre en glissant les tuiles.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/puzzle15.png" alt="Puzzle 15">
+        <div class="txt"><h3>Puzzle 15</h3><p>Remets les nombres 1 à 15 dans l'ordre.</p></div>
+      </div>
       <div class="btn-row"><button class="btn primary" onclick="openPuzzle15()">Jouer</button></div>
     </div>
     <div class="panel">
-      <h2>❌⭕ Morpion</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">2 joueurs, un seul téléphone.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/morpion.png" alt="Morpion">
+        <div class="txt"><h3>Morpion</h3><p>2 joueurs, un seul téléphone.</p></div>
+      </div>
       <div class="btn-row"><button class="btn primary" onclick="openMorpion()">Jouer</button></div>
     </div>
     <div class="panel">
-      <h2>🐍 Snake</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Mange, grandis, évite de te mordre la queue.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/snake.png" alt="Snake">
+        <div class="txt"><h3>Snake</h3><p>Mange, grandis, évite de te mordre la queue.</p></div>
+      </div>
       <div class="btn-row"><button class="btn primary" onclick="openSnake()">Jouer</button></div>
     </div>
     <div class="panel">
-      <h2>🔩 Nuts and Bolts</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Trie les écrous par couleur sur les tiges.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/nutsbolts.png" alt="Nuts and Bolts">
+        <div class="txt"><h3>Nuts and Bolts</h3><p>Trie les écrous par couleur, 5 niveaux.</p></div>
+      </div>
       <div class="btn-row"><button class="btn primary" onclick="openNutsBolts()">Jouer</button></div>
     </div>
     <div class="panel">
-      <h2>🧩 Bientôt disponible</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">Tetris et Bataille navale arrivent dans une prochaine mise à jour.</p>
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/bientot.png" alt="Bientôt disponible">
+        <div class="txt"><h3>Bientôt disponible</h3><p>Tetris et Bataille navale arrivent bientôt.</p></div>
+      </div>
     </div>
   </div>
 </div>
