@@ -219,10 +219,10 @@ tr.total td{font-weight:700; color:#fff; border-top:2px solid var(--line); borde
 .footnote{font-size:12px; color:#666; text-align:center; margin-top:18px;}
 
 /* ---------- AD BANNER (placeholder) ---------- */
-body{padding-bottom:64px;}
-body.no-ads{padding-bottom:0;}
+body{padding-bottom:120px;}
+body.no-ads{padding-bottom:64px;}
 .ad-banner{
-  position:fixed; bottom:0; left:0; right:0;
+  position:fixed; bottom:60px; left:0; right:0;
   height:56px;
   background:var(--bg2);
   border-top:1px solid var(--line);
@@ -230,13 +230,33 @@ body.no-ads{padding-bottom:0;}
   gap:8px;
   font-size:11px; color:var(--muted);
   letter-spacing:.05em; text-transform:uppercase;
-  z-index:40;
+  z-index:35;
 }
 .ad-banner .tag{
   background:var(--line); color:var(--muted);
   font-size:9px; padding:2px 6px; border-radius:4px; text-transform:uppercase;
 }
 body.no-ads .ad-banner{display:none;}
+
+/* ---------- BOTTOM NAV BAR ---------- */
+.bottom-nav{
+  position:fixed; bottom:0; left:0; right:0; height:60px;
+  background:var(--card);
+  border-top:1px solid var(--line);
+  display:flex;
+  z-index:45;
+  transition:transform .25s ease;
+  padding-bottom:env(safe-area-inset-bottom, 0);
+}
+.bottom-nav.hidden{ transform:translateY(100%); }
+.bottom-nav .tab{
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:2px; background:none; border:none; color:var(--muted);
+  font-size:10.5px; font-weight:600; cursor:pointer;
+}
+.bottom-nav .tab .tab-icon{font-size:19px;}
+.bottom-nav .tab.active{color:var(--accent);}
+
 
 /* ---------- REMOVE ADS CARD ---------- */
 .remove-ads-card{
@@ -309,21 +329,63 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   <div class="hero">
     <div class="eyebrow">Probabilités contre-intuitives</div>
     <h1>Impressionne tes amis avec des paradoxes qui vont leur décrocher le cerveau.</h1>
-    <p>6 énigmes qui trompent ton instinct. Joue, simule, et regarde le hasard te donner tort — ou raison.</p>
-  </div>
-
-  <div class="remove-ads-card" id="removeAdsCard">
-    <div class="txt">
-      <h3 id="removeAdsTitle">🎈 Retirer les pubs</h3>
-      <p id="removeAdsText">Un petit paiement unique, pas d'abonnement. Ça aide énormément le créateur de l'app 😉</p>
-    </div>
-    <button id="removeAdsBtn" onclick="toggleAds()">2,99 €</button>
+    <p>10 énigmes qui trompent ton instinct. Joue, simule, et regarde le hasard te donner tort — ou raison.</p>
   </div>
 
   <div class="grid" id="cardGrid"></div>
 </div>
 
+<!-- ============ JEUX (Quiz Express) ============ -->
+<div class="screen" id="game-jeux">
+  <div class="game-wrap">
+    <div class="topbar">
+      <div class="game-title">🎮 Jeux</div>
+    </div>
+    <div class="panel">
+      <h2>Quiz Express</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">5 questions vrai/faux sur ce que tu as appris. Combien tu en as retenu ?</p>
+      <div id="quiz-area"></div>
+    </div>
+    <div class="panel">
+      <h2>🧩 Bientôt disponible</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">D'autres mini-jeux arrivent : memory, défi du jour, mode contre un ami.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ OPTIONS ============ -->
+<div class="screen" id="game-options">
+  <div class="game-wrap">
+    <div class="topbar">
+      <div class="game-title">⚙️ Options</div>
+    </div>
+    <div class="remove-ads-card" id="removeAdsCard">
+      <div class="txt">
+        <h3 id="removeAdsTitle">🎈 Retirer les pubs</h3>
+        <p id="removeAdsText">Un petit paiement unique, pas d'abonnement. Ça aide énormément le créateur de l'app 😉</p>
+      </div>
+      <button id="removeAdsBtn" onclick="toggleAds()">2,99 €</button>
+    </div>
+    <div class="panel">
+      <h2>À propos</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">Paradoxes & Probabilités — fait avec 💛 pour que les maths donnent le sourire.</p>
+    </div>
+  </div>
+</div>
+
 <div class="ad-banner" id="adBanner"><span class="tag">Pub</span> Emplacement publicitaire — ton app grandit grâce à ça</div>
+
+<nav class="bottom-nav" id="bottomNav">
+  <button class="tab active" id="tab-home" onclick="goHome()">
+    <span class="tab-icon">🏠</span><span>Paradoxes</span>
+  </button>
+  <button class="tab" id="tab-jeux" onclick="openJeux()">
+    <span class="tab-icon">🎮</span><span>Jeux</span>
+  </button>
+  <button class="tab" id="tab-options" onclick="openOptions()">
+    <span class="tab-icon">⚙️</span><span>Options</span>
+  </button>
+</nav>
 
 <!-- ============ MONTY HALL ============ -->
 <div class="screen" id="game-monty">
@@ -733,15 +795,77 @@ const infoText = {
   }
 };
 
+/* ================= QUIZ EXPRESS ================= */
+const quizBank = [
+  {q:"Au Monty Hall, changer de porte double tes chances de gagner.", a:true},
+  {q:"Dans un groupe de 23 personnes, il y a plus de 50% de chance que deux partagent un anniversaire.", a:true},
+  {q:"Si une famille a 2 enfants et qu'on sait qu'au moins un est un garçon, la chance que l'autre soit un garçon est de 50%.", a:false},
+  {q:"Le paradoxe de Simpson montre qu'un traitement peut gagner dans chaque sous-groupe et perdre au total.", a:true},
+  {q:"Dans le jeu de Saint-Pétersbourg, le gain moyen théorique (espérance) est infini.", a:true},
+  {q:"Avec 3 dés, la somme 9 et la somme 10 ont exactement la même probabilité de sortir.", a:false},
+  {q:"Le paradoxe de Parrondo montre que 2 jeux perdants peuvent, ensemble, devenir gagnants.", a:true},
+  {q:"Zénon pensait qu'Achille ne pourrait jamais rattraper la tortue.", a:true},
+  {q:"Une infinité d'étapes prend forcément une infinité de temps.", a:false},
+  {q:"Au Franc-Carreau, plus la pièce est grande par rapport à la tuile, plus il est facile d'éviter les lignes.", a:false},
+];
+let quizStarted = false;
+let quizQuestions = [];
+let quizIndex = 0;
+let quizScore = 0;
+
+function quizShuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function quizRender(){
+  quizStarted = true;
+  quizQuestions = quizShuffle(quizBank).slice(0,5);
+  quizIndex = 0;
+  quizScore = 0;
+  quizShowQuestion();
+}
+function quizShowQuestion(){
+  const area = document.getElementById('quiz-area');
+  if(!area) return;
+  if(quizIndex >= quizQuestions.length){
+    area.innerHTML = `
+      <div class="status-line" style="text-align:center; font-size:20px; font-weight:700;">${quizScore} / ${quizQuestions.length}</div>
+      <div class="status-line" style="text-align:center;">${quizScore>=4 ? '🟩 Excellent, tu as tout compris !' : quizScore>=2 ? '🟨 Pas mal, révise les paradoxes ratés.' : '🟥 Retourne jouer les paradoxes, ça va rentrer !'}</div>
+      <div class="btn-row" style="justify-content:center;"><button class="btn primary" onclick="quizRender()">Rejouer</button></div>
+    `;
+    return;
+  }
+  const item = quizQuestions[quizIndex];
+  area.innerHTML = `
+    <div class="status-line" style="min-height:60px; font-size:15px;">${item.q}</div>
+    <div class="btn-row">
+      <button class="btn" style="flex:1;" onclick="quizAnswer(true)">✅ Vrai</button>
+      <button class="btn" style="flex:1;" onclick="quizAnswer(false)">❌ Faux</button>
+    </div>
+    <div class="footnote">Question ${quizIndex+1} / ${quizQuestions.length}</div>
+  `;
+}
+function quizAnswer(answer){
+  const correct = quizQuestions[quizIndex].a === answer;
+  if(correct) quizScore++;
+  const area = document.getElementById('quiz-area');
+  area.innerHTML += `<div class="status-line" style="text-align:center;">${correct ? '🟩 Correct !' : '🟥 Raté.'}</div>`;
+  setTimeout(()=>{ quizIndex++; quizShowQuestion(); }, 700);
+}
+
 /* ================= ADS TOGGLE (mock — vraie transaction viendra avec l'app native) ================= */
-let adsRemoved = false;
-function toggleAds(){
-  adsRemoved = !adsRemoved;
+let adsRemoved = localStorage.getItem('adsRemoved') === '1';
+function applyAdsState(){
   document.body.classList.toggle('no-ads', adsRemoved);
   const card = document.getElementById('removeAdsCard');
   const btn = document.getElementById('removeAdsBtn');
   const title = document.getElementById('removeAdsTitle');
   const text = document.getElementById('removeAdsText');
+  if(!card) return;
   if(adsRemoved){
     card.classList.add('done');
     title.textContent = '✅ Pubs retirées';
@@ -754,6 +878,12 @@ function toggleAds(){
     btn.textContent = '2,99 €';
   }
 }
+function toggleAds(){
+  adsRemoved = !adsRemoved;
+  localStorage.setItem('adsRemoved', adsRemoved ? '1' : '0');
+  applyAdsState();
+}
+applyAdsState();
 
 /* ================= NAVIGATION ================= */
 function renderHome(){
@@ -779,18 +909,80 @@ function renderHome(){
 }
 
 function goHome(){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('home').classList.add('active');
+  switchScreen('home');
+  setActiveTab('tab-home');
   trackPage('/accueil');
 }
 function openGame(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('game-'+id).classList.add('active');
+  switchScreen('game-'+id);
+  setActiveTab(null);
   if(id==='monty') mhNewRound();
   if(id==='zenon') zenReset();
-  window.scrollTo(0,0);
   trackPage('/'+id);
 }
+function openJeux(){
+  switchScreen('game-jeux');
+  setActiveTab('tab-jeux');
+  if(!quizStarted) quizRender();
+  trackPage('/jeux');
+}
+function openOptions(){
+  switchScreen('game-options');
+  setActiveTab('tab-options');
+  trackPage('/options');
+}
+function setActiveTab(tabId){
+  document.querySelectorAll('.bottom-nav .tab').forEach(t=>t.classList.remove('active'));
+  if(tabId) document.getElementById(tabId).classList.add('active');
+}
+
+/* ---- Sauvegarde de la position de scroll par écran ---- */
+function switchScreen(newId){
+  const current = document.querySelector('.screen.active');
+  if(current){
+    localStorage.setItem('scroll:'+current.id, window.scrollY);
+  }
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(newId).classList.add('active');
+  localStorage.setItem('lastScreen', newId);
+  const savedY = parseInt(localStorage.getItem('scroll:'+newId) || '0');
+  requestAnimationFrame(()=>{ window.scrollTo(0, savedY); });
+}
+
+/* ---- Restauration au chargement : reprendre là où on était ---- */
+function restoreLastScreen(){
+  const last = localStorage.getItem('lastScreen');
+  if(!last || last==='home'){ return; }
+  if(last==='game-jeux'){ openJeux(); return; }
+  if(last==='game-options'){ openOptions(); return; }
+  if(last.startsWith('game-')){
+    const id = last.replace('game-','');
+    const exists = puzzles.some(p=>p.id===id);
+    if(exists) openGame(id);
+  }
+}
+restoreLastScreen();
+
+/* ---- Nav bar : disparaît en scrollant vers le bas, revient en remontant ---- */
+(function(){
+  let lastY = window.scrollY;
+  let ticking = false;
+  const nav = document.getElementById('bottomNav');
+  window.addEventListener('scroll', () => {
+    if(ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const y = window.scrollY;
+      if(y > lastY && y > 80){
+        nav.classList.add('hidden');
+      } else {
+        nav.classList.remove('hidden');
+      }
+      lastY = y;
+      ticking = false;
+    });
+  }, {passive:true});
+})();
 function trackPage(path){
   if (window.goatcounter && typeof window.goatcounter.count === 'function') {
     window.goatcounter.count({ path: path, event: false });
