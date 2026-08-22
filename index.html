@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paradoxes & Probabilités</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#11131c">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paradoxes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#11131c;
+  --bg2:#171a26;
+  --card:#1c2032;
+  --card-hover:#232840;
+  --text:#eef0f6;
+  --muted:#8d93ab;
+  --line:#2a2f45;
+  --accent:#f5b942;
+  --good:#4fd1c5;
+  --bad:#ef6461;
+  --radius:16px;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:'Fraunces',serif; margin:0;}
+.screen{display:none; min-height:100vh;}
+.screen.active{display:block;}
+
+/* ---------- HOME ---------- */
+#home{padding:36px 20px 60px; max-width:920px; margin:0 auto;}
+.hero{margin-bottom:32px;}
+.hero .eyebrow{color:var(--accent); font-size:12px; letter-spacing:.14em; text-transform:uppercase; font-weight:600;}
+.hero h1{font-size:32px; font-weight:600; line-height:1.15; margin:8px 0 10px;}
+.hero p{color:var(--muted); font-size:14.5px; max-width:52ch; line-height:1.5;}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(260px,1fr));
+  gap:16px;
+}
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:20px;
+  position:relative;
+  transition:background .15s ease, transform .15s ease;
+  cursor:pointer;
+}
+.card:hover{background:var(--card-hover); transform:translateY(-2px);}
+.card .icon{
+  width:52px; height:52px;
+  border-radius:14px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px;
+  margin-bottom:14px;
+}
+.card h3{font-size:17px; font-weight:600; margin-bottom:6px;}
+.card .hook{color:var(--muted); font-size:13px; line-height:1.45; margin-bottom:14px;}
+.card .odds{
+  display:inline-block;
+  font-size:11px;
+  color:var(--accent);
+  background:rgba(245,185,66,0.1);
+  border:1px solid rgba(245,185,66,0.25);
+  padding:3px 8px;
+  border-radius:99px;
+  font-weight:600;
+}
+.info-btn{
+  position:absolute;
+  top:16px; right:16px;
+  width:26px; height:26px;
+  border-radius:50%;
+  background:var(--bg2);
+  border:1px solid var(--line);
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+  font-family:'Fraunces',serif;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+}
+.info-btn:hover{color:var(--accent); border-color:var(--accent);}
+
+/* ---------- GAME SCREENS ---------- */
+.game-wrap{max-width:560px; margin:0 auto; padding:20px 20px 60px;}
+.topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;}
+.back-btn{
+  background:none; border:none; color:var(--muted); font-size:14px;
+  cursor:pointer; display:flex; align-items:center; gap:6px; padding:8px 0;
+}
+.back-btn:hover{color:var(--text);}
+.game-title{font-size:20px; font-weight:600;}
+.game-title .icon-inline{margin-right:8px;}
+
+.panel{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:20px;
+  margin-bottom:16px;
+}
+.panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:14px; font-family:'Inter',sans-serif; font-weight:600;}
+
+button.btn{
+  background:var(--bg2);
+  color:var(--text);
+  border:1px solid var(--line);
+  padding:11px 18px;
+  border-radius:10px;
+  font-size:14px;
+  cursor:pointer;
+  font-weight:500;
+}
+button.btn:hover{background:#242a3f;}
+button.btn.primary{background:var(--accent); color:#1a1300; border-color:var(--accent); font-weight:700;}
+button.btn.primary:hover{filter:brightness(1.08);}
+button.btn:disabled{opacity:.35; cursor:default;}
+.btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+
+.status-line{font-size:14.5px; color:var(--text); min-height:22px; margin-bottom:14px; line-height:1.5;}
+
+.row{display:flex; justify-content:space-between; align-items:center; font-size:14px; margin-bottom:8px;}
+.row b{color:#fff;}
+.bar-container{height:9px; background:var(--bg2); border-radius:5px; overflow:hidden; margin:4px 0 16px;}
+.bar{height:100%; border-radius:5px; transition:width .3s ease;}
+.bar.good{background:var(--good);}
+.bar.bad{background:var(--bad);}
+.bar.accent{background:var(--accent);}
+
+/* Monty Hall doors */
+.doors{display:flex; gap:10px; justify-content:center; margin:18px 0;}
+.door{
+  width:84px; height:120px; background:#2653c9;
+  border-radius:10px; display:flex; align-items:center; justify-content:center;
+  font-size:36px; cursor:pointer; border:3px solid transparent; user-select:none;
+}
+.door:hover{filter:brightness(1.15);}
+.door.disabled{cursor:default; opacity:.5; filter:none;}
+.door.chosen{border-color:var(--accent);}
+.door.revealed{background:#3a3f52;}
+.door.win{background:#1e8a5f; border-color:var(--good);}
+.door.lose{background:#b23c38; border-color:var(--bad);}
+
+/* Birthday grid */
+.bday-grid{display:flex; flex-wrap:wrap; gap:5px; margin:16px 0; justify-content:center;}
+.bday-chip{
+  width:28px; height:28px; border-radius:7px; background:var(--bg2);
+  display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--muted);
+  border:1px solid var(--line);
+}
+.bday-chip.match{background:var(--bad); color:#fff; border-color:var(--bad); font-weight:700;}
+
+input[type=range]{width:100%; accent-color:var(--accent);}
+input[type=number]{
+  width:100px; background:var(--bg2); border:1px solid var(--line); color:var(--text);
+  padding:9px; border-radius:8px; font-size:14px;
+}
+label.field{font-size:13px; color:var(--muted); display:block; margin-bottom:6px;}
+
+/* Simpson table */
+table{width:100%; border-collapse:collapse; font-size:13.5px; margin-top:6px;}
+th,td{padding:8px 6px; text-align:left; border-bottom:1px solid var(--line);}
+th{color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase;}
+td.num{text-align:right;}
+tr.total td{font-weight:700; color:#fff; border-top:2px solid var(--line); border-bottom:none;}
+
+/* family sim chips */
+.fam-grid{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0;}
+.fam-chip{
+  padding:6px 10px; border-radius:8px; font-size:12px; background:var(--bg2);
+  border:1px solid var(--line); color:var(--muted);
+}
+.fam-chip.hl{border-color:var(--accent); color:var(--accent);}
+
+/* Modal */
+.modal-overlay{
+  display:none; position:fixed; inset:0; background:rgba(6,7,12,0.72);
+  align-items:center; justify-content:center; padding:20px; z-index:50;
+}
+.modal-overlay.active{display:flex;}
+.modal{
+  background:var(--card); border:1px solid var(--line); border-radius:18px;
+  max-width:440px; width:100%; padding:24px; max-height:80vh; overflow-y:auto;
+}
+.modal h3{font-size:18px; margin-bottom:12px; color:var(--accent);}
+.modal p{font-size:14.5px; line-height:1.6; color:var(--text); margin:0 0 12px;}
+.modal p:last-of-type{margin-bottom:0;}
+.modal .close-btn{
+  margin-top:16px; width:100%; background:var(--bg2); border:1px solid var(--line);
+  color:var(--text); padding:11px; border-radius:10px; cursor:pointer; font-size:14px;
+}
+
+.footnote{font-size:12px; color:#666; text-align:center; margin-top:18px;}
+
+/* ---------- AD BANNER (placeholder) ---------- */
+body{padding-bottom:64px;}
+body.no-ads{padding-bottom:0;}
+.ad-banner{
+  position:fixed; bottom:0; left:0; right:0;
+  height:56px;
+  background:var(--bg2);
+  border-top:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  gap:8px;
+  font-size:11px; color:var(--muted);
+  letter-spacing:.05em; text-transform:uppercase;
+  z-index:40;
+}
+.ad-banner .tag{
+  background:var(--line); color:var(--muted);
+  font-size:9px; padding:2px 6px; border-radius:4px; text-transform:uppercase;
+}
+body.no-ads .ad-banner{display:none;}
+
+/* ---------- REMOVE ADS CARD ---------- */
+.remove-ads-card{
+  background:linear-gradient(135deg, #232840, #1c2032);
+  border:1px solid var(--accent);
+  border-radius:var(--radius);
+  padding:18px 20px;
+  margin-bottom:24px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  flex-wrap:wrap;
+}
+.remove-ads-card .txt h3{font-size:15px; margin-bottom:4px;}
+.remove-ads-card .txt p{font-size:12.5px; color:var(--muted); margin:0; line-height:1.4; max-width:38ch;}
+.remove-ads-card button{
+  background:var(--accent); color:#1a1300; border:none;
+  padding:10px 16px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
+}
+.remove-ads-card.done{border-color:var(--good);}
+.remove-ads-card.done button{background:var(--good);}
+
+.mini-remove-ads{
+  display:block; width:100%; text-align:center;
+  background:none; border:1px dashed var(--line); color:var(--muted);
+  padding:9px; border-radius:10px; font-size:12px; cursor:pointer; margin-top:6px;
+}
+.mini-remove-ads:hover{border-color:var(--accent); color:var(--accent);}
+</style>
+</head>
+<body>
+
+<!-- ============ HOME ============ -->
+<div class="screen active" id="home">
+  <div class="hero">
+    <div class="eyebrow">Probabilités contre-intuitives</div>
+    <h1>Impressionne tes amis avec des paradoxes qui vont leur décrocher le cerveau.</h1>
+    <p>6 énigmes qui trompent ton instinct. Joue, simule, et regarde le hasard te donner tort — ou raison.</p>
+  </div>
+
+  <div class="remove-ads-card" id="removeAdsCard">
+    <div class="txt">
+      <h3 id="removeAdsTitle">🎈 Retirer les pubs</h3>
+      <p id="removeAdsText">Un petit paiement unique, pas d'abonnement. Ça aide énormément le créateur de l'app 😉</p>
+    </div>
+    <button id="removeAdsBtn" onclick="toggleAds()">2,99 €</button>
+  </div>
+
+  <div class="grid" id="cardGrid"></div>
+</div>
+
+<div class="ad-banner" id="adBanner"><span class="tag">Pub</span> Emplacement publicitaire — ton app grandit grâce à ça</div>
+
+<!-- ============ MONTY HALL ============ -->
+<div class="screen" id="game-monty">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('monty')">i</button>
+    </div>
+    <div class="game-title">🚪 Monty Hall</div>
+    <div class="panel">
+      <h2>Ta partie</h2>
+      <div class="doors" id="mh-doors"></div>
+      <div class="status-line" id="mh-status">Choisis une porte.</div>
+      <div class="btn-row" id="mh-actions"></div>
+    </div>
+    <div class="panel">
+      <h2>Stats — manuel</h2>
+      <div class="row"><span>Parties jouées</span><b id="mh-total">0</b></div>
+      <div class="row"><span>🟨 En restant</span><b id="mh-stay">0 / 0</b></div>
+      <div class="row"><span>🟩 En changeant</span><b id="mh-switch">0 / 0</b></div>
+    </div>
+    <div class="panel">
+      <h2>Simulation (loi des grands nombres)</h2>
+      <label class="field">Nombre de parties</label>
+      <input type="number" id="mh-simN" value="10000" min="100" step="1000">
+      <div class="btn-row"><button class="btn primary" onclick="mhRunSim()">Lancer</button></div>
+      <div style="margin-top:16px;">
+        <div class="row"><span>🟥 Rester</span><b id="mh-simStay">—</b></div>
+        <div class="bar-container"><div class="bar bad" id="mh-simStayBar" style="width:0%"></div></div>
+        <div class="row"><span>🟩 Changer</span><b id="mh-simSwitch">—</b></div>
+        <div class="bar-container"><div class="bar good" id="mh-simSwitchBar" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BIRTHDAY ============ -->
+<div class="screen" id="game-bday">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('bday')">i</button>
+    </div>
+    <div class="game-title">🎂 Paradoxe des anniversaires</div>
+    <div class="panel">
+      <h2>Tire un groupe</h2>
+      <label class="field">Taille du groupe : <b id="bday-nLabel">23</b> personnes</label>
+      <input type="range" id="bday-n" min="2" max="80" value="23" oninput="bdayUpdateLabel()">
+      <div class="btn-row" style="margin-top:12px;"><button class="btn primary" onclick="bdayDraw()">Tirer un groupe</button></div>
+      <div class="status-line" id="bday-status" style="margin-top:14px;"></div>
+      <div class="bday-grid" id="bday-grid"></div>
+    </div>
+    <div class="panel">
+      <h2>Probabilité théorique vs simulation</h2>
+      <div class="row"><span>Théorique (formule)</span><b id="bday-theory">—</b></div>
+      <div class="bar-container"><div class="bar accent" id="bday-theoryBar" style="width:0%"></div></div>
+      <div class="btn-row"><button class="btn" onclick="bdaySimulate()">Simuler 10 000 groupes à cette taille</button></div>
+      <div class="row" style="margin-top:12px;"><span>Empirique</span><b id="bday-empirical">—</b></div>
+      <div class="bar-container"><div class="bar good" id="bday-empiricalBar" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TWO CHILDREN ============ -->
+<div class="screen" id="game-twokids">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('twokids')">i</button>
+    </div>
+    <div class="game-title">👦👧 Paradoxe des 2 enfants</div>
+    <div class="panel">
+      <h2>Simulation</h2>
+      <p style="font-size:13.5px; color:var(--muted); margin:0 0 14px; line-height:1.5;">On génère 20 000 familles de 2 enfants au hasard, puis on filtre selon l'info connue.</p>
+      <div class="btn-row"><button class="btn primary" onclick="twoKidsRun()">Générer 20 000 familles</button></div>
+    </div>
+    <div class="panel">
+      <h2>Cas A — "Le premier enfant est un garçon"</h2>
+      <div class="row"><span>P(l'autre est un garçon)</span><b id="tk-caseA">—</b></div>
+      <div class="bar-container"><div class="bar accent" id="tk-caseABar" style="width:0%"></div></div>
+    </div>
+    <div class="panel">
+      <h2>Cas B — "Au moins un des deux est un garçon" (ordre inconnu)</h2>
+      <div class="row"><span>P(l'autre est un garçon)</span><b id="tk-caseB">—</b></div>
+      <div class="bar-container"><div class="bar good" id="tk-caseBBar" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BOY TUESDAY ============ -->
+<div class="screen" id="game-tuesday">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('tuesday')">i</button>
+    </div>
+    <div class="game-title">📅 Le garçon né un mardi</div>
+    <div class="panel">
+      <h2>Simulation</h2>
+      <p style="font-size:13.5px; color:var(--muted); margin:0 0 14px; line-height:1.5;">200 000 familles générées (sexe + jour de naissance aléatoires), filtrées sur "au moins un garçon né un mardi".</p>
+      <div class="btn-row"><button class="btn primary" onclick="tueRun()">Lancer la simulation</button></div>
+    </div>
+    <div class="panel">
+      <h2>Sans info sur le jour — "au moins un garçon"</h2>
+      <div class="row"><span>P(l'autre est un garçon)</span><b id="tue-base">—</b></div>
+      <div class="bar-container"><div class="bar accent" id="tue-baseBar" style="width:0%"></div></div>
+    </div>
+    <div class="panel">
+      <h2>Avec info — "au moins un garçon né un mardi"</h2>
+      <div class="row"><span>P(l'autre est un garçon)</span><b id="tue-tuesday">—</b></div>
+      <div class="bar-container"><div class="bar good" id="tue-tuesdayBar" style="width:0%"></div></div>
+      <div class="footnote" style="margin-top:10px;">Théorie : 13/27 ≈ 48,1%</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SIMPSON ============ -->
+<div class="screen" id="game-simpson">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('simpson')">i</button>
+    </div>
+    <div class="game-title">📊 Paradoxe de Simpson</div>
+    <div class="panel">
+      <h2>Traitement A vs B — Petits calculs</h2>
+      <table>
+        <tr><th>Groupe</th><th>Traitement A</th><th>Traitement B</th></tr>
+        <tr><td>Patients légers</td><td class="num">93/100 (93%)</td><td class="num">87/90 (97%)</td></tr>
+        <tr><td>Patients graves</td><td class="num">73/90 (81%)</td><td class="num">6/10 (60%)</td></tr>
+        <tr class="total"><td>Total combiné</td><td class="num" id="simp-totalA">166/190</td><td class="num" id="simp-totalB">93/100</td></tr>
+      </table>
+      <div class="status-line" style="margin-top:14px;">
+        🟥 B bat A dans chaque sous-groupe (97%>93%, 60%>81%... attends).<br><br>
+        🟩 Regarde bien : B est meilleur dans <b>chaque</b> sous-groupe pris séparément,<br>
+        mais A gagne sur le total combiné (<b>87.4%</b> vs <b>93%</b>).
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Pourquoi ça s'inverse</h2>
+      <p style="font-size:13.5px; color:var(--text); line-height:1.6; margin:0;">
+        Le traitement B a surtout traité des cas légers (faciles à guérir), et très peu de cas graves.
+        Le traitement A a pris en charge beaucoup plus de cas graves (plus difficiles).
+        Le mélange des groupes cache ce déséquilibre. La taille des sous-groupes fait tout.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ST PETERSBURG ============ -->
+<div class="screen" id="game-stpete">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('stpete')">i</button>
+    </div>
+    <div class="game-title">🪙 Paradoxe de Saint-Pétersbourg</div>
+    <div class="panel">
+      <h2>Le jeu</h2>
+      <p style="font-size:13.5px; color:var(--muted); margin:0 0 14px; line-height:1.5;">
+        On lance une pièce. Le pot commence à 1€ et double à chaque "Face". Dès que "Pile" tombe, tu empoches le pot.
+      </p>
+      <div class="btn-row"><button class="btn primary" onclick="stpFlip()">Lancer une partie</button></div>
+      <div class="status-line" id="stp-status" style="margin-top:14px;"></div>
+    </div>
+    <div class="panel">
+      <h2>Gain moyen sur N parties</h2>
+      <div class="row"><span>N = 100</span><b id="stp-100">—</b></div>
+      <div class="row"><span>N = 10 000</span><b id="stp-10000">—</b></div>
+      <div class="row"><span>N = 1 000 000</span><b id="stp-1000000">—</b></div>
+      <div class="btn-row"><button class="btn" onclick="stpRunAll()">Calculer les 3 moyennes</button></div>
+      <div class="footnote" style="margin-top:10px;">L'espérance mathématique est infinie — mais la moyenne empirique grimpe très lentement.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+/* ================= DATA ================= */
+const puzzles = [
+  {id:'monty', icon:'🚪', color:'#2653c9', title:'Monty Hall', hook:'3 portes. 1 voiture derrière une seule. Tu choisis, puis on t\'enlève une mauvaise porte. Faut-il changer d\'avis ?', odds:'Rester = 1/3 · Changer = 2/3'},
+  {id:'bday', icon:'🎂', color:'#c94f6b', title:'Anniversaires', hook:'Dans une classe de 23 élèves, y\'a plus d\'1 chance sur 2 que deux d\'entre eux soient nés le même jour. Vérifie par toi-même.', odds:'23 élèves → +50% de chance'},
+  {id:'twokids', icon:'👦', color:'#3f9d6e', title:'Les 2 enfants', hook:'Une famille a 2 enfants. On te dit "il y a au moins un garçon". Quelle chance que l\'autre soit aussi un garçon ? Pas 50%.', odds:'On croit 1/2 · en vrai 1/3'},
+  {id:'tuesday', icon:'📅', color:'#7a5fc9', title:'Né un mardi', hook:'Même énigme, mais on ajoute un détail : ce garçon est né un mardi. Ce petit détail change encore le résultat.', odds:'1/3 devient 13/27'},
+  {id:'simpson', icon:'📊', color:'#c98a3f', title:'Paradoxe de Simpson', hook:'Un médicament peut être meilleur dans CHAQUE groupe de malades, et pourtant perdre au score final. Comment c\'est possible ?', odds:'Meilleur partout, mais perdant au total'},
+  {id:'stpete', icon:'🪙', color:'#3f8ec9', title:'Saint-Pétersbourg', hook:'Un jeu de pièce où le gain moyen possible est infini... mais personne ne voudrait payer cher pour y jouer. Pourquoi ?', odds:'Gain moyen = infini, mais...'},
+];
+
+const infoText = {
+  monty: {
+    title:'🚪 Pourquoi changer double tes chances',
+    body:[
+      "Au départ, ta porte a 1 chance sur 3 d'être la bonne. Donc 2 chances sur 3 que la voiture soit derrière une des deux autres.",
+      "L'animateur sait où est la voiture. Il ouvre TOUJOURS une porte avec une chèvre — jamais au hasard.",
+      "En éliminant une mauvaise porte, il ne change rien à ta porte de départ (toujours 1/3), mais il concentre tout le 2/3 restant sur l'unique porte qu'il n'a pas ouverte.",
+      "Changer = récupérer ce 2/3. Rester = garder ton 1/3 initial."
+    ]
+  },
+  bday: {
+    title:'🎂 Pourquoi 23 personnes suffisent',
+    body:[
+      "On ne compare pas les personnes une par une, mais toutes les PAIRES possibles.",
+      "Avec 23 personnes, il y a 253 paires différentes (23×22/2). Chaque paire a une petite chance de partager un anniversaire, mais il y en a beaucoup.",
+      "C'est comme un loto avec 253 tickets au lieu d'un seul billet — la chance qu'AU MOINS un ticket gagne devient énorme, même si chaque ticket seul a peu de chance.",
+      "Résultat : à 23 personnes, la probabilité dépasse 50%. À 70 personnes, elle dépasse 99%."
+    ]
+  },
+  twokids: {
+    title:'👦👧 Pourquoi ce n\'est pas 50/50',
+    body:[
+      "Une famille de 2 enfants a 4 combinaisons possibles et équiprobables : Garçon-Garçon, Garçon-Fille, Fille-Garçon, Fille-Fille.",
+      "Si on te dit juste 'le premier enfant est un garçon' (ordre connu), il ne reste que 2 cas possibles : GG et GF. L'autre est un garçon dans 1 cas sur 2 → 50%.",
+      "Mais si on te dit juste 'au moins un des deux est un garçon' (sans savoir lequel), il reste 3 cas possibles : GG, GF, FG. L'autre est un garçon seulement dans GG → 1 cas sur 3.",
+      "La différence vient de la quantité d'information : savoir QUEL enfant est un garçon change tout."
+    ]
+  },
+  tuesday: {
+    title:'📅 Pourquoi le jour change encore la probabilité',
+    body:[
+      "Ajouter un détail précis (né un mardi) réduit encore l'espace des familles possibles compatibles avec l'information — et de façon asymétrique.",
+      "Sans le jour : 3 cas sur 4 possibles ont 'au moins un garçon', et 1 seul (GG) donne 'les deux garçons' → 1/3.",
+      "Avec le jour précisé, il y a beaucoup plus de façons d'avoir 'un garçon né un mardi et une fille' que d'avoir 'deux garçons dont un né précisément un mardi'. Le calcul complet donne 13/27 ≈ 48%.",
+      "Plus l'info est précise, plus la probabilité se rapproche de 50% — c'est le point contre-intuitif du paradoxe."
+    ]
+  },
+  simpson: {
+    title:'📊 Pourquoi le classement s\'inverse',
+    body:[
+      "Un traitement peut gagner dans chaque sous-groupe (cas légers, cas graves) et pourtant perdre sur le total.",
+      "La raison : les groupes n'ont pas la même taille ni la même difficulté. Si un traitement traite surtout des cas faciles, son taux global est gonflé artificiellement.",
+      "Le paradoxe de Simpson est un piège classique en statistiques : ne jamais juger sur un total global sans regarder la répartition des sous-groupes derrière.",
+      "Utilisé (volontairement ou non) dans des études biaisées, du marketing, ou des comparaisons politiques."
+    ]
+  },
+  stpete: {
+    title:'🪙 Pourquoi personne ne paierait cher pour jouer',
+    body:[
+      "Le gain possible double à chaque Face : 2€, 4€, 8€, 16€... La probabilité d'atteindre chaque niveau est divisée par 2 à chaque fois.",
+      "Le calcul de l'espérance (gain moyen théorique) additionne une infinité de termes qui ne diminuent jamais → le résultat est infini.",
+      "Mais en pratique, les très gros gains sont extrêmement rares. Sur un nombre raisonnable de parties, le gain moyen réel reste petit.",
+      "Ça montre une limite de l'espérance mathématique pure : elle ignore le risque et la patience réelle d'un joueur humain."
+    ]
+  }
+};
+
+/* ================= ADS TOGGLE (mock — vraie transaction viendra avec l'app native) ================= */
+let adsRemoved = false;
+function toggleAds(){
+  adsRemoved = !adsRemoved;
+  document.body.classList.toggle('no-ads', adsRemoved);
+  const card = document.getElementById('removeAdsCard');
+  const btn = document.getElementById('removeAdsBtn');
+  const title = document.getElementById('removeAdsTitle');
+  const text = document.getElementById('removeAdsText');
+  if(adsRemoved){
+    card.classList.add('done');
+    title.textContent = '✅ Pubs retirées';
+    text.textContent = 'Merci pour ton soutien 💛 Profite de l\'app sans interruption.';
+    btn.textContent = 'Activé';
+  } else {
+    card.classList.remove('done');
+    title.textContent = '🎈 Retirer les pubs';
+    text.textContent = 'Un petit paiement unique, pas d\'abonnement. Ça aide énormément le créateur de l\'app 😉';
+    btn.textContent = '2,99 €';
+  }
+}
+
+/* ================= NAVIGATION ================= */
+function renderHome(){
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = '';
+  puzzles.forEach(p=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.onclick = ()=>openGame(p.id);
+    card.innerHTML = `
+      <div class="icon" style="background:${p.color}22; color:${p.color};">${p.icon}</div>
+      <h3>${p.title}</h3>
+      <div class="hook">${p.hook}</div>
+      <span class="odds">${p.odds}</span>
+    `;
+    const infoBtn = document.createElement('div');
+    infoBtn.className = 'info-btn';
+    infoBtn.textContent = 'i';
+    infoBtn.onclick = (e)=>{ e.stopPropagation(); openInfo(p.id); };
+    card.appendChild(infoBtn);
+    grid.appendChild(card);
+  });
+}
+
+function goHome(){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('home').classList.add('active');
+}
+function openGame(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('game-'+id).classList.add('active');
+  if(id==='monty') mhNewRound();
+  window.scrollTo(0,0);
+}
+function openInfo(id){
+  const info = infoText[id];
+  const modal = document.getElementById('modalContent');
+  modal.innerHTML = `<h3>${info.title}</h3>` + info.body.map(t=>`<p>${t}</p>`).join('') + `<button class="close-btn" onclick="closeInfo()">Compris</button>`;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+function closeInfo(){
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+document.getElementById('modalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id==='modalOverlay') closeInfo();
+});
+
+renderHome();
+
+/* ================= MONTY HALL ================= */
+let mh = {car:null, chosen:null, opened:null, stage:'choose', stats:{stay:[0,0], sw:[0,0]}};
+
+function mhNewRound(){
+  mh.car = Math.floor(Math.random()*3);
+  mh.chosen = null; mh.opened = null; mh.stage = 'choose';
+  mhRenderDoors();
+  document.getElementById('mh-status').textContent = 'Choisis une porte.';
+  document.getElementById('mh-actions').innerHTML = '';
+}
+function mhRenderDoors(){
+  const el = document.getElementById('mh-doors');
+  el.innerHTML = '';
+  for(let i=0;i<3;i++){
+    const d = document.createElement('div');
+    d.className = 'door';
+    d.textContent = '?';
+    if(mh.stage==='choose'){ d.onclick = ()=>mhChoose(i); } else { d.classList.add('disabled'); }
+    if(mh.chosen===i) d.classList.add('chosen');
+    if(mh.opened===i){ d.classList.add('revealed'); d.textContent='🐐'; }
+    el.appendChild(d);
+  }
+}
+function mhChoose(i){
+  mh.chosen = i;
+  const opts = [0,1,2].filter(x=>x!==mh.chosen && x!==mh.car);
+  mh.opened = opts[Math.floor(Math.random()*opts.length)];
+  mh.stage = 'decide';
+  mhRenderDoors();
+  document.getElementById('mh-status').textContent = `J'ouvre la porte ${mh.opened+1} → une chèvre. Tu restes ou tu changes ?`;
+  const actions = document.getElementById('mh-actions');
+  actions.innerHTML = '';
+  const stayBtn = document.createElement('button');
+  stayBtn.className='btn'; stayBtn.textContent='Rester'; stayBtn.onclick=()=>mhFinish(false);
+  const swBtn = document.createElement('button');
+  swBtn.className='btn primary'; swBtn.textContent='Changer'; swBtn.onclick=()=>mhFinish(true);
+  actions.appendChild(stayBtn); actions.appendChild(swBtn);
+}
+function mhFinish(didSwitch){
+  let finalDoor = mh.chosen;
+  if(didSwitch) finalDoor = [0,1,2].find(x=>x!==mh.chosen && x!==mh.opened);
+  const won = finalDoor===mh.car;
+  mh.stage='done';
+  const el = document.getElementById('mh-doors');
+  [...el.children].forEach((d,i)=>{
+    d.classList.remove('chosen');
+    if(i===mh.car){ d.textContent='🚗'; d.classList.add('win'); } else { d.textContent='🐐'; }
+    if(i===finalDoor && i!==mh.car) d.classList.add('lose');
+    if(i===finalDoor) d.style.borderColor='var(--accent)';
+  });
+  document.getElementById('mh-status').textContent = won
+    ? (didSwitch ? '🟩 Tu as changé → VOITURE !' : '🟨 Tu es resté → VOITURE ! (chance)')
+    : (didSwitch ? '🟥 Tu as changé → chèvre.' : '🟥 Tu es resté → chèvre.');
+  const key = didSwitch?'sw':'stay';
+  mh.stats[key][1]++; if(won) mh.stats[key][0]++;
+  mhUpdateStats();
+  const actions = document.getElementById('mh-actions');
+  actions.innerHTML = '';
+  const again = document.createElement('button');
+  again.className='btn primary'; again.textContent='Rejouer'; again.onclick=mhNewRound;
+  actions.appendChild(again);
+}
+function mhUpdateStats(){
+  const [sw,st] = [mh.stats.stay, mh.stats.sw];
+  document.getElementById('mh-total').textContent = sw[1]+st[1];
+  document.getElementById('mh-stay').textContent = `${sw[0]} / ${sw[1]} (${sw[1]?(100*sw[0]/sw[1]).toFixed(0):0}%)`;
+  document.getElementById('mh-switch').textContent = `${st[0]} / ${st[1]} (${st[1]?(100*st[0]/st[1]).toFixed(0):0}%)`;
+}
+function mhRunSim(){
+  const n = parseInt(document.getElementById('mh-simN').value)||10000;
+  let stayWins=0, swWins=0;
+  for(let i=0;i<n;i++){
+    const car=Math.floor(Math.random()*3);
+    const choice=Math.floor(Math.random()*3);
+    const opts=[0,1,2].filter(x=>x!==choice && x!==car);
+    const opened=opts[Math.floor(Math.random()*opts.length)];
+    const sw=[0,1,2].find(x=>x!==choice && x!==opened);
+    if(choice===car) stayWins++;
+    if(sw===car) swWins++;
+  }
+  const stayPct=(100*stayWins/n).toFixed(2), swPct=(100*swWins/n).toFixed(2);
+  document.getElementById('mh-simStay').textContent = `${stayWins} / ${n} (${stayPct}%)`;
+  document.getElementById('mh-simSwitch').textContent = `${swWins} / ${n} (${swPct}%)`;
+  document.getElementById('mh-simStayBar').style.width = stayPct+'%';
+  document.getElementById('mh-simSwitchBar').style.width = swPct+'%';
+}
+
+/* ================= BIRTHDAY PARADOX ================= */
+function bdayUpdateLabel(){
+  const n = document.getElementById('bday-n').value;
+  document.getElementById('bday-nLabel').textContent = n;
+  bdayShowTheory(parseInt(n));
+}
+function bdayTheory(n){
+  let p = 1;
+  for(let i=0;i<n;i++){ p *= (365-i)/365; }
+  return 1-p;
+}
+function bdayShowTheory(n){
+  const p = bdayTheory(n)*100;
+  document.getElementById('bday-theory').textContent = p.toFixed(2)+'%';
+  document.getElementById('bday-theoryBar').style.width = Math.min(p,100)+'%';
+}
+function bdayDraw(){
+  const n = parseInt(document.getElementById('bday-n').value);
+  const days = [];
+  for(let i=0;i<n;i++) days.push(Math.floor(Math.random()*365));
+  const seen = {};
+  let matchDay = null;
+  days.forEach(d=>{
+    if(seen[d]!==undefined && matchDay===null) matchDay = d;
+    seen[d] = (seen[d]||0)+1;
+  });
+  const grid = document.getElementById('bday-grid');
+  grid.innerHTML = '';
+  days.forEach(d=>{
+    const chip = document.createElement('div');
+    chip.className = 'bday-chip' + (matchDay!==null && d===matchDay ? ' match':'');
+    chip.textContent = d+1;
+    grid.appendChild(chip);
+  });
+  document.getElementById('bday-status').textContent = matchDay!==null
+    ? `🟥 Doublon trouvé ! Au moins 2 personnes sont nées le même jour (jour ${matchDay+1}/365).`
+    : `🟩 Aucun doublon dans ce groupe de ${n}.`;
+}
+function bdaySimulate(){
+  const n = parseInt(document.getElementById('bday-n').value);
+  const trials = 10000;
+  let collisions = 0;
+  for(let t=0;t<trials;t++){
+    const seen = new Set();
+    let hit = false;
+    for(let i=0;i<n;i++){
+      const d = Math.floor(Math.random()*365);
+      if(seen.has(d)){ hit=true; break; }
+      seen.add(d);
+    }
+    if(hit) collisions++;
+  }
+  const pct = (100*collisions/trials).toFixed(2);
+  document.getElementById('bday-empirical').textContent = `${collisions} / ${trials} (${pct}%)`;
+  document.getElementById('bday-empiricalBar').style.width = pct+'%';
+}
+bdayShowTheory(23);
+
+/* ================= TWO CHILDREN ================= */
+function twoKidsRun(){
+  const n = 20000;
+  let caseA_total=0, caseA_bothBoys=0;
+  let caseB_total=0, caseB_bothBoys=0;
+  for(let i=0;i<n;i++){
+    const c1 = Math.random()<0.5 ? 'G':'F';
+    const c2 = Math.random()<0.5 ? 'G':'F';
+    // Case A: first child known to be a boy
+    if(c1==='G'){
+      caseA_total++;
+      if(c2==='G') caseA_bothBoys++;
+    }
+    // Case B: at least one boy, order unknown
+    if(c1==='G' || c2==='G'){
+      caseB_total++;
+      if(c1==='G' && c2==='G') caseB_bothBoys++;
+    }
+  }
+  const pA = (100*caseA_bothBoys/caseA_total).toFixed(1);
+  const pB = (100*caseB_bothBoys/caseB_total).toFixed(1);
+  document.getElementById('tk-caseA').textContent = `${caseA_bothBoys} / ${caseA_total} (${pA}%)`;
+  document.getElementById('tk-caseABar').style.width = pA+'%';
+  document.getElementById('tk-caseB').textContent = `${caseB_bothBoys} / ${caseB_total} (${pB}%)`;
+  document.getElementById('tk-caseBBar').style.width = pB+'%';
+}
+
+/* ================= BOY TUESDAY ================= */
+function tueRun(){
+  const n = 200000;
+  const days = 7; // 0=Tuesday for simplicity index
+  let base_total=0, base_bothBoys=0;
+  let tue_total=0, tue_bothBoys=0;
+  for(let i=0;i<n;i++){
+    const c1sex = Math.random()<0.5?'G':'F';
+    const c2sex = Math.random()<0.5?'G':'F';
+    const c1day = Math.floor(Math.random()*7); // 0 = Tuesday
+    const c2day = Math.floor(Math.random()*7);
+    const c1boyTue = c1sex==='G' && c1day===0;
+    const c2boyTue = c2sex==='G' && c2day===0;
+
+    if(c1sex==='G' || c2sex==='G'){
+      base_total++;
+      if(c1sex==='G' && c2sex==='G') base_bothBoys++;
+    }
+    if(c1boyTue || c2boyTue){
+      tue_total++;
+      if(c1sex==='G' && c2sex==='G') tue_bothBoys++;
+    }
+  }
+  const pBase = (100*base_bothBoys/base_total).toFixed(1);
+  const pTue = (100*tue_bothBoys/tue_total).toFixed(1);
+  document.getElementById('tue-base').textContent = `${base_bothBoys} / ${base_total} (${pBase}%)`;
+  document.getElementById('tue-baseBar').style.width = pBase+'%';
+  document.getElementById('tue-tuesday').textContent = `${tue_bothBoys} / ${tue_total} (${pTue}%)`;
+  document.getElementById('tue-tuesdayBar').style.width = pTue+'%';
+}
+
+/* ================= ST PETERSBURG ================= */
+function stpPlayOne(){
+  let pot = 1;
+  let flips = 0;
+  while(Math.random()<0.5){
+    pot *= 2;
+    flips++;
+  }
+  return pot;
+}
+function stpFlip(){
+  const gain = stpPlayOne();
+  document.getElementById('stp-status').textContent = `🎲 Résultat : tu gagnes ${gain}€`;
+}
+function stpAverage(n){
+  let total = 0;
+  for(let i=0;i<n;i++) total += stpPlayOne();
+  return total/n;
+}
+function stpRunAll(){
+  document.getElementById('stp-100').textContent = stpAverage(100).toFixed(2)+' €';
+  document.getElementById('stp-10000').textContent = stpAverage(10000).toFixed(2)+' €';
+  document.getElementById('stp-1000000').textContent = stpAverage(1000000).toFixed(2)+' €';
+}
+
+/* ================= PWA — SERVICE WORKER ================= */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
