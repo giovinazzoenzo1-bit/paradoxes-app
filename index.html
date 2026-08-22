@@ -378,6 +378,30 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 .wordle-key.absent{background:#20242f; color:var(--muted);}
 .wordle-key.wide{min-width:50px; font-size:10px;}
 
+/* ---------- QUI SUIS-JE ---------- */
+.qsj-player-list{display:flex; flex-direction:column; gap:8px; margin:14px 0;}
+.qsj-player-row{
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--bg2); border:1px solid var(--line); border-radius:10px; padding:10px 14px;
+}
+.qsj-player-row button{background:none; border:none; color:var(--bad); font-size:16px; cursor:pointer;}
+.qsj-add-row{display:flex; gap:8px;}
+.qsj-add-row input{
+  flex:1; background:var(--bg2); border:1px solid var(--line); color:var(--text);
+  padding:11px; border-radius:10px; font-size:14px;
+}
+.qsj-reveal-card{
+  background:linear-gradient(160deg, #232840, #1c2032);
+  border:2px solid var(--accent); border-radius:18px;
+  padding:36px 20px; text-align:center; margin:20px 0;
+}
+.qsj-reveal-card .qsj-char{font-size:44px; margin-bottom:10px;}
+.qsj-reveal-card .qsj-charname{font-size:20px; font-weight:700; color:var(--accent);}
+.qsj-hidden-card{
+  background:var(--bg2); border:2px dashed var(--line); border-radius:18px;
+  padding:36px 20px; text-align:center; margin:20px 0;
+}
+
 </style>
 </head>
 <body>
@@ -403,8 +427,8 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <h2>Quiz</h2>
       <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">5 questions, réponse expliquée à chaque fois.</p>
       <div class="btn-row">
-        <button class="btn primary" style="flex:1;" onclick="quizRender('paradoxes')">🧠 Quiz Paradoxes</button>
-        <button class="btn" style="flex:1;" onclick="quizRender('general')">🎓 Quiz Général</button>
+        <button class="btn primary" style="flex:1;" onclick="quizStart('paradoxes')">🧠 Quiz Paradoxes</button>
+        <button class="btn" style="flex:1;" onclick="quizStart('general')">🎓 Quiz Général</button>
       </div>
       <div id="quiz-area" style="margin-top:14px;"></div>
     </div>
@@ -414,9 +438,25 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row"><button class="btn primary" onclick="openWordle()">Jouer</button></div>
     </div>
     <div class="panel">
+      <h2>🎭 Qui suis-je ?</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Jeu en groupe, un seul téléphone qui tourne. Chacun devine son personnage grâce aux indices des autres.</p>
+      <div class="btn-row"><button class="btn primary" onclick="openQuisuisje()">Jouer</button></div>
+    </div>
+    <div class="panel">
       <h2>🧩 Bientôt disponible</h2>
       <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">Tetris et Bataille navale arrivent dans une prochaine mise à jour.</p>
     </div>
+  </div>
+</div>
+
+<!-- ============ QUI SUIS-JE ? ============ -->
+<div class="screen" id="game-quisuisje">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="openJeux()">← Retour</button>
+    </div>
+    <div class="game-title">🎭 Qui suis-je ?</div>
+    <div id="qsj-area"></div>
   </div>
 </div>
 
@@ -899,7 +939,7 @@ const infoText = {
   }
 };
 
-/* ================= QUIZ (2 modes + explications) ================= */
+/* ================= QUIZ (2 modes indépendants + explications) ================= */
 const quizBankParadoxes = [
   {q:"Au Monty Hall, changer de porte double tes chances de gagner.", a:true, exp:"Ta porte de départ a 1/3 de chance. L'animateur élimine une chèvre, donc les 2/3 restants se concentrent sur l'autre porte."},
   {q:"Dans un groupe de 23 personnes, il y a plus de 50% de chance que deux partagent un anniversaire.", a:true, exp:"On compare les 253 paires possibles entre 23 personnes, pas les personnes une par une — d'où la probabilité élevée."},
@@ -912,20 +952,34 @@ const quizBankParadoxes = [
   {q:"Une infinité d'étapes prend forcément une infinité de temps.", a:false, exp:"Une série infinie de durées de plus en plus courtes peut additionner à un temps fini (ex: 1/2+1/4+1/8+...=1)."},
   {q:"Au Franc-Carreau, plus la pièce est grande par rapport à la tuile, plus il est facile d'éviter les lignes.", a:false, exp:"C'est l'inverse : une pièce plus grande réduit la zone sûre au centre de la tuile, donc c'est plus difficile."},
 ];
-const quizBankGeneral = [
-  {q:"Si tu lances une pièce 10 fois et qu'elle tombe sur Face à chaque fois, le prochain lancer a plus de chances de faire Pile.", a:false, exp:"C'est le 'sophisme du joueur'. Chaque lancer est indépendant : toujours 50/50, peu importe l'historique."},
-  {q:"Un événement avec 1% de chance ne peut jamais arriver deux fois de suite à la même personne.", a:false, exp:"1% n'est pas 0%. Rare ne veut pas dire impossible — sur assez d'essais, ça finit par arriver."},
-  {q:"En probabilités, 'indépendant' veut dire que deux événements ne s'influencent pas l'un l'autre.", a:true, exp:"Exactement — le résultat de l'un ne change rien à la probabilité de l'autre (ex: deux lancers de dés séparés)."},
-  {q:"Plus un échantillon est grand, plus le résultat observé se rapproche de la vraie probabilité.", a:true, exp:"C'est la loi des grands nombres — la base de toutes les simulations qu'on a faites dans cette app."},
-  {q:"Une corrélation entre deux choses prouve toujours qu'il y a un lien de cause à effet.", a:false, exp:"Corrélation n'est pas causalité — un troisième facteur caché peut expliquer les deux à la fois."},
-  {q:"Si un test médical est fiable à 99%, un résultat positif veut dire que tu es malade à 99%.", a:false, exp:"Ça dépend aussi de la rareté de la maladie dans la population — c'est le piège du taux de base (paradoxe du taxi)."},
-  {q:"L'espérance mathématique d'un jeu, c'est le gain moyen si tu y jouais un nombre infini de fois.", a:true, exp:"Exactement sa définition — une moyenne théorique sur le très long terme, pas un résultat garanti à chaque partie."},
-  {q:"Un dé à 6 faces truqué peut quand même donner des résultats qui semblent équilibrés sur peu de lancers.", a:true, exp:"Avec peu d'essais, le hasard peut masquer un déséquilibre réel — il faut un grand échantillon pour le détecter."},
-];
-let quizStarted = false;
-let quizQuestions = [];
-let quizIndex = 0;
-let quizScore = 0;
+const quizBankGeneralByAge = {
+  enfant: [
+    {q:"Si tu lances une pièce, elle a autant de chance de tomber sur Pile que sur Face.", a:true, exp:"Oui ! Une pièce normale donne 50% de chance à chaque côté."},
+    {q:"Un dé à 6 faces a plus de chances de tomber sur le 6 que sur le 3.", a:false, exp:"Chaque face a exactement la même chance de sortir : 1 sur 6, peu importe le chiffre."},
+    {q:"Si t'as eu 3 fois « Pile » d'affilée, le prochain lancer a plus de chance de faire « Face ».", a:false, exp:"Chaque lancer est indépendant du précédent — toujours 50/50, la pièce n'a pas de mémoire !"},
+    {q:"Plus tu essaies un jeu de hasard, plus le résultat moyen se rapproche de la vraie probabilité.", a:true, exp:"C'est la loi des grands nombres : plus on répète, plus on s'approche de la réalité."},
+    {q:"Un événement « impossible » a 0% de chance d'arriver.", a:true, exp:"Par définition, un événement impossible ne peut jamais se produire."},
+  ],
+  ado: [
+    {q:"La probabilité qu'un événement ET son contraire arrivent EN MÊME TEMPS est de 100%.", a:false, exp:"Un événement et son contraire sont exclusifs — ils ne peuvent pas arriver ensemble. Leurs probabilités s'additionnent à 100%, chacun séparément."},
+    {q:"Pour 2 événements indépendants, leurs probabilités se multiplient pour trouver la chance des deux ensemble.", a:true, exp:"P(A et B) = P(A) × P(B) quand les deux événements ne s'influencent pas."},
+    {q:"Une moyenne peut être trompeuse s'il y a des valeurs extrêmes dans les données.", a:true, exp:"Un salaire de patron ultra élevé peut fausser complètement la moyenne des salaires d'une entreprise."},
+    {q:"Le hasard n'a pas de mémoire.", a:true, exp:"Chaque tirage aléatoire est indépendant des précédents (sauf système conçu autrement, comme des cartes sans remise)."},
+    {q:"Un sondage sur 20 personnes est aussi fiable qu'un sondage sur 2000 personnes.", a:false, exp:"Plus l'échantillon est grand, plus le résultat est fiable et proche de la réalité globale."},
+  ],
+  adulte: [
+    {q:"Le biais de confirmation, c'est chercher des infos qui confirment ce qu'on croit déjà.", a:true, exp:"Exactement — on ignore souvent, sans s'en rendre compte, ce qui contredit nos idées de départ."},
+    {q:"En investissement, un bon rendement passé garantit un rendement futur similaire.", a:false, exp:"C'est un des pièges les plus répandus en finance — les performances passées ne prédisent pas l'avenir."},
+    {q:"Le biais du survivant fait qu'on surestime les chances de succès en ne regardant que les gagnants visibles.", a:true, exp:"On ne voit jamais les échecs invisibles (entreprises fermées, etc.), ça fausse notre perception du risque réel."},
+    {q:"Une probabilité conditionnelle change selon l'information déjà connue.", a:true, exp:"C'est le cœur du théorème de Bayes — chaque nouvelle info modifie la probabilité restante."},
+    {q:"Un risque de 1% par an reste négligeable même répété sur 30 ans.", a:false, exp:"Répété 30 fois, ce risque cumulé grimpe à environ 26% de chance qu'il arrive au moins une fois — loin d'être négligeable."},
+  ],
+};
+
+const quizState = {
+  paradoxes: {questions:[], index:0, score:0},
+  general: {questions:[], index:0, score:0, ageTier:null},
+};
 
 function quizShuffle(arr){
   const a = [...arr];
@@ -935,48 +989,84 @@ function quizShuffle(arr){
   }
   return a;
 }
-function quizRender(mode){
-  quizStarted = true;
-  const bank = mode==='general' ? quizBankGeneral : quizBankParadoxes;
-  quizQuestions = quizShuffle(bank).slice(0,5);
-  quizIndex = 0;
-  quizScore = 0;
-  quizShowQuestion();
+function quizHeader(mode){
+  return mode==='general'
+    ? `<h3 style="color:#5fb8c9; font-size:14px; margin-bottom:10px;">🎓 Quiz Général</h3>`
+    : `<h3 style="color:var(--accent); font-size:14px; margin-bottom:10px;">🧠 Quiz Paradoxes</h3>`;
 }
-function quizShowQuestion(){
-  const area = document.getElementById('quiz-area');
-  if(!area) return;
-  if(quizIndex >= quizQuestions.length){
-    area.innerHTML = `
-      <div class="status-line" style="text-align:center; font-size:20px; font-weight:700;">${quizScore} / ${quizQuestions.length}</div>
-      <div class="status-line" style="text-align:center;">${quizScore>=4 ? '🟩 Excellent, tu as tout compris !' : quizScore>=2 ? '🟨 Pas mal, révise les paradoxes ratés.' : '🟥 Retourne jouer les paradoxes, ça va rentrer !'}</div>
-      <div class="btn-row" style="justify-content:center;"><button class="btn primary" onclick="quizRender()">Rejouer</button></div>
-    `;
-    statsRecordQuiz(quizScore, quizQuestions.length);
+function quizStart(mode){
+  quizStarted = true;
+  if(mode==='general' && !quizState.general.ageTier){
+    quizAskAge();
     return;
   }
-  const item = quizQuestions[quizIndex];
-  area.innerHTML = `
-    <div class="status-line" style="min-height:60px; font-size:15px;">${item.q}</div>
-    <div class="btn-row">
-      <button class="btn" style="flex:1;" onclick="quizAnswer(true)">✅ Vrai</button>
-      <button class="btn" style="flex:1;" onclick="quizAnswer(false)">❌ Faux</button>
-    </div>
-    <div class="footnote">Question ${quizIndex+1} / ${quizQuestions.length}</div>
-  `;
+  const bank = mode==='general' ? quizBankGeneralByAge[quizState.general.ageTier] : quizBankParadoxes;
+  const st = quizState[mode];
+  st.questions = quizShuffle(bank).slice(0,5);
+  st.index = 0;
+  st.score = 0;
+  quizShowQuestion(mode);
 }
-function quizAnswer(answer){
-  const item = quizQuestions[quizIndex];
-  const correct = item.a === answer;
-  if(correct) quizScore++;
+function quizAskAge(){
   const area = document.getElementById('quiz-area');
   area.innerHTML = `
+    ${quizHeader('general')}
+    <div class="status-line">Pour te proposer des questions adaptées, quel âge as-tu ?</div>
+    <div class="btn-row" style="flex-direction:column;">
+      <button class="btn" onclick="quizSetAge('enfant')">👶 Moins de 12 ans</button>
+      <button class="btn" onclick="quizSetAge('ado')">🧑 12 à 17 ans</button>
+      <button class="btn" onclick="quizSetAge('adulte')">🧔 18 ans et plus</button>
+    </div>
+  `;
+}
+function quizSetAge(tier){
+  quizState.general.ageTier = tier;
+  quizStart('general');
+}
+function quizShowQuestion(mode){
+  const area = document.getElementById('quiz-area');
+  if(!area) return;
+  const st = quizState[mode];
+  if(st.index >= st.questions.length){
+    area.innerHTML = `
+      ${quizHeader(mode)}
+      <div class="status-line" style="text-align:center; font-size:20px; font-weight:700;">${st.score} / ${st.questions.length}</div>
+      <div class="status-line" style="text-align:center;">${st.score>=4 ? '🟩 Excellent, tu as tout compris !' : st.score>=2 ? '🟨 Pas mal, tu peux progresser.' : '🟥 Retente, ça va rentrer !'}</div>
+      <div class="btn-row" style="justify-content:center;"><button class="btn primary" onclick="quizStart('${mode}')">Rejouer</button></div>
+    `;
+    statsRecordQuiz(st.score, st.questions.length);
+    return;
+  }
+  const item = st.questions[st.index];
+  area.innerHTML = `
+    ${quizHeader(mode)}
+    <div class="status-line" style="min-height:60px; font-size:15px;">${item.q}</div>
+    <div class="btn-row">
+      <button class="btn" style="flex:1;" onclick="quizAnswer('${mode}', true)">✅ Vrai</button>
+      <button class="btn" style="flex:1;" onclick="quizAnswer('${mode}', false)">❌ Faux</button>
+    </div>
+    <div class="footnote">Question ${st.index+1} / ${st.questions.length}</div>
+  `;
+}
+function quizAnswer(mode, answer){
+  const st = quizState[mode];
+  const item = st.questions[st.index];
+  const correct = item.a === answer;
+  if(correct) st.score++;
+  const area = document.getElementById('quiz-area');
+  area.innerHTML = `
+    ${quizHeader(mode)}
     <div class="status-line" style="min-height:60px; font-size:15px;">${item.q}</div>
     <div class="status-line" style="text-align:center; font-weight:700;">${correct ? '🟩 Correct !' : '🟥 Raté.'}</div>
     <div class="footnote" style="text-align:left; line-height:1.5;">${item.exp}</div>
+    <div class="btn-row" style="justify-content:center; margin-top:10px;"><button class="btn primary" onclick="quizNext('${mode}')">Question suivante →</button></div>
   `;
-  setTimeout(()=>{ quizIndex++; quizShowQuestion(); }, 1800);
 }
+function quizNext(mode){
+  quizState[mode].index++;
+  quizShowQuestion(mode);
+}
+let quizStarted = false;
 
 /* ================= TROPHÉES & STATS (localStorage) ================= */
 function statsGet(){
@@ -1191,6 +1281,136 @@ function wordleSubmit(){
   }
 }
 
+/* ================= QUI SUIS-JE ? (pass-and-play local) ================= */
+const qsjCharacterBank = [
+  '🦁 Un lion', '🐘 Un éléphant', '🐧 Un manchot', '🦊 Un renard', '🐢 Une tortue',
+  '🧙 Un magicien', '🧛 Un vampire', '🦸 Un super-héros', '👽 Un extraterrestre', '🏴‍☠️ Un pirate',
+  '⚽ Un ballon de foot', '🍕 Une pizza', '🎸 Une guitare', '🚗 Une voiture de course', '🎈 Un ballon',
+  '👑 Un roi', '🧑‍🚀 Un astronaute', '🥷 Un ninja', '🧟 Un zombie', '🤖 Un robot',
+  '🍦 Une glace', '🌵 Un cactus', '🦄 Une licorne', '🐉 Un dragon', '🎃 Une citrouille',
+  '🕵️ Un détective', '🧑‍🍳 Un chef cuisinier', '🎤 Une star de la chanson', '⛄ Un bonhomme de neige', '🦖 Un dinosaure',
+];
+let qsjPlayers = [];
+let qsjAssignments = [];
+let qsjRevealIndex = 0;
+let qsjRevealState = 'hidden'; // 'hidden' | 'shown'
+
+function openQuisuisje(){
+  switchScreen('game-quisuisje');
+  setActiveTab(null);
+  qsjPlayers = [];
+  qsjRenderSetup();
+  trackPage('/quisuisje');
+}
+function qsjRenderSetup(){
+  const area = document.getElementById('qsj-area');
+  area.innerHTML = `
+    <div class="panel">
+      <h2>Qui joue ?</h2>
+      <div class="qsj-add-row">
+        <input type="text" id="qsj-nameInput" placeholder="Prénom" maxlength="20" onkeydown="if(event.key==='Enter') qsjAddPlayer()">
+        <button class="btn primary" onclick="qsjAddPlayer()">Ajouter</button>
+      </div>
+      <div class="qsj-player-list" id="qsj-playerList"></div>
+      <div class="footnote">Minimum 3 joueurs pour que ce soit marrant.</div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn primary" id="qsj-startBtn" onclick="qsjStartGame()" disabled>Lancer la partie</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Règles</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">Chaque joueur reçoit un personnage secret. Le téléphone tourne : montre l'écran à tout le monde SAUF à la personne concernée. Ensuite, chacun pose des questions oui/non aux autres pour deviner qui il est !</p>
+    </div>
+  `;
+  qsjRenderPlayerList();
+}
+function qsjRenderPlayerList(){
+  const list = document.getElementById('qsj-playerList');
+  list.innerHTML = qsjPlayers.map((name, i) => `
+    <div class="qsj-player-row">
+      <span>${name}</span>
+      <button onclick="qsjRemovePlayer(${i})">✕</button>
+    </div>
+  `).join('');
+  document.getElementById('qsj-startBtn').disabled = qsjPlayers.length < 3;
+}
+function qsjAddPlayer(){
+  const input = document.getElementById('qsj-nameInput');
+  const name = input.value.trim();
+  if(!name) return;
+  qsjPlayers.push(name);
+  input.value = '';
+  qsjRenderPlayerList();
+  input.focus();
+}
+function qsjRemovePlayer(i){
+  qsjPlayers.splice(i,1);
+  qsjRenderPlayerList();
+}
+function qsjShuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function qsjStartGame(){
+  const chars = qsjShuffle(qsjCharacterBank).slice(0, qsjPlayers.length);
+  qsjAssignments = qsjPlayers.map((name, i) => ({name, character: chars[i]}));
+  qsjRevealIndex = 0;
+  qsjRevealState = 'hidden';
+  qsjRenderReveal();
+}
+function qsjRenderReveal(){
+  const area = document.getElementById('qsj-area');
+  if(qsjRevealIndex >= qsjAssignments.length){
+    area.innerHTML = `
+      <div class="panel" style="text-align:center;">
+        <h2 style="text-align:center;">🎉 Tout le monde a son personnage !</h2>
+        <p style="font-size:13px; color:var(--muted); line-height:1.5;">Chacun pose des questions oui/non aux autres pour deviner qui il est. Le premier qui trouve a gagné !</p>
+        <div class="btn-row" style="justify-content:center; margin-top:14px;">
+          <button class="btn primary" onclick="openQuisuisje()">Nouvelle partie</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  const current = qsjAssignments[qsjRevealIndex];
+  if(qsjRevealState === 'hidden'){
+    area.innerHTML = `
+      <div class="qsj-hidden-card">
+        <div style="font-size:15px; color:var(--muted); margin-bottom:8px;">Tour de</div>
+        <div style="font-size:22px; font-weight:700;">${current.name}</div>
+        <div class="footnote" style="margin-top:14px;">📵 Ne regarde pas, ${current.name} ! Passe le téléphone aux autres joueurs.</div>
+      </div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn primary" onclick="qsjReveal()">Les autres sont prêts, révéler 👀</button>
+      </div>
+    `;
+  } else {
+    area.innerHTML = `
+      <div class="qsj-reveal-card">
+        <div style="font-size:13px; color:var(--muted); margin-bottom:10px;">Montrez ceci à tout le monde SAUF à ${current.name}</div>
+        <div class="qsj-char">${current.character.split(' ')[0]}</div>
+        <div class="qsj-charname">${current.character.split(' ').slice(1).join(' ')}</div>
+      </div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn primary" onclick="qsjNextPlayer()">Joueur suivant →</button>
+      </div>
+    `;
+  }
+}
+function qsjReveal(){
+  qsjRevealState = 'shown';
+  qsjRenderReveal();
+}
+function qsjNextPlayer(){
+  qsjRevealIndex++;
+  qsjRevealState = 'hidden';
+  qsjRenderReveal();
+}
+
 /* ================= ADS TOGGLE (mock — vraie transaction viendra avec l'app native) ================= */
 let adsRemoved = localStorage.getItem('adsRemoved') === '1';
 function applyAdsState(){
@@ -1258,7 +1478,6 @@ function openGame(id){
 function openJeux(){
   switchScreen('game-jeux');
   setActiveTab('tab-jeux');
-  if(!quizStarted) quizRender();
   trackPage('/jeux');
 }
 function openProgres(){
@@ -1297,6 +1516,7 @@ function restoreLastScreen(){
   if(!last || last==='home'){ return; }
   if(last==='game-jeux'){ openJeux(); return; }
   if(last==='game-wordle'){ openWordle(); return; }
+  if(last==='game-quisuisje'){ openJeux(); return; }
   if(last==='game-progres'){ openProgres(); return; }
   if(last==='game-options'){ openOptions(); return; }
   if(last.startsWith('game-')){
