@@ -411,7 +411,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   <div class="hero">
     <div class="eyebrow">Probabilités contre-intuitives</div>
     <h1>Impressionne tes amis avec des paradoxes qui vont leur décrocher le cerveau.</h1>
-    <p>10 énigmes qui trompent ton instinct. Joue, simule, et regarde le hasard te donner tort — ou raison.</p>
+    <p>20 énigmes qui trompent ton instinct. Joue, simule, et regarde le hasard te donner tort — ou raison.</p>
   </div>
 
   <div class="grid" id="cardGrid"></div>
@@ -823,6 +823,235 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   </div>
 </div>
 
+<!-- ============ 100 PRISONNIERS ============ -->
+<div class="screen" id="game-prisonniers">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('prisonniers')">i</button>
+    </div>
+    <div class="game-title">📦 Les 100 prisonniers</div>
+    <div class="panel">
+      <h2>100 boîtes, 100 prisonniers, 50 essais chacun</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Stratégie aléatoire : chacun ouvre 50 boîtes au hasard. Stratégie des boucles : chacun commence par la boîte de son numéro, puis suit le numéro trouvé dedans.</p>
+      <div class="btn-row"><button class="btn primary" onclick="prisSimulate()">Simuler 500 groupes des 2 façons</button></div>
+    </div>
+    <div class="panel">
+      <h2>Résultats — % de groupes où TOUS survivent</h2>
+      <div class="row"><span>🟥 Stratégie aléatoire</span><b id="pris-random">—</b></div>
+      <div class="bar-container"><div class="bar bad" id="pris-randomBar" style="width:0%"></div></div>
+      <div class="row"><span>🟩 Stratégie des boucles</span><b id="pris-loop">—</b></div>
+      <div class="bar-container"><div class="bar good" id="pris-loopBar" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LE BUS QUI N'ARRIVE JAMAIS ============ -->
+<div class="screen" id="game-bus">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('bus')">i</button>
+    </div>
+    <div class="game-title">🚌 Le bus qui n'arrive jamais</div>
+    <div class="panel">
+      <h2>Horaire réel des bus (en minutes entre chaque)</h2>
+      <div class="status-line">2 · 2 · 2 · 2 · 2 · 2 · 2 · 2 · 2 · 20</div>
+      <div class="footnote">Écart moyen entre bus : 4,4 min. Tu arrives à un moment totalement aléatoire.</div>
+      <div class="btn-row"><button class="btn primary" onclick="busSimulate()">Simuler 10 000 arrivées au hasard</button></div>
+    </div>
+    <div class="panel">
+      <h2>Résultats</h2>
+      <div class="row"><span>Attente "naïve" attendue (moitié de l'écart moyen)</span><b>2,2 min</b></div>
+      <div class="row"><span>🟥 Attente moyenne réelle simulée</span><b id="bus-result">—</b></div>
+      <div class="footnote">Tu as plus de chances de tomber dans le grand trou de 20 min que dans un petit — ça tire la moyenne vers le haut.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LA RUINE DU JOUEUR ============ -->
+<div class="screen" id="game-ruine">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('ruine')">i</button>
+    </div>
+    <div class="game-title">🎰 La ruine du joueur</div>
+    <div class="panel">
+      <h2>Mise 1€ à chaque tour, 50/50 pile ou face</h2>
+      <label class="field">Capital de départ : <b id="ruine-capLabel">20€</b></label>
+      <input type="range" id="ruine-cap" min="5" max="50" value="20" oninput="ruineUpdateLabel()">
+      <div class="footnote" style="margin-top:8px;">Objectif : atteindre 100€ avant de tomber à 0€.</div>
+      <div class="btn-row" style="margin-top:12px;"><button class="btn primary" onclick="ruineSimulate()">Simuler 2000 joueurs</button></div>
+    </div>
+    <div class="panel">
+      <h2>Résultats</h2>
+      <div class="row"><span>🟩 Ont atteint 100€</span><b id="ruine-win">—</b></div>
+      <div class="bar-container"><div class="bar good" id="ruine-winBar" style="width:0%"></div></div>
+      <div class="row"><span>🟥 Sont tombés à 0€</span><b id="ruine-lose">—</b></div>
+      <div class="bar-container"><div class="bar bad" id="ruine-loseBar" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PARADOXE DE BRAESS ============ -->
+<div class="screen" id="game-braess">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('braess')">i</button>
+    </div>
+    <div class="game-title">🚗 Paradoxe de Braess</div>
+    <div class="panel">
+      <h2>4000 conducteurs, 2 routes possibles</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Chaque route a un tronçon qui ralentit avec le trafic, et un tronçon toujours à 45 min. Une route "raccourci" gratuite est ajoutée entre les deux.</p>
+      <div class="btn-row"><button class="btn" onclick="braessShow(false)">Sans le raccourci</button><button class="btn primary" onclick="braessShow(true)">Avec le raccourci</button></div>
+    </div>
+    <div class="panel">
+      <h2>Temps de trajet à l'équilibre</h2>
+      <div class="status-line" id="braess-status" style="text-align:center; font-size:20px; font-weight:700;">—</div>
+      <div class="footnote" id="braess-detail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PARADOXE DU TAXI ============ -->
+<div class="screen" id="game-taxi">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('taxi')">i</button>
+    </div>
+    <div class="game-title">🚕 Le paradoxe du taxi</div>
+    <div class="panel">
+      <h2>Un témoin dit avoir vu un taxi BLEU</h2>
+      <label class="field">Fiabilité du témoin : <b id="taxi-relLabel">80%</b></label>
+      <input type="range" id="taxi-rel" min="50" max="99" value="80" oninput="taxiUpdate()">
+      <label class="field" style="margin-top:14px;">% de taxis bleus dans la ville : <b id="taxi-baseLabel">15%</b></label>
+      <input type="range" id="taxi-base" min="1" max="50" value="15" oninput="taxiUpdate()">
+    </div>
+    <div class="panel">
+      <h2>Résultat (théorème de Bayes)</h2>
+      <div class="status-line" style="text-align:center; font-size:24px; font-weight:700;" id="taxi-result">—</div>
+      <div class="footnote">Chance que le taxi soit VRAIMENT bleu, sachant que le témoin dit l'avoir vu bleu.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LA CORDE AUTOUR DE LA TERRE ============ -->
+<div class="screen" id="game-corde">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('corde')">i</button>
+    </div>
+    <div class="game-title">🌍 La corde autour de la Terre</div>
+    <div class="panel">
+      <h2>Ajoute de la corde autour d'un cercle</h2>
+      <label class="field">Longueur ajoutée : <b id="corde-addLabel">1 mètre</b></label>
+      <input type="range" id="corde-add" min="0.1" max="10" value="1" step="0.1" oninput="cordeUpdate()">
+    </div>
+    <div class="panel">
+      <h2>Écart créé tout autour</h2>
+      <div class="row"><span>🌍 Autour de la Terre</span><b id="corde-earth">—</b></div>
+      <div class="row"><span>🏀 Autour d'un ballon de basket</span><b id="corde-ball">—</b></div>
+      <div class="footnote">Le même écart, peu importe la taille du cercle de départ !</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LOI DE BENFORD ============ -->
+<div class="screen" id="game-benford">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('benford')">i</button>
+    </div>
+    <div class="game-title">🔢 La loi de Benford</div>
+    <div class="panel">
+      <h2>Génère 5000 nombres "naturels" (croissance aléatoire)</h2>
+      <div class="btn-row"><button class="btn primary" onclick="benfordSimulate()">Générer et analyser</button></div>
+    </div>
+    <div class="panel">
+      <h2>Fréquence du premier chiffre</h2>
+      <div id="benford-results"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PARADOXE DE CONDORCET ============ -->
+<div class="screen" id="game-condorcet">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('condorcet')">i</button>
+    </div>
+    <div class="game-title">🗳️ Paradoxe de Condorcet</div>
+    <div class="panel">
+      <h2>3 votants classent A, B, C par préférence</h2>
+      <div class="btn-row"><button class="btn primary" onclick="condorcetVote()">Générer un vote</button></div>
+      <div class="status-line" id="condorcet-status" style="margin-top:12px;"></div>
+    </div>
+    <div class="panel">
+      <h2>Sur beaucoup de votes</h2>
+      <div class="btn-row"><button class="btn" onclick="condorcetSimulate()">Simuler 10 000 votes</button></div>
+      <div class="row" style="margin-top:12px;"><span>% de votes sans gagnant logique (cycle)</span><b id="condorcet-cycleRate">—</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HÔTEL DE HILBERT ============ -->
+<div class="screen" id="game-hilbert">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('hilbert')">i</button>
+    </div>
+    <div class="game-title">🏨 L'hôtel infini de Hilbert</div>
+    <div class="panel">
+      <h2>L'hôtel a une infinité de chambres, TOUTES occupées</h2>
+      <div class="status-line" id="hilbert-status">Chambre 1 : Client A · Chambre 2 : Client B · Chambre 3 : Client C · Chambre 4 : Client D · ... (infini)</div>
+      <div class="btn-row"><button class="btn primary" onclick="hilbertNewGuest()">Un nouveau client arrive</button></div>
+    </div>
+    <div class="panel">
+      <h2>Ce qui se passe</h2>
+      <div class="status-line" id="hilbert-explain">Chaque client déménage de sa chambre N vers la chambre N+1. Ça libère la chambre 1, même si l'hôtel était complet !</div>
+      <div class="row"><span>Nouveaux clients accueillis</span><b id="hilbert-count">0</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LES DEUX ENVELOPPES ============ -->
+<div class="screen" id="game-enveloppes">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('enveloppes')">i</button>
+    </div>
+    <div class="game-title">✉️ Les deux enveloppes</div>
+    <div class="panel">
+      <h2>2 enveloppes : une contient 2x plus que l'autre</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Choisis une enveloppe, découvre son contenu, puis décide : tu gardes, ou tu changes ?</p>
+      <div class="btn-row" id="env-choice">
+        <button class="btn primary" style="flex:1;" onclick="envChoose('A')">Enveloppe A</button>
+        <button class="btn primary" style="flex:1;" onclick="envChoose('B')">Enveloppe B</button>
+      </div>
+      <div class="status-line" id="env-status" style="margin-top:14px;"></div>
+      <div class="btn-row" id="env-decision" style="display:none;">
+        <button class="btn" style="flex:1;" onclick="envDecide(false)">Garder</button>
+        <button class="btn primary" style="flex:1;" onclick="envDecide(true)">Changer</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Sur beaucoup de parties</h2>
+      <div class="btn-row"><button class="btn" onclick="envSimulate()">Simuler 10 000 parties : toujours changer</button></div>
+      <div class="row" style="margin-top:12px;"><span>Gain moyen en changeant systématiquement</span><b id="env-avgSwitch">—</b></div>
+      <div class="row"><span>Gain moyen en restant systématiquement</span><b id="env-avgStay">—</b></div>
+      <div class="footnote">Avec un montant de départ fixe et connu (pas infini), changer ou rester donne le MÊME résultat en moyenne.</div>
+    </div>
+  </div>
+</div>
+
 <!-- ============ MODAL ============ -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalContent"></div>
@@ -844,6 +1073,16 @@ const puzzles = [
   {id:'toscane', icon:'🎲', color:'#b85fc9', title:'Grand Duc de Toscane', hook:'En lançant 3 dés, la somme 10 sort plus souvent que la somme 9. Pourtant les deux ont l\'air d\'avoir autant de chances. Pourquoi ?', odds:'9 et 10 : pas égaux !'},
   {id:'franccarreau', icon:'🪙', color:'#8fc95f', title:'Le Franc-Carreau', hook:'Lance une pièce sur un sol carrelé. Quelle chance qu\'elle ne touche aucune ligne ? Teste-le toi-même.', odds:'Ça se calcule avec une formule'},
   {id:'zenon', icon:'🐢', color:'#c9825f', title:'Achille et la tortue', hook:'Pour la rattraper, Achille doit d\'abord parcourir la moitié de la distance. Puis la moitié du reste. À l\'infini... Alors comment fait-il pour la rattraper ?', odds:'Infini d\'étapes, temps fini'},
+  {id:'prisonniers', icon:'📦', color:'#b85f8f', title:'Les 100 prisonniers', hook:'100 prisonniers, 100 boîtes. Une stratégie simple fait passer leurs chances de survie de quasi 0% à 31%. Laquelle ?', odds:'0% → 31% avec la bonne astuce'},
+  {id:'bus', icon:'🚌', color:'#5f9dc9', title:'Le bus qui n\'arrive jamais', hook:'Même si les bus passent en moyenne toutes les 5 minutes, ton attente moyenne est presque toujours plus longue. Pourquoi ?', odds:'Ton ressenti n\'est pas un mensonge'},
+  {id:'ruine', icon:'🎰', color:'#c95f5f', title:'La ruine du joueur', hook:'Même à un jeu parfaitement équitable (50/50), miser petit et souvent finit presque toujours par te ruiner. Teste-le.', odds:'Équitable ≠ sans risque'},
+  {id:'braess', icon:'🚗', color:'#8f5fc9', title:'Paradoxe de Braess', hook:'Ajouter une route gratuite à une ville peut ralentir TOUT LE MONDE, pas l\'inverse. Comment c\'est possible ?', odds:'+1 route = plus lent pour tous'},
+  {id:'taxi', icon:'🚕', color:'#c9c15f', title:'Le paradoxe du taxi', hook:'Un témoin fiable à 80% peut quand même se tromper la plupart du temps. Ça dépend d\'un chiffre qu\'on oublie souvent.', odds:'Fiable ≠ toujours juste'},
+  {id:'corde', icon:'🌍', color:'#5fc9a0', title:'La corde autour de la Terre', hook:'Ajoute 1 mètre à une corde qui fait le tour de la Terre. L\'écart au sol tout autour est... plus grand que tu ne crois.', odds:'Même écart, planète ou ballon'},
+  {id:'benford', icon:'🔢', color:'#c98f5f', title:'La loi de Benford', hook:'Dans plein de données réelles (populations, factures...), le chiffre 1 apparaît en premier bien plus souvent qu\'il ne devrait. Vérifie-le.', odds:'1 domine, sans raison évidente'},
+  {id:'condorcet', icon:'🗳️', color:'#5f7ac9', title:'Paradoxe de Condorcet', hook:'Un vote à 3 personnes peut n\'avoir AUCUN gagnant logique — A bat B, B bat C, et C bat A. Vois-le de tes yeux.', odds:'Un vote peut tourner en boucle'},
+  {id:'hilbert', icon:'🏨', color:'#c95fa8', title:'L\'hôtel infini de Hilbert', hook:'Un hôtel avec une infinité de chambres, toutes occupées, peut quand même accueillir un client de plus. Comment ?', odds:'Complet ≠ plus de place'},
+  {id:'enveloppes', icon:'✉️', color:'#5fc9c1', title:'Les deux enveloppes', hook:'L\'envie de toujours "changer d\'enveloppe" pour gagner plus semble logique... et c\'est pourtant un piège de calcul.', odds:'"Toujours changer" = un piège'},
 ];
 
 const infoText = {
@@ -936,6 +1175,96 @@ const infoText = {
       "Chaque étape est de plus en plus courte ET de plus en plus rapide à parcourir. La somme des durées (1/2 + 1/4 + 1/8 + ...) converge vers un nombre fini : 1.",
       "C'est le concept de 'série convergente' : une infinité de termes peut additionner à un résultat fini. Achille rattrape la tortue en un temps parfaitement normal — le paradoxe vient juste d'une façon de découper le temps, pas d'un vrai blocage physique."
     ]
+  },
+  prisonniers: {
+    title:'📦 Pourquoi la stratégie des boucles marche',
+    body:[
+      "Les numéros dans les boîtes forment des 'boucles' : la boîte 5 contient peut-être le numéro 12, la boîte 12 le numéro 30, et ainsi de suite jusqu'à revenir au numéro 5.",
+      "En suivant sa propre boucle depuis sa boîte de départ, un prisonnier trouve toujours son numéro — la seule question est si sa boucle fait moins de 50 étapes.",
+      "Le groupe entier réussit seulement si TOUTES les boucles font 50 cases ou moins. Grâce aux maths des permutations aléatoires, ça arrive environ 31% du temps.",
+      "La stratégie aléatoire, elle, n'exploite aucune structure — chaque prisonnier a individuellement 50% de chance, mais TOUS réussir en même temps devient quasiment impossible (environ 0,0000000008%)."
+    ]
+  },
+  bus: {
+    title:'🚌 Pourquoi l\'attente semble toujours plus longue',
+    body:[
+      "Si tu arrives à un moment totalement aléatoire, tu as plus de chances de 'tomber' dans un long intervalle que dans un court — simplement parce que les longs intervalles occupent plus de temps total.",
+      "C'est le paradoxe de l'inspection : ton expérience personnelle est biaisée vers les grands écarts, même si la moyenne théorique des écarts est plus petite.",
+      "Ce même effet explique pourquoi 'tous les bus sont en retard' te semble vrai, ou pourquoi la classe où tu attends 'a toujours plus d'élèves' que la moyenne réelle.",
+      "Ce n'est pas une impression fausse — c'est un vrai biais statistique dans la façon dont on échantillonne le temps."
+    ]
+  },
+  ruine: {
+    title:'🎰 Pourquoi un jeu "équitable" peut quand même te ruiner',
+    body:[
+      "Avec un capital fini et un objectif fixe, même un jeu parfaitement 50/50 a un chemin qui mène plus souvent vers la ruine que vers la victoire, si ton capital de départ est petit par rapport à l'objectif.",
+      "Chaque perte te rapproche de 0€, où le jeu s'arrête définitivement (tu ne peux plus miser). Chaque gain te rapproche de l'objectif, mais rien ne t'empêche de redescendre après.",
+      "Plus ton capital de départ est petit comparé à l'objectif, plus tu passes de temps près de 0€ — là où une seule série de pertes suffit à t'éliminer.",
+      "C'est pour ça que les casinos gagnent presque toujours à long terme : même avec des jeux proches de l'équitable, le joueur a un capital limité face à une banque quasi illimitée."
+    ]
+  },
+  braess: {
+    title:'🚗 Pourquoi une route en plus peut ralentir tout le monde',
+    body:[
+      "Chaque conducteur choisit égoïstement la route qui LUI semble la plus rapide à cet instant, sans se soucier de l'effet sur les autres.",
+      "Quand un raccourci gratuit est ajouté, tout le monde est tenté de l'emprunter — mais si tout le monde fait ce choix, ce chemin devient lui-même encombré et lent.",
+      "Le nouvel équilibre (où plus personne n'a intérêt à changer de route seul) peut être pire pour TOUT LE MONDE que l'ancien équilibre sans le raccourci.",
+      "C'est un exemple classique où des décisions individuelles rationnelles mènent à un résultat collectif pire — plusieurs villes ont réellement amélioré leur trafic en FERMANT des routes."
+    ]
+  },
+  taxi: {
+    title:'🚕 Pourquoi la fiabilité du témoin ne suffit pas',
+    body:[
+      "Si les taxis bleus sont rares dans la ville, il y a beaucoup plus de taxis NON bleus qui peuvent être mal identifiés comme bleus par erreur, simplement parce qu'ils sont bien plus nombreux au départ.",
+      "Même avec un témoin fiable à 80%, si les taxis bleus ne représentent que 15% du parc, les 'faux positifs' (taxis non-bleus mal vus comme bleus) peuvent être plus nombreux que les 'vrais positifs'.",
+      "Le théorème de Bayes permet de calculer la vraie probabilité en combinant la fiabilité du témoin ET la rareté de départ (le 'taux de base') — ignorer ce taux de base est une erreur de raisonnement extrêmement fréquente, y compris chez les professionnels.",
+      "Ce même piège s'applique aux tests médicaux : un test fiable à 99% pour une maladie rare donne souvent plus de faux positifs que de vrais cas détectés."
+    ]
+  },
+  corde: {
+    title:'🌍 Pourquoi l\'écart ne dépend pas de la taille du cercle',
+    body:[
+      "La circonférence d'un cercle est C = 2πr. Si on ajoute une longueur 'd' à la corde, le nouveau rayon devient (C+d)/(2π).",
+      "L'écart entre la corde et le cercle est donc simplement d/(2π) — une formule qui ne contient PAS le rayon de départ !",
+      "Concrètement : ajouter 1 mètre de corde crée un écart d'environ 16 centimètres tout autour, que ce soit autour d'un ballon de basket ou de la Terre entière.",
+      "C'est contre-intuitif car on s'attend à ce qu'un si petit ajout soit insignifiant sur une si grande planète — mais la géométrie du cercle ne se soucie pas de l'échelle ici."
+    ]
+  },
+  benford: {
+    title:'🔢 Pourquoi le chiffre 1 domine',
+    body:[
+      "Beaucoup de données réelles (populations, longueurs de rivières, chiffres d'affaires) résultent de croissances multiplicatives répétées, pas de tirages uniformes.",
+      "Un nombre doit 'traverser' la plage des chiffres commençant par 1 (100 à 199) avant d'atteindre celle des chiffres commençant par 9 — il passe donc statistiquement plus de temps avec un 1 en tête.",
+      "Cette loi permet même de détecter des fraudes comptables : des chiffres inventés à la main respectent rarement cette distribution naturelle et sont plus uniformes qu'ils ne devraient l'être.",
+      "Ce n'est pas magique : c'est une conséquence mathématique de la façon dont les échelles logarithmiques fonctionnent pour des données qui grandissent proportionnellement."
+    ]
+  },
+  condorcet: {
+    title:'🗳️ Pourquoi un vote peut n\'avoir aucun gagnant logique',
+    body:[
+      "Chaque votant a un classement individuel parfaitement cohérent (par exemple A > B > C), mais additionner plusieurs classements cohérents peut créer un résultat collectif incohérent.",
+      "Exemple classique : Votant 1 préfère A>B>C, Votant 2 préfère B>C>A, Votant 3 préfère C>A>B. En duel, A bat B (2 voix contre 1), B bat C (2 contre 1), et C bat A (2 contre 1) — un cycle sans fin.",
+      "Ce paradoxe montre qu'il n'existe pas de système de vote parfait capable de toujours produire un choix collectif cohérent à partir de préférences individuelles cohérentes (théorème d'impossibilité d'Arrow).",
+      "C'est un vrai sujet en science politique : le mode de scrutin choisi peut littéralement changer qui gagne, même avec les mêmes préférences des électeurs."
+    ]
+  },
+  hilbert: {
+    title:'🏨 Pourquoi un hôtel complet peut accueillir plus de monde',
+    body:[
+      "L'astuce : demander à CHAQUE client de déménager de sa chambre N vers la chambre N+1. Le client de la chambre 1 va en 2, celui de la 2 va en 3, etc.",
+      "Comme il y a une infinité de chambres, cette chaîne de déménagements ne s'arrête jamais — personne ne se retrouve sans chambre.",
+      "Résultat : la chambre 1 se libère, alors que l'hôtel reste 'complet' au sens où chaque chambre a toujours quelqu'un dedans.",
+      "Ça illustre une propriété unique de l'infini : contrairement à un nombre fini, 'infini plus un' reste égal à 'infini' — une notion développée par le mathématicien Georg Cantor."
+    ]
+  },
+  enveloppes: {
+    title:'✉️ Pourquoi "toujours changer" est un piège',
+    body:[
+      "L'argument piège dit : si mon enveloppe contient X, l'autre contient soit X/2 soit 2X avec 50% de chance chacun, donc l'espérance de l'autre est 0,5×(X/2) + 0,5×(2X) = 1,25X — donc je devrais toujours changer.",
+      "Le problème : ce raisonnement traite X comme fixe alors qu'il devrait dépendre de la VALEUR RÉELLE que tu as découverte, pas d'une variable abstraite.",
+      "Avec un scénario bien défini (par exemple, les montants possibles sont tirés d'une liste connue à l'avance), le calcul correct montre que changer ou rester donne exactement la même espérance de gain en moyenne.",
+      "Ce paradoxe est un piège classique de manipulation d'espérance mathématique — il a fait couler beaucoup d'encre chez les philosophes et mathématiciens sur ce qui rend un raisonnement sur l'infini ou l'inconnu valide ou non."
+    ]
   }
 };
 
@@ -959,6 +1288,11 @@ const quizBankGeneralByAge = {
     {q:"Si t'as eu 3 fois « Pile » d'affilée, le prochain lancer a plus de chance de faire « Face ».", a:false, exp:"Chaque lancer est indépendant du précédent — toujours 50/50, la pièce n'a pas de mémoire !"},
     {q:"Plus tu essaies un jeu de hasard, plus le résultat moyen se rapproche de la vraie probabilité.", a:true, exp:"C'est la loi des grands nombres : plus on répète, plus on s'approche de la réalité."},
     {q:"Un événement « impossible » a 0% de chance d'arriver.", a:true, exp:"Par définition, un événement impossible ne peut jamais se produire."},
+    {q:"Dans un jeu de 32 cartes, tu as plus de chances de tirer un cœur qu'un roi.", a:true, exp:"8 cœurs sur 32 cartes (25%), mais seulement 4 rois sur 32 (12,5%). Le cœur est plus probable."},
+    {q:"Si tu joues à pile ou face avec un ami, vous avez chacun 50% de chance de gagner un tour.", a:true, exp:"Exactement — un jeu à deux issues équiprobables partage la chance en deux parts égales."},
+    {q:"Un événement « certain » a toujours 100% de chance d'arriver.", a:true, exp:"Par définition — si c'est certain, ça arrive à coup sûr, donc 100%."},
+    {q:"Avec un sac de 5 billes rouges et 5 billes bleues, tu as plus de chance de tirer une bille rouge.", a:false, exp:"Il y a autant de billes rouges que de bleues (5 et 5) donc exactement 50/50, pas d'avantage pour le rouge."},
+    {q:"Plus un jeu a de joueurs, plus chaque joueur a de chances de gagner.", a:false, exp:"C'est l'inverse : plus il y a de joueurs, plus la chance de chacun de gagner diminue, car elle se partage entre tous."},
   ],
   ado: [
     {q:"La probabilité qu'un événement ET son contraire arrivent EN MÊME TEMPS est de 100%.", a:false, exp:"Un événement et son contraire sont exclusifs — ils ne peuvent pas arriver ensemble. Leurs probabilités s'additionnent à 100%, chacun séparément."},
@@ -966,6 +1300,11 @@ const quizBankGeneralByAge = {
     {q:"Une moyenne peut être trompeuse s'il y a des valeurs extrêmes dans les données.", a:true, exp:"Un salaire de patron ultra élevé peut fausser complètement la moyenne des salaires d'une entreprise."},
     {q:"Le hasard n'a pas de mémoire.", a:true, exp:"Chaque tirage aléatoire est indépendant des précédents (sauf système conçu autrement, comme des cartes sans remise)."},
     {q:"Un sondage sur 20 personnes est aussi fiable qu'un sondage sur 2000 personnes.", a:false, exp:"Plus l'échantillon est grand, plus le résultat est fiable et proche de la réalité globale."},
+    {q:"La médiane et la moyenne sont toujours égales.", a:false, exp:"Elles ne coïncident que pour des distributions symétriques — sinon, des valeurs extrêmes peuvent les écarter fortement."},
+    {q:"Un échantillon non représentatif peut donner un résultat totalement faussé, même s'il est grand.", a:true, exp:"La taille ne suffit pas — si l'échantillon est biaisé dans sa composition, plus de données ne corrige pas le biais."},
+    {q:"Deux événements peuvent être corrélés sans qu'aucun ne cause l'autre.", a:true, exp:"C'est très courant — un troisième facteur peut influencer les deux en même temps (variable cachée)."},
+    {q:"En probabilité, additionner deux événements possibles EN MÊME TEMPS donne toujours leur probabilité combinée.", a:false, exp:"S'ils peuvent arriver ensemble, il faut soustraire leur intersection pour ne pas la compter deux fois (formule d'union)."},
+    {q:"Un test statistique 'significatif' prouve à 100% qu'un effet est réel.", a:false, exp:"Un résultat significatif réduit le doute mais ne l'élimine jamais totalement — il reste toujours une marge d'erreur possible."},
   ],
   adulte: [
     {q:"Le biais de confirmation, c'est chercher des infos qui confirment ce qu'on croit déjà.", a:true, exp:"Exactement — on ignore souvent, sans s'en rendre compte, ce qui contredit nos idées de départ."},
@@ -973,6 +1312,11 @@ const quizBankGeneralByAge = {
     {q:"Le biais du survivant fait qu'on surestime les chances de succès en ne regardant que les gagnants visibles.", a:true, exp:"On ne voit jamais les échecs invisibles (entreprises fermées, etc.), ça fausse notre perception du risque réel."},
     {q:"Une probabilité conditionnelle change selon l'information déjà connue.", a:true, exp:"C'est le cœur du théorème de Bayes — chaque nouvelle info modifie la probabilité restante."},
     {q:"Un risque de 1% par an reste négligeable même répété sur 30 ans.", a:false, exp:"Répété 30 fois, ce risque cumulé grimpe à environ 26% de chance qu'il arrive au moins une fois — loin d'être négligeable."},
+    {q:"La diversification d'un portefeuille réduit le risque sans jamais réduire le rendement espéré.", a:false, exp:"Diversifier réduit la variance (le risque), mais peut aussi lisser et donc réduire le rendement espéré par rapport à un pari concentré chanceux."},
+    {q:"Le coût irrécupérable (sunk cost) devrait influencer une décision future rationnelle.", a:false, exp:"Un coût déjà dépensé et non récupérable ne devrait, en théorie, pas peser sur une décision future — seul l'avenir compte."},
+    {q:"L'effet de halo, c'est juger un trait d'une personne à partir d'une impression générale positive ou négative.", a:true, exp:"Exactement — une bonne première impression nous fait surestimer d'autres qualités sans preuve."},
+    {q:"Une probabilité de 50% pour un événement veut dire qu'il arrivera forcément une fois sur deux essais.", a:false, exp:"50% est une tendance à long terme, pas une garantie sur un petit nombre d'essais — la variance à court terme reste grande."},
+    {q:"Le regret d'anticipation peut pousser à prendre des décisions plus prudentes que ce que la probabilité pure suggérerait.", a:true, exp:"C'est un biais bien documenté en économie comportementale — la peur du regret pèse autant que le calcul rationnel."},
   ],
 };
 
@@ -1002,7 +1346,7 @@ function quizStart(mode){
   }
   const bank = mode==='general' ? quizBankGeneralByAge[quizState.general.ageTier] : quizBankParadoxes;
   const st = quizState[mode];
-  st.questions = quizShuffle(bank).slice(0,5);
+  st.questions = quizShuffle(bank).slice(0,10);
   st.index = 0;
   st.score = 0;
   quizShowQuestion(mode);
@@ -1298,7 +1642,7 @@ let qsjRevealState = 'hidden'; // 'hidden' | 'shown'
 function openQuisuisje(){
   switchScreen('game-quisuisje');
   setActiveTab(null);
-  qsjPlayers = [];
+  qsjPlayers = JSON.parse(localStorage.getItem('qsjPlayers') || '[]');
   qsjRenderSetup();
   trackPage('/quisuisje');
 }
@@ -1339,12 +1683,14 @@ function qsjAddPlayer(){
   const name = input.value.trim();
   if(!name) return;
   qsjPlayers.push(name);
+  localStorage.setItem('qsjPlayers', JSON.stringify(qsjPlayers));
   input.value = '';
   qsjRenderPlayerList();
   input.focus();
 }
 function qsjRemovePlayer(i){
   qsjPlayers.splice(i,1);
+  localStorage.setItem('qsjPlayers', JSON.stringify(qsjPlayers));
   qsjRenderPlayerList();
 }
 function qsjShuffle(arr){
@@ -1409,6 +1755,252 @@ function qsjNextPlayer(){
   qsjRevealIndex++;
   qsjRevealState = 'hidden';
   qsjRenderReveal();
+}
+
+/* ================= 100 PRISONNIERS ================= */
+function prisPermutation(n){
+  const arr = Array.from({length:n}, (_,i)=>i);
+  for(let i=n-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+function prisLoopSuccess(perm, n, limit){
+  for(let i=0;i<n;i++){
+    let current = i, found = false;
+    for(let k=0;k<limit;k++){
+      current = perm[current];
+      if(current === i){ found = true; break; }
+    }
+    if(!found) return false;
+  }
+  return true;
+}
+function prisRandomSuccess(n, limit){
+  for(let i=0;i<n;i++){
+    const opened = new Set();
+    while(opened.size < limit) opened.add(Math.floor(Math.random()*n));
+    // chaque prisonnier réussit si sa "position cible" (indépendante) tombe dans ses tirages aléatoires
+    const target = Math.floor(Math.random()*n);
+    if(!opened.has(target)) return false;
+  }
+  return true;
+}
+function prisSimulate(){
+  const n = 100, limit = 50, trials = 500;
+  let loopWins = 0, randomWins = 0;
+  for(let t=0;t<trials;t++){
+    const perm = prisPermutation(n);
+    if(prisLoopSuccess(perm, n, limit)) loopWins++;
+    if(prisRandomSuccess(n, limit)) randomWins++;
+  }
+  const pLoop = (100*loopWins/trials).toFixed(1);
+  const pRandom = (100*randomWins/trials).toFixed(3);
+  document.getElementById('pris-loop').textContent = `${loopWins} / ${trials} (${pLoop}%)`;
+  document.getElementById('pris-loopBar').style.width = pLoop+'%';
+  document.getElementById('pris-random').textContent = `${randomWins} / ${trials} (${pRandom}%)`;
+  document.getElementById('pris-randomBar').style.width = Math.max(pRandom,0.5)+'%';
+}
+
+/* ================= LE BUS QUI N'ARRIVE JAMAIS ================= */
+function busSimulate(){
+  const gaps = [2,2,2,2,2,2,2,2,2,20];
+  const total = gaps.reduce((a,b)=>a+b,0);
+  const trials = 10000;
+  let sumWait = 0;
+  for(let t=0;t<trials;t++){
+    let arrival = Math.random()*total;
+    let cursor = 0;
+    for(const g of gaps){
+      if(arrival < cursor+g){
+        sumWait += (cursor+g) - arrival;
+        break;
+      }
+      cursor += g;
+    }
+  }
+  const avgWait = (sumWait/trials).toFixed(2);
+  document.getElementById('bus-result').textContent = avgWait+' min';
+}
+
+/* ================= LA RUINE DU JOUEUR ================= */
+function ruineUpdateLabel(){
+  document.getElementById('ruine-capLabel').textContent = document.getElementById('ruine-cap').value+'€';
+}
+function ruineSimulate(){
+  const start = parseInt(document.getElementById('ruine-cap').value);
+  const target = 100;
+  const trials = 2000;
+  let wins = 0, losses = 0;
+  for(let t=0;t<trials;t++){
+    let capital = start;
+    let steps = 0;
+    while(capital>0 && capital<target && steps<100000){
+      capital += Math.random()<0.5 ? 1 : -1;
+      steps++;
+    }
+    if(capital>=target) wins++; else losses++;
+  }
+  const pWin = (100*wins/trials).toFixed(1);
+  const pLose = (100*losses/trials).toFixed(1);
+  document.getElementById('ruine-win').textContent = `${wins} / ${trials} (${pWin}%)`;
+  document.getElementById('ruine-winBar').style.width = pWin+'%';
+  document.getElementById('ruine-lose').textContent = `${losses} / ${trials} (${pLose}%)`;
+  document.getElementById('ruine-loseBar').style.width = pLose+'%';
+}
+
+/* ================= PARADOXE DE BRAESS ================= */
+function braessShow(withShortcut){
+  // Exemple classique : 4000 conducteurs, routes A-C-B et A-D-B, coût x/100 (congestion) + 45 (fixe)
+  const drivers = 4000;
+  let status, detail;
+  if(!withShortcut){
+    // équilibre : moitié par chaque route symétrique
+    const half = drivers/2;
+    const time = (half/100) + 45; // temps sur le tronçon variable + le fixe
+    status = time.toFixed(0)+' min par conducteur';
+    detail = `Sans raccourci : le trafic se répartit également sur les 2 routes (${half} chacune). Chacune prend ${time.toFixed(0)} minutes.`;
+  } else {
+    // tout le monde utilise le raccourci A-C-D-B, congestionnant les deux tronçons variables à fond
+    const time = (drivers/100) + (drivers/100);
+    status = time.toFixed(0)+' min par conducteur';
+    detail = `Avec le raccourci gratuit, TOUT LE MONDE l'emprunte (A→C→D→B), congestionnant les deux tronçons variables à fond : ${time.toFixed(0)} minutes chacun — pire pour tout le monde qu'avant !`;
+  }
+  document.getElementById('braess-status').textContent = status;
+  document.getElementById('braess-detail').textContent = detail;
+}
+
+/* ================= PARADOXE DU TAXI (Bayes) ================= */
+function taxiUpdate(){
+  const rel = parseInt(document.getElementById('taxi-rel').value)/100;
+  const base = parseInt(document.getElementById('taxi-base').value)/100;
+  document.getElementById('taxi-relLabel').textContent = (rel*100).toFixed(0)+'%';
+  document.getElementById('taxi-baseLabel').textContent = (base*100).toFixed(0)+'%';
+  // P(bleu | dit bleu) = P(dit bleu | bleu)*P(bleu) / [P(dit bleu|bleu)*P(bleu) + P(dit bleu|pas bleu)*P(pas bleu)]
+  const pDitBleuSachantBleu = rel;
+  const pDitBleuSachantPasBleu = 1-rel;
+  const num = pDitBleuSachantBleu * base;
+  const denom = num + pDitBleuSachantPasBleu * (1-base);
+  const result = (100*num/denom).toFixed(1);
+  document.getElementById('taxi-result').textContent = result+'%';
+}
+taxiUpdate();
+
+/* ================= LA CORDE AUTOUR DE LA TERRE ================= */
+function cordeUpdate(){
+  const add = parseFloat(document.getElementById('corde-add').value);
+  document.getElementById('corde-addLabel').textContent = add.toFixed(1)+' mètre'+(add>=2?'s':'');
+  const gapMeters = add / (2*Math.PI);
+  const gapCm = (gapMeters*100).toFixed(1);
+  document.getElementById('corde-earth').textContent = gapCm+' cm d\'écart';
+  document.getElementById('corde-ball').textContent = gapCm+' cm d\'écart';
+}
+cordeUpdate();
+
+/* ================= LOI DE BENFORD ================= */
+function benfordSimulate(){
+  const n = 5000;
+  const counts = new Array(10).fill(0);
+  for(let i=0;i<n;i++){
+    let value = 1 + Math.random()*9; // démarre entre 1 et 10
+    const steps = Math.floor(Math.random()*40)+5;
+    for(let s=0;s<steps;s++){
+      value *= (1 + (Math.random()*0.2 - 0.05)); // croissance multiplicative aléatoire
+    }
+    const str = value.toExponential().replace('-','');
+    const firstDigit = parseInt(str[0]);
+    if(firstDigit>=1 && firstDigit<=9) counts[firstDigit]++;
+  }
+  const total = counts.reduce((a,b)=>a+b,0);
+  const benfordTheory = [0,30.1,17.6,12.5,9.7,7.9,6.7,5.8,5.1,4.6];
+  let html = '';
+  for(let d=1;d<=9;d++){
+    const pct = (100*counts[d]/total).toFixed(1);
+    html += `
+      <div class="row"><span>Chiffre ${d} (théorie ${benfordTheory[d]}%)</span><b>${pct}%</b></div>
+      <div class="bar-container"><div class="bar accent" style="width:${pct*2.5}%"></div></div>
+    `;
+  }
+  document.getElementById('benford-results').innerHTML = html;
+}
+
+/* ================= PARADOXE DE CONDORCET ================= */
+function condorcetGenerateVoter(){
+  const orders = [['A','B','C'],['A','C','B'],['B','A','C'],['B','C','A'],['C','A','B'],['C','B','A']];
+  return orders[Math.floor(Math.random()*orders.length)];
+}
+function condorcetBeats(voters, x, y){
+  let xWins = 0, yWins = 0;
+  voters.forEach(v=>{
+    if(v.indexOf(x) < v.indexOf(y)) xWins++; else yWins++;
+  });
+  return xWins > yWins;
+}
+function condorcetHasCycle(voters){
+  const aBeatsB = condorcetBeats(voters,'A','B');
+  const bBeatsC = condorcetBeats(voters,'B','C');
+  const cBeatsA = condorcetBeats(voters,'C','A');
+  return aBeatsB && bBeatsC && cBeatsA || (!aBeatsB && !bBeatsC && !cBeatsA);
+}
+function condorcetVote(){
+  const voters = [condorcetGenerateVoter(), condorcetGenerateVoter(), condorcetGenerateVoter()];
+  const cycle = condorcetHasCycle(voters);
+  const desc = voters.map((v,i)=>`Votant ${i+1}: ${v.join('>')}`).join(' · ');
+  document.getElementById('condorcet-status').textContent = cycle
+    ? `🟥 ${desc} → CYCLE ! Aucun gagnant logique.`
+    : `🟩 ${desc} → Un gagnant logique existe.`;
+}
+function condorcetSimulate(){
+  const trials = 10000;
+  let cycles = 0;
+  for(let t=0;t<trials;t++){
+    const voters = [condorcetGenerateVoter(), condorcetGenerateVoter(), condorcetGenerateVoter()];
+    if(condorcetHasCycle(voters)) cycles++;
+  }
+  document.getElementById('condorcet-cycleRate').textContent = (100*cycles/trials).toFixed(1)+'%';
+}
+
+/* ================= HÔTEL DE HILBERT ================= */
+let hilbertGuestCount = 0;
+function hilbertNewGuest(){
+  hilbertGuestCount++;
+  document.getElementById('hilbert-status').textContent = `Client déménagé : chambre N → N+1, pour toutes les chambres. Chambre 1 libérée pour le Client ${String.fromCharCode(65+((hilbertGuestCount-1)%26))} !`;
+  document.getElementById('hilbert-count').textContent = hilbertGuestCount;
+}
+
+/* ================= LES DEUX ENVELOPPES ================= */
+const envAmounts = [5,10,20,40,80]; // montants possibles connus à l'avance
+let envChosenValue = null;
+let envOtherValue = null;
+function envChoose(letter){
+  const base = envAmounts[Math.floor(Math.random()*envAmounts.length)];
+  const isDouble = Math.random()<0.5;
+  envChosenValue = isDouble ? base*2 : base;
+  envOtherValue = isDouble ? base : base*2;
+  document.getElementById('env-status').textContent = `Tu ouvres l'enveloppe ${letter} : elle contient ${envChosenValue}€.`;
+  document.getElementById('env-choice').style.display = 'none';
+  document.getElementById('env-decision').style.display = 'flex';
+}
+function envDecide(switched){
+  const final = switched ? envOtherValue : envChosenValue;
+  document.getElementById('env-status').textContent = `Tu ${switched?'changes':'gardes'} → tu repars avec ${final}€. (L'autre enveloppe contenait ${switched?envChosenValue:envOtherValue}€)`;
+  document.getElementById('env-decision').style.display = 'none';
+  document.getElementById('env-choice').style.display = 'flex';
+}
+function envSimulate(){
+  const trials = 10000;
+  let sumSwitch = 0, sumStay = 0;
+  for(let t=0;t<trials;t++){
+    const base = envAmounts[Math.floor(Math.random()*envAmounts.length)];
+    const isDouble = Math.random()<0.5;
+    const chosen = isDouble ? base*2 : base;
+    const other = isDouble ? base : base*2;
+    sumStay += chosen;
+    sumSwitch += other;
+  }
+  document.getElementById('env-avgSwitch').textContent = (sumSwitch/trials).toFixed(2)+'€';
+  document.getElementById('env-avgStay').textContent = (sumStay/trials).toFixed(2)+'€';
 }
 
 /* ================= ADS TOGGLE (mock — vraie transaction viendra avec l'app native) ================= */
