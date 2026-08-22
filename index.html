@@ -320,6 +320,64 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 .zenon-fill{position:absolute; left:0; top:0; bottom:0; background:var(--accent); border-radius:10px; transition:width .4s ease;}
 .zenon-marker{position:absolute; top:50%; transform:translate(-50%,-50%); font-size:22px;}
 
+/* ---------- TROPHÉES ---------- */
+.trophy-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(90px,1fr)); gap:12px; margin-top:6px;}
+.trophy{
+  background:var(--bg2); border:1px solid var(--line); border-radius:14px;
+  padding:14px 8px; text-align:center; opacity:0.35; filter:grayscale(1);
+}
+.trophy.unlocked{opacity:1; filter:none; border-color:var(--accent); background:linear-gradient(160deg, #232840, #1c2032);}
+.trophy .trophy-icon{font-size:30px; display:block; margin-bottom:6px;}
+.trophy .trophy-name{font-size:10.5px; font-weight:600; color:var(--text); line-height:1.3;}
+.trophy .trophy-desc{font-size:9.5px; color:var(--muted); margin-top:2px; line-height:1.3;}
+
+/* ---------- CLASSEMENT ---------- */
+.leaderboard-row{
+  display:flex; align-items:center; gap:12px; padding:10px 6px;
+  border-bottom:1px solid var(--line);
+}
+.leaderboard-row:last-child{border-bottom:none;}
+.leaderboard-rank{width:26px; font-weight:700; color:var(--muted); font-size:13px;}
+.leaderboard-row.me{background:rgba(245,185,66,0.08); border-radius:8px;}
+.leaderboard-name{flex:1; font-size:13.5px;}
+.leaderboard-score{font-weight:700; color:var(--accent); font-size:13.5px;}
+.preview-badge{
+  display:inline-block; font-size:10px; color:var(--muted); background:var(--bg2);
+  border:1px dashed var(--line); padding:3px 8px; border-radius:99px; margin-bottom:12px;
+}
+
+/* ---------- TOAST TROPHÉE ---------- */
+.toast{
+  position:fixed; top:16px; left:50%; transform:translateX(-50%) translateY(-100px);
+  background:var(--accent); color:#1a1300; font-weight:700; font-size:13px;
+  padding:12px 20px; border-radius:12px; z-index:200; transition:transform .4s ease;
+  box-shadow:0 8px 24px rgba(0,0,0,0.4);
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ---------- WORDLE ---------- */
+.wordle-grid{display:flex; flex-direction:column; gap:6px; align-items:center; margin:16px 0;}
+.wordle-row{display:flex; gap:6px;}
+.wordle-cell{
+  width:46px; height:46px; border:2px solid var(--line); border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:700; text-transform:uppercase; color:var(--text);
+  background:var(--bg2);
+}
+.wordle-cell.correct{background:var(--good); border-color:var(--good); color:#0a1a17;}
+.wordle-cell.present{background:var(--accent); border-color:var(--accent); color:#1a1300;}
+.wordle-cell.absent{background:#2a2f45; border-color:#2a2f45; color:var(--muted);}
+.wordle-keyboard{display:flex; flex-direction:column; gap:6px; align-items:center; margin-top:12px;}
+.wordle-krow{display:flex; gap:5px;}
+.wordle-key{
+  min-width:28px; height:42px; padding:0 6px; border-radius:6px; border:none;
+  background:var(--bg2); color:var(--text); font-size:12px; font-weight:600; cursor:pointer;
+}
+.wordle-key.correct{background:var(--good); color:#0a1a17;}
+.wordle-key.present{background:var(--accent); color:#1a1300;}
+.wordle-key.absent{background:#20242f; color:var(--muted);}
+.wordle-key.wide{min-width:50px; font-size:10px;}
+
 </style>
 </head>
 <body>
@@ -335,20 +393,63 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   <div class="grid" id="cardGrid"></div>
 </div>
 
-<!-- ============ JEUX (Quiz Express) ============ -->
+<!-- ============ JEUX ============ -->
 <div class="screen" id="game-jeux">
   <div class="game-wrap">
     <div class="topbar">
       <div class="game-title">🎮 Jeux</div>
     </div>
     <div class="panel">
-      <h2>Quiz Express</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">5 questions vrai/faux sur ce que tu as appris. Combien tu en as retenu ?</p>
-      <div id="quiz-area"></div>
+      <h2>Quiz</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">5 questions, réponse expliquée à chaque fois.</p>
+      <div class="btn-row">
+        <button class="btn primary" style="flex:1;" onclick="quizRender('paradoxes')">🧠 Quiz Paradoxes</button>
+        <button class="btn" style="flex:1;" onclick="quizRender('general')">🎓 Quiz Général</button>
+      </div>
+      <div id="quiz-area" style="margin-top:14px;"></div>
+    </div>
+    <div class="panel">
+      <h2>🔤 Wordle</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Devine le mot de 5 lettres en 6 essais.</p>
+      <div class="btn-row"><button class="btn primary" onclick="openWordle()">Jouer</button></div>
     </div>
     <div class="panel">
       <h2>🧩 Bientôt disponible</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">D'autres mini-jeux arrivent : memory, défi du jour, mode contre un ami.</p>
+      <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">Tetris et Bataille navale arrivent dans une prochaine mise à jour.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ WORDLE ============ -->
+<div class="screen" id="game-wordle">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="openJeux()">← Retour</button>
+    </div>
+    <div class="game-title">🔤 Wordle</div>
+    <div class="panel">
+      <div class="wordle-grid" id="wordle-grid"></div>
+      <div class="status-line" id="wordle-status" style="text-align:center;"></div>
+      <div class="wordle-keyboard" id="wordle-keyboard"></div>
+      <div class="btn-row" style="justify-content:center; margin-top:12px;"><button class="btn" onclick="wordleNewGame()">Nouvelle partie</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PROGRÈS (Trophées + Classement) ============ -->
+<div class="screen" id="game-progres">
+  <div class="game-wrap">
+    <div class="topbar">
+      <div class="game-title">🏆 Progrès</div>
+    </div>
+    <div class="panel">
+      <h2>Trophées</h2>
+      <div class="trophy-grid" id="trophyGrid"></div>
+    </div>
+    <div class="panel">
+      <h2>Classement</h2>
+      <span class="preview-badge">Aperçu — classement réel bientôt (compte requis)</span>
+      <div id="leaderboardList"></div>
     </div>
   </div>
 </div>
@@ -381,6 +482,9 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   </button>
   <button class="tab" id="tab-jeux" onclick="openJeux()">
     <span class="tab-icon">🎮</span><span>Jeux</span>
+  </button>
+  <button class="tab" id="tab-progres" onclick="openProgres()">
+    <span class="tab-icon">🏆</span><span>Progrès</span>
   </button>
   <button class="tab" id="tab-options" onclick="openOptions()">
     <span class="tab-icon">⚙️</span><span>Options</span>
@@ -795,18 +899,28 @@ const infoText = {
   }
 };
 
-/* ================= QUIZ EXPRESS ================= */
-const quizBank = [
-  {q:"Au Monty Hall, changer de porte double tes chances de gagner.", a:true},
-  {q:"Dans un groupe de 23 personnes, il y a plus de 50% de chance que deux partagent un anniversaire.", a:true},
-  {q:"Si une famille a 2 enfants et qu'on sait qu'au moins un est un garçon, la chance que l'autre soit un garçon est de 50%.", a:false},
-  {q:"Le paradoxe de Simpson montre qu'un traitement peut gagner dans chaque sous-groupe et perdre au total.", a:true},
-  {q:"Dans le jeu de Saint-Pétersbourg, le gain moyen théorique (espérance) est infini.", a:true},
-  {q:"Avec 3 dés, la somme 9 et la somme 10 ont exactement la même probabilité de sortir.", a:false},
-  {q:"Le paradoxe de Parrondo montre que 2 jeux perdants peuvent, ensemble, devenir gagnants.", a:true},
-  {q:"Zénon pensait qu'Achille ne pourrait jamais rattraper la tortue.", a:true},
-  {q:"Une infinité d'étapes prend forcément une infinité de temps.", a:false},
-  {q:"Au Franc-Carreau, plus la pièce est grande par rapport à la tuile, plus il est facile d'éviter les lignes.", a:false},
+/* ================= QUIZ (2 modes + explications) ================= */
+const quizBankParadoxes = [
+  {q:"Au Monty Hall, changer de porte double tes chances de gagner.", a:true, exp:"Ta porte de départ a 1/3 de chance. L'animateur élimine une chèvre, donc les 2/3 restants se concentrent sur l'autre porte."},
+  {q:"Dans un groupe de 23 personnes, il y a plus de 50% de chance que deux partagent un anniversaire.", a:true, exp:"On compare les 253 paires possibles entre 23 personnes, pas les personnes une par une — d'où la probabilité élevée."},
+  {q:"Si une famille a 2 enfants et qu'on sait qu'au moins un est un garçon, la chance que l'autre soit un garçon est de 50%.", a:false, exp:"3 cas restent possibles (GG, GF, FG) sur 4 au départ. Un seul (GG) donne 2 garçons → 1/3, pas 1/2."},
+  {q:"Le paradoxe de Simpson montre qu'un traitement peut gagner dans chaque sous-groupe et perdre au total.", a:true, exp:"Si les sous-groupes n'ont pas la même taille ni la même difficulté, le mélange peut inverser le classement."},
+  {q:"Dans le jeu de Saint-Pétersbourg, le gain moyen théorique (espérance) est infini.", a:true, exp:"Le gain double à chaque tour alors que sa probabilité diminue de moitié — la somme des termes ne converge jamais."},
+  {q:"Avec 3 dés, la somme 9 et la somme 10 ont exactement la même probabilité de sortir.", a:false, exp:"9 a 25 façons de sortir sur 216, 10 en a 27 — l'ordre des dés compte, pas juste les combinaisons de chiffres."},
+  {q:"Le paradoxe de Parrondo montre que 2 jeux perdants peuvent, ensemble, devenir gagnants.", a:true, exp:"Alterner les deux jeux empêche le capital de rester bloqué dans la zone défavorable du Jeu B."},
+  {q:"Zénon pensait qu'Achille ne pourrait jamais rattraper la tortue.", a:true, exp:"Il découpait la course en une infinité d'étapes, en pensant qu'une infinité d'étapes prend forcément un temps infini."},
+  {q:"Une infinité d'étapes prend forcément une infinité de temps.", a:false, exp:"Une série infinie de durées de plus en plus courtes peut additionner à un temps fini (ex: 1/2+1/4+1/8+...=1)."},
+  {q:"Au Franc-Carreau, plus la pièce est grande par rapport à la tuile, plus il est facile d'éviter les lignes.", a:false, exp:"C'est l'inverse : une pièce plus grande réduit la zone sûre au centre de la tuile, donc c'est plus difficile."},
+];
+const quizBankGeneral = [
+  {q:"Si tu lances une pièce 10 fois et qu'elle tombe sur Face à chaque fois, le prochain lancer a plus de chances de faire Pile.", a:false, exp:"C'est le 'sophisme du joueur'. Chaque lancer est indépendant : toujours 50/50, peu importe l'historique."},
+  {q:"Un événement avec 1% de chance ne peut jamais arriver deux fois de suite à la même personne.", a:false, exp:"1% n'est pas 0%. Rare ne veut pas dire impossible — sur assez d'essais, ça finit par arriver."},
+  {q:"En probabilités, 'indépendant' veut dire que deux événements ne s'influencent pas l'un l'autre.", a:true, exp:"Exactement — le résultat de l'un ne change rien à la probabilité de l'autre (ex: deux lancers de dés séparés)."},
+  {q:"Plus un échantillon est grand, plus le résultat observé se rapproche de la vraie probabilité.", a:true, exp:"C'est la loi des grands nombres — la base de toutes les simulations qu'on a faites dans cette app."},
+  {q:"Une corrélation entre deux choses prouve toujours qu'il y a un lien de cause à effet.", a:false, exp:"Corrélation n'est pas causalité — un troisième facteur caché peut expliquer les deux à la fois."},
+  {q:"Si un test médical est fiable à 99%, un résultat positif veut dire que tu es malade à 99%.", a:false, exp:"Ça dépend aussi de la rareté de la maladie dans la population — c'est le piège du taux de base (paradoxe du taxi)."},
+  {q:"L'espérance mathématique d'un jeu, c'est le gain moyen si tu y jouais un nombre infini de fois.", a:true, exp:"Exactement sa définition — une moyenne théorique sur le très long terme, pas un résultat garanti à chaque partie."},
+  {q:"Un dé à 6 faces truqué peut quand même donner des résultats qui semblent équilibrés sur peu de lancers.", a:true, exp:"Avec peu d'essais, le hasard peut masquer un déséquilibre réel — il faut un grand échantillon pour le détecter."},
 ];
 let quizStarted = false;
 let quizQuestions = [];
@@ -821,9 +935,10 @@ function quizShuffle(arr){
   }
   return a;
 }
-function quizRender(){
+function quizRender(mode){
   quizStarted = true;
-  quizQuestions = quizShuffle(quizBank).slice(0,5);
+  const bank = mode==='general' ? quizBankGeneral : quizBankParadoxes;
+  quizQuestions = quizShuffle(bank).slice(0,5);
   quizIndex = 0;
   quizScore = 0;
   quizShowQuestion();
@@ -837,6 +952,7 @@ function quizShowQuestion(){
       <div class="status-line" style="text-align:center;">${quizScore>=4 ? '🟩 Excellent, tu as tout compris !' : quizScore>=2 ? '🟨 Pas mal, révise les paradoxes ratés.' : '🟥 Retourne jouer les paradoxes, ça va rentrer !'}</div>
       <div class="btn-row" style="justify-content:center;"><button class="btn primary" onclick="quizRender()">Rejouer</button></div>
     `;
+    statsRecordQuiz(quizScore, quizQuestions.length);
     return;
   }
   const item = quizQuestions[quizIndex];
@@ -850,11 +966,229 @@ function quizShowQuestion(){
   `;
 }
 function quizAnswer(answer){
-  const correct = quizQuestions[quizIndex].a === answer;
+  const item = quizQuestions[quizIndex];
+  const correct = item.a === answer;
   if(correct) quizScore++;
   const area = document.getElementById('quiz-area');
-  area.innerHTML += `<div class="status-line" style="text-align:center;">${correct ? '🟩 Correct !' : '🟥 Raté.'}</div>`;
-  setTimeout(()=>{ quizIndex++; quizShowQuestion(); }, 700);
+  area.innerHTML = `
+    <div class="status-line" style="min-height:60px; font-size:15px;">${item.q}</div>
+    <div class="status-line" style="text-align:center; font-weight:700;">${correct ? '🟩 Correct !' : '🟥 Raté.'}</div>
+    <div class="footnote" style="text-align:left; line-height:1.5;">${item.exp}</div>
+  `;
+  setTimeout(()=>{ quizIndex++; quizShowQuestion(); }, 1800);
+}
+
+/* ================= TROPHÉES & STATS (localStorage) ================= */
+function statsGet(){
+  try{ return JSON.parse(localStorage.getItem('userStats')) || {}; }
+  catch(e){ return {}; }
+}
+function statsSet(stats){ localStorage.setItem('userStats', JSON.stringify(stats)); }
+
+function statsRecordVisit(paradoxId){
+  const s = statsGet();
+  s.visited = s.visited || [];
+  if(!s.visited.includes(paradoxId)) s.visited.push(paradoxId);
+  statsTouchStreak(s);
+  statsSet(s);
+  trophiesCheck();
+}
+function statsRecordQuiz(score, total){
+  const s = statsGet();
+  s.quizzesCompleted = (s.quizzesCompleted || 0) + 1;
+  if(score === total) s.quizPerfect = (s.quizPerfect || 0) + 1;
+  statsSet(s);
+  trophiesCheck();
+}
+function statsRecordWordleWin(){
+  const s = statsGet();
+  s.wordleWins = (s.wordleWins || 0) + 1;
+  statsSet(s);
+  trophiesCheck();
+}
+function statsTouchStreak(s){
+  const today = new Date().toISOString().slice(0,10);
+  if(s.lastVisitDate === today) return;
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  s.streak = (s.lastVisitDate === yesterday) ? (s.streak||0)+1 : 1;
+  s.lastVisitDate = today;
+}
+
+const trophyList = [
+  {id:'first', icon:'🥉', name:'Premier pas', desc:'Ouvre 1 paradoxe', check:s=>(s.visited||[]).length>=1},
+  {id:'curious', icon:'🥈', name:'Curieux', desc:'5 paradoxes différents', check:s=>(s.visited||[]).length>=5},
+  {id:'collector', icon:'🥇', name:'Collectionneur', desc:'Tous les paradoxes vus', check:s=>(s.visited||[]).length>=puzzles.length},
+  {id:'quizmaster', icon:'🧠', name:'Sans faute', desc:'5/5 à un quiz', check:s=>(s.quizPerfect||0)>=1},
+  {id:'student', icon:'🎯', name:'Bon élève', desc:'5 quiz terminés', check:s=>(s.quizzesCompleted||0)>=5},
+  {id:'streak3', icon:'🔥', name:'Sur une lancée', desc:'3 jours de suite', check:s=>(s.streak||0)>=3},
+  {id:'wordle', icon:'🔤', name:'Bien joué !', desc:'1 Wordle gagné', check:s=>(s.wordleWins||0)>=1},
+  {id:'tryhard', icon:'👑', name:'Tryhard', desc:'Tous les trophées ci-dessus', check:s=>trophyList.slice(0,-1).every(t=>t.check(s))},
+];
+function trophiesCheck(){
+  const s = statsGet();
+  const previouslyUnlocked = new Set(s.unlockedTrophies || []);
+  const nowUnlocked = trophyList.filter(t => t.id!=='tryhard' ? t.check(s) : false).map(t=>t.id);
+  // évalue 'tryhard' séparément après les autres pour éviter la dépendance circulaire d'ordre
+  if(trophyList.find(t=>t.id==='tryhard').check(s)) nowUnlocked.push('tryhard');
+
+  const newOnes = nowUnlocked.filter(id => !previouslyUnlocked.has(id));
+  s.unlockedTrophies = nowUnlocked;
+  statsSet(s);
+
+  if(newOnes.length && document.getElementById('trophyGrid')){
+    const t = trophyList.find(t=>t.id===newOnes[0]);
+    showToast(`🏆 Trophée débloqué : ${t.name}`);
+  }
+  renderTrophies();
+}
+function renderTrophies(){
+  const grid = document.getElementById('trophyGrid');
+  if(!grid) return;
+  const s = statsGet();
+  const unlocked = new Set(s.unlockedTrophies || []);
+  grid.innerHTML = trophyList.map(t => `
+    <div class="trophy ${unlocked.has(t.id) ? 'unlocked' : ''}">
+      <span class="trophy-icon">${t.icon}</span>
+      <div class="trophy-name">${t.name}</div>
+      <div class="trophy-desc">${t.desc}</div>
+    </div>
+  `).join('');
+}
+function showToast(msg){
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  requestAnimationFrame(()=>toast.classList.add('show'));
+  setTimeout(()=>{
+    toast.classList.remove('show');
+    setTimeout(()=>toast.remove(), 400);
+  }, 3000);
+}
+
+/* ================= CLASSEMENT (aperçu, données fictives) ================= */
+function renderLeaderboard(){
+  const el = document.getElementById('leaderboardList');
+  if(!el) return;
+  const s = statsGet();
+  const myScore = (s.visited||[]).length*10 + (s.quizPerfect||0)*15 + (s.wordleWins||0)*5;
+  const fake = [
+    {name:'Léa M.', score:145},
+    {name:'Thomas B.', score:120},
+    {name:'Sofia K.', score:98},
+    {name:'Toi', score:myScore, me:true},
+    {name:'Adam R.', score:60},
+    {name:'Nina P.', score:42},
+  ].sort((a,b)=>b.score-a.score);
+  el.innerHTML = fake.map((p,i) => `
+    <div class="leaderboard-row ${p.me?'me':''}">
+      <span class="leaderboard-rank">${i+1}</span>
+      <span class="leaderboard-name">${p.me?'👉 ':''}${p.name}</span>
+      <span class="leaderboard-score">${p.score} pts</span>
+    </div>
+  `).join('');
+}
+
+/* ================= WORDLE ================= */
+const wordleBank = ['TABLE','CHIEN','PORTE','LIVRE','PLAGE','FLEUR','MONDE','SOUPE','JAUNE','VERRE','NOEUD','TEMPS','PAIRE','FORCE','GRAND','ROUGE','SALLE','FOYER','GLACE','RIVES'];
+let wordleTarget = '';
+let wordleRow = 0;
+let wordleGuess = '';
+let wordleOver = false;
+const wordleKeyboardRows = [
+  ['A','Z','E','R','T','Y','U','I','O','P'],
+  ['Q','S','D','F','G','H','J','K','L','M'],
+  ['ENTER','W','X','C','V','B','N','ENVOI'],
+];
+function openWordle(){
+  switchScreen('game-wordle');
+  setActiveTab(null);
+  wordleNewGame();
+  trackPage('/wordle');
+}
+function wordleNewGame(){
+  wordleTarget = wordleBank[Math.floor(Math.random()*wordleBank.length)];
+  wordleRow = 0;
+  wordleGuess = '';
+  wordleOver = false;
+  document.getElementById('wordle-status').textContent = '';
+  wordleRenderGrid();
+  wordleRenderKeyboard({});
+}
+function wordleRenderGrid(){
+  const grid = document.getElementById('wordle-grid');
+  let html = '';
+  for(let r=0;r<6;r++){
+    html += '<div class="wordle-row">';
+    for(let c=0;c<5;c++){
+      let letter = '';
+      let cls = '';
+      if(r < wordleRow){
+        letter = wordleHistory[r][c];
+        cls = wordleEvalCell(wordleHistory[r], c);
+      } else if(r === wordleRow){
+        letter = wordleGuess[c] || '';
+      }
+      html += `<div class="wordle-cell ${cls}">${letter}</div>`;
+    }
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+let wordleHistory = [];
+function wordleEvalCell(guess, idx){
+  const letter = guess[idx];
+  if(wordleTarget[idx] === letter) return 'correct';
+  if(wordleTarget.includes(letter)) return 'present';
+  return 'absent';
+}
+function wordleRenderKeyboard(letterStates){
+  const kb = document.getElementById('wordle-keyboard');
+  kb.innerHTML = wordleKeyboardRows.map(row => `
+    <div class="wordle-krow">
+      ${row.map(k=>{
+        if(k==='ENTER') return `<button class="wordle-key wide" onclick="wordleSubmit()">Valider</button>`;
+        if(k==='ENVOI') return `<button class="wordle-key wide" onclick="wordleBackspace()">⌫</button>`;
+        const cls = letterStates[k] || '';
+        return `<button class="wordle-key ${cls}" onclick="wordleType('${k}')">${k}</button>`;
+      }).join('')}
+    </div>
+  `).join('');
+}
+function wordleType(letter){
+  if(wordleOver || wordleGuess.length>=5) return;
+  wordleGuess += letter;
+  wordleRenderGrid();
+}
+function wordleBackspace(){
+  if(wordleOver) return;
+  wordleGuess = wordleGuess.slice(0,-1);
+  wordleRenderGrid();
+}
+function wordleSubmit(){
+  if(wordleOver || wordleGuess.length!==5) return;
+  wordleHistory[wordleRow] = wordleGuess;
+  const letterStates = {};
+  for(let i=0;i<5;i++){
+    const cls = wordleEvalCell(wordleGuess, i);
+    const letter = wordleGuess[i];
+    if(cls==='correct') letterStates[letter]='correct';
+    else if(cls==='present' && letterStates[letter]!=='correct') letterStates[letter]='present';
+    else if(!letterStates[letter]) letterStates[letter]='absent';
+  }
+  const won = wordleGuess === wordleTarget;
+  wordleRow++;
+  wordleGuess = '';
+  wordleRenderGrid();
+  wordleRenderKeyboard(letterStates);
+  if(won){
+    wordleOver = true;
+    document.getElementById('wordle-status').textContent = '🟩 Gagné !';
+    statsRecordWordleWin();
+  } else if(wordleRow>=6){
+    wordleOver = true;
+    document.getElementById('wordle-status').textContent = `🟥 Perdu — le mot était ${wordleTarget}.`;
+  }
 }
 
 /* ================= ADS TOGGLE (mock — vraie transaction viendra avec l'app native) ================= */
@@ -918,6 +1252,7 @@ function openGame(id){
   setActiveTab(null);
   if(id==='monty') mhNewRound();
   if(id==='zenon') zenReset();
+  statsRecordVisit(id);
   trackPage('/'+id);
 }
 function openJeux(){
@@ -925,6 +1260,13 @@ function openJeux(){
   setActiveTab('tab-jeux');
   if(!quizStarted) quizRender();
   trackPage('/jeux');
+}
+function openProgres(){
+  switchScreen('game-progres');
+  setActiveTab('tab-progres');
+  renderTrophies();
+  renderLeaderboard();
+  trackPage('/progres');
 }
 function openOptions(){
   switchScreen('game-options');
@@ -954,6 +1296,8 @@ function restoreLastScreen(){
   const last = localStorage.getItem('lastScreen');
   if(!last || last==='home'){ return; }
   if(last==='game-jeux'){ openJeux(); return; }
+  if(last==='game-wordle'){ openWordle(); return; }
+  if(last==='game-progres'){ openProgres(); return; }
   if(last==='game-options'){ openOptions(); return; }
   if(last.startsWith('game-')){
     const id = last.replace('game-','');
