@@ -468,6 +468,9 @@ body.no-ads .ad-banner{display:none;}
   <div class="modal" id="modalContent"></div>
 </div>
 
+<script data-goatcounter="https://paradoxes-app.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
 <script>
 /* ================= DATA ================= */
 const puzzles = [
@@ -584,12 +587,19 @@ function renderHome(){
 function goHome(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('home').classList.add('active');
+  trackPage('/accueil');
 }
 function openGame(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('game-'+id).classList.add('active');
   if(id==='monty') mhNewRound();
   window.scrollTo(0,0);
+  trackPage('/'+id);
+}
+function trackPage(path){
+  if (window.goatcounter && typeof window.goatcounter.count === 'function') {
+    window.goatcounter.count({ path: path, event: false });
+  }
 }
 function openInfo(id){
   const info = infoText[id];
