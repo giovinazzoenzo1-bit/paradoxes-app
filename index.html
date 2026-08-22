@@ -263,6 +263,43 @@ body.no-ads .ad-banner{display:none;}
   padding:9px; border-radius:10px; font-size:12px; cursor:pointer; margin-top:6px;
 }
 .mini-remove-ads:hover{border-color:var(--accent); color:var(--accent);}
+
+/* ---------- DICE (Grand Duc de Toscane) ---------- */
+.dice-row{display:flex; gap:12px; justify-content:center; margin:18px 0;}
+.die{
+  width:60px; height:60px; background:var(--bg2); border:1px solid var(--line);
+  border-radius:12px; display:flex; align-items:center; justify-content:center;
+  font-size:26px; font-weight:700; color:var(--text);
+}
+.die.total{background:var(--accent); color:#1a1300; border-color:var(--accent);}
+
+/* ---------- TILE GRID (Franc-carreau) ---------- */
+.tile-wrap{display:flex; justify-content:center; margin:18px 0;}
+.tile{
+  position:relative; width:220px; height:220px;
+  background:
+    linear-gradient(var(--line) 2px, transparent 2px),
+    linear-gradient(90deg, var(--line) 2px, transparent 2px);
+  background-size: 110px 110px;
+  background-color:var(--bg2);
+  border:2px solid var(--line);
+  border-radius:8px;
+}
+.coin{
+  position:absolute; border-radius:50%;
+  background:var(--accent); opacity:0.9;
+  transform:translate(-50%,-50%);
+}
+.coin.hit{background:var(--bad);}
+
+/* ---------- CANVAS CHARTS (Parrondo) ---------- */
+canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius:10px; margin:10px 0;}
+
+/* ---------- ZENON ---------- */
+.zenon-track{position:relative; height:50px; background:var(--bg2); border-radius:10px; margin:18px 0; overflow:hidden;}
+.zenon-fill{position:absolute; left:0; top:0; bottom:0; background:var(--accent); border-radius:10px; transition:width .4s ease;}
+.zenon-marker{position:absolute; top:50%; transform:translate(-50%,-50%); font-size:22px;}
+
 </style>
 </head>
 <body>
@@ -463,6 +500,123 @@ body.no-ads .ad-banner{display:none;}
   </div>
 </div>
 
+<!-- ============ GRAND DUC DE TOSCANE ============ -->
+<div class="screen" id="game-toscane">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('toscane')">i</button>
+    </div>
+    <div class="game-title">🎲 Grand Duc de Toscane</div>
+    <div class="panel">
+      <h2>Lance 3 dés</h2>
+      <div class="dice-row" id="tosc-dice">
+        <div class="die">?</div><div class="die">?</div><div class="die">?</div>
+        <div class="die total" id="tosc-total">=?</div>
+      </div>
+      <div class="status-line" id="tosc-status">Tape sur le bouton pour lancer.</div>
+      <div class="btn-row"><button class="btn primary" onclick="toscRoll()">Lancer les dés</button></div>
+    </div>
+    <div class="panel">
+      <h2>Stats — manuel</h2>
+      <div class="row"><span>Lancers totaux</span><b id="tosc-total-count">0</b></div>
+      <div class="row"><span>Somme = 9</span><b id="tosc-9">0</b></div>
+      <div class="row"><span>Somme = 10</span><b id="tosc-10">0</b></div>
+    </div>
+    <div class="panel">
+      <h2>Simulation (50 000 lancers)</h2>
+      <div class="btn-row"><button class="btn primary" onclick="toscSimulate()">Simuler</button></div>
+      <div style="margin-top:16px;">
+        <div class="row"><span>Somme = 9 (théorique 11,57%)</span><b id="tosc-sim9">—</b></div>
+        <div class="bar-container"><div class="bar bad" id="tosc-sim9Bar" style="width:0%"></div></div>
+        <div class="row"><span>Somme = 10 (théorique 12,5%)</span><b id="tosc-sim10">—</b></div>
+        <div class="bar-container"><div class="bar good" id="tosc-sim10Bar" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRANC-CARREAU ============ -->
+<div class="screen" id="game-franccarreau">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('franccarreau')">i</button>
+    </div>
+    <div class="game-title">🪙 Le Franc-Carreau</div>
+    <div class="panel">
+      <h2>Taille de la pièce</h2>
+      <label class="field">Diamètre / taille de la tuile : <b id="fc-ratioLabel">50%</b></label>
+      <input type="range" id="fc-ratio" min="10" max="90" value="50" oninput="fcUpdateLabel()">
+      <div class="btn-row" style="margin-top:12px;"><button class="btn primary" onclick="fcDrop()">Lancer la pièce</button></div>
+      <div class="tile-wrap"><div class="tile" id="fc-tile"></div></div>
+      <div class="status-line" id="fc-status" style="text-align:center;"></div>
+    </div>
+    <div class="panel">
+      <h2>Probabilité théorique vs simulation</h2>
+      <div class="row"><span>Théorique</span><b id="fc-theory">—</b></div>
+      <div class="bar-container"><div class="bar accent" id="fc-theoryBar" style="width:0%"></div></div>
+      <div class="btn-row"><button class="btn" onclick="fcSimulate()">Simuler 10 000 lancers</button></div>
+      <div class="row" style="margin-top:12px;"><span>Empirique</span><b id="fc-empirical">—</b></div>
+      <div class="bar-container"><div class="bar good" id="fc-empiricalBar" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PARRONDO ============ -->
+<div class="screen" id="game-parrondo">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('parrondo')">i</button>
+    </div>
+    <div class="game-title">🎰 Paradoxe de Parrondo</div>
+    <div class="panel">
+      <h2>2 jeux perdants → 1 stratégie gagnante ?</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 14px; line-height:1.5;">Jeu A : tu perds légèrement plus souvent que tu gagnes. Jeu B : pareil, mais la règle change selon ton capital actuel. Seul, chaque jeu te fait perdre de l'argent en moyenne.</p>
+      <div class="btn-row"><button class="btn primary" onclick="parRun()">Jouer 500 tours des 3 façons</button></div>
+    </div>
+    <div class="panel">
+      <h2>Capital final après 500 tours (départ à 0)</h2>
+      <div class="row"><span>🟥 Jeu A seul</span><b id="par-a">—</b></div>
+      <div class="row"><span>🟥 Jeu B seul</span><b id="par-b">—</b></div>
+      <div class="row"><span>🟩 En alternant A et B</span><b id="par-ab">—</b></div>
+      <canvas class="mini-chart" id="par-canvas" width="600" height="160"></canvas>
+      <div class="footnote">Rouge = Jeu A · Orange = Jeu B · Vert = Alterné A/B</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ZENON ============ -->
+<div class="screen" id="game-zenon">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <button class="info-btn" onclick="openInfo('zenon')">i</button>
+    </div>
+    <div class="game-title">🐢 Achille et la tortue</div>
+    <div class="panel">
+      <h2>Rattrape la tortue, une moitié à la fois</h2>
+      <div class="zenon-track">
+        <div class="zenon-fill" id="zen-fill" style="width:0%"></div>
+        <div class="zenon-marker" id="zen-runner" style="left:0%;">🏃</div>
+        <div class="zenon-marker" id="zen-turtle" style="left:100%;">🐢</div>
+      </div>
+      <div class="status-line" id="zen-status">Distance restante : 100%. Chaque étape parcourt la moitié du chemin restant.</div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="zenStep()">Étape suivante</button>
+        <button class="btn" onclick="zenReset()">Recommencer</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Ce qui s'accumule</h2>
+      <div class="row"><span>Nombre d'étapes</span><b id="zen-steps">0</b></div>
+      <div class="row"><span>Distance totale parcourue</span><b id="zen-total">0%</b></div>
+      <div class="footnote">Une infinité d'étapes, mais la somme ne dépasse jamais 100%.</div>
+    </div>
+  </div>
+</div>
+
 <!-- ============ MODAL ============ -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalContent"></div>
@@ -480,6 +634,10 @@ const puzzles = [
   {id:'tuesday', icon:'📅', color:'#7a5fc9', title:'Né un mardi', hook:'Même énigme, mais on ajoute un détail : ce garçon est né un mardi. Ce petit détail change encore le résultat.', odds:'1/3 devient 13/27'},
   {id:'simpson', icon:'📊', color:'#c98a3f', title:'Paradoxe de Simpson', hook:'Un médicament peut être meilleur dans CHAQUE groupe de malades, et pourtant perdre au score final. Comment c\'est possible ?', odds:'Meilleur partout, mais perdant au total'},
   {id:'stpete', icon:'🪙', color:'#3f8ec9', title:'Saint-Pétersbourg', hook:'Un jeu de pièce où le gain moyen possible est infini... mais personne ne voudrait payer cher pour y jouer. Pourquoi ?', odds:'Gain moyen = infini, mais...'},
+  {id:'parrondo', icon:'🎰', color:'#5fb8c9', title:'Paradoxe de Parrondo', hook:'2 jeux où tu perds à chaque fois. Mais si tu les alternes... tu gagnes ! Comment c\'est possible ?', odds:'Perdant + Perdant = Gagnant'},
+  {id:'toscane', icon:'🎲', color:'#b85fc9', title:'Grand Duc de Toscane', hook:'En lançant 3 dés, la somme 10 sort plus souvent que la somme 9. Pourtant les deux ont l\'air d\'avoir autant de chances. Pourquoi ?', odds:'9 et 10 : pas égaux !'},
+  {id:'franccarreau', icon:'🪙', color:'#8fc95f', title:'Le Franc-Carreau', hook:'Lance une pièce sur un sol carrelé. Quelle chance qu\'elle ne touche aucune ligne ? Teste-le toi-même.', odds:'Ça se calcule avec une formule'},
+  {id:'zenon', icon:'🐢', color:'#c9825f', title:'Achille et la tortue', hook:'Pour la rattraper, Achille doit d\'abord parcourir la moitié de la distance. Puis la moitié du reste. À l\'infini... Alors comment fait-il pour la rattraper ?', odds:'Infini d\'étapes, temps fini'},
 ];
 
 const infoText = {
@@ -535,6 +693,42 @@ const infoText = {
       "Le calcul de l'espérance (gain moyen théorique) additionne une infinité de termes qui ne diminuent jamais → le résultat est infini.",
       "Mais en pratique, les très gros gains sont extrêmement rares. Sur un nombre raisonnable de parties, le gain moyen réel reste petit.",
       "Ça montre une limite de l'espérance mathématique pure : elle ignore le risque et la patience réelle d'un joueur humain."
+    ]
+  },
+  parrondo: {
+    title:'🎰 Pourquoi 2 jeux perdants peuvent devenir gagnants',
+    body:[
+      "Le Jeu B n'est pas fixe : sa probabilité de gagner dépend de TON capital actuel. Il est très mauvais quand ton capital est un multiple de 3, mais plutôt bon sinon.",
+      "Joué seul, le Jeu B te ramène souvent vers les multiples de 3 (là où il est mauvais), donc en moyenne tu perds.",
+      "Le Jeu A, joué seul, est juste légèrement défavorable, comme un casino normal.",
+      "Mais en alternant A et B, le Jeu A vient perturber la trajectoire du capital, l'empêchant de rester bloqué sur les multiples de 3. Ça te maintient plus souvent dans la zone où le Jeu B est favorable → le mélange devient gagnant, même si chaque brique est perdante."
+    ]
+  },
+  toscane: {
+    title:'🎲 Pourquoi 10 sort plus souvent que 9',
+    body:[
+      "Avec 3 dés, il y a 216 résultats possibles au total (6×6×6), tous équiprobables si on distingue l'ordre des dés.",
+      "On pourrait croire que 9 et 10 ont le même nombre de façons d'être obtenus, car les DEUX ont 6 combinaisons de chiffres différentes qui donnent ce total (ex: 1-2-6, 1-3-5, 1-4-4, 2-2-5, 2-3-4, 3-3-3 pour le 9).",
+      "Mais chaque combinaison ne compte pas pour 1 : elle compte pour le nombre de façons de l'ORDONNER sur 3 dés distincts. Une combinaison comme 1-2-6 peut sortir dans 6 ordres différents, alors que 3-3-3 ne peut sortir que dans 1 seul ordre.",
+      "En comptant tous les ordres, 9 a 25 façons de sortir sur 216, et 10 en a 27. C'est cette différence, invisible à l'œil nu, que le Grand Duc de Toscane avait remarquée en jouant des milliers de fois."
+    ]
+  },
+  franccarreau: {
+    title:'🪙 Pourquoi ça se calcule avec une formule',
+    body:[
+      "Pour qu'une pièce ne touche aucune ligne, son CENTRE doit tomber dans une zone plus petite que la tuile entière — une zone rétrécie de la moitié du diamètre de la pièce sur chaque bord.",
+      "Si la tuile fait un côté 'c' et la pièce un diamètre 'd', la zone sûre pour le centre est un carré de côté (c-d).",
+      "La probabilité de réussite est donc l'aire de cette zone sûre divisée par l'aire totale de la tuile : (c-d)² / c².",
+      "Plus la pièce est grande par rapport à la tuile, plus cette zone sûre rétrécit vite — la probabilité chute beaucoup plus vite que l'intuition ne le suggère."
+    ]
+  },
+  zenon: {
+    title:'🐢 Comment Achille rattrape quand même la tortue',
+    body:[
+      "Zénon avait raison sur un point : il faut bien un nombre infini d'étapes pour décrire la course de cette façon (moitié, puis moitié du reste, etc.).",
+      "Son erreur (qu'on ne comprendra vraiment qu'avec les mathématiques 2000 ans plus tard) : une infinité d'étapes ne veut pas dire un temps infini.",
+      "Chaque étape est de plus en plus courte ET de plus en plus rapide à parcourir. La somme des durées (1/2 + 1/4 + 1/8 + ...) converge vers un nombre fini : 1.",
+      "C'est le concept de 'série convergente' : une infinité de termes peut additionner à un résultat fini. Achille rattrape la tortue en un temps parfaitement normal — le paradoxe vient juste d'une façon de découper le temps, pas d'un vrai blocage physique."
     ]
   }
 };
@@ -593,6 +787,7 @@ function openGame(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('game-'+id).classList.add('active');
   if(id==='monty') mhNewRound();
+  if(id==='zenon') zenReset();
   window.scrollTo(0,0);
   trackPage('/'+id);
 }
@@ -875,6 +1070,184 @@ function showUpdateBanner(worker){
   bar.textContent = '🔄 Nouvelle version disponible — appuie pour actualiser';
   bar.onclick = () => { worker.postMessage({type:'SKIP_WAITING'}); };
   document.body.appendChild(bar);
+}
+
+/* ================= GRAND DUC DE TOSCANE ================= */
+let toscStats = {total:0, nine:0, ten:0};
+function toscRoll(){
+  const dice = [1,2,3].map(()=>Math.floor(Math.random()*6)+1);
+  const sum = dice[0]+dice[1]+dice[2];
+  const el = document.getElementById('tosc-dice');
+  el.children[0].textContent = dice[0];
+  el.children[1].textContent = dice[1];
+  el.children[2].textContent = dice[2];
+  document.getElementById('tosc-total').textContent = '='+sum;
+  toscStats.total++;
+  if(sum===9) toscStats.nine++;
+  if(sum===10) toscStats.ten++;
+  document.getElementById('tosc-total-count').textContent = toscStats.total;
+  document.getElementById('tosc-9').textContent = toscStats.nine;
+  document.getElementById('tosc-10').textContent = toscStats.ten;
+  document.getElementById('tosc-status').textContent = sum===9 ? '🟥 Somme = 9' : sum===10 ? '🟩 Somme = 10' : `Somme = ${sum}`;
+}
+function toscSimulate(){
+  const n = 50000;
+  let nine=0, ten=0;
+  for(let i=0;i<n;i++){
+    const s = (Math.floor(Math.random()*6)+1)+(Math.floor(Math.random()*6)+1)+(Math.floor(Math.random()*6)+1);
+    if(s===9) nine++;
+    if(s===10) ten++;
+  }
+  const p9 = (100*nine/n).toFixed(2), p10 = (100*ten/n).toFixed(2);
+  document.getElementById('tosc-sim9').textContent = `${nine} / ${n} (${p9}%)`;
+  document.getElementById('tosc-sim9Bar').style.width = (p9*4)+'%';
+  document.getElementById('tosc-sim10').textContent = `${ten} / ${n} (${p10}%)`;
+  document.getElementById('tosc-sim10Bar').style.width = (p10*4)+'%';
+}
+
+/* ================= FRANC-CARREAU ================= */
+function fcUpdateLabel(){
+  const v = document.getElementById('fc-ratio').value;
+  document.getElementById('fc-ratioLabel').textContent = v+'%';
+  fcShowTheory(v/100);
+}
+function fcTheory(ratio){
+  // ratio = d/c ; P = (c-d)^2 / c^2 = (1-ratio)^2
+  if(ratio>=1) return 0;
+  return Math.pow(1-ratio, 2);
+}
+function fcShowTheory(ratio){
+  const p = fcTheory(ratio)*100;
+  document.getElementById('fc-theory').textContent = p.toFixed(1)+'%';
+  document.getElementById('fc-theoryBar').style.width = p+'%';
+}
+function fcDrop(){
+  const ratioPct = parseInt(document.getElementById('fc-ratio').value);
+  const ratio = ratioPct/100;
+  const tileEl = document.getElementById('fc-tile');
+  const tileSize = 110; // px, one grid cell drawn by CSS background-size
+  const coinDiameter = ratio * tileSize;
+  // random center within one cell (0..tileSize), repeated visually across the 2x2 shown grid at a fixed cell
+  const cx = Math.random()*tileSize + 55;
+  const cy = Math.random()*tileSize + 55;
+  const localX = ((cx-55) % tileSize + tileSize) % tileSize;
+  const localY = ((cy-55) % tileSize + tileSize) % tileSize;
+  const safe = coinDiameter/2;
+  const hit = (localX < safe || localX > tileSize-safe || localY < safe || localY > tileSize-safe);
+
+  document.querySelectorAll('.coin').forEach(c=>c.remove());
+  const coin = document.createElement('div');
+  coin.className = 'coin' + (hit ? ' hit' : '');
+  coin.style.width = coinDiameter+'px';
+  coin.style.height = coinDiameter+'px';
+  coin.style.left = cx+'px';
+  coin.style.top = cy+'px';
+  tileEl.appendChild(coin);
+
+  document.getElementById('fc-status').textContent = hit
+    ? '🟥 La pièce touche une ligne.'
+    : '🟩 La pièce est entièrement dans une tuile !';
+}
+function fcSimulate(){
+  const ratioPct = parseInt(document.getElementById('fc-ratio').value);
+  const ratio = ratioPct/100;
+  const n = 10000;
+  let success = 0;
+  for(let i=0;i<n;i++){
+    const x = Math.random();
+    const y = Math.random();
+    const safe = ratio/2;
+    if(x>=safe && x<=1-safe && y>=safe && y<=1-safe) success++;
+  }
+  const pct = (100*success/n).toFixed(2);
+  document.getElementById('fc-empirical').textContent = `${success} / ${n} (${pct}%)`;
+  document.getElementById('fc-empiricalBar').style.width = pct+'%';
+}
+fcShowTheory(0.5);
+
+/* ================= PARRONDO ================= */
+function parGameA(capital){
+  const p = 0.495; // légèrement défavorable
+  return Math.random() < p ? capital+1 : capital-1;
+}
+function parGameB(capital){
+  const mod = ((capital % 3) + 3) % 3;
+  const p = (mod === 0) ? 0.10 : 0.75; // très mauvais sur multiples de 3, bon sinon
+  return Math.random() < p ? capital+1 : capital-1;
+}
+function parSimulate(mode, rounds){
+  let capital = 0;
+  const history = [capital];
+  for(let i=0;i<rounds;i++){
+    if(mode==='A') capital = parGameA(capital);
+    else if(mode==='B') capital = parGameB(capital);
+    else capital = (i%2===0) ? parGameA(capital) : parGameB(capital);
+    history.push(capital);
+  }
+  return history;
+}
+function parDrawChart(seriesList){
+  const canvas = document.getElementById('par-canvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const allValues = seriesList.flatMap(s=>s.data);
+  const minV = Math.min(...allValues, 0), maxV = Math.max(...allValues, 0);
+  const range = (maxV-minV) || 1;
+  // zero line
+  const zeroY = h - ((0-minV)/range)*h;
+  ctx.strokeStyle = '#2a2f45';
+  ctx.beginPath(); ctx.moveTo(0, zeroY); ctx.lineTo(w, zeroY); ctx.stroke();
+
+  seriesList.forEach(s=>{
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    s.data.forEach((v,i)=>{
+      const x = (i/(s.data.length-1))*w;
+      const y = h - ((v-minV)/range)*h;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
+}
+function parRun(){
+  const rounds = 500;
+  const histA = parSimulate('A', rounds);
+  const histB = parSimulate('B', rounds);
+  const histAB = parSimulate('AB', rounds);
+  document.getElementById('par-a').textContent = histA[histA.length-1];
+  document.getElementById('par-b').textContent = histB[histB.length-1];
+  document.getElementById('par-ab').textContent = histAB[histAB.length-1];
+  parDrawChart([
+    {data:histA, color:'#ef6461'},
+    {data:histB, color:'#f5b942'},
+    {data:histAB, color:'#4fd1c5'}
+  ]);
+}
+
+/* ================= ZENON ================= */
+let zenRemaining = 100;
+let zenSteps = 0;
+function zenStep(){
+  const covered = zenRemaining/2;
+  zenRemaining -= covered;
+  zenSteps++;
+  const progressPct = 100 - zenRemaining;
+  document.getElementById('zen-fill').style.width = progressPct+'%';
+  document.getElementById('zen-runner').style.left = progressPct+'%';
+  document.getElementById('zen-steps').textContent = zenSteps;
+  document.getElementById('zen-total').textContent = progressPct.toFixed(4)+'%';
+  document.getElementById('zen-status').textContent = `Distance restante : ${zenRemaining.toFixed(4)}%. Encore la moitié à chaque étape.`;
+}
+function zenReset(){
+  zenRemaining = 100;
+  zenSteps = 0;
+  document.getElementById('zen-fill').style.width = '0%';
+  document.getElementById('zen-runner').style.left = '0%';
+  document.getElementById('zen-steps').textContent = '0';
+  document.getElementById('zen-total').textContent = '0%';
+  document.getElementById('zen-status').textContent = 'Distance restante : 100%. Chaque étape parcourt la moitié du chemin restant.';
 }
 </script>
 </body>
