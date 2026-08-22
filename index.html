@@ -3062,7 +3062,7 @@ applyAdsState();
 function renderHome(){
   const grid = document.getElementById('cardGrid');
   grid.innerHTML = '';
-  const noProperIcon = new Set(['tuesday']); // en attente d'une icône dédiée (le triangle est réservé au logo de l'app)
+  const noProperIcon = new Set([]); // toutes les icônes de paradoxes sont maintenant prêtes
   puzzles.forEach(p=>{
     const card = document.createElement('div');
     card.className = 'card';
