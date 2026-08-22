@@ -1577,8 +1577,11 @@ function stpRunAll(){
 
 /* ================= PWA — SERVICE WORKER + DÉTECTION MAJ ================= */
 if ('serviceWorker' in navigator) {
+  let swReg = null;
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {
+      swReg = reg;
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
         newWorker.addEventListener('statechange', () => {
@@ -1595,6 +1598,18 @@ if ('serviceWorker' in navigator) {
       refreshing = true;
       window.location.reload();
     });
+  });
+
+  // Forcer la vérification de nouvelle version à chaque fois que l'app revient au premier plan
+  // (sans ça, reprendre l'app depuis le multitâche ne déclenche jamais de vraie navigation,
+  // donc le navigateur ne recontacte jamais le serveur pour comparer les versions)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && swReg) {
+      swReg.update();
+    }
+  });
+  window.addEventListener('focus', () => {
+    if (swReg) swReg.update();
   });
 }
 
