@@ -467,7 +467,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 /* ---------- PUZZLE 15 ---------- */
 .p15-grid{
   display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
-  background:var(--bg2); padding:6px; border-radius:10px; margin:14px 0; max-width:280px; margin-left:auto; margin-right:auto;
+  background:var(--bg2); padding:6px; border-radius:10px; margin:14px 0; max-width:340px; margin-left:auto; margin-right:auto;
 }
 .p15-tile{
   aspect-ratio:1; border-radius:6px; display:flex; align-items:center; justify-content:center;
@@ -738,11 +738,39 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <button class="back-btn" onclick="openJeux()">← Retour</button>
     </div>
     <div class="game-title">🧩 Puzzle 15</div>
-    <div class="panel">
+    <div class="panel" id="p15-level-panel">
+      <h2>Choisis ton niveau</h2>
+      <div class="btn-row" style="flex-direction:column;">
+        <button class="btn primary" onclick="p15New(4)">🟩 15 pièces (4×4)</button>
+        <button class="btn primary" onclick="p15New(5)">🟨 24 pièces (5×5)</button>
+        <button class="btn primary" onclick="p15New(6)">🟧 35 pièces (6×6)</button>
+        <button class="btn primary" onclick="p15New(7)">🟥 48 pièces (7×7)</button>
+      </div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn" onclick="p15OpenLeaderboard()">🏆 Classements</button>
+      </div>
+    </div>
+    <div class="panel" id="p15-game-panel" style="display:none;">
       <div class="row"><span>Coups</span><b id="p15-moves">0</b></div>
+      <div class="row"><span>Temps</span><b id="p15-timer">0:00</b></div>
+      <div class="row"><span>Meilleur (ce niveau)</span><b id="p15-best">—</b></div>
       <div class="p15-grid" id="p15-grid"></div>
       <div class="status-line" id="p15-status" style="text-align:center;"></div>
-      <div class="btn-row" style="justify-content:center;"><button class="btn" onclick="p15New()">Mélanger</button></div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn" onclick="p15New(p15N)">Mélanger</button>
+        <button class="btn" onclick="p15OpenLevelPanel()">Changer de niveau</button>
+      </div>
+    </div>
+    <div class="panel" id="p15-leaderboard-panel" style="display:none;">
+      <h2>🏆 Classements par niveau</h2>
+      <div class="btn-row" id="p15-lb-tabs" style="margin-bottom:10px;"></div>
+      <div style="font-size:13px; font-weight:700; color:var(--muted); margin:10px 0 4px;">🟦 Ton top perso</div>
+      <div id="p15-lb-perso"></div>
+      <div style="font-size:13px; font-weight:700; color:var(--muted); margin:16px 0 4px;">🌍 Mondial (aperçu, pas de vrai backend)</div>
+      <div id="p15-lb-world"></div>
+      <div class="btn-row" style="justify-content:center; margin-top:12px;">
+        <button class="btn" onclick="p15OpenLevelPanel()">← Retour</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2956,37 +2984,134 @@ function memoryFlip(i){
   }
 }
 
-/* ================= PUZZLE 15 ================= */
+/* ================= PUZZLE 15 (niveaux 4×4/5×5/6×6/7×7) ================= */
 let p15Tiles = [];
 let p15Moves = 0;
+let p15N = 4;
+let p15Seconds = 0;
+let p15TimerInterval = null;
+let p15LbLevel = 4;
+const p15Levels = [
+  {n:4, label:'15 (4×4)'},
+  {n:5, label:'24 (5×5)'},
+  {n:6, label:'35 (6×6)'},
+  {n:7, label:'48 (7×7)'},
+];
+// Classement mondial fictif (aperçu, pas de vrai backend — voir PROJECT_STATE.md)
+const p15WorldMock = {
+  4: [{name:'Adam R.', seconds:34, moves:58},{name:'Léa M.', seconds:41, moves:66},{name:'Nina P.', seconds:49, moves:74}],
+  5: [{name:'Thomas B.', seconds:88, moves:132},{name:'Sofia K.', seconds:104, moves:150},{name:'Léa M.', seconds:122, moves:170}],
+  6: [{name:'Léa M.', seconds:205, moves:248},{name:'Adam R.', seconds:245, moves:286},{name:'Nina P.', seconds:288, moves:324}],
+  7: [{name:'Thomas B.', seconds:398, moves:452},{name:'Sofia K.', seconds:460, moves:512},{name:'Léa M.', seconds:520, moves:568}],
+};
 function openPuzzle15(){
   switchScreen('game-puzzle15');
   setActiveTab(null);
-  p15New();
+  p15OpenLevelPanel();
   trackPage('/puzzle15');
 }
-function p15New(){
-  p15Tiles = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0];
-  // mélange via des mouvements valides pour garantir la solvabilité
-  let emptyIdx = 15;
-  for(let i=0;i<200;i++){
-    const neighbors = p15Neighbors(emptyIdx);
+function p15OpenLevelPanel(){
+  if(p15TimerInterval) clearInterval(p15TimerInterval);
+  document.getElementById('p15-level-panel').style.display = 'block';
+  document.getElementById('p15-game-panel').style.display = 'none';
+  document.getElementById('p15-leaderboard-panel').style.display = 'none';
+}
+function p15GetScores(n){
+  try{
+    const raw = localStorage.getItem('p15Scores:'+n);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function p15SaveScore(n, seconds, moves){
+  const list = p15GetScores(n);
+  list.push({seconds, moves, date:Date.now()});
+  list.sort((a,b)=>a.seconds-b.seconds);
+  const top = list.slice(0,10);
+  localStorage.setItem('p15Scores:'+n, JSON.stringify(top));
+  return top;
+}
+function p15OpenLeaderboard(){
+  if(p15TimerInterval) clearInterval(p15TimerInterval);
+  document.getElementById('p15-level-panel').style.display = 'none';
+  document.getElementById('p15-game-panel').style.display = 'none';
+  document.getElementById('p15-leaderboard-panel').style.display = 'block';
+  p15RenderLbTabs();
+  p15RenderLeaderboard();
+}
+function p15RenderLbTabs(){
+  const el = document.getElementById('p15-lb-tabs');
+  el.innerHTML = p15Levels.map(l => `
+    <button class="btn ${l.n===p15LbLevel?'primary':''}" onclick="p15SelectLbTab(${l.n})" style="font-size:11px; padding:6px 8px;">${l.label}</button>
+  `).join('');
+}
+function p15SelectLbTab(n){
+  p15LbLevel = n;
+  p15RenderLbTabs();
+  p15RenderLeaderboard();
+}
+function p15RenderLeaderboard(){
+  const persoEl = document.getElementById('p15-lb-perso');
+  const worldEl = document.getElementById('p15-lb-world');
+  const perso = p15GetScores(p15LbLevel).slice(0,5);
+  persoEl.innerHTML = perso.length ? perso.map((e,i) => `
+    <div class="leaderboard-row">
+      <span class="leaderboard-rank">${i+1}</span>
+      <span class="leaderboard-name">${e.moves} coups</span>
+      <span class="leaderboard-score">${memoryFormatTime(e.seconds)}</span>
+    </div>
+  `).join('') : `<div class="footnote">Aucune partie terminée à ce niveau pour l'instant.</div>`;
+  const myBest = perso.length ? perso[0] : null;
+  let world = [...p15WorldMock[p15LbLevel]];
+  if(myBest) world.push({name:'Toi', seconds:myBest.seconds, moves:myBest.moves, me:true});
+  world.sort((a,b)=>a.seconds-b.seconds);
+  worldEl.innerHTML = world.map((p,i) => `
+    <div class="leaderboard-row ${p.me?'me':''}">
+      <span class="leaderboard-rank">${i+1}</span>
+      <span class="leaderboard-name">${p.me?'👉 ':''}${p.name} (${p.moves} coups)</span>
+      <span class="leaderboard-score">${memoryFormatTime(p.seconds)}</span>
+    </div>
+  `).join('');
+}
+function p15New(n){
+  p15N = n;
+  const total = n*n;
+  p15Tiles = Array.from({length:total-1}, (_,i)=>i+1);
+  p15Tiles.push(0);
+  // mélange via des mouvements valides pour garantir la solvabilité, quelle que soit la taille
+  let emptyIdx = total-1;
+  const shuffleMoves = Math.max(200, total*30);
+  for(let i=0;i<shuffleMoves;i++){
+    const neighbors = p15Neighbors(emptyIdx, n);
     const swapIdx = neighbors[Math.floor(Math.random()*neighbors.length)];
     [p15Tiles[emptyIdx], p15Tiles[swapIdx]] = [p15Tiles[swapIdx], p15Tiles[emptyIdx]];
     emptyIdx = swapIdx;
   }
   p15Moves = 0;
+  p15Seconds = 0;
   document.getElementById('p15-status').textContent = '';
+  document.getElementById('p15-level-panel').style.display = 'none';
+  document.getElementById('p15-leaderboard-panel').style.display = 'none';
+  document.getElementById('p15-game-panel').style.display = 'block';
+  document.getElementById('p15-grid').style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+  document.getElementById('p15-grid').style.gap = n>5 ? '3px' : '6px';
+  const scores = p15GetScores(n);
+  document.getElementById('p15-best').textContent = scores.length ? `${memoryFormatTime(scores[0].seconds)} (${scores[0].moves} coups)` : '—';
+  if(p15TimerInterval) clearInterval(p15TimerInterval);
+  p15TimerInterval = setInterval(()=>{
+    p15Seconds++;
+    document.getElementById('p15-timer').textContent = memoryFormatTime(p15Seconds);
+  }, 1000);
+  document.getElementById('p15-timer').textContent = '0:00';
   p15Render();
 }
-function p15Neighbors(idx){
-  const r = Math.floor(idx/4), c = idx%4;
-  const n = [];
-  if(r>0) n.push(idx-4);
-  if(r<3) n.push(idx+4);
-  if(c>0) n.push(idx-1);
-  if(c<3) n.push(idx+1);
-  return n;
+function p15Neighbors(idx, n){
+  const r = Math.floor(idx/n), c = idx%n;
+  const nb = [];
+  if(r>0) nb.push(idx-n);
+  if(r<n-1) nb.push(idx+n);
+  if(c>0) nb.push(idx-1);
+  if(c<n-1) nb.push(idx+1);
+  return nb;
 }
 function p15GradientColor(value, maxValue){
   // dégradé #0ebeff -> #ff42b3 selon le numéro de la tuile
@@ -2999,9 +3124,11 @@ function p15Render(){
   const el = document.getElementById('p15-grid');
   el.innerHTML = '';
   const maxValue = p15Tiles.length - 1;
+  const fontSize = p15N<=4 ? '18px' : p15N<=5 ? '15px' : p15N<=6 ? '12px' : '10px';
   p15Tiles.forEach((v, i) => {
     const div = document.createElement('div');
     div.className = 'p15-tile' + (v===0 ? ' empty':'');
+    div.style.fontSize = fontSize;
     div.textContent = v || '';
     if(v!==0){
       div.style.background = p15GradientColor(v, maxValue);
@@ -3014,12 +3141,23 @@ function p15Render(){
 }
 function p15Tap(i){
   const emptyIdx = p15Tiles.indexOf(0);
-  if(p15Neighbors(emptyIdx).includes(i)){
+  if(p15Neighbors(emptyIdx, p15N).includes(i)){
     [p15Tiles[emptyIdx], p15Tiles[i]] = [p15Tiles[i], p15Tiles[emptyIdx]];
     p15Moves++;
     p15Render();
-    const solved = p15Tiles.slice(0,15).every((v,idx)=>v===idx+1) && p15Tiles[15]===0;
-    if(solved) document.getElementById('p15-status').textContent = `🟩 Résolu en ${p15Moves} coups !`;
+    const total = p15N*p15N;
+    const solved = p15Tiles.slice(0,total-1).every((v,idx)=>v===idx+1) && p15Tiles[total-1]===0;
+    if(solved){
+      clearInterval(p15TimerInterval);
+      const scoresBefore = p15GetScores(p15N);
+      const prevBestSeconds = scoresBefore.length ? scoresBefore[0].seconds : null;
+      p15SaveScore(p15N, p15Seconds, p15Moves);
+      document.getElementById('p15-status').textContent = `🟩 Résolu en ${p15Moves} coups, en ${memoryFormatTime(p15Seconds)} !`;
+      if(prevBestSeconds===null || p15Seconds<prevBestSeconds){
+        document.getElementById('p15-best').textContent = `${memoryFormatTime(p15Seconds)} (${p15Moves} coups)`;
+        playFeedback('record');
+      }
+    }
   }
 }
 

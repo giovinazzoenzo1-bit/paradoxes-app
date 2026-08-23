@@ -68,7 +68,12 @@ Cause du problème "aucun changement visible malgré les push" : le fetch handle
   - Classement mondial : aperçu fictif (`memoryWorldMock`, pas de vrai backend) fusionné avec le meilleur temps perso inséré au bon rang
   - Anti-triche v1 : chaque score est signé (`memorySign()`, hash simple) et un score dont la signature ne correspond pas (édité à la main dans localStorage) est silencieusement rejeté du classement ; un score physiquement impossible (moins de coups que de paires, temps trop court) est aussi rejeté (`memoryIsPlausible()`)
   - ⚠️ Limite documentée dans le code : protection client uniquement, dissuade la triche "rapide" via édition directe de localStorage, ne bloque pas quelqu'un qui lit le code source — un vrai anti-triche nécessiterait un backend (Phase 7)
-- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : Puzzle15, Snake, Nuts and Bolts, + nouveaux mini-jeux)
+- **Puzzle15 (fait, v25)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour (couleurs dégradées déjà faites en Phase 1) :
+  - 4 niveaux de difficulté : 15 (4×4), 24 (5×5), 35 (6×6), 48 (7×7) — écran de sélection de niveau ajouté
+  - Génération solvable par construction pour toutes les tailles (mélange via mouvements légaux uniquement, `p15Neighbors(idx,n)` généralisé)
+  - Classement "🏆 Classements" avec onglets par niveau : top 5 perso (coups + temps, `localStorage p15Scores:<n>`) + mondial aperçu fictif (`p15WorldMock`) fusionné avec le meilleur perso
+  - Grille et police redimensionnées dynamiquement selon le niveau (jusqu'à 48 pièces en 7×7)
+- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : Snake, Nuts and Bolts, + nouveaux mini-jeux)
 - **Phase 3 (à faire)** : classements perso (localStorage) — Memory, Puzzle15, Snake, 2048
 - **Phase 4 (à faire)** : anti-triche v1 Memory + validation de mot réel pour Wordle (refuser la soumission si le mot n'existe pas)
 - **Phase 5 (à faire)** : Nuts and Bolts — passer de 5 à 50 niveaux
