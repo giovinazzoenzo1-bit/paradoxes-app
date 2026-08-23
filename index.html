@@ -412,6 +412,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 .g2048-grid{
   display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
   background:var(--bg2); padding:8px; border-radius:10px; margin:14px 0;
+  touch-action:none;
 }
 .g2048-cell{
   aspect-ratio:1; border-radius:8px; display:flex; align-items:center; justify-content:center;
@@ -473,46 +474,51 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 .nb-nut{width:36px; height:26px; border-radius:6px;}
 
 /* ---------- SNAKE — THÈME GAME BOY ---------- */
+#game-snake{
+  background:radial-gradient(ellipse at 50% 0%, #223322 0%, #0a0f0a 65%);
+}
+#game-snake .game-wrap{max-width:640px;}
 .gameboy-body{
   background:#c4c9a3;
-  border-radius:18px 18px 40px 18px;
-  padding:20px 18px 24px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3);
-  max-width:320px; margin:0 auto;
+  border-radius:22px 22px 48px 22px;
+  padding:26px 22px 30px;
+  box-shadow:0 14px 40px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.3);
+  max-width:480px; width:100%; margin:0 auto;
   border:3px solid #9aa080;
+  box-sizing:border-box;
 }
 .gameboy-speaker{
-  width:70px; height:14px; margin:0 auto 14px;
-  background:repeating-linear-gradient(90deg, #8a8f6f 0 4px, transparent 4px 8px);
+  width:90px; height:16px; margin:0 auto 18px;
+  background:repeating-linear-gradient(90deg, #8a8f6f 0 5px, transparent 5px 10px);
   border-radius:8px;
 }
 .gameboy-screen{
   background:#1a2e1a;
-  border-radius:6px;
-  padding:10px;
+  border-radius:8px;
+  padding:14px;
   box-shadow:inset 0 3px 10px rgba(0,0,0,0.6);
-  border:4px solid #3a3f2f;
+  border:5px solid #3a3f2f;
 }
 .gameboy-screen-header{
   display:flex; justify-content:space-between;
-  font-family:monospace; font-size:10px; color:#9bbc0f;
-  margin-bottom:6px; letter-spacing:.05em;
+  font-family:monospace; font-size:12px; color:#9bbc0f;
+  margin-bottom:8px; letter-spacing:.05em;
 }
-.gameboy-screen-header b{color:#c4f000; font-size:11px;}
-#snake-canvas{width:100%; max-width:260px; display:block; margin:0 auto; background:#9bbc0f; border-radius:2px;}
-#snake-status{color:#c4f000; font-family:monospace; font-size:12px;}
+.gameboy-screen-header b{color:#c4f000; font-size:13px;}
+#snake-canvas{width:100%; max-width:400px; display:block; margin:0 auto; background:#9bbc0f; border-radius:2px;}
+#snake-status{color:#c4f000; font-family:monospace; font-size:13px;}
 .gameboy-dpad{
-  position:relative; width:110px; height:110px; margin:20px auto 0;
+  position:relative; width:150px; height:150px; margin:26px auto 0;
 }
 .dpad-btn{
-  position:absolute; width:36px; height:36px; background:#2a2a2a; border:none;
-  color:#888; font-size:14px; cursor:pointer;
+  position:absolute; width:50px; height:50px; background:#2a2a2a; border:none;
+  color:#999; font-size:20px; cursor:pointer;
 }
-.dpad-up{top:0; left:37px; border-radius:6px 6px 0 0;}
-.dpad-down{bottom:0; left:37px; border-radius:0 0 6px 6px;}
-.dpad-left{left:0; top:37px; border-radius:6px 0 0 6px;}
-.dpad-right{right:0; top:37px; border-radius:0 6px 6px 0;}
-.dpad-center{position:absolute; left:37px; top:37px; width:36px; height:36px; background:#2a2a2a;}
+.dpad-up{top:0; left:50px; border-radius:8px 8px 0 0;}
+.dpad-down{bottom:0; left:50px; border-radius:0 0 8px 8px;}
+.dpad-left{left:0; top:50px; border-radius:8px 0 0 8px;}
+.dpad-right{right:0; top:50px; border-radius:0 8px 8px 0;}
+.dpad-center{position:absolute; left:50px; top:50px; width:50px; height:50px; background:#2a2a2a;}
 .gameboy-body.flash{animation:gbFlash .5s ease 3;}
 @keyframes gbFlash{
   0%,100%{box-shadow:0 10px 30px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3);}
@@ -1969,6 +1975,23 @@ function wordleBackspace(){
   wordleGuess = wordleGuess.slice(0,-1);
   wordleRenderGrid();
 }
+function wordlePlayCellFeedback(cls, delayIndex){
+  const mode = localStorage.getItem('feedbackMode') || 'sound';
+  if(mode === 'silent') return;
+  if(mode === 'vibrate'){
+    if(navigator.vibrate){
+      if(cls==='correct') navigator.vibrate(40);
+      else if(cls==='present') navigator.vibrate(15);
+    }
+    return;
+  }
+  if(cls==='correct'){
+    playTone(880,0.1,'sine',delayIndex*0.05,0.15);
+    playTone(1320,0.08,'sine',delayIndex*0.05+0.06,0.1);
+  } else if(cls==='present'){
+    playTone(500,0.12,'triangle',delayIndex*0.05,0.12);
+  }
+}
 function wordleSubmit(){
   if(wordleOver || wordleGuess.length!==5) return;
   wordleHistory[wordleRow] = wordleGuess;
@@ -1976,6 +1999,7 @@ function wordleSubmit(){
   for(let i=0;i<5;i++){
     const cls = wordleEvalCell(wordleGuess, i);
     const letter = wordleGuess[i];
+    wordlePlayCellFeedback(cls, i);
     if(cls==='correct') letterStates[letter]='correct';
     else if(cls==='present' && letterStates[letter]!=='correct') letterStates[letter]='present';
     else if(!letterStates[letter]) letterStates[letter]='absent';
@@ -2394,6 +2418,10 @@ function g2048AttachSwipe(){
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
   }, {passive:true});
+  el.addEventListener('touchmove', (e)=>{
+    // empêche la page de scroller pendant un swipe vertical sur la grille
+    e.preventDefault();
+  }, {passive:false});
   el.addEventListener('touchend', (e)=>{
     const dx = e.changedTouches[0].clientX - startX;
     const dy = e.changedTouches[0].clientY - startY;
@@ -2629,13 +2657,25 @@ function p15Neighbors(idx){
   if(c<3) n.push(idx+1);
   return n;
 }
+function p15GradientColor(value, maxValue){
+  // dégradé #0ebeff -> #ff42b3 selon le numéro de la tuile
+  const c1 = [0x0e,0xbe,0xff], c2 = [0xff,0x42,0xb3];
+  const t = maxValue>1 ? (value-1)/(maxValue-1) : 0;
+  const rgb = c1.map((c,i)=> Math.round(c + (c2[i]-c)*t));
+  return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+}
 function p15Render(){
   const el = document.getElementById('p15-grid');
   el.innerHTML = '';
+  const maxValue = p15Tiles.length - 1;
   p15Tiles.forEach((v, i) => {
     const div = document.createElement('div');
     div.className = 'p15-tile' + (v===0 ? ' empty':'');
     div.textContent = v || '';
+    if(v!==0){
+      div.style.background = p15GradientColor(v, maxValue);
+      div.style.color = '#0a0a14';
+    }
     div.onclick = () => p15Tap(i);
     el.appendChild(div);
   });
@@ -2838,19 +2878,73 @@ function nbBackToLevels(){
   document.getElementById('nb-game-panel').style.display = 'none';
   nbRenderLevelButtons();
 }
-function nbNew(level){
-  nbLevel = level;
-  const cfg = nbLevelConfig[level];
-  const colors = nbAllColors.slice(0, cfg.colors);
+function nbShuffle(colors, emptyRods){
   const stacks = colors.map(c => Array(4).fill(c));
   let allNuts = stacks.flat();
   for(let i=allNuts.length-1;i>0;i--){
     const j = Math.floor(Math.random()*(i+1));
     [allNuts[i],allNuts[j]] = [allNuts[j],allNuts[i]];
   }
-  nbRods = [];
-  for(let i=0;i<colors.length;i++) nbRods.push(allNuts.splice(0,4));
-  for(let i=0;i<cfg.emptyRods;i++) nbRods.push([]);
+  const rods = [];
+  for(let i=0;i<colors.length;i++) rods.push(allNuts.splice(0,4));
+  for(let i=0;i<emptyRods;i++) rods.push([]);
+  return rods;
+}
+function nbIsWon(state){
+  return state.every(rod => rod.length===0 || (rod.length===4 && rod.every(c=>c===rod[0])));
+}
+// Vérifie si une configuration est solvable via BFS sur états canoniques (les tiges ne sont pas ordonnées entre elles)
+function nbIsSolvable(startRods){
+  if(nbIsWon(startRods)) return true;
+  const canon = state => state.map(r=>r.join(',')).sort().join('|');
+  const visited = new Set([canon(startRods)]);
+  let frontier = [startRods];
+  let explored = 0;
+  const MAX_STATES = 60000;
+  while(frontier.length){
+    const next = [];
+    for(const state of frontier){
+      for(let i=0;i<state.length;i++){
+        if(state[i].length===0) continue;
+        // pas d'intérêt à vider une tige déjà 100% uniforme
+        const from = state[i];
+        const moving = from[from.length-1];
+        for(let j=0;j<state.length;j++){
+          if(i===j) continue;
+          const to = state[j];
+          if(to.length<4 && (to.length===0 || to[to.length-1]===moving)){
+            const newState = state.map((r,k)=> k===i ? r.slice(0,-1) : k===j ? r.concat([moving]) : r);
+            explored++;
+            if(nbIsWon(newState)) return true;
+            const key = canon(newState);
+            if(!visited.has(key)){
+              visited.add(key);
+              next.push(newState);
+            }
+            if(explored>MAX_STATES) return false;
+          }
+        }
+      }
+    }
+    frontier = next;
+  }
+  return false;
+}
+function nbGenerateSolvableRods(colors, emptyRods){
+  const MAX_ATTEMPTS = 400;
+  let lastTry = null;
+  for(let attempt=0; attempt<MAX_ATTEMPTS; attempt++){
+    const rods = nbShuffle(colors, emptyRods);
+    lastTry = rods;
+    if(nbIsSolvable(rods)) return rods;
+  }
+  return lastTry; // filet de sécurité, ne devrait jamais arriver
+}
+function nbNew(level){
+  nbLevel = level;
+  const cfg = nbLevelConfig[level];
+  const colors = nbAllColors.slice(0, cfg.colors);
+  nbRods = nbGenerateSolvableRods(colors, cfg.emptyRods);
   nbSelected = null;
   document.getElementById('nb-status').textContent = '';
   document.getElementById('nb-levelLabel').textContent = level;

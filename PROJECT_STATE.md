@@ -38,7 +38,16 @@ PWA (Progressive Web App) éducative/ludique : paradoxes de probabilités expliq
 - App native (Capacitor) pour vraie pub AdMob et présence App Store — actuellement PWA uniquement
 
 ## Bugs connus à vérifier
-- Nuts and Bolts niveau 4 (5 couleurs, seulement 2 tiges vides) : risque de configuration bloquée car le mélange est aléatoire, pas de vérification de solvabilité
+- (résolu v19) ~~Nuts and Bolts niveau 4 : risque de configuration bloquée~~ → génération avec vérification de solvabilité (BFS sur états canoniques) avant de lancer la partie, voir `nbGenerateSolvableRods()`
+
+## Roadmap corrective en cours (phases définies avec l'utilisateur le 23/08/2026)
+- **Phase 1 (fait, v19)** : bug Nuts and Bolts niv.4, sons Wordle (lettre correcte/mal placée), bug scroll 2048 au swipe, boutons Snake agrandis + décor plein écran, couleurs dégradées Puzzle15
+- **Phase 2 (à faire)** : fonctionnalités mock (bouton pub simulée Wordle/2048, undo 2048, système "cartes révélées" Qui suis-je, niveaux de difficulté Puzzle15 15/24/35/48)
+- **Phase 3 (à faire)** : classements perso (localStorage) — Memory, Puzzle15, Snake, 2048
+- **Phase 4 (à faire)** : anti-triche v1 Memory + validation de mot réel pour Wordle (refuser la soumission si le mot n'existe pas)
+- **Phase 5 (à faire)** : Nuts and Bolts — passer de 5 à 50 niveaux
+- **Phase 6 (à faire)** : nouveaux mini-jeux un par un — Solitaire, Sudoku, Puissance 4, Flappy Bird (raisonnables en vanilla JS) ; Ludo, Skip-Bo, Échecs, Billard, Ping-pong (plus lourds, à traiter en dernier)
+- **Phase 7 (bloquant pour tout "classement mondial")** : vrai backend (comptes utilisateurs + base de données) — indispensable avant tout classement mondial réel, actuellement tout est en localStorage local à l'appareil
 
 ## Convention de code utile à connaître
 - `puzzles` (array JS) = liste des 20 paradoxes, chaque entrée a `id`, `icon` (emoji, fallback), `color`, `title`, `hook`, `odds`
