@@ -46,6 +46,13 @@ Cause du problème "aucun changement visible malgré les push" : le fetch handle
 - **Filet de sécurité ajouté** : bouton "Forcer la mise à jour" dans Options → supprime tous les caches + désenregistre le service worker + recharge.
 - Le cache CDN GitHub Pages de 5 min reste incompressible (limite d'hébergement gratuit), mais maintenant après ce délai un simple refresh normal suffit, plus besoin du bandeau.
 
+## 🟥 Correctif v28 : Nuts and Bolts — la génération "garantie solvable" de v27 ne mélangeait jamais les couleurs
+Bug signalé par l'utilisateur après v27 : niveaux triviaux, certains résolus en 1 coup, couleurs jamais mélangées dans une même tige.
+**Cause racine (erreur de conception v27)** : la méthode "on part de l'état résolu et on joue des coups légaux en arrière" est mathématiquement solvable par construction, MAIS sous la règle "on ne peut poser un écrou que sur une tige vide ou dont le dessus est de la même couleur", il est **mathématiquement impossible qu'une tige contienne 2 couleurs différentes** avec ce type de mélange — donc les tiges restent toujours mono-couleur, seule leur répartition entre tiges change. Le mélange était donc quasi cosmétique.
+**Fix v28** : retour à un **vrai mélange aléatoire** (`nbRandomShuffle`, Fisher-Yates sur tous les écrous puis répartition en tiges — les couleurs se retrouvent bien mélangées à l'intérieur d'une même tige, comme il se doit). Le problème inverse refait surface : un mélange 100% aléatoire n'est pas toujours solvable, donc vérification nécessaire.
+**Nouveau solveur** : BFS classique remplacé par une recherche **"best-first" avec tas binaire (min-heap)**, priorisée par une heuristique (`nbHeuristic` = nombre de segments de couleur contigus dans l'ensemble des tiges — moins il y en a, plus c'est proche d'être résolu). Explore toujours l'état le plus prometteur en premier au lieu de tout explorer dans l'ordre → converge vers une solution en quelques dizaines de ms même à 9 couleurs, là où le BFS classique explosait en temps de calcul.
+**Testé** : 150 générations (3 passes × 50 niveaux) — 0 échec de solvabilité, 0 niveau déjà résolu au départ, mélange réellement multi-couleur par tige confirmé, temps max par génération 229ms (imperceptible).
+
 ## Roadmap corrective en cours (approche validée le 23/08/2026 : jeu par jeu à 100%, pas phase horizontale)
 - **Phase 1 (fait, v19)** : bug Nuts and Bolts niv.4, sons Wordle (lettre correcte/mal placée), bug scroll 2048 au swipe, boutons Snake agrandis + décor plein écran, couleurs dégradées Puzzle15
 - **Wordle (fait, v20)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour :

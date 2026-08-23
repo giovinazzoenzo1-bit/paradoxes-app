@@ -3400,40 +3400,112 @@ function nbBackToLevels(){
   document.getElementById('nb-game-panel').style.display = 'none';
   nbRenderLevelButtons();
 }
-// Génère une configuration garantie solvable : on part de l'état résolu et on effectue
-// des mouvements aléatoires LÉGAUX (comme un vrai coup du joueur). Puisque chaque mouvement
-// est réversible pas à pas (annuler le dernier coup joué est toujours un coup légal, et ainsi
-// de suite jusqu'au premier), l'état mélangé final est TOUJOURS solvable par construction —
-// aucune vérification a posteriori n'est nécessaire, contrairement à un mélange 100% aléatoire.
-function nbShuffle(colors, emptyRods){
-  let rods = colors.map(c => Array(NB_CAPACITY).fill(c));
-  for(let i=0;i<emptyRods;i++) rods.push([]);
-  const numRods = rods.length;
-  const targetMoves = Math.max(150, colors.length * NB_CAPACITY * 8);
-  let performed = 0, guard = 0;
-  while(performed < targetMoves && guard < targetMoves*30){
-    guard++;
-    const i = Math.floor(Math.random()*numRods);
-    if(rods[i].length===0) continue;
-    const j = Math.floor(Math.random()*numRods);
-    if(j===i) continue;
-    const moving = rods[i][rods[i].length-1];
-    if(rods[j].length<NB_CAPACITY && (rods[j].length===0 || rods[j][rods[j].length-1]===moving)){
-      rods[j].push(rods[i].pop());
-      performed++;
-    }
+// Mélange VRAIMENT aléatoire (les couleurs se retrouvent mélangées à l'intérieur d'une même tige,
+// contrairement à un mélange "par coups légaux" qui ne peut jamais mélanger deux couleurs dans une
+// même tige — c'était le bug de la version précédente : tiges toujours mono-couleur, niveaux
+// quasi résolus dès le départ).
+function nbRandomShuffle(colors, emptyRods){
+  const stacks = colors.map(c => Array(NB_CAPACITY).fill(c));
+  let allNuts = stacks.flat();
+  for(let i=allNuts.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [allNuts[i],allNuts[j]] = [allNuts[j],allNuts[i]];
   }
+  const rods = [];
+  for(let i=0;i<colors.length;i++) rods.push(allNuts.splice(0,NB_CAPACITY));
+  for(let i=0;i<emptyRods;i++) rods.push([]);
   return rods;
 }
 function nbIsWon(state){
   return state.every(rod => rod.length===0 || (rod.length===NB_CAPACITY && rod.every(c=>c===rod[0])));
 }
+// Heuristique : nombre de "segments" de couleur contigus (plus il y en a, plus c'est mélangé/loin d'être résolu).
+function nbHeuristic(state){
+  let segments = 0;
+  for(const rod of state){
+    let prev = null;
+    for(const c of rod){ if(c!==prev) segments++; prev = c; }
+  }
+  return segments;
+}
+// Petit tas binaire (min-heap) pour la recherche "best-first" : explore toujours l'état le plus
+// prometteur (le moins mélangé) en premier — beaucoup plus rapide qu'un BFS classique qui explore
+// tout dans l'ordre, et qui devenait ingérable dès 7-8 couleurs.
+function nbHeapPush(heap, item){
+  heap.push(item);
+  let i = heap.length-1;
+  while(i>0){
+    const p = (i-1)>>1;
+    if(heap[p].h <= heap[i].h) break;
+    [heap[p],heap[i]] = [heap[i],heap[p]];
+    i = p;
+  }
+}
+function nbHeapPop(heap){
+  const top = heap[0];
+  const last = heap.pop();
+  if(heap.length){
+    heap[0] = last;
+    let i = 0;
+    while(true){
+      const l = 2*i+1, r = 2*i+2;
+      let smallest = i;
+      if(l<heap.length && heap[l].h<heap[smallest].h) smallest = l;
+      if(r<heap.length && heap[r].h<heap[smallest].h) smallest = r;
+      if(smallest===i) break;
+      [heap[smallest],heap[i]] = [heap[i],heap[smallest]];
+      i = smallest;
+    }
+  }
+  return top;
+}
+function nbSolveExists(startRods, nodeBudget){
+  if(nbIsWon(startRods)) return true;
+  const canon = state => state.map(r=>r.join(',')).sort().join('|');
+  const visited = new Set([canon(startRods)]);
+  const heap = [];
+  nbHeapPush(heap, {state:startRods, h:nbHeuristic(startRods)});
+  let explored = 0;
+  while(heap.length){
+    const {state} = nbHeapPop(heap);
+    explored++;
+    if(explored>nodeBudget) return false;
+    for(let i=0;i<state.length;i++){
+      if(state[i].length===0) continue;
+      const moving = state[i][state[i].length-1];
+      for(let j=0;j<state.length;j++){
+        if(i===j) continue;
+        const to = state[j];
+        if(to.length<NB_CAPACITY && (to.length===0 || to[to.length-1]===moving)){
+          const newState = state.map((r,k)=> k===i ? r.slice(0,-1) : k===j ? r.concat([moving]) : r);
+          if(nbIsWon(newState)) return true;
+          const key = canon(newState);
+          if(!visited.has(key)){
+            visited.add(key);
+            nbHeapPush(heap, {state:newState, h:nbHeuristic(newState)});
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+function nbGenerateSolvableRods(colors, emptyRods){
+  const MAX_ATTEMPTS = 300;
+  const NODE_BUDGET = 60000;
+  let lastTry = null;
+  for(let attempt=0; attempt<MAX_ATTEMPTS; attempt++){
+    const rods = nbRandomShuffle(colors, emptyRods);
+    lastTry = rods;
+    if(nbSolveExists(rods, NODE_BUDGET)) return rods;
+  }
+  return lastTry; // filet de sécurité, quasi jamais atteint en pratique (voir tests)
+}
 function nbNew(level){
   nbLevel = level;
   const cfg = nbConfigForLevel(level);
   const colors = nbAllColors.slice(0, cfg.colors);
-  nbRods = nbShuffle(colors, cfg.emptyRods);
-  if(nbIsWon(nbRods)) nbRods = nbShuffle(colors, cfg.emptyRods); // filet de sécurité (probabilité quasi nulle)
+  nbRods = nbGenerateSolvableRods(colors, cfg.emptyRods);
   nbSelected = null;
   document.getElementById('nb-status').textContent = '';
   document.getElementById('nb-levelLabel').textContent = level;
