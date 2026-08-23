@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paradoxes-v23';
+const CACHE_NAME = 'paradoxes-v24';
 const ASSETS = [
   './',
   './index.html',
@@ -61,13 +61,31 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
-        // Cache new same-origin GET requests for offline use next time
-        if (event.request.method === 'GET' && response.ok) {
+  const req = event.request;
+  // Network-first pour la navigation (le HTML de l'app) : on essaie toujours d'avoir la
+  // version la plus fraîche en premier, on ne retombe sur le cache que hors-ligne.
+  // Avant, tout (y compris le HTML) était cache-first, ce qui pouvait servir une version
+  // périmée indéfiniment tant que le bandeau de mise à jour n'était pas tapé.
+  const isNavigation = req.mode === 'navigate' || (req.method === 'GET' && (req.headers.get('accept')||'').includes('text/html'));
+  if (isNavigation) {
+    event.respondWith(
+      fetch(req, {cache:'no-store'}).then((response) => {
+        if (response.ok) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+        }
+        return response;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      return cached || fetch(req).then((response) => {
+        // Cache new same-origin GET requests for offline use next time
+        if (req.method === 'GET' && response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
         }
         return response;
       }).catch(() => cached);

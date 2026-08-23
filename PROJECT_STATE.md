@@ -40,6 +40,12 @@ PWA (Progressive Web App) éducative/ludique : paradoxes de probabilités expliq
 ## Bugs connus à vérifier
 - (résolu v19) ~~Nuts and Bolts niveau 4 : risque de configuration bloquée~~ → génération avec vérification de solvabilité (BFS sur états canoniques) avant de lancer la partie, voir `nbGenerateSolvableRods()`
 
+## 🟥 Correctif critique v24 : le HTML était servi cache-first, jamais rafraîchi
+Cause du problème "aucun changement visible malgré les push" : le fetch handler de `sw.js` servait TOUT en cache-first, y compris le `index.html` lui-même. Résultat : tant que l'utilisateur ne tapait pas explicitement le bandeau jaune "nouvelle version" (qui ne se déclenchait pas de façon fiable, probablement lié au cycle de vie des PWA en mode standalone sur mobile), l'app restait bloquée sur une version périmée indéfiniment, même après avoir fermé/rouvert l'app plusieurs fois.
+- **Fix** : le HTML (requêtes de navigation) passe en **network-first** (`fetch(req, {cache:'no-store'})`), ne retombe sur le cache que hors-ligne. Les autres assets (icônes, mp3) restent cache-first pour l'usage hors-ligne.
+- **Filet de sécurité ajouté** : bouton "Forcer la mise à jour" dans Options → supprime tous les caches + désenregistre le service worker + recharge.
+- Le cache CDN GitHub Pages de 5 min reste incompressible (limite d'hébergement gratuit), mais maintenant après ce délai un simple refresh normal suffit, plus besoin du bandeau.
+
 ## Roadmap corrective en cours (approche validée le 23/08/2026 : jeu par jeu à 100%, pas phase horizontale)
 - **Phase 1 (fait, v19)** : bug Nuts and Bolts niv.4, sons Wordle (lettre correcte/mal placée), bug scroll 2048 au swipe, boutons Snake agrandis + décor plein écran, couleurs dégradées Puzzle15
 - **Wordle (fait, v20)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour :
