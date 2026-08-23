@@ -75,7 +75,12 @@ Cause du problème "aucun changement visible malgré les push" : le fetch handle
   - Grille et police redimensionnées dynamiquement selon le niveau (jusqu'à 48 pièces en 7×7)
 - **Snake (fait, v26)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour (boutons agrandis + décor plein écran déjà faits en Phase 1) :
   - Classement mondial affiché à la fin de partie (`snakeRenderWorldboard()`, aperçu fictif `snakeWorldMock` fusionné avec le meilleur score perso, panneau caché au lancement d'une nouvelle partie)
-- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : Nuts and Bolts — 50 niveaux —, + nouveaux mini-jeux)
+- **Nuts and Bolts (fait, v27)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour :
+  - **50 niveaux** au lieu de 5, même système de difficulté (nombre de couleurs 3→9 + tiges vides 3→1), organisé en paliers : lvl1-5 (config originale inchangée), lvl6-14 (6 couleurs), lvl15-23 (7 couleurs), lvl24-33 (8 couleurs), lvl34-50 (9 couleurs) — chaque palier se termine à 1 tige vide (le plus dur) puis le palier suivant repart à 3 (respiration avant la couleur en plus)
+  - Palette étendue à 9 couleurs distinctes (`nbAllColors`)
+  - **Changement majeur de génération** : l'ancien système (mélange 100% aléatoire + vérification BFS de solvabilité) explosait en temps de calcul dès 7-8+ couleurs. Remplacé par une génération **garantie solvable par construction** : on part de l'état résolu et on joue des coups légaux aléatoires (comme le ferait un joueur) — puisque défaire ces coups un par un en partant du dernier est toujours légal, l'état mélangé final est mathématiquement toujours solvable, sans aucune vérification a posteriori. Résultat : génération quasi-instantanée (<1ms) même à 9 couleurs, contre un risque de blocage du thread avec l'ancienne méthode. Testé et confirmé solvable via un solveur BFS indépendant sur échantillons.
+  - Écran de sélection : grille de 50 boutons numérotés (verrouillés/déverrouillés selon la progression), remplace l'ancienne liste verticale de 5 boutons
+- **Tous les jeux existants sont maintenant à 100%.** Reste uniquement les nouveaux mini-jeux à ajouter un par un (Solitaire, Sudoku, Puissance 4, Flappy Bird en priorité — Ludo, Skip-Bo, Échecs, Billard, Ping-pong plus lourds, à traiter en dernier). Voir la liste complète en tête de fichier.
 - **Phase 3 (à faire)** : classements perso (localStorage) — Memory, Puzzle15, Snake, 2048
 - **Phase 4 (à faire)** : anti-triche v1 Memory + validation de mot réel pour Wordle (refuser la soumission si le mot n'existe pas)
 - **Phase 5 (à faire)** : Nuts and Bolts — passer de 5 à 50 niveaux

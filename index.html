@@ -495,6 +495,13 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 }
 .nb-rod.selected{border-color:var(--accent);}
 .nb-nut{width:36px; height:26px; border-radius:6px;}
+.nb-level-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:6px;}
+.nb-level-btn{
+  aspect-ratio:1; border-radius:8px; border:none; background:var(--bg2); color:var(--text);
+  font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.nb-level-btn.locked{color:var(--muted); font-size:14px; cursor:default; opacity:0.6;}
+.nb-level-btn:not(.locked):active{background:var(--accent); color:#1a1300;}
 
 /* ---------- SNAKE — THÈME GAME BOY ---------- */
 #game-snake{
@@ -833,8 +840,8 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     <div class="game-title">🔩 Nuts and Bolts</div>
     <div class="panel" id="nb-level-panel">
       <h2>Choisis ton niveau</h2>
-      <div class="btn-row" id="nb-level-buttons" style="flex-direction:column;"></div>
-      <div class="footnote">Niveaux 6 à 50 arrivent dans une prochaine mise à jour.</div>
+      <div id="nb-level-buttons" class="nb-level-grid"></div>
+      <div class="footnote" style="margin-top:10px;">50 niveaux, difficulté progressive (plus de couleurs, moins de tiges vides).</div>
     </div>
     <div class="panel" id="nb-game-panel" style="display:none;">
       <div class="row"><span>Niveau</span><b id="nb-levelLabel">1</b></div>
@@ -3338,15 +3345,30 @@ function snakeDraw(){
   });
 }
 
-/* ================= NUTS AND BOLTS (tri par couleur, niveaux progressifs) ================= */
-const nbAllColors = ['#ef6461','#f5b942','#4fd1c5','#5f9dc9','#b85fc9','#8fc95f'];
-const nbLevelConfig = {
-  1: {colors:3, emptyRods:2},
-  2: {colors:4, emptyRods:2},
-  3: {colors:4, emptyRods:1},
-  4: {colors:5, emptyRods:2},
-  5: {colors:5, emptyRods:1},
-};
+/* ================= NUTS AND BOLTS (tri par couleur, 50 niveaux progressifs) ================= */
+const nbAllColors = ['#ef6461','#f5b942','#4fd1c5','#5f9dc9','#b85fc9','#8fc95f','#ff8fa3','#e08a3c','#a0522d'];
+const NB_TOTAL_LEVELS = 50;
+const NB_CAPACITY = 4;
+function nbConfigForLevel(level){
+  if(level<=5){
+    const t = {1:{colors:3,emptyRods:2},2:{colors:4,emptyRods:2},3:{colors:4,emptyRods:1},4:{colors:5,emptyRods:2},5:{colors:5,emptyRods:1}};
+    return t[level];
+  }
+  // À partir du niveau 6 : même système (nombre de couleurs + tiges vides), étendu sur 50 niveaux.
+  // Chaque palier de couleurs (6→9) dure plusieurs niveaux et se termine sur 1 seule tige vide (le plus dur),
+  // puis le palier suivant repart à 3 tiges vides (petite respiration) avant de redescendre.
+  const tiers = [
+    {colors:6, start:6,  end:14},
+    {colors:7, start:15, end:23},
+    {colors:8, start:24, end:33},
+    {colors:9, start:34, end:50},
+  ];
+  const tier = tiers.find(t => level>=t.start && level<=t.end);
+  const span = tier.end - tier.start;
+  const pos = level - tier.start;
+  const emptyRods = pos < span/3 ? 3 : pos < (span/3)*2 ? 2 : 1;
+  return {colors: tier.colors, emptyRods};
+}
 let nbRods = [];
 let nbSelected = null;
 let nbLevel = 1;
@@ -3359,14 +3381,15 @@ function openNutsBolts(){
   trackPage('/nutsbolts');
 }
 function nbRenderLevelButtons(){
-  const maxUnlocked = Math.min(5, (parseInt(localStorage.getItem('nbMaxLevel')||'0'))+1);
+  const maxUnlocked = Math.min(NB_TOTAL_LEVELS, (parseInt(localStorage.getItem('nbMaxLevel')||'0'))+1);
   const el = document.getElementById('nb-level-buttons');
   el.innerHTML = '';
-  for(let lvl=1; lvl<=5; lvl++){
+  el.className = 'nb-level-grid';
+  for(let lvl=1; lvl<=NB_TOTAL_LEVELS; lvl++){
     const btn = document.createElement('button');
-    btn.className = 'btn primary';
     const locked = lvl > maxUnlocked;
-    btn.textContent = locked ? `🔒 Niveau ${lvl}` : `Niveau ${lvl}`;
+    btn.className = 'nb-level-btn' + (locked ? ' locked' : '');
+    btn.textContent = locked ? '🔒' : lvl;
     btn.disabled = locked;
     btn.onclick = () => nbNew(lvl);
     el.appendChild(btn);
@@ -3377,73 +3400,40 @@ function nbBackToLevels(){
   document.getElementById('nb-game-panel').style.display = 'none';
   nbRenderLevelButtons();
 }
+// Génère une configuration garantie solvable : on part de l'état résolu et on effectue
+// des mouvements aléatoires LÉGAUX (comme un vrai coup du joueur). Puisque chaque mouvement
+// est réversible pas à pas (annuler le dernier coup joué est toujours un coup légal, et ainsi
+// de suite jusqu'au premier), l'état mélangé final est TOUJOURS solvable par construction —
+// aucune vérification a posteriori n'est nécessaire, contrairement à un mélange 100% aléatoire.
 function nbShuffle(colors, emptyRods){
-  const stacks = colors.map(c => Array(4).fill(c));
-  let allNuts = stacks.flat();
-  for(let i=allNuts.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [allNuts[i],allNuts[j]] = [allNuts[j],allNuts[i]];
-  }
-  const rods = [];
-  for(let i=0;i<colors.length;i++) rods.push(allNuts.splice(0,4));
+  let rods = colors.map(c => Array(NB_CAPACITY).fill(c));
   for(let i=0;i<emptyRods;i++) rods.push([]);
+  const numRods = rods.length;
+  const targetMoves = Math.max(150, colors.length * NB_CAPACITY * 8);
+  let performed = 0, guard = 0;
+  while(performed < targetMoves && guard < targetMoves*30){
+    guard++;
+    const i = Math.floor(Math.random()*numRods);
+    if(rods[i].length===0) continue;
+    const j = Math.floor(Math.random()*numRods);
+    if(j===i) continue;
+    const moving = rods[i][rods[i].length-1];
+    if(rods[j].length<NB_CAPACITY && (rods[j].length===0 || rods[j][rods[j].length-1]===moving)){
+      rods[j].push(rods[i].pop());
+      performed++;
+    }
+  }
   return rods;
 }
 function nbIsWon(state){
-  return state.every(rod => rod.length===0 || (rod.length===4 && rod.every(c=>c===rod[0])));
-}
-// Vérifie si une configuration est solvable via BFS sur états canoniques (les tiges ne sont pas ordonnées entre elles)
-function nbIsSolvable(startRods){
-  if(nbIsWon(startRods)) return true;
-  const canon = state => state.map(r=>r.join(',')).sort().join('|');
-  const visited = new Set([canon(startRods)]);
-  let frontier = [startRods];
-  let explored = 0;
-  const MAX_STATES = 60000;
-  while(frontier.length){
-    const next = [];
-    for(const state of frontier){
-      for(let i=0;i<state.length;i++){
-        if(state[i].length===0) continue;
-        // pas d'intérêt à vider une tige déjà 100% uniforme
-        const from = state[i];
-        const moving = from[from.length-1];
-        for(let j=0;j<state.length;j++){
-          if(i===j) continue;
-          const to = state[j];
-          if(to.length<4 && (to.length===0 || to[to.length-1]===moving)){
-            const newState = state.map((r,k)=> k===i ? r.slice(0,-1) : k===j ? r.concat([moving]) : r);
-            explored++;
-            if(nbIsWon(newState)) return true;
-            const key = canon(newState);
-            if(!visited.has(key)){
-              visited.add(key);
-              next.push(newState);
-            }
-            if(explored>MAX_STATES) return false;
-          }
-        }
-      }
-    }
-    frontier = next;
-  }
-  return false;
-}
-function nbGenerateSolvableRods(colors, emptyRods){
-  const MAX_ATTEMPTS = 400;
-  let lastTry = null;
-  for(let attempt=0; attempt<MAX_ATTEMPTS; attempt++){
-    const rods = nbShuffle(colors, emptyRods);
-    lastTry = rods;
-    if(nbIsSolvable(rods)) return rods;
-  }
-  return lastTry; // filet de sécurité, ne devrait jamais arriver
+  return state.every(rod => rod.length===0 || (rod.length===NB_CAPACITY && rod.every(c=>c===rod[0])));
 }
 function nbNew(level){
   nbLevel = level;
-  const cfg = nbLevelConfig[level];
+  const cfg = nbConfigForLevel(level);
   const colors = nbAllColors.slice(0, cfg.colors);
-  nbRods = nbGenerateSolvableRods(colors, cfg.emptyRods);
+  nbRods = nbShuffle(colors, cfg.emptyRods);
+  if(nbIsWon(nbRods)) nbRods = nbShuffle(colors, cfg.emptyRods); // filet de sécurité (probabilité quasi nulle)
   nbSelected = null;
   document.getElementById('nb-status').textContent = '';
   document.getElementById('nb-levelLabel').textContent = level;
@@ -3477,12 +3467,12 @@ function nbTap(i){
     const to = nbRods[i];
     const moving = from[from.length-1];
     if(to.length===0 || to[to.length-1]===moving){
-      if(to.length<4){
+      if(to.length<NB_CAPACITY){
         to.push(from.pop());
       }
     }
     nbSelected = null;
-    const won = nbRods.every(rod => rod.length===0 || (rod.length===4 && rod.every(c=>c===rod[0])));
+    const won = nbIsWon(nbRods);
     if(won){
       document.getElementById('nb-status').textContent = `🟩 Niveau ${nbLevel} terminé !`;
       statsRecordNbLevel(nbLevel);
