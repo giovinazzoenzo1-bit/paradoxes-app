@@ -56,7 +56,13 @@ PWA (Progressive Web App) éducative/ludique : paradoxes de probabilités expliq
   - Meilleur score perso affiché en permanence (localStorage `g2048Best`)
   - Message de fin (gagné/perdu) : score + temps de la partie + meilleur perso + meilleur mondial (aperçu fictif `g2048WorldBestMock`, pas de backend réel)
   - Bouton "↩️ Annuler" (historique jusqu'à 20 coups) — 1er undo de la partie gratuit, à partir du 2e le bouton devient "↩️📺 Annuler (pub)" et déclenche `mockWatchAd()` avant d'annuler
-- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : Memory, Puzzle15, Snake, Nuts and Bolts, + nouveaux mini-jeux)
+- **Memory (fait, v23)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour :
+  - Nouveau panneau "🏆 Classements" accessible depuis l'écran de choix de difficulté, avec onglets par difficulté (4×4/6×6/10×10/14×14)
+  - Classement perso : top 5 temps par difficulté, stocké dans `localStorage` (`memoryScores:<size>`, jusqu'à 10 scores gardés)
+  - Classement mondial : aperçu fictif (`memoryWorldMock`, pas de vrai backend) fusionné avec le meilleur temps perso inséré au bon rang
+  - Anti-triche v1 : chaque score est signé (`memorySign()`, hash simple) et un score dont la signature ne correspond pas (édité à la main dans localStorage) est silencieusement rejeté du classement ; un score physiquement impossible (moins de coups que de paires, temps trop court) est aussi rejeté (`memoryIsPlausible()`)
+  - ⚠️ Limite documentée dans le code : protection client uniquement, dissuade la triche "rapide" via édition directe de localStorage, ne bloque pas quelqu'un qui lit le code source — un vrai anti-triche nécessiterait un backend (Phase 7)
+- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : Puzzle15, Snake, Nuts and Bolts, + nouveaux mini-jeux)
 - **Phase 3 (à faire)** : classements perso (localStorage) — Memory, Puzzle15, Snake, 2048
 - **Phase 4 (à faire)** : anti-triche v1 Memory + validation de mot réel pour Wordle (refuser la soumission si le mot n'existe pas)
 - **Phase 5 (à faire)** : Nuts and Bolts — passer de 5 à 50 niveaux
