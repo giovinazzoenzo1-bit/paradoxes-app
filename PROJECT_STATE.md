@@ -48,7 +48,11 @@ PWA (Progressive Web App) éducative/ludique : paradoxes de probabilités expliq
   - Bouton "📺 Lettre offerte (pub)" — pub simulée (`mockWatchAd()`, overlay générique réutilisable, 4s), révèle la lettre correcte à la prochaine position vide de la ligne en cours
   - ⚠️ Note : le clavier du jeu ne gère pas les accents, donc le dictionnaire est filtré aux mots sans accents/tirets uniquement (4448/336524 mots du corpus complet)
 - **Système générique créé (réutilisable pour d'autres jeux)** : `mockWatchAd(durationSec, callback)` — overlay pub simulée avec barre de progression, `#ad-overlay` dans le `<body>`, CSS `.ad-overlay/.ad-box/.ad-progress`
-- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : Qui suis-je, 2048, Memory, Puzzle15, Snake, Nuts and Bolts, + nouveaux mini-jeux)
+- **Qui suis-je (fait, v21)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour :
+  - Système "🔎 J'ai oublié ma carte" : liste tous les joueurs, tap sur un nom → écran de confirmation d'identité (anti-spoil, honor system comme le reste du jeu) → révèle la carte de CE joueur uniquement
+  - Accessible depuis l'écran d'attente entre deux joueurs et depuis l'écran final "tout le monde a son personnage"
+  - État géré via `qsjRecallMode` ('list'|'confirm'|'shown'), n'interfère pas avec le flux normal de distribution des cartes
+- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : 2048, Memory, Puzzle15, Snake, Nuts and Bolts, + nouveaux mini-jeux)
 - **Phase 3 (à faire)** : classements perso (localStorage) — Memory, Puzzle15, Snake, 2048
 - **Phase 4 (à faire)** : anti-triche v1 Memory + validation de mot réel pour Wordle (refuser la soumission si le mot n'existe pas)
 - **Phase 5 (à faire)** : Nuts and Bolts — passer de 5 à 50 niveaux
