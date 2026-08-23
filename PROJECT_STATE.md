@@ -53,6 +53,9 @@ Bug signalé par l'utilisateur après v27 : niveaux triviaux, certains résolus 
 **Nouveau solveur** : BFS classique remplacé par une recherche **"best-first" avec tas binaire (min-heap)**, priorisée par une heuristique (`nbHeuristic` = nombre de segments de couleur contigus dans l'ensemble des tiges — moins il y en a, plus c'est proche d'être résolu). Explore toujours l'état le plus prometteur en premier au lieu de tout explorer dans l'ordre → converge vers une solution en quelques dizaines de ms même à 9 couleurs, là où le BFS classique explosait en temps de calcul.
 **Testé** : 150 générations (3 passes × 50 niveaux) — 0 échec de solvabilité, 0 niveau déjà résolu au départ, mélange réellement multi-couleur par tige confirmé, temps max par génération 229ms (imperceptible).
 
+## v29 : bouton "Niveau suivant ▶" sur Nuts and Bolts
+Après une victoire, un bouton "Niveau suivant ▶" apparaît (au-dessus de Recommencer/Changer de niveau) et enchaîne directement sur `nbNew(nbLevel+1)` sans repasser par l'écran de sélection. Caché au niveau 50 (dernier) et à chaque nouveau départ de niveau (`nb-nextlevel-row`).
+
 ## Roadmap corrective en cours (approche validée le 23/08/2026 : jeu par jeu à 100%, pas phase horizontale)
 - **Phase 1 (fait, v19)** : bug Nuts and Bolts niv.4, sons Wordle (lettre correcte/mal placée), bug scroll 2048 au swipe, boutons Snake agrandis + décor plein écran, couleurs dégradées Puzzle15
 - **Wordle (fait, v20)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour :
