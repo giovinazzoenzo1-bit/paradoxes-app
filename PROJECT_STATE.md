@@ -40,9 +40,15 @@ PWA (Progressive Web App) éducative/ludique : paradoxes de probabilités expliq
 ## Bugs connus à vérifier
 - (résolu v19) ~~Nuts and Bolts niveau 4 : risque de configuration bloquée~~ → génération avec vérification de solvabilité (BFS sur états canoniques) avant de lancer la partie, voir `nbGenerateSolvableRods()`
 
-## Roadmap corrective en cours (phases définies avec l'utilisateur le 23/08/2026)
+## Roadmap corrective en cours (approche validée le 23/08/2026 : jeu par jeu à 100%, pas phase horizontale)
 - **Phase 1 (fait, v19)** : bug Nuts and Bolts niv.4, sons Wordle (lettre correcte/mal placée), bug scroll 2048 au swipe, boutons Snake agrandis + décor plein écran, couleurs dégradées Puzzle15
-- **Phase 2 (à faire)** : fonctionnalités mock (bouton pub simulée Wordle/2048, undo 2048, système "cartes révélées" Qui suis-je, niveaux de difficulté Puzzle15 15/24/35/48)
+- **Wordle (fait, v20)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour :
+  - Sons lettre correcte / mal placée
+  - Dictionnaire de validation (`wordleDictionary`, 4448 mots français 5 lettres, extrait du package npm `an-array-of-french-words`, embarqué en dur dans index.html) — le bouton Valider refuse et fait "shake" la ligne + toast si le mot n'existe pas
+  - Bouton "📺 Lettre offerte (pub)" — pub simulée (`mockWatchAd()`, overlay générique réutilisable, 4s), révèle la lettre correcte à la prochaine position vide de la ligne en cours
+  - ⚠️ Note : le clavier du jeu ne gère pas les accents, donc le dictionnaire est filtré aux mots sans accents/tirets uniquement (4448/336524 mots du corpus complet)
+- **Système générique créé (réutilisable pour d'autres jeux)** : `mockWatchAd(durationSec, callback)` — overlay pub simulée avec barre de progression, `#ad-overlay` dans le `<body>`, CSS `.ad-overlay/.ad-box/.ad-progress`
+- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : Qui suis-je, 2048, Memory, Puzzle15, Snake, Nuts and Bolts, + nouveaux mini-jeux)
 - **Phase 3 (à faire)** : classements perso (localStorage) — Memory, Puzzle15, Snake, 2048
 - **Phase 4 (à faire)** : anti-triche v1 Memory + validation de mot réel pour Wordle (refuser la soumission si le mot n'existe pas)
 - **Phase 5 (à faire)** : Nuts and Bolts — passer de 5 à 50 niveaux
