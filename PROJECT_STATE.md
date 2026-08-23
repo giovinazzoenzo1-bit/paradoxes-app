@@ -73,7 +73,9 @@ Cause du problème "aucun changement visible malgré les push" : le fetch handle
   - Génération solvable par construction pour toutes les tailles (mélange via mouvements légaux uniquement, `p15Neighbors(idx,n)` généralisé)
   - Classement "🏆 Classements" avec onglets par niveau : top 5 perso (coups + temps, `localStorage p15Scores:<n>`) + mondial aperçu fictif (`p15WorldMock`) fusionné avec le meilleur perso
   - Grille et police redimensionnées dynamiquement selon le niveau (jusqu'à 48 pièces en 7×7)
-- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : Snake, Nuts and Bolts, + nouveaux mini-jeux)
+- **Snake (fait, v26)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour (boutons agrandis + décor plein écran déjà faits en Phase 1) :
+  - Classement mondial affiché à la fin de partie (`snakeRenderWorldboard()`, aperçu fictif `snakeWorldMock` fusionné avec le meilleur score perso, panneau caché au lancement d'une nouvelle partie)
+- **Prochain jeu à traiter à 100% avant de passer au suivant** : à définir avec l'utilisateur (candidats restants : Nuts and Bolts — 50 niveaux —, + nouveaux mini-jeux)
 - **Phase 3 (à faire)** : classements perso (localStorage) — Memory, Puzzle15, Snake, 2048
 - **Phase 4 (à faire)** : anti-triche v1 Memory + validation de mot réel pour Wordle (refuser la soumission si le mot n'existe pas)
 - **Phase 5 (à faire)** : Nuts and Bolts — passer de 5 à 50 niveaux

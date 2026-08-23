@@ -816,6 +816,11 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       </div>
       <div class="btn-row" style="justify-content:center; margin-top:14px;"><button class="btn" onclick="snakeNew()">Nouvelle partie</button></div>
     </div>
+    <div class="panel" id="snake-worldboard-panel" style="display:none; margin-top:16px;">
+      <h2>🌍 Classement mondial (aperçu)</h2>
+      <div id="snake-worldboard"></div>
+      <div class="footnote" style="margin-top:8px;">Aperçu fictif, pas de vrai backend — voir Confidentialité.</div>
+    </div>
   </div>
 </div>
 
@@ -3221,6 +3226,29 @@ let snakeInterval = null;
 let snakeScore = 0;
 let snakeOver = false;
 let snakeHighScore = 0;
+// Classement mondial fictif (aperçu, pas de vrai backend — voir PROJECT_STATE.md)
+const snakeWorldMock = [
+  {name:'Thomas B.', score:34},
+  {name:'Léa M.', score:29},
+  {name:'Nina P.', score:24},
+  {name:'Adam R.', score:19},
+  {name:'Sofia K.', score:14},
+];
+function snakeRenderWorldboard(){
+  const panel = document.getElementById('snake-worldboard-panel');
+  const el = document.getElementById('snake-worldboard');
+  panel.style.display = 'block';
+  let world = [...snakeWorldMock];
+  world.push({name:'Toi', score:snakeHighScore, me:true});
+  world.sort((a,b)=>b.score-a.score);
+  el.innerHTML = world.map((p,i) => `
+    <div class="leaderboard-row ${p.me?'me':''}">
+      <span class="leaderboard-rank">${i+1}</span>
+      <span class="leaderboard-name">${p.me?'👉 ':''}${p.name}</span>
+      <span class="leaderboard-score">${p.score} pts</span>
+    </div>
+  `).join('');
+}
 function openSnake(){
   switchScreen('game-snake');
   setActiveTab(null);
@@ -3241,6 +3269,7 @@ function snakeNew(){
   snakePlaceFood();
   document.getElementById('snake-status').textContent = '';
   document.getElementById('snake-score').textContent = '0';
+  document.getElementById('snake-worldboard-panel').style.display = 'none';
   if(snakeInterval) clearInterval(snakeInterval);
   snakeInterval = setInterval(snakeTick, 160);
   snakeDraw();
@@ -3271,6 +3300,7 @@ function snakeTick(){
     document.getElementById('snake-status').textContent = `PERDU — SCORE : ${snakeScore}`;
     statsRecordSnakeScore(snakeScore);
     playFeedback('lose');
+    snakeRenderWorldboard();
     return;
   }
   snakeBody.unshift(head);
