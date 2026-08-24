@@ -869,6 +869,13 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
     <div class="panel">
       <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/billiard.png" alt="Billard">
+        <div class="txt"><h3>Billard</h3><p>8-ball, entraînement solo ou à 2 en pass-and-play.</p></div>
+      </div>
+      <div class="btn-row"><button class="btn primary" onclick="openBilliard()">Jouer</button></div>
+    </div>
+    <div class="panel">
+      <div class="game-panel-header">
         <img class="game-panel-icon" src="icons/bientot.png" alt="Bientôt disponible">
         <div class="txt"><h3>Bientôt disponible</h3><p>D'autres mini-jeux arrivent bientôt.</p></div>
       </div>
@@ -1365,6 +1372,42 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="footnote" style="margin-top:8px;">Aperçu fictif, pas de vrai backend — voir Confidentialité.</div>
       <div class="btn-row" style="justify-content:center; margin-top:12px;">
         <button class="btn primary" onclick="chessBackToSetup()">Rejouer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BILLARD ============ -->
+<div class="screen" id="game-billiard">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="openJeux()">← Retour</button>
+    </div>
+    <div class="game-title">🎱 Billard (8-ball)</div>
+
+    <div class="panel" id="bil-setup-panel">
+      <h2>Choisis un mode</h2>
+      <div class="btn-row" style="flex-direction:column;">
+        <button class="btn primary" onclick="bilStart('solo')">🎯 Entraînement solo</button>
+        <button class="btn primary" onclick="bilStart('pnp')">👥 Pass & Play (2 joueurs)</button>
+      </div>
+      <p class="footnote" style="margin-top:14px;">Entraînement : aucune règle, tape librement. Pass & Play : vraies règles du 8-ball (fautes, bille en main, victoire).</p>
+    </div>
+
+    <div class="panel" id="bil-game-panel" style="display:none; text-align:center;">
+      <div class="status-line" id="bil-status" style="text-align:center; font-weight:700; margin-bottom:6px;"></div>
+      <canvas id="bil-canvas" width="340" height="170" style="max-width:100%; border-radius:6px; touch-action:none; cursor:pointer; background:#1a5c3a;"></canvas>
+      <div class="footnote" id="bil-hint" style="margin-top:6px;">Glisse depuis la bille blanche vers l'arrière pour viser, relâche pour tirer.</div>
+      <div class="btn-row" style="justify-content:center; margin-top:10px;">
+        <button class="btn" onclick="bilStart(bilMode)">Nouvelle partie</button>
+        <button class="btn" onclick="bilBackToSetup()">Changer de mode</button>
+      </div>
+    </div>
+
+    <div class="panel" id="bil-endgame-panel" style="display:none; text-align:center;">
+      <h2 id="bil-endgame-title"></h2>
+      <div class="btn-row" style="justify-content:center; margin-top:12px;">
+        <button class="btn primary" onclick="bilBackToSetup()">Rejouer</button>
       </div>
     </div>
   </div>
@@ -6107,6 +6150,376 @@ function chessRenderEndgameBoard(){
     `).join('');
 }
 
+/* ================= BILLARD (8-ball) ================= */
+// Physique 2D avec sous-étapes (substepping) pour éviter le tunneling à haute vitesse (CCD simplifié),
+// collision bille-bille par décomposition normale/tangentielle avec restitution, friction de roulement
+// simplifiée (un seul coefficient — le modèle glissement/roulement en 2 phases du cahier des charges est
+// simplifié pour rester dans un scope raisonnable, tout comme l'effet/spin qui n'est pas implémenté ici).
+// Moteur validé unitairement : conservation de la quantité de mouvement, anti-tunneling, décélération.
+const BIL_TABLE_W = 340, BIL_TABLE_H = 170;
+const BIL_BALL_R = 7;
+const BIL_FRICTION = 0.988;
+const BIL_MIN_SPEED = 0.03;
+const BIL_REST_WALL = 0.80;
+const BIL_REST_BALL = 0.95;
+const BIL_SUBSTEPS = 6;
+const BIL_POCKET_R = 12;
+const BIL_POCKETS = [
+  {x:0,y:0},{x:BIL_TABLE_W/2,y:0},{x:BIL_TABLE_W,y:0},
+  {x:0,y:BIL_TABLE_H},{x:BIL_TABLE_W/2,y:BIL_TABLE_H},{x:BIL_TABLE_W,y:BIL_TABLE_H},
+];
+const BIL_BALL_DEFS = [
+  {id:0, group:'cue', color:'#f4f1ea'},
+  {id:1, group:'solid', color:'#f5b942'}, {id:2, group:'solid', color:'#5f9dc9'},
+  {id:3, group:'solid', color:'#ef6461'}, {id:4, group:'solid', color:'#b85fc9'},
+  {id:5, group:'solid', color:'#e08a3c'}, {id:6, group:'solid', color:'#8fc95f'},
+  {id:7, group:'solid', color:'#a0522d'}, {id:8, group:'eight', color:'#161616'},
+  {id:9, group:'stripe', color:'#f5b942'}, {id:10, group:'stripe', color:'#5f9dc9'},
+  {id:11, group:'stripe', color:'#ef6461'}, {id:12, group:'stripe', color:'#b85fc9'},
+  {id:13, group:'stripe', color:'#e08a3c'}, {id:14, group:'stripe', color:'#8fc95f'},
+  {id:15, group:'stripe', color:'#a0522d'},
+];
+function bilVecLen(v){ return Math.sqrt(v.x*v.x+v.y*v.y); }
+function bilResolveBallCollision(b1, b2){
+  const dx=b2.pos.x-b1.pos.x, dy=b2.pos.y-b1.pos.y;
+  const dist = Math.sqrt(dx*dx+dy*dy);
+  if(dist===0 || dist >= BIL_BALL_R*2) return false;
+  const nx=dx/dist, ny=dy/dist;
+  const overlap = BIL_BALL_R*2 - dist;
+  b1.pos.x -= nx*overlap/2; b1.pos.y -= ny*overlap/2;
+  b2.pos.x += nx*overlap/2; b2.pos.y += ny*overlap/2;
+  const v1n = b1.vel.x*nx+b1.vel.y*ny, v2n = b2.vel.x*nx+b2.vel.y*ny;
+  if(v1n-v2n <= 0) return false;
+  const impulse = ((1+BIL_REST_BALL)/2) * (v1n-v2n);
+  b1.vel.x -= impulse*nx; b1.vel.y -= impulse*ny;
+  b2.vel.x += impulse*nx; b2.vel.y += impulse*ny;
+  if(!bilShotFacts.firstContactGroup){
+    if(b1.id===0) bilShotFacts.firstContactGroup = b2.group;
+    else if(b2.id===0) bilShotFacts.firstContactGroup = b1.group;
+  }
+  return true;
+}
+function bilResolveWallCollision(ball){
+  let bounced = false;
+  if(ball.pos.x - BIL_BALL_R < 0){ ball.pos.x = BIL_BALL_R; ball.vel.x = -ball.vel.x*BIL_REST_WALL; bounced=true; }
+  if(ball.pos.x + BIL_BALL_R > BIL_TABLE_W){ ball.pos.x = BIL_TABLE_W-BIL_BALL_R; ball.vel.x = -ball.vel.x*BIL_REST_WALL; bounced=true; }
+  if(ball.pos.y - BIL_BALL_R < 0){ ball.pos.y = BIL_BALL_R; ball.vel.y = -ball.vel.y*BIL_REST_WALL; bounced=true; }
+  if(ball.pos.y + BIL_BALL_R > BIL_TABLE_H){ ball.pos.y = BIL_TABLE_H-BIL_BALL_R; ball.vel.y = -ball.vel.y*BIL_REST_WALL; bounced=true; }
+  if(bounced && bilShotFacts.firstContactGroup) bilShotFacts.railAfterContact = true;
+}
+function bilCheckPockets(){
+  for(const ball of bilBalls){
+    if(ball.pocketed) continue;
+    for(const p of BIL_POCKETS){
+      if(Math.hypot(ball.pos.x-p.x, ball.pos.y-p.y) < BIL_POCKET_R){
+        ball.pocketed = true;
+        ball.vel = {x:0,y:0};
+        if(ball.id===0) bilShotFacts.cueScratched = true;
+        else bilShotFacts.pocketedBalls.push({id:ball.id, group:ball.group});
+        break;
+      }
+    }
+  }
+}
+function bilStepPhysics(){
+  for(let s=0;s<BIL_SUBSTEPS;s++){
+    for(const ball of bilBalls){
+      if(ball.pocketed) continue;
+      ball.pos.x += ball.vel.x/BIL_SUBSTEPS;
+      ball.pos.y += ball.vel.y/BIL_SUBSTEPS;
+      ball.vel.x *= BIL_FRICTION; ball.vel.y *= BIL_FRICTION;
+      if(bilVecLen(ball.vel) < BIL_MIN_SPEED) ball.vel = {x:0,y:0};
+      bilResolveWallCollision(ball);
+    }
+    for(let i=0;i<bilBalls.length;i++){
+      if(bilBalls[i].pocketed) continue;
+      for(let j=i+1;j<bilBalls.length;j++){
+        if(bilBalls[j].pocketed) continue;
+        bilResolveBallCollision(bilBalls[i], bilBalls[j]);
+      }
+    }
+    bilCheckPockets();
+  }
+}
+function bilAllStopped(){
+  return bilBalls.every(b => b.pocketed || (Math.abs(b.vel.x)<0.001 && Math.abs(b.vel.y)<0.001));
+}
+// Règles du 8-ball : voir PROJECT_STATE.md pour le détail des scénarios testés.
+function bilEvaluateShot(playerGroup, groupsAssigned, shotFacts){
+  const result = { foul:false, reason:null, gameOver:false, winner:null, assignGroup:null, continueTurn:false };
+  const eightPocketed = shotFacts.pocketedBalls.some(b => b.group==='eight');
+  const ownGroup = groupsAssigned ? playerGroup : null;
+  const ownRemain = shotFacts.ownGroupBallsRemainingBeforeShot;
+  if(eightPocketed){
+    const groupWasCleared = groupsAssigned && ownRemain===0;
+    const otherFoul = shotFacts.cueScratched || !shotFacts.firstContactGroup ||
+      (groupsAssigned && shotFacts.firstContactGroup!=='eight' && shotFacts.firstContactGroup!==ownGroup && ownRemain>0);
+    if(!groupWasCleared || otherFoul){
+      result.gameOver = true; result.winner = 'opponent'; result.reason = 'Bille 8 rentrée hors-jeu';
+      return result;
+    }
+    result.gameOver = true; result.winner = 'player'; result.reason = 'Bille 8 rentrée légalement';
+    return result;
+  }
+  if(shotFacts.cueScratched){ result.foul=true; result.reason='Bille blanche empochée'; return result; }
+  if(!shotFacts.firstContactGroup){ result.foul=true; result.reason='Aucune bille touchée'; return result; }
+  if(!groupsAssigned && shotFacts.firstContactGroup!=='eight'){ result.assignGroup = shotFacts.firstContactGroup; }
+  const effectiveOwnGroup = result.assignGroup || ownGroup;
+  if(groupsAssigned && shotFacts.firstContactGroup!==effectiveOwnGroup && shotFacts.firstContactGroup!=='eight'){
+    result.foul=true; result.reason='Mauvais groupe touché en premier'; return result;
+  }
+  if(shotFacts.firstContactGroup==='eight' && groupsAssigned && ownRemain>0){
+    result.foul=true; result.reason="Bille 8 touchée avant d'avoir vidé son groupe"; return result;
+  }
+  if(shotFacts.pocketedBalls.length===0 && !shotFacts.railAfterContact){
+    result.foul=true; result.reason='Aucune bande touchée après contact'; return result;
+  }
+  result.continueTurn = shotFacts.pocketedBalls.some(b => b.group===effectiveOwnGroup);
+  return result;
+}
+
+// ---- État & UI ----
+let bilCanvas, bilCtx;
+let bilBalls = [];
+let bilMode = 'solo';
+let bilState = 'aim'; // 'aim' | 'sim' | 'placing'
+let bilCurrentPlayer = 1;
+let bilPlayerGroups = {1:null, 2:null};
+let bilGroupsAssigned = false;
+let bilShotFacts = null;
+let bilOwnRemainingSnapshot = 0;
+let bilAnimId = null;
+let bilDragging = false;
+let bilDragPos = null;
+let bilInputAttached = false;
+const BIL_MAX_POWER = 26;
+const BIL_MAX_DRAG = 70;
+function bilRackPositions(footX, midY){
+  const positions = [];
+  const rowGap = BIL_BALL_R*2 + 0.6;
+  const colGap = BIL_BALL_R*1.75;
+  for(let row=0; row<5; row++){
+    for(let i=0;i<=row;i++){
+      positions.push({ x: footX + row*colGap, y: midY - (row*rowGap)/2 + i*rowGap });
+    }
+  }
+  return positions;
+}
+function bilShuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function bilSetupRack(){
+  const positions = bilRackPositions(BIL_TABLE_W*0.72, BIL_TABLE_H/2);
+  const eightIndex = 4; // milieu de la 3e rangée (indices 3,4,5)
+  const others = bilShuffle([1,2,3,4,5,6,7,9,10,11,12,13,14,15]);
+  const numbers = new Array(15);
+  numbers[eightIndex] = 8;
+  let oi=0;
+  for(let i=0;i<15;i++){ if(i!==eightIndex){ numbers[i]=others[oi]; oi++; } }
+  const balls = [{id:0, group:'cue', color:'#f4f1ea', pos:{x:BIL_TABLE_W*0.25,y:BIL_TABLE_H/2}, vel:{x:0,y:0}, pocketed:false}];
+  for(let i=0;i<15;i++){
+    const def = BIL_BALL_DEFS.find(d=>d.id===numbers[i]);
+    balls.push({id:numbers[i], group:def.group, color:def.color, pos:{...positions[i]}, vel:{x:0,y:0}, pocketed:false});
+  }
+  return balls;
+}
+function openBilliard(){
+  switchScreen('game-billiard');
+  setActiveTab(null);
+  document.getElementById('bil-setup-panel').style.display = 'block';
+  document.getElementById('bil-game-panel').style.display = 'none';
+  document.getElementById('bil-endgame-panel').style.display = 'none';
+  trackPage('/billiard');
+}
+function bilBackToSetup(){
+  if(bilAnimId) cancelAnimationFrame(bilAnimId);
+  document.getElementById('bil-setup-panel').style.display = 'block';
+  document.getElementById('bil-game-panel').style.display = 'none';
+  document.getElementById('bil-endgame-panel').style.display = 'none';
+}
+function bilStart(mode){
+  bilMode = mode;
+  bilBalls = bilSetupRack();
+  bilState = 'aim';
+  bilCurrentPlayer = 1;
+  bilPlayerGroups = {1:null, 2:null};
+  bilGroupsAssigned = false;
+  if(bilAnimId) cancelAnimationFrame(bilAnimId);
+  document.getElementById('bil-setup-panel').style.display = 'none';
+  document.getElementById('bil-endgame-panel').style.display = 'none';
+  document.getElementById('bil-game-panel').style.display = 'block';
+  document.getElementById('bil-status').textContent = mode==='solo' ? 'Entraînement libre' : 'Tour : Joueur 1';
+  bilCanvas = document.getElementById('bil-canvas');
+  bilCtx = bilCanvas.getContext('2d');
+  bilAttachInput();
+  bilDraw();
+}
+function bilAttachInput(){
+  if(bilInputAttached) return;
+  bilInputAttached = true;
+  bilCanvas.addEventListener('touchstart', (e)=>{ e.preventDefault(); bilPointerDown(bilGetPos(e)); }, {passive:false});
+  bilCanvas.addEventListener('touchmove', (e)=>{ e.preventDefault(); bilPointerMove(bilGetPos(e)); }, {passive:false});
+  bilCanvas.addEventListener('touchend', (e)=>{ e.preventDefault(); bilPointerUp(); }, {passive:false});
+  bilCanvas.addEventListener('mousedown', (e)=> bilPointerDown(bilGetPos(e)));
+  bilCanvas.addEventListener('mousemove', (e)=> bilPointerMove(bilGetPos(e)));
+  bilCanvas.addEventListener('mouseup', ()=> bilPointerUp());
+}
+function bilGetPos(e){
+  const rect = bilCanvas.getBoundingClientRect();
+  const clientX = e.touches ? (e.touches[0]||e.changedTouches[0]).clientX : e.clientX;
+  const clientY = e.touches ? (e.touches[0]||e.changedTouches[0]).clientY : e.clientY;
+  const scaleX = bilCanvas.width/rect.width, scaleY = bilCanvas.height/rect.height;
+  return { x:(clientX-rect.left)*scaleX, y:(clientY-rect.top)*scaleY };
+}
+function bilPointerDown(pos){
+  if(bilState==='placing'){
+    bilTryPlaceCue(pos);
+    return;
+  }
+  if(bilState!=='aim') return;
+  bilDragging = true;
+  bilDragPos = pos;
+  bilDraw();
+}
+function bilPointerMove(pos){
+  if(!bilDragging) return;
+  bilDragPos = pos;
+  bilDraw();
+}
+function bilPointerUp(){
+  if(!bilDragging) return;
+  bilDragging = false;
+  const cue = bilBalls[0];
+  const dx = cue.pos.x - bilDragPos.x, dy = cue.pos.y - bilDragPos.y;
+  const dist = Math.min(Math.hypot(dx,dy), BIL_MAX_DRAG);
+  if(dist < 8){ bilDraw(); return; } // glissement trop court, tir annulé
+  const power = (dist/BIL_MAX_DRAG) * BIL_MAX_POWER;
+  const nx = dx/Math.hypot(dx,dy), ny = dy/Math.hypot(dx,dy);
+  bilFireShot(nx*power, ny*power);
+}
+function bilTryPlaceCue(pos){
+  const valid = pos.x>BIL_BALL_R && pos.x<BIL_TABLE_W-BIL_BALL_R && pos.y>BIL_BALL_R && pos.y<BIL_TABLE_H-BIL_BALL_R;
+  const overlapping = bilBalls.some(b => !b.pocketed && b.id!==0 && Math.hypot(b.pos.x-pos.x,b.pos.y-pos.y) < BIL_BALL_R*2);
+  if(!valid || overlapping) return;
+  bilBalls[0].pos = pos; bilBalls[0].pocketed = false; bilBalls[0].vel = {x:0,y:0};
+  bilState = 'aim';
+  document.getElementById('bil-hint').textContent = "Glisse depuis la bille blanche vers l'arrière pour viser, relâche pour tirer.";
+  bilDraw();
+}
+function bilFireShot(vx, vy){
+  bilBalls[0].vel = {x:vx, y:vy};
+  bilShotFacts = { firstContactGroup:null, cueScratched:false, pocketedBalls:[], railAfterContact:false };
+  const currentGroup = bilGroupsAssigned ? bilPlayerGroups[bilCurrentPlayer] : null;
+  bilOwnRemainingSnapshot = currentGroup ? bilBalls.filter(b=>b.group===currentGroup && !b.pocketed).length : 0;
+  bilState = 'sim';
+  bilAnimId = requestAnimationFrame(bilAnimate);
+}
+function bilAnimate(){
+  bilStepPhysics();
+  bilDraw();
+  if(bilAllStopped()){
+    bilOnShotSettled();
+  } else {
+    bilAnimId = requestAnimationFrame(bilAnimate);
+  }
+}
+function bilOnShotSettled(){
+  if(bilMode==='solo'){
+    if(bilBalls[0].pocketed){
+      bilBalls[0].pocketed=false; bilBalls[0].pos={x:BIL_TABLE_W*0.25,y:BIL_TABLE_H/2}; bilBalls[0].vel={x:0,y:0};
+    }
+    bilState='aim';
+    document.getElementById('bil-status').textContent = 'Entraînement libre';
+    bilDraw();
+    return;
+  }
+  const currentGroup = bilGroupsAssigned ? bilPlayerGroups[bilCurrentPlayer] : null;
+  const res = bilEvaluateShot(currentGroup, bilGroupsAssigned, {
+    firstContactGroup: bilShotFacts.firstContactGroup,
+    cueScratched: bilShotFacts.cueScratched,
+    pocketedBalls: bilShotFacts.pocketedBalls,
+    railAfterContact: bilShotFacts.railAfterContact,
+    ownGroupBallsRemainingBeforeShot: bilOwnRemainingSnapshot,
+  });
+  if(res.assignGroup && !bilGroupsAssigned){
+    bilGroupsAssigned = true;
+    bilPlayerGroups[bilCurrentPlayer] = res.assignGroup;
+    bilPlayerGroups[bilCurrentPlayer===1?2:1] = res.assignGroup==='solid' ? 'stripe' : 'solid';
+  }
+  if(res.gameOver){
+    const winnerPlayer = res.winner==='player' ? bilCurrentPlayer : (bilCurrentPlayer===1?2:1);
+    bilShowEndgame(winnerPlayer, res.reason);
+    return;
+  }
+  if(bilBalls[0].pocketed){
+    bilBalls[0].pocketed=false; bilBalls[0].pos={x:BIL_TABLE_W*0.25,y:BIL_TABLE_H/2}; bilBalls[0].vel={x:0,y:0};
+  }
+  if(res.foul){
+    bilCurrentPlayer = bilCurrentPlayer===1?2:1;
+    bilState = 'placing';
+    document.getElementById('bil-status').textContent = `🟥 Faute (${res.reason}) — Bille en main, Joueur ${bilCurrentPlayer}`;
+    document.getElementById('bil-hint').textContent = 'Tape sur la table pour placer la bille blanche.';
+  } else if(res.continueTurn){
+    bilState='aim';
+    document.getElementById('bil-status').textContent = `🟩 Rejoue, Joueur ${bilCurrentPlayer}`;
+  } else {
+    bilCurrentPlayer = bilCurrentPlayer===1?2:1;
+    bilState='aim';
+    document.getElementById('bil-status').textContent = `Tour : Joueur ${bilCurrentPlayer}`;
+  }
+  bilDraw();
+}
+function bilShowEndgame(winnerPlayer, reason){
+  playFeedback('record');
+  document.getElementById('bil-game-panel').style.display = 'none';
+  document.getElementById('bil-endgame-panel').style.display = 'block';
+  document.getElementById('bil-endgame-title').textContent = `🎉 Joueur ${winnerPlayer} gagne ! (${reason})`;
+}
+function bilDraw(){
+  const ctx = bilCtx;
+  if(!ctx) return;
+  ctx.clearRect(0,0,BIL_TABLE_W,BIL_TABLE_H);
+  ctx.fillStyle = '#1a5c3a';
+  ctx.fillRect(0,0,BIL_TABLE_W,BIL_TABLE_H);
+  ctx.strokeStyle = '#0d3320'; ctx.lineWidth=3;
+  ctx.strokeRect(1.5,1.5,BIL_TABLE_W-3,BIL_TABLE_H-3);
+  for(const p of BIL_POCKETS){
+    ctx.beginPath(); ctx.arc(p.x,p.y,BIL_POCKET_R,0,Math.PI*2);
+    ctx.fillStyle = '#0a0a14'; ctx.fill();
+  }
+  for(const ball of bilBalls){
+    if(ball.pocketed) continue;
+    ctx.beginPath();
+    ctx.arc(ball.pos.x, ball.pos.y, BIL_BALL_R, 0, Math.PI*2);
+    ctx.fillStyle = ball.color;
+    ctx.fill();
+    if(ball.group==='stripe'){
+      ctx.beginPath();
+      ctx.arc(ball.pos.x, ball.pos.y, BIL_BALL_R*0.55, 0, Math.PI*2);
+      ctx.fillStyle = '#f4f1ea';
+      ctx.fill();
+    }
+    ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.stroke();
+  }
+  if(bilDragging && bilDragPos){
+    const cue = bilBalls[0];
+    const dx = cue.pos.x - bilDragPos.x, dy = cue.pos.y - bilDragPos.y;
+    const len = Math.hypot(dx,dy);
+    if(len>2){
+      const dist = Math.min(len, BIL_MAX_DRAG);
+      const nx=dx/len, ny=dy/len;
+      ctx.beginPath();
+      ctx.moveTo(cue.pos.x, cue.pos.y);
+      ctx.lineTo(cue.pos.x + nx*60, cue.pos.y + ny*60);
+      ctx.strokeStyle = `rgba(245,185,66,${0.4+0.5*(dist/BIL_MAX_DRAG)})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+}
+
 /* ================= SON & VIBRATION ================= */
 let audioCtx = null;
 function getAudioCtx(){
@@ -6388,6 +6801,7 @@ function restoreLastScreen(){
   if(last==='game-ludo'){ openLudo(); return; }
   if(last==='game-skipbo'){ openSkipbo(); return; }
   if(last==='game-chess'){ openChess(); return; }
+  if(last==='game-billiard'){ openBilliard(); return; }
   if(last==='game-progres'){ openProgres(); return; }
   if(last==='game-options'){ openOptions(); return; }
   if(last==='game-privacy'){ openPrivacy(); return; }
