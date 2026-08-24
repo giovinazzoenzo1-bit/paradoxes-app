@@ -2131,6 +2131,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 
 <script data-goatcounter="https://paradoxes-app.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
 
 <script>
 /* ================= DATA ================= */
@@ -6237,19 +6238,19 @@ function chessRenderEndgameBoard(){
     `).join('');
 }
 
-/* ================= BILLARD (8-ball) ================= */
-// Physique 2D avec sous-étapes (substepping) pour éviter le tunneling à haute vitesse (CCD simplifié),
-// collision bille-bille par décomposition normale/tangentielle avec restitution, friction de roulement
-// simplifiée (un seul coefficient — le modèle glissement/roulement en 2 phases du cahier des charges est
-// simplifié pour rester dans un scope raisonnable, tout comme l'effet/spin qui n'est pas implémenté ici).
-// Moteur validé unitairement : conservation de la quantité de mouvement, anti-tunneling, décélération.
+/* ================= BILLARD (8-ball) — moteur physique Matter.js (open source, MIT) ================= */
+// Remplace l'ancien moteur physique maison par Matter.js (bien plus robuste, gère nativement les
+// collisions bille-bille/bille-bande avec restitution). On garde nos propres règles du 8-ball,
+// la détection de poches (Matter n'a pas de "trous" natifs) et le système de visée/puissance/tir.
+// Sous-étapes (substepping=8) conservées pour éviter le tunneling à haute vitesse — testé jusqu'à
+// vitesse 100 sans qu'aucune bille ne traverse une bande.
 const BIL_TABLE_W = 900, BIL_TABLE_H = 450;
 const BIL_BALL_R = 18;
-const BIL_FRICTION = 0.988;
-const BIL_MIN_SPEED = 0.03;
 const BIL_REST_WALL = 0.80;
 const BIL_REST_BALL = 0.95;
-const BIL_SUBSTEPS = 6;
+const BIL_FRICTION_AIR = 0.018;
+const BIL_SUBSTEPS = 8;
+const BIL_WALL_T = 30;
 const BIL_POCKET_R = 32;
 const BIL_POCKETS = [
   {x:0,y:0},{x:BIL_TABLE_W/2,y:0},{x:BIL_TABLE_W,y:0},
@@ -6266,33 +6267,54 @@ const BIL_BALL_DEFS = [
   {id:13, group:'stripe', color:'#e08a3c'}, {id:14, group:'stripe', color:'#8fc95f'},
   {id:15, group:'stripe', color:'#a0522d'},
 ];
-function bilVecLen(v){ return Math.sqrt(v.x*v.x+v.y*v.y); }
-function bilResolveBallCollision(b1, b2){
-  const dx=b2.pos.x-b1.pos.x, dy=b2.pos.y-b1.pos.y;
-  const dist = Math.sqrt(dx*dx+dy*dy);
-  if(dist===0 || dist >= BIL_BALL_R*2) return false;
-  const nx=dx/dist, ny=dy/dist;
-  const overlap = BIL_BALL_R*2 - dist;
-  b1.pos.x -= nx*overlap/2; b1.pos.y -= ny*overlap/2;
-  b2.pos.x += nx*overlap/2; b2.pos.y += ny*overlap/2;
-  const v1n = b1.vel.x*nx+b1.vel.y*ny, v2n = b2.vel.x*nx+b2.vel.y*ny;
-  if(v1n-v2n <= 0) return false;
-  const impulse = ((1+BIL_REST_BALL)/2) * (v1n-v2n);
-  b1.vel.x -= impulse*nx; b1.vel.y -= impulse*ny;
-  b2.vel.x += impulse*nx; b2.vel.y += impulse*ny;
-  if(!bilShotFacts.firstContactGroup){
-    if(b1.id===0) bilShotFacts.firstContactGroup = b2.group;
-    else if(b2.id===0) bilShotFacts.firstContactGroup = b1.group;
-  }
-  return true;
+let bilEngine = null;
+function bilCreateEngine(){
+  const engine = Matter.Engine.create();
+  engine.gravity.x = 0; engine.gravity.y = 0;
+  const walls = [
+    Matter.Bodies.rectangle(BIL_TABLE_W/2, -BIL_WALL_T/2, BIL_TABLE_W, BIL_WALL_T, {isStatic:true, restitution:BIL_REST_WALL, label:'wall'}),
+    Matter.Bodies.rectangle(BIL_TABLE_W/2, BIL_TABLE_H+BIL_WALL_T/2, BIL_TABLE_W, BIL_WALL_T, {isStatic:true, restitution:BIL_REST_WALL, label:'wall'}),
+    Matter.Bodies.rectangle(-BIL_WALL_T/2, BIL_TABLE_H/2, BIL_WALL_T, BIL_TABLE_H, {isStatic:true, restitution:BIL_REST_WALL, label:'wall'}),
+    Matter.Bodies.rectangle(BIL_TABLE_W+BIL_WALL_T/2, BIL_TABLE_H/2, BIL_WALL_T, BIL_TABLE_H, {isStatic:true, restitution:BIL_REST_WALL, label:'wall'}),
+  ];
+  Matter.Composite.add(engine.world, walls);
+  Matter.Events.on(engine, 'collisionStart', (event) => {
+    if(!bilShotFacts) return;
+    for(const pair of event.pairs){
+      const a = pair.bodyA, b = pair.bodyB;
+      if(a.label.startsWith('ball') && b.label.startsWith('ball')){
+        if(!bilShotFacts.firstContactGroup){
+          const aBall = bilBalls.find(x=>x.body===a);
+          const bBall = bilBalls.find(x=>x.body===b);
+          if(aBall && bBall){
+            if(aBall.id===0) bilShotFacts.firstContactGroup = bBall.group;
+            else if(bBall.id===0) bilShotFacts.firstContactGroup = aBall.group;
+          }
+        }
+      }
+      if((a.label==='wall' || b.label==='wall') && bilShotFacts.firstContactGroup){
+        bilShotFacts.railAfterContact = true;
+      }
+    }
+  });
+  return engine;
 }
-function bilResolveWallCollision(ball){
-  let bounced = false;
-  if(ball.pos.x - BIL_BALL_R < 0){ ball.pos.x = BIL_BALL_R; ball.vel.x = -ball.vel.x*BIL_REST_WALL; bounced=true; }
-  if(ball.pos.x + BIL_BALL_R > BIL_TABLE_W){ ball.pos.x = BIL_TABLE_W-BIL_BALL_R; ball.vel.x = -ball.vel.x*BIL_REST_WALL; bounced=true; }
-  if(ball.pos.y - BIL_BALL_R < 0){ ball.pos.y = BIL_BALL_R; ball.vel.y = -ball.vel.y*BIL_REST_WALL; bounced=true; }
-  if(ball.pos.y + BIL_BALL_R > BIL_TABLE_H){ ball.pos.y = BIL_TABLE_H-BIL_BALL_R; ball.vel.y = -ball.vel.y*BIL_REST_WALL; bounced=true; }
-  if(bounced && bilShotFacts.firstContactGroup) bilShotFacts.railAfterContact = true;
+function bilMakeBallBody(x, y, id){
+  return Matter.Bodies.circle(x, y, BIL_BALL_R, {
+    restitution: BIL_REST_BALL, friction: 0, frictionAir: BIL_FRICTION_AIR,
+    label: 'ball'+id, slop: 0,
+  });
+}
+function bilRespawnCueBall(pos){
+  const cueBall = bilBalls[0];
+  if(cueBall.pocketed){
+    cueBall.pocketed = false;
+    Matter.Composite.add(bilEngine.world, cueBall.body);
+  }
+  Matter.Body.setPosition(cueBall.body, pos);
+  Matter.Body.setVelocity(cueBall.body, {x:0,y:0});
+  cueBall.pos = {x:pos.x, y:pos.y};
+  cueBall.vel = {x:0,y:0};
 }
 function bilCheckPockets(){
   for(const ball of bilBalls){
@@ -6300,7 +6322,8 @@ function bilCheckPockets(){
     for(const p of BIL_POCKETS){
       if(Math.hypot(ball.pos.x-p.x, ball.pos.y-p.y) < BIL_POCKET_R){
         ball.pocketed = true;
-        ball.vel = {x:0,y:0};
+        Matter.Body.setVelocity(ball.body, {x:0,y:0});
+        Matter.Composite.remove(bilEngine.world, ball.body);
         if(ball.id===0) bilShotFacts.cueScratched = true;
         else bilShotFacts.pocketedBalls.push({id:ball.id, group:ball.group});
         break;
@@ -6309,29 +6332,21 @@ function bilCheckPockets(){
   }
 }
 function bilStepPhysics(){
+  const dt = (1000/60)/BIL_SUBSTEPS;
   for(let s=0;s<BIL_SUBSTEPS;s++){
-    for(const ball of bilBalls){
-      if(ball.pocketed) continue;
-      ball.pos.x += ball.vel.x/BIL_SUBSTEPS;
-      ball.pos.y += ball.vel.y/BIL_SUBSTEPS;
-      ball.vel.x *= BIL_FRICTION; ball.vel.y *= BIL_FRICTION;
-      if(bilVecLen(ball.vel) < BIL_MIN_SPEED) ball.vel = {x:0,y:0};
-      bilResolveWallCollision(ball);
-    }
-    for(let i=0;i<bilBalls.length;i++){
-      if(bilBalls[i].pocketed) continue;
-      for(let j=i+1;j<bilBalls.length;j++){
-        if(bilBalls[j].pocketed) continue;
-        bilResolveBallCollision(bilBalls[i], bilBalls[j]);
-      }
-    }
-    bilCheckPockets();
+    Matter.Engine.update(bilEngine, dt);
   }
+  for(const ball of bilBalls){
+    if(ball.pocketed) continue;
+    ball.pos.x = ball.body.position.x; ball.pos.y = ball.body.position.y;
+    ball.vel.x = ball.body.velocity.x; ball.vel.y = ball.body.velocity.y;
+  }
+  bilCheckPockets();
 }
 function bilAllStopped(){
-  return bilBalls.every(b => b.pocketed || (Math.abs(b.vel.x)<0.001 && Math.abs(b.vel.y)<0.001));
+  return bilBalls.every(b => b.pocketed || (Math.abs(b.vel.x)<0.02 && Math.abs(b.vel.y)<0.02));
 }
-// Règles du 8-ball : voir PROJECT_STATE.md pour le détail des scénarios testés.
+// Règles du 8-ball (inchangées, indépendantes du moteur physique) : voir PROJECT_STATE.md.
 function bilEvaluateShot(playerGroup, groupsAssigned, shotFacts){
   const result = { foul:false, reason:null, gameOver:false, winner:null, assignGroup:null, continueTurn:false };
   const eightPocketed = shotFacts.pocketedBalls.some(b => b.group==='eight');
@@ -6383,8 +6398,7 @@ let bilAimDir = null;         // {x,y} direction visée, verrouillée jusqu'au p
 let bilAimingActive = false;  // en train de glisser sur la table pour viser
 let bilPower = 0;             // 0..BIL_MAX_POWER, réglé via la jauge dédiée
 let bilPowerBarDragging = false;
-const BIL_MAX_POWER = 69;
-const BIL_MAX_DRAG = 185;
+const BIL_MAX_POWER = 45; // calibré empiriquement avec Matter.js (testé stable jusqu'à 100 sans tunneling)
 function bilRackPositions(footX, midY){
   const positions = [];
   const rowGap = BIL_BALL_R*2 + 0.6;
@@ -6402,6 +6416,7 @@ function bilShuffle(arr){
   return a;
 }
 function bilSetupRack(){
+  bilEngine = bilCreateEngine();
   const positions = bilRackPositions(BIL_TABLE_W*0.72, BIL_TABLE_H/2);
   const eightIndex = 4; // milieu de la 3e rangée (indices 3,4,5)
   const others = bilShuffle([1,2,3,4,5,6,7,9,10,11,12,13,14,15]);
@@ -6409,11 +6424,15 @@ function bilSetupRack(){
   numbers[eightIndex] = 8;
   let oi=0;
   for(let i=0;i<15;i++){ if(i!==eightIndex){ numbers[i]=others[oi]; oi++; } }
-  const balls = [{id:0, group:'cue', color:'#f4f1ea', pos:{x:BIL_TABLE_W*0.25,y:BIL_TABLE_H/2}, vel:{x:0,y:0}, pocketed:false}];
+  const cueX = BIL_TABLE_W*0.25, cueY = BIL_TABLE_H/2;
+  const cueBody = bilMakeBallBody(cueX, cueY, 0);
+  const balls = [{id:0, group:'cue', color:'#f4f1ea', pos:{x:cueX,y:cueY}, vel:{x:0,y:0}, pocketed:false, body:cueBody}];
   for(let i=0;i<15;i++){
     const def = BIL_BALL_DEFS.find(d=>d.id===numbers[i]);
-    balls.push({id:numbers[i], group:def.group, color:def.color, pos:{...positions[i]}, vel:{x:0,y:0}, pocketed:false});
+    const body = bilMakeBallBody(positions[i].x, positions[i].y, numbers[i]);
+    balls.push({id:numbers[i], group:def.group, color:def.color, pos:{...positions[i]}, vel:{x:0,y:0}, pocketed:false, body});
   }
+  Matter.Composite.add(bilEngine.world, balls.map(b=>b.body));
   return balls;
 }
 function openBilliard(){
@@ -6583,12 +6602,13 @@ function bilTryPlaceCue(pos){
   const valid = pos.x>BIL_BALL_R && pos.x<BIL_TABLE_W-BIL_BALL_R && pos.y>BIL_BALL_R && pos.y<BIL_TABLE_H-BIL_BALL_R;
   const overlapping = bilBalls.some(b => !b.pocketed && b.id!==0 && Math.hypot(b.pos.x-pos.x,b.pos.y-pos.y) < BIL_BALL_R*2);
   if(!valid || overlapping) return;
-  bilBalls[0].pos = pos; bilBalls[0].pocketed = false; bilBalls[0].vel = {x:0,y:0};
+  bilRespawnCueBall(pos);
   bilState = 'aim';
   document.getElementById('bil-status').textContent = `Tour : Joueur ${bilCurrentPlayer}`;
   bilDraw();
 }
 function bilFireShot(vx, vy){
+  Matter.Body.setVelocity(bilBalls[0].body, {x:vx, y:vy});
   bilBalls[0].vel = {x:vx, y:vy};
   bilShotFacts = { firstContactGroup:null, cueScratched:false, pocketedBalls:[], railAfterContact:false };
   const currentGroup = bilGroupsAssigned ? bilPlayerGroups[bilCurrentPlayer] : null;
@@ -6609,7 +6629,7 @@ function bilAnimate(){
 function bilOnShotSettled(){
   if(bilMode==='solo'){
     if(bilBalls[0].pocketed){
-      bilBalls[0].pocketed=false; bilBalls[0].pos={x:BIL_TABLE_W*0.25,y:BIL_TABLE_H/2}; bilBalls[0].vel={x:0,y:0};
+      bilRespawnCueBall({x:BIL_TABLE_W*0.25, y:BIL_TABLE_H/2});
     }
     bilState='aim';
     document.getElementById('bil-status').textContent = 'Entraînement libre';
@@ -6635,7 +6655,7 @@ function bilOnShotSettled(){
     return;
   }
   if(bilBalls[0].pocketed){
-    bilBalls[0].pocketed=false; bilBalls[0].pos={x:BIL_TABLE_W*0.25,y:BIL_TABLE_H/2}; bilBalls[0].vel={x:0,y:0};
+    bilRespawnCueBall({x:BIL_TABLE_W*0.25, y:BIL_TABLE_H/2});
   }
   if(res.foul){
     bilCurrentPlayer = bilCurrentPlayer===1?2:1;
