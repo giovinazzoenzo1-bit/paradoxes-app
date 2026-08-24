@@ -56,6 +56,11 @@ Bug signalé par l'utilisateur après v27 : niveaux triviaux, certains résolus 
 ## v29 : bouton "Niveau suivant ▶" sur Nuts and Bolts
 Après une victoire, un bouton "Niveau suivant ▶" apparaît (au-dessus de Recommencer/Changer de niveau) et enchaîne directement sur `nbNew(nbLevel+1)` sans repasser par l'écran de sélection. Caché au niveau 50 (dernier) et à chaque nouveau départ de niveau (`nb-nextlevel-row`).
 
+## v30 : Nuts and Bolts — déplacement de paires en un coup + undo
+- **Déplacement automatique des paires** : quand on tape une tige pour poser des écrous, tous les écrous de même couleur consécutifs en haut de la tige source (une paire ou plus) se déplacent d'un seul coup vers la destination, dans la limite de la place disponible (jamais plus de 4 empilés — capacité `NB_CAPACITY` toujours respectée, testé unitairement)
+- **Bouton "↩️ Annuler"** : historique jusqu'à 20 coups (`nbHistory`), 1er undo de la partie gratuit, à partir du 2e le bouton devient "↩️📺 Annuler (pub)" et déclenche `mockWatchAd()` avant d'annuler — même pattern que 2048
+- Historique et undo réinitialisés à chaque nouveau niveau (`nbNew`)
+
 ## Roadmap corrective en cours (approche validée le 23/08/2026 : jeu par jeu à 100%, pas phase horizontale)
 - **Phase 1 (fait, v19)** : bug Nuts and Bolts niv.4, sons Wordle (lettre correcte/mal placée), bug scroll 2048 au swipe, boutons Snake agrandis + décor plein écran, couleurs dégradées Puzzle15
 - **Wordle (fait, v20)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour :

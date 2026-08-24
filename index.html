@@ -845,11 +845,14 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
     <div class="panel" id="nb-game-panel" style="display:none;">
       <div class="row"><span>Niveau</span><b id="nb-levelLabel">1</b></div>
-      <p style="font-size:13px; color:var(--muted); margin:0 0 10px; line-height:1.5;">Tape une tige pour prendre l'écrou du dessus, puis tape une autre tige pour le poser. But : une couleur par tige.</p>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 10px; line-height:1.5;">Tape une tige pour prendre les écrous du dessus (une paire ou plus de la même couleur se déplace d'un coup), puis tape une autre tige pour les poser. But : une couleur par tige, 4 maximum.</p>
       <div class="nb-rods" id="nb-rods"></div>
       <div class="status-line" id="nb-status" style="text-align:center;"></div>
       <div class="btn-row" id="nb-nextlevel-row" style="justify-content:center; display:none;">
         <button class="btn primary" id="nb-nextlevel-btn" onclick="nbNext()">Niveau suivant ▶</button>
+      </div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn" id="nb-undoBtn" onclick="nbUndo()" disabled>↩️ Annuler</button>
       </div>
       <div class="btn-row" style="justify-content:center;">
         <button class="btn" onclick="nbNew(nbLevel)">Recommencer</button>
@@ -3375,6 +3378,8 @@ function nbConfigForLevel(level){
 let nbRods = [];
 let nbSelected = null;
 let nbLevel = 1;
+let nbHistory = [];
+let nbUndoFreeUsed = false;
 function openNutsBolts(){
   switchScreen('game-nutsbolts');
   setActiveTab(null);
@@ -3510,15 +3515,47 @@ function nbNew(level){
   const colors = nbAllColors.slice(0, cfg.colors);
   nbRods = nbGenerateSolvableRods(colors, cfg.emptyRods);
   nbSelected = null;
+  nbHistory = [];
+  nbUndoFreeUsed = false;
   document.getElementById('nb-status').textContent = '';
   document.getElementById('nb-nextlevel-row').style.display = 'none';
   document.getElementById('nb-levelLabel').textContent = level;
   document.getElementById('nb-level-panel').style.display = 'none';
   document.getElementById('nb-game-panel').style.display = 'block';
+  nbUpdateUndoButton();
   nbRender();
 }
 function nbNext(){
   if(nbLevel < NB_TOTAL_LEVELS) nbNew(nbLevel+1);
+}
+function nbUpdateUndoButton(){
+  const btn = document.getElementById('nb-undoBtn');
+  if(!btn) return;
+  if(nbHistory.length===0){
+    btn.disabled = true;
+    btn.textContent = '↩️ Annuler';
+  } else {
+    btn.disabled = false;
+    btn.textContent = nbUndoFreeUsed ? '↩️📺 Annuler (pub)' : '↩️ Annuler';
+  }
+}
+function nbUndo(){
+  if(nbHistory.length===0) return;
+  const doUndo = ()=>{
+    nbRods = nbHistory.pop();
+    nbSelected = null;
+    document.getElementById('nb-status').textContent = '';
+    document.getElementById('nb-nextlevel-row').style.display = 'none';
+    nbRender();
+    nbUpdateUndoButton();
+  };
+  if(!nbUndoFreeUsed){
+    nbUndoFreeUsed = true;
+    doUndo();
+    nbUpdateUndoButton();
+  } else {
+    mockWatchAd(4, doUndo);
+  }
 }
 function nbRender(){
   const el = document.getElementById('nb-rods');
@@ -3544,10 +3581,23 @@ function nbTap(i){
   } else {
     const from = nbRods[nbSelected];
     const to = nbRods[i];
-    const moving = from[from.length-1];
-    if(to.length===0 || to[to.length-1]===moving){
-      if(to.length<NB_CAPACITY){
-        to.push(from.pop());
+    if(from.length>0){
+      const moving = from[from.length-1];
+      if(to.length===0 || to[to.length-1]===moving){
+        // Une paire (ou plus) de la même couleur en haut de la tige source se déplace en un seul coup,
+        // dans la limite de la place disponible sur la tige de destination (4 max).
+        let runLength = 0;
+        for(let k=from.length-1; k>=0 && from[k]===moving; k--) runLength++;
+        const spaceAvailable = NB_CAPACITY - to.length;
+        const moveCount = Math.min(runLength, spaceAvailable);
+        if(moveCount>0){
+          nbHistory.push(JSON.parse(JSON.stringify(nbRods)));
+          if(nbHistory.length>20) nbHistory.shift();
+          for(let k=0;k<moveCount;k++){
+            to.push(from.pop());
+          }
+          nbUpdateUndoButton();
+        }
       }
     }
     nbSelected = null;
