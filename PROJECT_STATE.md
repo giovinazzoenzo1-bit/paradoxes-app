@@ -69,6 +69,15 @@ Deuxième nouveau mini-jeu ajouté. 3 difficultés (Facile 40 indices, Moyen 32,
 - Pas de classement (non demandé), MVP scope à la mécanique de jeu + génération correcte
 - 🟨 Icône à générer par l'utilisateur (prompt donné en conversation) → déposer dans `icons/sudoku.png` (300×300px)
 
+## v33 : Sudoku — refonte complète (vies, sons, indice/effacer/undo)
+Changement de modèle : la saisie n'est plus juste vérifiée pour absence de conflit, elle est comparée **directement à la solution unique** générée (`sudokuSolution`, conservée en mémoire). Une mauvaise réponse n'est jamais gardée dans la grille (auto-annulée), juste sanctionnée.
+- **3 cœurs (vies)** affichés en haut (`sudoku-hearts`), perte d'un cœur à chaque mauvaise réponse, partie perdue à 0 cœur (`sudokuGameOver`, saisie bloquée)
+- **3 nouveaux sons** ajoutés au système global `playFeedback()` (réutilisables par d'autres jeux à l'avenir) : `correct` (bonne réponse), `objective` (ligne/colonne/bloc 3×3 complété — son différent, plus satisfaisant), `wrong` (mauvaise réponse, buzzer) — chacun avec son pattern de vibration dédié
+- **💡 Indice** : toujours via pub simulée (`mockWatchAd`), jamais gratuit, révèle la bonne valeur sur la case sélectionnée
+- **⌫ Effacer** et **↩️ Annuler** : 1er gratuit par partie, puis pub simulée à chaque utilisation (même pattern que 2048/Nuts and Bolts)
+- Bouton "effacer" retiré du pavé numérique (qui n'a plus que 1-9), devient un bouton dédié avec la logique pub
+- **Testé unitairement** : vies décrémentées correctement, mauvaise réponse non conservée, game over à 3 erreurs, indice pose la bonne valeur, undo/effacer respectent le pattern gratuit-puis-pub
+
 ## Process établi avec l'utilisateur pour les nouveaux mini-jeux
 1. Claude donne le prompt image (format identique aux icônes existantes : squircle navy 300×300, style glossy 3D) AVANT ou pendant qu'il code le jeu
 2. L'utilisateur génère l'image ailleurs et l'upload dans la conversation
