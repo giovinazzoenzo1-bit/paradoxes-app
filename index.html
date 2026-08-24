@@ -557,6 +557,18 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 }
 .sudoku-numpad button:active{background:var(--accent); color:#1a1300;}
 
+/* ---------- PUISSANCE 4 ---------- */
+.p4-board{
+  display:grid; grid-template-columns:repeat(7,1fr); gap:5px;
+  background:#1a2a5e; padding:8px; border-radius:10px; max-width:350px; margin:0 auto;
+}
+.p4-cell{
+  aspect-ratio:1; border-radius:50%; background:#0a0f2e; cursor:pointer;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,0.4);
+}
+.p4-cell.red{background:radial-gradient(circle at 35% 30%, #ff8a80, #ef6461);}
+.p4-cell.yellow{background:radial-gradient(circle at 35% 30%, #ffe08a, #f5b942);}
+
 /* ---------- SNAKE — THÈME GAME BOY ---------- */
 #game-snake{
   background:radial-gradient(ellipse at 50% 0%, #223322 0%, #0a0f0a 65%);
@@ -723,8 +735,15 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
     <div class="panel">
       <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/puissance4.png" alt="Puissance 4">
+        <div class="txt"><h3>Puissance 4</h3><p>Aligne 4 jetons avant l'adversaire, à 2 joueurs.</p></div>
+      </div>
+      <div class="btn-row"><button class="btn primary" onclick="openPuissance4()">Jouer</button></div>
+    </div>
+    <div class="panel">
+      <div class="game-panel-header">
         <img class="game-panel-icon" src="icons/bientot.png" alt="Bientôt disponible">
-        <div class="txt"><h3>Bientôt disponible</h3><p>Puissance 4, Flappy Bird et plus arrivent bientôt.</p></div>
+        <div class="txt"><h3>Bientôt disponible</h3><p>Flappy Bird et plus arrivent bientôt.</p></div>
       </div>
     </div>
   </div>
@@ -1005,6 +1024,23 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row" style="justify-content:center;">
         <button class="btn" onclick="sudokuNew(sudokuLevel)">Recommencer</button>
         <button class="btn" onclick="sudokuBackToLevels()">Changer de niveau</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PUISSANCE 4 ============ -->
+<div class="screen" id="game-puissance4">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="openJeux()">← Retour</button>
+    </div>
+    <div class="game-title">🔴 Puissance 4</div>
+    <div class="panel">
+      <div class="status-line" id="p4-status" style="text-align:center; font-weight:700; margin-bottom:8px;"></div>
+      <div class="p4-board" id="p4-board"></div>
+      <div class="btn-row" style="justify-content:center; margin-top:12px;">
+        <button class="btn" onclick="p4New()">Nouvelle partie</button>
       </div>
     </div>
   </div>
@@ -4280,6 +4316,74 @@ function sudokuCheckWin(){
   playFeedback('record');
 }
 
+/* ================= PUISSANCE 4 (2 joueurs local, pass-and-play) ================= */
+const P4_ROWS = 6, P4_COLS = 7;
+let p4Board = [];
+let p4Turn = 1; // 1 = rouge, 2 = jaune
+let p4Over = false;
+function openPuissance4(){
+  switchScreen('game-puissance4');
+  setActiveTab(null);
+  p4New();
+  trackPage('/puissance4');
+}
+function p4New(){
+  p4Board = Array.from({length:P4_ROWS}, () => Array(P4_COLS).fill(0));
+  p4Turn = 1;
+  p4Over = false;
+  document.getElementById('p4-status').textContent = '🔴 Tour : Rouge';
+  p4Render();
+}
+function p4Render(){
+  const el = document.getElementById('p4-board');
+  el.innerHTML = '';
+  for(let r=0;r<P4_ROWS;r++){
+    for(let c=0;c<P4_COLS;c++){
+      const div = document.createElement('div');
+      const v = p4Board[r][c];
+      div.className = 'p4-cell' + (v===1 ? ' red' : v===2 ? ' yellow' : '');
+      div.onclick = () => p4Drop(c);
+      el.appendChild(div);
+    }
+  }
+}
+function p4CheckWin(row, col){
+  const player = p4Board[row][col];
+  const directions = [[0,1],[1,0],[1,1],[1,-1]];
+  for(const [dr,dc] of directions){
+    let count = 1;
+    let r = row+dr, c = col+dc;
+    while(r>=0 && r<P4_ROWS && c>=0 && c<P4_COLS && p4Board[r][c]===player){ count++; r+=dr; c+=dc; }
+    r = row-dr; c = col-dc;
+    while(r>=0 && r<P4_ROWS && c>=0 && c<P4_COLS && p4Board[r][c]===player){ count++; r-=dr; c-=dc; }
+    if(count>=4) return true;
+  }
+  return false;
+}
+function p4Drop(col){
+  if(p4Over) return;
+  let targetRow = -1;
+  for(let r=P4_ROWS-1; r>=0; r--){
+    if(p4Board[r][col]===0){ targetRow = r; break; }
+  }
+  if(targetRow===-1) return; // colonne pleine
+  p4Board[targetRow][col] = p4Turn;
+  p4Render();
+  if(p4CheckWin(targetRow, col)){
+    p4Over = true;
+    document.getElementById('p4-status').textContent = `🟩 ${p4Turn===1 ? '🔴 Rouge' : '🟡 Jaune'} a gagné !`;
+    playFeedback('record');
+    return;
+  }
+  if(p4Board.every(row => row.every(v => v!==0))){
+    p4Over = true;
+    document.getElementById('p4-status').textContent = '🟨 Match nul !';
+    return;
+  }
+  p4Turn = p4Turn===1 ? 2 : 1;
+  document.getElementById('p4-status').textContent = p4Turn===1 ? '🔴 Tour : Rouge' : '🟡 Tour : Jaune';
+}
+
 /* ================= SON & VIBRATION ================= */
 let audioCtx = null;
 function getAudioCtx(){
@@ -4556,6 +4660,7 @@ function restoreLastScreen(){
   if(last==='game-nutsbolts'){ openNutsBolts(); return; }
   if(last==='game-solitaire'){ openSolitaire(); return; }
   if(last==='game-sudoku'){ openSudoku(); return; }
+  if(last==='game-puissance4'){ openPuissance4(); return; }
   if(last==='game-progres'){ openProgres(); return; }
   if(last==='game-options'){ openOptions(); return; }
   if(last==='game-privacy'){ openPrivacy(); return; }

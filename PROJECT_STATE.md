@@ -78,6 +78,15 @@ Changement de modèle : la saisie n'est plus juste vérifiée pour absence de co
 - Bouton "effacer" retiré du pavé numérique (qui n'a plus que 1-9), devient un bouton dédié avec la logique pub
 - **Testé unitairement** : vies décrémentées correctement, mauvaise réponse non conservée, game over à 3 erreurs, indice pose la bonne valeur, undo/effacer respectent le pattern gratuit-puis-pub
 
+## v34 : Nouveau mini-jeu — Puissance 4
+Troisième nouveau mini-jeu. 2 joueurs en local (pass-and-play), grille 7×6, tap sur une colonne pour y faire tomber un jeton.
+- Détection de victoire dans les 4 directions (horizontale, verticale, diagonale montante et descendante) à partir du dernier jeton posé, comptage bidirectionnel
+- Détection de match nul (grille pleine sans alignement)
+- Colonne pleine : le tap est ignoré silencieusement
+- **Testé** : victoire horizontale/verticale confirmée via simulation de coups réels ; victoire diagonale (les 2 sens) et absence de faux positif à 3 pions alignés confirmées via plateau construit directement (test unitaire de la fonction `p4CheckWin` isolée)
+- Icône déjà fournie par l'utilisateur et placée dans `icons/puissance4.png`
+- Pas de classement ni d'IA (non demandé), MVP 2 joueurs locaux uniquement
+
 ## Process établi avec l'utilisateur pour les nouveaux mini-jeux
 1. Claude donne le prompt image (format identique aux icônes existantes : squircle navy 300×300, style glossy 3D) AVANT ou pendant qu'il code le jeu
 2. L'utilisateur génère l'image ailleurs et l'upload dans la conversation
