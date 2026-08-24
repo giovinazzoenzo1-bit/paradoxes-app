@@ -625,6 +625,29 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   background:var(--bg2); border-radius:12px;
 }
 
+/* ---------- SKIP-BO ---------- */
+.sb-scores{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:6px;}
+.sb-score-chip{
+  font-size:11px; background:var(--bg2); border-radius:20px; padding:4px 10px; color:var(--muted);
+}
+.sb-score-chip.active{background:var(--accent); color:#1a1300; font-weight:700;}
+.sb-piles-row{display:flex; gap:6px; flex-wrap:wrap; justify-content:center;}
+.sb-card{
+  width:44px; height:62px; border-radius:6px; background:#f4f1ea; color:#1a1a1a;
+  display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800;
+  box-shadow:0 2px 4px rgba(0,0,0,0.3); cursor:pointer; border:2px solid transparent; position:relative;
+}
+.sb-card.wild{background:linear-gradient(135deg,#b85fc9,#5f9dc9); color:#fff;}
+.sb-card.selected{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent);}
+.sb-card.target{border-color:#8fc95f; box-shadow:0 0 0 3px rgba(143,201,95,0.6); animation:sbTargetPulse 1s ease-in-out infinite;}
+@keyframes sbTargetPulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.08);}
+}
+.sb-card.empty{background:#232840; color:var(--muted); font-size:11px; font-weight:600; box-shadow:none; cursor:default;}
+.sb-card .sb-count{position:absolute; bottom:-6px; right:-6px; background:var(--accent); color:#1a1300; font-size:10px; font-weight:800; border-radius:50%; width:18px; height:18px; display:flex; align-items:center; justify-content:center;}
+.sb-card.stock-empty{opacity:0.3; cursor:default;}
+
 /* ---------- SNAKE — THÈME GAME BOY ---------- */
 #game-snake{
   background:radial-gradient(ellipse at 50% 0%, #223322 0%, #0a0f0a 65%);
@@ -809,6 +832,13 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         <div class="txt"><h3>Ludo</h3><p>Solo contre 3 bots, ou entre amis (2-4 joueurs).</p></div>
       </div>
       <div class="btn-row"><button class="btn primary" onclick="openLudo()">Jouer</button></div>
+    </div>
+    <div class="panel">
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/skipbo.png" alt="Skip-Bo">
+        <div class="txt"><h3>Skip-Bo</h3><p>Vide ta pioche perso avant tout le monde, en solo ou entre amis.</p></div>
+      </div>
+      <div class="btn-row"><button class="btn primary" onclick="openSkipbo()">Jouer</button></div>
     </div>
     <div class="panel">
       <div class="game-panel-header">
@@ -1195,6 +1225,78 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="footnote" style="margin-top:8px;">Aperçu fictif, pas de vrai backend — voir Confidentialité.</div>
       <div class="btn-row" style="justify-content:center; margin-top:12px;">
         <button class="btn primary" onclick="ludoBackToSetup()">Rejouer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SKIP-BO ============ -->
+<div class="screen" id="game-skipbo">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="openJeux()">← Retour</button>
+    </div>
+    <div class="game-title">🃏 Skip-Bo</div>
+
+    <div class="panel" id="sb-setup-panel">
+      <h2>Choisis un mode</h2>
+      <div class="btn-row" style="flex-direction:column;">
+        <button class="btn primary" onclick="sbSetupMode('solo')">🤖 Solo contre 3 bots</button>
+        <button class="btn primary" onclick="sbSetupMode('amis')">👥 Entre amis</button>
+      </div>
+      <div id="sb-friends-count" style="display:none; margin-top:14px;">
+        <p style="font-size:13px; color:var(--muted); margin-bottom:8px;">Combien de joueurs ?</p>
+        <div class="btn-row">
+          <button class="btn" onclick="sbStartAmis(2)">2</button>
+          <button class="btn" onclick="sbStartAmis(3)">3</button>
+          <button class="btn" onclick="sbStartAmis(4)">4</button>
+        </div>
+      </div>
+      <p class="footnote" style="margin-top:14px;">Manche gagnée = vider sa pioche perso en premier. Le match se joue en 2 manches gagnantes.</p>
+      <div class="footnote" id="sb-winstat" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="panel" id="sb-pass-panel" style="display:none; text-align:center;">
+      <h2 id="sb-pass-title"></h2>
+      <p style="font-size:13px; color:var(--muted);">📵 Les autres ne doivent pas regarder l'écran.</p>
+      <div class="btn-row" style="justify-content:center; margin-top:14px;">
+        <button class="btn primary" onclick="sbRevealTurn()">Je suis prêt·e, révéler mon jeu</button>
+      </div>
+    </div>
+
+    <div class="panel" id="sb-game-panel" style="display:none;">
+      <div class="status-line" id="sb-status" style="text-align:center; font-weight:700; margin-bottom:6px;"></div>
+      <div class="sb-scores" id="sb-scores"></div>
+
+      <div style="font-size:12px; color:var(--muted); margin:10px 0 4px;">Piles de construction (communes)</div>
+      <div class="sb-piles-row" id="sb-building"></div>
+
+      <div id="sb-human-zone">
+        <div style="font-size:12px; color:var(--muted); margin:12px 0 4px;">Ta pioche perso</div>
+        <div class="sb-piles-row" id="sb-stock"></div>
+
+        <div style="font-size:12px; color:var(--muted); margin:12px 0 4px;">Ta main</div>
+        <div class="sb-piles-row" id="sb-hand"></div>
+
+        <div style="font-size:12px; color:var(--muted); margin:12px 0 4px;">Tes piles de défausse (tape une carte de ta main puis une pile pour y terminer ton tour)</div>
+        <div class="sb-piles-row" id="sb-discards"></div>
+      </div>
+
+      <div class="status-line" id="sb-hint-text" style="text-align:center; font-size:12px; color:var(--accent); margin-top:8px;"></div>
+      <div class="btn-row" style="justify-content:center; margin-top:8px;">
+        <button class="btn" id="sb-hintBtn" onclick="sbHint()">💡 Indice (pub)</button>
+      </div>
+      <div class="btn-row" style="justify-content:center; margin-top:10px;">
+        <button class="btn" onclick="sbBackToSetup()">Changer de mode</button>
+      </div>
+    </div>
+
+    <div class="panel" id="sb-endgame-panel" style="display:none;">
+      <h2 id="sb-endgame-title"></h2>
+      <div id="sb-endgame-board"></div>
+      <div class="footnote" style="margin-top:8px;">Aperçu fictif, pas de vrai backend — voir Confidentialité.</div>
+      <div class="btn-row" style="justify-content:center; margin-top:12px;">
+        <button class="btn primary" onclick="sbBackToSetup()">Rejouer</button>
       </div>
     </div>
   </div>
@@ -5070,6 +5172,452 @@ function ludoRenderEndgameBoard(){
     `).join('');
 }
 
+/* ================= SKIP-BO ================= */
+// Moteur : 162 cartes (144 numérotées 1-12 ×12 + 18 Skip-Bo joker), pioche perso de 30 par joueur,
+// main de 5, 4 piles de construction communes (1→12, se vident en atteignant 12), 4 piles de défausse
+// perso par joueur. Victoire de manche = vider sa pioche perso. Match en 2 manches gagnantes.
+function sbShuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function sbCreateDeck(){
+  const deck = [];
+  for(let v=1;v<=12;v++) for(let i=0;i<12;i++) deck.push({value:v, wild:false});
+  for(let i=0;i<18;i++) deck.push({value:0, wild:true});
+  return sbShuffle(deck);
+}
+let sbPlayers = [];
+let sbRoundWins = [];
+let sbBuildingPiles = [[],[],[],[]];
+let sbUsedPile = [];
+let sbDeck = [];
+let sbCurrentIdx = 0;
+let sbMode = 'solo';
+let sbMatchOver = false;
+let sbSelected = null;
+const sbWorldMock = [
+  {name:'Léa M.', wins:29},
+  {name:'Thomas B.', wins:24},
+  {name:'Sofia K.', wins:18},
+  {name:'Adam R.', wins:13},
+  {name:'Nina P.', wins:9},
+];
+function sbNewMatch(playerNames, isBotArr){
+  sbPlayers = playerNames.map((name,i) => ({
+    name, isBot: isBotArr[i],
+    hand: [], stock: [], discardPiles: [[],[],[],[]],
+  }));
+  sbRoundWins = playerNames.map(()=>0);
+}
+function sbNewRound(){
+  const deck = sbCreateDeck();
+  for(const p of sbPlayers){
+    p.hand = [];
+    p.discardPiles = [[],[],[],[]];
+    p.stock = deck.splice(0,30);
+  }
+  sbBuildingPiles = [[],[],[],[]];
+  sbUsedPile = [];
+  sbDeck = deck;
+}
+function sbDrawToFive(playerIdx){
+  const p = sbPlayers[playerIdx];
+  while(p.hand.length<5){
+    if(sbDeck.length===0){
+      if(sbUsedPile.length===0) break;
+      sbDeck = sbShuffle(sbUsedPile);
+      sbUsedPile = [];
+    }
+    p.hand.push(sbDeck.pop());
+  }
+}
+function sbNeededValue(pileIdx){ return sbBuildingPiles[pileIdx].length + 1; }
+function sbCanPlay(card, pileIdx){
+  if(sbBuildingPiles[pileIdx].length>=12) return false;
+  return card.wild || card.value===sbNeededValue(pileIdx);
+}
+function sbPlayCard(playerIdx, source, sourceIndex, pileIdx){
+  const p = sbPlayers[playerIdx];
+  let card;
+  if(source==='hand') card = p.hand[sourceIndex];
+  else if(source==='stock') card = p.stock[p.stock.length-1];
+  else if(source==='discard') card = p.discardPiles[sourceIndex][p.discardPiles[sourceIndex].length-1];
+  if(!card || !sbCanPlay(card, pileIdx)) return {ok:false};
+  if(source==='hand') p.hand.splice(sourceIndex,1);
+  else if(source==='stock') p.stock.pop();
+  else if(source==='discard') p.discardPiles[sourceIndex].pop();
+  sbBuildingPiles[pileIdx].push(card);
+  let cleared = false;
+  if(sbBuildingPiles[pileIdx].length===12){
+    sbUsedPile.push(...sbBuildingPiles[pileIdx]);
+    sbBuildingPiles[pileIdx] = [];
+    cleared = true;
+  }
+  const stockEmpty = source==='stock' && p.stock.length===0;
+  if(source==='hand' && p.hand.length===0 && !stockEmpty){
+    sbDrawToFive(playerIdx);
+  }
+  return {ok:true, cleared, stockEmpty};
+}
+function sbDiscard(playerIdx, handIndex, pileIdx){
+  const p = sbPlayers[playerIdx];
+  const card = p.hand[handIndex];
+  if(!card) return {ok:false};
+  p.hand.splice(handIndex,1);
+  p.discardPiles[pileIdx].push(card);
+  return {ok:true};
+}
+function sbBotPlayTurn(playerIdx){
+  let playedSomething = true;
+  let guard = 0;
+  while(playedSomething && guard<200){
+    guard++;
+    playedSomething = false;
+    const p = sbPlayers[playerIdx];
+    if(p.stock.length>0){
+      const card = p.stock[p.stock.length-1];
+      for(let pi=0; pi<4; pi++){
+        if(sbCanPlay(card, pi)){
+          const res = sbPlayCard(playerIdx,'stock',null,pi);
+          if(res.stockEmpty) return {won:true};
+          playedSomething = true;
+          break;
+        }
+      }
+      if(playedSomething) continue;
+    }
+    for(let hi=0; hi<p.hand.length; hi++){
+      const card = p.hand[hi];
+      let done=false;
+      for(let pi=0; pi<4; pi++){
+        if(sbCanPlay(card, pi)){
+          sbPlayCard(playerIdx,'hand',hi,pi);
+          playedSomething = true; done=true;
+          break;
+        }
+      }
+      if(done) break;
+    }
+    if(playedSomething) continue;
+    for(let di=0; di<4; di++){
+      const pile = p.discardPiles[di];
+      if(pile.length===0) continue;
+      const card = pile[pile.length-1];
+      let done=false;
+      for(let pi=0;pi<4;pi++){
+        if(sbCanPlay(card, pi)){
+          sbPlayCard(playerIdx,'discard',di,pi);
+          playedSomething = true; done=true;
+          break;
+        }
+      }
+      if(done) break;
+    }
+  }
+  const p = sbPlayers[playerIdx];
+  if(p.hand.length>0){
+    let worstIdx = 0;
+    for(let i=1;i<p.hand.length;i++){
+      if(!p.hand[i].wild && (p.hand[worstIdx].wild || p.hand[i].value>p.hand[worstIdx].value)) worstIdx=i;
+    }
+    let targetPile = p.discardPiles.findIndex(pile=>pile.length===0);
+    if(targetPile===-1) targetPile = 0;
+    sbDiscard(playerIdx, worstIdx, targetPile);
+  }
+  return {won:false};
+}
+function sbCardLabel(card){ return card.wild ? 'SB' : card.value; }
+function openSkipbo(){
+  switchScreen('game-skipbo');
+  setActiveTab(null);
+  document.getElementById('sb-setup-panel').style.display = 'block';
+  document.getElementById('sb-pass-panel').style.display = 'none';
+  document.getElementById('sb-game-panel').style.display = 'none';
+  document.getElementById('sb-endgame-panel').style.display = 'none';
+  document.getElementById('sb-friends-count').style.display = 'none';
+  sbRenderWinStat();
+  trackPage('/skipbo');
+}
+function sbRenderWinStat(){
+  const el = document.getElementById('sb-winstat');
+  const wins = parseInt(localStorage.getItem('sbWins')||'0');
+  el.textContent = wins>0 ? `🏆 Tes matchs gagnés en solo vs bots : ${wins}` : '';
+}
+function sbSetupMode(mode){
+  if(mode==='solo') sbStartMatch('solo', ['Toi','Bot 1','Bot 2','Bot 3'], [false,true,true,true]);
+  else document.getElementById('sb-friends-count').style.display = 'block';
+}
+function sbStartAmis(count){
+  const names = [];
+  for(let i=1;i<=count;i++) names.push('Joueur '+i);
+  sbStartMatch('amis', names, names.map(()=>false));
+}
+function sbStartMatch(mode, names, isBotArr){
+  sbMode = mode;
+  sbNewMatch(names, isBotArr);
+  sbNewRound();
+  sbCurrentIdx = 0;
+  sbMatchOver = false;
+  sbSelected = null;
+  document.getElementById('sb-setup-panel').style.display = 'none';
+  document.getElementById('sb-endgame-panel').style.display = 'none';
+  document.getElementById('sb-friends-count').style.display = 'none';
+  sbBeginTurn();
+}
+function sbBackToSetup(){
+  document.getElementById('sb-setup-panel').style.display = 'block';
+  document.getElementById('sb-pass-panel').style.display = 'none';
+  document.getElementById('sb-game-panel').style.display = 'none';
+  document.getElementById('sb-endgame-panel').style.display = 'none';
+  document.getElementById('sb-friends-count').style.display = 'none';
+  sbRenderWinStat();
+}
+function sbBeginTurn(){
+  if(sbMatchOver) return;
+  sbSelected = null;
+  document.getElementById('sb-hint-text').textContent = '';
+  const idx = sbCurrentIdx;
+  sbDrawToFive(idx);
+  const p = sbPlayers[idx];
+  if(p.isBot){
+    document.getElementById('sb-pass-panel').style.display = 'none';
+    document.getElementById('sb-game-panel').style.display = 'block';
+    document.getElementById('sb-human-zone').style.display = 'none';
+    document.getElementById('sb-status').textContent = `Tour : ${p.name} 🤖`;
+    sbRenderScores();
+    sbRenderBuilding();
+    setTimeout(sbRunBotTurn, 800);
+  } else if(sbMode==='amis'){
+    document.getElementById('sb-game-panel').style.display = 'none';
+    document.getElementById('sb-pass-panel').style.display = 'block';
+    document.getElementById('sb-pass-title').textContent = `Au tour de ${p.name}`;
+  } else {
+    document.getElementById('sb-pass-panel').style.display = 'none';
+    document.getElementById('sb-game-panel').style.display = 'block';
+    document.getElementById('sb-human-zone').style.display = 'block';
+    document.getElementById('sb-status').textContent = `Ton tour, ${p.name}`;
+    sbRenderAll();
+  }
+}
+function sbRevealTurn(){
+  document.getElementById('sb-pass-panel').style.display = 'none';
+  document.getElementById('sb-game-panel').style.display = 'block';
+  document.getElementById('sb-human-zone').style.display = 'block';
+  document.getElementById('sb-status').textContent = `Ton tour, ${sbPlayers[sbCurrentIdx].name}`;
+  sbRenderAll();
+}
+function sbRunBotTurn(){
+  const idx = sbCurrentIdx;
+  const result = sbBotPlayTurn(idx);
+  sbRenderScores();
+  sbRenderBuilding();
+  if(result.won){ sbHandleRoundWin(idx); return; }
+  setTimeout(sbAdvanceTurn, 500);
+}
+function sbAdvanceTurn(){
+  sbCurrentIdx = (sbCurrentIdx+1) % sbPlayers.length;
+  sbBeginTurn();
+}
+function sbGetSelectedCard(){
+  if(!sbSelected) return null;
+  const p = sbPlayers[sbCurrentIdx];
+  if(sbSelected.source==='hand') return p.hand[sbSelected.index];
+  if(sbSelected.source==='stock') return p.stock[p.stock.length-1];
+  if(sbSelected.source==='discard') return p.discardPiles[sbSelected.index][p.discardPiles[sbSelected.index].length-1];
+  return null;
+}
+function sbTapCard(source, index){
+  if(sbPlayers[sbCurrentIdx].isBot) return;
+  const p = sbPlayers[sbCurrentIdx];
+  let card;
+  if(source==='stock'){ if(p.stock.length===0) return; card = p.stock[p.stock.length-1]; }
+  else if(source==='hand'){ card = p.hand[index]; }
+  else if(source==='discard'){ if(p.discardPiles[index].length===0) return; card = p.discardPiles[index][p.discardPiles[index].length-1]; }
+  if(!card) return;
+  if(sbSelected && sbSelected.source===source && sbSelected.index===index){
+    sbSelected = null;
+  } else {
+    sbSelected = {source, index};
+  }
+  document.getElementById('sb-hint-text').textContent = '';
+  sbRenderAll();
+}
+function sbTapBuildingPile(pileIdx){
+  if(!sbSelected) return;
+  const res = sbPlayCard(sbCurrentIdx, sbSelected.source, sbSelected.index, pileIdx);
+  if(!res.ok) return;
+  sbSelected = null;
+  playFeedback(res.cleared ? 'objective' : 'correct');
+  sbRenderAll();
+  if(res.stockEmpty) sbHandleRoundWin(sbCurrentIdx);
+}
+function sbTapDiscardPileArea(pileIdx){
+  if(sbSelected && sbSelected.source==='hand'){
+    const res = sbDiscard(sbCurrentIdx, sbSelected.index, pileIdx);
+    if(!res.ok) return;
+    sbSelected = null;
+    playFeedback('correct');
+    sbAdvanceTurn();
+  } else {
+    sbTapCard('discard', pileIdx);
+  }
+}
+function sbRenderAll(){
+  sbRenderScores();
+  sbRenderBuilding();
+  sbRenderHumanZone();
+}
+function sbRenderScores(){
+  const el = document.getElementById('sb-scores');
+  el.innerHTML = sbPlayers.map((p,i) => `<span class="sb-score-chip ${i===sbCurrentIdx?'active':''}">${p.name}${p.isBot?' 🤖':''} — 🃏${p.stock.length} — 🏆${sbRoundWins[i]}</span>`).join('');
+}
+function sbRenderBuilding(){
+  const el = document.getElementById('sb-building');
+  el.innerHTML = '';
+  const selectedCard = sbGetSelectedCard();
+  for(let i=0;i<4;i++){
+    const pile = sbBuildingPiles[i];
+    const div = document.createElement('div');
+    let cls = 'sb-card';
+    if(pile.length===0){
+      cls += ' empty';
+      div.innerHTML = `besoin<br>1`;
+    } else {
+      const top = pile[pile.length-1];
+      if(top.wild) cls += ' wild';
+      div.textContent = sbCardLabel(top);
+    }
+    if(selectedCard && sbCanPlay(selectedCard, i)) cls += ' target';
+    div.className = cls;
+    div.onclick = () => sbTapBuildingPile(i);
+    el.appendChild(div);
+  }
+}
+function sbRenderHumanZone(){
+  const p = sbPlayers[sbCurrentIdx];
+  if(p.isBot) return;
+  const stockEl = document.getElementById('sb-stock');
+  stockEl.innerHTML = '';
+  const stockDiv = document.createElement('div');
+  if(p.stock.length===0){
+    stockDiv.className = 'sb-card empty stock-empty';
+    stockDiv.textContent = 'vide';
+  } else {
+    const top = p.stock[p.stock.length-1];
+    stockDiv.className = 'sb-card' + (top.wild?' wild':'') + (sbSelected && sbSelected.source==='stock' ? ' selected':'');
+    stockDiv.innerHTML = sbCardLabel(top) + `<span class="sb-count">${p.stock.length}</span>`;
+    stockDiv.onclick = () => sbTapCard('stock', null);
+  }
+  stockEl.appendChild(stockDiv);
+
+  const handEl = document.getElementById('sb-hand');
+  handEl.innerHTML = '';
+  p.hand.forEach((card, i) => {
+    const div = document.createElement('div');
+    div.className = 'sb-card' + (card.wild?' wild':'') + (sbSelected && sbSelected.source==='hand' && sbSelected.index===i ? ' selected':'');
+    div.textContent = sbCardLabel(card);
+    div.onclick = () => sbTapCard('hand', i);
+    handEl.appendChild(div);
+  });
+
+  const discardEl = document.getElementById('sb-discards');
+  discardEl.innerHTML = '';
+  p.discardPiles.forEach((pile, i) => {
+    const div = document.createElement('div');
+    let cls = 'sb-card';
+    if(pile.length===0){
+      cls += ' empty';
+      div.textContent = 'vide';
+    } else {
+      const top = pile[pile.length-1];
+      if(top.wild) cls += ' wild';
+      if(sbSelected && sbSelected.source==='discard' && sbSelected.index===i) cls += ' selected';
+      div.innerHTML = sbCardLabel(top) + `<span class="sb-count">${pile.length}</span>`;
+    }
+    if(sbSelected && sbSelected.source==='hand') cls += ' target';
+    div.className = cls;
+    div.onclick = () => sbTapDiscardPileArea(i);
+    discardEl.appendChild(div);
+  });
+}
+function sbHandleRoundWin(winnerIdx){
+  sbRoundWins[winnerIdx]++;
+  playFeedback('record');
+  if(sbRoundWins[winnerIdx] >= 2){
+    sbEndMatch(winnerIdx);
+  } else {
+    document.getElementById('sb-status').textContent = `🟩 ${sbPlayers[winnerIdx].name} remporte la manche ! Manche suivante...`;
+    setTimeout(() => {
+      sbNewRound();
+      sbCurrentIdx = 0;
+      sbBeginTurn();
+    }, 1800);
+  }
+}
+function sbEndMatch(winnerIdx){
+  sbMatchOver = true;
+  document.getElementById('sb-game-panel').style.display = 'none';
+  document.getElementById('sb-pass-panel').style.display = 'none';
+  document.getElementById('sb-endgame-panel').style.display = 'block';
+  document.getElementById('sb-endgame-title').textContent = `🎉 ${sbPlayers[winnerIdx].name} remporte le match !`;
+  if(sbMode==='solo' && winnerIdx===0){
+    const wins = parseInt(localStorage.getItem('sbWins')||'0') + 1;
+    localStorage.setItem('sbWins', wins);
+  }
+  sbRenderEndgameBoard();
+}
+function sbRenderEndgameBoard(){
+  const el = document.getElementById('sb-endgame-board');
+  const myWins = parseInt(localStorage.getItem('sbWins')||'0');
+  let world = [...sbWorldMock];
+  world.push({name:'Toi', wins:myWins, me:true});
+  world.sort((a,b)=>b.wins-a.wins);
+  el.innerHTML = `<div style="font-size:13px; font-weight:700; color:var(--muted); margin:10px 0 4px;">🏆 Matchs gagnés (solo vs bots)</div>` +
+    world.map((p,i) => `
+      <div class="leaderboard-row ${p.me?'me':''}">
+        <span class="leaderboard-rank">${i+1}</span>
+        <span class="leaderboard-name">${p.me?'👉 ':''}${p.name}</span>
+        <span class="leaderboard-score">${p.wins} victoires</span>
+      </div>
+    `).join('');
+}
+function sbFindHintMove(idx){
+  const p = sbPlayers[idx];
+  if(p.stock.length>0){
+    const card = p.stock[p.stock.length-1];
+    for(let pi=0;pi<4;pi++) if(sbCanPlay(card,pi)) return {source:'stock', index:null};
+  }
+  for(let hi=0; hi<p.hand.length; hi++){
+    const card = p.hand[hi];
+    for(let pi=0;pi<4;pi++) if(sbCanPlay(card,pi)) return {source:'hand', index:hi};
+  }
+  for(let di=0; di<4; di++){
+    const pile = p.discardPiles[di];
+    if(pile.length===0) continue;
+    const card = pile[pile.length-1];
+    for(let pi=0;pi<4;pi++) if(sbCanPlay(card,pi)) return {source:'discard', index:di};
+  }
+  return null;
+}
+function sbHint(){
+  const idx = sbCurrentIdx;
+  if(sbPlayers[idx].isBot) return;
+  mockWatchAd(4, () => {
+    const move = sbFindHintMove(idx);
+    if(!move){
+      document.getElementById('sb-hint-text').textContent = "Aucun coup possible — défausse une carte de ta main pour terminer ton tour.";
+      return;
+    }
+    sbSelected = {source:move.source, index:move.index};
+    document.getElementById('sb-hint-text').textContent = `💡 Joue la carte en surbrillance sur une pile bordée de vert.`;
+    sbRenderAll();
+  });
+}
+
 /* ================= SON & VIBRATION ================= */
 let audioCtx = null;
 function getAudioCtx(){
@@ -5349,6 +5897,7 @@ function restoreLastScreen(){
   if(last==='game-puissance4'){ openPuissance4(); return; }
   if(last==='game-flappybird'){ openFlappyBird(); return; }
   if(last==='game-ludo'){ openLudo(); return; }
+  if(last==='game-skipbo'){ openSkipbo(); return; }
   if(last==='game-progres'){ openProgres(); return; }
   if(last==='game-options'){ openOptions(); return; }
   if(last==='game-privacy'){ openPrivacy(); return; }

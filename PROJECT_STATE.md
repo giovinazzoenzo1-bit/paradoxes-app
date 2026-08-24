@@ -107,6 +107,15 @@ Quatrième et dernier des mini-jeux prioritaires (Solitaire, Sudoku, Puissance 4
 
 **Les 4 mini-jeux prioritaires de la liste originale sont maintenant tous ajoutés.** Restent les mini-jeux plus lourds (physique/règles complexes) à traiter en dernier : Ludo (jeu des chevaux), Skip-Bo, Échecs, Billard, Ping-pong.
 
+## v39 : Nouveau mini-jeu — Skip-Bo
+Sixième mini-jeu. Règles fidèles au vrai jeu : deck de 162 cartes (144 numérotées 1-12 ×12 exemplaires + 18 jokers Skip-Bo), pioche perso de 30 cartes/joueur, main de 5, 4 piles de construction communes (doivent monter 1→12 dans l'ordre, se vident automatiquement en atteignant 12), 4 piles de défausse perso par joueur. Victoire de manche = vider sa pioche perso en premier ; **match en 2 manches gagnantes** (ajout : le vrai jeu se joue souvent en match, pas en manche unique — plus engageant qu'une seule partie).
+- **2 modes** : solo vs 3 bots, ou entre amis 2-4 joueurs local — avec **écran "passe le téléphone"** entre les tours humains en mode amis (main privée, ne doit pas être vue par les autres — inspiré du système déjà en place sur Qui suis-je)
+- **Interaction 100% tap direct** (comme demandé) : taper une carte (main, dessus de la pioche perso, ou dessus d'une pile de défausse perso) pour la sélectionner, puis taper une pile de construction pour la jouer si légal (surbrillance verte automatique des piles qui acceptent la carte sélectionnée), ou taper une pile de défausse perso pour y terminer son tour (uniquement possible depuis la main)
+- **IA bots** : priorité pioche perso > main > défausses, défausse la carte la plus haute en fin de tour
+- **💡 Indice** : toujours via pub simulée, sélectionne automatiquement un coup légal pour que le joueur n'ait plus qu'à taper la pile en surbrillance
+- **Classement** (ajout, cohérent avec la règle générale) : matchs gagnés perso (solo vs bots) + mondial aperçu fictif
+- **Testé en profondeur** : intégrité du deck (162 cartes, 12 exemplaires par valeur, 18 jokers), règles de pose (refus si valeur incorrecte, jokers toujours acceptés, pile vidée à 12), victoire de manche/match, repioche automatique à 5 pendant le tour, **simulation complète d'un match 4 bots sans crash avec intégrité du deck vérifiée après coup (162 cartes conservées)**
+
 ## v38 : Ludo — tap direct sur les pions (au lieu de boutons) + plateau plus visuel
 - **Interaction changée** : les pions jouables (en réserve ou sur le plateau) sont maintenant directement tapables — surbrillance pulsante blanche autour du pion + curseur pointer — au lieu de la liste de boutons "Pion 1/2/3/4" précédente. Tap = sélection ET déplacement en un geste.
 - Plateau visuellement enrichi : quadrants de réserve plus saturés, cases sûres marquées d'une étoile, cases de départ colorées plus visibles.
@@ -193,3 +202,6 @@ Premier des nouveaux mini-jeux ajouté (liste complète en tête de fichier). In
 1. Prompt Gemini avec le bloc "style" (flat vector, fond noir uni #000000, pas de scène réaliste, pas de damier de transparence)
 2. Claude nettoie le fond (script Python : détection couleur de coin + flood-fill + scipy pour connectivité), recadre en carré si besoin
 3. Redimensionne à 300x300, sauvegarde dans `icons/`, référence dans le HTML, ajoute au cache `sw.js`, bump `CACHE_NAME`
+
+## 🟥 BUG CONNU signalé le 24/08 : Ludo — "quelques bugs" (non détaillés par l'utilisateur, à investiguer plus tard)
+L'utilisateur a mentionné qu'il y a des bugs sur Ludo mais n'a pas précisé lesquels, et a dit "on verra plus tard". À creuser à la prochaine session si l'utilisateur en reparle — lui demander de préciser quels bugs exactement avant de chercher à l'aveugle.
