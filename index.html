@@ -575,32 +575,40 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   flex:1; border-radius:10px; padding:6px; display:flex; flex-wrap:wrap; gap:4px; justify-content:center;
   align-items:center; min-height:44px;
 }
-.ludo-yard.red{background:rgba(239,100,97,0.18);}
-.ludo-yard.green{background:rgba(143,201,95,0.18);}
-.ludo-yard.blue{background:rgba(95,157,201,0.18);}
-.ludo-yard.yellow{background:rgba(245,185,66,0.18);}
+.ludo-yard.red{background:rgba(239,100,97,0.28);}
+.ludo-yard.green{background:rgba(143,201,95,0.28);}
+.ludo-yard.blue{background:rgba(95,157,201,0.28);}
+.ludo-yard.yellow{background:rgba(245,185,66,0.28);}
 .ludo-pawn-dot{
-  width:16px; height:16px; border-radius:50%; border:2px solid rgba(255,255,255,0.6);
-  box-shadow:0 1px 3px rgba(0,0,0,0.4);
+  width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,0.7);
+  box-shadow:0 1px 3px rgba(0,0,0,0.4); cursor:default;
 }
 .ludo-pawn-dot.red{background:#ef6461;}
 .ludo-pawn-dot.green{background:#8fc95f;}
 .ludo-pawn-dot.blue{background:#5f9dc9;}
 .ludo-pawn-dot.yellow{background:#f5b942;}
 .ludo-pawn-dot.inactive{opacity:0.25;}
+.ludo-pawn-dot.movable{cursor:pointer; animation:ludoPulse 1s ease-in-out infinite; box-shadow:0 0 0 3px #fff, 0 0 8px 3px rgba(255,255,255,0.8);}
+@keyframes ludoPulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.22);}
+}
 .ludo-ring-wrap{display:flex; justify-content:center; margin:10px 0;}
 .ludo-ring{
   display:grid; grid-template-columns:repeat(14,1fr); grid-template-rows:repeat(14,1fr);
-  width:280px; height:280px; position:relative;
+  width:294px; height:294px; position:relative; background:var(--bg2); border-radius:12px; padding:4px;
+  border:3px solid #3a3f5a;
 }
 .ludo-cell{
-  border-radius:2px; background:#232840; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:1px;
+  border-radius:2px; background:#2a2f45; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:1px;
 }
-.ludo-cell.safe{background:#3a3f5a;}
-.ludo-cell.start-red{background:rgba(239,100,97,0.5);}
-.ludo-cell.start-green{background:rgba(143,201,95,0.5);}
-.ludo-cell.start-blue{background:rgba(95,157,201,0.5);}
-.ludo-cell.start-yellow{background:rgba(245,185,66,0.5);}
+.ludo-cell.safe{background:#454b6e;}
+.ludo-cell.safe::before{content:'★'; position:absolute; font-size:8px; color:#f5b942; opacity:0.7;}
+.ludo-cell.start-red{background:rgba(239,100,97,0.65);}
+.ludo-cell.start-green{background:rgba(143,201,95,0.65);}
+.ludo-cell.start-blue{background:rgba(95,157,201,0.65);}
+.ludo-cell.start-yellow{background:rgba(245,185,66,0.65);}
+.ludo-corner-quad{position:absolute; width:60px; height:60px; border-radius:10px; opacity:0.35; pointer-events:none;}
 .ludo-stretches{display:flex; flex-direction:column; gap:4px; margin-top:10px;}
 .ludo-stretch-row{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted);}
 .ludo-stretch-cells{display:flex; gap:3px; flex:1;}
@@ -616,7 +624,6 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   display:inline-block; font-size:40px; min-width:64px; min-height:64px; line-height:64px;
   background:var(--bg2); border-radius:12px;
 }
-.ludo-pawn-choice-btn{text-align:left;}
 
 /* ---------- SNAKE — THÈME GAME BOY ---------- */
 #game-snake{
@@ -1175,7 +1182,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row" style="justify-content:center; display:none;" id="ludo-reroll-row">
         <button class="btn" id="ludo-rerollBtn" onclick="ludoReroll()">🔄 Relancer</button>
       </div>
-      <div class="btn-row" id="ludo-pawn-choices" style="flex-direction:column; display:none;"></div>
+      <div class="status-line" id="ludo-hint" style="text-align:center; font-size:12px; color:var(--accent);"></div>
 
       <div class="btn-row" style="justify-content:center; margin-top:14px;">
         <button class="btn" onclick="ludoBackToSetup()">Changer de mode</button>
@@ -4837,17 +4844,26 @@ function ludoRenderYards(){
     const active = ludoGame && ludoGame.activeColors.includes(color);
     box.className = 'ludo-yard ' + color;
     if(active){
-      const count = ludoGame.pawns[color].filter(p=>p.state==='yard').length;
-      for(let i=0;i<count;i++){
+      const yardPawns = ludoGame.pawns[color].filter(p=>p.state==='yard');
+      yardPawns.forEach(p => {
         const dot = document.createElement('div');
-        dot.className = 'ludo-pawn-dot ' + color;
+        const movable = ludoIsPawnMovable(color, p.id);
+        dot.className = 'ludo-pawn-dot ' + color + (movable ? ' movable' : '');
+        if(movable) dot.onclick = () => ludoChooseMove(p.id);
         box.appendChild(dot);
-      }
+      });
     } else {
       box.style.opacity = '0.15';
     }
     el.appendChild(box);
   }
+}
+function ludoIsPawnMovable(color, pawnId){
+  if(!ludoGame || ludoOver || ludoPendingRoll===null) return false;
+  if(color !== ludoCurrentColor()) return false;
+  if(ludoIsBot[color]) return false;
+  const pawn = ludoGame.pawns[color].find(p=>p.id===pawnId);
+  return pawn ? ludoCanMove(pawn, ludoPendingRoll) : false;
 }
 function ludoRenderRing(){
   const el = document.getElementById('ludo-ring');
@@ -4866,7 +4882,9 @@ function ludoRenderRing(){
         for(const pawn of ludoGame.pawns[color]){
           if(pawn.state==='track' && ludoGlobalCell(pawn.color, pawn.pos)===i){
             const dot = document.createElement('div');
-            dot.className = 'ludo-pawn-dot ' + color;
+            const movable = ludoIsPawnMovable(color, pawn.id);
+            dot.className = 'ludo-pawn-dot ' + color + (movable ? ' movable' : '');
+            if(movable) dot.onclick = (e) => { e.stopPropagation(); ludoChooseMove(pawn.id); };
             div.appendChild(dot);
           }
         }
@@ -4910,9 +4928,9 @@ function ludoUpdateTurnUI(){
   const isBot = ludoIsBot[color];
   document.getElementById('ludo-status').textContent = `Tour : ${ludoColorLabel(color)}${isBot?' (bot)':''}`;
   document.getElementById('ludo-dice').textContent = '🎲';
-  document.getElementById('ludo-pawn-choices').style.display = 'none';
-  document.getElementById('ludo-pawn-choices').innerHTML = '';
+  document.getElementById('ludo-hint').textContent = '';
   document.getElementById('ludo-reroll-row').style.display = 'none';
+  ludoRenderAll();
   if(isBot){
     document.getElementById('ludo-roll-row').style.display = 'none';
     setTimeout(ludoBotTurn, 700);
@@ -4951,26 +4969,18 @@ function ludoPresentRollOptions(){
   const color = ludoCurrentColor();
   const movable = ludoGame.pawns[color].filter(p => ludoCanMove(p, ludoPendingRoll));
   const rerollRow = document.getElementById('ludo-reroll-row');
-  const choicesEl = document.getElementById('ludo-pawn-choices');
+  const hintEl = document.getElementById('ludo-hint');
   if(movable.length===0){
     document.getElementById('ludo-status').textContent = `${ludoColorLabel(color)} : aucun coup possible avec ${ludoPendingRoll}`;
     rerollRow.style.display = 'none';
-    choicesEl.style.display = 'none';
+    hintEl.textContent = '';
     setTimeout(ludoEndTurnAfterNoMove, 1000);
     return;
   }
   rerollRow.style.display = 'flex';
   ludoUpdateRerollButton();
-  choicesEl.style.display = 'flex';
-  choicesEl.innerHTML = '';
-  movable.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'btn primary ludo-pawn-choice-btn';
-    const desc = p.state==='yard' ? 'sortir de la réserve' : p.state==='stretch' ? `couloir final (${p.pos-50}/6)` : `case ${p.pos}`;
-    btn.textContent = `${ludoColorLabel(color).split(' ')[0]} Pion ${p.id+1} — ${desc}`;
-    btn.onclick = () => ludoChooseMove(p.id);
-    choicesEl.appendChild(btn);
-  });
+  hintEl.textContent = '👉 Touche un pion en surbrillance pour le jouer';
+  ludoRenderAll();
 }
 function ludoEndTurnAfterNoMove(){
   ludoPendingRoll = null;
@@ -4979,10 +4989,11 @@ function ludoEndTurnAfterNoMove(){
 function ludoChooseMove(pawnId){
   const color = ludoCurrentColor();
   const roll = ludoPendingRoll;
+  if(roll===null) return;
   const result = ludoMovePawn(ludoGame, color, pawnId, roll);
   if(!result.ok) return;
   ludoPendingRoll = null;
-  document.getElementById('ludo-pawn-choices').style.display = 'none';
+  document.getElementById('ludo-hint').textContent = '';
   document.getElementById('ludo-reroll-row').style.display = 'none';
   ludoRenderAll();
   playFeedback(result.captured.length>0 ? 'wrong' : 'correct');

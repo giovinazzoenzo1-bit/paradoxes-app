@@ -107,6 +107,12 @@ Quatrième et dernier des mini-jeux prioritaires (Solitaire, Sudoku, Puissance 4
 
 **Les 4 mini-jeux prioritaires de la liste originale sont maintenant tous ajoutés.** Restent les mini-jeux plus lourds (physique/règles complexes) à traiter en dernier : Ludo (jeu des chevaux), Skip-Bo, Échecs, Billard, Ping-pong.
 
+## v38 : Ludo — tap direct sur les pions (au lieu de boutons) + plateau plus visuel
+- **Interaction changée** : les pions jouables (en réserve ou sur le plateau) sont maintenant directement tapables — surbrillance pulsante blanche autour du pion + curseur pointer — au lieu de la liste de boutons "Pion 1/2/3/4" précédente. Tap = sélection ET déplacement en un geste.
+- Plateau visuellement enrichi : quadrants de réserve plus saturés, cases sûres marquées d'une étoile, cases de départ colorées plus visibles.
+- 🟥 Note honnête sur le plateau physique "vrai jeu" (croix classique 15×15 avec 4 bras) : j'ai tenté de reconstruire la géométrie exacte du plateau physique Ludo à partir de la capture d'écran fournie, mais la reconstruction précise (quelle case connecte à quelle autre, entrée exacte des couloirs finaux) s'est avérée trop sujette à erreur à faire de mémoire sans un vrai plan de référence — risque de plateau cassé/incohérent trop élevé. J'ai gardé l'anneau carré de 52 cases (déjà testé et garanti correct géométriquement) plutôt que de risquer un plateau buggé. Si un vrai visuel en croix est important, le mieux serait de fournir un schéma exact (coordonnées case par case) plutôt qu'une capture d'écran d'appli tierce à partir de laquelle il faut deviner la géométrie.
+- Tous les tests précédents repassent (solo/bots, multijoueur, capture, victoire) + nouveaux tests sur le tap direct (pion movable seulement pour le joueur actif avec un lancer en attente)
+
 ## v37 : Nouveau mini-jeu — Ludo
 Cinquième mini-jeu, le plus complexe à ce jour. Moteur de règles classique : anneau partagé de 52 cases, couloir final privé de 6 cases par couleur, 8 cases sûres (4 départs + 4 étoiles), capture d'un pion adverse non protégé, victoire quand les 4 pions d'une couleur sont à la maison.
 - **2 modes** : 🤖 Solo contre 3 bots (le joueur est toujours rouge) — IA simple (priorité : sortir de réserve > capturer un adversaire > avancer le pion le plus proche de la maison) ; 👥 Entre amis 2/3/4 joueurs en local (pass-and-play), couleurs actives choisies pour l'équilibre (2 joueurs = coins opposés rouge+bleu, 3 = rouge/vert/jaune, 4 = toutes)
