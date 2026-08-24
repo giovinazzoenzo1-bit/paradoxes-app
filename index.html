@@ -648,6 +648,64 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 .sb-card .sb-count{position:absolute; bottom:-6px; right:-6px; background:var(--accent); color:#1a1300; font-size:10px; font-weight:800; border-radius:50%; width:18px; height:18px; display:flex; align-items:center; justify-content:center;}
 .sb-card.stock-empty{opacity:0.3; cursor:default;}
 
+/* ---------- BILLARD — table plein écran en mode paysage ---------- */
+#bil-table-wrap{
+  position:fixed; inset:0; z-index:500; background:#f2a689;
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+#bil-landscape-box{
+  width:100%; height:100%; box-sizing:border-box; padding:10px 14px;
+  display:grid; grid-template-columns:50px 1fr 50px; grid-template-rows:56px 1fr 22px;
+  grid-template-areas:"exit score reset" "table table table" "status status status";
+  gap:6px;
+}
+/* Astuce CSS pour forcer un rendu "paysage" même si le téléphone reste physiquement en
+   portrait (l'API Screen Orientation n'est pas fiable/disponible partout, notamment iOS
+   Safari hors PWA installée) : on fait pivoter le conteneur de 90° et on inverse largeur/hauteur. */
+#bil-table-wrap.bil-force-rotate #bil-landscape-box{
+  position:absolute; top:50%; left:50%; width:100vh; height:100vw;
+  transform:translate(-50%,-50%) rotate(90deg); transform-origin:center center;
+}
+.bil-round-btn{
+  width:44px; height:44px; border-radius:50%; background:#fff; border:none;
+  font-size:18px; color:#5c4a45; box-shadow:0 3px 8px rgba(0,0,0,0.25); cursor:pointer;
+}
+#bil-exitBtn{grid-area:exit; justify-self:start; align-self:center;}
+#bil-resetBtn{grid-area:reset; justify-self:end; align-self:center;}
+.bil-scoreboard{
+  grid-area:score; justify-self:center; align-self:center; position:relative;
+  background:#4a3b38; border-radius:20px; padding:10px 18px 8px; min-width:180px;
+}
+.bil-scoreboard-tab{
+  position:absolute; top:-14px; left:50%; transform:translateX(-50%);
+  background:#4a3b38; color:#c9bdb9; font-size:10px; font-weight:700; letter-spacing:.06em;
+  padding:3px 12px; border-radius:8px 8px 0 0;
+}
+.bil-scoreboard-row{display:flex; align-items:center; justify-content:center; gap:14px;}
+.bil-score-side{display:flex; flex-direction:column; align-items:center;}
+.bil-score-side .bil-score-label{font-size:10px; font-weight:700; color:#ef6461;}
+#bil-score-p2 .bil-score-label{color:#5f9dc9;}
+.bil-score-side .bil-score-value{font-size:20px; font-weight:800; color:#fff;}
+.bil-score-vs{color:#fff; font-weight:800; font-size:13px;}
+.bil-table-area{
+  grid-area:table; display:flex; align-items:center; justify-content:center; gap:8px; min-height:0;
+}
+#bil-canvas{
+  max-width:100%; max-height:100%; border-radius:10px; touch-action:none; cursor:pointer;
+  background:#1a5c3a; box-shadow:0 6px 18px rgba(0,0,0,0.35);
+}
+.bil-power-bar{
+  width:16px; height:70%; background:rgba(0,0,0,0.25); border-radius:8px; overflow:hidden;
+  display:flex; align-items:flex-end; flex-shrink:0;
+}
+.bil-power-fill{
+  width:100%; height:0%; background:linear-gradient(0deg,#8fc95f,#f5b942 60%,#ef6461);
+  transition:height 0.05s linear;
+}
+.bil-status-line{
+  grid-area:status; text-align:center; color:#4a3b38; font-size:11px; font-weight:700;
+}
+
 /* ---------- ÉCHECS ---------- */
 .chess-board{
   display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr);
@@ -1379,7 +1437,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 
 <!-- ============ BILLARD ============ -->
 <div class="screen" id="game-billiard">
-  <div class="game-wrap">
+  <div class="game-wrap" id="bil-setup-wrap">
     <div class="topbar">
       <button class="back-btn" onclick="openJeux()">← Retour</button>
     </div>
@@ -1392,16 +1450,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         <button class="btn primary" onclick="bilStart('pnp')">👥 Pass & Play (2 joueurs)</button>
       </div>
       <p class="footnote" style="margin-top:14px;">Entraînement : aucune règle, tape librement. Pass & Play : vraies règles du 8-ball (fautes, bille en main, victoire).</p>
-    </div>
-
-    <div class="panel" id="bil-game-panel" style="display:none; text-align:center;">
-      <div class="status-line" id="bil-status" style="text-align:center; font-weight:700; margin-bottom:6px;"></div>
-      <canvas id="bil-canvas" width="340" height="170" style="max-width:100%; border-radius:6px; touch-action:none; cursor:pointer; background:#1a5c3a;"></canvas>
-      <div class="footnote" id="bil-hint" style="margin-top:6px;">Glisse depuis la bille blanche vers l'arrière pour viser, relâche pour tirer.</div>
-      <div class="btn-row" style="justify-content:center; margin-top:10px;">
-        <button class="btn" onclick="bilStart(bilMode)">Nouvelle partie</button>
-        <button class="btn" onclick="bilBackToSetup()">Changer de mode</button>
-      </div>
+      <p class="footnote" style="margin-top:8px;">🔄 La table s'affiche en plein écran, en mode paysage.</p>
     </div>
 
     <div class="panel" id="bil-endgame-panel" style="display:none; text-align:center;">
@@ -1409,6 +1458,29 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row" style="justify-content:center; margin-top:12px;">
         <button class="btn primary" onclick="bilBackToSetup()">Rejouer</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Table plein écran, forcée en paysage via rotation CSS si le téléphone est en portrait -->
+  <div id="bil-table-wrap" style="display:none;">
+    <div id="bil-landscape-box">
+      <button class="bil-round-btn" id="bil-exitBtn" onclick="bilExitTable()">←</button>
+      <div class="bil-scoreboard" id="bil-scoreboard">
+        <div class="bil-scoreboard-tab" id="bil-modeTab">SOLO</div>
+        <div class="bil-scoreboard-row">
+          <div class="bil-score-side" id="bil-score-p1"><span class="bil-score-label">JOUEUR 1</span><span class="bil-score-value">0</span></div>
+          <div class="bil-score-vs">VS</div>
+          <div class="bil-score-side" id="bil-score-p2"><span class="bil-score-label">JOUEUR 2</span><span class="bil-score-value">0</span></div>
+        </div>
+      </div>
+      <button class="bil-round-btn" id="bil-resetBtn" onclick="bilStart(bilMode)">↺</button>
+      <div class="bil-table-area">
+        <canvas id="bil-canvas" width="900" height="450"></canvas>
+        <div class="bil-power-bar" id="bil-power-bar" style="display:none;">
+          <div class="bil-power-fill" id="bil-power-fill"></div>
+        </div>
+      </div>
+      <div class="bil-status-line" id="bil-status"></div>
     </div>
   </div>
 </div>
@@ -6156,14 +6228,14 @@ function chessRenderEndgameBoard(){
 // simplifiée (un seul coefficient — le modèle glissement/roulement en 2 phases du cahier des charges est
 // simplifié pour rester dans un scope raisonnable, tout comme l'effet/spin qui n'est pas implémenté ici).
 // Moteur validé unitairement : conservation de la quantité de mouvement, anti-tunneling, décélération.
-const BIL_TABLE_W = 340, BIL_TABLE_H = 170;
-const BIL_BALL_R = 7;
+const BIL_TABLE_W = 900, BIL_TABLE_H = 450;
+const BIL_BALL_R = 18;
 const BIL_FRICTION = 0.988;
 const BIL_MIN_SPEED = 0.03;
 const BIL_REST_WALL = 0.80;
 const BIL_REST_BALL = 0.95;
 const BIL_SUBSTEPS = 6;
-const BIL_POCKET_R = 12;
+const BIL_POCKET_R = 32;
 const BIL_POCKETS = [
   {x:0,y:0},{x:BIL_TABLE_W/2,y:0},{x:BIL_TABLE_W,y:0},
   {x:0,y:BIL_TABLE_H},{x:BIL_TABLE_W/2,y:BIL_TABLE_H},{x:BIL_TABLE_W,y:BIL_TABLE_H},
@@ -6292,8 +6364,8 @@ let bilAnimId = null;
 let bilDragging = false;
 let bilDragPos = null;
 let bilInputAttached = false;
-const BIL_MAX_POWER = 26;
-const BIL_MAX_DRAG = 70;
+const BIL_MAX_POWER = 69;
+const BIL_MAX_DRAG = 185;
 function bilRackPositions(footX, midY){
   const positions = [];
   const rowGap = BIL_BALL_R*2 + 0.6;
@@ -6329,15 +6401,44 @@ function openBilliard(){
   switchScreen('game-billiard');
   setActiveTab(null);
   document.getElementById('bil-setup-panel').style.display = 'block';
-  document.getElementById('bil-game-panel').style.display = 'none';
   document.getElementById('bil-endgame-panel').style.display = 'none';
+  document.getElementById('bil-table-wrap').style.display = 'none';
+  bilTeardownOrientationWatcher();
   trackPage('/billiard');
 }
 function bilBackToSetup(){
   if(bilAnimId) cancelAnimationFrame(bilAnimId);
   document.getElementById('bil-setup-panel').style.display = 'block';
-  document.getElementById('bil-game-panel').style.display = 'none';
   document.getElementById('bil-endgame-panel').style.display = 'none';
+  document.getElementById('bil-table-wrap').style.display = 'none';
+  bilTeardownOrientationWatcher();
+  try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+}
+function bilExitTable(){
+  if(bilAnimId) cancelAnimationFrame(bilAnimId);
+  bilBackToSetup();
+}
+// Bascule paysage : tente le vrai verrouillage d'orientation (Android/PWA), et dans tous les
+// cas ajoute une astuce CSS (rotation du conteneur) si le téléphone est physiquement en portrait,
+// car l'API Screen Orientation n'est pas disponible sur iOS Safari.
+let bilOrientationHandler = null;
+function bilSetupOrientationWatcher(){
+  const wrap = document.getElementById('bil-table-wrap');
+  const apply = () => {
+    const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+    wrap.classList.toggle('bil-force-rotate', isPortrait);
+  };
+  apply();
+  bilOrientationHandler = apply;
+  window.addEventListener('resize', bilOrientationHandler);
+  window.addEventListener('orientationchange', bilOrientationHandler);
+}
+function bilTeardownOrientationWatcher(){
+  if(bilOrientationHandler){
+    window.removeEventListener('resize', bilOrientationHandler);
+    window.removeEventListener('orientationchange', bilOrientationHandler);
+    bilOrientationHandler = null;
+  }
 }
 function bilStart(mode){
   bilMode = mode;
@@ -6349,12 +6450,33 @@ function bilStart(mode){
   if(bilAnimId) cancelAnimationFrame(bilAnimId);
   document.getElementById('bil-setup-panel').style.display = 'none';
   document.getElementById('bil-endgame-panel').style.display = 'none';
-  document.getElementById('bil-game-panel').style.display = 'block';
+  document.getElementById('bil-table-wrap').style.display = 'flex';
+  document.getElementById('bil-modeTab').textContent = mode==='solo' ? 'ENTRAÎNEMENT' : 'PASS & PLAY';
+  bilRenderScoreboard();
   document.getElementById('bil-status').textContent = mode==='solo' ? 'Entraînement libre' : 'Tour : Joueur 1';
   bilCanvas = document.getElementById('bil-canvas');
   bilCtx = bilCanvas.getContext('2d');
   bilAttachInput();
+  bilSetupOrientationWatcher();
+  try{ if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
   bilDraw();
+}
+function bilRenderScoreboard(){
+  const p1 = document.getElementById('bil-score-p1');
+  const p2 = document.getElementById('bil-score-p2');
+  if(bilMode==='solo'){
+    p1.style.visibility='hidden'; p2.style.visibility='hidden';
+    document.querySelector('.bil-score-vs').textContent = '🎯';
+    return;
+  }
+  p1.style.visibility='visible'; p2.style.visibility='visible';
+  document.querySelector('.bil-score-vs').textContent = 'VS';
+  const g1 = bilPlayerGroups[1] ? (bilPlayerGroups[1]==='solid' ? 'Pleines' : 'Rayées') : '';
+  const g2 = bilPlayerGroups[2] ? (bilPlayerGroups[2]==='solid' ? 'Pleines' : 'Rayées') : '';
+  p1.querySelector('.bil-score-value').textContent = g1 || '—';
+  p2.querySelector('.bil-score-value').textContent = g2 || '—';
+  p1.style.opacity = bilCurrentPlayer===1 ? '1' : '0.5';
+  p2.style.opacity = bilCurrentPlayer===2 ? '1' : '0.5';
 }
 function bilAttachInput(){
   if(bilInputAttached) return;
@@ -6381,6 +6503,7 @@ function bilPointerDown(pos){
   if(bilState!=='aim') return;
   bilDragging = true;
   bilDragPos = pos;
+  document.getElementById('bil-power-bar').style.display = 'flex';
   bilDraw();
 }
 function bilPointerMove(pos){
@@ -6391,6 +6514,7 @@ function bilPointerMove(pos){
 function bilPointerUp(){
   if(!bilDragging) return;
   bilDragging = false;
+  document.getElementById('bil-power-bar').style.display = 'none';
   const cue = bilBalls[0];
   const dx = cue.pos.x - bilDragPos.x, dy = cue.pos.y - bilDragPos.y;
   const dist = Math.min(Math.hypot(dx,dy), BIL_MAX_DRAG);
@@ -6405,7 +6529,7 @@ function bilTryPlaceCue(pos){
   if(!valid || overlapping) return;
   bilBalls[0].pos = pos; bilBalls[0].pocketed = false; bilBalls[0].vel = {x:0,y:0};
   bilState = 'aim';
-  document.getElementById('bil-hint').textContent = "Glisse depuis la bille blanche vers l'arrière pour viser, relâche pour tirer.";
+  document.getElementById('bil-status').textContent = `Tour : Joueur ${bilCurrentPlayer}`;
   bilDraw();
 }
 function bilFireShot(vx, vy){
@@ -6459,8 +6583,7 @@ function bilOnShotSettled(){
   if(res.foul){
     bilCurrentPlayer = bilCurrentPlayer===1?2:1;
     bilState = 'placing';
-    document.getElementById('bil-status').textContent = `🟥 Faute (${res.reason}) — Bille en main, Joueur ${bilCurrentPlayer}`;
-    document.getElementById('bil-hint').textContent = 'Tape sur la table pour placer la bille blanche.';
+    document.getElementById('bil-status').textContent = `🟥 Faute (${res.reason}) — bille en main, tape la table (Joueur ${bilCurrentPlayer})`;
   } else if(res.continueTurn){
     bilState='aim';
     document.getElementById('bil-status').textContent = `🟩 Rejoue, Joueur ${bilCurrentPlayer}`;
@@ -6469,26 +6592,102 @@ function bilOnShotSettled(){
     bilState='aim';
     document.getElementById('bil-status').textContent = `Tour : Joueur ${bilCurrentPlayer}`;
   }
+  bilRenderScoreboard();
   bilDraw();
 }
 function bilShowEndgame(winnerPlayer, reason){
   playFeedback('record');
-  document.getElementById('bil-game-panel').style.display = 'none';
+  document.getElementById('bil-table-wrap').style.display = 'none';
   document.getElementById('bil-endgame-panel').style.display = 'block';
   document.getElementById('bil-endgame-title').textContent = `🎉 Joueur ${winnerPlayer} gagne ! (${reason})`;
+  bilTeardownOrientationWatcher();
+}
+function bilComputeAimPreview(dirX, dirY){
+  const cue = bilBalls[0];
+  let x = cue.pos.x, y = cue.pos.y;
+  const step = 2;
+  for(let d=0; d<1400; d+=step){
+    x += dirX*step; y += dirY*step;
+    if(x<BIL_BALL_R || x>BIL_TABLE_W-BIL_BALL_R || y<BIL_BALL_R || y>BIL_TABLE_H-BIL_BALL_R){
+      return { end:{x,y} };
+    }
+    for(const ball of bilBalls){
+      if(ball===cue || ball.pocketed) continue;
+      if(Math.hypot(ball.pos.x-x, ball.pos.y-y) <= BIL_BALL_R*2){
+        const nx = x-ball.pos.x, ny = y-ball.pos.y;
+        const ndist = Math.hypot(nx,ny) || 1;
+        const contact = { x: ball.pos.x + nx/ndist*BIL_BALL_R*2, y: ball.pos.y + ny/ndist*BIL_BALL_R*2 };
+        const tx = ball.pos.x-contact.x, ty = ball.pos.y-contact.y;
+        const tlen = Math.hypot(tx,ty) || 1;
+        return { end:contact, targetBall:ball, targetDir:{x:tx/tlen, y:ty/tlen} };
+      }
+    }
+  }
+  return { end:{x,y} };
 }
 function bilDraw(){
   const ctx = bilCtx;
   if(!ctx) return;
   ctx.clearRect(0,0,BIL_TABLE_W,BIL_TABLE_H);
-  ctx.fillStyle = '#1a5c3a';
+  // rail en bois
+  ctx.fillStyle = '#6b4226';
   ctx.fillRect(0,0,BIL_TABLE_W,BIL_TABLE_H);
-  ctx.strokeStyle = '#0d3320'; ctx.lineWidth=3;
-  ctx.strokeRect(1.5,1.5,BIL_TABLE_W-3,BIL_TABLE_H-3);
+  // feutre vert
+  const railW = 16;
+  ctx.fillStyle = '#1f7a45';
+  ctx.fillRect(railW,railW,BIL_TABLE_W-railW*2,BIL_TABLE_H-railW*2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth=3;
+  ctx.strokeRect(railW+4,railW+4,BIL_TABLE_W-railW*2-8,BIL_TABLE_H-railW*2-8);
+  // pochettes
   for(const p of BIL_POCKETS){
     ctx.beginPath(); ctx.arc(p.x,p.y,BIL_POCKET_R,0,Math.PI*2);
-    ctx.fillStyle = '#0a0a14'; ctx.fill();
+    ctx.fillStyle = '#111'; ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x,p.y,BIL_POCKET_R,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=2; ctx.stroke();
   }
+  // aperçu de visée (pendant le glissement)
+  if(bilDragging && bilDragPos){
+    const cue = bilBalls[0];
+    const dx = cue.pos.x - bilDragPos.x, dy = cue.pos.y - bilDragPos.y;
+    const len = Math.hypot(dx,dy);
+    if(len>2){
+      const dist = Math.min(len, BIL_MAX_DRAG);
+      const nx=dx/len, ny=dy/len;
+      // ligne de recul (queue tirée en arrière)
+      ctx.beginPath();
+      ctx.moveTo(cue.pos.x - nx*BIL_BALL_R, cue.pos.y - ny*BIL_BALL_R);
+      ctx.lineTo(cue.pos.x - nx*(dist+40), cue.pos.y - ny*(dist+40));
+      ctx.strokeStyle = `rgba(245,185,66,${0.5+0.4*(dist/BIL_MAX_DRAG)})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // aperçu de trajectoire vers l'avant + bille fantôme + direction de la bille visée
+      const preview = bilComputeAimPreview(nx, ny);
+      ctx.beginPath();
+      ctx.moveTo(cue.pos.x, cue.pos.y);
+      ctx.lineTo(preview.end.x, preview.end.y);
+      ctx.strokeStyle = 'rgba(180,255,220,0.55)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5,4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // bille fantôme (position de la blanche au moment du contact)
+      ctx.beginPath();
+      ctx.arc(preview.end.x, preview.end.y, BIL_BALL_R, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth=1.5; ctx.stroke();
+      if(preview.targetBall){
+        ctx.beginPath();
+        ctx.moveTo(preview.targetBall.pos.x, preview.targetBall.pos.y);
+        ctx.lineTo(preview.targetBall.pos.x + preview.targetDir.x*50, preview.targetBall.pos.y + preview.targetDir.y*50);
+        ctx.strokeStyle = 'rgba(180,255,220,0.75)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+    document.getElementById('bil-power-fill').style.height = (Math.min(len,BIL_MAX_DRAG)/BIL_MAX_DRAG*100) + '%';
+  }
+  // billes
   for(const ball of bilBalls){
     if(ball.pocketed) continue;
     ctx.beginPath();
@@ -6502,21 +6701,11 @@ function bilDraw(){
       ctx.fill();
     }
     ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.stroke();
-  }
-  if(bilDragging && bilDragPos){
-    const cue = bilBalls[0];
-    const dx = cue.pos.x - bilDragPos.x, dy = cue.pos.y - bilDragPos.y;
-    const len = Math.hypot(dx,dy);
-    if(len>2){
-      const dist = Math.min(len, BIL_MAX_DRAG);
-      const nx=dx/len, ny=dy/len;
-      ctx.beginPath();
-      ctx.moveTo(cue.pos.x, cue.pos.y);
-      ctx.lineTo(cue.pos.x + nx*60, cue.pos.y + ny*60);
-      ctx.strokeStyle = `rgba(245,185,66,${0.4+0.5*(dist/BIL_MAX_DRAG)})`;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
+    // reflet glossy
+    ctx.beginPath();
+    ctx.arc(ball.pos.x-BIL_BALL_R*0.32, ball.pos.y-BIL_BALL_R*0.32, BIL_BALL_R*0.28, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fill();
   }
 }
 
@@ -6779,6 +6968,11 @@ function switchScreen(newId){
   localStorage.setItem('lastScreen', newId);
   const savedY = parseInt(localStorage.getItem('scroll:'+newId) || '0');
   requestAnimationFrame(()=>{ window.scrollTo(0, savedY); });
+  // Immersion : la barre de menu du bas ne s'affiche que sur les 4 écrans principaux,
+  // jamais pendant qu'on joue à un jeu (seule la flèche de retour permet d'en sortir).
+  const mainScreens = ['home','game-jeux','game-progres','game-options'];
+  const nav = document.getElementById('bottomNav');
+  nav.style.display = mainScreens.includes(newId) ? '' : 'none';
 }
 
 /* ---- Restauration au chargement : reprendre là où on était ---- */
