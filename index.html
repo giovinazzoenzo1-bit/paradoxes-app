@@ -742,8 +742,15 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
     <div class="panel">
       <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/flappybird.png" alt="Flappy Bird">
+        <div class="txt"><h3>Flappy Bird</h3><p>Tape pour voler, évite les tuyaux.</p></div>
+      </div>
+      <div class="btn-row"><button class="btn primary" onclick="openFlappyBird()">Jouer</button></div>
+    </div>
+    <div class="panel">
+      <div class="game-panel-header">
         <img class="game-panel-icon" src="icons/bientot.png" alt="Bientôt disponible">
-        <div class="txt"><h3>Bientôt disponible</h3><p>Flappy Bird et plus arrivent bientôt.</p></div>
+        <div class="txt"><h3>Bientôt disponible</h3><p>D'autres mini-jeux arrivent bientôt.</p></div>
       </div>
     </div>
   </div>
@@ -1041,6 +1048,24 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="p4-board" id="p4-board"></div>
       <div class="btn-row" style="justify-content:center; margin-top:12px;">
         <button class="btn" onclick="p4New()">Nouvelle partie</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FLAPPY BIRD ============ -->
+<div class="screen" id="game-flappybird">
+  <div class="game-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="openJeux()">← Retour</button>
+    </div>
+    <div class="game-title">🐤 Flappy Bird</div>
+    <div class="panel" style="text-align:center;">
+      <div class="row"><span>Meilleur score</span><b id="fb-best">0</b></div>
+      <canvas id="fb-canvas" width="300" height="400" style="max-width:100%; border-radius:10px; touch-action:none; cursor:pointer;"></canvas>
+      <div class="status-line" id="fb-status" style="text-align:center; margin-top:8px;">Tape sur l'écran pour commencer</div>
+      <div class="btn-row" style="justify-content:center; margin-top:8px;">
+        <button class="btn" onclick="fbStart()">Nouvelle partie</button>
       </div>
     </div>
   </div>
@@ -4384,6 +4409,155 @@ function p4Drop(col){
   document.getElementById('p4-status').textContent = p4Turn===1 ? '🔴 Tour : Rouge' : '🟡 Tour : Jaune';
 }
 
+/* ================= FLAPPY BIRD (canvas, physique par delta-temps) ================= */
+const FB_WIDTH = 300, FB_HEIGHT = 400;
+const FB_GRAVITY = 1400;         // px/s²
+const FB_FLAP_VELOCITY = -420;   // px/s (impulsion vers le haut)
+const FB_PIPE_SPEED = 140;       // px/s vers la gauche
+const FB_PIPE_GAP = 130;         // hauteur de l'ouverture
+const FB_PIPE_WIDTH = 52;
+const FB_PIPE_INTERVAL = 1500;   // ms entre 2 tuyaux
+const FB_BIRD_X = 70;
+const FB_BIRD_RADIUS = 14;
+let fbCanvas, fbCtx;
+let fbBirdY = FB_HEIGHT/2, fbBirdVY = 0;
+let fbPipes = [];
+let fbScore = 0;
+let fbBest = 0;
+let fbRunning = false;
+let fbGameOver = false;
+let fbAnimId = null;
+let fbLastTime = 0;
+let fbSpawnTimer = 0;
+function openFlappyBird(){
+  switchScreen('game-flappybird');
+  setActiveTab(null);
+  fbCanvas = document.getElementById('fb-canvas');
+  fbCtx = fbCanvas.getContext('2d');
+  fbBest = parseInt(localStorage.getItem('fbBest')||'0');
+  document.getElementById('fb-best').textContent = fbBest;
+  fbRunning = false;
+  fbGameOver = false;
+  fbBirdY = FB_HEIGHT/2;
+  fbBirdVY = 0;
+  fbPipes = [];
+  fbScore = 0;
+  document.getElementById('fb-status').textContent = "Tape sur l'écran pour commencer";
+  fbAttachInput();
+  fbDraw();
+  trackPage('/flappybird');
+}
+let fbInputAttached = false;
+function fbAttachInput(){
+  if(fbInputAttached) return;
+  fbInputAttached = true;
+  fbCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); fbFlap(); }, {passive:false});
+  fbCanvas.addEventListener('click', fbFlap);
+}
+function fbFlap(){
+  if(fbGameOver){ fbStart(); return; }
+  if(!fbRunning){ fbStart(); return; }
+  fbBirdVY = FB_FLAP_VELOCITY;
+  playFeedback('correct');
+}
+function fbSpawnPipe(){
+  const margin = 40;
+  const gapY = margin + Math.random()*(FB_HEIGHT - 2*margin - FB_PIPE_GAP);
+  fbPipes.push({x: FB_WIDTH, gapY, passed:false});
+}
+function fbStart(){
+  fbBirdY = FB_HEIGHT/2;
+  fbBirdVY = FB_FLAP_VELOCITY;
+  fbPipes = [];
+  fbScore = 0;
+  fbSpawnTimer = 0;
+  fbGameOver = false;
+  fbRunning = true;
+  document.getElementById('fb-status').textContent = '';
+  fbLastTime = performance.now();
+  if(fbAnimId) cancelAnimationFrame(fbAnimId);
+  fbAnimId = requestAnimationFrame(fbLoop);
+}
+function fbCheckCollision(){
+  if(fbBirdY - FB_BIRD_RADIUS < 0 || fbBirdY + FB_BIRD_RADIUS > FB_HEIGHT) return true;
+  for(const p of fbPipes){
+    if(FB_BIRD_X + FB_BIRD_RADIUS > p.x && FB_BIRD_X - FB_BIRD_RADIUS < p.x + FB_PIPE_WIDTH){
+      if(fbBirdY - FB_BIRD_RADIUS < p.gapY || fbBirdY + FB_BIRD_RADIUS > p.gapY + FB_PIPE_GAP) return true;
+    }
+  }
+  return false;
+}
+function fbLoop(timestamp){
+  if(!fbRunning) return;
+  const dt = Math.min((timestamp - fbLastTime)/1000, 0.033);
+  fbLastTime = timestamp;
+
+  fbBirdVY += FB_GRAVITY * dt;
+  fbBirdY += fbBirdVY * dt;
+
+  fbSpawnTimer += dt*1000;
+  if(fbSpawnTimer > FB_PIPE_INTERVAL){
+    fbSpawnTimer = 0;
+    fbSpawnPipe();
+  }
+  fbPipes.forEach(p => p.x -= FB_PIPE_SPEED*dt);
+  fbPipes = fbPipes.filter(p => p.x + FB_PIPE_WIDTH > 0);
+
+  fbPipes.forEach(p => {
+    if(!p.passed && p.x + FB_PIPE_WIDTH < FB_BIRD_X){
+      p.passed = true;
+      fbScore++;
+    }
+  });
+
+  if(fbCheckCollision()){
+    fbEndGame();
+    return;
+  }
+
+  fbDraw();
+  fbAnimId = requestAnimationFrame(fbLoop);
+}
+function fbEndGame(){
+  fbRunning = false;
+  fbGameOver = true;
+  if(fbAnimId) cancelAnimationFrame(fbAnimId);
+  if(fbScore > fbBest){
+    fbBest = fbScore;
+    localStorage.setItem('fbBest', fbBest);
+    document.getElementById('fb-best').textContent = fbBest;
+  }
+  fbDraw();
+  document.getElementById('fb-status').textContent = `🟥 Perdu ! Score : ${fbScore} — Meilleur : ${fbBest} (tape pour rejouer)`;
+  playFeedback('lose');
+}
+function fbDraw(){
+  const ctx = fbCtx;
+  if(!ctx) return;
+  ctx.fillStyle = '#7ec8e3';
+  ctx.fillRect(0,0,FB_WIDTH,FB_HEIGHT);
+  ctx.fillStyle = '#4caf50';
+  fbPipes.forEach(p => {
+    ctx.fillRect(p.x, 0, FB_PIPE_WIDTH, p.gapY);
+    ctx.fillRect(p.x, p.gapY+FB_PIPE_GAP, FB_PIPE_WIDTH, FB_HEIGHT-(p.gapY+FB_PIPE_GAP));
+  });
+  ctx.fillStyle = '#f5b942';
+  ctx.beginPath();
+  ctx.arc(FB_BIRD_X, fbBirdY, FB_BIRD_RADIUS, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#e08a3c';
+  ctx.beginPath();
+  ctx.moveTo(FB_BIRD_X+FB_BIRD_RADIUS-2, fbBirdY);
+  ctx.lineTo(FB_BIRD_X+FB_BIRD_RADIUS+8, fbBirdY-3);
+  ctx.lineTo(FB_BIRD_X+FB_BIRD_RADIUS+8, fbBirdY+3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 26px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(fbScore, FB_WIDTH/2, 44);
+}
+
 /* ================= SON & VIBRATION ================= */
 let audioCtx = null;
 function getAudioCtx(){
@@ -4661,6 +4835,7 @@ function restoreLastScreen(){
   if(last==='game-solitaire'){ openSolitaire(); return; }
   if(last==='game-sudoku'){ openSudoku(); return; }
   if(last==='game-puissance4'){ openPuissance4(); return; }
+  if(last==='game-flappybird'){ openFlappyBird(); return; }
   if(last==='game-progres'){ openProgres(); return; }
   if(last==='game-options'){ openOptions(); return; }
   if(last==='game-privacy'){ openPrivacy(); return; }

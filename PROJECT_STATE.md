@@ -87,6 +87,17 @@ Troisième nouveau mini-jeu. 2 joueurs en local (pass-and-play), grille 7×6, ta
 - Icône déjà fournie par l'utilisateur et placée dans `icons/puissance4.png`
 - Pas de classement ni d'IA (non demandé), MVP 2 joueurs locaux uniquement
 
+## v35 : Nouveau mini-jeu — Flappy Bird
+Quatrième et dernier des mini-jeux prioritaires (Solitaire, Sudoku, Puissance 4, Flappy Bird = tous faits). Rendu canvas 300×400, boucle `requestAnimationFrame` avec physique par delta-temps (indépendante du framerate de l'appareil).
+- Gravité + impulsion vers le haut au tap ("flap"), tuyaux qui défilent et se génèrent à intervalle régulier, ouverture aléatoire
+- Collision sol/plafond + collision précise avec les tuyaux (zone du trou exclue)
+- Score +1 par tuyau passé, meilleur score persistant (`localStorage fbBest`)
+- Tap n'importe où sur le canvas pour démarrer / voler / rejouer après un game over
+- **Testé unitairement** (logique pure, sans rendu) : pas de collision en vol libre, collision sol/plafond, collision précise avec le haut/bas d'un tuyau, pas de collision hors zone du tuyau, physique gravité/flap cohérente sur plusieurs frames
+- Icône fournie par l'utilisateur et placée dans `icons/flappybird.png`
+
+**Les 4 mini-jeux prioritaires de la liste originale sont maintenant tous ajoutés.** Restent les mini-jeux plus lourds (physique/règles complexes) à traiter en dernier : Ludo (jeu des chevaux), Skip-Bo, Échecs, Billard, Ping-pong.
+
 ## Process établi avec l'utilisateur pour les nouveaux mini-jeux
 1. Claude donne le prompt image (format identique aux icônes existantes : squircle navy 300×300, style glossy 3D) AVANT ou pendant qu'il code le jeu
 2. L'utilisateur génère l'image ailleurs et l'upload dans la conversation
