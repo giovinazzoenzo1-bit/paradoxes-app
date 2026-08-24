@@ -107,6 +107,15 @@ Quatrième et dernier des mini-jeux prioritaires (Solitaire, Sudoku, Puissance 4
 
 **Les 4 mini-jeux prioritaires de la liste originale sont maintenant tous ajoutés.** Restent les mini-jeux plus lourds (physique/règles complexes) à traiter en dernier : Ludo (jeu des chevaux), Skip-Bo, Échecs, Billard, Ping-pong.
 
+## v43 : Billard — refonte du contrôle en 2 étapes (visée précise + puissance manuelle + bouton Tirer)
+Retour utilisateur sur v42 : le geste "élastique" combiné (glisser près de la bille pour viser ET doser la puissance en même temps) était imprécis, impossible d'envoyer la bille exactement où voulu.
+**Nouveau flux, complètement séparé :**
+1. **Visée** : glisser n'importe où sur TOUTE la table (pas juste une petite zone autour de la bille blanche) pointe la ligne de visée précisément vers le point touché. Toute la largeur/hauteur de la table sert de zone de geste → bien plus de résolution angulaire qu'un petit rayon de glissement limité. L'angle reste mémorisé ("verrouillé") après avoir relâché le doigt, tant qu'on ne retouche pas la table.
+2. **Puissance** : jauge verticale dédiée à droite de la table, désormais un vrai slider tactile (`bilPowerBarSet()`) — on tape/glisse directement dessus pour choisir un pourcentage précis (affiché en %), complètement indépendant du geste de visée.
+3. **Tir** : bouton rond "🎯 TIRER" sous la jauge, désactivé tant que visée ET puissance (>5%) ne sont pas réglées, déclenche le tir avec l'angle + la puissance choisis (`bilConfirmFire()`).
+La ligne de visée (bille fantôme + direction de la bille visée) reste affichée en continu dès qu'un angle est mémorisé, avec la ligne de recul de la queue qui s'allonge visuellement selon la puissance réglée sur la jauge — feedback visuel cohérent entre les deux étapes.
+**Testé** : visée seule ne déclenche jamais de tir, bouton Tirer désactivé tant que l'un des deux réglages manque, tir réellement exécuté dans la direction et à la puissance choisies une fois confirmé, visée/puissance réinitialisées après chaque tir (obligation de reviser à chaque coup).
+
 ## v42 : Immersion globale + Billard en mode paysage plein écran
 ### 🟦 Changement global (tous les jeux)
 La barre de menu du bas (Paradoxe|Jeux|Trophées|Options) est maintenant **masquée automatiquement dès qu'un jeu est ouvert**, sur les 16 jeux existants sans exception — un seul point de contrôle dans `switchScreen()` (liste blanche des 4 écrans principaux `home`/`game-jeux`/`game-progres`/`game-options`, tout le reste = barre cachée). Seule la flèche "← Retour" de chaque jeu permet de sortir. Aucune modification nécessaire dans chaque jeu individuellement.
