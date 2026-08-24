@@ -1068,6 +1068,11 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         <button class="btn" onclick="fbStart()">Nouvelle partie</button>
       </div>
     </div>
+    <div class="panel" id="fb-worldboard-panel" style="display:none; margin-top:16px;">
+      <h2>🌍 Classement mondial (aperçu)</h2>
+      <div id="fb-worldboard"></div>
+      <div class="footnote" style="margin-top:8px;">Aperçu fictif, pas de vrai backend — voir Confidentialité.</div>
+    </div>
   </div>
 </div>
 
@@ -4429,6 +4434,29 @@ let fbGameOver = false;
 let fbAnimId = null;
 let fbLastTime = 0;
 let fbSpawnTimer = 0;
+// Classement mondial fictif (aperçu, pas de vrai backend — voir PROJECT_STATE.md)
+const fbWorldMock = [
+  {name:'Thomas B.', score:47},
+  {name:'Léa M.', score:38},
+  {name:'Nina P.', score:29},
+  {name:'Adam R.', score:21},
+  {name:'Sofia K.', score:15},
+];
+function fbRenderWorldboard(){
+  const panel = document.getElementById('fb-worldboard-panel');
+  const el = document.getElementById('fb-worldboard');
+  panel.style.display = 'block';
+  let world = [...fbWorldMock];
+  world.push({name:'Toi', score:fbBest, me:true});
+  world.sort((a,b)=>b.score-a.score);
+  el.innerHTML = world.map((p,i) => `
+    <div class="leaderboard-row ${p.me?'me':''}">
+      <span class="leaderboard-rank">${i+1}</span>
+      <span class="leaderboard-name">${p.me?'👉 ':''}${p.name}</span>
+      <span class="leaderboard-score">${p.score} pts</span>
+    </div>
+  `).join('');
+}
 function openFlappyBird(){
   switchScreen('game-flappybird');
   setActiveTab(null);
@@ -4443,6 +4471,7 @@ function openFlappyBird(){
   fbPipes = [];
   fbScore = 0;
   document.getElementById('fb-status').textContent = "Tape sur l'écran pour commencer";
+  document.getElementById('fb-worldboard-panel').style.display = 'none';
   fbAttachInput();
   fbDraw();
   trackPage('/flappybird');
@@ -4474,6 +4503,7 @@ function fbStart(){
   fbGameOver = false;
   fbRunning = true;
   document.getElementById('fb-status').textContent = '';
+  document.getElementById('fb-worldboard-panel').style.display = 'none';
   fbLastTime = performance.now();
   if(fbAnimId) cancelAnimationFrame(fbAnimId);
   fbAnimId = requestAnimationFrame(fbLoop);
@@ -4530,6 +4560,7 @@ function fbEndGame(){
   fbDraw();
   document.getElementById('fb-status').textContent = `🟥 Perdu ! Score : ${fbScore} — Meilleur : ${fbBest} (tape pour rejouer)`;
   playFeedback('lose');
+  fbRenderWorldboard();
 }
 function fbDraw(){
   const ctx = fbCtx;

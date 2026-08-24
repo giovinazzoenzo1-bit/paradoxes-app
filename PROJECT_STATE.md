@@ -87,6 +87,15 @@ Troisième nouveau mini-jeu. 2 joueurs en local (pass-and-play), grille 7×6, ta
 - Icône déjà fournie par l'utilisateur et placée dans `icons/puissance4.png`
 - Pas de classement ni d'IA (non demandé), MVP 2 joueurs locaux uniquement
 
+## 🟦 RÈGLE GÉNÉRALE (à appliquer systématiquement, sans qu'on ait besoin de le redemander) — validée le 24/08/2026
+Pour CHAQUE jeu (existant ou nouveau) :
+- **Classement perso + mondial** : si le jeu a un score/temps/coups qui a du sens à comparer → l'ajouter systématiquement (perso en `localStorage`, mondial en aperçu fictif mergé avec le meilleur perso, même pattern que Memory/Puzzle15/Snake/2048). Pour un jeu à score continu simple (pas de niveaux/difficulté), suivre le pattern Snake (classement affiché en fin de partie). Pour un jeu à plusieurs runs/difficultés, suivre le pattern Memory/Puzzle15 (panneau dédié avec onglets, top 5 perso).
+- **Undo** : si le jeu s'y prête (actions réversibles, pas de temps réel/réflexe) → l'ajouter avec le pattern établi : 1er gratuit par partie, puis pub simulée (`mockWatchAd`). Ne PAS l'ajouter sur les jeux temps réel/réflexe où ça n'a pas de sens (Flappy Bird, Snake — annuler une collision n'a pas de sens).
+- Appliquer ce raisonnement à chaque nouveau jeu ajouté (Ludo, Skip-Bo, Échecs, Billard, Ping-pong) sans attendre une demande explicite à chaque fois.
+
+## v36 : Flappy Bird — classement mondial ajouté (pas d'undo, non pertinent pour ce genre de jeu)
+Classement mondial (aperçu, `fbWorldMock`) affiché en fin de partie, même pattern que Snake — le meilleur score perso est fusionné et inséré au bon rang. Pas de bouton undo : un jeu réflexe temps réel où on ne peut pas "annuler" une collision, ça n'a pas de sens (voir règle générale ci-dessus).
+
 ## v35 : Nouveau mini-jeu — Flappy Bird
 Quatrième et dernier des mini-jeux prioritaires (Solitaire, Sudoku, Puissance 4, Flappy Bird = tous faits). Rendu canvas 300×400, boucle `requestAnimationFrame` avec physique par delta-temps (indépendante du framerate de l'appareil).
 - Gravité + impulsion vers le haut au tap ("flap"), tuyaux qui défilent et se génèrent à intervalle régulier, ouverture aléatoire
