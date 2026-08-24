@@ -61,6 +61,18 @@ Après une victoire, un bouton "Niveau suivant ▶" apparaît (au-dessus de Reco
 - **Bouton "↩️ Annuler"** : historique jusqu'à 20 coups (`nbHistory`), 1er undo de la partie gratuit, à partir du 2e le bouton devient "↩️📺 Annuler (pub)" et déclenche `mockWatchAd()` avant d'annuler — même pattern que 2048
 - Historique et undo réinitialisés à chaque nouveau niveau (`nbNew`)
 
+## v31 : Nouveau mini-jeu — Solitaire (Klondike)
+Premier des nouveaux mini-jeux ajouté (liste complète en tête de fichier). Interaction 100% par tap (cohérent avec le reste de l'app, pas de drag) : taper une carte pour la sélectionner (une suite alternée descendante valide se sélectionne d'un bloc), puis taper la destination.
+- Distribution standard Klondike : 7 colonnes (1 à 7 cartes, dernière face visible), pioche, défausse, 4 fondations par couleur
+- Pioche → défausse (1 carte à la fois), recyclage de la défausse en pioche quand elle est vide
+- Déplacement de suites valides (alternance rouge/noir, rang décroissant) en un tap
+- Fondations : Valet As→Roi, une seule carte à la fois
+- Colonne vide : seul un Roi (ou suite commençant par un Roi) peut s'y poser
+- Compteur de coups, détection de victoire (52 cartes en fondation)
+- **Testé unitairement** : distribution (28+24=52, pas de doublon), tirage/recyclage pioche↔défausse, détection victoire, validation des suites (valide/invalide)
+- 🟨 Icône à générer par l'utilisateur (prompt fourni en conversation) → déposer dans `icons/solitaire.png` (300×300px)
+- Pas de classement (non demandé pour ce jeu), MVP volontairement scope à la mécanique de jeu core
+
 ## Roadmap corrective en cours (approche validée le 23/08/2026 : jeu par jeu à 100%, pas phase horizontale)
 - **Phase 1 (fait, v19)** : bug Nuts and Bolts niv.4, sons Wordle (lettre correcte/mal placée), bug scroll 2048 au swipe, boutons Snake agrandis + décor plein écran, couleurs dégradées Puzzle15
 - **Wordle (fait, v20)** — TOUS les correctifs demandés sont faits, jeu à considérer 100% à jour :
