@@ -61,6 +61,20 @@ Après une victoire, un bouton "Niveau suivant ▶" apparaît (au-dessus de Reco
 - **Bouton "↩️ Annuler"** : historique jusqu'à 20 coups (`nbHistory`), 1er undo de la partie gratuit, à partir du 2e le bouton devient "↩️📺 Annuler (pub)" et déclenche `mockWatchAd()` avant d'annuler — même pattern que 2048
 - Historique et undo réinitialisés à chaque nouveau niveau (`nbNew`)
 
+## v32 : Nouveau mini-jeu — Sudoku
+Deuxième nouveau mini-jeu ajouté. 3 difficultés (Facile 40 indices, Moyen 32, Difficile 26).
+- **Génération avec solution unique garantie** : grille complète générée par backtracking randomisé, puis retrait de cases une par une (ordre aléatoire) en vérifiant à chaque retrait via un solveur à heuristique MRV (case la plus contrainte en premier, comptage de solutions plafonné à 2) que la solution reste unique — sinon la case est remise. Testé : 3 difficultés, génération 6-10ms, solution unique confirmée à chaque fois.
+- Sélection de case + pavé numérique (1-9 + effacer), détection de conflits en temps réel (ligne/colonne/bloc 3×3) surlignée en rouge, victoire quand la grille est pleine et sans conflit
+- Cases de départ (indices) non modifiables, visuellement distinguées
+- Pas de classement (non demandé), MVP scope à la mécanique de jeu + génération correcte
+- 🟨 Icône à générer par l'utilisateur (prompt donné en conversation) → déposer dans `icons/sudoku.png` (300×300px)
+
+## Process établi avec l'utilisateur pour les nouveaux mini-jeux
+1. Claude donne le prompt image (format identique aux icônes existantes : squircle navy 300×300, style glossy 3D) AVANT ou pendant qu'il code le jeu
+2. L'utilisateur génère l'image ailleurs et l'upload dans la conversation
+3. Claude recadre proprement (détection des bords du squircle si l'image n'est pas déjà carrée — ne jamais juste resize une image non carrée, ça déforme) puis redimensionne en 300×300 et place dans `icons/<jeu>.png`
+4. Claude enchaîne direct sur le prompt image du jeu suivant
+
 ## v31 : Nouveau mini-jeu — Solitaire (Klondike)
 Premier des nouveaux mini-jeux ajouté (liste complète en tête de fichier). Interaction 100% par tap (cohérent avec le reste de l'app, pas de drag) : taper une carte pour la sélectionner (une suite alternée descendante valide se sélectionne d'un bloc), puis taper la destination.
 - Distribution standard Klondike : 7 colonnes (1 à 7 cartes, dernière face visible), pioche, défausse, 4 fondations par couleur
