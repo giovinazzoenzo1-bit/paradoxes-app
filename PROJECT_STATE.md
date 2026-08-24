@@ -107,6 +107,15 @@ Quatrième et dernier des mini-jeux prioritaires (Solitaire, Sudoku, Puissance 4
 
 **Les 4 mini-jeux prioritaires de la liste originale sont maintenant tous ajoutés.** Restent les mini-jeux plus lourds (physique/règles complexes) à traiter en dernier : Ludo (jeu des chevaux), Skip-Bo, Échecs, Billard, Ping-pong.
 
+## v37 : Nouveau mini-jeu — Ludo
+Cinquième mini-jeu, le plus complexe à ce jour. Moteur de règles classique : anneau partagé de 52 cases, couloir final privé de 6 cases par couleur, 8 cases sûres (4 départs + 4 étoiles), capture d'un pion adverse non protégé, victoire quand les 4 pions d'une couleur sont à la maison.
+- **2 modes** : 🤖 Solo contre 3 bots (le joueur est toujours rouge) — IA simple (priorité : sortir de réserve > capturer un adversaire > avancer le pion le plus proche de la maison) ; 👥 Entre amis 2/3/4 joueurs en local (pass-and-play), couleurs actives choisies pour l'équilibre (2 joueurs = coins opposés rouge+bleu, 3 = rouge/vert/jaune, 4 = toutes)
+- **Relance de dé** : 1ère relance gratuite par partie, ensuite pub simulée à chaque fois (même pattern que les autres jeux)
+- **Classement victoires** (uniquement en solo vs bots, où "toi" a un sens clair) : compteur perso (`localStorage ludoWins`) + mondial aperçu fictif, affiché en fin de partie
+- **Plateau simplifié mais fonctionnellement fidèle** : anneau de 52 cases rendu en grille CSS 14×14 (bordure = ring path, généré algorithmiquement et vérifié géométriquement plutôt que recopié à la main — risque d'erreur trop élevé), couloirs finaux et réserves affichés en zones séparées ; sélection des pions à jouer via boutons dédiés (plus fiable au tap que des pions superposés sur le plateau)
+- **Testé en profondeur** : géométrie de l'anneau (52 cases uniques, connectées, coins alignés aux couleurs), sortie de réserve, capture (protégée sur case sûre / non protégée ailleurs), victoire + incrément du compteur perso, relance gratuite puis payante, **simulation complète d'une partie 4 bots de bout en bout sans crash** (398 coups jusqu'à victoire)
+- ⚠️ Simplification connue : pas de règle de "blocage" (2 pions de la même couleur sur une case qui empêche le passage adverse) — omise pour rester dans un scope raisonnable, notée ici si demandée plus tard
+
 ## Process établi avec l'utilisateur pour les nouveaux mini-jeux
 1. Claude donne le prompt image (format identique aux icônes existantes : squircle navy 300×300, style glossy 3D) AVANT ou pendant qu'il code le jeu
 2. L'utilisateur génère l'image ailleurs et l'upload dans la conversation
