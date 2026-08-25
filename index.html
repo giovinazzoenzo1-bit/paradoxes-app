@@ -746,7 +746,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 }
 #ping-combo.show{ opacity:1; transform:scale(1); }
 #ping-canvas-holder{
-  flex:1; display:flex; align-items:center; justify-content:center; min-height:0; padding:10px 12px 16px;
+  flex:1; display:flex; align-items:center; justify-content:center; min-height:0; padding:4px 6px 8px;
 }
 #ping-canvas{
   touch-action:none; border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.28); display:block;
@@ -6828,7 +6828,7 @@ function ppUpdateCombo(){
 function ppResize(){
   const holder = document.getElementById('ping-canvas-holder');
   const availW = holder.clientWidth, availH = holder.clientHeight;
-  const ratio = 0.58; // largeur/hauteur du terrain
+  const ratio = 0.43; // largeur/hauteur du terrain, aligné sur la référence (table haute et étroite)
   let w = availW, h = w/ratio;
   if(h > availH){ h = availH; w = h*ratio; }
   ppW = Math.round(w); ppH = Math.round(h);
@@ -6913,12 +6913,11 @@ function ppOnPointerMove(e){
   p.vx = (x-p.lastX)/dt*1000;
   p.vy = (y-p.lastY)/dt*1000;
   p.x = x;
-  if(ppMode==='amis'){
-    // en 1v1 sur le même tel, chacun peut aussi avancer/reculer un peu, sans dépasser le filet
-    const midY = ppH/2;
-    if(target==='player') p.y = Math.max(midY+p.r*1.1, Math.min(ppH-p.r*1.15, y));
-    else p.y = Math.max(p.r*1.15, Math.min(midY-p.r*1.1, y));
-  }
+  // La raquette suit le doigt sur les 2 axes, mais reste dans sa propre moitié de terrain
+  // (ne peut pas franchir le filet ni sortir par le fond).
+  const midY = ppH/2;
+  if(target==='player') p.y = Math.max(midY+p.r*1.05, Math.min(ppH-p.r*1.1, y));
+  else p.y = Math.max(p.r*1.1, Math.min(midY-p.r*1.05, y));
   ppClampPaddle(p);
   p.lastX = x; p.lastY = y; p.lastT = now;
 }
@@ -6990,6 +6989,14 @@ function ppDeflect(p, isPlayer, dx, dy, dist){
   ppUpdateCombo();
   ppSpawnHitBurst(b.x, b.y, isPlayer ? '#ef6461' : '#3ec6f0');
   playFeedback('correct');
+  ppHitVibrate();
+}
+function ppHitVibrate(){
+  // Petite vibration à chaque impact de balle, en plus du son — respecte le mode "Silencieux"
+  // des réglages, mais se déclenche même en mode "Sons" (retour haptique + sonore combinés).
+  const mode = localStorage.getItem('feedbackMode') || 'sound';
+  if(mode === 'silent') return;
+  if(navigator.vibrate) navigator.vibrate(12);
 }
 
 // ---- Particules & juice ----
