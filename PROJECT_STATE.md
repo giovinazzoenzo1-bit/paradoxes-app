@@ -107,6 +107,27 @@ Quatrième et dernier des mini-jeux prioritaires (Solitaire, Sudoku, Puissance 4
 
 **Les 4 mini-jeux prioritaires de la liste originale sont maintenant tous ajoutés.** Restent les mini-jeux plus lourds (physique/règles complexes) à traiter en dernier : Ludo (jeu des chevaux), Skip-Bo, Échecs, Billard, Ping-pong.
 
+## v49 : Ping-pong refait entièrement en 3D (Three.js), suite au retour "injouable" sur la v2D
+Retour utilisateur direct sur v47/v48 : 2D non désirée (voulait de la vraie 3D), raquette injouable, trop de crédits consommés pour un résultat décevant. Refonte complète, avec une méthode différente pour éviter de reproduire les mêmes erreurs.
+
+### 🟦 Changements de méthode (leçons tirées de la session précédente)
+- **Physique 100% maison, aucun moteur tiers.** Les deux bugs de la version 2D venaient spécifiquement de mésusages de Matter.js (vitesse transitoire non fiable pendant les événements de collision). Un rebond de balle avec gravité est un calcul simple et déterministe — pas besoin de dépendance, moins de surface à bugs.
+- **Contrôle à un seul axe** (glissement horizontal gauche/droite) au lieu du système multi-touch précédent — geste plus simple, moins de risque d'échec silencieux.
+- **Chaque joueur a son propre `<canvas>`** en mode "entre amis" (écran partagé haut/bas, une vue 3D chacun) au lieu d'un seul canvas partagé avec détection de zone tactile — élimine le besoin de désambiguïser les identifiants de touches.
+- Three.js auto-hébergé dès le départ (`vendor/three.module.min.js`, ES module, MIT), même logique que chess.js — pas de CDN.
+
+### ✅ Ce qui a été testé (et passe)
+Toute la physique est écrite dans des fonctions pures (`pp3dStepBall`, `pp3dCheckScore`, `pp3dPaddleCanHit`, `pp3dDeflect`, `pp3dCheckWin`), testées **extraites directement du fichier réel** : rebond gravité+table, détection de sortie de terrain (score), détection de frappe raquette (zone x/z), déflexion avec angle selon le point d'impact + arc de retour, règle du deuce. Simulation complète d'un match jusqu'à 11-0 sans crash.
+
+### 🟥 Ce qui NE peut PAS être testé depuis cet environnement — limite assumée
+Le rendu Three.js (scène 3D, caméras, maillages) et les contrôles tactiles réels ne peuvent pas être vérifiés visuellement ni interactivement depuis ce sandbox de dev (pas de navigateur graphique, pas de vrai téléphone). Seule la syntaxe a pu être validée automatiquement. **La v48 avait déjà ce même angle mort sur le tactile** — retour utilisateur nécessaire après déploiement pour confirmer que ça fonctionne réellement en conditions réelles, avant d'investir davantage de crédits sur ce jeu.
+
+### Design retenu
+- Table 3D vue en perspective : caméra placée derrière chaque raquette, regardant vers l'autre bout
+- Mode 🤖 bot : une seule vue plein écran, le bot suit la balle en x avec une imprécision volontaire
+- Mode 👥 entre amis : écran divisé en 2 (haut/bas), chaque joueur a sa propre caméra/vue et glisse sur sa moitié
+- Score, victoire à 11 points avec 2 points d'écart (deuce), classement mondial fictif — repris du système déjà en place
+
 ## v48 : Retrait de l'astuce de rotation CSS forcée (Billard + Ping-pong) — retour utilisateur "raquette injouable"
 🟥 **Retour direct de l'utilisateur** : impossible de bouger la raquette au Ping-pong. Cause probable identifiée : l'astuce CSS utilisée depuis la v42 pour forcer un rendu paysage (`transform: rotate(90deg)` sur le conteneur quand le téléphone reste en portrait) est connue pour perturber la correspondance des coordonnées tactiles sur certains navigateurs mobiles réels — un problème **impossible à détecter depuis cet environnement de dev**, qui n'a pas accès à un vrai téléphone pour tester le tactile en conditions réelles. C'est un vrai angle mort méthodologique : toute la physique (Matter.js) a été testée en profondeur avec le vrai moteur, mais la couche d'interaction tactile elle-même n'a jamais pu l'être.
 **Correctif** : la rotation CSS forcée est retirée entièrement (Billard ET Ping-pong). À la place, un simple message "🔄 Tourne ton téléphone" s'affiche par-dessus la table quand le téléphone est en portrait — la table elle-même n'est plus jamais transformée/pivotée en CSS, elle s'affiche dans son orientation naturelle. Ça élimine une classe entière de bugs tactiles potentiels au lieu d'essayer de deviner/corriger celui précis rencontré.
