@@ -710,19 +710,48 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   grid-area:status; text-align:center; color:#4a3b38; font-size:11px; font-weight:700;
 }
 
-/* ---------- PING-PONG 3D — Three.js, vue(s) plein écran en mode paysage ---------- */
+/* ---------- PING-PONG 2D — canvas fluide, façon "10000 Offline Games" ---------- */
 #ping-table-wrap{
-  position:fixed; inset:0; z-index:500; background:#0a1f0f;
-  overflow:hidden;
+  position:fixed; inset:0; z-index:500; background:linear-gradient(#ffcf72,#f6b94f);
+  display:flex; flex-direction:column; overflow:hidden;
 }
-#ping-viewports{
-  position:absolute; inset:0; display:flex; flex-direction:column;
+#ping-topbar{
+  display:flex; align-items:center; justify-content:center; position:relative;
+  padding:16px 16px 4px; flex-shrink:0;
 }
-#ping-viewports canvas{
-  width:100%; touch-action:none; display:block; cursor:pointer;
+#ping-back-btn{
+  position:absolute; left:16px; top:12px; width:44px; height:44px; border-radius:50%;
+  background:#fff; border:none; box-shadow:0 3px 8px rgba(0,0,0,0.18); font-size:20px; color:#c2477a;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
 }
-#ping-viewports.single canvas{ height:100%; }
-#ping-viewports.split canvas{ height:50%; border-bottom:2px solid #0a1f0f; }
+#ping-scoreboard{
+  background:#5b4636; border-radius:16px; padding:9px 24px 11px; display:flex; align-items:center; gap:24px;
+  position:relative; color:#fff; box-shadow:0 4px 10px rgba(0,0,0,0.25);
+}
+#ping-scoreboard .side{ text-align:center; min-width:38px; }
+#ping-scoreboard .side .lbl{ font-size:12px; font-weight:800; letter-spacing:.03em; }
+#ping-scoreboard .side .val{ font-size:23px; font-weight:900; line-height:1.15; }
+#ping-scoreboard .side.you .lbl{ color:#ef6461; }
+#ping-scoreboard .side.opp .lbl{ color:#3ec6f0; }
+#ping-mid-vs{ font-size:15px; font-weight:900; color:#fff; }
+#ping-diff-badge{
+  position:absolute; top:-13px; left:50%; transform:translateX(-50%);
+  background:#5b4636; border-radius:10px; padding:2px 14px; font-size:9px; font-weight:800;
+  color:#f0c34d; letter-spacing:.06em; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.2);
+}
+#ping-combo{
+  position:absolute; top:-11px; right:-6px; font-size:11px; font-weight:800; color:#fff5d0;
+  background:#ef6461; border-radius:10px; padding:2px 8px; text-shadow:0 1px 1px rgba(0,0,0,.25);
+  opacity:0; transform:scale(0.7); transition:opacity .15s, transform .15s; white-space:nowrap;
+}
+#ping-combo.show{ opacity:1; transform:scale(1); }
+#ping-canvas-holder{
+  flex:1; display:flex; align-items:center; justify-content:center; min-height:0; padding:10px 12px 16px;
+}
+#ping-canvas{
+  touch-action:none; border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.28); display:block;
+}
+#ping-diff-row .btn{ flex:1; padding:10px 6px; font-size:13px; }
 
 /* ---------- ÉCHECS ---------- */
 .chess-board{
@@ -953,7 +982,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     <div class="panel">
       <div class="game-panel-header">
         <img class="game-panel-icon" src="icons/pingpong.png" alt="Ping-pong">
-        <div class="txt"><h3>Ping-pong</h3><p>Table plein écran, vs bot ou à 2 en simultané.</p></div>
+        <div class="txt"><h3>Ping-pong</h3><p>Vue de dessus, glisse pour jouer, vs bot ou à 2 en simultané.</p></div>
       </div>
       <div class="btn-row"><button class="btn primary" onclick="openPingpong()">Jouer</button></div>
     </div>
@@ -1520,16 +1549,21 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     <div class="topbar">
       <button class="back-btn" onclick="openJeux()">← Retour</button>
     </div>
-    <div class="game-title">🏓 Ping-pong 3D</div>
+    <div class="game-title">🏓 Ping-pong</div>
 
     <div class="panel" id="ping-setup-panel">
-      <h2>Choisis un mode</h2>
-      <div class="btn-row" style="flex-direction:column;">
-        <button class="btn primary" onclick="pp3dStart('bot')">🤖 Contre un bot</button>
-        <button class="btn primary" onclick="pp3dStart('amis')">👥 Entre amis (écran partagé)</button>
+      <h2>Difficulté du bot</h2>
+      <div class="btn-row" id="ping-diff-row">
+        <button class="btn" data-diff="facile" onclick="ppChooseDiff('facile')">😌 Facile</button>
+        <button class="btn primary" data-diff="moyen" onclick="ppChooseDiff('moyen')">🙂 Moyen</button>
+        <button class="btn" data-diff="difficile" onclick="ppChooseDiff('difficile')">🔥 Difficile</button>
       </div>
-      <p class="footnote" style="margin-top:14px;">Entre amis : l'écran se divise en 2, chacun voit sa propre vue 3D et glisse horizontalement sur sa moitié pour bouger sa raquette. Premier à 11 points, victoire par 2 points d'écart.</p>
-      <p class="footnote" style="margin-top:8px;">🔄 S'affiche en plein écran, en mode paysage.</p>
+      <h2 style="margin-top:16px;">Mode</h2>
+      <div class="btn-row" style="flex-direction:column;">
+        <button class="btn primary" onclick="ppStart('bot')">🤖 Contre le bot</button>
+        <button class="btn primary" onclick="ppStart('amis')">👥 Entre amis (1 téléphone, 2 doigts)</button>
+      </div>
+      <p class="footnote" style="margin-top:14px;">Glisse ta raquette pour la placer. Plus ton doigt va vite au moment de l'impact, plus le tir part fort — ralentis pour un tir placé, précis.</p>
       <div class="footnote" id="ping-winstat" style="margin-top:8px;"></div>
     </div>
 
@@ -1538,19 +1572,25 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div id="ping-endgame-board"></div>
       <div class="footnote" style="margin-top:8px;">Aperçu fictif, pas de vrai backend — voir Confidentialité.</div>
       <div class="btn-row" style="justify-content:center; margin-top:12px;">
-        <button class="btn primary" onclick="pp3dBackToSetup()">Rejouer</button>
+        <button class="btn primary" onclick="ppBackToSetup()">Rejouer</button>
       </div>
     </div>
   </div>
 
   <div id="ping-table-wrap" style="display:none;">
-    <button class="bil-round-btn" id="ping-exitBtn" onclick="pp3dExitTable()" style="position:absolute; top:10px; left:10px; z-index:20;">←</button>
-    <button class="bil-round-btn" id="ping-resetBtn" onclick="pp3dStart(pp3dMode)" style="position:absolute; top:10px; right:10px; z-index:20;">↺</button>
-    <div id="ping-scoreboard-3d" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:20; background:#1a2a1a; border-radius:16px; padding:6px 18px; text-align:center; color:#fff;">
-      <div id="ping-modeTab-3d" style="font-size:9px; font-weight:700; color:#8fc95f; letter-spacing:.06em;">BOT</div>
-      <div style="font-size:16px; font-weight:800;"><span id="ping-scoreNear">0</span> — <span id="ping-scoreFar">0</span></div>
+    <div id="ping-topbar">
+      <button id="ping-back-btn" onclick="ppExitTable()">←</button>
+      <div id="ping-scoreboard">
+        <div id="ping-diff-badge">MOYEN</div>
+        <div class="side you"><div class="lbl">TOI</div><div class="val" id="ping-scoreYou">0</div></div>
+        <div class="mid"><div id="ping-mid-vs">VS</div></div>
+        <div class="side opp"><div class="lbl" id="ping-oppLbl">BOT</div><div class="val" id="ping-scoreOpp">0</div></div>
+        <div id="ping-combo"></div>
+      </div>
     </div>
-    <div id="ping-viewports"></div>
+    <div id="ping-canvas-holder">
+      <canvas id="ping-canvas"></canvas>
+    </div>
   </div>
 </div>
 
@@ -2191,12 +2231,6 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   // garantie (fonctionne hors-ligne comme le reste de l'app, pas de dépendance réseau externe).
   import { Chess } from './vendor/chess.esm.js';
   window.Chess = Chess;
-</script>
-<script type="module">
-  // three.js (MIT) — auto-hébergé, uniquement pour le rendu 3D du Ping-pong (aucune physique
-  // tierce : la physique de la balle est écrite et testée à la main, voir index.html).
-  import * as THREE from './vendor/three.module.min.js';
-  window.THREE = THREE;
 </script>
 
 <script>
@@ -6674,322 +6708,442 @@ function bilDraw(){
   }
 }
 
-/* ================= PING-PONG 3D (Three.js pour le rendu, physique maison testée) ================= */
-// La physique (gravité, rebonds, détection de raquette, score) est écrite et testée à la main,
-// SANS moteur physique tiers — c'est ce qui avait causé deux bugs de fond avec Matter.js sur la
-// version 2D précédente. Three.js n'est utilisé que pour le rendu 3D (scène, caméra(s), maillages).
-const PP3D_WIDTH = 140, PP3D_LENGTH = 280;
-const PP3D_BALL_R = 3;
-const PP3D_GRAVITY = -420;
-const PP3D_TABLE_REST = 0.78;
-const PP3D_WALL_REST = 0.9;
-const PP3D_PADDLE_HALF_W = 22;
-const PP3D_PADDLE_TOL = 8;
-const PP3D_BASE_SPEED_Z = 160;
-const PP3D_SPEED_INC = 1.035;
-const PP3D_MAX_SPEED_Z = 320;
-const PP3D_MAX_DEFLECT_VX = 140;
-const PP3D_RETURN_ARC_VY = 160;
-const PP3D_PADDLE_Y = 10;
+/* ================= PING-PONG 2D — canvas fluide, physique main-testée (aucune lib physique tierce) ================= */
+// Vue de dessus façon "10000 Offline Games" : raquettes rondes, terrain vertical, tir plus ou
+// moins fort selon la vitesse du doigt au moment de l'impact. Un seul <canvas> 2D — plus de
+// Three.js, plus de verrouillage d'orientation : ça tient dans l'écran du téléphone tel quel.
+const PP_DIFFS = {
+  facile:    { label:'FACILE',    botSpeed:0.62, botError:0.16, botPowerMin:0.35, botPowerMax:0.75 },
+  moyen:     { label:'MOYEN',     botSpeed:0.82, botError:0.09, botPowerMin:0.5,  botPowerMax:0.95 },
+  difficile: { label:'DIFFICILE', botSpeed:1.05, botError:0.03, botPowerMin:0.7,  botPowerMax:1.15 },
+};
+const PP_WIN_SCORE = 11;
+const PP_BASE_SPEED_FACTOR = 0.62;   // fraction de H parcourue par seconde, vitesse de base
+const PP_MAX_SPEED_FACTOR  = 1.55;
+const PP_SPEED_GROWTH = 1.045;       // accélération à chaque échange
+const PP_TRAIL_LEN = 10;
 
-let pp3dBall = { x:0, y:40, z:PP3D_LENGTH/2, vx:0, vy:0, vz:0 };
-let pp3dNearX = 0, pp3dFarX = 0;
-let pp3dMode = 'bot';
-let pp3dScoreNear = 0, pp3dScoreFar = 0;
-let pp3dOver = false;
-let pp3dAnimId = null;
-let pp3dLastTime = 0;
-let pp3dOrientationHandlerRef = null;
-const pp3dWorldMock = [
+let ppMode = 'bot';
+let ppDiff = 'moyen';
+let ppW = 0, ppH = 0, ppDpr = 1;
+let ppCanvas = null, ppCtx = null;
+let ppAnimId = null, ppLastTime = 0;
+let ppOver = true;
+let ppScoreYou = 0, ppScoreOpp = 0;
+let ppCombo = 0;
+let ppResizeHandlerRef = null;
+
+let ppBall = { x:0, y:0, vx:0, vy:0, r:10 };
+let ppTrail = [];
+let ppParticles = [];
+let ppShake = 0;
+
+// paddle du bas = "toi" (contrôlé par l'utilisateur, toujours). paddle du haut = bot OU joueur 2.
+let ppPlayer = { x:0, y:0, r:26, vx:0, vy:0, lastX:0, lastY:0, lastT:0 };
+let ppOpp    = { x:0, y:0, r:26, vx:0, vy:0, lastX:0, lastY:0, lastT:0, aiTargetX:0 };
+let ppActivePointers = {}; // pointerId -> 'player' | 'opp'
+
+const ppWorldMock = [
   {name:'Sofia K.', wins:22}, {name:'Thomas B.', wins:17}, {name:'Léa M.', wins:13},
   {name:'Nina P.', wins:9}, {name:'Adam R.', wins:5},
 ];
-function pp3dServe(towardFar){
-  pp3dBall.x = 0; pp3dBall.y = 45; pp3dBall.z = PP3D_LENGTH/2;
-  pp3dBall.vx = (Math.random()-0.5)*40;
-  pp3dBall.vy = 30;
-  pp3dBall.vz = towardFar ? PP3D_BASE_SPEED_Z : -PP3D_BASE_SPEED_Z;
-}
-function pp3dStepBall(dt){
-  const b = pp3dBall;
-  b.vy += PP3D_GRAVITY*dt;
-  b.x += b.vx*dt; b.y += b.vy*dt; b.z += b.vz*dt;
-  if(b.y <= PP3D_BALL_R && b.vy < 0 && b.z >= 0 && b.z <= PP3D_LENGTH && Math.abs(b.x) <= PP3D_WIDTH/2){
-    b.y = PP3D_BALL_R; b.vy = -b.vy*PP3D_TABLE_REST;
-  }
-  if(b.x < -PP3D_WIDTH/2+PP3D_BALL_R){ b.x = -PP3D_WIDTH/2+PP3D_BALL_R; b.vx = -b.vx*PP3D_WALL_REST; }
-  if(b.x > PP3D_WIDTH/2-PP3D_BALL_R){ b.x = PP3D_WIDTH/2-PP3D_BALL_R; b.vx = -b.vx*PP3D_WALL_REST; }
-}
-function pp3dCheckScore(){
-  if(pp3dBall.z < -PP3D_PADDLE_TOL) return 'far';
-  if(pp3dBall.z > PP3D_LENGTH+PP3D_PADDLE_TOL) return 'near';
-  return null;
-}
-function pp3dPaddleCanHit(paddleX, isNearSide){
-  const z0 = isNearSide ? 0 : PP3D_LENGTH;
-  const withinZ = Math.abs(pp3dBall.z - z0) <= PP3D_PADDLE_TOL;
-  const movingToward = isNearSide ? pp3dBall.vz < 0 : pp3dBall.vz > 0;
-  const withinX = Math.abs(pp3dBall.x - paddleX) <= PP3D_PADDLE_HALF_W;
-  return withinZ && movingToward && withinX;
-}
-function pp3dDeflect(paddleX, isNearSide, lastSpeedZ){
-  const offset = Math.max(-1, Math.min(1, (pp3dBall.x - paddleX)/PP3D_PADDLE_HALF_W));
-  const jitter = (Math.random()-0.5)*8;
-  const newSpeedZ = Math.min(Math.abs(lastSpeedZ)*PP3D_SPEED_INC, PP3D_MAX_SPEED_Z);
-  pp3dBall.vz = isNearSide ? newSpeedZ : -newSpeedZ;
-  pp3dBall.vx = offset*PP3D_MAX_DEFLECT_VX + jitter;
-  pp3dBall.vy = PP3D_RETURN_ARC_VY;
-  playFeedback('correct');
-}
-function pp3dCheckWin(a,b){
-  if(a>=11 && a-b>=2) return 'near';
-  if(b>=11 && b-a>=2) return 'far';
-  return null;
+
+function ppChooseDiff(d){
+  ppDiff = d;
+  document.querySelectorAll('#ping-diff-row .btn').forEach(b => {
+    b.classList.toggle('primary', b.dataset.diff === d);
+  });
 }
 
-// ---- Rendu Three.js ----
-let pp3dScene, pp3dBallMesh, pp3dNearPaddleMesh, pp3dFarPaddleMesh;
-let pp3dCamNear, pp3dCamFar;
-let pp3dRendererSingle = null, pp3dRendererTop = null, pp3dRendererBottom = null;
-function pp3dBuildScene(){
-  pp3dScene = new THREE.Scene();
-  pp3dScene.background = new THREE.Color(0x0a1f0f);
-  const ambient = new THREE.AmbientLight(0xffffff, 0.7);
-  pp3dScene.add(ambient);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.7);
-  dir.position.set(50, 120, 50);
-  pp3dScene.add(dir);
-  // table
-  const tableGeo = new THREE.BoxGeometry(PP3D_WIDTH, 6, PP3D_LENGTH);
-  const tableMat = new THREE.MeshStandardMaterial({color:0x1a7a3a});
-  const table = new THREE.Mesh(tableGeo, tableMat);
-  table.position.set(0, -3, PP3D_LENGTH/2);
-  pp3dScene.add(table);
-  // lignes blanches (bordures + ligne centrale)
-  const lineMat = new THREE.MeshBasicMaterial({color:0xffffff});
-  const edgeN = new THREE.Mesh(new THREE.BoxGeometry(PP3D_WIDTH, 0.5, 1.5), lineMat);
-  edgeN.position.set(0, 0.3, 1); pp3dScene.add(edgeN);
-  const edgeF = new THREE.Mesh(new THREE.BoxGeometry(PP3D_WIDTH, 0.5, 1.5), lineMat);
-  edgeF.position.set(0, 0.3, PP3D_LENGTH-1); pp3dScene.add(edgeF);
-  const midLine = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, PP3D_LENGTH), lineMat);
-  midLine.position.set(0, 0.3, PP3D_LENGTH/2); pp3dScene.add(midLine);
-  // filet
-  const net = new THREE.Mesh(new THREE.BoxGeometry(PP3D_WIDTH, 8, 0.8), new THREE.MeshStandardMaterial({color:0xeeeeee, transparent:true, opacity:0.85}));
-  net.position.set(0, 4, PP3D_LENGTH/2); pp3dScene.add(net);
-  // raquettes
-  const paddleGeo = new THREE.BoxGeometry(18, 18, 2);
-  pp3dNearPaddleMesh = new THREE.Mesh(paddleGeo, new THREE.MeshStandardMaterial({color:0xf5b942}));
-  pp3dNearPaddleMesh.position.set(0, PP3D_PADDLE_Y, 0);
-  pp3dScene.add(pp3dNearPaddleMesh);
-  pp3dFarPaddleMesh = new THREE.Mesh(paddleGeo, new THREE.MeshStandardMaterial({color:0xef6461}));
-  pp3dFarPaddleMesh.position.set(0, PP3D_PADDLE_Y, PP3D_LENGTH);
-  pp3dScene.add(pp3dFarPaddleMesh);
-  // balle
-  pp3dBallMesh = new THREE.Mesh(new THREE.SphereGeometry(PP3D_BALL_R, 16, 16), new THREE.MeshStandardMaterial({color:0xffffff}));
-  pp3dScene.add(pp3dBallMesh);
-  // caméras : une derrière chaque raquette, regardant vers l'autre bout
-  pp3dCamNear = new THREE.PerspectiveCamera(60, 1, 1, 1000);
-  pp3dCamNear.position.set(0, 55, -55);
-  pp3dCamNear.lookAt(0, 10, PP3D_LENGTH/2);
-  pp3dCamFar = new THREE.PerspectiveCamera(60, 1, 1, 1000);
-  pp3dCamFar.position.set(0, 55, PP3D_LENGTH+55);
-  pp3dCamFar.lookAt(0, 10, PP3D_LENGTH/2);
-}
-function pp3dSetupRenderers(){
-  const container = document.getElementById('ping-viewports');
-  container.innerHTML = '';
-  if(pp3dMode==='bot'){
-    container.className = 'single';
-    const canvas = document.createElement('canvas');
-    canvas.id = 'ping-canvas-single';
-    container.appendChild(canvas);
-    pp3dRendererSingle = new THREE.WebGLRenderer({canvas, antialias:true});
-    pp3dResizeRenderer(pp3dRendererSingle, pp3dCamNear, canvas);
-    pp3dRendererTop = null; pp3dRendererBottom = null;
-  } else {
-    container.className = 'split';
-    const canvasTop = document.createElement('canvas');
-    canvasTop.id = 'ping-canvas-top';
-    const canvasBottom = document.createElement('canvas');
-    canvasBottom.id = 'ping-canvas-bottom';
-    container.appendChild(canvasTop);
-    container.appendChild(canvasBottom);
-    pp3dRendererTop = new THREE.WebGLRenderer({canvas:canvasTop, antialias:true});
-    pp3dRendererBottom = new THREE.WebGLRenderer({canvas:canvasBottom, antialias:true});
-    pp3dResizeRenderer(pp3dRendererTop, pp3dCamFar, canvasTop);
-    pp3dResizeRenderer(pp3dRendererBottom, pp3dCamNear, canvasBottom);
-    pp3dRendererSingle = null;
-  }
-}
-function pp3dResizeRenderer(renderer, camera, canvas){
-  const w = canvas.clientWidth || window.innerWidth;
-  const h = canvas.clientHeight || (window.innerHeight/ (pp3dMode==='bot'?1:2));
-  renderer.setSize(w, h, false);
-  camera.aspect = w/h;
-  camera.updateProjectionMatrix();
-}
-function pp3dHandleResize(){
-  if(pp3dRendererSingle){
-    pp3dResizeRenderer(pp3dRendererSingle, pp3dCamNear, pp3dRendererSingle.domElement);
-  }
-  if(pp3dRendererTop) pp3dResizeRenderer(pp3dRendererTop, pp3dCamFar, pp3dRendererTop.domElement);
-  if(pp3dRendererBottom) pp3dResizeRenderer(pp3dRendererBottom, pp3dCamNear, pp3dRendererBottom.domElement);
-}
-
-// ---- État & UI ----
 function openPingpong(){
   switchScreen('game-pingpong');
   setActiveTab(null);
   document.getElementById('ping-setup-panel').style.display = 'block';
   document.getElementById('ping-endgame-panel').style.display = 'none';
   document.getElementById('ping-table-wrap').style.display = 'none';
-  pp3dTeardownOrientationWatcher();
-  pp3dRenderWinStat();
+  ppRenderWinStat();
   trackPage('/pingpong');
 }
-function pp3dRenderWinStat(){
+function ppRenderWinStat(){
   const el = document.getElementById('ping-winstat');
   const wins = parseInt(localStorage.getItem('ppWins')||'0');
   el.textContent = wins>0 ? `🏆 Tes victoires contre le bot : ${wins}` : '';
 }
-function pp3dBackToSetup(){
-  if(pp3dAnimId) cancelAnimationFrame(pp3dAnimId);
-  pp3dOver = true;
+function ppBackToSetup(){
+  ppStopLoop();
   document.getElementById('ping-setup-panel').style.display = 'block';
   document.getElementById('ping-endgame-panel').style.display = 'none';
   document.getElementById('ping-table-wrap').style.display = 'none';
-  pp3dTeardownOrientationWatcher();
-  try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
-  pp3dRenderWinStat();
+  ppDetachInput();
+  ppTeardownResize();
+  ppRenderWinStat();
 }
-function pp3dExitTable(){
-  if(pp3dAnimId) cancelAnimationFrame(pp3dAnimId);
-  pp3dBackToSetup();
+function ppExitTable(){
+  ppStopLoop();
+  ppBackToSetup();
 }
-function pp3dSetupOrientationWatcher(){
-  // Ne bloque plus jamais l'accès au jeu derrière un message de rotation : si le téléphone a
-  // la rotation verrouillée dans ses réglages système, le navigateur ne change JAMAIS de forme
-  // même si l'utilisateur tourne physiquement l'appareil — le message ne disparaissait donc
-  // jamais (bug remonté par l'utilisateur). Le jeu s'affiche désormais dans l'orientation
-  // actuelle, quelle qu'elle soit, en s'adaptant simplement à la taille réelle de l'écran.
-  const apply = () => { pp3dHandleResize(); };
-  apply();
-  pp3dOrientationHandlerRef = apply;
-  window.addEventListener('resize', pp3dOrientationHandlerRef);
-  window.addEventListener('orientationchange', pp3dOrientationHandlerRef);
+function ppStopLoop(){
+  ppOver = true;
+  if(ppAnimId) cancelAnimationFrame(ppAnimId);
+  ppAnimId = null;
 }
-function pp3dTeardownOrientationWatcher(){
-  if(pp3dOrientationHandlerRef){
-    window.removeEventListener('resize', pp3dOrientationHandlerRef);
-    window.removeEventListener('orientationchange', pp3dOrientationHandlerRef);
-    pp3dOrientationHandlerRef = null;
-  }
-}
-function pp3dStart(mode){
-  pp3dMode = mode;
-  pp3dScoreNear = 0; pp3dScoreFar = 0;
-  pp3dOver = false;
-  pp3dNearX = 0; pp3dFarX = 0;
-  if(pp3dAnimId) cancelAnimationFrame(pp3dAnimId);
-  if(!pp3dScene) pp3dBuildScene();
-  pp3dServe(Math.random()<0.5);
+
+function ppStart(mode){
+  ppMode = mode;
+  ppScoreYou = 0; ppScoreOpp = 0;
+  ppCombo = 0;
+  ppOver = false;
+  ppTrail = []; ppParticles = []; ppShake = 0;
   document.getElementById('ping-setup-panel').style.display = 'none';
   document.getElementById('ping-endgame-panel').style.display = 'none';
   document.getElementById('ping-table-wrap').style.display = 'block';
-  document.getElementById('ping-modeTab-3d').textContent = mode==='bot' ? 'CONTRE UN BOT' : 'ENTRE AMIS';
-  pp3dRenderScoreboard();
-  pp3dSetupRenderers();
-  pp3dAttachInput();
-  pp3dSetupOrientationWatcher();
-  try{ if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
-  pp3dLastTime = performance.now();
-  pp3dAnimId = requestAnimationFrame(pp3dAnimate);
+  document.getElementById('ping-diff-badge').textContent = mode==='bot' ? PP_DIFFS[ppDiff].label : 'ENTRE AMIS';
+  document.getElementById('ping-oppLbl').textContent = mode==='bot' ? 'BOT' : 'J2';
+  ppUpdateScoreboard();
+  ppUpdateCombo();
+  ppCanvas = document.getElementById('ping-canvas');
+  ppCtx = ppCanvas.getContext('2d');
+  ppResize();
+  ppSetupResize();
+  ppAttachInput();
+  ppServe(Math.random()<0.5);
+  ppLastTime = performance.now();
+  ppAnimId = requestAnimationFrame(ppLoop);
 }
-function pp3dRenderScoreboard(){
-  document.getElementById('ping-scoreNear').textContent = pp3dScoreNear;
-  document.getElementById('ping-scoreFar').textContent = pp3dScoreFar;
+function ppUpdateScoreboard(){
+  document.getElementById('ping-scoreYou').textContent = ppScoreYou;
+  document.getElementById('ping-scoreOpp').textContent = ppScoreOpp;
 }
-// ---- Contrôles : glissement horizontal simple (un seul axe), par canvas ----
-let pp3dInputAttachedFor = null;
-function pp3dAttachInput(){
-  if(pp3dMode==='bot'){
-    const canvas = document.getElementById('ping-canvas-single');
-    pp3dBindDrag(canvas, (fracX) => { pp3dNearX = (fracX-0.5)*PP3D_WIDTH; });
+function ppUpdateCombo(){
+  const el = document.getElementById('ping-combo');
+  if(ppCombo >= 3){
+    el.textContent = `🔥 x${ppCombo}`;
+    el.classList.add('show');
   } else {
-    const canvasTop = document.getElementById('ping-canvas-top');
-    const canvasBottom = document.getElementById('ping-canvas-bottom');
-    // la vue du haut (loin) est visuellement inversée (on regarde vers l'autre bout) -> on inverse l'axe
-    pp3dBindDrag(canvasTop, (fracX) => { pp3dFarX = (0.5-fracX)*PP3D_WIDTH; });
-    pp3dBindDrag(canvasBottom, (fracX) => { pp3dNearX = (fracX-0.5)*PP3D_WIDTH; });
+    el.classList.remove('show');
   }
 }
-function pp3dBindDrag(canvas, onMove){
-  if(!canvas) return;
-  const handle = (clientX) => {
-    const rect = canvas.getBoundingClientRect();
-    const frac = Math.max(0, Math.min(1, (clientX-rect.left)/rect.width));
-    onMove(frac);
-  };
-  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handle(e.touches[0].clientX); }, {passive:false});
-  canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handle(e.touches[0].clientX); }, {passive:false});
-  canvas.addEventListener('mousemove', (e) => { handle(e.clientX); });
+
+// ---- Dimensionnement du canvas (garde un ratio portrait, s'adapte à l'espace dispo) ----
+function ppResize(){
+  const holder = document.getElementById('ping-canvas-holder');
+  const availW = holder.clientWidth, availH = holder.clientHeight;
+  const ratio = 0.58; // largeur/hauteur du terrain
+  let w = availW, h = w/ratio;
+  if(h > availH){ h = availH; w = h*ratio; }
+  ppW = Math.round(w); ppH = Math.round(h);
+  ppDpr = Math.min(window.devicePixelRatio||1, 2.5);
+  ppCanvas.style.width = ppW+'px';
+  ppCanvas.style.height = ppH+'px';
+  ppCanvas.width = Math.round(ppW*ppDpr);
+  ppCanvas.height = Math.round(ppH*ppDpr);
+  ppCtx.setTransform(ppDpr,0,0,ppDpr,0,0);
+  ppPlayer.r = ppOpp.r = ppW*0.135;
+  ppBall.r = ppW*0.04;
+  ppPlayer.y = ppH - ppPlayer.r*1.15;
+  ppOpp.y = ppOpp.r*1.15;
+  if(ppPlayer.x===0 && ppOpp.x===0){ ppPlayer.x = ppW/2; ppOpp.x = ppW/2; }
+  ppClampPaddle(ppPlayer); ppClampPaddle(ppOpp);
 }
-function pp3dBotUpdate(dt){
-  const target = pp3dBall.x;
-  const maxSpeed = 70;
-  const diff = target - pp3dFarX;
+function ppSetupResize(){
+  ppResizeHandlerRef = () => ppResize();
+  window.addEventListener('resize', ppResizeHandlerRef);
+  window.addEventListener('orientationchange', ppResizeHandlerRef);
+}
+function ppTeardownResize(){
+  if(ppResizeHandlerRef){
+    window.removeEventListener('resize', ppResizeHandlerRef);
+    window.removeEventListener('orientationchange', ppResizeHandlerRef);
+    ppResizeHandlerRef = null;
+  }
+}
+function ppClampPaddle(p){
+  p.x = Math.max(p.r, Math.min(ppW-p.r, p.x));
+}
+
+// ---- Service ----
+function ppServe(towardOpp){
+  ppBall.x = ppW/2; ppBall.y = ppH/2;
+  const speed = ppH*PP_BASE_SPEED_FACTOR;
+  ppBall.vx = (Math.random()-0.5)*speed*0.3;
+  ppBall.vy = towardOpp ? -speed : speed;
+  ppTrail = [];
+}
+
+// ---- Entrées : pointer events, multi-touch pour le mode "entre amis" ----
+function ppAttachInput(){
+  const c = ppCanvas;
+  c.addEventListener('pointerdown', ppOnPointerDown);
+  c.addEventListener('pointermove', ppOnPointerMove);
+  c.addEventListener('pointerup', ppOnPointerUp);
+  c.addEventListener('pointercancel', ppOnPointerUp);
+}
+function ppDetachInput(){
+  const c = ppCanvas;
+  if(!c) return;
+  c.removeEventListener('pointerdown', ppOnPointerDown);
+  c.removeEventListener('pointermove', ppOnPointerMove);
+  c.removeEventListener('pointerup', ppOnPointerUp);
+  c.removeEventListener('pointercancel', ppOnPointerUp);
+  ppActivePointers = {};
+}
+function ppLocalXY(e){
+  const rect = ppCanvas.getBoundingClientRect();
+  return { x: e.clientX-rect.left, y: e.clientY-rect.top };
+}
+function ppOnPointerDown(e){
+  e.preventDefault();
+  const {x,y} = ppLocalXY(e);
+  let target = 'player';
+  if(ppMode==='amis') target = (y < ppH/2) ? 'opp' : 'player';
+  const p = target==='player' ? ppPlayer : ppOpp;
+  p.lastX = x; p.lastY = y; p.lastT = performance.now();
+  p.vx = 0; p.vy = 0;
+  ppActivePointers[e.pointerId] = target;
+  try{ ppCanvas.setPointerCapture(e.pointerId); }catch(err){}
+}
+function ppOnPointerMove(e){
+  const target = ppActivePointers[e.pointerId];
+  if(!target) return;
+  e.preventDefault();
+  const {x,y} = ppLocalXY(e);
+  const p = target==='player' ? ppPlayer : ppOpp;
+  const now = performance.now();
+  const dt = Math.max(1, now-p.lastT);
+  p.vx = (x-p.lastX)/dt*1000;
+  p.vy = (y-p.lastY)/dt*1000;
+  p.x = x;
+  if(ppMode==='amis'){
+    // en 1v1 sur le même tel, chacun peut aussi avancer/reculer un peu, sans dépasser le filet
+    const midY = ppH/2;
+    if(target==='player') p.y = Math.max(midY+p.r*1.1, Math.min(ppH-p.r*1.15, y));
+    else p.y = Math.max(p.r*1.15, Math.min(midY-p.r*1.1, y));
+  }
+  ppClampPaddle(p);
+  p.lastX = x; p.lastY = y; p.lastT = now;
+}
+function ppOnPointerUp(e){
+  delete ppActivePointers[e.pointerId];
+}
+
+// ---- IA du bot ----
+function ppBotUpdate(dt){
+  const cfg = PP_DIFFS[ppDiff];
+  const maxSpeed = ppW*1.6*cfg.botSpeed;
+  const error = (Math.sin(performance.now()*0.003 + ppBall.x)*cfg.botError)*ppW;
+  const target = Math.max(ppOpp.r, Math.min(ppW-ppOpp.r, ppBall.x + error));
+  const diff = target - ppOpp.x;
   const move = Math.max(-maxSpeed*dt, Math.min(maxSpeed*dt, diff));
-  pp3dFarX += move * 0.8;
-  pp3dFarX = Math.max(-PP3D_WIDTH/2, Math.min(PP3D_WIDTH/2, pp3dFarX));
+  ppOpp.vx = move/Math.max(dt,0.0001);
+  ppOpp.vy = 0;
+  ppOpp.x += move;
+  ppClampPaddle(ppOpp);
 }
-function pp3dHandlePoint(scorer){
-  if(scorer==='near') pp3dScoreNear++; else pp3dScoreFar++;
-  playFeedback(scorer==='near' ? 'objective' : 'wrong');
-  pp3dRenderScoreboard();
-  const winner = pp3dCheckWin(pp3dScoreNear, pp3dScoreFar);
-  if(winner){ pp3dEndGame(winner); return; }
-  pp3dServe(scorer==='near');
+
+// ---- Physique de la balle ----
+function ppStepBall(dt){
+  const b = ppBall;
+  b.x += b.vx*dt; b.y += b.vy*dt;
+  if(b.x - b.r < 0){ b.x = b.r; b.vx = Math.abs(b.vx); ppSpawnWallSpark(b.x,b.y); }
+  else if(b.x + b.r > ppW){ b.x = ppW-b.r; b.vx = -Math.abs(b.vx); ppSpawnWallSpark(b.x,b.y); }
+  ppTrail.push({x:b.x, y:b.y});
+  if(ppTrail.length > PP_TRAIL_LEN) ppTrail.shift();
 }
-function pp3dAnimate(now){
-  if(pp3dOver) return;
-  let dt = Math.min((now - pp3dLastTime)/1000, 1/30);
-  pp3dLastTime = now;
-  if(pp3dMode==='bot') pp3dBotUpdate(dt);
-  const lastSpeedZ = pp3dBall.vz;
-  pp3dStepBall(dt);
-  if(pp3dPaddleCanHit(pp3dNearX, true)) pp3dDeflect(pp3dNearX, true, lastSpeedZ);
-  else if(pp3dPaddleCanHit(pp3dFarX, false)) pp3dDeflect(pp3dFarX, false, lastSpeedZ);
-  const score = pp3dCheckScore();
-  if(score) pp3dHandlePoint(score);
-  pp3dRenderFrame();
-  if(!pp3dOver) pp3dAnimId = requestAnimationFrame(pp3dAnimate);
+function ppTryPaddleHit(p, isPlayer){
+  const b = ppBall;
+  const dx = b.x-p.x, dy = b.y-p.y;
+  const dist = Math.hypot(dx,dy);
+  const movingToward = isPlayer ? b.vy > 0 : b.vy < 0;
+  if(!movingToward) return false;
+  if(dist > p.r + b.r) return false;
+  ppDeflect(p, isPlayer, dx, dy, dist);
+  return true;
 }
-function pp3dRenderFrame(){
-  pp3dBallMesh.position.set(pp3dBall.x, pp3dBall.y, pp3dBall.z);
-  pp3dNearPaddleMesh.position.x = pp3dNearX;
-  pp3dFarPaddleMesh.position.x = pp3dFarX;
-  if(pp3dRendererSingle) pp3dRendererSingle.render(pp3dScene, pp3dCamNear);
-  if(pp3dRendererTop) pp3dRendererTop.render(pp3dScene, pp3dCamFar);
-  if(pp3dRendererBottom) pp3dRendererBottom.render(pp3dScene, pp3dCamNear);
+function ppDeflect(p, isPlayer, dx, dy, dist){
+  const b = ppBall;
+  // pousse la balle hors de la raquette pour éviter les doubles collisions
+  const nx = dist>0.01 ? dx/dist : 0, ny = dist>0.01 ? dy/dist : (isPlayer?-1:1);
+  b.x = p.x + nx*(p.r+b.r); b.y = p.y + ny*(p.r+b.r);
+
+  const curSpeed = Math.hypot(b.vx, b.vy);
+  const baseSpeed = Math.min(curSpeed*PP_SPEED_GROWTH, ppH*PP_MAX_SPEED_FACTOR);
+  const paddleSpeed = Math.hypot(p.vx, p.vy);
+  const powerRef = ppW*4.2; // vitesse de doigt de référence pour un tir "à fond"
+  let powerBoost = Math.max(0, Math.min(1, paddleSpeed/powerRef));
+  if(!isPlayer){
+    const cfg = PP_DIFFS[ppDiff];
+    powerBoost = cfg.botPowerMin + Math.random()*(cfg.botPowerMax-cfg.botPowerMin);
+  }
+  const outSpeed = baseSpeed*(0.72 + powerBoost*0.65);
+
+  const offset = Math.max(-1, Math.min(1, dx/(p.r+b.r)));
+  const spin = isPlayer ? p.vx/powerRef : (Math.random()-0.5)*0.6;
+  const angle = offset*0.85 + spin*0.35;
+  const dirY = isPlayer ? -1 : 1;
+  b.vx = angle*outSpeed;
+  b.vy = dirY*Math.sqrt(Math.max(0.15, 1-Math.min(0.9,Math.abs(angle))))*outSpeed;
+
+  if(isPlayer){
+    if(powerBoost > 0.55){ ppCombo++; ppShake = Math.min(10, 4+powerBoost*8); }
+    else { ppCombo = 0; }
+  }
+  ppUpdateCombo();
+  ppSpawnHitBurst(b.x, b.y, isPlayer ? '#ef6461' : '#3ec6f0');
+  playFeedback('correct');
 }
-function pp3dEndGame(winner){
-  pp3dOver = true;
+
+// ---- Particules & juice ----
+function ppSpawnHitBurst(x,y,color){
+  for(let i=0;i<10;i++){
+    const a = Math.random()*Math.PI*2, sp = 40+Math.random()*90;
+    ppParticles.push({x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:1, color});
+  }
+}
+function ppSpawnWallSpark(x,y){
+  for(let i=0;i<4;i++){
+    const a = Math.random()*Math.PI*2, sp = 20+Math.random()*40;
+    ppParticles.push({x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:0.6, color:'#ffffff'});
+  }
+}
+function ppStepParticles(dt){
+  for(const pt of ppParticles){ pt.x += pt.vx*dt; pt.y += pt.vy*dt; pt.life -= dt*1.6; }
+  ppParticles = ppParticles.filter(pt => pt.life > 0);
+  if(ppShake > 0) ppShake = Math.max(0, ppShake - dt*24);
+}
+
+function ppCheckScore(){
+  if(ppBall.y - ppBall.r > ppH) return 'opp';   // passée derrière ta ligne
+  if(ppBall.y + ppBall.r < 0) return 'player';  // passée derrière la ligne adverse
+  return null;
+}
+function ppCheckWin(a,b){
+  if(a>=PP_WIN_SCORE && a-b>=2) return 'player';
+  if(b>=PP_WIN_SCORE && b-a>=2) return 'opp';
+  return null;
+}
+function ppHandlePoint(scorer){
+  if(scorer==='player'){ ppScoreYou++; } else { ppScoreOpp++; ppCombo = 0; ppUpdateCombo(); }
+  playFeedback(scorer==='player' ? 'objective' : 'wrong');
+  ppUpdateScoreboard();
+  const winner = ppCheckWin(ppScoreYou, ppScoreOpp);
+  if(winner){ ppEndGame(winner); return; }
+  ppServe(scorer==='player');
+}
+
+function ppLoop(now){
+  if(ppOver) return;
+  let dt = Math.min((now-ppLastTime)/1000, 1/30);
+  ppLastTime = now;
+  if(ppMode==='bot') ppBotUpdate(dt);
+  else { ppOpp.vx *= 0.9; ppOpp.vy *= 0.9; }
+  ppPlayer.vx *= 0.92; ppPlayer.vy *= 0.92;
+
+  ppStepBall(dt);
+  if(!ppTryPaddleHit(ppPlayer, true)) ppTryPaddleHit(ppOpp, false);
+  ppStepParticles(dt);
+
+  const scorer = ppCheckScore();
+  if(scorer){ ppHandlePoint(scorer); }
+
+  ppRender();
+  if(!ppOver) ppAnimId = requestAnimationFrame(ppLoop);
+}
+
+// ---- Rendu ----
+function ppDrawPaddle(p, color, colorDark){
+  const ctx = ppCtx;
+  ctx.save();
+  // manche (poignée) qui dépasse du bord, comme sur la référence
+  const handleW = p.r*0.5, handleH = p.r*0.9;
+  const handleDir = p.y < ppH/2 ? -1 : 1;
+  ctx.fillStyle = colorDark;
+  ctx.fillRect(p.x-handleW/2, p.y+handleDir*p.r*0.15, handleW, handleDir*handleH);
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.lineWidth = Math.max(2, p.r*0.14);
+  ctx.strokeStyle = '#12120f';
+  ctx.stroke();
+  ctx.restore();
+}
+function ppRender(){
+  const ctx = ppCtx;
+  ctx.clearRect(0,0,ppW,ppH);
+  ctx.save();
+  if(ppShake > 0){
+    ctx.translate((Math.random()-0.5)*ppShake, (Math.random()-0.5)*ppShake);
+  }
+  // terrain
+  ctx.fillStyle = '#5cb04e';
+  ctx.fillRect(0,0,ppW,ppH);
+  ctx.lineWidth = Math.max(4, ppW*0.03);
+  ctx.strokeStyle = '#14140f';
+  ctx.strokeRect(ctx.lineWidth/2, ctx.lineWidth/2, ppW-ctx.lineWidth, ppH-ctx.lineWidth);
+  // ligne centrale verticale
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = Math.max(2, ppW*0.012);
+  ctx.beginPath(); ctx.moveTo(ppW/2, ctx.lineWidth); ctx.lineTo(ppW/2, ppH-ctx.lineWidth); ctx.stroke();
+  // filet horizontal (double ligne) au milieu
+  const midY = ppH/2;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, midY-3, ppW, 3);
+  ctx.fillRect(0, midY+3, ppW, 2);
+
+  // traînée de la balle
+  for(let i=0;i<ppTrail.length;i++){
+    const t = ppTrail[i];
+    const a = (i+1)/ppTrail.length;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, ppBall.r*a*0.85, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,255,255,${a*0.35})`;
+    ctx.fill();
+  }
+
+  // particules
+  for(const pt of ppParticles){
+    ctx.globalAlpha = Math.max(0, pt.life);
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 2.6, 0, Math.PI*2);
+    ctx.fillStyle = pt.color;
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // raquettes
+  ppDrawPaddle(ppOpp, '#3ec6f0', '#1c8fb8');
+  ppDrawPaddle(ppPlayer, '#ef6461', '#b8433f');
+
+  // balle
+  ctx.beginPath();
+  ctx.arc(ppBall.x, ppBall.y, ppBall.r, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#14140f';
+  ctx.stroke();
+  ctx.restore();
+}
+
+function ppEndGame(winner){
+  ppOver = true;
   playFeedback('record');
   document.getElementById('ping-table-wrap').style.display = 'none';
   document.getElementById('ping-endgame-panel').style.display = 'block';
-  const winnerLabel = winner==='near' ? 'Toi' : (pp3dMode==='bot' ? 'Le bot' : 'Joueur 2');
-  document.getElementById('ping-endgame-title').textContent = `🎉 ${winnerLabel} gagne ! (${pp3dScoreNear} - ${pp3dScoreFar})`;
-  if(pp3dMode==='bot' && winner==='near'){
+  const winnerLabel = winner==='player' ? 'Toi' : (ppMode==='bot' ? 'Le bot' : 'Joueur 2');
+  document.getElementById('ping-endgame-title').textContent = `🎉 ${winnerLabel} gagne ! (${ppScoreYou} - ${ppScoreOpp})`;
+  if(ppMode==='bot' && winner==='player'){
     const wins = parseInt(localStorage.getItem('ppWins')||'0') + 1;
     localStorage.setItem('ppWins', wins);
   }
-  pp3dRenderEndgameBoard();
-  pp3dTeardownOrientationWatcher();
+  ppRenderEndgameBoard();
+  ppDetachInput();
+  ppTeardownResize();
 }
-function pp3dRenderEndgameBoard(){
+function ppRenderEndgameBoard(){
   const el = document.getElementById('ping-endgame-board');
   const myWins = parseInt(localStorage.getItem('ppWins')||'0');
-  let world = [...pp3dWorldMock];
+  let world = [...ppWorldMock];
   world.push({name:'Toi', wins:myWins, me:true});
   world.sort((a,b)=>b.wins-a.wins);
   el.innerHTML = `<div style="font-size:13px; font-weight:700; color:var(--muted); margin:10px 0 4px;">🏆 Victoires contre le bot</div>` +

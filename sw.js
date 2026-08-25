@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paradoxes-v50';
+const CACHE_NAME = 'paradoxes-v51';
 const ASSETS = [
   './',
   './index.html',
@@ -8,7 +8,6 @@ const ASSETS = [
   './bgmusic.mp3',
   './vendor/chess.esm.js',
   './vendor/matter.min.js',
-  './vendor/three.module.min.js',
   './icons/memory.png',
   './icons/puzzle15.png',
   './icons/snake.png',
