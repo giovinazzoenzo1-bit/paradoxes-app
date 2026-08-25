@@ -6828,10 +6828,13 @@ function ppUpdateCombo(){
 function ppResize(){
   const holder = document.getElementById('ping-canvas-holder');
   const availW = holder.clientWidth, availH = holder.clientHeight;
-  const ratio = 0.43; // largeur/hauteur du terrain, aligné sur la référence (table haute et étroite)
-  let w = availW, h = w/ratio;
-  if(h > availH){ h = availH; w = h*ratio; }
-  ppW = Math.round(w); ppH = Math.round(h);
+  // Remplit le conteneur au maximum (comme la référence, qui occupe quasiment tout l'écran) —
+  // pas de ratio cible imposé : un ratio fixe, même "portrait", finit par RÉTRÉCIR le terrain
+  // dès qu'un des deux axes est plus généreux que l'autre sur un device donné. On garde juste
+  // une toute petite marge pour l'ombre portée du canvas.
+  const w = Math.round(availW*0.97);
+  const h = Math.round(availH*0.99);
+  ppW = w; ppH = h;
   ppDpr = Math.min(window.devicePixelRatio||1, 2.5);
   ppCanvas.style.width = ppW+'px';
   ppCanvas.style.height = ppH+'px';
