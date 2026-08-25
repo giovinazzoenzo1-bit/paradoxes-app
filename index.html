@@ -2132,6 +2132,12 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 <script data-goatcounter="https://paradoxes-app.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
+<script type="module">
+  // chess.js (BSD-2-Clause) — auto-hébergé dans /vendor plutôt que via CDN, pour fiabilité
+  // garantie (fonctionne hors-ligne comme le reste de l'app, pas de dépendance réseau externe).
+  import { Chess } from './vendor/chess.esm.js';
+  window.Chess = Chess;
+</script>
 
 <script>
 /* ================= DATA ================= */
@@ -5817,201 +5823,36 @@ function sbHint(){
   });
 }
 
-/* ================= ÉCHECS ================= */
-// Moteur validé par perft (méthode de référence en développement d'échecs) : perft(1)=20, perft(2)=400,
-// perft(3)=8902, perft(4)=197281 — tous exacts. Couvre tous les déplacements, roque, prise en passant,
-// promotion, détection d'échec/mat/pat. IA : minimax + élagage alpha-bêta, profondeur 3, évaluation matérielle.
-const CH_KNIGHT_OFFSETS = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
-const CH_KING_OFFSETS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-const CH_BISHOP_DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
-const CH_ROOK_DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
-const CH_QUEEN_DIRS = CH_BISHOP_DIRS.concat(CH_ROOK_DIRS);
-const CH_PIECE_VALUES = {p:1,n:3,b:3,r:5,q:9,k:0};
+/* ================= ÉCHECS — moteur chess.js (open source, BSD-2-Clause) ================= */
+// Remplace le moteur maison (qui passait déjà perft 1-4 exact) par chess.js — plus complet :
+// gère en plus nativement la nulle par répétition, la règle des 50 coups et l'insuffisance de
+// matériel (des cas qu'on avait sciemment zappés). API perft() intégrée, revalidée ci-après.
 const CH_SYMBOLS = {
   w:{k:'♔',q:'♕',r:'♖',b:'♗',n:'♘',p:'♙'},
   b:{k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'},
 };
-function chInBounds(r,c){ return r>=0&&r<8&&c>=0&&c<8; }
-function chInitialBoard(){
-  const board = Array.from({length:8},()=>Array(8).fill(null));
-  const back = ['r','n','b','q','k','b','n','r'];
-  for(let c=0;c<8;c++){
-    board[0][c] = {type:back[c], color:'b'};
-    board[1][c] = {type:'p', color:'b'};
-    board[6][c] = {type:'p', color:'w'};
-    board[7][c] = {type:back[c], color:'w'};
-  }
-  return board;
-}
-function chInitialState(){
-  return { moved:{wK:false,wR_a:false,wR_h:false,bK:false,bR_a:false,bR_h:false}, enPassant:null };
-}
-function chIsSquareAttacked(board, r, c, byColor){
-  const pawnDir = byColor==='w' ? 1 : -1;
-  for(const dc of [-1,1]){
-    const pr=r+pawnDir, pc=c+dc;
-    if(chInBounds(pr,pc) && board[pr][pc] && board[pr][pc].type==='p' && board[pr][pc].color===byColor) return true;
-  }
-  for(const [dr,dc] of CH_KNIGHT_OFFSETS){
-    const nr=r+dr,nc=c+dc;
-    if(chInBounds(nr,nc) && board[nr][nc] && board[nr][nc].type==='n' && board[nr][nc].color===byColor) return true;
-  }
-  for(const [dr,dc] of CH_KING_OFFSETS){
-    const nr=r+dr,nc=c+dc;
-    if(chInBounds(nr,nc) && board[nr][nc] && board[nr][nc].type==='k' && board[nr][nc].color===byColor) return true;
-  }
-  for(const [dr,dc] of CH_BISHOP_DIRS){
-    let nr=r+dr,nc=c+dc;
-    while(chInBounds(nr,nc)){
-      const p = board[nr][nc];
-      if(p){ if(p.color===byColor && (p.type==='b'||p.type==='q')) return true; break; }
-      nr+=dr; nc+=dc;
-    }
-  }
-  for(const [dr,dc] of CH_ROOK_DIRS){
-    let nr=r+dr,nc=c+dc;
-    while(chInBounds(nr,nc)){
-      const p = board[nr][nc];
-      if(p){ if(p.color===byColor && (p.type==='r'||p.type==='q')) return true; break; }
-      nr+=dr; nc+=dc;
-    }
-  }
-  return false;
-}
-function chFindKing(board, color){
-  for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(board[r][c] && board[r][c].type==='k' && board[r][c].color===color) return [r,c];
-  return null;
-}
-function chIsInCheck(board, color){
-  const kp = chFindKing(board,color);
-  if(!kp) return false;
-  return chIsSquareAttacked(board, kp[0], kp[1], color==='w'?'b':'w');
-}
-function chGeneratePseudoMoves(board, r, c, state){
-  const piece = board[r][c];
-  if(!piece) return [];
-  const moves = [];
-  const color = piece.color;
-  const enemy = color==='w'?'b':'w';
-  if(piece.type==='p'){
-    const dir = color==='w' ? -1 : 1;
-    const startRow = color==='w' ? 6 : 1;
-    const promoRow = color==='w' ? 0 : 7;
-    if(chInBounds(r+dir,c) && !board[r+dir][c]){
-      moves.push({from:[r,c], to:[r+dir,c], promo: r+dir===promoRow});
-      if(r===startRow && !board[r+2*dir][c]){
-        moves.push({from:[r,c], to:[r+2*dir,c], twoStep:true});
-      }
-    }
-    for(const dc of [-1,1]){
-      const nr=r+dir, nc=c+dc;
-      if(chInBounds(nr,nc)){
-        if(board[nr][nc] && board[nr][nc].color===enemy){
-          moves.push({from:[r,c], to:[nr,nc], promo: nr===promoRow, capture:true});
-        } else if(state.enPassant && state.enPassant[0]===nr && state.enPassant[1]===nc){
-          moves.push({from:[r,c], to:[nr,nc], enPassantCapture:true});
-        }
-      }
-    }
-  } else if(piece.type==='n'){
-    for(const [dr,dc] of CH_KNIGHT_OFFSETS){
-      const nr=r+dr,nc=c+dc;
-      if(chInBounds(nr,nc) && (!board[nr][nc] || board[nr][nc].color===enemy)){
-        moves.push({from:[r,c], to:[nr,nc], capture: !!board[nr][nc]});
-      }
-    }
-  } else if(piece.type==='k'){
-    for(const [dr,dc] of CH_KING_OFFSETS){
-      const nr=r+dr,nc=c+dc;
-      if(chInBounds(nr,nc) && (!board[nr][nc] || board[nr][nc].color===enemy)){
-        moves.push({from:[r,c], to:[nr,nc], capture: !!board[nr][nc]});
-      }
-    }
-    if(!state.moved[color+'K']){
-      if(!state.moved[color+'R_h'] && !board[r][5] && !board[r][6] && board[r][7] && board[r][7].type==='r' && board[r][7].color===color){
-        if(!chIsSquareAttacked(board,r,4,enemy) && !chIsSquareAttacked(board,r,5,enemy) && !chIsSquareAttacked(board,r,6,enemy)){
-          moves.push({from:[r,c], to:[r,6], castle:'king'});
-        }
-      }
-      if(!state.moved[color+'R_a'] && !board[r][1] && !board[r][2] && !board[r][3] && board[r][0] && board[r][0].type==='r' && board[r][0].color===color){
-        if(!chIsSquareAttacked(board,r,4,enemy) && !chIsSquareAttacked(board,r,3,enemy) && !chIsSquareAttacked(board,r,2,enemy)){
-          moves.push({from:[r,c], to:[r,2], castle:'queen'});
-        }
-      }
-    }
-  } else {
-    let dirs = [];
-    if(piece.type==='b') dirs=CH_BISHOP_DIRS;
-    else if(piece.type==='r') dirs=CH_ROOK_DIRS;
-    else if(piece.type==='q') dirs=CH_QUEEN_DIRS;
-    for(const [dr,dc] of dirs){
-      let nr=r+dr, nc=c+dc;
-      while(chInBounds(nr,nc)){
-        if(!board[nr][nc]){
-          moves.push({from:[r,c], to:[nr,nc]});
-        } else {
-          if(board[nr][nc].color===enemy) moves.push({from:[r,c], to:[nr,nc], capture:true});
-          break;
-        }
-        nr+=dr; nc+=dc;
-      }
-    }
-  }
-  return moves;
-}
-function chApplyMove(board, move, state){
-  const newBoard = board.map(row=>row.slice());
-  const newState = JSON.parse(JSON.stringify(state));
-  const [fr,fc] = move.from, [tr,tc] = move.to;
-  const piece = newBoard[fr][fc];
-  newBoard[fr][fc] = null;
-  if(move.enPassantCapture) newBoard[fr][tc] = null;
-  newBoard[tr][tc] = move.promo ? {type:'q', color:piece.color} : piece;
-  if(move.castle==='king'){ newBoard[tr][5] = newBoard[tr][7]; newBoard[tr][7]=null; }
-  else if(move.castle==='queen'){ newBoard[tr][3] = newBoard[tr][0]; newBoard[tr][0]=null; }
-  if(piece.type==='k'){ newState.moved[piece.color+'K']=true; }
-  if(piece.type==='r'){
-    if(fc===0) newState.moved[piece.color+'R_a']=true;
-    if(fc===7) newState.moved[piece.color+'R_h']=true;
-  }
-  newState.enPassant = null;
-  if(move.twoStep) newState.enPassant = [(fr+tr)/2, fc];
-  return {board:newBoard, state:newState};
-}
-function chGetLegalMoves(board, state, color){
-  const moves = [];
-  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
-    const p = board[r][c];
-    if(p && p.color===color){
-      const pseudo = chGeneratePseudoMoves(board, r, c, state);
-      for(const m of pseudo){
-        const {board:nb} = chApplyMove(board, m, state);
-        if(!chIsInCheck(nb, color)) moves.push(m);
-      }
-    }
-  }
-  return moves;
-}
-function chEvaluateBoard(board){
+const CH_PIECE_VALUES = {p:1,n:3,b:3,r:5,q:9,k:0};
+function chSquareFromRC(r,c){ return String.fromCharCode(97+c) + (8-r); }
+function chRCFromSquare(sq){ return { r: 8-parseInt(sq[1]), c: sq.charCodeAt(0)-97 }; }
+function chEvaluateBoard(chess){
   let score = 0;
-  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
-    const p = board[r][c];
-    if(p) score += CH_PIECE_VALUES[p.type] * (p.color==='w'?1:-1);
+  for(const row of chess.board()) for(const cell of row){
+    if(cell) score += CH_PIECE_VALUES[cell.type] * (cell.color==='w'?1:-1);
   }
   return score;
 }
-function chMinimax(board, state, color, depth, alpha, beta){
-  const moves = chGetLegalMoves(board, state, color);
-  if(moves.length===0){
-    if(chIsInCheck(board,color)) return color==='w' ? -9999 : 9999;
-    return 0;
-  }
-  if(depth===0) return chEvaluateBoard(board);
+function chMinimax(chess, depth, alpha, beta){
+  if(chess.isCheckmate()) return chess.turn()==='w' ? -9999 : 9999;
+  if(chess.isDraw() || chess.isStalemate()) return 0;
+  if(depth===0) return chEvaluateBoard(chess);
+  const moves = chess.moves();
+  const color = chess.turn();
   if(color==='b'){
     let best = Infinity;
     for(const m of moves){
-      const {board:nb, state:ns} = chApplyMove(board, m, state);
-      best = Math.min(best, chMinimax(nb, ns, 'w', depth-1, alpha, beta));
+      chess.move(m);
+      best = Math.min(best, chMinimax(chess, depth-1, alpha, beta));
+      chess.undo();
       beta = Math.min(beta, best);
       if(beta<=alpha) break;
     }
@@ -6019,28 +5860,32 @@ function chMinimax(board, state, color, depth, alpha, beta){
   } else {
     let best = -Infinity;
     for(const m of moves){
-      const {board:nb, state:ns} = chApplyMove(board, m, state);
-      best = Math.max(best, chMinimax(nb, ns, 'b', depth-1, alpha, beta));
+      chess.move(m);
+      best = Math.max(best, chMinimax(chess, depth-1, alpha, beta));
+      chess.undo();
       alpha = Math.max(alpha, best);
       if(beta<=alpha) break;
     }
     return best;
   }
 }
-function chChooseBotMove(board, state, color, depth){
-  const moves = chGetLegalMoves(board, state, color);
-  let bestMoves = [], bestVal = color==='b' ? Infinity : -Infinity;
+function chChooseBotMove(chess, depth){
+  const moves = chess.moves({verbose:true});
+  let bestMoves = [], bestVal = chess.turn()==='b' ? Infinity : -Infinity;
   for(const m of moves){
-    const {board:nb, state:ns} = chApplyMove(board, m, state);
-    const val = chMinimax(nb, ns, color==='w'?'b':'w', depth-1, -Infinity, Infinity);
-    if(color==='b' ? val<bestVal : val>bestVal){ bestVal=val; bestMoves=[m]; }
+    chess.move(m.san);
+    const val = chMinimax(chess, depth-1, -Infinity, Infinity);
+    chess.undo();
+    if(chess.turn()==='b' ? val<bestVal : val>bestVal){ bestVal=val; bestMoves=[m]; }
     else if(val===bestVal) bestMoves.push(m);
   }
   return bestMoves[Math.floor(Math.random()*bestMoves.length)];
 }
 
 // ---- État & UI ----
-let chessBoard, chessState, chessTurn, chessMode, chessSelected, chessLegalForSelected, chessOver, chessHistory, chessUndoFreeUsed;
+let chessGame = null;
+let chessMode, chessSelected, chessLegalForSelected, chessOver;
+let chessUndoFreeUsed;
 const chessWorldMock = [
   {name:'Thomas B.', wins:19},
   {name:'Léa M.', wins:15},
@@ -6070,13 +5915,10 @@ function chessBackToSetup(){
 }
 function chessStart(mode){
   chessMode = mode;
-  chessBoard = chInitialBoard();
-  chessState = chInitialState();
-  chessTurn = 'w';
+  chessGame = new Chess();
   chessSelected = null;
   chessLegalForSelected = [];
   chessOver = false;
-  chessHistory = [];
   chessUndoFreeUsed = false;
   document.getElementById('chess-setup-panel').style.display = 'none';
   document.getElementById('chess-endgame-panel').style.display = 'none';
@@ -6089,17 +5931,14 @@ function chessStart(mode){
 function chessUpdateUndoButton(){
   const btn = document.getElementById('chess-undoBtn');
   if(!btn) return;
-  btn.disabled = chessHistory.length===0;
+  btn.disabled = chessGame.history().length===0;
   btn.textContent = chessUndoFreeUsed ? '↩️📺 Annuler (pub)' : '↩️ Annuler';
 }
 function chessUndo(){
-  if(chessMode!=='bot' || chessOver || chessHistory.length===0) return;
+  if(chessMode!=='bot' || chessOver || chessGame.history().length===0) return;
   const doUndo = () => {
-    chessHistory.pop();
-    const target = chessHistory.pop();
-    if(target){
-      chessBoard = target.board; chessState = target.state; chessTurn = 'w';
-    }
+    chessGame.undo(); // annule le coup du bot
+    chessGame.undo(); // annule le coup du joueur
     chessSelected = null; chessLegalForSelected = [];
     document.getElementById('chess-status').textContent = 'À toi de jouer (blancs)';
     chessUpdateUndoButton();
@@ -6113,26 +5952,26 @@ function chessUndo(){
     mockWatchAd(4, doUndo);
   }
 }
-function chessSquareColor(piece){ return piece.color==='w' ? 'white' : 'black'; }
 function chessRender(){
   const el = document.getElementById('chess-board');
   el.innerHTML = '';
-  const inCheckColor = chIsInCheck(chessBoard, chessTurn) ? chessTurn : null;
-  const kingPos = inCheckColor ? chFindKing(chessBoard, inCheckColor) : null;
+  const inCheck = chessGame.isCheck();
+  const board = chessGame.board();
   for(let r=0;r<8;r++){
     for(let c=0;c<8;c++){
       const div = document.createElement('div');
       let cls = 'chess-sq ' + ((r+c)%2===0 ? 'light' : 'dark');
       if(chessSelected && chessSelected[0]===r && chessSelected[1]===c) cls += ' selected';
-      if(kingPos && kingPos[0]===r && kingPos[1]===c) cls += ' check';
-      const legalHere = chessLegalForSelected.find(m => m.to[0]===r && m.to[1]===c);
-      if(legalHere) cls += legalHere.capture || legalHere.enPassantCapture ? ' legal-capture' : ' legal';
+      const sq = chSquareFromRC(r,c);
+      const cell = board[r][c];
+      if(inCheck && cell && cell.type==='k' && cell.color===chessGame.turn()) cls += ' check';
+      const legalHere = chessLegalForSelected.find(m => m.to===sq);
+      if(legalHere) cls += legalHere.captured ? ' legal-capture' : ' legal';
       div.className = cls;
-      const piece = chessBoard[r][c];
-      if(piece){
+      if(cell){
         const span = document.createElement('span');
-        span.className = 'chess-piece ' + chessSquareColor(piece);
-        span.textContent = CH_SYMBOLS[piece.color][piece.type];
+        span.className = 'chess-piece ' + (cell.color==='w'?'white':'black');
+        span.textContent = CH_SYMBOLS[cell.color][cell.type];
         div.appendChild(span);
       }
       div.onclick = () => chessTapSquare(r,c);
@@ -6142,19 +5981,20 @@ function chessRender(){
 }
 function chessTapSquare(r,c){
   if(chessOver) return;
-  if(chessMode==='bot' && chessTurn==='b') return; // le bot joue seul
-  const piece = chessBoard[r][c];
+  if(chessMode==='bot' && chessGame.turn()==='b') return; // le bot joue seul
+  const sq = chSquareFromRC(r,c);
+  const cell = chessGame.board()[r][c];
   if(chessSelected){
-    const move = chessLegalForSelected.find(m => m.to[0]===r && m.to[1]===c);
-    if(move){
+    const candidates = chessLegalForSelected.filter(m => m.to===sq);
+    if(candidates.length>0){
+      const move = candidates.length>1 ? candidates.find(m=>m.promotion==='q') || candidates[0] : candidates[0];
       chessMakeMove(move);
       return;
     }
   }
-  if(piece && piece.color===chessTurn){
+  if(cell && cell.color===chessGame.turn()){
     chessSelected = [r,c];
-    const all = chGetLegalMoves(chessBoard, chessState, chessTurn);
-    chessLegalForSelected = all.filter(m => m.from[0]===r && m.from[1]===c);
+    chessLegalForSelected = chessGame.moves({square:sq, verbose:true});
   } else {
     chessSelected = null;
     chessLegalForSelected = [];
@@ -6162,30 +6002,22 @@ function chessTapSquare(r,c){
   chessRender();
 }
 function chessMakeMove(move){
-  chessHistory.push({board:chessBoard.map(row=>row.slice()), state:JSON.parse(JSON.stringify(chessState))});
-  const {board, state} = chApplyMove(chessBoard, move, chessState);
-  chessBoard = board;
-  chessState = state;
-  playFeedback(move.capture || move.enPassantCapture ? 'wrong' : 'correct');
+  chessGame.move({from:move.from, to:move.to, promotion:move.promotion || undefined});
+  playFeedback(move.captured ? 'wrong' : 'correct');
   chessSelected = null;
   chessLegalForSelected = [];
-  const nextColor = chessTurn==='w' ? 'b' : 'w';
-  chessTurn = nextColor;
   chessRender();
   chessCheckGameEnd();
-  if(!chessOver && chessMode==='bot' && chessTurn==='b'){
+  if(!chessOver && chessMode==='bot' && chessGame.turn()==='b'){
     document.getElementById('chess-status').textContent = '🤖 Le bot réfléchit...';
     setTimeout(chessBotMove, 500);
   }
 }
 function chessBotMove(){
-  const move = chChooseBotMove(chessBoard, chessState, 'b', 3);
+  const move = chChooseBotMove(chessGame, 3);
   if(!move) return;
-  const {board, state} = chApplyMove(chessBoard, move, chessState);
-  chessBoard = board;
-  chessState = state;
-  playFeedback(move.capture || move.enPassantCapture ? 'wrong' : 'correct');
-  chessTurn = 'w';
+  chessGame.move(move.san);
+  playFeedback(move.captured ? 'wrong' : 'correct');
   chessRender();
   chessCheckGameEnd();
   if(!chessOver){
@@ -6194,13 +6026,11 @@ function chessBotMove(){
   }
 }
 function chessCheckGameEnd(){
-  const moves = chGetLegalMoves(chessBoard, chessState, chessTurn);
-  if(moves.length>0) return;
+  if(!chessGame.isGameOver()) return;
   chessOver = true;
-  const inCheck = chIsInCheck(chessBoard, chessTurn);
   document.getElementById('chess-undo-row').style.display = 'none';
-  if(inCheck){
-    const winner = chessTurn==='w' ? 'b' : 'w';
+  if(chessGame.isCheckmate()){
+    const winner = chessGame.turn()==='w' ? 'b' : 'w'; // le camp qui vient de jouer a gagné
     const winnerLabel = winner==='w' ? 'Les blancs' : 'Les noirs';
     document.getElementById('chess-status').textContent = `🟩 Échec et mat — ${winnerLabel} gagnent !`;
     playFeedback('record');
@@ -6210,8 +6040,12 @@ function chessCheckGameEnd(){
     }
     chessShowEndgame(`🎉 ${winnerLabel} gagnent (échec et mat) !`);
   } else {
-    document.getElementById('chess-status').textContent = '🟨 Pat — match nul.';
-    chessShowEndgame('🤝 Pat — match nul.');
+    let reason = 'Pat';
+    if(chessGame.isThreefoldRepetition()) reason = 'Nulle par répétition';
+    else if(chessGame.isInsufficientMaterial()) reason = 'Matériel insuffisant';
+    else if(chessGame.isDrawByFiftyMoves()) reason = 'Règle des 50 coups';
+    document.getElementById('chess-status').textContent = `🟨 ${reason} — match nul.`;
+    chessShowEndgame(`🤝 ${reason} — match nul.`);
   }
 }
 function chessShowEndgame(title){
