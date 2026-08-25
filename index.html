@@ -717,6 +717,29 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   grid-area:status; text-align:center; color:#4a3b38; font-size:11px; font-weight:700;
 }
 
+/* ---------- PING-PONG — table plein écran en mode paysage (réutilise .bil-round-btn / .bil-scoreboard / .bil-table-area) ---------- */
+#ping-table-wrap{
+  position:fixed; inset:0; z-index:500; background:#0a2e1a;
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+#ping-landscape-box{
+  width:100%; height:100%; box-sizing:border-box; padding:10px 14px;
+  display:grid; grid-template-columns:50px 1fr 50px; grid-template-rows:56px 1fr 22px;
+  grid-template-areas:"exit score reset" "table table table" "status status status";
+  gap:6px;
+}
+#ping-table-wrap.pp-force-rotate #ping-landscape-box{
+  position:absolute; top:50%; left:50%; width:100vh; height:100vw;
+  transform:translate(-50%,-50%) rotate(90deg); transform-origin:center center;
+}
+#ping-scoreboard .bil-score-label{color:#8fc95f;}
+#ping-score-right .bil-score-label{color:#ef6461;}
+#ping-canvas{
+  max-width:100%; max-height:100%; border-radius:10px; touch-action:none; cursor:pointer;
+  background:#1a7a3a; box-shadow:0 6px 18px rgba(0,0,0,0.35);
+}
+#ping-status{color:#eef0f6;}
+
 /* ---------- ÉCHECS ---------- */
 .chess-board{
   display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr);
@@ -942,6 +965,13 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         <div class="txt"><h3>Billard</h3><p>8-ball, entraînement solo ou à 2 en pass-and-play.</p></div>
       </div>
       <div class="btn-row"><button class="btn primary" onclick="openBilliard()">Jouer</button></div>
+    </div>
+    <div class="panel">
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/pingpong.png" alt="Ping-pong">
+        <div class="txt"><h3>Ping-pong</h3><p>Table plein écran, vs bot ou à 2 en simultané.</p></div>
+      </div>
+      <div class="btn-row"><button class="btn primary" onclick="openPingpong()">Jouer</button></div>
     </div>
     <div class="panel">
       <div class="game-panel-header">
@@ -1496,6 +1526,55 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         </div>
       </div>
       <div class="bil-status-line" id="bil-status"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PING-PONG ============ -->
+<div class="screen" id="game-pingpong">
+  <div class="game-wrap" id="ping-setup-wrap">
+    <div class="topbar">
+      <button class="back-btn" onclick="openJeux()">← Retour</button>
+    </div>
+    <div class="game-title">🏓 Ping-pong</div>
+
+    <div class="panel" id="ping-setup-panel">
+      <h2>Choisis un mode</h2>
+      <div class="btn-row" style="flex-direction:column;">
+        <button class="btn primary" onclick="ppStart('bot')">🤖 Contre un bot</button>
+        <button class="btn primary" onclick="ppStart('amis')">👥 Entre amis (2 joueurs en simultané)</button>
+      </div>
+      <p class="footnote" style="margin-top:14px;">Entre amis : chacun glisse le doigt sur sa moitié de l'écran pour contrôler sa raquette, en même temps. Premier à 11 points, victoire par 2 points d'écart (vraie règle du ping-pong).</p>
+      <p class="footnote" style="margin-top:8px;">🔄 La table s'affiche en plein écran, en mode paysage.</p>
+      <div class="footnote" id="ping-winstat" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="panel" id="ping-endgame-panel" style="display:none; text-align:center;">
+      <h2 id="ping-endgame-title"></h2>
+      <div id="ping-endgame-board"></div>
+      <div class="footnote" style="margin-top:8px;">Aperçu fictif, pas de vrai backend — voir Confidentialité.</div>
+      <div class="btn-row" style="justify-content:center; margin-top:12px;">
+        <button class="btn primary" onclick="ppBackToSetup()">Rejouer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ping-table-wrap" style="display:none;">
+    <div id="ping-landscape-box">
+      <button class="bil-round-btn" id="ping-exitBtn" onclick="ppExitTable()">←</button>
+      <div class="bil-scoreboard" id="ping-scoreboard">
+        <div class="bil-scoreboard-tab" id="ping-modeTab">BOT</div>
+        <div class="bil-scoreboard-row">
+          <div class="bil-score-side" id="ping-score-left"><span class="bil-score-label">TOI</span><span class="bil-score-value">0</span></div>
+          <div class="bil-score-vs">VS</div>
+          <div class="bil-score-side" id="ping-score-right"><span class="bil-score-label">BOT</span><span class="bil-score-value">0</span></div>
+        </div>
+      </div>
+      <button class="bil-round-btn" id="ping-resetBtn" onclick="ppStart(ppMode)">↺</button>
+      <div class="bil-table-area">
+        <canvas id="ping-canvas" width="900" height="450"></canvas>
+      </div>
+      <div class="bil-status-line" id="ping-status"></div>
     </div>
   </div>
 </div>
@@ -6617,6 +6696,302 @@ function bilDraw(){
   }
 }
 
+/* ================= PING-PONG (Matter.js, réutilise le moteur déjà éprouvé sur le Billard) ================= */
+const PP_TABLE_W = 900, PP_TABLE_H = 450;
+const PP_BALL_R = 10;
+const PP_PADDLE_W = 14, PP_PADDLE_H = 90;
+const PP_WALL_T = 20;
+const PP_BASE_SPEED = 6;
+const PP_SPEED_INCREASE = 1.04;
+const PP_MAX_SPEED = 16;
+const PP_SUBSTEPS = 8;
+const PP_PADDLE_MARGIN = 30;
+let ppEngine = null;
+let ppBall = null, ppLeftPaddle = null, ppRightPaddle = null;
+let ppLeftY = PP_TABLE_H/2, ppRightY = PP_TABLE_H/2;
+let ppMode = 'bot';
+let ppScoreLeft = 0, ppScoreRight = 0;
+let ppOver = false;
+let ppAnimId = null;
+let ppCanvas, ppCtx;
+let ppInputAttached = false;
+let ppTouches = {};
+let ppOrientationHandlerRef = null;
+let ppLastBallSpeed = 0; // vitesse de la balle capturée juste AVANT chaque pas physique (voir ppDeflect)
+const ppWorldMock = [
+  {name:'Sofia K.', wins:22},
+  {name:'Thomas B.', wins:17},
+  {name:'Léa M.', wins:13},
+  {name:'Nina P.', wins:9},
+  {name:'Adam R.', wins:5},
+];
+function ppCreateEngine(){
+  const engine = Matter.Engine.create();
+  engine.gravity.x = 0; engine.gravity.y = 0;
+  const walls = [
+    Matter.Bodies.rectangle(PP_TABLE_W/2, -PP_WALL_T/2, PP_TABLE_W, PP_WALL_T, {isStatic:true, restitution:1, label:'wall'}),
+    Matter.Bodies.rectangle(PP_TABLE_W/2, PP_TABLE_H+PP_WALL_T/2, PP_TABLE_W, PP_WALL_T, {isStatic:true, restitution:1, label:'wall'}),
+  ];
+  Matter.Composite.add(engine.world, walls);
+  Matter.Events.on(engine, 'collisionStart', (event) => {
+    for(const pair of event.pairs){
+      const a = pair.bodyA, b = pair.bodyB;
+      let paddle = null, ball = null;
+      if(a.label==='paddle' && b.label==='ball'){ paddle=a; ball=b; }
+      else if(b.label==='paddle' && a.label==='ball'){ paddle=b; ball=a; }
+      if(paddle && ball){
+        ppDeflect(ball, paddle, paddle===ppLeftPaddle);
+        playFeedback('correct');
+      }
+    }
+  });
+  return engine;
+}
+function ppMakePaddle(x,y){
+  // isSensor:true est indispensable ici : Matter expose une vitesse TRANSITOIRE/intermédiaire de
+  // son pipeline de résolution interne au moment de l'événement 'collisionStart' (confirmé en test :
+  // ball.velocity y apparaît déjà réduite à ~12% de sa valeur réelle, puis revient à la normale la
+  // frame suivante si on ne la modifie pas). En passant la raquette en capteur, Matter n'applique
+  // plus aucune résolution physique automatique — on gère 100% du rebond nous-mêmes dans ppDeflect().
+  return Matter.Bodies.rectangle(x, y, PP_PADDLE_W, PP_PADDLE_H, {isStatic:true, isSensor:true, label:'paddle'});
+}
+function ppMakeBall(){
+  return Matter.Bodies.circle(PP_TABLE_W/2, PP_TABLE_H/2, PP_BALL_R, {restitution:1, friction:0, frictionAir:0, label:'ball'});
+}
+// Déflexion classique façon Pong : l'angle de sortie dépend du point d'impact sur la raquette,
+// la vitesse augmente légèrement à chaque échange (plafonnée) — testé unitairement.
+// Important : on utilise ppLastBallSpeed (capturée AVANT le pas physique, voir ppAnimate) plutôt que
+// de relire ball.velocity ici, qui reflète un état transitoire non fiable du solveur Matter au
+// moment de l'événement de collision (bug réel trouvé et corrigé en test — voir PROJECT_STATE.md).
+// Un léger bruit aléatoire est ajouté à l'angle : sans ça, si la balle finit par toucher pile le
+// centre de la raquette (vy=0) alors que les deux côtés suivent la balle en Y, la trajectoire peut
+// se figer en un échange purement horizontal qui ne se termine jamais (trouvé en simulation de test).
+function ppDeflect(ball, paddle, movingRight){
+  const offset = (ball.position.y - paddle.position.y) / (PP_PADDLE_H/2);
+  const clamped = Math.max(-1, Math.min(1, offset));
+  const speed = Math.min(ppLastBallSpeed * PP_SPEED_INCREASE, PP_MAX_SPEED);
+  const maxAngle = Math.PI/3;
+  const jitter = (Math.random()-0.5) * 0.12;
+  const angle = clamped * maxAngle + jitter;
+  const dir = movingRight ? 1 : -1;
+  Matter.Body.setVelocity(ball, { x: dir*speed*Math.cos(angle), y: speed*Math.sin(angle) });
+}
+function ppSetupTable(){
+  ppEngine = ppCreateEngine();
+  ppLeftY = PP_TABLE_H/2;
+  ppRightY = PP_TABLE_H/2;
+  ppLeftPaddle = ppMakePaddle(PP_PADDLE_MARGIN, ppLeftY);
+  ppRightPaddle = ppMakePaddle(PP_TABLE_W-PP_PADDLE_MARGIN, ppRightY);
+  ppBall = ppMakeBall();
+  Matter.Composite.add(ppEngine.world, [ppLeftPaddle, ppRightPaddle, ppBall]);
+}
+function ppServe(direction){
+  Matter.Body.setPosition(ppBall, {x:PP_TABLE_W/2, y:PP_TABLE_H/2});
+  const angle = (Math.random()-0.5)*0.6;
+  Matter.Body.setVelocity(ppBall, {x:direction*PP_BASE_SPEED*Math.cos(angle), y:PP_BASE_SPEED*Math.sin(angle)});
+}
+function openPingpong(){
+  switchScreen('game-pingpong');
+  setActiveTab(null);
+  document.getElementById('ping-setup-panel').style.display = 'block';
+  document.getElementById('ping-endgame-panel').style.display = 'none';
+  document.getElementById('ping-table-wrap').style.display = 'none';
+  ppTeardownOrientationWatcher();
+  ppRenderWinStat();
+  trackPage('/pingpong');
+}
+function ppRenderWinStat(){
+  const el = document.getElementById('ping-winstat');
+  const wins = parseInt(localStorage.getItem('ppWins')||'0');
+  el.textContent = wins>0 ? `🏆 Tes victoires contre le bot : ${wins}` : '';
+}
+function ppBackToSetup(){
+  if(ppAnimId) cancelAnimationFrame(ppAnimId);
+  ppOver = true;
+  document.getElementById('ping-setup-panel').style.display = 'block';
+  document.getElementById('ping-endgame-panel').style.display = 'none';
+  document.getElementById('ping-table-wrap').style.display = 'none';
+  ppTeardownOrientationWatcher();
+  try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+  ppRenderWinStat();
+}
+function ppExitTable(){
+  if(ppAnimId) cancelAnimationFrame(ppAnimId);
+  ppBackToSetup();
+}
+function ppSetupOrientationWatcher(){
+  const wrap = document.getElementById('ping-table-wrap');
+  const apply = () => {
+    const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+    wrap.classList.toggle('pp-force-rotate', isPortrait);
+  };
+  apply();
+  ppOrientationHandlerRef = apply;
+  window.addEventListener('resize', ppOrientationHandlerRef);
+  window.addEventListener('orientationchange', ppOrientationHandlerRef);
+}
+function ppTeardownOrientationWatcher(){
+  if(ppOrientationHandlerRef){
+    window.removeEventListener('resize', ppOrientationHandlerRef);
+    window.removeEventListener('orientationchange', ppOrientationHandlerRef);
+    ppOrientationHandlerRef = null;
+  }
+}
+function ppStart(mode){
+  ppMode = mode;
+  ppScoreLeft = 0; ppScoreRight = 0;
+  ppOver = false;
+  ppTouches = {};
+  if(ppAnimId) cancelAnimationFrame(ppAnimId);
+  ppSetupTable();
+  ppServe(Math.random()<0.5 ? 1 : -1);
+  document.getElementById('ping-setup-panel').style.display = 'none';
+  document.getElementById('ping-endgame-panel').style.display = 'none';
+  document.getElementById('ping-table-wrap').style.display = 'flex';
+  document.getElementById('ping-modeTab').textContent = mode==='bot' ? 'CONTRE UN BOT' : 'ENTRE AMIS';
+  document.getElementById('ping-score-right').querySelector('.bil-score-label').textContent = mode==='bot' ? 'BOT' : 'JOUEUR 2';
+  ppRenderScoreboard();
+  document.getElementById('ping-status').textContent = '';
+  ppCanvas = document.getElementById('ping-canvas');
+  ppCtx = ppCanvas.getContext('2d');
+  ppAttachInput();
+  ppSetupOrientationWatcher();
+  try{ if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
+  ppAnimId = requestAnimationFrame(ppAnimate);
+}
+function ppRenderScoreboard(){
+  document.getElementById('ping-score-left').querySelector('.bil-score-value').textContent = ppScoreLeft;
+  document.getElementById('ping-score-right').querySelector('.bil-score-value').textContent = ppScoreRight;
+}
+function ppAttachInput(){
+  if(ppInputAttached) return;
+  ppInputAttached = true;
+  ppCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); for(const t of e.changedTouches) ppHandleTouch(t, true); }, {passive:false});
+  ppCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); for(const t of e.changedTouches) ppHandleTouch(t, false); }, {passive:false});
+  ppCanvas.addEventListener('touchend', (e) => { e.preventDefault(); for(const t of e.changedTouches) delete ppTouches[t.identifier]; }, {passive:false});
+  ppCanvas.addEventListener('mousemove', (e) => {
+    const rect = ppCanvas.getBoundingClientRect();
+    const scaleX = ppCanvas.width/rect.width, scaleY = ppCanvas.height/rect.height;
+    const x = (e.clientX-rect.left)*scaleX, y = (e.clientY-rect.top)*scaleY;
+    const clampedY = Math.max(PP_PADDLE_H/2, Math.min(PP_TABLE_H-PP_PADDLE_H/2, y));
+    if(x < PP_TABLE_W/2) ppLeftY = clampedY;
+    else if(ppMode==='amis') ppRightY = clampedY;
+  });
+}
+function ppHandleTouch(touch, isStart){
+  const rect = ppCanvas.getBoundingClientRect();
+  const scaleX = ppCanvas.width/rect.width, scaleY = ppCanvas.height/rect.height;
+  const x = (touch.clientX-rect.left)*scaleX;
+  const y = (touch.clientY-rect.top)*scaleY;
+  let side = ppTouches[touch.identifier];
+  if(isStart || !side){
+    side = x < PP_TABLE_W/2 ? 'left' : 'right';
+    ppTouches[touch.identifier] = side;
+  }
+  const clampedY = Math.max(PP_PADDLE_H/2, Math.min(PP_TABLE_H-PP_PADDLE_H/2, y));
+  if(side==='left') ppLeftY = clampedY;
+  else if(ppMode==='amis') ppRightY = clampedY;
+}
+function ppBotUpdate(){
+  const target = ppBall.position.y;
+  const maxSpeed = 6;
+  const diff = target - ppRightY;
+  const move = Math.max(-maxSpeed, Math.min(maxSpeed, diff));
+  ppRightY += move * 0.85; // légère imprécision volontaire pour rester battable
+  ppRightY = Math.max(PP_PADDLE_H/2, Math.min(PP_TABLE_H-PP_PADDLE_H/2, ppRightY));
+}
+function ppCheckScore(){
+  if(ppBall.position.x < -PP_BALL_R) return 'right';
+  if(ppBall.position.x > PP_TABLE_W+PP_BALL_R) return 'left';
+  return null;
+}
+function ppCheckWin(a, b){
+  if(a>=11 && a-b>=2) return 'left';
+  if(b>=11 && b-a>=2) return 'right';
+  return null;
+}
+function ppHandlePoint(scorer){
+  if(scorer==='left') ppScoreLeft++; else ppScoreRight++;
+  playFeedback(scorer==='left' ? 'objective' : 'wrong');
+  ppRenderScoreboard();
+  const winner = ppCheckWin(ppScoreLeft, ppScoreRight);
+  if(winner){
+    ppEndGame(winner);
+    return;
+  }
+  ppServe(scorer==='left' ? 1 : -1); // sert vers le camp qui vient d'encaisser, pour lui laisser sa chance
+}
+function ppAnimate(){
+  if(ppOver) return;
+  if(ppMode==='bot') ppBotUpdate();
+  Matter.Body.setPosition(ppLeftPaddle, {x:PP_PADDLE_MARGIN, y:ppLeftY});
+  Matter.Body.setPosition(ppRightPaddle, {x:PP_TABLE_W-PP_PADDLE_MARGIN, y:ppRightY});
+  ppLastBallSpeed = Math.hypot(ppBall.velocity.x, ppBall.velocity.y); // capturée avant le pas physique
+  for(let s=0;s<PP_SUBSTEPS;s++) Matter.Engine.update(ppEngine, (1000/60)/PP_SUBSTEPS);
+  const score = ppCheckScore();
+  if(score) ppHandlePoint(score);
+  ppDraw();
+  if(!ppOver) ppAnimId = requestAnimationFrame(ppAnimate);
+}
+function ppEndGame(winner){
+  ppOver = true;
+  playFeedback('record');
+  document.getElementById('ping-table-wrap').style.display = 'none';
+  document.getElementById('ping-endgame-panel').style.display = 'block';
+  const winnerLabel = winner==='left' ? 'Toi' : (ppMode==='bot' ? 'Le bot' : 'Joueur 2');
+  document.getElementById('ping-endgame-title').textContent = `🎉 ${winnerLabel} gagne ! (${ppScoreLeft} - ${ppScoreRight})`;
+  if(ppMode==='bot' && winner==='left'){
+    const wins = parseInt(localStorage.getItem('ppWins')||'0') + 1;
+    localStorage.setItem('ppWins', wins);
+  }
+  ppRenderEndgameBoard();
+  ppTeardownOrientationWatcher();
+}
+function ppRenderEndgameBoard(){
+  const el = document.getElementById('ping-endgame-board');
+  const myWins = parseInt(localStorage.getItem('ppWins')||'0');
+  let world = [...ppWorldMock];
+  world.push({name:'Toi', wins:myWins, me:true});
+  world.sort((a,b)=>b.wins-a.wins);
+  el.innerHTML = `<div style="font-size:13px; font-weight:700; color:var(--muted); margin:10px 0 4px;">🏆 Victoires contre le bot</div>` +
+    world.map((p,i) => `
+      <div class="leaderboard-row ${p.me?'me':''}">
+        <span class="leaderboard-rank">${i+1}</span>
+        <span class="leaderboard-name">${p.me?'👉 ':''}${p.name}</span>
+        <span class="leaderboard-score">${p.wins} victoires</span>
+      </div>
+    `).join('');
+}
+function ppDraw(){
+  const ctx = ppCtx;
+  if(!ctx) return;
+  ctx.clearRect(0,0,PP_TABLE_W,PP_TABLE_H);
+  ctx.fillStyle = '#1a7a3a';
+  ctx.fillRect(0,0,PP_TABLE_W,PP_TABLE_H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 4;
+  ctx.setLineDash([12,10]);
+  ctx.beginPath();
+  ctx.moveTo(PP_TABLE_W/2, 0);
+  ctx.lineTo(PP_TABLE_W/2, PP_TABLE_H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,PP_TABLE_W,4);
+  ctx.fillRect(0,PP_TABLE_H-4,PP_TABLE_W,4);
+  ctx.fillStyle = '#f5b942';
+  ctx.fillRect(PP_PADDLE_MARGIN-PP_PADDLE_W/2, ppLeftY-PP_PADDLE_H/2, PP_PADDLE_W, PP_PADDLE_H);
+  ctx.fillStyle = ppMode==='bot' ? '#ef6461' : '#5f9dc9';
+  ctx.fillRect(PP_TABLE_W-PP_PADDLE_MARGIN-PP_PADDLE_W/2, ppRightY-PP_PADDLE_H/2, PP_PADDLE_W, PP_PADDLE_H);
+  ctx.beginPath();
+  ctx.arc(ppBall.position.x, ppBall.position.y, PP_BALL_R, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
 /* ================= SON & VIBRATION ================= */
 let audioCtx = null;
 function getAudioCtx(){
@@ -6904,6 +7279,7 @@ function restoreLastScreen(){
   if(last==='game-skipbo'){ openSkipbo(); return; }
   if(last==='game-chess'){ openChess(); return; }
   if(last==='game-billiard'){ openBilliard(); return; }
+  if(last==='game-pingpong'){ openPingpong(); return; }
   if(last==='game-progres'){ openProgres(); return; }
   if(last==='game-options'){ openOptions(); return; }
   if(last==='game-privacy'){ openPrivacy(); return; }

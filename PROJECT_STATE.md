@@ -107,6 +107,24 @@ Quatrième et dernier des mini-jeux prioritaires (Solitaire, Sudoku, Puissance 4
 
 **Les 4 mini-jeux prioritaires de la liste originale sont maintenant tous ajoutés.** Restent les mini-jeux plus lourds (physique/règles complexes) à traiter en dernier : Ludo (jeu des chevaux), Skip-Bo, Échecs, Billard, Ping-pong.
 
+## v47 : Nouveau mini-jeu — Ping-pong (Matter.js), avec 2 vrais bugs de fond trouvés et corrigés en test
+Neuvième mini-jeu, table plein écran en mode paysage (même astuce CSS de rotation que le Billard), moteur Matter.js (déjà utilisé pour le Billard, zéro poids supplémentaire). 2 modes : 🤖 contre un bot, 👥 entre amis en **temps réel simultané** (contrôle multi-touch : chaque joueur glisse sur sa moitié d'écran, identifié par l'endroit où son doigt touche l'écran en premier). Système de points : premier à 11, victoire par 2 points d'écart (vraie règle du ping-pong, deuce géré).
+
+### 🟥 Bug n°1 (le plus subtil rencontré jusqu'ici) : vitesse transitoire non fiable de Matter.js
+En testant l'intégration, la balle s'arrêtait quasiment net à chaque frappe de raquette au lieu de rebondir. Debug poussé : `ball.velocity` lue **pendant** l'événement `collisionStart` reflète un état **transitoire/intermédiaire** du pipeline de résolution interne de Matter (confirmé par un test isolé : la vitesse y apparaît écrasée à ~12% de sa valeur réelle, puis **revient toute seule à la normale la frame suivante** si on n'y touche pas — donc pas une vraie perte d'énergie, juste une valeur de lecture non fiable à ce moment précis). Notre code lisait cette valeur pour calculer le rebond, héritant du problème.
+**Correctif à deux volets :**
+1. Les raquettes passent en `isSensor:true` — Matter détecte toujours la collision (événements) mais n'applique plus aucune résolution physique automatique dessus ; on gère 100% du rebond nous-mêmes.
+2. La vitesse utilisée dans `ppDeflect()` est désormais **capturée juste avant chaque pas physique** (`ppLastBallSpeed`, mise à jour en tout début de `ppAnimate()`) plutôt que relue pendant l'événement de collision.
+
+### 🟥 Bug n°2 : trajectoire dégénérée qui ne se termine jamais
+En simulant un match complet (bot vs joueur avec suivi quasi parfait), le score restait bloqué à 0-0 indéfiniment. Cause : si la balle finit par toucher une raquette pile en son centre (`vy=0`) alors que les deux côtés suivent précisément sa position en Y, la trajectoire se fige en un échange **purement horizontal** à `y` constant qui s'auto-entretient à l'infini (chaque frappe retombe encore pile au centre puisque rien ne fait dévier verticalement). Pas un bug de logique de score (`ppCheckScore`/`ppHandlePoint` fonctionnaient très bien, prouvé par test direct) — un état stable dégénéré de la physique.
+**Correctif** : léger bruit aléatoire ajouté à l'angle de sortie dans `ppDeflect()` (`± 0.06 rad`), qui rend cette trajectoire figée impossible à maintenir tout en restant imperceptible sur un rebond normal.
+
+### ✅ Validation finale
+- 5 matchs très déséquilibrés simulés (perte du côté faible garantie) : les 5 se terminent normalement à 11-0, plus de blocage
+- 8 matchs équilibrés simulés (les deux côtés avec la même imprécision) : les 8 se terminent correctement, y compris un cas de deuce réel (12-10), tous les écarts de victoire ≥2 points vérifiés
+- Aucun crash sur aucune des 13 parties complètes simulées avec le vrai module `matter-js`
+
 ## v46 : Matter.js rapatrié en local — zéro dépendance externe restante dans toute l'app
 Suite à la question légitime sur la fiabilité long terme des CDN externes : Matter.js (jusque-là chargé depuis `cdnjs.cloudflare.com`) est maintenant auto-hébergé, exactement comme chess.js.
 - Copié depuis le même package npm déjà testé (`matter-js@0.20.0`) → `vendor/matter.min.js` (83 476 octets, **fichier identique bit pour bit** à celui utilisé lors des tests d'intégration du Billard — vérifié par checksum MD5, donc aucune re-validation nécessaire)
