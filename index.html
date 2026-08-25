@@ -746,7 +746,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 }
 #ping-combo.show{ opacity:1; transform:scale(1); }
 #ping-canvas-holder{
-  flex:1; display:flex; align-items:center; justify-content:center; min-height:0; padding:4px 6px 8px;
+  display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px 6px 8px;
 }
 #ping-canvas{
   touch-action:none; border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.28); display:block;
@@ -6794,6 +6794,7 @@ function ppStart(mode){
   ppCombo = 0;
   ppOver = false;
   ppTrail = []; ppParticles = []; ppShake = 0;
+  ppPlayer.x = 0; ppOpp.x = 0; // sentinelle pour que ppResize() recentre les raquettes à ce nouveau départ
   document.getElementById('ping-setup-panel').style.display = 'none';
   document.getElementById('ping-endgame-panel').style.display = 'none';
   document.getElementById('ping-table-wrap').style.display = 'block';
@@ -6804,6 +6805,8 @@ function ppStart(mode){
   ppCanvas = document.getElementById('ping-canvas');
   ppCtx = ppCanvas.getContext('2d');
   ppResize();
+  requestAnimationFrame(ppResize); // filet de sécurité si la 1ère mesure tombe avant layout stable
+  setTimeout(ppResize, 300);       // idem si un chargement de police décale la mise en page
   ppSetupResize();
   ppAttachInput();
   ppServe(Math.random()<0.5);
@@ -6826,12 +6829,20 @@ function ppUpdateCombo(){
 
 // ---- Dimensionnement du canvas (garde un ratio portrait, s'adapte à l'espace dispo) ----
 function ppResize(){
+  const topbar = document.getElementById('ping-topbar');
   const holder = document.getElementById('ping-canvas-holder');
-  const availW = holder.clientWidth, availH = holder.clientHeight;
-  // Remplit le conteneur au maximum (comme la référence, qui occupe quasiment tout l'écran) —
-  // pas de ratio cible imposé : un ratio fixe, même "portrait", finit par RÉTRÉCIR le terrain
-  // dès qu'un des deux axes est plus généreux que l'autre sur un device donné. On garde juste
-  // une toute petite marge pour l'ombre portée du canvas.
+  // On calcule l'espace dispo directement depuis le viewport réel (visualViewport quand
+  // possible) + la hauteur RÉELLEMENT rendue de la barre du haut, plutôt que de faire confiance
+  // à un flex:1 dont la mesure (clientHeight) s'est révélée non fiable sur certains navigateurs
+  // mobiles (table rendue minuscule, cantonnée en haut de l'écran, constaté par l'utilisateur).
+  const vv = window.visualViewport;
+  const vw = vv ? vv.width  : window.innerWidth;
+  const vh = vv ? vv.height : window.innerHeight;
+  const topbarH = topbar.offsetHeight;
+  const availW = vw;
+  const availH = Math.max(200, vh - topbarH);
+  holder.style.width = availW+'px';
+  holder.style.height = availH+'px';
   const w = Math.round(availW*0.97);
   const h = Math.round(availH*0.99);
   ppW = w; ppH = h;
@@ -6843,20 +6854,29 @@ function ppResize(){
   ppCtx.setTransform(ppDpr,0,0,ppDpr,0,0);
   ppPlayer.r = ppOpp.r = ppW*0.135;
   ppBall.r = ppW*0.04;
-  ppPlayer.y = ppH - ppPlayer.r*1.15;
-  ppOpp.y = ppOpp.r*1.15;
-  if(ppPlayer.x===0 && ppOpp.x===0){ ppPlayer.x = ppW/2; ppOpp.x = ppW/2; }
+  // Ne recentrer la position par défaut des raquettes qu'au tout premier calcul de taille
+  // (sentinelle x===0) — sinon les résize de sécurité (police, barre d'adresse mobile) feraient
+  // sauter la raquette du joueur pendant qu'il est en train de la déplacer librement.
+  if(ppPlayer.x===0 && ppOpp.x===0){
+    ppPlayer.x = ppW/2; ppOpp.x = ppW/2;
+    ppPlayer.y = ppH - ppPlayer.r*1.15;
+    ppOpp.y = ppOpp.r*1.15;
+  }
   ppClampPaddle(ppPlayer); ppClampPaddle(ppOpp);
 }
 function ppSetupResize(){
   ppResizeHandlerRef = () => ppResize();
   window.addEventListener('resize', ppResizeHandlerRef);
   window.addEventListener('orientationchange', ppResizeHandlerRef);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', ppResizeHandlerRef);
+  }
 }
 function ppTeardownResize(){
   if(ppResizeHandlerRef){
     window.removeEventListener('resize', ppResizeHandlerRef);
     window.removeEventListener('orientationchange', ppResizeHandlerRef);
+    if(window.visualViewport) window.visualViewport.removeEventListener('resize', ppResizeHandlerRef);
     ppResizeHandlerRef = null;
   }
 }
