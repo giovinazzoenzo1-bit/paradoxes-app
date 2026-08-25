@@ -107,6 +107,15 @@ Quatrième et dernier des mini-jeux prioritaires (Solitaire, Sudoku, Puissance 4
 
 **Les 4 mini-jeux prioritaires de la liste originale sont maintenant tous ajoutés.** Restent les mini-jeux plus lourds (physique/règles complexes) à traiter en dernier : Ludo (jeu des chevaux), Skip-Bo, Échecs, Billard, Ping-pong.
 
+## v46 : Matter.js rapatrié en local — zéro dépendance externe restante dans toute l'app
+Suite à la question légitime sur la fiabilité long terme des CDN externes : Matter.js (jusque-là chargé depuis `cdnjs.cloudflare.com`) est maintenant auto-hébergé, exactement comme chess.js.
+- Copié depuis le même package npm déjà testé (`matter-js@0.20.0`) → `vendor/matter.min.js` (83 476 octets, **fichier identique bit pour bit** à celui utilisé lors des tests d'intégration du Billard — vérifié par checksum MD5, donc aucune re-validation nécessaire)
+- Licence MIT incluse dans `vendor/matter.js.LICENSE`
+- `<script src="./vendor/matter.min.js">` remplace le tag CDN dans `index.html`
+- `sw.js` simplifié : `vendor/matter.min.js` rejoint la liste principale `ASSETS` (mise en cache atomique standard) — le système `THIRD_PARTY_ASSETS` non-bloquant devenu inutile a été retiré
+- **Décision de fond documentée** : pour l'archi actuelle (un seul fichier HTML, pas d'outil de build), l'auto-hébergement est strictement plus robuste que le CDN dès lors qu'on fige une version précise (ce qu'on fait déjà) — le seul avantage du CDN (mises à jour automatiques) ne s'applique pas ici. Ce choix n'a par ailleurs aucun impact sur une éventuelle refonte future avec un vrai outil de build (Webpack/Vite) : les deux approches (CDN ou vendor/) seraient de toute façon remplacées par un vrai `npm install` + bundling à ce moment-là.
+- **L'application entière (16 mini-jeux + moteur de paradoxes) ne dépend plus d'aucun service tiers pour fonctionner.** Tout ce qui est nécessaire est soit dans `index.html`, soit dans `vendor/`, soit dans `icons/` — tout versionné dans le repo, tout servi depuis le même domaine GitHub Pages.
+
 ## v45 : Échecs — moteur remplacé par chess.js (open source, BSD-2-Clause)
 Le moteur maison (déjà validé perft 1-4 exact) est remplacé par **chess.js 1.4.0**, la référence du milieu (utilisée par lichess.org et de très nombreux projets), plus complète que notre implémentation.
 - **Auto-hébergé, pas de CDN** : copié localement dans `vendor/chess.esm.js` (~107 Ko, licence BSD-2-Clause incluse dans `vendor/chess.js.LICENSE`) plutôt que chargé depuis un CDN externe. Décision prise après avoir constaté que cdnjs n'héberge qu'une vieille version (0.10.3, API différente/dépréciée snake_case) et n'avoir pas pu vérifier de façon fiable une URL CDN exacte et fonctionnelle pour la version moderne (1.4.0, API camelCase). L'auto-hébergement élimine ce problème : fonctionne hors-ligne comme le reste de l'app, mis en cache directement dans `ASSETS` (pas besoin du système `THIRD_PARTY_ASSETS` non-bloquant utilisé pour Matter.js, puisque ce n'est plus un tiers réseau).

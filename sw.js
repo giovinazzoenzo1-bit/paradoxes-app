@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paradoxes-v45';
+const CACHE_NAME = 'paradoxes-v46';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS = [
   './icon-512.png',
   './bgmusic.mp3',
   './vendor/chess.esm.js',
+  './vendor/matter.min.js',
   './icons/memory.png',
   './icons/puzzle15.png',
   './icons/snake.png',
@@ -46,22 +47,9 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Assets tiers (CDN) : mis en cache séparément et de façon non-bloquante — un pépin réseau sur un
-// CDN externe ne doit jamais empêcher la mise en cache de nos propres fichiers (cache.addAll est
-// atomique : un seul échec ferait échouer tout le précache et casserait le mode hors-ligne).
-const THIRD_PARTY_ASSETS = [
-  'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js',
-];
-
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
-      cache.addAll(ASSETS).then(() =>
-        Promise.all(THIRD_PARTY_ASSETS.map((url) =>
-          cache.add(url).catch((err) => console.log('Cache tiers ignoré (non bloquant):', url, err))
-        ))
-      )
-    )
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
 });
 
