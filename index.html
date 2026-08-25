@@ -659,15 +659,6 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   grid-template-areas:"exit score reset" "table table table" "status status status";
   gap:6px;
 }
-/* Overlay "tourne ton téléphone" : plus simple et plus fiable que la rotation CSS forcée
-   utilisée avant (qui pouvait casser la correspondance des coordonnées tactiles sur certains
-   navigateurs mobiles réels — bug remonté par l'utilisateur, non détectable depuis le sandbox
-   de dev qui n'a pas de vrai téléphone). On affiche juste un message quand le téléphone est en
-   portrait, la table elle-même n'est plus jamais transformée/pivotée en CSS. */
-.rotate-prompt{
-  position:absolute; inset:0; z-index:10; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; text-align:center; background:inherit;
-}
 .bil-round-btn{
   width:44px; height:44px; border-radius:50%; background:#fff; border:none;
   font-size:18px; color:#5c4a45; box-shadow:0 3px 8px rgba(0,0,0,0.25); cursor:pointer;
@@ -1495,13 +1486,8 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
   </div>
 
-  <!-- Table plein écran, forcée en paysage via rotation CSS si le téléphone est en portrait -->
+  <!-- Table plein écran, s'adapte à l'orientation actuelle du téléphone -->
   <div id="bil-table-wrap" style="display:none;">
-    <div id="bil-rotate-prompt" class="rotate-prompt" style="display:none;">
-      <div style="font-size:48px;">🔄</div>
-      <div style="font-size:15px; font-weight:700; margin-top:10px;">Tourne ton téléphone</div>
-      <div style="font-size:12px; color:var(--muted); margin-top:4px;">La table s'affiche en mode paysage</div>
-    </div>
     <div id="bil-landscape-box">
       <button class="bil-round-btn" id="bil-exitBtn" onclick="bilExitTable()">←</button>
       <div class="bil-scoreboard" id="bil-scoreboard">
@@ -1558,11 +1544,6 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   </div>
 
   <div id="ping-table-wrap" style="display:none;">
-    <div id="ping-rotate-prompt" class="rotate-prompt" style="display:none;">
-      <div style="font-size:48px;">🔄</div>
-      <div style="font-size:15px; font-weight:700; margin-top:10px;">Tourne ton téléphone</div>
-      <div style="font-size:12px; color:var(--muted); margin-top:4px;">Le terrain s'affiche en mode paysage</div>
-    </div>
     <button class="bil-round-btn" id="ping-exitBtn" onclick="pp3dExitTable()" style="position:absolute; top:10px; left:10px; z-index:20;">←</button>
     <button class="bil-round-btn" id="ping-resetBtn" onclick="pp3dStart(pp3dMode)" style="position:absolute; top:10px; right:10px; z-index:20;">↺</button>
     <div id="ping-scoreboard-3d" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:20; background:#1a2a1a; border-radius:16px; padding:6px 18px; text-align:center; color:#fff;">
@@ -6374,15 +6355,12 @@ function bilExitTable(){
 // car l'API Screen Orientation n'est pas disponible sur iOS Safari.
 let bilOrientationHandler = null;
 function bilSetupOrientationWatcher(){
-  const prompt = document.getElementById('bil-rotate-prompt');
-  const apply = () => {
-    const isPortrait = window.matchMedia('(orientation: portrait)').matches;
-    prompt.style.display = isPortrait ? 'flex' : 'none';
-  };
-  apply();
-  bilOrientationHandler = apply;
-  window.addEventListener('resize', bilOrientationHandler);
-  window.addEventListener('orientationchange', bilOrientationHandler);
+  // Ne bloque plus l'accès derrière un message de rotation : si la rotation est verrouillée
+  // dans les réglages du téléphone, le navigateur ne change jamais de forme même en tournant
+  // physiquement l'appareil — le message ne disparaissait donc jamais (bug remonté par
+  // l'utilisateur sur le Ping-pong, même risque ici). La table s'affiche dans l'orientation
+  // actuelle ; le canvas garde ses proportions via le CSS (max-width/max-height:100%).
+  bilOrientationHandler = () => {};
 }
 function bilTeardownOrientationWatcher(){
   if(bilOrientationHandler){
@@ -6889,12 +6867,12 @@ function pp3dExitTable(){
   pp3dBackToSetup();
 }
 function pp3dSetupOrientationWatcher(){
-  const prompt = document.getElementById('ping-rotate-prompt');
-  const apply = () => {
-    const isPortrait = window.matchMedia('(orientation: portrait)').matches;
-    prompt.style.display = isPortrait ? 'flex' : 'none';
-    pp3dHandleResize();
-  };
+  // Ne bloque plus jamais l'accès au jeu derrière un message de rotation : si le téléphone a
+  // la rotation verrouillée dans ses réglages système, le navigateur ne change JAMAIS de forme
+  // même si l'utilisateur tourne physiquement l'appareil — le message ne disparaissait donc
+  // jamais (bug remonté par l'utilisateur). Le jeu s'affiche désormais dans l'orientation
+  // actuelle, quelle qu'elle soit, en s'adaptant simplement à la taille réelle de l'écran.
+  const apply = () => { pp3dHandleResize(); };
   apply();
   pp3dOrientationHandlerRef = apply;
   window.addEventListener('resize', pp3dOrientationHandlerRef);
