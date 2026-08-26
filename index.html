@@ -6882,7 +6882,10 @@ function ppTeardownResize(){
   }
 }
 function ppClampPaddle(p){
-  p.x = Math.max(p.r, Math.min(ppW-p.r, p.x));
+  // Léger débordement autorisé au-delà des bords latéraux (~35% du rayon), comme sur la
+  // référence où les raquettes chevauchent visiblement les coins pour chasser une balle large.
+  const overhang = p.r*0.35;
+  p.x = Math.max(-overhang, Math.min(ppW+overhang, p.x));
 }
 
 // ---- Service ----
@@ -6940,11 +6943,12 @@ function ppOnPointerMove(e){
   p.vx = (x-p.lastX)/dt*1000;
   p.vy = (y-p.lastY)/dt*1000;
   p.x = x;
-  // La raquette suit le doigt sur les 2 axes, mais reste dans sa propre moitié de terrain
-  // (ne peut pas franchir le filet ni sortir par le fond).
+  // La raquette suit le doigt sur les 2 axes, dans sa propre moitié de terrain, avec un peu de
+  // débordement autorisé vers l'arrière (comme sur la référence, où la raquette peut chasser
+  // une balle large jusqu'à dépasser légèrement le bord de la table) — mais jamais le filet.
   const midY = ppH/2;
-  if(target==='player') p.y = Math.max(midY+p.r*1.05, Math.min(ppH-p.r*1.1, y));
-  else p.y = Math.max(p.r*1.1, Math.min(midY-p.r*1.05, y));
+  if(target==='player') p.y = Math.max(midY+p.r*1.05, Math.min(ppH+p.r*0.3, y));
+  else p.y = Math.max(-p.r*0.3, Math.min(midY-p.r*1.05, y));
   ppClampPaddle(p);
   p.lastX = x; p.lastY = y; p.lastT = now;
 }
@@ -7104,9 +7108,13 @@ function ppLoop(now){
 function ppDrawPaddle(p, color, colorDark){
   const ctx = ppCtx;
   ctx.save();
-  // manche (poignée) qui dépasse du bord, comme sur la référence
   const handleW = p.r*0.5, handleH = p.r*0.9;
   const handleDir = p.y < ppH/2 ? -1 : 1;
+  // ombre portée (décalée bas-droite), comme sur la référence — donne un effet "posé sur la table"
+  ctx.beginPath();
+  ctx.arc(p.x+p.r*0.12, p.y+p.r*0.12, p.r, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.16)';
+  ctx.fill();
   ctx.fillStyle = colorDark;
   ctx.fillRect(p.x-handleW/2, p.y+handleDir*p.r*0.15, handleW, handleDir*handleH);
   ctx.beginPath();
@@ -7166,6 +7174,10 @@ function ppRender(){
   ppDrawPaddle(ppPlayer, '#ef6461', '#b8433f');
 
   // balle
+  ctx.beginPath();
+  ctx.arc(ppBall.x+ppBall.r*0.15, ppBall.y+ppBall.r*0.15, ppBall.r, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fill();
   ctx.beginPath();
   ctx.arc(ppBall.x, ppBall.y, ppBall.r, 0, Math.PI*2);
   ctx.fillStyle = '#ffffff';
