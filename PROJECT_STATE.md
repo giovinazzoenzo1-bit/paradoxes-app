@@ -33,6 +33,10 @@ PWA éducative/ludique : paradoxes de probabilités expliqués simplement + mini
 
 **Billard** — mode paysage géré en pivotant le DESSIN canvas (pas le DOM), 8-ball avec vraies règles, mode Bot (IA ghost-ball) avec animation de frappe de la queue, pochettes latérales plus étroites que les coins. Watchdog anti-blocage (try/catch + double garde-fou temporel) ajouté suite à un bug de bot qui bloquait la partie. **Dernier retour utilisateur : "pour l'instant c'est ok"** — pas de nouveau bug remonté depuis, mais pas non plus testé en profondeur post-fix.
 
+**2048** — cahier des charges complet fourni par l'utilisateur et son frère (Drive, docs "Enzo"=logique/monétisation et "Flavio"=UI/visuel), thème cible "néon cyberpunk". Chantier en cours, traité point par point :
+- ✅ Le jeu continue à l'infini après 2048 (4096, 8192...) au lieu de s'arrêter — c'était un vrai bug par rapport au cahier des charges, corrigé (`g2048Reached2048`, célébration non-bloquante, seul `!g2048CanMove()` déclenche un vrai Game Over).
+- Reste à faire (dans l'ordre du cahier des charges, à traiter avec l'utilisateur) : reskin visuel néon complet (palette/wireframe du doc Flavio), power-ups Marteau Laser + Swap, économie de pièces, streaks/multiplicateurs, sound design dédié, mode Rush 60s (explicitement marqué "future MAJ", pas prioritaire), architecture pub (rewarded video + règles anti-churn interstitiels — nécessite de vérifier si une vraie régie pub existe dans l'app, actuellement pub factice seulement).
+
 ## 🟥 Bug connu non résolu
 **Ludo** (signalé 24/08) : "quelques bugs", jamais détaillés. Demander à l'utilisateur de préciser avant d'investiguer.
 

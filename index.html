@@ -3429,6 +3429,7 @@ let g2048History = [];
 let g2048UndoFreeUsed = false;
 let g2048StartTime = 0;
 let g2048Over = false;
+let g2048Reached2048 = false; // cahier des charges : 2048 = célébration, mais le jeu continue à l'infini (4096, 8192...)
 const g2048WorldBestMock = {name:'Léa M.', score:6284, seconds:284}; // aperçu fictif, pas de backend
 function open2048(){
   switchScreen('game-2048');
@@ -3469,6 +3470,7 @@ function g2048New(){
   g2048History = [];
   g2048UndoFreeUsed = false;
   g2048Over = false;
+  g2048Reached2048 = false;
   g2048StartTime = Date.now();
   g2048AddTile();
   g2048AddTile();
@@ -3544,14 +3546,18 @@ function g2048Move(dir){
   g2048Render();
   const flat = g2048Grid.flat();
   const elapsed = Math.floor((Date.now()-g2048StartTime)/1000);
-  if(flat.includes(2048) && !g2048Over){
-    g2048Over = true;
-    document.getElementById('g2048-status').innerHTML =
-      `🟩 2048 atteint ! Score : ${g2048Score} en ${memoryFormatTime(elapsed)}<br>`+
-      `🟦 Meilleur score perso : ${g2048Best}<br>`+
-      `🌍 Meilleur score mondial (aperçu) : ${g2048WorldBestMock.score} — ${g2048WorldBestMock.name} en ${memoryFormatTime(g2048WorldBestMock.seconds)}`;
+  if(flat.includes(2048) && !g2048Reached2048){
+    // Cahier des charges : palier 2048 = célébration, mais la partie continue à l'infini
+    // (4096, 8192...) jusqu'au vrai Game Over. Ne PAS bloquer le jeu ici.
+    g2048Reached2048 = true;
+    document.getElementById('g2048-status').innerHTML = `🟩 2048 atteint ! La partie continue...`;
+    playFeedback('trophy');
     statsRecord2048();
-  } else if(!g2048CanMove() && !g2048Over){
+    setTimeout(()=>{
+      if(!g2048Over) document.getElementById('g2048-status').textContent = '';
+    }, 2500);
+  }
+  if(!g2048CanMove() && !g2048Over){
     g2048Over = true;
     document.getElementById('g2048-status').innerHTML =
       `🟥 Plus de coup possible. Score : ${g2048Score} en ${memoryFormatTime(elapsed)}<br>`+
