@@ -6953,71 +6953,32 @@ function ppClampPaddle(p){
   p.x = Math.max(-overhang, Math.min(ppW+overhang, p.x));
 }
 
-// ---- Service ----
-// ---- État de la volée : vraies règles du ping-pong ----
-// legalToHit=false tant que la balle n'a pas fait tous ses rebonds réglementaires pour ce
-// trajet — la toucher avant, c'est une faute de volée. pendingCheckpoints est la liste
-// ordonnée des positions Y à franchir (rebond ou passage du filet) avant que le relanceur ait
-// le droit de la toucher.
-let ppLegalToHit = true;
-let ppPendingCheckpoints = [];
-let ppWillNetFault = false;
-
-function ppSetupServeCheckpoints(server){
-  const midY = ppH/2;
-  // Service réglementaire : [rebond côté serveur] -> [passage du filet] -> [rebond côté relanceur].
-  const ownY  = server==='player' ? midY + (ppH/2)*0.20 : midY - (ppH/2)*0.20;
-  const recvY = server==='player' ? midY - ppH*0.05      : midY + ppH*0.05;
-  ppPendingCheckpoints = [ {y:ownY, net:false}, {y:midY, net:true}, {y:recvY, net:false} ];
-  ppLegalToHit = false;
-  ppWillNetFault = false; // simplification : le service ne finit jamais dans le filet dans cette version
+// ---- Règle du ping-pong, version simple et fiable ----
+// Il faut obligatoirement que la balle touche la table du CÔTÉ ADVERSE avant de sortir.
+// ppTargetBounced = la balle a-t-elle rebondi côté adverse depuis la dernière frappe/service ?
+// Si oui et qu'elle sort ensuite (dépasse une ligne de fond) sans être renvoyée : point pour
+// celui qui l'a frappée (l'autre a raté son retour). Si elle sort AVANT d'avoir touché le côté
+// adverse (dehors, dans le filet, ou rebondit sur son propre côté) : celui qui l'a frappée perd
+// le point, l'autre le gagne — exactement "le dernier qui touche la balle et qui la fait sortir
+// perd le point".
+let ppTargetBounced = false;
+function ppResetTargetBounce(hitter){
+  ppTargetBounced = false;
+  ppTargetZone = hitter==='player' ? 'top' : 'bottom'; // camp adverse du frappeur
 }
-function ppSetupReturnCheckpoints(isPlayerHitter, powerBoost){
-  const midY = ppH/2;
-  const recvY = isPlayerHitter ? midY - ppH*0.05 : midY + ppH*0.05;
-  ppPendingCheckpoints = [ {y:midY, net:true}, {y:recvY, net:false} ];
-  ppLegalToHit = false;
-  // Une frappe molle risque un peu de finir dans le filet ; une frappe normale/puissante, jamais.
-  ppWillNetFault = Math.random() < (powerBoost < 0.22 ? 0.14 : (powerBoost < 0.35 ? 0.05 : 0));
-}
-function ppUpdateRallyCheckpoints(prevY){
-  const b = ppBall;
-  if(ppPendingCheckpoints.length === 0) return null;
-  const cp = ppPendingCheckpoints[0];
-  const crossed = (prevY-cp.y)*(b.y-cp.y) <= 0;
-  if(!crossed) return null;
-  if(cp.net){
-    if(ppWillNetFault){
-      // Faute de filet : point à l'adversaire de celui qui vient de frapper.
-      ppSpawnBounceMark(b.x, cp.y);
-      playFeedback('wrong');
-      return ppLastHitter==='player' ? 'opp' : 'player';
-    }
-    ppPendingCheckpoints.shift();
-    return null;
-  }
-  // Rebond réglementaire sur la table — resynchronise aussi l'arc visuel dessus.
-  b.z = 0; b.vz = PP_BOUNCE_VZ0*(ppH/700); b.bounced = false;
-  ppSpawnBounceMark(b.x, b.y);
-  ppPendingCheckpoints.shift();
-  if(ppPendingCheckpoints.length === 0) ppLegalToHit = true;
-  return null;
-}
+let ppTargetZone = 'top';
 
 // ---- Service ----
 function ppServe(towardOpp){
-  const server = towardOpp ? 'player' : 'opp';
-  const midY = ppH/2;
-  ppBall.x = ppW/2;
-  ppBall.y = server==='player' ? midY + (ppH/2)*0.45 : midY - (ppH/2)*0.45;
+  ppBall.x = ppW/2; ppBall.y = ppH/2;
   const speed = ppH*PP_BASE_SPEED_FACTOR;
   ppBall.vx = (Math.random()-0.5)*speed*0.3;
   ppBall.vy = towardOpp ? -speed : speed;
   ppBall.z = 0; ppBall.vz = PP_BOUNCE_VZ0*(ppH/700); ppBall.bounced = false;
   ppTrail = [];
   // Celui qui vient de gagner le point précédent sert vers l'autre.
-  ppLastHitter = server;
-  ppSetupServeCheckpoints(server);
+  ppLastHitter = towardOpp ? 'player' : 'opp';
+  ppResetTargetBounce(ppLastHitter);
 }
 
 // ---- Entrées : pointer events, multi-touch pour le mode "entre amis" ----
@@ -7113,37 +7074,36 @@ function ppBotUpdate(dt){
 // ---- Physique de la balle ----
 function ppStepBall(dt){
   const b = ppBall;
-  const prevY = b.y;
   b.x += b.vx*dt; b.y += b.vy*dt;
   // Pas de mur sur les côtés (vrai ping-pong, pas air hockey) : la balle peut sortir sur le
   // côté et reste jouable — une raquette peut la poursuivre hors de la table pour la renvoyer.
-  // L'arc visuel (z) tombe naturellement puis se fige au sol ; les rebonds RÉGLEMENTAIRES (qui
-  // comptent pour les règles) sont resynchronisés séparément dans ppUpdateRallyCheckpoints.
+  // Vrai rebond AU SOL : la balle monte puis retombe une fois après chaque frappe/service.
   if(!b.bounced){
     const g = PP_GRAVITY*(ppH/700);
     b.vz -= g*dt;
     b.z += b.vz*dt;
-    if(b.z <= 0){ b.z = 0; b.vz = 0; b.bounced = true; }
+    if(b.z <= 0){
+      b.z = 0; b.vz = 0; b.bounced = true;
+      ppSpawnBounceMark(b.x, b.y);
+      // Ce rebond ne compte que s'il a lieu du bon côté (celui de l'adversaire du frappeur) —
+      // rebondir sur son PROPRE côté ne valide rien : la balle doit obligatoirement toucher la
+      // table adverse pour que le point devienne gagnable.
+      const zone = b.y < ppH/2 ? 'top' : 'bottom';
+      if(zone === ppTargetZone) ppTargetBounced = true;
+    }
   }
   ppTrail.push({x:b.x, y:b.y});
   if(ppTrail.length > PP_TRAIL_LEN) ppTrail.shift();
-  return ppUpdateRallyCheckpoints(prevY);
 }
 function ppTryPaddleHit(p, isPlayer){
   const b = ppBall;
   const dx = b.x-p.x, dy = b.y-p.y;
   const dist = Math.hypot(dx,dy);
   const movingToward = isPlayer ? b.vy > 0 : b.vy < 0;
-  if(!movingToward) return null;
-  if(dist > p.r + b.r) return null;
-  if(!ppLegalToHit){
-    // Faute de volée : la balle est touchée avant d'avoir fait son rebond réglementaire —
-    // point pour celui qui vient de la frapper (l'autre n'avait pas le droit de la toucher).
-    playFeedback('wrong');
-    return ppLastHitter;
-  }
+  if(!movingToward) return false;
+  if(dist > p.r + b.r) return false;
   ppDeflect(p, isPlayer, dx, dy, dist);
-  return 'HIT';
+  return true;
 }
 function ppDeflect(p, isPlayer, dx, dy, dist){
   const b = ppBall;
@@ -7175,7 +7135,7 @@ function ppDeflect(p, isPlayer, dx, dy, dist){
     else { ppCombo = 0; }
   }
   ppLastHitter = isPlayer ? 'player' : 'opp';
-  ppSetupReturnCheckpoints(isPlayer, powerBoost);
+  ppResetTargetBounce(ppLastHitter);
   ppUpdateCombo();
   ppSpawnHitBurst(b.x, b.y, isPlayer ? '#ef6461' : '#3ec6f0');
   playFeedback('correct');
@@ -7213,11 +7173,12 @@ function ppCheckScore(){
   const outBottom = ppBall.y - ppBall.r > ppH;
   const outTop = ppBall.y + ppBall.r < 0;
   if(!outBottom && !outTop) return null;
-  if(ppLegalToHit){
-    // La balle avait déjà fait son rebond réglementaire : le relanceur n'a pas su la renvoyer.
+  if(ppTargetBounced){
+    // La balle avait déjà touché le camp adverse : le relanceur n'a pas su la renvoyer.
     return ppLastHitter;
   }
-  // Sortie avant tout rebond réglementaire ("out") : faute de celui qui vient de frapper.
+  // Elle n'a jamais touché le camp adverse (sortie directe, ou rebond resté sur son propre
+  // côté) : celui qui l'a frappée en dernier ET qui l'a fait sortir perd le point.
   return ppLastHitter==='player' ? 'opp' : 'player';
 }
 function ppCheckWin(a,b){
@@ -7242,17 +7203,11 @@ function ppLoop(now){
   else { ppOpp.vx *= 0.9; ppOpp.vy *= 0.9; }
   ppPlayer.vx *= 0.92; ppPlayer.vy *= 0.92;
 
-  let scorer = ppStepBall(dt); // faute de filet éventuelle, détectée pendant le déplacement
-  if(!scorer){
-    const r1 = ppTryPaddleHit(ppPlayer, true);
-    if(r1 && r1!=='HIT') scorer = r1;
-    else if(!r1){
-      const r2 = ppTryPaddleHit(ppOpp, false);
-      if(r2 && r2!=='HIT') scorer = r2;
-    }
-  }
+  ppStepBall(dt);
+  if(!ppTryPaddleHit(ppPlayer, true)) ppTryPaddleHit(ppOpp, false);
   ppStepParticles(dt);
-  if(!scorer) scorer = ppCheckScore();
+
+  const scorer = ppCheckScore();
   if(scorer){ ppHandlePoint(scorer); }
 
   ppRender();
