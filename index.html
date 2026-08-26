@@ -6410,6 +6410,7 @@ let bilCanvasCSSW = 0, bilCanvasCSSH = 0, bilScale = 1, bilDpr = 1, bilRotated =
 let bilGameId = 0;          // incrémenté à chaque bilStart() — protège contre un setTimeout du bot resté en attente d'une ancienne partie
 let bilBotTimeoutId = null; // id du setTimeout en attente pour le coup du bot, pour pouvoir l'annuler
 let bilShotStartTime = 0;   // horodatage du tir en cours, pour le garde-fou anti-blocage ci-dessous
+let bilWatchdogId = null;   // setTimeout indépendant de la boucle d'animation, voir bilFireShot
 const BIL_MAX_POWER = 45; // calibré empiriquement avec Matter.js (testé stable jusqu'à 100 sans tunneling)
 function bilRackPositions(footX, midY){
   const positions = [];
@@ -6460,6 +6461,7 @@ function bilBackToSetup(){
   if(bilAnimId) cancelAnimationFrame(bilAnimId);
   bilGameId++; // invalide tout setTimeout du bot resté en attente
   if(bilBotTimeoutId){ clearTimeout(bilBotTimeoutId); bilBotTimeoutId = null; }
+  if(bilWatchdogId){ clearTimeout(bilWatchdogId); bilWatchdogId = null; }
   document.getElementById('bil-setup-panel').style.display = 'block';
   document.getElementById('bil-endgame-panel').style.display = 'none';
   document.getElementById('bil-victory-overlay').style.display = 'none';
@@ -6552,6 +6554,7 @@ function bilStart(mode){
   bilGroupsAssigned = false;
   bilGameId++; // invalide tout setTimeout du bot d'une éventuelle partie précédente encore en attente
   if(bilBotTimeoutId){ clearTimeout(bilBotTimeoutId); bilBotTimeoutId = null; }
+  if(bilWatchdogId){ clearTimeout(bilWatchdogId); bilWatchdogId = null; }
   if(bilAnimId) cancelAnimationFrame(bilAnimId);
   document.getElementById('bil-setup-panel').style.display = 'none';
   document.getElementById('bil-endgame-panel').style.display = 'none';
@@ -6659,7 +6662,37 @@ function bilUpdateFireButton(){
 }
 function bilConfirmFire(){
   if(!bilAimDir || bilPower <= BIL_MAX_POWER*0.05 || bilState!=='aim') return;
-  bilFireShot(bilAimDir.x*bilPower, bilAimDir.y*bilPower);
+  bilStartStrike(bilAimDir.x, bilAimDir.y, bilPower);
+}
+// ---- Animation de frappe : la queue recule (déjà visible pendant la visée), puis part
+// rapidement en avant jusqu'à toucher la bille avant que le tir ne soit réellement lancé —
+// un petit temps d'impact plutôt qu'un tir instantané dès l'appui sur TIRER.
+let bilStrike = null; // {dirX,dirY,power,startTime,duration,fromDist,toDist}
+function bilStartStrike(dirX, dirY, power){
+  bilState = 'strike';
+  bilUpdateFireButton(); // désactive visuellement le bouton pendant l'animation (guard déjà en place côté logique)
+  const powerFrac = power / BIL_MAX_POWER;
+  bilStrike = {
+    dirX, dirY, power,
+    startTime: performance.now(), duration: 130,
+    fromDist: 30 + powerFrac*90, // même distance de recul que la ligne de visée déjà affichée
+    toDist: BIL_BALL_R + 2,
+  };
+  bilAimingActive = false;
+  requestAnimationFrame(bilAnimateStrike);
+}
+function bilAnimateStrike(now){
+  if(!bilStrike) return;
+  const t = Math.min(1, (now - bilStrike.startTime) / bilStrike.duration);
+  bilDraw();
+  if(t < 1){
+    requestAnimationFrame(bilAnimateStrike);
+  } else {
+    const {dirX, dirY, power} = bilStrike;
+    bilStrike = null;
+    bilResetAimAndPower();
+    bilFireShot(dirX*power, dirY*power);
+  }
 }
 function bilResetAimAndPower(){
   bilAimDir = null;
@@ -6694,17 +6727,40 @@ function bilFireShot(vx, vy){
   bilState = 'sim';
   bilResetAimAndPower();
   bilShotStartTime = performance.now();
+  // Garde-fou INDÉPENDANT de la boucle d'animation : si une exception silencieuse arrête un
+  // jour requestAnimationFrame en cours de route (le garde-fou "temps écoulé" à l'intérieur de
+  // bilAnimate ne se déclencherait alors jamais, puisqu'il faut que la boucle continue de
+  // tourner pour le vérifier), ce setTimeout, lui, se déclenche de toute façon.
+  if(bilWatchdogId) clearTimeout(bilWatchdogId);
+  const gid = bilGameId;
+  bilWatchdogId = setTimeout(()=>{
+    if(gid!==bilGameId || bilState!=='sim') return;
+    console.warn('[billard] simulation bloquée détectée par le garde-fou indépendant, arrêt forcé');
+    if(bilAnimId){ cancelAnimationFrame(bilAnimId); bilAnimId=null; }
+    for(const b of bilBalls){ if(!b.pocketed){ try{ Matter.Body.setVelocity(b.body, {x:0,y:0}); }catch(e){} b.vel={x:0,y:0}; } }
+    bilOnShotSettled();
+  }, 6000);
   bilAnimId = requestAnimationFrame(bilAnimate);
 }
 function bilAnimate(){
-  bilStepPhysics();
-  bilDraw();
-  // Garde-fou anti-blocage : quelle qu'en soit la cause (vitesse invalide passée outre le
-  // premier filtre, bille qui vibre indéfiniment à très faible vitesse, etc.), si la simulation
-  // tourne depuis plus de 8s sans se stabiliser, on force l'arrêt plutôt que de laisser le match
-  // planté indéfiniment.
-  const stuck = performance.now() - bilShotStartTime > 8000;
+  try{
+    bilStepPhysics();
+    bilDraw();
+  }catch(err){
+    // Une exception ici arrêterait silencieusement la boucle (plus jamais de nouvelle frame
+    // demandée) et le match resterait figé sans même que le garde-fou "temps écoulé" ci-dessous
+    // n'ait la moindre chance de s'exécuter — on la rattrape pour forcer l'arrêt immédiatement.
+    console.error('[billard] erreur pendant la simulation, arrêt forcé du tir :', err);
+    if(bilWatchdogId){ clearTimeout(bilWatchdogId); bilWatchdogId=null; }
+    for(const b of bilBalls){ if(!b.pocketed){ try{ Matter.Body.setVelocity(b.body, {x:0,y:0}); }catch(e){} b.vel={x:0,y:0}; } }
+    bilOnShotSettled();
+    return;
+  }
+  // Garde-fou anti-blocage (dans la boucle) : si la simulation tourne depuis plus de 6s sans se
+  // stabiliser, on force l'arrêt plutôt que de laisser le match planté indéfiniment.
+  const stuck = performance.now() - bilShotStartTime > 6000;
   if(bilAllStopped() || stuck){
+    if(bilWatchdogId){ clearTimeout(bilWatchdogId); bilWatchdogId=null; }
     if(stuck){
       for(const b of bilBalls){ if(!b.pocketed){ Matter.Body.setVelocity(b.body, {x:0,y:0}); b.vel={x:0,y:0}; } }
     }
@@ -6767,33 +6823,52 @@ function bilBotPickShot(){
 }
 function bilBotTakeShot(){
   if(bilMode!=='bot' || bilCurrentPlayer!==2 || bilState !== 'aim') return;
-  let shot = bilBotPickShot();
-  // Filet de sécurité : direction invalide -> tir neutre plutôt que de figer la partie.
-  if(!shot || !isFinite(shot.dir.x) || !isFinite(shot.dir.y) || (shot.dir.x===0 && shot.dir.y===0)){
+  // Toute la logique de choix est protégée : une exception ici (par ex. si bilBotPickShot()
+  // rencontre un cas dégénéré imprévu) ne doit JAMAIS empêcher un tir d'être joué, sinon le
+  // tour du bot reste bloqué en 'aim' pour toujours et la partie semble plantée sans qu'aucun
+  // garde-fou de bilFireShot n'ait la moindre chance de s'exécuter (puisqu'il ne serait jamais
+  // appelé). En cas de pépin, on retombe sur un tir neutre plutôt que de ne rien jouer du tout.
+  let shot;
+  try{
+    shot = bilBotPickShot();
+    if(!shot || !isFinite(shot.dir.x) || !isFinite(shot.dir.y) || (shot.dir.x===0 && shot.dir.y===0) || !isFinite(shot.power)){
+      throw new Error('tir invalide calculé par bilBotPickShot');
+    }
+  }catch(err){
+    console.warn('[billard] bilBotPickShot a échoué, tir de repli utilisé :', err);
     shot = { dir:{x:0, y:-1}, power: BIL_MAX_POWER*0.4 };
   }
   bilAimDir = shot.dir;
-  bilPower = Math.min(BIL_MAX_POWER, shot.power);
+  bilPower = Math.min(BIL_MAX_POWER, Math.max(0, shot.power));
   bilDraw();
-  bilFireShot(shot.dir.x*bilPower, shot.dir.y*bilPower);
+  bilStartStrike(shot.dir.x, shot.dir.y, bilPower);
 }
 function bilBotPlaceCue(){
   if(bilMode!=='bot' || bilCurrentPlayer!==2 || bilState!=='placing') return;
-  for(let tries=0; tries<40; tries++){
-    const x = BIL_BALL_R*2 + Math.random()*(BIL_TABLE_W-BIL_BALL_R*4);
-    const y = BIL_BALL_R*2 + Math.random()*(BIL_TABLE_H-BIL_BALL_R*4);
-    const overlapping = bilBalls.some(b => !b.pocketed && b.id!==0 && Math.hypot(b.pos.x-x,b.pos.y-y) < BIL_BALL_R*2.4);
-    if(!overlapping){
-      bilRespawnCueBall({x,y});
-      bilState = 'aim';
-      document.getElementById('bil-status').textContent = `Tour : ${bilTurnLabel(bilCurrentPlayer)}`;
-      bilDraw();
-      return;
+  try{
+    for(let tries=0; tries<40; tries++){
+      const x = BIL_BALL_R*2 + Math.random()*(BIL_TABLE_W-BIL_BALL_R*4);
+      const y = BIL_BALL_R*2 + Math.random()*(BIL_TABLE_H-BIL_BALL_R*4);
+      const overlapping = bilBalls.some(b => !b.pocketed && b.id!==0 && Math.hypot(b.pos.x-x,b.pos.y-y) < BIL_BALL_R*2.4);
+      if(!overlapping){
+        bilRespawnCueBall({x,y});
+        bilState = 'aim';
+        document.getElementById('bil-status').textContent = `Tour : ${bilTurnLabel(bilCurrentPlayer)}`;
+        bilDraw();
+        return;
+      }
     }
+    bilRespawnCueBall({x:BIL_TABLE_W/2, y:BIL_TABLE_H/2});
+    bilState = 'aim';
+    bilDraw();
+  }catch(err){
+    // Même logique de sécurité que bilBotTakeShot : ne jamais laisser le bot rester bloqué en
+    // 'placing' pour toujours si un cas imprévu fait planter le calcul.
+    console.warn('[billard] bilBotPlaceCue a échoué, repli au centre :', err);
+    try{ bilRespawnCueBall({x:BIL_TABLE_W/2, y:BIL_TABLE_H/2}); }catch(e){}
+    bilState = 'aim';
+    bilDraw();
   }
-  bilRespawnCueBall({x:BIL_TABLE_W/2, y:BIL_TABLE_H/2});
-  bilState = 'aim';
-  bilDraw();
 }
 // Programme le coup du bot (ou son placement de bille en main) après un court délai, pour un
 // effet "réflexion" plus naturel qu'un tir instantané. bilGameId protège contre le cas où la
@@ -6903,6 +6978,29 @@ function bilComputeAimPreview(dirX, dirY){
   }
   return { end:{x,y} };
 }
+// Dessine la queue de billard (dégradé bois clair->foncé + petit procédé) à une distance donnée
+// de la bille blanche, dans la direction opposée au tir — réutilisé pendant la visée (position
+// reculée fixe selon la puissance) et pendant l'animation de frappe (distance qui diminue).
+function bilDrawCueStick(cue, nx, ny, dist){
+  const ctx = bilCtx;
+  const len = 170;
+  const backX = cue.pos.x - nx*dist, backY = cue.pos.y - ny*dist;
+  const tipX = cue.pos.x - nx*(dist+len), tipY = cue.pos.y - ny*(dist+len);
+  const grad = ctx.createLinearGradient(backX, backY, tipX, tipY);
+  grad.addColorStop(0, '#f0d9ab');
+  grad.addColorStop(1, '#6b4226');
+  ctx.beginPath();
+  ctx.moveTo(backX, backY);
+  ctx.lineTo(tipX, tipY);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(backX, backY, 5, 0, Math.PI*2);
+  ctx.fillStyle = '#f4e9d8';
+  ctx.fill();
+}
 function bilDraw(){
   const ctx = bilCtx;
   if(!ctx || !bilCanvas) return;
@@ -6939,14 +7037,7 @@ function bilDraw(){
     const cue = bilBalls[0];
     const nx = bilAimDir.x, ny = bilAimDir.y;
     const powerFrac = bilPower / BIL_MAX_POWER;
-    // ligne de recul (queue tirée en arrière), longueur proportionnelle à la puissance réglée
-    ctx.beginPath();
-    ctx.moveTo(cue.pos.x - nx*BIL_BALL_R, cue.pos.y - ny*BIL_BALL_R);
-    ctx.lineTo(cue.pos.x - nx*(30+powerFrac*90), cue.pos.y - ny*(30+powerFrac*90));
-    ctx.strokeStyle = `rgba(245,185,66,${0.5+0.4*powerFrac})`;
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    bilDrawCueStick(cue, nx, ny, 30+powerFrac*90);
     // aperçu de trajectoire vers l'avant + bille fantôme + direction de la bille visée
     const preview = bilComputeAimPreview(nx, ny);
     ctx.beginPath();
@@ -6971,6 +7062,13 @@ function bilDraw(){
       ctx.lineWidth = 2;
       ctx.stroke();
     }
+  } else if(bilState==='strike' && bilStrike){
+    // Animation de frappe : la queue part de la position reculée et fonce jusqu'à toucher la
+    // bille avant que le tir ne soit réellement lancé (voir bilStartStrike/bilAnimateStrike).
+    const cue = bilBalls[0];
+    const t = Math.min(1, (performance.now()-bilStrike.startTime) / bilStrike.duration);
+    const dist = bilStrike.fromDist + (bilStrike.toDist-bilStrike.fromDist)*t;
+    bilDrawCueStick(cue, bilStrike.dirX, bilStrike.dirY, dist);
   }
   // billes
   for(const ball of bilBalls){
