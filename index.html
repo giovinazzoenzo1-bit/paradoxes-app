@@ -7085,11 +7085,13 @@ function ppStepBall(dt){
     if(b.z <= 0){
       b.z = 0; b.vz = 0; b.bounced = true;
       ppSpawnBounceMark(b.x, b.y);
-      // Ce rebond ne compte que s'il a lieu du bon côté (celui de l'adversaire du frappeur) —
-      // rebondir sur son PROPRE côté ne valide rien : la balle doit obligatoirement toucher la
-      // table adverse pour que le point devienne gagnable.
+      // Ce rebond ne compte QUE s'il a lieu DANS les limites de la table (X entre 0 et ppW) ET
+      // du bon côté (celui de l'adversaire du frappeur) — une balle qui "atterrit" hors-table
+      // sur le côté (chassée mais tapée large) ne touche pas la table adverse, donc ne compte
+      // pas comme un point valide. Rebondir sur son PROPRE côté ne valide rien non plus.
+      const withinTable = b.x >= 0 && b.x <= ppW;
       const zone = b.y < ppH/2 ? 'top' : 'bottom';
-      if(zone === ppTargetZone) ppTargetBounced = true;
+      if(withinTable && zone === ppTargetZone) ppTargetBounced = true;
     }
   }
   ppTrail.push({x:b.x, y:b.y});
