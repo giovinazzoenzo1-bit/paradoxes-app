@@ -450,6 +450,8 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 .g2048-cell[data-v="64"]{background:#f57642; color:#fff;}
 .g2048-cell[data-v="128"],.g2048-cell[data-v="256"],.g2048-cell[data-v="512"]{background:var(--good); color:#0a1a17;}
 .g2048-cell[data-v="1024"],.g2048-cell[data-v="2048"]{background:#4fd18a; color:#0a1a17;}
+.g2048-cell.g2048-selectable{cursor:pointer; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.3);}
+.g2048-cell.g2048-selected{box-shadow:inset 0 0 0 3px var(--accent);}
 .g2048-controls{
   display:grid; grid-template-columns:60px 60px 60px; gap:8px; justify-content:center; margin-top:10px;
 }
@@ -1080,16 +1082,47 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <button class="back-btn" onclick="openJeux()">← Retour</button>
     </div>
     <div class="game-title">🔢 2048</div>
-    <div class="panel">
+    <div class="panel" id="g2048-mode-panel">
+      <div class="row"><span>🪙 Pièces</span><b id="g2048-coins-modepanel">0</b></div>
+      <div class="footnote" style="margin-bottom:10px;">Choisis un mode pour commencer.</div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn primary" onclick="g2048StartMode('normal')">♾️ Classique (infini)</button>
+      </div>
+      <div class="btn-row" style="justify-content:center; margin-top:8px;">
+        <button class="btn" onclick="g2048StartMode('rush')">⏱️ Rush 60s</button>
+      </div>
+      <div class="btn-row" style="justify-content:center; margin-top:8px;">
+        <button class="btn" onclick="g2048OpenLeaderboard()">🏆 Classements</button>
+      </div>
+    </div>
+    <div class="panel" id="g2048-game-panel" style="display:none;">
       <div class="row"><span>Score</span><b id="g2048-score">0</b></div>
       <div class="row"><span>🟦 Meilleur score perso</span><b id="g2048-best">0</b></div>
+      <div class="row" id="g2048-rush-row" style="display:none;"><span>⏱️ Temps restant</span><b id="g2048-timer">60s</b></div>
+      <div class="row"><span>🪙 Pièces</span><b id="g2048-coins">0</b></div>
       <div class="g2048-grid" id="g2048-grid"></div>
       <div class="footnote" style="text-align:center; margin-top:8px;">Glisse ton doigt sur la grille pour déplacer les tuiles</div>
       <div class="status-line" id="g2048-status" style="text-align:center; margin-top:10px;"></div>
-      <div class="btn-row" style="justify-content:center;">
+      <div class="btn-row" style="justify-content:center; margin-top:10px;">
         <button class="btn" id="g2048-undoBtn" onclick="g2048Undo()" disabled>↩️ Annuler</button>
+        <button class="btn" id="g2048-laserBtn" onclick="g2048UseLaser()">🔨 Marteau</button>
+        <button class="btn" id="g2048-swapBtn" onclick="g2048UseSwap()">🔀 Swap</button>
       </div>
-      <div class="btn-row" style="justify-content:center; margin-top:8px;"><button class="btn" onclick="g2048New()">Nouvelle partie</button></div>
+      <div class="btn-row" style="justify-content:center; margin-top:8px;">
+        <button class="btn" onclick="g2048New()">Nouvelle partie</button>
+        <button class="btn" onclick="g2048BackToModes()">← Modes</button>
+      </div>
+    </div>
+    <div class="panel" id="g2048-leaderboard-panel" style="display:none;">
+      <h2>🏆 Classements</h2>
+      <div class="btn-row" id="g2048-lb-tabs" style="margin-bottom:10px;"></div>
+      <div style="font-size:13px; font-weight:700; color:var(--muted); margin:10px 0 4px;">🟦 Ton top perso</div>
+      <div class="leaderboard-list" id="g2048-lb-perso"></div>
+      <div style="font-size:13px; font-weight:700; color:var(--muted); margin:16px 0 4px;">🌍 Mondial (aperçu, pas de vrai backend)</div>
+      <div class="leaderboard-list" id="g2048-lb-world"></div>
+      <div class="btn-row" style="justify-content:center; margin-top:12px;">
+        <button class="btn" onclick="g2048BackToModes()">← Retour</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3425,19 +3458,48 @@ function envSimulate(){
 let g2048Grid = [];
 let g2048Score = 0;
 let g2048Best = 0;
+let g2048Coins = 0;
 let g2048History = [];
-let g2048UndoFreeUsed = false;
 let g2048StartTime = 0;
 let g2048Over = false;
 let g2048Reached2048 = false; // cahier des charges : 2048 = célébration, mais le jeu continue à l'infini (4096, 8192...)
-const g2048WorldBestMock = {name:'Léa M.', score:6284, seconds:284}; // aperçu fictif, pas de backend
+let g2048Mode = 'normal';      // 'normal' (infini) ou 'rush' (chrono 60s)
+let g2048Streak = 0;           // fusions sur swipes consécutifs -> multiplicateur de pièces
+let g2048LaserMode = false;    // sélection en cours pour le power-up Marteau Laser
+let g2048SwapMode = false;     // sélection en cours pour le power-up Swap
+let g2048SwapFirst = null;     // [r,c] de la première tuile sélectionnée pour le Swap
+let g2048RushTimeLeft = 60;
+let g2048RushInterval = null;
+let g2048LbMode = 'normal';    // onglet actif du panneau classement
+// Classements mondiaux (aperçu fictif, pas de vrai backend), séparés par mode car les scores
+// Classique (infini) et Rush 60s ne sont pas comparables entre eux.
+const g2048WorldBestMock = {
+  normal: [{name:'Léa M.', score:6284},{name:'Thomas B.', score:5120},{name:'Nina P.', score:4380},{name:'Adam R.', score:3650}],
+  rush:   [{name:'Sofia K.', score:1840},{name:'Nina P.', score:1520},{name:'Léa M.', score:1290},{name:'Thomas B.', score:980}],
+};
 function open2048(){
   switchScreen('game-2048');
   setActiveTab(null);
   g2048Best = parseInt(localStorage.getItem('g2048Best')||'0');
-  g2048New();
+  g2048Coins = parseInt(localStorage.getItem('g2048Coins')||'0');
+  g2048BackToModes();
   g2048AttachSwipe();
   trackPage('/2048');
+}
+function g2048BackToModes(){
+  if(g2048RushInterval){ clearInterval(g2048RushInterval); g2048RushInterval=null; }
+  document.getElementById('g2048-coins-modepanel').textContent = g2048Coins;
+  document.getElementById('g2048-mode-panel').style.display = 'block';
+  document.getElementById('g2048-game-panel').style.display = 'none';
+  document.getElementById('g2048-leaderboard-panel').style.display = 'none';
+}
+function g2048StartMode(mode){
+  g2048Mode = mode;
+  document.getElementById('g2048-mode-panel').style.display = 'none';
+  document.getElementById('g2048-leaderboard-panel').style.display = 'none';
+  document.getElementById('g2048-game-panel').style.display = 'block';
+  document.getElementById('g2048-rush-row').style.display = mode==='rush' ? 'flex' : 'none';
+  g2048New();
 }
 let g2048SwipeAttached = false;
 function g2048AttachSwipe(){
@@ -3468,15 +3530,38 @@ function g2048New(){
   g2048Grid = Array.from({length:4}, ()=>Array(4).fill(0));
   g2048Score = 0;
   g2048History = [];
-  g2048UndoFreeUsed = false;
   g2048Over = false;
   g2048Reached2048 = false;
+  g2048Streak = 0;
+  g2048LaserMode = false;
+  g2048SwapMode = false;
+  g2048SwapFirst = null;
   g2048StartTime = Date.now();
+  if(g2048RushInterval){ clearInterval(g2048RushInterval); g2048RushInterval=null; }
+  if(g2048Mode==='rush'){
+    g2048RushTimeLeft = 60;
+    g2048UpdateRushTimerDisplay();
+    g2048RushInterval = setInterval(g2048RushTick, 1000);
+  }
   g2048AddTile();
   g2048AddTile();
   g2048Render();
   g2048UpdateUndoButton();
   document.getElementById('g2048-status').textContent = '';
+}
+function g2048RushTick(){
+  if(g2048Over) return;
+  g2048RushTimeLeft--;
+  g2048UpdateRushTimerDisplay();
+  if(g2048RushTimeLeft<=0){
+    g2048RushTimeLeft = 0;
+    g2048UpdateRushTimerDisplay();
+    g2048EndGame('Temps écoulé !');
+  }
+}
+function g2048UpdateRushTimerDisplay(){
+  const el = document.getElementById('g2048-timer');
+  if(el) el.textContent = g2048RushTimeLeft + 's';
 }
 function g2048AddTile(){
   const empty = [];
@@ -3484,6 +3569,47 @@ function g2048AddTile(){
   if(empty.length===0) return;
   const [r,c] = empty[Math.floor(Math.random()*empty.length)];
   g2048Grid[r][c] = Math.random()<0.9 ? 2 : 4;
+}
+function g2048OnCellClick(r,c){
+  // Gère la sélection de tuile pour les power-ups Marteau Laser et Swap (cahier des charges §2).
+  if(g2048Over) return;
+  if(g2048LaserMode){
+    if(g2048Grid[r][c]===0) return;
+    g2048History.push({grid:JSON.parse(JSON.stringify(g2048Grid)), score:g2048Score, streak:g2048Streak});
+    if(g2048History.length>20) g2048History.shift();
+    g2048Grid[r][c] = 0;
+    g2048LaserMode = false;
+    document.getElementById('g2048-status').textContent = '';
+    g2048Render();
+    g2048UpdateUndoButton();
+    return;
+  }
+  if(g2048SwapMode){
+    if(g2048Grid[r][c]===0) return;
+    if(!g2048SwapFirst){
+      g2048SwapFirst = [r,c];
+      document.getElementById('g2048-status').textContent = '🔀 Choisis une tuile voisine';
+      g2048Render();
+      return;
+    }
+    const [r0,c0] = g2048SwapFirst;
+    if(r0===r && c0===c){ g2048SwapFirst=null; document.getElementById('g2048-status').textContent=''; g2048Render(); return; }
+    const adjacent = (Math.abs(r0-r)+Math.abs(c0-c))===1;
+    if(!adjacent){
+      document.getElementById('g2048-status').textContent = '🟥 Choisis une tuile voisine (adjacente)';
+      return;
+    }
+    g2048History.push({grid:JSON.parse(JSON.stringify(g2048Grid)), score:g2048Score, streak:g2048Streak});
+    if(g2048History.length>20) g2048History.shift();
+    const tmp = g2048Grid[r0][c0];
+    g2048Grid[r0][c0] = g2048Grid[r][c];
+    g2048Grid[r][c] = tmp;
+    g2048SwapMode = false;
+    g2048SwapFirst = null;
+    document.getElementById('g2048-status').textContent = '';
+    g2048Render();
+    g2048UpdateUndoButton();
+  }
 }
 function g2048Render(){
   const el = document.getElementById('g2048-grid');
@@ -3494,17 +3620,25 @@ function g2048Render(){
     cell.className = 'g2048-cell';
     cell.setAttribute('data-v', v);
     cell.textContent = v || '';
+    if((g2048LaserMode || g2048SwapMode) && v!==0) cell.classList.add('g2048-selectable');
+    if(g2048SwapMode && g2048SwapFirst && g2048SwapFirst[0]===r && g2048SwapFirst[1]===c) cell.classList.add('g2048-selected');
+    cell.addEventListener('click', ()=> g2048OnCellClick(r,c));
     el.appendChild(cell);
   }
   document.getElementById('g2048-score').textContent = g2048Score;
   document.getElementById('g2048-best').textContent = g2048Best;
+  const coinsEl = document.getElementById('g2048-coins');
+  if(coinsEl) coinsEl.textContent = g2048Coins;
+  g2048UpdatePowerButtons();
 }
+let g2048MergesThisMove = [];
 function g2048SlideRow(row){
   let arr = row.filter(v=>v!==0);
   for(let i=0;i<arr.length-1;i++){
     if(arr[i]===arr[i+1]){
       arr[i]*=2;
       g2048Score += arr[i];
+      g2048MergesThisMove.push(arr[i]);
       arr.splice(i+1,1);
     }
   }
@@ -3512,9 +3646,10 @@ function g2048SlideRow(row){
   return arr;
 }
 function g2048Move(dir){
-  if(g2048Over) return;
+  if(g2048Over || g2048LaserMode || g2048SwapMode) return;
   const beforeGrid = JSON.stringify(g2048Grid);
   const beforeScore = g2048Score;
+  g2048MergesThisMove = [];
   if(dir==='left'){
     g2048Grid = g2048Grid.map(row => g2048SlideRow(row));
   } else if(dir==='right'){
@@ -3534,10 +3669,32 @@ function g2048Move(dir){
   }
   const moved = JSON.stringify(g2048Grid) !== beforeGrid;
   if(moved){
-    g2048History.push({grid:JSON.parse(beforeGrid), score:beforeScore});
+    g2048History.push({grid:JSON.parse(beforeGrid), score:beforeScore, streak:g2048Streak});
     if(g2048History.length>20) g2048History.shift();
     g2048AddTile();
     g2048UpdateUndoButton();
+    // Streak & économie de pièces (cahier des charges §2/§4) : chaque fusion rapporte 1 pièce de
+    // base + un bonus au palier (128/1024/2048+), multiplié par le streak de swipes consécutifs
+    // avec au moins une fusion (x1.5 à partir de 3, x2 à partir de 5).
+    if(g2048MergesThisMove.length>0){
+      g2048Streak++;
+      const mult = g2048Streak>=5 ? 2 : (g2048Streak>=3 ? 1.5 : 1);
+      let earned = 0;
+      for(const v of g2048MergesThisMove){
+        let bonus = 0;
+        if(v===128) bonus=10; else if(v===1024) bonus=50; else if(v>=2048) bonus=200;
+        earned += 1+bonus;
+      }
+      g2048Coins += Math.round(earned*mult);
+      localStorage.setItem('g2048Coins', g2048Coins);
+      if(g2048Mode==='rush'){
+        // +1s par fusion réussie, plafonné à 60s (cahier des charges, prépa Rush 60s)
+        g2048RushTimeLeft = Math.min(60, g2048RushTimeLeft+1);
+        g2048UpdateRushTimerDisplay();
+      }
+    } else {
+      g2048Streak = 0;
+    }
   }
   if(g2048Score > g2048Best){
     g2048Best = g2048Score;
@@ -3545,7 +3702,6 @@ function g2048Move(dir){
   }
   g2048Render();
   const flat = g2048Grid.flat();
-  const elapsed = Math.floor((Date.now()-g2048StartTime)/1000);
   if(flat.includes(2048) && !g2048Reached2048){
     // Cahier des charges : palier 2048 = célébration, mais la partie continue à l'infini
     // (4096, 8192...) jusqu'au vrai Game Over. Ne PAS bloquer le jeu ici.
@@ -3558,12 +3714,7 @@ function g2048Move(dir){
     }, 2500);
   }
   if(!g2048CanMove() && !g2048Over){
-    g2048Over = true;
-    document.getElementById('g2048-status').innerHTML =
-      `🟥 Plus de coup possible. Score : ${g2048Score} en ${memoryFormatTime(elapsed)}<br>`+
-      `🟦 Meilleur score perso : ${g2048Best}<br>`+
-      `🌍 Meilleur score mondial (aperçu) : ${g2048WorldBestMock.score} — ${g2048WorldBestMock.name} en ${memoryFormatTime(g2048WorldBestMock.seconds)}`;
-    playFeedback('lose');
+    g2048EndGame('Plus de coup possible.');
   }
 }
 function g2048CanMove(){
@@ -3574,34 +3725,163 @@ function g2048CanMove(){
   }
   return false;
 }
+function g2048EndGame(reasonLabel){
+  if(g2048Over) return;
+  g2048Over = true;
+  if(g2048RushInterval){ clearInterval(g2048RushInterval); g2048RushInterval=null; }
+  const elapsed = Math.floor((Date.now()-g2048StartTime)/1000);
+  g2048SaveScore(g2048Mode, g2048Score);
+  document.getElementById('g2048-status').innerHTML =
+    `🟥 ${reasonLabel} Score : ${g2048Score} en ${memoryFormatTime(elapsed)}<br>`+
+    `🟦 Meilleur score perso : ${g2048Best}<br>`+
+    `🌍 Meilleur score mondial (aperçu, ${g2048Mode==='rush'?'Rush 60s':'Classique'}) : ${g2048WorldBestMock[g2048Mode][0].score} — ${g2048WorldBestMock[g2048Mode][0].name}`;
+  playFeedback('lose');
+  g2048UpdateUndoButton();
+  g2048UpdatePowerButtons();
+}
 function g2048UpdateUndoButton(){
   const btn = document.getElementById('g2048-undoBtn');
   if(!btn) return;
-  if(g2048History.length===0){
+  if(g2048History.length===0 || g2048Over){
     btn.disabled = true;
     btn.textContent = '↩️ Annuler';
   } else {
     btn.disabled = false;
-    btn.textContent = g2048UndoFreeUsed ? '↩️📺 Annuler (pub)' : '↩️ Annuler';
+    btn.textContent = g2048Coins>=50 ? '↩️ Annuler (🪙50)' : '↩️📺 Annuler (pub)';
+  }
+}
+function g2048UpdatePowerButtons(){
+  const laserBtn = document.getElementById('g2048-laserBtn');
+  const swapBtn = document.getElementById('g2048-swapBtn');
+  if(laserBtn){
+    laserBtn.disabled = g2048Over;
+    laserBtn.classList.toggle('primary', g2048LaserMode);
+    laserBtn.textContent = g2048Coins>=100 ? '🔨 Marteau (🪙100)' : '🔨📺 Marteau (pub)';
+  }
+  if(swapBtn){
+    swapBtn.disabled = g2048Over;
+    swapBtn.classList.toggle('primary', g2048SwapMode);
+    swapBtn.textContent = g2048Coins>=75 ? '🔀 Swap (🪙75)' : '🔀📺 Swap (pub)';
   }
 }
 function g2048Undo(){
   if(g2048Over || g2048History.length===0) return;
-  const doUndo = ()=>{
+  const doRevert = ()=>{
     const prev = g2048History.pop();
     g2048Grid = prev.grid;
     g2048Score = prev.score;
+    g2048Streak = prev.streak;
+    document.getElementById('g2048-status').textContent = '';
     g2048Render();
     g2048UpdateUndoButton();
-    document.getElementById('g2048-status').textContent = '';
   };
-  if(!g2048UndoFreeUsed){
-    g2048UndoFreeUsed = true;
-    doUndo();
-    g2048UpdateUndoButton();
+  if(g2048Coins>=50){
+    g2048Coins -= 50;
+    localStorage.setItem('g2048Coins', g2048Coins);
+    doRevert();
   } else {
-    mockWatchAd(4, doUndo);
+    mockWatchAd(4, doRevert);
   }
+}
+function g2048UseLaser(){
+  if(g2048Over || g2048LaserMode) return;
+  const activate = ()=>{
+    g2048LaserMode = true;
+    g2048SwapMode = false;
+    g2048SwapFirst = null;
+    document.getElementById('g2048-status').textContent = '🔨 Touche une tuile à détruire';
+    g2048Render();
+  };
+  if(g2048Coins>=100){
+    g2048Coins -= 100;
+    localStorage.setItem('g2048Coins', g2048Coins);
+    activate();
+  } else {
+    mockWatchAd(4, activate);
+  }
+}
+function g2048UseSwap(){
+  if(g2048Over || g2048SwapMode) return;
+  const activate = ()=>{
+    g2048SwapMode = true;
+    g2048SwapFirst = null;
+    g2048LaserMode = false;
+    document.getElementById('g2048-status').textContent = '🔀 Touche une première tuile';
+    g2048Render();
+  };
+  if(g2048Coins>=75){
+    g2048Coins -= 75;
+    localStorage.setItem('g2048Coins', g2048Coins);
+    activate();
+  } else {
+    mockWatchAd(4, activate);
+  }
+}
+// ---- Classements (perso localStorage signé anti-triche v1 + aperçu mondial fictif) ----
+function g2048Sign(mode, score){
+  const str = `g2048-${mode}-${score}-p4r4d0x-v1`;
+  let hash = 0;
+  for(let i=0;i<str.length;i++){ hash = ((hash<<5)-hash+str.charCodeAt(i))|0; }
+  return hash.toString(36);
+}
+function g2048GetPersonalScores(mode){
+  try{
+    const raw = localStorage.getItem('g2048Scores:'+mode);
+    if(!raw) return [];
+    const arr = JSON.parse(raw);
+    return arr.filter(e => e && e.sig === g2048Sign(mode, e.score));
+  }catch(e){ return []; }
+}
+function g2048SaveScore(mode, score){
+  if(score<=0) return;
+  const list = g2048GetPersonalScores(mode);
+  list.push({score, date:Date.now(), sig:g2048Sign(mode, score)});
+  list.sort((a,b)=>b.score-a.score);
+  const top = list.slice(0,10);
+  localStorage.setItem('g2048Scores:'+mode, JSON.stringify(top));
+  return top;
+}
+function g2048OpenLeaderboard(){
+  document.getElementById('g2048-mode-panel').style.display = 'none';
+  document.getElementById('g2048-game-panel').style.display = 'none';
+  document.getElementById('g2048-leaderboard-panel').style.display = 'block';
+  g2048RenderLbTabs();
+  g2048RenderLeaderboard();
+}
+function g2048RenderLbTabs(){
+  const el = document.getElementById('g2048-lb-tabs');
+  el.innerHTML = `
+    <button class="btn ${g2048LbMode==='normal'?'primary':''}" onclick="g2048SelectLbTab('normal')">♾️ Classique</button>
+    <button class="btn ${g2048LbMode==='rush'?'primary':''}" onclick="g2048SelectLbTab('rush')">⏱️ Rush 60s</button>
+  `;
+}
+function g2048SelectLbTab(mode){
+  g2048LbMode = mode;
+  g2048RenderLbTabs();
+  g2048RenderLeaderboard();
+}
+function g2048RenderLeaderboard(){
+  const persoEl = document.getElementById('g2048-lb-perso');
+  const worldEl = document.getElementById('g2048-lb-world');
+  const perso = g2048GetPersonalScores(g2048LbMode).slice(0,5);
+  persoEl.innerHTML = perso.length ? perso.map((e,i) => `
+    <div class="leaderboard-row">
+      <span class="leaderboard-rank">${i+1}</span>
+      <span class="leaderboard-name">Score</span>
+      <span class="leaderboard-score">${e.score}</span>
+    </div>
+  `).join('') : `<div class="footnote">Aucune partie terminée dans ce mode pour l'instant.</div>`;
+  const myBest = perso.length ? perso[0].score : null;
+  let world = [...g2048WorldBestMock[g2048LbMode]];
+  if(myBest !== null) world.push({name:'Toi', score:myBest, me:true});
+  world.sort((a,b)=>b.score-a.score);
+  worldEl.innerHTML = world.map((p,i) => `
+    <div class="leaderboard-row ${p.me?'me':''}">
+      <span class="leaderboard-rank">${i+1}</span>
+      <span class="leaderboard-name">${p.me?'👉 ':''}${p.name}</span>
+      <span class="leaderboard-score">${p.score}</span>
+    </div>
+  `).join('');
 }
 
 /* ================= MEMORY ================= */

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paradoxes-v66';
+const CACHE_NAME = 'paradoxes-v67';
 const ASSETS = [
   './',
   './index.html',
