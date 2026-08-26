@@ -749,7 +749,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px 6px 8px;
 }
 #ping-canvas{
-  touch-action:none; border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.28); display:block;
+  touch-action:none; display:block;
 }
 #ping-diff-row .btn{ flex:1; padding:10px 6px; font-size:13px; }
 
@@ -6771,10 +6771,13 @@ const PP_BASE_SPEED_FACTOR = 0.62;   // fraction de H parcourue par seconde, vit
 const PP_MAX_SPEED_FACTOR  = 1.55;
 const PP_SPEED_GROWTH = 1.045;       // accélération à chaque échange
 const PP_TRAIL_LEN = 10;
+const PP_BOUNCE_VZ0 = 900;   // vitesse verticale initiale du rebond (unité arbitraire, mise à l'échelle de ppH)
+const PP_GRAVITY = 2600;     // "gravité" du rebond — réglée pour qu'un seul rebond survienne pendant le trajet
 
 let ppMode = 'bot';
 let ppDiff = 'moyen';
 let ppW = 0, ppH = 0, ppDpr = 1;
+let ppOffX = 0, ppOffY = 0, ppCanvasW = 0, ppCanvasH = 0; // marge "hors-table" autour du terrain, dans le canvas
 let ppCanvas = null, ppCtx = null;
 let ppAnimId = null, ppLastTime = 0;
 let ppOver = true;
@@ -6782,7 +6785,7 @@ let ppScoreYou = 0, ppScoreOpp = 0;
 let ppCombo = 0;
 let ppResizeHandlerRef = null;
 
-let ppBall = { x:0, y:0, vx:0, vy:0, r:10 };
+let ppBall = { x:0, y:0, vx:0, vy:0, r:10, z:0, vz:0, bounced:false };
 let ppTrail = [];
 let ppParticles = [];
 let ppShake = 0;
@@ -6886,10 +6889,6 @@ function ppUpdateCombo(){
 function ppResize(){
   const topbar = document.getElementById('ping-topbar');
   const holder = document.getElementById('ping-canvas-holder');
-  // On calcule l'espace dispo directement depuis le viewport réel (visualViewport quand
-  // possible) + la hauteur RÉELLEMENT rendue de la barre du haut, plutôt que de faire confiance
-  // à un flex:1 dont la mesure (clientHeight) s'est révélée non fiable sur certains navigateurs
-  // mobiles (table rendue minuscule, cantonnée en haut de l'écran, constaté par l'utilisateur).
   const vv = window.visualViewport;
   const vw = vv ? vv.width  : window.innerWidth;
   const vh = vv ? vv.height : window.innerHeight;
@@ -6898,14 +6897,25 @@ function ppResize(){
   const availH = Math.max(200, vh - topbarH);
   holder.style.width = availW+'px';
   holder.style.height = availH+'px';
+  // La TABLE (le rectangle vert) n'occupe qu'une partie de l'écran (73%/65%, comme au vrai
+  // ping-pong où on joue aussi à côté/derrière la table) — mais le <canvas>, lui, est plus
+  // grand : il inclut une marge "hors-table" tout autour, pour qu'une balle qui sort sur le
+  // côté et une raquette qui la poursuit restent visibles au lieu d'être coupées par le bord
+  // du canvas. ppW/ppH restent les dimensions de la TABLE (utilisées par toute la physique et
+  // le score) ; ppOffX/ppOffY décalent son dessin à l'intérieur du canvas plus grand.
   const w = Math.round(availW*0.73);
   const h = Math.round(availH*0.65);
   ppW = w; ppH = h;
+  ppOffX = Math.round(availW*0.12);
+  ppOffY = Math.round(availH*0.10);
+  const canvasW = w + ppOffX*2;
+  const canvasH = h + ppOffY*2;
+  ppCanvasW = canvasW; ppCanvasH = canvasH;
   ppDpr = Math.min(window.devicePixelRatio||1, 2.5);
-  ppCanvas.style.width = ppW+'px';
-  ppCanvas.style.height = ppH+'px';
-  ppCanvas.width = Math.round(ppW*ppDpr);
-  ppCanvas.height = Math.round(ppH*ppDpr);
+  ppCanvas.style.width = canvasW+'px';
+  ppCanvas.style.height = canvasH+'px';
+  ppCanvas.width = Math.round(canvasW*ppDpr);
+  ppCanvas.height = Math.round(canvasH*ppDpr);
   ppCtx.setTransform(ppDpr,0,0,ppDpr,0,0);
   ppPlayer.r = ppOpp.r = ppW*0.135;
   ppBall.r = ppW*0.04;
@@ -6936,9 +6946,10 @@ function ppTeardownResize(){
   }
 }
 function ppClampPaddle(p){
-  // Léger débordement autorisé au-delà des bords latéraux (~35% du rayon), comme sur la
-  // référence où les raquettes chevauchent visiblement les coins pour chasser une balle large.
-  const overhang = p.r*0.35;
+  // Débordement généreux au-delà des bords latéraux — la raquette peut sortir de la table pour
+  // rattraper une balle large (vrai ping-pong : on joue aussi à côté), limité à la marge hors-
+  // table réellement dessinée sur le canvas pour ne jamais disparaître hors champ.
+  const overhang = ppOffX*0.85;
   p.x = Math.max(-overhang, Math.min(ppW+overhang, p.x));
 }
 
@@ -6948,6 +6959,7 @@ function ppServe(towardOpp){
   const speed = ppH*PP_BASE_SPEED_FACTOR;
   ppBall.vx = (Math.random()-0.5)*speed*0.3;
   ppBall.vy = towardOpp ? -speed : speed;
+  ppBall.z = 0; ppBall.vz = PP_BOUNCE_VZ0*(ppH/700); ppBall.bounced = false;
   ppTrail = [];
   // Celui qui vient de gagner le point précédent sert vers l'autre — s'il fait faute direct
   // (rarissime), c'est donc lui qui a "frappé" cette balle, comme une vraie faute au service.
@@ -6972,8 +6984,11 @@ function ppDetachInput(){
   ppActivePointers = {};
 }
 function ppLocalXY(e){
+  // Convertit la position de l'écran en coordonnées "espace table" (0..ppW, 0..ppH) en
+  // retirant la marge hors-table du canvas — la raquette continue de suivre le doigt même
+  // quand elle chasse la balle au-delà du bord vert.
   const rect = ppCanvas.getBoundingClientRect();
-  return { x: e.clientX-rect.left, y: e.clientY-rect.top };
+  return { x: e.clientX-rect.left-ppOffX, y: e.clientY-rect.top-ppOffY };
 }
 function ppOnPointerDown(e){
   e.preventDefault();
@@ -7001,8 +7016,8 @@ function ppOnPointerMove(e){
   // débordement autorisé vers l'arrière (comme sur la référence, où la raquette peut chasser
   // une balle large jusqu'à dépasser légèrement le bord de la table) — mais jamais le filet.
   const midY = ppH/2;
-  if(target==='player') p.y = Math.max(midY+p.r*1.05, Math.min(ppH+p.r*0.3, y));
-  else p.y = Math.max(-p.r*0.3, Math.min(midY-p.r*1.05, y));
+  if(target==='player') p.y = Math.max(midY+p.r*1.05, Math.min(ppH+ppOffY*0.8, y));
+  else p.y = Math.max(-ppOffY*0.8, Math.min(midY-p.r*1.05, y));
   ppClampPaddle(p);
   p.lastX = x; p.lastY = y; p.lastT = now;
 }
@@ -7015,7 +7030,7 @@ function ppBotUpdate(dt){
   const cfg = PP_DIFFS[ppDiff];
   const maxSpeedX = ppW*1.6*cfg.botSpeed;
   const error = (Math.sin(performance.now()*0.003 + ppBall.x)*cfg.botError)*ppW;
-  const targetX = Math.max(ppOpp.r, Math.min(ppW-ppOpp.r, ppBall.x + error));
+  const targetX = ppBall.x + error; // pas de clamp ici : le bot doit pouvoir chasser hors-table, ppClampPaddle borne le résultat final
   const diffX = targetX - ppOpp.x;
   const moveX = Math.max(-maxSpeedX*dt, Math.min(maxSpeedX*dt, diffX));
   ppOpp.vx = moveX/Math.max(dt,0.0001);
@@ -7045,11 +7060,19 @@ function ppBotUpdate(dt){
 function ppStepBall(dt){
   const b = ppBall;
   b.x += b.vx*dt; b.y += b.vy*dt;
-  // Rebond élastique sur les côtés tant que la balle est dans la largeur du terrain — confirmé
-  // par l'utilisateur en jeu réel (mes 2 échantillonnages vidéo à 4-8fps avaient raté le rebond,
-  // trop bref pour être capturé entre 2 frames). Sans ça, aucune balle ne revient sur un tir large.
-  if(b.x - b.r < 0){ b.x = b.r; b.vx = Math.abs(b.vx); ppSpawnWallSpark(b.x,b.y); }
-  else if(b.x + b.r > ppW){ b.x = ppW-b.r; b.vx = -Math.abs(b.vx); ppSpawnWallSpark(b.x,b.y); }
+  // Pas de mur sur les côtés (vrai ping-pong, pas air hockey) : la balle peut sortir sur le
+  // côté et reste jouable — une raquette peut la poursuivre hors de la table pour la renvoyer.
+  // En revanche, un vrai rebond AU SOL (sur la table) : la balle monte puis retombe une fois
+  // après chaque frappe, comme au vrai ping-pong.
+  if(!b.bounced){
+    const g = PP_GRAVITY*(ppH/700);
+    b.vz -= g*dt;
+    b.z += b.vz*dt;
+    if(b.z <= 0){
+      b.z = 0; b.vz = 0; b.bounced = true;
+      ppSpawnBounceMark(b.x, b.y);
+    }
+  }
   ppTrail.push({x:b.x, y:b.y});
   if(ppTrail.length > PP_TRAIL_LEN) ppTrail.shift();
 }
@@ -7068,6 +7091,8 @@ function ppDeflect(p, isPlayer, dx, dy, dist){
   // pousse la balle hors de la raquette pour éviter les doubles collisions
   const nx = dist>0.01 ? dx/dist : 0, ny = dist>0.01 ? dy/dist : (isPlayer?-1:1);
   b.x = p.x + nx*(p.r+b.r); b.y = p.y + ny*(p.r+b.r);
+  // Chaque frappe relance l'arc du rebond au sol pour le trajet suivant.
+  b.z = 0; b.vz = PP_BOUNCE_VZ0*(ppH/700); b.bounced = false;
 
   const curSpeed = Math.hypot(b.vx, b.vy);
   const baseSpeed = Math.min(curSpeed*PP_SPEED_GROWTH, ppH*PP_MAX_SPEED_FACTOR);
@@ -7112,10 +7137,11 @@ function ppSpawnHitBurst(x,y,color){
     ppParticles.push({x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:1, color});
   }
 }
-function ppSpawnWallSpark(x,y){
-  for(let i=0;i<4;i++){
-    const a = Math.random()*Math.PI*2, sp = 20+Math.random()*40;
-    ppParticles.push({x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:0.6, color:'#ffffff'});
+function ppSpawnBounceMark(x,y){
+  // Petite gerbe blanche au moment où la balle touche la table — le "rebond au sol".
+  for(let i=0;i<6;i++){
+    const a = Math.random()*Math.PI*2, sp = 15+Math.random()*30;
+    ppParticles.push({x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:0.5, color:'#ffffff'});
   }
 }
 function ppStepParticles(dt){
@@ -7125,8 +7151,8 @@ function ppStepParticles(dt){
 }
 
 function ppCheckScore(){
-  // Avec le rebond mural rétabli, la balle ne sort plus jamais par les côtés — seul le fond
-  // (au-delà de la ligne de fond d'un des 2 joueurs) marque un point, comme au vrai ping-pong.
+  // Seul le fond (au-delà de la ligne de fond d'un des 2 joueurs) marque un point — sortir sur
+  // le côté ne compte pas, la balle reste en jeu tant qu'elle n'a pas dépassé le haut ou le bas.
   if(ppBall.y - ppBall.r > ppH) return 'opp';   // passée derrière ta ligne
   if(ppBall.y + ppBall.r < 0) return 'player';  // passée derrière la ligne adverse
   return null;
@@ -7188,11 +7214,13 @@ function ppDrawPaddle(p, color, colorDark){
 }
 function ppRender(){
   const ctx = ppCtx;
-  ctx.clearRect(0,0,ppW,ppH);
+  ctx.clearRect(0,0,ppCanvasW,ppCanvasH);
   ctx.save();
-  if(ppShake > 0){
-    ctx.translate((Math.random()-0.5)*ppShake, (Math.random()-0.5)*ppShake);
-  }
+  let shakeX=0, shakeY=0;
+  if(ppShake > 0){ shakeX=(Math.random()-0.5)*ppShake; shakeY=(Math.random()-0.5)*ppShake; }
+  // Décale tout le dessin "espace table" (0..ppW, 0..ppH) de la marge hors-table, pour que la
+  // table verte s'affiche bien à l'intérieur du canvas plus grand (qui inclut les 4 marges).
+  ctx.translate(ppOffX+shakeX, ppOffY+shakeY);
   // terrain
   ctx.fillStyle = '#5cb04e';
   ctx.fillRect(0,0,ppW,ppH);
@@ -7233,13 +7261,15 @@ function ppRender(){
   ppDrawPaddle(ppOpp, '#3ec6f0', '#1c8fb8');
   ppDrawPaddle(ppPlayer, '#ef6461', '#b8433f');
 
-  // balle
+  // balle — le sprite se soulève avec la hauteur du rebond (z), l'ombre reste au sol (position
+  // réelle x,y), les deux se rejoignent exactement au moment de l'impact sur la table.
+  const lift = ppBall.z*0.6;
   ctx.beginPath();
   ctx.arc(ppBall.x+ppBall.r*0.15, ppBall.y+ppBall.r*0.15, ppBall.r, 0, Math.PI*2);
   ctx.fillStyle = 'rgba(0,0,0,0.18)';
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(ppBall.x, ppBall.y, ppBall.r, 0, Math.PI*2);
+  ctx.arc(ppBall.x, ppBall.y-lift, ppBall.r, 0, Math.PI*2);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.lineWidth = 1.5;
