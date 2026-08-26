@@ -33,6 +33,8 @@ PWA éducative/ludique : paradoxes de probabilités expliqués simplement + mini
 
 **Billard** — mode paysage géré en pivotant le DESSIN canvas (pas le DOM), 8-ball avec vraies règles, mode Bot (IA ghost-ball) avec animation de frappe de la queue, pochettes latérales plus étroites que les coins. Watchdog anti-blocage (try/catch + double garde-fou temporel) ajouté suite à un bug de bot qui bloquait la partie. **Dernier retour utilisateur : "pour l'instant c'est ok"** — pas de nouveau bug remonté depuis, mais pas non plus testé en profondeur post-fix.
 
+**Flappy Bird** — l'oiseau est maintenant un sprite PNG (toucan fourni par l'utilisateur) au lieu d'une forme dessinée, avec légère inclinaison selon la vitesse verticale. Nouveau dossier `sprites/` créé pour les images de jeu (distinct de `icons/` qui reste pour les icônes de menu).
+
 **2048** — cahier des charges complet fourni par l'utilisateur et son frère (Drive, docs "Enzo"=logique/monétisation et "Flavio"=UI/visuel), thème cible "néon cyberpunk". Chantier en cours, traité point par point (§ = numéro du cahier des charges "Enzo") :
 - ✅ §1 Jeu infini après 2048 (4096, 8192...) au lieu de s'arrêter.
 - ✅ §2 Power-ups : Undo (coût aligné sur la spec : 50 pièces ou pub, plus de "1er gratuit"), Marteau Laser (100 pièces/pub, tap une tuile pour la détruire), Swap (75 pièces/pub, tap 2 tuiles adjacentes pour les permuter). Économie de pièces (§4) : 1 pièce de base par fusion + bonus par palier (128:+10, 1024:+50, 2048+:+200), streak de swipes consécutifs avec fusion (x1.5 à 3 coups, x2 à 5 coups).

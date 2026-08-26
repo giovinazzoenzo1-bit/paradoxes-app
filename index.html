@@ -5452,6 +5452,10 @@ function fbEndGame(){
   playFeedback('lose');
   fbRenderWorldboard();
 }
+let fbBirdImg = new Image();
+let fbBirdImgLoaded = false;
+fbBirdImg.onload = ()=>{ fbBirdImgLoaded = true; };
+fbBirdImg.src = 'sprites/flappybird_toucan.png';
 function fbDraw(){
   const ctx = fbCtx;
   if(!ctx) return;
@@ -5462,17 +5466,31 @@ function fbDraw(){
     ctx.fillRect(p.x, 0, FB_PIPE_WIDTH, p.gapY);
     ctx.fillRect(p.x, p.gapY+FB_PIPE_GAP, FB_PIPE_WIDTH, FB_HEIGHT-(p.gapY+FB_PIPE_GAP));
   });
-  ctx.fillStyle = '#f5b942';
-  ctx.beginPath();
-  ctx.arc(FB_BIRD_X, fbBirdY, FB_BIRD_RADIUS, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle = '#e08a3c';
-  ctx.beginPath();
-  ctx.moveTo(FB_BIRD_X+FB_BIRD_RADIUS-2, fbBirdY);
-  ctx.lineTo(FB_BIRD_X+FB_BIRD_RADIUS+8, fbBirdY-3);
-  ctx.lineTo(FB_BIRD_X+FB_BIRD_RADIUS+8, fbBirdY+3);
-  ctx.closePath();
-  ctx.fill();
+  if(fbBirdImgLoaded){
+    // Sprite du toucan, taille dérivée de FB_BIRD_RADIUS (garde le ratio d'origine de l'image),
+    // légère inclinaison selon la vitesse verticale pour un effet "piqué/montée" classique du genre.
+    const w = FB_BIRD_RADIUS*3.4;
+    const h = w * (fbBirdImg.naturalHeight / fbBirdImg.naturalWidth);
+    const tilt = Math.max(-0.5, Math.min(0.7, fbBirdVY * 0.04));
+    ctx.save();
+    ctx.translate(FB_BIRD_X, fbBirdY);
+    ctx.rotate(tilt);
+    ctx.drawImage(fbBirdImg, -w/2, -h/2, w, h);
+    ctx.restore();
+  } else {
+    // Repli le temps que l'image charge (ou si elle échoue à charger)
+    ctx.fillStyle = '#f5b942';
+    ctx.beginPath();
+    ctx.arc(FB_BIRD_X, fbBirdY, FB_BIRD_RADIUS, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#e08a3c';
+    ctx.beginPath();
+    ctx.moveTo(FB_BIRD_X+FB_BIRD_RADIUS-2, fbBirdY);
+    ctx.lineTo(FB_BIRD_X+FB_BIRD_RADIUS+8, fbBirdY-3);
+    ctx.lineTo(FB_BIRD_X+FB_BIRD_RADIUS+8, fbBirdY+3);
+    ctx.closePath();
+    ctx.fill();
+  }
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 26px sans-serif';
   ctx.textAlign = 'center';
