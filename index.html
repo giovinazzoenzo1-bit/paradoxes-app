@@ -753,6 +753,50 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 }
 #ping-diff-row .btn{ flex:1; padding:10px 6px; font-size:13px; }
 
+/* ---------- Écran de victoire — overlay sombre + pluie d'étoiles + médaille + 3 boutons ---------- */
+#ping-victory-overlay{
+  position:absolute; inset:0; z-index:30; background:rgba(30,20,10,0.72);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  overflow:hidden; animation:ppFadeIn .25s ease;
+}
+@keyframes ppFadeIn{ from{opacity:0;} to{opacity:1;} }
+#ping-victory-stars{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.pp-star{
+  position:absolute; top:-40px; font-size:20px; color:#ffd84d;
+  animation:ppStarFall linear infinite; text-shadow:0 0 4px rgba(255,216,77,0.8);
+}
+@keyframes ppStarFall{
+  from{ transform:translateY(-10vh) rotate(0deg); opacity:0.9; }
+  to{ transform:translateY(110vh) rotate(360deg); opacity:0.4; }
+}
+#ping-victory-medal{
+  width:84px; height:84px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #ffe27a, #f0b429 70%);
+  border:5px solid #c9861a; display:flex; align-items:center; justify-content:center; font-size:38px;
+  box-shadow:0 6px 16px rgba(0,0,0,0.35); position:relative; z-index:2;
+}
+#ping-victory-medal::before{
+  content:''; position:absolute; top:-22px; left:50%; transform:translateX(-50%);
+  width:0; height:0; border-left:22px solid transparent; border-right:22px solid transparent;
+  border-bottom:26px solid #d9463c; z-index:-1;
+}
+#ping-victory-title{
+  margin-top:14px; font-size:22px; font-weight:900; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.4);
+  position:relative; z-index:2;
+}
+#ping-victory-score{ margin-top:4px; font-size:15px; font-weight:700; color:#ffe9c2; position:relative; z-index:2; }
+#ping-victory-stats{
+  margin-top:10px; max-height:160px; overflow-y:auto; background:rgba(0,0,0,0.25); border-radius:12px;
+  padding:8px 14px; width:78%; position:relative; z-index:2;
+}
+#ping-victory-buttons{ margin-top:20px; display:flex; align-items:center; gap:16px; position:relative; z-index:2; }
+.pp-vbtn{
+  border:none; border-radius:16px; font-weight:800; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.3);
+}
+.pp-vbtn.home, .pp-vbtn.stats{ width:52px; height:52px; font-size:20px; color:#fff; }
+.pp-vbtn.home{ background:#ef6461; }
+.pp-vbtn.stats{ background:#8a5cd6; }
+.pp-vbtn.replay{ background:#4fbf5f; color:#fff; padding:16px 30px; font-size:16px; letter-spacing:.03em; }
+
 /* ---------- ÉCHECS ---------- */
 .chess-board{
   display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr);
@@ -1567,14 +1611,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="footnote" id="ping-winstat" style="margin-top:8px;"></div>
     </div>
 
-    <div class="panel" id="ping-endgame-panel" style="display:none; text-align:center;">
-      <h2 id="ping-endgame-title"></h2>
-      <div id="ping-endgame-board"></div>
-      <div class="footnote" style="margin-top:8px;">Aperçu fictif, pas de vrai backend — voir Confidentialité.</div>
-      <div class="btn-row" style="justify-content:center; margin-top:12px;">
-        <button class="btn primary" onclick="ppBackToSetup()">Rejouer</button>
-      </div>
-    </div>
+    <div class="panel" id="ping-endgame-panel" style="display:none;"></div>
   </div>
 
   <div id="ping-table-wrap" style="display:none;">
@@ -1590,6 +1627,18 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
     <div id="ping-canvas-holder">
       <canvas id="ping-canvas"></canvas>
+    </div>
+    <div id="ping-victory-overlay" style="display:none;">
+      <div id="ping-victory-stars"></div>
+      <div id="ping-victory-medal"><span id="ping-victory-medal-emoji">🥇</span></div>
+      <div id="ping-victory-title">TU GAGNES !</div>
+      <div id="ping-victory-score"></div>
+      <div id="ping-victory-stats" style="display:none;"></div>
+      <div id="ping-victory-buttons">
+        <button class="pp-vbtn home" onclick="openJeux()">🏠</button>
+        <button class="pp-vbtn replay" onclick="ppRestartSameMode()">REJOUER</button>
+        <button class="pp-vbtn stats" onclick="ppToggleVictoryStats()">📊</button>
+      </div>
     </div>
   </div>
 </div>
@@ -6717,7 +6766,7 @@ const PP_DIFFS = {
   moyen:     { label:'MOYEN',     botSpeed:0.82, botError:0.09, botPowerMin:0.5,  botPowerMax:0.95 },
   difficile: { label:'DIFFICILE', botSpeed:1.05, botError:0.03, botPowerMin:0.7,  botPowerMax:1.15 },
 };
-const PP_WIN_SCORE = 11;
+const PP_WIN_SCORE = 7; // confirmé sur 2 sources indépendantes (vidéo + rapport) : partie courte = plus addictif
 const PP_BASE_SPEED_FACTOR = 0.62;   // fraction de H parcourue par seconde, vitesse de base
 const PP_MAX_SPEED_FACTOR  = 1.55;
 const PP_SPEED_GROWTH = 1.045;       // accélération à chaque échange
@@ -6774,10 +6823,14 @@ function ppBackToSetup(){
   ppStopLoop();
   document.getElementById('ping-setup-panel').style.display = 'block';
   document.getElementById('ping-endgame-panel').style.display = 'none';
+  document.getElementById('ping-victory-overlay').style.display = 'none';
   document.getElementById('ping-table-wrap').style.display = 'none';
   ppDetachInput();
   ppTeardownResize();
   ppRenderWinStat();
+}
+function ppRestartSameMode(){
+  ppStart(ppMode);
 }
 function ppExitTable(){
   ppStopLoop();
@@ -6798,6 +6851,7 @@ function ppStart(mode){
   ppPlayer.x = 0; ppOpp.x = 0; // sentinelle pour que ppResize() recentre les raquettes à ce nouveau départ
   document.getElementById('ping-setup-panel').style.display = 'none';
   document.getElementById('ping-endgame-panel').style.display = 'none';
+  document.getElementById('ping-victory-overlay').style.display = 'none';
   document.getElementById('ping-table-wrap').style.display = 'block';
   document.getElementById('ping-diff-badge').textContent = mode==='bot' ? PP_DIFFS[ppDiff].label : 'ENTRE AMIS';
   document.getElementById('ping-oppLbl').textContent = mode==='bot' ? 'BOT' : 'J2';
@@ -7190,33 +7244,59 @@ function ppRender(){
 
 function ppEndGame(winner){
   ppOver = true;
-  playFeedback('record');
-  document.getElementById('ping-table-wrap').style.display = 'none';
-  document.getElementById('ping-endgame-panel').style.display = 'block';
-  const winnerLabel = winner==='player' ? 'Toi' : (ppMode==='bot' ? 'Le bot' : 'Joueur 2');
-  document.getElementById('ping-endgame-title').textContent = `🎉 ${winnerLabel} gagne ! (${ppScoreYou} - ${ppScoreOpp})`;
-  if(ppMode==='bot' && winner==='player'){
+  const won = winner==='player';
+  playFeedback(won ? 'record' : 'wrong');
+  // Le plateau reste visible, figé, en fond -- seul un voile sombre + les infos de victoire
+  // s'affichent par-dessus (comme sur la reference), au lieu de masquer entierement la table.
+  if(ppMode==='bot' && won){
     const wins = parseInt(localStorage.getItem('ppWins')||'0') + 1;
     localStorage.setItem('ppWins', wins);
   }
+  const winnerLabel = won ? 'TU GAGNES !' : (ppMode==='bot' ? 'LE BOT GAGNE' : 'JOUEUR 2 GAGNE');
+  document.getElementById('ping-victory-medal-emoji').textContent = won ? '🥇' : '🥈';
+  document.getElementById('ping-victory-title').textContent = winnerLabel;
+  document.getElementById('ping-victory-score').textContent = `${ppScoreYou} — ${ppScoreOpp}`;
+  document.getElementById('ping-victory-stats').style.display = 'none';
   ppRenderEndgameBoard();
+  ppSpawnVictoryStars();
+  document.getElementById('ping-victory-overlay').style.display = 'flex';
   ppDetachInput();
   ppTeardownResize();
 }
+function ppToggleVictoryStats(){
+  const el = document.getElementById('ping-victory-stats');
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+function ppSpawnVictoryStars(){
+  const holder = document.getElementById('ping-victory-stars');
+  holder.innerHTML = '';
+  const n = 22;
+  for(let i=0;i<n;i++){
+    const s = document.createElement('span');
+    s.className = 'pp-star';
+    s.textContent = '⭐';
+    s.style.left = Math.random()*100 + '%';
+    s.style.fontSize = (14+Math.random()*16) + 'px';
+    s.style.animationDuration = (2.2+Math.random()*2.2) + 's';
+    s.style.animationDelay = (Math.random()*2.5) + 's';
+    holder.appendChild(s);
+  }
+}
 function ppRenderEndgameBoard(){
-  const el = document.getElementById('ping-endgame-board');
+  const el = document.getElementById('ping-victory-stats');
   const myWins = parseInt(localStorage.getItem('ppWins')||'0');
   let world = [...ppWorldMock];
   world.push({name:'Toi', wins:myWins, me:true});
   world.sort((a,b)=>b.wins-a.wins);
-  el.innerHTML = `<div style="font-size:13px; font-weight:700; color:var(--muted); margin:10px 0 4px;">🏆 Victoires contre le bot</div>` +
+  el.innerHTML = `<div style="font-size:12px; font-weight:700; color:#ffe9c2; margin-bottom:6px;">🏆 Victoires contre le bot</div>` +
     world.map((p,i) => `
-      <div class="leaderboard-row ${p.me?'me':''}">
+      <div class="leaderboard-row ${p.me?'me':''}" style="background:transparent;">
         <span class="leaderboard-rank">${i+1}</span>
         <span class="leaderboard-name">${p.me?'👉 ':''}${p.name}</span>
         <span class="leaderboard-score">${p.wins} victoires</span>
       </div>
-    `).join('');
+    `).join('') +
+    `<div style="font-size:10px; color:#ffe9c2; opacity:0.75; margin-top:6px;">Aperçu fictif, pas de vrai backend</div>`;
 }
 
 /* ================= SON & VIBRATION ================= */
