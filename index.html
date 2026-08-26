@@ -694,7 +694,6 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 }
 .bil-power-fill{
   width:100%; height:0%; background:linear-gradient(0deg,#8fc95f,#f5b942 60%,#ef6461);
-  transition:height 0.08s linear;
 }
 .bil-power-pct{
   position:absolute; top:6px; left:0; right:0; text-align:center; font-size:10px; font-weight:800;
@@ -6259,10 +6258,11 @@ const BIL_REST_BALL = 0.95;
 const BIL_FRICTION_AIR = 0.018;
 const BIL_SUBSTEPS = 8;
 const BIL_WALL_T = 30;
-const BIL_POCKET_R = 32;
+const BIL_POCKET_R = 32;       // pochettes de coin — comme sur une vraie table
+const BIL_POCKET_R_SIDE = 24;  // pochettes du milieu (latérales) — plus étroites qu'en coin sur une vraie table, plus exigeantes en angle
 const BIL_POCKETS = [
-  {x:0,y:0},{x:BIL_TABLE_W/2,y:0},{x:BIL_TABLE_W,y:0},
-  {x:0,y:BIL_TABLE_H},{x:BIL_TABLE_W/2,y:BIL_TABLE_H},{x:BIL_TABLE_W,y:BIL_TABLE_H},
+  {x:0,y:0, r:BIL_POCKET_R}, {x:BIL_TABLE_W/2,y:0, r:BIL_POCKET_R_SIDE}, {x:BIL_TABLE_W,y:0, r:BIL_POCKET_R},
+  {x:0,y:BIL_TABLE_H, r:BIL_POCKET_R}, {x:BIL_TABLE_W/2,y:BIL_TABLE_H, r:BIL_POCKET_R_SIDE}, {x:BIL_TABLE_W,y:BIL_TABLE_H, r:BIL_POCKET_R},
 ];
 const BIL_BALL_DEFS = [
   {id:0, group:'cue', color:'#f4f1ea'},
@@ -6328,7 +6328,7 @@ function bilCheckPockets(){
   for(const ball of bilBalls){
     if(ball.pocketed) continue;
     for(const p of BIL_POCKETS){
-      if(Math.hypot(ball.pos.x-p.x, ball.pos.y-p.y) < BIL_POCKET_R){
+      if(Math.hypot(ball.pos.x-p.x, ball.pos.y-p.y) < p.r){
         ball.pocketed = true;
         Matter.Body.setVelocity(ball.body, {x:0,y:0});
         Matter.Composite.remove(bilEngine.world, ball.body);
@@ -6407,6 +6407,9 @@ let bilAimingActive = false;  // en train de glisser sur la table pour viser
 let bilPower = 0;             // 0..BIL_MAX_POWER, réglé via la jauge dédiée
 let bilPowerBarDragging = false;
 let bilCanvasCSSW = 0, bilCanvasCSSH = 0, bilScale = 1, bilDpr = 1, bilRotated = false;
+let bilGameId = 0;          // incrémenté à chaque bilStart() — protège contre un setTimeout du bot resté en attente d'une ancienne partie
+let bilBotTimeoutId = null; // id du setTimeout en attente pour le coup du bot, pour pouvoir l'annuler
+let bilShotStartTime = 0;   // horodatage du tir en cours, pour le garde-fou anti-blocage ci-dessous
 const BIL_MAX_POWER = 45; // calibré empiriquement avec Matter.js (testé stable jusqu'à 100 sans tunneling)
 function bilRackPositions(footX, midY){
   const positions = [];
@@ -6455,6 +6458,8 @@ function openBilliard(){
 }
 function bilBackToSetup(){
   if(bilAnimId) cancelAnimationFrame(bilAnimId);
+  bilGameId++; // invalide tout setTimeout du bot resté en attente
+  if(bilBotTimeoutId){ clearTimeout(bilBotTimeoutId); bilBotTimeoutId = null; }
   document.getElementById('bil-setup-panel').style.display = 'block';
   document.getElementById('bil-endgame-panel').style.display = 'none';
   document.getElementById('bil-victory-overlay').style.display = 'none';
@@ -6545,6 +6550,8 @@ function bilStart(mode){
   bilCurrentPlayer = 1;
   bilPlayerGroups = {1:null, 2:null};
   bilGroupsAssigned = false;
+  bilGameId++; // invalide tout setTimeout du bot d'une éventuelle partie précédente encore en attente
+  if(bilBotTimeoutId){ clearTimeout(bilBotTimeoutId); bilBotTimeoutId = null; }
   if(bilAnimId) cancelAnimationFrame(bilAnimId);
   document.getElementById('bil-setup-panel').style.display = 'none';
   document.getElementById('bil-endgame-panel').style.display = 'none';
@@ -6675,6 +6682,10 @@ function bilTurnLabel(player){
   return (bilMode==='bot' && player===2) ? 'BOT' : `Joueur ${player}`;
 }
 function bilFireShot(vx, vy){
+  // Garde-fou : une vitesse invalide (NaN/Infini) ferait tourner la simulation pour toujours,
+  // car bilAllStopped() ne redevient jamais vrai avec des vitesses NaN — le match resterait
+  // "planté". On retombe sur un tir neutre plutôt que de transmettre une vitesse invalide.
+  if(!isFinite(vx) || !isFinite(vy)){ vx = 0; vy = -8; }
   Matter.Body.setVelocity(bilBalls[0].body, {x:vx, y:vy});
   bilBalls[0].vel = {x:vx, y:vy};
   bilShotFacts = { firstContactGroup:null, cueScratched:false, pocketedBalls:[], railAfterContact:false };
@@ -6682,12 +6693,21 @@ function bilFireShot(vx, vy){
   bilOwnRemainingSnapshot = currentGroup ? bilBalls.filter(b=>b.group===currentGroup && !b.pocketed).length : 0;
   bilState = 'sim';
   bilResetAimAndPower();
+  bilShotStartTime = performance.now();
   bilAnimId = requestAnimationFrame(bilAnimate);
 }
 function bilAnimate(){
   bilStepPhysics();
   bilDraw();
-  if(bilAllStopped()){
+  // Garde-fou anti-blocage : quelle qu'en soit la cause (vitesse invalide passée outre le
+  // premier filtre, bille qui vibre indéfiniment à très faible vitesse, etc.), si la simulation
+  // tourne depuis plus de 8s sans se stabiliser, on force l'arrêt plutôt que de laisser le match
+  // planté indéfiniment.
+  const stuck = performance.now() - bilShotStartTime > 8000;
+  if(bilAllStopped() || stuck){
+    if(stuck){
+      for(const b of bilBalls){ if(!b.pocketed){ Matter.Body.setVelocity(b.body, {x:0,y:0}); b.vel={x:0,y:0}; } }
+    }
     bilOnShotSettled();
   } else {
     bilAnimId = requestAnimationFrame(bilAnimate);
@@ -6746,14 +6766,19 @@ function bilBotPickShot(){
   return { dir: {x:1,y:0}, power: BIL_MAX_POWER*0.4 };
 }
 function bilBotTakeShot(){
-  if(bilState !== 'aim') return;
-  const shot = bilBotPickShot();
+  if(bilMode!=='bot' || bilCurrentPlayer!==2 || bilState !== 'aim') return;
+  let shot = bilBotPickShot();
+  // Filet de sécurité : direction invalide -> tir neutre plutôt que de figer la partie.
+  if(!shot || !isFinite(shot.dir.x) || !isFinite(shot.dir.y) || (shot.dir.x===0 && shot.dir.y===0)){
+    shot = { dir:{x:0, y:-1}, power: BIL_MAX_POWER*0.4 };
+  }
   bilAimDir = shot.dir;
   bilPower = Math.min(BIL_MAX_POWER, shot.power);
   bilDraw();
   bilFireShot(shot.dir.x*bilPower, shot.dir.y*bilPower);
 }
 function bilBotPlaceCue(){
+  if(bilMode!=='bot' || bilCurrentPlayer!==2 || bilState!=='placing') return;
   for(let tries=0; tries<40; tries++){
     const x = BIL_BALL_R*2 + Math.random()*(BIL_TABLE_W-BIL_BALL_R*4);
     const y = BIL_BALL_R*2 + Math.random()*(BIL_TABLE_H-BIL_BALL_R*4);
@@ -6771,13 +6796,17 @@ function bilBotPlaceCue(){
   bilDraw();
 }
 // Programme le coup du bot (ou son placement de bille en main) après un court délai, pour un
-// effet "réflexion" plus naturel qu'un tir instantané.
+// effet "réflexion" plus naturel qu'un tir instantané. bilGameId protège contre le cas où la
+// partie a été quittée/relancée pendant l'attente : le délai en cours devient obsolète et ne
+// doit rien déclencher sur la nouvelle partie.
 function bilMaybeBotTurn(){
   if(bilMode !== 'bot' || bilCurrentPlayer !== 2) return;
+  const gid = bilGameId;
+  if(bilBotTimeoutId){ clearTimeout(bilBotTimeoutId); bilBotTimeoutId = null; }
   if(bilState === 'placing'){
-    setTimeout(bilBotPlaceCue, 700);
+    bilBotTimeoutId = setTimeout(()=>{ if(gid===bilGameId) bilBotPlaceCue(); }, 700);
   } else if(bilState === 'aim'){
-    setTimeout(bilBotTakeShot, 900);
+    bilBotTimeoutId = setTimeout(()=>{ if(gid===bilGameId) bilBotTakeShot(); }, 900);
   }
 }
 function bilOnShotSettled(){
@@ -6899,9 +6928,9 @@ function bilDraw(){
   ctx.strokeRect(railW+4,railW+4,BIL_TABLE_W-railW*2-8,BIL_TABLE_H-railW*2-8);
   // pochettes
   for(const p of BIL_POCKETS){
-    ctx.beginPath(); ctx.arc(p.x,p.y,BIL_POCKET_R,0,Math.PI*2);
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
     ctx.fillStyle = '#111'; ctx.fill();
-    ctx.beginPath(); ctx.arc(p.x,p.y,BIL_POCKET_R,0,Math.PI*2);
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
     ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=2; ctx.stroke();
   }
   // aperçu de visée : actif dès qu'un angle est mémorisé (verrouillé ou en cours de réglage),
