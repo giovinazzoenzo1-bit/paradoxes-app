@@ -97,6 +97,14 @@ L'utilisateur a fourni un rapport technique généré par Gemini listant des mé
 - **Testé** : simulation headless mise à jour (seuil de victoire à 7) — 50 matchs, 0 anomalie, parties nettement plus courtes.
 - **Limite assumée** : overlay de victoire (positionnement CSS, animation des étoiles) non testable en rendu réel depuis ce sandbox.
 
+## v58 : Ping-pong — retour en jeu réel de l'utilisateur : table trop large + rebond mural rétabli
+Après avoir testé en vrai, l'utilisateur tranche sur les 2 points que j'avais rejetés en v57 (au profit du rapport Gemini, contre ma propre analyse vidéo) :
+- **Table trop large, impossible de jouer sur les côtés** : confirme le point Gemini. Largeur réduite de 90% → 73% du conteneur, hauteur de 93% → 65% (proche du 70-75%/60-65% du rapport). Donne de vraies marges sur les côtés pour poser le doigt sans gêne.
+- **Rebond mural rétabli** : l'utilisateur confirme qu'il y a bien un rebond sur les côtés en jeu réel. Mon analyse vidéo (échantillonnage à 4-8 fps) avait probablement raté le rebond — un rebond bref entre deux frames capturées peut facilement passer inaperçu à cette fréquence d'échantillonnage. `ppStepBall` rétabli avec rebond élastique (`Vx = -Vx`) sur les 2 côtés tant que la balle est dans la largeur du terrain, `ppSpawnWallSpark` réintroduit. Le mécanisme "sortie latérale = point pour le dernier frappeur" (v55-v57) est retiré de `ppCheckScore` — seul le fond (au-delà d'une ligne de fond) marque un point désormais. `ppLastHitter` reste suivi (inoffensif, plus utilisé pour le score) au cas où utile plus tard.
+- **Conservé de v57** : victoire à 7 points, écran de fin en overlay (étoiles/médaille/3 boutons), débordement des raquettes dans les coins, décalage avant/arrière du bot, ombres portées.
+- **Testé** : simulation headless mise à jour (rebond mural restauré) — 50 matchs, 0 anomalie, parties de longueur variable et cohérente (le rebond permet de vrais échanges avant le point).
+- **Limite assumée, comme toutes les versions précédentes** : non testable en rendu réel depuis ce sandbox.
+
 ## 🟥 Correctif critique v24 : le HTML était servi cache-first, jamais rafraîchi
 Cause du problème "aucun changement visible malgré les push" : le fetch handler de `sw.js` servait TOUT en cache-first, y compris le `index.html` lui-même. Résultat : tant que l'utilisateur ne tapait pas explicitement le bandeau jaune "nouvelle version" (qui ne se déclenchait pas de façon fiable, probablement lié au cycle de vie des PWA en mode standalone sur mobile), l'app restait bloquée sur une version périmée indéfiniment, même après avoir fermé/rouvert l'app plusieurs fois.
 - **Fix** : le HTML (requêtes de navigation) passe en **network-first** (`fetch(req, {cache:'no-store'})`), ne retombe sur le cache que hors-ligne. Les autres assets (icônes, mp3) restent cache-first pour l'usage hors-ligne.

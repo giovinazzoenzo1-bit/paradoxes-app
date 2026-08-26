@@ -6898,8 +6898,8 @@ function ppResize(){
   const availH = Math.max(200, vh - topbarH);
   holder.style.width = availW+'px';
   holder.style.height = availH+'px';
-  const w = Math.round(availW*0.90);
-  const h = Math.round(availH*0.93);
+  const w = Math.round(availW*0.73);
+  const h = Math.round(availH*0.65);
   ppW = w; ppH = h;
   ppDpr = Math.min(window.devicePixelRatio||1, 2.5);
   ppCanvas.style.width = ppW+'px';
@@ -7045,8 +7045,11 @@ function ppBotUpdate(dt){
 function ppStepBall(dt){
   const b = ppBall;
   b.x += b.vx*dt; b.y += b.vy*dt;
-  // Pas de rebond sur les côtés : le vrai ping-pong n'a pas de mur — une balle tirée dans le
-  // coin sort du terrain (point pour celui qui vient de la frapper), elle ne revient jamais.
+  // Rebond élastique sur les côtés tant que la balle est dans la largeur du terrain — confirmé
+  // par l'utilisateur en jeu réel (mes 2 échantillonnages vidéo à 4-8fps avaient raté le rebond,
+  // trop bref pour être capturé entre 2 frames). Sans ça, aucune balle ne revient sur un tir large.
+  if(b.x - b.r < 0){ b.x = b.r; b.vx = Math.abs(b.vx); ppSpawnWallSpark(b.x,b.y); }
+  else if(b.x + b.r > ppW){ b.x = ppW-b.r; b.vx = -Math.abs(b.vx); ppSpawnWallSpark(b.x,b.y); }
   ppTrail.push({x:b.x, y:b.y});
   if(ppTrail.length > PP_TRAIL_LEN) ppTrail.shift();
 }
@@ -7109,6 +7112,12 @@ function ppSpawnHitBurst(x,y,color){
     ppParticles.push({x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:1, color});
   }
 }
+function ppSpawnWallSpark(x,y){
+  for(let i=0;i<4;i++){
+    const a = Math.random()*Math.PI*2, sp = 20+Math.random()*40;
+    ppParticles.push({x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:0.6, color:'#ffffff'});
+  }
+}
 function ppStepParticles(dt){
   for(const pt of ppParticles){ pt.x += pt.vx*dt; pt.y += pt.vy*dt; pt.life -= dt*1.6; }
   ppParticles = ppParticles.filter(pt => pt.life > 0);
@@ -7116,13 +7125,10 @@ function ppStepParticles(dt){
 }
 
 function ppCheckScore(){
+  // Avec le rebond mural rétabli, la balle ne sort plus jamais par les côtés — seul le fond
+  // (au-delà de la ligne de fond d'un des 2 joueurs) marque un point, comme au vrai ping-pong.
   if(ppBall.y - ppBall.r > ppH) return 'opp';   // passée derrière ta ligne
   if(ppBall.y + ppBall.r < 0) return 'player';  // passée derrière la ligne adverse
-  if(ppBall.x + ppBall.r < 0 || ppBall.x - ppBall.r > ppW){
-    // Sortie par le côté : coup gagnant pour celui qui vient de frapper la balle.
-    ppSpawnHitBurst(Math.max(0, Math.min(ppW, ppBall.x)), ppBall.y, ppLastHitter==='player' ? '#ef6461' : '#3ec6f0');
-    return ppLastHitter;
-  }
   return null;
 }
 function ppCheckWin(a,b){
