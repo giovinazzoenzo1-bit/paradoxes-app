@@ -650,7 +650,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 
 /* ---------- BILLARD — table plein écran en mode paysage ---------- */
 #bil-table-wrap{
-  position:fixed; inset:0; z-index:500; background:#f2a689;
+  position:fixed; inset:0; z-index:500; background:linear-gradient(#ffcf72,#f6b94f);
   display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
 #bil-landscape-box{
@@ -684,8 +684,8 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
   grid-area:table; display:flex; align-items:center; justify-content:center; gap:12px; min-height:0;
 }
 #bil-canvas{
-  max-width:100%; max-height:100%; border-radius:10px; touch-action:none; cursor:pointer;
-  background:#1a5c3a; box-shadow:0 6px 18px rgba(0,0,0,0.35);
+  border-radius:10px; touch-action:none; cursor:pointer;
+  background:#1a5c3a; box-shadow:0 6px 18px rgba(0,0,0,0.35); display:block;
 }
 .bil-control-col{display:flex; flex-direction:column; align-items:center; gap:8px; flex-shrink:0; height:100%; padding:4px 0;}
 .bil-power-bar{
@@ -796,6 +796,30 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 .pp-vbtn.home{ background:#ef6461; }
 .pp-vbtn.stats{ background:#8a5cd6; }
 .pp-vbtn.replay{ background:#4fbf5f; color:#fff; padding:16px 30px; font-size:16px; letter-spacing:.03em; }
+
+/* ---------- Billard — même décor de victoire que le Ping-pong (overlay + étoiles + médaille) ---------- */
+#bil-victory-overlay{
+  position:absolute; inset:0; z-index:30; background:rgba(30,20,10,0.72);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  overflow:hidden; animation:ppFadeIn .25s ease;
+}
+#bil-victory-stars{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+#bil-victory-medal{
+  width:84px; height:84px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #ffe27a, #f0b429 70%);
+  border:5px solid #c9861a; display:flex; align-items:center; justify-content:center; font-size:38px;
+  box-shadow:0 6px 16px rgba(0,0,0,0.35); position:relative; z-index:2;
+}
+#bil-victory-medal::before{
+  content:''; position:absolute; top:-22px; left:50%; transform:translateX(-50%);
+  width:0; height:0; border-left:22px solid transparent; border-right:22px solid transparent;
+  border-bottom:26px solid #d9463c; z-index:-1;
+}
+#bil-victory-title{
+  margin-top:14px; font-size:22px; font-weight:900; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.4);
+  position:relative; z-index:2; text-align:center; padding:0 20px;
+}
+#bil-victory-reason{ margin-top:4px; font-size:14px; font-weight:700; color:#ffe9c2; position:relative; z-index:2; }
+#bil-victory-buttons{ margin-top:20px; display:flex; align-items:center; gap:16px; position:relative; z-index:2; }
 
 /* ---------- ÉCHECS ---------- */
 .chess-board{
@@ -1019,7 +1043,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     <div class="panel">
       <div class="game-panel-header">
         <img class="game-panel-icon" src="icons/billiard.png" alt="Billard">
-        <div class="txt"><h3>Billard</h3><p>8-ball, entraînement solo ou à 2 en pass-and-play.</p></div>
+        <div class="txt"><h3>Billard</h3><p>8-ball, entraînement solo, vs bot ou à 2 en pass-and-play.</p></div>
       </div>
       <div class="btn-row"><button class="btn primary" onclick="openBilliard()">Jouer</button></div>
     </div>
@@ -1545,21 +1569,17 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <h2>Choisis un mode</h2>
       <div class="btn-row" style="flex-direction:column;">
         <button class="btn primary" onclick="bilStart('solo')">🎯 Entraînement solo</button>
+        <button class="btn primary" onclick="bilStart('bot')">🤖 Contre le bot</button>
         <button class="btn primary" onclick="bilStart('pnp')">👥 Pass & Play (2 joueurs)</button>
       </div>
-      <p class="footnote" style="margin-top:14px;">Entraînement : aucune règle, tape librement. Pass & Play : vraies règles du 8-ball (fautes, bille en main, victoire).</p>
-      <p class="footnote" style="margin-top:8px;">🔄 La table s'affiche en plein écran, en mode paysage.</p>
+      <p class="footnote" style="margin-top:14px;">Entraînement : aucune règle, tape librement. Bot / Pass & Play : vraies règles du 8-ball (fautes, bille en main, victoire).</p>
+      <p class="footnote" style="margin-top:8px;">🔄 La table s'affiche en plein écran — tourne le dessin automatiquement en paysage si ton téléphone est en portrait.</p>
     </div>
 
-    <div class="panel" id="bil-endgame-panel" style="display:none; text-align:center;">
-      <h2 id="bil-endgame-title"></h2>
-      <div class="btn-row" style="justify-content:center; margin-top:12px;">
-        <button class="btn primary" onclick="bilBackToSetup()">Rejouer</button>
-      </div>
-    </div>
+    <div class="panel" id="bil-endgame-panel" style="display:none;"></div>
   </div>
 
-  <!-- Table plein écran, s'adapte à l'orientation actuelle du téléphone -->
+  <!-- Table plein écran, tourne le dessin en paysage si l'écran est en portrait -->
   <div id="bil-table-wrap" style="display:none;">
     <div id="bil-landscape-box">
       <button class="bil-round-btn" id="bil-exitBtn" onclick="bilExitTable()">←</button>
@@ -1583,6 +1603,17 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         </div>
       </div>
       <div class="bil-status-line" id="bil-status"></div>
+    </div>
+    <div id="bil-victory-overlay" style="display:none;">
+      <div id="bil-victory-stars"></div>
+      <div id="bil-victory-medal"><span id="bil-victory-medal-emoji">🥇</span></div>
+      <div id="bil-victory-title">JOUEUR 1 GAGNE !</div>
+      <div id="bil-victory-reason"></div>
+      <div id="bil-victory-buttons">
+        <button class="pp-vbtn home" onclick="openJeux()">🏠</button>
+        <button class="pp-vbtn replay" onclick="bilStart(bilMode)">REJOUER</button>
+        <button class="pp-vbtn stats" onclick="bilBackToSetup()">⚙️</button>
+      </div>
     </div>
   </div>
 </div>
@@ -6375,6 +6406,7 @@ let bilAimDir = null;         // {x,y} direction visée, verrouillée jusqu'au p
 let bilAimingActive = false;  // en train de glisser sur la table pour viser
 let bilPower = 0;             // 0..BIL_MAX_POWER, réglé via la jauge dédiée
 let bilPowerBarDragging = false;
+let bilCanvasCSSW = 0, bilCanvasCSSH = 0, bilScale = 1, bilDpr = 1, bilRotated = false;
 const BIL_MAX_POWER = 45; // calibré empiriquement avec Matter.js (testé stable jusqu'à 100 sans tunneling)
 function bilRackPositions(footX, midY){
   const positions = [];
@@ -6425,32 +6457,86 @@ function bilBackToSetup(){
   if(bilAnimId) cancelAnimationFrame(bilAnimId);
   document.getElementById('bil-setup-panel').style.display = 'block';
   document.getElementById('bil-endgame-panel').style.display = 'none';
+  document.getElementById('bil-victory-overlay').style.display = 'none';
   document.getElementById('bil-table-wrap').style.display = 'none';
   bilTeardownOrientationWatcher();
-  try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
 }
 function bilExitTable(){
   if(bilAnimId) cancelAnimationFrame(bilAnimId);
   bilBackToSetup();
 }
-// Bascule paysage : tente le vrai verrouillage d'orientation (Android/PWA), et dans tous les
-// cas ajoute une astuce CSS (rotation du conteneur) si le téléphone est physiquement en portrait,
-// car l'API Screen Orientation n'est pas disponible sur iOS Safari.
-let bilOrientationHandler = null;
+// ---- Mode paysage sans dépendre de l'API Screen Orientation (peu fiable : échoue
+// silencieusement sur iOS Safari, nécessite le plein écran ailleurs — c'était la source du bug
+// remonté par l'utilisateur : "ça bloquait en haut à droite" quand la table passait en paysage).
+// À la place : le téléphone reste dans son orientation naturelle (portrait la plupart du temps),
+// et c'est le DESSIN dans le canvas qui est tourné à 90° pour donner l'apparence d'une table en
+// paysage — la zone de clic du canvas, elle, reste un rectangle NORMAL non transformé en CSS, donc
+// aucune ambiguïté de getBoundingClientRect() sur un élément pivoté (c'était probablement la
+// vraie cause du bug précédent). bilCanvasToGame()/bilGameToCanvas() ci-dessous appliquent
+// exactement la même rotation mathématique dans les deux sens, testée pour être l'inverse exacte
+// l'une de l'autre (round-trip) avant intégration.
+let bilResizeHandlerRef = null;
+function bilResize(){
+  const vv = window.visualViewport;
+  const vw = vv ? vv.width : window.innerWidth;
+  const vh = vv ? vv.height : window.innerHeight;
+  bilRotated = vh > vw; // écran plus haut que large -> on tourne le dessin pour un rendu "paysage"
+  // Espace réservé (estimé, volontairement généreux) pour les boutons du haut, la barre de
+  // statut, et la colonne de contrôle (jauge de puissance + bouton TIRER) à côté du canvas.
+  const topH = 68, statusH = 30, controlW = 78, padH = 32, padV = 24;
+  const availW = Math.max(160, vw - padH - controlW);
+  const availH = Math.max(160, vh - padV - topH - statusH);
+  let w, h;
+  if(bilRotated){
+    // Le rectangle 900x450 tourné de 90° occupe un espace 450x900 (rapport 1:2, portrait) —
+    // on l'ajuste dans l'espace dispo en conservant ce rapport.
+    h = availH; w = h*(BIL_TABLE_H/BIL_TABLE_W);
+    if(w > availW){ w = availW; h = w*(BIL_TABLE_W/BIL_TABLE_H); }
+  } else {
+    w = availW; h = w*(BIL_TABLE_H/BIL_TABLE_W);
+    if(h > availH){ h = availH; w = h*(BIL_TABLE_W/BIL_TABLE_H); }
+  }
+  bilCanvasCSSW = Math.round(w); bilCanvasCSSH = Math.round(h);
+  bilScale = bilRotated ? bilCanvasCSSW/BIL_TABLE_H : bilCanvasCSSW/BIL_TABLE_W;
+  bilDpr = Math.min(window.devicePixelRatio||1, 2.5);
+  if(bilCanvas){
+    bilCanvas.style.width = bilCanvasCSSW+'px';
+    bilCanvas.style.height = bilCanvasCSSH+'px';
+    bilCanvas.width = Math.round(bilCanvasCSSW*bilDpr);
+    bilCanvas.height = Math.round(bilCanvasCSSH*bilDpr);
+  }
+  bilDraw();
+}
 function bilSetupOrientationWatcher(){
-  // Ne bloque plus l'accès derrière un message de rotation : si la rotation est verrouillée
-  // dans les réglages du téléphone, le navigateur ne change jamais de forme même en tournant
-  // physiquement l'appareil — le message ne disparaissait donc jamais (bug remonté par
-  // l'utilisateur sur le Ping-pong, même risque ici). La table s'affiche dans l'orientation
-  // actuelle ; le canvas garde ses proportions via le CSS (max-width/max-height:100%).
-  bilOrientationHandler = () => {};
+  bilResizeHandlerRef = () => bilResize();
+  window.addEventListener('resize', bilResizeHandlerRef);
+  window.addEventListener('orientationchange', bilResizeHandlerRef);
+  if(window.visualViewport) window.visualViewport.addEventListener('resize', bilResizeHandlerRef);
 }
 function bilTeardownOrientationWatcher(){
-  if(bilOrientationHandler){
-    window.removeEventListener('resize', bilOrientationHandler);
-    window.removeEventListener('orientationchange', bilOrientationHandler);
-    bilOrientationHandler = null;
+  if(bilResizeHandlerRef){
+    window.removeEventListener('resize', bilResizeHandlerRef);
+    window.removeEventListener('orientationchange', bilResizeHandlerRef);
+    if(window.visualViewport) window.visualViewport.removeEventListener('resize', bilResizeHandlerRef);
+    bilResizeHandlerRef = null;
   }
+}
+// Convertit une position "espace table" (0..900, 0..450) en position canvas CSS px — la même
+// matrice est posée dans le contexte 2D via ctx.setTransform() au début de bilDraw(), donc tout
+// le reste du dessin continue de se faire en coordonnées "espace table" normales, inchangées.
+function bilGameToCanvas(gx, gy){
+  if(bilRotated){
+    return { x: -bilScale*(gy-BIL_TABLE_H/2) + bilCanvasCSSW/2, y: bilScale*(gx-BIL_TABLE_W/2) + bilCanvasCSSH/2 };
+  }
+  return { x: bilScale*(gx-BIL_TABLE_W/2) + bilCanvasCSSW/2, y: bilScale*(gy-BIL_TABLE_H/2) + bilCanvasCSSH/2 };
+}
+// Inverse exacte de bilGameToCanvas — utilisée pour convertir une position de clic/toucher
+// (en px CSS relatifs au canvas) vers l'espace table où vit toute la logique de jeu existante.
+function bilCanvasToGame(cx, cy){
+  if(bilRotated){
+    return { x: (cy-bilCanvasCSSH/2)/bilScale + BIL_TABLE_W/2, y: -(cx-bilCanvasCSSW/2)/bilScale + BIL_TABLE_H/2 };
+  }
+  return { x: (cx-bilCanvasCSSW/2)/bilScale + BIL_TABLE_W/2, y: (cy-bilCanvasCSSH/2)/bilScale + BIL_TABLE_H/2 };
 }
 function bilStart(mode){
   bilMode = mode;
@@ -6462,8 +6548,10 @@ function bilStart(mode){
   if(bilAnimId) cancelAnimationFrame(bilAnimId);
   document.getElementById('bil-setup-panel').style.display = 'none';
   document.getElementById('bil-endgame-panel').style.display = 'none';
+  document.getElementById('bil-victory-overlay').style.display = 'none';
   document.getElementById('bil-table-wrap').style.display = 'flex';
-  document.getElementById('bil-modeTab').textContent = mode==='solo' ? 'ENTRAÎNEMENT' : 'PASS & PLAY';
+  document.getElementById('bil-modeTab').textContent = mode==='solo' ? 'ENTRAÎNEMENT' : (mode==='bot' ? 'VS BOT' : 'PASS & PLAY');
+  document.querySelector('#bil-score-p2 .bil-score-label').textContent = mode==='bot' ? 'BOT' : 'JOUEUR 2';
   bilRenderScoreboard();
   document.getElementById('bil-status').textContent = mode==='solo' ? 'Entraînement libre' : 'Tour : Joueur 1';
   bilCanvas = document.getElementById('bil-canvas');
@@ -6471,8 +6559,7 @@ function bilStart(mode){
   bilAttachInput();
   bilResetAimAndPower();
   bilSetupOrientationWatcher();
-  try{ if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
-  bilDraw();
+  bilResize(); // calcule la taille + appelle bilDraw()
 }
 function bilRenderScoreboard(){
   const p1 = document.getElementById('bil-score-p1');
@@ -6508,11 +6595,12 @@ function bilAttachInput(){
   window.addEventListener('mouseup', ()=>{ bilPowerBarDragging=false; });
 }
 function bilGetPos(e){
+  // Position CSS relative au canvas (non transformé en CSS, donc pas d'ambiguïté), puis
+  // conversion vers l'espace table via l'inverse exacte de la rotation utilisée pour dessiner.
   const rect = bilCanvas.getBoundingClientRect();
   const clientX = e.touches ? (e.touches[0]||e.changedTouches[0]).clientX : e.clientX;
   const clientY = e.touches ? (e.touches[0]||e.changedTouches[0]).clientY : e.clientY;
-  const scaleX = bilCanvas.width/rect.width, scaleY = bilCanvas.height/rect.height;
-  return { x:(clientX-rect.left)*scaleX, y:(clientY-rect.top)*scaleY };
+  return bilCanvasToGame(clientX-rect.left, clientY-rect.top);
 }
 function bilGetBarPos(e){
   const bar = document.getElementById('bil-power-bar');
@@ -6524,6 +6612,7 @@ function bilGetBarPos(e){
 // blanche) pour pointer précisément où on veut envoyer la bille — bien plus précis qu'un
 // petit "élastique" limité à une petite zone autour de la bille. ----
 function bilPointerDown(pos){
+  if(bilMode==='bot' && bilCurrentPlayer===2) return; // c'est au bot de jouer, on ignore le doigt du joueur
   if(bilState==='placing'){
     bilTryPlaceCue(pos);
     return;
@@ -6533,6 +6622,7 @@ function bilPointerDown(pos){
   bilUpdateAim(pos);
 }
 function bilPointerMove(pos){
+  if(bilMode==='bot' && bilCurrentPlayer===2) return;
   if(!bilAimingActive) return;
   bilUpdateAim(pos);
 }
@@ -6578,8 +6668,11 @@ function bilTryPlaceCue(pos){
   if(!valid || overlapping) return;
   bilRespawnCueBall(pos);
   bilState = 'aim';
-  document.getElementById('bil-status').textContent = `Tour : Joueur ${bilCurrentPlayer}`;
+  document.getElementById('bil-status').textContent = `Tour : ${bilTurnLabel(bilCurrentPlayer)}`;
   bilDraw();
+}
+function bilTurnLabel(player){
+  return (bilMode==='bot' && player===2) ? 'BOT' : `Joueur ${player}`;
 }
 function bilFireShot(vx, vy){
   Matter.Body.setVelocity(bilBalls[0].body, {x:vx, y:vy});
@@ -6598,6 +6691,93 @@ function bilAnimate(){
     bilOnShotSettled();
   } else {
     bilAnimId = requestAnimationFrame(bilAnimate);
+  }
+}
+// ---- IA du bot (billard) ----
+// Stratégie "ghost ball" classique : pour chaque bille jouable et chaque pochette, calcule le
+// point où le centre de la blanche doit être au moment du contact pour envoyer la bille dans
+// cette pochette, en écartant les coupes trop fines (>~75°). Choisit le meilleur candidat
+// (privilégie distance courte + angle simple), ajoute une petite imprécision, et tire. Pas de
+// vérification d'obstruction par les autres billes pour rester simple — un tir bloqué se soldera
+// juste par un raté naturel dans le moteur physique, pas un bug.
+function bilBotPickShot(){
+  const cue = bilBalls[0];
+  const group = bilGroupsAssigned ? bilPlayerGroups[2] : null;
+  let candidates = bilBalls.filter(b => !b.pocketed && b.id!==0 && (group ? b.group===group : b.group!=='eight'));
+  if(group && candidates.length===0){
+    candidates = bilBalls.filter(b => !b.pocketed && b.group==='eight');
+  }
+  if(candidates.length===0){
+    candidates = bilBalls.filter(b => !b.pocketed && b.id!==0);
+  }
+  let best = null;
+  for(const ball of candidates){
+    for(const pocket of BIL_POCKETS){
+      const toPocket = {x:pocket.x-ball.pos.x, y:pocket.y-ball.pos.y};
+      const distToPocket = Math.hypot(toPocket.x, toPocket.y);
+      if(distToPocket < 1) continue;
+      const dirToPocket = {x:toPocket.x/distToPocket, y:toPocket.y/distToPocket};
+      const contact = {x: ball.pos.x - dirToPocket.x*BIL_BALL_R*2, y: ball.pos.y - dirToPocket.y*BIL_BALL_R*2};
+      const toContact = {x:contact.x-cue.pos.x, y:contact.y-cue.pos.y};
+      const distToContact = Math.hypot(toContact.x, toContact.y);
+      if(distToContact < 1) continue;
+      const dirToContact = {x:toContact.x/distToContact, y:toContact.y/distToContact};
+      const cutAngle = Math.acos(Math.max(-1, Math.min(1, dirToContact.x*dirToPocket.x + dirToContact.y*dirToPocket.y)));
+      if(cutAngle > Math.PI*0.42) continue; // coupe trop fine (~75°+), on écarte ce candidat
+      const score = -distToContact*0.6 - distToPocket*0.4 - cutAngle*260;
+      if(!best || score > best.score){ best = {dirToContact, score}; }
+    }
+  }
+  if(best){
+    const errA = (Math.random()-0.5)*0.09; // petite imprécision (~±2.5°)
+    const c = Math.cos(errA), s = Math.sin(errA);
+    return { dir: { x: best.dirToContact.x*c - best.dirToContact.y*s, y: best.dirToContact.x*s + best.dirToContact.y*c }, power: BIL_MAX_POWER*(0.55+Math.random()*0.25) };
+  }
+  // Repli : aucun tir "propre" trouvé, vise la bille jouable la plus proche avec une puissance moyenne
+  let nearest = null, nd = Infinity;
+  for(const b of candidates){
+    const d = Math.hypot(b.pos.x-cue.pos.x, b.pos.y-cue.pos.y);
+    if(d < nd){ nd = d; nearest = b; }
+  }
+  if(nearest){
+    const dx = nearest.pos.x-cue.pos.x, dy = nearest.pos.y-cue.pos.y, d = Math.hypot(dx,dy)||1;
+    return { dir: {x:dx/d, y:dy/d}, power: BIL_MAX_POWER*0.5 };
+  }
+  return { dir: {x:1,y:0}, power: BIL_MAX_POWER*0.4 };
+}
+function bilBotTakeShot(){
+  if(bilState !== 'aim') return;
+  const shot = bilBotPickShot();
+  bilAimDir = shot.dir;
+  bilPower = Math.min(BIL_MAX_POWER, shot.power);
+  bilDraw();
+  bilFireShot(shot.dir.x*bilPower, shot.dir.y*bilPower);
+}
+function bilBotPlaceCue(){
+  for(let tries=0; tries<40; tries++){
+    const x = BIL_BALL_R*2 + Math.random()*(BIL_TABLE_W-BIL_BALL_R*4);
+    const y = BIL_BALL_R*2 + Math.random()*(BIL_TABLE_H-BIL_BALL_R*4);
+    const overlapping = bilBalls.some(b => !b.pocketed && b.id!==0 && Math.hypot(b.pos.x-x,b.pos.y-y) < BIL_BALL_R*2.4);
+    if(!overlapping){
+      bilRespawnCueBall({x,y});
+      bilState = 'aim';
+      document.getElementById('bil-status').textContent = `Tour : ${bilTurnLabel(bilCurrentPlayer)}`;
+      bilDraw();
+      return;
+    }
+  }
+  bilRespawnCueBall({x:BIL_TABLE_W/2, y:BIL_TABLE_H/2});
+  bilState = 'aim';
+  bilDraw();
+}
+// Programme le coup du bot (ou son placement de bille en main) après un court délai, pour un
+// effet "réflexion" plus naturel qu'un tir instantané.
+function bilMaybeBotTurn(){
+  if(bilMode !== 'bot' || bilCurrentPlayer !== 2) return;
+  if(bilState === 'placing'){
+    setTimeout(bilBotPlaceCue, 700);
+  } else if(bilState === 'aim'){
+    setTimeout(bilBotTakeShot, 900);
   }
 }
 function bilOnShotSettled(){
@@ -6634,24 +6814,42 @@ function bilOnShotSettled(){
   if(res.foul){
     bilCurrentPlayer = bilCurrentPlayer===1?2:1;
     bilState = 'placing';
-    document.getElementById('bil-status').textContent = `🟥 Faute (${res.reason}) — bille en main, tape la table (Joueur ${bilCurrentPlayer})`;
+    document.getElementById('bil-status').textContent = `🟥 Faute (${res.reason}) — bille en main, tape la table (${bilTurnLabel(bilCurrentPlayer)})`;
   } else if(res.continueTurn){
     bilState='aim';
-    document.getElementById('bil-status').textContent = `🟩 Rejoue, Joueur ${bilCurrentPlayer}`;
+    document.getElementById('bil-status').textContent = `🟩 Rejoue, ${bilTurnLabel(bilCurrentPlayer)}`;
   } else {
     bilCurrentPlayer = bilCurrentPlayer===1?2:1;
     bilState='aim';
-    document.getElementById('bil-status').textContent = `Tour : Joueur ${bilCurrentPlayer}`;
+    document.getElementById('bil-status').textContent = `Tour : ${bilTurnLabel(bilCurrentPlayer)}`;
   }
   bilRenderScoreboard();
   bilDraw();
+  bilMaybeBotTurn();
 }
 function bilShowEndgame(winnerPlayer, reason){
-  playFeedback('record');
-  document.getElementById('bil-table-wrap').style.display = 'none';
-  document.getElementById('bil-endgame-panel').style.display = 'block';
-  document.getElementById('bil-endgame-title').textContent = `🎉 Joueur ${winnerPlayer} gagne ! (${reason})`;
+  playFeedback(bilMode==='bot' && winnerPlayer===2 ? 'wrong' : 'record');
+  const label = bilMode==='bot' ? (winnerPlayer===1 ? 'TU GAGNES !' : 'LE BOT GAGNE') : `JOUEUR ${winnerPlayer} GAGNE !`;
+  document.getElementById('bil-victory-medal-emoji').textContent = (bilMode==='bot' && winnerPlayer===2) ? '🥈' : '🥇';
+  document.getElementById('bil-victory-title').textContent = label;
+  document.getElementById('bil-victory-reason').textContent = reason || '';
+  bilSpawnVictoryStars();
+  document.getElementById('bil-victory-overlay').style.display = 'flex';
   bilTeardownOrientationWatcher();
+}
+function bilSpawnVictoryStars(){
+  const holder = document.getElementById('bil-victory-stars');
+  holder.innerHTML = '';
+  for(let i=0;i<22;i++){
+    const s = document.createElement('span');
+    s.className = 'pp-star';
+    s.textContent = '⭐';
+    s.style.left = Math.random()*100 + '%';
+    s.style.fontSize = (14+Math.random()*16) + 'px';
+    s.style.animationDuration = (2.2+Math.random()*2.2) + 's';
+    s.style.animationDelay = (Math.random()*2.5) + 's';
+    holder.appendChild(s);
+  }
 }
 function bilComputeAimPreview(dirX, dirY){
   const cue = bilBalls[0];
@@ -6678,8 +6876,18 @@ function bilComputeAimPreview(dirX, dirY){
 }
 function bilDraw(){
   const ctx = bilCtx;
-  if(!ctx) return;
-  ctx.clearRect(0,0,BIL_TABLE_W,BIL_TABLE_H);
+  if(!ctx || !bilCanvas) return;
+  // Efface tout le canvas en pixels bruts (avant transform), puis pose la matrice
+  // rotation+échelle+centrage — tout le reste du dessin ci-dessous continue d'utiliser les
+  // coordonnées "espace table" (0..900, 0..450) normales, sans aucun changement.
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,bilCanvas.width,bilCanvas.height);
+  const s = bilScale*bilDpr;
+  if(bilRotated){
+    ctx.setTransform(0, s, -s, 0, (bilCanvasCSSW/2 + bilScale*(BIL_TABLE_H/2))*bilDpr, (bilCanvasCSSH/2 - bilScale*(BIL_TABLE_W/2))*bilDpr);
+  } else {
+    ctx.setTransform(s, 0, 0, s, (bilCanvasCSSW/2 - bilScale*(BIL_TABLE_W/2))*bilDpr, (bilCanvasCSSH/2 - bilScale*(BIL_TABLE_H/2))*bilDpr);
+  }
   // rail en bois
   ctx.fillStyle = '#6b4226';
   ctx.fillRect(0,0,BIL_TABLE_W,BIL_TABLE_H);
