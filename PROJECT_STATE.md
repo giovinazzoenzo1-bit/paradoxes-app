@@ -29,6 +29,7 @@ PWA éducative/ludique : paradoxes de probabilités expliqués simplement + mini
   - **Nuts and Bolts** : +1 pièce si niveau réussi en moins de 30s (le jeu ne s'arrête jamais au-delà, juste pas de bonus).
   - **Snake** (10→1, 25→5, 40→10) / **Flappy Bird** (5→1, 15→5, 25→10) : paliers de score additifs, un seul gain par palier et par partie.
   - 🟨 **Tous les seuils de temps/score sont des estimations de départ** (méthode 2×durée÷P(réussite), sans simulation possible pour un défi solo humain contrairement à un bot) — à ajuster avec un vrai ressenti de jeu.
+  - **Premier retour de test réel intégré** : Memory (4×4 sous 18s / 6×6 sous 60s), 2048 Rush (paliers 900→3/1100→6, suite extrapolée), Nuts and Bolts (seuil devenu progressif avec le niveau au lieu d'un 30s fixe — le vrai souci était que les niveaux faciles se battent trivialement sous n'importe quel seuil fixe), Morpion Facile (plus de gain par manche, seulement 1 pièce si BO3 gagné), Puissance 4 (bot durci : Facile bloque désormais, Normal évite de préparer un coup gagnant adverse — pièces réduites de 30%), Flappy Bird (pièces divisées par 2), Wordle (3 pièces si trouvé, 5 à la 5e tentative, 8 à la 6e). Puzzle 15 pas encore retouché (l'utilisateur n'est pas sûr du seuil, à tester).
   - Ping-pong/Billard ont un bot mais pas encore de pièces branchées — reste à faire.
 - Nav bar 4 onglets, sauvegarde de scroll/session, son/vibration (3 modes), musique de fond, pub factice (pas de vraie régie)
 

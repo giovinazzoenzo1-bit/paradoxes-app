@@ -3022,6 +3022,10 @@ function openWordle(){
   wordleNewGame();
   trackPage('/wordle');
 }
+// Pièces : 3 pour une victoire normale, plus si trouvé tard (retour de test : bonus mérité pour
+// un mot trouvé au bout du suspense).
+const WORDLE_COIN_BASE = 3;
+const WORDLE_COIN_TABLE = {5:5, 6:8};
 function wordleNewGame(){
   wordleTarget = wordleBank[Math.floor(Math.random()*wordleBank.length)];
   wordleRow = 0;
@@ -3139,6 +3143,12 @@ function wordleSubmit(){
     wordleOver = true;
     document.getElementById('wordle-status').textContent = '🟩 Gagné !';
     statsRecordWordleWin();
+    // wordleRow vient d'être incrémenté juste au-dessus : il vaut désormais le nombre de tentatives
+    // utilisées pour trouver le mot. 3 pièces normalement, 5 si trouvé à la 5e tentative (retour de
+    // test), 8 si trouvé à la toute dernière (6e) — extrapolation de la même logique croissante.
+    const gain = WORDLE_COIN_TABLE[wordleRow] || WORDLE_COIN_BASE;
+    appCoinsAdd(gain);
+    document.getElementById('wordle-status').textContent += ` 🪙 +${gain} pièces`;
   } else if(wordleRow>=6){
     wordleOver = true;
     document.getElementById('wordle-status').textContent = `🟥 Perdu — le mot était ${wordleTarget}.`;
@@ -3619,7 +3629,7 @@ let g2048MilestonesHit = [];   // indices des paliers de score déjà obtenus da
 // une fois qu'on a un vrai ressenti de jeu sur les scores typiquement atteints.
 const G2048_SCORE_MILESTONES = {
   normal: [{score:2000, coins:3}, {score:8000, coins:10}, {score:20000, coins:25}, {score:50000, coins:50}],
-  rush:   [{score:500, coins:3}, {score:1500, coins:10}, {score:3000, coins:25}],
+  rush:   [{score:900, coins:3}, {score:1100, coins:6}, {score:1400, coins:12}, {score:1800, coins:25}],
 };
 function g2048CheckMilestones(){
   const list = G2048_SCORE_MILESTONES[g2048Mode] || [];
@@ -4034,8 +4044,8 @@ let memorySize = 4;
 // Pièces gagnées si la grille est terminée sous le seuil de temps (par taille) — estimations de
 // départ (méthode 2×durée÷P(réussite)), à ajuster avec un vrai ressenti de jeu.
 const MEMORY_COIN_TABLE = {
-  4:  {threshold:90,  coins:4},
-  6:  {threshold:180, coins:15},
+  4:  {threshold:18,  coins:4},
+  6:  {threshold:60, coins:15},
   10: {threshold:480, coins:64},
   14: {threshold:900, coins:200},
 };
@@ -4746,8 +4756,10 @@ function morpionRoundWin(winner, winLine){
   morpionStreak[winner==='X'?'O':'X'] = 0;
   // Seule une victoire d'un JOUEUR HUMAIN rapporte des pièces — si le bot gagne, rien (cf. principe
   // "ce sont les wins qui paient, pas les défaites"). En mode Ami, les 2 côtés sont humains.
+  // En Facile, plus de gain par manche (retour de test : trop facile pour rapporter à chaque
+  // manche) — seule la victoire du match complet (BO3) rapporte, voir morpionEndMatch.
   const humanWon = morpionMode==='ami' || winner==='X';
-  if(humanWon){
+  if(humanWon && !(morpionMode==='bot' && morpionBotDifficulty==='facile')){
     const gain = morpionMode==='bot' ? (MORPION_ROUND_COINS[morpionBotDifficulty]||4) : MORPION_ROUND_COINS.normal;
     appCoinsAdd(gain);
     morpionMatchCoinsEarned += gain;
@@ -4971,7 +4983,12 @@ function nbConfigForLevel(level){
 let nbRods = [];
 let nbSelected = null;
 let nbLevel = 1;
-let nbStartTime = 0; // horodatage de début du niveau, pour le défi "moins de 30s" (pièces)
+let nbStartTime = 0; // horodatage de début du niveau, pour le défi chrono (pièces)
+function nbTimeThreshold(level){
+  // Seuil qui grandit avec le niveau (plus de couleurs/tiges = puzzle plus long à résoudre même
+  // pour un joueur qui sait ce qu'il fait) — ~18s au niveau 1, ~35s au niveau 50.
+  return Math.round(18 + level*0.35);
+}
 let nbHistory = [];
 let nbUndoFreeUsed = false;
 function openNutsBolts(){
@@ -5199,12 +5216,15 @@ function nbTap(i){
     const won = nbIsWon(nbRods);
     if(won){
       document.getElementById('nb-status').textContent = `🟩 Niveau ${nbLevel} terminé !`;
-      // 1 pièce si le niveau est réussi en moins de 30s — mais on ne bloque jamais le jeu au-delà
-      // de 30s, le joueur peut continuer tranquillement, il rate juste ce bonus précis.
+      // 1 pièce si le niveau est réussi sous le seuil de temps — le seuil évolue avec le niveau
+      // (un seuil fixe de 30s ne "challenge" jamais aux niveaux faciles, qui se résolvent en
+      // quelques secondes pour n'importe qui : c'était le vrai problème derrière "ça donne
+      // toujours une pièce"). Le jeu ne s'arrête jamais au-delà, le joueur rate juste ce bonus.
       const elapsed = (Date.now()-nbStartTime)/1000;
-      if(elapsed <= 30){
+      const threshold = nbTimeThreshold(nbLevel);
+      if(elapsed <= threshold){
         appCoinsAdd(1);
-        document.getElementById('nb-status').textContent += ' 🪙 +1 pièce (moins de 30s) !';
+        document.getElementById('nb-status').textContent += ` 🪙 +1 pièce (moins de ${threshold}s) !`;
       }
       statsRecordNbLevel(nbLevel);
       const currentMax = parseInt(localStorage.getItem('nbMaxLevel')||'0');
@@ -5779,9 +5799,9 @@ let p4Mode = 'ami';        // 'ami' | 'bot'
 let p4Difficulty = 'normal'; // 'facile' | 'normal'
 let p4GameId = 0;          // jeton de session : invalide un setTimeout de bot resté en attente après un changement de partie
 let p4BotTimeoutId = null;
-// Barème pièces calibré sur 120 pièces/heure (même méthode que Morpion), durée moyenne de partie
-// estimée à 2 min — à ajuster si le ressenti de jeu réel dit autre chose.
-const P4_COIN_TABLE = {facile:5, normal:17};
+// Barème pièces calibré sur 120 pièces/heure, réduit de 30% (retour de test : trop facile) —
+// durée moyenne de partie estimée à 2 min.
+const P4_COIN_TABLE = {facile:4, normal:12};
 function openPuissance4(){
   switchScreen('game-puissance4');
   setActiveTab(null);
@@ -5876,12 +5896,30 @@ function p4RandomCol(board){
   const cols = p4ValidCols(board);
   return cols[Math.floor(Math.random()*cols.length)];
 }
+function p4MoveEnablesOpponentWin(board, col, opponent, botPlayer){
+  const r = p4FindDropRow(board, col);
+  if(r===-1) return false;
+  board[r][col] = botPlayer;
+  let enables = false;
+  const rAbove = r-1;
+  if(rAbove>=0 && board[rAbove][col]===0){
+    board[rAbove][col] = opponent;
+    if(p4CheckWinAt(board, rAbove, col, opponent)) enables = true;
+    board[rAbove][col] = 0;
+  }
+  board[r][col] = 0;
+  return enables;
+}
 function p4BotPickCol(){
   const bot=2, human=1;
   if(p4Difficulty==='facile'){
-    if(Math.random()<0.5) return p4RandomCol(p4Board);
+    // Retour de test : le Facile bloquait trop peu -> 30% aléatoire (au lieu de 50%), garde
+    // désormais le blocage des menaces évidentes du joueur en plus du coup gagnant.
+    if(Math.random()<0.3) return p4RandomCol(p4Board);
     const w = p4FindWinningCol(p4Board, bot);
-    return w!==null ? w : p4RandomCol(p4Board);
+    if(w!==null) return w;
+    const b = p4FindWinningCol(p4Board, human);
+    return b!==null ? b : p4RandomCol(p4Board);
   }
   const w = p4FindWinningCol(p4Board, bot);
   if(w!==null) return w;
@@ -5890,7 +5928,11 @@ function p4BotPickCol(){
   const cols = p4ValidCols(p4Board);
   const center = Math.floor(P4_COLS/2);
   cols.sort((a,b2)=>Math.abs(a-center)-Math.abs(b2-center));
-  const topN = cols.slice(0, Math.min(3, cols.length));
+  // Évite de préparer une victoire immédiate pour l'adversaire au coup suivant (retour de test :
+  // Normal était trop facile) — filtre les colonnes dangereuses si une alternative existe.
+  const safeCols = cols.filter(c => !p4MoveEnablesOpponentWin(p4Board, c, human, bot));
+  const pool = safeCols.length>0 ? safeCols : cols;
+  const topN = pool.slice(0, Math.min(3, pool.length));
   return topN[Math.floor(Math.random()*topN.length)];
 }
 function p4MaybeBotTurn(){
@@ -5968,7 +6010,7 @@ let fbMilestonesHit = []; // indices des paliers de score déjà obtenus dans la
 // Paliers de pièces par score atteint — même logique additive que Snake, mais seuils plus bas :
 // Flappy Bird est objectivement plus dur par point marqué (un pipe raté = fin immédiate), donc
 // un score de 25 ici représente un exploit bien plus rare qu'un score de 25 au Snake.
-const FB_COIN_MILESTONES = [{score:5, coins:1}, {score:15, coins:5}, {score:25, coins:10}];
+const FB_COIN_MILESTONES = [{score:5, coins:1}, {score:15, coins:3}, {score:25, coins:5}];
 function fbCheckMilestones(){
   FB_COIN_MILESTONES.forEach((m, i) => {
     if(!fbMilestonesHit.includes(i) && fbScore >= m.score){
