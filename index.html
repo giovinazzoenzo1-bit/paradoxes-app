@@ -1476,11 +1476,30 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <button class="back-btn" onclick="openJeux()">← Retour</button>
     </div>
     <div class="game-title">🔴 Puissance 4</div>
-    <div class="panel">
+    <div class="panel" id="p4-setup-panel">
+      <div class="row"><span>🟨 Mode</span></div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn" id="p4-mode-ami" onclick="p4SetMode('ami')">🧑‍🤝‍🧑 Contre un ami</button>
+        <button class="btn" id="p4-mode-bot" onclick="p4SetMode('bot')">🤖 Contre le bot</button>
+      </div>
+      <div id="p4-diff-row" style="display:none; margin-top:12px;">
+        <div class="row"><span>🟨 Difficulté du bot</span></div>
+        <div class="btn-row" style="justify-content:center;">
+          <button class="btn" id="p4-diff-facile" onclick="p4SetDifficulty('facile')">😊 Facile</button>
+          <button class="btn" id="p4-diff-normal" onclick="p4SetDifficulty('normal')">😐 Normal</button>
+        </div>
+        <div class="footnote" style="text-align:center; margin-top:4px;">🪙 Plus c'est dur, plus une victoire rapporte de pièces.</div>
+      </div>
+      <div class="btn-row" style="justify-content:center; margin-top:16px;">
+        <button class="btn primary" onclick="p4StartFromSetup()">Commencer</button>
+      </div>
+    </div>
+    <div class="panel" id="p4-game-panel" style="display:none;">
       <div class="status-line" id="p4-status" style="text-align:center; font-weight:700; margin-bottom:8px;"></div>
       <div class="p4-board" id="p4-board"></div>
       <div class="btn-row" style="justify-content:center; margin-top:12px;">
         <button class="btn" onclick="p4New()">Nouvelle partie</button>
+        <button class="btn" onclick="p4OpenSetup()">← Modes</button>
       </div>
     </div>
   </div>
@@ -3588,13 +3607,31 @@ let g2048StartTime = 0;
 let g2048Over = false;
 let g2048Reached2048 = false; // cahier des charges : 2048 = célébration, mais le jeu continue à l'infini (4096, 8192...)
 let g2048Mode = 'normal';      // 'normal' (infini) ou 'rush' (chrono 60s)
-let g2048Streak = 0;           // fusions sur swipes consécutifs -> multiplicateur de pièces
 let g2048LaserMode = false;    // sélection en cours pour le power-up Marteau Laser
 let g2048SwapMode = false;     // sélection en cours pour le power-up Swap
 let g2048SwapFirst = null;     // [r,c] de la première tuile sélectionnée pour le Swap
 let g2048RushTimeLeft = 60;
 let g2048RushInterval = null;
 let g2048LbMode = 'normal';    // onglet actif du panneau classement
+let g2048MilestonesHit = [];   // indices des paliers de score déjà obtenus dans la partie en cours
+// Paliers de pièces par score atteint (remplace l'ancienne économie par fusion, jugée trop
+// généreuse) — un seul gain possible par palier, par partie. Estimations de départ, à ajuster
+// une fois qu'on a un vrai ressenti de jeu sur les scores typiquement atteints.
+const G2048_SCORE_MILESTONES = {
+  normal: [{score:2000, coins:3}, {score:8000, coins:10}, {score:20000, coins:25}, {score:50000, coins:50}],
+  rush:   [{score:500, coins:3}, {score:1500, coins:10}, {score:3000, coins:25}],
+};
+function g2048CheckMilestones(){
+  const list = G2048_SCORE_MILESTONES[g2048Mode] || [];
+  list.forEach((m, i) => {
+    if(!g2048MilestonesHit.includes(i) && g2048Score >= m.score){
+      g2048MilestonesHit.push(i);
+      appCoinsAdd(m.coins);
+      document.getElementById('g2048-status').textContent = `🪙 Palier ${m.score} atteint ! +${m.coins} pièces`;
+      setTimeout(()=>{ if(!g2048Over) document.getElementById('g2048-status').textContent=''; }, 2000);
+    }
+  });
+}
 // Classements mondiaux (aperçu fictif, pas de vrai backend), séparés par mode car les scores
 // Classique (infini) et Rush 60s ne sont pas comparables entre eux.
 const g2048WorldBestMock = {
@@ -3658,10 +3695,10 @@ function g2048New(){
   g2048History = [];
   g2048Over = false;
   g2048Reached2048 = false;
-  g2048Streak = 0;
   g2048LaserMode = false;
   g2048SwapMode = false;
   g2048SwapFirst = null;
+  g2048MilestonesHit = [];
   g2048StartTime = Date.now();
   if(g2048RushInterval){ clearInterval(g2048RushInterval); g2048RushInterval=null; }
   if(g2048Mode==='rush'){
@@ -3701,7 +3738,7 @@ function g2048OnCellClick(r,c){
   if(g2048Over) return;
   if(g2048LaserMode){
     if(g2048Grid[r][c]===0) return;
-    g2048History.push({grid:JSON.parse(JSON.stringify(g2048Grid)), score:g2048Score, streak:g2048Streak});
+    g2048History.push({grid:JSON.parse(JSON.stringify(g2048Grid)), score:g2048Score});
     if(g2048History.length>20) g2048History.shift();
     g2048Grid[r][c] = 0;
     g2048LaserMode = false;
@@ -3725,7 +3762,7 @@ function g2048OnCellClick(r,c){
       document.getElementById('g2048-status').textContent = '🟥 Choisis une tuile voisine (adjacente)';
       return;
     }
-    g2048History.push({grid:JSON.parse(JSON.stringify(g2048Grid)), score:g2048Score, streak:g2048Streak});
+    g2048History.push({grid:JSON.parse(JSON.stringify(g2048Grid)), score:g2048Score});
     if(g2048History.length>20) g2048History.shift();
     const tmp = g2048Grid[r0][c0];
     g2048Grid[r0][c0] = g2048Grid[r][c];
@@ -3796,35 +3833,17 @@ function g2048Move(dir){
   }
   const moved = JSON.stringify(g2048Grid) !== beforeGrid;
   if(moved){
-    g2048History.push({grid:JSON.parse(beforeGrid), score:beforeScore, streak:g2048Streak});
+    g2048History.push({grid:JSON.parse(beforeGrid), score:beforeScore});
     if(g2048History.length>20) g2048History.shift();
     g2048AddTile();
     g2048UpdateUndoButton();
-    // Streak & économie de pièces (cahier des charges §2/§4) : chaque fusion rapporte 1 pièce de
-    // base + un bonus au palier (128/1024/2048+), multiplié par le streak de swipes consécutifs
-    // avec au moins une fusion (x1.5 à partir de 3, x2 à partir de 5).
-    if(g2048MergesThisMove.length>0){
-      g2048Streak++;
-      const mult = g2048Streak>=5 ? 2 : (g2048Streak>=3 ? 1.5 : 1);
-      let earned = 0;
-      for(const v of g2048MergesThisMove){
-        let bonus = 0;
-        if(v===128) bonus=10; else if(v===1024) bonus=50; else if(v>=2048) bonus=200;
-        earned += 1+bonus;
-      }
-      appCoinsAdd(Math.round(earned*mult));
-      // Note : le mode Rush n'accorde plus de secondes bonus par fusion (retiré à la demande de
-      // l'utilisateur — ça neutralisait quasiment la descente du chrono en jouant vite). Le
-      // chrono Rush est désormais un compte à rebours strict de 60s, voir g2048RushTick.
-    } else {
-      g2048Streak = 0;
-    }
   }
   if(g2048Score > g2048Best){
     g2048Best = g2048Score;
     localStorage.setItem('g2048Best', g2048Best);
   }
   g2048Render();
+  g2048CheckMilestones();
   const flat = g2048Grid.flat();
   if(flat.includes(2048) && !g2048Reached2048){
     // Cahier des charges : palier 2048 = célébration, mais la partie continue à l'infini
@@ -3895,7 +3914,6 @@ function g2048Undo(){
     const prev = g2048History.pop();
     g2048Grid = prev.grid;
     g2048Score = prev.score;
-    g2048Streak = prev.streak;
     document.getElementById('g2048-status').textContent = '';
     g2048Render();
     g2048UpdateUndoButton();
@@ -4013,6 +4031,14 @@ let memoryFlipped = [];
 let memoryMoves = 0;
 let memoryLock = false;
 let memorySize = 4;
+// Pièces gagnées si la grille est terminée sous le seuil de temps (par taille) — estimations de
+// départ (méthode 2×durée÷P(réussite)), à ajuster avec un vrai ressenti de jeu.
+const MEMORY_COIN_TABLE = {
+  4:  {threshold:90,  coins:4},
+  6:  {threshold:180, coins:15},
+  10: {threshold:480, coins:64},
+  14: {threshold:900, coins:200},
+};
 let memoryTimerInterval = null;
 let memorySeconds = 0;
 const memoryDifficulties = [
@@ -4190,6 +4216,14 @@ function memoryFlip(i){
         const updated = memorySaveScore(memorySize, memorySeconds, memoryMoves);
         const isNewBest = updated.length && updated[0].seconds===memorySeconds && (prevBest===null || memorySeconds<prevBest);
         document.getElementById('memory-status').textContent = `🟩 Gagné en ${memoryMoves} coups, en ${memoryFormatTime(memorySeconds)} !`;
+        // Défi chrono (cahier des charges pièces) : sous un certain temps selon la taille de
+        // grille, la victoire rapporte des pièces. Estimation de départ, à ajuster avec un vrai
+        // ressenti de jeu.
+        const challenge = MEMORY_COIN_TABLE[memorySize];
+        if(challenge && memorySeconds <= challenge.threshold){
+          appCoinsAdd(challenge.coins);
+          document.getElementById('memory-status').textContent += ` 🪙 +${challenge.coins} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
+        }
         if(isNewBest){
           document.getElementById('memory-best').textContent = memoryFormatTime(memorySeconds);
           playFeedback('record');
@@ -4234,6 +4268,14 @@ function openPuzzle15(){
   p15OpenLevelPanel();
   trackPage('/puzzle15');
 }
+// Pièces gagnées si le puzzle est résolu sous le seuil de temps (par taille) — estimations de
+// départ (méthode 2×durée÷P(réussite)), à ajuster avec un vrai ressenti de jeu.
+const P15_COIN_TABLE = {
+  4: {threshold:180, coins:10},
+  5: {threshold:360, coins:30},
+  6: {threshold:600, coins:67},
+  7: {threshold:900, coins:150},
+};
 function p15OpenLevelPanel(){
   if(p15TimerInterval) clearInterval(p15TimerInterval);
   document.getElementById('p15-level-panel').style.display = 'block';
@@ -4377,6 +4419,13 @@ function p15Tap(i){
       const prevBestSeconds = scoresBefore.length ? scoresBefore[0].seconds : null;
       p15SaveScore(p15N, p15Seconds, p15Moves);
       document.getElementById('p15-status').textContent = `🟩 Résolu en ${p15Moves} coups, en ${memoryFormatTime(p15Seconds)} !`;
+      // Défi chrono (cahier des charges pièces) : sous un certain temps selon la taille, la
+      // résolution rapporte des pièces. Estimation de départ, à ajuster avec un vrai ressenti de jeu.
+      const challenge = P15_COIN_TABLE[p15N];
+      if(challenge && p15Seconds <= challenge.threshold){
+        appCoinsAdd(challenge.coins);
+        document.getElementById('p15-status').textContent += ` 🪙 +${challenge.coins} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
+      }
       if(prevBestSeconds===null || p15Seconds<prevBestSeconds){
         document.getElementById('p15-best').textContent = `${memoryFormatTime(p15Seconds)} (${p15Moves} coups)`;
         playFeedback('record');
@@ -4729,8 +4778,13 @@ function morpionRoundDraw(){
 }
 function morpionEndMatch(winner){
   morpionMatchOver = true;
-  // Pas de bonus fixe de fin de match (casserait le calibrage 120 pièces/h) : les pièces déjà
-  // gagnées manche par manche suffisent, cf. formule 2×durée÷P(victoire).
+  // Pas de bonus fixe de fin de match en général (casserait le calibrage 120 pièces/h) — SAUF en
+  // Facile contre le bot : le mode est jugé trop facile pour ne rapporter que des micro-gains par
+  // manche, donc +1 pièce de bonus si le joueur remporte le match complet dans ce mode précis.
+  if(morpionMode==='bot' && morpionBotDifficulty==='facile' && winner==='X'){
+    appCoinsAdd(1);
+    morpionMatchCoinsEarned += 1;
+  }
   morpionUpdateScoreboard();
   const big = Math.max(morpionScoreX, morpionScoreO), small = Math.min(morpionScoreX, morpionScoreO);
   const winnerLabel = winner==='X' ? 'Joueur 1' : morpionTurnLabel('O').replace(' (○)','');
@@ -4762,6 +4816,18 @@ let snakeNextDir = 'right';
 let snakeFood = {x:5,y:5};
 let snakeInterval = null;
 let snakeScore = 0;
+let snakeMilestonesHit = []; // indices des paliers de score déjà obtenus dans la partie en cours
+// Paliers de pièces par score atteint, demandés explicitement par l'utilisateur : additifs, un
+// seul gain possible par palier et par partie.
+const SNAKE_COIN_MILESTONES = [{score:10, coins:1}, {score:25, coins:5}, {score:40, coins:10}];
+function snakeCheckMilestones(){
+  SNAKE_COIN_MILESTONES.forEach((m, i) => {
+    if(!snakeMilestonesHit.includes(i) && snakeScore >= m.score){
+      snakeMilestonesHit.push(i);
+      appCoinsAdd(m.coins);
+    }
+  });
+}
 let snakeOver = false;
 let snakeHighScore = 0;
 // Classement mondial fictif (aperçu, pas de vrai backend — voir PROJECT_STATE.md)
@@ -4803,6 +4869,7 @@ function snakeNew(){
   snakeDir = 'right';
   snakeNextDir = 'right';
   snakeScore = 0;
+  snakeMilestonesHit = [];
   snakeOver = false;
   snakePlaceFood();
   document.getElementById('snake-status').textContent = '';
@@ -4845,6 +4912,7 @@ function snakeTick(){
   if(head.x===snakeFood.x && head.y===snakeFood.y){
     snakeScore++;
     document.getElementById('snake-score').textContent = snakeScore;
+    snakeCheckMilestones();
     if(snakeScore > snakeHighScore){
       snakeHighScore = snakeScore;
       localStorage.setItem('snakeHighScore', snakeHighScore);
@@ -4903,6 +4971,7 @@ function nbConfigForLevel(level){
 let nbRods = [];
 let nbSelected = null;
 let nbLevel = 1;
+let nbStartTime = 0; // horodatage de début du niveau, pour le défi "moins de 30s" (pièces)
 let nbHistory = [];
 let nbUndoFreeUsed = false;
 function openNutsBolts(){
@@ -5042,6 +5111,7 @@ function nbNew(level){
   nbSelected = null;
   nbHistory = [];
   nbUndoFreeUsed = false;
+  nbStartTime = Date.now(); // pour le défi "niveau réussi en moins de 30s" (pièces)
   document.getElementById('nb-status').textContent = '';
   document.getElementById('nb-nextlevel-row').style.display = 'none';
   document.getElementById('nb-levelLabel').textContent = level;
@@ -5129,6 +5199,13 @@ function nbTap(i){
     const won = nbIsWon(nbRods);
     if(won){
       document.getElementById('nb-status').textContent = `🟩 Niveau ${nbLevel} terminé !`;
+      // 1 pièce si le niveau est réussi en moins de 30s — mais on ne bloque jamais le jeu au-delà
+      // de 30s, le joueur peut continuer tranquillement, il rate juste ce bonus précis.
+      const elapsed = (Date.now()-nbStartTime)/1000;
+      if(elapsed <= 30){
+        appCoinsAdd(1);
+        document.getElementById('nb-status').textContent += ' 🪙 +1 pièce (moins de 30s) !';
+      }
       statsRecordNbLevel(nbLevel);
       const currentMax = parseInt(localStorage.getItem('nbMaxLevel')||'0');
       if(nbLevel > currentMax) localStorage.setItem('nbMaxLevel', nbLevel);
@@ -5359,6 +5436,14 @@ function solCheckWin(){
 
 /* ================= SUDOKU (génération avec solution unique garantie) ================= */
 const sudokuDifficulties = {facile:40, moyen:32, difficile:26};
+let sudokuStartTime = 0; // horodatage de début de grille, pour le défi chrono (pièces)
+// Pièces gagnées si la grille est résolue sous le seuil de temps (par difficulté) — estimations
+// de départ (méthode 2×durée÷P(réussite)), à ajuster avec un vrai ressenti de jeu.
+const SUDOKU_COIN_TABLE = {
+  facile: {threshold:300, coins:17},
+  moyen: {threshold:480, coins:46},
+  difficile: {threshold:720, coins:120},
+};
 let sudokuGiven = [];    // grille de départ (indices), non modifiable
 let sudokuGrid = [];     // grille actuelle (valeurs saisies incluses)
 let sudokuSelected = null; // {r,c}
@@ -5482,6 +5567,7 @@ function sudokuNew(level){
   sudokuEraseFreeUsed = false;
   sudokuUndoFreeUsed = false;
   sudokuShaking = null;
+  sudokuStartTime = Date.now(); // défi chrono (pièces), voir sudokuCheckWin
   document.getElementById('sudoku-status').textContent = '';
   document.getElementById('sudoku-levelLabel').textContent = sudokuLevelLabels[level];
   document.getElementById('sudoku-level-panel').style.display = 'none';
@@ -5674,24 +5760,65 @@ function sudokuCheckWin(){
   if(!full) return;
   document.getElementById('sudoku-status').textContent = `🟩 Sudoku résolu, bravo !`;
   playFeedback('record');
+  // Défi chrono (cahier des charges pièces) : sous un certain temps selon la difficulté, la
+  // résolution rapporte des pièces. Estimation de départ, à ajuster avec un vrai ressenti de jeu.
+  const elapsed = (Date.now()-sudokuStartTime)/1000;
+  const challenge = SUDOKU_COIN_TABLE[sudokuLevel];
+  if(challenge && elapsed <= challenge.threshold){
+    appCoinsAdd(challenge.coins);
+    document.getElementById('sudoku-status').textContent += ` 🪙 +${challenge.coins} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
+  }
 }
 
 /* ================= PUISSANCE 4 (2 joueurs local, pass-and-play) ================= */
 const P4_ROWS = 6, P4_COLS = 7;
 let p4Board = [];
-let p4Turn = 1; // 1 = rouge, 2 = jaune
+let p4Turn = 1; // 1 = rouge (joueur), 2 = jaune (ami ou bot)
 let p4Over = false;
+let p4Mode = 'ami';        // 'ami' | 'bot'
+let p4Difficulty = 'normal'; // 'facile' | 'normal'
+let p4GameId = 0;          // jeton de session : invalide un setTimeout de bot resté en attente après un changement de partie
+let p4BotTimeoutId = null;
+// Barème pièces calibré sur 120 pièces/heure (même méthode que Morpion), durée moyenne de partie
+// estimée à 2 min — à ajuster si le ressenti de jeu réel dit autre chose.
+const P4_COIN_TABLE = {facile:5, normal:17};
 function openPuissance4(){
   switchScreen('game-puissance4');
   setActiveTab(null);
-  p4New();
+  p4OpenSetup();
   trackPage('/puissance4');
 }
+function p4OpenSetup(){
+  p4GameId++;
+  if(p4BotTimeoutId){ clearTimeout(p4BotTimeoutId); p4BotTimeoutId=null; }
+  document.getElementById('p4-setup-panel').style.display = 'block';
+  document.getElementById('p4-game-panel').style.display = 'none';
+  p4RenderSetupButtons();
+}
+function p4SetMode(mode){
+  p4Mode = mode;
+  document.getElementById('p4-diff-row').style.display = mode==='bot' ? 'block' : 'none';
+  p4RenderSetupButtons();
+}
+function p4SetDifficulty(d){ p4Difficulty = d; p4RenderSetupButtons(); }
+function p4RenderSetupButtons(){
+  document.getElementById('p4-mode-ami').classList.toggle('primary', p4Mode==='ami');
+  document.getElementById('p4-mode-bot').classList.toggle('primary', p4Mode==='bot');
+  document.getElementById('p4-diff-facile').classList.toggle('primary', p4Difficulty==='facile');
+  document.getElementById('p4-diff-normal').classList.toggle('primary', p4Difficulty==='normal');
+}
+function p4StartFromSetup(){
+  document.getElementById('p4-setup-panel').style.display = 'none';
+  document.getElementById('p4-game-panel').style.display = 'block';
+  p4New();
+}
 function p4New(){
+  p4GameId++;
+  if(p4BotTimeoutId){ clearTimeout(p4BotTimeoutId); p4BotTimeoutId=null; }
   p4Board = Array.from({length:P4_ROWS}, () => Array(P4_COLS).fill(0));
   p4Turn = 1;
   p4Over = false;
-  document.getElementById('p4-status').textContent = '🔴 Tour : Rouge';
+  document.getElementById('p4-status').textContent = p4Mode==='bot' ? '🔴 Tour : Toi' : '🔴 Tour : Rouge';
   p4Render();
 }
 function p4Render(){
@@ -5702,37 +5829,108 @@ function p4Render(){
       const div = document.createElement('div');
       const v = p4Board[r][c];
       div.className = 'p4-cell' + (v===1 ? ' red' : v===2 ? ' yellow' : '');
-      div.onclick = () => p4Drop(c);
+      div.onclick = () => p4HumanDrop(c);
       el.appendChild(div);
     }
   }
 }
-function p4CheckWin(row, col){
-  const player = p4Board[row][col];
+function p4FindDropRow(board, col){
+  for(let r=P4_ROWS-1;r>=0;r--) if(board[r][col]===0) return r;
+  return -1;
+}
+function p4ValidCols(board){
+  const cols=[];
+  for(let c=0;c<P4_COLS;c++) if(p4FindDropRow(board,c)!==-1) cols.push(c);
+  return cols;
+}
+function p4CheckWinAt(board, row, col, player){
   const directions = [[0,1],[1,0],[1,1],[1,-1]];
   for(const [dr,dc] of directions){
     let count = 1;
     let r = row+dr, c = col+dc;
-    while(r>=0 && r<P4_ROWS && c>=0 && c<P4_COLS && p4Board[r][c]===player){ count++; r+=dr; c+=dc; }
+    while(r>=0 && r<P4_ROWS && c>=0 && c<P4_COLS && board[r][c]===player){ count++; r+=dr; c+=dc; }
     r = row-dr; c = col-dc;
-    while(r>=0 && r<P4_ROWS && c>=0 && c<P4_COLS && p4Board[r][c]===player){ count++; r-=dr; c-=dc; }
+    while(r>=0 && r<P4_ROWS && c>=0 && c<P4_COLS && board[r][c]===player){ count++; r-=dr; c-=dc; }
     if(count>=4) return true;
   }
   return false;
 }
+function p4CheckWin(row, col){
+  return p4CheckWinAt(p4Board, row, col, p4Board[row][col]);
+}
+// ---- Bot IA ----
+// Facile : 50% de colonnes aléatoires, sinon prend un coup gagnant s'il existe (sinon aléatoire).
+// Normal : joue le coup gagnant s'il existe, sinon bloque le coup gagnant du joueur, sinon
+// privilégie les colonnes centrales (statistiquement les plus fortes au Puissance 4).
+function p4FindWinningCol(board, player){
+  for(const c of p4ValidCols(board)){
+    const r = p4FindDropRow(board, c);
+    board[r][c] = player;
+    const win = p4CheckWinAt(board, r, c, player);
+    board[r][c] = 0;
+    if(win) return c;
+  }
+  return null;
+}
+function p4RandomCol(board){
+  const cols = p4ValidCols(board);
+  return cols[Math.floor(Math.random()*cols.length)];
+}
+function p4BotPickCol(){
+  const bot=2, human=1;
+  if(p4Difficulty==='facile'){
+    if(Math.random()<0.5) return p4RandomCol(p4Board);
+    const w = p4FindWinningCol(p4Board, bot);
+    return w!==null ? w : p4RandomCol(p4Board);
+  }
+  const w = p4FindWinningCol(p4Board, bot);
+  if(w!==null) return w;
+  const b = p4FindWinningCol(p4Board, human);
+  if(b!==null) return b;
+  const cols = p4ValidCols(p4Board);
+  const center = Math.floor(P4_COLS/2);
+  cols.sort((a,b2)=>Math.abs(a-center)-Math.abs(b2-center));
+  const topN = cols.slice(0, Math.min(3, cols.length));
+  return topN[Math.floor(Math.random()*topN.length)];
+}
+function p4MaybeBotTurn(){
+  if(p4Mode!=='bot' || p4Turn!==2 || p4Over) return;
+  const gid = p4GameId;
+  if(p4BotTimeoutId) clearTimeout(p4BotTimeoutId);
+  p4BotTimeoutId = setTimeout(()=>{
+    if(gid!==p4GameId) return; // partie quittée/relancée entretemps, ce coup est obsolète
+    try{
+      const col = p4BotPickCol();
+      if(col===null || col===undefined || p4FindDropRow(p4Board, col)===-1){
+        throw new Error('colonne invalide calculée par le bot');
+      }
+      p4Drop(col);
+    }catch(err){
+      // Même filet de sécurité que Morpion/Billard : ne jamais laisser le tour du bot ne pas se
+      // jouer du tout, sinon la partie reste bloquée en silence.
+      console.warn('[puissance4] le bot a échoué, coup de repli aléatoire utilisé :', err);
+      const fallback = p4ValidCols(p4Board);
+      if(fallback.length>0) p4Drop(fallback[Math.floor(Math.random()*fallback.length)]);
+    }
+  }, 600);
+}
 function p4Drop(col){
   if(p4Over) return;
-  let targetRow = -1;
-  for(let r=P4_ROWS-1; r>=0; r--){
-    if(p4Board[r][col]===0){ targetRow = r; break; }
-  }
+  const targetRow = p4FindDropRow(p4Board, col);
   if(targetRow===-1) return; // colonne pleine
   p4Board[targetRow][col] = p4Turn;
   p4Render();
   if(p4CheckWin(targetRow, col)){
     p4Over = true;
-    document.getElementById('p4-status').textContent = `🟩 ${p4Turn===1 ? '🔴 Rouge' : '🟡 Jaune'} a gagné !`;
+    const winnerLabel = p4Mode==='bot' ? (p4Turn===1 ? 'Toi' : 'Le bot') : (p4Turn===1 ? '🔴 Rouge' : '🟡 Jaune');
+    document.getElementById('p4-status').textContent = `🟩 ${winnerLabel} a gagné !`;
     playFeedback('record');
+    // Seule une victoire d'un JOUEUR HUMAIN rapporte des pièces (pas le bot).
+    const humanWon = p4Mode==='ami' || p4Turn===1;
+    if(humanWon){
+      const gain = p4Mode==='bot' ? (P4_COIN_TABLE[p4Difficulty]||17) : P4_COIN_TABLE.normal;
+      appCoinsAdd(gain);
+    }
     return;
   }
   if(p4Board.every(row => row.every(v => v!==0))){
@@ -5741,8 +5939,16 @@ function p4Drop(col){
     return;
   }
   p4Turn = p4Turn===1 ? 2 : 1;
-  document.getElementById('p4-status').textContent = p4Turn===1 ? '🔴 Tour : Rouge' : '🟡 Tour : Jaune';
+  document.getElementById('p4-status').textContent = p4Mode==='bot'
+    ? (p4Turn===1 ? '🔴 Tour : Toi' : '🟡 Le bot réfléchit...')
+    : (p4Turn===1 ? '🔴 Tour : Rouge' : '🟡 Tour : Jaune');
+  p4MaybeBotTurn();
 }
+function p4HumanDrop(col){
+  if(p4Mode==='bot' && p4Turn===2) return; // c'est au bot de jouer, on ignore le doigt du joueur
+  p4Drop(col);
+}
+
 
 /* ================= FLAPPY BIRD (canvas, physique par delta-temps) ================= */
 const FB_WIDTH = 300, FB_HEIGHT = 400;
@@ -5758,6 +5964,19 @@ let fbCanvas, fbCtx;
 let fbBirdY = FB_HEIGHT/2, fbBirdVY = 0;
 let fbPipes = [];
 let fbScore = 0;
+let fbMilestonesHit = []; // indices des paliers de score déjà obtenus dans la partie en cours
+// Paliers de pièces par score atteint — même logique additive que Snake, mais seuils plus bas :
+// Flappy Bird est objectivement plus dur par point marqué (un pipe raté = fin immédiate), donc
+// un score de 25 ici représente un exploit bien plus rare qu'un score de 25 au Snake.
+const FB_COIN_MILESTONES = [{score:5, coins:1}, {score:15, coins:5}, {score:25, coins:10}];
+function fbCheckMilestones(){
+  FB_COIN_MILESTONES.forEach((m, i) => {
+    if(!fbMilestonesHit.includes(i) && fbScore >= m.score){
+      fbMilestonesHit.push(i);
+      appCoinsAdd(m.coins);
+    }
+  });
+}
 let fbBest = 0;
 let fbRunning = false;
 let fbGameOver = false;
@@ -5800,6 +6019,7 @@ function openFlappyBird(){
   fbBirdVY = 0;
   fbPipes = [];
   fbScore = 0;
+  fbMilestonesHit = [];
   document.getElementById('fb-status').textContent = "Tape sur l'écran pour commencer";
   document.getElementById('fb-worldboard-panel').style.display = 'none';
   fbAttachInput();
@@ -5829,6 +6049,7 @@ function fbStart(){
   fbBirdVY = FB_FLAP_VELOCITY;
   fbPipes = [];
   fbScore = 0;
+  fbMilestonesHit = [];
   fbSpawnTimer = 0;
   fbGameOver = false;
   fbRunning = true;
@@ -5867,6 +6088,7 @@ function fbLoop(timestamp){
     if(!p.passed && p.x + FB_PIPE_WIDTH < FB_BIRD_X){
       p.passed = true;
       fbScore++;
+      fbCheckMilestones();
     }
   });
 

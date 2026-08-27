@@ -21,7 +21,15 @@ PWA éducative/ludique : paradoxes de probabilités expliqués simplement + mini
 - **Quiz** : 2 modes (Paradoxes / Général, 3 tranches d'âge), 10 questions
 - **Mini-jeux** : Wordle, Qui suis-je, 2048, Memory, Puzzle 15, Morpion, Snake, Nuts and Bolts, Solitaire, Sudoku, Puissance 4, Flappy Bird, Ludo, Skip-Bo, Échecs, Billard, Ping-pong
 - **Trophées** (localStorage) + Classement (aperçu avec données fictives mergées au meilleur score perso, pas de vrai compte)
-- **Monnaie in-game globale** (`appCoins`, une seule cagnotte partagée par toute l'app, barre fixe toujours visible en haut de l'écran). Fusionnée depuis les anciennes cagnottes séparées 2048/Morpion (migration automatique unique à la première ouverture post-mise à jour). Formule de gain calibrée sur un objectif de **120 pièces/heure** : `pièces = 2 × durée_partie(min) ÷ P(victoire)`, appliquée pour l'instant à Morpion (Facile=1, Normal=4 par manche, uniquement si le joueur gagne — pas le bot). Ping-pong/Billard ont un bot mais pas encore de pièces branchées. Un vrai Expert imbattable (Minimax parfait) sort de la formule (P=0 → indéfini) : traité comme trophée/diamant hors farm, pas comme un palier de difficulté normal, tant qu'une règle ne le rend pas battable de temps en temps.
+- **Monnaie in-game globale** (`appCoins`, une seule cagnotte partagée par toute l'app, barre fixe toujours visible en haut de l'écran). Formule de gain pour les jeux avec bot, calibrée sur **120 pièces/heure** : `pièces = 2 × durée_partie(min) ÷ P(victoire)`. Pour les jeux sans bot (score/temps) : paliers fixes atteints une fois par partie. Un vrai Expert imbattable sort de la formule (P=0) : traité comme trophée/diamant hors farm.
+  - **Morpion** : 1 Facile / 4 Normal par manche (joueur gagnant seulement) + 1 pièce bonus si BO3 gagné en Facile (mode jugé trop facile pour ne rapporter que des micro-gains).
+  - **Puissance 4** : bot ajouté (Facile/Normal, mêmes filets de sécurité try/catch + jeton de session que Morpion/Billard), 5 Facile / 17 Normal.
+  - **2048** : ancienne économie par fusion retirée (jugée trop généreuse) → paliers de score, séparés Classique (2000→3 ... 50000→50) / Rush (500→3 ... 3000→25).
+  - **Memory** / **Puzzle 15** / **Sudoku** : défi chrono par taille/difficulté (résoudre sous un seuil de temps → pièces), un seul gain par partie.
+  - **Nuts and Bolts** : +1 pièce si niveau réussi en moins de 30s (le jeu ne s'arrête jamais au-delà, juste pas de bonus).
+  - **Snake** (10→1, 25→5, 40→10) / **Flappy Bird** (5→1, 15→5, 25→10) : paliers de score additifs, un seul gain par palier et par partie.
+  - 🟨 **Tous les seuils de temps/score sont des estimations de départ** (méthode 2×durée÷P(réussite), sans simulation possible pour un défi solo humain contrairement à un bot) — à ajuster avec un vrai ressenti de jeu.
+  - Ping-pong/Billard ont un bot mais pas encore de pièces branchées — reste à faire.
 - Nav bar 4 onglets, sauvegarde de scroll/session, son/vibration (3 modes), musique de fond, pub factice (pas de vraie régie)
 
 ## 🟦 Règle générale pour tout jeu (existant ou nouveau)
