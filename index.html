@@ -5955,13 +5955,19 @@ function p4MoveEnablesOpponentWin(board, col, opponent, botPlayer){
 function p4BotPickCol(){
   const bot=2, human=1;
   if(p4Difficulty==='facile'){
-    // Retour de test : le Facile bloquait trop peu -> 30% aléatoire (au lieu de 50%), garde
-    // désormais le blocage des menaces évidentes du joueur en plus du coup gagnant.
-    if(Math.random()<0.3) return p4RandomCol(p4Board);
+    // +30% de difficulté supplémentaire (demande utilisateur) : moins d'aléatoire (20% au lieu de
+    // 30%) et évite désormais aussi de laisser un coup gagnant immédiat à l'adversaire quand ni
+    // victoire ni blocage n'est possible — comme Normal, mais reste moins optimal (pas de biais
+    // centre, choix uniforme parmi les colonnes sûres) pour garder un vrai écart avec Normal.
+    if(Math.random()<0.2) return p4RandomCol(p4Board);
     const w = p4FindWinningCol(p4Board, bot);
     if(w!==null) return w;
     const b = p4FindWinningCol(p4Board, human);
-    return b!==null ? b : p4RandomCol(p4Board);
+    if(b!==null) return b;
+    const cols = p4ValidCols(p4Board);
+    const safeCols = cols.filter(c => !p4MoveEnablesOpponentWin(p4Board, c, human, bot));
+    const pool = safeCols.length>0 ? safeCols : cols;
+    return pool[Math.floor(Math.random()*pool.length)];
   }
   const w = p4FindWinningCol(p4Board, bot);
   if(w!==null) return w;
