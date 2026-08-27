@@ -21,6 +21,7 @@ PWA éducative/ludique : paradoxes de probabilités expliqués simplement + mini
 - **Quiz** : 2 modes (Paradoxes / Général, 3 tranches d'âge), 10 questions
 - **Mini-jeux** : Wordle, Qui suis-je, 2048, Memory, Puzzle 15, Morpion, Snake, Nuts and Bolts, Solitaire, Sudoku, Puissance 4, Flappy Bird, Ludo, Skip-Bo, Échecs, Billard, Ping-pong
 - **Trophées** (localStorage) + Classement (aperçu avec données fictives mergées au meilleur score perso, pas de vrai compte)
+- **Monnaie in-game globale** (`appCoins`, une seule cagnotte partagée par toute l'app, barre fixe toujours visible en haut de l'écran). Fusionnée depuis les anciennes cagnottes séparées 2048/Morpion (migration automatique unique à la première ouverture post-mise à jour). Formule de gain calibrée sur un objectif de **120 pièces/heure** : `pièces = 2 × durée_partie(min) ÷ P(victoire)`, appliquée pour l'instant à Morpion (Facile=1, Normal=4 par manche, uniquement si le joueur gagne — pas le bot). Ping-pong/Billard ont un bot mais pas encore de pièces branchées. Un vrai Expert imbattable (Minimax parfait) sort de la formule (P=0 → indéfini) : traité comme trophée/diamant hors farm, pas comme un palier de difficulté normal, tant qu'une règle ne le rend pas battable de temps en temps.
 - Nav bar 4 onglets, sauvegarde de scroll/session, son/vibration (3 modes), musique de fond, pub factice (pas de vraie régie)
 
 ## 🟦 Règle générale pour tout jeu (existant ou nouveau)

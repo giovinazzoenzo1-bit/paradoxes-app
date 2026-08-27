@@ -244,6 +244,21 @@ body.no-ads{padding-bottom:64px;}
 }
 body.no-ads .ad-banner{display:none;}
 
+/* ---------- BARRE DE MONNAIE GLOBALE (fixe, en haut, centrée) ---------- */
+body{padding-top:44px;}
+.coin-bar{
+  position:fixed; top:0; left:50%; transform:translateX(-50%);
+  padding-top:calc(6px + env(safe-area-inset-top, 0px));
+  background:var(--card); border:1px solid var(--line); border-top:none;
+  border-radius:0 0 14px 14px;
+  display:flex; align-items:center; gap:6px;
+  padding-left:16px; padding-right:16px; padding-bottom:6px;
+  font-weight:800; font-size:14px; z-index:40;
+  box-shadow:0 2px 8px rgba(0,0,0,0.25);
+}
+.coin-bar-icon{font-size:15px;}
+.coin-bar-value{color:var(--accent);}
+
 /* ---------- BOTTOM NAV BAR ---------- */
 .bottom-nav{
   position:fixed; bottom:0; left:0; right:0; height:60px;
@@ -916,6 +931,12 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 </head>
 <body>
 
+<!-- ============ BARRE DE MONNAIE GLOBALE (toujours visible, hors des .screen) ============ -->
+<div class="coin-bar" id="coinBar">
+  <span class="coin-bar-icon">🪙</span>
+  <span class="coin-bar-value" id="coinBarValue">0</span>
+</div>
+
 <!-- ============ OVERLAY PUB SIMULÉE (globale, réutilisée par plusieurs jeux) ============ -->
 <div class="ad-overlay" id="ad-overlay" style="display:none;">
   <div class="ad-box">
@@ -1253,6 +1274,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
           <button class="btn" id="morpion-diff-normal" onclick="morpionSetDifficulty('normal')">😐 Normal</button>
           <button class="btn" id="morpion-diff-expert" onclick="morpionSetDifficulty('expert')">🔥 Expert</button>
         </div>
+        <div class="footnote" style="text-align:center; margin-top:4px;">🪙 Plus c'est dur, plus une victoire rapporte de pièces.</div>
       </div>
       <div style="margin-top:12px;">
         <div class="row"><span>🟨 Règle</span></div>
@@ -2776,6 +2798,37 @@ function statsGet(){
 }
 function statsSet(stats){ localStorage.setItem('userStats', JSON.stringify(stats)); }
 
+// ---- Monnaie in-game globale (pièces) ----
+// Une seule cagnotte partagée par toute l'app (tous les mini-jeux), affichée en permanence dans
+// la barre fixe en haut de l'écran. Avant cette version, 2048 et Morpion avaient chacun leur
+// propre cagnotte séparée (g2048Coins / morpionCoins) : à la première ouverture après la mise à
+// jour, on les fusionne une seule fois dans appCoins plutôt que de perdre ce que le joueur avait déjà.
+let appCoins = 0;
+function appCoinsInit(){
+  if(localStorage.getItem('appCoins')===null){
+    const migrated = (parseInt(localStorage.getItem('g2048Coins')||'0')) + (parseInt(localStorage.getItem('morpionCoins')||'0'));
+    localStorage.setItem('appCoins', migrated);
+  }
+  appCoins = parseInt(localStorage.getItem('appCoins')||'0');
+  appCoinsRender();
+}
+function appCoinsRender(){
+  const el = document.getElementById('coinBarValue');
+  if(el) el.textContent = appCoins;
+}
+function appCoinsAdd(n){
+  appCoins += n;
+  localStorage.setItem('appCoins', appCoins);
+  appCoinsRender();
+}
+function appCoinsSpend(n){
+  if(appCoins < n) return false;
+  appCoins -= n;
+  localStorage.setItem('appCoins', appCoins);
+  appCoinsRender();
+  return true;
+}
+
 function statsRecordVisit(paradoxId){
   const s = statsGet();
   s.visited = s.visited || [];
@@ -3530,7 +3583,6 @@ function envSimulate(){
 let g2048Grid = [];
 let g2048Score = 0;
 let g2048Best = 0;
-let g2048Coins = 0;
 let g2048History = [];
 let g2048StartTime = 0;
 let g2048Over = false;
@@ -3553,14 +3605,13 @@ function open2048(){
   switchScreen('game-2048');
   setActiveTab(null);
   g2048Best = parseInt(localStorage.getItem('g2048Best')||'0');
-  g2048Coins = parseInt(localStorage.getItem('g2048Coins')||'0');
   g2048BackToModes();
   g2048AttachSwipe();
   trackPage('/2048');
 }
 function g2048BackToModes(){
   if(g2048RushInterval){ clearInterval(g2048RushInterval); g2048RushInterval=null; }
-  document.getElementById('g2048-coins-modepanel').textContent = g2048Coins;
+  document.getElementById('g2048-coins-modepanel').textContent = appCoins;
   document.getElementById('g2048-mode-panel').style.display = 'block';
   document.getElementById('g2048-game-panel').style.display = 'none';
   document.getElementById('g2048-leaderboard-panel').style.display = 'none';
@@ -3703,7 +3754,8 @@ function g2048Render(){
   document.getElementById('g2048-score').textContent = g2048Score;
   document.getElementById('g2048-best').textContent = g2048Best;
   const coinsEl = document.getElementById('g2048-coins');
-  if(coinsEl) coinsEl.textContent = g2048Coins;
+  if(coinsEl) coinsEl.textContent = appCoins;
+  appCoinsRender();
   g2048UpdatePowerButtons();
 }
 let g2048MergesThisMove = [];
@@ -3760,8 +3812,7 @@ function g2048Move(dir){
         if(v===128) bonus=10; else if(v===1024) bonus=50; else if(v>=2048) bonus=200;
         earned += 1+bonus;
       }
-      g2048Coins += Math.round(earned*mult);
-      localStorage.setItem('g2048Coins', g2048Coins);
+      appCoinsAdd(Math.round(earned*mult));
       // Note : le mode Rush n'accorde plus de secondes bonus par fusion (retiré à la demande de
       // l'utilisateur — ça neutralisait quasiment la descente du chrono en jouant vite). Le
       // chrono Rush est désormais un compte à rebours strict de 60s, voir g2048RushTick.
@@ -3820,7 +3871,7 @@ function g2048UpdateUndoButton(){
     btn.textContent = '↩️ Annuler';
   } else {
     btn.disabled = false;
-    btn.textContent = g2048Coins>=50 ? '↩️ Annuler (🪙50)' : '↩️📺 Annuler (pub)';
+    btn.textContent = appCoins>=50 ? '↩️ Annuler (🪙50)' : '↩️📺 Annuler (pub)';
   }
 }
 function g2048UpdatePowerButtons(){
@@ -3829,12 +3880,12 @@ function g2048UpdatePowerButtons(){
   if(laserBtn){
     laserBtn.disabled = g2048Over;
     laserBtn.classList.toggle('primary', g2048LaserMode);
-    laserBtn.textContent = g2048Coins>=100 ? '🔨 Marteau (🪙100)' : '🔨📺 Marteau (pub)';
+    laserBtn.textContent = appCoins>=100 ? '🔨 Marteau (🪙100)' : '🔨📺 Marteau (pub)';
   }
   if(swapBtn){
     swapBtn.disabled = g2048Over;
     swapBtn.classList.toggle('primary', g2048SwapMode);
-    swapBtn.textContent = g2048Coins>=75 ? '🔀 Swap (🪙75)' : '🔀📺 Swap (pub)';
+    swapBtn.textContent = appCoins>=75 ? '🔀 Swap (🪙75)' : '🔀📺 Swap (pub)';
   }
 }
 function g2048Undo(){
@@ -3849,9 +3900,7 @@ function g2048Undo(){
     g2048Render();
     g2048UpdateUndoButton();
   };
-  if(g2048Coins>=50){
-    g2048Coins -= 50;
-    localStorage.setItem('g2048Coins', g2048Coins);
+  if(appCoinsSpend(50)){
     doRevert();
   } else {
     mockWatchAd(4, doRevert);
@@ -3867,9 +3916,7 @@ function g2048UseLaser(){
     document.getElementById('g2048-status').textContent = '🔨 Touche une tuile à détruire';
     g2048Render();
   };
-  if(g2048Coins>=100){
-    g2048Coins -= 100;
-    localStorage.setItem('g2048Coins', g2048Coins);
+  if(appCoinsSpend(100)){
     activate();
   } else {
     mockWatchAd(4, activate);
@@ -3885,9 +3932,7 @@ function g2048UseSwap(){
     document.getElementById('g2048-status').textContent = '🔀 Touche une première tuile';
     g2048Render();
   };
-  if(g2048Coins>=75){
-    g2048Coins -= 75;
-    localStorage.setItem('g2048Coins', g2048Coins);
+  if(appCoinsSpend(75)){
     activate();
   } else {
     mockWatchAd(4, activate);
@@ -4349,7 +4394,6 @@ let morpionLocked = false; // verrouille les taps pendant les transitions/animat
 let morpionScoreX = 0, morpionScoreO = 0;
 let morpionFirstPlayer = 'X'; // alterne à chaque manche (§1.1)
 let morpionStreak = {X:0, O:0};
-let morpionCoins = 0; // cagnotte locale partagée par l'appareil (party game 2P sur un seul téléphone, pas de profil séparé par joueur)
 let morpionUndoCharges = 1; // 1 gratuite par manche, +2 via pub si épuisée (§1.4/§5) — désactivé en règle Anti-nul, voir limite assumée
 let morpionLastMove = null; // {index, player} — undo strictement limité à 1 niveau, jamais en chaîne
 let morpionMode = 'ami';           // 'ami' (pass-and-play) | 'bot'
@@ -4358,11 +4402,17 @@ let morpionRule = 'classic';       // 'classic' | 'antidraw' (V2 roadmap : 3 pio
 let morpionPieceOrder = {X:[], O:[]}; // ordre de pose, nécessaire pour retirer le plus ancien pion en règle Anti-nul
 let morpionGameId = 0;             // jeton de session : invalide un setTimeout de bot resté en attente après un changement de partie
 let morpionBotTimeoutId = null;
+let morpionMatchCoinsEarned = 0; // pièces gagnées durant le match en cours, pour permettre de les doubler en fin de match
+// Barème pièces/manche calibré sur un objectif de 120 pièces/heure, ajusté à la probabilité de
+// victoire mesurée par simulation (voir discussion) — Expert exclu tant que le bot est réellement
+// imbattable (Minimax parfait) : traité provisoirement comme Normal en attendant une règle qui le
+// rende battable de temps en temps (ex. "étourdi" 5%), condition nécessaire pour rentrer dans
+// une formule de farm répétable plutôt que de basculer uniquement en récompense trophée/diamant.
+const MORPION_ROUND_COINS = {facile:1, normal:4, expert:4};
 const morpionLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 function openMorpion(){
   switchScreen('game-morpion');
   setActiveTab(null);
-  morpionCoins = parseInt(localStorage.getItem('morpionCoins')||'0');
   morpionOpenSetup();
   trackPage('/morpion');
 }
@@ -4400,6 +4450,7 @@ function morpionNewMatch(){
   morpionScoreX = 0; morpionScoreO = 0;
   morpionMatchOver = false;
   morpionFirstPlayer = 'X';
+  morpionMatchCoinsEarned = 0;
   document.getElementById('morpion-matchend-panel').style.display = 'none';
   morpionNewRound();
 }
@@ -4437,7 +4488,8 @@ function morpionRender(){
 function morpionUpdateScoreboard(){
   document.getElementById('morpion-score-x').textContent = morpionScoreX;
   document.getElementById('morpion-score-o').textContent = morpionScoreO;
-  document.getElementById('morpion-coins').textContent = morpionCoins;
+  document.getElementById('morpion-coins').textContent = appCoins;
+  appCoinsRender();
   document.getElementById('morpion-card-x').classList.toggle('active', morpionTurn==='X' && !morpionRoundOver);
   document.getElementById('morpion-card-o').classList.toggle('active', morpionTurn==='O' && !morpionRoundOver);
   // Streaks locaux (§4) : flamme dès 3 victoires de manche consécutives par le même joueur
@@ -4643,8 +4695,14 @@ function morpionRoundWin(winner, winLine){
   if(winner==='X') morpionScoreX++; else morpionScoreO++;
   morpionStreak[winner]++;
   morpionStreak[winner==='X'?'O':'X'] = 0;
-  morpionCoins += 10; // +10 pièces par manche gagnée (§4)
-  localStorage.setItem('morpionCoins', morpionCoins);
+  // Seule une victoire d'un JOUEUR HUMAIN rapporte des pièces — si le bot gagne, rien (cf. principe
+  // "ce sont les wins qui paient, pas les défaites"). En mode Ami, les 2 côtés sont humains.
+  const humanWon = morpionMode==='ami' || winner==='X';
+  if(humanWon){
+    const gain = morpionMode==='bot' ? (MORPION_ROUND_COINS[morpionBotDifficulty]||4) : MORPION_ROUND_COINS.normal;
+    appCoinsAdd(gain);
+    morpionMatchCoinsEarned += gain;
+  }
   document.getElementById('morpion-status').textContent = `🟩 ${winner==='X'?'Joueur 1':morpionTurnLabel('O').replace(' (○)','')} gagne la manche !`;
   playFeedback('trophy');
   morpionVibrate([30,20,30,20,60]); // vibration longue et intense pour l'alignement (§4)
@@ -4671,9 +4729,8 @@ function morpionRoundDraw(){
 }
 function morpionEndMatch(winner){
   morpionMatchOver = true;
-  morpionCoins += 50; // vainqueur du match complet (§4)
-  morpionCoins += 5;  // consolation pour le perdant (§4)
-  localStorage.setItem('morpionCoins', morpionCoins);
+  // Pas de bonus fixe de fin de match (casserait le calibrage 120 pièces/h) : les pièces déjà
+  // gagnées manche par manche suffisent, cf. formule 2×durée÷P(victoire).
   morpionUpdateScoreboard();
   const big = Math.max(morpionScoreX, morpionScoreO), small = Math.min(morpionScoreX, morpionScoreO);
   const winnerLabel = winner==='X' ? 'Joueur 1' : morpionTurnLabel('O').replace(' (○)','');
@@ -4686,9 +4743,9 @@ function morpionEndMatch(winner){
 function morpionDoubleCoins(){
   const panel = document.getElementById('morpion-matchend-panel');
   if(panel.dataset.claimed==='1') return;
+  if(morpionMatchCoinsEarned<=0) return; // rien à doubler
   mockWatchAd(4, ()=>{
-    morpionCoins += 55; // double le gain de ce match (50+5 déjà crédités -> +55 pour atteindre x2 au total)
-    localStorage.setItem('morpionCoins', morpionCoins);
+    appCoinsAdd(morpionMatchCoinsEarned); // double exactement ce qui a été gagné pendant ce match
     panel.dataset.claimed = '1';
     morpionUpdateScoreboard();
   });
@@ -8683,6 +8740,7 @@ function restoreLastScreen(){
   }
 }
 restoreLastScreen();
+appCoinsInit();
 applyMusicState();
 
 /* ---- Nav bar : disparaît en scrollant vers le bas, revient en remontant ---- */
