@@ -258,6 +258,11 @@ body{padding-top:44px;}
 }
 .coin-bar-icon{font-size:15px;}
 .coin-bar-value{color:var(--accent);}
+.coin-bar-reset{
+  background:none; border:none; color:var(--muted); font-size:15px; line-height:1; cursor:pointer;
+  padding:0 0 0 4px; margin:0;
+}
+.coin-bar-reset:active{color:var(--text);}
 
 /* ---------- BOTTOM NAV BAR ---------- */
 .bottom-nav{
@@ -935,6 +940,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 <div class="coin-bar" id="coinBar">
   <span class="coin-bar-icon">🪙</span>
   <span class="coin-bar-value" id="coinBarValue">0</span>
+  <button class="coin-bar-reset" onclick="appCoinsReset()" title="Remettre à zéro">↺</button>
 </div>
 
 <!-- ============ OVERLAY PUB SIMULÉE (globale, réutilisée par plusieurs jeux) ============ -->
@@ -1039,8 +1045,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         <div class="txt"><h3>Quiz</h3><p>10 questions, réponse expliquée à chaque fois.</p></div>
       </div>
       <div class="btn-row">
-        <button class="btn primary" style="flex:1;" onclick="quizStart('paradoxes')">🧠 Quiz Paradoxes</button>
-        <button class="btn" style="flex:1;" onclick="quizStart('general')">🎓 Quiz Général</button>
+        <button class="btn primary" style="flex:1;" onclick="quizStart('general')">🎓 Lancer le Quiz</button>
       </div>
       <div id="quiz-area" style="margin-top:14px;"></div>
     </div>
@@ -1920,10 +1925,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 <audio id="bgMusic" src="bgmusic.mp3" loop preload="none"></audio>
 
 <nav class="bottom-nav" id="bottomNav">
-  <button class="tab active" id="tab-home" onclick="goHome()">
-    <span class="tab-icon">🏠</span><span>Paradoxes</span>
-  </button>
-  <button class="tab" id="tab-jeux" onclick="openJeux()">
+  <button class="tab active" id="tab-jeux" onclick="openJeux()">
     <span class="tab-icon">🎮</span><span>Jeux</span>
   </button>
   <button class="tab" id="tab-progres" onclick="openProgres()">
@@ -2880,6 +2882,17 @@ function appCoinsAddLimited(gameKey, amount){
     appCoinsAdd(toAward);
   }
   return toAward;
+}
+// Bouton de remise à zéro, à côté de la barre de pièces — utile pour tester l'app sur une base
+// neutre (ex : plusieurs testeurs qui enchaînent). Réinitialise aussi l'historique du plafond
+// horaire de chaque jeu, sinon d'anciens gains continueraient de compter dans les 40/h.
+function appCoinsReset(){
+  if(!confirm('Remettre les pièces à zéro ? Cette action est irréversible.')) return;
+  appCoins = 0;
+  localStorage.setItem('appCoins', '0');
+  const gameKeys = ['morpion','puissance4','jeu2048','memory','puzzle15','sudoku','nutsAndBolts','snake','flappyBird','wordle'];
+  gameKeys.forEach(k => localStorage.removeItem('coinRateLimit:'+k));
+  appCoinsRender();
 }
 
 function statsRecordVisit(paradoxId){
@@ -8959,9 +8972,10 @@ function renderHome(){
 }
 
 function goHome(){
-  switchScreen('home');
-  setActiveTab('tab-home');
-  trackPage('/accueil');
+  // Paradoxes masqués (voir PROJECT_STATE.md) : plus d'onglet "tab-home" dans le DOM, donc on
+  // redirige simplement vers Jeux pour ne jamais planter si cette fonction est encore appelée
+  // depuis un vieil écran de paradoxe (inaccessible en pratique, mais code conservé tel quel).
+  openJeux();
 }
 function openGame(id){
   switchScreen('game-'+id);
@@ -9014,7 +9028,7 @@ function switchScreen(newId){
   requestAnimationFrame(()=>{ window.scrollTo(0, savedY); });
   // Immersion : la barre de menu du bas ne s'affiche que sur les 4 écrans principaux,
   // jamais pendant qu'on joue à un jeu (seule la flèche de retour permet d'en sortir).
-  const mainScreens = ['home','game-jeux','game-progres','game-options'];
+  const mainScreens = ['game-jeux','game-progres','game-options'];
   const nav = document.getElementById('bottomNav');
   nav.style.display = mainScreens.includes(newId) ? '' : 'none';
 }
@@ -9022,7 +9036,9 @@ function switchScreen(newId){
 /* ---- Restauration au chargement : reprendre là où on était ---- */
 function restoreLastScreen(){
   const last = localStorage.getItem('lastScreen');
-  if(!last || last==='home'){ return; }
+  // Paradoxes retirés de l'app (accès masqué, code conservé pour un retour possible plus tard) :
+  // tout ce qui pointait vers l'accueil ou un paradoxe précis retombe désormais sur Jeux.
+  if(!last || last==='home'){ openJeux(); return; }
   if(last==='game-jeux'){ openJeux(); return; }
   if(last==='game-wordle'){ openWordle(); return; }
   if(last==='game-quisuisje'){ openJeux(); return; }
@@ -9047,7 +9063,7 @@ function restoreLastScreen(){
   if(last.startsWith('game-')){
     const id = last.replace('game-','');
     const exists = puzzles.some(p=>p.id===id);
-    if(exists) openGame(id);
+    if(exists) openJeux(); // ancien paradoxe sauvegardé : redirige vers Jeux (paradoxes masqués)
   }
 }
 restoreLastScreen();

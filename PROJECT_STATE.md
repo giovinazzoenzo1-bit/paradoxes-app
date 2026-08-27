@@ -3,7 +3,7 @@
 > **Pour Claude : lis ce fichier avant de répondre.** Version condensée — ne contient QUE l'essentiel (état actuel + leçons à ne pas réapprendre). Pas d'historique détaillé version par version : voir `git log` si besoin de retracer une décision précise.
 
 ## C'est quoi
-PWA éducative/ludique : paradoxes de probabilités expliqués simplement + mini-jeux, en français, grand public (12 ans+).
+PWA éducative/ludique : mini-jeux avec monnaie in-game, en français, grand public (12 ans+). 🟥 **Paradoxes masqués depuis le [date] — voir section dédiée ci-dessous, code conservé mais inaccessible depuis l'app.**
 - **URL live** : https://giovinazzoenzo1-bit.github.io/paradoxes-app/
 - **Repo** : https://github.com/giovinazzoenzo1-bit/paradoxes-app
 - **Stack** : un seul fichier `index.html` (HTML+CSS+JS vanilla), `sw.js` (service worker PWA), `manifest.json`. GitHub Pages.
@@ -38,6 +38,16 @@ PWA éducative/ludique : paradoxes de probabilités expliqués simplement + mini
   - Rééquilibrages suite à retours répétés : Puissance 4 -50% (2/6), 2048 Rush seuils -20% (plus facile), Flappy Bird seuils +50% (plus dur), Wordle 6e tentative ramenée à 3 pièces (au lieu de 8), Puissance 4 Facile +30% de difficulté (20% aléatoire au lieu de 30%, évite désormais aussi de laisser un coup gagnant immédiat à l'adversaire).
   - **Phase de test utilisateurs prévue** (plusieurs testeurs, 10 min chacun, objectif : gagner un maximum de pièces + retour sur quels jeux sont trop faciles/durs + suggestions de nouveaux jeux) — résultats attendus, à intégrer dans les prochains rééquilibrages.
   - Jeux du bas de la page "Jeux" réordonnés à la demande : Quiz, Qui suis-je, Solitaire, Skip-Bo, Ludo, Échecs, Billard, Ping-pong regroupés en dernier.
+  - **Bouton de remise à zéro des pièces** ajouté à côté de la barre en haut (↺, avec confirmation) — réinitialise aussi l'historique du plafond horaire de chaque jeu, pour repartir sur une base neutre (utile pour les tests utilisateurs).
+
+## 🟥 Paradoxes masqués (pas supprimés)
+À la demande de l'utilisateur, qui n'est pas sûr de vouloir les retirer définitivement ("on le rajoutera peut-être plus tard mais c'est pas sûr") : **choix délibéré de MASQUER plutôt que SUPPRIMER**, pour rester facilement réversible sans devoir re-coder 20 simulations de paradoxes si l'utilisateur change d'avis.
+- Onglet "Paradoxes" retiré de la barre de navigation du bas (reste 3 onglets : Jeux/Progrès/Options, Jeux devient l'écran par défaut à l'ouverture).
+- Quiz Paradoxes retiré, seul le Quiz Général reste.
+- `restoreLastScreen()` redirige tout ancien accès sauvegardé (accueil ou paradoxe précis) vers Jeux.
+- **Le code des 20 écrans de paradoxes (simulations, HTML, JS) reste intégralement dans `index.html`, juste rendu inaccessible** (plus aucun lien n'y mène). Pas de nettoyage de code fait exprès, pour un retour en arrière simple.
+- Non traité (à voir si besoin un jour) : les 3 trophées liés aux paradoxes ("Premier pas", "Curieux", "Collectionneur") restent dans le code et resteront à jamais inatteignables pour un nouvel utilisateur tant que les paradoxes sont masqués — pas grave en soi (n'affiche pas d'erreur), mais à garder en tête.
+- Le nom de l'app ("Paradoxes & Probabilités") et le manifest n'ont pas été retouchés — pourrait sembler décalé vu le contenu actuel, à voir si l'utilisateur veut y toucher.
   - **Puzzle 15** : seuils recalculés à partir d'une vraie recherche de temps moyen de résolution (confirmé pour 4×4 : "joueur confiant 3-5 min" selon plusieurs sources concordantes ; 5×5/6×6/7×7 extrapolés par ratio de nombre de coups, beaucoup moins fiable faute de données réelles) — seuil = 20% plus rapide que la moyenne, 5 pièces à la clé sur les 4 tailles.
 - Nav bar 4 onglets, sauvegarde de scroll/session, son/vibration (3 modes), musique de fond, pub factice (pas de vraie régie)
 
