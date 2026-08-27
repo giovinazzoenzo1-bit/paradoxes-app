@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paradoxes-v80';
+const CACHE_NAME = 'paradoxes-v81';
 const ASSETS = [
   './',
   './index.html',
@@ -21,6 +21,8 @@ const ASSETS = [
   './icons/wordle.png',
   './icons/quiz_general.png',
   './icons/morpion.png',
+  './icons/billiard.png',
+  './icons/pingpong.png',
   './icons/paradox_monty.png',
   './icons/paradox_bday.png',
   './icons/paradox_twokids.png',
