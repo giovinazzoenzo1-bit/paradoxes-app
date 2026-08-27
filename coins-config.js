@@ -28,18 +28,18 @@
 
 const COINS_CONFIG = {
 
-  // ❌⭕ MORPION — contre le bot uniquement (le mode "Contre un ami" est fixe, voir plus bas)
+  // ❌⭕ MORPION — contre le bot uniquement. Le mode "Contre un ami" ne rapporte plus rien (trop
+  // facile de farmer en jouant les 2 côtés soi-même). Le match se gagne au bout de 3 manches
+  // remportées (pas 2) — plus aucun gain manche par manche, seulement à la victoire du match.
   morpion: {
-    facile_par_manche: 0,     // Facile : rien manche par manche...
-    facile_bonus_bo3: 1,      // ...seulement ce bonus si tu gagnes le match complet (BO3)
-    normal_par_manche: 4,     // Normal : ce montant à CHAQUE manche gagnée
-    ami_par_manche: 4,        // Mode "Contre un ami" (2 humains) : même montant que Normal
+    facile_bonus_match: 1,   // pièces si le match complet (3 manches) est gagné en Facile
+    normal_bonus_match: 6,   // pièces si le match complet (3 manches) est gagné en Normal
   },
 
-  // 🔴 PUISSANCE 4 — contre le bot uniquement
+  // 🔴 PUISSANCE 4 — contre le bot uniquement (mode Ami : aucune pièce, voir Morpion)
   puissance4: {
-    facile: 4,
-    normal: 12,
+    facile: 2,
+    normal: 6,
   },
 
   // 🔢 2048 — paliers de score, un seul gain possible par palier et par partie
@@ -51,10 +51,10 @@ const COINS_CONFIG = {
       {score:50000, coins:50},
     ],
     rush60s: [
-      {score:900,  coins:3},
-      {score:1100, coins:6},
-      {score:1400, coins:12},
-      {score:1800, coins:25},
+      {score:720,  coins:3},
+      {score:880,  coins:6},
+      {score:1120, coins:12},
+      {score:1440, coins:25},
     ],
   },
 
@@ -98,16 +98,16 @@ const COINS_CONFIG = {
 
   // 🐤 FLAPPY BIRD — paliers de score, additifs (chaque palier compte une seule fois par partie)
   flappyBird: [
-    {score:5,  coins:1},
-    {score:15, coins:3},
-    {score:25, coins:5},
+    {score:8,  coins:1},
+    {score:23, coins:3},
+    {score:38, coins:5},
   ],
 
-  // 🔤 WORDLE — pièces à la victoire, plus si trouvé tard (tension du suspense)
+  // 🔤 WORDLE — pièces à la victoire
   wordle: {
     base: 3,             // trouvé aux tentatives 1 à 4
     tentative_5: 5,       // trouvé à la 5e tentative
-    tentative_6: 8,       // trouvé à la 6e (dernière) tentative
+    tentative_6: 3,       // trouvé à la 6e (dernière) tentative — ramené au niveau de base
   },
 
 };

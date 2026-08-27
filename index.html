@@ -965,28 +965,10 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
     <div class="panel">
       <div class="game-panel-header">
-        <img class="game-panel-icon" src="icons/quiz_paradoxes.png" alt="Quiz">
-        <div class="txt"><h3>Quiz</h3><p>10 questions, réponse expliquée à chaque fois.</p></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn primary" style="flex:1;" onclick="quizStart('paradoxes')">🧠 Quiz Paradoxes</button>
-        <button class="btn" style="flex:1;" onclick="quizStart('general')">🎓 Quiz Général</button>
-      </div>
-      <div id="quiz-area" style="margin-top:14px;"></div>
-    </div>
-    <div class="panel">
-      <div class="game-panel-header">
         <img class="game-panel-icon" src="icons/wordle.png" alt="Wordle">
         <div class="txt"><h3>Wordle</h3><p>Devine le mot de 5 lettres en 6 essais.</p></div>
       </div>
       <div class="btn-row"><button class="btn primary" onclick="openWordle()">Jouer</button></div>
-    </div>
-    <div class="panel">
-      <div class="game-panel-header">
-        <img class="game-panel-icon" src="icons/quisuisje.png" alt="Qui suis-je">
-        <div class="txt"><h3>Qui suis-je ?</h3><p>Jeu en groupe, un seul téléphone qui tourne.</p></div>
-      </div>
-      <div class="btn-row"><button class="btn primary" onclick="openQuisuisje()">Jouer</button></div>
     </div>
     <div class="panel">
       <div class="game-panel-header">
@@ -1032,13 +1014,6 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
     <div class="panel">
       <div class="game-panel-header">
-        <img class="game-panel-icon" src="icons/solitaire.png" alt="Solitaire">
-        <div class="txt"><h3>Solitaire</h3><p>Le classique Klondike, en solo.</p></div>
-      </div>
-      <div class="btn-row"><button class="btn primary" onclick="openSolitaire()">Jouer</button></div>
-    </div>
-    <div class="panel">
-      <div class="game-panel-header">
         <img class="game-panel-icon" src="icons/sudoku.png" alt="Sudoku">
         <div class="txt"><h3>Sudoku</h3><p>3 niveaux de difficulté, solution unique garantie.</p></div>
       </div>
@@ -1060,10 +1035,28 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
     <div class="panel">
       <div class="game-panel-header">
-        <img class="game-panel-icon" src="icons/ludo.png" alt="Ludo">
-        <div class="txt"><h3>Ludo</h3><p>Solo contre 3 bots, ou entre amis (2-4 joueurs).</p></div>
+        <img class="game-panel-icon" src="icons/quiz_paradoxes.png" alt="Quiz">
+        <div class="txt"><h3>Quiz</h3><p>10 questions, réponse expliquée à chaque fois.</p></div>
       </div>
-      <div class="btn-row"><button class="btn primary" onclick="openLudo()">Jouer</button></div>
+      <div class="btn-row">
+        <button class="btn primary" style="flex:1;" onclick="quizStart('paradoxes')">🧠 Quiz Paradoxes</button>
+        <button class="btn" style="flex:1;" onclick="quizStart('general')">🎓 Quiz Général</button>
+      </div>
+      <div id="quiz-area" style="margin-top:14px;"></div>
+    </div>
+    <div class="panel">
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/quisuisje.png" alt="Qui suis-je">
+        <div class="txt"><h3>Qui suis-je ?</h3><p>Jeu en groupe, un seul téléphone qui tourne.</p></div>
+      </div>
+      <div class="btn-row"><button class="btn primary" onclick="openQuisuisje()">Jouer</button></div>
+    </div>
+    <div class="panel">
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/solitaire.png" alt="Solitaire">
+        <div class="txt"><h3>Solitaire</h3><p>Le classique Klondike, en solo.</p></div>
+      </div>
+      <div class="btn-row"><button class="btn primary" onclick="openSolitaire()">Jouer</button></div>
     </div>
     <div class="panel">
       <div class="game-panel-header">
@@ -1071,6 +1064,13 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         <div class="txt"><h3>Skip-Bo</h3><p>Vide ta pioche perso avant tout le monde, en solo ou entre amis.</p></div>
       </div>
       <div class="btn-row"><button class="btn primary" onclick="openSkipbo()">Jouer</button></div>
+    </div>
+    <div class="panel">
+      <div class="game-panel-header">
+        <img class="game-panel-icon" src="icons/ludo.png" alt="Ludo">
+        <div class="txt"><h3>Ludo</h3><p>Solo contre 3 bots, ou entre amis (2-4 joueurs).</p></div>
+      </div>
+      <div class="btn-row"><button class="btn primary" onclick="openLudo()">Jouer</button></div>
     </div>
     <div class="panel">
       <div class="game-panel-header">
@@ -1298,7 +1298,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
           <div class="morpion-player-label">Joueur 1 · ✕</div>
           <div class="morpion-player-score" id="morpion-score-x">0</div>
         </div>
-        <div class="morpion-vs">BO3</div>
+        <div class="morpion-vs">1er à 3</div>
         <div class="morpion-player-card o-card" id="morpion-card-o">
           <div class="morpion-player-label">Joueur 2 · ○</div>
           <div class="morpion-player-score" id="morpion-score-o">0</div>
@@ -2860,6 +2860,27 @@ function appCoinsSpend(n){
   appCoinsRender();
   return true;
 }
+// ---- Plafond anti-abus : 40 pièces maximum par heure, PAR JEU (fenêtre glissante) ----
+// Chaque jeu appelle appCoinsAddLimited('cléDuJeu', montant) au lieu de appCoinsAdd() directement.
+// Si le plafond est déjà atteint, accorde ce qu'il reste de la marge (jamais plus), ou 0 si la
+// marge est épuisée. Retourne le montant réellement accordé, utile pour l'affichage ("+X pièces").
+const COIN_RATE_LIMIT_PER_HOUR = 40;
+function appCoinsAddLimited(gameKey, amount){
+  const key = 'coinRateLimit:' + gameKey;
+  const now = Date.now();
+  let history = [];
+  try{ history = JSON.parse(localStorage.getItem(key)) || []; }catch(e){ history = []; }
+  history = history.filter(e => now - e.t < 3600000); // ne garde que la dernière heure glissante
+  const earnedThisHour = history.reduce((sum,e) => sum+e.amount, 0);
+  const allowance = Math.max(0, COIN_RATE_LIMIT_PER_HOUR - earnedThisHour);
+  const toAward = Math.max(0, Math.min(amount, allowance));
+  if(toAward > 0){
+    history.push({t:now, amount:toAward});
+    localStorage.setItem(key, JSON.stringify(history));
+    appCoinsAdd(toAward);
+  }
+  return toAward;
+}
 
 function statsRecordVisit(paradoxId){
   const s = statsGet();
@@ -3157,12 +3178,11 @@ function wordleSubmit(){
     document.getElementById('wordle-status').textContent = '🟩 Gagné !';
     statsRecordWordleWin();
     // wordleRow vient d'être incrémenté juste au-dessus : il vaut désormais le nombre de tentatives
-    // utilisées pour trouver le mot. 3 pièces normalement, 5 si trouvé à la 5e tentative (retour de
-    // test), 8 si trouvé à la toute dernière (6e) — extrapolation de la même logique croissante.
+    // utilisées pour trouver le mot.
     const wc = COINS_CONFIG.wordle;
     const gain = wordleRow===5 ? wc.tentative_5 : wordleRow===6 ? wc.tentative_6 : wc.base;
-    appCoinsAdd(gain);
-    document.getElementById('wordle-status').textContent += ` 🪙 +${gain} pièces`;
+    const awarded = appCoinsAddLimited('wordle', gain);
+    document.getElementById('wordle-status').textContent += ` 🪙 +${awarded} pièces`;
   } else if(wordleRow>=6){
     wordleOver = true;
     document.getElementById('wordle-status').textContent = `🟥 Perdu — le mot était ${wordleTarget}.`;
@@ -3644,8 +3664,8 @@ function g2048CheckMilestones(){
   list.forEach((m, i) => {
     if(!g2048MilestonesHit.includes(i) && g2048Score >= m.score){
       g2048MilestonesHit.push(i);
-      appCoinsAdd(m.coins);
-      document.getElementById('g2048-status').textContent = `🪙 Palier ${m.score} atteint ! +${m.coins} pièces`;
+      const awarded = appCoinsAddLimited('jeu2048', m.coins);
+      document.getElementById('g2048-status').textContent = `🪙 Palier ${m.score} atteint ! +${awarded} pièces`;
       setTimeout(()=>{ if(!g2048Over) document.getElementById('g2048-status').textContent=''; }, 2000);
     }
   });
@@ -4243,8 +4263,8 @@ function memoryFlip(i){
         // ressenti de jeu.
         const challenge = COINS_CONFIG.memory['grille_'+memorySize+'x'+memorySize];
         if(challenge && memorySeconds <= challenge.threshold){
-          appCoinsAdd(challenge.coins);
-          document.getElementById('memory-status').textContent += ` 🪙 +${challenge.coins} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
+          const awarded = appCoinsAddLimited('memory', challenge.coins);
+          document.getElementById('memory-status').textContent += ` 🪙 +${awarded} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
         }
         if(isNewBest){
           document.getElementById('memory-best').textContent = memoryFormatTime(memorySeconds);
@@ -4445,8 +4465,8 @@ function p15Tap(i){
       const p15SizeNames = {4:'4x4', 5:'5x5', 6:'6x6', 7:'7x7'};
       const challenge = COINS_CONFIG.puzzle15['taille_'+(p15SizeNames[p15N]||'4x4')];
       if(challenge && p15Seconds <= challenge.threshold){
-        appCoinsAdd(challenge.coins);
-        document.getElementById('p15-status').textContent += ` 🪙 +${challenge.coins} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
+        const awarded = appCoinsAddLimited('puzzle15', challenge.coins);
+        document.getElementById('p15-status').textContent += ` 🪙 +${awarded} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
       }
       if(prevBestSeconds===null || p15Seconds<prevBestSeconds){
         document.getElementById('p15-best').textContent = `${memoryFormatTime(p15Seconds)} (${p15Moves} coups)`;
@@ -4509,15 +4529,10 @@ function morpionRenderSetupButtons(){
   // Affiche clairement combien rapporte le mode/difficulté actuellement sélectionné (toujours
   // lu depuis coins-config.js, donc jamais désynchronisé du vrai gain).
   const cfg = COINS_CONFIG.morpion;
-  let botInfo = '';
-  if(morpionBotDifficulty==='normal' || morpionBotDifficulty==='expert'){
-    botInfo = `🪙 ${cfg.normal_par_manche} pièces à chaque manche gagnée.`;
-  } else {
-    botInfo = `🪙 Aucun gain par manche — ${cfg.facile_bonus_bo3} pièce si tu gagnes le match complet (BO3).`;
-  }
-  document.getElementById('morpion-coin-info').textContent = botInfo;
+  const matchGain = (morpionBotDifficulty==='normal' || morpionBotDifficulty==='expert') ? cfg.normal_bonus_match : cfg.facile_bonus_match;
+  document.getElementById('morpion-coin-info').textContent = `🪙 Aucun gain par manche — ${matchGain} pièces si tu gagnes le match complet (1er à 3 manches).`;
   document.getElementById('morpion-coin-info-ami').textContent = morpionMode==='ami'
-    ? `🪙 Mode Ami : ${cfg.ami_par_manche} pièces à chaque manche gagnée.`
+    ? '🟨 Mode Ami : aucune pièce (pour éviter de farmer en jouant les 2 côtés soi-même).'
     : (morpionRule==='antidraw' ? '🟨 Règle Anti-nul : l\'Undo est désactivé (voir note plus haut).' : '');
 }
 function morpionStartFromSetup(){
@@ -4776,25 +4791,18 @@ function morpionRoundWin(winner, winLine){
   if(winner==='X') morpionScoreX++; else morpionScoreO++;
   morpionStreak[winner]++;
   morpionStreak[winner==='X'?'O':'X'] = 0;
-  // Seule une victoire d'un JOUEUR HUMAIN rapporte des pièces — si le bot gagne, rien (cf. principe
-  // "ce sont les wins qui paient, pas les défaites"). En mode Ami, les 2 côtés sont humains.
-  // En Facile, plus de gain par manche (retour de test : trop facile pour rapporter à chaque
-  // manche) — seule la victoire du match complet (BO3) rapporte, voir morpionEndMatch.
-  const humanWon = morpionMode==='ami' || winner==='X';
-  if(humanWon && !(morpionMode==='bot' && morpionBotDifficulty==='facile')){
-    const cfg = COINS_CONFIG.morpion;
-    const gain = morpionMode==='bot' ? (morpionBotDifficulty==='normal' || morpionBotDifficulty==='expert' ? cfg.normal_par_manche : cfg.facile_par_manche) : cfg.ami_par_manche;
-    appCoinsAdd(gain);
-    morpionMatchCoinsEarned += gain;
-  }
+  // Plus aucun gain par manche (retour de test répété : trop facile de farmer manche par manche,
+  // et en mode Ami un seul joueur peut jouer les 2 côtés lui-même). Seule la victoire du match
+  // complet rapporte des pièces, voir morpionEndMatch — et le mode Ami n'en rapporte plus du tout.
   document.getElementById('morpion-status').textContent = `🟩 ${winner==='X'?'Joueur 1':morpionTurnLabel('O').replace(' (○)','')} gagne la manche !`;
   playFeedback('trophy');
   morpionVibrate([30,20,30,20,60]); // vibration longue et intense pour l'alignement (§4)
   morpionUpdateScoreboard();
-  const matchWon = morpionScoreX>=2 || morpionScoreO>=2;
+  // Match désormais gagné au bout de 3 manches remportées (au lieu de 2/BO3) — demande explicite.
+  const matchWon = morpionScoreX>=3 || morpionScoreO>=3;
   setTimeout(()=>{
     if(matchWon){
-      morpionEndMatch(morpionScoreX>=2 ? 'X' : 'O');
+      morpionEndMatch(morpionScoreX>=3 ? 'X' : 'O');
     } else {
       morpionFirstPlayer = morpionFirstPlayer==='X' ? 'O' : 'X'; // alterne le 1er joueur (§1.1)
       morpionNewRound();
@@ -4813,12 +4821,13 @@ function morpionRoundDraw(){
 }
 function morpionEndMatch(winner){
   morpionMatchOver = true;
-  // Pas de bonus fixe de fin de match en général (casserait le calibrage 120 pièces/h) — SAUF en
-  // Facile contre le bot : le mode est jugé trop facile pour ne rapporter que des micro-gains par
-  // manche, donc +1 pièce de bonus si le joueur remporte le match complet dans ce mode précis.
-  if(morpionMode==='bot' && morpionBotDifficulty==='facile' && winner==='X'){
-    appCoinsAdd(COINS_CONFIG.morpion.facile_bonus_bo3);
-    morpionMatchCoinsEarned += COINS_CONFIG.morpion.facile_bonus_bo3;
+  // Pièces uniquement à la victoire du match complet (3 manches gagnées), et uniquement contre le
+  // bot — le mode Ami ne rapporte plus rien (trop facile de farmer en jouant les 2 côtés soi-même).
+  if(morpionMode==='bot' && winner==='X'){
+    const cfg = COINS_CONFIG.morpion;
+    const gain = (morpionBotDifficulty==='normal' || morpionBotDifficulty==='expert') ? cfg.normal_bonus_match : cfg.facile_bonus_match;
+    const awarded = appCoinsAddLimited('morpion', gain);
+    morpionMatchCoinsEarned += awarded;
   }
   morpionUpdateScoreboard();
   const big = Math.max(morpionScoreX, morpionScoreO), small = Math.min(morpionScoreX, morpionScoreO);
@@ -4834,7 +4843,7 @@ function morpionDoubleCoins(){
   if(panel.dataset.claimed==='1') return;
   if(morpionMatchCoinsEarned<=0) return; // rien à doubler
   mockWatchAd(4, ()=>{
-    appCoinsAdd(morpionMatchCoinsEarned); // double exactement ce qui a été gagné pendant ce match
+    appCoinsAddLimited('morpion', morpionMatchCoinsEarned); // double (dans la limite du plafond horaire)
     panel.dataset.claimed = '1';
     morpionUpdateScoreboard();
   });
@@ -4857,7 +4866,7 @@ function snakeCheckMilestones(){
   COINS_CONFIG.snake.forEach((m, i) => {
     if(!snakeMilestonesHit.includes(i) && snakeScore >= m.score){
       snakeMilestonesHit.push(i);
-      appCoinsAdd(m.coins);
+      appCoinsAddLimited('snake', m.coins);
     }
   });
 }
@@ -5249,8 +5258,8 @@ function nbTap(i){
       const threshold = nbTimeThreshold(nbLevel);
       if(elapsed <= threshold){
         const coins = COINS_CONFIG.nutsAndBolts.coins_si_reussi_a_temps;
-        appCoinsAdd(coins);
-        document.getElementById('nb-status').textContent += ` 🪙 +${coins} pièce${coins>1?'s':''} (moins de ${threshold}s) !`;
+        const awarded = appCoinsAddLimited('nutsAndBolts', coins);
+        document.getElementById('nb-status').textContent += ` 🪙 +${awarded} pièce${awarded>1?'s':''} (moins de ${threshold}s) !`;
       }
       statsRecordNbLevel(nbLevel);
       const currentMax = parseInt(localStorage.getItem('nbMaxLevel')||'0');
@@ -5815,8 +5824,8 @@ function sudokuCheckWin(){
   const elapsed = (Date.now()-sudokuStartTime)/1000;
   const challenge = COINS_CONFIG.sudoku[sudokuLevel];
   if(challenge && elapsed <= challenge.threshold){
-    appCoinsAdd(challenge.coins);
-    document.getElementById('sudoku-status').textContent += ` 🪙 +${challenge.coins} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
+    const awarded = appCoinsAddLimited('sudoku', challenge.coins);
+    document.getElementById('sudoku-status').textContent += ` 🪙 +${awarded} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
   }
 }
 
@@ -5857,7 +5866,7 @@ function p4RenderSetupButtons(){
   const cfg = COINS_CONFIG.puissance4;
   document.getElementById('p4-coin-info').textContent = `🪙 ${cfg[p4Difficulty]} pièces si tu gagnes.`;
   document.getElementById('p4-coin-info-ami').textContent = p4Mode==='ami'
-    ? `🪙 Mode Ami : ${cfg.normal} pièces à la victoire.`
+    ? '🟨 Mode Ami : aucune pièce (pour éviter de farmer en jouant les 2 côtés soi-même).'
     : '';
 }
 function p4StartFromSetup(){
@@ -6000,11 +6009,11 @@ function p4Drop(col){
     const winnerLabel = p4Mode==='bot' ? (p4Turn===1 ? 'Toi' : 'Le bot') : (p4Turn===1 ? '🔴 Rouge' : '🟡 Jaune');
     document.getElementById('p4-status').textContent = `🟩 ${winnerLabel} a gagné !`;
     playFeedback('record');
-    // Seule une victoire d'un JOUEUR HUMAIN rapporte des pièces (pas le bot).
-    const humanWon = p4Mode==='ami' || p4Turn===1;
-    if(humanWon){
-      const gain = p4Mode==='bot' ? (COINS_CONFIG.puissance4[p4Difficulty]||12) : COINS_CONFIG.puissance4.normal;
-      appCoinsAdd(gain);
+    // Pièces uniquement contre le bot, et seulement si c'est TOI qui gagnes (mode Ami : plus
+    // aucune pièce, trop facile de farmer en jouant les 2 côtés soi-même).
+    if(p4Mode==='bot' && p4Turn===1){
+      const gain = COINS_CONFIG.puissance4[p4Difficulty]||6;
+      appCoinsAddLimited('puissance4', gain);
     }
     return;
   }
@@ -6045,7 +6054,7 @@ function fbCheckMilestones(){
   COINS_CONFIG.flappyBird.forEach((m, i) => {
     if(!fbMilestonesHit.includes(i) && fbScore >= m.score){
       fbMilestonesHit.push(i);
-      appCoinsAdd(m.coins);
+      appCoinsAddLimited('flappyBird', m.coins);
     }
   });
 }
