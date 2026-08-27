@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Paradoxes & Probabilités</title>
+<title>Paradox</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#11131c">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Paradoxes">
+<meta name="apple-mobile-web-app-title" content="Paradox">
 
 <!-- Open Graph / partage réseaux sociaux -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="Impressionne tes amis avec ces paradoxes.">
-<meta property="og:description" content="6 énigmes qui trompent ton instinct. Joue, simule, et regarde le hasard te donner tort — ou raison.">
+<meta property="og:title" content="Paradox — des mini-jeux, des pièces, des défis.">
+<meta property="og:description" content="Une vingtaine de mini-jeux, une monnaie in-game, des défis à battre. Gratte, joue, gagne des pièces.">
 <meta property="og:image" content="https://giovinazzoenzo1-bit.github.io/paradoxes-app/share-image.png">
 <meta property="og:url" content="https://giovinazzoenzo1-bit.github.io/paradoxes-app/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Impressionne tes amis avec ces paradoxes.">
-<meta name="twitter:description" content="6 énigmes qui trompent ton instinct.">
+<meta name="twitter:title" content="Paradox — des mini-jeux, des pièces, des défis.">
+<meta name="twitter:description" content="Une vingtaine de mini-jeux, une monnaie in-game, des défis à battre.">
 <meta name="twitter:image" content="https://giovinazzoenzo1-bit.github.io/paradoxes-app/share-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1895,7 +1895,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
     <div class="panel">
       <h2>À propos</h2>
-      <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">Paradoxes & Probabilités — fait avec 💛 pour que les maths donnent le sourire.</p>
+      <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.5;">Paradox — fait avec 💛 pour que les maths donnent le sourire.</p>
     </div>
   </div>
 </div>
@@ -2940,6 +2940,14 @@ function statsRecordNbLevel(level){
   statsSet(s);
   trophiesCheck();
 }
+// Compteur de victoires générique "vs bot", réutilisé par plusieurs jeux (localStorage direct,
+// même pattern que Ludo/Skip-Bo/Échecs/Ping-pong qui l'utilisaient déjà chacun de leur côté).
+// Appelle systématiquement trophiesCheck() pour que le trophée associé se débloque immédiatement.
+function statsRecordGameWin(key){
+  const wins = parseInt(localStorage.getItem(key)||'0') + 1;
+  localStorage.setItem(key, wins);
+  trophiesCheck();
+}
 function statsTouchStreak(s){
   const today = new Date().toISOString().slice(0,10);
   if(s.lastVisitDate === today) return;
@@ -2949,9 +2957,6 @@ function statsTouchStreak(s){
 }
 
 const trophyList = [
-  {id:'first', icon:'🥉', name:'Premier pas', desc:'Ouvre 1 paradoxe', check:s=>(s.visited||[]).length>=1},
-  {id:'curious', icon:'🥈', name:'Curieux', desc:'5 paradoxes différents', check:s=>(s.visited||[]).length>=5},
-  {id:'collector', icon:'🥇', name:'Collectionneur', desc:'Tous les paradoxes vus', check:s=>(s.visited||[]).length>=puzzles.length},
   {id:'quizmaster', icon:'🧠', name:'Sans faute', desc:'5/5 à un quiz', check:s=>(s.quizPerfect||0)>=1},
   {id:'student', icon:'🎯', name:'Bon élève', desc:'5 quiz terminés', check:s=>(s.quizzesCompleted||0)>=5},
   {id:'streak3', icon:'🔥', name:'Sur une lancée', desc:'3 jours de suite', check:s=>(s.streak||0)>=3},
@@ -2960,6 +2965,18 @@ const trophyList = [
   {id:'memoryhard', icon:'🃏', name:'Mémoire de fer', desc:'Termine le Memory 14×14', check:s=>!!s.memoryHardWin},
   {id:'snakemaster', icon:'🐍', name:'Serpent affamé', desc:'Score de 15+ à Snake', check:s=>(s.snakeBestScore||0)>=15},
   {id:'nbmaster', icon:'🔩', name:'Ingénieur', desc:'Termine le niveau 5 de Nuts and Bolts', check:s=>(s.nbMaxLevel||0)>=5},
+  {id:'p15master', icon:'🧩', name:'Casse-tête', desc:'Résous un Puzzle 15', check:s=>parseInt(localStorage.getItem('p15Wins')||'0')>=1},
+  {id:'sudokumaster', icon:'🔢', name:'Déductif', desc:'Résous un Sudoku', check:s=>parseInt(localStorage.getItem('sudokuWins')||'0')>=1},
+  {id:'solmaster', icon:'🃏', name:'Patience', desc:'Gagne une partie de Solitaire', check:s=>parseInt(localStorage.getItem('solWins')||'0')>=1},
+  {id:'fbmaster', icon:'🐤', name:'Pilote confirmé', desc:'Score de 15+ à Flappy Bird', check:s=>parseInt(localStorage.getItem('fbBest')||'0')>=15},
+  {id:'morpionmaster', icon:'❌', name:'Tacticien', desc:'Gagne un match de Morpion contre le bot', check:s=>parseInt(localStorage.getItem('morpionWins')||'0')>=1},
+  {id:'p4master', icon:'🔴', name:'Aligneur', desc:'Bats le bot au Puissance 4', check:s=>parseInt(localStorage.getItem('p4Wins')||'0')>=1},
+  {id:'ludomaster', icon:'🎲', name:'Petit conquérant', desc:'Gagne une partie de Ludo contre les bots', check:s=>parseInt(localStorage.getItem('ludoWins')||'0')>=1},
+  {id:'sbmaster', icon:'🎴', name:'Videur de pioche', desc:'Gagne une manche de Skip-Bo contre les bots', check:s=>parseInt(localStorage.getItem('sbWins')||'0')>=1},
+  {id:'chessmaster', icon:'♟️', name:'Grand Maître', desc:'Bats le bot aux Échecs', check:s=>parseInt(localStorage.getItem('chessWins')||'0')>=1},
+  {id:'bilmaster', icon:'🎱', name:'Queue d\'or', desc:'Bats le bot au Billard', check:s=>parseInt(localStorage.getItem('bilWins')||'0')>=1},
+  {id:'ppmaster', icon:'🏓', name:'Réflexes', desc:'Bats le bot au Ping-pong', check:s=>parseInt(localStorage.getItem('ppWins')||'0')>=1},
+  {id:'qsjmaster', icon:'🕵️', name:'Meneur de jeu', desc:'Termine une partie de Qui suis-je ?', check:s=>parseInt(localStorage.getItem('qsjRounds')||'0')>=1},
   {id:'tryhard', icon:'👑', name:'Tryhard', desc:'Tous les trophées ci-dessus', check:s=>trophyList.slice(0,-1).every(t=>t.check(s))},
 ];
 function trophiesCheck(){
@@ -3294,6 +3311,7 @@ function qsjRenderReveal(){
   const area = document.getElementById('qsj-area');
   if(qsjRecallMode){ qsjRenderRecall(area); return; }
   if(qsjRevealIndex >= qsjAssignments.length){
+    statsRecordGameWin('qsjRounds');
     area.innerHTML = `
       <div class="panel" style="text-align:center;">
         <h2 style="text-align:center;">🎉 Tout le monde a son personnage !</h2>
@@ -4473,6 +4491,7 @@ function p15Tap(i){
       const prevBestSeconds = scoresBefore.length ? scoresBefore[0].seconds : null;
       p15SaveScore(p15N, p15Seconds, p15Moves);
       document.getElementById('p15-status').textContent = `🟩 Résolu en ${p15Moves} coups, en ${memoryFormatTime(p15Seconds)} !`;
+      statsRecordGameWin('p15Wins');
       // Défi chrono (cahier des charges pièces) : sous un certain temps selon la taille, la
       // résolution rapporte des pièces. Estimation de départ, à ajuster avec un vrai ressenti de jeu.
       const p15SizeNames = {4:'4x4', 5:'5x5', 6:'6x6', 7:'7x7'};
@@ -4841,6 +4860,7 @@ function morpionEndMatch(winner){
     const gain = (morpionBotDifficulty==='normal' || morpionBotDifficulty==='expert') ? cfg.normal_bonus_match : cfg.facile_bonus_match;
     const awarded = appCoinsAddLimited('morpion', gain);
     morpionMatchCoinsEarned += awarded;
+    statsRecordGameWin('morpionWins');
   }
   morpionUpdateScoreboard();
   const big = Math.max(morpionScoreX, morpionScoreO), small = Math.min(morpionScoreX, morpionScoreO);
@@ -5499,6 +5519,7 @@ function solCheckWin(){
   if(total===52){
     document.getElementById('sol-status').textContent = `🟩 Gagné en ${solMoves} coups !`;
     playFeedback('record');
+    statsRecordGameWin('solWins');
   }
 }
 
@@ -5832,6 +5853,7 @@ function sudokuCheckWin(){
   if(!full) return;
   document.getElementById('sudoku-status').textContent = `🟩 Sudoku résolu, bravo !`;
   playFeedback('record');
+  statsRecordGameWin('sudokuWins');
   // Défi chrono (cahier des charges pièces) : sous un certain temps selon la difficulté, la
   // résolution rapporte des pièces. Estimation de départ, à ajuster avec un vrai ressenti de jeu.
   const elapsed = (Date.now()-sudokuStartTime)/1000;
@@ -6033,6 +6055,7 @@ function p4Drop(col){
     if(p4Mode==='bot' && p4Turn===1){
       const gain = COINS_CONFIG.puissance4[p4Difficulty]||6;
       appCoinsAddLimited('puissance4', gain);
+      statsRecordGameWin('p4Wins');
     }
     return;
   }
@@ -6213,6 +6236,7 @@ function fbEndGame(){
   }
   fbDraw();
   document.getElementById('fb-status').textContent = `🟥 Perdu ! Score : ${fbScore} — Meilleur : ${fbBest} (tape pour rejouer)`;
+  trophiesCheck();
   playFeedback('lose');
   fbRenderWorldboard();
 }
@@ -6599,6 +6623,7 @@ function ludoEndGame(winnerColor){
   if(ludoMode==='solo' && winnerColor==='red'){
     const wins = parseInt(localStorage.getItem('ludoWins')||'0') + 1;
     localStorage.setItem('ludoWins', wins);
+    trophiesCheck();
   }
   ludoRenderEndgameBoard();
 }
@@ -7013,6 +7038,7 @@ function sbEndMatch(winnerIdx){
   if(sbMode==='solo' && winnerIdx===0){
     const wins = parseInt(localStorage.getItem('sbWins')||'0') + 1;
     localStorage.setItem('sbWins', wins);
+    trophiesCheck();
   }
   sbRenderEndgameBoard();
 }
@@ -7278,6 +7304,7 @@ function chessCheckGameEnd(){
     if(chessMode==='bot' && winner==='w'){
       const wins = parseInt(localStorage.getItem('chessWins')||'0') + 1;
       localStorage.setItem('chessWins', wins);
+      trophiesCheck();
     }
     chessShowEndgame(`🎉 ${winnerLabel} gagnent (échec et mat) !`);
   } else {
@@ -8001,6 +8028,7 @@ function bilOnShotSettled(){
 }
 function bilShowEndgame(winnerPlayer, reason){
   playFeedback(bilMode==='bot' && winnerPlayer===2 ? 'wrong' : 'record');
+  if(bilMode==='bot' && winnerPlayer===1) statsRecordGameWin('bilWins');
   const label = bilMode==='bot' ? (winnerPlayer===1 ? 'TU GAGNES !' : 'LE BOT GAGNE') : `JOUEUR ${winnerPlayer} GAGNE !`;
   document.getElementById('bil-victory-medal-emoji').textContent = (bilMode==='bot' && winnerPlayer===2) ? '🥈' : '🥇';
   document.getElementById('bil-victory-title').textContent = label;
@@ -8716,6 +8744,7 @@ function ppEndGame(winner){
   if(ppMode==='bot' && won){
     const wins = parseInt(localStorage.getItem('ppWins')||'0') + 1;
     localStorage.setItem('ppWins', wins);
+    trophiesCheck();
   }
   const winnerLabel = won ? 'TU GAGNES !' : (ppMode==='bot' ? 'LE BOT GAGNE' : 'JOUEUR 2 GAGNE');
   document.getElementById('ping-victory-medal-emoji').textContent = won ? '🥇' : '🥈';
@@ -9069,6 +9098,13 @@ function restoreLastScreen(){
 restoreLastScreen();
 appCoinsInit();
 applyMusicState();
+// Le streak quotidien (trophée "3 jours de suite") n'était touché que par la visite d'un
+// paradoxe — désormais masqués, donc on le rattache simplement à l'ouverture de l'app.
+(function(){
+  const s = statsGet();
+  statsTouchStreak(s);
+  statsSet(s);
+})();
 
 /* ---- Nav bar : disparaît en scrollant vers le bas, revient en remontant ---- */
 (function(){

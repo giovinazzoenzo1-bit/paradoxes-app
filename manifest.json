@@ -1,7 +1,7 @@
 {
-  "name": "Paradoxes & Probabilités",
-  "short_name": "Paradoxes",
-  "description": "Impressionne tes amis avec des paradoxes qui vont leur décrocher le cerveau.",
+  "name": "Paradox",
+  "short_name": "Paradox",
+  "description": "Une vingtaine de mini-jeux, une monnaie in-game, des défis à battre.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
