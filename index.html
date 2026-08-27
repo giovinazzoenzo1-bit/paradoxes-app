@@ -276,8 +276,25 @@ tr.total td{font-weight:700; color:#fff; border-top:2px solid var(--line); borde
 .fb-shop-swatch .fb-mini-pipe.right{right:16px; height:35%;}
 
 
-/* ---------- (bannière pub retirée : app en mode sans-pub permanent) ---------- */
-body{padding-bottom:64px;}
+/* ---------- AD BANNER (placeholder) ---------- */
+body{padding-bottom:120px;}
+body.no-ads{padding-bottom:64px;}
+.ad-banner{
+  position:fixed; bottom:60px; left:0; right:0;
+  height:56px;
+  background:var(--bg2);
+  border-top:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  gap:8px;
+  font-size:11px; color:var(--muted);
+  letter-spacing:.05em; text-transform:uppercase;
+  z-index:35;
+}
+.ad-banner .tag{
+  background:var(--line); color:var(--muted);
+  font-size:9px; padding:2px 6px; border-radius:4px; text-transform:uppercase;
+}
+body.no-ads .ad-banner{display:none;}
 
 /* ---------- BARRE DE MONNAIE GLOBALE (fixe, en haut, centrée) ---------- */
 body{padding-top:44px;}
@@ -318,7 +335,31 @@ body{padding-top:44px;}
 .bottom-nav .tab .tab-icon{font-size:19px;}
 .bottom-nav .tab.active{color:var(--accent);}
 
-/* ---------- (carte "retirer les pubs" retirée : app en mode sans-pub permanent) ---------- */
+/* ---------- REMOVE ADS CARD ---------- */
+.remove-ads-card{
+  background:linear-gradient(135deg, #232840, #1c2032);
+  border:1px solid var(--accent);
+  border-radius:var(--radius);
+  padding:18px 20px;
+  margin-bottom:24px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  flex-wrap:wrap;
+}
+.remove-ads-card .txt h3{font-size:15px; margin-bottom:4px;}
+.remove-ads-card .txt p{font-size:12.5px; color:var(--muted); margin:0; line-height:1.4; max-width:38ch;}
+.remove-ads-card button{
+  background:var(--accent); color:#1a1300; border:none;
+  padding:10px 16px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
+}
+.remove-ads-card.done{border-color:var(--good);}
+.remove-ads-card.done button{background:var(--good);}
+
+.mini-remove-ads{
+  display:block; width:100%; text-align:center;
+  background:none; border:1px dashed var(--line); color:var(--muted);
+  padding:9px; border-radius:10px; font-size:12px; cursor:pointer; margin-top:6px;
+}
+.mini-remove-ads:hover{border-color:var(--accent); color:var(--accent);}
 
 /* ---------- DICE (Grand Duc de Toscane) ---------- */
 .dice-row{display:flex; gap:12px; justify-content:center; margin:18px 0;}
@@ -1894,6 +1935,13 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     <div class="topbar">
       <div class="game-title">⚙️ Options</div>
     </div>
+    <div class="remove-ads-card" id="removeAdsCard">
+      <div class="txt">
+        <h3 id="removeAdsTitle">🎈 Retirer les pubs</h3>
+        <p id="removeAdsText">Un petit paiement unique, pas d'abonnement. Ça aide énormément le créateur de l'app 😉</p>
+      </div>
+      <button id="removeAdsBtn" onclick="toggleAds()">2,99 €</button>
+    </div>
     <div class="panel">
       <h2>🔔 Retour sensoriel</h2>
       <p style="font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5;">Trophées, records battus, défaites — choisis comment tu veux le ressentir.</p>
@@ -1953,6 +2001,8 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     </div>
   </div>
 </div>
+
+<div class="ad-banner" id="adBanner"><span class="tag">Pub</span> Emplacement publicitaire — ton app grandit grâce à ça</div>
 
 <audio id="bgMusic" src="bgmusic.mp3" loop preload="none"></audio>
 
@@ -9190,7 +9240,35 @@ function renderLanguageButtons(){
   `).join('');
 }
 
-/* ---------- (système "retirer les pubs" retiré : app en mode sans-pub permanent) ---------- */
+/* ================= ADS TOGGLE (mock — vraie transaction viendra avec l'app native) ================= */
+// Premium actif PAR DÉFAUT dès le premier lancement (meilleur confort visuel pour tester/développer)
+// — mais le toggle reste fonctionnel si besoin de re-voir la bannière (démo, test de l'expérience pub).
+let adsRemoved = localStorage.getItem('adsRemoved') !== '0';
+function applyAdsState(){
+  document.body.classList.toggle('no-ads', adsRemoved);
+  const card = document.getElementById('removeAdsCard');
+  const btn = document.getElementById('removeAdsBtn');
+  const title = document.getElementById('removeAdsTitle');
+  const text = document.getElementById('removeAdsText');
+  if(!card) return;
+  if(adsRemoved){
+    card.classList.add('done');
+    title.textContent = '✅ Pubs retirées';
+    text.textContent = 'Merci pour ton soutien 💛 Profite de l\'app sans interruption.';
+    btn.textContent = 'Activé';
+  } else {
+    card.classList.remove('done');
+    title.textContent = '🎈 Retirer les pubs';
+    text.textContent = 'Un petit paiement unique, pas d\'abonnement. Ça aide énormément le créateur de l\'app 😉';
+    btn.textContent = '2,99 €';
+  }
+}
+function toggleAds(){
+  adsRemoved = !adsRemoved;
+  localStorage.setItem('adsRemoved', adsRemoved ? '1' : '0');
+  applyAdsState();
+}
+applyAdsState();
 
 /* ================= NAVIGATION ================= */
 function renderHome(){
