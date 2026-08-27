@@ -117,6 +117,19 @@ const COINS_CONFIG = {
     moyen: 5,
   },
 
+  // 🏓 BOUTIQUE DE RAQUETTES — cosmétique uniquement, aucun effet sur le jeu (juste la couleur).
+  // "classique" est gratuite et possédée dès le départ. Les prix sont en pièces.
+  pingpongPaddles: [
+    {id:'classique',  name:'Classique',    color:'#ef6461', colorDark:'#b8433f', price:0},
+    {id:'ocean',      name:'Océan',        color:'#3ec6f0', colorDark:'#1c8fb8', price:15},
+    {id:'emeraude',   name:'Émeraude',     color:'#4fd18a', colorDark:'#2c9c5f', price:15},
+    {id:'violet',     name:'Violet Néon',  color:'#b96bff', colorDark:'#7d3fc9', price:25},
+    {id:'rose',       name:'Rose Bonbon',  color:'#ff6fb0', colorDark:'#c94080', price:25},
+    {id:'or',         name:'Or Royal',     color:'#f5d76e', colorDark:'#c9a227', price:40},
+    {id:'noir',       name:'Noir Mat',     color:'#3a3a42', colorDark:'#1c1c22', price:40},
+    {id:'arcenciel',  name:'Arc-en-ciel',  color:'#ff6fb0', colorDark:'#7d3fc9', price:75, gradient:true},
+  ],
+
   // 🎱 BILLARD — contre le bot uniquement, pas de paliers de difficulté ici (un seul montant).
   billard: {
     win: 5,

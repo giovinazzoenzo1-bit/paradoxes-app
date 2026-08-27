@@ -224,6 +224,43 @@ tr.total td{font-weight:700; color:#fff; border-top:2px solid var(--line); borde
 
 .footnote{font-size:12px; color:#666; text-align:center; margin-top:18px;}
 
+/* ---------- PING-PONG : fond néon du menu + boutique de raquettes ---------- */
+#ping-setup-panel, #ping-shop-panel{
+  position:relative;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255,0,200,0.28), transparent 55%),
+    radial-gradient(circle at 100% 15%, rgba(0,230,255,0.24), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(160,0,255,0.18), transparent 60%),
+    linear-gradient(160deg, #1a0b2e 0%, #0d0221 55%, #170a2c 100%);
+  border:1px solid rgba(255,0,200,0.25);
+  overflow:hidden;
+}
+#ping-setup-panel h2, #ping-shop-panel h2{
+  color:#fff; text-shadow:0 0 12px rgba(255,0,200,0.6), 0 0 24px rgba(0,230,255,0.35);
+}
+.pp-shop-fab{
+  position:absolute; right:16px; bottom:16px; width:64px; height:64px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #3ec6f0, #1c5f8f);
+  border:3px solid rgba(255,255,255,0.85); color:#fff; font-size:26px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  box-shadow:0 0 18px rgba(62,198,240,0.7);
+}
+.pp-shop-grid{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px;
+}
+.pp-shop-card{
+  background:rgba(255,255,255,0.06); border:2px solid rgba(255,255,255,0.15); border-radius:14px;
+  padding:10px 6px; text-align:center;
+}
+.pp-shop-card.equipped{border-color:#4fd18a; box-shadow:0 0 12px rgba(79,209,138,0.5);}
+.pp-shop-swatch{
+  width:52px; height:52px; border-radius:50%; margin:0 auto 6px; border:4px solid; box-shadow:0 2px 6px rgba(0,0,0,0.4);
+}
+.pp-shop-name{color:#fff; font-size:12px; font-weight:700; margin-bottom:6px;}
+.pp-shop-action button{width:100%; padding:6px 0; font-size:12px;}
+.pp-shop-owned-tag{color:#4fd18a; font-size:12px; font-weight:800;}
+
+
 /* ---------- AD BANNER (placeholder) ---------- */
 body{padding-bottom:120px;}
 body.no-ads{padding-bottom:64px;}
@@ -1804,6 +1841,15 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       </div>
       <p class="footnote" style="margin-top:14px;">Glisse ta raquette pour la placer. Plus ton doigt va vite au moment de l'impact, plus le tir part fort — ralentis pour un tir placé, précis.</p>
       <div class="footnote" id="ping-winstat" style="margin-top:8px;"></div>
+      <button class="pp-shop-fab" onclick="ppOpenShop()" title="Raquettes">🏓</button>
+    </div>
+
+    <div class="panel" id="ping-shop-panel" style="display:none;">
+      <div class="btn-row"><button class="btn" onclick="ppCloseShop()">← Retour</button></div>
+      <h2 style="margin-top:10px;">🏓 Boutique de raquettes</h2>
+      <p class="footnote">Cosmétique uniquement — juste pour le style, aucun effet sur le jeu.</p>
+      <div class="row"><span>🪙 Pièces</span><b id="ping-shop-coins">0</b></div>
+      <div class="pp-shop-grid" id="ping-shop-grid"></div>
     </div>
 
     <div class="panel" id="ping-endgame-panel" style="display:none;"></div>
@@ -8267,11 +8313,86 @@ function openPingpong(){
   switchScreen('game-pingpong');
   setActiveTab(null);
   document.getElementById('ping-setup-panel').style.display = 'block';
+  document.getElementById('ping-shop-panel').style.display = 'none';
   document.getElementById('ping-endgame-panel').style.display = 'none';
   document.getElementById('ping-table-wrap').style.display = 'none';
   ppRenderWinStat();
   ppChooseDiff(ppDiff);
   trackPage('/pingpong');
+}
+// ---- Boutique de raquettes (cosmétique, achetée avec les pièces) ----
+let ppSelectedPaddle = localStorage.getItem('ppSelectedPaddle') || 'classique';
+let ppOwnedPaddles = [];
+try{ ppOwnedPaddles = JSON.parse(localStorage.getItem('ppOwnedPaddles')) || ['classique']; }catch(e){ ppOwnedPaddles = ['classique']; }
+if(!ppOwnedPaddles.includes('classique')) ppOwnedPaddles.push('classique'); // toujours possédée
+function ppGetSelectedSkin(){
+  return COINS_CONFIG.pingpongPaddles.find(s=>s.id===ppSelectedPaddle) || COINS_CONFIG.pingpongPaddles[0];
+}
+function ppOpenShop(){
+  document.getElementById('ping-setup-panel').style.display = 'none';
+  document.getElementById('ping-shop-panel').style.display = 'block';
+  ppRenderShop();
+}
+function ppCloseShop(){
+  document.getElementById('ping-shop-panel').style.display = 'none';
+  document.getElementById('ping-setup-panel').style.display = 'block';
+}
+function ppRenderShop(){
+  document.getElementById('ping-shop-coins').textContent = appCoins;
+  const grid = document.getElementById('ping-shop-grid');
+  grid.innerHTML = '';
+  COINS_CONFIG.pingpongPaddles.forEach(skin => {
+    const owned = ppOwnedPaddles.includes(skin.id);
+    const equipped = ppSelectedPaddle === skin.id;
+    const card = document.createElement('div');
+    card.className = 'pp-shop-card' + (equipped ? ' equipped' : '');
+    const swatch = document.createElement('div');
+    swatch.className = 'pp-shop-swatch';
+    swatch.style.background = skin.gradient
+      ? `conic-gradient(${skin.color}, ${skin.colorDark}, ${skin.color})`
+      : skin.color;
+    swatch.style.borderColor = skin.colorDark;
+    const name = document.createElement('div');
+    name.className = 'pp-shop-name';
+    name.textContent = skin.name;
+    const action = document.createElement('div');
+    action.className = 'pp-shop-action';
+    if(equipped){
+      action.innerHTML = '<span class="pp-shop-owned-tag">✅ Équipée</span>';
+    } else if(owned){
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = 'Équiper';
+      btn.onclick = () => ppEquipPaddle(skin.id);
+      action.appendChild(btn);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = `🪙 ${skin.price}`;
+      btn.onclick = () => ppBuyPaddle(skin.id);
+      action.appendChild(btn);
+    }
+    card.appendChild(swatch);
+    card.appendChild(name);
+    card.appendChild(action);
+    grid.appendChild(card);
+  });
+}
+function ppBuyPaddle(id){
+  const skin = COINS_CONFIG.pingpongPaddles.find(s=>s.id===id);
+  if(!skin || ppOwnedPaddles.includes(id)) return;
+  if(appCoinsSpend(skin.price)){
+    ppOwnedPaddles.push(id);
+    localStorage.setItem('ppOwnedPaddles', JSON.stringify(ppOwnedPaddles));
+    ppEquipPaddle(id);
+  } else {
+    alert('Pas assez de pièces pour cette raquette !');
+  }
+}
+function ppEquipPaddle(id){
+  ppSelectedPaddle = id;
+  localStorage.setItem('ppSelectedPaddle', id);
+  ppRenderShop();
 }
 function ppRenderWinStat(){
   const el = document.getElementById('ping-winstat');
@@ -8745,7 +8866,8 @@ function ppRender(){
 
   // raquettes
   ppDrawPaddle(ppOpp, '#3ec6f0', '#1c8fb8');
-  ppDrawPaddle(ppPlayer, '#ef6461', '#b8433f');
+  const ppSkin = ppGetSelectedSkin();
+  ppDrawPaddle(ppPlayer, ppSkin.color, ppSkin.colorDark);
 
   // balle — le sprite se soulève avec la hauteur du rebond (z), l'ombre reste au sol (position
   // réelle x,y), les deux se rejoignent exactement au moment de l'impact sur la table.
