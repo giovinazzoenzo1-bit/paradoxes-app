@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paradoxes-v86';
+const CACHE_NAME = 'paradoxes-v87';
 const ASSETS = [
   './',
   './index.html',
@@ -16,7 +16,9 @@ const ASSETS = [
   './icons/quisuisje.png',
   './icons/nutsbolts.png',
   './icons/g2048.png',
-  './sprites/flappybird_toucan.png',
+  './sprites/flappybird/bird_toucan.png',
+  './sprites/flappybird/pipe_body.png',
+  './sprites/flappybird/pipe_cap.png',
   './icons/quiz_paradoxes.png',
   './icons/wordle.png',
   './icons/quiz_general.png',

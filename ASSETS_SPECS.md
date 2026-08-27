@@ -9,9 +9,12 @@
 
 ## Flappy Bird
 - Canvas de jeu : 300 × 400 px (CSS px, indépendant de la résolution écran)
-- **Oiseau** : `sprites/flappybird_toucan.png` — déjà en place. Dessiné à une largeur de `FB_BIRD_RADIUS*3.4` ≈ 47px, hauteur dérivée automatiquement du ratio de l'image (pas de déformation). Peut être remplacé par un autre PNG au même nom sans toucher au code.
-- **Tuyaux** : PAS ENCORE de sprite — rectangles de couleur unie pour l'instant. Largeur fixe 52px, mais **hauteur variable à chaque apparition** (position de l'ouverture aléatoire), écart vertical entre les deux tuyaux = 130px.
-  - 🟥 Une image à hauteur fixe ne peut PAS remplacer ça telle quelle — il faut soit une texture 52px de large répétable verticalement (le code la boucle pour couvrir n'importe quelle hauteur), soit une embouchure fixe + un corps répétable séparés. Prévenir Claude avant de dessiner pour caler le format exact.
+- Tous les assets sont dans `sprites/flappybird/` (dossier dédié, pour rester facile à gérer à mesure que d'autres jeux accumulent leurs propres sprites).
+- **Oiseau** : `sprites/flappybird/bird_toucan.png` — en place. Dessiné à une largeur de `FB_BIRD_RADIUS*3.4` ≈ 47px, hauteur dérivée automatiquement du ratio de l'image (pas de déformation).
+- **Tuyaux** : en place, mais **uniquement pour le thème "classique"** de la boutique de fonds (les 5 autres thèmes n'ont pas encore leurs propres assets, ils gardent un remplissage couleur uni) :
+  - `sprites/flappybird/pipe_body.png` — 52×42px, corps répétable (tuilé verticalement par le code, dernière tuile recadrée proprement, jamais étirée/déformée).
+  - `sprites/flappybird/pipe_cap.png` — 60×24px, embouchure posée une fois à l'ouverture de chaque tuyau, dépasse de 4px de chaque côté du corps (60 = 52 + 2×4).
+  - Si de nouveaux thèmes (coucher de soleil, désert, nuit, espace, néon — voir `coins-config.js` → `flappyBirdThemes`) reçoivent leurs propres textures un jour, même format exact à respecter (52×42 et 60×24).
 
 ## 2048
 - Grille 4×4, cellules carrées (ratio 1:1), thème cible "néon cyberpunk" (cahier des charges du 26/08). Voir doc "Flavio" sur le Drive pour la palette hex détaillée par palier de tuile.

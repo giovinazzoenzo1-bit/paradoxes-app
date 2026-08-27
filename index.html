@@ -6331,7 +6331,50 @@ function fbEndGame(){
 let fbBirdImg = new Image();
 let fbBirdImgLoaded = false;
 fbBirdImg.onload = ()=>{ fbBirdImgLoaded = true; };
-fbBirdImg.src = 'sprites/flappybird_toucan.png';
+fbBirdImg.src = 'sprites/flappybird/bird_toucan.png';
+// Tuyaux texturés (corps répétable 52×42 + embouchure 60×24, voir ASSETS_SPECS.md) — utilisés
+// UNIQUEMENT pour le thème "classique" (les autres thèmes de la boutique n'ont pas encore
+// d'assets dédiés, ils gardent le remplissage couleur uni en attendant).
+let fbPipeBodyImg = new Image();
+let fbPipeBodyLoaded = false;
+fbPipeBodyImg.onload = ()=>{ fbPipeBodyLoaded = true; };
+fbPipeBodyImg.src = 'sprites/flappybird/pipe_body.png';
+let fbPipeCapImg = new Image();
+let fbPipeCapLoaded = false;
+fbPipeCapImg.onload = ()=>{ fbPipeCapLoaded = true; };
+fbPipeCapImg.src = 'sprites/flappybird/pipe_cap.png';
+const FB_PIPE_CAP_H = 24;
+const FB_PIPE_CAP_OVERHANG = 4; // l'embouchure (60px) dépasse de 4px de chaque côté du corps (52px)
+// Dessine un segment de tuyau texturé entre topY et bottomY. mouthAtBottom=true : l'embouchure
+// est en bas du segment (tuyau du haut, bouche vers l'ouverture) ; false : embouchure en haut
+// (tuyau du bas). Le corps est tuilé verticalement, la dernière tuile partielle est RECADRÉE
+// (pas étirée) pour éviter toute déformation visuelle.
+function fbDrawPipeSegment(ctx, x, topY, bottomY, mouthAtBottom){
+  const bodyH = fbPipeBodyImg.naturalHeight;
+  const bodyW = fbPipeBodyImg.naturalWidth;
+  const capX = x - FB_PIPE_CAP_OVERHANG;
+  const capW = FB_PIPE_WIDTH + FB_PIPE_CAP_OVERHANG*2;
+  if(mouthAtBottom){
+    let y = topY;
+    const bodyBottom = bottomY - FB_PIPE_CAP_H;
+    while(y < bodyBottom){
+      const h = Math.min(bodyH, bodyBottom - y);
+      const srcH = Math.round((h/bodyH) * bodyH);
+      ctx.drawImage(fbPipeBodyImg, 0, 0, bodyW, srcH, x, y, FB_PIPE_WIDTH, h);
+      y += bodyH;
+    }
+    ctx.drawImage(fbPipeCapImg, capX, bodyBottom, capW, FB_PIPE_CAP_H);
+  } else {
+    ctx.drawImage(fbPipeCapImg, capX, topY, capW, FB_PIPE_CAP_H);
+    let y = topY + FB_PIPE_CAP_H;
+    while(y < bottomY){
+      const h = Math.min(bodyH, bottomY - y);
+      const srcH = Math.round((h/bodyH) * bodyH);
+      ctx.drawImage(fbPipeBodyImg, 0, 0, bodyW, srcH, x, y, FB_PIPE_WIDTH, h);
+      y += bodyH;
+    }
+  }
+}
 // ---- Boutique de fonds (cosmétique, achetée avec les pièces) ----
 let fbSelectedTheme = localStorage.getItem('fbSelectedTheme') || 'classique';
 let fbOwnedThemes = [];
@@ -6429,11 +6472,19 @@ function fbDraw(){
       ctx.fillRect(sx, sy, i%5===0 ? 3 : 2, i%5===0 ? 3 : 2);
     }
   }
-  ctx.fillStyle = theme.pipe;
-  fbPipes.forEach(p => {
-    ctx.fillRect(p.x, 0, FB_PIPE_WIDTH, p.gapY);
-    ctx.fillRect(p.x, p.gapY+FB_PIPE_GAP, FB_PIPE_WIDTH, FB_HEIGHT-(p.gapY+FB_PIPE_GAP));
-  });
+  const useTexturedPipes = theme.id==='classique' && fbPipeBodyLoaded && fbPipeCapLoaded;
+  if(useTexturedPipes){
+    fbPipes.forEach(p => {
+      fbDrawPipeSegment(ctx, p.x, 0, p.gapY, true);
+      fbDrawPipeSegment(ctx, p.x, p.gapY+FB_PIPE_GAP, FB_HEIGHT, false);
+    });
+  } else {
+    ctx.fillStyle = theme.pipe;
+    fbPipes.forEach(p => {
+      ctx.fillRect(p.x, 0, FB_PIPE_WIDTH, p.gapY);
+      ctx.fillRect(p.x, p.gapY+FB_PIPE_GAP, FB_PIPE_WIDTH, FB_HEIGHT-(p.gapY+FB_PIPE_GAP));
+    });
+  }
   if(fbBirdImgLoaded){
     // Sprite du toucan, taille dérivée de FB_BIRD_RADIUS (garde le ratio d'origine de l'image),
     // légère inclinaison selon la vitesse verticale pour un effet "piqué/montée" classique du genre.
