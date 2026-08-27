@@ -1126,9 +1126,11 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row" style="justify-content:center;">
         <button class="btn primary" onclick="g2048StartMode('normal')">♾️ Classique (infini)</button>
       </div>
-      <div class="btn-row" style="justify-content:center; margin-top:8px;">
+      <div class="footnote" id="g2048-coin-info-normal" style="text-align:center; margin:4px 0 8px;"></div>
+      <div class="btn-row" style="justify-content:center;">
         <button class="btn" onclick="g2048StartMode('rush')">⏱️ Rush 60s</button>
       </div>
+      <div class="footnote" id="g2048-coin-info-rush" style="text-align:center; margin:4px 0 8px;"></div>
       <div class="btn-row" style="justify-content:center; margin-top:8px;">
         <button class="btn" onclick="g2048OpenLeaderboard()">🏆 Classements</button>
       </div>
@@ -1184,6 +1186,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row" style="margin-top:10px;">
         <button class="btn" onclick="memoryOpenLeaderboard()">🏆 Classements</button>
       </div>
+      <div class="footnote" id="memory-coin-info" style="text-align:center; margin-top:10px; line-height:1.6;"></div>
     </div>
     <div class="panel" id="memory-game-panel" style="display:none;">
       <div class="row"><span>Coups joués</span><b id="memory-moves">0</b></div>
@@ -1228,6 +1231,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row" style="margin-top:10px;">
         <button class="btn" onclick="p15OpenLeaderboard()">🏆 Classements</button>
       </div>
+      <div class="footnote" id="p15-coin-info" style="text-align:center; margin-top:10px; line-height:1.6;"></div>
     </div>
     <div class="panel" id="p15-game-panel" style="display:none;">
       <div class="row"><span>Coups</span><b id="p15-moves">0</b></div>
@@ -1274,7 +1278,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
           <button class="btn" id="morpion-diff-normal" onclick="morpionSetDifficulty('normal')">😐 Normal</button>
           <button class="btn" id="morpion-diff-expert" onclick="morpionSetDifficulty('expert')">🔥 Expert</button>
         </div>
-        <div class="footnote" style="text-align:center; margin-top:4px;">🪙 Plus c'est dur, plus une victoire rapporte de pièces.</div>
+        <div class="footnote" id="morpion-coin-info" style="text-align:center; margin-top:4px;"></div>
       </div>
       <div style="margin-top:12px;">
         <div class="row"><span>🟨 Règle</span></div>
@@ -1283,6 +1287,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
           <button class="btn" id="morpion-rule-antidraw" onclick="morpionSetRule('antidraw')">♾️ Anti-nul (3 pions max)</button>
         </div>
       </div>
+      <div class="footnote" style="text-align:center; margin-top:8px;" id="morpion-coin-info-ami"></div>
       <div class="btn-row" style="justify-content:center; margin-top:16px;">
         <button class="btn primary" onclick="morpionStartFromSetup()">Commencer</button>
       </div>
@@ -1349,6 +1354,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         <button class="dpad-btn dpad-down" onclick="snakeSetDir('down')">▼</button>
       </div>
       <div class="btn-row" style="justify-content:center; margin-top:14px;"><button class="btn" onclick="snakeNew()">Nouvelle partie</button></div>
+      <div class="footnote" id="snake-coin-info" style="text-align:center; margin-top:8px;"></div>
     </div>
     <div class="panel" id="snake-worldboard-panel" style="display:none; margin-top:16px;">
       <h2>🌍 Classement mondial (aperçu)</h2>
@@ -1369,9 +1375,11 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <h2>Choisis ton niveau</h2>
       <div id="nb-level-buttons" class="nb-level-grid"></div>
       <div class="footnote" style="margin-top:10px;">50 niveaux, difficulté progressive (plus de couleurs, moins de tiges vides).</div>
+      <div class="footnote" style="text-align:center; margin-top:6px;">🪙 Termine un niveau sous le temps affiché en jeu pour gagner une pièce (le temps limite grandit avec le niveau).</div>
     </div>
     <div class="panel" id="nb-game-panel" style="display:none;">
       <div class="row"><span>Niveau</span><b id="nb-levelLabel">1</b></div>
+      <div class="row"><span>🪙 Défi</span><b id="nb-coin-info">—</b></div>
       <p style="font-size:13px; color:var(--muted); margin:0 0 10px; line-height:1.5;">Tape une tige pour prendre les écrous du dessus (une paire ou plus de la même couleur se déplace d'un coup), puis tape une autre tige pour les poser. But : une couleur par tige, 4 maximum.</p>
       <div class="nb-rods" id="nb-rods"></div>
       <div class="status-line" id="nb-status" style="text-align:center;"></div>
@@ -1404,6 +1412,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         <button class="btn" onclick="wordleWatchAdForHint()">📺 Lettre offerte (pub)</button>
       </div>
       <div class="btn-row" style="justify-content:center; margin-top:8px;"><button class="btn" onclick="wordleNewGame()">Nouvelle partie</button></div>
+      <div class="footnote" id="wordle-coin-info" style="text-align:center; margin-top:8px;"></div>
     </div>
   </div>
 </div>
@@ -1447,6 +1456,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
         <button class="btn primary" onclick="sudokuNew('moyen')">🟨 Moyen</button>
         <button class="btn primary" onclick="sudokuNew('difficile')">🟥 Difficile</button>
       </div>
+      <div class="footnote" id="sudoku-coin-info" style="text-align:center; margin-top:10px; line-height:1.6;"></div>
     </div>
     <div class="panel" id="sudoku-game-panel" style="display:none;">
       <div class="row"><span>Difficulté</span><b id="sudoku-levelLabel">—</b></div>
@@ -1488,8 +1498,9 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
           <button class="btn" id="p4-diff-facile" onclick="p4SetDifficulty('facile')">😊 Facile</button>
           <button class="btn" id="p4-diff-normal" onclick="p4SetDifficulty('normal')">😐 Normal</button>
         </div>
-        <div class="footnote" style="text-align:center; margin-top:4px;">🪙 Plus c'est dur, plus une victoire rapporte de pièces.</div>
+        <div class="footnote" id="p4-coin-info" style="text-align:center; margin-top:4px;"></div>
       </div>
+      <div class="footnote" style="text-align:center; margin-top:4px;" id="p4-coin-info-ami"></div>
       <div class="btn-row" style="justify-content:center; margin-top:16px;">
         <button class="btn primary" onclick="p4StartFromSetup()">Commencer</button>
       </div>
@@ -1519,6 +1530,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row" style="justify-content:center; margin-top:8px;">
         <button class="btn" onclick="fbStart()">Nouvelle partie</button>
       </div>
+      <div class="footnote" id="fb-coin-info" style="text-align:center; margin-top:8px;"></div>
     </div>
     <div class="panel" id="fb-worldboard-panel" style="display:none; margin-top:16px;">
       <h2>🌍 Classement mondial (aperçu)</h2>
@@ -2451,6 +2463,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 <script data-goatcounter="https://paradoxes-app.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 <script src="./vendor/matter.min.js"></script>
+<script src="./coins-config.js"></script>
 <script type="module">
   // chess.js (BSD-2-Clause) — auto-hébergé dans /vendor plutôt que via CDN, pour fiabilité
   // garantie (fonctionne hors-ligne comme le reste de l'app, pas de dépendance réseau externe).
@@ -3020,12 +3033,12 @@ function openWordle(){
   switchScreen('game-wordle');
   setActiveTab(null);
   wordleNewGame();
+  const wc = COINS_CONFIG.wordle;
+  document.getElementById('wordle-coin-info').textContent =
+    `🪙 Trouvé : ${wc.base} pièces · à la 5e tentative : ${wc.tentative_5} · à la 6e : ${wc.tentative_6}`;
   trackPage('/wordle');
 }
-// Pièces : 3 pour une victoire normale, plus si trouvé tard (retour de test : bonus mérité pour
-// un mot trouvé au bout du suspense).
-const WORDLE_COIN_BASE = 3;
-const WORDLE_COIN_TABLE = {5:5, 6:8};
+// Pièces : voir coins-config.js (COINS_CONFIG.wordle).
 function wordleNewGame(){
   wordleTarget = wordleBank[Math.floor(Math.random()*wordleBank.length)];
   wordleRow = 0;
@@ -3146,7 +3159,8 @@ function wordleSubmit(){
     // wordleRow vient d'être incrémenté juste au-dessus : il vaut désormais le nombre de tentatives
     // utilisées pour trouver le mot. 3 pièces normalement, 5 si trouvé à la 5e tentative (retour de
     // test), 8 si trouvé à la toute dernière (6e) — extrapolation de la même logique croissante.
-    const gain = WORDLE_COIN_TABLE[wordleRow] || WORDLE_COIN_BASE;
+    const wc = COINS_CONFIG.wordle;
+    const gain = wordleRow===5 ? wc.tentative_5 : wordleRow===6 ? wc.tentative_6 : wc.base;
     appCoinsAdd(gain);
     document.getElementById('wordle-status').textContent += ` 🪙 +${gain} pièces`;
   } else if(wordleRow>=6){
@@ -3624,15 +3638,9 @@ let g2048RushTimeLeft = 60;
 let g2048RushInterval = null;
 let g2048LbMode = 'normal';    // onglet actif du panneau classement
 let g2048MilestonesHit = [];   // indices des paliers de score déjà obtenus dans la partie en cours
-// Paliers de pièces par score atteint (remplace l'ancienne économie par fusion, jugée trop
-// généreuse) — un seul gain possible par palier, par partie. Estimations de départ, à ajuster
-// une fois qu'on a un vrai ressenti de jeu sur les scores typiquement atteints.
-const G2048_SCORE_MILESTONES = {
-  normal: [{score:2000, coins:3}, {score:8000, coins:10}, {score:20000, coins:25}, {score:50000, coins:50}],
-  rush:   [{score:900, coins:3}, {score:1100, coins:6}, {score:1400, coins:12}, {score:1800, coins:25}],
-};
+// Paliers de pièces par score atteint : voir coins-config.js (COINS_CONFIG.jeu2048).
 function g2048CheckMilestones(){
-  const list = G2048_SCORE_MILESTONES[g2048Mode] || [];
+  const list = (g2048Mode==='rush' ? COINS_CONFIG.jeu2048.rush60s : COINS_CONFIG.jeu2048.classique) || [];
   list.forEach((m, i) => {
     if(!g2048MilestonesHit.includes(i) && g2048Score >= m.score){
       g2048MilestonesHit.push(i);
@@ -3662,6 +3670,10 @@ function g2048BackToModes(){
   document.getElementById('g2048-mode-panel').style.display = 'block';
   document.getElementById('g2048-game-panel').style.display = 'none';
   document.getElementById('g2048-leaderboard-panel').style.display = 'none';
+  // Barème clair par mode, toujours lu depuis coins-config.js.
+  const fmtList = list => list.map(m => `${m.score}pts→🪙${m.coins}`).join(' · ');
+  document.getElementById('g2048-coin-info-normal').textContent = '🪙 ' + fmtList(COINS_CONFIG.jeu2048.classique);
+  document.getElementById('g2048-coin-info-rush').textContent = '🪙 ' + fmtList(COINS_CONFIG.jeu2048.rush60s);
 }
 function g2048StartMode(mode){
   g2048Mode = mode;
@@ -4041,14 +4053,8 @@ let memoryFlipped = [];
 let memoryMoves = 0;
 let memoryLock = false;
 let memorySize = 4;
-// Pièces gagnées si la grille est terminée sous le seuil de temps (par taille) — estimations de
-// départ (méthode 2×durée÷P(réussite)), à ajuster avec un vrai ressenti de jeu.
-const MEMORY_COIN_TABLE = {
-  4:  {threshold:18,  coins:4},
-  6:  {threshold:60, coins:15},
-  10: {threshold:480, coins:64},
-  14: {threshold:900, coins:200},
-};
+// Pièces gagnées si la grille est terminée sous le seuil de temps : voir coins-config.js
+// (COINS_CONFIG.memory).
 let memoryTimerInterval = null;
 let memorySeconds = 0;
 const memoryDifficulties = [
@@ -4109,6 +4115,12 @@ function memoryBackToDifficulty(){
   document.getElementById('memory-difficulty-panel').style.display = 'block';
   document.getElementById('memory-game-panel').style.display = 'none';
   document.getElementById('memory-leaderboard-panel').style.display = 'none';
+  const c = COINS_CONFIG.memory;
+  document.getElementById('memory-coin-info').innerHTML =
+    `🪙 Facile sous ${memoryFormatTime(c.grille_4x4.threshold)} : ${c.grille_4x4.coins} pièces<br>`+
+    `🪙 Moyen sous ${memoryFormatTime(c.grille_6x6.threshold)} : ${c.grille_6x6.coins} pièces<br>`+
+    `🪙 Difficile sous ${memoryFormatTime(c.grille_10x10.threshold)} : ${c.grille_10x10.coins} pièces<br>`+
+    `🪙 Expert sous ${memoryFormatTime(c.grille_14x14.threshold)} : ${c.grille_14x14.coins} pièces`;
 }
 function memoryOpenLeaderboard(){
   document.getElementById('memory-difficulty-panel').style.display = 'none';
@@ -4229,7 +4241,7 @@ function memoryFlip(i){
         // Défi chrono (cahier des charges pièces) : sous un certain temps selon la taille de
         // grille, la victoire rapporte des pièces. Estimation de départ, à ajuster avec un vrai
         // ressenti de jeu.
-        const challenge = MEMORY_COIN_TABLE[memorySize];
+        const challenge = COINS_CONFIG.memory['grille_'+memorySize+'x'+memorySize];
         if(challenge && memorySeconds <= challenge.threshold){
           appCoinsAdd(challenge.coins);
           document.getElementById('memory-status').textContent += ` 🪙 +${challenge.coins} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
@@ -4278,19 +4290,18 @@ function openPuzzle15(){
   p15OpenLevelPanel();
   trackPage('/puzzle15');
 }
-// Pièces gagnées si le puzzle est résolu sous le seuil de temps (par taille) — estimations de
-// départ (méthode 2×durée÷P(réussite)), à ajuster avec un vrai ressenti de jeu.
-const P15_COIN_TABLE = {
-  4: {threshold:180, coins:10},
-  5: {threshold:360, coins:30},
-  6: {threshold:600, coins:67},
-  7: {threshold:900, coins:150},
-};
+// Pièces gagnées si le puzzle est résolu sous le seuil de temps : voir coins-config.js
+// (COINS_CONFIG.puzzle15) — seuils basés sur une recherche de temps moyen réel de résolution.
 function p15OpenLevelPanel(){
   if(p15TimerInterval) clearInterval(p15TimerInterval);
   document.getElementById('p15-level-panel').style.display = 'block';
   document.getElementById('p15-game-panel').style.display = 'none';
   document.getElementById('p15-leaderboard-panel').style.display = 'none';
+  const c = COINS_CONFIG.puzzle15;
+  document.getElementById('p15-coin-info').innerHTML =
+    `🪙 Chaque taille : résous en moins de ${memoryFormatTime(c.taille_4x4.threshold)} (4×4), `+
+    `${memoryFormatTime(c.taille_5x5.threshold)} (5×5), ${memoryFormatTime(c.taille_6x6.threshold)} (6×6) ou `+
+    `${memoryFormatTime(c.taille_7x7.threshold)} (7×7) pour gagner ${c.taille_4x4.coins} pièces.`;
 }
 function p15GetScores(n){
   try{
@@ -4431,7 +4442,8 @@ function p15Tap(i){
       document.getElementById('p15-status').textContent = `🟩 Résolu en ${p15Moves} coups, en ${memoryFormatTime(p15Seconds)} !`;
       // Défi chrono (cahier des charges pièces) : sous un certain temps selon la taille, la
       // résolution rapporte des pièces. Estimation de départ, à ajuster avec un vrai ressenti de jeu.
-      const challenge = P15_COIN_TABLE[p15N];
+      const p15SizeNames = {4:'4x4', 5:'5x5', 6:'6x6', 7:'7x7'};
+      const challenge = COINS_CONFIG.puzzle15['taille_'+(p15SizeNames[p15N]||'4x4')];
       if(challenge && p15Seconds <= challenge.threshold){
         appCoinsAdd(challenge.coins);
         document.getElementById('p15-status').textContent += ` 🪙 +${challenge.coins} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
@@ -4462,12 +4474,9 @@ let morpionPieceOrder = {X:[], O:[]}; // ordre de pose, nécessaire pour retirer
 let morpionGameId = 0;             // jeton de session : invalide un setTimeout de bot resté en attente après un changement de partie
 let morpionBotTimeoutId = null;
 let morpionMatchCoinsEarned = 0; // pièces gagnées durant le match en cours, pour permettre de les doubler en fin de match
-// Barème pièces/manche calibré sur un objectif de 120 pièces/heure, ajusté à la probabilité de
-// victoire mesurée par simulation (voir discussion) — Expert exclu tant que le bot est réellement
-// imbattable (Minimax parfait) : traité provisoirement comme Normal en attendant une règle qui le
-// rende battable de temps en temps (ex. "étourdi" 5%), condition nécessaire pour rentrer dans
-// une formule de farm répétable plutôt que de basculer uniquement en récompense trophée/diamant.
-const MORPION_ROUND_COINS = {facile:1, normal:4, expert:4};
+// Barème pièces/manche : voir coins-config.js (COINS_CONFIG.morpion). Expert exclu du farm tant
+// que le bot est réellement imbattable (Minimax parfait) — traité comme Normal en attendant une
+// règle qui le rende battable de temps en temps (ex. "étourdi" 5%).
 const morpionLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 function openMorpion(){
   switchScreen('game-morpion');
@@ -4497,6 +4506,19 @@ function morpionRenderSetupButtons(){
   document.getElementById('morpion-diff-expert').classList.toggle('primary', morpionBotDifficulty==='expert');
   document.getElementById('morpion-rule-classic').classList.toggle('primary', morpionRule==='classic');
   document.getElementById('morpion-rule-antidraw').classList.toggle('primary', morpionRule==='antidraw');
+  // Affiche clairement combien rapporte le mode/difficulté actuellement sélectionné (toujours
+  // lu depuis coins-config.js, donc jamais désynchronisé du vrai gain).
+  const cfg = COINS_CONFIG.morpion;
+  let botInfo = '';
+  if(morpionBotDifficulty==='normal' || morpionBotDifficulty==='expert'){
+    botInfo = `🪙 ${cfg.normal_par_manche} pièces à chaque manche gagnée.`;
+  } else {
+    botInfo = `🪙 Aucun gain par manche — ${cfg.facile_bonus_bo3} pièce si tu gagnes le match complet (BO3).`;
+  }
+  document.getElementById('morpion-coin-info').textContent = botInfo;
+  document.getElementById('morpion-coin-info-ami').textContent = morpionMode==='ami'
+    ? `🪙 Mode Ami : ${cfg.ami_par_manche} pièces à chaque manche gagnée.`
+    : (morpionRule==='antidraw' ? '🟨 Règle Anti-nul : l\'Undo est désactivé (voir note plus haut).' : '');
 }
 function morpionStartFromSetup(){
   document.getElementById('morpion-setup-panel').style.display = 'none';
@@ -4760,7 +4782,8 @@ function morpionRoundWin(winner, winLine){
   // manche) — seule la victoire du match complet (BO3) rapporte, voir morpionEndMatch.
   const humanWon = morpionMode==='ami' || winner==='X';
   if(humanWon && !(morpionMode==='bot' && morpionBotDifficulty==='facile')){
-    const gain = morpionMode==='bot' ? (MORPION_ROUND_COINS[morpionBotDifficulty]||4) : MORPION_ROUND_COINS.normal;
+    const cfg = COINS_CONFIG.morpion;
+    const gain = morpionMode==='bot' ? (morpionBotDifficulty==='normal' || morpionBotDifficulty==='expert' ? cfg.normal_par_manche : cfg.facile_par_manche) : cfg.ami_par_manche;
     appCoinsAdd(gain);
     morpionMatchCoinsEarned += gain;
   }
@@ -4794,8 +4817,8 @@ function morpionEndMatch(winner){
   // Facile contre le bot : le mode est jugé trop facile pour ne rapporter que des micro-gains par
   // manche, donc +1 pièce de bonus si le joueur remporte le match complet dans ce mode précis.
   if(morpionMode==='bot' && morpionBotDifficulty==='facile' && winner==='X'){
-    appCoinsAdd(1);
-    morpionMatchCoinsEarned += 1;
+    appCoinsAdd(COINS_CONFIG.morpion.facile_bonus_bo3);
+    morpionMatchCoinsEarned += COINS_CONFIG.morpion.facile_bonus_bo3;
   }
   morpionUpdateScoreboard();
   const big = Math.max(morpionScoreX, morpionScoreO), small = Math.min(morpionScoreX, morpionScoreO);
@@ -4829,11 +4852,9 @@ let snakeFood = {x:5,y:5};
 let snakeInterval = null;
 let snakeScore = 0;
 let snakeMilestonesHit = []; // indices des paliers de score déjà obtenus dans la partie en cours
-// Paliers de pièces par score atteint, demandés explicitement par l'utilisateur : additifs, un
-// seul gain possible par palier et par partie.
-const SNAKE_COIN_MILESTONES = [{score:10, coins:1}, {score:25, coins:5}, {score:40, coins:10}];
+// Paliers de pièces par score atteint : voir coins-config.js (COINS_CONFIG.snake).
 function snakeCheckMilestones(){
-  SNAKE_COIN_MILESTONES.forEach((m, i) => {
+  COINS_CONFIG.snake.forEach((m, i) => {
     if(!snakeMilestonesHit.includes(i) && snakeScore >= m.score){
       snakeMilestonesHit.push(i);
       appCoinsAdd(m.coins);
@@ -4873,6 +4894,8 @@ function openSnake(){
   snakeCellSize = snakeCanvas.width / snakeGridSize;
   snakeHighScore = parseInt(localStorage.getItem('snakeHighScore') || '0');
   document.getElementById('snake-highscore').textContent = snakeHighScore;
+  document.getElementById('snake-coin-info').textContent =
+    '🪙 ' + COINS_CONFIG.snake.map(m => `Score ${m.score}→${m.coins}`).join(' · ');
   snakeNew();
   trackPage('/snake');
 }
@@ -4985,9 +5008,9 @@ let nbSelected = null;
 let nbLevel = 1;
 let nbStartTime = 0; // horodatage de début du niveau, pour le défi chrono (pièces)
 function nbTimeThreshold(level){
-  // Seuil qui grandit avec le niveau (plus de couleurs/tiges = puzzle plus long à résoudre même
-  // pour un joueur qui sait ce qu'il fait) — ~18s au niveau 1, ~35s au niveau 50.
-  return Math.round(18 + level*0.35);
+  // Seuil qui grandit avec le niveau : voir coins-config.js (COINS_CONFIG.nutsAndBolts).
+  const cfg = COINS_CONFIG.nutsAndBolts;
+  return Math.round(cfg.seuil_base_secondes + level*cfg.seuil_croissance_par_niveau);
 }
 let nbHistory = [];
 let nbUndoFreeUsed = false;
@@ -5128,10 +5151,12 @@ function nbNew(level){
   nbSelected = null;
   nbHistory = [];
   nbUndoFreeUsed = false;
-  nbStartTime = Date.now(); // pour le défi "niveau réussi en moins de 30s" (pièces)
+  nbStartTime = Date.now(); // pour le défi "niveau réussi à temps" (pièces)
   document.getElementById('nb-status').textContent = '';
   document.getElementById('nb-nextlevel-row').style.display = 'none';
   document.getElementById('nb-levelLabel').textContent = level;
+  const th = nbTimeThreshold(level);
+  document.getElementById('nb-coin-info').textContent = `Sous ${th}s : +${COINS_CONFIG.nutsAndBolts.coins_si_reussi_a_temps} pièce`;
   document.getElementById('nb-level-panel').style.display = 'none';
   document.getElementById('nb-game-panel').style.display = 'block';
   nbUpdateUndoButton();
@@ -5223,8 +5248,9 @@ function nbTap(i){
       const elapsed = (Date.now()-nbStartTime)/1000;
       const threshold = nbTimeThreshold(nbLevel);
       if(elapsed <= threshold){
-        appCoinsAdd(1);
-        document.getElementById('nb-status').textContent += ` 🪙 +1 pièce (moins de ${threshold}s) !`;
+        const coins = COINS_CONFIG.nutsAndBolts.coins_si_reussi_a_temps;
+        appCoinsAdd(coins);
+        document.getElementById('nb-status').textContent += ` 🪙 +${coins} pièce${coins>1?'s':''} (moins de ${threshold}s) !`;
       }
       statsRecordNbLevel(nbLevel);
       const currentMax = parseInt(localStorage.getItem('nbMaxLevel')||'0');
@@ -5457,13 +5483,8 @@ function solCheckWin(){
 /* ================= SUDOKU (génération avec solution unique garantie) ================= */
 const sudokuDifficulties = {facile:40, moyen:32, difficile:26};
 let sudokuStartTime = 0; // horodatage de début de grille, pour le défi chrono (pièces)
-// Pièces gagnées si la grille est résolue sous le seuil de temps (par difficulté) — estimations
-// de départ (méthode 2×durée÷P(réussite)), à ajuster avec un vrai ressenti de jeu.
-const SUDOKU_COIN_TABLE = {
-  facile: {threshold:300, coins:17},
-  moyen: {threshold:480, coins:46},
-  difficile: {threshold:720, coins:120},
-};
+// Pièces gagnées si la grille est résolue sous le seuil de temps : voir coins-config.js
+// (COINS_CONFIG.sudoku).
 let sudokuGiven = [];    // grille de départ (indices), non modifiable
 let sudokuGrid = [];     // grille actuelle (valeurs saisies incluses)
 let sudokuSelected = null; // {r,c}
@@ -5560,11 +5581,20 @@ function openSudoku(){
   setActiveTab(null);
   document.getElementById('sudoku-level-panel').style.display = 'block';
   document.getElementById('sudoku-game-panel').style.display = 'none';
+  sudokuRenderCoinInfo();
   trackPage('/sudoku');
+}
+function sudokuRenderCoinInfo(){
+  const c = COINS_CONFIG.sudoku;
+  document.getElementById('sudoku-coin-info').innerHTML =
+    `🪙 Facile sous ${memoryFormatTime(c.facile.threshold)} : ${c.facile.coins} pièces<br>`+
+    `🪙 Moyen sous ${memoryFormatTime(c.moyen.threshold)} : ${c.moyen.coins} pièces<br>`+
+    `🪙 Difficile sous ${memoryFormatTime(c.difficile.threshold)} : ${c.difficile.coins} pièces`;
 }
 function sudokuBackToLevels(){
   document.getElementById('sudoku-level-panel').style.display = 'block';
   document.getElementById('sudoku-game-panel').style.display = 'none';
+  sudokuRenderCoinInfo();
 }
 const sudokuLevelLabels = {facile:'🟩 Facile', moyen:'🟨 Moyen', difficile:'🟥 Difficile'};
 let sudokuSolution = [];
@@ -5783,7 +5813,7 @@ function sudokuCheckWin(){
   // Défi chrono (cahier des charges pièces) : sous un certain temps selon la difficulté, la
   // résolution rapporte des pièces. Estimation de départ, à ajuster avec un vrai ressenti de jeu.
   const elapsed = (Date.now()-sudokuStartTime)/1000;
-  const challenge = SUDOKU_COIN_TABLE[sudokuLevel];
+  const challenge = COINS_CONFIG.sudoku[sudokuLevel];
   if(challenge && elapsed <= challenge.threshold){
     appCoinsAdd(challenge.coins);
     document.getElementById('sudoku-status').textContent += ` 🪙 +${challenge.coins} pièces (moins de ${memoryFormatTime(challenge.threshold)}) !`;
@@ -5799,9 +5829,7 @@ let p4Mode = 'ami';        // 'ami' | 'bot'
 let p4Difficulty = 'normal'; // 'facile' | 'normal'
 let p4GameId = 0;          // jeton de session : invalide un setTimeout de bot resté en attente après un changement de partie
 let p4BotTimeoutId = null;
-// Barème pièces calibré sur 120 pièces/heure, réduit de 30% (retour de test : trop facile) —
-// durée moyenne de partie estimée à 2 min.
-const P4_COIN_TABLE = {facile:4, normal:12};
+// Barème pièces : voir coins-config.js (COINS_CONFIG.puissance4).
 function openPuissance4(){
   switchScreen('game-puissance4');
   setActiveTab(null);
@@ -5826,6 +5854,11 @@ function p4RenderSetupButtons(){
   document.getElementById('p4-mode-bot').classList.toggle('primary', p4Mode==='bot');
   document.getElementById('p4-diff-facile').classList.toggle('primary', p4Difficulty==='facile');
   document.getElementById('p4-diff-normal').classList.toggle('primary', p4Difficulty==='normal');
+  const cfg = COINS_CONFIG.puissance4;
+  document.getElementById('p4-coin-info').textContent = `🪙 ${cfg[p4Difficulty]} pièces si tu gagnes.`;
+  document.getElementById('p4-coin-info-ami').textContent = p4Mode==='ami'
+    ? `🪙 Mode Ami : ${cfg.normal} pièces à la victoire.`
+    : '';
 }
 function p4StartFromSetup(){
   document.getElementById('p4-setup-panel').style.display = 'none';
@@ -5970,7 +6003,7 @@ function p4Drop(col){
     // Seule une victoire d'un JOUEUR HUMAIN rapporte des pièces (pas le bot).
     const humanWon = p4Mode==='ami' || p4Turn===1;
     if(humanWon){
-      const gain = p4Mode==='bot' ? (P4_COIN_TABLE[p4Difficulty]||17) : P4_COIN_TABLE.normal;
+      const gain = p4Mode==='bot' ? (COINS_CONFIG.puissance4[p4Difficulty]||12) : COINS_CONFIG.puissance4.normal;
       appCoinsAdd(gain);
     }
     return;
@@ -6007,12 +6040,9 @@ let fbBirdY = FB_HEIGHT/2, fbBirdVY = 0;
 let fbPipes = [];
 let fbScore = 0;
 let fbMilestonesHit = []; // indices des paliers de score déjà obtenus dans la partie en cours
-// Paliers de pièces par score atteint — même logique additive que Snake, mais seuils plus bas :
-// Flappy Bird est objectivement plus dur par point marqué (un pipe raté = fin immédiate), donc
-// un score de 25 ici représente un exploit bien plus rare qu'un score de 25 au Snake.
-const FB_COIN_MILESTONES = [{score:5, coins:1}, {score:15, coins:3}, {score:25, coins:5}];
+// Paliers de pièces par score atteint : voir coins-config.js (COINS_CONFIG.flappyBird).
 function fbCheckMilestones(){
-  FB_COIN_MILESTONES.forEach((m, i) => {
+  COINS_CONFIG.flappyBird.forEach((m, i) => {
     if(!fbMilestonesHit.includes(i) && fbScore >= m.score){
       fbMilestonesHit.push(i);
       appCoinsAdd(m.coins);
@@ -6055,6 +6085,8 @@ function openFlappyBird(){
   fbCtx = fbCanvas.getContext('2d');
   fbBest = parseInt(localStorage.getItem('fbBest')||'0');
   document.getElementById('fb-best').textContent = fbBest;
+  document.getElementById('fb-coin-info').textContent =
+    '🪙 ' + COINS_CONFIG.flappyBird.map(m => `Score ${m.score}→${m.coins}`).join(' · ');
   fbRunning = false;
   fbGameOver = false;
   fbBirdY = FB_HEIGHT/2;
