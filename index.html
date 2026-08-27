@@ -1239,7 +1239,32 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <button class="back-btn" onclick="openJeux()">← Retour</button>
     </div>
     <div class="game-title">❌⭕ Morpion</div>
-    <div class="panel">
+    <div class="panel" id="morpion-setup-panel">
+      <div class="row"><span>🟨 Mode</span></div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn" id="morpion-mode-ami" onclick="morpionSetMode('ami')">🧑‍🤝‍🧑 Contre un ami</button>
+        <button class="btn" id="morpion-mode-bot" onclick="morpionSetMode('bot')">🤖 Contre le bot</button>
+      </div>
+      <div id="morpion-diff-row" style="display:none; margin-top:12px;">
+        <div class="row"><span>🟨 Difficulté du bot</span></div>
+        <div class="btn-row" style="justify-content:center;">
+          <button class="btn" id="morpion-diff-facile" onclick="morpionSetDifficulty('facile')">😊 Facile</button>
+          <button class="btn" id="morpion-diff-normal" onclick="morpionSetDifficulty('normal')">😐 Normal</button>
+          <button class="btn" id="morpion-diff-expert" onclick="morpionSetDifficulty('expert')">🔥 Expert</button>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="row"><span>🟨 Règle</span></div>
+        <div class="btn-row" style="justify-content:center;">
+          <button class="btn" id="morpion-rule-classic" onclick="morpionSetRule('classic')">Classique</button>
+          <button class="btn" id="morpion-rule-antidraw" onclick="morpionSetRule('antidraw')">♾️ Anti-nul (3 pions max)</button>
+        </div>
+      </div>
+      <div class="btn-row" style="justify-content:center; margin-top:16px;">
+        <button class="btn primary" onclick="morpionStartFromSetup()">Commencer</button>
+      </div>
+    </div>
+    <div class="panel" id="morpion-game-panel" style="display:none;">
       <div class="morpion-scoreboard">
         <div class="morpion-player-card x-card" id="morpion-card-x">
           <div class="morpion-player-label">Joueur 1 · ✕</div>
@@ -1260,7 +1285,10 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="btn-row" style="justify-content:center; margin-top:10px;">
         <button class="btn" id="morpion-undoBtn" onclick="morpionUndo()">↩️ Annuler</button>
       </div>
-      <div class="btn-row" style="justify-content:center; margin-top:8px;"><button class="btn" onclick="morpionNewMatch()">Nouveau match</button></div>
+      <div class="btn-row" style="justify-content:center; margin-top:8px;">
+        <button class="btn" onclick="morpionNewMatch()">Nouveau match</button>
+        <button class="btn" onclick="morpionOpenSetup()">← Modes</button>
+      </div>
       <div class="panel" id="morpion-matchend-panel" style="display:none; margin-top:12px;">
         <div style="text-align:center; font-weight:800; font-size:16px;" id="morpion-matchend-title"></div>
         <div class="btn-row" style="justify-content:center; margin-top:10px;">
@@ -1270,6 +1298,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       </div>
     </div>
   </div>
+
 </div>
 
 <!-- ============ SNAKE ============ -->
@@ -4316,17 +4345,53 @@ let morpionScoreX = 0, morpionScoreO = 0;
 let morpionFirstPlayer = 'X'; // alterne à chaque manche (§1.1)
 let morpionStreak = {X:0, O:0};
 let morpionCoins = 0; // cagnotte locale partagée par l'appareil (party game 2P sur un seul téléphone, pas de profil séparé par joueur)
-let morpionUndoCharges = 1; // 1 gratuite par manche, +3 via pub si épuisée (§1.4/§5)
+let morpionUndoCharges = 1; // 1 gratuite par manche, +2 via pub si épuisée (§1.4/§5) — désactivé en règle Anti-nul, voir limite assumée
 let morpionLastMove = null; // {index, player} — undo strictement limité à 1 niveau, jamais en chaîne
+let morpionMode = 'ami';           // 'ami' (pass-and-play) | 'bot'
+let morpionBotDifficulty = 'normal'; // 'facile' | 'normal' | 'expert' (V2 roadmap)
+let morpionRule = 'classic';       // 'classic' | 'antidraw' (V2 roadmap : 3 pions max par joueur)
+let morpionPieceOrder = {X:[], O:[]}; // ordre de pose, nécessaire pour retirer le plus ancien pion en règle Anti-nul
+let morpionGameId = 0;             // jeton de session : invalide un setTimeout de bot resté en attente après un changement de partie
+let morpionBotTimeoutId = null;
 const morpionLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 function openMorpion(){
   switchScreen('game-morpion');
   setActiveTab(null);
   morpionCoins = parseInt(localStorage.getItem('morpionCoins')||'0');
-  morpionNewMatch();
+  morpionOpenSetup();
   trackPage('/morpion');
 }
+function morpionOpenSetup(){
+  morpionGameId++;
+  if(morpionBotTimeoutId){ clearTimeout(morpionBotTimeoutId); morpionBotTimeoutId=null; }
+  document.getElementById('morpion-setup-panel').style.display = 'block';
+  document.getElementById('morpion-game-panel').style.display = 'none';
+  morpionRenderSetupButtons();
+}
+function morpionSetMode(mode){
+  morpionMode = mode;
+  document.getElementById('morpion-diff-row').style.display = mode==='bot' ? 'block' : 'none';
+  morpionRenderSetupButtons();
+}
+function morpionSetDifficulty(d){ morpionBotDifficulty = d; morpionRenderSetupButtons(); }
+function morpionSetRule(r){ morpionRule = r; morpionRenderSetupButtons(); }
+function morpionRenderSetupButtons(){
+  document.getElementById('morpion-mode-ami').classList.toggle('primary', morpionMode==='ami');
+  document.getElementById('morpion-mode-bot').classList.toggle('primary', morpionMode==='bot');
+  document.getElementById('morpion-diff-facile').classList.toggle('primary', morpionBotDifficulty==='facile');
+  document.getElementById('morpion-diff-normal').classList.toggle('primary', morpionBotDifficulty==='normal');
+  document.getElementById('morpion-diff-expert').classList.toggle('primary', morpionBotDifficulty==='expert');
+  document.getElementById('morpion-rule-classic').classList.toggle('primary', morpionRule==='classic');
+  document.getElementById('morpion-rule-antidraw').classList.toggle('primary', morpionRule==='antidraw');
+}
+function morpionStartFromSetup(){
+  document.getElementById('morpion-setup-panel').style.display = 'none';
+  document.getElementById('morpion-game-panel').style.display = 'block';
+  morpionNewMatch();
+}
 function morpionNewMatch(){
+  morpionGameId++;
+  if(morpionBotTimeoutId){ clearTimeout(morpionBotTimeoutId); morpionBotTimeoutId=null; }
   morpionScoreX = 0; morpionScoreO = 0;
   morpionMatchOver = false;
   morpionFirstPlayer = 'X';
@@ -4335,16 +4400,22 @@ function morpionNewMatch(){
 }
 function morpionNewRound(){
   morpionBoard = Array(9).fill('');
+  morpionPieceOrder = {X:[], O:[]};
   morpionTurn = morpionFirstPlayer;
   morpionRoundOver = false;
   morpionLocked = false;
   morpionUndoCharges = 1;
   morpionLastMove = null;
-  document.getElementById('morpion-status').textContent = `Tour de ${morpionTurn==='X'?'Joueur 1 (✕)':'Joueur 2 (○)'}`;
+  document.getElementById('morpion-status').textContent = `Tour de ${morpionTurnLabel(morpionTurn)}`;
   morpionClearStrike();
   morpionRender();
   morpionUpdateScoreboard();
   morpionUpdateUndoButton();
+  morpionMaybeBotTurn();
+}
+function morpionTurnLabel(player){
+  if(player==='X') return 'Joueur 1 (✕)';
+  return (morpionMode==='bot' ? 'Bot' : 'Joueur 2') + ' (○)';
 }
 function morpionRender(){
   const el = document.getElementById('morpion-grid');
@@ -4368,11 +4439,19 @@ function morpionUpdateScoreboard(){
   const flameX = morpionStreak.X>=3 ? ` 🔥×${morpionStreak.X}` : '';
   const flameO = morpionStreak.O>=3 ? ` 🔥×${morpionStreak.O}` : '';
   document.querySelector('#morpion-card-x .morpion-player-label').textContent = 'Joueur 1 · ✕' + flameX;
-  document.querySelector('#morpion-card-o .morpion-player-label').textContent = 'Joueur 2 · ○' + flameO;
+  document.querySelector('#morpion-card-o .morpion-player-label').textContent = (morpionMode==='bot'?'Bot':'Joueur 2') + ' · ○' + flameO;
 }
 function morpionUpdateUndoButton(){
   const btn = document.getElementById('morpion-undoBtn');
   if(!btn) return;
+  if(morpionRule==='antidraw'){
+    // Limite assumée : l'historique un-niveau de l'Undo ne suit pas la rotation des pions les plus
+    // anciens propre à la règle Anti-nul (ambiguïté sur quoi restaurer exactement) — désactivé ici
+    // plutôt que de risquer un état de plateau incohérent.
+    btn.disabled = true;
+    btn.textContent = '↩️ Indisponible (Anti-nul)';
+    return;
+  }
   const canUndo = !!morpionLastMove && !morpionRoundOver && !morpionLocked;
   btn.disabled = !canUndo;
   btn.textContent = morpionUndoCharges>0 ? `↩️ Annuler (×${morpionUndoCharges})` : '↩️📺 Recharger (pub)';
@@ -4385,6 +4464,7 @@ function morpionVibrate(pattern){
 }
 function morpionTap(i){
   if(morpionLocked || morpionRoundOver || morpionMatchOver) return;
+  if(morpionMode==='bot' && morpionTurn==='O') return; // c'est au bot de jouer, on ignore le doigt du joueur
   if(morpionBoard[i]){
     // Case déjà occupée : protection anti-spam (§2) — tremblement + vibration, aucune autre action
     const el = document.querySelector(`.morpion-cell[data-i="${i}"]`);
@@ -4393,29 +4473,43 @@ function morpionTap(i){
     morpionVibrate([15]);
     return;
   }
-  morpionBoard[i] = morpionTurn;
-  morpionLastMove = {index:i, player:morpionTurn};
+  morpionApplyMove(i, morpionTurn);
+}
+function morpionApplyMove(i, player){
+  // Règle Anti-nul (V2 roadmap) : chaque joueur ne garde que 3 pions max sur la grille — le plus
+  // ancien disparaît automatiquement à la pose du 4e, garantissant qu'il y ait toujours un
+  // vainqueur (le plateau ne peut alors jamais être totalement plein : 3+3 pions max sur 9 cases).
+  if(morpionRule==='antidraw' && morpionPieceOrder[player].length>=3){
+    const oldest = morpionPieceOrder[player].shift();
+    morpionBoard[oldest] = '';
+  }
+  morpionBoard[i] = player;
+  morpionPieceOrder[player].push(i);
+  morpionLastMove = (morpionRule==='classic') ? {index:i, player} : null;
   morpionRender();
   const el = document.querySelector(`.morpion-cell[data-i="${i}"]`);
   if(el) el.classList.add('pop');
-  playFeedback(morpionTurn==='X' ? 'correct' : 'objective');
-  morpionVibrate(morpionTurn==='X' ? [10] : [10,40,10]); // sèche pour J1, double pulsation pour J2 (§4)
+  playFeedback(player==='X' ? 'correct' : 'objective');
+  morpionVibrate(player==='X' ? [10] : [10,40,10]); // sèche pour J1, double pulsation pour J2 (§4)
   morpionUpdateUndoButton();
-  const winLine = morpionLines.find(line => line.every(idx => morpionBoard[idx]===morpionTurn));
-  if(winLine){ morpionRoundWin(morpionTurn, winLine); return; }
-  if(morpionBoard.every(v=>v)){ morpionRoundDraw(); return; }
-  morpionTurn = morpionTurn==='X' ? 'O' : 'X';
-  document.getElementById('morpion-status').textContent = `Tour de ${morpionTurn==='X'?'Joueur 1 (✕)':'Joueur 2 (○)'}`;
+  const winLine = morpionLines.find(line => line.every(idx => morpionBoard[idx]===player));
+  if(winLine){ morpionRoundWin(player, winLine); return; }
+  if(morpionRule==='classic' && morpionBoard.every(v=>v)){ morpionRoundDraw(); return; }
+  morpionTurn = player==='X' ? 'O' : 'X';
+  document.getElementById('morpion-status').textContent = `Tour de ${morpionTurnLabel(morpionTurn)}`;
   morpionUpdateScoreboard();
+  morpionMaybeBotTurn();
 }
 function morpionUndo(){
+  if(morpionRule==='antidraw') return;
   if(!morpionLastMove || morpionRoundOver || morpionLocked) return;
   const doUndo = ()=>{
     morpionBoard[morpionLastMove.index] = '';
+    morpionPieceOrder[morpionLastMove.player].pop();
     morpionTurn = morpionLastMove.player;
     morpionLastMove = null; // jamais 2 annulations d'affilée (§1.4)
     morpionRender();
-    document.getElementById('morpion-status').textContent = `Tour de ${morpionTurn==='X'?'Joueur 1 (✕)':'Joueur 2 (○)'}`;
+    document.getElementById('morpion-status').textContent = `Tour de ${morpionTurnLabel(morpionTurn)}`;
     morpionUpdateScoreboard();
     morpionUpdateUndoButton();
   };
@@ -4428,6 +4522,91 @@ function morpionUndo(){
       doUndo();
     });
   }
+}
+// ---- Bot IA (§ roadmap V2) ----
+// Facile : 50% de coups aléatoires, sinon prend un coup gagnant s'il existe (sinon aléatoire).
+// Normal : joue le coup gagnant s'il existe, sinon bloque le coup gagnant du joueur, sinon aléatoire.
+// Expert : Minimax exhaustif, imbattable — mais UNIQUEMENT en règle Classique. En règle Anti-nul,
+// le plateau n'a plus d'état terminal "plein" (les pions tournent en permanence), donc le minimax
+// classique ne s'applique pas tel quel ; on retombe alors sur l'heuristique "Normal" (limite assumée).
+function morpionFindWinningMove(board, player){
+  for(const line of morpionLines){
+    const vals = line.map(idx=>board[idx]);
+    const countP = vals.filter(v=>v===player).length;
+    const countEmpty = vals.filter(v=>v==='').length;
+    if(countP===2 && countEmpty===1) return line[vals.indexOf('')];
+  }
+  return null;
+}
+function morpionCheckWinnerOnBoard(board, player){
+  return morpionLines.some(line => line.every(idx=>board[idx]===player));
+}
+function morpionMinimax(board, playerToMove, bot, human, depth){
+  if(morpionCheckWinnerOnBoard(board, bot)) return 10-depth;
+  if(morpionCheckWinnerOnBoard(board, human)) return depth-10;
+  const emptyIdx = board.map((v,i)=>v===''?i:null).filter(i=>i!==null);
+  if(emptyIdx.length===0) return 0;
+  let best = playerToMove===bot ? -Infinity : Infinity;
+  for(const i of emptyIdx){
+    board[i] = playerToMove;
+    const score = morpionMinimax(board, playerToMove===bot?human:bot, bot, human, depth+1);
+    board[i] = '';
+    best = playerToMove===bot ? Math.max(best, score) : Math.min(best, score);
+  }
+  return best;
+}
+function morpionMinimaxBestMove(bot, human){
+  const board = [...morpionBoard];
+  const emptyIdx = board.map((v,i)=>v===''?i:null).filter(i=>i!==null);
+  let bestScore = -Infinity, bestMove = emptyIdx[0];
+  for(const i of emptyIdx){
+    board[i] = bot;
+    const score = morpionMinimax(board, human, bot, human, 0);
+    board[i] = '';
+    if(score > bestScore){ bestScore = score; bestMove = i; }
+  }
+  return bestMove;
+}
+function morpionBotPickMove(){
+  const empty = morpionBoard.map((v,i)=>v===''?i:null).filter(i=>i!==null);
+  if(empty.length===0) return null;
+  const bot='O', human='X';
+  const randomMove = ()=> empty[Math.floor(Math.random()*empty.length)];
+  if(morpionBotDifficulty==='expert' && morpionRule==='classic'){
+    return morpionMinimaxBestMove(bot, human);
+  }
+  if(morpionBotDifficulty==='facile'){
+    if(Math.random()<0.5) return randomMove();
+    const winMove = morpionFindWinningMove(morpionBoard, bot);
+    return winMove!==null ? winMove : randomMove();
+  }
+  // Normal, et Expert replié en règle Anti-nul (voir note ci-dessus)
+  const winMove = morpionFindWinningMove(morpionBoard, bot);
+  if(winMove!==null) return winMove;
+  const blockMove = morpionFindWinningMove(morpionBoard, human);
+  if(blockMove!==null) return blockMove;
+  return randomMove();
+}
+function morpionMaybeBotTurn(){
+  if(morpionMode!=='bot' || morpionTurn!=='O' || morpionRoundOver || morpionMatchOver) return;
+  const gid = morpionGameId;
+  if(morpionBotTimeoutId) clearTimeout(morpionBotTimeoutId);
+  morpionBotTimeoutId = setTimeout(()=>{
+    if(gid!==morpionGameId) return; // partie quittée/relancée entretemps, ce coup est obsolète
+    try{
+      const move = morpionBotPickMove();
+      if(move===null || move===undefined || morpionBoard[move]!==''){
+        throw new Error('coup invalide calculé par le bot');
+      }
+      morpionApplyMove(move, 'O');
+    }catch(err){
+      // Filet de sécurité (même leçon que le bot du Billard) : ne jamais laisser le tour du bot
+      // ne pas se jouer du tout — sinon la partie reste bloquée en silence.
+      console.warn('[morpion] le bot a échoué, coup de repli aléatoire utilisé :', err);
+      const fallback = morpionBoard.map((v,i)=>v===''?i:null).filter(i=>i!==null);
+      if(fallback.length>0) morpionApplyMove(fallback[Math.floor(Math.random()*fallback.length)], 'O');
+    }
+  }, 600);
 }
 function morpionDrawStrike(line){
   const [a,,c] = line;
@@ -4461,7 +4640,7 @@ function morpionRoundWin(winner, winLine){
   morpionStreak[winner==='X'?'O':'X'] = 0;
   morpionCoins += 10; // +10 pièces par manche gagnée (§4)
   localStorage.setItem('morpionCoins', morpionCoins);
-  document.getElementById('morpion-status').textContent = `🟩 ${winner==='X'?'Joueur 1':'Joueur 2'} gagne la manche !`;
+  document.getElementById('morpion-status').textContent = `🟩 ${winner==='X'?'Joueur 1':morpionTurnLabel('O').replace(' (○)','')} gagne la manche !`;
   playFeedback('trophy');
   morpionVibrate([30,20,30,20,60]); // vibration longue et intense pour l'alignement (§4)
   morpionUpdateScoreboard();
@@ -4492,9 +4671,10 @@ function morpionEndMatch(winner){
   localStorage.setItem('morpionCoins', morpionCoins);
   morpionUpdateScoreboard();
   const big = Math.max(morpionScoreX, morpionScoreO), small = Math.min(morpionScoreX, morpionScoreO);
-  document.getElementById('morpion-status').textContent = `🏆 ${winner==='X'?'Joueur 1':'Joueur 2'} remporte le match ${big} - ${small} !`;
+  const winnerLabel = winner==='X' ? 'Joueur 1' : morpionTurnLabel('O').replace(' (○)','');
+  document.getElementById('morpion-status').textContent = `🏆 ${winnerLabel} remporte le match ${big} - ${small} !`;
   const panel = document.getElementById('morpion-matchend-panel');
-  document.getElementById('morpion-matchend-title').textContent = `🏆 ${winner==='X'?'Joueur 1 (✕)':'Joueur 2 (○)'} remporte le match !`;
+  document.getElementById('morpion-matchend-title').textContent = `🏆 ${winner==='X'?'Joueur 1 (✕)':morpionTurnLabel('O')} remporte le match !`;
   panel.style.display = 'block';
   panel.dataset.claimed = '0';
 }
@@ -4508,6 +4688,7 @@ function morpionDoubleCoins(){
     morpionUpdateScoreboard();
   });
 }
+
 
 /* ================= SNAKE (thème Game Boy) ================= */
 let snakeCanvas, snakeCtx;
