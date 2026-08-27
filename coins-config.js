@@ -110,4 +110,16 @@ const COINS_CONFIG = {
     tentative_6: 3,       // trouvé à la 6e (dernière) tentative — ramené au niveau de base
   },
 
+  // 🏓 PING-PONG — contre le bot uniquement. Pas de gain en Difficile pour l'instant (pas encore
+  // calibré, à ajouter plus tard si besoin).
+  pingpong: {
+    facile: 2,
+    moyen: 5,
+  },
+
+  // 🎱 BILLARD — contre le bot uniquement, pas de paliers de difficulté ici (un seul montant).
+  billard: {
+    win: 5,
+  },
+
 };
