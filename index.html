@@ -1120,11 +1120,12 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="g2048-grid" id="g2048-grid"></div>
       <div class="footnote" style="text-align:center; margin-top:8px;">Glisse ton doigt sur la grille pour déplacer les tuiles</div>
       <div class="status-line" id="g2048-status" style="text-align:center; margin-top:10px;"></div>
-      <div class="btn-row" style="justify-content:center; margin-top:10px;">
+      <div class="btn-row" id="g2048-powerups-row" style="justify-content:center; margin-top:10px;">
         <button class="btn" id="g2048-undoBtn" onclick="g2048Undo()" disabled>↩️ Annuler</button>
         <button class="btn" id="g2048-laserBtn" onclick="g2048UseLaser()">🔨 Marteau</button>
         <button class="btn" id="g2048-swapBtn" onclick="g2048UseSwap()">🔀 Swap</button>
       </div>
+      <div class="footnote" id="g2048-rush-note" style="display:none; text-align:center; margin-top:6px;">⏱️ Défi Rush : pas de power-up, juste le chrono.</div>
       <div class="btn-row" style="justify-content:center; margin-top:8px;">
         <button class="btn" onclick="g2048New()">Nouvelle partie</button>
         <button class="btn" onclick="g2048BackToModes()">← Modes</button>
@@ -3570,6 +3571,9 @@ function g2048StartMode(mode){
   document.getElementById('g2048-leaderboard-panel').style.display = 'none';
   document.getElementById('g2048-game-panel').style.display = 'block';
   document.getElementById('g2048-rush-row').style.display = mode==='rush' ? 'flex' : 'none';
+  // Défi Rush : aucun power-up, uniquement le chrono (demande explicite de l'utilisateur)
+  document.getElementById('g2048-powerups-row').style.display = mode==='rush' ? 'none' : 'flex';
+  document.getElementById('g2048-rush-note').style.display = mode==='rush' ? 'block' : 'none';
   g2048New();
 }
 let g2048SwipeAttached = false;
@@ -3758,11 +3762,9 @@ function g2048Move(dir){
       }
       g2048Coins += Math.round(earned*mult);
       localStorage.setItem('g2048Coins', g2048Coins);
-      if(g2048Mode==='rush'){
-        // +1s par fusion réussie, plafonné à 60s (cahier des charges, prépa Rush 60s)
-        g2048RushTimeLeft = Math.min(60, g2048RushTimeLeft+1);
-        g2048UpdateRushTimerDisplay();
-      }
+      // Note : le mode Rush n'accorde plus de secondes bonus par fusion (retiré à la demande de
+      // l'utilisateur — ça neutralisait quasiment la descente du chrono en jouant vite). Le
+      // chrono Rush est désormais un compte à rebours strict de 60s, voir g2048RushTick.
     } else {
       g2048Streak = 0;
     }
@@ -3836,6 +3838,7 @@ function g2048UpdatePowerButtons(){
   }
 }
 function g2048Undo(){
+  if(g2048Mode==='rush') return; // Défi Rush : pas de power-up
   if(g2048Over || g2048History.length===0) return;
   const doRevert = ()=>{
     const prev = g2048History.pop();
@@ -3855,6 +3858,7 @@ function g2048Undo(){
   }
 }
 function g2048UseLaser(){
+  if(g2048Mode==='rush') return; // Défi Rush : pas de power-up
   if(g2048Over || g2048LaserMode) return;
   const activate = ()=>{
     g2048LaserMode = true;
@@ -3872,6 +3876,7 @@ function g2048UseLaser(){
   }
 }
 function g2048UseSwap(){
+  if(g2048Mode==='rush') return; // Défi Rush : pas de power-up
   if(g2048Over || g2048SwapMode) return;
   const activate = ()=>{
     g2048SwapMode = true;
