@@ -253,33 +253,31 @@ tr.total td{font-weight:700; color:#fff; border-top:2px solid var(--line); borde
   padding:10px 6px; text-align:center;
 }
 .pp-shop-card.equipped{border-color:#4fd18a; box-shadow:0 0 12px rgba(79,209,138,0.5);}
+.pp-shop-paddle-preview{width:52px; height:74px; margin:0 auto 6px; position:relative;}
 .pp-shop-swatch{
-  width:52px; height:52px; border-radius:50%; margin:0 auto 6px; border:4px solid; box-shadow:0 2px 6px rgba(0,0,0,0.4);
+  width:52px; height:52px; border-radius:50%; border:4px solid; box-shadow:0 2px 6px rgba(0,0,0,0.4);
+}
+.pp-shop-handle{
+  width:13px; height:24px; margin:-4px auto 0; border-radius:0 0 5px 5px; border:3px solid; border-top:none;
+  box-shadow:0 2px 4px rgba(0,0,0,0.4);
 }
 .pp-shop-name{color:#fff; font-size:12px; font-weight:700; margin-bottom:6px;}
 .pp-shop-action button{width:100%; padding:6px 0; font-size:12px;}
 .pp-shop-owned-tag{color:#4fd18a; font-size:12px; font-weight:800;}
 
+.fb-shop-swatch{
+  width:70px; height:52px; border-radius:8px; margin:0 auto 6px; position:relative; overflow:hidden;
+  border:2px solid rgba(255,255,255,0.25); box-shadow:0 2px 6px rgba(0,0,0,0.4);
+}
+.fb-shop-swatch .fb-mini-pipe{
+  position:absolute; bottom:0; width:11px; height:55%;
+}
+.fb-shop-swatch .fb-mini-pipe.left{left:16px;}
+.fb-shop-swatch .fb-mini-pipe.right{right:16px; height:35%;}
 
-/* ---------- AD BANNER (placeholder) ---------- */
-body{padding-bottom:120px;}
-body.no-ads{padding-bottom:64px;}
-.ad-banner{
-  position:fixed; bottom:60px; left:0; right:0;
-  height:56px;
-  background:var(--bg2);
-  border-top:1px solid var(--line);
-  display:flex; align-items:center; justify-content:center;
-  gap:8px;
-  font-size:11px; color:var(--muted);
-  letter-spacing:.05em; text-transform:uppercase;
-  z-index:35;
-}
-.ad-banner .tag{
-  background:var(--line); color:var(--muted);
-  font-size:9px; padding:2px 6px; border-radius:4px; text-transform:uppercase;
-}
-body.no-ads .ad-banner{display:none;}
+
+/* ---------- (bannière pub retirée : app en mode sans-pub permanent) ---------- */
+body{padding-bottom:64px;}
 
 /* ---------- BARRE DE MONNAIE GLOBALE (fixe, en haut, centrée) ---------- */
 body{padding-top:44px;}
@@ -320,32 +318,7 @@ body{padding-top:44px;}
 .bottom-nav .tab .tab-icon{font-size:19px;}
 .bottom-nav .tab.active{color:var(--accent);}
 
-
-/* ---------- REMOVE ADS CARD ---------- */
-.remove-ads-card{
-  background:linear-gradient(135deg, #232840, #1c2032);
-  border:1px solid var(--accent);
-  border-radius:var(--radius);
-  padding:18px 20px;
-  margin-bottom:24px;
-  display:flex; align-items:center; justify-content:space-between; gap:14px;
-  flex-wrap:wrap;
-}
-.remove-ads-card .txt h3{font-size:15px; margin-bottom:4px;}
-.remove-ads-card .txt p{font-size:12.5px; color:var(--muted); margin:0; line-height:1.4; max-width:38ch;}
-.remove-ads-card button{
-  background:var(--accent); color:#1a1300; border:none;
-  padding:10px 16px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
-}
-.remove-ads-card.done{border-color:var(--good);}
-.remove-ads-card.done button{background:var(--good);}
-
-.mini-remove-ads{
-  display:block; width:100%; text-align:center;
-  background:none; border:1px dashed var(--line); color:var(--muted);
-  padding:9px; border-radius:10px; font-size:12px; cursor:pointer; margin-top:6px;
-}
-.mini-remove-ads:hover{border-color:var(--accent); color:var(--accent);}
+/* ---------- (carte "retirer les pubs" retirée : app en mode sans-pub permanent) ---------- */
 
 /* ---------- DICE (Grand Duc de Toscane) ---------- */
 .dice-row{display:flex; gap:12px; justify-content:center; margin:18px 0;}
@@ -787,7 +760,12 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 
 /* ---------- PING-PONG 2D — canvas fluide, façon "10000 Offline Games" ---------- */
 #ping-table-wrap{
-  position:fixed; inset:0; z-index:500; background:linear-gradient(#ffcf72,#f6b94f);
+  position:fixed; inset:0; z-index:500;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255,0,200,0.28), transparent 55%),
+    radial-gradient(circle at 100% 15%, rgba(0,230,255,0.24), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(160,0,255,0.18), transparent 60%),
+    linear-gradient(160deg, #1a0b2e 0%, #0d0221 55%, #170a2c 100%);
   display:flex; flex-direction:column; overflow:hidden;
 }
 #ping-topbar{
@@ -796,12 +774,12 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 }
 #ping-back-btn{
   position:absolute; left:16px; top:12px; width:44px; height:44px; border-radius:50%;
-  background:#fff; border:none; box-shadow:0 3px 8px rgba(0,0,0,0.18); font-size:20px; color:#c2477a;
+  background:#1c0f30; border:2px solid rgba(0,230,255,0.5); box-shadow:0 0 12px rgba(0,230,255,0.4); font-size:20px; color:#3ec6f0;
   display:flex; align-items:center; justify-content:center; cursor:pointer;
 }
 #ping-scoreboard{
-  background:#5b4636; border-radius:16px; padding:9px 24px 11px; display:flex; align-items:center; gap:24px;
-  position:relative; color:#fff; box-shadow:0 4px 10px rgba(0,0,0,0.25);
+  background:#1c0f30; border:1px solid rgba(255,0,200,0.35); border-radius:16px; padding:9px 24px 11px; display:flex; align-items:center; gap:24px;
+  position:relative; color:#fff; box-shadow:0 0 16px rgba(180,0,255,0.3), 0 4px 10px rgba(0,0,0,0.25);
 }
 #ping-scoreboard .side{ text-align:center; min-width:38px; }
 #ping-scoreboard .side .lbl{ font-size:12px; font-weight:800; letter-spacing:.03em; }
@@ -811,8 +789,8 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 #ping-mid-vs{ font-size:15px; font-weight:900; color:#fff; }
 #ping-diff-badge{
   position:absolute; top:-13px; left:50%; transform:translateX(-50%);
-  background:#5b4636; border-radius:10px; padding:2px 14px; font-size:9px; font-weight:800;
-  color:#f0c34d; letter-spacing:.06em; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  background:#1c0f30; border:1px solid rgba(255,0,200,0.4); border-radius:10px; padding:2px 14px; font-size:9px; font-weight:800;
+  color:#f0c34d; letter-spacing:.06em; white-space:nowrap; box-shadow:0 0 10px rgba(255,0,200,0.3);
 }
 #ping-combo{
   position:absolute; top:-11px; right:-6px; font-size:11px; font-weight:800; color:#fff5d0;
@@ -830,7 +808,7 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
 
 /* ---------- Écran de victoire — overlay sombre + pluie d'étoiles + médaille + 3 boutons ---------- */
 #ping-victory-overlay{
-  position:absolute; inset:0; z-index:30; background:rgba(30,20,10,0.72);
+  position:absolute; inset:0; z-index:30; background:rgba(20,5,35,0.78);
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   overflow:hidden; animation:ppFadeIn .25s ease;
 }
@@ -1571,8 +1549,16 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <div class="status-line" id="fb-status" style="text-align:center; margin-top:8px;">Tape sur l'écran pour commencer</div>
       <div class="btn-row" style="justify-content:center; margin-top:8px;">
         <button class="btn" onclick="fbStart()">Nouvelle partie</button>
+        <button class="btn" onclick="fbOpenShop()">🎨 Fonds</button>
       </div>
       <div class="footnote" id="fb-coin-info" style="text-align:center; margin-top:8px;"></div>
+    </div>
+    <div class="panel" id="fb-shop-panel" style="display:none;">
+      <div class="btn-row"><button class="btn" onclick="fbCloseShop()">← Retour</button></div>
+      <h2 style="margin-top:10px;">🎨 Boutique de fonds</h2>
+      <p class="footnote">Cosmétique uniquement — le ciel et la couleur des tuyaux, aucun effet sur le jeu.</p>
+      <div class="row"><span>🪙 Pièces</span><b id="fb-shop-coins">0</b></div>
+      <div class="pp-shop-grid" id="fb-shop-grid"></div>
     </div>
     <div class="panel" id="fb-worldboard-panel" style="display:none; margin-top:16px;">
       <h2>🌍 Classement mondial (aperçu)</h2>
@@ -1908,13 +1894,6 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
     <div class="topbar">
       <div class="game-title">⚙️ Options</div>
     </div>
-    <div class="remove-ads-card" id="removeAdsCard">
-      <div class="txt">
-        <h3 id="removeAdsTitle">🎈 Retirer les pubs</h3>
-        <p id="removeAdsText">Un petit paiement unique, pas d'abonnement. Ça aide énormément le créateur de l'app 😉</p>
-      </div>
-      <button id="removeAdsBtn" onclick="toggleAds()">2,99 €</button>
-    </div>
     <div class="panel">
       <h2>🔔 Retour sensoriel</h2>
       <p style="font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5;">Trophées, records battus, défaites — choisis comment tu veux le ressentir.</p>
@@ -1965,10 +1944,15 @@ canvas.mini-chart{width:100%; height:160px; background:var(--bg2); border-radius
       <h2>Tes droits</h2>
       <p style="font-size:13px; color:var(--muted); margin:0; line-height:1.6;">Tu peux effacer toutes tes données locales (progression, trophées, réglages) à tout moment en désinstallant l'app ou en vidant le cache de ton navigateur pour ce site.</p>
     </div>
+    <div class="panel" style="border:1px dashed var(--line); opacity:.85;">
+      <h2>🛠️ Mode développeur</h2>
+      <p class="footnote" style="margin-top:0;">Outil de test — ne pas montrer aux joueurs finaux.</p>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn" onclick="devAddCoins()">🪙 +10 pièces</button>
+      </div>
+    </div>
   </div>
 </div>
-
-<div class="ad-banner" id="adBanner"><span class="tag">Pub</span> Emplacement publicitaire — ton app grandit grâce à ça</div>
 
 <audio id="bgMusic" src="bgmusic.mp3" loop preload="none"></audio>
 
@@ -2930,6 +2914,11 @@ function appCoinsAddLimited(gameKey, amount){
     appCoinsAdd(toAward);
   }
   return toAward;
+}
+// Mode développeur (Options, tout en bas) : ajoute des pièces directement, sans passer par le
+// plafond horaire anti-abus — c'est un outil de test, pas une action de jeu normale.
+function devAddCoins(){
+  appCoinsAdd(10);
 }
 // Bouton de remise à zéro, à côté de la barre de pièces — utile pour tester l'app sur une base
 // neutre (ex : plusieurs testeurs qui enchaînent). Réinitialise aussi l'historique du plafond
@@ -6180,6 +6169,7 @@ function fbRenderWorldboard(){
 function openFlappyBird(){
   switchScreen('game-flappybird');
   setActiveTab(null);
+  document.getElementById('fb-shop-panel').style.display = 'none';
   fbCanvas = document.getElementById('fb-canvas');
   fbCtx = fbCanvas.getContext('2d');
   fbBest = parseInt(localStorage.getItem('fbBest')||'0');
@@ -6292,12 +6282,104 @@ let fbBirdImg = new Image();
 let fbBirdImgLoaded = false;
 fbBirdImg.onload = ()=>{ fbBirdImgLoaded = true; };
 fbBirdImg.src = 'sprites/flappybird_toucan.png';
+// ---- Boutique de fonds (cosmétique, achetée avec les pièces) ----
+let fbSelectedTheme = localStorage.getItem('fbSelectedTheme') || 'classique';
+let fbOwnedThemes = [];
+try{ fbOwnedThemes = JSON.parse(localStorage.getItem('fbOwnedThemes')) || ['classique']; }catch(e){ fbOwnedThemes = ['classique']; }
+if(!fbOwnedThemes.includes('classique')) fbOwnedThemes.push('classique');
+function fbGetSelectedTheme(){
+  return COINS_CONFIG.flappyBirdThemes.find(t=>t.id===fbSelectedTheme) || COINS_CONFIG.flappyBirdThemes[0];
+}
+function fbOpenShop(){
+  document.getElementById('fb-shop-panel').style.display = 'block';
+  fbRenderShop();
+}
+function fbCloseShop(){
+  document.getElementById('fb-shop-panel').style.display = 'none';
+}
+function fbRenderShop(){
+  document.getElementById('fb-shop-coins').textContent = appCoins;
+  const grid = document.getElementById('fb-shop-grid');
+  grid.innerHTML = '';
+  COINS_CONFIG.flappyBirdThemes.forEach(theme => {
+    const owned = fbOwnedThemes.includes(theme.id);
+    const equipped = fbSelectedTheme === theme.id;
+    const card = document.createElement('div');
+    card.className = 'pp-shop-card' + (equipped ? ' equipped' : '');
+    const swatch = document.createElement('div');
+    swatch.className = 'fb-shop-swatch';
+    swatch.style.background = `linear-gradient(${theme.sky[0]}, ${theme.sky[1]})`;
+    const pipeL = document.createElement('div');
+    pipeL.className = 'fb-mini-pipe left';
+    pipeL.style.background = theme.pipe;
+    const pipeR = document.createElement('div');
+    pipeR.className = 'fb-mini-pipe right';
+    pipeR.style.background = theme.pipe;
+    swatch.appendChild(pipeL);
+    swatch.appendChild(pipeR);
+    const name = document.createElement('div');
+    name.className = 'pp-shop-name';
+    name.textContent = theme.name;
+    const action = document.createElement('div');
+    action.className = 'pp-shop-action';
+    if(equipped){
+      action.innerHTML = '<span class="pp-shop-owned-tag">✅ Équipé</span>';
+    } else if(owned){
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = 'Équiper';
+      btn.onclick = () => fbEquipTheme(theme.id);
+      action.appendChild(btn);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = `🪙 ${theme.price}`;
+      btn.onclick = () => fbBuyTheme(theme.id);
+      action.appendChild(btn);
+    }
+    card.appendChild(swatch);
+    card.appendChild(name);
+    card.appendChild(action);
+    grid.appendChild(card);
+  });
+}
+function fbBuyTheme(id){
+  const theme = COINS_CONFIG.flappyBirdThemes.find(t=>t.id===id);
+  if(!theme || fbOwnedThemes.includes(id)) return;
+  if(appCoinsSpend(theme.price)){
+    fbOwnedThemes.push(id);
+    localStorage.setItem('fbOwnedThemes', JSON.stringify(fbOwnedThemes));
+    fbEquipTheme(id);
+  } else {
+    alert('Pas assez de pièces pour ce fond !');
+  }
+}
+function fbEquipTheme(id){
+  fbSelectedTheme = id;
+  localStorage.setItem('fbSelectedTheme', id);
+  fbRenderShop();
+  if(!fbRunning) fbDraw();
+}
 function fbDraw(){
   const ctx = fbCtx;
   if(!ctx) return;
-  ctx.fillStyle = '#7ec8e3';
+  const theme = fbGetSelectedTheme();
+  const sky = ctx.createLinearGradient(0, 0, 0, FB_HEIGHT);
+  sky.addColorStop(0, theme.sky[0]);
+  sky.addColorStop(1, theme.sky[1]);
+  ctx.fillStyle = sky;
   ctx.fillRect(0,0,FB_WIDTH,FB_HEIGHT);
-  ctx.fillStyle = '#4caf50';
+  if(theme.stars){
+    // Étoiles fixes (position dérivée d'un index, pas de Math.random ici) pour éviter un
+    // scintillement parasite à chaque frame de rendu.
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    for(let i=0;i<28;i++){
+      const sx = (i*53) % FB_WIDTH;
+      const sy = (i*97 + (i%3)*40) % FB_HEIGHT;
+      ctx.fillRect(sx, sy, i%5===0 ? 3 : 2, i%5===0 ? 3 : 2);
+    }
+  }
+  ctx.fillStyle = theme.pipe;
   fbPipes.forEach(p => {
     ctx.fillRect(p.x, 0, FB_PIPE_WIDTH, p.gapY);
     ctx.fillRect(p.x, p.gapY+FB_PIPE_GAP, FB_PIPE_WIDTH, FB_HEIGHT-(p.gapY+FB_PIPE_GAP));
@@ -8346,12 +8428,22 @@ function ppRenderShop(){
     const equipped = ppSelectedPaddle === skin.id;
     const card = document.createElement('div');
     card.className = 'pp-shop-card' + (equipped ? ' equipped' : '');
+    // Aperçu tête + manche (plus réaliste qu'un simple rond) — les 2 parties partagent la même
+    // couleur, le manche légèrement plus sombre comme sur la vraie raquette en jeu.
+    const preview = document.createElement('div');
+    preview.className = 'pp-shop-paddle-preview';
     const swatch = document.createElement('div');
     swatch.className = 'pp-shop-swatch';
     swatch.style.background = skin.gradient
       ? `conic-gradient(${skin.color}, ${skin.colorDark}, ${skin.color})`
       : skin.color;
     swatch.style.borderColor = skin.colorDark;
+    const handle = document.createElement('div');
+    handle.className = 'pp-shop-handle';
+    handle.style.background = skin.colorDark;
+    handle.style.borderColor = skin.colorDark;
+    preview.appendChild(swatch);
+    preview.appendChild(handle);
     const name = document.createElement('div');
     name.className = 'pp-shop-name';
     name.textContent = skin.name;
@@ -8372,7 +8464,7 @@ function ppRenderShop(){
       btn.onclick = () => ppBuyPaddle(skin.id);
       action.appendChild(btn);
     }
-    card.appendChild(swatch);
+    card.appendChild(preview);
     card.appendChild(name);
     card.appendChild(action);
     grid.appendChild(card);
@@ -9098,33 +9190,7 @@ function renderLanguageButtons(){
   `).join('');
 }
 
-/* ================= ADS TOGGLE (mock — vraie transaction viendra avec l'app native) ================= */
-let adsRemoved = localStorage.getItem('adsRemoved') === '1';
-function applyAdsState(){
-  document.body.classList.toggle('no-ads', adsRemoved);
-  const card = document.getElementById('removeAdsCard');
-  const btn = document.getElementById('removeAdsBtn');
-  const title = document.getElementById('removeAdsTitle');
-  const text = document.getElementById('removeAdsText');
-  if(!card) return;
-  if(adsRemoved){
-    card.classList.add('done');
-    title.textContent = '✅ Pubs retirées';
-    text.textContent = 'Merci pour ton soutien 💛 Profite de l\'app sans interruption.';
-    btn.textContent = 'Activé';
-  } else {
-    card.classList.remove('done');
-    title.textContent = '🎈 Retirer les pubs';
-    text.textContent = 'Un petit paiement unique, pas d\'abonnement. Ça aide énormément le créateur de l\'app 😉';
-    btn.textContent = '2,99 €';
-  }
-}
-function toggleAds(){
-  adsRemoved = !adsRemoved;
-  localStorage.setItem('adsRemoved', adsRemoved ? '1' : '0');
-  applyAdsState();
-}
-applyAdsState();
+/* ---------- (système "retirer les pubs" retiré : app en mode sans-pub permanent) ---------- */
 
 /* ================= NAVIGATION ================= */
 function renderHome(){

@@ -135,4 +135,15 @@ const COINS_CONFIG = {
     win: 5,
   },
 
+  // 🐤 BOUTIQUE DE FONDS FLAPPY BIRD — cosmétique uniquement (ciel + couleur des tuyaux), aucun
+  // effet sur le jeu. "classique" est gratuit et possédé dès le départ.
+  flappyBirdThemes: [
+    {id:'classique', name:'Ciel classique',    price:0,  sky:['#7ec8e3','#7ec8e3'], pipe:'#4caf50'},
+    {id:'coucher',   name:'Coucher de soleil', price:15, sky:['#ff9a76','#6a3fa0'], pipe:'#c1447e'},
+    {id:'desert',    name:'Désert',            price:20, sky:['#ffd98a','#e0a95c'], pipe:'#a9743a'},
+    {id:'nuit',      name:'Nuit étoilée',      price:20, sky:['#0b1030','#1c2450'], pipe:'#3f7d5c', stars:true},
+    {id:'espace',    name:'Espace',            price:30, sky:['#050014','#1a0a30'], pipe:'#6a5acd', stars:true},
+    {id:'neon',      name:'Néon',              price:40, sky:['#1a0b2e','#170a2c'], pipe:'#ff2fd1', stars:true},
+  ],
+
 };
