@@ -42,4 +42,4 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           CI: "1"
-        run: eas update --branch preview --message "Auto-publish depuis GitHub Actions (${{ github.sha }})" --non-interactive
+        run: eas update --branch main --message "Auto-publish depuis GitHub Actions (${{ github.sha }})" --non-interactive
