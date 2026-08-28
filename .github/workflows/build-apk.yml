@@ -1,0 +1,41 @@
+name: Construire l'APK Android (installable directement)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Récupère le code
+        uses: actions/checkout@v4
+
+      - name: Installe Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Installe les dépendances
+        run: npm install
+
+      - name: Corrige les versions pour la compatibilité SDK
+        run: npx expo install --fix
+
+      - name: Installe EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Lie le projet Expo existant
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas init --account paradoxes-app1 --non-interactive --force
+
+      # --wait attend la fin du build (10-20 min) pour que le lien de téléchargement
+      # apparaisse directement dans les logs, plutôt que d'avoir à le chercher ailleurs.
+      - name: Construit l'APK Android
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: "1"
+        run: eas build --platform android --profile preview --non-interactive --wait
