@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { CoinsProvider } from './src/context/CoinsContext';
 import JeuxScreen from './src/screens/JeuxScreen';
 import ProgresScreen from './src/screens/ProgresScreen';
@@ -25,6 +26,7 @@ const navTheme = {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <SafeAreaProvider>
       <CoinsProvider>
         <NavigationContainer theme={navTheme}>
@@ -48,5 +50,6 @@ export default function App() {
         </NavigationContainer>
       </CoinsProvider>
     </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
