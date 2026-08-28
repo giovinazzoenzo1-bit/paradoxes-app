@@ -29,6 +29,11 @@ jobs:
       - name: Installe EAS CLI
         run: npm install -g eas-cli
 
+      - name: Lie le projet Expo existant (idempotent, sûr à répéter)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas init --account paradoxes-app1 --non-interactive --force
+
       - name: Publie la mise à jour (EAS Update)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
