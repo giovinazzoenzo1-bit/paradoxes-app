@@ -1,3 +1,9 @@
+// Doit être la toute première ligne exécutée de l'appli : react-native-gesture-handler
+// (dont dépend React Navigation) a besoin d'être initialisé avant tout le reste, sinon
+// ça peut planter silencieusement au démarrage sur une vraie build Android (contrairement
+// à Expo Go, plus tolérant en développement).
+import 'react-native-gesture-handler';
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';
