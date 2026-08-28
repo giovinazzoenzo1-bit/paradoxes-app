@@ -26,6 +26,10 @@ jobs:
       - name: Installe les dépendances
         run: npm install
 
+      - name: Corrige les versions pour la compatibilité SDK (npx expo install a besoin d'internet
+          pour vérifier les versions, ce que je n'ai pas dans mon bac à sable — mais ce robot, si)
+        run: npx expo install --fix
+
       - name: Installe EAS CLI
         run: npm install -g eas-cli
 
@@ -37,4 +41,5 @@ jobs:
       - name: Publie la mise à jour (EAS Update)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: "1"
         run: eas update --branch preview --message "Auto-publish depuis GitHub Actions (${{ github.sha }})" --non-interactive
