@@ -2,24 +2,24 @@
   "name": "mobile",
   "version": "1.0.0",
   "main": "index.js",
-  "dependencies": {
-    "@react-native-async-storage/async-storage": "^3.1.1",
-    "@react-navigation/bottom-tabs": "^7.18.18",
-    "@react-navigation/native": "^7.3.18",
-    "expo": "~57.0.17",
-    "expo-status-bar": "~57.0.1",
-    "expo-updates": "^57.0.18",
-    "react": "19.2.3",
-    "react-native": "0.86.3",
-    "react-native-gesture-handler": "^3.2.1",
-    "react-native-safe-area-context": "^5.9.1",
-    "react-native-screens": "^4.27.0"
-  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^3.1.1",
+    "@react-navigation/bottom-tabs": "^7.18.18",
+    "@react-navigation/native": "^7.3.18",
+    "expo": "~54.0.36",
+    "expo-status-bar": "~3.0.9",
+    "expo-updates": "^57.0.18",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-gesture-handler": "^3.2.1",
+    "react-native-safe-area-context": "^5.9.1",
+    "react-native-screens": "^4.27.0"
   },
   "private": true
 }
