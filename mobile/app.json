@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Paradox",
+    "slug": "paradox-1",
+    "owner": "paradoxes-app1",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#11131c",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.paradox.mobile"
+    },
+    "android": {
+      "package": "app.paradox.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#11131c",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "plugins": []
+  }
+}
