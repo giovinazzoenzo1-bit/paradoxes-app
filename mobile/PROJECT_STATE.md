@@ -288,3 +288,23 @@ ne jamais utiliser `Dimensions.get('window')` comme CONSTANTE DE MODULE
 dimensions en cours de vie (rotation, mode paysage). Toujours utiliser le
 hook `useWindowDimensions()` à l'intérieur du composant pour un
 recalcul réactif.
+
+## Billard : 4 corrections supplémentaires (29/08)
+1. **Disposition revue** : panneau fixe à droite (score en haut, jauge de
+   puissance horizontale + bouton TIRER en dessous), table maximisée à
+   gauche. Remplace l'ancienne barre du haut pleine largeur.
+2. **Le swipe retour Android fermait l'appli** (pas de handler enregistré
+   pour ce jeu) — `BackHandler` ajouté, intercepte le retour matériel/geste
+   pour naviguer dans l'écran (table → setup → sortie) au lieu de fermer
+   l'appli. **Point d'attention pour tout futur écran hors du flux normal
+   JeuxScreen** (billard sort de la logique `onGameOpenChange`/tab bar
+   standard à cause du mode paysage) : bien vérifier que le retour
+   matériel Android est géré, sinon il ferme l'appli par défaut.
+3. **Animation de frappe ajoutée** : la queue recule (déjà visible pendant
+   la visée) puis fonce vers la bille en 130ms avant que le tir ne parte
+   réellement, comme le PWA — la simplification initiale ("pas
+   d'animation") a été explicitement retirée, l'utilisateur la voulait.
+4. **Jauge de puissance** : largeur découplée de la largeur de la table
+   (fixée à la largeur du panneau) — probable cause du petit bug résiduel.
+
+**Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
