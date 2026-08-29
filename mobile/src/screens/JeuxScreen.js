@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import CoinBar from '../components/CoinBar';
 import MorpionScreen from './games/MorpionScreen';
+import Puissance4Screen from './games/Puissance4Screen';
 
 const GAMES = [
   { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
-  { key: 'puissance4', name: 'Puissance 4', status: 'À venir', ready: false },
+  { key: 'puissance4', name: 'Puissance 4', status: 'Jouer', ready: true },
   { key: '2048', name: '2048', status: 'À venir', ready: false },
   { key: 'memory', name: 'Memory', status: 'À venir', ready: false },
   { key: 'snake', name: 'Snake', status: 'À venir', ready: false },
@@ -16,6 +17,9 @@ export default function JeuxScreen() {
 
   if (openGame === 'morpion') {
     return <MorpionScreen onBack={() => setOpenGame(null)} />;
+  }
+  if (openGame === 'puissance4') {
+    return <Puissance4Screen onBack={() => setOpenGame(null)} />;
   }
 
   return (
