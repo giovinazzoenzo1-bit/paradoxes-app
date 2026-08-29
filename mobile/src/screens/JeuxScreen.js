@@ -6,6 +6,7 @@ import Puissance4Screen from './games/Puissance4Screen';
 import Game2048Screen from './games/Game2048Screen';
 import MemoryScreen from './games/MemoryScreen';
 import SnakeScreen from './games/SnakeScreen';
+import Puzzle15Screen from './games/Puzzle15Screen';
 
 const GAMES = [
   { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
@@ -13,6 +14,7 @@ const GAMES = [
   { key: '2048', name: '2048', status: 'Jouer', ready: true },
   { key: 'memory', name: 'Memory', status: 'Jouer', ready: true },
   { key: 'snake', name: 'Snake', status: 'Jouer', ready: true },
+  { key: 'puzzle15', name: 'Puzzle 15', status: 'Jouer', ready: true },
 ];
 
 export default function JeuxScreen({ onGameOpenChange }) {
@@ -38,6 +40,9 @@ export default function JeuxScreen({ onGameOpenChange }) {
   }
   if (openGame === 'snake') {
     return <SnakeScreen onBack={() => setOpenGame(null)} />;
+  }
+  if (openGame === 'puzzle15') {
+    return <Puzzle15Screen onBack={() => setOpenGame(null)} />;
   }
 
   return (
