@@ -26,7 +26,12 @@ const COLORS = {
 
 function tileStyle(v) {
   if (v === 0) return { bg: COLORS.cellEmpty, color: 'transparent' };
-  if (v <= 8) return { bg: v === 4 ? '#00FF88' : '#00F0FF', color: '#0A0B14' };
+  // 2 et 4 : volontairement discrets (proches du fond), pour que l'intensité
+  // néon monte progressivement avec la valeur — garde l'effet "récompense"
+  // pour les vraies étapes de progression plutôt que de le griller dès le début.
+  if (v === 2) return { bg: '#232945', color: '#6b7391' };
+  if (v === 4) return { bg: '#283555', color: '#8fa3c2' };
+  if (v === 8) return { bg: '#123244', color: '#00D9F0' }; // premier vrai "pop" de couleur
   if (v <= 128) return { bg: v === 32 || v === 128 ? '#FF7B00' : '#FFE600', color: '#ffffff' };
   if (v <= 1024) return { bg: v === 512 ? '#BD00FF' : '#FF0055', color: '#ffffff' };
   return { bg: '#ffffff', color: '#0A0B14' }; // 2048+
