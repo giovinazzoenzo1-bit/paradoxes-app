@@ -198,3 +198,36 @@ décision unilatérale) :**
   functions vues dans plusieurs jeux) mais pas encore porté côté mobile —
   actuellement un écran vide.
 - Écran Options : idem, à développer.
+
+
+## Billard porté (29/08) — hors des 10 jeux du menu principal
+Le PWA a AUSSI un Billard 8-ball (866 lignes, le jeu le plus complexe du
+PWA) et un Ping-pong, tous deux absents du tableau `gameKeys` suivi par les
+stats mais bien présents et fonctionnels dans le PWA. Le Billard est
+maintenant porté.
+
+**Décision technique importante :** le PWA utilise Matter.js (moteur
+physique tiers) + un vrai `<canvas>`. Pour le mobile, remplacé par :
+- Un moteur physique **maison** (`billiardPhysics.js`) : collisions
+  cercle-cercle élastiques à masse égale + réflexion cercle-mur, MêMES
+  constantes que le PWA (restitution 0.95/0.80, frictionAir 0.018,
+  8 sous-étapes/frame, MAX_POWER 45) — pour ne pas introduire une nouvelle
+  dépendance native à la compatibilité RN non vérifiée (voir historique de
+  crash Bridgeless documenté plus haut).
+- Un rendu **100% Views RN** (`BilliardScreen.js`) à la place du canvas —
+  même technique de transformation de coordonnées que le PWA
+  (`gameToScreen`/`screenToGame` dans `billiardLogic.js`, transliterées de
+  `bilGameToCanvas`/`bilCanvasToGame`) pour faire tenir la table 900×450
+  tournée "en paysage" dans un écran portrait.
+- Règles du 8-ball et IA du bot ("ghost ball") **transliterées fidèlement**
+  depuis `bilEvaluateShot`/`bilBotPickShot` — testées unitairement
+  (assignation de groupe, fautes, victoire légale/illégale à la bille 8,
+  placement de bille valide) avant de pousser.
+- Simplifications **cosmétiques uniquement** (gameplay/règles/physique
+  100% fidèles) : pas d'animation de recul de queue avant le tir, ligne de
+  visée en trait plein au lieu de pointillés, queue en couleur unie au lieu
+  d'un dégradé, pas de confettis de victoire.
+
+**Prochaine étape : porter Ping-pong** (dernier jeu du PWA restant, hors
+menu principal). Même méthode : lire tout le code PWA d'abord, vérifier
+s'il a un cahier des charges Drive, tester la logique avant de pousser.
