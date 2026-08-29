@@ -117,11 +117,14 @@ classement dans le PWA : ne pas le porter en V1** (perso signé + mondial
 fictif = faible valeur/forte complexité relative). Le mentionner à
 l'utilisateur à chaque fois plutôt que de le faire silencieusement.
 
-**Point à trancher avec l'utilisateur (pas fait silencieusement) :** Snake
-affiche maintenant la CoinBar pendant la partie (comme le PWA). Les autres
-jeux (Morpion, Puissance 4, 2048, Memory) n'ont PAS la CoinBar visible
-pendant le jeu — incohérence entre jeux à corriger si demandé, mais pas
-fait de soi-même pour l'instant (pourrait être voulu ou pas selon le jeu).
+**Décisions UI globales tranchées (29/08) :**
+- **CoinBar visible sur tous les écrans de jeu**, y compris pendant la
+  partie (pas seulement les écrans de setup). S'applique à tout futur jeu.
+- **Barre d'onglets du bas masquée pendant qu'un jeu est ouvert.**
+  Mécanisme : `App.js` garde un état `gameOpen`, transmis en prop
+  `onGameOpenChange` à `JeuxScreen`, qui le déclenche via `useEffect` sur son
+  `openGame`. Tout futur jeu ajouté à `JeuxScreen` bénéficie de ce mécanisme
+  automatiquement (pas besoin de code supplémentaire par jeu).
 
 **Jeux restants côté PWA à porter, dans l'ordre du menu Jeux du PWA :**
 Puzzle 15, Sudoku, Nuts and Bolts, Flappy Bird, Wordle. Vérifier aussi les
