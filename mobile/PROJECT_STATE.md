@@ -231,3 +231,35 @@ physique tiers) + un vrai `<canvas>`. Pour le mobile, remplacé par :
 **Prochaine étape : porter Ping-pong** (dernier jeu du PWA restant, hors
 menu principal). Même méthode : lire tout le code PWA d'abord, vérifier
 s'il a un cahier des charges Drive, tester la logique avant de pousser.
+
+## Bugs Billard corrigés (29/08) — 4 bugs remontés en une fois, tous réglés
+1. **Queue de billard "de travers"** : mélange d'une direction en espace
+   jeu avec des coordonnées écran sans passer par la même rotation que le
+   reste du rendu. Corrigé en calculant la géométrie de la queue en espace
+   jeu D'ABORD, puis en la transformant via `toScreen()` comme tous les
+   autres éléments (billes, poches, ligne de visée).
+2. **Placement de bille bloqué après une faute** + **jauge de puissance
+   capricieuse** : même cause racine, **piège React général important à
+   retenir pour tout futur jeu tactile** : un `PanResponder` créé via
+   `useRef(PanResponder.create({...})).current` n'est construit qu'UNE
+   SEULE FOIS — ses callbacks capturent alors les variables d'état
+   (`gameState`, `mode`, `currentPlayer`...) de ce tout premier rendu, et ne
+   les voient plus jamais changer ensuite (fermeture figée / stale closure).
+   **Solution systématique : ne jamais lire une variable d'état directement
+   dans un callback de PanResponder mémorisé par useRef — toujours passer
+   par une ref synchronisée à chaque rendu** (`const xRef = useRef(x);
+   xRef.current = x;` en haut du corps de la fonction, puis lire
+   `xRef.current` dans les callbacks). `useBackGesture.js` n'a pas ce
+   problème (il ne dépend d'aucun état réactif), mais tout futur jeu avec
+   un PanResponder plus complexe doit appliquer ce pattern dès le départ.
+3. **Fausse faute systématique** (le vrai bug le plus sérieux) : le booléen
+   `railAfterContact` (bande touchée après contact, condition légale du
+   8-ball) n'était JAMAIS mis à jour dans le moteur physique maison — donc
+   tout tir qui ne rentrait aucune bille était compté comme faute, même
+   quand une bande était légitimement touchée après contact. Corrigé dans
+   `stepPhysics` (billiardPhysics.js).
+
+Les 4 corrections ont été testées unitairement (script Node) avant d'être
+poussées, notamment la correction #3 avec un scénario de tir réaliste.
+
+**Prochaine étape (inchangée) : porter Ping-pong.**
