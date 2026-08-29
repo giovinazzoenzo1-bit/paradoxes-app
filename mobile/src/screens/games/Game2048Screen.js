@@ -10,6 +10,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Vibration, PanResponder } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../../context/CoinsContext';
+import CoinBar from '../../components/CoinBar';
 import { SIZE, emptyGrid, addTile, move as moveLogic, canMove } from '../../games/g2048/g2048Logic';
 import useBackGesture from '../../hooks/useBackGesture';
 
@@ -310,6 +311,7 @@ export default function Game2048Screen({ onBack }) {
     const fmt = (list) => list.map((m) => `${m.score}pts→🪙${m.coins}`).join(' · ');
     return (
       <View style={styles.screen} {...panHandlers}>
+      <CoinBar />
         <View style={styles.header}>
           {onBack && (
             <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -338,6 +340,7 @@ export default function Game2048Screen({ onBack }) {
 
   return (
     <View style={styles.screen} {...panHandlers}>
+      <CoinBar />
       <View style={styles.header}>
         <TouchableOpacity onPress={backToModes} style={styles.backBtn}>
           <Text style={styles.backText}>← Retour</Text>

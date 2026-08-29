@@ -14,6 +14,7 @@ import {
   Vibration,
 } from 'react-native';
 import { useCoins } from '../../context/CoinsContext';
+import CoinBar from '../../components/CoinBar';
 import { findWinLine, botPickMove } from '../../games/morpion/morpionLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 
@@ -286,6 +287,7 @@ export default function MorpionScreen({ onBack }) {
     const matchGain = difficulty === 'normal' || difficulty === 'expert' ? COINS_CONFIG.normal_bonus_match : COINS_CONFIG.facile_bonus_match;
     return (
       <View style={styles.screen} {...panHandlers}>
+      <CoinBar />
         <View style={styles.header}>
           {onBack && (
             <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -340,6 +342,7 @@ export default function MorpionScreen({ onBack }) {
 
   return (
     <View style={styles.screen} {...panHandlers}>
+      <CoinBar />
       <View style={styles.header}>
         <TouchableOpacity onPress={openSetup} style={styles.backBtn}>
           <Text style={styles.backText}>← Retour</Text>

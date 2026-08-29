@@ -23,26 +23,29 @@ const TABS = [
 function AppContent() {
   const insets = useSafeAreaInsets();
   const [active, setActive] = useState('Jeux');
+  const [gameOpen, setGameOpen] = useState(false); // masque la tab bar quand un jeu est ouvert
   const ActiveComponent = TABS.find((t) => t.key === active).Component;
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={[styles.content, { paddingTop: insets.top }]}>
-        <ActiveComponent />
+        <ActiveComponent onGameOpenChange={setGameOpen} />
       </View>
-      <View style={[styles.tabBar, { paddingBottom: insets.bottom + 8 }]}>
-        {TABS.map((t) => (
-          <TouchableOpacity
-            key={t.key}
-            style={styles.tabItem}
-            onPress={() => setActive(t.key)}
-          >
-            <Text style={{ fontSize: 18, opacity: active === t.key ? 1 : 0.5 }}>{t.icon}</Text>
-            <Text style={[styles.tabLabel, active === t.key && styles.tabLabelActive]}>{t.key}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {!gameOpen && (
+        <View style={[styles.tabBar, { paddingBottom: insets.bottom + 8 }]}>
+          {TABS.map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              style={styles.tabItem}
+              onPress={() => setActive(t.key)}
+            >
+              <Text style={{ fontSize: 18, opacity: active === t.key ? 1 : 0.5 }}>{t.icon}</Text>
+              <Text style={[styles.tabLabel, active === t.key && styles.tabLabelActive]}>{t.key}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
     </View>
   );
 }

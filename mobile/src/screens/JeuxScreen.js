@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import CoinBar from '../components/CoinBar';
 import MorpionScreen from './games/MorpionScreen';
@@ -15,8 +15,14 @@ const GAMES = [
   { key: 'snake', name: 'Snake', status: 'Jouer', ready: true },
 ];
 
-export default function JeuxScreen() {
+export default function JeuxScreen({ onGameOpenChange }) {
   const [openGame, setOpenGame] = useState(null);
+
+  // Signale à App.js quand un jeu est ouvert, pour masquer la barre d'onglets
+  // du bas pendant la partie (plus d'espace, moins de risque de tap fantôme).
+  useEffect(() => {
+    if (onGameOpenChange) onGameOpenChange(!!openGame);
+  }, [openGame, onGameOpenChange]);
 
   if (openGame === 'morpion') {
     return <MorpionScreen onBack={() => setOpenGame(null)} />;

@@ -11,6 +11,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Vibration, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../../context/CoinsContext';
+import CoinBar from '../../components/CoinBar';
 import { DIFFICULTIES, generateCards, formatTime } from '../../games/memory/memoryLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 
@@ -212,6 +213,7 @@ export default function MemoryScreen({ onBack }) {
   if (phase === 'difficulty') {
     return (
       <View style={styles.screen} {...panHandlers}>
+      <CoinBar />
         <View style={styles.header}>
           {onBack && (
             <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -245,6 +247,7 @@ export default function MemoryScreen({ onBack }) {
 
   return (
     <View style={styles.screen} {...panHandlers}>
+      <CoinBar />
       <View style={styles.header}>
         <TouchableOpacity onPress={backToDifficulty} style={styles.backBtn}>
           <Text style={styles.backText}>← Retour</Text>

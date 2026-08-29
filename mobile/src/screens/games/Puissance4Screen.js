@@ -6,6 +6,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Vibration } from 'react-native';
 import { useCoins } from '../../context/CoinsContext';
+import CoinBar from '../../components/CoinBar';
 import { ROWS, COLS, emptyBoard, findDropRow, validCols, checkWinAt, botPickCol } from '../../games/puissance4/puissance4Logic';
 import useBackGesture from '../../hooks/useBackGesture';
 
@@ -149,6 +150,7 @@ export default function Puissance4Screen({ onBack }) {
     const gain = COINS_CONFIG[difficulty] || 6;
     return (
       <View style={styles.screen} {...panHandlers}>
+      <CoinBar />
         <View style={styles.header}>
           {onBack && (
             <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -190,6 +192,7 @@ export default function Puissance4Screen({ onBack }) {
 
   return (
     <View style={styles.screen} {...panHandlers}>
+      <CoinBar />
       <View style={styles.header}>
         <TouchableOpacity onPress={openSetup} style={styles.backBtn}>
           <Text style={styles.backText}>← Retour</Text>
