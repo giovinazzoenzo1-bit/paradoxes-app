@@ -96,21 +96,23 @@ juste après chaque push.
   immédiatement après (ne jamais le laisser dans l'historique de commande)
 
 ## Étape en cours / prochaine étape
-Morpion, Puissance 4, 2048, Memory et **Snake portés et jouables**. Snake :
-dossier Drive vide (comme Puissance 4) — PWA fait foi. Palette Game Boy DMG,
-contrôles D-pad (le PWA n'a pas de swipe, contrôles boutons uniquement),
-tick 160ms, paliers de pièces alignés sur coins-config.js, bouton rejouer,
-flash visuel + vibration sur nouveau record. **Tous les jeux ont maintenant
-un bouton "Rejouer" visible en fin de partie** (ajouté explicitement sur
-demande pour Memory, à reproduire systématiquement pour les prochains).
+Morpion, Puissance 4, 2048, Memory, Snake et **Puzzle 15 (taquin) portés et
+jouables**. Puzzle 15 : 4 niveaux (4×4→7×7), mélange garanti résoluble
+(mouvements valides depuis l'état trié), dégradé cyan→magenta par tuile
+suivant le doc Flavio. **Divergences volontaires PWA > cahier des
+charges** : tap simple sur tuile adjacente uniquement (pas de glissement en
+bloc pourtant décrit dans le cahier des charges), chronomètre démarre
+immédiatement (pas au 1er coup), pas de power-up Undo.
 
 **Avant de porter le jeu suivant, toujours vérifier le dossier Drive
 correspondant** (parent : 1NbnNSF_mq0Vi9CsiOHaTp7VzPdVMhtl5) — s'il contient
 des docs (Flavio=UI, Enzo=gameplay), les lire et les suivre pour le
 design/UX ; s'il est vide, suivre le PWA (`index.html`) comme référence
 unique. **Le PWA reste la référence définitive sur les mécaniques déjà
-itérées/équilibrées** (barème de pièces réel, choix de contrôles comme
-D-pad vs swipe) même quand un cahier des charges dit autre chose.
+itérées/équilibrées**, même quand un cahier des charges décrit une
+mécanique plus riche jamais implémentée (ex: glissement en bloc du Puzzle
+15) — toujours vérifier ce qui est RÉELLEMENT dans le JS du PWA, pas
+seulement ce que dit le cahier des charges.
 
 **Décision récurrente à reproduire pour chaque futur jeu ayant un
 classement dans le PWA : ne pas le porter en V1** (perso signé + mondial
@@ -125,12 +127,9 @@ l'utilisateur à chaque fois plutôt que de le faire silencieusement.
   `onGameOpenChange` à `JeuxScreen`, qui le déclenche via `useEffect` sur son
   `openGame`. Tout futur jeu ajouté à `JeuxScreen` bénéficie de ce mécanisme
   automatiquement (pas besoin de code supplémentaire par jeu).
+- **Bouton "Rejouer" systématique en fin de partie.**
 
-**Jeux restants côté PWA à porter, dans l'ordre du menu Jeux du PWA :**
-Puzzle 15, Sudoku, Nuts and Bolts, Flappy Bird, Wordle. Vérifier aussi les
-dossiers Drive additionnels repérés mais pas encore utilisés : Flavio
-(mystère, à vérifier), Qui suis-je ?, Ping pong, Billard, Echec, Sky-bo,
-Ludo, Sodoku, Solitaire — certains de ces jeux Drive n'ont peut-être pas
-d'équivalent PWA encore codé, à vérifier avant de commencer.
+**Jeux restants côté PWA à porter :** Sudoku, Nuts and Bolts, Flappy Bird,
+Wordle.
 
-**Prochaine étape : porter Puzzle 15.**
+**Prochaine étape : porter Sudoku.**
