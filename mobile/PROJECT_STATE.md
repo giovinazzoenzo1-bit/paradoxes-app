@@ -96,14 +96,18 @@ juste après chaque push.
   immédiatement après (ne jamais le laisser dans l'historique de commande)
 
 ## Étape en cours / prochaine étape
-Navigation stabilisée. **Morpion porté et jouable** (mode Ami + Bot avec 3
-difficultés dont Minimax imbattable en Expert, règle Anti-nul en option,
-undo, streaks, pièces via coins-config.js — première victoire de match
-contre le bot = 1 à 6 pièces selon difficulté, mode Ami = 0 pièce). Design
-suit le cahier des charges Drive (dossier "Morpion", docs Flavio + Enzo).
-Undo n'a PAS de recharge pub pour l'instant (pas de SDK pub en mobile) —
-charge unique par manche, à revoir quand la monétisation sera intégrée.
+Morpion et **Puissance 4 portés et jouables** (mode Ami + Bot, 2
+difficultés, heuristiques anti-piège pour le bot Normal). Puissance 4
+n'avait pas de cahier des charges dans le dossier Drive (vide) — logique et
+équilibrage pièces repris fidèlement du PWA (coins-config.js). Design
+Puissance 4 : cohérent avec le thème sombre général, pas de doc Flavio
+dédié pour ce jeu.
 
-**Prochaine étape : porter Puissance 4** (logique déjà présente dans
-`index.html` du PWA, même méthode : lire la logique existante avant de
-coder, réutiliser fidèlement).
+**Avant de porter le jeu suivant, toujours vérifier le dossier Drive
+correspondant** (parent : 1NbnNSF_mq0Vi9CsiOHaTp7VzPdVMhtl5) — s'il contient
+des docs (comme Morpion : Flavio=UI, Enzo=gameplay), les lire et les suivre
+pour le design/UX ; s'il est vide, suivre le PWA (`index.html`) comme
+référence unique.
+
+**Prochaine étape : porter 2048** (logique déjà présente dans
+`index.html` du PWA).
