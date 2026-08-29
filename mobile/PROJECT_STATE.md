@@ -168,6 +168,33 @@ Flappy Bird), toujours empiler manuellement plusieurs copies de l'Image
 (voir composant `TiledPipeBody` dans FlappyBirdScreen.js) plutôt que de
 compter sur ce resizeMode.
 
-**Jeux restants côté PWA à porter :** Wordle.
+**Wordle porté et jouable — DERNIER JEU DU PWA, LES 10 JEUX SONT
+MAINTENANT PORTÉS.** Design néon cyberpunk suivant le doc Flavio,
+dictionnaire de 4448 mots extrait programmatiquement (pas retapé à la
+main, vérifié identique par comparaison d'ensembles) depuis index.html.
+**Un vrai bug corrigé au passage** (pas juste une divergence PWA) :
+l'algorithme d'évaluation des lettres du PWA ne décrémentait pas le stock
+de lettres du mot cible, donnant un résultat faux avec des lettres en
+double dans la proposition — remplacé par le véritable algorithme Wordle
+à deux passes.
 
-**Prochaine étape : porter Wordle** (dernier jeu du PWA).
+## Bilan : les 10 jeux du menu PWA sont tous portés en mobile
+Morpion, Puissance 4, 2048, Memory, Snake, Puzzle 15, Sudoku,
+Nuts and Bolts, Flappy Bird, Wordle.
+
+**Prochaines étapes possibles (à discuter avec l'utilisateur, pas de
+décision unilatérale) :**
+- Revenir sur les décisions "non porté en V1" si l'utilisateur les
+  redemande : classements (perso + mondial fictif) pour tous les jeux à
+  chrono/score, boutique de thèmes Flappy Bird, power-ups ad-gated
+  (Sudoku Hint, Morpion undo illimité, etc.) — nécessite de discuter
+  monétisation/pub d'abord.
+- Cohérence visuelle : chaque jeu a été stylé sur sa propre palette suivant
+  son cahier des charges Drive (quand il existe) ; pas de design system
+  unifié entre les jeux — voulu ou à harmoniser ?
+- Build APK de test complet (tous les 10 jeux) avant une éventuelle
+  soumission App Store / Play Store.
+- Écran Progrès (trophées/stats) : existe dans le PWA (statsRecord*
+  functions vues dans plusieurs jeux) mais pas encore porté côté mobile —
+  actuellement un écran vide.
+- Écran Options : idem, à développer.
