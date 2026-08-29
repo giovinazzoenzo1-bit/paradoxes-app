@@ -96,27 +96,32 @@ juste après chaque push.
   immédiatement après (ne jamais le laisser dans l'historique de commande)
 
 ## Étape en cours / prochaine étape
-Morpion, Puissance 4, 2048 et **Memory portés et jouables**. Memory : 4
-difficultés (4×4/6×6/10×10/14×14), design suivant le cahier des charges
-Drive (Flavio/Enzo présents), power-ups Flash X-Ray + Aimant Paire (pièces
-uniquement), paliers de pièces alignés sur coins-config.js. Grille
-dimensionnée dynamiquement selon la taille d'écran (nécessaire pour le
-14×14 qui a 196 cases). **Non porté (même décision que 2048) : le
-classement** (perso signé anti-triche + mondial fictif).
+Morpion, Puissance 4, 2048, Memory et **Snake portés et jouables**. Snake :
+dossier Drive vide (comme Puissance 4) — PWA fait foi. Palette Game Boy DMG,
+contrôles D-pad (le PWA n'a pas de swipe, contrôles boutons uniquement),
+tick 160ms, paliers de pièces alignés sur coins-config.js, bouton rejouer,
+flash visuel + vibration sur nouveau record. **Tous les jeux ont maintenant
+un bouton "Rejouer" visible en fin de partie** (ajouté explicitement sur
+demande pour Memory, à reproduire systématiquement pour les prochains).
 
 **Avant de porter le jeu suivant, toujours vérifier le dossier Drive
 correspondant** (parent : 1NbnNSF_mq0Vi9CsiOHaTp7VzPdVMhtl5) — s'il contient
 des docs (Flavio=UI, Enzo=gameplay), les lire et les suivre pour le
-design/UX ; s'il est vide (comme Puissance 4), suivre le PWA (`index.html`)
-comme référence unique. **Le PWA reste la référence définitive sur les
-mécaniques déjà itérées/équilibrées** (ex: barème de pièces réel dans
-coins-config.js, délai de mismatch 800ms vs 600ms dans le cahier des
-charges) même quand un cahier des charges dit autre chose.
+design/UX ; s'il est vide, suivre le PWA (`index.html`) comme référence
+unique. **Le PWA reste la référence définitive sur les mécaniques déjà
+itérées/équilibrées** (barème de pièces réel, choix de contrôles comme
+D-pad vs swipe) même quand un cahier des charges dit autre chose.
 
 **Décision récurrente à reproduire pour chaque futur jeu ayant un
 classement dans le PWA : ne pas le porter en V1** (perso signé + mondial
 fictif = faible valeur/forte complexité relative). Le mentionner à
 l'utilisateur à chaque fois plutôt que de le faire silencieusement.
 
-**Prochaine étape : porter Snake** (logique déjà présente dans
-`index.html` du PWA).
+**Jeux restants côté PWA à porter, dans l'ordre du menu Jeux du PWA :**
+Puzzle 15, Sudoku, Nuts and Bolts, Flappy Bird, Wordle. Vérifier aussi les
+dossiers Drive additionnels repérés mais pas encore utilisés : Flavio
+(mystère, à vérifier), Qui suis-je ?, Ping pong, Billard, Echec, Sky-bo,
+Ludo, Sodoku, Solitaire — certains de ces jeux Drive n'ont peut-être pas
+d'équivalent PWA encore codé, à vérifier avant de commencer.
+
+**Prochaine étape : porter Puzzle 15.**
