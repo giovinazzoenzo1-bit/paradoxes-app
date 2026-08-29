@@ -4,12 +4,13 @@ import CoinBar from '../components/CoinBar';
 import MorpionScreen from './games/MorpionScreen';
 import Puissance4Screen from './games/Puissance4Screen';
 import Game2048Screen from './games/Game2048Screen';
+import MemoryScreen from './games/MemoryScreen';
 
 const GAMES = [
   { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
   { key: 'puissance4', name: 'Puissance 4', status: 'Jouer', ready: true },
   { key: '2048', name: '2048', status: 'Jouer', ready: true },
-  { key: 'memory', name: 'Memory', status: 'À venir', ready: false },
+  { key: 'memory', name: 'Memory', status: 'Jouer', ready: true },
   { key: 'snake', name: 'Snake', status: 'À venir', ready: false },
 ];
 
@@ -24,6 +25,9 @@ export default function JeuxScreen() {
   }
   if (openGame === '2048') {
     return <Game2048Screen onBack={() => setOpenGame(null)} />;
+  }
+  if (openGame === 'memory') {
+    return <MemoryScreen onBack={() => setOpenGame(null)} />;
   }
 
   return (
