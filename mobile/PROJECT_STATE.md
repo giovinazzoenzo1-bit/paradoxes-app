@@ -55,6 +55,11 @@ juste après chaque push.
   oublié). Les lignes explicites n'ont pas ce risque.
 - `newArchEnabled: false` dans app.json (précaution, RN 0.81 reste
   bridgeless par défaut de toute façon)
+- **`eas.json` profil `preview` a un `channel: "main"`.** Sans ça, l'APK
+  installé ne reçoit JAMAIS les mises à jour publiées par
+  `mobile-publish.yml` (qui publie sur la branche `main`) — bug découvert
+  et corrigé le 29/08. Si un jour l'appli installée ne se met plus à jour
+  toute seule, vérifier ce channel en premier.
 - `expo-updates` doit rester en version `~29.0.x` (compatible SDK 54) —
   `npx expo install --fix` peut la faire dériver, vérifier après usage
 
