@@ -57,6 +57,22 @@ const DIMS = {
 const CAP_H_S = CAP_H * SCALE;
 const CAP_OVERHANG_S = CAP_OVERHANG * SCALE;
 const BIRD_W = DIMS.birdRadius * 3.4;
+const BODY_TILE_H = 42 * SCALE; // hauteur naturelle de pipe_body.png (52×42), mise à l'échelle
+
+// Carrelage manuel du corps de tuyau : resizeMode="repeat" n'est pas fiable
+// sur Android (fonctionne sur iOS mais rend le tuyau invisible sur Android —
+// bug constaté). On empile plusieurs copies de l'image à la place, ce qui
+// marche de façon identique sur les deux plateformes.
+function TiledPipeBody({ width, height }) {
+  const tileCount = Math.max(1, Math.ceil(height / BODY_TILE_H));
+  return (
+    <View style={{ width, height, overflow: 'hidden' }}>
+      {Array.from({ length: tileCount }).map((_, i) => (
+        <Image key={i} source={PIPE_BODY_IMG} style={{ width, height: BODY_TILE_H }} resizeMode="stretch" />
+      ))}
+    </View>
+  );
+}
 
 export default function FlappyBirdScreen({ onBack }) {
   const { addCoinsLimited } = useCoins();
@@ -198,8 +214,8 @@ export default function FlappyBirdScreen({ onBack }) {
         >
           {pipes.map((p, i) => (
             <React.Fragment key={i}>
-              <View style={{ position: 'absolute', left: p.x, top: 0, width: DIMS.pipeWidth, height: Math.max(0, p.gapY - CAP_H_S), overflow: 'hidden' }}>
-                <Image source={PIPE_BODY_IMG} style={{ width: DIMS.pipeWidth, height: '100%' }} resizeMode="repeat" />
+              <View style={{ position: 'absolute', left: p.x, top: 0, width: DIMS.pipeWidth, height: Math.max(0, p.gapY - CAP_H_S) }}>
+                <TiledPipeBody width={DIMS.pipeWidth} height={Math.max(0, p.gapY - CAP_H_S)} />
               </View>
               <Image
                 source={PIPE_HEAD_IMG}
@@ -218,10 +234,9 @@ export default function FlappyBirdScreen({ onBack }) {
                   top: p.gapY + DIMS.pipeGap + CAP_H_S,
                   width: DIMS.pipeWidth,
                   height: Math.max(0, DIMS.height - (p.gapY + DIMS.pipeGap + CAP_H_S)),
-                  overflow: 'hidden',
                 }}
               >
-                <Image source={PIPE_BODY_IMG} style={{ width: DIMS.pipeWidth, height: '100%' }} resizeMode="repeat" />
+                <TiledPipeBody width={DIMS.pipeWidth} height={Math.max(0, DIMS.height - (p.gapY + DIMS.pipeGap + CAP_H_S))} />
               </View>
             </React.Fragment>
           ))}
