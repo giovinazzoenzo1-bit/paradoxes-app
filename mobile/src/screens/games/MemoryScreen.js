@@ -64,6 +64,7 @@ export default function MemoryScreen({ onBack }) {
   const [moves, setMoves] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [status, setStatus] = useState('');
+  const [over, setOver] = useState(false);
   const [best, setBest] = useState(null);
   const [xrayActive, setXrayActive] = useState(false);
 
@@ -98,6 +99,7 @@ export default function MemoryScreen({ onBack }) {
       setMoves(0);
       setSeconds(0);
       setStatus('');
+      setOver(false);
       setXrayActive(false);
       loadBest(selectedSize);
       setPhase('playing');
@@ -117,6 +119,7 @@ export default function MemoryScreen({ onBack }) {
   const finishGame = useCallback(
     async (finalMoves, finalSeconds) => {
       if (timerRef.current) clearInterval(timerRef.current);
+      setOver(true);
       setStatus(`🟩 Gagné en ${finalMoves} coups, en ${formatTime(finalSeconds)} !`);
       const cfg = COINS_CONFIG[size];
       if (cfg && finalSeconds <= cfg.threshold) {
@@ -311,6 +314,12 @@ export default function MemoryScreen({ onBack }) {
         </TouchableOpacity>
       </View>
 
+      {over && (
+        <TouchableOpacity style={styles.replayBtn} onPress={() => startGame(size)}>
+          <Text style={styles.replayBtnText}>🔁 Rejouer</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity style={styles.changeDiffBtn} onPress={backToDifficulty}>
         <Text style={styles.changeDiffBtnText}>Changer de difficulté</Text>
       </TouchableOpacity>
@@ -379,4 +388,13 @@ const styles = StyleSheet.create({
 
   changeDiffBtn: { marginTop: 14, alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16 },
   changeDiffBtnText: { color: COLORS.muted, fontSize: 13, fontWeight: '700' },
+  replayBtn: {
+    marginTop: 16,
+    alignSelf: 'center',
+    backgroundColor: COLORS.matched,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+  },
+  replayBtnText: { color: '#04120c', fontSize: 15, fontWeight: '800' },
 });
