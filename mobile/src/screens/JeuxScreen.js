@@ -8,6 +8,7 @@ import MemoryScreen from './games/MemoryScreen';
 import SnakeScreen from './games/SnakeScreen';
 import Puzzle15Screen from './games/Puzzle15Screen';
 import SudokuScreen from './games/SudokuScreen';
+import NutsBoltsScreen from './games/NutsBoltsScreen';
 
 const GAMES = [
   { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
@@ -17,6 +18,7 @@ const GAMES = [
   { key: 'snake', name: 'Snake', status: 'Jouer', ready: true },
   { key: 'puzzle15', name: 'Puzzle 15', status: 'Jouer', ready: true },
   { key: 'sudoku', name: 'Sudoku', status: 'Jouer', ready: true },
+  { key: 'nutsbolts', name: 'Nuts and Bolts', status: 'Jouer', ready: true },
 ];
 
 export default function JeuxScreen({ onGameOpenChange }) {
@@ -48,6 +50,9 @@ export default function JeuxScreen({ onGameOpenChange }) {
   }
   if (openGame === 'sudoku') {
     return <SudokuScreen onBack={() => setOpenGame(null)} />;
+  }
+  if (openGame === 'nutsbolts') {
+    return <NutsBoltsScreen onBack={() => setOpenGame(null)} />;
   }
 
   return (
