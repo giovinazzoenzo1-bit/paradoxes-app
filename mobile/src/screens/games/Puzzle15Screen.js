@@ -170,7 +170,7 @@ export default function Puzzle15Screen({ onBack }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.levelLabel}>{l.label}</Text>
                 <Text style={styles.levelCoin}>
-                  🪙 sous {formatTime(COINS_CONFIG[l.n].threshold)} : {COINS_CONFIG[l.n].coins} pièces
+                  🪙 {COINS_CONFIG[l.n].coins} pièces sous {formatTime(COINS_CONFIG[l.n].threshold)} de temps
                 </Text>
               </View>
             </TouchableOpacity>

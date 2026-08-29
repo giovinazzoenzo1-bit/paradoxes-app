@@ -230,7 +230,7 @@ export default function MemoryScreen({ onBack }) {
                 {d.emoji} {d.label}
               </Text>
               <Text style={styles.diffBtnCoin}>
-                🪙 sous {formatTime(COINS_CONFIG[d.size].threshold)} : {COINS_CONFIG[d.size].coins} pièces
+                🪙 {COINS_CONFIG[d.size].coins} pièces sous {formatTime(COINS_CONFIG[d.size].threshold)} de temps
               </Text>
             </TouchableOpacity>
           ))}
