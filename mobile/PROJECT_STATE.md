@@ -77,7 +77,14 @@ juste après chaque push.
   immédiatement après (ne jamais le laisser dans l'historique de commande)
 
 ## Étape en cours / prochaine étape
-Navigation stabilisée, appli vide fonctionnelle (pièces + 3 écrans). 
-**Prochaine étape : porter le premier mini-jeu (Morpion) depuis `index.html`
-vers `mobile/src/screens/`, en réutilisant la logique de jeu déjà validée du
-PWA sans la réinventer.**
+Navigation stabilisée. **Morpion porté et jouable** (mode Ami + Bot avec 3
+difficultés dont Minimax imbattable en Expert, règle Anti-nul en option,
+undo, streaks, pièces via coins-config.js — première victoire de match
+contre le bot = 1 à 6 pièces selon difficulté, mode Ami = 0 pièce). Design
+suit le cahier des charges Drive (dossier "Morpion", docs Flavio + Enzo).
+Undo n'a PAS de recharge pub pour l'instant (pas de SDK pub en mobile) —
+charge unique par manche, à revoir quand la monétisation sera intégrée.
+
+**Prochaine étape : porter Puissance 4** (logique déjà présente dans
+`index.html` du PWA, même méthode : lire la logique existante avant de
+coder, réutiliser fidèlement).
