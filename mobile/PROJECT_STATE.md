@@ -136,6 +136,10 @@ l'utilisateur à chaque fois plutôt que de le faire silencieusement.
   automatiquement (pas besoin de code supplémentaire par jeu).
 - **Bouton "Rejouer" systématique en fin de partie.**
 
-**Jeux restants côté PWA à porter :** Nuts and Bolts, Flappy Bird, Wordle.
+**Nuts and Bolts porté et jouable** : 50 niveaux progressifs (3 à 9
+couleurs), mélange garanti résoluble par recherche best-first (vérifié
+<200ms même niveau 50), progression persistée (AsyncStorage nbMaxLevel).
 
-**Prochaine étape : porter Nuts and Bolts.**
+**Jeux restants côté PWA à porter :** Flappy Bird, Wordle.
+
+**Prochaine étape : porter Flappy Bird.**
