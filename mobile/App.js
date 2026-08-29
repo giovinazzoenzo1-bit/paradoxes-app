@@ -1,8 +1,6 @@
-// VERSION DE TEST #2 — diagnostic écran blanc.
-// On réintroduit le vrai code (pièces, écrans, filet d'erreur) mais on retire
-// la navigation par onglets (react-navigation + gesture-handler + screens),
-// remplacée par un simple switch d'état local. Objectif : confirmer si ce
-// groupe de libs est bien le responsable du blocage.
+// Navigation par onglets en état local (pas de react-navigation/gesture-handler/
+// screens) : ce groupe de libs causait un blocage indéfini du contexte React sur
+// ce build (écran blanc permanent), confirmé par bisection. Solution stable.
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
