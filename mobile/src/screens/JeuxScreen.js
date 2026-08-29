@@ -1,16 +1,23 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import CoinBar from '../components/CoinBar';
+import MorpionScreen from './games/MorpionScreen';
 
 const GAMES = [
-  { name: 'Morpion', status: 'À venir' },
-  { name: 'Puissance 4', status: 'À venir' },
-  { name: '2048', status: 'À venir' },
-  { name: 'Memory', status: 'À venir' },
-  { name: 'Snake', status: 'À venir' },
+  { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
+  { key: 'puissance4', name: 'Puissance 4', status: 'À venir', ready: false },
+  { key: '2048', name: '2048', status: 'À venir', ready: false },
+  { key: 'memory', name: 'Memory', status: 'À venir', ready: false },
+  { key: 'snake', name: 'Snake', status: 'À venir', ready: false },
 ];
 
 export default function JeuxScreen() {
+  const [openGame, setOpenGame] = useState(null);
+
+  if (openGame === 'morpion') {
+    return <MorpionScreen onBack={() => setOpenGame(null)} />;
+  }
+
   return (
     <View style={styles.container}>
       <CoinBar />
@@ -20,10 +27,16 @@ export default function JeuxScreen() {
           Première version native — les jeux arrivent un par un.
         </Text>
         {GAMES.map((g) => (
-          <View key={g.name} style={styles.card}>
+          <TouchableOpacity
+            key={g.key}
+            style={styles.card}
+            disabled={!g.ready}
+            onPress={() => g.ready && setOpenGame(g.key)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.cardTitle}>{g.name}</Text>
-            <Text style={styles.cardStatus}>{g.status}</Text>
-          </View>
+            <Text style={[styles.cardStatus, g.ready && styles.cardStatusReady]}>{g.status}</Text>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
@@ -43,4 +56,5 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#eef0f6' },
   cardStatus: { fontSize: 12, color: '#8d93ab', marginTop: 4 },
+  cardStatusReady: { color: '#f5b942', fontWeight: '700' },
 });
