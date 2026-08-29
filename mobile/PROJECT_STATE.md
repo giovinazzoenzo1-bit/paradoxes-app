@@ -96,8 +96,15 @@ juste après chaque push.
   immédiatement après (ne jamais le laisser dans l'historique de commande)
 
 ## Étape en cours / prochaine étape
-Morpion, Puissance 4, 2048, Memory, Snake et **Puzzle 15 (taquin) portés et
-jouables**. Puzzle 15 : 4 niveaux (4×4→7×7), mélange garanti résoluble
+Morpion, Puissance 4, 2048, Memory, Snake, Puzzle 15 et **Sudoku portés et
+jouables**. Sudoku : génération avec solution garantie unique (backtracking
++ comptage de solutions, rapide : <15ms même en difficile), 3 vies, conflits
+détectés en temps réel. Undo/Effacer : 1 gratuit par partie puis désactivé
+(pas de pub). **Indice (Hint) non porté** : 100% payant en pub dans le PWA,
+aucune alternative gratuite ou en pièces définie — plutôt que d'inventer un
+prix, je ne l'ai pas fait. À trancher avec l'utilisateur si voulu.
+
+Puzzle 15 (taquin) porté juste avant. Puzzle 15 : 4 niveaux (4×4→7×7), mélange garanti résoluble
 (mouvements valides depuis l'état trié), dégradé cyan→magenta par tuile
 suivant le doc Flavio. **Divergences volontaires PWA > cahier des
 charges** : tap simple sur tuile adjacente uniquement (pas de glissement en
@@ -129,7 +136,6 @@ l'utilisateur à chaque fois plutôt que de le faire silencieusement.
   automatiquement (pas besoin de code supplémentaire par jeu).
 - **Bouton "Rejouer" systématique en fin de partie.**
 
-**Jeux restants côté PWA à porter :** Sudoku, Nuts and Bolts, Flappy Bird,
-Wordle.
+**Jeux restants côté PWA à porter :** Nuts and Bolts, Flappy Bird, Wordle.
 
-**Prochaine étape : porter Sudoku.**
+**Prochaine étape : porter Nuts and Bolts.**
