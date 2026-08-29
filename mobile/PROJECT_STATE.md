@@ -263,3 +263,28 @@ Les 4 corrections ont été testées unitairement (script Node) avant d'être
 poussées, notamment la correction #3 avec un scénario de tir réaliste.
 
 **Prochaine étape (inchangée) : porter Ping-pong.**
+
+## Billard passé en vrai mode paysage (29/08)
+Suite à un nouveau retour ("table sur le côté, jauge encore buggée"), le
+billard tourne maintenant l'ÉCRAN PHYSIQUEMENT en paysage (pas juste un
+tour de coordonnées en interne comme le PWA) :
+- `expo-screen-orientation` ajouté aux dépendances (module Expo de base,
+  déjà inclus dans Expo Go pour le SDK courant — pas besoin de dev client
+  custom, contrairement à un vrai module natif tiers).
+- Verrouillage paysage au montage de l'écran (`ScreenOrientation.lockAsync`),
+  restauration portrait au démontage (retour au reste de l'appli).
+- Dimensions lues via `useWindowDimensions()` (réactif à la vraie rotation
+  OS) au lieu de `Dimensions.get('window')` figé au chargement du module —
+  **cause probable des soucis de proportion/jauge remontés**.
+- Nouvelle disposition : barre du haut (retour/mode/score/statut + jauge de
+  puissance HORIZONTALE + bouton TIRER), table maximisée en dessous sur
+  toute la largeur.
+- Geste de retour bord-droit retiré spécifiquement pour cet écran (n'a plus
+  de sens en paysage) — boutons Retour visibles à la place.
+
+**Piège à retenir pour tout futur écran avec des dimensions calculées** :
+ne jamais utiliser `Dimensions.get('window')` comme CONSTANTE DE MODULE
+(calculée une seule fois au chargement) si l'écran peut changer de
+dimensions en cours de vie (rotation, mode paysage). Toujours utiliser le
+hook `useWindowDimensions()` à l'intérieur du composant pour un
+recalcul réactif.
