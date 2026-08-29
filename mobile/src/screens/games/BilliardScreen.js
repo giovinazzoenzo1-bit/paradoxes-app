@@ -96,6 +96,20 @@ export default function BilliardScreen({ onBack }) {
   const botTimeoutRef = useRef(null);
   const shotStartRef = useRef(0);
 
+  // Refs synchronisées à chaque rendu : les PanResponder ci-dessous sont créés
+  // UNE SEULE FOIS via useRef (nécessaire pour ne pas perdre le geste en
+  // cours en cas de re-render), donc leurs callbacks ne peuvent PAS lire
+  // gameState/mode/currentPlayer directement (fermeture figée sur la toute
+  // première valeur, jamais mise à jour — c'était le bug : placement de
+  // bille bloqué après une faute, et jauge de puissance qui répondait mal).
+  // Passer par des refs à jour à chaque rendu contourne ce problème.
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const currentPlayerRef = useRef(currentPlayer);
+  currentPlayerRef.current = currentPlayer;
+
   const bump = () => setRenderTick((t) => t + 1);
 
   const respawnCue = (pos) => {
@@ -300,7 +314,7 @@ export default function BilliardScreen({ onBack }) {
     if (!isValidCuePlacement(ballsRef.current, pos)) return;
     respawnCue(pos);
     setGameState('aim');
-    setStatus(`Tour : ${turnLabel(currentPlayer)}`);
+    setStatus(`Tour : ${turnLabel(currentPlayerRef.current)}`);
     bump();
   };
 
@@ -317,10 +331,16 @@ export default function BilliardScreen({ onBack }) {
 
   const tablePanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => canInteract && (gameState === 'aim' || gameState === 'placing'),
-      onMoveShouldSetPanResponder: () => canInteract && gameState === 'aim',
+      onStartShouldSetPanResponder: () => {
+        const canAct = !(modeRef.current === 'bot' && currentPlayerRef.current === 2);
+        return canAct && (gameStateRef.current === 'aim' || gameStateRef.current === 'placing');
+      },
+      onMoveShouldSetPanResponder: () => {
+        const canAct = !(modeRef.current === 'bot' && currentPlayerRef.current === 2);
+        return canAct && gameStateRef.current === 'aim';
+      },
       onPanResponderGrant: (evt) => {
-        if (gameState === 'placing') return;
+        if (gameStateRef.current === 'placing') return;
         const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, SCALE, TABLE_AREA_W, TABLE_AREA_H, true);
         aimingActiveRef.current = true;
         updateAim(pos);
@@ -332,16 +352,15 @@ export default function BilliardScreen({ onBack }) {
       },
       onPanResponderRelease: (evt) => {
         aimingActiveRef.current = false;
-        if (gameState === 'placing') {
+        if (gameStateRef.current === 'placing') {
           const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, SCALE, TABLE_AREA_W, TABLE_AREA_H, true);
           tryPlaceCue(pos);
         }
       },
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   ).current;
 
-  const POWER_BAR_H = 160;
+  const POWER_BAR_H = Math.min(260, TABLE_AREA_H - 60);
   const setPowerFromBar = (y) => {
     const frac = Math.max(0, Math.min(1, 1 - y / POWER_BAR_H));
     setPower(frac * MAX_POWER);
@@ -349,12 +368,11 @@ export default function BilliardScreen({ onBack }) {
 
   const powerBarResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => gameState === 'aim',
-      onMoveShouldSetPanResponder: () => gameState === 'aim',
+      onStartShouldSetPanResponder: () => gameStateRef.current === 'aim',
+      onMoveShouldSetPanResponder: () => gameStateRef.current === 'aim',
       onPanResponderGrant: (evt) => setPowerFromBar(evt.nativeEvent.locationY),
       onPanResponderMove: (evt) => setPowerFromBar(evt.nativeEvent.locationY),
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   ).current;
 
   if (phase === 'setup') {
@@ -437,7 +455,7 @@ export default function BilliardScreen({ onBack }) {
                   thin
                 />
               )}
-              <CueStick cueScreen={cueScreen} dir={aimDir} pullback={30 + (power / MAX_POWER) * 90} scale={SCALE} />
+              <CueStick cuePos={cue.pos} dir={aimDir} pullback={30 + (power / MAX_POWER) * 90} toScreen={toScreen} />
             </>
           )}
 
@@ -455,7 +473,7 @@ export default function BilliardScreen({ onBack }) {
         </View>
 
         <View style={styles.controlCol}>
-          <View style={styles.powerBarWrap} {...powerBarResponder.panHandlers}>
+          <View style={[styles.powerBarWrap, { height: POWER_BAR_H }]} {...powerBarResponder.panHandlers}>
             <View style={[styles.powerBarFill, { height: `${(power / MAX_POWER) * 100}%` }]} />
           </View>
           <Text style={styles.powerPct}>{Math.round((power / MAX_POWER) * 100)}%</Text>
@@ -526,22 +544,27 @@ function GhostBall({ center, r }) {
   );
 }
 
-function CueStick({ cueScreen, dir, pullback, scale }) {
-  const len = 170 * scale;
-  const backX = cueScreen.x - dir.x * pullback * scale;
-  const backY = cueScreen.y - dir.y * pullback * scale;
-  const tipX = cueScreen.x - dir.x * (pullback + 170) * scale;
-  const tipY = cueScreen.y - dir.y * (pullback + 170) * scale;
-  const dx = tipX - backX;
-  const dy = tipY - backY;
+// cuePos/dir en ESPACE JEU (pas écran) — c'était le bug : mélanger une
+// direction "espace jeu" avec des coordonnées "écran" directement, sans
+// passer par la même transformation de rotation que le reste (aim line,
+// billes, poches). Résultat : la queue semblait "de travers" (mauvais
+// angle) alors que la ligne de visée, elle, était correcte.
+function CueStick({ cuePos, dir, pullback, toScreen }) {
+  const backGame = { x: cuePos.x - dir.x * pullback, y: cuePos.y - dir.y * pullback };
+  const tipGame = { x: cuePos.x - dir.x * (pullback + 170), y: cuePos.y - dir.y * (pullback + 170) };
+  const back = toScreen(backGame.x, backGame.y);
+  const tip = toScreen(tipGame.x, tipGame.y);
+  const dx = tip.x - back.x;
+  const dy = tip.y - back.y;
+  const len = Math.hypot(dx, dy);
   const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
   return (
     <View
       pointerEvents="none"
       style={{
         position: 'absolute',
-        left: backX,
-        top: backY - 3.5,
+        left: back.x,
+        top: back.y - 3.5,
         width: len,
         height: 7,
         borderRadius: 3.5,
@@ -591,8 +614,7 @@ const styles = StyleSheet.create({
 
   controlCol: { width: CONTROL_W, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 4 },
   powerBarWrap: {
-    width: 28,
-    height: 160,
+    width: 30,
     backgroundColor: '#1c2032',
     borderRadius: 14,
     borderWidth: 1,

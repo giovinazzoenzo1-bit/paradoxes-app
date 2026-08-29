@@ -122,7 +122,15 @@ export function stepPhysics(balls, events) {
     }
     for (const ball of active) {
       const bounced = resolveWallCollision(ball);
-      if (bounced && events) events.railContacts.add(ball.id);
+      if (bounced && events) {
+        events.railContacts.add(ball.id);
+        // Bug corrigé : ce booléen n'était jamais mis à jour (seul le Set
+        // railContacts l'était), donc railAfterContact restait toujours
+        // false et TOUT tir qui n'empochait rien était compté comme une
+        // faute "aucune bande touchée", même quand une bande était bien
+        // touchée après contact — cause de la fausse faute remontée.
+        if (events.firstContactGroup) events.railAfterContact = true;
+      }
     }
     for (let i = 0; i < active.length; i++) {
       for (let j = i + 1; j < active.length; j++) {
