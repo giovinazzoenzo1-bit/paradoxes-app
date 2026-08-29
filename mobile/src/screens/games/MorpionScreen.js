@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useCoins } from '../../context/CoinsContext';
 import { findWinLine, botPickMove } from '../../games/morpion/morpionLogic';
+import useBackGesture from '../../hooks/useBackGesture';
 
 const COLORS = {
   bg: '#141721',
@@ -39,6 +40,7 @@ function emptyBoard() {
 
 export default function MorpionScreen({ onBack }) {
   const { addCoinsLimited } = useCoins();
+  const panHandlers = useBackGesture(onBack);
 
   const [phase, setPhase] = useState('setup'); // 'setup' | 'playing'
   const [mode, setMode] = useState('ami'); // 'ami' | 'bot'
@@ -283,7 +285,7 @@ export default function MorpionScreen({ onBack }) {
   if (phase === 'setup') {
     const matchGain = difficulty === 'normal' || difficulty === 'expert' ? COINS_CONFIG.normal_bonus_match : COINS_CONFIG.facile_bonus_match;
     return (
-      <View style={styles.screen}>
+      <View style={styles.screen} {...panHandlers}>
         <View style={styles.header}>
           {onBack && (
             <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -337,7 +339,7 @@ export default function MorpionScreen({ onBack }) {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} {...panHandlers}>
       <View style={styles.header}>
         <TouchableOpacity onPress={openSetup} style={styles.backBtn}>
           <Text style={styles.backText}>← Retour</Text>
@@ -364,30 +366,36 @@ export default function MorpionScreen({ onBack }) {
 
       <View style={styles.boardWrap}>
         <View style={styles.board}>
-          {board.map((v, i) => {
-            const scale = cellAnims[i].interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 1.2, 1] });
-            const translateX = cellShake[i].interpolate({ inputRange: [-1, 1], outputRange: [-4, 4] });
-            const isWin = winLine && winLine.includes(i);
-            return (
-              <Animated.View key={i} style={{ transform: [{ translateX }] }}>
-                <TouchableOpacity
-                  style={[styles.cell, isWin && styles.cellWin]}
-                  activeOpacity={0.7}
-                  onPress={() => handleTap(i)}
-                >
-                  <Animated.Text
-                    style={[
-                      styles.cellText,
-                      { color: v === 'X' ? COLORS.x : COLORS.o },
-                      v ? { transform: [{ scale }] } : null,
-                    ]}
-                  >
-                    {v === 'X' ? '✕' : v === 'O' ? '○' : ''}
-                  </Animated.Text>
-                </TouchableOpacity>
-              </Animated.View>
-            );
-          })}
+          {[0, 1, 2].map((row) => (
+            <View key={row} style={styles.boardRow}>
+              {[0, 1, 2].map((col) => {
+                const i = row * 3 + col;
+                const v = board[i];
+                const scale = cellAnims[i].interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 1.2, 1] });
+                const translateX = cellShake[i].interpolate({ inputRange: [-1, 1], outputRange: [-4, 4] });
+                const isWin = winLine && winLine.includes(i);
+                return (
+                  <Animated.View key={i} style={{ transform: [{ translateX }] }}>
+                    <TouchableOpacity
+                      style={[styles.cell, isWin && styles.cellWin]}
+                      activeOpacity={0.7}
+                      onPress={() => handleTap(i)}
+                    >
+                      <Animated.Text
+                        style={[
+                          styles.cellText,
+                          { color: v === 'X' ? COLORS.x : COLORS.o },
+                          v ? { transform: [{ scale }] } : null,
+                        ]}
+                      >
+                        {v === 'X' ? '✕' : v === 'O' ? '○' : ''}
+                      </Animated.Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+            </View>
+          ))}
         </View>
       </View>
 
@@ -482,14 +490,11 @@ const styles = StyleSheet.create({
 
   boardWrap: { alignItems: 'center', marginTop: 14 },
   board: {
-    width: CELL_SIZE * 3 + 24,
     backgroundColor: COLORS.board,
     borderRadius: 28,
     padding: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 0,
   },
+  boardRow: { flexDirection: 'row' },
   cell: {
     width: CELL_SIZE,
     height: CELL_SIZE,

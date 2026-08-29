@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { CoinsProvider } from './src/context/CoinsContext';
 import JeuxScreen from './src/screens/JeuxScreen';
@@ -17,30 +17,42 @@ const TABS = [
   { key: 'Options', icon: '⚙️', Component: OptionsScreen },
 ];
 
-export default function App() {
+// Zone sûre gérée ICI, une seule fois, plutôt que dans chaque écran : évite
+// le chevauchement avec la barre de statut (haut) et la barre de gestes
+// Android (bas) partout dans l'appli, y compris dans les jeux (ex: Morpion).
+function AppContent() {
+  const insets = useSafeAreaInsets();
   const [active, setActive] = useState('Jeux');
   const ActiveComponent = TABS.find((t) => t.key === active).Component;
 
   return (
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <View style={[styles.content, { paddingTop: insets.top }]}>
+        <ActiveComponent />
+      </View>
+      <View style={[styles.tabBar, { paddingBottom: insets.bottom + 8 }]}>
+        {TABS.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            style={styles.tabItem}
+            onPress={() => setActive(t.key)}
+          >
+            <Text style={{ fontSize: 18, opacity: active === t.key ? 1 : 0.5 }}>{t.icon}</Text>
+            <Text style={[styles.tabLabel, active === t.key && styles.tabLabelActive]}>{t.key}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export default function App() {
+  return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <CoinsProvider>
-          <StatusBar style="light" />
-          <View style={styles.container}>
-            <ActiveComponent />
-            <View style={styles.tabBar}>
-              {TABS.map((t) => (
-                <TouchableOpacity
-                  key={t.key}
-                  style={styles.tabItem}
-                  onPress={() => setActive(t.key)}
-                >
-                  <Text style={{ fontSize: 18, opacity: active === t.key ? 1 : 0.5 }}>{t.icon}</Text>
-                  <Text style={[styles.tabLabel, active === t.key && styles.tabLabelActive]}>{t.key}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          <AppContent />
         </CoinsProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
@@ -49,12 +61,12 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#11131c' },
+  content: { flex: 1 },
   tabBar: {
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#2a2f45',
     backgroundColor: '#1c2032',
-    paddingBottom: 24,
     paddingTop: 8,
   },
   tabItem: { flex: 1, alignItems: 'center' },
