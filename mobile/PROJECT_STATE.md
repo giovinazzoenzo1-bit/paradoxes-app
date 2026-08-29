@@ -161,6 +161,13 @@ fichier DIRECTEMENT dans le chat (pas via Drive) — les fichiers uploadés
 atterrissent sur le disque sans repasser par une recopie manuelle de
 texte, donc sans risque de corruption.**
 
+**Piège technique additionnel (29/08) : `resizeMode="repeat"` sur Image RN
+n'est pas fiable cross-platform** — invisible/cassé sur Android alors qu'il
+fonctionne sur iOS. Pour carreler une texture (comme le corps du tuyau
+Flappy Bird), toujours empiler manuellement plusieurs copies de l'Image
+(voir composant `TiledPipeBody` dans FlappyBirdScreen.js) plutôt que de
+compter sur ce resizeMode.
+
 **Jeux restants côté PWA à porter :** Wordle.
 
 **Prochaine étape : porter Wordle** (dernier jeu du PWA).
