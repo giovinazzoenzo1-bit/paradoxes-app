@@ -11,6 +11,7 @@ import SudokuScreen from './games/SudokuScreen';
 import NutsBoltsScreen from './games/NutsBoltsScreen';
 import FlappyBirdScreen from './games/FlappyBirdScreen';
 import WordleScreen from './games/WordleScreen';
+import BilliardScreen from './games/BilliardScreen';
 
 const GAMES = [
   { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
@@ -23,6 +24,7 @@ const GAMES = [
   { key: 'nutsbolts', name: 'Nuts and Bolts', status: 'Jouer', ready: true },
   { key: 'flappybird', name: 'Flappy Bird', status: 'Jouer', ready: true },
   { key: 'wordle', name: 'Wordle', status: 'Jouer', ready: true },
+  { key: 'billiard', name: 'Billard', status: 'Jouer', ready: true },
 ];
 
 export default function JeuxScreen({ onGameOpenChange }) {
@@ -63,6 +65,9 @@ export default function JeuxScreen({ onGameOpenChange }) {
   }
   if (openGame === 'wordle') {
     return <WordleScreen onBack={() => setOpenGame(null)} />;
+  }
+  if (openGame === 'billiard') {
+    return <BilliardScreen onBack={() => setOpenGame(null)} />;
   }
 
   return (
