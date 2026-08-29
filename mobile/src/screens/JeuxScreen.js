@@ -9,6 +9,7 @@ import SnakeScreen from './games/SnakeScreen';
 import Puzzle15Screen from './games/Puzzle15Screen';
 import SudokuScreen from './games/SudokuScreen';
 import NutsBoltsScreen from './games/NutsBoltsScreen';
+import FlappyBirdScreen from './games/FlappyBirdScreen';
 
 const GAMES = [
   { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
@@ -19,6 +20,7 @@ const GAMES = [
   { key: 'puzzle15', name: 'Puzzle 15', status: 'Jouer', ready: true },
   { key: 'sudoku', name: 'Sudoku', status: 'Jouer', ready: true },
   { key: 'nutsbolts', name: 'Nuts and Bolts', status: 'Jouer', ready: true },
+  { key: 'flappybird', name: 'Flappy Bird', status: 'Jouer', ready: true },
 ];
 
 export default function JeuxScreen({ onGameOpenChange }) {
@@ -53,6 +55,9 @@ export default function JeuxScreen({ onGameOpenChange }) {
   }
   if (openGame === 'nutsbolts') {
     return <NutsBoltsScreen onBack={() => setOpenGame(null)} />;
+  }
+  if (openGame === 'flappybird') {
+    return <FlappyBirdScreen onBack={() => setOpenGame(null)} />;
   }
 
   return (
