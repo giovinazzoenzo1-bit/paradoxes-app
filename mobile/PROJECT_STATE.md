@@ -96,18 +96,23 @@ juste après chaque push.
   immédiatement après (ne jamais le laisser dans l'historique de commande)
 
 ## Étape en cours / prochaine étape
-Morpion et **Puissance 4 portés et jouables** (mode Ami + Bot, 2
-difficultés, heuristiques anti-piège pour le bot Normal). Puissance 4
-n'avait pas de cahier des charges dans le dossier Drive (vide) — logique et
-équilibrage pièces repris fidèlement du PWA (coins-config.js). Design
-Puissance 4 : cohérent avec le thème sombre général, pas de doc Flavio
-dédié pour ce jeu.
+Morpion, Puissance 4 et **2048 portés et jouables**. 2048 : design néon
+cyberpunk suivant le cahier des charges Drive (docs Flavio/Enzo présents
+pour ce jeu), modes Classique (infini) + Rush 60s, power-ups Undo/Marteau
+Laser/Swap payants **en pièces uniquement** (pas de "ou pub" — pas de SDK
+pub en mobile, même limite assumée que l'Undo Morpion), paliers de score
+alignés sur coins-config.js. **Non porté volontairement : le classement
+(perso + mondial fictif)** — hors scope V1, ajout à faible valeur/forte
+complexité relative, à reconsidérer plus tard si demandé.
 
 **Avant de porter le jeu suivant, toujours vérifier le dossier Drive
 correspondant** (parent : 1NbnNSF_mq0Vi9CsiOHaTp7VzPdVMhtl5) — s'il contient
-des docs (comme Morpion : Flavio=UI, Enzo=gameplay), les lire et les suivre
-pour le design/UX ; s'il est vide, suivre le PWA (`index.html`) comme
-référence unique.
+des docs (comme Morpion et 2048 : Flavio=UI, Enzo=gameplay), les lire et les
+suivre pour le design/UX ; s'il est vide (comme Puissance 4), suivre le PWA
+(`index.html`) comme référence unique. **Le PWA reste la référence
+définitive sur les mécaniques déjà itérées/équilibrées** (ex: barème de
+pièces réel dans coins-config.js) même quand un cahier des charges dit
+autre chose — le PWA a été testé et ajusté après coup.
 
-**Prochaine étape : porter 2048** (logique déjà présente dans
+**Prochaine étape : porter Memory** (logique déjà présente dans
 `index.html` du PWA).
