@@ -39,6 +39,20 @@ juste après chaque push.
   méthodique. Solution : navigation par état local (`useState` dans
   `App.js`). Si un futur écran a besoin de navigation empilée (stack), tester
   d'abord en isolation via build APK avant d'adopter une lib.
+- **Zone sûre (safe area) gérée une seule fois, dans `App.js`** (paddingTop
+  sur le conteneur de contenu, paddingBottom sur la tab bar, via
+  `useSafeAreaInsets`). Les écrans individuels (Jeux, Morpion, etc.) n'ont
+  PAS à gérer leur propre zone sûre — sinon double-padding ou oublis.
+- **Geste de retour : `src/hooks/useBackGesture.js`**, réutilisable, sans
+  lib tierce (PanResponder + BackHandler, tous deux natifs de RN, zéro
+  risque de réintroduire le bug de navigation). Tout écran de jeu avec un
+  `onBack` doit appliquer `{...useBackGesture(onBack)}` sur sa View racine
+  pour supporter le swipe bord droit→gauche + bouton retour Android.
+- **Grille de jeu (type Morpion) : toujours en lignes explicites**
+  (`[0,1,2].map(row => <View flexDirection:row>...)`), jamais en
+  `flexWrap` avec une largeur de conteneur calculée à la main — source d'un
+  bug réel (grille passée en 2 colonnes au lieu de 3, calcul de padding
+  oublié). Les lignes explicites n'ont pas ce risque.
 - `newArchEnabled: false` dans app.json (précaution, RN 0.81 reste
   bridgeless par défaut de toute façon)
 - `expo-updates` doit rester en version `~29.0.x` (compatible SDK 54) —
