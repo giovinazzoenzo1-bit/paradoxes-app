@@ -14,6 +14,15 @@
   (~10000 lignes) + `PROJECT_STATE.md` / `ASSETS_SPECS.md` à la racine
 - PWA en ligne : giovinazzoenzo1-bit.github.io/paradoxes-app/
 
+## Démarrage rapide d'une nouvelle session Claude
+Message type à donner : "Projet Paradox. Lis mobile/PROJECT_STATE.md sur ce
+repo, clone avec le token ci-dessous, continue à partir de là." Le token
+GitHub à utiliser (permissions Contents/Metadata/Secrets/Workflows en
+Read/write, pas Actions) est fourni par l'utilisateur en début de
+conversation — ne pas le stocker en clair ici à long terme, il est redonné
+à chaque nouvelle session par l'utilisateur lui-même. Le retirer du remote
+juste après chaque push.
+
 ## Stack actuelle
 - Expo SDK 54 (figé — Expo Go du Play Store bloqué dessus, ne pas monter en
   SDK 55+)
