@@ -1,20 +1,24 @@
 // Billard 8-ball — port fidèle des RÈGLES et de l'IA du PWA (index.html),
 // avec un moteur physique maison à la place de Matter.js (voir
-// billiardPhysics.js) et un rendu 100% Views RN à la place du <canvas>
-// (voir billiardLogic.js pour les transformations de coordonnées, mêmes
-// formules que bilGameToCanvas/bilCanvasToGame). Simplifications visuelles
-// assumées (gameplay/règles/physique 100% fidèles, seul le "polish" cosmétique
-// est allégé) :
-//  - Pas d'animation de recul de queue avant le tir (130ms dans le PWA) — le
-//    tir part directement au appui sur TIRER.
-//  - Ligne de visée en trait plein semi-transparent au lieu de pointillés
-//    (RN ne supporte pas nativement les traits pointillés arbitraires).
+// billiardPhysics.js) et un rendu 100% Views RN à la place du <canvas>.
+// Mode PAYSAGE réel (pas un simple tour de coordonnées comme le PWA) :
+// verrouillage physique de l'orientation de l'écran via
+// expo-screen-orientation à l'entrée du jeu, restauré en portrait à la
+// sortie — retour utilisateur explicite ("la table est sur le côté, pas
+// ouf"). Dimensions lues via useWindowDimensions (réactif à la vraie
+// rotation), le tableau n'a donc plus besoin d'être "tourné" par calcul :
+// TABLE_W (900, long axe) correspond à la largeur écran, TABLE_H (450,
+// court axe) à la hauteur écran, directement.
+// Simplifications visuelles assumées (gameplay/règles/physique 100%
+// fidèles, seul le "polish" cosmétique est allégé) :
+//  - Pas d'animation de recul de queue avant le tir.
+//  - Ligne de visée en trait plein semi-transparent au lieu de pointillés.
 //  - Queue de billard en couleur unie au lieu d'un dégradé bois.
 //  - Pas de confettis/étoiles de victoire animées.
-// Coins-config.js : 5 pièces si victoire contre le bot (mode "bot" only,
-// comme le PWA).
+// Coins-config.js : 5 pièces si victoire contre le bot.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, PanResponder, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions } from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
 import {
@@ -37,7 +41,6 @@ import {
   gameToScreen,
   screenToGame,
 } from '../../games/billiard/billiardLogic';
-import useBackGesture from '../../hooks/useBackGesture';
 
 const COLORS = {
   bg: '#141721',
@@ -50,30 +53,35 @@ const COLORS = {
 };
 
 const COINS_WIN = 5;
-const SCREEN_W = Dimensions.get('window').width;
-const SCREEN_H = Dimensions.get('window').height;
-
-const CONTROL_W = 64;
-const HEADER_H = 90;
-const STATUS_H = 24;
-const AVAIL_W = SCREEN_W - 24 - CONTROL_W;
-const AVAIL_H = SCREEN_H - HEADER_H - STATUS_H - 140;
-let TABLE_AREA_H = AVAIL_H;
-let TABLE_AREA_W = TABLE_AREA_H * (TABLE_H / TABLE_W);
-if (TABLE_AREA_W > AVAIL_W) {
-  TABLE_AREA_W = AVAIL_W;
-  TABLE_AREA_H = TABLE_AREA_W * (TABLE_W / TABLE_H);
-}
-const SCALE = TABLE_AREA_W / TABLE_H;
-const RAIL_W = 16 * SCALE;
-
-function toScreen(gx, gy) {
-  return gameToScreen(gx, gy, SCALE, TABLE_AREA_W, TABLE_AREA_H, true);
-}
+const TOP_H = 96; // hauteur réservée en haut (retour/mode/score/statut/jauge+tirer)
 
 export default function BilliardScreen({ onBack }) {
   const { addCoinsLimited } = useCoins();
-  const panHandlers = useBackGesture(onBack);
+  const { width: WIN_W, height: WIN_H } = useWindowDimensions();
+
+  // Verrouille l'écran en paysage à l'entrée du billard, restaure le
+  // portrait (comportement normal du reste de l'appli) à la sortie.
+  useEffect(() => {
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+    return () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    };
+  }, []);
+
+  // Table non tournée : on est en vrai paysage, TABLE_W (long axe) suit la
+  // largeur écran, TABLE_H (court axe) suit la hauteur restante.
+  const availW = WIN_W - 24;
+  const availH = WIN_H - TOP_H - 12;
+  let tableAreaW = availW;
+  let tableAreaH = tableAreaW * (TABLE_H / TABLE_W);
+  if (tableAreaH > availH) {
+    tableAreaH = availH;
+    tableAreaW = tableAreaH * (TABLE_W / TABLE_H);
+  }
+  const scale = tableAreaW / TABLE_W;
+  const railW = 16 * scale;
+
+  const toScreen = useCallback((gx, gy) => gameToScreen(gx, gy, scale, tableAreaW, tableAreaH, false), [scale, tableAreaW, tableAreaH]);
 
   const [phase, setPhase] = useState('setup');
   const [mode, setMode] = useState('solo');
@@ -96,19 +104,19 @@ export default function BilliardScreen({ onBack }) {
   const botTimeoutRef = useRef(null);
   const shotStartRef = useRef(0);
 
-  // Refs synchronisées à chaque rendu : les PanResponder ci-dessous sont créés
-  // UNE SEULE FOIS via useRef (nécessaire pour ne pas perdre le geste en
-  // cours en cas de re-render), donc leurs callbacks ne peuvent PAS lire
-  // gameState/mode/currentPlayer directement (fermeture figée sur la toute
-  // première valeur, jamais mise à jour — c'était le bug : placement de
-  // bille bloqué après une faute, et jauge de puissance qui répondait mal).
-  // Passer par des refs à jour à chaque rendu contourne ce problème.
+  // Refs synchronisées à chaque rendu : nécessaires car les PanResponder
+  // sont créés UNE SEULE FOIS via useRef (pour ne pas perdre un geste en
+  // cours), donc leurs callbacks doivent lire l'état via ces refs plutôt
+  // que directement les variables d'état (sinon fermeture figée - bug déjà
+  // rencontré et corrigé une première fois, voir PROJECT_STATE.md).
   const gameStateRef = useRef(gameState);
   gameStateRef.current = gameState;
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const currentPlayerRef = useRef(currentPlayer);
   currentPlayerRef.current = currentPlayer;
+  const dimsRef = useRef({ scale, tableAreaW, tableAreaH });
+  dimsRef.current = { scale, tableAreaW, tableAreaH };
 
   const bump = () => setRenderTick((t) => t + 1);
 
@@ -119,7 +127,7 @@ export default function BilliardScreen({ onBack }) {
     cue.vel = { x: 0, y: 0 };
   };
 
-  const turnLabel = (player) => (mode === 'bot' && player === 2 ? 'BOT' : `Joueur ${player}`);
+  const turnLabel = (player) => (mode === 'bot' && player === 2 ? 'BOT' : `J${player}`);
 
   const startGame = useCallback((selectedMode) => {
     gameIdRef.current++;
@@ -241,7 +249,7 @@ export default function BilliardScreen({ onBack }) {
           if (res.foul) {
             nextPlayer = cp === 1 ? 2 : 1;
             setGameState('placing');
-            setStatus(`🟥 Faute (${res.reason}) — bille en main, tape la table (${turnLabel(nextPlayer)})`);
+            setStatus(`🟥 Faute (${res.reason}) — bille en main`);
           } else if (res.continueTurn) {
             setGameState('aim');
             setStatus(`🟩 Rejoue, ${turnLabel(cp)}`);
@@ -340,46 +348,52 @@ export default function BilliardScreen({ onBack }) {
         return canAct && gameStateRef.current === 'aim';
       },
       onPanResponderGrant: (evt) => {
+        const d = dimsRef.current;
         if (gameStateRef.current === 'placing') return;
-        const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, SCALE, TABLE_AREA_W, TABLE_AREA_H, true);
+        const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, d.scale, d.tableAreaW, d.tableAreaH, false);
         aimingActiveRef.current = true;
         updateAim(pos);
       },
       onPanResponderMove: (evt) => {
         if (!aimingActiveRef.current) return;
-        const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, SCALE, TABLE_AREA_W, TABLE_AREA_H, true);
+        const d = dimsRef.current;
+        const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, d.scale, d.tableAreaW, d.tableAreaH, false);
         updateAim(pos);
       },
       onPanResponderRelease: (evt) => {
         aimingActiveRef.current = false;
         if (gameStateRef.current === 'placing') {
-          const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, SCALE, TABLE_AREA_W, TABLE_AREA_H, true);
+          const d = dimsRef.current;
+          const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, d.scale, d.tableAreaW, d.tableAreaH, false);
           tryPlaceCue(pos);
         }
       },
     })
   ).current;
 
-  const POWER_BAR_H = Math.min(260, TABLE_AREA_H - 60);
-  const setPowerFromBar = (y) => {
-    const frac = Math.max(0, Math.min(1, 1 - y / POWER_BAR_H));
+  // Jauge de puissance HORIZONTALE (mieux adaptée au paysage : large bande
+  // au-dessus de la table plutôt qu'une colonne étroite sur le côté).
+  const POWER_BAR_W = Math.max(120, tableAreaW - 90);
+  const powerBarWRef = useRef(POWER_BAR_W);
+  powerBarWRef.current = POWER_BAR_W;
+  const setPowerFromBar = (x) => {
+    const frac = Math.max(0, Math.min(1, x / powerBarWRef.current));
     setPower(frac * MAX_POWER);
   };
-
   const powerBarResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => gameStateRef.current === 'aim',
       onMoveShouldSetPanResponder: () => gameStateRef.current === 'aim',
-      onPanResponderGrant: (evt) => setPowerFromBar(evt.nativeEvent.locationY),
-      onPanResponderMove: (evt) => setPowerFromBar(evt.nativeEvent.locationY),
+      onPanResponderGrant: (evt) => setPowerFromBar(evt.nativeEvent.locationX),
+      onPanResponderMove: (evt) => setPowerFromBar(evt.nativeEvent.locationX),
     })
   ).current;
 
   if (phase === 'setup') {
     return (
-      <View style={styles.screen} {...panHandlers}>
+      <View style={styles.screen}>
         <CoinBar />
-        <View style={styles.header}>
+        <View style={styles.setupHeader}>
           {onBack && (
             <TouchableOpacity onPress={onBack} style={styles.backBtn}>
               <Text style={styles.backText}>← Retour</Text>
@@ -411,43 +425,51 @@ export default function BilliardScreen({ onBack }) {
   const cueScreen = cue && !cue.pocketed ? toScreen(cue.pos.x, cue.pos.y) : null;
 
   return (
-    <View style={styles.screen} {...panHandlers}>
-      <CoinBar />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={backToSetup} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
+    <View style={styles.screen}>
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={backToSetup} style={styles.backBtnSmall}>
+          <Text style={styles.backText}>← {mode === 'solo' ? 'ENTRAÎNEMENT' : mode === 'bot' ? 'VS BOT' : 'PASS'}</Text>
         </TouchableOpacity>
-        <Text style={styles.modeBadge}>{mode === 'solo' ? 'ENTRAÎNEMENT' : mode === 'bot' ? 'VS BOT' : 'PASS & PLAY'}</Text>
+
+        {mode !== 'solo' && (
+          <Text style={styles.scoreText} numberOfLines={1}>
+            <Text style={currentPlayer === 1 ? styles.scoreActive : null}>J1{playerGroups[1] ? `(${playerGroups[1] === 'solid' ? 'Pl' : 'Ra'})` : ''}</Text>
+            {'  vs  '}
+            <Text style={currentPlayer === 2 ? styles.scoreActive : null}>{mode === 'bot' ? 'Bot' : 'J2'}{playerGroups[2] ? `(${playerGroups[2] === 'solid' ? 'Pl' : 'Ra'})` : ''}</Text>
+          </Text>
+        )}
+
+        <Text style={styles.status} numberOfLines={1}>{status}</Text>
+
+        <View style={styles.powerRow}>
+          <View style={[styles.powerBarWrap, { width: POWER_BAR_W }]} {...powerBarResponder.panHandlers}>
+            <View style={[styles.powerBarFill, { width: `${(power / MAX_POWER) * 100}%` }]} />
+            <Text style={styles.powerPct}>{Math.round((power / MAX_POWER) * 100)}%</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.fireBtn, !(aimDir && power > MAX_POWER * 0.05 && gameState === 'aim') && styles.fireBtnDisabled]}
+            onPress={confirmFire}
+            disabled={!(aimDir && power > MAX_POWER * 0.05 && gameState === 'aim')}
+          >
+            <Text style={styles.fireBtnText}>TIRER</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {mode !== 'solo' && (
-        <View style={styles.scoreRow}>
-          <Text style={[styles.scoreText, currentPlayer === 1 && styles.scoreActive]}>
-            Joueur 1 {playerGroups[1] ? `(${playerGroups[1] === 'solid' ? 'Pleines' : 'Rayées'})` : ''}
-          </Text>
-          <Text style={styles.vs}>VS</Text>
-          <Text style={[styles.scoreText, currentPlayer === 2 && styles.scoreActive]}>
-            {mode === 'bot' ? 'Bot' : 'Joueur 2'} {playerGroups[2] ? `(${playerGroups[2] === 'solid' ? 'Pleines' : 'Rayées'})` : ''}
-          </Text>
-        </View>
-      )}
-
-      <Text style={styles.status} numberOfLines={2}>{status}</Text>
-
-      <View style={styles.tableRow}>
-        <View style={[styles.tableArea, { width: TABLE_AREA_W, height: TABLE_AREA_H }]} {...tablePanResponder.panHandlers}>
-          <View style={styles.felt} pointerEvents="none" />
+      <View style={styles.tableWrap}>
+        <View style={[styles.tableArea, { width: tableAreaW, height: tableAreaH }]} {...tablePanResponder.panHandlers}>
+          <View style={[styles.felt, { left: railW, top: railW, right: railW, bottom: railW }]} pointerEvents="none" />
 
           {POCKETS.map((p, i) => {
             const s = toScreen(p.x, p.y);
-            const r = p.r * SCALE;
+            const r = p.r * scale;
             return <View key={i} pointerEvents="none" style={[styles.pocket, { left: s.x - r, top: s.y - r, width: r * 2, height: r * 2, borderRadius: r }]} />;
           })}
 
           {preview && cueScreen && (
             <>
               <AimLine from={cueScreen} to={toScreen(preview.end.x, preview.end.y)} />
-              <GhostBall center={toScreen(preview.end.x, preview.end.y)} r={BALL_R * SCALE} />
+              <GhostBall center={toScreen(preview.end.x, preview.end.y)} r={BALL_R * scale} />
               {preview.targetBall && (
                 <AimLine
                   from={toScreen(preview.targetBall.pos.x, preview.targetBall.pos.y)}
@@ -462,7 +484,7 @@ export default function BilliardScreen({ onBack }) {
           {balls.map((ball, i) => {
             if (ball.pocketed) return null;
             const s = toScreen(ball.pos.x, ball.pos.y);
-            const r = BALL_R * SCALE;
+            const r = BALL_R * scale;
             return (
               <View key={i} pointerEvents="none" style={[styles.ball, { left: s.x - r, top: s.y - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: ball.color }]}>
                 {ball.group === 'stripe' && <View style={[styles.stripeCenter, { width: r * 1.1, height: r * 1.1, borderRadius: r * 0.55 }]} />}
@@ -470,20 +492,6 @@ export default function BilliardScreen({ onBack }) {
               </View>
             );
           })}
-        </View>
-
-        <View style={styles.controlCol}>
-          <View style={[styles.powerBarWrap, { height: POWER_BAR_H }]} {...powerBarResponder.panHandlers}>
-            <View style={[styles.powerBarFill, { height: `${(power / MAX_POWER) * 100}%` }]} />
-          </View>
-          <Text style={styles.powerPct}>{Math.round((power / MAX_POWER) * 100)}%</Text>
-          <TouchableOpacity
-            style={[styles.fireBtn, !(aimDir && power > MAX_POWER * 0.05 && gameState === 'aim') && styles.fireBtnDisabled]}
-            onPress={confirmFire}
-            disabled={!(aimDir && power > MAX_POWER * 0.05 && gameState === 'aim')}
-          >
-            <Text style={styles.fireBtnText}>TIRER</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -544,11 +552,6 @@ function GhostBall({ center, r }) {
   );
 }
 
-// cuePos/dir en ESPACE JEU (pas écran) — c'était le bug : mélanger une
-// direction "espace jeu" avec des coordonnées "écran" directement, sans
-// passer par la même transformation de rotation que le reste (aim line,
-// billes, poches). Résultat : la queue semblait "de travers" (mauvais
-// angle) alors que la ligne de visée, elle, était correcte.
 function CueStick({ cuePos, dir, pullback, toScreen }) {
   const backGame = { x: cuePos.x - dir.x * pullback, y: cuePos.y - dir.y * pullback };
   const tipGame = { x: cuePos.x - dir.x * (pullback + 170), y: cuePos.y - dir.y * (pullback + 170) };
@@ -577,62 +580,60 @@ function CueStick({ cuePos, dir, pullback, toScreen }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg, padding: 12 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  screen: { flex: 1, backgroundColor: COLORS.bg },
+  setupHeader: { flexDirection: 'row', alignItems: 'center', padding: 12 },
   backBtn: { paddingVertical: 6, paddingRight: 12 },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
+  backText: { color: COLORS.muted, fontSize: 12, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
-  modeBadge: { color: COLORS.action, fontSize: 12, fontWeight: '800', marginLeft: 'auto' },
 
-  setupPanel: { marginTop: 8, gap: 12 },
+  setupPanel: { padding: 16, gap: 12 },
   modeCard: { backgroundColor: '#1c2032', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#2a2f45' },
   modeTitle: { color: COLORS.text, fontSize: 16, fontWeight: '800' },
   modeDesc: { color: COLORS.muted, fontSize: 12, marginTop: 4 },
 
-  scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 4 },
-  scoreText: { color: COLORS.muted, fontSize: 12, fontWeight: '700' },
-  scoreActive: { color: COLORS.action },
-  vs: { color: COLORS.muted, fontSize: 10 },
-
-  status: { color: COLORS.text, textAlign: 'center', fontSize: 12, fontWeight: '700', marginTop: 6, minHeight: 30 },
-
-  tableRow: { flexDirection: 'row', marginTop: 6, gap: 8, alignSelf: 'center' },
-  tableArea: { backgroundColor: COLORS.wood, borderRadius: 8, overflow: 'hidden' },
-  felt: {
-    position: 'absolute',
-    left: RAIL_W,
-    top: RAIL_W,
-    right: RAIL_W,
-    bottom: RAIL_W,
-    backgroundColor: COLORS.felt,
-    borderRadius: 4,
+  topBar: {
+    height: TOP_H,
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
   },
+  backBtnSmall: { paddingVertical: 4, paddingHorizontal: 6 },
+  scoreText: { color: COLORS.muted, fontSize: 11, fontWeight: '700' },
+  scoreActive: { color: COLORS.action },
+  status: { color: COLORS.text, fontSize: 11, fontWeight: '700', flex: 1, textAlign: 'center' },
+
+  powerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' },
+  powerBarWrap: {
+    height: 26,
+    backgroundColor: '#1c2032',
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: '#2a2f45',
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  powerBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#FF5252' },
+  powerPct: { color: COLORS.text, fontSize: 10, fontWeight: '800', textAlign: 'center' },
+  fireBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14 },
+  fireBtnDisabled: { opacity: 0.35 },
+  fireBtnText: { color: '#1a1300', fontSize: 12, fontWeight: '900' },
+
+  tableWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  tableArea: { backgroundColor: COLORS.wood, borderRadius: 8, overflow: 'hidden' },
+  felt: { position: 'absolute', backgroundColor: COLORS.felt, borderRadius: 4 },
   pocket: { position: 'absolute', backgroundColor: COLORS.pocket },
   ball: { position: 'absolute', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.35)' },
   stripeCenter: { position: 'absolute', backgroundColor: '#f4f1ea' },
   glossy: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.55)' },
 
-  controlCol: { width: CONTROL_W, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 4 },
-  powerBarWrap: {
-    width: 30,
-    backgroundColor: '#1c2032',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#2a2f45',
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  powerBarFill: { backgroundColor: '#FF5252', width: '100%' },
-  powerPct: { color: COLORS.muted, fontSize: 10, marginTop: 4, marginBottom: 10 },
-  fireBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 10 },
-  fireBtnDisabled: { opacity: 0.35 },
-  fireBtnText: { color: '#1a1300', fontSize: 12, fontWeight: '900' },
-
   endOverlay: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    top: '35%',
+    left: '25%',
+    right: '25%',
+    top: '30%',
     backgroundColor: '#1c2032',
     borderRadius: 16,
     padding: 20,
@@ -640,10 +641,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2a2f45',
   },
-  endTitle: { color: COLORS.action, fontSize: 20, fontWeight: '900' },
-  endReason: { color: COLORS.muted, fontSize: 12, marginTop: 6, textAlign: 'center' },
-  replayBtn: { marginTop: 16, backgroundColor: '#00E676', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 24 },
-  replayBtnText: { color: '#04120c', fontSize: 15, fontWeight: '800' },
-  changeModeBtn: { marginTop: 10, paddingVertical: 6 },
-  changeModeBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '700' },
+  endTitle: { color: COLORS.action, fontSize: 18, fontWeight: '900' },
+  endReason: { color: COLORS.muted, fontSize: 11, marginTop: 6, textAlign: 'center' },
+  replayBtn: { marginTop: 14, backgroundColor: '#00E676', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 20 },
+  replayBtnText: { color: '#04120c', fontSize: 14, fontWeight: '800' },
+  changeModeBtn: { marginTop: 8, paddingVertical: 6 },
+  changeModeBtnText: { color: COLORS.muted, fontSize: 11, fontWeight: '700' },
 });
