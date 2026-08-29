@@ -140,6 +140,27 @@ l'utilisateur à chaque fois plutôt que de le faire silencieusement.
 couleurs), mélange garanti résoluble par recherche best-first (vérifié
 <200ms même niveau 50), progression persistée (AsyncStorage nbMaxLevel).
 
-**Jeux restants côté PWA à porter :** Flappy Bird, Wordle.
+**Flappy Bird porté et jouable, avec les VRAIS graphismes** (fournis par
+le frère de l'utilisateur, via Drive puis re-uploadés directement dans le
+chat après échec de copie du base64 Drive — voir note ci-dessous). Physique
+par delta-temps identique au PWA, tuyaux texturés (corps carrelé
+verticalement + embouchure débordante), inclinaison de l'oiseau selon la
+vitesse. Pas de boutique de thèmes ni classement en V1.
 
-**Prochaine étape : porter Flappy Bird.**
+**⚠️ Piège technique important (29/08) : ne JAMAIS recopier à la main un
+fichier binaire (image) depuis le contenu base64 renvoyé par un outil
+(ex: Google Drive download_file_content) — le modèle peut silencieusement
+corrompre de longues chaînes base64 en les retapant, produisant un fichier
+qui "a l'air" correct mais est tronqué/faux. Vérifié : une image de 72KB
+recopiée à la main a donné un fichier de 2KB qui se décodait quand même en
+PNG valide (mais faux/tronqué) — piège silencieux, aucune erreur visible
+sans vérification de taille. Toujours vérifier la taille du fichier
+décodé contre la taille attendue avant de faire confiance à une copie
+base64. La méthode fiable : demander à l'utilisateur d'uploader le
+fichier DIRECTEMENT dans le chat (pas via Drive) — les fichiers uploadés
+atterrissent sur le disque sans repasser par une recopie manuelle de
+texte, donc sans risque de corruption.**
+
+**Jeux restants côté PWA à porter :** Wordle.
+
+**Prochaine étape : porter Wordle** (dernier jeu du PWA).
