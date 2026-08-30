@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import CoinBar from '../components/CoinBar';
+import ClickerScreen from './games/ClickerScreen';
 import MorpionScreen from './games/MorpionScreen';
 import Puissance4Screen from './games/Puissance4Screen';
 import Game2048Screen from './games/Game2048Screen';
@@ -16,6 +17,7 @@ import PingPongScreen from './games/PingPongScreen';
 import RuneTracerScreen from './games/RuneTracerScreen';
 
 const GAMES = [
+  { key: 'clicker', name: 'Élevage', status: 'Jouer', ready: true },
   { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
   { key: 'puissance4', name: 'Puissance 4', status: 'Jouer', ready: true },
   { key: '2048', name: '2048', status: 'Jouer', ready: true },
@@ -40,6 +42,9 @@ export default function JeuxScreen({ onGameOpenChange }) {
     if (onGameOpenChange) onGameOpenChange(!!openGame);
   }, [openGame, onGameOpenChange]);
 
+  if (openGame === 'clicker') {
+    return <ClickerScreen onBack={() => setOpenGame(null)} />;
+  }
   if (openGame === 'morpion') {
     return <MorpionScreen onBack={() => setOpenGame(null)} />;
   }
