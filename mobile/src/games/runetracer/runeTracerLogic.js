@@ -13,6 +13,26 @@
 // nécessitait 2 traits séparés, a été retirée pour cette raison : lever le
 // doigt entre les deux traits validait la manche prématurément avec la
 // moitié de la forme seulement).
+
+// Ajoute des points intermédiaires le long de chaque segment d'un tracé
+// polygonal (mêmes sommets, même forme géométrique — juste plus de points
+// pour la décrire). Nécessaire car les formes à très peu de sommets
+// (triangle, carré, losange, éclair) se comportaient différemment des
+// formes à courbe (cercle, étoile) dans les tests de calibration, les
+// rendant injustement plus dures à bien noter.
+function densify(points, pointsPerSegment = 12) {
+  const out = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    for (let k = 1; k <= pointsPerSegment; k++) {
+      const t = k / pointsPerSegment;
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    }
+  }
+  return out;
+}
+
 function circlePoints(n = 48) {
   const pts = [];
   for (let i = 0; i <= n; i++) {
@@ -25,17 +45,17 @@ function trianglePoints() {
   const a = { x: 0.5, y: 0.16 };
   const b = { x: 0.82, y: 0.78 };
   const c = { x: 0.18, y: 0.78 };
-  return [a, b, c, a];
+  return densify([a, b, c, a]);
 }
 function squarePoints() {
   const m = 0.18;
-  return [
+  return densify([
     { x: m, y: m },
     { x: 1 - m, y: m },
     { x: 1 - m, y: 1 - m },
     { x: m, y: 1 - m },
     { x: m, y: m },
-  ];
+  ]);
 }
 function starPoints() {
   const pts = [];
@@ -47,7 +67,7 @@ function starPoints() {
     const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
     pts.push({ x: 0.5 + Math.cos(a) * r, y: 0.5 + Math.sin(a) * r });
   }
-  return pts;
+  return densify(pts, 5);
 }
 function wavePoints(n = 40) {
   const pts = [];
@@ -58,13 +78,13 @@ function wavePoints(n = 40) {
   return pts;
 }
 function zigzagPoints() {
-  return [
+  return densify([
     { x: 0.2, y: 0.25 },
     { x: 0.5, y: 0.46 },
     { x: 0.2, y: 0.62 },
     { x: 0.5, y: 0.85 },
     { x: 0.8, y: 0.55 },
-  ];
+  ]);
 }
 function spiralPoints(n = 60) {
   const pts = [];
@@ -97,13 +117,13 @@ function crescentPoints(n = 30) {
   return pts;
 }
 function diamondPoints() {
-  return [
+  return densify([
     { x: 0.5, y: 0.14 },
     { x: 0.86, y: 0.5 },
     { x: 0.5, y: 0.86 },
     { x: 0.14, y: 0.5 },
     { x: 0.5, y: 0.14 },
-  ];
+  ]);
 }
 
 export const RUNES = [
@@ -172,7 +192,10 @@ function boundingDiag(points) {
 const SAMPLE_N = 96; // densité d'échantillonnage — augmentée de 48 à 96 pour réduire le bruit
 // de discrétisation résiduel qui pénalisait injustement les formes fermées bien tracées mais
 // démarrées à un autre point de la boucle (voir scoreTrace ci-dessous)
-const SCORE_K = 700; // légèrement réduit après l'augmentation de résolution (voir tests)
+const SCORE_K = 550; // assoupli après retour utilisateur : des tracés honnêtes avec coins
+// arrondis (naturel avec un doigt, notamment sur étoile/éclair aux angles vifs) tombaient à
+// 40-58% alors qu'ils "avaient l'air corrects" à l'œil — un tracé franchement mauvais doit
+// rester nettement pénalisé (~50 ou moins), mais un effort honnête doit se sentir récompensé
 
 function rotateArray(arr, k) {
   const n = arr.length;
