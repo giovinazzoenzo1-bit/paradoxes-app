@@ -99,31 +99,46 @@ export function botPickShot(balls, playerGroup) {
   if (candidates.length === 0) {
     candidates = balls.filter((b) => !b.pocketed && b.id !== 0);
   }
-  let best = null;
-  for (const ball of candidates) {
-    for (const pocket of POCKETS) {
-      const toPocket = { x: pocket.x - ball.pos.x, y: pocket.y - ball.pos.y };
-      const distToPocket = Math.hypot(toPocket.x, toPocket.y);
-      if (distToPocket < 1) continue;
-      const dirToPocket = { x: toPocket.x / distToPocket, y: toPocket.y / distToPocket };
-      const contact = { x: ball.pos.x - dirToPocket.x * BALL_R * 2, y: ball.pos.y - dirToPocket.y * BALL_R * 2 };
-      const toContact = { x: contact.x - cue.pos.x, y: contact.y - cue.pos.y };
-      const distToContact = Math.hypot(toContact.x, toContact.y);
-      if (distToContact < 1) continue;
-      const dirToContact = { x: toContact.x / distToContact, y: toContact.y / distToContact };
-      const cutAngle = Math.acos(Math.max(-1, Math.min(1, dirToContact.x * dirToPocket.x + dirToContact.y * dirToPocket.y)));
-      if (cutAngle > Math.PI * 0.42) continue;
-      const score = -distToContact * 0.6 - distToPocket * 0.4 - cutAngle * 260;
-      if (!best || score > best.score) best = { dirToContact, score };
+
+  // Recherche en 2 passes : d'abord les coupes "raisonnables" (< 63°,
+  // difficulté normale), et seulement si vraiment aucune n'existe, on
+  // assouplit et prend la meilleure option disponible quelle qu'elle soit
+  // — plutôt que d'abandonner et de viser la bille la plus proche au
+  // hasard sans se soucier d'une poche (c'était le vrai problème : le bot
+  // "oubliait" les règles/poches dès que la situation devenait un peu
+  // compliquée, d'où l'impression de bêtise).
+  const findBest = (maxCutAngle) => {
+    let found = null;
+    for (const ball of candidates) {
+      for (const pocket of POCKETS) {
+        const toPocket = { x: pocket.x - ball.pos.x, y: pocket.y - ball.pos.y };
+        const distToPocket = Math.hypot(toPocket.x, toPocket.y);
+        if (distToPocket < 1) continue;
+        const dirToPocket = { x: toPocket.x / distToPocket, y: toPocket.y / distToPocket };
+        const contact = { x: ball.pos.x - dirToPocket.x * BALL_R * 2, y: ball.pos.y - dirToPocket.y * BALL_R * 2 };
+        const toContact = { x: contact.x - cue.pos.x, y: contact.y - cue.pos.y };
+        const distToContact = Math.hypot(toContact.x, toContact.y);
+        if (distToContact < 1) continue;
+        const dirToContact = { x: toContact.x / distToContact, y: toContact.y / distToContact };
+        const cutAngle = Math.acos(Math.max(-1, Math.min(1, dirToContact.x * dirToPocket.x + dirToContact.y * dirToPocket.y)));
+        if (cutAngle > maxCutAngle) continue;
+        const score = -distToContact * 0.6 - distToPocket * 0.4 - cutAngle * 260;
+        if (!found || score > found.score) found = { dirToContact, score };
+      }
     }
-  }
+    return found;
+  };
+
+  const best = findBest(Math.PI * 0.35) || findBest(Math.PI * 0.49);
+
   if (best) {
-    const errA = (Math.random() - 0.5) * 0.09;
+    // Imprécision modérée (difficulté "normale", ni parfait ni maladroit).
+    const errA = (Math.random() - 0.5) * 0.07;
     const c = Math.cos(errA);
     const s = Math.sin(errA);
     return {
       dir: { x: best.dirToContact.x * c - best.dirToContact.y * s, y: best.dirToContact.x * s + best.dirToContact.y * c },
-      power: MAX_POWER * (0.55 + Math.random() * 0.25),
+      power: MAX_POWER * (0.6 + Math.random() * 0.22),
     };
   }
   let nearest = null;
