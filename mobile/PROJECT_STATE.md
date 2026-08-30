@@ -308,3 +308,29 @@ recalcul réactif.
    (fixée à la largeur du panneau) — probable cause du petit bug résiduel.
 
 **Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
+
+## Billard : session reprise après coupure de crédits (29/08) — 4 corrections
+1. **Bug réel trouvé et corrigé** : après une faute, le bot plaçait bien la
+   bille en main mais ne tirait ensuite JAMAIS — rien ne relançait
+   `maybeBotTurn()` après la fin du placement. Ajouté `maybeBotTurnRef` +
+   appel différé pour enchaîner placement → tir.
+2. **Disposition** : score/mode remontés dans une barre fine au-dessus de
+   la table (n'est plus dans le panneau latéral).
+3. **Jauge repassée à la verticale** (demande explicite, après l'avoir
+   mise à l'horizontale la fois précédente).
+4. **Vitesse d'animation recalibrée** : un tir à pleine puissance se
+   stabilisait en ~0,45s (quasi instantané, pas beau) car MAX_POWER/
+   FRICTION_AIR avaient été copiés tels quels du PWA sans tenir compte du
+   fait que notre moteur simplifié (position += vitesse par sous-étape)
+   n'a pas la même sémantique que la vraie friction interne de Matter.js.
+   Recalibré en gardant le même RATIO puissance/friction (donc la même
+   distance totale parcourue à puissance max) mais en ralentissant le
+   déroulé dans le temps : MAX_POWER 45→10, FRICTION_AIR 0.018→0.004 —
+   testé, un tir à pleine puissance dure maintenant ~3s.
+
+Effet de bord positif : panneau latéral réduit (96px au lieu de 190px) +
+score sorti du panneau → table plus large. Zones sûres (`useSafeAreaInsets`)
+ajoutées pour ne plus jamais rendre la table sous la barre de gestes
+système.
+
+**Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
