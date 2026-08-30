@@ -27,7 +27,7 @@ const COLORS = {
   action: '#f5c542',
 };
 
-const SHOW_DURATION = 1800;
+const SHOW_HOLD_DURATION = 450; // pause une fois la forme entièrement dessinée
 const FADE_DURATION = 350;
 const RATING_COLOR = {
   PARFAIT: '#00E676',
@@ -45,6 +45,17 @@ function coinsForAverage(avg) {
   return 0;
 }
 
+// Durée du dessin progressif proportionnelle à la complexité de la forme
+// (nombre de segments) — une forme simple (croix, triangle) se trace vite,
+// une forme plus riche (étoile, spirale) a plus de temps pour rester
+// lisible. Répond au retour "formes pas trop compliquées" : au moins
+// autant de temps que nécessaire pour bien la mémoriser.
+function dimsForRune(rune) {
+  const segments = rune.points.length;
+  const duration = Math.max(1100, Math.min(2600, 700 + segments * 22));
+  return { duration };
+}
+
 export default function RuneTracerScreen({ onBack }) {
   const { addCoinsLimited } = useCoins();
   const panHandlers = useBackGesture(onBack);
@@ -59,6 +70,8 @@ export default function RuneTracerScreen({ onBack }) {
 
   const phaseRef = useRef('setup');
   phaseRef.current = phase;
+  const runeIndexRef = useRef(0);
+  runeIndexRef.current = runeIndex;
   const userPointsRef = useRef([]);
   const timeoutRef = useRef(null);
   const gameIdRef = useRef(0);
@@ -75,19 +88,40 @@ export default function RuneTracerScreen({ onBack }) {
     }
   };
 
+  const revealProgressRef = useRef(0);
+  const revealRafRef = useRef(null);
+  const revealStartRef = useRef(0);
+
+  // Anime le dessin progressif de la forme (comme le vrai jeu de référence :
+  // la forme se trace elle-même trait par trait, plutôt que d'apparaître
+  // d'un coup) — demande explicite de l'utilisateur.
+  const animateReveal = useCallback(() => {
+    const dims = dimsForRune(RUNES[runeIndexRef.current]);
+    const t = Math.min(1, (performance.now() - revealStartRef.current) / dims.duration);
+    revealProgressRef.current = t;
+    bump();
+    if (t < 1) {
+      revealRafRef.current = requestAnimationFrame(animateReveal);
+    } else {
+      timeoutRef.current = setTimeout(() => {
+        setPhase('fading');
+        timeoutRef.current = setTimeout(() => setPhase('drawing'), FADE_DURATION);
+      }, SHOW_HOLD_DURATION);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const startRune = useCallback((index) => {
     userPointsRef.current = [];
     setLastScore(null);
     setRuneIndex(index);
     setPhase('showing');
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      setPhase('fading');
-      timeoutRef.current = setTimeout(() => {
-        setPhase('drawing');
-      }, FADE_DURATION);
-    }, SHOW_DURATION);
-  }, []);
+    if (revealRafRef.current) cancelAnimationFrame(revealRafRef.current);
+    revealProgressRef.current = 0;
+    revealStartRef.current = performance.now();
+    revealRafRef.current = requestAnimationFrame(animateReveal);
+  }, [animateReveal]);
 
   const startGame = useCallback(() => {
     gameIdRef.current++;
@@ -97,6 +131,7 @@ export default function RuneTracerScreen({ onBack }) {
 
   const backToSetup = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (revealRafRef.current) cancelAnimationFrame(revealRafRef.current);
     gameIdRef.current++;
     setPhase('setup');
   };
@@ -104,7 +139,7 @@ export default function RuneTracerScreen({ onBack }) {
   const finishStroke = useCallback(() => {
     if (phaseRef.current !== 'drawing') return;
     const rune = RUNES[runeIndex];
-    const score = scoreTrace(rune.points, userPointsRef.current);
+    const score = scoreTrace(rune.points, userPointsRef.current, rune.closed);
     setLastScore(score);
     setScores((prev) => [...prev, score]);
     setPhase('result');
@@ -231,7 +266,7 @@ export default function RuneTracerScreen({ onBack }) {
 
           {showShape && (
             <View pointerEvents="none" style={{ opacity: phase === 'fading' ? 0.15 : 1 }}>
-              {segmentsFor(rune.points, canvasSize).map((seg, i) => (
+              {segmentsFor(revealedPoints(rune.points, revealProgressRef.current), canvasSize).map((seg, i) => (
                 <Segment key={i} {...seg} color={COLORS.drawn} thickness={5} glow />
               ))}
             </View>
@@ -269,6 +304,31 @@ export default function RuneTracerScreen({ onBack }) {
       )}
     </View>
   );
+}
+
+// Retourne la portion du tracé de référence correspondant à la fraction
+// "progress" (0..1) de sa LONGUEUR (pas juste du nombre de points, sinon
+// des segments très courts/longs feraient avancer le dessin de façon
+// irrégulière) — donne l'effet "la forme se trace elle-même" demandé.
+function revealedPoints(points, progress) {
+  if (progress >= 1) return points;
+  if (progress <= 0) return [points[0]];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) total += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+  const target = total * progress;
+  const result = [points[0]];
+  let acc = 0;
+  for (let i = 1; i < points.length; i++) {
+    const segLen = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+    if (acc + segLen >= target) {
+      const t = segLen < 1e-9 ? 0 : (target - acc) / segLen;
+      result.push({ x: points[i - 1].x + (points[i].x - points[i - 1].x) * t, y: points[i - 1].y + (points[i].y - points[i - 1].y) * t });
+      return result;
+    }
+    acc += segLen;
+    result.push(points[i]);
+  }
+  return points;
 }
 
 function segmentsFor(points, size) {

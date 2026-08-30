@@ -99,16 +99,16 @@ function diamondPoints() {
 }
 
 export const RUNES = [
-  { id: 'halo', name: 'Halo', desc: 'Cercle de garde', difficulty: 'DÉBUTANT', points: circlePoints() },
-  { id: 'flamme', name: 'Flamme', desc: 'Pointe ascendante', difficulty: 'DÉBUTANT', points: trianglePoints() },
-  { id: 'bastion', name: 'Bastion', desc: "Rempart d'angles droits", difficulty: 'DÉBUTANT', points: squarePoints() },
-  { id: 'croisee', name: 'Croisée', desc: 'Intersection simple', difficulty: 'DÉBUTANT', points: crossPoints() },
-  { id: 'joyau', name: 'Joyau', desc: 'Facettes en losange', difficulty: 'INTERMÉDIAIRE', points: diamondPoints() },
-  { id: 'maree', name: 'Marée', desc: 'Ondulation continue', difficulty: 'INTERMÉDIAIRE', points: wavePoints() },
-  { id: 'eclair', name: 'Éclair', desc: 'Angles vifs enchaînés', difficulty: 'INTERMÉDIAIRE', points: zigzagPoints() },
-  { id: 'etincelle', name: 'Étincelle', desc: 'Pointes multiples', difficulty: 'AVANCÉ', points: starPoints() },
-  { id: 'eternite', name: 'Éternité', desc: 'Boucle sans fin', difficulty: 'AVANCÉ', points: infinityPoints() },
-  { id: 'tourbillon', name: 'Tourbillon', desc: 'Spirale resserrée', difficulty: 'AVANCÉ', points: spiralPoints() },
+  { id: 'halo', name: 'Halo', desc: 'Cercle de garde', difficulty: 'DÉBUTANT', points: circlePoints(), closed: true },
+  { id: 'flamme', name: 'Flamme', desc: 'Pointe ascendante', difficulty: 'DÉBUTANT', points: trianglePoints(), closed: true },
+  { id: 'bastion', name: 'Bastion', desc: "Rempart d'angles droits", difficulty: 'DÉBUTANT', points: squarePoints(), closed: true },
+  { id: 'croisee', name: 'Croisée', desc: 'Intersection simple', difficulty: 'DÉBUTANT', points: crossPoints(), closed: false },
+  { id: 'joyau', name: 'Joyau', desc: 'Facettes en losange', difficulty: 'INTERMÉDIAIRE', points: diamondPoints(), closed: true },
+  { id: 'maree', name: 'Marée', desc: 'Ondulation continue', difficulty: 'INTERMÉDIAIRE', points: wavePoints(), closed: false },
+  { id: 'eclair', name: 'Éclair', desc: 'Angles vifs enchaînés', difficulty: 'INTERMÉDIAIRE', points: zigzagPoints(), closed: false },
+  { id: 'etincelle', name: 'Étincelle', desc: 'Pointes multiples', difficulty: 'AVANCÉ', points: starPoints(), closed: true },
+  { id: 'eternite', name: 'Éternité', desc: 'Boucle sans fin', difficulty: 'AVANCÉ', points: infinityPoints(), closed: true },
+  { id: 'tourbillon', name: 'Tourbillon', desc: 'Spirale resserrée', difficulty: 'AVANCÉ', points: spiralPoints(), closed: false },
 ];
 
 function pathLength(points) {
@@ -161,27 +161,50 @@ function boundingDiag(points) {
   return Math.hypot(maxX - minX, maxY - minY) || 1;
 }
 
-const SAMPLE_N = 48;
-const SCORE_K = 850; // constante de sévérité, calibrée empiriquement contre l'exemple de référence (main qui tremble + forme déformée ≈ 55-65%)
+const SAMPLE_N = 96; // densité d'échantillonnage — augmentée de 48 à 96 pour réduire le bruit
+// de discrétisation résiduel qui pénalisait injustement les formes fermées bien tracées mais
+// démarrées à un autre point de la boucle (voir scoreTrace ci-dessous)
+const SCORE_K = 700; // légèrement réduit après l'augmentation de résolution (voir tests)
+
+function rotateArray(arr, k) {
+  const n = arr.length;
+  const shift = ((k % n) + n) % n;
+  return arr.slice(shift).concat(arr.slice(0, shift));
+}
+
+function avgDist(a, b) {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) sum += Math.hypot(a[i].x - b[i].x, a[i].y - b[i].y);
+  return sum / a.length;
+}
 
 // Compare le tracé du joueur (userPoints, mêmes coordonnées normalisées
-// [0,1] que la forme de référence) à la forme de référence. Essaie les 2
-// sens de parcours (le joueur peut tracer dans l'ordre inverse) et garde
-// le meilleur score. Retourne un entier 0-100.
-export function scoreTrace(shapePoints, userPoints) {
+// [0,1] que la forme de référence) à la forme de référence.
+// - Essaie les 2 sens de parcours (le joueur peut tracer dans l'ordre
+//   inverse).
+// - Pour les formes FERMÉES (cercle, étoile, infini...), essaie aussi
+//   plusieurs points de départ le long de la boucle : rien n'oblige le
+//   joueur à commencer exactement où la forme de référence "commence"
+//   (bug corrigé — un tracé par ailleurs parfait, mais démarré à un autre
+//   endroit de la boucle, pouvait scorer 0% car chaque point du tracé
+//   était comparé au mauvais point de référence).
+// Retourne un entier 0-100.
+export function scoreTrace(shapePoints, userPoints, isClosed) {
   if (!userPoints || userPoints.length < 2) return 0;
   const ref = resample(shapePoints, SAMPLE_N);
   const usr = resample(userPoints, SAMPLE_N);
   const usrRev = [...usr].reverse();
   const diag = boundingDiag(shapePoints);
 
-  const avgDist = (a, b) => {
-    let sum = 0;
-    for (let i = 0; i < SAMPLE_N; i++) sum += Math.hypot(a[i].x - b[i].x, a[i].y - b[i].y);
-    return sum / SAMPLE_N;
-  };
+  let best = Infinity;
+  if (isClosed) {
+    for (let off = 0; off < SAMPLE_N; off++) {
+      best = Math.min(best, avgDist(ref, rotateArray(usr, off)), avgDist(ref, rotateArray(usrRev, off)));
+    }
+  } else {
+    best = Math.min(avgDist(ref, usr), avgDist(ref, usrRev));
+  }
 
-  const best = Math.min(avgDist(ref, usr), avgDist(ref, usrRev));
   const normalized = best / diag;
   const score = Math.round(Math.max(0, Math.min(100, 100 - normalized * SCORE_K)));
   return score;
