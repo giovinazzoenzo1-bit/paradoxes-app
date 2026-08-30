@@ -557,3 +557,32 @@ progressivement (comme le jeu de référence), au lieu d'apparaître d'un
 coup. Durée proportionnelle à la complexité de la forme (plus de segments
 = plus de temps pour la mémoriser), répond au retour "formes pas trop
 compliquées" sans avoir à refondre les formes elles-mêmes.
+
+## Traceur de Runes : le VRAI bug de score trouvé (29/08, suite)
+6 captures d'écran fournies par l'utilisateur ont révélé le vrai problème :
+Halo (rune 1) scorait juste (76%), mais TOUTES les runes suivantes
+donnaient des scores erratiques (Marée à 0% malgré un tracé quasi-parfait
+visuellement, Flamme 23%, Bastion 56%, Joyau 40%).
+
+**Cause racine : exactement le même piège de fermeture figée déjà
+rencontré (et corrigé) sur le billard et le ping-pong, manqué cette fois
+au premier jet.** `finishStroke` dépendait de `runeIndex` (donc recréée à
+chaque rune), mais le `PanResponder` du dessin est créé UNE SEULE FOIS via
+`useRef` — son `onPanResponderRelease` gardait pour toujours la version de
+`finishStroke` de la TOUTE PREMIÈRE rune. Résultat : à partir de la 2e
+rune, le tracé du joueur était comparé à la forme de la RUNE 1 (Halo,
+cercle) au lieu de sa propre forme — Halo scorait juste car c'était
+justement la rune 1. Corrigé avec `finishStrokeRef`, même remède que sur
+les jeux précédents. **Ce piège doit être vérifié systématiquement pour
+CHAQUE nouveau jeu utilisant un PanResponder mémorisé — ne pas se fier au
+fait qu'il a déjà été corrigé ailleurs, le revérifier à chaque fois.**
+
+**Autres corrections demandées :**
+- Croix ("Croisée") retirée : nécessitait 2 traits séparés (lever le
+  doigt entre la barre verticale et horizontale), incompatible avec le
+  principe du jeu (un seul trait continu — lever le doigt déclenche la fin
+  du tracé). Remplacée par "Croissant" (arc simple, un seul trait).
+- Toutes les formes réduites en taille (cercle 0.38→0.32 de rayon, etc.)
+  et la spirale simplifiée (4,2→3 tours), en prenant Marée comme référence
+  de la "bonne taille" (citée explicitement par l'utilisateur comme
+  exemple à suivre).
