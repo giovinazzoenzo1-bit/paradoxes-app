@@ -434,3 +434,31 @@ mondial fictif.
 Les 10 du menu principal (Morpion, Puissance 4, 2048, Memory, Snake,
 Puzzle 15, Sudoku, Nuts and Bolts, Flappy Bird, Wordle) + Billard +
 Ping-pong.
+
+## Boutique de raquettes ajoutée au Ping-pong + style néon (29/08)
+Suite à des captures d'écran de référence montrant le style attendu
+(carte néon violette, badges, bouton retour circulaire lumineux, boutique
+de skins), ajouté ce qui manquait :
+
+- **8 skins de raquette** (identiques à coins-config.js `pingpongPaddles`),
+  cosmétique uniquement, persistés via AsyncStorage (`ppOwnedPaddles`/
+  `ppSelectedPaddle`), change la couleur de la raquette du joueur en jeu.
+- Nouvel écran boutique (bouton flottant sur l'écran de configuration).
+- Style visuel retravaillé pour ce jeu spécifiquement (carte néon violette,
+  boutons à emoji, bouton retour circulaire lumineux, carte de score
+  colorée TOI/BOT) — chaque jeu garde sa propre palette, pas de design
+  system unifié (choix déjà assumé, voir plus haut).
+
+**Vrai bug pré-existant corrigé au passage** : `spendCoins` dans
+`CoinsContext.js` n'avait encore jamais été utilisé par aucun jeu jusqu'à
+cette boutique. Il retournait TOUJOURS `true` (même sans assez de pièces)
+à cause d'une course entre un `setState` asynchrone et une relecture
+immédiate d'AsyncStorage. Corrigé en vérifiant directement contre l'état
+`coins` avant de dépenser — c'était sur le point de devenir un vrai bug
+bloquant pour la toute première fonctionnalité qui en dépendait.
+
+## Bilan : les 12 jeux du PWA sont portés, Ping-pong a maintenant sa boutique
+Reste ouvert (à discuter) : les autres jeux ayant des boutiques/features
+similaires dans le PWA (ex. Flappy Bird avait une boutique de thèmes de
+fond, explicitement non portée en V1) pourraient faire l'objet de la même
+demande plus tard.
