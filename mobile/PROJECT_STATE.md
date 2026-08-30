@@ -745,3 +745,20 @@ construire l'écran.
 
 **Bilan : 15 jeux au total maintenant** (13 précédents + Traceur de
 Runes + Élevage).
+
+## Options : 2 boutons de remise à zéro ajoutés (29/08)
+- **"Réinitialiser Élevage"** : efface uniquement la sauvegarde du
+  clicker (une seule clé AsyncStorage, exportée comme constante nommée
+  depuis ClickerScreen.js pour ne pas dupliquer la chaîne littérale dans
+  2 fichiers).
+- **"Réinitialiser toute l'appli"** : efface TOUT le stockage local via
+  `AsyncStorage.getAllKeys()` + `multiRemove` plutôt que d'énumérer
+  chaque clé de chaque jeu à la main — plus fiable, et couvre
+  automatiquement tout futur jeu sans qu'il faille penser à mettre cette
+  fonction à jour à chaque nouvel ajout. Appelle ensuite
+  `resetCoins()` du `CoinsContext` existant pour remettre aussi l'état
+  des pièces EN MÉMOIRE (pas juste le stockage) à 0 immédiatement, sans
+  attendre un redémarrage de l'appli.
+
+Les deux actions sont irréversibles → confirmation obligatoire
+(`Alert.alert` natif, bouton en style "destructive") avant exécution.
