@@ -12,6 +12,7 @@ import NutsBoltsScreen from './games/NutsBoltsScreen';
 import FlappyBirdScreen from './games/FlappyBirdScreen';
 import WordleScreen from './games/WordleScreen';
 import BilliardScreen from './games/BilliardScreen';
+import PingPongScreen from './games/PingPongScreen';
 
 const GAMES = [
   { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
@@ -25,6 +26,7 @@ const GAMES = [
   { key: 'flappybird', name: 'Flappy Bird', status: 'Jouer', ready: true },
   { key: 'wordle', name: 'Wordle', status: 'Jouer', ready: true },
   { key: 'billiard', name: 'Billard', status: 'Jouer', ready: true },
+  { key: 'pingpong', name: 'Ping-pong', status: 'Jouer', ready: true },
 ];
 
 export default function JeuxScreen({ onGameOpenChange }) {
@@ -68,6 +70,9 @@ export default function JeuxScreen({ onGameOpenChange }) {
   }
   if (openGame === 'billiard') {
     return <BilliardScreen onBack={() => setOpenGame(null)} />;
+  }
+  if (openGame === 'pingpong') {
+    return <PingPongScreen onBack={() => setOpenGame(null)} />;
   }
 
   return (
