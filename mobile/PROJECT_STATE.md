@@ -696,3 +696,21 @@ cumulé, CASTS à 3 points, minuteur ~5s) :
   rouge sur sa capture) — somme littérale des meilleurs % de chaque rune
   terminée (PAS une moyenne), conformément à la demande explicite
   "score=%+%" et au format "SCORE 160" du jeu de référence.
+
+## Traceur de Runes : minuteur en bas + chances liées au temps uniquement (29/08, suite)
+2 précisions importantes de l'utilisateur :
+1. **Minuteur déplacé en bas**, sous le canevas, avec une barre qui se
+   vide (comme le jeu de référence) au lieu d'un petit texte en haut à
+   droite.
+2. **Correction de comportement importante** : les 3 chances ne se
+   déclenchent QUE si le joueur ne termine pas son tracé dans les 6
+   secondes — PAS comme un bouton "Réessayer" volontaire s'il n'aime pas
+   son résultat. Un tracé terminé à temps (le joueur lève le doigt) est
+   désormais définitif et immédiat (vers "Suivant", jamais de bouton
+   réessayer). Seul un temps écoulé consomme une chance et relance
+   automatiquement le cycle d'affichage de la forme pour un nouvel essai.
+   Séparé l'ancien gestionnaire unique `finishStroke` en deux chemins
+   distincts (`handleRelease` pour une fin volontaire à temps,
+   `handleTimeout` pour un échec par manque de temps) pour que cette
+   distinction soit structurelle plutôt que masquée par un simple
+   drapeau.
