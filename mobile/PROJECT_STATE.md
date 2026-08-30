@@ -586,3 +586,26 @@ fait qu'il a déjà été corrigé ailleurs, le revérifier à chaque fois.**
   et la spirale simplifiée (4,2→3 tours), en prenant Marée comme référence
   de la "bonne taille" (citée explicitement par l'utilisateur comme
   exemple à suivre).
+
+## Traceur de Runes : recalibration (29/08, suite) — pas un bug cette fois
+4 nouvelles captures fournies. Contrairement au lot précédent, **pas de
+bug algorithmique** cette fois (le correctif de fermeture figée a tenu :
+les scores variaient bien selon la vraie qualité du tracé). Mais la
+sévérité restait trop dure pour un ressenti satisfaisant : des tracés
+honnêtes avec coins naturellement arrondis (étoile, éclair) tombaient à
+51-58% alors qu'ils "semblaient corrects" à l'œil.
+
+**2 changements :**
+1. Sévérité assouplie (`SCORE_K` 700→550) — vérifié qu'un tracé
+   franchement mauvais reste bien pénalisé (~9-50%) tandis qu'un effort
+   honnête avec l'imprécision naturelle du doigt atteint maintenant 90%+
+   au lieu de 40-65%.
+2. **Vrai problème trouvé en calibrant** : les formes à très peu de
+   sommets (triangle : 4 points, carré/losange : 5 points) réagissaient
+   très différemment des formes à courbe (cercle : 49 points) face à la
+   même imprécision de tracé, chaque point ayant un poids disproportionné
+   sur un si petit nombre. Ajouté un helper `densify()` (ajoute des points
+   le long de chaque segment droit, même géométrie, juste plus de points
+   pour la décrire) appliqué à triangle/carré/losange/éclair/étoile —
+   toutes les formes se comportent maintenant de façon cohérente,
+   indépendamment de leur nombre de sommets d'origine.
