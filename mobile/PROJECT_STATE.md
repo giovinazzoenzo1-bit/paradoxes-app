@@ -503,3 +503,29 @@ ne jamais supposer qu'un `setTimeout(0)` planifié depuis l'intérieur de la
 boucle s'exécutera avant la frame suivante — toujours poser un verrou
 explicite si une action a besoin d'être "acquittée" avant de pouvoir se
 redéclencher.
+
+## Nouveau jeu : Traceur de Runes (29/08) — PAS un port, création originale
+Inspiré du mécanisme observé dans un jeu tiers (Hoora / "Spell Tracer") :
+une forme s'affiche, disparaît, le joueur la reproduit du doigt, score =
+% de ressemblance. **Univers et noms 100% originaux** (Halo, Flamme,
+Bastion, Croisée, Joyau, Marée, Éclair, Étincelle, Éternité, Tourbillon) —
+PAS les noms de sorts Harry Potter ("Nox" etc.) vus dans la capture de
+référence, protégés par le droit d'auteur. Le mécanisme de jeu en
+lui-même n'est pas protégeable, mais les noms/l'univers de la référence
+l'étaient.
+
+- 10 formes géométriques générées par code (cercle, triangle, carré,
+  étoile, vague, zigzag, spirale, infini, croix, losange).
+- Algorithme de score : rééchantillonnage des 2 tracés (référence + joueur)
+  en points équidistants le long de leur longueur, comparaison dans les 2
+  sens de parcours (le joueur peut tracer à l'envers), distance normalisée
+  par la diagonale de la forme. **Calibré empiriquement contre l'exemple
+  de la capture d'écran fournie par l'utilisateur** (un cercle tracé à main
+  levée, visiblement approximatif, notait 59% "SLOPPY") en testant contre
+  des tracés synthétiques bruités jusqu'à obtenir un résultat cohérent
+  dans cette fourchette.
+- Pièces selon la moyenne des 10 runes (système de plafond horaire existant).
+- Toucher : leçons du billard/ping-pong appliquées dès le départ (mesure
+  absolue + gestureState, refs pour les callbacks PanResponder).
+
+**Bilan : 13 jeux au total maintenant (12 portés du PWA + ce nouveau).**
