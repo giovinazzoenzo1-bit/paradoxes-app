@@ -484,3 +484,22 @@ demande plus tard.
 
 **Bilan à jour : les 12 jeux du PWA sont portés, avec Ping-pong et son
 système de raquettes/boutique désormais peaufinés.**
+
+## Ping-pong : score qui avançait de 2 en 2 (29/08)
+Course entre deux tâches asynchrones : après un point, `doServe()` (qui
+replace la balle en zone neutre) était planifié via `setTimeout(0)`, mais
+la boucle d'animation continuait immédiatement via `requestAnimationFrame`
+sans aucune garantie que le `setTimeout` s'exécute avant la frame
+suivante. Si la frame suivante arrivait en premier, la balle était encore
+à sa position "sortie", `checkScore` détectait la MÊME sortie une
+deuxième fois, et le point était compté deux fois.
+
+Corrigé avec un verrou (`pointScoredRef`) : dès qu'un point est détecté,
+on bloque toute nouvelle vérification de score jusqu'à ce que `doServe()`
+ait réellement remis la balle en jeu (et donc levé le verrou).
+
+**Piège à retenir pour tout futur jeu à boucle `requestAnimationFrame`** :
+ne jamais supposer qu'un `setTimeout(0)` planifié depuis l'intérieur de la
+boucle s'exécutera avant la frame suivante — toujours poser un verrou
+explicite si une action a besoin d'être "acquittée" avant de pouvoir se
+redéclencher.
