@@ -31,7 +31,7 @@ const COLORS = {
   good: '#00E676',
 };
 
-const STORAGE_KEY = 'clicker:state:v1';
+export const STORAGE_KEY = 'clicker:state:v1';
 
 function formatNum(n) {
   if (n < 1000) return Math.floor(n).toString();
