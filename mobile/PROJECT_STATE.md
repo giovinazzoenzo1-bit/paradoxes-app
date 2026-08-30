@@ -361,3 +361,23 @@ système.
    l'entrée, restaurée à la sortie).
 
 **Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
+
+## Barre système masquée pour toute l'appli + vrai bug de la jauge trouvé (29/08)
+- **Barre de navigation Android masquée globalement** (déplacé de
+  BilliardScreen vers App.js, `AppContent`) — plus d'immersion sur toute
+  l'appli, pas seulement le billard. `overlay-swipe` permet quand même de
+  la faire réapparaître d'un geste bord d'écran si besoin.
+- **Le vrai bug de la jauge (toujours pas résolu après la correction
+  précédente)** : la jauge ne fait que 34px de large, donc pendant un
+  glissement vertical le doigt sort très facilement de sa zone tactile —
+  exactement le même piège RN que celui déjà trouvé et corrigé pour la
+  visée sur la table (`evt.nativeEvent.locationY` peu fiable hors des
+  limites de la vue). Corrigé avec exactement le même remède : position
+  absolue mesurée (`ref` + `.measure()`) + `gestureState.moveY` au lieu de
+  `locationY`. Ajouté un `hitSlop` généreux en plus pour plus de tolérance.
+  **Ce pattern (mesure + gestureState) est maintenant la référence pour
+  TOUT geste de glissement dans une zone tactile étroite — à appliquer
+  d'emblée pour tout futur slider/jauge, pas seulement en réaction à un
+  bug remonté.**
+
+**Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
