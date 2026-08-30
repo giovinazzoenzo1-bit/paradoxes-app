@@ -14,9 +14,10 @@
 // Animation de frappe : la queue recule (visible pendant la visée) puis
 // fonce vers la bille en ~130ms avant que le tir ne parte réellement.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions, BackHandler } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions, BackHandler, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ScreenOrientation from 'expo-screen-orientation';
+import * as NavigationBar from 'expo-navigation-bar';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
 import {
@@ -51,8 +52,8 @@ const COLORS = {
 };
 
 const COINS_WIN = 5;
-const PANEL_W = 96; // panneau étroit : juste la jauge verticale + TIRER
-const TOP_BAR_H = 44; // barre fine du haut : retour/mode/score
+const PANEL_W = 82; // panneau étroit : juste la jauge verticale + TIRER
+const TOP_BAR_H = 34; // barre fine du haut : retour/mode/score
 const STRIKE_DURATION = 130;
 
 export default function BilliardScreen({ onBack }) {
@@ -62,8 +63,17 @@ export default function BilliardScreen({ onBack }) {
 
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+    if (Platform.OS === 'android') {
+      // Masque la barre de navigation/tâche système (gênante en paysage,
+      // notamment la "taskbar" Samsung One UI) pendant le billard.
+      NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
+      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+    }
     return () => {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+      if (Platform.OS === 'android') {
+        NavigationBar.setVisibilityAsync('visible').catch(() => {});
+      }
     };
   }, []);
 
@@ -103,8 +113,8 @@ export default function BilliardScreen({ onBack }) {
   // Table non tournée (vrai paysage) : TABLE_W (long axe) = largeur
   // dispo, TABLE_H (court axe) = hauteur dispo. Zones sûres (insets)
   // soustraites pour ne jamais déborder sous la barre de gestes système.
-  const availW = WIN_W - PANEL_W - insets.left - insets.right - 16;
-  const availH = WIN_H - TOP_BAR_H - insets.top - insets.bottom - 12;
+  const availW = WIN_W - PANEL_W - insets.left - insets.right - 8;
+  const availH = WIN_H - TOP_BAR_H - insets.top - insets.bottom - 6;
   let tableAreaW = availW;
   let tableAreaH = tableAreaW * (TABLE_H / TABLE_W);
   if (tableAreaH > availH) {
@@ -397,6 +407,28 @@ export default function BilliardScreen({ onBack }) {
     setAimDir({ x: dx / len, y: dy / len });
   };
 
+  // Position absolue (écran entier) de la table, mesurée après chaque
+  // layout — nécessaire car evt.nativeEvent.locationX/Y devient erratique
+  // dès que le doigt sort des limites de la vue touchée (bug connu de RN,
+  // c'était la cause de la visée "n'importe quoi" hors de la table).
+  // gestureState.moveX/moveY (coordonnées ABSOLUES, toujours fiables même
+  // hors-limites) moins cette origine donnent la position correcte.
+  const tableViewRef = useRef(null);
+  const tableOriginRef = useRef({ x: 0, y: 0 });
+  const handleTableLayout = () => {
+    if (tableViewRef.current && tableViewRef.current.measure) {
+      tableViewRef.current.measure((x, y, w, h, pageX, pageY) => {
+        tableOriginRef.current = { x: pageX, y: pageY };
+      });
+    }
+  };
+  const posFromGesture = (gestureState) => {
+    const d = dimsRef.current;
+    const localX = gestureState.moveX - tableOriginRef.current.x;
+    const localY = gestureState.moveY - tableOriginRef.current.y;
+    return screenToGame(localX, localY, d.scale, d.tableAreaW, d.tableAreaH, false);
+  };
+
   const tablePanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => {
@@ -407,24 +439,21 @@ export default function BilliardScreen({ onBack }) {
         const canAct = !(modeRef.current === 'bot' && currentPlayerRef.current === 2);
         return canAct && gameStateRef.current === 'aim';
       },
-      onPanResponderGrant: (evt) => {
-        const d = dimsRef.current;
+      onPanResponderGrant: (evt, gestureState) => {
         if (gameStateRef.current === 'placing') return;
-        const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, d.scale, d.tableAreaW, d.tableAreaH, false);
+        const pos = posFromGesture(gestureState);
         aimingActiveRef.current = true;
         updateAim(pos);
       },
-      onPanResponderMove: (evt) => {
+      onPanResponderMove: (evt, gestureState) => {
         if (!aimingActiveRef.current) return;
-        const d = dimsRef.current;
-        const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, d.scale, d.tableAreaW, d.tableAreaH, false);
+        const pos = posFromGesture(gestureState);
         updateAim(pos);
       },
-      onPanResponderRelease: (evt) => {
+      onPanResponderRelease: (evt, gestureState) => {
         aimingActiveRef.current = false;
         if (gameStateRef.current === 'placing') {
-          const d = dimsRef.current;
-          const pos = screenToGame(evt.nativeEvent.locationX, evt.nativeEvent.locationY, d.scale, d.tableAreaW, d.tableAreaH, false);
+          const pos = posFromGesture(gestureState);
           tryPlaceCue(pos);
         }
       },
@@ -435,8 +464,14 @@ export default function BilliardScreen({ onBack }) {
   // à la table) — l'ancien couplage à une dimension de la table provoquait
   // un léger bug visuel/tactile résiduel signalé par l'utilisateur.
   const POWER_BAR_H = Math.max(120, availH - 70);
+  const powerBarHRef = useRef(POWER_BAR_H);
+  powerBarHRef.current = POWER_BAR_H;
+  // Même piège que gameState/mode/currentPlayer plus haut : le PanResponder
+  // est créé une seule fois via useRef, donc son callback doit lire la
+  // hauteur de la jauge via une ref à jour, pas la constante figée du
+  // premier rendu (c'était le bug remonté après le passage à la verticale).
   const setPowerFromBar = (y) => {
-    const frac = Math.max(0, Math.min(1, 1 - y / POWER_BAR_H));
+    const frac = Math.max(0, Math.min(1, 1 - y / powerBarHRef.current));
     setPower(frac * MAX_POWER);
   };
   const powerBarResponder = useRef(
@@ -499,24 +534,35 @@ export default function BilliardScreen({ onBack }) {
   return (
     <View style={styles.screen}>
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={backToSetup} style={styles.topBackBtn}>
-          <Text style={styles.backText}>← {mode === 'solo' ? 'Entraînement' : mode === 'bot' ? 'VS Bot' : 'Pass & Play'}</Text>
-        </TouchableOpacity>
+        <View style={styles.topCol}>
+          <TouchableOpacity onPress={backToSetup} style={styles.topBackBtn}>
+            <Text style={styles.backText}>← {mode === 'solo' ? 'Entraînement' : mode === 'bot' ? 'VS Bot' : 'Pass & Play'}</Text>
+          </TouchableOpacity>
+        </View>
 
-        {mode !== 'solo' && (
-          <Text style={styles.scoreTextTop} numberOfLines={1}>
-            <Text style={currentPlayer === 1 ? styles.scoreActive : null}>Joueur 1{playerGroups[1] ? ` (${playerGroups[1] === 'solid' ? 'Pleines' : 'Rayées'})` : ''}</Text>
-            {'   vs   '}
-            <Text style={currentPlayer === 2 ? styles.scoreActive : null}>{mode === 'bot' ? 'Bot' : 'Joueur 2'}{playerGroups[2] ? ` (${playerGroups[2] === 'solid' ? 'Pleines' : 'Rayées'})` : ''}</Text>
-          </Text>
-        )}
+        <View style={[styles.topCol, { alignItems: 'center' }]}>
+          {mode !== 'solo' && (
+            <Text style={styles.scoreTextTop} numberOfLines={1}>
+              <Text style={currentPlayer === 1 ? styles.scoreActive : null}>Joueur 1{playerGroups[1] ? ` (${playerGroups[1] === 'solid' ? 'Pleines' : 'Rayées'})` : ''}</Text>
+              {'   vs   '}
+              <Text style={currentPlayer === 2 ? styles.scoreActive : null}>{mode === 'bot' ? 'Bot' : 'Joueur 2'}{playerGroups[2] ? ` (${playerGroups[2] === 'solid' ? 'Pleines' : 'Rayées'})` : ''}</Text>
+            </Text>
+          )}
+        </View>
 
-        <Text style={styles.statusTop} numberOfLines={1}>{status}</Text>
+        <View style={[styles.topCol, { alignItems: 'flex-end' }]}>
+          <Text style={styles.statusTop} numberOfLines={1}>{status}</Text>
+        </View>
       </View>
 
       <View style={styles.mainRow}>
         <View style={styles.tableWrap}>
-          <View style={[styles.tableArea, { width: tableAreaW, height: tableAreaH }]} {...tablePanResponder.panHandlers}>
+          <View
+            ref={tableViewRef}
+            onLayout={handleTableLayout}
+            style={[styles.tableArea, { width: tableAreaW, height: tableAreaH }]}
+            {...tablePanResponder.panHandlers}
+          >
             <View style={[styles.felt, { left: railW, top: railW, right: railW, bottom: railW }]} pointerEvents="none" />
 
             {POCKETS.map((p, i) => {
@@ -678,8 +724,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#2a2f45',
   },
   topBackBtn: { paddingVertical: 4 },
+  topCol: { flex: 1, justifyContent: 'center' },
   scoreTextTop: { color: COLORS.muted, fontSize: 13, fontWeight: '700' },
-  statusTop: { color: COLORS.text, fontSize: 12, fontWeight: '700', flex: 1, textAlign: 'right' },
+  statusTop: { color: COLORS.text, fontSize: 12, fontWeight: '700' },
 
   mainRow: { flex: 1, flexDirection: 'row' },
   tableWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
