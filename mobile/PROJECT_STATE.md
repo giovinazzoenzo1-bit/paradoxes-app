@@ -381,3 +381,21 @@ système.
   bug remonté.**
 
 **Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
+
+## Bot billard amélioré — "avait l'air bête" (29/08)
+Vrai problème trouvé : dès qu'aucun tir avec un angle de coupe raisonnable
+(< 75,6°) n'existait, le bot ABANDONNAIT complètement et visait la bille la
+plus proche avec une puissance générique, sans se soucier d'AUCUNE poche —
+d'où l'impression qu'il "ne connaissait pas les règles".
+
+Corrigé avec une recherche en 2 passes dans `botPickShot`
+(billiardLogic.js) : essai d'abord avec un angle raisonnable (<63°,
+difficulté "normale"), puis seulement si vraiment rien ne convient,
+assouplissement à <88° en prenant la meilleure option — le bot vise
+désormais TOUJOURS une bille de son groupe vers une poche précise, jamais
+un coup au hasard. Imprécision de visée légèrement resserrée (0,09→0,07
+rad) et puissance minimum relevée (0,55→0,6×) pour un jeu plus décisif,
+sans le rendre parfait (demande explicite : difficulté normale, pas
+extrême).
+
+**Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
