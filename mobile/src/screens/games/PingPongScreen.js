@@ -150,6 +150,18 @@ export default function PingPongScreen({ onBack }) {
     targetZoneRef.current = hitter === 'player' ? 'top' : 'bottom';
   };
 
+  // Verrou anti-double-comptage : doServe() (qui replace la balle en zone
+  // neutre) est planifié via setTimeout(0), mais la boucle d'animation,
+  // elle, continue immédiatement via requestAnimationFrame — rien ne
+  // garantit que le setTimeout s'exécute AVANT la frame suivante. Si la
+  // frame suivante arrivait en premier, la balle était encore à sa
+  // position "sortie" au moment de la revérification, et checkScore
+  // détectait la MÊME sortie une deuxième fois -> le score avançait de 2
+  // en 2 au lieu de 1 en 1 (bug remonté). Ce verrou bloque toute nouvelle
+  // vérification de score dès qu'un point vient d'être détecté, jusqu'à ce
+  // que doServe() remette réellement la balle en jeu.
+  const pointScoredRef = useRef(false);
+
   const doServe = (towardOpp) => {
     const { tableW: w, tableH: h } = dimsRef.current;
     const { lastHitter, targetZone } = serve(ballRef.current, w, h, towardOpp);
@@ -161,6 +173,7 @@ export default function PingPongScreen({ onBack }) {
     lastHitterRef.current = lastHitter;
     targetZoneRef.current = targetZone;
     targetBouncedRef.current = false;
+    pointScoredRef.current = false;
   };
 
   // Refs miroir pour lire le score courant dans les callbacks sans risquer
@@ -267,9 +280,10 @@ export default function PingPongScreen({ onBack }) {
       // sauver. On ne vérifie donc le score QUE si aucune frappe n'a eu
       // lieu cette frame (une balle qui vient d'être touchée est par
       // définition "revenue en jeu", pas "sortie").
-      if (!hitBy) {
+      if (!hitBy && !pointScoredRef.current) {
         const scorer = checkScore(ballRef.current, w, h, targetBouncedRef.current, lastHitterRef.current);
         if (scorer) {
+          pointScoredRef.current = true;
           handlePoint(scorer);
         }
       }
