@@ -529,3 +529,31 @@ l'étaient.
   absolue + gestureState, refs pour les callbacks PanResponder).
 
 **Bilan : 13 jeux au total maintenant (12 portés du PWA + ce nouveau).**
+
+## Traceur de Runes : bug de score critique corrigé + animation de dessin (29/08)
+Capture d'écran fournie par l'utilisateur : un tracé visiblement excellent
+de l'infini notait 0% ("RATÉ"). Vrai bug, pas juste un souci de calibration.
+
+**Cause racine** : le score comparait le tracé du joueur et la forme de
+référence point par point, dans l'ordre. Pour les formes FERMÉES (cercle,
+infini, étoile, carré, triangle, losange — désormais marquées `closed:
+true` dans `RUNES`), rien n'empêche le joueur de commencer à tracer à
+n'importe quel endroit de la boucle. Un tracé par ailleurs parfait mais
+démarré à un autre point que celui de la paramétrisation interne de la
+référence se retrouvait totalement désaligné point à point → score proche
+de 0 malgré un tracé visuellement irréprochable.
+
+**Corrigé** : pour les formes fermées, on teste maintenant TOUS les
+décalages de point de départ possibles (en plus des 2 sens de parcours
+déjà gérés) et on garde le meilleur alignement — calcul unique au
+relâchement du doigt, donc coût négligeable (~1ms). Résolution
+d'échantillonnage aussi augmentée (48→96 points) pour réduire le bruit de
+discrétisation résiduel. Vérifié : un tracé parfait démarré n'importe où
+sur la boucle note maintenant 93-96% au lieu de 0-88%, un mauvais tracé
+reste bien à 0%.
+
+**Animation de dessin ajoutée** : la forme se trace maintenant elle-même
+progressivement (comme le jeu de référence), au lieu d'apparaître d'un
+coup. Durée proportionnelle à la complexité de la forme (plus de segments
+= plus de temps pour la mémoriser), répond au retour "formes pas trop
+compliquées" sans avoir à refondre les formes elles-mêmes.
