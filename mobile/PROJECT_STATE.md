@@ -714,3 +714,34 @@ cumulé, CASTS à 3 points, minuteur ~5s) :
    `handleTimeout` pour un échec par manque de temps) pour que cette
    distinction soit structurelle plutôt que masquée par un simple
    drapeau.
+
+## Nouveau jeu : Élevage (Clicker de créatures), 1er du menu (29/08)
+Nouveau jeu (pas un port), placé en PREMIER dans le menu comme demandé.
+Thème choisi avec l'utilisateur (par élicitation) : créatures à
+collectionner et faire évoluer, esprit gacha, pour viser un public 10-25
+ans.
+
+**Roster 100% original** : 10 créatures, 3 stades d'évolution chacune
+(niveau 1 → niveau 5 → niveau 15) = 30 formes nommées (ex. Braisillon →
+Brasegriffe → Infernouve). Aucun nom, design ou franchise protégée
+repris — seul le PRINCIPE générique du genre (élément, rareté, évolution
+par niveau) est repris, ce qui n'est pas protégeable. Art en emoji simple
+(pas de génération d'image, cohérent avec l'approche 100% Views du reste
+de l'appli).
+
+**Boucle de jeu** : tap pour gagner des pièces (puissance de tap
+améliorable) → dépenser les pièces en invocations gacha (rareté pondérée
+60/25/12/3%) et en nourriture pour faire monter les créatures possédées
+en niveau (revenu passif/s croissant, évolution automatique à niveau 5 et
+15). Gains hors-ligne calculés au chargement (plafonnés à 4h anti-abus),
+bannière "pendant ton absence". **Économie séparée** du système de
+pièces `appCoins` partagé du reste de l'appli — un jeu incrémental/idle a
+sa propre monnaie persistée via AsyncStorage dédié.
+
+Toutes les formules de coût/revenu sont des fonctions pures dans
+`clickerLogic.js`, testées unitairement (distribution de rareté,
+progression des coûts, seuils d'évolution, plafond hors-ligne) avant de
+construire l'écran.
+
+**Bilan : 15 jeux au total maintenant** (13 précédents + Traceur de
+Runes + Élevage).
