@@ -399,3 +399,38 @@ sans le rendre parfait (demande explicite : difficulté normale, pas
 extrême).
 
 **Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
+
+## Ping-pong porté (29/08) — tous les jeux du PWA sont maintenant portés
+Dernier jeu restant (hors menu principal, comme le Billard). Bonne nouvelle
+trouvée dans le code source du PWA lui-même : contrairement au billard, ce
+jeu reste **volontairement en portrait** ("plus de verrouillage
+d'orientation : ça tient dans l'écran du téléphone tel quel") et utilise
+déjà une **physique maison** (pas de Matter.js) — donc ce portage évite
+TOUTE la complexité rencontrée sur le billard : pas de verrouillage
+paysage, pas de barre système à masquer, pas de zones sûres spéciales, pas
+de rotation de coordonnées.
+
+**Leçons du billard appliquées d'emblée (pas en réaction à un bug) :**
+- Contrôles tactiles : mesure de position absolue (`ref` + `.measure()`) +
+  `gestureState.moveX/Y` dès le départ, jamais `locationX/Y`.
+- 2 `PanResponder` séparés sur 2 zones fixes (haut/bas) plutôt que du
+  multi-touch brut sur une seule vue — évite la complexité du
+  `ppActivePointers` du PWA tout en gérant correctement le mode "Entre
+  amis" à 2 joueurs sur le même téléphone.
+- Toutes les valeurs utilisées dans les callbacks de PanResponder passent
+  par des refs (`dimsRef`, `modeRef`, `diffRef`) mises à jour à chaque
+  rendu, jamais capturées directement.
+- Physique et règles testées unitairement (service, rebond, collision
+  raquette, déflexion, règles de score, condition de victoire, IA du bot)
+  AVANT d'écrire l'écran.
+
+3 difficultés de bot (facile/moyen/difficile), pièces selon
+coins-config.js (rien encore en difficile, comme le PWA). Non porté (même
+politique que les autres jeux) : boutique de raquettes cosmétiques,
+particules d'impact/tremblement d'écran/étoiles de victoire, classement
+mondial fictif.
+
+## 🎉 Bilan complet : tous les jeux du PWA sont portés en mobile (12 au total)
+Les 10 du menu principal (Morpion, Puissance 4, 2048, Memory, Snake,
+Puzzle 15, Sudoku, Nuts and Bolts, Flappy Bird, Wordle) + Billard +
+Ping-pong.
