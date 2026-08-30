@@ -677,3 +677,22 @@ Vérifié par la longueur réelle du tracé (pas juste "à l'œil") : Coche
 déjà validé comme rapide) et bien plus courtes que Halo/cercle (2,01) —
 donc objectivement plus rapides à tracer, pas juste visuellement plus
 simples. Roster toujours à 10 formes.
+
+## Traceur de Runes : minuteur, essais, score cumulé (29/08, suite)
+Suite aux captures du jeu de référence (Spell Tracer, montrant SCORE
+cumulé, CASTS à 3 points, minuteur ~5s) :
+- **Tolérance légèrement réassouplie** (0,015→0,02) — retour "un peu
+  sévère" sur un tracé de la Coche pourtant raisonnablement proche
+  (10%). Vérifié que le gribouillage reste bien pénalisé (~30%, RATÉ) à
+  cette valeur.
+- **Minuteur de 6 secondes** par tentative de tracé — démarre quand la
+  forme disparaît, soumet automatiquement ce qui a été tracé (ou rien) si
+  le temps s'épuise. Affiché en haut, passe en rouge sous 2s.
+- **3 essais ("chances") par rune** — le MEILLEUR score parmi les
+  tentatives est conservé. Écran de résultat : bouton "Réessayer" tant
+  qu'il reste des essais, indicateur à points (comme les CASTS de la
+  référence).
+- **Score cumulé affiché en haut** (là où l'utilisateur avait entouré en
+  rouge sur sa capture) — somme littérale des meilleurs % de chaque rune
+  terminée (PAS une moyenne), conformément à la demande explicite
+  "score=%+%" et au format "SCORE 160" du jeu de référence.
