@@ -663,3 +663,17 @@ tombe à 24% (RATÉ, correct) au lieu de 67% à l'ancienne tolérance.
 Vérifié qu'un tracé honnête avec un tremblement de doigt réaliste (~2% du
 canevas) reste à 98-100% à cette tolérance, avec une marge confortable
 avant dégradation (perceptible seulement en dessous de ~0,01).
+
+## Traceur de Runes : formes remplacées (29/08, suite)
+Retour direct : le carré (Bastion) jugé "chiant et pas amusant" (long à
+tracer, 4 côtés égaux), l'étoile (Étincelle) jugée "trop compliquée" (5
+pointes = 10 sommets). Les deux retirées et remplacées par des formes
+courtes et rapides :
+- **Coche** (validation, 2 segments) remplace Bastion.
+- **Flèche** (2 segments) remplace Étincelle.
+
+Vérifié par la longueur réelle du tracé (pas juste "à l'œil") : Coche
+(1,19 unités) et Flèche (0,94) sont plus courtes que Croissant (1,25,
+déjà validé comme rapide) et bien plus courtes que Halo/cercle (2,01) —
+donc objectivement plus rapides à tracer, pas juste visuellement plus
+simples. Roster toujours à 10 formes.
