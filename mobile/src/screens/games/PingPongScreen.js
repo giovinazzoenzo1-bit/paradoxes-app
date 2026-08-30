@@ -12,6 +12,7 @@
 // mondial fictif — même politique que les autres jeux portés.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
 import {
@@ -46,8 +47,22 @@ const COLORS = {
   oppDark: '#1c8fb8',
 };
 
+// Boutique de raquettes — cosmétique uniquement, aucun effet sur le jeu.
+// Identique à coins-config.js (pingpongPaddles) du PWA.
+const PADDLES = [
+  { id: 'classique', name: 'Classique', color: '#ef6461', colorDark: '#b8433f', price: 0 },
+  { id: 'ocean', name: 'Océan', color: '#3ec6f0', colorDark: '#1c8fb8', price: 15 },
+  { id: 'emeraude', name: 'Émeraude', color: '#4fd18a', colorDark: '#2c9c5f', price: 15 },
+  { id: 'violet', name: 'Violet Néon', color: '#b96bff', colorDark: '#7d3fc9', price: 25 },
+  { id: 'rose', name: 'Rose Bonbon', color: '#ff6fb0', colorDark: '#c94080', price: 25 },
+  { id: 'or', name: 'Or Royal', color: '#f5d76e', colorDark: '#c9a227', price: 40 },
+  { id: 'noir', name: 'Noir Mat', color: '#3a3a42', colorDark: '#1c1c22', price: 40 },
+  { id: 'arcenciel', name: 'Arc-en-ciel', color: '#ff6fb0', colorDark: '#7d3fc9', price: 75, gradient: true },
+];
+const DEFAULT_PADDLE = PADDLES[0];
+
 export default function PingPongScreen({ onBack }) {
-  const { addCoinsLimited } = useCoins();
+  const { addCoinsLimited, spendCoins, coins } = useCoins();
   const panHandlers = useBackGesture(onBack);
   const { width: WIN_W, height: WIN_H } = useWindowDimensions();
 
@@ -58,6 +73,41 @@ export default function PingPongScreen({ onBack }) {
   const [scoreOpp, setScoreOpp] = useState(0);
   const [combo, setCombo] = useState(0);
   const [endInfo, setEndInfo] = useState(null);
+  const [ownedPaddles, setOwnedPaddles] = useState(['classique']);
+  const [selectedPaddleId, setSelectedPaddleId] = useState('classique');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const owned = await AsyncStorage.getItem('ppOwnedPaddles');
+        const parsed = owned ? JSON.parse(owned) : ['classique'];
+        if (!parsed.includes('classique')) parsed.push('classique');
+        setOwnedPaddles(parsed);
+      } catch (e) {
+        setOwnedPaddles(['classique']);
+      }
+      const selected = await AsyncStorage.getItem('ppSelectedPaddle');
+      if (selected) setSelectedPaddleId(selected);
+    })();
+  }, []);
+
+  const playerSkin = PADDLES.find((s) => s.id === selectedPaddleId) || DEFAULT_PADDLE;
+
+  const buyPaddle = async (skin) => {
+    if (ownedPaddles.includes(skin.id)) return;
+    const ok = await spendCoins(skin.price);
+    if (!ok) return;
+    const next = [...ownedPaddles, skin.id];
+    setOwnedPaddles(next);
+    await AsyncStorage.setItem('ppOwnedPaddles', JSON.stringify(next));
+    setSelectedPaddleId(skin.id);
+    await AsyncStorage.setItem('ppSelectedPaddle', skin.id);
+  };
+
+  const equipPaddle = async (id) => {
+    setSelectedPaddleId(id);
+    await AsyncStorage.setItem('ppSelectedPaddle', id);
+  };
   const [, setRenderTick] = useState(0);
 
   const bump = () => setRenderTick((t) => t + 1);
@@ -324,6 +374,7 @@ export default function PingPongScreen({ onBack }) {
 
   if (phase === 'setup') {
     const gain = DIFFS_COINS[diff];
+    const DIFF_EMOJI = { facile: '😔', moyen: '🙂', difficile: '🔥' };
     return (
       <View style={styles.screen} {...panHandlers}>
         <CoinBar />
@@ -333,32 +384,88 @@ export default function PingPongScreen({ onBack }) {
               <Text style={styles.backText}>← Retour</Text>
             </TouchableOpacity>
           )}
-          <Text style={styles.title}>🏓 Ping-pong</Text>
         </View>
+        <Text style={styles.title}>🏓 Ping-pong</Text>
 
-        <Text style={styles.sectionLabel}>Difficulté (contre le bot)</Text>
-        <View style={styles.diffRow}>
-          {Object.keys(DIFFS).map((d) => (
-            <TouchableOpacity
-              key={d}
-              style={[styles.diffBtn, diff === d && styles.diffBtnActive]}
-              onPress={() => setDiff(d)}
-            >
-              <Text style={[styles.diffBtnText, diff === d && styles.diffBtnTextActive]}>{DIFFS[d].label}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.neonCard}>
+          <Text style={styles.sectionLabel}>DIFFICULTÉ DU BOT</Text>
+          <View style={styles.diffRow}>
+            {Object.keys(DIFFS).map((d) => (
+              <TouchableOpacity
+                key={d}
+                style={[styles.diffBtn, diff === d && styles.diffBtnActive]}
+                onPress={() => setDiff(d)}
+              >
+                <Text style={[styles.diffBtnText, diff === d && styles.diffBtnTextActive]}>
+                  {DIFF_EMOJI[d]} {DIFFS[d].label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.coinInfo}>{gain ? `🪙 ${gain} pièces si tu gagnes.` : '🟨 Pas encore de pièces sur cette difficulté.'}</Text>
+
+          <Text style={[styles.sectionLabel, { marginTop: 18 }]}>MODE</Text>
+          <TouchableOpacity style={styles.modeBtn} onPress={() => startGame('bot')}>
+            <Text style={styles.modeBtnText}>🤖 Contre le bot</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.modeBtn} onPress={() => startGame('amis')}>
+            <Text style={styles.modeBtnText}>🧑‍🤝‍🧑 Entre amis (1 téléphone, 2 doigts)</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.hintText}>
+            Glisse ta raquette pour la placer. Plus ton doigt bouge vite au moment de l'impact, plus le tir part
+            fort — reste tranquille pour un tir placé, précis.
+          </Text>
+
+          <TouchableOpacity style={styles.shopFab} onPress={() => setPhase('shop')}>
+            <Text style={styles.shopFabEmoji}>🏓</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.coinInfo}>{gain ? `🪙 ${gain} pièces si tu gagnes.` : '🟨 Pas encore de pièces sur cette difficulté.'}</Text>
+      </View>
+    );
+  }
 
-        <View style={styles.setupPanel}>
-          <TouchableOpacity style={styles.modeCard} onPress={() => startGame('bot')}>
-            <Text style={styles.modeTitle}>🤖 Contre le bot</Text>
-            <Text style={styles.modeDesc}>Premier à {WIN_SCORE} points (écart de 2).</Text>
+  if (phase === 'shop') {
+    return (
+      <View style={styles.screen} {...panHandlers}>
+        <CoinBar />
+        <TouchableOpacity onPress={() => setPhase('setup')} style={styles.backBtn}>
+          <Text style={styles.backText}>← Retour</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>🏓 Ping-pong</Text>
+
+        <View style={styles.neonCard}>
+          <TouchableOpacity onPress={() => setPhase('setup')} style={styles.shopBackBtn}>
+            <Text style={styles.shopBackBtnText}>← Retour</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.modeCard} onPress={() => startGame('amis')}>
-            <Text style={styles.modeTitle}>🧑‍🤝‍🧑 Entre amis</Text>
-            <Text style={styles.modeDesc}>2 joueurs, un seul téléphone.</Text>
-          </TouchableOpacity>
+          <Text style={styles.shopTitle}>🏓 BOUTIQUE DE RAQUETTES</Text>
+          <Text style={styles.shopSubtitle}>Cosmétique uniquement — juste pour le style, aucun effet sur le jeu.</Text>
+          <Text style={styles.shopCoins}>🪙 Pièces{'   '}<Text style={{ color: COLORS.action }}>{coins}</Text></Text>
+
+          <View style={styles.shopGrid}>
+            {PADDLES.map((skin) => {
+              const owned = ownedPaddles.includes(skin.id);
+              const equipped = selectedPaddleId === skin.id;
+              return (
+                <View key={skin.id} style={[styles.shopCard, equipped && styles.shopCardEquipped]}>
+                  <View style={[styles.shopSwatch, { backgroundColor: skin.color, borderColor: skin.colorDark }]} />
+                  <View style={[styles.shopHandle, { backgroundColor: skin.colorDark }]} />
+                  <Text style={styles.shopName}>{skin.name}</Text>
+                  {equipped ? (
+                    <Text style={styles.shopOwnedTag}>✅ Équipée</Text>
+                  ) : owned ? (
+                    <TouchableOpacity style={styles.shopActionBtn} onPress={() => equipPaddle(skin.id)}>
+                      <Text style={styles.shopActionText}>Équiper</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={styles.shopActionBtn} onPress={() => buyPaddle(skin)}>
+                      <Text style={styles.shopActionText}>🪙 {skin.price}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+          </View>
         </View>
       </View>
     );
@@ -372,19 +479,20 @@ export default function PingPongScreen({ onBack }) {
   return (
     <View style={styles.screen} {...panHandlers}>
       <CoinBar />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={backToSetup} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
+      <View style={styles.gameHeader}>
+        <TouchableOpacity onPress={backToSetup} style={styles.circleBackBtn}>
+          <Text style={styles.circleBackBtnText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.modeBadge}>{mode === 'bot' ? DIFFS[diff].label : 'ENTRE AMIS'}</Text>
-      </View>
-
-      <View style={styles.scoreRow}>
-        <Text style={styles.scoreLabel}>Toi</Text>
-        <Text style={styles.scoreValue}>{scoreYou}</Text>
-        <Text style={styles.scoreDash}>—</Text>
-        <Text style={styles.scoreValue}>{scoreOpp}</Text>
-        <Text style={styles.scoreLabel}>{mode === 'bot' ? 'Bot' : 'J2'}</Text>
+        <View style={styles.scoreCard}>
+          <Text style={styles.diffBadge}>{mode === 'bot' ? DIFFS[diff].label : 'ENTRE AMIS'}</Text>
+          <View style={styles.scoreRow}>
+            <Text style={styles.scoreLabelPlayer}>TOI</Text>
+            <Text style={styles.scoreValue}>{scoreYou}</Text>
+            <Text style={styles.scoreVs}>VS</Text>
+            <Text style={styles.scoreValue}>{scoreOpp}</Text>
+            <Text style={styles.scoreLabelOpp}>{mode === 'bot' ? 'BOT' : 'J2'}</Text>
+          </View>
+        </View>
       </View>
       {combo >= 3 && <Text style={styles.comboText}>🔥 x{combo}</Text>}
 
@@ -421,7 +529,7 @@ export default function PingPongScreen({ onBack }) {
           })}
 
           <Paddle p={opp} offX={offX} offY={offY} color={COLORS.opp} colorDark={COLORS.oppDark} isPlayer={false} />
-          <Paddle p={player} offX={offX} offY={offY} color={COLORS.player} colorDark={COLORS.playerDark} isPlayer />
+          <Paddle p={player} offX={offX} offY={offY} color={playerSkin.color} colorDark={playerSkin.colorDark} isPlayer />
 
           <View pointerEvents="none" style={{ position: 'absolute', left: offX + ball.x - ball.r + ball.r * 0.15, top: offY + ball.y - ball.r + ball.r * 0.15, width: ball.r * 2, height: ball.r * 2, borderRadius: ball.r, backgroundColor: 'rgba(0,0,0,0.18)' }} />
           <View pointerEvents="none" style={{ position: 'absolute', left: offX + ball.x - ball.r, top: offY + ball.y - lift - ball.r, width: ball.r * 2, height: ball.r * 2, borderRadius: ball.r, backgroundColor: '#fff', borderWidth: 1.5, borderColor: COLORS.line }} />
@@ -475,26 +583,101 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   backBtn: { paddingVertical: 6, paddingRight: 12 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
-  title: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
-  modeBadge: { color: COLORS.action, fontSize: 12, fontWeight: '800', marginLeft: 'auto' },
+  title: { color: COLORS.text, fontSize: 22, fontWeight: '800', marginBottom: 12 },
 
-  sectionLabel: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 12 },
-  diffRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  diffBtn: { flex: 1, backgroundColor: '#1c2032', borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: '#2a2f45' },
-  diffBtnActive: { backgroundColor: COLORS.action, borderColor: COLORS.action },
+  // Carte néon violette du setup/boutique — se démarque du reste de
+  // l'appli (style propre à ce jeu, comme le néon cyberpunk de Wordle ou
+  // le vert billard), suivant la référence visuelle demandée.
+  neonCard: {
+    backgroundColor: '#241a42',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#4a3a7a',
+    shadowColor: '#7d3fc9',
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
+  },
+
+  sectionLabel: { color: '#c9bce8', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  diffRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  diffBtn: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  diffBtnActive: { backgroundColor: COLORS.action },
   diffBtnText: { color: COLORS.text, fontSize: 12, fontWeight: '800' },
   diffBtnTextActive: { color: '#1a1300' },
-  coinInfo: { color: COLORS.muted, fontSize: 11, marginTop: 8 },
+  coinInfo: { color: '#c9bce8', fontSize: 11, marginTop: 10 },
 
-  setupPanel: { marginTop: 16, gap: 12 },
-  modeCard: { backgroundColor: '#1c2032', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#2a2f45' },
-  modeTitle: { color: COLORS.text, fontSize: 16, fontWeight: '800' },
-  modeDesc: { color: COLORS.muted, fontSize: 12, marginTop: 4 },
+  modeBtn: { backgroundColor: COLORS.action, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 10 },
+  modeBtnText: { color: '#1a1300', fontSize: 14, fontWeight: '800' },
+  hintText: { color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 18, lineHeight: 16 },
 
-  scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  scoreLabel: { color: COLORS.muted, fontSize: 12, fontWeight: '700' },
+  shopFab: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.opp,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.opp,
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  },
+  shopFabEmoji: { fontSize: 24 },
+
+  shopBackBtn: { alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, marginBottom: 12 },
+  shopBackBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
+  shopTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800' },
+  shopSubtitle: { color: '#c9bce8', fontSize: 11, marginTop: 4 },
+  shopCoins: { color: COLORS.text, fontSize: 13, fontWeight: '700', marginTop: 10 },
+  shopGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
+  shopCard: {
+    width: '31%',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 14,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  shopCardEquipped: { borderColor: '#00E676', borderWidth: 2 },
+  shopSwatch: { width: 42, height: 42, borderRadius: 21, borderWidth: 2, marginBottom: 2 },
+  shopHandle: { width: 12, height: 16, borderRadius: 3, marginBottom: 6 },
+  shopName: { color: COLORS.text, fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  shopOwnedTag: { color: '#00E676', fontSize: 10, fontWeight: '800', marginTop: 6 },
+  shopActionBtn: { backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10, marginTop: 6 },
+  shopActionText: { color: COLORS.text, fontSize: 11, fontWeight: '800' },
+
+  gameHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  circleBackBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: COLORS.opp,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.opp,
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
+  circleBackBtnText: { color: COLORS.opp, fontSize: 18, fontWeight: '900' },
+  scoreCard: { flex: 1, backgroundColor: '#1c2032', borderRadius: 16, paddingVertical: 8, alignItems: 'center' },
+  diffBadge: { color: COLORS.action, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+
+  scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 2 },
+  scoreLabelPlayer: { color: COLORS.player, fontSize: 12, fontWeight: '800' },
+  scoreLabelOpp: { color: COLORS.opp, fontSize: 12, fontWeight: '800' },
   scoreValue: { color: COLORS.text, fontSize: 24, fontWeight: '900' },
-  scoreDash: { color: COLORS.muted, fontSize: 18 },
+  scoreVs: { color: COLORS.muted, fontSize: 12, fontWeight: '700' },
   comboText: { color: '#FF7043', textAlign: 'center', fontSize: 13, fontWeight: '900', marginTop: 2 },
 
   canvasWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
@@ -520,3 +703,4 @@ const styles = StyleSheet.create({
   changeModeBtn: { marginTop: 10, paddingVertical: 6 },
   changeModeBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '700' },
 });
+

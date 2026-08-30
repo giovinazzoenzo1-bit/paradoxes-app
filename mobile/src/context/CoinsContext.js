@@ -32,22 +32,21 @@ export function CoinsProvider({ children }) {
     });
   }, []);
 
+  // Bug corrigé : cette fonction n'était encore utilisée par aucun jeu
+  // jusqu'à la boutique de raquettes du ping-pong. L'ancienne version
+  // relisait AsyncStorage juste après un setCoins asynchrone (course entre
+  // les deux), et `fresh !== null` était presque toujours vrai (une valeur
+  // existe déjà en stockage dès la 1ère pièce gagnée) — donc la fonction
+  // renvoyait TOUJOURS true, même sans assez de pièces. Corrigé en
+  // vérifiant directement contre `coins` (état à jour, dans la portée de
+  // la fonction) avant de rien modifier.
   const spendCoins = useCallback(async (n) => {
-    let success = false;
-    setCoins((prev) => {
-      if (prev < n) {
-        success = false;
-        return prev;
-      }
-      success = true;
-      const next = prev - n;
-      AsyncStorage.setItem('appCoins', String(next));
-      return next;
-    });
-    // setState est asynchrone : on relit la valeur fraîche pour renvoyer un résultat fiable
-    const fresh = await AsyncStorage.getItem('appCoins');
-    return fresh !== null ? true : success;
-  }, []);
+    if (coins < n) return false;
+    const next = coins - n;
+    setCoins(next);
+    await AsyncStorage.setItem('appCoins', String(next));
+    return true;
+  }, [coins]);
 
   // Plafond anti-abus : 40 pièces/heure max par jeu (clé = ex. 'morpion', 'puissance4'...),
   // fenêtre glissante stockée sous 'coinRateLimit:<jeu>'. Retourne le montant réellement accordé.
