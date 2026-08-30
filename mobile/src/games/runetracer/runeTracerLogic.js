@@ -178,67 +178,61 @@ export function resample(points, n) {
   return result;
 }
 
-function boundingDiag(points) {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of points) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
+// ---- Nouveau système de score : COUVERTURE BIDIRECTIONNELLE (remplace
+// l'ancien système "distance moyenne + recherche de décalage") ----
+// Principe (décidé avec l'utilisateur après plusieurs tests) : on ne
+// mesure plus une distance moyenne globale, mais littéralement "quel %
+// du tracé affiché est recouvert par le tracé du joueur, AU MÊME
+// ENDROIT" — la position compte pleinement, aucun recentrage. Avantage
+// direct : plus besoin de deviner un sens de parcours ou un point de
+// départ (les anciens problèmes des formes fermées disparaissent tout
+// seuls, une couverture ne dépend pas de l'ordre des points).
+//
+// Pour éviter qu'un gribouillis dense sur tout l'écran ne score 100% par
+// hasard (il finirait par "recouvrir" tous les points de la référence),
+// la couverture est mesurée dans les DEUX sens :
+//   - covRef : quelle fraction des points de la RÉFÉRENCE a un point du
+//     JOUEUR à proximité (le joueur a-t-il bien parcouru toute la forme ?)
+//   - covUser : quelle fraction des points du JOUEUR a un point de la
+//     RÉFÉRENCE à proximité (le joueur n'est-il pas sorti du tracé,
+//     n'a-t-il pas griffonné à côté ?)
+// Score = moyenne des deux. Un gribouillage couvrirait bien covRef, mais
+// s'effondrerait sur covUser (plein de points du joueur loin de la
+// référence) — les deux dérives possibles sont donc couvertes.
+const SAMPLE_N = 120;
+const TOLERANCE = 0.045; // rayon de tolérance minimal, en unités normalisées [0,1] — "minim" comme demandé
+
+function coverageFraction(fromPoints, toPoints, tolerance) {
+  let covered = 0;
+  for (const p of fromPoints) {
+    let minD = Infinity;
+    for (const q of toPoints) {
+      const d = Math.hypot(p.x - q.x, p.y - q.y);
+      if (d < minD) minD = d;
+      if (minD <= tolerance) break; // sortie anticipée, pas besoin d'aller plus loin
+    }
+    if (minD <= tolerance) covered++;
   }
-  return Math.hypot(maxX - minX, maxY - minY) || 1;
-}
-
-const SAMPLE_N = 96; // densité d'échantillonnage — augmentée de 48 à 96 pour réduire le bruit
-// de discrétisation résiduel qui pénalisait injustement les formes fermées bien tracées mais
-// démarrées à un autre point de la boucle (voir scoreTrace ci-dessous)
-const SCORE_K = 550; // assoupli après retour utilisateur : des tracés honnêtes avec coins
-// arrondis (naturel avec un doigt, notamment sur étoile/éclair aux angles vifs) tombaient à
-// 40-58% alors qu'ils "avaient l'air corrects" à l'œil — un tracé franchement mauvais doit
-// rester nettement pénalisé (~50 ou moins), mais un effort honnête doit se sentir récompensé
-
-function rotateArray(arr, k) {
-  const n = arr.length;
-  const shift = ((k % n) + n) % n;
-  return arr.slice(shift).concat(arr.slice(0, shift));
-}
-
-function avgDist(a, b) {
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) sum += Math.hypot(a[i].x - b[i].x, a[i].y - b[i].y);
-  return sum / a.length;
+  return covered / fromPoints.length;
 }
 
 // Compare le tracé du joueur (userPoints, mêmes coordonnées normalisées
-// [0,1] que la forme de référence) à la forme de référence.
-// - Essaie les 2 sens de parcours (le joueur peut tracer dans l'ordre
-//   inverse).
-// - Pour les formes FERMÉES (cercle, étoile, infini...), essaie aussi
-//   plusieurs points de départ le long de la boucle : rien n'oblige le
-//   joueur à commencer exactement où la forme de référence "commence"
-//   (bug corrigé — un tracé par ailleurs parfait, mais démarré à un autre
-//   endroit de la boucle, pouvait scorer 0% car chaque point du tracé
-//   était comparé au mauvais point de référence).
-// Retourne un entier 0-100.
-export function scoreTrace(shapePoints, userPoints, isClosed) {
+// [0,1] que la forme de référence, AUCUN recentrage) à la forme de
+// référence. Retourne un entier 0-100.
+export function scoreTrace(shapePoints, userPoints) {
   if (!userPoints || userPoints.length < 2) return 0;
   const ref = resample(shapePoints, SAMPLE_N);
   const usr = resample(userPoints, SAMPLE_N);
-  const usrRev = [...usr].reverse();
-  const diag = boundingDiag(shapePoints);
 
-  let best = Infinity;
-  if (isClosed) {
-    for (let off = 0; off < SAMPLE_N; off++) {
-      best = Math.min(best, avgDist(ref, rotateArray(usr, off)), avgDist(ref, rotateArray(usrRev, off)));
-    }
-  } else {
-    best = Math.min(avgDist(ref, usr), avgDist(ref, usrRev));
-  }
+  const covRef = coverageFraction(ref, usr, TOLERANCE);
+  const covUser = coverageFraction(usr, ref, TOLERANCE);
 
-  const normalized = best / diag;
-  const score = Math.round(Math.max(0, Math.min(100, 100 - normalized * SCORE_K)));
-  return score;
+  // Le MINIMUM des deux (pas la moyenne) : un tracé qui ne fait que la
+  // moitié de la forme doit être nettement pénalisé, pas "sauvé" par une
+  // bonne couverture dans l'autre sens. Testé : avec la moyenne, un tracé
+  // à moitié fait notait ~76% (trop généreux) ; avec le minimum, ~52%.
+  const score = Math.round(Math.min(covRef, covUser) * 100);
+  return Math.max(0, Math.min(100, score));
 }
 
 export function ratingForScore(score) {

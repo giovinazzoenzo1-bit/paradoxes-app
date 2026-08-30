@@ -139,7 +139,7 @@ export default function RuneTracerScreen({ onBack }) {
   const finishStroke = useCallback(() => {
     if (phaseRef.current !== 'drawing') return;
     const rune = RUNES[runeIndexRef.current];
-    const score = scoreTrace(rune.points, userPointsRef.current, rune.closed);
+    const score = scoreTrace(rune.points, userPointsRef.current);
     setLastScore(score);
     setScores((prev) => [...prev, score]);
     setPhase('result');
