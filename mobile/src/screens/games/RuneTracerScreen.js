@@ -138,12 +138,23 @@ export default function RuneTracerScreen({ onBack }) {
 
   const finishStroke = useCallback(() => {
     if (phaseRef.current !== 'drawing') return;
-    const rune = RUNES[runeIndex];
+    const rune = RUNES[runeIndexRef.current];
     const score = scoreTrace(rune.points, userPointsRef.current, rune.closed);
     setLastScore(score);
     setScores((prev) => [...prev, score]);
     setPhase('result');
-  }, [runeIndex]);
+  }, []);
+  // Piège déjà rencontré (billard, ping-pong) et cette fois manqué au premier
+  // jet : le PanResponder ci-dessous est créé UNE SEULE FOIS via useRef, donc
+  // son callback onPanResponderRelease ne doit JAMAIS appeler directement une
+  // fonction qui change (finishStroke dépendait de runeIndex) — sinon il
+  // garde pour toujours la version de la TOUTE PREMIÈRE rune. C'était le vrai
+  // bug : à partir de la 2e rune, le score comparait le tracé du joueur à la
+  // forme de la rune 1 (Halo/cercle) au lieu de la bonne forme — d'où des
+  // scores erratiques (0% pour une vague très bien tracée, comparée à un
+  // cercle). Corrigé en passant par une ref à jour à chaque rendu.
+  const finishStrokeRef = useRef(finishStroke);
+  finishStrokeRef.current = finishStroke;
 
   const goNext = () => {
     const next = runeIndex + 1;
@@ -158,24 +169,27 @@ export default function RuneTracerScreen({ onBack }) {
     }
   };
 
+  const canvasSizeRef = useRef(canvasSize);
+  canvasSizeRef.current = canvasSize;
+
   const drawResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => phaseRef.current === 'drawing',
       onMoveShouldSetPanResponder: () => phaseRef.current === 'drawing',
       onPanResponderGrant: (evt, gestureState) => {
         userPointsRef.current = [];
-        const x = (gestureState.x0 - canvasOriginRef.current.x) / canvasSize;
-        const y = (gestureState.y0 - canvasOriginRef.current.y) / canvasSize;
+        const x = (gestureState.x0 - canvasOriginRef.current.x) / canvasSizeRef.current;
+        const y = (gestureState.y0 - canvasOriginRef.current.y) / canvasSizeRef.current;
         userPointsRef.current.push({ x, y });
         bump();
       },
       onPanResponderMove: (evt, gestureState) => {
-        const x = (gestureState.moveX - canvasOriginRef.current.x) / canvasSize;
-        const y = (gestureState.moveY - canvasOriginRef.current.y) / canvasSize;
+        const x = (gestureState.moveX - canvasOriginRef.current.x) / canvasSizeRef.current;
+        const y = (gestureState.moveY - canvasOriginRef.current.y) / canvasSizeRef.current;
         userPointsRef.current.push({ x, y });
         bump();
       },
-      onPanResponderRelease: () => finishStroke(),
+      onPanResponderRelease: () => finishStrokeRef.current(),
     })
   ).current;
 
