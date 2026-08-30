@@ -646,3 +646,20 @@ Testé sur 7 scénarios (tracé parfait, décalé, gribouillage aléatoire,
 tracé honnête imprécis, mauvaise forme, forme fermée démarrée ailleurs,
 tracé partiel) + les 10 runes avec un tracé bruité standard, avant de
 pousser.
+
+## Traceur de Runes : tolérance resserrée (29/08, suite)
+Captures montrant 2 vrais problèmes avec la tolérance initiale (0,045) :
+1. Un gribouillage complet sans rapport avec la forme (Éternité/infini,
+   juste des traits diagonaux denses sur la zone) notait 61% "BIEN" —
+   la tolérance était trop large, assez de points du gribouillage
+   tombaient "par hasard" près d'un point de la référence.
+2. Des traits parasites hors de la forme (petit trait sous le triangle,
+   au-dessus du carré) étaient noyés dans le score global (96-97% quand
+   même) au lieu d'être visiblement pénalisés.
+
+**Resserrée à 0,015** (÷3) — testé contre le scénario exact du
+gribouillage (simulé, traits diagonaux denses sur la zone de l'infini) :
+tombe à 24% (RATÉ, correct) au lieu de 67% à l'ancienne tolérance.
+Vérifié qu'un tracé honnête avec un tremblement de doigt réaliste (~2% du
+canevas) reste à 98-100% à cette tolérance, avec une marge confortable
+avant dégradation (perceptible seulement en dessous de ~0,01).
