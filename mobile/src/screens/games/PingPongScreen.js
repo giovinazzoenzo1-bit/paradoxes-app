@@ -255,9 +255,23 @@ export default function PingPongScreen({ onBack }) {
         }
       }
 
-      const scorer = checkScore(ballRef.current, w, h, targetBouncedRef.current, lastHitterRef.current);
-      if (scorer) {
-        handlePoint(scorer);
+      // Bug corrigé : quand une raquette rattrape la balle dans la marge
+      // hors-table (débordement autorisé pour "sauver" une balle large),
+      // deflect() repositionne la balle tout près de la raquette — donc
+      // potentiellement TOUJOURS hors des limites [0,h] à cet instant
+      // précis, avant même d'avoir eu le temps de repartir avec sa
+      // nouvelle vitesse. Si on vérifiait le score dans la même frame,
+      // cette position encore "dehors" pouvait déclencher un point pour
+      // le MAUVAIS joueur — typiquement le point revenait à celui qui
+      // avait fait sortir la balle, au lieu de celui qui venait de la
+      // sauver. On ne vérifie donc le score QUE si aucune frappe n'a eu
+      // lieu cette frame (une balle qui vient d'être touchée est par
+      // définition "revenue en jeu", pas "sortie").
+      if (!hitBy) {
+        const scorer = checkScore(ballRef.current, w, h, targetBouncedRef.current, lastHitterRef.current);
+        if (scorer) {
+          handlePoint(scorer);
+        }
       }
 
       bump();
@@ -553,10 +567,18 @@ export default function PingPongScreen({ onBack }) {
   );
 }
 
+// Manche nettement plus visible que le port initial (qui reprenait tel
+// quel les proportions du PWA : à peine 5% du rayon dépassait du cercle,
+// quasi invisible sur un écran de téléphone) — demande explicite de
+// l'utilisateur pour plus de réalisme. Le manche part de l'intérieur du
+// cercle (léger chevauchement pour un raccord propre) et dépasse
+// nettement en dessous/au-dessus, avec un bout arrondi.
 function Paddle({ p, offX, offY, color, colorDark, isPlayer }) {
-  const handleW = p.r * 0.5;
-  const handleH = p.r * 0.9;
+  const handleW = p.r * 0.42;
+  const handleLen = p.r * 0.9; // longueur totale, dont une partie chevauche le cercle
+  const overlap = p.r * 0.35; // portion cachée sous le cercle, pour un raccord propre
   const dir = isPlayer ? 1 : -1;
+  const handleTop = offY + p.y + dir * (p.r - overlap);
   return (
     <>
       <View pointerEvents="none" style={{ position: 'absolute', left: offX + p.x - p.r + p.r * 0.12, top: offY + p.y - p.r + p.r * 0.12, width: p.r * 2, height: p.r * 2, borderRadius: p.r, backgroundColor: 'rgba(0,0,0,0.16)' }} />
@@ -565,9 +587,10 @@ function Paddle({ p, offX, offY, color, colorDark, isPlayer }) {
         style={{
           position: 'absolute',
           left: offX + p.x - handleW / 2,
-          top: offY + p.y + (dir > 0 ? p.r * 0.15 : -p.r * 0.15 - handleH),
+          top: dir > 0 ? handleTop : handleTop - handleLen,
           width: handleW,
-          height: handleH,
+          height: handleLen,
+          borderRadius: handleW / 2,
           backgroundColor: colorDark,
         }}
       />
