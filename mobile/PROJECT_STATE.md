@@ -462,3 +462,25 @@ Reste ouvert (à discuter) : les autres jeux ayant des boutiques/features
 similaires dans le PWA (ex. Flappy Bird avait une boutique de thèmes de
 fond, explicitement non portée en V1) pourraient faire l'objet de la même
 demande plus tard.
+
+## Ping-pong : 2 corrections (29/08)
+1. **Manches de raquette rendues visibles** : la reprise littérale des
+   proportions du PWA ne laissait dépasser que ~5% du rayon du cercle —
+   quasi invisible sur téléphone. Redessiné pour un manche clairement
+   visible (~0,55×rayon qui dépasse), bout arrondi.
+2. **Vrai bug de score trouvé et reproduit** (probablement présent aussi
+   dans le PWA, jamais remarqué) : quand une raquette rattrape la balle
+   dans la marge hors-table généreuse (pour "sauver" une balle large),
+   `deflect()` replace la balle juste à côté de la raquette — qui peut
+   encore être hors des limites [0,h] à cet instant précis, avant même
+   d'avoir bougé avec sa nouvelle vitesse. Comme la vérification du score
+   avait lieu dans la MÊME frame juste après la frappe, le point pouvait
+   partir au MAUVAIS joueur (celui qui avait fait sortir la balle, au lieu
+   de celui qui venait de la sauver) — exactement le symptôme remonté.
+   Corrigé en ignorant complètement la vérification de score sur toute
+   frame où une frappe vient d'avoir lieu (une balle qui vient d'être
+   touchée est par définition "revenue en jeu", pas "sortie"). Bug
+   reproduit avec un scénario de test dédié avant correction.
+
+**Bilan à jour : les 12 jeux du PWA sont portés, avec Ping-pong et son
+système de raquettes/boutique désormais peaufinés.**
