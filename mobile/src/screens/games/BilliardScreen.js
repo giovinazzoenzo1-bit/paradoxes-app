@@ -1,18 +1,21 @@
 // Billard 8-ball — port fidèle des RÈGLES et de l'IA du PWA (index.html),
-// moteur physique maison (billiardPhysics.js), rendu 100% Views RN.
-// Mode PAYSAGE réel (rotation physique de l'écran via
-// expo-screen-orientation), dimensions lues via useWindowDimensions
-// (réactif). Disposition (retour utilisateur) : panneau fixe à droite
-// (score en haut, jauge de puissance horizontale + bouton TIRER en
-// dessous), table maximisée à gauche sur le reste de l'espace.
+// moteur physique maison (billiardPhysics.js — constantes de puissance/
+// friction recalibrées pour un tir qui se joue sur ~2s au lieu de ~0,45s,
+// voir ce fichier), rendu 100% Views RN. Mode PAYSAGE réel (rotation
+// physique via expo-screen-orientation), dimensions lues via
+// useWindowDimensions (réactif) ET zones sûres (useSafeAreaInsets) pour ne
+// jamais laisser la table déborder sous la barre de gestes système —
+// bug remonté ("table trop haute, coupée en bas").
+// Disposition : barre fine en haut (retour/mode/score, "Bot vs Joueur"),
+// jauge de puissance VERTICALE + bouton TIRER dans un panneau étroit à
+// droite, table maximisée sur le reste de l'espace.
 // Bouton/geste retour Android intercepté (BackHandler) pour naviguer dans
-// l'écran plutôt que fermer l'appli (bug remonté : le swipe retour système
-// fermait l'appli faute de gestion).
+// l'écran plutôt que fermer l'appli.
 // Animation de frappe : la queue recule (visible pendant la visée) puis
-// fonce vers la bille en ~130ms avant que le tir ne parte réellement,
-// comme le PWA (bilStartStrike/bilAnimateStrike).
+// fonce vers la bille en ~130ms avant que le tir ne parte réellement.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions, BackHandler } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
@@ -48,12 +51,14 @@ const COLORS = {
 };
 
 const COINS_WIN = 5;
-const PANEL_W = 190;
+const PANEL_W = 96; // panneau étroit : juste la jauge verticale + TIRER
+const TOP_BAR_H = 44; // barre fine du haut : retour/mode/score
 const STRIKE_DURATION = 130;
 
 export default function BilliardScreen({ onBack }) {
   const { addCoinsLimited } = useCoins();
   const { width: WIN_W, height: WIN_H } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
@@ -96,9 +101,10 @@ export default function BilliardScreen({ onBack }) {
   const backToSetupRef = useRef(() => {});
 
   // Table non tournée (vrai paysage) : TABLE_W (long axe) = largeur
-  // dispo, TABLE_H (court axe) = hauteur dispo.
-  const availW = WIN_W - PANEL_W - 24;
-  const availH = WIN_H - 16;
+  // dispo, TABLE_H (court axe) = hauteur dispo. Zones sûres (insets)
+  // soustraites pour ne jamais déborder sous la barre de gestes système.
+  const availW = WIN_W - PANEL_W - insets.left - insets.right - 16;
+  const availH = WIN_H - TOP_BAR_H - insets.top - insets.bottom - 12;
   let tableAreaW = availW;
   let tableAreaH = tableAreaW * (TABLE_H / TABLE_W);
   if (tableAreaH > availH) {
@@ -194,6 +200,7 @@ export default function BilliardScreen({ onBack }) {
   const fireShotRef = useRef(null);
   const startStrikeRef = useRef(null);
 
+  const maybeBotTurnRef = useRef(() => {});
   const maybeBotTurn = useCallback(() => {
     if (mode !== 'bot') return;
     const gid = gameIdRef.current;
@@ -208,6 +215,10 @@ export default function BilliardScreen({ onBack }) {
             respawnCue(pos);
             setStatus(`Tour : ${turnLabel(2)}`);
             bump();
+            // Bug corrigé : rien ne relançait le bot pour qu'il tire une
+            // fois la bille replacée après une faute — il restait "figé"
+            // en attente indéfiniment. On enchaîne directement vers le tir.
+            setTimeout(() => maybeBotTurnRef.current(), 0);
             return 'aim';
           }
           if (gs === 'aim') {
@@ -234,6 +245,7 @@ export default function BilliardScreen({ onBack }) {
     }, 900);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
+  maybeBotTurnRef.current = maybeBotTurn;
 
   const onShotSettled = useCallback(() => {
     if (mode === 'solo') {
@@ -419,20 +431,20 @@ export default function BilliardScreen({ onBack }) {
     })
   ).current;
 
-  // Jauge horizontale, largeur FIXE (liée au panneau, pas à la table) —
-  // l'ancien couplage à la largeur de la table provoquait un léger bug
-  // visuel/tactile résiduel signalé par l'utilisateur.
-  const POWER_BAR_W = PANEL_W - 32;
-  const setPowerFromBar = (x) => {
-    const frac = Math.max(0, Math.min(1, x / POWER_BAR_W));
+  // Jauge VERTICALE (demande explicite), hauteur FIXE (liée au panneau, pas
+  // à la table) — l'ancien couplage à une dimension de la table provoquait
+  // un léger bug visuel/tactile résiduel signalé par l'utilisateur.
+  const POWER_BAR_H = Math.max(120, availH - 70);
+  const setPowerFromBar = (y) => {
+    const frac = Math.max(0, Math.min(1, 1 - y / POWER_BAR_H));
     setPower(frac * MAX_POWER);
   };
   const powerBarResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => gameStateRef.current === 'aim',
       onMoveShouldSetPanResponder: () => gameStateRef.current === 'aim',
-      onPanResponderGrant: (evt) => setPowerFromBar(evt.nativeEvent.locationX),
-      onPanResponderMove: (evt) => setPowerFromBar(evt.nativeEvent.locationX),
+      onPanResponderGrant: (evt) => setPowerFromBar(evt.nativeEvent.locationY),
+      onPanResponderMove: (evt) => setPowerFromBar(evt.nativeEvent.locationY),
     })
   ).current;
 
@@ -486,6 +498,22 @@ export default function BilliardScreen({ onBack }) {
 
   return (
     <View style={styles.screen}>
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={backToSetup} style={styles.topBackBtn}>
+          <Text style={styles.backText}>← {mode === 'solo' ? 'Entraînement' : mode === 'bot' ? 'VS Bot' : 'Pass & Play'}</Text>
+        </TouchableOpacity>
+
+        {mode !== 'solo' && (
+          <Text style={styles.scoreTextTop} numberOfLines={1}>
+            <Text style={currentPlayer === 1 ? styles.scoreActive : null}>Joueur 1{playerGroups[1] ? ` (${playerGroups[1] === 'solid' ? 'Pleines' : 'Rayées'})` : ''}</Text>
+            {'   vs   '}
+            <Text style={currentPlayer === 2 ? styles.scoreActive : null}>{mode === 'bot' ? 'Bot' : 'Joueur 2'}{playerGroups[2] ? ` (${playerGroups[2] === 'solid' ? 'Pleines' : 'Rayées'})` : ''}</Text>
+          </Text>
+        )}
+
+        <Text style={styles.statusTop} numberOfLines={1}>{status}</Text>
+      </View>
+
       <View style={styles.mainRow}>
         <View style={styles.tableWrap}>
           <View style={[styles.tableArea, { width: tableAreaW, height: tableAreaH }]} {...tablePanResponder.panHandlers}>
@@ -530,25 +558,9 @@ export default function BilliardScreen({ onBack }) {
         </View>
 
         <View style={styles.panel}>
-          <TouchableOpacity onPress={backToSetup} style={styles.panelBackBtn}>
-            <Text style={styles.backText}>← {mode === 'solo' ? 'Entraînement' : mode === 'bot' ? 'VS Bot' : 'Pass & Play'}</Text>
-          </TouchableOpacity>
-
-          {mode !== 'solo' && (
-            <Text style={styles.scoreText} numberOfLines={1}>
-              <Text style={currentPlayer === 1 ? styles.scoreActive : null}>J1{playerGroups[1] ? `(${playerGroups[1] === 'solid' ? 'Pl' : 'Ra'})` : ''}</Text>
-              {'  vs  '}
-              <Text style={currentPlayer === 2 ? styles.scoreActive : null}>{mode === 'bot' ? 'Bot' : 'J2'}{playerGroups[2] ? `(${playerGroups[2] === 'solid' ? 'Pl' : 'Ra'})` : ''}</Text>
-            </Text>
-          )}
-
-          <Text style={styles.status} numberOfLines={2}>{status}</Text>
-
-          <View style={{ flex: 1 }} />
-
-          <View style={[styles.powerBarWrap, { width: POWER_BAR_W }]} {...powerBarResponder.panHandlers}>
-            <View style={[styles.powerBarFill, { width: `${(power / MAX_POWER) * 100}%` }]} />
-            <Text style={styles.powerPct}>{Math.round((power / MAX_POWER) * 100)}%</Text>
+          <Text style={styles.powerPctLabel}>{Math.round((power / MAX_POWER) * 100)}%</Text>
+          <View style={[styles.powerBarWrap, { height: POWER_BAR_H }]} {...powerBarResponder.panHandlers}>
+            <View style={[styles.powerBarFill, { height: `${(power / MAX_POWER) * 100}%` }]} />
           </View>
           <TouchableOpacity
             style={[styles.fireBtn, !(aimDir && power > MAX_POWER * 0.05 && gameState === 'aim') && styles.fireBtnDisabled]}
@@ -656,6 +668,19 @@ const styles = StyleSheet.create({
   modeTitle: { color: COLORS.text, fontSize: 16, fontWeight: '800' },
   modeDesc: { color: COLORS.muted, fontSize: 12, marginTop: 4 },
 
+  topBar: {
+    height: TOP_BAR_H,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2f45',
+  },
+  topBackBtn: { paddingVertical: 4 },
+  scoreTextTop: { color: COLORS.muted, fontSize: 13, fontWeight: '700' },
+  statusTop: { color: COLORS.text, fontSize: 12, fontWeight: '700', flex: 1, textAlign: 'right' },
+
   mainRow: { flex: 1, flexDirection: 'row' },
   tableWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tableArea: { backgroundColor: COLORS.wood, borderRadius: 8, overflow: 'hidden' },
@@ -667,30 +692,29 @@ const styles = StyleSheet.create({
 
   panel: {
     width: PANEL_W,
-    padding: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
     borderLeftWidth: 1,
     borderLeftColor: '#2a2f45',
   },
-  panelBackBtn: { paddingVertical: 4, marginBottom: 10 },
-  scoreText: { color: COLORS.muted, fontSize: 13, fontWeight: '700', marginBottom: 6 },
   scoreActive: { color: COLORS.action },
-  status: { color: COLORS.text, fontSize: 12, fontWeight: '700' },
 
   powerBarWrap: {
-    height: 30,
+    width: 34,
     backgroundColor: '#1c2032',
-    borderRadius: 15,
+    borderRadius: 17,
     borderWidth: 1,
     borderColor: '#2a2f45',
     overflow: 'hidden',
-    justifyContent: 'center',
-    marginBottom: 10,
+    justifyContent: 'flex-end',
   },
-  powerBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#FF5252' },
-  powerPct: { color: COLORS.text, fontSize: 11, fontWeight: '800', textAlign: 'center' },
-  fireBtn: { backgroundColor: COLORS.action, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
+  powerBarFill: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#FF5252' },
+  powerPctLabel: { color: COLORS.text, fontSize: 11, fontWeight: '800' },
+  fireBtn: { backgroundColor: COLORS.action, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center' },
   fireBtnDisabled: { opacity: 0.35 },
-  fireBtnText: { color: '#1a1300', fontSize: 14, fontWeight: '900' },
+  fireBtnText: { color: '#1a1300', fontSize: 13, fontWeight: '900' },
 
   endOverlay: {
     position: 'absolute',

@@ -1,22 +1,28 @@
 // Moteur physique du billard — remplace Matter.js (utilisé dans le PWA) par
 // une implémentation maison en JS pur, pour éviter d'introduire une nouvelle
 // dépendance native dans le projet mobile (voir historique de crash lié aux
-// modules natifs, documenté dans PROJECT_STATE.md). Les CONSTANTES
-// (restitution, friction, sous-étapes) sont IDENTIQUES au PWA pour un
-// ressenti de jeu équivalent — seule la méthode de résolution des
-// collisions change (collision cercle-cercle élastique à masse égale +
-// réflexion cercle-mur, au lieu d'un vrai moteur de corps rigides).
+// modules natifs, documenté dans PROJECT_STATE.md). RESTITUTION et
+// SUBSTEPS sont identiques au PWA. MAX_POWER et FRICTION_AIR ont dû être
+// RECALIBRÉS (pas copiés tels quels) : Matter.js applique sa friction de
+// l'air selon sa propre formule interne liée au vrai pas de temps, que
+// notre moteur simplifié (position += vitesse à chaque sous-étape) ne
+// reproduit pas à l'identique. Avec les valeurs copiées telles quelles du
+// PWA (45 / 0.018), un tir à pleine puissance se stabilisait en ~0,45s —
+// visuellement "instantané", retour utilisateur explicite. Recalibré pour
+// ~2s (retour à un rythme de tir agréable), en gardant le même ratio
+// puissance/friction (donc la même distance totale parcourue à puissance
+// max, seule la VITESSE à laquelle cette distance se joue a changé).
 
 export const TABLE_W = 900;
 export const TABLE_H = 450;
 export const BALL_R = 18;
 export const REST_WALL = 0.8;
 export const REST_BALL = 0.95;
-export const FRICTION_AIR = 0.018;
+export const FRICTION_AIR = 0.004;
 export const SUBSTEPS = 8;
 export const POCKET_R = 32;
 export const POCKET_R_SIDE = 24;
-export const MAX_POWER = 45;
+export const MAX_POWER = 10;
 
 export const POCKETS = [
   { x: 0, y: 0, r: POCKET_R },
@@ -111,9 +117,9 @@ function resolveBallCollision(a, b) {
 // frame : { ballBallContacts: Set<pairKey>, railContacts: Set<ballId> } pour
 // que l'appelant puisse dériver firstContactGroup / railAfterContact.
 export function stepPhysics(balls, events) {
-  // Vitesse exprimée en "pixels par sous-étape" (pas en px/s) — cohérent avec
-  // le calibrage de MAX_POWER (45) repris tel quel du PWA, qui définissait
-  // déjà sa puissance dans les unités internes de Matter.js à pas fixe.
+  // Vitesse exprimée en "pixels par sous-étape" (pas en px/s) — MAX_POWER
+  // et FRICTION_AIR ont été recalibrés (voir en-tête du fichier) pour un
+  // tir qui se joue sur ~2-3s au lieu d'être quasi instantané.
   const active = balls.filter((b) => !b.pocketed);
   for (let s = 0; s < SUBSTEPS; s++) {
     for (const ball of active) {
