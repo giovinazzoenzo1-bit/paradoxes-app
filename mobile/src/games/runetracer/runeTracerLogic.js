@@ -200,7 +200,14 @@ export function resample(points, n) {
 // s'effondrerait sur covUser (plein de points du joueur loin de la
 // référence) — les deux dérives possibles sont donc couvertes.
 const SAMPLE_N = 120;
-const TOLERANCE = 0.045; // rayon de tolérance minimal, en unités normalisées [0,1] — "minim" comme demandé
+const TOLERANCE = 0.015; // resserrée (0.045→0.015) après retour utilisateur : un gribouillage
+// dense sans rapport avec la forme (voir capture "Éternité") notait encore 61% ("BIEN") avec
+// l'ancienne valeur — testé : à 0.015 ce même gribouillage tombe à ~24% (RATÉ), tandis qu'un
+// tracé honnête avec un tremblement de doigt réaliste (~2% du canevas) reste à 98-100%, avec
+// une marge de sécurité confortable avant que ça ne devienne trop dur (dégradation seulement
+// en dessous de ~0.01). Bénéfice supplémentaire : les traits parasites hors de la forme (vus
+// sur les captures triangle/carré, un petit trait en trop) sont maintenant bien plus pénalisés,
+// puisqu'il leur est plus difficile de "tomber" par hasard à proximité d'un point de la référence.
 
 function coverageFraction(fromPoints, toPoints, tolerance) {
   let covered = 0;
