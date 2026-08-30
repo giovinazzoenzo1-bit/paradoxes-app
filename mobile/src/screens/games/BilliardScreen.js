@@ -14,10 +14,9 @@
 // Animation de frappe : la queue recule (visible pendant la visée) puis
 // fonce vers la bille en ~130ms avant que le tir ne parte réellement.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions, BackHandler, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import * as NavigationBar from 'expo-navigation-bar';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
 import {
@@ -63,17 +62,8 @@ export default function BilliardScreen({ onBack }) {
 
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
-    if (Platform.OS === 'android') {
-      // Masque la barre de navigation/tâche système (gênante en paysage,
-      // notamment la "taskbar" Samsung One UI) pendant le billard.
-      NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
-      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
-    }
     return () => {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-      if (Platform.OS === 'android') {
-        NavigationBar.setVisibilityAsync('visible').catch(() => {});
-      }
     };
   }, []);
 
@@ -466,20 +456,31 @@ export default function BilliardScreen({ onBack }) {
   const POWER_BAR_H = Math.max(120, availH - 70);
   const powerBarHRef = useRef(POWER_BAR_H);
   powerBarHRef.current = POWER_BAR_H;
-  // Même piège que gameState/mode/currentPlayer plus haut : le PanResponder
-  // est créé une seule fois via useRef, donc son callback doit lire la
-  // hauteur de la jauge via une ref à jour, pas la constante figée du
-  // premier rendu (c'était le bug remonté après le passage à la verticale).
   const setPowerFromBar = (y) => {
     const frac = Math.max(0, Math.min(1, 1 - y / powerBarHRef.current));
     setPower(frac * MAX_POWER);
+  };
+
+  // Même piège que la visée sur la table (voir posFromGesture plus haut) :
+  // la jauge ne fait que 34px de large, le doigt en sort très facilement
+  // pendant un glissement vertical, ce qui rend locationY peu fiable dès
+  // cet instant (bug RN connu) — c'était le vrai bug encore non résolu.
+  // Même correctif : position absolue mesurée + gestureState.moveY.
+  const powerBarViewRef = useRef(null);
+  const powerBarOriginRef = useRef({ x: 0, y: 0 });
+  const handlePowerBarLayout = () => {
+    if (powerBarViewRef.current && powerBarViewRef.current.measure) {
+      powerBarViewRef.current.measure((x, y, w, h, pageX, pageY) => {
+        powerBarOriginRef.current = { x: pageX, y: pageY };
+      });
+    }
   };
   const powerBarResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => gameStateRef.current === 'aim',
       onMoveShouldSetPanResponder: () => gameStateRef.current === 'aim',
-      onPanResponderGrant: (evt) => setPowerFromBar(evt.nativeEvent.locationY),
-      onPanResponderMove: (evt) => setPowerFromBar(evt.nativeEvent.locationY),
+      onPanResponderGrant: (evt, gestureState) => setPowerFromBar(gestureState.moveY - powerBarOriginRef.current.y),
+      onPanResponderMove: (evt, gestureState) => setPowerFromBar(gestureState.moveY - powerBarOriginRef.current.y),
     })
   ).current;
 
@@ -605,7 +606,13 @@ export default function BilliardScreen({ onBack }) {
 
         <View style={styles.panel}>
           <Text style={styles.powerPctLabel}>{Math.round((power / MAX_POWER) * 100)}%</Text>
-          <View style={[styles.powerBarWrap, { height: POWER_BAR_H }]} {...powerBarResponder.panHandlers}>
+          <View
+            ref={powerBarViewRef}
+            onLayout={handlePowerBarLayout}
+            style={[styles.powerBarWrap, { height: POWER_BAR_H }]}
+            hitSlop={{ left: 20, right: 20, top: 10, bottom: 10 }}
+            {...powerBarResponder.panHandlers}
+          >
             <View style={[styles.powerBarFill, { height: `${(power / MAX_POWER) * 100}%` }]} />
           </View>
           <TouchableOpacity

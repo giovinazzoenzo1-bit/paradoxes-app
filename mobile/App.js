@@ -1,10 +1,11 @@
 // Navigation par onglets en état local (pas de react-navigation/gesture-handler/
 // screens) : ce groupe de libs causait un blocage indéfini du contexte React sur
 // ce build (écran blanc permanent), confirmé par bisection. Solution stable.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as NavigationBar from 'expo-navigation-bar';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { CoinsProvider } from './src/context/CoinsContext';
 import JeuxScreen from './src/screens/JeuxScreen';
@@ -24,6 +25,18 @@ function AppContent() {
   const insets = useSafeAreaInsets();
   const [active, setActive] = useState('Jeux');
   const [gameOpen, setGameOpen] = useState(false); // masque la tab bar quand un jeu est ouvert
+
+  // Barre de navigation/gestes Android masquée pour TOUTE l'appli (plus
+  // d'immersion, demande explicite) — plus seulement pendant le billard.
+  // 'overlay-swipe' permet quand même de la faire réapparaître brièvement
+  // d'un geste bord d'écran si besoin (pas totalement bloquant).
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
+      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+    }
+  }, []);
+
   const ActiveComponent = TABS.find((t) => t.key === active).Component;
 
   return (
