@@ -4,15 +4,18 @@
 // similarité entre le tracé du joueur et la forme de référence. Univers et
 // noms 100% originaux (voir runeTracerLogic.js) — pas de sorts Harry
 // Potter, qui sont une propriété intellectuelle protégée.
-// Ajouté sur retour utilisateur (avec captures d'un jeu de référence) :
-// minuteur de 6s par tentative, 3 essais ("chances") par rune avec le
-// meilleur score conservé, score cumulé affiché en haut (somme des % de
-// chaque rune, pas une moyenne).
-// Leçons retenues des jeux précédents appliquées dès le départ :
-// - Position tactile mesurée en absolu (ref + .measure()) + gestureState,
-//   jamais locationX/Y.
-// - Toute valeur lue dans un callback PanResponder mémorisé passe par une
-//   ref à jour, jamais une variable d'état capturée.
+//
+// Règle des essais (précisée par l'utilisateur) : les 3 "chances" ne se
+// déclenchent QUE si le joueur ne termine pas son tracé dans le temps
+// imparti (6s) — PAS parce qu'il n'aime pas son résultat. Concrètement :
+// - Le joueur lève le doigt à temps -> tracé accepté tel quel, définitif,
+//   pas de bouton "Réessayer" (seulement "Suivant").
+// - Le temps s'épuise avant qu'il ait fini -> une chance est consommée,
+//   la forme se remontre automatiquement pour un nouvel essai, jusqu'à
+//   épuisement des 3 chances (le dernier essai, réussi ou non, devient
+//   alors le résultat définitif).
+// Minuteur affiché en BAS avec une barre qui se vide (comme le jeu de
+// référence), pas en haut.
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions } from 'react-native';
 import { useCoins } from '../../context/CoinsContext';
@@ -31,10 +34,11 @@ const COLORS = {
   action: '#f5c542',
 };
 
-const SHOW_HOLD_DURATION = 450; // pause une fois la forme entièrement dessinée
+const SHOW_HOLD_DURATION = 450;
 const FADE_DURATION = 350;
-const DRAW_TIME_LIMIT = 6; // secondes pour tracer, demande explicite
-const MAX_ATTEMPTS = 3; // "chances" par rune, demande explicite
+const TIMEOUT_MSG_DURATION = 900; // durée d'affichage du message "temps écoulé" avant relance
+const DRAW_TIME_LIMIT = 6; // secondes pour tracer
+const MAX_ATTEMPTS = 3; // "chances" par rune — uniquement en cas de temps écoulé
 const RATING_COLOR = {
   PARFAIT: '#00E676',
   'TRÈS BIEN': '#4fd18a',
@@ -51,7 +55,6 @@ function coinsForAverage(avg) {
   return 0;
 }
 
-// Durée du dessin progressif proportionnelle à la complexité de la forme.
 function dimsForRune(rune) {
   const segments = rune.points.length;
   const duration = Math.max(1100, Math.min(2600, 700 + segments * 22));
@@ -63,12 +66,11 @@ export default function RuneTracerScreen({ onBack }) {
   const panHandlers = useBackGesture(onBack);
   const { width: WIN_W, height: WIN_H } = useWindowDimensions();
 
-  const [phase, setPhase] = useState('setup');
+  const [phase, setPhase] = useState('setup'); // setup|showing|fading|drawing|timeout|result|final
   const [runeIndex, setRuneIndex] = useState(0);
   const [scores, setScores] = useState([]);
   const [lastScore, setLastScore] = useState(null);
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
-  const [bestScore, setBestScore] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(DRAW_TIME_LIMIT);
   const [, setTick] = useState(0);
@@ -82,11 +84,10 @@ export default function RuneTracerScreen({ onBack }) {
   const timeoutRef = useRef(null);
   const gameIdRef = useRef(0);
   const attemptsLeftRef = useRef(MAX_ATTEMPTS);
-  const bestScoreRef = useRef(0);
   const timerIntervalRef = useRef(null);
   const drawStartRef = useRef(0);
 
-  const canvasSize = Math.min(WIN_W - 40, WIN_H - 340, 420);
+  const canvasSize = Math.min(WIN_W - 40, WIN_H - 320, 400);
 
   const canvasViewRef = useRef(null);
   const canvasOriginRef = useRef({ x: 0, y: 0 });
@@ -109,7 +110,7 @@ export default function RuneTracerScreen({ onBack }) {
     }
   };
 
-  const finishStrokeRef = useRef(null);
+  const handleTimeoutRef = useRef(null);
 
   const startDrawTimer = useCallback(() => {
     drawStartRef.current = performance.now();
@@ -121,13 +122,11 @@ export default function RuneTracerScreen({ onBack }) {
       setTimeLeft(remain);
       if (remain <= 0) {
         stopTimer();
-        finishStrokeRef.current();
+        handleTimeoutRef.current();
       }
     }, 100);
   }, []);
 
-  // Anime le dessin progressif de la forme (elle se trace elle-même), puis
-  // enchaîne sur la disparition et démarre le minuteur de dessin.
   const animateReveal = useCallback(() => {
     const dims = dimsForRune(RUNES[runeIndexRef.current]);
     const t = Math.min(1, (performance.now() - revealStartRef.current) / dims.duration);
@@ -147,9 +146,8 @@ export default function RuneTracerScreen({ onBack }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDrawTimer]);
 
-  // Relance le cycle affichage→disparition→dessin SANS toucher aux essais
-  // restants ni au meilleur score (utilisé au premier lancement d'une rune
-  // ET pour "Réessayer").
+  // Relance le cycle affichage→disparition→dessin pour un nouvel essai
+  // (utilisé uniquement après un temps écoulé, pas de bouton manuel).
   const beginShowPhase = useCallback(() => {
     userPointsRef.current = [];
     setLastScore(null);
@@ -166,17 +164,11 @@ export default function RuneTracerScreen({ onBack }) {
     (index) => {
       attemptsLeftRef.current = MAX_ATTEMPTS;
       setAttemptsLeft(MAX_ATTEMPTS);
-      bestScoreRef.current = 0;
-      setBestScore(0);
       setRuneIndex(index);
       beginShowPhase();
     },
     [beginShowPhase]
   );
-
-  const retryRune = useCallback(() => {
-    beginShowPhase();
-  }, [beginShowPhase]);
 
   const startGame = useCallback(() => {
     gameIdRef.current++;
@@ -193,27 +185,47 @@ export default function RuneTracerScreen({ onBack }) {
     setPhase('setup');
   };
 
-  const finishStroke = useCallback(() => {
-    if (phaseRef.current !== 'drawing') return;
-    stopTimer();
+  // Finalise DÉFINITIVEMENT le résultat de cette rune (tracé terminé à
+  // temps, OU dernière chance épuisée) — pas de retour en arrière possible.
+  const finalizeAttempt = useCallback(() => {
     const rune = RUNES[runeIndexRef.current];
     const score = scoreTrace(rune.points, userPointsRef.current);
-    bestScoreRef.current = Math.max(bestScoreRef.current, score);
-    setBestScore(bestScoreRef.current);
-    attemptsLeftRef.current = Math.max(0, attemptsLeftRef.current - 1);
-    setAttemptsLeft(attemptsLeftRef.current);
     setLastScore(score);
     setPhase('result');
   }, []);
-  // Piège déjà rencontré (billard, ping-pong) et cette fois manqué au premier
-  // jet : le PanResponder ci-dessous est créé UNE SEULE FOIS via useRef, donc
-  // son callback onPanResponderRelease ne doit JAMAIS appeler directement une
-  // fonction qui change — sinon il garde pour toujours la version du tout
-  // premier rendu. Corrigé en passant par une ref à jour à chaque rendu.
-  finishStrokeRef.current = finishStroke;
+  const finalizeAttemptRef = useRef(finalizeAttempt);
+  finalizeAttemptRef.current = finalizeAttempt;
+
+  // Le joueur a levé le doigt lui-même, À TEMPS -> définitif, pas de retour
+  // en arrière possible même s'il n'aime pas le résultat.
+  const handleRelease = useCallback(() => {
+    if (phaseRef.current !== 'drawing') return;
+    stopTimer();
+    finalizeAttemptRef.current();
+  }, []);
+  const handleReleaseRef = useRef(handleRelease);
+  handleReleaseRef.current = handleRelease;
+
+  // Le temps s'est épuisé AVANT que le joueur ait fini -> consomme une
+  // chance ; s'il en reste, relance automatiquement un nouvel essai (avec
+  // un bref message) ; sinon, le tracé partiel devient le résultat définitif.
+  const handleTimeout = useCallback(() => {
+    if (phaseRef.current !== 'drawing') return;
+    attemptsLeftRef.current = Math.max(0, attemptsLeftRef.current - 1);
+    setAttemptsLeft(attemptsLeftRef.current);
+    if (attemptsLeftRef.current > 0) {
+      setPhase('timeout');
+      timeoutRef.current = setTimeout(() => {
+        beginShowPhase();
+      }, TIMEOUT_MSG_DURATION);
+    } else {
+      finalizeAttemptRef.current();
+    }
+  }, [beginShowPhase]);
+  handleTimeoutRef.current = handleTimeout;
 
   const goNext = () => {
-    const finalScoreForRune = bestScoreRef.current;
+    const finalScoreForRune = lastScore || 0;
     setTotalScore((s) => s + finalScoreForRune);
     const newScores = [...scores, finalScoreForRune];
     setScores(newScores);
@@ -248,7 +260,7 @@ export default function RuneTracerScreen({ onBack }) {
         userPointsRef.current.push({ x, y });
         bump();
       },
-      onPanResponderRelease: () => finishStrokeRef.current(),
+      onPanResponderRelease: () => handleReleaseRef.current(),
     })
   ).current;
 
@@ -267,11 +279,11 @@ export default function RuneTracerScreen({ onBack }) {
         <View style={styles.introPanel}>
           <Text style={styles.introText}>
             Une rune s'affiche quelques secondes puis disparaît. Reproduis-la du doigt le plus
-            fidèlement possible en {DRAW_TIME_LIMIT}s — ton score est le % de ressemblance avec le
-            tracé original.
+            fidèlement possible en {DRAW_TIME_LIMIT}s.
           </Text>
           <Text style={styles.introText}>
-            {MAX_ATTEMPTS} essais par rune (le meilleur compte), 10 runes par manche.
+            {MAX_ATTEMPTS} chances si le temps s'épuise avant que tu finisses — mais un tracé
+            terminé à temps est définitif, pas de retour en arrière.
           </Text>
           <TouchableOpacity style={styles.startBtn} onPress={startGame}>
             <Text style={styles.startBtnText}>Commencer</Text>
@@ -323,13 +335,7 @@ export default function RuneTracerScreen({ onBack }) {
           <Text style={styles.scoreValue}>{totalScore}</Text>
         </View>
       </View>
-
-      <View style={styles.subHeader}>
-        <Text style={styles.runeCounter}>RUNE {runeIndex + 1} / {RUNES.length}</Text>
-        {phase === 'drawing' && (
-          <Text style={[styles.timerText, timeLeft <= 2 && styles.timerTextUrgent]}>⏱ {timeLeft.toFixed(1)}s</Text>
-        )}
-      </View>
+      <Text style={styles.runeCounter}>RUNE {runeIndex + 1} / {RUNES.length}</Text>
 
       <View style={styles.progressRow}>
         {RUNES.map((_, i) => (
@@ -365,6 +371,13 @@ export default function RuneTracerScreen({ onBack }) {
               <Segment key={i} {...seg} color={COLORS.drawn} thickness={5} glow />
             ))}
 
+          {phase === 'timeout' && (
+            <View style={styles.timeoutOverlay} pointerEvents="none">
+              <Text style={styles.timeoutText}>⏱ Temps écoulé !</Text>
+              <Text style={styles.timeoutSubtext}>Nouvel essai…</Text>
+            </View>
+          )}
+
           {phase === 'result' && (
             <>
               {segmentsFor(rune.points, canvasSize).map((seg, i) => (
@@ -379,39 +392,44 @@ export default function RuneTracerScreen({ onBack }) {
       </View>
 
       {phase === 'showing' && <Text style={styles.hintText}>Mémorise la forme…</Text>}
-      {phase === 'drawing' && <Text style={styles.hintText}>À toi de tracer !</Text>}
+
+      {phase === 'drawing' && (
+        <View style={styles.timerSection}>
+          <Text style={styles.hintText}>À toi de tracer !</Text>
+          <View style={styles.timeBarTrack}>
+            <View
+              style={[
+                styles.timeBarFill,
+                { width: `${(timeLeft / DRAW_TIME_LIMIT) * 100}%` },
+                timeLeft <= 2 && styles.timeBarFillUrgent,
+              ]}
+            />
+          </View>
+          <View style={styles.timerFooterRow}>
+            <Text style={styles.chancesLabel}>CHANCES</Text>
+            <View style={styles.castsRow}>
+              {Array.from({ length: MAX_ATTEMPTS }).map((_, i) => (
+                <View key={i} style={[styles.castDot, i < MAX_ATTEMPTS - attemptsLeft && styles.castDotUsed]} />
+              ))}
+            </View>
+            <Text style={styles.timerText}>{timeLeft.toFixed(1)}s</Text>
+          </View>
+        </View>
+      )}
 
       {phase === 'result' && lastScore !== null && (
         <View style={styles.resultPanel}>
           <Text style={styles.resultScore}>{lastScore}%</Text>
           <Text style={[styles.resultRating, { color: RATING_COLOR[ratingForScore(lastScore)] }]}>{ratingForScore(lastScore)}</Text>
-          {bestScore !== lastScore && <Text style={styles.bestScoreHint}>Meilleur essai : {bestScore}%</Text>}
-
-          <View style={styles.castsRow}>
-            {Array.from({ length: MAX_ATTEMPTS }).map((_, i) => (
-              <View key={i} style={[styles.castDot, i < MAX_ATTEMPTS - attemptsLeft && styles.castDotUsed]} />
-            ))}
-          </View>
-
-          <View style={styles.resultBtnRow}>
-            {attemptsLeft > 0 && (
-              <TouchableOpacity style={styles.retryBtn} onPress={retryRune}>
-                <Text style={styles.retryBtnText}>↻ Réessayer</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity style={styles.nextBtn} onPress={goNext}>
-              <Text style={styles.nextBtnText}>{runeIndex + 1 >= RUNES.length ? 'Voir le résultat' : 'Suivant →'}</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.nextBtn} onPress={goNext}>
+            <Text style={styles.nextBtnText}>{runeIndex + 1 >= RUNES.length ? 'Voir le résultat' : 'Suivant →'}</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
   );
 }
 
-// Retourne la portion du tracé de référence correspondant à la fraction
-// "progress" (0..1) de sa LONGUEUR — donne l'effet "la forme se trace
-// elle-même".
 function revealedPoints(points, progress) {
   if (progress >= 1) return points;
   if (progress <= 0) return [points[0]];
@@ -473,7 +491,7 @@ function Segment({ x, y, len, angle, color, thickness, glow }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
   backBtn: { paddingVertical: 6, paddingRight: 12 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
@@ -482,39 +500,44 @@ const styles = StyleSheet.create({
   scoreLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   scoreValue: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
 
-  subHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 2, marginBottom: 6 },
-  runeCounter: { color: COLORS.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1 },
-  timerText: { color: COLORS.guide, fontSize: 13, fontWeight: '800', marginLeft: 'auto' },
-  timerTextUrgent: { color: '#FF5252' },
+  runeCounter: { color: COLORS.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1, marginTop: 4 },
 
   progressRow: { flexDirection: 'row', gap: 4, marginTop: 4, marginBottom: 10 },
   progressDot: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#2a2350' },
   progressDotDone: { backgroundColor: COLORS.guide },
 
-  runeName: { color: COLORS.guide, fontSize: 26, fontWeight: '900', textAlign: 'center' },
+  runeName: { color: COLORS.guide, fontSize: 24, fontWeight: '900', textAlign: 'center' },
   runeDesc: { color: COLORS.muted, fontSize: 12, textAlign: 'center', marginTop: 2 },
-  diffBadge: { alignSelf: 'center', backgroundColor: 'rgba(62,198,240,0.15)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, marginTop: 8 },
+  diffBadge: { alignSelf: 'center', backgroundColor: 'rgba(62,198,240,0.15)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, marginTop: 6 },
   diffBadgeText: { color: COLORS.guide, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
 
-  canvasWrap: { alignItems: 'center', marginTop: 16 },
+  canvasWrap: { alignItems: 'center', marginTop: 12 },
   canvas: { backgroundColor: COLORS.panel, borderRadius: 20, overflow: 'hidden', position: 'relative' },
   canvasGuideBorder: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, borderWidth: 1, borderColor: COLORS.border, borderRadius: 20 },
 
-  hintText: { color: COLORS.muted, textAlign: 'center', marginTop: 12, fontSize: 12, fontWeight: '700' },
+  timeoutOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  timeoutText: { color: '#FF5252', fontSize: 22, fontWeight: '900' },
+  timeoutSubtext: { color: COLORS.muted, fontSize: 13, fontWeight: '700', marginTop: 6 },
 
-  resultPanel: { alignItems: 'center', marginTop: 12 },
+  hintText: { color: COLORS.muted, textAlign: 'center', fontSize: 12, fontWeight: '700' },
+
+  // Minuteur en BAS avec barre qui se vide, comme demandé
+  timerSection: { marginTop: 12, alignItems: 'stretch' },
+  timeBarTrack: { height: 10, borderRadius: 5, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 8 },
+  timeBarFill: { height: '100%', backgroundColor: COLORS.guide, borderRadius: 5 },
+  timeBarFillUrgent: { backgroundColor: '#FF5252' },
+  timerFooterRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  chancesLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  timerText: { color: COLORS.text, fontSize: 13, fontWeight: '800', marginLeft: 'auto' },
+
+  castsRow: { flexDirection: 'row', gap: 8, marginLeft: 10 },
+  castDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#2a2350', borderWidth: 1, borderColor: COLORS.border },
+  castDotUsed: { backgroundColor: '#FF5252', borderColor: '#FF5252' },
+
+  resultPanel: { alignItems: 'center', marginTop: 14 },
   resultScore: { color: COLORS.text, fontSize: 36, fontWeight: '900' },
   resultRating: { fontSize: 14, fontWeight: '900', letterSpacing: 1, marginTop: 2 },
-  bestScoreHint: { color: COLORS.muted, fontSize: 11, marginTop: 4, fontWeight: '700' },
-
-  castsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  castDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#2a2350', borderWidth: 1, borderColor: COLORS.border },
-  castDotUsed: { backgroundColor: COLORS.guide, borderColor: COLORS.guide },
-
-  resultBtnRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  retryBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 20, borderWidth: 1, borderColor: COLORS.border },
-  retryBtnText: { color: COLORS.text, fontSize: 14, fontWeight: '800' },
-  nextBtn: { backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 26 },
+  nextBtn: { backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 26, marginTop: 14 },
   nextBtnText: { color: '#241a00', fontSize: 14, fontWeight: '800' },
 
   introPanel: { marginTop: 24, alignItems: 'center', paddingHorizontal: 8 },
