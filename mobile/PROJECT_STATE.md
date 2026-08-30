@@ -334,3 +334,30 @@ ajoutées pour ne plus jamais rendre la table sous la barre de gestes
 système.
 
 **Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
+
+## Billard : 5 corrections supplémentaires (29/08, suite)
+1. **Table élargie** : barre du haut réduite (44→34px) + marges resserrées.
+   Comme la table était limitée par la HAUTEUR (aspect 2:1, hauteur =
+   facteur limitant), libérer de la hauteur libère aussi de la largeur.
+2. **Score vraiment centré** en haut : 3 colonnes flex égales (retour à
+   gauche, score au centre, statut à droite) au lieu d'un simple alignement
+   à gauche à côté du bouton retour.
+3. **Bug réel (même piège que la fois précédente, pas encore repéré
+   partout)** : la jauge verticale souffrait du MÊME problème de fermeture
+   figée que gameState/mode/currentPlayer — `POWER_BAR_H` était capturé par
+   le PanResponder créé une seule fois. Corrigé via une ref, même pattern
+   que les autres. **À vérifier systématiquement pour toute nouvelle valeur
+   utilisée dans un callback PanResponder mémorisé.**
+4. **Bug réel important** : viser en sortant du doigt hors de la zone de la
+   table faisait n'importe quoi. Cause : `evt.nativeEvent.locationX/Y`
+   devient peu fiable dès que le doigt quitte les limites de la vue touchée
+   (piège connu de React Native). Corrigé en mesurant la position absolue
+   de la table à l'écran (`ref` + `.measure()`) et en utilisant
+   `gestureState.moveX/moveY` (toujours fiables, coordonnées absolues)
+   moins cette origine. **Pattern à réutiliser pour tout futur geste de
+   glissement qui peut sortir de sa vue d'origine.**
+5. **Barre de navigation Android masquée** (`expo-navigation-bar`, nouvelle
+   dépendance) pendant le billard — géré comme l'orientation (masquée à
+   l'entrée, restaurée à la sortie).
+
+**Prochaine étape (inchangée) : porter Ping-pong**, dernier jeu du PWA.
