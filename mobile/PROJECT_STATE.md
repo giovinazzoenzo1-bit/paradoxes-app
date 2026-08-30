@@ -609,3 +609,40 @@ honnêtes avec coins naturellement arrondis (étoile, éclair) tombaient à
    pour la décrire) appliqué à triangle/carré/losange/éclair/étoile —
    toutes les formes se comportent maintenant de façon cohérente,
    indépendamment de leur nombre de sommets d'origine.
+
+## Traceur de Runes : refonte complète du système de score (29/08, décision utilisateur)
+Après plusieurs allers-retours de captures d'écran, l'utilisateur a
+identifié le vrai problème conceptuel : l'ancien système (distance
+moyenne point à point + recherche de décalage) pénalisait un simple
+DÉCALAGE DE POSITION presque autant qu'une vraie erreur de FORME, sans
+qu'on puisse régler leur poids l'un par rapport à l'autre. L'utilisateur
+a explicitement refusé un recentrage ("le but du jeu est d'avoir la même
+forme ET au même endroit") et a proposé lui-même la solution : **mesurer
+le % de recouvrement entre le tracé affiché et le tracé du joueur**, sans
+aucun recentrage.
+
+**Nouveau système (COUVERTURE BIDIRECTIONNELLE), qui remplace
+entièrement l'ancien :**
+- `covRef` : quelle fraction des points de la référence a un point du
+  joueur à proximité (a-t-il bien parcouru toute la forme ?)
+- `covUser` : quelle fraction des points du joueur a un point de la
+  référence à proximité (n'est-il pas sorti du tracé / n'a-t-il pas
+  gribouillé à côté ?)
+- Score = **minimum** des deux (pas la moyenne — testé : avec la
+  moyenne, un tracé ne couvrant que la moitié de la forme notait 76%,
+  trop généreux ; avec le minimum, ~53%, correctement pénalisé).
+- Tolérance minimale fixe : 0,045 en unités normalisées [0,1] (demande
+  explicite : "minim" pour l'instant, à resserrer si besoin plus tard).
+
+**Effet de bord positif** : toute la mécanique de "recherche de décalage
+de point de départ" pour les formes fermées (rotateArray, essai de tous
+les offsets, SCORE_K, normalisation par la diagonale) est devenue
+inutile et a été retirée — la couverture ne se soucie pas de l'ordre des
+points, donc l'ancien bug ("l'infini scorait 0% si tracé en démarrant
+ailleurs sur la boucle") est désormais structurellement impossible, pas
+juste corrigé au cas par cas.
+
+Testé sur 7 scénarios (tracé parfait, décalé, gribouillage aléatoire,
+tracé honnête imprécis, mauvaise forme, forme fermée démarrée ailleurs,
+tracé partiel) + les 10 runes avec un tracé bruité standard, avant de
+pousser.
