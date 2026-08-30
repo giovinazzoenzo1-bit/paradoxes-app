@@ -47,27 +47,23 @@ function trianglePoints() {
   const c = { x: 0.18, y: 0.78 };
   return densify([a, b, c, a]);
 }
-function squarePoints() {
-  const m = 0.18;
+// Remplace l'ancien carré ("Bastion" — 4 côtés égaux, jugé long et
+// ennuyeux à tracer). Coche courte, 2 segments seulement.
+function checkmarkPoints() {
   return densify([
-    { x: m, y: m },
-    { x: 1 - m, y: m },
-    { x: 1 - m, y: 1 - m },
-    { x: m, y: 1 - m },
-    { x: m, y: m },
+    { x: 0.16, y: 0.42 },
+    { x: 0.4, y: 0.78 },
+    { x: 0.86, y: 0.18 },
   ]);
 }
-function starPoints() {
-  const pts = [];
-  const spikes = 5;
-  const outerR = 0.33;
-  const innerR = 0.14;
-  for (let i = 0; i <= spikes * 2; i++) {
-    const r = i % 2 === 0 ? outerR : innerR;
-    const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
-    pts.push({ x: 0.5 + Math.cos(a) * r, y: 0.5 + Math.sin(a) * r });
-  }
-  return densify(pts, 5);
+// Remplace l'ancienne étoile ("Étincelle" — trop de pointes, jugée trop
+// compliquée). Flèche simple, 2 segments, rapide.
+function arrowPoints() {
+  return densify([
+    { x: 0.15, y: 0.55 },
+    { x: 0.75, y: 0.55 },
+    { x: 0.55, y: 0.28 },
+  ]);
 }
 function wavePoints(n = 40) {
   const pts = [];
@@ -129,12 +125,12 @@ function diamondPoints() {
 export const RUNES = [
   { id: 'halo', name: 'Halo', desc: 'Cercle de garde', difficulty: 'DÉBUTANT', points: circlePoints(), closed: true },
   { id: 'flamme', name: 'Flamme', desc: 'Pointe ascendante', difficulty: 'DÉBUTANT', points: trianglePoints(), closed: true },
-  { id: 'bastion', name: 'Bastion', desc: "Rempart d'angles droits", difficulty: 'DÉBUTANT', points: squarePoints(), closed: true },
+  { id: 'coche', name: 'Coche', desc: 'Validation rapide', difficulty: 'DÉBUTANT', points: checkmarkPoints(), closed: false },
   { id: 'croissant', name: 'Croissant', desc: 'Arc lunaire', difficulty: 'DÉBUTANT', points: crescentPoints(), closed: false },
   { id: 'joyau', name: 'Joyau', desc: 'Facettes en losange', difficulty: 'INTERMÉDIAIRE', points: diamondPoints(), closed: true },
   { id: 'maree', name: 'Marée', desc: 'Ondulation continue', difficulty: 'INTERMÉDIAIRE', points: wavePoints(), closed: false },
   { id: 'eclair', name: 'Éclair', desc: 'Angles vifs enchaînés', difficulty: 'INTERMÉDIAIRE', points: zigzagPoints(), closed: false },
-  { id: 'etincelle', name: 'Étincelle', desc: 'Pointes multiples', difficulty: 'AVANCÉ', points: starPoints(), closed: true },
+  { id: 'fleche', name: 'Flèche', desc: 'Trait rapide', difficulty: 'INTERMÉDIAIRE', points: arrowPoints(), closed: false },
   { id: 'eternite', name: 'Éternité', desc: 'Boucle sans fin', difficulty: 'AVANCÉ', points: infinityPoints(), closed: true },
   { id: 'tourbillon', name: 'Tourbillon', desc: 'Spirale resserrée', difficulty: 'AVANCÉ', points: spiralPoints(), closed: false },
 ];
