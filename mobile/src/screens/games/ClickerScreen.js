@@ -23,6 +23,15 @@ import {
   powerForCreature,
   SPAWN_INTERVAL_SEC,
   SPAWN_VISIBLE_SEC,
+  critChance,
+  critMultiplier,
+  critUpgradeCost,
+  rollCrit,
+  transeMultiplier,
+  transeStillActive,
+  nextGoldenDelaySec,
+  goldenBonus,
+  GOLDEN_VISIBLE_SEC,
 } from '../../games/clicker/clickerLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 
@@ -62,6 +71,9 @@ export default function ClickerScreen({ onBack }) {
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
   const [pendingDiscount, setPendingDiscount] = useState(null); // {percent, name} — consommé au prochain achat
+  const [critLevel, setCritLevel] = useState(0); // niveau de "Faveur des Esprits"
+  const [comboCount, setComboCount] = useState(0); // niveau actuel de la Transe
+  const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
   const [, setLiveTick] = useState(0); // force le re-rendu pour les décomptes visuels
 
   const coinsRef = useRef(0);
@@ -82,6 +94,14 @@ export default function ClickerScreen({ onBack }) {
   activePowerRef.current = activePower;
   const pendingDiscountRef = useRef(null);
   pendingDiscountRef.current = pendingDiscount;
+  const critLevelRef = useRef(0);
+  critLevelRef.current = critLevel;
+  const comboCountRef = useRef(0);
+  comboCountRef.current = comboCount;
+  const lastTapTimeRef = useRef(0);
+  const goldenTargetRef = useRef(null);
+  goldenTargetRef.current = goldenTarget;
+  const nextGoldenAtRef = useRef(Date.now() + nextGoldenDelaySec() * 1000);
   // Premier essaim au bout d'~1/3 de l'intervalle (pas d'attente complète
   // pour un nouveau joueur), puis toutes les SPAWN_INTERVAL_SEC ensuite.
   const lastSpawnTimeRef = useRef(Date.now() - Math.round(SPAWN_INTERVAL_SEC * (2 / 3)) * 1000);
@@ -102,6 +122,7 @@ export default function ClickerScreen({ onBack }) {
           setTapPower(saved.tapPower || 1);
           setOwned(saved.owned || []);
           setDeck(saved.deck || [null, null, null]);
+          setCritLevel(saved.critLevel || 0);
           if (offline > 5) setWelcomeBack(offline);
         }
       } catch (e) {
@@ -118,17 +139,17 @@ export default function ClickerScreen({ onBack }) {
     saveTimeoutRef.current = setTimeout(() => {
       AsyncStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ coins, tapPower, owned, deck, lastSave: Date.now() / 1000 })
+        JSON.stringify({ coins, tapPower, owned, deck, critLevel, lastSave: Date.now() / 1000 })
       );
     }, 600);
-  }, [coins, tapPower, owned, deck, loaded]);
+  }, [coins, tapPower, owned, deck, critLevel, loaded]);
 
   // Sauvegarde immédiate à la sortie de l'écran.
   useEffect(() => {
     return () => {
       AsyncStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ coins: coinsRef.current, tapPower: tapPowerRef.current, owned: ownedRef.current, deck: deckRef.current, lastSave: Date.now() / 1000 })
+        JSON.stringify({ coins: coinsRef.current, tapPower: tapPowerRef.current, owned: ownedRef.current, deck: deckRef.current, critLevel: critLevelRef.current, lastSave: Date.now() / 1000 })
       );
     };
   }, []);
@@ -145,14 +166,14 @@ export default function ClickerScreen({ onBack }) {
     return () => clearInterval(interval);
   }, [loaded]);
 
-  // Apparitions de créatures sur le bouton de tap : toutes les
-  // Apparitions de créatures sur le bouton de tap : toutes les
-  // SPAWN_INTERVAL_SEC, si on est sur l'onglet Tap, qu'aucune créature
-  // n'est déjà affichée, ET que le deck contient au moins une créature —
-  // seules les créatures placées dans le deck peuvent apparaître (plus le
-  // tirage sur les 10 créatures, qui donnait l'impression que certaines ne
-  // sortaient jamais). La même boucle gère aussi l'expiration de
-  // l'apparition (ratée si pas tapée à temps) et l'expiration du pouvoir actif.
+  // Boucle toutes les 300ms qui gère :
+  // - les apparitions de créatures sur le bouton de tap (deck uniquement,
+  //   voir plus haut) et leur expiration si ratées
+  // - l'expiration du pouvoir actif
+  // - la retombée du combo Transe si le joueur arrête de taper (pas
+  //   seulement au prochain tap — sinon le multiplicateur affiché resterait
+  //   figé si le joueur s'arrête net)
+  // - l'apparition et l'expiration de la cible dorée (intervalle aléatoire)
   useEffect(() => {
     if (!loaded) return;
     const interval = setInterval(() => {
@@ -176,28 +197,56 @@ export default function ClickerScreen({ onBack }) {
         setActivePower(null);
       }
 
+      if (comboCountRef.current > 0 && !transeStillActive(lastTapTimeRef.current, now)) {
+        comboCountRef.current = 0;
+        setComboCount(0);
+      }
+
+      if (goldenTargetRef.current && now > goldenTargetRef.current.expiresAt) {
+        setGoldenTarget(null);
+        nextGoldenAtRef.current = now + nextGoldenDelaySec() * 1000;
+      } else if (!goldenTargetRef.current && viewRef.current === 'tap' && now >= nextGoldenAtRef.current) {
+        const pos = randomRingPosition();
+        setGoldenTarget({ expiresAt: now + GOLDEN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
+      }
+
       setLiveTick((t) => t + 1);
     }, 300);
     return () => clearInterval(interval);
   }, [loaded]);
 
-  const spawnPopup = (text, x, y) => {
+  const spawnPopup = (text, x, y, isCrit) => {
     const id = popupIdRef.current++;
-    setPopups((p) => [...p, { id, text, x, y }]);
+    setPopups((p) => [...p, { id, text, x, y, isCrit }]);
     setTimeout(() => setPopups((p) => p.filter((pp) => pp.id !== id)), 700);
   };
 
   const handleTap = (evt) => {
-    const multiplier = activePowerRef.current ? activePowerRef.current.tapMultiplier : 1;
-    const gain = tapPowerRef.current * multiplier;
+    const now = Date.now();
+
+    // Transe : la fenêtre entre deux taps décide si le combo continue ou repart de 1.
+    const stillActive = transeStillActive(lastTapTimeRef.current, now);
+    const newCombo = stillActive ? comboCountRef.current + 1 : 1;
+    comboCountRef.current = newCombo;
+    lastTapTimeRef.current = now;
+    setComboCount(newCombo);
+
+    // Faveur des Esprits : jet de coup critique indépendant à chaque tap.
+    const isCrit = rollCrit(critLevelRef.current);
+
+    const powerMult = activePowerRef.current ? activePowerRef.current.tapMultiplier : 1;
+    const transeMult = transeMultiplier(newCombo);
+    const critMult = isCrit ? critMultiplier(critLevelRef.current) : 1;
+    const gain = Math.max(1, Math.round(tapPowerRef.current * powerMult * transeMult * critMult));
+
     setCoins((c) => c + gain);
     Animated.sequence([
-      Animated.timing(tapScale, { toValue: 0.88, duration: 60, useNativeDriver: true }),
+      Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
       Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start();
     const x = evt.nativeEvent.locationX || 60;
     const y = evt.nativeEvent.locationY || 60;
-    spawnPopup(`+${gain}`, x, y);
+    spawnPopup(`+${gain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
   };
 
   // Le joueur a tapé la créature apparue à temps : son pouvoir s'active,
@@ -235,6 +284,23 @@ export default function ClickerScreen({ onBack }) {
     setCoins((c) => c - cost);
     setTapPower((t) => t + 1);
     if (pendingDiscountRef.current) setPendingDiscount(null);
+  };
+
+  const buyCritUpgrade = () => {
+    const cost = applyDiscount(critUpgradeCost(critLevel));
+    if (coins < cost) return;
+    setCoins((c) => c - cost);
+    setCritLevel((l) => l + 1);
+    if (pendingDiscountRef.current) setPendingDiscount(null);
+  };
+
+  const claimGolden = () => {
+    if (!goldenTargetRef.current) return;
+    const bonus = goldenBonus(tapPowerRef.current);
+    setCoins((c) => c + bonus);
+    spawnPopup(`+${bonus} ✨`, 110, 60, true);
+    setGoldenTarget(null);
+    nextGoldenAtRef.current = Date.now() + nextGoldenDelaySec() * 1000;
   };
 
   const passiveIncome = totalPassiveIncome(owned) * (activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1);
@@ -359,16 +425,22 @@ export default function ClickerScreen({ onBack }) {
               </View>
             </TouchableOpacity>
             {popups.map((p) => (
-              <Animated.Text key={p.id} style={[styles.popup, { left: p.x, top: p.y }]}>
+              <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
                 {p.text}
               </Animated.Text>
             ))}
-            {/* La bulle de créature est un FRÈRE du bouton tapable, pas un
-                enfant — elle capte son propre appui sans jamais entrer en
-                conflit avec le tap de l'œuf en dessous. */}
+            {/* La bulle de créature et la cible dorée sont FRÈRES du bouton
+                tapable, pas enfants — elles captent leur propre appui sans
+                jamais entrer en conflit avec le tap de l'œuf en dessous. */}
             {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
+            {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
           </View>
-          <Text style={styles.tapHint}>Tape pour récolter des pièces</Text>
+
+          {comboCount > 1 ? (
+            <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
+          ) : (
+            <Text style={styles.tapHint}>Tape pour récolter des pièces</Text>
+          )}
 
           <TouchableOpacity
             style={[styles.actionBtn, coins < applyDiscount(tapPowerCost(tapPower)) && styles.actionBtnDisabled]}
@@ -380,6 +452,20 @@ export default function ClickerScreen({ onBack }) {
               <Text style={styles.actionBtnSubtext}>+1 pièce par tap à chaque niveau</Text>
             </View>
             <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(tapPowerCost(tapPower)))}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, coins < applyDiscount(critUpgradeCost(critLevel)) && styles.actionBtnDisabled]}
+            onPress={buyCritUpgrade}
+            disabled={coins < applyDiscount(critUpgradeCost(critLevel))}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.actionBtnText}>✨ Faveur des Esprits (nv {critLevel})</Text>
+              <Text style={styles.actionBtnSubtext}>
+                {Math.round(critChance(critLevel) * 100)}% de chance de coup critique x{critMultiplier(critLevel).toFixed(1)}
+              </Text>
+            </View>
+            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(critUpgradeCost(critLevel)))}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -628,6 +714,36 @@ function SpawnedCreatureBubble({ spawned, onClaim }) {
   );
 }
 
+// Cible dorée : pulsation plus rapide (courte durée de vie, doit se voir
+// tout de suite), pas de dérive — l'urgence vient du rythme, pas du
+// mouvement.
+function GoldenTargetBubble({ target, onClaim }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.25, duration: 220, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 220, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  return (
+    <TouchableOpacity
+      onPress={onClaim}
+      style={[styles.spawnBubbleWrap, { left: `${target.leftPct}%`, top: `${target.topPct}%` }]}
+      hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+    >
+      <Animated.View style={[styles.goldenBubble, { transform: [{ scale: pulse }] }]}>
+        <Text style={styles.spawnBubbleEmoji}>✨</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
@@ -655,6 +771,11 @@ const styles = StyleSheet.create({
     shadowColor: '#fff', shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
   },
   spawnBubbleEmoji: { fontSize: 28 },
+  goldenBubble: {
+    width: 54, height: 54, borderRadius: 27, backgroundColor: '#3d2f00',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: COLORS.action,
+    shadowColor: COLORS.action, shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+  },
 
   tabRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   tabBtn: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center', backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.border },
@@ -680,7 +801,9 @@ const styles = StyleSheet.create({
   },
   tapEmoji: { fontSize: 74 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
+  comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
   popup: { position: 'absolute', color: COLORS.action, fontSize: 16, fontWeight: '900' },
+  popupCrit: { color: '#FF7043', fontSize: 20 },
 
   actionBtn: {
     width: '100%', backgroundColor: COLORS.panel, borderRadius: 14, padding: 14, marginTop: 16,

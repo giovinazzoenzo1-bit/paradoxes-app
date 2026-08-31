@@ -186,3 +186,47 @@ export function offlineEarnings(ownedCreatures, secondsElapsed) {
   const capped = Math.max(0, Math.min(secondsElapsed, OFFLINE_CAP_SECONDS));
   return Math.floor(totalPassiveIncome(ownedCreatures) * capped);
 }
+
+// ---- Faveur des Esprits (coups critiques) ----
+// Chance de coup critique à chaque tap, qui grandit avec le niveau
+// (achetable), plafonnée pour rester un bonus ponctuel et pas la norme.
+// Le multiplicateur du coup grandit lui aussi légèrement avec le niveau.
+export function critChance(level) {
+  return Math.min(0.3, level * 0.025); // +2.5%/niveau, plafonné à 30%
+}
+export function critMultiplier(level) {
+  return Math.min(10, 5 + level * 0.25); // x5 de base, jusqu'à x10 au niveau max
+}
+export function critUpgradeCost(level) {
+  return Math.round(25 * Math.pow(1.5, level));
+}
+export function rollCrit(level) {
+  return Math.random() < critChance(level);
+}
+
+// ---- Transe (combo) ----
+// Taper vite et sans interruption fait monter un multiplicateur ; une
+// pause plus longue que TRANSE_WINDOW_MS entre deux taps le fait retomber.
+export const TRANSE_WINDOW_MS = 1200;
+export const TRANSE_STEP = 0.04;
+export const TRANSE_MAX_MULTIPLIER = 3;
+export function transeMultiplier(comboCount) {
+  return Math.min(TRANSE_MAX_MULTIPLIER, 1 + comboCount * TRANSE_STEP);
+}
+export function transeStillActive(lastTapMs, nowMs) {
+  return nowMs - lastTapMs <= TRANSE_WINDOW_MS;
+}
+
+// ---- Cible dorée ----
+// Apparaît par surprise à intervalle aléatoire (pas fixe, pour garder
+// l'effet de surprise), visible brièvement ; tap dessus = gros bonus
+// ponctuel proportionnel à la progression du joueur.
+export const GOLDEN_MIN_INTERVAL_SEC = 45;
+export const GOLDEN_MAX_INTERVAL_SEC = 90;
+export const GOLDEN_VISIBLE_SEC = 3;
+export function nextGoldenDelaySec() {
+  return GOLDEN_MIN_INTERVAL_SEC + Math.random() * (GOLDEN_MAX_INTERVAL_SEC - GOLDEN_MIN_INTERVAL_SEC);
+}
+export function goldenBonus(tapPower) {
+  return Math.round(tapPower * 40);
+}
