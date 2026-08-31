@@ -372,10 +372,8 @@ export default function ClickerScreen({ onBack }) {
         <Text style={styles.title}>🐾 Élevage</Text>
       </View>
 
-      <View style={styles.coinsRow}>
-        <Text style={styles.coinsValue}>💰 {formatNum(coins)}</Text>
-        {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
-      </View>
+      <Text style={styles.coinsValue}>💰 {formatNum(coins)}</Text>
+      {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
 
       {activePower && (
         <View style={styles.powerBanner}>
@@ -752,9 +750,8 @@ const styles = StyleSheet.create({
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
-  coinsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'center', gap: 10, marginTop: 4, paddingHorizontal: 16 },
-  coinsValue: { color: COLORS.action, fontSize: 26, fontWeight: '900' },
-  incomeText: { color: COLORS.good, fontSize: 13, fontWeight: '700' },
+  coinsValue: { color: COLORS.action, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 4 },
+  incomeText: { color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center' },
 
   welcomeBanner: { backgroundColor: 'rgba(0,230,118,0.15)', borderRadius: 12, padding: 10, marginTop: 8, borderWidth: 1, borderColor: COLORS.good },
   welcomeText: { color: COLORS.good, fontSize: 12, fontWeight: '700', textAlign: 'center' },
