@@ -84,30 +84,51 @@ export function tapPowerCost(currentTapPower) {
 // ---- Apparitions de créatures sur le bouton de tap ("le cookie") ----
 // Toutes les SPAWN_INTERVAL_SEC secondes, une créature apparaît
 // brièvement (SPAWN_VISIBLE_SEC) ; si le joueur tape dessus à temps, son
-// pouvoir s'active selon la rareté de la créature (plus rare = pouvoir
-// plus fort). Non tapée à temps = disparaît sans effet.
+// pouvoir s'active. Non tapée à temps = disparaît sans effet.
 export const SPAWN_INTERVAL_SEC = 180;
 export const SPAWN_VISIBLE_SEC = 4;
 
-export const POWER_EFFECTS = {
-  commun: { name: 'Élan', tapMultiplier: 2, durationSec: 10, bonusCoinsPerTapPower: 0 },
-  rare: { name: 'Frénésie', tapMultiplier: 3, durationSec: 10, bonusCoinsPerTapPower: 10 },
-  epique: { name: 'Déluge', tapMultiplier: 5, durationSec: 15, bonusCoinsPerTapPower: 25 },
-  legendaire: { name: 'Bénédiction', tapMultiplier: 10, durationSec: 15, bonusCoinsPerTapPower: 75 },
+// La RARETÉ détermine l'intensité (multiplicateur de tap + durée) — garde
+// une progression simple et lisible, peu importe la créature. Chaque
+// CRÉATURE a en plus son propre effet secondaire thématique (son élément),
+// donc 10 pouvoirs vraiment distincts plutôt que 4 pouvoirs partagés par
+// palier de rareté. 3 familles d'effet secondaire, pour rester
+// implémentable simplement :
+//  - coins_burst : bonus de pièces immédiat à l'activation
+//  - passive_boost : multiplie le revenu passif pendant la durée du pouvoir
+//  - discount_next : réduit le coût du prochain achat (tap/invocation/nourrir)
+const RARITY_TAP_MULTIPLIER = { commun: 2, rare: 3, epique: 5, legendaire: 10 };
+const RARITY_DURATION_SEC = { commun: 10, rare: 10, epique: 15, legendaire: 15 };
+
+export const CREATURE_POWERS = {
+  braisillon: { name: 'Éruption', effectType: 'coins_burst', effectValue: 8 },
+  gouttelin: { name: 'Flux Montant', effectType: 'passive_boost', effectValue: 2 },
+  bourgeonin: { name: 'Éclosion Généreuse', effectType: 'discount_next', effectValue: 0.2 },
+  cailloutin: { name: 'Fondation', effectType: 'coins_burst', effectValue: 8 },
+  etincelot: { name: 'Décharge', effectType: 'coins_burst', effectValue: 12 },
+  brisillon: { name: 'Bourrasque', effectType: 'passive_boost', effectValue: 2.5 },
+  frimouss: { name: 'Conservation', effectType: 'discount_next', effectValue: 0.25 },
+  ombrelin: { name: 'Éclipse', effectType: 'coins_burst', effectValue: 25 },
+  lumeret: { name: 'Rayonnement', effectType: 'passive_boost', effectValue: 3 },
+  gemmion: { name: 'Résonance Cristalline', effectType: 'coins_burst', effectValue: 75 },
 };
 
-// Calcule le pouvoir déclenché en tapant une créature apparue, selon sa
-// rareté et la puissance de tap actuelle du joueur (le bonus de pièces
-// immédiat est proportionnel à la progression du joueur, pas un montant
-// fixe qui deviendrait négligeable en fin de partie).
-export function powerForRarity(rarity, tapPower) {
-  const effect = POWER_EFFECTS[rarity];
+// Calcule le pouvoir déclenché en tapant une créature apparue. Le bonus de
+// pièces (coins_burst) est proportionnel à la puissance de tap actuelle du
+// joueur (pas un montant fixe qui deviendrait négligeable en fin de partie).
+export function powerForCreature(creature, tapPower) {
+  const cfg = CREATURE_POWERS[creature.id];
+  const tapMultiplier = RARITY_TAP_MULTIPLIER[creature.rarity];
+  const durationSec = RARITY_DURATION_SEC[creature.rarity];
   return {
-    name: effect.name,
-    rarity,
-    tapMultiplier: effect.tapMultiplier,
-    durationSec: effect.durationSec,
-    bonusCoins: Math.round(effect.bonusCoinsPerTapPower * tapPower),
+    name: cfg.name,
+    creatureId: creature.id,
+    rarity: creature.rarity,
+    tapMultiplier,
+    durationSec,
+    effectType: cfg.effectType,
+    effectValue: cfg.effectValue,
+    bonusCoins: cfg.effectType === 'coins_burst' ? Math.round(cfg.effectValue * tapPower) : 0,
   };
 }
 

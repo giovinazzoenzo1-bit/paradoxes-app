@@ -19,7 +19,7 @@ import {
   totalPassiveIncome,
   offlineEarnings,
   shouldSpawn,
-  powerForRarity,
+  powerForCreature,
   SPAWN_INTERVAL_SEC,
   SPAWN_VISIBLE_SEC,
 } from '../../games/clicker/clickerLogic';
@@ -56,7 +56,8 @@ export default function ClickerScreen({ onBack }) {
   const [welcomeBack, setWelcomeBack] = useState(null);
   const [popups, setPopups] = useState([]);
   const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, corner}
-  const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt}
+  const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
+  const [pendingDiscount, setPendingDiscount] = useState(null); // {percent, name} — consommé au prochain achat
   const [, setLiveTick] = useState(0); // force le re-rendu pour les décomptes visuels
 
   const coinsRef = useRef(0);
@@ -73,6 +74,8 @@ export default function ClickerScreen({ onBack }) {
   spawnedCreatureRef.current = spawnedCreature;
   const activePowerRef = useRef(null);
   activePowerRef.current = activePower;
+  const pendingDiscountRef = useRef(null);
+  pendingDiscountRef.current = pendingDiscount;
   // Premier essaim ~20s après l'ouverture (pas d'attente de 3min pour un
   // nouveau joueur), puis toutes les SPAWN_INTERVAL_SEC ensuite.
   const lastSpawnTimeRef = useRef(Date.now() - (SPAWN_INTERVAL_SEC - 20) * 1000);
@@ -123,11 +126,13 @@ export default function ClickerScreen({ onBack }) {
     };
   }, []);
 
-  // Revenu passif : +1 tick par seconde.
+  // Revenu passif : +1 tick par seconde, boosté si un pouvoir passive_boost est actif.
   useEffect(() => {
     if (!loaded) return;
     const interval = setInterval(() => {
-      const income = totalPassiveIncome(ownedRef.current);
+      const base = totalPassiveIncome(ownedRef.current);
+      const boost = activePowerRef.current && activePowerRef.current.effectType === 'passive_boost' ? activePowerRef.current.effectValue : 1;
+      const income = base * boost;
       if (income > 0) setCoins((c) => c + income);
     }, 1000);
     return () => clearInterval(interval);
@@ -179,32 +184,50 @@ export default function ClickerScreen({ onBack }) {
     spawnPopup(`+${gain}`, x, y);
   };
 
-  // Le joueur a tapé la créature apparue à temps : son pouvoir s'active.
+  // Le joueur a tapé la créature apparue à temps : son pouvoir s'active,
+  // différent selon la créature (pas juste sa rareté).
   const claimPower = () => {
     const spawned = spawnedCreatureRef.current;
     if (!spawned) return;
-    const power = powerForRarity(spawned.creature.rarity, tapPowerRef.current);
-    setActivePower({ ...power, expiresAt: Date.now() + power.durationSec * 1000 });
-    if (power.bonusCoins > 0) {
-      setCoins((c) => c + power.bonusCoins);
-      spawnPopup(`+${power.bonusCoins}`, 110, 60);
+    const power = powerForCreature(spawned.creature, tapPowerRef.current);
+
+    if (power.effectType === 'discount_next') {
+      // Réduit le coût du tout prochain achat (tap/invocation/nourrir),
+      // quel qu'il soit — consommé une seule fois.
+      setPendingDiscount({ percent: power.effectValue, name: power.name });
+      spawnPopup(`-${Math.round(power.effectValue * 100)}%`, 110, 60);
+    } else {
+      // coins_burst et passive_boost passent tous les deux par le buff actif
+      // (coins_burst donne aussi un bonus immédiat en plus du multiplicateur de tap).
+      setActivePower({ ...power, expiresAt: Date.now() + power.durationSec * 1000 });
+      if (power.bonusCoins > 0) {
+        setCoins((c) => c + power.bonusCoins);
+        spawnPopup(`+${power.bonusCoins}`, 110, 60);
+      }
     }
     setSpawnedCreature(null);
   };
 
+  // Applique la remise en attente (pouvoir discount_next) au coût donné —
+  // ne fait rien si aucune remise n'est active. Consommée séparément, au
+  // moment où l'achat aboutit vraiment (voir les 3 fonctions ci-dessous).
+  const applyDiscount = (cost) => (pendingDiscount ? Math.max(1, Math.round(cost * (1 - pendingDiscount.percent))) : cost);
+
   const buyTapPower = () => {
-    const cost = tapPowerCost(tapPower);
+    const cost = applyDiscount(tapPowerCost(tapPower));
     if (coins < cost) return;
     setCoins((c) => c - cost);
     setTapPower((t) => t + 1);
+    if (pendingDiscountRef.current) setPendingDiscount(null);
   };
 
-  const passiveIncome = totalPassiveIncome(owned);
-  const nextSummonCost = summonCost(owned.length);
+  const passiveIncome = totalPassiveIncome(owned) * (activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1);
+  const nextSummonCost = applyDiscount(summonCost(owned.length));
 
   const doSummon = () => {
     if (coins < nextSummonCost) return;
     setCoins((c) => c - nextSummonCost);
+    if (pendingDiscountRef.current) setPendingDiscount(null);
     const creature = rollCreature();
     setOwned((prev) => {
       const existing = prev.find((o) => o.id === creature.id);
@@ -221,9 +244,10 @@ export default function ClickerScreen({ onBack }) {
     const owned1 = ownedRef.current.find((o) => o.id === id);
     if (!owned1) return;
     const creature = CREATURES.find((c) => c.id === id);
-    const cost = levelUpCost(creature, owned1.level);
+    const cost = applyDiscount(levelUpCost(creature, owned1.level));
     if (coinsRef.current < cost) return;
     setCoins((c) => c - cost);
+    if (pendingDiscountRef.current) setPendingDiscount(null);
     setOwned((prev) => prev.map((o) => (o.id === id ? { ...o, level: o.level + 1 } : o)));
   };
 
@@ -254,7 +278,17 @@ export default function ClickerScreen({ onBack }) {
       {activePower && (
         <View style={styles.powerBanner}>
           <Text style={styles.powerBannerText}>
-            ⚡ {activePower.name} actif : x{activePower.tapMultiplier} tap ({Math.max(0, Math.ceil((activePower.expiresAt - Date.now()) / 1000))}s)
+            ⚡ {activePower.name} actif : x{activePower.tapMultiplier} tap
+            {activePower.effectType === 'passive_boost' ? ` + x${activePower.effectValue} revenu passif` : ''}
+            {' '}({Math.max(0, Math.ceil((activePower.expiresAt - Date.now()) / 1000))}s)
+          </Text>
+        </View>
+      )}
+
+      {pendingDiscount && (
+        <View style={[styles.powerBanner, styles.discountBanner]}>
+          <Text style={[styles.powerBannerText, styles.discountBannerText]}>
+            🏷️ {pendingDiscount.name} : -{Math.round(pendingDiscount.percent * 100)}% sur ton prochain achat
           </Text>
         </View>
       )}
@@ -294,12 +328,12 @@ export default function ClickerScreen({ onBack }) {
           <Text style={styles.tapHint}>Tape pour récolter des pièces</Text>
 
           <TouchableOpacity
-            style={[styles.actionBtn, coins < tapPowerCost(tapPower) && styles.actionBtnDisabled]}
+            style={[styles.actionBtn, coins < applyDiscount(tapPowerCost(tapPower)) && styles.actionBtnDisabled]}
             onPress={buyTapPower}
-            disabled={coins < tapPowerCost(tapPower)}
+            disabled={coins < applyDiscount(tapPowerCost(tapPower))}
           >
             <Text style={styles.actionBtnText}>👆 Puissance de tap : {tapPower} → {tapPower + 1}</Text>
-            <Text style={styles.actionBtnCost}>💰 {formatNum(tapPowerCost(tapPower))}</Text>
+            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(tapPowerCost(tapPower)))}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -318,13 +352,14 @@ export default function ClickerScreen({ onBack }) {
           setSelectedCreature={setSelectedCreature}
           coins={coins}
           onFeed={feedCreature}
+          pendingDiscount={pendingDiscount}
         />
       )}
     </View>
   );
 }
 
-function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, onFeed }) {
+function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, onFeed, pendingDiscount }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
 
@@ -362,17 +397,19 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, o
           coins={coins}
           onFeed={() => onFeed(selectedCreature)}
           onClose={() => setSelectedCreature(null)}
+          pendingDiscount={pendingDiscount}
         />
       )}
     </View>
   );
 }
 
-function CreatureDetail({ creature, owned, coins, onFeed, onClose }) {
+function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscount }) {
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
   const income = incomeForCreature(creature, owned.level);
-  const cost = levelUpCost(creature, owned.level);
+  const baseCost = levelUpCost(creature, owned.level);
+  const cost = pendingDiscount ? Math.max(1, Math.round(baseCost * (1 - pendingDiscount.percent))) : baseCost;
   const canFeed = coins >= cost;
   const nextEvoLevel = stage === 0 ? 5 : stage === 1 ? 15 : null;
 
@@ -452,6 +489,8 @@ const styles = StyleSheet.create({
   welcomeText: { color: COLORS.good, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   powerBanner: { backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, marginTop: 6, borderWidth: 1, borderColor: COLORS.action },
+  discountBanner: { backgroundColor: 'rgba(46,127,184,0.15)', borderColor: '#3ec6f0' },
+  discountBannerText: { color: '#3ec6f0' },
   powerBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10 },
