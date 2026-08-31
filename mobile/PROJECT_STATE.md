@@ -13,22 +13,17 @@ Ce n'est **pas un site web**, c'est une **application mobile** (Expo /
 React Native) — le code ressemble à du web mais ça tourne comme une vraie
 appli téléphone.
 
-**Pour voir/jouer à l'appli sur ton téléphone (Expo Go) :**
-1. Installe l'appli **Expo Go** (Play Store / App Store).
-2. Demande à Enzo de faire l'une des deux choses sur expo.dev (compte
-   `paradoxes-app1`, projet `paradox-1`) — c'est un réglage qu'IL doit
-   faire depuis le site, aucun Claude ne peut le faire à sa place :
-   - passer le projet en visibilité **"Public"** (tu scannes juste le QR
-     code), ou
-   - t'inviter comme **membre** du projet Expo.
-3. Une fois ça fait, scanne le QR code ou ouvre le lien depuis Expo Go —
-   l'appli se met à jour automatiquement à chaque nouveau push (~15s).
+**L'accès (Git public + membre du projet Expo Go) est déjà en place.**
+Le vrai souci probable, si un précédent Claude ne semblait "rien
+connaître" du jeu : il n'avait juste jamais reçu la consigne d'aller lire
+ce fichier ni de cloner le dépôt — ce n'est pas un problème d'accès, mais
+de consigne donnée en début de conversation.
 
-**Pour que TON Claude ait accès au code** (si tu veux qu'il regarde le
-détail technique) : donne-lui l'URL du dépôt
-`github.com/giovinazzoenzo1-bit/paradoxes-app` et demande-lui de le
-cloner/lire. Si le dépôt est public (à vérifier avec Enzo), aucun token
-n'est nécessaire pour juste LIRE le code.
+**Message à donner à ton Claude en début de session :**
+"Projet Paradox. Lis mobile/PROJECT_STATE.md sur
+github.com/giovinazzoenzo1-bit/paradoxes-app (dépôt public, pas besoin de
+token pour lire), clone-le, et pars de là." Ensuite il aura tout le
+contexte technique de ce fichier.
 
 **Pour le design spécifiquement**, tu as déjà reçu un brief dédié
 (`clicker-brief-flavio.docx`, envoyé sur Drive) qui liste dans l'ordre ce
