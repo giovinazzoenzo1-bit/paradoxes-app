@@ -39,9 +39,10 @@ const COLORS = {
 export const STORAGE_KEY = 'clicker:state:v1';
 
 function formatNum(n) {
+  if (!Number.isFinite(n)) return '0'; // garde-fou : jamais NaN/Infinity affiché
   if (n < 1000) return Math.floor(n).toString();
-  if (n < 1_000_000) return (n / 1000).toFixed(1) + 'K';
-  if (n < 1_000_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+  if (n < 999_950) return (n / 1000).toFixed(1) + 'K'; // évite "1000.0K" juste sous 1M
+  if (n < 999_950_000) return (n / 1_000_000).toFixed(2) + 'M';
   return (n / 1_000_000_000).toFixed(2) + 'Md';
 }
 
@@ -374,7 +375,10 @@ export default function ClickerScreen({ onBack }) {
             onPress={buyTapPower}
             disabled={coins < applyDiscount(tapPowerCost(tapPower))}
           >
-            <Text style={styles.actionBtnText}>👆 Puissance de tap : {tapPower} → {tapPower + 1}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.actionBtnText}>🔗 Pacte : {tapPower} → {tapPower + 1}</Text>
+              <Text style={styles.actionBtnSubtext}>+1 pièce par tap à chaque niveau</Text>
+            </View>
             <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(tapPowerCost(tapPower)))}</Text>
           </TouchableOpacity>
 
@@ -632,7 +636,7 @@ const styles = StyleSheet.create({
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
-  coinsRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 10, marginTop: 4 },
+  coinsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'center', gap: 10, marginTop: 4, paddingHorizontal: 16 },
   coinsValue: { color: COLORS.action, fontSize: 26, fontWeight: '900' },
   incomeText: { color: COLORS.good, fontSize: 13, fontWeight: '700' },
 
@@ -683,6 +687,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
   actionBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '700', flex: 1 },
+  actionBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 2 },
   actionBtnCost: { color: COLORS.action, fontSize: 13, fontWeight: '800' },
   actionBtnDisabled: { opacity: 0.4 },
 
