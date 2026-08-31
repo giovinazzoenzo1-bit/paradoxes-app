@@ -903,3 +903,27 @@ affecté.
 cible dorée, Familier (auto-clic), Sanctuaire, Ascension (prestige),
 système de quêtes + œuf à 4 paliers, fausse pub (Rituel), Offrande
 (dépenser les pièces `appCoins` partagées), stats inter-jeux.
+
+## Clicker : coups critiques + Transe + cible dorée (29/08, suite)
+Poursuite de la feuille de route, 3 mécaniques ajoutées d'un coup :
+
+- **Faveur des Esprits** (coups critiques) : bouton d'amélioration
+  achetable comme Pacte. Chance de critique plafonnée à 30%,
+  multiplicateur plafonné à x10, les deux montent avec le niveau. Popup
+  orange distinct sur un coup critique.
+- **Transe** (combo) : taper vite et sans interruption fait monter un
+  multiplicateur (+0,04x par tap consécutif dans une fenêtre de 1,2s),
+  plafonné à x3. Retombe à 1 si le joueur s'arrête — pas seulement au
+  prochain tap, la boucle de 300ms vérifie aussi activement l'inactivité
+  pour que l'affichage ne reste pas figé.
+- **Cible dorée** : apparaît à un intervalle ALÉATOIRE (45-90s, jamais
+  fixe, pour garder l'effet de surprise), visible 3s, tap dessus = gros
+  bonus proportionnel à la puissance de tap. Reprogrammée qu'elle soit
+  touchée OU ratée (sinon elle réapparaîtrait immédiatement après un
+  échec).
+
+Tous les multiplicateurs se cumulent sur un même tap (pouvoir de
+créature actif × Transe × critique), vérifié par un scénario de test
+combiné avant de pousser. Même pattern de structure tactile déjà établi
+pour la bulle de créature (élément frère du bouton œuf, jamais imbriqué
+dedans) réutilisé pour la cible dorée.
