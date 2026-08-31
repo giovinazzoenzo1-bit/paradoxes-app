@@ -762,3 +762,37 @@ Runes + Élevage).
 
 Les deux actions sont irréversibles → confirmation obligatoire
 (`Alert.alert` natif, bouton en style "destructive") avant exécution.
+
+## Clicker : apparitions de créatures sur le cookie (29/08, début du codage)
+Première fonctionnalité codée de la feuille de route (voir docs Drive
+envoyés). Toutes les 3 minutes (`SPAWN_INTERVAL_SEC=180`), une créature
+apparaît brièvement (4s, `SPAWN_VISIBLE_SEC`) sous forme de bulle
+pulsante à un coin aléatoire du bouton de tap. Si le joueur la tape à
+temps, son pouvoir s'active selon la rareté :
+- Commun → "Élan" : x2 tap pendant 10s
+- Rare → "Frénésie" : x3 tap pendant 10s
+- Épique → "Déluge" : x5 tap pendant 15s + bonus de pièces immédiat
+- Légendaire → "Bénédiction" : x10 tap pendant 15s + gros bonus immédiat
+
+Le bonus de pièces immédiat est proportionnel à la puissance de tap
+actuelle du joueur (pas un montant fixe qui deviendrait négligeable en
+fin de partie). Premier essaim ~20s après l'ouverture (pas d'attente de
+3 min pour un nouveau joueur).
+
+**Pattern technique réutilisé d'emblée** (pas en réaction à un bug cette
+fois) : toutes les valeurs lues dans la boucle `setInterval` passent par
+des refs synchronisées à chaque rendu (`viewRef`, `spawnedCreatureRef`,
+`activePowerRef`) — même précaution anti-fermeture-figée que sur les
+jeux précédents, appliquée directement.
+
+**Incident mineur pendant l'édition** : un `str_replace` a accidentellement
+supprimé la déclaration `export function rollCreature() {` en ne laissant
+que son corps — détecté immédiatement par la validation de syntaxe
+systématique avant de continuer, corrigé avant de pousser.
+
+**Reste à coder** (voir les 2 docs Drive envoyés à l'utilisateur et
+Flavio pour le détail complet) : renommage RP des boutons existants
+(Pacte à la place de "Puissance de tap"), coups critiques, Transe
+(combo), cible dorée, Familier (auto-clic), Sanctuaire, Ascension
+(prestige), système de quêtes/œuf à 4 paliers, fausse pub, Offrande
+(dépenser les pièces `appCoins` partagées), stats inter-jeux.
