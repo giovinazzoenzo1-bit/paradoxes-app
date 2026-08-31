@@ -988,3 +988,34 @@ que de faire semblant de l'avoir fait.
 
 **Bilan de la table RP : 6/7 boutons faits, Couveuse en attente du
 système de quêtes.**
+
+## Clicker : système de quêtes + œuf à 4 paliers (29/08, suite)
+Complète ce dont dépendait Couveuse. **Première passe volontairement
+limitée** aux quêtes réalisables DANS le clicker (internes +
+compétence/timing) — les quêtes liées aux autres jeux de l'appli
+demandent la couche de stats partagées entre jeux qui n'existe pas
+encore, signalé explicitement plutôt que bricolé.
+
+- **8 quêtes dans le pool**, 4 tirées au hasard par cycle d'œuf
+  (`pickQuestSet`, évite de répéter les 4 précédentes immédiatement)
+- **5 paliers visuels de l'œuf** (Œuf endormi → frémissant → fissuré →
+  lumineux → prêt à éclore), calculés à partir du nombre de quêtes
+  validées (0-4)
+- Une fois les 4 quêtes validées : bascule automatique vers l'éclosion
+  (**500 taps**) puis la capture (**200 taps** supplémentaires)
+- Récompense à la capture : tirage **classique** (pas de créature rare
+  garantie, conforme à la demande) + bonus de pièces, puis nouveau cycle
+  de quêtes différentes
+- Nouvel onglet **"Quêtes"** (Tap / Quêtes / Collection), avec badge du
+  nombre de quêtes validées ou alerte ❗ si l'œuf est prêt
+- Nouveaux compteurs suivis pour les quêtes (invocations, critiques,
+  cible dorée touchée, combo max) — persistés
+
+**Testé de bout en bout** avant de pousser : cycle complet
+quêtes→éclosion→capture→nouveau cycle avec des quêtes différentes,
+vérifié en isolation avant intégration.
+
+**Bilan** : la table RP est maintenant 7/7 complète (Couveuse peut
+désormais être ajoutée si besoin, le système dont elle dépendait
+existe). Reste : stats inter-jeux (pour les quêtes liées aux autres
+jeux du pool prévu dans les docs Drive).
