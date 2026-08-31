@@ -848,3 +848,29 @@ jamais imbriquer un `TouchableOpacity` à l'intérieur d'un autre
 `TouchableOpacity` parent qui a lui-même un `onPress` — toujours les
 rendre frères dans un conteneur non-tapable, avec l'élément prioritaire
 rendu en dernier (donc au-dessus) dans l'arbre.
+
+## Clicker : système de deck de 3 créatures (29/08, suite)
+Retour utilisateur : "toutes les créatures ne provoquent pas la bulle,
+c'est un bug." **Cause réelle** : le tirage se faisait sur les 10
+créatures pondéré par rareté (60/25/12/3%) — en test court, les
+rares/épiques/légendaires n'apparaissaient presque jamais, donnant
+l'impression que "certaines ne sortent jamais" (pas vraiment un bug
+technique, mais un vrai problème de ressenti).
+
+**Remplacé par un système de deck** : le joueur choisit exactement 3
+créatures possédées dans un deck persistant (3 emplacements affichés
+au-dessus de l'œuf). Seules CES 3 créatures peuvent apparaître en
+bulle, et avec une **probabilité égale** entre elles peu importe leur
+rareté (vérifié par test : ~1000/1000/1000 sur 3000 tirages, légendaire
+incluse) — la rareté ne contrôle plus que l'intensité du pouvoir une
+fois activé, plus la fréquence d'apparition.
+
+- Emplacement vide = œuf grisé, appui dessus (vide ou plein) ouvre un
+  sélecteur listant les créatures possédées
+- Choisir une créature déjà dans un autre emplacement la retire de
+  l'ancien (pas de doublon dans le deck)
+- Bouton "Vider cet emplacement" si déjà occupé
+- Deck persisté dans la même sauvegarde que le reste du clicker
+- Si le deck est vide, aucune apparition ne se déclenche — mais dès
+  qu'une créature y est ajoutée, une apparition redevient possible
+  presque immédiatement (pas d'attente d'un cycle complet)
