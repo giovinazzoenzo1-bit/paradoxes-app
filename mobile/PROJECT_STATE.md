@@ -947,3 +947,44 @@ cette session, je n'ai pas pu reproduire ni confirmer la cause exacte
 sans accès à l'appareil réel — cette fois c'est une restructuration
 défensive plutôt qu'une correction ciblée d'une cause identifiée avec
 certitude. À surveiller si le problème persiste malgré tout.
+
+## Clicker : table des boutons RP complétée (29/08, suite)
+Retour utilisateur : il manquait 5 des 7 boutons du tableau RP prévu,
+demande explicite de finir cette étape avant tout le reste. Ajouté :
+
+- **Familier** (auto-clic) : revenu continu proportionnel à la puissance
+  de tap, plutôt que de simuler des taps automatiques discrets — plus
+  simple, même esprit thématique.
+- **Sanctuaire** (boost global %) : +5%/niveau sur TOUTE la production
+  (tap ET revenu passif), contrairement à Pacte qui n'affecte que le tap.
+- **Veilleur** (gains hors-ligne) : +15%/niveau, appliqué au calcul des
+  gains hors-ligne au chargement.
+- **Ascension** (prestige) : débloquée sur un seuil de pièces gagnées
+  CUMULÉES sur toute la partie (pas le solde actuel, pour ne pas
+  récompenser la thésaurisation) ; réinitialise la progression contre de
+  l'essence PERMANENTE (+2% de production/point, survit aux resets
+  suivants). Confirmation obligatoire (irréversible).
+- **Rituel** (bouton "fausse pub", pas de vrai SDK) : recharge de 3
+  minutes pour éviter le spam, même rythme qu'un vrai bouton de pub à
+  récompense.
+- **Offrande** : dépense les pièces PARTAGÉES de l'appli (`appCoins`,
+  via `CoinsContext`) contre un bonus dans le clicker — donne enfin une
+  utilité aux pièces gagnées dans les autres jeux.
+
+**Refactorisation notable** : tous les gains de pièces passent maintenant
+par une fonction centrale `gainCoins()` qui applique le multiplicateur
+global (Sanctuaire × essence) de façon uniforme, plutôt que de
+disperser cette logique à chaque source de gain. Elle alimente aussi
+`totalEarned` (cumul jamais décroissant), nécessaire pour le seuil
+d'Ascension.
+
+**Ajout technique** : la liste de boutons (9 au total maintenant) ne
+tenait plus sur un écran — ajout d'un `ScrollView` dédié, la zone de tap
+et le deck restant fixes au-dessus.
+
+**Couveuse volontairement non implémentée** — dépend du système d'œuf à
+4 paliers (quêtes) qui n'existe pas encore. Signalé explicitement plutôt
+que de faire semblant de l'avoir fait.
+
+**Bilan de la table RP : 6/7 boutons faits, Couveuse en attente du
+système de quêtes.**
