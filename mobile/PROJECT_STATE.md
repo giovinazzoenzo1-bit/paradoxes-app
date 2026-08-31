@@ -8,6 +8,34 @@
 > changement notable : nouveau jeu porté, dépendance ajoutée/retirée, bug
 > résolu, décision d'architecture.
 
+## 👋 Pour Flavio (design) — lis ceci en premier
+Ce n'est **pas un site web**, c'est une **application mobile** (Expo /
+React Native) — le code ressemble à du web mais ça tourne comme une vraie
+appli téléphone.
+
+**Pour voir/jouer à l'appli sur ton téléphone (Expo Go) :**
+1. Installe l'appli **Expo Go** (Play Store / App Store).
+2. Demande à Enzo de faire l'une des deux choses sur expo.dev (compte
+   `paradoxes-app1`, projet `paradox-1`) — c'est un réglage qu'IL doit
+   faire depuis le site, aucun Claude ne peut le faire à sa place :
+   - passer le projet en visibilité **"Public"** (tu scannes juste le QR
+     code), ou
+   - t'inviter comme **membre** du projet Expo.
+3. Une fois ça fait, scanne le QR code ou ouvre le lien depuis Expo Go —
+   l'appli se met à jour automatiquement à chaque nouveau push (~15s).
+
+**Pour que TON Claude ait accès au code** (si tu veux qu'il regarde le
+détail technique) : donne-lui l'URL du dépôt
+`github.com/giovinazzoenzo1-bit/paradoxes-app` et demande-lui de le
+cloner/lire. Si le dépôt est public (à vérifier avec Enzo), aucun token
+n'est nécessaire pour juste LIRE le code.
+
+**Pour le design spécifiquement**, tu as déjà reçu un brief dédié
+(`clicker-brief-flavio.docx`, envoyé sur Drive) qui liste dans l'ordre ce
+qu'il y a à dessiner pour le clicker. Le reste de ce fichier (en dessous)
+est le suivi technique complet du projet — utile si tu veux du contexte,
+mais pas nécessaire pour juste dessiner.
+
 ## Repo
 - `github.com/giovinazzoenzo1-bit/paradoxes-app`, dossier `mobile/`
 - PWA de référence (logique de jeu à porter) : racine du repo, `index.html`
