@@ -289,3 +289,68 @@ export const OFFRANDE_APPCOINS_COST = 10;
 export function offrandeReward(tapPower) {
   return Math.round(tapPower * 15);
 }
+
+// ---- Système de quêtes + œuf à 4 paliers ----
+// Première passe volontairement limitée aux quêtes réalisables DANS le
+// clicker (internes + compétence/timing) — les quêtes liées aux autres
+// jeux de l'appli (ex: "gagner 5 fois à Puissance 4") demandent une
+// couche de stats partagées entre jeux qui n'existe pas encore ; à
+// construire séparément avant de les ajouter à ce pool.
+export const QUEST_POOL = [
+  { id: 'combo25', desc: 'Atteins un multiplicateur de Transe x2,5' },
+  { id: 'summon10', desc: 'Invoque 10 créatures' },
+  { id: 'crit20', desc: 'Obtiens 20 coups critiques' },
+  { id: 'golden3', desc: 'Touche 3 fois la cible dorée' },
+  { id: 'earn5000', desc: 'Cumule 5 000 pièces gagnées au total' },
+  { id: 'evolve1', desc: "Fais évoluer une créature jusqu'au stade final" },
+  { id: 'feed10', desc: "Nourris une créature jusqu'au niveau 10" },
+  { id: 'pacte5', desc: 'Fais monter Pacte au niveau 6' },
+];
+
+// Tire 4 quêtes au hasard dans le pool (sans répéter celles données en
+// exclusion, pour varier d'un cycle d'œuf à l'autre).
+export function pickQuestSet(excludeIds = []) {
+  const pool = QUEST_POOL.filter((q) => !excludeIds.includes(q.id));
+  const source = pool.length >= 4 ? pool : QUEST_POOL; // si pas assez pour exclure, retire du pool complet
+  const shuffled = [...source].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 4).map((q) => q.id);
+}
+
+export function questLabel(questId) {
+  return QUEST_POOL.find((q) => q.id === questId)?.desc || '';
+}
+
+// Progression 0-1 d'une quête donnée, à partir des stats du joueur.
+// stats attendu : { maxCombo, totalSummons, totalCrits, goldenClaimed,
+// totalEarned, maxCreatureLevel, tapPower }
+export function questProgress(questId, stats) {
+  switch (questId) {
+    case 'combo25': return Math.min(1, stats.maxCombo / 2.5);
+    case 'summon10': return Math.min(1, stats.totalSummons / 10);
+    case 'crit20': return Math.min(1, stats.totalCrits / 20);
+    case 'golden3': return Math.min(1, stats.goldenClaimed / 3);
+    case 'earn5000': return Math.min(1, stats.totalEarned / 5000);
+    case 'evolve1': return Math.min(1, stats.maxCreatureLevel / 15);
+    case 'feed10': return Math.min(1, stats.maxCreatureLevel / 10);
+    case 'pacte5': return Math.min(1, Math.max(0, stats.tapPower - 1) / 5);
+    default: return 0;
+  }
+}
+export function questComplete(questId, stats) {
+  return questProgress(questId, stats) >= 1;
+}
+
+export const EGG_STAGES = [
+  { name: 'Œuf endormi', desc: 'Immobile, terne' },
+  { name: 'Œuf frémissant', desc: 'Petits tremblements' },
+  { name: 'Œuf fissuré', desc: 'Fissures visibles' },
+  { name: 'Œuf lumineux', desc: 'Lueur qui pulse' },
+  { name: 'Œuf prêt à éclore', desc: 'Vibre fort, prêt !' },
+];
+// Nombre de quêtes validées (0-4) -> palier visuel (0-4).
+export function eggStageForCompletedCount(completedCount) {
+  return Math.max(0, Math.min(4, completedCount));
+}
+
+export const HATCH_TAPS_REQUIRED = 500;
+export const CAPTURE_TAPS_REQUIRED = 200;

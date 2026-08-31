@@ -46,6 +46,15 @@ import {
   RITUAL_COOLDOWN_SEC,
   OFFRANDE_APPCOINS_COST,
   offrandeReward,
+  QUEST_POOL,
+  pickQuestSet,
+  questLabel,
+  questProgress,
+  questComplete,
+  EGG_STAGES,
+  eggStageForCompletedCount,
+  HATCH_TAPS_REQUIRED,
+  CAPTURE_TAPS_REQUIRED,
 } from '../../games/clicker/clickerLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 
@@ -95,6 +104,17 @@ export default function ClickerScreen({ onBack }) {
   const [veilleurLevel, setVeilleurLevel] = useState(0);
   const [essence, setEssence] = useState(0); // bonus permanent d'Ascension, survit aux resets
   const [lastRitualAt, setLastRitualAt] = useState(0);
+  // Stats pour les quêtes (cumuls jamais décroissants).
+  const [totalSummons, setTotalSummons] = useState(0);
+  const [totalCrits, setTotalCrits] = useState(0);
+  const [goldenClaimed, setGoldenClaimed] = useState(0);
+  const [maxCombo, setMaxCombo] = useState(1);
+  // Système de quêtes + œuf.
+  const [activeQuestIds, setActiveQuestIds] = useState(() => pickQuestSet());
+  const [eggPhase, setEggPhase] = useState('collecting'); // 'collecting' | 'hatching' | 'capturing'
+  const [hatchTaps, setHatchTaps] = useState(0);
+  const [captureTaps, setCaptureTaps] = useState(0);
+  const [rewardCreature, setRewardCreature] = useState(null); // affiché après capture
   const [, setLiveTick] = useState(0); // force le re-rendu pour les décomptes visuels
 
   const coinsRef = useRef(0);
@@ -115,6 +135,22 @@ export default function ClickerScreen({ onBack }) {
   essenceRef.current = essence;
   const lastRitualAtRef = useRef(0);
   lastRitualAtRef.current = lastRitualAt;
+  const totalSummonsRef = useRef(0);
+  totalSummonsRef.current = totalSummons;
+  const totalCritsRef = useRef(0);
+  totalCritsRef.current = totalCrits;
+  const goldenClaimedRef = useRef(0);
+  goldenClaimedRef.current = goldenClaimed;
+  const maxComboRef = useRef(1);
+  maxComboRef.current = maxCombo;
+  const activeQuestIdsRef = useRef([]);
+  activeQuestIdsRef.current = activeQuestIds;
+  const eggPhaseRef = useRef('collecting');
+  eggPhaseRef.current = eggPhase;
+  const hatchTapsRef = useRef(0);
+  hatchTapsRef.current = hatchTaps;
+  const captureTapsRef = useRef(0);
+  captureTapsRef.current = captureTaps;
   const popupIdRef = useRef(0);
   const saveTimeoutRef = useRef(null);
   const viewRef = useRef('tap');
@@ -163,6 +199,14 @@ export default function ClickerScreen({ onBack }) {
           setVeilleurLevel(savedVeilleur);
           setEssence(saved.essence || 0);
           setLastRitualAt(saved.lastRitualAt || 0);
+          setTotalSummons(saved.totalSummons || 0);
+          setTotalCrits(saved.totalCrits || 0);
+          setGoldenClaimed(saved.goldenClaimed || 0);
+          setMaxCombo(saved.maxCombo || 1);
+          setActiveQuestIds(saved.activeQuestIds && saved.activeQuestIds.length === 4 ? saved.activeQuestIds : pickQuestSet());
+          setEggPhase(saved.eggPhase || 'collecting');
+          setHatchTaps(saved.hatchTaps || 0);
+          setCaptureTaps(saved.captureTaps || 0);
           if (offline > 5) setWelcomeBack(offline);
         }
       } catch (e) {
@@ -182,11 +226,17 @@ export default function ClickerScreen({ onBack }) {
         JSON.stringify({
           coins, totalEarned, tapPower, owned, deck, critLevel,
           familiarLevel, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
+          totalSummons, totalCrits, goldenClaimed, maxCombo,
+          activeQuestIds, eggPhase, hatchTaps, captureTaps,
           lastSave: Date.now() / 1000,
         })
       );
     }, 600);
-  }, [coins, totalEarned, tapPower, owned, deck, critLevel, familiarLevel, sanctuaryLevel, veilleurLevel, essence, lastRitualAt, loaded]);
+  }, [
+    coins, totalEarned, tapPower, owned, deck, critLevel, familiarLevel, sanctuaryLevel,
+    veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo,
+    activeQuestIds, eggPhase, hatchTaps, captureTaps, loaded,
+  ]);
 
   // Sauvegarde immédiate à la sortie de l'écran.
   useEffect(() => {
@@ -198,6 +248,10 @@ export default function ClickerScreen({ onBack }) {
           owned: ownedRef.current, deck: deckRef.current, critLevel: critLevelRef.current,
           familiarLevel: familiarLevelRef.current, sanctuaryLevel: sanctuaryLevelRef.current,
           veilleurLevel: veilleurLevelRef.current, essence: essenceRef.current, lastRitualAt: lastRitualAtRef.current,
+          totalSummons: totalSummonsRef.current, totalCrits: totalCritsRef.current,
+          goldenClaimed: goldenClaimedRef.current, maxCombo: maxComboRef.current,
+          activeQuestIds: activeQuestIdsRef.current, eggPhase: eggPhaseRef.current,
+          hatchTaps: hatchTapsRef.current, captureTaps: captureTapsRef.current,
           lastSave: Date.now() / 1000,
         })
       );
@@ -293,14 +347,22 @@ export default function ClickerScreen({ onBack }) {
     comboCountRef.current = newCombo;
     lastTapTimeRef.current = now;
     setComboCount(newCombo);
+    const newTranseMult = transeMultiplier(newCombo);
+    if (newTranseMult > maxComboRef.current) {
+      maxComboRef.current = newTranseMult;
+      setMaxCombo(newTranseMult);
+    }
 
     // Faveur des Esprits : jet de coup critique indépendant à chaque tap.
     const isCrit = rollCrit(critLevelRef.current);
+    if (isCrit) {
+      totalCritsRef.current += 1;
+      setTotalCrits(totalCritsRef.current);
+    }
 
     const powerMult = activePowerRef.current ? activePowerRef.current.tapMultiplier : 1;
-    const transeMult = transeMultiplier(newCombo);
     const critMult = isCrit ? critMultiplier(critLevelRef.current) : 1;
-    const gain = Math.max(1, Math.round(tapPowerRef.current * powerMult * transeMult * critMult));
+    const gain = Math.max(1, Math.round(tapPowerRef.current * powerMult * newTranseMult * critMult));
     const finalGain = Math.round(gainCoins(gain));
     Animated.sequence([
       Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
@@ -427,6 +489,19 @@ export default function ClickerScreen({ onBack }) {
     spawnPopup(`+${reward} 🕯️`, 110, 60, true);
   };
 
+  // Ajoute une créature à la collection (nouvelle entrée, ou niveau +1 si
+  // déjà possédée) — factorisé car utilisé à la fois par l'invocation
+  // gacha ET la récompense de capture d'œuf.
+  const addCreatureToOwned = (creature) => {
+    setOwned((prev) => {
+      const existing = prev.find((o) => o.id === creature.id);
+      if (existing) {
+        return prev.map((o) => (o.id === creature.id ? { ...o, level: o.level + 1 } : o));
+      }
+      return [...prev, { id: creature.id, level: 1 }];
+    });
+  };
+
   const doOffrande = () => {
     if (sharedCoins < OFFRANDE_APPCOINS_COST) return;
     spendSharedCoins(OFFRANDE_APPCOINS_COST).then((ok) => {
@@ -436,12 +511,59 @@ export default function ClickerScreen({ onBack }) {
     });
   };
 
+  // ---- Système de quêtes + œuf ----
+  const maxCreatureLevel = owned.reduce((max, o) => Math.max(max, o.level), 0);
+  const questStats = { maxCombo, totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower };
+  const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats)).length;
+
+  // Bascule automatique collecte -> éclosion dès que les 4 quêtes sont
+  // validées (une seule fois, via une ref pour éviter de redéclencher en
+  // boucle à chaque rendu tant que la phase n'a pas changé).
+  useEffect(() => {
+    if (eggPhaseRef.current === 'collecting' && completedQuestCount >= 4) {
+      setEggPhase('hatching');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedQuestCount]);
+
+  const handleEggTap = () => {
+    if (eggPhaseRef.current === 'hatching') {
+      const next = hatchTapsRef.current + 1;
+      hatchTapsRef.current = next;
+      setHatchTaps(next);
+      if (next >= HATCH_TAPS_REQUIRED) {
+        setEggPhase('capturing');
+      }
+    } else if (eggPhaseRef.current === 'capturing') {
+      const next = captureTapsRef.current + 1;
+      captureTapsRef.current = next;
+      setCaptureTaps(next);
+      if (next >= CAPTURE_TAPS_REQUIRED) {
+        // Capture réussie : récompense (tirage classique, comme demandé —
+        // pas de créature rare garantie) + petit bonus de pièces, puis
+        // nouveau cycle de quêtes.
+        const creature = rollCreature();
+        addCreatureToOwned(creature);
+        gainCoins(goldenBonus(tapPowerRef.current) * 3);
+        setRewardCreature(creature);
+        setActiveQuestIds(pickQuestSet(activeQuestIdsRef.current));
+        setEggPhase('collecting');
+        setHatchTaps(0);
+        setCaptureTaps(0);
+        hatchTapsRef.current = 0;
+        captureTapsRef.current = 0;
+      }
+    }
+  };
+
   const claimGolden = () => {
     if (!goldenTargetRef.current) return;
     const bonus = Math.round(gainCoins(goldenBonus(tapPowerRef.current)));
     spawnPopup(`+${bonus} ✨`, 110, 60, true);
     setGoldenTarget(null);
     nextGoldenAtRef.current = Date.now() + nextGoldenDelaySec() * 1000;
+    goldenClaimedRef.current += 1;
+    setGoldenClaimed(goldenClaimedRef.current);
   };
 
   const nextSummonCost = applyDiscount(summonCost(owned.length));
@@ -451,13 +573,9 @@ export default function ClickerScreen({ onBack }) {
     setCoins((c) => c - nextSummonCost);
     if (pendingDiscountRef.current) setPendingDiscount(null);
     const creature = rollCreature();
-    setOwned((prev) => {
-      const existing = prev.find((o) => o.id === creature.id);
-      if (existing) {
-        return prev.map((o) => (o.id === creature.id ? { ...o, level: o.level + 1 } : o));
-      }
-      return [...prev, { id: creature.id, level: 1 }];
-    });
+    addCreatureToOwned(creature);
+    totalSummonsRef.current += 1;
+    setTotalSummons(totalSummonsRef.current);
     setSelectedCreature(creature.id);
     setView('collection');
   };
@@ -542,6 +660,11 @@ export default function ClickerScreen({ onBack }) {
       <View style={styles.tabRow}>
         <TouchableOpacity style={[styles.tabBtn, view === 'tap' && styles.tabBtnActive]} onPress={() => setView('tap')}>
           <Text style={[styles.tabBtnText, view === 'tap' && styles.tabBtnTextActive]}>Tap</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tabBtn, view === 'quests' && styles.tabBtnActive]} onPress={() => setView('quests')}>
+          <Text style={[styles.tabBtnText, view === 'quests' && styles.tabBtnTextActive]}>
+            🥚 Quêtes {eggPhase !== 'collecting' ? '❗' : `(${completedQuestCount}/4)`}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tabBtn, view === 'collection' && styles.tabBtnActive]} onPress={() => setView('collection')}>
           <Text style={[styles.tabBtnText, view === 'collection' && styles.tabBtnTextActive]}>
@@ -678,6 +801,17 @@ export default function ClickerScreen({ onBack }) {
           </TouchableOpacity>
           </ScrollView>
         </View>
+      ) : view === 'quests' ? (
+        <QuestsView
+          activeQuestIds={activeQuestIds}
+          questStats={questStats}
+          eggPhase={eggPhase}
+          hatchTaps={hatchTaps}
+          captureTaps={captureTaps}
+          onEggTap={handleEggTap}
+          rewardCreature={rewardCreature}
+          onDismissReward={() => setRewardCreature(null)}
+        />
       ) : (
         <CollectionView
           owned={owned}
@@ -773,6 +907,83 @@ function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose }) {
         )}
       </View>
     </View>
+  );
+}
+
+// Onglet Quêtes : l'œuf (5 apparences selon la progression), les 4
+// quêtes du cycle en cours avec leur barre de progression, puis la
+// séquence finale (éclosion 500 taps -> capture 200 taps) une fois les 4
+// quêtes validées.
+function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTaps, onEggTap, rewardCreature, onDismissReward }) {
+  const completedCount = activeQuestIds.filter((id) => questComplete(id, questStats)).length;
+  const stageIndex = eggPhase === 'collecting' ? eggStageForCompletedCount(completedCount) : 4;
+  const stage = EGG_STAGES[stageIndex];
+
+  return (
+    <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={styles.questsScrollContent} showsVerticalScrollIndicator={false}>
+      {eggPhase === 'collecting' ? (
+        <>
+          <View style={styles.eggDisplay}>
+            <Text style={[styles.eggEmoji, { opacity: 0.55 + stageIndex * 0.11 }]}>🥚</Text>
+            <Text style={styles.eggStageName}>{stage.name}</Text>
+            <Text style={styles.eggStageDesc}>{stage.desc}</Text>
+          </View>
+
+          {activeQuestIds.map((id) => {
+            const progress = questProgress(id, questStats);
+            const done = progress >= 1;
+            return (
+              <View key={id} style={[styles.questCard, done && styles.questCardDone]}>
+                <View style={styles.questCardHeader}>
+                  <Text style={styles.questCheckbox}>{done ? '✅' : '⬜'}</Text>
+                  <Text style={[styles.questLabel, done && styles.questLabelDone]}>{questLabel(id)}</Text>
+                </View>
+                <View style={styles.questBarTrack}>
+                  <View style={[styles.questBarFill, { width: `${Math.round(progress * 100)}%` }, done && styles.questBarFillDone]} />
+                </View>
+              </View>
+            );
+          })}
+        </>
+      ) : (
+        <View style={styles.hatchArea}>
+          <Text style={styles.hatchTitle}>{eggPhase === 'hatching' ? '🥚 L\'œuf est prêt !' : '✨ Capture-le !'}</Text>
+          <Text style={styles.hatchSubtitle}>
+            {eggPhase === 'hatching' ? 'Tape pour le faire éclore' : 'La créature sauvage bouge encore — tape pour la capturer'}
+          </Text>
+          <TouchableOpacity onPress={onEggTap} style={styles.hatchTapZone} activeOpacity={0.8}>
+            <Text style={styles.hatchEmoji}>{eggPhase === 'hatching' ? '🥚' : '💫'}</Text>
+          </TouchableOpacity>
+          <View style={styles.questBarTrack}>
+            <View
+              style={[
+                styles.questBarFill,
+                styles.questBarFillDone,
+                { width: `${Math.round(((eggPhase === 'hatching' ? hatchTaps : captureTaps) / (eggPhase === 'hatching' ? HATCH_TAPS_REQUIRED : CAPTURE_TAPS_REQUIRED)) * 100)}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.hatchCount}>
+            {eggPhase === 'hatching' ? hatchTaps : captureTaps} / {eggPhase === 'hatching' ? HATCH_TAPS_REQUIRED : CAPTURE_TAPS_REQUIRED}
+          </Text>
+        </View>
+      )}
+
+      {rewardCreature && (
+        <View style={styles.detailOverlay}>
+          <View style={styles.detailPanel}>
+            <Text style={styles.detailEmoji}>{rewardCreature.stages[0].emoji}</Text>
+            <Text style={styles.detailName}>Capturé !</Text>
+            <Text style={[styles.creatureRarity, { color: RARITY_COLOR[rewardCreature.rarity] }]}>
+              {rewardCreature.stages[0].name} · {RARITY_LABEL[rewardCreature.rarity]}
+            </Text>
+            <TouchableOpacity style={styles.feedBtn} onPress={onDismissReward}>
+              <Text style={styles.feedBtnText}>Super !</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
@@ -1080,4 +1291,35 @@ const styles = StyleSheet.create({
   feedBtn: { backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 28, marginTop: 16, alignItems: 'center' },
   feedBtnText: { color: '#241a00', fontSize: 14, fontWeight: '900' },
   feedBtnCost: { color: '#241a00', fontSize: 11, fontWeight: '700', marginTop: 2 },
+
+  questsScrollContent: { alignItems: 'center', paddingBottom: 30, paddingTop: 4 },
+  eggDisplay: { alignItems: 'center', marginBottom: 18 },
+  eggEmoji: { fontSize: 90 },
+  eggStageName: { color: COLORS.action, fontSize: 17, fontWeight: '900', marginTop: 6 },
+  eggStageDesc: { color: COLORS.muted, fontSize: 12, marginTop: 2 },
+
+  questCard: {
+    width: '100%', backgroundColor: COLORS.panel, borderRadius: 14, padding: 12, marginBottom: 10,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  questCardDone: { borderColor: COLORS.good, backgroundColor: 'rgba(0,230,118,0.08)' },
+  questCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  questCheckbox: { fontSize: 16 },
+  questLabel: { color: COLORS.text, fontSize: 13, fontWeight: '700', flex: 1 },
+  questLabelDone: { color: COLORS.good, textDecorationLine: 'line-through' },
+  questBarTrack: { height: 8, borderRadius: 4, backgroundColor: '#241d42', overflow: 'hidden' },
+  questBarFill: { height: '100%', backgroundColor: COLORS.action, borderRadius: 4 },
+  questBarFillDone: { backgroundColor: COLORS.good },
+
+  hatchArea: { alignItems: 'center', width: '100%', marginTop: 10 },
+  hatchTitle: { color: COLORS.action, fontSize: 20, fontWeight: '900' },
+  hatchSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 4, marginBottom: 20, textAlign: 'center' },
+  hatchTapZone: {
+    width: 180, height: 180, borderRadius: 90, backgroundColor: COLORS.panel,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.action,
+    shadowColor: COLORS.action, shadowOpacity: 0.6, shadowRadius: 18, shadowOffset: { width: 0, height: 0 },
+    marginBottom: 20,
+  },
+  hatchEmoji: { fontSize: 84 },
+  hatchCount: { color: COLORS.text, fontSize: 13, fontWeight: '800', marginTop: 8 },
 });
