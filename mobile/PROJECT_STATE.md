@@ -874,3 +874,32 @@ fois activé, plus la fréquence d'apparition.
 - Si le deck est vide, aucune apparition ne se déclenche — mais dès
   qu'une créature y est ajoutée, une apparition redevient possible
   presque immédiatement (pas d'attente d'un cycle complet)
+
+## Clicker : pièces invisibles à partir de 1K corrigé + renommage "Pacte" (29/08, suite)
+**Bug trouvé** : `coinsRow` centrait son contenu sur une seule ligne
+sans retour à la ligne autorisé (`flexDirection:'row'` sans
+`flexWrap`). Une fois une créature possédée, le texte "+X.X/s" de revenu
+passif s'affiche à côté du montant de pièces sur la même ligne — une
+fois les pièces passées à 4 chiffres (1K+), la ligne combinée dépassait
+la largeur de l'écran, et un contenu centré qui déborde s'étend de façon
+symétrique des deux côtés : le DÉBUT du texte des pièces sortait du
+cadre à gauche, donnant l'impression qu'il avait disparu. Corrigé avec
+`flexWrap:'wrap'` — le texte de revenu passif passe à la ligne suivante
+si besoin, au lieu de pousser le montant de pièces hors écran.
+
+Au passage : garde-fou ajouté dans `formatNum()` (retourne '0' si
+NaN/Infinity au lieu d'afficher un texte cassé), et correction d'un cas
+limite cosmétique (999999 affichait "1000.0K" au lieu de "1.00M").
+
+**Poursuite de la feuille de route** : bouton "Puissance de tap"
+renommé en **"Pacte"** (nom RP déjà validé dans les docs Drive), avec un
+petit sous-texte explicatif ("+1 pièce par tap à chaque niveau") pour
+qu'un nouveau joueur comprenne l'effet sans avoir à deviner. Seul le
+texte affiché a changé — les noms de variables internes (`tapPower`,
+`tapPowerCost`...) restent inchangés, aucun comportement fonctionnel
+affecté.
+
+**Reste à faire** (voir docs Drive) : coups critiques, Transe (combo),
+cible dorée, Familier (auto-clic), Sanctuaire, Ascension (prestige),
+système de quêtes + œuf à 4 paliers, fausse pub (Rituel), Offrande
+(dépenser les pièces `appCoins` partagées), stats inter-jeux.
