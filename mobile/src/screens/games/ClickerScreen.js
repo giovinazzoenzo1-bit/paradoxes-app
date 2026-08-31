@@ -4,8 +4,9 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCoins } from '../../context/CoinsContext';
 import {
   CREATURES,
   RARITY_LABEL,
@@ -32,6 +33,19 @@ import {
   nextGoldenDelaySec,
   goldenBonus,
   GOLDEN_VISIBLE_SEC,
+  familiarIncome,
+  familiarUpgradeCost,
+  sanctuaryMultiplier,
+  sanctuaryUpgradeCost,
+  veilleurOfflineMultiplier,
+  veilleurUpgradeCost,
+  ascensionEssenceGain,
+  essenceBonusMultiplier,
+  ritualReward,
+  ritualReady,
+  RITUAL_COOLDOWN_SEC,
+  OFFRANDE_APPCOINS_COST,
+  offrandeReward,
 } from '../../games/clicker/clickerLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 
@@ -57,9 +71,11 @@ function formatNum(n) {
 
 export default function ClickerScreen({ onBack }) {
   const panHandlers = useBackGesture(onBack);
+  const { coins: sharedCoins, spendCoins: spendSharedCoins } = useCoins();
 
   const [loaded, setLoaded] = useState(false);
   const [coins, setCoins] = useState(0);
+  const [totalEarned, setTotalEarned] = useState(0); // cumul jamais décroissant, pour l'Ascension
   const [tapPower, setTapPower] = useState(1);
   const [owned, setOwned] = useState([]); // [{id, level}]
   const [view, setView] = useState('tap'); // 'tap' | 'collection'
@@ -74,14 +90,31 @@ export default function ClickerScreen({ onBack }) {
   const [critLevel, setCritLevel] = useState(0); // niveau de "Faveur des Esprits"
   const [comboCount, setComboCount] = useState(0); // niveau actuel de la Transe
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
+  const [familiarLevel, setFamiliarLevel] = useState(0);
+  const [sanctuaryLevel, setSanctuaryLevel] = useState(0);
+  const [veilleurLevel, setVeilleurLevel] = useState(0);
+  const [essence, setEssence] = useState(0); // bonus permanent d'Ascension, survit aux resets
+  const [lastRitualAt, setLastRitualAt] = useState(0);
   const [, setLiveTick] = useState(0); // force le re-rendu pour les décomptes visuels
 
   const coinsRef = useRef(0);
   coinsRef.current = coins;
+  const totalEarnedRef = useRef(0);
+  totalEarnedRef.current = totalEarned;
   const ownedRef = useRef([]);
   ownedRef.current = owned;
   const tapPowerRef = useRef(1);
   tapPowerRef.current = tapPower;
+  const familiarLevelRef = useRef(0);
+  familiarLevelRef.current = familiarLevel;
+  const sanctuaryLevelRef = useRef(0);
+  sanctuaryLevelRef.current = sanctuaryLevel;
+  const veilleurLevelRef = useRef(0);
+  veilleurLevelRef.current = veilleurLevel;
+  const essenceRef = useRef(0);
+  essenceRef.current = essence;
+  const lastRitualAtRef = useRef(0);
+  lastRitualAtRef.current = lastRitualAt;
   const popupIdRef = useRef(0);
   const saveTimeoutRef = useRef(null);
   const viewRef = useRef('tap');
@@ -117,12 +150,19 @@ export default function ClickerScreen({ onBack }) {
           const saved = JSON.parse(raw);
           const nowSec = Date.now() / 1000;
           const elapsed = saved.lastSave ? nowSec - saved.lastSave : 0;
-          const offline = offlineEarnings(saved.owned || [], elapsed);
+          const savedVeilleur = saved.veilleurLevel || 0;
+          const offline = Math.round(offlineEarnings(saved.owned || [], elapsed) * veilleurOfflineMultiplier(savedVeilleur));
           setCoins((saved.coins || 0) + offline);
+          setTotalEarned((saved.totalEarned || 0) + offline);
           setTapPower(saved.tapPower || 1);
           setOwned(saved.owned || []);
           setDeck(saved.deck || [null, null, null]);
           setCritLevel(saved.critLevel || 0);
+          setFamiliarLevel(saved.familiarLevel || 0);
+          setSanctuaryLevel(saved.sanctuaryLevel || 0);
+          setVeilleurLevel(savedVeilleur);
+          setEssence(saved.essence || 0);
+          setLastRitualAt(saved.lastRitualAt || 0);
           if (offline > 5) setWelcomeBack(offline);
         }
       } catch (e) {
@@ -139,29 +179,52 @@ export default function ClickerScreen({ onBack }) {
     saveTimeoutRef.current = setTimeout(() => {
       AsyncStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ coins, tapPower, owned, deck, critLevel, lastSave: Date.now() / 1000 })
+        JSON.stringify({
+          coins, totalEarned, tapPower, owned, deck, critLevel,
+          familiarLevel, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
+          lastSave: Date.now() / 1000,
+        })
       );
     }, 600);
-  }, [coins, tapPower, owned, deck, critLevel, loaded]);
+  }, [coins, totalEarned, tapPower, owned, deck, critLevel, familiarLevel, sanctuaryLevel, veilleurLevel, essence, lastRitualAt, loaded]);
 
   // Sauvegarde immédiate à la sortie de l'écran.
   useEffect(() => {
     return () => {
       AsyncStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ coins: coinsRef.current, tapPower: tapPowerRef.current, owned: ownedRef.current, deck: deckRef.current, critLevel: critLevelRef.current, lastSave: Date.now() / 1000 })
+        JSON.stringify({
+          coins: coinsRef.current, totalEarned: totalEarnedRef.current, tapPower: tapPowerRef.current,
+          owned: ownedRef.current, deck: deckRef.current, critLevel: critLevelRef.current,
+          familiarLevel: familiarLevelRef.current, sanctuaryLevel: sanctuaryLevelRef.current,
+          veilleurLevel: veilleurLevelRef.current, essence: essenceRef.current, lastRitualAt: lastRitualAtRef.current,
+          lastSave: Date.now() / 1000,
+        })
       );
     };
   }, []);
 
-  // Revenu passif : +1 tick par seconde, boosté si un pouvoir passive_boost est actif.
+  // Point de passage UNIQUE pour tout gain de pièces — applique le
+  // multiplicateur global (Sanctuaire × bonus permanent d'Ascension) et
+  // alimente le cumul total (totalEarned), qui ne baisse jamais même en
+  // dépensant, utilisé pour calculer le gain d'essence à l'Ascension.
+  const gainCoins = (rawAmount) => {
+    const multiplier = sanctuaryMultiplier(sanctuaryLevelRef.current) * essenceBonusMultiplier(essenceRef.current);
+    const amount = rawAmount * multiplier;
+    setCoins((c) => c + amount);
+    setTotalEarned((t) => t + amount);
+    return amount;
+  };
+
+  // Revenu passif : +1 tick par seconde (créatures + Familier), boosté si
+  // un pouvoir passive_boost est actif.
   useEffect(() => {
     if (!loaded) return;
     const interval = setInterval(() => {
-      const base = totalPassiveIncome(ownedRef.current);
+      const base = totalPassiveIncome(ownedRef.current) + familiarIncome(familiarLevelRef.current, tapPowerRef.current);
       const boost = activePowerRef.current && activePowerRef.current.effectType === 'passive_boost' ? activePowerRef.current.effectValue : 1;
       const income = base * boost;
-      if (income > 0) setCoins((c) => c + income);
+      if (income > 0) gainCoins(income);
     }, 1000);
     return () => clearInterval(interval);
   }, [loaded]);
@@ -238,15 +301,14 @@ export default function ClickerScreen({ onBack }) {
     const transeMult = transeMultiplier(newCombo);
     const critMult = isCrit ? critMultiplier(critLevelRef.current) : 1;
     const gain = Math.max(1, Math.round(tapPowerRef.current * powerMult * transeMult * critMult));
-
-    setCoins((c) => c + gain);
+    const finalGain = Math.round(gainCoins(gain));
     Animated.sequence([
       Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
       Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start();
     const x = evt.nativeEvent.locationX || 60;
     const y = evt.nativeEvent.locationY || 60;
-    spawnPopup(`+${gain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
+    spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
   };
 
   // Le joueur a tapé la créature apparue à temps : son pouvoir s'active,
@@ -266,8 +328,8 @@ export default function ClickerScreen({ onBack }) {
       // (coins_burst donne aussi un bonus immédiat en plus du multiplicateur de tap).
       setActivePower({ ...power, expiresAt: Date.now() + power.durationSec * 1000 });
       if (power.bonusCoins > 0) {
-        setCoins((c) => c + power.bonusCoins);
-        spawnPopup(`+${power.bonusCoins}`, 110, 60);
+        const finalBonus = Math.round(gainCoins(power.bonusCoins));
+        spawnPopup(`+${finalBonus}`, 110, 60);
       }
     }
     setSpawnedCreature(null);
@@ -294,16 +356,94 @@ export default function ClickerScreen({ onBack }) {
     if (pendingDiscountRef.current) setPendingDiscount(null);
   };
 
+  const buyFamiliar = () => {
+    const cost = applyDiscount(familiarUpgradeCost(familiarLevel));
+    if (coins < cost) return;
+    setCoins((c) => c - cost);
+    setFamiliarLevel((l) => l + 1);
+    if (pendingDiscountRef.current) setPendingDiscount(null);
+  };
+
+  const buySanctuary = () => {
+    const cost = applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel));
+    if (coins < cost) return;
+    setCoins((c) => c - cost);
+    setSanctuaryLevel((l) => l + 1);
+    if (pendingDiscountRef.current) setPendingDiscount(null);
+  };
+
+  const buyVeilleur = () => {
+    const cost = applyDiscount(veilleurUpgradeCost(veilleurLevel));
+    if (coins < cost) return;
+    setCoins((c) => c - cost);
+    setVeilleurLevel((l) => l + 1);
+    if (pendingDiscountRef.current) setPendingDiscount(null);
+  };
+
+  // Ascension : réinitialise coins/Pacte/Faveur/Familier/Sanctuaire/
+  // Veilleur/collection/deck contre un gain d'essence PERMANENT (jamais
+  // remis à zéro, même par une nouvelle Ascension).
+  const essenceGainPreview = ascensionEssenceGain(totalEarned);
+  const doAscension = () => {
+    if (essenceGainPreview <= 0) return;
+    Alert.alert(
+      'Ascension',
+      `Tu vas tout réinitialiser (pièces, Pacte, créatures, améliorations) contre +${essenceGainPreview} essence permanente (+${Math.round(essenceGainPreview * 2)}% de production pour toujours). Continuer ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Ascensionner',
+          style: 'destructive',
+          onPress: () => {
+            setEssence((e) => e + essenceGainPreview);
+            setCoins(0);
+            setTotalEarned(0);
+            setTapPower(1);
+            setCritLevel(0);
+            setFamiliarLevel(0);
+            setSanctuaryLevel(0);
+            setVeilleurLevel(0);
+            setOwned([]);
+            setDeck([null, null, null]);
+            setActivePower(null);
+            setPendingDiscount(null);
+          },
+        },
+      ]
+    );
+  };
+
+  const passiveIncome =
+    (totalPassiveIncome(owned) + familiarIncome(familiarLevel, tapPower)) *
+    (activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1) *
+    sanctuaryMultiplier(sanctuaryLevel) *
+    essenceBonusMultiplier(essence);
+
+  const ritualIsReady = ritualReady(lastRitualAt, Date.now());
+  const doRitual = () => {
+    if (!ritualIsReady) return;
+    const reward = Math.round(gainCoins(ritualReward(tapPowerRef.current, passiveIncome)));
+    setLastRitualAt(Date.now());
+    spawnPopup(`+${reward} 🕯️`, 110, 60, true);
+  };
+
+  const doOffrande = () => {
+    if (sharedCoins < OFFRANDE_APPCOINS_COST) return;
+    spendSharedCoins(OFFRANDE_APPCOINS_COST).then((ok) => {
+      if (!ok) return;
+      const reward = Math.round(gainCoins(offrandeReward(tapPowerRef.current)));
+      spawnPopup(`+${reward} 🪙`, 110, 60);
+    });
+  };
+
   const claimGolden = () => {
     if (!goldenTargetRef.current) return;
-    const bonus = goldenBonus(tapPowerRef.current);
-    setCoins((c) => c + bonus);
+    const bonus = Math.round(gainCoins(goldenBonus(tapPowerRef.current)));
     spawnPopup(`+${bonus} ✨`, 110, 60, true);
     setGoldenTarget(null);
     nextGoldenAtRef.current = Date.now() + nextGoldenDelaySec() * 1000;
   };
 
-  const passiveIncome = totalPassiveIncome(owned) * (activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1);
   const nextSummonCost = applyDiscount(summonCost(owned.length));
 
   const doSummon = () => {
@@ -440,6 +580,7 @@ export default function ClickerScreen({ onBack }) {
             <Text style={styles.tapHint}>Tape pour récolter des pièces</Text>
           )}
 
+          <ScrollView style={styles.buttonScroll} contentContainerStyle={styles.buttonScrollContent} showsVerticalScrollIndicator={false}>
           <TouchableOpacity
             style={[styles.actionBtn, coins < applyDiscount(tapPowerCost(tapPower)) && styles.actionBtnDisabled]}
             onPress={buyTapPower}
@@ -467,6 +608,67 @@ export default function ClickerScreen({ onBack }) {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.actionBtn, coins < applyDiscount(familiarUpgradeCost(familiarLevel)) && styles.actionBtnDisabled]}
+            onPress={buyFamiliar}
+            disabled={coins < applyDiscount(familiarUpgradeCost(familiarLevel))}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.actionBtnText}>🐿️ Familier (nv {familiarLevel})</Text>
+              <Text style={styles.actionBtnSubtext}>Auto-clic : +{familiarIncome(familiarLevel + 1, tapPower).toFixed(1)}/s au niveau suivant</Text>
+            </View>
+            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(familiarUpgradeCost(familiarLevel)))}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)) && styles.actionBtnDisabled]}
+            onPress={buySanctuary}
+            disabled={coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.actionBtnText}>🏛️ Sanctuaire (nv {sanctuaryLevel})</Text>
+              <Text style={styles.actionBtnSubtext}>+5% sur TOUTE la production (tap + passif) par niveau</Text>
+            </View>
+            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)))}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, coins < applyDiscount(veilleurUpgradeCost(veilleurLevel)) && styles.actionBtnDisabled]}
+            onPress={buyVeilleur}
+            disabled={coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.actionBtnText}>🌙 Veilleur (nv {veilleurLevel})</Text>
+              <Text style={styles.actionBtnSubtext}>+15% de gains hors-ligne par niveau</Text>
+            </View>
+            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.ascensionBtn, essenceGainPreview <= 0 && styles.actionBtnDisabled]}
+            onPress={doAscension}
+            disabled={essenceGainPreview <= 0}
+          >
+            <Text style={styles.ascensionBtnText}>🌟 Ascension {essence > 0 ? `(essence : ${essence})` : ''}</Text>
+            <Text style={styles.ascensionBtnSubtext}>
+              {essenceGainPreview > 0
+                ? `Réinitialise ta progression contre +${essenceGainPreview} essence permanente`
+                : `Gagne encore ${formatNum(50000 - totalEarned)} pièces au total pour débloquer`}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.ritualBtn, !ritualIsReady && styles.actionBtnDisabled]} onPress={doRitual} disabled={!ritualIsReady}>
+            <Text style={styles.ritualBtnText}>🕯️ Rituel</Text>
+            <Text style={styles.ritualBtnSubtext}>
+              {ritualIsReady ? 'Regarder une "pub" (test) pour un gros bonus' : `Recharge dans ${Math.ceil((RITUAL_COOLDOWN_SEC * 1000 - (Date.now() - lastRitualAt)) / 1000)}s`}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.offrandeBtn, sharedCoins < OFFRANDE_APPCOINS_COST && styles.actionBtnDisabled]} onPress={doOffrande} disabled={sharedCoins < OFFRANDE_APPCOINS_COST}>
+            <Text style={styles.offrandeBtnText}>🪙 Offrande</Text>
+            <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} pièces de l'appli (tu en as {sharedCoins}) contre un bonus ici</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.summonBtn, coins < nextSummonCost && styles.actionBtnDisabled]}
             onPress={doSummon}
             disabled={coins < nextSummonCost}
@@ -474,6 +676,7 @@ export default function ClickerScreen({ onBack }) {
             <Text style={styles.summonBtnText}>🥚 Invoquer une créature</Text>
             <Text style={styles.summonBtnCost}>💰 {formatNum(nextSummonCost)}</Text>
           </TouchableOpacity>
+          </ScrollView>
         </View>
       ) : (
         <CollectionView
@@ -788,8 +991,10 @@ const styles = StyleSheet.create({
   deckSlotEmoji: { fontSize: 26 },
   deckSlotEmpty: { fontSize: 22, opacity: 0.35 },
 
-  tapArea: { flex: 1, alignItems: 'center', marginTop: 10 },
-  tapZone: { width: '100%', height: 220, position: 'relative' },
+  tapArea: { flex: 1, alignItems: 'center', marginTop: 10, width: '100%' },
+  tapZone: { width: '100%', height: 190, position: 'relative' },
+  buttonScroll: { width: '100%', flex: 1, marginTop: 4 },
+  buttonScrollContent: { paddingBottom: 24 },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tapButton: {
     width: 160, height: 160, borderRadius: 80, backgroundColor: COLORS.panel,
@@ -817,6 +1022,27 @@ const styles = StyleSheet.create({
   },
   summonBtnText: { color: '#b96bff', fontSize: 15, fontWeight: '900' },
   summonBtnCost: { color: COLORS.action, fontSize: 12, fontWeight: '800', marginTop: 4 },
+
+  ascensionBtn: {
+    width: '100%', backgroundColor: 'rgba(255,112,67,0.12)', borderRadius: 14, padding: 14, marginTop: 16,
+    borderWidth: 1.5, borderColor: '#FF7043', alignItems: 'center',
+  },
+  ascensionBtnText: { color: '#FF7043', fontSize: 14, fontWeight: '900' },
+  ascensionBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
+
+  ritualBtn: {
+    width: '100%', backgroundColor: 'rgba(245,197,66,0.1)', borderRadius: 14, padding: 14, marginTop: 12,
+    borderWidth: 1, borderColor: COLORS.border, alignItems: 'center',
+  },
+  ritualBtnText: { color: COLORS.action, fontSize: 14, fontWeight: '900' },
+  ritualBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
+
+  offrandeBtn: {
+    width: '100%', backgroundColor: 'rgba(62,198,240,0.1)', borderRadius: 14, padding: 14, marginTop: 12,
+    borderWidth: 1, borderColor: '#3ec6f0', alignItems: 'center',
+  },
+  offrandeBtnText: { color: '#3ec6f0', fontSize: 14, fontWeight: '900' },
+  offrandeBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
 
   grid: { paddingBottom: 20 },
   creatureCell: {

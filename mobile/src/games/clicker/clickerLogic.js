@@ -230,3 +230,62 @@ export function nextGoldenDelaySec() {
 export function goldenBonus(tapPower) {
   return Math.round(tapPower * 40);
 }
+
+// ---- Familier (auto-clic) ----
+// Un compagnon tape pour le joueur en continu — traduit en revenu/s
+// supplémentaire proportionnel à la puissance de tap actuelle (pas un
+// montant fixe qui deviendrait négligeable en fin de partie).
+export function familiarIncome(level, tapPower) {
+  return level * tapPower * 0.5;
+}
+export function familiarUpgradeCost(level) {
+  return Math.round(40 * Math.pow(1.6, level));
+}
+
+// ---- Sanctuaire (boost global %) ----
+// Multiplicateur global appliqué à TOUTE la production (tap ET revenu
+// passif), pas juste au tap comme Pacte.
+export function sanctuaryMultiplier(level) {
+  return 1 + level * 0.05;
+}
+export function sanctuaryUpgradeCost(level) {
+  return Math.round(60 * Math.pow(1.7, level));
+}
+
+// ---- Veilleur (gains hors-ligne) ----
+export function veilleurOfflineMultiplier(level) {
+  return 1 + level * 0.15;
+}
+export function veilleurUpgradeCost(level) {
+  return Math.round(50 * Math.pow(1.6, level));
+}
+
+// ---- Ascension (prestige) ----
+// Réinitialise la progression contre un bonus PERMANENT (essence), qui
+// persiste à travers les résets suivants. Le gain d'essence dépend du
+// total de pièces gagnées sur toute la partie (pas juste le solde
+// actuel, qui peut avoir été dépensé) — récompense la progression
+// globale, pas la thésaurisation.
+export const ASCENSION_MIN_LIFETIME_EARNED = 50000; // seuil avant de pouvoir ascensionner
+export function ascensionEssenceGain(totalCoinsEarnedLifetime) {
+  if (totalCoinsEarnedLifetime < ASCENSION_MIN_LIFETIME_EARNED) return 0;
+  return Math.floor(Math.sqrt(totalCoinsEarnedLifetime / 10000));
+}
+export function essenceBonusMultiplier(essence) {
+  return 1 + essence * 0.02; // +2% de production permanente par point d'essence
+}
+
+// ---- Rituel (bouton "fausse pub" — pas de vrai SDK pour l'instant) ----
+export const RITUAL_COOLDOWN_SEC = 180; // 3 minutes entre 2 utilisations
+export function ritualReward(tapPower, passiveIncome) {
+  return Math.round(tapPower * 100 + passiveIncome * 120);
+}
+export function ritualReady(lastUsedMs, nowMs) {
+  return nowMs - lastUsedMs >= RITUAL_COOLDOWN_SEC * 1000;
+}
+
+// ---- Offrande (dépenser les pièces partagées appCoins de l'appli) ----
+export const OFFRANDE_APPCOINS_COST = 10;
+export function offrandeReward(tapPower) {
+  return Math.round(tapPower * 15);
+}
