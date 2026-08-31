@@ -1019,3 +1019,55 @@ vérifié en isolation avant intégration.
 désormais être ajoutée si besoin, le système dont elle dépendait
 existe). Reste : stats inter-jeux (pour les quêtes liées aux autres
 jeux du pool prévu dans les docs Drive).
+
+## Clicker : refonte économique avant le futur mode combat (29/08, suite)
+Décision explicite de l'utilisateur, en préparation d'un futur mode
+combat/aventure (créatures qui se battent) : les créatures ne doivent
+plus générer de pièces automatiquement — elles servent maintenant
+uniquement au tap, à leur pouvoir dédié en bulle (déjà en place, un
+pouvoir unique par créature depuis la maj précédente), et bientôt au
+combat. Le rôle de revenu passif est repris entièrement par une
+**nouvelle boutique dédiée aux auto-clics**.
+
+**Boutique à 5 paliers** (`AUTOCLICKERS`), façon jeu incrémental
+classique — remplace l'ancien "Familier" à niveau unique :
+Esprit Frappeur → Main Spectrale → Automate Runique → Colonie de
+Familiers → Titan Mécanique. Chaque palier achetable plusieurs fois,
+coût qui grimpe à chaque achat (×1,15 par unité déjà possédée). Nouveau
+menu modal `AutoClickerShop` accessible via un bouton dédié.
+
+**Changements techniques notables :**
+- `offlineEarnings()` généralisée pour prendre un taux de revenu
+  directement plutôt qu'une liste de créatures (les créatures ne
+  produisent plus rien) — le plafond de 4h reste vérifié fonctionnel avec
+  la nouvelle signature.
+- `incomeForCreature`/`totalPassiveIncome` gardées définies dans
+  `clickerLogic.js` (plus utilisées pour générer des pièces, mais
+  potentiellement utiles comme base de calcul pour de futures stats de
+  combat) — pas supprimées, juste commentées comme obsolètes pour cet
+  usage.
+- Les pouvoirs `passive_boost` (Flux Montant, Bourrasque, Rayonnement)
+  boostent maintenant le revenu de la boutique d'auto-clics au lieu de
+  l'ancien revenu créature — sans code supplémentaire nécessaire, le
+  multiplicateur s'applique simplement à la nouvelle base.
+- Migration douce des anciennes sauvegardes : un ancien niveau de
+  Familier se convertit en autant d'unités du 1er palier de la boutique.
+- `CreatureDetail` n'affiche plus un "💰/s" devenu incohérent, montre
+  maintenant le nom du pouvoir dédié de la créature à la place.
+
+**Bug attrapé pendant la vérification post-édition** : un appel résiduel
+`setFamiliarLevel(0)` oublié dans la fonction de reset d'Ascension
+(aurait planté au runtime, `setFamiliarLevel` n'existant plus) — trouvé
+par une recherche exhaustive systématique avant de pousser, pas laissé
+au hasard.
+
+**Testé de bout en bout** avant de pousser : achats progressifs de la
+boutique, plafond des gains hors-ligne avec la nouvelle signature,
+migration de l'ancien Familier, intégrité des 10 pouvoirs de créature.
+
+**Prochaine grande étape évoquée (pas encore commencée)** : mode
+combat/aventure, débloqué après la 1ère créature obtenue, pour rendre
+l'obtention de nouvelles créatures plus difficile/intéressante. Plusieurs
+questions de conception à trancher avant de coder (voir échange
+précédent : style de combat, stats de combat par créature, ce que le
+combat remplace ou complète).
