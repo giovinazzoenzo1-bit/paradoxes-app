@@ -822,3 +822,29 @@ toujours pas se le payer même remisé).
 (bouton "Invoquer une créature") reste inchangée et non restreinte pour
 l'instant, pour pouvoir tester librement les 10 pouvoirs sans attendre
 le futur système de quêtes/œufs.
+
+## Clicker : apparitions ne se déclenchaient pas + 3 changements (29/08, suite)
+Retour utilisateur : les pouvoirs de créature n'apparaissaient jamais en
+test. **Cause probable trouvée** : la bulle de créature était rendue en
+ENFANT du `TouchableOpacity` du bouton œuf (`onPress={handleTap}`) —
+risque d'ambiguïté du système de gestion tactile de RN entre les deux
+zones tapables imbriquées. Restructuré pour que la bulle soit une SŒUR
+du bouton œuf (les deux dans une simple `View` non-tapable), le bouton
+œuf remplissant maintenant la zone via `StyleSheet.absoluteFillObject`
+plutôt que d'ÊTRE la zone elle-même — élimine le risque de conflit par
+la structure plutôt que par un correctif ponctuel.
+
+**3 changements demandés en même temps :**
+1. Intervalle : 3 min → **1 minute** (`SPAWN_INTERVAL_SEC`)
+2. Position : coins fixes → **position aléatoire en anneau autour de
+   l'œuf** (angle + rayon tirés au hasard à chaque apparition, via
+   `randomRingPosition()`)
+3. **Mouvement doux continu** : une dérive lente en boucle (via
+   `Animated.ValueXY`) superposée à la pulsation déjà existante — la
+   bulle flotte visiblement au lieu de rester figée
+
+**Piège à surveiller pour tout futur élément tactile superposé** : ne
+jamais imbriquer un `TouchableOpacity` à l'intérieur d'un autre
+`TouchableOpacity` parent qui a lui-même un `onPress` — toujours les
+rendre frères dans un conteneur non-tapable, avec l'élément prioritaire
+rendu en dernier (donc au-dessus) dans l'arbre.
