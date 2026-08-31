@@ -1071,3 +1071,31 @@ l'obtention de nouvelles créatures plus difficile/intéressante. Plusieurs
 questions de conception à trancher avant de coder (voir échange
 précédent : style de combat, stats de combat par créature, ce que le
 combat remplace ou complète).
+
+## Clicker : réorganisation de l'interface pour préparer le combat (29/08, suite)
+Demande explicite : faire de la place pour la prochaine grosse maj
+(combat/aventure).
+
+1. **Rangée du haut** (était Tap/Quêtes/Collection) → devient
+   **"🏭 Auto-tap"** (ouvre la boutique déjà existante) et
+   **"⚔️ Combat / Aventure"** (placeholder "bientôt disponible" pour
+   l'instant — accroche UI explicite plutôt qu'un bouton qui ne fait
+   rien silencieusement).
+2. **Quêtes et Collection** déplacées des onglets du haut vers une
+   colonne d'icônes à DROITE de l'œuf (`sideIconColumn`), en dehors de la
+   `tapZone` elle-même (élément frère, pas dans le même espace de
+   coordonnées) — les bulles de pouvoir/cible dorée ne peuvent
+   structurellement PAS chevaucher ces boutons (elles ne se positionnent
+   qu'en pourcentage DANS les limites de `tapZone`), pas juste évité par
+   chance visuelle.
+3. **Bouton "Rituel" retiré** de la liste de boutons, remplacé par une
+   **bannière façon pub fixe en bas d'écran** (même logique `doRitual()`
+   et même minuteur de recharge, juste redéplacée/restylée) — un clic
+   accidentel dessus déclenche quand même la récompense gratuite, comme
+   demandé.
+
+**Piège attrapé pendant cette passe** : en retirant l'onglet "Tap", plus
+aucun moyen de revenir en arrière depuis Quêtes/Collection vers l'écran
+principal — ajouté un bouton "← Retour au clicker" dans les deux vues
+avant que ça devienne une vraie impasse plutôt qu'après qu'un joueur s'y
+retrouve coincé.
