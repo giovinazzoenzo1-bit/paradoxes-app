@@ -796,3 +796,29 @@ Flavio pour le détail complet) : renommage RP des boutons existants
 (combo), cible dorée, Familier (auto-clic), Sanctuaire, Ascension
 (prestige), système de quêtes/œuf à 4 paliers, fausse pub, Offrande
 (dépenser les pièces `appCoins` partagées), stats inter-jeux.
+
+## Clicker : pouvoir unique par créature (29/08, suite immédiate)
+Suite directe de l'apparition sur le cookie : au lieu de 4 pouvoirs
+partagés par palier de rareté, les 10 créatures ont maintenant chacune
+leur propre pouvoir nommé. La rareté garde le contrôle de l'INTENSITÉ
+(multiplicateur de tap + durée, même échelle qu'avant), mais chaque
+créature ajoute un effet secondaire propre à son élément, tiré de 3
+familles pour rester implémentable simplement :
+- **coins_burst** (bonus de pièces immédiat) : Braisillon "Éruption",
+  Cailloutin "Fondation", Étincelot "Décharge", Ombrelin "Éclipse",
+  Gemmion "Résonance Cristalline"
+- **passive_boost** (multiplie le revenu passif pendant la durée) :
+  Gouttelin "Flux Montant", Brisillon "Bourrasque", Lumeret "Rayonnement"
+- **discount_next** (réduit le coût du tout prochain achat, peu importe
+  lequel) : Bourgeonin "Éclosion Généreuse", Frimouss "Conservation"
+
+`discount_next` est branché sur les 3 chemins d'achat existants (tap,
+invocation, nourrir) via un helper `applyDiscount()` partagé, pour que
+le prix affiché corresponde toujours au prix réellement débité —
+consommé seulement si l'achat aboutit (gardé si le joueur ne peut
+toujours pas se le payer même remisé).
+
+**Décision explicite de l'utilisateur** : l'invocation gacha directe
+(bouton "Invoquer une créature") reste inchangée et non restreinte pour
+l'instant, pour pouvoir tester librement les 10 pouvoirs sans attendre
+le futur système de quêtes/œufs.
