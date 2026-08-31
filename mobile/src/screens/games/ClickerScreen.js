@@ -5,6 +5,7 @@
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../../context/CoinsContext';
 import {
@@ -39,7 +40,6 @@ import {
   essenceBonusMultiplier,
   ritualReward,
   ritualReady,
-  RITUAL_COOLDOWN_SEC,
   OFFRANDE_APPCOINS_COST,
   offrandeReward,
   QUEST_POOL,
@@ -87,7 +87,7 @@ export default function ClickerScreen({ onBack }) {
   const [totalEarned, setTotalEarned] = useState(0); // cumul jamais décroissant, pour l'Ascension
   const [tapPower, setTapPower] = useState(1);
   const [owned, setOwned] = useState([]); // [{id, level}]
-  const [view, setView] = useState('tap'); // 'tap' | 'collection'
+  const [view, setView] = useState('tap'); // 'tap' | 'shop' | 'quests' | 'collection'
   const [selectedCreature, setSelectedCreature] = useState(null);
   const [welcomeBack, setWelcomeBack] = useState(null);
   const [popups, setPopups] = useState([]);
@@ -99,8 +99,8 @@ export default function ClickerScreen({ onBack }) {
   const [critLevel, setCritLevel] = useState(0); // niveau de "Faveur des Esprits"
   const [comboCount, setComboCount] = useState(0); // niveau actuel de la Transe
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
+  const [ritualTarget, setRitualTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null — bulle "pub" (Rituel)
   const [autoClickers, setAutoClickers] = useState({}); // { esprit: 3, main: 1, ... }
-  const [autoShopOpen, setAutoShopOpen] = useState(false);
   const [combatComingSoonOpen, setCombatComingSoonOpen] = useState(false);
   const [sanctuaryLevel, setSanctuaryLevel] = useState(0);
   const [veilleurLevel, setVeilleurLevel] = useState(0);
@@ -173,6 +173,9 @@ export default function ClickerScreen({ onBack }) {
   const goldenTargetRef = useRef(null);
   goldenTargetRef.current = goldenTarget;
   const nextGoldenAtRef = useRef(Date.now() + nextGoldenDelaySec() * 1000);
+  const ritualTargetRef = useRef(null);
+  ritualTargetRef.current = ritualTarget;
+  const RITUAL_VISIBLE_SEC = 6; // un peu plus longue que la cible dorée, bonus plus rare
   // Premier essaim au bout d'~1/3 de l'intervalle (pas d'attente complète
   // pour un nouveau joueur), puis toutes les SPAWN_INTERVAL_SEC ensuite.
   const lastSpawnTimeRef = useRef(Date.now() - Math.round(SPAWN_INTERVAL_SEC * (2 / 3)) * 1000);
@@ -340,6 +343,18 @@ export default function ClickerScreen({ onBack }) {
         setGoldenTarget({ expiresAt: now + GOLDEN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
       }
 
+      // Bulle Rituel ("pub" de boost) : apparaît dès que le cooldown est
+      // écoulé, comme une bulle de pouvoir — plus de bouton dédié ni de
+      // bannière fixe. Si ratée, redevient éligible dès le tick suivant
+      // (le cooldown est déjà passé), donc réapparaîtra bientôt plutôt que
+      // de punir un raté par une attente supplémentaire.
+      if (ritualTargetRef.current && now > ritualTargetRef.current.expiresAt) {
+        setRitualTarget(null);
+      } else if (!ritualTargetRef.current && viewRef.current === 'tap' && ritualReady(lastRitualAtRef.current, now)) {
+        const pos = randomRingPosition();
+        setRitualTarget({ expiresAt: now + RITUAL_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
+      }
+
       setLiveTick((t) => t + 1);
     }, 300);
     return () => clearInterval(interval);
@@ -497,11 +512,11 @@ export default function ClickerScreen({ onBack }) {
     sanctuaryMultiplier(sanctuaryLevel) *
     essenceBonusMultiplier(essence);
 
-  const ritualIsReady = ritualReady(lastRitualAt, Date.now());
-  const doRitual = () => {
-    if (!ritualIsReady) return;
+  const claimRitual = () => {
+    if (!ritualTargetRef.current) return;
     const reward = Math.round(gainCoins(ritualReward(tapPowerRef.current, passiveIncome)));
     setLastRitualAt(Date.now());
+    setRitualTarget(null);
     spawnPopup(`+${reward} 🕯️`, 110, 60, true);
   };
 
@@ -646,47 +661,42 @@ export default function ClickerScreen({ onBack }) {
         <Text style={styles.title}>🐾 Élevage</Text>
       </View>
 
-      <Text style={styles.coinsValue}>💰 {formatNum(coins)}</Text>
-      {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
+      {view === 'tap' && (
+        <>
+          <Text style={styles.coinsValue}>💰 {formatNum(coins)}</Text>
+          {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
 
-      {activePower && (
-        <View style={styles.powerBanner}>
-          <Text style={styles.powerBannerText}>
-            ⚡ {activePower.name} actif : x{activePower.tapMultiplier} tap
-            {activePower.effectType === 'passive_boost' ? ` + x${activePower.effectValue} revenu passif` : ''}
-            {' '}({Math.max(0, Math.ceil((activePower.expiresAt - Date.now()) / 1000))}s)
-          </Text>
-        </View>
-      )}
+          {activePower && (
+            <View style={styles.powerBanner}>
+              <Text style={styles.powerBannerText}>
+                ⚡ {activePower.name} actif : x{activePower.tapMultiplier} tap
+                {activePower.effectType === 'passive_boost' ? ` + x${activePower.effectValue} revenu passif` : ''}
+                {' '}({Math.max(0, Math.ceil((activePower.expiresAt - Date.now()) / 1000))}s)
+              </Text>
+            </View>
+          )}
 
-      {pendingDiscount && (
-        <View style={[styles.powerBanner, styles.discountBanner]}>
-          <Text style={[styles.powerBannerText, styles.discountBannerText]}>
-            🏷️ {pendingDiscount.name} : -{Math.round(pendingDiscount.percent * 100)}% sur ton prochain achat
-          </Text>
-        </View>
-      )}
+          {pendingDiscount && (
+            <View style={[styles.powerBanner, styles.discountBanner]}>
+              <Text style={[styles.powerBannerText, styles.discountBannerText]}>
+                🏷️ {pendingDiscount.name} : -{Math.round(pendingDiscount.percent * 100)}% sur ton prochain achat
+              </Text>
+            </View>
+          )}
 
-      {welcomeBack !== null && (
-        <TouchableOpacity style={styles.welcomeBanner} onPress={() => setWelcomeBack(null)}>
-          <Text style={styles.welcomeText}>🎉 Pendant ton absence, tes créatures ont gagné {formatNum(welcomeBack)} pièces !</Text>
-        </TouchableOpacity>
-      )}
+          {welcomeBack !== null && (
+            <TouchableOpacity style={styles.welcomeBanner} onPress={() => setWelcomeBack(null)}>
+              <Text style={styles.welcomeText}>🎉 Pendant ton absence, tes créatures ont gagné {formatNum(welcomeBack)} pièces !</Text>
+            </TouchableOpacity>
+          )}
 
-      <View style={styles.tabRow}>
-        <TouchableOpacity style={styles.tabBtn} onPress={() => setAutoShopOpen(true)}>
-          <Text style={styles.tabBtnText}>🏭 Auto-tap</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabBtn} onPress={() => setCombatComingSoonOpen(true)}>
-          <Text style={styles.tabBtnText}>⚔️ Combat / Aventure</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Écran d'accueil volontairement épuré : juste l'œuf, les
+              pièces, le revenu/s, et le deck actuel — tout le reste
+              (améliorations, quêtes, collection) vit maintenant dans la
+              barre de navigation du bas. */}
+          <View style={styles.tapArea}>
+            <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
 
-      {view === 'tap' ? (
-        <View style={styles.tapArea}>
-          <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
-
-          <View style={styles.tapRowLayout}>
             <View style={styles.tapZone}>
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
                 <View style={styles.tapButtonWrap}>
@@ -700,125 +710,44 @@ export default function ClickerScreen({ onBack }) {
                   {p.text}
                 </Animated.Text>
               ))}
-              {/* La bulle de créature et la cible dorée sont FRÈRES du bouton
-                  tapable, pas enfants — elles captent leur propre appui sans
-                  jamais entrer en conflit avec le tap de l'œuf en dessous. */}
+              {/* Bulles de pouvoir : toutes FRÈRES du bouton tapable, pas
+                  enfants — elles captent leur propre appui sans jamais
+                  entrer en conflit avec le tap de l'œuf en dessous. */}
               {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
               {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
+              {ritualTarget && <RitualBubble target={ritualTarget} onClaim={claimRitual} />}
             </View>
 
-            {/* Quêtes et Collection en colonne à DROITE de l'œuf, hors de la
-                tapZone elle-même — les bulles de pouvoir tournent uniquement
-                DANS la tapZone (voir randomRingPosition), donc aucun risque
-                de chevauchement avec ces 2 boutons. */}
-            <View style={styles.sideIconColumn}>
-              <TouchableOpacity style={styles.sideIconBtn} onPress={() => setView('quests')}>
-                <Text style={styles.sideIconEmoji}>🥚</Text>
-                <Text style={styles.sideIconLabel}>Quêtes</Text>
-                <Text style={styles.sideIconBadge}>{eggPhase !== 'collecting' ? '❗' : `${completedQuestCount}/4`}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sideIconBtn} onPress={() => setView('collection')}>
-                <Text style={styles.sideIconEmoji}>📖</Text>
-                <Text style={styles.sideIconLabel}>Collection</Text>
-                <Text style={styles.sideIconBadge}>{owned.length}/{CREATURES.length}</Text>
-              </TouchableOpacity>
-            </View>
+            {comboCount > 1 ? (
+              <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
+            ) : (
+              <Text style={styles.tapHint}>Tape pour récolter des pièces</Text>
+            )}
           </View>
+        </>
+      )}
 
-          {comboCount > 1 ? (
-            <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
-          ) : (
-            <Text style={styles.tapHint}>Tape pour récolter des pièces</Text>
-          )}
+      {view === 'shop' && (
+        <ShopView
+          coins={coins}
+          sharedCoins={sharedCoins}
+          tapPower={tapPower}
+          critLevel={critLevel}
+          sanctuaryLevel={sanctuaryLevel}
+          veilleurLevel={veilleurLevel}
+          autoClickers={autoClickers}
+          applyDiscount={applyDiscount}
+          onBuyTapPower={buyTapPower}
+          onBuyCrit={buyCritUpgrade}
+          onBuySanctuary={buySanctuary}
+          onBuyVeilleur={buyVeilleur}
+          onBuyAutoClicker={buyAutoClicker}
+          onOffrande={doOffrande}
+          onBack={() => setView('tap')}
+        />
+      )}
 
-          <ScrollView style={styles.buttonScroll} contentContainerStyle={styles.buttonScrollContent} showsVerticalScrollIndicator={false}>
-          <TouchableOpacity
-            style={[styles.actionBtn, coins < applyDiscount(tapPowerCost(tapPower)) && styles.actionBtnDisabled]}
-            onPress={buyTapPower}
-            disabled={coins < applyDiscount(tapPowerCost(tapPower))}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.actionBtnText}>🔗 Pacte : {tapPower} → {tapPower + 1}</Text>
-              <Text style={styles.actionBtnSubtext}>+1 pièce par tap à chaque niveau</Text>
-            </View>
-            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(tapPowerCost(tapPower)))}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionBtn, coins < applyDiscount(critUpgradeCost(critLevel)) && styles.actionBtnDisabled]}
-            onPress={buyCritUpgrade}
-            disabled={coins < applyDiscount(critUpgradeCost(critLevel))}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.actionBtnText}>✨ Faveur des Esprits (nv {critLevel})</Text>
-              <Text style={styles.actionBtnSubtext}>
-                {Math.round(critChance(critLevel) * 100)}% de chance de coup critique x{critMultiplier(critLevel).toFixed(1)}
-              </Text>
-            </View>
-            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(critUpgradeCost(critLevel)))}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionBtn} onPress={() => setAutoShopOpen(true)}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.actionBtnText}>🏭 Boutique d'auto-clics</Text>
-              <Text style={styles.actionBtnSubtext}>Revenu actuel : +{passiveIncome.toFixed(1)}/s — appuie pour acheter des générateurs</Text>
-            </View>
-            <Text style={styles.actionBtnCost}>👉</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionBtn, coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)) && styles.actionBtnDisabled]}
-            onPress={buySanctuary}
-            disabled={coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.actionBtnText}>🏛️ Sanctuaire (nv {sanctuaryLevel})</Text>
-              <Text style={styles.actionBtnSubtext}>+5% sur TOUTE la production (tap + passif) par niveau</Text>
-            </View>
-            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)))}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionBtn, coins < applyDiscount(veilleurUpgradeCost(veilleurLevel)) && styles.actionBtnDisabled]}
-            onPress={buyVeilleur}
-            disabled={coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.actionBtnText}>🌙 Veilleur (nv {veilleurLevel})</Text>
-              <Text style={styles.actionBtnSubtext}>+15% de gains hors-ligne par niveau</Text>
-            </View>
-            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.ascensionBtn, essenceGainPreview <= 0 && styles.actionBtnDisabled]}
-            onPress={doAscension}
-            disabled={essenceGainPreview <= 0}
-          >
-            <Text style={styles.ascensionBtnText}>🌟 Ascension {essence > 0 ? `(essence : ${essence})` : ''}</Text>
-            <Text style={styles.ascensionBtnSubtext}>
-              {essenceGainPreview > 0
-                ? `Réinitialise ta progression contre +${essenceGainPreview} essence permanente`
-                : `Gagne encore ${formatNum(50000 - totalEarned)} pièces au total pour débloquer`}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.offrandeBtn, sharedCoins < OFFRANDE_APPCOINS_COST && styles.actionBtnDisabled]} onPress={doOffrande} disabled={sharedCoins < OFFRANDE_APPCOINS_COST}>
-            <Text style={styles.offrandeBtnText}>🪙 Offrande</Text>
-            <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} pièces de l'appli (tu en as {sharedCoins}) contre un bonus ici</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.summonBtn, coins < nextSummonCost && styles.actionBtnDisabled]}
-            onPress={doSummon}
-            disabled={coins < nextSummonCost}
-          >
-            <Text style={styles.summonBtnText}>🥚 Invoquer une créature</Text>
-            <Text style={styles.summonBtnCost}>💰 {formatNum(nextSummonCost)}</Text>
-          </TouchableOpacity>
-          </ScrollView>
-        </View>
-      ) : view === 'quests' ? (
+      {view === 'quests' && (
         <QuestsView
           activeQuestIds={activeQuestIds}
           questStats={questStats}
@@ -828,9 +757,15 @@ export default function ClickerScreen({ onBack }) {
           onEggTap={handleEggTap}
           rewardCreature={rewardCreature}
           onDismissReward={() => setRewardCreature(null)}
+          essence={essence}
+          essenceGainPreview={essenceGainPreview}
+          totalEarned={totalEarned}
+          onAscend={doAscension}
           onBack={() => setView('tap')}
         />
-      ) : (
+      )}
+
+      {view === 'collection' && (
         <CollectionView
           owned={owned}
           selectedCreature={selectedCreature}
@@ -838,6 +773,8 @@ export default function ClickerScreen({ onBack }) {
           coins={coins}
           onFeed={feedCreature}
           pendingDiscount={pendingDiscount}
+          nextSummonCost={nextSummonCost}
+          onSummon={doSummon}
           onBack={() => setView('tap')}
         />
       )}
@@ -850,16 +787,6 @@ export default function ClickerScreen({ onBack }) {
           onPick={(id) => assignToDeck(pickerSlot, id)}
           onClear={() => clearDeckSlot(pickerSlot)}
           onClose={() => setPickerSlot(null)}
-        />
-      )}
-
-      {autoShopOpen && (
-        <AutoClickerShop
-          coins={coins}
-          autoClickers={autoClickers}
-          applyDiscount={applyDiscount}
-          onBuy={buyAutoClicker}
-          onClose={() => setAutoShopOpen(false)}
         />
       )}
 
@@ -879,24 +806,15 @@ export default function ClickerScreen({ onBack }) {
         </View>
       )}
 
-      {/* Bannière façon pub, fixe en bas — remplace l'ancien bouton "Rituel"
-          dédié. Toujours visible en bas de l'écran (comme une vraie bannière
-          publicitaire de jeu mobile) : un joueur peut la toucher sans faire
-          exprès, ce qui déclenche quand même le "visionnage" — comportement
-          volontaire, ça reste à son avantage (récompense gratuite). */}
-      <TouchableOpacity
-        style={[styles.adBanner, !ritualIsReady && styles.adBannerCooldown]}
-        onPress={doRitual}
-        disabled={!ritualIsReady}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.adBannerLabel}>PUBLICITÉ</Text>
-        <Text style={styles.adBannerText}>
-          {ritualIsReady
-            ? '🕯️ Regarder — bonus gratuit'
-            : `Revient dans ${Math.ceil((RITUAL_COOLDOWN_SEC * 1000 - (Date.now() - lastRitualAt)) / 1000)}s`}
-        </Text>
-      </TouchableOpacity>
+      <BottomTabBar
+        view={view}
+        setView={setView}
+        onAdventurePress={() => setCombatComingSoonOpen(true)}
+        eggPhase={eggPhase}
+        completedQuestCount={completedQuestCount}
+        ownedCount={owned.length}
+        totalCreatures={CREATURES.length}
+      />
     </View>
   );
 }
@@ -978,42 +896,118 @@ function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose }) {
 // bouton "Familier" à niveau unique) — un palier par ligne, avec le
 // nombre possédé, le revenu qu'il rapporte, et un bouton pour en acheter
 // un de plus (coût qui grimpe à chaque achat du même palier).
-function AutoClickerShop({ coins, autoClickers, applyDiscount, onBuy, onClose }) {
-  return (
-    <View style={styles.detailOverlay}>
-      <View style={[styles.detailPanel, { paddingTop: 20 }]}>
-        <TouchableOpacity style={styles.detailClose} onPress={onClose}>
-          <Text style={styles.detailCloseText}>✕</Text>
-        </TouchableOpacity>
-        <Text style={styles.pickerTitle}>🏭 Boutique d'auto-clics</Text>
-        <Text style={styles.pickerSubtitle}>Seule source de revenu passif du jeu — les créatures n'en produisent plus.</Text>
+// Écran Boutique, plein écran (pas un modal), avec 2 PAGES internes façon
+// Cookie Clicker : "Améliorations" (Pacte, Faveur des Esprits, Sanctuaire,
+// Veilleur, puis Offrande en dernier) et "Auto-clics" (les 5 générateurs).
+function ShopView({
+  coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers,
+  applyDiscount, onBuyTapPower, onBuyCrit, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onOffrande, onBack,
+}) {
+  const [page, setPage] = useState('upgrades'); // 'upgrades' | 'autoclick'
 
-        <ScrollView style={{ width: '100%', maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-          {AUTOCLICKERS.map((clicker) => {
-            const owned = autoClickers[clicker.id] || 0;
-            const cost = applyDiscount(autoClickerCost(clicker, owned));
-            const canAfford = coins >= cost;
-            return (
-              <View key={clicker.id} style={styles.shopRow}>
-                <Text style={styles.shopRowEmoji}>{clicker.emoji}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.shopRowName}>{clicker.name}</Text>
-                  <Text style={styles.shopRowInfo}>
-                    Possédé : {owned} · +{clicker.baseIncome.toFixed(1)}/s chacun
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.shopBuyBtn, !canAfford && styles.actionBtnDisabled]}
-                  onPress={() => onBuy(clicker.id)}
-                  disabled={!canAfford}
-                >
-                  <Text style={styles.shopBuyBtnText}>💰 {formatNum(cost)}</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-        </ScrollView>
+  return (
+    <View style={{ flex: 1, width: '100%' }}>
+      <TouchableOpacity style={styles.viewBackBtn} onPress={onBack}>
+        <Text style={styles.viewBackBtnText}>← Retour au clicker</Text>
+      </TouchableOpacity>
+
+      <View style={styles.shopPageRow}>
+        <TouchableOpacity style={[styles.shopPageBtn, page === 'upgrades' && styles.shopPageBtnActive]} onPress={() => setPage('upgrades')}>
+          <Text style={[styles.shopPageBtnText, page === 'upgrades' && styles.shopPageBtnTextActive]}>Améliorations</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.shopPageBtn, page === 'autoclick' && styles.shopPageBtnActive]} onPress={() => setPage('autoclick')}>
+          <Text style={[styles.shopPageBtnText, page === 'autoclick' && styles.shopPageBtnTextActive]}>Auto-clics</Text>
+        </TouchableOpacity>
       </View>
+
+      <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+        {page === 'upgrades' ? (
+          <>
+            <TouchableOpacity
+              style={[styles.actionBtn, coins < applyDiscount(tapPowerCost(tapPower)) && styles.actionBtnDisabled]}
+              onPress={onBuyTapPower}
+              disabled={coins < applyDiscount(tapPowerCost(tapPower))}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionBtnText}>🔗 Pacte : {tapPower} → {tapPower + 1}</Text>
+                <Text style={styles.actionBtnSubtext}>+1 pièce par tap à chaque niveau</Text>
+              </View>
+              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(tapPowerCost(tapPower)))}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, coins < applyDiscount(critUpgradeCost(critLevel)) && styles.actionBtnDisabled]}
+              onPress={onBuyCrit}
+              disabled={coins < applyDiscount(critUpgradeCost(critLevel))}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionBtnText}>✨ Faveur des Esprits (nv {critLevel})</Text>
+                <Text style={styles.actionBtnSubtext}>
+                  {Math.round(critChance(critLevel) * 100)}% de chance de coup critique x{critMultiplier(critLevel).toFixed(1)}
+                </Text>
+              </View>
+              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(critUpgradeCost(critLevel)))}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)) && styles.actionBtnDisabled]}
+              onPress={onBuySanctuary}
+              disabled={coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionBtnText}>🏛️ Sanctuaire (nv {sanctuaryLevel})</Text>
+                <Text style={styles.actionBtnSubtext}>+5% sur TOUTE la production (tap + passif) par niveau</Text>
+              </View>
+              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)))}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, coins < applyDiscount(veilleurUpgradeCost(veilleurLevel)) && styles.actionBtnDisabled]}
+              onPress={onBuyVeilleur}
+              disabled={coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionBtnText}>🌙 Veilleur (nv {veilleurLevel})</Text>
+                <Text style={styles.actionBtnSubtext}>+15% de gains hors-ligne par niveau</Text>
+              </View>
+              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}</Text>
+            </TouchableOpacity>
+
+            {/* Offrande en dernier de cette 1ère page, comme demandé. */}
+            <TouchableOpacity style={[styles.offrandeBtn, sharedCoins < OFFRANDE_APPCOINS_COST && styles.actionBtnDisabled]} onPress={onOffrande} disabled={sharedCoins < OFFRANDE_APPCOINS_COST}>
+              <Text style={styles.offrandeBtnText}>🪙 Offrande</Text>
+              <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} pièces de l'appli (tu en as {sharedCoins}) contre un bonus ici</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={styles.pickerSubtitle}>Seule source de revenu passif du jeu — les créatures n'en produisent plus.</Text>
+            {AUTOCLICKERS.map((clicker) => {
+              const ownedCount = autoClickers[clicker.id] || 0;
+              const cost = applyDiscount(autoClickerCost(clicker, ownedCount));
+              const canAfford = coins >= cost;
+              return (
+                <View key={clicker.id} style={styles.shopRow}>
+                  <Text style={styles.shopRowEmoji}>{clicker.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.shopRowName}>{clicker.name}</Text>
+                    <Text style={styles.shopRowInfo}>
+                      Possédé : {ownedCount} · +{clicker.baseIncome.toFixed(1)}/s chacun
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.shopBuyBtn, !canAfford && styles.actionBtnDisabled]}
+                    onPress={() => onBuyAutoClicker(clicker.id)}
+                    disabled={!canAfford}
+                  >
+                    <Text style={styles.shopBuyBtnText}>💰 {formatNum(cost)}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -1022,7 +1016,7 @@ function AutoClickerShop({ coins, autoClickers, applyDiscount, onBuy, onClose })
 // quêtes du cycle en cours avec leur barre de progression, puis la
 // séquence finale (éclosion 500 taps -> capture 200 taps) une fois les 4
 // quêtes validées.
-function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTaps, onEggTap, rewardCreature, onDismissReward, onBack }) {
+function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTaps, onEggTap, rewardCreature, onDismissReward, essence, essenceGainPreview, totalEarned, onAscend, onBack }) {
   const completedCount = activeQuestIds.filter((id) => questComplete(id, questStats)).length;
   const stageIndex = eggPhase === 'collecting' ? eggStageForCompletedCount(completedCount) : 4;
   const stage = EGG_STAGES[stageIndex];
@@ -1081,6 +1075,21 @@ function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTa
         </View>
       )}
 
+      {/* Ascension vit ici maintenant, plutôt que dans la boutique — c'est
+          un jalon de progression majeur, pas un simple achat. */}
+      <TouchableOpacity
+        style={[styles.ascensionBtn, essenceGainPreview <= 0 && styles.actionBtnDisabled]}
+        onPress={onAscend}
+        disabled={essenceGainPreview <= 0}
+      >
+        <Text style={styles.ascensionBtnText}>🌟 Ascension {essence > 0 ? `(essence : ${essence})` : ''}</Text>
+        <Text style={styles.ascensionBtnSubtext}>
+          {essenceGainPreview > 0
+            ? `Réinitialise ta progression contre +${essenceGainPreview} essence permanente`
+            : `Gagne encore ${formatNum(50000 - totalEarned)} pièces au total pour débloquer`}
+        </Text>
+      </TouchableOpacity>
+
       {rewardCreature && (
         <View style={styles.detailOverlay}>
           <View style={styles.detailPanel}>
@@ -1099,7 +1108,7 @@ function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTa
   );
 }
 
-function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, onFeed, pendingDiscount, onBack }) {
+function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, onFeed, pendingDiscount, nextSummonCost, onSummon, onBack }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
 
@@ -1113,6 +1122,16 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, o
         keyExtractor={(item) => item.id}
         numColumns={3}
         contentContainerStyle={styles.grid}
+        ListHeaderComponent={
+          <TouchableOpacity
+            style={[styles.summonBtn, coins < nextSummonCost && styles.actionBtnDisabled]}
+            onPress={onSummon}
+            disabled={coins < nextSummonCost}
+          >
+            <Text style={styles.summonBtnText}>🥚 Invoquer une créature</Text>
+            <Text style={styles.summonBtnCost}>💰 {formatNum(nextSummonCost)}</Text>
+          </TouchableOpacity>
+        }
         renderItem={({ item }) => {
           const own = ownedMap[item.id];
           const discovered = !!own;
@@ -1272,6 +1291,78 @@ function GoldenTargetBubble({ target, onClaim }) {
   );
 }
 
+// Bulle "Rituel" (pub de boost) — remplace l'ancienne bannière fixe en
+// bas. Même famille visuelle que la cible dorée mais teintée différemment
+// pour qu'on la distingue au premier coup d'œil, pulsation plus lente
+// (elle reste affichée plus longtemps, moins d'urgence).
+function RitualBubble({ target, onClaim }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.18, duration: 380, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 380, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  return (
+    <TouchableOpacity
+      onPress={onClaim}
+      style={[styles.spawnBubbleWrap, { left: `${target.leftPct}%`, top: `${target.topPct}%` }]}
+      hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+    >
+      <Animated.View style={[styles.ritualBubble, { transform: [{ scale: pulse }] }]}>
+        <Text style={styles.spawnBubbleEmoji}>🕯️</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+// Barre de navigation du bas — Shop | Quêtes | Collection | Aventure.
+// Icônes vectorielles (Ionicons, fournies avec Expo, libres de droits)
+// plutôt que du texte ou des images tirées du web, pour rester sûr sur le
+// plan des droits et cohérent techniquement.
+function BottomTabBar({ view, setView, onAdventurePress, eggPhase, completedQuestCount, ownedCount, totalCreatures }) {
+  const questAlert = eggPhase !== 'collecting';
+  return (
+    <View style={styles.bottomBar}>
+      <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('shop')}>
+        <Ionicons name="storefront" size={24} color={view === 'shop' ? COLORS.action : COLORS.muted} />
+        <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>Shop</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('quests')}>
+        <View>
+          <Ionicons name="flag" size={24} color={view === 'quests' ? COLORS.action : COLORS.muted} />
+          {questAlert ? (
+            <View style={styles.bottomBarDot} />
+          ) : (
+            completedQuestCount > 0 && <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{completedQuestCount}</Text></View>
+          )}
+        </View>
+        <Text style={[styles.bottomBarLabel, view === 'quests' && styles.bottomBarLabelActive]}>Quêtes</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('collection')}>
+        <View>
+          <Ionicons name="albums" size={24} color={view === 'collection' ? COLORS.action : COLORS.muted} />
+          <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{ownedCount}</Text></View>
+        </View>
+        <Text style={[styles.bottomBarLabel, view === 'collection' && styles.bottomBarLabelActive]}>Collection</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.bottomBarItem} onPress={onAdventurePress}>
+        <Ionicons name="skull" size={24} color={COLORS.muted} />
+        <Text style={styles.bottomBarLabel}>Aventure</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
@@ -1303,12 +1394,33 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: COLORS.action,
     shadowColor: COLORS.action, shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
   },
+  ritualBubble: {
+    width: 54, height: 54, borderRadius: 27, backgroundColor: '#2a1f42',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#b96bff',
+    shadowColor: '#b96bff', shadowOpacity: 0.8, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+  },
 
-  tabRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  tabBtn: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center', backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.border },
-  tabBtnActive: { backgroundColor: COLORS.action, borderColor: COLORS.action },
-  tabBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '800' },
-  tabBtnTextActive: { color: '#241a00' },
+  // Barre de navigation du bas — Shop | Quêtes | Collection | Aventure.
+  bottomBar: {
+    flexDirection: 'row', width: '100%', borderTopWidth: 1, borderTopColor: COLORS.border,
+    paddingTop: 8, marginTop: 6, backgroundColor: COLORS.bg,
+  },
+  bottomBarItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
+  bottomBarLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '700', marginTop: 2 },
+  bottomBarLabelActive: { color: COLORS.action },
+  bottomBarDot: { position: 'absolute', top: -2, right: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: '#FF5252' },
+  bottomBarBadge: {
+    position: 'absolute', top: -6, right: -10, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.action,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
+  },
+  bottomBarBadgeText: { color: '#241a00', fontSize: 9, fontWeight: '900' },
+
+  // Les 2 pages internes de l'écran Shop.
+  shopPageRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  shopPageBtn: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center', backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.border },
+  shopPageBtnActive: { backgroundColor: COLORS.action, borderColor: COLORS.action },
+  shopPageBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '800' },
+  shopPageBtnTextActive: { color: '#241a00' },
 
   deckRow: { flexDirection: 'row', gap: 12, marginBottom: 6 },
   deckSlot: {
@@ -1318,26 +1430,18 @@ const styles = StyleSheet.create({
   deckSlotEmoji: { fontSize: 26 },
   deckSlotEmpty: { fontSize: 22, opacity: 0.35 },
 
-  tapArea: { flex: 1, alignItems: 'center', marginTop: 10, width: '100%' },
-  tapRowLayout: { flexDirection: 'row', width: '100%', alignItems: 'center' },
-  tapZone: { flex: 1, height: 190, position: 'relative' },
-  sideIconColumn: { width: 76, gap: 10, marginLeft: 8 },
-  sideIconBtn: {
-    backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 10, alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  sideIconEmoji: { fontSize: 22 },
-  sideIconLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 2 },
-  sideIconBadge: { color: COLORS.action, fontSize: 10, fontWeight: '900', marginTop: 2 },
-  buttonScroll: { width: '100%', flex: 1, marginTop: 4 },
-  buttonScrollContent: { paddingBottom: 24 },
+  // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
+  // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
+  // liste de boutons (tout ça vit dans les onglets de la barre du bas).
+  tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  tapZone: { width: '100%', height: 260, position: 'relative' },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tapButton: {
-    width: 160, height: 160, borderRadius: 80, backgroundColor: COLORS.panel,
+    width: 180, height: 180, borderRadius: 90, backgroundColor: COLORS.panel,
     alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.action,
     shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 16, shadowOffset: { width: 0, height: 0 },
   },
-  tapEmoji: { fontSize: 74 },
+  tapEmoji: { fontSize: 84 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
   popup: { position: 'absolute', color: COLORS.action, fontSize: 16, fontWeight: '900' },
@@ -1365,17 +1469,6 @@ const styles = StyleSheet.create({
   },
   ascensionBtnText: { color: '#FF7043', fontSize: 14, fontWeight: '900' },
   ascensionBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
-
-  adBanner: {
-    width: '100%', backgroundColor: '#1a1730', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14,
-    marginTop: 10, borderWidth: 1, borderColor: '#3a3560', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-  },
-  adBannerCooldown: { opacity: 0.5 },
-  adBannerLabel: {
-    color: COLORS.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1, backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
-  },
-  adBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800' },
 
   offrandeBtn: {
     width: '100%', backgroundColor: 'rgba(62,198,240,0.1)', borderRadius: 14, padding: 14, marginTop: 12,
