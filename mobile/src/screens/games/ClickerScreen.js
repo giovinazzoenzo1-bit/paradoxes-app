@@ -101,6 +101,7 @@ export default function ClickerScreen({ onBack }) {
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
   const [autoClickers, setAutoClickers] = useState({}); // { esprit: 3, main: 1, ... }
   const [autoShopOpen, setAutoShopOpen] = useState(false);
+  const [combatComingSoonOpen, setCombatComingSoonOpen] = useState(false);
   const [sanctuaryLevel, setSanctuaryLevel] = useState(0);
   const [veilleurLevel, setVeilleurLevel] = useState(0);
   const [essence, setEssence] = useState(0); // bonus permanent d'Ascension, survit aux resets
@@ -673,18 +674,11 @@ export default function ClickerScreen({ onBack }) {
       )}
 
       <View style={styles.tabRow}>
-        <TouchableOpacity style={[styles.tabBtn, view === 'tap' && styles.tabBtnActive]} onPress={() => setView('tap')}>
-          <Text style={[styles.tabBtnText, view === 'tap' && styles.tabBtnTextActive]}>Tap</Text>
+        <TouchableOpacity style={styles.tabBtn} onPress={() => setAutoShopOpen(true)}>
+          <Text style={styles.tabBtnText}>🏭 Auto-tap</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tabBtn, view === 'quests' && styles.tabBtnActive]} onPress={() => setView('quests')}>
-          <Text style={[styles.tabBtnText, view === 'quests' && styles.tabBtnTextActive]}>
-            🥚 Quêtes {eggPhase !== 'collecting' ? '❗' : `(${completedQuestCount}/4)`}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tabBtn, view === 'collection' && styles.tabBtnActive]} onPress={() => setView('collection')}>
-          <Text style={[styles.tabBtnText, view === 'collection' && styles.tabBtnTextActive]}>
-            Collection ({owned.length}/{CREATURES.length})
-          </Text>
+        <TouchableOpacity style={styles.tabBtn} onPress={() => setCombatComingSoonOpen(true)}>
+          <Text style={styles.tabBtnText}>⚔️ Combat / Aventure</Text>
         </TouchableOpacity>
       </View>
 
@@ -692,24 +686,43 @@ export default function ClickerScreen({ onBack }) {
         <View style={styles.tapArea}>
           <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
 
-          <View style={styles.tapZone}>
-            <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
-              <View style={styles.tapButtonWrap}>
-                <Animated.View style={[styles.tapButton, { transform: [{ scale: tapScale }] }]}>
-                  <Text style={styles.tapEmoji}>🥚</Text>
-                </Animated.View>
-              </View>
-            </TouchableOpacity>
-            {popups.map((p) => (
-              <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
-                {p.text}
-              </Animated.Text>
-            ))}
-            {/* La bulle de créature et la cible dorée sont FRÈRES du bouton
-                tapable, pas enfants — elles captent leur propre appui sans
-                jamais entrer en conflit avec le tap de l'œuf en dessous. */}
-            {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
-            {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
+          <View style={styles.tapRowLayout}>
+            <View style={styles.tapZone}>
+              <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
+                <View style={styles.tapButtonWrap}>
+                  <Animated.View style={[styles.tapButton, { transform: [{ scale: tapScale }] }]}>
+                    <Text style={styles.tapEmoji}>🥚</Text>
+                  </Animated.View>
+                </View>
+              </TouchableOpacity>
+              {popups.map((p) => (
+                <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
+                  {p.text}
+                </Animated.Text>
+              ))}
+              {/* La bulle de créature et la cible dorée sont FRÈRES du bouton
+                  tapable, pas enfants — elles captent leur propre appui sans
+                  jamais entrer en conflit avec le tap de l'œuf en dessous. */}
+              {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
+              {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
+            </View>
+
+            {/* Quêtes et Collection en colonne à DROITE de l'œuf, hors de la
+                tapZone elle-même — les bulles de pouvoir tournent uniquement
+                DANS la tapZone (voir randomRingPosition), donc aucun risque
+                de chevauchement avec ces 2 boutons. */}
+            <View style={styles.sideIconColumn}>
+              <TouchableOpacity style={styles.sideIconBtn} onPress={() => setView('quests')}>
+                <Text style={styles.sideIconEmoji}>🥚</Text>
+                <Text style={styles.sideIconLabel}>Quêtes</Text>
+                <Text style={styles.sideIconBadge}>{eggPhase !== 'collecting' ? '❗' : `${completedQuestCount}/4`}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sideIconBtn} onPress={() => setView('collection')}>
+                <Text style={styles.sideIconEmoji}>📖</Text>
+                <Text style={styles.sideIconLabel}>Collection</Text>
+                <Text style={styles.sideIconBadge}>{owned.length}/{CREATURES.length}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {comboCount > 1 ? (
@@ -790,13 +803,6 @@ export default function ClickerScreen({ onBack }) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.ritualBtn, !ritualIsReady && styles.actionBtnDisabled]} onPress={doRitual} disabled={!ritualIsReady}>
-            <Text style={styles.ritualBtnText}>🕯️ Rituel</Text>
-            <Text style={styles.ritualBtnSubtext}>
-              {ritualIsReady ? 'Regarder une "pub" (test) pour un gros bonus' : `Recharge dans ${Math.ceil((RITUAL_COOLDOWN_SEC * 1000 - (Date.now() - lastRitualAt)) / 1000)}s`}
-            </Text>
-          </TouchableOpacity>
-
           <TouchableOpacity style={[styles.offrandeBtn, sharedCoins < OFFRANDE_APPCOINS_COST && styles.actionBtnDisabled]} onPress={doOffrande} disabled={sharedCoins < OFFRANDE_APPCOINS_COST}>
             <Text style={styles.offrandeBtnText}>🪙 Offrande</Text>
             <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} pièces de l'appli (tu en as {sharedCoins}) contre un bonus ici</Text>
@@ -822,6 +828,7 @@ export default function ClickerScreen({ onBack }) {
           onEggTap={handleEggTap}
           rewardCreature={rewardCreature}
           onDismissReward={() => setRewardCreature(null)}
+          onBack={() => setView('tap')}
         />
       ) : (
         <CollectionView
@@ -831,6 +838,7 @@ export default function ClickerScreen({ onBack }) {
           coins={coins}
           onFeed={feedCreature}
           pendingDiscount={pendingDiscount}
+          onBack={() => setView('tap')}
         />
       )}
 
@@ -854,6 +862,41 @@ export default function ClickerScreen({ onBack }) {
           onClose={() => setAutoShopOpen(false)}
         />
       )}
+
+      {combatComingSoonOpen && (
+        <View style={styles.detailOverlay}>
+          <View style={styles.detailPanel}>
+            <TouchableOpacity style={styles.detailClose} onPress={() => setCombatComingSoonOpen(false)}>
+              <Text style={styles.detailCloseText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.detailEmoji}>⚔️</Text>
+            <Text style={styles.detailName}>Combat / Aventure</Text>
+            <Text style={styles.pickerSubtitle}>
+              Bientôt disponible — affronte d'autres créatures pour en capturer de nouvelles.
+              Débloqué dès ta première créature obtenue.
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Bannière façon pub, fixe en bas — remplace l'ancien bouton "Rituel"
+          dédié. Toujours visible en bas de l'écran (comme une vraie bannière
+          publicitaire de jeu mobile) : un joueur peut la toucher sans faire
+          exprès, ce qui déclenche quand même le "visionnage" — comportement
+          volontaire, ça reste à son avantage (récompense gratuite). */}
+      <TouchableOpacity
+        style={[styles.adBanner, !ritualIsReady && styles.adBannerCooldown]}
+        onPress={doRitual}
+        disabled={!ritualIsReady}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.adBannerLabel}>PUBLICITÉ</Text>
+        <Text style={styles.adBannerText}>
+          {ritualIsReady
+            ? '🕯️ Regarder — bonus gratuit'
+            : `Revient dans ${Math.ceil((RITUAL_COOLDOWN_SEC * 1000 - (Date.now() - lastRitualAt)) / 1000)}s`}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -979,13 +1022,17 @@ function AutoClickerShop({ coins, autoClickers, applyDiscount, onBuy, onClose })
 // quêtes du cycle en cours avec leur barre de progression, puis la
 // séquence finale (éclosion 500 taps -> capture 200 taps) une fois les 4
 // quêtes validées.
-function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTaps, onEggTap, rewardCreature, onDismissReward }) {
+function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTaps, onEggTap, rewardCreature, onDismissReward, onBack }) {
   const completedCount = activeQuestIds.filter((id) => questComplete(id, questStats)).length;
   const stageIndex = eggPhase === 'collecting' ? eggStageForCompletedCount(completedCount) : 4;
   const stage = EGG_STAGES[stageIndex];
 
   return (
     <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={styles.questsScrollContent} showsVerticalScrollIndicator={false}>
+      <TouchableOpacity style={styles.viewBackBtn} onPress={onBack}>
+        <Text style={styles.viewBackBtnText}>← Retour au clicker</Text>
+      </TouchableOpacity>
+
       {eggPhase === 'collecting' ? (
         <>
           <View style={styles.eggDisplay}>
@@ -1052,12 +1099,15 @@ function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTa
   );
 }
 
-function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, onFeed, pendingDiscount }) {
+function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, onFeed, pendingDiscount, onBack }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
 
   return (
     <View style={{ flex: 1 }}>
+      <TouchableOpacity style={styles.viewBackBtn} onPress={onBack}>
+        <Text style={styles.viewBackBtnText}>← Retour au clicker</Text>
+      </TouchableOpacity>
       <FlatList
         data={CREATURES}
         keyExtractor={(item) => item.id}
@@ -1269,7 +1319,16 @@ const styles = StyleSheet.create({
   deckSlotEmpty: { fontSize: 22, opacity: 0.35 },
 
   tapArea: { flex: 1, alignItems: 'center', marginTop: 10, width: '100%' },
-  tapZone: { width: '100%', height: 190, position: 'relative' },
+  tapRowLayout: { flexDirection: 'row', width: '100%', alignItems: 'center' },
+  tapZone: { flex: 1, height: 190, position: 'relative' },
+  sideIconColumn: { width: 76, gap: 10, marginLeft: 8 },
+  sideIconBtn: {
+    backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 10, alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  sideIconEmoji: { fontSize: 22 },
+  sideIconLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 2 },
+  sideIconBadge: { color: COLORS.action, fontSize: 10, fontWeight: '900', marginTop: 2 },
   buttonScroll: { width: '100%', flex: 1, marginTop: 4 },
   buttonScrollContent: { paddingBottom: 24 },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -1307,12 +1366,16 @@ const styles = StyleSheet.create({
   ascensionBtnText: { color: '#FF7043', fontSize: 14, fontWeight: '900' },
   ascensionBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
 
-  ritualBtn: {
-    width: '100%', backgroundColor: 'rgba(245,197,66,0.1)', borderRadius: 14, padding: 14, marginTop: 12,
-    borderWidth: 1, borderColor: COLORS.border, alignItems: 'center',
+  adBanner: {
+    width: '100%', backgroundColor: '#1a1730', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14,
+    marginTop: 10, borderWidth: 1, borderColor: '#3a3560', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  ritualBtnText: { color: COLORS.action, fontSize: 14, fontWeight: '900' },
-  ritualBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
+  adBannerCooldown: { opacity: 0.5 },
+  adBannerLabel: {
+    color: COLORS.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1, backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
+  },
+  adBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800' },
 
   offrandeBtn: {
     width: '100%', backgroundColor: 'rgba(62,198,240,0.1)', borderRadius: 14, padding: 14, marginTop: 12,
@@ -1321,6 +1384,8 @@ const styles = StyleSheet.create({
   offrandeBtnText: { color: '#3ec6f0', fontSize: 14, fontWeight: '900' },
   offrandeBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
 
+  viewBackBtn: { paddingVertical: 8, marginBottom: 4 },
+  viewBackBtnText: { color: COLORS.muted, fontSize: 13, fontWeight: '700' },
   grid: { paddingBottom: 20 },
   creatureCell: {
     flex: 1, margin: 4, backgroundColor: COLORS.panel, borderRadius: 12, padding: 10, alignItems: 'center',
