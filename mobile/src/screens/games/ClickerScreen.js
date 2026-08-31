@@ -19,6 +19,7 @@ import {
   totalPassiveIncome,
   offlineEarnings,
   shouldSpawn,
+  pickFromDeck,
   powerForCreature,
   SPAWN_INTERVAL_SEC,
   SPAWN_VISIBLE_SEC,
@@ -55,7 +56,9 @@ export default function ClickerScreen({ onBack }) {
   const [selectedCreature, setSelectedCreature] = useState(null);
   const [welcomeBack, setWelcomeBack] = useState(null);
   const [popups, setPopups] = useState([]);
-  const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, corner}
+  const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, leftPct, topPct}
+  const [deck, setDeck] = useState([null, null, null]); // 3 emplacements, id de créature ou null
+  const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
   const [pendingDiscount, setPendingDiscount] = useState(null); // {percent, name} — consommé au prochain achat
   const [, setLiveTick] = useState(0); // force le re-rendu pour les décomptes visuels
@@ -72,6 +75,8 @@ export default function ClickerScreen({ onBack }) {
   viewRef.current = view;
   const spawnedCreatureRef = useRef(null);
   spawnedCreatureRef.current = spawnedCreature;
+  const deckRef = useRef([null, null, null]);
+  deckRef.current = deck;
   const activePowerRef = useRef(null);
   activePowerRef.current = activePower;
   const pendingDiscountRef = useRef(null);
@@ -95,6 +100,7 @@ export default function ClickerScreen({ onBack }) {
           setCoins((saved.coins || 0) + offline);
           setTapPower(saved.tapPower || 1);
           setOwned(saved.owned || []);
+          setDeck(saved.deck || [null, null, null]);
           if (offline > 5) setWelcomeBack(offline);
         }
       } catch (e) {
@@ -111,17 +117,17 @@ export default function ClickerScreen({ onBack }) {
     saveTimeoutRef.current = setTimeout(() => {
       AsyncStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ coins, tapPower, owned, lastSave: Date.now() / 1000 })
+        JSON.stringify({ coins, tapPower, owned, deck, lastSave: Date.now() / 1000 })
       );
     }, 600);
-  }, [coins, tapPower, owned, loaded]);
+  }, [coins, tapPower, owned, deck, loaded]);
 
   // Sauvegarde immédiate à la sortie de l'écran.
   useEffect(() => {
     return () => {
       AsyncStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ coins: coinsRef.current, tapPower: tapPowerRef.current, owned: ownedRef.current, lastSave: Date.now() / 1000 })
+        JSON.stringify({ coins: coinsRef.current, tapPower: tapPowerRef.current, owned: ownedRef.current, deck: deckRef.current, lastSave: Date.now() / 1000 })
       );
     };
   }, []);
@@ -139,10 +145,13 @@ export default function ClickerScreen({ onBack }) {
   }, [loaded]);
 
   // Apparitions de créatures sur le bouton de tap : toutes les
-  // SPAWN_INTERVAL_SEC, si on est sur l'onglet Tap et qu'aucune créature
-  // n'est déjà affichée, une créature apparaît pendant SPAWN_VISIBLE_SEC.
-  // La même boucle gère aussi l'expiration de l'apparition (ratée si pas
-  // tapée à temps) et l'expiration du pouvoir actif.
+  // Apparitions de créatures sur le bouton de tap : toutes les
+  // SPAWN_INTERVAL_SEC, si on est sur l'onglet Tap, qu'aucune créature
+  // n'est déjà affichée, ET que le deck contient au moins une créature —
+  // seules les créatures placées dans le deck peuvent apparaître (plus le
+  // tirage sur les 10 créatures, qui donnait l'impression que certaines ne
+  // sortaient jamais). La même boucle gère aussi l'expiration de
+  // l'apparition (ratée si pas tapée à temps) et l'expiration du pouvoir actif.
   useEffect(() => {
     if (!loaded) return;
     const interval = setInterval(() => {
@@ -151,9 +160,15 @@ export default function ClickerScreen({ onBack }) {
       if (spawnedCreatureRef.current && now > spawnedCreatureRef.current.expiresAt) {
         setSpawnedCreature(null);
       } else if (!spawnedCreatureRef.current && viewRef.current === 'tap' && shouldSpawn(lastSpawnTimeRef.current, now)) {
-        lastSpawnTimeRef.current = now;
-        const pos = randomRingPosition();
-        setSpawnedCreature({ creature: rollCreature(), expiresAt: now + SPAWN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
+        const picked = pickFromDeck(deckRef.current);
+        if (picked) {
+          lastSpawnTimeRef.current = now;
+          const pos = randomRingPosition();
+          setSpawnedCreature({ creature: picked, expiresAt: now + SPAWN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
+        }
+        // Deck vide : on ne met PAS à jour lastSpawnTimeRef, pour qu'une
+        // apparition devienne possible dès qu'une créature est ajoutée au
+        // deck, sans devoir attendre un cycle complet de plus.
       }
 
       if (activePowerRef.current && now > activePowerRef.current.expiresAt) {
@@ -251,6 +266,26 @@ export default function ClickerScreen({ onBack }) {
     setOwned((prev) => prev.map((o) => (o.id === id ? { ...o, level: o.level + 1 } : o)));
   };
 
+  // Deck de 3 créatures (les seules qui peuvent apparaître sur le cookie).
+  const assignToDeck = (slotIndex, creatureId) => {
+    setDeck((prev) => {
+      const next = [...prev];
+      // Retire d'abord la créature de tout autre emplacement où elle
+      // serait déjà (pas de doublon dans le deck).
+      for (let i = 0; i < next.length; i++) {
+        if (next[i] === creatureId) next[i] = null;
+      }
+      next[slotIndex] = creatureId;
+      return next;
+    });
+    setPickerSlot(null);
+  };
+
+  const clearDeckSlot = (slotIndex) => {
+    setDeck((prev) => prev.map((id, i) => (i === slotIndex ? null : id)));
+    setPickerSlot(null);
+  };
+
   if (!loaded) {
     return (
       <View style={styles.screen} {...panHandlers}>
@@ -312,6 +347,8 @@ export default function ClickerScreen({ onBack }) {
 
       {view === 'tap' ? (
         <View style={styles.tapArea}>
+          <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
+
           <View style={styles.tapZone}>
             <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
               <View style={styles.tapButtonWrap}>
@@ -360,6 +397,90 @@ export default function ClickerScreen({ onBack }) {
           pendingDiscount={pendingDiscount}
         />
       )}
+
+      {pickerSlot !== null && (
+        <DeckPicker
+          slotIndex={pickerSlot}
+          deck={deck}
+          owned={owned}
+          onPick={(id) => assignToDeck(pickerSlot, id)}
+          onClear={() => clearDeckSlot(pickerSlot)}
+          onClose={() => setPickerSlot(null)}
+        />
+      )}
+    </View>
+  );
+}
+
+// Les 3 emplacements du deck, affichés au-dessus de l'œuf. Un
+// emplacement vide est un œuf grisé — appuyer dessus (rempli ou vide)
+// ouvre le sélecteur pour choisir/changer la créature qui l'occupe.
+function DeckRow({ deck, owned, onSlotPress }) {
+  const ownedMap = {};
+  owned.forEach((o) => (ownedMap[o.id] = o));
+
+  return (
+    <View style={styles.deckRow}>
+      {deck.map((id, i) => {
+        const creature = id ? CREATURES.find((c) => c.id === id) : null;
+        const own = id ? ownedMap[id] : null;
+        const display = creature && own ? creature.stages[stageForLevel(own.level)] : null;
+        return (
+          <TouchableOpacity
+            key={i}
+            style={[styles.deckSlot, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
+            onPress={() => onSlotPress(i)}
+          >
+            {display ? <Text style={styles.deckSlotEmoji}>{display.emoji}</Text> : <Text style={styles.deckSlotEmpty}>🥚</Text>}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+// Sélecteur : choisir quelle créature possédée occupe l'emplacement
+// tapé. Une créature déjà dans un autre emplacement peut être choisie —
+// elle sera simplement retirée de l'autre emplacement (pas de doublon).
+function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose }) {
+  return (
+    <View style={styles.detailOverlay}>
+      <View style={styles.detailPanel}>
+        <TouchableOpacity style={styles.detailClose} onPress={onClose}>
+          <Text style={styles.detailCloseText}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.pickerTitle}>Emplacement {slotIndex + 1} du deck</Text>
+        <Text style={styles.pickerSubtitle}>Choisis une créature que tu possèdes</Text>
+
+        {owned.length === 0 ? (
+          <Text style={styles.pickerEmptyText}>Tu ne possèdes encore aucune créature — invoque-en une d'abord !</Text>
+        ) : (
+          <View style={styles.pickerGrid}>
+            {owned.map((o) => {
+              const creature = CREATURES.find((c) => c.id === o.id);
+              const display = creature.stages[stageForLevel(o.level)];
+              const inOtherSlot = deck.includes(o.id) && deck[slotIndex] !== o.id;
+              return (
+                <TouchableOpacity
+                  key={o.id}
+                  style={[styles.pickerCell, deck[slotIndex] === o.id && styles.pickerCellSelected]}
+                  onPress={() => onPick(o.id)}
+                >
+                  <Text style={styles.creatureEmoji}>{display.emoji}</Text>
+                  <Text style={styles.creatureName} numberOfLines={1}>{display.name}</Text>
+                  {inOtherSlot && <Text style={styles.pickerInUse}>déjà en jeu</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {deck[slotIndex] && (
+          <TouchableOpacity style={styles.pickerClearBtn} onPress={onClear}>
+            <Text style={styles.pickerClearBtnText}>Vider cet emplacement</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -537,6 +658,14 @@ const styles = StyleSheet.create({
   tabBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '800' },
   tabBtnTextActive: { color: '#241a00' },
 
+  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 6 },
+  deckSlot: {
+    width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.panel,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
+  },
+  deckSlotEmoji: { fontSize: 26 },
+  deckSlotEmpty: { fontSize: 22, opacity: 0.35 },
+
   tapArea: { flex: 1, alignItems: 'center', marginTop: 10 },
   tapZone: { width: '100%', height: 220, position: 'relative' },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -583,6 +712,19 @@ const styles = StyleSheet.create({
   detailName: { color: COLORS.text, fontSize: 20, fontWeight: '900', marginTop: 6 },
   detailStat: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 10 },
   detailEvoHint: { color: '#b96bff', fontSize: 11, fontWeight: '700', marginTop: 4 },
+
+  pickerTitle: { color: COLORS.text, fontSize: 17, fontWeight: '900', marginTop: 6 },
+  pickerSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 4, marginBottom: 14, textAlign: 'center' },
+  pickerEmptyText: { color: COLORS.muted, fontSize: 13, textAlign: 'center', paddingVertical: 10 },
+  pickerGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, width: '100%' },
+  pickerCell: {
+    width: 84, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 10, alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  pickerCellSelected: { borderColor: COLORS.action, backgroundColor: 'rgba(245,197,66,0.12)' },
+  pickerInUse: { color: COLORS.muted, fontSize: 8, marginTop: 2, fontStyle: 'italic' },
+  pickerClearBtn: { marginTop: 16, paddingVertical: 8 },
+  pickerClearBtnText: { color: '#FF5252', fontSize: 13, fontWeight: '700' },
 
   feedBtn: { backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 28, marginTop: 16, alignItems: 'center' },
   feedBtnText: { color: '#241a00', fontSize: 14, fontWeight: '900' },

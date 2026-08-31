@@ -140,6 +140,19 @@ export function shouldSpawn(lastSpawnMs, nowMs) {
   return nowMs - lastSpawnMs >= SPAWN_INTERVAL_SEC * 1000;
 }
 
+// Tire une créature au hasard, mais UNIQUEMENT parmi celles placées dans
+// le deck (3 emplacements, potentiellement vides = null) — remplace
+// l'ancien tirage sur les 10 créatures (l'ancien système, pondéré par
+// rareté, faisait qu'un joueur pouvait tester longtemps sans jamais voir
+// certaines créatures, perçu comme un bug). Retourne null si le deck est
+// entièrement vide (aucune apparition possible tant que rien n'y est mis).
+export function pickFromDeck(deckIds) {
+  const validIds = (deckIds || []).filter(Boolean);
+  if (validIds.length === 0) return null;
+  const id = validIds[Math.floor(Math.random() * validIds.length)];
+  return CREATURES.find((c) => c.id === id) || null;
+}
+
 // Tire une créature au hasard selon les poids de rareté.
 export function rollCreature() {
   const total = Object.values(RARITY_WEIGHTS).reduce((a, b) => a + b, 0);
