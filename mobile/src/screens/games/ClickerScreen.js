@@ -18,6 +18,10 @@ import {
   rollCreature,
   totalPassiveIncome,
   offlineEarnings,
+  shouldSpawn,
+  powerForRarity,
+  SPAWN_INTERVAL_SEC,
+  SPAWN_VISIBLE_SEC,
 } from '../../games/clicker/clickerLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 
@@ -51,6 +55,9 @@ export default function ClickerScreen({ onBack }) {
   const [selectedCreature, setSelectedCreature] = useState(null);
   const [welcomeBack, setWelcomeBack] = useState(null);
   const [popups, setPopups] = useState([]);
+  const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, corner}
+  const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt}
+  const [, setLiveTick] = useState(0); // force le re-rendu pour les décomptes visuels
 
   const coinsRef = useRef(0);
   coinsRef.current = coins;
@@ -60,6 +67,15 @@ export default function ClickerScreen({ onBack }) {
   tapPowerRef.current = tapPower;
   const popupIdRef = useRef(0);
   const saveTimeoutRef = useRef(null);
+  const viewRef = useRef('tap');
+  viewRef.current = view;
+  const spawnedCreatureRef = useRef(null);
+  spawnedCreatureRef.current = spawnedCreature;
+  const activePowerRef = useRef(null);
+  activePowerRef.current = activePower;
+  // Premier essaim ~20s après l'ouverture (pas d'attente de 3min pour un
+  // nouveau joueur), puis toutes les SPAWN_INTERVAL_SEC ensuite.
+  const lastSpawnTimeRef = useRef(Date.now() - (SPAWN_INTERVAL_SEC - 20) * 1000);
 
   const tapScale = useRef(new Animated.Value(1)).current;
 
@@ -117,6 +133,33 @@ export default function ClickerScreen({ onBack }) {
     return () => clearInterval(interval);
   }, [loaded]);
 
+  // Apparitions de créatures sur le bouton de tap : toutes les
+  // SPAWN_INTERVAL_SEC, si on est sur l'onglet Tap et qu'aucune créature
+  // n'est déjà affichée, une créature apparaît pendant SPAWN_VISIBLE_SEC.
+  // La même boucle gère aussi l'expiration de l'apparition (ratée si pas
+  // tapée à temps) et l'expiration du pouvoir actif.
+  useEffect(() => {
+    if (!loaded) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+
+      if (spawnedCreatureRef.current && now > spawnedCreatureRef.current.expiresAt) {
+        setSpawnedCreature(null);
+      } else if (!spawnedCreatureRef.current && viewRef.current === 'tap' && shouldSpawn(lastSpawnTimeRef.current, now)) {
+        lastSpawnTimeRef.current = now;
+        const corner = Math.floor(Math.random() * 4);
+        setSpawnedCreature({ creature: rollCreature(), expiresAt: now + SPAWN_VISIBLE_SEC * 1000, corner });
+      }
+
+      if (activePowerRef.current && now > activePowerRef.current.expiresAt) {
+        setActivePower(null);
+      }
+
+      setLiveTick((t) => t + 1);
+    }, 300);
+    return () => clearInterval(interval);
+  }, [loaded]);
+
   const spawnPopup = (text, x, y) => {
     const id = popupIdRef.current++;
     setPopups((p) => [...p, { id, text, x, y }]);
@@ -124,14 +167,29 @@ export default function ClickerScreen({ onBack }) {
   };
 
   const handleTap = (evt) => {
-    setCoins((c) => c + tapPowerRef.current);
+    const multiplier = activePowerRef.current ? activePowerRef.current.tapMultiplier : 1;
+    const gain = tapPowerRef.current * multiplier;
+    setCoins((c) => c + gain);
     Animated.sequence([
       Animated.timing(tapScale, { toValue: 0.88, duration: 60, useNativeDriver: true }),
       Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start();
     const x = evt.nativeEvent.locationX || 60;
     const y = evt.nativeEvent.locationY || 60;
-    spawnPopup(`+${tapPowerRef.current}`, x, y);
+    spawnPopup(`+${gain}`, x, y);
+  };
+
+  // Le joueur a tapé la créature apparue à temps : son pouvoir s'active.
+  const claimPower = () => {
+    const spawned = spawnedCreatureRef.current;
+    if (!spawned) return;
+    const power = powerForRarity(spawned.creature.rarity, tapPowerRef.current);
+    setActivePower({ ...power, expiresAt: Date.now() + power.durationSec * 1000 });
+    if (power.bonusCoins > 0) {
+      setCoins((c) => c + power.bonusCoins);
+      spawnPopup(`+${power.bonusCoins}`, 110, 60);
+    }
+    setSpawnedCreature(null);
   };
 
   const buyTapPower = () => {
@@ -193,6 +251,14 @@ export default function ClickerScreen({ onBack }) {
         {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
       </View>
 
+      {activePower && (
+        <View style={styles.powerBanner}>
+          <Text style={styles.powerBannerText}>
+            ⚡ {activePower.name} actif : x{activePower.tapMultiplier} tap ({Math.max(0, Math.ceil((activePower.expiresAt - Date.now()) / 1000))}s)
+          </Text>
+        </View>
+      )}
+
       {welcomeBack !== null && (
         <TouchableOpacity style={styles.welcomeBanner} onPress={() => setWelcomeBack(null)}>
           <Text style={styles.welcomeText}>🎉 Pendant ton absence, tes créatures ont gagné {formatNum(welcomeBack)} pièces !</Text>
@@ -221,6 +287,9 @@ export default function ClickerScreen({ onBack }) {
                 {p.text}
               </Animated.Text>
             ))}
+            {spawnedCreature && (
+              <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />
+            )}
           </TouchableOpacity>
           <Text style={styles.tapHint}>Tape pour récolter des pièces</Text>
 
@@ -330,6 +399,43 @@ function CreatureDetail({ creature, owned, coins, onFeed, onClose }) {
   );
 }
 
+const CORNER_STYLES = [
+  { top: 4, left: 4 },
+  { top: 4, right: 4 },
+  { bottom: 4, left: 4 },
+  { bottom: 4, right: 4 },
+];
+
+function SpawnedCreatureBubble({ spawned, onClaim }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.15, duration: 350, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 350, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const display = spawned.creature.stages[0];
+  const color = RARITY_COLOR[spawned.creature.rarity];
+
+  return (
+    <TouchableOpacity
+      onPress={onClaim}
+      style={[styles.spawnBubbleWrap, CORNER_STYLES[spawned.corner]]}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+    >
+      <Animated.View style={[styles.spawnBubble, { borderColor: color, transform: [{ scale: pulse }] }]}>
+        <Text style={styles.spawnBubbleEmoji}>{display.emoji}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
@@ -344,6 +450,17 @@ const styles = StyleSheet.create({
 
   welcomeBanner: { backgroundColor: 'rgba(0,230,118,0.15)', borderRadius: 12, padding: 10, marginTop: 8, borderWidth: 1, borderColor: COLORS.good },
   welcomeText: { color: COLORS.good, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+
+  powerBanner: { backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, marginTop: 6, borderWidth: 1, borderColor: COLORS.action },
+  powerBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
+
+  spawnBubbleWrap: { position: 'absolute', zIndex: 10 },
+  spawnBubble: {
+    width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.panel,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2.5,
+    shadowColor: '#fff', shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
+  },
+  spawnBubbleEmoji: { fontSize: 28 },
 
   tabRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   tabBtn: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center', backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.border },

@@ -81,6 +81,44 @@ export function tapPowerCost(currentTapPower) {
   return Math.round(20 * Math.pow(1.55, currentTapPower - 1));
 }
 
+// ---- Apparitions de créatures sur le bouton de tap ("le cookie") ----
+// Toutes les SPAWN_INTERVAL_SEC secondes, une créature apparaît
+// brièvement (SPAWN_VISIBLE_SEC) ; si le joueur tape dessus à temps, son
+// pouvoir s'active selon la rareté de la créature (plus rare = pouvoir
+// plus fort). Non tapée à temps = disparaît sans effet.
+export const SPAWN_INTERVAL_SEC = 180;
+export const SPAWN_VISIBLE_SEC = 4;
+
+export const POWER_EFFECTS = {
+  commun: { name: 'Élan', tapMultiplier: 2, durationSec: 10, bonusCoinsPerTapPower: 0 },
+  rare: { name: 'Frénésie', tapMultiplier: 3, durationSec: 10, bonusCoinsPerTapPower: 10 },
+  epique: { name: 'Déluge', tapMultiplier: 5, durationSec: 15, bonusCoinsPerTapPower: 25 },
+  legendaire: { name: 'Bénédiction', tapMultiplier: 10, durationSec: 15, bonusCoinsPerTapPower: 75 },
+};
+
+// Calcule le pouvoir déclenché en tapant une créature apparue, selon sa
+// rareté et la puissance de tap actuelle du joueur (le bonus de pièces
+// immédiat est proportionnel à la progression du joueur, pas un montant
+// fixe qui deviendrait négligeable en fin de partie).
+export function powerForRarity(rarity, tapPower) {
+  const effect = POWER_EFFECTS[rarity];
+  return {
+    name: effect.name,
+    rarity,
+    tapMultiplier: effect.tapMultiplier,
+    durationSec: effect.durationSec,
+    bonusCoins: Math.round(effect.bonusCoinsPerTapPower * tapPower),
+  };
+}
+
+// Détermine si une nouvelle créature doit apparaître, selon le temps
+// écoulé depuis la dernière apparition (en millisecondes, via Date.now()
+// ou performance.now() — peu importe l'unité tant qu'elle est cohérente
+// entre les deux appels).
+export function shouldSpawn(lastSpawnMs, nowMs) {
+  return nowMs - lastSpawnMs >= SPAWN_INTERVAL_SEC * 1000;
+}
+
 // Tire une créature au hasard selon les poids de rareté.
 export function rollCreature() {
   const total = Object.values(RARITY_WEIGHTS).reduce((a, b) => a + b, 0);
