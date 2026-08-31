@@ -76,9 +76,9 @@ export default function ClickerScreen({ onBack }) {
   activePowerRef.current = activePower;
   const pendingDiscountRef = useRef(null);
   pendingDiscountRef.current = pendingDiscount;
-  // Premier essaim ~20s après l'ouverture (pas d'attente de 3min pour un
-  // nouveau joueur), puis toutes les SPAWN_INTERVAL_SEC ensuite.
-  const lastSpawnTimeRef = useRef(Date.now() - (SPAWN_INTERVAL_SEC - 20) * 1000);
+  // Premier essaim au bout d'~1/3 de l'intervalle (pas d'attente complète
+  // pour un nouveau joueur), puis toutes les SPAWN_INTERVAL_SEC ensuite.
+  const lastSpawnTimeRef = useRef(Date.now() - Math.round(SPAWN_INTERVAL_SEC * (2 / 3)) * 1000);
 
   const tapScale = useRef(new Animated.Value(1)).current;
 
@@ -152,8 +152,8 @@ export default function ClickerScreen({ onBack }) {
         setSpawnedCreature(null);
       } else if (!spawnedCreatureRef.current && viewRef.current === 'tap' && shouldSpawn(lastSpawnTimeRef.current, now)) {
         lastSpawnTimeRef.current = now;
-        const corner = Math.floor(Math.random() * 4);
-        setSpawnedCreature({ creature: rollCreature(), expiresAt: now + SPAWN_VISIBLE_SEC * 1000, corner });
+        const pos = randomRingPosition();
+        setSpawnedCreature({ creature: rollCreature(), expiresAt: now + SPAWN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
       }
 
       if (activePowerRef.current && now > activePowerRef.current.expiresAt) {
@@ -312,19 +312,24 @@ export default function ClickerScreen({ onBack }) {
 
       {view === 'tap' ? (
         <View style={styles.tapArea}>
-          <TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapZone}>
-            <Animated.View style={[styles.tapButton, { transform: [{ scale: tapScale }] }]}>
-              <Text style={styles.tapEmoji}>🥚</Text>
-            </Animated.View>
+          <View style={styles.tapZone}>
+            <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
+              <View style={styles.tapButtonWrap}>
+                <Animated.View style={[styles.tapButton, { transform: [{ scale: tapScale }] }]}>
+                  <Text style={styles.tapEmoji}>🥚</Text>
+                </Animated.View>
+              </View>
+            </TouchableOpacity>
             {popups.map((p) => (
               <Animated.Text key={p.id} style={[styles.popup, { left: p.x, top: p.y }]}>
                 {p.text}
               </Animated.Text>
             ))}
-            {spawnedCreature && (
-              <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />
-            )}
-          </TouchableOpacity>
+            {/* La bulle de créature est un FRÈRE du bouton tapable, pas un
+                enfant — elle capte son propre appui sans jamais entrer en
+                conflit avec le tap de l'œuf en dessous. */}
+            {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
+          </View>
           <Text style={styles.tapHint}>Tape pour récolter des pièces</Text>
 
           <TouchableOpacity
@@ -436,26 +441,46 @@ function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscou
   );
 }
 
-const CORNER_STYLES = [
-  { top: 4, left: 4 },
-  { top: 4, right: 4 },
-  { bottom: 4, left: 4 },
-  { bottom: 4, right: 4 },
-];
+// Position aléatoire en anneau AUTOUR de l'œuf (pas dessus, pas dans un
+// coin fixe) — angle et rayon tirés au hasard à chaque apparition.
+function randomRingPosition() {
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 32 + Math.random() * 10; // % de la zone, autour du centre
+  return {
+    leftPct: 50 + Math.cos(angle) * radius,
+    topPct: 50 + Math.sin(angle) * radius,
+  };
+}
 
 function SpawnedCreatureBubble({ spawned, onClaim }) {
   const pulse = useRef(new Animated.Value(1)).current;
+  const drift = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
   useEffect(() => {
-    const loop = Animated.loop(
+    const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1.15, duration: 350, useNativeDriver: true }),
         Animated.timing(pulse, { toValue: 1, duration: 350, useNativeDriver: true }),
       ])
     );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
+    pulseLoop.start();
+
+    // Dérive douce et continue (flotte lentement autour de son point
+    // d'apparition, jamais tout à fait immobile).
+    const driftLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(drift, { toValue: { x: 10, y: -8 }, duration: 1400, useNativeDriver: true }),
+        Animated.timing(drift, { toValue: { x: -10, y: 8 }, duration: 1400, useNativeDriver: true }),
+        Animated.timing(drift, { toValue: { x: 0, y: 0 }, duration: 1400, useNativeDriver: true }),
+      ])
+    );
+    driftLoop.start();
+
+    return () => {
+      pulseLoop.stop();
+      driftLoop.stop();
+    };
+  }, [pulse, drift]);
 
   const display = spawned.creature.stages[0];
   const color = RARITY_COLOR[spawned.creature.rarity];
@@ -463,10 +488,15 @@ function SpawnedCreatureBubble({ spawned, onClaim }) {
   return (
     <TouchableOpacity
       onPress={onClaim}
-      style={[styles.spawnBubbleWrap, CORNER_STYLES[spawned.corner]]}
-      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      style={[styles.spawnBubbleWrap, { left: `${spawned.leftPct}%`, top: `${spawned.topPct}%` }]}
+      hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
     >
-      <Animated.View style={[styles.spawnBubble, { borderColor: color, transform: [{ scale: pulse }] }]}>
+      <Animated.View
+        style={[
+          styles.spawnBubble,
+          { borderColor: color, transform: [...drift.getTranslateTransform(), { scale: pulse }] },
+        ]}
+      >
         <Text style={styles.spawnBubbleEmoji}>{display.emoji}</Text>
       </Animated.View>
     </TouchableOpacity>
@@ -493,7 +523,7 @@ const styles = StyleSheet.create({
   discountBannerText: { color: '#3ec6f0' },
   powerBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
 
-  spawnBubbleWrap: { position: 'absolute', zIndex: 10 },
+  spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },
   spawnBubble: {
     width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.panel,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2.5,
@@ -508,7 +538,8 @@ const styles = StyleSheet.create({
   tabBtnTextActive: { color: '#241a00' },
 
   tapArea: { flex: 1, alignItems: 'center', marginTop: 10 },
-  tapZone: { width: '100%', height: 220, alignItems: 'center', justifyContent: 'center' },
+  tapZone: { width: '100%', height: 220, position: 'relative' },
+  tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tapButton: {
     width: 160, height: 160, borderRadius: 80, backgroundColor: COLORS.panel,
     alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.action,

@@ -85,7 +85,7 @@ export function tapPowerCost(currentTapPower) {
 // Toutes les SPAWN_INTERVAL_SEC secondes, une créature apparaît
 // brièvement (SPAWN_VISIBLE_SEC) ; si le joueur tape dessus à temps, son
 // pouvoir s'active. Non tapée à temps = disparaît sans effet.
-export const SPAWN_INTERVAL_SEC = 180;
+export const SPAWN_INTERVAL_SEC = 60; // 1 minute (était 3 minutes)
 export const SPAWN_VISIBLE_SEC = 4;
 
 // La RARETÉ détermine l'intensité (multiplicateur de tap + durée) — garde
