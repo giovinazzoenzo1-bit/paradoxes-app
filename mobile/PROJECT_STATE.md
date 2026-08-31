@@ -1099,3 +1099,45 @@ aucun moyen de revenir en arrière depuis Quêtes/Collection vers l'écran
 principal — ajouté un bouton "← Retour au clicker" dans les deux vues
 avant que ça devienne une vraie impasse plutôt qu'après qu'un joueur s'y
 retrouve coincé.
+
+## Clicker : refonte majeure de l'interface façon Cookie Clicker (29/08, suite)
+Demande détaillée pour préparer le futur mode combat, avec captures du
+vrai Cookie Clicker en référence.
+
+**1. Barre de navigation du bas** : `Shop | Quêtes | Collection |
+Aventure`, avec de vraies icônes vectorielles (`@expo/vector-icons`,
+fourni gratuitement avec Expo — Ionicons storefront/flag/albums/skull)
+plutôt que d'aller chercher des logos sur le web (risque de droits
+d'auteur + pas de vraie chaîne d'assets pour ça ici). Badges : nombre de
+quêtes validées, taille de collection, point rouge d'alerte si l'œuf est
+prêt.
+
+**2. Écran d'accueil radicalement épuré** : exactement ce qui était
+demandé — pièces, revenu/s, deck à 3 emplacements, et l'œuf (agrandi
+160→180px, plus besoin de partager l'espace avec une colonne latérale ou
+une liste de boutons). Plus aucun bouton d'amélioration sur cet écran.
+
+**3. Nouvel écran Shop plein écran** (pas un modal), 2 pages internes
+comme sur la capture Cookie Clicker fournie : "Améliorations" (Pacte,
+Faveur des Esprits, Sanctuaire, Veilleur, puis **Offrande en dernier**
+comme précisé) et "Auto-clics" (les 5 générateurs, avant un modal à
+part).
+
+**4. Ascension déplacée dans Quêtes** (jalon de progression majeur, pas
+un simple achat de boutique). **"Invoquer une créature" déplacé dans
+Collection** (l'acquisition de créatures va avec leur gestion, pas avec
+la boutique de pièces).
+
+**5. Rituel redevenu une bulle** (`RitualBubble`), comme demandé
+explicitement ("je voulais une bulle comme pour les effets des
+créatures") — teinte violette, pulsation plus lente que la cible dorée,
+même structure anti-imbrication tactile déjà établie, apparaît dès que
+le cooldown est écoulé et reste visible ~6s. Plus de bannière fixe en
+bas.
+
+**Vérifié avant de pousser** : tous les noms de props croisés entre
+points d'appel et signatures de composants, aucune référence orpheline
+aux styles/composants supprimés, logique de sauvegarde/chargement
+totalement intacte (refonte purement visuelle, aucun changement du
+modèle de données), cycle complet d'apparition/réclamation de la bulle
+rituel testé.
