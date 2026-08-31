@@ -927,3 +927,23 @@ créature actif × Transe × critique), vérifié par un scénario de test
 combiné avant de pousser. Même pattern de structure tactile déjà établi
 pour la bulle de créature (élément frère du bouton œuf, jamais imbriqué
 dedans) réutilisé pour la cible dorée.
+
+## Clicker : pièces toujours invisibles à 1K après le 1er correctif (29/08, suite)
+Le correctif précédent (flexWrap sur la ligne partagée pièces+revenu
+passif) n'a pas suffi selon le retour utilisateur. En recalculant la
+largeur disponible (padding de l'écran + padding de la ligne vs largeur
+d'écran typique), le débordement n'était pas évident pour un texte aussi
+court — donc plutôt que de continuer à deviner la cause exacte,
+**restructuré pour éliminer toute la catégorie de bug** : le montant de
+pièces et le taux de revenu passif sont maintenant chacun sur leur PROPRE
+ligne, centrés indépendamment, sans plus jamais partager d'espace
+horizontal. Ça élimine tout risque de "largeur combinée qui dépasse le
+conteneur", peu importe la cause exacte du problème initial, plutôt que
+de rafistoler autour d'une reproduction précise que je n'ai pas pu
+confirmer avec certitude depuis ici.
+
+**Honnêteté sur cette correction** : contrairement aux autres bugs de
+cette session, je n'ai pas pu reproduire ni confirmer la cause exacte
+sans accès à l'appareil réel — cette fois c'est une restructuration
+défensive plutôt qu'une correction ciblée d'une cause identifiée avec
+certitude. À surveiller si le problème persiste malgré tout.
