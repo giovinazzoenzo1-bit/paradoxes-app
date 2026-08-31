@@ -56,6 +56,10 @@ export function stageForLevel(level) {
 
 // Revenu passif (pièces/seconde) d'une créature possédée, selon son niveau
 // et son stade d'évolution (le stade multiplie le revenu de base).
+// DEPUIS LA REFONTE : les créatures ne produisent plus de pièces
+// automatiquement (seule la boutique d'auto-clics le fait désormais).
+// Fonction gardée (le calcul niveau/stade reste utile comme base pour de
+// futures stats de combat) mais plus appelée pour la génération de pièces.
 const STAGE_MULTIPLIER = [1, 2.2, 5];
 export function incomeForCreature(creature, level) {
   const stage = stageForLevel(level);
@@ -181,10 +185,14 @@ export function totalPassiveIncome(ownedCreatures) {
 }
 
 // Gains hors-ligne, plafonnés pour éviter les abus (4h max comptabilisées).
+// Prend directement un taux de pièces/s (calculé par l'appelant) plutôt
+// que la liste de créatures — les créatures ne produisent plus de revenu
+// passif automatique, seuls les générateurs de la boutique d'auto-clics
+// en produisent maintenant.
 const OFFLINE_CAP_SECONDS = 4 * 3600;
-export function offlineEarnings(ownedCreatures, secondsElapsed) {
+export function offlineEarnings(incomePerSecond, secondsElapsed) {
   const capped = Math.max(0, Math.min(secondsElapsed, OFFLINE_CAP_SECONDS));
-  return Math.floor(totalPassiveIncome(ownedCreatures) * capped);
+  return Math.floor(incomePerSecond * capped);
 }
 
 // ---- Faveur des Esprits (coups critiques) ----
@@ -354,3 +362,35 @@ export function eggStageForCompletedCount(completedCount) {
 
 export const HATCH_TAPS_REQUIRED = 500;
 export const CAPTURE_TAPS_REQUIRED = 200;
+
+// ---- Boutique d'auto-clics ----
+// Remplace l'ancien "Familier" (un seul niveau) par un vrai menu boutique
+// à plusieurs générateurs, façon jeu incrémental classique : chaque
+// palier a son propre coût et son propre revenu, achetable plusieurs
+// fois (le coût grimpe à chaque achat du MÊME palier). Nécessaire suite
+// à la décision de retirer le revenu passif automatique des créatures —
+// c'est maintenant la seule source de revenu passif du jeu.
+export const AUTOCLICKERS = [
+  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 15, baseIncome: 0.1 },
+  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 100, baseIncome: 1 },
+  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 1100, baseIncome: 8 },
+  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 12000, baseIncome: 47 },
+  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 130000, baseIncome: 260 },
+];
+
+// Coût pour acheter UNE unité de plus d'un générateur donné, sachant
+// combien on en possède déjà (le coût grimpe à chaque achat du même palier).
+export function autoClickerCost(clicker, ownedCount) {
+  return Math.round(clicker.baseCost * Math.pow(1.15, ownedCount));
+}
+
+// Revenu total/s de tous les générateurs possédés.
+// ownedAutoClickers : { esprit: 3, main: 1, ... }
+export function totalAutoClickIncome(ownedAutoClickers) {
+  let sum = 0;
+  for (const clicker of AUTOCLICKERS) {
+    const count = ownedAutoClickers[clicker.id] || 0;
+    sum += count * clicker.baseIncome;
+  }
+  return sum;
+}

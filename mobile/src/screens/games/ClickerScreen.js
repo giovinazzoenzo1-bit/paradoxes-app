@@ -12,12 +12,10 @@ import {
   RARITY_LABEL,
   RARITY_COLOR,
   stageForLevel,
-  incomeForCreature,
   levelUpCost,
   summonCost,
   tapPowerCost,
   rollCreature,
-  totalPassiveIncome,
   offlineEarnings,
   shouldSpawn,
   pickFromDeck,
@@ -33,8 +31,6 @@ import {
   nextGoldenDelaySec,
   goldenBonus,
   GOLDEN_VISIBLE_SEC,
-  familiarIncome,
-  familiarUpgradeCost,
   sanctuaryMultiplier,
   sanctuaryUpgradeCost,
   veilleurOfflineMultiplier,
@@ -55,6 +51,10 @@ import {
   eggStageForCompletedCount,
   HATCH_TAPS_REQUIRED,
   CAPTURE_TAPS_REQUIRED,
+  AUTOCLICKERS,
+  autoClickerCost,
+  totalAutoClickIncome,
+  CREATURE_POWERS,
 } from '../../games/clicker/clickerLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 
@@ -99,7 +99,8 @@ export default function ClickerScreen({ onBack }) {
   const [critLevel, setCritLevel] = useState(0); // niveau de "Faveur des Esprits"
   const [comboCount, setComboCount] = useState(0); // niveau actuel de la Transe
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
-  const [familiarLevel, setFamiliarLevel] = useState(0);
+  const [autoClickers, setAutoClickers] = useState({}); // { esprit: 3, main: 1, ... }
+  const [autoShopOpen, setAutoShopOpen] = useState(false);
   const [sanctuaryLevel, setSanctuaryLevel] = useState(0);
   const [veilleurLevel, setVeilleurLevel] = useState(0);
   const [essence, setEssence] = useState(0); // bonus permanent d'Ascension, survit aux resets
@@ -125,8 +126,8 @@ export default function ClickerScreen({ onBack }) {
   ownedRef.current = owned;
   const tapPowerRef = useRef(1);
   tapPowerRef.current = tapPower;
-  const familiarLevelRef = useRef(0);
-  familiarLevelRef.current = familiarLevel;
+  const autoClickersRef = useRef({});
+  autoClickersRef.current = autoClickers;
   const sanctuaryLevelRef = useRef(0);
   sanctuaryLevelRef.current = sanctuaryLevel;
   const veilleurLevelRef = useRef(0);
@@ -187,14 +188,22 @@ export default function ClickerScreen({ onBack }) {
           const nowSec = Date.now() / 1000;
           const elapsed = saved.lastSave ? nowSec - saved.lastSave : 0;
           const savedVeilleur = saved.veilleurLevel || 0;
-          const offline = Math.round(offlineEarnings(saved.owned || [], elapsed) * veilleurOfflineMultiplier(savedVeilleur));
+          const savedAutoClickers = saved.autoClickers || {};
+          // Migration douce depuis l'ancien "Familier" à niveau unique (dev
+          // en cours, pas d'utilisateurs en prod à préserver strictement) :
+          // convertit un ancien niveau en unités du 1er palier de la boutique.
+          if (!saved.autoClickers && saved.familiarLevel) {
+            savedAutoClickers.esprit = saved.familiarLevel;
+          }
+          const offlineIncome = totalAutoClickIncome(savedAutoClickers) * veilleurOfflineMultiplier(savedVeilleur);
+          const offline = Math.round(offlineEarnings(offlineIncome, elapsed));
           setCoins((saved.coins || 0) + offline);
           setTotalEarned((saved.totalEarned || 0) + offline);
           setTapPower(saved.tapPower || 1);
           setOwned(saved.owned || []);
           setDeck(saved.deck || [null, null, null]);
           setCritLevel(saved.critLevel || 0);
-          setFamiliarLevel(saved.familiarLevel || 0);
+          setAutoClickers(savedAutoClickers);
           setSanctuaryLevel(saved.sanctuaryLevel || 0);
           setVeilleurLevel(savedVeilleur);
           setEssence(saved.essence || 0);
@@ -225,7 +234,7 @@ export default function ClickerScreen({ onBack }) {
         STORAGE_KEY,
         JSON.stringify({
           coins, totalEarned, tapPower, owned, deck, critLevel,
-          familiarLevel, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
+          autoClickers, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
           totalSummons, totalCrits, goldenClaimed, maxCombo,
           activeQuestIds, eggPhase, hatchTaps, captureTaps,
           lastSave: Date.now() / 1000,
@@ -233,7 +242,7 @@ export default function ClickerScreen({ onBack }) {
       );
     }, 600);
   }, [
-    coins, totalEarned, tapPower, owned, deck, critLevel, familiarLevel, sanctuaryLevel,
+    coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo,
     activeQuestIds, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
@@ -246,7 +255,7 @@ export default function ClickerScreen({ onBack }) {
         JSON.stringify({
           coins: coinsRef.current, totalEarned: totalEarnedRef.current, tapPower: tapPowerRef.current,
           owned: ownedRef.current, deck: deckRef.current, critLevel: critLevelRef.current,
-          familiarLevel: familiarLevelRef.current, sanctuaryLevel: sanctuaryLevelRef.current,
+          autoClickers: autoClickersRef.current, sanctuaryLevel: sanctuaryLevelRef.current,
           veilleurLevel: veilleurLevelRef.current, essence: essenceRef.current, lastRitualAt: lastRitualAtRef.current,
           totalSummons: totalSummonsRef.current, totalCrits: totalCritsRef.current,
           goldenClaimed: goldenClaimedRef.current, maxCombo: maxComboRef.current,
@@ -270,12 +279,15 @@ export default function ClickerScreen({ onBack }) {
     return amount;
   };
 
-  // Revenu passif : +1 tick par seconde (créatures + Familier), boosté si
-  // un pouvoir passive_boost est actif.
+  // Revenu passif : +1 tick par seconde, désormais UNIQUEMENT depuis la
+  // boutique d'auto-clics (les créatures ne produisent plus rien
+  // automatiquement — elles servent au tap, à leur pouvoir dédié en bulle,
+  // et bientôt au combat). Le pouvoir passive_boost d'une créature booste
+  // maintenant ce revenu d'auto-clics.
   useEffect(() => {
     if (!loaded) return;
     const interval = setInterval(() => {
-      const base = totalPassiveIncome(ownedRef.current) + familiarIncome(familiarLevelRef.current, tapPowerRef.current);
+      const base = totalAutoClickIncome(autoClickersRef.current);
       const boost = activePowerRef.current && activePowerRef.current.effectType === 'passive_boost' ? activePowerRef.current.effectValue : 1;
       const income = base * boost;
       if (income > 0) gainCoins(income);
@@ -418,11 +430,14 @@ export default function ClickerScreen({ onBack }) {
     if (pendingDiscountRef.current) setPendingDiscount(null);
   };
 
-  const buyFamiliar = () => {
-    const cost = applyDiscount(familiarUpgradeCost(familiarLevel));
-    if (coins < cost) return;
+  // Achète UNE unité d'un palier de la boutique d'auto-clics donné.
+  const buyAutoClicker = (clickerId) => {
+    const clicker = AUTOCLICKERS.find((a) => a.id === clickerId);
+    const owned = autoClickersRef.current[clickerId] || 0;
+    const cost = applyDiscount(autoClickerCost(clicker, owned));
+    if (coinsRef.current < cost) return;
     setCoins((c) => c - cost);
-    setFamiliarLevel((l) => l + 1);
+    setAutoClickers((prev) => ({ ...prev, [clickerId]: (prev[clickerId] || 0) + 1 }));
     if (pendingDiscountRef.current) setPendingDiscount(null);
   };
 
@@ -462,7 +477,7 @@ export default function ClickerScreen({ onBack }) {
             setTotalEarned(0);
             setTapPower(1);
             setCritLevel(0);
-            setFamiliarLevel(0);
+            setAutoClickers({});
             setSanctuaryLevel(0);
             setVeilleurLevel(0);
             setOwned([]);
@@ -476,7 +491,7 @@ export default function ClickerScreen({ onBack }) {
   };
 
   const passiveIncome =
-    (totalPassiveIncome(owned) + familiarIncome(familiarLevel, tapPower)) *
+    totalAutoClickIncome(autoClickers) *
     (activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1) *
     sanctuaryMultiplier(sanctuaryLevel) *
     essenceBonusMultiplier(essence);
@@ -730,16 +745,12 @@ export default function ClickerScreen({ onBack }) {
             <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(critUpgradeCost(critLevel)))}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionBtn, coins < applyDiscount(familiarUpgradeCost(familiarLevel)) && styles.actionBtnDisabled]}
-            onPress={buyFamiliar}
-            disabled={coins < applyDiscount(familiarUpgradeCost(familiarLevel))}
-          >
+          <TouchableOpacity style={styles.actionBtn} onPress={() => setAutoShopOpen(true)}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.actionBtnText}>🐿️ Familier (nv {familiarLevel})</Text>
-              <Text style={styles.actionBtnSubtext}>Auto-clic : +{familiarIncome(familiarLevel + 1, tapPower).toFixed(1)}/s au niveau suivant</Text>
+              <Text style={styles.actionBtnText}>🏭 Boutique d'auto-clics</Text>
+              <Text style={styles.actionBtnSubtext}>Revenu actuel : +{passiveIncome.toFixed(1)}/s — appuie pour acheter des générateurs</Text>
             </View>
-            <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(familiarUpgradeCost(familiarLevel)))}</Text>
+            <Text style={styles.actionBtnCost}>👉</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -833,6 +844,16 @@ export default function ClickerScreen({ onBack }) {
           onClose={() => setPickerSlot(null)}
         />
       )}
+
+      {autoShopOpen && (
+        <AutoClickerShop
+          coins={coins}
+          autoClickers={autoClickers}
+          applyDiscount={applyDiscount}
+          onBuy={buyAutoClicker}
+          onClose={() => setAutoShopOpen(false)}
+        />
+      )}
     </View>
   );
 }
@@ -905,6 +926,50 @@ function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose }) {
             <Text style={styles.pickerClearBtnText}>Vider cet emplacement</Text>
           </TouchableOpacity>
         )}
+      </View>
+    </View>
+  );
+}
+
+// Menu boutique dédié aux générateurs d'auto-clics (remplace l'ancien
+// bouton "Familier" à niveau unique) — un palier par ligne, avec le
+// nombre possédé, le revenu qu'il rapporte, et un bouton pour en acheter
+// un de plus (coût qui grimpe à chaque achat du même palier).
+function AutoClickerShop({ coins, autoClickers, applyDiscount, onBuy, onClose }) {
+  return (
+    <View style={styles.detailOverlay}>
+      <View style={[styles.detailPanel, { paddingTop: 20 }]}>
+        <TouchableOpacity style={styles.detailClose} onPress={onClose}>
+          <Text style={styles.detailCloseText}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.pickerTitle}>🏭 Boutique d'auto-clics</Text>
+        <Text style={styles.pickerSubtitle}>Seule source de revenu passif du jeu — les créatures n'en produisent plus.</Text>
+
+        <ScrollView style={{ width: '100%', maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+          {AUTOCLICKERS.map((clicker) => {
+            const owned = autoClickers[clicker.id] || 0;
+            const cost = applyDiscount(autoClickerCost(clicker, owned));
+            const canAfford = coins >= cost;
+            return (
+              <View key={clicker.id} style={styles.shopRow}>
+                <Text style={styles.shopRowEmoji}>{clicker.emoji}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.shopRowName}>{clicker.name}</Text>
+                  <Text style={styles.shopRowInfo}>
+                    Possédé : {owned} · +{clicker.baseIncome.toFixed(1)}/s chacun
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.shopBuyBtn, !canAfford && styles.actionBtnDisabled]}
+                  onPress={() => onBuy(clicker.id)}
+                  disabled={!canAfford}
+                >
+                  <Text style={styles.shopBuyBtnText}>💰 {formatNum(cost)}</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </ScrollView>
       </View>
     </View>
   );
@@ -1035,7 +1100,7 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, o
 function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscount }) {
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
-  const income = incomeForCreature(creature, owned.level);
+  const power = CREATURE_POWERS[creature.id];
   const baseCost = levelUpCost(creature, owned.level);
   const cost = pendingDiscount ? Math.max(1, Math.round(baseCost * (1 - pendingDiscount.percent))) : baseCost;
   const canFeed = coins >= cost;
@@ -1052,7 +1117,8 @@ function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscou
         <Text style={[styles.creatureRarity, { color: RARITY_COLOR[creature.rarity] }]}>
           {RARITY_LABEL[creature.rarity]} · {creature.family}
         </Text>
-        <Text style={styles.detailStat}>Niveau {owned.level} — 💰 {income.toFixed(2)}/s</Text>
+        <Text style={styles.detailStat}>Niveau {owned.level}</Text>
+        <Text style={styles.detailPowerHint}>✨ Pouvoir dédié (bulle) : {power.name}</Text>
         {nextEvoLevel && <Text style={styles.detailEvoHint}>Évolue au niveau {nextEvoLevel}</Text>}
 
         <TouchableOpacity style={[styles.feedBtn, !canFeed && styles.actionBtnDisabled]} onPress={onFeed} disabled={!canFeed}>
@@ -1274,6 +1340,17 @@ const styles = StyleSheet.create({
   detailName: { color: COLORS.text, fontSize: 20, fontWeight: '900', marginTop: 6 },
   detailStat: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 10 },
   detailEvoHint: { color: '#b96bff', fontSize: 11, fontWeight: '700', marginTop: 4 },
+  detailPowerHint: { color: COLORS.action, fontSize: 12, fontWeight: '700', marginTop: 8, textAlign: 'center' },
+
+  shopRow: {
+    width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  shopRowEmoji: { fontSize: 28 },
+  shopRowName: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
+  shopRowInfo: { color: COLORS.muted, fontSize: 10, marginTop: 2 },
+  shopBuyBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
+  shopBuyBtnText: { color: '#241a00', fontSize: 12, fontWeight: '900' },
 
   pickerTitle: { color: COLORS.text, fontSize: 17, fontWeight: '900', marginTop: 6 },
   pickerSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 4, marginBottom: 14, textAlign: 'center' },
