@@ -33,11 +33,12 @@ export const CREATURES = [
     stages: [
     { name: 'Pyrosile', emoji: '🦎' }, { name: 'Pyrosile', emoji: '🦎' }, { name: 'Pyrosile', emoji: '🦎' },
   ]},
-  { id: 'gouttelin', element: 'Eau', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
-    skills: mkSkills([['Éclaboussure', 2, 15], ["Jet d'Eau", 3, 15], ['Vague Déferlante', 5, 15], ['Raz-de-Marée', 7, 15]]),
-    lore: "Gouttelin est né d'une simple goutte de pluie tombée dans un lac enchanté. Plus il grandit, plus il se sent à l'étroit sur la terre ferme.",
+  { id: 'caraploof', element: 'Eau', rarity: 'commun', baseIncome: 0.15, combatType: 'tank',
+    baseHp: 15, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Bulle Aqueuse', 1, 5], ['Jet Baveux', 2, 10], ['Charge Coquille', 2, 15], ['Éclaboussure Lourde', 3, 25]]),
+    lore: "Caraploof est une petite tortue des ruisseaux dotée d'une coquille très dense qui absorbe parfaitement les chocs. Très lente et peu agressive, elle préfère encaisser les coups plutôt que de fuir, servant souvent de bouclier aux autres créatures de sa mare. On la trouve principalement assoupie sous les nénuphars.",
     stages: [
-    { name: 'Gouttelin', emoji: '🐸' }, { name: 'Marégouffre', emoji: '🐙' }, { name: 'Abyssaline', emoji: '🦑' },
+    { name: 'Caraploof', emoji: '🐢' }, { name: 'Caraploof', emoji: '🐢' }, { name: 'Caraploof', emoji: '🐢' },
   ]},
   { id: 'bourgeonin', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
     skills: mkSkills([['Fouet de Liane', 2, 15], ['Épines', 3, 15], ['Étreinte Végétale', 5, 15], ['Floraison Sauvage', 7, 15]]),
@@ -185,7 +186,7 @@ const RARITY_DURATION_SEC = { commun: 10, rare: 10, epique: 15, legendaire: 15 }
 
 export const CREATURE_POWERS = {
   pyrosile: { name: 'Éruption', effectType: 'coins_burst', effectValue: 8 },
-  gouttelin: { name: 'Flux Montant', effectType: 'passive_boost', effectValue: 2 },
+  caraploof: { name: 'Flux Montant', effectType: 'passive_boost', effectValue: 2 },
   bourgeonin: { name: 'Éclosion Généreuse', effectType: 'discount_next', effectValue: 0.2 },
   cailloutin: { name: 'Fondation', effectType: 'coins_burst', effectValue: 8 },
   etincelot: { name: 'Décharge', effectType: 'coins_burst', effectValue: 12 },
