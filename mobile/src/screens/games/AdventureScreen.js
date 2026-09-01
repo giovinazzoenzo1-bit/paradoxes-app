@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
+import CombatScreen from './CombatScreen';
 import { CREATURES, RARITY_LABEL, RARITY_COLOR, stageForLevel, CREATURE_POWERS } from '../../games/clicker/clickerLogic';
 import {
   combatStatsForCreature,
@@ -14,6 +15,7 @@ import {
   levelIndexInChapter,
   LEVELS_PER_CHAPTER,
   opponentForLevel,
+  griffesReward,
 } from '../../games/clicker/combatLogic';
 
 // Sauvegarde séparée de celle du clicker classique — la progression
@@ -25,6 +27,7 @@ export default function AdventureScreen({ owned, deck, onBack }) {
   const [detailCreatureId, setDetailCreatureId] = useState(null);
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
   const [currentUnlockedLevel, setCurrentUnlockedLevel] = useState(1);
+  const [griffes, setGriffes] = useState(0);
   const [progressLoaded, setProgressLoaded] = useState(false);
   const currentUnlockedLevelRef = useRef(1);
   currentUnlockedLevelRef.current = currentUnlockedLevel;
@@ -37,6 +40,7 @@ export default function AdventureScreen({ owned, deck, onBack }) {
         if (raw) {
           const saved = JSON.parse(raw);
           setCurrentUnlockedLevel(saved.currentUnlockedLevel || 1);
+          setGriffes(saved.griffes || 0);
         }
       } catch (e) {
         // pas de sauvegarde valide, on démarre au niveau 1
@@ -45,11 +49,22 @@ export default function AdventureScreen({ owned, deck, onBack }) {
     })();
   }, []);
 
-  // Sauvegarde à chaque changement (léger, un seul nombre pour l'instant).
+  // Sauvegarde à chaque changement.
   useEffect(() => {
     if (!progressLoaded) return;
-    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel }));
-  }, [currentUnlockedLevel, progressLoaded]);
+    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes }));
+  }, [currentUnlockedLevel, griffes, progressLoaded]);
+
+  // Appelé par ChapterMapScreen (via CombatScreen) à la fin d'un combat
+  // gagné : débloque le niveau suivant SEULEMENT si c'était bien le
+  // niveau de progression actuel (rejouer un niveau déjà acquis ne fait
+  // pas avancer davantage), et crédite la récompense.
+  const handleLevelWon = (levelNumber, reward) => {
+    setGriffes((g) => g + reward);
+    if (levelNumber === currentUnlockedLevelRef.current) {
+      setCurrentUnlockedLevel((l) => l + 1);
+    }
+  };
 
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
@@ -71,7 +86,16 @@ export default function AdventureScreen({ owned, deck, onBack }) {
 
   // Carte des chapitres — même schéma de retour anticipé.
   if (chapterMapOpen) {
-    return <ChapterMapScreen currentUnlockedLevel={currentUnlockedLevel} onBack={() => setChapterMapOpen(false)} />;
+    return (
+      <ChapterMapScreen
+        currentUnlockedLevel={currentUnlockedLevel}
+        owned={owned}
+        deck={deck}
+        griffes={griffes}
+        onLevelWon={handleLevelWon}
+        onBack={() => setChapterMapOpen(false)}
+      />
+    );
   }
 
   return (
@@ -190,8 +214,30 @@ function CreatureDetailScreen({ creature, owned, onBack }) {
 // (plus simple et robuste en React Native, même effet de progression
 // visuelle). Structure uniquement à cette étape : taper un niveau montre
 // un aperçu de l'adversaire, mais le vrai combat reste à coder (étape 5).
-function ChapterMapScreen({ currentUnlockedLevel, onBack }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelWon, onBack }) {
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
+  const [activeBattle, setActiveBattle] = useState(null); // { levelNumber, creatureId } ou null
+
+  // Combat en cours — retour anticipé, même schéma que le reste de
+  // l'écran Aventure.
+  if (activeBattle) {
+    const ownedEntry = owned.find((o) => o.id === activeBattle.creatureId);
+    const creature = CREATURES.find((c) => c.id === activeBattle.creatureId);
+    return (
+      <CombatScreen
+        playerCreature={creature}
+        playerOwnedLevel={ownedEntry.level}
+        levelNumber={activeBattle.levelNumber}
+        onFinish={(outcome) => {
+          if (outcome === 'win') {
+            onLevelWon(activeBattle.levelNumber, griffesReward(activeBattle.levelNumber));
+          }
+          setActiveBattle(null);
+          setLevelPreview(null);
+        }}
+      />
+    );
+  }
 
   // Affiche le chapitre en cours + 2 chapitres suivants (verrouillés,
   // pour montrer qu'il y a une suite) plutôt que de générer une liste
@@ -207,6 +253,7 @@ function ChapterMapScreen({ currentUnlockedLevel, onBack }) {
         </TouchableOpacity>
         <Text style={styles.title}>⚔️ Chapitres</Text>
       </View>
+      <Text style={styles.griffesText}>🐾 {griffes} Griffes</Text>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
         {Array.from({ length: chaptersToShow }, (_, chapterIdx) => chapterIdx + 1).map((chapterNum) => (
@@ -246,17 +293,27 @@ function ChapterMapScreen({ currentUnlockedLevel, onBack }) {
       </ScrollView>
 
       {levelPreview && (
-        <LevelPreviewOverlay levelNumber={levelPreview} onClose={() => setLevelPreview(null)} />
+        <FighterSelectOverlay
+          levelNumber={levelPreview}
+          owned={owned}
+          deck={deck}
+          onClose={() => setLevelPreview(null)}
+          onSelect={(creatureId) => setActiveBattle({ levelNumber: levelPreview, creatureId })}
+        />
       )}
     </View>
   );
 }
 
-// Aperçu d'un niveau au clic — montre déjà l'adversaire qui attend (via
-// opponentForLevel, étape 1), mais le vrai combat n'est pas encore câblé.
-function LevelPreviewOverlay({ levelNumber, onClose }) {
+// Choix du combattant avant de lancer le combat — limité aux 3 créatures
+// du deck (même roster que le reste du mode Aventure, pas de sélection
+// séparée à gérer). Montre déjà l'adversaire qui attend.
+function FighterSelectOverlay({ levelNumber, owned, deck, onClose, onSelect }) {
   const opponent = opponentForLevel(levelNumber);
   const display = opponent.stages[0];
+  const ownedMap = {};
+  owned.forEach((o) => (ownedMap[o.id] = o));
+
   return (
     <View style={styles.overlay}>
       <View style={styles.overlayPanel}>
@@ -266,13 +323,33 @@ function LevelPreviewOverlay({ levelNumber, onClose }) {
         <Text style={styles.overlayTitle}>
           Chapitre {chapterForLevel(levelNumber)} · Niveau {levelIndexInChapter(levelNumber)}
         </Text>
-        <Text style={{ fontSize: 60, marginVertical: 10 }}>{display.emoji}</Text>
+        <Text style={{ fontSize: 50, marginVertical: 6 }}>{display.emoji}</Text>
         <Text style={[styles.overlaySubtitle, { color: RARITY_COLOR[opponent.rarity] }]}>
           Adversaire : {display.name}
         </Text>
-        <Text style={[styles.overlaySubtitle, { marginTop: 10 }]}>
-          Le combat en lui-même arrive bientôt.
-        </Text>
+
+        <Text style={[styles.overlaySubtitle, { marginTop: 14, marginBottom: 8 }]}>Choisis ton combattant :</Text>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {deck.map((id, i) => {
+            const creature = id ? CREATURES.find((c) => c.id === id) : null;
+            const own = id ? ownedMap[id] : null;
+            const fighterDisplay = creature && own ? creature.stages[stageForLevel(own.level)] : null;
+            return (
+              <TouchableOpacity
+                key={i}
+                style={[styles.fighterPick, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
+                onPress={() => creature && onSelect(id)}
+                disabled={!creature}
+              >
+                {fighterDisplay ? (
+                  <Text style={{ fontSize: 30 }}>{fighterDisplay.emoji}</Text>
+                ) : (
+                  <Text style={{ fontSize: 24, opacity: 0.3 }}>🥚</Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -330,6 +407,12 @@ const styles = StyleSheet.create({
   },
   levelNodeDone: { borderColor: COLORS.good, backgroundColor: COLORS.good },
   levelNodeText: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
+
+  griffesText: { color: COLORS.action, fontSize: 13, fontWeight: '800', textAlign: 'center', marginBottom: 14 },
+  fighterPick: {
+    width: 56, height: 56, borderRadius: 14, backgroundColor: COLORS.bg,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
+  },
 
   detailPortrait: { alignItems: 'center', marginTop: 10, marginBottom: 20 },
   detailEmoji: { fontSize: 90 },
