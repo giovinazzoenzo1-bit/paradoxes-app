@@ -1190,3 +1190,9 @@ Toutes les couleurs passaient déjà par `COLORS.*` (aucune couleur codée
 en dur trouvée à l'audit), donc le changement de palette se propage
 automatiquement partout dans l'écran sans édition supplémentaire
 nécessaire.
+
+## Mode Aventure / Combat : design capturé avant tout code (29/08)
+Toutes les décisions de conception (structure, mécanique de combat,
+écrans, ordre d'implémentation) sont dans **`mobile/ADVENTURE_MODE.md`**
+— fichier séparé pour ne pas alourdir davantage celui-ci. Rien n'est
+encore codé à ce stade, c'est un document de préparation.
