@@ -10,78 +10,92 @@
 // Chaque créature a 3 stades (base, évolution 1 à niveau 5, évolution 2 à
 // niveau 15). baseIncome = pièces/seconde à niveau 1 du stade de base.
 
-// Génère les 4 compétences d'une créature avec des DÉGÂTS FIXES (pas des
-// multiplicateurs) — aligné sur le format produit par le générateur de
-// créatures Gemini de l'utilisateur, qui donne un nombre de dégâts
-// précis par attaque plutôt qu'un multiplicateur. Le multiplicateur de
-// vitesse du défi de tap (voir combatLogic.js) s'applique PAR-DESSUS ce
-// nombre au moment du combat, donc les deux systèmes se combinent sans
-// contradiction. Utilisé au combat : le joueur choisit UNE des 4 à
-// chaque tour (remplace l'ancien bouton "Attaquer" unique).
+// Génère les 4 compétences d'une créature avec des DÉGÂTS FIXES et un
+// COÛT EN ENDURANCE (pas des multiplicateurs) — aligné sur le format
+// produit par le générateur de créatures Gemini de l'utilisateur. Le
+// multiplicateur de vitesse du défi de tap (voir combatLogic.js)
+// s'applique PAR-DESSUS ce nombre au moment du combat. Utilisé au
+// combat : le joueur choisit UNE des 4 à chaque tour, tant qu'il a assez
+// d'endurance pour se la payer.
 function mkSkills(entries) {
-  return entries.map(([name, damage], i) => ({ id: `s${i + 1}`, name, damage }));
+  return entries.map(([name, damage, enduranceCost], i) => ({ id: `s${i + 1}`, name, damage, enduranceCost }));
 }
 
 export const CREATURES = [
   { id: 'braisillon', element: 'Feu', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
-    skills: mkSkills([['Griffure Ardente', 2], ['Souffle Brûlant', 4], ['Éruption', 6], ['Nova Infernale', 9]]),
+    skills: mkSkills([['Griffure Ardente', 2, 15], ['Souffle Brûlant', 4, 15], ['Éruption', 6, 15], ['Nova Infernale', 9, 15]]),
     lore: "Né dans les cendres d'un feu de camp oublié, Braisillon grandit en absorbant la chaleur autour de lui. Une fois adulte, il n'a plus besoin de flamme extérieure — il EST la flamme.",
     stages: [
     { name: 'Braisillon', emoji: '🦎' }, { name: 'Brasegriffe', emoji: '🐲' }, { name: 'Infernouve', emoji: '🐉' },
   ]},
   { id: 'gouttelin', element: 'Eau', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
-    skills: mkSkills([['Éclaboussure', 2], ["Jet d'Eau", 3], ['Vague Déferlante', 5], ['Raz-de-Marée', 7]]),
+    skills: mkSkills([['Éclaboussure', 2, 15], ["Jet d'Eau", 3, 15], ['Vague Déferlante', 5, 15], ['Raz-de-Marée', 7, 15]]),
     lore: "Gouttelin est né d'une simple goutte de pluie tombée dans un lac enchanté. Plus il grandit, plus il se sent à l'étroit sur la terre ferme.",
     stages: [
     { name: 'Gouttelin', emoji: '🐸' }, { name: 'Marégouffre', emoji: '🐙' }, { name: 'Abyssaline', emoji: '🦑' },
   ]},
   { id: 'bourgeonin', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
-    skills: mkSkills([['Fouet de Liane', 2], ['Épines', 3], ['Étreinte Végétale', 5], ['Floraison Sauvage', 7]]),
+    skills: mkSkills([['Fouet de Liane', 2, 15], ['Épines', 3, 15], ['Étreinte Végétale', 5, 15], ['Floraison Sauvage', 7, 15]]),
     lore: "Une graine tombée au mauvais endroit, au bon moment. Bourgeonin pousse un peu plus à chaque fois qu'on le nourrit — littéralement.",
     stages: [
     { name: 'Bourgeonin', emoji: '🌱' }, { name: 'Ronceval', emoji: '🌿' }, { name: 'Florengarde', emoji: '🌺' },
   ]},
   { id: 'cailloutin', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'tank',
-    skills: mkSkills([['Coup de Boulier', 1], ['Éboulement', 2], ['Poing de Pierre', 3], ['Avalanche', 4]]),
+    skills: mkSkills([['Coup de Boulier', 1, 15], ['Éboulement', 2, 15], ['Poing de Pierre', 3, 15], ['Avalanche', 4, 15]]),
     lore: "On dit que Cailloutin était autrefois un simple caillou dans une chaussure. Aujourd'hui, ce sont les montagnes qui ont peur de lui.",
     stages: [
     { name: 'Cailloutin', emoji: '🪨' }, { name: 'Rocheval', emoji: '🗿' }, { name: 'Titanroc', emoji: '⛰️' },
   ]},
   { id: 'etincelot', element: 'Foudre', rarity: 'rare', baseIncome: 0.4, combatType: 'attaquant',
-    skills: mkSkills([['Étincelle', 9], ['Décharge', 17], ['Éclair', 26], ['Tempête Électrique', 37]]),
+    skills: mkSkills([['Étincelle', 9, 20], ['Décharge', 17, 20], ['Éclair', 26, 20], ['Tempête Électrique', 37, 20]]),
     lore: "Étincelot stocke l'électricité statique de tout ce qu'il touche. Ses câlins sont... déconseillés.",
     stages: [
     { name: 'Étincelot', emoji: '🐹' }, { name: 'Foudrepic', emoji: '🦔' }, { name: 'Fulgurionne', emoji: '⚡' },
   ]},
   { id: 'brisillon', element: 'Air', rarity: 'rare', baseIncome: 0.4, combatType: 'attaquant',
-    skills: mkSkills([['Bourrasque', 9], ['Lame de Vent', 17], ['Tourbillon', 26], ['Cyclone', 37]]),
+    skills: mkSkills([['Bourrasque', 9, 20], ['Lame de Vent', 17, 20], ['Tourbillon', 26, 20], ['Cyclone', 37, 20]]),
     lore: "Brisillon n'a jamais posé une patte au sol de sa vie. Certains prétendent qu'il est né en plein vol.",
     stages: [
     { name: 'Brisillon', emoji: '🐦' }, { name: 'Tourbillan', emoji: '🦅' }, { name: 'Zéphyrion', emoji: '🕊️' },
   ]},
   { id: 'frimouss', element: 'Eau', rarity: 'rare', baseIncome: 0.4, combatType: 'tank',
-    skills: mkSkills([['Griffe Givrée', 5], ['Souffle Glacial', 10], ['Pic de Glace', 15], ['Blizzard', 22]]),
+    skills: mkSkills([['Griffe Givrée', 5, 20], ['Souffle Glacial', 10, 20], ['Pic de Glace', 15, 20], ['Blizzard', 22, 20]]),
     lore: "Frimouss fond légèrement chaque été et regèle chaque hiver. Personne ne sait vraiment comment il survit à la saison entre les deux.",
     stages: [
     { name: 'Frimouss', emoji: '🐧' }, { name: 'Glacœur', emoji: '❄️' }, { name: 'Cristalys', emoji: '🧊' },
   ]},
   { id: 'ombrelin', element: 'Ténèbres', rarity: 'epique', baseIncome: 1.0, combatType: 'attaquant',
-    skills: mkSkills([['Griffure Furtive', 19], ["Morsure d'Ombre", 38], ['Voile Ténébreux', 57], ['Éclipse Totale', 84]]),
+    skills: mkSkills([['Griffure Furtive', 19, 30], ["Morsure d'Ombre", 38, 30], ['Voile Ténébreux', 57, 30], ['Éclipse Totale', 84, 30]]),
     lore: "Ombrelin n'existe qu'à moitié dans notre monde — l'autre moitié traîne quelque part dans l'obscurité, à observer.",
     stages: [
     { name: 'Ombrelin', emoji: '🦇' }, { name: 'Nocturval', emoji: '🦉' }, { name: 'Ténébrume', emoji: '🐺' },
   ]},
   { id: 'lumeret', element: 'Lumière', rarity: 'epique', baseIncome: 1.0, combatType: 'soutien',
-    skills: mkSkills([['Rayon', 14], ['Éclat Lumineux', 28], ['Flash Aveuglant', 42], ['Jugement Solaire', 62]]),
+    skills: mkSkills([['Rayon', 14, 30], ['Éclat Lumineux', 28, 30], ['Flash Aveuglant', 42, 30], ['Jugement Solaire', 62, 30]]),
     lore: "Lumeret brille même les yeux fermés. On raconte qu'il a été créé à partir d'un rayon de soleil égaré.",
     stages: [
-    { name: 'Lumeret', emoji: '✨' }, { name: 'Radianloup', emoji: '🦁' }, { name: 'Solarion', emoji: '☀️' },
+    { name: 'Lumeret', emoji: '✨' }, { name: 'Radianloup', emoji: '🦁' }, { name: 'Astrélios', emoji: '☀️' },
   ]},
   { id: 'gemmion', element: 'Terre', rarity: 'legendaire', baseIncome: 2.5, combatType: 'tank',
-    skills: mkSkills([['Éclat de Cristal', 24], ['Onde Prismatique', 47], ['Tir de Diamant', 71], ['Résonance Stellaire', 103]]),
+    skills: mkSkills([['Éclat de Cristal', 24, 35], ['Onde Prismatique', 47, 35], ['Tir de Diamant', 71, 35], ['Résonance Stellaire', 103, 35]]),
     lore: "Formé au cœur d'une mine oubliée depuis des siècles, Gemmion est si rare que même les légendes ne sont pas sûres qu'il existe vraiment.",
     stages: [
     { name: 'Gemmion', emoji: '💎' }, { name: 'Prismatis', emoji: '🔮' }, { name: 'Éclatoile', emoji: '⭐' },
+  ]},
+  // Première créature produite via le générateur Gemini de l'utilisateur
+  // (29/08). PV/ATQ reproduits EXACTEMENT par la formule existante
+  // (épique + attaquant), vérifié avant intégration — voir combatLogic.js.
+  // Pas de stades d'évolution dans le format Gemini pour l'instant (les 3
+  // slots répètent la même forme) : à retravailler si des évolutions
+  // distinctes sont voulues pour les prochaines créatures.
+  { id: 'solarion', element: 'Lumière', rarity: 'epique', baseIncome: 1.0, combatType: 'attaquant',
+    skills: mkSkills([
+      ['Éclat Aveuglant', 18, 30], ['Rayon Stellaire', 35, 30],
+      ["Lame de l'Aurore", 55, 30], ['Éruption Solaire', 85, 30],
+    ]),
+    lore: "Guerrier forgé dans le cœur d'une étoile mourante. Canalise les rayons solaires concentrés pour calciner ses adversaires en un instant. Son armure dorée absorbe la lumière ambiante pour amplifier sa force de frappe.",
+    stages: [
+    { name: 'Solarion', emoji: '🌟' }, { name: 'Solarion', emoji: '🌟' }, { name: 'Solarion', emoji: '🌟' },
   ]},
 ];
 

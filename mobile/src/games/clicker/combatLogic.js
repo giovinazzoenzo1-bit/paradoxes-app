@@ -13,12 +13,12 @@ import { CREATURES } from './clickerLogic';
 // comme précisé dans le prompt Gemini). "mythique" défini mais pas
 // encore utilisé par aucune créature.
 export const RARITY_BASE_STATS = {
-  commun: { hp: 10, attack: 3 },
-  peu_commun: { hp: 23, attack: 6 },
-  rare: { hp: 52, attack: 14 },
-  epique: { hp: 119, attack: 29 },
-  legendaire: { hp: 272, attack: 62 },
-  mythique: { hp: 620, attack: 132 },
+  commun: { hp: 10, attack: 3, clickSpeed: 1.0, endurance: 60 },
+  peu_commun: { hp: 23, attack: 6, clickSpeed: 1.2, endurance: 75 },
+  rare: { hp: 52, attack: 14, clickSpeed: 1.4, endurance: 95 },
+  epique: { hp: 119, attack: 29, clickSpeed: 1.8, endurance: 120 },
+  legendaire: { hp: 272, attack: 62, clickSpeed: 2.2, endurance: 150 },
+  mythique: { hp: 620, attack: 132, clickSpeed: 2.8, endurance: 190 },
 };
 
 // Stats de combat d'une créature possédée par le joueur, selon sa
@@ -30,6 +30,11 @@ export function combatStatsForCreature(creature, level) {
   return {
     hp: Math.round(base.hp * levelMult),
     attack: Math.round(base.attack * levelMult),
+    // La vitesse de clic ne monte PAS avec le niveau (sinon le défi de
+    // tap deviendrait trivial en fin de partie) — seule l'endurance suit
+    // la même progression que PV/Attaque.
+    clickSpeed: base.clickSpeed,
+    endurance: Math.round(base.endurance * levelMult),
   };
 }
 
@@ -65,6 +70,8 @@ export function opponentStatsForLevel(levelNumber) {
   return {
     hp: Math.round(base.hp * growth),
     attack: Math.round(base.attack * growth),
+    clickSpeed: base.clickSpeed,
+    endurance: Math.round(base.endurance * growth),
   };
 }
 
@@ -141,6 +148,8 @@ export function combatStatsForCreatureTyped(creature, level) {
   return {
     hp: Math.round(base.hp * typeMod.hpMult),
     attack: Math.round(base.attack * typeMod.attackMult),
+    clickSpeed: base.clickSpeed,
+    endurance: base.endurance,
   };
 }
 
@@ -153,5 +162,7 @@ export function opponentStatsForLevelTyped(levelNumber) {
   return {
     hp: Math.round(base.hp * typeMod.hpMult),
     attack: Math.round(base.attack * typeMod.attackMult),
+    clickSpeed: base.clickSpeed,
+    endurance: base.endurance,
   };
 }
