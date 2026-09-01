@@ -60,6 +60,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const challengeStartRef = useRef(0);
   const challengeDoneRef = useRef(false);
   const selectedSkillRef = useRef(null);
+  const pendingTransitionRef = useRef(null);
 
   const punchScale = useRef(new Animated.Value(1)).current;
 
@@ -154,32 +155,57 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       skillName: skill.name,
       opponentSkillName: result.dmgToPlayer > 0 ? opponentSkill.name : null,
     });
-    setPhase('resolving');
 
-    setTimeout(() => {
-      if (result.opponentHp <= 0) {
-        setOutcome('win');
-        setPhase('done');
-        return;
-      }
-      if (result.playerHp <= 0) {
-        const nextIdx = newFighters.findIndex((f) => f.hp > 0);
-        if (nextIdx === -1) {
-          setOutcome('lose');
-          setPhase('done');
-        } else {
-          activeIndexRef.current = nextIdx;
-          setActiveIndex(nextIdx);
-          setSwitchMessage(
-            `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`
-          );
-          setPhase('choosing');
-          setTimeout(() => setSwitchMessage(null), 2200);
-        }
+    // Détermine IMMÉDIATEMENT ce qui doit se passer ensuite (victoire /
+    // défaite / changement de combattant / tour suivant), mais ne
+    // l'applique PAS tout de suite — attend un tap explicite du joueur sur
+    // "Continuer" plutôt qu'un minuteur automatique. Avant, un
+    // setTimeout(…, 1200) déclenchait la suite tout seul ; si quoi que ce
+    // soit l'interrompait (changement de phase pendant l'attente,
+    // comportement JS en arrière-plan…), le combat restait bloqué en
+    // phase "resolving" pour toujours — correspond exactement au bug
+    // remonté ("le combat s'arrête avant que la barre de PV soit à
+    // zéro"). Un bouton explicite élimine toute cette classe de bug.
+    if (result.opponentHp <= 0) {
+      pendingTransitionRef.current = { type: 'win' };
+    } else if (result.playerHp <= 0) {
+      const nextIdx = newFighters.findIndex((f) => f.hp > 0);
+      if (nextIdx === -1) {
+        pendingTransitionRef.current = { type: 'lose' };
       } else {
-        setPhase('choosing');
+        pendingTransitionRef.current = {
+          type: 'switch',
+          nextIdx,
+          message: `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`,
+        };
       }
-    }, 1200);
+    } else {
+      pendingTransitionRef.current = { type: 'continue' };
+    }
+    setPhase('resolving');
+  };
+
+  // Applique la transition calculée dans finishChallenge — déclenché par
+  // le bouton "Continuer", jamais automatiquement.
+  const confirmContinue = () => {
+    const t = pendingTransitionRef.current;
+    if (!t) return;
+    if (t.type === 'win') {
+      setOutcome('win');
+      setPhase('done');
+    } else if (t.type === 'lose') {
+      setOutcome('lose');
+      setPhase('done');
+    } else if (t.type === 'switch') {
+      activeIndexRef.current = t.nextIdx;
+      setActiveIndex(t.nextIdx);
+      setSwitchMessage(t.message);
+      setPhase('choosing');
+      setTimeout(() => setSwitchMessage(null), 2200);
+    } else {
+      setPhase('choosing');
+    }
+    pendingTransitionRef.current = null;
   };
 
   if (phase === 'done') {
@@ -302,7 +328,11 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           </>
         )}
 
-        {phase === 'resolving' && <Text style={styles.resolvingText}>...</Text>}
+        {phase === 'resolving' && (
+          <TouchableOpacity style={styles.continueBtn} onPress={confirmContinue}>
+            <Text style={styles.continueBtnText}>Continuer →</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -388,7 +418,11 @@ const styles = StyleSheet.create({
   timeTrack: { width: 220, height: 8, borderRadius: 4, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 10 },
   timeFill: { height: '100%', backgroundColor: COLORS.neonCyan, borderRadius: 4 },
 
-  resolvingText: { color: COLORS.muted, fontSize: 30, fontWeight: '900' },
+  continueBtn: {
+    backgroundColor: COLORS.action, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 36,
+    shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
+  },
+  continueBtnText: { color: '#241a00', fontSize: 15, fontWeight: '900' },
 
   resultEmoji: { fontSize: 80 },
   resultTitle: { fontSize: 26, fontWeight: '900', marginTop: 10 },
