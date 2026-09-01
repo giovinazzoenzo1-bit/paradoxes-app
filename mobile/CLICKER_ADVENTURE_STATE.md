@@ -38,7 +38,7 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Quêtes | Collection
 
 ## Créatures — schéma de données actuel
 
-11 créatures dans `CREATURES` (10 d'origine + Solarion, la 1ère créature générée via le générateur Gemini de l'utilisateur). Champs d'une entrée :
+11 créatures dans `CREATURES` — le roster d'origine est en cours de remplacement progressif par des créatures générées via Gemini (l'utilisateur colle une réponse à la fois, je remplace la créature correspondante). Déjà remplacées : **pyrosile** (ex-braisillon, commun/feu/attaquant). Champs d'une entrée :
 
 ```js
 {
@@ -80,7 +80,10 @@ RARITY_BASE_STATS = {
   mythique:   { hp: 620, attack: 132, clickSpeed: 2.8, endurance: 190 },
 }
 ```
-Calibré pour reproduire EXACTEMENT les stats du 1er monstre Gemini (Solarion, Épique/Attaquant, PV95/ATQ38/vitesse1.8/endurance120) — vérifié par test. **Si Gemini donne maintenant ses propres stats à chaque créature** (voir section Workflow Gemini plus bas), ces valeurs deviennent une référence/garde-fou plutôt qu'une formule imposée — voir "Point ouvert" en bas de fichier.
+Cette formule ne sert plus QUE de repli pour les créatures qui n'ont pas encore de stats explicites — **depuis Pyrosile (29/08), le système préfère les stats propres à chaque créature** quand elles existent (voir section Workflow Gemini plus bas). Calibrée à l'origine pour reproduire les stats de Solarion (le 1er monstre Gemini) — toujours vraie pour lui puisqu'il n'a pas de champs `baseHp` explicites (repose encore sur cette formule).
+
+### Stats propres à une créature (remplacent la formule par rareté)
+Champs optionnels sur une entrée de `CREATURES` : `baseHp`, `baseAttack`, `baseClickSpeed`, `baseEndurance`. **S'ils existent, `combatStatsForCreature`/`combatStatsForCreatureTyped`/`opponentStatsForLevel`/`opponentStatsForLevelTyped` les utilisent directement**, SANS appliquer le multiplicateur de rôle (`MONSTER_TYPES`) par-dessus — Gemini a déjà le rôle en tête au moment de choisir ses chiffres, l'appliquer une 2e fois fausserait tout. Seule la croissance par niveau (`levelMult`/`growth`) continue de s'appliquer sur ces stats de base.
 
 ### Modificateurs par rôle de combat
 ```
@@ -155,7 +158,7 @@ ATTAQUE4: [nom] | [dégâts] | [coût endurance]
 
 ## Points ouverts / pas encore tranchés
 
-- **Validation des stats Gemini** : l'utilisateur a demandé un système où Gemini fournit les stats (variété créative) mais où je les valide contre une fourchette raisonnable (±30% autour de ma formule) plutôt que les accepter en silence. **Pas encore codé** — à faire dès qu'un monstre avec stats explicites arrive.
+- **Validation des stats Gemini** : le système accepte maintenant les stats explicites par créature (`baseHp` etc., voir section dédiée plus haut), mais **aucun garde-fou de cohérence n'est codé** — l'utilisateur avait demandé une validation contre une fourchette raisonnable (±30% autour de la formule par rareté) plutôt qu'une acceptation silencieuse. Écart déjà repéré une fois (Pyrosile : endurance 100 donnée par Gemini vs 60 attendu par la formule, +67%, signalé à l'utilisateur mais pas bloqué). Toujours pas de garde-fou automatique — à construire si les écarts deviennent fréquents ou gênants.
 - **Boutique pour dépenser les Griffes** au-delà de l'évolution — pas construite.
 - **"Peu commun" et "Mythique"** : toujours aucune créature classée dedans.
 - **Stats inter-jeux** (pour débloquer les quêtes liées aux autres jeux de l'appli comme Puissance 4) — brique technique jamais commencée.
