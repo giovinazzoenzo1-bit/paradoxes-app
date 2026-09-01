@@ -522,7 +522,7 @@ export default function ClickerScreen({ onBack }) {
       if (existing) {
         return prev.map((o) => (o.id === creature.id ? { ...o, level: o.level + 1 } : o));
       }
-      return [...prev, { id: creature.id, level: 1 }];
+      return [...prev, { id: creature.id, level: 1, evolutionTier: 0 }];
     });
   };
 
@@ -643,11 +643,19 @@ export default function ClickerScreen({ onBack }) {
     );
   }
 
+  // Fait passer une créature possédée à un nouveau palier d'évolution —
+  // appelé depuis AdventureScreen (qui a déjà vérifié le niveau requis et
+  // débité les Griffes de son côté ; ici on ne fait que persister le
+  // nouveau palier sur la collection du clicker).
+  const handleEvolveCreature = (creatureId, newTier) => {
+    setOwned((prev) => prev.map((o) => (o.id === creatureId ? { ...o, evolutionTier: newTier } : o)));
+  };
+
   // L'Aventure est un écran à part entière (son propre header, sa propre
   // barre du bas) — pas juste une "vue" de plus parmi tap/shop/quests/
   // collection, pour éviter d'empiler deux headers et deux barres de nav.
   if (view === 'adventure') {
-    return <AdventureScreen owned={owned} deck={deck} onBack={() => setView('tap')} />;
+    return <AdventureScreen owned={owned} deck={deck} onBack={() => setView('tap')} onEvolveCreature={handleEvolveCreature} />;
   }
 
   return (

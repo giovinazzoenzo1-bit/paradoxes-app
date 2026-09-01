@@ -16,6 +16,8 @@ import {
   LEVELS_PER_CHAPTER,
   opponentForLevel,
   griffesReward,
+  canEvolve,
+  evolutionCost,
 } from '../../games/clicker/combatLogic';
 
 // Sauvegarde séparée de celle du clicker classique — la progression
@@ -23,7 +25,7 @@ import {
 // la peine d'alourdir davantage la sauvegarde déjà volumineuse du clicker.
 const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
 
-export default function AdventureScreen({ owned, deck, onBack }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature }) {
   const [detailCreatureId, setDetailCreatureId] = useState(null);
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
   const [currentUnlockedLevel, setCurrentUnlockedLevel] = useState(1);
@@ -66,6 +68,19 @@ export default function AdventureScreen({ owned, deck, onBack }) {
     }
   };
 
+  // Fait évoluer une créature d'un palier : vérifie l'éligibilité et le
+  // coût ICI (Griffes vivent dans cet écran), débite localement, puis
+  // remonte au clicker (via onEvolveCreature) pour persister le nouveau
+  // palier sur owned — l'évolution touche la collection du clicker, pas
+  // seulement l'état de l'écran Aventure.
+  const handleEvolve = (creatureId, currentTier, ownedLevel) => {
+    if (!canEvolve(currentTier, ownedLevel)) return;
+    const cost = evolutionCost(currentTier);
+    if (griffes < cost) return;
+    setGriffes((g) => g - cost);
+    onEvolveCreature(creatureId, currentTier + 1);
+  };
+
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
 
@@ -79,6 +94,8 @@ export default function AdventureScreen({ owned, deck, onBack }) {
       <CreatureDetailScreen
         creature={CREATURES.find((c) => c.id === detailCreatureId)}
         owned={ownedMap[detailCreatureId]}
+        griffes={griffes}
+        onEvolve={() => handleEvolve(detailCreatureId, ownedMap[detailCreatureId].evolutionTier || 0, ownedMap[detailCreatureId].level)}
         onBack={() => setDetailCreatureId(null)}
       />
     );
@@ -160,11 +177,45 @@ export default function AdventureScreen({ owned, deck, onBack }) {
 // Legends fourni en référence : portrait, stats de combat, compétence,
 // histoire. Les stats viennent de combatLogic.js (étape 1) — première
 // fois que cette logique sert réellement à quelque chose de visible.
-function CreatureDetailScreen({ creature, owned, onBack }) {
+// Carte d'évolution : palier actuel (★★★), et si éligible (niveau
+// suffisant), un bouton pour dépenser les Griffes et débloquer le
+// palier suivant — pas de changement de nom, juste un boost de PV/ATQ/
+// Endurance (contrairement aux 10 créatures d'origine avec 3 noms/
+// dessins distincts par stade évolutif).
+function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
+  const maxed = evolutionTier >= 2;
+  const eligible = !maxed && canEvolve(evolutionTier, ownedLevel);
+  const cost = maxed ? null : evolutionCost(evolutionTier);
+  const nextLevelNeeded = maxed ? null : (evolutionTier === 0 ? 25 : 50);
+
+  return (
+    <View style={styles.sectionCard}>
+      <Text style={styles.sectionTitle}>🌟 Évolution</Text>
+      <Text style={styles.sectionBody}>Palier actuel : {'★'.repeat(evolutionTier + 1)}{'☆'.repeat(2 - evolutionTier)}</Text>
+      {maxed ? (
+        <Text style={[styles.speciesNote, { marginTop: 8 }]}>Palier maximum atteint.</Text>
+      ) : eligible ? (
+        <TouchableOpacity
+          style={[styles.startBattleBtn, griffes < cost && styles.actionBtnDisabledAdv]}
+          onPress={onEvolve}
+          disabled={griffes < cost}
+        >
+          <Text style={styles.startBattleBtnText}>Évoluer — {cost} 🐾 Griffes</Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={[styles.speciesNote, { marginTop: 8 }]}>Atteins le niveau {nextLevelNeeded} pour débloquer ce palier.</Text>
+      )}
+    </View>
+  );
+}
+
+
+function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onBack }) {
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
   const baseName = creature.stages[0].name; // nom de base, pour clarifier le lien avec l'histoire
-  const stats = combatStatsForCreatureTyped(creature, owned.level);
+  const evolutionTier = owned.evolutionTier || 0;
+  const stats = combatStatsForCreatureTyped(creature, owned.level, evolutionTier);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 30 }}>
@@ -215,6 +266,8 @@ function CreatureDetailScreen({ creature, owned, onBack }) {
         </View>
       </View>
 
+      <EvolutionCard evolutionTier={evolutionTier} ownedLevel={owned.level} griffes={griffes} onEvolve={onEvolve} />
+
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>⚔️ Attaques</Text>
         {creature.skills.map((skill) => (
@@ -243,17 +296,23 @@ function CreatureDetailScreen({ creature, owned, onBack }) {
 // un aperçu de l'adversaire, mais le vrai combat reste à coder (étape 5).
 function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelWon, onBack }) {
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
-  const [activeBattle, setActiveBattle] = useState(null); // { levelNumber, creatureId } ou null
+  const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
 
   // Combat en cours — retour anticipé, même schéma que le reste de
-  // l'écran Aventure.
+  // l'écran Aventure. L'équipe entière (les 3 créatures du deck, dans
+  // l'ordre) combat à tour de rôle — plus de sélection d'une seule
+  // créature avant le combat.
   if (activeBattle) {
-    const ownedEntry = owned.find((o) => o.id === activeBattle.creatureId);
-    const creature = CREATURES.find((c) => c.id === activeBattle.creatureId);
+    const team = deck
+      .filter((id) => id)
+      .map((id) => ({
+        creature: CREATURES.find((c) => c.id === id),
+        ownedLevel: owned.find((o) => o.id === id).level,
+        evolutionTier: owned.find((o) => o.id === id).evolutionTier || 0,
+      }));
     return (
       <CombatScreen
-        playerCreature={creature}
-        playerOwnedLevel={ownedEntry.level}
+        team={team}
         levelNumber={activeBattle.levelNumber}
         onFinish={(outcome) => {
           if (outcome === 'win') {
@@ -325,21 +384,22 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
           owned={owned}
           deck={deck}
           onClose={() => setLevelPreview(null)}
-          onSelect={(creatureId) => setActiveBattle({ levelNumber: levelPreview, creatureId })}
+          onStart={() => setActiveBattle({ levelNumber: levelPreview })}
         />
       )}
     </View>
   );
 }
 
-// Choix du combattant avant de lancer le combat — limité aux 3 créatures
-// du deck (même roster que le reste du mode Aventure, pas de sélection
-// séparée à gérer). Montre déjà l'adversaire qui attend.
-function FighterSelectOverlay({ levelNumber, owned, deck, onClose, onSelect }) {
+// Aperçu avant combat — montre l'adversaire ET toute l'équipe qui va se
+// battre (les 3 créatures du deck, à tour de rôle si l'une tombe). Plus
+// de choix d'une seule créature : toute l'équipe part au combat.
+function FighterSelectOverlay({ levelNumber, owned, deck, onClose, onStart }) {
   const opponent = opponentForLevel(levelNumber);
   const display = opponent.stages[0];
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
+  const teamCount = deck.filter((id) => id).length;
 
   return (
     <View style={styles.overlay}>
@@ -355,28 +415,32 @@ function FighterSelectOverlay({ levelNumber, owned, deck, onClose, onSelect }) {
           Adversaire : {display.name}
         </Text>
 
-        <Text style={[styles.overlaySubtitle, { marginTop: 14, marginBottom: 8 }]}>Choisis ton combattant :</Text>
+        <Text style={[styles.overlaySubtitle, { marginTop: 14, marginBottom: 8 }]}>Ton équipe (à tour de rôle) :</Text>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {deck.map((id, i) => {
             const creature = id ? CREATURES.find((c) => c.id === id) : null;
             const own = id ? ownedMap[id] : null;
             const fighterDisplay = creature && own ? creature.stages[stageForLevel(own.level)] : null;
             return (
-              <TouchableOpacity
-                key={i}
-                style={[styles.fighterPick, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
-                onPress={() => creature && onSelect(id)}
-                disabled={!creature}
-              >
+              <View key={i} style={[styles.fighterPick, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}>
                 {fighterDisplay ? (
                   <Text style={{ fontSize: 30 }}>{fighterDisplay.emoji}</Text>
                 ) : (
                   <Text style={{ fontSize: 24, opacity: 0.3 }}>🥚</Text>
                 )}
-              </TouchableOpacity>
+              </View>
             );
           })}
         </View>
+
+        <TouchableOpacity
+          style={[styles.startBattleBtn, teamCount === 0 && styles.actionBtnDisabledAdv]}
+          onPress={onStart}
+          disabled={teamCount === 0}
+        >
+          <Text style={styles.startBattleBtnText}>{teamCount > 0 ? '⚔️ Combattre' : 'Deck vide'}</Text>
+        </TouchableOpacity>
+
       </View>
     </View>
   );
@@ -440,6 +504,12 @@ const styles = StyleSheet.create({
     width: 56, height: 56, borderRadius: 14, backgroundColor: COLORS.bg,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
   },
+  startBattleBtn: {
+    backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 30, marginTop: 20,
+    shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
+  },
+  startBattleBtnText: { color: '#241a00', fontSize: 15, fontWeight: '900' },
+  actionBtnDisabledAdv: { opacity: 0.4 },
 
   detailPortraitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 10, marginBottom: 20 },
   rarityBadgeColumn: { alignItems: 'center' },

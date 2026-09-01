@@ -76,7 +76,10 @@ export function opponentStatsForLevel(levelNumber) {
 }
 
 // ---- Défi de tap (attaque du joueur) ----
-export const TAP_CHALLENGE_COUNT = 50;
+// 25 pour l'instant (au lieu de 50) — demande explicite pour la phase de
+// développement, plus rapide à tester en boucle. À remonter à 50 si
+// besoin une fois l'équilibrage validé.
+export const TAP_CHALLENGE_COUNT = 25;
 export const TAP_CHALLENGE_TIME_LIMIT_SEC = 12; // fenêtre pour compléter les 50 taps
 export const TAP_CHALLENGE_FAST_THRESHOLD_SEC = 4; // en dessous = multiplicateur max
 export const TAP_CHALLENGE_MIN_MULTIPLIER = 1; // complété mais lentement
@@ -128,6 +131,26 @@ export function griffesReward(levelNumber) {
   return 5 + Math.floor(levelNumber * 1.5);
 }
 
+// ---- Évolution par palier (créatures au format Gemini, SANS changement
+// de nom — contrairement aux 10 créatures d'origine qui ont 3 noms/
+// dessins distincts par stade). Contrairement au niveau (qui monte en
+// nourrissant avec des pièces), l'évolution est un choix DÉLIBÉRÉ du
+// joueur, débloqué par le niveau ET payé en Griffes gagnées au combat
+// (et plus tard via certaines quêtes) — pas automatique.
+export const EVOLUTION_LEVEL_REQUIREMENT = [0, 25, 50]; // niveau requis pour le palier 1, 2
+export const EVOLUTION_STAT_MULTIPLIER = [1.0, 1.3, 1.7]; // boost de PV/ATQ/Endurance par palier
+export const EVOLUTION_GRIFFES_COST = [0, 40, 100]; // coût en Griffes pour débloquer le palier
+
+export function canEvolve(currentTier, ownedLevel) {
+  const nextTier = currentTier + 1;
+  if (nextTier > 2) return false;
+  return ownedLevel >= EVOLUTION_LEVEL_REQUIREMENT[nextTier];
+}
+export function evolutionCost(currentTier) {
+  const nextTier = currentTier + 1;
+  return nextTier > 2 ? null : EVOLUTION_GRIFFES_COST[nextTier];
+}
+
 // ---- Type de monstre (Attaquant / Soutien / Tank) ----
 // Chaque créature a maintenant, en plus de sa rareté, un TYPE de combat
 // qui modifie ses stats de base : le Tank encaisse plus mais frappe
@@ -142,14 +165,18 @@ export const MONSTER_TYPES = {
 // Version de combatStatsForCreature qui applique EN PLUS le modificateur
 // du type — remplace l'ancienne fonction dans les nouveaux usages (le
 // choix du type se fait maintenant par créature, pas par rareté seule).
-export function combatStatsForCreatureTyped(creature, level) {
+export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0) {
   const base = combatStatsForCreature(creature, level);
   const typeMod = MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant;
+  const evoMult = EVOLUTION_STAT_MULTIPLIER[evolutionTier] || 1;
   return {
-    hp: Math.round(base.hp * typeMod.hpMult),
-    attack: Math.round(base.attack * typeMod.attackMult),
+    hp: Math.round(base.hp * typeMod.hpMult * evoMult),
+    attack: Math.round(base.attack * typeMod.attackMult * evoMult),
+    // La vitesse de clic n'est jamais boostée par l'évolution — le défi
+    // de tap ne doit pas devenir plus dur à réussir en évoluant, seule
+    // la PUISSANCE des attaques doit grandir.
     clickSpeed: base.clickSpeed,
-    endurance: base.endurance,
+    endurance: Math.round(base.endurance * evoMult),
   };
 }
 
