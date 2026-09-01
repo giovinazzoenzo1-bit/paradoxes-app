@@ -1164,3 +1164,29 @@ aux styles/composants supprimés, logique de sauvegarde/chargement
 totalement intacte (refonte purement visuelle, aucun changement du
 modèle de données), cycle complet d'apparition/réclamation de la bulle
 rituel testé.
+
+## Clicker : bouton boutique trop petit + passe design "Juicy" (29/08, suite)
+**Correctif** : les prix au-delà de 1000 semblaient invisibles dans la
+boutique d'auto-clics. Audit complet — `formatNum()` (déjà en place,
+produit "1.0K"/"130.0K"/"1.00M") était bien utilisé partout, le vrai
+problème était la taille du bouton lui-même, trop étroit pour afficher
+proprement 5-6 caractères. Corrigé : `minWidth` ajouté, padding/police
+légèrement agrandis, `numberOfLines={1}` en garantie dure contre tout
+retour à la ligne.
+
+**Passe de design "Juicy Contrastes Extrêmes"** (partielle, comme
+demandé — éléments d'action clés, pas toute l'interface) :
+- Fond assombri vers un vrai bleu-violet abysse (`bg: #07051a`,
+  `panel: #171331`), palette enrichie de `neonPink`/`neonCyan`
+- Lueur néon (glow) ajoutée sur les boutons Invoquer/Ascension/Offrande/
+  achat boutique, assortie à la couleur de bordure de chacun — ils avaient
+  déjà des bordures colorées mais aucune lueur, ce qui les faisait
+  paraître plats à côté du bouton de tap (qui avait déjà un glow doré)
+- Icône active de la barre du bas : pastille lumineuse derrière l'icône
+  plutôt qu'un simple changement de teinte, lisible d'un coup d'œil
+- Montant de pièces : légère lueur textuelle assortie
+
+Toutes les couleurs passaient déjà par `COLORS.*` (aucune couleur codée
+en dur trouvée à l'audit), donc le changement de palette se propage
+automatiquement partout dans l'écran sans édition supplémentaire
+nécessaire.
