@@ -89,11 +89,15 @@ Chaque étape doit être testable/livrable indépendamment, comme pour
 toutes les fonctionnalités précédentes du clicker — pas de gros bloc
 monolithique d'un coup.
 
-1. **Logique pure de combat** (`combatLogic.js`, façon `clickerLogic.js`)
+1. ✅ **Logique pure de combat** (`combatLogic.js`, façon `clickerLogic.js`)
    — formules de PV/Attaque par rareté+niveau, formule du multiplicateur
    de dégâts selon la vitesse des 50 taps, schéma de numérotation
    chapitre/niveau, mise à l'échelle des stats adverses par niveau.
    Rien à l'écran encore, juste des fonctions testables.
+   **FAIT** (29/08) — `mobile/src/games/clicker/combatLogic.js`, testé
+   de bout en bout (stats, chapitres, adversaires déterministes,
+   multiplicateur de vitesse, résolution de tours, combat complet
+   simulé jusqu'à victoire).
 2. **Écran principal Aventure** — remplace le placeholder "bientôt
    disponible" actuel (déclenché depuis la barre du bas). Affiche les 3
    créatures du deck + la barre du bas avec "Mode Combat des chapitres"
