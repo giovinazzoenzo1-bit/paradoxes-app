@@ -109,10 +109,18 @@ monolithique d'un coup.
    Clic sur une créature = aperçu léger (pas encore la fiche complète,
    c'est l'étape 3). Palette `COLORS` extraite dans `clickerTheme.js`
    pour éviter un import circulaire entre les deux écrans.
-3. **Page détail créature** — ouverte au clic sur une des 3. Surtout de
+3. ✅ **Page détail créature** — ouverte au clic sur une des 3. Surtout de
    l'affichage, réutilise les données déjà existantes (roster, niveau,
    rareté). Compétences peuvent rester un placeholder "à venir" à cette
    étape si pas encore tranché.
+   **FAIT** (29/08) — `CreatureDetailScreen` dans `AdventureScreen.js`,
+   vrai écran (pas un overlay), navigué par retour anticipé. Contient :
+   portrait, rareté/famille, stats de combat (Force/Vie, via
+   `combatStatsForCreature` — 1ère utilisation réelle de l'étape 1),
+   Compétence (réutilise le pouvoir de bulle déjà existant, décision
+   prise plutôt que d'inventer de nouvelles compétences de combat), et
+   une histoire courte ajoutée à chacune des 10 créatures dans
+   `clickerLogic.js` (n'existait pas avant).
 4. **Carte des chapitres/niveaux** (le sentier façon Monster Legends) —
    uniquement la structure visuelle de progression (niveaux
    verrouillés/débloqués/complétés), sans le vrai combat derrière —
