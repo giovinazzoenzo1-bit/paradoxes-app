@@ -1,17 +1,55 @@
 // Écran principal du mode Aventure. Voir mobile/ADVENTURE_MODE.md pour
-// le design complet et l'ordre de construction — ceci est l'étape 2
-// (affichage seulement, le vrai combat et la fiche créature détaillée
-// arrivent aux étapes suivantes).
-import React, { useState } from 'react';
+// le design complet et l'ordre de construction — ceci ajoute l'étape 4
+// (carte des chapitres/niveaux, structure visuelle seulement, le vrai
+// combat derrière chaque niveau arrive à l'étape 5).
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
 import { CREATURES, RARITY_LABEL, RARITY_COLOR, stageForLevel, CREATURE_POWERS } from '../../games/clicker/clickerLogic';
-import { combatStatsForCreature } from '../../games/clicker/combatLogic';
+import {
+  combatStatsForCreature,
+  chapterForLevel,
+  levelIndexInChapter,
+  LEVELS_PER_CHAPTER,
+  opponentForLevel,
+} from '../../games/clicker/combatLogic';
+
+// Sauvegarde séparée de celle du clicker classique — la progression
+// d'Aventure grossira avec le temps (niveaux, ressource Griffes...), pas
+// la peine d'alourdir davantage la sauvegarde déjà volumineuse du clicker.
+const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
 
 export default function AdventureScreen({ owned, deck, onBack }) {
   const [detailCreatureId, setDetailCreatureId] = useState(null);
-  const [combatComingSoon, setCombatComingSoon] = useState(false);
+  const [chapterMapOpen, setChapterMapOpen] = useState(false);
+  const [currentUnlockedLevel, setCurrentUnlockedLevel] = useState(1);
+  const [progressLoaded, setProgressLoaded] = useState(false);
+  const currentUnlockedLevelRef = useRef(1);
+  currentUnlockedLevelRef.current = currentUnlockedLevel;
+
+  // Chargement de la progression au montage.
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(ADVENTURE_STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          setCurrentUnlockedLevel(saved.currentUnlockedLevel || 1);
+        }
+      } catch (e) {
+        // pas de sauvegarde valide, on démarre au niveau 1
+      }
+      setProgressLoaded(true);
+    })();
+  }, []);
+
+  // Sauvegarde à chaque changement (léger, un seul nombre pour l'instant).
+  useEffect(() => {
+    if (!progressLoaded) return;
+    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel }));
+  }, [currentUnlockedLevel, progressLoaded]);
 
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
@@ -29,6 +67,11 @@ export default function AdventureScreen({ owned, deck, onBack }) {
         onBack={() => setDetailCreatureId(null)}
       />
     );
+  }
+
+  // Carte des chapitres — même schéma de retour anticipé.
+  if (chapterMapOpen) {
+    return <ChapterMapScreen currentUnlockedLevel={currentUnlockedLevel} onBack={() => setChapterMapOpen(false)} />;
   }
 
   return (
@@ -80,26 +123,11 @@ export default function AdventureScreen({ owned, deck, onBack }) {
       {/* Barre du bas dédiée à l'Aventure — pour les futurs modes de jeu
           qu'on ajoutera avec le temps. Un seul item pour l'instant. */}
       <View style={styles.subBar}>
-        <TouchableOpacity style={styles.subBarItem} onPress={() => setCombatComingSoon(true)}>
+        <TouchableOpacity style={styles.subBarItem} onPress={() => setChapterMapOpen(true)}>
           <Ionicons name="map" size={24} color={COLORS.action} />
           <Text style={styles.subBarLabel}>Mode Combat</Text>
         </TouchableOpacity>
       </View>
-
-      {combatComingSoon && (
-        <View style={styles.overlay}>
-          <View style={styles.overlayPanel}>
-            <TouchableOpacity style={styles.overlayClose} onPress={() => setCombatComingSoon(false)}>
-              <Text style={styles.overlayCloseText}>✕</Text>
-            </TouchableOpacity>
-            <Ionicons name="map" size={40} color={COLORS.action} />
-            <Text style={styles.overlayTitle}>Mode Combat des chapitres</Text>
-            <Text style={styles.overlaySubtitle}>
-              Bientôt disponible — une carte de niveaux organisés en chapitres, avec des adversaires de plus en plus forts.
-            </Text>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
@@ -157,6 +185,99 @@ function CreatureDetailScreen({ creature, owned, onBack }) {
   );
 }
 
+// Carte des chapitres/niveaux, façon Monster Legends (capture de
+// référence fournie) — sentier en zigzag plutôt qu'une vraie courbe SVG
+// (plus simple et robuste en React Native, même effet de progression
+// visuelle). Structure uniquement à cette étape : taper un niveau montre
+// un aperçu de l'adversaire, mais le vrai combat reste à coder (étape 5).
+function ChapterMapScreen({ currentUnlockedLevel, onBack }) {
+  const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
+
+  // Affiche le chapitre en cours + 2 chapitres suivants (verrouillés,
+  // pour montrer qu'il y a une suite) plutôt que de générer une liste
+  // potentiellement infinie d'un coup.
+  const currentChapter = chapterForLevel(currentUnlockedLevel);
+  const chaptersToShow = currentChapter + 2;
+
+  return (
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>← Retour</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>⚔️ Chapitres</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+        {Array.from({ length: chaptersToShow }, (_, chapterIdx) => chapterIdx + 1).map((chapterNum) => (
+          <View key={chapterNum} style={styles.chapterBlock}>
+            <Text style={styles.chapterTitle}>Chapitre {chapterNum}</Text>
+            <View style={styles.chapterPath}>
+              {Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) => (chapterNum - 1) * LEVELS_PER_CHAPTER + i + 1).map(
+                (levelNum, i) => {
+                  const align = i % 3 === 0 ? 'flex-start' : i % 3 === 1 ? 'center' : 'flex-end';
+                  const state = levelNum < currentUnlockedLevel ? 'done' : levelNum === currentUnlockedLevel ? 'current' : 'locked';
+                  return (
+                    <View key={levelNum} style={[styles.levelNodeRow, { alignItems: align === 'flex-start' ? 'flex-start' : align === 'flex-end' ? 'flex-end' : 'center' }]}>
+                      <TouchableOpacity
+                        style={[
+                          styles.levelNode,
+                          state === 'current' && styles.levelNodeCurrent,
+                          state === 'done' && styles.levelNodeDone,
+                        ]}
+                        onPress={() => state !== 'locked' && setLevelPreview(levelNum)}
+                        disabled={state === 'locked'}
+                      >
+                        {state === 'locked' ? (
+                          <Ionicons name="lock-closed" size={16} color={COLORS.muted} />
+                        ) : state === 'done' ? (
+                          <Ionicons name="checkmark" size={20} color="#0a3d24" />
+                        ) : (
+                          <Text style={styles.levelNodeText}>{levelIndexInChapter(levelNum)}</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  );
+                }
+              )}
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+
+      {levelPreview && (
+        <LevelPreviewOverlay levelNumber={levelPreview} onClose={() => setLevelPreview(null)} />
+      )}
+    </View>
+  );
+}
+
+// Aperçu d'un niveau au clic — montre déjà l'adversaire qui attend (via
+// opponentForLevel, étape 1), mais le vrai combat n'est pas encore câblé.
+function LevelPreviewOverlay({ levelNumber, onClose }) {
+  const opponent = opponentForLevel(levelNumber);
+  const display = opponent.stages[0];
+  return (
+    <View style={styles.overlay}>
+      <View style={styles.overlayPanel}>
+        <TouchableOpacity style={styles.overlayClose} onPress={onClose}>
+          <Text style={styles.overlayCloseText}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.overlayTitle}>
+          Chapitre {chapterForLevel(levelNumber)} · Niveau {levelIndexInChapter(levelNumber)}
+        </Text>
+        <Text style={{ fontSize: 60, marginVertical: 10 }}>{display.emoji}</Text>
+        <Text style={[styles.overlaySubtitle, { color: RARITY_COLOR[opponent.rarity] }]}>
+          Adversaire : {display.name}
+        </Text>
+        <Text style={[styles.overlaySubtitle, { marginTop: 10 }]}>
+          Le combat en lui-même arrive bientôt.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
@@ -194,6 +315,21 @@ const styles = StyleSheet.create({
   overlayCloseText: { color: COLORS.muted, fontSize: 18, fontWeight: '900' },
   overlayTitle: { color: COLORS.text, fontSize: 18, fontWeight: '900', marginTop: 10, textAlign: 'center' },
   overlaySubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 6, textAlign: 'center' },
+
+  chapterBlock: { marginBottom: 28 },
+  chapterTitle: { color: COLORS.action, fontSize: 15, fontWeight: '900', marginBottom: 14, textAlign: 'center' },
+  chapterPath: { width: '100%' },
+  levelNodeRow: { width: '100%', paddingHorizontal: 20, marginVertical: 4 },
+  levelNode: {
+    width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.panel,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
+  },
+  levelNodeCurrent: {
+    borderColor: COLORS.action, backgroundColor: 'rgba(245,197,66,0.15)',
+    shadowColor: COLORS.action, shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
+  },
+  levelNodeDone: { borderColor: COLORS.good, backgroundColor: COLORS.good },
+  levelNodeText: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
 
   detailPortrait: { alignItems: 'center', marginTop: 10, marginBottom: 20 },
   detailEmoji: { fontSize: 90 },
