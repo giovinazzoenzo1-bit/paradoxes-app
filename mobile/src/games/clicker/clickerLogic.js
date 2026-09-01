@@ -110,9 +110,14 @@ export const RARITY_LABEL = {
   commun: 'Commun', peu_commun: 'Peu commun', rare: 'Rare',
   epique: 'Épique', legendaire: 'Légendaire', mythique: 'Mythique',
 };
+// Couleurs et lettres réalignées sur le style Monster Legends (capture
+// de référence fournie par l'utilisateur : badges ronds C/UC/R/E/L/M).
 export const RARITY_COLOR = {
-  commun: '#9088b8', peu_commun: '#6bcf7f', rare: '#3ec6f0',
-  epique: '#b96bff', legendaire: '#f5c542', mythique: '#ff2d55',
+  commun: '#e8b923', peu_commun: '#a67c3d', rare: '#d0342c',
+  epique: '#4caf50', legendaire: '#9b4fd6', mythique: '#ff8c00',
+};
+export const RARITY_BADGE_LETTER = {
+  commun: 'C', peu_commun: 'UC', rare: 'R', epique: 'E', legendaire: 'L', mythique: 'M',
 };
 
 export const EVOLUTION_LEVELS = [1, 5, 15]; // niveau à partir duquel chaque stade s'active

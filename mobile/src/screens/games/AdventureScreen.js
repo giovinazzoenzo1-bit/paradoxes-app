@@ -8,9 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
 import CombatScreen from './CombatScreen';
-import { CREATURES, RARITY_LABEL, RARITY_COLOR, stageForLevel, CREATURE_POWERS } from '../../games/clicker/clickerLogic';
+import { CREATURES, RARITY_LABEL, RARITY_COLOR, RARITY_BADGE_LETTER, stageForLevel } from '../../games/clicker/clickerLogic';
 import {
-  combatStatsForCreature,
+  combatStatsForCreatureTyped,
   chapterForLevel,
   levelIndexInChapter,
   LEVELS_PER_CHAPTER,
@@ -163,8 +163,8 @@ export default function AdventureScreen({ owned, deck, onBack }) {
 function CreatureDetailScreen({ creature, owned, onBack }) {
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
-  const stats = combatStatsForCreature(creature, owned.level);
-  const power = CREATURE_POWERS[creature.id];
+  const baseName = creature.stages[0].name; // nom de base, pour clarifier le lien avec l'histoire
+  const stats = combatStatsForCreatureTyped(creature, owned.level);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 30 }}>
@@ -175,34 +175,61 @@ function CreatureDetailScreen({ creature, owned, onBack }) {
         <Text style={styles.title}>{display.name}</Text>
       </View>
 
-      <View style={styles.detailPortrait}>
-        <Text style={styles.detailEmoji}>{display.emoji}</Text>
-        <Text style={[styles.detailRarity, { color: RARITY_COLOR[creature.rarity] }]}>
-          {RARITY_LABEL[creature.rarity]} · {creature.element}
-        </Text>
-        <Text style={styles.detailLevel}>Niveau {owned.level}</Text>
+      <View style={styles.detailPortraitRow}>
+        {/* Badge de rareté à GAUCHE du portrait, façon Monster Legends —
+            élément juste en dessous. */}
+        <View style={styles.rarityBadgeColumn}>
+          <View style={[styles.rarityBadge, { backgroundColor: RARITY_COLOR[creature.rarity] }]}>
+            <Text style={styles.rarityBadgeText}>{RARITY_BADGE_LETTER[creature.rarity]}</Text>
+          </View>
+          <Text style={styles.elementLabel}>{creature.element}</Text>
+        </View>
+
+        <View style={styles.detailPortrait}>
+          <Text style={styles.detailEmoji}>{display.emoji}</Text>
+          <Text style={styles.detailRarity}>{RARITY_LABEL[creature.rarity]} · {creature.combatType}</Text>
+          <Text style={styles.detailLevel}>Niveau {owned.level}</Text>
+        </View>
       </View>
 
       <View style={styles.statsCard}>
         <View style={styles.statRow}>
+          <Ionicons name="heart" size={18} color={COLORS.good} />
+          <Text style={styles.statLabel}>PV</Text>
+          <Text style={styles.statValue}>{stats.hp}</Text>
+        </View>
+        <View style={styles.statRow}>
           <Ionicons name="flash" size={18} color={COLORS.neonPink} />
-          <Text style={styles.statLabel}>Force</Text>
+          <Text style={styles.statLabel}>ATQ</Text>
           <Text style={styles.statValue}>{stats.attack}</Text>
         </View>
         <View style={styles.statRow}>
-          <Ionicons name="heart" size={18} color={COLORS.good} />
-          <Text style={styles.statLabel}>Vie</Text>
-          <Text style={styles.statValue}>{stats.hp}</Text>
+          <Ionicons name="finger-print" size={18} color={COLORS.neonCyan} />
+          <Text style={styles.statLabel}>Vitesse de clic</Text>
+          <Text style={styles.statValue}>{stats.clickSpeed}</Text>
+        </View>
+        <View style={styles.statRow}>
+          <Ionicons name="battery-charging" size={18} color={COLORS.action} />
+          <Text style={styles.statLabel}>Endurance</Text>
+          <Text style={styles.statValue}>{stats.endurance}</Text>
         </View>
       </View>
 
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>✨ Compétence</Text>
-        <Text style={styles.sectionBody}>{power.name}</Text>
+        <Text style={styles.sectionTitle}>⚔️ Attaques</Text>
+        {creature.skills.map((skill) => (
+          <View key={skill.id} style={styles.skillRow}>
+            <Text style={styles.skillName}>{skill.name}</Text>
+            <Text style={styles.skillStats}>{skill.damage} dégâts · {skill.enduranceCost} endurance</Text>
+          </View>
+        ))}
       </View>
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>📖 Histoire</Text>
+        {display.name !== baseName && (
+          <Text style={styles.speciesNote}>Forme de base : {baseName}</Text>
+        )}
         <Text style={styles.sectionBody}>{creature.lore}</Text>
       </View>
     </ScrollView>
@@ -414,9 +441,19 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
   },
 
-  detailPortrait: { alignItems: 'center', marginTop: 10, marginBottom: 20 },
+  detailPortraitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 10, marginBottom: 20 },
+  rarityBadgeColumn: { alignItems: 'center' },
+  rarityBadge: {
+    width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+    shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
+  },
+  rarityBadgeText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  elementLabel: { color: COLORS.muted, fontSize: 11, fontWeight: '700', marginTop: 6, textAlign: 'center' },
+
+  detailPortrait: { alignItems: 'center' },
   detailEmoji: { fontSize: 90 },
-  detailRarity: { fontSize: 13, fontWeight: '800', marginTop: 8 },
+  detailRarity: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 8, textTransform: 'capitalize' },
   detailLevel: { color: COLORS.text, fontSize: 14, fontWeight: '700', marginTop: 4 },
 
   statsCard: {
@@ -433,4 +470,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: COLORS.action, fontSize: 13, fontWeight: '900', marginBottom: 8 },
   sectionBody: { color: COLORS.text, fontSize: 13, lineHeight: 19 },
+  speciesNote: { color: COLORS.muted, fontSize: 11, fontStyle: 'italic', marginBottom: 6 },
+
+  skillRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  skillName: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
+  skillStats: { color: COLORS.action, fontSize: 11, fontWeight: '700' },
 });
