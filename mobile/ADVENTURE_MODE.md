@@ -98,11 +98,17 @@ monolithique d'un coup.
    de bout en bout (stats, chapitres, adversaires déterministes,
    multiplicateur de vitesse, résolution de tours, combat complet
    simulé jusqu'à victoire).
-2. **Écran principal Aventure** — remplace le placeholder "bientôt
+2. ✅ **Écran principal Aventure** — remplace le placeholder "bientôt
    disponible" actuel (déclenché depuis la barre du bas). Affiche les 3
    créatures du deck + la barre du bas avec "Mode Combat des chapitres"
    pour l'instant seul item. Pas besoin de logique de combat pour cette
    étape, juste de l'affichage.
+   **FAIT** (29/08) — `mobile/src/screens/games/AdventureScreen.js`,
+   câblé depuis la barre du bas du clicker (`view === 'adventure'`, en
+   retour anticipé pour ne pas empiler deux headers/deux barres de nav).
+   Clic sur une créature = aperçu léger (pas encore la fiche complète,
+   c'est l'étape 3). Palette `COLORS` extraite dans `clickerTheme.js`
+   pour éviter un import circulaire entre les deux écrans.
 3. **Page détail créature** — ouverte au clic sur une des 3. Surtout de
    l'affichage, réutilise les données déjà existantes (roster, niveau,
    rareté). Compétences peuvent rester un placeholder "à venir" à cette
