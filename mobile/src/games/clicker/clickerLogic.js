@@ -22,11 +22,16 @@ function mkSkills(entries) {
 }
 
 export const CREATURES = [
-  { id: 'braisillon', element: 'Feu', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
-    skills: mkSkills([['Griffure Ardente', 2, 15], ['Souffle Brûlant', 4, 15], ['Éruption', 6, 15], ['Nova Infernale', 9, 15]]),
-    lore: "Né dans les cendres d'un feu de camp oublié, Braisillon grandit en absorbant la chaleur autour de lui. Une fois adulte, il n'a plus besoin de flamme extérieure — il EST la flamme.",
+  // Remplace Braisillon (29/08) — 1ère créature du roster à venir du
+  // générateur Gemini de l'utilisateur, stats explicites (baseHp/etc.)
+  // au lieu de la formule par rareté. combatType en minuscules
+  // (Gemini a donné "Attaquant"), rarity en minuscules sans accent.
+  { id: 'pyrosile', element: 'Feu', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
+    baseHp: 10, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Morsure Chaude', 2, 5], ['Cendres Aveuglantes', 1, 10], ['Souffle de Braise', 3, 15], ['Tête Brûlée', 5, 25]]),
+    lore: "Ce petit lézard volcanique se nourrit exclusivement de cendres chaudes trouvées près des cratères. Bien que de petite taille, il crache des flammèches capables de brûler gravement ses adversaires. Il est souvent le premier compagnon d'entraînement des jeunes pyromanciens.",
     stages: [
-    { name: 'Braisillon', emoji: '🦎' }, { name: 'Brasegriffe', emoji: '🐲' }, { name: 'Infernouve', emoji: '🐉' },
+    { name: 'Pyrosile', emoji: '🦎' }, { name: 'Pyrosile', emoji: '🦎' }, { name: 'Pyrosile', emoji: '🦎' },
   ]},
   { id: 'gouttelin', element: 'Eau', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
     skills: mkSkills([['Éclaboussure', 2, 15], ["Jet d'Eau", 3, 15], ['Vague Déferlante', 5, 15], ['Raz-de-Marée', 7, 15]]),
@@ -179,7 +184,7 @@ const RARITY_TAP_MULTIPLIER = { commun: 2, rare: 3, epique: 5, legendaire: 10 };
 const RARITY_DURATION_SEC = { commun: 10, rare: 10, epique: 15, legendaire: 15 };
 
 export const CREATURE_POWERS = {
-  braisillon: { name: 'Éruption', effectType: 'coins_burst', effectValue: 8 },
+  pyrosile: { name: 'Éruption', effectType: 'coins_burst', effectValue: 8 },
   gouttelin: { name: 'Flux Montant', effectType: 'passive_boost', effectValue: 2 },
   bourgeonin: { name: 'Éclosion Généreuse', effectType: 'discount_next', effectValue: 0.2 },
   cailloutin: { name: 'Fondation', effectType: 'coins_burst', effectValue: 8 },

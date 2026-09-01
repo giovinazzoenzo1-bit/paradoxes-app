@@ -24,8 +24,17 @@ export const RARITY_BASE_STATS = {
 // Stats de combat d'une créature possédée par le joueur, selon sa
 // rareté et son niveau ACTUEL (celui qu'on monte déjà en la nourrissant
 // dans le clicker classique — ça lui donne enfin une 2e utilité).
+// Si la créature a ses propres stats de base (fournies par Gemini —
+// champs baseHp/baseAttack/baseClickSpeed/baseEndurance), on les utilise
+// TELLES QUELLES plutôt que la formule par rareté — Gemini connaît déjà
+// le rôle de la créature au moment de choisir ses chiffres, pas la peine
+// d'appliquer un multiplicateur de type par-dessus (risque de double
+// application). Repli sur la formule uniquement pour les créatures qui
+// n'ont pas encore été régénérées par Gemini.
 export function combatStatsForCreature(creature, level) {
-  const base = RARITY_BASE_STATS[creature.rarity];
+  const base = creature.baseHp != null
+    ? { hp: creature.baseHp, attack: creature.baseAttack, clickSpeed: creature.baseClickSpeed, endurance: creature.baseEndurance }
+    : RARITY_BASE_STATS[creature.rarity];
   const levelMult = 1 + (level - 1) * 0.08;
   return {
     hp: Math.round(base.hp * levelMult),
@@ -65,7 +74,9 @@ export function opponentForLevel(levelNumber) {
 // monte les chapitres.
 export function opponentStatsForLevel(levelNumber) {
   const creature = opponentForLevel(levelNumber);
-  const base = RARITY_BASE_STATS[creature.rarity];
+  const base = creature.baseHp != null
+    ? { hp: creature.baseHp, attack: creature.baseAttack, clickSpeed: creature.baseClickSpeed, endurance: creature.baseEndurance }
+    : RARITY_BASE_STATS[creature.rarity];
   const growth = 1 + (levelNumber - 1) * 0.15;
   return {
     hp: Math.round(base.hp * growth),
@@ -167,7 +178,12 @@ export const MONSTER_TYPES = {
 // choix du type se fait maintenant par créature, pas par rareté seule).
 export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0) {
   const base = combatStatsForCreature(creature, level);
-  const typeMod = MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant;
+  // Le multiplicateur de type ne s'applique QUE pour les créatures qui
+  // suivent encore la formule par rareté — les créatures avec des stats
+  // Gemini explicites (baseHp défini) ont déjà leur rôle pris en compte
+  // par Gemini au moment de choisir les chiffres, l'appliquer ici
+  // reviendrait à le compter deux fois.
+  const typeMod = creature.baseHp != null ? { hpMult: 1, attackMult: 1 } : (MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant);
   const evoMult = EVOLUTION_STAT_MULTIPLIER[evolutionTier] || 1;
   return {
     hp: Math.round(base.hp * typeMod.hpMult * evoMult),
@@ -185,7 +201,7 @@ export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0) 
 export function opponentStatsForLevelTyped(levelNumber) {
   const base = opponentStatsForLevel(levelNumber);
   const creature = opponentForLevel(levelNumber);
-  const typeMod = MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant;
+  const typeMod = creature.baseHp != null ? { hpMult: 1, attackMult: 1 } : (MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant);
   return {
     hp: Math.round(base.hp * typeMod.hpMult),
     attack: Math.round(base.attack * typeMod.attackMult),
