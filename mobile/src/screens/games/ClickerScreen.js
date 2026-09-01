@@ -58,14 +58,20 @@ import {
 } from '../../games/clicker/clickerLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 
+// Style "Juicy" : fond très sombre et profond (bleu abysse) pour que les
+// éléments d'action en néon ressortent instantanément et guident l'œil —
+// contraste extrême assumé plutôt qu'une palette timide.
 const COLORS = {
-  bg: '#12102a',
-  panel: '#1d1a3d',
+  bg: '#07051a',
+  panel: '#171331',
+  panelLight: '#221c47',
   border: '#332c5e',
-  text: '#eef0f6',
+  text: '#f5f3ff',
   muted: '#9088b8',
   action: '#f5c542',
-  good: '#00E676',
+  good: '#00ffa3',
+  neonPink: '#ff2d95',
+  neonCyan: '#00e5ff',
 };
 
 export const STORAGE_KEY = 'clicker:state:v1';
@@ -1000,7 +1006,7 @@ function ShopView({
                     onPress={() => onBuyAutoClicker(clicker.id)}
                     disabled={!canAfford}
                   >
-                    <Text style={styles.shopBuyBtnText}>💰 {formatNum(cost)}</Text>
+                    <Text style={styles.shopBuyBtnText} numberOfLines={1}>💰 {formatNum(cost)}</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -1331,12 +1337,14 @@ function BottomTabBar({ view, setView, onAdventurePress, eggPhase, completedQues
   return (
     <View style={styles.bottomBar}>
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('shop')}>
-        <Ionicons name="storefront" size={24} color={view === 'shop' ? COLORS.action : COLORS.muted} />
+        <View style={view === 'shop' && styles.bottomBarIconGlow}>
+          <Ionicons name="storefront" size={24} color={view === 'shop' ? COLORS.action : COLORS.muted} />
+        </View>
         <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>Shop</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('quests')}>
-        <View>
+        <View style={view === 'quests' && styles.bottomBarIconGlow}>
           <Ionicons name="flag" size={24} color={view === 'quests' ? COLORS.action : COLORS.muted} />
           {questAlert ? (
             <View style={styles.bottomBarDot} />
@@ -1348,7 +1356,7 @@ function BottomTabBar({ view, setView, onAdventurePress, eggPhase, completedQues
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('collection')}>
-        <View>
+        <View style={view === 'collection' && styles.bottomBarIconGlow}>
           <Ionicons name="albums" size={24} color={view === 'collection' ? COLORS.action : COLORS.muted} />
           <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{ownedCount}</Text></View>
         </View>
@@ -1371,7 +1379,10 @@ const styles = StyleSheet.create({
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
-  coinsValue: { color: COLORS.action, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 4 },
+  coinsValue: {
+    color: COLORS.action, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 4,
+    textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10,
+  },
   incomeText: { color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center' },
 
   welcomeBanner: { backgroundColor: 'rgba(0,230,118,0.15)', borderRadius: 12, padding: 10, marginTop: 8, borderWidth: 1, borderColor: COLORS.good },
@@ -1406,6 +1417,10 @@ const styles = StyleSheet.create({
     paddingTop: 8, marginTop: 6, backgroundColor: COLORS.bg,
   },
   bottomBarItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
+  bottomBarIconGlow: {
+    backgroundColor: 'rgba(245,197,66,0.14)', borderRadius: 20, padding: 6,
+    shadowColor: COLORS.action, shadowOpacity: 0.7, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
+  },
   bottomBarLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '700', marginTop: 2 },
   bottomBarLabelActive: { color: COLORS.action },
   bottomBarDot: { position: 'absolute', top: -2, right: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: '#FF5252' },
@@ -1459,6 +1474,7 @@ const styles = StyleSheet.create({
   summonBtn: {
     width: '100%', backgroundColor: 'rgba(185,107,255,0.15)', borderRadius: 14, padding: 16, marginTop: 12,
     borderWidth: 1.5, borderColor: '#b96bff', alignItems: 'center',
+    shadowColor: '#b96bff', shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
   },
   summonBtnText: { color: '#b96bff', fontSize: 15, fontWeight: '900' },
   summonBtnCost: { color: COLORS.action, fontSize: 12, fontWeight: '800', marginTop: 4 },
@@ -1466,15 +1482,17 @@ const styles = StyleSheet.create({
   ascensionBtn: {
     width: '100%', backgroundColor: 'rgba(255,112,67,0.12)', borderRadius: 14, padding: 14, marginTop: 16,
     borderWidth: 1.5, borderColor: '#FF7043', alignItems: 'center',
+    shadowColor: '#FF7043', shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
   },
   ascensionBtnText: { color: '#FF7043', fontSize: 14, fontWeight: '900' },
   ascensionBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
 
   offrandeBtn: {
     width: '100%', backgroundColor: 'rgba(62,198,240,0.1)', borderRadius: 14, padding: 14, marginTop: 12,
-    borderWidth: 1, borderColor: '#3ec6f0', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.neonCyan, alignItems: 'center',
+    shadowColor: COLORS.neonCyan, shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
   },
-  offrandeBtnText: { color: '#3ec6f0', fontSize: 14, fontWeight: '900' },
+  offrandeBtnText: { color: COLORS.neonCyan, fontSize: 14, fontWeight: '900' },
   offrandeBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
 
   viewBackBtn: { paddingVertical: 8, marginBottom: 4 },
@@ -1507,8 +1525,11 @@ const styles = StyleSheet.create({
   shopRowEmoji: { fontSize: 28 },
   shopRowName: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
   shopRowInfo: { color: COLORS.muted, fontSize: 10, marginTop: 2 },
-  shopBuyBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
-  shopBuyBtnText: { color: '#241a00', fontSize: 12, fontWeight: '900' },
+  shopBuyBtn: {
+    backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, minWidth: 84,
+    alignItems: 'center', shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
+  },
+  shopBuyBtnText: { color: '#241a00', fontSize: 13, fontWeight: '900' },
 
   pickerTitle: { color: COLORS.text, fontSize: 17, fontWeight: '900', marginTop: 6 },
   pickerSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 4, marginBottom: 14, textAlign: 'center' },
