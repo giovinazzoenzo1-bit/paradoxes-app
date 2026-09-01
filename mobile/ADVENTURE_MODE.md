@@ -121,10 +121,19 @@ monolithique d'un coup.
    prise plutôt que d'inventer de nouvelles compétences de combat), et
    une histoire courte ajoutée à chacune des 10 créatures dans
    `clickerLogic.js` (n'existait pas avant).
-4. **Carte des chapitres/niveaux** (le sentier façon Monster Legends) —
+4. ✅ **Carte des chapitres/niveaux** (le sentier façon Monster Legends) —
    uniquement la structure visuelle de progression (niveaux
    verrouillés/débloqués/complétés), sans le vrai combat derrière —
    taper un niveau peut afficher un placeholder le temps de l'étape 5.
+   **FAIT** (29/08) — `ChapterMapScreen` dans `AdventureScreen.js`.
+   Sentier en zigzag (pas une vraie courbe SVG, plus simple/robuste en
+   React Native). Nœuds colorés selon l'état (verrouillé/actuel/complété).
+   Affiche le chapitre en cours + 2 d'avance verrouillés, grandit avec la
+   progression. Clic sur un niveau débloqué → aperçu de l'adversaire
+   (via `opponentForLevel`, étape 1) avec note honnête que le combat
+   n'est pas encore câblé. Progression persistée séparément
+   (`adventure:state:v1`), pas encore incrémentée (aucun combat réel
+   pour l'instant, viendra avec l'étape 5).
 5. **Écran de combat réel** (le système de tour + défi de 50 taps) — la
    pièce la plus complexe, s'appuie sur tout ce qui précède. PV, tours,
    victoire/défaite, application des récompenses.
