@@ -9,7 +9,7 @@
 // (COINS_CONFIG.flappyBirdThemes) et le classement — seul le thème
 // "classique" (celui avec les vrais assets) est utilisé.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Animated, Vibration, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Animated, Vibration, Dimensions, Easing } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
@@ -31,10 +31,41 @@ const BIRD_IMG = require('../../../assets/flappybird/bird.png');
 const PIPE_BODY_IMG = require('../../../assets/flappybird/pipe_body.png');
 const PIPE_HEAD_IMG = require('../../../assets/flappybird/pipe_head.png');
 
+// Décor arrière-plan fourni par Flavio (29/08). ATTENTION : sol.png
+// manque à l'appel — seuls 7 des 8 fichiers annoncés ont été reçus (le
+// 8e fichier envoyé était en réalité une capture d'écran des consignes,
+// pas une image). La bande "sol" (y=260 au bas, défilement rapide)
+// n'est donc pas affichée pour l'instant — à ajouter dès réception.
+const FOND_IMG = require('../../../assets/flappybird/fond.png');
+const NUAGES_IMG = require('../../../assets/flappybird/nuages.png');
+const VILLE_IMG = require('../../../assets/flappybird/ville.png');
+const ARBRES_IMG = require('../../../assets/flappybird/arbres.png');
+const HERBE_IMGS = [
+  require('../../../assets/flappybird/herbe_1.png'),
+  require('../../../assets/flappybird/herbe_2.png'),
+  require('../../../assets/flappybird/herbe_3.png'),
+];
+
 const SKY_COLOR = '#4FC3F7';
 const TEXT_OUTLINE = '#1A237E';
 const CAP_H = 24;
 const CAP_OVERHANG = 4;
+
+// Dimensions natives réelles des fichiers reçus (px) — légèrement
+// différentes des cotes annoncées dans les consignes (ex: arbres 114 au
+// lieu de 110, herbe ~98 au lieu de 40 — les découpes ont des silhouettes
+// irrégulières qui débordent du "cadre" nominal, normal pour ce genre
+// d'export). On utilise les vraies dimensions pour ne pas déformer les
+// images, ancrées par le PIED (bas) comme demandé.
+const NUAGES_NATIVE = { w: 600, h: 130 };
+const VILLE_NATIVE = { w: 600, h: 80 };
+const ARBRES_NATIVE = { w: 600, h: 114 };
+const HERBE_NATIVE = { w: 600, h: 98 };
+
+// Vitesses de défilement (px/s, en unités BASE avant mise à l'échelle) —
+// "rapide" calée sur PIPE_SPEED (140) pour rester cohérente avec le
+// rythme du jeu, le reste en dessous par paliers.
+const SCROLL_SPEED = { nuages: 12, ville: 28, herbe: PIPE_SPEED };
 
 const MILESTONES = [
   { score: 8, coins: 1 },
@@ -71,6 +102,112 @@ function TiledPipeBody({ width, height }) {
         <Image key={i} source={PIPE_BODY_IMG} style={{ width, height: BODY_TILE_H }} resizeMode="stretch" />
       ))}
     </View>
+  );
+}
+
+// Bande qui défile horizontalement à l'infini : deux copies collées
+// l'une à l'autre, translatées en boucle de 0 à -largeur — le raccord
+// est invisible puisque le bord droit de l'image rejoint son propre bord
+// gauche (raccord déjà fait dans les fichiers fournis).
+function ScrollingStrip({ source, width, height, top, speedPxPerSec }) {
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    translateX.setValue(0);
+    const durationMs = (width / speedPxPerSec) * 1000;
+    const anim = Animated.loop(
+      Animated.timing(translateX, { toValue: -width, duration: durationMs, easing: Easing.linear, useNativeDriver: true })
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [width, speedPxPerSec, translateX]);
+
+  return (
+    <Animated.View style={{ position: 'absolute', top, left: 0, flexDirection: 'row', transform: [{ translateX }] }}>
+      <Image source={source} style={{ width, height }} resizeMode="stretch" />
+      <Image source={source} style={{ width, height }} resizeMode="stretch" />
+    </Animated.View>
+  );
+}
+
+// Arbres : pas de défilement, juste une légère oscillation de la bande
+// entière (1-2px), comme demandé — donne un effet de vent léger sans
+// avoir besoin d'images multiples ni de logique de boucle.
+function SwayingStrip({ source, width, height, top, swayPx = 2 }) {
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateX, { toValue: swayPx, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(translateX, { toValue: -swayPx, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [swayPx, translateX]);
+
+  return (
+    <Animated.View style={{ position: 'absolute', top, left: 0, transform: [{ translateX }] }}>
+      <Image source={source} style={{ width, height }} resizeMode="stretch" />
+    </Animated.View>
+  );
+}
+
+// Herbe : défilement rapide (comme le sol) EN PLUS d'une animation
+// d'images en aller-retour (1→2→3→2→1→2→3…), ~150ms par image, jamais en
+// boucle sèche pour éviter le "saut" (voir consignes).
+function HerbeStrip({ width, height, top, speedPxPerSec }) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const [frameIdx, setFrameIdx] = useState(0);
+  const frameDirRef = useRef(1);
+
+  useEffect(() => {
+    translateX.setValue(0);
+    const durationMs = (width / speedPxPerSec) * 1000;
+    const scrollAnim = Animated.loop(
+      Animated.timing(translateX, { toValue: -width, duration: durationMs, easing: Easing.linear, useNativeDriver: true })
+    );
+    scrollAnim.start();
+
+    const frameInterval = setInterval(() => {
+      setFrameIdx((i) => {
+        let next = i + frameDirRef.current;
+        if (next >= HERBE_IMGS.length - 1) frameDirRef.current = -1;
+        else if (next <= 0) frameDirRef.current = 1;
+        return Math.max(0, Math.min(HERBE_IMGS.length - 1, next));
+      });
+    }, 150);
+
+    return () => {
+      scrollAnim.stop();
+      clearInterval(frameInterval);
+    };
+  }, [width, speedPxPerSec, translateX]);
+
+  const source = HERBE_IMGS[frameIdx];
+  return (
+    <Animated.View style={{ position: 'absolute', top, left: 0, flexDirection: 'row', transform: [{ translateX }] }}>
+      <Image source={source} style={{ width, height }} resizeMode="stretch" />
+      <Image source={source} style={{ width, height }} resizeMode="stretch" />
+    </Animated.View>
+  );
+}
+
+// Empile les 6 couches de décor, dans l'ordre (fond fixe en premier =
+// tout au fond, herbe animée en dernier = tout devant) — ancrées par le
+// PIED comme spécifié (top calculé = position du pied - hauteur de la
+// bande). sol.png manque (voir note plus haut), donc pas de couche "sol".
+function FlappyBackground({ scale, gameWidth, gameHeight }) {
+  const stripW = 600 * scale;
+  return (
+    <>
+      <Image source={FOND_IMG} style={{ position: 'absolute', top: 0, left: 0, width: gameWidth, height: gameHeight }} resizeMode="stretch" />
+      <ScrollingStrip source={NUAGES_IMG} width={stripW} height={NUAGES_NATIVE.h * scale} top={0} speedPxPerSec={SCROLL_SPEED.nuages * scale} />
+      <ScrollingStrip source={VILLE_IMG} width={stripW} height={VILLE_NATIVE.h * scale} top={266 * scale - VILLE_NATIVE.h * scale} speedPxPerSec={SCROLL_SPEED.ville * scale} />
+      <SwayingStrip source={ARBRES_IMG} width={stripW} height={ARBRES_NATIVE.h * scale} top={355 * scale - ARBRES_NATIVE.h * scale} swayPx={2 * scale} />
+      <HerbeStrip width={stripW} height={HERBE_NATIVE.h * scale} top={gameHeight - HERBE_NATIVE.h * scale} speedPxPerSec={SCROLL_SPEED.herbe * scale} />
+    </>
   );
 }
 
@@ -212,6 +349,8 @@ export default function FlappyBirdScreen({ onBack }) {
           onPress={handleTap}
           style={[styles.playfield, { width: DIMS.width, height: DIMS.height }]}
         >
+          <FlappyBackground scale={SCALE} gameWidth={DIMS.width} gameHeight={DIMS.height} />
+
           {pipes.map((p, i) => (
             <React.Fragment key={i}>
               <View style={{ position: 'absolute', left: p.x, top: 0, width: DIMS.pipeWidth, height: Math.max(0, p.gapY - CAP_H_S) }}>
