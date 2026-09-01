@@ -6,7 +6,8 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from './clickerTheme';
-import { CREATURES, RARITY_LABEL, RARITY_COLOR, stageForLevel } from '../../games/clicker/clickerLogic';
+import { CREATURES, RARITY_LABEL, RARITY_COLOR, stageForLevel, CREATURE_POWERS } from '../../games/clicker/clickerLogic';
+import { combatStatsForCreature } from '../../games/clicker/combatLogic';
 
 export default function AdventureScreen({ owned, deck, onBack }) {
   const [detailCreatureId, setDetailCreatureId] = useState(null);
@@ -16,6 +17,19 @@ export default function AdventureScreen({ owned, deck, onBack }) {
   owned.forEach((o) => (ownedMap[o.id] = o));
 
   const hasEmptySlot = deck.some((id) => !id);
+
+  // La fiche détaillée est un vrai écran (pas juste un overlay léger
+  // comme à l'étape 2) — retour anticipé, même schéma que celui utilisé
+  // dans ClickerScreen pour la navigation entre écrans complets.
+  if (detailCreatureId) {
+    return (
+      <CreatureDetailScreen
+        creature={CREATURES.find((c) => c.id === detailCreatureId)}
+        owned={ownedMap[detailCreatureId]}
+        onBack={() => setDetailCreatureId(null)}
+      />
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -72,14 +86,6 @@ export default function AdventureScreen({ owned, deck, onBack }) {
         </TouchableOpacity>
       </View>
 
-      {detailCreatureId && (
-        <CreaturePreviewOverlay
-          creature={CREATURES.find((c) => c.id === detailCreatureId)}
-          owned={ownedMap[detailCreatureId]}
-          onClose={() => setDetailCreatureId(null)}
-        />
-      )}
-
       {combatComingSoon && (
         <View style={styles.overlay}>
           <View style={styles.overlayPanel}>
@@ -98,27 +104,56 @@ export default function AdventureScreen({ owned, deck, onBack }) {
   );
 }
 
-// Aperçu léger d'une créature — la vraie fiche détaillée (histoire,
-// compétences) arrive à l'étape 3 du plan. Pour l'instant, juste de quoi
-// confirmer que le clic fonctionne et donner les infos déjà disponibles.
-function CreaturePreviewOverlay({ creature, owned, onClose }) {
-  const display = creature.stages[stageForLevel(owned.level)];
+// Fiche détaillée d'une créature, inspirée de l'onglet "Info" de Monster
+// Legends fourni en référence : portrait, stats de combat, compétence,
+// histoire. Les stats viennent de combatLogic.js (étape 1) — première
+// fois que cette logique sert réellement à quelque chose de visible.
+function CreatureDetailScreen({ creature, owned, onBack }) {
+  const stage = stageForLevel(owned.level);
+  const display = creature.stages[stage];
+  const stats = combatStatsForCreature(creature, owned.level);
+  const power = CREATURE_POWERS[creature.id];
+
   return (
-    <View style={styles.overlay}>
-      <View style={styles.overlayPanel}>
-        <TouchableOpacity style={styles.overlayClose} onPress={onClose}>
-          <Text style={styles.overlayCloseText}>✕</Text>
+    <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 30 }}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>← Retour</Text>
         </TouchableOpacity>
-        <Text style={styles.previewEmoji}>{display.emoji}</Text>
-        <Text style={styles.overlayTitle}>{display.name}</Text>
-        <Text style={[styles.overlaySubtitle, { color: RARITY_COLOR[creature.rarity] }]}>
-          {RARITY_LABEL[creature.rarity]} · {creature.family} · Niveau {owned.level}
-        </Text>
-        <Text style={[styles.overlaySubtitle, { marginTop: 10 }]}>
-          Fiche détaillée (histoire, compétences) bientôt disponible.
-        </Text>
+        <Text style={styles.title}>{display.name}</Text>
       </View>
-    </View>
+
+      <View style={styles.detailPortrait}>
+        <Text style={styles.detailEmoji}>{display.emoji}</Text>
+        <Text style={[styles.detailRarity, { color: RARITY_COLOR[creature.rarity] }]}>
+          {RARITY_LABEL[creature.rarity]} · {creature.family}
+        </Text>
+        <Text style={styles.detailLevel}>Niveau {owned.level}</Text>
+      </View>
+
+      <View style={styles.statsCard}>
+        <View style={styles.statRow}>
+          <Ionicons name="flash" size={18} color={COLORS.neonPink} />
+          <Text style={styles.statLabel}>Force</Text>
+          <Text style={styles.statValue}>{stats.attack}</Text>
+        </View>
+        <View style={styles.statRow}>
+          <Ionicons name="heart" size={18} color={COLORS.good} />
+          <Text style={styles.statLabel}>Vie</Text>
+          <Text style={styles.statValue}>{stats.hp}</Text>
+        </View>
+      </View>
+
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>✨ Compétence</Text>
+        <Text style={styles.sectionBody}>{power.name}</Text>
+      </View>
+
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>📖 Histoire</Text>
+        <Text style={styles.sectionBody}>{creature.lore}</Text>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -157,7 +192,26 @@ const styles = StyleSheet.create({
   },
   overlayClose: { position: 'absolute', top: 12, right: 14 },
   overlayCloseText: { color: COLORS.muted, fontSize: 18, fontWeight: '900' },
-  previewEmoji: { fontSize: 60, marginBottom: 6 },
   overlayTitle: { color: COLORS.text, fontSize: 18, fontWeight: '900', marginTop: 10, textAlign: 'center' },
   overlaySubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 6, textAlign: 'center' },
+
+  detailPortrait: { alignItems: 'center', marginTop: 10, marginBottom: 20 },
+  detailEmoji: { fontSize: 90 },
+  detailRarity: { fontSize: 13, fontWeight: '800', marginTop: 8 },
+  detailLevel: { color: COLORS.text, fontSize: 14, fontWeight: '700', marginTop: 4 },
+
+  statsCard: {
+    backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, marginBottom: 14,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  statRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  statLabel: { color: COLORS.muted, fontSize: 13, fontWeight: '700', flex: 1 },
+  statValue: { color: COLORS.text, fontSize: 16, fontWeight: '900' },
+
+  sectionCard: {
+    backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, marginBottom: 14,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  sectionTitle: { color: COLORS.action, fontSize: 13, fontWeight: '900', marginBottom: 8 },
+  sectionBody: { color: COLORS.text, fontSize: 13, lineHeight: 19 },
 });

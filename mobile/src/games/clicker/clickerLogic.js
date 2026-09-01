@@ -10,34 +10,54 @@
 // Chaque créature a 3 stades (base, évolution 1 à niveau 5, évolution 2 à
 // niveau 15). baseIncome = pièces/seconde à niveau 1 du stade de base.
 export const CREATURES = [
-  { id: 'braisillon', family: 'Feu', rarity: 'commun', baseIncome: 0.15, stages: [
+  { id: 'braisillon', family: 'Feu', rarity: 'commun', baseIncome: 0.15,
+    lore: "Né dans les cendres d'un feu de camp oublié, Braisillon grandit en absorbant la chaleur autour de lui. Une fois adulte, il n'a plus besoin de flamme extérieure — il EST la flamme.",
+    stages: [
     { name: 'Braisillon', emoji: '🦎' }, { name: 'Brasegriffe', emoji: '🐲' }, { name: 'Infernouve', emoji: '🐉' },
   ]},
-  { id: 'gouttelin', family: 'Eau', rarity: 'commun', baseIncome: 0.15, stages: [
+  { id: 'gouttelin', family: 'Eau', rarity: 'commun', baseIncome: 0.15,
+    lore: "Gouttelin est né d'une simple goutte de pluie tombée dans un lac enchanté. Plus il grandit, plus il se sent à l'étroit sur la terre ferme.",
+    stages: [
     { name: 'Gouttelin', emoji: '🐸' }, { name: 'Marégouffre', emoji: '🐙' }, { name: 'Abyssaline', emoji: '🦑' },
   ]},
-  { id: 'bourgeonin', family: 'Plante', rarity: 'commun', baseIncome: 0.15, stages: [
+  { id: 'bourgeonin', family: 'Plante', rarity: 'commun', baseIncome: 0.15,
+    lore: "Une graine tombée au mauvais endroit, au bon moment. Bourgeonin pousse un peu plus à chaque fois qu'on le nourrit — littéralement.",
+    stages: [
     { name: 'Bourgeonin', emoji: '🌱' }, { name: 'Ronceval', emoji: '🌿' }, { name: 'Florengarde', emoji: '🌺' },
   ]},
-  { id: 'cailloutin', family: 'Roche', rarity: 'commun', baseIncome: 0.15, stages: [
+  { id: 'cailloutin', family: 'Roche', rarity: 'commun', baseIncome: 0.15,
+    lore: "On dit que Cailloutin était autrefois un simple caillou dans une chaussure. Aujourd'hui, ce sont les montagnes qui ont peur de lui.",
+    stages: [
     { name: 'Cailloutin', emoji: '🪨' }, { name: 'Rocheval', emoji: '🗿' }, { name: 'Titanroc', emoji: '⛰️' },
   ]},
-  { id: 'etincelot', family: 'Foudre', rarity: 'rare', baseIncome: 0.4, stages: [
+  { id: 'etincelot', family: 'Foudre', rarity: 'rare', baseIncome: 0.4,
+    lore: "Étincelot stocke l'électricité statique de tout ce qu'il touche. Ses câlins sont... déconseillés.",
+    stages: [
     { name: 'Étincelot', emoji: '🐹' }, { name: 'Foudrepic', emoji: '🦔' }, { name: 'Fulgurionne', emoji: '⚡' },
   ]},
-  { id: 'brisillon', family: 'Vent', rarity: 'rare', baseIncome: 0.4, stages: [
+  { id: 'brisillon', family: 'Vent', rarity: 'rare', baseIncome: 0.4,
+    lore: "Brisillon n'a jamais posé une patte au sol de sa vie. Certains prétendent qu'il est né en plein vol.",
+    stages: [
     { name: 'Brisillon', emoji: '🐦' }, { name: 'Tourbillan', emoji: '🦅' }, { name: 'Zéphyrion', emoji: '🕊️' },
   ]},
-  { id: 'frimouss', family: 'Glace', rarity: 'rare', baseIncome: 0.4, stages: [
+  { id: 'frimouss', family: 'Glace', rarity: 'rare', baseIncome: 0.4,
+    lore: "Frimouss fond légèrement chaque été et regèle chaque hiver. Personne ne sait vraiment comment il survit à la saison entre les deux.",
+    stages: [
     { name: 'Frimouss', emoji: '🐧' }, { name: 'Glacœur', emoji: '❄️' }, { name: 'Cristalys', emoji: '🧊' },
   ]},
-  { id: 'ombrelin', family: 'Ombre', rarity: 'epique', baseIncome: 1.0, stages: [
+  { id: 'ombrelin', family: 'Ombre', rarity: 'epique', baseIncome: 1.0,
+    lore: "Ombrelin n'existe qu'à moitié dans notre monde — l'autre moitié traîne quelque part dans l'obscurité, à observer.",
+    stages: [
     { name: 'Ombrelin', emoji: '🦇' }, { name: 'Nocturval', emoji: '🦉' }, { name: 'Ténébrume', emoji: '🐺' },
   ]},
-  { id: 'lumeret', family: 'Lumière', rarity: 'epique', baseIncome: 1.0, stages: [
+  { id: 'lumeret', family: 'Lumière', rarity: 'epique', baseIncome: 1.0,
+    lore: "Lumeret brille même les yeux fermés. On raconte qu'il a été créé à partir d'un rayon de soleil égaré.",
+    stages: [
     { name: 'Lumeret', emoji: '✨' }, { name: 'Radianloup', emoji: '🦁' }, { name: 'Solarion', emoji: '☀️' },
   ]},
-  { id: 'gemmion', family: 'Cristal', rarity: 'legendaire', baseIncome: 2.5, stages: [
+  { id: 'gemmion', family: 'Cristal', rarity: 'legendaire', baseIncome: 2.5,
+    lore: "Formé au cœur d'une mine oubliée depuis des siècles, Gemmion est si rare que même les légendes ne sont pas sûres qu'il existe vraiment.",
+    stages: [
     { name: 'Gemmion', emoji: '💎' }, { name: 'Prismatis', emoji: '🔮' }, { name: 'Éclatoile', emoji: '⭐' },
   ]},
 ];
