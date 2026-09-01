@@ -137,6 +137,24 @@ monolithique d'un coup.
 5. **Écran de combat réel** (le système de tour + défi de 50 taps) — la
    pièce la plus complexe, s'appuie sur tout ce qui précède. PV, tours,
    victoire/défaite, application des récompenses.
+   **FAIT** (29/08) — `mobile/src/screens/games/CombatScreen.js`, pure
+   couche d'interface au-dessus de `combatLogic.js` déjà testé (aucune
+   nouvelle règle de combat inventée ici).
+
+   **⚠️ Décision prise en cours de route, signalée plutôt que tranchée en
+   silence** : le brainstorm initial décrivait une "montée façon tour,
+   pas de soin entre niveaux, retour à l'étage 1 en cas de défaite".
+   Mais l'étape 4 a construit une carte PERSISTANTE façon Monster Legends
+   (les niveaux gagnés le restent). Ce choix a donc été suivi à la place
+   : **chaque niveau est un combat indépendant, à pleine vie à chaque
+   tentative** — défaite = juste réessayer, victoire débloque le suivant.
+   Plus simple et cohérent avec ce qui existe déjà.
+
+   Ressource **Griffes** déjà partiellement implémentée ici (comptage +
+   sauvegarde + affichage du gain à la victoire) plutôt que reportée
+   entièrement à l'étape 6, puisqu'un écran de victoire a besoin de
+   montrer un vrai gain. L'étape 6 reste nécessaire pour construire la
+   boutique où la dépenser.
 6. **Ressource "Griffes"** — ajout au modèle de données, persistance,
    affichage du gain à la victoire. La boutique pour la dépenser viendra
    dans une passe encore plus tardive, pas incluse dans cet ordre.
