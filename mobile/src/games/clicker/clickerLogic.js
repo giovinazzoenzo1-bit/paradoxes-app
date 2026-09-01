@@ -9,62 +9,97 @@
 
 // Chaque créature a 3 stades (base, évolution 1 à niveau 5, évolution 2 à
 // niveau 15). baseIncome = pièces/seconde à niveau 1 du stade de base.
+
+// Génère les 4 compétences d'une créature avec des DÉGÂTS FIXES (pas des
+// multiplicateurs) — aligné sur le format produit par le générateur de
+// créatures Gemini de l'utilisateur, qui donne un nombre de dégâts
+// précis par attaque plutôt qu'un multiplicateur. Le multiplicateur de
+// vitesse du défi de tap (voir combatLogic.js) s'applique PAR-DESSUS ce
+// nombre au moment du combat, donc les deux systèmes se combinent sans
+// contradiction. Utilisé au combat : le joueur choisit UNE des 4 à
+// chaque tour (remplace l'ancien bouton "Attaquer" unique).
+function mkSkills(entries) {
+  return entries.map(([name, damage], i) => ({ id: `s${i + 1}`, name, damage }));
+}
+
 export const CREATURES = [
-  { id: 'braisillon', family: 'Feu', rarity: 'commun', baseIncome: 0.15,
+  { id: 'braisillon', element: 'Feu', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
+    skills: mkSkills([['Griffure Ardente', 2], ['Souffle Brûlant', 4], ['Éruption', 6], ['Nova Infernale', 9]]),
     lore: "Né dans les cendres d'un feu de camp oublié, Braisillon grandit en absorbant la chaleur autour de lui. Une fois adulte, il n'a plus besoin de flamme extérieure — il EST la flamme.",
     stages: [
     { name: 'Braisillon', emoji: '🦎' }, { name: 'Brasegriffe', emoji: '🐲' }, { name: 'Infernouve', emoji: '🐉' },
   ]},
-  { id: 'gouttelin', family: 'Eau', rarity: 'commun', baseIncome: 0.15,
+  { id: 'gouttelin', element: 'Eau', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
+    skills: mkSkills([['Éclaboussure', 2], ["Jet d'Eau", 3], ['Vague Déferlante', 5], ['Raz-de-Marée', 7]]),
     lore: "Gouttelin est né d'une simple goutte de pluie tombée dans un lac enchanté. Plus il grandit, plus il se sent à l'étroit sur la terre ferme.",
     stages: [
     { name: 'Gouttelin', emoji: '🐸' }, { name: 'Marégouffre', emoji: '🐙' }, { name: 'Abyssaline', emoji: '🦑' },
   ]},
-  { id: 'bourgeonin', family: 'Plante', rarity: 'commun', baseIncome: 0.15,
+  { id: 'bourgeonin', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
+    skills: mkSkills([['Fouet de Liane', 2], ['Épines', 3], ['Étreinte Végétale', 5], ['Floraison Sauvage', 7]]),
     lore: "Une graine tombée au mauvais endroit, au bon moment. Bourgeonin pousse un peu plus à chaque fois qu'on le nourrit — littéralement.",
     stages: [
     { name: 'Bourgeonin', emoji: '🌱' }, { name: 'Ronceval', emoji: '🌿' }, { name: 'Florengarde', emoji: '🌺' },
   ]},
-  { id: 'cailloutin', family: 'Roche', rarity: 'commun', baseIncome: 0.15,
+  { id: 'cailloutin', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'tank',
+    skills: mkSkills([['Coup de Boulier', 1], ['Éboulement', 2], ['Poing de Pierre', 3], ['Avalanche', 4]]),
     lore: "On dit que Cailloutin était autrefois un simple caillou dans une chaussure. Aujourd'hui, ce sont les montagnes qui ont peur de lui.",
     stages: [
     { name: 'Cailloutin', emoji: '🪨' }, { name: 'Rocheval', emoji: '🗿' }, { name: 'Titanroc', emoji: '⛰️' },
   ]},
-  { id: 'etincelot', family: 'Foudre', rarity: 'rare', baseIncome: 0.4,
+  { id: 'etincelot', element: 'Foudre', rarity: 'rare', baseIncome: 0.4, combatType: 'attaquant',
+    skills: mkSkills([['Étincelle', 9], ['Décharge', 17], ['Éclair', 26], ['Tempête Électrique', 37]]),
     lore: "Étincelot stocke l'électricité statique de tout ce qu'il touche. Ses câlins sont... déconseillés.",
     stages: [
     { name: 'Étincelot', emoji: '🐹' }, { name: 'Foudrepic', emoji: '🦔' }, { name: 'Fulgurionne', emoji: '⚡' },
   ]},
-  { id: 'brisillon', family: 'Vent', rarity: 'rare', baseIncome: 0.4,
+  { id: 'brisillon', element: 'Air', rarity: 'rare', baseIncome: 0.4, combatType: 'attaquant',
+    skills: mkSkills([['Bourrasque', 9], ['Lame de Vent', 17], ['Tourbillon', 26], ['Cyclone', 37]]),
     lore: "Brisillon n'a jamais posé une patte au sol de sa vie. Certains prétendent qu'il est né en plein vol.",
     stages: [
     { name: 'Brisillon', emoji: '🐦' }, { name: 'Tourbillan', emoji: '🦅' }, { name: 'Zéphyrion', emoji: '🕊️' },
   ]},
-  { id: 'frimouss', family: 'Glace', rarity: 'rare', baseIncome: 0.4,
+  { id: 'frimouss', element: 'Eau', rarity: 'rare', baseIncome: 0.4, combatType: 'tank',
+    skills: mkSkills([['Griffe Givrée', 5], ['Souffle Glacial', 10], ['Pic de Glace', 15], ['Blizzard', 22]]),
     lore: "Frimouss fond légèrement chaque été et regèle chaque hiver. Personne ne sait vraiment comment il survit à la saison entre les deux.",
     stages: [
     { name: 'Frimouss', emoji: '🐧' }, { name: 'Glacœur', emoji: '❄️' }, { name: 'Cristalys', emoji: '🧊' },
   ]},
-  { id: 'ombrelin', family: 'Ombre', rarity: 'epique', baseIncome: 1.0,
+  { id: 'ombrelin', element: 'Ténèbres', rarity: 'epique', baseIncome: 1.0, combatType: 'attaquant',
+    skills: mkSkills([['Griffure Furtive', 19], ["Morsure d'Ombre", 38], ['Voile Ténébreux', 57], ['Éclipse Totale', 84]]),
     lore: "Ombrelin n'existe qu'à moitié dans notre monde — l'autre moitié traîne quelque part dans l'obscurité, à observer.",
     stages: [
     { name: 'Ombrelin', emoji: '🦇' }, { name: 'Nocturval', emoji: '🦉' }, { name: 'Ténébrume', emoji: '🐺' },
   ]},
-  { id: 'lumeret', family: 'Lumière', rarity: 'epique', baseIncome: 1.0,
+  { id: 'lumeret', element: 'Lumière', rarity: 'epique', baseIncome: 1.0, combatType: 'soutien',
+    skills: mkSkills([['Rayon', 14], ['Éclat Lumineux', 28], ['Flash Aveuglant', 42], ['Jugement Solaire', 62]]),
     lore: "Lumeret brille même les yeux fermés. On raconte qu'il a été créé à partir d'un rayon de soleil égaré.",
     stages: [
     { name: 'Lumeret', emoji: '✨' }, { name: 'Radianloup', emoji: '🦁' }, { name: 'Solarion', emoji: '☀️' },
   ]},
-  { id: 'gemmion', family: 'Cristal', rarity: 'legendaire', baseIncome: 2.5,
+  { id: 'gemmion', element: 'Terre', rarity: 'legendaire', baseIncome: 2.5, combatType: 'tank',
+    skills: mkSkills([['Éclat de Cristal', 24], ['Onde Prismatique', 47], ['Tir de Diamant', 71], ['Résonance Stellaire', 103]]),
     lore: "Formé au cœur d'une mine oubliée depuis des siècles, Gemmion est si rare que même les légendes ne sont pas sûres qu'il existe vraiment.",
     stages: [
     { name: 'Gemmion', emoji: '💎' }, { name: 'Prismatis', emoji: '🔮' }, { name: 'Éclatoile', emoji: '⭐' },
   ]},
 ];
 
-export const RARITY_WEIGHTS = { commun: 60, rare: 25, epique: 12, legendaire: 3 };
-export const RARITY_LABEL = { commun: 'Commun', rare: 'Rare', epique: 'Épique', legendaire: 'Légendaire' };
-export const RARITY_COLOR = { commun: '#9088b8', rare: '#3ec6f0', epique: '#b96bff', legendaire: '#f5c542' };
+// 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
+// définis mais à poids 0 dans le gacha : AUCUNE des 10 créatures
+// actuelles n'a la rareté "peu_commun" (seulement commun/rare/épique/
+// légendaire existent pour l'instant), donc lui donner un poids > 0
+// ferait planter le tirage (panier vide) — à réactiver dès qu'une
+// créature (nouvelle via Gemini, ou une existante reclassée) y est assignée.
+export const RARITY_WEIGHTS = { commun: 70, peu_commun: 0, rare: 18, epique: 9, legendaire: 3, mythique: 0 };
+export const RARITY_LABEL = {
+  commun: 'Commun', peu_commun: 'Peu commun', rare: 'Rare',
+  epique: 'Épique', legendaire: 'Légendaire', mythique: 'Mythique',
+};
+export const RARITY_COLOR = {
+  commun: '#9088b8', peu_commun: '#6bcf7f', rare: '#3ec6f0',
+  epique: '#b96bff', legendaire: '#f5c542', mythique: '#ff2d55',
+};
 
 export const EVOLUTION_LEVELS = [1, 5, 15]; // niveau à partir duquel chaque stade s'active
 
@@ -183,6 +218,11 @@ export function rollCreature() {
   let r = Math.random() * total;
   let chosenRarity = 'commun';
   for (const [rarity, weight] of Object.entries(RARITY_WEIGHTS)) {
+    if (weight <= 0) continue; // ex: "mythique" tant qu'aucune créature n'y est assignée —
+    // exclu explicitement plutôt que de compter sur "r < 0" qui peut être
+    // atteint par erreur à cause d'imprécisions de virgule flottante
+    // après plusieurs soustractions successives (bug réel rencontré et
+    // corrigé ici, pas juste une précaution théorique).
     if (r < weight) {
       chosenRarity = rarity;
       break;
@@ -190,6 +230,13 @@ export function rollCreature() {
     r -= weight;
   }
   const pool = CREATURES.filter((c) => c.rarity === chosenRarity);
+  if (pool.length === 0) {
+    // Garde-fou : un poids > 0 sans aucune créature de cette rareté ne
+    // doit jamais planter le tirage, même par erreur de synchronisation
+    // future entre RARITY_WEIGHTS et le roster réel — repli sur "commun".
+    const fallback = CREATURES.filter((c) => c.rarity === 'commun');
+    return fallback[Math.floor(Math.random() * fallback.length)];
+  }
   return pool[Math.floor(Math.random() * pool.length)];
 }
 

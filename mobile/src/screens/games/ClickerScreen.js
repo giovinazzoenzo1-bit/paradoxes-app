@@ -1168,7 +1168,7 @@ function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscou
         <Text style={styles.detailEmoji}>{display.emoji}</Text>
         <Text style={styles.detailName}>{display.name}</Text>
         <Text style={[styles.creatureRarity, { color: RARITY_COLOR[creature.rarity] }]}>
-          {RARITY_LABEL[creature.rarity]} · {creature.family}
+          {RARITY_LABEL[creature.rarity]} · {creature.element}
         </Text>
         <Text style={styles.detailStat}>Niveau {owned.level}</Text>
         <Text style={styles.detailPowerHint}>✨ Pouvoir dédié (bulle) : {power.name}</Text>

@@ -178,7 +178,7 @@ function CreatureDetailScreen({ creature, owned, onBack }) {
       <View style={styles.detailPortrait}>
         <Text style={styles.detailEmoji}>{display.emoji}</Text>
         <Text style={[styles.detailRarity, { color: RARITY_COLOR[creature.rarity] }]}>
-          {RARITY_LABEL[creature.rarity]} · {creature.family}
+          {RARITY_LABEL[creature.rarity]} · {creature.element}
         </Text>
         <Text style={styles.detailLevel}>Niveau {owned.level}</Text>
       </View>

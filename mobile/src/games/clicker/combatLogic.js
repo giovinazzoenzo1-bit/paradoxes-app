@@ -4,13 +4,21 @@
 import { CREATURES } from './clickerLogic';
 
 // ---- Stats de combat par rareté ----
-// Base différente des pièces/tap : ici on veut un vrai sentiment de
-// progression (PV, Attaque), pas un revenu passif.
+// Recalibré (29/08) à partir d'un exemple réel produit par le
+// générateur Gemini de l'utilisateur : Solarion (Épique, Attaquant,
+// PV95/ATQ38). En retirant le modificateur de type Attaquant (x0,8 PV /
+// x1,3 ATQ), on obtient la base "équilibrée" épique ≈ PV119/ATQ29, qui
+// sert d'ancrage à toute la progression ci-dessous (ratio géométrique
+// ~x2,28 PV / ~x2,13 ATQ par palier, en partant de commun=PV10/ATQ3
+// comme précisé dans le prompt Gemini). "mythique" défini mais pas
+// encore utilisé par aucune créature.
 export const RARITY_BASE_STATS = {
-  commun: { hp: 80, attack: 12 },
-  rare: { hp: 120, attack: 18 },
-  epique: { hp: 180, attack: 28 },
-  legendaire: { hp: 280, attack: 45 },
+  commun: { hp: 10, attack: 3 },
+  peu_commun: { hp: 23, attack: 6 },
+  rare: { hp: 52, attack: 14 },
+  epique: { hp: 119, attack: 29 },
+  legendaire: { hp: 272, attack: 62 },
+  mythique: { hp: 620, attack: 132 },
 };
 
 // Stats de combat d'une créature possédée par le joueur, selon sa
@@ -111,4 +119,39 @@ export function resolveRound(playerHp, opponentHp, opponentAttack, playerDamage)
 // ---- Récompense (ressource "Griffes", nom provisoire) ----
 export function griffesReward(levelNumber) {
   return 5 + Math.floor(levelNumber * 1.5);
+}
+
+// ---- Type de monstre (Attaquant / Soutien / Tank) ----
+// Chaque créature a maintenant, en plus de sa rareté, un TYPE de combat
+// qui modifie ses stats de base : le Tank encaisse plus mais frappe
+// moins fort, l'Attaquant l'inverse, le Soutien reste équilibré (sa
+// valeur est censée venir de ses compétences, pas de stats brutes).
+export const MONSTER_TYPES = {
+  attaquant: { label: 'Attaquant', hpMult: 0.8, attackMult: 1.3 },
+  soutien: { label: 'Soutien', hpMult: 1.0, attackMult: 0.95 },
+  tank: { label: 'Tank', hpMult: 1.4, attackMult: 0.75 },
+};
+
+// Version de combatStatsForCreature qui applique EN PLUS le modificateur
+// du type — remplace l'ancienne fonction dans les nouveaux usages (le
+// choix du type se fait maintenant par créature, pas par rareté seule).
+export function combatStatsForCreatureTyped(creature, level) {
+  const base = combatStatsForCreature(creature, level);
+  const typeMod = MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant;
+  return {
+    hp: Math.round(base.hp * typeMod.hpMult),
+    attack: Math.round(base.attack * typeMod.attackMult),
+  };
+}
+
+// Même chose pour l'adversaire IA (stats déjà mises à l'échelle par
+// niveau via opponentStatsForLevel, puis modifiées par le type).
+export function opponentStatsForLevelTyped(levelNumber) {
+  const base = opponentStatsForLevel(levelNumber);
+  const creature = opponentForLevel(levelNumber);
+  const typeMod = MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant;
+  return {
+    hp: Math.round(base.hp * typeMod.hpMult),
+    attack: Math.round(base.attack * typeMod.attackMult),
+  };
 }
