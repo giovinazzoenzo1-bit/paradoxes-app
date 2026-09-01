@@ -65,7 +65,7 @@ const HERBE_NATIVE = { w: 600, h: 98 };
 // Vitesses de défilement (px/s, en unités BASE avant mise à l'échelle) —
 // "rapide" calée sur PIPE_SPEED (140) pour rester cohérente avec le
 // rythme du jeu, le reste en dessous par paliers.
-const SCROLL_SPEED = { nuages: 12, ville: 28, herbe: PIPE_SPEED };
+const SCROLL_SPEED = { nuages: 12, ville: 28, arbres: 55, herbe: PIPE_SPEED };
 
 const MILESTONES = [
   { score: 8, coins: 1 },
@@ -130,36 +130,17 @@ function ScrollingStrip({ source, width, height, top, speedPxPerSec }) {
   );
 }
 
-// Arbres : pas de défilement, juste une légère oscillation de la bande
-// entière (1-2px), comme demandé — donne un effet de vent léger sans
-// avoir besoin d'images multiples ni de logique de boucle.
-function SwayingStrip({ source, width, height, top, swayPx = 2 }) {
-  const translateX = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(translateX, { toValue: swayPx, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(translateX, { toValue: -swayPx, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [swayPx, translateX]);
-
-  return (
-    <Animated.View style={{ position: 'absolute', top, left: 0, transform: [{ translateX }] }}>
-      <Image source={source} style={{ width, height }} resizeMode="stretch" />
-    </Animated.View>
-  );
-}
-
 // Herbe : défilement rapide (comme le sol) EN PLUS d'une animation
-// d'images en aller-retour (1→2→3→2→1→2→3…), ~150ms par image, jamais en
-// boucle sèche pour éviter le "saut" (voir consignes).
+// d'images en aller-retour (1→2→3→2→1→2→3…). Les 3 images restent
+// TOUTES montées en permanence, empilées, et on fait un fondu enchaîné
+// (opacité) entre elles plutôt que de changer la source de l'Image —
+// corrige à la fois le flash de rechargement/décodage ("bug de salade")
+// ET le changement de luminosité trop brutal entre les images (elles
+// n'ont pas exactement le même éclairage), en lissant la transition.
 function HerbeStrip({ width, height, top, speedPxPerSec }) {
   const translateX = useRef(new Animated.Value(0)).current;
-  const [frameIdx, setFrameIdx] = useState(0);
+  const opacities = useRef(HERBE_IMGS.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
+  const frameIdxRef = useRef(0);
   const frameDirRef = useRef(1);
 
   useEffect(() => {
@@ -171,41 +152,66 @@ function HerbeStrip({ width, height, top, speedPxPerSec }) {
     scrollAnim.start();
 
     const frameInterval = setInterval(() => {
-      setFrameIdx((i) => {
-        let next = i + frameDirRef.current;
-        if (next >= HERBE_IMGS.length - 1) frameDirRef.current = -1;
-        else if (next <= 0) frameDirRef.current = 1;
-        return Math.max(0, Math.min(HERBE_IMGS.length - 1, next));
-      });
+      const prevIdx = frameIdxRef.current;
+      let next = prevIdx + frameDirRef.current;
+      if (next >= HERBE_IMGS.length - 1) frameDirRef.current = -1;
+      else if (next <= 0) frameDirRef.current = 1;
+      next = Math.max(0, Math.min(HERBE_IMGS.length - 1, next));
+      frameIdxRef.current = next;
+      Animated.parallel([
+        Animated.timing(opacities[prevIdx], { toValue: 0, duration: 140, useNativeDriver: true }),
+        Animated.timing(opacities[next], { toValue: 1, duration: 140, useNativeDriver: true }),
+      ]).start();
     }, 150);
 
     return () => {
       scrollAnim.stop();
       clearInterval(frameInterval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [width, speedPxPerSec, translateX]);
 
-  const source = HERBE_IMGS[frameIdx];
   return (
     <Animated.View style={{ position: 'absolute', top, left: 0, flexDirection: 'row', transform: [{ translateX }] }}>
-      <Image source={source} style={{ width, height }} resizeMode="stretch" />
-      <Image source={source} style={{ width, height }} resizeMode="stretch" />
+      {[0, 1].map((copyIdx) => (
+        <View key={copyIdx} style={{ width, height }}>
+          {HERBE_IMGS.map((src, i) => (
+            <Animated.Image
+              key={i}
+              source={src}
+              style={{ position: 'absolute', top: 0, left: 0, width, height, opacity: opacities[i] }}
+              resizeMode="stretch"
+            />
+          ))}
+        </View>
+      ))}
     </Animated.View>
   );
 }
 
 // Empile les 6 couches de décor, dans l'ordre (fond fixe en premier =
 // tout au fond, herbe animée en dernier = tout devant) — ancrées par le
-// PIED comme spécifié (top calculé = position du pied - hauteur de la
-// bande). sol.png manque (voir note plus haut), donc pas de couche "sol".
+// PIED comme spécifié. sol.png manque (voir note plus haut), donc pas de
+// couche "sol". Les arbres débordent volontairement de +20px sous leur
+// pied nominal (y=355) pour bien recouvrir la zone où l'herbe n'est pas
+// encore "pleine" (les brins d'herbe ne sont denses qu'à partir d'environ
+// 60% de leur hauteur, le haut de l'image est fait de pointes espacées) —
+// sans cette marge, un filet de ciel bleu passait entre les deux bandes.
 function FlappyBackground({ scale, gameWidth, gameHeight }) {
   const stripW = 600 * scale;
+  const ARBRES_OVERLAP = 20; // px supplémentaires sous le pied nominal des arbres
   return (
     <>
       <Image source={FOND_IMG} style={{ position: 'absolute', top: 0, left: 0, width: gameWidth, height: gameHeight }} resizeMode="stretch" />
       <ScrollingStrip source={NUAGES_IMG} width={stripW} height={NUAGES_NATIVE.h * scale} top={0} speedPxPerSec={SCROLL_SPEED.nuages * scale} />
       <ScrollingStrip source={VILLE_IMG} width={stripW} height={VILLE_NATIVE.h * scale} top={266 * scale - VILLE_NATIVE.h * scale} speedPxPerSec={SCROLL_SPEED.ville * scale} />
-      <SwayingStrip source={ARBRES_IMG} width={stripW} height={ARBRES_NATIVE.h * scale} top={355 * scale - ARBRES_NATIVE.h * scale} swayPx={2 * scale} />
+      <ScrollingStrip
+        source={ARBRES_IMG}
+        width={stripW}
+        height={ARBRES_NATIVE.h * scale}
+        top={(355 + ARBRES_OVERLAP) * scale - ARBRES_NATIVE.h * scale}
+        speedPxPerSec={SCROLL_SPEED.arbres * scale}
+      />
       <HerbeStrip width={stripW} height={HERBE_NATIVE.h * scale} top={gameHeight - HERBE_NATIVE.h * scale} speedPxPerSec={SCROLL_SPEED.herbe * scale} />
     </>
   );
