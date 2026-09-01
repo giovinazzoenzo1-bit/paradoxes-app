@@ -8,6 +8,16 @@
 > changement notable : nouveau jeu porté, dépendance ajoutée/retirée, bug
 > résolu, décision d'architecture.
 
+## 🎮 Travail sur le Clicker ou le mode Aventure/Combat ?
+**Lis `mobile/CLICKER_ADVENTURE_STATE.md` À LA PLACE de la section
+correspondante plus bas dans ce fichier.** Ce jeu est devenu gros
+(11 créatures, système de combat complet, boutique, quêtes...) et mérite
+son propre état à jour, plutôt que les sections historiques ci-dessous
+qui s'accumulent au fil des sessions sans être vraiment "l'état actuel".
+Objectif : gagner du temps/contexte en début de session, pas le perdre à
+lire un historique. Les sections "Clicker" plus bas dans CE fichier
+restent en place pour archive mais ne sont plus la référence à jour.
+
 ## 👋 Pour Flavio (design) — lis ceci en premier
 Ce n'est **pas un site web**, c'est une **application mobile** (Expo /
 React Native) — le code ressemble à du web mais ça tourne comme une vraie
