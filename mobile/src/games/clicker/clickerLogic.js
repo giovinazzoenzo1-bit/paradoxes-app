@@ -21,6 +21,25 @@ function mkSkills(entries) {
   return entries.map(([name, damage, enduranceCost], i) => ({ id: `s${i + 1}`, name, damage, enduranceCost }));
 }
 
+// Table de migration : quand une créature est renommée/remplacée par une
+// version Gemini (nouvel id), toute sauvegarde existante qui référence
+// l'ANCIEN id (dans `owned` ou `deck`) doit être redirigée vers le
+// nouveau — sinon `CREATURES.find(id)` renvoie undefined et fait planter
+// tout ce qui essaie de lire `.stages`/`.skills`/etc. sur le résultat
+// (crash réel rencontré : DeckPicker plantait pour les joueurs ayant déjà
+// "braisillon" ou "gouttelin" en collection/deck avant leur remplacement).
+// À compléter à chaque remplacement d'une créature d'origine par Gemini.
+export const CREATURE_ID_MIGRATIONS = {
+  braisillon: 'pyrosile',
+  gouttelin: 'caraploof',
+};
+
+// Applique la migration à un id de créature — renvoie l'id tel quel s'il
+// n'y a rien à migrer.
+export function migrateCreatureId(id) {
+  return CREATURE_ID_MIGRATIONS[id] || id;
+}
+
 export const CREATURES = [
   // Remplace Braisillon (29/08) — 1ère créature du roster à venir du
   // générateur Gemini de l'utilisateur, stats explicites (baseHp/etc.)

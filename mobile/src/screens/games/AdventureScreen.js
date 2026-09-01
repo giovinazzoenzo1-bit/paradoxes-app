@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
 import CombatScreen from './CombatScreen';
+import { DeckPicker } from './DeckPicker';
 import { CREATURES, RARITY_LABEL, RARITY_COLOR, RARITY_BADGE_LETTER, stageForLevel } from '../../games/clicker/clickerLogic';
 import {
   combatStatsForCreatureTyped,
@@ -25,8 +26,9 @@ import {
 // la peine d'alourdir davantage la sauvegarde déjà volumineuse du clicker.
 const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onAssignDeck, onClearDeckSlot }) {
   const [detailCreatureId, setDetailCreatureId] = useState(null);
+  const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
   const [currentUnlockedLevel, setCurrentUnlockedLevel] = useState(1);
   const [griffes, setGriffes] = useState(0);
@@ -126,38 +128,63 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature 
 
       {/* Les 3 créatures affichées ici sont le MÊME deck que celui utilisé
           pour les bulles de pouvoir du clicker classique — pas de
-          sélection séparée à gérer, une seule source de vérité. */}
+          sélection séparée à gérer, une seule source de vérité. Touche le
+          corps d'un emplacement rempli pour voir sa fiche, touche le
+          petit crayon (ou un emplacement vide) pour changer qui l'occupe. */}
       <View style={styles.creatureRow}>
         {deck.map((id, i) => {
           const creature = id ? CREATURES.find((c) => c.id === id) : null;
           const own = id ? ownedMap[id] : null;
           const display = creature && own ? creature.stages[stageForLevel(own.level)] : null;
           return (
-            <TouchableOpacity
-              key={i}
-              style={[styles.creatureSlot, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
-              onPress={() => creature && setDetailCreatureId(id)}
-              disabled={!creature}
-            >
-              {display ? (
-                <>
-                  <Text style={styles.creatureEmoji}>{display.emoji}</Text>
-                  <Text style={styles.creatureName} numberOfLines={1}>{display.name}</Text>
-                  <Text style={[styles.creatureRarity, { color: RARITY_COLOR[creature.rarity] }]}>{RARITY_LABEL[creature.rarity]}</Text>
-                </>
-              ) : (
-                <Text style={styles.emptySlotEmoji}>🥚</Text>
+            <View key={i} style={{ alignItems: 'center' }}>
+              <TouchableOpacity
+                style={[styles.creatureSlot, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
+                onPress={() => (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i))}
+              >
+                {display ? (
+                  <>
+                    <Text style={styles.creatureEmoji}>{display.emoji}</Text>
+                    <Text style={styles.creatureName} numberOfLines={1}>{display.name}</Text>
+                    <Text style={[styles.creatureRarity, { color: RARITY_COLOR[creature.rarity] }]}>{RARITY_LABEL[creature.rarity]}</Text>
+                  </>
+                ) : (
+                  <Text style={styles.emptySlotEmoji}>🥚</Text>
+                )}
+              </TouchableOpacity>
+              {creature && (
+                <TouchableOpacity style={styles.editSlotBtn} onPress={() => setDeckPickerSlot(i)}>
+                  <Ionicons name="pencil" size={12} color={COLORS.action} />
+                  <Text style={styles.editSlotBtnText}>Changer</Text>
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </View>
           );
         })}
       </View>
 
-      {hasEmptySlot && (
-        <Text style={styles.hint}>Configure ton deck depuis l'écran principal du clicker pour remplir les emplacements vides.</Text>
+      {deckPickerSlot !== null && (
+        <DeckPicker
+          slotIndex={deckPickerSlot}
+          deck={deck}
+          owned={owned}
+          onPick={(creatureId) => {
+            onAssignDeck(deckPickerSlot, creatureId);
+            setDeckPickerSlot(null);
+          }}
+          onClear={() => {
+            onClearDeckSlot(deckPickerSlot);
+            setDeckPickerSlot(null);
+          }}
+          onClose={() => setDeckPickerSlot(null)}
+        />
       )}
 
-      {!hasEmptySlot && <Text style={styles.hint}>Touche une créature pour voir sa fiche.</Text>}
+      {hasEmptySlot && (
+        <Text style={styles.hint}>Touche un emplacement vide pour choisir une créature.</Text>
+      )}
+
+      {!hasEmptySlot && <Text style={styles.hint}>Touche une créature pour voir sa fiche, "Changer" pour la remplacer.</Text>}
 
       <View style={{ flex: 1 }} />
 
@@ -462,6 +489,8 @@ const styles = StyleSheet.create({
   creatureName: { color: COLORS.text, fontSize: 11, fontWeight: '800', marginTop: 6, textAlign: 'center' },
   creatureRarity: { fontSize: 9, fontWeight: '700', marginTop: 2 },
   emptySlotEmoji: { fontSize: 36, opacity: 0.3 },
+  editSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 6, paddingVertical: 3, paddingHorizontal: 8, backgroundColor: 'rgba(245,197,66,0.1)', borderRadius: 8 },
+  editSlotBtnText: { color: COLORS.action, fontSize: 9, fontWeight: '700' },
 
   hint: { color: COLORS.muted, fontSize: 12, textAlign: 'center', marginTop: 18, paddingHorizontal: 20 },
 

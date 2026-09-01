@@ -56,9 +56,13 @@ import {
   autoClickerCost,
   totalAutoClickIncome,
   CREATURE_POWERS,
+  migrateCreatureId,
+  RARITY_BADGE_LETTER,
 } from '../../games/clicker/clickerLogic';
+import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 import { COLORS } from './clickerTheme';
+import { DeckPicker } from './DeckPicker';
 
 export const STORAGE_KEY = 'clicker:state:v1';
 
@@ -197,8 +201,27 @@ export default function ClickerScreen({ onBack }) {
           setCoins((saved.coins || 0) + offline);
           setTotalEarned((saved.totalEarned || 0) + offline);
           setTapPower(saved.tapPower || 1);
-          setOwned(saved.owned || []);
-          setDeck(saved.deck || [null, null, null]);
+          // Migration des identifiants renommés (créatures d'origine
+          // remplacées par des versions Gemini) — sans ça, une sauvegarde
+          // qui référence encore un ancien id fait planter tout ce qui
+          // essaie de retrouver la créature correspondante. Déduplique
+          // ensuite par sécurité (cas limite : si la nouvelle et
+          // l'ancienne créature étaient TOUTES LES DEUX déjà possédées,
+          // la migration créerait un doublon — on garde alors le niveau
+          // le plus élevé des deux).
+          const migratedOwned = (saved.owned || []).map((o) => ({ ...o, id: migrateCreatureId(o.id) }));
+          const dedupedOwned = [];
+          migratedOwned.forEach((o) => {
+            const existing = dedupedOwned.find((x) => x.id === o.id);
+            if (existing) {
+              existing.level = Math.max(existing.level, o.level);
+              existing.evolutionTier = Math.max(existing.evolutionTier || 0, o.evolutionTier || 0);
+            } else {
+              dedupedOwned.push(o);
+            }
+          });
+          setOwned(dedupedOwned);
+          setDeck((saved.deck || [null, null, null]).map((id) => (id ? migrateCreatureId(id) : id)));
           setCritLevel(saved.critLevel || 0);
           setAutoClickers(savedAutoClickers);
           setSanctuaryLevel(saved.sanctuaryLevel || 0);
@@ -655,7 +678,16 @@ export default function ClickerScreen({ onBack }) {
   // barre du bas) — pas juste une "vue" de plus parmi tap/shop/quests/
   // collection, pour éviter d'empiler deux headers et deux barres de nav.
   if (view === 'adventure') {
-    return <AdventureScreen owned={owned} deck={deck} onBack={() => setView('tap')} onEvolveCreature={handleEvolveCreature} />;
+    return (
+      <AdventureScreen
+        owned={owned}
+        deck={deck}
+        onBack={() => setView('tap')}
+        onEvolveCreature={handleEvolveCreature}
+        onAssignDeck={assignToDeck}
+        onClearDeckSlot={clearDeckSlot}
+      />
+    );
   }
 
   return (
@@ -841,49 +873,6 @@ function DeckRow({ deck, owned, onSlotPress }) {
 // Sélecteur : choisir quelle créature possédée occupe l'emplacement
 // tapé. Une créature déjà dans un autre emplacement peut être choisie —
 // elle sera simplement retirée de l'autre emplacement (pas de doublon).
-function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose }) {
-  return (
-    <View style={styles.detailOverlay}>
-      <View style={styles.detailPanel}>
-        <TouchableOpacity style={styles.detailClose} onPress={onClose}>
-          <Text style={styles.detailCloseText}>✕</Text>
-        </TouchableOpacity>
-        <Text style={styles.pickerTitle}>Emplacement {slotIndex + 1} du deck</Text>
-        <Text style={styles.pickerSubtitle}>Choisis une créature que tu possèdes</Text>
-
-        {owned.length === 0 ? (
-          <Text style={styles.pickerEmptyText}>Tu ne possèdes encore aucune créature — invoque-en une d'abord !</Text>
-        ) : (
-          <View style={styles.pickerGrid}>
-            {owned.map((o) => {
-              const creature = CREATURES.find((c) => c.id === o.id);
-              const display = creature.stages[stageForLevel(o.level)];
-              const inOtherSlot = deck.includes(o.id) && deck[slotIndex] !== o.id;
-              return (
-                <TouchableOpacity
-                  key={o.id}
-                  style={[styles.pickerCell, deck[slotIndex] === o.id && styles.pickerCellSelected]}
-                  onPress={() => onPick(o.id)}
-                >
-                  <Text style={styles.creatureEmoji}>{display.emoji}</Text>
-                  <Text style={styles.creatureName} numberOfLines={1}>{display.name}</Text>
-                  {inOtherSlot && <Text style={styles.pickerInUse}>déjà en jeu</Text>}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {deck[slotIndex] && (
-          <TouchableOpacity style={styles.pickerClearBtn} onPress={onClear}>
-            <Text style={styles.pickerClearBtnText}>Vider cet emplacement</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-}
-
 // Menu boutique dédié aux générateurs d'auto-clics (remplace l'ancien
 // bouton "Familier" à niveau unique) — un palier par ligne, avec le
 // nombre possédé, le revenu qu'il rapporte, et un bouton pour en acheter
@@ -1161,7 +1150,9 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, o
 function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscount }) {
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
+  const baseName = creature.stages[0].name;
   const power = CREATURE_POWERS[creature.id];
+  const combatStats = combatStatsForCreatureTyped(creature, owned.level, owned.evolutionTier || 0);
   const baseCost = levelUpCost(creature, owned.level);
   const cost = pendingDiscount ? Math.max(1, Math.round(baseCost * (1 - pendingDiscount.percent))) : baseCost;
   const canFeed = coins >= cost;
@@ -1169,24 +1160,61 @@ function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscou
 
   return (
     <View style={styles.detailOverlay}>
-      <View style={styles.detailPanel}>
-        <TouchableOpacity style={styles.detailClose} onPress={onClose}>
-          <Text style={styles.detailCloseText}>✕</Text>
-        </TouchableOpacity>
-        <Text style={styles.detailEmoji}>{display.emoji}</Text>
-        <Text style={styles.detailName}>{display.name}</Text>
+      <TouchableOpacity style={styles.detailClose} onPress={onClose}>
+        <Text style={styles.detailCloseText}>✕</Text>
+      </TouchableOpacity>
+      <ScrollView style={styles.detailPanel} contentContainerStyle={{ alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={{ alignItems: 'center' }}>
+            <View style={[styles.rarityBadgeSmall, { backgroundColor: RARITY_COLOR[creature.rarity] }]}>
+              <Text style={styles.rarityBadgeSmallText}>{RARITY_BADGE_LETTER[creature.rarity]}</Text>
+            </View>
+            <Text style={styles.elementLabelSmall}>{creature.element}</Text>
+          </View>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={styles.detailEmoji}>{display.emoji}</Text>
+            <Text style={styles.detailName}>{display.name}</Text>
+          </View>
+        </View>
+
         <Text style={[styles.creatureRarity, { color: RARITY_COLOR[creature.rarity] }]}>
-          {RARITY_LABEL[creature.rarity]} · {creature.element}
+          {RARITY_LABEL[creature.rarity]} · {creature.combatType}
         </Text>
         <Text style={styles.detailStat}>Niveau {owned.level}</Text>
-        <Text style={styles.detailPowerHint}>✨ Pouvoir dédié (bulle) : {power.name}</Text>
         {nextEvoLevel && <Text style={styles.detailEvoHint}>Évolue au niveau {nextEvoLevel}</Text>}
+
+        <View style={styles.combatStatsRow}>
+          <Text style={styles.combatStatItem}>❤️ {combatStats.hp} PV</Text>
+          <Text style={styles.combatStatItem}>⚔️ {combatStats.attack} ATQ</Text>
+          <Text style={styles.combatStatItem}>👆 {combatStats.clickSpeed} vitesse</Text>
+          <Text style={styles.combatStatItem}>🔋 {combatStats.endurance} END</Text>
+        </View>
+
+        <Text style={styles.detailPowerHint}>✨ Pouvoir dédié (bulle) : {power.name}</Text>
+
+        <View style={styles.skillsBox}>
+          <Text style={styles.sectionTitleSmall}>⚔️ Attaques</Text>
+          {creature.skills.map((skill) => (
+            <View key={skill.id} style={styles.skillRowSmall}>
+              <Text style={styles.skillNameSmall}>{skill.name}</Text>
+              <Text style={styles.skillStatsSmall}>{skill.damage} dégâts · {skill.enduranceCost} END</Text>
+            </View>
+          ))}
+        </View>
+
+        {creature.lore && (
+          <View style={styles.skillsBox}>
+            <Text style={styles.sectionTitleSmall}>📖 Histoire</Text>
+            {display.name !== baseName && <Text style={styles.speciesNoteSmall}>Forme de base : {baseName}</Text>}
+            <Text style={styles.loreTextSmall}>{creature.lore}</Text>
+          </View>
+        )}
 
         <TouchableOpacity style={[styles.feedBtn, !canFeed && styles.actionBtnDisabled]} onPress={onFeed} disabled={!canFeed}>
           <Text style={styles.feedBtnText}>🍖 Nourrir</Text>
           <Text style={styles.feedBtnCost}>💰 {formatNum(cost)}</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -1495,14 +1523,32 @@ const styles = StyleSheet.create({
   creatureRarity: { fontSize: 8, fontWeight: '800', marginTop: 2, letterSpacing: 0.5 },
 
   detailOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  detailPanel: { width: '100%', backgroundColor: COLORS.panel, borderRadius: 20, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  detailClose: { position: 'absolute', top: 12, right: 12, padding: 6 },
+  detailPanel: { width: '100%', maxHeight: '85%', backgroundColor: COLORS.panel, borderRadius: 20, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
+  detailClose: { position: 'absolute', top: 30, right: 30, padding: 6, zIndex: 10 },
   detailCloseText: { color: COLORS.muted, fontSize: 16, fontWeight: '800' },
   detailEmoji: { fontSize: 64 },
   detailName: { color: COLORS.text, fontSize: 20, fontWeight: '900', marginTop: 6 },
   detailStat: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 10 },
   detailEvoHint: { color: '#b96bff', fontSize: 11, fontWeight: '700', marginTop: 4 },
   detailPowerHint: { color: COLORS.action, fontSize: 12, fontWeight: '700', marginTop: 8, textAlign: 'center' },
+
+  rarityBadgeSmall: {
+    width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+  },
+  rarityBadgeSmallText: { color: '#fff', fontSize: 13, fontWeight: '900' },
+  elementLabelSmall: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 4 },
+
+  combatStatsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginTop: 12 },
+  combatStatItem: { color: COLORS.text, fontSize: 11, fontWeight: '800', backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+
+  skillsBox: { width: '100%', marginTop: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 12 },
+  sectionTitleSmall: { color: COLORS.action, fontSize: 12, fontWeight: '900', marginBottom: 6 },
+  skillRowSmall: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  skillNameSmall: { color: COLORS.text, fontSize: 11, fontWeight: '700' },
+  skillStatsSmall: { color: COLORS.action, fontSize: 10, fontWeight: '700' },
+  speciesNoteSmall: { color: COLORS.muted, fontSize: 10, fontStyle: 'italic', marginBottom: 4 },
+  loreTextSmall: { color: COLORS.text, fontSize: 11, lineHeight: 16 },
 
   shopRow: {
     width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10,
