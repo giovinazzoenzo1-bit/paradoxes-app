@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AdventureScreen from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
 import {
   CREATURES,
@@ -57,22 +58,7 @@ import {
   CREATURE_POWERS,
 } from '../../games/clicker/clickerLogic';
 import useBackGesture from '../../hooks/useBackGesture';
-
-// Style "Juicy" : fond très sombre et profond (bleu abysse) pour que les
-// éléments d'action en néon ressortent instantanément et guident l'œil —
-// contraste extrême assumé plutôt qu'une palette timide.
-const COLORS = {
-  bg: '#07051a',
-  panel: '#171331',
-  panelLight: '#221c47',
-  border: '#332c5e',
-  text: '#f5f3ff',
-  muted: '#9088b8',
-  action: '#f5c542',
-  good: '#00ffa3',
-  neonPink: '#ff2d95',
-  neonCyan: '#00e5ff',
-};
+import { COLORS } from './clickerTheme';
 
 export const STORAGE_KEY = 'clicker:state:v1';
 
@@ -93,7 +79,7 @@ export default function ClickerScreen({ onBack }) {
   const [totalEarned, setTotalEarned] = useState(0); // cumul jamais décroissant, pour l'Ascension
   const [tapPower, setTapPower] = useState(1);
   const [owned, setOwned] = useState([]); // [{id, level}]
-  const [view, setView] = useState('tap'); // 'tap' | 'shop' | 'quests' | 'collection'
+  const [view, setView] = useState('tap'); // 'tap' | 'shop' | 'quests' | 'collection' | 'adventure'
   const [selectedCreature, setSelectedCreature] = useState(null);
   const [welcomeBack, setWelcomeBack] = useState(null);
   const [popups, setPopups] = useState([]);
@@ -107,7 +93,8 @@ export default function ClickerScreen({ onBack }) {
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
   const [ritualTarget, setRitualTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null — bulle "pub" (Rituel)
   const [autoClickers, setAutoClickers] = useState({}); // { esprit: 3, main: 1, ... }
-  const [combatComingSoonOpen, setCombatComingSoonOpen] = useState(false);
+  // (plus d'état combatComingSoonOpen — remplacé par la vraie navigation
+  // vers AdventureScreen, voir plus bas)
   const [sanctuaryLevel, setSanctuaryLevel] = useState(0);
   const [veilleurLevel, setVeilleurLevel] = useState(0);
   const [essence, setEssence] = useState(0); // bonus permanent d'Ascension, survit aux resets
@@ -656,6 +643,13 @@ export default function ClickerScreen({ onBack }) {
     );
   }
 
+  // L'Aventure est un écran à part entière (son propre header, sa propre
+  // barre du bas) — pas juste une "vue" de plus parmi tap/shop/quests/
+  // collection, pour éviter d'empiler deux headers et deux barres de nav.
+  if (view === 'adventure') {
+    return <AdventureScreen owned={owned} deck={deck} onBack={() => setView('tap')} />;
+  }
+
   return (
     <View style={styles.screen} {...panHandlers}>
       <View style={styles.header}>
@@ -796,26 +790,10 @@ export default function ClickerScreen({ onBack }) {
         />
       )}
 
-      {combatComingSoonOpen && (
-        <View style={styles.detailOverlay}>
-          <View style={styles.detailPanel}>
-            <TouchableOpacity style={styles.detailClose} onPress={() => setCombatComingSoonOpen(false)}>
-              <Text style={styles.detailCloseText}>✕</Text>
-            </TouchableOpacity>
-            <Text style={styles.detailEmoji}>⚔️</Text>
-            <Text style={styles.detailName}>Combat / Aventure</Text>
-            <Text style={styles.pickerSubtitle}>
-              Bientôt disponible — affronte d'autres créatures pour en capturer de nouvelles.
-              Débloqué dès ta première créature obtenue.
-            </Text>
-          </View>
-        </View>
-      )}
-
       <BottomTabBar
         view={view}
         setView={setView}
-        onAdventurePress={() => setCombatComingSoonOpen(true)}
+        onAdventurePress={() => setView('adventure')}
         eggPhase={eggPhase}
         completedQuestCount={completedQuestCount}
         ownedCount={owned.length}
