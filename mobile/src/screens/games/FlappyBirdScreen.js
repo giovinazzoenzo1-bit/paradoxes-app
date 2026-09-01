@@ -110,22 +110,29 @@ function TiledPipeBody({ width, height }) {
 // est invisible puisque le bord droit de l'image rejoint son propre bord
 // gauche (raccord déjà fait dans les fichiers fournis).
 function ScrollingStrip({ source, width, height, top, speedPxPerSec }) {
+  // Arrondi à l'entier ET positionnement ABSOLU explicite de chaque copie
+  // (au lieu de flexDirection:row, où chaque enfant peut être arrondi
+  // indépendamment par le moteur de mise en page et laisser un écart
+  // d'un sous-pixel entre les deux) — c'est cet écart qui créait la ligne
+  // verticale visible au raccord, repérée sur la capture d'écran.
+  const w = Math.round(width);
   const translateX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     translateX.setValue(0);
-    const durationMs = (width / speedPxPerSec) * 1000;
+    const durationMs = (w / speedPxPerSec) * 1000;
     const anim = Animated.loop(
-      Animated.timing(translateX, { toValue: -width, duration: durationMs, easing: Easing.linear, useNativeDriver: true })
+      Animated.timing(translateX, { toValue: -w, duration: durationMs, easing: Easing.linear, useNativeDriver: true })
     );
     anim.start();
     return () => anim.stop();
-  }, [width, speedPxPerSec, translateX]);
+  }, [w, speedPxPerSec, translateX]);
 
   return (
-    <Animated.View style={{ position: 'absolute', top, left: 0, flexDirection: 'row', transform: [{ translateX }] }}>
-      <Image source={source} style={{ width, height }} resizeMode="stretch" />
-      <Image source={source} style={{ width, height }} resizeMode="stretch" />
+    <Animated.View style={{ position: 'absolute', top, left: 0, transform: [{ translateX }] }}>
+      <Image source={source} style={{ position: 'absolute', left: 0, top: 0, width: w, height }} resizeMode="stretch" />
+      <Image source={source} style={{ position: 'absolute', left: w, top: 0, width: w, height }} resizeMode="stretch" />
+      <Image source={source} style={{ position: 'absolute', left: w * 2, top: 0, width: w, height }} resizeMode="stretch" />
     </Animated.View>
   );
 }
@@ -138,6 +145,10 @@ function ScrollingStrip({ source, width, height, top, speedPxPerSec }) {
 // ET le changement de luminosité trop brutal entre les images (elles
 // n'ont pas exactement le même éclairage), en lissant la transition.
 function HerbeStrip({ width, height, top, speedPxPerSec }) {
+  // Même correctif que ScrollingStrip : largeur arrondie + positionnement
+  // absolu explicite de chaque copie, pour éliminer l'écart de sous-pixel
+  // au raccord (ligne verticale visible sur la capture d'écran).
+  const w = Math.round(width);
   const translateX = useRef(new Animated.Value(0)).current;
   const opacities = useRef(HERBE_IMGS.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
   const frameIdxRef = useRef(0);
@@ -145,9 +156,9 @@ function HerbeStrip({ width, height, top, speedPxPerSec }) {
 
   useEffect(() => {
     translateX.setValue(0);
-    const durationMs = (width / speedPxPerSec) * 1000;
+    const durationMs = (w / speedPxPerSec) * 1000;
     const scrollAnim = Animated.loop(
-      Animated.timing(translateX, { toValue: -width, duration: durationMs, easing: Easing.linear, useNativeDriver: true })
+      Animated.timing(translateX, { toValue: -w, duration: durationMs, easing: Easing.linear, useNativeDriver: true })
     );
     scrollAnim.start();
 
@@ -169,17 +180,17 @@ function HerbeStrip({ width, height, top, speedPxPerSec }) {
       clearInterval(frameInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [width, speedPxPerSec, translateX]);
+  }, [w, speedPxPerSec, translateX]);
 
   return (
-    <Animated.View style={{ position: 'absolute', top, left: 0, flexDirection: 'row', transform: [{ translateX }] }}>
-      {[0, 1].map((copyIdx) => (
-        <View key={copyIdx} style={{ width, height }}>
+    <Animated.View style={{ position: 'absolute', top, left: 0, transform: [{ translateX }] }}>
+      {[0, 1, 2].map((copyIdx) => (
+        <View key={copyIdx} style={{ position: 'absolute', left: w * copyIdx, top: 0, width: w, height }}>
           {HERBE_IMGS.map((src, i) => (
             <Animated.Image
               key={i}
               source={src}
-              style={{ position: 'absolute', top: 0, left: 0, width, height, opacity: opacities[i] }}
+              style={{ position: 'absolute', top: 0, left: 0, width: w, height, opacity: opacities[i] }}
               resizeMode="stretch"
             />
           ))}
