@@ -158,3 +158,32 @@ monolithique d'un coup.
 6. **Ressource "Griffes"** — ajout au modèle de données, persistance,
    affichage du gain à la victoire. La boutique pour la dépenser viendra
    dans une passe encore plus tardive, pas incluse dans cet ordre.
+
+
+## Combat en équipe de 3 + système d'évolution (29/08)
+Deux ajouts majeurs suite au retour de l'utilisateur, tous deux testés
+et poussés :
+
+**Combat en équipe** : les 3 créatures du deck combattent maintenant à
+tour de rôle (fini le choix d'une seule créature avant le combat).
+Quand le combattant actif tombe à 0 PV, le suivant de l'équipe entre
+automatiquement (bannière "X est K.O. ! Y entre en combat !"). Défaite
+seulement si les 3 sont K.O. Rotation vérifiée par simulation avant
+intégration dans l'écran.
+
+**Système d'évolution** (séparé du niveau, qui continue de monter via
+le nourrissage classique) : palier 0→1 débloqué au niveau 25, 1→2 au
+niveau 50, chaque palier payé en **Griffes** (40 puis 100) — pas
+automatique, un vrai choix du joueur. **Pas de changement de nom** (à la
+différence des 10 créatures d'origine qui gardent leurs 3 noms/dessins
+distincts par stade). Boost de PV/ATQ/Endurance par palier (x1.0 → x1.3
+→ x1.7), la vitesse de clic ne change jamais (le défi de tap ne doit pas
+devenir plus dur en évoluant).
+
+**Ajustement dev** : défi de tap réduit à 25 clics (au lieu de 50) pour
+itérer plus vite pendant cette phase — à remonter si besoin une fois
+l'équilibrage validé.
+
+Voir aussi les stats recalibrées (rareté à 6 paliers, éléments alignés
+sur les 8 de Gemini, badges façon Monster Legends) documentées
+directement dans `clickerLogic.js`/`combatLogic.js`.
