@@ -208,14 +208,31 @@ function HerbeStrip({ width, height, top, speedPxPerSec }) {
 // encore "pleine" (les brins d'herbe ne sont denses qu'à partir d'environ
 // 60% de leur hauteur, le haut de l'image est fait de pointes espacées) —
 // sans cette marge, un filet de ciel bleu passait entre les deux bandes.
+//
+// Correctif horizon (29/08, retour utilisateur) : la ligne ciel/mer dans
+// fond.png est à y≈225 sur 400 (mesuré directement sur les pixels, pas
+// deviné). Les immeubles avaient leur pied à y=266 — 40px DANS la mer, et
+// pas assez haut pour couvrir le bas des tours du pont, d'où l'impression
+// de coupure. Deux ajustements : le fond remonte de 50px (FOND_SHIFT_UP,
+// révèle plus de mer plus haut) et les immeubles descendent (266→310,
+// pied plus proche du pont/des arbres). Le bas de fond.png qui sort du
+// cadre après le décalage reste couvert par les arbres et l'herbe (leurs
+// zones [261,375] et [302,400] recouvrent largement le trou [350,400]
+// laissé par le décalage — vérifié par calcul avant d'appliquer).
 function FlappyBackground({ scale, gameWidth, gameHeight }) {
   const stripW = 600 * scale;
   const ARBRES_OVERLAP = 20; // px supplémentaires sous le pied nominal des arbres
+  const FOND_SHIFT_UP = 50; // px — remonte le fond pour révéler plus de mer
+  const VILLE_FOOT_Y = 310; // était 266 — descendu pour ne plus déborder dans la mer
   return (
     <>
-      <Image source={FOND_IMG} style={{ position: 'absolute', top: 0, left: 0, width: gameWidth, height: gameHeight }} resizeMode="stretch" />
+      <Image
+        source={FOND_IMG}
+        style={{ position: 'absolute', top: -FOND_SHIFT_UP * scale, left: 0, width: gameWidth, height: gameHeight }}
+        resizeMode="stretch"
+      />
       <ScrollingStrip source={NUAGES_IMG} width={stripW} height={NUAGES_NATIVE.h * scale} top={0} speedPxPerSec={SCROLL_SPEED.nuages * scale} />
-      <ScrollingStrip source={VILLE_IMG} width={stripW} height={VILLE_NATIVE.h * scale} top={266 * scale - VILLE_NATIVE.h * scale} speedPxPerSec={SCROLL_SPEED.ville * scale} />
+      <ScrollingStrip source={VILLE_IMG} width={stripW} height={VILLE_NATIVE.h * scale} top={VILLE_FOOT_Y * scale - VILLE_NATIVE.h * scale} speedPxPerSec={SCROLL_SPEED.ville * scale} />
       <ScrollingStrip
         source={ARBRES_IMG}
         width={stripW}
