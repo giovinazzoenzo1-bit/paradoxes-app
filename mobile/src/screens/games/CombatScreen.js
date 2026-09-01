@@ -24,6 +24,19 @@ import {
 // combat ne pourrait plus se terminer. Dégâts volontairement faibles.
 const BASIC_ATTACK_RATIO = 0.4; // proportion de la stat ATQ brute
 
+// Trouve le prochain combattant VIVANT après `fromIndex`, en boucle sur
+// l'équipe (0→1→2→0…), en sautant les K.O. — utilisé à CHAQUE tour pour
+// faire tourner l'équipe, pas seulement quand le combattant actif tombe.
+// Retourne -1 si personne n'est vivant.
+function nextLivingIndex(fighters, fromIndex) {
+  const n = fighters.length;
+  for (let step = 1; step <= n; step++) {
+    const idx = (fromIndex + step) % n;
+    if (fighters[idx].hp > 0) return idx;
+  }
+  return -1;
+}
+
 // team : [{ creature, ownedLevel, evolutionTier }, ...] (1 à 3 entrées,
 // dans l'ordre du deck) — voir ChapterMapScreen pour la construction.
 export default function CombatScreen({ team, levelNumber, onFinish }) {
@@ -156,31 +169,30 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       opponentSkillName: result.dmgToPlayer > 0 ? opponentSkill.name : null,
     });
 
-    // Détermine IMMÉDIATEMENT ce qui doit se passer ensuite (victoire /
-    // défaite / changement de combattant / tour suivant), mais ne
+    // Détermine IMMÉDIATEMENT ce qui doit se passer ensuite, mais ne
     // l'applique PAS tout de suite — attend un tap explicite du joueur sur
-    // "Continuer" plutôt qu'un minuteur automatique. Avant, un
-    // setTimeout(…, 1200) déclenchait la suite tout seul ; si quoi que ce
-    // soit l'interrompait (changement de phase pendant l'attente,
-    // comportement JS en arrière-plan…), le combat restait bloqué en
-    // phase "resolving" pour toujours — correspond exactement au bug
-    // remonté ("le combat s'arrête avant que la barre de PV soit à
-    // zéro"). Un bouton explicite élimine toute cette classe de bug.
+    // "Continuer" plutôt qu'un minuteur automatique (voir plus haut,
+    // corrige le bug de blocage). Rotation à CHAQUE tour désormais — pas
+    // seulement quand le combattant actif tombe K.O. — pour varier le
+    // combat : après chaque attaque, on passe systématiquement au
+    // prochain combattant vivant de l'équipe (en boucle), qu'il ait
+    // survécu ou non.
     if (result.opponentHp <= 0) {
       pendingTransitionRef.current = { type: 'win' };
-    } else if (result.playerHp <= 0) {
-      const nextIdx = newFighters.findIndex((f) => f.hp > 0);
+    } else {
+      const fainted = result.playerHp <= 0;
+      const nextIdx = nextLivingIndex(newFighters, curIdx);
       if (nextIdx === -1) {
         pendingTransitionRef.current = { type: 'lose' };
       } else {
         pendingTransitionRef.current = {
           type: 'switch',
           nextIdx,
-          message: `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`,
+          message: fainted
+            ? `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`
+            : `Au tour de ${newFighters[nextIdx].creature.stages[0].name} !`,
         };
       }
-    } else {
-      pendingTransitionRef.current = { type: 'continue' };
     }
     setPhase('resolving');
   };
