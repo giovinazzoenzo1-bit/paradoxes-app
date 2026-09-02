@@ -55,19 +55,31 @@ export default function ProgresScreen() {
             clicker ou d'aventure) : juste être revenu aujourd'hui compte,
             peu importe le mode joué. */}
         <View style={styles.streakCard}>
-          <Text style={styles.streakTitle}>🔥 {streak} jour{streak > 1 ? 's' : ''} de suite</Text>
-          <View style={styles.streakDots}>
-            {STREAK_REWARDS.map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.streakDot,
-                  i + 1 === dayInCycle && styles.streakDotCurrent,
-                  i + 1 < dayInCycle && styles.streakDotDone,
-                ]}
-              />
-            ))}
+          <Text style={styles.streakTitle}>🔥 Jour {dayInCycle} / 7</Text>
+          <Text style={styles.streakSubtitle}>Le cycle de 7 jours recommence ensuite</Text>
+
+          {/* Tableau des 7 jours — remplace les petits points par une
+              vraie grille numérotée avec la récompense visible sur
+              chaque case (demande explicite), et affiche bien "Jour 1"
+              après le jour 7, pas un compteur qui grimpe sans fin. */}
+          <View style={styles.streakTable}>
+            {STREAK_REWARDS.map((reward, i) => {
+              const dayNum = i + 1;
+              const isCurrent = dayNum === dayInCycle;
+              const isDone = dayNum < dayInCycle || (dayNum === dayInCycle && streakAlreadyClaimed);
+              return (
+                <View
+                  key={i}
+                  style={[styles.streakDayCell, isCurrent && styles.streakDayCellCurrent, isDone && styles.streakDayCellDone]}
+                >
+                  <Text style={[styles.streakDayLabel, isCurrent && styles.streakDayLabelCurrent]}>J{dayNum}</Text>
+                  <Text style={[styles.streakDayReward, isCurrent && styles.streakDayLabelCurrent]}>{reward}</Text>
+                  {isDone && <Text style={styles.streakDayCheck}>✓</Text>}
+                </View>
+              );
+            })}
           </View>
+
           <TouchableOpacity
             style={[styles.claimBtn, streakAlreadyClaimed && styles.claimBtnDone]}
             onPress={handleClaimStreak}
@@ -126,10 +138,18 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border, marginBottom: 22,
   },
   streakTitle: { color: COLORS.action, fontSize: 18, fontWeight: '900' },
-  streakDots: { flexDirection: 'row', gap: 8, marginTop: 12, marginBottom: 14 },
-  streakDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.border },
-  streakDotDone: { backgroundColor: COLORS.good },
-  streakDotCurrent: { backgroundColor: COLORS.action, transform: [{ scale: 1.3 }] },
+  streakSubtitle: { color: COLORS.muted, fontSize: 10, marginTop: 2, marginBottom: 14 },
+  streakTable: { flexDirection: 'row', gap: 6, marginBottom: 16 },
+  streakDayCell: {
+    flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1.5, borderColor: COLORS.border,
+  },
+  streakDayCellCurrent: { borderColor: COLORS.action, backgroundColor: 'rgba(245,197,66,0.14)' },
+  streakDayCellDone: { borderColor: COLORS.good, backgroundColor: 'rgba(0,255,163,0.08)' },
+  streakDayLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '800' },
+  streakDayLabelCurrent: { color: COLORS.action },
+  streakDayReward: { color: COLORS.text, fontSize: 12, fontWeight: '900', marginTop: 3 },
+  streakDayCheck: { color: COLORS.good, fontSize: 11, fontWeight: '900', marginTop: 2 },
 
   sectionTitle: { color: COLORS.muted, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginBottom: 10 },
 
