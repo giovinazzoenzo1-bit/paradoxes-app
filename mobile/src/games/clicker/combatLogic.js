@@ -348,7 +348,37 @@ export const MONSTER_TYPES = {
 // Version de combatStatsForCreature qui applique EN PLUS le modificateur
 // du type — remplace l'ancienne fonction dans les nouveaux usages (le
 // choix du type se fait maintenant par créature, pas par rareté seule).
-export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0) {
+// ---- Runes (30/08) — table validée avec l'utilisateur avant implémentation ----
+// 4 types, 5 paliers chacun, progression à rendements légèrement
+// décroissants (même logique que le plafond de croissance de l'ATQ par
+// niveau) pour qu'un palier 5 reste fort sans devenir abusé.
+export const RUNE_BONUS_TABLE = {
+  force: [0.04, 0.08, 0.13, 0.19, 0.27], // % bonus ATQ
+  vitalite: [0.05, 0.10, 0.16, 0.23, 0.32], // % bonus PV
+  endurance: [0.06, 0.12, 0.19, 0.27, 0.37], // % bonus Endurance max
+  celerite: [0.10, 0.20, 0.35, 0.50, 0.70], // bonus ADDITIF sur le plafond du multiplicateur de dégâts (x2,5 de base)
+};
+
+// Additionne les bonus de TOUTES les runes équipées (jusqu'à 3) sur une
+// créature — plusieurs runes du même type s'additionnent simplement
+// entre elles (pas de rendements décroissants supplémentaires entre
+// runes, seulement au sein de la progression de palier d'UNE rune).
+export function runeBonuses(equippedRunes) {
+  const totals = { atkPct: 0, hpPct: 0, endurancePct: 0, dmgMultBonus: 0 };
+  (equippedRunes || []).forEach((r) => {
+    if (!r) return;
+    const table = RUNE_BONUS_TABLE[r.type];
+    if (!table) return;
+    const val = table[Math.max(0, Math.min(4, r.level - 1))];
+    if (r.type === 'force') totals.atkPct += val;
+    else if (r.type === 'vitalite') totals.hpPct += val;
+    else if (r.type === 'endurance') totals.endurancePct += val;
+    else if (r.type === 'celerite') totals.dmgMultBonus += val;
+  });
+  return totals;
+}
+
+export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0, equippedRunes = []) {
   const base = combatStatsForCreature(creature, level);
   // Le multiplicateur de type ne s'applique QUE pour les créatures qui
   // suivent encore la formule par rareté — les créatures avec des stats
@@ -357,14 +387,22 @@ export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0) 
   // reviendrait à le compter deux fois.
   const typeMod = creature.baseHp != null ? { hpMult: 1, attackMult: 1 } : (MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant);
   const evoMult = EVOLUTION_STAT_MULTIPLIER[evolutionTier] || 1;
+  // 4e paramètre optionnel, défaut [] — un appel existant sans runes
+  // (partout ailleurs dans le code pour l'instant) donne des bonus nuls
+  // et reproduit EXACTEMENT le comportement d'avant, aucune régression.
+  const bonus = runeBonuses(equippedRunes);
   return {
-    hp: Math.round(base.hp * typeMod.hpMult * evoMult),
-    attack: Math.round(base.attack * typeMod.attackMult * evoMult),
+    hp: Math.round(base.hp * typeMod.hpMult * evoMult * (1 + bonus.hpPct)),
+    attack: Math.round(base.attack * typeMod.attackMult * evoMult * (1 + bonus.atkPct)),
     // La vitesse de clic n'est jamais boostée par l'évolution — le défi
     // de tap ne doit pas devenir plus dur à réussir en évoluant, seule
     // la PUISSANCE des attaques doit grandir.
     clickSpeed: base.clickSpeed,
-    endurance: Math.round(base.endurance * evoMult),
+    endurance: Math.round(base.endurance * evoMult * (1 + bonus.endurancePct)),
+    // Exposé pour que CombatScreen l'ajoute au plafond du multiplicateur
+    // de vitesse de tap (Rune de Célérité) — pas une vraie "stat" au
+    // sens PV/ATQ/Endurance, juste transporté avec le reste.
+    dmgMultBonus: bonus.dmgMultBonus,
   };
 }
 
