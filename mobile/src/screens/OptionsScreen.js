@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CoinBar from '../components/CoinBar';
 import { useCoins } from '../context/CoinsContext';
 import { STORAGE_KEY as CLICKER_STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY } from './games/ClickerScreen';
+import { DEV_ADD_GRIFFES_KEY } from './games/AdventureScreen';
 import { CREATURES } from '../games/clicker/clickerLogic';
 
 export default function OptionsScreen() {
@@ -82,6 +83,14 @@ export default function OptionsScreen() {
     ]);
   };
 
+  // Outil de dev : même schéma que unlockAllCreatures — pose un drapeau
+  // lu par AdventureScreen à son prochain chargement (+1000 Griffes),
+  // jamais d'écriture directe dans sa sauvegarde depuis ici.
+  const devAddGriffes = async () => {
+    await AsyncStorage.setItem(DEV_ADD_GRIFFES_KEY, '1');
+    Alert.alert('Fait', "1000 Griffes seront ajoutées à l'ouverture du mode Aventure.");
+  };
+
   return (
     <View style={styles.container}>
       <CoinBar />
@@ -109,6 +118,9 @@ export default function OptionsScreen() {
           </TouchableOpacity>
           <TouchableOpacity style={[styles.devBtn, { marginTop: 8 }]} onPress={restoreBackup}>
             <Text style={styles.devBtnText}>🛟 Restaurer la sauvegarde de secours (Élevage)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.devBtn, { marginTop: 8 }]} onPress={devAddGriffes}>
+            <Text style={styles.devBtnText}>🐾 +1000 Griffes (Aventure)</Text>
           </TouchableOpacity>
         </View>
       </View>

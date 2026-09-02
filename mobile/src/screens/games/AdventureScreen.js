@@ -25,6 +25,12 @@ import {
 // d'Aventure grossira avec le temps (niveaux, ressource Griffes...), pas
 // la peine d'alourdir davantage la sauvegarde déjà volumineuse du clicker.
 const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
+// Drapeau dev "Ajouter des Griffes" (posé depuis Options) — même schéma
+// de sécurité que DEV_UNLOCK_ALL_KEY dans ClickerScreen.js : jamais
+// d'écriture directe dans la sauvegarde depuis un autre écran, juste un
+// drapeau lu et appliqué par AdventureScreen lui-même à son chargement.
+export const DEV_ADD_GRIFFES_KEY = 'adventure:dev:addGriffes';
+const DEV_GRIFFES_AMOUNT = 1000;
 
 // Runes — proposition initiale de 4 types (voir le tableau des paliers
 // donné à l'utilisateur en réponse). Les BONUS eux-mêmes ne sont pas
@@ -73,6 +79,13 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         }
       } catch (e) {
         // pas de sauvegarde valide, on démarre au niveau 1
+      }
+      // Drapeau dev "Ajouter des Griffes" — placé hors du if(raw) pour
+      // marcher aussi sans sauvegarde existante.
+      const griffesFlag = await AsyncStorage.getItem(DEV_ADD_GRIFFES_KEY);
+      if (griffesFlag === '1') {
+        setGriffes((g) => g + DEV_GRIFFES_AMOUNT);
+        await AsyncStorage.removeItem(DEV_ADD_GRIFFES_KEY);
       }
       setProgressLoaded(true);
     })();
