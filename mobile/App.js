@@ -8,6 +8,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import * as NavigationBar from 'expo-navigation-bar';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { CoinsProvider } from './src/context/CoinsContext';
+import { DailyProvider } from './src/context/DailyContext';
 import JeuxScreen from './src/screens/JeuxScreen';
 import ProgresScreen from './src/screens/ProgresScreen';
 import OptionsScreen from './src/screens/OptionsScreen';
@@ -68,7 +69,9 @@ export default function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <CoinsProvider>
-          <AppContent />
+          <DailyProvider>
+            <AppContent />
+          </DailyProvider>
         </CoinsProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
