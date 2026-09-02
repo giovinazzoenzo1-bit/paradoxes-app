@@ -36,6 +36,7 @@ export const CREATURE_ID_MIGRATIONS = {
   bourgeonin: 'ventis',
   etincelot: 'voltix',
   lumeret: 'luxorbe',
+  ombrelin: 'ombrillon',
 };
 
 // Applique la migration à un id de créature — renvoie l'id tel quel s'il
@@ -98,11 +99,12 @@ export const CREATURES = [
     stages: [
     { name: 'Frimouss', emoji: '🐧' }, { name: 'Glacœur', emoji: '❄️' }, { name: 'Cristalys', emoji: '🧊' },
   ]},
-  { id: 'ombrelin', element: 'Ténèbres', rarity: 'epique', baseIncome: 1.0, combatType: 'attaquant',
-    skills: mkSkills([['Griffure Furtive', 19, 30], ["Morsure d'Ombre", 38, 30], ['Voile Ténébreux', 57, 30], ['Éclipse Totale', 84, 30]]),
-    lore: "Ombrelin n'existe qu'à moitié dans notre monde — l'autre moitié traîne quelque part dans l'obscurité, à observer.",
+  { id: 'ombrillon', element: 'Ténèbres', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
+    baseHp: 10, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([["Griffe d'Ombre", 2, 5], ["Jet d'Obscurité", 3, 10], ['Regard Panique', 4, 15], ['Frappe Nocturne', 5, 25]]),
+    lore: "Ombrillon est une petite entité née dans les recoins obscurs des vieilles caves. Bien qu'il soit chétif et souvent ignoré, il se nourrit des petites peurs pour gagner en agressivité. Ses frappes furtives surprennent toujours ceux qui s'aventurent sans torche dans le noir.",
     stages: [
-    { name: 'Ombrelin', emoji: '🦇' }, { name: 'Nocturval', emoji: '🦉' }, { name: 'Ténébrume', emoji: '🐺' },
+    { name: 'Ombrillon', emoji: '🦇' }, { name: 'Ombrillon', emoji: '🦇' }, { name: 'Ombrillon', emoji: '🦇' },
   ]},
   { id: 'luxorbe', element: 'Lumière', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
     baseHp: 12, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
@@ -221,7 +223,7 @@ export const CREATURE_POWERS = {
   voltix: { name: 'Décharge', effectType: 'coins_burst', effectValue: 12 },
   brisillon: { name: 'Bourrasque', effectType: 'passive_boost', effectValue: 2.5 },
   frimouss: { name: 'Conservation', effectType: 'discount_next', effectValue: 0.25 },
-  ombrelin: { name: 'Éclipse', effectType: 'coins_burst', effectValue: 25 },
+  ombrillon: { name: 'Éclipse', effectType: 'coins_burst', effectValue: 25 },
   luxorbe: { name: 'Rayonnement', effectType: 'passive_boost', effectValue: 3 },
   gemmion: { name: 'Résonance Cristalline', effectType: 'coins_burst', effectValue: 75 },
 };
