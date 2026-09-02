@@ -34,6 +34,7 @@ export const CREATURE_ID_MIGRATIONS = {
   gouttelin: 'caraploof',
   cailloutin: 'bouldog',
   bourgeonin: 'ventis',
+  etincelot: 'voltix',
 };
 
 // Applique la migration à un id de créature — renvoie l'id tel quel s'il
@@ -77,11 +78,12 @@ export const CREATURES = [
     stages: [
     { name: 'Bouldog', emoji: '🐕' }, { name: 'Bouldog', emoji: '🐕' }, { name: 'Bouldog', emoji: '🐕' },
   ]},
-  { id: 'etincelot', element: 'Foudre', rarity: 'rare', baseIncome: 0.4, combatType: 'attaquant',
-    skills: mkSkills([['Étincelle', 9, 20], ['Décharge', 17, 20], ['Éclair', 26, 20], ['Tempête Électrique', 37, 20]]),
-    lore: "Étincelot stocke l'électricité statique de tout ce qu'il touche. Ses câlins sont... déconseillés.",
+  { id: 'voltix', element: 'Foudre', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
+    baseHp: 10, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Étincelle Statique', 2, 5], ['Choc Poilu', 3, 10], ['Morsure Électrique', 4, 15], ['Décharge Flash', 5, 25]]),
+    lore: "Voltix est un petit rongeur survolté qui génère de l'électricité statique en frottant sa fourrure. Incapable de tenir en place, il décharge son énergie nerveuse sur tout ce qu'il touche. Bien que faible seul, un groupe de Voltix peut provoquer de sérieuses pannes de courant.",
     stages: [
-    { name: 'Étincelot', emoji: '🐹' }, { name: 'Foudrepic', emoji: '🦔' }, { name: 'Fulgurionne', emoji: '⚡' },
+    { name: 'Voltix', emoji: '🐹' }, { name: 'Voltix', emoji: '🐹' }, { name: 'Voltix', emoji: '🐹' },
   ]},
   { id: 'brisillon', element: 'Air', rarity: 'rare', baseIncome: 0.4, combatType: 'attaquant',
     skills: mkSkills([['Bourrasque', 9, 20], ['Lame de Vent', 17, 20], ['Tourbillon', 26, 20], ['Cyclone', 37, 20]]),
@@ -214,7 +216,7 @@ export const CREATURE_POWERS = {
   caraploof: { name: 'Flux Montant', effectType: 'passive_boost', effectValue: 2 },
   ventis: { name: 'Éclosion Généreuse', effectType: 'discount_next', effectValue: 0.2 },
   bouldog: { name: 'Fondation', effectType: 'coins_burst', effectValue: 8 },
-  etincelot: { name: 'Décharge', effectType: 'coins_burst', effectValue: 12 },
+  voltix: { name: 'Décharge', effectType: 'coins_burst', effectValue: 12 },
   brisillon: { name: 'Bourrasque', effectType: 'passive_boost', effectValue: 2.5 },
   frimouss: { name: 'Conservation', effectType: 'discount_next', effectValue: 0.25 },
   ombrelin: { name: 'Éclipse', effectType: 'coins_burst', effectValue: 25 },
