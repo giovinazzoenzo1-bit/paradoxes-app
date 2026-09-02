@@ -606,21 +606,37 @@ export function questLabel(questId) {
 // Progression 0-1 d'une quête donnée, à partir des stats du joueur.
 // stats attendu : { maxCombo, totalSummons, totalCrits, goldenClaimed,
 // totalEarned, maxCreatureLevel, tapPower }
-export function questProgress(questId, stats) {
+// `baseline` = snapshot des stats au moment où CE jeu de 4 quêtes a été
+// tiré — nécessaire pour les quêtes de type "cumul total" (invocations,
+// critiques, cible dorée, pièces gagnées) : sans lui, un joueur qui a
+// déjà beaucoup joué aurait déjà dépassé le seuil absolu dès le premier
+// instant du nouveau cycle, achevant les quêtes instantanément sans
+// jamais les voir (bug réel signalé : "il n'y a plus du tout de quête,
+// juste l'œuf directement" — la bascule collecte→éclosion, tout juste
+// réparée pour être fiable, sautait désormais direct puisque les
+// conditions étaient déjà satisfaites avant même le premier rendu).
+//
+// Les 4 AUTRES quêtes (combo25/evolve1/feed10/pacte5) restent des
+// paliers ABSOLUS volontairement : ce sont des états "atteints une fois
+// pour toutes" (combo max, niveau d'une créature, Pacte) plutôt que des
+// compteurs qui avancent à chaque action — les avoir déjà atteints est
+// une vraie preuve de progression, pas un artefact à corriger.
+export function questProgress(questId, stats, baseline = {}) {
+  const delta = (key) => Math.max(0, (stats[key] || 0) - (baseline[key] || 0));
   switch (questId) {
     case 'combo25': return Math.min(1, stats.maxCombo / 2.5);
-    case 'summon10': return Math.min(1, stats.totalSummons / 10);
-    case 'crit20': return Math.min(1, stats.totalCrits / 20);
-    case 'golden3': return Math.min(1, stats.goldenClaimed / 3);
-    case 'earn5000': return Math.min(1, stats.totalEarned / 5000);
+    case 'summon10': return Math.min(1, delta('totalSummons') / 10);
+    case 'crit20': return Math.min(1, delta('totalCrits') / 20);
+    case 'golden3': return Math.min(1, delta('goldenClaimed') / 3);
+    case 'earn5000': return Math.min(1, delta('totalEarned') / 5000);
     case 'evolve1': return Math.min(1, stats.maxCreatureLevel / 15);
     case 'feed10': return Math.min(1, stats.maxCreatureLevel / 10);
     case 'pacte5': return Math.min(1, Math.max(0, stats.tapPower - 1) / 5);
     default: return 0;
   }
 }
-export function questComplete(questId, stats) {
-  return questProgress(questId, stats) >= 1;
+export function questComplete(questId, stats, baseline = {}) {
+  return questProgress(questId, stats, baseline) >= 1;
 }
 
 export const EGG_STAGES = [

@@ -120,6 +120,11 @@ export default function ClickerScreen({ onBack }) {
   const [maxCombo, setMaxCombo] = useState(1);
   // Système de quêtes + œuf.
   const [activeQuestIds, setActiveQuestIds] = useState(() => pickQuestSet());
+  // Snapshot des stats au moment du tirage — voir le commentaire sur
+  // questProgress() dans clickerLogic.js pour le pourquoi. Vide au tout
+  // départ : un nouveau joueur a forcément 0 partout, donc "absolu" et
+  // "depuis le baseline" reviennent au même dans ce cas précis.
+  const [questBaseline, setQuestBaseline] = useState({});
   const [eggPhase, setEggPhase] = useState('collecting'); // 'collecting' | 'hatching' | 'capturing'
   const [hatchTaps, setHatchTaps] = useState(0);
   const [captureTaps, setCaptureTaps] = useState(0);
@@ -154,6 +159,8 @@ export default function ClickerScreen({ onBack }) {
   maxComboRef.current = maxCombo;
   const activeQuestIdsRef = useRef([]);
   activeQuestIdsRef.current = activeQuestIds;
+  const questBaselineRef = useRef({});
+  questBaselineRef.current = questBaseline;
   const eggPhaseRef = useRef('collecting');
   eggPhaseRef.current = eggPhase;
   const hatchTapsRef = useRef(0);
@@ -244,6 +251,21 @@ export default function ClickerScreen({ onBack }) {
           setGoldenClaimed(saved.goldenClaimed || 0);
           setMaxCombo(saved.maxCombo || 1);
           setActiveQuestIds(saved.activeQuestIds && saved.activeQuestIds.length === 4 ? saved.activeQuestIds : pickQuestSet());
+          // Migration douce pour les sauvegardes d'avant ce correctif
+          // (pas de questBaseline stocké) : on prend un instantané des
+          // stats ACTUELLES comme point de départ — équitable, pas de
+          // quête instantanément acquise ni bloquée pour toujours.
+          setQuestBaseline(
+            saved.questBaseline || {
+              maxCombo: saved.maxCombo || 1,
+              totalSummons: saved.totalSummons || 0,
+              totalCrits: saved.totalCrits || 0,
+              goldenClaimed: saved.goldenClaimed || 0,
+              totalEarned: (saved.totalEarned || 0) + offline,
+              maxCreatureLevel: dedupedOwned.reduce((max, o) => Math.max(max, o.level), 0),
+              tapPower: saved.tapPower || 1,
+            }
+          );
           setEggPhase(saved.eggPhase || 'collecting');
           setHatchTaps(saved.hatchTaps || 0);
           setCaptureTaps(saved.captureTaps || 0);
@@ -292,7 +314,7 @@ export default function ClickerScreen({ onBack }) {
           coins, totalEarned, tapPower, owned, deck, critLevel,
           autoClickers, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
           totalSummons, totalCrits, goldenClaimed, maxCombo,
-          activeQuestIds, eggPhase, hatchTaps, captureTaps,
+          activeQuestIds, questBaseline, eggPhase, hatchTaps, captureTaps,
           lastSave: Date.now() / 1000,
         })
       );
@@ -300,7 +322,7 @@ export default function ClickerScreen({ onBack }) {
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo,
-    activeQuestIds, eggPhase, hatchTaps, captureTaps, loaded,
+    activeQuestIds, questBaseline, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
   // Sauvegarde immédiate à la sortie de l'écran. Annule d'abord le
@@ -322,7 +344,7 @@ export default function ClickerScreen({ onBack }) {
           veilleurLevel: veilleurLevelRef.current, essence: essenceRef.current, lastRitualAt: lastRitualAtRef.current,
           totalSummons: totalSummonsRef.current, totalCrits: totalCritsRef.current,
           goldenClaimed: goldenClaimedRef.current, maxCombo: maxComboRef.current,
-          activeQuestIds: activeQuestIdsRef.current, eggPhase: eggPhaseRef.current,
+          activeQuestIds: activeQuestIdsRef.current, questBaseline: questBaselineRef.current, eggPhase: eggPhaseRef.current,
           hatchTaps: hatchTapsRef.current, captureTaps: captureTapsRef.current,
           lastSave: Date.now() / 1000,
         })
@@ -606,7 +628,7 @@ export default function ClickerScreen({ onBack }) {
   // ---- Système de quêtes + œuf ----
   const maxCreatureLevel = owned.reduce((max, o) => Math.max(max, o.level), 0);
   const questStats = { maxCombo, totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower };
-  const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats)).length;
+  const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats, questBaseline)).length;
 
   // Bascule automatique collecte -> éclosion dès que les 4 quêtes sont
   // validées. Bug corrigé (30/08, signalé par capture d'écran : l'œuf
@@ -648,6 +670,19 @@ export default function ClickerScreen({ onBack }) {
         gainCoins(goldenBonus(tapPowerRef.current) * 3);
         setRewardCreature(creature);
         setActiveQuestIds(pickQuestSet(activeQuestIdsRef.current));
+        // Nouveau baseline au moment MÊME du tirage (après le bonus de
+        // pièces ci-dessus, pour que "5000 pièces gagnées" reparte bien
+        // de ce point précis, pas d'un instant légèrement antérieur) —
+        // voir questProgress() dans clickerLogic.js pour le pourquoi.
+        setQuestBaseline({
+          maxCombo: maxComboRef.current,
+          totalSummons: totalSummonsRef.current,
+          totalCrits: totalCritsRef.current,
+          goldenClaimed: goldenClaimedRef.current,
+          totalEarned: totalEarnedRef.current,
+          maxCreatureLevel: ownedRef.current.reduce((max, o) => Math.max(max, o.level), 0),
+          tapPower: tapPowerRef.current,
+        });
         setEggPhase('collecting');
         setHatchTaps(0);
         setCaptureTaps(0);
@@ -846,6 +881,7 @@ export default function ClickerScreen({ onBack }) {
       {view === 'quests' && (
         <QuestsView
           activeQuestIds={activeQuestIds}
+          questBaseline={questBaseline}
           questStats={questStats}
           eggPhase={eggPhase}
           hatchTaps={hatchTaps}
@@ -1053,8 +1089,8 @@ function ShopView({
 // quêtes du cycle en cours avec leur barre de progression, puis la
 // séquence finale (éclosion 500 taps -> capture 200 taps) une fois les 4
 // quêtes validées.
-function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTaps, onEggTap, rewardCreature, onDismissReward, essence, essenceGainPreview, totalEarned, onAscend, onBack }) {
-  const completedCount = activeQuestIds.filter((id) => questComplete(id, questStats)).length;
+function QuestsView({ activeQuestIds, questStats, questBaseline, eggPhase, hatchTaps, captureTaps, onEggTap, rewardCreature, onDismissReward, essence, essenceGainPreview, totalEarned, onAscend, onBack }) {
+  const completedCount = activeQuestIds.filter((id) => questComplete(id, questStats, questBaseline)).length;
   const stageIndex = eggPhase === 'collecting' ? eggStageForCompletedCount(completedCount) : 4;
   const stage = EGG_STAGES[stageIndex];
 
@@ -1073,7 +1109,7 @@ function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTa
           </View>
 
           {activeQuestIds.map((id) => {
-            const progress = questProgress(id, questStats);
+            const progress = questProgress(id, questStats, questBaseline);
             const done = progress >= 1;
             return (
               <View key={id} style={[styles.questCard, done && styles.questCardDone]}>
