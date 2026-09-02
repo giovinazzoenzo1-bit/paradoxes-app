@@ -152,14 +152,40 @@ export function opponentGoesFirst() {
 // chapitre 2), pas seulement l'unique adversaire renvoyé par
 // opponentForLevel. opponentStatsForLevel devient un simple cas
 // particulier de cette fonction plus générale.
+// Budget de puissance (PV+ATQ combinés) PUR par niveau — indépendant de
+// la créature précisément piochée à ce niveau. Sans ça (ancienne
+// version : dégâts dérivés directement des stats de base de la
+// créature), la difficulté pouvait RECULER : le cycle des 26 créatures
+// repart du début après le niveau 26, et si une créature "faible" (PV+ATQ
+// de base ~13) réapparaît à un niveau élevé, sa croissance par niveau ne
+// suffit pas toujours à dépasser une créature "forte" (~220) apparue à un
+// niveau plus bas — repéré par un vrai test (niveau 70 plus faible que
+// niveau 60). Calibré pour retomber presque exactement sur les stats
+// réelles de Solarion/Solstral aux niveaux où ils apparaissaient déjà,
+// donc aucun changement perceptible en tout début de partie.
+function opponentPowerBudget(levelNumber) {
+  return 13 * Math.pow(1.062, levelNumber - 1);
+}
+
 export function statsForOpponentCreature(creature, levelNumber) {
   const base = creature.baseHp != null
     ? { hp: creature.baseHp, attack: creature.baseAttack, clickSpeed: creature.baseClickSpeed, endurance: creature.baseEndurance }
     : RARITY_BASE_STATS[creature.rarity];
   const growth = 1 + (levelNumber - 1) * 0.15;
+
+  // PV/ATQ viennent du budget de puissance PUR (garantit une croissance
+  // strictement monotone), réparti selon le PROFIL propre de la
+  // créature (une créature à dominante PV dans son propre roster reste
+  // relativement plus "tanky" qu'ATQ une fois remise à l'échelle) —
+  // garde la saveur de chaque créature sans dépendre de sa magnitude
+  // absolue, qui variait trop d'une créature à l'autre pour rester
+  // cohérente une fois le cycle des 26 créatures repris depuis le début.
+  const budget = opponentPowerBudget(levelNumber);
+  const hpRatio = base.hp / Math.max(1, base.hp + base.attack);
+
   return {
-    hp: Math.round(base.hp * growth),
-    attack: Math.round(base.attack * growth),
+    hp: Math.max(1, Math.round(budget * hpRatio)),
+    attack: Math.max(1, Math.round(budget * (1 - hpRatio))),
     // Voir combatStatsForCreature : toujours dérivée de la rareté, jamais
     // de la valeur Gemini (systématiquement 1, donc plate/inutile).
     clickSpeed: RARITY_BASE_STATS[creature.rarity].clickSpeed,
