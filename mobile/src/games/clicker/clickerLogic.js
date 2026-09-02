@@ -700,151 +700,153 @@ export function offrandeReward(tapPower) {
 // construire séparément avant de les ajouter à ce pool.
 // ---- Défis de l'œuf (refonte 02/09) ----
 //
-// Un défi est DÉCLARATIF : il nomme une métrique, un objectif, et un
-// mode de lecture. `questProgress()` est générique — ajouter un défi ne
-// demande plus de toucher à une seule ligne de logique, seulement
-// d'ajouter une entrée dans ce tableau. L'ancien switch géant devenait
-// intenable passé une dizaine de défis.
+// Un défi ne stocke plus une cible chiffrée mais un **temps de farm**
+// (`effortMin`). La cible réelle est calculée au tirage à partir du
+// revenu du joueur, puis figée — voir `resolveQuestTarget()` plus bas.
+//
+// Pourquoi : une cible en dur n'est juste qu'à un instant précis de la
+// partie. « Aie 30M de pièces » est un mur au début et un défi déjà
+// validé trois heures plus tard. Une version précédente découpait la
+// partie en 6 phases pour limiter le problème, mais à l'intérieur d'une
+// même phase le revenu varie déjà d'un facteur 100 — l'approximation
+// restait grossière. Avec `effortMin`, un défi coûte le même temps de
+// jeu à toutes les échelles, et les phases deviennent inutiles.
 //
 // Champs :
-//   id      identifiant stable, JAMAIS renommé (il vit dans les sauvegardes)
-//   tier    phase de jeu (1-6) — voir QUEST_TIERS juste en dessous
-//   icon    pastille de la barre de défi
-//   desc    libellé affiché
-//   metric  quoi mesurer (voir readMetric)
-//   target  valeur à atteindre
-//   mode    'absolute' = état atteint ici et maintenant
-//           'delta'    = progression DEPUIS le tirage du défi
+//   id         identifiant stable, JAMAIS renommé (il vit dans les sauvegardes)
+//   icon       pastille de la barre de défi
+//   label(t)   FONCTION qui construit le texte depuis la cible résolue,
+//              pour qu'un libellé ne puisse pas mentir sur l'objectif
+//   metric     quoi mesurer (voir readMetric)
+//   effortMin  minutes de farm visées
+//   target     cible FIXE, pour les défis de rythme d'action (nombre de
+//              taps, de combats) que le temps ne convertit pas en pièces
+//   mode       'absolute' = état atteint ici et maintenant
+//              'delta'    = progression DEPUIS le tirage
+//   available  (optionnel) le défi a-t-il un sens pour ce joueur
+//   step/minStep  pas minimum pour les métriques non monétaires
 //
-// Le choix du mode n'est pas cosmétique. `delta` sert aux compteurs qui
-// ne redescendent jamais (invocations, critiques, combats gagnés) : sans
-// lui, un vétéran validerait le défi à l'instant du tirage. `absolute`
-// sert aux états que le joueur possède ou pas (niveau d'un Pacte, pièces
-// en banque, générateurs achetés) — les avoir déjà EST la preuve de
-// progression, et les remettre à zéro n'aurait aucun sens.
+// Le mode n'est pas cosmétique. `delta` sert aux compteurs qui ne
+// redescendent jamais (invocations, critiques, combats) : sans lui, un
+// vétéran validerait le défi à l'instant du tirage. `absolute` sert aux
+// états que le joueur possède ou non (niveau d'un Pacte, pièces en
+// réserve, générateurs achetés) — les avoir déjà EST la preuve de
+// progression.
 
-// Bornes de `totalEarned` délimitant les 6 phases de jeu. Calées sur la
-// courbe MESURÉE en simulation lors de la refonte d'équilibrage (voir
-// CLICKER_ADVENTURE_STATE.md), pas choisies à l'œil : un premier jeu de
-// seuils « ronds » faisait entrer le joueur en phase 2 au bout de 10
-// minutes et en phase 6 au bout d'une journée, ce qui vidait tout le
-// contenu des phases hautes en un jour.
-//
-// Durées visées, joueur régulier : phase 1 ≈ 30 min, phase 2 → 3 h,
-// phase 3 → 12 h, phase 4 → 1 j, phase 5 → 5 j, phase 6 au-delà (et
-// c'est là que l'Ascension prend le relais).
-export const QUEST_TIER_THRESHOLDS = [
-  0,
-  150000, // ~30 min
-  100000000, // ~3 h
-  300000000000, // ~12 h
-  5000000000000000, // ~1 j
-  300000000000000000, // ~5 j
-];
-
-// Phase actuelle du joueur (1-6) d'après son total de pièces gagnées.
-export function playerQuestTier(stats) {
-  const earned = Number.isFinite(stats?.totalEarned) ? stats.totalEarned : 0;
-  let tier = 1;
-  for (let i = 0; i < QUEST_TIER_THRESHOLDS.length; i++) {
-    if (earned >= QUEST_TIER_THRESHOLDS[i]) tier = i + 1;
-  }
-  return Math.min(6, tier);
-}
-
+const fmtQ = (n) => {
+  const v = Math.round(n);
+  if (v >= 1e15) return `${+(v / 1e15).toFixed(1)} millions de milliards`;
+  if (v >= 1e12) return `${+(v / 1e12).toFixed(1)} billions`;
+  if (v >= 1e9) return `${+(v / 1e9).toFixed(1)} milliards`;
+  if (v >= 1e6) return `${+(v / 1e6).toFixed(1)} millions`;
+  return v.toLocaleString('fr-FR');
+};
+// « 290 milliards DE pièces » mais « 100 000 pièces » : dès que le
+// nombre est écrit en mots, le français impose la préposition.
+const qtyQ = (n, noun) => (Math.round(n) >= 1e6 ? `${fmtQ(n)} de ${noun}` : `${fmtQ(n)} ${noun}`);
+// Les noms de générateurs sont au singulier dans AUTOCLICKERS
+// (« Automate Runique ») : un défi en demande toujours plusieurs. Seul
+// le groupe AVANT une préposition s'accorde — « Colonie de Familiers »
+// donne « Colonies de Familiers », pas « Colonies des Familiers ».
+const PLURAL_STOP = ['de', 'du', 'des', 'la', 'le', 'les', "d'"];
+const pluralQ = (name) => {
+  const words = name.split(' ');
+  const stopAt = words.findIndex((w) => PLURAL_STOP.includes(w.toLowerCase()));
+  const limit = stopAt === -1 ? words.length : stopAt;
+  return words
+    .map((w, i) => (i < limit && !/[sx]$/i.test(w) ? `${w}s` : w))
+    .join(' ');
+};
 export const QUEST_POOL = [
-  // ---------- Phase 1 : découverte ----------
-  { id: 'combo25', tier: 1, icon: '🔥', desc: "Atteins un multiplicateur de Transe x2,5", metric: 'maxCombo', target: 25, mode: 'absolute' },
-  { id: 'summon10', tier: 1, icon: '🔮', desc: "Invoque 10 créatures", metric: 'totalSummons', target: 10, mode: 'delta' },
-  { id: 'crit20', tier: 1, icon: '💥', desc: "Obtiens 20 coups critiques", metric: 'totalCrits', target: 20, mode: 'delta' },
-  { id: 'golden3', tier: 1, icon: '⭐', desc: "Touche 3 fois la cible dorée", metric: 'goldenClaimed', target: 3, mode: 'delta' },
-  { id: 'earn5000', tier: 1, icon: '💰', desc: "Gagne 60 000 pièces", metric: 'totalEarned', target: 60000, mode: 'delta' },
-  { id: 'pacte5', tier: 1, icon: '🔗', desc: "Fais monter Pacte au niveau 15", metric: 'tapPower', target: 15, mode: 'absolute' },
-  { id: 'hold2500', tier: 1, icon: '🏦', desc: "Aie 51 000 pièces en réserve", metric: 'coins', target: 51000, mode: 'absolute' },
-  { id: 'auto10', tier: 1, icon: '⚙️', desc: "Possède 55 auto-clics en tout", metric: 'autoTotal', target: 55, mode: 'absolute' },
-  { id: 'esprit8', tier: 1, icon: '👻', desc: "Possède 30 Esprits Frappeurs", metric: 'auto:esprit', target: 30, mode: 'absolute' },
-  { id: 'own3', tier: 1, icon: '🐣', desc: "Possède 3 créatures différentes", metric: 'ownedCount', target: 3, mode: 'absolute' },
+  // ---------- Économie générale ----------
+  { id: 'earnShort', family: 'economy', icon: '💰', metric: 'totalEarned', effortMin: 10, mode: 'delta',
+    label: (t) => `Gagne ${qtyQ(t, 'pièces')}` },
+  { id: 'earnMid', family: 'economy', icon: '💰', metric: 'totalEarned', effortMin: 25, mode: 'delta',
+    label: (t) => `Gagne ${qtyQ(t, 'pièces')}` },
+  { id: 'earnLong', family: 'economy', icon: '💰', metric: 'totalEarned', effortMin: 60, mode: 'delta',
+    label: (t) => `Gagne ${qtyQ(t, 'pièces')}` },
+  { id: 'holdShort', family: 'economy', icon: '🏦', metric: 'coins', effortMin: 15, mode: 'absolute',
+    label: (t) => `Aie ${qtyQ(t, 'pièces')} en réserve` },
+  { id: 'holdMid', family: 'economy', icon: '🏦', metric: 'coins', effortMin: 35, mode: 'absolute',
+    label: (t) => `Aie ${qtyQ(t, 'pièces')} en réserve` },
+  { id: 'holdLong', family: 'economy', icon: '🏦', metric: 'coins', effortMin: 75, mode: 'absolute',
+    label: (t) => `Aie ${qtyQ(t, 'pièces')} en réserve` },
+  { id: 'passiveMid', family: 'economy', icon: '📈', metric: 'passiveIncome', effortMin: 30, mode: 'absolute',
+    label: (t) => `Atteins ${qtyQ(t, 'pièces')} par seconde` },
+  { id: 'passiveLong', family: 'economy', icon: '📈', metric: 'passiveIncome', effortMin: 70, mode: 'absolute',
+    label: (t) => `Atteins ${qtyQ(t, 'pièces')} par seconde` },
 
-  // ---------- Phase 2 : première accélération ----------
-  { id: 'hold50k', tier: 2, icon: '🏦', desc: "Aie 15 millions de pièces en réserve", metric: 'coins', target: 15000000, mode: 'absolute' },
-  { id: 'earn250k', tier: 2, icon: '💰', desc: "Gagne 40 millions de pièces", metric: 'totalEarned', target: 40000000, mode: 'delta' },
-  { id: 'pacte15', tier: 2, icon: '🔗', desc: "Fais monter Pacte au niveau 30", metric: 'tapPower', target: 30, mode: 'absolute' },
-  { id: 'griffe5', tier: 2, icon: '🔥', desc: "Monte Griffe de Braisillon au niveau 15", metric: 'upgrade:griffeBraisillon', target: 15, mode: 'absolute' },
-  { id: 'ecaille4', tier: 2, icon: '🌊', desc: "Monte Écaille de Caraploof au niveau 10", metric: 'upgrade:ecailleCaraploof', target: 10, mode: 'absolute' },
-  { id: 'sanct8', tier: 2, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 15", metric: 'sanctuaryLevel', target: 15, mode: 'absolute' },
-  { id: 'main12', tier: 2, icon: '🖐️', desc: "Possède 45 Mains Spectrales", metric: 'auto:main', target: 45, mode: 'absolute' },
-  { id: 'passive100', tier: 2, icon: '📈', desc: "Atteins 49 000 pièces par seconde", metric: 'passiveIncome', target: 49000, mode: 'absolute' },
-  { id: 'crit100', tier: 2, icon: '💥', desc: "Obtiens 150 coups critiques", metric: 'totalCrits', target: 150, mode: 'delta' },
-  { id: 'summon25', tier: 2, icon: '🔮', desc: "Invoque 40 créatures", metric: 'totalSummons', target: 40, mode: 'delta' },
-  { id: 'feed10', tier: 2, icon: '🍖', desc: "Nourris une créature jusqu'au niveau 10", metric: 'maxCreatureLevel', target: 10, mode: 'absolute' },
-  { id: 'faveur6', tier: 2, icon: '✨', desc: "Monte la Faveur des Esprits au niveau 6", metric: 'critLevel', target: 6, mode: 'absolute' },
+  // ---------- Mécaniques historiques ----------
+  { id: 'pacteMid', family: 'core', icon: '🔗', metric: 'tapPower', effortMin: 20, mode: 'absolute',
+    label: (t) => `Fais monter Pacte au niveau ${t}` },
+  { id: 'pacteLong', family: 'core', icon: '🔗', metric: 'tapPower', effortMin: 50, mode: 'absolute',
+    label: (t) => `Fais monter Pacte au niveau ${t}` },
+  { id: 'sanctMid', family: 'core', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 25, mode: 'absolute',
+    label: (t) => `Monte le Sanctuaire au niveau ${t}` },
+  { id: 'sanctLong', family: 'core', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 55, mode: 'absolute',
+    label: (t) => `Monte le Sanctuaire au niveau ${t}` },
+  { id: 'veilleurMid', family: 'core', icon: '🌙', metric: 'veilleurLevel', effortMin: 20, mode: 'absolute',
+    label: (t) => `Monte le Veilleur au niveau ${t}` },
+  { id: 'faveurMid', family: 'core', icon: '✨', metric: 'critLevel', effortMin: 20, mode: 'absolute',
+    label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
+  { id: 'autoTotalMid', family: 'core', icon: '🔧', metric: 'autoTotal', effortMin: 30, mode: 'absolute',
+    label: (t) => `Possède ${fmtQ(t)} auto-clics en tout` },
+  { id: 'autoTotalLong', family: 'core', icon: '🔧', metric: 'autoTotal', effortMin: 65, mode: 'absolute',
+    label: (t) => `Possède ${fmtQ(t)} auto-clics en tout` },
 
-  // ---------- Phase 3 : le million ----------
-  { id: 'hold1M', tier: 3, icon: '🏦', desc: "Aie 20 milliards de pièces en réserve", metric: 'coins', target: 20000000000, mode: 'absolute' },
-  { id: 'earn10M', tier: 3, icon: '💰', desc: "Gagne 120 milliards de pièces", metric: 'totalEarned', target: 120000000000, mode: 'delta' },
-  { id: 'pacte30', tier: 3, icon: '🔗', desc: "Fais monter Pacte au niveau 45", metric: 'tapPower', target: 45, mode: 'absolute' },
-  { id: 'croc8', tier: 3, icon: '🪨', desc: "Monte Croc de Bouldog au niveau 20", metric: 'upgrade:crocBouldog', target: 20, mode: 'absolute' },
-  { id: 'luxorbe6', tier: 3, icon: '💡', desc: "Monte Éclat de Luxorbe au niveau 15", metric: 'upgrade:eclatLuxorbe', target: 15, mode: 'absolute' },
-  { id: 'automate15', tier: 3, icon: '⚙️', desc: "Possède 70 Automates Runiques", metric: 'auto:automate', target: 70, mode: 'absolute' },
-  { id: 'auto60', tier: 3, icon: '🔧', desc: "Possède 430 auto-clics en tout", metric: 'autoTotal', target: 430, mode: 'absolute' },
-  { id: 'passive10k', tier: 3, icon: '📈', desc: "Atteins 66 millions de pièces par seconde", metric: 'passiveIncome', target: 66000000, mode: 'absolute' },
-  { id: 'sanct15', tier: 3, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 25", metric: 'sanctuaryLevel', target: 25, mode: 'absolute' },
-  { id: 'own8', tier: 3, icon: '🐣', desc: "Possède 8 créatures différentes", metric: 'ownedCount', target: 8, mode: 'absolute' },
-  { id: 'golden15', tier: 3, icon: '⭐', desc: "Touche 20 fois la cible dorée", metric: 'goldenClaimed', target: 20, mode: 'delta' },
-  { id: 'veilleur8', tier: 3, icon: '🌙', desc: "Monte le Veilleur au niveau 8", metric: 'veilleurLevel', target: 8, mode: 'absolute' },
-  { id: 'evolve1', tier: 3, icon: '🧬', desc: "Fais évoluer une créature jusqu'au stade final", metric: 'maxCreatureLevel', target: 15, mode: 'absolute' },
+  // ---------- Rythme d'action (cibles FIXES) ----------
+  // Ces défis ne coûtent pas de pièces mais du temps de jeu actif : les
+  // convertir en budget n'aurait aucun sens.
+  { id: 'combo25', family: 'action', icon: '🔥', metric: 'maxCombo', target: 25, mode: 'absolute',
+    label: () => 'Atteins un multiplicateur de Transe x2,5' },
+  { id: 'combo30', family: 'action', icon: '🔥', metric: 'maxCombo', target: 30, mode: 'absolute',
+    available: (s) => (s.maxCombo || 0) >= 20,
+    label: () => 'Atteins un multiplicateur de Transe x3' },
+  { id: 'crit20', family: 'action', icon: '💥', metric: 'totalCrits', target: 20, mode: 'delta',
+    label: (t) => `Obtiens ${t} coups critiques` },
+  { id: 'crit100', family: 'action', icon: '💥', metric: 'totalCrits', target: 100, mode: 'delta',
+    available: (s) => (s.critLevel || 0) >= 2,
+    label: (t) => `Obtiens ${t} coups critiques` },
+  { id: 'crit400', family: 'action', icon: '💥', metric: 'totalCrits', target: 400, mode: 'delta',
+    available: (s) => (s.critLevel || 0) >= 5,
+    label: (t) => `Obtiens ${t} coups critiques` },
+  { id: 'golden3', family: 'action', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
+    label: (t) => `Touche ${t} fois la cible dorée` },
+  { id: 'golden10', family: 'action', icon: '⭐', metric: 'goldenClaimed', target: 10, mode: 'delta',
+    available: (s) => (s.totalEarned || 0) > 50000,
+    label: (t) => `Touche ${t} fois la cible dorée` },
+  { id: 'summon10', family: 'action', icon: '🔮', metric: 'totalSummons', target: 10, mode: 'delta',
+    label: (t) => `Invoque ${t} créatures` },
+  { id: 'summon30', family: 'action', icon: '🔮', metric: 'totalSummons', target: 30, mode: 'delta',
+    available: (s) => (s.ownedCount || 0) >= 4,
+    label: (t) => `Invoque ${t} créatures` },
 
-  // ---------- Phase 4 : industrialisation ----------
-  { id: 'hold30M', tier: 4, icon: '🏦', desc: "Aie 120 billions de pièces en réserve", metric: 'coins', target: 120000000000000, mode: 'absolute' },
-  { id: 'earn1B', tier: 4, icon: '💰', desc: "Gagne 2 millions de milliards de pièces", metric: 'totalEarned', target: 2000000000000000, mode: 'delta' },
-  { id: 'pacte50', tier: 4, icon: '🔗', desc: "Fais monter Pacte au niveau 65", metric: 'tapPower', target: 65, mode: 'absolute' },
-  { id: 'colonie20', tier: 4, icon: '🦊', desc: "Possède 100 Colonies de Familiers", metric: 'auto:colonie', target: 100, mode: 'absolute' },
-  { id: 'titan12', tier: 4, icon: '🗿', desc: "Possède 90 Titans Mécaniques", metric: 'auto:titan', target: 90, mode: 'absolute' },
-  { id: 'auto150', tier: 4, icon: '🔧', desc: "Possède 980 auto-clics en tout", metric: 'autoTotal', target: 980, mode: 'absolute' },
-  { id: 'passive1M', tier: 4, icon: '📈', desc: "Atteins 400 milliards de pièces par seconde", metric: 'passiveIncome', target: 400000000000, mode: 'absolute' },
-  { id: 'sanct25', tier: 4, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 40", metric: 'sanctuaryLevel', target: 40, mode: 'absolute' },
-  { id: 'flamme10', tier: 4, icon: '🔥', desc: "Monte Flamme de Fournax au niveau 30", metric: 'upgrade:flammeFournax', target: 30, mode: 'absolute' },
-  { id: 'sceau8', tier: 4, icon: '🔮', desc: "Monte Sceau de Malefix au niveau 25", metric: 'upgrade:sceauMalefix', target: 25, mode: 'absolute' },
-  { id: 'own14', tier: 4, icon: '🐣', desc: "Possède 14 créatures différentes", metric: 'ownedCount', target: 14, mode: 'absolute' },
-  { id: 'feed30', tier: 4, icon: '🍖', desc: "Nourris une créature jusqu'au niveau 30", metric: 'maxCreatureLevel', target: 30, mode: 'absolute' },
-  { id: 'crit1000', tier: 4, icon: '💥', desc: "Obtiens 1 500 coups critiques", metric: 'totalCrits', target: 1500, mode: 'delta' },
+  // ---------- Collection (pas monétaire : pas relatif) ----------
+  { id: 'own1', family: 'collection', icon: '🐣', metric: 'ownedCount', mode: 'absolute', step: 1, minStep: 1,
+    label: (t) => `Possède ${t} créatures différentes` },
+  { id: 'own3', family: 'collection', icon: '🐣', metric: 'ownedCount', mode: 'absolute', step: 3, minStep: 3,
+    label: (t) => `Possède ${t} créatures différentes` },
+  { id: 'feed5', family: 'collection', icon: '🍖', metric: 'maxCreatureLevel', mode: 'absolute', step: 5, minStep: 5,
+    label: (t) => `Nourris une créature jusqu'au niveau ${t}` },
+  { id: 'feed15', family: 'collection', icon: '🍖', metric: 'maxCreatureLevel', mode: 'absolute', step: 15, minStep: 15,
+    label: (t) => `Nourris une créature jusqu'au niveau ${t}` },
+  { id: 'essence5', family: 'collection', icon: '🌟', metric: 'essence', mode: 'absolute', step: 5, minStep: 5,
+    available: (s) => (s.essence || 0) > 0,
+    label: (t) => `Accumule ${t} points d'essence` },
 
-  // ---------- Phase 5 : fin de run ----------
-  { id: 'hold10B', tier: 5, icon: '🏦', desc: "Aie 390 billions de pièces en réserve", metric: 'coins', target: 390000000000000, mode: 'absolute' },
-  { id: 'earn500B', tier: 5, icon: '💰', desc: "Gagne 120 millions de milliards de pièces", metric: 'totalEarned', target: 120000000000000000, mode: 'delta' },
-  { id: 'pacte70', tier: 5, icon: '🔗', desc: "Fais monter Pacte au niveau 75", metric: 'tapPower', target: 75, mode: 'absolute' },
-  { id: 'golem25', tier: 5, icon: '💎', desc: "Possède 95 Golems de Cristal", metric: 'auto:golem', target: 95, mode: 'absolute' },
-  { id: 'phenix15', tier: 5, icon: '🔥', desc: "Possède 75 Phénix Renaissants", metric: 'auto:phenix', target: 75, mode: 'absolute' },
-  { id: 'auto400', tier: 5, icon: '🔧', desc: "Possède 1 300 auto-clics en tout", metric: 'autoTotal', target: 1300, mode: 'absolute' },
-  { id: 'passive1B', tier: 5, icon: '📈', desc: "Atteins 1,3 billion de pièces par seconde", metric: 'passiveIncome', target: 1300000000000, mode: 'absolute' },
-  { id: 'sanct35', tier: 5, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 45", metric: 'sanctuaryLevel', target: 45, mode: 'absolute' },
-  { id: 'voile12', tier: 5, icon: '🌑', desc: "Monte Voile de Nocturis au niveau 30", metric: 'upgrade:voileNocturis', target: 30, mode: 'absolute' },
-  { id: 'own20', tier: 5, icon: '🐣', desc: "Possède 20 créatures différentes", metric: 'ownedCount', target: 20, mode: 'absolute' },
-  { id: 'feed50', tier: 5, icon: '🍖', desc: "Nourris une créature jusqu'au niveau 50", metric: 'maxCreatureLevel', target: 50, mode: 'absolute' },
-  { id: 'summon150', tier: 5, icon: '🔮', desc: "Invoque 200 créatures", metric: 'totalSummons', target: 200, mode: 'delta' },
-
-  // ---------- Phase 6 : au-delà / après Ascension ----------
-  { id: 'hold1Qa', tier: 6, icon: '🏦', desc: "Aie 1 million de milliards de pièces en réserve", metric: 'coins', target: 1000000000000000, mode: 'absolute' },
-  { id: 'essence50', tier: 6, icon: '🌟', desc: "Accumule 50 points d'essence", metric: 'essence', target: 50, mode: 'absolute' },
-  { id: 'essence250', tier: 6, icon: '🌟', desc: "Accumule 250 points d'essence", metric: 'essence', target: 250, mode: 'absolute' },
-  { id: 'auto900', tier: 6, icon: '🔧', desc: "Possède 2 500 auto-clics en tout", metric: 'autoTotal', target: 2500, mode: 'absolute' },
-  { id: 'etoile20', tier: 6, icon: '⭐', desc: "Possède 80 Étoiles Filantes", metric: 'auto:etoilefilante', target: 80, mode: 'absolute' },
-  { id: 'oracle30', tier: 6, icon: '🔯', desc: "Possède 120 Oracles Anciens", metric: 'auto:oracle', target: 120, mode: 'absolute' },
-  { id: 'passive1T', tier: 6, icon: '📈', desc: "Atteins 50 billions de pièces par seconde", metric: 'passiveIncome', target: 50000000000000, mode: 'absolute' },
-  { id: 'sanct50', tier: 6, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 50", metric: 'sanctuaryLevel', target: 50, mode: 'absolute' },
-  { id: 'abysse20', tier: 6, icon: '🌊', desc: "Monte Abysse d'Abyssorax au niveau 40", metric: 'upgrade:abysseAbyssorax', target: 40, mode: 'absolute' },
-  { id: 'own26', tier: 6, icon: '🐣', desc: "Complète la collection : 26 créatures", metric: 'ownedCount', target: 26, mode: 'absolute' },
-  { id: 'feed100', tier: 6, icon: '🍖', desc: "Nourris une créature jusqu'au niveau 100", metric: 'maxCreatureLevel', target: 100, mode: 'absolute' },
-
-  // ---------- Défis Aventure (tous paliers) ----------
-  // Ils ne dépendent pas de l'économie du clicker, donc ils restent
-  // tirables à toutes les phases — d'où l'absence de `tier`, traitée
-  // comme « compatible partout » par pickQuestSet().
-  { id: 'advWin3', icon: '⚔️', desc: 'Gagne 3 combats en Aventure', metric: 'battleWon', target: 3, mode: 'delta' },
-  { id: 'advWin10', icon: '⚔️', desc: 'Gagne 10 combats en Aventure', metric: 'battleWon', target: 10, mode: 'delta' },
-  { id: 'advEquipRune2', icon: '🪬', desc: 'Équipe 2 runes sur tes créatures (Aventure)', metric: 'runeEquipped', target: 2, mode: 'delta' },
-  { id: 'advBuyRune1', icon: '🛒', desc: 'Achète 1 rune en Aventure', metric: 'runeBought', target: 1, mode: 'delta' },
-  { id: 'advBuyRune5', icon: '🛒', desc: 'Achète 5 runes en Aventure', metric: 'runeBought', target: 5, mode: 'delta' },
+  // ---------- Défis Aventure ----------
+  { id: 'advWin3', family: 'adventure', icon: '⚔️', metric: 'battleWon', target: 3, mode: 'delta',
+    label: (t) => `Gagne ${t} combats en Aventure` },
+  { id: 'advWin10', family: 'adventure', icon: '⚔️', metric: 'battleWon', target: 10, mode: 'delta',
+    available: (s) => (s.battleWon || 0) >= 3,
+    label: (t) => `Gagne ${t} combats en Aventure` },
+  { id: 'advEquipRune2', family: 'adventure', icon: '🪬', metric: 'runeEquipped', target: 2, mode: 'delta',
+    label: (t) => `Équipe ${t} runes sur tes créatures (Aventure)` },
+  { id: 'advBuyRune1', family: 'adventure', icon: '🛒', metric: 'runeBought', target: 1, mode: 'delta',
+    label: (t) => `Achète ${t} rune en Aventure` },
+  { id: 'advBuyRune5', family: 'adventure', icon: '🛒', metric: 'runeBought', target: 5, mode: 'delta',
+    available: (s) => (s.runeBought || 0) >= 1,
+    label: (t) => `Achète ${t} runes en Aventure` },
 ];
 
 // Lit une métrique dans l'objet de stats. Les métriques paramétrées
@@ -864,36 +866,206 @@ function readMetric(metric, stats) {
   return Number.isFinite(v) ? v : 0;
 }
 
-// Progression 0-1 d'un défi. Générique : plus aucun cas particulier.
-// `baseline` = instantané des stats au moment du tirage, utilisé
-// uniquement par les défis en mode 'delta' (voir le commentaire du pool).
-export function questProgress(questId, stats, baseline = {}) {
+// ---- Cibles dynamiques : « X minutes de jeu » plutôt qu'un nombre ----
+//
+// Le problème que ça résout : une cible écrite en dur ne peut être juste
+// qu'à un seul moment de la partie. « Aie 30M de pièces » est un mur
+// infranchissable au début et un défi déjà validé trois heures plus
+// tard. Les phases de progression (QUEST_TIER_THRESHOLDS) limitaient les
+// dégâts en ne proposant que des défis de la bonne tranche, mais restent
+// une approximation grossière : à l'intérieur d'une même phase, le
+// revenu du joueur varie déjà d'un facteur 100.
+//
+// La cible est donc calculée AU MOMENT DU TIRAGE à partir du revenu réel
+// du joueur, puis FIGÉE pour toute la durée du défi (persistée dans la
+// sauvegarde, voir `questTargets` dans ClickerScreen.js). Un défi coûte
+// désormais un temps de jeu — « environ 25 minutes de farm » — quelle
+// que soit la phase, et ce temps reste honnête à toutes les échelles.
+//
+// Figer la cible est indispensable : recalculée à chaque rendu, elle
+// monterait en même temps que le revenu du joueur et le défi
+// s'éloignerait à mesure qu'il progresse, sans jamais se terminer.
+
+// Revenu total estimé par seconde, passif + tap. Le tap est compté à un
+// rythme volontairement bas (2 taps/s sur une fraction du temps) : il
+// sert seulement à éviter un budget nul en tout début de partie, quand
+// il n'y a encore aucun auto-clic.
+export function estimatedIncomePerSecond(stats) {
+  const passive = Math.max(0, readMetric('passiveIncome', stats));
+  const perTap = Math.max(1, readMetric('tapPower', stats));
+  return passive + perTap * 0.5;
+}
+
+// Budget de pièces qu'un joueur produit en `minutes` minutes de jeu.
+export function questBudget(stats, minutes) {
+  return estimatedIncomePerSecond(stats) * 60 * Math.max(1, minutes);
+}
+
+// Combien de niveaux supplémentaires ce budget permet-il d'acheter, en
+// suivant la VRAIE fonction de coût du jeu ? C'est ce qui rend un défi
+// « monte Griffe de Braisillon » aussi honnête qu'un défi en pièces :
+// on ne devine pas, on additionne les coûts réels jusqu'à épuisement.
+//
+// Le garde-fou `MAX_LEVEL_SCAN` évite une boucle sans fin si une
+// fonction de coût renvoyait 0 ou NaN.
+const MAX_LEVEL_SCAN = 500;
+function levelsAffordable(costFn, currentLevel, budget) {
+  let spent = 0;
+  let level = currentLevel;
+  for (let i = 0; i < MAX_LEVEL_SCAN; i++) {
+    const cost = costFn(level);
+    if (!Number.isFinite(cost) || cost <= 0) break;
+    if (spent + cost > budget) break;
+    spent += cost;
+    level += 1;
+  }
+  return level;
+}
+
+// Revenu passif atteint si tout le budget partait dans le générateur le
+// plus rentable que le joueur peut s'offrir. Sert de cible aux défis
+// « atteins X pièces/seconde ».
+function passiveIncomeAfterBudget(stats, budget) {
+  const current = Math.max(0, readMetric('passiveIncome', stats));
+  const owned = stats.autoClickers || {};
+  let bestGain = 0;
+  for (const clicker of AUTOCLICKERS) {
+    const have = owned[clicker.id] || 0;
+    const reachable = levelsAffordable((n) => autoClickerCost(clicker, n), have, budget);
+    const gain = (reachable - have) * clicker.baseIncome;
+    if (gain > bestGain) bestGain = gain;
+  }
+  return current + bestGain;
+}
+
+// Arrondi « lisible » : un défi doit annoncer 25 000, pas 24 137.
+export function roundQuestTarget(n) {
+  if (!Number.isFinite(n) || n <= 0) return 1;
+  if (n < 10) return Math.max(1, Math.round(n));
+  if (n < 100) return Math.round(n / 5) * 5;
+  const exp = Math.floor(Math.log10(n));
+  const step = Math.pow(10, exp - 1);
+  return Math.round(n / step) * step;
+}
+
+// Résout la cible d'un défi pour un joueur donné. `effortMin` = durée de
+// farm visée. Le résultat est toujours strictement supérieur à l'état
+// actuel du joueur : sinon le défi naîtrait déjà validé.
+export function resolveQuestTarget(quest, stats) {
+  if (!quest) return 1;
+  if (quest.target) return quest.target; // défi à cible fixe (rythme d'action)
+  const minutes = quest.effortMin || 15;
+  const budget = questBudget(stats, minutes);
+  const now = readMetric(quest.metric, stats);
+  const metric = quest.metric;
+  let raw;
+
+  if (metric === 'totalEarned') {
+    raw = budget;
+  } else if (metric === 'coins') {
+    // Épargner demande de ne PAS tout réinvestir : on vise une fraction
+    // de la production de la période, pas sa totalité.
+    raw = Math.max(budget * 0.6, now * 1.5);
+  } else if (metric === 'passiveIncome') {
+    raw = Math.max(passiveIncomeAfterBudget(stats, budget), now * 1.25);
+  } else if (metric === 'tapPower') {
+    raw = levelsAffordable((lv) => tapPowerCost(lv), Math.max(1, now), budget);
+  } else if (metric === 'sanctuaryLevel') {
+    raw = levelsAffordable((lv) => sanctuaryUpgradeCost(lv), now, budget);
+  } else if (metric === 'veilleurLevel') {
+    raw = levelsAffordable((lv) => veilleurUpgradeCost(lv), now, budget);
+  } else if (metric === 'critLevel') {
+    raw = levelsAffordable((lv) => critUpgradeCost(lv), now, budget);
+  } else if (metric.startsWith('upgrade:')) {
+    const item = UPGRADE_ITEMS.find((u) => u.id === metric.slice(8));
+    raw = item ? levelsAffordable((lv) => upgradeItemCost(item, lv), now, budget) : now + 1;
+  } else if (metric.startsWith('auto:')) {
+    const clicker = AUTOCLICKERS.find((c) => c.id === metric.slice(5));
+    raw = clicker ? levelsAffordable((n) => autoClickerCost(clicker, n), now, budget) : now + 1;
+  } else if (metric === 'autoTotal') {
+    // Combien d'unités de PLUS le budget achète, en le dépensant sur le
+    // générateur qui en rend le plus — c'est ce qu'un joueur ferait pour
+    // faire grimper ce compteur au moins cher.
+    const owned = stats.autoClickers || {};
+    let bestCount = 0;
+    for (const clicker of AUTOCLICKERS) {
+      const have = owned[clicker.id] || 0;
+      const reachable = levelsAffordable((n) => autoClickerCost(clicker, n), have, budget);
+      if (reachable - have > bestCount) bestCount = reachable - have;
+    }
+    raw = now + bestCount;
+  } else {
+    // Métriques non monétaires (créatures possédées, niveau nourri,
+    // essence) : le temps ne s'y convertit pas en pièces, on avance donc
+    // d'un pas relatif à l'état actuel.
+    raw = now + (quest.step || 1);
+  }
+
+  const rounded = roundQuestTarget(raw);
+  // Un défi doit toujours demander un vrai pas en avant, même si le
+  // budget calculé était trop faible pour acheter quoi que ce soit.
+  //
+  // Ce plancher ne vaut QUE pour les défis 'absolute'. Sur un défi
+  // 'delta', `now` est un cumul de toute la partie : le borner par
+  // `now + 1` donnait « gagne 162 001 pièces » à un joueur qui en avait
+  // déjà gagné 162 000 — soit un défi validé à l'instant du tirage.
+  if (quest.mode === 'delta') return Math.max(rounded, quest.minStep || 1);
+  // Le pas minimum est aussi RELATIF à l'existant : sur un compteur déjà
+  // haut, « +1 » donne un défi affiché à 98% dès le tirage. On exige au
+  // moins 15% de progression pour que la barre parte d'un état crédible.
+  const floor = now + Math.max(quest.minStep || 1, Math.ceil(now * 0.15));
+  return Math.max(rounded, floor);
+}
+
+// Progression 0-1 d'un défi. `targets` = cibles figées au tirage
+// (objet id -> valeur). Si une cible manque, on la recalcule à la volée
+// depuis les stats — ce n'est qu'un repli pour les sauvegardes d'avant
+// les cibles dynamiques, jamais le chemin normal.
+export function questProgress(questId, stats, baseline = {}, targets = {}) {
   const q = QUEST_POOL.find((x) => x.id === questId);
-  if (!q || !q.target) return 0;
+  if (!q) return 0;
+  const target = targets[questId] || resolveQuestTarget(q, baseline && baseline.totalEarned !== undefined ? baseline : stats);
+  if (!target) return 0;
   const now = readMetric(q.metric, stats);
-  const value = q.mode === 'delta' ? Math.max(0, now - readMetric(q.metric, baseline)) : now;
-  return Math.max(0, Math.min(1, value / q.target));
+  const base = readMetric(q.metric, baseline);
+  if (q.mode === 'delta') {
+    return Math.max(0, Math.min(1, Math.max(0, now - base) / target));
+  }
+  // Mode 'absolute' : la CIBLE est absolue, mais la BARRE est mesurée
+  // depuis l'état au tirage. Un défi « possède 58 Colosses » proposé à
+  // un joueur qui en a déjà 50 s'afficherait sinon à 86% dès la première
+  // seconde — techniquement exact, mais le joueur voit une barre
+  // presque pleine sans avoir rien fait. En repartant de l'état au
+  // tirage, la barre part de zéro et se remplit avec l'effort réel.
+  // `questComplete` reste identique : elle vaut 1 exactement quand la
+  // cible absolue est atteinte.
+  if (now >= target) return 1;
+  const span = target - base;
+  if (span <= 0) return now >= target ? 1 : 0;
+  return Math.max(0, Math.min(1, (now - base) / span));
 }
 
-export function questComplete(questId, stats, baseline = {}) {
-  return questProgress(questId, stats, baseline) >= 1;
+export function questComplete(questId, stats, baseline = {}, targets = {}) {
+  return questProgress(questId, stats, baseline, targets) >= 1;
 }
 
-export function questLabel(questId) {
-  return QUEST_POOL.find((q) => q.id === questId)?.desc || '';
-}
-
-// Détail affichable d'un défi : icône, libellé, et la fraction
-// «courant / objectif» de la barre segmentée. `current` est DÉRIVÉ de
-// questProgress() (jamais recalculé à part) : deux sources de vérité
-// permettraient à la barre d'afficher 5/5 sur un défi non validé.
-export function questDetail(questId, stats, baseline = {}) {
+// Libellé d'un défi, construit à partir de la cible RÉSOLUE — il ne peut
+// donc pas mentir sur ce qui est demandé. C'est le piège tombé deux fois
+// avec les libellés figés : changer une cible sans régénérer le texte.
+export function questLabel(questId, target) {
   const q = QUEST_POOL.find((x) => x.id === questId);
-  const target = q?.target || 1;
-  const progress = questProgress(questId, stats, baseline);
+  if (!q) return '';
+  return q.label(target || q.target || 1);
+}
+
+export function questDetail(questId, stats, baseline = {}, targets = {}) {
+  const q = QUEST_POOL.find((x) => x.id === questId);
+  if (!q) return { icon: '🎯', label: '', progress: 0, target: 1, current: 0, done: false };
+  const target = targets[questId] || resolveQuestTarget(q, stats);
+  const progress = questProgress(questId, stats, baseline, { ...targets, [questId]: target });
   return {
-    icon: q?.icon || '🎯',
-    label: q?.desc || '',
+    icon: q.icon,
+    label: q.label(target),
     progress,
     target,
     current: Math.min(target, Math.floor(progress * target + 1e-9)),
@@ -903,27 +1075,54 @@ export function questDetail(questId, stats, baseline = {}) {
 
 export const QUEST_SET_SIZE = 4;
 
-// Tire un jeu de 4 défis adaptés à la phase du joueur.
+// Tire 4 défis et résout leurs cibles d'un coup. Retourne
+// `{ ids, targets }` — les deux doivent être persistés ENSEMBLE : des
+// ids sans leurs cibles feraient recalculer des objectifs différents au
+// prochain chargement.
 //
-// Le filtrage par phase est le cœur du système : sans lui, un joueur qui
-// démarre pouvait tirer « aie 30 000 000 de pièces » et rester bloqué
-// pour toujours, l'œuf n'éclosant jamais. On pioche donc dans la phase
-// courante ET la précédente (pour garder un défi rapide à cocher), plus
-// les défis Aventure qui n'ont pas de phase.
-//
-// Les niveaux au-dessus sont volontairement exclus : un défi hors de
-// portée n'est pas « difficile », il est bloquant. La difficulté vient
-// des seuils exigeants À L'INTÉRIEUR de chaque phase.
+// Un défi n'est éligible que si sa métrique a du sens pour ce joueur
+// (`available`) : proposer « possède 30 Étoiles Filantes » à quelqu'un
+// qui n'a pas encore les moyens du premier générateur donnerait un défi
+// techniquement résoluble mais absurde.
 export function pickQuestSet(excludeIds = [], stats = {}) {
-  const tier = playerQuestTier(stats);
-  const eligible = QUEST_POOL.filter((q) => !q.tier || (q.tier <= tier && q.tier >= tier - 1));
+  const eligible = QUEST_POOL.filter((q) => !q.available || q.available(stats));
   let pool = eligible.filter((q) => !excludeIds.includes(q.id));
-  // Replis en cascade : jamais moins de 4 défis, quoi qu'il arrive.
   if (pool.length < QUEST_SET_SIZE) pool = eligible;
-  if (pool.length < QUEST_SET_SIZE) pool = QUEST_POOL.filter((q) => !q.tier || q.tier <= tier);
   if (pool.length < QUEST_SET_SIZE) pool = QUEST_POOL;
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, QUEST_SET_SIZE).map((q) => q.id);
+  // Un seul défi par métrique dans un même jeu : sans ce filtre, le
+  // tirage sortait « atteins 130 000/s » ET « atteins 170 000/s » côte à
+  // côte, ce qui donne l'impression d'un bug plutôt que d'un choix.
+  // Un jeu de 4 défis doit être VARIÉ : une seule métrique par défi, et
+  // au plus 2 défis d'une même famille. Sans la contrainte de famille,
+  // le tirage sortait quatre « monte telle amélioration au niveau X »
+  // d'affilée, ou deux paliers du même objectif côte à côte — ce qui
+  // ressemble à un bug plus qu'à un choix.
+  const chosen = [];
+  const usedMetrics = new Set();
+  const familyCount = {};
+  const MAX_PER_FAMILY = 2;
+  for (const q of shuffled) {
+    if (chosen.length >= QUEST_SET_SIZE) break;
+    if (usedMetrics.has(q.metric)) continue;
+    const fam = q.family || 'autre';
+    if ((familyCount[fam] || 0) >= MAX_PER_FAMILY) continue;
+    usedMetrics.add(q.metric);
+    familyCount[fam] = (familyCount[fam] || 0) + 1;
+    chosen.push(q);
+  }
+  // Repli : si la contrainte d'unicité empêche d'atteindre 4 défis
+  // (joueur très en début de partie, peu de métriques disponibles), on
+  // complète sans elle plutôt que de rendre un jeu incomplet.
+  for (const q of shuffled) {
+    if (chosen.length >= QUEST_SET_SIZE) break;
+    if (!chosen.includes(q)) chosen.push(q);
+  }
+  const targets = {};
+  chosen.forEach((q) => {
+    targets[q.id] = resolveQuestTarget(q, stats);
+  });
+  return { ids: chosen.map((q) => q.id), targets };
 }
 
 export const EGG_STAGES = [
@@ -997,3 +1196,45 @@ export function totalAutoClickIncome(ownedAutoClickers) {
   }
   return sum;
 }
+
+// NOTE D'ORDRE : ce bloc vit en FIN de fichier, pas à côté du reste des
+// défis. Il s'exécute au chargement du module et lit `AUTOCLICKERS`, qui
+// est déclaré plus bas que la section des défis — le placer près d'elle
+// provoquait un « Cannot access 'AUTOCLICKERS' before initialization »
+// au premier import. Déplacer ce bloc vers le haut casse le jeu.
+
+// Défis visant une amélioration ou un générateur PRÉCIS, générés depuis
+// les tableaux existants plutôt qu'écrits à la main : ajouter une
+// amélioration au jeu ajoute automatiquement son défi, et aucun libellé
+// ne peut se désynchroniser d'un renommage.
+UPGRADE_ITEMS.forEach((item) => {
+  QUEST_POOL.push({
+    id: `up_${item.id}`,
+    family: 'upgrade',
+    icon: item.emoji,
+    metric: `upgrade:${item.id}`,
+    effortMin: 30,
+    mode: 'absolute',
+    available: (s) => {
+      const lvl = normalizeUpgradeLevels(s.upgradeLevels)[item.id] || 0;
+      return lvl > 0 || upgradeItemCost(item, 0) <= questBudget(s, 30);
+    },
+    label: (t) => `Monte ${item.name} au niveau ${t}`,
+  });
+});
+
+AUTOCLICKERS.forEach((clicker) => {
+  QUEST_POOL.push({
+    id: `ac_${clicker.id}`,
+    family: 'autoclicker',
+    icon: clicker.emoji,
+    metric: `auto:${clicker.id}`,
+    effortMin: 30,
+    mode: 'absolute',
+    available: (s) => {
+      const have = (s.autoClickers || {})[clicker.id] || 0;
+      return have > 0 || autoClickerCost(clicker, 0) <= questBudget(s, 30);
+    },
+    label: (t) => `Possède ${fmtQ(t)} ${pluralQ(clicker.name)}`,
+  });
+});

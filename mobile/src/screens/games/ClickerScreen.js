@@ -49,6 +49,7 @@ import {
   QUEST_SET_SIZE,
   questComplete,
   questDetail,
+  resolveQuestTarget,
   EGG_STAGES,
   eggStageForCompletedCount,
   HATCH_TAPS_REQUIRED,
@@ -129,7 +130,14 @@ export default function ClickerScreen({ onBack }) {
   const [goldenClaimed, setGoldenClaimed] = useState(0);
   const [maxCombo, setMaxCombo] = useState(1);
   // Système de quêtes + œuf.
-  const [activeQuestIds, setActiveQuestIds] = useState(() => pickQuestSet());
+  // Les défis ET leurs cibles résolues. Les deux doivent voyager
+  // ensemble : des ids sans leurs cibles feraient recalculer des
+  // objectifs différents au prochain chargement, et un défi presque fini
+  // repartirait de zéro (ou serait validé d'emblée) selon le sens où le
+  // revenu a bougé entre-temps.
+  const initialQuests = useState(() => pickQuestSet())[0];
+  const [activeQuestIds, setActiveQuestIds] = useState(initialQuests.ids);
+  const [questTargets, setQuestTargets] = useState(initialQuests.targets);
   // Snapshot des stats au moment du tirage — voir le commentaire sur
   // questProgress() dans clickerLogic.js pour le pourquoi. Vide au tout
   // départ : un nouveau joueur a forcément 0 partout, donc "absolu" et
@@ -173,6 +181,8 @@ export default function ClickerScreen({ onBack }) {
   activeQuestIdsRef.current = activeQuestIds;
   const questBaselineRef = useRef({});
   questBaselineRef.current = questBaseline;
+  const questTargetsRef = useRef({});
+  questTargetsRef.current = questTargets;
   const eggPhaseRef = useRef('collecting');
   eggPhaseRef.current = eggPhase;
   const hatchTapsRef = useRef(0);
@@ -280,11 +290,41 @@ export default function ClickerScreen({ onBack }) {
           // toujours et bloquerait l'œuf définitivement. On retire donc
           // au tirage adapté à la progression du joueur.
           const savedQuests = (saved.activeQuestIds || []).filter((id) => QUEST_POOL.some((q) => q.id === id));
-          setActiveQuestIds(
-            savedQuests.length === QUEST_SET_SIZE
-              ? savedQuests
-              : pickQuestSet(savedQuests, { totalEarned: saved.totalEarned || 0 })
-          );
+          const savedTargets = saved.questTargets || {};
+          if (savedQuests.length === QUEST_SET_SIZE) {
+            setActiveQuestIds(savedQuests);
+            // Sauvegardes d'AVANT les cibles dynamiques : aucune cible
+            // stockée. On les résout une fois à partir des stats
+            // chargées, puis elles sont figées comme les autres — sans
+            // ce repli, questProgress recalculerait une cible à chaque
+            // rendu et le défi s'éloignerait à mesure que le joueur
+            // progresse, sans jamais se terminer.
+            const statsAtLoad = {
+              totalEarned: saved.totalEarned || 0,
+              coins: saved.coins || 0,
+              passiveIncome: totalAutoClickIncome(saved.autoClickers || {}),
+              tapPower: saved.tapPower || 1,
+              autoClickers: saved.autoClickers || {},
+              upgradeLevels: saved.upgradeLevels || {},
+              sanctuaryLevel: saved.sanctuaryLevel || 0,
+              veilleurLevel: saved.veilleurLevel || 0,
+              critLevel: saved.critLevel || 0,
+              essence: saved.essence || 0,
+              ownedCount: (saved.owned || []).length,
+              maxCreatureLevel: (saved.owned || []).reduce((m, o) => Math.max(m, o.level || 0), 0),
+              autoTotal: Object.values(saved.autoClickers || {}).reduce((a, b) => a + (b || 0), 0),
+            };
+            const resolved = {};
+            savedQuests.forEach((id) => {
+              const q = QUEST_POOL.find((x) => x.id === id);
+              resolved[id] = savedTargets[id] || resolveQuestTarget(q, statsAtLoad);
+            });
+            setQuestTargets(resolved);
+          } else {
+            const fresh = pickQuestSet(savedQuests, { totalEarned: saved.totalEarned || 0 });
+            setActiveQuestIds(fresh.ids);
+            setQuestTargets(fresh.targets);
+          }
           // Migration douce pour les sauvegardes d'avant ce correctif
           // (pas de questBaseline stocké) : on prend un instantané des
           // stats ACTUELLES comme point de départ — équitable, pas de
@@ -370,7 +410,7 @@ export default function ClickerScreen({ onBack }) {
           coins, totalEarned, tapPower, owned, deck, critLevel,
           autoClickers, upgradeLevels, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
           totalSummons, totalCrits, goldenClaimed, maxCombo,
-          activeQuestIds, questBaseline, eggPhase, hatchTaps, captureTaps,
+          activeQuestIds, questTargets, questBaseline, eggPhase, hatchTaps, captureTaps,
           lastSave: Date.now() / 1000,
         })
       );
@@ -378,7 +418,7 @@ export default function ClickerScreen({ onBack }) {
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, upgradeLevels, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo,
-    activeQuestIds, questBaseline, eggPhase, hatchTaps, captureTaps, loaded,
+    activeQuestIds, questTargets, questBaseline, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
   // Sauvegarde immédiate à la sortie de l'écran. Annule d'abord le
@@ -400,7 +440,8 @@ export default function ClickerScreen({ onBack }) {
           veilleurLevel: veilleurLevelRef.current, essence: essenceRef.current, lastRitualAt: lastRitualAtRef.current,
           totalSummons: totalSummonsRef.current, totalCrits: totalCritsRef.current,
           goldenClaimed: goldenClaimedRef.current, maxCombo: maxComboRef.current,
-          activeQuestIds: activeQuestIdsRef.current, questBaseline: questBaselineRef.current, eggPhase: eggPhaseRef.current,
+          activeQuestIds: activeQuestIdsRef.current, questTargets: questTargetsRef.current,
+          questBaseline: questBaselineRef.current, eggPhase: eggPhaseRef.current,
           hatchTaps: hatchTapsRef.current, captureTaps: captureTapsRef.current,
           lastSave: Date.now() / 1000,
         })
@@ -741,7 +782,7 @@ export default function ClickerScreen({ onBack }) {
     runeEquipped: lifetimeStats.runeEquipped || 0,
     runeBought: lifetimeStats.runeBought || 0,
   };
-  const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats, questBaseline)).length;
+  const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats, questBaseline, questTargets)).length;
 
   // Défi mis en avant sur l'écran d'accueil : le PREMIER non terminé des
   // 4 du cycle. Un seul à la fois, volontairement — la barre segmentée
@@ -749,9 +790,9 @@ export default function ClickerScreen({ onBack }) {
   // et empiler 4 barres sur l'accueil recréerait l'onglet Quêtes qu'on
   // vient justement de supprimer. Vaut `null` quand les 4 sont finies
   // (l'affichage bascule alors sur la barre d'éclosion).
-  const currentChallengeId = activeQuestIds.find((id) => !questComplete(id, questStats, questBaseline)) || null;
+  const currentChallengeId = activeQuestIds.find((id) => !questComplete(id, questStats, questBaseline, questTargets)) || null;
   const currentChallenge = currentChallengeId
-    ? questDetail(currentChallengeId, questStats, questBaseline)
+    ? questDetail(currentChallengeId, questStats, questBaseline, questTargets)
     : null;
 
   // Palier visuel de l'œuf (0-4), réaffiché sur l'accueil : il existait
@@ -813,27 +854,41 @@ export default function ClickerScreen({ onBack }) {
         addCreatureToOwned(creature);
         gainCoins(goldenBonus(tapPowerRef.current) * 3);
         setRewardCreature(creature);
-        // Le nouveau tirage suit la progression : plus le joueur avance,
-        // plus les défis proposés sont exigeants (voir pickQuestSet).
-        setActiveQuestIds(pickQuestSet(activeQuestIdsRef.current, { totalEarned: totalEarnedRef.current }));
-        // Nouveau baseline au moment MÊME du tirage (après le bonus de
-        // pièces ci-dessus, pour que "5000 pièces gagnées" reparte bien
-        // de ce point précis, pas d'un instant légèrement antérieur) —
-        // voir questProgress() dans clickerLogic.js pour le pourquoi.
-        // Le baseline ne sert QUE aux défis en mode 'delta' — inutile
-        // d'y mettre les métriques d'état (pièces en réserve, niveaux),
-        // qui sont lues en absolu. Il doit en revanche couvrir TOUTES
-        // les métriques delta du pool, sinon celles qui manquent
-        // repartent de 0 et se valident instantanément chez un vétéran.
-        setQuestBaseline({
+        // Instantané complet des stats à cet instant précis. Il sert à
+        // DEUX choses désormais : résoudre les cibles des nouveaux défis
+        // (« 25 minutes de farm » se convertit en pièces d'après le
+        // revenu d'ICI), et servir de point zéro à la progression.
+        //
+        // Il couvre TOUTES les métriques, plus seulement les 'delta' :
+        // depuis que la barre des défis 'absolute' se mesure elle aussi
+        // depuis le tirage, une métrique absente ferait repartir la
+        // barre d'un état faux.
+        const statsAtDraw = {
+          totalEarned: totalEarnedRef.current,
+          coins: coinsRef.current,
+          passiveIncome,
+          tapPower: tapPowerRef.current,
+          autoClickers: autoClickersRef.current,
+          autoTotal: Object.values(autoClickersRef.current).reduce((a, b) => a + (b || 0), 0),
+          upgradeLevels: upgradeLevelsRef.current,
+          sanctuaryLevel: sanctuaryLevelRef.current,
+          veilleurLevel: veilleurLevelRef.current,
+          critLevel: critLevelRef.current,
+          essence: essenceRef.current,
+          ownedCount: ownedRef.current.length,
+          maxCreatureLevel: ownedRef.current.reduce((m, o) => Math.max(m, o.level || 0), 0),
+          maxCombo: Math.round(maxComboRef.current * 10),
           totalSummons: totalSummonsRef.current,
           totalCrits: totalCritsRef.current,
           goldenClaimed: goldenClaimedRef.current,
-          totalEarned: totalEarnedRef.current,
           battleWon: lifetimeStats.battleWon || 0,
           runeEquipped: lifetimeStats.runeEquipped || 0,
           runeBought: lifetimeStats.runeBought || 0,
-        });
+        };
+        const nextSet = pickQuestSet(activeQuestIdsRef.current, statsAtDraw);
+        setActiveQuestIds(nextSet.ids);
+        setQuestTargets(nextSet.targets);
+        setQuestBaseline(statsAtDraw);
         setEggPhase('collecting');
         setHatchTaps(0);
         setCaptureTaps(0);

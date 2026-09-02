@@ -38,83 +38,91 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventur
 - **Invoquer une créature** (gacha) : vit dans l'onglet **Collection**, pas dans Shop.
 - **Rituel** (bonus "pub" gratuit) : une bulle qui apparaît près de l'œuf (comme les pouvoirs de créature), pas un bouton ni une bannière.
 
-## Défis de l'œuf — pool par phases de progression (refonte 02/09)
+## Défis de l'œuf — cibles dynamiques en « temps de farm » (02/09)
 
-**76 défis** (contre 11 avant), répartis en 6 phases de jeu + 5 défis
-Aventure. Le pool est **déclaratif** : un défi nomme une métrique, un
-objectif et un mode de lecture, et `questProgress()` est générique.
-Ajouter un défi = ajouter une ligne, plus jamais toucher à la logique.
-L'ancien `switch` par id devenait intenable passé une dizaine d'entrées.
+**70 défis.** Un défi ne stocke plus une cible chiffrée mais un **temps
+de jeu** (`effortMin`). La cible réelle est calculée **au tirage** à
+partir du revenu du joueur, puis **figée** dans la sauvegarde.
 
-### Le tirage suit la progression du joueur
+### Pourquoi (deux tentatives avant celle-ci)
 
-C'est le cœur du système. Sans lui, un joueur qui démarre pouvait tirer
-« aie 30 000 000 de pièces » et rester **bloqué pour toujours**, l'œuf
-n'éclosant jamais. `pickQuestSet(excludeIds, stats)` déduit la phase du
-joueur (`playerQuestTier`, d'après `totalEarned`) et ne pioche que dans
-la phase courante **et la précédente**, plus les défis Aventure qui n'ont
-pas de phase.
+1. Cibles en dur : « aie 30M de pièces » est un mur infranchissable au
+   début et un défi déjà validé trois heures plus tard.
+2. Découpage en 6 phases de progression : ça limitait les dégâts, mais à
+   l'intérieur d'une même phase le revenu varie déjà d'un facteur 100 —
+   l'approximation restait grossière. **Ce système a été supprimé**
+   (`QUEST_TIER_THRESHOLDS`, `playerQuestTier` n'existent plus).
+3. **Temps de farm** : un défi coûte « environ 25 minutes », ce qui reste
+   honnête à toutes les échelles et rend les phases inutiles.
 
-Les phases au-dessus sont volontairement exclues : un défi hors de
-portée n'est pas « difficile », il est bloquant. La difficulté vient des
-seuils exigeants **à l'intérieur** de chaque phase.
+### Comment la cible est calculée
 
-`QUEST_TIER_THRESHOLDS` est calé sur la courbe MESURÉE (voir section
-Équilibrage), pas à l'œil : un premier jeu de seuils « ronds » faisait
-entrer le joueur en phase 2 en 10 minutes et en phase 6 en une journée.
-Durées obtenues : phase 1 ≈ 30 min, 2 → 3 h, 3 → 12 h, 4 → 1 j, 5 → 5 j,
-6 au-delà.
+`questBudget(stats, minutes)` = revenu/s estimé × 60 × minutes. Ce budget
+est ensuite converti selon la métrique, **en suivant les vraies fonctions
+de coût du jeu** plutôt qu'en estimant :
 
-### `mode` : 'delta' vs 'absolute'
+| Métrique | Conversion |
+|---|---|
+| `totalEarned` | le budget directement |
+| `coins` (réserve) | 60% du budget — épargner suppose de ne pas tout réinvestir |
+| `passiveIncome` | revenu obtenu si le budget partait dans le meilleur générateur |
+| `tapPower`, `sanctuaryLevel`, `veilleurLevel`, `critLevel` | `levelsAffordable()` additionne les coûts réels jusqu'à épuisement |
+| `upgrade:<id>`, `auto:<id>`, `autoTotal` | idem, avec `upgradeItemCost` / `autoClickerCost` |
+| collection, essence | pas relatif (`step`) : le temps ne s'y convertit pas en pièces |
 
-Ce choix n'est pas cosmétique :
-- **`delta`** pour les compteurs qui ne redescendent jamais (invocations,
-  critiques, pièces gagnées, combats). Mesuré **depuis le tirage** via
-  `questBaseline`, sinon un vétéran validerait à l'instant même du
-  tirage — c'est le bug réel corrigé le 30/08.
-- **`absolute`** pour les états que le joueur possède ou non (niveau d'un
-  Pacte, pièces en réserve, générateurs achetés). Les avoir déjà EST la
-  preuve de progression.
+### Points structurants
 
-Le `questBaseline` ne contient donc QUE les métriques delta. S'il en
-manque une, les défis correspondants repartent de 0 et se valident
-instantanément.
+- **Figer la cible est indispensable.** Recalculée à chaque rendu, elle
+  monterait avec le revenu du joueur et le défi s'éloignerait à mesure
+  qu'il progresse, sans jamais se terminer. `questTargets` est persisté
+  À CÔTÉ de `activeQuestIds` — les deux voyagent ensemble, sinon le
+  prochain chargement résout des objectifs différents.
+- **`label` est une FONCTION** de la cible, plus une chaîne figée. Un
+  libellé ne peut donc plus mentir sur ce qui est demandé — le piège
+  était tombé deux fois (améliorations, puis défis).
+- Les défis visant une amélioration ou un générateur précis sont
+  **générés depuis `UPGRADE_ITEMS` / `AUTOCLICKERS`** : ajouter une
+  amélioration au jeu ajoute automatiquement son défi.
+- **`available(stats)`** filtre les défis absurdes : pas de « possède 30
+  Étoiles Filantes » à qui n'a pas les moyens du premier générateur, pas
+  de défi de crit sans Faveur des Esprits.
+- **Variété imposée au tirage** : une seule métrique par défi et au plus
+  **2 défis par famille** (economy / core / action / collection /
+  upgrade / autoclicker / adventure). Sans ça le tirage sortait quatre
+  « monte telle amélioration » d'affilée.
+- **La barre des défis 'absolute' se mesure depuis le tirage.** Un défi
+  « possède 58 Colosses » proposé à qui en a 50 s'afficherait sinon à
+  86% dès la première seconde. `questComplete` reste inchangée : elle
+  vaut 1 exactement quand la cible absolue est atteinte.
 
-### Calibrage de la difficulté
+### Bugs trouvés par les tests pendant cette refonte
 
-Chaque cible économique a été calculée **par simulation**, calée sur la
-**fin** de sa phase (l'état du joueur à l'entrée de la phase suivante) et
-non sur son milieu. Mesure avant/après : **33 défis sur 48 étaient déjà
-acquis** au moment où le joueur entrait dans leur phase — donc des
-cadeaux, pas des défis. Après recalibrage : **1 sur 48**.
+- **Défi `delta` validé au tirage** : le plancher « cible > état actuel »
+  était appliqué à `totalEarned`, un cumul de toute la partie. Résultat :
+  « gagne 162 001 pièces » à un joueur qui en avait gagné 162 000. Le
+  plancher ne vaut désormais que pour le mode `absolute`.
+- **`autoTotal` non géré** dans le résolveur : il tombait dans le repli
+  générique et donnait « possède 1 auto-clics en tout ».
+- **Ordre de déclaration** : le bloc qui génère les défis par générateur
+  lit `AUTOCLICKERS`, déclaré plus bas dans le fichier. Il vit donc en
+  FIN de fichier — le remonter provoque un « Cannot access
+  'AUTOCLICKERS' before initialization » à l'import. Un commentaire le
+  signale sur place.
+- Pluriel français : « Colonie de Familiers » → « Colonies de
+  Familiers », pas « Colonies **des** Familiers » (seul le groupe avant
+  la préposition s'accorde).
 
-Règles appliquées :
-- métrique d'état → valeur atteinte à l'entrée de la phase suivante
-- `coins` (réserve) → ~5 min de production de fin de phase, ce qui force
-  à épargner au lieu de tout réinvestir
-- `totalEarned` en delta → ~40% de ce que la phase produit
-- **jamais de cible abaissée** : on garde `max(actuelle, calculée)`
-- phase 6 **durcie à la main** : la simulation s'arrêtant à 7 jours, ses
-  valeurs y sont une extrapolation basse
+### Durées mesurées (simulation)
 
-### Pièges de cette refonte
+Cycle complet de 4 défis : **1,3 h** quand tiré à 4 h de jeu, **2 h**
+pour le suivant, **20 h** quand tiré à 1 jour de jeu.
 
-- **Les ids sont figés, pas les valeurs.** Un id vit dans les
-  sauvegardes des joueurs et ne doit JAMAIS être renommé — mais les
-  cibles, elles, ont été recalibrées. Conséquence à connaître :
-  `hold1M` vaut aujourd'hui 20 milliards, `pacte5` demande le niveau 15.
-  Ne jamais déduire une valeur d'un id, toujours lire `target`.
-- **Régénérer les `desc` après tout changement de cible** : ce sont des
-  chaînes figées qui annonceraient sinon les anciens chiffres. Même
-  piège que sur les améliorations, tombé deux fois.
-- Une formule de recalibrage valable pour une métrique ne l'est pas pour
-  toutes : appliquer « 40% des pièces produites » aux compteurs
-  d'invocations a produit un « invoque 60 000 créatures » avant
-  correction. Les compteurs non monétaires gardent des cibles écrites à
-  la main.
-- **Revalider les défis sauvegardés contre le pool actuel** au
-  chargement : un id disparu renverrait une progression de 0 pour
-  toujours et bloquerait l'œuf définitivement.
+⚠️ La simulation n'achète que ce qui augmente le revenu, ne joue pas à
+l'Aventure et ne nourrit pas ses créatures — elle bloque donc
+artificiellement sur les défis de combat, de collection et de chance
+critique. Ce ne sont pas des blocages réels, mais **ne jamais conclure
+d'un blocage en simulation sans vérifier ce que l'IA de test sait
+faire**.
 
 ## Équilibrage de l'économie du clicker (refonte 02/09)
 
