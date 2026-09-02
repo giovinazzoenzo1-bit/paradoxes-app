@@ -314,6 +314,41 @@ export function griffesReward(levelNumber) {
   return 5 + Math.floor(levelNumber * 1.5);
 }
 
+// ---- Énergie (30/08) — 1 vie toutes les 20 min, plafond à 5 ----
+// Coûte 1 énergie pour LANCER un combat (pas remboursé en cas de
+// défaite — c'est bien "1 vie par tentative", pas "1 vie par victoire").
+export const ENERGY_MAX = 5;
+export const ENERGY_REGEN_MS = 20 * 60 * 1000; // 20 minutes
+
+// Recalcule l'énergie actuelle à partir du dernier timestamp connu — le
+// même principe que les gains hors-ligne du clicker (temps écoulé /
+// intervalle = nombre de "ticks"), mais plafonné à ENERGY_MAX.
+//
+// Point important : si le plafond est atteint, `lastUpdateAt` est
+// RESYNCHRONISÉ sur `now` plutôt que de garder un vieux timestamp avec
+// un surplus de temps "non consommé" — sinon, dès que le joueur dépense
+// à nouveau de l'énergie, ce surplus se traduirait par un remplissage
+// instantané injustifié (l'énergie doit recommencer à compter 20 min
+// PLEINES à partir du moment où elle redescend sous le plafond, pas
+// bénéficier d'un arriéré accumulé pendant qu'elle était déjà pleine).
+export function computeEnergyRegen(storedEnergy, lastUpdateAt, now) {
+  if (storedEnergy >= ENERGY_MAX) return { energy: ENERGY_MAX, lastUpdateAt: now };
+  const elapsed = now - lastUpdateAt;
+  const ticks = Math.floor(elapsed / ENERGY_REGEN_MS);
+  if (ticks <= 0) return { energy: storedEnergy, lastUpdateAt };
+  const newEnergy = Math.min(ENERGY_MAX, storedEnergy + ticks);
+  if (newEnergy >= ENERGY_MAX) return { energy: ENERGY_MAX, lastUpdateAt: now };
+  return { energy: newEnergy, lastUpdateAt: lastUpdateAt + ticks * ENERGY_REGEN_MS };
+}
+
+// Millisecondes avant le PROCHAIN point d'énergie (0 si déjà plein).
+export function msUntilNextEnergy(storedEnergy, lastUpdateAt, now) {
+  if (storedEnergy >= ENERGY_MAX) return 0;
+  const elapsed = now - lastUpdateAt;
+  const remainder = elapsed % ENERGY_REGEN_MS;
+  return ENERGY_REGEN_MS - remainder;
+}
+
 // ---- Évolution par palier (créatures au format Gemini, SANS changement
 // de nom — contrairement aux 10 créatures d'origine qui ont 3 noms/
 // dessins distincts par stade). Contrairement au niveau (qui monte en
