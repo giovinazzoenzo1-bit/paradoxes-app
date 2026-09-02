@@ -166,6 +166,13 @@ export const CREATURES = [
     stages: [
     { name: 'Zephyrion', emoji: '☁️' }, { name: 'Zephyrion', emoji: '☁️' }, { name: 'Zephyrion', emoji: '☁️' },
   ]},
+  { id: 'brontobloc', element: 'Foudre', rarity: 'peu_commun', baseIncome: 0.2, combatType: 'tank',
+    baseHp: 30, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Frappe Aimantée', 2, 10], ['Bouclier Statique', 3, 15], ['Charge Magnétique', 5, 20], ['Onde de Choc Électrique', 7, 30]]),
+    lore: "Ce golem massif est composé d'aimants naturels et de minerais conducteurs. Il attire délibérément la foudre lors des orages pour charger son épaisse armure électromagnétique. Sur le champ de bataille, il encaisse les coups tout en renvoyant de puissantes décharges statiques à ses agresseurs.",
+    stages: [
+    { name: 'Brontobloc', emoji: '🗿' }, { name: 'Brontobloc', emoji: '🗿' }, { name: 'Brontobloc', emoji: '🗿' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -264,6 +271,7 @@ export const CREATURE_POWERS = {
   aquamira: { name: 'Marée Curative', effectType: 'passive_boost', effectValue: 2 },
   terracroc: { name: 'Séisme', effectType: 'coins_burst', effectValue: 15 },
   zephyrion: { name: 'Brise Protectrice', effectType: 'passive_boost', effectValue: 2 },
+  brontobloc: { name: 'Décharge Statique', effectType: 'coins_burst', effectValue: 15 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
