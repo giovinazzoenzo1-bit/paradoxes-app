@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
 import CombatScreen from './CombatScreen';
 import { DeckPicker } from './DeckPicker';
-import { CREATURES, RARITY_LABEL, RARITY_COLOR, RARITY_BADGE_LETTER, stageForLevel } from '../../games/clicker/clickerLogic';
+import { CREATURES, RARITY_LABEL, RARITY_COLOR, RARITY_BADGE_LETTER, stageForLevel, levelUpCost } from '../../games/clicker/clickerLogic';
 import * as Notifications from 'expo-notifications';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import {
@@ -103,7 +103,7 @@ function makeRuneId() {
 }
 
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onAssignDeck, onClearDeckSlot }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot }) {
   const { trackEvent, trackMax } = useDaily();
   const [detailCreatureId, setDetailCreatureId] = useState(null);
   const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
@@ -265,6 +265,25 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     onEvolveCreature(creatureId, currentTier + 1);
   };
 
+  // Monte une créature d'un niveau, payé EN GRIFFES. Même schéma que
+  // handleEvolve : le coût est vérifié et débité ICI (les Griffes vivent
+  // dans cet écran), puis le nouveau niveau est persisté par le clicker
+  // via onLevelUpCreature — la collection lui appartient.
+  //
+  // Le nourrissage se faisait avant dans le clicker, payé en pièces. Il a
+  // été déplacé ici plutôt que de faire descendre les Griffes vers le
+  // clicker : garder une monnaie dans un seul écran évite qu'elle soit
+  // débitée à deux endroits qui ne se voient pas.
+  const handleLevelUp = (creatureId) => {
+    const creature = CREATURES.find((c) => c.id === creatureId);
+    const ownedEntry = ownedMap[creatureId];
+    if (!creature || !ownedEntry) return;
+    const cost = levelUpCost(creature, ownedEntry.level);
+    if (griffes < cost) return;
+    setGriffes((g) => g - cost);
+    onLevelUpCreature(creatureId);
+  };
+
   // Achète une rune ALÉATOIRE contre 100 Griffes (toujours niveau 1, pas
   // encore équipée). Les bonus des runes affectent maintenant vraiment
   // les stats de combat (voir combatLogic.js/runeBonuses).
@@ -328,6 +347,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         owned={ownedMap[detailCreatureId]}
         griffes={griffes}
         onEvolve={() => handleEvolve(detailCreatureId, ownedMap[detailCreatureId].evolutionTier || 0, ownedMap[detailCreatureId].level)}
+        onLevelUp={() => handleLevelUp(detailCreatureId)}
         ownedRunes={ownedRunes}
         onEquipRune={(runeId) => equipRune(runeId, detailCreatureId)}
         onUnequipRune={unequipRune}
@@ -463,6 +483,34 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
 // palier suivant — pas de changement de nom, juste un boost de PV/ATQ/
 // Endurance (contrairement aux 10 créatures d'origine avec 3 noms/
 // dessins distincts par stade évolutif).
+// Montée de niveau, payée en Griffes. Affiche aussi le prochain palier
+// d'évolution visé, pour que le joueur sache à quoi servent les niveaux
+// qu'il achète au lieu de monter à l'aveugle.
+function LevelUpCard({ creature, ownedLevel, griffes, onLevelUp }) {
+  const cost = levelUpCost(creature, ownedLevel);
+  const affordable = griffes >= cost;
+  const nextTierLevel = ownedLevel < 25 ? 25 : ownedLevel < 50 ? 50 : null;
+
+  return (
+    <View style={styles.sectionCard}>
+      <Text style={styles.sectionTitle}>🍖 Niveau</Text>
+      <Text style={styles.sectionBody}>Niveau actuel : {ownedLevel}</Text>
+      {nextTierLevel && (
+        <Text style={styles.speciesNote}>
+          Encore {nextTierLevel - ownedLevel} niveau{nextTierLevel - ownedLevel > 1 ? 'x' : ''} avant le prochain palier d'évolution.
+        </Text>
+      )}
+      <TouchableOpacity
+        style={[styles.startBattleBtn, !affordable && styles.actionBtnDisabledAdv]}
+        onPress={onLevelUp}
+        disabled={!affordable}
+      >
+        <Text style={styles.startBattleBtnText}>Monter au niveau {ownedLevel + 1} — {cost} 🐾 Griffes</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
   const maxed = evolutionTier >= 2;
   const eligible = !maxed && canEvolve(evolutionTier, ownedLevel);
@@ -491,7 +539,7 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
 }
 
 
-function CreatureDetailScreen({ creature, owned, griffes, onEvolve, ownedRunes, onEquipRune, onUnequipRune, onBack }) {
+function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack }) {
   const [runePickerSlot, setRunePickerSlot] = useState(null); // index (0-2) ou null
 
   const stage = stageForLevel(owned.level);
@@ -606,6 +654,8 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, ownedRunes, 
         </View>
         <Text style={styles.speciesNote}>Touche une case pleine pour retirer sa rune.</Text>
       </View>
+
+      <LevelUpCard creature={creature} ownedLevel={owned.level} griffes={griffes} onLevelUp={onLevelUp} />
 
       <EvolutionCard evolutionTier={evolutionTier} ownedLevel={owned.level} griffes={griffes} onEvolve={onEvolve} />
 

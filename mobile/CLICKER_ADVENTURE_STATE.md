@@ -223,6 +223,56 @@ quoi débloquer une évolution en attente, pas de quoi s'acheter la
 collection. Les tests vérifient ce rapport plutôt qu'un nombre de
 créatures évoluées.
 
+## Amélioration des créatures — 100% en Griffes (fait)
+
+Les créatures ne se montent **plus du tout avec les pièces du clicker**.
+Leur seule monnaie d'amélioration est la **Griffe**, gagnée au combat en
+Aventure. Les deux économies sont franchement séparées : les pièces font
+tourner le clicker, les Griffes font progresser les créatures.
+
+### Déplacement du nourrissage
+
+Le bouton « Nourrir » du clicker (payé en pièces) est **supprimé**. La
+montée de niveau vit maintenant dans **Aventure → fiche de créature →
+carte « Niveau »** (`LevelUpCard`), juste au-dessus de la carte
+Évolution.
+
+Pourquoi là plutôt que de faire descendre les Griffes vers le clicker :
+garder une monnaie dans un seul écran évite qu'elle soit débitée à deux
+endroits qui ne se voient pas. Même schéma que l'évolution — Aventure
+vérifie et débite le coût, puis le clicker persiste le nouveau niveau via
+`onLevelUpCreature`, la collection lui appartenant.
+
+La fiche de créature du clicker n'affiche plus de bouton mais **indique
+le chemin** et le coût du prochain niveau, plutôt que de laisser un vide.
+
+### Barème (calibré sur le revenu de combat)
+
+`levelUpCost` = `0,5 × niveau^1,2 × facteur de rareté`, en Griffes.
+L'ancienne formule en pièces (`8 × niveau^1,35`) aurait donné ~820
+Griffes pour amener une commune au niveau 25, soit le double du revenu de
+combat disponible à ce stade.
+
+Paliers d'évolution **relevés de 40/100 à 150/400** : depuis que les
+niveaux se paient aussi en Griffes, un palier doit rester un vrai jalon
+face au coût cumulé des niveaux qui y mènent, sinon il tombe tout seul en
+chemin.
+
+| Rareté | Niveau 25 | + palier 1 | Niveau 50 | + palier 2 |
+|---|---|---|---|---|
+| Commun | 259 | 409 | 1 215 | 1 615 |
+| Rare | 414 | 564 | 1 943 | 2 343 |
+| Épique | 673 | 823 | 3 160 | 3 560 |
+| Mythique | 1 734 | 1 884 | 8 144 | 8 544 |
+
+Repères : le combat rapporte ~410 Griffes sur 20 niveaux, ~840 sur 30,
+~2 150 sur 50. Une créature commune menée au palier 1 coûte donc à peu
+près 30 niveaux d'Aventure ; le palier 2 est franchement plus loin.
+
+`RARITY_COST_FACTOR` est désormais **exporté et partagé** — c'est le
+mappage qui avait été oublié lors du passage à 6 raretés, rendant le coût
+NaN pour « peu_commun » et « mythique ». Toujours passer par lui.
+
 ### Où se trouve l'amélioration des créatures
 
 Question posée pendant cette MAJ : il n'existe pas de bouton dédié, le

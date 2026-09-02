@@ -304,17 +304,31 @@ export function incomeForCreature(creature, level) {
   return creature.baseIncome * STAGE_MULTIPLIER[stage] * levelBonus;
 }
 
-// Coût (en pièces) pour faire passer une créature possédée du niveau
-// `level` à `level+1`.
+// Facteur de rareté partagé par tous les coûts d'amélioration.
+// 6 paliers (ratio ~x1,6 entre chacun) — "peu_commun" et "mythique"
+// avaient été oubliés lors du passage à 6 raretés, ce qui rendait le
+// coût NaN et le nourrissage impossible pour toutes les créatures de ces
+// deux raretés. Toujours passer par ce mappage, jamais en redéfinir un.
+export const RARITY_COST_FACTOR = { commun: 1, peu_commun: 1.3, rare: 1.6, epique: 2.6, legendaire: 4.2, mythique: 6.7 };
+
+// Coût EN GRIFFES pour faire passer une créature du niveau `level` au
+// suivant.
+//
+// Les créatures ne se montent plus du tout avec les pièces du clicker :
+// leur seule monnaie d'amélioration est la Griffe, gagnée au combat en
+// Aventure. Les deux économies sont ainsi franchement séparées — les
+// pièces font tourner le clicker, les Griffes font progresser les
+// créatures — au lieu que la même ressource achète tout.
+//
+// Barème calibré sur le revenu de Griffes du combat (~410 Griffes pour
+// les 20 premiers niveaux d'Aventure) : monter une créature COMMUNE
+// jusqu'au niveau 25 (le seuil du 1er palier d'évolution) coûte environ
+// 270 Griffes. L'ancien barème en pièces (8 × level^1,35) aurait donné
+// ~820 Griffes pour le même parcours, soit le double du revenu de
+// combat disponible à ce stade.
 export function levelUpCost(creature, level) {
-  // 6 paliers désormais (ratio ~x1,6 entre chaque, cohérent avec la
-  // progression déjà en place pour commun→rare→épique→légendaire) —
-  // "peu_commun" et "mythique" manquaient ici depuis le passage aux 6
-  // paliers de rareté, ce qui rendait le coût NaN (donc le nourrissage
-  // impossible) pour TOUTE créature de ces deux raretés, pas seulement
-  // les Mythiques.
-  const rarityFactor = { commun: 1, peu_commun: 1.3, rare: 1.6, epique: 2.6, legendaire: 4.2, mythique: 6.7 }[creature.rarity];
-  return Math.round(8 * Math.pow(level, 1.35) * rarityFactor);
+  const rarityFactor = RARITY_COST_FACTOR[creature.rarity] || 1;
+  return Math.max(1, Math.round(0.5 * Math.pow(level, 1.2) * rarityFactor));
 }
 
 // Coût d'une invocation (gacha), croissant avec le nombre de créatures

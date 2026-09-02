@@ -357,7 +357,11 @@ export function msUntilNextEnergy(storedEnergy, lastUpdateAt, now) {
 // (et plus tard via certaines quêtes) — pas automatique.
 export const EVOLUTION_LEVEL_REQUIREMENT = [0, 25, 50]; // niveau requis pour le palier 1, 2
 export const EVOLUTION_STAT_MULTIPLIER = [1.0, 1.3, 1.7]; // boost de PV/ATQ/Endurance par palier
-export const EVOLUTION_GRIFFES_COST = [0, 40, 100]; // coût en Griffes pour débloquer le palier
+// Coût en Griffes pour débloquer un palier d'évolution. Nettement
+// relevé (40/100 -> 150/400) depuis que les NIVEAUX se paient eux aussi
+// en Griffes : un palier doit rester un vrai jalon face au coût cumulé
+// des niveaux qui y mènent, sinon il tombe tout seul en chemin.
+export const EVOLUTION_GRIFFES_COST = [0, 150, 400];
 
 export function canEvolve(currentTier, ownedLevel) {
   const nextTier = currentTier + 1;

@@ -1171,14 +1171,13 @@ export default function ClickerScreen({ onBack }) {
     setView('collection');
   };
 
-  const feedCreature = (id) => {
-    const owned1 = ownedRef.current.find((o) => o.id === id);
-    if (!owned1) return;
-    const creature = CREATURES.find((c) => c.id === id);
-    const cost = applyDiscount(levelUpCost(creature, owned1.level));
-    if (coinsRef.current < cost) return;
-    setCoins((c) => c - cost);
-    if (pendingDiscountRef.current) setPendingDiscount(null);
+  // Applique la montée de niveau d'une créature. NE débite RIEN : les
+  // créatures se paient désormais uniquement en Griffes, et c'est
+  // AdventureScreen qui vérifie et débite ce coût, puisque les Griffes
+  // vivent dans son état. Ce point d'entrée ne fait que persister le
+  // nouveau niveau, la collection appartenant au clicker — même schéma
+  // que handleEvolveCreature.
+  const handleLevelUpCreature = (id) => {
     setOwned((prev) => prev.map((o) => (o.id === id ? { ...o, level: o.level + 1 } : o)));
     trackEvent('creatureFed', 1);
   };
@@ -1229,6 +1228,7 @@ export default function ClickerScreen({ onBack }) {
         deck={deck}
         onBack={() => setView('tap')}
         onEvolveCreature={handleEvolveCreature}
+        onLevelUpCreature={handleLevelUpCreature}
         onAssignDeck={assignToDeck}
         onClearDeckSlot={clearDeckSlot}
       />
@@ -1409,7 +1409,6 @@ export default function ClickerScreen({ onBack }) {
           selectedCreature={selectedCreature}
           setSelectedCreature={setSelectedCreature}
           coins={coins}
-          onFeed={feedCreature}
           pendingDiscount={pendingDiscount}
           nextSummonCost={nextSummonCost}
           onSummon={doSummon}
@@ -1687,7 +1686,7 @@ function ShopView({
 // quêtes du cycle en cours avec leur barre de progression, puis la
 // séquence finale (éclosion 500 taps -> capture 200 taps) une fois les 4
 // quêtes validées.
-function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, onFeed, pendingDiscount, nextSummonCost, onSummon, onBack }) {
+function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, pendingDiscount, nextSummonCost, onSummon, onBack }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
 
@@ -1736,7 +1735,6 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, o
           creature={CREATURES.find((c) => c.id === selectedCreature)}
           owned={ownedMap[selectedCreature]}
           coins={coins}
-          onFeed={() => onFeed(selectedCreature)}
           onClose={() => setSelectedCreature(null)}
           pendingDiscount={pendingDiscount}
         />
@@ -1745,7 +1743,7 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, o
   );
 }
 
-function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscount }) {
+function CreatureDetail({ creature, owned, coins, onClose, pendingDiscount }) {
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
   const baseName = creature.stages[0].name;
@@ -1753,7 +1751,6 @@ function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscou
   const combatStats = combatStatsForCreatureTyped(creature, owned.level, owned.evolutionTier || 0);
   const baseCost = levelUpCost(creature, owned.level);
   const cost = pendingDiscount ? Math.max(1, Math.round(baseCost * (1 - pendingDiscount.percent))) : baseCost;
-  const canFeed = coins >= cost;
   const nextEvoLevel = stage === 0 ? 5 : stage === 1 ? 15 : null;
 
   return (
@@ -1814,10 +1811,17 @@ function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscou
           </View>
         )}
 
-        <TouchableOpacity style={[styles.feedBtn, !canFeed && styles.actionBtnDisabled]} onPress={onFeed} disabled={!canFeed}>
-          <Text style={styles.feedBtnText}>🍖 Nourrir</Text>
-          <Text style={styles.feedBtnCost}>💰 {formatNum(cost)}</Text>
-        </TouchableOpacity>
+        {/* Le nourrissage en pièces a été retiré : les créatures se
+            montent uniquement en Griffes, depuis l'Aventure, où cette
+            monnaie vit. Laisser le bouton ici aurait fait coexister deux
+            systèmes d'amélioration payés dans deux monnaies différentes.
+            On indique le chemin plutôt que de laisser un vide. */}
+        <View style={styles.upgradeHintBox}>
+          <Text style={styles.upgradeHintText}>
+            🐾 Améliore cette créature depuis l'Aventure : ouvre son deck et touche sa fiche.
+          </Text>
+          <Text style={styles.upgradeHintCost}>Prochain niveau : {formatNum(cost)} Griffes</Text>
+        </View>
         </ScrollView>
       </View>
     </View>
@@ -2252,7 +2256,12 @@ const styles = StyleSheet.create({
 
   feedBtn: { backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 28, marginTop: 16, alignItems: 'center' },
   feedBtnText: { color: '#241a00', fontSize: 14, fontWeight: '900' },
-  feedBtnCost: { color: '#241a00', fontSize: 11, fontWeight: '700', marginTop: 2 },
+  upgradeHintBox: {
+    backgroundColor: COLORS.panelLight, borderRadius: 12, padding: 12, marginTop: 6,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  upgradeHintText: { color: COLORS.text, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  upgradeHintCost: { color: COLORS.action, fontSize: 11, fontWeight: '800', textAlign: 'center', marginTop: 4 },
 
 
 });
