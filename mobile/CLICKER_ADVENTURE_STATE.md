@@ -129,6 +129,29 @@ sinon la barre retomberait à zéro à chaque pause et n'atteindrait la
 cible que sur une seule série parfaite, sans jamais montrer de progrès.
 La métrique exposée aux défis est arrondie à la seconde entière.
 
+### Une seule fonction de sauvegarde (`buildSaveData`)
+
+**Bug signalé** : le défi « reste en Transe x2,5 pendant 30 secondes »,
+une fois validé, redevenait le défi courant après avoir quitté puis
+rouvert l'écran.
+
+Cause : il existait **deux objets de sauvegarde distincts** — un pour
+l'écriture anti-rebond, un pour la sortie d'écran — à tenir synchronisés
+à la main. `maxTranseHoldSec` n'avait été ajouté qu'au premier. En
+quittant l'écran, le second écrasait la sauvegarde avec un objet où le
+champ manquait ; au retour, le record repassait à 0 et le défi pourtant
+réussi redevenait le défi courant.
+
+Les deux appels passent désormais par **`buildSaveData()`**, seule source
+de vérité, construite uniquement à partir des refs (donc toujours à jour
+quel que soit le moment de l'appel). Toute nouvelle donnée persistée
+s'ajoute à un seul endroit.
+
+**Vérification à refaire après tout ajout de champ** : croiser les
+`saved.X` lus au chargement avec les clés écrites par `buildSaveData`.
+Seuls `familiarLevel` et `purchasedUpgradeIds` doivent apparaître comme
+lus-non-écrits — ce sont des champs de migration d'anciens formats.
+
 ### Deux corrections liées
 
 - **Le blocage des défis de crit était trop strict.** Signalé par

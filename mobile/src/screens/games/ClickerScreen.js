@@ -467,22 +467,53 @@ export default function ClickerScreen({ onBack }) {
     if (!loaded || saveBlockedRef.current) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      AsyncStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          coins, totalEarned, tapPower, owned, deck, critLevel,
-          autoClickers, upgradeLevels, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
-          totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
-          activeQuestIds, questTargets, questBaseline, questBaselines, sequenceIndex, eggPhase, hatchTaps, captureTaps,
-          lastSave: Date.now() / 1000,
-        })
-      );
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(buildSaveData()));
     }, 600);
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, upgradeLevels, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
     activeQuestIds, questTargets, questBaseline, questBaselines, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
+
+  // Construit l'objet de sauvegarde à partir des REFS uniquement, donc
+  // toujours à jour quel que soit le moment de l'appel.
+  //
+  // Il existait deux objets de sauvegarde distincts (un pour l'écriture
+  // anti-rebond, un pour la sortie d'écran) qu'il fallait tenir
+  // synchronisés à la main. `maxTranseHoldSec` avait été ajouté au
+  // premier seulement : en quittant l'écran, le second écrasait la
+  // sauvegarde avec un objet où le champ manquait, le record de Transe
+  // repassait à 0 au retour et le défi « tiens 30 secondes », pourtant
+  // validé, redevenait le défi courant. Une seule fonction, plus de
+  // divergence possible.
+  const buildSaveData = () => ({
+    coins: coinsRef.current,
+    totalEarned: totalEarnedRef.current,
+    tapPower: tapPowerRef.current,
+    owned: ownedRef.current,
+    deck: deckRef.current,
+    critLevel: critLevelRef.current,
+    autoClickers: autoClickersRef.current,
+    upgradeLevels: upgradeLevelsRef.current,
+    sanctuaryLevel: sanctuaryLevelRef.current,
+    veilleurLevel: veilleurLevelRef.current,
+    essence: essenceRef.current,
+    lastRitualAt: lastRitualAtRef.current,
+    totalSummons: totalSummonsRef.current,
+    totalCrits: totalCritsRef.current,
+    goldenClaimed: goldenClaimedRef.current,
+    maxCombo: maxComboRef.current,
+    maxTranseHoldSec: maxTranseHoldSecRef.current,
+    activeQuestIds: activeQuestIdsRef.current,
+    questTargets: questTargetsRef.current,
+    questBaseline: questBaselineRef.current,
+    questBaselines: questBaselinesRef.current,
+    sequenceIndex: sequenceIndexRef.current,
+    eggPhase: eggPhaseRef.current,
+    hatchTaps: hatchTapsRef.current,
+    captureTaps: captureTapsRef.current,
+    lastSave: Date.now() / 1000,
+  });
 
   // Sauvegarde immédiate à la sortie de l'écran. Annule d'abord le
   // minuteur anti-rebond encore en attente : sans ça, une écriture
@@ -494,22 +525,7 @@ export default function ClickerScreen({ onBack }) {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (saveBlockedRef.current) return;
-      AsyncStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          coins: coinsRef.current, totalEarned: totalEarnedRef.current, tapPower: tapPowerRef.current,
-          owned: ownedRef.current, deck: deckRef.current, critLevel: critLevelRef.current,
-          autoClickers: autoClickersRef.current, upgradeLevels: upgradeLevelsRef.current, sanctuaryLevel: sanctuaryLevelRef.current,
-          veilleurLevel: veilleurLevelRef.current, essence: essenceRef.current, lastRitualAt: lastRitualAtRef.current,
-          totalSummons: totalSummonsRef.current, totalCrits: totalCritsRef.current,
-          goldenClaimed: goldenClaimedRef.current, maxCombo: maxComboRef.current,
-          activeQuestIds: activeQuestIdsRef.current, questTargets: questTargetsRef.current,
-          sequenceIndex: sequenceIndexRef.current, questBaselines: questBaselinesRef.current,
-          questBaseline: questBaselineRef.current, eggPhase: eggPhaseRef.current,
-          hatchTaps: hatchTapsRef.current, captureTaps: captureTapsRef.current,
-          lastSave: Date.now() / 1000,
-        })
-      );
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(buildSaveData()));
     };
   }, []);
 
