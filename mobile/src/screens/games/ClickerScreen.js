@@ -609,14 +609,23 @@ export default function ClickerScreen({ onBack }) {
   const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats)).length;
 
   // Bascule automatique collecte -> éclosion dès que les 4 quêtes sont
-  // validées (une seule fois, via une ref pour éviter de redéclencher en
-  // boucle à chaque rendu tant que la phase n'a pas changé).
+  // validées. Bug corrigé (30/08, signalé par capture d'écran : l'œuf
+  // restait bloqué sur "prêt à éclore" avec les 4 quêtes cochées, sans
+  // jamais vraiment passer en phase d'éclosion) : l'ancienne version
+  // vérifiait `eggPhaseRef.current === 'collecting'` dans l'effet — au
+  // chargement d'une sauvegarde, plusieurs setState (quêtes ET stats)
+  // arrivent dans le même lot, et selon l'ordre exact de résolution des
+  // rendus, la condition pouvait ne jamais être vraie AU MOMENT où
+  // `completedQuestCount` passait à 4 dans les dépendances de l'effet —
+  // et comme cette valeur ne "changeait" plus ensuite (déjà à 4), rien
+  // ne redéclenchait plus jamais la bascule. Corrigé en vérifiant l'état
+  // ACTUEL directement dans l'updater fonctionnel de setEggPhase (jamais
+  // périmé, quel que soit l'ordre des rendus) plutôt que via une ref.
   useEffect(() => {
-    if (eggPhaseRef.current === 'collecting' && completedQuestCount >= 4) {
-      setEggPhase('hatching');
+    if (completedQuestCount >= 4) {
+      setEggPhase((phase) => (phase === 'collecting' ? 'hatching' : phase));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [completedQuestCount]);
+  }, [completedQuestCount, eggPhase]);
 
   const handleEggTap = () => {
     if (eggPhaseRef.current === 'hatching') {
