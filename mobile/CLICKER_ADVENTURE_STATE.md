@@ -38,6 +38,86 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventur
 - **Invoquer une créature** (gacha) : vit dans l'onglet **Collection**, pas dans Shop.
 - **Rituel** (bonus "pub" gratuit) : une bulle qui apparaît près de l'œuf (comme les pouvoirs de créature), pas un bouton ni une bannière.
 
+## Défis de l'œuf — séquence de démarrage scriptée (02/09)
+
+Les **10 premiers cycles** ne sont PAS tirés au hasard : ils suivent une
+progression écrite à la main (`QUEST_SEQUENCE`, 41 défis), validée avec
+l'utilisateur avant implémentation. Elle enseigne les mécaniques dans
+l'ordre : tap → Pacte → Transe → cible dorée → critiques → Offrande →
+Aventure → auto-clics → pouvoirs → Sanctuaire → Veilleur → Ascension →
+runes → évolution → 2e Ascension.
+
+Les cibles y sont **écrites en dur**, contrairement au pool dynamique :
+en début de partie le revenu est trop faible et trop instable pour
+qu'une cible en « minutes de farm » ait du sens, et on veut que tous les
+joueurs vivent exactement la même montée. `nextQuestSet(index, …)`
+bascule automatiquement sur le pool dynamique une fois la séquence
+épuisée — les deux systèmes coexistent et se lisent pareil côté écran
+grâce à `findQuest()`.
+
+- **Nombre de défis par cycle VARIABLE** (4 ou 5, le cycle 3 en a 5).
+  L'œuf éclot quand tous ceux du cycle courant sont validés, plus à un
+  compte fixe — `QUEST_SET_SIZE` ne vaut plus que pour le pool.
+- `sequenceIndex` est persisté et **n'est pas remis à zéro par une
+  Ascension** : la séquence est un fil de découverte, on ne rejoue pas
+  le tutoriel à chaque prestige.
+- **Un défi scripté n'est jamais remplacé** au chargement, même si sa
+  précondition semble non remplie : y substituer un défi aléatoire
+  casserait l'ordre voulu. Seuls les défis du pool dynamique sont
+  revalidés.
+- **L'Ascension ne re-tire pas pendant la séquence** : le cycle 5
+  contient justement « fais l'Ascension », et re-tirer l'annulerait au
+  moment exact où le joueur vient de le réussir.
+
+### 6 métriques construites pour cette séquence
+
+| Métrique | Source |
+|---|---|
+| `maxTranseHoldSec` | tracker de DURÉE dans `handleTap` — un défi « reste en Transe x2,5 pendant 30 s » ne peut pas se contenter du pic atteint |
+| `offering` | `trackEvent('offering')` dans `doOffrande` |
+| `powerActivated` | `trackEvent('powerActivated')` dans `claimPower` |
+| `ascension` | `trackEvent('ascension')` dans `doAscension` |
+| `advLevelReached` | **`trackMax`** (nouveau) publié par `AdventureScreen` |
+| `maxEvolutionTier` | dérivé de `owned[].evolutionTier` |
+
+**`trackMax` vs `trackEvent`** : un niveau atteint est un MAXIMUM, pas un
+cumul. Rejouer un niveau déjà battu ne doit pas faire progresser un défi
+de progression. C'est aussi le seul chemin propre pour qu'un défi du
+clicker lise la progression d'Aventure : celle-ci vit dans une sauvegarde
+séparée, et l'écrire depuis un autre écran a déjà causé une perte de
+progression. **L'Aventure publie, le clicker lit.**
+
+Un niveau d'Aventure s'exprime en niveau GLOBAL (10 par chapitre) :
+chapitre 2 niveau 5 = niveau 15.
+
+### Deux corrections liées
+
+- **Le blocage des défis de crit était trop strict.** Signalé par
+  l'utilisateur : la Faveur des Esprits ne coûte que 25 pièces au premier
+  niveau, soit moins de 5 minutes de tap pour un joueur nu. Le défi est
+  donc atteignable dès le départ — il demande juste d'acheter la Faveur
+  d'abord. La condition porte désormais sur la capacité à se la payer,
+  plus sur le fait de la posséder déjà.
+- **La créature capturée est auto-équipée** dans le premier emplacement
+  de deck libre. Sans ça, un joueur qui vient de capturer sa première
+  créature a une collection mais un deck vide, et l'Aventure refuse de
+  démarrer — rendant « termine le chapitre 1 » (cycle 2) infaisable sans
+  que rien ne l'explique. Un emplacement déjà occupé n'est jamais
+  remplacé : le choix du joueur reste prioritaire. À revoir quand le
+  tutoriel existera.
+
+### Prochaine MAJ (décidée, pas encore faite)
+
+- L'Ascension ne fera plus perdre la progression d'Aventure ni les
+  monstres — seulement les niveaux d'améliorations et les pièces.
+- Les défis d'œuf continueront **à la suite** après une Ascension, les
+  premiers étant simplement plus durs à relever.
+- L'Ascension donnera des **Griffes** et un bonus de **+30% de vitesse**
+  sur la nouvelle progression.
+- Les Griffes serviront à améliorer les créatures : il faudra calculer le
+  budget de Griffes selon leur usage, pour une amélioration rapide au
+  début puis de plus en plus lente.
+
 ## Défis de l'œuf — cibles dynamiques en « temps de farm » (02/09)
 
 **70 défis.** Un défi ne stocke plus une cible chiffrée mais un **temps

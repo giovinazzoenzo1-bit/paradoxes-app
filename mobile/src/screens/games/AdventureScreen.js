@@ -104,7 +104,7 @@ function makeRuneId() {
 
 
 export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onAssignDeck, onClearDeckSlot }) {
-  const { trackEvent } = useDaily();
+  const { trackEvent, trackMax } = useDaily();
   const [detailCreatureId, setDetailCreatureId] = useState(null);
   const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
@@ -241,6 +241,12 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   const handleLevelWon = (levelNumber, reward) => {
     setGriffes((g) => g + reward);
     trackEvent('battleWon', 1);
+    // Publie le niveau atteint pour que les défis de l'œuf (clicker)
+    // puissent lire la progression d'Aventure. trackMax, pas trackEvent :
+    // c'est un maximum, rejouer un niveau déjà battu ne doit pas le
+    // faire monter. L'Aventure PUBLIE, le clicker LIT — jamais d'accès
+    // direct d'un écran à la sauvegarde de l'autre.
+    trackMax('advLevelReached', levelNumber);
     if (levelNumber === currentUnlockedLevelRef.current) {
       setCurrentUnlockedLevel((l) => l + 1);
     }

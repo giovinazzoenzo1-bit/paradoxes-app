@@ -45,6 +45,9 @@ import {
   OFFRANDE_APPCOINS_COST,
   offrandeReward,
   pickQuestSet,
+  nextQuestSet,
+  findQuest,
+  SEQUENCE_LENGTH,
   QUEST_POOL,
   QUEST_SET_SIZE,
   questComplete,
@@ -135,7 +138,13 @@ export default function ClickerScreen({ onBack }) {
   // objectifs différents au prochain chargement, et un défi presque fini
   // repartirait de zéro (ou serait validé d'emblée) selon le sens où le
   // revenu a bougé entre-temps.
-  const initialQuests = useState(() => pickQuestSet())[0];
+  // Avancement dans la séquence de démarrage scriptée. Tant qu'il est
+  // sous SEQUENCE_LENGTH, les défis viennent de la séquence ; ensuite le
+  // jeu bascule définitivement sur le pool dynamique.
+  const [sequenceIndex, setSequenceIndex] = useState(0);
+  const sequenceIndexRef = useRef(0);
+  sequenceIndexRef.current = sequenceIndex;
+  const initialQuests = useState(() => nextQuestSet(0))[0];
   const [activeQuestIds, setActiveQuestIds] = useState(initialQuests.ids);
   const [questTargets, setQuestTargets] = useState(initialQuests.targets);
   // Snapshot des stats au moment du tirage — voir le commentaire sur
@@ -217,6 +226,17 @@ export default function ClickerScreen({ onBack }) {
   // pour un nouveau joueur), puis toutes les SPAWN_INTERVAL_SEC ensuite.
   const lastSpawnTimeRef = useRef(Date.now() - Math.round(SPAWN_INTERVAL_SEC * (2 / 3)) * 1000);
 
+  // Durée pendant laquelle la Transe s'est maintenue AU MOINS à x2,5,
+  // en une seule série ininterrompue. Un défi « reste en Transe x2,5
+  // pendant 30 secondes » ne peut pas se contenter du pic atteint : il
+  // faut mesurer la tenue. On garde le meilleur record, pas la série en
+  // cours, sinon le compteur retomberait à zéro à chaque pause et le
+  // défi ne pourrait jamais s'afficher comme progressant.
+  const transeStartRef = useRef(null);
+  const [maxTranseHoldSec, setMaxTranseHoldSec] = useState(0);
+  const maxTranseHoldSecRef = useRef(0);
+  maxTranseHoldSecRef.current = maxTranseHoldSec;
+
   const tapScale = useRef(new Animated.Value(1)).current;
   // Secousse latérale de l'œuf, jouée UNIQUEMENT pendant l'éclosion et la
   // capture (02/09). Sans elle, les centaines de taps nécessaires pour
@@ -285,13 +305,23 @@ export default function ClickerScreen({ onBack }) {
           setTotalCrits(saved.totalCrits || 0);
           setGoldenClaimed(saved.goldenClaimed || 0);
           setMaxCombo(saved.maxCombo || 1);
+          setMaxTranseHoldSec(saved.maxTranseHoldSec || 0);
           // Les défis sauvegardés sont revalidés contre le pool ACTUEL :
           // un id disparu du pool renverrait une progression de 0 pour
           // toujours et bloquerait l'œuf définitivement. On retire donc
           // au tirage adapté à la progression du joueur.
-          const savedQuests = (saved.activeQuestIds || []).filter((id) => QUEST_POOL.some((q) => q.id === id));
+          const savedSeqIndex = saved.sequenceIndex || 0;
+          setSequenceIndex(savedSeqIndex);
+          // Un défi valide est soit dans la séquence, soit dans le pool.
+          const savedQuests = (saved.activeQuestIds || []).filter((id) => !!findQuest(id));
+          // La séquence impose un nombre de défis par cycle (4 ou 5) ;
+          // le pool dynamique en donne toujours 4. On compare donc à la
+          // taille attendue du cycle courant, pas à une constante.
+          const expectedSize = savedSeqIndex < SEQUENCE_LENGTH
+            ? nextQuestSet(savedSeqIndex).ids.length
+            : QUEST_SET_SIZE;
           const savedTargets = saved.questTargets || {};
-          if (savedQuests.length === QUEST_SET_SIZE) {
+          if (savedQuests.length === expectedSize) {
             // Sauvegardes d'AVANT les cibles dynamiques : aucune cible
             // stockée. On les résout une fois à partir des stats
             // chargées, puis elles sont figées comme les autres — sans
@@ -322,14 +352,18 @@ export default function ClickerScreen({ onBack }) {
             // remplace ici les défis dont la précondition n'est plus
             // remplie, un par un, en gardant les autres intacts pour ne
             // pas effacer la progression déjà faite.
+            // Les défis SCRIPTÉS ne sont jamais remplacés : la séquence
+            // est un fil fixe, y substituer un défi aléatoire casserait
+            // l'ordre de découverte voulu. Seuls les défis du pool
+            // dynamique sont revalidés.
             const stillOk = savedQuests.filter((id) => {
-              const q = QUEST_POOL.find((x) => x.id === id);
-              return !q.available || q.available(statsAtLoad);
+              const q = findQuest(id);
+              return !q || !q.available || q.available(statsAtLoad);
             });
             let finalQuests = savedQuests;
             if (stillOk.length < savedQuests.length) {
               const replacements = pickQuestSet(stillOk, statsAtLoad).ids.filter((id) => !stillOk.includes(id));
-              finalQuests = [...stillOk, ...replacements].slice(0, QUEST_SET_SIZE);
+              finalQuests = [...stillOk, ...replacements].slice(0, expectedSize);
             }
             const resolved = {};
             finalQuests.forEach((id) => {
@@ -339,7 +373,7 @@ export default function ClickerScreen({ onBack }) {
             setActiveQuestIds(finalQuests);
             setQuestTargets(resolved);
           } else {
-            const fresh = pickQuestSet(savedQuests, { totalEarned: saved.totalEarned || 0 });
+            const fresh = nextQuestSet(savedSeqIndex, savedQuests, { totalEarned: saved.totalEarned || 0 });
             setActiveQuestIds(fresh.ids);
             setQuestTargets(fresh.targets);
           }
@@ -427,16 +461,16 @@ export default function ClickerScreen({ onBack }) {
         JSON.stringify({
           coins, totalEarned, tapPower, owned, deck, critLevel,
           autoClickers, upgradeLevels, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
-          totalSummons, totalCrits, goldenClaimed, maxCombo,
-          activeQuestIds, questTargets, questBaseline, eggPhase, hatchTaps, captureTaps,
+          totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
+          activeQuestIds, questTargets, questBaseline, sequenceIndex, eggPhase, hatchTaps, captureTaps,
           lastSave: Date.now() / 1000,
         })
       );
     }, 600);
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, upgradeLevels, sanctuaryLevel,
-    veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo,
-    activeQuestIds, questTargets, questBaseline, eggPhase, hatchTaps, captureTaps, loaded,
+    veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
+    activeQuestIds, questTargets, questBaseline, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
   // Sauvegarde immédiate à la sortie de l'écran. Annule d'abord le
@@ -459,6 +493,7 @@ export default function ClickerScreen({ onBack }) {
           totalSummons: totalSummonsRef.current, totalCrits: totalCritsRef.current,
           goldenClaimed: goldenClaimedRef.current, maxCombo: maxComboRef.current,
           activeQuestIds: activeQuestIdsRef.current, questTargets: questTargetsRef.current,
+          sequenceIndex: sequenceIndexRef.current,
           questBaseline: questBaselineRef.current, eggPhase: eggPhaseRef.current,
           hatchTaps: hatchTapsRef.current, captureTaps: captureTapsRef.current,
           lastSave: Date.now() / 1000,
@@ -580,6 +615,20 @@ export default function ClickerScreen({ onBack }) {
       setMaxCombo(newTranseMult);
     }
 
+    // Tenue de la Transe à x2,5 ou plus. `stillActive` dit si la série
+    // de taps n'a pas été rompue : si elle l'a été, la tenue repart de
+    // zéro même quand le multiplicateur remonte tout de suite après.
+    if (newTranseMult >= 2.5 && stillActive) {
+      if (transeStartRef.current === null) transeStartRef.current = now;
+      const heldSec = (now - transeStartRef.current) / 1000;
+      if (heldSec > maxTranseHoldSecRef.current) {
+        maxTranseHoldSecRef.current = heldSec;
+        setMaxTranseHoldSec(heldSec);
+      }
+    } else if (newTranseMult < 2.5) {
+      transeStartRef.current = null;
+    }
+
     // Faveur des Esprits : jet de coup critique indépendant à chaque tap.
     // Bonus des améliorations débloquées ajoutés PAR-DESSUS (chance et
     // multiplicateur), sans toucher aux fonctions pures critChance/
@@ -622,6 +671,7 @@ export default function ClickerScreen({ onBack }) {
   // Le joueur a tapé la créature apparue à temps : son pouvoir s'active,
   // différent selon la créature (pas juste sa rareté).
   const claimPower = () => {
+    trackEvent('powerActivated', 1);
     const spawned = spawnedCreatureRef.current;
     if (!spawned) return;
     const power = powerForCreature(spawned.creature, tapPowerRef.current);
@@ -721,6 +771,7 @@ export default function ClickerScreen({ onBack }) {
           text: 'Ascensionner',
           style: 'destructive',
           onPress: () => {
+            trackEvent('ascension', 1);
             setEssence((e) => e + essenceGainPreview);
             setCoins(0);
             setTotalEarned(0);
@@ -754,15 +805,24 @@ export default function ClickerScreen({ onBack }) {
               runeEquipped: lifetimeStats.runeEquipped || 0,
               runeBought: lifetimeStats.runeBought || 0,
             };
-            const freshSet = pickQuestSet([], statsAfterAscension);
-            setActiveQuestIds(freshSet.ids);
-            setQuestTargets(freshSet.targets);
-            setQuestBaseline(statsAfterAscension);
-            setEggPhase('collecting');
-            setHatchTaps(0);
-            setCaptureTaps(0);
-            hatchTapsRef.current = 0;
-            captureTapsRef.current = 0;
+            // Pendant la séquence scriptée, on NE re-tire PAS : l'un des
+            // défis du cycle 5 est justement « fais l'Ascension », et le
+            // remplacer l'annulerait au moment même où le joueur vient
+            // de le réussir. Le cycle en cours est conservé tel quel.
+            // Hors séquence, on repart d'un cycle neuf, les cibles
+            // dynamiques calculées sur l'ancien revenu n'ayant plus de
+            // sens après un reset à zéro.
+            if (sequenceIndexRef.current >= SEQUENCE_LENGTH) {
+              const freshSet = nextQuestSet(sequenceIndexRef.current, [], statsAfterAscension);
+              setActiveQuestIds(freshSet.ids);
+              setQuestTargets(freshSet.targets);
+              setQuestBaseline(statsAfterAscension);
+              setEggPhase('collecting');
+              setHatchTaps(0);
+              setCaptureTaps(0);
+              hatchTapsRef.current = 0;
+              captureTapsRef.current = 0;
+            }
           },
         },
       ]
@@ -787,6 +847,22 @@ export default function ClickerScreen({ onBack }) {
   // déjà possédée) — factorisé car utilisé à la fois par l'invocation
   // gacha ET la récompense de capture d'œuf.
   const addCreatureToOwned = (creature) => {
+    // Place automatiquement la créature dans le premier emplacement de
+    // deck libre. Sans ça, un joueur qui vient de capturer sa première
+    // créature a bien une collection mais un deck vide — et l'Aventure
+    // refuse de démarrer sur un deck vide (« Deck vide »), ce qui rend
+    // le défi « termine le chapitre 1 » infaisable sans que rien ne
+    // l'explique. En attendant le tutoriel, on équipe pour lui. On ne
+    // remplace jamais un emplacement déjà occupé : le choix du joueur
+    // reste prioritaire.
+    setDeck((prevDeck) => {
+      if (prevDeck.includes(creature.id)) return prevDeck;
+      const freeSlot = prevDeck.findIndex((id) => !id);
+      if (freeSlot === -1) return prevDeck;
+      const nextDeck = [...prevDeck];
+      nextDeck[freeSlot] = creature.id;
+      return nextDeck;
+    });
     setOwned((prev) => {
       const existing = prev.find((o) => o.id === creature.id);
       if (existing) {
@@ -800,6 +876,7 @@ export default function ClickerScreen({ onBack }) {
     if (sharedCoins < OFFRANDE_APPCOINS_COST) return;
     spendSharedCoins(OFFRANDE_APPCOINS_COST).then((ok) => {
       if (!ok) return;
+      trackEvent('offering', 1);
       const reward = Math.round(gainCoins(offrandeReward(tapPowerRef.current)));
       spawnPopup(`+${reward} 🪙`, 110, 60);
     });
@@ -829,6 +906,18 @@ export default function ClickerScreen({ onBack }) {
     // valeur, pas `ownedCount`, qui décide si l'Aventure est jouable
     // (AdventureScreen désactive le combat sur « Deck vide »).
     deckCount: deck.filter(Boolean).length,
+    // Palier d'évolution le plus haut atteint sur une créature.
+    maxEvolutionTier: owned.reduce((m, o) => Math.max(m, o.evolutionTier || 0), 0),
+    // Tenue de la Transe (secondes) — voir le tracker dans handleTap.
+    maxTranseHoldSec,
+    // Compteurs À VIE venant de DailyContext. `advLevelReached` est
+    // publié par l'Aventure via trackMax : c'est un maximum, pas un
+    // cumul, donc rejouer un niveau déjà battu ne le fait pas monter.
+    offering: lifetimeStats.offering || 0,
+    powerActivated: lifetimeStats.powerActivated || 0,
+    ascension: lifetimeStats.ascension || 0,
+    advLevelReached: lifetimeStats.advLevelReached || 0,
+    runeFused: lifetimeStats.runeFused || 0,
     // Compteurs Aventure À VIE (DailyContext).
     battleWon: lifetimeStats.battleWon || 0,
     runeEquipped: lifetimeStats.runeEquipped || 0,
@@ -869,7 +958,7 @@ export default function ClickerScreen({ onBack }) {
   // ACTUEL directement dans l'updater fonctionnel de setEggPhase (jamais
   // périmé, quel que soit l'ordre des rendus) plutôt que via une ref.
   useEffect(() => {
-    if (completedQuestCount >= QUEST_SET_SIZE) {
+    if (activeQuestIds.length > 0 && completedQuestCount >= activeQuestIds.length) {
       setEggPhase((phase) => (phase === 'collecting' ? 'hatching' : phase));
     }
   }, [completedQuestCount, eggPhase]);
@@ -931,6 +1020,13 @@ export default function ClickerScreen({ onBack }) {
           deckCount: deckRef.current.filter(Boolean).length,
           maxCreatureLevel: ownedRef.current.reduce((m, o) => Math.max(m, o.level || 0), 0),
           maxCombo: Math.round(maxComboRef.current * 10),
+          maxTranseHoldSec: maxTranseHoldSecRef.current,
+          maxEvolutionTier: ownedRef.current.reduce((m, o) => Math.max(m, o.evolutionTier || 0), 0),
+          offering: lifetimeStats.offering || 0,
+          powerActivated: lifetimeStats.powerActivated || 0,
+          ascension: lifetimeStats.ascension || 0,
+          advLevelReached: lifetimeStats.advLevelReached || 0,
+          runeFused: lifetimeStats.runeFused || 0,
           totalSummons: totalSummonsRef.current,
           totalCrits: totalCritsRef.current,
           goldenClaimed: goldenClaimedRef.current,
@@ -938,7 +1034,12 @@ export default function ClickerScreen({ onBack }) {
           runeEquipped: lifetimeStats.runeEquipped || 0,
           runeBought: lifetimeStats.runeBought || 0,
         };
-        const nextSet = pickQuestSet(activeQuestIdsRef.current, statsAtDraw);
+        // Avance d'un cran dans la séquence scriptée. Une fois celle-ci
+        // épuisée, nextQuestSet bascule tout seul sur le pool dynamique
+        // et l'index continue de grimper sans effet.
+        const nextIndex = sequenceIndexRef.current + 1;
+        setSequenceIndex(nextIndex);
+        const nextSet = nextQuestSet(nextIndex, activeQuestIdsRef.current, statsAtDraw);
         setActiveQuestIds(nextSet.ids);
         setQuestTargets(nextSet.targets);
         setQuestBaseline(statsAtDraw);

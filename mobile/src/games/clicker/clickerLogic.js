@@ -698,6 +698,150 @@ export function offrandeReward(tapPower) {
 // jeux de l'appli (ex: "gagner 5 fois à Puissance 4") demandent une
 // couche de stats partagées entre jeux qui n'existe pas encore ; à
 // construire séparément avant de les ajouter à ce pool.
+// ---- Séquence de démarrage (défis fixes) ----
+//
+// Les premiers cycles d'œuf ne sont PAS tirés au hasard : ils suivent une
+// progression écrite à la main, qui sert de fil conducteur au début de
+// partie. Elle enseigne les mécaniques dans l'ordre (tap → Pacte →
+// Transe → cible dorée → critiques → Offrande → Aventure → auto-clics →
+// pouvoirs → Sanctuaire → Veilleur → Ascension).
+//
+// Cibles ÉCRITES EN DUR ici, contrairement au pool dynamique : au tout
+// début de partie le revenu du joueur est trop faible et trop instable
+// pour qu'une cible calculée en « minutes de farm » ait du sens, et on
+// veut surtout que tous les joueurs vivent exactement la même montée.
+// Une fois la séquence terminée, le jeu bascule automatiquement sur le
+// pool dynamique (voir `pickQuestSet`), qui lui s'adapte au revenu.
+//
+// Le nombre de défis par cycle est VARIABLE (4 ou 5) : l'œuf éclot quand
+// tous ceux du cycle en cours sont validés, pas à un compte fixe.
+//
+// Un niveau d'Aventure est exprimé en niveau GLOBAL : 10 niveaux par
+// chapitre (`LEVELS_PER_CHAPTER`), donc chapitre 2 niveau 5 = niveau 15.
+export const QUEST_SEQUENCE = [
+  // --- Cycle 1 : les bases du clicker ---
+  [
+    { id: 'seq_earn10k', icon: '💰', metric: 'totalEarned', target: 10000, mode: 'delta',
+      label: () => 'Obtiens 10 000 pièces' },
+    { id: 'seq_pacte15', icon: '🔗', metric: 'tapPower', target: 15, mode: 'absolute',
+      label: () => 'Monte Pacte au niveau 15' },
+    { id: 'seq_transe30', icon: '🔥', metric: 'maxTranseHoldSec', target: 30, mode: 'absolute',
+      label: () => 'Reste en Transe x2,5 pendant 30 secondes' },
+    { id: 'seq_golden3', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
+      label: () => 'Touche 3 fois la cible dorée' },
+  ],
+  // --- Cycle 2 : critiques, Offrande, premier combat ---
+  [
+    { id: 'seq_crit20', icon: '💥', metric: 'totalCrits', target: 20, mode: 'delta',
+      label: () => 'Obtiens 20 coups critiques' },
+    { id: 'seq_offering2', icon: '🪙', metric: 'offering', target: 2, mode: 'delta',
+      label: () => 'Fais 2 Offrandes' },
+    { id: 'seq_adv_c1l1', icon: '⚔️', metric: 'advLevelReached', target: 1, mode: 'absolute',
+      label: () => 'Termine le chapitre 1, niveau 1' },
+    { id: 'seq_esprit10', icon: '👻', metric: 'auto:esprit', target: 10, mode: 'absolute',
+      label: () => 'Possède 10 Esprits Frappeurs' },
+  ],
+  // --- Cycle 3 : pouvoirs, Sanctuaire, revenu passif (5 défis) ---
+  [
+    { id: 'seq_power5', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
+      label: () => 'Active 5 fois un pouvoir de créature' },
+    { id: 'seq_adv_c1l10', icon: '⚔️', metric: 'advLevelReached', target: 10, mode: 'absolute',
+      label: () => 'Termine le chapitre 1, niveau 10' },
+    { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', target: 10, mode: 'absolute',
+      label: () => 'Monte le Sanctuaire au niveau 10' },
+    { id: 'seq_hold100k', icon: '🏦', metric: 'coins', target: 100000, mode: 'absolute',
+      label: () => 'Aie 100 000 pièces en réserve' },
+    { id: 'seq_passive50', icon: '📈', metric: 'passiveIncome', target: 50, mode: 'absolute',
+      label: () => 'Atteins 50 pièces par seconde en auto-clic' },
+  ],
+  // --- Cycle 4 : montée en puissance ---
+  [
+    { id: 'seq_golden6', icon: '⭐', metric: 'goldenClaimed', target: 6, mode: 'delta',
+      label: () => 'Touche 6 fois la cible dorée' },
+    { id: 'seq_veilleur10', icon: '🌙', metric: 'veilleurLevel', target: 10, mode: 'absolute',
+      label: () => 'Monte le Veilleur au niveau 10' },
+    { id: 'seq_crit40', icon: '💥', metric: 'totalCrits', target: 40, mode: 'delta',
+      label: () => 'Obtiens 40 coups critiques' },
+    { id: 'seq_adv_c2l5', icon: '⚔️', metric: 'advLevelReached', target: 15, mode: 'absolute',
+      label: () => 'Termine le chapitre 2, niveau 5' },
+  ],
+  // --- Cycle 5 : première Ascension ---
+  [
+    { id: 'seq_offering5', icon: '🪙', metric: 'offering', target: 5, mode: 'delta',
+      label: () => 'Fais 5 Offrandes' },
+    { id: 'seq_griffe5', icon: '🔥', metric: 'upgrade:griffeBraisillon', target: 5, mode: 'absolute',
+      label: () => 'Monte Griffe de Braisillon au niveau 5' },
+    { id: 'seq_adv_c2l10', icon: '⚔️', metric: 'advLevelReached', target: 20, mode: 'absolute',
+      label: () => 'Termine le chapitre 2, niveau 10' },
+    { id: 'seq_ascend1', icon: '🌟', metric: 'ascension', target: 1, mode: 'delta',
+      label: () => "Fais l'Ascension" },
+  ],
+  // --- Cycle 6 : relance après Ascension ---
+  [
+    { id: 'seq_earn100k', icon: '💰', metric: 'totalEarned', target: 100000, mode: 'delta',
+      label: () => 'Regagne 100 000 pièces' },
+    { id: 'seq_pacte20', icon: '🔗', metric: 'tapPower', target: 20, mode: 'absolute',
+      label: () => 'Monte Pacte au niveau 20' },
+    { id: 'seq_rune1', icon: '🛒', metric: 'runeBought', target: 1, mode: 'delta',
+      label: () => 'Achète 1 rune en Aventure' },
+    { id: 'seq_adv_c3l5', icon: '⚔️', metric: 'advLevelReached', target: 25, mode: 'absolute',
+      label: () => 'Termine le chapitre 3, niveau 5' },
+  ],
+  // --- Cycle 7 : runes et évolution ---
+  [
+    { id: 'seq_equipRune2', icon: '🪬', metric: 'runeEquipped', target: 2, mode: 'delta',
+      label: () => 'Équipe 2 runes sur tes créatures' },
+    { id: 'seq_sanct15', icon: '🏛️', metric: 'sanctuaryLevel', target: 15, mode: 'absolute',
+      label: () => 'Monte le Sanctuaire au niveau 15' },
+    { id: 'seq_hold1M', icon: '🏦', metric: 'coins', target: 1000000, mode: 'absolute',
+      label: () => 'Aie 1 million de pièces en réserve' },
+    { id: 'seq_evolve1', icon: '🧬', metric: 'maxEvolutionTier', target: 1, mode: 'absolute',
+      label: () => 'Fais évoluer une créature au palier 1' },
+  ],
+  // --- Cycle 8 : rythme ---
+  [
+    { id: 'seq_power10', icon: '✨', metric: 'powerActivated', target: 10, mode: 'delta',
+      label: () => 'Active 10 fois un pouvoir de créature' },
+    { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', target: 10, mode: 'absolute',
+      label: () => 'Possède 10 Mains Spectrales' },
+    { id: 'seq_adv_c3l10', icon: '⚔️', metric: 'advLevelReached', target: 30, mode: 'absolute',
+      label: () => 'Termine le chapitre 3, niveau 10' },
+    { id: 'seq_crit100', icon: '💥', metric: 'totalCrits', target: 100, mode: 'delta',
+      label: () => 'Obtiens 100 coups critiques' },
+  ],
+  // --- Cycle 9 : profondeur ---
+  [
+    { id: 'seq_hold10M', icon: '🏦', metric: 'coins', target: 10000000, mode: 'absolute',
+      label: () => 'Aie 10 millions de pièces en réserve' },
+    { id: 'seq_croc10', icon: '🪨', metric: 'upgrade:crocBouldog', target: 10, mode: 'absolute',
+      label: () => 'Monte Croc de Bouldog au niveau 10' },
+    { id: 'seq_fuse2', icon: '🔮', metric: 'runeFused', target: 2, mode: 'delta',
+      label: () => 'Fusionne 2 runes' },
+    { id: 'seq_adv_c4l10', icon: '⚔️', metric: 'advLevelReached', target: 40, mode: 'absolute',
+      label: () => 'Termine le chapitre 4, niveau 10' },
+  ],
+  // --- Cycle 10 : seconde Ascension, dernier cycle scripté ---
+  [
+    { id: 'seq_hold50M', icon: '🏦', metric: 'coins', target: 50000000, mode: 'absolute',
+      label: () => 'Aie 50 millions de pièces en réserve' },
+    { id: 'seq_veilleur20', icon: '🌙', metric: 'veilleurLevel', target: 20, mode: 'absolute',
+      label: () => 'Monte le Veilleur au niveau 20' },
+    { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', target: 30, mode: 'absolute',
+      label: () => 'Nourris une créature jusqu\'au niveau 30' },
+    { id: 'seq_ascend2', icon: '🌟', metric: 'ascension', target: 2, mode: 'delta',
+      label: () => 'Fais une seconde Ascension' },
+  ],
+];
+
+// Tous les défis scriptés à plat, pour que questProgress/questDetail les
+// retrouvent par id exactement comme ceux du pool dynamique.
+export const SEQUENCE_QUESTS = QUEST_SEQUENCE.flat();
+
+export function sequenceCycle(index) {
+  return QUEST_SEQUENCE[index] || null;
+}
+export const SEQUENCE_LENGTH = QUEST_SEQUENCE.length;
+
 // ---- Défis de l'œuf (refonte 02/09) ----
 //
 // Un défi ne stocke plus une cible chiffrée mais un **temps de farm**
@@ -802,11 +946,13 @@ export const QUEST_POOL = [
   { id: 'combo30', family: 'action', icon: '🔥', metric: 'maxCombo', target: 30, mode: 'absolute',
     available: (s) => (s.maxCombo || 0) >= 20,
     label: () => 'Atteins un multiplicateur de Transe x3' },
-  // `critChance(0)` vaut exactement 0 : sans au moins un niveau de
-  // Faveur des Esprits, AUCUN coup critique ne peut tomber et le défi
-  // est infaisable, pas seulement difficile. Vérifié en audit.
+  // `critChance(0)` vaut exactement 0 : sans Faveur des Esprits, aucun
+  // coup critique ne peut tomber. Mais le 1er niveau ne coûte que 25
+  // pièces — le défi est donc parfaitement atteignable dès le début, il
+  // demande juste d'acheter la Faveur d'abord. On ne le bloque donc que
+  // pour un joueur qui n'a pas encore de quoi se la payer.
   { id: 'crit20', family: 'action', icon: '💥', metric: 'totalCrits', target: 20, mode: 'delta',
-    available: (s) => (s.critLevel || 0) >= 1,
+    available: (s) => (s.critLevel || 0) >= 1 || (s.coins || 0) >= critUpgradeCost(0) || questBudget(s, 5) >= critUpgradeCost(0),
     label: (t) => `Obtiens ${t} coups critiques` },
   { id: 'crit100', family: 'action', icon: '💥', metric: 'totalCrits', target: 100, mode: 'delta',
     available: (s) => (s.critLevel || 0) >= 2,
@@ -885,6 +1031,13 @@ export const QUEST_POOL = [
 // (`upgrade:<id>`, `auto:<id>`) sont résolues ici plutôt que d'exiger
 // une entrée à plat par amélioration — sinon ajouter une amélioration
 // obligerait à toucher aussi la couche de stats.
+// Retrouve un défi par id, qu'il vienne de la séquence scriptée ou du
+// pool dynamique. Toutes les fonctions publiques passent par ici, donc
+// les deux systèmes se lisent exactement pareil côté écran.
+export function findQuest(questId) {
+  return SEQUENCE_QUESTS.find((q) => q.id === questId) || QUEST_POOL.find((q) => q.id === questId) || null;
+}
+
 function readMetric(metric, stats) {
   if (!stats) return 0;
   if (metric.startsWith('upgrade:')) {
@@ -1054,7 +1207,7 @@ export function resolveQuestTarget(quest, stats) {
 // depuis les stats — ce n'est qu'un repli pour les sauvegardes d'avant
 // les cibles dynamiques, jamais le chemin normal.
 export function questProgress(questId, stats, baseline = {}, targets = {}) {
-  const q = QUEST_POOL.find((x) => x.id === questId);
+  const q = findQuest(questId);
   if (!q) return 0;
   const target = targets[questId] || resolveQuestTarget(q, baseline && baseline.totalEarned !== undefined ? baseline : stats);
   if (!target) return 0;
@@ -1085,13 +1238,13 @@ export function questComplete(questId, stats, baseline = {}, targets = {}) {
 // donc pas mentir sur ce qui est demandé. C'est le piège tombé deux fois
 // avec les libellés figés : changer une cible sans régénérer le texte.
 export function questLabel(questId, target) {
-  const q = QUEST_POOL.find((x) => x.id === questId);
+  const q = findQuest(questId);
   if (!q) return '';
   return q.label(target || q.target || 1);
 }
 
 export function questDetail(questId, stats, baseline = {}, targets = {}) {
-  const q = QUEST_POOL.find((x) => x.id === questId);
+  const q = findQuest(questId);
   if (!q) return { icon: '🎯', label: '', progress: 0, target: 1, current: 0, done: false };
   const target = targets[questId] || resolveQuestTarget(q, stats);
   const progress = questProgress(questId, stats, baseline, { ...targets, [questId]: target });
@@ -1103,6 +1256,27 @@ export function questDetail(questId, stats, baseline = {}, targets = {}) {
     current: Math.min(target, Math.floor(progress * target + 1e-9)),
     done: progress >= 1,
   };
+}
+
+
+// Point d'entrée unique pour obtenir le prochain jeu de défis.
+//
+// Tant que la séquence de démarrage n'est pas épuisée, on sert le cycle
+// scripté à l'index courant (cibles fixes, mêmes défis pour tous, dans
+// un ordre pensé pour enseigner les mécaniques). Ensuite seulement, on
+// bascule sur le pool dynamique dont les cibles suivent le revenu.
+//
+// `index` est l'avancement dans la séquence, persisté par l'écran. Il
+// n'est PAS remis à zéro par une Ascension : la séquence est un fil de
+// découverte, on ne rejoue pas le tutoriel à chaque prestige.
+export function nextQuestSet(index, excludeIds = [], stats = {}) {
+  const cycle = sequenceCycle(index);
+  if (cycle) {
+    const targets = {};
+    cycle.forEach((q) => { targets[q.id] = q.target; });
+    return { ids: cycle.map((q) => q.id), targets, fromSequence: true };
+  }
+  return { ...pickQuestSet(excludeIds, stats), fromSequence: false };
 }
 
 export const QUEST_SET_SIZE = 4;

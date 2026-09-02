@@ -118,6 +118,24 @@ export function DailyProvider({ children }) {
     });
   }, []);
 
+  // Variante de trackEvent pour les valeurs qui sont un MAXIMUM et non
+  // un cumul : « niveau 12 atteint en Aventure » ne doit pas s'ajouter
+  // au précédent, il doit le remplacer s'il est plus haut. Rejouer un
+  // niveau déjà battu ne fait donc pas progresser un défi de
+  // progression, ce qui est le comportement attendu.
+  //
+  // C'est aussi le seul chemin propre pour qu'un défi du clicker lise la
+  // progression du mode Aventure : celle-ci vit dans une sauvegarde
+  // séparée (`adventure:state:v1`), et l'écrire depuis un autre écran a
+  // déjà causé une perte de progression (voir les pièges du fichier
+  // d'état). Ici l'Aventure PUBLIE sa valeur, le clicker la lit.
+  const trackMax = useCallback((eventType, value) => {
+    if (!Number.isFinite(value)) return;
+    setLifetimeStats((prev) => (
+      (prev[eventType] || 0) >= value ? prev : { ...prev, [eventType]: value }
+    ));
+  }, []);
+
   // Réclame la récompense d'UNE quête terminée — crédite via le drapeau
   // partagé (voir PENDING_GRIFFES_KEY plus haut), pas d'accès direct à
   // l'état d'Aventure depuis ce Context.
@@ -146,7 +164,7 @@ export function DailyProvider({ children }) {
 
   const value = {
     loaded, date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats,
-    trackEvent, claimQuest, claimStreak,
+    trackEvent, trackMax, claimQuest, claimStreak,
   };
 
   return <DailyContext.Provider value={value}>{children}</DailyContext.Provider>;
