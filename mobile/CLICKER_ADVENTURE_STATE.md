@@ -168,17 +168,73 @@ lus-non-écrits — ce sont des champs de migration d'anciens formats.
   remplacé : le choix du joueur reste prioritaire. À revoir quand le
   tutoriel existera.
 
-### Prochaine MAJ (décidée, pas encore faite)
+## Ascension non destructive (fait)
 
-- L'Ascension ne fera plus perdre la progression d'Aventure ni les
-  monstres — seulement les niveaux d'améliorations et les pièces.
-- Les défis d'œuf continueront **à la suite** après une Ascension, les
-  premiers étant simplement plus durs à relever.
-- L'Ascension donnera des **Griffes** et un bonus de **+30% de vitesse**
-  sur la nouvelle progression.
-- Les Griffes serviront à améliorer les créatures : il faudra calculer le
-  budget de Griffes selon leur usage, pour une amélioration rapide au
-  début puis de plus en plus lente.
+L'Ascension ne remet plus à zéro que l'**économie du clicker** : pièces,
+Pacte, Faveur, Sanctuaire, Veilleur, auto-clics, améliorations.
+
+**Conservés** : les créatures possédées, le deck, et toute la
+progression d'Aventure (niveaux, Griffes, runes). Perdre ses monstres et
+sa campagne rendait le prestige punitif au lieu d'être une récompense.
+Et la progression d'Aventure vit dans une autre sauvegarde : la remettre
+à zéro depuis le clicker aurait été l'écriture croisée qu'on s'interdit.
+
+**Les défis d'œuf continuent à la suite** — ni le cycle en cours ni la
+séquence ne sont retirés. Le joueur gardant ses créatures, plus aucun
+défi ne devient infaisable, ce qui était la seule raison de re-tirer
+auparavant. Les premiers défis sont simplement plus durs à relever avec
+une économie repartie de zéro : c'est l'effet voulu.
+
+### Les deux récompenses
+
+**Vitesse : +30% par Ascension, multiplicatif** (`ascensionSpeedMultiplier`
+= 1,3^n), appliqué avec les autres multiplicateurs globaux dans
+`gainCoins` et `passiveIncome`. C'est ce qui rend le run suivant
+nettement plus rapide alors que l'économie repart de zéro. Le compteur
+d'Ascensions vient de `DailyContext` (compteur à vie), donc il survit à
+tout ce que l'Ascension réinitialise.
+
+**Griffes**, créditées via `PENDING_GRIFFES_KEY` — le clicker n'écrit
+jamais dans la sauvegarde d'Aventure, c'est `AdventureScreen` qui
+encaisse à sa prochaine ouverture.
+
+### Calibrage du gain de Griffes (mesuré)
+
+Coûts réels relevés avant de choisir : évolution palier 1 = 40 Griffes,
+palier 2 = 100, soit **140 pour une créature menée à fond** et **3 640
+pour la collection complète** (26 créatures). Une rune coûte 100.
+
+La 1re Ascension donne **150 Griffes** : de quoi évoluer entièrement une
+créature immédiatement, donc une récompense tout de suite lisible.
+Ensuite le gain suit une **racine carrée**, pas une droite.
+
+Le linéaire (+75 par Ascension) avait été essayé d'abord **et mesuré** :
+au bout de 10 Ascensions il donnait de quoi évoluer 35 créatures pour une
+collection qui n'en compte que 26. L'amélioration ne ralentissait donc
+pas, elle **s'épuisait** — le joueur atteignait le plafond du contenu et
+les Griffes perdaient tout usage. En racine :
+
+| Ascension | Griffes | Cumul | Créatures évoluables | Vitesse |
+|---|---|---|---|---|
+| 1 | 150 | 150 | 1,1 / 26 | x1,30 |
+| 3 | 260 | 622 | 4,4 / 26 | x2,20 |
+| 5 | 335 | 1 257 | 9,0 / 26 | x3,71 |
+| 10 | 474 | 3 369 | 24,1 / 26 | x13,79 |
+
+Rapide au début, de plus en plus lent, jamais saturé.
+
+⚠️ **Ce calibrage dépend du système d'amélioration actuel** (2 paliers
+d'évolution par créature, plafond à 3 640 Griffes). Il sera à revoir en
+même temps que la refonte de l'amélioration des créatures — un système
+sans plafond changerait complètement le budget cible.
+
+### Reste à faire
+
+- Refonte de l'**amélioration des créatures** : le système actuel
+  plafonne à 2 paliers par créature, donc les Griffes finissent par
+  n'avoir plus d'usage. C'est ce plafond qu'il faut lever.
+- Revoir **coûts et gains de chaque amélioration** du clicker (gelés
+  jusque-là, à la demande de l'utilisateur).
 
 ## Défis de l'œuf — cibles dynamiques en « temps de farm » (02/09)
 

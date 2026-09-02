@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
-import { useDaily } from '../../context/DailyContext';
+import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import {
   CREATURES,
   RARITY_LABEL,
@@ -40,12 +40,14 @@ import {
   ascensionEssenceGain,
   ASCENSION_MIN_LIFETIME_EARNED,
   essenceBonusMultiplier,
+  ascensionGriffesReward,
+  ascensionSpeedMultiplier,
   ritualReward,
   ritualReady,
   OFFRANDE_APPCOINS_COST,
   offrandeReward,
-  pickQuestSet,
   nextQuestSet,
+  pickQuestSet,
   findQuest,
   SEQUENCE_LENGTH,
   QUEST_POOL,
@@ -98,6 +100,12 @@ export default function ClickerScreen({ onBack }) {
   const panHandlers = useBackGesture(onBack);
   const { coins: sharedCoins, spendCoins: spendSharedCoins } = useCoins();
   const { trackEvent, lifetimeStats, loaded: dailyLoaded } = useDaily();
+  // Nombre d'Ascensions faites, source unique du bonus de vitesse. Vient
+  // de DailyContext (compteur à vie) plutôt que d'un état local : il
+  // survit ainsi à tout ce que l'Ascension remet à zéro.
+  const ascensionCount = lifetimeStats.ascension || 0;
+  const ascensionCountRef = useRef(0);
+  ascensionCountRef.current = ascensionCount;
 
   const [loaded, setLoaded] = useState(false);
   const [coins, setCoins] = useState(0);
@@ -535,7 +543,15 @@ export default function ClickerScreen({ onBack }) {
   // dépensant, utilisé pour calculer le gain d'essence à l'Ascension.
   const gainCoins = (rawAmount) => {
     const upgradeCoinMult = 1 + upgradeBonuses(upgradeLevelsRef.current).coinPct;
-    const multiplier = sanctuaryMultiplier(sanctuaryLevelRef.current) * essenceBonusMultiplier(essenceRef.current) * upgradeCoinMult;
+    // Le bonus de vitesse d'Ascension (+30% par Ascension, multiplicatif)
+    // s'applique ici avec les autres multiplicateurs globaux : c'est ce
+    // qui rend le run d'après nettement plus rapide alors que le joueur
+    // repart d'une économie à zéro.
+    const multiplier =
+      sanctuaryMultiplier(sanctuaryLevelRef.current) *
+      essenceBonusMultiplier(essenceRef.current) *
+      ascensionSpeedMultiplier(ascensionCountRef.current) *
+      upgradeCoinMult;
     const amount = rawAmount * multiplier;
     setCoins((c) => c + amount);
     setTotalEarned((t) => t + amount);
@@ -786,67 +802,55 @@ export default function ClickerScreen({ onBack }) {
   const essenceGainPreview = ascensionEssenceGain(totalEarned);
   const doAscension = () => {
     if (essenceGainPreview <= 0) return;
+    const ascensionNumber = (lifetimeStats.ascension || 0) + 1;
+    const griffesReward = ascensionGriffesReward(ascensionNumber);
+    const nextSpeed = ascensionSpeedMultiplier(ascensionNumber);
     Alert.alert(
       'Ascension',
-      `Tu vas tout réinitialiser (pièces, Pacte, créatures, améliorations) contre +${essenceGainPreview} essence permanente (production x${(essenceBonusMultiplier(essence + essenceGainPreview)).toFixed(2)} pour toujours). Continuer ?`,
+      `Tu remets à zéro ton économie (pièces, Pacte, Faveur, Sanctuaire, Veilleur, auto-clics, améliorations).\n\n`
+        + `Tu GARDES tes créatures, ton deck et toute ta progression en Aventure.\n\n`
+        + `Tu gagnes : ${griffesReward} Griffes, +${essenceGainPreview} essence, et une production x${nextSpeed.toFixed(2)} pour toujours.\n\nContinuer ?`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Ascensionner',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             trackEvent('ascension', 1);
             setEssence((e) => e + essenceGainPreview);
+            // Remise à zéro de la SEULE économie du clicker.
             setCoins(0);
             setTotalEarned(0);
             setTapPower(1);
             setCritLevel(0);
             setAutoClickers({});
+            setUpgradeLevels({});
             setSanctuaryLevel(0);
             setVeilleurLevel(0);
-            setOwned([]);
-            setDeck([null, null, null]);
             setActivePower(null);
             setPendingDiscount(null);
-            // L'Ascension vide le deck et la collection. Un défi tiré
-            // AVANT (« gagne 3 combats », « nourris une créature »)
-            // deviendrait infaisable jusqu'à ce que le joueur réinvoque
-            // une créature — et ses cibles chiffrées, calculées sur
-            // l'ancien revenu, seraient de toute façon absurdes après un
-            // reset à zéro. On repart donc d'un cycle neuf, tiré sur les
-            // stats d'après-Ascension.
-            const statsAfterAscension = {
-              totalEarned: 0, coins: 0, passiveIncome: 0, tapPower: 1,
-              autoClickers: {}, autoTotal: 0, upgradeLevels: upgradeLevelsRef.current,
-              sanctuaryLevel: 0, veilleurLevel: 0, critLevel: 0,
-              essence: essenceRef.current + essenceGainPreview,
-              ownedCount: 0, deckCount: 0, maxCreatureLevel: 0,
-              maxCombo: Math.round(maxComboRef.current * 10),
-              totalSummons: totalSummonsRef.current,
-              totalCrits: totalCritsRef.current,
-              goldenClaimed: goldenClaimedRef.current,
-              battleWon: lifetimeStats.battleWon || 0,
-              runeEquipped: lifetimeStats.runeEquipped || 0,
-              runeBought: lifetimeStats.runeBought || 0,
-            };
-            // Pendant la séquence scriptée, on NE re-tire PAS : l'un des
-            // défis du cycle 5 est justement « fais l'Ascension », et le
-            // remplacer l'annulerait au moment même où le joueur vient
-            // de le réussir. Le cycle en cours est conservé tel quel.
-            // Hors séquence, on repart d'un cycle neuf, les cibles
-            // dynamiques calculées sur l'ancien revenu n'ayant plus de
-            // sens après un reset à zéro.
-            if (sequenceIndexRef.current >= SEQUENCE_LENGTH) {
-              const freshSet = nextQuestSet(sequenceIndexRef.current, [], statsAfterAscension);
-              setActiveQuestIds(freshSet.ids);
-              setQuestTargets(freshSet.targets);
-              setQuestBaseline(statsAfterAscension);
-              setEggPhase('collecting');
-              setHatchTaps(0);
-              setCaptureTaps(0);
-              hatchTapsRef.current = 0;
-              captureTapsRef.current = 0;
-            }
+            // Créatures, deck et progression d'Aventure sont CONSERVÉS.
+            // Perdre ses monstres et sa campagne rendait le prestige
+            // punitif au lieu d'être une récompense ; et la progression
+            // d'Aventure vit dans une autre sauvegarde, la réinitialiser
+            // d'ici aurait été l'écriture croisée qu'on s'interdit.
+
+            // Griffes créditées via le drapeau partagé : c'est
+            // l'AdventureScreen qui les encaissera à sa prochaine
+            // ouverture. Le clicker n'écrit jamais dans la sauvegarde
+            // d'Aventure directement.
+            try {
+              const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+              const pending = raw ? parseInt(raw, 10) || 0 : 0;
+              await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + griffesReward));
+            } catch (_) {}
+
+            // Les défis d'œuf CONTINUENT à la suite : ni le cycle en
+            // cours ni la séquence ne sont remis à zéro. Le joueur garde
+            // ses créatures, donc plus aucun défi ne devient infaisable
+            // — c'était la seule raison de re-tirer auparavant. Les
+            // premiers défis seront simplement plus durs à relever avec
+            // une économie repartie de zéro, ce qui est l'effet voulu.
           },
         },
       ]
@@ -857,7 +861,8 @@ export default function ClickerScreen({ onBack }) {
     totalAutoClickIncome(autoClickers) *
     (activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1) *
     sanctuaryMultiplier(sanctuaryLevel) *
-    essenceBonusMultiplier(essence);
+    essenceBonusMultiplier(essence) *
+    ascensionSpeedMultiplier(ascensionCount);
 
   const claimRitual = () => {
     if (!ritualTargetRef.current) return;
@@ -1391,6 +1396,7 @@ export default function ClickerScreen({ onBack }) {
           onOffrande={doOffrande}
           essence={essence}
           essenceGainPreview={essenceGainPreview}
+          ascensionCount={ascensionCount}
           totalEarned={totalEarned}
           onAscend={doAscension}
           onBack={() => setView('tap')}
@@ -1509,7 +1515,7 @@ function describeUpgradeTotal(item, level) {
 function ShopView({
   coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers, upgradeLevels,
   applyDiscount, onBuyTapPower, onBuyCrit, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onOffrande,
-  essence, essenceGainPreview, totalEarned, onAscend, onBack,
+  essence, essenceGainPreview, totalEarned, ascensionCount, onAscend, onBack,
 }) {
   const [page, setPage] = useState('upgrades'); // 'upgrades' | 'autoclick'
 
@@ -1597,10 +1603,12 @@ function ShopView({
               onPress={onAscend}
               disabled={essenceGainPreview <= 0}
             >
-              <Text style={styles.ascensionBtnText}>🌟 Ascension {essence > 0 ? `(essence : ${essence})` : ''}</Text>
+              <Text style={styles.ascensionBtnText}>
+                🌟 Ascension {ascensionCount > 0 ? `(x${ascensionSpeedMultiplier(ascensionCount).toFixed(2)} production)` : ''}
+              </Text>
               <Text style={styles.ascensionBtnSubtext}>
                 {essenceGainPreview > 0
-                  ? `Réinitialise ta progression contre +${essenceGainPreview} essence permanente`
+                  ? `Remet ton économie à zéro · tu gardes créatures et Aventure · +${ascensionGriffesReward(ascensionCount + 1)} Griffes et production x${ascensionSpeedMultiplier(ascensionCount + 1).toFixed(2)}`
                   : `Gagne encore ${formatNum(ASCENSION_MIN_LIFETIME_EARNED - totalEarned)} pièces au total pour débloquer`}
               </Text>
             </TouchableOpacity>

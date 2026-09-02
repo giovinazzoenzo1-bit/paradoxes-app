@@ -677,6 +677,50 @@ export function essenceBonusMultiplier(essence) {
   return 1 + essence * ESSENCE_BONUS_PER_POINT; // +1% permanent par point
 }
 
+// ---- Récompenses d'Ascension (refonte : Ascension non destructive) ----
+//
+// L'Ascension ne réinitialise plus QUE l'économie du clicker (pièces,
+// Pacte, Faveur, Sanctuaire, Veilleur, auto-clics, améliorations). Elle
+// laisse intacts : les créatures possédées, le deck, et toute la
+// progression du mode Aventure (niveaux, Griffes, runes). Perdre ses
+// monstres et sa campagne rendait le prestige punitif au lieu d'être une
+// récompense — et la progression d'Aventure ne vit même pas dans la
+// sauvegarde du clicker, la remettre à zéro d'ici aurait été une
+// écriture croisée, exactement ce qu'on s'interdit.
+
+// Vitesse de progression gagnée : +30% par Ascension, multiplicatif.
+// C'est la vraie récompense de prestige — elle s'applique à toute la
+// production du clicker, donc le run suivant est franchement plus rapide
+// sans que le joueur ait à tout reconstruire depuis rien.
+export const ASCENSION_SPEED_BONUS = 0.3;
+export function ascensionSpeedMultiplier(ascensionCount) {
+  const n = Number.isFinite(ascensionCount) ? Math.max(0, ascensionCount) : 0;
+  return Math.pow(1 + ASCENSION_SPEED_BONUS, n);
+}
+
+// Griffes offertes par la n-ième Ascension (n commence à 1).
+//
+// Calibré sur le coût RÉEL d'amélioration d'une créature : palier 1 =
+// 40 Griffes, palier 2 = 100, soit 140 pour une créature menée à fond,
+// et 3 640 pour toute la collection (26 créatures).
+//
+// La 1re Ascension donne 150 Griffes : de quoi évoluer entièrement une
+// créature immédiatement, donc une récompense tout de suite lisible.
+// Le gain suit ensuite une RACINE CARRÉE, pas une droite.
+//
+// Le linéaire avait été essayé d'abord (+75 par Ascension) et mesuré :
+// au bout de 10 Ascensions il donnait de quoi évoluer 35 créatures pour
+// une collection qui n'en compte que 26. L'amélioration ne ralentissait
+// donc pas, elle s'épuisait — le joueur atteignait le plafond du contenu
+// et les Griffes perdaient tout usage. En racine, 10 Ascensions cumulent
+// ~3 370 Griffes, soit un peu moins que la collection complète : rapide
+// au début, de plus en plus lent, et jamais saturé.
+export const ASCENSION_GRIFFES_BASE = 150;
+export function ascensionGriffesReward(ascensionNumber) {
+  const n = Number.isFinite(ascensionNumber) ? Math.max(1, Math.floor(ascensionNumber)) : 1;
+  return Math.round(ASCENSION_GRIFFES_BASE * Math.sqrt(n));
+}
+
 // ---- Rituel (bouton "fausse pub" — pas de vrai SDK pour l'instant) ----
 export const RITUAL_COOLDOWN_SEC = 180; // 3 minutes entre 2 utilisations
 export function ritualReward(tapPower, passiveIncome) {
