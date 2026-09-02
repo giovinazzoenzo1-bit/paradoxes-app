@@ -10,7 +10,9 @@
 // intégré dans ce projet). Pas d'animation pour l'instant, on garde les
 // emojis actuels comme "skins". Croix pour quitter en haut à gauche.
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { COLORS } from './clickerTheme';
 import { stageForLevel } from '../../games/clicker/clickerLogic';
@@ -44,7 +46,27 @@ function firstLivingIndex(fighters) {
 
 // team : [{ creature, ownedLevel, evolutionTier }, ...] (1 à 3 entrées,
 // dans l'ordre du deck) — voir ChapterMapScreen pour la construction.
+// Formation façon Monster Legends (fractions de la largeur/hauteur de
+// l'écran en paysage), mesurée sur les captures de référence : côté
+// joueur, combattant actif devant en bas à gauche (grand), 2e au milieu,
+// 3e derrière en haut (plus petit, atténué = profondeur). Côté adverse,
+// miroir : 1er au centre-droite (grand), 2e en haut à droite (petit,
+// loin), 3e en bas à droite.
+const PLAYER_SLOTS = [
+  { x: 0.20, y: 0.56, size: 1.0 },
+  { x: 0.36, y: 0.46, size: 0.78 },
+  { x: 0.23, y: 0.26, size: 0.62 },
+];
+const OPPONENT_SLOTS = [
+  { x: 0.60, y: 0.48, size: 1.0 },
+  { x: 0.79, y: 0.26, size: 0.66 },
+  { x: 0.80, y: 0.60, size: 0.82 },
+];
+const SPRITE_BASE = 74; // taille de l'emoji du sprite "devant" (size 1.0)
+
 export default function CombatScreen({ team, levelNumber, onFinish }) {
+  const { width: W, height: H } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const opponentTeamCreatures = useRef(opponentTeamForLevel(levelNumber)).current;
 
   // Verrouille l'écran en paysage à l'entrée du combat, revient en
@@ -332,141 +354,144 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     return <CombatResultScreen outcome={outcome} levelNumber={levelNumber} onContinue={() => onFinish(outcome)} />;
   }
 
-  const playerDisplay = activeFighter.creature.stages[stageForLevel(activeFighter.ownedLevel)];
-  const playerHpPct = Math.max(0, activeFighter.hp / activeFighter.stats.hp) * 100;
-  const playerEndurancePct = Math.max(0, activeFighter.endurance / activeFighter.stats.endurance) * 100;
+  // Ordre d'affichage côté joueur : l'actif prend TOUJOURS la place de
+  // devant (slot 0), les autres remplissent les slots 1 et 2.
+  const playerOrder = [activeIndex, ...fighters.map((_, i) => i).filter((i) => i !== activeIndex)];
+
+  const renderSprite = ({ key, slot, emoji, name, hp, hpMax, endurance, enduranceMax, fainted, ring, onPress, disabled, hpColor }) => {
+    const fs = Math.round(SPRITE_BASE * slot.size);
+    const boxW = Math.round(fs * 1.7);
+    const left = slot.x * W - boxW / 2;
+    const top = slot.y * H - fs / 2 - 10;
+    return (
+      <TouchableOpacity
+        key={key}
+        activeOpacity={onPress ? 0.8 : 1}
+        onPress={onPress}
+        disabled={disabled}
+        style={[styles.sprite, { left, top, width: boxW, opacity: fainted ? 0.35 : slot.size < 0.7 ? 0.85 : 1 }]}
+      >
+        <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }, ring === 'active' && styles.ringActive, ring === 'target' && styles.ringTarget]}>
+          <Text style={{ fontSize: fs, lineHeight: fs + 12 }}>{emoji}</Text>
+        </View>
+        <Text style={[styles.spriteName, { fontSize: Math.max(9, Math.round(12 * slot.size)) }]} numberOfLines={1}>{name}</Text>
+        <View style={[styles.spriteHpTrack, { width: Math.round(90 * slot.size) }]}>
+          <View style={[styles.spriteHpFill, { width: `${Math.max(0, hp / hpMax) * 100}%`, backgroundColor: hpColor }]} />
+        </View>
+        {endurance != null && (
+          <View style={[styles.spriteEndTrack, { width: Math.round(90 * slot.size) }]}>
+            <View style={[styles.spriteEndFill, { width: `${Math.max(0, endurance / enduranceMax) * 100}%` }]} />
+          </View>
+        )}
+        {ring === 'target' && !fainted && <Text style={styles.targetLabel}>🎯</Text>}
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View style={styles.screen}>
-      <TouchableOpacity style={styles.closeBtn} onPress={confirmQuit}>
+    <View style={[styles.screen, { marginTop: -insets.top }]}>
+      <StatusBar hidden />
+
+      {/* Fond "nature" de secours, construit en Views (ciel / collines /
+          sol / sentier) — PLACEHOLDER en attendant un vrai décor dessiné
+          par Flavio : une simple image plein écran viendra le remplacer. */}
+      <View style={styles.bgSky} />
+      <View style={[styles.bgSkyLow, { top: H * 0.28 }]} />
+      <View style={[styles.bgHill, { left: -W * 0.1, top: H * 0.38, width: W * 0.7, height: H * 0.34 }]} />
+      <View style={[styles.bgHill, { left: W * 0.5, top: H * 0.40, width: W * 0.7, height: H * 0.32 }]} />
+      <View style={[styles.bgGround, { top: H * 0.55 }]} />
+      <View style={[styles.bgPath, { left: W * 0.15, top: H * 0.60, width: W * 0.7, height: H * 0.3 }]} />
+
+      <TouchableOpacity style={[styles.closeBtn, { top: 10 + insets.top, left: 10 + insets.left }]} onPress={confirmQuit}>
         <Text style={styles.closeBtnText}>✕</Text>
       </TouchableOpacity>
 
-      <View style={styles.battlefield}>
-        {/* Équipe du joueur, à GAUCHE — sprites qui "flottent" sur le
-            terrain (pas de cadre carte autour), hauteurs décalées entre
-            les remplaçants et l'actif pour un effet plus organique,
-            façon Monster Legends, plutôt qu'une grille bien rangée. */}
-        <View style={styles.playerZone}>
-          <View style={styles.benchRow}>
-            {fighters.map((f, i) => {
-              if (i === activeIndex) return null;
-              const d = f.creature.stages[stageForLevel(f.ownedLevel)];
-              const fainted = f.hp <= 0;
-              return (
-                <Text key={i} style={[styles.benchEmoji, { opacity: fainted ? 0.3 : 1 }]}>{d.emoji}</Text>
-              );
-            })}
-          </View>
-          <View style={styles.activeFighterBlock}>
-            <Text style={styles.activeEmoji}>{playerDisplay.emoji}</Text>
-            <Text style={styles.activeName} numberOfLines={1}>{playerDisplay.name}</Text>
-            <View style={styles.hpTrack}>
-              <View style={[styles.hpFill, { width: `${playerHpPct}%`, backgroundColor: COLORS.good }]} />
-            </View>
-            <Text style={styles.hpText}>{Math.max(0, activeFighter.hp)} / {activeFighter.stats.hp}</Text>
-            <View style={styles.enduranceTrack}>
-              <View style={[styles.enduranceFill, { width: `${playerEndurancePct}%` }]} />
-            </View>
-          </View>
-        </View>
+      {/* Équipe du joueur — 3 sprites sur le terrain, l'actif devant. */}
+      {playerOrder.map((fi, slotIdx) => {
+        const f = fighters[fi];
+        const d = f.creature.stages[stageForLevel(f.ownedLevel)];
+        return renderSprite({
+          key: `p${fi}`, slot: PLAYER_SLOTS[slotIdx], emoji: d.emoji, name: d.name,
+          hp: f.hp, hpMax: f.stats.hp,
+          endurance: fi === activeIndex ? f.endurance : null, enduranceMax: f.stats.endurance,
+          fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
+        });
+      })}
 
-        {/* Zone centrale : défi de tap pendant 'tapping', message/bouton
-            Continuer pendant 'resolving', rien pendant 'choosing' (la
-            barre du bas prend le relais). */}
-        <View style={styles.centerZone}>
-          {switchMessage && (
-            <View style={styles.switchBanner}>
-              <Text style={styles.switchBannerText}>{switchMessage}</Text>
-            </View>
-          )}
-          {lastRound && phase === 'resolving' && !switchMessage && (
-            <View style={styles.roundLog}>
-              {lastRound.skillName && (
-                <Text style={styles.roundLogText}>💥 -{lastRound.dmgToOpponent} (x{lastRound.multiplier.toFixed(2)})</Text>
-              )}
-              {lastRound.dmgToPlayer > 0 && (
-                <Text style={[styles.roundLogText, { color: '#FF5252' }]}>🔻 -{lastRound.dmgToPlayer} reçu</Text>
-              )}
-            </View>
-          )}
-          {phase === 'tapping' && (
-            <>
-              <Text style={styles.chosenSkillLabel}>{selectedSkill?.name}</Text>
-              <TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapZoneCombat}>
-                <Animated.View style={{ transform: [{ scale: punchScale }] }}>
-                  <Text style={styles.tapPunchText}>👊</Text>
-                </Animated.View>
-              </TouchableOpacity>
-              <Text style={styles.tapCountText}>{tapCount} / {requiredTaps}</Text>
-              <View style={styles.timeTrack}>
-                <View style={[styles.timeFill, { width: `${(timeLeft / TAP_CHALLENGE_TIME_LIMIT_SEC) * 100}%` }]} />
-              </View>
-            </>
-          )}
-          {phase === 'resolving' && (
-            <TouchableOpacity style={styles.continueBtn} onPress={confirmContinue}>
-              <Text style={styles.continueBtnText}>Continuer →</Text>
+      {/* Équipe adverse — tous tapables pour choisir la cible. */}
+      {opponents.map((o, i) => {
+        const d = o.creature.stages[0];
+        const fainted = o.hp <= 0;
+        return renderSprite({
+          key: `o${i}`, slot: OPPONENT_SLOTS[i], emoji: d.emoji, name: d.name,
+          hp: o.hp, hpMax: o.stats.hp, fainted,
+          ring: i === targetIndex && !fainted ? 'target' : null,
+          onPress: () => chooseTarget(i), disabled: fainted || phase !== 'choosing', hpColor: '#FF5252',
+        });
+      })}
+
+      {/* Couche centrale : défi de tap / résultat du tour / bouton Continuer. */}
+      <View pointerEvents="box-none" style={styles.centerLayer}>
+        {switchMessage && (
+          <View style={styles.switchBanner}>
+            <Text style={styles.switchBannerText}>{switchMessage}</Text>
+          </View>
+        )}
+        {lastRound && phase === 'resolving' && !switchMessage && (
+          <View style={styles.roundLog}>
+            {lastRound.skillName && (
+              <Text style={styles.roundLogText}>💥 -{lastRound.dmgToOpponent} (x{lastRound.multiplier.toFixed(2)})</Text>
+            )}
+            {lastRound.dmgToPlayer > 0 && (
+              <Text style={[styles.roundLogText, { color: '#FF5252' }]}>🔻 -{lastRound.dmgToPlayer} reçu</Text>
+            )}
+          </View>
+        )}
+        {phase === 'tapping' && (
+          <>
+            <Text style={styles.chosenSkillLabel}>{selectedSkill?.name}</Text>
+            <TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapZoneCombat}>
+              <Animated.View style={{ transform: [{ scale: punchScale }] }}>
+                <Text style={styles.tapPunchText}>👊</Text>
+              </Animated.View>
             </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Équipe adverse, à DROITE — TOUS affichés et tapables pour
-            choisir la cible (demande explicite). Sprites flottants (pas
-            de cadre carte), hauteurs décalées une créature sur deux pour
-            un effet plus organique, cible marquée par un halo circulaire
-            autour du sprite plutôt qu'un cadre rectangulaire. */}
-        <View style={styles.opponentZone}>
-          {opponents.map((o, i) => {
-            const d = o.creature.stages[0];
-            const fainted = o.hp <= 0;
-            const isTarget = i === targetIndex;
-            const hpPct = Math.max(0, o.hp / o.stats.hp) * 100;
-            const emojiSize = opponents.length > 1 ? 46 : 70;
-            return (
-              <TouchableOpacity
-                key={i}
-                style={[styles.opponentSlot, i % 2 === 1 && styles.opponentSlotOffset]}
-                onPress={() => chooseTarget(i)}
-                disabled={fainted || phase !== 'choosing'}
-              >
-                <View style={[styles.targetRing, isTarget && !fainted && styles.targetRingActive]}>
-                  <Text style={{ fontSize: emojiSize, opacity: fainted ? 0.3 : 1 }}>{d.emoji}</Text>
-                </View>
-                <Text style={styles.opponentName} numberOfLines={1}>{d.name}</Text>
-                <View style={styles.hpTrackSmall}>
-                  <View style={[styles.hpFill, { width: `${hpPct}%`, backgroundColor: '#FF5252' }]} />
-                </View>
-                {isTarget && !fainted && <Text style={styles.targetLabel}>🎯 cible</Text>}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+            <Text style={styles.tapCountText}>{tapCount} / {requiredTaps}</Text>
+            <View style={styles.timeTrack}>
+              <View style={[styles.timeFill, { width: `${(timeLeft / TAP_CHALLENGE_TIME_LIMIT_SEC) * 100}%` }]} />
+            </View>
+          </>
+        )}
+        {phase === 'resolving' && (
+          <TouchableOpacity style={styles.continueBtn} onPress={confirmContinue}>
+            <Text style={styles.continueBtnText}>Continuer →</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Barre de compétences en bas — 4 attaques avec leurs dégâts
-          juste en dessous, comme demandé, + bouton Recharge. */}
       {phase === 'choosing' && (
-        <View style={styles.bottomBar}>
-          {activeFighter.creature.skills.map((skill) => {
-            const canAfford = activeFighter.endurance >= skill.enduranceCost;
-            return (
-              <TouchableOpacity
-                key={skill.id}
-                style={[styles.skillBtn, !canAfford && styles.skillBtnDisabled]}
-                onPress={() => chooseSkill(skill, false)}
-                disabled={!canAfford}
-              >
-                <Text style={styles.skillBtnName} numberOfLines={1}>{skill.name}</Text>
-                <Text style={styles.skillBtnDamage}>{skill.damage} dégâts</Text>
-                <Text style={[styles.skillBtnCost, !canAfford && styles.skillBtnCostMissing]}>{skill.enduranceCost} END</Text>
-              </TouchableOpacity>
-            );
-          })}
-          <TouchableOpacity style={styles.rechargeBtn} onPress={rechargeEndurance}>
-            <Text style={styles.rechargeBtnText}>📺</Text>
-            <Text style={styles.rechargeBtnLabel}>Recharge</Text>
-          </TouchableOpacity>
+        <View style={[styles.bottomWrap, { paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: insets.bottom }]}>
+          <Text style={styles.hintText}>▼ CHOIX DE COMPÉTENCE ▼</Text>
+          <View style={styles.bottomBar}>
+            {activeFighter.creature.skills.map((skill) => {
+              const canAfford = activeFighter.endurance >= skill.enduranceCost;
+              return (
+                <TouchableOpacity
+                  key={skill.id}
+                  style={[styles.skillBtn, !canAfford && styles.skillBtnDisabled]}
+                  onPress={() => chooseSkill(skill, false)}
+                  disabled={!canAfford}
+                >
+                  <Text style={styles.skillBtnName} numberOfLines={1}>{skill.name}</Text>
+                  <Text style={styles.skillBtnDamage}>{skill.damage} dégâts</Text>
+                  <Text style={[styles.skillBtnCost, !canAfford && styles.skillBtnCostMissing]}>{skill.enduranceCost} END</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity style={styles.rechargeBtn} onPress={rechargeEndurance}>
+              <Text style={styles.rechargeBtnText}>📺</Text>
+              <Text style={styles.rechargeBtnLabel}>Recharge</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -495,72 +520,62 @@ function CombatResultScreen({ outcome, levelNumber, onContinue }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg, flexDirection: 'column' },
+  screen: { flex: 1, backgroundColor: '#5a8fd6' },
+
+  // Fond placeholder (voir commentaire dans le rendu)
+  bgSky: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#5a8fd6' },
+  bgSkyLow: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#8fb8e8' },
+  bgHill: { position: 'absolute', borderRadius: 999, backgroundColor: '#4f8a52' },
+  bgGround: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#6aa84f' },
+  bgPath: { position: 'absolute', borderRadius: 999, backgroundColor: '#c9b27a', opacity: 0.85 },
 
   closeBtn: {
-    position: 'absolute', top: 10, left: 10, zIndex: 20, width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center',
+    position: 'absolute', zIndex: 30, width: 34, height: 34, borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
   },
   closeBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 
-  battlefield: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingTop: 8 },
+  sprite: { position: 'absolute', alignItems: 'center', zIndex: 5 },
+  spriteRing: { alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: 'transparent' },
+  ringActive: { borderColor: COLORS.action, backgroundColor: 'rgba(245,197,66,0.15)' },
+  ringTarget: { borderColor: '#FF5252', backgroundColor: 'rgba(255,82,82,0.15)' },
+  spriteName: {
+    color: '#fff', fontWeight: '900', marginTop: 2, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 },
+  },
+  spriteHpTrack: { height: 8, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', marginTop: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
+  spriteHpFill: { height: '100%', borderRadius: 4 },
+  spriteEndTrack: { height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', marginTop: 2 },
+  spriteEndFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.action },
+  targetLabel: { fontSize: 12, marginTop: 1 },
 
-  playerZone: { flex: 1, alignItems: 'center' },
-  // Remplaçants en petites silhouettes flottantes (pas de cadre autour) —
-  // légèrement décalés en hauteur pour un effet moins "grille bien rangée".
-  benchRow: { flexDirection: 'row', gap: 14, marginBottom: 4, height: 40, alignItems: 'flex-end' },
-  benchEmoji: { fontSize: 30 },
-  activeFighterBlock: { alignItems: 'center' },
-  activeEmoji: { fontSize: 84 },
-  activeName: { color: COLORS.text, fontSize: 13, fontWeight: '800', marginTop: 2 },
-  hpTrack: { width: 120, height: 8, borderRadius: 4, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 6 },
-  hpFill: { height: '100%', borderRadius: 4 },
-  hpText: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 2 },
-  enduranceTrack: { width: 120, height: 5, borderRadius: 3, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 4 },
-  enduranceFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.action },
-
-  centerZone: { width: 170, alignItems: 'center', justifyContent: 'center' },
-  switchBanner: { backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: COLORS.action },
-  switchBannerText: { color: COLORS.action, fontSize: 10, fontWeight: '800', textAlign: 'center' },
-  roundLog: { alignItems: 'center' },
-  roundLogText: { color: COLORS.action, fontSize: 11, fontWeight: '900' },
-  chosenSkillLabel: { color: COLORS.action, fontSize: 12, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
-  // Bouton de tap nettement plus gros (demande explicite) — presque toute
-  // la hauteur disponible en paysage, pour bien remplir le pouce.
+  centerLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+  switchBanner: { backgroundColor: 'rgba(20,10,0,0.85)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1.5, borderColor: COLORS.action, marginBottom: 8 },
+  switchBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
+  roundLog: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 8 },
+  roundLogText: { color: COLORS.action, fontSize: 13, fontWeight: '900' },
+  chosenSkillLabel: {
+    color: COLORS.action, fontSize: 13, fontWeight: '900', marginBottom: 8, textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3,
+  },
   tapZoneCombat: {
-    width: 150, height: 150, borderRadius: 75, backgroundColor: COLORS.panel,
+    width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(23,19,49,0.92)',
     alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: COLORS.neonPink,
     shadowColor: COLORS.neonPink, shadowOpacity: 0.7, shadowRadius: 18, shadowOffset: { width: 0, height: 0 },
   },
   tapPunchText: { fontSize: 68 },
-  tapCountText: { color: COLORS.text, fontSize: 17, fontWeight: '900', marginTop: 10 },
-  timeTrack: { width: 120, height: 6, borderRadius: 3, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 6 },
+  tapCountText: { color: '#fff', fontSize: 17, fontWeight: '900', marginTop: 8, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
+  timeTrack: { width: 130, height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', marginTop: 6 },
   timeFill: { height: '100%', backgroundColor: COLORS.neonCyan, borderRadius: 3 },
-  continueBtn: {
-    backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 20,
-  },
+  continueBtn: { backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 22 },
   continueBtnText: { color: '#241a00', fontSize: 13, fontWeight: '900' },
 
-  opponentZone: { flex: 1.3, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 16 },
-  // Sprites flottants, sans cadre carte — chaque adversaire "un sur deux"
-  // légèrement plus haut, pour casser l'alignement en grille bien rangée.
-  opponentSlot: { alignItems: 'center' },
-  opponentSlotOffset: { marginTop: -22 },
-  // La cible n'est plus marquée par un cadre rectangulaire autour d'une
-  // carte, mais par un halo circulaire directement autour du sprite.
-  targetRing: {
-    width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: 'transparent',
+  bottomWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 20 },
+  hintText: {
+    color: '#fff', fontSize: 11, fontWeight: '900', textAlign: 'center', marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3,
   },
-  targetRingActive: {
-    borderColor: '#FF5252', backgroundColor: 'rgba(255,82,82,0.1)',
-    shadowColor: '#FF5252', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
-  },
-  opponentName: { color: COLORS.text, fontSize: 11, fontWeight: '700', marginTop: 2, maxWidth: 90 },
-  hpTrackSmall: { width: 70, height: 5, borderRadius: 3, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 4 },
-  targetLabel: { color: '#FF5252', fontSize: 9, fontWeight: '800', marginTop: 2 },
-
-  bottomBar: { flexDirection: 'row', paddingHorizontal: 8, paddingBottom: 8, paddingTop: 4, gap: 6 },
+  bottomBar: { flexDirection: 'row', paddingHorizontal: 8, paddingBottom: 8, paddingTop: 6, gap: 6, backgroundColor: 'rgba(7,5,26,0.92)' },
   skillBtn: {
     flex: 1, backgroundColor: COLORS.panel, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 4,
     alignItems: 'center', borderWidth: 1.5, borderColor: COLORS.action,
