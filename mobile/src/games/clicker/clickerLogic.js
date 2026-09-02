@@ -245,6 +245,16 @@ export const CREATURES = [
     stages: [
     { name: 'Tartaroth', emoji: '👹' }, { name: 'Tartaroth', emoji: '👹' }, { name: 'Tartaroth', emoji: '👹' },
   ]},
+  // VRAI 25e créneau du plan d'origine (Mythique + Magie + Attaquant,
+  // dernier de la liste des 25) — Tartaroth avait été annoncé par erreur
+  // comme le 25e/dernier, décalage d'un cran repéré par l'utilisateur.
+  { id: 'arcanis', element: 'Magie', rarity: 'mythique', baseIncome: 4.0, combatType: 'attaquant',
+    baseHp: 130, baseAttack: 90, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Déchirure Dimensionnelle', 40, 15], ['Implosion de Mana', 65, 25], ['Singularité Arcanique', 95, 35], ['Effacement Réel', 150, 50]]),
+    lore: "Arcanis est une entité primordiale née de la première étincelle arcanique de l'univers, manipulant la trame même de la réalité. Il pulvérise ses adversaires en altérant les lois de la magie pour les réduire en pure énergie. Seuls les mages les plus fous osent l'invoquer, risquant d'être consumés par son pouvoir absolu.",
+    stages: [
+    { name: 'Arcanis', emoji: '🌌' }, { name: 'Arcanis', emoji: '🌌' }, { name: 'Arcanis', emoji: '🌌' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -256,8 +266,9 @@ export const CREATURES = [
 // "legendaire" et "mythique" repassent à poids 0 (plus aucune créature
 // dedans depuis le remplacement de Gemmion) — "peu_commun" réactivé
 // maintenant que Fournax existe (29/08).
-// "legendaire" réactivé (29/08) — Solstral existe enfin dans ce palier.
-export const RARITY_WEIGHTS = { commun: 45, peu_commun: 20, rare: 15, epique: 12, legendaire: 8, mythique: 0 };
+// "mythique" réactivé (30/08) — Arcanis existe enfin, TOUS les paliers
+// sont maintenant représentés dans le roster.
+export const RARITY_WEIGHTS = { commun: 40, peu_commun: 20, rare: 15, epique: 12, legendaire: 8, mythique: 5 };
 export const RARITY_LABEL = {
   commun: 'Commun', peu_commun: 'Peu commun', rare: 'Rare',
   epique: 'Épique', legendaire: 'Légendaire', mythique: 'Mythique',
@@ -355,6 +366,7 @@ export const CREATURE_POWERS = {
   voltarel: { name: 'Défibrillation Foudroyante', effectType: 'passive_boost', effectValue: 4 },
   solstral: { name: 'Supernova Jugement', effectType: 'coins_burst', effectValue: 90 },
   tartaroth: { name: 'Écrasement Abyssal', effectType: 'coins_burst', effectValue: 90 },
+  arcanis: { name: 'Effacement Réel', effectType: 'coins_burst', effectValue: 150 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
