@@ -224,6 +224,13 @@ export const CREATURES = [
     stages: [
     { name: 'Cumulox', emoji: '☁️' }, { name: 'Cumulox', emoji: '☁️' }, { name: 'Cumulox', emoji: '☁️' },
   ]},
+  { id: 'voltarel', element: 'Foudre', rarity: 'epique', baseIncome: 1.0, combatType: 'soutien',
+    baseHp: 85, baseAttack: 14, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Étincelle Vitale', 8, 15], ['Cocon Magnétique', 12, 25], ['Onde Galvanisante', 18, 35], ['Défibrillation Foudroyante', 25, 50]]),
+    lore: "Voltarel est un esprit d'orage majestueux tissé de foudre pure et d'ozone. Bien qu'il possède une puissance destructrice, il préfère canaliser son énergie pour galvaniser le système nerveux de ses alliés et soigner leurs blessures. On dit que sa simple présence électrise le moral des troupes lors des batailles les plus désespérées.",
+    stages: [
+    { name: 'Voltarel', emoji: '⚡' }, { name: 'Voltarel', emoji: '⚡' }, { name: 'Voltarel', emoji: '⚡' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -330,6 +337,7 @@ export const CREATURE_POWERS = {
   braiserose: { name: 'Cautérisation Vitale', effectType: 'passive_boost', effectValue: 3 },
   abyssorax: { name: 'Exécution Abyssale', effectType: 'coins_burst', effectValue: 40 },
   cumulox: { name: 'Rejet Stratosphérique', effectType: 'coins_burst', effectValue: 40 },
+  voltarel: { name: 'Défibrillation Foudroyante', effectType: 'passive_boost', effectValue: 4 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
