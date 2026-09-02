@@ -120,8 +120,36 @@ créature dans le DECK -> combats gagnés -> Griffes -> achat de rune -> équipe
      entièrement retiré (ses cibles chiffrées, calculées sur l'ancien
      revenu, seraient de toute façon absurdes après un reset à zéro).
 
-Vérifié : sur 5 000 tirages pour un joueur vierge, aucun défi injouable ;
-25 défis distincts restent disponibles au démarrage.
+### Audit des défis de démarrage (suite au signalement suivant)
+
+Un second passage, déclenché par « possède 3 créatures différentes »
+proposé à un joueur qui n'en avait aucune, a fait tomber deux autres
+familles de défauts. **Un défi n'est valide que si le joueur peut
+l'accomplir sans passer par l'œuf que ce défi bloque.**
+
+- 🟥 **`ownedCount` : supprimé du pool.** Les créatures s'obtiennent en
+  faisant éclore l'œuf — un défi qui en réclame bloque donc ce qui les
+  produit. Le gacha offrait une porte de sortie, mais un défi ne doit
+  pas exiger de contourner le système qu'il gèle. `summon*` couvre déjà
+  l'invocation, proprement et en mode delta.
+- 🟥 **`crit*` était STRICTEMENT impossible** sans Faveur des Esprits :
+  `critChance(0)` vaut exactement 0, donc aucun coup critique ne peut
+  jamais tomber. Précondition `critLevel >= 1` ajoutée.
+- 🟨 `summon*` exige désormais que le budget couvre le coût réel des
+  invocations (`summonCost` grimpe avec la collection).
+- 🟨 `golden10` exige d'avoir déjà attrapé 3 cibles : elles n'
+  apparaissent qu'une fois toutes les 45-90 s, soit une bonne dizaine de
+  minutes de présence continue pour dix.
+
+**Méthode à réutiliser** : lister les défis tirables pour un profil
+donné, et pour chacun se demander par quelle mécanique concrète le
+joueur l'accomplit. Une cible atteignable sur le papier ne suffit pas —
+il faut que le chemin existe et ne repasse pas par l'œuf.
+
+Vérifié : 8 profils × 2 000 tirages, **aucun défi infaisable ni né déjà
+validé** ; le deck vide bloque l'Aventure même quand des créatures sont
+possédées mais non placées ; une sauvegarde contenant un id supprimé
+(`own3`) est recomplétée à 4 défis.
 - **Variété imposée au tirage** : une seule métrique par défi et au plus
   **2 défis par famille** (economy / core / action / collection /
   upgrade / autoclicker / adventure). Sans ça le tirage sortait quatre

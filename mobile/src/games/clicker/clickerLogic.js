@@ -802,7 +802,11 @@ export const QUEST_POOL = [
   { id: 'combo30', family: 'action', icon: '🔥', metric: 'maxCombo', target: 30, mode: 'absolute',
     available: (s) => (s.maxCombo || 0) >= 20,
     label: () => 'Atteins un multiplicateur de Transe x3' },
+  // `critChance(0)` vaut exactement 0 : sans au moins un niveau de
+  // Faveur des Esprits, AUCUN coup critique ne peut tomber et le défi
+  // est infaisable, pas seulement difficile. Vérifié en audit.
   { id: 'crit20', family: 'action', icon: '💥', metric: 'totalCrits', target: 20, mode: 'delta',
+    available: (s) => (s.critLevel || 0) >= 1,
     label: (t) => `Obtiens ${t} coups critiques` },
   { id: 'crit100', family: 'action', icon: '💥', metric: 'totalCrits', target: 100, mode: 'delta',
     available: (s) => (s.critLevel || 0) >= 2,
@@ -812,20 +816,28 @@ export const QUEST_POOL = [
     label: (t) => `Obtiens ${t} coups critiques` },
   { id: 'golden3', family: 'action', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
     label: (t) => `Touche ${t} fois la cible dorée` },
+  // La cible dorée n'apparaît qu'une fois toutes les 45-90 secondes :
+  // 10 captures demandent une bonne dizaine de minutes de présence
+  // continue. Réservé à un joueur qui en a déjà attrapé.
   { id: 'golden10', family: 'action', icon: '⭐', metric: 'goldenClaimed', target: 10, mode: 'delta',
-    available: (s) => (s.totalEarned || 0) > 50000,
+    available: (s) => (s.goldenClaimed || 0) >= 3,
     label: (t) => `Touche ${t} fois la cible dorée` },
+  // L'invocation coûte des pièces et son prix grimpe avec la
+  // collection : inutile de proposer 10 invocations à qui n'a pas de
+  // quoi en payer une seule.
   { id: 'summon10', family: 'action', icon: '🔮', metric: 'totalSummons', target: 10, mode: 'delta',
+    available: (s) => questBudget(s, 20) >= summonCost(s.ownedCount || 0) * 10,
     label: (t) => `Invoque ${t} créatures` },
   { id: 'summon30', family: 'action', icon: '🔮', metric: 'totalSummons', target: 30, mode: 'delta',
-    available: (s) => (s.ownedCount || 0) >= 4,
+    available: (s) => (s.ownedCount || 0) >= 4 && questBudget(s, 30) >= summonCost(s.ownedCount || 0) * 30,
     label: (t) => `Invoque ${t} créatures` },
 
   // ---------- Collection (pas monétaire : pas relatif) ----------
-  { id: 'own1', family: 'collection', icon: '🐣', metric: 'ownedCount', mode: 'absolute', step: 1, minStep: 1,
-    label: (t) => `Possède ${t} créatures différentes` },
-  { id: 'own3', family: 'collection', icon: '🐣', metric: 'ownedCount', mode: 'absolute', step: 3, minStep: 3,
-    label: (t) => `Possède ${t} créatures différentes` },
+  // PAS de défi « possède N créatures différentes » : les créatures
+  // s'obtiennent en faisant éclore l'œuf, que ce défi bloquerait — une
+  // dépendance circulaire. Le gacha offre bien une porte de sortie, mais
+  // un défi ne doit pas exiger de contourner le système qu'il gèle.
+  // `summon*` couvre déjà l'invocation, proprement et en mode delta.
   // Nourrir suppose d'avoir au moins une créature à nourrir.
   { id: 'feed5', family: 'collection', icon: '🍖', metric: 'maxCreatureLevel', mode: 'absolute', step: 5, minStep: 5,
     available: (s) => (s.ownedCount || 0) >= 1,
