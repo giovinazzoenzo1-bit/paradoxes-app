@@ -217,6 +217,13 @@ export const CREATURES = [
     stages: [
     { name: 'Abyssorax', emoji: '🦈' }, { name: 'Abyssorax', emoji: '🦈' }, { name: 'Abyssorax', emoji: '🦈' },
   ]},
+  { id: 'cumulox', element: 'Air', rarity: 'epique', baseIncome: 1.0, combatType: 'tank',
+    baseHp: 110, baseAttack: 10, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Frappe Venteuse', 8, 15], ['Mur de Pression', 12, 25], ['Cyclone Bouclier', 18, 35], ['Rejet Stratosphérique', 25, 50]]),
+    lore: "Cumulox est un gigantesque golem formé de nuages denses qui flotte lourdement au-dessus des champs de bataille. Son corps cotonneux, chargé de fortes pressions atmosphériques, lui permet d'absorber les chocs physiques les plus violents sans broncher. Véritable forteresse volante, il s'interpose toujours face au danger pour repousser les ennemis par de puissantes bourrasques.",
+    stages: [
+    { name: 'Cumulox', emoji: '☁️' }, { name: 'Cumulox', emoji: '☁️' }, { name: 'Cumulox', emoji: '☁️' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -322,6 +329,7 @@ export const CREATURE_POWERS = {
   runicor: { name: 'Sceau Protecteur', effectType: 'coins_burst', effectValue: 20 },
   braiserose: { name: 'Cautérisation Vitale', effectType: 'passive_boost', effectValue: 3 },
   abyssorax: { name: 'Exécution Abyssale', effectType: 'coins_burst', effectValue: 40 },
+  cumulox: { name: 'Rejet Stratosphérique', effectType: 'coins_burst', effectValue: 40 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
