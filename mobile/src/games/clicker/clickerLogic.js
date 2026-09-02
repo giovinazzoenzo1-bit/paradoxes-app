@@ -32,6 +32,7 @@ function mkSkills(entries) {
 export const CREATURE_ID_MIGRATIONS = {
   braisillon: 'pyrosile',
   gouttelin: 'caraploof',
+  cailloutin: 'bouldog',
 };
 
 // Applique la migration à un id de créature — renvoie l'id tel quel s'il
@@ -65,11 +66,12 @@ export const CREATURES = [
     stages: [
     { name: 'Bourgeonin', emoji: '🌱' }, { name: 'Ronceval', emoji: '🌿' }, { name: 'Florengarde', emoji: '🌺' },
   ]},
-  { id: 'cailloutin', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'tank',
-    skills: mkSkills([['Coup de Boulier', 1, 15], ['Éboulement', 2, 15], ['Poing de Pierre', 3, 15], ['Avalanche', 4, 15]]),
-    lore: "On dit que Cailloutin était autrefois un simple caillou dans une chaussure. Aujourd'hui, ce sont les montagnes qui ont peur de lui.",
+  { id: 'bouldog', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'tank',
+    baseHp: 14, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Coup de Truffe', 1, 5], ['Jet de Cailloux', 2, 10], ['Morsure Terrestre', 2, 15], ['Chute de Gravier', 3, 25]]),
+    lore: "Ce petit chien de pierre patrouille inlassablement dans les carrières abandonnées pour protéger son territoire. Son corps fait de rocaille agglomérée lui permet d'encaisser de lourds impacts sans broncher. Bien qu'il soit affectueux avec ses maîtres, il reste un véritable mur de briques face aux ennemis.",
     stages: [
-    { name: 'Cailloutin', emoji: '🪨' }, { name: 'Rocheval', emoji: '🗿' }, { name: 'Titanroc', emoji: '⛰️' },
+    { name: 'Bouldog', emoji: '🐕' }, { name: 'Bouldog', emoji: '🐕' }, { name: 'Bouldog', emoji: '🐕' },
   ]},
   { id: 'etincelot', element: 'Foudre', rarity: 'rare', baseIncome: 0.4, combatType: 'attaquant',
     skills: mkSkills([['Étincelle', 9, 20], ['Décharge', 17, 20], ['Éclair', 26, 20], ['Tempête Électrique', 37, 20]]),
@@ -207,7 +209,7 @@ export const CREATURE_POWERS = {
   pyrosile: { name: 'Éruption', effectType: 'coins_burst', effectValue: 8 },
   caraploof: { name: 'Flux Montant', effectType: 'passive_boost', effectValue: 2 },
   bourgeonin: { name: 'Éclosion Généreuse', effectType: 'discount_next', effectValue: 0.2 },
-  cailloutin: { name: 'Fondation', effectType: 'coins_burst', effectValue: 8 },
+  bouldog: { name: 'Fondation', effectType: 'coins_burst', effectValue: 8 },
   etincelot: { name: 'Décharge', effectType: 'coins_burst', effectValue: 12 },
   brisillon: { name: 'Bourrasque', effectType: 'passive_boost', effectValue: 2.5 },
   frimouss: { name: 'Conservation', effectType: 'discount_next', effectValue: 0.25 },
