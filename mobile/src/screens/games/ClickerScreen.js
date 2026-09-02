@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
+import { useDaily } from '../../context/DailyContext';
 import {
   CREATURES,
   RARITY_LABEL,
@@ -85,6 +86,7 @@ function formatNum(n) {
 export default function ClickerScreen({ onBack }) {
   const panHandlers = useBackGesture(onBack);
   const { coins: sharedCoins, spendCoins: spendSharedCoins } = useCoins();
+  const { trackEvent } = useDaily();
 
   const [loaded, setLoaded] = useState(false);
   const [coins, setCoins] = useState(0);
@@ -337,6 +339,7 @@ export default function ClickerScreen({ onBack }) {
     const amount = rawAmount * multiplier;
     setCoins((c) => c + amount);
     setTotalEarned((t) => t + amount);
+    trackEvent('coinsEarned', amount);
     return amount;
   };
 
@@ -443,6 +446,7 @@ export default function ClickerScreen({ onBack }) {
     if (isCrit) {
       totalCritsRef.current += 1;
       setTotalCrits(totalCritsRef.current);
+      trackEvent('crit', 1);
     }
 
     const powerMult = activePowerRef.current ? activePowerRef.current.tapMultiplier : 1;
@@ -664,6 +668,7 @@ export default function ClickerScreen({ onBack }) {
     addCreatureToOwned(creature);
     totalSummonsRef.current += 1;
     setTotalSummons(totalSummonsRef.current);
+    trackEvent('summon', 1);
     setSelectedCreature(creature.id);
     setView('collection');
   };
@@ -677,6 +682,7 @@ export default function ClickerScreen({ onBack }) {
     setCoins((c) => c - cost);
     if (pendingDiscountRef.current) setPendingDiscount(null);
     setOwned((prev) => prev.map((o) => (o.id === id ? { ...o, level: o.level + 1 } : o)));
+    trackEvent('creatureFed', 1);
   };
 
   // Deck de 3 créatures (les seules qui peuvent apparaître sur le cookie).

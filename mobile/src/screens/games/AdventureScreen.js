@@ -11,6 +11,7 @@ import CombatScreen from './CombatScreen';
 import { DeckPicker } from './DeckPicker';
 import { CREATURES, RARITY_LABEL, RARITY_COLOR, RARITY_BADGE_LETTER, stageForLevel } from '../../games/clicker/clickerLogic';
 import * as Notifications from 'expo-notifications';
+import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import {
   combatStatsForCreatureTyped,
   chapterForLevel,
@@ -103,6 +104,7 @@ function makeRuneId() {
 
 
 export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onAssignDeck, onClearDeckSlot }) {
+  const { trackEvent } = useDaily();
   const [detailCreatureId, setDetailCreatureId] = useState(null);
   const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
@@ -155,6 +157,16 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         setEnergy(ENERGY_MAX);
         setEnergyUpdatedAt(Date.now());
         await AsyncStorage.removeItem(DEV_REFILL_ENERGY_KEY);
+      }
+      // Griffes en attente (récompenses de quêtes quotidiennes/streak,
+      // réclamées depuis ProgresScreen) — même schéma de sécurité que
+      // les drapeaux dev ci-dessus, montant accumulé plutôt qu'un simple
+      // booléen (plusieurs récompenses peuvent s'empiler).
+      const pendingRaw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+      if (pendingRaw) {
+        const pending = parseInt(pendingRaw, 10) || 0;
+        if (pending > 0) setGriffes((g) => g + pending);
+        await AsyncStorage.removeItem(PENDING_GRIFFES_KEY);
       }
       setProgressLoaded(true);
     })();
@@ -228,6 +240,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // pas avancer davantage), et crédite la récompense.
   const handleLevelWon = (levelNumber, reward) => {
     setGriffes((g) => g + reward);
+    trackEvent('battleWon', 1);
     if (levelNumber === currentUnlockedLevelRef.current) {
       setCurrentUnlockedLevel((l) => l + 1);
     }
@@ -254,6 +267,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     setGriffes((g) => g - RUNE_COST);
     const type = RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)];
     setOwnedRunes((prev) => [...prev, { id: makeRuneId(), type, level: 1, equippedCreatureId: null }]);
+    trackEvent('runeBought', 1);
   };
 
   // Fusionne 2 runes du MÊME type et MÊME niveau en une seule au niveau
@@ -261,27 +275,32 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // disparaissent. Si l'une des deux était équipée, la nouvelle rune
   // fusionnée prend AUTOMATIQUEMENT sa place (pas de désarmement surprise).
   const fuseRunes = (id1, id2) => {
+    // Vérification faite AVANT le setState (pas dans l'updater) : appeler
+    // trackEvent (un AUTRE setState) depuis l'intérieur d'un updater
+    // risquerait un double déclenchement en mode strict de React, qui
+    // peut ré-invoquer les fonctions d'updater pour détecter les effets
+    // de bord — ça compterait la quête deux fois pour une seule fusion.
+    const r1 = ownedRunes.find((r) => r.id === id1);
+    const r2 = ownedRunes.find((r) => r.id === id2);
+    const valid = r1 && r2 && r1.id !== r2.id && r1.type === r2.type && r1.level === r2.level && r1.level < RUNE_MAX_LEVEL;
+    if (!valid) return;
+
     setOwnedRunes((prev) => {
-      const r1 = prev.find((r) => r.id === id1);
-      const r2 = prev.find((r) => r.id === id2);
-      if (!r1 || !r2 || r1.id === r2.id || r1.type !== r2.type || r1.level !== r2.level || r1.level >= RUNE_MAX_LEVEL) {
-        return prev;
-      }
       const rest = prev.filter((r) => r.id !== id1 && r.id !== id2);
       const inheritedSlot = r1.equippedCreatureId || r2.equippedCreatureId || null;
       return [...rest, { id: makeRuneId(), type: r1.type, level: r1.level + 1, equippedCreatureId: inheritedSlot }];
     });
+    trackEvent('runeFused', 1);
   };
 
   // Équipe une rune NON équipée sur une créature — refuse si la créature
   // a déjà ses 3 emplacements pleins (garde-fou, la carte des 3 cases
   // dans le profil ne devrait de toute façon jamais en proposer une 4e).
   const equipRune = (runeId, creatureId) => {
-    setOwnedRunes((prev) => {
-      const alreadyEquipped = prev.filter((r) => r.equippedCreatureId === creatureId).length;
-      if (alreadyEquipped >= 3) return prev;
-      return prev.map((r) => (r.id === runeId ? { ...r, equippedCreatureId: creatureId } : r));
-    });
+    const alreadyEquipped = ownedRunes.filter((r) => r.equippedCreatureId === creatureId).length;
+    if (alreadyEquipped >= 3) return;
+    setOwnedRunes((prev) => prev.map((r) => (r.id === runeId ? { ...r, equippedCreatureId: creatureId } : r)));
+    trackEvent('runeEquipped', 1);
   };
 
   const unequipRune = (runeId) => {
