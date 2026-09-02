@@ -210,6 +210,13 @@ export const CREATURES = [
     stages: [
     { name: 'Braiserose', emoji: '🌺' }, { name: 'Braiserose', emoji: '🌺' }, { name: 'Braiserose', emoji: '🌺' },
   ]},
+  { id: 'abyssorax', element: 'Eau', rarity: 'epique', baseIncome: 1.0, combatType: 'attaquant',
+    baseHp: 55, baseAttack: 22, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Morsure Glaciale', 12, 15], ['Lames de Courant', 18, 25], ['Maelström Déchirant', 25, 35], ['Exécution Abyssale', 35, 50]]),
+    lore: "Abyssorax est un prédateur des profondes abysses océaniques dont les écailles tranchent comme des rasoirs. Il remonte à la surface uniquement lors des tempêtes titanesques pour traquer des proies à sa démesure. Ses redoutables crocs glacés peuvent transpercer sans effort les coques des navires les plus robustes.",
+    stages: [
+    { name: 'Abyssorax', emoji: '🦈' }, { name: 'Abyssorax', emoji: '🦈' }, { name: 'Abyssorax', emoji: '🦈' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -314,6 +321,7 @@ export const CREATURE_POWERS = {
   racinea: { name: 'Éclosion Vitale', effectType: 'passive_boost', effectValue: 3 },
   runicor: { name: 'Sceau Protecteur', effectType: 'coins_burst', effectValue: 20 },
   braiserose: { name: 'Cautérisation Vitale', effectType: 'passive_boost', effectValue: 3 },
+  abyssorax: { name: 'Exécution Abyssale', effectType: 'coins_burst', effectValue: 40 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
