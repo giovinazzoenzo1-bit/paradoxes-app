@@ -35,6 +35,7 @@ export const CREATURE_ID_MIGRATIONS = {
   cailloutin: 'bouldog',
   bourgeonin: 'ventis',
   etincelot: 'voltix',
+  lumeret: 'luxorbe',
 };
 
 // Applique la migration à un id de créature — renvoie l'id tel quel s'il
@@ -103,11 +104,12 @@ export const CREATURES = [
     stages: [
     { name: 'Ombrelin', emoji: '🦇' }, { name: 'Nocturval', emoji: '🦉' }, { name: 'Ténébrume', emoji: '🐺' },
   ]},
-  { id: 'lumeret', element: 'Lumière', rarity: 'epique', baseIncome: 1.0, combatType: 'soutien',
-    skills: mkSkills([['Rayon', 14, 30], ['Éclat Lumineux', 28, 30], ['Flash Aveuglant', 42, 30], ['Jugement Solaire', 62, 30]]),
-    lore: "Lumeret brille même les yeux fermés. On raconte qu'il a été créé à partir d'un rayon de soleil égaré.",
+  { id: 'luxorbe', element: 'Lumière', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
+    baseHp: 12, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Rayon Faible', 1, 5], ['Lueur Aveuglante', 2, 10], ['Éclat Chaleureux', 1, 15], ['Flash Purificateur', 3, 25]]),
+    lore: "Luxorbe est une petite sphère rayonnante qui flotte dans les forêts anciennes pour guider les voyageurs perdus. Dépourvue de véritable corps physique, elle émet une aura apaisante qui revigore ses compagnons. Bien qu'inoffensive en apparence, sa lumière concentrée peut éblouir quiconque menace la paix des bois.",
     stages: [
-    { name: 'Lumeret', emoji: '✨' }, { name: 'Radianloup', emoji: '🦁' }, { name: 'Astrélios', emoji: '☀️' },
+    { name: 'Luxorbe', emoji: '✨' }, { name: 'Luxorbe', emoji: '✨' }, { name: 'Luxorbe', emoji: '✨' },
   ]},
   { id: 'gemmion', element: 'Terre', rarity: 'legendaire', baseIncome: 2.5, combatType: 'tank',
     skills: mkSkills([['Éclat de Cristal', 24, 35], ['Onde Prismatique', 47, 35], ['Tir de Diamant', 71, 35], ['Résonance Stellaire', 103, 35]]),
@@ -220,7 +222,7 @@ export const CREATURE_POWERS = {
   brisillon: { name: 'Bourrasque', effectType: 'passive_boost', effectValue: 2.5 },
   frimouss: { name: 'Conservation', effectType: 'discount_next', effectValue: 0.25 },
   ombrelin: { name: 'Éclipse', effectType: 'coins_burst', effectValue: 25 },
-  lumeret: { name: 'Rayonnement', effectType: 'passive_boost', effectValue: 3 },
+  luxorbe: { name: 'Rayonnement', effectType: 'passive_boost', effectValue: 3 },
   gemmion: { name: 'Résonance Cristalline', effectType: 'coins_burst', effectValue: 75 },
 };
 
