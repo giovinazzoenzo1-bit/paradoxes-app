@@ -4,7 +4,7 @@
 // SANS créer d'import circulaire entre les deux écrans (même piège déjà
 // rencontré avec COLORS, voir clickerTheme.js).
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { COLORS } from './clickerTheme';
 import { CREATURES, RARITY_COLOR, stageForLevel } from '../../games/clicker/clickerLogic';
 
@@ -14,10 +14,15 @@ import { CREATURES, RARITY_COLOR, stageForLevel } from '../../games/clicker/clic
 export function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose }) {
   return (
     <View style={styles.overlay}>
-      <View style={styles.panel}>
-        <TouchableOpacity style={styles.close} onPress={onClose}>
-          <Text style={styles.closeText}>✕</Text>
-        </TouchableOpacity>
+      <TouchableOpacity style={styles.close} onPress={onClose}>
+        <Text style={styles.closeText}>✕</Text>
+      </TouchableOpacity>
+      {/* maxHeight sur ce View englobant, PAS sur le ScrollView lui-même
+          (peu fiable en RN) — avec 26 créatures désormais, la grille peut
+          largement dépasser l'écran, il faut vraiment pouvoir défiler
+          jusqu'en bas pour voir "Vider cet emplacement". */}
+      <View style={styles.panelWrap}>
+        <ScrollView style={styles.panel} contentContainerStyle={styles.panelContent}>
         <Text style={styles.title}>Emplacement {slotIndex + 1} du deck</Text>
         <Text style={styles.subtitle}>Choisis une créature que tu possèdes</Text>
 
@@ -51,6 +56,7 @@ export function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose })
             <Text style={styles.clearBtnText}>Vider cet emplacement</Text>
           </TouchableOpacity>
         )}
+        </ScrollView>
       </View>
     </View>
   );
@@ -61,11 +67,13 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center', justifyContent: 'center', padding: 20,
   },
+  panelWrap: { width: '100%', maxHeight: '85%' },
   panel: {
-    width: '100%', backgroundColor: COLORS.panel, borderRadius: 20, padding: 24, alignItems: 'center',
+    width: '100%', backgroundColor: COLORS.panel, borderRadius: 20,
     borderWidth: 1, borderColor: COLORS.border,
   },
-  close: { position: 'absolute', top: 12, right: 14 },
+  panelContent: { alignItems: 'center', padding: 24, paddingBottom: 40 },
+  close: { position: 'absolute', top: 30, right: 30, zIndex: 10 },
   closeText: { color: COLORS.muted, fontSize: 18, fontWeight: '900' },
   title: { color: COLORS.text, fontSize: 17, fontWeight: '900', marginTop: 6 },
   subtitle: { color: COLORS.muted, fontSize: 12, marginTop: 4, marginBottom: 14, textAlign: 'center' },
