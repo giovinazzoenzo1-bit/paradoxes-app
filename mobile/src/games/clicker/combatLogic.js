@@ -24,6 +24,20 @@ export const RARITY_BASE_STATS = {
 // Stats de combat d'une créature possédée par le joueur, selon sa
 // rareté et son niveau ACTUEL (celui qu'on monte déjà en la nourrissant
 // dans le clicker classique — ça lui donne enfin une 2e utilité).
+// Croissance des PV/Attaque par niveau — linéaire (+8%/niveau) jusqu'au
+// niveau 50, puis ralentie (+2%/niveau) au-delà. Sans ce ralentissement,
+// une seule créature beaucoup nourrie grandirait sans limite (×8,9 à
+// niveau 100, ×16,9 à niveau 200...), largement plus vite que la
+// progression des adversaires en Aventure (liée au niveau de CHAPITRE,
+// pas au niveau de la créature) — un grind extrême pouvait tout
+// déséquilibrer. Le seuil de 50 reprend un repère déjà existant dans le
+// jeu (2e palier d'évolution).
+export function levelMultiplier(level) {
+  if (level <= 50) return 1 + (level - 1) * 0.08;
+  const atFifty = 1 + 49 * 0.08; // = 4,92 — valeur exacte au niveau 50
+  return atFifty + (level - 50) * 0.02;
+}
+
 // Si la créature a ses propres stats de base (fournies par Gemini —
 // champs baseHp/baseAttack/baseClickSpeed/baseEndurance), on les utilise
 // TELLES QUELLES plutôt que la formule par rareté — Gemini connaît déjà
@@ -35,7 +49,7 @@ export function combatStatsForCreature(creature, level) {
   const base = creature.baseHp != null
     ? { hp: creature.baseHp, attack: creature.baseAttack, clickSpeed: creature.baseClickSpeed, endurance: creature.baseEndurance }
     : RARITY_BASE_STATS[creature.rarity];
-  const levelMult = 1 + (level - 1) * 0.08;
+  const levelMult = levelMultiplier(level);
   return {
     hp: Math.round(base.hp * levelMult),
     attack: Math.round(base.attack * levelMult),
