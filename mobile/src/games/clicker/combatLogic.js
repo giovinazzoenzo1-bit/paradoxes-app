@@ -149,6 +149,38 @@ export function damageMultiplierForTime(elapsedSec, completed) {
   return TAP_CHALLENGE_MAX_MULTIPLIER - t * (TAP_CHALLENGE_MAX_MULTIPLIER - TAP_CHALLENGE_MIN_MULTIPLIER);
 }
 
+// ---- Mise à l'échelle des dégâts par la stat ATQ (30/08) ----
+// Chaque compétence a ses propres dégâts fixes (donnés par Gemini), mais
+// ils doivent grandir avec le niveau et l'évolution de la créature —
+// sinon nourrir/faire évoluer une créature n'a AUCUN effet sur ses
+// dégâts réels en combat (seule l'attaque de base gratuite utilisait
+// l'ATQ jusqu'ici). Le ratio ATQ actuel / ATQ de base sert de facteur
+// d'échelle appliqué à CHAQUE compétence, en plus (pas à la place) du
+// multiplicateur de vitesse de tap déjà existant.
+//
+// Stable par construction : au niveau 1 sans évolution, ratio = 1 →
+// comportement identique à avant ce changement pour toute créature
+// existante. Le ratio grandit ensuite avec `levelMultiplier` (déjà
+// plafonné à rendements décroissants après le niveau 50) et le
+// multiplicateur d'évolution — aucune nouvelle courbe à équilibrer,
+// on réutilise les garde-fous déjà en place.
+export function baseAttackFor(creature) {
+  return creature.baseAttack != null ? creature.baseAttack : RARITY_BASE_STATS[creature.rarity].attack;
+}
+
+export function attackRatio(creature, currentAttack) {
+  const base = baseAttackFor(creature);
+  return base > 0 ? currentAttack / base : 1;
+}
+
+// Dégâts d'une compétence, mis à l'échelle par le ratio ATQ actuel/ATQ de
+// base — à appliquer sur les VRAIES compétences (skill.damage), jamais
+// sur l'attaque de base gratuite (déjà dérivée directement de l'ATQ
+// actuel, l'appliquer ici la compterait deux fois).
+export function scaledSkillDamage(skill, creature, currentAttack) {
+  return skill.damage * attackRatio(creature, currentAttack);
+}
+
 // ---- Résolution d'un tour ----
 export function computePlayerDamage(attackerAttack, multiplier) {
   return Math.max(1, Math.round(attackerAttack * multiplier));

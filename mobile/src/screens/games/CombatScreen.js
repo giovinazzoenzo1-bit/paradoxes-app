@@ -16,6 +16,7 @@ import {
   resolveRound,
   griffesReward,
   effectiveTapCount,
+  scaledSkillDamage,
   TAP_CHALLENGE_TIME_LIMIT_SEC,
 } from '../../games/clicker/combatLogic';
 
@@ -146,16 +147,25 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     challengeDoneRef.current = true;
     const elapsedSec = (Date.now() - challengeStartRef.current) / 1000;
     const skill = selectedSkillRef.current;
+    const curIdx = activeIndexRef.current;
+    const curFighter = fightersRef.current[curIdx];
+
+    // Dégâts mis à l'échelle par le ratio ATQ actuel/ATQ de base (30/08)
+    // — l'attaque de base gratuite reste dérivée directement de l'ATQ
+    // actuel (pas de mise à l'échelle supplémentaire, ce serait compter
+    // deux fois). Même règle pour le joueur ET l'adversaire.
     const multiplier = skill.isBasic ? 1 : damageMultiplierForTime(elapsedSec, completed);
-    const playerDamage = computePlayerDamage(skill.damage, multiplier);
+    const skillDamage = skill.isBasic ? skill.damage : scaledSkillDamage(skill, curFighter.creature, curFighter.stats.attack);
+    const playerDamage = computePlayerDamage(skillDamage, multiplier);
 
     const opponentSkill = pickOpponentAttack();
     opponentEnduranceRef.current = Math.max(0, opponentEnduranceRef.current - opponentSkill.enduranceCost);
     setOpponentEndurance(opponentEnduranceRef.current);
+    const opponentDamage = opponentSkill.isBasic
+      ? opponentSkill.damage
+      : Math.round(scaledSkillDamage(opponentSkill, opponent, opponentStats.attack));
 
-    const curIdx = activeIndexRef.current;
-    const curFighter = fightersRef.current[curIdx];
-    const result = resolveRound(curFighter.hp, opponentHpRef.current, opponentSkill.damage, playerDamage);
+    const result = resolveRound(curFighter.hp, opponentHpRef.current, opponentDamage, playerDamage);
 
     const newFighters = fightersRef.current.map((f, i) => (i === curIdx ? { ...f, hp: result.playerHp } : f));
     fightersRef.current = newFighters;
