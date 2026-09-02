@@ -141,6 +141,17 @@ export const CREATURES = [
     stages: [
     { name: 'Solarion', emoji: '🌟' }, { name: 'Solarion', emoji: '🌟' }, { name: 'Solarion', emoji: '🌟' },
   ]},
+  // Première créature qui AGRANDIT le roster (29/08) — plus rien à
+  // remplacer, le roster passe de 11 à 12. Pas de contrainte d'ordre par
+  // rapport à la liste des 25 : les créatures suivantes s'ajoutent dans
+  // l'ordre où l'utilisateur les envoie.
+  { id: 'aquamira', element: 'Eau', rarity: 'peu_commun', baseIncome: 0.2, combatType: 'soutien',
+    baseHp: 25, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Onde Apaisante', 2, 10], ['Brume Corallienne', 3, 15], ['Étreinte Aqueuse', 4, 20], ['Geyser Revigorant', 5, 30]]),
+    lore: "Aquamira est une méduse cristalline qui flotte gracieusement dans les récifs coralliens sacrés. Ses tentacules diffusent des ondes curatives qui apaisent les blessures de ses alliés au combat. En cas de menace, elle sécrète une brume marine pour désorienter ses adversaires.",
+    stages: [
+    { name: 'Aquamira', emoji: '🎐' }, { name: 'Aquamira', emoji: '🎐' }, { name: 'Aquamira', emoji: '🎐' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -236,6 +247,8 @@ export const CREATURE_POWERS = {
   ombrillon: { name: 'Éclipse', effectType: 'coins_burst', effectValue: 25 },
   luxorbe: { name: 'Rayonnement', effectType: 'passive_boost', effectValue: 3 },
   fournax: { name: 'Résonance Cristalline', effectType: 'coins_burst', effectValue: 75 },
+  aquamira: { name: 'Marée Curative', effectType: 'passive_boost', effectValue: 2 },
+  solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
 // Calcule le pouvoir déclenché en tapant une créature apparue. Le bonus de
