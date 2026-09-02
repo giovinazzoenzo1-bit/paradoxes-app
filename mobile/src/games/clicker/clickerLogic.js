@@ -203,6 +203,13 @@ export const CREATURES = [
     stages: [
     { name: 'Runicor', emoji: '🗿' }, { name: 'Runicor', emoji: '🗿' }, { name: 'Runicor', emoji: '🗿' },
   ]},
+  { id: 'braiserose', element: 'Feu', rarity: 'rare', baseIncome: 0.4, combatType: 'soutien',
+    baseHp: 45, baseAttack: 4, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Pétale Ardent', 3, 10], ['Nuage de Cendres', 4, 15], ['Chaleur Réconfortante', 5, 25], ['Cautérisation Vitale', 7, 35]]),
+    lore: "Cette étrange fleur volcanique s'épanouit uniquement dans les cratères bouillonnants et diffuse une chaleur réconfortante. Ses pétales rougeoyants libèrent des spores curatives capables de cautériser instantanément les blessures de ses alliés. Pacifique par nature, elle utilise sa suie incandescente pour aveugler quiconque menace son groupe.",
+    stages: [
+    { name: 'Braiserose', emoji: '🌺' }, { name: 'Braiserose', emoji: '🌺' }, { name: 'Braiserose', emoji: '🌺' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -306,6 +313,7 @@ export const CREATURE_POWERS = {
   nocturis: { name: 'Éclipse Curative', effectType: 'passive_boost', effectValue: 3 },
   racinea: { name: 'Éclosion Vitale', effectType: 'passive_boost', effectValue: 3 },
   runicor: { name: 'Sceau Protecteur', effectType: 'coins_burst', effectValue: 20 },
+  braiserose: { name: 'Cautérisation Vitale', effectType: 'passive_boost', effectValue: 3 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
