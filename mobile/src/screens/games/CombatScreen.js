@@ -10,7 +10,7 @@
 // intégré dans ce projet). Pas d'animation pour l'instant, on garde les
 // emojis actuels comme "skins". Croix pour quitter en haut à gauche.
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
