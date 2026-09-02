@@ -307,7 +307,13 @@ export function incomeForCreature(creature, level) {
 // Coût (en pièces) pour faire passer une créature possédée du niveau
 // `level` à `level+1`.
 export function levelUpCost(creature, level) {
-  const rarityFactor = { commun: 1, rare: 1.6, epique: 2.6, legendaire: 4.2 }[creature.rarity];
+  // 6 paliers désormais (ratio ~x1,6 entre chaque, cohérent avec la
+  // progression déjà en place pour commun→rare→épique→légendaire) —
+  // "peu_commun" et "mythique" manquaient ici depuis le passage aux 6
+  // paliers de rareté, ce qui rendait le coût NaN (donc le nourrissage
+  // impossible) pour TOUTE créature de ces deux raretés, pas seulement
+  // les Mythiques.
+  const rarityFactor = { commun: 1, peu_commun: 1.3, rare: 1.6, epique: 2.6, legendaire: 4.2, mythique: 6.7 }[creature.rarity];
   return Math.round(8 * Math.pow(level, 1.35) * rarityFactor);
 }
 
@@ -338,8 +344,12 @@ export const SPAWN_VISIBLE_SEC = 4;
 //  - coins_burst : bonus de pièces immédiat à l'activation
 //  - passive_boost : multiplie le revenu passif pendant la durée du pouvoir
 //  - discount_next : réduit le coût du prochain achat (tap/invocation/nourrir)
-const RARITY_TAP_MULTIPLIER = { commun: 2, rare: 3, epique: 5, legendaire: 10 };
-const RARITY_DURATION_SEC = { commun: 10, rare: 10, epique: 15, legendaire: 15 };
+// Même piège que levelUpCost : ces deux mappages ne connaissaient que 4
+// raretés sur 6, donnant undefined (puis NaN en aval) pour les créatures
+// Peu Commun/Mythique — corrigé en même temps, avant qu'un joueur tombe
+// sur ce bug via une bulle de pouvoir plutôt qu'en le découvrant plus tard.
+const RARITY_TAP_MULTIPLIER = { commun: 2, peu_commun: 2.5, rare: 3, epique: 5, legendaire: 10, mythique: 15 };
+const RARITY_DURATION_SEC = { commun: 10, peu_commun: 10, rare: 10, epique: 15, legendaire: 15, mythique: 15 };
 
 export const CREATURE_POWERS = {
   pyrosile: { name: 'Éruption', effectType: 'coins_burst', effectValue: 8 },

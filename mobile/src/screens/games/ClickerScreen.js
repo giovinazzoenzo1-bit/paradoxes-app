@@ -1073,7 +1073,7 @@ function QuestsView({ activeQuestIds, questStats, eggPhase, hatchTaps, captureTa
 
       {rewardCreature && (
         <View style={styles.detailOverlay}>
-          <View style={styles.detailPanel}>
+          <View style={styles.rewardPanel}>
             <Text style={styles.detailEmoji}>{rewardCreature.stages[0].emoji}</Text>
             <Text style={styles.detailName}>Capturé !</Text>
             <Text style={[styles.creatureRarity, { color: RARITY_COLOR[rewardCreature.rarity] }]}>
@@ -1163,7 +1163,13 @@ function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscou
       <TouchableOpacity style={styles.detailClose} onPress={onClose}>
         <Text style={styles.detailCloseText}>✕</Text>
       </TouchableOpacity>
-      <ScrollView style={styles.detailPanel} contentContainerStyle={{ alignItems: 'center' }}>
+      {/* maxHeight sur un View englobant plutôt que directement sur le
+          ScrollView — plus fiable en React Native (le pourcentage sur un
+          ScrollView peut ne pas se calculer correctement selon les
+          versions), c'est ce qui empêchait de défiler jusqu'au bouton
+          "Nourrir" en bas de la fiche. */}
+      <View style={styles.detailPanelWrap}>
+        <ScrollView style={styles.detailPanel} contentContainerStyle={styles.detailPanelContent}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <View style={{ alignItems: 'center' }}>
             <View style={[styles.rarityBadgeSmall, { backgroundColor: RARITY_COLOR[creature.rarity] }]}>
@@ -1214,7 +1220,8 @@ function CreatureDetail({ creature, owned, coins, onFeed, onClose, pendingDiscou
           <Text style={styles.feedBtnText}>🍖 Nourrir</Text>
           <Text style={styles.feedBtnCost}>💰 {formatNum(cost)}</Text>
         </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -1523,7 +1530,10 @@ const styles = StyleSheet.create({
   creatureRarity: { fontSize: 8, fontWeight: '800', marginTop: 2, letterSpacing: 0.5 },
 
   detailOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  detailPanel: { width: '100%', maxHeight: '85%', backgroundColor: COLORS.panel, borderRadius: 20, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
+  detailPanelWrap: { width: '100%', maxHeight: '85%' },
+  detailPanel: { width: '100%', backgroundColor: COLORS.panel, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
+  detailPanelContent: { alignItems: 'center', padding: 24, paddingBottom: 40 },
+  rewardPanel: { width: '100%', backgroundColor: COLORS.panel, borderRadius: 20, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
   detailClose: { position: 'absolute', top: 30, right: 30, padding: 6, zIndex: 10 },
   detailCloseText: { color: COLORS.muted, fontSize: 16, fontWeight: '800' },
   detailEmoji: { fontSize: 64 },

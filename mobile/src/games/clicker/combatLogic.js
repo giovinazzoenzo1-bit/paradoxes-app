@@ -42,7 +42,15 @@ export function combatStatsForCreature(creature, level) {
     // La vitesse de clic ne monte PAS avec le niveau (sinon le défi de
     // tap deviendrait trivial en fin de partie) — seule l'endurance suit
     // la même progression que PV/Attaque.
-    clickSpeed: base.clickSpeed,
+    //
+    // TOUJOURS dérivée de la rareté (RARITY_BASE_STATS), jamais de la
+    // valeur donnée par Gemini pour cette créature précise : Gemini a
+    // systématiquement renvoyé "1" pour cette stat sur les 26 créatures
+    // intégrées jusqu'ici (contrairement à PV/ATQ/Endurance qui varient
+    // vraiment), la rendant plate et sans intérêt. La progression par
+    // rareté (1,0 → 1,2 → 1,4 → 1,8 → 2,2 → 2,8) est déjà cohérente et
+    // logique, on s'y appuie systématiquement à la place.
+    clickSpeed: RARITY_BASE_STATS[creature.rarity].clickSpeed,
     endurance: Math.round(base.endurance * levelMult),
   };
 }
@@ -81,7 +89,9 @@ export function opponentStatsForLevel(levelNumber) {
   return {
     hp: Math.round(base.hp * growth),
     attack: Math.round(base.attack * growth),
-    clickSpeed: base.clickSpeed,
+    // Voir combatStatsForCreature : toujours dérivée de la rareté, jamais
+    // de la valeur Gemini (systématiquement 1, donc plate/inutile).
+    clickSpeed: RARITY_BASE_STATS[creature.rarity].clickSpeed,
     endurance: Math.round(base.endurance * growth),
   };
 }
