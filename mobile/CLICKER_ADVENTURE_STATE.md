@@ -198,35 +198,41 @@ tout ce que l'Ascension réinitialise.
 jamais dans la sauvegarde d'Aventure, c'est `AdventureScreen` qui
 encaisse à sa prochaine ouverture.
 
-### Calibrage du gain de Griffes (mesuré)
+### Calibrage du gain de Griffes
 
-Coûts réels relevés avant de choisir : évolution palier 1 = 40 Griffes,
-palier 2 = 100, soit **140 pour une créature menée à fond** et **3 640
-pour la collection complète** (26 créatures). Une rune coûte 100.
+Gain en **racine carrée** : rapide au début, de plus en plus lent.
+`ASCENSION_GRIFFES_BASE = 60`.
 
-La 1re Ascension donne **150 Griffes** : de quoi évoluer entièrement une
-créature immédiatement, donc une récompense tout de suite lisible.
-Ensuite le gain suit une **racine carrée**, pas une droite.
+| Ascension | Griffes | Cumul | Équivaut à |
+|---|---|---|---|
+| 1 | 60 | 60 | 1,5 évolution palier 1 |
+| 3 | 104 | 249 | 2,5 runes |
+| 5 | 134 | 503 | 5 runes |
+| 10 | 190 | 1 349 | 13,5 runes |
 
-Le linéaire (+75 par Ascension) avait été essayé d'abord **et mesuré** :
-au bout de 10 Ascensions il donnait de quoi évoluer 35 créatures pour une
-collection qui n'en compte que 26. L'amélioration ne ralentissait donc
-pas, elle **s'épuisait** — le joueur atteignait le plafond du contenu et
-les Griffes perdaient tout usage. En racine :
+**Ne PAS calibrer sur « une créature menée au palier maximum ».** C'était
+le premier repère utilisé (base 150) et il est mauvais pour deux
+raisons : des paliers d'évolution supplémentaires sont prévus, donc ce
+plafond va bouger ; et s'y caler revenait à garantir au joueur de tout
+débloquer en N Ascensions, ce qui vide les Griffes de leur valeur.
 
-| Ascension | Griffes | Cumul | Créatures évoluables | Vitesse |
-|---|---|---|---|---|
-| 1 | 150 | 150 | 1,1 / 26 | x1,30 |
-| 3 | 260 | 622 | 4,4 / 26 | x2,20 |
-| 5 | 335 | 1 257 | 9,0 / 26 | x3,71 |
-| 10 | 474 | 3 369 | 24,1 / 26 | x13,79 |
+Le bon repère est le **combat** : ~410 Griffes pour les 20 premiers
+niveaux d'Aventure. L'Ascension est un COMPLÉMENT à ce revenu, pas sa
+source principale — elle donne l'équivalent de quelques victoires, de
+quoi débloquer une évolution en attente, pas de quoi s'acheter la
+collection. Les tests vérifient ce rapport plutôt qu'un nombre de
+créatures évoluées.
 
-Rapide au début, de plus en plus lent, jamais saturé.
+### Où se trouve l'amélioration des créatures
 
-⚠️ **Ce calibrage dépend du système d'amélioration actuel** (2 paliers
-d'évolution par créature, plafond à 3 640 Griffes). Il sera à revoir en
-même temps que la refonte de l'amélioration des créatures — un système
-sans plafond changerait complètement le budget cible.
+Question posée pendant cette MAJ : il n'existe pas de bouton dédié, le
+chemin est **Aventure → taper une créature du deck → carte « Évolution »**
+(`CreatureDetailScreen` / `EvolutionCard` dans `AdventureScreen.js`).
+
+Le bouton n'apparaît que si la créature atteint le niveau requis
+(`EVOLUTION_LEVEL_REQUIREMENT = [0, 25, 50]`) : sous le niveau 25, la
+carte affiche seulement « Atteins le niveau 25 pour débloquer ce palier ».
+C'est pour cela que l'amélioration semble absente en début de partie.
 
 ### Reste à faire
 

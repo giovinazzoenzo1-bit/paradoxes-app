@@ -700,22 +700,20 @@ export function ascensionSpeedMultiplier(ascensionCount) {
 
 // Griffes offertes par la n-ième Ascension (n commence à 1).
 //
-// Calibré sur le coût RÉEL d'amélioration d'une créature : palier 1 =
-// 40 Griffes, palier 2 = 100, soit 140 pour une créature menée à fond,
-// et 3 640 pour toute la collection (26 créatures).
+// Le gain suit une RACINE CARRÉE : rapide au début, de plus en plus lent.
 //
-// La 1re Ascension donne 150 Griffes : de quoi évoluer entièrement une
-// créature immédiatement, donc une récompense tout de suite lisible.
-// Le gain suit ensuite une RACINE CARRÉE, pas une droite.
+// Volontairement calibré BAS, et surtout PAS sur « le coût d'une créature
+// menée au palier maximum ». Ce repère était mauvais pour deux raisons :
+// des paliers d'évolution supplémentaires sont prévus, donc ce plafond
+// va bouger ; et se caler dessus revenait à garantir au joueur de tout
+// débloquer en N Ascensions, ce qui vide les Griffes de leur valeur.
 //
-// Le linéaire avait été essayé d'abord (+75 par Ascension) et mesuré :
-// au bout de 10 Ascensions il donnait de quoi évoluer 35 créatures pour
-// une collection qui n'en compte que 26. L'amélioration ne ralentissait
-// donc pas, elle s'épuisait — le joueur atteignait le plafond du contenu
-// et les Griffes perdaient tout usage. En racine, 10 Ascensions cumulent
-// ~3 370 Griffes, soit un peu moins que la collection complète : rapide
-// au début, de plus en plus lent, et jamais saturé.
-export const ASCENSION_GRIFFES_BASE = 150;
+// L'Ascension est un COMPLÉMENT au revenu de Griffes, pas sa source
+// principale : celle-ci reste le combat en Aventure (~410 Griffes pour
+// les 20 premiers niveaux). Une Ascension donne ici l'équivalent de
+// quelques victoires, de quoi débloquer une évolution en attente, pas de
+// quoi s'acheter la collection.
+export const ASCENSION_GRIFFES_BASE = 60;
 export function ascensionGriffesReward(ascensionNumber) {
   const n = Number.isFinite(ascensionNumber) ? Math.max(1, Math.floor(ascensionNumber)) : 1;
   return Math.round(ASCENSION_GRIFFES_BASE * Math.sqrt(n));
