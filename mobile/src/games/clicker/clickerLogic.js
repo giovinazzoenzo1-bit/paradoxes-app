@@ -826,27 +826,47 @@ export const QUEST_POOL = [
     label: (t) => `Possède ${t} créatures différentes` },
   { id: 'own3', family: 'collection', icon: '🐣', metric: 'ownedCount', mode: 'absolute', step: 3, minStep: 3,
     label: (t) => `Possède ${t} créatures différentes` },
+  // Nourrir suppose d'avoir au moins une créature à nourrir.
   { id: 'feed5', family: 'collection', icon: '🍖', metric: 'maxCreatureLevel', mode: 'absolute', step: 5, minStep: 5,
+    available: (s) => (s.ownedCount || 0) >= 1,
     label: (t) => `Nourris une créature jusqu'au niveau ${t}` },
   { id: 'feed15', family: 'collection', icon: '🍖', metric: 'maxCreatureLevel', mode: 'absolute', step: 15, minStep: 15,
+    available: (s) => (s.ownedCount || 0) >= 1 && (s.maxCreatureLevel || 0) >= 5,
     label: (t) => `Nourris une créature jusqu'au niveau ${t}` },
   { id: 'essence5', family: 'collection', icon: '🌟', metric: 'essence', mode: 'absolute', step: 5, minStep: 5,
     available: (s) => (s.essence || 0) > 0,
     label: (t) => `Accumule ${t} points d'essence` },
 
   // ---------- Défis Aventure ----------
+  //
+  // BUG RÉEL (signalé après une réinitialisation de progression) : ces
+  // défis étaient proposés à un joueur tout neuf, qui recevait « gagne 3
+  // combats » et « équipe une rune » alors qu'il n'avait AUCUNE créature.
+  // Le bouton Combattre d'AdventureScreen est désactivé quand le deck
+  // est vide (« Deck vide ») : l'œuf devenait donc définitivement
+  // inéclosable. Chaque défi porte maintenant sa vraie précondition, et
+  // la chaîne complète est respectée :
+  //   créature dans le deck -> combats -> Griffes -> achat de rune ->
+  //   équipement de rune
   { id: 'advWin3', family: 'adventure', icon: '⚔️', metric: 'battleWon', target: 3, mode: 'delta',
+    available: (s) => (s.deckCount || 0) >= 1,
     label: (t) => `Gagne ${t} combats en Aventure` },
   { id: 'advWin10', family: 'adventure', icon: '⚔️', metric: 'battleWon', target: 10, mode: 'delta',
-    available: (s) => (s.battleWon || 0) >= 3,
+    available: (s) => (s.deckCount || 0) >= 1 && (s.battleWon || 0) >= 3,
     label: (t) => `Gagne ${t} combats en Aventure` },
-  { id: 'advEquipRune2', family: 'adventure', icon: '🪬', metric: 'runeEquipped', target: 2, mode: 'delta',
-    label: (t) => `Équipe ${t} runes sur tes créatures (Aventure)` },
+  // Les runes s'achètent avec des Griffes, qui ne s'obtiennent qu'en
+  // gagnant des combats : exiger un combat déjà gagné, pas seulement une
+  // créature.
   { id: 'advBuyRune1', family: 'adventure', icon: '🛒', metric: 'runeBought', target: 1, mode: 'delta',
+    available: (s) => (s.deckCount || 0) >= 1 && (s.battleWon || 0) >= 1,
     label: (t) => `Achète ${t} rune en Aventure` },
   { id: 'advBuyRune5', family: 'adventure', icon: '🛒', metric: 'runeBought', target: 5, mode: 'delta',
-    available: (s) => (s.runeBought || 0) >= 1,
+    available: (s) => (s.deckCount || 0) >= 1 && (s.runeBought || 0) >= 1,
     label: (t) => `Achète ${t} runes en Aventure` },
+  // On ne peut équiper une rune qu'après en avoir acheté une.
+  { id: 'advEquipRune2', family: 'adventure', icon: '🪬', metric: 'runeEquipped', target: 2, mode: 'delta',
+    available: (s) => (s.deckCount || 0) >= 1 && (s.runeBought || 0) >= 1,
+    label: (t) => `Équipe ${t} runes sur tes créatures (Aventure)` },
 ];
 
 // Lit une métrique dans l'objet de stats. Les métriques paramétrées

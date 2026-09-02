@@ -86,6 +86,42 @@ de coût du jeu** plutôt qu'en estimant :
 - **`available(stats)`** filtre les défis absurdes : pas de « possède 30
   Étoiles Filantes » à qui n'a pas les moyens du premier générateur, pas
   de défi de crit sans Faveur des Esprits.
+
+### Préconditions : un défi injouable bloque l'œuf POUR TOUJOURS
+
+**Bug réel signalé** après une réinitialisation de progression : le
+premier cycle contenait « gagne 3 combats en Aventure » et « équipe une
+rune » alors que le joueur n'avait aucune créature. `AdventureScreen`
+désactive le bouton de combat quand le deck est vide (« Deck vide ») :
+le défi était donc impossible, et l'œuf ne pouvait plus jamais éclore.
+
+C'est la classe de bug la plus grave de ce système : un seul défi
+infaisable dans un jeu de 4 gèle définitivement toute la boucle de
+progression du clicker. **Tout défi qui dépend d'une mécanique
+extérieure au clicker doit porter sa précondition.**
+
+Chaîne de dépendances désormais respectée :
+
+```
+créature dans le DECK -> combats gagnés -> Griffes -> achat de rune -> équipement de rune
+```
+
+- `deckCount` (créatures réellement placées dans le deck) a été ajouté
+  aux stats. C'est LUI qui décide si l'Aventure est jouable, pas
+  `ownedCount` : posséder des créatures sans en placer une ne suffit pas.
+- `feed*` exige de posséder une créature ; `feed15` exige le niveau 5.
+- **Trois filets de sécurité**, parce qu'un seul ne couvre pas tout :
+  1. au **tirage** — `available()` écarte les défis injouables ;
+  2. au **chargement** — les défis sauvegardés dont la précondition
+     n'est plus remplie sont remplacés un par un, les autres étant
+     conservés pour ne pas effacer la progression en cours. C'est ce qui
+     répare les sauvegardes déjà bloquées ;
+  3. à l'**Ascension** — elle vide deck et collection, donc le cycle est
+     entièrement retiré (ses cibles chiffrées, calculées sur l'ancien
+     revenu, seraient de toute façon absurdes après un reset à zéro).
+
+Vérifié : sur 5 000 tirages pour un joueur vierge, aucun défi injouable ;
+25 défis distincts restent disponibles au démarrage.
 - **Variété imposée au tirage** : une seule métrique par défi et au plus
   **2 défis par famille** (economy / core / action / collection /
   upgrade / autoclicker / adventure). Sans ça le tirage sortait quatre

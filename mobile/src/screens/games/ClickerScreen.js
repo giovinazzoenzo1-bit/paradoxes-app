@@ -292,7 +292,6 @@ export default function ClickerScreen({ onBack }) {
           const savedQuests = (saved.activeQuestIds || []).filter((id) => QUEST_POOL.some((q) => q.id === id));
           const savedTargets = saved.questTargets || {};
           if (savedQuests.length === QUEST_SET_SIZE) {
-            setActiveQuestIds(savedQuests);
             // Sauvegardes d'AVANT les cibles dynamiques : aucune cible
             // stockée. On les résout une fois à partir des stats
             // chargées, puis elles sont figées comme les autres — sans
@@ -311,14 +310,33 @@ export default function ClickerScreen({ onBack }) {
               critLevel: saved.critLevel || 0,
               essence: saved.essence || 0,
               ownedCount: (saved.owned || []).length,
+              deckCount: (saved.deck || []).filter(Boolean).length,
               maxCreatureLevel: (saved.owned || []).reduce((m, o) => Math.max(m, o.level || 0), 0),
               autoTotal: Object.values(saved.autoClickers || {}).reduce((a, b) => a + (b || 0), 0),
             };
+            // Un défi sauvegardé peut être devenu INFAISABLE : c'est le
+            // cas signalé après une réinitialisation, où « gagne 3
+            // combats » avait été tiré alors que le joueur n'avait
+            // aucune créature — l'Aventure refusant de démarrer sur un
+            // deck vide, l'œuf ne pouvait plus jamais éclore. On
+            // remplace ici les défis dont la précondition n'est plus
+            // remplie, un par un, en gardant les autres intacts pour ne
+            // pas effacer la progression déjà faite.
+            const stillOk = savedQuests.filter((id) => {
+              const q = QUEST_POOL.find((x) => x.id === id);
+              return !q.available || q.available(statsAtLoad);
+            });
+            let finalQuests = savedQuests;
+            if (stillOk.length < savedQuests.length) {
+              const replacements = pickQuestSet(stillOk, statsAtLoad).ids.filter((id) => !stillOk.includes(id));
+              finalQuests = [...stillOk, ...replacements].slice(0, QUEST_SET_SIZE);
+            }
             const resolved = {};
-            savedQuests.forEach((id) => {
+            finalQuests.forEach((id) => {
               const q = QUEST_POOL.find((x) => x.id === id);
               resolved[id] = savedTargets[id] || resolveQuestTarget(q, statsAtLoad);
             });
+            setActiveQuestIds(finalQuests);
             setQuestTargets(resolved);
           } else {
             const fresh = pickQuestSet(savedQuests, { totalEarned: saved.totalEarned || 0 });
@@ -715,6 +733,36 @@ export default function ClickerScreen({ onBack }) {
             setDeck([null, null, null]);
             setActivePower(null);
             setPendingDiscount(null);
+            // L'Ascension vide le deck et la collection. Un défi tiré
+            // AVANT (« gagne 3 combats », « nourris une créature »)
+            // deviendrait infaisable jusqu'à ce que le joueur réinvoque
+            // une créature — et ses cibles chiffrées, calculées sur
+            // l'ancien revenu, seraient de toute façon absurdes après un
+            // reset à zéro. On repart donc d'un cycle neuf, tiré sur les
+            // stats d'après-Ascension.
+            const statsAfterAscension = {
+              totalEarned: 0, coins: 0, passiveIncome: 0, tapPower: 1,
+              autoClickers: {}, autoTotal: 0, upgradeLevels: upgradeLevelsRef.current,
+              sanctuaryLevel: 0, veilleurLevel: 0, critLevel: 0,
+              essence: essenceRef.current + essenceGainPreview,
+              ownedCount: 0, deckCount: 0, maxCreatureLevel: 0,
+              maxCombo: Math.round(maxComboRef.current * 10),
+              totalSummons: totalSummonsRef.current,
+              totalCrits: totalCritsRef.current,
+              goldenClaimed: goldenClaimedRef.current,
+              battleWon: lifetimeStats.battleWon || 0,
+              runeEquipped: lifetimeStats.runeEquipped || 0,
+              runeBought: lifetimeStats.runeBought || 0,
+            };
+            const freshSet = pickQuestSet([], statsAfterAscension);
+            setActiveQuestIds(freshSet.ids);
+            setQuestTargets(freshSet.targets);
+            setQuestBaseline(statsAfterAscension);
+            setEggPhase('collecting');
+            setHatchTaps(0);
+            setCaptureTaps(0);
+            hatchTapsRef.current = 0;
+            captureTapsRef.current = 0;
           },
         },
       ]
@@ -777,6 +825,10 @@ export default function ClickerScreen({ onBack }) {
     critLevel,
     essence,
     ownedCount: owned.length,
+    // Nombre de créatures réellement placées dans le deck : c'est CETTE
+    // valeur, pas `ownedCount`, qui décide si l'Aventure est jouable
+    // (AdventureScreen désactive le combat sur « Deck vide »).
+    deckCount: deck.filter(Boolean).length,
     // Compteurs Aventure À VIE (DailyContext).
     battleWon: lifetimeStats.battleWon || 0,
     runeEquipped: lifetimeStats.runeEquipped || 0,
@@ -876,6 +928,7 @@ export default function ClickerScreen({ onBack }) {
           critLevel: critLevelRef.current,
           essence: essenceRef.current,
           ownedCount: ownedRef.current.length,
+          deckCount: deckRef.current.filter(Boolean).length,
           maxCreatureLevel: ownedRef.current.reduce((m, o) => Math.max(m, o.level || 0), 0),
           maxCombo: Math.round(maxComboRef.current * 10),
           totalSummons: totalSummonsRef.current,
