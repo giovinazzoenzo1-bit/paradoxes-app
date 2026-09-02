@@ -372,6 +372,12 @@ function pathDots(p0, p1, count = 7) {
 function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelWon, onBack }) {
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
+  // TOUJOURS appelé avant tout retour anticipé (règle des Hooks React) —
+  // c'était placé après le "if (activeBattle) return" et faisait planter
+  // l'appli ("Rendered fewer hooks than expected") dès qu'on
+  // entrait/sortait d'un combat, puisque le nombre de Hooks exécutés
+  // différait d'un rendu à l'autre selon activeBattle.
+  const { width: screenWidth } = useWindowDimensions();
 
   // Combat en cours — retour anticipé, même schéma que le reste de
   // l'écran Aventure. L'équipe entière (les 3 créatures du deck, dans
@@ -409,7 +415,6 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
   // combatLogic.js/opponentPowerBudget).
   const currentChapter = chapterForLevel(currentUnlockedLevel);
   const chaptersToShow = currentChapter + 6;
-  const { width: screenWidth } = useWindowDimensions();
   const pathWidth = screenWidth - 28; // marges de l'écran (padding: 14 de chaque côté)
   const chapterHeight = (LEVELS_PER_CHAPTER - 1) * ROW_HEIGHT + LEVEL_NODE_SIZE * 2;
 
@@ -425,7 +430,17 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
 
       <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
         {Array.from({ length: chaptersToShow }, (_, chapterIdx) => chapterIdx + 1).map((chapterNum) => {
-          const positions = Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) => nodePosition(i));
+          // Positions converties en PIXELS tout de suite (x ET y dans la
+          // même unité) — un vrai bug avait laissé x en fraction (0-1) et
+          // y déjà en pixels, ce qui envoyait les points de contrôle des
+          // courbes très loin hors écran (le calcul de perpendiculaire
+          // mélangeait des échelles totalement différentes) : les
+          // pointillés étaient bien calculés, juste invisibles car
+          // positionnés à des milliers de pixels du cadre visible.
+          const positions = Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) => {
+            const p = nodePosition(i);
+            return { x: p.x * pathWidth, y: p.y };
+          });
           return (
             <View key={chapterNum} style={styles.chapterBlock}>
               <Text style={styles.chapterTitle}>Chapitre {chapterNum}</Text>
@@ -439,7 +454,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
                       key={`dot-${i}-${di}`}
                       style={[
                         styles.pathDot,
-                        { left: d.x * pathWidth - 3, top: d.y - 3 },
+                        { left: d.x - 3, top: d.y - 3 },
                       ]}
                     />
                   ));
@@ -453,7 +468,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
                       key={levelNum}
                       style={[
                         styles.levelNode,
-                        { left: pos.x * pathWidth - LEVEL_NODE_SIZE / 2, top: pos.y - LEVEL_NODE_SIZE / 2 },
+                        { left: pos.x - LEVEL_NODE_SIZE / 2, top: pos.y - LEVEL_NODE_SIZE / 2 },
                         state === 'current' && styles.levelNodeCurrent,
                         state === 'done' && styles.levelNodeDone,
                       ]}
