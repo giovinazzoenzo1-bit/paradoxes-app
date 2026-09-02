@@ -238,6 +238,13 @@ export const CREATURES = [
     stages: [
     { name: 'Solstral', emoji: '🌠' }, { name: 'Solstral', emoji: '🌠' }, { name: 'Solstral', emoji: '🌠' },
   ]},
+  { id: 'tartaroth', element: 'Ténèbres', rarity: 'legendaire', baseIncome: 2.5, combatType: 'tank',
+    baseHp: 180, baseAttack: 20, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([["Frappe de l'Ombre", 15, 15], ['Mur des Âmes', 25, 25], ['Attraction Funeste', 35, 35], ['Écrasement Abyssal', 50, 50]]),
+    lore: "Tartaroth est un béhémoth d'obsidienne forgé dans les fosses les plus sombres pour engloutir toute source de lumière. Véritable trou noir sur le champ de bataille, il absorbe les attaques ennemies tout en se nourrissant de leur désespoir. Sa simple présence dresse un mur impénétrable de ténèbres absolues pour protéger infailliblement ses alliés.",
+    stages: [
+    { name: 'Tartaroth', emoji: '👹' }, { name: 'Tartaroth', emoji: '👹' }, { name: 'Tartaroth', emoji: '👹' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -347,6 +354,7 @@ export const CREATURE_POWERS = {
   cumulox: { name: 'Rejet Stratosphérique', effectType: 'coins_burst', effectValue: 40 },
   voltarel: { name: 'Défibrillation Foudroyante', effectType: 'passive_boost', effectValue: 4 },
   solstral: { name: 'Supernova Jugement', effectType: 'coins_burst', effectValue: 90 },
+  tartaroth: { name: 'Écrasement Abyssal', effectType: 'coins_burst', effectValue: 90 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
