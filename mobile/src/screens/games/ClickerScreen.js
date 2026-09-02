@@ -65,6 +65,14 @@ import { COLORS } from './clickerTheme';
 import { DeckPicker } from './DeckPicker';
 
 export const STORAGE_KEY = 'clicker:state:v1';
+// Copie de la dernière sauvegarde brute quand un chargement échoue —
+// restaurable depuis Options (voir OptionsScreen.js).
+export const BACKUP_KEY = 'clicker:state:v1:backup';
+// Drapeau posé par le bouton dev "Débloquer tous les monstres" (Options) :
+// le clicker le lit au chargement et fait la fusion LUI-MÊME dans son
+// état en mémoire, puis l'efface. Options n'écrit plus jamais directement
+// dans la sauvegarde principale — zéro risque de course/corruption.
+export const DEV_UNLOCK_ALL_KEY = 'clicker:dev:unlockAll';
 
 function formatNum(n) {
   if (!Number.isFinite(n)) return '0'; // garde-fou : jamais NaN/Infinity affiché
@@ -152,6 +160,7 @@ export default function ClickerScreen({ onBack }) {
   captureTapsRef.current = captureTaps;
   const popupIdRef = useRef(0);
   const saveTimeoutRef = useRef(null);
+  const saveBlockedRef = useRef(false); // true si le chargement a échoué — plus aucune écriture (protège la sauvegarde sur disque)
   const viewRef = useRef('tap');
   viewRef.current = view;
   const spawnedCreatureRef = useRef(null);
@@ -238,8 +247,33 @@ export default function ClickerScreen({ onBack }) {
           setCaptureTaps(saved.captureTaps || 0);
           if (offline > 5) setWelcomeBack(offline);
         }
+        // Drapeau dev "Débloquer tous les monstres" (posé depuis Options) :
+        // fusion faite ICI, dans l'état en mémoire, puis persistée par la
+        // sauvegarde normale — jamais d'écriture directe depuis Options.
+        // Placé HORS du if(raw) pour marcher aussi sur une install vierge.
+        // N'écrase jamais une créature déjà possédée (niveau/palier gardés).
+        const unlockFlag = await AsyncStorage.getItem(DEV_UNLOCK_ALL_KEY);
+        if (unlockFlag === '1') {
+          setOwned((prev) => {
+            const haveIds = new Set(prev.map((o) => o.id));
+            const missing = CREATURES.filter((c) => !haveIds.has(c.id)).map((c) => ({ id: c.id, level: 1, evolutionTier: 0 }));
+            return [...prev, ...missing];
+          });
+          await AsyncStorage.removeItem(DEV_UNLOCK_ALL_KEY);
+        }
       } catch (e) {
-        // pas de sauvegarde valide, on démarre à zéro
+        // Chargement raté (JSON abîmé, donnée inattendue…). AVANT (bug
+        // réel de "remise à zéro") : on repartait de zéro en mémoire, puis
+        // la sauvegarde automatique ÉCRASAIT la sauvegarde encore valide
+        // sur disque avec ces zéros → perte définitive. Désormais on
+        // bloque toute écriture pour cette session, et la sauvegarde
+        // brute est copiée dans une clé de secours restaurable depuis
+        // Options.
+        saveBlockedRef.current = true;
+        try {
+          const raw = await AsyncStorage.getItem(STORAGE_KEY);
+          if (raw) await AsyncStorage.setItem(BACKUP_KEY, raw);
+        } catch (_) {}
       }
       setLoaded(true);
     })();
@@ -247,7 +281,7 @@ export default function ClickerScreen({ onBack }) {
 
   // Sauvegarde (avec un léger anti-rebond pour ne pas écrire à chaque tap).
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || saveBlockedRef.current) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       AsyncStorage.setItem(
@@ -267,9 +301,16 @@ export default function ClickerScreen({ onBack }) {
     activeQuestIds, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
-  // Sauvegarde immédiate à la sortie de l'écran.
+  // Sauvegarde immédiate à la sortie de l'écran. Annule d'abord le
+  // minuteur anti-rebond encore en attente : sans ça, une écriture
+  // OBSOLÈTE pouvait partir ~600ms après avoir quitté l'écran et écraser
+  // ce qu'un autre écran (ex: le bouton "Débloquer tous les monstres" des
+  // Options) venait de modifier dans le stockage. Et jamais d'écriture si
+  // le chargement avait échoué (voir saveBlockedRef).
   useEffect(() => {
     return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (saveBlockedRef.current) return;
       AsyncStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
