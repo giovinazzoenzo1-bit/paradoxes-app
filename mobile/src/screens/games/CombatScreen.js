@@ -50,6 +50,27 @@ function firstLivingIndex(fighters) {
   return fighters.findIndex((f) => f.hp > 0);
 }
 
+// Nombre de dégâts flottant, affiché AU-DESSUS de la créature qui vient
+// de subir l'attaque (demande explicite) — monte et s'efface tout seul.
+// Purement décoratif : sa propre animation ne bloque JAMAIS la suite du
+// combat (contrairement à l'ancien bouton "Continuer"), le `key` unique
+// à chaque tour (passé par le parent) le fait juste se remonter et
+// rejouer son animation depuis le début.
+function FloatingDamage({ amount, color }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    anim.setValue(0);
+    Animated.timing(anim, { toValue: 1, duration: 900, useNativeDriver: true }).start();
+  }, [anim]);
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -44] });
+  const opacity = anim.interpolate({ inputRange: [0, 0.75, 1], outputRange: [1, 1, 0] });
+  return (
+    <Animated.Text style={[styles.floatingDamage, { color, opacity, transform: [{ translateY }] }]}>
+      -{amount}
+    </Animated.Text>
+  );
+}
+
 // team : [{ creature, ownedLevel, evolutionTier }, ...] (1 à 3 entrées,
 // dans l'ordre du deck) — voir ChapterMapScreen pour la construction.
 // Formation façon Monster Legends (fractions de la largeur/hauteur de
@@ -102,11 +123,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   // adversaire attaquer, pas une rotation automatique côté adversaire).
   const [targetIndex, setTargetIndex] = useState(0);
 
-  const [phase, setPhase] = useState('choosing'); // 'choosing' | 'tapping' | 'resolving' | 'done'
+  const [phase, setPhase] = useState('choosing'); // 'choosing' | 'tapping' | 'done'
   const [selectedSkill, setSelectedSkill] = useState(null);
   const [tapCount, setTapCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(TAP_CHALLENGE_TIME_LIMIT_SEC);
-  const [lastRound, setLastRound] = useState(null);
   const [switchMessage, setSwitchMessage] = useState(null);
   const [outcome, setOutcome] = useState(null); // null | 'win' | 'lose'
 
@@ -122,13 +142,23 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const challengeStartRef = useRef(0);
   const challengeDoneRef = useRef(false);
   const selectedSkillRef = useRef(null);
-  const pendingTransitionRef = useRef(null);
   const firstStrikeHandledRef = useRef(false);
 
   const punchScale = useRef(new Animated.Value(1)).current;
 
+  // Chiffres de dégâts flottants — purement décoratifs (voir
+  // FloatingDamage plus haut), `roundKey` change à chaque tour pour les
+  // faire rejouer leur animation depuis le début.
+  const [roundKey, setRoundKey] = useState(0);
+  const [opponentDamageFloat, setOpponentDamageFloat] = useState(null);
+  const [playerDamageFloat, setPlayerDamageFloat] = useState(null);
+
   // Pile ou face au tout début du combat : 1 chance sur 2 que
   // l'adversaire frappe en premier, avant le premier choix du joueur.
+  // Transition IMMÉDIATE vers 'choosing' (pas de bouton "Continuer", pas
+  // de minuteur non plus — demande explicite de retirer l'attente, sans
+  // réintroduire le bug de blocage qu'un minuteur avait causé la
+  // dernière fois : ici il n'y a simplement plus RIEN à attendre).
   useEffect(() => {
     if (firstStrikeHandledRef.current) return;
     firstStrikeHandledRef.current = true;
@@ -147,24 +177,25 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     fightersRef.current = newFighters;
     setFighters(newFighters);
 
-    setLastRound({ dmgToOpponent: 0, dmgToPlayer: oppDamage, multiplier: 1, skillName: null, opponentSkillName: oppSkill.name });
+    setRoundKey((k) => k + 1);
+    setOpponentDamageFloat(null);
+    setPlayerDamageFloat(oppDamage);
 
     if (newPlayerHp <= 0) {
       const nextIdx = nextLivingIndex(newFighters, curIdx);
       if (nextIdx === -1) {
-        pendingTransitionRef.current = { type: 'lose' };
-      } else {
-        pendingTransitionRef.current = {
-          type: 'switch',
-          nextIdx,
-          message: `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`,
-        };
+        setOutcome('lose');
+        setPhase('done');
+        return;
       }
+      activeIndexRef.current = nextIdx;
+      setActiveIndex(nextIdx);
+      setSwitchMessage(`${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`);
     } else {
-      pendingTransitionRef.current = { type: 'continue' };
+      setSwitchMessage("L'adversaire attaque en premier !");
     }
-    setSwitchMessage("L'adversaire attaque en premier !");
-    setPhase('resolving');
+    setTimeout(() => setSwitchMessage(null), 2200);
+    setPhase('choosing');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -263,21 +294,19 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     let newOpponents = opponentsRef.current.map((o, i) => (i === targetIdx ? { ...o, hp: newOpponentHp } : o));
 
     let opponentDamage = 0;
-    let opponentSkillName = null;
     if (newOpponentHp > 0) {
       const oppSkill = pickOpponentSkill({ ...opp, hp: newOpponentHp });
       newOpponents = newOpponents.map((o, i) =>
         i === targetIdx ? { ...o, endurance: Math.max(0, o.endurance - oppSkill.enduranceCost) } : o
       );
       opponentDamage = oppSkill.isBasic ? oppSkill.damage : Math.round(scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack));
-      opponentSkillName = oppSkill.name;
     }
     opponentsRef.current = newOpponents;
     setOpponents(newOpponents);
 
     // Si la cible tombe, on repositionne automatiquement la sélection
     // sur le premier adversaire encore vivant — le joueur reste libre de
-    // choisir une AUTRE cible ensuite pendant sa prochaine phase de choix.
+    // choisir une AUTRE cible ensuite (à CHAQUE tour, demande explicite).
     if (newOpponentHp <= 0) {
       const nextTarget = firstLivingIndex(newOpponents);
       if (nextTarget !== -1 && nextTarget !== targetIdx) {
@@ -291,62 +320,49 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     fightersRef.current = newFighters;
     setFighters(newFighters);
 
-    setLastRound({
-      dmgToOpponent: playerDamage,
-      dmgToPlayer: opponentDamage,
-      multiplier,
-      skillName: skill.name,
-      opponentSkillName: opponentDamage > 0 ? opponentSkillName : null,
-    });
-    setPhase('resolving');
+    // Dégâts flottants au-dessus de CHAQUE créature touchée (demande
+    // explicite) — purement décoratif, la suite du combat ne les attend
+    // jamais.
+    setRoundKey((k) => k + 1);
+    setOpponentDamageFloat(playerDamage);
+    setPlayerDamageFloat(opponentDamage > 0 ? opponentDamage : null);
 
+    // Victoire : plus AUCUN adversaire vivant.
     const anyOpponentAlive = newOpponents.some((o) => o.hp > 0);
     if (!anyOpponentAlive) {
-      pendingTransitionRef.current = { type: 'win' };
+      setOutcome('win');
+      setPhase('done');
       return;
     }
 
+    // Le joueur est-il K.O. ?
     if (newPlayerHp <= 0) {
       const nextIdx = nextLivingIndex(newFighters, curIdx);
       if (nextIdx === -1) {
-        pendingTransitionRef.current = { type: 'lose' };
-      } else {
-        pendingTransitionRef.current = {
-          type: 'switch',
-          nextIdx,
-          message: `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`,
-        };
+        setOutcome('lose');
+        setPhase('done');
+        return;
       }
-    } else {
-      const nextIdx = nextLivingIndex(newFighters, curIdx);
-      pendingTransitionRef.current = {
-        type: 'switch',
-        nextIdx,
-        message: `Au tour de ${newFighters[nextIdx].creature.stages[0].name} !`,
-      };
-    }
-  };
-
-  const confirmContinue = () => {
-    const t = pendingTransitionRef.current;
-    if (!t) return;
-    setSwitchMessage(null);
-    if (t.type === 'win') {
-      setOutcome('win');
-      setPhase('done');
-    } else if (t.type === 'lose') {
-      setOutcome('lose');
-      setPhase('done');
-    } else if (t.type === 'switch') {
-      activeIndexRef.current = t.nextIdx;
-      setActiveIndex(t.nextIdx);
-      setSwitchMessage(t.message);
-      setPhase('choosing');
+      activeIndexRef.current = nextIdx;
+      setActiveIndex(nextIdx);
+      setSwitchMessage(`${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`);
       setTimeout(() => setSwitchMessage(null), 2200);
     } else {
-      setPhase('choosing');
+      // Rotation systématique côté joueur, comme avant, à chaque tour.
+      const nextIdx = nextLivingIndex(newFighters, curIdx);
+      activeIndexRef.current = nextIdx;
+      setActiveIndex(nextIdx);
+      setSwitchMessage(`Au tour de ${newFighters[nextIdx].creature.stages[0].name} !`);
+      setTimeout(() => setSwitchMessage(null), 1400);
     }
-    pendingTransitionRef.current = null;
+
+    // Transition IMMÉDIATE vers le prochain choix — plus de bouton
+    // "Continuer" à taper après une attaque du joueur (demande
+    // explicite). Sans minuteur non plus (contrairement à l'ancienne
+    // version qui avait causé un vrai bug de blocage) : ici il n'y a
+    // simplement plus rien à attendre, le passage à 'choosing' est
+    // synchrone avec le calcul du tour.
+    setPhase('choosing');
   };
 
   const confirmQuit = () => {
@@ -364,7 +380,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   // devant (slot 0), les autres remplissent les slots 1 et 2.
   const playerOrder = [activeIndex, ...fighters.map((_, i) => i).filter((i) => i !== activeIndex)];
 
-  const renderSprite = ({ key, slot, emoji, name, hp, hpMax, endurance, enduranceMax, fainted, ring, onPress, disabled, hpColor }) => {
+  const renderSprite = ({ key, slot, emoji, name, hp, hpMax, endurance, enduranceMax, fainted, ring, onPress, disabled, hpColor, floatDamage }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -377,6 +393,11 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         disabled={disabled}
         style={[styles.sprite, { left, top, width: boxW, opacity: fainted ? 0.35 : slot.size < 0.7 ? 0.85 : 1 }]}
       >
+        {floatDamage != null && (
+          <View pointerEvents="none" style={styles.floatingDamageWrap}>
+            <FloatingDamage key={`${key}-${roundKey}`} amount={floatDamage} color="#FF5252" />
+          </View>
+        )}
         <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }, ring === 'active' && styles.ringActive, ring === 'target' && styles.ringTarget]}>
           <Text style={{ fontSize: fs, lineHeight: fs + 12 }}>{emoji}</Text>
         </View>
@@ -418,10 +439,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           hp: f.hp, hpMax: f.stats.hp,
           endurance: fi === activeIndex ? f.endurance : null, enduranceMax: f.stats.endurance,
           fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
+          floatDamage: fi === activeIndex ? playerDamageFloat : null,
         });
       })}
 
-      {/* Équipe adverse — tous tapables pour choisir la cible. */}
+      {/* Équipe adverse — tous tapables pour choisir la cible, à chaque
+          tour (demande explicite), pas seulement une fois par combat. */}
       {opponents.map((o, i) => {
         const d = o.creature.stages[0];
         const fainted = o.hp <= 0;
@@ -430,24 +453,17 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           hp: o.hp, hpMax: o.stats.hp, fainted,
           ring: i === targetIndex && !fainted ? 'target' : null,
           onPress: () => chooseTarget(i), disabled: fainted || phase !== 'choosing', hpColor: '#FF5252',
+          floatDamage: i === targetIndex ? opponentDamageFloat : null,
         });
       })}
 
-      {/* Couche centrale : défi de tap / résultat du tour / bouton Continuer. */}
+      {/* Couche centrale : défi de tap / bannière de tour uniquement —
+          plus de bouton "Continuer" après une attaque du joueur (demande
+          explicite), la transition est immédiate. */}
       <View pointerEvents="box-none" style={styles.centerLayer}>
         {switchMessage && (
           <View style={styles.switchBanner}>
             <Text style={styles.switchBannerText}>{switchMessage}</Text>
-          </View>
-        )}
-        {lastRound && phase === 'resolving' && !switchMessage && (
-          <View style={styles.roundLog}>
-            {lastRound.skillName && (
-              <Text style={styles.roundLogText}>💥 -{lastRound.dmgToOpponent} (x{lastRound.multiplier.toFixed(2)})</Text>
-            )}
-            {lastRound.dmgToPlayer > 0 && (
-              <Text style={[styles.roundLogText, { color: '#FF5252' }]}>🔻 -{lastRound.dmgToPlayer} reçu</Text>
-            )}
           </View>
         )}
         {phase === 'tapping' && (
@@ -463,11 +479,6 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
               <View style={[styles.timeFill, { width: `${(timeLeft / TAP_CHALLENGE_TIME_LIMIT_SEC) * 100}%` }]} />
             </View>
           </>
-        )}
-        {phase === 'resolving' && (
-          <TouchableOpacity style={styles.continueBtn} onPress={confirmContinue}>
-            <Text style={styles.continueBtnText}>Continuer →</Text>
-          </TouchableOpacity>
         )}
       </View>
 
@@ -550,8 +561,6 @@ const styles = StyleSheet.create({
   centerLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
   switchBanner: { backgroundColor: 'rgba(20,10,0,0.85)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1.5, borderColor: COLORS.action, marginBottom: 8 },
   switchBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
-  roundLog: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 8 },
-  roundLogText: { color: COLORS.action, fontSize: 13, fontWeight: '900' },
   chosenSkillLabel: {
     color: COLORS.action, fontSize: 13, fontWeight: '900', marginBottom: 8, textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3,
@@ -565,8 +574,11 @@ const styles = StyleSheet.create({
   tapCountText: { color: '#fff', fontSize: 17, fontWeight: '900', marginTop: 8, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
   timeTrack: { width: 130, height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', marginTop: 6 },
   timeFill: { height: '100%', backgroundColor: COLORS.neonCyan, borderRadius: 3 },
-  continueBtn: { backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 22 },
-  continueBtnText: { color: '#241a00', fontSize: 13, fontWeight: '900' },
+  floatingDamageWrap: { position: 'absolute', top: -26, left: 0, right: 0, alignItems: 'center', zIndex: 15 },
+  floatingDamage: {
+    color: '#FF5252', fontSize: 20, fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 },
+  },
 
   bottomWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 20 },
   hintText: {
