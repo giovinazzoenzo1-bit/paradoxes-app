@@ -688,25 +688,15 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 // touche une 1ère rune pour la sélectionner, touche une 2ème rune
 // compatible pour fusionner automatiquement.
 function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
-  // Mode fusion : DÉSACTIVÉ par défaut (la grille sert juste à consulter
-  // sa collection), activé par un bouton dédié (demande explicite) — tant
-  // qu'il n'est pas actif, taper une rune ne fait rien.
-  const [fusionMode, setFusionMode] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
+  // Écran de fusion dédié (30/08) — remplace l'ancien mode "tape une
+  // rune puis retape une pareille", pas très intuitif (fallait deviner
+  // quelle rune correspondait à quelle autre). Regroupe automatiquement
+  // les runes identiques, un seul bouton clair par groupe.
+  const [fusionOpen, setFusionOpen] = useState(false);
 
-  const handlePress = (rune) => {
-    if (!fusionMode) return;
-    if (!selectedId) {
-      setSelectedId(rune.id);
-      return;
-    }
-    if (selectedId === rune.id) {
-      setSelectedId(null);
-      return;
-    }
-    onFuseRunes(selectedId, rune.id);
-    setSelectedId(null);
-  };
+  if (fusionOpen) {
+    return <RuneFusionScreen ownedRunes={ownedRunes} onFuseRunes={onFuseRunes} onBack={() => setFusionOpen(false)} />;
+  }
 
   return (
     <View style={styles.screen}>
@@ -726,22 +716,12 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
         <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} 🐾 Griffes</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.fusionModeBtn, fusionMode && styles.fusionModeBtnActive]}
-        onPress={() => {
-          setFusionMode((v) => !v);
-          setSelectedId(null);
-        }}
-      >
-        <Text style={styles.fusionModeBtnText}>{fusionMode ? '✕ Quitter le mode fusion' : '🔀 Fusionner des runes'}</Text>
+      <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>
+        <Text style={styles.fusionModeBtnText}>🔀 Fusionner des runes</Text>
       </TouchableOpacity>
 
       <Text style={styles.runeHint}>
-        {!fusionMode
-          ? "Pour équiper une rune, va dans la fiche d'une créature. Le bouton ci-dessus sert à fusionner 2 runes identiques."
-          : selectedId
-          ? 'Touche une 2e rune du MÊME type et MÊME niveau pour fusionner (donne 1 rune au niveau supérieur).'
-          : 'Touche une 1ère rune à fusionner.'}
+        Pour équiper une rune, va dans la fiche d'une créature. Ta collection complète est listée ci-dessous.
       </Text>
 
       <ScrollView contentContainerStyle={styles.runeGrid}>
@@ -753,20 +733,87 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
             .sort((a, b) => b.level - a.level)
             .map((rune) => {
               const def = RUNE_TYPES[rune.type];
-              const isSelected = rune.id === selectedId;
               return (
-                <TouchableOpacity
-                  key={rune.id}
-                  style={[styles.runeCell, { borderColor: def.color }, isSelected && styles.runeCellSelected, !fusionMode && { opacity: 0.85 }]}
-                  onPress={() => handlePress(rune)}
-                  disabled={!fusionMode}
-                >
+                <View key={rune.id} style={[styles.runeCell, { borderColor: def.color, opacity: 0.9 }]}>
                   <Text style={styles.runeEmoji}>{def.icon}</Text>
                   <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
                   {rune.equippedCreatureId && <Text style={styles.runeEquippedTag}>équipée</Text>}
-                </TouchableOpacity>
+                </View>
               );
             })
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+// Écran de fusion — regroupe les runes par type+niveau IDENTIQUES, un
+// bouton "Fusionner" unique et clair par groupe (au lieu de deviner
+// quelle rune correspond à quelle autre). Grisé/désactivé si moins de 2
+// exemplaires, ou si déjà au palier maximum.
+function RuneFusionScreen({ ownedRunes, onFuseRunes, onBack }) {
+  const groups = {};
+  ownedRunes.forEach((r) => {
+    const key = `${r.type}_${r.level}`;
+    (groups[key] = groups[key] || []).push(r);
+  });
+  const groupList = Object.values(groups).sort((a, b) => {
+    if (a[0].type !== b[0].type) return a[0].type.localeCompare(b[0].type);
+    return b[0].level - a[0].level;
+  });
+
+  const handleFuse = (group) => {
+    // Fusionne 2 runes NON équipées en priorité (pas de surprise sur le
+    // matériel d'une créature) — si moins de 2 sont libres, inclut une
+    // rune équipée (son emplacement est de toute façon reporté sur la
+    // nouvelle rune fusionnée, voir fuseRunes plus haut).
+    const unequipped = group.filter((r) => !r.equippedCreatureId);
+    const pool = unequipped.length >= 2 ? unequipped : group;
+    onFuseRunes(pool[0].id, pool[1].id);
+  };
+
+  return (
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>← Retour</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>🔀 Fusionner</Text>
+      </View>
+      <Text style={styles.runeHint}>2 runes identiques (même type, même niveau) fusionnent en 1 rune au niveau supérieur.</Text>
+
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 30 }}>
+        {groupList.length === 0 ? (
+          <Text style={styles.runeEmptyText}>Aucune rune pour l'instant.</Text>
+        ) : (
+          groupList.map((group) => {
+            const rune = group[0];
+            const def = RUNE_TYPES[rune.type];
+            const isMaxed = rune.level >= RUNE_MAX_LEVEL;
+            const canFuse = group.length >= 2 && !isMaxed;
+            return (
+              <View key={rune.type + '_' + rune.level} style={[styles.fusionGroupCard, { borderColor: def.color }]}>
+                <View style={styles.fusionGroupInfo}>
+                  <Text style={styles.runeEmoji}>{def.icon}</Text>
+                  <View style={{ marginLeft: 10 }}>
+                    <Text style={styles.fusionGroupName}>{def.name}</Text>
+                    <Text style={styles.fusionGroupCount}>Niveau {rune.level} · possédées : {group.length}</Text>
+                  </View>
+                </View>
+                {isMaxed ? (
+                  <Text style={styles.fusionGroupMaxed}>Niveau max</Text>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.fusionBtn, !canFuse && styles.fusionBtnDisabled]}
+                    onPress={() => handleFuse(group)}
+                    disabled={!canFuse}
+                  >
+                    <Text style={[styles.fusionBtnText, !canFuse && styles.fusionBtnTextDisabled]}>Fusionner → Niv. {rune.level + 1}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -993,9 +1040,22 @@ const styles = StyleSheet.create({
     borderRadius: 14, paddingVertical: 10, alignItems: 'center', marginTop: 10,
     borderWidth: 1.5, borderColor: COLORS.neonCyan, backgroundColor: 'rgba(62,198,240,0.08)',
   },
-  fusionModeBtnActive: { backgroundColor: 'rgba(62,198,240,0.22)' },
   fusionModeBtnText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
   runeEquippedTag: { color: COLORS.action, fontSize: 8, fontWeight: '800', marginTop: 2 },
+
+  fusionGroupCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: COLORS.panel, borderRadius: 14, padding: 14, marginBottom: 10,
+    borderWidth: 1.5,
+  },
+  fusionGroupInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  fusionGroupName: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
+  fusionGroupCount: { color: COLORS.muted, fontSize: 11, marginTop: 2 },
+  fusionGroupMaxed: { color: COLORS.muted, fontSize: 11, fontWeight: '700', fontStyle: 'italic' },
+  fusionBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
+  fusionBtnDisabled: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.border },
+  fusionBtnText: { color: '#241a00', fontSize: 11, fontWeight: '800' },
+  fusionBtnTextDisabled: { color: COLORS.muted },
 
   sectionCard: {
     backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, marginBottom: 14,
