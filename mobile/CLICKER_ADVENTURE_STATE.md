@@ -100,14 +100,20 @@ Toujours utiliser `combatStatsForCreatureTyped(creature, level, evolutionTier)` 
 - Vitesse d'exécution → multiplicateur de dégâts : x1 (lent) à x2,5 (rapide, ≤4s), interpolation linéaire entre les deux. Pas complété à temps → x0,5 fixe (jamais 0, l'attaque part toujours).
 - **Attaque de secours gratuite** ("Attaque de base", 0 endurance, ~40% de la stat ATQ) toujours disponible même à endurance épuisée — pour joueur ET adversaire IA. Sans ça, un combat pourrait se bloquer si personne ne peut plus rien payer.
 
-### Combat en équipe de 3
+### Combat en équipe de 3 (côté joueur) vs équipe adverse de 1 à 3 (30/08)
 - Les 3 créatures du **deck actuel du clicker** (même deck que les bulles de pouvoir) combattent, PAS une sélection séparée.
-- **Rotation à CHAQUE attaque** (pas seulement quand un combattant tombe K.O.) — demande explicite pour varier le combat. Rotation circulaire (`nextLivingIndex()` dans `CombatScreen.js`), saute les combattants K.O.
-- Défaite seulement quand les 3 sont K.O.
+- **Rotation à CHAQUE attaque côté joueur** (pas seulement quand un combattant tombe K.O.) — demande explicite pour varier le combat. Rotation circulaire (`nextLivingIndex()` dans `CombatScreen.js`), saute les combattants K.O.
+- **Côté adversaire, rotation UNIQUEMENT au K.O.** (pas à chaque tour comme le joueur) — mécanique volontairement différente, pas demandée pour l'adversaire, pour ne pas inventer une règle non demandée. Un adversaire qui vient de tomber ne riposte pas ce tour-ci.
+- **Pile ou face au début du combat** (`opponentGoesFirst()`) : 1 chance sur 2 que l'adversaire attaque en premier, avant même le 1er choix du joueur — résolu une seule fois au montage de l'écran, réutilise le même mécanisme "transition en attente + bouton Continuer" que les tours normaux.
+- Défaite quand toute l'équipe du joueur est K.O. ; victoire quand toute l'équipe adverse est K.O.
+- **Dégâts d'une compétence mis à l'échelle par le ratio ATQ actuel / ATQ de base** (`scaledSkillDamage` dans `combatLogic.js`) — nourrir/faire évoluer une créature rend VRAIMENT ses attaques plus fortes (avant le 30/08, seule l'attaque de base gratuite utilisait l'ATQ, les compétences avaient des dégâts fixes indépendants du niveau). Ratio = 1 exactement au niveau 1/palier 0 → aucun changement de comportement pour une créature toute neuve.
+- **Vitesse de clic** (`clickSpeed`, dépend de la rareté, jamais du niveau) réduit le NOMBRE DE TAPS requis pour le défi (`effectiveTapCount`), pas la fenêtre de temps — de 25 taps (commun) à 10 taps minimum (mythique, plancher de sécurité, jamais trivial).
 - **Pas de minuteur automatique entre les tours** — un bug réel a été causé par un `setTimeout` qui pouvait se bloquer silencieusement. Remplacé par un bouton "Continuer" explicite que le joueur doit taper. Ne jamais réintroduire une transition de phase automatique par minuteur dans ce fichier sans un filet de sécurité manuel.
 
 ### Chapitres et niveaux
-- 10 niveaux par chapitre (`LEVELS_PER_CHAPTER`). Adversaire choisi de façon DÉTERMINISTE (`opponentForLevel`, cycle sur le roster) — pas aléatoire, même niveau = même adversaire à chaque tentative.
+- 10 niveaux par chapitre (`LEVELS_PER_CHAPTER`). Adversaire choisi de façon DÉTERMINISTE — pas aléatoire, même niveau = même adversaire à chaque tentative.
+- **Adversaires triés par puissance** (`CREATURES_BY_POWER` dans `combatLogic.js`, calculé une fois au chargement) : le niveau 1 tombe sur la créature la plus faible du roster (PV+ATQ de base), le niveau 26 sur la plus forte, puis ça reboucle — remplace l'ancien ordre arbitraire (ordre de définition dans `CREATURES`).
+- **Taille de l'équipe adverse liée au CHAPITRE** (`opponentTeamSize`) : 1 adversaire au chapitre 1, 2 au chapitre 2, 3 à partir du chapitre 3 — mêmes repères que `LEVELS_PER_CHAPTER`, pas de seuil inventé à part.
 - **Carte persistante** façon Monster Legends (PAS une tour qu'on redescend en cas de défaite, contrairement à l'idée de départ) : un niveau gagné reste acquis. Défaite = juste réessayer, sans perdre la progression déjà faite.
 - Progression (`currentUnlockedLevel`) et ressource **Griffes** stockées dans une sauvegarde SÉPARÉE de celle du clicker (`adventure:state:v1`, gérée dans `AdventureScreen.js`) — pas dans la sauvegarde du clicker classique.
 
