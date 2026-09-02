@@ -33,6 +33,7 @@ export const CREATURE_ID_MIGRATIONS = {
   braisillon: 'pyrosile',
   gouttelin: 'caraploof',
   cailloutin: 'bouldog',
+  bourgeonin: 'ventis',
 };
 
 // Applique la migration à un id de créature — renvoie l'id tel quel s'il
@@ -60,11 +61,14 @@ export const CREATURES = [
     stages: [
     { name: 'Caraploof', emoji: '🐢' }, { name: 'Caraploof', emoji: '🐢' }, { name: 'Caraploof', emoji: '🐢' },
   ]},
-  { id: 'bourgeonin', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
-    skills: mkSkills([['Fouet de Liane', 2, 15], ['Épines', 3, 15], ['Étreinte Végétale', 5, 15], ['Floraison Sauvage', 7, 15]]),
-    lore: "Une graine tombée au mauvais endroit, au bon moment. Bourgeonin pousse un peu plus à chaque fois qu'on le nourrit — littéralement.",
+  { id: 'ventis', element: 'Air', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
+    baseHp: 10, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
+    // "Bourrasque" renommée en "Bourrasque Légère" — collision avec
+    // l'attaque de Brisillon (Air, Rare, toujours présent pour l'instant).
+    skills: mkSkills([['Brise Légère', 2, 5], ['Plume Coupante', 3, 10], ['Bourrasque Légère', 4, 15], ['Piqué Tornade', 5, 25]]),
+    lore: "Ventis est un petit esprit aviaire formé de courants d'air tourbillonnants qui adore chasser dans les tempêtes. Ses ailes génèrent de violentes bourrasques capables de déséquilibrer n'importe quel agresseur. Bien qu'il soit très commun dans les plaines, son caractère imprévisible en fait un adversaire particulièrement vif.",
     stages: [
-    { name: 'Bourgeonin', emoji: '🌱' }, { name: 'Ronceval', emoji: '🌿' }, { name: 'Florengarde', emoji: '🌺' },
+    { name: 'Ventis', emoji: '🐦' }, { name: 'Ventis', emoji: '🐦' }, { name: 'Ventis', emoji: '🐦' },
   ]},
   { id: 'bouldog', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'tank',
     baseHp: 14, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
@@ -208,7 +212,7 @@ const RARITY_DURATION_SEC = { commun: 10, rare: 10, epique: 15, legendaire: 15 }
 export const CREATURE_POWERS = {
   pyrosile: { name: 'Éruption', effectType: 'coins_burst', effectValue: 8 },
   caraploof: { name: 'Flux Montant', effectType: 'passive_boost', effectValue: 2 },
-  bourgeonin: { name: 'Éclosion Généreuse', effectType: 'discount_next', effectValue: 0.2 },
+  ventis: { name: 'Éclosion Généreuse', effectType: 'discount_next', effectValue: 0.2 },
   bouldog: { name: 'Fondation', effectType: 'coins_burst', effectValue: 8 },
   etincelot: { name: 'Décharge', effectType: 'coins_burst', effectValue: 12 },
   brisillon: { name: 'Bourrasque', effectType: 'passive_boost', effectValue: 2.5 },
