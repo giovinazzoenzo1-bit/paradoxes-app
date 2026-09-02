@@ -182,6 +182,13 @@ export const CREATURES = [
     stages: [
     { name: 'Malefix', emoji: '📖' }, { name: 'Malefix', emoji: '📖' }, { name: 'Malefix', emoji: '📖' },
   ]},
+  { id: 'nocturis', element: 'Ténèbres', rarity: 'rare', baseIncome: 0.4, combatType: 'soutien',
+    baseHp: 45, baseAttack: 4, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Murmure Macabre', 3, 10], ["Voile d'Ombre", 4, 15], ['Pacte Sanglant', 5, 25], ['Éclipse Curative', 7, 35]]),
+    lore: "Nocturis est un spectre bienveillant qui hante les anciens cimetières pour guider les âmes égarées. Il utilise les ombres pour tisser des barrières protectrices autour de ses alliés et affaiblir les agresseurs. Sa présence silencieuse apaise les esprits tourmentés lors des batailles nocturnes.",
+    stages: [
+    { name: 'Nocturis', emoji: '👻' }, { name: 'Nocturis', emoji: '👻' }, { name: 'Nocturis', emoji: '👻' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -282,6 +289,7 @@ export const CREATURE_POWERS = {
   zephyrion: { name: 'Brise Protectrice', effectType: 'passive_boost', effectValue: 2 },
   brontobloc: { name: 'Décharge Statique', effectType: 'coins_burst', effectValue: 15 },
   malefix: { name: 'Explosion Runique', effectType: 'coins_burst', effectValue: 15 },
+  nocturis: { name: 'Éclipse Curative', effectType: 'passive_boost', effectValue: 3 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
