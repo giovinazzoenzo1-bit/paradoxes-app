@@ -196,6 +196,13 @@ export const CREATURES = [
     stages: [
     { name: 'Racinea', emoji: '🌳' }, { name: 'Racinea', emoji: '🌳' }, { name: 'Racinea', emoji: '🌳' },
   ]},
+  { id: 'runicor', element: 'Magie', rarity: 'rare', baseIncome: 0.4, combatType: 'tank',
+    baseHp: 65, baseAttack: 4, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([["Frappe d'Obsidienne", 4, 10], ['Mur Runique', 5, 15], ['Sceau Protecteur', 8, 25], ['Décharge Arcanique', 12, 35]]),
+    lore: "Runicor est une imposante gargouille d'obsidienne animée par des rituels oubliés. Incapable de voler à cause de son poids démesuré, elle se plante sur le champ de bataille pour absorber les sortilèges avec son armure impénétrable. Les sceaux incandescents gravés sur sa pierre redirigent violemment la force des impacts vers ses agresseurs.",
+    stages: [
+    { name: 'Runicor', emoji: '🗿' }, { name: 'Runicor', emoji: '🗿' }, { name: 'Runicor', emoji: '🗿' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -298,6 +305,7 @@ export const CREATURE_POWERS = {
   malefix: { name: 'Explosion Runique', effectType: 'coins_burst', effectValue: 15 },
   nocturis: { name: 'Éclipse Curative', effectType: 'passive_boost', effectValue: 3 },
   racinea: { name: 'Éclosion Vitale', effectType: 'passive_boost', effectValue: 3 },
+  runicor: { name: 'Sceau Protecteur', effectType: 'coins_burst', effectValue: 20 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
