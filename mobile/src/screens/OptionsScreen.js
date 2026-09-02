@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CoinBar from '../components/CoinBar';
 import { useCoins } from '../context/CoinsContext';
 import { STORAGE_KEY as CLICKER_STORAGE_KEY } from './games/ClickerScreen';
+import { CREATURES } from '../games/clicker/clickerLogic';
 
 export default function OptionsScreen() {
   const { addCoins, resetCoins } = useCoins();
@@ -50,6 +51,29 @@ export default function OptionsScreen() {
     );
   };
 
+  // Outil de dev : ajoute directement TOUTES les créatures du roster à la
+  // collection du clicker (niveau 1, palier d'évolution 0 pour celles pas
+  // déjà possédées — les créatures déjà possédées ne sont PAS touchées,
+  // pas de perte de progression). Écrit directement dans AsyncStorage
+  // plutôt que par un state React partagé, puisque OptionsScreen et
+  // ClickerScreen sont des écrans séparés qui ne partagent pas leur état
+  // en mémoire — nécessite donc de relancer l'appli (pas juste changer
+  // d'écran) pour que ClickerScreen recharge bien cette nouvelle donnée
+  // au lieu de réécrire par-dessus avec son ancien état en mémoire.
+  const unlockAllCreatures = async () => {
+    const raw = await AsyncStorage.getItem(CLICKER_STORAGE_KEY);
+    const saved = raw ? JSON.parse(raw) : {};
+    const owned = saved.owned || [];
+    const ownedIds = new Set(owned.map((o) => o.id));
+    const missing = CREATURES.filter((c) => !ownedIds.has(c.id));
+    const newOwned = [...owned, ...missing.map((c) => ({ id: c.id, level: 1, evolutionTier: 0 }))];
+    await AsyncStorage.setItem(CLICKER_STORAGE_KEY, JSON.stringify({ ...saved, owned: newOwned }));
+    Alert.alert(
+      'Fait',
+      `${missing.length} créature(s) ajoutée(s) (${newOwned.length}/${CREATURES.length} au total). Relance l'appli complètement (pas juste changer d'écran) pour que ça prenne effet.`
+    );
+  };
+
   return (
     <View style={styles.container}>
       <CoinBar />
@@ -71,6 +95,9 @@ export default function OptionsScreen() {
           <Text style={styles.devSubtitle}>Outil de test — ne pas montrer aux joueurs finaux.</Text>
           <TouchableOpacity style={styles.devBtn} onPress={() => addCoins(10)}>
             <Text style={styles.devBtnText}>🪙 +10 pièces</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.devBtn, { marginTop: 8 }]} onPress={unlockAllCreatures}>
+            <Text style={styles.devBtnText}>🐾 Débloquer tous les monstres (Élevage)</Text>
           </TouchableOpacity>
         </View>
       </View>
