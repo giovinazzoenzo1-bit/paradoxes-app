@@ -38,6 +38,7 @@ export const CREATURE_ID_MIGRATIONS = {
   lumeret: 'luxorbe',
   ombrelin: 'ombrillon',
   frimouss: 'glyphon',
+  gemmion: 'fournax',
 };
 
 // Applique la migration à un id de créature — renvoie l'id tel quel s'il
@@ -115,11 +116,15 @@ export const CREATURES = [
     stages: [
     { name: 'Luxorbe', emoji: '✨' }, { name: 'Luxorbe', emoji: '✨' }, { name: 'Luxorbe', emoji: '✨' },
   ]},
-  { id: 'gemmion', element: 'Terre', rarity: 'legendaire', baseIncome: 2.5, combatType: 'tank',
-    skills: mkSkills([['Éclat de Cristal', 24, 35], ['Onde Prismatique', 47, 35], ['Tir de Diamant', 71, 35], ['Résonance Stellaire', 103, 35]]),
-    lore: "Formé au cœur d'une mine oubliée depuis des siècles, Gemmion est si rare que même les légendes ne sont pas sûres qu'il existe vraiment.",
+  // Dernière créature d'origine du roster remplacée ici (29/08) — à
+  // partir de la suivante, le roster GRANDIT au-delà de 11 (plus rien à
+  // sacrifier) jusqu'à atteindre les 25 prévues.
+  { id: 'fournax', element: 'Feu', rarity: 'peu_commun', baseIncome: 0.15, combatType: 'tank',
+    baseHp: 30, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Frappe Cendrée', 2, 10], ['Bouclier de Braise', 3, 15], ['Charge Magmatique', 5, 20], ['Éruption Lourde', 7, 30]]),
+    lore: "Fournax est une créature trapue recouverte d'une épaisse carapace de magma refroidi. Très lent, il encaisse les coups en faisant fondre les armes de ses agresseurs au contact de son corps brûlant. Il se place toujours en première ligne pour servir de mur de chaleur impénétrable.",
     stages: [
-    { name: 'Gemmion', emoji: '💎' }, { name: 'Prismatis', emoji: '🔮' }, { name: 'Éclatoile', emoji: '⭐' },
+    { name: 'Fournax', emoji: '🗿' }, { name: 'Fournax', emoji: '🗿' }, { name: 'Fournax', emoji: '🗿' },
   ]},
   // Première créature produite via le générateur Gemini de l'utilisateur
   // (29/08). PV/ATQ reproduits EXACTEMENT par la formule existante
@@ -144,7 +149,10 @@ export const CREATURES = [
 // légendaire existent pour l'instant), donc lui donner un poids > 0
 // ferait planter le tirage (panier vide) — à réactiver dès qu'une
 // créature (nouvelle via Gemini, ou une existante reclassée) y est assignée.
-export const RARITY_WEIGHTS = { commun: 70, peu_commun: 0, rare: 18, epique: 9, legendaire: 3, mythique: 0 };
+// "legendaire" et "mythique" repassent à poids 0 (plus aucune créature
+// dedans depuis le remplacement de Gemmion) — "peu_commun" réactivé
+// maintenant que Fournax existe (29/08).
+export const RARITY_WEIGHTS = { commun: 55, peu_commun: 20, rare: 15, epique: 10, legendaire: 0, mythique: 0 };
 export const RARITY_LABEL = {
   commun: 'Commun', peu_commun: 'Peu commun', rare: 'Rare',
   epique: 'Épique', legendaire: 'Légendaire', mythique: 'Mythique',
@@ -227,7 +235,7 @@ export const CREATURE_POWERS = {
   glyphon: { name: 'Conservation', effectType: 'discount_next', effectValue: 0.25 },
   ombrillon: { name: 'Éclipse', effectType: 'coins_burst', effectValue: 25 },
   luxorbe: { name: 'Rayonnement', effectType: 'passive_boost', effectValue: 3 },
-  gemmion: { name: 'Résonance Cristalline', effectType: 'coins_burst', effectValue: 75 },
+  fournax: { name: 'Résonance Cristalline', effectType: 'coins_burst', effectValue: 75 },
 };
 
 // Calcule le pouvoir déclenché en tapant une créature apparue. Le bonus de
