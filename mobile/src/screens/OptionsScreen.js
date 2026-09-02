@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CoinBar from '../components/CoinBar';
 import { useCoins } from '../context/CoinsContext';
 import { STORAGE_KEY as CLICKER_STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY } from './games/ClickerScreen';
-import { DEV_ADD_GRIFFES_KEY } from './games/AdventureScreen';
+import { DEV_ADD_GRIFFES_KEY, DEV_REFILL_ENERGY_KEY } from './games/AdventureScreen';
 import { CREATURES } from '../games/clicker/clickerLogic';
 
 export default function OptionsScreen() {
@@ -91,6 +91,13 @@ export default function OptionsScreen() {
     Alert.alert('Fait', "1000 Griffes seront ajoutées à l'ouverture du mode Aventure.");
   };
 
+  // Même schéma — pose un drapeau lu par AdventureScreen à son prochain
+  // chargement, qui remet l'énergie au max lui-même.
+  const devRefillEnergy = async () => {
+    await AsyncStorage.setItem(DEV_REFILL_ENERGY_KEY, '1');
+    Alert.alert('Fait', "L'énergie sera remise au max à l'ouverture du mode Aventure.");
+  };
+
   return (
     <View style={styles.container}>
       <CoinBar />
@@ -121,6 +128,9 @@ export default function OptionsScreen() {
           </TouchableOpacity>
           <TouchableOpacity style={[styles.devBtn, { marginTop: 8 }]} onPress={devAddGriffes}>
             <Text style={styles.devBtnText}>🐾 +1000 Griffes (Aventure)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.devBtn, { marginTop: 8 }]} onPress={devRefillEnergy}>
+            <Text style={styles.devBtnText}>⚡ Énergie au max (Aventure)</Text>
           </TouchableOpacity>
         </View>
       </View>
