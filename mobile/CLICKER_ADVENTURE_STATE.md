@@ -38,7 +38,7 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Quêtes | Collection
 
 ## Créatures — schéma de données actuel
 
-11 créatures dans `CREATURES` — le roster d'origine est en cours de remplacement progressif par des créatures générées via Gemini (l'utilisateur colle une réponse à la fois, je remplace la créature correspondante). Déjà remplacées : **pyrosile** (ex-braisillon, commun/feu/attaquant). Champs d'une entrée :
+11 créatures dans `CREATURES` — **le roster d'origine a été ENTIÈREMENT remplacé** (29/08, 9 créatures Gemini intégrées : pyrosile, caraploof, bouldog, ventis, voltix, luxorbe, ombrillon, glyphon, fournax + solarion). **À partir de la 10e créature Gemini, le roster GRANDIT au-delà de 11** — il n'y a plus rien à sacrifier, chaque nouvel envoi s'AJOUTE plutôt que de remplacer, jusqu'à atteindre les 25 prévues. Table de migration (`CREATURE_ID_MIGRATIONS`) à consulter pour la correspondance ancien→nouveau id. Champs d'une entrée :
 
 ```js
 {
