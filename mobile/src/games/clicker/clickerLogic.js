@@ -231,6 +231,13 @@ export const CREATURES = [
     stages: [
     { name: 'Voltarel', emoji: '⚡' }, { name: 'Voltarel', emoji: '⚡' }, { name: 'Voltarel', emoji: '⚡' },
   ]},
+  { id: 'solstral', element: 'Lumière', rarity: 'legendaire', baseIncome: 2.5, combatType: 'attaquant',
+    baseHp: 85, baseAttack: 45, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([["Lame de l'Aube", 20, 15], ['Rayon Perforant', 35, 25], ['Châtiment Solaire', 50, 35], ['Supernova Jugement', 75, 50]]),
+    lore: "Solstral est une entité cosmique née de la première aurore, maniant des lances de pure lumière cristallisée. Il parcourt les cieux pour purger les ténèbres ancestrales avec une précision chirurgicale et une force dévastatrice. On dit que son apparition sur le champ de bataille illumine la galaxie entière et aveugle définitivement ses ennemis.",
+    stages: [
+    { name: 'Solstral', emoji: '🌠' }, { name: 'Solstral', emoji: '🌠' }, { name: 'Solstral', emoji: '🌠' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -242,7 +249,8 @@ export const CREATURES = [
 // "legendaire" et "mythique" repassent à poids 0 (plus aucune créature
 // dedans depuis le remplacement de Gemmion) — "peu_commun" réactivé
 // maintenant que Fournax existe (29/08).
-export const RARITY_WEIGHTS = { commun: 55, peu_commun: 20, rare: 15, epique: 10, legendaire: 0, mythique: 0 };
+// "legendaire" réactivé (29/08) — Solstral existe enfin dans ce palier.
+export const RARITY_WEIGHTS = { commun: 45, peu_commun: 20, rare: 15, epique: 12, legendaire: 8, mythique: 0 };
 export const RARITY_LABEL = {
   commun: 'Commun', peu_commun: 'Peu commun', rare: 'Rare',
   epique: 'Épique', legendaire: 'Légendaire', mythique: 'Mythique',
@@ -338,6 +346,7 @@ export const CREATURE_POWERS = {
   abyssorax: { name: 'Exécution Abyssale', effectType: 'coins_burst', effectValue: 40 },
   cumulox: { name: 'Rejet Stratosphérique', effectType: 'coins_burst', effectValue: 40 },
   voltarel: { name: 'Défibrillation Foudroyante', effectType: 'passive_boost', effectValue: 4 },
+  solstral: { name: 'Supernova Jugement', effectType: 'coins_burst', effectValue: 90 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
