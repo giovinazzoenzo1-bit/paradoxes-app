@@ -34,9 +34,76 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventur
 
 - Les **créatures ne produisent PLUS de pièces automatiquement** (refonte volontaire, en préparation du mode combat). La seule source de revenu passif est la **boutique d'auto-clics** (`AUTOCLICKERS`, 5 paliers : esprit → main → automate → colonie → titan), achetable plusieurs fois, coût croissant ×1,15 par unité déjà possédée.
 - Boutons d'amélioration (Pacte, Faveur des Esprits, Sanctuaire, Veilleur, puis Offrande, puis les 20 améliorations de créatures, puis Ascension) : dans l'écran **Shop**, page "Améliorations". Page 2 du Shop = la boutique d'auto-clics (15 générateurs, liste continue).
-- **Ascension** (prestige, essence permanente) : vit en bas de la page « Améliorations » du **Shop** (déplacée le 02/09 avec la suppression de l'onglet Quêtes).
+- **Ascension** (prestige, essence permanente) : vit en bas de la page « Améliorations » du **Shop** (déplacée le 02/09 avec la suppression de l'onglet Quêtes). **C'est elle qui porte la longévité du jeu** — voir la section Équilibrage.
 - **Invoquer une créature** (gacha) : vit dans l'onglet **Collection**, pas dans Shop.
 - **Rituel** (bonus "pub" gratuit) : une bulle qui apparaît près de l'œuf (comme les pouvoirs de créature), pas un bouton ni une bannière.
+
+## Équilibrage de l'économie du clicker (refonte 02/09)
+
+Refonte complète des gains et des coûts, faite **à la simulation** et non
+à l'intuition. Un script jetable rejouait la partie seconde par seconde
+(4 taps/s, 50% du temps actif, achat du meilleur ratio revenu/coût
+disponible à chaque instant) sur des horizons de 30 min à 30 jours.
+
+**Diagnostic mesuré avant la refonte** : les 15 auto-clics étaient tous
+débloqués en 6 heures, le revenu atteignait 3,4M/s au bout d'une heure,
+et entre le 1er et le 7e jour il ne progressait plus que d'un facteur
+1,6 — le jeu était plié en une journée puis totalement plat.
+
+**Ce qui a changé** (chaque valeur choisie après balayage de variantes) :
+
+| Levier | Avant | Après | Pourquoi |
+|---|---|---|---|
+| `AUTOCLICKER_COST_GROWTH` | ×1,15 | **×1,25** | Levier le plus puissant du jeu : il porte la seule source de revenu passif. |
+| `sanctuaryMultiplier` | +5%/nv | **+2,5%/nv** | Multiplie tap ET passif, donc compose avec tout le reste. |
+| `sanctuaryUpgradeCost` | ×1,7 | **×2,0** | Idem. |
+| Coût de base des 20 améliorations | — | **×8** | Elles arrivaient bien trop tôt dans la courbe. |
+| `growth` des améliorations | 1,6 uniforme | **1,86 à 2,28, par type d'effet** | Un % sur toute la production doit coûter plus cher qu'un +N par tap. |
+| Effet des améliorations | — | **÷2** (sauf crit) | Compensation de la suppression du cap. |
+| Seuil d'Ascension | 50 000 | **100 000 000** | L'ancien tombait en quelques minutes. |
+| Gain d'essence | √(lifetime/10k) | **(lifetime/seuil)^0,3** | Rendait des milliers de points dès le 1er run. |
+| Bonus par essence | +2% | **+1%** | Idem. |
+
+**Courbe obtenue** (simulation, joueur régulier, sans ascension) :
+
+| Temps | Revenu/s | Auto-clics | Amélioration la plus haute |
+|---|---|---|---|
+| 30 min | 181 | 3/15 | nv 4 |
+| 1 h | 735 | 4/15 | nv 6 |
+| 4 h | 92k | 6/15 | nv 15 |
+| 12 h | 66M | 10/15 | nv 26 |
+| 1 j | 233B | 15/15 | nv 39 |
+
+Première Ascension possible vers **4 h**. Une ascension au bout d'un jour
+rend ×2,4 de production permanente, au bout d'une semaine ×9,6.
+
+### Suppression du plafond de niveau des améliorations
+
+Le cap à 10 niveaux a été **retiré** (demande explicite). Ce qui rend
+l'absence de cap tenable : **l'effet monte linéairement pendant que le
+coût monte exponentiellement**, donc le bonus accessible croît comme le
+logarithme de la fortune du joueur — même contrat que les auto-clics.
+
+**Sauf la chance de coup critique**, bornée par nature à 100% : elle est
+sommée en **série géométrique** (`CRIT_CHANCE_DECAY = 0,75`, chaque
+niveau rapporte 75% du précédent) et converge vers **+36% au total, quel
+que soit le niveau atteint**. Sans ça, retirer le cap rendait le critique
+garanti et la Faveur des Esprits inutile.
+
+### Pièges de cette refonte
+
+- **Ne jamais rééquilibrer ce jeu à l'intuition** : chaque levier compose
+  avec les autres (le Sanctuaire multiplie ce que les auto-clics
+  produisent, que les `coinPct` remultiplient encore). Trois variantes
+  jugées « évidemment suffisantes » ont été mesurées comme quasi sans
+  effet avant de trouver la bonne. Rejouer une simulation avant de
+  toucher une constante.
+- Un effet **borné par nature** (pourcentage d'une chance, part d'un
+  total) ne peut pas être empilé linéairement sans cap — il lui faut une
+  asymptote, pas un plafond dur.
+- Les `desc` des améliorations sont du texte figé : les **régénérer**
+  depuis `effect.value` après tout changement de valeur, sinon l'écran
+  annonce des chiffres faux (arrivé pendant cette refonte).
 
 ## Créatures — schéma de données actuel
 

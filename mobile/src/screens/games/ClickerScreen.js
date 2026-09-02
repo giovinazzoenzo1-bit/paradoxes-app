@@ -38,6 +38,7 @@ import {
   veilleurOfflineMultiplier,
   veilleurUpgradeCost,
   ascensionEssenceGain,
+  ASCENSION_MIN_LIFETIME_EARNED,
   essenceBonusMultiplier,
   ritualReward,
   ritualReady,
@@ -55,10 +56,8 @@ import {
   totalAutoClickIncome,
   UPGRADE_ITEMS,
   upgradeItemCost,
-  upgradeItemMaxed,
   upgradeBonuses,
   normalizeUpgradeLevels,
-  UPGRADE_MAX_LEVEL,
   CREATURE_POWERS,
   migrateCreatureId,
   RARITY_BADGE_LETTER,
@@ -614,7 +613,6 @@ export default function ClickerScreen({ onBack }) {
     const item = UPGRADE_ITEMS.find((u) => u.id === upgradeId);
     if (!item) return;
     const level = upgradeLevelsRef.current[upgradeId] || 0;
-    if (upgradeItemMaxed(level)) return;
     const cost = applyDiscount(upgradeItemCost(item, level));
     if (coinsRef.current < cost) return;
     setCoins((c) => c - cost);
@@ -646,7 +644,7 @@ export default function ClickerScreen({ onBack }) {
     if (essenceGainPreview <= 0) return;
     Alert.alert(
       'Ascension',
-      `Tu vas tout réinitialiser (pièces, Pacte, créatures, améliorations) contre +${essenceGainPreview} essence permanente (+${Math.round(essenceGainPreview * 2)}% de production pour toujours). Continuer ?`,
+      `Tu vas tout réinitialiser (pièces, Pacte, créatures, améliorations) contre +${essenceGainPreview} essence permanente (production x${(essenceBonusMultiplier(essence + essenceGainPreview)).toFixed(2)} pour toujours). Continuer ?`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -1275,7 +1273,7 @@ function ShopView({
               <Text style={styles.ascensionBtnSubtext}>
                 {essenceGainPreview > 0
                   ? `Réinitialise ta progression contre +${essenceGainPreview} essence permanente`
-                  : `Gagne encore ${formatNum(50000 - totalEarned)} pièces au total pour débloquer`}
+                  : `Gagne encore ${formatNum(ASCENSION_MIN_LIFETIME_EARNED - totalEarned)} pièces au total pour débloquer`}
               </Text>
             </TouchableOpacity>
 
@@ -1289,25 +1287,24 @@ function ShopView({
             <Text style={styles.shopTierHeader}>💎 Améliorations de créatures</Text>
             {[...UPGRADE_ITEMS].sort((a, b) => a.cost - b.cost).map((item) => {
               const level = upgradeLevels[item.id] || 0;
-              const maxed = upgradeItemMaxed(level);
               const cost = applyDiscount(upgradeItemCost(item, level));
               const canAfford = coins >= cost;
               return (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.actionBtn, (maxed || !canAfford) && styles.actionBtnDisabled]}
+                  style={[styles.actionBtn, !canAfford && styles.actionBtnDisabled]}
                   onPress={() => onBuyUpgradeItem(item.id)}
-                  disabled={maxed || !canAfford}
+                  disabled={!canAfford}
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.actionBtnText}>
-                      {item.emoji} {item.name} (nv {level}/{UPGRADE_MAX_LEVEL})
+                      {item.emoji} {item.name} (nv {level})
                     </Text>
                     <Text style={styles.actionBtnSubtext}>
                       {item.desc} par niveau{level > 0 ? ` · actuellement ${describeUpgradeTotal(item, level)}` : ''}
                     </Text>
                   </View>
-                  <Text style={styles.actionBtnCost}>{maxed ? '⭐ MAX' : `💰 ${formatNum(cost)}`}</Text>
+                  <Text style={styles.actionBtnCost}>💰 {formatNum(cost)}</Text>
                 </TouchableOpacity>
               );
             })}

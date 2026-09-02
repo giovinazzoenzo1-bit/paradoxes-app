@@ -528,11 +528,16 @@ export function familiarUpgradeCost(level) {
 // ---- Sanctuaire (boost global %) ----
 // Multiplicateur global appliqué à TOUTE la production (tap ET revenu
 // passif), pas juste au tap comme Pacte.
+// Refonte 02/09 : +5%/niveau à ×1,7 → +2,5%/niveau à ×2,0. Le
+// Sanctuaire multiplie TOUT (tap ET passif), donc il compose avec
+// chaque autre bonus : c'était le second accélérateur de la courbe
+// après les auto-clics. Deux fois moins d'effet, pour un coût qui
+// double à chaque niveau.
 export function sanctuaryMultiplier(level) {
-  return 1 + level * 0.05;
+  return 1 + level * 0.025;
 }
 export function sanctuaryUpgradeCost(level) {
-  return Math.round(60 * Math.pow(1.7, level));
+  return Math.round(60 * Math.pow(2.0, level));
 }
 
 // ---- Veilleur (gains hors-ligne) ----
@@ -560,39 +565,47 @@ export function veilleurUpgradeCost(level) {
 // `cost` est le prix du 1er niveau ; `effect.value` est l'effet gagné
 // PAR NIVEAU. `maxLevel` borne chaque amélioration : sans lui, un +8%
 // de production répété à l'infini casserait toute l'économie.
-export const UPGRADE_MAX_LEVEL = 10;
 export const UPGRADE_ITEMS = [
-  { id: 'griffeBraisillon', name: 'Griffe de Braisillon', emoji: '🔥', tier: 1, cost: 80, effect: { type: 'tapFlat', value: 1 }, desc: '+1 pièce par tap' },
-  { id: 'ecailleCaraploof', name: 'Écaille de Caraploof', emoji: '🌊', tier: 1, cost: 120, effect: { type: 'autoClickerPct', value: 0.05 }, desc: '+5% sur les auto-clics' },
-  { id: 'crocBouldog', name: 'Croc de Bouldog', emoji: '🪨', tier: 1, cost: 180, effect: { type: 'coinPct', value: 0.03 }, desc: '+3% sur toute la production' },
-  { id: 'plumeVentis', name: 'Plume de Ventis', emoji: '🌬️', tier: 1, cost: 250, effect: { type: 'critChancePct', value: 0.02 }, desc: '+2% de chance de coup critique' },
-  { id: 'etincelleVoltix', name: 'Étincelle de Voltix', emoji: '⚡', tier: 1, cost: 350, effect: { type: 'critMultPct', value: 0.10 }, desc: '+10% de dégâts critiques' },
-  { id: 'eclatLuxorbe', name: 'Éclat de Luxorbe', emoji: '💡', tier: 2, cost: 800, effect: { type: 'coinPct', value: 0.04 }, desc: '+4% sur toute la production' },
-  { id: 'ombreOmbrillon', name: "Ombre d'Ombrillon", emoji: '🌑', tier: 2, cost: 1100, effect: { type: 'tapFlat', value: 2 }, desc: '+2 pièces par tap' },
-  { id: 'runeGlyphon', name: 'Rune de Glyphon', emoji: '🔮', tier: 2, cost: 1500, effect: { type: 'autoClickerPct', value: 0.07 }, desc: '+7% sur les auto-clics' },
-  { id: 'flammeFournax', name: 'Flamme de Fournax', emoji: '🔥', tier: 2, cost: 2000, effect: { type: 'coinPct', value: 0.05 }, desc: '+5% sur toute la production' },
-  { id: 'perleAquamira', name: "Perle d'Aquamira", emoji: '🌊', tier: 2, cost: 2600, effect: { type: 'autoClickerPct', value: 0.08 }, desc: '+8% sur les auto-clics' },
-  { id: 'pierreTerracroc', name: 'Pierre de Terracroc', emoji: '🪨', tier: 3, cost: 5000, effect: { type: 'tapFlat', value: 3 }, desc: '+3 pièces par tap' },
-  { id: 'ventZephyrion', name: 'Vent de Zephyrion', emoji: '🌬️', tier: 3, cost: 6500, effect: { type: 'critChancePct', value: 0.03 }, desc: '+3% de chance de coup critique' },
-  { id: 'noyauBrontobloc', name: 'Noyau de Brontobloc', emoji: '⚡', tier: 3, cost: 8000, effect: { type: 'critMultPct', value: 0.15 }, desc: '+15% de dégâts critiques' },
-  { id: 'sceauMalefix', name: 'Sceau de Malefix', emoji: '🔮', tier: 3, cost: 10000, effect: { type: 'coinPct', value: 0.06 }, desc: '+6% sur toute la production' },
-  { id: 'bouclierAegisolar', name: "Bouclier d'Aegisolar", emoji: '✨', tier: 3, cost: 13000, effect: { type: 'autoClickerPct', value: 0.10 }, desc: '+10% sur les auto-clics' },
-  { id: 'voileNocturis', name: 'Voile de Nocturis', emoji: '🌑', tier: 4, cost: 25000, effect: { type: 'coinPct', value: 0.08 }, desc: '+8% sur toute la production' },
-  { id: 'racineRacinea', name: 'Racine de Racinea', emoji: '🪨', tier: 4, cost: 32000, effect: { type: 'autoClickerPct', value: 0.12 }, desc: '+12% sur les auto-clics' },
-  { id: 'glypheRunicor', name: 'Glyphe de Runicor', emoji: '🔮', tier: 4, cost: 40000, effect: { type: 'tapFlat', value: 6 }, desc: '+6 pièces par tap' },
-  { id: 'petaleBraiserose', name: 'Pétale de Braiserose', emoji: '🔥', tier: 4, cost: 50000, effect: { type: 'critChancePct', value: 0.04 }, desc: '+4% de chance de coup critique' },
-  { id: 'abysseAbyssorax', name: "Abysse d'Abyssorax", emoji: '🌊', tier: 4, cost: 65000, effect: { type: 'critMultPct', value: 0.20 }, desc: '+20% de dégâts critiques' },
+  { id: 'griffeBraisillon', name: 'Griffe de Braisillon', emoji: '🔥', tier: 1, cost: 640, effect: { type: 'tapFlat', value: 0.5 }, growth: 1.86, desc: '+0.5 pièce par tap' },
+  { id: 'ecailleCaraploof', name: 'Écaille de Caraploof', emoji: '🌊', tier: 1, cost: 960, effect: { type: 'autoClickerPct', value: 0.025 }, growth: 2.16, desc: '+2.5% sur les auto-clics' },
+  { id: 'crocBouldog', name: 'Croc de Bouldog', emoji: '🪨', tier: 1, cost: 1440, effect: { type: 'coinPct', value: 0.015 }, growth: 2.22, desc: '+1.5% sur toute la production' },
+  { id: 'plumeVentis', name: 'Plume de Ventis', emoji: '🌬️', tier: 1, cost: 2000, effect: { type: 'critChancePct', value: 0.02 }, growth: 2.28, desc: '+2% de chance de coup critique' },
+  { id: 'etincelleVoltix', name: 'Étincelle de Voltix', emoji: '⚡', tier: 1, cost: 2800, effect: { type: 'critMultPct', value: 0.05 }, growth: 2.04, desc: '+5% de dégâts critiques' },
+  { id: 'eclatLuxorbe', name: 'Éclat de Luxorbe', emoji: '💡', tier: 2, cost: 6400, effect: { type: 'coinPct', value: 0.02 }, growth: 2.22, desc: '+2% sur toute la production' },
+  { id: 'ombreOmbrillon', name: "Ombre d'Ombrillon", emoji: '🌑', tier: 2, cost: 8800, effect: { type: 'tapFlat', value: 1 }, growth: 1.86, desc: '+1 pièce par tap' },
+  { id: 'runeGlyphon', name: 'Rune de Glyphon', emoji: '🔮', tier: 2, cost: 12000, effect: { type: 'autoClickerPct', value: 0.035 }, growth: 2.16, desc: '+3.5% sur les auto-clics' },
+  { id: 'flammeFournax', name: 'Flamme de Fournax', emoji: '🔥', tier: 2, cost: 16000, effect: { type: 'coinPct', value: 0.025 }, growth: 2.22, desc: '+2.5% sur toute la production' },
+  { id: 'perleAquamira', name: "Perle d'Aquamira", emoji: '🌊', tier: 2, cost: 20800, effect: { type: 'autoClickerPct', value: 0.04 }, growth: 2.16, desc: '+4% sur les auto-clics' },
+  { id: 'pierreTerracroc', name: 'Pierre de Terracroc', emoji: '🪨', tier: 3, cost: 40000, effect: { type: 'tapFlat', value: 1.5 }, growth: 1.86, desc: '+1.5 pièces par tap' },
+  { id: 'ventZephyrion', name: 'Vent de Zephyrion', emoji: '🌬️', tier: 3, cost: 52000, effect: { type: 'critChancePct', value: 0.03 }, growth: 2.28, desc: '+3% de chance de coup critique' },
+  { id: 'noyauBrontobloc', name: 'Noyau de Brontobloc', emoji: '⚡', tier: 3, cost: 64000, effect: { type: 'critMultPct', value: 0.075 }, growth: 2.04, desc: '+7.5% de dégâts critiques' },
+  { id: 'sceauMalefix', name: 'Sceau de Malefix', emoji: '🔮', tier: 3, cost: 80000, effect: { type: 'coinPct', value: 0.03 }, growth: 2.22, desc: '+3% sur toute la production' },
+  { id: 'bouclierAegisolar', name: "Bouclier d'Aegisolar", emoji: '✨', tier: 3, cost: 104000, effect: { type: 'autoClickerPct', value: 0.05 }, growth: 2.16, desc: '+5% sur les auto-clics' },
+  { id: 'voileNocturis', name: 'Voile de Nocturis', emoji: '🌑', tier: 4, cost: 200000, effect: { type: 'coinPct', value: 0.04 }, growth: 2.22, desc: '+4% sur toute la production' },
+  { id: 'racineRacinea', name: 'Racine de Racinea', emoji: '🪨', tier: 4, cost: 256000, effect: { type: 'autoClickerPct', value: 0.06 }, growth: 2.16, desc: '+6% sur les auto-clics' },
+  { id: 'glypheRunicor', name: 'Glyphe de Runicor', emoji: '🔮', tier: 4, cost: 320000, effect: { type: 'tapFlat', value: 3 }, growth: 1.86, desc: '+3 pièces par tap' },
+  { id: 'petaleBraiserose', name: 'Pétale de Braiserose', emoji: '🔥', tier: 4, cost: 400000, effect: { type: 'critChancePct', value: 0.04 }, growth: 2.28, desc: '+4% de chance de coup critique' },
+  { id: 'abysseAbyssorax', name: "Abysse d'Abyssorax", emoji: '🌊', tier: 4, cost: 520000, effect: { type: 'critMultPct', value: 0.1 }, growth: 2.04, desc: '+10% de dégâts critiques' },
 ];
 
-// Coût du PROCHAIN niveau d'une amélioration. Même forme que
-// veilleurUpgradeCost() (×1,6 par niveau) pour que la progression se
-// lise comme celle des 4 mécaniques historiques.
+// Coût du PROCHAIN niveau d'une amélioration. Le facteur vient de
+// l'item (`growth`), pas d'une constante partagée : c'est lui qui
+// remplace l'ancien plafond de niveau. Un effet qui compose avec tout
+// le reste (pourcentage de production) grimpe plus vite qu'un +N par
+// tap, donc s'auto-limite sans qu'on ait besoin d'interdire l'achat.
 export function upgradeItemCost(item, level) {
-  return Math.round(item.cost * Math.pow(1.6, level));
+  return Math.round(item.cost * Math.pow(item.growth || 1.7, level));
 }
 
-export function upgradeItemMaxed(level) {
-  return level >= UPGRADE_MAX_LEVEL;
+// Taux de convergence de la chance de crit : chaque niveau rapporte 75%
+// du précédent. Total après N niveaux = value × (1 − r^N) / (1 − r),
+// qui converge vers value × 4 — donc les 3 améliorations de crit
+// réunies plafonnent à +36%, jamais 100%. Sans ça, retirer le cap de
+// niveau rendait le crit garanti et la Faveur des Esprits inutile.
+export const CRIT_CHANCE_DECAY = 0.75;
+function geometricTotal(value, level, decay) {
+  if (level <= 0) return 0;
+  return (value * (1 - Math.pow(decay, level))) / (1 - decay);
 }
 
 // Additionne les effets de toutes les améliorations, chaque effet
@@ -610,7 +623,13 @@ export function upgradeBonuses(levels) {
   UPGRADE_ITEMS.forEach((u) => {
     const lvl = map[u.id] || 0;
     if (lvl <= 0) return;
-    totals[u.effect.type] += u.effect.value * lvl;
+    // La chance de crit converge (bornée à 100% par nature) ; tout le
+    // reste s'additionne linéairement, son coût exponentiel suffisant à
+    // le tenir en bride.
+    totals[u.effect.type] +=
+      u.effect.type === 'critChancePct'
+        ? geometricTotal(u.effect.value, lvl, CRIT_CHANCE_DECAY)
+        : u.effect.value * lvl;
   });
   return totals;
 }
@@ -633,13 +652,29 @@ export function normalizeUpgradeLevels(levels) {
 // total de pièces gagnées sur toute la partie (pas juste le solde
 // actuel, qui peut avoir été dépensé) — récompense la progression
 // globale, pas la thésaurisation.
-export const ASCENSION_MIN_LIFETIME_EARNED = 50000; // seuil avant de pouvoir ascensionner
+// Refonte 02/09. L'ancien seuil (50 000) et l'ancienne formule
+// (√(lifetime/10 000), +2%/essence) dataient d'une économie où le joueur
+// gagnait quelques milliers de pièces par heure. Avec les auto-clics, la
+// simulation franchissait ce seuil en quelques minutes et rendait des
+// milliers de points d'essence — soit plusieurs milliers de pourcents de
+// production permanente dès le premier run.
+//
+// C'est l'Ascension qui porte la longévité du jeu : une course en ligne
+// droite finit toujours par s'aplatir (une fois les 15 générateurs
+// débloqués, l'empilement seul est logarithmique). Le nouveau seuil est
+// calé pour tomber vers 3-4h de jeu, et l'exposant 0,3 fait qu'un run
+// deux fois plus long ne rapporte qu'environ 23% d'essence en plus —
+// c'est ce qui rend le rebouclage plus payant que l'étirement. Testé à
+// 0,4 d'abord : un run d'un mois rendait +18 000% de production
+// permanente, ce qui aurait effacé toute la courbe au run suivant.
+export const ASCENSION_MIN_LIFETIME_EARNED = 100000000; // 100M
 export function ascensionEssenceGain(totalCoinsEarnedLifetime) {
   if (totalCoinsEarnedLifetime < ASCENSION_MIN_LIFETIME_EARNED) return 0;
-  return Math.floor(Math.sqrt(totalCoinsEarnedLifetime / 10000));
+  return Math.floor(Math.pow(totalCoinsEarnedLifetime / ASCENSION_MIN_LIFETIME_EARNED, 0.3));
 }
+export const ESSENCE_BONUS_PER_POINT = 0.01;
 export function essenceBonusMultiplier(essence) {
-  return 1 + essence * 0.02; // +2% de production permanente par point d'essence
+  return 1 + essence * ESSENCE_BONUS_PER_POINT; // +1% permanent par point
 }
 
 // ---- Rituel (bouton "fausse pub" — pas de vrai SDK pour l'instant) ----
@@ -817,8 +852,15 @@ export const AUTOCLICKERS = [
 
 // Coût pour acheter UNE unité de plus d'un générateur donné, sachant
 // combien on en possède déjà (le coût grimpe à chaque achat du même palier).
+//
+// Refonte du 02/09 : 1,15 → 1,25. C'est le levier d'équilibrage le plus
+// puissant du jeu, parce qu'il s'applique à la seule source de revenu
+// passif. À 1,15, la simulation débloquait les 15 générateurs en 6h et
+// la progression devenait complètement plate ensuite ; à 1,25 elle
+// s'étale sur un vrai run (3 générateurs à 30min, 6 à 4h, 10 à 12h).
+export const AUTOCLICKER_COST_GROWTH = 1.25;
 export function autoClickerCost(clicker, ownedCount) {
-  return Math.round(clicker.baseCost * Math.pow(1.15, ownedCount));
+  return Math.round(clicker.baseCost * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount));
 }
 
 // Revenu total/s de tous les générateurs possédés.
