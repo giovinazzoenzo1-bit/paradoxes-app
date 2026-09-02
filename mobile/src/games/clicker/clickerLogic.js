@@ -189,6 +189,13 @@ export const CREATURES = [
     stages: [
     { name: 'Nocturis', emoji: '👻' }, { name: 'Nocturis', emoji: '👻' }, { name: 'Nocturis', emoji: '👻' },
   ]},
+  { id: 'racinea', element: 'Terre', rarity: 'rare', baseIncome: 0.4, combatType: 'soutien',
+    baseHp: 50, baseAttack: 4, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Liane Protectrice', 3, 10], ['Sève Apaisante', 4, 15], ['Racines Entravantes', 5, 25], ['Éclosion Vitale', 7, 35]]),
+    lore: "Racinea est un ancien esprit sylvestre dont le corps est tissé de racines entrelacées et d'ambre magique. Elle arpente lentement les sous-bois pour fertiliser les sols arides et panser les blessures de la faune sauvage. Ses bourgeons libèrent un pollen curatif qui revitalise instantanément ses compagnons d'armes.",
+    stages: [
+    { name: 'Racinea', emoji: '🌳' }, { name: 'Racinea', emoji: '🌳' }, { name: 'Racinea', emoji: '🌳' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -290,6 +297,7 @@ export const CREATURE_POWERS = {
   brontobloc: { name: 'Décharge Statique', effectType: 'coins_burst', effectValue: 15 },
   malefix: { name: 'Explosion Runique', effectType: 'coins_burst', effectValue: 15 },
   nocturis: { name: 'Éclipse Curative', effectType: 'passive_boost', effectValue: 3 },
+  racinea: { name: 'Éclosion Vitale', effectType: 'passive_boost', effectValue: 3 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
