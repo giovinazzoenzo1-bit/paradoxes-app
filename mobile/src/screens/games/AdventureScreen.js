@@ -3,7 +3,7 @@
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
@@ -321,6 +321,54 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onBack }) {
 // (plus simple et robuste en React Native, même effet de progression
 // visuelle). Structure uniquement à cette étape : taper un niveau montre
 // un aperçu de l'adversaire, mais le vrai combat reste à coder (étape 5).
+// Tracé de la carte des chapitres (30/08) — positions calculées (pas de
+// mise en page flexbox) pour pouvoir dessiner des tracés COURBES entre
+// les niveaux plutôt que des lignes droites, comme demandé ("belles
+// formes logiques, arrondies, comme sur d'autres jeux vidéo").
+const LEVEL_NODE_SIZE = 46;
+const ROW_HEIGHT = 92; // espace vertical entre deux niveaux
+const WAVE_AMPLITUDE = 0.30; // amplitude horizontale du serpentin, en fraction de la largeur
+
+// Position (fraction 0-1 de la largeur, y en px depuis le haut du
+// chapitre) du niveau d'index `i` (0-9) dans son chapitre — une onde
+// continue plutôt que 3 positions fixes en alternance, pour que la
+// courbe entre deux niveaux consécutifs ait vraiment l'air organique.
+function nodePosition(i) {
+  const x = 0.5 + Math.sin(i * 0.95) * WAVE_AMPLITUDE;
+  const y = i * ROW_HEIGHT + LEVEL_NODE_SIZE;
+  return { x, y };
+}
+
+// Point sur une courbe de Bézier quadratique.
+function bezierPoint(p0, p1, ctrl, t) {
+  const mt = 1 - t;
+  return {
+    x: mt * mt * p0.x + 2 * mt * t * ctrl.x + t * t * p1.x,
+    y: mt * mt * p0.y + 2 * mt * t * ctrl.y + t * t * p1.y,
+  };
+}
+
+// Points intermédiaires (petits ronds) entre deux niveaux consécutifs,
+// le long d'une courbe (pas une ligne droite) — le point de contrôle est
+// décalé perpendiculairement au segment direct pour créer un vrai arc.
+function pathDots(p0, p1, count = 7) {
+  const mx = (p0.x + p1.x) / 2;
+  const my = (p0.y + p1.y) / 2;
+  const dx = p1.x - p0.x;
+  const dy = p1.y - p0.y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  // Perpendiculaire normalisée, sens fixé par le signe de dx pour que
+  // l'arc penche toujours "vers l'extérieur" du serpentin plutôt
+  // qu'aléatoirement à gauche ou à droite.
+  const bend = 26 * (dx >= 0 ? 1 : -1);
+  const ctrl = { x: mx - (dy / len) * bend, y: my + (dx / len) * bend };
+  const dots = [];
+  for (let k = 1; k < count; k++) {
+    dots.push(bezierPoint(p0, p1, ctrl, k / count));
+  }
+  return dots;
+}
+
 function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelWon, onBack }) {
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
@@ -352,11 +400,18 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
     );
   }
 
-  // Affiche le chapitre en cours + 2 chapitres suivants (verrouillés,
-  // pour montrer qu'il y a une suite) plutôt que de générer une liste
-  // potentiellement infinie d'un coup.
+  // Affiche le chapitre en cours + 6 chapitres suivants (verrouillés,
+  // pour montrer qu'il y a une suite) — porté de +2 à +6 (4 chapitres de
+  // marge supplémentaires, demande explicite) plutôt que de générer une
+  // liste potentiellement infinie d'un coup. La difficulté adverse reste
+  // cohérente sur toute cette plage (vérifié : puissance totale
+  // strictement croissante jusqu'au niveau 100 au moins, voir
+  // combatLogic.js/opponentPowerBudget).
   const currentChapter = chapterForLevel(currentUnlockedLevel);
-  const chaptersToShow = currentChapter + 2;
+  const chaptersToShow = currentChapter + 6;
+  const { width: screenWidth } = useWindowDimensions();
+  const pathWidth = screenWidth - 28; // marges de l'écran (padding: 14 de chaque côté)
+  const chapterHeight = (LEVELS_PER_CHAPTER - 1) * ROW_HEIGHT + LEVEL_NODE_SIZE * 2;
 
   return (
     <View style={styles.screen}>
@@ -369,40 +424,56 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
       <Text style={styles.griffesText}>🐾 {griffes} Griffes</Text>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-        {Array.from({ length: chaptersToShow }, (_, chapterIdx) => chapterIdx + 1).map((chapterNum) => (
-          <View key={chapterNum} style={styles.chapterBlock}>
-            <Text style={styles.chapterTitle}>Chapitre {chapterNum}</Text>
-            <View style={styles.chapterPath}>
-              {Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) => (chapterNum - 1) * LEVELS_PER_CHAPTER + i + 1).map(
-                (levelNum, i) => {
-                  const align = i % 3 === 0 ? 'flex-start' : i % 3 === 1 ? 'center' : 'flex-end';
+        {Array.from({ length: chaptersToShow }, (_, chapterIdx) => chapterIdx + 1).map((chapterNum) => {
+          const positions = Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) => nodePosition(i));
+          return (
+            <View key={chapterNum} style={styles.chapterBlock}>
+              <Text style={styles.chapterTitle}>Chapitre {chapterNum}</Text>
+              <View style={[styles.chapterPath, { height: chapterHeight }]}>
+                {/* Tracé courbe en pointillés entre chaque niveau consécutif —
+                    dessiné EN PREMIER pour rester derrière les pastilles. */}
+                {positions.slice(0, -1).map((p0, i) => {
+                  const p1 = positions[i + 1];
+                  return pathDots(p0, p1).map((d, di) => (
+                    <View
+                      key={`dot-${i}-${di}`}
+                      style={[
+                        styles.pathDot,
+                        { left: d.x * pathWidth - 3, top: d.y - 3 },
+                      ]}
+                    />
+                  ));
+                })}
+
+                {positions.map((pos, i) => {
+                  const levelNum = (chapterNum - 1) * LEVELS_PER_CHAPTER + i + 1;
                   const state = levelNum < currentUnlockedLevel ? 'done' : levelNum === currentUnlockedLevel ? 'current' : 'locked';
                   return (
-                    <View key={levelNum} style={[styles.levelNodeRow, { alignItems: align === 'flex-start' ? 'flex-start' : align === 'flex-end' ? 'flex-end' : 'center' }]}>
-                      <TouchableOpacity
-                        style={[
-                          styles.levelNode,
-                          state === 'current' && styles.levelNodeCurrent,
-                          state === 'done' && styles.levelNodeDone,
-                        ]}
-                        onPress={() => state !== 'locked' && setLevelPreview(levelNum)}
-                        disabled={state === 'locked'}
-                      >
-                        {state === 'locked' ? (
-                          <Ionicons name="lock-closed" size={16} color={COLORS.muted} />
-                        ) : state === 'done' ? (
-                          <Ionicons name="checkmark" size={20} color="#0a3d24" />
-                        ) : (
-                          <Text style={styles.levelNodeText}>{levelIndexInChapter(levelNum)}</Text>
-                        )}
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      key={levelNum}
+                      style={[
+                        styles.levelNode,
+                        { left: pos.x * pathWidth - LEVEL_NODE_SIZE / 2, top: pos.y - LEVEL_NODE_SIZE / 2 },
+                        state === 'current' && styles.levelNodeCurrent,
+                        state === 'done' && styles.levelNodeDone,
+                      ]}
+                      onPress={() => state !== 'locked' && setLevelPreview(levelNum)}
+                      disabled={state === 'locked'}
+                    >
+                      {state === 'locked' ? (
+                        <Ionicons name="lock-closed" size={16} color={COLORS.muted} />
+                      ) : state === 'done' ? (
+                        <Ionicons name="checkmark" size={20} color="#0a3d24" />
+                      ) : (
+                        <Text style={styles.levelNodeText}>{levelIndexInChapter(levelNum)}</Text>
+                      )}
+                    </TouchableOpacity>
                   );
-                }
-              )}
+                })}
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
 
       {levelPreview && (
@@ -515,9 +586,13 @@ const styles = StyleSheet.create({
 
   chapterBlock: { marginBottom: 28 },
   chapterTitle: { color: COLORS.action, fontSize: 15, fontWeight: '900', marginBottom: 14, textAlign: 'center' },
-  chapterPath: { width: '100%' },
-  levelNodeRow: { width: '100%', paddingHorizontal: 20, marginVertical: 4 },
+  chapterPath: { width: '100%', position: 'relative' },
+  pathDot: {
+    position: 'absolute', width: 6, height: 6, borderRadius: 3,
+    backgroundColor: COLORS.border,
+  },
   levelNode: {
+    position: 'absolute',
     width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.panel,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
   },
