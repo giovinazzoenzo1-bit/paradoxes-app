@@ -121,22 +121,20 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     onEvolveCreature(creatureId, currentTier + 1);
   };
 
-  // Achète une rune ALÉATOIRE contre 100 Griffes (toujours niveau 1) —
-  // structure fonctionnelle posée maintenant (achat + fusion marchent
-  // réellement), mais l'application des bonus des runes aux stats de
-  // combat n'est PAS encore câblée dans combatLogic.js — prévu pour une
-  // prochaine passe (voir la proposition de types/paliers ci-dessous,
-  // à valider avant de l'implémenter).
+  // Achète une rune ALÉATOIRE contre 100 Griffes (toujours niveau 1, pas
+  // encore équipée). Les bonus des runes affectent maintenant vraiment
+  // les stats de combat (voir combatLogic.js/runeBonuses).
   const buyRandomRune = () => {
     if (griffes < RUNE_COST) return;
     setGriffes((g) => g - RUNE_COST);
     const type = RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)];
-    setOwnedRunes((prev) => [...prev, { id: makeRuneId(), type, level: 1 }]);
+    setOwnedRunes((prev) => [...prev, { id: makeRuneId(), type, level: 1, equippedCreatureId: null }]);
   };
 
   // Fusionne 2 runes du MÊME type et MÊME niveau en une seule au niveau
   // supérieur (jamais au-delà du palier 5) — les deux runes d'origine
-  // disparaissent.
+  // disparaissent. Si l'une des deux était équipée, la nouvelle rune
+  // fusionnée prend AUTOMATIQUEMENT sa place (pas de désarmement surprise).
   const fuseRunes = (id1, id2) => {
     setOwnedRunes((prev) => {
       const r1 = prev.find((r) => r.id === id1);
@@ -145,8 +143,24 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         return prev;
       }
       const rest = prev.filter((r) => r.id !== id1 && r.id !== id2);
-      return [...rest, { id: makeRuneId(), type: r1.type, level: r1.level + 1 }];
+      const inheritedSlot = r1.equippedCreatureId || r2.equippedCreatureId || null;
+      return [...rest, { id: makeRuneId(), type: r1.type, level: r1.level + 1, equippedCreatureId: inheritedSlot }];
     });
+  };
+
+  // Équipe une rune NON équipée sur une créature — refuse si la créature
+  // a déjà ses 3 emplacements pleins (garde-fou, la carte des 3 cases
+  // dans le profil ne devrait de toute façon jamais en proposer une 4e).
+  const equipRune = (runeId, creatureId) => {
+    setOwnedRunes((prev) => {
+      const alreadyEquipped = prev.filter((r) => r.equippedCreatureId === creatureId).length;
+      if (alreadyEquipped >= 3) return prev;
+      return prev.map((r) => (r.id === runeId ? { ...r, equippedCreatureId: creatureId } : r));
+    });
+  };
+
+  const unequipRune = (runeId) => {
+    setOwnedRunes((prev) => prev.map((r) => (r.id === runeId ? { ...r, equippedCreatureId: null } : r)));
   };
 
   const ownedMap = {};
@@ -164,6 +178,9 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         owned={ownedMap[detailCreatureId]}
         griffes={griffes}
         onEvolve={() => handleEvolve(detailCreatureId, ownedMap[detailCreatureId].evolutionTier || 0, ownedMap[detailCreatureId].level)}
+        ownedRunes={ownedRunes}
+        onEquipRune={(runeId) => equipRune(runeId, detailCreatureId)}
+        onUnequipRune={unequipRune}
         onBack={() => setDetailCreatureId(null)}
       />
     );
@@ -177,6 +194,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         owned={owned}
         deck={deck}
         griffes={griffes}
+        ownedRunes={ownedRunes}
         onLevelWon={handleLevelWon}
         onBack={() => setChapterMapOpen(false)}
       />
@@ -320,14 +338,29 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
 }
 
 
-function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onBack }) {
+function CreatureDetailScreen({ creature, owned, griffes, onEvolve, ownedRunes, onEquipRune, onUnequipRune, onBack }) {
+  const [runePickerSlot, setRunePickerSlot] = useState(null); // index (0-2) ou null
+
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
   const baseName = creature.stages[0].name; // nom de base, pour clarifier le lien avec l'histoire
   const evolutionTier = owned.evolutionTier || 0;
-  const stats = combatStatsForCreatureTyped(creature, owned.level, evolutionTier);
+
+  // Runes équipées sur CETTE créature (jusqu'à 3), dans l'ordre où elles
+  // ont été équipées — sert à la fois de liste d'affichage et de calcul
+  // des bonus réels.
+  const equippedRunes = ownedRunes.filter((r) => r.equippedCreatureId === creature.id);
+  const statsBase = combatStatsForCreatureTyped(creature, owned.level, evolutionTier, []);
+  const stats = combatStatsForCreatureTyped(creature, owned.level, evolutionTier, equippedRunes);
+  // Delta affiché en couleur à côté de chaque stat concernée — vert pour
+  // les PV, rouge pour l'ATQ, doré pour l'Endurance (mêmes couleurs que
+  // les barres correspondantes ailleurs dans l'appli).
+  const hpBonus = stats.hp - statsBase.hp;
+  const atkBonus = stats.attack - statsBase.attack;
+  const enduranceBonus = stats.endurance - statsBase.endurance;
 
   return (
+    <>
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 30 }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -357,12 +390,16 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onBack }) {
         <View style={styles.statRow}>
           <Ionicons name="heart" size={18} color={COLORS.good} />
           <Text style={styles.statLabel}>PV</Text>
-          <Text style={styles.statValue}>{stats.hp}</Text>
+          <Text style={styles.statValue}>
+            {stats.hp}{hpBonus > 0 && <Text style={styles.statBonusGood}> (+{hpBonus} PV)</Text>}
+          </Text>
         </View>
         <View style={styles.statRow}>
           <Ionicons name="flash" size={18} color={COLORS.neonPink} />
           <Text style={styles.statLabel}>ATQ</Text>
-          <Text style={styles.statValue}>{stats.attack}</Text>
+          <Text style={styles.statValue}>
+            {stats.attack}{atkBonus > 0 && <Text style={styles.statBonusBad}> (+{atkBonus} ATQ)</Text>}
+          </Text>
         </View>
         <View style={styles.statRow}>
           <Ionicons name="finger-print" size={18} color={COLORS.neonCyan} />
@@ -372,8 +409,49 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onBack }) {
         <View style={styles.statRow}>
           <Ionicons name="battery-charging" size={18} color={COLORS.action} />
           <Text style={styles.statLabel}>Endurance</Text>
-          <Text style={styles.statValue}>{stats.endurance}</Text>
+          <Text style={styles.statValue}>
+            {stats.endurance}{enduranceBonus > 0 && <Text style={styles.statBonusAction}> (+{enduranceBonus})</Text>}
+          </Text>
         </View>
+        {stats.dmgMultBonus > 0 && (
+          <View style={styles.statRow}>
+            <Ionicons name="flame" size={18} color={COLORS.neonCyan} />
+            <Text style={styles.statLabel}>Multiplicateur max</Text>
+            <Text style={styles.statValue}>
+              x{(2.5 + stats.dmgMultBonus).toFixed(2)}<Text style={styles.statBonusCyan}> (+{stats.dmgMultBonus.toFixed(2)})</Text>
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* 3 cases de rune — grisée si vide (tap = ouvre le sélecteur),
+          remplie sinon (tap = propose de la retirer). */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>💎 Runes</Text>
+        <View style={styles.runeSlotRow}>
+          {[0, 1, 2].map((slotIdx) => {
+            const rune = equippedRunes[slotIdx];
+            if (rune) {
+              const def = RUNE_TYPES[rune.type];
+              return (
+                <TouchableOpacity
+                  key={slotIdx}
+                  style={[styles.runeSlot, { borderColor: def.color, backgroundColor: 'rgba(255,255,255,0.06)' }]}
+                  onPress={() => onUnequipRune(rune.id)}
+                >
+                  <Text style={styles.runeSlotEmoji}>{def.icon}</Text>
+                  <Text style={styles.runeSlotLevel}>Niv. {rune.level}</Text>
+                </TouchableOpacity>
+              );
+            }
+            return (
+              <TouchableOpacity key={slotIdx} style={styles.runeSlotEmpty} onPress={() => setRunePickerSlot(slotIdx)}>
+                <Ionicons name="add" size={22} color={COLORS.muted} />
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.speciesNote}>Touche une case pleine pour retirer sa rune.</Text>
       </View>
 
       <EvolutionCard evolutionTier={evolutionTier} ownedLevel={owned.level} griffes={griffes} onEvolve={onEvolve} />
@@ -396,6 +474,18 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onBack }) {
         <Text style={styles.sectionBody}>{creature.lore}</Text>
       </View>
     </ScrollView>
+
+    {runePickerSlot !== null && (
+      <RunePickerOverlay
+        ownedRunes={ownedRunes}
+        onPick={(runeId) => {
+          onEquipRune(runeId);
+          setRunePickerSlot(null);
+        }}
+        onClose={() => setRunePickerSlot(null)}
+      />
+    )}
+    </>
   );
 }
 
@@ -452,7 +542,7 @@ function pathDots(p0, p1, count = 7) {
   return dots;
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelWon, onBack }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, onLevelWon, onBack }) {
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
   // TOUJOURS appelé avant tout retour anticipé (règle des Hooks React) —
@@ -473,6 +563,9 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
         creature: CREATURES.find((c) => c.id === id),
         ownedLevel: owned.find((o) => o.id === id).level,
         evolutionTier: owned.find((o) => o.id === id).evolutionTier || 0,
+        // Runes équipées sur CETTE créature précise — c'est ce qui rend
+        // les runes réellement actives en combat (voir CombatScreen.js).
+        equippedRunes: ownedRunes.filter((r) => r.equippedCreatureId === id),
       }));
     return (
       <CombatScreen
@@ -595,9 +688,14 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
 // touche une 1ère rune pour la sélectionner, touche une 2ème rune
 // compatible pour fusionner automatiquement.
 function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
+  // Mode fusion : DÉSACTIVÉ par défaut (la grille sert juste à consulter
+  // sa collection), activé par un bouton dédié (demande explicite) — tant
+  // qu'il n'est pas actif, taper une rune ne fait rien.
+  const [fusionMode, setFusionMode] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
   const handlePress = (rune) => {
+    if (!fusionMode) return;
     if (!selectedId) {
       setSelectedId(rune.id);
       return;
@@ -628,10 +726,22 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
         <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} 🐾 Griffes</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={[styles.fusionModeBtn, fusionMode && styles.fusionModeBtnActive]}
+        onPress={() => {
+          setFusionMode((v) => !v);
+          setSelectedId(null);
+        }}
+      >
+        <Text style={styles.fusionModeBtnText}>{fusionMode ? '✕ Quitter le mode fusion' : '🔀 Fusionner des runes'}</Text>
+      </TouchableOpacity>
+
       <Text style={styles.runeHint}>
-        {selectedId
+        {!fusionMode
+          ? "Pour équiper une rune, va dans la fiche d'une créature. Le bouton ci-dessus sert à fusionner 2 runes identiques."
+          : selectedId
           ? 'Touche une 2e rune du MÊME type et MÊME niveau pour fusionner (donne 1 rune au niveau supérieur).'
-          : 'Touche une rune pour la sélectionner, puis une 2e identique pour la fusionner.'}
+          : 'Touche une 1ère rune à fusionner.'}
       </Text>
 
       <ScrollView contentContainerStyle={styles.runeGrid}>
@@ -647,11 +757,13 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
               return (
                 <TouchableOpacity
                   key={rune.id}
-                  style={[styles.runeCell, { borderColor: def.color }, isSelected && styles.runeCellSelected]}
+                  style={[styles.runeCell, { borderColor: def.color }, isSelected && styles.runeCellSelected, !fusionMode && { opacity: 0.85 }]}
                   onPress={() => handlePress(rune)}
+                  disabled={!fusionMode}
                 >
                   <Text style={styles.runeEmoji}>{def.icon}</Text>
                   <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
+                  {rune.equippedCreatureId && <Text style={styles.runeEquippedTag}>équipée</Text>}
                 </TouchableOpacity>
               );
             })
@@ -661,6 +773,47 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
   );
 }
 
+
+// Sélecteur affiché quand on touche une case de rune VIDE dans la fiche
+// d'une créature — ne propose que les runes NON équipées ailleurs (une
+// rune ne peut être sur qu'une seule créature à la fois).
+function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
+  const available = ownedRunes.filter((r) => !r.equippedCreatureId);
+  return (
+    <View style={styles.overlay}>
+      <View style={styles.overlayPanel}>
+        <TouchableOpacity style={styles.overlayClose} onPress={onClose}>
+          <Text style={styles.overlayCloseText}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.overlayTitle}>Choisir une rune</Text>
+        {available.length === 0 ? (
+          <Text style={[styles.overlaySubtitle, { marginTop: 10 }]}>
+            Aucune rune disponible — achètes-en une ou libères-en une déjà équipée ailleurs.
+          </Text>
+        ) : (
+          <View style={[styles.runeGrid, { marginTop: 14 }]}>
+            {available
+              .slice()
+              .sort((a, b) => b.level - a.level)
+              .map((rune) => {
+                const def = RUNE_TYPES[rune.type];
+                return (
+                  <TouchableOpacity
+                    key={rune.id}
+                    style={[styles.runeCell, { borderColor: def.color }]}
+                    onPress={() => onPick(rune.id)}
+                  >
+                    <Text style={styles.runeEmoji}>{def.icon}</Text>
+                    <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
 
 function FighterSelectOverlay({ levelNumber, owned, deck, onClose, onStart }) {
   const opponent = opponentForLevel(levelNumber);
@@ -818,6 +971,31 @@ const styles = StyleSheet.create({
   statRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   statLabel: { color: COLORS.muted, fontSize: 13, fontWeight: '700', flex: 1 },
   statValue: { color: COLORS.text, fontSize: 16, fontWeight: '900' },
+  // Delta de bonus affiché à côté de la stat concernée — couleur liée au
+  // TYPE de rune (demande explicite : vert pour PV, rouge pour ATQ).
+  statBonusGood: { color: COLORS.good, fontSize: 13, fontWeight: '800' },
+  statBonusBad: { color: '#FF5252', fontSize: 13, fontWeight: '800' },
+  statBonusAction: { color: COLORS.action, fontSize: 13, fontWeight: '800' },
+  statBonusCyan: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
+
+  runeSlotRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 },
+  runeSlot: {
+    width: 66, height: 66, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2,
+  },
+  runeSlotEmoji: { fontSize: 26 },
+  runeSlotLevel: { color: COLORS.text, fontSize: 9, fontWeight: '800', marginTop: 2 },
+  runeSlotEmpty: {
+    width: 66, height: 66, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: COLORS.border, borderStyle: 'dashed', backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  fusionModeBtn: {
+    borderRadius: 14, paddingVertical: 10, alignItems: 'center', marginTop: 10,
+    borderWidth: 1.5, borderColor: COLORS.neonCyan, backgroundColor: 'rgba(62,198,240,0.08)',
+  },
+  fusionModeBtnActive: { backgroundColor: 'rgba(62,198,240,0.22)' },
+  fusionModeBtnText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
+  runeEquippedTag: { color: COLORS.action, fontSize: 8, fontWeight: '800', marginTop: 2 },
 
   sectionCard: {
     backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, marginBottom: 14,

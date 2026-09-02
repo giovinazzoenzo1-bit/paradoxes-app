@@ -107,7 +107,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
 
   const [fighters, setFighters] = useState(() =>
     team.map((member) => {
-      const stats = combatStatsForCreatureTyped(member.creature, member.ownedLevel, member.evolutionTier || 0);
+      const stats = combatStatsForCreatureTyped(member.creature, member.ownedLevel, member.evolutionTier || 0, member.equippedRunes || []);
       return { creature: member.creature, ownedLevel: member.ownedLevel, stats, hp: stats.hp, endurance: stats.endurance };
     })
   );
@@ -286,7 +286,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     const targetIdx = targetIndexRef.current;
     const opp = opponentsRef.current[targetIdx];
 
-    const multiplier = skill.isBasic ? 1 : damageMultiplierForTime(elapsedSec, completed);
+    // Rune de Célérité : bonus ADDITIF sur le multiplicateur, seulement
+    // pour une vraie compétence (l'attaque de base a un multiplicateur
+    // fixe à x1, ce n'est pas ce que la rune est censée booster).
+    const multiplier = skill.isBasic ? 1 : damageMultiplierForTime(elapsedSec, completed) + (curFighter.stats.dmgMultBonus || 0);
     const skillDamage = skill.isBasic ? skill.damage : scaledSkillDamage(skill, curFighter.creature, curFighter.stats.attack);
     const playerDamage = computePlayerDamage(skillDamage, multiplier);
 
