@@ -152,6 +152,13 @@ export const CREATURES = [
     stages: [
     { name: 'Aquamira', emoji: '🎐' }, { name: 'Aquamira', emoji: '🎐' }, { name: 'Aquamira', emoji: '🎐' },
   ]},
+  { id: 'terracroc', element: 'Terre', rarity: 'peu_commun', baseIncome: 0.2, combatType: 'attaquant',
+    baseHp: 20, baseAttack: 6, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([["Griffe d'Argile", 4, 10], ['Coup de Silex', 6, 15], ['Morsure Sismique', 8, 20], ['Éboulement Brutal', 12, 30]]),
+    lore: "Terracroc est un prédateur bipède recouvert de roches acérées et d'argile durcie. Il chasse frénétiquement dans les canyons arides, utilisant ses lourdes griffes de pierre pour fracasser l'armure de ses proies. Bien qu'il manque d'intelligence, sa force brute en fait un redoutable chasseur d'embuscade.",
+    stages: [
+    { name: 'Terracroc', emoji: '🐊' }, { name: 'Terracroc', emoji: '🐊' }, { name: 'Terracroc', emoji: '🐊' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -248,6 +255,7 @@ export const CREATURE_POWERS = {
   luxorbe: { name: 'Rayonnement', effectType: 'passive_boost', effectValue: 3 },
   fournax: { name: 'Résonance Cristalline', effectType: 'coins_burst', effectValue: 75 },
   aquamira: { name: 'Marée Curative', effectType: 'passive_boost', effectValue: 2 },
+  terracroc: { name: 'Séisme', effectType: 'coins_burst', effectValue: 15 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
