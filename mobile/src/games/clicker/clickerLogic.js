@@ -37,6 +37,7 @@ export const CREATURE_ID_MIGRATIONS = {
   etincelot: 'voltix',
   lumeret: 'luxorbe',
   ombrelin: 'ombrillon',
+  frimouss: 'glyphon',
 };
 
 // Applique la migration à un id de créature — renvoie l'id tel quel s'il
@@ -93,11 +94,12 @@ export const CREATURES = [
     stages: [
     { name: 'Brisillon', emoji: '🐦' }, { name: 'Tourbillan', emoji: '🦅' }, { name: 'Zéphyrion', emoji: '🕊️' },
   ]},
-  { id: 'frimouss', element: 'Eau', rarity: 'rare', baseIncome: 0.4, combatType: 'tank',
-    skills: mkSkills([['Griffe Givrée', 5, 20], ['Souffle Glacial', 10, 20], ['Pic de Glace', 15, 20], ['Blizzard', 22, 20]]),
-    lore: "Frimouss fond légèrement chaque été et regèle chaque hiver. Personne ne sait vraiment comment il survit à la saison entre les deux.",
+  { id: 'glyphon', element: 'Magie', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
+    baseHp: 12, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Onde Runique', 1, 5], ['Poussière de Mana', 2, 10], ['Aura Apaisante', 1, 15], ['Choc Arcanique', 3, 25]]),
+    lore: "Glyphon est une petite rune flottante qui s'est imprégnée de magie résiduelle dans les vieilles bibliothèques. Il s'attache souvent aux jeunes sorciers pour les aider à canaliser leurs premiers sorts. Bien qu'il soit fragile, sa présence apaise les esprits et renforce les enchantements de ses alliés.",
     stages: [
-    { name: 'Frimouss', emoji: '🐧' }, { name: 'Glacœur', emoji: '❄️' }, { name: 'Cristalys', emoji: '🧊' },
+    { name: 'Glyphon', emoji: '🔮' }, { name: 'Glyphon', emoji: '🔮' }, { name: 'Glyphon', emoji: '🔮' },
   ]},
   { id: 'ombrillon', element: 'Ténèbres', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
     baseHp: 10, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
@@ -222,7 +224,7 @@ export const CREATURE_POWERS = {
   bouldog: { name: 'Fondation', effectType: 'coins_burst', effectValue: 8 },
   voltix: { name: 'Décharge', effectType: 'coins_burst', effectValue: 12 },
   brisillon: { name: 'Bourrasque', effectType: 'passive_boost', effectValue: 2.5 },
-  frimouss: { name: 'Conservation', effectType: 'discount_next', effectValue: 0.25 },
+  glyphon: { name: 'Conservation', effectType: 'discount_next', effectValue: 0.25 },
   ombrillon: { name: 'Éclipse', effectType: 'coins_burst', effectValue: 25 },
   luxorbe: { name: 'Rayonnement', effectType: 'passive_boost', effectValue: 3 },
   gemmion: { name: 'Résonance Cristalline', effectType: 'coins_burst', effectValue: 75 },
