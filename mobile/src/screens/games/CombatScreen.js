@@ -10,9 +10,15 @@
 // intégré dans ce projet). Pas d'animation pour l'instant, on garde les
 // emojis actuels comme "skins". Croix pour quitter en haut à gauche.
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+
+// Décor de combat fourni par l'utilisateur (30/08) — remplace le fond
+// placeholder en formes. Élargi au ratio 2400x1080 par miroir flouté sur
+// les côtés pour éviter tout rognage vertical (la lune et le premier plan
+// restent visibles quel que soit l'écran), exporté en JPEG (512 Ko).
+const BG_IMG = require('../../../assets/combat/background.jpg');
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { COLORS } from './clickerTheme';
 import { stageForLevel } from '../../games/clicker/clickerLogic';
@@ -392,15 +398,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     <View style={[styles.screen, { marginTop: -insets.top }]}>
       <StatusBar hidden />
 
-      {/* Fond "nature" de secours, construit en Views (ciel / collines /
-          sol / sentier) — PLACEHOLDER en attendant un vrai décor dessiné
-          par Flavio : une simple image plein écran viendra le remplacer. */}
-      <View style={styles.bgSky} />
-      <View style={[styles.bgSkyLow, { top: H * 0.28 }]} />
-      <View style={[styles.bgHill, { left: -W * 0.1, top: H * 0.38, width: W * 0.7, height: H * 0.34 }]} />
-      <View style={[styles.bgHill, { left: W * 0.5, top: H * 0.40, width: W * 0.7, height: H * 0.32 }]} />
-      <View style={[styles.bgGround, { top: H * 0.55 }]} />
-      <View style={[styles.bgPath, { left: W * 0.15, top: H * 0.60, width: W * 0.7, height: H * 0.3 }]} />
+      {/* Décor de combat. Voile sombre par-dessus : le décor est très
+          détaillé/lumineux, sans ça les sprites et les barres de vie s'y
+          perdent visuellement. */}
+      <ImageBackground source={BG_IMG} resizeMode="cover" style={StyleSheet.absoluteFill}>
+        <View style={styles.bgDim} />
+      </ImageBackground>
 
       <TouchableOpacity style={[styles.closeBtn, { top: 10 + insets.top, left: 10 + insets.left }]} onPress={confirmQuit}>
         <Text style={styles.closeBtnText}>✕</Text>
@@ -520,14 +523,9 @@ function CombatResultScreen({ outcome, levelNumber, onContinue }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#5a8fd6' },
+  screen: { flex: 1, backgroundColor: '#0a0820' },
 
-  // Fond placeholder (voir commentaire dans le rendu)
-  bgSky: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#5a8fd6' },
-  bgSkyLow: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#8fb8e8' },
-  bgHill: { position: 'absolute', borderRadius: 999, backgroundColor: '#4f8a52' },
-  bgGround: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#6aa84f' },
-  bgPath: { position: 'absolute', borderRadius: 999, backgroundColor: '#c9b27a', opacity: 0.85 },
+  bgDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,4,20,0.34)' },
 
   closeBtn: {
     position: 'absolute', zIndex: 30, width: 34, height: 34, borderRadius: 17,
