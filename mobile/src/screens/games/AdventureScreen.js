@@ -10,6 +10,7 @@ import { COLORS } from './clickerTheme';
 import CombatScreen from './CombatScreen';
 import { DeckPicker } from './DeckPicker';
 import { CREATURES, RARITY_LABEL, RARITY_COLOR, RARITY_BADGE_LETTER, stageForLevel } from '../../games/clicker/clickerLogic';
+import * as Notifications from 'expo-notifications';
 import {
   combatStatsForCreatureTyped,
   chapterForLevel,
@@ -19,7 +20,54 @@ import {
   griffesReward,
   canEvolve,
   evolutionCost,
+  ENERGY_MAX,
+  ENERGY_REGEN_MS,
+  computeEnergyRegen,
+  msUntilNextEnergy,
 } from '../../games/clicker/combatLogic';
+
+// Configuration du gestionnaire de notifications — une seule fois, au
+// chargement du module. Protégé par try/catch : si expo-notifications
+// pose problème sur l'environnement (permissions, plateforme...), le
+// reste de l'appli ne doit JAMAIS en dépendre pour fonctionner —
+// l'énergie elle-même marche très bien sans notification.
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+} catch (e) {
+  // Pas grave — les notifications sont un bonus, pas une dépendance dure.
+}
+
+// Programme (ou reprogramme) LA notification "énergie pleine" — un seul
+// identifiant fixe pour toujours remplacer la précédente plutôt que
+// d'en empiler plusieurs à chaque fois que l'écran se recharge.
+async function scheduleEnergyFullNotification(msFromNow) {
+  try {
+    await Notifications.cancelScheduledNotificationAsync('energy-full').catch(() => {});
+    if (msFromNow <= 0) return;
+    const { status } = await Notifications.getPermissionsAsync();
+    let granted = status === 'granted';
+    if (!granted) {
+      const req = await Notifications.requestPermissionsAsync();
+      granted = req.status === 'granted';
+    }
+    if (!granted) return;
+    await Notifications.scheduleNotificationAsync({
+      identifier: 'energy-full',
+      content: { title: '⚡ Énergie pleine !', body: 'Tes 5 vies sont prêtes — retourne combattre !' },
+      trigger: { seconds: Math.max(1, Math.round(msFromNow / 1000)) },
+    });
+  } catch (e) {
+    // Pas grave — même raison qu'au-dessus.
+  }
+}
 
 // Sauvegarde séparée de celle du clicker classique — la progression
 // d'Aventure grossira avec le temps (niveaux, ressource Griffes...), pas
@@ -31,6 +79,8 @@ const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
 // drapeau lu et appliqué par AdventureScreen lui-même à son chargement.
 export const DEV_ADD_GRIFFES_KEY = 'adventure:dev:addGriffes';
 const DEV_GRIFFES_AMOUNT = 1000;
+// Même schéma que ci-dessus pour recharger l'énergie au max depuis Options.
+export const DEV_REFILL_ENERGY_KEY = 'adventure:dev:refillEnergy';
 
 // Runes — proposition initiale de 4 types (voir le tableau des paliers
 // donné à l'utilisateur en réponse). Les BONUS eux-mêmes ne sont pas
@@ -62,6 +112,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Runes possédées : [{ id, type, level }] — id unique généré à l'achat/
   // la fusion, type = l'une des 4 clés de RUNE_TYPES, level 1 à 5.
   const [ownedRunes, setOwnedRunes] = useState([]);
+  // Énergie — 1 point toutes les 20 min, plafond 5, coûte 1 pour LANCER
+  // un combat (voir startBattleWithEnergy plus bas).
+  const [energy, setEnergy] = useState(ENERGY_MAX);
+  const [energyUpdatedAt, setEnergyUpdatedAt] = useState(Date.now());
   const [progressLoaded, setProgressLoaded] = useState(false);
   const currentUnlockedLevelRef = useRef(1);
   currentUnlockedLevelRef.current = currentUnlockedLevel;
@@ -76,6 +130,15 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           setCurrentUnlockedLevel(saved.currentUnlockedLevel || 1);
           setGriffes(saved.griffes || 0);
           setOwnedRunes(saved.ownedRunes || []);
+          // Recalcule l'énergie à partir du temps RÉELLEMENT écoulé
+          // depuis la dernière sauvegarde (même principe que les gains
+          // hors-ligne du clicker) — sans ça, fermer l'appli ne ferait
+          // jamais avancer la régénération.
+          const storedEnergy = saved.energy != null ? saved.energy : ENERGY_MAX;
+          const storedAt = saved.energyUpdatedAt || Date.now();
+          const recalced = computeEnergyRegen(storedEnergy, storedAt, Date.now());
+          setEnergy(recalced.energy);
+          setEnergyUpdatedAt(recalced.lastUpdateAt);
         }
       } catch (e) {
         // pas de sauvegarde valide, on démarre au niveau 1
@@ -87,6 +150,12 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         setGriffes((g) => g + DEV_GRIFFES_AMOUNT);
         await AsyncStorage.removeItem(DEV_ADD_GRIFFES_KEY);
       }
+      const energyFlag = await AsyncStorage.getItem(DEV_REFILL_ENERGY_KEY);
+      if (energyFlag === '1') {
+        setEnergy(ENERGY_MAX);
+        setEnergyUpdatedAt(Date.now());
+        await AsyncStorage.removeItem(DEV_REFILL_ENERGY_KEY);
+      }
       setProgressLoaded(true);
     })();
   }, []);
@@ -94,8 +163,64 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Sauvegarde à chaque changement.
   useEffect(() => {
     if (!progressLoaded) return;
-    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, ownedRunes }));
-  }, [currentUnlockedLevel, griffes, ownedRunes, progressLoaded]);
+    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt }));
+  }, [currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, progressLoaded]);
+
+  // Pendant que l'écran Aventure est ouvert, revérifie la régénération
+  // toutes les 30s — permet de VOIR l'énergie remonter en direct sans
+  // avoir à fermer/rouvrir l'appli. Coût négligeable (juste une
+  // soustraction de timestamps), et purement décoratif si rien n'a
+  // changé (computeEnergyRegen ne fait rien tant qu'un tick complet ne
+  // s'est pas écoulé).
+  useEffect(() => {
+    if (!progressLoaded) return;
+    const interval = setInterval(() => {
+      setEnergy((e) => {
+        const recalced = computeEnergyRegen(e, energyUpdatedAt, Date.now());
+        if (recalced.energy !== e) setEnergyUpdatedAt(recalced.lastUpdateAt);
+        return recalced.energy;
+      });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [progressLoaded, energyUpdatedAt]);
+
+  // Reprogramme la notification "énergie pleine" à chaque fois que
+  // l'énergie change — annule automatiquement l'ancienne (identifiant
+  // fixe côté scheduleEnergyFullNotification) si elle n'est plus valable.
+  useEffect(() => {
+    if (!progressLoaded) return;
+    const remaining = msUntilNextEnergy(energy, energyUpdatedAt, Date.now());
+    if (energy >= ENERGY_MAX) {
+      Notifications.cancelScheduledNotificationAsync('energy-full').catch(() => {});
+    } else {
+      // Temps jusqu'au PLEIN (pas juste le prochain point) : autant de
+      // ticks manquants que d'énergie sous le plafond.
+      const ticksMissing = ENERGY_MAX - energy;
+      const msUntilFull = remaining + (ticksMissing - 1) * ENERGY_REGEN_MS;
+      scheduleEnergyFullNotification(msUntilFull);
+    }
+  }, [energy, energyUpdatedAt, progressLoaded]);
+
+  // Dépense 1 énergie pour lancer un combat — recalcule d'abord la
+  // régénération au cas où du temps se serait écoulé depuis la dernière
+  // vérification. Retourne false (et ne dépense rien) si pas assez.
+  const startBattleWithEnergy = () => {
+    const now = Date.now();
+    const recalced = computeEnergyRegen(energy, energyUpdatedAt, now);
+    if (recalced.energy <= 0) {
+      setEnergy(recalced.energy);
+      setEnergyUpdatedAt(recalced.lastUpdateAt);
+      return false;
+    }
+    const wasFull = recalced.energy >= ENERGY_MAX;
+    setEnergy(recalced.energy - 1);
+    // Si on VIENT de repasser sous le plafond, le compte à rebours des
+    // 20 min démarre maintenant — sinon on garde le timestamp déjà en
+    // cours (ne pas perdre la progression déjà accumulée vers le
+    // prochain point).
+    setEnergyUpdatedAt(wasFull ? now : recalced.lastUpdateAt);
+    return true;
+  };
 
   // Appelé par ChapterMapScreen (via CombatScreen) à la fin d'un combat
   // gagné : débloque le niveau suivant SEULEMENT si c'était bien le
@@ -195,6 +320,9 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         deck={deck}
         griffes={griffes}
         ownedRunes={ownedRunes}
+        energy={energy}
+        energyUpdatedAt={energyUpdatedAt}
+        onStartBattle={startBattleWithEnergy}
         onLevelWon={handleLevelWon}
         onBack={() => setChapterMapOpen(false)}
       />
@@ -542,7 +670,29 @@ function pathDots(p0, p1, count = 7) {
   return dots;
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, onLevelWon, onBack }) {
+// Petit badge autonome, avec son propre tick d'1s pour un compte à
+// rebours fluide (indépendant du rafraîchissement toutes les 30s côté
+// AdventureScreen, qui lui met à jour la VRAIE valeur d'énergie).
+function EnergyBadge({ energy, energyUpdatedAt }) {
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => forceTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+  const remaining = msUntilNextEnergy(energy, energyUpdatedAt, Date.now());
+  const mm = Math.floor(remaining / 60000);
+  const ss = Math.floor((remaining % 60000) / 1000);
+  return (
+    <View style={styles.energyBadge}>
+      <Text style={styles.energyBadgeText}>⚡ {energy}/{ENERGY_MAX}</Text>
+      {energy < ENERGY_MAX && (
+        <Text style={styles.energyBadgeCountdown}>+1 dans {mm}:{String(ss).padStart(2, '0')}</Text>
+      )}
+    </View>
+  );
+}
+
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack }) {
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
   // TOUJOURS appelé avant tout retour anticipé (règle des Hooks React) —
@@ -602,7 +752,10 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         </TouchableOpacity>
         <Text style={styles.title}>⚔️ Chapitres</Text>
       </View>
-      <Text style={styles.griffesText}>🐾 {griffes} Griffes</Text>
+      <View style={styles.topStatsRow}>
+        <Text style={styles.griffesText}>🐾 {griffes} Griffes</Text>
+        <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
+      </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
         {Array.from({ length: chaptersToShow }, (_, chapterIdx) => chapterIdx + 1).map((chapterNum) => {
@@ -672,8 +825,15 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           levelNumber={levelPreview}
           owned={owned}
           deck={deck}
+          energy={energy}
           onClose={() => setLevelPreview(null)}
-          onStart={() => setActiveBattle({ levelNumber: levelPreview })}
+          onStart={() => {
+            // 1 énergie par TENTATIVE (pas remboursée en cas de défaite,
+            // c'est bien "1 vie", pas "1 vie par victoire") — bloque le
+            // lancement si le joueur n'en a plus.
+            if (!onStartBattle()) return;
+            setActiveBattle({ levelNumber: levelPreview });
+          }}
         />
       )}
     </View>
@@ -862,7 +1022,7 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   );
 }
 
-function FighterSelectOverlay({ levelNumber, owned, deck, onClose, onStart }) {
+function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart }) {
   const opponent = opponentForLevel(levelNumber);
   const display = opponent.stages[0];
   const ownedMap = {};
@@ -901,12 +1061,16 @@ function FighterSelectOverlay({ levelNumber, owned, deck, onClose, onStart }) {
           })}
         </View>
 
+        <Text style={styles.energyCostText}>⚡ Coûte 1 énergie ({energy}/{ENERGY_MAX} disponible{energy > 1 ? 's' : ''})</Text>
+
         <TouchableOpacity
-          style={[styles.startBattleBtn, teamCount === 0 && styles.actionBtnDisabledAdv]}
+          style={[styles.startBattleBtn, (teamCount === 0 || energy <= 0) && styles.actionBtnDisabledAdv]}
           onPress={onStart}
-          disabled={teamCount === 0}
+          disabled={teamCount === 0 || energy <= 0}
         >
-          <Text style={styles.startBattleBtnText}>{teamCount > 0 ? '⚔️ Combattre' : 'Deck vide'}</Text>
+          <Text style={styles.startBattleBtnText}>
+            {teamCount === 0 ? 'Deck vide' : energy <= 0 ? '⚡ Plus d\'énergie' : '⚔️ Combattre'}
+          </Text>
         </TouchableOpacity>
 
       </View>
@@ -974,6 +1138,11 @@ const styles = StyleSheet.create({
   levelNodeText: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
 
   griffesText: { color: COLORS.action, fontSize: 13, fontWeight: '800', textAlign: 'center', marginBottom: 14 },
+  topStatsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 },
+  energyBadge: { alignItems: 'center' },
+  energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
+  energyBadgeCountdown: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1 },
+  energyCostText: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 10, marginBottom: 4 },
   fighterPick: {
     width: 56, height: 56, borderRadius: 14, backgroundColor: COLORS.bg,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
