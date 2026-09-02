@@ -80,7 +80,10 @@ function formatNum(n) {
   if (n < 1000) return Math.floor(n).toString();
   if (n < 999_950) return (n / 1000).toFixed(1) + 'K'; // évite "1000.0K" juste sous 1M
   if (n < 999_950_000) return (n / 1_000_000).toFixed(2) + 'M';
-  return (n / 1_000_000_000).toFixed(2) + 'Md';
+  if (n < 999_950_000_000) return (n / 1_000_000_000).toFixed(2) + 'Md';
+  // Au-delà du milliard — nécessaire depuis l'ajout des auto-clics de
+  // palier 3 (jusqu'à 4 000 milliards de coût).
+  return (n / 1_000_000_000_000).toFixed(2) + 'T';
 }
 
 export default function ClickerScreen({ onBack }) {

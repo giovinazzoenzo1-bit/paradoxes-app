@@ -543,6 +543,61 @@ export function veilleurUpgradeCost(level) {
   return Math.round(50 * Math.pow(1.6, level));
 }
 
+// ---- Améliorations à débloquer (30/08) ----
+// Distinctes des 4 mécaniques ci-dessus (Pacte/Faveur/Sanctuaire/Veilleur,
+// qui se re-niveautent à l'infini) : ici, chaque amélioration s'ACHÈTE
+// UNE SEULE FOIS et reste acquise pour toujours. 20 au total, 4 paliers
+// de 5, thème créatures/éléments — noms tirés du roster existant.
+// Palier N+1 verrouillé (case grisée "???") tant que les 5 du palier N
+// n'ont pas TOUTES été achetées — demande explicite.
+export const UPGRADE_ITEMS = [
+  // Palier 1 — visible dès le départ.
+  { id: 'griffeBraisillon', name: 'Griffe de Braisillon', emoji: '🔥', tier: 1, cost: 80, effect: { type: 'tapFlat', value: 1 }, desc: '+1 pièce par tap' },
+  { id: 'ecailleCaraploof', name: 'Écaille de Caraploof', emoji: '🌊', tier: 1, cost: 120, effect: { type: 'autoClickerPct', value: 0.05 }, desc: '+5% sur les auto-clics' },
+  { id: 'crocBouldog', name: 'Croc de Bouldog', emoji: '🪨', tier: 1, cost: 180, effect: { type: 'coinPct', value: 0.03 }, desc: '+3% sur toute la production' },
+  { id: 'plumeVentis', name: 'Plume de Ventis', emoji: '🌬️', tier: 1, cost: 250, effect: { type: 'critChancePct', value: 0.02 }, desc: '+2% de chance de coup critique' },
+  { id: 'etincelleVoltix', name: 'Étincelle de Voltix', emoji: '⚡', tier: 1, cost: 350, effect: { type: 'critMultPct', value: 0.10 }, desc: '+10% de dégâts critiques' },
+  // Palier 2.
+  { id: 'eclatLuxorbe', name: 'Éclat de Luxorbe', emoji: '💡', tier: 2, cost: 800, effect: { type: 'coinPct', value: 0.04 }, desc: '+4% sur toute la production' },
+  { id: 'ombreOmbrillon', name: "Ombre d'Ombrillon", emoji: '🌑', tier: 2, cost: 1100, effect: { type: 'tapFlat', value: 2 }, desc: '+2 pièces par tap' },
+  { id: 'runeGlyphon', name: 'Rune de Glyphon', emoji: '🔮', tier: 2, cost: 1500, effect: { type: 'autoClickerPct', value: 0.07 }, desc: '+7% sur les auto-clics' },
+  { id: 'flammeFournax', name: 'Flamme de Fournax', emoji: '🔥', tier: 2, cost: 2000, effect: { type: 'coinPct', value: 0.05 }, desc: '+5% sur toute la production' },
+  { id: 'perleAquamira', name: "Perle d'Aquamira", emoji: '🌊', tier: 2, cost: 2600, effect: { type: 'autoClickerPct', value: 0.08 }, desc: '+8% sur les auto-clics' },
+  // Palier 3.
+  { id: 'pierreTerracroc', name: 'Pierre de Terracroc', emoji: '🪨', tier: 3, cost: 5000, effect: { type: 'tapFlat', value: 3 }, desc: '+3 pièces par tap' },
+  { id: 'ventZephyrion', name: 'Vent de Zephyrion', emoji: '🌬️', tier: 3, cost: 6500, effect: { type: 'critChancePct', value: 0.03 }, desc: '+3% de chance de coup critique' },
+  { id: 'noyauBrontobloc', name: 'Noyau de Brontobloc', emoji: '⚡', tier: 3, cost: 8000, effect: { type: 'critMultPct', value: 0.15 }, desc: '+15% de dégâts critiques' },
+  { id: 'sceauMalefix', name: 'Sceau de Malefix', emoji: '🔮', tier: 3, cost: 10000, effect: { type: 'coinPct', value: 0.06 }, desc: '+6% sur toute la production' },
+  { id: 'bouclierAegisolar', name: "Bouclier d'Aegisolar", emoji: '✨', tier: 3, cost: 13000, effect: { type: 'autoClickerPct', value: 0.10 }, desc: '+10% sur les auto-clics' },
+  // Palier 4.
+  { id: 'voileNocturis', name: 'Voile de Nocturis', emoji: '🌑', tier: 4, cost: 25000, effect: { type: 'coinPct', value: 0.08 }, desc: '+8% sur toute la production' },
+  { id: 'racineRacinea', name: 'Racine de Racinea', emoji: '🪨', tier: 4, cost: 32000, effect: { type: 'autoClickerPct', value: 0.12 }, desc: '+12% sur les auto-clics' },
+  { id: 'glypheRunicor', name: 'Glyphe de Runicor', emoji: '🔮', tier: 4, cost: 40000, effect: { type: 'tapFlat', value: 6 }, desc: '+6 pièces par tap' },
+  { id: 'petaleBraiserose', name: 'Pétale de Braiserose', emoji: '🔥', tier: 4, cost: 50000, effect: { type: 'critChancePct', value: 0.04 }, desc: '+4% de chance de coup critique' },
+  { id: 'abysseAbyssorax', name: "Abysse d'Abyssorax", emoji: '🌊', tier: 4, cost: 65000, effect: { type: 'critMultPct', value: 0.20 }, desc: '+20% de dégâts critiques' },
+];
+
+// Un palier d'améliorations est débloqué si TOUTES celles du palier
+// précédent sont déjà achetées (achat unique, contrairement aux
+// auto-clics qui n'exigent qu'1 exemplaire de chaque).
+export function upgradeTierUnlocked(tier, purchasedIds) {
+  if (tier <= 1) return true;
+  const prevTierItems = UPGRADE_ITEMS.filter((u) => u.tier === tier - 1);
+  return prevTierItems.every((u) => purchasedIds.includes(u.id));
+}
+
+// Additionne les effets de TOUTES les améliorations achetées — un seul
+// passage, retourne un objet prêt à appliquer sur les gains (voir
+// ClickerScreen.js : gainCoins pour coinPct, le tap pour tapFlat, etc.).
+export function upgradeBonuses(purchasedIds) {
+  const totals = { coinPct: 0, tapFlat: 0, autoClickerPct: 0, critChancePct: 0, critMultPct: 0 };
+  UPGRADE_ITEMS.forEach((u) => {
+    if (!purchasedIds.includes(u.id)) return;
+    totals[u.effect.type] += u.effect.value;
+  });
+  return totals;
+}
+
 // ---- Ascension (prestige) ----
 // Réinitialise la progression contre un bonus PERMANENT (essence), qui
 // persiste à travers les résets suivants. Le gain d'essence dépend du
@@ -674,13 +729,38 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // fois (le coût grimpe à chaque achat du MÊME palier). Nécessaire suite
 // à la décision de retirer le revenu passif automatique des créatures —
 // c'est maintenant la seule source de revenu passif du jeu.
+// `tier` (1-3) sert au déblocage progressif côté boutique — voir
+// autoClickerTierUnlocked() plus bas. Les 5 premiers (palier 1) sont
+// visibles dès le départ, comme avant cet ajout.
 export const AUTOCLICKERS = [
-  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 15, baseIncome: 0.1 },
-  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 100, baseIncome: 1 },
-  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 1100, baseIncome: 8 },
-  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 12000, baseIncome: 47 },
-  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 130000, baseIncome: 260 },
+  // Palier 1 — visible dès le départ.
+  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 15, baseIncome: 0.1, tier: 1 },
+  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 100, baseIncome: 1, tier: 1 },
+  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 1100, baseIncome: 8, tier: 1 },
+  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 12000, baseIncome: 47, tier: 1 },
+  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 130000, baseIncome: 260, tier: 1 },
+  // Palier 2 — débloqué une fois les 5 du palier 1 possédés (≥1 chacun).
+  { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 1_400_000, baseIncome: 1400, tier: 2 },
+  { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 15_000_000, baseIncome: 7500, tier: 2 },
+  { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 160_000_000, baseIncome: 40000, tier: 2 },
+  { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 900_000_000, baseIncome: 150000, tier: 2 },
+  { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 3_500_000_000, baseIncome: 500000, tier: 2 },
+  // Palier 3 — débloqué une fois les 5 du palier 2 possédés.
+  { id: 'titanfoudre', name: 'Titan de Foudre', emoji: '⚡', baseCost: 15_000_000_000, baseIncome: 1_800_000, tier: 3 },
+  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 60_000_000_000, baseIncome: 6_500_000, tier: 3 },
+  { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 250_000_000_000, baseIncome: 24_000_000, tier: 3 },
+  { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 1_000_000_000_000, baseIncome: 90_000_000, tier: 3 },
+  { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 4_000_000_000_000, baseIncome: 320_000_000, tier: 3 },
 ];
+
+// Un palier d'auto-clics est débloqué si le joueur possède AU MOINS 1 de
+// CHAQUE générateur du palier précédent — pas besoin de les maximiser,
+// juste de les avoir tous "découverts" une fois.
+export function autoClickerTierUnlocked(tier, ownedAutoClickers) {
+  if (tier <= 1) return true;
+  const prevTierClickers = AUTOCLICKERS.filter((c) => c.tier === tier - 1);
+  return prevTierClickers.every((c) => (ownedAutoClickers[c.id] || 0) >= 1);
+}
 
 // Coût pour acheter UNE unité de plus d'un générateur donné, sachant
 // combien on en possède déjà (le coût grimpe à chaque achat du même palier).
