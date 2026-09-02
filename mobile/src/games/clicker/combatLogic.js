@@ -80,13 +80,65 @@ export function levelIndexInChapter(levelNumber) {
   return ((levelNumber - 1) % LEVELS_PER_CHAPTER) + 1;
 }
 
+// Score de puissance approximatif d'une créature (PV+ATQ de base) — sert
+// UNIQUEMENT à ordonner les adversaires du plus faible au plus fort, pas
+// utilisé pour le combat réel (qui utilise toujours les vraies stats
+// mises à l'échelle par niveau/évolution/type).
+function powerScore(creature) {
+  const base = creature.baseHp != null
+    ? { hp: creature.baseHp, attack: creature.baseAttack }
+    : RARITY_BASE_STATS[creature.rarity];
+  return base.hp + base.attack;
+}
+
+// Roster trié une seule fois au chargement du module (30/08) — les
+// adversaires apparaissent maintenant du plus faible au plus fort à
+// mesure qu'on avance dans les niveaux, au lieu de suivre l'ordre
+// arbitraire de définition dans CREATURES.
+const CREATURES_BY_POWER = [...CREATURES].sort((a, b) => powerScore(a) - powerScore(b));
+
 // Choix de l'adversaire pour un niveau donné — déterministe (pas
 // aléatoire), pour que le même niveau donne toujours le même adversaire
-// d'une tentative à l'autre. Cycle sur les 10 créatures existantes (pas
-// de nouveau roster pour l'instant, voir ADVENTURE_MODE.md).
+// d'une tentative à l'autre. Cycle sur le roster TRIÉ PAR PUISSANCE
+// (voir CREATURES_BY_POWER) : le niveau 1 tombe sur la créature la plus
+// faible, le niveau 26 sur la plus forte, puis ça reboucle (mais les
+// stats continuent de grossir avec le niveau via opponentStatsForLevel,
+// donc même une créature "faible" qui revient plus tard reste un vrai défi).
 export function opponentForLevel(levelNumber) {
-  const idx = (levelNumber - 1) % CREATURES.length;
-  return CREATURES[idx];
+  const idx = (levelNumber - 1) % CREATURES_BY_POWER.length;
+  return CREATURES_BY_POWER[idx];
+}
+
+// Taille de l'équipe adverse selon le CHAPITRE (pas le niveau brut) — 1
+// adversaire au chapitre 1, 2 au chapitre 2, 3 à partir du chapitre 3.
+// Reprend le même repère que le reste du système (LEVELS_PER_CHAPTER),
+// pas un seuil arbitraire inventé à part.
+export function opponentTeamSize(levelNumber) {
+  const chapter = chapterForLevel(levelNumber);
+  if (chapter <= 1) return 1;
+  if (chapter === 2) return 2;
+  return 3;
+}
+
+// Équipe adverse complète pour un niveau donné — plusieurs créatures
+// DIFFÉRENTES (pas 3x la même), toujours déterministe. Le décalage (+9,
+// +18) pris dans le roster trié par puissance pour varier les membres
+// sans avoir besoin d'un vrai tirage aléatoire.
+export function opponentTeamForLevel(levelNumber) {
+  const size = opponentTeamSize(levelNumber);
+  const team = [];
+  for (let i = 0; i < size; i++) {
+    const idx = (levelNumber - 1 + i * 9) % CREATURES_BY_POWER.length;
+    team.push(CREATURES_BY_POWER[idx]);
+  }
+  return team;
+}
+
+// Qui attaque en premier — 1 chance sur 2 que ce soit l'adversaire,
+// comme demandé. Fonction séparée (plutôt qu'un Math.random() en ligne
+// dans l'écran) pour rester testable.
+export function opponentGoesFirst() {
+  return Math.random() < 0.5;
 }
 
 // Stats de l'adversaire pour un niveau donné — grossissent avec le
@@ -94,8 +146,13 @@ export function opponentForLevel(levelNumber) {
 // pas de sens pour une IA). Croissance volontairement un peu plus
 // marquée que celle du joueur pour garder un vrai défi à mesure qu'on
 // monte les chapitres.
-export function opponentStatsForLevel(levelNumber) {
-  const creature = opponentForLevel(levelNumber);
+// Stats d'une créature adverse ARBITRAIRE à un niveau donné — extrait de
+// opponentStatsForLevel pour pouvoir calculer les stats de PLUSIEURS
+// adversaires différents au même niveau (équipe adverse à partir du
+// chapitre 2), pas seulement l'unique adversaire renvoyé par
+// opponentForLevel. opponentStatsForLevel devient un simple cas
+// particulier de cette fonction plus générale.
+export function statsForOpponentCreature(creature, levelNumber) {
   const base = creature.baseHp != null
     ? { hp: creature.baseHp, attack: creature.baseAttack, clickSpeed: creature.baseClickSpeed, endurance: creature.baseEndurance }
     : RARITY_BASE_STATS[creature.rarity];
@@ -107,6 +164,27 @@ export function opponentStatsForLevel(levelNumber) {
     // de la valeur Gemini (systématiquement 1, donc plate/inutile).
     clickSpeed: RARITY_BASE_STATS[creature.rarity].clickSpeed,
     endurance: Math.round(base.endurance * growth),
+  };
+}
+
+// Cas particulier : stats de l'UNIQUE adversaire renvoyé par
+// opponentForLevel (gardé pour compatibilité, les niveaux à équipe
+// adverse multiple utilisent statsForOpponentCreature directement).
+export function opponentStatsForLevel(levelNumber) {
+  return statsForOpponentCreature(opponentForLevel(levelNumber), levelNumber);
+}
+
+// Version typée (avec modificateur de rôle) pour une créature adverse
+// arbitraire — même règle que côté joueur : pas de multiplicateur de
+// type pour les créatures Gemini (déjà pris en compte par Gemini lui-même).
+export function statsForOpponentCreatureTyped(creature, levelNumber) {
+  const base = statsForOpponentCreature(creature, levelNumber);
+  const typeMod = creature.baseHp != null ? { hpMult: 1, attackMult: 1 } : (MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant);
+  return {
+    hp: Math.round(base.hp * typeMod.hpMult),
+    attack: Math.round(base.attack * typeMod.attackMult),
+    clickSpeed: base.clickSpeed,
+    endurance: base.endurance,
   };
 }
 
@@ -267,13 +345,5 @@ export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0) 
 // Même chose pour l'adversaire IA (stats déjà mises à l'échelle par
 // niveau via opponentStatsForLevel, puis modifiées par le type).
 export function opponentStatsForLevelTyped(levelNumber) {
-  const base = opponentStatsForLevel(levelNumber);
-  const creature = opponentForLevel(levelNumber);
-  const typeMod = creature.baseHp != null ? { hpMult: 1, attackMult: 1 } : (MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant);
-  return {
-    hp: Math.round(base.hp * typeMod.hpMult),
-    attack: Math.round(base.attack * typeMod.attackMult),
-    clickSpeed: base.clickSpeed,
-    endurance: base.endurance,
-  };
+  return statsForOpponentCreatureTyped(opponentForLevel(levelNumber), levelNumber);
 }
