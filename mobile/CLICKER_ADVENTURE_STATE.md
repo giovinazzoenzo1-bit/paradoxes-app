@@ -162,9 +162,63 @@ ATTAQUE4: [nom] | [dégâts] | [coût endurance]
 3. Si Gemini fournit des stats explicites (PV/ATQ/vitesse/endurance), **les utiliser directement** plutôt que la formule par rareté — voir "Point ouvert" ci-dessous pour la validation.
 4. Tester (`node -e ...` avec Babel, méthode déjà utilisée partout dans ce projet) avant de pousser : au minimum vérifier que la créature apparaît dans `CREATURES`, que ses 4 compétences ont bien `damage` + `enduranceCost`, et si c'est une rareté à poids 0 (`peu_commun`/`mythique`), remonter son poids dans `RARITY_WEIGHTS`.
 
-## Points ouverts / pas encore tranchés
+## Points ouverts / pas encore tranchés (mis à jour 02/09)
 
-- **Validation des stats Gemini** : le système accepte maintenant les stats explicites par créature (`baseHp` etc., voir section dédiée plus haut), mais **aucun garde-fou de cohérence n'est codé** — l'utilisateur avait demandé une validation contre une fourchette raisonnable (±30% autour de la formule par rareté) plutôt qu'une acceptation silencieuse. Écart déjà repéré une fois (Pyrosile : endurance 100 donnée par Gemini vs 60 attendu par la formule, +67%, signalé à l'utilisateur mais pas bloqué). Toujours pas de garde-fou automatique — à construire si les écarts deviennent fréquents ou gênants.
-- **Boutique pour dépenser les Griffes** au-delà de l'évolution — pas construite.
-- **"Peu commun" et "Mythique"** : toujours aucune créature classée dedans.
-- **Stats inter-jeux** (pour débloquer les quêtes liées aux autres jeux de l'appli comme Puissance 4) — brique technique jamais commencée.
+- **Validation des stats Gemini** : toujours pas de garde-fou automatique (±30% autour de la formule par rareté) — accepté tel quel, écarts signalés au cas par cas mais jamais bloqués.
+- **Objectifs de collection** ("possède 5 créatures Épiques+" etc.) — idée gardée de côté, jamais commencée.
+- **Chapitre/rune "événement" limité dans le temps** — idée gardée de côté, jamais commencée.
+- **`sol.png`** (dernier fichier de décor Flappy Bird) — toujours manquant depuis le tout début.
+- ~~Boutique pour dépenser les Griffes~~ → **FAIT** (système de Runes, voir plus bas).
+- ~~"Peu commun"/"Mythique" vides~~ → **FAIT**, les 25 créatures du plan sont là, tous les paliers de rareté représentés.
+- ~~Stats inter-jeux~~ → **FAIT** (`DailyContext.js`, voir plus bas).
+
+## Grosse session du 02/09 — résumé pour reprise rapide
+
+Tout ce qui suit a été construit dans UNE session très longue le 2 septembre 2026. Le detail complet (raisonnement, tests, bugs corrigés) est dans le transcript de cette date si besoin, mais voici l'essentiel pour repartir sans tout relire.
+
+### Mode Combat — refonte complète
+- **Plein écran, mode PAYSAGE forcé** (`expo-screen-orientation`, verrouillé à l'entrée/sortie de `CombatScreen.js`).
+- **Formation façon Monster Legends** : sprites en positionnement absolu (`PLAYER_SLOTS`/`OPPONENT_SLOTS`, fractions d'écran), pas de flexbox — l'actif devant en grand, profondeur derrière.
+- **Décor réel** (`mobile/assets/combat/background.jpg`) avec voile sombre par-dessus.
+- **Ciblage manuel** de l'adversaire à CHAQUE tour (tap sur un sprite adverse), plus de rotation automatique.
+- **Pile ou face** en tout début de combat : 1 chance sur 2 que l'adversaire attaque en premier.
+- **Plus de bouton "Continuer"** après une attaque du joueur — transition immédiate et synchrone (pas de minuteur, pour ne pas réintroduire le bug de blocage déjà corrigé une fois).
+- **Dégâts flottants** au-dessus de la créature touchée (composant `FloatingDamage`).
+- **Récapitulatif de fin de combat** (`CombatResultScreen`) : dégâts infligés/reçus, tours joués, adversaires vaincus, répartition par créature.
+- **Équipe adverse** de 1 à 3 selon le chapitre (`opponentTeamSize`), adversaires triés par puissance (`CREATURES_BY_POWER`), difficulté strictement croissante jusqu'au niveau 100+ (`opponentPowerBudget`, découplé de la créature précise piochée — sinon régression de difficulté possible après le niveau 26).
+- **Dégâts d'une compétence mis à l'échelle** par le ratio ATQ actuel/ATQ de base (`scaledSkillDamage`) — nourrir/évoluer une créature rend vraiment ses attaques plus fortes.
+- **Vitesse de clic** dépend de la rareté (jamais du niveau), réduit le nombre de taps requis (`effectiveTapCount`, plancher à 10).
+- **Croissance ATQ/PV par niveau** plafonnée à rendements décroissants après le niveau 50 (`levelMultiplier`).
+- **Carte des chapitres** : tracés courbes en pointillés entre les niveaux (Bézier, positions en pixels — attention, un bug de mélange d'unités fraction/pixel avait rendu les points invisibles, corrigé), +6 chapitres de marge affichés à l'avance.
+- **Énergie** : 1 vie/20 min, plafond 5, coûte 1 par tentative de combat (pas remboursée en cas de défaite), notification locale programmée pour l'instant où elle sera pleine (`expo-notifications`, protégé par try/catch). Bouton dev "Énergie au max" dans Options.
+
+### Runes — nouveau système complet
+- 4 types (Force/Vitalité/Endurance/Célérité), 5 paliers chacun, table de bonus validée avec l'utilisateur avant implémentation (voir `RUNE_BONUS_TABLE` dans `combatLogic.js`).
+- Achat aléatoire (100 Griffes), fusion (écran dédié `RuneFusionScreen`, regroupe automatiquement les runes identiques — évite l'ancien système "tape 2 runes" peu intuitif).
+- 3 cases d'équipement dans la fiche de chaque créature (Aventure), grisées si vides, sélecteur au tap.
+- Bonus réellement appliqués aux stats de combat (`runeBonuses`, 4e paramètre optionnel de `combatStatsForCreatureTyped` — rétrocompatible, aucun changement sans rune équipée).
+- Affichage coloré du bonus dans la fiche créature (+X PV en vert, +X ATQ en rouge, etc.).
+
+### Quêtes quotidiennes + streak de connexion — nouveau système complet
+- **`src/context/DailyContext.js`** : Context partagé app-wide (enveloppe `App.js`), c'est LA couche de stats inter-jeux qui manquait.
+- **Pool mixte de 3 quêtes/jour** (`dailyLogic.js`), tirage déterministe par date, mélange volontaire Clicker/Aventure.
+- **Streak neutre** (aucune mention de mode) : 7 paliers de Griffes qui rebouclent, affichage en vrai tableau de 7 jours (pas un compteur qui grimpe).
+- Récompenses créditées via drapeau partagé `PENDING_GRIFFES_KEY` (lu par `AdventureScreen.js` à son prochain chargement — JAMAIS d'écriture directe cross-écran, leçon du bug de sauvegarde écrasée plus bas).
+- **`lifetimeStats`** (compteurs à vie, jamais remis à zéro) alimente aussi 3 nouvelles quêtes Aventure dans le VIEUX pool de quêtes de l'œuf (`QUEST_POOL` dans `clickerLogic.js`), qui n'en avait aucune à l'origine.
+
+### Cycle de quêtes de l'œuf (clicker) — 2 bugs réels corrigés
+1. **Bascule collecte→éclosion parfois bloquée pour toujours** (ref périmée dans un `useEffect`) — corrigé avec un updater fonctionnel qui lit toujours l'état à jour.
+2. **Quêtes de type "cumul total" instantanément acquises pour un joueur vétéran** (comparaison à un seuil absolu depuis toujours, pas depuis le tirage) — corrigé avec un `questBaseline` (instantané des stats au moment du tirage), migration douce pour les sauvegardes existantes.
+
+### Boutique du clicker — paliers à débloquer (tout dernier ajout)
+- **20 nouvelles améliorations** à débloquer (achat unique, `UPGRADE_ITEMS`), 4 paliers de 5, thème créatures/éléments.
+- **10 nouveaux auto-clics** (`AUTOCLICKERS` étendu à 15, `tier` 1-3).
+- Palier verrouillé = case grisée "❓ ??? ???" tant que le palier précédent n'est pas complet (améliorations : toutes achetées ; auto-clics : ≥1 de chaque, pas besoin de maximiser).
+- Bonus réellement appliqués : `upgradeBonuses()` agrège tapFlat/coinPct/autoClickerPct/critChancePct/critMultPct, câblé dans `gainCoins`, le tap, le revenu passif (live + hors-ligne).
+
+### Leçons/pièges récurrents à ne pas reproduire
+- **Ne jamais écrire directement dans la sauvegarde d'un AUTRE écran** (ex: Options → sauvegarde d'Aventure) — toujours passer par un drapeau/montant en attente, lu et appliqué par l'écran propriétaire à son PROCHAIN chargement. Un vrai bug de "sauvegarde remise à zéro" est arrivé une fois pour cette raison exacte.
+- **Toujours vérifier les imports React Native** avant de pousser (`grep` les composants utilisés vs importés) — deux crashs différents cette session (`ScrollView` manquant dans `CombatScreen.js` puis dans un autre écran) venaient d'un import oublié après un changement de style.
+- **Ne jamais appeler un `setState` depuis l'intérieur d'un updater d'un AUTRE `setState`** — risque de double déclenchement en mode strict de React (repéré et corrigé sur `fuseRunes`/`equipRune`).
+- **Toujours vérifier qu'une déclaration de fonction n'a pas été accidentellement supprimée** lors d'une édition par bloc (`grep -c "^function NomDeLaFonction"` doit toujours donner 1) — arrivé 2 fois cette session (`FighterSelectOverlay` amputé de sa ligne de signature).
+
