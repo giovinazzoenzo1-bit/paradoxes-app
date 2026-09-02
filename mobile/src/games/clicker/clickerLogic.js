@@ -173,6 +173,13 @@ export const CREATURES = [
     stages: [
     { name: 'Brontobloc', emoji: '🗿' }, { name: 'Brontobloc', emoji: '🗿' }, { name: 'Brontobloc', emoji: '🗿' },
   ]},
+  { id: 'malefix', element: 'Magie', rarity: 'peu_commun', baseIncome: 0.2, combatType: 'attaquant',
+    baseHp: 20, baseAttack: 6, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Rayon Arcanique', 4, 10], ['Pages Coupantes', 6, 15], ['Malédiction Rapide', 8, 20], ['Explosion Runique', 12, 30]]),
+    lore: "Ce grimoire flottant est devenu incontrôlable après avoir absorbé trop d'incantations destructrices. Il virevolte frénétiquement en libérant des salves d'énergie pure sur quiconque tente de le refermer. De nombreux apprentis sorciers ont perdu leurs sourcils en essayant de le dompter.",
+    stages: [
+    { name: 'Malefix', emoji: '📖' }, { name: 'Malefix', emoji: '📖' }, { name: 'Malefix', emoji: '📖' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -272,6 +279,7 @@ export const CREATURE_POWERS = {
   terracroc: { name: 'Séisme', effectType: 'coins_burst', effectValue: 15 },
   zephyrion: { name: 'Brise Protectrice', effectType: 'passive_boost', effectValue: 2 },
   brontobloc: { name: 'Décharge Statique', effectType: 'coins_burst', effectValue: 15 },
+  malefix: { name: 'Explosion Runique', effectType: 'coins_burst', effectValue: 15 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
