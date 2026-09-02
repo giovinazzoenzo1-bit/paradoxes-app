@@ -38,7 +38,7 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Quêtes | Collection
 
 ## Créatures — schéma de données actuel
 
-25 créatures dans `CREATURES` — **le plan des 25 premières créatures Gemini est TERMINÉ** (29/08-30/08). Roster d'origine entièrement remplacé, puis agrandi jusqu'à 25 en suivant la répartition prévue (8 commun/6 peu commun/5 rare/3 épique/2 légendaire/1 mythique — le mythique reste vide, aucune créature n'y a été assignée). Répartition par élément quasi exacte : 3 par élément (Feu/Eau/Air/Terre/Foudre/Magie/Ténèbres), Lumière à 4. Table de migration (`CREATURE_ID_MIGRATIONS`) à consulter pour la correspondance ancien→nouveau id des créatures d'origine remplacées. **Pour toute créature au-delà de la 25e, le processus reste identique** (voir section Workflow Gemini plus bas) : simple ajout, pas de contrainte d'ordre. Champs d'une entrée :
+26 créatures dans `CREATURES` (les 25 du plan d'origine + Solarion, qui précède ce plan et n'est jamais compté dedans) — **le plan des 25 premières créatures Gemini est TERMINÉ** (29/08-30/08, avec un décalage de comptage d'un cran corrigé en cours de route : Tartaroth avait été annoncé par erreur comme le 25e/dernier, alors qu'Arcanis — Mythique+Magie+Attaquant, exactement le dernier créneau de la liste — était le vrai 25e). Roster d'origine entièrement remplacé, puis agrandi jusqu'à 25 en suivant la répartition prévue (8 commun/6 peu commun/5 rare/3 épique/2 légendaire/1 mythique — **tous les paliers sont désormais représentés**, y compris mythique). Répartition par élément quasi exacte : 3 par élément (Feu/Eau/Air/Terre/Foudre/Magie/Ténèbres), Lumière à 4. Table de migration (`CREATURE_ID_MIGRATIONS`) à consulter pour la correspondance ancien→nouveau id des créatures d'origine remplacées. **Pour toute créature au-delà de ces 25, le processus reste identique** (voir section Workflow Gemini plus bas) : simple ajout, pas de contrainte d'ordre. Champs d'une entrée :
 
 ```js
 {
@@ -57,9 +57,9 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Quêtes | Collection
 
 ### Rareté (6 paliers)
 ```
-RARITY_WEIGHTS = { commun: 45, peu_commun: 20, rare: 15, epique: 12, legendaire: 8, mythique: 0 }
+RARITY_WEIGHTS = { commun: 40, peu_commun: 20, rare: 15, epique: 12, legendaire: 8, mythique: 5 }
 ```
-Seul `mythique` reste à **poids 0** (aucune créature actuelle n'a cette rareté — les 5 autres paliers sont tous représentés depuis la complétion des 25 créatures). Dès qu'une créature obtient la rareté mythique, remonter son poids dans `RARITY_WEIGHTS` et rééquilibrer les autres (sinon le tirage gacha peut planter sur un panier vide — un garde-fou existe dans `rollCreature()` mais mieux vaut resynchroniser les poids).
+**Tous les paliers sont désormais actifs** (0 crash vérifié sur 300 000 tirages) — c'est la 1ère fois que les 6 sont représentés en même temps. Si un nouveau palier venait à se vider à nouveau (aucune créature dedans), remettre son poids à 0 et rééquilibrer les autres (sinon le tirage gacha peut planter sur un panier vide — un garde-fou existe dans `rollCreature()` mais mieux vaut resynchroniser les poids).
 
 Badges de rareté (façon Monster Legends, affichés à gauche du portrait dans la fiche créature) :
 ```
