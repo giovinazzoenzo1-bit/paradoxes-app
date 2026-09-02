@@ -86,7 +86,7 @@ function formatNum(n) {
 export default function ClickerScreen({ onBack }) {
   const panHandlers = useBackGesture(onBack);
   const { coins: sharedCoins, spendCoins: spendSharedCoins } = useCoins();
-  const { trackEvent } = useDaily();
+  const { trackEvent, lifetimeStats, loaded: dailyLoaded } = useDaily();
 
   const [loaded, setLoaded] = useState(false);
   const [coins, setCoins] = useState(0);
@@ -302,6 +302,28 @@ export default function ClickerScreen({ onBack }) {
       setLoaded(true);
     })();
   }, []);
+
+  // DailyContext (source de lifetimeStats, les compteurs Aventure à
+  // vie) se charge de façon INDÉPENDANTE de ce chargement-ci — il peut
+  // finir après. Ce petit effet capture le baseline des 3 quêtes
+  // Aventure dès que ces données arrivent, sans jamais écraser un
+  // baseline déjà sauvegardé pour ces mêmes champs (le spread `...prev`
+  // gagne s'ils existaient déjà). Se déclenche une seule fois grâce à
+  // la ref, une fois que lifetimeStats a fini de charger (distingué
+  // d'un simple "pas encore de combat gagné" par le fait que
+  // DailyContext initialise lifetimeStats à {} tant qu'il n'a pas fini
+  // sa propre lecture d'AsyncStorage).
+  const advBaselineCapturedRef = useRef(false);
+  useEffect(() => {
+    if (!loaded || advBaselineCapturedRef.current || !dailyLoaded) return;
+    advBaselineCapturedRef.current = true;
+    setQuestBaseline((prev) => ({
+      battleWon: lifetimeStats.battleWon || 0,
+      runeEquipped: lifetimeStats.runeEquipped || 0,
+      runeBought: lifetimeStats.runeBought || 0,
+      ...prev,
+    }));
+  }, [loaded, dailyLoaded, lifetimeStats]);
 
   // Sauvegarde (avec un léger anti-rebond pour ne pas écrire à chaque tap).
   useEffect(() => {
@@ -627,7 +649,14 @@ export default function ClickerScreen({ onBack }) {
 
   // ---- Système de quêtes + œuf ----
   const maxCreatureLevel = owned.reduce((max, o) => Math.max(max, o.level), 0);
-  const questStats = { maxCombo, totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower };
+  const questStats = {
+    maxCombo, totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower,
+    // Compteurs Aventure À VIE (DailyContext) — alimentent les 3
+    // nouvelles quêtes advWin3/advEquipRune2/advBuyRune1.
+    battleWon: lifetimeStats.battleWon || 0,
+    runeEquipped: lifetimeStats.runeEquipped || 0,
+    runeBought: lifetimeStats.runeBought || 0,
+  };
   const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats, questBaseline)).length;
 
   // Bascule automatique collecte -> éclosion dès que les 4 quêtes sont
@@ -682,6 +711,9 @@ export default function ClickerScreen({ onBack }) {
           totalEarned: totalEarnedRef.current,
           maxCreatureLevel: ownedRef.current.reduce((max, o) => Math.max(max, o.level), 0),
           tapPower: tapPowerRef.current,
+          battleWon: lifetimeStats.battleWon || 0,
+          runeEquipped: lifetimeStats.runeEquipped || 0,
+          runeBought: lifetimeStats.runeBought || 0,
         });
         setEggPhase('collecting');
         setHatchTaps(0);

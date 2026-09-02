@@ -588,6 +588,13 @@ export const QUEST_POOL = [
   { id: 'evolve1', desc: "Fais évoluer une créature jusqu'au stade final" },
   { id: 'feed10', desc: "Nourris une créature jusqu'au niveau 10" },
   { id: 'pacte5', desc: 'Fais monter Pacte au niveau 6' },
+  // Quêtes liées à l'Aventure (30/08) — possibles maintenant que
+  // DailyContext.js fournit des compteurs À VIE partagés entre les deux
+  // jeux (voir lifetimeStats), la couche qui manquait explicitement
+  // quand ce pool a été créé la première fois.
+  { id: 'advWin3', desc: 'Gagne 3 combats en Aventure' },
+  { id: 'advEquipRune2', desc: 'Équipe 2 runes sur tes créatures (Aventure)' },
+  { id: 'advBuyRune1', desc: 'Achète 1 rune en Aventure' },
 ];
 
 // Tire 4 quêtes au hasard dans le pool (sans répéter celles données en
@@ -632,6 +639,12 @@ export function questProgress(questId, stats, baseline = {}) {
     case 'evolve1': return Math.min(1, stats.maxCreatureLevel / 15);
     case 'feed10': return Math.min(1, stats.maxCreatureLevel / 10);
     case 'pacte5': return Math.min(1, Math.max(0, stats.tapPower - 1) / 5);
+    // Quêtes Aventure — `stats.battleWon`/`runeEquipped`/`runeBought`
+    // viennent du compteur À VIE de DailyContext (lifetimeStats), fusionné
+    // dans `stats` côté ClickerScreen.js avant l'appel à cette fonction.
+    case 'advWin3': return Math.min(1, delta('battleWon') / 3);
+    case 'advEquipRune2': return Math.min(1, delta('runeEquipped') / 2);
+    case 'advBuyRune1': return Math.min(1, delta('runeBought') / 1);
     default: return 0;
   }
 }

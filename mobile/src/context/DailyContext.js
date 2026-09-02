@@ -22,6 +22,14 @@ export function DailyProvider({ children }) {
   const [questClaimed, setQuestClaimed] = useState({});
   const [streak, setStreak] = useState(0);
   const [streakClaimedDate, setStreakClaimedDate] = useState(null);
+  // Compteurs À VIE (jamais remis à zéro, contrairement aux quêtes
+  // quotidiennes ci-dessus) — permet au cycle de quêtes de l'œuf
+  // (clicker) d'avoir enfin des quêtes liées à l'Aventure, chose
+  // explicitement notée comme "pas encore possible" quand ce pool avait
+  // été créé, faute de cette couche de stats partagée entre les deux
+  // jeux. Alimentés par le MÊME trackEvent déjà câblé côté Aventure —
+  // aucun nouveau point de suivi à ajouter ailleurs dans le code.
+  const [lifetimeStats, setLifetimeStats] = useState({});
   const [loaded, setLoaded] = useState(false);
 
   // Refs pour trackEvent — évite de recréer cette fonction (et donc de
@@ -60,6 +68,7 @@ export function DailyProvider({ children }) {
         const newStreak = nextStreak(prevStreak, saved.lastLoginDate || null, today);
         setStreak(newStreak);
         setStreakClaimedDate(saved.streakClaimedDate || null);
+        setLifetimeStats(saved.lifetimeStats || {});
       } catch (e) {
         setDate(today);
         setQuestIds(pickDailyQuests(today));
@@ -76,9 +85,9 @@ export function DailyProvider({ children }) {
     if (!loaded) return;
     AsyncStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ date, questIds, questProgress, questClaimed, streak, lastLoginDate: date, streakClaimedDate })
+      JSON.stringify({ date, questIds, questProgress, questClaimed, streak, lastLoginDate: date, streakClaimedDate, lifetimeStats })
     );
-  }, [date, questIds, questProgress, questClaimed, streak, streakClaimedDate, loaded]);
+  }, [date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats, loaded]);
 
   // Appelé par le clicker ET l'aventure quand un événement pertinent se
   // produit (ex: trackEvent('summon', 1)) — ne touche QUE les quêtes du
@@ -87,6 +96,12 @@ export function DailyProvider({ children }) {
   // de risque de dépasser la cible si le joueur continue de jouer après
   // avoir réclamé).
   const trackEvent = useCallback((eventType, amount = 1) => {
+    // Compteur À VIE — totalement indépendant des quêtes quotidiennes
+    // ci-dessous, jamais plafonné ni remis à zéro. C'est CE compteur que
+    // le pool de quêtes de l'œuf (clicker) consulte pour ses propres
+    // quêtes liées à l'Aventure.
+    setLifetimeStats((prev) => ({ ...prev, [eventType]: (prev[eventType] || 0) + amount }));
+
     setQuestProgress((prev) => {
       let changed = false;
       const next = { ...prev };
@@ -130,7 +145,7 @@ export function DailyProvider({ children }) {
   }, [streak, date, streakClaimedDate]);
 
   const value = {
-    loaded, date, questIds, questProgress, questClaimed, streak, streakClaimedDate,
+    loaded, date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats,
     trackEvent, claimQuest, claimStreak,
   };
 
