@@ -1,19 +1,30 @@
-// Écran de combat réel — étape 5 du plan (voir mobile/ADVENTURE_MODE.md),
-// mis à jour (29/08) pour : choix de compétence + endurance, ET combat en
-// ÉQUIPE DE 3 à tour de rôle (quand un combattant tombe à 0 PV, le
-// suivant de l'équipe entre automatiquement — défaite seulement si les 3
-// sont K.O.).
+// Écran de combat réel — voir mobile/ADVENTURE_MODE.md et
+// mobile/CLICKER_ADVENTURE_STATE.md pour l'historique complet.
+//
+// Mise à jour (30/08) — 3 changements demandés :
+// 1. Pile ou face au début du combat : 1 chance sur 2 que l'ADVERSAIRE
+//    attaque en premier, avant même le premier choix du joueur.
+// 2. Les adversaires sont désormais tirés d'un roster TRIÉ PAR PUISSANCE
+//    (voir opponentForLevel dans combatLogic.js) — progression logique
+//    du plus faible au plus fort à mesure qu'on avance dans les niveaux.
+// 3. Équipe adverse de plusieurs créatures à partir du chapitre 2 (2),
+//    puis 3 à partir du chapitre 3 — "comme les joueurs avec leurs 3
+//    créatures". Contrairement à l'équipe du JOUEUR (qui tourne à CHAQUE
+//    attaque, pour varier le combat), l'équipe adverse ne change de
+//    combattant actif QUE quand celui-ci tombe K.O. — plus simple, pas
+//    demandé explicitement pour l'adversaire, évite d'ajouter une
+//    mécanique non demandée.
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { COLORS } from './clickerTheme';
 import { stageForLevel } from '../../games/clicker/clickerLogic';
 import {
   combatStatsForCreatureTyped,
-  opponentForLevel,
-  opponentStatsForLevelTyped,
+  opponentTeamForLevel,
+  statsForOpponentCreatureTyped,
+  opponentGoesFirst,
   damageMultiplierForTime,
   computePlayerDamage,
-  resolveRound,
   griffesReward,
   effectiveTapCount,
   scaledSkillDamage,
@@ -26,9 +37,9 @@ import {
 const BASIC_ATTACK_RATIO = 0.4; // proportion de la stat ATQ brute
 
 // Trouve le prochain combattant VIVANT après `fromIndex`, en boucle sur
-// l'équipe (0→1→2→0…), en sautant les K.O. — utilisé à CHAQUE tour pour
-// faire tourner l'équipe, pas seulement quand le combattant actif tombe.
-// Retourne -1 si personne n'est vivant.
+// l'équipe (0→1→2→0…), en sautant les K.O. — utilisé à CHAQUE tour côté
+// joueur pour faire tourner l'équipe, et côté adversaire uniquement
+// quand le combattant actif tombe K.O. Retourne -1 si personne n'est vivant.
 function nextLivingIndex(fighters, fromIndex) {
   const n = fighters.length;
   for (let step = 1; step <= n; step++) {
@@ -37,13 +48,17 @@ function nextLivingIndex(fighters, fromIndex) {
   }
   return -1;
 }
+// Premier index vivant à partir de 0 (pour choisir le prochain
+// combattant adverse actif après un K.O., en repartant du début de
+// l'équipe plutôt qu'en continuant la boucle — plus prévisible).
+function firstLivingIndex(fighters) {
+  return fighters.findIndex((f) => f.hp > 0);
+}
 
 // team : [{ creature, ownedLevel, evolutionTier }, ...] (1 à 3 entrées,
 // dans l'ordre du deck) — voir ChapterMapScreen pour la construction.
 export default function CombatScreen({ team, levelNumber, onFinish }) {
-  const opponent = opponentForLevel(levelNumber);
-  const opponentStats = opponentStatsForLevelTyped(levelNumber);
-  const opponentBasicDamage = Math.max(1, Math.round(opponentStats.attack * BASIC_ATTACK_RATIO));
+  const opponentTeamCreatures = useRef(opponentTeamForLevel(levelNumber)).current;
 
   const [fighters, setFighters] = useState(() =>
     team.map((member) => {
@@ -52,8 +67,15 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     })
   );
   const [activeIndex, setActiveIndex] = useState(0);
-  const [opponentHp, setOpponentHp] = useState(opponentStats.hp);
-  const [opponentEndurance, setOpponentEndurance] = useState(opponentStats.endurance);
+
+  const [opponents, setOpponents] = useState(() =>
+    opponentTeamCreatures.map((creature) => {
+      const stats = statsForOpponentCreatureTyped(creature, levelNumber);
+      return { creature, stats, hp: stats.hp, endurance: stats.endurance };
+    })
+  );
+  const [activeOpponentIndex, setActiveOpponentIndex] = useState(0);
+
   const [phase, setPhase] = useState('choosing'); // 'choosing' | 'tapping' | 'resolving' | 'done'
   const [selectedSkill, setSelectedSkill] = useState(null);
   const [tapCount, setTapCount] = useState(0);
@@ -66,17 +88,62 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   fightersRef.current = fighters;
   const activeIndexRef = useRef(0);
   activeIndexRef.current = activeIndex;
-  const opponentHpRef = useRef(opponentStats.hp);
-  opponentHpRef.current = opponentHp;
-  const opponentEnduranceRef = useRef(opponentStats.endurance);
-  opponentEnduranceRef.current = opponentEndurance;
+  const opponentsRef = useRef(opponents);
+  opponentsRef.current = opponents;
+  const activeOpponentIndexRef = useRef(0);
+  activeOpponentIndexRef.current = activeOpponentIndex;
   const tapCountRef = useRef(0);
   const challengeStartRef = useRef(0);
   const challengeDoneRef = useRef(false);
   const selectedSkillRef = useRef(null);
   const pendingTransitionRef = useRef(null);
+  const firstStrikeHandledRef = useRef(false);
 
   const punchScale = useRef(new Animated.Value(1)).current;
+
+  // Pile ou face au tout début du combat : 1 chance sur 2 que
+  // l'adversaire frappe en premier, avant le premier choix du joueur.
+  // Résolu une seule fois au montage (firstStrikeHandledRef), en
+  // réutilisant le même mécanisme "transition en attente + bouton
+  // Continuer" que pour un tour normal, plutôt qu'un minuteur séparé.
+  useEffect(() => {
+    if (firstStrikeHandledRef.current) return;
+    firstStrikeHandledRef.current = true;
+    if (!opponentGoesFirst()) return;
+
+    const opp = opponentsRef.current[activeOpponentIndexRef.current];
+    const oppSkill = pickOpponentSkill(opp);
+    const oppDamage = oppSkill.isBasic
+      ? oppSkill.damage
+      : Math.round(scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack));
+
+    const curIdx = activeIndexRef.current;
+    const curFighter = fightersRef.current[curIdx];
+    const newPlayerHp = Math.max(0, curFighter.hp - oppDamage);
+    const newFighters = fightersRef.current.map((f, i) => (i === curIdx ? { ...f, hp: newPlayerHp } : f));
+    fightersRef.current = newFighters;
+    setFighters(newFighters);
+
+    setLastRound({ dmgToOpponent: 0, dmgToPlayer: oppDamage, multiplier: 1, skillName: null, opponentSkillName: oppSkill.name });
+
+    if (newPlayerHp <= 0) {
+      const nextIdx = nextLivingIndex(newFighters, curIdx);
+      if (nextIdx === -1) {
+        pendingTransitionRef.current = { type: 'lose' };
+      } else {
+        pendingTransitionRef.current = {
+          type: 'switch',
+          nextIdx,
+          message: `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`,
+        };
+      }
+    } else {
+      pendingTransitionRef.current = { type: 'continue' };
+    }
+    setSwitchMessage("L'adversaire attaque en premier !");
+    setPhase('resolving');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Boucle du défi de tap : vérifie le temps écoulé toutes les 100ms
   // pendant la phase 'tapping', déclenche la résolution si le temps est
@@ -95,6 +162,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   }, [phase]);
 
   const activeFighter = fighters[activeIndex];
+  const activeOpponent = opponents[activeOpponentIndex];
   const requiredTaps = effectiveTapCount(activeFighter.stats.clickSpeed);
 
   // Choix d'une compétence : si le combattant actif a assez d'endurance,
@@ -127,12 +195,14 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     }
   };
 
-  // Choisit l'attaque de l'adversaire : une compétence au hasard parmi
-  // celles qu'il peut encore payer, sinon l'attaque de secours à 0 endurance.
-  const pickOpponentAttack = () => {
-    const affordable = opponent.skills.filter((s) => s.enduranceCost <= opponentEnduranceRef.current);
+  // Choisit l'attaque d'un combattant adverse donné : une compétence au
+  // hasard parmi celles qu'il peut encore payer, sinon l'attaque de
+  // secours à 0 endurance (même filet de sécurité que le joueur).
+  const pickOpponentSkill = (opp) => {
+    const affordable = opp.creature.skills.filter((s) => s.enduranceCost <= opp.endurance);
     if (affordable.length === 0) {
-      return { name: 'Attaque de base', damage: opponentBasicDamage, enduranceCost: 0, isBasic: true };
+      const basicDmg = Math.max(1, Math.round(opp.stats.attack * BASIC_ATTACK_RATIO));
+      return { name: 'Attaque de base', damage: basicDmg, enduranceCost: 0, isBasic: true };
     }
     const skill = affordable[Math.floor(Math.random() * affordable.length)];
     return { ...skill, isBasic: false };
@@ -140,8 +210,8 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
 
   // Résout le défi de tap (complété ou pas) puis le tour complet. Si le
   // combattant actif tombe à 0 PV mais qu'un autre membre de l'équipe est
-  // encore debout, il entre automatiquement — défaite seulement si les 3
-  // sont K.O.
+  // encore debout, il entre automatiquement — défaite/victoire seulement
+  // si toute une équipe est K.O.
   const finishChallenge = (completed) => {
     if (challengeDoneRef.current) return;
     challengeDoneRef.current = true;
@@ -149,49 +219,66 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     const skill = selectedSkillRef.current;
     const curIdx = activeIndexRef.current;
     const curFighter = fightersRef.current[curIdx];
+    const oppIdx = activeOpponentIndexRef.current;
+    const opp = opponentsRef.current[oppIdx];
 
-    // Dégâts mis à l'échelle par le ratio ATQ actuel/ATQ de base (30/08)
-    // — l'attaque de base gratuite reste dérivée directement de l'ATQ
-    // actuel (pas de mise à l'échelle supplémentaire, ce serait compter
-    // deux fois). Même règle pour le joueur ET l'adversaire.
+    // Dégâts du joueur, mis à l'échelle par le ratio ATQ actuel/ATQ de base.
     const multiplier = skill.isBasic ? 1 : damageMultiplierForTime(elapsedSec, completed);
     const skillDamage = skill.isBasic ? skill.damage : scaledSkillDamage(skill, curFighter.creature, curFighter.stats.attack);
     const playerDamage = computePlayerDamage(skillDamage, multiplier);
 
-    const opponentSkill = pickOpponentAttack();
-    opponentEnduranceRef.current = Math.max(0, opponentEnduranceRef.current - opponentSkill.enduranceCost);
-    setOpponentEndurance(opponentEnduranceRef.current);
-    const opponentDamage = opponentSkill.isBasic
-      ? opponentSkill.damage
-      : Math.round(scaledSkillDamage(opponentSkill, opponent, opponentStats.attack));
+    const newOpponentHp = Math.max(0, opp.hp - playerDamage);
+    let newOpponents = opponentsRef.current.map((o, i) => (i === oppIdx ? { ...o, hp: newOpponentHp } : o));
 
-    const result = resolveRound(curFighter.hp, opponentHpRef.current, opponentDamage, playerDamage);
+    // L'adversaire actif riposte-t-il ce tour ? Seulement s'il a survécu
+    // aux dégâts du joueur — un adversaire qui vient de tomber ne frappe
+    // pas depuis l'au-delà.
+    let opponentDamage = 0;
+    let opponentSkillName = null;
+    let nextOppIdx = oppIdx;
+    if (newOpponentHp > 0) {
+      const oppSkill = pickOpponentSkill({ ...opp, hp: newOpponentHp });
+      newOpponents = newOpponents.map((o, i) =>
+        i === oppIdx ? { ...o, endurance: Math.max(0, o.endurance - oppSkill.enduranceCost) } : o
+      );
+      opponentDamage = oppSkill.isBasic ? oppSkill.damage : Math.round(scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack));
+      opponentSkillName = oppSkill.name;
+    } else {
+      // Combattant adverse K.O. — le suivant vivant prend sa place pour
+      // le PROCHAIN tour (pas de riposte ce tour-ci).
+      nextOppIdx = firstLivingIndex(newOpponents);
+    }
+    opponentsRef.current = newOpponents;
+    setOpponents(newOpponents);
+    if (nextOppIdx !== oppIdx && nextOppIdx !== -1) {
+      activeOpponentIndexRef.current = nextOppIdx;
+      setActiveOpponentIndex(nextOppIdx);
+    }
 
-    const newFighters = fightersRef.current.map((f, i) => (i === curIdx ? { ...f, hp: result.playerHp } : f));
+    const newPlayerHp = Math.max(0, curFighter.hp - opponentDamage);
+    const newFighters = fightersRef.current.map((f, i) => (i === curIdx ? { ...f, hp: newPlayerHp } : f));
     fightersRef.current = newFighters;
     setFighters(newFighters);
-    setOpponentHp(result.opponentHp);
 
     setLastRound({
-      dmgToOpponent: result.dmgToOpponent,
-      dmgToPlayer: result.dmgToPlayer,
+      dmgToOpponent: playerDamage,
+      dmgToPlayer: opponentDamage,
       multiplier,
       skillName: skill.name,
-      opponentSkillName: result.dmgToPlayer > 0 ? opponentSkill.name : null,
+      opponentSkillName: opponentDamage > 0 ? opponentSkillName : null,
     });
+    setPhase('resolving');
 
-    // Détermine IMMÉDIATEMENT ce qui doit se passer ensuite, mais ne
-    // l'applique PAS tout de suite — attend un tap explicite du joueur sur
-    // "Continuer" plutôt qu'un minuteur automatique (voir plus haut,
-    // corrige le bug de blocage). Rotation à CHAQUE tour désormais — pas
-    // seulement quand le combattant actif tombe K.O. — pour varier le
-    // combat : après chaque attaque, on passe systématiquement au
-    // prochain combattant vivant de l'équipe (en boucle), qu'il ait
-    // survécu ou non.
-    if (result.opponentHp <= 0) {
+    // Victoire : plus AUCUN adversaire vivant après les dégâts du joueur.
+    const anyOpponentAlive = newOpponents.some((o) => o.hp > 0);
+    if (!anyOpponentAlive) {
       pendingTransitionRef.current = { type: 'win' };
-    } else {
-      const fainted = result.playerHp <= 0;
+      return;
+    }
+
+    // Sinon, gérer le sort du combattant joueur actif (K.O. ou non) — la
+    // même rotation "à chaque tour" que d'habitude côté joueur.
+    if (newPlayerHp <= 0) {
       const nextIdx = nextLivingIndex(newFighters, curIdx);
       if (nextIdx === -1) {
         pendingTransitionRef.current = { type: 'lose' };
@@ -199,13 +286,17 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         pendingTransitionRef.current = {
           type: 'switch',
           nextIdx,
-          message: fainted
-            ? `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`
-            : `Au tour de ${newFighters[nextIdx].creature.stages[0].name} !`,
+          message: `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`,
         };
       }
+    } else {
+      const nextIdx = nextLivingIndex(newFighters, curIdx);
+      pendingTransitionRef.current = {
+        type: 'switch',
+        nextIdx,
+        message: `Au tour de ${newFighters[nextIdx].creature.stages[0].name} !`,
+      };
     }
-    setPhase('resolving');
   };
 
   // Applique la transition calculée dans finishChallenge — déclenché par
@@ -213,6 +304,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const confirmContinue = () => {
     const t = pendingTransitionRef.current;
     if (!t) return;
+    setSwitchMessage(null);
     if (t.type === 'win') {
       setOutcome('win');
       setPhase('done');
@@ -236,17 +328,20 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   }
 
   const playerDisplay = activeFighter.creature.stages[stageForLevel(activeFighter.ownedLevel)];
-  const opponentDisplay = opponent.stages[0];
+  const opponentDisplay = activeOpponent.creature.stages[0];
   const playerHpPct = Math.max(0, activeFighter.hp / activeFighter.stats.hp) * 100;
-  const opponentHpPct = Math.max(0, opponentHp / opponentStats.hp) * 100;
+  const opponentHpPct = Math.max(0, activeOpponent.hp / activeOpponent.stats.hp) * 100;
   const playerEndurancePct = Math.max(0, activeFighter.endurance / activeFighter.stats.endurance) * 100;
-  const opponentEndurancePct = Math.max(0, opponentEndurance / opponentStats.endurance) * 100;
+  const opponentEndurancePct = Math.max(0, activeOpponent.endurance / activeOpponent.stats.endurance) * 100;
 
   return (
     <View style={styles.screen}>
       <Text style={styles.combatTitle}>⚔️ Combat</Text>
 
-      {/* Rangée d'icônes de l'équipe : qui est actif, qui attend, qui est K.O. */}
+      {/* Rangée d'icônes de CHAQUE équipe : qui est actif, qui attend,
+          qui est K.O. — équipe adverse affichée seulement si plus d'1
+          membre, pour ne rien changer visuellement aux niveaux à 1 seul
+          adversaire (chapitre 1). */}
       <View style={styles.teamRow}>
         {fighters.map((f, i) => {
           const d = f.creature.stages[stageForLevel(f.ownedLevel)];
@@ -258,6 +353,19 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           );
         })}
       </View>
+      {opponents.length > 1 && (
+        <View style={[styles.teamRow, { marginTop: 4 }]}>
+          {opponents.map((o, i) => {
+            const d = o.creature.stages[0];
+            const fainted = o.hp <= 0;
+            return (
+              <View key={i} style={[styles.teamIconOpp, i === activeOpponentIndex && styles.teamIconActiveOpp, fainted && styles.teamIconFainted]}>
+                <Text style={{ fontSize: 18, opacity: fainted ? 0.3 : 1 }}>{d.emoji}</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       <View style={styles.fighterRow}>
         <View style={styles.fighterCard}>
@@ -281,11 +389,11 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           <View style={styles.hpTrack}>
             <View style={[styles.hpFill, { width: `${opponentHpPct}%`, backgroundColor: '#FF5252' }]} />
           </View>
-          <Text style={styles.hpText}>{Math.max(0, opponentHp)} / {opponentStats.hp} PV</Text>
+          <Text style={styles.hpText}>{Math.max(0, activeOpponent.hp)} / {activeOpponent.stats.hp} PV</Text>
           <View style={styles.enduranceTrack}>
             <View style={[styles.enduranceFill, { width: `${opponentEndurancePct}%`, backgroundColor: COLORS.neonPink }]} />
           </View>
-          <Text style={styles.enduranceText}>{Math.max(0, opponentEndurance)} / {opponentStats.endurance} END</Text>
+          <Text style={styles.enduranceText}>{Math.max(0, activeOpponent.endurance)} / {activeOpponent.stats.endurance} END</Text>
         </View>
       </View>
 
@@ -297,7 +405,9 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
 
       {lastRound && phase === 'resolving' && !switchMessage && (
         <View style={styles.roundLog}>
-          <Text style={styles.roundLogText}>💥 {lastRound.skillName} : -{lastRound.dmgToOpponent} (x{lastRound.multiplier.toFixed(2)})</Text>
+          {lastRound.skillName && (
+            <Text style={styles.roundLogText}>💥 {lastRound.skillName} : -{lastRound.dmgToOpponent} (x{lastRound.multiplier.toFixed(2)})</Text>
+          )}
           {lastRound.dmgToPlayer > 0 && (
             <Text style={[styles.roundLogText, { color: '#FF5252' }]}>🔻 {lastRound.opponentSkillName} : -{lastRound.dmgToPlayer} reçu</Text>
           )}
@@ -392,6 +502,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: COLORS.border,
   },
   teamIconActive: { borderColor: COLORS.action, shadowColor: COLORS.action, shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } },
+  teamIconOpp: {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.panel,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: COLORS.border,
+  },
+  teamIconActiveOpp: { borderColor: '#FF5252', shadowColor: '#FF5252', shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } },
   teamIconFainted: { borderColor: '#FF5252' },
 
   fighterRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 10 },
