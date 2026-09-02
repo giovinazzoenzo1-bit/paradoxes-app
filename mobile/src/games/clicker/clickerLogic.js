@@ -698,108 +698,232 @@ export function offrandeReward(tapPower) {
 // jeux de l'appli (ex: "gagner 5 fois à Puissance 4") demandent une
 // couche de stats partagées entre jeux qui n'existe pas encore ; à
 // construire séparément avant de les ajouter à ce pool.
-// `icon` et `target` (02/09) servent à la barre de défi segmentée
-// affichée directement sur l'écran d'accueil du clicker : l'icône est
-// posée dans la pastille à gauche de la barre, `target` sert à afficher
-// la fraction «courant / objectif» à droite (ex: 3/10). Ils ne changent
-// RIEN au calcul de progression (questProgress ci-dessous reste la
-// source de vérité) — ce sont uniquement des métadonnées d'affichage.
-export const QUEST_POOL = [
-  { id: 'combo25', desc: 'Atteins un multiplicateur de Transe x2,5', icon: '🔥', target: 25 },
-  { id: 'summon10', desc: 'Invoque 10 créatures', icon: '🔮', target: 10 },
-  { id: 'crit20', desc: 'Obtiens 20 coups critiques', icon: '💥', target: 20 },
-  { id: 'golden3', desc: 'Touche 3 fois la cible dorée', icon: '⭐', target: 3 },
-  { id: 'earn5000', desc: 'Cumule 5 000 pièces gagnées au total', icon: '💰', target: 5000 },
-  { id: 'evolve1', desc: "Fais évoluer une créature jusqu'au stade final", icon: '🧬', target: 15 },
-  { id: 'feed10', desc: "Nourris une créature jusqu'au niveau 10", icon: '🍖', target: 10 },
-  { id: 'pacte5', desc: 'Fais monter Pacte au niveau 6', icon: '🔗', target: 5 },
-  // Quêtes liées à l'Aventure (30/08) — possibles maintenant que
-  // DailyContext.js fournit des compteurs À VIE partagés entre les deux
-  // jeux (voir lifetimeStats), la couche qui manquait explicitement
-  // quand ce pool a été créé la première fois.
-  { id: 'advWin3', desc: 'Gagne 3 combats en Aventure', icon: '⚔️', target: 3 },
-  { id: 'advEquipRune2', desc: 'Équipe 2 runes sur tes créatures (Aventure)', icon: '🪬', target: 2 },
-  { id: 'advBuyRune1', desc: 'Achète 1 rune en Aventure', icon: '🛒', target: 1 },
+// ---- Défis de l'œuf (refonte 02/09) ----
+//
+// Un défi est DÉCLARATIF : il nomme une métrique, un objectif, et un
+// mode de lecture. `questProgress()` est générique — ajouter un défi ne
+// demande plus de toucher à une seule ligne de logique, seulement
+// d'ajouter une entrée dans ce tableau. L'ancien switch géant devenait
+// intenable passé une dizaine de défis.
+//
+// Champs :
+//   id      identifiant stable, JAMAIS renommé (il vit dans les sauvegardes)
+//   tier    phase de jeu (1-6) — voir QUEST_TIERS juste en dessous
+//   icon    pastille de la barre de défi
+//   desc    libellé affiché
+//   metric  quoi mesurer (voir readMetric)
+//   target  valeur à atteindre
+//   mode    'absolute' = état atteint ici et maintenant
+//           'delta'    = progression DEPUIS le tirage du défi
+//
+// Le choix du mode n'est pas cosmétique. `delta` sert aux compteurs qui
+// ne redescendent jamais (invocations, critiques, combats gagnés) : sans
+// lui, un vétéran validerait le défi à l'instant du tirage. `absolute`
+// sert aux états que le joueur possède ou pas (niveau d'un Pacte, pièces
+// en banque, générateurs achetés) — les avoir déjà EST la preuve de
+// progression, et les remettre à zéro n'aurait aucun sens.
+
+// Bornes de `totalEarned` délimitant les 6 phases de jeu. Calées sur la
+// courbe MESURÉE en simulation lors de la refonte d'équilibrage (voir
+// CLICKER_ADVENTURE_STATE.md), pas choisies à l'œil : un premier jeu de
+// seuils « ronds » faisait entrer le joueur en phase 2 au bout de 10
+// minutes et en phase 6 au bout d'une journée, ce qui vidait tout le
+// contenu des phases hautes en un jour.
+//
+// Durées visées, joueur régulier : phase 1 ≈ 30 min, phase 2 → 3 h,
+// phase 3 → 12 h, phase 4 → 1 j, phase 5 → 5 j, phase 6 au-delà (et
+// c'est là que l'Ascension prend le relais).
+export const QUEST_TIER_THRESHOLDS = [
+  0,
+  150000, // ~30 min
+  100000000, // ~3 h
+  300000000000, // ~12 h
+  5000000000000000, // ~1 j
+  300000000000000000, // ~5 j
 ];
 
-// Tire 4 quêtes au hasard dans le pool (sans répéter celles données en
-// exclusion, pour varier d'un cycle d'œuf à l'autre).
-export function pickQuestSet(excludeIds = []) {
-  const pool = QUEST_POOL.filter((q) => !excludeIds.includes(q.id));
-  const source = pool.length >= 4 ? pool : QUEST_POOL; // si pas assez pour exclure, retire du pool complet
-  const shuffled = [...source].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 4).map((q) => q.id);
+// Phase actuelle du joueur (1-6) d'après son total de pièces gagnées.
+export function playerQuestTier(stats) {
+  const earned = Number.isFinite(stats?.totalEarned) ? stats.totalEarned : 0;
+  let tier = 1;
+  for (let i = 0; i < QUEST_TIER_THRESHOLDS.length; i++) {
+    if (earned >= QUEST_TIER_THRESHOLDS[i]) tier = i + 1;
+  }
+  return Math.min(6, tier);
+}
+
+export const QUEST_POOL = [
+  // ---------- Phase 1 : découverte ----------
+  { id: 'combo25', tier: 1, icon: '🔥', desc: "Atteins un multiplicateur de Transe x2,5", metric: 'maxCombo', target: 25, mode: 'absolute' },
+  { id: 'summon10', tier: 1, icon: '🔮', desc: "Invoque 10 créatures", metric: 'totalSummons', target: 10, mode: 'delta' },
+  { id: 'crit20', tier: 1, icon: '💥', desc: "Obtiens 20 coups critiques", metric: 'totalCrits', target: 20, mode: 'delta' },
+  { id: 'golden3', tier: 1, icon: '⭐', desc: "Touche 3 fois la cible dorée", metric: 'goldenClaimed', target: 3, mode: 'delta' },
+  { id: 'earn5000', tier: 1, icon: '💰', desc: "Gagne 60 000 pièces", metric: 'totalEarned', target: 60000, mode: 'delta' },
+  { id: 'pacte5', tier: 1, icon: '🔗', desc: "Fais monter Pacte au niveau 15", metric: 'tapPower', target: 15, mode: 'absolute' },
+  { id: 'hold2500', tier: 1, icon: '🏦', desc: "Aie 51 000 pièces en réserve", metric: 'coins', target: 51000, mode: 'absolute' },
+  { id: 'auto10', tier: 1, icon: '⚙️', desc: "Possède 55 auto-clics en tout", metric: 'autoTotal', target: 55, mode: 'absolute' },
+  { id: 'esprit8', tier: 1, icon: '👻', desc: "Possède 30 Esprits Frappeurs", metric: 'auto:esprit', target: 30, mode: 'absolute' },
+  { id: 'own3', tier: 1, icon: '🐣', desc: "Possède 3 créatures différentes", metric: 'ownedCount', target: 3, mode: 'absolute' },
+
+  // ---------- Phase 2 : première accélération ----------
+  { id: 'hold50k', tier: 2, icon: '🏦', desc: "Aie 15 millions de pièces en réserve", metric: 'coins', target: 15000000, mode: 'absolute' },
+  { id: 'earn250k', tier: 2, icon: '💰', desc: "Gagne 40 millions de pièces", metric: 'totalEarned', target: 40000000, mode: 'delta' },
+  { id: 'pacte15', tier: 2, icon: '🔗', desc: "Fais monter Pacte au niveau 30", metric: 'tapPower', target: 30, mode: 'absolute' },
+  { id: 'griffe5', tier: 2, icon: '🔥', desc: "Monte Griffe de Braisillon au niveau 15", metric: 'upgrade:griffeBraisillon', target: 15, mode: 'absolute' },
+  { id: 'ecaille4', tier: 2, icon: '🌊', desc: "Monte Écaille de Caraploof au niveau 10", metric: 'upgrade:ecailleCaraploof', target: 10, mode: 'absolute' },
+  { id: 'sanct8', tier: 2, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 15", metric: 'sanctuaryLevel', target: 15, mode: 'absolute' },
+  { id: 'main12', tier: 2, icon: '🖐️', desc: "Possède 45 Mains Spectrales", metric: 'auto:main', target: 45, mode: 'absolute' },
+  { id: 'passive100', tier: 2, icon: '📈', desc: "Atteins 49 000 pièces par seconde", metric: 'passiveIncome', target: 49000, mode: 'absolute' },
+  { id: 'crit100', tier: 2, icon: '💥', desc: "Obtiens 150 coups critiques", metric: 'totalCrits', target: 150, mode: 'delta' },
+  { id: 'summon25', tier: 2, icon: '🔮', desc: "Invoque 40 créatures", metric: 'totalSummons', target: 40, mode: 'delta' },
+  { id: 'feed10', tier: 2, icon: '🍖', desc: "Nourris une créature jusqu'au niveau 10", metric: 'maxCreatureLevel', target: 10, mode: 'absolute' },
+  { id: 'faveur6', tier: 2, icon: '✨', desc: "Monte la Faveur des Esprits au niveau 6", metric: 'critLevel', target: 6, mode: 'absolute' },
+
+  // ---------- Phase 3 : le million ----------
+  { id: 'hold1M', tier: 3, icon: '🏦', desc: "Aie 20 milliards de pièces en réserve", metric: 'coins', target: 20000000000, mode: 'absolute' },
+  { id: 'earn10M', tier: 3, icon: '💰', desc: "Gagne 120 milliards de pièces", metric: 'totalEarned', target: 120000000000, mode: 'delta' },
+  { id: 'pacte30', tier: 3, icon: '🔗', desc: "Fais monter Pacte au niveau 45", metric: 'tapPower', target: 45, mode: 'absolute' },
+  { id: 'croc8', tier: 3, icon: '🪨', desc: "Monte Croc de Bouldog au niveau 20", metric: 'upgrade:crocBouldog', target: 20, mode: 'absolute' },
+  { id: 'luxorbe6', tier: 3, icon: '💡', desc: "Monte Éclat de Luxorbe au niveau 15", metric: 'upgrade:eclatLuxorbe', target: 15, mode: 'absolute' },
+  { id: 'automate15', tier: 3, icon: '⚙️', desc: "Possède 70 Automates Runiques", metric: 'auto:automate', target: 70, mode: 'absolute' },
+  { id: 'auto60', tier: 3, icon: '🔧', desc: "Possède 430 auto-clics en tout", metric: 'autoTotal', target: 430, mode: 'absolute' },
+  { id: 'passive10k', tier: 3, icon: '📈', desc: "Atteins 66 millions de pièces par seconde", metric: 'passiveIncome', target: 66000000, mode: 'absolute' },
+  { id: 'sanct15', tier: 3, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 25", metric: 'sanctuaryLevel', target: 25, mode: 'absolute' },
+  { id: 'own8', tier: 3, icon: '🐣', desc: "Possède 8 créatures différentes", metric: 'ownedCount', target: 8, mode: 'absolute' },
+  { id: 'golden15', tier: 3, icon: '⭐', desc: "Touche 20 fois la cible dorée", metric: 'goldenClaimed', target: 20, mode: 'delta' },
+  { id: 'veilleur8', tier: 3, icon: '🌙', desc: "Monte le Veilleur au niveau 8", metric: 'veilleurLevel', target: 8, mode: 'absolute' },
+  { id: 'evolve1', tier: 3, icon: '🧬', desc: "Fais évoluer une créature jusqu'au stade final", metric: 'maxCreatureLevel', target: 15, mode: 'absolute' },
+
+  // ---------- Phase 4 : industrialisation ----------
+  { id: 'hold30M', tier: 4, icon: '🏦', desc: "Aie 120 billions de pièces en réserve", metric: 'coins', target: 120000000000000, mode: 'absolute' },
+  { id: 'earn1B', tier: 4, icon: '💰', desc: "Gagne 2 millions de milliards de pièces", metric: 'totalEarned', target: 2000000000000000, mode: 'delta' },
+  { id: 'pacte50', tier: 4, icon: '🔗', desc: "Fais monter Pacte au niveau 65", metric: 'tapPower', target: 65, mode: 'absolute' },
+  { id: 'colonie20', tier: 4, icon: '🦊', desc: "Possède 100 Colonies de Familiers", metric: 'auto:colonie', target: 100, mode: 'absolute' },
+  { id: 'titan12', tier: 4, icon: '🗿', desc: "Possède 90 Titans Mécaniques", metric: 'auto:titan', target: 90, mode: 'absolute' },
+  { id: 'auto150', tier: 4, icon: '🔧', desc: "Possède 980 auto-clics en tout", metric: 'autoTotal', target: 980, mode: 'absolute' },
+  { id: 'passive1M', tier: 4, icon: '📈', desc: "Atteins 400 milliards de pièces par seconde", metric: 'passiveIncome', target: 400000000000, mode: 'absolute' },
+  { id: 'sanct25', tier: 4, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 40", metric: 'sanctuaryLevel', target: 40, mode: 'absolute' },
+  { id: 'flamme10', tier: 4, icon: '🔥', desc: "Monte Flamme de Fournax au niveau 30", metric: 'upgrade:flammeFournax', target: 30, mode: 'absolute' },
+  { id: 'sceau8', tier: 4, icon: '🔮', desc: "Monte Sceau de Malefix au niveau 25", metric: 'upgrade:sceauMalefix', target: 25, mode: 'absolute' },
+  { id: 'own14', tier: 4, icon: '🐣', desc: "Possède 14 créatures différentes", metric: 'ownedCount', target: 14, mode: 'absolute' },
+  { id: 'feed30', tier: 4, icon: '🍖', desc: "Nourris une créature jusqu'au niveau 30", metric: 'maxCreatureLevel', target: 30, mode: 'absolute' },
+  { id: 'crit1000', tier: 4, icon: '💥', desc: "Obtiens 1 500 coups critiques", metric: 'totalCrits', target: 1500, mode: 'delta' },
+
+  // ---------- Phase 5 : fin de run ----------
+  { id: 'hold10B', tier: 5, icon: '🏦', desc: "Aie 390 billions de pièces en réserve", metric: 'coins', target: 390000000000000, mode: 'absolute' },
+  { id: 'earn500B', tier: 5, icon: '💰', desc: "Gagne 120 millions de milliards de pièces", metric: 'totalEarned', target: 120000000000000000, mode: 'delta' },
+  { id: 'pacte70', tier: 5, icon: '🔗', desc: "Fais monter Pacte au niveau 75", metric: 'tapPower', target: 75, mode: 'absolute' },
+  { id: 'golem25', tier: 5, icon: '💎', desc: "Possède 95 Golems de Cristal", metric: 'auto:golem', target: 95, mode: 'absolute' },
+  { id: 'phenix15', tier: 5, icon: '🔥', desc: "Possède 75 Phénix Renaissants", metric: 'auto:phenix', target: 75, mode: 'absolute' },
+  { id: 'auto400', tier: 5, icon: '🔧', desc: "Possède 1 300 auto-clics en tout", metric: 'autoTotal', target: 1300, mode: 'absolute' },
+  { id: 'passive1B', tier: 5, icon: '📈', desc: "Atteins 1,3 billion de pièces par seconde", metric: 'passiveIncome', target: 1300000000000, mode: 'absolute' },
+  { id: 'sanct35', tier: 5, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 45", metric: 'sanctuaryLevel', target: 45, mode: 'absolute' },
+  { id: 'voile12', tier: 5, icon: '🌑', desc: "Monte Voile de Nocturis au niveau 30", metric: 'upgrade:voileNocturis', target: 30, mode: 'absolute' },
+  { id: 'own20', tier: 5, icon: '🐣', desc: "Possède 20 créatures différentes", metric: 'ownedCount', target: 20, mode: 'absolute' },
+  { id: 'feed50', tier: 5, icon: '🍖', desc: "Nourris une créature jusqu'au niveau 50", metric: 'maxCreatureLevel', target: 50, mode: 'absolute' },
+  { id: 'summon150', tier: 5, icon: '🔮', desc: "Invoque 200 créatures", metric: 'totalSummons', target: 200, mode: 'delta' },
+
+  // ---------- Phase 6 : au-delà / après Ascension ----------
+  { id: 'hold1Qa', tier: 6, icon: '🏦', desc: "Aie 1 million de milliards de pièces en réserve", metric: 'coins', target: 1000000000000000, mode: 'absolute' },
+  { id: 'essence50', tier: 6, icon: '🌟', desc: "Accumule 50 points d'essence", metric: 'essence', target: 50, mode: 'absolute' },
+  { id: 'essence250', tier: 6, icon: '🌟', desc: "Accumule 250 points d'essence", metric: 'essence', target: 250, mode: 'absolute' },
+  { id: 'auto900', tier: 6, icon: '🔧', desc: "Possède 2 500 auto-clics en tout", metric: 'autoTotal', target: 2500, mode: 'absolute' },
+  { id: 'etoile20', tier: 6, icon: '⭐', desc: "Possède 80 Étoiles Filantes", metric: 'auto:etoilefilante', target: 80, mode: 'absolute' },
+  { id: 'oracle30', tier: 6, icon: '🔯', desc: "Possède 120 Oracles Anciens", metric: 'auto:oracle', target: 120, mode: 'absolute' },
+  { id: 'passive1T', tier: 6, icon: '📈', desc: "Atteins 50 billions de pièces par seconde", metric: 'passiveIncome', target: 50000000000000, mode: 'absolute' },
+  { id: 'sanct50', tier: 6, icon: '🏛️', desc: "Monte le Sanctuaire au niveau 50", metric: 'sanctuaryLevel', target: 50, mode: 'absolute' },
+  { id: 'abysse20', tier: 6, icon: '🌊', desc: "Monte Abysse d'Abyssorax au niveau 40", metric: 'upgrade:abysseAbyssorax', target: 40, mode: 'absolute' },
+  { id: 'own26', tier: 6, icon: '🐣', desc: "Complète la collection : 26 créatures", metric: 'ownedCount', target: 26, mode: 'absolute' },
+  { id: 'feed100', tier: 6, icon: '🍖', desc: "Nourris une créature jusqu'au niveau 100", metric: 'maxCreatureLevel', target: 100, mode: 'absolute' },
+
+  // ---------- Défis Aventure (tous paliers) ----------
+  // Ils ne dépendent pas de l'économie du clicker, donc ils restent
+  // tirables à toutes les phases — d'où l'absence de `tier`, traitée
+  // comme « compatible partout » par pickQuestSet().
+  { id: 'advWin3', icon: '⚔️', desc: 'Gagne 3 combats en Aventure', metric: 'battleWon', target: 3, mode: 'delta' },
+  { id: 'advWin10', icon: '⚔️', desc: 'Gagne 10 combats en Aventure', metric: 'battleWon', target: 10, mode: 'delta' },
+  { id: 'advEquipRune2', icon: '🪬', desc: 'Équipe 2 runes sur tes créatures (Aventure)', metric: 'runeEquipped', target: 2, mode: 'delta' },
+  { id: 'advBuyRune1', icon: '🛒', desc: 'Achète 1 rune en Aventure', metric: 'runeBought', target: 1, mode: 'delta' },
+  { id: 'advBuyRune5', icon: '🛒', desc: 'Achète 5 runes en Aventure', metric: 'runeBought', target: 5, mode: 'delta' },
+];
+
+// Lit une métrique dans l'objet de stats. Les métriques paramétrées
+// (`upgrade:<id>`, `auto:<id>`) sont résolues ici plutôt que d'exiger
+// une entrée à plat par amélioration — sinon ajouter une amélioration
+// obligerait à toucher aussi la couche de stats.
+function readMetric(metric, stats) {
+  if (!stats) return 0;
+  if (metric.startsWith('upgrade:')) {
+    const levels = normalizeUpgradeLevels(stats.upgradeLevels);
+    return levels[metric.slice(8)] || 0;
+  }
+  if (metric.startsWith('auto:')) {
+    return (stats.autoClickers || {})[metric.slice(5)] || 0;
+  }
+  const v = stats[metric];
+  return Number.isFinite(v) ? v : 0;
+}
+
+// Progression 0-1 d'un défi. Générique : plus aucun cas particulier.
+// `baseline` = instantané des stats au moment du tirage, utilisé
+// uniquement par les défis en mode 'delta' (voir le commentaire du pool).
+export function questProgress(questId, stats, baseline = {}) {
+  const q = QUEST_POOL.find((x) => x.id === questId);
+  if (!q || !q.target) return 0;
+  const now = readMetric(q.metric, stats);
+  const value = q.mode === 'delta' ? Math.max(0, now - readMetric(q.metric, baseline)) : now;
+  return Math.max(0, Math.min(1, value / q.target));
+}
+
+export function questComplete(questId, stats, baseline = {}) {
+  return questProgress(questId, stats, baseline) >= 1;
 }
 
 export function questLabel(questId) {
   return QUEST_POOL.find((q) => q.id === questId)?.desc || '';
 }
 
-// Progression 0-1 d'une quête donnée, à partir des stats du joueur.
-// stats attendu : { maxCombo, totalSummons, totalCrits, goldenClaimed,
-// totalEarned, maxCreatureLevel, tapPower }
-// `baseline` = snapshot des stats au moment où CE jeu de 4 quêtes a été
-// tiré — nécessaire pour les quêtes de type "cumul total" (invocations,
-// critiques, cible dorée, pièces gagnées) : sans lui, un joueur qui a
-// déjà beaucoup joué aurait déjà dépassé le seuil absolu dès le premier
-// instant du nouveau cycle, achevant les quêtes instantanément sans
-// jamais les voir (bug réel signalé : "il n'y a plus du tout de quête,
-// juste l'œuf directement" — la bascule collecte→éclosion, tout juste
-// réparée pour être fiable, sautait désormais direct puisque les
-// conditions étaient déjà satisfaites avant même le premier rendu).
-//
-// Les 4 AUTRES quêtes (combo25/evolve1/feed10/pacte5) restent des
-// paliers ABSOLUS volontairement : ce sont des états "atteints une fois
-// pour toutes" (combo max, niveau d'une créature, Pacte) plutôt que des
-// compteurs qui avancent à chaque action — les avoir déjà atteints est
-// une vraie preuve de progression, pas un artefact à corriger.
-export function questProgress(questId, stats, baseline = {}) {
-  const delta = (key) => Math.max(0, (stats[key] || 0) - (baseline[key] || 0));
-  // Les 4 quêtes à seuil ABSOLU lisaient `stats.X` directement : sur un
-  // objet de stats incomplet elles renvoyaient NaN, qui traverse
-  // Math.min() sans broncher et se serait affiché tel quel dans la
-  // nouvelle barre de défi ("NaN/25"). `abs()` garantit un nombre.
-  const abs = (key) => (Number.isFinite(stats[key]) ? stats[key] : 0);
-  switch (questId) {
-    case 'combo25': return Math.min(1, abs('maxCombo') / 2.5);
-    case 'summon10': return Math.min(1, delta('totalSummons') / 10);
-    case 'crit20': return Math.min(1, delta('totalCrits') / 20);
-    case 'golden3': return Math.min(1, delta('goldenClaimed') / 3);
-    case 'earn5000': return Math.min(1, delta('totalEarned') / 5000);
-    case 'evolve1': return Math.min(1, abs('maxCreatureLevel') / 15);
-    case 'feed10': return Math.min(1, abs('maxCreatureLevel') / 10);
-    case 'pacte5': return Math.min(1, Math.max(0, abs('tapPower') - 1) / 5);
-    // Quêtes Aventure — `stats.battleWon`/`runeEquipped`/`runeBought`
-    // viennent du compteur À VIE de DailyContext (lifetimeStats), fusionné
-    // dans `stats` côté ClickerScreen.js avant l'appel à cette fonction.
-    case 'advWin3': return Math.min(1, delta('battleWon') / 3);
-    case 'advEquipRune2': return Math.min(1, delta('runeEquipped') / 2);
-    case 'advBuyRune1': return Math.min(1, delta('runeBought') / 1);
-    default: return 0;
-  }
-}
-export function questComplete(questId, stats, baseline = {}) {
-  return questProgress(questId, stats, baseline) >= 1;
-}
-
-// Détail affichable d'une quête : icône, libellé, et surtout la fraction
-// «courant / objectif» à montrer dans la barre segmentée de l'écran
-// d'accueil. `current` est DÉRIVÉ de questProgress() (jamais recalculé à
-// part) pour qu'il soit impossible que la barre affiche 5/5 alors que la
-// quête n'est pas considérée comme terminée, ou l'inverse — c'était le
-// piège évident ici, deux sources de vérité qui divergent.
+// Détail affichable d'un défi : icône, libellé, et la fraction
+// «courant / objectif» de la barre segmentée. `current` est DÉRIVÉ de
+// questProgress() (jamais recalculé à part) : deux sources de vérité
+// permettraient à la barre d'afficher 5/5 sur un défi non validé.
 export function questDetail(questId, stats, baseline = {}) {
-  const entry = QUEST_POOL.find((q) => q.id === questId);
-  const target = entry?.target || 1;
+  const q = QUEST_POOL.find((x) => x.id === questId);
+  const target = q?.target || 1;
   const progress = questProgress(questId, stats, baseline);
   return {
-    icon: entry?.icon || '🎯',
-    label: entry?.desc || '',
+    icon: q?.icon || '🎯',
+    label: q?.desc || '',
     progress,
     target,
     current: Math.min(target, Math.floor(progress * target + 1e-9)),
     done: progress >= 1,
   };
+}
+
+export const QUEST_SET_SIZE = 4;
+
+// Tire un jeu de 4 défis adaptés à la phase du joueur.
+//
+// Le filtrage par phase est le cœur du système : sans lui, un joueur qui
+// démarre pouvait tirer « aie 30 000 000 de pièces » et rester bloqué
+// pour toujours, l'œuf n'éclosant jamais. On pioche donc dans la phase
+// courante ET la précédente (pour garder un défi rapide à cocher), plus
+// les défis Aventure qui n'ont pas de phase.
+//
+// Les niveaux au-dessus sont volontairement exclus : un défi hors de
+// portée n'est pas « difficile », il est bloquant. La difficulté vient
+// des seuils exigeants À L'INTÉRIEUR de chaque phase.
+export function pickQuestSet(excludeIds = [], stats = {}) {
+  const tier = playerQuestTier(stats);
+  const eligible = QUEST_POOL.filter((q) => !q.tier || (q.tier <= tier && q.tier >= tier - 1));
+  let pool = eligible.filter((q) => !excludeIds.includes(q.id));
+  // Replis en cascade : jamais moins de 4 défis, quoi qu'il arrive.
+  if (pool.length < QUEST_SET_SIZE) pool = eligible;
+  if (pool.length < QUEST_SET_SIZE) pool = QUEST_POOL.filter((q) => !q.tier || q.tier <= tier);
+  if (pool.length < QUEST_SET_SIZE) pool = QUEST_POOL;
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, QUEST_SET_SIZE).map((q) => q.id);
 }
 
 export const EGG_STAGES = [

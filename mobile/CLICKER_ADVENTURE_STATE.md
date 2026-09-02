@@ -38,6 +38,84 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventur
 - **Invoquer une créature** (gacha) : vit dans l'onglet **Collection**, pas dans Shop.
 - **Rituel** (bonus "pub" gratuit) : une bulle qui apparaît près de l'œuf (comme les pouvoirs de créature), pas un bouton ni une bannière.
 
+## Défis de l'œuf — pool par phases de progression (refonte 02/09)
+
+**76 défis** (contre 11 avant), répartis en 6 phases de jeu + 5 défis
+Aventure. Le pool est **déclaratif** : un défi nomme une métrique, un
+objectif et un mode de lecture, et `questProgress()` est générique.
+Ajouter un défi = ajouter une ligne, plus jamais toucher à la logique.
+L'ancien `switch` par id devenait intenable passé une dizaine d'entrées.
+
+### Le tirage suit la progression du joueur
+
+C'est le cœur du système. Sans lui, un joueur qui démarre pouvait tirer
+« aie 30 000 000 de pièces » et rester **bloqué pour toujours**, l'œuf
+n'éclosant jamais. `pickQuestSet(excludeIds, stats)` déduit la phase du
+joueur (`playerQuestTier`, d'après `totalEarned`) et ne pioche que dans
+la phase courante **et la précédente**, plus les défis Aventure qui n'ont
+pas de phase.
+
+Les phases au-dessus sont volontairement exclues : un défi hors de
+portée n'est pas « difficile », il est bloquant. La difficulté vient des
+seuils exigeants **à l'intérieur** de chaque phase.
+
+`QUEST_TIER_THRESHOLDS` est calé sur la courbe MESURÉE (voir section
+Équilibrage), pas à l'œil : un premier jeu de seuils « ronds » faisait
+entrer le joueur en phase 2 en 10 minutes et en phase 6 en une journée.
+Durées obtenues : phase 1 ≈ 30 min, 2 → 3 h, 3 → 12 h, 4 → 1 j, 5 → 5 j,
+6 au-delà.
+
+### `mode` : 'delta' vs 'absolute'
+
+Ce choix n'est pas cosmétique :
+- **`delta`** pour les compteurs qui ne redescendent jamais (invocations,
+  critiques, pièces gagnées, combats). Mesuré **depuis le tirage** via
+  `questBaseline`, sinon un vétéran validerait à l'instant même du
+  tirage — c'est le bug réel corrigé le 30/08.
+- **`absolute`** pour les états que le joueur possède ou non (niveau d'un
+  Pacte, pièces en réserve, générateurs achetés). Les avoir déjà EST la
+  preuve de progression.
+
+Le `questBaseline` ne contient donc QUE les métriques delta. S'il en
+manque une, les défis correspondants repartent de 0 et se valident
+instantanément.
+
+### Calibrage de la difficulté
+
+Chaque cible économique a été calculée **par simulation**, calée sur la
+**fin** de sa phase (l'état du joueur à l'entrée de la phase suivante) et
+non sur son milieu. Mesure avant/après : **33 défis sur 48 étaient déjà
+acquis** au moment où le joueur entrait dans leur phase — donc des
+cadeaux, pas des défis. Après recalibrage : **1 sur 48**.
+
+Règles appliquées :
+- métrique d'état → valeur atteinte à l'entrée de la phase suivante
+- `coins` (réserve) → ~5 min de production de fin de phase, ce qui force
+  à épargner au lieu de tout réinvestir
+- `totalEarned` en delta → ~40% de ce que la phase produit
+- **jamais de cible abaissée** : on garde `max(actuelle, calculée)`
+- phase 6 **durcie à la main** : la simulation s'arrêtant à 7 jours, ses
+  valeurs y sont une extrapolation basse
+
+### Pièges de cette refonte
+
+- **Les ids sont figés, pas les valeurs.** Un id vit dans les
+  sauvegardes des joueurs et ne doit JAMAIS être renommé — mais les
+  cibles, elles, ont été recalibrées. Conséquence à connaître :
+  `hold1M` vaut aujourd'hui 20 milliards, `pacte5` demande le niveau 15.
+  Ne jamais déduire une valeur d'un id, toujours lire `target`.
+- **Régénérer les `desc` après tout changement de cible** : ce sont des
+  chaînes figées qui annonceraient sinon les anciens chiffres. Même
+  piège que sur les améliorations, tombé deux fois.
+- Une formule de recalibrage valable pour une métrique ne l'est pas pour
+  toutes : appliquer « 40% des pièces produites » aux compteurs
+  d'invocations a produit un « invoque 60 000 créatures » avant
+  correction. Les compteurs non monétaires gardent des cibles écrites à
+  la main.
+- **Revalider les défis sauvegardés contre le pool actuel** au
+  chargement : un id disparu renverrait une progression de 0 pour
+  toujours et bloquerait l'œuf définitivement.
+
 ## Équilibrage de l'économie du clicker (refonte 02/09)
 
 Refonte complète des gains et des coûts, faite **à la simulation** et non

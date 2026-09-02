@@ -45,6 +45,8 @@ import {
   OFFRANDE_APPCOINS_COST,
   offrandeReward,
   pickQuestSet,
+  QUEST_POOL,
+  QUEST_SET_SIZE,
   questComplete,
   questDetail,
   EGG_STAGES,
@@ -273,7 +275,16 @@ export default function ClickerScreen({ onBack }) {
           setTotalCrits(saved.totalCrits || 0);
           setGoldenClaimed(saved.goldenClaimed || 0);
           setMaxCombo(saved.maxCombo || 1);
-          setActiveQuestIds(saved.activeQuestIds && saved.activeQuestIds.length === 4 ? saved.activeQuestIds : pickQuestSet());
+          // Les défis sauvegardés sont revalidés contre le pool ACTUEL :
+          // un id disparu du pool renverrait une progression de 0 pour
+          // toujours et bloquerait l'œuf définitivement. On retire donc
+          // au tirage adapté à la progression du joueur.
+          const savedQuests = (saved.activeQuestIds || []).filter((id) => QUEST_POOL.some((q) => q.id === id));
+          setActiveQuestIds(
+            savedQuests.length === QUEST_SET_SIZE
+              ? savedQuests
+              : pickQuestSet(savedQuests, { totalEarned: saved.totalEarned || 0 })
+          );
           // Migration douce pour les sauvegardes d'avant ce correctif
           // (pas de questBaseline stocké) : on prend un instantané des
           // stats ACTUELLES comme point de départ — équitable, pas de
@@ -707,10 +718,25 @@ export default function ClickerScreen({ onBack }) {
 
   // ---- Système de quêtes + œuf ----
   const maxCreatureLevel = owned.reduce((max, o) => Math.max(max, o.level), 0);
+  // Toutes les métriques lisibles par un défi. Le pool étant déclaratif
+  // (voir QUEST_POOL), ajouter un défi ne demande RIEN ici tant qu'il
+  // s'appuie sur une métrique déjà listée — c'est tout l'intérêt.
+  // `maxCombo` est en centièmes côté défi (x2,5 → 25) pour rester un
+  // entier affichable dans la barre segmentée.
   const questStats = {
-    maxCombo, totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower,
-    // Compteurs Aventure À VIE (DailyContext) — alimentent les 3
-    // nouvelles quêtes advWin3/advEquipRune2/advBuyRune1.
+    maxCombo: Math.round(maxCombo * 10),
+    totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower,
+    coins,
+    passiveIncome,
+    autoTotal: Object.values(autoClickers).reduce((sum, n) => sum + (n || 0), 0),
+    autoClickers,
+    upgradeLevels,
+    sanctuaryLevel,
+    veilleurLevel,
+    critLevel,
+    essence,
+    ownedCount: owned.length,
+    // Compteurs Aventure À VIE (DailyContext).
     battleWon: lifetimeStats.battleWon || 0,
     runeEquipped: lifetimeStats.runeEquipped || 0,
     runeBought: lifetimeStats.runeBought || 0,
@@ -750,7 +776,7 @@ export default function ClickerScreen({ onBack }) {
   // ACTUEL directement dans l'updater fonctionnel de setEggPhase (jamais
   // périmé, quel que soit l'ordre des rendus) plutôt que via une ref.
   useEffect(() => {
-    if (completedQuestCount >= 4) {
+    if (completedQuestCount >= QUEST_SET_SIZE) {
       setEggPhase((phase) => (phase === 'collecting' ? 'hatching' : phase));
     }
   }, [completedQuestCount, eggPhase]);
@@ -787,19 +813,23 @@ export default function ClickerScreen({ onBack }) {
         addCreatureToOwned(creature);
         gainCoins(goldenBonus(tapPowerRef.current) * 3);
         setRewardCreature(creature);
-        setActiveQuestIds(pickQuestSet(activeQuestIdsRef.current));
+        // Le nouveau tirage suit la progression : plus le joueur avance,
+        // plus les défis proposés sont exigeants (voir pickQuestSet).
+        setActiveQuestIds(pickQuestSet(activeQuestIdsRef.current, { totalEarned: totalEarnedRef.current }));
         // Nouveau baseline au moment MÊME du tirage (après le bonus de
         // pièces ci-dessus, pour que "5000 pièces gagnées" reparte bien
         // de ce point précis, pas d'un instant légèrement antérieur) —
         // voir questProgress() dans clickerLogic.js pour le pourquoi.
+        // Le baseline ne sert QUE aux défis en mode 'delta' — inutile
+        // d'y mettre les métriques d'état (pièces en réserve, niveaux),
+        // qui sont lues en absolu. Il doit en revanche couvrir TOUTES
+        // les métriques delta du pool, sinon celles qui manquent
+        // repartent de 0 et se valident instantanément chez un vétéran.
         setQuestBaseline({
-          maxCombo: maxComboRef.current,
           totalSummons: totalSummonsRef.current,
           totalCrits: totalCritsRef.current,
           goldenClaimed: goldenClaimedRef.current,
           totalEarned: totalEarnedRef.current,
-          maxCreatureLevel: ownedRef.current.reduce((max, o) => Math.max(max, o.level), 0),
-          tapPower: tapPowerRef.current,
           battleWon: lifetimeStats.battleWon || 0,
           runeEquipped: lifetimeStats.runeEquipped || 0,
           runeBought: lifetimeStats.runeBought || 0,
