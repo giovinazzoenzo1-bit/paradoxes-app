@@ -24,7 +24,9 @@
 
 ## Navigation générale du Clicker
 
-Barre de navigation en bas de `ClickerScreen.js` : **Shop | Quêtes | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) est volontairement épuré : pièces, revenu/s, deck de 3 créatures, l'œuf central. Tout le reste vit dans les 4 onglets.
+Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.
+
+**L'onglet Quêtes n'existe plus** (02/09) — voir la section « Défis de l'œuf sur l'écran d'accueil » plus bas. Le composant `QuestsView` a été supprimé, ainsi que la valeur `'quests'` de `view`. L'**Ascension**, qui vivait dedans, est désormais en bas de la page « Améliorations » du **Shop**, juste après l'Offrande.
 
 **Style visuel "Juicy"** : fond bleu-violet abysse très sombre (`COLORS.bg = '#07051a'`), éléments d'action avec lueur néon (shadowColor assorti à la couleur de bordure).
 
@@ -32,7 +34,7 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Quêtes | Collection
 
 - Les **créatures ne produisent PLUS de pièces automatiquement** (refonte volontaire, en préparation du mode combat). La seule source de revenu passif est la **boutique d'auto-clics** (`AUTOCLICKERS`, 5 paliers : esprit → main → automate → colonie → titan), achetable plusieurs fois, coût croissant ×1,15 par unité déjà possédée.
 - Boutons d'amélioration (Pacte, Faveur des Esprits, Sanctuaire, Veilleur, puis Offrande en dernier) : dans l'écran **Shop**, page "Améliorations". Page 2 du Shop = la boutique d'auto-clics.
-- **Ascension** (prestige, essence permanente) : vit dans l'onglet **Quêtes**, pas dans Shop.
+- **Ascension** (prestige, essence permanente) : vit en bas de la page « Améliorations » du **Shop** (déplacée le 02/09 avec la suppression de l'onglet Quêtes).
 - **Invoquer une créature** (gacha) : vit dans l'onglet **Collection**, pas dans Shop.
 - **Rituel** (bonus "pub" gratuit) : une bulle qui apparaît près de l'œuf (comme les pouvoirs de créature), pas un bouton ni une bannière.
 
@@ -210,6 +212,52 @@ Tout ce qui suit a été construit dans UNE session très longue le 2 septembre 
 1. **Bascule collecte→éclosion parfois bloquée pour toujours** (ref périmée dans un `useEffect`) — corrigé avec un updater fonctionnel qui lit toujours l'état à jour.
 2. **Quêtes de type "cumul total" instantanément acquises pour un joueur vétéran** (comparaison à un seuil absolu depuis toujours, pas depuis le tirage) — corrigé avec un `questBaseline` (instantané des stats au moment du tirage), migration douce pour les sauvegardes existantes.
 
+### Défis de l'œuf sur l'écran d'accueil — suppression de l'onglet Quêtes (tout dernier ajout)
+
+Objectif demandé : **supprimer le menu Quêtes du clicker**, pour que le
+joueur doive casser le VRAI œuf de l'écran d'accueil afin d'obtenir une
+créature — au lieu d'aller taper un second œuf dans un onglet à part.
+
+- **Barre de défi segmentée** (`ChallengeBar` dans `ClickerScreen.js`),
+  posée entre la bannière de pouvoir et le deck : libellé du défi
+  au-dessus, puis une piste en gélule avec pastille d'icône à gauche,
+  segments dorés au milieu, fraction `courant/objectif` à droite. Style
+  repris d'une capture Monster Legends fournie par l'utilisateur.
+- **Un seul défi affiché à la fois** : le premier non terminé des 4 du
+  cycle (`currentChallenge`). Empiler les 4 recréerait exactement
+  l'onglet qu'on vient de supprimer. Une ligne « Défi N sur 4 avant
+  l'éclosion » sous la barre garde la progression du cycle visible.
+- **Nombre de segments plafonné à 6** (`CHALLENGE_MAX_SEGMENTS`) :
+  certains objectifs valent 20, 25 ou 5000 — un segment par unité
+  donnerait des traits de 2px. Au-delà, un segment vaut plusieurs
+  unités, mais la fraction à droite reste toujours la VRAIE valeur.
+- **L'œuf central est devenu le seul œuf du jeu** : `handleTap` appelle
+  aussi `handleEggTap()` dès que `eggPhase !== 'collecting'`. Le joueur
+  ne change ni d'écran ni de geste ; le gain de pièces reste acquis
+  pendant l'éclosion (aucune raison de le punir). Le texte sous l'œuf et
+  l'emoji basculent selon la phase (🥚 « Tape pour casser l'œuf » →
+  💫 « Tape pour capturer la créature »).
+- La **même barre** sert de jauge d'éclosion/capture pendant ces phases —
+  jamais deux barres concurrentes à l'écran.
+- **`questDetail()`** (nouveau, `clickerLogic.js`) fournit icône, libellé
+  et fraction. Son `current` est **dérivé de `questProgress()`**, jamais
+  recalculé à part : deux sources de vérité auraient permis à la barre
+  d'afficher 5/5 sur une quête non validée. Métadonnées `icon`/`target`
+  ajoutées sur chaque entrée de `QUEST_POOL` (affichage seulement, aucun
+  effet sur le calcul de progression).
+- **Overlay de récompense remonté** au niveau de l'écran : la capture
+  peut maintenant tomber depuis l'accueil, il serait invisible s'il
+  restait dans un sous-composant supprimé.
+- **Bug corrigé au passage** : les 4 quêtes à seuil absolu
+  (`combo25`/`evolve1`/`feed10`/`pacte5`) lisaient `stats.X` sans
+  garde-fou et renvoyaient **NaN** sur un objet de stats incomplet —
+  invisible avant, mais la nouvelle barre l'aurait affiché tel quel
+  (« NaN/25 »). Helper `abs()` ajouté dans `questProgress()`.
+- Vérifié par test : 0 divergence entre `questDetail().done` et
+  `questComplete()` sur les 11 quêtes, à vide comme à plein ; 2000
+  tirages de `pickQuestSet()` tous valides ; aucun style orphelin dans
+  les deux sens (20 styles morts de l'ancien onglet supprimés).
+
 ### Boutique du clicker — paliers à débloquer (tout dernier ajout)
 - **20 nouvelles améliorations** à débloquer (achat unique, `UPGRADE_ITEMS`), 4 paliers de 5, thème créatures/éléments.
 - **10 nouveaux auto-clics** (`AUTOCLICKERS` étendu à 15, `tier` 1-3).
@@ -220,5 +268,6 @@ Tout ce qui suit a été construit dans UNE session très longue le 2 septembre 
 - **Ne jamais écrire directement dans la sauvegarde d'un AUTRE écran** (ex: Options → sauvegarde d'Aventure) — toujours passer par un drapeau/montant en attente, lu et appliqué par l'écran propriétaire à son PROCHAIN chargement. Un vrai bug de "sauvegarde remise à zéro" est arrivé une fois pour cette raison exacte.
 - **Toujours vérifier les imports React Native** avant de pousser (`grep` les composants utilisés vs importés) — deux crashs différents cette session (`ScrollView` manquant dans `CombatScreen.js` puis dans un autre écran) venaient d'un import oublié après un changement de style.
 - **Ne jamais appeler un `setState` depuis l'intérieur d'un updater d'un AUTRE `setState`** — risque de double déclenchement en mode strict de React (repéré et corrigé sur `fuseRunes`/`equipRune`).
+- **Quand une valeur est affichée à côté d'une condition, la dériver de cette condition** — la fraction de la barre de défi vient de `questProgress()` plutôt que d'un recalcul parallèle, sinon barre pleine et quête non validée peuvent diverger.
 - **Toujours vérifier qu'une déclaration de fonction n'a pas été accidentellement supprimée** lors d'une édition par bloc (`grep -c "^function NomDeLaFonction"` doit toujours donner 1) — arrivé 2 fois cette session (`FighterSelectOverlay` amputé de sa ligne de signature).
 

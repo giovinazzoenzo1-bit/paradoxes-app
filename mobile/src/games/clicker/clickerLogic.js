@@ -634,22 +634,28 @@ export function offrandeReward(tapPower) {
 // jeux de l'appli (ex: "gagner 5 fois à Puissance 4") demandent une
 // couche de stats partagées entre jeux qui n'existe pas encore ; à
 // construire séparément avant de les ajouter à ce pool.
+// `icon` et `target` (02/09) servent à la barre de défi segmentée
+// affichée directement sur l'écran d'accueil du clicker : l'icône est
+// posée dans la pastille à gauche de la barre, `target` sert à afficher
+// la fraction «courant / objectif» à droite (ex: 3/10). Ils ne changent
+// RIEN au calcul de progression (questProgress ci-dessous reste la
+// source de vérité) — ce sont uniquement des métadonnées d'affichage.
 export const QUEST_POOL = [
-  { id: 'combo25', desc: 'Atteins un multiplicateur de Transe x2,5' },
-  { id: 'summon10', desc: 'Invoque 10 créatures' },
-  { id: 'crit20', desc: 'Obtiens 20 coups critiques' },
-  { id: 'golden3', desc: 'Touche 3 fois la cible dorée' },
-  { id: 'earn5000', desc: 'Cumule 5 000 pièces gagnées au total' },
-  { id: 'evolve1', desc: "Fais évoluer une créature jusqu'au stade final" },
-  { id: 'feed10', desc: "Nourris une créature jusqu'au niveau 10" },
-  { id: 'pacte5', desc: 'Fais monter Pacte au niveau 6' },
+  { id: 'combo25', desc: 'Atteins un multiplicateur de Transe x2,5', icon: '🔥', target: 25 },
+  { id: 'summon10', desc: 'Invoque 10 créatures', icon: '🔮', target: 10 },
+  { id: 'crit20', desc: 'Obtiens 20 coups critiques', icon: '💥', target: 20 },
+  { id: 'golden3', desc: 'Touche 3 fois la cible dorée', icon: '⭐', target: 3 },
+  { id: 'earn5000', desc: 'Cumule 5 000 pièces gagnées au total', icon: '💰', target: 5000 },
+  { id: 'evolve1', desc: "Fais évoluer une créature jusqu'au stade final", icon: '🧬', target: 15 },
+  { id: 'feed10', desc: "Nourris une créature jusqu'au niveau 10", icon: '🍖', target: 10 },
+  { id: 'pacte5', desc: 'Fais monter Pacte au niveau 6', icon: '🔗', target: 5 },
   // Quêtes liées à l'Aventure (30/08) — possibles maintenant que
   // DailyContext.js fournit des compteurs À VIE partagés entre les deux
   // jeux (voir lifetimeStats), la couche qui manquait explicitement
   // quand ce pool a été créé la première fois.
-  { id: 'advWin3', desc: 'Gagne 3 combats en Aventure' },
-  { id: 'advEquipRune2', desc: 'Équipe 2 runes sur tes créatures (Aventure)' },
-  { id: 'advBuyRune1', desc: 'Achète 1 rune en Aventure' },
+  { id: 'advWin3', desc: 'Gagne 3 combats en Aventure', icon: '⚔️', target: 3 },
+  { id: 'advEquipRune2', desc: 'Équipe 2 runes sur tes créatures (Aventure)', icon: '🪬', target: 2 },
+  { id: 'advBuyRune1', desc: 'Achète 1 rune en Aventure', icon: '🛒', target: 1 },
 ];
 
 // Tire 4 quêtes au hasard dans le pool (sans répéter celles données en
@@ -685,15 +691,20 @@ export function questLabel(questId) {
 // une vraie preuve de progression, pas un artefact à corriger.
 export function questProgress(questId, stats, baseline = {}) {
   const delta = (key) => Math.max(0, (stats[key] || 0) - (baseline[key] || 0));
+  // Les 4 quêtes à seuil ABSOLU lisaient `stats.X` directement : sur un
+  // objet de stats incomplet elles renvoyaient NaN, qui traverse
+  // Math.min() sans broncher et se serait affiché tel quel dans la
+  // nouvelle barre de défi ("NaN/25"). `abs()` garantit un nombre.
+  const abs = (key) => (Number.isFinite(stats[key]) ? stats[key] : 0);
   switch (questId) {
-    case 'combo25': return Math.min(1, stats.maxCombo / 2.5);
+    case 'combo25': return Math.min(1, abs('maxCombo') / 2.5);
     case 'summon10': return Math.min(1, delta('totalSummons') / 10);
     case 'crit20': return Math.min(1, delta('totalCrits') / 20);
     case 'golden3': return Math.min(1, delta('goldenClaimed') / 3);
     case 'earn5000': return Math.min(1, delta('totalEarned') / 5000);
-    case 'evolve1': return Math.min(1, stats.maxCreatureLevel / 15);
-    case 'feed10': return Math.min(1, stats.maxCreatureLevel / 10);
-    case 'pacte5': return Math.min(1, Math.max(0, stats.tapPower - 1) / 5);
+    case 'evolve1': return Math.min(1, abs('maxCreatureLevel') / 15);
+    case 'feed10': return Math.min(1, abs('maxCreatureLevel') / 10);
+    case 'pacte5': return Math.min(1, Math.max(0, abs('tapPower') - 1) / 5);
     // Quêtes Aventure — `stats.battleWon`/`runeEquipped`/`runeBought`
     // viennent du compteur À VIE de DailyContext (lifetimeStats), fusionné
     // dans `stats` côté ClickerScreen.js avant l'appel à cette fonction.
@@ -705,6 +716,26 @@ export function questProgress(questId, stats, baseline = {}) {
 }
 export function questComplete(questId, stats, baseline = {}) {
   return questProgress(questId, stats, baseline) >= 1;
+}
+
+// Détail affichable d'une quête : icône, libellé, et surtout la fraction
+// «courant / objectif» à montrer dans la barre segmentée de l'écran
+// d'accueil. `current` est DÉRIVÉ de questProgress() (jamais recalculé à
+// part) pour qu'il soit impossible que la barre affiche 5/5 alors que la
+// quête n'est pas considérée comme terminée, ou l'inverse — c'était le
+// piège évident ici, deux sources de vérité qui divergent.
+export function questDetail(questId, stats, baseline = {}) {
+  const entry = QUEST_POOL.find((q) => q.id === questId);
+  const target = entry?.target || 1;
+  const progress = questProgress(questId, stats, baseline);
+  return {
+    icon: entry?.icon || '🎯',
+    label: entry?.desc || '',
+    progress,
+    target,
+    current: Math.min(target, Math.floor(progress * target + 1e-9)),
+    done: progress >= 1,
+  };
 }
 
 export const EGG_STAGES = [

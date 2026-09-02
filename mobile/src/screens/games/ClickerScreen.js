@@ -43,13 +43,9 @@ import {
   ritualReady,
   OFFRANDE_APPCOINS_COST,
   offrandeReward,
-  QUEST_POOL,
   pickQuestSet,
-  questLabel,
-  questProgress,
   questComplete,
-  EGG_STAGES,
-  eggStageForCompletedCount,
+  questDetail,
   HATCH_TAPS_REQUIRED,
   CAPTURE_TAPS_REQUIRED,
   AUTOCLICKERS,
@@ -99,7 +95,7 @@ export default function ClickerScreen({ onBack }) {
   const [totalEarned, setTotalEarned] = useState(0); // cumul jamais décroissant, pour l'Ascension
   const [tapPower, setTapPower] = useState(1);
   const [owned, setOwned] = useState([]); // [{id, level}]
-  const [view, setView] = useState('tap'); // 'tap' | 'shop' | 'quests' | 'collection' | 'adventure'
+  const [view, setView] = useState('tap'); // 'tap' | 'shop' | 'collection' | 'adventure'
   const [selectedCreature, setSelectedCreature] = useState(null);
   const [welcomeBack, setWelcomeBack] = useState(null);
   const [popups, setPopups] = useState([]);
@@ -526,6 +522,17 @@ export default function ClickerScreen({ onBack }) {
     const x = evt.nativeEvent.locationX || 60;
     const y = evt.nativeEvent.locationY || 60;
     spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
+
+    // 02/09 : l'onglet Quêtes a disparu, l'œuf de l'écran d'accueil EST
+    // désormais le véritable œuf à casser. Quand les 4 défis sont
+    // validés, ce même tap fait aussi avancer l'éclosion puis la
+    // capture — le joueur ne change ni d'écran ni de geste, il tape au
+    // même endroit et l'œuf finit par s'ouvrir. Le gain de pièces reste
+    // acquis en plus (aucune raison de punir le joueur pendant cette
+    // phase). `handleEggTap` est déclaré plus bas dans le composant :
+    // pas de souci de TDZ, cette ligne ne s'exécute qu'au moment d'un
+    // vrai appui, bien après l'initialisation.
+    if (eggPhaseRef.current !== 'collecting') handleEggTap();
   };
 
   // Le joueur a tapé la créature apparue à temps : son pouvoir s'active,
@@ -694,6 +701,17 @@ export default function ClickerScreen({ onBack }) {
     runeBought: lifetimeStats.runeBought || 0,
   };
   const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats, questBaseline)).length;
+
+  // Défi mis en avant sur l'écran d'accueil : le PREMIER non terminé des
+  // 4 du cycle. Un seul à la fois, volontairement — la barre segmentée
+  // reprise de Monster Legends n'a de sens que pour un objectif unique,
+  // et empiler 4 barres sur l'accueil recréerait l'onglet Quêtes qu'on
+  // vient justement de supprimer. Vaut `null` quand les 4 sont finies
+  // (l'affichage bascule alors sur la barre d'éclosion).
+  const currentChallengeId = activeQuestIds.find((id) => !questComplete(id, questStats, questBaseline)) || null;
+  const currentChallenge = currentChallengeId
+    ? questDetail(currentChallengeId, questStats, questBaseline)
+    : null;
 
   // Bascule automatique collecte -> éclosion dès que les 4 quêtes sont
   // validées. Bug corrigé (30/08, signalé par capture d'écran : l'œuf
@@ -893,6 +911,33 @@ export default function ClickerScreen({ onBack }) {
               pièces, le revenu/s, et le deck actuel — tout le reste
               (améliorations, quêtes, collection) vit maintenant dans la
               barre de navigation du bas. */}
+          {/* Le défi en cours vit désormais ICI, sur l'écran d'accueil,
+              exactement à l'emplacement de l'ancien vide entre la
+              bannière de pouvoir et le deck. En phase d'éclosion/capture
+              la même barre bascule sur le décompte de taps, pour que le
+              joueur n'ait jamais deux barres concurrentes à l'écran. */}
+          {eggPhase === 'collecting' ? (
+            currentChallenge && (
+              <ChallengeBar
+                icon={currentChallenge.icon}
+                label={currentChallenge.label}
+                current={currentChallenge.current}
+                target={currentChallenge.target}
+                cycleIndex={completedQuestCount}
+                cycleTotal={activeQuestIds.length}
+              />
+            )
+          ) : (
+            <ChallengeBar
+              icon={eggPhase === 'hatching' ? '🥚' : '💫'}
+              label={eggPhase === 'hatching' ? "L'œuf est prêt : brise la coquille !" : 'La créature bouge encore : capture-la !'}
+              current={eggPhase === 'hatching' ? hatchTaps : captureTaps}
+              target={eggPhase === 'hatching' ? HATCH_TAPS_REQUIRED : CAPTURE_TAPS_REQUIRED}
+              cycleIndex={0}
+              cycleTotal={0}
+            />
+          )}
+
           <View style={styles.tapArea}>
             <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
 
@@ -900,7 +945,7 @@ export default function ClickerScreen({ onBack }) {
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
                 <View style={styles.tapButtonWrap}>
                   <Animated.View style={[styles.tapButton, { transform: [{ scale: tapScale }] }]}>
-                    <Text style={styles.tapEmoji}>🥚</Text>
+                    <Text style={styles.tapEmoji}>{eggPhase === 'capturing' ? '💫' : '🥚'}</Text>
                   </Animated.View>
                 </View>
               </TouchableOpacity>
@@ -920,7 +965,13 @@ export default function ClickerScreen({ onBack }) {
             {comboCount > 1 ? (
               <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
             ) : (
-              <Text style={styles.tapHint}>Tape pour récolter des pièces</Text>
+              <Text style={styles.tapHint}>
+                {eggPhase === 'hatching'
+                  ? "Tape pour casser l'œuf"
+                  : eggPhase === 'capturing'
+                  ? 'Tape pour capturer la créature'
+                  : 'Tape pour récolter des pièces'}
+              </Text>
             )}
           </View>
         </>
@@ -944,21 +995,6 @@ export default function ClickerScreen({ onBack }) {
           onBuyAutoClicker={buyAutoClicker}
           onBuyUpgradeItem={buyUpgradeItem}
           onOffrande={doOffrande}
-          onBack={() => setView('tap')}
-        />
-      )}
-
-      {view === 'quests' && (
-        <QuestsView
-          activeQuestIds={activeQuestIds}
-          questBaseline={questBaseline}
-          questStats={questStats}
-          eggPhase={eggPhase}
-          hatchTaps={hatchTaps}
-          captureTaps={captureTaps}
-          onEggTap={handleEggTap}
-          rewardCreature={rewardCreature}
-          onDismissReward={() => setRewardCreature(null)}
           essence={essence}
           essenceGainPreview={essenceGainPreview}
           totalEarned={totalEarned}
@@ -992,12 +1028,29 @@ export default function ClickerScreen({ onBack }) {
         />
       )}
 
+      {/* La capture d'une créature peut désormais se produire depuis
+          l'écran d'accueil (l'onglet Quêtes n'existe plus), donc cet
+          overlay est remonté au niveau de l'écran entier — sinon la
+          récompense serait invisible au moment exact où elle tombe. */}
+      {rewardCreature && (
+        <View style={styles.detailOverlay}>
+          <View style={styles.rewardPanel}>
+            <Text style={styles.detailEmoji}>{rewardCreature.stages[0].emoji}</Text>
+            <Text style={styles.detailName}>Capturé !</Text>
+            <Text style={[styles.creatureRarity, { color: RARITY_COLOR[rewardCreature.rarity] }]}>
+              {rewardCreature.stages[0].name} · {RARITY_LABEL[rewardCreature.rarity]}
+            </Text>
+            <TouchableOpacity style={styles.feedBtn} onPress={() => setRewardCreature(null)}>
+              <Text style={styles.feedBtnText}>Super !</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <BottomTabBar
         view={view}
         setView={setView}
         onAdventurePress={() => setView('adventure')}
-        eggPhase={eggPhase}
-        completedQuestCount={completedQuestCount}
         ownedCount={owned.length}
         totalCreatures={CREATURES.length}
       />
@@ -1044,7 +1097,8 @@ function DeckRow({ deck, owned, onSlotPress }) {
 // Veilleur, puis Offrande en dernier) et "Auto-clics" (les 5 générateurs).
 function ShopView({
   coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers, purchasedUpgradeIds,
-  applyDiscount, onBuyTapPower, onBuyCrit, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onOffrande, onBack,
+  applyDiscount, onBuyTapPower, onBuyCrit, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onOffrande,
+  essence, essenceGainPreview, totalEarned, onAscend, onBack,
 }) {
   const [page, setPage] = useState('upgrades'); // 'upgrades' | 'autoclick'
   const upgradeTiers = [1, 2, 3, 4];
@@ -1122,6 +1176,24 @@ function ShopView({
             <TouchableOpacity style={[styles.offrandeBtn, sharedCoins < OFFRANDE_APPCOINS_COST && styles.actionBtnDisabled]} onPress={onOffrande} disabled={sharedCoins < OFFRANDE_APPCOINS_COST}>
               <Text style={styles.offrandeBtnText}>🪙 Offrande</Text>
               <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} pièces de l'appli (tu en as {sharedCoins}) contre un bonus ici</Text>
+            </TouchableOpacity>
+
+            {/* Ascension : elle vivait dans l'onglet Quêtes, qui n'existe
+                plus depuis que les défis sont passés sur l'écran
+                d'accueil (02/09). Rapatriée ici plutôt que sur l'accueil,
+                qu'on veut garder épuré — et c'est le seul autre endroit
+                du clicker où l'on dépense sa progression. */}
+            <TouchableOpacity
+              style={[styles.ascensionBtn, essenceGainPreview <= 0 && styles.actionBtnDisabled]}
+              onPress={onAscend}
+              disabled={essenceGainPreview <= 0}
+            >
+              <Text style={styles.ascensionBtnText}>🌟 Ascension {essence > 0 ? `(essence : ${essence})` : ''}</Text>
+              <Text style={styles.ascensionBtnSubtext}>
+                {essenceGainPreview > 0
+                  ? `Réinitialise ta progression contre +${essenceGainPreview} essence permanente`
+                  : `Gagne encore ${formatNum(50000 - totalEarned)} pièces au total pour débloquer`}
+              </Text>
             </TouchableOpacity>
 
             {/* 20 améliorations à débloquer, 4 paliers de 5 (demande
@@ -1227,98 +1299,6 @@ function ShopView({
 // quêtes du cycle en cours avec leur barre de progression, puis la
 // séquence finale (éclosion 500 taps -> capture 200 taps) une fois les 4
 // quêtes validées.
-function QuestsView({ activeQuestIds, questStats, questBaseline, eggPhase, hatchTaps, captureTaps, onEggTap, rewardCreature, onDismissReward, essence, essenceGainPreview, totalEarned, onAscend, onBack }) {
-  const completedCount = activeQuestIds.filter((id) => questComplete(id, questStats, questBaseline)).length;
-  const stageIndex = eggPhase === 'collecting' ? eggStageForCompletedCount(completedCount) : 4;
-  const stage = EGG_STAGES[stageIndex];
-
-  return (
-    <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={styles.questsScrollContent} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity style={styles.viewBackBtn} onPress={onBack}>
-        <Text style={styles.viewBackBtnText}>← Retour au clicker</Text>
-      </TouchableOpacity>
-
-      {eggPhase === 'collecting' ? (
-        <>
-          <View style={styles.eggDisplay}>
-            <Text style={[styles.eggEmoji, { opacity: 0.55 + stageIndex * 0.11 }]}>🥚</Text>
-            <Text style={styles.eggStageName}>{stage.name}</Text>
-            <Text style={styles.eggStageDesc}>{stage.desc}</Text>
-          </View>
-
-          {activeQuestIds.map((id) => {
-            const progress = questProgress(id, questStats, questBaseline);
-            const done = progress >= 1;
-            return (
-              <View key={id} style={[styles.questCard, done && styles.questCardDone]}>
-                <View style={styles.questCardHeader}>
-                  <Text style={styles.questCheckbox}>{done ? '✅' : '⬜'}</Text>
-                  <Text style={[styles.questLabel, done && styles.questLabelDone]}>{questLabel(id)}</Text>
-                </View>
-                <View style={styles.questBarTrack}>
-                  <View style={[styles.questBarFill, { width: `${Math.round(progress * 100)}%` }, done && styles.questBarFillDone]} />
-                </View>
-              </View>
-            );
-          })}
-        </>
-      ) : (
-        <View style={styles.hatchArea}>
-          <Text style={styles.hatchTitle}>{eggPhase === 'hatching' ? '🥚 L\'œuf est prêt !' : '✨ Capture-le !'}</Text>
-          <Text style={styles.hatchSubtitle}>
-            {eggPhase === 'hatching' ? 'Tape pour le faire éclore' : 'La créature sauvage bouge encore — tape pour la capturer'}
-          </Text>
-          <TouchableOpacity onPress={onEggTap} style={styles.hatchTapZone} activeOpacity={0.8}>
-            <Text style={styles.hatchEmoji}>{eggPhase === 'hatching' ? '🥚' : '💫'}</Text>
-          </TouchableOpacity>
-          <View style={styles.questBarTrack}>
-            <View
-              style={[
-                styles.questBarFill,
-                styles.questBarFillDone,
-                { width: `${Math.round(((eggPhase === 'hatching' ? hatchTaps : captureTaps) / (eggPhase === 'hatching' ? HATCH_TAPS_REQUIRED : CAPTURE_TAPS_REQUIRED)) * 100)}%` },
-              ]}
-            />
-          </View>
-          <Text style={styles.hatchCount}>
-            {eggPhase === 'hatching' ? hatchTaps : captureTaps} / {eggPhase === 'hatching' ? HATCH_TAPS_REQUIRED : CAPTURE_TAPS_REQUIRED}
-          </Text>
-        </View>
-      )}
-
-      {/* Ascension vit ici maintenant, plutôt que dans la boutique — c'est
-          un jalon de progression majeur, pas un simple achat. */}
-      <TouchableOpacity
-        style={[styles.ascensionBtn, essenceGainPreview <= 0 && styles.actionBtnDisabled]}
-        onPress={onAscend}
-        disabled={essenceGainPreview <= 0}
-      >
-        <Text style={styles.ascensionBtnText}>🌟 Ascension {essence > 0 ? `(essence : ${essence})` : ''}</Text>
-        <Text style={styles.ascensionBtnSubtext}>
-          {essenceGainPreview > 0
-            ? `Réinitialise ta progression contre +${essenceGainPreview} essence permanente`
-            : `Gagne encore ${formatNum(50000 - totalEarned)} pièces au total pour débloquer`}
-        </Text>
-      </TouchableOpacity>
-
-      {rewardCreature && (
-        <View style={styles.detailOverlay}>
-          <View style={styles.rewardPanel}>
-            <Text style={styles.detailEmoji}>{rewardCreature.stages[0].emoji}</Text>
-            <Text style={styles.detailName}>Capturé !</Text>
-            <Text style={[styles.creatureRarity, { color: RARITY_COLOR[rewardCreature.rarity] }]}>
-              {rewardCreature.stages[0].name} · {RARITY_LABEL[rewardCreature.rarity]}
-            </Text>
-            <TouchableOpacity style={styles.feedBtn} onPress={onDismissReward}>
-              <Text style={styles.feedBtnText}>Super !</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-    </ScrollView>
-  );
-}
-
 function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, onFeed, pendingDiscount, nextSummonCost, onSummon, onBack }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
@@ -1583,8 +1563,53 @@ function RitualBubble({ target, onClaim }) {
 // Icônes vectorielles (Ionicons, fournies avec Expo, libres de droits)
 // plutôt que du texte ou des images tirées du web, pour rester sûr sur le
 // plan des droits et cohérent techniquement.
-function BottomTabBar({ view, setView, onAdventurePress, eggPhase, completedQuestCount, ownedCount, totalCreatures }) {
-  const questAlert = eggPhase !== 'collecting';
+// Barre de défi segmentée affichée sur l'écran d'accueil, juste au-dessus
+// du deck (02/09). Remplace entièrement l'ancien onglet Quêtes : un seul
+// défi montré à la fois — le premier non terminé des 4 du cycle en cours
+// — avec le libellé au-dessus et une barre découpée en segments façon
+// Monster Legends (pastille d'icône à gauche, fraction à droite).
+//
+// Le nombre de segments est PLAFONNÉ à 6 : certaines quêtes ont un
+// objectif à 20 (coups critiques), et 20 segments sur un écran de 380px
+// donneraient des traits de 2px illisibles. Au-delà du plafond, chaque
+// segment représente donc plusieurs unités, mais la fraction affichée à
+// droite reste toujours la vraie valeur (3/20), jamais la valeur
+// ramenée à l'échelle des segments.
+const CHALLENGE_MAX_SEGMENTS = 6;
+
+function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) {
+  const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
+  const ratio = target > 0 ? Math.min(1, current / target) : 0;
+  const filled = Math.floor(ratio * segments);
+
+  return (
+    <View style={styles.challengeWrap}>
+      <Text style={styles.challengeLabel} numberOfLines={2}>
+        {icon} {label}
+      </Text>
+      <View style={styles.challengeBar}>
+        <View style={styles.challengeIconBubble}>
+          <Text style={styles.challengeIconText}>{icon}</Text>
+        </View>
+        <View style={styles.challengeSegments}>
+          {Array.from({ length: segments }).map((_, i) => (
+            <View key={i} style={[styles.challengeSegment, i < filled && styles.challengeSegmentFilled]} />
+          ))}
+        </View>
+        <Text style={styles.challengeCount}>
+          {formatNum(current)}/{formatNum(target)}
+        </Text>
+      </View>
+      {cycleTotal > 0 && (
+        <Text style={styles.challengeCycle}>
+          Défi {Math.min(cycleIndex + 1, cycleTotal)} sur {cycleTotal} avant l'éclosion
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures }) {
   return (
     <View style={styles.bottomBar}>
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('shop')}>
@@ -1592,18 +1617,6 @@ function BottomTabBar({ view, setView, onAdventurePress, eggPhase, completedQues
           <Ionicons name="storefront" size={24} color={view === 'shop' ? COLORS.action : COLORS.muted} />
         </View>
         <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>Shop</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('quests')}>
-        <View style={view === 'quests' && styles.bottomBarIconGlow}>
-          <Ionicons name="flag" size={24} color={view === 'quests' ? COLORS.action : COLORS.muted} />
-          {questAlert ? (
-            <View style={styles.bottomBarDot} />
-          ) : (
-            completedQuestCount > 0 && <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{completedQuestCount}</Text></View>
-          )}
-        </View>
-        <Text style={[styles.bottomBarLabel, view === 'quests' && styles.bottomBarLabelActive]}>Quêtes</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('collection')}>
@@ -1644,6 +1657,36 @@ const styles = StyleSheet.create({
   discountBannerText: { color: '#3ec6f0' },
   powerBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
 
+  // Barre de défi (écran d'accueil). Reprise du repère visuel Monster
+  // Legends : piste sombre en gélule, segments dorés séparés par de
+  // vrais espaces (pas une barre continue), pastille d'icône collée à
+  // gauche et fraction collée à droite, le tout sur une seule ligne.
+  challengeWrap: { marginTop: 10, marginBottom: 2 },
+  challengeLabel: { color: COLORS.text, fontSize: 13, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
+  challengeBar: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.panel, borderRadius: 22,
+    borderWidth: 1, borderColor: COLORS.border,
+    paddingVertical: 6, paddingHorizontal: 8,
+  },
+  challengeIconBubble: {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.panelLight,
+    alignItems: 'center', justifyContent: 'center', marginRight: 8,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  challengeIconText: { fontSize: 14 },
+  challengeSegments: { flex: 1, flexDirection: 'row' },
+  challengeSegment: {
+    flex: 1, height: 16, borderRadius: 8, marginHorizontal: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  challengeSegmentFilled: {
+    backgroundColor: COLORS.action,
+    shadowColor: COLORS.action, shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
+  },
+  challengeCount: { color: COLORS.action, fontSize: 13, fontWeight: '900', marginLeft: 8, minWidth: 38, textAlign: 'right' },
+  challengeCycle: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 4 },
+
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },
   spawnBubble: {
     width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.panel,
@@ -1674,7 +1717,6 @@ const styles = StyleSheet.create({
   },
   bottomBarLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '700', marginTop: 2 },
   bottomBarLabelActive: { color: COLORS.action },
-  bottomBarDot: { position: 'absolute', top: -2, right: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: '#FF5252' },
   bottomBarBadge: {
     position: 'absolute', top: -6, right: -10, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.action,
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
@@ -1827,34 +1869,5 @@ const styles = StyleSheet.create({
   feedBtnText: { color: '#241a00', fontSize: 14, fontWeight: '900' },
   feedBtnCost: { color: '#241a00', fontSize: 11, fontWeight: '700', marginTop: 2 },
 
-  questsScrollContent: { alignItems: 'center', paddingBottom: 30, paddingTop: 4 },
-  eggDisplay: { alignItems: 'center', marginBottom: 18 },
-  eggEmoji: { fontSize: 90 },
-  eggStageName: { color: COLORS.action, fontSize: 17, fontWeight: '900', marginTop: 6 },
-  eggStageDesc: { color: COLORS.muted, fontSize: 12, marginTop: 2 },
 
-  questCard: {
-    width: '100%', backgroundColor: COLORS.panel, borderRadius: 14, padding: 12, marginBottom: 10,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  questCardDone: { borderColor: COLORS.good, backgroundColor: 'rgba(0,230,118,0.08)' },
-  questCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  questCheckbox: { fontSize: 16 },
-  questLabel: { color: COLORS.text, fontSize: 13, fontWeight: '700', flex: 1 },
-  questLabelDone: { color: COLORS.good, textDecorationLine: 'line-through' },
-  questBarTrack: { height: 8, borderRadius: 4, backgroundColor: '#241d42', overflow: 'hidden' },
-  questBarFill: { height: '100%', backgroundColor: COLORS.action, borderRadius: 4 },
-  questBarFillDone: { backgroundColor: COLORS.good },
-
-  hatchArea: { alignItems: 'center', width: '100%', marginTop: 10 },
-  hatchTitle: { color: COLORS.action, fontSize: 20, fontWeight: '900' },
-  hatchSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 4, marginBottom: 20, textAlign: 'center' },
-  hatchTapZone: {
-    width: 180, height: 180, borderRadius: 90, backgroundColor: COLORS.panel,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.action,
-    shadowColor: COLORS.action, shadowOpacity: 0.6, shadowRadius: 18, shadowOffset: { width: 0, height: 0 },
-    marginBottom: 20,
-  },
-  hatchEmoji: { fontSize: 84 },
-  hatchCount: { color: COLORS.text, fontSize: 13, fontWeight: '800', marginTop: 8 },
 });
