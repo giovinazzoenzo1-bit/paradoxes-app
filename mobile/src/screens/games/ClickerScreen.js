@@ -52,11 +52,13 @@ import {
   CAPTURE_TAPS_REQUIRED,
   AUTOCLICKERS,
   autoClickerCost,
-  autoClickerTierUnlocked,
   totalAutoClickIncome,
   UPGRADE_ITEMS,
-  upgradeTierUnlocked,
+  upgradeItemCost,
+  upgradeItemMaxed,
   upgradeBonuses,
+  normalizeUpgradeLevels,
+  UPGRADE_MAX_LEVEL,
   CREATURE_POWERS,
   migrateCreatureId,
   RARITY_BADGE_LETTER,
@@ -113,7 +115,7 @@ export default function ClickerScreen({ onBack }) {
   const [autoClickers, setAutoClickers] = useState({}); // { esprit: 3, main: 1, ... }
   // Améliorations à débloquer, achetées une seule fois — liste d'ids
   // (voir UPGRADE_ITEMS dans clickerLogic.js).
-  const [purchasedUpgradeIds, setPurchasedUpgradeIds] = useState([]);
+  const [upgradeLevels, setUpgradeLevels] = useState({});
   // (plus d'état combatComingSoonOpen — remplacé par la vraie navigation
   // vers AdventureScreen, voir plus bas)
   const [sanctuaryLevel, setSanctuaryLevel] = useState(0);
@@ -148,8 +150,8 @@ export default function ClickerScreen({ onBack }) {
   tapPowerRef.current = tapPower;
   const autoClickersRef = useRef({});
   autoClickersRef.current = autoClickers;
-  const purchasedUpgradeIdsRef = useRef([]);
-  purchasedUpgradeIdsRef.current = purchasedUpgradeIds;
+  const upgradeLevelsRef = useRef({});
+  upgradeLevelsRef.current = upgradeLevels;
   const sanctuaryLevelRef = useRef(0);
   sanctuaryLevelRef.current = sanctuaryLevel;
   const veilleurLevelRef = useRef(0);
@@ -229,7 +231,7 @@ export default function ClickerScreen({ onBack }) {
           if (!saved.autoClickers && saved.familiarLevel) {
             savedAutoClickers.esprit = saved.familiarLevel;
           }
-          const offlineUpgradeBoost = 1 + upgradeBonuses(saved.purchasedUpgradeIds || []).autoClickerPct;
+          const offlineUpgradeBoost = 1 + upgradeBonuses(saved.upgradeLevels || saved.purchasedUpgradeIds || {}).autoClickerPct;
           const offlineIncome = totalAutoClickIncome(savedAutoClickers) * veilleurOfflineMultiplier(savedVeilleur) * offlineUpgradeBoost;
           const offline = Math.round(offlineEarnings(offlineIncome, elapsed));
           setCoins((saved.coins || 0) + offline);
@@ -258,7 +260,12 @@ export default function ClickerScreen({ onBack }) {
           setDeck((saved.deck || [null, null, null]).map((id) => (id ? migrateCreatureId(id) : id)));
           setCritLevel(saved.critLevel || 0);
           setAutoClickers(savedAutoClickers);
-          setPurchasedUpgradeIds(saved.purchasedUpgradeIds || []);
+          // Migration douce (02/09) : les sauvegardes d'avant la refonte
+          // stockaient `purchasedUpgradeIds` (tableau d'ids achetés une
+          // fois). normalizeUpgradeLevels() les relit comme « niveau 1 »
+          // chacune, donc un joueur existant garde exactement les bonus
+          // qu'il avait déjà — et peut désormais les monter plus haut.
+          setUpgradeLevels(normalizeUpgradeLevels(saved.upgradeLevels || saved.purchasedUpgradeIds || {}));
           setSanctuaryLevel(saved.sanctuaryLevel || 0);
           setVeilleurLevel(savedVeilleur);
           setEssence(saved.essence || 0);
@@ -351,7 +358,7 @@ export default function ClickerScreen({ onBack }) {
         STORAGE_KEY,
         JSON.stringify({
           coins, totalEarned, tapPower, owned, deck, critLevel,
-          autoClickers, purchasedUpgradeIds, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
+          autoClickers, upgradeLevels, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
           totalSummons, totalCrits, goldenClaimed, maxCombo,
           activeQuestIds, questBaseline, eggPhase, hatchTaps, captureTaps,
           lastSave: Date.now() / 1000,
@@ -359,7 +366,7 @@ export default function ClickerScreen({ onBack }) {
       );
     }, 600);
   }, [
-    coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, purchasedUpgradeIds, sanctuaryLevel,
+    coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, upgradeLevels, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo,
     activeQuestIds, questBaseline, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
@@ -379,7 +386,7 @@ export default function ClickerScreen({ onBack }) {
         JSON.stringify({
           coins: coinsRef.current, totalEarned: totalEarnedRef.current, tapPower: tapPowerRef.current,
           owned: ownedRef.current, deck: deckRef.current, critLevel: critLevelRef.current,
-          autoClickers: autoClickersRef.current, purchasedUpgradeIds: purchasedUpgradeIdsRef.current, sanctuaryLevel: sanctuaryLevelRef.current,
+          autoClickers: autoClickersRef.current, upgradeLevels: upgradeLevelsRef.current, sanctuaryLevel: sanctuaryLevelRef.current,
           veilleurLevel: veilleurLevelRef.current, essence: essenceRef.current, lastRitualAt: lastRitualAtRef.current,
           totalSummons: totalSummonsRef.current, totalCrits: totalCritsRef.current,
           goldenClaimed: goldenClaimedRef.current, maxCombo: maxComboRef.current,
@@ -396,7 +403,7 @@ export default function ClickerScreen({ onBack }) {
   // alimente le cumul total (totalEarned), qui ne baisse jamais même en
   // dépensant, utilisé pour calculer le gain d'essence à l'Ascension.
   const gainCoins = (rawAmount) => {
-    const upgradeCoinMult = 1 + upgradeBonuses(purchasedUpgradeIdsRef.current).coinPct;
+    const upgradeCoinMult = 1 + upgradeBonuses(upgradeLevelsRef.current).coinPct;
     const multiplier = sanctuaryMultiplier(sanctuaryLevelRef.current) * essenceBonusMultiplier(essenceRef.current) * upgradeCoinMult;
     const amount = rawAmount * multiplier;
     setCoins((c) => c + amount);
@@ -415,7 +422,7 @@ export default function ClickerScreen({ onBack }) {
     const interval = setInterval(() => {
       const base = totalAutoClickIncome(autoClickersRef.current);
       const boost = activePowerRef.current && activePowerRef.current.effectType === 'passive_boost' ? activePowerRef.current.effectValue : 1;
-      const upgradeAutoBoost = 1 + upgradeBonuses(purchasedUpgradeIdsRef.current).autoClickerPct;
+      const upgradeAutoBoost = 1 + upgradeBonuses(upgradeLevelsRef.current).autoClickerPct;
       const income = base * boost * upgradeAutoBoost;
       if (income > 0) gainCoins(income);
     }, 1000);
@@ -509,7 +516,7 @@ export default function ClickerScreen({ onBack }) {
     // multiplicateur), sans toucher aux fonctions pures critChance/
     // critMultiplier (encore utilisées ailleurs pour l'affichage du
     // niveau seul, pas la peine de changer leur signature).
-    const upgradeBonus = upgradeBonuses(purchasedUpgradeIdsRef.current);
+    const upgradeBonus = upgradeBonuses(upgradeLevelsRef.current);
     const effectiveCritChance = Math.min(1, critChance(critLevelRef.current) + upgradeBonus.critChancePct);
     const isCrit = Math.random() < effectiveCritChance;
     if (isCrit) {
@@ -601,15 +608,17 @@ export default function ClickerScreen({ onBack }) {
 
   // Achat UNIQUE d'une amélioration à débloquer — refuse si déjà achetée,
   // si le palier est encore verrouillé, ou si les pièces manquent.
+  // Achat d'un niveau d'amélioration — même forme que buyVeilleur et
+  // consorts : on paie le coût du niveau courant, le niveau monte de 1.
   const buyUpgradeItem = (upgradeId) => {
     const item = UPGRADE_ITEMS.find((u) => u.id === upgradeId);
     if (!item) return;
-    if (purchasedUpgradeIdsRef.current.includes(upgradeId)) return;
-    if (!upgradeTierUnlocked(item.tier, purchasedUpgradeIdsRef.current)) return;
-    const cost = applyDiscount(item.cost);
+    const level = upgradeLevelsRef.current[upgradeId] || 0;
+    if (upgradeItemMaxed(level)) return;
+    const cost = applyDiscount(upgradeItemCost(item, level));
     if (coinsRef.current < cost) return;
     setCoins((c) => c - cost);
-    setPurchasedUpgradeIds((prev) => [...prev, upgradeId]);
+    setUpgradeLevels((prev) => ({ ...prev, [upgradeId]: (prev[upgradeId] || 0) + 1 }));
     if (pendingDiscountRef.current) setPendingDiscount(null);
   };
 
@@ -1045,7 +1054,7 @@ export default function ClickerScreen({ onBack }) {
           sanctuaryLevel={sanctuaryLevel}
           veilleurLevel={veilleurLevel}
           autoClickers={autoClickers}
-          purchasedUpgradeIds={purchasedUpgradeIds}
+          upgradeLevels={upgradeLevels}
           applyDiscount={applyDiscount}
           onBuyTapPower={buyTapPower}
           onBuyCrit={buyCritUpgrade}
@@ -1154,14 +1163,29 @@ function DeckRow({ deck, owned, onSlotPress }) {
 // Écran Boutique, plein écran (pas un modal), avec 2 PAGES internes façon
 // Cookie Clicker : "Améliorations" (Pacte, Faveur des Esprits, Sanctuaire,
 // Veilleur, puis Offrande en dernier) et "Auto-clics" (les 5 générateurs).
+// Résume l'effet TOTAL déjà acquis sur une amélioration (effet unitaire
+// x niveau), pour que le joueur voie ce que ses niveaux lui rapportent
+// vraiment et pas seulement le gain du prochain. Les 5 types d'effet
+// n'ont pas la même unité : deux sont des nombres plats, trois des
+// pourcentages — d'où le formatage par type plutôt qu'un template unique.
+function describeUpgradeTotal(item, level) {
+  const total = item.effect.value * level;
+  switch (item.effect.type) {
+    case 'tapFlat': return `+${Math.round(total)} par tap`;
+    case 'coinPct': return `+${Math.round(total * 100)}% production`;
+    case 'autoClickerPct': return `+${Math.round(total * 100)}% auto-clics`;
+    case 'critChancePct': return `+${Math.round(total * 100)}% chance crit`;
+    case 'critMultPct': return `+${Math.round(total * 100)}% dégâts crit`;
+    default: return '';
+  }
+}
+
 function ShopView({
-  coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers, purchasedUpgradeIds,
+  coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers, upgradeLevels,
   applyDiscount, onBuyTapPower, onBuyCrit, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onOffrande,
   essence, essenceGainPreview, totalEarned, onAscend, onBack,
 }) {
   const [page, setPage] = useState('upgrades'); // 'upgrades' | 'autoclick'
-  const upgradeTiers = [1, 2, 3, 4];
-  const autoClickerTiers = [1, 2, 3];
 
   return (
     <View style={{ flex: 1, width: '100%' }}>
@@ -1255,95 +1279,67 @@ function ShopView({
               </Text>
             </TouchableOpacity>
 
-            {/* 20 améliorations à débloquer, 4 paliers de 5 (demande
-                explicite) — palier verrouillé = case grisée "???",
-                tant que les 5 du palier précédent ne sont pas TOUTES
-                achetées. */}
-            <Text style={styles.shopTierHeader}>💎 Objets à débloquer</Text>
-            {upgradeTiers.map((tier) => {
-              const unlocked = upgradeTierUnlocked(tier, purchasedUpgradeIds);
-              const items = UPGRADE_ITEMS.filter((u) => u.tier === tier);
+            {/* Améliorations refondues (02/09) : de simples améliorations
+                de plus, dans la continuité de Pacte/Faveur/Sanctuaire/
+                Veilleur juste au-dessus — un niveau, un coût qui grimpe,
+                un effet qui se cumule. Plus de paliers, plus de cases
+                "??? ???" : tout est visible, le prix suffit à échelonner.
+                Triées par coût de base pour que la suite se lise de
+                gauche à droite du plus abordable au plus lointain. */}
+            <Text style={styles.shopTierHeader}>💎 Améliorations de créatures</Text>
+            {[...UPGRADE_ITEMS].sort((a, b) => a.cost - b.cost).map((item) => {
+              const level = upgradeLevels[item.id] || 0;
+              const maxed = upgradeItemMaxed(level);
+              const cost = applyDiscount(upgradeItemCost(item, level));
+              const canAfford = coins >= cost;
               return (
-                <View key={tier}>
-                  <Text style={styles.shopTierLabel}>Palier {tier}{!unlocked ? ' (verrouillé)' : ''}</Text>
-                  {items.map((item) => {
-                    if (!unlocked) {
-                      return (
-                        <View key={item.id} style={[styles.actionBtn, styles.actionBtnLocked]}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.lockedText}>❓ ??? ???</Text>
-                            <Text style={styles.lockedSubtext}>Débloque tout le palier précédent pour révéler</Text>
-                          </View>
-                          <Ionicons name="lock-closed" size={18} color={COLORS.muted} />
-                        </View>
-                      );
-                    }
-                    const purchased = purchasedUpgradeIds.includes(item.id);
-                    const cost = applyDiscount(item.cost);
-                    const canAfford = coins >= cost;
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={[styles.actionBtn, (purchased || !canAfford) && styles.actionBtnDisabled]}
-                        onPress={() => onBuyUpgradeItem(item.id)}
-                        disabled={purchased || !canAfford}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.actionBtnText}>{item.emoji} {item.name}</Text>
-                          <Text style={styles.actionBtnSubtext}>{item.desc}</Text>
-                        </View>
-                        <Text style={styles.actionBtnCost}>{purchased ? '✅' : `💰 ${formatNum(cost)}`}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.actionBtn, (maxed || !canAfford) && styles.actionBtnDisabled]}
+                  onPress={() => onBuyUpgradeItem(item.id)}
+                  disabled={maxed || !canAfford}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.actionBtnText}>
+                      {item.emoji} {item.name} (nv {level}/{UPGRADE_MAX_LEVEL})
+                    </Text>
+                    <Text style={styles.actionBtnSubtext}>
+                      {item.desc} par niveau{level > 0 ? ` · actuellement ${describeUpgradeTotal(item, level)}` : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.actionBtnCost}>{maxed ? '⭐ MAX' : `💰 ${formatNum(cost)}`}</Text>
+                </TouchableOpacity>
               );
             })}
           </>
         ) : (
           <>
             <Text style={styles.pickerSubtitle}>Seule source de revenu passif du jeu — les créatures n'en produisent plus.</Text>
-            {autoClickerTiers.map((tier) => {
-              const unlocked = autoClickerTierUnlocked(tier, autoClickers);
-              const clickers = AUTOCLICKERS.filter((c) => c.tier === tier);
+            {/* Auto-clics : même refonte que les améliorations (02/09).
+                Les 15 générateurs sont listés d'affilée par coût
+                croissant, sans palier ni case "??? ???" — c'est déjà la
+                progression naturelle d'un clicker, le prix fait le
+                travail tout seul. */}
+            {[...AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost).map((clicker) => {
+              const ownedCount = autoClickers[clicker.id] || 0;
+              const cost = applyDiscount(autoClickerCost(clicker, ownedCount));
+              const canAfford = coins >= cost;
               return (
-                <View key={tier}>
-                  {tier > 1 && <Text style={styles.shopTierLabel}>Palier {tier}{!unlocked ? ' (verrouillé)' : ''}</Text>}
-                  {clickers.map((clicker) => {
-                    if (!unlocked) {
-                      return (
-                        <View key={clicker.id} style={[styles.shopRow, styles.actionBtnLocked]}>
-                          <Text style={styles.shopRowEmoji}>❓</Text>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.lockedText}>??? ???</Text>
-                            <Text style={styles.lockedSubtext}>Possède 1 de chaque du palier précédent pour révéler</Text>
-                          </View>
-                          <Ionicons name="lock-closed" size={18} color={COLORS.muted} />
-                        </View>
-                      );
-                    }
-                    const ownedCount = autoClickers[clicker.id] || 0;
-                    const cost = applyDiscount(autoClickerCost(clicker, ownedCount));
-                    const canAfford = coins >= cost;
-                    return (
-                      <View key={clicker.id} style={styles.shopRow}>
-                        <Text style={styles.shopRowEmoji}>{clicker.emoji}</Text>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.shopRowName}>{clicker.name}</Text>
-                          <Text style={styles.shopRowInfo}>
-                            Possédé : {ownedCount} · +{clicker.baseIncome.toFixed(1)}/s chacun
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          style={[styles.shopBuyBtn, !canAfford && styles.actionBtnDisabled]}
-                          onPress={() => onBuyAutoClicker(clicker.id)}
-                          disabled={!canAfford}
-                        >
-                          <Text style={styles.shopBuyBtnText} numberOfLines={1}>💰 {formatNum(cost)}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
+                <View key={clicker.id} style={styles.shopRow}>
+                  <Text style={styles.shopRowEmoji}>{clicker.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.shopRowName}>{clicker.name}</Text>
+                    <Text style={styles.shopRowInfo}>
+                      Possédé : {ownedCount} · +{clicker.baseIncome.toFixed(1)}/s chacun
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.shopBuyBtn, !canAfford && styles.actionBtnDisabled]}
+                    onPress={() => onBuyAutoClicker(clicker.id)}
+                    disabled={!canAfford}
+                  >
+                    <Text style={styles.shopBuyBtnText} numberOfLines={1}>💰 {formatNum(cost)}</Text>
+                  </TouchableOpacity>
                 </View>
               );
             })}
@@ -1826,10 +1822,6 @@ const styles = StyleSheet.create({
 
   // Paliers d'améliorations/auto-clics à débloquer (30/08).
   shopTierHeader: { color: COLORS.action, fontSize: 14, fontWeight: '900', marginTop: 26, marginBottom: 4 },
-  shopTierLabel: { color: COLORS.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', marginTop: 14, marginBottom: 2 },
-  actionBtnLocked: { borderStyle: 'dashed', opacity: 0.55 },
-  lockedText: { color: COLORS.muted, fontSize: 13, fontWeight: '800' },
-  lockedSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 2, fontStyle: 'italic' },
 
   summonBtn: {
     width: '100%', backgroundColor: 'rgba(185,107,255,0.15)', borderRadius: 14, padding: 16, marginTop: 12,

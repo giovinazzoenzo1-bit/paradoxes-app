@@ -33,7 +33,7 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventur
 ## Économie du Clicker
 
 - Les **créatures ne produisent PLUS de pièces automatiquement** (refonte volontaire, en préparation du mode combat). La seule source de revenu passif est la **boutique d'auto-clics** (`AUTOCLICKERS`, 5 paliers : esprit → main → automate → colonie → titan), achetable plusieurs fois, coût croissant ×1,15 par unité déjà possédée.
-- Boutons d'amélioration (Pacte, Faveur des Esprits, Sanctuaire, Veilleur, puis Offrande en dernier) : dans l'écran **Shop**, page "Améliorations". Page 2 du Shop = la boutique d'auto-clics.
+- Boutons d'amélioration (Pacte, Faveur des Esprits, Sanctuaire, Veilleur, puis Offrande, puis les 20 améliorations de créatures, puis Ascension) : dans l'écran **Shop**, page "Améliorations". Page 2 du Shop = la boutique d'auto-clics (15 générateurs, liste continue).
 - **Ascension** (prestige, essence permanente) : vit en bas de la page « Améliorations » du **Shop** (déplacée le 02/09 avec la suppression de l'onglet Quêtes).
 - **Invoquer une créature** (gacha) : vit dans l'onglet **Collection**, pas dans Shop.
 - **Rituel** (bonus "pub" gratuit) : une bulle qui apparaît près de l'œuf (comme les pouvoirs de créature), pas un bouton ni une bannière.
@@ -276,11 +276,40 @@ créature — au lieu d'aller taper un second œuf dans un onglet à part.
   aucun style orphelin dans les deux sens (20 styles morts de l'ancien
   onglet supprimés).
 
-### Boutique du clicker — paliers à débloquer (tout dernier ajout)
-- **20 nouvelles améliorations** à débloquer (achat unique, `UPGRADE_ITEMS`), 4 paliers de 5, thème créatures/éléments.
-- **10 nouveaux auto-clics** (`AUTOCLICKERS` étendu à 15, `tier` 1-3).
-- Palier verrouillé = case grisée "❓ ??? ???" tant que le palier précédent n'est pas complet (améliorations : toutes achetées ; auto-clics : ≥1 de chaque, pas besoin de maximiser).
+### Boutique du clicker — 20 améliorations + 15 auto-clics
+- **20 améliorations de créatures** (`UPGRADE_ITEMS`) et **15 auto-clics** (`AUTOCLICKERS`), thème créatures/éléments.
 - Bonus réellement appliqués : `upgradeBonuses()` agrège tapFlat/coinPct/autoClickerPct/critChancePct/critMultPct, câblé dans `gainCoins`, le tap, le revenu passif (live + hors-ligne).
+
+**Refonte du 02/09 — ce sont maintenant des améliorations NORMALES.**
+La première version était une grille d'objets à collectionner (achat
+unique, 4 paliers, cases "❓ ??? ???" verrouillées). Ce n'était pas la
+demande : il fallait de simples améliorations de plus, dans la
+continuité du clicker. Donc :
+- **Achat unique → niveaux** : chaque amélioration se monte jusqu'à
+  `UPGRADE_MAX_LEVEL` (10), coût ×1,6 par niveau (`upgradeItemCost`,
+  même forme que `veilleurUpgradeCost`), effet cumulé par niveau. Elles
+  se lisent exactement comme Pacte/Faveur/Sanctuaire/Veilleur, juste
+  au-dessus dans la même page.
+- **Verrouillage par palier SUPPRIMÉ** des deux côtés :
+  `upgradeTierUnlocked()` et `autoClickerTierUnlocked()` n'existent plus.
+  Tout est visible dès le départ, listé par coût croissant — dans un
+  clicker le prix suffit à échelonner la progression. `tier` survit sur
+  les entrées mais ne sert **plus qu'à rien côté règles** (ordre
+  historique uniquement).
+- **`purchasedUpgradeIds` (tableau d'ids) → `upgradeLevels` (objet
+  id→niveau)** dans la sauvegarde. `normalizeUpgradeLevels()` relit
+  l'ancien format comme « niveau 1 chacune » : un joueur existant garde
+  exactement les bonus qu'il avait, et peut désormais les monter plus
+  haut. Vérifié par test : bonus recalculés identiques au centième près.
+- `describeUpgradeTotal()` (ClickerScreen) affiche le cumul déjà acquis
+  à côté du gain du prochain niveau — les 5 types d'effet n'ayant pas la
+  même unité (2 plats, 3 pourcentages), le formatage est par type.
+- **À surveiller (équilibrage)** : les 4 améliorations de chance
+  critique toutes au niveau 10 donnent +90% de chance de crit cumulée.
+  L'écran plafonne bien à 100% (`Math.min(1, …)` dans `handleTap`), donc
+  aucun bug — mais en fin de partie la Faveur des Esprits devient
+  quasiment inutile. Coût cumulé pour y arriver : plusieurs millions,
+  donc c'est un endgame lointain, laissé tel quel pour l'instant.
 
 ### Leçons/pièges récurrents à ne pas reproduire
 - **Ne jamais écrire directement dans la sauvegarde d'un AUTRE écran** (ex: Options → sauvegarde d'Aventure) — toujours passer par un drapeau/montant en attente, lu et appliqué par l'écran propriétaire à son PROCHAIN chargement. Un vrai bug de "sauvegarde remise à zéro" est arrivé une fois pour cette raison exacte.
