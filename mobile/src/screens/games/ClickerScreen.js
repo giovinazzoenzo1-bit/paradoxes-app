@@ -192,6 +192,16 @@ export default function ClickerScreen({ onBack }) {
   questBaselineRef.current = questBaseline;
   const questTargetsRef = useRef({});
   questTargetsRef.current = questTargets;
+  // Instantané des stats pris quand CHAQUE défi devient le défi courant,
+  // et non une seule fois pour tout le cycle.
+  //
+  // Bug réel : avec un baseline commun aux 4 défis, tout ce que le
+  // joueur accumulait en travaillant le défi 1 comptait déjà pour le
+  // défi 3. « Obtiens 20 coups critiques » arrivait à moitié fait, voire
+  // déjà validé. Un compteur ne doit courir que pendant SON défi.
+  const [questBaselines, setQuestBaselines] = useState({});
+  const questBaselinesRef = useRef({});
+  questBaselinesRef.current = questBaselines;
   const eggPhaseRef = useRef('collecting');
   eggPhaseRef.current = eggPhase;
   const hatchTapsRef = useRef(0);
@@ -392,6 +402,7 @@ export default function ClickerScreen({ onBack }) {
               tapPower: saved.tapPower || 1,
             }
           );
+          setQuestBaselines(saved.questBaselines || {});
           setEggPhase(saved.eggPhase || 'collecting');
           setHatchTaps(saved.hatchTaps || 0);
           setCaptureTaps(saved.captureTaps || 0);
@@ -462,7 +473,7 @@ export default function ClickerScreen({ onBack }) {
           coins, totalEarned, tapPower, owned, deck, critLevel,
           autoClickers, upgradeLevels, sanctuaryLevel, veilleurLevel, essence, lastRitualAt,
           totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
-          activeQuestIds, questTargets, questBaseline, sequenceIndex, eggPhase, hatchTaps, captureTaps,
+          activeQuestIds, questTargets, questBaseline, questBaselines, sequenceIndex, eggPhase, hatchTaps, captureTaps,
           lastSave: Date.now() / 1000,
         })
       );
@@ -470,7 +481,7 @@ export default function ClickerScreen({ onBack }) {
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, upgradeLevels, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
-    activeQuestIds, questTargets, questBaseline, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
+    activeQuestIds, questTargets, questBaseline, questBaselines, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
   // Sauvegarde immédiate à la sortie de l'écran. Annule d'abord le
@@ -493,7 +504,7 @@ export default function ClickerScreen({ onBack }) {
           totalSummons: totalSummonsRef.current, totalCrits: totalCritsRef.current,
           goldenClaimed: goldenClaimedRef.current, maxCombo: maxComboRef.current,
           activeQuestIds: activeQuestIdsRef.current, questTargets: questTargetsRef.current,
-          sequenceIndex: sequenceIndexRef.current,
+          sequenceIndex: sequenceIndexRef.current, questBaselines: questBaselinesRef.current,
           questBaseline: questBaselineRef.current, eggPhase: eggPhaseRef.current,
           hatchTaps: hatchTapsRef.current, captureTaps: captureTapsRef.current,
           lastSave: Date.now() / 1000,
@@ -615,17 +626,14 @@ export default function ClickerScreen({ onBack }) {
       setMaxCombo(newTranseMult);
     }
 
-    // Tenue de la Transe à x2,5 ou plus. `stillActive` dit si la série
-    // de taps n'a pas été rompue : si elle l'a été, la tenue repart de
-    // zéro même quand le multiplicateur remonte tout de suite après.
-    if (newTranseMult >= 2.5 && stillActive) {
+    // Tenue de la Transe à x2,5 ou plus : on marque seulement le DÉBUT
+    // de la série ici. Le décompte lui-même tourne dans un intervalle
+    // (voir plus bas) — mesuré uniquement au tap, le compteur n'avançait
+    // que par à-coups et restait figé dès que le joueur s'arrêtait, ce
+    // qui rendait le défi « tiens 30 secondes » illisible.
+    if (newTranseMult >= 2.5) {
       if (transeStartRef.current === null) transeStartRef.current = now;
-      const heldSec = (now - transeStartRef.current) / 1000;
-      if (heldSec > maxTranseHoldSecRef.current) {
-        maxTranseHoldSecRef.current = heldSec;
-        setMaxTranseHoldSec(heldSec);
-      }
-    } else if (newTranseMult < 2.5) {
+    } else {
       transeStartRef.current = null;
     }
 
@@ -909,7 +917,7 @@ export default function ClickerScreen({ onBack }) {
     // Palier d'évolution le plus haut atteint sur une créature.
     maxEvolutionTier: owned.reduce((m, o) => Math.max(m, o.evolutionTier || 0), 0),
     // Tenue de la Transe (secondes) — voir le tracker dans handleTap.
-    maxTranseHoldSec,
+    maxTranseHoldSec: Math.floor(maxTranseHoldSec),
     // Compteurs À VIE venant de DailyContext. `advLevelReached` est
     // publié par l'Aventure via trackMax : c'est un maximum, pas un
     // cumul, donc rejouer un niveau déjà battu ne le fait pas monter.
@@ -923,7 +931,11 @@ export default function ClickerScreen({ onBack }) {
     runeEquipped: lifetimeStats.runeEquipped || 0,
     runeBought: lifetimeStats.runeBought || 0,
   };
-  const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats, questBaseline, questTargets)).length;
+  // Baseline effectif d'un défi : le sien s'il a déjà démarré, sinon
+  // celui du cycle (utilisé tant que le défi n'est pas devenu courant,
+  // et pour les sauvegardes d'avant les baselines par défi).
+  const baselineFor = (id) => questBaselines[id] || questBaseline;
+  const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats, baselineFor(id), questTargets)).length;
 
   // Défi mis en avant sur l'écran d'accueil : le PREMIER non terminé des
   // 4 du cycle. Un seul à la fois, volontairement — la barre segmentée
@@ -931,10 +943,35 @@ export default function ClickerScreen({ onBack }) {
   // et empiler 4 barres sur l'accueil recréerait l'onglet Quêtes qu'on
   // vient justement de supprimer. Vaut `null` quand les 4 sont finies
   // (l'affichage bascule alors sur la barre d'éclosion).
-  const currentChallengeId = activeQuestIds.find((id) => !questComplete(id, questStats, questBaseline, questTargets)) || null;
+  const currentChallengeId = activeQuestIds.find((id) => !questComplete(id, questStats, baselineFor(id), questTargets)) || null;
   const currentChallenge = currentChallengeId
-    ? questDetail(currentChallengeId, questStats, questBaseline, questTargets)
+    ? questDetail(currentChallengeId, questStats, baselineFor(currentChallengeId), questTargets)
     : null;
+
+  // Démarre le chronomètre d'un défi au moment EXACT où il devient le
+  // défi courant. Tout ce qui a été accumulé avant ne compte pas.
+  //
+  // Les métriques de type RECORD (meilleure tenue de Transe, meilleur
+  // multiplicateur atteint) sont en plus remises à zéro : un baseline ne
+  // suffit pas pour elles. Un record de 12 s obtenu avant le défi
+  // rendrait la barre incompréhensible — elle afficherait une avance que
+  // le joueur n'a pas prise pendant ce défi, et un record déjà supérieur
+  // à la cible validerait le défi d'emblée.
+  useEffect(() => {
+    if (!loaded || !currentChallengeId) return;
+    if (questBaselinesRef.current[currentChallengeId]) return;
+    const quest = findQuest(currentChallengeId);
+    if (quest && (quest.metric === 'maxTranseHoldSec' || quest.metric === 'maxCombo')) {
+      maxTranseHoldSecRef.current = 0;
+      setMaxTranseHoldSec(0);
+      transeStartRef.current = null;
+      maxComboRef.current = 1;
+      setMaxCombo(1);
+    }
+    setQuestBaselines((prev) => (
+      prev[currentChallengeId] ? prev : { ...prev, [currentChallengeId]: buildQuestStatsSnapshot() }
+    ));
+  }, [currentChallengeId, loaded]);
 
   // Palier visuel de l'œuf (0-4), réaffiché sur l'accueil : il existait
   // déjà (EGG_STAGES) mais n'était rendu que dans l'onglet Quêtes, donc
@@ -962,6 +999,68 @@ export default function ClickerScreen({ onBack }) {
       setEggPhase((phase) => (phase === 'collecting' ? 'hatching' : phase));
     }
   }, [completedQuestCount, eggPhase]);
+
+  // Instantané complet des métriques de défi à cet instant. Une seule
+  // définition, appelée au démarrage de chaque défi ET au tirage d'un
+  // nouveau cycle : deux versions divergentes laisseraient des
+  // métriques absentes d'un côté, et un compteur absent du baseline
+  // repart de zéro et se valide instantanément.
+  // Décompte de la tenue de Transe, en temps réel. Deux rôles :
+  //  - faire avancer le compteur seconde par seconde même entre deux
+  //    taps, pour que la barre du défi bouge visiblement ;
+  //  - couper la série dès que la fenêtre de Transe expire, pour que le
+  //    compteur s'arrête net quand le joueur cesse de taper au lieu de
+  //    rester figé sur sa dernière valeur.
+  // On conserve le MEILLEUR temps tenu, pas la série en cours : sinon la
+  // barre retomberait à zéro à chaque pause et n'atteindrait la cible
+  // que sur une seule série parfaite, sans jamais montrer de progrès.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (transeStartRef.current === null) return;
+      const now = Date.now();
+      if (!transeStillActive(lastTapTimeRef.current, now)) {
+        transeStartRef.current = null;
+        return;
+      }
+      const heldSec = (now - transeStartRef.current) / 1000;
+      if (heldSec > maxTranseHoldSecRef.current) {
+        maxTranseHoldSecRef.current = heldSec;
+        setMaxTranseHoldSec(heldSec);
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
+
+  const buildQuestStatsSnapshot = () => ({
+    totalEarned: totalEarnedRef.current,
+    coins: coinsRef.current,
+    passiveIncome,
+    tapPower: tapPowerRef.current,
+    autoClickers: autoClickersRef.current,
+    autoTotal: Object.values(autoClickersRef.current).reduce((a, b) => a + (b || 0), 0),
+    upgradeLevels: upgradeLevelsRef.current,
+    sanctuaryLevel: sanctuaryLevelRef.current,
+    veilleurLevel: veilleurLevelRef.current,
+    critLevel: critLevelRef.current,
+    essence: essenceRef.current,
+    ownedCount: ownedRef.current.length,
+    deckCount: deckRef.current.filter(Boolean).length,
+    maxCreatureLevel: ownedRef.current.reduce((m, o) => Math.max(m, o.level || 0), 0),
+    maxCombo: Math.round(maxComboRef.current * 10),
+    maxTranseHoldSec: Math.floor(maxTranseHoldSecRef.current),
+    maxEvolutionTier: ownedRef.current.reduce((m, o) => Math.max(m, o.evolutionTier || 0), 0),
+    offering: lifetimeStats.offering || 0,
+    powerActivated: lifetimeStats.powerActivated || 0,
+    ascension: lifetimeStats.ascension || 0,
+    advLevelReached: lifetimeStats.advLevelReached || 0,
+    runeFused: lifetimeStats.runeFused || 0,
+    totalSummons: totalSummonsRef.current,
+    totalCrits: totalCritsRef.current,
+    goldenClaimed: goldenClaimedRef.current,
+    battleWon: lifetimeStats.battleWon || 0,
+    runeEquipped: lifetimeStats.runeEquipped || 0,
+    runeBought: lifetimeStats.runeBought || 0,
+  });
 
   const handleEggTap = () => {
     // Secousse à chaque coup porté sur la coquille. Séquence courte et
@@ -1004,36 +1103,7 @@ export default function ClickerScreen({ onBack }) {
         // depuis que la barre des défis 'absolute' se mesure elle aussi
         // depuis le tirage, une métrique absente ferait repartir la
         // barre d'un état faux.
-        const statsAtDraw = {
-          totalEarned: totalEarnedRef.current,
-          coins: coinsRef.current,
-          passiveIncome,
-          tapPower: tapPowerRef.current,
-          autoClickers: autoClickersRef.current,
-          autoTotal: Object.values(autoClickersRef.current).reduce((a, b) => a + (b || 0), 0),
-          upgradeLevels: upgradeLevelsRef.current,
-          sanctuaryLevel: sanctuaryLevelRef.current,
-          veilleurLevel: veilleurLevelRef.current,
-          critLevel: critLevelRef.current,
-          essence: essenceRef.current,
-          ownedCount: ownedRef.current.length,
-          deckCount: deckRef.current.filter(Boolean).length,
-          maxCreatureLevel: ownedRef.current.reduce((m, o) => Math.max(m, o.level || 0), 0),
-          maxCombo: Math.round(maxComboRef.current * 10),
-          maxTranseHoldSec: maxTranseHoldSecRef.current,
-          maxEvolutionTier: ownedRef.current.reduce((m, o) => Math.max(m, o.evolutionTier || 0), 0),
-          offering: lifetimeStats.offering || 0,
-          powerActivated: lifetimeStats.powerActivated || 0,
-          ascension: lifetimeStats.ascension || 0,
-          advLevelReached: lifetimeStats.advLevelReached || 0,
-          runeFused: lifetimeStats.runeFused || 0,
-          totalSummons: totalSummonsRef.current,
-          totalCrits: totalCritsRef.current,
-          goldenClaimed: goldenClaimedRef.current,
-          battleWon: lifetimeStats.battleWon || 0,
-          runeEquipped: lifetimeStats.runeEquipped || 0,
-          runeBought: lifetimeStats.runeBought || 0,
-        };
+        const statsAtDraw = buildQuestStatsSnapshot();
         // Avance d'un cran dans la séquence scriptée. Une fois celle-ci
         // épuisée, nextQuestSet bascule tout seul sur le pool dynamique
         // et l'index continue de grimper sans effet.
@@ -1043,6 +1113,9 @@ export default function ClickerScreen({ onBack }) {
         setActiveQuestIds(nextSet.ids);
         setQuestTargets(nextSet.targets);
         setQuestBaseline(statsAtDraw);
+        // Les chronomètres par défi repartent à zéro : chaque défi du
+        // nouveau cycle démarrera le sien quand il deviendra courant.
+        setQuestBaselines({});
         setEggPhase('collecting');
         setHatchTaps(0);
         setCaptureTaps(0);

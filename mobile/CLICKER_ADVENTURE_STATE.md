@@ -90,6 +90,45 @@ progression. **L'Aventure publie, le clicker lit.**
 Un niveau d'Aventure s'exprime en niveau GLOBAL (10 par chapitre) :
 chapitre 2 niveau 5 = niveau 15.
 
+### Un baseline PAR DÉFI, pas par cycle (bug signalé)
+
+**Bug réel** : les 4 défis d'un cycle partageaient un seul instantané de
+départ, pris au tirage. Tout ce que le joueur accumulait en travaillant
+le défi 1 comptait donc déjà pour le défi 3 : « obtiens 20 coups
+critiques » arrivait à moitié fait, parfois déjà validé. Idem pour la
+cible dorée.
+
+`questBaselines` (objet `questId -> instantané`) remplace l'instantané
+unique. Le chronomètre d'un défi démarre **au moment exact où il devient
+le défi courant**, via un `useEffect` sur `currentChallengeId`. Le
+`questBaseline` global reste comme repli pour les sauvegardes antérieures
+(`baselineFor(id)`).
+
+**Les métriques de type RECORD demandent en plus une remise à zéro.** Un
+baseline ne suffit pas pour `maxTranseHoldSec` et `maxCombo` : un record
+de 45 s obtenu avant le défi le validerait d'emblée, et un record de 12 s
+ferait afficher une avance que le joueur n'a pas prise pendant ce défi.
+Ces deux compteurs sont donc remis à zéro quand leur défi démarre.
+
+`buildQuestStatsSnapshot()` est défini **une seule fois** et sert au
+démarrage d'un défi comme au tirage d'un cycle : deux versions
+divergentes laisseraient des métriques absentes d'un côté, et un
+compteur absent du baseline repart de zéro donc se valide instantanément.
+
+### Décompte de la Transe en temps réel (bug signalé)
+
+La tenue était mesurée uniquement au moment d'un tap. Le compteur
+n'avançait donc que par à-coups et, dès que le joueur s'arrêtait, il
+restait figé sur sa dernière valeur au lieu de retomber — le défi « tiens
+30 secondes » était illisible.
+
+Un `setInterval` de 250 ms fait maintenant deux choses : avancer le
+compteur entre les taps, et couper la série dès que la fenêtre de Transe
+expire. On conserve le MEILLEUR temps tenu, pas la série en cours :
+sinon la barre retomberait à zéro à chaque pause et n'atteindrait la
+cible que sur une seule série parfaite, sans jamais montrer de progrès.
+La métrique exposée aux défis est arrondie à la seconde entière.
+
 ### Deux corrections liées
 
 - **Le blocage des défis de crit était trop strict.** Signalé par
