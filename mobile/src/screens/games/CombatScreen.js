@@ -129,6 +129,17 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const [timeLeft, setTimeLeft] = useState(TAP_CHALLENGE_TIME_LIMIT_SEC);
   const [switchMessage, setSwitchMessage] = useState(null);
   const [outcome, setOutcome] = useState(null); // null | 'win' | 'lose'
+  // Statistiques accumulées pendant le combat, pour le récapitulatif de
+  // fin (demande explicite) — mises à jour à chaque tour (premier coup
+  // adverse inclus) et jamais réinitialisées avant la fin du combat.
+  const [battleStats, setBattleStats] = useState({
+    totalDamageDealt: 0,
+    totalDamageTaken: 0,
+    rounds: 0,
+    opponentsDefeated: 0,
+    fightersFainted: 0,
+    perFighterDamage: {}, // { [creatureId]: dégâts infligés par cette créature }
+  });
 
   const fightersRef = useRef(fighters);
   fightersRef.current = fighters;
@@ -180,6 +191,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     setRoundKey((k) => k + 1);
     setOpponentDamageFloat(null);
     setPlayerDamageFloat(oppDamage);
+    setBattleStats((s) => ({
+      ...s,
+      totalDamageTaken: s.totalDamageTaken + oppDamage,
+      rounds: s.rounds + 1,
+      fightersFainted: s.fightersFainted + (newPlayerHp <= 0 ? 1 : 0),
+    }));
 
     if (newPlayerHp <= 0) {
       const nextIdx = nextLivingIndex(newFighters, curIdx);
@@ -329,6 +346,17 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     setRoundKey((k) => k + 1);
     setOpponentDamageFloat(playerDamage);
     setPlayerDamageFloat(opponentDamage > 0 ? opponentDamage : null);
+    setBattleStats((s) => ({
+      totalDamageDealt: s.totalDamageDealt + playerDamage,
+      totalDamageTaken: s.totalDamageTaken + opponentDamage,
+      rounds: s.rounds + 1,
+      opponentsDefeated: s.opponentsDefeated + (newOpponentHp <= 0 ? 1 : 0),
+      fightersFainted: s.fightersFainted + (newPlayerHp <= 0 ? 1 : 0),
+      perFighterDamage: {
+        ...s.perFighterDamage,
+        [curFighter.creature.id]: (s.perFighterDamage[curFighter.creature.id] || 0) + playerDamage,
+      },
+    }));
 
     // Victoire : plus AUCUN adversaire vivant.
     const anyOpponentAlive = newOpponents.some((o) => o.hp > 0);
@@ -376,7 +404,15 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   };
 
   if (phase === 'done') {
-    return <CombatResultScreen outcome={outcome} levelNumber={levelNumber} onContinue={() => onFinish(outcome)} />;
+    return (
+      <CombatResultScreen
+        outcome={outcome}
+        levelNumber={levelNumber}
+        battleStats={battleStats}
+        fighters={fighters}
+        onContinue={() => onFinish(outcome)}
+      />
+    );
   }
 
   // Ordre d'affichage côté joueur : l'actif prend TOUJOURS la place de
@@ -515,24 +551,75 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   );
 }
 
-function CombatResultScreen({ outcome, levelNumber, onContinue }) {
+function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onContinue }) {
   const isWin = outcome === 'win';
   const reward = isWin ? griffesReward(levelNumber) : 0;
+
+  // Répartition des dégâts par créature, triée par contribution — vide
+  // si un seul combattant a fait tout le combat (pas la peine d'un
+  // classement à un seul élément).
+  const breakdown = Object.entries(battleStats.perFighterDamage)
+    .map(([creatureId, dmg]) => {
+      const fighter = fighters.find((f) => f.creature.id === creatureId);
+      return { name: fighter ? fighter.creature.stages[0].name : creatureId, emoji: fighter ? fighter.creature.stages[0].emoji : '❓', dmg };
+    })
+    .sort((a, b) => b.dmg - a.dmg);
+
   return (
-    <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.resultScroll}>
       <Text style={styles.resultEmoji}>{isWin ? '🏆' : '💀'}</Text>
       <Text style={[styles.resultTitle, { color: isWin ? COLORS.good : '#FF5252' }]}>
         {isWin ? 'Victoire !' : 'Défaite'}
       </Text>
-      {isWin ? (
-        <Text style={styles.resultReward}>+{reward} 🐾 Griffes</Text>
-      ) : (
-        <Text style={styles.resultSubtitle}>Réessaie quand tu veux — rien n'est perdu.</Text>
-      )}
+      {isWin && <Text style={styles.resultReward}>+{reward} 🐾 Griffes</Text>}
+
+      {/* Récapitulatif du combat (demande explicite) — mêmes chiffres
+          quelle que soit l'issue, victoire ou défaite. */}
+      <View style={styles.recapCard}>
+        <Text style={styles.recapTitle}>📊 Récapitulatif</Text>
+        <View style={styles.recapRow}>
+          <View style={styles.recapStat}>
+            <Text style={styles.recapStatValue}>{battleStats.totalDamageDealt}</Text>
+            <Text style={styles.recapStatLabel}>Dégâts infligés</Text>
+          </View>
+          <View style={styles.recapStat}>
+            <Text style={[styles.recapStatValue, { color: '#FF5252' }]}>{battleStats.totalDamageTaken}</Text>
+            <Text style={styles.recapStatLabel}>Dégâts reçus</Text>
+          </View>
+          <View style={styles.recapStat}>
+            <Text style={styles.recapStatValue}>{battleStats.rounds}</Text>
+            <Text style={styles.recapStatLabel}>Tours joués</Text>
+          </View>
+        </View>
+        <View style={styles.recapRow}>
+          <View style={styles.recapStat}>
+            <Text style={[styles.recapStatValue, { color: COLORS.good }]}>{battleStats.opponentsDefeated}</Text>
+            <Text style={styles.recapStatLabel}>Adversaires vaincus</Text>
+          </View>
+          <View style={styles.recapStat}>
+            <Text style={[styles.recapStatValue, { color: COLORS.action }]}>{battleStats.fightersFainted}</Text>
+            <Text style={styles.recapStatLabel}>Tes créatures K.O.</Text>
+          </View>
+        </View>
+
+        {breakdown.length > 1 && (
+          <>
+            <Text style={styles.recapSubTitle}>Dégâts par créature</Text>
+            {breakdown.map((b) => (
+              <View key={b.name} style={styles.recapBreakdownRow}>
+                <Text style={styles.recapBreakdownName}>{b.emoji} {b.name}</Text>
+                <Text style={styles.recapBreakdownValue}>{b.dmg} dégâts</Text>
+              </View>
+            ))}
+          </>
+        )}
+      </View>
+
+      {!isWin && <Text style={styles.resultSubtitle}>Réessaie quand tu veux — rien n'est perdu.</Text>}
       <TouchableOpacity style={styles.resultBtn} onPress={onContinue}>
         <Text style={styles.resultBtnText}>Retour à la carte</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -611,4 +698,19 @@ const styles = StyleSheet.create({
   resultSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
   resultBtn: { backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 26, marginTop: 24, borderWidth: 1, borderColor: COLORS.border },
   resultBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
+
+  resultScroll: { flexGrow: 1, alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 },
+  recapCard: {
+    width: '100%', maxWidth: 420, backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, marginTop: 18,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  recapTitle: { color: COLORS.action, fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
+  recapRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 6 },
+  recapStat: { alignItems: 'center', flex: 1 },
+  recapStatValue: { color: COLORS.text, fontSize: 18, fontWeight: '900' },
+  recapStatLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 2, textAlign: 'center' },
+  recapSubTitle: { color: COLORS.muted, fontSize: 10, fontWeight: '800', marginTop: 10, marginBottom: 4, textTransform: 'uppercase' },
+  recapBreakdownRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
+  recapBreakdownName: { color: COLORS.text, fontSize: 12, fontWeight: '700' },
+  recapBreakdownValue: { color: COLORS.action, fontSize: 12, fontWeight: '800' },
 });
