@@ -159,6 +159,13 @@ export const CREATURES = [
     stages: [
     { name: 'Terracroc', emoji: '🐊' }, { name: 'Terracroc', emoji: '🐊' }, { name: 'Terracroc', emoji: '🐊' },
   ]},
+  { id: 'zephyrion', element: 'Air', rarity: 'peu_commun', baseIncome: 0.2, combatType: 'soutien',
+    baseHp: 25, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Brise Réparatrice', 2, 10], ['Murmure Éolien', 3, 15], ['Bourrasque Protectrice', 4, 20], ["Souffle d'Altitude", 5, 30]]),
+    lore: "Zephyrion est un petit nuage cotonneux doué de conscience qui flotte paisiblement au-dessus des hautes cimes. Il utilise des vents doux pour soigner ses alliés et dévier les projectiles ennemis avec une brise protectrice. Toujours serein, il évite les conflits directs mais se révèle indispensable lors des longues batailles.",
+    stages: [
+    { name: 'Zephyrion', emoji: '☁️' }, { name: 'Zephyrion', emoji: '☁️' }, { name: 'Zephyrion', emoji: '☁️' },
+  ]},
 ];
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
@@ -256,6 +263,7 @@ export const CREATURE_POWERS = {
   fournax: { name: 'Résonance Cristalline', effectType: 'coins_burst', effectValue: 75 },
   aquamira: { name: 'Marée Curative', effectType: 'passive_boost', effectValue: 2 },
   terracroc: { name: 'Séisme', effectType: 'coins_burst', effectValue: 15 },
+  zephyrion: { name: 'Brise Protectrice', effectType: 'passive_boost', effectValue: 2 },
   solarion: { name: 'Éruption Solaire', effectType: 'coins_burst', effectValue: 30 },
 };
 
