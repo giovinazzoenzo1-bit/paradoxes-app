@@ -15,7 +15,7 @@ import {
   computePlayerDamage,
   resolveRound,
   griffesReward,
-  TAP_CHALLENGE_COUNT,
+  effectiveTapCount,
   TAP_CHALLENGE_TIME_LIMIT_SEC,
 } from '../../games/clicker/combatLogic';
 
@@ -94,6 +94,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   }, [phase]);
 
   const activeFighter = fighters[activeIndex];
+  const requiredTaps = effectiveTapCount(activeFighter.stats.clickSpeed);
 
   // Choix d'une compétence : si le combattant actif a assez d'endurance,
   // elle est débitée immédiatement et le défi de tap démarre.
@@ -120,7 +121,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       Animated.timing(punchScale, { toValue: 0.9, duration: 40, useNativeDriver: true }),
       Animated.spring(punchScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start();
-    if (tapCountRef.current >= TAP_CHALLENGE_COUNT) {
+    if (tapCountRef.current >= requiredTaps) {
       finishChallenge(true);
     }
   };
@@ -333,7 +334,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
                 <Text style={styles.tapPunchText}>👊</Text>
               </Animated.View>
             </TouchableOpacity>
-            <Text style={styles.tapCountText}>{tapCount} / {TAP_CHALLENGE_COUNT}</Text>
+            <Text style={styles.tapCountText}>{tapCount} / {requiredTaps}</Text>
             <View style={styles.timeTrack}>
               <View style={[styles.timeFill, { width: `${(timeLeft / TAP_CHALLENGE_TIME_LIMIT_SEC) * 100}%` }]} />
             </View>

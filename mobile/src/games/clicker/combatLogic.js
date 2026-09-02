@@ -107,6 +107,18 @@ export const TAP_CHALLENGE_MIN_MULTIPLIER = 1; // complété mais lentement
 export const TAP_CHALLENGE_MAX_MULTIPLIER = 2.5; // complété très vite
 export const TAP_CHALLENGE_INCOMPLETE_MULTIPLIER = 0.5; // pas fini à temps, attaque affaiblie
 
+// Nombre de taps RÉELLEMENT requis pour la créature active, réduit selon
+// sa vitesse de clic (1,0 à 2,8 selon la rareté) — "réduit le temps réel
+// nécessaire" comme demandé : moins de taps à faire = fini plus vite en
+// temps réel, PAS une fenêtre de temps raccourcie (qui deviendrait vite
+// physiquement impossible à haute vitesse). Plancher à 10 taps pour que
+// le mini-jeu garde un minimum de sens même pour un Mythique (2,8 → 9
+// arrondi, mais plafonné à 10) — pas de créature "quasi gratuite".
+export const TAP_CHALLENGE_MIN_COUNT = 10;
+export function effectiveTapCount(clickSpeed) {
+  return Math.max(TAP_CHALLENGE_MIN_COUNT, Math.round(TAP_CHALLENGE_COUNT / clickSpeed));
+}
+
 // Multiplicateur de dégâts selon le temps mis pour les 50 taps.
 // - Pas complété dans le temps imparti -> multiplicateur réduit fixe
 //   (l'attaque part quand même, juste affaiblie, jamais annulée).
