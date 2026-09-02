@@ -46,6 +46,8 @@ import {
   pickQuestSet,
   questComplete,
   questDetail,
+  EGG_STAGES,
+  eggStageForCompletedCount,
   HATCH_TAPS_REQUIRED,
   CAPTURE_TAPS_REQUIRED,
   AUTOCLICKERS,
@@ -203,6 +205,12 @@ export default function ClickerScreen({ onBack }) {
   const lastSpawnTimeRef = useRef(Date.now() - Math.round(SPAWN_INTERVAL_SEC * (2 / 3)) * 1000);
 
   const tapScale = useRef(new Animated.Value(1)).current;
+  // Secousse latérale de l'œuf, jouée UNIQUEMENT pendant l'éclosion et la
+  // capture (02/09). Sans elle, les centaines de taps nécessaires pour
+  // briser la coquille n'ont aucun retour visuel autre que le petit
+  // rebond d'échelle déjà présent sur un tap normal — le joueur ne
+  // distingue plus "je récolte des pièces" de "je casse l'œuf".
+  const eggShake = useRef(new Animated.Value(0)).current;
 
   // Chargement initial + calcul des gains hors-ligne.
   useEffect(() => {
@@ -713,6 +721,14 @@ export default function ClickerScreen({ onBack }) {
     ? questDetail(currentChallengeId, questStats, questBaseline)
     : null;
 
+  // Palier visuel de l'œuf (0-4), réaffiché sur l'accueil : il existait
+  // déjà (EGG_STAGES) mais n'était rendu que dans l'onglet Quêtes, donc
+  // sa suppression avait fait disparaître tout retour sur l'état de
+  // l'œuf. L'œuf se réveille maintenant sous les yeux du joueur au fil
+  // des défis validés, sur l'écran où il tape vraiment.
+  const eggStageIndex = eggPhase === 'collecting' ? eggStageForCompletedCount(completedQuestCount) : 4;
+  const eggStage = EGG_STAGES[eggStageIndex];
+
   // Bascule automatique collecte -> éclosion dès que les 4 quêtes sont
   // validées. Bug corrigé (30/08, signalé par capture d'écran : l'œuf
   // restait bloqué sur "prêt à éclore" avec les 4 quêtes cochées, sans
@@ -733,6 +749,18 @@ export default function ClickerScreen({ onBack }) {
   }, [completedQuestCount, eggPhase]);
 
   const handleEggTap = () => {
+    // Secousse à chaque coup porté sur la coquille. Séquence courte et
+    // symétrique qui revient toujours à 0 : impossible que l'œuf reste
+    // figé de travers si le joueur tape en rafale.
+    eggShake.stopAnimation(() => {
+      eggShake.setValue(0);
+      Animated.sequence([
+        Animated.timing(eggShake, { toValue: 1, duration: 45, useNativeDriver: true }),
+        Animated.timing(eggShake, { toValue: -1, duration: 45, useNativeDriver: true }),
+        Animated.timing(eggShake, { toValue: 0, duration: 45, useNativeDriver: true }),
+      ]).start();
+    });
+
     if (eggPhaseRef.current === 'hatching') {
       const next = hatchTapsRef.current + 1;
       hatchTapsRef.current = next;
@@ -944,8 +972,35 @@ export default function ClickerScreen({ onBack }) {
             <View style={styles.tapZone}>
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
                 <View style={styles.tapButtonWrap}>
-                  <Animated.View style={[styles.tapButton, { transform: [{ scale: tapScale }] }]}>
-                    <Text style={styles.tapEmoji}>{eggPhase === 'capturing' ? '💫' : '🥚'}</Text>
+                  <Animated.View
+                    style={[
+                      styles.tapButton,
+                      // La bordure et la lueur s'intensifient palier par
+                      // palier : l'œuf passe de terne à incandescent au
+                      // fur et à mesure que les défis tombent.
+                      { borderWidth: 3 + eggStageIndex * 0.6, shadowOpacity: 0.25 + eggStageIndex * 0.15 },
+                      {
+                        transform: [
+                          { scale: tapScale },
+                          {
+                            translateX: eggShake.interpolate({
+                              inputRange: [-1, 0, 1],
+                              outputRange: [-7, 0, 7],
+                            }),
+                          },
+                          {
+                            rotate: eggShake.interpolate({
+                              inputRange: [-1, 0, 1],
+                              outputRange: ['-5deg', '0deg', '5deg'],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.tapEmoji, { opacity: 0.6 + eggStageIndex * 0.1 }]}>
+                      {eggPhase === 'capturing' ? '💫' : '🥚'}
+                    </Text>
                   </Animated.View>
                 </View>
               </TouchableOpacity>
@@ -973,6 +1028,10 @@ export default function ClickerScreen({ onBack }) {
                   : 'Tape pour récolter des pièces'}
               </Text>
             )}
+            {/* Nom du palier toujours visible, même pendant la Transe :
+                c'est l'indicateur d'état de l'œuf, pas un message
+                contextuel qu'on peut masquer. */}
+            {eggPhase === 'collecting' && <Text style={styles.eggStageLabel}>{eggStage.name}</Text>}
           </View>
         </>
       )}
@@ -1751,6 +1810,7 @@ const styles = StyleSheet.create({
   },
   tapEmoji: { fontSize: 84 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
+  eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8 },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
   popup: { position: 'absolute', color: COLORS.action, fontSize: 16, fontWeight: '900' },
   popupCrit: { color: '#FF7043', fontSize: 20 },

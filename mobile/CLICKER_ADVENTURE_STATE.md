@@ -253,10 +253,28 @@ créature — au lieu d'aller taper un second œuf dans un onglet à part.
   garde-fou et renvoyaient **NaN** sur un objet de stats incomplet —
   invisible avant, mais la nouvelle barre l'aurait affiché tel quel
   (« NaN/25 »). Helper `abs()` ajouté dans `questProgress()`.
+- **Paliers visuels de l'œuf réaffichés sur l'accueil** : `EGG_STAGES`
+  existait déjà mais n'était rendu QUE dans l'onglet Quêtes — sa
+  suppression avait fait disparaître tout retour sur l'état de l'œuf.
+  Le nom du palier s'affiche sous l'œuf, et bordure/lueur/opacité
+  s'intensifient palier par palier (`eggStageIndex`), sur l'écran où le
+  joueur tape vraiment.
+- **Secousse de l'œuf** (`eggShake`) jouée uniquement pendant l'éclosion
+  et la capture : sans elle, les centaines de taps nécessaires n'avaient
+  aucun retour distinct d'un tap de récolte normal. Séquence courte et
+  symétrique qui revient toujours à 0, donc l'œuf ne peut pas rester
+  figé de travers si le joueur tape en rafale.
+- **Durci** : `eggStageForCompletedCount()` laissait passer NaN
+  (`Math.min`/`Math.max` le propagent), ce qui aurait donné
+  `EGG_STAGES[NaN]` puis un crash sur `.name`. Non atteignable
+  aujourd'hui (`completedQuestCount` vient d'un `.length`), corrigé
+  quand même.
 - Vérifié par test : 0 divergence entre `questDetail().done` et
   `questComplete()` sur les 11 quêtes, à vide comme à plein ; 2000
-  tirages de `pickQuestSet()` tous valides ; aucun style orphelin dans
-  les deux sens (20 styles morts de l'ancien onglet supprimés).
+  tirages de `pickQuestSet()` tous valides ; palier visuel dans les
+  bornes sur 14 entrées limites (négatif, décimal, NaN, null, chaîne) ;
+  aucun style orphelin dans les deux sens (20 styles morts de l'ancien
+  onglet supprimés).
 
 ### Boutique du clicker — paliers à débloquer (tout dernier ajout)
 - **20 nouvelles améliorations** à débloquer (achat unique, `UPGRADE_ITEMS`), 4 paliers de 5, thème créatures/éléments.

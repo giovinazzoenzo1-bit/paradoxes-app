@@ -746,8 +746,12 @@ export const EGG_STAGES = [
   { name: 'Œuf prêt à éclore', desc: 'Vibre fort, prêt !' },
 ];
 // Nombre de quêtes validées (0-4) -> palier visuel (0-4).
+// Math.min/Math.max laissent passer NaN : l'appelant indexerait alors
+// EGG_STAGES[NaN] (undefined) et planterait sur `.name`. Le garde-fou
+// coûte une ligne, le crash coûterait un écran blanc.
 export function eggStageForCompletedCount(completedCount) {
-  return Math.max(0, Math.min(4, completedCount));
+  if (!Number.isFinite(completedCount)) return 0;
+  return Math.max(0, Math.min(4, Math.floor(completedCount)));
 }
 
 export const HATCH_TAPS_REQUIRED = 500;
