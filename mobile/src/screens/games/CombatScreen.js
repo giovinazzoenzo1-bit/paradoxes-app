@@ -343,9 +343,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       </TouchableOpacity>
 
       <View style={styles.battlefield}>
-        {/* Équipe du joueur, à GAUCHE — combattant actif en grand, le
-            reste de l'équipe en petit au-dessus, comme sur les captures
-            de référence. */}
+        {/* Équipe du joueur, à GAUCHE — sprites qui "flottent" sur le
+            terrain (pas de cadre carte autour), hauteurs décalées entre
+            les remplaçants et l'actif pour un effet plus organique,
+            façon Monster Legends, plutôt qu'une grille bien rangée. */}
         <View style={styles.playerZone}>
           <View style={styles.benchRow}>
             {fighters.map((f, i) => {
@@ -353,9 +354,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
               const d = f.creature.stages[stageForLevel(f.ownedLevel)];
               const fainted = f.hp <= 0;
               return (
-                <View key={i} style={[styles.benchIcon, fainted && styles.benchIconFainted]}>
-                  <Text style={{ fontSize: 22, opacity: fainted ? 0.3 : 1 }}>{d.emoji}</Text>
-                </View>
+                <Text key={i} style={[styles.benchEmoji, { opacity: fainted ? 0.3 : 1 }]}>{d.emoji}</Text>
               );
             })}
           </View>
@@ -413,22 +412,27 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         </View>
 
         {/* Équipe adverse, à DROITE — TOUS affichés et tapables pour
-            choisir la cible (demande explicite), celle sélectionnée
-            entourée d'un contour distinct. */}
+            choisir la cible (demande explicite). Sprites flottants (pas
+            de cadre carte), hauteurs décalées une créature sur deux pour
+            un effet plus organique, cible marquée par un halo circulaire
+            autour du sprite plutôt qu'un cadre rectangulaire. */}
         <View style={styles.opponentZone}>
           {opponents.map((o, i) => {
             const d = o.creature.stages[0];
             const fainted = o.hp <= 0;
             const isTarget = i === targetIndex;
             const hpPct = Math.max(0, o.hp / o.stats.hp) * 100;
+            const emojiSize = opponents.length > 1 ? 46 : 70;
             return (
               <TouchableOpacity
                 key={i}
-                style={[styles.opponentCard, isTarget && styles.opponentCardTargeted, fainted && styles.opponentCardFainted]}
+                style={[styles.opponentSlot, i % 2 === 1 && styles.opponentSlotOffset]}
                 onPress={() => chooseTarget(i)}
                 disabled={fainted || phase !== 'choosing'}
               >
-                <Text style={{ fontSize: opponents.length > 1 ? 30 : 44, opacity: fainted ? 0.3 : 1 }}>{d.emoji}</Text>
+                <View style={[styles.targetRing, isTarget && !fainted && styles.targetRingActive]}>
+                  <Text style={{ fontSize: emojiSize, opacity: fainted ? 0.3 : 1 }}>{d.emoji}</Text>
+                </View>
                 <Text style={styles.opponentName} numberOfLines={1}>{d.name}</Text>
                 <View style={styles.hpTrackSmall}>
                   <View style={[styles.hpFill, { width: `${hpPct}%`, backgroundColor: '#FF5252' }]} />
@@ -502,50 +506,59 @@ const styles = StyleSheet.create({
   battlefield: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingTop: 8 },
 
   playerZone: { flex: 1, alignItems: 'center' },
-  benchRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  benchIcon: {
-    width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.panel,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: COLORS.border,
-  },
-  benchIconFainted: { borderColor: '#FF5252' },
+  // Remplaçants en petites silhouettes flottantes (pas de cadre autour) —
+  // légèrement décalés en hauteur pour un effet moins "grille bien rangée".
+  benchRow: { flexDirection: 'row', gap: 14, marginBottom: 4, height: 40, alignItems: 'flex-end' },
+  benchEmoji: { fontSize: 30 },
   activeFighterBlock: { alignItems: 'center' },
-  activeEmoji: { fontSize: 56 },
-  activeName: { color: COLORS.text, fontSize: 12, fontWeight: '800', marginTop: 2 },
-  hpTrack: { width: 110, height: 8, borderRadius: 4, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 6 },
+  activeEmoji: { fontSize: 84 },
+  activeName: { color: COLORS.text, fontSize: 13, fontWeight: '800', marginTop: 2 },
+  hpTrack: { width: 120, height: 8, borderRadius: 4, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 6 },
   hpFill: { height: '100%', borderRadius: 4 },
   hpText: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 2 },
-  enduranceTrack: { width: 110, height: 5, borderRadius: 3, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 4 },
+  enduranceTrack: { width: 120, height: 5, borderRadius: 3, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 4 },
   enduranceFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.action },
 
-  centerZone: { width: 150, alignItems: 'center', justifyContent: 'center' },
+  centerZone: { width: 170, alignItems: 'center', justifyContent: 'center' },
   switchBanner: { backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: COLORS.action },
   switchBannerText: { color: COLORS.action, fontSize: 10, fontWeight: '800', textAlign: 'center' },
   roundLog: { alignItems: 'center' },
   roundLogText: { color: COLORS.action, fontSize: 11, fontWeight: '900' },
-  chosenSkillLabel: { color: COLORS.action, fontSize: 11, fontWeight: '900', marginBottom: 6, textAlign: 'center' },
+  chosenSkillLabel: { color: COLORS.action, fontSize: 12, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
+  // Bouton de tap nettement plus gros (demande explicite) — presque toute
+  // la hauteur disponible en paysage, pour bien remplir le pouce.
   tapZoneCombat: {
-    width: 90, height: 90, borderRadius: 45, backgroundColor: COLORS.panel,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.neonPink,
+    width: 150, height: 150, borderRadius: 75, backgroundColor: COLORS.panel,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: COLORS.neonPink,
+    shadowColor: COLORS.neonPink, shadowOpacity: 0.7, shadowRadius: 18, shadowOffset: { width: 0, height: 0 },
   },
-  tapPunchText: { fontSize: 40 },
-  tapCountText: { color: COLORS.text, fontSize: 15, fontWeight: '900', marginTop: 8 },
-  timeTrack: { width: 100, height: 6, borderRadius: 3, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 6 },
+  tapPunchText: { fontSize: 68 },
+  tapCountText: { color: COLORS.text, fontSize: 17, fontWeight: '900', marginTop: 10 },
+  timeTrack: { width: 120, height: 6, borderRadius: 3, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 6 },
   timeFill: { height: '100%', backgroundColor: COLORS.neonCyan, borderRadius: 3 },
   continueBtn: {
     backgroundColor: COLORS.action, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 20,
   },
   continueBtnText: { color: '#241a00', fontSize: 13, fontWeight: '900' },
 
-  opponentZone: { flex: 1.3, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 8 },
-  opponentCard: {
-    backgroundColor: COLORS.panel, borderRadius: 14, padding: 8, alignItems: 'center',
-    borderWidth: 2, borderColor: COLORS.border, minWidth: 78,
+  opponentZone: { flex: 1.3, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 16 },
+  // Sprites flottants, sans cadre carte — chaque adversaire "un sur deux"
+  // légèrement plus haut, pour casser l'alignement en grille bien rangée.
+  opponentSlot: { alignItems: 'center' },
+  opponentSlotOffset: { marginTop: -22 },
+  // La cible n'est plus marquée par un cadre rectangulaire autour d'une
+  // carte, mais par un halo circulaire directement autour du sprite.
+  targetRing: {
+    width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: 'transparent',
   },
-  opponentCardTargeted: { borderColor: '#FF5252', shadowColor: '#FF5252', shadowOpacity: 0.7, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
-  opponentCardFainted: { opacity: 0.5 },
-  opponentName: { color: COLORS.text, fontSize: 9, fontWeight: '700', marginTop: 2, maxWidth: 70 },
-  hpTrackSmall: { width: 60, height: 5, borderRadius: 3, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 4 },
-  targetLabel: { color: '#FF5252', fontSize: 8, fontWeight: '800', marginTop: 2 },
+  targetRingActive: {
+    borderColor: '#FF5252', backgroundColor: 'rgba(255,82,82,0.1)',
+    shadowColor: '#FF5252', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
+  },
+  opponentName: { color: COLORS.text, fontSize: 11, fontWeight: '700', marginTop: 2, maxWidth: 90 },
+  hpTrackSmall: { width: 70, height: 5, borderRadius: 3, backgroundColor: '#241d42', overflow: 'hidden', marginTop: 4 },
+  targetLabel: { color: '#FF5252', fontSize: 9, fontWeight: '800', marginTop: 2 },
 
   bottomBar: { flexDirection: 'row', paddingHorizontal: 8, paddingBottom: 8, paddingTop: 4, gap: 6 },
   skillBtn: {
