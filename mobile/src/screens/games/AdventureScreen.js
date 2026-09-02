@@ -26,12 +26,36 @@ import {
 // la peine d'alourdir davantage la sauvegarde déjà volumineuse du clicker.
 const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
 
+// Runes — proposition initiale de 4 types (voir le tableau des paliers
+// donné à l'utilisateur en réponse). Les BONUS eux-mêmes ne sont pas
+// encore appliqués aux stats de combat, seule la structure achat/fusion
+// est fonctionnelle pour l'instant.
+const RUNE_TYPES = {
+  force: { name: 'Rune de Force', icon: '⚔️', color: '#FF5252' },
+  vitalite: { name: 'Rune de Vitalité', icon: '❤️', color: COLORS.good },
+  endurance: { name: "Rune d'Endurance", icon: '🔋', color: COLORS.action },
+  celerite: { name: 'Rune de Célérité', icon: '⚡', color: COLORS.neonCyan },
+};
+const RUNE_TYPE_KEYS = Object.keys(RUNE_TYPES);
+const RUNE_COST = 100;
+const RUNE_MAX_LEVEL = 5;
+let runeIdCounter = 0;
+function makeRuneId() {
+  runeIdCounter += 1;
+  return `rune_${Date.now()}_${runeIdCounter}`;
+}
+
+
 export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onAssignDeck, onClearDeckSlot }) {
   const [detailCreatureId, setDetailCreatureId] = useState(null);
   const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
+  const [runesOpen, setRunesOpen] = useState(false);
   const [currentUnlockedLevel, setCurrentUnlockedLevel] = useState(1);
   const [griffes, setGriffes] = useState(0);
+  // Runes possédées : [{ id, type, level }] — id unique généré à l'achat/
+  // la fusion, type = l'une des 4 clés de RUNE_TYPES, level 1 à 5.
+  const [ownedRunes, setOwnedRunes] = useState([]);
   const [progressLoaded, setProgressLoaded] = useState(false);
   const currentUnlockedLevelRef = useRef(1);
   currentUnlockedLevelRef.current = currentUnlockedLevel;
@@ -45,6 +69,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           const saved = JSON.parse(raw);
           setCurrentUnlockedLevel(saved.currentUnlockedLevel || 1);
           setGriffes(saved.griffes || 0);
+          setOwnedRunes(saved.ownedRunes || []);
         }
       } catch (e) {
         // pas de sauvegarde valide, on démarre au niveau 1
@@ -56,8 +81,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Sauvegarde à chaque changement.
   useEffect(() => {
     if (!progressLoaded) return;
-    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes }));
-  }, [currentUnlockedLevel, griffes, progressLoaded]);
+    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, ownedRunes }));
+  }, [currentUnlockedLevel, griffes, ownedRunes, progressLoaded]);
 
   // Appelé par ChapterMapScreen (via CombatScreen) à la fin d'un combat
   // gagné : débloque le niveau suivant SEULEMENT si c'était bien le
@@ -81,6 +106,34 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     if (griffes < cost) return;
     setGriffes((g) => g - cost);
     onEvolveCreature(creatureId, currentTier + 1);
+  };
+
+  // Achète une rune ALÉATOIRE contre 100 Griffes (toujours niveau 1) —
+  // structure fonctionnelle posée maintenant (achat + fusion marchent
+  // réellement), mais l'application des bonus des runes aux stats de
+  // combat n'est PAS encore câblée dans combatLogic.js — prévu pour une
+  // prochaine passe (voir la proposition de types/paliers ci-dessous,
+  // à valider avant de l'implémenter).
+  const buyRandomRune = () => {
+    if (griffes < RUNE_COST) return;
+    setGriffes((g) => g - RUNE_COST);
+    const type = RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)];
+    setOwnedRunes((prev) => [...prev, { id: makeRuneId(), type, level: 1 }]);
+  };
+
+  // Fusionne 2 runes du MÊME type et MÊME niveau en une seule au niveau
+  // supérieur (jamais au-delà du palier 5) — les deux runes d'origine
+  // disparaissent.
+  const fuseRunes = (id1, id2) => {
+    setOwnedRunes((prev) => {
+      const r1 = prev.find((r) => r.id === id1);
+      const r2 = prev.find((r) => r.id === id2);
+      if (!r1 || !r2 || r1.id === r2.id || r1.type !== r2.type || r1.level !== r2.level || r1.level >= RUNE_MAX_LEVEL) {
+        return prev;
+      }
+      const rest = prev.filter((r) => r.id !== id1 && r.id !== id2);
+      return [...rest, { id: makeRuneId(), type: r1.type, level: r1.level + 1 }];
+    });
   };
 
   const ownedMap = {};
@@ -113,6 +166,19 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         griffes={griffes}
         onLevelWon={handleLevelWon}
         onBack={() => setChapterMapOpen(false)}
+      />
+    );
+  }
+
+  // Runes — même schéma de retour anticipé.
+  if (runesOpen) {
+    return (
+      <RunesScreen
+        griffes={griffes}
+        ownedRunes={ownedRunes}
+        onBuyRune={buyRandomRune}
+        onFuseRunes={fuseRunes}
+        onBack={() => setRunesOpen(false)}
       />
     );
   }
@@ -189,11 +255,15 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
       <View style={{ flex: 1 }} />
 
       {/* Barre du bas dédiée à l'Aventure — pour les futurs modes de jeu
-          qu'on ajoutera avec le temps. Un seul item pour l'instant. */}
+          qu'on ajoutera avec le temps. */}
       <View style={styles.subBar}>
         <TouchableOpacity style={styles.subBarItem} onPress={() => setChapterMapOpen(true)}>
           <Ionicons name="map" size={24} color={COLORS.action} />
           <Text style={styles.subBarLabel}>Mode Combat</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.subBarItem} onPress={() => setRunesOpen(true)}>
+          <Ionicons name="diamond" size={24} color={COLORS.neonCyan} />
+          <Text style={[styles.subBarLabel, { color: COLORS.neonCyan }]}>Runes</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -507,6 +577,78 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, onLevelW
 // Aperçu avant combat — montre l'adversaire ET toute l'équipe qui va se
 // battre (les 3 créatures du deck, à tour de rôle si l'une tombe). Plus
 // de choix d'une seule créature : toute l'équipe part au combat.
+// Écran Runes — achat aléatoire (100 Griffes) + fusion (2 runes du même
+// type/niveau -> 1 rune au niveau supérieur). Sélection tactile simple :
+// touche une 1ère rune pour la sélectionner, touche une 2ème rune
+// compatible pour fusionner automatiquement.
+function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
+  const [selectedId, setSelectedId] = useState(null);
+
+  const handlePress = (rune) => {
+    if (!selectedId) {
+      setSelectedId(rune.id);
+      return;
+    }
+    if (selectedId === rune.id) {
+      setSelectedId(null);
+      return;
+    }
+    onFuseRunes(selectedId, rune.id);
+    setSelectedId(null);
+  };
+
+  return (
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>← Retour</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>💎 Runes</Text>
+      </View>
+      <Text style={styles.griffesText}>🐾 {griffes} Griffes</Text>
+
+      <TouchableOpacity
+        style={[styles.startBattleBtn, griffes < RUNE_COST && styles.actionBtnDisabledAdv]}
+        onPress={onBuyRune}
+        disabled={griffes < RUNE_COST}
+      >
+        <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} 🐾 Griffes</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.runeHint}>
+        {selectedId
+          ? 'Touche une 2e rune du MÊME type et MÊME niveau pour fusionner (donne 1 rune au niveau supérieur).'
+          : 'Touche une rune pour la sélectionner, puis une 2e identique pour la fusionner.'}
+      </Text>
+
+      <ScrollView contentContainerStyle={styles.runeGrid}>
+        {ownedRunes.length === 0 ? (
+          <Text style={styles.runeEmptyText}>Aucune rune pour l'instant — achètes-en une ci-dessus !</Text>
+        ) : (
+          ownedRunes
+            .slice()
+            .sort((a, b) => b.level - a.level)
+            .map((rune) => {
+              const def = RUNE_TYPES[rune.type];
+              const isSelected = rune.id === selectedId;
+              return (
+                <TouchableOpacity
+                  key={rune.id}
+                  style={[styles.runeCell, { borderColor: def.color }, isSelected && styles.runeCellSelected]}
+                  onPress={() => handlePress(rune)}
+                >
+                  <Text style={styles.runeEmoji}>{def.icon}</Text>
+                  <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
+                </TouchableOpacity>
+              );
+            })
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+
 function FighterSelectOverlay({ levelNumber, owned, deck, onClose, onStart }) {
   const opponent = opponentForLevel(levelNumber);
   const display = opponent.stages[0];
@@ -628,6 +770,17 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
   },
   startBattleBtnText: { color: '#241a00', fontSize: 15, fontWeight: '900' },
+
+  runeHint: { color: COLORS.muted, fontSize: 11, textAlign: 'center', marginTop: 14, marginBottom: 10, paddingHorizontal: 10 },
+  runeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingBottom: 30 },
+  runeEmptyText: { color: COLORS.muted, fontSize: 13, textAlign: 'center', paddingVertical: 20, width: '100%' },
+  runeCell: {
+    width: 84, backgroundColor: COLORS.panel, borderRadius: 14, padding: 12, alignItems: 'center',
+    borderWidth: 2,
+  },
+  runeCellSelected: { backgroundColor: 'rgba(245,197,66,0.15)', borderColor: COLORS.action },
+  runeEmoji: { fontSize: 30 },
+  runeLevel: { color: COLORS.text, fontSize: 11, fontWeight: '800', marginTop: 4 },
   actionBtnDisabledAdv: { opacity: 0.4 },
 
   detailPortraitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 10, marginBottom: 20 },
