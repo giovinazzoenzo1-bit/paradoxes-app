@@ -39,6 +39,7 @@ export const CREATURE_ID_MIGRATIONS = {
   ombrelin: 'ombrillon',
   frimouss: 'glyphon',
   gemmion: 'fournax',
+  brisillon: 'aegisolar',
 };
 
 // Applique la migration à un id de créature — renvoie l'id tel quel s'il
@@ -89,11 +90,12 @@ export const CREATURES = [
     stages: [
     { name: 'Voltix', emoji: '🐹' }, { name: 'Voltix', emoji: '🐹' }, { name: 'Voltix', emoji: '🐹' },
   ]},
-  { id: 'brisillon', element: 'Air', rarity: 'rare', baseIncome: 0.4, combatType: 'attaquant',
-    skills: mkSkills([['Bourrasque', 9, 20], ['Lame de Vent', 17, 20], ['Tourbillon', 26, 20], ['Cyclone', 37, 20]]),
-    lore: "Brisillon n'a jamais posé une patte au sol de sa vie. Certains prétendent qu'il est né en plein vol.",
+  { id: 'aegisolar', element: 'Lumière', rarity: 'rare', baseIncome: 0.4, combatType: 'tank',
+    baseHp: 60, baseAttack: 5, baseClickSpeed: 1, baseEndurance: 100,
+    skills: mkSkills([['Frappe Rayonnante', 4, 10], ['Bouclier Prisme', 5, 15], ['Halo Réflecteur', 8, 25], ['Jugement Solaire', 12, 35]]),
+    lore: "Aegisolar est un imposant golem de marbre blanc infusé de pure lumière céleste. Forgé pour protéger les temples sacrés, il absorbe les attaques ennemies grâce à son lourd bouclier prismatique. On raconte que sa seule présence suffit à repousser les ténèbres les plus tenaces.",
     stages: [
-    { name: 'Brisillon', emoji: '🐦' }, { name: 'Tourbillan', emoji: '🦅' }, { name: 'Zéphyrion', emoji: '🕊️' },
+    { name: 'Aegisolar', emoji: '🛡️' }, { name: 'Aegisolar', emoji: '🛡️' }, { name: 'Aegisolar', emoji: '🛡️' },
   ]},
   { id: 'glyphon', element: 'Magie', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
     baseHp: 12, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
@@ -270,7 +272,7 @@ export const CREATURE_POWERS = {
   ventis: { name: 'Éclosion Généreuse', effectType: 'discount_next', effectValue: 0.2 },
   bouldog: { name: 'Fondation', effectType: 'coins_burst', effectValue: 8 },
   voltix: { name: 'Décharge', effectType: 'coins_burst', effectValue: 12 },
-  brisillon: { name: 'Bourrasque', effectType: 'passive_boost', effectValue: 2.5 },
+  aegisolar: { name: 'Bouclier Prisme', effectType: 'passive_boost', effectValue: 2.5 },
   glyphon: { name: 'Conservation', effectType: 'discount_next', effectValue: 0.25 },
   ombrillon: { name: 'Éclipse', effectType: 'coins_burst', effectValue: 25 },
   luxorbe: { name: 'Rayonnement', effectType: 'passive_boost', effectValue: 3 },
