@@ -38,6 +38,54 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventur
 - **Invoquer une créature** (gacha) : vit dans l'onglet **Collection**, pas dans Shop.
 - **Rituel** (bonus "pub" gratuit) : une bulle qui apparaît près de l'œuf (comme les pouvoirs de créature), pas un bouton ni une bannière.
 
+## Mode Aventure en PAYSAGE (02/09)
+
+Tout le mode Aventure bascule en orientation paysage.
+
+`expo-screen-orientation` était déjà installé, donc aucun rebuild natif
+n'a été nécessaire. L'appli est déclarée `portrait` dans `app.json` ; le
+verrouillage est posé à l'entrée d'`AdventureScreen` et **le portrait est
+remis dans le nettoyage de l'effet**.
+
+⚠️ Ce nettoyage est indispensable : sans lui, quitter l'Aventure par le
+bouton retour système laisserait le clicker et tout le reste de l'appli
+bloqués en paysage, sans autre issue qu'un redémarrage.
+
+### Écran principal
+
+- Les 3 créatures du deck sont **côte à côte**, à parts égales sur toute
+  la largeur, avec nom, rareté et niveau.
+- L'accès aux **Runes est passé en haut à droite** (même icône), à côté
+  du compteur de Griffes.
+- **L'ancienne barre du bas a disparu** : en paysage la hauteur est la
+  ressource rare, on ne la dépense pas en barre de navigation. Le bouton
+  Mode Combat vit maintenant sur la ligne du bas, à droite du conseil.
+
+### Profil de créature (façon Monster Legends)
+
+Deux colonnes, comme la référence fournie :
+
+- **Gauche** : portrait avec badge de rareté, puis **niveau et paliers
+  d'évolution juste en dessous**, puis les boutons Niveau et Évoluer avec
+  leur coût en Griffes. Les **Griffes sont affichées au-dessus**, dans le
+  bandeau.
+- **Droite** : statistiques (avec bonus de runes en couleur), runes
+  équipées, attaques, histoire.
+
+Les deux colonnes **défilent indépendamment** : en paysage la hauteur est
+très limitée, une zone de défilement unique aurait obligé à remonter tout
+en haut pour revoir le portrait.
+
+25 styles portrait devenus morts ont été supprimés.
+
+### Reste à adapter
+
+`ChapterMapScreen`, `RunesScreen`, `RuneFusionScreen` et les overlays
+gardent l'en-tête portrait. Ils restent fonctionnels en paysage (la carte
+des chapitres positionne ses nœuds en fraction de largeur, elle s'étire
+sans casser) mais leur mise en page n'exploite pas la largeur
+disponible — à retravailler.
+
 ## Défis de l'œuf — séquence de démarrage scriptée (02/09)
 
 Les **10 premiers cycles** ne sont PAS tirés au hasard : ils suivent une

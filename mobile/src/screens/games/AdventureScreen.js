@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
 import CombatScreen from './CombatScreen';
@@ -104,6 +105,21 @@ function makeRuneId() {
 
 
 export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot }) {
+  // Tout le mode Aventure se joue en PAYSAGE. L'appli entière est
+  // déclarée en portrait dans app.json ; on bascule donc à l'entrée et
+  // on REMET le portrait au démontage.
+  //
+  // Le nettoyage est indispensable et doit vivre dans le `return` de
+  // l'effet : sans lui, quitter l'Aventure par le bouton retour système
+  // laisserait le clicker et tout le reste de l'appli bloqués en
+  // paysage, sans aucun moyen d'en sortir autrement qu'en redémarrant.
+  useEffect(() => {
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+    return () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    };
+  }, []);
+
   const { trackEvent, trackMax } = useDaily();
   const [detailCreatureId, setDetailCreatureId] = useState(null);
   const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
@@ -389,37 +405,55 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
+      {/* En-tête paysage : retour à gauche, Griffes au centre, accès aux
+          Runes en HAUT À DROITE (même icône qu'avant, seulement
+          déplacée). L'ancienne barre du bas disparaît : en paysage la
+          hauteur est la ressource rare, on ne la gaspille pas en barre
+          de navigation. */}
+      <View style={styles.headerLand}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <Text style={styles.backText}>← Retour</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>🗺️ Aventure</Text>
+        <Text style={styles.titleLand}>🗺️ Aventure</Text>
+        <View style={styles.headerRight}>
+          <View style={styles.griffesPill}>
+            <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
+          </View>
+          <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
+            <Ionicons name="diamond" size={22} color={COLORS.neonCyan} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Les 3 créatures affichées ici sont le MÊME deck que celui utilisé
-          pour les bulles de pouvoir du clicker classique — pas de
-          sélection séparée à gérer, une seule source de vérité. Touche le
-          corps d'un emplacement rempli pour voir sa fiche, touche le
-          petit crayon (ou un emplacement vide) pour changer qui l'occupe. */}
-      <View style={styles.creatureRow}>
+      {/* Les 3 créatures du deck, côte à côte et occupant toute la
+          largeur. C'est le MÊME deck que celui du clicker — une seule
+          source de vérité, pas de sélection séparée. */}
+      <View style={styles.creatureRowLand}>
         {deck.map((id, i) => {
           const creature = id ? CREATURES.find((c) => c.id === id) : null;
           const own = id ? ownedMap[id] : null;
           const display = creature && own ? creature.stages[stageForLevel(own.level)] : null;
           return (
-            <View key={i} style={{ alignItems: 'center' }}>
+            <View key={i} style={styles.creatureCellLand}>
               <TouchableOpacity
-                style={[styles.creatureSlot, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
+                style={[styles.creatureSlotLand, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
                 onPress={() => (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i))}
+                activeOpacity={0.8}
               >
                 {display ? (
                   <>
-                    <Text style={styles.creatureEmoji}>{display.emoji}</Text>
-                    <Text style={styles.creatureName} numberOfLines={1}>{display.name}</Text>
-                    <Text style={[styles.creatureRarity, { color: RARITY_COLOR[creature.rarity] }]}>{RARITY_LABEL[creature.rarity]}</Text>
+                    <Text style={styles.creatureEmojiLand}>{display.emoji}</Text>
+                    <Text style={styles.creatureNameLand} numberOfLines={1}>{display.name}</Text>
+                    <Text style={[styles.creatureRarity, { color: RARITY_COLOR[creature.rarity] }]}>
+                      {RARITY_LABEL[creature.rarity]}
+                    </Text>
+                    <Text style={styles.creatureLevelLand}>Niveau {own.level}</Text>
                   </>
                 ) : (
-                  <Text style={styles.emptySlotEmoji}>🥚</Text>
+                  <>
+                    <Text style={styles.emptySlotEmojiLand}>🥚</Text>
+                    <Text style={styles.creatureNameLand}>Emplacement vide</Text>
+                  </>
                 )}
               </TouchableOpacity>
               {creature && (
@@ -450,24 +484,15 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         />
       )}
 
-      {hasEmptySlot && (
-        <Text style={styles.hint}>Touche un emplacement vide pour choisir une créature.</Text>
-      )}
-
-      {!hasEmptySlot && <Text style={styles.hint}>Touche une créature pour voir sa fiche, "Changer" pour la remplacer.</Text>}
-
-      <View style={{ flex: 1 }} />
-
-      {/* Barre du bas dédiée à l'Aventure — pour les futurs modes de jeu
-          qu'on ajoutera avec le temps. */}
-      <View style={styles.subBar}>
-        <TouchableOpacity style={styles.subBarItem} onPress={() => setChapterMapOpen(true)}>
-          <Ionicons name="map" size={24} color={COLORS.action} />
-          <Text style={styles.subBarLabel}>Mode Combat</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.subBarItem} onPress={() => setRunesOpen(true)}>
-          <Ionicons name="diamond" size={24} color={COLORS.neonCyan} />
-          <Text style={[styles.subBarLabel, { color: COLORS.neonCyan }]}>Runes</Text>
+      <View style={styles.bottomLand}>
+        <Text style={styles.hintLand}>
+          {hasEmptySlot
+            ? 'Touche un emplacement vide pour choisir une créature.'
+            : 'Touche une créature pour ouvrir son profil.'}
+        </Text>
+        <TouchableOpacity style={styles.combatBtnLand} onPress={() => setChapterMapOpen(true)}>
+          <Ionicons name="map" size={20} color="#0b0d16" />
+          <Text style={styles.combatBtnLandText}>Mode Combat</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -539,144 +564,147 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
 }
 
 
+// Profil de créature, en PAYSAGE et structuré comme la fiche de Monster
+// Legends fournie en référence :
+//   - colonne GAUCHE : portrait, puis niveau et paliers d'évolution
+//     juste en dessous ; les Griffes sont affichées au-dessus.
+//   - colonne DROITE : stats, runes, attaques, histoire — tout le reste,
+//     dans une zone défilante propre.
+// Les deux colonnes défilent indépendamment : en paysage la hauteur est
+// très limitée, une seule zone de défilement pour toute la fiche aurait
+// obligé à remonter en haut pour revoir le portrait.
 function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack }) {
   const [runePickerSlot, setRunePickerSlot] = useState(null); // index (0-2) ou null
 
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
-  const baseName = creature.stages[0].name; // nom de base, pour clarifier le lien avec l'histoire
+  const baseName = creature.stages[0].name;
   const evolutionTier = owned.evolutionTier || 0;
 
-  // Runes équipées sur CETTE créature (jusqu'à 3), dans l'ordre où elles
-  // ont été équipées — sert à la fois de liste d'affichage et de calcul
-  // des bonus réels.
   const equippedRunes = ownedRunes.filter((r) => r.equippedCreatureId === creature.id);
   const statsBase = combatStatsForCreatureTyped(creature, owned.level, evolutionTier, []);
   const stats = combatStatsForCreatureTyped(creature, owned.level, evolutionTier, equippedRunes);
-  // Delta affiché en couleur à côté de chaque stat concernée — vert pour
-  // les PV, rouge pour l'ATQ, doré pour l'Endurance (mêmes couleurs que
-  // les barres correspondantes ailleurs dans l'appli).
   const hpBonus = stats.hp - statsBase.hp;
   const atkBonus = stats.attack - statsBase.attack;
   const enduranceBonus = stats.endurance - statsBase.endurance;
 
+  const levelCost = levelUpCost(creature, owned.level);
+  const evoMaxed = evolutionTier >= 2;
+  const evoEligible = !evoMaxed && canEvolve(evolutionTier, owned.level);
+  const evoCost = evoMaxed ? null : evolutionCost(evolutionTier);
+  const nextEvoLevel = evoMaxed ? null : (evolutionTier === 0 ? 25 : 50);
+
   return (
     <>
-    <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 30 }}>
-      <View style={styles.header}>
+    <View style={styles.screen}>
+      {/* Bandeau supérieur : retour, nom, et les GRIFFES au-dessus de
+          tout le reste, comme demandé. */}
+      <View style={styles.headerLand}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <Text style={styles.backText}>← Retour</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>{display.name}</Text>
+        <Text style={styles.titleLand} numberOfLines={1}>{display.name}</Text>
+        <View style={styles.griffesPill}>
+          <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
+        </View>
       </View>
 
-      <View style={styles.detailPortraitRow}>
-        {/* Badge de rareté à GAUCHE du portrait, façon Monster Legends —
-            élément juste en dessous. */}
-        <View style={styles.rarityBadgeColumn}>
-          <View style={[styles.rarityBadge, { backgroundColor: RARITY_COLOR[creature.rarity] }]}>
-            <Text style={styles.rarityBadgeText}>{RARITY_BADGE_LETTER[creature.rarity]}</Text>
+      <View style={styles.profileRow}>
+        {/* ---------- COLONNE GAUCHE ---------- */}
+        <ScrollView style={styles.profileLeft} contentContainerStyle={{ paddingBottom: 16 }}>
+          <View style={[styles.portraitBox, { borderColor: RARITY_COLOR[creature.rarity] }]}>
+            <View style={[styles.rarityBadge, { backgroundColor: RARITY_COLOR[creature.rarity] }]}>
+              <Text style={styles.rarityBadgeText}>{RARITY_BADGE_LETTER[creature.rarity]}</Text>
+            </View>
+            <Text style={styles.portraitEmoji}>{display.emoji}</Text>
+            <Text style={styles.portraitElement}>{creature.element} · {creature.combatType}</Text>
           </View>
-          <Text style={styles.elementLabel}>{creature.element}</Text>
-        </View>
 
-        <View style={styles.detailPortrait}>
-          <Text style={styles.detailEmoji}>{display.emoji}</Text>
-          <Text style={styles.detailRarity}>{RARITY_LABEL[creature.rarity]} · {creature.combatType}</Text>
-          <Text style={styles.detailLevel}>Niveau {owned.level}</Text>
-        </View>
-      </View>
-
-      <View style={styles.statsCard}>
-        <View style={styles.statRow}>
-          <Ionicons name="heart" size={18} color={COLORS.good} />
-          <Text style={styles.statLabel}>PV</Text>
-          <Text style={styles.statValue}>
-            {stats.hp}{hpBonus > 0 && <Text style={styles.statBonusGood}> (+{hpBonus} PV)</Text>}
-          </Text>
-        </View>
-        <View style={styles.statRow}>
-          <Ionicons name="flash" size={18} color={COLORS.neonPink} />
-          <Text style={styles.statLabel}>ATQ</Text>
-          <Text style={styles.statValue}>
-            {stats.attack}{atkBonus > 0 && <Text style={styles.statBonusBad}> (+{atkBonus} ATQ)</Text>}
-          </Text>
-        </View>
-        <View style={styles.statRow}>
-          <Ionicons name="finger-print" size={18} color={COLORS.neonCyan} />
-          <Text style={styles.statLabel}>Vitesse de clic</Text>
-          <Text style={styles.statValue}>{stats.clickSpeed}</Text>
-        </View>
-        <View style={styles.statRow}>
-          <Ionicons name="battery-charging" size={18} color={COLORS.action} />
-          <Text style={styles.statLabel}>Endurance</Text>
-          <Text style={styles.statValue}>
-            {stats.endurance}{enduranceBonus > 0 && <Text style={styles.statBonusAction}> (+{enduranceBonus})</Text>}
-          </Text>
-        </View>
-        {stats.dmgMultBonus > 0 && (
-          <View style={styles.statRow}>
-            <Ionicons name="flame" size={18} color={COLORS.neonCyan} />
-            <Text style={styles.statLabel}>Multiplicateur max</Text>
-            <Text style={styles.statValue}>
-              x{(2.5 + stats.dmgMultBonus).toFixed(2)}<Text style={styles.statBonusCyan}> (+{stats.dmgMultBonus.toFixed(2)})</Text>
+          {/* Niveau et paliers, JUSTE EN DESSOUS du portrait. */}
+          <View style={styles.levelBlock}>
+            <Text style={styles.levelBlockLevel}>Niveau {owned.level}</Text>
+            <Text style={styles.levelBlockTier}>
+              {'★'.repeat(evolutionTier + 1)}{'☆'.repeat(2 - evolutionTier)}
             </Text>
+            <Text style={styles.levelBlockRarity}>{RARITY_LABEL[creature.rarity]}</Text>
           </View>
-        )}
-      </View>
 
-      {/* 3 cases de rune — grisée si vide (tap = ouvre le sélecteur),
-          remplie sinon (tap = propose de la retirer). */}
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>💎 Runes</Text>
-        <View style={styles.runeSlotRow}>
-          {[0, 1, 2].map((slotIdx) => {
-            const rune = equippedRunes[slotIdx];
-            if (rune) {
-              const def = RUNE_TYPES[rune.type];
-              return (
-                <TouchableOpacity
-                  key={slotIdx}
-                  style={[styles.runeSlot, { borderColor: def.color, backgroundColor: 'rgba(255,255,255,0.06)' }]}
-                  onPress={() => onUnequipRune(rune.id)}
-                >
-                  <Text style={styles.runeSlotEmoji}>{def.icon}</Text>
-                  <Text style={styles.runeSlotLevel}>Niv. {rune.level}</Text>
-                </TouchableOpacity>
-              );
-            }
-            return (
-              <TouchableOpacity key={slotIdx} style={styles.runeSlotEmpty} onPress={() => setRunePickerSlot(slotIdx)}>
-                <Ionicons name="add" size={22} color={COLORS.muted} />
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <Text style={styles.speciesNote}>Touche une case pleine pour retirer sa rune.</Text>
-      </View>
+          <TouchableOpacity
+            style={[styles.profileBtn, griffes < levelCost && styles.actionBtnDisabledAdv]}
+            onPress={onLevelUp}
+            disabled={griffes < levelCost}
+          >
+            <Text style={styles.profileBtnText}>Niveau {owned.level + 1}</Text>
+            <Text style={styles.profileBtnCost}>{levelCost} 🐾</Text>
+          </TouchableOpacity>
 
-      <LevelUpCard creature={creature} ownedLevel={owned.level} griffes={griffes} onLevelUp={onLevelUp} />
+          {evoMaxed ? (
+            <Text style={styles.profileNote}>Palier maximum atteint.</Text>
+          ) : evoEligible ? (
+            <TouchableOpacity
+              style={[styles.profileBtnGold, griffes < evoCost && styles.actionBtnDisabledAdv]}
+              onPress={onEvolve}
+              disabled={griffes < evoCost}
+            >
+              <Text style={styles.profileBtnText}>🌟 Évoluer</Text>
+              <Text style={styles.profileBtnCost}>{evoCost} 🐾</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.profileNote}>Niveau {nextEvoLevel} requis pour le palier suivant.</Text>
+          )}
+        </ScrollView>
 
-      <EvolutionCard evolutionTier={evolutionTier} ownedLevel={owned.level} griffes={griffes} onEvolve={onEvolve} />
-
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>⚔️ Attaques</Text>
-        {creature.skills.map((skill) => (
-          <View key={skill.id} style={styles.skillRow}>
-            <Text style={styles.skillName}>{skill.name}</Text>
-            <Text style={styles.skillStats}>{skill.damage} dégâts · {skill.enduranceCost} endurance</Text>
+        {/* ---------- COLONNE DROITE ---------- */}
+        <ScrollView style={styles.profileRight} contentContainerStyle={{ paddingBottom: 20 }}>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>📊 Statistiques</Text>
+            <StatLine label="❤️ Vie" value={stats.hp} bonus={hpBonus} color={COLORS.good} />
+            <StatLine label="⚔️ Attaque" value={stats.attack} bonus={atkBonus} color={COLORS.bad} />
+            <StatLine label="⚡ Endurance" value={stats.endurance} bonus={enduranceBonus} color={COLORS.action} />
           </View>
-        ))}
-      </View>
 
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>📖 Histoire</Text>
-        {display.name !== baseName && (
-          <Text style={styles.speciesNote}>Forme de base : {baseName}</Text>
-        )}
-        <Text style={styles.sectionBody}>{creature.lore}</Text>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>🪬 Runes</Text>
+            <View style={styles.runeSlotRow}>
+              {[0, 1, 2].map((i) => {
+                const rune = equippedRunes[i];
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.runeSlot, rune && styles.runeSlotFilled]}
+                    onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(i))}
+                  >
+                    <Text style={styles.runeSlotText}>{rune ? RUNE_TYPES[rune.type].emoji : '＋'}</Text>
+                    {rune && <Text style={styles.runeSlotLevel}>nv {rune.level}</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={styles.speciesNote}>Touche une case pleine pour retirer sa rune.</Text>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>⚔️ Attaques</Text>
+            {creature.skills.map((skill) => (
+              <View key={skill.id} style={styles.skillRow}>
+                <Text style={styles.skillName}>{skill.name}</Text>
+                <Text style={styles.skillStats}>{skill.damage} dégâts · {skill.enduranceCost} endurance</Text>
+              </View>
+            ))}
+          </View>
+
+          {creature.lore && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>📖 Histoire</Text>
+              {display.name !== baseName && (
+                <Text style={styles.speciesNote}>Forme de base : {baseName}</Text>
+              )}
+              <Text style={styles.loreText}>{creature.lore}</Text>
+            </View>
+          )}
+        </ScrollView>
       </View>
-    </ScrollView>
+    </View>
 
     {runePickerSlot !== null && (
       <RunePickerOverlay
@@ -692,18 +720,19 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
   );
 }
 
-// Carte des chapitres/niveaux, façon Monster Legends (capture de
-// référence fournie) — sentier en zigzag plutôt qu'une vraie courbe SVG
-// (plus simple et robuste en React Native, même effet de progression
-// visuelle). Structure uniquement à cette étape : taper un niveau montre
-// un aperçu de l'adversaire, mais le vrai combat reste à coder (étape 5).
-// Tracé de la carte des chapitres (30/08) — positions calculées (pas de
-// mise en page flexbox) pour pouvoir dessiner des tracés COURBES entre
-// les niveaux plutôt que des lignes droites, comme demandé ("belles
-// formes logiques, arrondies, comme sur d'autres jeux vidéo").
-const LEVEL_NODE_SIZE = 46;
-const ROW_HEIGHT = 92; // espace vertical entre deux niveaux
-const WAVE_AMPLITUDE = 0.30; // amplitude horizontale du serpentin, en fraction de la largeur
+// Une ligne de statistique avec son bonus de runes en couleur.
+function StatLine({ label, value, bonus, color }) {
+  return (
+    <View style={styles.statLine}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>
+        {value}
+        {bonus > 0 && <Text style={{ color }}> (+{bonus})</Text>}
+      </Text>
+    </View>
+  );
+}
+
 
 // Position (fraction 0-1 de la largeur, y en px depuis le haut du
 // chapitre) du niveau d'index `i` (0-9) dans son chapitre — une onde
@@ -1160,25 +1189,11 @@ const styles = StyleSheet.create({
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
 
-  creatureRow: { flexDirection: 'row', justifyContent: 'center', gap: 14, marginTop: 30 },
-  creatureSlot: {
-    width: 100, height: 130, borderRadius: 18, backgroundColor: COLORS.panel,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border, padding: 8,
-  },
-  creatureEmoji: { fontSize: 42 },
-  creatureName: { color: COLORS.text, fontSize: 11, fontWeight: '800', marginTop: 6, textAlign: 'center' },
   creatureRarity: { fontSize: 9, fontWeight: '700', marginTop: 2 },
-  emptySlotEmoji: { fontSize: 36, opacity: 0.3 },
   editSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 6, paddingVertical: 3, paddingHorizontal: 8, backgroundColor: 'rgba(245,197,66,0.1)', borderRadius: 8 },
   editSlotBtnText: { color: COLORS.action, fontSize: 9, fontWeight: '700' },
 
-  hint: { color: COLORS.muted, fontSize: 12, textAlign: 'center', marginTop: 18, paddingHorizontal: 20 },
 
-  subBar: {
-    flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, marginTop: 10,
-  },
-  subBarItem: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  subBarLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 4 },
 
   overlay: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)',
@@ -1235,51 +1250,110 @@ const styles = StyleSheet.create({
     width: 84, backgroundColor: COLORS.panel, borderRadius: 14, padding: 12, alignItems: 'center',
     borderWidth: 2,
   },
-  runeCellSelected: { backgroundColor: 'rgba(245,197,66,0.15)', borderColor: COLORS.action },
   runeEmoji: { fontSize: 30 },
   runeLevel: { color: COLORS.text, fontSize: 11, fontWeight: '800', marginTop: 4 },
   actionBtnDisabledAdv: { opacity: 0.4 },
 
-  detailPortraitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 10, marginBottom: 20 },
-  rarityBadgeColumn: { alignItems: 'center' },
   rarityBadge: {
     width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
     shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
   },
   rarityBadgeText: { color: '#fff', fontSize: 16, fontWeight: '900' },
-  elementLabel: { color: COLORS.muted, fontSize: 11, fontWeight: '700', marginTop: 6, textAlign: 'center' },
 
-  detailPortrait: { alignItems: 'center' },
-  detailEmoji: { fontSize: 90 },
-  detailRarity: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 8, textTransform: 'capitalize' },
-  detailLevel: { color: COLORS.text, fontSize: 14, fontWeight: '700', marginTop: 4 },
 
-  statsCard: {
-    backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, marginBottom: 14,
+  // ---------- Mise en page PAYSAGE ----------
+  // En paysage la HAUTEUR est la ressource rare : marges et polices sont
+  // volontairement plus serrées qu'en portrait, et la navigation passe
+  // dans l'en-tête plutôt que dans une barre du bas.
+  headerLand: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6,
+  },
+  titleLand: { color: COLORS.text, fontSize: 18, fontWeight: '900', flex: 1, textAlign: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  griffesPill: {
+    backgroundColor: COLORS.panel, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5,
     borderWidth: 1, borderColor: COLORS.border,
   },
-  statRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  griffesPillText: { color: COLORS.action, fontSize: 13, fontWeight: '900' },
+  runesTopBtn: {
+    width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.neonCyan,
+  },
+
+  // Les 3 créatures occupent toute la largeur, à parts égales.
+  creatureRowLand: { flexDirection: 'row', paddingHorizontal: 12, gap: 10, flex: 1 },
+  creatureCellLand: { flex: 1, alignItems: 'center' },
+  creatureSlotLand: {
+    width: '100%', flex: 1, backgroundColor: COLORS.panel, borderRadius: 16,
+    borderWidth: 2, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  creatureEmojiLand: { fontSize: 46 },
+  creatureNameLand: { color: COLORS.text, fontSize: 12, fontWeight: '800', marginTop: 4 },
+  creatureLevelLand: { color: COLORS.muted, fontSize: 11, fontWeight: '700', marginTop: 2 },
+  emptySlotEmojiLand: { fontSize: 40, opacity: 0.35 },
+  bottomLand: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 8, gap: 12,
+  },
+  hintLand: { color: COLORS.muted, fontSize: 11, flex: 1 },
+  combatBtnLand: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.action, borderRadius: 22, paddingHorizontal: 20, paddingVertical: 10,
+  },
+  combatBtnLandText: { color: '#0b0d16', fontSize: 14, fontWeight: '900' },
+
+  // ---------- Profil de créature (2 colonnes) ----------
+  profileRow: { flex: 1, flexDirection: 'row', paddingHorizontal: 12, gap: 12 },
+  profileLeft: { width: '34%' },
+  profileRight: { flex: 1 },
+  portraitBox: {
+    backgroundColor: COLORS.panel, borderRadius: 16, borderWidth: 2,
+    alignItems: 'center', paddingVertical: 14, position: 'relative',
+  },
+  portraitEmoji: { fontSize: 72 },
+  portraitElement: { color: COLORS.muted, fontSize: 11, fontWeight: '700', marginTop: 4 },
+  levelBlock: {
+    backgroundColor: COLORS.panelLight, borderRadius: 12, paddingVertical: 8,
+    alignItems: 'center', marginTop: 8,
+  },
+  levelBlockLevel: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
+  levelBlockTier: { color: COLORS.action, fontSize: 15, marginTop: 2 },
+  levelBlockRarity: { color: COLORS.muted, fontSize: 11, fontWeight: '700', marginTop: 2 },
+  profileBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: COLORS.panelLight, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+    marginTop: 8, borderWidth: 1, borderColor: COLORS.border,
+  },
+  profileBtnGold: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: 'rgba(246,195,67,0.14)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+    marginTop: 8, borderWidth: 1, borderColor: COLORS.action,
+  },
+  profileBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
+  profileBtnCost: { color: COLORS.action, fontSize: 12, fontWeight: '900' },
+  profileNote: { color: COLORS.muted, fontSize: 11, fontStyle: 'italic', marginTop: 8, textAlign: 'center' },
+  statLine: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 5,
+  },
+  runeSlotFilled: { borderColor: COLORS.neonCyan },
+  runeSlotText: { fontSize: 22 },
+  loreText: { color: COLORS.muted, fontSize: 12, lineHeight: 18 },
+
   statLabel: { color: COLORS.muted, fontSize: 13, fontWeight: '700', flex: 1 },
   statValue: { color: COLORS.text, fontSize: 16, fontWeight: '900' },
   // Delta de bonus affiché à côté de la stat concernée — couleur liée au
   // TYPE de rune (demande explicite : vert pour PV, rouge pour ATQ).
-  statBonusGood: { color: COLORS.good, fontSize: 13, fontWeight: '800' },
-  statBonusBad: { color: '#FF5252', fontSize: 13, fontWeight: '800' },
-  statBonusAction: { color: COLORS.action, fontSize: 13, fontWeight: '800' },
-  statBonusCyan: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
 
   runeSlotRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 },
   runeSlot: {
     width: 66, height: 66, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2,
   },
-  runeSlotEmoji: { fontSize: 26 },
   runeSlotLevel: { color: COLORS.text, fontSize: 9, fontWeight: '800', marginTop: 2 },
-  runeSlotEmpty: {
-    width: 66, height: 66, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: COLORS.border, borderStyle: 'dashed', backgroundColor: 'rgba(255,255,255,0.02)',
-  },
   fusionModeBtn: {
     borderRadius: 14, paddingVertical: 10, alignItems: 'center', marginTop: 10,
     borderWidth: 1.5, borderColor: COLORS.neonCyan, backgroundColor: 'rgba(62,198,240,0.08)',
