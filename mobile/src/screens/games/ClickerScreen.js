@@ -2445,10 +2445,10 @@ const styles = StyleSheet.create({
   // justifyContent center : le groupe deck + oeuf + textes est centre
   // verticalement dans l'espace disponible, au lieu d'etre plaque en
   // haut avec l'oeuf qui derive vers le bas.
-  tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  tapArea: { flex: 1, alignItems: 'center', width: '100%' },
 
-  tapZone: { width: '100%', height: 300, position: 'relative' },
-  tapButtonWrap: { alignItems: 'center', justifyContent: 'center' },
+  tapZone: { width: '100%', flex: 1, position: 'relative' },
+  tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Plus de cercle : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint, le cercle faisait
   // doublon et rognait visuellement l'oeuf.
