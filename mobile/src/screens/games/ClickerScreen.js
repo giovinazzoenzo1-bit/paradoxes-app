@@ -4,7 +4,7 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet, Animated, FlatList, Alert, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1407,8 +1407,6 @@ export default function ClickerScreen({ onBack }) {
         colors={BG_GRADIENT}
         style={[StyleSheet.absoluteFillObject, { pointerEvents: 'none' }]}
       />
-      <View style={styles.screenFrame} />
-
       <View style={styles.header}>
         {onBack && (
           <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -1511,8 +1509,7 @@ export default function ClickerScreen({ onBack }) {
                   L'inverse — animer la vue qui reçoit les taps — décalait
                   la surface tactile de ±7px pendant la secousse et
                   laissait des bandes mortes autour de l'œuf. */}
-              <TouchableOpacity
-                activeOpacity={1}
+              <Pressable
                 onPress={handleTap}
                 style={[StyleSheet.absoluteFillObject, styles.tapButtonWrap]}
               >
@@ -1554,7 +1551,7 @@ export default function ClickerScreen({ onBack }) {
                     )}
                   </Animated.View>
                 </View>
-              </TouchableOpacity>
+              </Pressable>
               {popups.map((p) => (
                 <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
                   {p.text}
@@ -2421,16 +2418,6 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
-  // Cadre cyan lumineux le long des bords de l'écran, comme sur la
-  // maquette. Purement décoratif, d'où le pointerEvents none côté JSX.
-  screenFrame: {
-    position: 'absolute', left: 6, right: 6, top: 6, bottom: 6,
-    borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.neonCyan, opacity: 0.35,
-    // DANS le style, pas en prop : la prop `pointerEvents` est dépréciée
-    // et ignorée sous la New Architecture (RN 0.86 / SDK 57). En prop,
-    // ce cadre couvrait tout l'écran et bloquait chaque tap.
-    pointerEvents: 'none',
-  },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   backBtn: { paddingVertical: 6, paddingRight: 12 },
