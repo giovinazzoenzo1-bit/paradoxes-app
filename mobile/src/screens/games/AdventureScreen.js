@@ -564,21 +564,25 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
 }
 
 
-// Profil de créature, en PAYSAGE et structuré comme la fiche de Monster
-// Legends fournie en référence :
-//   - colonne GAUCHE : portrait, puis niveau et paliers d'évolution
-//     juste en dessous ; les Griffes sont affichées au-dessus.
-//   - colonne DROITE : stats, runes, attaques, histoire — tout le reste,
-//     dans une zone défilante propre.
-// Les deux colonnes défilent indépendamment : en paysage la hauteur est
-// très limitée, une seule zone de défilement pour toute la fiche aurait
-// obligé à remonter en haut pour revoir le portrait.
+// Profil de créature — mise en page calquée sur la fiche Monster Legends
+// fournie en référence, et surtout : TOUT TIENT À L'ÉCRAN, sans aucun
+// défilement.
+//
+// C'est la contrainte structurante. Elle impose du flex pur (aucune
+// ScrollView), des hauteurs qui se partagent l'espace disponible plutôt
+// que des marges fixes, et des textes bornés par `numberOfLines` — une
+// description longue doit se tronquer, jamais pousser le reste hors de
+// l'écran.
+//
+//   GAUCHE (44%) : portrait, puis étoiles / niveau / barre, puis les
+//                  deux boutons d'action.
+//   DROITE (56%) : stats et runes côte à côte, attribut + habitat,
+//                  description, le tout dans un panneau.
 function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack }) {
-  const [runePickerSlot, setRunePickerSlot] = useState(null); // index (0-2) ou null
+  const [runePickerSlot, setRunePickerSlot] = useState(null);
 
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
-  const baseName = creature.stages[0].name;
   const evolutionTier = owned.evolutionTier || 0;
 
   const equippedRunes = ownedRunes.filter((r) => r.equippedCreatureId === creature.id);
@@ -593,116 +597,133 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
   const evoEligible = !evoMaxed && canEvolve(evolutionTier, owned.level);
   const evoCost = evoMaxed ? null : evolutionCost(evolutionTier);
   const nextEvoLevel = evoMaxed ? null : (evolutionTier === 0 ? 25 : 50);
+  // Barre de niveau : progression vers le palier d'évolution suivant,
+  // c'est le seul jalon qui donne du sens au niveau actuel.
+  const levelSpanFrom = evolutionTier === 0 ? 1 : 25;
+  const levelSpanTo = nextEvoLevel || owned.level;
+  const levelRatio = evoMaxed
+    ? 1
+    : Math.max(0, Math.min(1, (owned.level - levelSpanFrom) / Math.max(1, levelSpanTo - levelSpanFrom)));
 
   return (
     <>
-    <View style={styles.screen}>
-      {/* Bandeau supérieur : retour, nom, et les GRIFFES au-dessus de
-          tout le reste, comme demandé. */}
-      <View style={styles.headerLand}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
+    <View style={styles.profileScreen}>
+      <View style={styles.profileTopBar}>
+        <TouchableOpacity onPress={onBack} style={styles.profileBackBtn}>
+          <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.titleLand} numberOfLines={1}>{display.name}</Text>
         <View style={styles.griffesPill}>
           <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
         </View>
       </View>
 
-      <View style={styles.profileRow}>
-        {/* ---------- COLONNE GAUCHE ---------- */}
-        <ScrollView style={styles.profileLeft} contentContainerStyle={{ paddingBottom: 16 }}>
-          <View style={[styles.portraitBox, { borderColor: RARITY_COLOR[creature.rarity] }]}>
-            <View style={[styles.rarityBadge, { backgroundColor: RARITY_COLOR[creature.rarity] }]}>
-              <Text style={styles.rarityBadgeText}>{RARITY_BADGE_LETTER[creature.rarity]}</Text>
-            </View>
-            <Text style={styles.portraitEmoji}>{display.emoji}</Text>
-            <Text style={styles.portraitElement}>{creature.element} · {creature.combatType}</Text>
+      <View style={styles.profileBody}>
+        {/* ---------- GAUCHE ---------- */}
+        <View style={styles.mlLeft}>
+          <View style={styles.mlPortraitZone}>
+            <Text style={styles.mlPortraitEmoji} numberOfLines={1}>{display.emoji}</Text>
           </View>
 
-          {/* Niveau et paliers, JUSTE EN DESSOUS du portrait. */}
-          <View style={styles.levelBlock}>
-            <Text style={styles.levelBlockLevel}>Niveau {owned.level}</Text>
-            <Text style={styles.levelBlockTier}>
+          <Text style={styles.mlName} numberOfLines={1}>{display.name}</Text>
+
+          <View style={styles.mlStars}>
+            <Text style={styles.mlStarsText}>
               {'★'.repeat(evolutionTier + 1)}{'☆'.repeat(2 - evolutionTier)}
             </Text>
-            <Text style={styles.levelBlockRarity}>{RARITY_LABEL[creature.rarity]}</Text>
+            <Text style={styles.mlLevelText}>
+              Niveau {owned.level}{!evoMaxed && `/${levelSpanTo}`}
+            </Text>
+          </View>
+
+          <View style={styles.mlLevelBarTrack}>
+            <View style={[styles.mlLevelBarFill, { width: `${Math.round(levelRatio * 100)}%` }]} />
           </View>
 
           <TouchableOpacity
-            style={[styles.profileBtn, griffes < levelCost && styles.actionBtnDisabledAdv]}
+            style={[styles.mlMainBtn, griffes < levelCost && styles.actionBtnDisabledAdv]}
             onPress={onLevelUp}
             disabled={griffes < levelCost}
           >
-            <Text style={styles.profileBtnText}>Niveau {owned.level + 1}</Text>
-            <Text style={styles.profileBtnCost}>{levelCost} 🐾</Text>
+            <Text style={styles.mlMainBtnText}>NIVEAU {owned.level + 1} · {levelCost} 🐾</Text>
           </TouchableOpacity>
 
           {evoMaxed ? (
-            <Text style={styles.profileNote}>Palier maximum atteint.</Text>
+            <Text style={styles.mlSubNote}>Palier maximum atteint</Text>
           ) : evoEligible ? (
             <TouchableOpacity
-              style={[styles.profileBtnGold, griffes < evoCost && styles.actionBtnDisabledAdv]}
+              style={[styles.mlEvoBtn, griffes < evoCost && styles.actionBtnDisabledAdv]}
               onPress={onEvolve}
               disabled={griffes < evoCost}
             >
-              <Text style={styles.profileBtnText}>🌟 Évoluer</Text>
-              <Text style={styles.profileBtnCost}>{evoCost} 🐾</Text>
+              <Text style={styles.mlEvoBtnText}>🌟 ÉVOLUER · {evoCost} 🐾</Text>
             </TouchableOpacity>
           ) : (
-            <Text style={styles.profileNote}>Niveau {nextEvoLevel} requis pour le palier suivant.</Text>
+            <Text style={styles.mlSubNote}>Niveau {nextEvoLevel} pour le palier suivant</Text>
           )}
-        </ScrollView>
+        </View>
 
-        {/* ---------- COLONNE DROITE ---------- */}
-        <ScrollView style={styles.profileRight} contentContainerStyle={{ paddingBottom: 20 }}>
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>📊 Statistiques</Text>
-            <StatLine label="❤️ Vie" value={stats.hp} bonus={hpBonus} color={COLORS.good} />
-            <StatLine label="⚔️ Attaque" value={stats.attack} bonus={atkBonus} color={COLORS.bad} />
-            <StatLine label="⚡ Endurance" value={stats.endurance} bonus={enduranceBonus} color={COLORS.action} />
-          </View>
-
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>🪬 Runes</Text>
-            <View style={styles.runeSlotRow}>
-              {[0, 1, 2].map((i) => {
-                const rune = equippedRunes[i];
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.runeSlot, rune && styles.runeSlotFilled]}
-                    onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(i))}
-                  >
-                    <Text style={styles.runeSlotText}>{rune ? RUNE_TYPES[rune.type].emoji : '＋'}</Text>
-                    {rune && <Text style={styles.runeSlotLevel}>nv {rune.level}</Text>}
-                  </TouchableOpacity>
-                );
-              })}
+        {/* ---------- DROITE ---------- */}
+        <View style={styles.mlRight}>
+          <View style={styles.mlRow}>
+            <View style={styles.mlStatsBox}>
+              <MlStat icon="⚔️" label="ATTAQUE" value={stats.attack} bonus={atkBonus} color={COLORS.bad} />
+              <MlStat icon="❤️" label="VIE" value={stats.hp} bonus={hpBonus} color={COLORS.good} />
+              <MlStat icon="⚡" label="ENDURANCE" value={stats.endurance} bonus={enduranceBonus} color={COLORS.action} />
             </View>
-            <Text style={styles.speciesNote}>Touche une case pleine pour retirer sa rune.</Text>
-          </View>
 
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>⚔️ Attaques</Text>
-            {creature.skills.map((skill) => (
-              <View key={skill.id} style={styles.skillRow}>
-                <Text style={styles.skillName}>{skill.name}</Text>
-                <Text style={styles.skillStats}>{skill.damage} dégâts · {skill.enduranceCost} endurance</Text>
+            <View style={styles.mlRunesBox}>
+              <Text style={styles.mlBoxTitle}>RUNES</Text>
+              <View style={styles.mlRuneRow}>
+                {[0, 1, 2].map((i) => {
+                  const rune = equippedRunes[i];
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[styles.mlRuneSlot, rune && styles.mlRuneSlotFilled]}
+                      onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(i))}
+                    >
+                      <Text style={styles.mlRuneEmoji}>{rune ? RUNE_TYPES[rune.type].emoji : '＋'}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            ))}
+            </View>
           </View>
 
-          {creature.lore && (
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>📖 Histoire</Text>
-              {display.name !== baseName && (
-                <Text style={styles.speciesNote}>Forme de base : {baseName}</Text>
-              )}
-              <Text style={styles.loreText}>{creature.lore}</Text>
+          <View style={styles.mlRow}>
+            <View style={styles.mlAttrBox}>
+              <Text style={styles.mlBoxTitle}>ATTRIBUT</Text>
+              <View style={styles.mlAttrRow}>
+                <View style={[styles.mlAttrChip, { borderColor: RARITY_COLOR[creature.rarity] }]}>
+                  <Text style={[styles.mlAttrChipText, { color: RARITY_COLOR[creature.rarity] }]}>
+                    {RARITY_BADGE_LETTER[creature.rarity]}
+                  </Text>
+                </View>
+                <View style={styles.mlAttrChip}>
+                  <Text style={styles.mlAttrChipText}>{creature.element}</Text>
+                </View>
+                <View style={styles.mlAttrChip}>
+                  <Text style={styles.mlAttrChipText}>{creature.combatType}</Text>
+                </View>
+              </View>
             </View>
-          )}
-        </ScrollView>
+
+            <View style={styles.mlSkillsBox}>
+              <Text style={styles.mlBoxTitle}>ATTAQUES</Text>
+              {creature.skills.slice(0, 2).map((skill) => (
+                <Text key={skill.id} style={styles.mlSkillLine} numberOfLines={1}>
+                  {skill.name} · {skill.damage} dgt
+                </Text>
+              ))}
+            </View>
+          </View>
+
+          {/* Description bornée : elle se tronque au lieu de pousser le
+              reste de la fiche hors de l'écran. */}
+          <View style={styles.mlLoreBox}>
+            <Text style={styles.mlLoreText} numberOfLines={3}>{creature.lore}</Text>
+          </View>
+        </View>
       </View>
     </View>
 
@@ -720,18 +741,19 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
   );
 }
 
-// Une ligne de statistique avec son bonus de runes en couleur.
-function StatLine({ label, value, bonus, color }) {
+// Ligne de statistique compacte, façon encadré Monster Legends.
+function MlStat({ icon, label, value, bonus, color }) {
   return (
-    <View style={styles.statLine}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>
-        {value}
-        {bonus > 0 && <Text style={{ color }}> (+{bonus})</Text>}
+    <View style={styles.mlStatLine}>
+      <Text style={styles.mlStatIcon}>{icon}</Text>
+      <Text style={styles.mlStatLabel} numberOfLines={1}>{label}</Text>
+      <Text style={styles.mlStatValue} numberOfLines={1}>
+        {value}{bonus > 0 && <Text style={{ color }}> +{bonus}</Text>}
       </Text>
     </View>
   );
 }
+
 
 
 // Tracé de la carte des chapitres (30/08) — positions calculées (pas de
@@ -1266,12 +1288,6 @@ const styles = StyleSheet.create({
   runeLevel: { color: COLORS.text, fontSize: 11, fontWeight: '800', marginTop: 4 },
   actionBtnDisabledAdv: { opacity: 0.4 },
 
-  rarityBadge: {
-    width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
-    shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
-  },
-  rarityBadgeText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 
 
   // ---------- Mise en page PAYSAGE ----------
@@ -1318,54 +1334,10 @@ const styles = StyleSheet.create({
   combatBtnLandText: { color: '#0b0d16', fontSize: 14, fontWeight: '900' },
 
   // ---------- Profil de créature (2 colonnes) ----------
-  profileRow: { flex: 1, flexDirection: 'row', paddingHorizontal: 12, gap: 12 },
-  profileLeft: { width: '34%' },
-  profileRight: { flex: 1 },
-  portraitBox: {
-    backgroundColor: COLORS.panel, borderRadius: 16, borderWidth: 2,
-    alignItems: 'center', paddingVertical: 14, position: 'relative',
-  },
-  portraitEmoji: { fontSize: 72 },
-  portraitElement: { color: COLORS.muted, fontSize: 11, fontWeight: '700', marginTop: 4 },
-  levelBlock: {
-    backgroundColor: COLORS.panelLight, borderRadius: 12, paddingVertical: 8,
-    alignItems: 'center', marginTop: 8,
-  },
-  levelBlockLevel: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
-  levelBlockTier: { color: COLORS.action, fontSize: 15, marginTop: 2 },
-  levelBlockRarity: { color: COLORS.muted, fontSize: 11, fontWeight: '700', marginTop: 2 },
-  profileBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: COLORS.panelLight, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
-    marginTop: 8, borderWidth: 1, borderColor: COLORS.border,
-  },
-  profileBtnGold: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: 'rgba(246,195,67,0.14)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
-    marginTop: 8, borderWidth: 1, borderColor: COLORS.action,
-  },
-  profileBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
-  profileBtnCost: { color: COLORS.action, fontSize: 12, fontWeight: '900' },
-  profileNote: { color: COLORS.muted, fontSize: 11, fontStyle: 'italic', marginTop: 8, textAlign: 'center' },
-  statLine: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 5,
-  },
-  runeSlotFilled: { borderColor: COLORS.neonCyan },
-  runeSlotText: { fontSize: 22 },
-  loreText: { color: COLORS.muted, fontSize: 12, lineHeight: 18 },
 
-  statLabel: { color: COLORS.muted, fontSize: 13, fontWeight: '700', flex: 1 },
-  statValue: { color: COLORS.text, fontSize: 16, fontWeight: '900' },
   // Delta de bonus affiché à côté de la stat concernée — couleur liée au
   // TYPE de rune (demande explicite : vert pour PV, rouge pour ATQ).
 
-  runeSlotRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 },
-  runeSlot: {
-    width: 66, height: 66, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2,
-  },
-  runeSlotLevel: { color: COLORS.text, fontSize: 9, fontWeight: '800', marginTop: 2 },
   fusionModeBtn: {
     borderRadius: 14, paddingVertical: 10, alignItems: 'center', marginTop: 10,
     borderWidth: 1.5, borderColor: COLORS.neonCyan, backgroundColor: 'rgba(62,198,240,0.08)',
@@ -1387,6 +1359,95 @@ const styles = StyleSheet.create({
   fusionBtnText: { color: '#241a00', fontSize: 11, fontWeight: '800' },
   fusionBtnTextDisabled: { color: COLORS.muted },
 
+  // ---------- Profil de créature, calqué sur Monster Legends ----------
+  // Aucune ScrollView : tout doit tenir. Les hauteurs se partagent
+  // l'espace via `flex`, jamais via des valeurs fixes qui déborderaient
+  // sur un écran plus court.
+  profileScreen: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: 10, paddingBottom: 8 },
+  profileTopBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  profileBackBtn: {
+    width: 38, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.border,
+  },
+  profileBody: { flex: 1, flexDirection: 'row', gap: 10 },
+
+  // --- colonne gauche ---
+  mlLeft: { width: '44%', alignItems: 'center' },
+  mlPortraitZone: {
+    flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.panel, borderRadius: 14,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  mlPortraitEmoji: { fontSize: 96 },
+  mlName: { color: COLORS.text, fontSize: 15, fontWeight: '900', marginTop: 6 },
+  mlStars: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  mlStarsText: { color: COLORS.action, fontSize: 14 },
+  mlLevelText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
+  mlLevelBarTrack: {
+    width: '90%', height: 9, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.10)',
+    marginTop: 4, overflow: 'hidden',
+  },
+  mlLevelBarFill: { height: '100%', backgroundColor: COLORS.neonCyan },
+  mlMainBtn: {
+    width: '100%', backgroundColor: COLORS.action, borderRadius: 12,
+    paddingVertical: 9, alignItems: 'center', marginTop: 7,
+  },
+  mlMainBtnText: { color: '#0b0d16', fontSize: 13, fontWeight: '900' },
+  mlEvoBtn: {
+    width: '100%', backgroundColor: 'rgba(246,195,67,0.15)', borderRadius: 12,
+    paddingVertical: 8, alignItems: 'center', marginTop: 5,
+    borderWidth: 1, borderColor: COLORS.action,
+  },
+  mlEvoBtnText: { color: COLORS.action, fontSize: 12, fontWeight: '900' },
+  mlSubNote: { color: COLORS.muted, fontSize: 10, fontStyle: 'italic', marginTop: 6, textAlign: 'center' },
+
+  // --- colonne droite ---
+  mlRight: { flex: 1, gap: 8 },
+  mlRow: { flexDirection: 'row', gap: 8, flex: 1 },
+  mlBoxTitle: { color: COLORS.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 4 },
+  mlStatsBox: {
+    flex: 1.25, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
+    borderWidth: 1, borderColor: COLORS.border, justifyContent: 'space-around',
+  },
+  mlStatLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  mlStatIcon: { fontSize: 13 },
+  mlStatLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '800', flex: 1 },
+  mlStatValue: { color: COLORS.text, fontSize: 13, fontWeight: '900' },
+  mlRunesBox: {
+    flex: 1, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  mlRuneRow: { flexDirection: 'row', gap: 6, flex: 1, alignItems: 'center' },
+  mlRuneSlot: {
+    flex: 1, aspectRatio: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.panelLight, borderWidth: 1, borderColor: COLORS.border,
+  },
+  mlRuneSlotFilled: { borderColor: COLORS.neonCyan },
+  mlRuneEmoji: { fontSize: 18 },
+  mlAttrBox: {
+    flex: 1.25, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  mlAttrRow: { flexDirection: 'row', gap: 5, flexWrap: 'wrap' },
+  mlAttrChip: {
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7,
+    backgroundColor: COLORS.panelLight, borderWidth: 1, borderColor: COLORS.border,
+  },
+  mlAttrChipText: { color: COLORS.text, fontSize: 9, fontWeight: '800' },
+  mlSkillsBox: {
+    flex: 1, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  mlSkillLine: { color: COLORS.text, fontSize: 9, fontWeight: '700', marginBottom: 2 },
+  mlLoreBox: {
+    backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  mlLoreText: { color: COLORS.muted, fontSize: 10, lineHeight: 14 },
+
   sectionCard: {
     backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, marginBottom: 14,
     borderWidth: 1, borderColor: COLORS.border,
@@ -1395,10 +1456,4 @@ const styles = StyleSheet.create({
   sectionBody: { color: COLORS.text, fontSize: 13, lineHeight: 19 },
   speciesNote: { color: COLORS.muted, fontSize: 11, fontStyle: 'italic', marginBottom: 6 },
 
-  skillRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  skillName: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
-  skillStats: { color: COLORS.action, fontSize: 11, fontWeight: '700' },
 });

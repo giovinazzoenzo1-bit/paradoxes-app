@@ -61,20 +61,32 @@ bloqués en paysage, sans autre issue qu'un redémarrage.
   ressource rare, on ne la dépense pas en barre de navigation. Le bouton
   Mode Combat vit maintenant sur la ligne du bas, à droite du conseil.
 
-### Profil de créature (façon Monster Legends)
+### Profil de créature (façon Monster Legends, SANS défilement)
 
-Deux colonnes, comme la référence fournie :
+**Contrainte structurante : tout tient à l'écran, aucune ScrollView.**
+C'est elle qui dicte la mise en page :
 
-- **Gauche** : portrait avec badge de rareté, puis **niveau et paliers
-  d'évolution juste en dessous**, puis les boutons Niveau et Évoluer avec
-  leur coût en Griffes. Les **Griffes sont affichées au-dessus**, dans le
-  bandeau.
-- **Droite** : statistiques (avec bonus de runes en couleur), runes
-  équipées, attaques, histoire.
+- **flex pur** — les hauteurs se partagent l'espace disponible, jamais de
+  valeur fixe qui déborderait sur un écran plus court ;
+- **textes bornés** par `numberOfLines` — la description se tronque à 3
+  lignes au lieu de pousser le reste hors de l'écran, et les noms/stats
+  sont tous en une ligne ;
+- **2 attaques affichées** sur les listes potentiellement plus longues.
 
-Les deux colonnes **défilent indépendamment** : en paysage la hauteur est
-très limitée, une zone de défilement unique aurait obligé à remonter tout
-en haut pour revoir le portrait.
+Répartition, calquée sur la référence :
+
+- **Gauche (44%)** : portrait qui occupe tout l'espace restant, puis nom,
+  étoiles de palier + niveau, barre de progression vers le prochain
+  palier d'évolution, bouton principal (monter de niveau) et bouton
+  Évoluer.
+- **Droite (56%)** : stats et runes côte à côte sur une rangée, attribut
+  et attaques sur la suivante, description en bas.
+
+Les Griffes restent dans le bandeau du haut.
+
+Une première version utilisait deux `ScrollView` indépendantes ; elle a
+été remplacée parce que la demande était explicitement de ne rien avoir à
+faire défiler.
 
 25 styles portrait devenus morts ont été supprimés.
 
@@ -114,7 +126,10 @@ C'est ce contrôle qui a confirmé qu'il ne manquait rien d'autre dans les
 deux écrans.
 
 **Et ne jamais utiliser `DOTALL` pour supprimer un bloc délimité par des
-accolades** : le `.*?` traverse les frontières et emporte le voisin.
+accolades** : le `.*?` traverse les frontières et emporte le voisin. La
+bonne méthode, appliquée depuis : parcourir les lignes en **comptant les
+accolades**, ce qui ne peut pas dépasser le bloc courant — puis comparer
+la liste des déclarations avant/après pour le confirmer.
 
 ### Reste à adapter
 
