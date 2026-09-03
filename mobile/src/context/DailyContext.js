@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR } from '../games/clicker/dailyLogic';
+import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward } from '../games/clicker/dailyLogic';
 
 // Clé lue par AdventureScreen.js à son prochain chargement pour créditer
 // les récompenses de quêtes/streak — MÊME schéma de sécurité que
@@ -11,14 +11,6 @@ import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendar
 // plusieurs récompenses seraient réclamées avant qu'Aventure ne soit
 // rouverte.
 export const PENDING_GRIFFES_KEY = 'adventure:pendingGriffesReward';
-// Creatures offertes par le calendrier de connexion. Le clicker (seul
-// proprietaire de la collection) les encaisse a son prochain chargement.
-// Valeur stockee : un JSON de tableau de raretes, ex. ["rare"].
-export const PENDING_CREATURES_KEY = 'clicker:pendingCalendarCreatures';
-// Bons de skin : le systeme de skins n'existe pas encore. On credite un
-// compteur pour que la recompense du jour 7 soit reellement acquise et
-// echangeable le jour ou les skins seront developpes.
-export const PENDING_SKINS_KEY = 'clicker:pendingSkinTickets';
 
 const STORAGE_KEY = 'daily:state:v1';
 const DailyContext = createContext(null);
@@ -49,13 +41,6 @@ export function DailyProvider({ children }) {
   questProgressRef.current = questProgress;
   const questClaimedRef = useRef({});
   questClaimedRef.current = questClaimed;
-  // claimStreak est memoise sur `date` seul : sans ces refs il
-  // capturerait le streak et la date de reclamation du premier rendu et
-  // distribuerait la recompense du mauvais jour.
-  const streakRef = useRef(0);
-  streakRef.current = streak;
-  const streakClaimedDateRef = useRef(null);
-  streakClaimedDateRef.current = streakClaimedDate;
 
   useEffect(() => {
     (async () => {
@@ -184,44 +169,19 @@ export function DailyProvider({ children }) {
     return def.reward;
   }, []);
 
-  // Reclame la recompense du jour de calendrier courant.
-  //
-  // Retourne l'entree du calendrier (pour que l'ecran affiche ce qui a
-  // ete gagne), ou false si deja reclamee aujourd'hui. Les pieces
-  // d'appli sont creditees directement car ce Context y a acces via son
-  // parent ; les Griffes, creatures et skins passent par un drapeau,
-  // l'ecran proprietaire les encaissant lui-meme.
-  const claimStreak = useCallback(async (addAppCoins) => {
-    if (streakClaimedDateRef.current === date) return false;
-    const entry = calendarRewardForStreak(streakRef.current);
-    if (!entry) return false;
+  const claimStreak = useCallback(async () => {
+    if (streakClaimedDate === date) return false;
+    const reward = streakReward(streak);
     setStreakClaimedDate(date);
-
-    if (entry.type === 'griffes') {
-      const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
-      const pending = raw ? parseInt(raw, 10) || 0 : 0;
-      await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + entry.amount));
-    } else if (entry.type === 'appCoins') {
-      if (typeof addAppCoins === 'function') await addAppCoins(entry.amount);
-    } else if (entry.type === 'creature') {
-      const raw = await AsyncStorage.getItem(PENDING_CREATURES_KEY);
-      let list = [];
-      try { list = raw ? JSON.parse(raw) : []; } catch (e) { list = []; }
-      if (!Array.isArray(list)) list = [];
-      list.push(entry.rarity);
-      await AsyncStorage.setItem(PENDING_CREATURES_KEY, JSON.stringify(list));
-    } else if (entry.type === 'skin') {
-      const raw = await AsyncStorage.getItem(PENDING_SKINS_KEY);
-      const pending = raw ? parseInt(raw, 10) || 0 : 0;
-      await AsyncStorage.setItem(PENDING_SKINS_KEY, String(pending + entry.amount));
-    }
-    return entry;
-  }, [date]);
+    const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+    const pending = raw ? parseInt(raw, 10) || 0 : 0;
+    await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + reward));
+    return reward;
+  }, [streak, date, streakClaimedDate]);
 
   const value = {
     loaded, date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats,
     trackEvent, trackMax, resetLifetimeStats, claimQuest, claimStreak,
-    calendarDay: calendarDayForStreak(streak), calendar: DAILY_CALENDAR,
   };
 
   return <DailyContext.Provider value={value}>{children}</DailyContext.Provider>;
