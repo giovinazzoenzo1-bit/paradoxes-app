@@ -18,6 +18,13 @@ import {
   levelUpCost,
   summonCost,
   tapPowerCost,
+  tapDamage,
+  critDamageUpgradeCost,
+  TAP_UPGRADES,
+  TAP_UPGRADE_FIRST_PACTE_LEVEL,
+  TAP_UPGRADE_STEP,
+  tapUpgradeUnlocked,
+  tapUpgradeBonus,
   rollCreature,
   offlineEarnings,
   shouldSpawn,
@@ -121,7 +128,17 @@ export default function ClickerScreen({ onBack }) {
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
   const [pendingDiscount, setPendingDiscount] = useState(null); // {percent, name} — consommé au prochain achat
-  const [critLevel, setCritLevel] = useState(0); // niveau de "Faveur des Esprits"
+  const [critLevel, setCritLevel] = useState(0);
+  // Dégâts critiques : amélioration SÉPARÉE de la Faveur des Esprits,
+  // qui ne donne plus que la chance. Cumuler les deux sur un seul bouton
+  // le rendait bien trop rentable pour son prix.
+  const [critDamageLevel, setCritDamageLevel] = useState(0);
+  const critDamageLevelRef = useRef(0);
+  critDamageLevelRef.current = critDamageLevel;
+  // Paliers de tap achetés (ids de TAP_UPGRADES), achat unique chacun.
+  const [tapUpgrades, setTapUpgrades] = useState([]);
+  const tapUpgradesRef = useRef([]);
+  tapUpgradesRef.current = tapUpgrades; // niveau de "Faveur des Esprits"
   const [comboCount, setComboCount] = useState(0); // niveau actuel de la Transe
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
   const [ritualTarget, setRitualTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null — bulle "pub" (Rituel)
@@ -315,6 +332,8 @@ export default function ClickerScreen({ onBack }) {
           setOwned(dedupedOwned);
           setDeck((saved.deck || [null, null, null]).map((id) => (id ? migrateCreatureId(id) : id)));
           setCritLevel(saved.critLevel || 0);
+          setCritDamageLevel(saved.critDamageLevel || 0);
+          setTapUpgrades(saved.tapUpgrades || []);
           setAutoClickers(savedAutoClickers);
           // Migration douce (02/09) : les sauvegardes d'avant la refonte
           // stockaient `purchasedUpgradeIds` (tableau d'ids achetés une
@@ -486,7 +505,7 @@ export default function ClickerScreen({ onBack }) {
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(buildSaveData()));
     }, 600);
   }, [
-    coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, upgradeLevels, sanctuaryLevel,
+    coins, totalEarned, tapPower, owned, deck, critLevel, critDamageLevel, tapUpgrades, autoClickers, upgradeLevels, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
     activeQuestIds, questTargets, questBaseline, questBaselines, devCompletedIds, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
@@ -509,6 +528,8 @@ export default function ClickerScreen({ onBack }) {
     owned: ownedRef.current,
     deck: deckRef.current,
     critLevel: critLevelRef.current,
+    critDamageLevel: critDamageLevelRef.current,
+    tapUpgrades: tapUpgradesRef.current,
     autoClickers: autoClickersRef.current,
     upgradeLevels: upgradeLevelsRef.current,
     sanctuaryLevel: sanctuaryLevelRef.current,
@@ -693,8 +714,12 @@ export default function ClickerScreen({ onBack }) {
     }
 
     const powerMult = activePowerRef.current ? activePowerRef.current.tapMultiplier : 1;
-    const critMult = isCrit ? critMultiplier(critLevelRef.current) * (1 + upgradeBonus.critMultPct) : 1;
-    const effectiveTapPower = tapPowerRef.current + upgradeBonus.tapFlat;
+    const critMult = isCrit ? critMultiplier(critDamageLevelRef.current) * (1 + upgradeBonus.critMultPct) : 1;
+    // `tapPower` est le NIVEAU du Pacte, pas les dégâts : il faut passer
+    // par tapDamage(). S'en servir directement rendait chaque niveau
+    // deux fois trop puissant.
+    const effectiveTapPower =
+      tapDamage(tapPowerRef.current) + upgradeBonus.tapFlat + tapUpgradeBonus(tapUpgradesRef.current);
     const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult));
     const finalGain = Math.round(gainCoins(gain));
     Animated.sequence([
@@ -778,6 +803,29 @@ export default function ClickerScreen({ onBack }) {
   // si le palier est encore verrouillé, ou si les pièces manquent.
   // Achat d'un niveau d'amélioration — même forme que buyVeilleur et
   // consorts : on paie le coût du niveau courant, le niveau monte de 1.
+  const buyCritDamage = () => {
+    const cost = applyDiscount(critDamageUpgradeCost(critDamageLevelRef.current));
+    if (coinsRef.current < cost) return;
+    setCoins((c) => c - cost);
+    setCritDamageLevel((l) => l + 1);
+    if (pendingDiscountRef.current) setPendingDiscount(null);
+  };
+
+  // Palier de tap : achat UNIQUE, et seulement si déverrouillé — la
+  // vérification est refaite ici et pas seulement à l'affichage, sinon
+  // un bouton grisé resterait cliquable.
+  const buyTapUpgrade = (upgradeId) => {
+    const index = TAP_UPGRADES.findIndex((u) => u.id === upgradeId);
+    if (index === -1) return;
+    if (tapUpgradesRef.current.includes(upgradeId)) return;
+    if (!tapUpgradeUnlocked(index, tapPowerRef.current, tapUpgradesRef.current.length)) return;
+    const cost = applyDiscount(TAP_UPGRADES[index].cost);
+    if (coinsRef.current < cost) return;
+    setCoins((c) => c - cost);
+    setTapUpgrades((prev) => [...prev, upgradeId]);
+    if (pendingDiscountRef.current) setPendingDiscount(null);
+  };
+
   const buyUpgradeItem = (upgradeId) => {
     const item = UPGRADE_ITEMS.find((u) => u.id === upgradeId);
     if (!item) return;
@@ -1078,6 +1126,8 @@ export default function ClickerScreen({ onBack }) {
     sanctuaryLevel: sanctuaryLevelRef.current,
     veilleurLevel: veilleurLevelRef.current,
     critLevel: critLevelRef.current,
+    critDamageLevel: critDamageLevelRef.current,
+    tapUpgrades: tapUpgradesRef.current,
     essence: essenceRef.current,
     ownedCount: ownedRef.current.length,
     deckCount: deckRef.current.filter(Boolean).length,
@@ -1541,7 +1591,8 @@ function describeUpgradeTotal(item, level) {
 
 function ShopView({
   coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers, upgradeLevels,
-  applyDiscount, onBuyTapPower, onBuyCrit, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onOffrande,
+  applyDiscount, onBuyTapPower, onBuyCrit, onBuyCritDamage, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onBuyTapUpgrade,
+  critDamageLevel, tapUpgrades, onOffrande,
   essence, essenceGainPreview, totalEarned, ascensionCount, onAscend, onBack,
 }) {
   const [page, setPage] = useState('upgrades'); // 'upgrades' | 'autoclick'
@@ -1571,7 +1622,7 @@ function ShopView({
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.actionBtnText}>🔗 Pacte : {tapPower} → {tapPower + 1}</Text>
-                <Text style={styles.actionBtnSubtext}>+1 pièce par tap à chaque niveau</Text>
+                <Text style={styles.actionBtnSubtext}>+0,5 pièce par tap à chaque niveau (actuellement {tapDamage(tapPower).toFixed(1)})</Text>
               </View>
               <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(tapPowerCost(tapPower)))}</Text>
             </TouchableOpacity>
@@ -1584,10 +1635,26 @@ function ShopView({
               <View style={{ flex: 1 }}>
                 <Text style={styles.actionBtnText}>✨ Faveur des Esprits (nv {critLevel})</Text>
                 <Text style={styles.actionBtnSubtext}>
-                  {Math.round(critChance(critLevel) * 100)}% de chance de coup critique x{critMultiplier(critLevel).toFixed(1)}
+                  {(critChance(critLevel) * 100).toFixed(2)}% de chance de coup critique · +1,25% par niveau
                 </Text>
               </View>
               <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(critUpgradeCost(critLevel)))}</Text>
+            </TouchableOpacity>
+
+            {/* Dégâts critiques : bouton distinct de la Faveur, qui ne
+                gère plus que la chance. */}
+            <TouchableOpacity
+              style={[styles.actionBtn, coins < applyDiscount(critDamageUpgradeCost(critDamageLevel)) && styles.actionBtnDisabled]}
+              onPress={onBuyCritDamage}
+              disabled={coins < applyDiscount(critDamageUpgradeCost(critDamageLevel))}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionBtnText}>💥 Dégâts critiques (nv {critDamageLevel})</Text>
+                <Text style={styles.actionBtnSubtext}>
+                  Coup critique x{critMultiplier(critDamageLevel).toFixed(1)} · +0,5 par niveau
+                </Text>
+              </View>
+              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(critDamageUpgradeCost(critDamageLevel)))}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1597,7 +1664,7 @@ function ShopView({
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.actionBtnText}>🏛️ Sanctuaire (nv {sanctuaryLevel})</Text>
-                <Text style={styles.actionBtnSubtext}>+5% sur TOUTE la production (tap + passif) par niveau</Text>
+                <Text style={styles.actionBtnSubtext}>+2,5% sur TOUTE la production (tap + passif) par niveau</Text>
               </View>
               <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)))}</Text>
             </TouchableOpacity>
@@ -1609,7 +1676,7 @@ function ShopView({
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.actionBtnText}>🌙 Veilleur (nv {veilleurLevel})</Text>
-                <Text style={styles.actionBtnSubtext}>+15% de gains hors-ligne par niveau</Text>
+                <Text style={styles.actionBtnSubtext}>+5% de gains hors-ligne par niveau</Text>
               </View>
               <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}</Text>
             </TouchableOpacity>
@@ -1647,6 +1714,44 @@ function ShopView({
                 "??? ???" : tout est visible, le prix suffit à échelonner.
                 Triées par coût de base pour que la suite se lise de
                 gauche à droite du plus abordable au plus lointain. */}
+            {/* 10 paliers de tap, déverrouillés en chaîne. Un palier
+                verrouillé reste AFFICHÉ mais grisé, avec sa condition :
+                le joueur voit ce qui l'attend et sait quoi viser, au
+                lieu d'une boutique qui grandit sans prévenir. */}
+            <Text style={styles.shopTierHeader}>✊ Puissance de tap</Text>
+            {TAP_UPGRADES.map((item, index) => {
+              const owned = tapUpgrades.includes(item.id);
+              const unlocked = tapUpgradeUnlocked(index, tapPower, tapUpgrades.length);
+              const cost = applyDiscount(item.cost);
+              const canBuy = unlocked && !owned && coins >= cost;
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.actionBtn, !canBuy && styles.actionBtnDisabled, !unlocked && styles.actionBtnLockedTap]}
+                  onPress={() => onBuyTapUpgrade(item.id)}
+                  disabled={!canBuy}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.actionBtnText}>
+                      {unlocked ? `${item.emoji} ${item.name}` : '🔒 ???'}
+                    </Text>
+                    <Text style={styles.actionBtnSubtext}>
+                      {owned
+                        ? `Acquis · +${formatNum(item.bonus)} par tap`
+                        : unlocked
+                        ? `+${formatNum(item.bonus)} pièces par tap`
+                        : index === 0
+                        ? `Se débloque au niveau ${TAP_UPGRADE_FIRST_PACTE_LEVEL} de Pacte`
+                        : `Se débloque après ${index * TAP_UPGRADE_STEP} améliorations de tap`}
+                    </Text>
+                  </View>
+                  <Text style={styles.actionBtnCost}>
+                    {owned ? '⭐' : unlocked ? `💰 ${formatNum(cost)}` : '🔒'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
             <Text style={styles.shopTierHeader}>💎 Améliorations de créatures</Text>
             {[...UPGRADE_ITEMS].sort((a, b) => a.cost - b.cost).map((item) => {
               const level = upgradeLevels[item.id] || 0;
@@ -2110,6 +2215,7 @@ const styles = StyleSheet.create({
     borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
   },
   devSkipBtnText: { color: '#b3a0ff', fontSize: 11, fontWeight: '800' },
+  actionBtnLockedTap: { opacity: 0.45, borderStyle: 'dashed' },
   challengeCycle: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 4 },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },

@@ -464,6 +464,81 @@ critique. Ce ne sont pas des blocages réels, mais **ne jamais conclure
 d'un blocage en simulation sans vérifier ce que l'IA de test sait
 faire**.
 
+## Durcissement du début de partie (02/09, seconde passe)
+
+Constat mesuré avant de toucher quoi que ce soit : **les créatures 1 et
+2 tombaient au même moment** (16 min), parce que « 10 Esprits Frappeurs »
+coûtait 499 pièces quand le cycle 1 en demandait 16 762. Les 3 premières
+créatures s'obtenaient en 1 h 20.
+
+### Ce qui a changé
+
+| Élément | Avant | Après |
+|---|---|---|
+| Pacte : gain | +1 dégât/niveau | **+0,5** |
+| Pacte : coût | ×1,55 | **×2** |
+| Faveur des Esprits | chance 2,5%/nv **+ dégâts** | **chance 1,25%/nv seulement**, coût 25 → 120 |
+| Dégâts critiques | inclus dans la Faveur | **amélioration séparée** (x2 de base, +0,5/nv) |
+| Veilleur | +15%/nv, ×1,6 | **+5%/nv, ×2** |
+| Sanctuaire | +2,5%/nv | inchangé |
+| Auto-clics | — | **coûts ×33, revenus ×4** |
+| Esprit Frappeur | 15 | **500** |
+
+### `tapPower` : niveau ≠ dégâts
+
+Piège introduit ici : `tapPower` est le **NIVEAU** du Pacte (entier, lu
+par les défis « Pacte niveau 10 »), tandis que les pièces par appui
+valent `tapDamage(niveau)` = `1 + (niveau-1) × 0,5`. Utiliser `tapPower`
+directement comme dégâts rend chaque niveau deux fois trop puissant.
+
+### Auto-clics : le couple prix/revenu vient d'une simulation
+
+Cible fixée : **50 pièces/s de revenu PASSIF au bout d'1 heure**. Ni les
+prix seuls ni les revenus seuls ne la tiennent — c'est leur rapport qui
+compte, et il a fallu balayer les deux :
+
+- prix ×33 seuls → 10/s à 1 h (courbe écrasée)
+- revenus ×15 → 342/s à 1 h (explosion)
+- **prix ×33 + revenus ×4 → 50/s pile**
+
+Courbe obtenue (joueur tapant 5 fois/s) :
+
+| Temps | Passif/s | Total/s | Cumul |
+|---|---|---|---|
+| 10 min | 3 | 34 | 15 k |
+| 30 min | 16 | 68 | 72 k |
+| **1 h** | **50** | 122 | 244 k |
+| 2 h | 154 | 257 | 830 k |
+| 4 h | 857 | 1 057 | 5,2 M |
+
+L'Ascension (100 M cumulés) demande **plus de 5 h**, ce qui respecte le
+« minimum 3-4 h » visé.
+
+### 10 paliers de tap verrouillés (`TAP_UPGRADES`)
+
+Achat unique chacun, bonus fixe (+1, +5, +25… jusqu'à +2 200 000).
+Déverrouillage **en chaîne** : le 1er après 10 niveaux de Pacte, chacun
+des suivants après 5 achats de paliers.
+
+Un palier verrouillé reste **affiché mais grisé, avec sa condition** —
+le joueur voit ce qui l'attend et sait quoi viser, au lieu d'une
+boutique qui grandit sans prévenir.
+
+Coûts ×9 par palier : le **5e coûte 6,5 M**, hors de portée avant la
+première Ascension, comme demandé.
+
+La vérification de déverrouillage est refaite **dans l'achat**, pas
+seulement à l'affichage : un bouton grisé reste sinon cliquable.
+
+### Défis ajustés
+
+Défi 1 : 10 000 → **5 000 pièces**. Défi 2 : Pacte 15 → **Pacte 10**.
+Défi 7 : chapitre 1 niveau 1 → **niveau 3**.
+
+### Prochaine MAJ
+
+Augmenter la difficulté des combats en mode Aventure.
+
 ## Équilibrage de l'économie du clicker (refonte 02/09)
 
 Refonte complète des gains et des coûts, faite **à la simulation** et non
