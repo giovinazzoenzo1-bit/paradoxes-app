@@ -2356,9 +2356,13 @@ const styles = StyleSheet.create({
   // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
   // liste de boutons (tout ça vit dans les onglets de la barre du bas).
-  tapArea: { flex: 1, alignItems: 'center', width: '100%' },
-  tapZone: { width: '100%', flex: 1, position: 'relative' },
-  tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // justifyContent center : le groupe deck + oeuf + textes est centre
+  // verticalement dans l'espace disponible, au lieu d'etre plaque en
+  // haut avec l'oeuf qui derive vers le bas.
+  tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
+
+  tapZone: { width: '100%', height: 300, position: 'relative' },
+  tapButtonWrap: { alignItems: 'center', justifyContent: 'center' },
   // Plus de cercle : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint, le cercle faisait
   // doublon et rognait visuellement l'oeuf.
