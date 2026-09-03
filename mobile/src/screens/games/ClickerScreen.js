@@ -150,6 +150,7 @@ export default function ClickerScreen({ onBack }) {
   const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, leftPct, topPct}
   const [deck, setDeck] = useState([null, null, null]); // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
   const [pendingDiscount, setPendingDiscount] = useState(null); // {percent, name} — consommé au prochain achat
   const [critLevel, setCritLevel] = useState(0);
@@ -1036,6 +1037,7 @@ export default function ClickerScreen({ onBack }) {
   // decide s'il faut crediter des pieces d'appli ou poser un drapeau.
   const handleClaimCalendar = async () => {
     const got = await claimStreak(addSharedCoins);
+    setCalendarOpen(false);
     if (!got) return;
     if (got.type === 'appCoins') spawnPopup(`+${got.amount} 🪙`, 110, 60);
     else if (got.type === 'griffes') spawnPopup(`+${got.amount} 🐾`, 110, 60);
@@ -1469,12 +1471,15 @@ export default function ClickerScreen({ onBack }) {
             </TouchableOpacity>
           )}
 
-          <DailyCalendarStrip
-            calendar={calendar}
-            currentDay={calendarDay}
-            alreadyClaimedToday={streakClaimedDate === today}
-            onClaim={handleClaimCalendar}
-          />
+          {/* Bouton cadeau : ouvre le calendrier des 7 jours. Une
+              pastille rouge signale une recompense a recuperer, pour
+              que le joueur n'ait pas a ouvrir le menu pour le savoir. */}
+          <View style={styles.calBtnRow}>
+            <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
+              <Text style={styles.calBtnIcon}>🎁</Text>
+              {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.tapArea}>
             <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
@@ -1607,6 +1612,16 @@ export default function ClickerScreen({ onBack }) {
         />
       )}
 
+      {calendarOpen && (
+        <DailyCalendarModal
+          calendar={calendar}
+          currentDay={calendarDay}
+          alreadyClaimedToday={streakClaimedDate === today}
+          onClaim={handleClaimCalendar}
+          onClose={() => setCalendarOpen(false)}
+        />
+      )}
+
       {pickerSlot !== null && (
         <DeckPicker
           slotIndex={pickerSlot}
@@ -1648,58 +1663,68 @@ export default function ClickerScreen({ onBack }) {
   );
 }
 
-// Les 3 emplacements du deck, affichés au-dessus de l'œuf. Un
-// emplacement vide est un œuf grisé — appuyer dessus (rempli ou vide)
-// ouvre le sélecteur pour choisir/changer la créature qui l'occupe.
-// Calendrier de connexion : 7 cases sur une ligne, affichees en
-// permanence sur l'accueil du clicker. La case du jour est mise en
-// avant et devient tapable quand la recompense n'a pas encore ete
-// prise ; les jours passes sont grises, les suivants restent visibles
-// pour donner envie de revenir (voir le lot du jour 7 est ce qui fait
-// tenir la semaine).
-function DailyCalendarStrip({ calendar, currentDay, alreadyClaimedToday, onClaim }) {
+// Menu du calendrier de connexion : 7 cases facon calendrier de
+// l'Avent, dans un panneau compact centre a l'ecran.
+//
+// Grille 4 + 3 plutot qu'une ligne de 7 : sur la largeur d'un
+// telephone, sept cases cote a cote deviennent trop etroites pour
+// afficher lisiblement l'icone ET le montant.
+function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim, onClose }) {
   if (!Array.isArray(calendar) || calendar.length === 0) return null;
   const ready = !alreadyClaimedToday;
+  const rows = [calendar.slice(0, 4), calendar.slice(4)];
+
   return (
-    <View style={styles.calWrap}>
-      <View style={styles.calHeader}>
-        <Text style={styles.calTitle}>🎁 Récompense du jour</Text>
+    <View style={styles.calOverlay}>
+      <View style={styles.calPanel}>
+        <View style={styles.calPanelHead}>
+          <Text style={styles.calPanelTitle}>🎁 Récompenses quotidiennes</Text>
+          <TouchableOpacity onPress={onClose} style={styles.calClose}>
+            <Ionicons name="close" size={20} color={COLORS.muted} />
+          </TouchableOpacity>
+        </View>
+
+        {rows.map((row, ri) => (
+          <View key={ri} style={styles.calGridRow}>
+            {row.map((d) => {
+              const isToday = d.day === currentDay;
+              const isPast = d.day < currentDay;
+              const claimable = isToday && ready;
+              return (
+                <TouchableOpacity
+                  key={d.day}
+                  style={[
+                    styles.calBox,
+                    isPast && styles.calBoxPast,
+                    isToday && styles.calBoxToday,
+                    claimable && styles.calBoxClaimable,
+                  ]}
+                  onPress={claimable ? onClaim : undefined}
+                  disabled={!claimable}
+                  activeOpacity={claimable ? 0.7 : 1}
+                >
+                  <Text style={styles.calBoxDay}>Jour {d.day}</Text>
+                  <Text style={styles.calBoxIcon}>{d.icon}</Text>
+                  <Text style={styles.calBoxLabel} numberOfLines={2}>{d.label}</Text>
+                  {isPast && <Text style={styles.calBoxCheck}>✓</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
+
         {ready ? (
-          <TouchableOpacity style={styles.calClaimBtn} onPress={onClaim}>
-            <Text style={styles.calClaimBtnText}>Récupérer</Text>
+          <TouchableOpacity style={styles.calBigBtn} onPress={onClaim}>
+            <Text style={styles.calBigBtnText}>Récupérer le jour {currentDay}</Text>
           </TouchableOpacity>
         ) : (
-          <Text style={styles.calDoneText}>Revenez demain</Text>
+          <Text style={styles.calWaitText}>Reviens demain pour le jour suivant</Text>
         )}
-      </View>
-      <View style={styles.calRow}>
-        {calendar.map((d) => {
-          const isToday = d.day === currentDay;
-          const isPast = d.day < currentDay;
-          const claimable = isToday && ready;
-          return (
-            <TouchableOpacity
-              key={d.day}
-              style={[
-                styles.calCell,
-                isPast && styles.calCellPast,
-                isToday && styles.calCellToday,
-                claimable && styles.calCellClaimable,
-              ]}
-              onPress={claimable ? onClaim : undefined}
-              disabled={!claimable}
-              activeOpacity={claimable ? 0.7 : 1}
-            >
-              <Text style={styles.calCellDay}>J{d.day}</Text>
-              <Text style={styles.calCellIcon}>{d.icon}</Text>
-              {d.amount > 1 && <Text style={styles.calCellAmount}>{d.amount}</Text>}
-            </TouchableOpacity>
-          );
-        })}
       </View>
     </View>
   );
 }
+
 
 function DeckRow({ deck, owned, onSlotPress }) {
   const ownedMap = {};
@@ -2445,27 +2470,54 @@ const styles = StyleSheet.create({
   shopPageBtnTextActive: { color: '#241a00' },
 
   // ---- Calendrier de connexion ----
-  // Compact volontairement : il vit en permanence sur l'accueil, il ne
-  // doit pas voler la place de l'oeuf.
-  calWrap: { width: '100%', marginBottom: 10 },
-  calHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  calTitle: { color: COLORS.text, fontSize: 12, fontWeight: '900' },
-  calClaimBtn: {
-    backgroundColor: COLORS.action, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4,
+  // Bouton cadeau : rond rouge, discret, aligne a gauche au-dessus du
+  // deck. Il n'a pas a etre gros — c'est un point d'entree, pas un
+  // element de jeu.
+  calBtnRow: { width: '100%', alignItems: 'flex-start', marginBottom: 8 },
+  calBtn: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.bad,
+    alignItems: 'center', justifyContent: 'center',
   },
-  calClaimBtnText: { color: '#0b0d16', fontSize: 11, fontWeight: '900' },
-  calDoneText: { color: COLORS.muted, fontSize: 10, fontWeight: '700' },
-  calRow: { flexDirection: 'row', gap: 4 },
-  calCell: {
-    flex: 1, backgroundColor: COLORS.panel, borderRadius: 8, paddingVertical: 5,
-    alignItems: 'center', borderWidth: 1, borderColor: COLORS.border,
+  calBtnIcon: { fontSize: 22 },
+  // Pastille : une recompense attend. Evite d'ouvrir le menu pour rien.
+  calBtnDot: {
+    position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,
+    backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
   },
-  calCellPast: { opacity: 0.35 },
-  calCellToday: { borderColor: COLORS.action },
-  calCellClaimable: { backgroundColor: 'rgba(246,195,67,0.15)', borderColor: COLORS.action, borderWidth: 2 },
-  calCellDay: { color: COLORS.muted, fontSize: 8, fontWeight: '800' },
-  calCellIcon: { fontSize: 15, marginTop: 1 },
-  calCellAmount: { color: COLORS.text, fontSize: 8, fontWeight: '800' },
+
+  // ---- Menu du calendrier ----
+  calOverlay: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', padding: 20,
+  },
+  // Compact et rectangulaire : il ne doit pas occuper tout l'ecran.
+  calPanel: {
+    width: '100%', maxWidth: 380, backgroundColor: COLORS.panel, borderRadius: 18,
+    borderWidth: 1, borderColor: COLORS.border, padding: 14,
+  },
+  calPanelHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  calPanelTitle: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
+  calClose: { padding: 4 },
+  calGridRow: { flexDirection: 'row', gap: 8, marginBottom: 8, justifyContent: 'flex-start' },
+  // Cases facon calendrier de l'Avent : carrees, bien delimitees.
+  calBox: {
+    width: 78, height: 92, backgroundColor: COLORS.panelLight, borderRadius: 10,
+    borderWidth: 1, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center', padding: 4,
+  },
+  calBoxPast: { opacity: 0.4 },
+  calBoxToday: { borderColor: COLORS.action, borderWidth: 2 },
+  calBoxClaimable: { backgroundColor: 'rgba(246,195,67,0.18)', borderColor: COLORS.action, borderWidth: 2 },
+  calBoxDay: { color: COLORS.muted, fontSize: 9, fontWeight: '800' },
+  calBoxIcon: { fontSize: 22, marginVertical: 2 },
+  calBoxLabel: { color: COLORS.text, fontSize: 8, fontWeight: '700', textAlign: 'center' },
+  calBoxCheck: { position: 'absolute', top: 3, right: 5, color: COLORS.good, fontSize: 11, fontWeight: '900' },
+  calBigBtn: {
+    backgroundColor: COLORS.action, borderRadius: 12, paddingVertical: 11,
+    alignItems: 'center', marginTop: 4,
+  },
+  calBigBtnText: { color: '#0b0d16', fontSize: 13, fontWeight: '900' },
+  calWaitText: { color: COLORS.muted, fontSize: 11, textAlign: 'center', marginTop: 6, fontStyle: 'italic' },
 
   deckRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
   deckSlot: {
