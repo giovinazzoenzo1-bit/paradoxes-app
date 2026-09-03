@@ -514,28 +514,49 @@ Courbe obtenue (joueur tapant 5 fois/s) :
 L'Ascension (100 M cumulés) demande **plus de 5 h**, ce qui respecte le
 « minimum 3-4 h » visé.
 
-### 10 paliers de tap verrouillés (`TAP_UPGRADES`)
+### Sanctuaire et Veilleur : plafonnés à 10 niveaux
 
-Achat unique chacun, bonus fixe (+1, +5, +25… jusqu'à +2 200 000).
-Déverrouillage **en chaîne** : le 1er après 10 niveaux de Pacte, chacun
-des suivants après 5 achats de paliers.
+Ce sont les **deux seules améliorations bornées** du jeu. Elles
+multiplient respectivement toute la production et tous les gains
+hors-ligne : sans plafond, elles devenaient un passage obligé qui
+écrasait tous les autres achats.
 
-Un palier verrouillé reste **affiché mais grisé, avec sa condition** —
-le joueur voit ce qui l'attend et sait quoi viser, au lieu d'une
-boutique qui grandit sans prévenir.
+⚠️ **Ce plafond a rendu deux défis scriptés littéralement impossibles**
+(« Sanctuaire niveau 15 », « Veilleur niveau 20 »), ce qui aurait bloqué
+l'œuf pour toujours. Ils ont été remplacés par des défis de paliers de
+tap. Les cibles DYNAMIQUES sont également bornées dans
+`resolveQuestTarget`, y compris après le plancher relatif de 15% qui
+pouvait repasser au-dessus du plafond, et `sanctMid`/`sanctLong`/
+`veilleurMid` ne sont plus proposés une fois le maximum atteint.
 
-Coûts ×9 par palier : le **5e coûte 6,5 M**, hors de portée avant la
-première Ascension, comme demandé.
+**Règle qui en découle** : plafonner une amélioration oblige à vérifier
+tous les défis qui la visent, scriptés ET dynamiques.
 
-La vérification de déverrouillage est refaite **dans l'achat**, pas
-seulement à l'affichage : un bouton grisé reste sinon cliquable.
+### 10 paliers de tap (`TAP_UPGRADES`)
 
-**Le compteur de déverrouillage porte sur les niveaux d'améliorations
-(`UPGRADE_ITEMS`), PAS sur les paliers de tap eux-mêmes.** Compter les
-paliers rendait les paliers 4 à 10 mathématiquement inatteignables : le
-palier 4 aurait exigé 15 achats alors qu'il n'existe que 10 paliers en
-tout. Les améliorations se montant sans plafond, le compteur peut
-toujours croître.
+Chaque palier se monte **sans plafond**, comme le reste du clicker :
+`bonus` est le gain par tap ET PAR NIVEAU, `cost` le prix du 1er niveau,
+`growth` le facteur par niveau suivant.
+
+Déverrouillage **en chaîne** : le 1er palier s'ouvre au niveau 10 de
+Pacte, et chaque palier suivant **au niveau 5 du palier précédent**. On
+monte donc Poigne Ancienne jusqu'à 5 pour voir apparaître Griffe
+Runique, et ainsi de suite.
+
+Chaîner sur le niveau du palier précédent — plutôt que sur un compteur
+global — garde la progression lisible : le joueur sait toujours
+exactement quoi monter pour ouvrir la suite. Une version antérieure
+comptait les paliers achetés, ce qui rendait les paliers 4 à 10
+**mathématiquement inatteignables** (le palier 4 exigeait 15 achats pour
+10 paliers existants).
+
+Un palier verrouillé reste **affiché mais grisé, avec sa condition**.
+La vérification est refaite **dans l'achat**, pas seulement à
+l'affichage : un bouton grisé reste sinon cliquable.
+
+`normalizeTapUpgrades` relit l'ancien format (tableau d'ids achetés une
+fois) comme « niveau 1 chacun », sinon une sauvegarde d'avant le passage
+aux niveaux perdrait silencieusement ses paliers.
 
 ### Piège : une prop manquante casse tout l'écran
 
@@ -554,6 +575,13 @@ Deux protections ajoutées :
   déclarées par un composant avec celles réellement passées à son rendu.
   C'est ce contrôle qui a confirmé qu'aucun autre composant des deux
   écrans n'était touché.
+
+### Ordre de la boutique
+
+**Offrande et Ascension sont remontées en haut** de la page
+Améliorations. Ce sont les deux actions à fort impact (l'une convertit la
+monnaie de l'appli, l'autre relance toute la partie) ; enfouies en bas de
+liste sous une vingtaine de boutons, elles passaient inaperçues.
 
 ### Défis ajustés
 

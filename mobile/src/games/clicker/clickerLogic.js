@@ -577,11 +577,22 @@ export function familiarUpgradeCost(level) {
 // chaque autre bonus : c'était le second accélérateur de la courbe
 // après les auto-clics. Deux fois moins d'effet, pour un coût qui
 // double à chaque niveau.
+// Sanctuaire et Veilleur sont désormais PLAFONNÉS à 10 niveaux. Ce sont
+// les deux seules améliorations bornées du jeu : elles multiplient
+// respectivement toute la production et tous les gains hors-ligne, donc
+// les laisser monter sans fin faisait d'elles un passage obligé qui
+// écrasait tous les autres achats.
+export const SANCTUARY_MAX_LEVEL = 10;
+export const VEILLEUR_MAX_LEVEL = 10;
+
 export function sanctuaryMultiplier(level) {
-  return 1 + level * 0.025;
+  return 1 + Math.min(SANCTUARY_MAX_LEVEL, Math.max(0, level || 0)) * 0.025;
 }
 export function sanctuaryUpgradeCost(level) {
   return Math.round(60 * Math.pow(2.0, level));
+}
+export function sanctuaryMaxed(level) {
+  return (level || 0) >= SANCTUARY_MAX_LEVEL;
 }
 
 // ---- Veilleur (gains hors-ligne) ----
@@ -590,66 +601,77 @@ export function sanctuaryUpgradeCost(level) {
 // Sanctuaire pour un défi qui vient plus tard dans la séquence — l'ordre
 // des défis et l'ordre des prix ne se contredisent plus.
 export function veilleurOfflineMultiplier(level) {
-  return 1 + level * 0.05;
+  return 1 + Math.min(VEILLEUR_MAX_LEVEL, Math.max(0, level || 0)) * 0.05;
 }
 export function veilleurUpgradeCost(level) {
   return Math.round(120 * Math.pow(2, level));
 }
+export function veilleurMaxed(level) {
+  return (level || 0) >= VEILLEUR_MAX_LEVEL;
+}
 
-// ---- Améliorations de TAP (10 paliers verrouillés) ----
+// ---- Améliorations de TAP (10 paliers, niveaux infinis) ----
 //
-// Famille dédiée à la puissance de tap, distincte des `UPGRADE_ITEMS`
-// génériques. Chaque palier ajoute un montant FIXE de pièces par appui
-// (+1, +5, +25, ...), achetable une seule fois.
+// Famille dédiée à la puissance de tap, distincte des `UPGRADE_ITEMS`.
+// Chaque palier se monte SANS PLAFOND, comme tout le reste du clicker :
+// `bonus` est le gain de pièces par tap et PAR NIVEAU, `cost` le prix du
+// 1er niveau, `growth` le facteur appliqué à chaque niveau suivant.
 //
-// Déverrouillage EN CHAÎNE : le 1er palier apparaît après 10 niveaux de
-// Pacte, chacun des suivants après 5 achats d'améliorations. Tant qu'il
-// est verrouillé, un palier reste visible mais grisé — le joueur voit
-// donc ce qui l'attend, ce qui donne une direction, au lieu d'une
-// boutique qui grandit sans prévenir.
+// Déverrouillage EN CHAÎNE : le 1er palier s'ouvre au niveau 10 de
+// Pacte, et chaque palier suivant à partir du **niveau 5 du palier
+// précédent**. On monte donc Poignée Ancienne jusqu'à 5 avant de voir
+// apparaître Griffe Runique, et ainsi de suite.
 //
-// Les coûts explosent volontairement (x9 par palier) : le 5e palier
-// coûte 6,5 millions, hors de portée avant la première Ascension, qui
-// est justement le moment où la production change d'échelle.
+// Un palier verrouillé reste affiché mais grisé avec sa condition : le
+// joueur voit ce qui l'attend au lieu d'une boutique qui grandit sans
+// prévenir.
 export const TAP_UPGRADES = [
-  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1200 },
-  { id: 'tap2', name: 'Griffe Runique', emoji: '🪄', bonus: 5, cost: 11000 },
-  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 25, cost: 95000 },
-  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 120, cost: 800000 },
-  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 600, cost: 6500000 },
-  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 3000, cost: 55000000 },
-  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 15000, cost: 480000000 },
-  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 80000, cost: 4200000000 },
-  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 420000, cost: 38000000000 },
-  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 2200000, cost: 340000000000 },
+  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1200, growth: 1.6 },
+  { id: 'tap2', name: 'Griffe Runique', emoji: '🪄', bonus: 5, cost: 11000, growth: 1.62 },
+  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 25, cost: 95000, growth: 1.64 },
+  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 120, cost: 800000, growth: 1.66 },
+  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 600, cost: 6500000, growth: 1.68 },
+  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 3000, cost: 55000000, growth: 1.7 },
+  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 15000, cost: 480000000, growth: 1.72 },
+  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 80000, cost: 4200000000, growth: 1.74 },
+  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 420000, cost: 38000000000, growth: 1.76 },
+  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 2200000, cost: 340000000000, growth: 1.78 },
 ];
 
-// Déverrouillage d'un palier : le 1er tient au niveau de Pacte (10),
-// les suivants au nombre CUMULÉ de niveaux d'améliorations achetés,
-// 5 de plus à chaque palier.
-//
-// Le compteur porte sur les améliorations (`UPGRADE_ITEMS`), PAS sur les
-// paliers de tap eux-mêmes. Compter les paliers rendait les paliers 4 à
-// 10 mathématiquement inatteignables : le palier 4 aurait exigé 15
-// achats alors qu'il n'existe que 10 paliers en tout. Les améliorations
-// se montant sans plafond, le compteur peut toujours croître.
 export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10;
-export const TAP_UPGRADE_STEP = 5;
-export function tapUpgradeUnlocked(index, tapPowerLevel, upgradePurchases) {
+export const TAP_UPGRADE_UNLOCK_LEVEL = 5;
+
+// Accepte l'ancien format (tableau d'ids achetés une fois) comme
+// « niveau 1 pour chacun » : sans ce repli, une sauvegarde d'avant le
+// passage aux niveaux perdrait silencieusement ses paliers.
+export function normalizeTapUpgrades(value) {
+  if (Array.isArray(value)) {
+    const out = {};
+    value.forEach((id) => { out[id] = 1; });
+    return out;
+  }
+  return value && typeof value === 'object' ? value : {};
+}
+
+export function tapUpgradeCost(item, level) {
+  return Math.round(item.cost * Math.pow(item.growth || 1.6, level));
+}
+
+// Le palier `index` est ouvert si le PRÉCÉDENT a atteint le niveau 5
+// (le tout premier dépendant du Pacte). Chaîner sur le niveau du palier
+// précédent, et non sur un compteur global, garde la progression lisible
+// : le joueur sait toujours exactement quoi monter pour ouvrir la suite.
+export function tapUpgradeUnlocked(index, tapPowerLevel, levels) {
+  const map = normalizeTapUpgrades(levels);
   if (index === 0) return (tapPowerLevel || 0) >= TAP_UPGRADE_FIRST_PACTE_LEVEL;
-  return (upgradePurchases || 0) >= index * TAP_UPGRADE_STEP;
+  const prev = TAP_UPGRADES[index - 1];
+  return (map[prev.id] || 0) >= TAP_UPGRADE_UNLOCK_LEVEL;
 }
 
-// Nombre total de niveaux d'améliorations achetés, toutes confondues.
-export function totalUpgradePurchases(levels) {
-  const map = normalizeUpgradeLevels(levels);
-  return Object.values(map).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
-}
-
-// Somme des bonus de tap déjà achetés. `owned` est un tableau d'ids.
-export function tapUpgradeBonus(owned) {
-  if (!Array.isArray(owned)) return 0;
-  return TAP_UPGRADES.reduce((sum, u) => (owned.includes(u.id) ? sum + u.bonus : sum), 0);
+// Somme des bonus de tap, chaque palier compté à son niveau.
+export function tapUpgradeBonus(levels) {
+  const map = normalizeTapUpgrades(levels);
+  return TAP_UPGRADES.reduce((sum, u) => sum + u.bonus * (map[u.id] || 0), 0);
 }
 
 // ---- Améliorations (30/08, refondues le 02/09) ----
@@ -937,8 +959,10 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'seq_equipRune2', icon: '🪬', metric: 'runeEquipped', target: 2, mode: 'delta',
       label: () => 'Équipe 2 runes sur tes créatures' },
-    { id: 'seq_sanct15', icon: '🏛️', metric: 'sanctuaryLevel', target: 15, mode: 'absolute',
-      label: () => 'Monte le Sanctuaire au niveau 15' },
+    // Remplacé : le Sanctuaire est plafonné à 10, « niveau 15 » était
+    // devenu littéralement impossible et bloquait l'œuf pour toujours.
+    { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', target: 5, mode: 'absolute',
+      label: () => 'Monte Poigne Ancienne au niveau 5' },
     { id: 'seq_hold1M', icon: '🏦', metric: 'coins', target: 1000000, mode: 'absolute',
       label: () => 'Aie 1 million de pièces en réserve' },
     { id: 'seq_evolve1', icon: '🧬', metric: 'maxEvolutionTier', target: 1, mode: 'absolute',
@@ -970,8 +994,9 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'seq_hold50M', icon: '🏦', metric: 'coins', target: 50000000, mode: 'absolute',
       label: () => 'Aie 50 millions de pièces en réserve' },
-    { id: 'seq_veilleur20', icon: '🌙', metric: 'veilleurLevel', target: 20, mode: 'absolute',
-      label: () => 'Monte le Veilleur au niveau 20' },
+    // Remplacé pour la même raison : le Veilleur est plafonné à 10.
+    { id: 'seq_veilleur20', icon: '🪄', metric: 'tapUpgrade:tap2', target: 5, mode: 'absolute',
+      label: () => 'Monte Griffe Runique au niveau 5' },
     { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', target: 30, mode: 'absolute',
       label: () => 'Nourris une créature jusqu\'au niveau 30' },
     { id: 'seq_ascend2', icon: '🌟', metric: 'ascension', target: 2, mode: 'delta',
@@ -1072,10 +1097,13 @@ export const QUEST_POOL = [
   { id: 'pacteLong', family: 'core', icon: '🔗', metric: 'tapPower', effortMin: 50, mode: 'absolute',
     label: (t) => `Fais monter Pacte au niveau ${t}` },
   { id: 'sanctMid', family: 'core', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 25, mode: 'absolute',
+    available: (s) => (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
     label: (t) => `Monte le Sanctuaire au niveau ${t}` },
   { id: 'sanctLong', family: 'core', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 55, mode: 'absolute',
+    available: (s) => (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
     label: (t) => `Monte le Sanctuaire au niveau ${t}` },
   { id: 'veilleurMid', family: 'core', icon: '🌙', metric: 'veilleurLevel', effortMin: 20, mode: 'absolute',
+    available: (s) => (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
     label: (t) => `Monte le Veilleur au niveau ${t}` },
   { id: 'faveurMid', family: 'core', icon: '✨', metric: 'critLevel', effortMin: 20, mode: 'absolute',
     label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
@@ -1193,6 +1221,9 @@ function readMetric(metric, stats) {
   if (metric.startsWith('auto:')) {
     return (stats.autoClickers || {})[metric.slice(5)] || 0;
   }
+  if (metric.startsWith('tapUpgrade:')) {
+    return normalizeTapUpgrades(stats.tapUpgrades)[metric.slice(11)] || 0;
+  }
   const v = stats[metric];
   return Number.isFinite(v) ? v : 0;
 }
@@ -1302,9 +1333,10 @@ export function resolveQuestTarget(quest, stats) {
   } else if (metric === 'tapPower') {
     raw = levelsAffordable((lv) => tapPowerCost(lv), Math.max(1, now), budget);
   } else if (metric === 'sanctuaryLevel') {
-    raw = levelsAffordable((lv) => sanctuaryUpgradeCost(lv), now, budget);
+    // Plafonné : viser au-delà du niveau max rendrait le défi infaisable.
+    raw = Math.min(SANCTUARY_MAX_LEVEL, levelsAffordable((lv) => sanctuaryUpgradeCost(lv), now, budget));
   } else if (metric === 'veilleurLevel') {
-    raw = levelsAffordable((lv) => veilleurUpgradeCost(lv), now, budget);
+    raw = Math.min(VEILLEUR_MAX_LEVEL, levelsAffordable((lv) => veilleurUpgradeCost(lv), now, budget));
   } else if (metric === 'critLevel') {
     raw = levelsAffordable((lv) => critUpgradeCost(lv), now, budget);
   } else if (metric.startsWith('upgrade:')) {
@@ -1345,7 +1377,11 @@ export function resolveQuestTarget(quest, stats) {
   // haut, « +1 » donne un défi affiché à 98% dès le tirage. On exige au
   // moins 15% de progression pour que la barre parte d'un état crédible.
   const floor = now + Math.max(quest.minStep || 1, Math.ceil(now * 0.15));
-  return Math.max(rounded, floor);
+  const target = Math.max(rounded, floor);
+  // Le plancher relatif pourrait repasser au-dessus d'un plafond dur.
+  if (metric === 'sanctuaryLevel') return Math.min(SANCTUARY_MAX_LEVEL, target);
+  if (metric === 'veilleurLevel') return Math.min(VEILLEUR_MAX_LEVEL, target);
+  return target;
 }
 
 // Progression 0-1 d'un défi. `targets` = cibles figées au tirage
@@ -1507,28 +1543,28 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // (02/09) : les 15 générateurs sont tous visibles dès le départ, le prix
 // suffit à échelonner la progression. Le verrouillage par palier a été
 // retiré en même temps que celui des améliorations.
-// Coûts recalibrés le 02/09 : x33 sur les prix de base (l'Esprit
-// Frappeur passe de 15 à 500) et x4 sur les revenus. Ce couple a été
+// Coûts recalibrés le 02/09 : x33 puis +30% sur les prix de base
+// (l'Esprit Frappeur passe de 15 à 650) et x4 sur les revenus. Ce couple a été
 // trouvé PAR SIMULATION, pas choisi : la cible était « 50 pièces/s de
 // revenu passif au bout d'1 heure », et seul ce rapport prix/revenu la
 // tient. Monter les prix seuls écrasait la courbe (10/s à 1h), monter
 // les revenus seuls la faisait exploser.
 export const AUTOCLICKERS = [
-  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 500, baseIncome: 0.4, tier: 1 },
-  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 3330, baseIncome: 4, tier: 1 },
-  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 36670, baseIncome: 32, tier: 1 },
-  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 400000, baseIncome: 188, tier: 1 },
-  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 4333290, baseIncome: 1040, tier: 1 },
-  { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 33_400_000, baseIncome: 5600, tier: 2 },
-  { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 500_000_000, baseIncome: 30000, tier: 2 },
-  { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 5330_000_000, baseIncome: 160000, tier: 2 },
-  { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 30000_000_000, baseIncome: 600000, tier: 2 },
-  { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 100_500_000_000, baseIncome: 2e+06, tier: 2 },
-  { id: 'titanfoudre', name: 'Titan de Foudre', emoji: '⚡', baseCost: 500_000_000_000, baseIncome: 4_800_000, tier: 3 },
-  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 2000_000_000_000, baseIncome: 24_500_000, tier: 3 },
-  { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 8330_000_000_000, baseIncome: 96_000_000, tier: 3 },
-  { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 33_000_000_000_000, baseIncome: 360_000_000, tier: 3 },
-  { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 130_000_000_000_000, baseIncome: 1280_000_000, tier: 3 },
+  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 650, baseIncome: 0.4, tier: 1 },
+  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 4330, baseIncome: 4, tier: 1 },
+  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 47670, baseIncome: 32, tier: 1 },
+  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 520000, baseIncome: 188, tier: 1 },
+  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 5633280, baseIncome: 1040, tier: 1 },
+  { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 43_400_000, baseIncome: 5600, tier: 2 },
+  { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 650_000_000, baseIncome: 30000, tier: 2 },
+  { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 6930_000_000, baseIncome: 160000, tier: 2 },
+  { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 39000_000_000, baseIncome: 600000, tier: 2 },
+  { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 130_500_000_000, baseIncome: 2e+06, tier: 2 },
+  { id: 'titanfoudre', name: 'Titan de Foudre', emoji: '⚡', baseCost: 650_000_000_000, baseIncome: 4_800_000, tier: 3 },
+  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 2600_000_000_000, baseIncome: 24_500_000, tier: 3 },
+  { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 10830_000_000_000, baseIncome: 96_000_000, tier: 3 },
+  { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 43_000_000_000_000, baseIncome: 360_000_000, tier: 3 },
+  { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 170_000_000_000_000, baseIncome: 1280_000_000, tier: 3 },
 ];
 
 // Coût pour acheter UNE unité de plus d'un générateur donné, sachant

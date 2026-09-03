@@ -22,10 +22,15 @@ import {
   critDamageUpgradeCost,
   TAP_UPGRADES,
   TAP_UPGRADE_FIRST_PACTE_LEVEL,
-  TAP_UPGRADE_STEP,
+  TAP_UPGRADE_UNLOCK_LEVEL,
   tapUpgradeUnlocked,
   tapUpgradeBonus,
-  totalUpgradePurchases,
+  tapUpgradeCost,
+  normalizeTapUpgrades,
+  sanctuaryMaxed,
+  veilleurMaxed,
+  SANCTUARY_MAX_LEVEL,
+  VEILLEUR_MAX_LEVEL,
   rollCreature,
   offlineEarnings,
   shouldSpawn,
@@ -137,8 +142,8 @@ export default function ClickerScreen({ onBack }) {
   const critDamageLevelRef = useRef(0);
   critDamageLevelRef.current = critDamageLevel;
   // Paliers de tap achetés (ids de TAP_UPGRADES), achat unique chacun.
-  const [tapUpgrades, setTapUpgrades] = useState([]);
-  const tapUpgradesRef = useRef([]);
+  const [tapUpgrades, setTapUpgrades] = useState({});
+  const tapUpgradesRef = useRef({});
   tapUpgradesRef.current = tapUpgrades;
   const [comboCount, setComboCount] = useState(0); // niveau actuel de la Transe
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
@@ -334,7 +339,9 @@ export default function ClickerScreen({ onBack }) {
           setDeck((saved.deck || [null, null, null]).map((id) => (id ? migrateCreatureId(id) : id)));
           setCritLevel(saved.critLevel || 0);
           setCritDamageLevel(saved.critDamageLevel || 0);
-          setTapUpgrades(saved.tapUpgrades || []);
+          // Migration douce : l'ancien format était un tableau d'ids
+          // achetés une fois, relu comme « niveau 1 » chacun.
+          setTapUpgrades(normalizeTapUpgrades(saved.tapUpgrades || {}));
           setAutoClickers(savedAutoClickers);
           // Migration douce (02/09) : les sauvegardes d'avant la refonte
           // stockaient `purchasedUpgradeIds` (tableau d'ids achetés une
@@ -818,12 +825,14 @@ export default function ClickerScreen({ onBack }) {
   const buyTapUpgrade = (upgradeId) => {
     const index = TAP_UPGRADES.findIndex((u) => u.id === upgradeId);
     if (index === -1) return;
-    if (tapUpgradesRef.current.includes(upgradeId)) return;
-    if (!tapUpgradeUnlocked(index, tapPowerRef.current, totalUpgradePurchases(upgradeLevelsRef.current))) return;
-    const cost = applyDiscount(TAP_UPGRADES[index].cost);
+    // Le déverrouillage est revérifié ICI, pas seulement à l'affichage :
+    // un bouton grisé reste sinon cliquable.
+    if (!tapUpgradeUnlocked(index, tapPowerRef.current, tapUpgradesRef.current)) return;
+    const level = tapUpgradesRef.current[upgradeId] || 0;
+    const cost = applyDiscount(tapUpgradeCost(TAP_UPGRADES[index], level));
     if (coinsRef.current < cost) return;
     setCoins((c) => c - cost);
-    setTapUpgrades((prev) => [...prev, upgradeId]);
+    setTapUpgrades((prev) => ({ ...prev, [upgradeId]: (prev[upgradeId] || 0) + 1 }));
     if (pendingDiscountRef.current) setPendingDiscount(null);
   };
 
@@ -839,6 +848,7 @@ export default function ClickerScreen({ onBack }) {
   };
 
   const buySanctuary = () => {
+    if (sanctuaryMaxed(sanctuaryLevelRef.current)) return;
     const cost = applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel));
     if (coins < cost) return;
     setCoins((c) => c - cost);
@@ -847,6 +857,7 @@ export default function ClickerScreen({ onBack }) {
   };
 
   const buyVeilleur = () => {
+    if (veilleurMaxed(veilleurLevelRef.current)) return;
     const cost = applyDiscount(veilleurUpgradeCost(veilleurLevel));
     if (coins < cost) return;
     setCoins((c) => c - cost);
@@ -1620,6 +1631,36 @@ function ShopView({
       <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
         {page === 'upgrades' ? (
           <>
+            {/* Offrande et Ascension EN HAUT de la boutique : ce sont
+            les deux actions à fort impact (l'une convertit la monnaie
+            de l'appli, l'autre relance toute la partie). Enfouies en
+            bas de liste, elles passaient inaperçues. */}
+            {/* Offrande, toujours juste après les 4 mécaniques historiques. */}
+            <TouchableOpacity style={[styles.offrandeBtn, sharedCoins < OFFRANDE_APPCOINS_COST && styles.actionBtnDisabled]} onPress={onOffrande} disabled={sharedCoins < OFFRANDE_APPCOINS_COST}>
+              <Text style={styles.offrandeBtnText}>🪙 Offrande</Text>
+              <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} pièces de l'appli (tu en as {sharedCoins}) contre un bonus ici</Text>
+            </TouchableOpacity>
+
+            {/* Ascension : elle vivait dans l'onglet Quêtes, qui n'existe
+                plus depuis que les défis sont passés sur l'écran
+                d'accueil (02/09). Rapatriée ici plutôt que sur l'accueil,
+                qu'on veut garder épuré — et c'est le seul autre endroit
+                du clicker où l'on dépense sa progression. */}
+            <TouchableOpacity
+              style={[styles.ascensionBtn, essenceGainPreview <= 0 && styles.actionBtnDisabled]}
+              onPress={onAscend}
+              disabled={essenceGainPreview <= 0}
+            >
+              <Text style={styles.ascensionBtnText}>
+                🌟 Ascension {ascensionCount > 0 ? `(x${ascensionSpeedMultiplier(ascensionCount).toFixed(2)} production)` : ''}
+              </Text>
+              <Text style={styles.ascensionBtnSubtext}>
+                {essenceGainPreview > 0
+                  ? `Remet ton économie à zéro · tu gardes créatures et Aventure · +${ascensionGriffesReward(ascensionCount + 1)} Griffes et production x${ascensionSpeedMultiplier(ascensionCount + 1).toFixed(2)}`
+                  : `Gagne encore ${formatNum(ASCENSION_MIN_LIFETIME_EARNED - totalEarned)} pièces au total pour débloquer`}
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.actionBtn, coins < applyDiscount(tapPowerCost(tapPower)) && styles.actionBtnDisabled]}
               onPress={onBuyTapPower}
@@ -1663,54 +1704,29 @@ function ShopView({
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)) && styles.actionBtnDisabled]}
+              style={[styles.actionBtn, (sanctuaryMaxed(sanctuaryLevel) || coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))) && styles.actionBtnDisabled]}
               onPress={onBuySanctuary}
-              disabled={coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))}
+              disabled={sanctuaryMaxed(sanctuaryLevel) || coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.actionBtnText}>🏛️ Sanctuaire (nv {sanctuaryLevel})</Text>
+                <Text style={styles.actionBtnText}>🏛️ Sanctuaire (nv {sanctuaryLevel}/{SANCTUARY_MAX_LEVEL})</Text>
                 <Text style={styles.actionBtnSubtext}>+2,5% sur TOUTE la production (tap + passif) par niveau</Text>
               </View>
-              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)))}</Text>
+              <Text style={styles.actionBtnCost}>{sanctuaryMaxed(sanctuaryLevel) ? '⭐ MAX' : `💰 ${formatNum(applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)))}`}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, coins < applyDiscount(veilleurUpgradeCost(veilleurLevel)) && styles.actionBtnDisabled]}
+              style={[styles.actionBtn, (veilleurMaxed(veilleurLevel) || coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))) && styles.actionBtnDisabled]}
               onPress={onBuyVeilleur}
-              disabled={coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))}
+              disabled={veilleurMaxed(veilleurLevel) || coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.actionBtnText}>🌙 Veilleur (nv {veilleurLevel})</Text>
+                <Text style={styles.actionBtnText}>🌙 Veilleur (nv {veilleurLevel}/{VEILLEUR_MAX_LEVEL})</Text>
                 <Text style={styles.actionBtnSubtext}>+5% de gains hors-ligne par niveau</Text>
               </View>
-              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}</Text>
+              <Text style={styles.actionBtnCost}>{veilleurMaxed(veilleurLevel) ? '⭐ MAX' : `💰 ${formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}`}</Text>
             </TouchableOpacity>
 
-            {/* Offrande, toujours juste après les 4 mécaniques historiques. */}
-            <TouchableOpacity style={[styles.offrandeBtn, sharedCoins < OFFRANDE_APPCOINS_COST && styles.actionBtnDisabled]} onPress={onOffrande} disabled={sharedCoins < OFFRANDE_APPCOINS_COST}>
-              <Text style={styles.offrandeBtnText}>🪙 Offrande</Text>
-              <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} pièces de l'appli (tu en as {sharedCoins}) contre un bonus ici</Text>
-            </TouchableOpacity>
-
-            {/* Ascension : elle vivait dans l'onglet Quêtes, qui n'existe
-                plus depuis que les défis sont passés sur l'écran
-                d'accueil (02/09). Rapatriée ici plutôt que sur l'accueil,
-                qu'on veut garder épuré — et c'est le seul autre endroit
-                du clicker où l'on dépense sa progression. */}
-            <TouchableOpacity
-              style={[styles.ascensionBtn, essenceGainPreview <= 0 && styles.actionBtnDisabled]}
-              onPress={onAscend}
-              disabled={essenceGainPreview <= 0}
-            >
-              <Text style={styles.ascensionBtnText}>
-                🌟 Ascension {ascensionCount > 0 ? `(x${ascensionSpeedMultiplier(ascensionCount).toFixed(2)} production)` : ''}
-              </Text>
-              <Text style={styles.ascensionBtnSubtext}>
-                {essenceGainPreview > 0
-                  ? `Remet ton économie à zéro · tu gardes créatures et Aventure · +${ascensionGriffesReward(ascensionCount + 1)} Griffes et production x${ascensionSpeedMultiplier(ascensionCount + 1).toFixed(2)}`
-                  : `Gagne encore ${formatNum(ASCENSION_MIN_LIFETIME_EARNED - totalEarned)} pièces au total pour débloquer`}
-              </Text>
-            </TouchableOpacity>
 
             {/* Améliorations refondues (02/09) : de simples améliorations
                 de plus, dans la continuité de Pacte/Faveur/Sanctuaire/
@@ -1725,10 +1741,10 @@ function ShopView({
                 lieu d'une boutique qui grandit sans prévenir. */}
             <Text style={styles.shopTierHeader}>✊ Puissance de tap</Text>
             {TAP_UPGRADES.map((item, index) => {
-              const owned = tapUpgrades.includes(item.id);
-              const unlocked = tapUpgradeUnlocked(index, tapPower, totalUpgradePurchases(upgradeLevels));
-              const cost = applyDiscount(item.cost);
-              const canBuy = unlocked && !owned && coins >= cost;
+              const level = tapUpgrades[item.id] || 0;
+              const unlocked = tapUpgradeUnlocked(index, tapPower, tapUpgrades);
+              const cost = applyDiscount(tapUpgradeCost(item, level));
+              const canBuy = unlocked && coins >= cost;
               return (
                 <TouchableOpacity
                   key={item.id}
@@ -1738,21 +1754,17 @@ function ShopView({
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.actionBtnText}>
-                      {unlocked ? `${item.emoji} ${item.name}` : '🔒 ???'}
+                      {unlocked ? `${item.emoji} ${item.name} (nv ${level})` : '🔒 ???'}
                     </Text>
                     <Text style={styles.actionBtnSubtext}>
-                      {owned
-                        ? `Acquis · +${formatNum(item.bonus)} par tap`
-                        : unlocked
-                        ? `+${formatNum(item.bonus)} pièces par tap`
+                      {unlocked
+                        ? `+${formatNum(item.bonus)} par tap et par niveau${level > 0 ? ` · actuellement +${formatNum(item.bonus * level)}` : ''}`
                         : index === 0
                         ? `Se débloque au niveau ${TAP_UPGRADE_FIRST_PACTE_LEVEL} de Pacte`
-                        : `Se débloque après ${index * TAP_UPGRADE_STEP} niveaux d'améliorations`}
+                        : `Se débloque à ${TAP_UPGRADE_UNLOCK_LEVEL} niveaux de ${TAP_UPGRADES[index - 1].name}`}
                     </Text>
                   </View>
-                  <Text style={styles.actionBtnCost}>
-                    {owned ? '⭐' : unlocked ? `💰 ${formatNum(cost)}` : '🔒'}
-                  </Text>
+                  <Text style={styles.actionBtnCost}>{unlocked ? `💰 ${formatNum(cost)}` : '🔒'}</Text>
                 </TouchableOpacity>
               );
             })}
