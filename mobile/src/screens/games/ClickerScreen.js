@@ -4,7 +4,7 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
@@ -88,6 +88,18 @@ import {
 import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 import { COLORS } from './clickerTheme';
+
+// Les 5 illustrations d'œuf (un fichier par palier de EGG_STAGES,
+// même index). `require` doit recevoir un chemin STATIQUE — Metro
+// résout les images au moment du bundling, pas à l'exécution, donc un
+// tableau construit avec un chemin dynamique ne fonctionnerait pas.
+const EGG_IMAGES = [
+  require('../../../assets/egg/egg-0-endormi.png'),
+  require('../../../assets/egg/egg-1-fremissant.png'),
+  require('../../../assets/egg/egg-2-fissure.png'),
+  require('../../../assets/egg/egg-3-lumineux.png'),
+  require('../../../assets/egg/egg-4-pret.png'),
+];
 import { DeckPicker } from './DeckPicker';
 
 export const STORAGE_KEY = 'clicker:state:v1';
@@ -1447,9 +1459,15 @@ export default function ClickerScreen({ onBack }) {
                       },
                     ]}
                   >
-                    <Text style={[styles.tapEmoji, { opacity: 0.6 + eggStageIndex * 0.1 }]}>
-                      {eggPhase === 'capturing' ? '💫' : '🥚'}
-                    </Text>
+                    {eggPhase === 'capturing' ? (
+                      <Text style={[styles.tapEmoji, { opacity: 0.6 + eggStageIndex * 0.1 }]}>💫</Text>
+                    ) : (
+                      <Image
+                        source={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
+                        style={[styles.eggImage, { opacity: 0.6 + eggStageIndex * 0.1 }]}
+                        resizeMode="contain"
+                      />
+                    )}
                   </Animated.View>
                 </View>
               </TouchableOpacity>
@@ -2336,6 +2354,9 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 16, shadowOffset: { width: 0, height: 0 },
   },
   tapEmoji: { fontSize: 84 },
+  // Taille pensée pour occuper le même espace que l'ancien emoji
+  // (fontSize 84) sur le bouton de tap circulaire.
+  eggImage: { width: 140, height: 140 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8 },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
