@@ -61,4 +61,15 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           CI: "1"
-        run: eas update --branch main --message "Auto-publish depuis GitHub Actions (${{ github.sha }})" --non-interactive
+        run: |
+          # Le runtimeVersion résolu est mis DANS LE MESSAGE de l'update.
+          # Les logs de ce robot sont stockés sur un hôte inaccessible
+          # depuis l'environnement de dev, alors que le message, lui,
+          # s'affiche directement dans Expo Go sur le téléphone. C'est le
+          # seul canal de diagnostic qui traverse.
+          EXPO_V=$(node -p "require('expo/package.json').version")
+          RN_V=$(node -p "require('react-native/package.json').version")
+          RT=$(npx expo config --type public --json 2>/dev/null | node -p "try{JSON.parse(require('fs').readFileSync(0,'utf8')).runtimeVersion||'(aucun)'}catch(e){'(illisible)'}")
+          SDKV=$(npx expo config --type public --json 2>/dev/null | node -p "try{JSON.parse(require('fs').readFileSync(0,'utf8')).sdkVersion||'(aucun)'}catch(e){'(illisible)'}")
+          eas update --branch main --non-interactive \
+            --message "expo=$EXPO_V rn=$RN_V sdk=$SDKV rt=$RT" 
