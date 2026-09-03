@@ -29,7 +29,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [],
-    "sdkVersion": "57.0.9",
-    "runtimeVersion": "exposdk:57.0.9"
+    "sdkVersion": "57.0.0",
+    "runtimeVersion": "exposdk:57.0.0"
   }
 }

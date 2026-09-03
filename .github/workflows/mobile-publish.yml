@@ -71,5 +71,21 @@ jobs:
           RN_V=$(node -p "require('react-native/package.json').version")
           RT=$(npx expo config --type public --json 2>/dev/null | node -p "try{JSON.parse(require('fs').readFileSync(0,'utf8')).runtimeVersion||'(aucun)'}catch(e){'(illisible)'}")
           SDKV=$(npx expo config --type public --json 2>/dev/null | node -p "try{JSON.parse(require('fs').readFileSync(0,'utf8')).sdkVersion||'(aucun)'}catch(e){'(illisible)'}")
+          # Interroge l'endpoint public des versions Expo pour savoir
+          # quelle version de SDK correspond au client Expo Go installé
+          # (57.0.9 sur les téléphones). C'est CE mapping que le client
+          # utilise pour accepter ou refuser un update, et il n'est pas
+          # devinable depuis l'environnement de dev (réseau restreint).
+          MAP=$(curl -s https://exp.host/--/api/v2/versions | node -e "
+            let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{
+              try{
+                const v=JSON.parse(s).sdkVersions||{};
+                const hits=Object.entries(v)
+                  .filter(([k,o])=>String(o.androidClientVersion||'').startsWith('57')||String(o.iosClientVersion||'').startsWith('57'))
+                  .map(([k,o])=>k+'>a'+o.androidClientVersion+'/i'+o.iosClientVersion);
+                console.log(hits.join(' ')||'aucun-57');
+              }catch(e){console.log('api-illisible');}
+            });" 2>/dev/null || echo "curl-ko")
+          echo "MAPPING: $MAP"
           eas update --branch main --non-interactive \
-            --message "expo=$EXPO_V rn=$RN_V sdk=$SDKV rt=$RT" 
+            --message "sdk=$SDKV rt=$RT | client57=$MAP" 
