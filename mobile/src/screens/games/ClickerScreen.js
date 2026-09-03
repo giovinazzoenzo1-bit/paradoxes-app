@@ -207,6 +207,13 @@ export default function ClickerScreen({ onBack }) {
   // joueur accumulait en travaillant le défi 1 comptait déjà pour le
   // défi 3. « Obtiens 20 coups critiques » arrivait à moitié fait, voire
   // déjà validé. Un compteur ne doit courir que pendant SON défi.
+  // Défis validés de force par l'outil de dev. Liste d'ids plutôt qu'une
+  // modification des stats du joueur : valider un défi ne doit pas lui
+  // offrir des coups critiques ou des pièces qu'il n'a pas gagnés, sinon
+  // l'outil de test fausse l'équilibrage qu'on mesure juste après.
+  const [devCompletedIds, setDevCompletedIds] = useState([]);
+  const devCompletedIdsRef = useRef([]);
+  devCompletedIdsRef.current = devCompletedIds;
   const [questBaselines, setQuestBaselines] = useState({});
   const questBaselinesRef = useRef({});
   questBaselinesRef.current = questBaselines;
@@ -411,6 +418,7 @@ export default function ClickerScreen({ onBack }) {
             }
           );
           setQuestBaselines(saved.questBaselines || {});
+          setDevCompletedIds(saved.devCompletedIds || []);
           setEggPhase(saved.eggPhase || 'collecting');
           setHatchTaps(saved.hatchTaps || 0);
           setCaptureTaps(saved.captureTaps || 0);
@@ -480,7 +488,7 @@ export default function ClickerScreen({ onBack }) {
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, autoClickers, upgradeLevels, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
-    activeQuestIds, questTargets, questBaseline, questBaselines, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
+    activeQuestIds, questTargets, questBaseline, questBaselines, devCompletedIds, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
   // Construit l'objet de sauvegarde à partir des REFS uniquement, donc
@@ -516,6 +524,7 @@ export default function ClickerScreen({ onBack }) {
     questTargets: questTargetsRef.current,
     questBaseline: questBaselineRef.current,
     questBaselines: questBaselinesRef.current,
+    devCompletedIds: devCompletedIdsRef.current,
     sequenceIndex: sequenceIndexRef.current,
     eggPhase: eggPhaseRef.current,
     hatchTaps: hatchTapsRef.current,
@@ -956,7 +965,13 @@ export default function ClickerScreen({ onBack }) {
   // celui du cycle (utilisé tant que le défi n'est pas devenu courant,
   // et pour les sauvegardes d'avant les baselines par défi).
   const baselineFor = (id) => questBaselines[id] || questBaseline;
-  const completedQuestCount = activeQuestIds.filter((id) => questComplete(id, questStats, baselineFor(id), questTargets)).length;
+  // Point de vérité unique de « ce défi est-il terminé ». Tout le reste
+  // (compteur du cycle, défi courant, éclosion) passe par ici, sinon un
+  // défi validé en dev serait terminé pour l'affichage mais pas pour
+  // l'œuf, qui n'éclorait jamais.
+  const isQuestDone = (id) =>
+    devCompletedIds.includes(id) || questComplete(id, questStats, baselineFor(id), questTargets);
+  const completedQuestCount = activeQuestIds.filter(isQuestDone).length;
 
   // Défi mis en avant sur l'écran d'accueil : le PREMIER non terminé des
   // 4 du cycle. Un seul à la fois, volontairement — la barre segmentée
@@ -964,7 +979,7 @@ export default function ClickerScreen({ onBack }) {
   // et empiler 4 barres sur l'accueil recréerait l'onglet Quêtes qu'on
   // vient justement de supprimer. Vaut `null` quand les 4 sont finies
   // (l'affichage bascule alors sur la barre d'éclosion).
-  const currentChallengeId = activeQuestIds.find((id) => !questComplete(id, questStats, baselineFor(id), questTargets)) || null;
+  const currentChallengeId = activeQuestIds.find((id) => !isQuestDone(id)) || null;
   const currentChallenge = currentChallengeId
     ? questDetail(currentChallengeId, questStats, baselineFor(currentChallengeId), questTargets)
     : null;
@@ -1137,6 +1152,7 @@ export default function ClickerScreen({ onBack }) {
         // Les chronomètres par défi repartent à zéro : chaque défi du
         // nouveau cycle démarrera le sien quand il deviendra courant.
         setQuestBaselines({});
+        setDevCompletedIds([]);
         setEggPhase('collecting');
         setHatchTaps(0);
         setCaptureTaps(0);
@@ -1304,6 +1320,18 @@ export default function ClickerScreen({ onBack }) {
               cycleIndex={0}
               cycleTotal={0}
             />
+          )}
+
+          {/* Outil de test : valide le défi affiché sans tricher sur les
+              stats du joueur (voir devCompletedIds). Même statut que la
+              section dev des Options, visible en phase de test. */}
+          {eggPhase === 'collecting' && currentChallengeId && (
+            <TouchableOpacity
+              style={styles.devSkipBtn}
+              onPress={() => setDevCompletedIds((prev) => (prev.includes(currentChallengeId) ? prev : [...prev, currentChallengeId]))}
+            >
+              <Text style={styles.devSkipBtnText}>🛠️ Valider ce défi (dev)</Text>
+            </TouchableOpacity>
           )}
 
           <View style={styles.tapArea}>
@@ -2077,6 +2105,11 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.action, shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
   },
   challengeCount: { color: COLORS.action, fontSize: 13, fontWeight: '900', marginLeft: 8, minWidth: 38, textAlign: 'right' },
+  devSkipBtn: {
+    alignSelf: 'center', marginTop: 8, paddingVertical: 5, paddingHorizontal: 12,
+    borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
+  },
+  devSkipBtnText: { color: '#b3a0ff', fontSize: 11, fontWeight: '800' },
   challengeCycle: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 4 },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },

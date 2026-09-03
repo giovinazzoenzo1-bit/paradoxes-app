@@ -223,6 +223,28 @@ quoi débloquer une évolution en attente, pas de quoi s'acheter la
 collection. Les tests vérifient ce rapport plutôt qu'un nombre de
 créatures évoluées.
 
+## Outil de dev : valider le défi en cours
+
+Bouton **« 🛠️ Valider ce défi (dev) »** sous la barre de défi, sur
+l'écran d'accueil du clicker.
+
+Placé là et non dans Options, contrairement aux autres outils de dev :
+ceux-ci posent un drapeau lu au prochain chargement de l'écran concerné,
+ce qui obligerait à quitter et rouvrir l'Élevage à chaque défi validé —
+inutilisable pour parcourir une séquence de 10 cycles.
+
+**Il ne triche pas sur les stats.** Le défi est ajouté à une liste
+`devCompletedIds` plutôt que d'offrir au joueur des coups critiques ou
+des pièces qu'il n'a pas gagnés : sinon l'outil de test fausserait
+l'équilibrage qu'on mesure juste après.
+
+`isQuestDone(id)` est le point de vérité unique de « ce défi est-il
+terminé » — compteur du cycle, défi courant et éclosion passent tous par
+lui. Sans ça, un défi validé en dev aurait été terminé pour l'affichage
+mais pas pour l'œuf, qui n'aurait jamais éclos.
+
+La liste est persistée et **remise à zéro à chaque nouveau cycle**.
+
 ## Amélioration des créatures — 100% en Griffes (fait)
 
 Les créatures ne se montent **plus du tout avec les pièces du clicker**.
