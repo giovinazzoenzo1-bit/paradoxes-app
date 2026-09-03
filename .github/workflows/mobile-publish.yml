@@ -37,18 +37,6 @@ jobs:
       # désormais résolues et vérifiées en amont, elles ne doivent plus
       # être touchées par la CI.
 
-      # Diagnostic : sans ça, un update publié « avec succès » mais refusé
-      # par Expo Go (« Not compatible with this version of Expo Go ») est
-      # impossible à expliquer depuis les logs. On veut voir noir sur
-      # blanc la version d'expo réellement installée et le runtimeVersion
-      # que EAS va attacher à l'update.
-      - name: Diagnostic versions
-        run: |
-          echo "expo installé : $(node -p "require('expo/package.json').version")"
-          echo "react-native  : $(node -p "require('react-native/package.json').version")"
-          echo "--- config publique résolue ---"
-          npx expo config --type public | grep -iE "sdkVersion|runtimeVersion|newArch" || true
-
       - name: Installe EAS CLI
         run: npm install -g eas-cli
 
@@ -61,31 +49,7 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           CI: "1"
-        run: |
-          # Le runtimeVersion résolu est mis DANS LE MESSAGE de l'update.
-          # Les logs de ce robot sont stockés sur un hôte inaccessible
-          # depuis l'environnement de dev, alors que le message, lui,
-          # s'affiche directement dans Expo Go sur le téléphone. C'est le
-          # seul canal de diagnostic qui traverse.
-          EXPO_V=$(node -p "require('expo/package.json').version")
-          RN_V=$(node -p "require('react-native/package.json').version")
-          RT=$(npx expo config --type public --json 2>/dev/null | node -p "try{JSON.parse(require('fs').readFileSync(0,'utf8')).runtimeVersion||'(aucun)'}catch(e){'(illisible)'}")
-          SDKV=$(npx expo config --type public --json 2>/dev/null | node -p "try{JSON.parse(require('fs').readFileSync(0,'utf8')).sdkVersion||'(aucun)'}catch(e){'(illisible)'}")
-          # Interroge l'endpoint public des versions Expo pour savoir
-          # quelle version de SDK correspond au client Expo Go installé
-          # (57.0.9 sur les téléphones). C'est CE mapping que le client
-          # utilise pour accepter ou refuser un update, et il n'est pas
-          # devinable depuis l'environnement de dev (réseau restreint).
-          MAP=$(curl -s https://exp.host/--/api/v2/versions | node -e "
-            let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{
-              try{
-                const v=JSON.parse(s).sdkVersions||{};
-                const hits=Object.entries(v)
-                  .filter(([k,o])=>String(o.androidClientVersion||'').startsWith('57')||String(o.iosClientVersion||'').startsWith('57'))
-                  .map(([k,o])=>k+'>a'+o.androidClientVersion+'/i'+o.iosClientVersion);
-                console.log(hits.join(' ')||'aucun-57');
-              }catch(e){console.log('api-illisible');}
-            });" 2>/dev/null || echo "curl-ko")
-          echo "MAPPING: $MAP"
-          eas update --branch main --non-interactive \
-            --message "sdk=$SDKV rt=$RT | client57=$MAP" 
+        # Aucun runtimeVersion n'est forcé dans app.json : eas update
+        # publie alors avec l'exposdk du SDK du projet, seule valeur
+        # qu'Expo Go accepte de LANCER. Voir 63b68ff (28/08).
+        run: eas update --branch main --message "Auto-publish depuis GitHub Actions (${{ github.sha }})" --non-interactive
