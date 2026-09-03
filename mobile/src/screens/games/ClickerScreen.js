@@ -689,6 +689,10 @@ export default function ClickerScreen({ onBack }) {
     return () => clearInterval(interval);
   }, [loaded]);
 
+  // Horodatage du dernier rafraichissement visuel. Voir handleTap : a
+  // 142 clics/s, tout afficher saturait le thread et bloquait l'appli.
+  const lastVisualAtRef = useRef(0);
+
   const spawnPopup = (text, x, y, isCrit) => {
     const id = popupIdRef.current++;
     setPopups((p) => [...p, { id, text, x, y, isCrit }]);
@@ -703,7 +707,10 @@ export default function ClickerScreen({ onBack }) {
     const newCombo = stillActive ? comboCountRef.current + 1 : 1;
     comboCountRef.current = newCombo;
     lastTapTimeRef.current = now;
-    setComboCount(newCombo);
+    // Le combo exact vit dans la ref (lue par le calcul de gain) ;
+    // l'etat React ne sert qu'a l'affichage, donc il suit le meme
+    // rythme limite que le reste.
+    if (now - lastVisualAtRef.current >= 50) setComboCount(newCombo);
     const newTranseMult = transeMultiplier(newCombo);
     if (newTranseMult > maxComboRef.current) {
       maxComboRef.current = newTranseMult;
@@ -731,7 +738,9 @@ export default function ClickerScreen({ onBack }) {
     const isCrit = Math.random() < effectiveCritChance;
     if (isCrit) {
       totalCritsRef.current += 1;
-      setTotalCrits(totalCritsRef.current);
+      // La ref est deja incrementee : l'etat suit au rythme limite, sans
+      // jamais fausser le compte reel.
+      if (now - lastVisualAtRef.current >= 50) setTotalCrits(totalCritsRef.current);
       trackEvent('crit', 1);
     }
 
@@ -744,13 +753,20 @@ export default function ClickerScreen({ onBack }) {
       tapDamage(tapPowerRef.current) + upgradeBonus.tapFlat + tapUpgradeBonus(tapUpgradesRef.current);
     const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult));
     const finalGain = Math.round(gainCoins(gain));
-    Animated.sequence([
-      Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
-      Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
-    ]).start();
-    const x = evt.nativeEvent.locationX || 60;
-    const y = evt.nativeEvent.locationY || 60;
-    spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
+    // Animation + popup au maximum toutes les 50 ms (~20 fois par
+    // seconde). Au-dela, l'oeil ne fait plus la difference alors que le
+    // cout de rendu, lui, continue de grimper lineairement.
+    if (now - lastVisualAtRef.current >= 50) {
+      lastVisualAtRef.current = now;
+      Animated.sequence([
+        Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
+        Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
+      ]).start();
+      const ne = evt && evt.nativeEvent ? evt.nativeEvent : null;
+      const x = (ne && ne.locationX) || 60;
+      const y = (ne && ne.locationY) || 60;
+      spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
+    }
 
     // 02/09 : l'onglet Quêtes a disparu, l'œuf de l'écran d'accueil EST
     // désormais le véritable œuf à casser. Quand les 4 défis sont
