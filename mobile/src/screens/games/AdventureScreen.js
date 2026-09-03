@@ -83,6 +83,9 @@ export const DEV_ADD_GRIFFES_KEY = 'adventure:dev:addGriffes';
 const DEV_GRIFFES_AMOUNT = 1000;
 // Même schéma que ci-dessus pour recharger l'énergie au max depuis Options.
 export const DEV_REFILL_ENERGY_KEY = 'adventure:dev:refillEnergy';
+// Remise à ZÉRO des Griffes — pour tester la difficulté de l'Aventure
+// depuis une bourse vide, ce que « +1000 Griffes » ne permet pas.
+export const DEV_RESET_GRIFFES_KEY = 'adventure:dev:resetGriffes';
 
 // Runes — proposition initiale de 4 types (voir le tableau des paliers
 // donné à l'utilisateur en réponse). Les BONUS eux-mêmes ne sont pas
@@ -161,8 +164,18 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
       } catch (e) {
         // pas de sauvegarde valide, on démarre au niveau 1
       }
-      // Drapeau dev "Ajouter des Griffes" — placé hors du if(raw) pour
-      // marcher aussi sans sauvegarde existante.
+      // Drapeaux dev — placés hors du if(raw) pour marcher aussi sans
+      // sauvegarde existante.
+      //
+      // La remise à zéro est traitée AVANT l'ajout : si les deux
+      // drapeaux sont posés (le joueur a cliqué sur les deux boutons
+      // avant de revenir), il obtient 0 puis +1000, soit 1000. Dans
+      // l'ordre inverse le +1000 serait silencieusement annulé.
+      const resetGriffesFlag = await AsyncStorage.getItem(DEV_RESET_GRIFFES_KEY);
+      if (resetGriffesFlag === '1') {
+        setGriffes(0);
+        await AsyncStorage.removeItem(DEV_RESET_GRIFFES_KEY);
+      }
       const griffesFlag = await AsyncStorage.getItem(DEV_ADD_GRIFFES_KEY);
       if (griffesFlag === '1') {
         setGriffes((g) => g + DEV_GRIFFES_AMOUNT);
