@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
@@ -1663,67 +1664,94 @@ export default function ClickerScreen({ onBack }) {
   );
 }
 
-// Menu du calendrier de connexion : 7 cases facon calendrier de
-// l'Avent, dans un panneau compact centre a l'ecran.
+// Calendrier de connexion, calque sur la maquette fournie.
 //
-// Grille 4 + 3 plutot qu'une ligne de 7 : sur la largeur d'un
-// telephone, sept cases cote a cote deviennent trop etroites pour
-// afficher lisiblement l'icone ET le montant.
+// La grille n'est PAS reguliere, et c'est voulu : 3 petites cases
+// (jours 1-3), puis 2 grandes (jours 4-5), puis 2 moyennes (jours 6-7).
+// La taille de la case signale l'importance du lot, le jour 7 etant
+// mis en avant en dore comme recompense supreme.
 function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim, onClose }) {
   if (!Array.isArray(calendar) || calendar.length === 0) return null;
   const ready = !alreadyClaimedToday;
-  const rows = [calendar.slice(0, 4), calendar.slice(4)];
+  // Nombre de jours deja encaisses dans le cycle courant : les jours
+  // avant aujourd'hui, plus aujourd'hui s'il a ete reclame.
+  const claimedCount = (currentDay - 1) + (ready ? 0 : 1);
+
+  const cell = (d, style) => {
+    const isToday = d.day === currentDay;
+    const isPast = d.day < currentDay;
+    const claimable = isToday && ready;
+    const isSupreme = d.day === 7;
+    return (
+      <TouchableOpacity
+        key={d.day}
+        style={[
+          styles.calBox, style,
+          isSupreme && styles.calBoxSupreme,
+          isPast && styles.calBoxPast,
+          isToday && styles.calBoxToday,
+          claimable && styles.calBoxClaimable,
+        ]}
+        onPress={claimable ? onClaim : undefined}
+        disabled={!claimable}
+        activeOpacity={claimable ? 0.7 : 1}
+      >
+        <Text style={styles.calBoxIcon}>{d.icon}</Text>
+        <Text style={[styles.calBoxDay, isSupreme && styles.calBoxDaySupreme]}>JOUR {d.day}</Text>
+        <Text
+          style={[styles.calBoxLabel, isSupreme && styles.calBoxLabelSupreme]}
+          numberOfLines={2}
+        >
+          {d.label}
+        </Text>
+        {isPast && <Text style={styles.calBoxCheck}>✓</Text>}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.calOverlay}>
-      <View style={styles.calPanel}>
-        <View style={styles.calPanelHead}>
-          <Text style={styles.calPanelTitle}>🎁 Récompenses quotidiennes</Text>
-          <TouchableOpacity onPress={onClose} style={styles.calClose}>
-            <Ionicons name="close" size={20} color={COLORS.muted} />
-          </TouchableOpacity>
+      <LinearGradient
+        colors={['#0f2740', '#0a1a2e', '#08131f']}
+        style={styles.calPanel}
+      >
+        <TouchableOpacity onPress={onClose} style={styles.calClose}>
+          <Ionicons name="close" size={20} color={COLORS.muted} />
+        </TouchableOpacity>
+
+        <Text style={styles.calPanelTitle}>CALENDRIER DE RÉCOMPENSES</Text>
+        <Text style={styles.calPanelSub}>SEMAINE DE CONNEXION</Text>
+
+        {/* Jours 1-3 : petites cases */}
+        <View style={styles.calGridRow}>
+          {calendar.slice(0, 3).map((d) => cell(d, styles.calBoxSmall))}
         </View>
 
-        {rows.map((row, ri) => (
-          <View key={ri} style={styles.calGridRow}>
-            {row.map((d) => {
-              const isToday = d.day === currentDay;
-              const isPast = d.day < currentDay;
-              const claimable = isToday && ready;
-              return (
-                <TouchableOpacity
-                  key={d.day}
-                  style={[
-                    styles.calBox,
-                    isPast && styles.calBoxPast,
-                    isToday && styles.calBoxToday,
-                    claimable && styles.calBoxClaimable,
-                  ]}
-                  onPress={claimable ? onClaim : undefined}
-                  disabled={!claimable}
-                  activeOpacity={claimable ? 0.7 : 1}
-                >
-                  <Text style={styles.calBoxDay}>Jour {d.day}</Text>
-                  <Text style={styles.calBoxIcon}>{d.icon}</Text>
-                  <Text style={styles.calBoxLabel} numberOfLines={2}>{d.label}</Text>
-                  {isPast && <Text style={styles.calBoxCheck}>✓</Text>}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ))}
+        {/* Jours 4-5 : grandes cases */}
+        <View style={styles.calGridRow}>
+          {calendar.slice(3, 5).map((d) => cell(d, styles.calBoxLarge))}
+        </View>
 
-        {ready ? (
+        {/* Jours 6-7 : cases moyennes, le 7 en récompense suprême */}
+        <View style={styles.calGridRow}>
+          {calendar.slice(5, 7).map((d) => cell(d, styles.calBoxMedium))}
+        </View>
+
+        <Text style={styles.calFooter}>CONNEXIONS RÉCLAMÉES : {claimedCount} / 7</Text>
+        <View style={styles.calProgressTrack}>
+          <View style={[styles.calProgressFill, { width: `${(claimedCount / 7) * 100}%` }]} />
+        </View>
+
+        {ready && (
           <TouchableOpacity style={styles.calBigBtn} onPress={onClaim}>
-            <Text style={styles.calBigBtnText}>Récupérer le jour {currentDay}</Text>
+            <Text style={styles.calBigBtnText}>RÉCUPÉRER LE JOUR {currentDay}</Text>
           </TouchableOpacity>
-        ) : (
-          <Text style={styles.calWaitText}>Reviens demain pour le jour suivant</Text>
         )}
-      </View>
+      </LinearGradient>
     </View>
   );
 }
+
 
 
 function DeckRow({ deck, owned, onSlotPress }) {
@@ -2485,39 +2513,65 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
   },
 
-  // ---- Menu du calendrier ----
+  // ---- Menu du calendrier (calque sur la maquette) ----
   calOverlay: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: 20,
   },
-  // Compact et rectangulaire : il ne doit pas occuper tout l'ecran.
+  // Panneau compact : juste la taille du calendrier, comme demande.
+  // Bordure cyan lumineuse de la maquette.
   calPanel: {
-    width: '100%', maxWidth: 380, backgroundColor: COLORS.panel, borderRadius: 18,
-    borderWidth: 1, borderColor: COLORS.border, padding: 14,
+    width: '100%', maxWidth: 360, borderRadius: 14, padding: 14,
+    borderWidth: 2, borderColor: '#4db8e8',
+    shadowColor: '#4db8e8', shadowOpacity: 0.6, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
   },
-  calPanelHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  calPanelTitle: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
-  calClose: { padding: 4 },
-  calGridRow: { flexDirection: 'row', gap: 8, marginBottom: 8, justifyContent: 'flex-start' },
-  // Cases facon calendrier de l'Avent : carrees, bien delimitees.
+  calClose: { position: 'absolute', top: 8, right: 8, padding: 6, zIndex: 10 },
+  calPanelTitle: {
+    color: '#eaf6ff', fontSize: 15, fontWeight: '900', textAlign: 'center',
+    letterSpacing: 0.5, marginTop: 2,
+  },
+  calPanelSub: {
+    color: COLORS.action, fontSize: 10, fontWeight: '800', textAlign: 'center',
+    letterSpacing: 1, marginTop: 3, marginBottom: 10,
+  },
+  calGridRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+
+  // Cases : la TAILLE porte l'importance du lot (petites J1-3, grandes
+  // J4-5, moyennes J6-7), exactement comme sur la maquette.
   calBox: {
-    width: 78, height: 92, backgroundColor: COLORS.panelLight, borderRadius: 10,
-    borderWidth: 1, borderColor: COLORS.border,
-    alignItems: 'center', justifyContent: 'center', padding: 4,
+    backgroundColor: 'rgba(10,26,46,0.85)', borderRadius: 8,
+    borderWidth: 1, borderColor: '#2a6f96',
+    alignItems: 'center', justifyContent: 'center', padding: 5,
   },
+  calBoxSmall: { flex: 1, height: 74 },
+  calBoxLarge: { flex: 1, height: 96 },
+  calBoxMedium: { flex: 1, height: 66 },
   calBoxPast: { opacity: 0.4 },
-  calBoxToday: { borderColor: COLORS.action, borderWidth: 2 },
+  calBoxToday: { borderColor: '#7fd4ff', borderWidth: 2 },
   calBoxClaimable: { backgroundColor: 'rgba(246,195,67,0.18)', borderColor: COLORS.action, borderWidth: 2 },
-  calBoxDay: { color: COLORS.muted, fontSize: 9, fontWeight: '800' },
-  calBoxIcon: { fontSize: 22, marginVertical: 2 },
-  calBoxLabel: { color: COLORS.text, fontSize: 8, fontWeight: '700', textAlign: 'center' },
+  // Jour 7 : recompense supreme, encadree en dore.
+  calBoxSupreme: { borderColor: COLORS.action, backgroundColor: 'rgba(246,195,67,0.10)' },
+  calBoxIcon: { fontSize: 20 },
+  calBoxDay: { color: '#eaf6ff', fontSize: 10, fontWeight: '900', letterSpacing: 0.3, marginTop: 2 },
+  calBoxDaySupreme: { color: COLORS.action },
+  calBoxLabel: { color: '#9fc4dc', fontSize: 7.5, fontWeight: '700', textAlign: 'center', marginTop: 1 },
+  calBoxLabelSupreme: { color: COLORS.action, fontWeight: '900' },
   calBoxCheck: { position: 'absolute', top: 3, right: 5, color: COLORS.good, fontSize: 11, fontWeight: '900' },
-  calBigBtn: {
-    backgroundColor: COLORS.action, borderRadius: 12, paddingVertical: 11,
-    alignItems: 'center', marginTop: 4,
+
+  calFooter: {
+    color: '#9fc4dc', fontSize: 9, fontWeight: '800', textAlign: 'center',
+    letterSpacing: 0.8, marginTop: 4,
   },
-  calBigBtnText: { color: '#0b0d16', fontSize: 13, fontWeight: '900' },
-  calWaitText: { color: COLORS.muted, fontSize: 11, textAlign: 'center', marginTop: 6, fontStyle: 'italic' },
+  calProgressTrack: {
+    height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)',
+    marginTop: 5, overflow: 'hidden', borderWidth: 1, borderColor: '#2a6f96',
+  },
+  calProgressFill: { height: '100%', backgroundColor: COLORS.action },
+  calBigBtn: {
+    backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10,
+    alignItems: 'center', marginTop: 10,
+  },
+  calBigBtnText: { color: '#0b0d16', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
   deckRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
   deckSlot: {

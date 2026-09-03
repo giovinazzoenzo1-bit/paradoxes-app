@@ -18,7 +18,8 @@
     "react-native": "0.86.2",
     "react-native-safe-area-context": "5.7.0",
     "@expo/vector-icons": "15.0.2",
-    "lottie-react-native": "7.3.8"
+    "lottie-react-native": "7.3.8",
+    "expo-linear-gradient": "57.0.1"
   },
   "private": true
 }
