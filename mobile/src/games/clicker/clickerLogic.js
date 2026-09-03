@@ -477,6 +477,20 @@ export function rollCreature() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// Tire une creature d'une rarete IMPOSEE (calendrier de connexion, ou
+// toute recompense garantie). Meme garde-fou que rollCreature : une
+// rarete sans aucune creature ne doit jamais renvoyer undefined et
+// planter l'appelant, on retombe sur commun.
+export function rollCreatureOfRarity(rarity) {
+  const pool = CREATURES.filter((c) => c.rarity === rarity);
+  if (pool.length === 0) {
+    const fallback = CREATURES.filter((c) => c.rarity === 'commun');
+    if (fallback.length === 0) return CREATURES[0];
+    return fallback[Math.floor(Math.random() * fallback.length)];
+  }
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 // Revenu passif total (pièces/seconde) de toute la collection possédée.
 // ownedCreatures : [{ id, level }]
 export function totalPassiveIncome(ownedCreatures) {

@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
-import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
+import { useDaily, PENDING_GRIFFES_KEY, PENDING_CREATURES_KEY } from '../../context/DailyContext';
 import {
   CREATURES,
   RARITY_LABEL,
@@ -34,6 +34,7 @@ import {
   SANCTUARY_MAX_LEVEL,
   VEILLEUR_MAX_LEVEL,
   rollCreature,
+  rollCreatureOfRarity,
   offlineEarnings,
   shouldSpawn,
   pickFromDeck,
@@ -125,8 +126,11 @@ function formatNum(n) {
 
 export default function ClickerScreen({ onBack }) {
   const panHandlers = useBackGesture(onBack);
-  const { coins: sharedCoins, spendCoins: spendSharedCoins } = useCoins();
-  const { trackEvent, lifetimeStats, loaded: dailyLoaded } = useDaily();
+  const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
+  const {
+    trackEvent, lifetimeStats, loaded: dailyLoaded,
+    calendar, calendarDay, streakClaimedDate, date: today, claimStreak,
+  } = useDaily();
   // Nombre d'Ascensions faites, source unique du bonus de vitesse. Vient
   // de DailyContext (compteur à vie) plutôt que d'un état local : il
   // survit ainsi à tout ce que l'Ascension remet à zéro.
@@ -478,6 +482,32 @@ export default function ClickerScreen({ onBack }) {
             return [...prev, ...missing];
           });
           await AsyncStorage.removeItem(DEV_UNLOCK_ALL_KEY);
+        }
+
+        // Creatures offertes par le calendrier de connexion. Meme
+        // principe que le drapeau dev ci-dessus : DailyContext depose
+        // une intention, le clicker (seul proprietaire de la collection)
+        // l'encaisse ici. Une creature deja possedee monte d'un niveau
+        // plutot que d'etre ignoree, comme lors d'une invocation.
+        const pendingRaw = await AsyncStorage.getItem(PENDING_CREATURES_KEY);
+        if (pendingRaw) {
+          let rarities = [];
+          try { rarities = JSON.parse(pendingRaw); } catch (e2) { rarities = []; }
+          if (Array.isArray(rarities) && rarities.length) {
+            const gifts = rarities.map((r) => rollCreatureOfRarity(r)).filter(Boolean);
+            if (gifts.length) {
+              setOwned((prev) => {
+                let next = [...prev];
+                gifts.forEach((c) => {
+                  const i = next.findIndex((o) => o.id === c.id);
+                  if (i >= 0) next[i] = { ...next[i], level: next[i].level + 1 };
+                  else next.push({ id: c.id, level: 1, evolutionTier: 0 });
+                });
+                return next;
+              });
+            }
+          }
+          await AsyncStorage.removeItem(PENDING_CREATURES_KEY);
         }
       } catch (e) {
         // Chargement raté (JSON abîmé, donnée inattendue…). AVANT (bug
@@ -1001,6 +1031,18 @@ export default function ClickerScreen({ onBack }) {
     });
   };
 
+  // Reclame la recompense du jour. `addSharedCoins` est passe au Context
+  // car lui seul connait le type de recompense du jour : c'est lui qui
+  // decide s'il faut crediter des pieces d'appli ou poser un drapeau.
+  const handleClaimCalendar = async () => {
+    const got = await claimStreak(addSharedCoins);
+    if (!got) return;
+    if (got.type === 'appCoins') spawnPopup(`+${got.amount} 🪙`, 110, 60);
+    else if (got.type === 'griffes') spawnPopup(`+${got.amount} 🐾`, 110, 60);
+    else if (got.type === 'creature') Alert.alert('🥚 Créature Rare !', 'Elle t\'attend dans ta Collection.');
+    else if (got.type === 'skin') Alert.alert('🎨 Bon pour un skin', "Le système de skins arrive bientôt — ton bon est conservé.");
+  };
+
   const doOffrande = () => {
     if (sharedCoins < OFFRANDE_APPCOINS_COST) return;
     spendSharedCoins(OFFRANDE_APPCOINS_COST).then((ok) => {
@@ -1427,6 +1469,13 @@ export default function ClickerScreen({ onBack }) {
             </TouchableOpacity>
           )}
 
+          <DailyCalendarStrip
+            calendar={calendar}
+            currentDay={calendarDay}
+            alreadyClaimedToday={streakClaimedDate === today}
+            onClaim={handleClaimCalendar}
+          />
+
           <View style={styles.tapArea}>
             <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
 
@@ -1602,6 +1651,56 @@ export default function ClickerScreen({ onBack }) {
 // Les 3 emplacements du deck, affichés au-dessus de l'œuf. Un
 // emplacement vide est un œuf grisé — appuyer dessus (rempli ou vide)
 // ouvre le sélecteur pour choisir/changer la créature qui l'occupe.
+// Calendrier de connexion : 7 cases sur une ligne, affichees en
+// permanence sur l'accueil du clicker. La case du jour est mise en
+// avant et devient tapable quand la recompense n'a pas encore ete
+// prise ; les jours passes sont grises, les suivants restent visibles
+// pour donner envie de revenir (voir le lot du jour 7 est ce qui fait
+// tenir la semaine).
+function DailyCalendarStrip({ calendar, currentDay, alreadyClaimedToday, onClaim }) {
+  if (!Array.isArray(calendar) || calendar.length === 0) return null;
+  const ready = !alreadyClaimedToday;
+  return (
+    <View style={styles.calWrap}>
+      <View style={styles.calHeader}>
+        <Text style={styles.calTitle}>🎁 Récompense du jour</Text>
+        {ready ? (
+          <TouchableOpacity style={styles.calClaimBtn} onPress={onClaim}>
+            <Text style={styles.calClaimBtnText}>Récupérer</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.calDoneText}>Revenez demain</Text>
+        )}
+      </View>
+      <View style={styles.calRow}>
+        {calendar.map((d) => {
+          const isToday = d.day === currentDay;
+          const isPast = d.day < currentDay;
+          const claimable = isToday && ready;
+          return (
+            <TouchableOpacity
+              key={d.day}
+              style={[
+                styles.calCell,
+                isPast && styles.calCellPast,
+                isToday && styles.calCellToday,
+                claimable && styles.calCellClaimable,
+              ]}
+              onPress={claimable ? onClaim : undefined}
+              disabled={!claimable}
+              activeOpacity={claimable ? 0.7 : 1}
+            >
+              <Text style={styles.calCellDay}>J{d.day}</Text>
+              <Text style={styles.calCellIcon}>{d.icon}</Text>
+              {d.amount > 1 && <Text style={styles.calCellAmount}>{d.amount}</Text>}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function DeckRow({ deck, owned, onSlotPress }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
@@ -2344,6 +2443,29 @@ const styles = StyleSheet.create({
   shopPageBtnActive: { backgroundColor: COLORS.action, borderColor: COLORS.action },
   shopPageBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '800' },
   shopPageBtnTextActive: { color: '#241a00' },
+
+  // ---- Calendrier de connexion ----
+  // Compact volontairement : il vit en permanence sur l'accueil, il ne
+  // doit pas voler la place de l'oeuf.
+  calWrap: { width: '100%', marginBottom: 10 },
+  calHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  calTitle: { color: COLORS.text, fontSize: 12, fontWeight: '900' },
+  calClaimBtn: {
+    backgroundColor: COLORS.action, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4,
+  },
+  calClaimBtnText: { color: '#0b0d16', fontSize: 11, fontWeight: '900' },
+  calDoneText: { color: COLORS.muted, fontSize: 10, fontWeight: '700' },
+  calRow: { flexDirection: 'row', gap: 4 },
+  calCell: {
+    flex: 1, backgroundColor: COLORS.panel, borderRadius: 8, paddingVertical: 5,
+    alignItems: 'center', borderWidth: 1, borderColor: COLORS.border,
+  },
+  calCellPast: { opacity: 0.35 },
+  calCellToday: { borderColor: COLORS.action },
+  calCellClaimable: { backgroundColor: 'rgba(246,195,67,0.15)', borderColor: COLORS.action, borderWidth: 2 },
+  calCellDay: { color: COLORS.muted, fontSize: 8, fontWeight: '800' },
+  calCellIcon: { fontSize: 15, marginTop: 1 },
+  calCellAmount: { color: COLORS.text, fontSize: 8, fontWeight: '800' },
 
   deckRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
   deckSlot: {

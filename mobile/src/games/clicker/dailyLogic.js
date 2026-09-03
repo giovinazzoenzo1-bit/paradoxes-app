@@ -66,6 +66,44 @@ export function questDef(questId) {
 
 // ---- Streak de connexion ----
 // 7 paliers, la récompense grandit puis reboucle (jour 8 = comme jour 1).
+// ---- Calendrier de connexion (7 jours, en boucle) ----
+//
+// Remplace l'ancien STREAK_REWARDS, qui ne donnait que des Griffes et
+// n'etait affiche nulle part. Chaque jour a un TYPE de recompense
+// different : l'alternance est ce qui donne envie de revenir, une suite
+// de montants croissants du meme lot lasse vite.
+//
+// Types possibles :
+//   griffes   -> credite via PENDING_GRIFFES_KEY (Aventure)
+//   appCoins  -> pieces PARTAGEES de l'appli (pas les pieces du clicker)
+//   creature  -> une creature garantie, de la rarete indiquee
+//   skin      -> systeme de skins pas encore developpe : on credite un
+//                BON echangeable, pour que la recompense soit reellement
+//                acquise le jour ou les skins existeront. Rien n'est
+//                perdu entre-temps.
+export const DAILY_CALENDAR = [
+  { day: 1, type: 'griffes',  amount: 40,  icon: '🐾', label: '40 Griffes' },
+  { day: 2, type: 'appCoins', amount: 25,  icon: '🪙', label: "25 pièces d'appli" },
+  { day: 3, type: 'creature', rarity: 'rare', icon: '🥚', label: 'Créature Rare' },
+  { day: 4, type: 'griffes',  amount: 80,  icon: '🐾', label: '80 Griffes' },
+  { day: 5, type: 'appCoins', amount: 50,  icon: '🪙', label: "50 pièces d'appli" },
+  { day: 6, type: 'griffes',  amount: 150, icon: '🐾', label: '150 Griffes' },
+  { day: 7, type: 'skin',     amount: 1,   icon: '🎨', label: 'Skin aléatoire' },
+];
+
+// Le jour du calendrier (1-7) pour un streak donne. Le streak continue
+// de grimper indefiniment (7, 8, 9...), le calendrier boucle.
+export function calendarDayForStreak(streakDay) {
+  if (!Number.isFinite(streakDay) || streakDay < 1) return 1;
+  return ((Math.floor(streakDay) - 1) % DAILY_CALENDAR.length) + 1;
+}
+
+export function calendarRewardForStreak(streakDay) {
+  return DAILY_CALENDAR[calendarDayForStreak(streakDay) - 1];
+}
+
+// Conserve pour compatibilite : d'anciennes sauvegardes et l'ecran
+// Progres s'appuient encore dessus.
 export const STREAK_REWARDS = [15, 20, 25, 35, 45, 60, 100];
 
 export function streakReward(streakDay) {
