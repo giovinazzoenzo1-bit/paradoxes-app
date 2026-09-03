@@ -593,64 +593,6 @@ export default function ClickerScreen({ onBack }) {
   // multiplicateur global (Sanctuaire × bonus permanent d'Ascension) et
   // alimente le cumul total (totalEarned), qui ne baisse jamais même en
   // dépensant, utilisé pour calculer le gain d'essence à l'Ascension.
-  // Gains en attente d'etre repercutes dans l'etat React. Rempli par
-  // gainCoins a chaque tap, vide 10 fois par seconde par l'effet plus
-  // bas. Indispensable a haute cadence : sans lui, chaque tap
-  // provoquait trois mises a jour d'etat dont une remontant au Context
-  // partage, soit un re-rendu de toute l'appli par tap.
-  const pendingGainRef = useRef(0);
-  // DIAGNOSTIC TEMPORAIRE : compte les taps reellement recus.
-  const tapCountRef = useRef(0);
-  const tapWindowRef = useRef(Date.now());
-  const [tapRate, setTapRate] = useState(0);
-  // Horodatage de la derniere secousse de l'oeuf (voir handleEggTap).
-  const lastShakeAtRef = useRef(0);
-
-  // Vide l'accumulateur de gains 10 fois par seconde. Les pieces
-  // credittees sont exactement les memes, seule la frequence des mises a
-  // jour d'etat change : de 142/s (une par tap) a 10/s.
-  //
-  // `trackEvent` est appele ici avec le total accumule plutot qu'a
-  // chaque tap : il ecrit dans DailyContext, donc chaque appel
-  // re-rendait TOUTE l'application.
-  // DIAGNOSTIC TEMPORAIRE : cadence de taps reellement recue.
-  useEffect(() => {
-    const id = setInterval(() => {
-      const now = Date.now();
-      const elapsed = (now - tapWindowRef.current) / 1000;
-      if (elapsed >= 0.5) {
-        setTapRate(Math.round(tapCountRef.current / elapsed));
-        tapCountRef.current = 0;
-        tapWindowRef.current = now;
-      }
-    }, 500);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      const pending = pendingGainRef.current;
-      if (pending <= 0) return;
-      pendingGainRef.current = 0;
-      setCoins((c) => c + pending);
-      setTotalEarned((t) => t + pending);
-      trackEvent('coinsEarned', pending);
-    }, 100);
-    return () => {
-      clearInterval(id);
-      // Vide une derniere fois au demontage : sinon jusqu'a 100 ms de
-      // gains seraient perdus en quittant l'ecran — une dizaine de taps
-      // a haute cadence.
-      const pending = pendingGainRef.current;
-      if (pending > 0) {
-        pendingGainRef.current = 0;
-        setCoins((c) => c + pending);
-        setTotalEarned((t) => t + pending);
-        trackEvent('coinsEarned', pending);
-      }
-    };
-  }, [trackEvent]);
-
   const gainCoins = (rawAmount) => {
     const upgradeCoinMult = 1 + upgradeBonuses(upgradeLevelsRef.current).coinPct;
     // Le bonus de vitesse d'Ascension (+30% par Ascension, multiplicatif)
@@ -663,8 +605,9 @@ export default function ClickerScreen({ onBack }) {
       ascensionSpeedMultiplier(ascensionCountRef.current) *
       upgradeCoinMult;
     const amount = rawAmount * multiplier;
-    // Accumule au lieu de declencher un rendu : voir flushGainsRef.
-    pendingGainRef.current += amount;
+    setCoins((c) => c + amount);
+    setTotalEarned((t) => t + amount);
+    trackEvent('coinsEarned', amount);
     return amount;
   };
 
@@ -746,10 +689,6 @@ export default function ClickerScreen({ onBack }) {
     return () => clearInterval(interval);
   }, [loaded]);
 
-  // Horodatage du dernier rafraichissement visuel. Voir handleTap : a
-  // 142 clics/s, tout afficher saturait le thread et bloquait l'appli.
-  const lastVisualAtRef = useRef(0);
-
   const spawnPopup = (text, x, y, isCrit) => {
     const id = popupIdRef.current++;
     setPopups((p) => [...p, { id, text, x, y, isCrit }]);
@@ -758,17 +697,13 @@ export default function ClickerScreen({ onBack }) {
 
   const handleTap = (evt) => {
     const now = Date.now();
-    tapCountRef.current += 1;
 
     // Transe : la fenêtre entre deux taps décide si le combo continue ou repart de 1.
     const stillActive = transeStillActive(lastTapTimeRef.current, now);
     const newCombo = stillActive ? comboCountRef.current + 1 : 1;
     comboCountRef.current = newCombo;
     lastTapTimeRef.current = now;
-    // Le combo exact vit dans la ref (lue par le calcul de gain) ;
-    // l'etat React ne sert qu'a l'affichage, donc il suit le meme
-    // rythme limite que le reste.
-    if (now - lastVisualAtRef.current >= 50) setComboCount(newCombo);
+    setComboCount(newCombo);
     const newTranseMult = transeMultiplier(newCombo);
     if (newTranseMult > maxComboRef.current) {
       maxComboRef.current = newTranseMult;
@@ -796,9 +731,7 @@ export default function ClickerScreen({ onBack }) {
     const isCrit = Math.random() < effectiveCritChance;
     if (isCrit) {
       totalCritsRef.current += 1;
-      // La ref est deja incrementee : l'etat suit au rythme limite, sans
-      // jamais fausser le compte reel.
-      if (now - lastVisualAtRef.current >= 50) setTotalCrits(totalCritsRef.current);
+      setTotalCrits(totalCritsRef.current);
       trackEvent('crit', 1);
     }
 
@@ -811,20 +744,13 @@ export default function ClickerScreen({ onBack }) {
       tapDamage(tapPowerRef.current) + upgradeBonus.tapFlat + tapUpgradeBonus(tapUpgradesRef.current);
     const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult));
     const finalGain = Math.round(gainCoins(gain));
-    // Animation + popup au maximum toutes les 50 ms (~20 fois par
-    // seconde). Au-dela, l'oeil ne fait plus la difference alors que le
-    // cout de rendu, lui, continue de grimper lineairement.
-    if (now - lastVisualAtRef.current >= 50) {
-      lastVisualAtRef.current = now;
-      Animated.sequence([
-        Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
-        Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
-      ]).start();
-      const ne = evt && evt.nativeEvent ? evt.nativeEvent : null;
-      const x = (ne && ne.locationX) || 60;
-      const y = (ne && ne.locationY) || 60;
-      spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
-    }
+    Animated.sequence([
+      Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
+      Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
+    ]).start();
+    const x = evt.nativeEvent.locationX || 60;
+    const y = evt.nativeEvent.locationY || 60;
+    spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
 
     // 02/09 : l'onglet Quêtes a disparu, l'œuf de l'écran d'accueil EST
     // désormais le véritable œuf à casser. Quand les 4 défis sont
@@ -1269,27 +1195,19 @@ export default function ClickerScreen({ onBack }) {
     // Secousse à chaque coup porté sur la coquille. Séquence courte et
     // symétrique qui revient toujours à 0 : impossible que l'œuf reste
     // figé de travers si le joueur tape en rafale.
-    // Secousse bridee comme le reste de l'affichage : a haute cadence,
-    // relancer trois animations par tap les fait s'annuler entre elles
-    // pour un cout enorme et aucun benefice visible.
-    if (Date.now() - lastShakeAtRef.current >= 50) {
-      lastShakeAtRef.current = Date.now();
-      eggShake.stopAnimation(() => {
-        eggShake.setValue(0);
-        Animated.sequence([
-          Animated.timing(eggShake, { toValue: 1, duration: 45, useNativeDriver: true }),
-          Animated.timing(eggShake, { toValue: -1, duration: 45, useNativeDriver: true }),
-          Animated.timing(eggShake, { toValue: 0, duration: 45, useNativeDriver: true }),
-        ]).start();
-      });
-    }
+    eggShake.stopAnimation(() => {
+      eggShake.setValue(0);
+      Animated.sequence([
+        Animated.timing(eggShake, { toValue: 1, duration: 45, useNativeDriver: true }),
+        Animated.timing(eggShake, { toValue: -1, duration: 45, useNativeDriver: true }),
+        Animated.timing(eggShake, { toValue: 0, duration: 45, useNativeDriver: true }),
+      ]).start();
+    });
 
     if (eggPhaseRef.current === 'hatching') {
       const next = hatchTapsRef.current + 1;
       hatchTapsRef.current = next;
-      // Le compte exact vit dans la ref ; l'etat suit au rythme limite,
-      // sauf au dernier coup ou il doit etre juste immediatement.
-      if (Date.now() - lastShakeAtRef.current < 5 || next >= HATCH_TAPS_REQUIRED) setHatchTaps(next);
+      setHatchTaps(next);
       if (next >= HATCH_TAPS_REQUIRED) {
         setEggPhase('capturing');
       }
@@ -1440,9 +1358,6 @@ export default function ClickerScreen({ onBack }) {
       {view === 'tap' && (
         <>
           <Text style={styles.coinsValue}>💰 {formatNum(coins)}</Text>
-          {/* DIAGNOSTIC TEMPORAIRE : cadence de taps reellement recue
-              par le code. A retirer une fois la cause identifiee. */}
-          <Text style={styles.tapRateDebug}>⚡ {tapRate} taps/s reçus</Text>
           {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
 
           {activePower && (
@@ -1523,9 +1438,9 @@ export default function ClickerScreen({ onBack }) {
                   L'inverse — animer la vue qui reçoit les taps — décalait
                   la surface tactile de ±7px pendant la secousse et
                   laissait des bandes mortes autour de l'œuf. */}
-              <View
-                onStartShouldSetResponder={() => true}
-                onResponderGrant={handleTap}
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={handleTap}
                 style={[StyleSheet.absoluteFillObject, styles.tapButtonWrap]}
               >
                 <View pointerEvents="none">
@@ -1566,7 +1481,7 @@ export default function ClickerScreen({ onBack }) {
                     )}
                   </Animated.View>
                 </View>
-              </View>
+              </TouchableOpacity>
               {popups.map((p) => (
                 <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
                   {p.text}
@@ -2337,7 +2252,6 @@ const styles = StyleSheet.create({
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
-  tapRateDebug: { color: COLORS.neonCyan, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   coinsValue: {
     color: COLORS.action, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 4,
     textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10,
@@ -2442,11 +2356,7 @@ const styles = StyleSheet.create({
   // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
   // liste de boutons (tout ça vit dans les onglets de la barre du bas).
-  // justifyContent center : le groupe deck + oeuf + textes est centre
-  // verticalement dans l'espace disponible, au lieu d'etre plaque en
-  // haut avec l'oeuf qui derive vers le bas.
   tapArea: { flex: 1, alignItems: 'center', width: '100%' },
-
   tapZone: { width: '100%', flex: 1, position: 'relative' },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Plus de cercle : ni fond, ni bordure, ni ombre. Les illustrations
