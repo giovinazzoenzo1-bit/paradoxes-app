@@ -593,6 +593,46 @@ export default function ClickerScreen({ onBack }) {
   // multiplicateur global (Sanctuaire × bonus permanent d'Ascension) et
   // alimente le cumul total (totalEarned), qui ne baisse jamais même en
   // dépensant, utilisé pour calculer le gain d'essence à l'Ascension.
+  // Gains en attente d'etre repercutes dans l'etat React. Rempli par
+  // gainCoins a chaque tap, vide 10 fois par seconde par l'effet plus
+  // bas. Indispensable a haute cadence : sans lui, chaque tap
+  // provoquait trois mises a jour d'etat dont une remontant au Context
+  // partage, soit un re-rendu de toute l'appli par tap.
+  const pendingGainRef = useRef(0);
+  // Horodatage de la derniere secousse de l'oeuf (voir handleEggTap).
+  const lastShakeAtRef = useRef(0);
+
+  // Vide l'accumulateur de gains 10 fois par seconde. Les pieces
+  // credittees sont exactement les memes, seule la frequence des mises a
+  // jour d'etat change : de 142/s (une par tap) a 10/s.
+  //
+  // `trackEvent` est appele ici avec le total accumule plutot qu'a
+  // chaque tap : il ecrit dans DailyContext, donc chaque appel
+  // re-rendait TOUTE l'application.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const pending = pendingGainRef.current;
+      if (pending <= 0) return;
+      pendingGainRef.current = 0;
+      setCoins((c) => c + pending);
+      setTotalEarned((t) => t + pending);
+      trackEvent('coinsEarned', pending);
+    }, 100);
+    return () => {
+      clearInterval(id);
+      // Vide une derniere fois au demontage : sinon jusqu'a 100 ms de
+      // gains seraient perdus en quittant l'ecran — une dizaine de taps
+      // a haute cadence.
+      const pending = pendingGainRef.current;
+      if (pending > 0) {
+        pendingGainRef.current = 0;
+        setCoins((c) => c + pending);
+        setTotalEarned((t) => t + pending);
+        trackEvent('coinsEarned', pending);
+      }
+    };
+  }, [trackEvent]);
+
   const gainCoins = (rawAmount) => {
     const upgradeCoinMult = 1 + upgradeBonuses(upgradeLevelsRef.current).coinPct;
     // Le bonus de vitesse d'Ascension (+30% par Ascension, multiplicatif)
@@ -605,9 +645,8 @@ export default function ClickerScreen({ onBack }) {
       ascensionSpeedMultiplier(ascensionCountRef.current) *
       upgradeCoinMult;
     const amount = rawAmount * multiplier;
-    setCoins((c) => c + amount);
-    setTotalEarned((t) => t + amount);
-    trackEvent('coinsEarned', amount);
+    // Accumule au lieu de declencher un rendu : voir flushGainsRef.
+    pendingGainRef.current += amount;
     return amount;
   };
 
@@ -1211,19 +1250,27 @@ export default function ClickerScreen({ onBack }) {
     // Secousse à chaque coup porté sur la coquille. Séquence courte et
     // symétrique qui revient toujours à 0 : impossible que l'œuf reste
     // figé de travers si le joueur tape en rafale.
-    eggShake.stopAnimation(() => {
-      eggShake.setValue(0);
-      Animated.sequence([
-        Animated.timing(eggShake, { toValue: 1, duration: 45, useNativeDriver: true }),
-        Animated.timing(eggShake, { toValue: -1, duration: 45, useNativeDriver: true }),
-        Animated.timing(eggShake, { toValue: 0, duration: 45, useNativeDriver: true }),
-      ]).start();
-    });
+    // Secousse bridee comme le reste de l'affichage : a haute cadence,
+    // relancer trois animations par tap les fait s'annuler entre elles
+    // pour un cout enorme et aucun benefice visible.
+    if (Date.now() - lastShakeAtRef.current >= 50) {
+      lastShakeAtRef.current = Date.now();
+      eggShake.stopAnimation(() => {
+        eggShake.setValue(0);
+        Animated.sequence([
+          Animated.timing(eggShake, { toValue: 1, duration: 45, useNativeDriver: true }),
+          Animated.timing(eggShake, { toValue: -1, duration: 45, useNativeDriver: true }),
+          Animated.timing(eggShake, { toValue: 0, duration: 45, useNativeDriver: true }),
+        ]).start();
+      });
+    }
 
     if (eggPhaseRef.current === 'hatching') {
       const next = hatchTapsRef.current + 1;
       hatchTapsRef.current = next;
-      setHatchTaps(next);
+      // Le compte exact vit dans la ref ; l'etat suit au rythme limite,
+      // sauf au dernier coup ou il doit etre juste immediatement.
+      if (Date.now() - lastShakeAtRef.current < 5 || next >= HATCH_TAPS_REQUIRED) setHatchTaps(next);
       if (next >= HATCH_TAPS_REQUIRED) {
         setEggPhase('capturing');
       }
