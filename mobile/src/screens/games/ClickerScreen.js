@@ -1431,22 +1431,15 @@ export default function ClickerScreen({ onBack }) {
             <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
 
             <View style={styles.tapZone}>
-              {/* Le TouchableOpacity est le PARENT et n'est jamais
-                  transformé : sa surface tactile couvre toute la zone et
-                  ne bouge pas. L'animation (scale/translate/rotate) ne
-                  s'applique qu'à la vue visuelle à l'intérieur.
-                  L'inverse — animer la vue qui reçoit les taps — décalait
-                  la surface tactile de ±7px pendant la secousse et
-                  laissait des bandes mortes autour de l'œuf. */}
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={handleTap}
-                style={[StyleSheet.absoluteFillObject, styles.tapButtonWrap]}
-              >
-                <View pointerEvents="none">
+              <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
+                <View style={styles.tapButtonWrap}>
                   <Animated.View
                     style={[
                       styles.tapButton,
+                      // La bordure et la lueur s'intensifient palier par
+                      // palier : l'œuf passe de terne à incandescent au
+                      // fur et à mesure que les défis tombent.
+                      { borderWidth: 3 + eggStageIndex * 0.6, shadowOpacity: 0.25 + eggStageIndex * 0.15 },
                       {
                         transform: [
                           { scale: tapScale },
@@ -1469,13 +1462,9 @@ export default function ClickerScreen({ onBack }) {
                     {eggPhase === 'capturing' ? (
                       <Text style={[styles.tapEmoji, { opacity: 0.6 + eggStageIndex * 0.1 }]}>💫</Text>
                     ) : (
-                      // Pas d'opacité progressive ici : chaque palier a
-                      // sa propre illustration, du terne à
-                      // l'incandescent. L'opacité datait de l'emoji
-                      // unique et ne ferait plus que ternir l'image.
                       <Image
                         source={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
-                        style={styles.eggImage}
+                        style={[styles.eggImage, { opacity: 0.6 + eggStageIndex * 0.1 }]}
                         resizeMode="contain"
                       />
                     )}
@@ -2345,7 +2334,7 @@ const styles = StyleSheet.create({
   shopPageBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '800' },
   shopPageBtnTextActive: { color: '#241a00' },
 
-  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
+  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 6 },
   deckSlot: {
     width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.panel,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
@@ -2356,22 +2345,18 @@ const styles = StyleSheet.create({
   // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
   // liste de boutons (tout ça vit dans les onglets de la barre du bas).
-  tapArea: { flex: 1, alignItems: 'center', width: '100%' },
-  tapZone: { width: '100%', flex: 1, position: 'relative' },
+  tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  tapZone: { width: '100%', height: 260, position: 'relative' },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // Plus de cercle : ni fond, ni bordure, ni ombre. Les illustrations
-  // d'oeuf portent deja leur propre halo peint, le cercle faisait
-  // doublon et rognait visuellement l'oeuf.
-  //
-  // La zone reste volontairement PLUS GRANDE que l'image (260 contre
-  // 230) : c'est elle qui recoit les taps, et une zone tactile plus
-  // large que le visuel est plus confortable, jamais l'inverse.
   tapButton: {
-    width: 260, height: 260,
-    alignItems: 'center', justifyContent: 'center',
+    width: 180, height: 180, borderRadius: 90, backgroundColor: COLORS.panel,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.action,
+    shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 16, shadowOffset: { width: 0, height: 0 },
   },
   tapEmoji: { fontSize: 84 },
-  eggImage: { width: 230, height: 230 },
+  // Taille pensée pour occuper le même espace que l'ancien emoji
+  // (fontSize 84) sur le bouton de tap circulaire.
+  eggImage: { width: 140, height: 140 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8 },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
