@@ -1364,7 +1364,10 @@ export default function ClickerScreen({ onBack }) {
   if (!loaded) {
     return (
       <View style={styles.screen} {...panHandlers}>
-        <LinearGradient colors={BG_GRADIENT} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
+        <LinearGradient
+          colors={BG_GRADIENT}
+          style={[StyleSheet.absoluteFillObject, { pointerEvents: 'none' }]}
+        />
         <Text style={styles.loadingText}>Chargement…</Text>
       </View>
     );
@@ -1400,8 +1403,11 @@ export default function ClickerScreen({ onBack }) {
       {/* Fond dégradé + cadre lumineux, repris de la maquette. Posé en
           absolu SOUS le contenu (pointerEvents none) : la mise en page
           existante n'est pas touchée et rien n'intercepte les taps. */}
-      <LinearGradient colors={BG_GRADIENT} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
-      <View style={styles.screenFrame} pointerEvents="none" />
+      <LinearGradient
+        colors={BG_GRADIENT}
+        style={[StyleSheet.absoluteFillObject, { pointerEvents: 'none' }]}
+      />
+      <View style={styles.screenFrame} />
 
       <View style={styles.header}>
         {onBack && (
@@ -1510,7 +1516,7 @@ export default function ClickerScreen({ onBack }) {
                 onPress={handleTap}
                 style={[StyleSheet.absoluteFillObject, styles.tapButtonWrap]}
               >
-                <View pointerEvents="none">
+                <View style={{ pointerEvents: 'none' }}>
                   <Animated.View
                     style={[
                       styles.tapButton,
@@ -2420,6 +2426,10 @@ const styles = StyleSheet.create({
   screenFrame: {
     position: 'absolute', left: 6, right: 6, top: 6, bottom: 6,
     borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.neonCyan, opacity: 0.35,
+    // DANS le style, pas en prop : la prop `pointerEvents` est dépréciée
+    // et ignorée sous la New Architecture (RN 0.86 / SDK 57). En prop,
+    // ce cadre couvrait tout l'écran et bloquait chaque tap.
+    pointerEvents: 'none',
   },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },

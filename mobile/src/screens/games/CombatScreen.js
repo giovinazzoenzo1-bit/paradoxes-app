@@ -437,7 +437,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         style={[styles.sprite, { left, top, width: boxW, opacity: fainted ? 0.35 : slot.size < 0.7 ? 0.85 : 1 }]}
       >
         {floatDamage != null && (
-          <View pointerEvents="none" style={styles.floatingDamageWrap}>
+          <View style={[styles.floatingDamageWrap, { pointerEvents: 'none' }]}>
             <FloatingDamage key={`${key}-${roundKey}`} amount={floatDamage} color="#FF5252" />
           </View>
         )}
@@ -503,7 +503,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       {/* Couche centrale : défi de tap / bannière de tour uniquement —
           plus de bouton "Continuer" après une attaque du joueur (demande
           explicite), la transition est immédiate. */}
-      <View pointerEvents="box-none" style={styles.centerLayer}>
+      <View style={[styles.centerLayer, { pointerEvents: 'box-none' }]}>
         {switchMessage && (
           <View style={styles.switchBanner}>
             <Text style={styles.switchBannerText}>{switchMessage}</Text>

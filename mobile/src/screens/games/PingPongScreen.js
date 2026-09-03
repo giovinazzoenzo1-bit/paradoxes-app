@@ -539,7 +539,7 @@ export default function PingPongScreen({ onBack }) {
             {...playerResponder.panHandlers}
           />
 
-          <View pointerEvents="none" style={{ position: 'absolute', left: offX, top: offY, width: tableW, height: tableH, backgroundColor: COLORS.felt, borderWidth: 3, borderColor: COLORS.line }}>
+          <View style={[{ position: 'absolute', left: offX, top: offY, width: tableW, height: tableH, backgroundColor: COLORS.felt, borderWidth: 3, borderColor: COLORS.line }, { pointerEvents: 'none' }]}>
             <View style={{ position: 'absolute', left: tableW / 2 - 1, top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.85)' }} />
             <View style={{ position: 'absolute', left: 0, top: tableH / 2 - 2, width: tableW, height: 3, backgroundColor: '#fff' }} />
           </View>
@@ -550,7 +550,7 @@ export default function PingPongScreen({ onBack }) {
             return (
               <View
                 key={i}
-                pointerEvents="none"
+                style={{ pointerEvents: 'none' }}
                 style={{ position: 'absolute', left: offX + t.x - r, top: offY + t.y - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: `rgba(255,255,255,${a * 0.35})` }}
               />
             );
@@ -559,8 +559,8 @@ export default function PingPongScreen({ onBack }) {
           <Paddle p={opp} offX={offX} offY={offY} color={COLORS.opp} colorDark={COLORS.oppDark} isPlayer={false} />
           <Paddle p={player} offX={offX} offY={offY} color={playerSkin.color} colorDark={playerSkin.colorDark} isPlayer />
 
-          <View pointerEvents="none" style={{ position: 'absolute', left: offX + ball.x - ball.r + ball.r * 0.15, top: offY + ball.y - ball.r + ball.r * 0.15, width: ball.r * 2, height: ball.r * 2, borderRadius: ball.r, backgroundColor: 'rgba(0,0,0,0.18)' }} />
-          <View pointerEvents="none" style={{ position: 'absolute', left: offX + ball.x - ball.r, top: offY + ball.y - lift - ball.r, width: ball.r * 2, height: ball.r * 2, borderRadius: ball.r, backgroundColor: '#fff', borderWidth: 1.5, borderColor: COLORS.line }} />
+          <View style={[{ position: 'absolute', left: offX + ball.x - ball.r + ball.r * 0.15, top: offY + ball.y - ball.r + ball.r * 0.15, width: ball.r * 2, height: ball.r * 2, borderRadius: ball.r, backgroundColor: 'rgba(0,0,0,0.18)' }, { pointerEvents: 'none' }]} />
+          <View style={[{ position: 'absolute', left: offX + ball.x - ball.r, top: offY + ball.y - lift - ball.r, width: ball.r * 2, height: ball.r * 2, borderRadius: ball.r, backgroundColor: '#fff', borderWidth: 1.5, borderColor: COLORS.line }, { pointerEvents: 'none' }]} />
         </View>
       </View>
 
@@ -595,10 +595,9 @@ function Paddle({ p, offX, offY, color, colorDark, isPlayer }) {
   const handleTop = offY + p.y + dir * (p.r - overlap);
   return (
     <>
-      <View pointerEvents="none" style={{ position: 'absolute', left: offX + p.x - p.r + p.r * 0.12, top: offY + p.y - p.r + p.r * 0.12, width: p.r * 2, height: p.r * 2, borderRadius: p.r, backgroundColor: 'rgba(0,0,0,0.16)' }} />
+      <View style={[{ position: 'absolute', left: offX + p.x - p.r + p.r * 0.12, top: offY + p.y - p.r + p.r * 0.12, width: p.r * 2, height: p.r * 2, borderRadius: p.r, backgroundColor: 'rgba(0,0,0,0.16)' }, { pointerEvents: 'none' }]} />
       <View
-        pointerEvents="none"
-        style={{
+        style={[{
           position: 'absolute',
           left: offX + p.x - handleW / 2,
           top: dir > 0 ? handleTop : handleTop - handleLen,
@@ -606,9 +605,9 @@ function Paddle({ p, offX, offY, color, colorDark, isPlayer }) {
           height: handleLen,
           borderRadius: handleW / 2,
           backgroundColor: colorDark,
-        }}
+        }, { pointerEvents: 'none' }]}
       />
-      <View pointerEvents="none" style={{ position: 'absolute', left: offX + p.x - p.r, top: offY + p.y - p.r, width: p.r * 2, height: p.r * 2, borderRadius: p.r, backgroundColor: color, borderWidth: Math.max(2, p.r * 0.14), borderColor: COLORS.line }} />
+      <View style={[{ position: 'absolute', left: offX + p.x - p.r, top: offY + p.y - p.r, width: p.r * 2, height: p.r * 2, borderRadius: p.r, backgroundColor: color, borderWidth: Math.max(2, p.r * 0.14), borderColor: COLORS.line }, { pointerEvents: 'none' }]} />
     </>
   );
 }

@@ -356,10 +356,10 @@ export default function RuneTracerScreen({ onBack }) {
           style={[styles.canvas, { width: canvasSize, height: canvasSize }]}
           {...(phase === 'drawing' ? drawResponder.panHandlers : {})}
         >
-          <View pointerEvents="none" style={styles.canvasGuideBorder} />
+          <View style={[styles.canvasGuideBorder, { pointerEvents: 'none' }]} />
 
           {showShape && (
-            <View pointerEvents="none" style={{ opacity: phase === 'fading' ? 0.15 : 1 }}>
+            <View style={[{ opacity: phase === 'fading' ? 0.15 : 1 }, { pointerEvents: 'none' }]}>
               {segmentsFor(revealedPoints(rune.points, revealProgressRef.current), canvasSize).map((seg, i) => (
                 <Segment key={i} {...seg} color={COLORS.drawn} thickness={5} glow />
               ))}
@@ -372,7 +372,7 @@ export default function RuneTracerScreen({ onBack }) {
             ))}
 
           {phase === 'timeout' && (
-            <View style={styles.timeoutOverlay} pointerEvents="none">
+            <View style={[styles.timeoutOverlay, { pointerEvents: 'none' }]}>
               <Text style={styles.timeoutText}>⏱ Temps écoulé !</Text>
               <Text style={styles.timeoutSubtext}>Nouvel essai…</Text>
             </View>
@@ -469,7 +469,7 @@ function segmentsFor(points, size) {
 function Segment({ x, y, len, angle, color, thickness, glow }) {
   return (
     <View
-      pointerEvents="none"
+      style={{ pointerEvents: 'none' }}
       style={{
         position: 'absolute',
         left: x,
