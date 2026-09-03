@@ -89,7 +89,7 @@ import {
 } from '../../games/clicker/clickerLogic';
 import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
 import useBackGesture from '../../hooks/useBackGesture';
-import { COLORS, BG_GRADIENT } from './clickerTheme';
+import { COLORS } from './clickerTheme';
 
 // Cyan de la barre de navigation, repris de la maquette fournie.
 // Defini ici plutot qu'en dur a chaque usage : une seule valeur a
@@ -1378,10 +1378,6 @@ export default function ClickerScreen({ onBack }) {
   if (!loaded) {
     return (
       <View style={styles.screen} {...panHandlers}>
-        <LinearGradient
-          colors={BG_GRADIENT}
-          style={[StyleSheet.absoluteFillObject, { pointerEvents: 'none' }]}
-        />
         <Text style={styles.loadingText}>Chargement…</Text>
       </View>
     );
@@ -1414,13 +1410,6 @@ export default function ClickerScreen({ onBack }) {
 
   return (
     <View style={styles.screen} {...panHandlers}>
-      {/* Fond dégradé + cadre lumineux, repris de la maquette. Posé en
-          absolu SOUS le contenu (pointerEvents none) : la mise en page
-          existante n'est pas touchée et rien n'intercepte les taps. */}
-      <LinearGradient
-        colors={BG_GRADIENT}
-        style={[StyleSheet.absoluteFillObject, { pointerEvents: 'none' }]}
-      />
       <View style={styles.header}>
         {onBack && (
           <TouchableOpacity onPress={onBack} style={styles.backBtn}>
