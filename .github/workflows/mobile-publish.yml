@@ -23,12 +23,19 @@ jobs:
         with:
           node-version: 20
 
-      - name: Installe les dépendances
-        run: npm install
+      # `npm ci` (et non `npm install`) : installe EXACTEMENT le
+      # package-lock.json du dépôt, sans jamais remonter un patch.
+      # Les versions y sont figées pour correspondre au client Expo Go
+      # installé sur les téléphones — un patch plus récent suffit à faire
+      # rejeter l'update avec « Not compatible with this version of Expo Go ».
+      - name: Installe les dépendances (versions figées du lock)
+        run: npm ci
 
-      - name: Corrige les versions pour la compatibilité SDK (npx expo install a besoin d'internet
-          pour vérifier les versions, ce que je n'ai pas dans mon bac à sable — mais ce robot, si)
-        run: npx expo install --fix
+      # `npx expo install --fix` a été RETIRÉ ici : il réaligne les
+      # versions sur ce qu'il croit être le mieux, ce qui défait
+      # l'alignement précis sur le client Expo Go. Les versions sont
+      # désormais résolues et vérifiées en amont, elles ne doivent plus
+      # être touchées par la CI.
 
       # Diagnostic : sans ça, un update publié « avec succès » mais refusé
       # par Expo Go (« Not compatible with this version of Expo Go ») est
