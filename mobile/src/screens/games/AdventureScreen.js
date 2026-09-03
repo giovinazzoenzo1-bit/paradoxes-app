@@ -492,7 +492,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         </Text>
         <TouchableOpacity style={styles.combatBtnLand} onPress={() => setChapterMapOpen(true)}>
           <Ionicons name="map" size={20} color="#0b0d16" />
-          <Text style={styles.combatBtnLandText}>Mode Combat</Text>
+          <Text style={styles.combatBtnLandText}>Combat</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -733,6 +733,18 @@ function StatLine({ label, value, bonus, color }) {
   );
 }
 
+
+// Tracé de la carte des chapitres (30/08) — positions calculées (pas de
+// mise en page flexbox) pour pouvoir dessiner des tracés COURBES entre
+// les niveaux plutôt que des lignes droites.
+//
+// Ces trois constantes avaient été supprimées par erreur lors du passage
+// en paysage : un nettoyage de styles morts par expression régulière en
+// mode DOTALL a mangé leur bloc en même temps qu'un style voisin, et
+// l'écran Combat plantait sur « Property 'ROW_HEIGHT' doesn't exist ».
+const LEVEL_NODE_SIZE = 46;
+const ROW_HEIGHT = 92; // espace vertical entre deux niveaux
+const WAVE_AMPLITUDE = 0.30; // amplitude horizontale du serpentin, en fraction de la largeur
 
 // Position (fraction 0-1 de la largeur, y en px depuis le haut du
 // chapitre) du niveau d'index `i` (0-9) dans son chapitre — une onde

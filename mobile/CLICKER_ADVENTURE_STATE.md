@@ -78,6 +78,27 @@ en haut pour revoir le portrait.
 
 25 styles portrait devenus morts ont été supprimés.
 
+### Piège : supprimer des styles morts par regex DOTALL
+
+Le nettoyage des 25 styles portrait devenus inutiles a été fait avec une
+expression régulière en mode `DOTALL` (`.` capture les retours à la
+ligne). Elle a mangé, en plus du style visé, le bloc de constantes
+voisin — `LEVEL_NODE_SIZE`, `ROW_HEIGHT`, `WAVE_AMPLITUDE`. L'écran
+Combat plantait au démarrage sur « Property 'ROW_HEIGHT' doesn't exist ».
+
+La compilation ne détecte pas ça : une constante manquante est une
+`ReferenceError` à l'exécution, pas une erreur de syntaxe.
+
+**Vérification à faire après toute suppression en masse** : comparer la
+liste des déclarations de premier niveau (`const`, `function`, exports)
+avant et après, et croiser les identifiants en MAJUSCULES utilisés dans
+le CODE (commentaires retirés) avec ceux réellement déclarés ou importés.
+C'est ce contrôle qui a confirmé qu'il ne manquait rien d'autre dans les
+deux écrans.
+
+**Et ne jamais utiliser `DOTALL` pour supprimer un bloc délimité par des
+accolades** : le `.*?` traverse les frontières et emporte le voisin.
+
 ### Reste à adapter
 
 `ChapterMapScreen`, `RunesScreen`, `RuneFusionScreen` et les overlays
