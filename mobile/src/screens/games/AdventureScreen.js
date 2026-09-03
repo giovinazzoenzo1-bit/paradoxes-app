@@ -11,7 +11,6 @@ import { COLORS } from './clickerTheme';
 import CombatScreen from './CombatScreen';
 import { DeckPicker } from './DeckPicker';
 import { CREATURES, RARITY_LABEL, RARITY_COLOR, RARITY_BADGE_LETTER, stageForLevel, levelUpCost } from '../../games/clicker/clickerLogic';
-import * as Notifications from 'expo-notifications';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import {
   combatStatsForCreatureTyped,
@@ -28,47 +27,27 @@ import {
   msUntilNextEnergy,
 } from '../../games/clicker/combatLogic';
 
-// Configuration du gestionnaire de notifications — une seule fois, au
-// chargement du module. Protégé par try/catch : si expo-notifications
-// pose problème sur l'environnement (permissions, plateforme...), le
-// reste de l'appli ne doit JAMAIS en dépendre pour fonctionner —
-// l'énergie elle-même marche très bien sans notification.
-try {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-} catch (e) {
-  // Pas grave — les notifications sont un bonus, pas une dépendance dure.
-}
-
-// Programme (ou reprogramme) LA notification "énergie pleine" — un seul
-// identifiant fixe pour toujours remplacer la précédente plutôt que
-// d'en empiler plusieurs à chaque fois que l'écran se recharge.
+// NOTIFICATIONS RETIREES (03/09).
+//
+// expo-notifications faisait planter le demarrage sous Expo Go :
+//   « Android Push notifications functionality provided by
+//     expo-notifications was removed from Expo Go with the release of
+//     SDK 53. Use a development build instead of Expo Go. »
+//
+// Le code etait pourtant deja protege par try/catch, mais ca ne servait
+// a rien : l'erreur vient du CHARGEMENT du module (addPushTokenListener
+// est appele a l'import), donc avant que le moindre try/catch du projet
+// puisse intervenir. Un import statique ne peut pas etre rattrape.
+//
+// La notification « energie pleine » n'etait qu'un bonus — la
+// regeneration d'energie fonctionne exactement pareil sans elle. On
+// remplace donc l'appel par une fonction vide plutot que de garder une
+// dependance qui empeche l'appli de demarrer.
+//
+// A rebrancher le jour ou on passera aux development builds, ou
+// expo-notifications fonctionne a nouveau.
 async function scheduleEnergyFullNotification(msFromNow) {
-  try {
-    await Notifications.cancelScheduledNotificationAsync('energy-full').catch(() => {});
-    if (msFromNow <= 0) return;
-    const { status } = await Notifications.getPermissionsAsync();
-    let granted = status === 'granted';
-    if (!granted) {
-      const req = await Notifications.requestPermissionsAsync();
-      granted = req.status === 'granted';
-    }
-    if (!granted) return;
-    await Notifications.scheduleNotificationAsync({
-      identifier: 'energy-full',
-      content: { title: '⚡ Énergie pleine !', body: 'Tes 5 vies sont prêtes — retourne combattre !' },
-      trigger: { seconds: Math.max(1, Math.round(msFromNow / 1000)) },
-    });
-  } catch (e) {
-    // Pas grave — même raison qu'au-dessus.
-  }
+  // Volontairement vide : voir le commentaire ci-dessus.
 }
 
 // Sauvegarde séparée de celle du clicker classique — la progression
@@ -232,7 +211,6 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     if (!progressLoaded) return;
     const remaining = msUntilNextEnergy(energy, energyUpdatedAt, Date.now());
     if (energy >= ENERGY_MAX) {
-      Notifications.cancelScheduledNotificationAsync('energy-full').catch(() => {});
     } else {
       // Temps jusqu'au PLEIN (pas juste le prochain point) : autant de
       // ticks manquants que d'énergie sous le plafond.
