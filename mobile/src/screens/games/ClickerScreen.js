@@ -726,9 +726,19 @@ export default function ClickerScreen({ onBack }) {
     return () => clearInterval(interval);
   }, [loaded]);
 
+  // Horodatage de la derniere animation de rebond : sert a ne pas
+  // empiler des sequences Animated a haute cadence (voir handleTap).
+  const lastAnimAtRef = useRef(0);
+
+  const MAX_POPUPS = 12;
   const spawnPopup = (text, x, y, isCrit) => {
     const id = popupIdRef.current++;
-    setPopups((p) => [...p, { id, text, x, y, isCrit }]);
+    setPopups((p) => {
+      const next = [...p, { id, text, x, y, isCrit }];
+      // Ne garde que les plus recents : au-dela d'une douzaine, ils se
+      // superposent et deviennent illisibles de toute facon.
+      return next.length > MAX_POPUPS ? next.slice(next.length - MAX_POPUPS) : next;
+    });
     setTimeout(() => setPopups((p) => p.filter((pp) => pp.id !== id)), 700);
   };
 
@@ -781,10 +791,13 @@ export default function ClickerScreen({ onBack }) {
       tapDamage(tapPowerRef.current) + upgradeBonus.tapFlat + tapUpgradeBonus(tapUpgradesRef.current);
     const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult));
     const finalGain = Math.round(gainCoins(gain));
-    Animated.sequence([
-      Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
-      Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
-    ]).start();
+    if (now - lastAnimAtRef.current > 80) {
+      lastAnimAtRef.current = now;
+      Animated.sequence([
+        Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
+        Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
+      ]).start();
+    }
     const x = evt.nativeEvent.locationX || 60;
     const y = evt.nativeEvent.locationY || 60;
     spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
