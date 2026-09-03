@@ -19,7 +19,6 @@ import { StatusBar } from 'expo-status-bar';
 // les côtés pour éviter tout rognage vertical (la lune et le premier plan
 // restent visibles quel que soit l'écran), exporté en JPEG (512 Ko).
 const BG_IMG = require('../../../assets/combat/background.jpg');
-import * as ScreenOrientation from 'expo-screen-orientation';
 import { COLORS } from './clickerTheme';
 import { stageForLevel } from '../../games/clicker/clickerLogic';
 import {
@@ -96,14 +95,19 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const insets = useSafeAreaInsets();
   const opponentTeamCreatures = useRef(opponentTeamForLevel(levelNumber)).current;
 
-  // Verrouille l'écran en paysage à l'entrée du combat, revient en
-  // portrait à la sortie — même schéma exact que BilliardScreen.js.
-  useEffect(() => {
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
-    return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-    };
-  }, []);
+  // PAS de gestion d'orientation ici. Cet écran n'est rendu que depuis
+  // AdventureScreen, qui verrouille déjà le paysage pour tout le mode et
+  // ne remet le portrait qu'en le quittant.
+  //
+  // Il avait son propre verrou, hérité de l'époque où seul le combat
+  // était en paysage. Son nettoyage forçait le PORTRAIT au démontage :
+  // à la fin d'un combat, on revenait donc à la carte des chapitres en
+  // portrait alors que l'Aventure entière doit rester en paysage.
+  // L'effet d'AdventureScreen ne se rejoue pas (dépendances vides), donc
+  // rien ne rétablissait le paysage.
+  //
+  // Règle : un seul écran est responsable de l'orientation d'un mode —
+  // celui qui l'ouvre et le ferme.
 
   const [fighters, setFighters] = useState(() =>
     team.map((member) => {

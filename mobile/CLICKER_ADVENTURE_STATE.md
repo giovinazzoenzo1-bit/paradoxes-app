@@ -78,6 +78,23 @@ en haut pour revoir le portrait.
 
 25 styles portrait devenus morts ont été supprimés.
 
+### Un seul écran responsable de l'orientation d'un mode
+
+`CombatScreen` avait son propre verrouillage paysage, hérité de l'époque
+où le combat était le seul écran en paysage. Son nettoyage forçait le
+PORTRAIT au démontage : **à la fin d'un combat on revenait à la carte des
+chapitres en portrait**, alors que tout le mode Aventure doit rester en
+paysage. L'effet d'`AdventureScreen` ne se rejoue pas (dépendances
+vides), donc rien ne rétablissait le paysage.
+
+Le verrou a été retiré de `CombatScreen`, qui n'est rendu que depuis
+`AdventureScreen`. `BilliardScreen` garde le sien : c'est un jeu
+indépendant, lancé depuis le menu.
+
+**Règle** : un seul écran gère l'orientation d'un mode — celui qui
+l'ouvre et le ferme. Deux verrous concurrents produisent un conflit
+invisible à la compilation, qui ne se voit qu'en jouant.
+
 ### Piège : supprimer des styles morts par regex DOTALL
 
 Le nettoyage des 25 styles portrait devenus inutiles a été fait avec une
