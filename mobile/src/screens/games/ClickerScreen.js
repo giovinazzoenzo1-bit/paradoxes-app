@@ -6,11 +6,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
-import { useDaily, PENDING_GRIFFES_KEY, PENDING_CREATURES_KEY } from '../../context/DailyContext';
+import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import {
   CREATURES,
   RARITY_LABEL,
@@ -35,7 +34,6 @@ import {
   SANCTUARY_MAX_LEVEL,
   VEILLEUR_MAX_LEVEL,
   rollCreature,
-  rollCreatureOfRarity,
   offlineEarnings,
   shouldSpawn,
   pickFromDeck,
@@ -91,11 +89,6 @@ import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 import { COLORS } from './clickerTheme';
 
-// Cyan de la barre de navigation, repris de la maquette fournie.
-// Defini ici plutot qu'en dur a chaque usage : une seule valeur a
-// changer si la teinte doit bouger.
-const NAV_CYAN = '#5bc8f0';
-
 // Les 5 illustrations d'œuf (un fichier par palier de EGG_STAGES,
 // même index). `require` doit recevoir un chemin STATIQUE — Metro
 // résout les images au moment du bundling, pas à l'exécution, donc un
@@ -132,11 +125,8 @@ function formatNum(n) {
 
 export default function ClickerScreen({ onBack }) {
   const panHandlers = useBackGesture(onBack);
-  const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
-  const {
-    trackEvent, lifetimeStats, loaded: dailyLoaded,
-    calendar, calendarDay, streakClaimedDate, date: today, claimStreak,
-  } = useDaily();
+  const { coins: sharedCoins, spendCoins: spendSharedCoins } = useCoins();
+  const { trackEvent, lifetimeStats, loaded: dailyLoaded } = useDaily();
   // Nombre d'Ascensions faites, source unique du bonus de vitesse. Vient
   // de DailyContext (compteur à vie) plutôt que d'un état local : il
   // survit ainsi à tout ce que l'Ascension remet à zéro.
@@ -156,7 +146,6 @@ export default function ClickerScreen({ onBack }) {
   const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, leftPct, topPct}
   const [deck, setDeck] = useState([null, null, null]); // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
   const [pendingDiscount, setPendingDiscount] = useState(null); // {percent, name} — consommé au prochain achat
   const [critLevel, setCritLevel] = useState(0);
@@ -490,32 +479,6 @@ export default function ClickerScreen({ onBack }) {
           });
           await AsyncStorage.removeItem(DEV_UNLOCK_ALL_KEY);
         }
-
-        // Creatures offertes par le calendrier de connexion. Meme
-        // principe que le drapeau dev ci-dessus : DailyContext depose
-        // une intention, le clicker (seul proprietaire de la collection)
-        // l'encaisse ici. Une creature deja possedee monte d'un niveau
-        // plutot que d'etre ignoree, comme lors d'une invocation.
-        const pendingRaw = await AsyncStorage.getItem(PENDING_CREATURES_KEY);
-        if (pendingRaw) {
-          let rarities = [];
-          try { rarities = JSON.parse(pendingRaw); } catch (e2) { rarities = []; }
-          if (Array.isArray(rarities) && rarities.length) {
-            const gifts = rarities.map((r) => rollCreatureOfRarity(r)).filter(Boolean);
-            if (gifts.length) {
-              setOwned((prev) => {
-                let next = [...prev];
-                gifts.forEach((c) => {
-                  const i = next.findIndex((o) => o.id === c.id);
-                  if (i >= 0) next[i] = { ...next[i], level: next[i].level + 1 };
-                  else next.push({ id: c.id, level: 1, evolutionTier: 0 });
-                });
-                return next;
-              });
-            }
-          }
-          await AsyncStorage.removeItem(PENDING_CREATURES_KEY);
-        }
       } catch (e) {
         // Chargement raté (JSON abîmé, donnée inattendue…). AVANT (bug
         // réel de "remise à zéro") : on repartait de zéro en mémoire, puis
@@ -726,19 +689,9 @@ export default function ClickerScreen({ onBack }) {
     return () => clearInterval(interval);
   }, [loaded]);
 
-  // Horodatage de la derniere animation de rebond : sert a ne pas
-  // empiler des sequences Animated a haute cadence (voir handleTap).
-  const lastAnimAtRef = useRef(0);
-
-  const MAX_POPUPS = 12;
   const spawnPopup = (text, x, y, isCrit) => {
     const id = popupIdRef.current++;
-    setPopups((p) => {
-      const next = [...p, { id, text, x, y, isCrit }];
-      // Ne garde que les plus recents : au-dela d'une douzaine, ils se
-      // superposent et deviennent illisibles de toute facon.
-      return next.length > MAX_POPUPS ? next.slice(next.length - MAX_POPUPS) : next;
-    });
+    setPopups((p) => [...p, { id, text, x, y, isCrit }]);
     setTimeout(() => setPopups((p) => p.filter((pp) => pp.id !== id)), 700);
   };
 
@@ -791,16 +744,12 @@ export default function ClickerScreen({ onBack }) {
       tapDamage(tapPowerRef.current) + upgradeBonus.tapFlat + tapUpgradeBonus(tapUpgradesRef.current);
     const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult));
     const finalGain = Math.round(gainCoins(gain));
-    if (now - lastAnimAtRef.current > 80) {
-      lastAnimAtRef.current = now;
-      Animated.sequence([
-        Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
-        Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
-      ]).start();
-    }
-    const ne = evt && evt.nativeEvent ? evt.nativeEvent : null;
-    const x = (ne && ne.locationX) || 60;
-    const y = (ne && ne.locationY) || 60;
+    Animated.sequence([
+      Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
+      Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
+    ]).start();
+    const x = evt.nativeEvent.locationX || 60;
+    const y = evt.nativeEvent.locationY || 60;
     spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
 
     // 02/09 : l'onglet Quêtes a disparu, l'œuf de l'écran d'accueil EST
@@ -1050,19 +999,6 @@ export default function ClickerScreen({ onBack }) {
       }
       return [...prev, { id: creature.id, level: 1, evolutionTier: 0 }];
     });
-  };
-
-  // Reclame la recompense du jour. `addSharedCoins` est passe au Context
-  // car lui seul connait le type de recompense du jour : c'est lui qui
-  // decide s'il faut crediter des pieces d'appli ou poser un drapeau.
-  const handleClaimCalendar = async () => {
-    const got = await claimStreak(addSharedCoins);
-    setCalendarOpen(false);
-    if (!got) return;
-    if (got.type === 'appCoins') spawnPopup(`+${got.amount} 🪙`, 110, 60);
-    else if (got.type === 'griffes') spawnPopup(`+${got.amount} 🐾`, 110, 60);
-    else if (got.type === 'creature') Alert.alert('🥚 Créature Rare !', 'Elle t\'attend dans ta Collection.');
-    else if (got.type === 'skin') Alert.alert('🎨 Bon pour un skin', "Le système de skins arrive bientôt — ton bon est conservé.");
   };
 
   const doOffrande = () => {
@@ -1491,16 +1427,6 @@ export default function ClickerScreen({ onBack }) {
             </TouchableOpacity>
           )}
 
-          {/* Bouton cadeau : ouvre le calendrier des 7 jours. Une
-              pastille rouge signale une recompense a recuperer, pour
-              que le joueur n'ait pas a ouvrir le menu pour le savoir. */}
-          <View style={styles.calBtnRow}>
-            <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
-              <Text style={styles.calBtnIcon}>🎁</Text>
-              {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.tapArea}>
             <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
 
@@ -1512,12 +1438,12 @@ export default function ClickerScreen({ onBack }) {
                   L'inverse — animer la vue qui reçoit les taps — décalait
                   la surface tactile de ±7px pendant la secousse et
                   laissait des bandes mortes autour de l'œuf. */}
-              <View
-                onStartShouldSetResponder={() => true}
-                onResponderGrant={handleTap}
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={handleTap}
                 style={[StyleSheet.absoluteFillObject, styles.tapButtonWrap]}
               >
-                <View style={{ pointerEvents: 'none' }}>
+                <View pointerEvents="none">
                   <Animated.View
                     style={[
                       styles.tapButton,
@@ -1555,7 +1481,7 @@ export default function ClickerScreen({ onBack }) {
                     )}
                   </Animated.View>
                 </View>
-              </View>
+              </TouchableOpacity>
               {popups.map((p) => (
                 <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
                   {p.text}
@@ -1632,16 +1558,6 @@ export default function ClickerScreen({ onBack }) {
         />
       )}
 
-      {calendarOpen && (
-        <DailyCalendarModal
-          calendar={calendar}
-          currentDay={calendarDay}
-          alreadyClaimedToday={streakClaimedDate === today}
-          onClaim={handleClaimCalendar}
-          onClose={() => setCalendarOpen(false)}
-        />
-      )}
-
       {pickerSlot !== null && (
         <DeckPicker
           slotIndex={pickerSlot}
@@ -1683,96 +1599,9 @@ export default function ClickerScreen({ onBack }) {
   );
 }
 
-// Calendrier de connexion, calque sur la maquette fournie.
-//
-// La grille n'est PAS reguliere, et c'est voulu : 3 petites cases
-// (jours 1-3), puis 2 grandes (jours 4-5), puis 2 moyennes (jours 6-7).
-// La taille de la case signale l'importance du lot, le jour 7 etant
-// mis en avant en dore comme recompense supreme.
-function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim, onClose }) {
-  if (!Array.isArray(calendar) || calendar.length === 0) return null;
-  const ready = !alreadyClaimedToday;
-  // Nombre de jours deja encaisses dans le cycle courant : les jours
-  // avant aujourd'hui, plus aujourd'hui s'il a ete reclame.
-  const claimedCount = (currentDay - 1) + (ready ? 0 : 1);
-
-  const cell = (d, style) => {
-    const isToday = d.day === currentDay;
-    const isPast = d.day < currentDay;
-    const claimable = isToday && ready;
-    const isSupreme = d.day === 7;
-    return (
-      <TouchableOpacity
-        key={d.day}
-        style={[
-          styles.calBox, style,
-          isSupreme && styles.calBoxSupreme,
-          isPast && styles.calBoxPast,
-          isToday && styles.calBoxToday,
-          claimable && styles.calBoxClaimable,
-        ]}
-        onPress={claimable ? onClaim : undefined}
-        disabled={!claimable}
-        activeOpacity={claimable ? 0.7 : 1}
-      >
-        <Text style={styles.calBoxIcon}>{d.icon}</Text>
-        <Text style={[styles.calBoxDay, isSupreme && styles.calBoxDaySupreme]}>JOUR {d.day}</Text>
-        <Text
-          style={[styles.calBoxLabel, isSupreme && styles.calBoxLabelSupreme]}
-          numberOfLines={2}
-        >
-          {d.label}
-        </Text>
-        {isPast && <Text style={styles.calBoxCheck}>✓</Text>}
-      </TouchableOpacity>
-    );
-  };
-
-  return (
-    <View style={styles.calOverlay}>
-      <LinearGradient
-        colors={['#0f2740', '#0a1a2e', '#08131f']}
-        style={styles.calPanel}
-      >
-        <TouchableOpacity onPress={onClose} style={styles.calClose}>
-          <Ionicons name="close" size={20} color={COLORS.muted} />
-        </TouchableOpacity>
-
-        <Text style={styles.calPanelTitle}>CALENDRIER DE RÉCOMPENSES</Text>
-        <Text style={styles.calPanelSub}>SEMAINE DE CONNEXION</Text>
-
-        {/* Jours 1-3 : petites cases */}
-        <View style={styles.calGridRow}>
-          {calendar.slice(0, 3).map((d) => cell(d, styles.calBoxSmall))}
-        </View>
-
-        {/* Jours 4-5 : grandes cases */}
-        <View style={styles.calGridRow}>
-          {calendar.slice(3, 5).map((d) => cell(d, styles.calBoxLarge))}
-        </View>
-
-        {/* Jours 6-7 : cases moyennes, le 7 en récompense suprême */}
-        <View style={styles.calGridRow}>
-          {calendar.slice(5, 7).map((d) => cell(d, styles.calBoxMedium))}
-        </View>
-
-        <Text style={styles.calFooter}>CONNEXIONS RÉCLAMÉES : {claimedCount} / 7</Text>
-        <View style={styles.calProgressTrack}>
-          <View style={[styles.calProgressFill, { width: `${(claimedCount / 7) * 100}%` }]} />
-        </View>
-
-        {ready && (
-          <TouchableOpacity style={styles.calBigBtn} onPress={onClaim}>
-            <Text style={styles.calBigBtnText}>RÉCUPÉRER LE JOUR {currentDay}</Text>
-          </TouchableOpacity>
-        )}
-      </LinearGradient>
-    </View>
-  );
-}
-
-
-
+// Les 3 emplacements du deck, affichés au-dessus de l'œuf. Un
+// emplacement vide est un œuf grisé — appuyer dessus (rempli ou vide)
+// ouvre le sélecteur pour choisir/changer la créature qui l'occupe.
 function DeckRow({ deck, owned, onSlotPress }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
@@ -2206,7 +2035,7 @@ function CreatureDetail({ creature, owned, coins, onClose, pendingDiscount }) {
             On indique le chemin plutôt que de laisser un vide. */}
         <View style={styles.upgradeHintBox}>
           <Text style={styles.upgradeHintText}>
-            🐾 Améliore cette créature depuis l'Exploration : ouvre son deck et touche sa fiche.
+            🐾 Améliore cette créature depuis l'Aventure : ouvre son deck et touche sa fiche.
           </Text>
           <Text style={styles.upgradeHintCost}>Prochain niveau : {formatNum(cost)} Griffes</Text>
         </View>
@@ -2392,29 +2221,24 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) 
 function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures }) {
   return (
     <View style={styles.bottomBar}>
-      {/* Chaque onglet : icone dans une case encadree de cyan, libelle
-          dessous — le motif de la maquette. La case active passe en
-          dore, ce qui reste la couleur d'accent du jeu. */}
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('shop')}>
-        <View style={[styles.navBox, view === 'shop' && styles.navBoxActive]}>
-          <Ionicons name="storefront" size={22} color={view === 'shop' ? COLORS.action : NAV_CYAN} />
+        <View style={view === 'shop' && styles.bottomBarIconGlow}>
+          <Ionicons name="storefront" size={24} color={view === 'shop' ? COLORS.action : COLORS.muted} />
         </View>
-        <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>SHOP</Text>
+        <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>Shop</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('collection')}>
-        <View style={[styles.navBox, view === 'collection' && styles.navBoxActive]}>
-          <Ionicons name="albums" size={22} color={view === 'collection' ? COLORS.action : NAV_CYAN} />
+        <View style={view === 'collection' && styles.bottomBarIconGlow}>
+          <Ionicons name="albums" size={24} color={view === 'collection' ? COLORS.action : COLORS.muted} />
           <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{ownedCount}</Text></View>
         </View>
-        <Text style={[styles.bottomBarLabel, view === 'collection' && styles.bottomBarLabelActive]}>COLLECTION</Text>
+        <Text style={[styles.bottomBarLabel, view === 'collection' && styles.bottomBarLabelActive]}>Collection</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={onAdventurePress}>
-        <View style={styles.navBox}>
-          <Ionicons name="compass" size={22} color={NAV_CYAN} />
-        </View>
-        <Text style={styles.bottomBarLabel}>EXPLORATION</Text>
+        <Ionicons name="skull" size={24} color={COLORS.muted} />
+        <Text style={styles.bottomBarLabel}>Aventure</Text>
       </TouchableOpacity>
     </View>
   );
@@ -2498,23 +2322,15 @@ const styles = StyleSheet.create({
 
   // Barre de navigation du bas — Shop | Quêtes | Collection | Aventure.
   bottomBar: {
-    flexDirection: 'row', width: '100%', borderTopWidth: 1, borderTopColor: '#2a6f96',
+    flexDirection: 'row', width: '100%', borderTopWidth: 1, borderTopColor: COLORS.border,
     paddingTop: 8, marginTop: 6, backgroundColor: COLORS.bg,
   },
   bottomBarItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
-  // Case encadrée autour de l'icône, comme sur la maquette.
-  navBox: {
-    width: 46, height: 40, borderRadius: 8,
-    borderWidth: 1, borderColor: '#2a6f96', backgroundColor: 'rgba(16,40,64,0.6)',
-    alignItems: 'center', justifyContent: 'center',
+  bottomBarIconGlow: {
+    backgroundColor: 'rgba(245,197,66,0.14)', borderRadius: 20, padding: 6,
+    shadowColor: COLORS.action, shadowOpacity: 0.7, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
   },
-  navBoxActive: {
-    borderColor: COLORS.action, backgroundColor: 'rgba(246,195,67,0.12)',
-    shadowColor: COLORS.action, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
-  },
-  bottomBarLabel: {
-    color: NAV_CYAN, fontSize: 8.5, fontWeight: '800', marginTop: 4, letterSpacing: 0.4,
-  },
+  bottomBarLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '700', marginTop: 2 },
   bottomBarLabelActive: { color: COLORS.action },
   bottomBarBadge: {
     position: 'absolute', top: -6, right: -10, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.action,
@@ -2528,82 +2344,6 @@ const styles = StyleSheet.create({
   shopPageBtnActive: { backgroundColor: COLORS.action, borderColor: COLORS.action },
   shopPageBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '800' },
   shopPageBtnTextActive: { color: '#241a00' },
-
-  // ---- Calendrier de connexion ----
-  // Bouton cadeau : rond rouge, discret, aligne a gauche au-dessus du
-  // deck. Il n'a pas a etre gros — c'est un point d'entree, pas un
-  // element de jeu.
-  calBtnRow: { width: '100%', alignItems: 'flex-start', marginBottom: 8 },
-  calBtn: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.bad,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  calBtnIcon: { fontSize: 22 },
-  // Pastille : une recompense attend. Evite d'ouvrir le menu pour rien.
-  calBtnDot: {
-    position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,
-    backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
-  },
-
-  // ---- Menu du calendrier (calque sur la maquette) ----
-  calOverlay: {
-    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: 20,
-  },
-  // Panneau compact : juste la taille du calendrier, comme demande.
-  // Bordure cyan lumineuse de la maquette.
-  calPanel: {
-    width: '100%', maxWidth: 360, borderRadius: 14, padding: 14,
-    borderWidth: 2, borderColor: '#4db8e8',
-    shadowColor: '#4db8e8', shadowOpacity: 0.6, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
-  },
-  calClose: { position: 'absolute', top: 8, right: 8, padding: 6, zIndex: 10 },
-  calPanelTitle: {
-    color: '#eaf6ff', fontSize: 15, fontWeight: '900', textAlign: 'center',
-    letterSpacing: 0.5, marginTop: 2,
-  },
-  calPanelSub: {
-    color: COLORS.action, fontSize: 10, fontWeight: '800', textAlign: 'center',
-    letterSpacing: 1, marginTop: 3, marginBottom: 10,
-  },
-  calGridRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-
-  // Cases : la TAILLE porte l'importance du lot (petites J1-3, grandes
-  // J4-5, moyennes J6-7), exactement comme sur la maquette.
-  calBox: {
-    backgroundColor: 'rgba(10,26,46,0.85)', borderRadius: 8,
-    borderWidth: 1, borderColor: '#2a6f96',
-    alignItems: 'center', justifyContent: 'center', padding: 5,
-  },
-  calBoxSmall: { flex: 1, height: 74 },
-  calBoxLarge: { flex: 1, height: 96 },
-  calBoxMedium: { flex: 1, height: 66 },
-  calBoxPast: { opacity: 0.4 },
-  calBoxToday: { borderColor: '#7fd4ff', borderWidth: 2 },
-  calBoxClaimable: { backgroundColor: 'rgba(246,195,67,0.18)', borderColor: COLORS.action, borderWidth: 2 },
-  // Jour 7 : recompense supreme, encadree en dore.
-  calBoxSupreme: { borderColor: COLORS.action, backgroundColor: 'rgba(246,195,67,0.10)' },
-  calBoxIcon: { fontSize: 20 },
-  calBoxDay: { color: '#eaf6ff', fontSize: 10, fontWeight: '900', letterSpacing: 0.3, marginTop: 2 },
-  calBoxDaySupreme: { color: COLORS.action },
-  calBoxLabel: { color: '#9fc4dc', fontSize: 7.5, fontWeight: '700', textAlign: 'center', marginTop: 1 },
-  calBoxLabelSupreme: { color: COLORS.action, fontWeight: '900' },
-  calBoxCheck: { position: 'absolute', top: 3, right: 5, color: COLORS.good, fontSize: 11, fontWeight: '900' },
-
-  calFooter: {
-    color: '#9fc4dc', fontSize: 9, fontWeight: '800', textAlign: 'center',
-    letterSpacing: 0.8, marginTop: 4,
-  },
-  calProgressTrack: {
-    height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)',
-    marginTop: 5, overflow: 'hidden', borderWidth: 1, borderColor: '#2a6f96',
-  },
-  calProgressFill: { height: '100%', backgroundColor: COLORS.action },
-  calBigBtn: {
-    backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10,
-    alignItems: 'center', marginTop: 10,
-  },
-  calBigBtnText: { color: '#0b0d16', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
   deckRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
   deckSlot: {
