@@ -604,7 +604,7 @@ export function veilleurOfflineMultiplier(level) {
   return 1 + Math.min(VEILLEUR_MAX_LEVEL, Math.max(0, level || 0)) * 0.05;
 }
 export function veilleurUpgradeCost(level) {
-  return Math.round(120 * Math.pow(2, level));
+  return Math.round(150 * Math.pow(2, level));
 }
 export function veilleurMaxed(level) {
   return (level || 0) >= VEILLEUR_MAX_LEVEL;
@@ -671,7 +671,7 @@ export function coreUpgradeRequirement(id) {
 // prévenir.
 export const TAP_UPGRADES = [
   { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1200, growth: 1.6 },
-  { id: 'tap2', name: 'Griffe Runique', emoji: '🪄', bonus: 2.5, cost: 16500, growth: 1.62 },
+  { id: 'tap2', name: 'Gantelet Runique', emoji: '🪄', bonus: 2.5, cost: 16500, growth: 1.62 },
   { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 12, cost: 153900, growth: 1.64 },
   { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 52, cost: 1392000, growth: 1.66 },
   { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 245, cost: 12090000, growth: 1.68 },
@@ -837,10 +837,23 @@ export function normalizeUpgradeLevels(levels) {
 // c'est ce qui rend le rebouclage plus payant que l'étirement. Testé à
 // 0,4 d'abord : un run d'un mois rendait +18 000% de production
 // permanente, ce qui aurait effacé toute la courbe au run suivant.
-export const ASCENSION_MIN_LIFETIME_EARNED = 100000000; // 100M
-export function ascensionEssenceGain(totalCoinsEarnedLifetime) {
-  if (totalCoinsEarnedLifetime < ASCENSION_MIN_LIFETIME_EARNED) return 0;
-  return Math.floor(Math.pow(totalCoinsEarnedLifetime / ASCENSION_MIN_LIFETIME_EARNED, 0.3));
+// Seuil de la PROCHAINE Ascension : 5M, puis 10M, 20M, 40M... Il double
+// à chaque fois. Le seuil unique à 100M était hors de portée d'un
+// premier run (mesuré à plus de 5h de jeu), donc le défi « Fais
+// l'Ascension » du cycle 5 bloquait la séquence.
+export const ASCENSION_FIRST_THRESHOLD = 5000000; // 5M
+export function ascensionThreshold(ascensionCount) {
+  const n = Number.isFinite(ascensionCount) ? Math.max(0, ascensionCount) : 0;
+  return ASCENSION_FIRST_THRESHOLD * Math.pow(2, n);
+}
+
+// Conservé pour compatibilité d'affichage : c'est le seuil de la 1re.
+export const ASCENSION_MIN_LIFETIME_EARNED = ASCENSION_FIRST_THRESHOLD;
+
+export function ascensionEssenceGain(totalCoinsEarnedLifetime, ascensionCount = 0) {
+  const threshold = ascensionThreshold(ascensionCount);
+  if (totalCoinsEarnedLifetime < threshold) return 0;
+  return Math.floor(Math.pow(totalCoinsEarnedLifetime / threshold, 0.3));
 }
 export const ESSENCE_BONUS_PER_POINT = 0.01;
 export function essenceBonusMultiplier(essence) {
@@ -1040,7 +1053,7 @@ export const QUEST_SEQUENCE = [
       label: () => 'Aie 50 millions de pièces en réserve' },
     // Remplacé pour la même raison : le Veilleur est plafonné à 10.
     { id: 'seq_veilleur20', icon: '🪄', metric: 'tapUpgrade:tap2', target: 5, mode: 'absolute',
-      label: () => 'Monte Griffe Runique au niveau 5' },
+      label: () => 'Monte Gantelet Runique au niveau 5' },
     { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', target: 30, mode: 'absolute',
       label: () => 'Nourris une créature jusqu\'au niveau 30' },
     { id: 'seq_ascend2', icon: '🌟', metric: 'ascension', target: 2, mode: 'delta',
@@ -1443,18 +1456,17 @@ export function questProgress(questId, stats, baseline = {}, targets = {}) {
   if (q.mode === 'delta') {
     return Math.max(0, Math.min(1, Math.max(0, now - base) / target));
   }
-  // Mode 'absolute' : la CIBLE est absolue, mais la BARRE est mesurée
-  // depuis l'état au tirage. Un défi « possède 58 Colosses » proposé à
-  // un joueur qui en a déjà 50 s'afficherait sinon à 86% dès la première
-  // seconde — techniquement exact, mais le joueur voit une barre
-  // presque pleine sans avoir rien fait. En repartant de l'état au
-  // tirage, la barre part de zéro et se remplit avec l'effort réel.
-  // `questComplete` reste identique : elle vaut 1 exactement quand la
-  // cible absolue est atteinte.
-  if (now >= target) return 1;
-  const span = target - base;
-  if (span <= 0) return now >= target ? 1 : 0;
-  return Math.max(0, Math.min(1, (now - base) / span));
+  // Mode 'absolute' : progression = valeur RÉELLE / cible.
+  //
+  // Une version précédente normalisait depuis l'état au tirage, pour
+  // qu'un défi « possède 58 Colosses » proposé à qui en a déjà 50 ne
+  // s'affiche pas à 86% d'emblée. Mais le compteur affichait alors un
+  // nombre FAUX : un joueur avec 46 700 pièces en banque lisait
+  // « 28,0K/100,0K ». Sur un défi « aie X pièces », le joueur vérifie
+  // le chiffre dans sa barre du haut — il doit correspondre.
+  // Une barre qui démarre haut est un moindre mal face à un compteur
+  // qui ment.
+  return Math.max(0, Math.min(1, now / target));
 }
 
 export function questComplete(questId, stats, baseline = {}, targets = {}) {

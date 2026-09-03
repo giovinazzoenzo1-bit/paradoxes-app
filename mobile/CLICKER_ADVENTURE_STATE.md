@@ -609,6 +609,38 @@ Deux protections ajoutées :
   C'est ce contrôle qui a confirmé qu'aucun autre composant des deux
   écrans n'était touché.
 
+### Piège : un compteur normalisé qui affiche un nombre faux
+
+Sur un défi « aie 100 000 pièces en réserve », un joueur ayant 46 700
+pièces lisait **« 28,0K/100,0K »**. La progression des défis `absolute`
+était normalisée depuis l'état au tirage — utile pour qu'un défi
+« possède 58 Colosses » proposé à qui en a 50 ne s'affiche pas à 86%
+d'emblée, mais le compteur affichait alors une valeur qui ne
+correspondait à rien.
+
+Le mode `absolute` affiche désormais **la valeur réelle** :
+`progression = valeur / cible`. Une barre qui démarre haut est un moindre
+mal face à un compteur qui ment — sur un défi de réserve, le joueur
+compare directement au chiffre de sa barre du haut.
+
+### Piège : deux améliorations au nom presque identique
+
+« Griffe Runique » (palier de tap) et « Griffe de Braisillon »
+(amélioration de créature) vivaient dans deux sections différentes de la
+boutique. Le défi « Monte Griffe de Braisillon au niveau 5 » a été lu
+comme visant l'autre, et jugé impossible. Le palier de tap est renommé
+**Gantelet Runique**. Un test vérifie qu'aucun nom n'est en double entre
+les deux familles.
+
+### Seuil d'Ascension progressif
+
+100M était hors de portée d'un premier run (mesuré à plus de 5h), donc le
+défi « Fais l'Ascension » du cycle 5 bloquait la séquence. Le seuil
+**double à chaque Ascension** : 5M, 10M, 20M, 40M…
+(`ascensionThreshold(n)`). `ascensionEssenceGain` prend maintenant le
+compteur d'Ascensions en second argument — sans lui, la 2e serait
+proposée dès le seuil de la 1re.
+
 ### Piège : les compteurs À VIE survivaient à la réinitialisation
 
 **Bug signalé** : le défi « Termine le chapitre 1, niveau 3 »
@@ -635,6 +667,24 @@ invisible pour toujours.
 
 Les défis en mode `delta` n'étaient pas touchés : ils repartent de leur
 baseline, pris au tirage.
+
+### Rythme de clic : l'outil de test change tout
+
+Les mesures d'équilibrage supposent un joueur tapant **5 à 7 fois par
+seconde**. Un auto-clicker réglé à 5 ms (200 clics/s) compresse la
+courbe d'un facteur ~30 et rend toute conclusion sur la difficulté
+inexploitable.
+
+| Clics/s | Intervalle | Créature 1 | Créature 3 | Ascension 5M |
+|---|---|---|---|---|
+| 3 | 333 ms | 44 min | > 4 h | > 4 h |
+| 5 | 200 ms | 28 min | 3,6 h | > 4 h |
+| **6,7** | **150 ms** | **21 min** | **2,8 h** | **3,6 h** |
+| 10 | 100 ms | 14 min | 2,0 h | 2,6 h |
+| 200 | 5 ms | 1 min | 6 min | 9 min |
+
+**Réglage de référence : 150 ms.** C'est le rythme d'un joueur motivé,
+et c'est celui sur lequel les cibles sont calées.
 
 ### Recalibrage : la difficulté doit CROÎTRE palier après palier
 

@@ -53,7 +53,7 @@ import {
   veilleurOfflineMultiplier,
   veilleurUpgradeCost,
   ascensionEssenceGain,
-  ASCENSION_MIN_LIFETIME_EARNED,
+  ascensionThreshold,
   essenceBonusMultiplier,
   ascensionGriffesReward,
   ascensionSpeedMultiplier,
@@ -884,7 +884,10 @@ export default function ClickerScreen({ onBack }) {
   // Ascension : réinitialise coins/Pacte/Faveur/Familier/Sanctuaire/
   // Veilleur/collection/deck contre un gain d'essence PERMANENT (jamais
   // remis à zéro, même par une nouvelle Ascension).
-  const essenceGainPreview = ascensionEssenceGain(totalEarned);
+  // Le seuil double à chaque Ascension (5M, 10M, 20M...), donc il faut
+  // passer le compteur : sans lui, la 2e Ascension serait proposée dès
+  // le seuil de la 1re.
+  const essenceGainPreview = ascensionEssenceGain(totalEarned, ascensionCount);
   const doAscension = () => {
     if (essenceGainPreview <= 0) return;
     const ascensionNumber = (lifetimeStats.ascension || 0) + 1;
@@ -1678,7 +1681,7 @@ function ShopView({
               <Text style={styles.ascensionBtnSubtext}>
                 {essenceGainPreview > 0
                   ? `Remet ton économie à zéro · tu gardes créatures et Aventure · +${ascensionGriffesReward(ascensionCount + 1)} Griffes et production x${ascensionSpeedMultiplier(ascensionCount + 1).toFixed(2)}`
-                  : `Gagne encore ${formatNum(ASCENSION_MIN_LIFETIME_EARNED - totalEarned)} pièces au total pour débloquer`}
+                  : `Gagne encore ${formatNum(ascensionThreshold(ascensionCount) - totalEarned)} pièces au total pour débloquer`}
               </Text>
             </TouchableOpacity>
 
