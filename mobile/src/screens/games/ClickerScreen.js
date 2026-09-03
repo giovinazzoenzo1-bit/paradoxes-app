@@ -1523,9 +1523,9 @@ export default function ClickerScreen({ onBack }) {
                   L'inverse — animer la vue qui reçoit les taps — décalait
                   la surface tactile de ±7px pendant la secousse et
                   laissait des bandes mortes autour de l'œuf. */}
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={handleTap}
+              <View
+                onStartShouldSetResponder={() => true}
+                onResponderGrant={handleTap}
                 style={[StyleSheet.absoluteFillObject, styles.tapButtonWrap]}
               >
                 <View pointerEvents="none">
@@ -1566,7 +1566,7 @@ export default function ClickerScreen({ onBack }) {
                     )}
                   </Animated.View>
                 </View>
-              </TouchableOpacity>
+              </View>
               {popups.map((p) => (
                 <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
                   {p.text}
