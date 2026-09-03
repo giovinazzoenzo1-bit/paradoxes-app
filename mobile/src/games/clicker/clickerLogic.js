@@ -671,15 +671,15 @@ export function coreUpgradeRequirement(id) {
 // prévenir.
 export const TAP_UPGRADES = [
   { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1200, growth: 1.6 },
-  { id: 'tap2', name: 'Griffe Runique', emoji: '🪄', bonus: 5, cost: 11000, growth: 1.62 },
-  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 25, cost: 95000, growth: 1.64 },
-  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 120, cost: 800000, growth: 1.66 },
-  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 600, cost: 6500000, growth: 1.68 },
-  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 3000, cost: 55000000, growth: 1.7 },
-  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 15000, cost: 480000000, growth: 1.72 },
-  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 80000, cost: 4200000000, growth: 1.74 },
-  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 420000, cost: 38000000000, growth: 1.76 },
-  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 2200000, cost: 340000000000, growth: 1.78 },
+  { id: 'tap2', name: 'Griffe Runique', emoji: '🪄', bonus: 2.5, cost: 16500, growth: 1.62 },
+  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 12, cost: 153900, growth: 1.64 },
+  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 52, cost: 1392000, growth: 1.66 },
+  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 245, cost: 12090000, growth: 1.68 },
+  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 1154, cost: 108900000, growth: 1.7 },
+  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 5455, cost: 1008000000, growth: 1.72 },
+  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 27586, cost: 9324000000, growth: 1.74 },
+  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 137705, cost: 88920000000, growth: 1.76 },
+  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 687500, cost: 836400000000, growth: 1.78 },
 ];
 
 export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10;
@@ -1596,20 +1596,20 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // les revenus seuls la faisait exploser.
 export const AUTOCLICKERS = [
   { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 650, baseIncome: 0.4, tier: 1 },
-  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 4330, baseIncome: 4, tier: 1 },
-  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 47670, baseIncome: 32, tier: 1 },
-  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 520000, baseIncome: 188, tier: 1 },
-  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 5633280, baseIncome: 1040, tier: 1 },
-  { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 43_400_000, baseIncome: 5600, tier: 2 },
-  { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 650_000_000, baseIncome: 30000, tier: 2 },
-  { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 6930_000_000, baseIncome: 160000, tier: 2 },
-  { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 39000_000_000, baseIncome: 600000, tier: 2 },
-  { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 130_500_000_000, baseIncome: 2e+06, tier: 2 },
-  { id: 'titanfoudre', name: 'Titan de Foudre', emoji: '⚡', baseCost: 650_000_000_000, baseIncome: 4_800_000, tier: 3 },
-  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 2600_000_000_000, baseIncome: 24_500_000, tier: 3 },
-  { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 10830_000_000_000, baseIncome: 96_000_000, tier: 3 },
-  { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 43_000_000_000_000, baseIncome: 360_000_000, tier: 3 },
-  { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 170_000_000_000_000, baseIncome: 1280_000_000, tier: 3 },
+  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 11120, baseIncome: 4, tier: 1 },
+  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 76030, baseIncome: 16, tier: 1 },
+  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 723160, baseIncome: 89, tier: 1 },
+  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 6447000, baseIncome: 464, tier: 1 },
+  { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 56381000, baseIncome: 2373, tier: 2 },
+  { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 491482000, baseIncome: 12097, tier: 2 },
+  { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 4275000000, baseIncome: 61538, tier: 2 },
+  { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 26206000000, baseIncome: 220588, tier: 2 },
+  { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 142206000000, baseIncome: 700000, tier: 2 },
+  { id: 'titanfoudre', name: 'Titan de Foudre', emoji: '⚡', baseCost: 471753000000, baseIncome: 1358000, tier: 3 },
+  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 4630487000000, baseIncome: 7795000, tier: 3 },
+  { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 30473893000000, baseIncome: 30000000, tier: 3 },
+  { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 187597288000000, baseIncome: 108000000, tier: 3 },
+  { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 1104948027000000, baseIncome: 372000000, tier: 3 },
 ];
 
 // Coût pour acheter UNE unité de plus d'un générateur donné, sachant

@@ -609,6 +609,42 @@ Deux protections ajoutées :
   C'est ce contrôle qui a confirmé qu'aucun autre composant des deux
   écrans n'était touché.
 
+### Recalibrage : la difficulté doit CROÎTRE palier après palier
+
+Griffe Runique passe de +5 à **+2,5** et de 11 000 à **16 500**.
+Automate Runique passe de 32/s à **16/s** et de 36 670 à **76 030**.
+Les paliers suivants suivent la même logique, avec un durcissement
+d'autant plus fort qu'on avance.
+
+**Règle posée** : le **ratio coût/revenu** doit être strictement
+croissant sur toute la chaîne. C'est lui qui porte la difficulté — chaque
+palier rapporte plus, mais coûte proportionnellement encore plus. Les
+coûts d'auto-clics sont donc générés par une géométrique,
+`coût = revenu × 1625 × 1,71^index`, ancrée sur l'Esprit Frappeur (650
+pour 0,4/s) et sur l'Automate demandé à ~76 000 pour 16/s.
+
+Courbe après durcissement (joueur tapant 5 fois/s) : 5/s de passif à
+30 min, **20/s à 1 h** (contre 50 avant), 57/s à 2 h, 240/s à 4 h.
+
+### Piège : patcher des littéraux numériques à la regex
+
+Trois passes successives de retouches ont produit des valeurs corrompues
+comme `baseCost: 1560_000_000_000` et `baseIncome: 1.35_800_000` : un
+remplacement ne visait que le préfixe du nombre et laissait une queue
+orpheline derrière, qu'un `%g` en notation exponentielle avait par
+ailleurs déjà cassée.
+
+**À faire** : réécrire la ligne entière avec un entier propre plutôt que
+substituer un préfixe, capturer largement (`[\d._e+]+`) pour attraper
+les littéraux déjà malformés, et vérifier après coup qu'aucun
+`base(Cost|Income)` ne contient `_` ni `e`. Le test le contrôle
+désormais.
+
+**Et ne pas corriger une table par patchs successifs** : les deux
+tentatives de « rattraper le recul » ont chacune produit des ratios
+absurdes (jusqu'à 3×10¹⁰). Reconstruire toute la table depuis une règle
+explicite est plus court et vérifiable.
+
 ### Ordre de la boutique
 
 **Offrande et Ascension sont remontées en haut** de la page
