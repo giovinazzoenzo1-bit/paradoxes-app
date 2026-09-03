@@ -30,6 +30,18 @@ jobs:
           pour vérifier les versions, ce que je n'ai pas dans mon bac à sable — mais ce robot, si)
         run: npx expo install --fix
 
+      # Diagnostic : sans ça, un update publié « avec succès » mais refusé
+      # par Expo Go (« Not compatible with this version of Expo Go ») est
+      # impossible à expliquer depuis les logs. On veut voir noir sur
+      # blanc la version d'expo réellement installée et le runtimeVersion
+      # que EAS va attacher à l'update.
+      - name: Diagnostic versions
+        run: |
+          echo "expo installé : $(node -p "require('expo/package.json').version")"
+          echo "react-native  : $(node -p "require('react-native/package.json').version")"
+          echo "--- config publique résolue ---"
+          npx expo config --type public | grep -iE "sdkVersion|runtimeVersion|newArch" || true
+
       - name: Installe EAS CLI
         run: npm install -g eas-cli
 
