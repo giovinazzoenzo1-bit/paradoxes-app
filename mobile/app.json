@@ -28,6 +28,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": []
+    "plugins": [],
+    "sdkVersion": "57.0.9"
   }
 }
