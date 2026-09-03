@@ -31,10 +31,27 @@ function AppContent() {
   // d'immersion, demande explicite) — plus seulement pendant le billard.
   // 'overlay-swipe' permet quand même de la faire réapparaître brièvement
   // d'un geste bord d'écran si besoin (pas totalement bloquant).
+  // Barre de navigation Android masquee.
+  //
+  // `setBehaviorAsync` a ete RETIREE d'expo-navigation-bar en SDK 57 (le
+  // mode edge-to-edge la remplace) : l'appeler donnait
+  // « undefined is not a function » et faisait planter le demarrage.
+  //
+  // Le `.catch()` ne protegeait rien : l'erreur est levee en appelant
+  // une valeur undefined, donc AVANT qu'une promesse existe. Seul un
+  // test d'existence de la fonction protege reellement d'une API
+  // retiree entre deux versions de SDK — d'ou le `typeof` ci-dessous,
+  // appliquer aux deux appels pour ne pas retomber dans le meme piege
+  // au prochain retrait.
   useEffect(() => {
-    if (Platform.OS === 'android') {
-      NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
-      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+    if (Platform.OS !== 'android') return;
+    try {
+      if (typeof NavigationBar.setVisibilityAsync === 'function') {
+        NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+      }
+    } catch (e) {
+      // La barre de navigation est cosmetique : jamais de quoi empecher
+      // l'appli de demarrer.
     }
   }, []);
 
