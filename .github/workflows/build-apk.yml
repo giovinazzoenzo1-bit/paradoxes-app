@@ -2,6 +2,11 @@ name: Construire l'APK Android (installable directement)
 
 on:
   workflow_dispatch: {}
+  # Déclenchable aussi en poussant le fichier mobile/BUILD_APK : le
+  # déclenchement manuel demande des droits que le jeton de dev n'a pas.
+  push:
+    paths:
+      - 'mobile/BUILD_APK'
 
 jobs:
   build-apk:
@@ -18,11 +23,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Installe les dépendances
-        run: npm install
-
-      - name: Corrige les versions pour la compatibilité SDK
-        run: npx expo install --fix
+      # `npm ci` + pas de `expo install --fix` : mêmes raisons que dans
+      # mobile-publish.yml. Les versions sont figées pour correspondre
+      # exactement au client, `--fix` les réaligne et défait ce travail.
+      - name: Installe les dépendances (versions figées du lock)
+        run: npm ci
 
       - name: Installe EAS CLI
         run: npm install -g eas-cli
