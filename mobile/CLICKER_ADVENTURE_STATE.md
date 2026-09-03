@@ -38,6 +38,66 @@ Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventur
 - **Invoquer une créature** (gacha) : vit dans l'onglet **Collection**, pas dans Shop.
 - **Rituel** (bonus "pub" gratuit) : une bulle qui apparaît près de l'œuf (comme les pouvoirs de créature), pas un bouton ni une bannière.
 
+## Montée en Expo SDK 57
+
+Expo Go ne supporte **qu'une seule version du SDK à la fois** et se met à
+jour tout seul depuis le store. Le passage d'Expo Go au SDK 57 a donc
+rendu le projet (SDK 54) impossible à ouvrir, sur Android comme sur iOS.
+Sur iPhone il n'existe aucun moyen de réinstaller une ancienne version
+d'Expo Go (sideloading interdit), d'où l'obligation de monter le projet.
+
+### Versions
+
+Elles viennent de `bundledNativeModules.json`, extrait du paquet
+`expo@57.0.19` lui-même. C'est la table de ce qu'Expo Go **embarque
+réellement** — pour un module NATIF, le paquet JS doit correspondre à la
+version native du client, sinon les API divergent à l'exécution.
+
+| Paquet | Avant | Après |
+|---|---|---|
+| expo | ~54.0.36 | **~57.0.19** |
+| react-native | 0.81.5 | **0.86.3** |
+| react | 19.1.0 | **19.2.3** |
+| async-storage | ^3.1.1 | **2.2.0** |
+| expo-notifications | ~0.32.12 | **~57.0.16** |
+| expo-screen-orientation | ~9.0.9 | **~57.0.2** |
+| safe-area-context | ^5.9.1 | **~5.7.0** |
+
+⚠️ **`async-storage` DESCEND de 3.1.1 à 2.2.0**, et c'est volontaire :
+c'est la version embarquée dans Expo Go 57. Les 5 méthodes utilisées par
+le projet (`getItem`, `setItem`, `removeItem`, `multiRemove`,
+`getAllKeys`) existent toutes en 2.2.0, donc aucune sauvegarde n'est
+affectée. Même logique pour `safe-area-context`.
+
+### `newArchEnabled: true`, obligatoire
+
+SDK 54 était le dernier à supporter l'ancienne architecture. À partir du
+SDK 55 (RN 0.83+), seule la New Architecture existe — laisser `false`
+n'est pas une option, l'app ne démarrerait pas.
+
+### `@expo/vector-icons` était une dépendance fantôme
+
+Utilisé dans presque tous les écrans mais **jamais déclaré** dans
+`package.json` : il arrivait en transitif d'`expo@54`. Expo 57 ne le tire
+plus, et le bundle échouait sur `Unable to resolve "@expo/vector-icons"`.
+Ajouté explicitement.
+
+**Règle** : une dépendance dont le code fait un `import` direct doit
+figurer dans `package.json`, même si elle « marche » par transitivité —
+la transitivité disparaît sans prévenir à la montée de version suivante.
+
+### Vérification faite
+
+`npx expo export` sur **Android ET iOS** : les deux bundles se
+construisent. C'est le vrai test, la compilation Babel seule ne suffit
+pas à valider une montée de SDK. `expo-doctor` passe 19/21, les 2 échecs
+étant des appels réseau à `api.expo.dev` bloqués dans l'environnement de
+travail, pas des problèmes de projet.
+
+Aucune API retirée en RN 0.83-0.86 n'est utilisée (vérifié :
+`PushNotificationIOS`, `Clipboard`, `ProgressBarAndroid`,
+`ViewPropTypes`, `removeEventListener`…).
+
 ## Mode Aventure en PAYSAGE (02/09)
 
 Tout le mode Aventure bascule en orientation paysage.
