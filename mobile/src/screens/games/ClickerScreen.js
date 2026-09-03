@@ -4,7 +4,7 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Pressable, StyleSheet, Animated, FlatList, Alert, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -798,8 +798,9 @@ export default function ClickerScreen({ onBack }) {
         Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
       ]).start();
     }
-    const x = evt.nativeEvent.locationX || 60;
-    const y = evt.nativeEvent.locationY || 60;
+    const ne = evt && evt.nativeEvent ? evt.nativeEvent : null;
+    const x = (ne && ne.locationX) || 60;
+    const y = (ne && ne.locationY) || 60;
     spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
 
     // 02/09 : l'onglet Quêtes a disparu, l'œuf de l'écran d'accueil EST
@@ -1522,8 +1523,9 @@ export default function ClickerScreen({ onBack }) {
                   L'inverse — animer la vue qui reçoit les taps — décalait
                   la surface tactile de ±7px pendant la secousse et
                   laissait des bandes mortes autour de l'œuf. */}
-              <Pressable
-                onPress={handleTap}
+              <View
+                onStartShouldSetResponder={() => true}
+                onResponderGrant={handleTap}
                 style={[StyleSheet.absoluteFillObject, styles.tapButtonWrap]}
               >
                 <View style={{ pointerEvents: 'none' }}>
@@ -1564,7 +1566,7 @@ export default function ClickerScreen({ onBack }) {
                     )}
                   </Animated.View>
                 </View>
-              </Pressable>
+              </View>
               {popups.map((p) => (
                 <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
                   {p.text}
