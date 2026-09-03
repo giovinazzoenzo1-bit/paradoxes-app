@@ -530,6 +530,31 @@ première Ascension, comme demandé.
 La vérification de déverrouillage est refaite **dans l'achat**, pas
 seulement à l'affichage : un bouton grisé reste sinon cliquable.
 
+**Le compteur de déverrouillage porte sur les niveaux d'améliorations
+(`UPGRADE_ITEMS`), PAS sur les paliers de tap eux-mêmes.** Compter les
+paliers rendait les paliers 4 à 10 mathématiquement inatteignables : le
+palier 4 aurait exigé 15 achats alors qu'il n'existe que 10 paliers en
+tout. Les améliorations se montant sans plafond, le compteur peut
+toujours croître.
+
+### Piège : une prop manquante casse tout l'écran
+
+Bug rencontré juste après cette MAJ — écran Shop blanc, « Cannot read
+property 'includes' of undefined ». Les 4 nouvelles props
+(`onBuyCritDamage`, `onBuyTapUpgrade`, `critDamageLevel`, `tapUpgrades`)
+n'étaient **jamais passées** à `ShopView` : l'édition automatique visait
+`onBuyCrit={buyCritLevel}` alors que le handler s'appelle
+`buyCritUpgrade`, et le remplacement a échoué **silencieusement**.
+
+Deux protections ajoutées :
+- **Valeurs par défaut** sur la signature de `ShopView`
+  (`tapUpgrades = []`, `autoClickers = {}`…) : une prop oubliée dégrade
+  l'affichage au lieu de faire tomber l'écran entier.
+- **Vérification à faire après tout ajout de prop** : croiser les props
+  déclarées par un composant avec celles réellement passées à son rendu.
+  C'est ce contrôle qui a confirmé qu'aucun autre composant des deux
+  écrans n'était touché.
+
 ### Défis ajustés
 
 Défi 1 : 10 000 → **5 000 pièces**. Défi 2 : Pacte 15 → **Pacte 10**.

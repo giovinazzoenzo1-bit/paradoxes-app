@@ -25,6 +25,7 @@ import {
   TAP_UPGRADE_STEP,
   tapUpgradeUnlocked,
   tapUpgradeBonus,
+  totalUpgradePurchases,
   rollCreature,
   offlineEarnings,
   shouldSpawn,
@@ -138,7 +139,7 @@ export default function ClickerScreen({ onBack }) {
   // Paliers de tap achetés (ids de TAP_UPGRADES), achat unique chacun.
   const [tapUpgrades, setTapUpgrades] = useState([]);
   const tapUpgradesRef = useRef([]);
-  tapUpgradesRef.current = tapUpgrades; // niveau de "Faveur des Esprits"
+  tapUpgradesRef.current = tapUpgrades;
   const [comboCount, setComboCount] = useState(0); // niveau actuel de la Transe
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
   const [ritualTarget, setRitualTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null — bulle "pub" (Rituel)
@@ -818,7 +819,7 @@ export default function ClickerScreen({ onBack }) {
     const index = TAP_UPGRADES.findIndex((u) => u.id === upgradeId);
     if (index === -1) return;
     if (tapUpgradesRef.current.includes(upgradeId)) return;
-    if (!tapUpgradeUnlocked(index, tapPowerRef.current, tapUpgradesRef.current.length)) return;
+    if (!tapUpgradeUnlocked(index, tapPowerRef.current, totalUpgradePurchases(upgradeLevelsRef.current))) return;
     const cost = applyDiscount(TAP_UPGRADES[index].cost);
     if (coinsRef.current < cost) return;
     setCoins((c) => c - cost);
@@ -1467,6 +1468,10 @@ export default function ClickerScreen({ onBack }) {
           applyDiscount={applyDiscount}
           onBuyTapPower={buyTapPower}
           onBuyCrit={buyCritUpgrade}
+          onBuyCritDamage={buyCritDamage}
+          onBuyTapUpgrade={buyTapUpgrade}
+          critDamageLevel={critDamageLevel}
+          tapUpgrades={tapUpgrades}
           onBuySanctuary={buySanctuary}
           onBuyVeilleur={buyVeilleur}
           onBuyAutoClicker={buyAutoClicker}
@@ -1590,9 +1595,9 @@ function describeUpgradeTotal(item, level) {
 }
 
 function ShopView({
-  coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers, upgradeLevels,
+  coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers = {}, upgradeLevels = {},
   applyDiscount, onBuyTapPower, onBuyCrit, onBuyCritDamage, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onBuyTapUpgrade,
-  critDamageLevel, tapUpgrades, onOffrande,
+  critDamageLevel = 0, tapUpgrades = [], onOffrande,
   essence, essenceGainPreview, totalEarned, ascensionCount, onAscend, onBack,
 }) {
   const [page, setPage] = useState('upgrades'); // 'upgrades' | 'autoclick'
@@ -1721,7 +1726,7 @@ function ShopView({
             <Text style={styles.shopTierHeader}>✊ Puissance de tap</Text>
             {TAP_UPGRADES.map((item, index) => {
               const owned = tapUpgrades.includes(item.id);
-              const unlocked = tapUpgradeUnlocked(index, tapPower, tapUpgrades.length);
+              const unlocked = tapUpgradeUnlocked(index, tapPower, totalUpgradePurchases(upgradeLevels));
               const cost = applyDiscount(item.cost);
               const canBuy = unlocked && !owned && coins >= cost;
               return (
@@ -1742,7 +1747,7 @@ function ShopView({
                         ? `+${formatNum(item.bonus)} pièces par tap`
                         : index === 0
                         ? `Se débloque au niveau ${TAP_UPGRADE_FIRST_PACTE_LEVEL} de Pacte`
-                        : `Se débloque après ${index * TAP_UPGRADE_STEP} améliorations de tap`}
+                        : `Se débloque après ${index * TAP_UPGRADE_STEP} niveaux d'améliorations`}
                     </Text>
                   </View>
                   <Text style={styles.actionBtnCost}>

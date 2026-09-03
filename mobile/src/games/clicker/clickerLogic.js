@@ -624,14 +624,26 @@ export const TAP_UPGRADES = [
   { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 2200000, cost: 340000000000 },
 ];
 
-// Nombre d'achats requis pour déverrouiller le palier d'index `index`.
-// Le premier tient au Pacte (10 niveaux), les suivants au nombre
-// d'améliorations de tap déjà achetées (5 de plus à chaque fois).
+// Déverrouillage d'un palier : le 1er tient au niveau de Pacte (10),
+// les suivants au nombre CUMULÉ de niveaux d'améliorations achetés,
+// 5 de plus à chaque palier.
+//
+// Le compteur porte sur les améliorations (`UPGRADE_ITEMS`), PAS sur les
+// paliers de tap eux-mêmes. Compter les paliers rendait les paliers 4 à
+// 10 mathématiquement inatteignables : le palier 4 aurait exigé 15
+// achats alors qu'il n'existe que 10 paliers en tout. Les améliorations
+// se montant sans plafond, le compteur peut toujours croître.
 export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10;
 export const TAP_UPGRADE_STEP = 5;
-export function tapUpgradeUnlocked(index, tapPowerLevel, purchasedCount) {
+export function tapUpgradeUnlocked(index, tapPowerLevel, upgradePurchases) {
   if (index === 0) return (tapPowerLevel || 0) >= TAP_UPGRADE_FIRST_PACTE_LEVEL;
-  return (purchasedCount || 0) >= index * TAP_UPGRADE_STEP;
+  return (upgradePurchases || 0) >= index * TAP_UPGRADE_STEP;
+}
+
+// Nombre total de niveaux d'améliorations achetés, toutes confondues.
+export function totalUpgradePurchases(levels) {
+  const map = normalizeUpgradeLevels(levels);
+  return Object.values(map).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
 }
 
 // Somme des bonus de tap déjà achetés. `owned` est un tableau d'ids.
