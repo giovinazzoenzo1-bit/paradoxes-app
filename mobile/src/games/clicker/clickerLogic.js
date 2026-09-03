@@ -610,6 +610,50 @@ export function veilleurMaxed(level) {
   return (level || 0) >= VEILLEUR_MAX_LEVEL;
 }
 
+// ---- Déverrouillage en chaîne des 4 mécaniques historiques ----
+//
+// Le Pacte est seul visible au départ ; chaque mécanique suivante
+// s'ouvre en achetant la précédente :
+//
+//   Pacte nv 5 -> Faveur des Esprits
+//   Faveur nv 1 -> Dégâts critiques
+//   Dégâts critiques nv 1 -> Sanctuaire
+//   Sanctuaire nv 1 -> Veilleur
+//   Pacte nv 10 -> 1er palier de Puissance de tap
+//
+// Les seuils sont exprimés en NIVEAU AFFICHÉ, comme les défis (« Monte
+// Pacte au niveau 10 ») : le Pacte démarre au niveau 1, donc « nv 5 »
+// veut dire quatre achats. Mélanger niveaux et nombre d'achats dans les
+// conditions était la meilleure façon d'obtenir un décalage de 1
+// invisible à la lecture.
+//
+// Une mécanique verrouillée reste AFFICHÉE mais grisée avec sa
+// condition : la boutique ne grandit pas par surprise, le joueur voit
+// dès le départ le chemin complet.
+export const CORE_UNLOCKS = [
+  { id: 'pacte', requires: null },
+  { id: 'faveur', requires: { key: 'tapPower', level: 5, label: 'Monte Pacte au niveau 5' } },
+  { id: 'critDamage', requires: { key: 'critLevel', level: 1, label: 'Achète 1 Faveur des Esprits' } },
+  { id: 'sanctuaire', requires: { key: 'critDamageLevel', level: 1, label: 'Achète 1 Dégâts critiques' } },
+  { id: 'veilleur', requires: { key: 'sanctuaryLevel', level: 1, label: 'Achète 1 Sanctuaire' } },
+];
+
+export function coreUnlockFor(id) {
+  return CORE_UNLOCKS.find((u) => u.id === id) || null;
+}
+
+// `state` = { tapPower, critLevel, critDamageLevel, sanctuaryLevel }
+export function coreUpgradeUnlocked(id, state) {
+  const entry = coreUnlockFor(id);
+  if (!entry || !entry.requires) return true;
+  const { key, level } = entry.requires;
+  return ((state && state[key]) || 0) >= level;
+}
+
+export function coreUpgradeRequirement(id) {
+  return coreUnlockFor(id)?.requires?.label || '';
+}
+
 // ---- Améliorations de TAP (10 paliers, niveaux infinis) ----
 //
 // Famille dédiée à la puissance de tap, distincte des `UPGRADE_ITEMS`.
@@ -1097,15 +1141,16 @@ export const QUEST_POOL = [
   { id: 'pacteLong', family: 'core', icon: '🔗', metric: 'tapPower', effortMin: 50, mode: 'absolute',
     label: (t) => `Fais monter Pacte au niveau ${t}` },
   { id: 'sanctMid', family: 'core', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 25, mode: 'absolute',
-    available: (s) => (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
+    available: (s) => coreUpgradeUnlocked('sanctuaire', s) && (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
     label: (t) => `Monte le Sanctuaire au niveau ${t}` },
   { id: 'sanctLong', family: 'core', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 55, mode: 'absolute',
-    available: (s) => (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
+    available: (s) => coreUpgradeUnlocked('sanctuaire', s) && (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
     label: (t) => `Monte le Sanctuaire au niveau ${t}` },
   { id: 'veilleurMid', family: 'core', icon: '🌙', metric: 'veilleurLevel', effortMin: 20, mode: 'absolute',
-    available: (s) => (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
+    available: (s) => coreUpgradeUnlocked('veilleur', s) && (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
     label: (t) => `Monte le Veilleur au niveau ${t}` },
   { id: 'faveurMid', family: 'core', icon: '✨', metric: 'critLevel', effortMin: 20, mode: 'absolute',
+    available: (s) => coreUpgradeUnlocked('faveur', s),
     label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
   { id: 'autoTotalMid', family: 'core', icon: '🔧', metric: 'autoTotal', effortMin: 30, mode: 'absolute',
     label: (t) => `Possède ${fmtQ(t)} auto-clics en tout` },
@@ -1126,13 +1171,13 @@ export const QUEST_POOL = [
   // demande juste d'acheter la Faveur d'abord. On ne le bloque donc que
   // pour un joueur qui n'a pas encore de quoi se la payer.
   { id: 'crit20', family: 'action', icon: '💥', metric: 'totalCrits', target: 20, mode: 'delta',
-    available: (s) => (s.critLevel || 0) >= 1 || (s.coins || 0) >= critUpgradeCost(0) || questBudget(s, 5) >= critUpgradeCost(0),
+    available: (s) => coreUpgradeUnlocked('faveur', s) && ((s.critLevel || 0) >= 1 || (s.coins || 0) >= critUpgradeCost(0) || questBudget(s, 5) >= critUpgradeCost(0)),
     label: (t) => `Obtiens ${t} coups critiques` },
   { id: 'crit100', family: 'action', icon: '💥', metric: 'totalCrits', target: 100, mode: 'delta',
-    available: (s) => (s.critLevel || 0) >= 2,
+    available: (s) => coreUpgradeUnlocked('faveur', s) && (s.critLevel || 0) >= 2,
     label: (t) => `Obtiens ${t} coups critiques` },
   { id: 'crit400', family: 'action', icon: '💥', metric: 'totalCrits', target: 400, mode: 'delta',
-    available: (s) => (s.critLevel || 0) >= 5,
+    available: (s) => coreUpgradeUnlocked('faveur', s) && (s.critLevel || 0) >= 5,
     label: (t) => `Obtiens ${t} coups critiques` },
   { id: 'golden3', family: 'action', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
     label: (t) => `Touche ${t} fois la cible dorée` },

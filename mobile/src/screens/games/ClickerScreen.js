@@ -27,6 +27,8 @@ import {
   tapUpgradeBonus,
   tapUpgradeCost,
   normalizeTapUpgrades,
+  coreUpgradeUnlocked,
+  coreUpgradeRequirement,
   sanctuaryMaxed,
   veilleurMaxed,
   SANCTUARY_MAX_LEVEL,
@@ -788,7 +790,18 @@ export default function ClickerScreen({ onBack }) {
     if (pendingDiscountRef.current) setPendingDiscount(null);
   };
 
+  // État lu par toutes les conditions de déverrouillage des mécaniques.
+  const coreStateRef = () => ({
+    tapPower: tapPowerRef.current,
+    critLevel: critLevelRef.current,
+    critDamageLevel: critDamageLevelRef.current,
+    sanctuaryLevel: sanctuaryLevelRef.current,
+  });
+
   const buyCritUpgrade = () => {
+    // Revérifié à l'achat, pas seulement à l'affichage : un bouton grisé
+    // reste sinon parfaitement cliquable.
+    if (!coreUpgradeUnlocked('faveur', coreStateRef())) return;
     const cost = applyDiscount(critUpgradeCost(critLevel));
     if (coins < cost) return;
     setCoins((c) => c - cost);
@@ -812,6 +825,7 @@ export default function ClickerScreen({ onBack }) {
   // Achat d'un niveau d'amélioration — même forme que buyVeilleur et
   // consorts : on paie le coût du niveau courant, le niveau monte de 1.
   const buyCritDamage = () => {
+    if (!coreUpgradeUnlocked('critDamage', coreStateRef())) return;
     const cost = applyDiscount(critDamageUpgradeCost(critDamageLevelRef.current));
     if (coinsRef.current < cost) return;
     setCoins((c) => c - cost);
@@ -848,6 +862,7 @@ export default function ClickerScreen({ onBack }) {
   };
 
   const buySanctuary = () => {
+    if (!coreUpgradeUnlocked('sanctuaire', coreStateRef())) return;
     if (sanctuaryMaxed(sanctuaryLevelRef.current)) return;
     const cost = applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel));
     if (coins < cost) return;
@@ -857,6 +872,7 @@ export default function ClickerScreen({ onBack }) {
   };
 
   const buyVeilleur = () => {
+    if (!coreUpgradeUnlocked('veilleur', coreStateRef())) return;
     if (veilleurMaxed(veilleurLevelRef.current)) return;
     const cost = applyDiscount(veilleurUpgradeCost(veilleurLevel));
     if (coins < cost) return;
@@ -1611,6 +1627,8 @@ function ShopView({
   critDamageLevel = 0, tapUpgrades = [], onOffrande,
   essence, essenceGainPreview, totalEarned, ascensionCount, onAscend, onBack,
 }) {
+  const coreState = { tapPower, critLevel, critDamageLevel, sanctuaryLevel };
+  const isUnlocked = (id) => coreUpgradeUnlocked(id, coreState);
   const [page, setPage] = useState('upgrades'); // 'upgrades' | 'autoclick'
 
   return (
@@ -1631,6 +1649,9 @@ function ShopView({
       <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
         {page === 'upgrades' ? (
           <>
+            {/* Déverrouillage en chaîne des 4 mécaniques : voir
+                CORE_UNLOCKS. Un bouton verrouillé reste affiché mais
+                grisé, avec la condition à remplir. */}
             {/* Offrande et Ascension EN HAUT de la boutique : ce sont
             les deux actions à fort impact (l'une convertit la monnaie
             de l'appli, l'autre relance toute la partie). Enfouies en
@@ -1674,57 +1695,71 @@ function ShopView({
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, coins < applyDiscount(critUpgradeCost(critLevel)) && styles.actionBtnDisabled]}
+              style={[styles.actionBtn, (!isUnlocked('faveur') || coins < applyDiscount(critUpgradeCost(critLevel))) && styles.actionBtnDisabled, !isUnlocked('faveur') && styles.actionBtnLockedTap]}
               onPress={onBuyCrit}
-              disabled={coins < applyDiscount(critUpgradeCost(critLevel))}
+              disabled={!isUnlocked('faveur') || coins < applyDiscount(critUpgradeCost(critLevel))}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.actionBtnText}>✨ Faveur des Esprits (nv {critLevel})</Text>
+                <Text style={styles.actionBtnText}>{isUnlocked('faveur') ? `✨ Faveur des Esprits (nv ${critLevel})` : '🔒 ???'}</Text>
                 <Text style={styles.actionBtnSubtext}>
-                  {(critChance(critLevel) * 100).toFixed(2)}% de chance de coup critique · +1,25% par niveau
+                  {isUnlocked('faveur')
+                    ? `${(critChance(critLevel) * 100).toFixed(2)}% de chance de coup critique · +1,25% par niveau`
+                    : coreUpgradeRequirement('faveur')}
                 </Text>
               </View>
-              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(critUpgradeCost(critLevel)))}</Text>
+              <Text style={styles.actionBtnCost}>{isUnlocked('faveur') ? `💰 ${formatNum(applyDiscount(critUpgradeCost(critLevel)))}` : '🔒'}</Text>
             </TouchableOpacity>
 
             {/* Dégâts critiques : bouton distinct de la Faveur, qui ne
                 gère plus que la chance. */}
             <TouchableOpacity
-              style={[styles.actionBtn, coins < applyDiscount(critDamageUpgradeCost(critDamageLevel)) && styles.actionBtnDisabled]}
+              style={[styles.actionBtn, (!isUnlocked('critDamage') || coins < applyDiscount(critDamageUpgradeCost(critDamageLevel))) && styles.actionBtnDisabled, !isUnlocked('critDamage') && styles.actionBtnLockedTap]}
               onPress={onBuyCritDamage}
-              disabled={coins < applyDiscount(critDamageUpgradeCost(critDamageLevel))}
+              disabled={!isUnlocked('critDamage') || coins < applyDiscount(critDamageUpgradeCost(critDamageLevel))}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.actionBtnText}>💥 Dégâts critiques (nv {critDamageLevel})</Text>
+                <Text style={styles.actionBtnText}>{isUnlocked('critDamage') ? `💥 Dégâts critiques (nv ${critDamageLevel})` : '🔒 ???'}</Text>
                 <Text style={styles.actionBtnSubtext}>
-                  Coup critique x{critMultiplier(critDamageLevel).toFixed(1)} · +0,5 par niveau
+                  {isUnlocked('critDamage')
+                    ? `Coup critique x${critMultiplier(critDamageLevel).toFixed(1)} · +0,5 par niveau`
+                    : coreUpgradeRequirement('critDamage')}
                 </Text>
               </View>
-              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(critDamageUpgradeCost(critDamageLevel)))}</Text>
+              <Text style={styles.actionBtnCost}>{isUnlocked('critDamage') ? `💰 ${formatNum(applyDiscount(critDamageUpgradeCost(critDamageLevel)))}` : '🔒'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, (sanctuaryMaxed(sanctuaryLevel) || coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))) && styles.actionBtnDisabled]}
+              style={[styles.actionBtn, (!isUnlocked('sanctuaire') || sanctuaryMaxed(sanctuaryLevel) || coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))) && styles.actionBtnDisabled, !isUnlocked('sanctuaire') && styles.actionBtnLockedTap]}
               onPress={onBuySanctuary}
-              disabled={sanctuaryMaxed(sanctuaryLevel) || coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))}
+              disabled={!isUnlocked('sanctuaire') || sanctuaryMaxed(sanctuaryLevel) || coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.actionBtnText}>🏛️ Sanctuaire (nv {sanctuaryLevel}/{SANCTUARY_MAX_LEVEL})</Text>
-                <Text style={styles.actionBtnSubtext}>+2,5% sur TOUTE la production (tap + passif) par niveau</Text>
+                <Text style={styles.actionBtnText}>{isUnlocked('sanctuaire') ? `🏛️ Sanctuaire (nv ${sanctuaryLevel}/${SANCTUARY_MAX_LEVEL})` : '🔒 ???'}</Text>
+                <Text style={styles.actionBtnSubtext}>
+                  {isUnlocked('sanctuaire')
+                    ? '+2,5% sur TOUTE la production (tap + passif) par niveau'
+                    : coreUpgradeRequirement('sanctuaire')}
+                </Text>
               </View>
-              <Text style={styles.actionBtnCost}>{sanctuaryMaxed(sanctuaryLevel) ? '⭐ MAX' : `💰 ${formatNum(applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)))}`}</Text>
+              <Text style={styles.actionBtnCost}>
+                {!isUnlocked('sanctuaire') ? '🔒' : sanctuaryMaxed(sanctuaryLevel) ? '⭐ MAX' : `💰 ${formatNum(applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)))}`}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, (veilleurMaxed(veilleurLevel) || coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))) && styles.actionBtnDisabled]}
+              style={[styles.actionBtn, (!isUnlocked('veilleur') || veilleurMaxed(veilleurLevel) || coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))) && styles.actionBtnDisabled, !isUnlocked('veilleur') && styles.actionBtnLockedTap]}
               onPress={onBuyVeilleur}
-              disabled={veilleurMaxed(veilleurLevel) || coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))}
+              disabled={!isUnlocked('veilleur') || veilleurMaxed(veilleurLevel) || coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.actionBtnText}>🌙 Veilleur (nv {veilleurLevel}/{VEILLEUR_MAX_LEVEL})</Text>
-                <Text style={styles.actionBtnSubtext}>+5% de gains hors-ligne par niveau</Text>
+                <Text style={styles.actionBtnText}>{isUnlocked('veilleur') ? `🌙 Veilleur (nv ${veilleurLevel}/${VEILLEUR_MAX_LEVEL})` : '🔒 ???'}</Text>
+                <Text style={styles.actionBtnSubtext}>
+                  {isUnlocked('veilleur') ? '+5% de gains hors-ligne par niveau' : coreUpgradeRequirement('veilleur')}
+                </Text>
               </View>
-              <Text style={styles.actionBtnCost}>{veilleurMaxed(veilleurLevel) ? '⭐ MAX' : `💰 ${formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}`}</Text>
+              <Text style={styles.actionBtnCost}>
+                {!isUnlocked('veilleur') ? '🔒' : veilleurMaxed(veilleurLevel) ? '⭐ MAX' : `💰 ${formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}`}
+              </Text>
             </TouchableOpacity>
 
 

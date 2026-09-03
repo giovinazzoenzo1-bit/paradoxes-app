@@ -514,6 +514,39 @@ Courbe obtenue (joueur tapant 5 fois/s) :
 L'Ascension (100 M cumulés) demande **plus de 5 h**, ce qui respecte le
 « minimum 3-4 h » visé.
 
+### Déverrouillage en chaîne des 4 mécaniques historiques
+
+Le Pacte est seul disponible au départ ; chaque mécanique s'ouvre en
+achetant la précédente (`CORE_UNLOCKS`) :
+
+```
+Pacte nv 5   -> Faveur des Esprits
+Faveur nv 1  -> Dégâts critiques
+Dégâts nv 1  -> Sanctuaire
+Sanctuaire 1 -> Veilleur
+Pacte nv 10  -> 1er palier de Puissance de tap
+```
+
+Les seuils sont exprimés en **niveau affiché**, comme les défis (« Monte
+Pacte au niveau 10 »). Le Pacte démarrant au niveau 1, « nv 5 » veut dire
+quatre achats — mélanger niveaux et nombre d'achats dans les conditions
+est la meilleure façon d'obtenir un décalage de 1 invisible à la lecture.
+
+Une mécanique verrouillée reste **affichée mais grisée avec sa
+condition** : la boutique ne grandit pas par surprise, le joueur voit dès
+le départ le chemin complet. La vérification est refaite **dans chaque
+handler d'achat**, pas seulement à l'affichage.
+
+**Le pool dynamique ne propose plus un défi visant une mécanique
+verrouillée** (`sanctMid`, `sanctLong`, `veilleurMid`, `faveurMid`,
+`crit*`) : le défi serait techniquement réalisable — il suffit de
+remonter la chaîne — mais illisible pour un joueur qui ne voit même pas
+le bouton. Vérifié : 4 000 tirages pour un débutant, zéro défi verrouillé.
+
+La séquence scriptée reste cohérente sans changement : le cycle 1 monte
+le Pacte au niveau 10, ce qui ouvre la Faveur (nv 5) et les paliers de
+tap (nv 10) avant que le cycle 2 ne réclame des coups critiques.
+
 ### Sanctuaire et Veilleur : plafonnés à 10 niveaux
 
 Ce sont les **deux seules améliorations bornées** du jeu. Elles
