@@ -599,6 +599,10 @@ export default function ClickerScreen({ onBack }) {
   // provoquait trois mises a jour d'etat dont une remontant au Context
   // partage, soit un re-rendu de toute l'appli par tap.
   const pendingGainRef = useRef(0);
+  // DIAGNOSTIC TEMPORAIRE : compte les taps reellement recus.
+  const tapCountRef = useRef(0);
+  const tapWindowRef = useRef(Date.now());
+  const [tapRate, setTapRate] = useState(0);
   // Horodatage de la derniere secousse de l'oeuf (voir handleEggTap).
   const lastShakeAtRef = useRef(0);
 
@@ -609,6 +613,20 @@ export default function ClickerScreen({ onBack }) {
   // `trackEvent` est appele ici avec le total accumule plutot qu'a
   // chaque tap : il ecrit dans DailyContext, donc chaque appel
   // re-rendait TOUTE l'application.
+  // DIAGNOSTIC TEMPORAIRE : cadence de taps reellement recue.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = Date.now();
+      const elapsed = (now - tapWindowRef.current) / 1000;
+      if (elapsed >= 0.5) {
+        setTapRate(Math.round(tapCountRef.current / elapsed));
+        tapCountRef.current = 0;
+        tapWindowRef.current = now;
+      }
+    }, 500);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     const id = setInterval(() => {
       const pending = pendingGainRef.current;
@@ -740,6 +758,7 @@ export default function ClickerScreen({ onBack }) {
 
   const handleTap = (evt) => {
     const now = Date.now();
+    tapCountRef.current += 1;
 
     // Transe : la fenêtre entre deux taps décide si le combo continue ou repart de 1.
     const stillActive = transeStillActive(lastTapTimeRef.current, now);
@@ -1421,6 +1440,9 @@ export default function ClickerScreen({ onBack }) {
       {view === 'tap' && (
         <>
           <Text style={styles.coinsValue}>💰 {formatNum(coins)}</Text>
+          {/* DIAGNOSTIC TEMPORAIRE : cadence de taps reellement recue
+              par le code. A retirer une fois la cause identifiee. */}
+          <Text style={styles.tapRateDebug}>⚡ {tapRate} taps/s reçus</Text>
           {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
 
           {activePower && (
@@ -2315,6 +2337,7 @@ const styles = StyleSheet.create({
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
+  tapRateDebug: { color: COLORS.neonCyan, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   coinsValue: {
     color: COLORS.action, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 4,
     textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10,
