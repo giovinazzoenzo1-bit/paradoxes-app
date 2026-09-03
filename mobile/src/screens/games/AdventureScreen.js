@@ -667,13 +667,15 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
               <View style={styles.mlRuneRow}>
                 {[0, 1, 2].map((i) => {
                   const rune = equippedRunes[i];
+                  const def = rune ? RUNE_TYPES[rune.type] : null;
                   return (
                     <TouchableOpacity
                       key={i}
-                      style={[styles.mlRuneSlot, rune && styles.mlRuneSlotFilled]}
+                      style={[styles.mlRuneSlot, def && { borderColor: def.color }]}
                       onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(i))}
                     >
-                      <Text style={styles.mlRuneEmoji}>{rune ? RUNE_TYPES[rune.type].emoji : '＋'}</Text>
+                      <Text style={styles.mlRuneEmoji}>{def ? def.icon : '＋'}</Text>
+                      {rune && <Text style={styles.mlRuneLevel}>{rune.level}</Text>}
                     </TouchableOpacity>
                   );
                 })}
@@ -1409,15 +1411,15 @@ const styles = StyleSheet.create({
   mlStatValue: { color: COLORS.text, fontSize: 13, fontWeight: '900' },
   mlRunesBox: {
     flex: 1, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
-    borderWidth: 1, borderColor: COLORS.border,
+    borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center',
   },
-  mlRuneRow: { flexDirection: 'row', gap: 6, flex: 1, alignItems: 'center' },
+  mlRuneRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   mlRuneSlot: {
-    flex: 1, aspectRatio: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+    width: 42, height: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
     backgroundColor: COLORS.panelLight, borderWidth: 1, borderColor: COLORS.border,
   },
-  mlRuneSlotFilled: { borderColor: COLORS.neonCyan },
   mlRuneEmoji: { fontSize: 18 },
+  mlRuneLevel: { color: COLORS.muted, fontSize: 9, fontWeight: '800' },
   mlAttrBox: {
     flex: 1.25, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
     borderWidth: 1, borderColor: COLORS.border,
