@@ -609,6 +609,33 @@ Deux protections ajoutées :
   C'est ce contrôle qui a confirmé qu'aucun autre composant des deux
   écrans n'était touché.
 
+### Piège : les compteurs À VIE survivaient à la réinitialisation
+
+**Bug signalé** : le défi « Termine le chapitre 1, niveau 3 »
+n'apparaissait jamais, même après avoir réinitialisé Élevage plusieurs
+fois de suite.
+
+Cause : « Réinitialiser Élevage » n'effaçait que `CLICKER_STORAGE_KEY`.
+Or les compteurs À VIE (`advLevelReached`, `offering`,
+`powerActivated`, `ascension`, `battleWon`, `runeBought`…) vivent dans la
+sauvegarde de **DailyContext**. Un joueur ayant battu une fois le niveau
+3 gardait donc `advLevelReached >= 3` pour toujours : le défi, en mode
+`absolute`, était validé d'office et **sauté à chaque partie neuve**.
+
+`resetLifetimeStats()` est exposé par DailyContext et appelé par la
+réinitialisation d'Élevage. Passer par le Context plutôt qu'écrire dans
+le stockage depuis Options suit la règle habituelle : l'écran
+propriétaire d'une donnée est le seul à l'écrire.
+
+**Règle à retenir** : une donnée persistée AILLEURS que dans la
+sauvegarde d'un jeu ne sera pas effacée par la réinitialisation de ce
+jeu. Tout compteur ajouté à `lifetimeStats` et lu par un défi doit être
+inclus dans cette remise à zéro, sinon le défi correspondant devient
+invisible pour toujours.
+
+Les défis en mode `delta` n'étaient pas touchés : ils repartent de leur
+baseline, pris au tirage.
+
 ### Recalibrage : la difficulté doit CROÎTRE palier après palier
 
 Griffe Runique passe de +5 à **+2,5** et de 11 000 à **16 500**.

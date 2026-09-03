@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CoinBar from '../components/CoinBar';
 import { useCoins } from '../context/CoinsContext';
+import { useDaily } from '../context/DailyContext';
 import { STORAGE_KEY as CLICKER_STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY } from './games/ClickerScreen';
 import { DEV_ADD_GRIFFES_KEY, DEV_REFILL_ENERGY_KEY } from './games/AdventureScreen';
 import { CREATURES } from '../games/clicker/clickerLogic';
 
 export default function OptionsScreen() {
   const { addCoins, resetCoins } = useCoins();
+  const { resetLifetimeStats } = useDaily();
 
   // Remise à zéro complète : efface TOUT le stockage local (pièces, meilleurs
   // scores de chaque jeu, sauvegarde du clicker...) plutôt que d'énumérer
@@ -45,6 +47,12 @@ export default function OptionsScreen() {
           style: 'destructive',
           onPress: async () => {
             await AsyncStorage.removeItem(CLICKER_STORAGE_KEY);
+            // Les compteurs À VIE (niveau d'Aventure atteint, Offrandes,
+            // pouvoirs activés, Ascensions...) vivent dans DailyContext,
+            // pas dans la sauvegarde du clicker. Sans cette remise à
+            // zéro ils survivaient au reset, et les défis qui les lisent
+            // restaient validés d'office sur une partie pourtant neuve.
+            resetLifetimeStats();
             Alert.alert('Fait', 'Élevage a été réinitialisé.');
           },
         },

@@ -136,6 +136,23 @@ export function DailyProvider({ children }) {
     ));
   }, []);
 
+  // Remet à zéro les compteurs À VIE. Appelé par la réinitialisation
+  // d'Élevage.
+  //
+  // Sans ça, ces compteurs survivaient à toutes les réinitialisations :
+  // ils vivent dans la sauvegarde de ce Context, pas dans celle du
+  // clicker. Conséquence observée — un joueur ayant battu une fois le
+  // niveau 3 en Aventure gardait `advLevelReached >= 3` pour toujours,
+  // donc le défi « Termine le chapitre 1, niveau 3 » était validé
+  // d'office et n'apparaissait JAMAIS, même sur une partie neuve.
+  //
+  // On passe par le Context plutôt que d'écrire dans le stockage depuis
+  // l'écran Options : c'est la même règle que partout ailleurs, l'écran
+  // propriétaire d'une donnée est le seul à l'écrire.
+  const resetLifetimeStats = useCallback(() => {
+    setLifetimeStats({});
+  }, []);
+
   // Réclame la récompense d'UNE quête terminée — crédite via le drapeau
   // partagé (voir PENDING_GRIFFES_KEY plus haut), pas d'accès direct à
   // l'état d'Aventure depuis ce Context.
@@ -164,7 +181,7 @@ export function DailyProvider({ children }) {
 
   const value = {
     loaded, date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats,
-    trackEvent, trackMax, claimQuest, claimStreak,
+    trackEvent, trackMax, resetLifetimeStats, claimQuest, claimStreak,
   };
 
   return <DailyContext.Provider value={value}>{children}</DailyContext.Provider>;
