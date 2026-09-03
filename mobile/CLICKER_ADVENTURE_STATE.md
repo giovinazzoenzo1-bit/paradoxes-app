@@ -98,6 +98,59 @@ Aucune API retirée en RN 0.83-0.86 n'est utilisée (vérifié :
 `PushNotificationIOS`, `Clipboard`, `ProgressBarAndroid`,
 `ViewPropTypes`, `removeEventListener`…).
 
+## Feuille de route illustrations créatures (03/09)
+
+Le frère de l'utilisateur va produire les assets visuels des 26
+créatures. Feuille de route complète livrée dans
+`mobile/CREATURE_ART_ROADMAP.md` — auto-suffisante, aucune question de
+retour prévue.
+
+### Décision technique : Lottie pour les animations
+
+L'utilisateur voulait de vraies animations fluides (pas un enchaînement
+de poses statiques comme l'œuf). Avant d'écrire quoi que ce soit dans la
+feuille de route, vérifié que ça ne reproduirait pas le crash
+`expo-notifications` du 03/09 (module retiré d'Expo Go, plante à
+l'import) :
+
+1. **`lottie-react-native` est bien embarqué dans Expo Go 57.0.9**
+   (`bundledNativeModules.json` du paquet `expo@57.0.9` : version
+   `~7.3.8`) — contrairement à `expo-notifications`, retiré.
+2. Le composant natif est enregistré via `codegenNativeComponent`, un
+   mécanisme **paresseux** (résolu au rendu, pas à l'import) — différent
+   du `requireNativeModule` synchrone qui avait fait planter les
+   notifications. Import sûr même si le module natif était absent.
+3. **Testé pour de vrai** : un écran temporaire important et **rendant**
+   réellement un `LottieView` (avec un JSON minimal valide), bundlé sur
+   Android ET iOS via `expo export`. Les deux passent. Le fichier de
+   test a été retiré après coup — seul l'ajout de la dépendance
+   `lottie-react-native: 7.3.8` (épinglée, même version qu'Expo Go)
+   reste dans `package.json`.
+
+### Structure attendue
+
+```
+mobile/assets/creatures/<id-creature>/
+  stage-0.png / stage-1.png / stage-2.png   (3 illustrations, 1024x1024 min)
+  logo.png                                    (icône, 512x512 min)
+  anim-idle.json / anim-reaction.json         (Lottie, stade final uniquement)
+```
+
+Les 26 dossiers vides (un par créature, nommés par leur `id` exact) sont
+déjà créés dans le repo, avec un `.gitkeep` pour être trackés par git
+avant que les fichiers n'arrivent.
+
+### Reste à faire côté code (pas encore commencé)
+
+Aucun composant ne charge ces assets pour l'instant — seule
+l'infrastructure (dépendance + dossiers + doc) est en place. Quand les
+premiers fichiers arriveront : brancher `LottieView` dans
+`AdventureScreen.js` (portrait détaillé + grille de deck), avec repli sur
+l'emoji existant tant qu'un dossier de créature est vide (ne jamais
+`require()` un chemin qui n'existe pas encore, Metro échouerait au
+bundling — prévoir une vérification d'existence ou une liste blanche mise
+à jour au fur et à mesure des livraisons).
+
 ## Mode Aventure en PAYSAGE (02/09)
 
 Tout le mode Aventure bascule en orientation paysage.
