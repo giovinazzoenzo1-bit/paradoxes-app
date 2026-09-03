@@ -89,7 +89,7 @@ import {
 } from '../../games/clicker/clickerLogic';
 import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
 import useBackGesture from '../../hooks/useBackGesture';
-import { COLORS } from './clickerTheme';
+import { COLORS, BG_GRADIENT } from './clickerTheme';
 
 // Cyan de la barre de navigation, repris de la maquette fournie.
 // Defini ici plutot qu'en dur a chaque usage : une seule valeur a
@@ -1364,6 +1364,7 @@ export default function ClickerScreen({ onBack }) {
   if (!loaded) {
     return (
       <View style={styles.screen} {...panHandlers}>
+        <LinearGradient colors={BG_GRADIENT} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
         <Text style={styles.loadingText}>Chargement…</Text>
       </View>
     );
@@ -1396,6 +1397,12 @@ export default function ClickerScreen({ onBack }) {
 
   return (
     <View style={styles.screen} {...panHandlers}>
+      {/* Fond dégradé + cadre lumineux, repris de la maquette. Posé en
+          absolu SOUS le contenu (pointerEvents none) : la mise en page
+          existante n'est pas touchée et rien n'intercepte les taps. */}
+      <LinearGradient colors={BG_GRADIENT} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
+      <View style={styles.screenFrame} pointerEvents="none" />
+
       <View style={styles.header}>
         {onBack && (
           <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -2408,6 +2415,12 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
+  // Cadre cyan lumineux le long des bords de l'écran, comme sur la
+  // maquette. Purement décoratif, d'où le pointerEvents none côté JSX.
+  screenFrame: {
+    position: 'absolute', left: 6, right: 6, top: 6, bottom: 6,
+    borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.neonCyan, opacity: 0.35,
+  },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   backBtn: { paddingVertical: 6, paddingRight: 12 },
