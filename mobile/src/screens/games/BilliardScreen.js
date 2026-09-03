@@ -564,12 +564,12 @@ export default function BilliardScreen({ onBack }) {
             style={[styles.tableArea, { width: tableAreaW, height: tableAreaH }]}
             {...tablePanResponder.panHandlers}
           >
-            <View style={[[styles.felt, { left: railW, top: railW, right: railW, bottom: railW }], { pointerEvents: 'none' }]} />
+            <View style={[styles.felt, { left: railW, top: railW, right: railW, bottom: railW }]} pointerEvents="none" />
 
             {POCKETS.map((p, i) => {
               const s = toScreen(p.x, p.y);
               const r = p.r * scale;
-              return <View key={i} style={[[styles.pocket, { left: s.x - r, top: s.y - r, width: r * 2, height: r * 2, borderRadius: r }], { pointerEvents: 'none' }]} />;
+              return <View key={i} pointerEvents="none" style={[styles.pocket, { left: s.x - r, top: s.y - r, width: r * 2, height: r * 2, borderRadius: r }]} />;
             })}
 
             {showAimVisuals && preview && cueScreen && (
@@ -595,7 +595,7 @@ export default function BilliardScreen({ onBack }) {
               const s = toScreen(ball.pos.x, ball.pos.y);
               const r = BALL_R * scale;
               return (
-                <View key={i} style={[[styles.ball, { left: s.x - r, top: s.y - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: ball.color }], { pointerEvents: 'none' }]}>
+                <View key={i} pointerEvents="none" style={[styles.ball, { left: s.x - r, top: s.y - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: ball.color }]}>
                   {ball.group === 'stripe' && <View style={[styles.stripeCenter, { width: r * 1.1, height: r * 1.1, borderRadius: r * 0.55 }]} />}
                   <View style={[styles.glossy, { width: r * 0.56, height: r * 0.56, borderRadius: r * 0.28, left: r * 0.28, top: r * 0.28 }]} />
                 </View>
@@ -648,7 +648,7 @@ function AimLine({ from, to, thin }) {
   const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
   return (
     <View
-      style={{ pointerEvents: 'none' }}
+      pointerEvents="none"
       style={{
         position: 'absolute',
         left: from.x,
@@ -666,7 +666,8 @@ function AimLine({ from, to, thin }) {
 function GhostBall({ center, r }) {
   return (
     <View
-      style={[{
+      pointerEvents="none"
+      style={{
         position: 'absolute',
         left: center.x - r,
         top: center.y - r,
@@ -676,7 +677,7 @@ function GhostBall({ center, r }) {
         backgroundColor: 'rgba(255,255,255,0.35)',
         borderWidth: 1.5,
         borderColor: 'rgba(255,255,255,0.7)',
-      }, { pointerEvents: 'none' }]}
+      }}
     />
   );
 }
@@ -692,7 +693,7 @@ function CueStick({ cuePos, dir, pullback, toScreen }) {
   const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
   return (
     <View
-      style={{ pointerEvents: 'none' }}
+      pointerEvents="none"
       style={{
         position: 'absolute',
         left: back.x,

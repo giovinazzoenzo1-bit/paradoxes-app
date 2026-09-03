@@ -32,7 +32,7 @@ export default function ProgresScreen() {
     const reward = await claimQuest(questId);
     setBusyId(null);
     if (reward) {
-      Alert.alert('Quête terminée !', `+${reward} 🐾 Griffes — récupère-les en ouvrant le mode Exploration.`);
+      Alert.alert('Quête terminée !', `+${reward} 🐾 Griffes — récupère-les en ouvrant le mode Aventure.`);
     }
   };
 
@@ -41,7 +41,7 @@ export default function ProgresScreen() {
     const reward = await claimStreak();
     setBusyId(null);
     if (reward) {
-      Alert.alert('Bonus de connexion !', `+${reward} 🐾 Griffes — récupère-les en ouvrant le mode Exploration.`);
+      Alert.alert('Bonus de connexion !', `+${reward} 🐾 Griffes — récupère-les en ouvrant le mode Aventure.`);
     }
   };
 
@@ -122,7 +122,7 @@ export default function ProgresScreen() {
           );
         })}
 
-        <Text style={styles.footnote}>Nouvelles quêtes chaque jour à minuit. Récompenses créditées à ta prochaine ouverture du mode Exploration.</Text>
+        <Text style={styles.footnote}>Nouvelles quêtes chaque jour à minuit. Récompenses créditées à ta prochaine ouverture du mode Aventure.</Text>
       </ScrollView>
     </View>
   );

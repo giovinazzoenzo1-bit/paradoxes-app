@@ -98,64 +98,6 @@ Aucune API retirée en RN 0.83-0.86 n'est utilisée (vérifié :
 `PushNotificationIOS`, `Clipboard`, `ProgressBarAndroid`,
 `ViewPropTypes`, `removeEventListener`…).
 
-## Calendrier de connexion (03/09)
-
-7 jours en boucle, affiché en permanence sur l'accueil du clicker, juste
-au-dessus du deck. Remplace l'ancien `STREAK_REWARDS`, qui donnait
-uniquement des Griffes et **n'était affiché nulle part**.
-
-| Jour | Récompense |
-|---|---|
-| 1 | 40 Griffes |
-| 2 | 25 pièces d'appli |
-| 3 | Créature **Rare** garantie |
-| 4 | 80 Griffes |
-| 5 | 50 pièces d'appli |
-| 6 | 150 Griffes |
-| 7 | Skin aléatoire |
-
-L'alternance des TYPES est le point important : une suite de montants
-croissants du même lot lasse vite, alors que ne pas savoir ce qui tombe
-demain fait revenir.
-
-### Le jour 7 et le système de skins
-
-**Les skins n'existent pas dans le jeu** — aucun code, aucun asset. Sur
-décision de l'utilisateur, le jour 7 reste malgré tout « Skin aléatoire »
-et le système sera développé plus tard. En attendant, réclamer ce jour
-crédite un **bon** (`PENDING_SKINS_KEY`), pour que la récompense soit
-réellement acquise et échangeable le jour où les skins arriveront. Rien
-n'est perdu, et le joueur est prévenu par une alerte explicite.
-
-### Deux nouveaux canaux inter-écrans
-
-Même principe que `PENDING_GRIFFES_KEY` : DailyContext ne touche jamais
-la sauvegarde d'un autre écran, il dépose une intention que l'écran
-propriétaire encaisse à son prochain chargement.
-
-- `PENDING_CREATURES_KEY` — tableau JSON de raretés. Le clicker le
-  consomme au chargement et ajoute les créatures ; une créature déjà
-  possédée monte d'un niveau plutôt que d'être ignorée, exactement comme
-  lors d'une invocation.
-- `PENDING_SKINS_KEY` — compteur de bons de skin.
-
-Les **pièces d'appli** font exception : `claimStreak` reçoit `addCoins`
-en argument et crédite directement, car seul le Context sait quel type de
-récompense tombe ce jour-là.
-
-### Piège corrigé au passage
-
-`claimStreak` est mémoïsé sur `date` seul. Sans refs sur `streak` et
-`streakClaimedDate`, il aurait capturé les valeurs du premier rendu et
-distribué la récompense du **mauvais jour**. Deux refs ajoutées, même
-motif que `questProgressRef`/`questClaimedRef` juste au-dessus.
-
-### Reste à faire
-
-`rollCreatureOfRarity(rarity)` a été ajouté dans `clickerLogic` (même
-garde-fou que `rollCreature` : rareté vide → repli sur commun, jamais
-`undefined`). Il servira aussi à toute future récompense garantie.
-
 ## Feuille de route illustrations créatures (03/09)
 
 Le frère de l'utilisateur va produire les assets visuels des 26

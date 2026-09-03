@@ -405,7 +405,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <Text style={styles.backText}>← Retour</Text>
         </TouchableOpacity>
-        <Text style={styles.titleLand}>🧭 Exploration</Text>
+        <Text style={styles.titleLand}>🗺️ Aventure</Text>
         <View style={styles.headerRight}>
           <View style={styles.griffesPill}>
             <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
@@ -667,15 +667,13 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
               <View style={styles.mlRuneRow}>
                 {[0, 1, 2].map((i) => {
                   const rune = equippedRunes[i];
-                  const def = rune ? RUNE_TYPES[rune.type] : null;
                   return (
                     <TouchableOpacity
                       key={i}
-                      style={[styles.mlRuneSlot, def && { borderColor: def.color }]}
+                      style={[styles.mlRuneSlot, rune && styles.mlRuneSlotFilled]}
                       onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(i))}
                     >
-                      <Text style={styles.mlRuneEmoji}>{def ? def.icon : '＋'}</Text>
-                      {rune && <Text style={styles.mlRuneLevel}>{rune.level}</Text>}
+                      <Text style={styles.mlRuneEmoji}>{rune ? RUNE_TYPES[rune.type].emoji : '＋'}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -1411,15 +1409,15 @@ const styles = StyleSheet.create({
   mlStatValue: { color: COLORS.text, fontSize: 13, fontWeight: '900' },
   mlRunesBox: {
     flex: 1, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
-    borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center',
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  mlRuneRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  mlRuneRow: { flexDirection: 'row', gap: 6, flex: 1, alignItems: 'center' },
   mlRuneSlot: {
-    width: 42, height: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+    flex: 1, aspectRatio: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
     backgroundColor: COLORS.panelLight, borderWidth: 1, borderColor: COLORS.border,
   },
+  mlRuneSlotFilled: { borderColor: COLORS.neonCyan },
   mlRuneEmoji: { fontSize: 18 },
-  mlRuneLevel: { color: COLORS.muted, fontSize: 9, fontWeight: '800' },
   mlAttrBox: {
     flex: 1.25, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
     borderWidth: 1, borderColor: COLORS.border,
