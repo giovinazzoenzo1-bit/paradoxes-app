@@ -2330,7 +2330,7 @@ const styles = StyleSheet.create({
   shopPageBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '800' },
   shopPageBtnTextActive: { color: '#241a00' },
 
-  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 18 },
+  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 10 },
   deckSlot: {
     width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.panel,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
@@ -2342,7 +2342,7 @@ const styles = StyleSheet.create({
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
   // liste de boutons (tout ça vit dans les onglets de la barre du bas).
   tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
-  tapZone: { width: '100%', height: 260, position: 'relative' },
+  tapZone: { width: '100%', height: 230, position: 'relative' },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
@@ -2352,11 +2352,11 @@ const styles = StyleSheet.create({
   // cette valeur, ou rendre tapZone flexible, reproduirait le bug des
   // taps perdus.
   tapButton: {
-    width: 240, height: 240,
+    width: 210, height: 210,
     alignItems: 'center', justifyContent: 'center',
   },
   tapEmoji: { fontSize: 84 },
-  eggImage: { width: 210, height: 210 },
+  eggImage: { width: 185, height: 185 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8 },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
