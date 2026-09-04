@@ -89,6 +89,10 @@ import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 import { COLORS } from './clickerTheme';
 
+// Cyan de la barre de navigation, repris de la maquette. Defini une
+// fois plutot qu'en dur a chaque usage.
+const NAV_CYAN = '#5bc8f0';
+
 // Les 5 illustrations d'œuf (un fichier par palier de EGG_STAGES,
 // même index). `require` doit recevoir un chemin STATIQUE — Metro
 // résout les images au moment du bundling, pas à l'exécution, donc un
@@ -2020,7 +2024,7 @@ function CreatureDetail({ creature, owned, coins, onClose, pendingDiscount }) {
             On indique le chemin plutôt que de laisser un vide. */}
         <View style={styles.upgradeHintBox}>
           <Text style={styles.upgradeHintText}>
-            🐾 Améliore cette créature depuis l'Aventure : ouvre son deck et touche sa fiche.
+            🐾 Améliore cette créature depuis l'Exploration : ouvre son deck et touche sa fiche.
           </Text>
           <Text style={styles.upgradeHintCost}>Prochain niveau : {formatNum(cost)} Griffes</Text>
         </View>
@@ -2206,24 +2210,29 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) 
 function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures }) {
   return (
     <View style={styles.bottomBar}>
+      {/* Chaque onglet : icone dans une case encadree de cyan, libelle
+          dessous — le motif de la maquette. La case active passe en
+          dore, couleur d'accent du jeu partout ailleurs. */}
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('shop')}>
-        <View style={view === 'shop' && styles.bottomBarIconGlow}>
-          <Ionicons name="storefront" size={24} color={view === 'shop' ? COLORS.action : COLORS.muted} />
+        <View style={[styles.navBox, view === 'shop' && styles.navBoxActive]}>
+          <Ionicons name="storefront" size={22} color={view === 'shop' ? COLORS.action : NAV_CYAN} />
         </View>
-        <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>Shop</Text>
+        <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>SHOP</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('collection')}>
-        <View style={view === 'collection' && styles.bottomBarIconGlow}>
-          <Ionicons name="albums" size={24} color={view === 'collection' ? COLORS.action : COLORS.muted} />
+        <View style={[styles.navBox, view === 'collection' && styles.navBoxActive]}>
+          <Ionicons name="albums" size={22} color={view === 'collection' ? COLORS.action : NAV_CYAN} />
           <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{ownedCount}</Text></View>
         </View>
-        <Text style={[styles.bottomBarLabel, view === 'collection' && styles.bottomBarLabelActive]}>Collection</Text>
+        <Text style={[styles.bottomBarLabel, view === 'collection' && styles.bottomBarLabelActive]}>COLLECTION</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={onAdventurePress}>
-        <Ionicons name="skull" size={24} color={COLORS.muted} />
-        <Text style={styles.bottomBarLabel}>Aventure</Text>
+        <View style={styles.navBox}>
+          <Ionicons name="compass" size={22} color={NAV_CYAN} />
+        </View>
+        <Text style={styles.bottomBarLabel}>EXPLORATION</Text>
       </TouchableOpacity>
     </View>
   );
@@ -2311,11 +2320,17 @@ const styles = StyleSheet.create({
     paddingTop: 8, marginTop: 6, backgroundColor: COLORS.bg,
   },
   bottomBarItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
-  bottomBarIconGlow: {
-    backgroundColor: 'rgba(245,197,66,0.14)', borderRadius: 20, padding: 6,
-    shadowColor: COLORS.action, shadowOpacity: 0.7, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
+  // Case encadree autour de l'icone, comme sur la maquette.
+  navBox: {
+    width: 46, height: 40, borderRadius: 8,
+    borderWidth: 1, borderColor: '#2a6f96', backgroundColor: 'rgba(16,40,64,0.6)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  bottomBarLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '700', marginTop: 2 },
+  navBoxActive: {
+    borderColor: COLORS.action, backgroundColor: 'rgba(246,195,67,0.12)',
+    shadowColor: COLORS.action, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
+  },
+  bottomBarLabel: { color: NAV_CYAN, fontSize: 8.5, fontWeight: '800', marginTop: 4, letterSpacing: 0.4 },
   bottomBarLabelActive: { color: COLORS.action },
   bottomBarBadge: {
     position: 'absolute', top: -6, right: -10, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.action,
