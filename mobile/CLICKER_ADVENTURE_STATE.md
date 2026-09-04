@@ -1263,13 +1263,43 @@ récompense du mauvais jour.
 - **Objectifs de collection** ("possède 5 créatures Épiques+" etc.) — idée gardée de côté, jamais commencée.
 - **Chapitre/rune "événement" limité dans le temps** — idée gardée de côté, jamais commencée.
 - **`sol.png`** (dernier fichier de décor Flappy Bird) — toujours manquant depuis le tout début.
-- **Difficulté des combats en Exploration** — LE sujet de fond, jamais
-  traité. Ratio puissance adverse/joueur mesuré : 1,0 aux niveaux 1-10,
-  puis **2,3 au niveau 15, 4,9 au 25, 8,6 au 40**. Le saut vient de
-  l'arrivée du 2e puis du 3e adversaire (chapitres 2 et 3) sans aucune
-  compensation côté joueur. Deux pistes envisagées, non tranchées :
-  lisser l'arrivée des adversaires supplémentaires, ou diviser le budget
-  de puissance adverse par la taille de l'équipe.
+- **Difficulté des combats en Exploration — CORRIGÉ (04/09).** Cause
+  réelle confirmée par simulation (`opponentTeamForLevel` + stats
+  réelles, joueur fixé à un deck témoin) : `opponentPowerBudget(niveau)`
+  était appliqué **PAR adversaire**, pas pour l'équipe entière. Passer de
+  1 à 2 puis 3 adversaires (chapitres 2 et 3) MULTIPLIAIT donc la
+  puissance totale par la taille d'équipe, en plus de la courbe déjà
+  croissante par niveau — ratio mesuré : 1,0 aux niveaux 1-10, saut à 2,3
+  au niveau 15 (2e adversaire), 4,9 au 25 et 8,6 au 40 (3e).
+  Deux pistes avaient été envisagées ; **mesurées avant de trancher**
+  (jamais au jugé) :
+  - Lisser l'arrivée du membre supplémentaire sur les 10 niveaux du
+    chapitre → repousse le saut mais ne l'annule pas (le total revient au
+    même une fois le chapitre traversé).
+  - **Diviser le budget par la taille d'équipe courante** (retenue) →
+    ratio simulé sans le fix : 0,38 → 0,83 au niveau 11, 1,40 → 2,22 au
+    niveau 21. Avec le fix : 0,38 → 0,40 au niveau 11, 0,72 → 0,72 au
+    niveau 21 — plus aucun saut, la courbe totale redevient celle
+    calibrée à l'origine pour un seul adversaire. Plus d'adversaires reste
+    une vraie difficulté tactique (plus de cibles, plus de tours, plus
+    d'endurance dépensée), juste sans spike de puissance brute.
+  - **Implémenté** : nouvelle fonction `opponentPowerBudgetPerMember(niveau)`
+    dans `combatLogic.js` = `opponentPowerBudget(niveau) / opponentTeamSize(niveau)`,
+    utilisée à la place de `opponentPowerBudget` dans
+    `statsForOpponentCreature`. Aucun appelant (`CombatScreen.js`) n'a
+    changé : la taille d'équipe se déduit du niveau, déjà son seul
+    paramètre.
+  - **Non-régression vérifiée** : puissance totale de l'équipe adverse
+    testée strictement croissante sur les niveaux 1 à 150 (0 régression) —
+    le bug de la commit 2e0a15e (difficulté qui pouvait reculer) ne
+    revient pas avec ce changement.
+  - **Reste ouvert** : la courbe de base (`opponentPowerBudget`, +6,2%/
+    niveau composé) grossit toujours plus vite que la progression du
+    joueur (+8%/niveau **linéaire**, `levelMultiplier`) sur le long terme
+    — hors du périmètre de ce fix, qui ne traitait que le saut lié à la
+    taille d'équipe. Le cercle vicieux perte→pas de Griffes→pas de niveau
+    reste une hypothèse non vérifiée par simulation, à mesurer séparément
+    si la difficulté reste ressentie comme trop dure après ce correctif.
 - **`pointerEvents` des 4 mini-jeux** — 19 occurrences en prop, donc
   ignorées depuis le SDK 57 (voir Règles de survie).
 - **Système de skins** — n'existe pas. Des bons sont déjà distribués par

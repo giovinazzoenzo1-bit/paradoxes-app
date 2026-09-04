@@ -167,6 +167,21 @@ function opponentPowerBudget(levelNumber) {
   return 13 * Math.pow(1.062, levelNumber - 1);
 }
 
+// Budget PAR MEMBRE de l'équipe adverse — le budget ci-dessus reste la
+// courbe totale voulue pour l'équipe adverse à ce niveau (celle calibrée
+// à l'origine pour un seul adversaire, chapitre 1). Sans division, passer
+// à 2 puis 3 adversaires (chapitres 2 et 3) MULTIPLIAIT la puissance
+// totale par la taille d'équipe en plus de la courbe déjà croissante —
+// ratio puissance adverse/joueur mesuré : 1,0 aux niveaux 1-10, un saut à
+// 2,3 au niveau 15 rien qu'à l'arrivée du 2e adversaire, 4,9 au niveau 25
+// et 8,6 au niveau 40 avec le 3e. Diviser par la taille d'équipe courante
+// restaure la courbe totale d'origine : plus d'adversaires = plus de
+// cibles et de tours à jouer (vraie difficulté tactique), mais sans
+// spike de puissance brute à l'entrée de chaque chapitre.
+function opponentPowerBudgetPerMember(levelNumber) {
+  return opponentPowerBudget(levelNumber) / opponentTeamSize(levelNumber);
+}
+
 export function statsForOpponentCreature(creature, levelNumber) {
   const base = creature.baseHp != null
     ? { hp: creature.baseHp, attack: creature.baseAttack, clickSpeed: creature.baseClickSpeed, endurance: creature.baseEndurance }
@@ -180,7 +195,7 @@ export function statsForOpponentCreature(creature, levelNumber) {
   // garde la saveur de chaque créature sans dépendre de sa magnitude
   // absolue, qui variait trop d'une créature à l'autre pour rester
   // cohérente une fois le cycle des 26 créatures repris depuis le début.
-  const budget = opponentPowerBudget(levelNumber);
+  const budget = opponentPowerBudgetPerMember(levelNumber);
   const hpRatio = base.hp / Math.max(1, base.hp + base.attack);
 
   return {
