@@ -660,6 +660,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
               <MlStat icon="⚔️" label="ATTAQUE" value={stats.attack} bonus={atkBonus} color={COLORS.bad} />
               <MlStat icon="❤️" label="VIE" value={stats.hp} bonus={hpBonus} color={COLORS.good} />
               <MlStat icon="⚡" label="ENDURANCE" value={stats.endurance} bonus={enduranceBonus} color={COLORS.action} />
+              <MlStat icon="👆" label="VITESSE" value={`×${stats.clickSpeed.toFixed(1).replace('.', ',')}`} bonus={0} color={COLORS.neonCyan} />
             </View>
 
             <View style={styles.mlRunesBox}>
