@@ -22,6 +22,77 @@
 | `mobile/src/screens/games/clickerTheme.js` | Palette `COLORS` partagée entre ClickerScreen et AdventureScreen — **fichier séparé exprès** pour éviter un import circulaire entre les deux écrans. |
 | `mobile/ADVENTURE_MODE.md` | Journal de conception du mode Aventure (décisions prises AVANT le code, avec un historique des étapes). Utile pour comprendre le "pourquoi", pas pour l'état actuel. |
 
+## ⚠️ RÈGLES DE SURVIE — à lire avant de toucher au ClickerScreen
+
+Une session entière (03/09) a été perdue sur ces pièges. Ils échouent
+tous EN SILENCE : rien ne plante, rien n'apparaît dans les logs, l'écran
+s'affiche normalement mais ne répond plus.
+
+### 1. Une vue qui déborde de son parent ne reçoit AUCUN tap (Android)
+
+Contrairement à iOS, il n'y a pas de propagation hors limites. Une zone
+tactile partiellement hors de son parent ne répond que sur la portion
+encore à l'intérieur.
+
+**La géométrie de la zone de tap est donc sacrée :**
+
+```
+tapZone   height: 230  (FIXE — ne jamais passer en flex)
+tapButton 210 x 210    (STRICTEMENT < 230)
+eggImage  185 x 185    (STRICTEMENT < 210)
+```
+
+Règle : **zone > bouton > image, avec une zone de hauteur FIXE.** La
+violer casse les taps sans le moindre message d'erreur. Le symptôme
+mesuré : 142 clics/s envoyés, 2 à 15 reçus.
+
+### 2. `pointerEvents` en PROP est ignoré (New Architecture, SDK 57)
+
+Doit être dans le STYLE : `style={{ pointerEvents: 'none' }}`. En prop,
+la valeur est silencieusement abandonnée et une couche décorative en
+absolu avale tous les taps de l'écran.
+
+⚠️ Reste à corriger dans les 4 mini-jeux (CombatScreen, PingPongScreen,
+RuneTracerScreen, BilliardScreen) — 19 occurrences.
+
+### 3. Pas de dégradé plein écran sur le ClickerScreen
+
+Un `LinearGradient` en `absoluteFillObject` se recompose à CHAQUE rendu.
+Cet écran a 45 `useState` et trois intervalles (1000/300/250 ms) : il se
+re-rend en permanence. Résultat mesuré : l'app se fige une seconde et
+perd les entrées. `BG_GRADIENT` existe dans le thème mais ne doit servir
+que pour de petites surfaces (panneau modal).
+
+### 4. Ne jamais reprendre un commit en bloc
+
+Plusieurs commits mélangent une fonctionnalité et l'ancienne géométrie
+de la zone de tap. `git checkout <commit> -- fichier` réintroduit le
+bug. Appliquer à la main uniquement ce qui est voulu, puis **vérifier la
+géométrie ci-dessus après coup**.
+
+### 5. La cadence réelle de l'utilisateur est ~142 clics/s
+
+Autoclicker mesuré sur un testeur externe. Toutes les simulations
+d'équilibrage de ce fichier supposent **5-7 clics/s** : à 142, l'économie
+tourne environ 20× plus vite que tout ce qui est écrit ici. Pour tester
+la difficulté, régler l'autoclicker à **150 ms**.
+
+Les gains sont regroupés (`pendingGainRef`, vidage 10×/s) précisément
+pour encaisser cette cadence : sans cela, `gainCoins` déclenchait 426
+mises à jour d'état par seconde, dont 142 re-rendus de toute l'appli via
+`trackEvent`.
+
+### 6. Méthode quand quelque chose casse
+
+**Demander à l'utilisateur QUAND ça marchait encore.** Il a identifié le
+commit fautif en une phrase là où dix tours de déduction avaient échoué.
+Puis restaurer ce commit exact et réappliquer les changements UN PAR UN
+avec un test à chaque étape.
+
+Le compteur de diagnostic (afficher la cadence de taps réellement reçue)
+a été l'outil décisif : il a prouvé que les taps se perdaient AVANT le
+code, ce qui a écarté d'un coup toutes les pistes de performance.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.
@@ -1145,12 +1216,68 @@ ATTAQUE4: [nom] | [dégâts] | [coût endurance]
 3. Si Gemini fournit des stats explicites (PV/ATQ/vitesse/endurance), **les utiliser directement** plutôt que la formule par rareté — voir "Point ouvert" ci-dessous pour la validation.
 4. Tester (`node -e ...` avec Babel, méthode déjà utilisée partout dans ce projet) avant de pousser : au minimum vérifier que la créature apparaît dans `CREATURES`, que ses 4 compétences ont bien `damage` + `enduranceCost`, et si c'est une rareté à poids 0 (`peu_commun`/`mythique`), remonter son poids dans `RARITY_WEIGHTS`.
 
-## Points ouverts / pas encore tranchés (mis à jour 02/09)
+## Calendrier de connexion (03/09)
+
+Bouton 🎁 en **position absolue** dans le coin de `tapArea` — surtout pas
+dans le flux, sinon il pousse tout le contenu vers le bas (deck compris).
+Il ouvre un panneau centré : grille irrégulière 3 petites / 2 grandes / 2
+moyennes cases, jour 7 encadré en doré.
+
+| Jour | Récompense |
+|---|---|
+| 1 | 40 Griffes |
+| 2 | 25 pièces d'appli |
+| 3 | Créature **Rare** garantie |
+| 4 | 80 Griffes |
+| 5 | 50 pièces d'appli |
+| 6 | 150 Griffes |
+| 7 | Skin aléatoire |
+
+Défini dans `DAILY_CALENDAR` (`dailyLogic.js`), boucle sur 7 jours via
+`calendarDayForStreak`. Le streak lui-même continue de grimper.
+
+**Les skins n'existent pas.** Le jour 7 crédite un bon
+(`PENDING_SKINS_KEY`) avec une alerte qui l'explique, plutôt que de ne
+rien donner en silence.
+
+**Canaux de distribution** — même règle que `PENDING_GRIFFES_KEY` :
+DailyContext ne touche jamais la sauvegarde d'un autre écran, il dépose
+une intention.
+
+- `PENDING_CREATURES_KEY` — tableau JSON de raretés, consommé par le
+  clicker au chargement. Une créature déjà possédée monte d'un niveau.
+- `PENDING_SKINS_KEY` — compteur de bons.
+- Les **pièces d'appli** font exception : `claimStreak` reçoit `addCoins`
+  en argument, car seul le Context connaît le type du jour.
+
+⚠️ `claimStreak` est mémoïsé sur `date` seul : `streakRef` et
+`streakClaimedDateRef` sont indispensables, sinon il distribue la
+récompense du mauvais jour.
+
+⚠️ `COLORS.bad` n'existe pas dans la palette — le bouton utilise
+`'#d0342c'` en dur.
+
+## Points ouverts / pas encore tranchés (mis à jour 03/09)
 
 - **Validation des stats Gemini** : toujours pas de garde-fou automatique (±30% autour de la formule par rareté) — accepté tel quel, écarts signalés au cas par cas mais jamais bloqués.
 - **Objectifs de collection** ("possède 5 créatures Épiques+" etc.) — idée gardée de côté, jamais commencée.
 - **Chapitre/rune "événement" limité dans le temps** — idée gardée de côté, jamais commencée.
 - **`sol.png`** (dernier fichier de décor Flappy Bird) — toujours manquant depuis le tout début.
+- **Difficulté des combats en Exploration** — LE sujet de fond, jamais
+  traité. Ratio puissance adverse/joueur mesuré : 1,0 aux niveaux 1-10,
+  puis **2,3 au niveau 15, 4,9 au 25, 8,6 au 40**. Le saut vient de
+  l'arrivée du 2e puis du 3e adversaire (chapitres 2 et 3) sans aucune
+  compensation côté joueur. Deux pistes envisagées, non tranchées :
+  lisser l'arrivée des adversaires supplémentaires, ou diviser le budget
+  de puissance adverse par la taille de l'équipe.
+- **`pointerEvents` des 4 mini-jeux** — 19 occurrences en prop, donc
+  ignorées depuis le SDK 57 (voir Règles de survie).
+- **Système de skins** — n'existe pas. Des bons sont déjà distribués par
+  le calendrier et attendent d'être échangeables.
+- **Assets des créatures** — 26 créatures × 6 fichiers commandés au frère
+  de l'utilisateur (`CREATURE_ART_ROADMAP.md`, dossiers déjà créés dans
+  `assets/creatures/`). `lottie-react-native` est installé et vérifié
+  fonctionnel, mais aucun code ne charge encore ces assets.
 - ~~Boutique pour dépenser les Griffes~~ → **FAIT** (système de Runes, voir plus bas).
 - ~~"Peu commun"/"Mythique" vides~~ → **FAIT**, les 25 créatures du plan sont là, tous les paliers de rareté représentés.
 - ~~Stats inter-jeux~~ → **FAIT** (`DailyContext.js`, voir plus bas).
