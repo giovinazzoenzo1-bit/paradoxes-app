@@ -2439,18 +2439,22 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) 
       </View>
 
       {/* Cristal lumineux par gemme REMPLIE (asset réel, remplace
-          l'ancienne pastille dorée) — une par CHALLENGE_GEM_X_PCT[i]
-          pour i < filled, jusqu'à 6. Les gemmes non remplies restent
-          grisées telles quelles (l'art de fond de challenge-bar.png),
-          rien à dessiner dessus. */}
-      {Array.from({ length: filled }).map((_, i) => (
-        <Image
-          key={i}
-          source={require('../../../assets/icons/gem-filled.png')}
-          style={[styles.challengeGemFilled, { left: `${CHALLENGE_GEM_X_PCT[i]}%` }]}
-          resizeMode="contain"
-        />
-      ))}
+          l'ancienne pastille dorée) — itère sur les 6 positions FIXES
+          (CHALLENGE_GEM_X_PCT) et compare l'index plutôt que de
+          reconstruire un tableau de longueur variable (Array.from a été
+          remplacé : signalé que la 1ère case ne recevait jamais son
+          cristal, cette forme élimine tout doute sur les clés React).
+          Les gemmes non remplies restent grisées telles quelles. */}
+      {CHALLENGE_GEM_X_PCT.map((pct, i) =>
+        i < filled ? (
+          <Image
+            key={pct}
+            source={require('../../../assets/icons/gem-filled.png')}
+            style={[styles.challengeGemFilled, { left: `${pct}%` }]}
+            resizeMode="contain"
+          />
+        ) : null
+      )}
 
       {/* adjustsFontSizeToFit : la place entre la 6e gemme et le bord du
           cadre est mesurée mais reste étroite — un gros nombre (ex.
@@ -2793,9 +2797,12 @@ const styles = StyleSheet.create({
   // TouchableOpacity couvre TOUTE cette zone (absoluteFillObject), pas
   // seulement le bouton visuel. RÈGLE ABSOLUE : zone(330) > bouton(290)
   // > image(250), zone toujours en hauteur FIXE.
+  // Agrandie de 5mm de chaque côté (~32dp, +64 au total) sur demande
+  // explicite — top décalé de -32 pour garder l'œuf centré dans la
+  // zone plutôt que de laisser grandir seulement vers le bas.
   tapZone: {
-    position: 'absolute', left: 0, top: SCREEN_H * 0.564, zIndex: 2,
-    width: '100%', height: 330,
+    position: 'absolute', left: 0, top: SCREEN_H * 0.564 - 32, zIndex: 2,
+    width: '100%', height: 394,
   },
   // Centré (flex) puis décalé de ~2mm (~13dp) vers la droite via
   // transform, sur demande explicite — un translateX ne casse pas le
@@ -2815,8 +2822,10 @@ const styles = StyleSheet.create({
   // sous tapZone (top 56,4% + hauteur fixe 330 + petite marge). zIndex
   // remonté à 3 (comme les autres blocs flottants) — signalé invisible
   // pendant la Transe, possible conflit d'empilement avec zIndex:2.
+  // Repositionné juste AU-DESSUS de la barre du bas (top 90%) sur
+  // demande explicite — ne dépend plus de la hauteur de tapZone.
   tapHintZone: {
-    position: 'absolute', left: 0, top: SCREEN_H * 0.564 + 340, zIndex: 3,
+    position: 'absolute', left: 0, top: SCREEN_H * 0.9 - 58, zIndex: 3,
     width: '100%', alignItems: 'center',
   },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
