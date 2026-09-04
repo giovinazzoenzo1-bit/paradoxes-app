@@ -1505,12 +1505,10 @@ export default function ClickerScreen({ onBack }) {
             {/* Bouton cadeau : ouvre le calendrier. La pastille signale
                 une recompense a prendre, pour ne pas avoir a ouvrir le
                 menu chaque jour pour verifier. */}
-            <View style={styles.calBtnRow}>
-              <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
-                <Text style={styles.calBtnIcon}>🎁</Text>
-                {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
+              <Text style={styles.calBtnIcon}>🎁</Text>
+              {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
+            </TouchableOpacity>
 
             <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
 
@@ -2498,8 +2496,11 @@ const styles = StyleSheet.create({
   shopPageBtnTextActive: { color: '#241a00' },
 
   // ---- Calendrier de connexion ----
-  calBtnRow: { width: '100%', alignItems: 'flex-start', marginBottom: 8 },
+  // Position ABSOLUE : le bouton flotte dans le coin et ne participe pas
+  // au flux vertical. Dans le flux, ses 44dp poussaient tout le contenu
+  // vers le bas, deck compris.
   calBtn: {
+    position: 'absolute', left: 0, top: 0, zIndex: 5,
     width: 44, height: 44, borderRadius: 22, backgroundColor: '#d0342c',
     alignItems: 'center', justifyContent: 'center',
   },
