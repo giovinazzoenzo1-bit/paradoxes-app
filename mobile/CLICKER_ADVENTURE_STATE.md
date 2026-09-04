@@ -150,12 +150,31 @@ Zone de tap   top 56.4%   width 100%
 Barre du bas  left 2%     top 90%    width 96%
 ```
 
+**Correctif du 04/09, après le premier passage en % : bug Yoga confirmé
+par mesure.** Un élément `position:'absolute'` qui combine une largeur
+en **%** ET `aspectRatio` se rend avec une largeur bien plus petite que
+demandée dans ce build ExpoGo (mesuré : 88% demandé → ~74,5% réel, 75%
+demandé → ~46% réel) — décalant tout vers la gauche puisque `left`
+restait correct mais la largeur, non. La preuve : `coinsPill` (déjà en
+largeur FIXE en pixels, sans `aspectRatio` combiné à du %) s'est
+toujours rendu correctement centré, contrairement à `challengeCard` et
+`deckFrame` (tous deux en % + `aspectRatio`).
+
+**Solution adoptée** : `SCREEN_W`/`SCREEN_H` (`Dimensions.get('window')`,
+figées au chargement du module) remplacent TOUS les `left`/`top`/`width`
+en % des blocs d'accueil par des pixels calculés (`SCREEN_W * 0.061`
+etc.) — plus aucun `%` sur un élément ayant `aspectRatio`. `tapZone`
+(width `100%`, pas d'`aspectRatio`) a été vérifié correct et laissé tel
+quel : le bug est spécifique à la combinaison %+`aspectRatio`, pas aux %
+en général.
+
 **Règle pour la suite** : si l'utilisateur redemande un ajustement de
-placement, ne PAS raisonner en marges/flex — juste changer le `top`/
-`left` en % du bloc concerné. Attention au `zIndex` : les overlays
-modaux (calendrier, sélecteur de deck, récompense) ont tous `zIndex:20`
-pour rester au-dessus des blocs d'accueil (`zIndex` 2 à 5) — tout nouvel
-élément plein écran doit reprendre `zIndex:20` ou plus.
+placement, changer les multiplicateurs (`SCREEN_W * 0.XX`) directement —
+ne JAMAIS revenir à des largeurs en `%` sur un élément qui a aussi
+`aspectRatio`. Attention au `zIndex` : les overlays modaux (calendrier,
+sélecteur de deck, récompense) ont tous `zIndex:20` pour rester
+au-dessus des blocs d'accueil (`zIndex` 2 à 5) — tout nouvel élément
+plein écran doit reprendre `zIndex:20` ou plus.
 
 ## Navigation générale du Clicker
 

@@ -4,7 +4,7 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
@@ -93,6 +93,17 @@ import { COLORS } from './clickerTheme';
 // Cyan de la barre de navigation, repris de la maquette. Defini une
 // fois plutot qu'en dur a chaque usage.
 const NAV_CYAN = '#5bc8f0';
+
+// Dimensions figées au chargement du module — utilisées pour calculer
+// des positions/largeurs en PIXELS plutôt qu'en %. Découvert le 04/09 :
+// un élément en position:'absolute' qui combine largeur en % ET
+// aspectRatio se rend avec une largeur bien plus petite que demandée
+// dans ce build ExpoGo (bug Yoga/RN confirmé par mesure : 88% demandé →
+// ~74,5% réel, 75% demandé → ~46% réel). Une largeur FIXE en pixels
+// (calculée ici une fois) contourne complètement le bug — vérifié :
+// coinsPill (déjà en pixels fixes) s'est toujours rendu correctement,
+// contrairement à challengeCard/deckFrame (en %).
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 // Les 5 illustrations d'œuf (un fichier par palier de EGG_STAGES,
 // même index). `require` doit recevoir un chemin STATIQUE — Metro
@@ -1602,21 +1613,28 @@ export default function ClickerScreen({ onBack }) {
               {ritualTarget && <RitualBubble target={ritualTarget} onClaim={claimRitual} />}
             </View>
 
-            {comboCount > 1 ? (
-              <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
-            ) : (
-              <Text style={styles.tapHint}>
-                {eggPhase === 'hatching'
-                  ? "Tape pour casser l'œuf"
-                  : eggPhase === 'capturing'
-                  ? 'Tape pour capturer la créature'
-                  : 'Tape pour récolter des pièces'}
-              </Text>
-            )}
-            {/* Nom du palier toujours visible, même pendant la Transe :
-                c'est l'indicateur d'état de l'œuf, pas un message
-                contextuel qu'on peut masquer. */}
-            {eggPhase === 'collecting' && <Text style={styles.eggStageLabel}>{eggStage.name}</Text>}
+            {/* Regroupés dans une zone positionnée en absolu, juste sous
+                tapZone — étaient restés en flux normal après le passage
+                en absolu du reste de l'écran, ce qui les faisait remonter
+                tout en haut (derrière le header, signalé par
+                l'utilisateur : texte "Ta../Œ.." visible en arrière-plan). */}
+            <View style={styles.tapHintZone}>
+              {comboCount > 1 ? (
+                <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
+              ) : (
+                <Text style={styles.tapHint}>
+                  {eggPhase === 'hatching'
+                    ? "Tape pour casser l'œuf"
+                    : eggPhase === 'capturing'
+                    ? 'Tape pour capturer la créature'
+                    : 'Tape pour récolter des pièces'}
+                </Text>
+              )}
+              {/* Nom du palier toujours visible, même pendant la Transe :
+                  c'est l'indicateur d'état de l'œuf, pas un message
+                  contextuel qu'on peut masquer. */}
+              {eggPhase === 'collecting' && <Text style={styles.eggStageLabel}>{eggStage.name}</Text>}
+            </View>
           </>
         </>
       )}
@@ -2486,7 +2504,7 @@ const styles = StyleSheet.create({
   // imprévisibles dans ExpoGo. Chaque grand bloc de l'écran Élevage a
   // maintenant un top/left figé, plus aucun calcul en chaîne.
   header: {
-    position: 'absolute', left: '6.8%', top: '0.8%', width: '86%', zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.068, top: SCREEN_H * 0.008, width: SCREEN_W * 0.86, zIndex: 3,
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.panel, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border,
     paddingVertical: 8, paddingHorizontal: 12,
@@ -2503,7 +2521,7 @@ const styles = StyleSheet.create({
   // résiduel sur les bords, signalé "pas bien fait sur les côtés").
   // Réduite (220 -> 165, signalé trop grande).
   coinsPill: {
-    position: 'absolute', left: '30.3%', top: '9.6%', zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.303, top: SCREEN_H * 0.096, zIndex: 3,
     width: 165, aspectRatio: 460 / 180,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -2515,18 +2533,18 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
   incomeText: {
-    position: 'absolute', left: '10%', top: '13%', width: '80%', zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.1, top: SCREEN_H * 0.13, width: SCREEN_W * 0.8, zIndex: 3,
     color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center',
   },
 
   welcomeBanner: {
-    position: 'absolute', left: '8%', top: '14.5%', width: '84%', zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.08, top: SCREEN_H * 0.145, width: SCREEN_W * 0.84, zIndex: 3,
     backgroundColor: 'rgba(0,230,118,0.15)', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: COLORS.good,
   },
   welcomeText: { color: COLORS.good, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   powerBanner: {
-    position: 'absolute', left: '8%', top: '14.5%', width: '84%', zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.08, top: SCREEN_H * 0.145, width: SCREEN_W * 0.84, zIndex: 3,
     backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.action,
   },
   discountBanner: { backgroundColor: 'rgba(46,127,184,0.15)', borderColor: '#3ec6f0' },
@@ -2540,8 +2558,8 @@ const styles = StyleSheet.create({
   // vides mesurées au-dessus/en-dessous du cercle+gemmes) — plus de
   // wrap ni de marges externes, tout est à l'intérieur de l'image.
   challengeCard: {
-    position: 'absolute', left: '6.1%', top: '15.7%', zIndex: 3,
-    width: '88%', aspectRatio: CHALLENGE_CARD_ASPECT_RATIO,
+    position: 'absolute', left: SCREEN_W * 0.061, top: SCREEN_H * 0.157, zIndex: 3,
+    width: SCREEN_W * 0.88, aspectRatio: CHALLENGE_CARD_ASPECT_RATIO,
   },
   // Zone vide mesurée entre le bord supérieur du cadre et le cercle
   // (9,3% à 39,8% de la hauteur).
@@ -2574,7 +2592,7 @@ const styles = StyleSheet.create({
     color: COLORS.action, fontSize: 11, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
   },
   devSkipBtn: {
-    position: 'absolute', left: '25.8%', top: '30.3%', zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.258, top: SCREEN_H * 0.303, zIndex: 3,
     paddingVertical: 5, paddingHorizontal: 12,
     borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
   },
@@ -2612,8 +2630,8 @@ const styles = StyleSheet.create({
   // paddingBottom compensatoire (voir styles.grid et ShopView) pour ne
   // pas finir caché sous cette barre devenue flottante.
   bottomBar: {
-    position: 'absolute', left: '2%', top: '90%', zIndex: 5,
-    flexDirection: 'row', width: '96%', borderTopWidth: 2, borderTopColor: COLORS.action,
+    position: 'absolute', left: SCREEN_W * 0.02, top: SCREEN_H * 0.9, zIndex: 5,
+    flexDirection: 'row', width: SCREEN_W * 0.96, borderTopWidth: 2, borderTopColor: COLORS.action,
     paddingTop: 8, backgroundColor: COLORS.bg,
     shadowColor: COLORS.action, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: -4 }, elevation: 4,
   },
@@ -2646,7 +2664,7 @@ const styles = StyleSheet.create({
 
   // ---- Calendrier de connexion ----
   calBtn: {
-    position: 'absolute', left: '1.5%', top: '33.4%', zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * 0.334, zIndex: 3,
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
@@ -2705,8 +2723,8 @@ const styles = StyleSheet.create({
   // Mesuré directement sur la maquette Gemini (screenshot 1080px de
   // large) : cadre à 553px = 49,5% de la largeur PLEINE d'écran.
   deckFrame: {
-    position: 'absolute', left: '20.8%', top: '35.7%', zIndex: 3,
-    width: '75%', aspectRatio: 800 / 329,
+    position: 'absolute', left: SCREEN_W * 0.208, top: SCREEN_H * 0.357, zIndex: 3,
+    width: SCREEN_W * 0.75, aspectRatio: 800 / 329,
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
   // row : chaque emplacement tombe exactement sur le panneau peint.
@@ -2738,7 +2756,7 @@ const styles = StyleSheet.create({
   // RÈGLE ABSOLUE toujours respectée : zone(290) > bouton(260) >
   // image(230), zone en hauteur FIXE (jamais flex).
   tapZone: {
-    position: 'absolute', left: 0, top: '56.4%', zIndex: 2,
+    position: 'absolute', left: 0, top: SCREEN_H * 0.564, zIndex: 2,
     width: '100%', height: 290,
   },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -2750,9 +2768,15 @@ const styles = StyleSheet.create({
   },
   tapEmoji: { fontSize: 84 },
   eggImage: { width: 230, height: 230 },
-  tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
-  eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8 },
-  comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
+  // Zone regroupant les textes sous l'œuf — position ABSOLUE, juste
+  // sous tapZone (top 56,4% + hauteur fixe 290 + petite marge).
+  tapHintZone: {
+    position: 'absolute', left: 0, top: SCREEN_H * 0.564 + 300, zIndex: 2,
+    width: '100%', alignItems: 'center',
+  },
+  tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8, textAlign: 'center' },
+  comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', textAlign: 'center' },
   popup: { position: 'absolute', color: COLORS.action, fontSize: 16, fontWeight: '900' },
   popupCrit: { color: '#FF7043', fontSize: 20 },
 
