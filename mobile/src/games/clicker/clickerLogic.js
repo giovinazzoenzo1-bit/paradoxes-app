@@ -477,6 +477,20 @@ export function rollCreature() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// Tire une creature d'une rarete IMPOSEE (calendrier de connexion, ou
+// toute recompense garantie). Meme garde-fou que rollCreature : une
+// rarete sans aucune creature ne doit jamais renvoyer undefined et
+// planter l'appelant, on retombe sur commun.
+export function rollCreatureOfRarity(rarity) {
+  const pool = CREATURES.filter((c) => c.rarity === rarity);
+  if (pool.length === 0) {
+    const fallback = CREATURES.filter((c) => c.rarity === 'commun');
+    if (fallback.length === 0) return CREATURES[0];
+    return fallback[Math.floor(Math.random() * fallback.length)];
+  }
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 // Revenu passif total (pièces/seconde) de toute la collection possédée.
 // ownedCreatures : [{ id, level }]
 export function totalPassiveIncome(ownedCreatures) {
@@ -1008,7 +1022,7 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_pacte20', icon: '🔗', metric: 'tapPower', target: 20, mode: 'absolute',
       label: () => 'Monte Pacte au niveau 20' },
     { id: 'seq_rune1', icon: '🛒', metric: 'runeBought', target: 1, mode: 'delta',
-      label: () => 'Achète 1 rune en Aventure' },
+      label: () => 'Achète 1 rune en Exploration' },
     { id: 'seq_adv_c3l5', icon: '⚔️', metric: 'advLevelReached', target: 25, mode: 'absolute',
       label: () => 'Termine le chapitre 3, niveau 5' },
   ],
@@ -1240,10 +1254,10 @@ export const QUEST_POOL = [
   //   équipement de rune
   { id: 'advWin3', family: 'adventure', icon: '⚔️', metric: 'battleWon', target: 3, mode: 'delta',
     available: (s) => (s.deckCount || 0) >= 1,
-    label: (t) => `Gagne ${t} combats en Aventure` },
+    label: (t) => `Gagne ${t} combats en Exploration` },
   { id: 'advWin10', family: 'adventure', icon: '⚔️', metric: 'battleWon', target: 10, mode: 'delta',
     available: (s) => (s.deckCount || 0) >= 1 && (s.battleWon || 0) >= 3,
-    label: (t) => `Gagne ${t} combats en Aventure` },
+    label: (t) => `Gagne ${t} combats en Exploration` },
   // Les runes s'achètent avec des Griffes, qui ne s'obtiennent qu'en
   // gagnant des combats : exiger un combat déjà gagné, pas seulement une
   // créature.

@@ -405,7 +405,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <Text style={styles.backText}>← Retour</Text>
         </TouchableOpacity>
-        <Text style={styles.titleLand}>🗺️ Aventure</Text>
+        <Text style={styles.titleLand}>🧭 Exploration</Text>
         <View style={styles.headerRight}>
           <View style={styles.griffesPill}>
             <Text style={styles.griffesPillText}>🐾 {griffes}</Text>

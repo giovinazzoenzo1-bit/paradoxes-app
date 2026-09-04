@@ -96,7 +96,7 @@ export default function OptionsScreen() {
   // jamais d'écriture directe dans sa sauvegarde depuis ici.
   const devAddGriffes = async () => {
     await AsyncStorage.setItem(DEV_ADD_GRIFFES_KEY, '1');
-    Alert.alert('Fait', "1000 Griffes seront ajoutées à l'ouverture du mode Aventure.");
+    Alert.alert('Fait', "1000 Griffes seront ajoutées à l'ouverture du mode Exploration.");
   };
 
   // Remet les Griffes à ZÉRO. Utile pour tester la difficulté de
@@ -105,14 +105,14 @@ export default function OptionsScreen() {
   // d'écriture directe dans la sauvegarde d'Aventure.
   const devResetGriffes = async () => {
     await AsyncStorage.setItem(DEV_RESET_GRIFFES_KEY, '1');
-    Alert.alert('Fait', "Les Griffes seront remises à 0 à l'ouverture du mode Aventure.");
+    Alert.alert('Fait', "Les Griffes seront remises à 0 à l'ouverture du mode Exploration.");
   };
 
   // Même schéma — pose un drapeau lu par AdventureScreen à son prochain
   // chargement, qui remet l'énergie au max lui-même.
   const devRefillEnergy = async () => {
     await AsyncStorage.setItem(DEV_REFILL_ENERGY_KEY, '1');
-    Alert.alert('Fait', "L'énergie sera remise au max à l'ouverture du mode Aventure.");
+    Alert.alert('Fait', "L'énergie sera remise au max à l'ouverture du mode Exploration.");
   };
 
   return (
@@ -144,13 +144,13 @@ export default function OptionsScreen() {
             <Text style={styles.devBtnText}>🛟 Restaurer la sauvegarde de secours (Élevage)</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.devBtn, { marginTop: 8 }]} onPress={devAddGriffes}>
-            <Text style={styles.devBtnText}>🐾 +1000 Griffes (Aventure)</Text>
+            <Text style={styles.devBtnText}>🐾 +1000 Griffes (Exploration)</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.devBtn, { marginTop: 8 }]} onPress={devResetGriffes}>
-            <Text style={styles.devBtnText}>🧹 Remettre les Griffes à 0 (Aventure)</Text>
+            <Text style={styles.devBtnText}>🧹 Remettre les Griffes à 0 (Exploration)</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.devBtn, { marginTop: 8 }]} onPress={devRefillEnergy}>
-            <Text style={styles.devBtnText}>⚡ Énergie au max (Aventure)</Text>
+            <Text style={styles.devBtnText}>⚡ Énergie au max (Exploration)</Text>
           </TouchableOpacity>
         </View>
       </View>
