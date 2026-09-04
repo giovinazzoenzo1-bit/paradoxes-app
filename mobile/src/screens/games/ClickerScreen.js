@@ -2559,8 +2559,9 @@ const styles = StyleSheet.create({
   // Étiquette et "Défi X sur Y" vivent maintenant DANS le cadre (zones
   // vides mesurées au-dessus/en-dessous du cercle+gemmes) — plus de
   // wrap ni de marges externes, tout est à l'intérieur de l'image.
+  // Remontée de ~2mm (~13dp) sur demande explicite.
   challengeCard: {
-    position: 'absolute', left: SCREEN_W * 0.061, top: SCREEN_H * 0.157, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.061, top: SCREEN_H * 0.157 - 13, zIndex: 3,
     width: SCREEN_W * 0.88, aspectRatio: CHALLENGE_CARD_ASPECT_RATIO,
   },
   // Zone vide mesurée entre le bord supérieur du cadre et le cercle
@@ -2593,8 +2594,9 @@ const styles = StyleSheet.create({
     position: 'absolute', right: '1.5%', top: '46%', width: '11%', height: '23%',
     color: COLORS.action, fontSize: 11, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
   },
+  // Remontée de ~2mm (~13dp) sur demande explicite.
   devSkipBtn: {
-    position: 'absolute', left: SCREEN_W * 0.258, top: SCREEN_H * 0.303, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.258, top: SCREEN_H * 0.303 - 13, zIndex: 3,
     paddingVertical: 5, paddingHorizontal: 12,
     borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
   },
@@ -2729,8 +2731,11 @@ const styles = StyleSheet.create({
   // Rétréci (75% -> 55%, signalé encore trop grand), recentré au même
   // point qu'avant (centre à 58,3% conservé), et remonté de ~5mm
   // (~32dp) avec la pilule de pièces sur demande explicite.
+  // Centré au vrai centre de l'écran (left = 50% - largeur/2), au lieu
+  // du centre décalé (58,3%) hérité d'un ancien réglage. Les créatures
+  // suivent automatiquement (DECK_SLOT_X_PCT est en % de CE cadre).
   deckFrame: {
-    position: 'absolute', left: SCREEN_W * 0.308, top: SCREEN_H * 0.357 - 32, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.225, top: SCREEN_H * 0.357 - 32, zIndex: 3,
     width: SCREEN_W * 0.55, aspectRatio: 800 / 329,
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
