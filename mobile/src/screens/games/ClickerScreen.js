@@ -2413,7 +2413,14 @@ const CHALLENGE_MAX_SEGMENTS = 6;
 // signalé par l'utilisateur, correspond aussi à l'emplacement exact de
 // la maquette Gemini d'origine.
 const CHALLENGE_CARD_ASPECT_RATIO = 900 / 295;
-const CHALLENGE_GEM_X_PCT = [30.6, 42.4, 54.2, 65.9, 77.7, 89.4];
+// Re-mesuré (05/09) directement sur une capture réelle de l'appli,
+// carte défi + cristaux visibles ensemble — les anciennes valeurs
+// (mesurées sur challenge-bar.png isolé, avant intégration) étaient
+// décalées d'environ 10% vers la droite : le cristal du slot 1 tombait
+// pile sur l'emplacement visuel de la gemme 2, signalé "cristal
+// manquant sur la 1ère case" alors que le vrai souci était un décalage
+// de positions, pas un bug de logique de remplissage.
+const CHALLENGE_GEM_X_PCT = [20.6, 33.0, 44.8, 57.2, 69.1, 80.9];
 
 function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
