@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
-import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
+import { useDaily, PENDING_GRIFFES_KEY, PENDING_CREATURES_KEY } from '../../context/DailyContext';
 import {
   CREATURES,
   RARITY_LABEL,
@@ -34,6 +34,7 @@ import {
   SANCTUARY_MAX_LEVEL,
   VEILLEUR_MAX_LEVEL,
   rollCreature,
+  rollCreatureOfRarity,
   offlineEarnings,
   shouldSpawn,
   pickFromDeck,
@@ -129,8 +130,11 @@ function formatNum(n) {
 
 export default function ClickerScreen({ onBack }) {
   const panHandlers = useBackGesture(onBack);
-  const { coins: sharedCoins, spendCoins: spendSharedCoins } = useCoins();
-  const { trackEvent, lifetimeStats, loaded: dailyLoaded } = useDaily();
+  const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
+  const {
+    trackEvent, lifetimeStats, loaded: dailyLoaded,
+    calendar, calendarDay, streakClaimedDate, date: today, claimStreak,
+  } = useDaily();
   // Nombre d'Ascensions faites, source unique du bonus de vitesse. Vient
   // de DailyContext (compteur à vie) plutôt que d'un état local : il
   // survit ainsi à tout ce que l'Ascension remet à zéro.
@@ -150,6 +154,7 @@ export default function ClickerScreen({ onBack }) {
   const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, leftPct, topPct}
   const [deck, setDeck] = useState([null, null, null]); // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
   const [pendingDiscount, setPendingDiscount] = useState(null); // {percent, name} — consommé au prochain achat
   const [critLevel, setCritLevel] = useState(0);
@@ -482,6 +487,31 @@ export default function ClickerScreen({ onBack }) {
             return [...prev, ...missing];
           });
           await AsyncStorage.removeItem(DEV_UNLOCK_ALL_KEY);
+        }
+
+        // Creatures offertes par le calendrier. DailyContext depose une
+        // intention, le clicker (seul proprietaire de la collection)
+        // l'encaisse ici. Une creature deja possedee monte d'un niveau,
+        // comme lors d'une invocation.
+        const pendingRaw = await AsyncStorage.getItem(PENDING_CREATURES_KEY);
+        if (pendingRaw) {
+          let rarities = [];
+          try { rarities = JSON.parse(pendingRaw); } catch (e2) { rarities = []; }
+          if (Array.isArray(rarities) && rarities.length) {
+            const gifts = rarities.map((r) => rollCreatureOfRarity(r)).filter(Boolean);
+            if (gifts.length) {
+              setOwned((prev) => {
+                let next = [...prev];
+                gifts.forEach((c) => {
+                  const i = next.findIndex((o) => o.id === c.id);
+                  if (i >= 0) next[i] = { ...next[i], level: next[i].level + 1 };
+                  else next.push({ id: c.id, level: 1, evolutionTier: 0 });
+                });
+                return next;
+              });
+            }
+          }
+          await AsyncStorage.removeItem(PENDING_CREATURES_KEY);
         }
       } catch (e) {
         // Chargement raté (JSON abîmé, donnée inattendue…). AVANT (bug
@@ -1005,6 +1035,18 @@ export default function ClickerScreen({ onBack }) {
     });
   };
 
+  // Reclame la recompense du jour. `addSharedCoins` est passe au
+  // Context car lui seul connait le type de recompense du jour.
+  const handleClaimCalendar = async () => {
+    const got = await claimStreak(addSharedCoins);
+    setCalendarOpen(false);
+    if (!got) return;
+    if (got.type === 'appCoins') spawnPopup(`+${got.amount} 🪙`, 110, 60);
+    else if (got.type === 'griffes') spawnPopup(`+${got.amount} 🐾`, 110, 60);
+    else if (got.type === 'creature') Alert.alert('🥚 Créature Rare !', "Elle t'attend dans ta Collection.");
+    else if (got.type === 'skin') Alert.alert('🎨 Bon pour un skin', "Le système de skins arrive bientôt — ton bon est conservé.");
+  };
+
   const doOffrande = () => {
     if (sharedCoins < OFFRANDE_APPCOINS_COST) return;
     spendSharedCoins(OFFRANDE_APPCOINS_COST).then((ok) => {
@@ -1432,6 +1474,16 @@ export default function ClickerScreen({ onBack }) {
           )}
 
           <View style={styles.tapArea}>
+            {/* Bouton cadeau : ouvre le calendrier. La pastille signale
+                une recompense a prendre, pour ne pas avoir a ouvrir le
+                menu chaque jour pour verifier. */}
+            <View style={styles.calBtnRow}>
+              <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
+                <Text style={styles.calBtnIcon}>🎁</Text>
+                {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
+              </TouchableOpacity>
+            </View>
+
             <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
 
             <View style={styles.tapZone}>
@@ -1547,6 +1599,16 @@ export default function ClickerScreen({ onBack }) {
         />
       )}
 
+      {calendarOpen && (
+        <DailyCalendarModal
+          calendar={calendar}
+          currentDay={calendarDay}
+          alreadyClaimedToday={streakClaimedDate === today}
+          onClaim={handleClaimCalendar}
+          onClose={() => setCalendarOpen(false)}
+        />
+      )}
+
       {pickerSlot !== null && (
         <DeckPicker
           slotIndex={pickerSlot}
@@ -1591,6 +1653,68 @@ export default function ClickerScreen({ onBack }) {
 // Les 3 emplacements du deck, affichés au-dessus de l'œuf. Un
 // emplacement vide est un œuf grisé — appuyer dessus (rempli ou vide)
 // ouvre le sélecteur pour choisir/changer la créature qui l'occupe.
+// Calendrier de connexion, calque sur la maquette : grille irreguliere
+// (3 petites cases, 2 grandes, 2 moyennes) ou la taille signale
+// l'importance du lot, le jour 7 encadre en dore.
+function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim, onClose }) {
+  if (!Array.isArray(calendar) || calendar.length === 0) return null;
+  const ready = !alreadyClaimedToday;
+  const claimedCount = (currentDay - 1) + (ready ? 0 : 1);
+
+  const cell = (d, style) => {
+    const isToday = d.day === currentDay;
+    const isPast = d.day < currentDay;
+    const claimable = isToday && ready;
+    const isSupreme = d.day === 7;
+    return (
+      <TouchableOpacity
+        key={d.day}
+        style={[styles.calBox, style, isSupreme && styles.calBoxSupreme,
+          isPast && styles.calBoxPast, isToday && styles.calBoxToday,
+          claimable && styles.calBoxClaimable]}
+        onPress={claimable ? onClaim : undefined}
+        disabled={!claimable}
+        activeOpacity={claimable ? 0.7 : 1}
+      >
+        <Text style={styles.calBoxIcon}>{d.icon}</Text>
+        <Text style={[styles.calBoxDay, isSupreme && styles.calBoxDaySupreme]}>JOUR {d.day}</Text>
+        <Text style={[styles.calBoxLabel, isSupreme && styles.calBoxLabelSupreme]} numberOfLines={2}>
+          {d.label}
+        </Text>
+        {isPast && <Text style={styles.calBoxCheck}>✓</Text>}
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={styles.calOverlay}>
+      <View style={styles.calPanel}>
+        <TouchableOpacity onPress={onClose} style={styles.calClose}>
+          <Ionicons name="close" size={20} color={COLORS.muted} />
+        </TouchableOpacity>
+
+        <Text style={styles.calPanelTitle}>CALENDRIER DE RÉCOMPENSES</Text>
+        <Text style={styles.calPanelSub}>SEMAINE DE CONNEXION</Text>
+
+        <View style={styles.calGridRow}>{calendar.slice(0, 3).map((d) => cell(d, styles.calBoxSmall))}</View>
+        <View style={styles.calGridRow}>{calendar.slice(3, 5).map((d) => cell(d, styles.calBoxLarge))}</View>
+        <View style={styles.calGridRow}>{calendar.slice(5, 7).map((d) => cell(d, styles.calBoxMedium))}</View>
+
+        <Text style={styles.calFooter}>CONNEXIONS RÉCLAMÉES : {claimedCount} / 7</Text>
+        <View style={styles.calProgressTrack}>
+          <View style={[styles.calProgressFill, { width: `${(claimedCount / 7) * 100}%` }]} />
+        </View>
+
+        {ready && (
+          <TouchableOpacity style={styles.calBigBtn} onPress={onClaim}>
+            <Text style={styles.calBigBtnText}>RÉCUPÉRER LE JOUR {currentDay}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
 function DeckRow({ deck, owned, onSlotPress }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
@@ -2345,7 +2469,57 @@ const styles = StyleSheet.create({
   shopPageBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '800' },
   shopPageBtnTextActive: { color: '#241a00' },
 
-  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 70 },
+  // ---- Calendrier de connexion ----
+  calBtnRow: { width: '100%', alignItems: 'flex-start', marginBottom: 8 },
+  calBtn: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#d0342c',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  calBtnIcon: { fontSize: 22 },
+  calBtnDot: {
+    position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,
+    backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
+  },
+  calOverlay: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: 20,
+  },
+  calPanel: {
+    width: '100%', maxWidth: 360, borderRadius: 14, padding: 14,
+    backgroundColor: COLORS.panel, borderWidth: 2, borderColor: COLORS.neonCyan,
+  },
+  calClose: { position: 'absolute', top: 8, right: 8, padding: 6, zIndex: 10 },
+  calPanelTitle: { color: COLORS.text, fontSize: 15, fontWeight: '900', textAlign: 'center', letterSpacing: 0.5, marginTop: 2 },
+  calPanelSub: { color: COLORS.action, fontSize: 10, fontWeight: '800', textAlign: 'center', letterSpacing: 1, marginTop: 3, marginBottom: 10 },
+  calGridRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  calBox: {
+    backgroundColor: COLORS.panelLight, borderRadius: 8,
+    borderWidth: 1, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center', padding: 5,
+  },
+  calBoxSmall: { flex: 1, height: 74 },
+  calBoxLarge: { flex: 1, height: 96 },
+  calBoxMedium: { flex: 1, height: 66 },
+  calBoxPast: { opacity: 0.4 },
+  calBoxToday: { borderColor: COLORS.neonCyan, borderWidth: 2 },
+  calBoxClaimable: { backgroundColor: 'rgba(246,195,67,0.18)', borderColor: COLORS.action, borderWidth: 2 },
+  calBoxSupreme: { borderColor: COLORS.action, backgroundColor: 'rgba(246,195,67,0.10)' },
+  calBoxIcon: { fontSize: 20 },
+  calBoxDay: { color: COLORS.text, fontSize: 10, fontWeight: '900', letterSpacing: 0.3, marginTop: 2 },
+  calBoxDaySupreme: { color: COLORS.action },
+  calBoxLabel: { color: COLORS.muted, fontSize: 7.5, fontWeight: '700', textAlign: 'center', marginTop: 1 },
+  calBoxLabelSupreme: { color: COLORS.action, fontWeight: '900' },
+  calBoxCheck: { position: 'absolute', top: 3, right: 5, color: COLORS.good, fontSize: 11, fontWeight: '900' },
+  calFooter: { color: COLORS.muted, fontSize: 9, fontWeight: '800', textAlign: 'center', letterSpacing: 0.8, marginTop: 4 },
+  calProgressTrack: {
+    height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)',
+    marginTop: 5, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border,
+  },
+  calProgressFill: { height: '100%', backgroundColor: COLORS.action },
+  calBigBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 10 },
+  calBigBtnText: { color: '#0b0d16', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
+
+  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 45 },
   deckSlot: {
     width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.panel,
     flexShrink: 0,
