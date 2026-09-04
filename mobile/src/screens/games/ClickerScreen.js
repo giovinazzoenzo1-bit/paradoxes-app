@@ -1448,7 +1448,13 @@ export default function ClickerScreen({ onBack }) {
 
       {view === 'tap' && (
         <>
-          <Text style={styles.coinsValue}>💰 {formatNum(coins)}</Text>
+          <ImageBackground
+            source={require('../../../assets/icons/coins-pill.png')}
+            style={styles.coinsPill}
+            resizeMode="stretch"
+          >
+            <Text style={styles.coinsPillText} numberOfLines={1}>{formatNum(coins)}</Text>
+          </ImageBackground>
           {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
 
           {activePower && (
@@ -1544,9 +1550,13 @@ export default function ClickerScreen({ onBack }) {
               {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
 
-            <View style={styles.deckFrame}>
+            <ImageBackground
+              source={require('../../../assets/icons/deck-frame.png')}
+              style={styles.deckFrame}
+              resizeMode="stretch"
+            >
               <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
-            </View>
+            </ImageBackground>
 
             <View style={styles.tapZone}>
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
@@ -1777,12 +1787,17 @@ function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim
   );
 }
 
+// Centres mesurés sur deck-frame.png (panneau intérieur entre les
+// bordures ornées) : 3 emplacements à parts égales entre 12,5% et
+// 92,5% de large, verticalement centrés sur le panneau (~49%).
+const DECK_SLOT_X_PCT = [25.83, 52.5, 79.17];
+
 function DeckRow({ deck, owned, onSlotPress }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
 
   return (
-    <View style={styles.deckRow}>
+    <>
       {deck.map((id, i) => {
         const creature = id ? CREATURES.find((c) => c.id === id) : null;
         const own = id ? ownedMap[id] : null;
@@ -1790,14 +1805,18 @@ function DeckRow({ deck, owned, onSlotPress }) {
         return (
           <TouchableOpacity
             key={i}
-            style={[styles.deckSlot, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
+            style={[
+              styles.deckSlot,
+              { left: `${DECK_SLOT_X_PCT[i]}%` },
+              creature && { borderColor: RARITY_COLOR[creature.rarity] },
+            ]}
             onPress={() => onSlotPress(i)}
           >
             {display ? <Text style={styles.deckSlotEmoji}>{display.emoji}</Text> : <Text style={styles.deckSlotEmpty}>🥚</Text>}
           </TouchableOpacity>
         );
       })}
-    </View>
+    </>
   );
 }
 
@@ -2460,12 +2479,19 @@ const styles = StyleSheet.create({
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
-  coinsValue: {
-    color: COLORS.action, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 8,
-    alignSelf: 'center', backgroundColor: COLORS.panel, borderRadius: 20,
-    paddingVertical: 6, paddingHorizontal: 22, borderWidth: 1.5, borderColor: COLORS.action,
-    textShadowColor: 'rgba(245,197,66,0.7)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10,
-    shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 6,
+  // Pilule de pièces — fond réel (coins-pill.png, 520x210, sac déjà
+  // peint sur la gauche). Largeur fixe (pas '100%' comme le cadre de
+  // défi : cette pilule doit rester compacte et centrée, pas s'étirer).
+  coinsPill: {
+    width: 220, aspectRatio: 520 / 210, alignSelf: 'center', marginTop: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  // Zone de texte dans l'espace vide à droite du sac peint (mesuré :
+  // le sac + son cadre occupent les premiers ~40% de la largeur).
+  coinsPillText: {
+    position: 'absolute', left: '42%', right: '6%', top: 0, bottom: 0,
+    color: COLORS.action, fontSize: 20, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
+    textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
   incomeText: { color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center' },
 
@@ -2627,21 +2653,25 @@ const styles = StyleSheet.create({
   calBigBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 10 },
   calBigBtnText: { color: '#0b0d16', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
+  // Cadre du deck — fond réel (deck-frame.png, 800x329). width:'100%'
+  // (pas une largeur fixe comme la pilule de pièces) : ce cadre doit
+  // occuper toute la largeur de tapArea, comme avant.
   deckFrame: {
-    flexDirection: 'row', gap: 12, marginBottom: 75,
-    backgroundColor: COLORS.panel, borderRadius: 18,
-    borderWidth: 2, borderColor: COLORS.action,
-    paddingVertical: 10, paddingHorizontal: 14,
-    shadowColor: COLORS.action, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 5,
+    width: '100%', aspectRatio: 800 / 329, marginBottom: 40, position: 'relative',
   },
-  deckRow: { flexDirection: 'row', gap: 12 },
+  // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
+  // row : chaque emplacement tombe exactement sur le panneau peint.
+  // Fond translucide (pas COLORS.panel plein, qui ferait un pâté bleu
+  // nuit sur le cuir brun) — juste assez pour distinguer la créature/
+  // l'œuf du fond, l'anneau de couleur reste le vrai indicateur de rareté.
   deckSlot: {
-    width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.panel,
-    flexShrink: 0,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
+    position: 'absolute', top: '49%', width: 50, height: 50, borderRadius: 25,
+    marginLeft: -25, marginTop: -25,
+    backgroundColor: 'rgba(8,19,31,0.35)',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: COLORS.border,
   },
-  deckSlotEmoji: { fontSize: 26 },
-  deckSlotEmpty: { fontSize: 22, opacity: 0.35 },
+  deckSlotEmoji: { fontSize: 24 },
+  deckSlotEmpty: { fontSize: 20, opacity: 0.5 },
 
   // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
