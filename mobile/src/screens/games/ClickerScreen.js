@@ -1560,6 +1560,13 @@ export default function ClickerScreen({ onBack }) {
               >
                 <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
               </ImageBackground>
+
+              {/* Espaceur invisible, même largeur que le cadeau + son gap
+                  (44+10=54) — sans lui, justifyContent:'center' centre le
+                  BLOC cadeau+cadre, ce qui décale le cadre (donc les 3
+                  créatures) hors du vrai centre de l'écran. Avec, le cadre
+                  reste pile au centre, le cadeau flotte juste à sa gauche. */}
+              <View style={styles.deckTopRowSpacer} />
             </View>
 
             <View style={styles.tapZone}>
@@ -2635,6 +2642,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     width: '100%', gap: 10, marginBottom: 32,
   },
+  // Même largeur que calBtn (44) + le gap de la rangée (10) — voir le
+  // commentaire JSX, c'est ce qui garde le cadre du deck au vrai centre
+  // de l'écran plutôt que centré avec le cadeau comme un seul bloc.
+  deckTopRowSpacer: { width: 54 },
   calBtn: {
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
@@ -2710,14 +2721,15 @@ const styles = StyleSheet.create({
   // 31 * 75/62 ≈ 38). Emplacement vide (🥚) rendu plus visible — trop
   // discret avant (12px, 50% opacité), pouvait donner l'impression d'un
   // 3e emplacement manquant plutôt que juste vide.
+  // Rapetissé (38 -> 26), signalé encore trop grand par l'utilisateur.
   deckSlot: {
-    position: 'absolute', top: '49%', width: 38, height: 38, borderRadius: 19,
-    marginLeft: -19, marginTop: -19,
+    position: 'absolute', top: '49%', width: 26, height: 26, borderRadius: 13,
+    marginLeft: -13, marginTop: -13,
     backgroundColor: 'rgba(8,19,31,0.35)',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: COLORS.border,
   },
-  deckSlotEmoji: { fontSize: 18 },
-  deckSlotEmpty: { fontSize: 16, opacity: 0.7 },
+  deckSlotEmoji: { fontSize: 13 },
+  deckSlotEmpty: { fontSize: 11, opacity: 0.7 },
 
   // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
