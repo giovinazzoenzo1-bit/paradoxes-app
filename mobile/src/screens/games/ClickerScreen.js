@@ -2520,8 +2520,10 @@ const styles = StyleSheet.create({
   // avec érosion du masque alpha pour supprimer le liseré clair
   // résiduel sur les bords, signalé "pas bien fait sur les côtés").
   // Réduite (220 -> 165, signalé trop grande).
+  // Remontée de ~5mm (~32dp — 1mm ≈ 6,3dp à la densité de référence
+  // 160dpi) avec le cadre du deck, sur demande explicite.
   coinsPill: {
-    position: 'absolute', left: SCREEN_W * 0.303, top: SCREEN_H * 0.096, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.303, top: SCREEN_H * 0.096 - 32, zIndex: 3,
     width: 165, aspectRatio: 460 / 180,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -2629,9 +2631,11 @@ const styles = StyleSheet.create({
   // (tap/shop/collection), donc leur ScrollView/FlatList a besoin d'un
   // paddingBottom compensatoire (voir styles.grid et ShopView) pour ne
   // pas finir caché sous cette barre devenue flottante.
+  // Élargie à 100% (bord à bord) sur demande explicite — avant 96% avec
+  // une marge de chaque côté.
   bottomBar: {
-    position: 'absolute', left: SCREEN_W * 0.02, top: SCREEN_H * 0.9, zIndex: 5,
-    flexDirection: 'row', width: SCREEN_W * 0.96, borderTopWidth: 2, borderTopColor: COLORS.action,
+    position: 'absolute', left: 0, top: SCREEN_H * 0.9, zIndex: 5,
+    flexDirection: 'row', width: SCREEN_W, borderTopWidth: 2, borderTopColor: COLORS.action,
     paddingTop: 8, backgroundColor: COLORS.bg,
     shadowColor: COLORS.action, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: -4 }, elevation: 4,
   },
@@ -2722,9 +2726,12 @@ const styles = StyleSheet.create({
   // bloc a ses propres coordonnées ABSOLUES indépendantes.
   // Mesuré directement sur la maquette Gemini (screenshot 1080px de
   // large) : cadre à 553px = 49,5% de la largeur PLEINE d'écran.
+  // Rétréci (75% -> 55%, signalé encore trop grand), recentré au même
+  // point qu'avant (centre à 58,3% conservé), et remonté de ~5mm
+  // (~32dp) avec la pilule de pièces sur demande explicite.
   deckFrame: {
-    position: 'absolute', left: SCREEN_W * 0.208, top: SCREEN_H * 0.357, zIndex: 3,
-    width: SCREEN_W * 0.75, aspectRatio: 800 / 329,
+    position: 'absolute', left: SCREEN_W * 0.308, top: SCREEN_H * 0.357 - 32, zIndex: 3,
+    width: SCREEN_W * 0.55, aspectRatio: 800 / 329,
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
   // row : chaque emplacement tombe exactement sur le panneau peint.
@@ -2740,14 +2747,15 @@ const styles = StyleSheet.create({
   // discret avant (12px, 50% opacité), pouvait donner l'impression d'un
   // 3e emplacement manquant plutôt que juste vide.
   // Rapetissé (38 -> 26), signalé encore trop grand par l'utilisateur.
+  // Rescalé avec le cadre (75% -> 55%, ratio 0,733 : 26 -> 19).
   deckSlot: {
-    position: 'absolute', top: '49%', width: 26, height: 26, borderRadius: 13,
-    marginLeft: -13, marginTop: -13,
+    position: 'absolute', top: '49%', width: 19, height: 19, borderRadius: 10,
+    marginLeft: -10, marginTop: -10,
     backgroundColor: 'rgba(8,19,31,0.35)',
     alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: COLORS.border,
   },
-  deckSlotEmoji: { fontSize: 13 },
-  deckSlotEmpty: { fontSize: 11, opacity: 0.7 },
+  deckSlotEmoji: { fontSize: 10 },
+  deckSlotEmpty: { fontSize: 9, opacity: 0.7 },
 
   // Écran d'accueil : positionnement ABSOLU (voir header) — tapArea
   // (le flex qui centrait tout et causait débordements/désyncs à
