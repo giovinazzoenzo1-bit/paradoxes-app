@@ -1436,10 +1436,6 @@ export default function ClickerScreen({ onBack }) {
                   <Animated.View
                     style={[
                       styles.tapButton,
-                      // La bordure et la lueur s'intensifient palier par
-                      // palier : l'œuf passe de terne à incandescent au
-                      // fur et à mesure que les défis tombent.
-                      { borderWidth: 3 + eggStageIndex * 0.6, shadowOpacity: 0.25 + eggStageIndex * 0.15 },
                       {
                         transform: [
                           { scale: tapScale },
@@ -1464,7 +1460,7 @@ export default function ClickerScreen({ onBack }) {
                     ) : (
                       <Image
                         source={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
-                        style={[styles.eggImage, { opacity: 0.6 + eggStageIndex * 0.1 }]}
+                        style={styles.eggImage}
                         resizeMode="contain"
                       />
                     )}
@@ -2348,15 +2344,19 @@ const styles = StyleSheet.create({
   tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
   tapZone: { width: '100%', height: 260, position: 'relative' },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
+  // d'oeuf portent deja leur propre halo peint.
+  //
+  // 240 et pas plus : `tapZone` fait 260 de haut (hauteur FIXE), donc
+  // tout bouton sous 260 reste dans les limites de son parent. Depasser
+  // cette valeur, ou rendre tapZone flexible, reproduirait le bug des
+  // taps perdus.
   tapButton: {
-    width: 180, height: 180, borderRadius: 90, backgroundColor: COLORS.panel,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.action,
-    shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 16, shadowOffset: { width: 0, height: 0 },
+    width: 240, height: 240,
+    alignItems: 'center', justifyContent: 'center',
   },
   tapEmoji: { fontSize: 84 },
-  // Taille pensée pour occuper le même espace que l'ancien emoji
-  // (fontSize 84) sur le bouton de tap circulaire.
-  eggImage: { width: 140, height: 140 },
+  eggImage: { width: 210, height: 210 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8 },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
