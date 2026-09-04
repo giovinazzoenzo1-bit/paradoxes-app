@@ -1525,31 +1525,42 @@ export default function ClickerScreen({ onBack }) {
           )}
 
           <View style={styles.tapArea}>
-            {/* Bouton cadeau : ouvre le calendrier. La pastille signale
-                une recompense a prendre, pour ne pas avoir a ouvrir le
-                menu chaque jour pour verifier. */}
-            <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
-              {/* Icône unique, qui respire légèrement (scale) — plus de
-                  duplicata derrière (créait un effet fantôme, 2 cadeaux
-                  superposés, signalé par l'utilisateur). */}
-              <Animated.View
-                style={[
-                  styles.calBtnImageWrap,
-                  { transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] },
-                ]}
-              >
-                <Image source={require('../../../assets/icons/gift.png')} style={styles.calBtnImage} resizeMode="cover" />
-              </Animated.View>
-              {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
-            </TouchableOpacity>
+            {/* Cadeau + cadre du deck dans UNE MÊME rangée flex — avant,
+                le cadeau était en position ABSOLUE (top:0 de tapArea)
+                pendant que le cadre du deck suivait le flux normal
+                centré par tapArea. Un débordement vertical du contenu
+                dévie ce centrage (justifyContent:'center' répartit
+                l'excédent des deux côtés) : le cadre du deck se
+                décalait tout seul, le cadeau restait scotché à sa
+                position fixe — d'où les deux qui se désynchronisaient,
+                signalé par l'utilisateur avec mesures à l'appui. En les
+                mettant tous les deux dans le flux normal d'une même
+                rangée, ils bougent TOUJOURS ensemble, quel que soit ce
+                qui se passe ailleurs dans tapArea. */}
+            <View style={styles.deckTopRow}>
+              <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
+                {/* Icône unique, qui respire légèrement (scale) — plus de
+                    duplicata derrière (créait un effet fantôme, 2 cadeaux
+                    superposés, signalé par l'utilisateur). */}
+                <Animated.View
+                  style={[
+                    styles.calBtnImageWrap,
+                    { transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] },
+                  ]}
+                >
+                  <Image source={require('../../../assets/icons/gift.png')} style={styles.calBtnImage} resizeMode="cover" />
+                </Animated.View>
+                {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
+              </TouchableOpacity>
 
-            <ImageBackground
-              source={require('../../../assets/icons/deck-frame.png')}
-              style={styles.deckFrame}
-              resizeMode="stretch"
-            >
-              <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
-            </ImageBackground>
+              <ImageBackground
+                source={require('../../../assets/icons/deck-frame.png')}
+                style={styles.deckFrame}
+                resizeMode="stretch"
+              >
+                <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
+              </ImageBackground>
+            </View>
 
             <View style={styles.tapZone}>
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
@@ -2617,21 +2628,20 @@ const styles = StyleSheet.create({
   shopPageBtnTextActive: { color: '#241a00' },
 
   // ---- Calendrier de connexion ----
-  // Position ABSOLUE : le bouton flotte dans le coin et ne participe pas
-  // au flux vertical. Dans le flux, ses 44dp poussaient tout le contenu
-  // vers le bas, deck compris.
+  // Rangée qui regroupe cadeau + cadre du deck (voir commentaire JSX) —
+  // ils bougent ensemble maintenant, plus de position ABSOLUE isolée
+  // pour le cadeau.
+  deckTopRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    width: '100%', gap: 10, marginBottom: 32,
+  },
   calBtn: {
-    position: 'absolute', left: 0, top: 0, zIndex: 5,
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
   calBtnImageWrap: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },
   calBtnImage: { width: 44, height: 44 },
-  // Couche de lueur animée, plus grande que le bouton et centrée dessus
-  // (74 au lieu de 44, décalage négatif = (44-74)/2). pointerEvents en
-  // STYLE (jamais en prop, voir Règles de survie) : purement décorative,
-  // ne doit jamais capter le tap destiné au bouton cadeau.
   calBtnDot: {
     position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,
     backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
@@ -2680,9 +2690,12 @@ const styles = StyleSheet.create({
   // elle-même, mais parce que son ancien encombrement vertical (largeur
   // 72% + marginBottom 30) participait au débordement qui poussait le
   // cadre par-dessus le bouton dev (voir tapArea).
+  // Mesuré directement sur la maquette Gemini (screenshot 1080px de
+  // large) : cadre à 553px = 49,5% de la largeur PLEINE d'écran. Les
+  // 62% précédents (dans deckTopRow, plus étroit que tapArea) ne
+  // donnaient que ~40% à l'écran — élargi en conséquence à 75%.
   deckFrame: {
-    width: '62%', aspectRatio: 800 / 329, marginTop: 8, marginBottom: 16, position: 'relative',
-    alignSelf: 'center',
+    width: '75%', aspectRatio: 800 / 329, position: 'relative',
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
   // row : chaque emplacement tombe exactement sur le panneau peint.
@@ -2693,14 +2706,18 @@ const styles = StyleSheet.create({
   // réduit à 72%) — même proportion relative qu'avant le rétrécissement
   // du cadre.
   // Rescalé avec le cadre (72% -> 62% de large, même proportion).
+  // Rescalé avec le cadre élargi (62% -> 75%, même proportion :
+  // 31 * 75/62 ≈ 38). Emplacement vide (🥚) rendu plus visible — trop
+  // discret avant (12px, 50% opacité), pouvait donner l'impression d'un
+  // 3e emplacement manquant plutôt que juste vide.
   deckSlot: {
-    position: 'absolute', top: '49%', width: 31, height: 31, borderRadius: 16,
-    marginLeft: -16, marginTop: -16,
+    position: 'absolute', top: '49%', width: 38, height: 38, borderRadius: 19,
+    marginLeft: -19, marginTop: -19,
     backgroundColor: 'rgba(8,19,31,0.35)',
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
   },
-  deckSlotEmoji: { fontSize: 15 },
-  deckSlotEmpty: { fontSize: 12, opacity: 0.5 },
+  deckSlotEmoji: { fontSize: 18 },
+  deckSlotEmpty: { fontSize: 16, opacity: 0.7 },
 
   // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue

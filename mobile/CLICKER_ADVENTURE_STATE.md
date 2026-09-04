@@ -103,6 +103,28 @@ Le compteur de diagnostic (afficher la cadence de taps réellement reçue)
 a été l'outil décisif : il a prouvé que les taps se perdaient AVANT le
 code, ce qui a écarté d'un coup toutes les pistes de performance.
 
+### 7. Ne jamais mélanger `position:'absolute'` isolé et frères en flux normal
+
+**Bug réel (04/09)** : le bouton cadeau (`calBtn`, `position:'absolute',
+top:0` dans `tapArea`) et le cadre du deck (flux normal, centré par
+`justifyContent:'center'` de `tapArea`) se sont désynchronisés — un
+débordement vertical du contenu de `tapArea` a décalé le cadre du deck
+(`justifyContent:'center'` répartit l'excédent pour moitié vers le
+haut), mais le bouton cadeau, en position absolue, est resté scotché à
+son `top:0` réel. Résultat : les deux, censés être à la même hauteur,
+se sont retrouvés à ~450px d'écart. Mesuré avec précision par
+l'utilisateur (captures annotées d'une règle graduée) avant que la
+vraie cause soit trouvée.
+
+**Corrigé structurellement**, pas en ajustant des marges : les deux
+sont maintenant dans une même `View` en `flexDirection:'row'`
+(`deckTopRow`), donc TOUJOURS à la même hauteur, quel que soit ce qui
+se passe ailleurs dans `tapArea`. **Règle** : si deux éléments doivent
+rester visuellement alignés, ne jamais isoler l'un des deux en
+`position:'absolute'` pendant que l'autre reste dans le flux normal
+d'un parent qui centre son contenu — les mettre dans un conteneur flex
+commun.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.
