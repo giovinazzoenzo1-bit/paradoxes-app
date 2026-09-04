@@ -1524,50 +1524,33 @@ export default function ClickerScreen({ onBack }) {
             </TouchableOpacity>
           )}
 
-          <View style={styles.tapArea}>
-            {/* Cadeau + cadre du deck dans UNE MÊME rangée flex — avant,
-                le cadeau était en position ABSOLUE (top:0 de tapArea)
-                pendant que le cadre du deck suivait le flux normal
-                centré par tapArea. Un débordement vertical du contenu
-                dévie ce centrage (justifyContent:'center' répartit
-                l'excédent des deux côtés) : le cadre du deck se
-                décalait tout seul, le cadeau restait scotché à sa
-                position fixe — d'où les deux qui se désynchronisaient,
-                signalé par l'utilisateur avec mesures à l'appui. En les
-                mettant tous les deux dans le flux normal d'une même
-                rangée, ils bougent TOUJOURS ensemble, quel que soit ce
-                qui se passe ailleurs dans tapArea. */}
-            <View style={styles.deckTopRow}>
-              <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
-                {/* Icône unique, qui respire légèrement (scale) — plus de
-                    duplicata derrière (créait un effet fantôme, 2 cadeaux
-                    superposés, signalé par l'utilisateur). */}
-                <Animated.View
-                  style={[
-                    styles.calBtnImageWrap,
-                    { transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] },
-                  ]}
-                >
-                  <Image source={require('../../../assets/icons/gift.png')} style={styles.calBtnImage} resizeMode="cover" />
-                </Animated.View>
-                {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
-              </TouchableOpacity>
-
-              <ImageBackground
-                source={require('../../../assets/icons/deck-frame.png')}
-                style={styles.deckFrame}
-                resizeMode="stretch"
+          <>
+            {/* Cadeau et cadre du deck, chacun avec ses coordonnées ABSOLUES
+                fixées en % du plein écran — plus de rangée flex ni
+                d'espaceur, chaque bloc est indépendant et ne peut plus
+                dériver de l'autre. */}
+            <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
+              {/* Icône unique, qui respire légèrement (scale) — plus de
+                  duplicata derrière (créait un effet fantôme, 2 cadeaux
+                  superposés, signalé par l'utilisateur). */}
+              <Animated.View
+                style={[
+                  styles.calBtnImageWrap,
+                  { transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] },
+                ]}
               >
-                <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
-              </ImageBackground>
+                <Image source={require('../../../assets/icons/gift.png')} style={styles.calBtnImage} resizeMode="cover" />
+              </Animated.View>
+              {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
+            </TouchableOpacity>
 
-              {/* Espaceur invisible, même largeur que le cadeau + son gap
-                  (44+10=54) — sans lui, justifyContent:'center' centre le
-                  BLOC cadeau+cadre, ce qui décale le cadre (donc les 3
-                  créatures) hors du vrai centre de l'écran. Avec, le cadre
-                  reste pile au centre, le cadeau flotte juste à sa gauche. */}
-              <View style={styles.deckTopRowSpacer} />
-            </View>
+            <ImageBackground
+              source={require('../../../assets/icons/deck-frame.png')}
+              style={styles.deckFrame}
+              resizeMode="stretch"
+            >
+              <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
+            </ImageBackground>
 
             <View style={styles.tapZone}>
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
@@ -1634,7 +1617,7 @@ export default function ClickerScreen({ onBack }) {
                 c'est l'indicateur d'état de l'œuf, pas un message
                 contextuel qu'on peut masquer. */}
             {eggPhase === 'collecting' && <Text style={styles.eggStageLabel}>{eggStage.name}</Text>}
-          </View>
+          </>
         </>
       )}
 
@@ -1802,8 +1785,8 @@ function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim
 // bordures ornées, 12,5% à 92,5% de large). Écart resserré (±26,67% →
 // ±10% autour du centre) sur demande explicite, et le slot du milieu
 // verrouillé à EXACTEMENT 50% (pas 52,5%, le centre géométrique du
-// panneau utile) — puisque deckFrame est maintenant centré à l'écran
-// (voir deckTopRowSpacer), 50% du cadre = centre réel de l'écran.
+// panneau utile) — deckFrame a ses propres coordonnées ABSOLUES fixes
+// (left 20.8%, voir styles.deckFrame), 50% du cadre reste stable.
 const DECK_SLOT_X_PCT = [40, 50, 60];
 
 function DeckRow({ deck, owned, onSlotPress }) {
@@ -1886,7 +1869,7 @@ function ShopView({
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         {page === 'upgrades' ? (
           <>
             {/* Déverrouillage en chaîne des 4 mécaniques : voir
@@ -2496,10 +2479,17 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
+  // Positionnement ABSOLU en % du plein écran (04/09) — sur demande
+  // explicite de l'utilisateur, qui a utilisé un outil de glisser-
+  // déposer pour fixer les coordonnées exactes, en réaction au flux
+  // flex (marges + aspectRatio en cascade) qui donnait des résultats
+  // imprévisibles dans ExpoGo. Chaque grand bloc de l'écran Élevage a
+  // maintenant un top/left figé, plus aucun calcul en chaîne.
   header: {
-    flexDirection: 'row', alignItems: 'center', marginBottom: 6,
+    position: 'absolute', left: '6.8%', top: '0.8%', width: '86%', zIndex: 3,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.panel, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border,
-    paddingVertical: 8, paddingHorizontal: 12, alignSelf: 'stretch',
+    paddingVertical: 8, paddingHorizontal: 12,
   },
   backBtn: { paddingVertical: 6, paddingRight: 12 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
@@ -2513,7 +2503,8 @@ const styles = StyleSheet.create({
   // résiduel sur les bords, signalé "pas bien fait sur les côtés").
   // Réduite (220 -> 165, signalé trop grande).
   coinsPill: {
-    width: 165, aspectRatio: 460 / 180, alignSelf: 'center', marginTop: 8,
+    position: 'absolute', left: '30.3%', top: '9.6%', zIndex: 3,
+    width: 165, aspectRatio: 460 / 180,
     alignItems: 'center', justifyContent: 'center',
   },
   // Zone de texte dans l'espace vide à droite du sac peint (mesuré sur
@@ -2523,13 +2514,23 @@ const styles = StyleSheet.create({
     color: COLORS.action, fontSize: 15, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
     textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
-  incomeText: { color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  incomeText: {
+    position: 'absolute', left: '10%', top: '13%', width: '80%', zIndex: 3,
+    color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center',
+  },
 
-  welcomeBanner: { backgroundColor: 'rgba(0,230,118,0.15)', borderRadius: 12, padding: 10, marginTop: 8, borderWidth: 1, borderColor: COLORS.good },
+  welcomeBanner: {
+    position: 'absolute', left: '8%', top: '14.5%', width: '84%', zIndex: 3,
+    backgroundColor: 'rgba(0,230,118,0.15)', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: COLORS.good,
+  },
   welcomeText: { color: COLORS.good, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
-  powerBanner: { backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, marginTop: 6, borderWidth: 1, borderColor: COLORS.action },
+  powerBanner: {
+    position: 'absolute', left: '8%', top: '14.5%', width: '84%', zIndex: 3,
+    backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.action,
+  },
   discountBanner: { backgroundColor: 'rgba(46,127,184,0.15)', borderColor: '#3ec6f0' },
+
   discountBannerText: { color: '#3ec6f0' },
   powerBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
 
@@ -2539,8 +2540,8 @@ const styles = StyleSheet.create({
   // vides mesurées au-dessus/en-dessous du cercle+gemmes) — plus de
   // wrap ni de marges externes, tout est à l'intérieur de l'image.
   challengeCard: {
-    width: '100%', aspectRatio: CHALLENGE_CARD_ASPECT_RATIO, position: 'relative',
-    marginTop: 10, marginBottom: 2,
+    position: 'absolute', left: '6.1%', top: '15.7%', zIndex: 3,
+    width: '88%', aspectRatio: CHALLENGE_CARD_ASPECT_RATIO,
   },
   // Zone vide mesurée entre le bord supérieur du cadre et le cercle
   // (9,3% à 39,8% de la hauteur).
@@ -2573,7 +2574,8 @@ const styles = StyleSheet.create({
     color: COLORS.action, fontSize: 11, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
   },
   devSkipBtn: {
-    alignSelf: 'center', marginTop: 8, marginBottom: 14, paddingVertical: 5, paddingHorizontal: 12,
+    position: 'absolute', left: '25.8%', top: '30.3%', zIndex: 3,
+    paddingVertical: 5, paddingHorizontal: 12,
     borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
   },
   devSkipBtnText: { color: '#b3a0ff', fontSize: 11, fontWeight: '800' },
@@ -2605,9 +2607,14 @@ const styles = StyleSheet.create({
   },
 
   // Barre de navigation du bas — Shop | Quêtes | Collection | Aventure.
+  // Positionnement ABSOLU (voir header) — partagé par les 3 onglets
+  // (tap/shop/collection), donc leur ScrollView/FlatList a besoin d'un
+  // paddingBottom compensatoire (voir styles.grid et ShopView) pour ne
+  // pas finir caché sous cette barre devenue flottante.
   bottomBar: {
-    flexDirection: 'row', width: '100%', borderTopWidth: 2, borderTopColor: COLORS.action,
-    paddingTop: 8, marginTop: 6, backgroundColor: COLORS.bg,
+    position: 'absolute', left: '2%', top: '90%', zIndex: 5,
+    flexDirection: 'row', width: '96%', borderTopWidth: 2, borderTopColor: COLORS.action,
+    paddingTop: 8, backgroundColor: COLORS.bg,
     shadowColor: COLORS.action, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: -4 }, elevation: 4,
   },
   bottomBarItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
@@ -2638,18 +2645,8 @@ const styles = StyleSheet.create({
   shopPageBtnTextActive: { color: '#241a00' },
 
   // ---- Calendrier de connexion ----
-  // Rangée qui regroupe cadeau + cadre du deck (voir commentaire JSX) —
-  // ils bougent ensemble maintenant, plus de position ABSOLUE isolée
-  // pour le cadeau.
-  deckTopRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    width: '100%', gap: 10, marginBottom: 32,
-  },
-  // Même largeur que calBtn (44) + le gap de la rangée (10) — voir le
-  // commentaire JSX, c'est ce qui garde le cadre du deck au vrai centre
-  // de l'écran plutôt que centré avec le cadeau comme un seul bloc.
-  deckTopRowSpacer: { width: 54 },
   calBtn: {
+    position: 'absolute', left: '1.5%', top: '33.4%', zIndex: 3,
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
@@ -2661,7 +2658,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
   },
   calOverlay: {
-    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 20,
     backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: 20,
   },
   calPanel: {
@@ -2703,13 +2700,13 @@ const styles = StyleSheet.create({
   // (72% -> 62%, marges réduites) : pas seulement pour la taille en
   // elle-même, mais parce que son ancien encombrement vertical (largeur
   // 72% + marginBottom 30) participait au débordement qui poussait le
-  // cadre par-dessus le bouton dev (voir tapArea).
+  // cadre par-dessus le bouton dev — plus un souci maintenant, chaque
+  // bloc a ses propres coordonnées ABSOLUES indépendantes.
   // Mesuré directement sur la maquette Gemini (screenshot 1080px de
-  // large) : cadre à 553px = 49,5% de la largeur PLEINE d'écran. Les
-  // 62% précédents (dans deckTopRow, plus étroit que tapArea) ne
-  // donnaient que ~40% à l'écran — élargi en conséquence à 75%.
+  // large) : cadre à 553px = 49,5% de la largeur PLEINE d'écran.
   deckFrame: {
-    width: '75%', aspectRatio: 800 / 329, position: 'relative',
+    position: 'absolute', left: '20.8%', top: '35.7%', zIndex: 3,
+    width: '75%', aspectRatio: 800 / 329,
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
   // row : chaque emplacement tombe exactement sur le panneau peint.
@@ -2734,28 +2731,16 @@ const styles = StyleSheet.create({
   deckSlotEmoji: { fontSize: 13 },
   deckSlotEmpty: { fontSize: 11, opacity: 0.7 },
 
-  // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
-  // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
-  // liste de boutons (tout ça vit dans les onglets de la barre du bas).
-  //
-  // CAUSE RÉELLE du chevauchement bouton dev / cadre du deck signalé :
-  // pas une histoire de marge — le contenu de tapArea (paddingTop 28 +
-  // cadre du deck + tapZone 320 + textes) dépassait largement l'espace
-  // flex:1 réellement disponible à l'écran. Avec justifyContent:'center'
-  // sur un contenu plus haut que son conteneur, le débordement se
-  // répartit pour moitié VERS LE HAUT — poussant le cadre du deck
-  // par-dessus le bouton dev situé juste au-dessus de tapArea. Corrigé
-  // en réduisant le budget vertical total (paddingTop retiré, cadre du
-  // deck rétréci) plutôt qu'en ajoutant encore de la marge, qui n'aurait
-  // rien changé au problème de fond.
-  tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
-  // Géométrie recalibrée pour tenir dans le budget vertical réel une
-  // fois le cadre du deck compté (320/290/260 débordait — cause du bug
-  // ci-dessus). 290/260/230 reste nettement plus grand que l'original
-  // (230/210/185) sans pousser le contenu hors de l'écran. RÈGLE
-  // ABSOLUE toujours respectée : zone > bouton > image, zone en hauteur
-  // FIXE (jamais flex).
-  tapZone: { width: '100%', height: 290, marginTop: 10, position: 'relative' },
+  // Écran d'accueil : positionnement ABSOLU (voir header) — tapArea
+  // (le flex qui centrait tout et causait débordements/désyncs à
+  // répétition) a été retiré. tapZone flotte maintenant à ses propres
+  // coordonnées, indépendant de tout le reste.
+  // RÈGLE ABSOLUE toujours respectée : zone(290) > bouton(260) >
+  // image(230), zone en hauteur FIXE (jamais flex).
+  tapZone: {
+    position: 'absolute', left: 0, top: '56.4%', zIndex: 2,
+    width: '100%', height: 290,
+  },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
@@ -2809,7 +2794,7 @@ const styles = StyleSheet.create({
 
   viewBackBtn: { paddingVertical: 8, marginBottom: 4 },
   viewBackBtnText: { color: COLORS.muted, fontSize: 13, fontWeight: '700' },
-  grid: { paddingBottom: 20 },
+  grid: { paddingBottom: 100 },
   creatureCell: {
     flex: 1, margin: 4, backgroundColor: COLORS.panel, borderRadius: 12, padding: 10, alignItems: 'center',
     borderWidth: 1, borderColor: COLORS.border, minHeight: 100,
@@ -2820,7 +2805,7 @@ const styles = StyleSheet.create({
   creatureLevel: { color: COLORS.muted, fontSize: 9, marginTop: 1 },
   creatureRarity: { fontSize: 8, fontWeight: '800', marginTop: 2, letterSpacing: 0.5 },
 
-  detailOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  detailOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   detailPanelWrap: { width: '100%', maxHeight: '85%' },
   detailPanel: { width: '100%', backgroundColor: COLORS.panel, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
   detailPanelContent: { alignItems: 'center', padding: 24, paddingBottom: 40 },

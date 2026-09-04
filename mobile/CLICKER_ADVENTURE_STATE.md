@@ -125,6 +125,38 @@ rester visuellement alignés, ne jamais isoler l'un des deux en
 d'un parent qui centre son contenu — les mettre dans un conteneur flex
 commun.
 
+**Solution finale (04/09, la vraie)** : même le correctif flex ci-dessus
+n'a pas suffi — l'utilisateur a fait remarquer que le rendu réel dans
+ExpoGo ne correspond pas à un calcul simple, à cause de l'empilement de
+marges/`aspectRatio`/centrage en cascade. **Tout l'écran d'accueil du
+Clicker est passé en positionnement 100% ABSOLU** : chaque bloc
+(header, pilule de pièces, carte de défi, bouton dev, bannières,
+cadeau, cadre du deck, zone de tap, barre du bas) a son propre
+`top`/`left` en % fixé DIRECTEMENT sur `styles.screen` (l'écran plein),
+sans aucune marge, `flex`, ni centrage en cascade. `tapArea` et
+`deckTopRow` ont été supprimés entièrement. Coordonnées obtenues via un
+outil de glisser-déposer (widget HTML interactif) que l'utilisateur a
+utilisé lui-même pour positionner chaque élément puis renvoyer les %
+exacts :
+
+```
+Header        left 6.8%   top 0.8%   width 86%
+Pièces        left 30.3%  top 9.6%   (largeur fixe 165)
+Carte défi    left 6.1%   top 15.7%  width 88%
+Bouton dev    left 25.8%  top 30.3%  (largeur auto)
+Cadeau        left 1.5%   top 33.4%  (44x44 fixe)
+Cadre deck    left 20.8%  top 35.7%  width 75%
+Zone de tap   top 56.4%   width 100%
+Barre du bas  left 2%     top 90%    width 96%
+```
+
+**Règle pour la suite** : si l'utilisateur redemande un ajustement de
+placement, ne PAS raisonner en marges/flex — juste changer le `top`/
+`left` en % du bloc concerné. Attention au `zIndex` : les overlays
+modaux (calendrier, sélecteur de deck, récompense) ont tous `zIndex:20`
+pour rester au-dessus des blocs d'accueil (`zIndex` 2 à 5) — tout nouvel
+élément plein écran doit reprendre `zIndex:20` ou plus.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

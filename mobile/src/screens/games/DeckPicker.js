@@ -64,7 +64,7 @@ export function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose })
 
 const styles = StyleSheet.create({
   overlay: {
-    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 20, backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center', justifyContent: 'center', padding: 20,
   },
   panelWrap: { width: '100%', maxHeight: '85%' },
