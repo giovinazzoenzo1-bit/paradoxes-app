@@ -37,18 +37,24 @@ encore à l'intérieur.
 **La géométrie de la zone de tap est donc sacrée :**
 
 ```
-tapZone   height: 320  (FIXE — ne jamais passer en flex)
-tapButton 290 x 290    (STRICTEMENT < 320)
-eggImage  260 x 260    (STRICTEMENT < 290)
+tapZone   height: 290  (FIXE — ne jamais passer en flex)
+tapButton 260 x 260    (STRICTEMENT < 290)
+eggImage  230 x 230    (STRICTEMENT < 260)
 ```
 
-Règle : **zone > bouton > image, avec une zone de hauteur FIXE.** Les 3
-valeurs sont montées ensemble deux fois le 04/09 (œuf jugé trop petit,
-un 1er ajustement 230/210/185 → 260/230/200 pas assez visible pour être
-perçu, puis 260/230/200 → 320/290/260) — l'ordre strict et le caractère
-FIXE de la zone sont ce qui compte, pas les chiffres exacts. La violer
-casse les taps sans le moindre message d'erreur. Le symptôme mesuré
-(avant l'agrandissement) : 142 clics/s envoyés, 2 à 15 reçus.
+Règle : **zone > bouton > image, avec une zone de hauteur FIXE.** Ces
+valeurs ont bougé 3 fois le 04/09 : 230/210/185 → 260/230/200 (pas assez
+visible) → 320/290/260 (a débordé le budget vertical réel de `tapArea`,
+poussant le cadre du deck PAR-DESSUS le bouton dev situé juste
+au-dessus — `justifyContent:'center'` répartit tout débordement pour
+moitié vers le haut) → 290/260/230, stabilisé avec le cadre du deck
+rétréci en même temps (72% → 62%). **Le chiffre exact n'est pas ce qui
+compte** — l'ordre strict et le caractère FIXE de la zone, si. Mais
+CETTE fois, le budget vertical total de `tapArea` (padding + cadre du
+deck + tapZone + textes) doit aussi rester sous l'espace flex:1
+réellement disponible à l'écran, sous peine de reproduire exactement ce
+bug. Le symptôme original (violation de la géométrie stricte) mesuré :
+142 clics/s envoyés, 2 à 15 reçus.
 
 ### 2. `pointerEvents` en PROP est ignoré (New Architecture, SDK 57)
 

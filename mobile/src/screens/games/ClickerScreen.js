@@ -2675,12 +2675,13 @@ const styles = StyleSheet.create({
   calBigBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 10 },
   calBigBtnText: { color: '#0b0d16', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
-  // Cadre du deck — fond réel (deck-frame.png, 800x329). Volontairement
-  // PAS en largeur 100% (signalé trop grand par l'utilisateur) : 72%,
-  // centré. marginTop ajouté pour ne plus toucher le bouton dev
-  // au-dessus (signalé superposé).
+  // Cadre du deck — fond réel (deck-frame.png, 800x329). Rétréci encore
+  // (72% -> 62%, marges réduites) : pas seulement pour la taille en
+  // elle-même, mais parce que son ancien encombrement vertical (largeur
+  // 72% + marginBottom 30) participait au débordement qui poussait le
+  // cadre par-dessus le bouton dev (voir tapArea).
   deckFrame: {
-    width: '72%', aspectRatio: 800 / 329, marginTop: 4, marginBottom: 30, position: 'relative',
+    width: '62%', aspectRatio: 800 / 329, marginTop: 8, marginBottom: 16, position: 'relative',
     alignSelf: 'center',
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
@@ -2691,37 +2692,47 @@ const styles = StyleSheet.create({
   // Rapetissé (50 -> 36, signalé trop grand par rapport au cadre
   // réduit à 72%) — même proportion relative qu'avant le rétrécissement
   // du cadre.
+  // Rescalé avec le cadre (72% -> 62% de large, même proportion).
   deckSlot: {
-    position: 'absolute', top: '49%', width: 36, height: 36, borderRadius: 18,
-    marginLeft: -18, marginTop: -18,
+    position: 'absolute', top: '49%', width: 31, height: 31, borderRadius: 16,
+    marginLeft: -16, marginTop: -16,
     backgroundColor: 'rgba(8,19,31,0.35)',
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
   },
-  deckSlotEmoji: { fontSize: 17 },
-  deckSlotEmpty: { fontSize: 14, opacity: 0.5 },
+  deckSlotEmoji: { fontSize: 15 },
+  deckSlotEmpty: { fontSize: 12, opacity: 0.5 },
 
   // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
   // liste de boutons (tout ça vit dans les onglets de la barre du bas).
-  // paddingTop décale tout le contenu centré (dont l'œuf) plus bas dans
-  // la zone disponible, signalé trop haut par l'utilisateur.
-  tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', paddingTop: 28 },
-  // Géométrie agrandie une 2e fois (signalé "toujours la même taille"
-  // après le 1er ajustement 230->260/210->230/185->200 — trop discret
-  // pour se voir) — la RÈGLE ABSOLUE reste respectée :
-  // zone(320) > bouton(290) > image(260), zone toujours en hauteur FIXE
-  // (jamais flex). Seules les 3 valeurs montent ensemble, l'ordre strict
-  // ne change pas.
-  tapZone: { width: '100%', height: 320, position: 'relative' },
+  //
+  // CAUSE RÉELLE du chevauchement bouton dev / cadre du deck signalé :
+  // pas une histoire de marge — le contenu de tapArea (paddingTop 28 +
+  // cadre du deck + tapZone 320 + textes) dépassait largement l'espace
+  // flex:1 réellement disponible à l'écran. Avec justifyContent:'center'
+  // sur un contenu plus haut que son conteneur, le débordement se
+  // répartit pour moitié VERS LE HAUT — poussant le cadre du deck
+  // par-dessus le bouton dev situé juste au-dessus de tapArea. Corrigé
+  // en réduisant le budget vertical total (paddingTop retiré, cadre du
+  // deck rétréci) plutôt qu'en ajoutant encore de la marge, qui n'aurait
+  // rien changé au problème de fond.
+  tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  // Géométrie recalibrée pour tenir dans le budget vertical réel une
+  // fois le cadre du deck compté (320/290/260 débordait — cause du bug
+  // ci-dessus). 290/260/230 reste nettement plus grand que l'original
+  // (230/210/185) sans pousser le contenu hors de l'écran. RÈGLE
+  // ABSOLUE toujours respectée : zone > bouton > image, zone en hauteur
+  // FIXE (jamais flex).
+  tapZone: { width: '100%', height: 290, marginTop: 10, position: 'relative' },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
   tapButton: {
-    width: 290, height: 290,
+    width: 260, height: 260,
     alignItems: 'center', justifyContent: 'center',
   },
   tapEmoji: { fontSize: 84 },
-  eggImage: { width: 260, height: 260 },
+  eggImage: { width: 230, height: 230 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8 },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
