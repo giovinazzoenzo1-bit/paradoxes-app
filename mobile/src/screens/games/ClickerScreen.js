@@ -2702,12 +2702,12 @@ const styles = StyleSheet.create({
   // ---- Calendrier de connexion ----
   calBtn: {
     position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * 0.334, zIndex: 3,
-    width: 44, height: 44, borderRadius: 22,
+    width: 62, height: 62, borderRadius: 31,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
-  calBtnImageWrap: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },
-  calBtnImage: { width: 44, height: 44 },
+  calBtnImageWrap: { width: 62, height: 62, borderRadius: 31, overflow: 'hidden' },
+  calBtnImage: { width: 62, height: 62 },
   calBtnDot: {
     position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,
     backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
