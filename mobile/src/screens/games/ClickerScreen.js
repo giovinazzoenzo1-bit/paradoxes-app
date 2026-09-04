@@ -1805,7 +1805,16 @@ function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim
 // verrouillé à EXACTEMENT 50% (pas 52,5%, le centre géométrique du
 // panneau utile) — deckFrame a ses propres coordonnées ABSOLUES fixes
 // (left 20.8%, voir styles.deckFrame), 50% du cadre reste stable.
-const DECK_SLOT_X_PCT = [40, 50, 60];
+// Créatures doublées (19 -> 38px) et espacées de ~3mm (~19dp) entre les
+// bords, sur demande explicite — calculé à partir de la largeur RÉELLE
+// du cadre (SCREEN_W * 0,55, voir styles.deckFrame) plutôt qu'en dur,
+// pour que l'espacement en mm reste correct quelle que soit la largeur
+// d'écran.
+const DECK_FRAME_W_PX = SCREEN_W * 0.55;
+const DECK_SLOT_DIAMETER_PX = 38;
+const DECK_SLOT_GAP_PX = 19; // ~3mm
+const DECK_SLOT_CENTER_GAP_PCT = ((DECK_SLOT_DIAMETER_PX + DECK_SLOT_GAP_PX) / DECK_FRAME_W_PX) * 100;
+const DECK_SLOT_X_PCT = [50 - DECK_SLOT_CENTER_GAP_PCT, 50, 50 + DECK_SLOT_CENTER_GAP_PCT];
 
 function DeckRow({ deck, owned, onSlotPress }) {
   const ownedMap = {};
@@ -2753,14 +2762,15 @@ const styles = StyleSheet.create({
   // 3e emplacement manquant plutôt que juste vide.
   // Rapetissé (38 -> 26), signalé encore trop grand par l'utilisateur.
   // Rescalé avec le cadre (75% -> 55%, ratio 0,733 : 26 -> 19).
+  // Doublées (19 -> 38, sur demande explicite : voir DECK_SLOT_DIAMETER_PX).
   deckSlot: {
-    position: 'absolute', top: '49%', width: 19, height: 19, borderRadius: 10,
-    marginLeft: -10, marginTop: -10,
+    position: 'absolute', top: '49%', width: 38, height: 38, borderRadius: 19,
+    marginLeft: -19, marginTop: -19,
     backgroundColor: 'rgba(8,19,31,0.35)',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
   },
-  deckSlotEmoji: { fontSize: 10 },
-  deckSlotEmpty: { fontSize: 9, opacity: 0.7 },
+  deckSlotEmoji: { fontSize: 19 },
+  deckSlotEmpty: { fontSize: 16, opacity: 0.7 },
 
   // Écran d'accueil : positionnement ABSOLU (voir header) — tapArea
   // (le flex qui centrait tout et causait débordements/désyncs à
@@ -2772,7 +2782,10 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, top: SCREEN_H * 0.564, zIndex: 2,
     width: '100%', height: 290,
   },
-  tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // Centré (flex) puis décalé de ~2mm (~13dp) vers la droite via
+  // transform, sur demande explicite — un translateX ne casse pas le
+  // centrage flex sous-jacent, il l'offset juste visuellement.
+  tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: 13 }] },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
   tapButton: {
