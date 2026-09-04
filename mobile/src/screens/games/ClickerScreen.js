@@ -2330,7 +2330,7 @@ const styles = StyleSheet.create({
   shopPageBtnText: { color: COLORS.muted, fontSize: 12, fontWeight: '800' },
   shopPageBtnTextActive: { color: '#241a00' },
 
-  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 40 },
+  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 70 },
   deckSlot: {
     width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.panel,
     flexShrink: 0,
