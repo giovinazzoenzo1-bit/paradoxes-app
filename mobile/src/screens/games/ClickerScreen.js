@@ -1799,9 +1799,12 @@ function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim
 }
 
 // Centres mesurés sur deck-frame.png (panneau intérieur entre les
-// bordures ornées) : 3 emplacements à parts égales entre 12,5% et
-// 92,5% de large, verticalement centrés sur le panneau (~49%).
-const DECK_SLOT_X_PCT = [25.83, 52.5, 79.17];
+// bordures ornées, 12,5% à 92,5% de large). Écart resserré (±26,67% →
+// ±10% autour du centre) sur demande explicite, et le slot du milieu
+// verrouillé à EXACTEMENT 50% (pas 52,5%, le centre géométrique du
+// panneau utile) — puisque deckFrame est maintenant centré à l'écran
+// (voir deckTopRowSpacer), 50% du cadre = centre réel de l'écran.
+const DECK_SLOT_X_PCT = [40, 50, 60];
 
 function DeckRow({ deck, owned, onSlotPress }) {
   const ownedMap = {};
