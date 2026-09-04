@@ -1529,24 +1529,17 @@ export default function ClickerScreen({ onBack }) {
                 une recompense a prendre, pour ne pas avoir a ouvrir le
                 menu chaque jour pour verifier. */}
             <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
-              {/* Lueur dupliquée, plus grande et animée, DERRIÈRE l'icône
-                  statique — c'est elle qui "bouge", l'icône net au-dessus
-                  ne bouge jamais. pointerEvents en STYLE (jamais en prop,
-                  voir Règles de survie). */}
-              <Animated.Image
-                source={require('../../../assets/icons/gift.png')}
+              {/* Icône unique, qui respire légèrement (scale) — plus de
+                  duplicata derrière (créait un effet fantôme, 2 cadeaux
+                  superposés, signalé par l'utilisateur). */}
+              <Animated.View
                 style={[
-                  styles.calBtnGlow,
-                  {
-                    opacity: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0.95] }),
-                    transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) }],
-                  },
+                  styles.calBtnImageWrap,
+                  { transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] },
                 ]}
-                resizeMode="contain"
-              />
-              <View style={styles.calBtnImageWrap}>
+              >
                 <Image source={require('../../../assets/icons/gift.png')} style={styles.calBtnImage} resizeMode="cover" />
-              </View>
+              </Animated.View>
               {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
 
@@ -2383,13 +2376,11 @@ const CHALLENGE_MAX_SEGMENTS = 6;
 // Barre de défi (écran d'accueil) — fond réel fourni par l'utilisateur
 // (mobile/assets/icons/challenge-bar.png, 900x295, ratio figé via
 // aspectRatio pour que les positions en % ci-dessous tombent toujours
-// au bon endroit quelle que soit la largeur de l'écran). Le cadre porte
-// déjà le cercle et les 6 gemmes à vide ; le code se contente de
-// superposer le texte et les pastilles de progression aux coordonnées
-// mesurées sur l'image (voir CHALLENGE_CARD_ASPECT_RATIO et
-// CHALLENGE_GEM_X_PCT). Étiquette au-dessus, "Défi X sur Y" en dessous —
-// PAS dans le cadre : le cadre ne prévoit de la place que pour le
-// cercle + les 6 gemmes, pas pour un texte variable.
+// au bon endroit quelle que soit la largeur de l'écran). TOUT le texte
+// vit maintenant DANS le cadre (étiquette dans la zone vide au-dessus
+// du cercle/gemmes, "Défi X sur Y" dans la zone vide en dessous) —
+// signalé par l'utilisateur, correspond aussi à l'emplacement exact de
+// la maquette Gemini d'origine.
 const CHALLENGE_CARD_ASPECT_RATIO = 900 / 295;
 const CHALLENGE_GEM_X_PCT = [30.6, 42.4, 54.2, 65.9, 77.7, 89.4];
 
@@ -2399,37 +2390,51 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) 
   const filled = Math.floor(ratio * segments);
 
   return (
-    <View style={styles.challengeWrap}>
-      <Text style={styles.challengeLabel} numberOfLines={2}>
-        {icon} {label}
-      </Text>
-      <ImageBackground
-        source={require('../../../assets/icons/challenge-bar.png')}
-        style={styles.challengeCard}
-        resizeMode="stretch"
+    <ImageBackground
+      source={require('../../../assets/icons/challenge-bar.png')}
+      style={styles.challengeCard}
+      resizeMode="stretch"
+    >
+      {/* Étiquette du défi — zone vide mesurée au-dessus du cercle. */}
+      <View style={styles.challengeLabelZone}>
+        <Text style={styles.challengeLabel} numberOfLines={2}>
+          {icon} {label}
+        </Text>
+      </View>
+
+      {/* Icône du défi, centrée sur le cercle peint dans l'image. */}
+      <View style={styles.challengeIconZone}>
+        <Text style={styles.challengeIconText}>{icon}</Text>
+      </View>
+
+      {/* Une pastille dorée par gemme REMPLIE, positionnée sur la
+          gemme peinte correspondante — les gemmes vides restent
+          simplement l'art de fond, rien à dessiner par-dessus. */}
+      {Array.from({ length: filled }).map((_, i) => (
+        <View key={i} style={[styles.challengeGemDot, { left: `${CHALLENGE_GEM_X_PCT[i]}%` }]} />
+      ))}
+
+      {/* adjustsFontSizeToFit : la place entre la 6e gemme et le bord du
+          cadre est mesurée mais reste étroite — un gros nombre (ex.
+          "428/5 000") se réduit tout seul plutôt que d'être coupé
+          (signalé caché par l'utilisateur). */}
+      <Text
+        style={styles.challengeCount}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.5}
       >
-        {/* Icône du défi, centrée sur le cercle peint dans l'image. */}
-        <View style={styles.challengeIconZone}>
-          <Text style={styles.challengeIconText}>{icon}</Text>
-        </View>
+        {formatNum(current)}/{formatNum(target)}
+      </Text>
 
-        {/* Une pastille dorée par gemme REMPLIE, positionnée sur la
-            gemme peinte correspondante — les gemmes vides restent
-            simplement l'art de fond, rien à dessiner par-dessus. */}
-        {Array.from({ length: filled }).map((_, i) => (
-          <View key={i} style={[styles.challengeGemDot, { left: `${CHALLENGE_GEM_X_PCT[i]}%` }]} />
-        ))}
-
-        <Text style={styles.challengeCount} numberOfLines={1}>
-          {formatNum(current)}/{formatNum(target)}
-        </Text>
-      </ImageBackground>
       {cycleTotal > 0 && (
-        <Text style={styles.challengeCycle}>
-          Défi {Math.min(cycleIndex + 1, cycleTotal)} sur {cycleTotal} avant l'éclosion
-        </Text>
+        <View style={styles.challengeCycleZone}>
+          <Text style={styles.challengeCycle} numberOfLines={2}>
+            Défi {Math.min(cycleIndex + 1, cycleTotal)} sur {cycleTotal} avant l'éclosion
+          </Text>
+        </View>
       )}
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -2505,11 +2510,20 @@ const styles = StyleSheet.create({
 
   // Barre de défi (écran d'accueil) — cadre réel (challenge-bar.png),
   // voir le composant ChallengeBar pour le détail des coordonnées.
-  challengeWrap: { marginTop: 10, marginBottom: 2 },
-  challengeLabel: { color: COLORS.text, fontSize: 13, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
+  // Étiquette et "Défi X sur Y" vivent maintenant DANS le cadre (zones
+  // vides mesurées au-dessus/en-dessous du cercle+gemmes) — plus de
+  // wrap ni de marges externes, tout est à l'intérieur de l'image.
   challengeCard: {
     width: '100%', aspectRatio: CHALLENGE_CARD_ASPECT_RATIO, position: 'relative',
+    marginTop: 10, marginBottom: 2,
   },
+  // Zone vide mesurée entre le bord supérieur du cadre et le cercle
+  // (9,3% à 39,8% de la hauteur).
+  challengeLabelZone: {
+    position: 'absolute', left: '8%', right: '8%', top: '9.3%', height: '30.5%',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  challengeLabel: { color: COLORS.text, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   // Cercle peint à 7,2% / 57,5% du cadre, ~7,7% de diamètre.
   challengeIconZone: {
     position: 'absolute', left: '2.8%', top: '46%', width: '9%', height: '23%',
@@ -2526,10 +2540,12 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.action, shadowOpacity: 0.9, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 4,
   },
   // Fraction actuelle/cible — dans la marge à droite de la 6e gemme,
-  // avant le bord arrondi du cadre (place mesurée : ~4% de large).
+  // avant le bord arrondi du cadre (place mesurée : ~4% de large, d'où
+  // adjustsFontSizeToFit sur le Text lui-même : un gros nombre se
+  // réduit plutôt que d'être coupé, signalé caché par l'utilisateur).
   challengeCount: {
-    position: 'absolute', right: '2%', top: '46%', width: '10%', height: '23%',
-    color: COLORS.action, fontSize: 10, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
+    position: 'absolute', right: '1.5%', top: '46%', width: '11%', height: '23%',
+    color: COLORS.action, fontSize: 11, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
   },
   devSkipBtn: {
     alignSelf: 'center', marginTop: 8, paddingVertical: 5, paddingHorizontal: 12,
@@ -2537,7 +2553,13 @@ const styles = StyleSheet.create({
   },
   devSkipBtnText: { color: '#b3a0ff', fontSize: 11, fontWeight: '800' },
   actionBtnLockedTap: { opacity: 0.45, borderStyle: 'dashed' },
-  challengeCycle: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 4 },
+  // Zone vide mesurée entre le bas de la pilule et le bord inférieur du
+  // cadre (74,75% à 96,6% de la hauteur).
+  challengeCycleZone: {
+    position: 'absolute', left: '8%', right: '8%', top: '74.75%', height: '21.85%',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  challengeCycle: { color: COLORS.muted, fontSize: 10, fontWeight: '700', textAlign: 'center' },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },
   spawnBubble: {
@@ -2606,10 +2628,6 @@ const styles = StyleSheet.create({
   // (74 au lieu de 44, décalage négatif = (44-74)/2). pointerEvents en
   // STYLE (jamais en prop, voir Règles de survie) : purement décorative,
   // ne doit jamais capter le tap destiné au bouton cadeau.
-  calBtnGlow: {
-    position: 'absolute', width: 74, height: 74, left: -15, top: -15,
-    pointerEvents: 'none',
-  },
   calBtnDot: {
     position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,
     backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
@@ -2653,11 +2671,12 @@ const styles = StyleSheet.create({
   calBigBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 10 },
   calBigBtnText: { color: '#0b0d16', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
-  // Cadre du deck — fond réel (deck-frame.png, 800x329). width:'100%'
-  // (pas une largeur fixe comme la pilule de pièces) : ce cadre doit
-  // occuper toute la largeur de tapArea, comme avant.
+  // Cadre du deck — fond réel (deck-frame.png, 800x329). Volontairement
+  // PAS en largeur 100% (signalé trop grand par l'utilisateur) : 72%,
+  // centré, plus proche de la taille compacte d'avant.
   deckFrame: {
-    width: '100%', aspectRatio: 800 / 329, marginBottom: 40, position: 'relative',
+    width: '72%', aspectRatio: 800 / 329, marginBottom: 30, position: 'relative',
+    alignSelf: 'center',
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
   // row : chaque emplacement tombe exactement sur le panneau peint.
@@ -2677,21 +2696,20 @@ const styles = StyleSheet.create({
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
   // liste de boutons (tout ça vit dans les onglets de la barre du bas).
   tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
-  tapZone: { width: '100%', height: 230, position: 'relative' },
+  // Géométrie agrandie (signalé trop petit par l'utilisateur) — la
+  // RÈGLE ABSOLUE reste respectée : zone(260) > bouton(230) > image(200),
+  // zone toujours en hauteur FIXE (jamais flex). Seules les 3 valeurs
+  // montent ensemble, l'ordre strict ne change pas.
+  tapZone: { width: '100%', height: 260, position: 'relative' },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
-  //
-  // 240 et pas plus : `tapZone` fait 260 de haut (hauteur FIXE), donc
-  // tout bouton sous 260 reste dans les limites de son parent. Depasser
-  // cette valeur, ou rendre tapZone flexible, reproduirait le bug des
-  // taps perdus.
   tapButton: {
-    width: 210, height: 210,
+    width: 230, height: 230,
     alignItems: 'center', justifyContent: 'center',
   },
   tapEmoji: { fontSize: 84 },
-  eggImage: { width: 185, height: 185 },
+  eggImage: { width: 200, height: 200 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8 },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },

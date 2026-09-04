@@ -37,14 +37,17 @@ encore à l'intérieur.
 **La géométrie de la zone de tap est donc sacrée :**
 
 ```
-tapZone   height: 230  (FIXE — ne jamais passer en flex)
-tapButton 210 x 210    (STRICTEMENT < 230)
-eggImage  185 x 185    (STRICTEMENT < 210)
+tapZone   height: 260  (FIXE — ne jamais passer en flex)
+tapButton 230 x 230    (STRICTEMENT < 260)
+eggImage  200 x 200    (STRICTEMENT < 230)
 ```
 
-Règle : **zone > bouton > image, avec une zone de hauteur FIXE.** La
-violer casse les taps sans le moindre message d'erreur. Le symptôme
-mesuré : 142 clics/s envoyés, 2 à 15 reçus.
+Règle : **zone > bouton > image, avec une zone de hauteur FIXE.** Les 3
+valeurs sont montées ensemble le 04/09 (œuf jugé trop petit) — l'ordre
+strict et le caractère FIXE de la zone sont ce qui compte, pas les
+chiffres exacts. La violer casse les taps sans le moindre message
+d'erreur. Le symptôme mesuré (avant l'agrandissement) : 142 clics/s
+envoyés, 2 à 15 reçus.
 
 ### 2. `pointerEvents` en PROP est ignoré (New Architecture, SDK 57)
 
