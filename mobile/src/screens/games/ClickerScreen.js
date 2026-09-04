@@ -627,6 +627,34 @@ export default function ClickerScreen({ onBack }) {
   // multiplicateur global (Sanctuaire × bonus permanent d'Ascension) et
   // alimente le cumul total (totalEarned), qui ne baisse jamais même en
   // dépensant, utilisé pour calculer le gain d'essence à l'Ascension.
+  // Gains en attente. Remplis par gainCoins a chaque tap, repercutes
+  // dans l'etat 10 fois par seconde par l'effet ci-dessous.
+  const pendingGainRef = useRef(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const pending = pendingGainRef.current;
+      if (pending <= 0) return;
+      pendingGainRef.current = 0;
+      setCoins((c) => c + pending);
+      setTotalEarned((t) => t + pending);
+      trackEvent('coinsEarned', pending);
+    }, 100);
+    return () => {
+      clearInterval(id);
+      // Vidage final : sans lui, jusqu'a 100 ms de gains seraient
+      // perdus en quittant l'ecran — une dizaine de taps a haute
+      // cadence.
+      const pending = pendingGainRef.current;
+      if (pending > 0) {
+        pendingGainRef.current = 0;
+        setCoins((c) => c + pending);
+        setTotalEarned((t) => t + pending);
+        trackEvent('coinsEarned', pending);
+      }
+    };
+  }, [trackEvent]);
+
   const gainCoins = (rawAmount) => {
     const upgradeCoinMult = 1 + upgradeBonuses(upgradeLevelsRef.current).coinPct;
     // Le bonus de vitesse d'Ascension (+30% par Ascension, multiplicatif)
@@ -639,9 +667,9 @@ export default function ClickerScreen({ onBack }) {
       ascensionSpeedMultiplier(ascensionCountRef.current) *
       upgradeCoinMult;
     const amount = rawAmount * multiplier;
-    setCoins((c) => c + amount);
-    setTotalEarned((t) => t + amount);
-    trackEvent('coinsEarned', amount);
+    // Accumule au lieu de declencher un rendu : voir l'intervalle de
+    // vidage plus bas. Le montant retourne reste exact pour l'appelant.
+    pendingGainRef.current += amount;
     return amount;
   };
 
