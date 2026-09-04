@@ -2361,6 +2361,19 @@ function RitualBubble({ target, onClaim }) {
 // ramenée à l'échelle des segments.
 const CHALLENGE_MAX_SEGMENTS = 6;
 
+// Barre de défi (écran d'accueil) — fond réel fourni par l'utilisateur
+// (mobile/assets/icons/challenge-bar.png, 900x295, ratio figé via
+// aspectRatio pour que les positions en % ci-dessous tombent toujours
+// au bon endroit quelle que soit la largeur de l'écran). Le cadre porte
+// déjà le cercle et les 6 gemmes à vide ; le code se contente de
+// superposer le texte et les pastilles de progression aux coordonnées
+// mesurées sur l'image (voir CHALLENGE_CARD_ASPECT_RATIO et
+// CHALLENGE_GEM_X_PCT). Étiquette au-dessus, "Défi X sur Y" en dessous —
+// PAS dans le cadre : le cadre ne prévoit de la place que pour le
+// cercle + les 6 gemmes, pas pour un texte variable.
+const CHALLENGE_CARD_ASPECT_RATIO = 900 / 295;
+const CHALLENGE_GEM_X_PCT = [30.6, 42.4, 54.2, 65.9, 77.7, 89.4];
+
 function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
   const ratio = target > 0 ? Math.min(1, current / target) : 0;
@@ -2371,19 +2384,27 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) 
       <Text style={styles.challengeLabel} numberOfLines={2}>
         {icon} {label}
       </Text>
-      <View style={styles.challengeBar}>
-        <View style={styles.challengeIconBubble}>
+      <ImageBackground
+        source={require('../../../assets/icons/challenge-bar.png')}
+        style={styles.challengeCard}
+        resizeMode="stretch"
+      >
+        {/* Icône du défi, centrée sur le cercle peint dans l'image. */}
+        <View style={styles.challengeIconZone}>
           <Text style={styles.challengeIconText}>{icon}</Text>
         </View>
-        <View style={styles.challengeSegments}>
-          {Array.from({ length: segments }).map((_, i) => (
-            <View key={i} style={[styles.challengeSegment, i < filled && styles.challengeSegmentFilled]} />
-          ))}
-        </View>
-        <Text style={styles.challengeCount}>
+
+        {/* Une pastille dorée par gemme REMPLIE, positionnée sur la
+            gemme peinte correspondante — les gemmes vides restent
+            simplement l'art de fond, rien à dessiner par-dessus. */}
+        {Array.from({ length: filled }).map((_, i) => (
+          <View key={i} style={[styles.challengeGemDot, { left: `${CHALLENGE_GEM_X_PCT[i]}%` }]} />
+        ))}
+
+        <Text style={styles.challengeCount} numberOfLines={1}>
           {formatNum(current)}/{formatNum(target)}
         </Text>
-      </View>
+      </ImageBackground>
       {cycleTotal > 0 && (
         <Text style={styles.challengeCycle}>
           Défi {Math.min(cycleIndex + 1, cycleTotal)} sur {cycleTotal} avant l'éclosion
@@ -2456,35 +2477,34 @@ const styles = StyleSheet.create({
   discountBannerText: { color: '#3ec6f0' },
   powerBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
 
-  // Barre de défi (écran d'accueil). Reprise du repère visuel Monster
-  // Legends : piste sombre en gélule, segments dorés séparés par de
-  // vrais espaces (pas une barre continue), pastille d'icône collée à
-  // gauche et fraction collée à droite, le tout sur une seule ligne.
+  // Barre de défi (écran d'accueil) — cadre réel (challenge-bar.png),
+  // voir le composant ChallengeBar pour le détail des coordonnées.
   challengeWrap: { marginTop: 10, marginBottom: 2 },
   challengeLabel: { color: COLORS.text, fontSize: 13, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
-  challengeBar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.panel, borderRadius: 22,
-    borderWidth: 1.5, borderColor: COLORS.neonCyan,
-    paddingVertical: 6, paddingHorizontal: 8,
-    shadowColor: COLORS.neonCyan, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 4,
+  challengeCard: {
+    width: '100%', aspectRatio: CHALLENGE_CARD_ASPECT_RATIO, position: 'relative',
   },
-  challengeIconBubble: {
-    width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.panelLight,
-    alignItems: 'center', justifyContent: 'center', marginRight: 8,
-    borderWidth: 1.5, borderColor: COLORS.action,
+  // Cercle peint à 7,2% / 57,5% du cadre, ~7,7% de diamètre.
+  challengeIconZone: {
+    position: 'absolute', left: '2.8%', top: '46%', width: '9%', height: '23%',
+    alignItems: 'center', justifyContent: 'center',
   },
-  challengeIconText: { fontSize: 14 },
-  challengeSegments: { flex: 1, flexDirection: 'row' },
-  challengeSegment: {
-    flex: 1, height: 16, borderRadius: 8, marginHorizontal: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  challengeSegmentFilled: {
+  challengeIconText: { fontSize: 15 },
+  // Pastille de progression, centrée sur la gemme peinte correspondante
+  // (CHALLENGE_GEM_X_PCT). Largeur/hauteur en dur plutôt qu'en % : une
+  // petite pastille ronde n'a pas besoin de suivre l'échelle du cadre.
+  challengeGemDot: {
+    position: 'absolute', top: '57.5%', width: 14, height: 14, borderRadius: 7,
+    marginLeft: -7, marginTop: -7,
     backgroundColor: COLORS.action,
-    shadowColor: COLORS.action, shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
+    shadowColor: COLORS.action, shadowOpacity: 0.9, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 4,
   },
-  challengeCount: { color: COLORS.action, fontSize: 13, fontWeight: '900', marginLeft: 8, minWidth: 38, textAlign: 'right' },
+  // Fraction actuelle/cible — dans la marge à droite de la 6e gemme,
+  // avant le bord arrondi du cadre (place mesurée : ~4% de large).
+  challengeCount: {
+    position: 'absolute', right: '2%', top: '46%', width: '10%', height: '23%',
+    color: COLORS.action, fontSize: 10, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
+  },
   devSkipBtn: {
     alignSelf: 'center', marginTop: 8, paddingVertical: 5, paddingHorizontal: 12,
     borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
@@ -2554,7 +2574,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
-  calBtnImageWrap: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: '#0a0a12' },
+  calBtnImageWrap: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },
   calBtnImage: { width: 44, height: 44 },
   // Couche de lueur animée, plus grande que le bouton et centrée dessus
   // (74 au lieu de 44, décalage négatif = (44-74)/2). pointerEvents en
