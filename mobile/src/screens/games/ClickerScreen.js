@@ -2487,15 +2487,19 @@ const styles = StyleSheet.create({
   // Pilule de pièces — fond réel (coins-pill.png, 520x210, sac déjà
   // peint sur la gauche). Largeur fixe (pas '100%' comme le cadre de
   // défi : cette pilule doit rester compacte et centrée, pas s'étirer).
+  // Pilule de pièces — fond réel (coins-pill.png, 460x180, re-détourée
+  // avec érosion du masque alpha pour supprimer le liseré clair
+  // résiduel sur les bords, signalé "pas bien fait sur les côtés").
+  // Réduite (220 -> 165, signalé trop grande).
   coinsPill: {
-    width: 220, aspectRatio: 520 / 210, alignSelf: 'center', marginTop: 8,
+    width: 165, aspectRatio: 460 / 180, alignSelf: 'center', marginTop: 8,
     alignItems: 'center', justifyContent: 'center',
   },
-  // Zone de texte dans l'espace vide à droite du sac peint (mesuré :
-  // le sac + son cadre occupent les premiers ~40% de la largeur).
+  // Zone de texte dans l'espace vide à droite du sac peint (mesuré sur
+  // le nouvel asset : le sac + son cadre occupent ~36% de la largeur).
   coinsPillText: {
-    position: 'absolute', left: '42%', right: '6%', top: 0, bottom: 0,
-    color: COLORS.action, fontSize: 20, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
+    position: 'absolute', left: '38%', right: '8%', top: 0, bottom: 0,
+    color: COLORS.action, fontSize: 15, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
     textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
   incomeText: { color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center' },
@@ -2548,7 +2552,7 @@ const styles = StyleSheet.create({
     color: COLORS.action, fontSize: 11, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
   },
   devSkipBtn: {
-    alignSelf: 'center', marginTop: 8, paddingVertical: 5, paddingHorizontal: 12,
+    alignSelf: 'center', marginTop: 8, marginBottom: 14, paddingVertical: 5, paddingHorizontal: 12,
     borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
   },
   devSkipBtnText: { color: '#b3a0ff', fontSize: 11, fontWeight: '800' },
@@ -2673,9 +2677,10 @@ const styles = StyleSheet.create({
 
   // Cadre du deck — fond réel (deck-frame.png, 800x329). Volontairement
   // PAS en largeur 100% (signalé trop grand par l'utilisateur) : 72%,
-  // centré, plus proche de la taille compacte d'avant.
+  // centré. marginTop ajouté pour ne plus toucher le bouton dev
+  // au-dessus (signalé superposé).
   deckFrame: {
-    width: '72%', aspectRatio: 800 / 329, marginBottom: 30, position: 'relative',
+    width: '72%', aspectRatio: 800 / 329, marginTop: 4, marginBottom: 30, position: 'relative',
     alignSelf: 'center',
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
@@ -2683,33 +2688,40 @@ const styles = StyleSheet.create({
   // Fond translucide (pas COLORS.panel plein, qui ferait un pâté bleu
   // nuit sur le cuir brun) — juste assez pour distinguer la créature/
   // l'œuf du fond, l'anneau de couleur reste le vrai indicateur de rareté.
+  // Rapetissé (50 -> 36, signalé trop grand par rapport au cadre
+  // réduit à 72%) — même proportion relative qu'avant le rétrécissement
+  // du cadre.
   deckSlot: {
-    position: 'absolute', top: '49%', width: 50, height: 50, borderRadius: 25,
-    marginLeft: -25, marginTop: -25,
+    position: 'absolute', top: '49%', width: 36, height: 36, borderRadius: 18,
+    marginLeft: -18, marginTop: -18,
     backgroundColor: 'rgba(8,19,31,0.35)',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
   },
-  deckSlotEmoji: { fontSize: 24 },
-  deckSlotEmpty: { fontSize: 20, opacity: 0.5 },
+  deckSlotEmoji: { fontSize: 17 },
+  deckSlotEmpty: { fontSize: 14, opacity: 0.5 },
 
   // Écran d'accueil épuré : l'œuf centré, plus grand qu'avant puisqu'il
   // n'a plus à partager l'espace avec la colonne d'icônes ni la longue
   // liste de boutons (tout ça vit dans les onglets de la barre du bas).
-  tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
-  // Géométrie agrandie (signalé trop petit par l'utilisateur) — la
-  // RÈGLE ABSOLUE reste respectée : zone(260) > bouton(230) > image(200),
-  // zone toujours en hauteur FIXE (jamais flex). Seules les 3 valeurs
-  // montent ensemble, l'ordre strict ne change pas.
-  tapZone: { width: '100%', height: 260, position: 'relative' },
+  // paddingTop décale tout le contenu centré (dont l'œuf) plus bas dans
+  // la zone disponible, signalé trop haut par l'utilisateur.
+  tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', paddingTop: 28 },
+  // Géométrie agrandie une 2e fois (signalé "toujours la même taille"
+  // après le 1er ajustement 230->260/210->230/185->200 — trop discret
+  // pour se voir) — la RÈGLE ABSOLUE reste respectée :
+  // zone(320) > bouton(290) > image(260), zone toujours en hauteur FIXE
+  // (jamais flex). Seules les 3 valeurs montent ensemble, l'ordre strict
+  // ne change pas.
+  tapZone: { width: '100%', height: 320, position: 'relative' },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
   tapButton: {
-    width: 230, height: 230,
+    width: 290, height: 290,
     alignItems: 'center', justifyContent: 'center',
   },
   tapEmoji: { fontSize: 84 },
-  eggImage: { width: 200, height: 200 },
+  eggImage: { width: 260, height: 260 },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8 },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', marginTop: 4 },
