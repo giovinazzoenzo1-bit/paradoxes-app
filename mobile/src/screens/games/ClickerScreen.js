@@ -2548,7 +2548,7 @@ const styles = StyleSheet.create({
   calBigBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 10 },
   calBigBtnText: { color: '#0b0d16', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
-  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 45 },
+  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 75 },
   deckSlot: {
     width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.panel,
     flexShrink: 0,
