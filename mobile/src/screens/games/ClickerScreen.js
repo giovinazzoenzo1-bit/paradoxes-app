@@ -2438,11 +2438,18 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) 
         <Text style={styles.challengeIconText}>{icon}</Text>
       </View>
 
-      {/* Une pastille dorée par gemme REMPLIE, positionnée sur la
-          gemme peinte correspondante — les gemmes vides restent
-          simplement l'art de fond, rien à dessiner par-dessus. */}
+      {/* Cristal lumineux par gemme REMPLIE (asset réel, remplace
+          l'ancienne pastille dorée) — une par CHALLENGE_GEM_X_PCT[i]
+          pour i < filled, jusqu'à 6. Les gemmes non remplies restent
+          grisées telles quelles (l'art de fond de challenge-bar.png),
+          rien à dessiner dessus. */}
       {Array.from({ length: filled }).map((_, i) => (
-        <View key={i} style={[styles.challengeGemDot, { left: `${CHALLENGE_GEM_X_PCT[i]}%` }]} />
+        <Image
+          key={i}
+          source={require('../../../assets/icons/gem-filled.png')}
+          style={[styles.challengeGemFilled, { left: `${CHALLENGE_GEM_X_PCT[i]}%` }]}
+          resizeMode="contain"
+        />
       ))}
 
       {/* adjustsFontSizeToFit : la place entre la 6e gemme et le bord du
@@ -2589,11 +2596,15 @@ const styles = StyleSheet.create({
   // Pastille de progression, centrée sur la gemme peinte correspondante
   // (CHALLENGE_GEM_X_PCT). Largeur/hauteur en dur plutôt qu'en % : une
   // petite pastille ronde n'a pas besoin de suivre l'échelle du cadre.
-  challengeGemDot: {
-    position: 'absolute', top: '57.5%', width: 14, height: 14, borderRadius: 7,
-    marginLeft: -7, marginTop: -7,
-    backgroundColor: COLORS.action,
-    shadowColor: COLORS.action, shadowOpacity: 0.9, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 4,
+  // Cristal lumineux (gem-filled.png, 240x77) redimensionné pour
+  // couvrir la gemme peinte sous-jacente — largeur ≈ 10,6% du cadre
+  // (même mesure que la gemme peinte elle-même), hauteur dérivée du
+  // ratio propre de l'asset (240/77) plutôt que forcée, pour ne pas le
+  // déformer.
+  challengeGemFilled: {
+    position: 'absolute', top: '57.5%',
+    width: SCREEN_W * 0.88 * 0.106, height: (SCREEN_W * 0.88 * 0.106) / (240 / 77),
+    marginLeft: -(SCREEN_W * 0.88 * 0.106) / 2, marginTop: -((SCREEN_W * 0.88 * 0.106) / (240 / 77)) / 2,
   },
   // Fraction actuelle/cible — dans la marge à droite de la 6e gemme,
   // avant le bord arrondi du cadre (place mesurée : ~4% de large, d'où
@@ -2778,9 +2789,13 @@ const styles = StyleSheet.create({
   // coordonnées, indépendant de tout le reste.
   // RÈGLE ABSOLUE toujours respectée : zone(290) > bouton(260) >
   // image(230), zone en hauteur FIXE (jamais flex).
+  // Zone de clic agrandie (290 -> 330) sur demande explicite — la
+  // TouchableOpacity couvre TOUTE cette zone (absoluteFillObject), pas
+  // seulement le bouton visuel. RÈGLE ABSOLUE : zone(330) > bouton(290)
+  // > image(250), zone toujours en hauteur FIXE.
   tapZone: {
     position: 'absolute', left: 0, top: SCREEN_H * 0.564, zIndex: 2,
-    width: '100%', height: 290,
+    width: '100%', height: 330,
   },
   // Centré (flex) puis décalé de ~2mm (~13dp) vers la droite via
   // transform, sur demande explicite — un translateX ne casse pas le
@@ -2789,15 +2804,19 @@ const styles = StyleSheet.create({
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
   tapButton: {
-    width: 260, height: 260,
+    width: 290, height: 290,
     alignItems: 'center', justifyContent: 'center',
   },
   tapEmoji: { fontSize: 84 },
-  eggImage: { width: 230, height: 230 },
+  eggImage: { width: 250, height: 250 },
   // Zone regroupant les textes sous l'œuf — position ABSOLUE, juste
   // sous tapZone (top 56,4% + hauteur fixe 290 + petite marge).
+  // Zone regroupant les textes sous l'œuf — position ABSOLUE, juste
+  // sous tapZone (top 56,4% + hauteur fixe 330 + petite marge). zIndex
+  // remonté à 3 (comme les autres blocs flottants) — signalé invisible
+  // pendant la Transe, possible conflit d'empilement avec zIndex:2.
   tapHintZone: {
-    position: 'absolute', left: 0, top: SCREEN_H * 0.564 + 300, zIndex: 2,
+    position: 'absolute', left: 0, top: SCREEN_H * 0.564 + 340, zIndex: 3,
     width: '100%', alignItems: 'center',
   },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
