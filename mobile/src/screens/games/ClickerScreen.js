@@ -316,19 +316,17 @@ export default function ClickerScreen({ onBack }) {
   // distingue plus "je récolte des pièces" de "je casse l'œuf".
   const eggShake = useRef(new Animated.Value(0)).current;
 
-  // Halo qui respire derrière l'œuf (04/09, demande explicite d'un fond
-  // "animé"). useNativeDriver: true — tourne sur le thread natif, pas
-  // recalculé par React à chaque re-rendu, contrairement au piège du
-  // LinearGradient plein écran (voir Règles de survie) : ici seuls
-  // opacity/scale sont interpolés, jamais recréés. Boucle démarrée UNE
-  // fois au montage de l'écran (tableau de dépendances vide), jamais
-  // relancée par les 45 autres useState de ce composant.
-  const glowPulse = useRef(new Animated.Value(0)).current;
+  // Lueur du bouton cadeau qui respire (04/09, demande explicite).
+  // useNativeDriver: true — tourne sur le thread natif, jamais recalculé
+  // par React à chaque re-rendu de cet écran (contrairement au piège du
+  // LinearGradient plein écran des Règles de survie). Boucle démarrée UNE
+  // fois au montage (tableau de dépendances vide).
+  const giftGlowPulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(glowPulse, { toValue: 1, duration: 2200, useNativeDriver: true }),
-        Animated.timing(glowPulse, { toValue: 0, duration: 2200, useNativeDriver: true }),
+        Animated.timing(giftGlowPulse, { toValue: 1, duration: 1400, useNativeDriver: true }),
+        Animated.timing(giftGlowPulse, { toValue: 0, duration: 1400, useNativeDriver: true }),
       ])
     );
     loop.start();
@@ -1525,6 +1523,21 @@ export default function ClickerScreen({ onBack }) {
                 une recompense a prendre, pour ne pas avoir a ouvrir le
                 menu chaque jour pour verifier. */}
             <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
+              {/* Lueur dupliquée, plus grande et animée, DERRIÈRE l'icône
+                  statique — c'est elle qui "bouge", l'icône net au-dessus
+                  ne bouge jamais. pointerEvents en STYLE (jamais en prop,
+                  voir Règles de survie). */}
+              <Animated.Image
+                source={require('../../../assets/icons/gift.png')}
+                style={[
+                  styles.calBtnGlow,
+                  {
+                    opacity: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0.95] }),
+                    transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) }],
+                  },
+                ]}
+                resizeMode="contain"
+              />
               <View style={styles.calBtnImageWrap}>
                 <Image source={require('../../../assets/icons/gift.png')} style={styles.calBtnImage} resizeMode="cover" />
               </View>
@@ -1536,19 +1549,6 @@ export default function ClickerScreen({ onBack }) {
             </View>
 
             <View style={styles.tapZone}>
-              {/* Halo derrière l'œuf — pointerEvents en STYLE (jamais en
-                  prop, ignoré silencieusement en New Architecture SDK 57,
-                  voir Règles de survie), sinon cette couche capterait les
-                  taps avant qu'ils n'atteignent le bouton. */}
-              <Animated.View
-                style={[
-                  styles.eggGlow,
-                  {
-                    opacity: glowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.55] }),
-                    transform: [{ scale: glowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.08] }) }],
-                  },
-                ]}
-              />
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
                 <View style={styles.tapButtonWrap}>
                   <Animated.View
@@ -2556,6 +2556,14 @@ const styles = StyleSheet.create({
   },
   calBtnImageWrap: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: '#0a0a12' },
   calBtnImage: { width: 44, height: 44 },
+  // Couche de lueur animée, plus grande que le bouton et centrée dessus
+  // (74 au lieu de 44, décalage négatif = (44-74)/2). pointerEvents en
+  // STYLE (jamais en prop, voir Règles de survie) : purement décorative,
+  // ne doit jamais capter le tap destiné au bouton cadeau.
+  calBtnGlow: {
+    position: 'absolute', width: 74, height: 74, left: -15, top: -15,
+    pointerEvents: 'none',
+  },
   calBtnDot: {
     position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,
     backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
@@ -2620,15 +2628,6 @@ const styles = StyleSheet.create({
   // liste de boutons (tout ça vit dans les onglets de la barre du bas).
   tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
   tapZone: { width: '100%', height: 230, position: 'relative' },
-  // Halo décoratif, centré derrière l'œuf. 220 < tapZone (230) : reste
-  // dans les limites de son parent, jamais de tap perdu même si un jour
-  // ce style change (voir géométrie sacrée de la zone de tap).
-  eggGlow: {
-    position: 'absolute', alignSelf: 'center', top: 5,
-    width: 220, height: 220, borderRadius: 110,
-    backgroundColor: COLORS.action,
-    pointerEvents: 'none',
-  },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
