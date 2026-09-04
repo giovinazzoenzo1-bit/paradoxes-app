@@ -1510,7 +1510,9 @@ export default function ClickerScreen({ onBack }) {
               {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
 
-            <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
+            <View style={styles.deckFrame}>
+              <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
+            </View>
 
             <View style={styles.tapZone}>
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
@@ -2391,14 +2393,21 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', marginBottom: 6,
+    backgroundColor: COLORS.panel, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border,
+    paddingVertical: 8, paddingHorizontal: 12, alignSelf: 'stretch',
+  },
   backBtn: { paddingVertical: 6, paddingRight: 12 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
   coinsValue: {
-    color: COLORS.action, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 4,
-    textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10,
+    color: COLORS.action, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 8,
+    alignSelf: 'center', backgroundColor: COLORS.panel, borderRadius: 20,
+    paddingVertical: 6, paddingHorizontal: 22, borderWidth: 1.5, borderColor: COLORS.action,
+    textShadowColor: 'rgba(245,197,66,0.7)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10,
+    shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 6,
   },
   incomeText: { color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center' },
 
@@ -2419,13 +2428,14 @@ const styles = StyleSheet.create({
   challengeBar: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.panel, borderRadius: 22,
-    borderWidth: 1, borderColor: COLORS.border,
+    borderWidth: 1.5, borderColor: COLORS.neonCyan,
     paddingVertical: 6, paddingHorizontal: 8,
+    shadowColor: COLORS.neonCyan, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 4,
   },
   challengeIconBubble: {
     width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.panelLight,
     alignItems: 'center', justifyContent: 'center', marginRight: 8,
-    borderWidth: 1, borderColor: COLORS.border,
+    borderWidth: 1.5, borderColor: COLORS.action,
   },
   challengeIconText: { fontSize: 14 },
   challengeSegments: { flex: 1, flexDirection: 'row' },
@@ -2466,8 +2476,9 @@ const styles = StyleSheet.create({
 
   // Barre de navigation du bas — Shop | Quêtes | Collection | Aventure.
   bottomBar: {
-    flexDirection: 'row', width: '100%', borderTopWidth: 1, borderTopColor: COLORS.border,
+    flexDirection: 'row', width: '100%', borderTopWidth: 2, borderTopColor: COLORS.action,
     paddingTop: 8, marginTop: 6, backgroundColor: COLORS.bg,
+    shadowColor: COLORS.action, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: -4 }, elevation: 4,
   },
   bottomBarItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
   // Case encadree autour de l'icone, comme sur la maquette.
@@ -2503,6 +2514,8 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, top: 0, zIndex: 5,
     width: 44, height: 44, borderRadius: 22, backgroundColor: '#d0342c',
     alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#ff6b5c',
+    shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
   calBtnIcon: { fontSize: 22 },
   calBtnDot: {
@@ -2548,7 +2561,14 @@ const styles = StyleSheet.create({
   calBigBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 10 },
   calBigBtnText: { color: '#0b0d16', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
-  deckRow: { flexDirection: 'row', gap: 12, marginBottom: 75 },
+  deckFrame: {
+    flexDirection: 'row', gap: 12, marginBottom: 75,
+    backgroundColor: COLORS.panel, borderRadius: 18,
+    borderWidth: 2, borderColor: COLORS.action,
+    paddingVertical: 10, paddingHorizontal: 14,
+    shadowColor: COLORS.action, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 5,
+  },
+  deckRow: { flexDirection: 'row', gap: 12 },
   deckSlot: {
     width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.panel,
     flexShrink: 0,
