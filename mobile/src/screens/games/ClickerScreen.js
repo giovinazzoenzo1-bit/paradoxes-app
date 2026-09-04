@@ -4,7 +4,7 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
@@ -315,6 +315,25 @@ export default function ClickerScreen({ onBack }) {
   // rebond d'échelle déjà présent sur un tap normal — le joueur ne
   // distingue plus "je récolte des pièces" de "je casse l'œuf".
   const eggShake = useRef(new Animated.Value(0)).current;
+
+  // Halo qui respire derrière l'œuf (04/09, demande explicite d'un fond
+  // "animé"). useNativeDriver: true — tourne sur le thread natif, pas
+  // recalculé par React à chaque re-rendu, contrairement au piège du
+  // LinearGradient plein écran (voir Règles de survie) : ici seuls
+  // opacity/scale sont interpolés, jamais recréés. Boucle démarrée UNE
+  // fois au montage de l'écran (tableau de dépendances vide), jamais
+  // relancée par les 45 autres useState de ce composant.
+  const glowPulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowPulse, { toValue: 1, duration: 2200, useNativeDriver: true }),
+        Animated.timing(glowPulse, { toValue: 0, duration: 2200, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
 
   // Chargement initial + calcul des gains hors-ligne.
   useEffect(() => {
@@ -1387,9 +1406,9 @@ export default function ClickerScreen({ onBack }) {
 
   if (!loaded) {
     return (
-      <View style={styles.screen} {...panHandlers}>
+      <ImageBackground source={require('../../../assets/icons/home-background.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
         <Text style={styles.loadingText}>Chargement…</Text>
-      </View>
+      </ImageBackground>
     );
   }
 
@@ -1419,7 +1438,7 @@ export default function ClickerScreen({ onBack }) {
   }
 
   return (
-    <View style={styles.screen} {...panHandlers}>
+    <ImageBackground source={require('../../../assets/icons/home-background.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
       <View style={styles.header}>
         {onBack && (
           <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -1517,6 +1536,19 @@ export default function ClickerScreen({ onBack }) {
             </View>
 
             <View style={styles.tapZone}>
+              {/* Halo derrière l'œuf — pointerEvents en STYLE (jamais en
+                  prop, ignoré silencieusement en New Architecture SDK 57,
+                  voir Règles de survie), sinon cette couche capterait les
+                  taps avant qu'ils n'atteignent le bouton. */}
+              <Animated.View
+                style={[
+                  styles.eggGlow,
+                  {
+                    opacity: glowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.55] }),
+                    transform: [{ scale: glowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.08] }) }],
+                  },
+                ]}
+              />
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
                 <View style={styles.tapButtonWrap}>
                   <Animated.View
@@ -1676,7 +1708,7 @@ export default function ClickerScreen({ onBack }) {
         ownedCount={owned.length}
         totalCreatures={CREATURES.length}
       />
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -2588,6 +2620,15 @@ const styles = StyleSheet.create({
   // liste de boutons (tout ça vit dans les onglets de la barre du bas).
   tapArea: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
   tapZone: { width: '100%', height: 230, position: 'relative' },
+  // Halo décoratif, centré derrière l'œuf. 220 < tapZone (230) : reste
+  // dans les limites de son parent, jamais de tap perdu même si un jour
+  // ce style change (voir géométrie sacrée de la zone de tap).
+  eggGlow: {
+    position: 'absolute', alignSelf: 'center', top: 5,
+    width: 220, height: 220, borderRadius: 110,
+    backgroundColor: COLORS.action,
+    pointerEvents: 'none',
+  },
   tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
