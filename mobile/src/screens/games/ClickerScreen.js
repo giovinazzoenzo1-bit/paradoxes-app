@@ -1506,7 +1506,9 @@ export default function ClickerScreen({ onBack }) {
                 une recompense a prendre, pour ne pas avoir a ouvrir le
                 menu chaque jour pour verifier. */}
             <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
-              <Text style={styles.calBtnIcon}>🎁</Text>
+              <View style={styles.calBtnImageWrap}>
+                <Image source={require('../../../assets/icons/gift.png')} style={styles.calBtnImage} resizeMode="cover" />
+              </View>
               {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
 
@@ -2364,17 +2366,20 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
     <View style={styles.bottomBar}>
       {/* Chaque onglet : icone dans une case encadree de cyan, libelle
           dessous — le motif de la maquette. La case active passe en
-          dore, couleur d'accent du jeu partout ailleurs. */}
+          dore, couleur d'accent du jeu partout ailleurs. Icones = vrais
+          assets recadrés depuis la maquette Gemini fournie par
+          l'utilisateur (mobile/assets/icons/), plus des Ionicons du
+          tout début du projet. */}
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('shop')}>
         <View style={[styles.navBox, view === 'shop' && styles.navBoxActive]}>
-          <Ionicons name="storefront" size={22} color={view === 'shop' ? COLORS.action : NAV_CYAN} />
+          <Image source={require('../../../assets/icons/nav-shop.png')} style={styles.navBoxImage} resizeMode="contain" />
         </View>
         <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>SHOP</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('collection')}>
         <View style={[styles.navBox, view === 'collection' && styles.navBoxActive]}>
-          <Ionicons name="albums" size={22} color={view === 'collection' ? COLORS.action : NAV_CYAN} />
+          <Image source={require('../../../assets/icons/nav-collection.png')} style={styles.navBoxImage} resizeMode="contain" />
           <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{ownedCount}</Text></View>
         </View>
         <Text style={[styles.bottomBarLabel, view === 'collection' && styles.bottomBarLabelActive]}>COLLECTION</Text>
@@ -2382,7 +2387,7 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={onAdventurePress}>
         <View style={styles.navBox}>
-          <Ionicons name="compass" size={22} color={NAV_CYAN} />
+          <Image source={require('../../../assets/icons/nav-exploration.png')} style={styles.navBoxImage} resizeMode="contain" />
         </View>
         <Text style={styles.bottomBarLabel}>EXPLORATION</Text>
       </TouchableOpacity>
@@ -2483,10 +2488,11 @@ const styles = StyleSheet.create({
   bottomBarItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
   // Case encadree autour de l'icone, comme sur la maquette.
   navBox: {
-    width: 46, height: 40, borderRadius: 8,
+    width: 52, height: 48, borderRadius: 10,
     borderWidth: 1, borderColor: '#2a6f96', backgroundColor: 'rgba(16,40,64,0.6)',
     alignItems: 'center', justifyContent: 'center',
   },
+  navBoxImage: { width: 40, height: 40 },
   navBoxActive: {
     borderColor: COLORS.action, backgroundColor: 'rgba(246,195,67,0.12)',
     shadowColor: COLORS.action, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
@@ -2512,12 +2518,12 @@ const styles = StyleSheet.create({
   // vers le bas, deck compris.
   calBtn: {
     position: 'absolute', left: 0, top: 0, zIndex: 5,
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#d0342c',
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#ff6b5c',
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
-  calBtnIcon: { fontSize: 22 },
+  calBtnImageWrap: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: '#0a0a12' },
+  calBtnImage: { width: 44, height: 44 },
   calBtnDot: {
     position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,
     backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,
