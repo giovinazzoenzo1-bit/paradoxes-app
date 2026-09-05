@@ -3,7 +3,7 @@
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground } from 'react-native';
 import BackButton from '../../components/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -405,14 +405,13 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   }
 
   return (
-    <View style={styles.screen}>
+    <ImageBackground source={require('../../../assets/icons/adventure-stone-bg.jpg')} style={styles.screen} resizeMode="cover">
       {/* Parchemin détouré (fond transparent réel, pas un simple
           rectangle recadré) — rétréci de 20% sur demande explicite,
-          pour laisser de la place à un fond noir que l'utilisateur va
-          fournir ensuite, à poser DERRIÈRE cette image. pointerEvents
-          en STYLE (jamais en prop, voir Règles de survie) : purement
-          décoratif, ne doit jamais capter un tap destiné au contenu
-          au-dessus. */}
+          posé sur le fond de pierre fourni par l'utilisateur juste
+          au-dessus. pointerEvents en STYLE (jamais en prop, voir
+          Règles de survie) : purement décoratif, ne doit jamais capter
+          un tap destiné au contenu au-dessus. */}
       <Image
         source={require('../../../assets/icons/adventure-parchment.png')}
         style={[
@@ -508,7 +507,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <Image source={require('../../../assets/icons/combat-button.png')} style={styles.combatBtnLandImage} resizeMode="contain" />
         </TouchableOpacity>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
