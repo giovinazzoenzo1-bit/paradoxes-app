@@ -6,6 +6,7 @@
 // (même décision que les autres jeux) : classement et partage social.
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
 import { KEYBOARD_ROWS, pickTarget, evaluateGuess, updateKeyboardStates } from '../../games/wordle/wordleLogic';
@@ -112,9 +113,7 @@ export default function WordleScreen({ onBack }) {
       <CoinBar />
       <View style={styles.header}>
         {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backText}>← Retour</Text>
-          </TouchableOpacity>
+          <BackButton onPress={onBack} />
         )}
         <Text style={styles.title}>WORDLE</Text>
       </View>
@@ -230,8 +229,6 @@ const KEY_SIZE = 30;
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 12 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  backBtn: { paddingVertical: 6, paddingRight: 12 },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '900', letterSpacing: 2 },
 
   status: { color: COLORS.text, textAlign: 'center', marginTop: 4, fontSize: 13, fontWeight: '700', minHeight: 16 },

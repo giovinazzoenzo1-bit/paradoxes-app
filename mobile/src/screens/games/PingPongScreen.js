@@ -12,6 +12,7 @@
 // mondial fictif — même politique que les autres jeux portés.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions } from 'react-native';
+import BackButton from '../../components/BackButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
@@ -408,9 +409,7 @@ export default function PingPongScreen({ onBack }) {
         <CoinBar />
         <View style={styles.header}>
           {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-              <Text style={styles.backText}>← Retour</Text>
-            </TouchableOpacity>
+            <BackButton onPress={onBack} />
           )}
         </View>
         <Text style={styles.title}>🏓 Ping-pong</Text>
@@ -457,15 +456,11 @@ export default function PingPongScreen({ onBack }) {
     return (
       <View style={styles.screen} {...panHandlers}>
         <CoinBar />
-        <TouchableOpacity onPress={() => setPhase('setup')} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => setPhase('setup')} />
         <Text style={styles.title}>🏓 Ping-pong</Text>
 
         <View style={styles.neonCard}>
-          <TouchableOpacity onPress={() => setPhase('setup')} style={styles.shopBackBtn}>
-            <Text style={styles.shopBackBtnText}>← Retour</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => setPhase('setup')} />
           <Text style={styles.shopTitle}>🏓 BOUTIQUE DE RAQUETTES</Text>
           <Text style={styles.shopSubtitle}>Cosmétique uniquement — juste pour le style, aucun effet sur le jeu.</Text>
           <Text style={styles.shopCoins}>🪙 Pièces{'   '}<Text style={{ color: COLORS.action }}>{coins}</Text></Text>
@@ -618,8 +613,6 @@ const DIFFS_COINS = { facile: 2, moyen: 5 };
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  backBtn: { paddingVertical: 6, paddingRight: 12 },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 22, fontWeight: '800', marginBottom: 12 },
 
   // Carte néon violette du setup/boutique — se démarque du reste de
@@ -668,8 +661,6 @@ const styles = StyleSheet.create({
   },
   shopFabEmoji: { fontSize: 24 },
 
-  shopBackBtn: { alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, marginBottom: 12 },
-  shopBackBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
   shopTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800' },
   shopSubtitle: { color: '#c9bce8', fontSize: 11, marginTop: 4 },
   shopCoins: { color: COLORS.text, fontSize: 13, fontWeight: '700', marginTop: 10 },

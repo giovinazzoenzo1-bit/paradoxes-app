@@ -18,6 +18,7 @@
 // référence), pas en haut.
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
 import { RUNES, scoreTrace, ratingForScore } from '../../games/runetracer/runeTracerLogic';
@@ -270,9 +271,7 @@ export default function RuneTracerScreen({ onBack }) {
         <CoinBar />
         <View style={styles.header}>
           {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-              <Text style={styles.backText}>← Retour</Text>
-            </TouchableOpacity>
+            <BackButton onPress={onBack} />
           )}
           <Text style={styles.title}>✨ Traceur de Runes</Text>
         </View>
@@ -300,9 +299,7 @@ export default function RuneTracerScreen({ onBack }) {
       <View style={styles.screen} {...panHandlers}>
         <CoinBar />
         <View style={styles.header}>
-          <TouchableOpacity onPress={backToSetup} style={styles.backBtn}>
-            <Text style={styles.backText}>← Retour</Text>
-          </TouchableOpacity>
+          <BackButton onPress={backToSetup} />
           <Text style={styles.title}>✨ Traceur de Runes</Text>
         </View>
         <View style={styles.introPanel}>
@@ -327,9 +324,7 @@ export default function RuneTracerScreen({ onBack }) {
     <View style={styles.screen} {...panHandlers}>
       <CoinBar />
       <View style={styles.header}>
-        <TouchableOpacity onPress={backToSetup} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={backToSetup} />
         <View style={styles.scoreBox}>
           <Text style={styles.scoreLabel}>SCORE</Text>
           <Text style={styles.scoreValue}>{totalScore}</Text>
@@ -492,8 +487,6 @@ function Segment({ x, y, len, angle, color, thickness, glow }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
-  backBtn: { paddingVertical: 6, paddingRight: 12 },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
   scoreBox: { marginLeft: 'auto', alignItems: 'flex-end' },

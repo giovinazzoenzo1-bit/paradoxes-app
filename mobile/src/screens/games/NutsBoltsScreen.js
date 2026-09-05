@@ -7,6 +7,7 @@
 // débloqué) persistée. Non porté (même décision que les autres) : classement.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Vibration } from 'react-native';
+import BackButton from '../../components/BackButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
@@ -130,9 +131,7 @@ export default function NutsBoltsScreen({ onBack }) {
         <CoinBar />
         <View style={styles.header}>
           {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-              <Text style={styles.backText}>← Retour</Text>
-            </TouchableOpacity>
+            <BackButton onPress={onBack} />
           )}
           <Text style={styles.title}>🔧 Nuts and Bolts</Text>
         </View>
@@ -164,9 +163,7 @@ export default function NutsBoltsScreen({ onBack }) {
     <View style={styles.screen} {...panHandlers}>
       <CoinBar />
       <View style={styles.header}>
-        <TouchableOpacity onPress={backToLevels} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={backToLevels} />
         <Text style={styles.levelBadge}>Niveau {level}</Text>
       </View>
 
@@ -216,8 +213,6 @@ export default function NutsBoltsScreen({ onBack }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 16 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  backBtn: { paddingVertical: 6, paddingRight: 12 },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
   subtitle: { color: COLORS.muted, fontSize: 12, marginBottom: 12 },
   levelBadge: { color: COLORS.text, fontSize: 15, fontWeight: '700', marginLeft: 8 },

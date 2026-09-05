@@ -10,6 +10,7 @@
 // "classique" (celui avec les vrais assets) est utilisé.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Animated, Vibration, Dimensions, Easing } from 'react-native';
+import BackButton from '../../components/BackButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
@@ -367,9 +368,7 @@ export default function FlappyBirdScreen({ onBack }) {
       <CoinBar />
       <View style={styles.header}>
         {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backText}>← Retour</Text>
-          </TouchableOpacity>
+          <BackButton onPress={onBack} />
         )}
         <Text style={styles.title}>🐦 Flappy Bird</Text>
       </View>
@@ -451,8 +450,6 @@ export default function FlappyBirdScreen({ onBack }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#141721', padding: 16 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  backBtn: { paddingVertical: 6, paddingRight: 12 },
-  backText: { color: '#8d93ab', fontSize: 14, fontWeight: '600' },
   title: { color: '#eef0f6', fontSize: 20, fontWeight: '800' },
   bestText: { color: '#8d93ab', fontSize: 12, textAlign: 'center', marginBottom: 4 },
   coinToast: { color: '#FFD700', textAlign: 'center', fontSize: 13, fontWeight: '800', marginBottom: 4 },

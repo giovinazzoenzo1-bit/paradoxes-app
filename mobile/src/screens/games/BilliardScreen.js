@@ -15,6 +15,7 @@
 // fonce vers la bille en ~130ms avant que le tir ne parte réellement.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, PanResponder, useWindowDimensions, BackHandler } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useCoins } from '../../context/CoinsContext';
@@ -490,9 +491,7 @@ export default function BilliardScreen({ onBack }) {
         <CoinBar />
         <View style={styles.setupHeader}>
           {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-              <Text style={styles.backText}>← Retour</Text>
-            </TouchableOpacity>
+            <BackButton onPress={onBack} />
           )}
           <Text style={styles.title}>🎱 Billard</Text>
         </View>
@@ -712,7 +711,6 @@ function CueStick({ cuePos, dir, pullback, toScreen }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg },
   setupHeader: { flexDirection: 'row', alignItems: 'center', padding: 12 },
-  backBtn: { paddingVertical: 6, paddingRight: 12 },
   backText: { color: COLORS.muted, fontSize: 12, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
 

@@ -5,6 +5,7 @@
 // au Morpion : une partie = une victoire directe).
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Vibration } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
 import { ROWS, COLS, emptyBoard, findDropRow, validCols, checkWinAt, botPickCol } from '../../games/puissance4/puissance4Logic';
@@ -153,9 +154,7 @@ export default function Puissance4Screen({ onBack }) {
       <CoinBar />
         <View style={styles.header}>
           {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-              <Text style={styles.backText}>← Retour</Text>
-            </TouchableOpacity>
+            <BackButton onPress={onBack} />
           )}
           <Text style={styles.title}>🔴 Puissance 4</Text>
         </View>
@@ -194,9 +193,7 @@ export default function Puissance4Screen({ onBack }) {
     <View style={styles.screen} {...panHandlers}>
       <CoinBar />
       <View style={styles.header}>
-        <TouchableOpacity onPress={openSetup} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={openSetup} />
       </View>
 
       <Text style={styles.status}>{status}</Text>
@@ -256,8 +253,6 @@ function SetupButton({ label, active, onPress }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 16 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  backBtn: { paddingVertical: 6, paddingRight: 12 },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
 
   setupPanel: { marginTop: 8 },

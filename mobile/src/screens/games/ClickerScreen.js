@@ -5,6 +5,7 @@
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
@@ -1448,23 +1449,22 @@ export default function ClickerScreen({ onBack }) {
 
   return (
     <ImageBackground source={require('../../../assets/icons/home-background.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
-      <View style={styles.header}>
-        {/* Bouton unique, contextuel : depuis Shop/Collection il ramène
-            à l'accueil du Clicker (view 'tap'), depuis l'accueil il
-            sort du Clicker (onBack). Avant, Shop et Collection avaient
-            CHACUN leur propre bouton "Retour au clicker" (viewBackBtn)
-            EN PLUS de celui-ci, d'où le chevauchement signalé — les deux
-            existaient en même temps sur ces pages. Supprimés (voir
-            ShopView/CollectionView), un seul bouton par page maintenant. */}
+      <View style={styles.headerRow}>
+        {/* Bouton SORTI de la case bleue — juste l'image, sans fond,
+            signalé "moche" sinon. Contextuel : depuis Shop/Collection il
+            ramène à l'accueil du Clicker (view 'tap'), depuis l'accueil
+            il sort du Clicker (onBack). Avant, Shop et Collection
+            avaient CHACUN leur propre bouton "Retour au clicker"
+            (viewBackBtn) EN PLUS de celui-ci, d'où le chevauchement
+            signalé — les deux existaient en même temps sur ces pages.
+            Supprimés (voir ShopView/CollectionView), un seul bouton par
+            page maintenant. */}
         {(onBack || view !== 'tap') && (
-          <TouchableOpacity
-            onPress={() => (view !== 'tap' ? setView('tap') : onBack())}
-            style={styles.backBtn}
-          >
-            <Image source={require('../../../assets/icons/back-button.png')} style={styles.backBtnImage} resizeMode="contain" />
-          </TouchableOpacity>
+          <BackButton onPress={() => (view !== 'tap' ? setView('tap') : onBack())} />
         )}
-        <Text style={styles.title}>🐾 Élevage</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>🐾 Élevage</Text>
+        </View>
       </View>
 
       {view === 'tap' && (
@@ -2531,17 +2531,21 @@ const styles = StyleSheet.create({
   // flex (marges + aspectRatio en cascade) qui donnait des résultats
   // imprévisibles dans ExpoGo. Chaque grand bloc de l'écran Élevage a
   // maintenant un top/left figé, plus aucun calcul en chaîne.
-  header: {
+  // Conteneur ABSOLU (a pris la position/zIndex de l'ancien header) —
+  // regroupe le bouton retour (sans fond, voir BackButton) ET la
+  // pilule bleue du titre, côte à côte. La "grosse case bleue" signalée
+  // moche autour du bouton retour : c'était CE fond qui enveloppait
+  // aussi le bouton avant. Maintenant le fond bleu n'entoure plus QUE
+  // le titre.
+  headerRow: {
     position: 'absolute', left: SCREEN_W * 0.068, top: SCREEN_H * 0.008, width: SCREEN_W * 0.86, zIndex: 3,
     flexDirection: 'row', alignItems: 'center',
+  },
+  header: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.panel, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border,
     paddingVertical: 8, paddingHorizontal: 12,
   },
-  backBtn: { paddingRight: 12, justifyContent: 'center' },
-  // Même encombrement que l'ancien texte "← Retour" (hauteur ~22,
-  // proche d'une ligne de texte fontSize 14) — asset réel, ratio
-  // propre (260x91) préservé via resizeMode="contain".
-  backBtnImage: { width: 63, height: 22 },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
   // Pilule de pièces — fond réel (coins-pill.png, 520x210, sac déjà

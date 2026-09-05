@@ -4,6 +4,7 @@
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -402,9 +403,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           hauteur est la ressource rare, on ne la gaspille pas en barre
           de navigation. */}
       <View style={styles.headerLand}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={styles.titleLand}>🧭 Exploration</Text>
         <View style={styles.headerRight}>
           <View style={styles.griffesPill}>
@@ -879,9 +878,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={styles.title}>⚔️ Chapitres</Text>
       </View>
       <View style={styles.topStatsRow}>
@@ -993,9 +990,7 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={styles.title}>💎 Runes</Text>
       </View>
       <Text style={styles.griffesText}>🐾 {griffes} Griffes</Text>
@@ -1067,9 +1062,7 @@ function RuneFusionScreen({ ownedRunes, onFuseRunes, onBack }) {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <Text style={styles.title}>🔀 Fusionner</Text>
       </View>
       <Text style={styles.runeHint}>2 runes identiques (même type, même niveau) fusionnent en 1 rune au niveau supérieur.</Text>
@@ -1213,7 +1206,6 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  backBtn: { marginRight: 12 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
 

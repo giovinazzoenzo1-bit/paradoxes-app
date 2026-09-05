@@ -8,6 +8,7 @@
 // l'instant), même logique que l'Undo du Morpion.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Vibration, PanResponder } from 'react-native';
+import BackButton from '../../components/BackButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
@@ -314,9 +315,7 @@ export default function Game2048Screen({ onBack }) {
       <CoinBar />
         <View style={styles.header}>
           {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-              <Text style={styles.backText}>← Retour</Text>
-            </TouchableOpacity>
+            <BackButton onPress={onBack} />
           )}
           <Text style={styles.title}>🔢 2048</Text>
         </View>
@@ -342,9 +341,7 @@ export default function Game2048Screen({ onBack }) {
     <View style={styles.screen} {...panHandlers}>
       <CoinBar />
       <View style={styles.header}>
-        <TouchableOpacity onPress={backToModes} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={backToModes} />
         <Text style={styles.title}>🔢 2048</Text>
         <Text style={styles.badge}>{mode === 'rush' ? 'RUSH 60S' : 'SOLO'}</Text>
       </View>
@@ -436,8 +433,6 @@ function PowerButton({ label, cost, coins, disabled, active, onPress }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 16 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
-  backBtn: { paddingVertical: 6, paddingRight: 4 },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
   badge: {
     marginLeft: 'auto',

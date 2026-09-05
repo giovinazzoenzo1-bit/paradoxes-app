@@ -10,6 +10,7 @@
 // Non porté (même décision que les autres jeux à chrono) : le classement.
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Vibration, Dimensions } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { useCoins } from '../../context/CoinsContext';
 import CoinBar from '../../components/CoinBar';
 import { DIFFICULTIES, generatePuzzle, conflicts } from '../../games/sudoku/sudokuLogic';
@@ -199,9 +200,7 @@ export default function SudokuScreen({ onBack }) {
         <CoinBar />
         <View style={styles.header}>
           {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-              <Text style={styles.backText}>← Retour</Text>
-            </TouchableOpacity>
+            <BackButton onPress={onBack} />
           )}
           <Text style={styles.title}>🔢 Sudoku</Text>
         </View>
@@ -224,9 +223,7 @@ export default function SudokuScreen({ onBack }) {
     <View style={styles.screen} {...panHandlers}>
       <CoinBar />
       <View style={styles.header}>
-        <TouchableOpacity onPress={backToLevels} style={styles.backBtn}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={backToLevels} />
         <Text style={styles.levelBadge}>{LEVEL_LABELS[level]}</Text>
       </View>
 
@@ -331,8 +328,6 @@ export default function SudokuScreen({ onBack }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 16 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  backBtn: { paddingVertical: 6, paddingRight: 12 },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
   levelBadge: { color: COLORS.text, fontSize: 15, fontWeight: '700', marginLeft: 8 },
 
