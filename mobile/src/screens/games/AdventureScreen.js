@@ -1318,7 +1318,7 @@ const styles = StyleSheet.create({
   combatBtnLand: {
     alignItems: 'center', justifyContent: 'center',
   },
-  combatBtnLandImage: { width: 130, height: 46 },
+  combatBtnLandImage: { width: 130, height: 43 },
 
   // ---------- Profil de créature (2 colonnes) ----------
 
