@@ -1449,9 +1449,19 @@ export default function ClickerScreen({ onBack }) {
   return (
     <ImageBackground source={require('../../../assets/icons/home-background.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
       <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backText}>← Retour</Text>
+        {/* Bouton unique, contextuel : depuis Shop/Collection il ramène
+            à l'accueil du Clicker (view 'tap'), depuis l'accueil il
+            sort du Clicker (onBack). Avant, Shop et Collection avaient
+            CHACUN leur propre bouton "Retour au clicker" (viewBackBtn)
+            EN PLUS de celui-ci, d'où le chevauchement signalé — les deux
+            existaient en même temps sur ces pages. Supprimés (voir
+            ShopView/CollectionView), un seul bouton par page maintenant. */}
+        {(onBack || view !== 'tap') && (
+          <TouchableOpacity
+            onPress={() => (view !== 'tap' ? setView('tap') : onBack())}
+            style={styles.backBtn}
+          >
+            <Image source={require('../../../assets/icons/back-button.png')} style={styles.backBtnImage} resizeMode="contain" />
           </TouchableOpacity>
         )}
         <Text style={styles.title}>🐾 Élevage</Text>
@@ -1666,7 +1676,6 @@ export default function ClickerScreen({ onBack }) {
           ascensionCount={ascensionCount}
           totalEarned={totalEarned}
           onAscend={doAscension}
-          onBack={() => setView('tap')}
         />
       )}
 
@@ -1679,7 +1688,6 @@ export default function ClickerScreen({ onBack }) {
           pendingDiscount={pendingDiscount}
           nextSummonCost={nextSummonCost}
           onSummon={doSummon}
-          onBack={() => setView('tap')}
         />
       )}
 
@@ -1875,7 +1883,7 @@ function ShopView({
   coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers = {}, upgradeLevels = {},
   applyDiscount, onBuyTapPower, onBuyCrit, onBuyCritDamage, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onBuyTapUpgrade,
   critDamageLevel = 0, tapUpgrades = [], onOffrande,
-  essence, essenceGainPreview, totalEarned, ascensionCount, onAscend, onBack,
+  essence, essenceGainPreview, totalEarned, ascensionCount, onAscend,
 }) {
   const coreState = { tapPower, critLevel, critDamageLevel, sanctuaryLevel };
   const isUnlocked = (id) => coreUpgradeUnlocked(id, coreState);
@@ -1883,10 +1891,6 @@ function ShopView({
 
   return (
     <View style={{ flex: 1, width: '100%' }}>
-      <TouchableOpacity style={styles.viewBackBtn} onPress={onBack}>
-        <Text style={styles.viewBackBtnText}>← Retour au clicker</Text>
-      </TouchableOpacity>
-
       <View style={styles.shopPageRow}>
         <TouchableOpacity style={[styles.shopPageBtn, page === 'upgrades' && styles.shopPageBtnActive]} onPress={() => setPage('upgrades')}>
           <Text style={[styles.shopPageBtnText, page === 'upgrades' && styles.shopPageBtnTextActive]}>Améliorations</Text>
@@ -2121,15 +2125,12 @@ function ShopView({
 // quêtes du cycle en cours avec leur barre de progression, puis la
 // séquence finale (éclosion 500 taps -> capture 200 taps) une fois les 4
 // quêtes validées.
-function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, pendingDiscount, nextSummonCost, onSummon, onBack }) {
+function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, pendingDiscount, nextSummonCost, onSummon }) {
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
 
   return (
     <View style={{ flex: 1 }}>
-      <TouchableOpacity style={styles.viewBackBtn} onPress={onBack}>
-        <Text style={styles.viewBackBtnText}>← Retour au clicker</Text>
-      </TouchableOpacity>
       <FlatList
         data={CREATURES}
         keyExtractor={(item) => item.id}
@@ -2536,8 +2537,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.panel, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border,
     paddingVertical: 8, paddingHorizontal: 12,
   },
-  backBtn: { paddingVertical: 6, paddingRight: 12 },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '600' },
+  backBtn: { paddingRight: 12, justifyContent: 'center' },
+  // Même encombrement que l'ancien texte "← Retour" (hauteur ~22,
+  // proche d'une ligne de texte fontSize 14) — asset réel, ratio
+  // propre (260x91) préservé via resizeMode="contain".
+  backBtnImage: { width: 63, height: 22 },
   title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
   // Pilule de pièces — fond réel (coins-pill.png, 520x210, sac déjà
@@ -2877,8 +2881,6 @@ const styles = StyleSheet.create({
   offrandeBtnText: { color: COLORS.neonCyan, fontSize: 14, fontWeight: '900' },
   offrandeBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 4, textAlign: 'center' },
 
-  viewBackBtn: { paddingVertical: 8, marginBottom: 4 },
-  viewBackBtnText: { color: COLORS.muted, fontSize: 13, fontWeight: '700' },
   grid: { paddingBottom: 100 },
   creatureCell: {
     flex: 1, margin: 4, backgroundColor: COLORS.panel, borderRadius: 12, padding: 10, alignItems: 'center',
