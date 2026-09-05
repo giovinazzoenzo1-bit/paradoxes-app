@@ -1450,21 +1450,13 @@ export default function ClickerScreen({ onBack }) {
   return (
     <ImageBackground source={require('../../../assets/icons/home-background.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
       <View style={styles.headerRow}>
-        {/* Bouton SORTI de la case bleue — juste l'image, sans fond,
-            signalé "moche" sinon. Contextuel : depuis Shop/Collection il
-            ramène à l'accueil du Clicker (view 'tap'), depuis l'accueil
-            il sort du Clicker (onBack). Avant, Shop et Collection
-            avaient CHACUN leur propre bouton "Retour au clicker"
-            (viewBackBtn) EN PLUS de celui-ci, d'où le chevauchement
-            signalé — les deux existaient en même temps sur ces pages.
-            Supprimés (voir ShopView/CollectionView), un seul bouton par
-            page maintenant. */}
+        {/* Case "Élevage" retirée complètement, sur demande explicite —
+            il ne reste que le bouton retour, sans fond. Contextuel :
+            depuis Shop/Collection il ramène à l'accueil du Clicker
+            (view 'tap'), depuis l'accueil il sort du Clicker (onBack). */}
         {(onBack || view !== 'tap') && (
           <BackButton onPress={() => (view !== 'tap' ? setView('tap') : onBack())} />
         )}
-        <View style={styles.header}>
-          <Text style={styles.title}>🐾 Élevage</Text>
-        </View>
       </View>
 
       {view === 'tap' && (
@@ -1890,7 +1882,7 @@ function ShopView({
   const [page, setPage] = useState('upgrades'); // 'upgrades' | 'autoclick'
 
   return (
-    <View style={{ flex: 1, width: '100%' }}>
+    <View style={{ flex: 1, width: '100%', paddingTop: 64 }}>
       <View style={styles.shopPageRow}>
         <TouchableOpacity style={[styles.shopPageBtn, page === 'upgrades' && styles.shopPageBtnActive]} onPress={() => setPage('upgrades')}>
           <Text style={[styles.shopPageBtnText, page === 'upgrades' && styles.shopPageBtnTextActive]}>Améliorations</Text>
@@ -2130,7 +2122,7 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, p
   owned.forEach((o) => (ownedMap[o.id] = o));
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, paddingTop: 64 }}>
       <FlatList
         data={CREATURES}
         keyExtractor={(item) => item.id}
@@ -2537,16 +2529,12 @@ const styles = StyleSheet.create({
   // moche autour du bouton retour : c'était CE fond qui enveloppait
   // aussi le bouton avant. Maintenant le fond bleu n'entoure plus QUE
   // le titre.
+  // Ne contient plus que le bouton retour (case "Élevage" retirée
+  // complètement, sur demande explicite) — width réduite au strict
+  // nécessaire, plus besoin de place pour une pilule de titre.
   headerRow: {
-    position: 'absolute', left: SCREEN_W * 0.068, top: SCREEN_H * 0.008, width: SCREEN_W * 0.86, zIndex: 3,
-    flexDirection: 'row', alignItems: 'center',
+    position: 'absolute', left: SCREEN_W * 0.068, top: SCREEN_H * 0.008, zIndex: 3,
   },
-  header: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.panel, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border,
-    paddingVertical: 8, paddingHorizontal: 12,
-  },
-  title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
 
   // Pilule de pièces — fond réel (coins-pill.png, 520x210, sac déjà
   // peint sur la gauche). Largeur fixe (pas '100%' comme le cadre de
