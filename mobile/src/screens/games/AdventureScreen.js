@@ -433,7 +433,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
             <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
           </View>
           <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
-            <Ionicons name="diamond" size={22} color={COLORS.neonCyan} />
+            <Image source={require('../../../assets/icons/rune-button.png')} style={styles.runesTopBtnImage} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -1324,10 +1324,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
   },
   griffesPillText: { color: COLORS.action, fontSize: 13, fontWeight: '900' },
+  // Fond/bordure retirés (image réelle intégrée, cadre déjà peint dedans).
   runesTopBtn: {
-    width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.neonCyan,
+    width: 38, height: 38, alignItems: 'center', justifyContent: 'center',
   },
+  runesTopBtnImage: { width: 38, height: 38 },
 
   // Les 3 créatures occupent toute la largeur, à parts égales.
   creatureRowLand: { flexDirection: 'row', paddingHorizontal: 12, gap: 10, flex: 1 },
