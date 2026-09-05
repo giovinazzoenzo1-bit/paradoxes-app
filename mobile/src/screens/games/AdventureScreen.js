@@ -3,7 +3,7 @@
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image } from 'react-native';
 import BackButton from '../../components/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -88,6 +88,15 @@ function makeRuneId() {
 
 
 export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot }) {
+  // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
+  // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
+  // combiné à aspectRatio sur un élément position:'absolute' se rend
+  // avec une largeur bien plus petite que demandée dans ce build
+  // ExpoGo (bug Yoga confirmé sur le Clicker, voir
+  // CLICKER_ADVENTURE_STATE.md) — donc jamais width:'%' + aspectRatio
+  // ensemble, ici comme ailleurs.
+  const { width: screenWidth } = useWindowDimensions();
+
   // Tout le mode Aventure se joue en PAYSAGE. L'appli entière est
   // déclarée en portrait dans app.json ; on bascule donc à l'entrée et
   // on REMET le portrait au démontage.
@@ -396,7 +405,22 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   }
 
   return (
-    <ImageBackground source={require('../../../assets/icons/adventure-background.jpg')} style={styles.screen} resizeMode="cover">
+    <View style={styles.screen}>
+      {/* Parchemin détouré (fond transparent réel, pas un simple
+          rectangle recadré) — rétréci de 20% sur demande explicite,
+          pour laisser de la place à un fond noir que l'utilisateur va
+          fournir ensuite, à poser DERRIÈRE cette image. pointerEvents
+          en STYLE (jamais en prop, voir Règles de survie) : purement
+          décoratif, ne doit jamais capter un tap destiné au contenu
+          au-dessus. */}
+      <Image
+        source={require('../../../assets/icons/adventure-parchment.png')}
+        style={[
+          styles.parchmentBg,
+          { width: screenWidth * 0.8, height: (screenWidth * 0.8) / (900 / 407) },
+        ]}
+        resizeMode="contain"
+      />
       {/* En-tête paysage : retour à gauche, Griffes au centre, accès aux
           Runes en HAUT À DROITE (même icône qu'avant, seulement
           déplacée). L'ancienne barre du bas disparaît : en paysage la
@@ -484,7 +508,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <Image source={require('../../../assets/icons/combat-button.png')} style={styles.combatBtnLandImage} resizeMode="contain" />
         </TouchableOpacity>
       </View>
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -1203,7 +1227,18 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
 }
 
 const styles = StyleSheet.create({
+  // backgroundColor sert de repère sombre en attendant le fond noir
+  // que l'utilisateur va fournir, à poser ici derrière le parchemin.
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
+  // Parchemin centré, à 80% de la largeur (rétréci de 20%) — largeur
+  // et hauteur calculées en pixels dans le JSX (screenWidth * 0.8),
+  // JAMAIS en %, voir le commentaire au-dessus du composant. zIndex
+  // bas : purement décoratif, tout le contenu réel (header, cartes,
+  // combat) doit rester au-dessus.
+  parchmentBg: {
+    position: 'absolute', alignSelf: 'center', top: '10%', zIndex: 0,
+    pointerEvents: 'none',
+  },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
