@@ -427,7 +427,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           de navigation. */}
       <View style={styles.headerLand}>
         <BackButton onPress={onBack} />
-        <Text style={styles.titleLand}>🧭 Exploration</Text>
+        <Image source={require('../../../assets/icons/exploration-title.png')} style={styles.titleLandImage} resizeMode="contain" />
         <View style={styles.headerRight}>
           <View style={styles.griffesPill}>
             <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
@@ -1317,7 +1317,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6,
   },
-  titleLand: { color: COLORS.text, fontSize: 18, fontWeight: '900', flex: 1, textAlign: 'center' },
+  titleLandImage: { flex: 1, height: 44, marginHorizontal: 8 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   griffesPill: {
     backgroundColor: COLORS.panel, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5,
