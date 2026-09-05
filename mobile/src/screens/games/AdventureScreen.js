@@ -429,9 +429,9 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         <BackButton onPress={onBack} />
         <Image source={require('../../../assets/icons/exploration-title.png')} style={styles.titleLandImage} resizeMode="contain" />
         <View style={styles.headerRight}>
-          <View style={styles.griffesPill}>
+          <ImageBackground source={require('../../../assets/icons/griffes-frame.png')} style={styles.griffesPill} resizeMode="stretch">
             <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
-          </View>
+          </ImageBackground>
           <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
             <Image source={require('../../../assets/icons/rune-button.png')} style={styles.runesTopBtnImage} resizeMode="contain" />
           </TouchableOpacity>
@@ -624,9 +624,9 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
         <TouchableOpacity onPress={onBack} style={styles.profileBackBtn}>
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
-        <View style={styles.griffesPill}>
+        <ImageBackground source={require('../../../assets/icons/griffes-frame.png')} style={styles.griffesPill} resizeMode="stretch">
           <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
-        </View>
+        </ImageBackground>
       </View>
 
       <View style={styles.profileBody}>
@@ -904,7 +904,9 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         <Text style={styles.title}>⚔️ Chapitres</Text>
       </View>
       <View style={styles.topStatsRow}>
-        <Text style={styles.griffesText}>🐾 {griffes} Griffes</Text>
+        <ImageBackground source={require('../../../assets/icons/griffes-frame.png')} style={styles.griffesPill} resizeMode="stretch">
+          <Text style={styles.griffesPillText}>🐾 {griffes} Griffes</Text>
+        </ImageBackground>
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
       </View>
 
@@ -1319,9 +1321,13 @@ const styles = StyleSheet.create({
   },
   titleLandImage: { flex: 1, height: 44, marginHorizontal: 8 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // Fond/bordure retirés (cadre réel intégré, griffes-frame.png,
+  // 320x120) — appliqué aussi dans ChapterMapScreen ("menu combat").
+  // Largeur fixe (pas de %+aspectRatio combinés, cause confirmée d'un
+  // bug Yoga ailleurs dans le projet, voir CLICKER_ADVENTURE_STATE.md).
   griffesPill: {
-    backgroundColor: COLORS.panel, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: COLORS.border,
+    width: 92, height: 92 * (120 / 320),
+    alignItems: 'center', justifyContent: 'center',
   },
   griffesPillText: { color: COLORS.action, fontSize: 13, fontWeight: '900' },
   // Fond/bordure retirés (image réelle intégrée, cadre déjà peint dedans).
