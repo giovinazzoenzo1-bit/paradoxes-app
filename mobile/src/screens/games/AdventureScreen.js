@@ -3,7 +3,7 @@
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image } from 'react-native';
 import BackButton from '../../components/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -481,8 +481,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
             : 'Touche une créature pour ouvrir son profil.'}
         </Text>
         <TouchableOpacity style={styles.combatBtnLand} onPress={() => setChapterMapOpen(true)}>
-          <Ionicons name="map" size={20} color="#0b0d16" />
-          <Text style={styles.combatBtnLandText}>Combat</Text>
+          <Image source={require('../../../assets/icons/combat-button.png')} style={styles.combatBtnLandImage} resizeMode="contain" />
         </TouchableOpacity>
       </View>
     </View>
@@ -1313,11 +1312,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8, gap: 12,
   },
   hintLand: { color: COLORS.muted, fontSize: 11, flex: 1 },
+  // Fond doré retiré (image réelle intégrée à la place), juste un
+  // conteneur pour la taper — même position bas-droite qu'avant
+  // (bottomLand en row/space-between, ce bouton est le 2e élément).
   combatBtnLand: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: COLORS.action, borderRadius: 22, paddingHorizontal: 20, paddingVertical: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
-  combatBtnLandText: { color: '#0b0d16', fontSize: 14, fontWeight: '900' },
+  combatBtnLandImage: { width: 130, height: 46 },
 
   // ---------- Profil de créature (2 colonnes) ----------
 
