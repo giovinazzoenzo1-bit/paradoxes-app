@@ -3,7 +3,7 @@
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground } from 'react-native';
 import BackButton from '../../components/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -396,7 +396,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   }
 
   return (
-    <View style={styles.screen}>
+    <ImageBackground source={require('../../../assets/icons/adventure-background.jpg')} style={styles.screen} resizeMode="cover">
       {/* En-tête paysage : retour à gauche, Griffes au centre, accès aux
           Runes en HAUT À DROITE (même icône qu'avant, seulement
           déplacée). L'ancienne barre du bas disparaît : en paysage la
@@ -484,7 +484,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <Image source={require('../../../assets/icons/combat-button.png')} style={styles.combatBtnLandImage} resizeMode="contain" />
         </TouchableOpacity>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
