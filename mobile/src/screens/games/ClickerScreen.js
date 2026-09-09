@@ -4,12 +4,13 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration } from 'react-native';
 import BackButton from '../../components/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
+import { useSettings } from '../../context/SettingsContext';
 import { useDaily, PENDING_GRIFFES_KEY, PENDING_CREATURES_KEY } from '../../context/DailyContext';
 import {
   CREATURES,
@@ -159,6 +160,9 @@ function formatNum(n) {
 
 export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
+  const { vibrations, ambientFx } = useSettings();
+  const vibrationsRef = useRef(vibrations);
+  vibrationsRef.current = vibrations;
   const {
     trackEvent, lifetimeStats, loaded: dailyLoaded,
     calendar, calendarDay, streakClaimedDate, date: today, claimStreak,
@@ -368,6 +372,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // fois au montage (tableau de dépendances vide).
   const giftGlowPulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    // Reglage "Animations d'ambiance" : coupe reellement la boucle au
+    // lieu de la masquer, donc plus aucun calcul d'animation en fond.
+    // La valeur est remise a 1 pour que le cadeau reste a sa taille
+    // normale et pas fige sur une frame intermediaire.
+    if (!ambientFx) {
+      giftGlowPulse.setValue(1);
+      return undefined;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(giftGlowPulse, { toValue: 1, duration: 1400, useNativeDriver: true }),
@@ -376,7 +388,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [ambientFx]);
 
   // Chargement initial + calcul des gains hors-ligne.
   useEffect(() => {
@@ -857,6 +869,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       totalCritsRef.current += 1;
       setTotalCrits(totalCritsRef.current);
       trackEvent('crit', 1);
+      // Reglage "Vibrations". Uniquement sur les CRITIQUES, jamais sur
+      // chaque tap : l'autoclicker de l'utilisateur monte a ~142 taps/s,
+      // vibrer a cette cadence rendrait le telephone inutilisable.
+      // `vibrationsRef` et pas `vibrations` : handleTap est appele depuis
+      // des callbacks qui capturent l'etat au montage, la ref donne
+      // toujours la valeur a jour.
+      if (vibrationsRef.current) Vibration.vibrate(12);
     }
 
     const powerMult = activePowerRef.current ? activePowerRef.current.tapMultiplier : 1;

@@ -15,6 +15,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { CoinsProvider } from './src/context/CoinsContext';
 import { DailyProvider } from './src/context/DailyContext';
+import { SettingsProvider } from './src/context/SettingsContext';
 import ClickerScreen from './src/screens/games/ClickerScreen';
 import ProgresScreen from './src/screens/ProgresScreen';
 import OptionsScreen from './src/screens/OptionsScreen';
@@ -73,7 +74,7 @@ function AppContent() {
           couvrent entièrement : on ne peut donc pas interagir avec le menu
           par-dessus une surcouche ouverte. */}
       {overlay === 'options' && (
-        <View style={[styles.overlay, { paddingTop: insets.top }]}>
+        <View style={styles.overlay}>
           <OptionsScreen onBack={() => setOverlay(null)} />
         </View>
       )}
@@ -96,7 +97,9 @@ export default function App() {
       <SafeAreaProvider>
         <CoinsProvider>
           <DailyProvider>
-            <AppContent />
+            <SettingsProvider>
+              <AppContent />
+            </SettingsProvider>
           </DailyProvider>
         </CoinsProvider>
       </SafeAreaProvider>

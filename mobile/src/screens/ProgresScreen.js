@@ -15,8 +15,9 @@ import { COLORS } from './games/clickerTheme';
 // correspondantes de DailyContext (claimStreak, streakReward,
 // STREAK_REWARDS) n'ont pas été touchées — le calendrier du Clicker s'en
 // sert toujours.
+// Onglet "Log-In" retiré le 07/09 : il aurait fait doublon avec le
+// calendrier du bouton cadeau, comme le bloc streak retiré juste avant.
 const TABS = [
-  { key: 'login', label: 'Log-In' },
   { key: 'daily', label: 'Quotidiennement' },
   { key: 'weekly', label: 'Hebdomadaire' },
   { key: 'success', label: 'Succès' },
@@ -107,8 +108,6 @@ export default function ProgresScreen({ onBack }) {
             ? renderEmpty('Chargement…')
             : tab === 'daily'
             ? renderDaily()
-            : tab === 'login'
-            ? renderEmpty('Les récompenses de connexion sont dans le calendrier, bouton 🎁 du menu principal.')
             : tab === 'weekly'
             ? renderEmpty('Quêtes hebdomadaires — à venir.')
             : renderEmpty('Succès — à venir.')}
