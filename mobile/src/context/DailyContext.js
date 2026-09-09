@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR } from '../games/clicker/dailyLogic';
+import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR,
+  weekKey, pickWeeklyQuests, weeklyQuestDef, ACHIEVEMENTS, achievementDef } from '../games/clicker/dailyLogic';
 
 // Clé lue par AdventureScreen.js à son prochain chargement pour créditer
 // les récompenses de quêtes/streak — MÊME schéma de sécurité que
@@ -38,6 +39,20 @@ export function DailyProvider({ children }) {
   // jeux. Alimentés par le MÊME trackEvent déjà câblé côté Aventure —
   // aucun nouveau point de suivi à ajouter ailleurs dans le code.
   const [lifetimeStats, setLifetimeStats] = useState({});
+  // ---- Hebdomadaires (07/09) ----
+  // Même mécanique que les quotidiennes mais sur une clé de SEMAINE.
+  // État séparé et non réutilisé : une quête hebdo doit survivre au
+  // changement de jour, donc elle ne peut pas partager `questProgress`,
+  // qui est vidé chaque matin.
+  const [week, setWeek] = useState(null);
+  const [weeklyIds, setWeeklyIds] = useState([]);
+  const [weeklyProgress, setWeeklyProgress] = useState({});
+  const [weeklyClaimed, setWeeklyClaimed] = useState({});
+  // ---- Succès ----
+  // Pas de progression stockée : elle se LIT dans lifetimeStats, qui
+  // compte déjà tout. On ne mémorise donc que ce qui a été réclamé,
+  // définitivement.
+  const [achievementsClaimed, setAchievementsClaimed] = useState({});
   const [loaded, setLoaded] = useState(false);
 
   // Refs pour trackEvent — évite de recréer cette fonction (et donc de
@@ -49,6 +64,14 @@ export function DailyProvider({ children }) {
   questProgressRef.current = questProgress;
   const questClaimedRef = useRef({});
   questClaimedRef.current = questClaimed;
+  const weeklyIdsRef = useRef([]);
+  weeklyIdsRef.current = weeklyIds;
+  const weeklyProgressRef = useRef({});
+  weeklyProgressRef.current = weeklyProgress;
+  const weeklyClaimedRef = useRef({});
+  weeklyClaimedRef.current = weeklyClaimed;
+  const lifetimeStatsRef = useRef({});
+  lifetimeStatsRef.current = lifetimeStats;
   // claimStreak est memoise sur `date` seul : sans ces refs il
   // capturerait le streak et la date de reclamation du premier rendu et
   // distribuerait la recompense du mauvais jour.
@@ -79,6 +102,25 @@ export function DailyProvider({ children }) {
           setQuestClaimed(saved.questClaimed || {});
         }
 
+        // Bascule de SEMAINE, indépendante de celle du jour : on peut
+        // changer de jour sans changer de semaine, et l'inverse ne se
+        // produit jamais — les deux tests doivent donc coexister.
+        const thisWeek = weekKey();
+        if ((saved.week || null) !== thisWeek) {
+          setWeek(thisWeek);
+          setWeeklyIds(pickWeeklyQuests(thisWeek));
+          setWeeklyProgress({});
+          setWeeklyClaimed({});
+        } else {
+          setWeek(saved.week);
+          setWeeklyIds(saved.weeklyIds && saved.weeklyIds.length ? saved.weeklyIds : pickWeeklyQuests(thisWeek));
+          setWeeklyProgress(saved.weeklyProgress || {});
+          setWeeklyClaimed(saved.weeklyClaimed || {});
+        }
+        // Les succès ne sont JAMAIS remis à zéro par une bascule de
+        // date : ce sont des jalons à vie.
+        setAchievementsClaimed(saved.achievementsClaimed || {});
+
         const prevStreak = saved.streak || 0;
         const newStreak = nextStreak(prevStreak, saved.lastLoginDate || null, today);
         setStreak(newStreak);
@@ -87,6 +129,9 @@ export function DailyProvider({ children }) {
       } catch (e) {
         setDate(today);
         setQuestIds(pickDailyQuests(today));
+        const wk = weekKey();
+        setWeek(wk);
+        setWeeklyIds(pickWeeklyQuests(wk));
         setStreak(1);
       }
       setLoaded(true);
@@ -100,9 +145,13 @@ export function DailyProvider({ children }) {
     if (!loaded) return;
     AsyncStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ date, questIds, questProgress, questClaimed, streak, lastLoginDate: date, streakClaimedDate, lifetimeStats })
+      JSON.stringify({
+        date, questIds, questProgress, questClaimed, streak, lastLoginDate: date, streakClaimedDate, lifetimeStats,
+        week, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed,
+      })
     );
-  }, [date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats, loaded]);
+  }, [date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats,
+      week, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, loaded]);
 
   // Appelé par le clicker ET l'aventure quand un événement pertinent se
   // produit (ex: trackEvent('summon', 1)) — ne touche QUE les quêtes du
@@ -124,6 +173,23 @@ export function DailyProvider({ children }) {
         const def = questDef(qid);
         if (!def || def.event !== eventType) return;
         if (questClaimedRef.current[qid]) return;
+        const current = next[qid] || 0;
+        if (current >= def.target) return;
+        next[qid] = Math.min(def.target, current + amount);
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+
+    // Mêmes règles que pour les quotidiennes : on ignore les quêtes
+    // d'un autre type, celles déjà réclamées, et on plafonne à la cible.
+    setWeeklyProgress((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      weeklyIdsRef.current.forEach((qid) => {
+        const def = weeklyQuestDef(qid);
+        if (!def || def.event !== eventType) return;
+        if (weeklyClaimedRef.current[qid]) return;
         const current = next[qid] || 0;
         if (current >= def.target) return;
         next[qid] = Math.min(def.target, current + amount);
@@ -184,6 +250,44 @@ export function DailyProvider({ children }) {
     return def.reward;
   }, []);
 
+  // Réclame une quête HEBDOMADAIRE terminée. Même chemin de crédit que
+  // les quotidiennes : un drapeau partagé, jamais d'écriture directe
+  // dans la sauvegarde d'Aventure depuis ce Context.
+  const claimWeekly = useCallback(async (questId) => {
+    const def = weeklyQuestDef(questId);
+    if (!def) return false;
+    if (weeklyClaimedRef.current[questId]) return false;
+    const progress = weeklyProgressRef.current[questId] || 0;
+    if (progress < def.target) return false;
+    setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));
+    const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+    const pending = raw ? parseInt(raw, 10) || 0 : 0;
+    await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + def.reward));
+    return def.reward;
+  }, []);
+
+  // Réclame un SUCCÈS. La progression n'est pas stockée : on la relit
+  // dans lifetimeStats au moment de la réclamation, ce qui évite de
+  // dupliquer un compteur déjà tenu à jour ailleurs (et donc tout risque
+  // de désynchronisation entre les deux).
+  const achievementProgress = useCallback((id) => {
+    const def = achievementDef(id);
+    if (!def) return 0;
+    return Math.floor(lifetimeStatsRef.current[def.stat] || 0);
+  }, []);
+
+  const claimAchievement = useCallback(async (id) => {
+    const def = achievementDef(id);
+    if (!def) return false;
+    if (achievementsClaimed[id]) return false;
+    if ((lifetimeStatsRef.current[def.stat] || 0) < def.target) return false;
+    setAchievementsClaimed((prev) => ({ ...prev, [id]: true }));
+    const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+    const pending = raw ? parseInt(raw, 10) || 0 : 0;
+    await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + def.reward));
+    return def.reward;
+  }, [achievementsClaimed]);
+
   // Reclame la recompense du jour de calendrier courant.
   //
   // Retourne l'entree du calendrier (pour que l'ecran affiche ce qui a
@@ -220,7 +324,9 @@ export function DailyProvider({ children }) {
 
   const value = {
     loaded, date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats,
+    week, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, achievements: ACHIEVEMENTS,
     trackEvent, trackMax, resetLifetimeStats, claimQuest, claimStreak,
+    claimWeekly, achievementProgress, claimAchievement,
     calendarDay: calendarDayForStreak(streak), calendar: DAILY_CALENDAR,
   };
 

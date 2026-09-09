@@ -64,6 +64,96 @@ export function questDef(questId) {
   return DAILY_QUEST_POOL.find((q) => q.id === questId);
 }
 
+// ---- Quêtes HEBDOMADAIRES (07/09) ----
+//
+// Même mécanique que les quotidiennes (tirage seedé, progression,
+// réclamation) mais sur une clé de SEMAINE, avec des objectifs environ
+// 6× plus durs : une semaine compte 7 jours, donc viser ~6× garde le
+// même effort quotidien tout en laissant une journée de marge à qui
+// rate un jour. Les récompenses suivent la même échelle (~6×), sinon
+// il serait toujours plus rentable de ne faire que les quotidiennes.
+
+// Clé de semaine ISO ('YYYY-Www'), en fuseau LOCAL comme todayKey.
+// Semaine commençant le LUNDI : `getDay()` renvoie 0 pour dimanche, on
+// le ramène à 7 pour que lundi=1 soit bien le début.
+export function weekKey(date = new Date()) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay() === 0 ? 7 : d.getDay();
+  // On se place sur le JEUDI de la même semaine : c'est la règle ISO,
+  // et c'est ce qui donne le bon numéro d'année pour les semaines à
+  // cheval sur deux années (fin décembre / début janvier).
+  d.setDate(d.getDate() + 4 - day);
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+export const WEEKLY_QUEST_POOL = [
+  { id: 'w_win12battles', desc: 'Gagne 12 combats en Aventure', event: 'battleWon', target: 12, reward: 240 },
+  { id: 'w_fuseRune6',    desc: 'Fusionne 6 fois des runes',    event: 'runeFused', target: 6,  reward: 210 },
+  { id: 'w_equipRune6',   desc: 'Équipe 6 runes',               event: 'runeEquipped', target: 6, reward: 180 },
+  { id: 'w_buyRune6',     desc: 'Achète 6 runes',               event: 'runeBought', target: 6,  reward: 150 },
+  { id: 'w_summon18',     desc: 'Invoque 18 créatures',         event: 'summon',    target: 18, reward: 180 },
+  { id: 'w_crit60',       desc: 'Obtiens 60 coups critiques',   event: 'crit',      target: 60, reward: 180 },
+  { id: 'w_earn12000',    desc: 'Gagne 12 000 pièces',          event: 'coinsEarned', target: 12000, reward: 180 },
+  { id: 'w_feed6',        desc: 'Nourris 6 fois une créature',  event: 'creatureFed', target: 6, reward: 150 },
+  // Ces deux événements sont suivis depuis longtemps mais n'étaient
+  // exploités par AUCUNE quête — le plus gros manque du pool actuel.
+  { id: 'w_offering3',    desc: 'Fais 3 Offrandes',             event: 'offering',  target: 3,  reward: 200 },
+  { id: 'w_power10',      desc: 'Active 10 pouvoirs de créature', event: 'powerActivated', target: 10, reward: 160 },
+];
+
+const QUESTS_PER_WEEK = 3;
+
+export function pickWeeklyQuests(wKey) {
+  let seed = 0;
+  for (let i = 0; i < wKey.length; i++) seed = (seed * 31 + wKey.charCodeAt(i)) >>> 0;
+  const rand = () => {
+    seed = (seed * 1103515245 + 12345) >>> 0;
+    return seed / 4294967296;
+  };
+  const shuffled = [...WEEKLY_QUEST_POOL];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, QUESTS_PER_WEEK).map((q) => q.id);
+}
+
+export function weeklyQuestDef(questId) {
+  return WEEKLY_QUEST_POOL.find((q) => q.id === questId);
+}
+
+// ---- SUCCÈS (07/09) ----
+//
+// Objectifs de très long terme, réclamables UNE SEULE FOIS et jamais
+// remis à zéro. Ils lisent `lifetimeStats` (compteurs à vie du
+// DailyContext), pas la progression du jour : c'est ce qui permet des
+// cibles à 4 chiffres sans qu'elles soient hors d'atteinte.
+//
+// `mode: 'max'` pour les valeurs qui sont un RECORD et non un cumul
+// (le niveau atteint en Aventure), alimentées par trackMax.
+//
+// Volontairement DURS, comme demandé : les paliers sont calés très
+// au-dessus des hebdomadaires (ex. 12 combats/semaine -> 500 au total,
+// soit environ 10 mois de jeu régulier).
+export const ACHIEVEMENTS = [
+  { id: 'a_battles500',  desc: 'Gagner 500 combats',              stat: 'battleWon',      target: 500,     reward: 1500 },
+  { id: 'a_level50',     desc: 'Atteindre le niveau 50 en Aventure', stat: 'advLevelReached', target: 50,  reward: 2000, mode: 'max' },
+  { id: 'a_coins1m',     desc: 'Gagner 1 000 000 de pièces',      stat: 'coinsEarned',    target: 1000000, reward: 1200 },
+  { id: 'a_crit5000',    desc: 'Obtenir 5 000 coups critiques',   stat: 'crit',           target: 5000,    reward: 1000 },
+  { id: 'a_summon150',   desc: 'Invoquer 150 créatures',          stat: 'summon',         target: 150,     reward: 1000 },
+  { id: 'a_fuse75',      desc: 'Fusionner 75 fois des runes',     stat: 'runeFused',      target: 75,      reward: 1200 },
+  { id: 'a_ascension10', desc: 'Faire 10 Ascensions',             stat: 'ascension',      target: 10,      reward: 2500 },
+  { id: 'a_offering25',  desc: 'Faire 25 Offrandes',              stat: 'offering',       target: 25,      reward: 900 },
+  { id: 'a_feed100',     desc: 'Nourrir 100 fois une créature',   stat: 'creatureFed',    target: 100,     reward: 800 },
+  { id: 'a_power200',    desc: 'Activer 200 pouvoirs de créature', stat: 'powerActivated', target: 200,    reward: 900 },
+];
+
+export function achievementDef(id) {
+  return ACHIEVEMENTS.find((a) => a.id === id);
+}
+
 // ---- Streak de connexion ----
 // 7 paliers, la récompense grandit puis reboucle (jour 8 = comme jour 1).
 // ---- Calendrier de connexion (7 jours, en boucle) ----

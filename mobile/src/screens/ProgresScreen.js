@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useDaily } from '../context/DailyContext';
-import { questDef } from '../games/clicker/dailyLogic';
+import { questDef, weeklyQuestDef, achievementDef } from '../games/clicker/dailyLogic';
 import { COLORS } from './games/clickerTheme';
 
 // Menu Quêtes — panneau MODAL (ne couvre plus tout l'écran, on voit le
@@ -24,17 +24,65 @@ const TABS = [
 ];
 
 export default function ProgresScreen({ onBack }) {
-  const { loaded, questIds, questProgress, questClaimed, claimQuest } = useDaily();
+  const {
+    loaded, questIds, questProgress, questClaimed, claimQuest,
+    weeklyIds, weeklyProgress, weeklyClaimed, claimWeekly,
+    achievements, achievementsClaimed, achievementProgress, claimAchievement,
+  } = useDaily();
   const [tab, setTab] = useState('daily');
   const [busyId, setBusyId] = useState(null); // évite un double-tap pendant l'écriture AsyncStorage
 
-  const handleClaimQuest = async (questId) => {
-    setBusyId(questId);
-    const reward = await claimQuest(questId);
+  // Un seul gestionnaire pour les 3 types : seule la fonction de
+  // réclamation change, le reste (verrou anti-double-tap, message) est
+  // identique.
+  const handleClaim = async (id, claimFn) => {
+    setBusyId(id);
+    const reward = await claimFn(id);
     setBusyId(null);
     if (reward) {
-      Alert.alert('Quête terminée !', `+${reward} 🐾 Griffes — récupère-les en ouvrant le mode Exploration.`);
+      Alert.alert('Récompense !', `+${reward} 🐾 Griffes — récupère-les en ouvrant le mode Exploration.`);
     }
+  };
+
+  // Abrège les grosses cibles des succès (1000000 -> 1M), sinon le
+  // compteur déborde de la barre.
+  const formatCount = (n) => {
+    if (n >= 1000000) return `${+(n / 1000000).toFixed(1)}M`;
+    if (n >= 1000) return `${+(n / 1000).toFixed(1)}k`;
+    return String(n);
+  };
+
+  // Une seule fonction de rendu pour les 3 onglets : les règles
+  // d'affichage sont identiques (barre plafonnée à la cible, bouton
+  // actif seulement si terminé et pas encore réclamé). Dupliquer aurait
+  // garanti que les trois divergent au premier ajustement.
+  const renderRow = (key, def, rawProgress, claimed, onClaim) => {
+    const progress = Math.min(def.target, Math.floor(rawProgress || 0));
+    const done = progress >= def.target;
+    const pct = Math.min(100, (progress / def.target) * 100);
+    return (
+      <View key={key} style={styles.questRow}>
+        <View style={styles.questGem}>
+          <Text style={styles.questGemIcon}>🐾</Text>
+        </View>
+        <View style={styles.questMiddle}>
+          <Text style={styles.questDesc} numberOfLines={2}>{def.desc}</Text>
+          <View style={styles.questBarTrack}>
+            <View style={[styles.questBarFill, { width: `${pct}%` }, claimed && { backgroundColor: COLORS.muted }]} />
+            <Text style={styles.questBarLabel}>{formatCount(progress)}/{formatCount(def.target)}</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={[styles.questClaimBtn, (!done || claimed) && styles.questClaimBtnDisabled]}
+          onPress={onClaim}
+          disabled={!done || claimed || busyId === key}
+        >
+          <Text style={[styles.questClaimBtnText, (!done || claimed) && styles.questClaimBtnTextDisabled]}>
+            {claimed ? '✓' : `+${def.reward}`}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   const renderDaily = () => (
@@ -42,40 +90,34 @@ export default function ProgresScreen({ onBack }) {
       {questIds.map((qid) => {
         const def = questDef(qid);
         if (!def) return null;
-        const progress = Math.min(def.target, Math.floor(questProgress[qid] || 0));
-        const done = progress >= def.target;
-        const claimed = !!questClaimed[qid];
-        const pct = Math.min(100, (progress / def.target) * 100);
-        return (
-          <View key={qid} style={styles.questRow}>
-            {/* Pastille de gauche — reprend l'emplacement de la gemme de
-                la maquette. Icône de récompense, pas de décoration. */}
-            <View style={styles.questGem}>
-              <Text style={styles.questGemIcon}>🐾</Text>
-            </View>
-
-            <View style={styles.questMiddle}>
-              <Text style={styles.questDesc} numberOfLines={2}>{def.desc}</Text>
-              <View style={styles.questBarTrack}>
-                <View style={[styles.questBarFill, { width: `${pct}%` }, claimed && { backgroundColor: COLORS.muted }]} />
-                <Text style={styles.questBarLabel}>{progress}/{def.target}</Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.questClaimBtn, (!done || claimed) && styles.questClaimBtnDisabled]}
-              onPress={() => handleClaimQuest(qid)}
-              disabled={!done || claimed || busyId === qid}
-            >
-              <Text style={[styles.questClaimBtnText, (!done || claimed) && styles.questClaimBtnTextDisabled]}>
-                {claimed ? '✓' : `+${def.reward}`}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        );
+        return renderRow(qid, def, questProgress[qid], !!questClaimed[qid], () => handleClaim(qid, claimQuest));
       })}
       <Text style={styles.footnote}>
         Nouvelles quêtes chaque jour à minuit. Récompenses créditées à ta prochaine ouverture du mode Exploration.
+      </Text>
+    </>
+  );
+
+  const renderWeekly = () => (
+    <>
+      {(weeklyIds || []).map((qid) => {
+        const def = weeklyQuestDef(qid);
+        if (!def) return null;
+        return renderRow(qid, def, weeklyProgress?.[qid], !!weeklyClaimed?.[qid], () => handleClaim(qid, claimWeekly));
+      })}
+      <Text style={styles.footnote}>
+        Objectifs ~6× plus gros que les quotidiens, à faire en 7 jours. Remise à zéro chaque lundi.
+      </Text>
+    </>
+  );
+
+  const renderAchievements = () => (
+    <>
+      {(achievements || []).map((a) => (
+        renderRow(a.id, a, achievementProgress(a.id), !!achievementsClaimed?.[a.id], () => handleClaim(a.id, claimAchievement))
+      ))}
+      <Text style={styles.footnote}>
+        Jalons à vie, réclamables une seule fois. Ils ne sont jamais remis à zéro.
       </Text>
     </>
   );
@@ -109,8 +151,8 @@ export default function ProgresScreen({ onBack }) {
             : tab === 'daily'
             ? renderDaily()
             : tab === 'weekly'
-            ? renderEmpty('Quêtes hebdomadaires — à venir.')
-            : renderEmpty('Succès — à venir.')}
+            ? renderWeekly()
+            : renderAchievements()}
         </ScrollView>
 
         <View style={styles.tabsRow}>
