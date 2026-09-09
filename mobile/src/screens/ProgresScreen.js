@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useDaily } from '../context/DailyContext';
-import { questDef, weeklyQuestDef, achievementDef } from '../games/clicker/dailyLogic';
+import { questDef, weeklyQuestDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER } from '../games/clicker/dailyLogic';
 import { COLORS } from './games/clickerTheme';
 
 // Menu Quêtes — panneau MODAL (ne couvre plus tout l'écran, on voit le
@@ -113,11 +113,46 @@ export default function ProgresScreen({ onBack }) {
 
   const renderAchievements = () => (
     <>
-      {(achievements || []).map((a) => (
-        renderRow(a.id, a, achievementProgress(a.id), !!achievementsClaimed?.[a.id], () => handleClaim(a.id, claimAchievement))
-      ))}
+      {(achievements || []).map((a) => {
+        // `Number(...) || 0` : une sauvegarde d'avant les paliers
+        // stockait un booléen ici, qu'on ignore proprement.
+        const claimedTiers = Number(achievementsClaimed?.[a.id]) || 0;
+        const maxed = claimedTiers >= ACHIEVEMENT_MAX_TIER;
+        const target = achievementTarget(a, claimedTiers);
+        const value = achievementProgress(a.id);
+
+        if (maxed) {
+          return (
+            <View key={a.id} style={[styles.questRow, styles.questRowDone]}>
+              <View style={styles.questGem}><Text style={styles.questGemIcon}>🏆</Text></View>
+              <View style={styles.questMiddle}>
+                <Text style={styles.questDesc} numberOfLines={2}>{a.desc}</Text>
+                <Text style={styles.tierLabel}>Terminé — palier 5/5</Text>
+              </View>
+              <View style={[styles.questClaimBtn, styles.questClaimBtnDisabled]}>
+                <Text style={styles.questClaimBtnTextDisabled}>✓</Text>
+              </View>
+            </View>
+          );
+        }
+
+        // On réutilise le rendu commun en lui passant une définition
+        // construite pour le PALIER COURANT (cible + gain du palier),
+        // plutôt que de dupliquer toute la rangée.
+        const tierDef = {
+          desc: a.desc,
+          target,
+          reward: achievementReward(claimedTiers),
+        };
+        return (
+          <View key={a.id}>
+            <Text style={styles.tierLabel}>Palier {claimedTiers + 1}/{ACHIEVEMENT_MAX_TIER}</Text>
+            {renderRow(a.id, tierDef, value, false, () => handleClaim(a.id, claimAchievement))}
+          </View>
+        );
+      })}
       <Text style={styles.footnote}>
-        Jalons à vie, réclamables une seule fois. Ils ne sont jamais remis à zéro.
+        Jalons à vie, en 5 paliers de plus en plus durs. Chaque palier réclamé débloque le suivant.
       </Text>
     </>
   );
@@ -250,6 +285,12 @@ const styles = StyleSheet.create({
   questClaimBtnTextDisabled: { color: COLORS.muted },
 
   footnote: { color: COLORS.muted, fontSize: 10, textAlign: 'center', marginTop: 6, paddingHorizontal: 8 },
+
+  tierLabel: {
+    color: COLORS.action, fontSize: 10, fontWeight: '900',
+    marginBottom: 3, marginLeft: 2, letterSpacing: 0.3,
+  },
+  questRowDone: { opacity: 0.65, borderColor: COLORS.good },
 
   emptyWrap: { paddingVertical: 40, paddingHorizontal: 16 },
   emptyText: { color: COLORS.muted, fontSize: 13, fontWeight: '700', textAlign: 'center', lineHeight: 20 },

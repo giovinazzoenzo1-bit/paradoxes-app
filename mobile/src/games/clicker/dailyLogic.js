@@ -88,22 +88,40 @@ export function weekKey(date = new Date()) {
   return `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
 }
 
+// Objectifs CALIBRÉS SUR MESURE (07/09), pas sur une intuition. Repères
+// obtenus en lisant les constantes du jeu :
+//  - Énergie : max 5, +1 / 20 min => plafond de 72 combats/jour, mais un
+//    joueur régulier (3-5 sessions) en fait 15-25/jour, soit 105-175/sem.
+//  - Griffes : ~20 par combat au niveau 10 => ~2800/semaine, donc ~28
+//    runes achetables (100 Griffes pièce) si on ne dépense que ça.
+//  - Critiques : à 5 taps/s et ~15% de chance, ~2000/jour => ~14 000/sem.
+//
+// Les cibles visent ~50-60% de ce qu'un joueur régulier produit en une
+// semaine : atteignable en 6-7 jours en jouant vraiment, jamais en une
+// seule session. L'ancienne version (12 combats, 60 critiques) tombait
+// à 7% et 0,4% d'une semaine — d'où le fait qu'elles se validaient
+// toutes seules.
 export const WEEKLY_QUEST_POOL = [
-  { id: 'w_win12battles', desc: 'Gagne 12 combats en Aventure', event: 'battleWon', target: 12, reward: 240 },
-  { id: 'w_fuseRune6',    desc: 'Fusionne 6 fois des runes',    event: 'runeFused', target: 6,  reward: 210 },
-  { id: 'w_equipRune6',   desc: 'Équipe 6 runes',               event: 'runeEquipped', target: 6, reward: 180 },
-  { id: 'w_buyRune6',     desc: 'Achète 6 runes',               event: 'runeBought', target: 6,  reward: 150 },
-  { id: 'w_summon18',     desc: 'Invoque 18 créatures',         event: 'summon',    target: 18, reward: 180 },
-  { id: 'w_crit60',       desc: 'Obtiens 60 coups critiques',   event: 'crit',      target: 60, reward: 180 },
-  { id: 'w_earn12000',    desc: 'Gagne 12 000 pièces',          event: 'coinsEarned', target: 12000, reward: 180 },
-  { id: 'w_feed6',        desc: 'Nourris 6 fois une créature',  event: 'creatureFed', target: 6, reward: 150 },
-  // Ces deux événements sont suivis depuis longtemps mais n'étaient
-  // exploités par AUCUNE quête — le plus gros manque du pool actuel.
-  { id: 'w_offering3',    desc: 'Fais 3 Offrandes',             event: 'offering',  target: 3,  reward: 200 },
-  { id: 'w_power10',      desc: 'Active 10 pouvoirs de créature', event: 'powerActivated', target: 10, reward: 160 },
+  { id: 'w_win80battles', desc: 'Gagne 80 combats en Aventure', event: 'battleWon', target: 80, reward: 700 },
+  { id: 'w_crit8000',     desc: 'Obtiens 8 000 coups critiques', event: 'crit', target: 8000, reward: 600 },
+  { id: 'w_buyRune12',    desc: 'Achète 12 runes',              event: 'runeBought', target: 12, reward: 600 },
+  // 4 et non 6 : la fusion exige DEUX runes identiques (même type ET
+  // même niveau). Sur ~28 runes tirées au hasard parmi 4 types, on
+  // obtient environ 7 paires — viser 6 revenait à exiger 100% de la
+  // production hebdomadaire ET une chance parfaite au tirage.
+  { id: 'w_fuseRune4',    desc: 'Fusionne 4 fois des runes',    event: 'runeFused', target: 4, reward: 650 },
+  { id: 'w_equipRune15',  desc: 'Équipe 15 runes',              event: 'runeEquipped', target: 15, reward: 500 },
+  { id: 'w_summon40',     desc: 'Invoque 40 créatures',         event: 'summon', target: 40, reward: 550 },
+  { id: 'w_earn250k',     desc: 'Gagne 250 000 pièces',         event: 'coinsEarned', target: 250000, reward: 500 },
+  { id: 'w_feed30',       desc: 'Nourris 30 fois une créature', event: 'creatureFed', target: 30, reward: 500 },
+  { id: 'w_offering10',   desc: 'Fais 10 Offrandes',            event: 'offering', target: 10, reward: 700 },
+  { id: 'w_power60',      desc: 'Active 60 pouvoirs de créature', event: 'powerActivated', target: 60, reward: 550 },
 ];
 
-const QUESTS_PER_WEEK = 3;
+// 6 par semaine (au lieu de 3) : sur 10 défis disponibles, en tirer 6
+// laisse encore de la variété d'une semaine à l'autre tout en donnant
+// nettement plus à faire.
+const QUESTS_PER_WEEK = 6;
 
 export function pickWeeklyQuests(wKey) {
   let seed = 0;
@@ -124,35 +142,61 @@ export function weeklyQuestDef(questId) {
   return WEEKLY_QUEST_POOL.find((q) => q.id === questId);
 }
 
-// ---- SUCCÈS (07/09) ----
+// ---- SUCCÈS À PALIERS (07/09) ----
 //
-// Objectifs de très long terme, réclamables UNE SEULE FOIS et jamais
-// remis à zéro. Ils lisent `lifetimeStats` (compteurs à vie du
-// DailyContext), pas la progression du jour : c'est ce qui permet des
-// cibles à 4 chiffres sans qu'elles soient hors d'atteinte.
+// Chaque succès est une FAMILLE de 5 paliers de plus en plus durs, et
+// non un objectif isolé. La version précédente mélangeait des exigences
+// incohérentes entre elles (« gagner 500 combats » demandait ~10 fois
+// plus d'efforts que « atteindre le niveau 50 », alors que les deux
+// donnaient une récompense comparable) — corrigé en calant chaque
+// famille sur le même rythme de progression.
 //
-// `mode: 'max'` pour les valeurs qui sont un RECORD et non un cumul
-// (le niveau atteint en Aventure), alimentées par trackMax.
+// Repères utilisés (mêmes mesures que pour les hebdos) : ~140 combats,
+// ~14 000 critiques et ~2800 Griffes par semaine pour un joueur régulier.
+// Palier 1 ≈ premiers jours, palier 5 ≈ plusieurs mois de jeu régulier.
 //
-// Volontairement DURS, comme demandé : les paliers sont calés très
-// au-dessus des hebdomadaires (ex. 12 combats/semaine -> 500 au total,
-// soit environ 10 mois de jeu régulier).
+// La progression se LIT dans lifetimeStats, jamais stockée en double.
+// `mode: 'max'` pour un RECORD et non un cumul (niveau atteint en
+// Aventure), alimenté par trackMax.
+export const ACHIEVEMENT_TIER_REWARDS = [150, 400, 1000, 2500, 6000];
+
 export const ACHIEVEMENTS = [
-  { id: 'a_battles500',  desc: 'Gagner 500 combats',              stat: 'battleWon',      target: 500,     reward: 1500 },
-  { id: 'a_level50',     desc: 'Atteindre le niveau 50 en Aventure', stat: 'advLevelReached', target: 50,  reward: 2000, mode: 'max' },
-  { id: 'a_coins1m',     desc: 'Gagner 1 000 000 de pièces',      stat: 'coinsEarned',    target: 1000000, reward: 1200 },
-  { id: 'a_crit5000',    desc: 'Obtenir 5 000 coups critiques',   stat: 'crit',           target: 5000,    reward: 1000 },
-  { id: 'a_summon150',   desc: 'Invoquer 150 créatures',          stat: 'summon',         target: 150,     reward: 1000 },
-  { id: 'a_fuse75',      desc: 'Fusionner 75 fois des runes',     stat: 'runeFused',      target: 75,      reward: 1200 },
-  { id: 'a_ascension10', desc: 'Faire 10 Ascensions',             stat: 'ascension',      target: 10,      reward: 2500 },
-  { id: 'a_offering25',  desc: 'Faire 25 Offrandes',              stat: 'offering',       target: 25,      reward: 900 },
-  { id: 'a_feed100',     desc: 'Nourrir 100 fois une créature',   stat: 'creatureFed',    target: 100,     reward: 800 },
-  { id: 'a_power200',    desc: 'Activer 200 pouvoirs de créature', stat: 'powerActivated', target: 200,    reward: 900 },
+  { id: 'a_battles', desc: 'Gagner des combats',          stat: 'battleWon',       tiers: [25, 150, 600, 2000, 6000] },
+  // Les niveaux d'Aventure ne se grindent pas : la puissance adverse
+  // grimpe de 6,2% par niveau (composé), donc la difficulté vient du
+  // mur de puissance, pas du nombre de combats. Les paliers restent
+  // donc bien plus bas que ceux des combats gagnés — c'est voulu.
+  { id: 'a_level',   desc: 'Atteindre un niveau en Aventure', stat: 'advLevelReached', mode: 'max', tiers: [10, 20, 35, 50, 75] },
+  { id: 'a_crit',    desc: 'Obtenir des coups critiques',  stat: 'crit',            tiers: [2000, 15000, 75000, 300000, 1000000] },
+  // Les pièces croissent de façon exponentielle avec la progression :
+  // les paliers doivent suivre la même courbe, sinon les trois derniers
+  // tomberaient le même jour.
+  { id: 'a_coins',   desc: 'Gagner des pièces',            stat: 'coinsEarned',     tiers: [50000, 1000000, 25000000, 500000000, 10000000000] },
+  { id: 'a_summon',  desc: 'Invoquer des créatures',       stat: 'summon',          tiers: [10, 50, 150, 400, 1000] },
+  { id: 'a_fuse',    desc: 'Fusionner des runes',          stat: 'runeFused',       tiers: [3, 15, 50, 150, 400] },
+  { id: 'a_feed',    desc: 'Nourrir des créatures',        stat: 'creatureFed',     tiers: [10, 50, 200, 600, 1500] },
+  { id: 'a_power',   desc: 'Activer des pouvoirs',         stat: 'powerActivated',  tiers: [25, 150, 600, 2000, 5000] },
+  { id: 'a_offering',desc: 'Faire des Offrandes',          stat: 'offering',        tiers: [3, 15, 50, 150, 400] },
+  // L'Ascension remet la progression à zéro : c'est l'acte le plus
+  // coûteux du jeu, d'où des paliers très bas comparés au reste.
+  { id: 'a_ascension', desc: 'Faire des Ascensions',       stat: 'ascension',       tiers: [1, 3, 8, 20, 50] },
 ];
 
 export function achievementDef(id) {
   return ACHIEVEMENTS.find((a) => a.id === id);
 }
+
+// Cible du palier suivant, ou null si les 5 sont déjà réclamés.
+export function achievementTarget(def, tiersClaimed) {
+  if (!def || tiersClaimed >= def.tiers.length) return null;
+  return def.tiers[tiersClaimed];
+}
+
+export function achievementReward(tiersClaimed) {
+  return ACHIEVEMENT_TIER_REWARDS[Math.min(ACHIEVEMENT_TIER_REWARDS.length - 1, tiersClaimed)];
+}
+
+export const ACHIEVEMENT_MAX_TIER = 5;
 
 // ---- Streak de connexion ----
 // 7 paliers, la récompense grandit puis reboucle (jour 8 = comme jour 1).

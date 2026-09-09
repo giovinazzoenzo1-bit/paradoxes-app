@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR,
-  weekKey, pickWeeklyQuests, weeklyQuestDef, ACHIEVEMENTS, achievementDef } from '../games/clicker/dailyLogic';
+  weekKey, pickWeeklyQuests, weeklyQuestDef,
+  ACHIEVEMENTS, achievementDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER } from '../games/clicker/dailyLogic';
 
 // Clé lue par AdventureScreen.js à son prochain chargement pour créditer
 // les récompenses de quêtes/streak — MÊME schéma de sécurité que
@@ -48,10 +49,14 @@ export function DailyProvider({ children }) {
   const [weeklyIds, setWeeklyIds] = useState([]);
   const [weeklyProgress, setWeeklyProgress] = useState({});
   const [weeklyClaimed, setWeeklyClaimed] = useState({});
-  // ---- Succès ----
+  // ---- Succès à paliers ----
   // Pas de progression stockée : elle se LIT dans lifetimeStats, qui
-  // compte déjà tout. On ne mémorise donc que ce qui a été réclamé,
-  // définitivement.
+  // compte déjà tout. On mémorise seulement, par famille, le NOMBRE de
+  // paliers déjà réclamés (0 à 5).
+  //
+  // Un compteur plutôt qu'une clé par palier : les paliers se réclament
+  // forcément dans l'ordre, donc un seul nombre suffit et il n'y a aucun
+  // état incohérent possible (palier 3 réclamé mais pas le 2).
   const [achievementsClaimed, setAchievementsClaimed] = useState({});
   const [loaded, setLoaded] = useState(false);
 
@@ -276,16 +281,24 @@ export function DailyProvider({ children }) {
     return Math.floor(lifetimeStatsRef.current[def.stat] || 0);
   }, []);
 
+  // Réclame le palier COURANT d'une famille, puis passe au suivant.
+  // Une ancienne sauvegarde stockait un booléen par succès : `|| 0`
+  // suffit à l'ignorer proprement (un booléen n'est pas un nombre de
+  // paliers valide), sans migration ni risque de plantage.
   const claimAchievement = useCallback(async (id) => {
     const def = achievementDef(id);
     if (!def) return false;
-    if (achievementsClaimed[id]) return false;
-    if ((lifetimeStatsRef.current[def.stat] || 0) < def.target) return false;
-    setAchievementsClaimed((prev) => ({ ...prev, [id]: true }));
+    const claimed = Number(achievementsClaimed[id]) || 0;
+    if (claimed >= ACHIEVEMENT_MAX_TIER) return false;
+    const target = achievementTarget(def, claimed);
+    if (target == null) return false;
+    if ((lifetimeStatsRef.current[def.stat] || 0) < target) return false;
+    const reward = achievementReward(claimed);
+    setAchievementsClaimed((prev) => ({ ...prev, [id]: (Number(prev[id]) || 0) + 1 }));
     const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
     const pending = raw ? parseInt(raw, 10) || 0 : 0;
-    await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + def.reward));
-    return def.reward;
+    await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + reward));
+    return reward;
   }, [achievementsClaimed]);
 
   // Reclame la recompense du jour de calendrier courant.
