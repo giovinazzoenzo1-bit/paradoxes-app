@@ -224,6 +224,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // accessibles depuis le sandbox). A RETIRER une fois la geometrie calee.
   const [dbg, setDbg] = useState(null);
   const dbgDone = useRef(false);
+  const [dbgWrap, setDbgWrap] = useState(null);
+  const dbgWrapDone = useRef(false);
+  const [dbgImg, setDbgImg] = useState(null);
+  const dbgImgDone = useRef(false);
 
   // Geste/bouton retour d'Android. Depuis Shop/Collection il ramène au
   // menu du Clicker ; depuis le menu lui-même il n'y a plus rien derrière
@@ -1538,7 +1542,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     <ImageBackground source={require('../../../assets/icons/home-background.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
       {dbg && (
         <Text style={styles.dbgText}>
-          H{Math.round(SCREEN_H)} W{Math.round(SCREEN_W)} | calc y{Math.round(TAP_ZONE_TOP)} h{Math.round(TAP_ZONE_H)} | REEL y{Math.round(dbg.y)} h{Math.round(dbg.height)}
+          zone y{Math.round(dbg.y)} h{Math.round(dbg.height)}
+          {dbgWrap ? `  wrap y${Math.round(dbgWrap.y)} h${Math.round(dbgWrap.height)}` : '  wrap ?'}
+          {dbgImg ? `  img y${Math.round(dbgImg.y)} h${Math.round(dbgImg.height)}` : '  img ?'}
         </Text>
       )}
       <View style={styles.headerRow}>
@@ -1695,7 +1701,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               }}
             >
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
-                <View style={styles.tapButtonWrap}>
+                <View
+                  style={styles.tapButtonWrap}
+                  onLayout={(e) => {
+                    if (dbgWrapDone.current) return;
+                    dbgWrapDone.current = true;
+                    setDbgWrap(e.nativeEvent.layout);
+                  }}
+                >
                   <Animated.View
                     style={[
                       styles.tapButton,
@@ -1725,6 +1738,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                         source={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
                         style={styles.eggImage}
                         resizeMode="contain"
+                        onLayout={(e) => {
+                          if (dbgImgDone.current) return;
+                          dbgImgDone.current = true;
+                          setDbgImg(e.nativeEvent.layout);
+                        }}
                       />
                     )}
                   </Animated.View>
