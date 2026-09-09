@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration } from 'react-native';
 import BackButton from '../../components/BackButton';
+import CreatureArt from '../../components/CreatureArt';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
@@ -1940,7 +1941,11 @@ function DeckRow({ deck, owned, onSlotPress }) {
             ]}
             onPress={() => onSlotPress(i)}
           >
-            {display ? <Text style={styles.deckSlotEmoji}>{display.emoji}</Text> : <Text style={styles.deckSlotEmpty}>🥚</Text>}
+            {display ? (
+              <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={26} emojiStyle={styles.deckSlotEmoji} />
+            ) : (
+              <Text style={styles.deckSlotEmpty}>🥚</Text>
+            )}
           </TouchableOpacity>
         );
       })}
@@ -2253,7 +2258,11 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, p
               onPress={() => discovered && setSelectedCreature(item.id)}
               disabled={!discovered}
             >
-              <Text style={styles.creatureEmoji}>{discovered ? display.emoji : '❔'}</Text>
+              {discovered ? (
+                <CreatureArt creatureId={item.id} stageIndex={stage} emoji={display.emoji} size={44} emojiStyle={styles.creatureEmoji} />
+              ) : (
+                <Text style={styles.creatureEmoji}>❔</Text>
+              )}
               <Text style={styles.creatureName} numberOfLines={1}>{discovered ? display.name : '???'}</Text>
               {discovered && <Text style={styles.creatureLevel}>Nv {own.level}</Text>}
               <Text style={[styles.creatureRarity, { color: RARITY_COLOR[item.rarity] }]}>{RARITY_LABEL[item.rarity]}</Text>
@@ -2305,7 +2314,7 @@ function CreatureDetail({ creature, owned, coins, onClose, pendingDiscount }) {
             <Text style={styles.elementLabelSmall}>{creature.element}</Text>
           </View>
           <View style={{ alignItems: 'center' }}>
-            <Text style={styles.detailEmoji}>{display.emoji}</Text>
+            <CreatureArt creatureId={creature.id} stageIndex={stage} emoji={display.emoji} size={96} emojiStyle={styles.detailEmoji} />
             <Text style={styles.detailName}>{display.name}</Text>
           </View>
         </View>

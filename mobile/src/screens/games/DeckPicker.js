@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { COLORS } from './clickerTheme';
 import { CREATURES, RARITY_COLOR, stageForLevel } from '../../games/clicker/clickerLogic';
+import CreatureArt from '../../components/CreatureArt';
 
 // Choix de quelle créature possédée occupe l'emplacement tapé. Une
 // créature déjà dans un autre emplacement peut être choisie — elle sera
@@ -42,7 +43,7 @@ export function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose })
                     style={[styles.cell, deck[slotIndex] === o.id && styles.cellSelected, { borderColor: RARITY_COLOR[creature.rarity] }]}
                     onPress={() => onPick(o.id)}
                   >
-                    <Text style={styles.emoji}>{display.emoji}</Text>
+                    <CreatureArt creatureId={o.id} stageIndex={stageForLevel(o.level)} emoji={display.emoji} size={44} emojiStyle={styles.emoji} />
                     <Text style={styles.name} numberOfLines={1}>{display.name}</Text>
                     {inOtherSlot && <Text style={styles.inUse}>déjà en jeu</Text>}
                   </TouchableOpacity>

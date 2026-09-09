@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground } from 'react-native';
 import BackButton from '../../components/BackButton';
+import CreatureArt from '../../components/CreatureArt';
 import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -455,7 +456,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
               >
                 {display ? (
                   <>
-                    <Text style={styles.creatureEmojiLand}>{display.emoji}</Text>
+                    <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={64} emojiStyle={styles.creatureEmojiLand} />
                     <Text style={styles.creatureNameLand} numberOfLines={1}>{display.name}</Text>
                     <Text style={[styles.creatureRarity, { color: RARITY_COLOR[creature.rarity] }]}>
                       {RARITY_LABEL[creature.rarity]}
@@ -633,7 +634,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
         {/* ---------- GAUCHE ---------- */}
         <View style={styles.mlLeft}>
           <View style={styles.mlPortraitZone}>
-            <Text style={styles.mlPortraitEmoji} numberOfLines={1}>{display.emoji}</Text>
+            <CreatureArt creatureId={creature.id} stageIndex={stage} emoji={display.emoji} size={130} emojiStyle={styles.mlPortraitEmoji} />
           </View>
 
           <Text style={styles.mlName} numberOfLines={1}>{display.name}</Text>
