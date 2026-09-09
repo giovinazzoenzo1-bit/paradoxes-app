@@ -137,15 +137,18 @@ const TOP_BLOCK_SHIFT = 0.05;
 // probleme — d'ou cet ancrage, qui garantit que la zone reste entierement
 // dans l'espace libre quelle que soit la taille d'ecran.
 //
-// 0.88 : juste au-dessus de la barre du bas (0.90). L'ecart de 0.41 a 0.88
-// laisse ~1 cm de marge cliquable au-dessus ET en dessous de l'oeuf (250),
-// en plus des cotes qui sont deja en pleine largeur.
+// Coefficients CALES SUR UNE CAPTURE REELLE (07/09) et pas devines : le
+// bas du cadre du deck tombe a 0.351 et le haut de la barre du bas a
+// 0.878, donc le milieu exact entre les deux est a 0.614. La zone fait
+// 0.419 de haut (oeuf 250dp + 1 cm de marge cliquable de chaque cote) et
+// demarre a 0.405, ce qui place son centre — donc l'oeuf — pile sur 0.614.
+// Bas de zone a 0.824 : sous le deck (0.351), au-dessus de la barre (0.878).
 //
 // RÈGLE ABSOLUE respectee : zone > bouton(290) > image(250). La hauteur
 // reste FIXE : elle est calculee UNE fois au chargement du module, ce
 // n'est pas un flex qui se recalcule au rendu.
-const TAP_ZONE_TOP = SCREEN_H * 0.41;
-const TAP_ZONE_H = SCREEN_H * 0.88 - TAP_ZONE_TOP;
+const TAP_ZONE_TOP = SCREEN_H * 0.405;
+const TAP_ZONE_H = SCREEN_H * 0.419;
 
 // Les 5 illustrations d'œuf (un fichier par palier de EGG_STAGES,
 // même index). `require` doit recevoir un chemin STATIQUE — Metro
@@ -2935,7 +2938,17 @@ const styles = StyleSheet.create({
   // Centré (flex) puis décalé de ~2mm (~13dp) vers la droite via
   // transform, sur demande explicite — un translateX ne casse pas le
   // centrage flex sous-jacent, il l'offset juste visuellement.
-  tapButtonWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: 13 }] },
+  // Remplissage ABSOLU et pas `flex: 1` (07/09). Mesure faite sur une
+  // capture reelle : l'oeuf se rendait pile au bord HAUT de la zone au
+  // lieu de son centre — signe que ce conteneur n'avait pas la hauteur de
+  // la zone, donc que `justifyContent: 'center'` n'avait rien a centrer.
+  // Un remplissage absolu prend toujours les dimensions du parent, quoi
+  // qu'il arrive.
+  tapButtonWrap: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center',
+    transform: [{ translateX: 13 }],
+  },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
   tapButton: {
