@@ -78,6 +78,18 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           PID=$(node -e "try{const a=require('./app.json');console.log(a.expo.extra.eas.projectId)}catch(e){console.log('')}" 2>/dev/null || true)
+          # Affiché AUSSI dans les logs, pas seulement dans le résumé :
+          # l'appli mobile GitHub n'affiche pas les résumés de job, seuls
+          # les logs y sont lisibles. Sans ça, le lien est invisible pour
+          # quelqu'un qui travaille uniquement sur téléphone.
+          echo "=================================================="
+          echo "LIEN A OUVRIR DANS EXPO GO :"
+          if [ -n "$PID" ]; then
+            echo "exp://u.expo.dev/$PID?channel-name=main&runtime-version=57.0.0"
+          else
+            echo "(projectId introuvable — voir expo.dev)"
+          fi
+          echo "=================================================="
           {
             echo "## Ouvrir l'appli dans Expo Go"
             if [ -n "$PID" ]; then
