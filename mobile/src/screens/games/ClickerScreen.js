@@ -124,6 +124,29 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 // du bas gardent leurs positions.
 const TOP_BLOCK_SHIFT = 0.05;
 
+// ---- Geometrie de la zone de tap de l'oeuf ----
+// 1 cm ≈ 63dp (1 pouce = 160dp de reference, 2,54 cm par pouce).
+//
+// La zone est ANCREE entre le bas du cadre du deck et le haut de la barre
+// de navigation, au lieu d'etre posee a un `top` fixe avec une hauteur
+// devinee. C'est ce qui corrige le bug « on ne peut taper que le haut de
+// l'oeuf » : l'ancienne zone (top 0.564*H, hauteur 394) descendait sous le
+// texte d'aide ET sous la barre du bas, qui ont tous deux un zIndex
+// SUPERIEUR (3 et 5 contre 2) et interceptaient donc les taps de toute la
+// moitie basse. La descendre davantage n'aurait fait qu'aggraver le
+// probleme — d'ou cet ancrage, qui garantit que la zone reste entierement
+// dans l'espace libre quelle que soit la taille d'ecran.
+//
+// 0.88 : juste au-dessus de la barre du bas (0.90). L'ecart de 0.41 a 0.88
+// laisse ~1 cm de marge cliquable au-dessus ET en dessous de l'oeuf (250),
+// en plus des cotes qui sont deja en pleine largeur.
+//
+// RÈGLE ABSOLUE respectee : zone > bouton(290) > image(250). La hauteur
+// reste FIXE : elle est calculee UNE fois au chargement du module, ce
+// n'est pas un flex qui se recalcule au rendu.
+const TAP_ZONE_TOP = SCREEN_H * 0.41;
+const TAP_ZONE_H = SCREEN_H * 0.88 - TAP_ZONE_TOP;
+
 // Les 5 illustrations d'œuf (un fichier par palier de EGG_STAGES,
 // même index). `require` doit recevoir un chemin STATIQUE — Metro
 // résout les images au moment du bundling, pas à l'exécution, donc un
@@ -2906,8 +2929,8 @@ const styles = StyleSheet.create({
   // explicite — top décalé de -32 pour garder l'œuf centré dans la
   // zone plutôt que de laisser grandir seulement vers le bas.
   tapZone: {
-    position: 'absolute', left: 0, top: SCREEN_H * 0.564 - 32, zIndex: 2,
-    width: '100%', height: 394,
+    position: 'absolute', left: 0, top: TAP_ZONE_TOP, zIndex: 2,
+    width: '100%', height: TAP_ZONE_H,
   },
   // Centré (flex) puis décalé de ~2mm (~13dp) vers la droite via
   // transform, sur demande explicite — un translateX ne casse pas le
@@ -2929,9 +2952,14 @@ const styles = StyleSheet.create({
   // pendant la Transe, possible conflit d'empilement avec zIndex:2.
   // Repositionné juste AU-DESSUS de la barre du bas (top 90%) sur
   // demande explicite — ne dépend plus de la hauteur de tapZone.
+  // `pointerEvents` dans le STYLE, jamais en prop (voir Regles de survie).
+  // Purement decoratif : sans ca, ce bloc vole les taps de la zone de
+  // l'oeuf partout ou il la recouvre, ce qui rendait le bas de l'oeuf
+  // insensible.
   tapHintZone: {
     position: 'absolute', left: 0, top: SCREEN_H * 0.9 - 58, zIndex: 3,
     width: '100%', alignItems: 'center',
+    pointerEvents: 'none',
   },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8, textAlign: 'center' },

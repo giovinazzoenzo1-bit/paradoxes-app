@@ -37,10 +37,27 @@ encore à l'intérieur.
 **La géométrie de la zone de tap est donc sacrée :**
 
 ```
-tapZone   height: 290  (FIXE — ne jamais passer en flex)
-tapButton 260 x 260    (STRICTEMENT < 290)
-eggImage  230 x 230    (STRICTEMENT < 260)
+tapZone   ANCRÉE : top 0.41*H, bas 0.88*H (hauteur FIXE, calculée une
+          fois au chargement du module — surtout pas un flex)
+tapButton 290 x 290    (STRICTEMENT < hauteur de zone)
+eggImage  250 x 250    (STRICTEMENT < 290)
 ```
+
+**07/09 — la zone n'a plus de `top`/`height` devinés.** Elle est ancrée
+entre le bas du cadre du deck et le haut de la barre de navigation
+(`TAP_ZONE_TOP` / `TAP_ZONE_H` en haut de `ClickerScreen.js`). Cause du
+bug « on ne peut taper que le haut de l'œuf » signalé ce jour-là :
+l'ancienne zone (`top: 0.564*H - 32`, `height: 394`) descendait **sous le
+texte d'aide et sous la barre du bas**, qui ont un `zIndex` supérieur
+(3 et 5 contre 2) et interceptaient donc tous les taps de la moitié
+basse. Descendre l'œuf davantage n'aurait fait qu'aggraver le problème.
+L'ancrage garantit que la zone reste dans l'espace libre quelle que soit
+la taille d'écran — vérifié par calcul sur 393x851, 360x780 et 412x915 :
+marge cliquable de 0,93 à 1,43 cm autour de l'œuf, aucun chevauchement.
+
+`tapHintZone` a aussi reçu `pointerEvents: 'none'` **dans son style** :
+purement décoratif, il ne doit jamais voler un tap là où il recouvre la
+zone.
 
 Règle : **zone > bouton > image, avec une zone de hauteur FIXE.** Ces
 valeurs ont bougé 3 fois le 04/09 : 230/210/185 → 260/230/200 (pas assez
