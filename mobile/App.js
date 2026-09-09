@@ -77,8 +77,12 @@ function AppContent() {
           <OptionsScreen onBack={() => setOverlay(null)} />
         </View>
       )}
+      {/* Pas de paddingTop ici, contrairement aux Options : le menu
+          Quêtes est un panneau centré et son fond assombri doit couvrir
+          TOUT l'écran, barre de statut comprise — sinon une bande claire
+          reste visible en haut. */}
       {overlay === 'quests' && (
-        <View style={[styles.overlay, { paddingTop: insets.top }]}>
+        <View style={styles.overlay}>
           <ProgresScreen onBack={() => setOverlay(null)} />
         </View>
       )}
@@ -101,9 +105,14 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  // Pas de couleur de fond ici : chaque surcouche fournit la sienne.
+  // OptionsScreen est opaque plein écran (son propre `container`), alors
+  // que le menu Quêtes est un panneau modal sur fond assombri qui laisse
+  // voir le Clicker autour. Mettre un fond opaque ici annulerait cet
+  // effet pour les Quêtes.
   overlay: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
-    backgroundColor: '#11131c', zIndex: 50,
+    zIndex: 50,
   },
   container: { flex: 1, backgroundColor: '#11131c' },
   content: { flex: 1 },

@@ -1,35 +1,31 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import CoinBar from '../components/CoinBar';
-import BackButton from '../components/BackButton';
 import { useDaily } from '../context/DailyContext';
-import { questDef, streakReward, STREAK_REWARDS } from '../games/clicker/dailyLogic';
+import { questDef } from '../games/clicker/dailyLogic';
 import { COLORS } from './games/clickerTheme';
 
-// Les récompenses de quêtes/streak sont créditées en Griffes (ressource
-// d'Aventure) via un drapeau partagé (PENDING_GRIFFES_KEY, voir
-// DailyContext.js) — pas d'accès direct à l'état d'Aventure depuis cet
-// écran, donc la récompense n'apparaît qu'à la PROCHAINE ouverture du
-// mode Aventure, pas instantanément ici. On le dit clairement au joueur
-// pour ne pas le laisser chercher où sont passées ses Griffes.
-// `onBack` n'est fourni que lorsque cet écran est ouvert EN SURCOUCHE
-// depuis le menu du Clicker (bouton Quêtes sous le cadeau). Voir la même
-// note dans OptionsScreen.js.
+// Menu Quêtes — panneau MODAL (ne couvre plus tout l'écran, on voit le
+// menu du Clicker autour), refondu le 07/09 d'après la maquette fournie :
+// bandeau de titre + croix de fermeture, liste au centre, rangée
+// d'onglets en bas.
+//
+// Le bloc "récompense de connexion journalière" (streak 7 jours) a été
+// RETIRÉ sur demande : il faisait doublon avec le calendrier déjà
+// accessible par le bouton cadeau du menu principal. Les fonctions
+// correspondantes de DailyContext (claimStreak, streakReward,
+// STREAK_REWARDS) n'ont pas été touchées — le calendrier du Clicker s'en
+// sert toujours.
+const TABS = [
+  { key: 'login', label: 'Log-In' },
+  { key: 'daily', label: 'Quotidiennement' },
+  { key: 'weekly', label: 'Hebdomadaire' },
+  { key: 'success', label: 'Succès' },
+];
+
 export default function ProgresScreen({ onBack }) {
-  const { loaded, questIds, questProgress, questClaimed, streak, streakClaimedDate, date, claimQuest, claimStreak } = useDaily();
+  const { loaded, questIds, questProgress, questClaimed, claimQuest } = useDaily();
+  const [tab, setTab] = useState('daily');
   const [busyId, setBusyId] = useState(null); // évite un double-tap pendant l'écriture AsyncStorage
-
-  if (!loaded) {
-    return (
-      <View style={styles.container}>
-        <CoinBar />
-      </View>
-    );
-  }
-
-  const streakAlreadyClaimed = streakClaimedDate === date;
-  const todayReward = streakReward(streak);
-  const dayInCycle = ((streak - 1) % STREAK_REWARDS.length) + 1;
 
   const handleClaimQuest = async (questId) => {
     setBusyId(questId);
@@ -40,142 +36,195 @@ export default function ProgresScreen({ onBack }) {
     }
   };
 
-  const handleClaimStreak = async () => {
-    setBusyId('streak');
-    const reward = await claimStreak();
-    setBusyId(null);
-    if (reward) {
-      Alert.alert('Bonus de connexion !', `+${reward} 🐾 Griffes — récupère-les en ouvrant le mode Exploration.`);
-    }
-  };
+  const renderDaily = () => (
+    <>
+      {questIds.map((qid) => {
+        const def = questDef(qid);
+        if (!def) return null;
+        const progress = Math.min(def.target, Math.floor(questProgress[qid] || 0));
+        const done = progress >= def.target;
+        const claimed = !!questClaimed[qid];
+        const pct = Math.min(100, (progress / def.target) * 100);
+        return (
+          <View key={qid} style={styles.questRow}>
+            {/* Pastille de gauche — reprend l'emplacement de la gemme de
+                la maquette. Icône de récompense, pas de décoration. */}
+            <View style={styles.questGem}>
+              <Text style={styles.questGemIcon}>🐾</Text>
+            </View>
+
+            <View style={styles.questMiddle}>
+              <Text style={styles.questDesc} numberOfLines={2}>{def.desc}</Text>
+              <View style={styles.questBarTrack}>
+                <View style={[styles.questBarFill, { width: `${pct}%` }, claimed && { backgroundColor: COLORS.muted }]} />
+                <Text style={styles.questBarLabel}>{progress}/{def.target}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.questClaimBtn, (!done || claimed) && styles.questClaimBtnDisabled]}
+              onPress={() => handleClaimQuest(qid)}
+              disabled={!done || claimed || busyId === qid}
+            >
+              <Text style={[styles.questClaimBtnText, (!done || claimed) && styles.questClaimBtnTextDisabled]}>
+                {claimed ? '✓' : `+${def.reward}`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+      <Text style={styles.footnote}>
+        Nouvelles quêtes chaque jour à minuit. Récompenses créditées à ta prochaine ouverture du mode Exploration.
+      </Text>
+    </>
+  );
+
+  // Onglets sans contenu réel pour l'instant. Message explicite plutôt
+  // qu'une page vide : on voit que l'onglet marche et ce qu'il attend.
+  const renderEmpty = (text) => (
+    <View style={styles.emptyWrap}>
+      <Text style={styles.emptyText}>{text}</Text>
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
-      <CoinBar />
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {onBack && <BackButton onPress={onBack} style={styles.overlayBack} />}
-        <Text style={styles.title}>🏆 Progrès</Text>
+    <View style={styles.backdrop}>
+      {/* Zone cliquable DERRIÈRE le panneau : taper à côté ferme le menu.
+          Posée en absolu plutôt qu'en parent du panneau, sinon un tap sur
+          le panneau lui-même déclencherait aussi la fermeture. */}
+      <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onBack} />
 
-        {/* Streak de connexion — volontairement NEUTRE (aucune mention de
-            clicker ou d'aventure) : juste être revenu aujourd'hui compte,
-            peu importe le mode joué. */}
-        <View style={styles.streakCard}>
-          <Text style={styles.streakTitle}>🔥 Jour {dayInCycle} / 7</Text>
-          <Text style={styles.streakSubtitle}>Le cycle de 7 jours recommence ensuite</Text>
-
-          {/* Tableau des 7 jours — remplace les petits points par une
-              vraie grille numérotée avec la récompense visible sur
-              chaque case (demande explicite), et affiche bien "Jour 1"
-              après le jour 7, pas un compteur qui grimpe sans fin. */}
-          <View style={styles.streakTable}>
-            {STREAK_REWARDS.map((reward, i) => {
-              const dayNum = i + 1;
-              const isCurrent = dayNum === dayInCycle;
-              const isDone = dayNum < dayInCycle || (dayNum === dayInCycle && streakAlreadyClaimed);
-              return (
-                <View
-                  key={i}
-                  style={[styles.streakDayCell, isCurrent && styles.streakDayCellCurrent, isDone && styles.streakDayCellDone]}
-                >
-                  <Text style={[styles.streakDayLabel, isCurrent && styles.streakDayLabelCurrent]}>J{dayNum}</Text>
-                  <Text style={[styles.streakDayReward, isCurrent && styles.streakDayLabelCurrent]}>{reward}</Text>
-                  {isDone && <Text style={styles.streakDayCheck}>✓</Text>}
-                </View>
-              );
-            })}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.claimBtn, streakAlreadyClaimed && styles.claimBtnDone]}
-            onPress={handleClaimStreak}
-            disabled={streakAlreadyClaimed || busyId === 'streak'}
-          >
-            <Text style={styles.claimBtnText}>
-              {streakAlreadyClaimed ? "✓ Déjà réclamé aujourd'hui" : `Réclamer +${todayReward} 🐾`}
-            </Text>
+      <View style={styles.panel}>
+        <View style={styles.panelHeader}>
+          <Text style={styles.panelTitle}>Quêtes</Text>
+          <TouchableOpacity style={styles.closeBtn} onPress={onBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Quêtes du jour — mélange volontaire Élevage/Aventure. */}
-        <Text style={styles.sectionTitle}>Quêtes du jour</Text>
-        {questIds.map((qid) => {
-          const def = questDef(qid);
-          if (!def) return null;
-          const progress = Math.min(def.target, Math.floor(questProgress[qid] || 0));
-          const done = progress >= def.target;
-          const claimed = !!questClaimed[qid];
-          const pct = Math.min(100, (progress / def.target) * 100);
-          return (
-            <View key={qid} style={styles.questCard}>
-              <Text style={styles.questDesc}>{def.desc}</Text>
-              <View style={styles.questBarTrack}>
-                <View style={[styles.questBarFill, { width: `${pct}%` }, claimed && { backgroundColor: COLORS.muted }]} />
-              </View>
-              <View style={styles.questFooter}>
-                <Text style={styles.questProgressText}>{progress} / {def.target}</Text>
-                <TouchableOpacity
-                  style={[styles.questClaimBtn, (!done || claimed) && styles.questClaimBtnDisabled]}
-                  onPress={() => handleClaimQuest(qid)}
-                  disabled={!done || claimed || busyId === qid}
-                >
-                  <Text style={[styles.questClaimBtnText, (!done || claimed) && styles.questClaimBtnTextDisabled]}>
-                    {claimed ? '✓ Réclamée' : `+${def.reward} 🐾`}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        })}
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
+          {!loaded
+            ? renderEmpty('Chargement…')
+            : tab === 'daily'
+            ? renderDaily()
+            : tab === 'login'
+            ? renderEmpty('Les récompenses de connexion sont dans le calendrier, bouton 🎁 du menu principal.')
+            : tab === 'weekly'
+            ? renderEmpty('Quêtes hebdomadaires — à venir.')
+            : renderEmpty('Succès — à venir.')}
+        </ScrollView>
 
-        <Text style={styles.footnote}>Nouvelles quêtes chaque jour à minuit. Récompenses créditées à ta prochaine ouverture du mode Exploration.</Text>
-      </ScrollView>
+        <View style={styles.tabsRow}>
+          {TABS.map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
+              onPress={() => setTab(t.key)}
+            >
+              <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]} numberOfLines={1}>
+                {t.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#11131c' },
-  scroll: { padding: 16, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: '800', color: '#eef0f6', marginBottom: 16 },
-  overlayBack: { marginBottom: 12 },
-
-  streakCard: {
-    backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.border, marginBottom: 22,
+  // Fond assombri : le menu du Clicker reste visible autour du panneau,
+  // comme sur la maquette (le menu ne prend plus tout l'écran).
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
   },
-  streakTitle: { color: COLORS.action, fontSize: 18, fontWeight: '900' },
-  streakSubtitle: { color: COLORS.muted, fontSize: 10, marginTop: 2, marginBottom: 14 },
-  streakTable: { flexDirection: 'row', gap: 6, marginBottom: 16 },
-  streakDayCell: {
-    flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1.5, borderColor: COLORS.border,
+  panel: {
+    width: '100%',
+    maxHeight: '82%',
+    backgroundColor: COLORS.bg,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
   },
-  streakDayCellCurrent: { borderColor: COLORS.action, backgroundColor: 'rgba(245,197,66,0.14)' },
-  streakDayCellDone: { borderColor: COLORS.good, backgroundColor: 'rgba(0,255,163,0.08)' },
-  streakDayLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '800' },
-  streakDayLabelCurrent: { color: COLORS.action },
-  streakDayReward: { color: COLORS.text, fontSize: 12, fontWeight: '900', marginTop: 3 },
-  streakDayCheck: { color: COLORS.good, fontSize: 11, fontWeight: '900', marginTop: 2 },
 
-  sectionTitle: { color: COLORS.muted, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginBottom: 10 },
+  panelHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 12, paddingHorizontal: 16,
+    backgroundColor: COLORS.panelLight,
+    borderBottomWidth: 2, borderBottomColor: COLORS.border,
+  },
+  panelTitle: { color: COLORS.text, fontSize: 17, fontWeight: '900', letterSpacing: 0.5 },
+  closeBtn: {
+    position: 'absolute', right: 12,
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.border,
+  },
+  closeBtnText: { color: COLORS.text, fontSize: 14, fontWeight: '900' },
 
-  questCard: {
-    backgroundColor: COLORS.panel, borderRadius: 14, padding: 14, marginBottom: 10,
+  body: { flexGrow: 0 },
+  bodyContent: { padding: 12 },
+
+  // ---- Rangée de quête : gemme | texte + barre | bouton ----
+  questRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.panel,
+    borderRadius: 12, borderWidth: 1.5, borderColor: COLORS.border,
+    padding: 10, marginBottom: 10,
+  },
+  questGem: {
+    width: 42, height: 42, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.panelLight,
+    borderWidth: 1.5, borderColor: COLORS.neonCyan,
+    marginRight: 10,
+  },
+  questGemIcon: { fontSize: 20 },
+
+  questMiddle: { flex: 1 },
+  questDesc: { color: COLORS.text, fontSize: 13, fontWeight: '800', marginBottom: 6 },
+  questBarTrack: {
+    height: 18, borderRadius: 9, backgroundColor: '#0a1a28',
     borderWidth: 1, borderColor: COLORS.border,
+    overflow: 'hidden', justifyContent: 'center',
   },
-  questDesc: { color: COLORS.text, fontSize: 13, fontWeight: '700', marginBottom: 8 },
-  questBarTrack: { height: 8, borderRadius: 4, backgroundColor: '#241d42', overflow: 'hidden' },
-  questBarFill: { height: '100%', borderRadius: 4, backgroundColor: COLORS.good },
-  questFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  questProgressText: { color: COLORS.muted, fontSize: 11, fontWeight: '700' },
-  questClaimBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12 },
-  questClaimBtnDisabled: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.border },
-  questClaimBtnText: { color: '#241a00', fontSize: 11, fontWeight: '800' },
+  questBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: COLORS.good },
+  questBarLabel: {
+    color: COLORS.text, fontSize: 10, fontWeight: '900', textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 2,
+  },
+
+  questClaimBtn: {
+    minWidth: 52, marginLeft: 10, paddingVertical: 10, paddingHorizontal: 8,
+    borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.action,
+  },
+  questClaimBtnDisabled: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.border },
+  questClaimBtnText: { color: '#241a00', fontSize: 13, fontWeight: '900' },
   questClaimBtnTextDisabled: { color: COLORS.muted },
 
-  claimBtn: { backgroundColor: COLORS.action, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 22, width: '100%', alignItems: 'center' },
-  claimBtnDone: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.border },
-  claimBtnText: { color: '#241a00', fontSize: 13, fontWeight: '800' },
+  footnote: { color: COLORS.muted, fontSize: 10, textAlign: 'center', marginTop: 6, paddingHorizontal: 8 },
 
-  footnote: { color: COLORS.muted, fontSize: 10, textAlign: 'center', marginTop: 16, paddingHorizontal: 10 },
+  emptyWrap: { paddingVertical: 40, paddingHorizontal: 16 },
+  emptyText: { color: COLORS.muted, fontSize: 13, fontWeight: '700', textAlign: 'center', lineHeight: 20 },
+
+  // ---- Onglets du bas ----
+  tabsRow: {
+    flexDirection: 'row',
+    borderTopWidth: 2, borderTopColor: COLORS.border,
+    backgroundColor: COLORS.panelLight,
+  },
+  tabBtn: {
+    flex: 1, paddingVertical: 12, paddingHorizontal: 2,
+    alignItems: 'center', justifyContent: 'center',
+    borderRightWidth: 1, borderRightColor: 'rgba(42,111,150,0.4)',
+  },
+  tabBtnActive: { backgroundColor: COLORS.panel, borderBottomWidth: 3, borderBottomColor: COLORS.neonCyan },
+  tabLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '800' },
+  tabLabelActive: { color: COLORS.neonCyan },
 });
