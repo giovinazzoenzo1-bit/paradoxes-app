@@ -147,7 +147,7 @@ const TOP_BLOCK_SHIFT = 0.05;
 // RÈGLE ABSOLUE respectee : zone > bouton(290) > image(250). La hauteur
 // reste FIXE : elle est calculee UNE fois au chargement du module, ce
 // n'est pas un flex qui se recalcule au rendu.
-const TAP_ZONE_TOP = SCREEN_H * 0.405;
+const TAP_ZONE_TOP = SCREEN_H * 0.429;
 const TAP_ZONE_H = SCREEN_H * 0.419;
 
 // Les 5 illustrations d'œuf (un fichier par palier de EGG_STAGES,
@@ -216,18 +216,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [owned, setOwned] = useState([]); // [{id, level}]
   const [view, setView] = useState('tap'); // 'tap' | 'shop' | 'collection' | 'adventure'
 
-  // ---- DIAGNOSTIC TEMPORAIRE (07/09) ----
-  // Trois hypotheses successives sur la position de l'oeuf ont ete
-  // contredites par la mesure : les valeurs calculees ne correspondent
-  // pas au rendu reel. On lit donc la position MESUREE par le moteur de
-  // layout et on l'affiche a l'ecran (les logs CI ne sont pas
-  // accessibles depuis le sandbox). A RETIRER une fois la geometrie calee.
-  const [dbg, setDbg] = useState(null);
-  const dbgDone = useRef(false);
-  const [dbgWrap, setDbgWrap] = useState(null);
-  const dbgWrapDone = useRef(false);
-  const [dbgImg, setDbgImg] = useState(null);
-  const dbgImgDone = useRef(false);
 
   // Geste/bouton retour d'Android. Depuis Shop/Collection il ramène au
   // menu du Clicker ; depuis le menu lui-même il n'y a plus rien derrière
@@ -1540,13 +1528,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   return (
     <ImageBackground source={require('../../../assets/icons/home-background.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
-      {dbg && (
-        <Text style={styles.dbgText}>
-          zone y{Math.round(dbg.y)} h{Math.round(dbg.height)}
-          {dbgWrap ? `  wrap y${Math.round(dbgWrap.y)} h${Math.round(dbgWrap.height)}` : '  wrap ?'}
-          {dbgImg ? `  img y${Math.round(dbgImg.y)} h${Math.round(dbgImg.height)}` : '  img ?'}
-        </Text>
-      )}
       <View style={styles.headerRow}>
         {/* Case "Élevage" retirée complètement, sur demande explicite —
             il ne reste que le bouton retour, sans fond. Contextuel :
@@ -1690,25 +1671,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
             </ImageBackground>
 
-            <View
-              style={styles.tapZone}
-              onLayout={(e) => {
-                // Une seule fois : un setState dans onLayout se rappelle
-                // sinon en boucle a chaque rendu.
-                if (dbgDone.current) return;
-                dbgDone.current = true;
-                setDbg(e.nativeEvent.layout);
-              }}
-            >
-              <TouchableOpacity activeOpacity={1} onPress={handleTap} style={StyleSheet.absoluteFillObject}>
-                <View
-                  style={styles.tapButtonWrap}
-                  onLayout={(e) => {
-                    if (dbgWrapDone.current) return;
-                    dbgWrapDone.current = true;
-                    setDbgWrap(e.nativeEvent.layout);
-                  }}
-                >
+            <View style={styles.tapZone}>
+              <TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapTouch}>
                   <Animated.View
                     style={[
                       styles.tapButton,
@@ -1738,15 +1702,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                         source={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
                         style={styles.eggImage}
                         resizeMode="contain"
-                        onLayout={(e) => {
-                          if (dbgImgDone.current) return;
-                          dbgImgDone.current = true;
-                          setDbgImg(e.nativeEvent.layout);
-                        }}
                       />
                     )}
-                  </Animated.View>
-                </View>
+                </Animated.View>
               </TouchableOpacity>
               {popups.map((p) => (
                 <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
@@ -2678,12 +2636,6 @@ const styles = StyleSheet.create({
   // Ne contient plus que le bouton retour (case "Élevage" retirée
   // complètement, sur demande explicite) — width réduite au strict
   // nécessaire, plus besoin de place pour une pilule de titre.
-  // DIAGNOSTIC TEMPORAIRE — a retirer avec le reste du bloc dbg.
-  dbgText: {
-    position: 'absolute', left: 4, top: SCREEN_H * 0.055, zIndex: 40,
-    color: '#00ffa3', fontSize: 9, fontWeight: '900',
-    backgroundColor: 'rgba(0,0,0,0.75)', paddingHorizontal: 4,
-  },
   headerRow: {
     position: 'absolute', left: SCREEN_W * 0.068, top: SCREEN_H * 0.008, zIndex: 3,
   },
@@ -2982,17 +2934,21 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, top: TAP_ZONE_TOP, zIndex: 2,
     width: '100%', height: TAP_ZONE_H,
   },
-  // Centré (flex) puis décalé de ~2mm (~13dp) vers la droite via
-  // transform, sur demande explicite — un translateX ne casse pas le
-  // centrage flex sous-jacent, il l'offset juste visuellement.
-  // Remplissage ABSOLU et pas `flex: 1` (07/09). Mesure faite sur une
-  // capture reelle : l'oeuf se rendait pile au bord HAUT de la zone au
-  // lieu de son centre — signe que ce conteneur n'avait pas la hauteur de
-  // la zone, donc que `justifyContent: 'center'` n'avait rien a centrer.
-  // Un remplissage absolu prend toujours les dimensions du parent, quoi
-  // qu'il arrive.
-  tapButtonWrap: {
-    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+  // Conteneur de centrage de l'oeuf. Hauteur EXPLICITE (TAP_ZONE_H) et
+  // pas un etirement (`flex: 1`, ni `absoluteFill` avec top/bottom a 0).
+  //
+  // Cause reelle du bug trouvee le 07/09 par mesure `onLayout` affichee a
+  // l'ecran : ce conteneur se rendait avec une hauteur de ZERO
+  // (« wrap y0 h0 »), donc `justifyContent: 'center'` centrait l'oeuf sur
+  // une hauteur nulle — il se retrouvait a cheval sur le BORD HAUT de la
+  // zone au lieu de son centre. C'est pour ca que deplacer la zone ne
+  // semblait rien changer : l'oeuf suivait le haut de la zone, pas son
+  // milieu. Le niveau de View intermediaire a ete supprime au passage,
+  // le TouchableOpacity fait le centrage lui-meme.
+  //
+  // translateX 13 : decalage de ~2mm vers la droite demande le 06/09.
+  tapTouch: {
+    width: '100%', height: TAP_ZONE_H,
     alignItems: 'center', justifyContent: 'center',
     transform: [{ translateX: 13 }],
   },
