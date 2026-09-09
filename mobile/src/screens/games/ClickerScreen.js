@@ -1816,7 +1816,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {rewardCreature && (
         <View style={styles.detailOverlay}>
           <View style={styles.rewardPanel}>
-            <Text style={styles.detailEmoji}>{rewardCreature.stages[0].emoji}</Text>
+            <CreatureArt
+              creatureId={rewardCreature.id}
+              stageIndex={0}
+              emoji={rewardCreature.stages[0].emoji}
+              size={96}
+              emojiStyle={styles.detailEmoji}
+            />
             <Text style={styles.detailName}>Capturé !</Text>
             <Text style={[styles.creatureRarity, { color: RARITY_COLOR[rewardCreature.rarity] }]}>
               {rewardCreature.stages[0].name} · {RARITY_LABEL[rewardCreature.rarity]}
@@ -2425,7 +2431,13 @@ function SpawnedCreatureBubble({ spawned, onClaim }) {
           { borderColor: color, transform: [...drift.getTranslateTransform(), { scale: pulse }] },
         ]}
       >
-        <Text style={styles.spawnBubbleEmoji}>{display.emoji}</Text>
+        <CreatureArt
+          creatureId={spawned.creature.id}
+          stageIndex={0}
+          emoji={display.emoji}
+          size={38}
+          emojiStyle={styles.spawnBubbleEmoji}
+        />
       </Animated.View>
     </TouchableOpacity>
   );

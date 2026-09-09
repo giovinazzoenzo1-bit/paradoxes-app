@@ -10,8 +10,10 @@
 // intégré dans ce projet). Pas d'animation pour l'instant, on garde les
 // emojis actuels comme "skins". Croix pour quitter en haut à gauche.
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, ScrollView } from 'react-native';
+import {
+  View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CreatureArt from '../../components/CreatureArt';
 import { StatusBar } from 'expo-status-bar';
 
 // Décor de combat fourni par l'utilisateur (30/08) — remplace le fond
@@ -423,7 +425,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   // devant (slot 0), les autres remplissent les slots 1 et 2.
   const playerOrder = [activeIndex, ...fighters.map((_, i) => i).filter((i) => i !== activeIndex)];
 
-  const renderSprite = ({ key, slot, emoji, name, hp, hpMax, endurance, enduranceMax, fainted, ring, onPress, disabled, hpColor, floatDamage }) => {
+  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, endurance, enduranceMax, fainted, ring, onPress, disabled, hpColor, floatDamage }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -442,7 +444,16 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           </View>
         )}
         <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }, ring === 'active' && styles.ringActive, ring === 'target' && styles.ringTarget]}>
-          <Text style={{ fontSize: fs, lineHeight: fs + 12 }}>{emoji}</Text>
+          {/* `size={fs}` : l'illustration reprend exactement la taille
+              calculee pour l'emoji, donc la mise en page du terrain
+              (anneaux, barres de vie, positions) reste identique. */}
+          <CreatureArt
+            creatureId={creatureId}
+            stageIndex={stageIndex}
+            emoji={emoji}
+            size={fs}
+            emojiStyle={{ fontSize: fs, lineHeight: fs + 12 }}
+          />
         </View>
         <Text style={[styles.spriteName, { fontSize: Math.max(9, Math.round(12 * slot.size)) }]} numberOfLines={1}>{name}</Text>
         <View style={[styles.spriteHpTrack, { width: Math.round(90 * slot.size) }]}>
@@ -478,7 +489,9 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         const f = fighters[fi];
         const d = f.creature.stages[stageForLevel(f.ownedLevel)];
         return renderSprite({
-          key: `p${fi}`, slot: PLAYER_SLOTS[slotIdx], emoji: d.emoji, name: d.name,
+          key: `p${fi}`, slot: PLAYER_SLOTS[slotIdx],
+          creatureId: f.creature.id, stageIndex: stageForLevel(f.ownedLevel),
+          emoji: d.emoji, name: d.name,
           hp: f.hp, hpMax: f.stats.hp,
           endurance: fi === activeIndex ? f.endurance : null, enduranceMax: f.stats.endurance,
           fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
@@ -492,7 +505,9 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         const d = o.creature.stages[0];
         const fainted = o.hp <= 0;
         return renderSprite({
-          key: `o${i}`, slot: OPPONENT_SLOTS[i], emoji: d.emoji, name: d.name,
+          key: `o${i}`, slot: OPPONENT_SLOTS[i],
+          creatureId: o.creature.id, stageIndex: 0,
+          emoji: d.emoji, name: d.name,
           hp: o.hp, hpMax: o.stats.hp, fainted,
           ring: i === targetIndex && !fainted ? 'target' : null,
           onPress: () => chooseTarget(i), disabled: fainted || phase !== 'choosing', hpColor: '#FF5252',

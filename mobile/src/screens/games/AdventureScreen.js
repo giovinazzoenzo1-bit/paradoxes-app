@@ -1188,7 +1188,14 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
         <Text style={styles.overlayTitle}>
           Chapitre {chapterForLevel(levelNumber)} · Niveau {levelIndexInChapter(levelNumber)}
         </Text>
-        <Text style={{ fontSize: 50, marginVertical: 6 }}>{display.emoji}</Text>
+        <CreatureArt
+          creatureId={opponent.id}
+          stageIndex={0}
+          emoji={display.emoji}
+          size={72}
+          emojiStyle={{ fontSize: 50, marginVertical: 6 }}
+          style={{ marginVertical: 6 }}
+        />
         <Text style={[styles.overlaySubtitle, { color: RARITY_COLOR[opponent.rarity] }]}>
           Adversaire : {display.name}
         </Text>
@@ -1202,7 +1209,13 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
             return (
               <View key={i} style={[styles.fighterPick, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}>
                 {fighterDisplay ? (
-                  <Text style={{ fontSize: 30 }}>{fighterDisplay.emoji}</Text>
+                  <CreatureArt
+                    creatureId={id}
+                    stageIndex={stageForLevel(own.level)}
+                    emoji={fighterDisplay.emoji}
+                    size={42}
+                    emojiStyle={{ fontSize: 30 }}
+                  />
                 ) : (
                   <Text style={{ fontSize: 24, opacity: 0.3 }}>🥚</Text>
                 )}
