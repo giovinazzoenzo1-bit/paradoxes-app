@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import CoinBar from '../components/CoinBar';
+import BackButton from '../components/BackButton';
 import { useDaily } from '../context/DailyContext';
 import { questDef, streakReward, STREAK_REWARDS } from '../games/clicker/dailyLogic';
 import { COLORS } from './games/clickerTheme';
@@ -11,7 +12,10 @@ import { COLORS } from './games/clickerTheme';
 // écran, donc la récompense n'apparaît qu'à la PROCHAINE ouverture du
 // mode Aventure, pas instantanément ici. On le dit clairement au joueur
 // pour ne pas le laisser chercher où sont passées ses Griffes.
-export default function ProgresScreen() {
+// `onBack` n'est fourni que lorsque cet écran est ouvert EN SURCOUCHE
+// depuis le menu du Clicker (bouton Quêtes sous le cadeau). Voir la même
+// note dans OptionsScreen.js.
+export default function ProgresScreen({ onBack }) {
   const { loaded, questIds, questProgress, questClaimed, streak, streakClaimedDate, date, claimQuest, claimStreak } = useDaily();
   const [busyId, setBusyId] = useState(null); // évite un double-tap pendant l'écriture AsyncStorage
 
@@ -49,6 +53,7 @@ export default function ProgresScreen() {
     <View style={styles.container}>
       <CoinBar />
       <ScrollView contentContainerStyle={styles.scroll}>
+        {onBack && <BackButton onPress={onBack} style={styles.overlayBack} />}
         <Text style={styles.title}>🏆 Progrès</Text>
 
         {/* Streak de connexion — volontairement NEUTRE (aucune mention de
@@ -132,6 +137,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#11131c' },
   scroll: { padding: 16, paddingBottom: 40 },
   title: { fontSize: 22, fontWeight: '800', color: '#eef0f6', marginBottom: 16 },
+  overlayBack: { marginBottom: 12 },
 
   streakCard: {
     backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, alignItems: 'center',

@@ -2,13 +2,18 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CoinBar from '../components/CoinBar';
+import BackButton from '../components/BackButton';
 import { useCoins } from '../context/CoinsContext';
 import { useDaily } from '../context/DailyContext';
 import { STORAGE_KEY as CLICKER_STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY } from './games/ClickerScreen';
 import { DEV_ADD_GRIFFES_KEY, DEV_REFILL_ENERGY_KEY, DEV_RESET_GRIFFES_KEY } from './games/AdventureScreen';
 import { CREATURES } from '../games/clicker/clickerLogic';
 
-export default function OptionsScreen() {
+// `onBack` n'est fourni que lorsque cet écran est ouvert EN SURCOUCHE
+// depuis le menu du Clicker (bouton ⚙️ en haut à droite). Tant qu'il sert
+// aussi d'onglet, il est rendu sans `onBack` et n'affiche donc pas de
+// bouton retour — le même composant marche dans les deux cas.
+export default function OptionsScreen({ onBack }) {
   const { addCoins, resetCoins } = useCoins();
   const { resetLifetimeStats } = useDaily();
 
@@ -119,6 +124,7 @@ export default function OptionsScreen() {
     <View style={styles.container}>
       <CoinBar />
       <View style={styles.content}>
+        {onBack && <BackButton onPress={onBack} style={styles.overlayBack} />}
         <Text style={styles.title}>⚙️ Options</Text>
 
         <View style={styles.section}>
@@ -162,6 +168,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#11131c' },
   content: { flex: 1, padding: 16 },
   title: { fontSize: 22, fontWeight: '800', color: '#eef0f6', marginBottom: 16 },
+  overlayBack: { marginBottom: 12 },
 
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: '#8d93ab', marginBottom: 10, letterSpacing: 0.5 },

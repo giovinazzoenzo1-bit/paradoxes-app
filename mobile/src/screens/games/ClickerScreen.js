@@ -88,6 +88,7 @@ import {
   RARITY_BADGE_LETTER,
 } from '../../games/clicker/clickerLogic';
 import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
+import { questDef } from '../../games/clicker/dailyLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 import { COLORS } from './clickerTheme';
 
@@ -156,13 +157,22 @@ function formatNum(n) {
   return (n / 1_000_000_000_000).toFixed(2) + 'T';
 }
 
-export default function ClickerScreen({ onBack }) {
+export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const panHandlers = useBackGesture(onBack);
   const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
   const {
     trackEvent, lifetimeStats, loaded: dailyLoaded,
     calendar, calendarDay, streakClaimedDate, date: today, claimStreak,
+    questIds, questProgress, questClaimed,
   } = useDaily();
+  // Pastille du bouton Quêtes : au moins une quête TERMINÉE et pas encore
+  // réclamée. Même rôle que le point rouge du cadeau — signaler qu'il y a
+  // quelque chose à récupérer sans avoir à ouvrir le menu pour vérifier.
+  const hasClaimableQuest = (questIds || []).some((qid) => {
+    const def = questDef(qid);
+    if (!def || questClaimed?.[qid]) return false;
+    return Math.floor(questProgress?.[qid] || 0) >= def.target;
+  });
   // Nombre d'Ascensions faites, source unique du bonus de vitesse. Vient
   // de DailyContext (compteur à vie) plutôt que d'un état local : il
   // survit ainsi à tout ce que l'Ascension remet à zéro.
@@ -1475,6 +1485,20 @@ export default function ClickerScreen({ onBack }) {
         )}
       </View>
 
+      {/* Bouton Options, tout en haut à DROITE (06/09). Rendu seulement
+          sur l'accueil du Clicker : dans Shop/Collection il ferait doublon
+          avec le retour et n'aurait pas de sens.
+          Il appelle une prop plutôt que d'afficher l'écran lui-même —
+          `OptionsScreen` importe déjà des constantes DEPUIS ce fichier
+          (STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY), donc l'importer
+          ici créerait un cycle d'imports. C'est App.js qui affiche la
+          surcouche. Même raison pour le bouton Quêtes plus bas. */}
+      {view === 'tap' && onOpenOptions && (
+        <TouchableOpacity style={styles.optionsBtn} onPress={onOpenOptions}>
+          <Text style={styles.optionsBtnIcon}>⚙️</Text>
+        </TouchableOpacity>
+      )}
+
       {view === 'tap' && (
         <>
           <ImageBackground
@@ -1572,6 +1596,19 @@ export default function ClickerScreen({ onBack }) {
               </Animated.View>
               {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
+
+            {/* Bouton Quêtes, juste SOUS le cadeau (06/09). Sa position
+                dérive de celle du cadeau (même `left`, `top` + 72) : les
+                deux restent donc collés quoi qu'il arrive au décalage
+                global TOP_BLOCK_SHIFT. La pastille signale une quête
+                terminée mais pas encore réclamée, même logique que le
+                point rouge du cadeau. */}
+            {onOpenQuests && (
+              <TouchableOpacity style={styles.questsBtn} onPress={onOpenQuests}>
+                <Text style={styles.questsBtnIcon}>📜</Text>
+                {hasClaimableQuest && <View style={styles.calBtnDot} />}
+              </TouchableOpacity>
+            )}
 
             <ImageBackground
               source={require('../../../assets/icons/deck-frame.png')}
@@ -2719,6 +2756,28 @@ const styles = StyleSheet.create({
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
   calBtnImageWrap: { width: 62, height: 62, borderRadius: 31, overflow: 'hidden' },
+
+  // Bouton Quêtes — même `left` que le cadeau, `top` = celui du cadeau
+  // + 72 (62 de haut + 10 d'écart). Exprimé à partir de la même formule
+  // que calBtn pour qu'ils restent solidaires si TOP_BLOCK_SHIFT bouge.
+  questsBtn: {
+    position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * (0.334 - TOP_BLOCK_SHIFT) + 72, zIndex: 3,
+    width: 62, height: 62, borderRadius: 31,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.panel, borderWidth: 2, borderColor: COLORS.action,
+    shadowColor: COLORS.action, shadowOpacity: 0.6, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 6,
+  },
+  questsBtnIcon: { fontSize: 28 },
+
+  // Bouton Options — coin HAUT DROIT, aligné verticalement sur le bouton
+  // retour (même `top` que headerRow) mais ancré à droite.
+  optionsBtn: {
+    position: 'absolute', right: SCREEN_W * 0.068, top: SCREEN_H * 0.008, zIndex: 4,
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.border,
+  },
+  optionsBtnIcon: { fontSize: 22 },
   calBtnImage: { width: 62, height: 62 },
   calBtnDot: {
     position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,

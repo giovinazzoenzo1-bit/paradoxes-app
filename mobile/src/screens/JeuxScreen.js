@@ -17,7 +17,7 @@ const GAMES = [
   { key: 'clicker', name: 'Élevage', status: 'Jouer', ready: true },
 ];
 
-export default function JeuxScreen({ onGameOpenChange }) {
+export default function JeuxScreen({ onGameOpenChange, onOpenOptions, onOpenQuests }) {
   const [openGame, setOpenGame] = useState(null);
 
   // Signale à App.js quand un jeu est ouvert, pour masquer la barre d'onglets
@@ -27,7 +27,7 @@ export default function JeuxScreen({ onGameOpenChange }) {
   }, [openGame, onGameOpenChange]);
 
   if (openGame === 'clicker') {
-    return <ClickerScreen onBack={() => setOpenGame(null)} />;
+    return <ClickerScreen onBack={() => setOpenGame(null)} onOpenOptions={onOpenOptions} onOpenQuests={onOpenQuests} />;
   }
 
   return (

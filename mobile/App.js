@@ -26,6 +26,12 @@ function AppContent() {
   const insets = useSafeAreaInsets();
   const [active, setActive] = useState('Jeux');
   const [gameOpen, setGameOpen] = useState(false); // masque la tab bar quand un jeu est ouvert
+  // Surcouches ouvertes depuis le menu du Clicker (bouton ⚙️ en haut à
+  // droite, bouton Quêtes sous le cadeau). Elles sont montées ICI et pas
+  // dans ClickerScreen : `OptionsScreen` importe déjà des constantes
+  // DEPUIS `ClickerScreen`, donc l'inverse créerait un cycle d'imports
+  // (valeurs `undefined` au démarrage, panne difficile à diagnostiquer).
+  const [overlay, setOverlay] = useState(null); // null | 'options' | 'quests'
 
   // Barre de navigation/gestes Android masquée pour TOUTE l'appli (plus
   // d'immersion, demande explicite) — plus seulement pendant le billard.
@@ -61,8 +67,26 @@ function AppContent() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={[styles.content, { paddingTop: insets.top }]}>
-        <ActiveComponent onGameOpenChange={setGameOpen} />
+        <ActiveComponent
+          onGameOpenChange={setGameOpen}
+          onOpenOptions={() => setOverlay('options')}
+          onOpenQuests={() => setOverlay('quests')}
+        />
       </View>
+
+      {/* Surcouches plein écran : couvrent aussi la barre d'onglets, pour
+          qu'on ne puisse pas changer d'onglet par-dessus une surcouche
+          ouverte et se retrouver avec deux écrans empilés. */}
+      {overlay === 'options' && (
+        <View style={[styles.overlay, { paddingTop: insets.top }]}>
+          <OptionsScreen onBack={() => setOverlay(null)} />
+        </View>
+      )}
+      {overlay === 'quests' && (
+        <View style={[styles.overlay, { paddingTop: insets.top }]}>
+          <ProgresScreen onBack={() => setOverlay(null)} />
+        </View>
+      )}
       {!gameOpen && (
         <View style={[styles.tabBar, { paddingBottom: insets.bottom + 8 }]}>
           {TABS.map((t) => (
@@ -96,6 +120,10 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    backgroundColor: '#11131c', zIndex: 50,
+  },
   container: { flex: 1, backgroundColor: '#11131c' },
   content: { flex: 1 },
   tabBar: {
