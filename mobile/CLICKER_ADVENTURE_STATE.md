@@ -273,6 +273,39 @@ quittait l'appli au lieu de revenir en arrière.
 pour recréer une navigation : ce groupe de libs causait un écran blanc
 permanent sur ce build (confirmé par bisection).
 
+### 8. Un conteneur de centrage doit avoir une hauteur EXPLICITE
+
+**Bug réel (07/09), 4 tours de correction avant d'être trouvé.** L'œuf ne
+se plaçait jamais où on le demandait : on déplaçait sa zone, il ne bougeait
+pas — ou du mauvais montant.
+
+Cause : le `View` intermédiaire qui centrait l'œuf se rendait avec une
+**hauteur de ZÉRO**. `justifyContent: 'center'` centrait donc sur rien, et
+l'œuf se retrouvait à cheval sur le **bord haut** de la zone au lieu de son
+milieu. Il suivait le `top` de la zone, pas son centre : d'où l'impression
+que les déplacements « ne marchaient pas ».
+
+**Ni `flex: 1` ni `absoluteFill` (top/bottom à 0) ne lui ont donné de
+hauteur.** Seule une hauteur explicite a fonctionné :
+
+```js
+tapTouch: { width: '100%', height: TAP_ZONE_H, alignItems: 'center', justifyContent: 'center' }
+```
+
+**Méthode qui a permis de trouver.** Trois hypothèses successives (ordre
+d'empilement, débordement du parent, image décentrée) ont toutes été
+contredites par la mesure. Ce qui a tranché : un `onLayout` sur chaque
+niveau, affiché **à l'écran** (les logs CI ne sont pas accessibles depuis
+le sandbox). Le relevé `zone y316 h327 · wrap y0 h0 · img y20 h250` a
+désigné le coupable en une capture. **Quand deux hypothèses de suite sont
+démenties par la mesure, arrêter de déduire et instrumenter.**
+
+Au passage, deux faits utiles sur les PNG d'œufs : l'œuf est parfaitement
+centré dans chacun (49,8 % à 50,2 %), mais il n'occupe que **50 % de la
+hauteur du fichier** au stade « endormi » (jusqu'à 80 % au stade
+« prêt »). Il paraît donc plus petit que sa boîte de 250 dp — normal, ce
+n'est pas un bug.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.
