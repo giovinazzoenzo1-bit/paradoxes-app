@@ -63,6 +63,23 @@ jobs:
         #    sur « Checking for new update » à l'infini.
         run: eas update --branch main --message "Auto-publish depuis GitHub Actions (${{ github.sha }})" --non-interactive
 
+      # Un lien Expo Go passe par un CANAL, alors que `eas update --branch`
+      # ne crée qu'une BRANCHE : les deux ne sont pas liés tout seuls.
+      # Sans ce lien, ouvrir exp://...?channel-name=main renvoie
+      # « There are no branches linked to the channel » (erreur 400).
+      #
+      # Les deux commandes sont tolérantes à l'échec et rejouables :
+      # `channel:create` échoue si le canal existe déjà, `channel:edit`
+      # (re)pointe le canal vers la branche. L'une ou l'autre suffit, et
+      # aucune ne doit faire échouer une publication déjà réussie.
+      - name: Lie le canal "main" à la branche "main"
+        if: always()
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas channel:create main --non-interactive || true
+          eas channel:edit main --branch main --non-interactive || true
+
       # Affiche le lien d'ouverture dans le RÉSUMÉ du job (visible en haut
       # de la page du run sur github.com, donc lisible depuis un téléphone).
       # Sert à partager l'appli à quelqu'un dont le compte Expo n'est pas
