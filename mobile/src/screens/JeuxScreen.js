@@ -2,35 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import CoinBar from '../components/CoinBar';
 import ClickerScreen from './games/ClickerScreen';
-import MorpionScreen from './games/MorpionScreen';
-import Puissance4Screen from './games/Puissance4Screen';
-import Game2048Screen from './games/Game2048Screen';
-import MemoryScreen from './games/MemoryScreen';
-import SnakeScreen from './games/SnakeScreen';
-import Puzzle15Screen from './games/Puzzle15Screen';
-import SudokuScreen from './games/SudokuScreen';
-import NutsBoltsScreen from './games/NutsBoltsScreen';
-import FlappyBirdScreen from './games/FlappyBirdScreen';
-import WordleScreen from './games/WordleScreen';
-import BilliardScreen from './games/BilliardScreen';
-import PingPongScreen from './games/PingPongScreen';
-import RuneTracerScreen from './games/RuneTracerScreen';
 
+// Les 13 mini-jeux (Morpion, Puissance 4, 2048, Memory, Snake, Puzzle 15,
+// Sudoku, Nuts and Bolts, Flappy Bird, Wordle, Billard, Ping-pong, Traceur
+// de Runes) ont ete RETIRES de l'appli le 06/09 — trop de surface a
+// maintenir en parallele du Clicker/Aventure.
+//
+// Ils ne sont PAS supprimes : leur code complet est archive dans
+// `archive/minigames/` A LA RACINE DU DEPOT, donc hors du dossier `mobile/`
+// que Metro empaquette. Ils n'entrent plus dans le bundle et ne peuvent
+// plus casser un demarrage. Voir archive/minigames/README.md pour la
+// procedure de restauration exacte (deplacements + imports a remettre).
 const GAMES = [
   { key: 'clicker', name: 'Élevage', status: 'Jouer', ready: true },
-  { key: 'morpion', name: 'Morpion', status: 'Jouer', ready: true },
-  { key: 'puissance4', name: 'Puissance 4', status: 'Jouer', ready: true },
-  { key: '2048', name: '2048', status: 'Jouer', ready: true },
-  { key: 'memory', name: 'Memory', status: 'Jouer', ready: true },
-  { key: 'snake', name: 'Snake', status: 'Jouer', ready: true },
-  { key: 'puzzle15', name: 'Puzzle 15', status: 'Jouer', ready: true },
-  { key: 'sudoku', name: 'Sudoku', status: 'Jouer', ready: true },
-  { key: 'nutsbolts', name: 'Nuts and Bolts', status: 'Jouer', ready: true },
-  { key: 'flappybird', name: 'Flappy Bird', status: 'Jouer', ready: true },
-  { key: 'wordle', name: 'Wordle', status: 'Jouer', ready: true },
-  { key: 'billiard', name: 'Billard', status: 'Jouer', ready: true },
-  { key: 'pingpong', name: 'Ping-pong', status: 'Jouer', ready: true },
-  { key: 'runetracer', name: 'Traceur de Runes', status: 'Jouer', ready: true },
 ];
 
 export default function JeuxScreen({ onGameOpenChange }) {
@@ -45,54 +29,12 @@ export default function JeuxScreen({ onGameOpenChange }) {
   if (openGame === 'clicker') {
     return <ClickerScreen onBack={() => setOpenGame(null)} />;
   }
-  if (openGame === 'morpion') {
-    return <MorpionScreen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'puissance4') {
-    return <Puissance4Screen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === '2048') {
-    return <Game2048Screen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'memory') {
-    return <MemoryScreen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'snake') {
-    return <SnakeScreen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'puzzle15') {
-    return <Puzzle15Screen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'sudoku') {
-    return <SudokuScreen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'nutsbolts') {
-    return <NutsBoltsScreen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'flappybird') {
-    return <FlappyBirdScreen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'wordle') {
-    return <WordleScreen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'billiard') {
-    return <BilliardScreen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'pingpong') {
-    return <PingPongScreen onBack={() => setOpenGame(null)} />;
-  }
-  if (openGame === 'runetracer') {
-    return <RuneTracerScreen onBack={() => setOpenGame(null)} />;
-  }
 
   return (
     <View style={styles.container}>
       <CoinBar />
       <ScrollView contentContainerStyle={styles.list}>
         <Text style={styles.title}>🎮 Jeux</Text>
-        <Text style={styles.subtitle}>
-          Première version native — les jeux arrivent un par un.
-        </Text>
         {GAMES.map((g) => (
           <TouchableOpacity
             key={g.key}
@@ -113,8 +55,7 @@ export default function JeuxScreen({ onGameOpenChange }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#11131c' },
   list: { padding: 16, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: '800', color: '#eef0f6', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#8d93ab', marginBottom: 16 },
+  title: { fontSize: 22, fontWeight: '800', color: '#eef0f6', marginBottom: 16 },
   card: {
     backgroundColor: '#1c2032',
     borderRadius: 14,

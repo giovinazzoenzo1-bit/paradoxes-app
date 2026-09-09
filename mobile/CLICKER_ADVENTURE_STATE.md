@@ -62,8 +62,12 @@ Doit être dans le STYLE : `style={{ pointerEvents: 'none' }}`. En prop,
 la valeur est silencieusement abandonnée et une couche décorative en
 absolu avale tous les taps de l'écran.
 
-⚠️ Reste à corriger dans les 4 mini-jeux (CombatScreen, PingPongScreen,
-RuneTracerScreen, BilliardScreen) — 19 occurrences.
+⚠️ Reste à corriger : **2 occurrences dans `CombatScreen.js`** (lignes ~440
+et ~506). Il y en avait 19 réparties sur 4 écrans ; les 17 autres vivaient
+dans PingPongScreen / RuneTracerScreen / BilliardScreen, **archivés hors de
+l'appli le 06/09** (voir « Retrait des mini-jeux » plus bas) — elles ne
+peuvent donc plus nuire, mais ne sont pas corrigées pour autant : si un de
+ces jeux est un jour restauré, le problème revient avec lui.
 
 ### 3. Pas de dégradé plein écran sur le ClickerScreen
 
@@ -175,6 +179,50 @@ ne JAMAIS revenir à des largeurs en `%` sur un élément qui a aussi
 sélecteur de deck, récompense) ont tous `zIndex:20` pour rester
 au-dessus des blocs d'accueil (`zIndex` 2 à 5) — tout nouvel élément
 plein écran doit reprendre `zIndex:20` ou plus.
+
+## Retrait des mini-jeux (06/09)
+
+Les **13 mini-jeux** (Morpion, Puissance 4, 2048, Memory, Snake, Puzzle 15,
+Sudoku, Nuts and Bolts, Flappy Bird, Wordle, Billard, Ping-pong, Traceur de
+Runes) ont été **retirés de l'appli**, sur demande explicite : trop de
+surface à maintenir en parallèle du Clicker/Aventure.
+
+**Ils ne sont pas supprimés.** Tout leur code est archivé dans
+`archive/minigames/` **à la racine du dépôt**, donc hors du dossier
+`mobile/` que Metro empaquette : ils n'entrent plus dans le bundle et ne
+peuvent plus casser un démarrage. Déplacés avec `git mv`, donc
+`git log --follow` marche encore sur chacun. Procédure de restauration
+détaillée dans `archive/minigames/README.md`.
+
+Pourquoi la racine du dépôt et pas `mobile/src/_archive/` : Metro prend
+`mobile/` comme racine de projet et surveille tout ce qu'il contient. Un
+sous-dossier de `mobile/` aurait continué d'être surveillé.
+
+Ce qui a bougé :
+
+| Dossier | De | Vers |
+|---|---|---|
+| 13 écrans | `mobile/src/screens/games/` | `archive/minigames/screens/` |
+| 13 dossiers de logique | `mobile/src/games/` | `archive/minigames/logic/` |
+| Sprites Flappy Bird | `mobile/assets/flappybird/` | `archive/minigames/assets/` |
+
+**Gardé volontairement** : les **pièces** (`CoinsContext`, `CoinBar`) —
+elles restent en place, une autre monnaie les remplacera plus tard.
+`useBackGesture`, `ErrorBoundary`, `clickerTheme` et
+`mobile/src/games/clicker/` sont partagés ou propres au Clicker, jamais
+touchés.
+
+`JeuxScreen.js` ne liste plus qu'une entrée (Élevage). Il a été **gardé
+comme hub** plutôt que de faire pointer l'onglet Jeux directement sur le
+Clicker : `JeuxScreen` signale `onGameOpenChange` à `App.js`, qui masque la
+barre d'onglets quand un jeu est ouvert. Ouvrir le Clicker d'office aurait
+masqué la barre en permanence et rendu les onglets Progrès/Options
+inaccessibles.
+
+⚠️ La **PWA à la racine** (`index.html`, `sw.js`, `coins-config.js`,
+`PROJECT_STATE.md`) contient aussi ces mini-jeux, en version web. Elle est
+indépendante du dossier `mobile/` et **n'a pas été touchée** — le robot de
+publication ne réagit qu'aux changements dans `mobile/**`.
 
 ## Navigation générale du Clicker
 
@@ -1383,8 +1431,9 @@ récompense du mauvais jour.
     taille d'équipe. Le cercle vicieux perte→pas de Griffes→pas de niveau
     reste une hypothèse non vérifiée par simulation, à mesurer séparément
     si la difficulté reste ressentie comme trop dure après ce correctif.
-- **`pointerEvents` des 4 mini-jeux** — 19 occurrences en prop, donc
-  ignorées depuis le SDK 57 (voir Règles de survie).
+- **`pointerEvents` en prop dans `CombatScreen`** — 2 occurrences, donc
+  ignorées depuis le SDK 57 (voir Règles de survie). Les 17 autres sont
+  parties avec les mini-jeux archivés.
 - **Système de skins** — n'existe pas. Des bons sont déjà distribués par
   le calendrier et attendent d'être échangeables.
 - **Assets des créatures** — 26 créatures × 6 fichiers commandés au frère
