@@ -224,6 +224,38 @@ inaccessibles.
 indépendante du dossier `mobile/` et **n'a pas été touchée** — le robot de
 publication ne réagit qu'aux changements dans `mobile/**`.
 
+## Le Clicker est l'écran RACINE de l'appli (06/09)
+
+Les **3 onglets** (Jeux / Progrès / Options) ont été supprimés : `App.js`
+rend désormais `ClickerScreen` directement, l'appli s'ouvre dessus.
+
+- **Options** : bouton ⚙️ en haut à DROITE du menu du Clicker.
+- **Quêtes** (ex-onglet Progrès) : bouton 📜 juste sous le cadeau. Pastille
+  quand une quête est finie mais pas réclamée.
+
+Les deux ouvrent l'écran correspondant **en surcouche plein écran, montée
+depuis `App.js`** — surtout pas depuis `ClickerScreen`. Raison :
+`OptionsScreen` importe déjà `STORAGE_KEY` / `BACKUP_KEY` /
+`DEV_UNLOCK_ALL_KEY` **depuis** `ClickerScreen`. Si `ClickerScreen`
+importait `OptionsScreen` en retour, le cycle d'imports rendrait ces
+constantes `undefined` au démarrage — panne silencieuse et pénible à
+diagnostiquer. `ClickerScreen` ne reçoit donc que deux callbacks
+(`onOpenOptions`, `onOpenQuests`).
+
+`JeuxScreen.js` n'ayant plus d'utilité, il a rejoint
+`archive/minigames/screens/` (même logique que les mini-jeux : archivé,
+pas supprimé).
+
+**Retour Android** : `useBackGesture` reçoit maintenant une cible
+contextuelle — depuis Shop/Collection il ramène au menu du Clicker, depuis
+le menu lui-même il n'est pas branché (écran racine, Android ferme l'appli
+normalement). Sans cette distinction, un retour Android depuis le Shop
+quittait l'appli au lieu de revenir en arrière.
+
+⚠️ Ne pas réintroduire `react-navigation` / `gesture-handler` / `screens`
+pour recréer une navigation : ce groupe de libs causait un écran blanc
+permanent sur ce build (confirmé par bisection).
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

@@ -158,7 +158,6 @@ function formatNum(n) {
 }
 
 export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
-  const panHandlers = useBackGesture(onBack);
   const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
   const {
     trackEvent, lifetimeStats, loaded: dailyLoaded,
@@ -186,6 +185,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [tapPower, setTapPower] = useState(1);
   const [owned, setOwned] = useState([]); // [{id, level}]
   const [view, setView] = useState('tap'); // 'tap' | 'shop' | 'collection' | 'adventure'
+
+  // Geste/bouton retour d'Android. Depuis Shop/Collection il ramène au
+  // menu du Clicker ; depuis le menu lui-même il n'y a plus rien derrière
+  // (le Clicker est l'écran racine de l'appli depuis le 06/09), donc on
+  // ne branche rien et Android ferme l'appli comme sur n'importe quel
+  // écran d'accueil. Sans cette distinction, un retour Android depuis le
+  // Shop quittait l'appli au lieu de revenir en arrière.
+  const panHandlers = useBackGesture(view !== 'tap' ? () => setView('tap') : onBack);
   const [selectedCreature, setSelectedCreature] = useState(null);
   const [welcomeBack, setWelcomeBack] = useState(null);
   const [popups, setPopups] = useState([]);
@@ -2760,22 +2767,23 @@ const styles = StyleSheet.create({
   // Bouton Quêtes — même `left` que le cadeau, `top` = celui du cadeau
   // + 72 (62 de haut + 10 d'écart). Exprimé à partir de la même formule
   // que calBtn pour qu'ils restent solidaires si TOP_BLOCK_SHIFT bouge.
+  // Aucun fond/bordure/lueur : juste l'icone, comme le cadeau (demande
+  // explicite du 06/09). La zone de tap reste 62x62 pour rester
+  // confortable au doigt meme si le visuel est plus petit.
   questsBtn: {
     position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * (0.334 - TOP_BLOCK_SHIFT) + 72, zIndex: 3,
-    width: 62, height: 62, borderRadius: 31,
+    width: 62, height: 62,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.panel, borderWidth: 2, borderColor: COLORS.action,
-    shadowColor: COLORS.action, shadowOpacity: 0.6, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 6,
   },
   questsBtnIcon: { fontSize: 28 },
 
   // Bouton Options — coin HAUT DROIT, aligné verticalement sur le bouton
   // retour (même `top` que headerRow) mais ancré à droite.
+  // Aucun fond/bordure : juste l'icone (demande explicite du 06/09).
   optionsBtn: {
     position: 'absolute', right: SCREEN_W * 0.068, top: SCREEN_H * 0.008, zIndex: 4,
-    width: 44, height: 44, borderRadius: 22,
+    width: 44, height: 44,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.border,
   },
   optionsBtnIcon: { fontSize: 22 },
   calBtnImage: { width: 62, height: 62 },

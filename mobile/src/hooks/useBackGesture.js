@@ -1,5 +1,6 @@
 // Geste de retour réutilisable pour tout écran empilé au-dessus des onglets
-// (ex: un jeu ouvert depuis JeuxScreen). Pas de react-navigation/gesture-handler
+// (ex: le Shop ou la Collection ouverts depuis le menu du Clicker). Pas de
+// react-navigation/gesture-handler
 // (retirés définitivement, voir App.js) — implémenté avec PanResponder, qui fait
 // partie du cœur de React Native (aucun module natif, ne réintroduit pas le bug
 // de blocage). Couvre 2 déclencheurs :
