@@ -49,7 +49,48 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           CI: "1"
-        # Aucun runtimeVersion n'est forcé dans app.json : eas update
-        # publie alors avec l'exposdk du SDK du projet, seule valeur
-        # qu'Expo Go accepte de LANCER. Voir 63b68ff (28/08).
+        # ⚠️ Commentaire corrigé le 07/09 : il affirmait l'inverse de la
+        # configuration qui marche, et aurait pu pousser à « réparer »
+        # app.json en cassant tout.
+        #
+        # app.json DOIT garder runtimeVersion: "57.0.0" — SANS le préfixe
+        # `exposdk:`, et le projet DOIT rester sans expo-updates. Les deux
+        # ensemble, pas l'un ou l'autre (voir 24ba5c0 du 03/09) :
+        #  - `exposdk:57.0.0` : Expo Go fait split('.')[0] dessus, obtient
+        #    « exposdk:57 » qui n'égale jamais « 57 », et marque toutes les
+        #    updates incompatibles (bug expo/expo#46846).
+        #  - expo-updates installé sans updates.url : bloque le démarrage
+        #    sur « Checking for new update » à l'infini.
         run: eas update --branch main --message "Auto-publish depuis GitHub Actions (${{ github.sha }})" --non-interactive
+
+      # Affiche le lien d'ouverture dans le RÉSUMÉ du job (visible en haut
+      # de la page du run sur github.com, donc lisible depuis un téléphone).
+      # Sert à partager l'appli à quelqu'un dont le compte Expo n'est pas
+      # membre de `paradoxes-app1` : la liste « Projects » d'Expo Go ne
+      # montre que les projets du compte connecté, alors qu'un lien direct
+      # s'ouvre quel que soit le compte.
+      #
+      # `|| true` partout : ce résumé est du confort, il ne doit JAMAIS
+      # faire échouer une publication qui a réussi.
+      - name: Affiche le lien d'ouverture Expo Go
+        if: always()
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          PID=$(node -e "try{const a=require('./app.json');console.log(a.expo.extra.eas.projectId)}catch(e){console.log('')}" 2>/dev/null || true)
+          {
+            echo "## Ouvrir l'appli dans Expo Go"
+            if [ -n "$PID" ]; then
+              echo ""
+              echo "Lien à ouvrir sur le téléphone (marche même si le compte Expo n'est pas membre du projet) :"
+              echo ""
+              echo '```'
+              echo "exp://u.expo.dev/$PID?channel-name=main&runtime-version=57.0.0"
+              echo '```'
+            else
+              echo ""
+              echo "projectId introuvable dans app.json — récupérer le lien sur expo.dev."
+            fi
+            echo ""
+            echo "Page des updates : https://expo.dev/accounts/paradoxes-app1/projects/paradox-1/updates"
+          } >> "$GITHUB_STEP_SUMMARY" || true
