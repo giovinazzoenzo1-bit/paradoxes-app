@@ -106,6 +106,22 @@ const NAV_CYAN = '#5bc8f0';
 // contrairement à challengeCard/deckFrame (en %).
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
+// Décalage vertical appliqué à TOUT le bloc du haut (pièces, revenu/s,
+// bannières, carte de défi, bouton dev, cadeau, cadre du deck) pour le
+// remonter d'un bloc — demande du 06/09, en préparation du nouveau menu
+// principal. UNE seule constante partagée : c'est ce qui garantit que les
+// positions RELATIVES entre ces éléments ne bougent pas d'un pixel, quel
+// que soit l'ajustement futur. Pour remonter/redescendre l'ensemble, il
+// suffit de changer ce chiffre ici, rien d'autre.
+//
+// 5% : la pilule de pièces se retrouve à ~7dp du haut de la zone de
+// contenu. Elle ne gêne pas le bouton retour malgré la hauteur : les deux
+// ne se croisent PAS horizontalement (retour ≈ x 27-90dp à gauche, pièces
+// ≈ x 119-284dp au centre), vérifié avant de choisir cette valeur.
+// Rien d'autre ne bouge : bouton retour, œuf, textes sous l'œuf et barre
+// du bas gardent leurs positions.
+const TOP_BLOCK_SHIFT = 0.05;
+
 // Les 5 illustrations d'œuf (un fichier par palier de EGG_STAGES,
 // même index). `require` doit recevoir un chemin STATIQUE — Metro
 // résout les images au moment du bundling, pas à l'exécution, donc un
@@ -2546,7 +2562,7 @@ const styles = StyleSheet.create({
   // Remontée de ~5mm (~32dp — 1mm ≈ 6,3dp à la densité de référence
   // 160dpi) avec le cadre du deck, sur demande explicite.
   coinsPill: {
-    position: 'absolute', left: SCREEN_W * 0.303, top: SCREEN_H * 0.096 - 32, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.303, top: SCREEN_H * (0.096 - TOP_BLOCK_SHIFT) - 32, zIndex: 3,
     width: 165, aspectRatio: 460 / 180,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -2558,18 +2574,18 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
   incomeText: {
-    position: 'absolute', left: SCREEN_W * 0.1, top: SCREEN_H * 0.13, width: SCREEN_W * 0.8, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.1, top: SCREEN_H * (0.13 - TOP_BLOCK_SHIFT), width: SCREEN_W * 0.8, zIndex: 3,
     color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center',
   },
 
   welcomeBanner: {
-    position: 'absolute', left: SCREEN_W * 0.08, top: SCREEN_H * 0.145, width: SCREEN_W * 0.84, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.08, top: SCREEN_H * (0.145 - TOP_BLOCK_SHIFT), width: SCREEN_W * 0.84, zIndex: 3,
     backgroundColor: 'rgba(0,230,118,0.15)', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: COLORS.good,
   },
   welcomeText: { color: COLORS.good, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   powerBanner: {
-    position: 'absolute', left: SCREEN_W * 0.08, top: SCREEN_H * 0.145, width: SCREEN_W * 0.84, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.08, top: SCREEN_H * (0.145 - TOP_BLOCK_SHIFT), width: SCREEN_W * 0.84, zIndex: 3,
     backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.action,
   },
   discountBanner: { backgroundColor: 'rgba(46,127,184,0.15)', borderColor: '#3ec6f0' },
@@ -2584,7 +2600,7 @@ const styles = StyleSheet.create({
   // wrap ni de marges externes, tout est à l'intérieur de l'image.
   // Remontée de ~2mm (~13dp) sur demande explicite.
   challengeCard: {
-    position: 'absolute', left: SCREEN_W * 0.061, top: SCREEN_H * 0.157 - 13, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.061, top: SCREEN_H * (0.157 - TOP_BLOCK_SHIFT) - 13, zIndex: 3,
     width: SCREEN_W * 0.88, aspectRatio: CHALLENGE_CARD_ASPECT_RATIO,
   },
   // Zone vide mesurée entre le bord supérieur du cadre et le cercle
@@ -2623,7 +2639,7 @@ const styles = StyleSheet.create({
   },
   // Remontée de ~2mm (~13dp) sur demande explicite.
   devSkipBtn: {
-    position: 'absolute', left: SCREEN_W * 0.258, top: SCREEN_H * 0.303 - 13, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.258, top: SCREEN_H * (0.303 - TOP_BLOCK_SHIFT) - 13, zIndex: 3,
     paddingVertical: 5, paddingHorizontal: 12,
     borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
   },
@@ -2697,7 +2713,7 @@ const styles = StyleSheet.create({
 
   // ---- Calendrier de connexion ----
   calBtn: {
-    position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * 0.334, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * (0.334 - TOP_BLOCK_SHIFT), zIndex: 3,
     width: 62, height: 62, borderRadius: 31,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
@@ -2762,7 +2778,7 @@ const styles = StyleSheet.create({
   // du centre décalé (58,3%) hérité d'un ancien réglage. Les créatures
   // suivent automatiquement (DECK_SLOT_X_PCT est en % de CE cadre).
   deckFrame: {
-    position: 'absolute', left: SCREEN_W * 0.225, top: SCREEN_H * 0.357 - 32, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.225, top: SCREEN_H * (0.357 - TOP_BLOCK_SHIFT) - 32, zIndex: 3,
     width: SCREEN_W * 0.55, aspectRatio: 800 / 329,
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
