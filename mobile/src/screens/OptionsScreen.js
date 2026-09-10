@@ -275,14 +275,17 @@ const styles = StyleSheet.create({
     borderRadius: 12, borderWidth: 1.5, borderColor: COLORS.border,
     padding: 12, marginBottom: 10,
   },
-  rowText: { flex: 1, marginRight: 10 },
+  // `minWidth: 0` : sans ça, Yoga refuse de rétrécir un élément flex
+  // sous la largeur de son texte, et l'élément voisin (bouton, valeur)
+  // sort de la ligne. Même défaut que les boutons d'achat du Shop.
+  rowText: { flex: 1, minWidth: 0, marginRight: 10 },
   rowLabel: { color: COLORS.text, fontSize: 14, fontWeight: '800' },
   rowHint: { color: COLORS.muted, fontSize: 10, fontWeight: '600', marginTop: 3 },
   // Interrupteur dessiné à la main plutôt que le `Switch` de React
   // Native : celui-ci s'affiche avec les couleurs système et jurerait
   // avec le reste du jeu.
   switchTrack: {
-    width: 46, height: 26, borderRadius: 13,
+    width: 46, height: 26, borderRadius: 13, flexShrink: 0,
     backgroundColor: '#0a1a28', borderWidth: 1.5, borderColor: COLORS.border,
     justifyContent: 'center', padding: 2,
   },

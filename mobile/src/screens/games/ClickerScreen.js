@@ -2316,7 +2316,7 @@ function ShopView({
               onPress={onBuyTapPower}
               disabled={coins < applyDiscount(tapPowerCost(tapPower))}
             >
-              <View style={{ flex: 1 }}>
+              <View style={styles.actionBtnLeft}>
                 <Text style={styles.actionBtnText}>🔗 Pacte : {tapPower} → {tapPower + 1}</Text>
                 <Text style={styles.actionBtnSubtext}>+0,5 pièce par tap à chaque niveau (actuellement {tapDamage(tapPower).toFixed(1)})</Text>
               </View>
@@ -2328,7 +2328,7 @@ function ShopView({
               onPress={onBuyCrit}
               disabled={!isUnlocked('faveur') || coins < applyDiscount(critUpgradeCost(critLevel))}
             >
-              <View style={{ flex: 1 }}>
+              <View style={styles.actionBtnLeft}>
                 <Text style={styles.actionBtnText}>{isUnlocked('faveur') ? `✨ Faveur des Esprits (nv ${critLevel})` : '🔒 ???'}</Text>
                 <Text style={styles.actionBtnSubtext}>
                   {isUnlocked('faveur')
@@ -2346,7 +2346,7 @@ function ShopView({
               onPress={onBuyCritDamage}
               disabled={!isUnlocked('critDamage') || coins < applyDiscount(critDamageUpgradeCost(critDamageLevel))}
             >
-              <View style={{ flex: 1 }}>
+              <View style={styles.actionBtnLeft}>
                 <Text style={styles.actionBtnText}>{isUnlocked('critDamage') ? `💥 Dégâts critiques (nv ${critDamageLevel})` : '🔒 ???'}</Text>
                 <Text style={styles.actionBtnSubtext}>
                   {isUnlocked('critDamage')
@@ -2362,7 +2362,7 @@ function ShopView({
               onPress={onBuySanctuary}
               disabled={!isUnlocked('sanctuaire') || sanctuaryMaxed(sanctuaryLevel) || coins < applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel))}
             >
-              <View style={{ flex: 1 }}>
+              <View style={styles.actionBtnLeft}>
                 <Text style={styles.actionBtnText}>{isUnlocked('sanctuaire') ? `🏛️ Sanctuaire (nv ${sanctuaryLevel}/${SANCTUARY_MAX_LEVEL})` : '🔒 ???'}</Text>
                 <Text style={styles.actionBtnSubtext}>
                   {isUnlocked('sanctuaire')
@@ -2380,7 +2380,7 @@ function ShopView({
               onPress={onBuyVeilleur}
               disabled={!isUnlocked('veilleur') || veilleurMaxed(veilleurLevel) || coins < applyDiscount(veilleurUpgradeCost(veilleurLevel))}
             >
-              <View style={{ flex: 1 }}>
+              <View style={styles.actionBtnLeft}>
                 <Text style={styles.actionBtnText}>{isUnlocked('veilleur') ? `🌙 Veilleur (nv ${veilleurLevel}/${VEILLEUR_MAX_LEVEL})` : '🔒 ???'}</Text>
                 <Text style={styles.actionBtnSubtext}>
                   {isUnlocked('veilleur') ? '+5% de gains hors-ligne par niveau' : coreUpgradeRequirement('veilleur')}
@@ -2416,7 +2416,7 @@ function ShopView({
                   onPress={() => onBuyTapUpgrade(item.id)}
                   disabled={!canBuy}
                 >
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.actionBtnLeft}>
                     <Text style={styles.actionBtnText}>
                       {unlocked ? `${item.emoji} ${item.name} (nv ${level})` : '🔒 ???'}
                     </Text>
@@ -2445,7 +2445,7 @@ function ShopView({
                   onPress={() => onBuyUpgradeItem(item.id)}
                   disabled={!canAfford}
                 >
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.actionBtnLeft}>
                     <Text style={styles.actionBtnText}>
                       {item.emoji} {item.name} (nv {level})
                     </Text>
@@ -2473,7 +2473,7 @@ function ShopView({
               return (
                 <View key={clicker.id} style={styles.shopRow}>
                   <Text style={styles.shopRowEmoji}>{clicker.emoji}</Text>
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.actionBtnLeft}>
                     <Text style={styles.shopRowName}>{clicker.name}</Text>
                     <Text style={styles.shopRowInfo}>
                       Possédé : {ownedCount} · +{clicker.baseIncome.toFixed(1)}/s chacun
@@ -3364,9 +3364,20 @@ const styles = StyleSheet.create({
     width: '100%', backgroundColor: COLORS.panel, borderRadius: 14, padding: 14, marginTop: 16,
     borderWidth: 1, borderColor: COLORS.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  actionBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '700', flex: 1 },
+  // Colonne de gauche des boutons d'achat. `minWidth: 0` est LE point
+  // important : par défaut Yoga donne `minWidth: auto` à un élément
+  // flex, donc ce conteneur refusait de rétrécir sous la largeur
+  // intrinsèque de son texte et POUSSAIT le coût hors de la ligne.
+  // Symptôme signalé : à partir du Pacte niveau 7, le coût devenait
+  // invisible (le libellé et le montant venaient de gagner un caractère
+  // chacun, ce qui faisait déborder la ligne). Les 8 boutons d'achat
+  // avaient exactement le même défaut.
+  actionBtnLeft: { flex: 1, minWidth: 0, flexShrink: 1, marginRight: 10 },
+  actionBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
   actionBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 2 },
-  actionBtnCost: { color: COLORS.action, fontSize: 13, fontWeight: '800' },
+  // `flexShrink: 0` : le montant garde toujours sa largeur naturelle,
+  // c'est le texte de gauche qui se replie.
+  actionBtnCost: { color: COLORS.action, fontSize: 13, fontWeight: '800', flexShrink: 0 },
   actionBtnDisabled: { opacity: 0.4 },
 
   // Paliers d'améliorations/auto-clics à débloquer (30/08).

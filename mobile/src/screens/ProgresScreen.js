@@ -262,7 +262,10 @@ const styles = StyleSheet.create({
   },
   questGemIcon: { fontSize: 20 },
 
-  questMiddle: { flex: 1 },
+  // `minWidth: 0` : sans ça, Yoga refuse de rétrécir un élément flex
+  // sous la largeur de son texte, et l'élément voisin (bouton, valeur)
+  // sort de la ligne. Même défaut que les boutons d'achat du Shop.
+  questMiddle: { flex: 1, minWidth: 0 },
   questDesc: { color: COLORS.text, fontSize: 13, fontWeight: '800', marginBottom: 6 },
   questBarTrack: {
     height: 18, borderRadius: 9, backgroundColor: '#0a1a28',
@@ -276,7 +279,7 @@ const styles = StyleSheet.create({
   },
 
   questClaimBtn: {
-    minWidth: 52, marginLeft: 10, paddingVertical: 10, paddingHorizontal: 8,
+    minWidth: 52, marginLeft: 10, paddingVertical: 10, paddingHorizontal: 8, flexShrink: 0,
     borderRadius: 10, alignItems: 'center', justifyContent: 'center',
     backgroundColor: COLORS.action,
   },

@@ -1392,7 +1392,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.panel, borderRadius: 14, padding: 14, marginBottom: 10,
     borderWidth: 1.5,
   },
-  fusionGroupInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  // `minWidth: 0` : sans ça, Yoga refuse de rétrécir un élément flex
+  // sous la largeur de son texte, et l'élément voisin (bouton, valeur)
+  // sort de la ligne. Même défaut que les boutons d'achat du Shop.
+  fusionGroupInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 },
   fusionGroupName: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
   fusionGroupCount: { color: COLORS.muted, fontSize: 11, marginTop: 2 },
   fusionGroupMaxed: { color: COLORS.muted, fontSize: 11, fontWeight: '700', fontStyle: 'italic' },

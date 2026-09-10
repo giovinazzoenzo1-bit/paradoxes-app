@@ -507,6 +507,34 @@ sans table à maintenir.
 ⚠️ Une fois les 26 obtenues, le tirage retombe sur le roster entier :
 l'œuf rend alors un doublon qui monte un niveau, plutôt que rien.
 
+### 10. `flex: 1` sans `minWidth: 0` pousse le voisin hors de la ligne
+
+**Bug réel (07/09)** : à partir du **Pacte niveau 7**, le coût d'achat
+devenait invisible dans la boutique, et le restait jusqu'au niveau 10.
+
+Cause : dans une ligne (`flexDirection: 'row'`), Yoga donne par défaut
+`minWidth: auto` à un élément `flex: 1`. Le conteneur refuse donc de
+rétrécir sous la **largeur intrinsèque de son texte** et pousse son
+voisin hors de la ligne. Au niveau 7, le libellé (« Pacte : 7 → 8 ») et
+le montant (« 1.3K » au lieu de « 640 ») gagnaient chacun un caractère —
+assez pour faire déborder la ligne.
+
+**Correctif** :
+```js
+colonneGauche: { flex: 1, minWidth: 0, flexShrink: 1 }  // peut se replier
+valeurDroite:  { flexShrink: 0 }                        // garde sa largeur
+```
+
+Le défaut n'était pas isolé, il touchait **11 emplacements** : les
+8 boutons d'achat du Shop, les rangées de quêtes (`questMiddle`), les
+lignes de réglages (`rowText`) et la fusion de runes
+(`fusionGroupInfo`).
+
+**Règle** : dès qu'une ligne contient un texte extensible ET une valeur
+ou un bouton à droite, le texte a besoin de `minWidth: 0` et la valeur de
+`flexShrink: 0`. Sans ça, le bug n'apparaît qu'à partir d'une certaine
+longueur de contenu — donc bien après la mise en production.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.
