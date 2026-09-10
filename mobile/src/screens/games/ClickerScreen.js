@@ -77,7 +77,6 @@ import {
   resolveQuestTarget,
   EGG_STAGES,
   eggStageForCompletedCount,
-  CAPTURE_TAPS_REQUIRED,
   AUTOCLICKERS,
   autoClickerCost,
   totalAutoClickIncome,
@@ -263,6 +262,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const id = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(id);
   }, [mainEgg]);
+  const mainEggRef = useRef(null);
+  mainEggRef.current = mainEgg;
   const mainRemaining = mainEgg ? Math.max(0, mainEgg.endsAt - nowTick) : 0;
   const mainReady = !!mainEgg && mainRemaining <= 0;
 
@@ -361,7 +362,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // départ : un nouveau joueur a forcément 0 partout, donc "absolu" et
   // "depuis le baseline" reviennent au même dans ce cas précis.
   const [questBaseline, setQuestBaseline] = useState({});
-  const [eggPhase, setEggPhase] = useState('collecting'); // 'collecting' | 'hatching' | 'capturing'
+  const [eggPhase, setEggPhase] = useState('collecting'); // 'collecting' | 'hatching'
   const [hatchTaps, setHatchTaps] = useState(0);
   const [captureTaps, setCaptureTaps] = useState(0);
   const [rewardCreature, setRewardCreature] = useState(null); // affiché après capture
@@ -1580,39 +1581,28 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
     if (eggPhaseRef.current === 'hatching') {
       // Le tap retire 1 seconde au minuteur (même règle que
-      // l'incubateur) au lieu d'incrémenter un compteur vers 500.
-      // On ne passe à la capture que lorsque le temps est écoulé.
-      setMainEgg((prev) => {
-        if (!prev) return prev;
-        const next = incubatorApplyTap(prev);
-        if (incubatorIsReady(next)) {
-          setEggPhase('capturing');
-          return null;
-        }
-        return next;
-      });
-    } else if (eggPhaseRef.current === 'capturing') {
-      const next = captureTapsRef.current + 1;
-      captureTapsRef.current = next;
-      setCaptureTaps(next);
-      if (next >= CAPTURE_TAPS_REQUIRED) {
-        // Capture réussie : récompense (tirage classique, comme demandé —
-        // pas de créature rare garantie) + petit bonus de pièces, puis
-        // nouveau cycle de quêtes.
+      // l'incubateur). Quand le temps est écoulé, la créature est
+      // donnée DIRECTEMENT : la phase de capture (200 taps de plus) a
+      // été supprimée le 07/09, elle faisait doublon avec le minuteur.
+      //
+      // La lecture se fait par ref et non dans l'updater de setMainEgg :
+      // déclencher d'autres setState depuis un updater est un effet de
+      // bord que React n'aime pas et qui peut s'exécuter deux fois.
+      const cur = mainEggRef.current;
+      if (!cur) return;
+      const next = incubatorApplyTap(cur);
+      if (incubatorIsReady(next)) {
+        mainEggRef.current = null;
+        setMainEgg(null);
+        // Tirage classique, pas de créature rare garantie, + petit
+        // bonus de pièces — comme l'ancienne capture.
         const creature = rollCreature();
         addCreatureToOwned(creature);
         gainCoins(goldenBonus(tapPowerRef.current) * 3);
         setRewardCreature(creature);
-        // Instantané complet des stats à cet instant précis. Il sert à
-        // DEUX choses désormais : résoudre les cibles des nouveaux défis
-        // (« 25 minutes de farm » se convertit en pièces d'après le
-        // revenu d'ICI), et servir de point zéro à la progression.
-        //
-        // Il couvre TOUTES les métriques, plus seulement les 'delta' :
-        // depuis que la barre des défis 'absolute' se mesure elle aussi
-        // depuis le tirage, une métrique absente ferait repartir la
-        // barre d'un état faux.
         startNewEggCycle();
+      } else {
+        setMainEgg(next);
       }
     }
   };
@@ -1794,19 +1784,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               />
             )
           ) : (
+            /* `countLabel` affiche le TEMPS RESTANT, pas « 5/500 » :
+               seule information utile maintenant que le tap réduit un
+               minuteur. */
             <ChallengeBar
-              icon={eggPhase === 'hatching' ? '🥚' : '💫'}
-              label={eggPhase === 'hatching' ? "L'œuf éclot bientôt — tape pour accélérer !" : 'La créature bouge encore : capture-la !'}
-              current={eggPhase === 'hatching' ? (mainEgg ? mainEgg.totalMs - mainRemaining : 0) : captureTaps}
-              target={eggPhase === 'hatching' ? (mainEgg ? mainEgg.totalMs : 1) : CAPTURE_TAPS_REQUIRED}
+              icon="🥚"
+              label={mainReady ? "L'œuf est prêt — tape pour l'ouvrir !" : "L'œuf éclot bientôt — tape pour accélérer !"}
+              current={mainEgg ? mainEgg.totalMs - mainRemaining : 0}
+              target={mainEgg ? mainEgg.totalMs : 1}
               cycleIndex={0}
               cycleTotal={0}
-              {...(eggPhase === 'hatching'
-                // Le compteur affiche le TEMPS RESTANT, pas « 5/500 » :
-                // c'est la seule information utile maintenant que le
-                // tap réduit un minuteur.
-                ? { countLabel: formatRemaining(mainRemaining) }
-                : {})}
+              countLabel={formatRemaining(mainRemaining)}
             />
           )}
 
@@ -1908,9 +1896,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                       },
                     ]}
                   >
-                    {eggPhase === 'capturing' ? (
-                      <Text style={[styles.tapEmoji, { opacity: 0.6 + eggStageIndex * 0.1 }]}>💫</Text>
-                    ) : (
+                    {(
                       <Image
                         source={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
                         style={styles.eggImage}
@@ -2000,9 +1986,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               ) : (
                 <Text style={styles.tapHint}>
                   {eggPhase === 'hatching'
-                    ? "Tape pour casser l'œuf"
-                    : eggPhase === 'capturing'
-                    ? 'Tape pour capturer la créature'
+                    ? "Tape pour accélérer l'éclosion"
                     : 'Tape pour récolter des pièces'}
                 </Text>
               )}
@@ -3159,26 +3143,35 @@ const styles = StyleSheet.create({
     width: 52, height: 52, borderRadius: 26,
     alignItems: 'center', justifyContent: 'center',
   },
+  // Lueur seule : ni fond ni bordure (le cercle vert était de trop),
+  // uniquement l'ombre colorée qui diffuse autour de l'icône.
   incubatorBtnActive: {
-    backgroundColor: 'rgba(0,255,163,0.18)',
-    borderWidth: 2, borderColor: COLORS.good,
-    shadowColor: COLORS.good, shadowOpacity: 0.9, shadowRadius: 14,
-    shadowOffset: { width: 0, height: 0 }, elevation: 10,
+    shadowColor: COLORS.good, shadowOpacity: 1, shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 }, elevation: 12,
   },
   incubatorBtnIcon: { fontSize: 28 },
 
   // Bouton vidéo à droite de l'œuf, pendant l'éclosion. Centré
   // verticalement sur la zone de tap, collé au bord droit.
+  // Ni fond ni bordure : juste l'icône et le texte, collés au bord droit
+  // (demande explicite). La zone de tap reste large malgré le visuel
+  // réduit, pour rester confortable au doigt.
   eggVideoBtn: {
-    position: 'absolute', right: 14, top: '50%', marginTop: -34, zIndex: 4,
-    width: 62, height: 68, borderRadius: 14,
+    position: 'absolute', right: 2, top: '50%', marginTop: -34, zIndex: 4,
+    width: 62, height: 68,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(10,26,40,0.9)',
-    borderWidth: 1.5, borderColor: COLORS.neonCyan,
   },
   eggVideoBtnIcon: { fontSize: 20 },
-  eggVideoBtnText: { color: COLORS.neonCyan, fontSize: 12, fontWeight: '900', marginTop: 2 },
-  eggVideoBtnCount: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1 },
+  eggVideoBtnText: {
+    color: COLORS.neonCyan, fontSize: 12, fontWeight: '900', marginTop: 2,
+    // Ombre portée : sans fond derrière, le texte doit rester lisible
+    // par-dessus n'importe quelle zone du décor.
+    textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 4,
+  },
+  eggVideoBtnCount: {
+    color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1,
+    textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 4,
+  },
 
   // Temps restant sous l'œuf.
   eggTimer: {

@@ -424,8 +424,19 @@ restant s'affiche sous l'œuf **et dans la barre de défi** à la place du
 `current/target`). On ne passe à la phase de capture qu'une fois le temps
 écoulé. `HATCH_TAPS_REQUIRED` n'est donc plus utilisé.
 
-⚠️ L'état `hatchTaps` est conservé dans la sauvegarde bien qu'inutilisé :
-le retirer changerait le format de sauvegarde pour un gain nul.
+**La phase de CAPTURE a été supprimée (07/09).** Les 200 taps
+supplémentaires après l'éclosion faisaient doublon avec le minuteur :
+`eggPhase` ne vaut plus que `'collecting'` ou `'hatching'`, et le
+minuteur à zéro donne la créature directement (tirage classique + bonus
+de pièces, comme l'ancienne capture).
+
+⚠️ Les états `hatchTaps` et `captureTaps` restent dans la sauvegarde bien
+qu'inutilisés : les retirer changerait le format pour un gain nul.
+
+⚠️ Le passage à la créature se fait **hors** de l'updater de `setMainEgg`
+(lecture par `mainEggRef`) : déclencher d'autres `setState` depuis un
+updater est un effet de bord que React peut exécuter deux fois — ici, ça
+aurait donné deux créatures pour un seul œuf.
 
 Les deux œufs (principal et incubateur) partagent la clé
 `clicker:incubator:v1`, désormais au format `{ incubating, main }`.
