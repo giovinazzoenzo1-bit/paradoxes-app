@@ -709,6 +709,19 @@ quel moment, suffisait à annuler ce défi pour toujours.
 Le mode `delta` n'est pas concerné : il mesure depuis l'instantané pris
 au tirage, donc il part toujours de zéro.
 
+**Cas particulier des métriques de type RECORD** (`maxTranseHoldSec`,
+`maxCombo`). Un mécanisme de remise à zéro existait DÉJÀ, mais il ne se
+déclenchait que pour le défi **courant**. Or `completedQuestCount`
+évalue les 4 défis du cycle **à la fois** : un défi déjà « fait » n'est
+jamais le premier non terminé, donc il ne devient jamais courant, donc la
+remise à zéro ne partait jamais. Le défi de Transe restait invisible pour
+toujours dès qu'un record antérieur dépassait la cible.
+
+Corrigé en remettant ces métriques à zéro **au TIRAGE du cycle** (pour
+tout le set, pas seulement le défi courant). Ces métriques sont en
+conséquence exclues de `questAlreadyDone` : il faut les RÉPARER, pas les
+remplacer — sinon on perdrait un défi au lieu de le rendre jouable.
+
 **Correctif** : `questAlreadyDone()` détecte le cas, et `nextQuestSet`
 **remplace** ces défis par des défis du pool dynamique, dont la cible est
 calculée à partir de l'état courant et se trouve donc forcément devant le

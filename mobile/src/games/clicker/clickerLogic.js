@@ -1574,8 +1574,16 @@ export function questDetail(questId, stats, baseline = {}, targets = {}) {
 // Cas réel signalé : « Reste en Transe x2,5 pendant 42 secondes » sur
 // `maxTranseHoldSec`, qui est un RECORD à vie. Une joueuse ayant tenu
 // une longue Transe plus tôt n'a jamais vu ce défi apparaître.
+// Métriques de type RECORD : elles sont remises à zéro au tirage du
+// cycle par ClickerScreen, donc elles ne sont JAMAIS déjà accomplies.
+// Les exclure ici est essentiel : sans ça, le défi de Transe serait
+// REMPLACÉ alors qu'il suffit de le remettre à zéro pour le rendre
+// jouable — on perdrait un défi au lieu de le réparer.
+const RESET_ON_DRAW_METRICS = ['maxTranseHoldSec', 'maxCombo'];
+
 export function questAlreadyDone(quest, stats = {}) {
   if (!quest || quest.mode !== 'absolute' || !quest.target) return false;
+  if (RESET_ON_DRAW_METRICS.includes(quest.metric)) return false;
   return readMetric(quest.metric, stats) >= quest.target;
 }
 

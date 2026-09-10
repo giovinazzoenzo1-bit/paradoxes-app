@@ -1530,17 +1530,43 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // rendrait la barre incompréhensible — elle afficherait une avance que
   // le joueur n'a pas prise pendant ce défi, et un record déjà supérieur
   // à la cible validerait le défi d'emblée.
+  // Remise à zéro des métriques de type RECORD dès le TIRAGE du cycle,
+  // et non quand le défi devient courant.
+  //
+  // Bug réel (07/09, signalé : « le défi de 30 s de Transe n'est jamais
+  // apparu ») : l'achèvement est évalué pour les 4 défis du cycle À LA
+  // FOIS (`completedQuestCount`), alors que la remise à zéro ne se
+  // déclenchait que pour le défi COURANT. Un joueur ayant déjà un record
+  // supérieur à la cible voyait donc le défi compté « terminé » dès le
+  // tirage — il ne devenait jamais courant, donc la remise à zéro ne
+  // partait jamais, et le défi restait invisible pour toujours.
+  //
+  // Remettre à zéro pour tout le SET règle la cause : le défi redevient
+  // réellement jouable au lieu d'être escamoté.
+  const recordResetForSetRef = useRef(null);
   useEffect(() => {
-    if (!loaded || !currentChallengeId) return;
-    if (questBaselinesRef.current[currentChallengeId]) return;
-    const quest = findQuest(currentChallengeId);
-    if (quest && (quest.metric === 'maxTranseHoldSec' || quest.metric === 'maxCombo')) {
+    if (!loaded || !activeQuestIds.length) return;
+    const key = activeQuestIds.join(',');
+    if (recordResetForSetRef.current === key) return;
+    recordResetForSetRef.current = key;
+    const hasRecordQuest = activeQuestIds.some((id) => {
+      const q = findQuest(id);
+      return q && (q.metric === 'maxTranseHoldSec' || q.metric === 'maxCombo');
+    });
+    if (hasRecordQuest) {
       maxTranseHoldSecRef.current = 0;
       setMaxTranseHoldSec(0);
       transeStartRef.current = null;
       maxComboRef.current = 1;
       setMaxCombo(1);
     }
+  }, [activeQuestIds, loaded]);
+
+  // Démarre le chronomètre d'un défi au moment EXACT où il devient le
+  // défi courant. Tout ce qui a été accumulé avant ne compte pas.
+  useEffect(() => {
+    if (!loaded || !currentChallengeId) return;
+    if (questBaselinesRef.current[currentChallengeId]) return;
     setQuestBaselines((prev) => (
       prev[currentChallengeId] ? prev : { ...prev, [currentChallengeId]: buildQuestStatsSnapshot() }
     ));
