@@ -986,9 +986,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // ---- Actions de l'incubateur ----
   // Un seul œuf à la fois (le 2e emplacement sera un achat en argent
   // réel). La durée dépend du nombre de créatures DÉJÀ possédées.
+  // L'œuf PRÊT (défis terminés) part en incubation au lieu d'être brisé
+  // tout de suite. Le cycle de défis repart aussitôt : le joueur
+  // continue à jouer normalement vers l'œuf suivant pendant que
+  // celui-ci incube, et revient l'ouvrir quand il veut.
   const startEggIncubation = () => {
     if (incubatingEgg) return;
     setIncubatingEgg(startIncubation(owned.length));
+    startNewEggCycle();
     setIncubatorOpen(true);
   };
 
@@ -1453,6 +1458,40 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     runeBought: lifetimeStats.runeBought || 0,
   });
 
+  // Relance un cycle d'œuf : nouveau tirage de défis, phase remise à
+  // 'collecting'. Extrait de la capture (07/09) pour être partagé avec
+  // la mise en incubation — les deux terminent le cycle courant, la
+  // seule différence est qu'une capture donne la créature tout de suite
+  // alors qu'une incubation la diffère.
+  const startNewEggCycle = () => {
+    // Instantané complet des stats à cet instant précis. Il sert à DEUX
+    // choses : résoudre les cibles des nouveaux défis (« 25 minutes de
+    // farm » se convertit en pièces d'après le revenu d'ICI), et servir
+    // de point zéro à la progression. Il couvre TOUTES les métriques,
+    // plus seulement les 'delta' : la barre des défis 'absolute' se
+    // mesure elle aussi depuis le tirage, donc une métrique absente
+    // ferait repartir la barre d'un état faux.
+    const statsAtDraw = buildQuestStatsSnapshot();
+    // Avance d'un cran dans la séquence scriptée. Une fois celle-ci
+    // épuisée, nextQuestSet bascule tout seul sur le pool dynamique et
+    // l'index continue de grimper sans effet.
+    const nextIndex = sequenceIndexRef.current + 1;
+    setSequenceIndex(nextIndex);
+    const nextSet = nextQuestSet(nextIndex, activeQuestIdsRef.current, statsAtDraw);
+    setActiveQuestIds(nextSet.ids);
+    setQuestTargets(nextSet.targets);
+    setQuestBaseline(statsAtDraw);
+    // Les chronomètres par défi repartent à zéro : chaque défi du
+    // nouveau cycle démarrera le sien quand il deviendra courant.
+    setQuestBaselines({});
+    setDevCompletedIds([]);
+    setEggPhase('collecting');
+    setHatchTaps(0);
+    setCaptureTaps(0);
+    hatchTapsRef.current = 0;
+    captureTapsRef.current = 0;
+  };
+
   const handleEggTap = () => {
     // Secousse à chaque coup porté sur la coquille. Séquence courte et
     // symétrique qui revient toujours à 0 : impossible que l'œuf reste
@@ -1494,25 +1533,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // depuis que la barre des défis 'absolute' se mesure elle aussi
         // depuis le tirage, une métrique absente ferait repartir la
         // barre d'un état faux.
-        const statsAtDraw = buildQuestStatsSnapshot();
-        // Avance d'un cran dans la séquence scriptée. Une fois celle-ci
-        // épuisée, nextQuestSet bascule tout seul sur le pool dynamique
-        // et l'index continue de grimper sans effet.
-        const nextIndex = sequenceIndexRef.current + 1;
-        setSequenceIndex(nextIndex);
-        const nextSet = nextQuestSet(nextIndex, activeQuestIdsRef.current, statsAtDraw);
-        setActiveQuestIds(nextSet.ids);
-        setQuestTargets(nextSet.targets);
-        setQuestBaseline(statsAtDraw);
-        // Les chronomètres par défi repartent à zéro : chaque défi du
-        // nouveau cycle démarrera le sien quand il deviendra courant.
-        setQuestBaselines({});
-        setDevCompletedIds([]);
-        setEggPhase('collecting');
-        setHatchTaps(0);
-        setCaptureTaps(0);
-        hatchTapsRef.current = 0;
-        captureTapsRef.current = 0;
+        startNewEggCycle();
       }
     }
   };
@@ -1827,21 +1848,25 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 `box-none` : le conteneur ne capte rien, mais le bouton
                 qu'il contient reste cliquable. */}
             <View style={[styles.tapHintZone, { bottom: insets.bottom + 88 }]}>
-              {eggPhase === 'collecting' && (
-                incubatingEgg ? (
-                  <TouchableOpacity style={styles.incubateCta} onPress={() => setIncubatorOpen(true)}>
-                    <Text style={styles.incubateCtaText}>
-                      🥚 {incubatorIsReady(incubatingEgg) ? 'Œuf prêt à éclore !' : `Incubation — ${formatRemaining(Math.max(0, incubatingEgg.endsAt - Date.now()))}`}
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity style={styles.incubateCta} onPress={startEggIncubation}>
-                    <Text style={styles.incubateCtaText}>
-                      🥚 Mettre un œuf en incubation ({formatRemaining(incubationDurationMs(owned.length))})
-                    </Text>
-                  </TouchableOpacity>
-                )
-              )}
+              {/* Un œuf en incubation prime sur tout : le bouton devient
+                  un raccourci vers l'incubateur, visible quelle que soit
+                  la phase. Sinon, le choix « briser ou incuber » n'est
+                  proposé QUE lorsque l'œuf est prêt (défis terminés) —
+                  c'est le moment où le joueur a réellement un arbitrage
+                  à faire. */}
+              {incubatingEgg ? (
+                <TouchableOpacity style={styles.incubateCta} onPress={() => setIncubatorOpen(true)}>
+                  <Text style={styles.incubateCtaText}>
+                    🥚 {incubatorIsReady(incubatingEgg) ? 'Œuf prêt à éclore !' : `Incubation — ${formatRemaining(Math.max(0, incubatingEgg.endsAt - Date.now()))}`}
+                  </Text>
+                </TouchableOpacity>
+              ) : eggPhase === 'hatching' ? (
+                <TouchableOpacity style={styles.incubateCta} onPress={startEggIncubation}>
+                  <Text style={styles.incubateCtaText}>
+                    🥚 Mettre en incubation ({formatRemaining(incubationDurationMs(owned.length))})
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               {comboCount > 1 ? (
                 <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
               ) : (

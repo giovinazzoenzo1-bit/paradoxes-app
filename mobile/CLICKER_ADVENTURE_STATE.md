@@ -415,11 +415,26 @@ pour la 26e**, total 85,5 h — exactement les bornes voulues.
 celle du clicker : une fonctionnalité neuve ne doit pas pouvoir corrompre
 la sauvegarde principale. Si elle échoue, le jeu continue sans elle.
 
+**Le moment du choix (corrigé le 07/09).** Le bouton « Mettre en
+incubation » n'apparaît QUE lorsque l'œuf est prêt (`eggPhase ===
+'hatching'`, défis terminés) — c'est le seul moment où le joueur a un
+arbitrage réel : briser tout de suite, ou différer pour incuber. Le
+proposer pendant la phase 'collecting' n'avait aucun sens et le bouton
+disparaissait justement au moment utile.
+
+Mettre un œuf en incubation **relance aussitôt un cycle de défis**
+(`startNewEggCycle`, extrait de la capture pour être partagé) : le joueur
+continue à jouer normalement vers l'œuf suivant pendant que celui-ci
+incube, et revient l'ouvrir quand il veut. Un œuf en incubation prime
+sur l'affichage : le bouton devient un raccourci vers l'incubateur,
+visible quelle que soit la phase.
+
 **Ce qui MANQUE encore, volontairement :**
 - ⚠️ **Le gardien d'œuf** — l'éclosion donne directement la créature. Le
   combat viendra s'intercaler entre « minuteur à zéro » et l'attribution.
 - ⚠️ **Les vraies vidéos** — aucune régie n'est installée. Le bouton
-  simule la réduction, avec une confirmation qui le dit explicitement.
+  simule une publicité avec **1 seconde de chargement** (indicateur
+  d'activité), pour tester le ressenti et le rythme.
 - L'indice de rareté (lueur), et les défis liés à l'incubation.
 
 **Piège évité** : le bouton sous l'œuf vit DANS `tapHintZone`, ancrée en

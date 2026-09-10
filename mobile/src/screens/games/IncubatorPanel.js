@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { COLORS } from './clickerTheme';
 import {
   remainingMs, isReady, progressRatio, formatRemaining,
@@ -20,6 +20,12 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
   // l'appli ne fait rien perdre. Ce tick ne sert qu'à rafraîchir
   // l'affichage tant que le panneau est ouvert.
   const [, setTick] = useState(0);
+  // Fausse publicité : 1 seconde de chargement pour imiter le temps
+  // d'affichage d'une vraie régie. Aucune régie n'est installée dans le
+  // projet — ce délai sert à tester le ressenti et le rythme.
+  const [adLoading, setAdLoading] = useState(false);
+  const adTimerRef = useRef(null);
+  useEffect(() => () => { if (adTimerRef.current) clearTimeout(adTimerRef.current); }, []);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
@@ -30,17 +36,16 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
   const pct = Math.round(progressRatio(egg, now) * 100);
 
   const handleVideo = () => {
-    // Pas de régie publicitaire installée dans le projet : ce bouton
-    // SIMULE la vidéo pour pouvoir tester l'équilibrage tout de suite.
-    // L'écran de confirmation évite de croire qu'une vraie pub s'affiche.
-    Alert.alert(
-      'Vidéo (simulée)',
-      `Aucune régie publicitaire n'est encore installée. Confirmer applique quand même la réduction de ${Math.round(VIDEO_REDUCTION_RATIO * 100)} %, pour tester.`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Appliquer', onPress: onWatchVideo },
-      ]
-    );
+    if (adLoading) return;
+    setAdLoading(true);
+    // Le nettoyage à la fermeture (plus haut) évite un setState sur un
+    // composant démonté si le joueur ferme le panneau pendant la
+    // seconde de chargement.
+    adTimerRef.current = setTimeout(() => {
+      adTimerRef.current = null;
+      setAdLoading(false);
+      onWatchVideo();
+    }, 1000);
   };
 
   return (
@@ -92,13 +97,20 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                     Tape l'œuf pour gagner {TAP_REDUCTION_MS / 1000} seconde par tap.
                   </Text>
                   <TouchableOpacity
-                    style={[styles.videoBtn, !canWatchVideo(egg) && styles.videoBtnDisabled]}
+                    style={[styles.videoBtn, (!canWatchVideo(egg) || adLoading) && styles.videoBtnDisabled]}
                     onPress={handleVideo}
-                    disabled={!canWatchVideo(egg)}
+                    disabled={!canWatchVideo(egg) || adLoading}
                   >
-                    <Text style={[styles.videoBtnText, !canWatchVideo(egg) && styles.videoBtnTextDisabled]}>
-                      📺 Vidéo — {Math.round(VIDEO_REDUCTION_RATIO * 100)} % ({egg.videosUsed || 0}/{MAX_VIDEOS_PER_EGG})
-                    </Text>
+                    {adLoading ? (
+                      <View style={styles.adLoadingRow}>
+                        <ActivityIndicator size="small" color={COLORS.neonCyan} />
+                        <Text style={styles.adLoadingText}>Publicité…</Text>
+                      </View>
+                    ) : (
+                      <Text style={[styles.videoBtnText, !canWatchVideo(egg) && styles.videoBtnTextDisabled]}>
+                        📺 Vidéo — {Math.round(VIDEO_REDUCTION_RATIO * 100)} % ({egg.videosUsed || 0}/{MAX_VIDEOS_PER_EGG})
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </>
               )}
@@ -115,8 +127,13 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
 }
 
 const styles = StyleSheet.create({
+  // `position: absolute` + `zIndex: 30` : sans ça le panneau se rendait
+  // DERRIÈRE les éléments du Clicker, qui sont eux-mêmes en absolu avec
+  // des zIndex de 3 à 5 (signalé sur capture le 07/09). Les autres
+  // surcouches du jeu utilisent 20, on passe au-dessus.
   backdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.62)',
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 30,
+    backgroundColor: 'rgba(0,0,0,0.62)',
     alignItems: 'center', justifyContent: 'center', padding: 16,
   },
   panel: {
@@ -179,6 +196,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.good,
   },
   hatchBtnText: { color: '#062b18', fontSize: 15, fontWeight: '900' },
+
+  adLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  adLoadingText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
 
   stats: { color: COLORS.muted, fontSize: 10, marginTop: 12, textAlign: 'center' },
 });
