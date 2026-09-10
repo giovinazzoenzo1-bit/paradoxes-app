@@ -306,6 +306,24 @@ hauteur du fichier** au stade « endormi » (jusqu'à 80 % au stade
 « prêt »). Il paraît donc plus petit que sa boîte de 250 dp — normal, ce
 n'est pas un bug.
 
+## Document des défis (Superhuman Docs) — À TENIR À JOUR
+
+Tous les défis (quotidiens, hebdomadaires, succès) sont recensés dans un
+document partagé avec l'utilisateur :
+
+**https://docs.superhuman.com/d/_dkVLP-SAD6N**
+
+**Consigne permanente de l'utilisateur (07/09)** : à CHAQUE modification
+d'un défi dans le code — ajout, retrait, changement d'objectif ou de
+récompense — mettre le document à jour dans la foulée. Il sert de source
+commune pour discuter des idées ; s'il diverge du code, il ne sert plus
+à rien.
+
+L'accès se fait par le connecteur *Superhuman Docs* (lecture **et**
+écriture, contrairement au connecteur Google Drive qui est en lecture
+seule). Les tableaux sont en markdown, pas en grilles Coda : demande
+explicite de l'utilisateur, qui veut tout voir d'un coup à l'écran.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

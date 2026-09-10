@@ -151,6 +151,15 @@ export function weeklyQuestDef(questId) {
 // donnaient une récompense comparable) — corrigé en calant chaque
 // famille sur le même rythme de progression.
 //
+// Pas de succès « gagner des combats » (retiré le 07/09) : il faisait
+// doublon avec « atteindre un niveau » tout en récompensant l'inverse.
+// Les niveaux déjà battus restent rejouables, donc `battleWon` monte en
+// farmant le niveau 1 en boucle — il mesurait le temps passé, pas la
+// progression. `advLevelReached` (trackMax) ne peut pas être gonflé
+// ainsi et reflète la vraie puissance de l'équipe. NE PAS le remettre.
+// `battleWon` reste utilisé par les quotidiens/hebdos, où mesurer
+// l'activité du jour ou de la semaine est justement le but.
+//
 // Repères utilisés (mêmes mesures que pour les hebdos) : ~140 combats,
 // ~14 000 critiques et ~2800 Griffes par semaine pour un joueur régulier.
 // Palier 1 ≈ premiers jours, palier 5 ≈ plusieurs mois de jeu régulier.
@@ -161,7 +170,6 @@ export function weeklyQuestDef(questId) {
 export const ACHIEVEMENT_TIER_REWARDS = [150, 400, 1000, 2500, 6000];
 
 export const ACHIEVEMENTS = [
-  { id: 'a_battles', desc: 'Gagner des combats',          stat: 'battleWon',       tiers: [25, 150, 600, 2000, 6000] },
   // Les niveaux d'Aventure ne se grindent pas : la puissance adverse
   // grimpe de 6,2% par niveau (composé), donc la difficulté vient du
   // mur de puissance, pas du nombre de combats. Les paliers restent
