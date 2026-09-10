@@ -1081,7 +1081,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const hatchIncubatedEgg = () => {
     const egg = incubatingEgg;
     if (!egg || !incubatorIsReady(egg)) return;
-    const creature = rollCreature();
+    // `owned` passé en argument : une éclosion ne rend JAMAIS un doublon
+    // (voir rollCreature). L'invocation payante, elle, appelle sans
+    // argument et peut donc monter un niveau.
+    const creature = rollCreature(ownedRef.current.map((o) => o.id));
     addCreatureToOwned(creature);
     setRewardCreature(creature);
     setIncubatingEgg(null);
@@ -1596,7 +1599,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         setMainEgg(null);
         // Tirage classique, pas de créature rare garantie, + petit
         // bonus de pièces — comme l'ancienne capture.
-        const creature = rollCreature();
+        const creature = rollCreature(ownedRef.current.map((o) => o.id));
         addCreatureToOwned(creature);
         gainCoins(goldenBonus(tapPowerRef.current) * 3);
         setRewardCreature(creature);

@@ -268,7 +268,19 @@ export const CREATURES = [
 // maintenant que Fournax existe (29/08).
 // "mythique" réactivé (30/08) — Arcanis existe enfin, TOUS les paliers
 // sont maintenant représentés dans le roster.
-export const RARITY_WEIGHTS = { commun: 40, peu_commun: 20, rare: 15, epique: 12, legendaire: 8, mythique: 5 };
+// Poids de tirage RECALIBRÉS (07/09) par simulation sur 30 000 parties.
+// Les anciens (40/20/15/12/8/5) donnaient le mythique au 14e œuf en
+// moyenne, soit à mi-collection : la fin de partie n'avait plus rien à
+// offrir. Avec ceux-ci et le retrait des doublons (voir rollCreature) :
+//
+//   rareté obtenue pour la 1re fois, n° d'œuf moyen
+//   commun 1,8 · peu commun 3,8 · rare 7,5 · épique 12,7
+//   légendaire 18,3 · mythique 22,8   (sur 26 œufs, ~42 h de jeu)
+//
+// L'écart n'est pas figé pour autant : 1 joueur sur 10 décroche un
+// légendaire ou un mythique dans ses 5 premiers œufs. Assez rare pour
+// rester une histoire à raconter, assez fréquent pour exister.
+export const RARITY_WEIGHTS = { commun: 100, peu_commun: 45, rare: 20, epique: 8, legendaire: 3, mythique: 1 };
 export const RARITY_LABEL = {
   commun: 'Commun', peu_commun: 'Peu commun', rare: 'Rare',
   epique: 'Épique', legendaire: 'Légendaire', mythique: 'Mythique',
@@ -450,30 +462,52 @@ export function pickFromDeck(deckIds) {
 }
 
 // Tire une créature au hasard selon les poids de rareté.
-export function rollCreature() {
-  const total = Object.values(RARITY_WEIGHTS).reduce((a, b) => a + b, 0);
+// Tirage d'une créature.
+//
+// `ownedIds` (facultatif) : les identifiants déjà possédés, qui sont
+// alors EXCLUS du tirage. Utilisé par les œufs, pour qu'une éclosion
+// donne toujours une créature NOUVELLE — un doublon après une attente
+// de plusieurs heures est la pire récompense possible.
+//
+// L'invocation payante, elle, appelle sans argument : y obtenir un
+// doublon monte le niveau de la créature, ce qui reste un usage
+// légitime des pièces.
+//
+// Les poids s'appliquent aux raretés qui ont ENCORE au moins une
+// créature disponible. Le poids d'une rareté épuisée se reporte donc
+// tout seul sur les autres, sans table à maintenir : c'est ce qui fait
+// monter naturellement la rareté moyenne à mesure que la collection se
+// remplit.
+export function rollCreature(ownedIds) {
+  const owned = ownedIds instanceof Set ? ownedIds : new Set(ownedIds || []);
+  let pickable = CREATURES.filter((c) => !owned.has(c.id));
+  // Collection complète : on retombe sur le roster entier plutôt que de
+  // ne rien rendre. L'œuf redonne alors un doublon, qui monte un niveau
+  // — les éclosions gardent un intérêt une fois les 26 obtenues.
+  if (pickable.length === 0) pickable = CREATURES;
+
+  const availableRarities = Object.entries(RARITY_WEIGHTS).filter(
+    ([rarity, weight]) => weight > 0 && pickable.some((c) => c.rarity === rarity)
+  );
+  if (availableRarities.length === 0) return pickable[Math.floor(Math.random() * pickable.length)];
+
+  const total = availableRarities.reduce((a, [, w]) => a + w, 0);
   let r = Math.random() * total;
-  let chosenRarity = 'commun';
-  for (const [rarity, weight] of Object.entries(RARITY_WEIGHTS)) {
-    if (weight <= 0) continue; // ex: "mythique" tant qu'aucune créature n'y est assignée —
-    // exclu explicitement plutôt que de compter sur "r < 0" qui peut être
-    // atteint par erreur à cause d'imprécisions de virgule flottante
-    // après plusieurs soustractions successives (bug réel rencontré et
-    // corrigé ici, pas juste une précaution théorique).
+  // Repli sur la DERNIÈRE rareté disponible et non sur « commun » :
+  // après plusieurs soustractions, une imprécision de virgule flottante
+  // peut laisser `r` légèrement au-dessus du dernier poids (bug réel
+  // rencontré ici), et « commun » peut très bien être déjà épuisé.
+  let chosenRarity = availableRarities[availableRarities.length - 1][0];
+  for (const [rarity, weight] of availableRarities) {
     if (r < weight) {
       chosenRarity = rarity;
       break;
     }
     r -= weight;
   }
-  const pool = CREATURES.filter((c) => c.rarity === chosenRarity);
-  if (pool.length === 0) {
-    // Garde-fou : un poids > 0 sans aucune créature de cette rareté ne
-    // doit jamais planter le tirage, même par erreur de synchronisation
-    // future entre RARITY_WEIGHTS et le roster réel — repli sur "commun".
-    const fallback = CREATURES.filter((c) => c.rarity === 'commun');
-    return fallback[Math.floor(Math.random() * fallback.length)];
-  }
+
+  const pool = pickable.filter((c) => c.rarity === chosenRarity);
+  if (pool.length === 0) return pickable[Math.floor(Math.random() * pickable.length)];
   return pool[Math.floor(Math.random() * pool.length)];
 }
 

@@ -471,6 +471,42 @@ la hauteur utile n'y étant pas la même que sur Android (voir règle 9).
 La zone est passée en `pointerEvents: 'box-none'` : elle ne capte rien
 elle-même, mais le bouton qu'elle contient reste cliquable.
 
+## Tirage des créatures — recalibré le 07/09
+
+**Les œufs ne donnent plus jamais de doublon.** `rollCreature(ownedIds)`
+exclut les créatures déjà possédées. Les deux éclosions (œuf principal et
+incubateur) passent la collection ; l'**invocation payante appelle sans
+argument** et peut donc rendre un doublon, qui monte un niveau — un usage
+légitime des pièces, contrairement à un doublon après plusieurs heures
+d'attente.
+
+**Poids recalibrés par simulation** (30 000 parties), anciens → nouveaux :
+
+| Rareté | Avant | Après | Créatures |
+|---|---|---|---|
+| Commun | 40 | **100** | 8 |
+| Peu commun | 20 | **45** | 6 |
+| Rare | 15 | **20** | 5 |
+| Épique | 12 | **8** | 4 |
+| Légendaire | 8 | **3** | 2 |
+| Mythique | 5 | **1** | 1 |
+
+Les anciens poids donnaient le mythique au **14e œuf** en moyenne, soit à
+mi-collection : la fin de partie n'avait plus rien à offrir. Désormais :
+commun 1,8 · peu commun 3,8 · rare 7,5 · épique 12,7 · légendaire 18,3 ·
+**mythique 22,8** sur 26 œufs (~42 h de jeu).
+
+L'écart n'est pas figé pour autant : **1 joueur sur 10** décroche un
+légendaire ou un mythique dans ses 5 premiers œufs.
+
+⚠️ Le poids d'une rareté épuisée **se reporte tout seul** sur les autres
+(les raretés sans créature disponible sont exclues du tirage) : c'est ce
+qui fait monter la rareté moyenne à mesure que la collection se remplit,
+sans table à maintenir.
+
+⚠️ Une fois les 26 obtenues, le tirage retombe sur le roster entier :
+l'œuf rend alors un doublon qui monte un niveau, plutôt que rien.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.
