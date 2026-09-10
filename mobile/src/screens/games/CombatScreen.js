@@ -439,7 +439,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         style={[styles.sprite, { left, top, width: boxW, opacity: fainted ? 0.35 : slot.size < 0.7 ? 0.85 : 1 }]}
       >
         {floatDamage != null && (
-          <View pointerEvents="none" style={styles.floatingDamageWrap}>
+          <View style={styles.floatingDamageWrap}>
             <FloatingDamage key={`${key}-${roundKey}`} amount={floatDamage} color="#FF5252" />
           </View>
         )}
@@ -518,7 +518,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       {/* Couche centrale : défi de tap / bannière de tour uniquement —
           plus de bouton "Continuer" après une attaque du joueur (demande
           explicite), la transition est immédiate. */}
-      <View pointerEvents="box-none" style={styles.centerLayer}>
+      <View style={styles.centerLayer}>
         {switchMessage && (
           <View style={styles.switchBanner}>
             <Text style={styles.switchBannerText}>{switchMessage}</Text>
@@ -667,7 +667,17 @@ const styles = StyleSheet.create({
   spriteEndFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.action },
   targetLabel: { fontSize: 12, marginTop: 1 },
 
-  centerLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+  // `pointerEvents` dans le STYLE, jamais en prop (voir Regles de
+  // survie) : la prop est ignoree depuis le SDK 57. Cette couche couvre
+  // TOUT l'ecran avec zIndex 10 — si elle intercepte les taps, plus
+  // aucune creature du terrain n'est selectionnable. `box-none` = la
+  // couche elle-meme ne recoit rien, ses enfants (bannieres, defi de
+  // tap) restent cliquables.
+  centerLayer: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center', zIndex: 10,
+    pointerEvents: 'box-none',
+  },
   switchBanner: { backgroundColor: 'rgba(20,10,0,0.85)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1.5, borderColor: COLORS.action, marginBottom: 8 },
   switchBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   chosenSkillLabel: {
@@ -683,7 +693,13 @@ const styles = StyleSheet.create({
   tapCountText: { color: '#fff', fontSize: 17, fontWeight: '900', marginTop: 8, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
   timeTrack: { width: 130, height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', marginTop: 6 },
   timeFill: { height: '100%', backgroundColor: COLORS.neonCyan, borderRadius: 3 },
-  floatingDamageWrap: { position: 'absolute', top: -26, left: 0, right: 0, alignItems: 'center', zIndex: 15 },
+  // Idem : purement decoratif (les degats qui s'envolent), ne doit
+  // jamais voler le tap destine au sprite en dessous.
+  floatingDamageWrap: {
+    position: 'absolute', top: -26, left: 0, right: 0,
+    alignItems: 'center', zIndex: 15,
+    pointerEvents: 'none',
+  },
   floatingDamage: {
     color: '#FF5252', fontSize: 20, fontWeight: '900',
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 },

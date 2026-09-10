@@ -79,12 +79,20 @@ Doit être dans le STYLE : `style={{ pointerEvents: 'none' }}`. En prop,
 la valeur est silencieusement abandonnée et une couche décorative en
 absolu avale tous les taps de l'écran.
 
-⚠️ Reste à corriger : **2 occurrences dans `CombatScreen.js`** (lignes ~440
-et ~506). Il y en avait 19 réparties sur 4 écrans ; les 17 autres vivaient
-dans PingPongScreen / RuneTracerScreen / BilliardScreen, **archivés hors de
-l'appli le 06/09** (voir « Retrait des mini-jeux » plus bas) — elles ne
-peuvent donc plus nuire, mais ne sont pas corrigées pour autant : si un de
-ces jeux est un jour restauré, le problème revient avec lui.
+✅ **Terminé (07/09).** Les 2 dernières occurrences (`CombatScreen.js`,
+couche des dégâts flottants et couche centrale) sont passées dans le
+style. **Plus aucun `pointerEvents` en prop dans tout le projet.**
+
+La couche centrale était la plus risquée : elle couvre TOUT l'écran de
+combat avec `zIndex: 10`, donc si elle interceptait les taps, aucune
+créature du terrain n'était sélectionnable. L'effet exact dépendait de
+la plateforme (une vue transparente sans gestionnaire ne bloque pas
+toujours), ce qui explique que le bug n'ait jamais été signalé en jeu.
+
+Les 17 autres occurrences vivaient dans PingPongScreen / RuneTracerScreen
+/ BilliardScreen, **archivés hors de l'appli** — elles ne peuvent plus
+nuire, mais ne sont pas corrigées pour autant : si un de ces jeux est un
+jour restauré, le problème revient avec lui.
 
 ### 3. Pas de dégradé plein écran sur le ClickerScreen
 
