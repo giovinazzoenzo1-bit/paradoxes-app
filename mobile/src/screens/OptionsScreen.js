@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../context/CoinsContext';
 import { useDaily } from '../context/DailyContext';
 import { useSettings } from '../context/SettingsContext';
-import { STORAGE_KEY as CLICKER_STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY } from './games/ClickerScreen';
+import { STORAGE_KEY as CLICKER_STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY, disableClickerSave } from './games/ClickerScreen';
+import { INCUBATOR_STORAGE_KEY } from '../games/clicker/incubatorLogic';
 import { DEV_ADD_GRIFFES_KEY, DEV_REFILL_ENERGY_KEY, DEV_RESET_GRIFFES_KEY } from './games/AdventureScreen';
 import { CREATURES } from '../games/clicker/clickerLogic';
 import { COLORS } from './games/clickerTheme';
@@ -17,7 +18,7 @@ import { COLORS } from './games/clickerTheme';
 // Réglages volontairement peu nombreux : on n'affiche QUE ce qui est
 // réellement branché (voir SettingsContext.js). Pas de "Son"/"Musique"
 // tant qu'aucune lib audio n'est installée.
-export default function OptionsScreen({ onBack }) {
+export default function OptionsScreen({ onBack, onAfterReset }) {
   const { addCoins, resetCoins } = useCoins();
   const { resetLifetimeStats } = useDaily();
   const { vibrations, ambientFx, toggleSetting } = useSettings();
@@ -36,10 +37,15 @@ export default function OptionsScreen({ onBack }) {
           text: 'Tout effacer',
           style: 'destructive',
           onPress: async () => {
+            // Verrou AVANT d'effacer : sans lui, le Clicker (resté monté
+            // sous cette surcouche) réécrit son état en mémoire dès la
+            // première action, et l'effacement semble sans effet.
+            disableClickerSave();
             const allKeys = await AsyncStorage.getAllKeys();
             if (allKeys.length) await AsyncStorage.multiRemove(allKeys);
             await resetCoins(); // remet aussi l'état en mémoire (pas juste le stockage) à 0
             Alert.alert('Fait', "L'appli a été réinitialisée.");
+            if (onAfterReset) onAfterReset();
           },
         },
       ]
@@ -56,7 +62,11 @@ export default function OptionsScreen({ onBack }) {
           text: 'Réinitialiser',
           style: 'destructive',
           onPress: async () => {
+            disableClickerSave();
             await AsyncStorage.removeItem(CLICKER_STORAGE_KEY);
+            // L'œuf en incubation vit dans SA propre clé : sans cette
+            // ligne il survivait à la réinitialisation d'Élevage.
+            await AsyncStorage.removeItem(INCUBATOR_STORAGE_KEY);
             // Les compteurs À VIE (niveau d'Aventure atteint, Offrandes,
             // pouvoirs activés, Ascensions...) vivent dans DailyContext,
             // pas dans la sauvegarde du clicker. Sans cette remise à
@@ -64,6 +74,7 @@ export default function OptionsScreen({ onBack }) {
             // restaient validés d'office sur une partie pourtant neuve.
             resetLifetimeStats();
             Alert.alert('Fait', 'Élevage a été réinitialisé.');
+            if (onAfterReset) onAfterReset();
           },
         },
       ]
@@ -77,7 +88,12 @@ export default function OptionsScreen({ onBack }) {
   // risque de course/corruption avec l'écran clicker, supprimé.
   const unlockAllCreatures = async () => {
     await AsyncStorage.setItem(DEV_UNLOCK_ALL_KEY, '1');
-    Alert.alert('Fait', `Les ${CREATURES.length} créatures seront ajoutées à l'ouverture d'Élevage (celles déjà possédées gardent leur niveau).`);
+    Alert.alert('Fait', `Les ${CREATURES.length} créatures ont été ajoutées (celles déjà possédées gardent leur niveau).`);
+    // Le drapeau n'est lu qu'au CHARGEMENT du Clicker : sans remontage
+    // il ne s'appliquerait qu'au prochain lancement de l'appli. Pas de
+    // verrou ici — l'état courant doit bien être sauvegardé avant, c'est
+    // sur lui que la fusion se fera.
+    if (onAfterReset) onAfterReset();
   };
 
   // Restaure la sauvegarde de secours (copiée automatiquement par
@@ -94,8 +110,13 @@ export default function OptionsScreen({ onBack }) {
       {
         text: 'Restaurer',
         onPress: async () => {
+          // Verrou puis remontage : l'écran resté monté écraserait la
+          // sauvegarde restaurée par son état en mémoire. Avec ça, plus
+          // besoin de relancer l'appli.
+          disableClickerSave();
           await AsyncStorage.setItem(CLICKER_STORAGE_KEY, backup);
-          Alert.alert('Fait', "Relance l'appli complètement pour que ça prenne effet.");
+          Alert.alert('Fait', 'Sauvegarde de secours restaurée.');
+          if (onAfterReset) onAfterReset();
         },
       },
     ]);

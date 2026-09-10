@@ -571,6 +571,41 @@ ou un bouton à droite, le texte a besoin de `minWidth: 0` et la valeur de
 `flexShrink: 0`. Sans ça, le bug n'apparaît qu'à partir d'une certaine
 longueur de contenu — donc bien après la mise en production.
 
+### 11. Une surcouche ne démonte pas l'écran en dessous
+
+**Bug réel (07/09)** : la réinitialisation d'Élevage et celle de l'appli
+ne faisaient plus rien. **Régression causée par la suppression des
+onglets**, plusieurs jours plus tôt et sans rapport apparent.
+
+- **Avant** : Options était un ONGLET → l'ouvrir démontait
+  `ClickerScreen`. Vider le stockage suffisait, l'écran se rechargeait
+  ensuite à vide.
+- **Depuis** : Options est une SURCOUCHE → `ClickerScreen` reste monté
+  avec tout son état en mémoire. Le stockage est bien vidé, puis la
+  sauvegarde automatique (anti-rebond 600 ms, plus l'écriture au
+  démontage) **réécrit l'ancien état** dès la première action.
+
+**Correctif en deux temps, les deux sont nécessaires :**
+
+1. `disableClickerSave()` — verrou au niveau du MODULE (pas dans l'état
+   React), appelé par Options AVANT d'effacer. Il empêche notamment
+   l'instance sortante d'écrire pendant son démontage, ce qui
+   restaurerait exactement ce qu'on vient d'effacer.
+2. `key={clickerKey}` sur `ClickerScreen` dans `App.js`, incrémenté via
+   `onAfterReset` → **remontage complet**, donc rechargement depuis le
+   stockage vide. Le verrou se libère au rendu de la nouvelle instance.
+
+**Trois autres outils souffraient du même défaut**, corrigés au passage :
+la restauration de sauvegarde (qui demandait de relancer l'appli — ce
+n'est plus nécessaire) et « Débloquer tous les monstres » (dont le
+drapeau n'est lu qu'au chargement). La réinitialisation d'Élevage efface
+désormais aussi `clicker:incubator:v1`, sans quoi l'œuf en incubation y
+survivait.
+
+**Règle** : dès qu'un écran passe d'onglet à surcouche, vérifier tout ce
+qui reposait sur son démontage — chargement, sauvegarde, remise à zéro.
+Rien ne signale ce type de rupture, le code continue de compiler.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

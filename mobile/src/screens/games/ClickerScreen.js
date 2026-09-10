@@ -181,6 +181,23 @@ export const BACKUP_KEY = 'clicker:state:v1:backup';
 // dans la sauvegarde principale — zéro risque de course/corruption.
 export const DEV_UNLOCK_ALL_KEY = 'clicker:dev:unlockAll';
 
+// Verrou de sauvegarde, au niveau du MODULE et non dans l'état React.
+//
+// Depuis que les onglets ont disparu (l'appli ouvre directement sur le
+// Clicker), le menu Options est une SURCOUCHE : ClickerScreen reste
+// monté, avec tout son état en mémoire. Vider le stockage ne suffisait
+// donc plus — la sauvegarde automatique réécrivait l'ancien état à la
+// première action, et la réinitialisation semblait sans effet.
+//
+// Options appelle `disableClickerSave()` AVANT d'effacer, puis demande
+// un remontage. Le verrou empêche l'instance sortante d'écrire une
+// dernière fois pendant son démontage, ce qui restaurerait justement
+// l'état qu'on vient d'effacer.
+let clickerSaveDisabled = false;
+export function disableClickerSave() {
+  clickerSaveDisabled = true;
+}
+
 function formatNum(n) {
   if (!Number.isFinite(n)) return '0'; // garde-fou : jamais NaN/Infinity affiché
   if (n < 1000) return Math.floor(n).toString();
@@ -193,6 +210,12 @@ function formatNum(n) {
 }
 
 export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
+  // Nouvelle instance = la réinitialisation est terminée, on réautorise
+  // l'écriture. Fait pendant le rendu et non dans un effet : un effet
+  // s'exécuterait APRÈS le premier chargement, qui doit déjà pouvoir
+  // écrire.
+  clickerSaveDisabled = false;
+
   const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
   const { vibrations, ambientFx } = useSettings();
   // Marges de securite de l'appareil (encoche en haut, barre d'accueil
@@ -755,7 +778,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   // Sauvegarde (avec un léger anti-rebond pour ne pas écrire à chaque tap).
   useEffect(() => {
-    if (!loaded || saveBlockedRef.current) return;
+    if (!loaded || saveBlockedRef.current || clickerSaveDisabled) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(buildSaveData()));
@@ -818,7 +841,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (saveBlockedRef.current) return;
+      if (saveBlockedRef.current || clickerSaveDisabled) return;
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(buildSaveData()));
     };
   }, []);

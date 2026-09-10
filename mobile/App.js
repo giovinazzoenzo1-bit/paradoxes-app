@@ -31,6 +31,11 @@ function AppContent() {
   // DEPUIS `ClickerScreen`, donc l'inverse créerait un cycle d'imports
   // (valeurs `undefined` au démarrage, panne difficile à diagnostiquer).
   const [overlay, setOverlay] = useState(null); // null | 'options' | 'quests'
+  // Incrémenté après une réinitialisation : sert de `key` au Clicker,
+  // ce qui le REMONTE entièrement. Indispensable depuis que les onglets
+  // ont disparu — l'écran reste monté sous la surcouche Options, donc
+  // vider le stockage ne suffit pas à vider son état en mémoire.
+  const [clickerKey, setClickerKey] = useState(0);
 
   // Barre de navigation/gestes Android masquée pour TOUTE l'appli (plus
   // d'immersion, demande explicite) — plus seulement pendant le billard.
@@ -65,6 +70,7 @@ function AppContent() {
       <StatusBar style="light" />
       <View style={[styles.content, { paddingTop: insets.top }]}>
         <ClickerScreen
+          key={clickerKey}
           onOpenOptions={() => setOverlay('options')}
           onOpenQuests={() => setOverlay('quests')}
         />
@@ -75,7 +81,13 @@ function AppContent() {
           par-dessus une surcouche ouverte. */}
       {overlay === 'options' && (
         <View style={styles.overlay}>
-          <OptionsScreen onBack={() => setOverlay(null)} />
+          <OptionsScreen
+            onBack={() => setOverlay(null)}
+            onAfterReset={() => {
+              setOverlay(null);
+              setClickerKey((k) => k + 1);
+            }}
+          />
         </View>
       )}
       {/* Pas de paddingTop ici, contrairement aux Options : le menu
