@@ -38,6 +38,14 @@ export const DAILY_QUEST_POOL = [
   { id: 'crit10', desc: 'Obtiens 10 coups critiques (Élevage)', event: 'crit', target: 10, reward: 30 },
   { id: 'earn2000', desc: 'Gagne 2 000 pièces (Élevage)', event: 'coinsEarned', target: 2000, reward: 30 },
   { id: 'feedCreature1', desc: 'Nourris une créature (Élevage)', event: 'creatureFed', target: 1, reward: 25 },
+  // ---- Incubation (07/09) ----
+  // Cibles calées sur le rythme de FIN de partie, pas de début : un œuf
+  // prend 10 min à la 1re créature mais 14 h à la 26e (144 œufs/jour
+  // possibles au début, 1,7 à la fin). Viser le début rendrait ces défis
+  // infaisables les derniers jours.
+  { id: 'hatch1', desc: 'Fais éclore 1 œuf', event: 'eggHatched', target: 1, reward: 40 },
+  { id: 'hatchVideo2', desc: "Regarde 2 vidéos d'accélération", event: 'hatchVideo', target: 2, reward: 30 },
+  { id: 'hatchTap600', desc: "Gagne 600 secondes d'éclosion en tapant", event: 'hatchSecondsSaved', target: 600, reward: 35 },
 ];
 
 const QUESTS_PER_DAY = 3;
@@ -116,6 +124,12 @@ export const WEEKLY_QUEST_POOL = [
   { id: 'w_feed30',       desc: 'Nourris 30 fois une créature', event: 'creatureFed', target: 30, reward: 500 },
   { id: 'w_offering10',   desc: 'Fais 10 Offrandes',            event: 'offering', target: 10, reward: 700 },
   { id: 'w_power60',      desc: 'Active 60 pouvoirs de créature', event: 'powerActivated', target: 60, reward: 550 },
+  // 5 œufs et non 30+ : même raison que les quotidiens, c'est le rythme
+  // de fin de partie (~1,7 œuf/jour, soit 12/semaine) qui fixe le
+  // plafond réaliste, pas celui du début.
+  { id: 'w_hatch5',       desc: 'Fais éclore 5 œufs',              event: 'eggHatched', target: 5, reward: 700 },
+  { id: 'w_hatchVideo12', desc: "Regarde 12 vidéos d'accélération", event: 'hatchVideo', target: 12, reward: 550 },
+  { id: 'w_hatchTap3600', desc: "Gagne 3 600 secondes d'éclosion en tapant", event: 'hatchSecondsSaved', target: 3600, reward: 600 },
 ];
 
 // 6 par semaine (au lieu de 3) : sur 10 défis disponibles, en tirer 6
@@ -188,6 +202,10 @@ export const ACHIEVEMENTS = [
   // L'Ascension remet la progression à zéro : c'est l'acte le plus
   // coûteux du jeu, d'où des paliers très bas comparés au reste.
   { id: 'a_ascension', desc: 'Faire des Ascensions',       stat: 'ascension',       tiers: [1, 3, 8, 20, 50] },
+  { id: 'a_hatch',      desc: 'Faire éclore des œufs',            stat: 'eggHatched', tiers: [5, 25, 75, 150, 300] },
+  // Plafonné à 5 vidéos par œuf : 1 500 vidéos ≈ 300 œufs, donc ce
+  // palier 5 tombe en même temps que celui des éclosions.
+  { id: 'a_hatchVideo', desc: "Regarder des vidéos d'accélération", stat: 'hatchVideo', tiers: [10, 50, 200, 600, 1500] },
 ];
 
 export function achievementDef(id) {

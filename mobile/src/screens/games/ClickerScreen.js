@@ -830,9 +830,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Gains en attente. Remplis par gainCoins a chaque tap, repercutes
   // dans l'etat 10 fois par seconde par l'effet ci-dessous.
   const pendingGainRef = useRef(0);
+  // Secondes d'éclosion gagnées en tapant, en attente de comptage.
+  // Regroupées comme les pièces et pour la MÊME raison : à 142 taps/s,
+  // appeler trackEvent à chaque tap déclencherait 142 mises à jour
+  // d'état par seconde (voir l'incident documenté sur gainCoins).
+  const pendingHatchSecRef = useRef(0);
 
   useEffect(() => {
     const id = setInterval(() => {
+      const hatchSec = pendingHatchSecRef.current;
+      if (hatchSec > 0) {
+        pendingHatchSecRef.current = 0;
+        trackEvent('hatchSecondsSaved', hatchSec);
+      }
       const pending = pendingGainRef.current;
       if (pending <= 0) return;
       pendingGainRef.current = 0;
@@ -851,6 +861,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         setCoins((c) => c + pending);
         setTotalEarned((t) => t + pending);
         trackEvent('coinsEarned', pending);
+      }
+      const hatchSec = pendingHatchSecRef.current;
+      if (hatchSec > 0) {
+        pendingHatchSecRef.current = 0;
+        trackEvent('hatchSecondsSaved', hatchSec);
       }
     };
   }, [trackEvent]);
@@ -1053,7 +1068,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     mainAdTimerRef.current = setTimeout(() => {
       mainAdTimerRef.current = null;
       setMainAdLoading(false);
-      setMainEgg((prev) => (prev ? incubatorApplyVideo(prev) : prev));
+      setMainEgg((prev) => {
+        if (!prev || !incubatorCanWatchVideo(prev)) return prev;
+        trackEvent('hatchVideo', 1);
+        return incubatorApplyVideo(prev);
+      });
     }, 1000);
   };
 
@@ -1065,11 +1084,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
 
   const incubatorTap = () => {
-    setIncubatingEgg((prev) => (prev ? incubatorApplyTap(prev) : prev));
+    setIncubatingEgg((prev) => {
+      if (!prev) return prev;
+      if (prev.endsAt > Date.now()) pendingHatchSecRef.current += 1;
+      return incubatorApplyTap(prev);
+    });
   };
 
   const incubatorVideo = () => {
-    setIncubatingEgg((prev) => (prev ? incubatorApplyVideo(prev) : prev));
+    setIncubatingEgg((prev) => {
+      if (!prev || !incubatorCanWatchVideo(prev)) return prev;
+      trackEvent('hatchVideo', 1);
+      return incubatorApplyVideo(prev);
+    });
   };
 
   // Éclosion : même chemin d'attribution que la capture classique
@@ -1086,6 +1113,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // argument et peut donc monter un niveau.
     const creature = rollCreature(ownedRef.current.map((o) => o.id));
     addCreatureToOwned(creature);
+    trackEvent('eggHatched', 1);
     setRewardCreature(creature);
     setIncubatingEgg(null);
     setIncubatorOpen(false);
@@ -1593,6 +1621,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       // bord que React n'aime pas et qui peut s'exécuter deux fois.
       const cur = mainEggRef.current;
       if (!cur) return;
+      // Ne compte que si le tap retire vraiment du temps : sur un œuf
+      // déjà prêt, le plancher de `applyTap` fait que rien n'est gagné.
+      if (cur.endsAt > Date.now()) pendingHatchSecRef.current += 1;
       const next = incubatorApplyTap(cur);
       if (incubatorIsReady(next)) {
         mainEggRef.current = null;
@@ -1601,6 +1632,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // bonus de pièces — comme l'ancienne capture.
         const creature = rollCreature(ownedRef.current.map((o) => o.id));
         addCreatureToOwned(creature);
+        trackEvent('eggHatched', 1);
         gainCoins(goldenBonus(tapPowerRef.current) * 3);
         setRewardCreature(creature);
         startNewEggCycle();

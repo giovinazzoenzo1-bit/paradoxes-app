@@ -336,6 +336,42 @@ Les trois servent le même but : le pool actuel n'est fait que de
 compteurs de volume, aucun défi ne demande de décision. Les boss
 apportent des défis à contrainte et à rendez-vous.
 
+## Défis d'incubation (07/09)
+
+Trois nouveaux événements suivis : `eggHatched`, `hatchVideo`,
+`hatchSecondsSaved`. Émis depuis les DEUX chemins (œuf principal et
+incubateur), soit 6 points d'appel.
+
+⚠️ **`hatchSecondsSaved` est REGROUPÉ**, jamais émis par tap : il passe
+par `pendingHatchSecRef`, vidé 10 fois par seconde par le même cycle que
+les pièces. À 142 taps/s, un `trackEvent` par tap déclencherait
+142 mises à jour d'état par seconde — exactement l'incident déjà
+rencontré sur `gainCoins`. Le vidage final au démontage est là aussi.
+
+⚠️ Un tap sur un œuf **déjà prêt** ne compte pas : le plancher de
+`applyTap` fait qu'aucun temps n'est réellement gagné, le compter serait
+faux (et permettrait de valider le défi en tapant dans le vide).
+
+**Cibles calées sur le rythme de FIN de partie**, pas de début. Un œuf
+prend 10 min à la 1re créature mais 14 h à la 26e : 144 œufs/jour
+possibles au début contre **1,7 à la fin**. Viser le début rendrait ces
+défis infaisables les derniers jours — d'où « 1 œuf » en quotidien et
+« 5 œufs » en hebdomadaire, et non 20 ou 30.
+
+| Type | Défis ajoutés |
+|---|---|
+| Quotidiens | 1 œuf éclos · 2 vidéos · 600 s gagnées en tapant |
+| Hebdomadaires | 5 œufs · 12 vidéos · 3 600 s gagnées |
+| Succès | Éclore des œufs (5→300) · Vidéos (10→1 500) |
+
+Pools : 11 quotidiens, 13 hebdomadaires (6 tirés/semaine), 11 succès.
+
+⚠️ **5 vidéos = 20 % × 5 = 100 % du total** : un œuf peut donc être
+annulé entièrement à la vidéo, quel que soit sa durée. C'est un levier de
+monétisation puissant, mais ça veut aussi dire que le minuteur est
+toujours contournable — à surveiller au moment de fixer le prix des
+vidéos ou leur disponibilité.
+
 ## Document des défis (Superhuman Docs) — À TENIR À JOUR
 
 Tous les défis (quotidiens, hebdomadaires, succès) sont recensés dans un
