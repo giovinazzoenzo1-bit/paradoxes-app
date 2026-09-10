@@ -306,6 +306,28 @@ hauteur du fichier** au stade « endormi » (jusqu'à 80 % au stade
 « prêt »). Il paraît donc plus petit que sa boîte de 250 dp — normal, ce
 n'est pas un bug.
 
+## Fonctionnalités à venir — RAPPELER À L'UTILISATEUR
+
+**https://docs.superhuman.com/d/_dZp6cXSuR5W**
+
+Trois fonctionnalités décidées le 07/09, **à faire plus tard**, que
+l'utilisateur a explicitement demandé qu'on lui **reremette en tête** :
+
+1. **Temps d'éclosion des œufs** — taper et regarder des vidéos réduit le
+   délai. ⚠️ Piège identifié dès la conception : l'autoclicker de
+   l'utilisateur tourne à ~142 taps/s, donc toute réduction linéaire par
+   tap fait éclore l'œuf instantanément et casse la mécanique ET l'intérêt
+   des vidéos. Prévoir un plafond ou une courbe décroissante.
+2. **Mini-boss toutes les ~30 min**. ⚠️ 48 apparitions/jour sans
+   notification possible (`expo-notifications` retiré, impossible dans
+   Expo Go depuis le SDK 53) : prévoir une **file d'attente** qui
+   s'accumule hors ligne, sinon le joueur les rate presque tous.
+3. **Gros boss quotidiens et hebdomadaires**.
+
+Les trois servent le même but : le pool actuel n'est fait que de
+compteurs de volume, aucun défi ne demande de décision. Les boss
+apportent des défis à contrainte et à rendez-vous.
+
 ## Document des défis (Superhuman Docs) — À TENIR À JOUR
 
 Tous les défis (quotidiens, hebdomadaires, succès) sont recensés dans un
