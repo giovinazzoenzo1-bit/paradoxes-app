@@ -655,6 +655,46 @@ survivait.
 qui reposait sur son démontage — chargement, sauvegarde, remise à zéro.
 Rien ne signale ce type de rupture, le code continue de compiler.
 
+## Équilibrage du 07/09 — retour de test
+
+Retour d'une joueuse : Aventure trop facile au début, défis du 1er œuf
+trop faciles, gardien trop facile.
+
+**Combats ×2.** `opponentPowerBudget` : base 13 → **26**. Confirmé par
+mesure AVANT de changer quoi que ce soit : l'équipe du joueur était 2 à
+4 fois plus puissante que l'adversaire à TOUS les niveaux jusqu'au 30
+(ratio adverse/joueur entre 0,22 et 0,51). Après : 0,5 à 1,0 — des
+combats disputés sans devenir infaisables. La croissance (1,062/niveau)
+est inchangée, le déséquilibre était sur le point de départ.
+
+⚠️ **Correction d'une erreur de ma part** : j'avais écrit dans le commit
+du gardien que la difficulté était déséquilibrée en haut de courbe
+(ratios 2,3 au niveau 15, 4,9 au 25). Ces chiffres décrivaient un bug
+**déjà corrigé** par la division par la taille d'équipe
+(`opponentPowerBudgetPerMember`) — j'avais lu un commentaire d'historique
+comme un état actuel. La courbe du gardien (œuf 26 → niveau 15) reste
+prudente, mais la justification était fausse.
+
+**Défis +40%, avec DEUX traitements distincts :**
+
+| Type de défi | Levier |
+|---|---|
+| Quantité (pièces, critiques, Offrandes, Transe…) | cible **×1,4** — 20 défis |
+| Niveau (Pacte, Sanctuaire, Veilleur, auto-clics, améliorations) | **prix ×1,4** (`UPGRADE_COST_MULT`), cible inchangée |
+| Niveau d'Aventure | rien — les combats sont déjà ×2 |
+
+Gonfler la cible d'un défi « monte Pacte au niveau 10 » aurait changé le
+texte sans rien rendre plus exigeant : c'est le coût cumulé qui fait la
+difficulté. Il passe de 10 220 à **14 308 pièces**.
+
+`UPGRADE_COST_MULT` s'applique aux 7 formules de coût (Pacte, Sanctuaire,
+Veilleur, améliorations de tap, objets, auto-clics, nourrissage) et
+multiplie la BASE : la croissance par niveau est intacte.
+
+⚠️ Les libellés des défis contiennent leurs nombres EN DUR. Toute
+modification de cible doit changer les deux — vérifié après coup que les
+20 libellés citent bien leur nouvelle cible.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

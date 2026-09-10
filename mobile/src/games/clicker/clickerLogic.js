@@ -340,7 +340,7 @@ export const RARITY_COST_FACTOR = { commun: 1, peu_commun: 1.3, rare: 1.6, epiqu
 // combat disponible à ce stade.
 export function levelUpCost(creature, level) {
   const rarityFactor = RARITY_COST_FACTOR[creature.rarity] || 1;
-  return Math.max(1, Math.round(0.5 * Math.pow(level, 1.2) * rarityFactor));
+  return Math.max(1, Math.round(0.5 * UPGRADE_COST_MULT * Math.pow(level, 1.2) * rarityFactor));
 }
 
 // Coût d'une invocation (gacha), croissant avec le nombre de créatures
@@ -365,8 +365,15 @@ export function tapDamage(level) {
   const lvl = Number.isFinite(level) ? Math.max(1, level) : 1;
   return 1 + (lvl - 1) * TAP_DAMAGE_PER_LEVEL;
 }
+// Coûts d'amélioration relevés de +40% le 07/09. Retour de test : les
+// défis « monte X au niveau N » étaient trop faciles. Pour ce type de
+// défi, la difficulté vient du PRIX de l'amélioration, pas de la cible —
+// gonfler la cible aurait changé le texte du défi sans rien rendre plus
+// exigeant. Le facteur multiplie le coût de BASE : la croissance par
+// niveau est inchangée, donc la courbe garde sa forme.
+export const UPGRADE_COST_MULT = 1.4;
 export function tapPowerCost(currentTapPower) {
-  return Math.round(20 * Math.pow(2, currentTapPower - 1));
+  return Math.round(20 * UPGRADE_COST_MULT * Math.pow(2, currentTapPower - 1));
 }
 
 // ---- Apparitions de créatures sur le bouton de tap ("le cookie") ----
@@ -637,7 +644,7 @@ export function sanctuaryMultiplier(level) {
   return 1 + Math.min(SANCTUARY_MAX_LEVEL, Math.max(0, level || 0)) * 0.025;
 }
 export function sanctuaryUpgradeCost(level) {
-  return Math.round(60 * Math.pow(2.0, level));
+  return Math.round(60 * UPGRADE_COST_MULT * Math.pow(2.0, level));
 }
 export function sanctuaryMaxed(level) {
   return (level || 0) >= SANCTUARY_MAX_LEVEL;
@@ -652,7 +659,7 @@ export function veilleurOfflineMultiplier(level) {
   return 1 + Math.min(VEILLEUR_MAX_LEVEL, Math.max(0, level || 0)) * 0.05;
 }
 export function veilleurUpgradeCost(level) {
-  return Math.round(150 * Math.pow(2, level));
+  return Math.round(150 * UPGRADE_COST_MULT * Math.pow(2, level));
 }
 export function veilleurMaxed(level) {
   return (level || 0) >= VEILLEUR_MAX_LEVEL;
@@ -746,7 +753,7 @@ export function normalizeTapUpgrades(value) {
 }
 
 export function tapUpgradeCost(item, level) {
-  return Math.round(item.cost * Math.pow(item.growth || 1.6, level));
+  return Math.round(item.cost * UPGRADE_COST_MULT * Math.pow(item.growth || 1.6, level));
 }
 
 // Le palier `index` est ouvert si le PRÉCÉDENT a atteint le niveau 5
@@ -812,7 +819,7 @@ export const UPGRADE_ITEMS = [
 // le reste (pourcentage de production) grimpe plus vite qu'un +N par
 // tap, donc s'auto-limite sans qu'on ait besoin d'interdire l'achat.
 export function upgradeItemCost(item, level) {
-  return Math.round(item.cost * Math.pow(item.growth || 1.7, level));
+  return Math.round(item.cost * UPGRADE_COST_MULT * Math.pow(item.growth || 1.7, level));
 }
 
 // Taux de convergence de la chance de crit : chaque niveau rapporte 75%
@@ -994,21 +1001,21 @@ export function offrandeReward(tapPower) {
 export const QUEST_SEQUENCE = [
   // --- Cycle 1 : les bases du clicker ---
   [
-    { id: 'seq_earn10k', icon: '💰', metric: 'totalEarned', target: 5000, mode: 'delta',
-      label: () => 'Obtiens 5 000 pièces' },
+    { id: 'seq_earn10k', icon: '💰', metric: 'totalEarned', target: 7000, mode: 'delta',
+      label: () => 'Obtiens 7 000 pièces' },
     { id: 'seq_pacte15', icon: '🔗', metric: 'tapPower', target: 10, mode: 'absolute',
       label: () => 'Monte Pacte au niveau 10' },
-    { id: 'seq_transe30', icon: '🔥', metric: 'maxTranseHoldSec', target: 30, mode: 'absolute',
-      label: () => 'Reste en Transe x2,5 pendant 30 secondes' },
-    { id: 'seq_golden3', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
-      label: () => 'Touche 3 fois la cible dorée' },
+    { id: 'seq_transe30', icon: '🔥', metric: 'maxTranseHoldSec', target: 42, mode: 'absolute',
+      label: () => 'Reste en Transe x2,5 pendant 42 secondes' },
+    { id: 'seq_golden3', icon: '⭐', metric: 'goldenClaimed', target: 4, mode: 'delta',
+      label: () => 'Touche 4 fois la cible dorée' },
   ],
   // --- Cycle 2 : critiques, Offrande, premier combat ---
   [
-    { id: 'seq_crit20', icon: '💥', metric: 'totalCrits', target: 20, mode: 'delta',
-      label: () => 'Obtiens 20 coups critiques' },
-    { id: 'seq_offering2', icon: '🪙', metric: 'offering', target: 2, mode: 'delta',
-      label: () => 'Fais 2 Offrandes' },
+    { id: 'seq_crit20', icon: '💥', metric: 'totalCrits', target: 28, mode: 'delta',
+      label: () => 'Obtiens 28 coups critiques' },
+    { id: 'seq_offering2', icon: '🪙', metric: 'offering', target: 3, mode: 'delta',
+      label: () => 'Fais 3 Offrandes' },
     { id: 'seq_adv_c1l1', icon: '⚔️', metric: 'advLevelReached', target: 3, mode: 'absolute',
       label: () => 'Termine le chapitre 1, niveau 3' },
     { id: 'seq_esprit10', icon: '👻', metric: 'auto:esprit', target: 10, mode: 'absolute',
@@ -1016,32 +1023,32 @@ export const QUEST_SEQUENCE = [
   ],
   // --- Cycle 3 : pouvoirs, Sanctuaire, revenu passif (5 défis) ---
   [
-    { id: 'seq_power5', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
-      label: () => 'Active 5 fois un pouvoir de créature' },
+    { id: 'seq_power5', icon: '✨', metric: 'powerActivated', target: 7, mode: 'delta',
+      label: () => 'Active 7 fois un pouvoir de créature' },
     { id: 'seq_adv_c1l10', icon: '⚔️', metric: 'advLevelReached', target: 10, mode: 'absolute',
       label: () => 'Termine le chapitre 1, niveau 10' },
     { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', target: 10, mode: 'absolute',
       label: () => 'Monte le Sanctuaire au niveau 10' },
-    { id: 'seq_hold100k', icon: '🏦', metric: 'coins', target: 100000, mode: 'absolute',
-      label: () => 'Aie 100 000 pièces en réserve' },
-    { id: 'seq_passive50', icon: '📈', metric: 'passiveIncome', target: 50, mode: 'absolute',
-      label: () => 'Atteins 50 pièces par seconde en auto-clic' },
+    { id: 'seq_hold100k', icon: '🏦', metric: 'coins', target: 140000, mode: 'absolute',
+      label: () => 'Aie 140 000 pièces en réserve' },
+    { id: 'seq_passive50', icon: '📈', metric: 'passiveIncome', target: 70, mode: 'absolute',
+      label: () => 'Atteins 70 pièces par seconde en auto-clic' },
   ],
   // --- Cycle 4 : montée en puissance ---
   [
-    { id: 'seq_golden6', icon: '⭐', metric: 'goldenClaimed', target: 6, mode: 'delta',
-      label: () => 'Touche 6 fois la cible dorée' },
+    { id: 'seq_golden6', icon: '⭐', metric: 'goldenClaimed', target: 8, mode: 'delta',
+      label: () => 'Touche 8 fois la cible dorée' },
     { id: 'seq_veilleur10', icon: '🌙', metric: 'veilleurLevel', target: 10, mode: 'absolute',
       label: () => 'Monte le Veilleur au niveau 10' },
-    { id: 'seq_crit40', icon: '💥', metric: 'totalCrits', target: 40, mode: 'delta',
-      label: () => 'Obtiens 40 coups critiques' },
+    { id: 'seq_crit40', icon: '💥', metric: 'totalCrits', target: 56, mode: 'delta',
+      label: () => 'Obtiens 56 coups critiques' },
     { id: 'seq_adv_c2l5', icon: '⚔️', metric: 'advLevelReached', target: 15, mode: 'absolute',
       label: () => 'Termine le chapitre 2, niveau 5' },
   ],
   // --- Cycle 5 : première Ascension ---
   [
-    { id: 'seq_offering5', icon: '🪙', metric: 'offering', target: 5, mode: 'delta',
-      label: () => 'Fais 5 Offrandes' },
+    { id: 'seq_offering5', icon: '🪙', metric: 'offering', target: 7, mode: 'delta',
+      label: () => 'Fais 7 Offrandes' },
     { id: 'seq_griffe5', icon: '🔥', metric: 'upgrade:griffeBraisillon', target: 5, mode: 'absolute',
       label: () => 'Monte Griffe de Braisillon au niveau 5' },
     { id: 'seq_adv_c2l10', icon: '⚔️', metric: 'advLevelReached', target: 20, mode: 'absolute',
@@ -1051,8 +1058,8 @@ export const QUEST_SEQUENCE = [
   ],
   // --- Cycle 6 : relance après Ascension ---
   [
-    { id: 'seq_earn100k', icon: '💰', metric: 'totalEarned', target: 100000, mode: 'delta',
-      label: () => 'Regagne 100 000 pièces' },
+    { id: 'seq_earn100k', icon: '💰', metric: 'totalEarned', target: 140000, mode: 'delta',
+      label: () => 'Regagne 140 000 pièces' },
     { id: 'seq_pacte20', icon: '🔗', metric: 'tapPower', target: 20, mode: 'absolute',
       label: () => 'Monte Pacte au niveau 20' },
     { id: 'seq_rune1', icon: '🛒', metric: 'runeBought', target: 1, mode: 'delta',
@@ -1062,48 +1069,48 @@ export const QUEST_SEQUENCE = [
   ],
   // --- Cycle 7 : runes et évolution ---
   [
-    { id: 'seq_equipRune2', icon: '🪬', metric: 'runeEquipped', target: 2, mode: 'delta',
-      label: () => 'Équipe 2 runes sur tes créatures' },
+    { id: 'seq_equipRune2', icon: '🪬', metric: 'runeEquipped', target: 3, mode: 'delta',
+      label: () => 'Équipe 3 runes sur tes créatures' },
     // Remplacé : le Sanctuaire est plafonné à 10, « niveau 15 » était
     // devenu littéralement impossible et bloquait l'œuf pour toujours.
     { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', target: 5, mode: 'absolute',
       label: () => 'Monte Poigne Ancienne au niveau 5' },
-    { id: 'seq_hold1M', icon: '🏦', metric: 'coins', target: 1000000, mode: 'absolute',
-      label: () => 'Aie 1 million de pièces en réserve' },
+    { id: 'seq_hold1M', icon: '🏦', metric: 'coins', target: 1400000, mode: 'absolute',
+      label: () => 'Aie 1,4 million de pièces en réserve' },
     { id: 'seq_evolve1', icon: '🧬', metric: 'maxEvolutionTier', target: 1, mode: 'absolute',
       label: () => 'Fais évoluer une créature au palier 1' },
   ],
   // --- Cycle 8 : rythme ---
   [
-    { id: 'seq_power10', icon: '✨', metric: 'powerActivated', target: 10, mode: 'delta',
-      label: () => 'Active 10 fois un pouvoir de créature' },
+    { id: 'seq_power10', icon: '✨', metric: 'powerActivated', target: 14, mode: 'delta',
+      label: () => 'Active 14 fois un pouvoir de créature' },
     { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', target: 10, mode: 'absolute',
       label: () => 'Possède 10 Mains Spectrales' },
     { id: 'seq_adv_c3l10', icon: '⚔️', metric: 'advLevelReached', target: 30, mode: 'absolute',
       label: () => 'Termine le chapitre 3, niveau 10' },
-    { id: 'seq_crit100', icon: '💥', metric: 'totalCrits', target: 100, mode: 'delta',
-      label: () => 'Obtiens 100 coups critiques' },
+    { id: 'seq_crit100', icon: '💥', metric: 'totalCrits', target: 140, mode: 'delta',
+      label: () => 'Obtiens 140 coups critiques' },
   ],
   // --- Cycle 9 : profondeur ---
   [
-    { id: 'seq_hold10M', icon: '🏦', metric: 'coins', target: 10000000, mode: 'absolute',
-      label: () => 'Aie 10 millions de pièces en réserve' },
+    { id: 'seq_hold10M', icon: '🏦', metric: 'coins', target: 14000000, mode: 'absolute',
+      label: () => 'Aie 14 millions de pièces en réserve' },
     { id: 'seq_croc10', icon: '🪨', metric: 'upgrade:crocBouldog', target: 10, mode: 'absolute',
       label: () => 'Monte Croc de Bouldog au niveau 10' },
-    { id: 'seq_fuse2', icon: '🔮', metric: 'runeFused', target: 2, mode: 'delta',
-      label: () => 'Fusionne 2 runes' },
+    { id: 'seq_fuse2', icon: '🔮', metric: 'runeFused', target: 3, mode: 'delta',
+      label: () => 'Fusionne 3 runes' },
     { id: 'seq_adv_c4l10', icon: '⚔️', metric: 'advLevelReached', target: 40, mode: 'absolute',
       label: () => 'Termine le chapitre 4, niveau 10' },
   ],
   // --- Cycle 10 : seconde Ascension, dernier cycle scripté ---
   [
-    { id: 'seq_hold50M', icon: '🏦', metric: 'coins', target: 50000000, mode: 'absolute',
-      label: () => 'Aie 50 millions de pièces en réserve' },
+    { id: 'seq_hold50M', icon: '🏦', metric: 'coins', target: 70000000, mode: 'absolute',
+      label: () => 'Aie 70 millions de pièces en réserve' },
     // Remplacé pour la même raison : le Veilleur est plafonné à 10.
     { id: 'seq_veilleur20', icon: '🪄', metric: 'tapUpgrade:tap2', target: 5, mode: 'absolute',
       label: () => 'Monte Gantelet Runique au niveau 5' },
-    { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', target: 30, mode: 'absolute',
-      label: () => 'Nourris une créature jusqu\'au niveau 30' },
+    { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', target: 42, mode: 'absolute',
+      label: () => 'Nourris une créature jusqu\'au niveau 42' },
     { id: 'seq_ascend2', icon: '🌟', metric: 'ascension', target: 2, mode: 'delta',
       label: () => 'Fais une seconde Ascension' },
   ],
@@ -1682,7 +1689,7 @@ export const AUTOCLICKERS = [
 // s'étale sur un vrai run (3 générateurs à 30min, 6 à 4h, 10 à 12h).
 export const AUTOCLICKER_COST_GROWTH = 1.25;
 export function autoClickerCost(clicker, ownedCount) {
-  return Math.round(clicker.baseCost * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount));
+  return Math.round(clicker.baseCost * UPGRADE_COST_MULT * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount));
 }
 
 // Revenu total/s de tous les générateurs possédés.

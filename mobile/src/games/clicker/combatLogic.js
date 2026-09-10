@@ -163,8 +163,17 @@ export function opponentGoesFirst() {
 // niveau 60). Calibré pour retomber presque exactement sur les stats
 // réelles de Solarion/Solstral aux niveaux où ils apparaissaient déjà,
 // donc aucun changement perceptible en tout début de partie.
+// Base DOUBLÉE le 07/09 (13 -> 26), sur retour de test « mode Aventure
+// trop facile au début » — et confirmé par mesure : avant ce changement,
+// l'équipe du joueur était 2 à 4 fois plus puissante que l'adversaire à
+// TOUS les niveaux jusqu'au 30 (ratio adverse/joueur mesuré entre 0,22 et
+// 0,51). Le facteur 2 ramène ce ratio autour de 0,45-1,0, donc des
+// combats réellement disputés sans jamais devenir infaisables.
+//
+// La croissance (1,062/niveau) est inchangée : le déséquilibre était sur
+// le NIVEAU de départ, pas sur la pente.
 function opponentPowerBudget(levelNumber) {
-  return 13 * Math.pow(1.062, levelNumber - 1);
+  return 26 * Math.pow(1.062, levelNumber - 1);
 }
 
 // Budget PAR MEMBRE de l'équipe adverse — le budget ci-dessus reste la
