@@ -388,6 +388,46 @@ iPhone. **Centrer un texte avec une VUE parente** (`alignItems` +
 `justifyContent`), jamais avec `textAlignVertical`. Plus aucune
 occurrence dans le projet.
 
+## Incubateur d'œufs — VERSION 1 (07/09)
+
+Première brique de la refonte décrite dans « Paradox — Fonctionnalités à
+venir ». **Volontairement incomplète** : elle sert à tester la mécanique.
+
+**Fichiers** : `src/games/clicker/incubatorLogic.js` (logique pure, sans
+React — donc simulable dans Node avant de figer les valeurs) et
+`src/screens/games/IncubatorPanel.js` (panneau modal).
+
+**Règles implémentées**, conformes au cahier des charges :
+
+| Règle | Valeur |
+|---|---|
+| Durée | `10 min × 1,194 ^ (créatures possédées)`, plafond 16 h |
+| Tap | −1 seconde, forfaitaire |
+| Vidéo | −20 % de la durée totale, 3 maximum par œuf |
+| Fin du minuteur | Pas d'éclosion automatique, le joueur revient taper |
+| Hors ligne | Horodatage de fin (`endsAt`), jamais un compteur décrémenté |
+| Emplacements | 1 seul (le 2e sera un achat en argent réel) |
+
+Courbe vérifiée par simulation : 10 min pour la 1re créature, **14 h 01
+pour la 26e**, total 85,5 h — exactement les bornes voulues.
+
+**Sauvegarde dans sa PROPRE clé** (`clicker:incubator:v1`) et pas dans
+celle du clicker : une fonctionnalité neuve ne doit pas pouvoir corrompre
+la sauvegarde principale. Si elle échoue, le jeu continue sans elle.
+
+**Ce qui MANQUE encore, volontairement :**
+- ⚠️ **Le gardien d'œuf** — l'éclosion donne directement la créature. Le
+  combat viendra s'intercaler entre « minuteur à zéro » et l'attribution.
+- ⚠️ **Les vraies vidéos** — aucune régie n'est installée. Le bouton
+  simule la réduction, avec une confirmation qui le dit explicitement.
+- L'indice de rareté (lueur), et les défis liés à l'incubation.
+
+**Piège évité** : le bouton sous l'œuf vit DANS `tapHintZone`, ancrée en
+bas. Deux éléments positionnés séparément se chevauchaient sur iPhone,
+la hauteur utile n'y étant pas la même que sur Android (voir règle 9).
+La zone est passée en `pointerEvents: 'box-none'` : elle ne capte rien
+elle-même, mais le bouton qu'elle contient reste cliquable.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

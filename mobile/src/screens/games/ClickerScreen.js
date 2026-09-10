@@ -92,6 +92,12 @@ import {
 } from '../../games/clicker/clickerLogic';
 import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
 import { questDef } from '../../games/clicker/dailyLogic';
+import IncubatorPanel from './IncubatorPanel';
+import {
+  INCUBATOR_STORAGE_KEY, startIncubation, applyTap as incubatorApplyTap,
+  applyVideo as incubatorApplyVideo, isReady as incubatorIsReady,
+  incubationDurationMs, formatRemaining,
+} from '../../games/clicker/incubatorLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 import { COLORS } from './clickerTheme';
 
@@ -194,6 +200,40 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // mais RIEN en bas — d'ou la barre de navigation qui passait sous la
   // barre d'accueil de l'iPhone et devenait difficile a toucher.
   const insets = useSafeAreaInsets();
+
+  // ---- Incubateur (v1, 07/09) ----
+  // Sauvegarde dans sa PROPRE clé et non dans celle du clicker : une
+  // fonctionnalité toute neuve ne doit pas pouvoir corrompre la
+  // sauvegarde principale (voir les incidents de « remise à zéro »
+  // documentés). Si elle échoue, le jeu continue sans elle.
+  const [incubatorOpen, setIncubatorOpen] = useState(false);
+  const [incubatingEgg, setIncubatingEgg] = useState(null);
+  const [incubatorLoaded, setIncubatorLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(INCUBATOR_STORAGE_KEY);
+        if (raw) setIncubatingEgg(JSON.parse(raw));
+      } catch (e) {
+        // Illisible : on repart sans œuf plutôt que d'empêcher l'écran
+        // de s'afficher.
+      }
+      setIncubatorLoaded(true);
+    })();
+  }, []);
+
+  // Écriture seulement APRÈS le chargement, sinon le premier rendu
+  // (état vide) écraserait l'œuf sauvegardé avant de l'avoir lu.
+  useEffect(() => {
+    if (!incubatorLoaded) return;
+    if (incubatingEgg) {
+      AsyncStorage.setItem(INCUBATOR_STORAGE_KEY, JSON.stringify(incubatingEgg)).catch(() => {});
+    } else {
+      AsyncStorage.removeItem(INCUBATOR_STORAGE_KEY).catch(() => {});
+    }
+  }, [incubatingEgg, incubatorLoaded]);
+
   const vibrationsRef = useRef(vibrations);
   vibrationsRef.current = vibrations;
   const {
@@ -943,6 +983,39 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   // Le joueur a tapé la créature apparue à temps : son pouvoir s'active,
   // différent selon la créature (pas juste sa rareté).
+  // ---- Actions de l'incubateur ----
+  // Un seul œuf à la fois (le 2e emplacement sera un achat en argent
+  // réel). La durée dépend du nombre de créatures DÉJÀ possédées.
+  const startEggIncubation = () => {
+    if (incubatingEgg) return;
+    setIncubatingEgg(startIncubation(owned.length));
+    setIncubatorOpen(true);
+  };
+
+  const incubatorTap = () => {
+    setIncubatingEgg((prev) => (prev ? incubatorApplyTap(prev) : prev));
+  };
+
+  const incubatorVideo = () => {
+    setIncubatingEgg((prev) => (prev ? incubatorApplyVideo(prev) : prev));
+  };
+
+  // Éclosion : même chemin d'attribution que la capture classique
+  // (tirage, ajout à la collection, panneau de récompense), pour ne pas
+  // créer un second circuit qui pourrait diverger.
+  //
+  // Le GARDIEN d'œuf n'existe pas encore : il viendra s'intercaler ici,
+  // entre « minuteur à zéro » et l'attribution de la créature.
+  const hatchIncubatedEgg = () => {
+    const egg = incubatingEgg;
+    if (!egg || !incubatorIsReady(egg)) return;
+    const creature = rollCreature();
+    addCreatureToOwned(creature);
+    setRewardCreature(creature);
+    setIncubatingEgg(null);
+    setIncubatorOpen(false);
+  };
+
   const claimPower = () => {
     trackEvent('powerActivated', 1);
     const spawned = spawnedCreatureRef.current;
@@ -1676,6 +1749,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               </TouchableOpacity>
             )}
 
+            {/* Bouton Incubateur, 3e de la colonne de gauche sous le
+                cadeau et les quêtes. Sa position dérive de celle du
+                cadeau (même `left`, `top` + 144) : les trois restent
+                donc solidaires quoi qu'il arrive à TOP_BLOCK_SHIFT. */}
+            <TouchableOpacity style={styles.incubatorBtn} onPress={() => setIncubatorOpen(true)}>
+              <Text style={styles.incubatorBtnIcon}>🥚</Text>
+              {incubatingEgg && incubatorIsReady(incubatingEgg) && <View style={styles.calBtnDot} />}
+            </TouchableOpacity>
+
             <ImageBackground
               source={require('../../../assets/icons/deck-frame.png')}
               style={styles.deckFrame}
@@ -1737,7 +1819,29 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 en absolu du reste de l'écran, ce qui les faisait remonter
                 tout en haut (derrière le header, signalé par
                 l'utilisateur : texte "Ta../Œ.." visible en arrière-plan). */}
+            {/* Colonne ancrée en bas : bouton d'incubation PUIS textes.
+                Les deux sont dans le même conteneur pour qu'ils ne
+                puissent pas se chevaucher — ils se chevauchaient sur
+                iPhone quand ils étaient positionnés séparément, la
+                hauteur utile n'étant pas la même que sur Android.
+                `box-none` : le conteneur ne capte rien, mais le bouton
+                qu'il contient reste cliquable. */}
             <View style={[styles.tapHintZone, { bottom: insets.bottom + 88 }]}>
+              {eggPhase === 'collecting' && (
+                incubatingEgg ? (
+                  <TouchableOpacity style={styles.incubateCta} onPress={() => setIncubatorOpen(true)}>
+                    <Text style={styles.incubateCtaText}>
+                      🥚 {incubatorIsReady(incubatingEgg) ? 'Œuf prêt à éclore !' : `Incubation — ${formatRemaining(Math.max(0, incubatingEgg.endsAt - Date.now()))}`}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.incubateCta} onPress={startEggIncubation}>
+                    <Text style={styles.incubateCtaText}>
+                      🥚 Mettre un œuf en incubation ({formatRemaining(incubationDurationMs(owned.length))})
+                    </Text>
+                  </TouchableOpacity>
+                )
+              )}
               {comboCount > 1 ? (
                 <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
               ) : (
@@ -1807,6 +1911,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           alreadyClaimedToday={streakClaimedDate === today}
           onClaim={handleClaimCalendar}
           onClose={() => setCalendarOpen(false)}
+        />
+      )}
+
+      {/* Surcouche de l'incubateur, sœur des autres surcouches (et non
+          imbriquée dans l'une d'elles). */}
+      {incubatorOpen && (
+        <IncubatorPanel
+          egg={incubatingEgg}
+          onTap={incubatorTap}
+          onWatchVideo={incubatorVideo}
+          onHatch={hatchIncubatedEgg}
+          onBack={() => setIncubatorOpen(false)}
         />
       )}
 
@@ -2875,6 +2991,25 @@ const styles = StyleSheet.create({
   },
   questsBtnIcon: { fontSize: 28 },
 
+  // 3e bouton de la colonne de gauche : même `left` que le cadeau,
+  // `top` = celui du cadeau + 144 (2 x 72). Dérivé de la même formule
+  // pour que les trois restent solidaires.
+  incubatorBtn: {
+    position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * (0.334 - TOP_BLOCK_SHIFT) + 144, zIndex: 3,
+    width: 62, height: 62,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  incubatorBtnIcon: { fontSize: 28 },
+
+  // Bouton sous l'œuf. Il vit dans `tapHintZone`, ancrée en bas, donc
+  // il ne peut pas chevaucher les textes ni la barre de navigation.
+  incubateCta: {
+    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 14, marginBottom: 8,
+    backgroundColor: 'rgba(46,127,184,0.22)',
+    borderWidth: 1.5, borderColor: COLORS.neonCyan,
+  },
+  incubateCtaText: { color: COLORS.neonCyan, fontSize: 12, fontWeight: '800' },
+
   // Bouton Options — coin HAUT DROIT, aligné verticalement sur le bouton
   // retour (même `top` que headerRow) mais ancré à droite.
   // Aucun fond/bordure : juste l'icone (demande explicite du 06/09).
@@ -3032,7 +3167,10 @@ const styles = StyleSheet.create({
   tapHintZone: {
     position: 'absolute', left: 0, zIndex: 3,
     width: '100%', alignItems: 'center',
-    pointerEvents: 'none',
+    // `box-none` et non `none` : la zone elle-même ne capte rien (les
+    // textes ne doivent pas voler les taps de l'œuf), mais le bouton
+    // d'incubation qu'elle contient doit rester cliquable.
+    pointerEvents: 'box-none',
   },
   tapHint: { color: COLORS.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8, textAlign: 'center' },
