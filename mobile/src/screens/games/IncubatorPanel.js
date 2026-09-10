@@ -129,8 +129,15 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                     </Text>
                   </View>
                 ) : (
-                  <TouchableOpacity style={styles.hatchBtn} onPress={onHatch}>
-                    <Text style={styles.hatchBtnText}>
+                  // Rouge quand c'est un gardien, vert quand l'œuf éclot
+                  // directement : même code couleur que l'écran
+                  // principal, la même action doit se reconnaître au
+                  // premier coup d'œil des deux côtés.
+                  <TouchableOpacity
+                    style={[styles.hatchBtn, guardianRequired && styles.hatchBtnGuardian]}
+                    onPress={onHatch}
+                  >
+                    <Text style={[styles.hatchBtnText, guardianRequired && styles.hatchBtnGuardianText]}>
                       {guardianRequired ? '⚔️ Affronter le gardien' : '🐣 Faire éclore'}
                     </Text>
                   </TouchableOpacity>
@@ -240,6 +247,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.good,
   },
   hatchBtnText: { color: '#062b18', fontSize: 15, fontWeight: '900' },
+  hatchBtnGuardian: {
+    backgroundColor: 'rgba(217,48,37,0.9)', borderWidth: 2, borderColor: '#ff6b5e',
+    shadowColor: '#ff2d2d', shadowOpacity: 0.8, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 }, elevation: 8,
+  },
+  hatchBtnGuardianText: { color: '#fff' },
   hatchBtnWaiting: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.border },
   hatchBtnWaitingText: { color: COLORS.muted, fontSize: 13, fontWeight: '800' },
 

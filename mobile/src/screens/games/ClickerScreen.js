@@ -2103,19 +2103,33 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   proposé QUE lorsque l'œuf est prêt (défis terminés) —
                   c'est le moment où le joueur a réellement un arbitrage
                   à faire. */}
-              {/* Temps restant SOUS l'œuf pendant l'éclosion. */}
-              {eggPhase === 'hatching' && mainEgg && (
-                <Text style={[styles.eggTimer, mainReady && styles.eggTimerReady]}>
-                  {!mainReady
-                    ? formatRemaining(mainRemaining)
-                    : guardianRetryRemainingMs(mainEgg, nowTick) > 0
-                    // Après une défaite : l'œuf n'est pas perdu, seule
-                    // une attente sépare le joueur d'un nouvel essai.
-                    ? `Gardien — nouvel essai dans ${formatRemaining(guardianRetryRemainingMs(mainEgg, nowTick))}`
-                    : guardianRequired(owned.length)
-                    ? '⚔️ Un gardien protège l\'œuf — tape pour l\'affronter'
-                    : 'Prêt — tape pour ouvrir !'}
-                </Text>
+              {/* Sous l'œuf pendant l'éclosion : le temps restant, puis
+                  un vrai BOUTON une fois prêt. C'était auparavant une
+                  seule ligne de texte en grosse police — le message du
+                  gardien y débordait et n'invitait pas à cliquer. */}
+              {eggPhase === 'hatching' && mainEgg && !mainReady && (
+                <Text style={styles.eggTimer}>{formatRemaining(mainRemaining)}</Text>
+              )}
+
+              {eggPhase === 'hatching' && mainEgg && mainReady && (
+                guardianRetryRemainingMs(mainEgg, nowTick) > 0 ? (
+                  // Après une défaite : l'œuf n'est PAS perdu, seule une
+                  // attente sépare le joueur d'un nouvel essai.
+                  <View style={[styles.guardianCta, styles.guardianCtaWaiting]}>
+                    <Text style={styles.guardianCtaWaitingText}>
+                      ⚔️ Gardien vaincu ? Nouvel essai dans {formatRemaining(guardianRetryRemainingMs(mainEgg, nowTick))}
+                    </Text>
+                  </View>
+                ) : guardianRequired(owned.length) ? (
+                  <TouchableOpacity style={styles.guardianCta} onPress={() => resolveHatch('main')}>
+                    <Text style={styles.guardianCtaText}>⚔️ Affronter le gardien</Text>
+                    <Text style={styles.guardianCtaSub}>Bats-le pour faire éclore l'œuf</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={[styles.guardianCta, styles.hatchCta]} onPress={() => resolveHatch('main')}>
+                    <Text style={styles.hatchCtaText}>🐣 Faire éclore l'œuf</Text>
+                  </TouchableOpacity>
+                )
               )}
 
               {/* Le bouton « Mettre en incubation » DISPARAÎT dès qu'un
@@ -3342,6 +3356,31 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4,
   },
   eggTimerReady: { color: COLORS.good, fontSize: 16 },
+
+  // Bouton du gardien : ROUGE et explicite (demande du 07/09). Il
+  // remplace un simple texte, qui débordait et n'invitait pas au clic.
+  guardianCta: {
+    paddingVertical: 10, paddingHorizontal: 20, borderRadius: 14, marginBottom: 8,
+    alignItems: 'center',
+    backgroundColor: 'rgba(217,48,37,0.9)',
+    borderWidth: 2, borderColor: '#ff6b5e',
+    shadowColor: '#ff2d2d', shadowOpacity: 0.8, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 }, elevation: 8,
+  },
+  guardianCtaText: { color: '#fff', fontSize: 15, fontWeight: '900' },
+  guardianCtaSub: { color: 'rgba(255,255,255,0.85)', fontSize: 10, fontWeight: '700', marginTop: 2 },
+  // Pendant l'attente : même emplacement, mais éteint et non cliquable.
+  guardianCtaWaiting: {
+    backgroundColor: 'rgba(217,48,37,0.22)', borderColor: 'rgba(255,107,94,0.5)',
+    shadowOpacity: 0, elevation: 0,
+  },
+  guardianCtaWaitingText: { color: '#ff9b91', fontSize: 12, fontWeight: '800', textAlign: 'center' },
+  // Premier œuf : aucun gardien, donc bouton vert d'éclosion directe.
+  hatchCta: {
+    backgroundColor: COLORS.good, borderColor: COLORS.good,
+    shadowColor: COLORS.good,
+  },
+  hatchCtaText: { color: '#062b18', fontSize: 15, fontWeight: '900' },
 
   // Bouton sous l'œuf. Il vit dans `tapHintZone`, ancrée en bas, donc
   // il ne peut pas chevaucher les textes ni la barre de navigation.
