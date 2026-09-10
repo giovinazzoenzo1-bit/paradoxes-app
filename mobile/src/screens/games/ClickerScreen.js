@@ -4,7 +4,7 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { Ionicons } from '@expo/vector-icons';
@@ -77,7 +77,6 @@ import {
   resolveQuestTarget,
   EGG_STAGES,
   eggStageForCompletedCount,
-  HATCH_TAPS_REQUIRED,
   CAPTURE_TAPS_REQUIRED,
   AUTOCLICKERS,
   autoClickerCost,
@@ -96,7 +95,9 @@ import IncubatorPanel from './IncubatorPanel';
 import {
   INCUBATOR_STORAGE_KEY, startIncubation, applyTap as incubatorApplyTap,
   applyVideo as incubatorApplyVideo, isReady as incubatorIsReady,
+  canWatchVideo as incubatorCanWatchVideo,
   incubationDurationMs, formatRemaining,
+  VIDEO_REDUCTION_RATIO, MAX_VIDEOS_PER_EGG,
 } from '../../games/clicker/incubatorLogic';
 import useBackGesture from '../../hooks/useBackGesture';
 import { COLORS } from './clickerTheme';
@@ -206,7 +207,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // fonctionnalité toute neuve ne doit pas pouvoir corrompre la
   // sauvegarde principale (voir les incidents de « remise à zéro »
   // documentés). Si elle échoue, le jeu continue sans elle.
+  // Minuteur de l'œuf PRINCIPAL (07/09). Remplace le comptage de 500
+  // taps de la phase d'éclosion : même mécanique que l'incubateur, taps
+  // et vidéos réduisent un temps restant. Le comptage de taps disparaît
+  // au profit du temps affiché dans la barre de défi.
+  const [mainEgg, setMainEgg] = useState(null);
   const [incubatorOpen, setIncubatorOpen] = useState(false);
+  // Rafraîchit l'affichage du temps restant. Le minuteur lui-même ne
+  // dépend PAS de ce tick (tout vient de l'horodatage de fin) : il ne
+  // sert qu'à réafficher, et il ne tourne que quand un œuf éclot.
+  const [nowTick, setNowTick] = useState(Date.now());
   const [incubatingEgg, setIncubatingEgg] = useState(null);
   const [incubatorLoaded, setIncubatorLoaded] = useState(false);
 
@@ -214,7 +224,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(INCUBATOR_STORAGE_KEY);
-        if (raw) setIncubatingEgg(JSON.parse(raw));
+        if (raw) {
+          const saved = JSON.parse(raw);
+          // Ancien format : la clé contenait directement l'œuf de
+          // l'incubateur. `saved.incubating` absent = ancienne
+          // sauvegarde, qu'on relit telle quelle plutôt que de la perdre.
+          if (saved && (saved.incubating !== undefined || saved.main !== undefined)) {
+            setIncubatingEgg(saved.incubating || null);
+            setMainEgg(saved.main || null);
+          } else {
+            setIncubatingEgg(saved);
+          }
+        }
       } catch (e) {
         // Illisible : on repart sans œuf plutôt que d'empêcher l'écran
         // de s'afficher.
@@ -227,12 +248,23 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // (état vide) écraserait l'œuf sauvegardé avant de l'avoir lu.
   useEffect(() => {
     if (!incubatorLoaded) return;
-    if (incubatingEgg) {
-      AsyncStorage.setItem(INCUBATOR_STORAGE_KEY, JSON.stringify(incubatingEgg)).catch(() => {});
+    if (incubatingEgg || mainEgg) {
+      AsyncStorage.setItem(
+        INCUBATOR_STORAGE_KEY,
+        JSON.stringify({ incubating: incubatingEgg, main: mainEgg })
+      ).catch(() => {});
     } else {
       AsyncStorage.removeItem(INCUBATOR_STORAGE_KEY).catch(() => {});
     }
-  }, [incubatingEgg, incubatorLoaded]);
+  }, [incubatingEgg, mainEgg, incubatorLoaded]);
+
+  useEffect(() => {
+    if (!mainEgg) return undefined;
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [mainEgg]);
+  const mainRemaining = mainEgg ? Math.max(0, mainEgg.endsAt - nowTick) : 0;
+  const mainReady = !!mainEgg && mainRemaining <= 0;
 
   const vibrationsRef = useRef(vibrations);
   vibrationsRef.current = vibrations;
@@ -444,6 +476,25 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // par React à chaque re-rendu de cet écran (contrairement au piège du
   // LinearGradient plein écran des Règles de survie). Boucle démarrée UNE
   // fois au montage (tableau de dépendances vide).
+  // Pulsation du bouton Incubateur : ne tourne QUE lorsqu'un œuf y est,
+  // pour ne pas animer dans le vide. Coupée aussi par le réglage
+  // « Animations d'ambiance », comme la lueur du cadeau.
+  const incubatorPulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!incubatingEgg || !ambientFx) {
+      incubatorPulse.setValue(0);
+      return undefined;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(incubatorPulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(incubatorPulse, { toValue: 0, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [incubatingEgg, ambientFx]);
+
   const giftGlowPulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     // Reglage "Animations d'ambiance" : coupe reellement la boucle au
@@ -990,6 +1041,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // tout de suite. Le cycle de défis repart aussitôt : le joueur
   // continue à jouer normalement vers l'œuf suivant pendant que
   // celui-ci incube, et revient l'ouvrir quand il veut.
+  // Fausse publicité de l'œuf principal — 1 seconde de chargement, même
+  // principe que dans l'incubateur.
+  const [mainAdLoading, setMainAdLoading] = useState(false);
+  const mainAdTimerRef = useRef(null);
+  useEffect(() => () => { if (mainAdTimerRef.current) clearTimeout(mainAdTimerRef.current); }, []);
+  const handleMainEggVideo = () => {
+    if (mainAdLoading || !mainEgg || !incubatorCanWatchVideo(mainEgg)) return;
+    setMainAdLoading(true);
+    mainAdTimerRef.current = setTimeout(() => {
+      mainAdTimerRef.current = null;
+      setMainAdLoading(false);
+      setMainEgg((prev) => (prev ? incubatorApplyVideo(prev) : prev));
+    }, 1000);
+  };
+
   const startEggIncubation = () => {
     if (incubatingEgg) return;
     setIncubatingEgg(startIncubation(owned.length));
@@ -1390,7 +1456,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // périmé, quel que soit l'ordre des rendus) plutôt que via une ref.
   useEffect(() => {
     if (activeQuestIds.length > 0 && completedQuestCount >= activeQuestIds.length) {
-      setEggPhase((phase) => (phase === 'collecting' ? 'hatching' : phase));
+      setEggPhase((phase) => {
+        if (phase !== 'collecting') return phase;
+        // Le minuteur naît en même temps que la phase, et UNIQUEMENT
+        // ici : le créer dans un effet séparé le ferait repartir de zéro
+        // à chaque rendu tant que la phase reste 'hatching'.
+        setMainEgg((prev) => prev || startIncubation(ownedRef.current.length));
+        return 'hatching';
+      });
     }
   }, [completedQuestCount, eggPhase]);
 
@@ -1506,12 +1579,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     });
 
     if (eggPhaseRef.current === 'hatching') {
-      const next = hatchTapsRef.current + 1;
-      hatchTapsRef.current = next;
-      setHatchTaps(next);
-      if (next >= HATCH_TAPS_REQUIRED) {
-        setEggPhase('capturing');
-      }
+      // Le tap retire 1 seconde au minuteur (même règle que
+      // l'incubateur) au lieu d'incrémenter un compteur vers 500.
+      // On ne passe à la capture que lorsque le temps est écoulé.
+      setMainEgg((prev) => {
+        if (!prev) return prev;
+        const next = incubatorApplyTap(prev);
+        if (incubatorIsReady(next)) {
+          setEggPhase('capturing');
+          return null;
+        }
+        return next;
+      });
     } else if (eggPhaseRef.current === 'capturing') {
       const next = captureTapsRef.current + 1;
       captureTapsRef.current = next;
@@ -1717,11 +1796,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           ) : (
             <ChallengeBar
               icon={eggPhase === 'hatching' ? '🥚' : '💫'}
-              label={eggPhase === 'hatching' ? "L'œuf est prêt : brise la coquille !" : 'La créature bouge encore : capture-la !'}
-              current={eggPhase === 'hatching' ? hatchTaps : captureTaps}
-              target={eggPhase === 'hatching' ? HATCH_TAPS_REQUIRED : CAPTURE_TAPS_REQUIRED}
+              label={eggPhase === 'hatching' ? "L'œuf éclot bientôt — tape pour accélérer !" : 'La créature bouge encore : capture-la !'}
+              current={eggPhase === 'hatching' ? (mainEgg ? mainEgg.totalMs - mainRemaining : 0) : captureTaps}
+              target={eggPhase === 'hatching' ? (mainEgg ? mainEgg.totalMs : 1) : CAPTURE_TAPS_REQUIRED}
               cycleIndex={0}
               cycleTotal={0}
+              {...(eggPhase === 'hatching'
+                // Le compteur affiche le TEMPS RESTANT, pas « 5/500 » :
+                // c'est la seule information utile maintenant que le
+                // tap réduit un minuteur.
+                ? { countLabel: formatRemaining(mainRemaining) }
+                : {})}
             />
           )}
 
@@ -1775,7 +1860,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 cadeau (même `left`, `top` + 144) : les trois restent
                 donc solidaires quoi qu'il arrive à TOP_BLOCK_SHIFT. */}
             <TouchableOpacity style={styles.incubatorBtn} onPress={() => setIncubatorOpen(true)}>
-              <Text style={styles.incubatorBtnIcon}>🥚</Text>
+              <Animated.View
+                style={[
+                  styles.incubatorBtnInner,
+                  incubatingEgg && styles.incubatorBtnActive,
+                  {
+                    transform: [
+                      { scale: incubatorPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] }) },
+                    ],
+                  },
+                ]}
+              >
+                <Text style={styles.incubatorBtnIcon}>🥚</Text>
+              </Animated.View>
               {incubatingEgg && incubatorIsReady(incubatingEgg) && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
 
@@ -1833,6 +1930,32 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
               {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
               {ritualTarget && <RitualBubble target={ritualTarget} onClaim={claimRitual} />}
+
+              {/* Bouton vidéo à DROITE de l'œuf, seulement pendant
+                  l'éclosion. Frère du bouton tapable et non enfant :
+                  il doit capter son propre appui sans déclencher le tap
+                  de l'œuf en dessous. */}
+              {eggPhase === 'hatching' && mainEgg && !mainReady && (
+                <TouchableOpacity
+                  style={styles.eggVideoBtn}
+                  onPress={handleMainEggVideo}
+                  disabled={mainAdLoading || !incubatorCanWatchVideo(mainEgg)}
+                >
+                  {mainAdLoading ? (
+                    <ActivityIndicator size="small" color={COLORS.neonCyan} />
+                  ) : (
+                    <>
+                      <Text style={styles.eggVideoBtnIcon}>📺</Text>
+                      <Text style={styles.eggVideoBtnText}>
+                        -{Math.round(VIDEO_REDUCTION_RATIO * 100)}%
+                      </Text>
+                      <Text style={styles.eggVideoBtnCount}>
+                        {(mainEgg.videosUsed || 0)}/{MAX_VIDEOS_PER_EGG}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Regroupés dans une zone positionnée en absolu, juste sous
@@ -1854,19 +1977,24 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   proposé QUE lorsque l'œuf est prêt (défis terminés) —
                   c'est le moment où le joueur a réellement un arbitrage
                   à faire. */}
-              {incubatingEgg ? (
-                <TouchableOpacity style={styles.incubateCta} onPress={() => setIncubatorOpen(true)}>
-                  <Text style={styles.incubateCtaText}>
-                    🥚 {incubatorIsReady(incubatingEgg) ? 'Œuf prêt à éclore !' : `Incubation — ${formatRemaining(Math.max(0, incubatingEgg.endsAt - Date.now()))}`}
-                  </Text>
-                </TouchableOpacity>
-              ) : eggPhase === 'hatching' ? (
+              {/* Temps restant SOUS l'œuf pendant l'éclosion. */}
+              {eggPhase === 'hatching' && mainEgg && (
+                <Text style={[styles.eggTimer, mainReady && styles.eggTimerReady]}>
+                  {mainReady ? 'Prêt — tape pour ouvrir !' : formatRemaining(mainRemaining)}
+                </Text>
+              )}
+
+              {/* Le bouton « Mettre en incubation » DISPARAÎT dès qu'un
+                  œuf occupe l'incubateur (un seul emplacement) : le
+                  proposer alors ne mènerait nulle part. On y accède par
+                  le bouton animé de la colonne de gauche. */}
+              {!incubatingEgg && eggPhase === 'hatching' && (
                 <TouchableOpacity style={styles.incubateCta} onPress={startEggIncubation}>
                   <Text style={styles.incubateCtaText}>
                     🥚 Mettre en incubation ({formatRemaining(incubationDurationMs(owned.length))})
                   </Text>
                 </TouchableOpacity>
-              ) : null}
+              )}
               {comboCount > 1 ? (
                 <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
               ) : (
@@ -2693,7 +2821,7 @@ const CHALLENGE_CARD_ASPECT_RATIO = 900 / 295;
 // de positions, pas un bug de logique de remplissage.
 const CHALLENGE_GEM_X_PCT = [20.6, 33.0, 44.8, 57.2, 69.1, 80.9];
 
-function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) {
+function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
   const ratio = target > 0 ? Math.min(1, current / target) : 0;
   const filled = Math.floor(ratio * segments);
@@ -2747,7 +2875,7 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) 
           adjustsFontSizeToFit
           minimumFontScale={0.5}
         >
-          {formatNum(current)}/{formatNum(target)}
+          {countLabel != null ? countLabel : `${formatNum(current)}/${formatNum(target)}`}
         </Text>
       </View>
 
@@ -3024,7 +3152,40 @@ const styles = StyleSheet.create({
     width: 62, height: 62,
     alignItems: 'center', justifyContent: 'center',
   },
+  // La lueur vit sur ce calque INTERNE et non sur le bouton lui-même :
+  // le bouton garde ainsi sa zone de tap fixe pendant que le calque
+  // grossit et rétrécit.
+  incubatorBtnInner: {
+    width: 52, height: 52, borderRadius: 26,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  incubatorBtnActive: {
+    backgroundColor: 'rgba(0,255,163,0.18)',
+    borderWidth: 2, borderColor: COLORS.good,
+    shadowColor: COLORS.good, shadowOpacity: 0.9, shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 }, elevation: 10,
+  },
   incubatorBtnIcon: { fontSize: 28 },
+
+  // Bouton vidéo à droite de l'œuf, pendant l'éclosion. Centré
+  // verticalement sur la zone de tap, collé au bord droit.
+  eggVideoBtn: {
+    position: 'absolute', right: 14, top: '50%', marginTop: -34, zIndex: 4,
+    width: 62, height: 68, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,26,40,0.9)',
+    borderWidth: 1.5, borderColor: COLORS.neonCyan,
+  },
+  eggVideoBtnIcon: { fontSize: 20 },
+  eggVideoBtnText: { color: COLORS.neonCyan, fontSize: 12, fontWeight: '900', marginTop: 2 },
+  eggVideoBtnCount: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1 },
+
+  // Temps restant sous l'œuf.
+  eggTimer: {
+    color: COLORS.text, fontSize: 20, fontWeight: '900', marginBottom: 6,
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4,
+  },
+  eggTimerReady: { color: COLORS.good, fontSize: 16 },
 
   // Bouton sous l'œuf. Il vit dans `tapHintZone`, ancrée en bas, donc
   // il ne peut pas chevaucher les textes ni la barre de navigation.

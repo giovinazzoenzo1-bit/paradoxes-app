@@ -22,7 +22,7 @@ export const INCUBATION_GROWTH = 1.194;             // +19,4 % par créature pos
 export const INCUBATION_MAX_MS = 16 * 3600 * 1000;  // plafond à 16 h
 export const TAP_REDUCTION_MS = 1000;               // 1 tap = 1 seconde
 export const VIDEO_REDUCTION_RATIO = 0.20;          // 1 vidéo = 20 % du total
-export const MAX_VIDEOS_PER_EGG = 3;                // 3 vidéos suffisent à retirer 60 %
+export const MAX_VIDEOS_PER_EGG = 5;                // 5 vidéos = 100 % du total retirable
 
 // Durée totale d'incubation pour la PROCHAINE créature, sachant combien
 // le joueur en possède déjà. `owned = 0` -> 10 min.

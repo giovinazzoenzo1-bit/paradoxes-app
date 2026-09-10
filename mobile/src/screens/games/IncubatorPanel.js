@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Animated } from 'react-native';
 import { COLORS } from './clickerTheme';
 import {
   remainingMs, isReady, progressRatio, formatRemaining,
@@ -24,6 +24,20 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
   // d'affichage d'une vraie régie. Aucune régie n'est installée dans le
   // projet — ce délai sert à tester le ressenti et le rythme.
   const [adLoading, setAdLoading] = useState(false);
+  // Secousse de l'œuf à chaque tap. Séquence courte et symétrique qui
+  // revient toujours à 0 : impossible que l'œuf reste figé de travers
+  // si le joueur tape en rafale (même schéma que l'œuf du Clicker).
+  const shake = useRef(new Animated.Value(0)).current;
+  const doShake = () => {
+    shake.stopAnimation(() => {
+      shake.setValue(0);
+      Animated.sequence([
+        Animated.timing(shake, { toValue: 1, duration: 45, useNativeDriver: true }),
+        Animated.timing(shake, { toValue: -1, duration: 45, useNativeDriver: true }),
+        Animated.timing(shake, { toValue: 0, duration: 45, useNativeDriver: true }),
+      ]).start();
+    });
+  };
   const adTimerRef = useRef(null);
   useEffect(() => () => { if (adTimerRef.current) clearTimeout(adTimerRef.current); }, []);
   useEffect(() => {
@@ -74,8 +88,25 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
             </View>
           ) : (
             <>
-              <TouchableOpacity activeOpacity={0.85} onPress={ready ? onHatch : onTap} style={styles.eggWrap}>
-                <Image source={EGG_IMG} style={styles.eggImg} resizeMode="contain" />
+              {/* Zone de tap volontairement plus large que l'image :
+                  l'œuf ne remplit pas tout son cadre (les PNG ont de
+                  grandes marges transparentes), taper juste à côté doit
+                  compter. */}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => { doShake(); (ready ? onHatch : onTap)(); }}
+                style={styles.eggWrap}
+              >
+                <Animated.Image
+                  source={EGG_IMG}
+                  style={[styles.eggImg, {
+                    transform: [
+                      { rotate: shake.interpolate({ inputRange: [-1, 1], outputRange: ['-7deg', '7deg'] }) },
+                      { scale: shake.interpolate({ inputRange: [-1, 0, 1], outputRange: [1.04, 1, 1.04] }) },
+                    ],
+                  }]}
+                  resizeMode="contain"
+                />
               </TouchableOpacity>
 
               <Text style={[styles.timer, ready && styles.timerReady]}>
@@ -161,7 +192,7 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 44, marginBottom: 12 },
   emptyText: { color: COLORS.muted, fontSize: 13, fontWeight: '700', textAlign: 'center', lineHeight: 20 },
 
-  eggWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  eggWrap: { width: 230, height: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   eggImg: { width: 150, height: 150 },
 
   timer: { color: COLORS.text, fontSize: 26, fontWeight: '900', marginBottom: 10 },

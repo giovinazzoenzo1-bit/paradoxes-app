@@ -415,6 +415,23 @@ pour la 26e**, total 85,5 h — exactement les bornes voulues.
 celle du clicker : une fonctionnalité neuve ne doit pas pouvoir corrompre
 la sauvegarde principale. Si elle échoue, le jeu continue sans elle.
 
+**L'œuf PRINCIPAL éclot lui aussi au minuteur (07/09).** La phase
+`hatching` ne compte plus 500 taps : elle lance un minuteur identique à
+celui de l'incubateur (même module `incubatorLogic`). Le tap retire
+1 seconde, un bouton vidéo à droite de l'œuf retire 20 %, le temps
+restant s'affiche sous l'œuf **et dans la barre de défi** à la place du
+« 5/500 » (`ChallengeBar` accepte un `countLabel` qui remplace
+`current/target`). On ne passe à la phase de capture qu'une fois le temps
+écoulé. `HATCH_TAPS_REQUIRED` n'est donc plus utilisé.
+
+⚠️ L'état `hatchTaps` est conservé dans la sauvegarde bien qu'inutilisé :
+le retirer changerait le format de sauvegarde pour un gain nul.
+
+Les deux œufs (principal et incubateur) partagent la clé
+`clicker:incubator:v1`, désormais au format `{ incubating, main }`.
+L'ancien format (l'œuf d'incubateur écrit directement) est encore relu
+pour ne pas perdre une incubation en cours.
+
 **Le moment du choix (corrigé le 07/09).** Le bouton « Mettre en
 incubation » n'apparaît QUE lorsque l'œuf est prêt (`eggPhase ===
 'hatching'`, défis terminés) — c'est le seul moment où le joueur a un
