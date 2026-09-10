@@ -97,7 +97,11 @@ import {
   canWatchVideo as incubatorCanWatchVideo,
   incubationDurationMs, formatRemaining,
   VIDEO_REDUCTION_RATIO, MAX_VIDEOS_PER_EGG,
+  guardianRequired, guardianLevelForEgg, guardianReady, guardianRetryRemainingMs,
+  applyGuardianDefeat,
 } from '../../games/clicker/incubatorLogic';
+import CombatScreen from './CombatScreen';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import useBackGesture from '../../hooks/useBackGesture';
 import { COLORS } from './clickerTheme';
 
@@ -228,6 +232,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // taps de la phase d'éclosion : même mécanique que l'incubateur, taps
   // et vidéos réduisent un temps restant. Le comptage de taps disparaît
   // au profit du temps affiché dans la barre de défi.
+  // Combat de gardien en cours : { source: 'main' | 'incubator', level }.
+  // Un seul état pour les deux œufs — le déroulé est identique, seul
+  // l'œuf à faire éclore en cas de victoire change.
+  const [guardianFight, setGuardianFight] = useState(null);
   const [mainEgg, setMainEgg] = useState(null);
   const [incubatorOpen, setIncubatorOpen] = useState(false);
   // Rafraîchit l'affichage du temps restant. Le minuteur lui-même ne
@@ -1101,6 +1109,62 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     }, 1000);
   };
 
+  // Attribue la créature d'un œuf éclos. Chemin UNIQUE pour les deux
+  // œufs et pour la victoire contre un gardien — dupliquer aurait
+  // garanti que les variantes divergent.
+  const grantHatchedCreature = () => {
+    const creature = rollCreature(ownedRef.current.map((o) => o.id));
+    addCreatureToOwned(creature);
+    trackEvent('eggHatched', 1);
+    setRewardCreature(creature);
+  };
+
+  // Lance le combat de gardien, ou fait éclore directement si aucun
+  // gardien n'est requis (tout premier œuf : le joueur n'a pas encore de
+  // créature, il ne pourrait pas combattre).
+  const resolveHatch = (source) => {
+    const eggNumber = ownedRef.current.length + 1;
+    if (!guardianRequired(ownedRef.current.length)) {
+      if (source === 'main') {
+        mainEggRef.current = null;
+        setMainEgg(null);
+        grantHatchedCreature();
+        startNewEggCycle();
+      } else {
+        setIncubatingEgg(null);
+        setIncubatorOpen(false);
+        grantHatchedCreature();
+      }
+      return;
+    }
+    setIncubatorOpen(false);
+    setGuardianFight({ source, level: guardianLevelForEgg(eggNumber) });
+  };
+
+  // Fin du combat. Victoire : l'œuf éclot. Défaite : l'œuf n'est JAMAIS
+  // perdu, seule une attente de 10 min est imposée — la sanction est le
+  // temps, pas la perte.
+  const finishGuardianFight = (outcome) => {
+    const fight = guardianFight;
+    setGuardianFight(null);
+    if (!fight) return;
+    if (outcome === 'win') {
+      if (fight.source === 'main') {
+        mainEggRef.current = null;
+        setMainEgg(null);
+        grantHatchedCreature();
+        startNewEggCycle();
+      } else {
+        setIncubatingEgg(null);
+        grantHatchedCreature();
+      }
+    } else if (fight.source === 'main') {
+      setMainEgg((prev) => applyGuardianDefeat(prev));
+    } else {
+      setIncubatingEgg((prev) => applyGuardianDefeat(prev));
+    }
+  };
+
   const startEggIncubation = () => {
     if (incubatingEgg) return;
     setIncubatingEgg(startIncubation(owned.length));
@@ -1132,16 +1196,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // entre « minuteur à zéro » et l'attribution de la créature.
   const hatchIncubatedEgg = () => {
     const egg = incubatingEgg;
-    if (!egg || !incubatorIsReady(egg)) return;
-    // `owned` passé en argument : une éclosion ne rend JAMAIS un doublon
-    // (voir rollCreature). L'invocation payante, elle, appelle sans
-    // argument et peut donc monter un niveau.
-    const creature = rollCreature(ownedRef.current.map((o) => o.id));
-    addCreatureToOwned(creature);
-    trackEvent('eggHatched', 1);
-    setRewardCreature(creature);
-    setIncubatingEgg(null);
-    setIncubatorOpen(false);
+    if (!egg || !guardianReady(egg)) return;
+    resolveHatch('incubator');
   };
 
   const claimPower = () => {
@@ -1651,16 +1707,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       if (cur.endsAt > Date.now()) pendingHatchSecRef.current += 1;
       const next = incubatorApplyTap(cur);
       if (incubatorIsReady(next)) {
-        mainEggRef.current = null;
-        setMainEgg(null);
-        // Tirage classique, pas de créature rare garantie, + petit
-        // bonus de pièces — comme l'ancienne capture.
-        const creature = rollCreature(ownedRef.current.map((o) => o.id));
-        addCreatureToOwned(creature);
-        trackEvent('eggHatched', 1);
-        gainCoins(goldenBonus(tapPowerRef.current) * 3);
-        setRewardCreature(creature);
-        startNewEggCycle();
+        // Prêt : on ne fait plus éclore directement, on passe par le
+        // gardien (sauf tout premier œuf). L'œuf RESTE en place tant
+        // qu'il n'est pas battu.
+        mainEggRef.current = next;
+        setMainEgg(next);
+        if (guardianReady(next)) resolveHatch('main');
       } else {
         setMainEgg(next);
       }
@@ -1742,6 +1794,34 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // L'Aventure est un écran à part entière (son propre header, sa propre
   // barre du bas) — pas juste une "vue" de plus parmi tap/shop/quests/
   // collection, pour éviter d'empiler deux headers et deux barres de nav.
+  // ---- Combat de gardien ----
+  // Rendu AVANT tout le reste et en retour anticipé, comme l'Aventure :
+  // le combat occupe l'écran entier en paysage.
+  if (guardianFight) {
+    const team = deck
+      .filter((id) => id)
+      .map((id) => {
+        const own = owned.find((o) => o.id === id);
+        return {
+          creature: CREATURES.find((c) => c.id === id),
+          ownedLevel: own ? own.level : 1,
+          evolutionTier: own ? own.evolutionTier || 0 : 0,
+          // Pas de runes ici : elles vivent dans la sauvegarde de
+          // l'Aventure, que cet écran ne lit pas. Le gardien se combat
+          // donc sans bonus de runes — à brancher si le déséquilibre
+          // se confirme au test.
+          equippedRunes: [],
+        };
+      });
+    return (
+      <GuardianBattle
+        team={team}
+        level={guardianFight.level}
+        onFinish={finishGuardianFight}
+      />
+    );
+  }
+
   if (view === 'adventure') {
     return (
       <AdventureScreen
@@ -2026,7 +2106,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               {/* Temps restant SOUS l'œuf pendant l'éclosion. */}
               {eggPhase === 'hatching' && mainEgg && (
                 <Text style={[styles.eggTimer, mainReady && styles.eggTimerReady]}>
-                  {mainReady ? 'Prêt — tape pour ouvrir !' : formatRemaining(mainRemaining)}
+                  {!mainReady
+                    ? formatRemaining(mainRemaining)
+                    : guardianRetryRemainingMs(mainEgg, nowTick) > 0
+                    // Après une défaite : l'œuf n'est pas perdu, seule
+                    // une attente sépare le joueur d'un nouvel essai.
+                    ? `Gardien — nouvel essai dans ${formatRemaining(guardianRetryRemainingMs(mainEgg, nowTick))}`
+                    : guardianRequired(owned.length)
+                    ? '⚔️ Un gardien protège l\'œuf — tape pour l\'affronter'
+                    : 'Prêt — tape pour ouvrir !'}
                 </Text>
               )}
 
@@ -2116,6 +2204,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {incubatorOpen && (
         <IncubatorPanel
           egg={incubatingEgg}
+          guardianRequired={guardianRequired(owned.length)}
           onTap={incubatorTap}
           onWatchVideo={incubatorVideo}
           onHatch={hatchIncubatedEgg}
@@ -2932,6 +3021,20 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
       )}
     </ImageBackground>
   );
+}
+
+// Combat de gardien : enveloppe CombatScreen en verrouillant le PAYSAGE.
+// CombatScreen n'en gère pas lui-même (il n'était rendu que depuis
+// l'Aventure, qui verrouille déjà pour tout le mode). Le nettoyage
+// remet le portrait, car on revient ici sur l'écran du Clicker.
+function GuardianBattle({ team, level, onFinish }) {
+  useEffect(() => {
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+    return () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    };
+  }, []);
+  return <CombatScreen team={team} levelNumber={level} onFinish={onFinish} />;
 }
 
 function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures }) {

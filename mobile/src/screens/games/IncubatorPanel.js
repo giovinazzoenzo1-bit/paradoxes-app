@@ -4,6 +4,7 @@ import { COLORS } from './clickerTheme';
 import {
   remainingMs, isReady, progressRatio, formatRemaining,
   canWatchVideo, MAX_VIDEOS_PER_EGG, VIDEO_REDUCTION_RATIO, TAP_REDUCTION_MS,
+  guardianRetryRemainingMs,
 } from '../../games/clicker/incubatorLogic';
 
 const EGG_IMG = require('../../../assets/egg/egg-2-fissure.png');
@@ -14,7 +15,7 @@ const EGG_IMG = require('../../../assets/egg/egg-2-fissure.png');
 // Le gardien d'œuf (combat à la fin du minuteur) n'est PAS dans cette
 // version : ici l'éclosion donne directement la créature. Il viendra
 // s'intercaler entre « minuteur à zéro » et « éclosion ».
-export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBack }) {
+export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBack, guardianRequired }) {
   // Ré-affichage chaque seconde. Le minuteur lui-même ne dépend PAS de
   // ce timer : tout est calculé depuis l'horodatage de fin, donc fermer
   // l'appli ne fait rien perdre. Ce tick ne sert qu'à rafraîchir
@@ -119,9 +120,21 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
               </View>
 
               {ready ? (
-                <TouchableOpacity style={styles.hatchBtn} onPress={onHatch}>
-                  <Text style={styles.hatchBtnText}>🐣 Faire éclore</Text>
-                </TouchableOpacity>
+                // Après une défaite contre le gardien, l'œuf reste : seul
+                // le délai avant nouvel essai bloque le bouton.
+                guardianRetryRemainingMs(egg, now) > 0 ? (
+                  <View style={[styles.hatchBtn, styles.hatchBtnWaiting]}>
+                    <Text style={styles.hatchBtnWaitingText}>
+                      ⚔️ Nouvel essai dans {formatRemaining(guardianRetryRemainingMs(egg, now))}
+                    </Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.hatchBtn} onPress={onHatch}>
+                    <Text style={styles.hatchBtnText}>
+                      {guardianRequired ? '⚔️ Affronter le gardien' : '🐣 Faire éclore'}
+                    </Text>
+                  </TouchableOpacity>
+                )
               ) : (
                 <>
                   <Text style={styles.hint}>
@@ -227,6 +240,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.good,
   },
   hatchBtnText: { color: '#062b18', fontSize: 15, fontWeight: '900' },
+  hatchBtnWaiting: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.border },
+  hatchBtnWaitingText: { color: COLORS.muted, fontSize: 13, fontWeight: '800' },
 
   adLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   adLoadingText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },

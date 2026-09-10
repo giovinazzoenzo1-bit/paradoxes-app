@@ -89,6 +89,64 @@ export function applyVideo(egg, now = Date.now()) {
   };
 }
 
+// ---- Gardien d'œuf (07/09) ----
+//
+// À la fin du minuteur, un gardien apparaît : il faut le battre pour que
+// l'œuf éclose. Le combat réutilise le moteur de l'Aventure (3v3).
+
+// Pas de gardien sur le PREMIER œuf : le joueur n'a encore aucune
+// créature, il ne pourrait pas combattre. Le gardien démarre donc au 2e
+// œuf, c'est-à-dire dès que la collection contient au moins 1 créature.
+export const GUARDIAN_FIRST_EGG = 2;
+
+export function guardianRequired(creaturesOwned) {
+  return (creaturesOwned || 0) >= GUARDIAN_FIRST_EGG - 1;
+}
+
+// Niveau d'Aventure équivalent du gardien, à partir du numéro de l'œuf
+// (= créatures possédées + 1). Courbe FIXE, jamais calée sur le deck du
+// joueur : sinon monter son équipe ne servirait à rien pour éclore, et
+// il suffirait d'équiper son deck le plus faible au moment du
+// déclenchement pour obtenir un gardien facile.
+//
+// Progression volontairement LENTE (œuf 2 → niveau 3, œuf 26 → niveau 15)
+// et non 1 pour 1. Raison mesurée : la difficulté de l'Aventure est déjà
+// déséquilibrée en haut de courbe — ratio puissance adverse/joueur de 1,0
+// aux niveaux 1-10, mais 2,3 au niveau 15 et 4,9 au niveau 25. Un gardien
+// « niveau 26 » serait infaisable. Rester dans la plage 3-15 garde des
+// combats tenables.
+//
+// ⚠️ À revoir quand l'équilibrage des combats d'Aventure sera corrigé :
+// cette courbe compense un défaut qui n'a pas vocation à rester.
+export const GUARDIAN_BASE_LEVEL = 3;
+export const GUARDIAN_LEVEL_PER_EGG = 0.5;
+export function guardianLevelForEgg(eggNumber) {
+  const n = Math.max(GUARDIAN_FIRST_EGG, Math.floor(eggNumber || 0));
+  return Math.max(1, Math.round(GUARDIAN_BASE_LEVEL + (n - GUARDIAN_FIRST_EGG) * GUARDIAN_LEVEL_PER_EGG));
+}
+
+// Défaite : l'œuf n'est JAMAIS perdu, seule une attente est imposée.
+// La sanction est le temps, pas la perte — perdre un œuf après des
+// heures d'incubation ferait désinstaller.
+export const GUARDIAN_RETRY_DELAY_MS = 10 * 60 * 1000; // 10 min
+
+export function applyGuardianDefeat(egg, now = Date.now()) {
+  if (!egg) return egg;
+  return { ...egg, retryAt: now + GUARDIAN_RETRY_DELAY_MS };
+}
+
+// Le gardien est affrontable si l'œuf est prêt ET que l'attente after
+// défaite est écoulée.
+export function guardianReady(egg, now = Date.now()) {
+  if (!egg || !isReady(egg, now)) return false;
+  return !egg.retryAt || egg.retryAt <= now;
+}
+
+export function guardianRetryRemainingMs(egg, now = Date.now()) {
+  if (!egg || !egg.retryAt) return 0;
+  return Math.max(0, egg.retryAt - now);
+}
+
 // Formatage court du temps restant : « 3 h 12 », « 12 min 04 », « 43 s ».
 export function formatRemaining(ms) {
   if (ms <= 0) return 'Prêt !';

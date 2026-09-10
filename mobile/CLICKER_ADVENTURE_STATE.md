@@ -493,9 +493,40 @@ incube, et revient l'ouvrir quand il veut. Un œuf en incubation prime
 sur l'affichage : le bouton devient un raccourci vers l'incubateur,
 visible quelle que soit la phase.
 
+## Gardien d'œuf (07/09) — EN PLACE
+
+À la fin du minuteur, un gardien apparaît : il faut le battre pour que
+l'œuf éclose. Le combat réutilise `CombatScreen` tel quel (3v3), enveloppé
+dans `GuardianBattle` qui verrouille le PAYSAGE — `CombatScreen` ne le
+fait pas lui-même, il n'était rendu que depuis l'Aventure qui verrouille
+déjà pour tout le mode.
+
+| Règle | Valeur |
+|---|---|
+| Premier gardien | **2e œuf** (`GUARDIAN_FIRST_EGG`) |
+| Niveau | Courbe fixe : œuf 2 → niveau 3, œuf 26 → niveau 15 |
+| Défaite | Œuf **jamais perdu**, 10 min avant nouvel essai |
+
+⚠️ **Pas de gardien sur le premier œuf** : le joueur n'a encore aucune
+créature, il ne pourrait pas combattre. Demande explicite, et c'est aussi
+le garde-fou identifié à la conception.
+
+⚠️ **La courbe monte lentement (3 → 15) et non 1 pour 1.** Raison mesurée :
+la difficulté de l'Aventure est déjà déséquilibrée en haut de courbe —
+ratio puissance adverse/joueur de 1,0 aux niveaux 1-10, mais 2,3 au
+niveau 15 et 4,9 au 25. Un gardien « niveau 26 » serait infaisable.
+**À revoir quand l'équilibrage des combats sera corrigé** : cette courbe
+compense un défaut qui n'a pas vocation à rester.
+
+⚠️ **Le gardien se combat SANS runes** : elles vivent dans la sauvegarde
+de l'Aventure, que `ClickerScreen` ne lit pas. À brancher si le
+déséquilibre se confirme au test.
+
+`grantHatchedCreature` / `resolveHatch` / `finishGuardianFight` sont
+partagés par les DEUX œufs (principal et incubateur) : un seul chemin,
+donc pas de variantes qui divergent.
+
 **Ce qui MANQUE encore, volontairement :**
-- ⚠️ **Le gardien d'œuf** — l'éclosion donne directement la créature. Le
-  combat viendra s'intercaler entre « minuteur à zéro » et l'attribution.
 - ⚠️ **Les vraies vidéos** — aucune régie n'est installée. Le bouton
   simule une publicité avec **1 seconde de chargement** (indicateur
   d'activité), pour tester le ressenti et le rythme.
