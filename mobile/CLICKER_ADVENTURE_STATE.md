@@ -585,6 +585,24 @@ onglets**, plusieurs jours plus tôt et sans rapport apparent.
   sauvegarde automatique (anti-rebond 600 ms, plus l'écriture au
   démontage) **réécrit l'ancien état** dès la première action.
 
+⚠️ **Deux pièges supplémentaires découverts au 2e essai** — le premier
+correctif ne suffisait pas :
+
+1. **React REND la nouvelle instance AVANT de démonter l'ancienne.**
+   Relâcher le verrou pendant le rendu le libérait donc trop tôt :
+   l'ancienne instance écrivait quand même pendant son démontage et
+   restaurait ce qu'on venait d'effacer. Le verrou se relâche
+   maintenant dans l'effet de chargement, qui s'exécute APRÈS ce
+   démontage.
+2. **Les contextes ne sont JAMAIS remontés par la `key` du Clicker** :
+   `CoinsProvider`, `DailyProvider` et `SettingsProvider` vivent
+   au-dessus de l'écran. Pièces, quêtes, série et réglages survivaient
+   donc à l'effacement et se réécrivaient. La réinitialisation TOTALE
+   remonte désormais tout l'arbre via une `key` sur `CoinsProvider`
+   (prop `onFullReset`), tandis que la réinitialisation d'Élevage ne
+   remonte que le Clicker (`onAfterReset`) — elle ne doit pas toucher au
+   quotidien.
+
 **Correctif en deux temps, les deux sont nécessaires :**
 
 1. `disableClickerSave()` — verrou au niveau du MODULE (pas dans l'état

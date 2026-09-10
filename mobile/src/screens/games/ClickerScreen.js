@@ -210,11 +210,6 @@ function formatNum(n) {
 }
 
 export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
-  // Nouvelle instance = la réinitialisation est terminée, on réautorise
-  // l'écriture. Fait pendant le rendu et non dans un effet : un effet
-  // s'exécuterait APRÈS le premier chargement, qui doit déjà pouvoir
-  // écrire.
-  clickerSaveDisabled = false;
 
   const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
   const { vibrations, ambientFx } = useSettings();
@@ -541,6 +536,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   // Chargement initial + calcul des gains hors-ligne.
   useEffect(() => {
+    // Déverrouillage de la sauvegarde ICI, et surtout PAS pendant le
+    // rendu : React REND la nouvelle instance AVANT de démonter
+    // l'ancienne. Relâcher au rendu laissait donc l'ancienne écrire son
+    // état pendant son démontage — elle restaurait exactement ce qu'on
+    // venait d'effacer, et la réinitialisation semblait toujours sans
+    // effet. Un effet, lui, s'exécute APRÈS ce démontage.
+    clickerSaveDisabled = false;
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);

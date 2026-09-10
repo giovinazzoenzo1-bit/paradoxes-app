@@ -23,7 +23,7 @@ import OptionsScreen from './src/screens/OptionsScreen';
 // Zone sûre gérée ICI, une seule fois, plutôt que dans chaque écran : évite
 // le chevauchement avec la barre de statut (haut) et la barre de gestes
 // Android (bas) partout dans l'appli, y compris dans les jeux (ex: Morpion).
-function AppContent() {
+function AppContent({ onFullReset }) {
   const insets = useSafeAreaInsets();
   // Surcouches ouvertes depuis le menu du Clicker (bouton ⚙️ en haut à
   // droite, bouton Quêtes sous le cadeau). Elles sont montées ICI et pas
@@ -87,6 +87,10 @@ function AppContent() {
               setOverlay(null);
               setClickerKey((k) => k + 1);
             }}
+            onFullReset={() => {
+              setOverlay(null);
+              if (onFullReset) onFullReset();
+            }}
           />
         </View>
       )}
@@ -104,13 +108,19 @@ function AppContent() {
 }
 
 export default function App() {
+  // Remontage de TOUT l'arbre de contextes après une réinitialisation
+  // complète. Indispensable : les contextes (pièces, quotidien,
+  // réglages) vivent AU-DESSUS de l'écran, ils ne sont donc jamais
+  // remontés par la `key` du Clicker. Ils gardaient leur état en
+  // mémoire et le réécrivaient aussitôt, ce qui annulait l'effacement.
+  const [appKey, setAppKey] = useState(0);
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <CoinsProvider>
+        <CoinsProvider key={appKey}>
           <DailyProvider>
             <SettingsProvider>
-              <AppContent />
+              <AppContent onFullReset={() => setAppKey((k) => k + 1)} />
             </SettingsProvider>
           </DailyProvider>
         </CoinsProvider>

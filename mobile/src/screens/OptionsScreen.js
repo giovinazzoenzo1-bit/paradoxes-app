@@ -18,8 +18,8 @@ import { COLORS } from './games/clickerTheme';
 // Réglages volontairement peu nombreux : on n'affiche QUE ce qui est
 // réellement branché (voir SettingsContext.js). Pas de "Son"/"Musique"
 // tant qu'aucune lib audio n'est installée.
-export default function OptionsScreen({ onBack, onAfterReset }) {
-  const { addCoins, resetCoins } = useCoins();
+export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
+  const { addCoins } = useCoins();
   const { resetLifetimeStats } = useDaily();
   const { vibrations, ambientFx, toggleSetting } = useSettings();
   const [devOpen, setDevOpen] = useState(false);
@@ -40,12 +40,20 @@ export default function OptionsScreen({ onBack, onAfterReset }) {
             // Verrou AVANT d'effacer : sans lui, le Clicker (resté monté
             // sous cette surcouche) réécrit son état en mémoire dès la
             // première action, et l'effacement semble sans effet.
+            // Verrou AVANT d'effacer : sans lui, le Clicker (resté monté
+            // sous cette surcouche) réécrit son état en mémoire dès la
+            // première action.
             disableClickerSave();
             const allKeys = await AsyncStorage.getAllKeys();
             if (allKeys.length) await AsyncStorage.multiRemove(allKeys);
-            await resetCoins(); // remet aussi l'état en mémoire (pas juste le stockage) à 0
             Alert.alert('Fait', "L'appli a été réinitialisée.");
-            if (onAfterReset) onAfterReset();
+            // Remontage de TOUT l'arbre (contextes compris) et pas
+            // seulement du Clicker : pièces, quotidien et réglages
+            // vivent au-dessus de l'écran, ils survivaient à
+            // l'effacement et réécrivaient leur état. `resetCoins`
+            // devient inutile — le contexte se recharge à vide.
+            if (onFullReset) onFullReset();
+            else if (onAfterReset) onAfterReset();
           },
         },
       ]
