@@ -695,6 +695,34 @@ multiplie la BASE : la croissance par niveau est intacte.
 modification de cible doit changer les deux — vérifié après coup que les
 20 libellés citent bien leur nouvelle cible.
 
+### 12. Un défi `absolute` déjà atteint se valide sans être vu
+
+**Bug réel (07/09)**, signalé par une joueuse : le défi de Transe n'est
+jamais apparu.
+
+Cause : en mode `absolute`, la progression est `valeur actuelle / cible`.
+Si le joueur dépasse déjà la cible au moment du tirage, le défi est
+accompli d'emblée et disparaît sans avoir été vu. `maxTranseHoldSec` est
+un **record à vie** : avoir tenu une longue Transe une fois, à n'importe
+quel moment, suffisait à annuler ce défi pour toujours.
+
+Le mode `delta` n'est pas concerné : il mesure depuis l'instantané pris
+au tirage, donc il part toujours de zéro.
+
+**Correctif** : `questAlreadyDone()` détecte le cas, et `nextQuestSet`
+**remplace** ces défis par des défis du pool dynamique, dont la cible est
+calculée à partir de l'état courant et se trouve donc forcément devant le
+joueur. `pickQuestSet` filtre de la même façon.
+
+⚠️ **Pourquoi remplacer et non relever la cible** : les libellés de la
+séquence contiennent leur nombre EN DUR (« ...pendant 42 secondes »).
+Relever la cible sans réécrire le texte donnerait un défi qui ment sur
+son propre objectif.
+
+Vérifié aux deux extrêmes : un joueur neuf reçoit la séquence scriptée
+intacte, un joueur très avancé reçoit des cycles complets et **aucun
+défi déjà accompli**.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

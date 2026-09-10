@@ -1563,12 +1563,47 @@ export function questDetail(questId, stats, baseline = {}, targets = {}) {
 // `index` est l'avancement dans la séquence, persisté par l'écran. Il
 // n'est PAS remis à zéro par une Ascension : la séquence est un fil de
 // découverte, on ne rejoue pas le tutoriel à chaque prestige.
+// Un défi est-il DÉJÀ accompli au moment où on le propose ?
+//
+// Seul le mode 'absolute' est concerné : il compare la valeur actuelle à
+// la cible, donc un joueur qui a déjà dépassé la cible voit le défi se
+// valider tout seul, sans jamais l'avoir vu. Le mode 'delta' part
+// toujours de zéro (il mesure depuis l'instantané du tirage), il ne peut
+// pas être accompli d'avance.
+//
+// Cas réel signalé : « Reste en Transe x2,5 pendant 42 secondes » sur
+// `maxTranseHoldSec`, qui est un RECORD à vie. Une joueuse ayant tenu
+// une longue Transe plus tôt n'a jamais vu ce défi apparaître.
+export function questAlreadyDone(quest, stats = {}) {
+  if (!quest || quest.mode !== 'absolute' || !quest.target) return false;
+  return readMetric(quest.metric, stats) >= quest.target;
+}
+
 export function nextQuestSet(index, excludeIds = [], stats = {}) {
   const cycle = sequenceCycle(index);
   if (cycle) {
+    // Les défis déjà accomplis sont REMPLACÉS par des défis du pool
+    // dynamique, dont la cible est calculée à partir de l'état courant
+    // et se situe donc forcément devant le joueur.
+    //
+    // Pourquoi remplacer plutôt que relever la cible du défi scripté :
+    // les libellés de la séquence contiennent leur nombre EN DUR
+    // (« ...pendant 42 secondes »). Changer la cible sans le texte
+    // donnerait un défi qui ment sur son propre objectif.
+    const kept = cycle.filter((q) => !questAlreadyDone(q, stats));
     const targets = {};
-    cycle.forEach((q) => { targets[q.id] = q.target; });
-    return { ids: cycle.map((q) => q.id), targets, fromSequence: true };
+    kept.forEach((q) => { targets[q.id] = q.target; });
+    const ids = kept.map((q) => q.id);
+
+    const missing = cycle.length - kept.length;
+    if (missing > 0) {
+      const sub = pickQuestSet([...excludeIds, ...ids], stats);
+      sub.ids.slice(0, missing).forEach((id) => {
+        ids.push(id);
+        targets[id] = sub.targets[id];
+      });
+    }
+    return { ids, targets, fromSequence: true };
   }
   return { ...pickQuestSet(excludeIds, stats), fromSequence: false };
 }
@@ -1585,7 +1620,12 @@ export const QUEST_SET_SIZE = 4;
 // qui n'a pas encore les moyens du premier générateur donnerait un défi
 // techniquement résoluble mais absurde.
 export function pickQuestSet(excludeIds = [], stats = {}) {
-  const eligible = QUEST_POOL.filter((q) => !q.available || q.available(stats));
+  // `questAlreadyDone` en plus de `available` : un défi du pool à cible
+  // FIXE peut lui aussi être déjà accompli, et se validerait sans que le
+  // joueur le voie.
+  const eligible = QUEST_POOL.filter(
+    (q) => (!q.available || q.available(stats)) && !questAlreadyDone(q, stats)
+  );
   let pool = eligible.filter((q) => !excludeIds.includes(q.id));
   if (pool.length < QUEST_SET_SIZE) pool = eligible;
   if (pool.length < QUEST_SET_SIZE) pool = QUEST_POOL;
