@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
 import { useSettings } from '../../context/SettingsContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDaily, PENDING_GRIFFES_KEY, PENDING_CREATURES_KEY } from '../../context/DailyContext';
 import {
   CREATURES,
@@ -188,6 +189,11 @@ function formatNum(n) {
 export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
   const { vibrations, ambientFx } = useSettings();
+  // Marges de securite de l'appareil (encoche en haut, barre d'accueil
+  // en bas). App.js applique deja `paddingTop: insets.top` au conteneur,
+  // mais RIEN en bas — d'ou la barre de navigation qui passait sous la
+  // barre d'accueil de l'iPhone et devenait difficile a toucher.
+  const insets = useSafeAreaInsets();
   const vibrationsRef = useRef(vibrations);
   vibrationsRef.current = vibrations;
   const {
@@ -1560,7 +1566,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             style={styles.coinsPill}
             resizeMode="stretch"
           >
-            <Text style={styles.coinsPillText} numberOfLines={1}>{formatNum(coins)}</Text>
+            {/* Le centrage vertical passe par cette VUE et non par
+                `textAlignVertical`, qui n'existe QUE sur Android : sur
+                iPhone il etait ignore et le montant se collait en haut,
+                hors de la pilule (signale sur iPhone le 07/09). */}
+            <View style={styles.coinsPillTextWrap}>
+              <Text style={styles.coinsPillText} numberOfLines={1}>{formatNum(coins)}</Text>
+            </View>
           </ImageBackground>
           {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
 
@@ -1725,7 +1737,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 en absolu du reste de l'écran, ce qui les faisait remonter
                 tout en haut (derrière le header, signalé par
                 l'utilisateur : texte "Ta../Œ.." visible en arrière-plan). */}
-            <View style={styles.tapHintZone}>
+            <View style={[styles.tapHintZone, { bottom: insets.bottom + 88 }]}>
               {comboCount > 1 ? (
                 <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
               ) : (
@@ -2585,14 +2597,18 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) 
           cadre est mesurée mais reste étroite — un gros nombre (ex.
           "428/5 000") se réduit tout seul plutôt que d'être coupé
           (signalé caché par l'utilisateur). */}
-      <Text
-        style={styles.challengeCount}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.5}
-      >
-        {formatNum(current)}/{formatNum(target)}
-      </Text>
+      {/* Centrage vertical par la VUE : `textAlignVertical` n'existe que
+          sur Android, le compteur se collait donc en haut sur iPhone. */}
+      <View style={styles.challengeCountWrap}>
+        <Text
+          style={styles.challengeCount}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+        >
+          {formatNum(current)}/{formatNum(target)}
+        </Text>
+      </View>
 
       {cycleTotal > 0 && (
         <View style={styles.challengeCycleZone}>
@@ -2606,8 +2622,11 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal }) 
 }
 
 function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures }) {
+  // Composant separe : il lui faut SON propre appel, `insets` de
+  // ClickerScreen n'est pas dans sa portee.
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.bottomBar}>
+    <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 6 }]}>
       {/* Chaque onglet : icone dans une case encadree de cyan, libelle
           dessous — le motif de la maquette. La case active passe en
           dore, couleur d'accent du jeu partout ailleurs. Icones = vrais
@@ -2677,9 +2696,12 @@ const styles = StyleSheet.create({
   },
   // Zone de texte dans l'espace vide à droite du sac peint (mesuré sur
   // le nouvel asset : le sac + son cadre occupent ~36% de la largeur).
-  coinsPillText: {
+  coinsPillTextWrap: {
     position: 'absolute', left: '38%', right: '8%', top: 0, bottom: 0,
-    color: COLORS.action, fontSize: 15, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  coinsPillText: {
+    color: COLORS.action, fontSize: 15, fontWeight: '900', textAlign: 'center',
     textShadowColor: 'rgba(245,197,66,0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
   incomeText: {
@@ -2742,9 +2764,12 @@ const styles = StyleSheet.create({
   // avant le bord arrondi du cadre (place mesurée : ~4% de large, d'où
   // adjustsFontSizeToFit sur le Text lui-même : un gros nombre se
   // réduit plutôt que d'être coupé, signalé caché par l'utilisateur).
-  challengeCount: {
+  challengeCountWrap: {
     position: 'absolute', right: '1.5%', top: '46%', width: '11%', height: '23%',
-    color: COLORS.action, fontSize: 11, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  challengeCount: {
+    color: COLORS.action, fontSize: 11, fontWeight: '900', textAlign: 'center',
   },
   // Remontée de ~2mm (~13dp) sur demande explicite.
   devSkipBtn: {
@@ -2787,8 +2812,16 @@ const styles = StyleSheet.create({
   // pas finir caché sous cette barre devenue flottante.
   // Élargie à 100% (bord à bord) sur demande explicite — avant 96% avec
   // une marge de chaque côté.
+  // Ancree sur le BAS du conteneur (`bottom: 0`) et non plus a
+  // `top: SCREEN_H * 0.9` (07/09). L'ancienne version cassait sur iPhone :
+  // ces elements vivent dans un conteneur reduit par la marge haute
+  // (`paddingTop: insets.top` dans App.js) + le padding 14 de `screen`.
+  // Avec une encoche (~59dp au lieu de ~24), le cadre utile tombe a
+  // ~765dp alors que 0.9 * 852 = 767 — la barre sortait du cadre et
+  // devenait invisible. Un ancrage en bas est vrai sur TOUS les
+  // appareils, sans dependre de la taille de l'encoche.
   bottomBar: {
-    position: 'absolute', left: 0, top: SCREEN_H * 0.9, zIndex: 5,
+    position: 'absolute', left: 0, bottom: 0, zIndex: 5,
     flexDirection: 'row', width: SCREEN_W, borderTopWidth: 2, borderTopColor: COLORS.action,
     paddingTop: 8, backgroundColor: COLORS.bg,
     shadowColor: COLORS.action, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: -4 }, elevation: 4,
@@ -2993,8 +3026,11 @@ const styles = StyleSheet.create({
   // Purement decoratif : sans ca, ce bloc vole les taps de la zone de
   // l'oeuf partout ou il la recouvre, ce qui rendait le bas de l'oeuf
   // insensible.
+  // Ancre en bas comme la barre, pour rester juste au-dessus d'elle quel
+  // que soit l'appareil (la barre fait ~79dp : padding 8 + boite 48 +
+  // marge 4 + libelle ~9 + marge 4, plus la marge de securite basse).
   tapHintZone: {
-    position: 'absolute', left: 0, top: SCREEN_H * 0.9 - 58, zIndex: 3,
+    position: 'absolute', left: 0, zIndex: 3,
     width: '100%', alignItems: 'center',
     pointerEvents: 'none',
   },

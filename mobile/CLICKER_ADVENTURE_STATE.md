@@ -354,6 +354,40 @@ L'accès se fait par le connecteur *Superhuman Docs* (lecture **et**
 seule). Les tableaux sont en markdown, pas en grilles Coda : demande
 explicite de l'utilisateur, qui veut tout voir d'un coup à l'écran.
 
+### 9. iOS ≠ Android — deux pièges rencontrés (07/09)
+
+Le jeu a été calibré sur l'Android de l'utilisateur. Testé sur iPhone
+par des proches, deux choses cassaient. **À vérifier sur les deux
+plateformes avant de considérer un problème d'affichage comme réglé.**
+
+**a) Ne jamais positionner un élément du BAS avec un pourcentage de
+`SCREEN_H`.** La barre de navigation était à `top: SCREEN_H * 0.9`. Or
+ces éléments vivent dans un conteneur réduit par `paddingTop:
+insets.top` (App.js) + le `padding: 14` de `screen`. Avec une encoche,
+la marge haute passe de ~24 à ~59dp :
+
+| | Marge haute | Cadre utile | Barre à 90% | Résultat |
+|---|---|---|---|---|
+| Android | ~24dp | ~728dp | 702dp | visible |
+| iPhone | ~59dp | ~765dp | **767dp** | **hors cadre** |
+
+Corrigé par un ancrage `bottom: 0`, vrai sur tout appareil. Idem pour
+`tapHintZone`, ancrée au-dessus de la barre. **Et `paddingBottom:
+insets.bottom` a été ajouté** : rien ne le faisait, donc la barre
+passait sous la barre d'accueil de l'iPhone et devenait pénible à
+toucher.
+
+⚠️ `BottomTabBar` est un composant SÉPARÉ : il lui faut son propre
+`useSafeAreaInsets()`, celui de `ClickerScreen` n'est pas dans sa portée.
+
+**b) `textAlignVertical` n'existe QUE sur Android.** Sur iOS il est
+ignoré en silence, donc tout texte centré ainsi se colle en haut de sa
+boîte. Deux occurrences trouvées (montant des pièces, compteur de la
+barre de défi) — le montant s'affichait au-dessus de la pilule sur
+iPhone. **Centrer un texte avec une VUE parente** (`alignItems` +
+`justifyContent`), jamais avec `textAlignVertical`. Plus aucune
+occurrence dans le projet.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.
