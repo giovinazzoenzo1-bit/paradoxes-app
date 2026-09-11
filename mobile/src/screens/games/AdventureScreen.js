@@ -766,6 +766,14 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
             style={[styles.mlMainBtn, theme && styles.mlMainBtnThemed, griffes < levelCost && styles.actionBtnDisabledAdv]}
             onPress={onLevelUp}
             disabled={griffes < levelCost}
+            // Pas de transparence à l'appui sur un bouton thémé : il
+            // chevauche la barre d'XP (marge négative pour le remonter)
+            // et l'illustration a des zones ajourées. En devenant
+            // translucide, il laissait voir la barre bleue à travers —
+            // « l'ancienne barre en fond » signalée le 11/09. Le retour
+            // visuel est assuré par la pulsation et par le niveau qui
+            // change aussitôt.
+            activeOpacity={theme ? 1 : 0.7}
           >
             {theme && (
               <Image source={theme.button} style={styles.mlMainBtnImg} resizeMode="stretch" />
