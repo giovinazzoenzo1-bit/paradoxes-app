@@ -654,9 +654,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
     <>
     <ThemedProfileBackground theme={theme}>
       <View style={styles.profileTopBar}>
-        <TouchableOpacity onPress={onBack} style={styles.profileBackBtn}>
-          <Text style={styles.backText}>←</Text>
-        </TouchableOpacity>
+        <BackButton onPress={onBack} />
         <ImageBackground source={require('../../../assets/icons/griffes-frame.png')} style={styles.griffesPill} resizeMode="stretch">
           <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
         </ImageBackground>
@@ -665,10 +663,9 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
       <View style={styles.profileBody}>
         {/* ---------- GAUCHE ---------- */}
         <View style={styles.mlLeft}>
-          <View style={styles.mlPortraitZone}>
-            <CreatureArt creatureId={creature.id} stageIndex={stage} emoji={display.emoji} size={130} emojiStyle={styles.mlPortraitEmoji} />
-          </View>
-
+          {/* Ordre inversé avec un thème : nom, barre et boutons EN HAUT,
+              créature EN BAS — elle se pose ainsi sur le piédestal de
+              pierre peint dans le décor, au lieu de flotter par-dessus. */}
           <Text style={styles.mlName} numberOfLines={1}>{display.name}</Text>
 
           <View style={styles.mlStars}>
@@ -684,13 +681,25 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
             <View style={[styles.mlLevelBarFill, { width: `${Math.round(levelRatio * 100)}%` }]} />
           </View>
 
+          {/* Bouton de montée de niveau. Avec un thème, l'illustration
+              remplace le fond uni — elle était livrée mais n'avait
+              jamais été branchée. Marges calées sur ses ornements
+              latéraux (~13% de chaque côté) pour que le texte tombe
+              dans la zone lisse du centre. */}
           <TouchableOpacity
-            style={[styles.mlMainBtn, griffes < levelCost && styles.actionBtnDisabledAdv]}
+            style={[styles.mlMainBtn, theme && styles.mlMainBtnThemed, griffes < levelCost && styles.actionBtnDisabledAdv]}
             onPress={onLevelUp}
             disabled={griffes < levelCost}
           >
+            {theme && (
+              <Image source={theme.button} style={styles.mlMainBtnImg} resizeMode="stretch" />
+            )}
             <Text style={styles.mlMainBtnText}>NIVEAU {owned.level + 1} · {levelCost} 🐾</Text>
           </TouchableOpacity>
+
+          <View style={[styles.mlPortraitZone, theme && styles.mlPortraitZoneThemed]}>
+            <CreatureArt creatureId={creature.id} stageIndex={stage} emoji={display.emoji} size={130} emojiStyle={styles.mlPortraitEmoji} />
+          </View>
 
           {evoMaxed ? (
             <Text style={styles.mlSubNote}>Palier maximum atteint</Text>
@@ -778,7 +787,8 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
 
           {/* Description bornée : elle se tronque au lieu de pousser le
               reste de la fiche hors de l'écran. */}
-          <View style={styles.mlLoreBox}>
+          <View style={[styles.mlLoreBox, theme && styles.themedBox]}>
+            <ThemedFrame theme={theme} />
             <Text style={styles.mlLoreText} numberOfLines={3}>{creature.lore}</Text>
           </View>
         </View>
@@ -1481,6 +1491,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.panel, borderRadius: 14,
     borderWidth: 1, borderColor: COLORS.border,
   },
+  // Avec un thème, la créature se pose directement sur le décor : ni
+  // fond ni bordure, sinon elle apparaît dans une boîte posée devant le
+  // piédestal au lieu d'être dessus.
+  mlMainBtnThemed: {
+    backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0,
+    paddingHorizontal: '14%',
+  },
+  mlMainBtnImg: {
+    position: 'absolute', left: 0, right: 0, top: -6, bottom: -6,
+    width: undefined, height: undefined,
+    pointerEvents: 'none',
+  },
+  mlPortraitZoneThemed: {
+    backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0,
+    justifyContent: 'flex-end', paddingBottom: 4,
+  },
   mlPortraitEmoji: { fontSize: 96 },
   mlName: { color: COLORS.text, fontSize: 15, fontWeight: '900', marginTop: 6 },
   mlStars: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
@@ -1521,9 +1547,14 @@ const styles = StyleSheet.create({
     width: undefined, height: undefined,
     pointerEvents: 'none',
   },
+  // Marges calées sur l'OUVERTURE RÉELLE du cadre, mesurée sur l'image :
+  // bordure de 8,7% en largeur et ~17% en hauteur. Sans ça, le texte
+  // passait sous la pierre du cadre (signalé sur capture).
   themedBox: {
     backgroundColor: 'rgba(18,10,8,0.82)',
     borderColor: 'transparent',
+    paddingHorizontal: '9%',
+    paddingVertical: '15%',
   },
   mlStatLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   mlStatIcon: { fontSize: 13 },
