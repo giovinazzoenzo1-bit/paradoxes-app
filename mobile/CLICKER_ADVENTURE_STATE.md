@@ -807,6 +807,20 @@ le document des fonctionnalités). En convertissant celle-ci, il a déjà sa
 monnaie : rien à créer le jour où on le code. Créer une seconde premium
 aurait été l'erreur à éviter.
 
+**Boutique de Diamants** (`DiamondShop.js`) — ouverte par la pilule 💎 à
+gauche des pièces. 4 offres, qui réutilisent toutes un mécanisme
+EXISTANT plutôt que d'en créer un :
+
+| Offre | Coût | Mécanisme réutilisé |
+|---|---|---|
+| Bourse de pièces | 10 💎 | `gainCoins`, montant calé sur le revenu passif |
+| 250 Griffes | 25 💎 | `PENDING_GRIFFES_KEY`, comme les récompenses de quête |
+| Énergie pleine | 15 💎 | `DEV_REFILL_ENERGY_KEY`, comme le bouton dev |
+| Éclosion immédiate | 40 💎 | met `endsAt` du minuteur à maintenant |
+
+⚠️ Le montant de pièces est **proportionnel au revenu passif** et non
+fixe : 1 000 pièces est énorme au début et dérisoire ensuite.
+
 ⚠️ **La clé de stockage reste `appCoins`** et les fonctions du contexte
 gardent leurs noms (`coins`, `addCoins`, `spendCoins`). Renommer la clé
 effacerait le solde de tous les joueurs. **Seul l'affichage parle de

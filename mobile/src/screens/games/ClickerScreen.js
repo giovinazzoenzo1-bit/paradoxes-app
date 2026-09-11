@@ -9,7 +9,7 @@ import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import AdventureScreen from './AdventureScreen';
+import AdventureScreen, { DEV_REFILL_ENERGY_KEY } from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
 import { useSettings } from '../../context/SettingsContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -91,6 +91,7 @@ import {
 import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
 import { questDef } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
+import DiamondShop from './DiamondShop';
 import {
   INCUBATOR_STORAGE_KEY, startIncubation, applyTap as incubatorApplyTap,
   applyVideo as incubatorApplyVideo, isReady as incubatorIsReady,
@@ -237,6 +238,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // l'œuf à faire éclore en cas de victoire change.
   const [guardianFight, setGuardianFight] = useState(null);
   const [mainEgg, setMainEgg] = useState(null);
+  const [diamondShopOpen, setDiamondShopOpen] = useState(false);
   const [incubatorOpen, setIncubatorOpen] = useState(false);
   // Rafraîchit l'affichage du temps restant. Le minuteur lui-même ne
   // dépend PAS de ce tick (tout vient de l'horodatage de fin) : il ne
@@ -1165,6 +1167,36 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     }
   };
 
+  // Achat en Diamants. Chaque offre s'appuie sur un mécanisme existant
+  // (clé de Griffes en attente, drapeau de recharge d'énergie, minuteur
+  // de l'incubateur) — rien de neuf à maintenir.
+  const buyWithDiamonds = async (offer) => {
+    const ok = await spendSharedCoins(offer.cost);
+    if (!ok) return null;
+    if (offer.id === 'coins') {
+      // Calé sur le revenu du joueur plutôt qu'un montant fixe : 1 000
+      // pièces est énorme au début et dérisoire plus tard.
+      const amount = Math.max(500, Math.round(passiveIncomeRef.current * 600));
+      gainCoins(amount);
+      return `+${formatNum(amount)} pièces`;
+    }
+    if (offer.id === 'griffes') {
+      const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+      const pending = raw ? parseInt(raw, 10) || 0 : 0;
+      await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + 250));
+      return '+250 Griffes — ouvre le mode Exploration pour les recevoir.';
+    }
+    if (offer.id === 'energy') {
+      await AsyncStorage.setItem(DEV_REFILL_ENERGY_KEY, '1');
+      return "L'énergie sera pleine à l'ouverture du mode Exploration.";
+    }
+    if (offer.id === 'hatch') {
+      setIncubatingEgg((prev) => (prev ? { ...prev, endsAt: Date.now() } : prev));
+      return "L'œuf est prêt à éclore !";
+    }
+    return null;
+  };
+
   const startEggIncubation = () => {
     if (incubatingEgg) return;
     setIncubatingEgg(startIncubation(owned.length));
@@ -1397,6 +1429,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     sanctuaryMultiplier(sanctuaryLevel) *
     essenceBonusMultiplier(essence) *
     ascensionSpeedMultiplier(ascensionCount);
+  // Ref tenue à jour : `buyWithDiamonds` est asynchrone et lirait
+  // sinon une valeur figée au montage.
+  const passiveIncomeRef = useRef(0);
+  passiveIncomeRef.current = passiveIncome;
 
   const claimRitual = () => {
     if (!ritualTargetRef.current) return;
@@ -1890,6 +1926,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
       {view === 'tap' && (
         <>
+          {/* Diamants, à gauche des pièces. Position dérivée de celle
+              de la pilule de pièces pour que les deux restent
+              solidaires si le bloc du haut est redéplacé. */}
+          <TouchableOpacity style={styles.diamondPill} onPress={() => setDiamondShopOpen(true)}>
+            <Text style={styles.diamondPillText}>💎 {formatNum(sharedCoins)}</Text>
+          </TouchableOpacity>
+
           <ImageBackground
             source={require('../../../assets/icons/coins-pill.png')}
             style={styles.coinsPill}
@@ -2241,6 +2284,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
       {/* Surcouche de l'incubateur, sœur des autres surcouches (et non
           imbriquée dans l'une d'elles). */}
+      {diamondShopOpen && (
+        <DiamondShop
+          diamonds={sharedCoins}
+          incubatingEgg={incubatingEgg}
+          onBuy={buyWithDiamonds}
+          onBack={() => setDiamondShopOpen(false)}
+        />
+      )}
+
       {incubatorOpen && (
         <IncubatorPanel
           egg={incubatingEgg}
@@ -3145,6 +3197,17 @@ const styles = StyleSheet.create({
   // Réduite (220 -> 165, signalé trop grande).
   // Remontée de ~5mm (~32dp — 1mm ≈ 6,3dp à la densité de référence
   // 160dpi) avec le cadre du deck, sur demande explicite.
+  // Calée sur la pilule de pièces : même `top`, posée juste à sa gauche.
+  diamondPill: {
+    position: 'absolute', zIndex: 4,
+    right: SCREEN_W - SCREEN_W * 0.303 + 6,
+    top: SCREEN_H * (0.096 - TOP_BLOCK_SHIFT) - 32 + 14,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: 'rgba(10,26,40,0.9)',
+    borderWidth: 1.5, borderColor: '#7fdcff',
+  },
+  diamondPillText: { color: '#7fdcff', fontSize: 12, fontWeight: '900' },
+
   coinsPill: {
     position: 'absolute', left: SCREEN_W * 0.303, top: SCREEN_H * (0.096 - TOP_BLOCK_SHIFT) - 32, zIndex: 3,
     width: 165, aspectRatio: 460 / 180,
