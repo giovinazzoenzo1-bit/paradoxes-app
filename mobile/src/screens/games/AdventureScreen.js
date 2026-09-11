@@ -595,51 +595,59 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
 // Fond de l'écran de profil. Avec un thème : l'illustration de
 // l'élément, assombrie par un voile pour que le texte reste lisible
 // par-dessus. Sans thème : exactement la vue unie d'avant.
-// Cadre ouvragé posé PAR-DESSUS un panneau. Il est en `pointerEvents:
-// 'none'` et en position absolue : il décore sans jamais intercepter un
-// tap destiné au contenu du panneau (emplacements de rune, boutons).
-function ThemedFrame({ theme }) {
-  if (!theme) return null;
-  return (
-    <Image
-      source={theme.panelFrame}
-      style={styles.themedFrame}
-      resizeMode="stretch"
-    />
-  );
-}
+// Bloc thémé — approche CONTENU D'ABORD.
+//
+// Le contenu garde sa taille naturelle ; le cadre est construit AUTOUR
+// de lui, en dehors du flux. C'est l'inverse de la première version, qui
+// imposait une taille de cadre puis tentait d'y comprimer le contenu —
+// et qui obligeait à des marges impossibles à exprimer (pixels fixes
+// inadaptés aux 4 tailles, pourcentages résolus sur la largeur).
+//
+// Le cadre étant en position absolue, il ne compte pas dans la hauteur
+// du bloc. La boucle qui empêchait d'appliquer ce système à la légende
+// (plus de marge -> plus haut -> plus de marge) disparaît donc : ce
+// composant marche pour TOUS les blocs, y compris ceux dimensionnés par
+// leur contenu.
+//
+// Ratios mesurés sur l'image du cadre : la bordure occupe 8,7% de la
+// largeur totale et ~17% de la hauteur totale. Pour un contenu de taille
+// C, le cadre doit donc mesurer C/0,826 en largeur et C/0,66 en hauteur,
+// soit un débordement de 10,5% et 26% de la taille du contenu.
+const FRAME_OVERHANG_X = 0.105;
+const FRAME_OVERHANG_Y = 0.26;
 
-// Panneau thémé qui se MESURE pour caler ses marges sur l'épaisseur
-// réelle du cadre.
-//
-// Nécessaire parce que le cadre est étiré : sa bordure occupe toujours
-// 8,7% de la largeur et 18,4% de la hauteur du panneau, quelle que soit
-// sa taille. Une marge fixe en pixels ne peut donc pas convenir aux
-// quatre panneaux à la fois — avec 14dp, le contenu démarrait sous la
-// pierre et « VITESSE » se faisait couper (constaté sur capture).
-//
-// Et une marge en POURCENTAGE ne marche pas non plus : en React Native
-// elle se résout sur la largeur, y compris pour le vertical (règle 13).
-// D'où la mesure au rendu.
-//
-// ⚠️ À réserver aux panneaux dont la hauteur vient du `flex` : sur une
-// boîte dimensionnée par son contenu, augmenter la marge augmenterait
-// la hauteur, qui augmenterait la marge — boucle sans fin.
-function ThemedPanel({ theme, style, children }) {
+function ThemedBlock({ theme, style, children }) {
   const [size, setSize] = React.useState(null);
-  const pad = theme && size
-    ? { paddingHorizontal: Math.round(size.width * 0.09), paddingVertical: Math.round(size.height * 0.17) }
-    : null;
+  if (!theme) return <View style={style}>{children}</View>;
+
+  const ox = size ? Math.max(10, Math.round(size.width * FRAME_OVERHANG_X)) : 0;
+  const oy = size ? Math.max(10, Math.round(size.height * FRAME_OVERHANG_Y)) : 0;
+
   return (
-    <View
-      style={[style, theme && styles.themedBox, pad, theme && { justifyContent: 'center' }]}
-      onLayout={(e) => {
-        const { width, height } = e.nativeEvent.layout;
-        setSize((prev) => (prev && Math.abs(prev.height - height) < 2 && Math.abs(prev.width - width) < 2 ? prev : { width, height }));
-      }}
-    >
-      <ThemedFrame theme={theme} />
-      {children}
+    // Marges égales au débordement : le cadre s'étend hors du bloc, sans
+    // ces marges il mordrait sur les blocs voisins (le défaut du
+    // « treillis » déjà corrigé une fois).
+    <View style={[style, styles.themedBlockOuter, { marginHorizontal: ox, marginVertical: oy }]}>
+      {size && (
+        <Image
+          source={theme.panelFrame}
+          style={{
+            position: 'absolute',
+            left: -ox, right: -ox, top: -oy, bottom: -oy,
+            width: undefined, height: undefined,
+            pointerEvents: 'none',
+          }}
+          resizeMode="stretch"
+        />
+      )}
+      <View
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setSize((prev) => (prev && Math.abs(prev.height - height) < 2 && Math.abs(prev.width - width) < 2 ? prev : { width, height }));
+        }}
+      >
+        {children}
+      </View>
     </View>
   );
 }
@@ -754,14 +762,14 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
         {/* ---------- DROITE ---------- */}
         <View style={styles.mlRight}>
           <View style={styles.mlRow}>
-            <ThemedPanel theme={theme} style={styles.mlStatsBox}>
+            <ThemedBlock theme={theme} style={styles.mlStatsBox}>
               <MlStat icon="⚔️" label="ATTAQUE" value={stats.attack} bonus={atkBonus} color={COLORS.bad} />
               <MlStat icon="❤️" label="VIE" value={stats.hp} bonus={hpBonus} color={COLORS.good} />
               <MlStat icon="⚡" label="ENDURANCE" value={stats.endurance} bonus={enduranceBonus} color={COLORS.action} />
               <MlStat icon="👆" label="VITESSE" value={`×${stats.clickSpeed.toFixed(1).replace('.', ',')}`} bonus={0} color={COLORS.neonCyan} />
-            </ThemedPanel>
+            </ThemedBlock>
 
-            <ThemedPanel theme={theme} style={styles.mlRunesBox}>
+            <ThemedBlock theme={theme} style={styles.mlRunesBox}>
               <Text style={styles.mlBoxTitle}>RUNES</Text>
               <View style={styles.mlRuneRow}>
                 {[0, 1, 2].map((i) => {
@@ -785,11 +793,11 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
                   );
                 })}
               </View>
-            </ThemedPanel>
+            </ThemedBlock>
           </View>
 
           <View style={styles.mlRow}>
-            <ThemedPanel theme={theme} style={styles.mlAttrBox}>
+            <ThemedBlock theme={theme} style={styles.mlAttrBox}>
               <Text style={styles.mlBoxTitle}>ATTRIBUT</Text>
               <View style={styles.mlAttrRow}>
                 <View style={[styles.mlAttrChip, { borderColor: RARITY_COLOR[creature.rarity] }]}>
@@ -804,28 +812,25 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
                   <Text style={styles.mlAttrChipText}>{creature.combatType}</Text>
                 </View>
               </View>
-            </ThemedPanel>
+            </ThemedBlock>
 
-            <ThemedPanel theme={theme} style={styles.mlSkillsBox}>
+            <ThemedBlock theme={theme} style={styles.mlSkillsBox}>
               <Text style={styles.mlBoxTitle}>ATTAQUES</Text>
               {creature.skills.slice(0, 2).map((skill) => (
                 <Text key={skill.id} style={styles.mlSkillLine} numberOfLines={1}>
                   {skill.name} · {skill.damage} dgt
                 </Text>
               ))}
-            </ThemedPanel>
+            </ThemedBlock>
           </View>
 
           {/* Description bornée : elle se tronque au lieu de pousser le
               reste de la fiche hors de l'écran. */}
-          {/* Marge FIXE ici, contrairement aux 4 panneaux : la hauteur
-              de cette boîte vient de son contenu, donc une marge
-              proportionnelle à la hauteur créerait une boucle
-              (plus de marge -> plus haut -> plus de marge). */}
-          <View style={[styles.mlLoreBox, theme && styles.themedLoreBox]}>
-            <ThemedFrame theme={theme} />
+          {/* Même composant que les 4 panneaux : le cadre étant hors
+              du flux, il n'y a plus de cas particulier à traiter ici. */}
+          <ThemedBlock theme={theme} style={styles.mlLoreBox}>
             <Text style={styles.mlLoreText} numberOfLines={4}>{creature.lore}</Text>
-          </View>
+          </ThemedBlock>
         </View>
       </View>
     </ThemedProfileBackground>
@@ -1496,19 +1501,6 @@ const styles = StyleSheet.create({
   // l'espace via `flex`, jamais via des valeurs fixes qui déborderaient
   // sur un écran plus court.
   profileScreen: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: 10, paddingBottom: 8 },
-  // Voile sombre par-dessus le décor : sans lui, le texte clair des
-  // panneaux devient illisible sur les zones de lave.
-  // Débordement réduit à 1px (était 6). Avec 6px de chaque côté et des
-  // écarts de 8px entre panneaux, deux cadres voisins se chevauchaient
-  // de 4px : au lieu de 4 panneaux distincts, on voyait un treillis
-  // continu (comparaison avec la maquette, 11/09).
-  themedFrame: {
-    position: 'absolute', left: -1, right: -1, top: -1, bottom: -1,
-    width: undefined, height: undefined,
-    // `pointerEvents` dans le STYLE, jamais en prop (ignoré depuis le
-    // SDK 57, voir Règles de survie).
-    pointerEvents: 'none',
-  },
   profileScrim: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
     backgroundColor: 'rgba(8,6,10,0.45)',
@@ -1575,8 +1567,12 @@ const styles = StyleSheet.create({
   // Écarts portés à 16 : chaque panneau doit respirer pour que son
   // cadre se lise comme un cadre, et non comme une cloison partagée
   // avec le panneau voisin.
-  mlRight: { flex: 1, gap: 16 },
-  mlRow: { flexDirection: 'row', gap: 16, flex: 1 },
+  // `alignItems: 'flex-start'` : les blocs ne s'étirent plus en hauteur,
+  // ils prennent la taille de leur CONTENU — c'est tout le principe du
+  // nouveau système. Les écarts tombent à 0 : ce sont les marges
+  // proportionnelles de ThemedBlock qui espacent désormais les cadres.
+  mlRight: { flex: 1, gap: 0, justifyContent: 'center' },
+  mlRow: { flexDirection: 'row', gap: 0, alignItems: 'flex-start' },
   mlBoxTitle: { color: COLORS.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 4 },
   mlStatsBox: {
     flex: 1.25, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
@@ -1585,33 +1581,16 @@ const styles = StyleSheet.create({
   // Avec un thème, le panneau perd sa bordure unie : c'est le cadre
   // ouvragé qui la remplace. Le fond reste légèrement opaque pour
   // garder le texte lisible sur le décor.
-  themedLoreBox: {
-    backgroundColor: 'rgba(18,10,8,0.82)',
-    borderColor: 'transparent',
-    paddingHorizontal: 34,
-    paddingVertical: 22,
+  themedBlockOuter: {
+    backgroundColor: 'rgba(18,10,8,0.86)',
+    borderColor: 'transparent', borderWidth: 0,
+    flex: undefined,
   },
   mlRuneSlotThemed: { backgroundColor: 'transparent', borderColor: 'transparent' },
   mlRuneSlotImg: {
     position: 'absolute', left: -5, right: -5, top: -5, bottom: -5,
     width: undefined, height: undefined,
     pointerEvents: 'none',
-  },
-  // Marges en PIXELS, jamais en pourcentage.
-  //
-  // ⚠️ Piège : en React Native (comme en CSS), une marge en pourcentage
-  // se calcule sur la LARGEUR du parent — y compris `paddingVertical`.
-  // Un `paddingVertical: '15%'` sur un panneau large de 400dp valait
-  // donc 60dp en haut ET en bas, ce qui a vidé les panneaux de tout
-  // leur contenu (constaté sur capture le 11/09).
-  //
-  // Valeurs calées à la main sur l'épaisseur du cadre une fois étiré
-  // aux tailles réelles des panneaux.
-  themedBox: {
-    backgroundColor: 'rgba(18,10,8,0.82)',
-    borderColor: 'transparent',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
   },
   mlStatLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   mlStatIcon: { fontSize: 13 },

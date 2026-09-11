@@ -751,6 +751,38 @@ hors du cadre.
 **Règle** : marges et espacements en PIXELS. Le pourcentage ne convient
 que pour une largeur, jamais pour caler quelque chose sur une hauteur.
 
+## Cadres thémés — principe CONTENU D'ABORD (11/09)
+
+**Idée de l'utilisateur, qui a remplacé trois tentatives ratées de ma
+part.** On ne fixe plus la taille du cadre pour y comprimer le contenu :
+le contenu garde sa taille naturelle et le **cadre se construit autour**.
+
+```
+bloc de stats = 4 lignes -> hauteur naturelle H
+cadre = H / 0,66  (la bordure occupe ~17% de la hauteur totale)
+```
+
+Ratios **mesurés sur l'image** du cadre, pas estimés : bordure de 8,7%
+en largeur et ~17% en hauteur. D'où un débordement de 10,5% et 26% de la
+taille du contenu (`FRAME_OVERHANG_X/Y` dans `AdventureScreen.js`).
+
+**Pourquoi c'est supérieur aux approches précédentes :**
+- Le cadre est en position ABSOLUE, donc hors du flux : il ne compte pas
+  dans la hauteur du bloc. La boucle qui interdisait ce système sur la
+  légende (plus de marge → plus haut → plus de marge) **n'existe plus**,
+  et un composant unique sert les 5 blocs.
+- Plus de marges fixes en pixels, qui ne pouvaient pas convenir à
+  4 panneaux de tailles différentes.
+- Plus de marges en pourcentage, impossibles pour du vertical (règle 13).
+
+Les blocs ne s'étirent plus (`alignItems: 'flex-start'`), et les écarts
+entre eux sont les **marges proportionnelles** du composant lui-même —
+ce qui empêche par construction le défaut du « treillis » (cadres voisins
+qui se chevauchent et fusionnent).
+
+`ThemedPanel`, `ThemedFrame`, `themedBox` et `themedLoreBox` ont été
+supprimés avec l'ancien système.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.
