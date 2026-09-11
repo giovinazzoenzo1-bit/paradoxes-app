@@ -100,7 +100,15 @@ donne la hauteur du contenu. Mettre `flex: undefined` en croyant
 libellés se tronquent en « ··· » et les panneaux n'atteignent plus le
 bord de l'écran.
 
-**4. Jamais d'écart fixe entre deux blocs thémés.** Si le débordement du
+**4. Un décor déplacé par `transform` continue de capter les taps.**
+La zone de la créature est rendue APRÈS le bouton d'amélioration, donc
+au-dessus. Remontée de 50dp pour se poser sur le piédestal, elle
+recouvrait ce bouton et rendait la montée de niveau **impossible** — sans
+aucune erreur, le bouton ne répondait simplement plus. Toute zone
+purement décorative doit porter `pointerEvents: 'none'` **dans son
+style**.
+
+**5. Jamais d'écart fixe entre deux blocs thémés.** Si le débordement du
 cadre dépasse l'écart, les cadres voisins se chevauchent et fusionnent en
 un treillis continu. Ce sont les marges proportionnelles du composant qui
 doivent assurer l'espacement.

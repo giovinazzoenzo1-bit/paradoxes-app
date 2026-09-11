@@ -3,7 +3,7 @@
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground, Animated } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
@@ -616,6 +616,38 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
 const FRAME_OVERHANG_X = 0.105;
 const FRAME_OVERHANG_Y = 0.26;
 
+// Pulsation du bouton d'amélioration, UNIQUEMENT quand le joueur a de
+// quoi payer : animer un bouton inutilisable serait une fausse promesse.
+// La boucle est arrêtée dès que `active` repasse à faux, donc rien ne
+// tourne en fond pour rien.
+function PulsingButton({ active, children }) {
+  const pulse = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    if (!active) {
+      pulse.setValue(0);
+      return undefined;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 780, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 780, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [active]);
+  return (
+    <Animated.View
+      style={{
+        width: '100%',
+        transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }],
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
 function ThemedBlock({ theme, style, children }) {
   const [size, setSize] = React.useState(null);
   if (!theme) return <View style={style}>{children}</View>;
@@ -729,6 +761,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
               jamais été branchée. Marges calées sur ses ornements
               latéraux (~13% de chaque côté) pour que le texte tombe
               dans la zone lisse du centre. */}
+          <PulsingButton active={griffes >= levelCost}>
           <TouchableOpacity
             style={[styles.mlMainBtn, theme && styles.mlMainBtnThemed, griffes < levelCost && styles.actionBtnDisabledAdv]}
             onPress={onLevelUp}
@@ -739,6 +772,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
             )}
             <Text style={[styles.mlMainBtnText, theme && styles.mlMainBtnTextThemed]}>NIVEAU {owned.level + 1} · {levelCost} 🐾</Text>
           </TouchableOpacity>
+          </PulsingButton>
 
           <View style={[styles.mlPortraitZone, theme && styles.mlPortraitZoneThemed]}>
             <CreatureArt creatureId={creature.id} stageIndex={stage} emoji={display.emoji} size={170} emojiStyle={styles.mlPortraitEmoji} />
@@ -1558,6 +1592,12 @@ const styles = StyleSheet.create({
     // Remontée ramenée de 94 à 50dp : 1,5 cm était trop, la créature
     // flottait au-dessus du rocher. 50dp la pose sur le repère indiqué.
     transform: [{ translateY: -50 }],
+    // ⚠️ INDISPENSABLE : cette zone est rendue APRÈS le bouton
+    // d'amélioration, donc au-dessus, et la remontée de 50dp la fait
+    // recouvrir ce bouton. Sans ça elle intercepte les taps et la
+    // montée de niveau devient impossible (signalé le 11/09). La zone
+    // est purement décorative, elle ne doit jamais capter un tap.
+    pointerEvents: 'none',
   },
   mlPortraitEmoji: { fontSize: 96 },
   mlName: { color: COLORS.text, fontSize: 15, fontWeight: '900', marginTop: 6 },
