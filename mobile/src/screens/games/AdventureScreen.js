@@ -609,6 +609,41 @@ function ThemedFrame({ theme }) {
   );
 }
 
+// Panneau thémé qui se MESURE pour caler ses marges sur l'épaisseur
+// réelle du cadre.
+//
+// Nécessaire parce que le cadre est étiré : sa bordure occupe toujours
+// 8,7% de la largeur et 18,4% de la hauteur du panneau, quelle que soit
+// sa taille. Une marge fixe en pixels ne peut donc pas convenir aux
+// quatre panneaux à la fois — avec 14dp, le contenu démarrait sous la
+// pierre et « VITESSE » se faisait couper (constaté sur capture).
+//
+// Et une marge en POURCENTAGE ne marche pas non plus : en React Native
+// elle se résout sur la largeur, y compris pour le vertical (règle 13).
+// D'où la mesure au rendu.
+//
+// ⚠️ À réserver aux panneaux dont la hauteur vient du `flex` : sur une
+// boîte dimensionnée par son contenu, augmenter la marge augmenterait
+// la hauteur, qui augmenterait la marge — boucle sans fin.
+function ThemedPanel({ theme, style, children }) {
+  const [size, setSize] = React.useState(null);
+  const pad = theme && size
+    ? { paddingHorizontal: Math.round(size.width * 0.09), paddingVertical: Math.round(size.height * 0.17) }
+    : null;
+  return (
+    <View
+      style={[style, theme && styles.themedBox, pad, theme && { justifyContent: 'center' }]}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setSize((prev) => (prev && Math.abs(prev.height - height) < 2 && Math.abs(prev.width - width) < 2 ? prev : { width, height }));
+      }}
+    >
+      <ThemedFrame theme={theme} />
+      {children}
+    </View>
+  );
+}
+
 function ThemedProfileBackground({ theme, children }) {
   if (!theme) return <View style={styles.profileScreen}>{children}</View>;
   return (
@@ -719,16 +754,14 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
         {/* ---------- DROITE ---------- */}
         <View style={styles.mlRight}>
           <View style={styles.mlRow}>
-            <View style={[styles.mlStatsBox, theme && styles.themedBox]}>
-              <ThemedFrame theme={theme} />
+            <ThemedPanel theme={theme} style={styles.mlStatsBox}>
               <MlStat icon="⚔️" label="ATTAQUE" value={stats.attack} bonus={atkBonus} color={COLORS.bad} />
               <MlStat icon="❤️" label="VIE" value={stats.hp} bonus={hpBonus} color={COLORS.good} />
               <MlStat icon="⚡" label="ENDURANCE" value={stats.endurance} bonus={enduranceBonus} color={COLORS.action} />
               <MlStat icon="👆" label="VITESSE" value={`×${stats.clickSpeed.toFixed(1).replace('.', ',')}`} bonus={0} color={COLORS.neonCyan} />
-            </View>
+            </ThemedPanel>
 
-            <View style={[styles.mlRunesBox, theme && styles.themedBox]}>
-              <ThemedFrame theme={theme} />
+            <ThemedPanel theme={theme} style={styles.mlRunesBox}>
               <Text style={styles.mlBoxTitle}>RUNES</Text>
               <View style={styles.mlRuneRow}>
                 {[0, 1, 2].map((i) => {
@@ -752,12 +785,11 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
                   );
                 })}
               </View>
-            </View>
+            </ThemedPanel>
           </View>
 
           <View style={styles.mlRow}>
-            <View style={[styles.mlAttrBox, theme && styles.themedBox]}>
-              <ThemedFrame theme={theme} />
+            <ThemedPanel theme={theme} style={styles.mlAttrBox}>
               <Text style={styles.mlBoxTitle}>ATTRIBUT</Text>
               <View style={styles.mlAttrRow}>
                 <View style={[styles.mlAttrChip, { borderColor: RARITY_COLOR[creature.rarity] }]}>
@@ -772,22 +804,25 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
                   <Text style={styles.mlAttrChipText}>{creature.combatType}</Text>
                 </View>
               </View>
-            </View>
+            </ThemedPanel>
 
-            <View style={[styles.mlSkillsBox, theme && styles.themedBox]}>
-              <ThemedFrame theme={theme} />
+            <ThemedPanel theme={theme} style={styles.mlSkillsBox}>
               <Text style={styles.mlBoxTitle}>ATTAQUES</Text>
               {creature.skills.slice(0, 2).map((skill) => (
                 <Text key={skill.id} style={styles.mlSkillLine} numberOfLines={1}>
                   {skill.name} · {skill.damage} dgt
                 </Text>
               ))}
-            </View>
+            </ThemedPanel>
           </View>
 
           {/* Description bornée : elle se tronque au lieu de pousser le
               reste de la fiche hors de l'écran. */}
-          <View style={[styles.mlLoreBox, theme && styles.themedBox]}>
+          {/* Marge FIXE ici, contrairement aux 4 panneaux : la hauteur
+              de cette boîte vient de son contenu, donc une marge
+              proportionnelle à la hauteur créerait une boucle
+              (plus de marge -> plus haut -> plus de marge). */}
+          <View style={[styles.mlLoreBox, theme && styles.themedLoreBox]}>
             <ThemedFrame theme={theme} />
             <Text style={styles.mlLoreText} numberOfLines={4}>{creature.lore}</Text>
           </View>
@@ -1550,6 +1585,12 @@ const styles = StyleSheet.create({
   // Avec un thème, le panneau perd sa bordure unie : c'est le cadre
   // ouvragé qui la remplace. Le fond reste légèrement opaque pour
   // garder le texte lisible sur le décor.
+  themedLoreBox: {
+    backgroundColor: 'rgba(18,10,8,0.82)',
+    borderColor: 'transparent',
+    paddingHorizontal: 34,
+    paddingVertical: 22,
+  },
   mlRuneSlotThemed: { backgroundColor: 'transparent', borderColor: 'transparent' },
   mlRuneSlotImg: {
     position: 'absolute', left: -5, right: -5, top: -5, bottom: -5,
