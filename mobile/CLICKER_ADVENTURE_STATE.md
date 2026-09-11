@@ -736,6 +736,21 @@ Vérifié aux deux extrêmes : un joueur neuf reçoit la séquence scriptée
 intacte, un joueur très avancé reçoit des cycles complets et **aucun
 défi déjà accompli**.
 
+### 13. Une marge en pourcentage se calcule sur la LARGEUR, même verticale
+
+**Bug réel (11/09)** : les 4 panneaux de la fiche de créature se sont
+retrouvés **entièrement vides** — plus aucune statistique, plus aucun
+libellé.
+
+Cause : `paddingVertical: '15%'` sur les panneaux thémés. En React Native
+comme en CSS, **toute** marge en pourcentage se résout sur la **largeur**
+du parent, `paddingVertical` compris. Sur un panneau large de 400 dp,
+15 % valaient donc 60 dp en haut ET en bas — le contenu était poussé
+hors du cadre.
+
+**Règle** : marges et espacements en PIXELS. Le pourcentage ne convient
+que pour une largeur, jamais pour caler quelque chose sur une hauteur.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

@@ -1494,9 +1494,11 @@ const styles = StyleSheet.create({
   // Avec un thème, la créature se pose directement sur le décor : ni
   // fond ni bordure, sinon elle apparaît dans une boîte posée devant le
   // piédestal au lieu d'être dessus.
+  // Idem : marge en pixels. Écarte le texte des ornements latéraux du
+  // bouton pour qu'il tombe dans la zone lisse du centre.
   mlMainBtnThemed: {
     backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0,
-    paddingHorizontal: '14%',
+    paddingHorizontal: 46,
   },
   mlMainBtnImg: {
     position: 'absolute', left: 0, right: 0, top: -6, bottom: -6,
@@ -1547,14 +1549,21 @@ const styles = StyleSheet.create({
     width: undefined, height: undefined,
     pointerEvents: 'none',
   },
-  // Marges calées sur l'OUVERTURE RÉELLE du cadre, mesurée sur l'image :
-  // bordure de 8,7% en largeur et ~17% en hauteur. Sans ça, le texte
-  // passait sous la pierre du cadre (signalé sur capture).
+  // Marges en PIXELS, jamais en pourcentage.
+  //
+  // ⚠️ Piège : en React Native (comme en CSS), une marge en pourcentage
+  // se calcule sur la LARGEUR du parent — y compris `paddingVertical`.
+  // Un `paddingVertical: '15%'` sur un panneau large de 400dp valait
+  // donc 60dp en haut ET en bas, ce qui a vidé les panneaux de tout
+  // leur contenu (constaté sur capture le 11/09).
+  //
+  // Valeurs calées à la main sur l'épaisseur du cadre une fois étiré
+  // aux tailles réelles des panneaux.
   themedBox: {
     backgroundColor: 'rgba(18,10,8,0.82)',
     borderColor: 'transparent',
-    paddingHorizontal: '9%',
-    paddingVertical: '15%',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
   },
   mlStatLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   mlStatIcon: { fontSize: 13 },
