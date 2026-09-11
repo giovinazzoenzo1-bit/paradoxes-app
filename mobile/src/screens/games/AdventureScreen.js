@@ -737,7 +737,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
             {theme && (
               <Image source={theme.button} style={styles.mlMainBtnImg} resizeMode="stretch" />
             )}
-            <Text style={styles.mlMainBtnText}>NIVEAU {owned.level + 1} · {levelCost} 🐾</Text>
+            <Text style={[styles.mlMainBtnText, theme && styles.mlMainBtnTextThemed]}>NIVEAU {owned.level + 1} · {levelCost} 🐾</Text>
           </TouchableOpacity>
 
           <View style={[styles.mlPortraitZone, theme && styles.mlPortraitZoneThemed]}>
@@ -1527,18 +1527,35 @@ const styles = StyleSheet.create({
   // piédestal au lieu d'être dessus.
   // Idem : marge en pixels. Écarte le texte des ornements latéraux du
   // bouton pour qu'il tombe dans la zone lisse du centre.
+  // Bouton d'amélioration mis en avant : lueur dorée autour et texte
+  // clair sur l'illustration. Remonté de ~0,5 cm (30dp) par une marge
+  // NÉGATIVE en haut, qui rapproche du bloc précédent sans laisser de
+  // vide derrière lui.
   mlMainBtnThemed: {
     backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0,
     paddingHorizontal: 46,
+    marginTop: -30,
+    shadowColor: COLORS.action, shadowOpacity: 0.95, shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 }, elevation: 12,
+  },
+  mlMainBtnTextThemed: {
+    color: '#fff5d6', fontSize: 14,
+    textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 5,
   },
   mlMainBtnImg: {
     position: 'absolute', left: 0, right: 0, top: -6, bottom: -6,
     width: undefined, height: undefined,
     pointerEvents: 'none',
   },
+  // 1 cm ≈ 63dp (1 pouce = 160dp, 2,54 cm par pouce). Remontée de
+  // 1,5 cm ≈ 94dp pour poser la créature sur le piédestal peint dans le
+  // décor. `transform` plutôt qu'une marge : ça déplace le rendu sans
+  // toucher à la place occupée dans la colonne, donc sans décaler le
+  // reste.
   mlPortraitZoneThemed: {
     backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0,
     justifyContent: 'flex-end', paddingBottom: 4,
+    transform: [{ translateY: -94 }],
   },
   mlPortraitEmoji: { fontSize: 96 },
   mlName: { color: COLORS.text, fontSize: 15, fontWeight: '900', marginTop: 6 },
@@ -1592,7 +1609,9 @@ const styles = StyleSheet.create({
     width: undefined, height: undefined,
     pointerEvents: 'none',
   },
-  mlStatLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  // Décalage vers la droite des lignes de stats (demande du 11/09) :
+  // elles se collaient au bord gauche de l'ouverture du cadre.
+  mlStatLine: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingLeft: 14 },
   mlStatIcon: { fontSize: 13 },
   mlStatLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '800', flex: 1 },
   mlStatValue: { color: COLORS.text, fontSize: 13, fontWeight: '900' },

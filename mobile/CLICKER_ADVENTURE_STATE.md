@@ -753,6 +753,12 @@ que pour une largeur, jamais pour caler quelque chose sur une hauteur.
 
 ## Cadres thémés — principe CONTENU D'ABORD (11/09)
 
+📄 **Référence complète : `mobile/THEME_FRAMES.md`** — ratios mesurés,
+script de remesure si l'image du cadre change, pièges rencontrés, et
+procédure pour ajouter un élément. **À lire avant de toucher à un cadre
+thémé.**
+
+
 **Idée de l'utilisateur, qui a remplacé trois tentatives ratées de ma
 part.** On ne fixe plus la taille du cadre pour y comprimer le contenu :
 le contenu garde sa taille naturelle et le **cadre se construit autour**.
