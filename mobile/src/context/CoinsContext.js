@@ -1,6 +1,19 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// DIAMANTS — monnaie premium de l'appli (11/09).
+//
+// C'est l'ancienne monnaie partagee des mini-jeux, devenue orpheline
+// quand ils ont ete archives. Plutot que d'en creer une nouvelle, elle
+// est simplement renommee : elle occupait deja le bon role (gagnee par
+// le calendrier quotidien, depensee en Offrandes), et le boss de tap a
+// venir aura ainsi DEJA sa monnaie, sans systeme a creer.
+//
+// ⚠️ La cle de stockage reste 'appCoins' et les fonctions gardent leurs
+// noms (`coins`, `addCoins`, `spendCoins`). Renommer la cle effacerait
+// le solde de tous les joueurs ; renommer les fonctions toucherait 4
+// fichiers pour un gain nul. Seul l'AFFICHAGE parle de Diamants.
+
 // Port fidèle du système de pièces du PWA (voir index.html: appCoinsAdd/Spend/AddLimited).
 // Même logique exacte : plafond de 40 pièces/heure par jeu, fenêtre glissante.
 const COIN_RATE_LIMIT_PER_HOUR = 40;

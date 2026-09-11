@@ -18,7 +18,7 @@ export default function CoinBar() {
 
   return (
     <View style={styles.bar}>
-      <Text style={styles.icon}>🪙</Text>
+      <Text style={styles.icon}>💎</Text>
       <Text style={styles.value}>{coins}</Text>
       <TouchableOpacity onPress={handleReset} style={styles.resetBtn}>
         <Text style={styles.resetText}>↺</Text>

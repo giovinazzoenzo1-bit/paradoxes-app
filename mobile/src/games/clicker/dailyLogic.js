@@ -235,7 +235,9 @@ export const ACHIEVEMENT_MAX_TIER = 5;
 //
 // Types possibles :
 //   griffes   -> credite via PENDING_GRIFFES_KEY (Aventure)
-//   appCoins  -> pieces PARTAGEES de l'appli (pas les pieces du clicker)
+//   appCoins  -> DIAMANTS, la monnaie premium (pas les pieces du
+//                clicker). Le type garde son ancien nom : il sert de
+//                cle de sauvegarde, le renommer effacerait les soldes.
 //   creature  -> une creature garantie, de la rarete indiquee
 //   skin      -> systeme de skins pas encore developpe : on credite un
 //                BON echangeable, pour que la recompense soit reellement
@@ -243,10 +245,10 @@ export const ACHIEVEMENT_MAX_TIER = 5;
 //                perdu entre-temps.
 export const DAILY_CALENDAR = [
   { day: 1, type: 'griffes',  amount: 40,  icon: '🐾', label: '40 Griffes' },
-  { day: 2, type: 'appCoins', amount: 25,  icon: '🪙', label: "25 pièces d'appli" },
+  { day: 2, type: 'appCoins', amount: 25,  icon: '💎', label: '25 Diamants' },
   { day: 3, type: 'creature', rarity: 'rare', icon: '🥚', label: 'Créature Rare' },
   { day: 4, type: 'griffes',  amount: 80,  icon: '🐾', label: '80 Griffes' },
-  { day: 5, type: 'appCoins', amount: 50,  icon: '🪙', label: "50 pièces d'appli" },
+  { day: 5, type: 'appCoins', amount: 50,  icon: '💎', label: '50 Diamants' },
   { day: 6, type: 'griffes',  amount: 150, icon: '🐾', label: '150 Griffes' },
   { day: 7, type: 'skin',     amount: 1,   icon: '🎨', label: 'Skin aléatoire' },
 ];

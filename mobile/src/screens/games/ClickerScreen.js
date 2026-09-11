@@ -1441,7 +1441,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const got = await claimStreak(addSharedCoins);
     setCalendarOpen(false);
     if (!got) return;
-    if (got.type === 'appCoins') spawnPopup(`+${got.amount} 🪙`, 110, 60);
+    if (got.type === 'appCoins') spawnPopup(`+${got.amount} 💎`, 110, 60);
     else if (got.type === 'griffes') spawnPopup(`+${got.amount} 🐾`, 110, 60);
     else if (got.type === 'creature') Alert.alert('🥚 Créature Rare !', "Elle t'attend dans ta Collection.");
     else if (got.type === 'skin') Alert.alert('🎨 Bon pour un skin', "Le système de skins arrive bientôt — ton bon est conservé.");
@@ -1453,7 +1453,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       if (!ok) return;
       trackEvent('offering', 1);
       const reward = Math.round(gainCoins(offrandeReward(tapPowerRef.current)));
-      spawnPopup(`+${reward} 🪙`, 110, 60);
+      spawnPopup(`+${reward} 💎`, 110, 60);
     });
   };
 
@@ -2473,8 +2473,8 @@ function ShopView({
             bas de liste, elles passaient inaperçues. */}
             {/* Offrande, toujours juste après les 4 mécaniques historiques. */}
             <TouchableOpacity style={[styles.offrandeBtn, sharedCoins < OFFRANDE_APPCOINS_COST && styles.actionBtnDisabled]} onPress={onOffrande} disabled={sharedCoins < OFFRANDE_APPCOINS_COST}>
-              <Text style={styles.offrandeBtnText}>🪙 Offrande</Text>
-              <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} pièces de l'appli (tu en as {sharedCoins}) contre un bonus ici</Text>
+              <Text style={styles.offrandeBtnText}>💎 Offrande</Text>
+              <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} Diamants (tu en as {sharedCoins}) contre un bonus ici</Text>
             </TouchableOpacity>
 
             {/* Ascension : elle vivait dans l'onglet Quêtes, qui n'existe

@@ -177,7 +177,7 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
             <Text style={styles.devWarning}>Outils de test — ne pas montrer aux joueurs finaux.</Text>
 
             <TouchableOpacity style={styles.devBtn} onPress={() => addCoins(10)}>
-              <Text style={styles.devBtnText}>🪙 +10 pièces</Text>
+              <Text style={styles.devBtnText}>💎 +10 Diamants</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.devBtn} onPress={unlockAllCreatures}>
               <Text style={styles.devBtnText}>🐾 Débloquer tous les monstres (Élevage)</Text>

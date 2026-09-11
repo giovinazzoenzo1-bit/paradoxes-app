@@ -789,6 +789,29 @@ qui se chevauchent et fusionnent).
 `ThemedPanel`, `ThemedFrame`, `themedBox` et `themedLoreBox` ont été
 supprimés avec l'ancien système.
 
+## Les trois monnaies (11/09)
+
+| Monnaie | Rôle | Gagnée par | Dépensée en |
+|---|---|---|---|
+| **Pièces** | monnaie douce du Clicker | taps, revenu passif | améliorations, invocations |
+| **Griffes** 🐾 | monnaie d'Aventure | combats, quêtes | runes, niveaux de créature |
+| **Diamants** 💎 | **premium** | calendrier quotidien | Offrandes |
+
+**Les Diamants sont l'ancienne monnaie partagée des mini-jeux**, devenue
+orpheline quand ils ont été archivés. Elle occupait déjà exactement le
+rôle d'une premium (rare, gagnée à la connexion, dépensée sur une action
+spéciale) : elle a donc été renommée plutôt que d'en créer une nouvelle.
+
+⚠️ **Le boss de tap à venir paie en Diamants** (plafond de 21/jour, voir
+le document des fonctionnalités). En convertissant celle-ci, il a déjà sa
+monnaie : rien à créer le jour où on le code. Créer une seconde premium
+aurait été l'erreur à éviter.
+
+⚠️ **La clé de stockage reste `appCoins`** et les fonctions du contexte
+gardent leurs noms (`coins`, `addCoins`, `spendCoins`). Renommer la clé
+effacerait le solde de tous les joueurs. **Seul l'affichage parle de
+Diamants.**
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

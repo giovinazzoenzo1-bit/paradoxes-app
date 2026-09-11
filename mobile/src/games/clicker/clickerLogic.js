@@ -1014,7 +1014,7 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'seq_crit20', icon: '💥', metric: 'totalCrits', target: 28, mode: 'delta',
       label: () => 'Obtiens 28 coups critiques' },
-    { id: 'seq_offering2', icon: '🪙', metric: 'offering', target: 3, mode: 'delta',
+    { id: 'seq_offering2', icon: '💎', metric: 'offering', target: 3, mode: 'delta',
       label: () => 'Fais 3 Offrandes' },
     { id: 'seq_adv_c1l1', icon: '⚔️', metric: 'advLevelReached', target: 3, mode: 'absolute',
       label: () => 'Termine le chapitre 1, niveau 3' },
@@ -1047,7 +1047,7 @@ export const QUEST_SEQUENCE = [
   ],
   // --- Cycle 5 : première Ascension ---
   [
-    { id: 'seq_offering5', icon: '🪙', metric: 'offering', target: 7, mode: 'delta',
+    { id: 'seq_offering5', icon: '💎', metric: 'offering', target: 7, mode: 'delta',
       label: () => 'Fais 7 Offrandes' },
     { id: 'seq_griffe5', icon: '🔥', metric: 'upgrade:griffeBraisillon', target: 5, mode: 'absolute',
       label: () => 'Monte Griffe de Braisillon au niveau 5' },
