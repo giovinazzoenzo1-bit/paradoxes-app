@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
+import { elementTheme } from './elementThemes';
 import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -591,8 +592,39 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
 //                  deux boutons d'action.
 //   DROITE (56%) : stats et runes côte à côte, attribut + habitat,
 //                  description, le tout dans un panneau.
+// Fond de l'écran de profil. Avec un thème : l'illustration de
+// l'élément, assombrie par un voile pour que le texte reste lisible
+// par-dessus. Sans thème : exactement la vue unie d'avant.
+// Cadre ouvragé posé PAR-DESSUS un panneau. Il est en `pointerEvents:
+// 'none'` et en position absolue : il décore sans jamais intercepter un
+// tap destiné au contenu du panneau (emplacements de rune, boutons).
+function ThemedFrame({ theme }) {
+  if (!theme) return null;
+  return (
+    <Image
+      source={theme.panelFrame}
+      style={styles.themedFrame}
+      resizeMode="stretch"
+    />
+  );
+}
+
+function ThemedProfileBackground({ theme, children }) {
+  if (!theme) return <View style={styles.profileScreen}>{children}</View>;
+  return (
+    <ImageBackground source={theme.background} style={styles.profileScreen} resizeMode="cover">
+      <View style={styles.profileScrim} />
+      {children}
+    </ImageBackground>
+  );
+}
+
 function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack }) {
   const [runePickerSlot, setRunePickerSlot] = useState(null);
+  // Thème visuel lié à l'ÉLÉMENT de la créature (Feu, Eau...). `null`
+  // pour les éléments pas encore illustrés : l'écran garde alors son
+  // apparence actuelle, rien ne casse.
+  const theme = elementTheme(creature.element);
 
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
@@ -620,7 +652,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
 
   return (
     <>
-    <View style={styles.profileScreen}>
+    <ThemedProfileBackground theme={theme}>
       <View style={styles.profileTopBar}>
         <TouchableOpacity onPress={onBack} style={styles.profileBackBtn}>
           <Text style={styles.backText}>←</Text>
@@ -678,14 +710,16 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
         {/* ---------- DROITE ---------- */}
         <View style={styles.mlRight}>
           <View style={styles.mlRow}>
-            <View style={styles.mlStatsBox}>
+            <View style={[styles.mlStatsBox, theme && styles.themedBox]}>
+              <ThemedFrame theme={theme} />
               <MlStat icon="⚔️" label="ATTAQUE" value={stats.attack} bonus={atkBonus} color={COLORS.bad} />
               <MlStat icon="❤️" label="VIE" value={stats.hp} bonus={hpBonus} color={COLORS.good} />
               <MlStat icon="⚡" label="ENDURANCE" value={stats.endurance} bonus={enduranceBonus} color={COLORS.action} />
               <MlStat icon="👆" label="VITESSE" value={`×${stats.clickSpeed.toFixed(1).replace('.', ',')}`} bonus={0} color={COLORS.neonCyan} />
             </View>
 
-            <View style={styles.mlRunesBox}>
+            <View style={[styles.mlRunesBox, theme && styles.themedBox]}>
+              <ThemedFrame theme={theme} />
               <Text style={styles.mlBoxTitle}>RUNES</Text>
               <View style={styles.mlRuneRow}>
                 {[0, 1, 2].map((i) => {
@@ -694,9 +728,15 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
                   return (
                     <TouchableOpacity
                       key={i}
-                      style={[styles.mlRuneSlot, def && { borderColor: def.color }]}
+                      style={[styles.mlRuneSlot, !theme && def && { borderColor: def.color }, theme && styles.mlRuneSlotThemed]}
                       onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(i))}
                     >
+                      {/* Avec un thème, le socle illustré remplace le
+                          cercle uni. Posé en fond, le contenu (icône de
+                          rune, niveau) reste au-dessus. */}
+                      {theme && (
+                        <Image source={theme.runeSlot} style={styles.mlRuneSlotImg} resizeMode="contain" />
+                      )}
                       <Text style={styles.mlRuneEmoji}>{def ? def.icon : '＋'}</Text>
                       {rune && <Text style={styles.mlRuneLevel}>{rune.level}</Text>}
                     </TouchableOpacity>
@@ -707,7 +747,8 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
           </View>
 
           <View style={styles.mlRow}>
-            <View style={styles.mlAttrBox}>
+            <View style={[styles.mlAttrBox, theme && styles.themedBox]}>
+              <ThemedFrame theme={theme} />
               <Text style={styles.mlBoxTitle}>ATTRIBUT</Text>
               <View style={styles.mlAttrRow}>
                 <View style={[styles.mlAttrChip, { borderColor: RARITY_COLOR[creature.rarity] }]}>
@@ -724,7 +765,8 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
               </View>
             </View>
 
-            <View style={styles.mlSkillsBox}>
+            <View style={[styles.mlSkillsBox, theme && styles.themedBox]}>
+              <ThemedFrame theme={theme} />
               <Text style={styles.mlBoxTitle}>ATTAQUES</Text>
               {creature.skills.slice(0, 2).map((skill) => (
                 <Text key={skill.id} style={styles.mlSkillLine} numberOfLines={1}>
@@ -741,7 +783,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
           </View>
         </View>
       </View>
-    </View>
+    </ThemedProfileBackground>
 
     {runePickerSlot !== null && (
       <RunePickerOverlay
@@ -1409,6 +1451,19 @@ const styles = StyleSheet.create({
   // l'espace via `flex`, jamais via des valeurs fixes qui déborderaient
   // sur un écran plus court.
   profileScreen: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: 10, paddingBottom: 8 },
+  // Voile sombre par-dessus le décor : sans lui, le texte clair des
+  // panneaux devient illisible sur les zones de lave.
+  themedFrame: {
+    position: 'absolute', left: -6, right: -6, top: -6, bottom: -6,
+    width: undefined, height: undefined,
+    // `pointerEvents` dans le STYLE, jamais en prop (ignoré depuis le
+    // SDK 57, voir Règles de survie).
+    pointerEvents: 'none',
+  },
+  profileScrim: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    backgroundColor: 'rgba(8,6,10,0.45)',
+  },
   profileTopBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 6,
@@ -1456,6 +1511,19 @@ const styles = StyleSheet.create({
   mlStatsBox: {
     flex: 1.25, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
     borderWidth: 1, borderColor: COLORS.border, justifyContent: 'space-around',
+  },
+  // Avec un thème, le panneau perd sa bordure unie : c'est le cadre
+  // ouvragé qui la remplace. Le fond reste légèrement opaque pour
+  // garder le texte lisible sur le décor.
+  mlRuneSlotThemed: { backgroundColor: 'transparent', borderColor: 'transparent' },
+  mlRuneSlotImg: {
+    position: 'absolute', left: -5, right: -5, top: -5, bottom: -5,
+    width: undefined, height: undefined,
+    pointerEvents: 'none',
+  },
+  themedBox: {
+    backgroundColor: 'rgba(18,10,8,0.82)',
+    borderColor: 'transparent',
   },
   mlStatLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   mlStatIcon: { fontSize: 13 },
