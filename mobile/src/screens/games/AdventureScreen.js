@@ -698,7 +698,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
           </TouchableOpacity>
 
           <View style={[styles.mlPortraitZone, theme && styles.mlPortraitZoneThemed]}>
-            <CreatureArt creatureId={creature.id} stageIndex={stage} emoji={display.emoji} size={130} emojiStyle={styles.mlPortraitEmoji} />
+            <CreatureArt creatureId={creature.id} stageIndex={stage} emoji={display.emoji} size={170} emojiStyle={styles.mlPortraitEmoji} />
           </View>
 
           {evoMaxed ? (
@@ -789,7 +789,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
               reste de la fiche hors de l'écran. */}
           <View style={[styles.mlLoreBox, theme && styles.themedBox]}>
             <ThemedFrame theme={theme} />
-            <Text style={styles.mlLoreText} numberOfLines={3}>{creature.lore}</Text>
+            <Text style={styles.mlLoreText} numberOfLines={4}>{creature.lore}</Text>
           </View>
         </View>
       </View>
@@ -1463,8 +1463,12 @@ const styles = StyleSheet.create({
   profileScreen: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: 10, paddingBottom: 8 },
   // Voile sombre par-dessus le décor : sans lui, le texte clair des
   // panneaux devient illisible sur les zones de lave.
+  // Débordement réduit à 1px (était 6). Avec 6px de chaque côté et des
+  // écarts de 8px entre panneaux, deux cadres voisins se chevauchaient
+  // de 4px : au lieu de 4 panneaux distincts, on voyait un treillis
+  // continu (comparaison avec la maquette, 11/09).
   themedFrame: {
-    position: 'absolute', left: -6, right: -6, top: -6, bottom: -6,
+    position: 'absolute', left: -1, right: -1, top: -1, bottom: -1,
     width: undefined, height: undefined,
     // `pointerEvents` dans le STYLE, jamais en prop (ignoré depuis le
     // SDK 57, voir Règles de survie).
@@ -1533,8 +1537,11 @@ const styles = StyleSheet.create({
   mlSubNote: { color: COLORS.muted, fontSize: 10, fontStyle: 'italic', marginTop: 6, textAlign: 'center' },
 
   // --- colonne droite ---
-  mlRight: { flex: 1, gap: 8 },
-  mlRow: { flexDirection: 'row', gap: 8, flex: 1 },
+  // Écarts portés à 16 : chaque panneau doit respirer pour que son
+  // cadre se lise comme un cadre, et non comme une cloison partagée
+  // avec le panneau voisin.
+  mlRight: { flex: 1, gap: 16 },
+  mlRow: { flexDirection: 'row', gap: 16, flex: 1 },
   mlBoxTitle: { color: COLORS.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 4 },
   mlStatsBox: {
     flex: 1.25, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,
@@ -1562,8 +1569,8 @@ const styles = StyleSheet.create({
   themedBox: {
     backgroundColor: 'rgba(18,10,8,0.82)',
     borderColor: 'transparent',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   mlStatLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   mlStatIcon: { fontSize: 13 },
