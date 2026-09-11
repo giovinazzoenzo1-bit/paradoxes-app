@@ -3171,9 +3171,22 @@ const styles = StyleSheet.create({
   },
   welcomeText: { color: COLORS.good, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
+  // Déplacée SOUS le cadre du deck (11/09). Elle était à 0,095 de la
+  // hauteur d'écran, c'est-à-dire en plein dans la carte de défi qui
+  // occupe 0,107 à ~0,22 : la bannière se rendait derrière elle et le
+  // joueur ne voyait jamais quel pouvoir il venait d'activer.
+  //
+  // Position DÉRIVÉE de celle du cadre du deck (même formule + sa
+  // hauteur) : les deux restent solidaires quoi qu'il arrive à
+  // TOP_BLOCK_SHIFT, plutôt qu'une constante à resynchroniser à la main.
   powerBanner: {
-    position: 'absolute', left: SCREEN_W * 0.08, top: SCREEN_H * (0.145 - TOP_BLOCK_SHIFT), width: SCREEN_W * 0.84, zIndex: 3,
+    position: 'absolute', left: SCREEN_W * 0.08, zIndex: 4,
+    top: SCREEN_H * (0.357 - TOP_BLOCK_SHIFT) - 32 + (SCREEN_W * 0.55 * (329 / 800)) + 6,
+    width: SCREEN_W * 0.84,
     backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.action,
+    // Purement informative : elle recouvre le haut de la zone de tap et
+    // ne doit surtout pas lui voler de clics (règle de survie n°2).
+    pointerEvents: 'none',
   },
   discountBanner: { backgroundColor: 'rgba(46,127,184,0.15)', borderColor: '#3ec6f0' },
 
