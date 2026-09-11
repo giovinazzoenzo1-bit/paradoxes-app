@@ -1555,7 +1555,9 @@ const styles = StyleSheet.create({
   mlPortraitZoneThemed: {
     backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0,
     justifyContent: 'flex-end', paddingBottom: 4,
-    transform: [{ translateY: -94 }],
+    // Remontée ramenée de 94 à 50dp : 1,5 cm était trop, la créature
+    // flottait au-dessus du rocher. 50dp la pose sur le repère indiqué.
+    transform: [{ translateY: -50 }],
   },
   mlPortraitEmoji: { fontSize: 96 },
   mlName: { color: COLORS.text, fontSize: 15, fontWeight: '900', marginTop: 6 },
@@ -1598,10 +1600,14 @@ const styles = StyleSheet.create({
   // Avec un thème, le panneau perd sa bordure unie : c'est le cadre
   // ouvragé qui la remplace. Le fond reste légèrement opaque pour
   // garder le texte lisible sur le décor.
+  // PAS de `flex: undefined` ici : dans une rangée, `flex` pilote la
+  // LARGEUR, tandis que c'est `alignItems: 'flex-start'` de la rangée
+  // qui donne la hauteur du contenu. L'annuler rétrécissait les blocs à
+  // la largeur de leur texte — les libellés de stats étaient tronqués
+  // en « ··· » et les panneaux n'atteignaient plus le bord droit.
   themedBlockOuter: {
     backgroundColor: 'rgba(18,10,8,0.86)',
     borderColor: 'transparent', borderWidth: 0,
-    flex: undefined,
   },
   mlRuneSlotThemed: { backgroundColor: 'transparent', borderColor: 'transparent' },
   mlRuneSlotImg: {

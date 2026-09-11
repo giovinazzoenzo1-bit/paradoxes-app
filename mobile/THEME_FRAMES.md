@@ -93,7 +93,14 @@ comme en CSS, toute marge en pourcentage se résout sur la **largeur** du
 parent — `paddingVertical: '15%'` inclus. Un essai a vidé les quatre
 panneaux de tout leur contenu.
 
-**3. Jamais d'écart fixe entre deux blocs thémés.** Si le débordement du
+**3. Ne jamais annuler le `flex` du bloc.** Dans une rangée, `flex`
+pilote la **largeur** ; c'est `alignItems: 'flex-start'` de la rangée qui
+donne la hauteur du contenu. Mettre `flex: undefined` en croyant
+« libérer la hauteur » rétrécit le bloc à la largeur de son texte : les
+libellés se tronquent en « ··· » et les panneaux n'atteignent plus le
+bord de l'écran.
+
+**4. Jamais d'écart fixe entre deux blocs thémés.** Si le débordement du
 cadre dépasse l'écart, les cadres voisins se chevauchent et fusionnent en
 un treillis continu. Ce sont les marges proportionnelles du composant qui
 doivent assurer l'espacement.
