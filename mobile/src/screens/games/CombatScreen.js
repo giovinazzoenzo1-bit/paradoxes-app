@@ -24,6 +24,10 @@ import { StatusBar } from 'expo-status-bar';
 // est dessiné en légère plongée, avec une zone centrale dégagée, donc
 // les créatures se posent dessus au lieu de flotter sur une image plate.
 const BG_IMG = require('../../../assets/combat/battlefield.jpg');
+// Décor de VICTOIRE : la même prairie au soleil couchant. Réutilisé
+// aussi en défaite, mais assombri par un voile (voir `resultDim`) —
+// une image de défaite séparée n'existe pas encore.
+const VICTORY_BG = require('../../../assets/combat/victory.jpg');
 import { COLORS } from './clickerTheme';
 import { stageForLevel, MANA_MAX, MANA_PER_TURN } from '../../games/clicker/clickerLogic';
 import {
@@ -657,7 +661,12 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
     .sort((a, b) => b.dmg - a.dmg);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.resultScroll}>
+    <ImageBackground source={VICTORY_BG} style={styles.screen} resizeMode="cover">
+      {/* Voile : léger en victoire (le décor doit rester lumineux),
+          nettement plus sombre et froid en défaite — ça évite d'avoir à
+          générer une seconde image juste pour l'ambiance. */}
+      <View style={[styles.resultDim, !isWin && styles.resultDimLose]} />
+      <ScrollView style={styles.resultScrollView} contentContainerStyle={styles.resultScroll}>
       <Text style={styles.resultEmoji}>{isWin ? '🏆' : '💀'}</Text>
       <Text style={[styles.resultTitle, { color: isWin ? COLORS.good : '#FF5252' }]}>
         {isWin ? 'Victoire !' : 'Défaite'}
@@ -710,7 +719,8 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
       <TouchableOpacity style={styles.resultBtn} onPress={onContinue}>
         <Text style={styles.resultBtnText}>Retour à la carte</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </ImageBackground>
   );
 }
 
@@ -848,6 +858,10 @@ const styles = StyleSheet.create({
   resultBtn: { backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 26, marginTop: 24, borderWidth: 1, borderColor: COLORS.border },
   resultBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
 
+  resultDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(20,10,0,0.18)' },
+  // Défaite : voile sombre et froid par-dessus le même décor doré.
+  resultDimLose: { backgroundColor: 'rgba(6,10,26,0.66)' },
+  resultScrollView: { flex: 1, backgroundColor: 'transparent' },
   resultScroll: { flexGrow: 1, alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 },
   recapCard: {
     width: '100%', maxWidth: 420, backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, marginTop: 18,
