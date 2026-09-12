@@ -940,15 +940,84 @@ pour repérer d'un coup d'œil les niveaux à refaire.
 Refonte visuelle en cours, assets générés par l'utilisateur via Gemini
 puis détourés ici. **Fait :** décor de fond, bannière de titre, bouton
 Combat, bouton retour partagé, 8 cadres de carte par élément, compteurs
-de monnaie épurés.
+de monnaie épurés, **icônes Griffes 🐾 et Diamants 💎**.
 
-**Reste à faire :**
-- Icône 💎 des Diamants (asset à venir) — remplacer l'emoji. Le **halo
-  bleu se fera EN CODE**, pas dans l'image : une lueur générée a des
-  bords flous qui se mélangent au magenta et se détourent mal.
-- Icône 🐾 des Griffes (asset à venir), même raisonnement.
+**Reste à faire :** rien d'identifié pour l'instant sur ce chantier.
 
-### Méthode de détourage — À RÉUTILISER
+### Icônes Griffes/Diamants — 3 méthodes essayées, 1 seule a marché
+
+Les deux icônes (griffe dorée sur médaillon, gemme sur cadre doré)
+arrivent sur fond magenta **avec un halo peint autour** (violet puis
+cyan pour la gemme, orangé pour la griffe) — contrairement aux cadres
+de carte du 12/09, ce halo n'est **pas juste un dégradé vers le
+magenta**, l'IA a peint un vrai anneau lumineux. Ça change tout : les
+deux méthodes de détourage déjà documentées dans ce fichier échouent
+toutes les deux dessus.
+
+1. ❌ **Remplissage depuis les bords, tolérance en chaîne** (méthode
+   existante, cadres de carte) : fuit entièrement à travers le dessin.
+   Ces icônes sont peintes à l'aérographe (ombrage doux, dégradés
+   continus jusqu'À L'INTÉRIEUR de l'objet), pas en aplats comme les
+   cadres — la chaîne de tolérance ne voit aucune vraie paroi et
+   engloutit la médaille entière (testé : ne restait que 53×53 px).
+2. ❌ **Test de couleur global (distance à la magenta)** : sépare bien
+   le fond, MAIS le halo peint (violet/orangé) est proche de la teinte
+   magenta et ressort en **frange semi-transparente colorée** une fois
+   posé sur un fond non-magenta — visible clairement sur fond sombre.
+   La décontamination (retirer la contribution magenta d'un pixel
+   translucide) ne corrige rien ici : ce n'est pas un mélange avec le
+   fond, c'est une couleur peinte à part entière.
+3. ✅ **Mur d'arêtes Canny** — la bonne méthode : détecter les contours
+   (`cv2.Canny`, dilatés de 2 px pour fermer les micro-trous), puis
+   remplir depuis les 4 coins en utilisant ces arêtes comme des MURS
+   que le remplissage ne peut pas franchir. Le contour dur du cadre
+   doré/métallique arrête le remplissage net, tout le halo peint (quel
+   que soit son ton) reste dehors avec le fond. Reboucher les trous
+   internes que la marche des arêtes peut créer
+   (`ndimage.binary_fill_holes`), garder la plus grande zone connexe
+   (filigrane Gemini toujours isolé), éroder ~1 px + lisser pour l'anti-
+   aliasing, décontaminer seulement le dernier pixel de bordure contre
+   la magenta.
+
+**À réutiliser en priorité pour tout futur asset à l'aérographe** (ombrage
+peint, pas un aplat) : commencer directement par la méthode 3, les
+méthodes 1 et 2 restent valables pour les aplats façon cadres de carte.
+
+### Le halo du compteur : pas dans l'image, mais pas des cercles CSS non plus
+
+Décision d'origine : « le halo se fera en code, pas dans l'image » —
+confirmée, mais la 1ère implémentation (2-3 `View` superposées, cercle
++ `opacity` + `transform: scale`) donnait des **anneaux concentriques
+visibles** (bandes nettes) au lieu d'une vraie lueur : React Native n'a
+aucune primitive de flou, superposer des ronds à opacité fixe ne le
+remplace pas.
+
+**Corrigé** : un dégradé radial est pré-rendu UNE FOIS en Python (vrai
+flou gaussien, `PIL.ImageFilter.GaussianBlur`) et exporté en PNG
+(`glow-gold.png` pour les Griffes, `glow-cyan.png` pour les Diamants,
+160×160). `CurrencyIcon` l'affiche en `Image` positionnée en absolu
+derrière l'icône, à ×2,6 sa taille. Coût d'exécution nul (pas de calcul
+au rendu), lueur lisse sur les deux plateformes.
+
+⚠️ Piège rencontré en générant ces 2 PNG : la 1ère version dessinait les
+cercles du plus PETIT (opaque) au plus GRAND (quasi transparent) —
+`ImageDraw` **remplace** les pixels au lieu de les mélanger, donc le
+grand cercle quasi-transparent dessiné EN DERNIER écrasait le centre
+opaque déjà tracé. Résultat : alpha à 0 partout, glow invisible. Corrigé
+en inversant l'ordre (grand+faible alpha d'abord, petit+alpha fort en
+dernier, chaque cercle plus petit que le précédent ne recouvre donc que
+son propre centre).
+
+### Fichiers ajoutés
+
+`mobile/assets/icons/diamond-icon.png`, `griffes-icon.png` (les icônes),
+`glow-gold.png`, `glow-cyan.png` (les halos pré-rendus). Tous les emojis
+🐾/💎 de `AdventureScreen.js` sont remplacés par ces images — compteur
+principal (3 emplacements), coûts de niveau/évolution, écran Runes,
+icône de recharge d'énergie. Seuls les 2 `Alert.alert` gardent l'emoji
+texte : une alerte native ne peut pas afficher d'image.
+
+### Méthode de détourage — À RÉUTILISER (aplats uniquement, voir ci-dessus pour l'aérographe)
 
 Les assets arrivent sur fond **magenta pur** (#FF00FF), demandé
 explicitement dans les prompts.
@@ -974,6 +1043,11 @@ poids chute d'un tiers sans perte visible.
 Intérieur VIDE · fond magenta pur uni · un seul objet centré · aucun
 texte (on l'écrit par-dessus en code) · objet PLEIN sans ajour · mention
 explicite « aucune signature, aucun filigrane, aucune étoile ».
+
+⚠️ **Insuffisant à lui seul contre le halo peint** (voir plus haut) :
+même avec cette consigne, l'IA a peint un anneau lumineux autour des 2
+dernières icônes. Prévoir la méthode 3 (mur d'arêtes) par défaut pour
+tout nouvel asset de ce type plutôt que d'espérer un rendu sans halo.
 
 ## Cadres de carte par élément (12/09)
 

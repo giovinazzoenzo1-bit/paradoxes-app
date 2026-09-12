@@ -18,6 +18,22 @@ import { cardFrameForElement, CARD_FRAME_BORDER_X, CARD_FRAME_BORDER_Y } from '.
 const EXPLORATION_BG = require('../../../assets/adventure/exploration-bg.jpg');
 const TITLE_BANNER = require('../../../assets/adventure/title-banner.png');
 const COMBAT_BTN = require('../../../assets/adventure/combat-btn.png');
+
+// Icônes des 2 monnaies de l'écran Exploration (12/09) — remplacent les
+// emojis 🐾/💎 partout dans cet écran. Détourées depuis un fond magenta :
+// le halo flou généré par Gemini a été retiré à la découpe (il se
+// confondait avec le fond et se détourait mal, voir CLICKER_ADVENTURE_
+// STATE.md) — le halo visible autour du compteur principal est fait EN
+// CODE via <CurrencyIcon>, pas dans l'image.
+const GRIFFES_ICON = require('../../../assets/icons/griffes-icon.png');
+const DIAMOND_ICON = require('../../../assets/icons/diamond-icon.png');
+
+// Halo derrière chaque icône — un dégradé radial PRÉ-RENDU (Gaussian
+// blur fait une fois, pas à l'exécution) plutôt que des cercles plats
+// superposés : 2-3 anneaux d'opacité fixe créent des bandes visibles au
+// lieu d'une lueur, aucune vraie primitive de flou n'existe en RN pur.
+const GLOW_GOLD = require('../../../assets/icons/glow-gold.png');
+const GLOW_CYAN = require('../../../assets/icons/glow-cyan.png');
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
@@ -510,7 +526,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <Text style={styles.titleBannerText}>EXPLORATION</Text>
         </ImageBackground>
         <View style={styles.headerRight}>
-          <CurrencyCounter icon="🐾" amount={griffes} onPlus={buyGriffesWithDiamonds} />
+          <CurrencyCounter currency="griffes" amount={griffes} onPlus={buyGriffesWithDiamonds} />
           <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
             <Image source={require('../../../assets/icons/rune-button.png')} style={styles.runesTopBtnImage} resizeMode="contain" />
           </TouchableOpacity>
@@ -630,7 +646,7 @@ function LevelUpCard({ creature, ownedLevel, griffes, onLevelUp }) {
         onPress={onLevelUp}
         disabled={!affordable}
       >
-        <Text style={styles.startBattleBtnText}>Monter au niveau {ownedLevel + 1} — {cost} 🐾 Griffes</Text>
+        <Text style={styles.startBattleBtnText}>Monter au niveau {ownedLevel + 1} — {cost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /> Griffes</Text>
       </TouchableOpacity>
     </View>
   );
@@ -654,7 +670,7 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
           onPress={onEvolve}
           disabled={griffes < cost}
         >
-          <Text style={styles.startBattleBtnText}>Évoluer — {cost} 🐾 Griffes</Text>
+          <Text style={styles.startBattleBtnText}>Évoluer — {cost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /> Griffes</Text>
         </TouchableOpacity>
       ) : (
         <Text style={[styles.speciesNote, { marginTop: 8 }]}>Atteins le niveau {nextLevelNeeded} pour débloquer ce palier.</Text>
@@ -815,7 +831,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
     <ThemedProfileBackground theme={theme}>
       <View style={styles.profileTopBar}>
         <BackButton onPress={onBack} />
-        <CurrencyCounter icon="🐾" amount={griffes} />
+        <CurrencyCounter currency="griffes" amount={griffes} />
       </View>
 
       <View style={styles.profileBody}>
@@ -861,7 +877,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
             {theme && (
               <Image source={theme.button} style={styles.mlMainBtnImg} resizeMode="stretch" />
             )}
-            <Text style={[styles.mlMainBtnText, theme && styles.mlMainBtnTextThemed]}>NIVEAU {owned.level + 1} · {levelCost} 🐾</Text>
+            <Text style={[styles.mlMainBtnText, theme && styles.mlMainBtnTextThemed]}>NIVEAU {owned.level + 1} · {levelCost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /></Text>
           </TouchableOpacity>
           </PulsingButton>
 
@@ -877,7 +893,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
               onPress={onEvolve}
               disabled={griffes < evoCost}
             >
-              <Text style={styles.mlEvoBtnText}>🌟 ÉVOLUER · {evoCost} 🐾</Text>
+              <Text style={styles.mlEvoBtnText}>🌟 ÉVOLUER · {evoCost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /></Text>
             </TouchableOpacity>
           ) : (
             <Text style={styles.mlSubNote}>Niveau {nextEvoLevel} pour le palier suivant</Text>
@@ -1098,15 +1114,51 @@ function ElementHelpOverlay({ onClose }) {
   );
 }
 
+// Icône de monnaie (griffe ou diamant) avec un halo — image de dégradé
+// radial pré-rendue (GLOW_GOLD/GLOW_CYAN), PAS le halo peint par Gemini
+// dans l'asset d'origine (il se détourait mal contre le magenta, voir
+// CLICKER_ADVENTURE_STATE.md § habillage Exploration) et PAS non plus des
+// cercles plats superposés en style (2-3 anneaux d'opacité fixe créent
+// des bandes visibles, aucune vraie primitive de flou n'existe en RN
+// pur). Couleur calée sur la teinte dominante de chaque icône : cyan
+// pour le diamant, or pour la griffe.
+const CURRENCY_ICONS = {
+  griffes: { source: GRIFFES_ICON, glow: GLOW_GOLD },
+  diamond: { source: DIAMOND_ICON, glow: GLOW_CYAN },
+};
+
+function CurrencyIcon({ kind, size = 22, haloed = true, style }) {
+  const def = CURRENCY_ICONS[kind] || CURRENCY_ICONS.griffes;
+  // Le halo déborde largement l'icône (×2,6) : c'est une lueur, elle
+  // doit se voir autour, pas juste la border du disque.
+  const glowSize = size * 2.6;
+  return (
+    <View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}>
+      {haloed && (
+        <Image
+          source={def.glow}
+          style={{
+            position: 'absolute', width: glowSize, height: glowSize,
+            left: (size - glowSize) / 2, top: (size - glowSize) / 2,
+            pointerEvents: 'none',
+          }}
+          resizeMode="contain"
+        />
+      )}
+      <Image source={def.source} style={{ width: size, height: size }} resizeMode="contain" />
+    </View>
+  );
+}
+
 // Compteur de monnaie : icône, montant, et « + » rouge.
 //
 // Le « + » n'est pas décoratif : il propose l'échange Diamants → Griffes
 // (250 pour 25 💎), seule façon d'en obtenir sur-le-champ. Sans
 // `onPlus`, le bouton n'est simplement pas rendu.
-function CurrencyCounter({ icon, amount, onPlus, style }) {
+function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
   return (
     <View style={[styles.counterRow, style]}>
-      <Text style={styles.counterIcon}>{icon}</Text>
+      <CurrencyIcon kind={currency} size={22} />
       <Text style={styles.counterValue} numberOfLines={1}>{amount}</Text>
       {onPlus && (
         <TouchableOpacity style={styles.counterPlus} onPress={onPlus} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -1220,7 +1272,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         <Text style={styles.title}>⚔️ Chapitres</Text>
       </View>
       <View style={styles.topStatsRow}>
-        <CurrencyCounter icon="🐾" amount={griffes} onPlus={onBuyGriffes} />
+        <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
       </View>
 
@@ -1365,16 +1417,16 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
       <StatusBar hidden />
       <View style={styles.header}>
         <BackButton onPress={onBack} />
-        <Text style={styles.title}>💎 Runes</Text>
+        <Text style={styles.title}><Image source={DIAMOND_ICON} style={styles.inlineCurrencyIconTitle} /> Runes</Text>
       </View>
-      <Text style={styles.griffesText}>🐾 {griffes} Griffes</Text>
+      <Text style={styles.griffesText}><Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /> {griffes} Griffes</Text>
 
       <TouchableOpacity
         style={[styles.startBattleBtn, griffes < RUNE_COST && styles.actionBtnDisabledAdv]}
         onPress={onBuyRune}
         disabled={griffes < RUNE_COST}
       >
-        <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} 🐾 Griffes</Text>
+        <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /> Griffes</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>
@@ -1593,7 +1645,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
               onPress={onBuyEnergy}
               disabled={diamonds < ENERGY_DIAMOND_COST}
             >
-              <Text style={styles.buyEnergyIcon}>💎</Text>
+              <Image source={DIAMOND_ICON} style={styles.buyEnergyIcon} resizeMode="contain" />
               <Text style={styles.buyEnergyCost}>{ENERGY_DIAMOND_COST}</Text>
             </TouchableOpacity>
           )}
@@ -1704,7 +1756,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(42,127,168,0.22)',
     borderWidth: 1.5, borderColor: '#7fdcff',
   },
-  buyEnergyIcon: { fontSize: 16 },
+  buyEnergyIcon: { width: 16, height: 16 },
   buyEnergyCost: { color: '#7fdcff', fontSize: 12, fontWeight: '900', marginTop: 1 },
   energyCostText: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 10, marginBottom: 4 },
   fighterPick: {
@@ -1762,7 +1814,10 @@ const styles = StyleSheet.create({
     paddingLeft: 8, paddingRight: 4, paddingVertical: 4, borderRadius: 16,
     backgroundColor: 'rgba(8,14,24,0.72)',
   },
-  counterIcon: { fontSize: 15 },
+  // Icônes 🐾/💎 remplacées par des images (12/09) — tailles calées sur
+  // le fontSize du texte qui les entoure, en `Image` inline dans un `Text`.
+  inlineCurrencyIcon: { width: 14, height: 14 },
+  inlineCurrencyIconTitle: { width: 18, height: 18 },
   counterValue: { color: '#fff', fontSize: 14, fontWeight: '900' },
   counterPlus: {
     width: 22, height: 22, borderRadius: 7,
