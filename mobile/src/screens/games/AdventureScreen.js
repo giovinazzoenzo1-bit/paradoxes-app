@@ -9,6 +9,12 @@ import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+
+// Décor d'Exploration (12/09) : mur de pierre gravé + carte au
+// parchemin. Remplace l'ancien fond de pierre uni. Le filigrane Gemini
+// en bas à droite a été reconstruit par symétrie depuis le bord gauche —
+// l'image est vierge.
+const EXPLORATION_BG = require('../../../assets/adventure/exploration-bg.jpg');
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
@@ -459,7 +465,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   }
 
   return (
-    <ImageBackground source={require('../../../assets/icons/adventure-stone-bg.jpg')} style={styles.screen} resizeMode="cover">
+    <ImageBackground source={EXPLORATION_BG} style={styles.screen} resizeMode="cover">
       {/* Parchemin détouré (fond transparent réel, pas un simple
           rectangle recadré) — rétréci de 20% sur demande explicite,
           posé sur le fond de pierre fourni par l'utilisateur juste
