@@ -14,7 +14,6 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CreatureArt from '../../components/CreatureArt';
-import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
 // Décor de combat fourni par l'utilisateur (30/08) — remplace le fond
@@ -166,20 +165,6 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   // désigne sa cible.
   const [lastExchange, setLastExchange] = useState(null);
   const [armedSkill, setArmedSkill] = useState(null);
-  // Rebond de la flèche de visée. Ne tourne QUE quand une attaque est
-  // armée : rien ne s'anime en fond le reste du temps.
-  const arrowBounce = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (!armedSkill) { arrowBounce.setValue(0); return undefined; }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(arrowBounce, { toValue: -9, duration: 380, useNativeDriver: true }),
-        Animated.timing(arrowBounce, { toValue: 0, duration: 380, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [armedSkill]);
   const armedSkillRef = useRef(null);
   armedSkillRef.current = armedSkill;
   const [tapCount, setTapCount] = useState(0);
@@ -617,16 +602,13 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         {/* Flèche de visée : n'apparaît QUE lorsqu'une attaque est
             armée — avant le choix, elle n'indique rien d'utile. Elle
             rebondit pour être repérable au premier coup d'œil. */}
-        {ring === 'target' && !fainted && armedSkill && (
-          <Animated.View style={{ transform: [{ translateY: arrowBounce }] }}>
-            <Ionicons name="arrow-down" size={34} color={elemColor || '#ffcf3f'} style={styles.targetArrow} />
-          </Animated.View>
-        )}
-        {/* Pastille d'affinité sur CHAQUE adversaire : avec une attaque
-            armée, taper un adversaire lance le coup — le joueur n'a donc
-            aucun moyen de comparer cible par cible sans cet indicateur. */}
-        {elemColor && !fainted && ring !== 'target' && (
-          <View style={[styles.elemDot, { backgroundColor: elemColor }]} />
+        {/* Pastille d'affinité sur CHAQUE adversaire, cible comprise.
+            La flèche a été retirée (12/09) : elle doublait l'information
+            et n'apparaissait que sur la cible, alors que le joueur doit
+            pouvoir COMPARER avant de frapper. La cible reste identifiée
+            par sa pastille agrandie. */}
+        {elemColor && !fainted && (
+          <View style={[styles.elemDot, ring === 'target' && styles.elemDotTarget, { backgroundColor: elemColor }]} />
         )}
         <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }]}>
           {/* `size={fs}` : l'illustration reprend exactement la taille
@@ -962,12 +944,11 @@ const styles = StyleSheet.create({
   spriteRing: { alignItems: 'center', justifyContent: 'center' },
   elemDot: {
     width: 12, height: 12, borderRadius: 6, marginBottom: 2,
+    
     borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.55)',
   },
-  targetArrow: {
-    marginBottom: -4,
-    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 5,
-  },
+  // Cible en cours : pastille agrandie et cerclée de blanc.
+  elemDotTarget: { width: 20, height: 20, borderRadius: 10, borderWidth: 2.5, borderColor: '#fff' },
 
   ringActive: { borderColor: COLORS.action, backgroundColor: 'rgba(245,197,66,0.15)' },
   ringTarget: { borderColor: '#FF5252', backgroundColor: 'rgba(255,82,82,0.15)' },

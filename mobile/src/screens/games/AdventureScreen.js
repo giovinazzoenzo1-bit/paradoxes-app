@@ -1392,8 +1392,8 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   return (
     <View style={styles.overlay}>
       <View style={styles.overlayPanel}>
-        <TouchableOpacity style={styles.overlayClose} onPress={onClose}>
-          <Text style={styles.overlayCloseText}>✕</Text>
+        <TouchableOpacity style={styles.overlayClose} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Text style={styles.overlayCloseText}>← Retour</Text>
         </TouchableOpacity>
         <Text style={styles.overlayTitle}>Choisir une rune</Text>
         {available.length === 0 ? (
@@ -1435,8 +1435,8 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
   return (
     <View style={styles.overlay}>
       <View style={styles.overlayPanel}>
-        <TouchableOpacity style={styles.overlayClose} onPress={onClose}>
-          <Text style={styles.overlayCloseText}>✕</Text>
+        <TouchableOpacity style={styles.overlayClose} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Text style={styles.overlayCloseText}>← Retour</Text>
         </TouchableOpacity>
         <Text style={styles.overlayTitle}>
           Chapitre {chapterForLevel(levelNumber)} · Niveau {levelIndexInChapter(levelNumber)}
@@ -1543,11 +1543,16 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', padding: 24,
   },
   overlayPanel: {
-    width: '100%', backgroundColor: COLORS.panel, borderRadius: 20, padding: 24, alignItems: 'center',
+    width: '100%', backgroundColor: COLORS.panel, borderRadius: 20, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 16, alignItems: 'center',
     borderWidth: 1, borderColor: COLORS.border,
   },
-  overlayClose: { position: 'absolute', top: 12, right: 14 },
-  overlayCloseText: { color: COLORS.muted, fontSize: 18, fontWeight: '900' },
+  overlayClose: {
+    position: 'absolute', top: 10, left: 12, zIndex: 5,
+    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14,
+    backgroundColor: 'rgba(10,20,32,0.85)',
+    borderWidth: 1.5, borderColor: COLORS.border,
+  },
+  overlayCloseText: { color: COLORS.text, fontSize: 13, fontWeight: '900' },
   overlayTitle: { color: COLORS.text, fontSize: 18, fontWeight: '900', marginTop: 10, textAlign: 'center' },
   overlaySubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 6, textAlign: 'center' },
 
