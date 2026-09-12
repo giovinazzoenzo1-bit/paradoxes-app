@@ -9,12 +9,15 @@ import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { cardFrameForElement, CARD_FRAME_BORDER_X, CARD_FRAME_BORDER_Y } from './cardFrames';
 
 // Décor d'Exploration (12/09) : mur de pierre gravé + carte au
 // parchemin. Remplace l'ancien fond de pierre uni. Le filigrane Gemini
 // en bas à droite a été reconstruit par symétrie depuis le bord gauche —
 // l'image est vierge.
 const EXPLORATION_BG = require('../../../assets/adventure/exploration-bg.jpg');
+const TITLE_BANNER = require('../../../assets/adventure/title-banner.png');
+const CURRENCY_PILL = require('../../../assets/adventure/currency-pill.png');
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
@@ -487,9 +490,11 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           de navigation. */}
       <View style={styles.headerLand}>
         <BackButton onPress={onBack} />
-        <Image source={require('../../../assets/icons/exploration-title.png')} style={styles.titleLandImage} resizeMode="contain" />
+        <ImageBackground source={TITLE_BANNER} style={styles.titleBanner} resizeMode="contain">
+          <Text style={styles.titleBannerText}>EXPLORATION</Text>
+        </ImageBackground>
         <View style={styles.headerRight}>
-          <ImageBackground source={require('../../../assets/icons/griffes-frame.png')} style={styles.griffesPill} resizeMode="stretch">
+          <ImageBackground source={CURRENCY_PILL} style={styles.griffesPill} resizeMode="stretch">
             <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
           </ImageBackground>
           <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
@@ -506,13 +511,25 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           const creature = id ? CREATURES.find((c) => c.id === id) : null;
           const own = id ? ownedMap[id] : null;
           const display = creature && own ? creature.stages[stageForLevel(own.level)] : null;
+          const cardFrame = creature ? cardFrameForElement(creature.element) : null;
           return (
             <View key={i} style={styles.creatureCellLand}>
               <TouchableOpacity
-                style={[styles.creatureSlotLand, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
+                style={[
+                  styles.creatureSlotLand,
+                  // Le cadre illustré remplace la bordure colorée : les
+                  // deux ensemble feraient double encadrement.
+                  creature && !cardFrame && { borderColor: RARITY_COLOR[creature.rarity] },
+                  cardFrame && styles.creatureSlotFramed,
+                ]}
                 onPress={() => (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i))}
                 activeOpacity={0.8}
               >
+                {/* Cadre posé PAR-DESSUS le contenu, en absolu : il
+                    décore sans jamais intercepter le tap de la carte. */}
+                {cardFrame && (
+                  <Image source={cardFrame} style={styles.creatureFrameImg} resizeMode="stretch" />
+                )}
                 {display ? (
                   <>
                     <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={64} emojiStyle={styles.creatureEmojiLand} />
@@ -787,7 +804,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
     <ThemedProfileBackground theme={theme}>
       <View style={styles.profileTopBar}>
         <BackButton onPress={onBack} />
-        <ImageBackground source={require('../../../assets/icons/griffes-frame.png')} style={styles.griffesPill} resizeMode="stretch">
+        <ImageBackground source={CURRENCY_PILL} style={styles.griffesPill} resizeMode="stretch">
           <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
         </ImageBackground>
       </View>
@@ -1175,7 +1192,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         <Text style={styles.title}>⚔️ Chapitres</Text>
       </View>
       <View style={styles.topStatsRow}>
-        <ImageBackground source={require('../../../assets/icons/griffes-frame.png')} style={styles.griffesPill} resizeMode="stretch">
+        <ImageBackground source={CURRENCY_PILL} style={styles.griffesPill} resizeMode="stretch">
           <Text style={styles.griffesPillText}>🐾 {griffes} Griffes</Text>
         </ImageBackground>
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
@@ -1705,9 +1722,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6,
   },
-  titleLandImage: { flex: 1, height: 44, marginHorizontal: 8 },
+  // Bannière de titre : le texte s'écrit DANS le parchemin, dont le
+  // centre a été demandé lisse à la génération pour cela.
+  titleBanner: { flex: 1, height: 52, marginHorizontal: 8, alignItems: 'center', justifyContent: 'center' },
+  titleBannerText: {
+    color: '#5a3d16', fontSize: 17, fontWeight: '900', letterSpacing: 2,
+  },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  // Fond/bordure retirés (cadre réel intégré, griffes-frame.png,
+  // Fond/bordure retirés (cadre réel intégré, currency-pill.png,
   // 320x120) — appliqué aussi dans ChapterMapScreen ("menu combat").
   // Largeur fixe (pas de %+aspectRatio combinés, cause confirmée d'un
   // bug Yoga ailleurs dans le projet, voir CLICKER_ADVENTURE_STATE.md).
@@ -1729,6 +1751,20 @@ const styles = StyleSheet.create({
     width: '100%', flex: 1, backgroundColor: COLORS.panel, borderRadius: 16,
     borderWidth: 2, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center',
     paddingVertical: 8,
+  },
+  // Avec un cadre illustré : plus de fond ni de bordure unie, et des
+  // marges calées sur la bordure MESURÉE du cadre (13% en largeur, 10%
+  // en hauteur). En pourcentage pour l'horizontal — c'est ce que RN sait
+  // résoudre — et en pixels pour le vertical (règle de survie n°13).
+  creatureSlotFramed: {
+    backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0,
+    paddingHorizontal: '14%', paddingVertical: 22,
+  },
+  creatureFrameImg: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    width: undefined, height: undefined,
+    // Décoratif : ne doit jamais voler le tap de la carte.
+    pointerEvents: 'none',
   },
   creatureEmojiLand: { fontSize: 46 },
   creatureNameLand: { color: COLORS.text, fontSize: 12, fontWeight: '800', marginTop: 4 },
