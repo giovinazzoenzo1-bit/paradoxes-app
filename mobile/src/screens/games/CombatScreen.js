@@ -156,6 +156,11 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const [selectedSkill, setSelectedSkill] = useState(null);
   // Détail d'une attaque, affiché sur appui long.
   const [skillInfo, setSkillInfo] = useState(null);
+  // Attaque choisie mais PAS encore lancée : elle attend que le joueur
+  // désigne sa cible.
+  const [armedSkill, setArmedSkill] = useState(null);
+  const armedSkillRef = useRef(null);
+  armedSkillRef.current = armedSkill;
   const [tapCount, setTapCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(TAP_CHALLENGE_TIME_LIMIT_SEC);
   const [switchMessage, setSwitchMessage] = useState(null);
@@ -308,8 +313,20 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     if (phase !== 'choosing') return;
     if (opponents[idx].hp <= 0) return;
     setTargetIndex(idx);
+    // Une attaque armée part sur la cible qu'on vient de désigner.
+    // `targetIndexRef` est mis à jour ICI, sans attendre le rendu :
+    // `launchArmedSkill` le lit tout de suite et taperait sinon
+    // l'ancienne cible.
+    if (armedSkillRef.current) {
+      targetIndexRef.current = idx;
+      launchArmedSkill();
+    }
   };
 
+  // Choisir une attaque l'ARME seulement : elle ne part plus tout de
+  // suite (demande du 12/09). L'enchaînement est désormais
+  // attaque -> cible -> défi de tap, ce qui laisse le temps de lire la
+  // description et de viser.
   const chooseSkill = (skill, isBasic) => {
     if (phase !== 'choosing') return;
     const cost = isBasic ? 0 : (skill.manaCost || 0);
@@ -317,9 +334,20 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     // c'est ce qui en fait un moment attendu plutôt qu'une attaque de plus.
     if (skill.special && activeFighter.mana < MANA_MAX) return;
     if (activeFighter.mana < cost) return;
+    setArmedSkill({ ...skill, isBasic });
+  };
+
+  // Lance réellement l'attaque armée, une fois la cible confirmée. Le
+  // mana n'est débité QU'ICI : armer puis changer d'avis ne doit rien
+  // coûter.
+  const launchArmedSkill = () => {
+    const skill = armedSkillRef.current;
+    if (!skill || phase !== 'choosing') return;
+    const cost = skill.isBasic ? 0 : (skill.manaCost || 0);
     setFighters((prev) => prev.map((f, i) => (i === activeIndex ? { ...f, mana: f.mana - cost } : f)));
-    selectedSkillRef.current = { ...skill, isBasic };
-    setSelectedSkill({ ...skill, isBasic });
+    selectedSkillRef.current = skill;
+    setSelectedSkill(skill);
+    setArmedSkill(null);
     tapCountRef.current = 0;
     challengeDoneRef.current = false;
     challengeStartRef.current = Date.now();
@@ -668,7 +696,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           des boutons — jamais une fenêtre bloquante : le combat ne doit
           pas s'interrompre pour lire une description. */}
       {skillInfo && (
-        <View style={styles.skillInfoCard}>
+        // Calé au-dessus du BOUTON pressé : les boutons font 86dp avec
+        // 8dp d'écart et sont alignés à droite, donc le décalage depuis
+        // le bord droit se déduit du rang du bouton.
+        <View style={[styles.skillInfoCard, { right: 10 + (skillInfo.fromRight || 0) * 94 }]}>
           <Text style={styles.skillInfoName}>{skillInfo.name}</Text>
           <Text style={styles.skillInfoLine}>
             {skillInfo.damage} dégâts{skillInfo.aoe ? ' · touche TOUS les ennemis' : ''}
@@ -680,6 +711,11 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
               ? 'Attaque de base · gratuite'
               : `Coûte ${skillInfo.manaCost}💧`}
           </Text>
+          {armedSkill && armedSkill.id === skillInfo.id && (
+            <Text style={styles.skillInfoTarget}>
+              {skillInfo.aoe ? '👉 Tape un adversaire pour frapper TOUT le groupe' : '👉 Tape un adversaire pour attaquer'}
+            </Text>
+          )}
         </View>
       )}
 
@@ -692,7 +728,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
               // pleine : afficher un bouton grisé qu'on ne peut pas
               // utiliser encombre l'écran sans rien apprendre.
               .filter((sk) => !sk.special || activeFighter.mana >= MANA_MAX)
-              .map((skill) => {
+              .map((skill, idx, arr) => {
               const cost = skill.manaCost || 0;
               // Le spécial exige la jauge PLEINE, pas seulement son coût.
               const canAfford = skill.special
@@ -701,14 +737,14 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
               return (
                 <TouchableOpacity
                   key={skill.id}
-                  style={[styles.skillBtn, skill.special && styles.skillBtnSpecial, !canAfford && styles.skillBtnDisabled]}
+                  style={[styles.skillBtn, skill.special && styles.skillBtnSpecial, armedSkill && armedSkill.id === skill.id && styles.skillBtnArmed, !canAfford && styles.skillBtnDisabled]}
                   // Un appui simple SÉLECTIONNE l'attaque ; un appui long
                   // affiche seulement son détail. Sans cette séparation,
                   // consulter une attaque reviendrait à la lancer.
                   // Appui simple : sélectionne ET affiche le détail. Il
                   // était auparavant sur appui LONG, que personne ne
                   // découvre — l'information n'était donc jamais vue.
-                  onPress={() => { setSkillInfo(skill); chooseSkill(skill, false); }}
+                  onPress={() => { setSkillInfo({ ...skill, fromRight: arr.length - 1 - idx }); chooseSkill(skill, false); }}
                   disabled={!canAfford}
                 >
                   <Text style={styles.skillBtnName} numberOfLines={2}>{skill.name}</Text>
@@ -921,6 +957,9 @@ const styles = StyleSheet.create({
   // Coup spécial : liseré doré pour qu'il se distingue au premier coup
   // d'œil des attaques ordinaires.
   skillBtnSpecial: { borderColor: '#f5c542', borderWidth: 2, backgroundColor: 'rgba(245,197,66,0.16)' },
+  // Attaque ARMÉE : liseré vert vif, pour voir d'un coup d'œil laquelle
+  // partira au prochain tap sur un adversaire.
+  skillBtnArmed: { borderColor: '#7fffb0', borderWidth: 2.5, backgroundColor: 'rgba(127,255,176,0.14)' },
 
   skillInfoCard: {
     position: 'absolute', right: 10, bottom: 108, zIndex: 12,
@@ -930,6 +969,7 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   skillInfoName: { color: '#ffd76a', fontSize: 15, fontWeight: '900', marginBottom: 5 },
+  skillInfoTarget: { color: '#7fffb0', fontSize: 11, fontWeight: '800', marginTop: 5 },
   skillInfoLine: { color: '#e6eef7', fontSize: 12, fontWeight: '700', marginTop: 2 },
 
   skillBtnDisabled: { borderColor: COLORS.border, opacity: 0.4 },
