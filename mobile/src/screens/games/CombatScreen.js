@@ -28,6 +28,8 @@ const BG_IMG = require('../../../assets/combat/battlefield.jpg');
 // aussi en défaite, mais assombri par un voile (voir `resultDim`) —
 // une image de défaite séparée n'existe pas encore.
 const VICTORY_BG = require('../../../assets/combat/victory.jpg');
+const VICTORY_BANNER = require('../../../assets/combat/victory-banner.png');
+const DEFEAT_BANNER = require('../../../assets/combat/defeat-banner.png');
 import { COLORS } from './clickerTheme';
 import { stageForLevel, MANA_MAX, MANA_PER_TURN } from '../../games/clicker/clickerLogic';
 import {
@@ -702,10 +704,16 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
           générer une seconde image juste pour l'ambiance. */}
       <View style={[styles.resultDim, !isWin && styles.resultDimLose]} />
       <ScrollView style={styles.resultScrollView} contentContainerStyle={styles.resultScroll}>
-      <Text style={styles.resultEmoji}>{isWin ? '🏆' : '💀'}</Text>
-      <Text style={[styles.resultTitle, { color: isWin ? COLORS.good : '#FF5252' }]}>
-        {isWin ? 'Victoire !' : 'Défaite'}
-      </Text>
+      {/* Le titre est écrit DANS le bandeau : la zone centrale a été
+          demandée lisse à la génération, précisément pour ça. */}
+      <ImageBackground
+        source={isWin ? VICTORY_BANNER : DEFEAT_BANNER}
+        style={styles.resultBanner}
+        imageStyle={styles.resultBannerImg}
+        resizeMode="contain"
+      >
+        <Text style={styles.resultBannerText}>{isWin ? 'VICTOIRE !' : 'DÉFAITE'}</Text>
+      </ImageBackground>
       {isWin && <Text style={styles.resultReward}>+{reward} 🐾 Griffes</Text>}
 
       {/* Récapitulatif du combat (demande explicite) — mêmes chiffres
@@ -886,8 +894,17 @@ const styles = StyleSheet.create({
   rechargeBtnText: { fontSize: 16 },
   rechargeBtnLabel: { color: COLORS.neonCyan, fontSize: 8, fontWeight: '800', marginTop: 2 },
 
-  resultEmoji: { fontSize: 70 },
-  resultTitle: { fontSize: 24, fontWeight: '900', marginTop: 8 },
+  // Ratio du bandeau conservé (1000x180) : `aspectRatio` plutôt qu'une
+  // hauteur fixe, pour qu'il ne se déforme sur aucun écran.
+  resultBanner: {
+    width: '86%', maxWidth: 460, aspectRatio: 1000 / 180,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  resultBannerImg: { resizeMode: 'contain' },
+  resultBannerText: {
+    color: '#fff', fontSize: 26, fontWeight: '900', letterSpacing: 1.5,
+    textShadowColor: 'rgba(0,0,0,0.75)', textShadowRadius: 5,
+  },
   resultReward: { color: COLORS.action, fontSize: 15, fontWeight: '800', marginTop: 8 },
   resultSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
   resultBtn: { backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 26, marginTop: 24, borderWidth: 1, borderColor: COLORS.border },
