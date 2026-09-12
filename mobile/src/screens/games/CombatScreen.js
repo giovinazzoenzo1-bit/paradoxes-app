@@ -87,17 +87,21 @@ function FloatingDamage({ amount, color }) {
 // 3e derrière en haut (plus petit, atténué = profondeur). Côté adverse,
 // miroir : 1er au centre-droite (grand), 2e en haut à droite (petit,
 // loin), 3e en bas à droite.
+// Remontés pour la même raison : la barre de vie du combattant de
+// devant arrivait au ras des boutons.
 const PLAYER_SLOTS = [
-  { x: 0.20, y: 0.56, size: 1.0 },
-  { x: 0.36, y: 0.46, size: 0.78 },
-  { x: 0.23, y: 0.26, size: 0.62 },
+  { x: 0.20, y: 0.46, size: 1.0 },
+  { x: 0.36, y: 0.38, size: 0.78 },
+  { x: 0.23, y: 0.20, size: 0.62 },
 ];
 // Adversaires décalés vers la droite (11/09) : ils empiétaient sur le
 // centre du terrain, où passe le sentier du décor.
+// Remontés le 12/09 : avec les boutons d'attaque en carrés de 86dp en
+// bas de l'écran, les emplacements bas (y 0,60) passaient derrière eux.
 const OPPONENT_SLOTS = [
-  { x: 0.70, y: 0.48, size: 1.0 },
-  { x: 0.88, y: 0.26, size: 0.66 },
-  { x: 0.89, y: 0.60, size: 0.82 },
+  { x: 0.70, y: 0.40, size: 1.0 },
+  { x: 0.88, y: 0.20, size: 0.66 },
+  { x: 0.89, y: 0.50, size: 0.82 },
 ];
 const SPRITE_BASE = 74; // taille de l'emoji du sprite "devant" (size 1.0)
 
@@ -173,6 +177,19 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const firstStrikeHandledRef = useRef(false);
 
   const punchScale = useRef(new Animated.Value(1)).current;
+  // Élan d'attaque : le combattant actif se jette vers l'adversaire puis
+  // revient. Valeur partagée par les deux camps — un seul sprite bouge à
+  // la fois, celui dont c'est le tour.
+  const lungeAnim = useRef(new Animated.Value(0)).current;
+  const [lungeSide, setLungeSide] = useState(null); // 'player' | 'opponent'
+  const playLunge = (side) => {
+    setLungeSide(side);
+    lungeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(lungeAnim, { toValue: 1, duration: 130, useNativeDriver: true }),
+      Animated.timing(lungeAnim, { toValue: 0, duration: 190, useNativeDriver: true }),
+    ]).start(() => setLungeSide(null));
+  };
 
   // Chiffres de dégâts flottants — purement décoratifs (voir
   // FloatingDamage plus haut), `roundKey` change à chaque tour pour les
@@ -197,6 +214,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     // passer par setOpponents aurait été asynchrone, et il aurait choisi
     // avec la valeur du tour précédent.
     const oppWithMana = { ...opp, mana: Math.min(MANA_MAX, opp.mana + MANA_PER_TURN) };
+    playLunge('opponent');
     const oppSkill = pickOpponentSkill(oppWithMana);
     const oppDamage = oppSkill.isBasic
       ? oppSkill.damage
@@ -326,6 +344,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const finishChallenge = (completed) => {
     if (challengeDoneRef.current) return;
     challengeDoneRef.current = true;
+    playLunge('player');
     const elapsedSec = (Date.now() - challengeStartRef.current) / 1000;
     const skill = selectedSkillRef.current;
     const curIdx = activeIndexRef.current;
@@ -457,7 +476,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   // devant (slot 0), les autres remplissent les slots 1 et 2.
   const playerOrder = [activeIndex, ...fighters.map((_, i) => i).filter((i) => i !== activeIndex)];
 
-  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage }) => {
+  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -468,7 +487,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         activeOpacity={onPress ? 0.8 : 1}
         onPress={onPress}
         disabled={disabled}
-        style={[styles.sprite, { left, top, width: boxW, opacity: fainted ? 0.35 : slot.size < 0.7 ? 0.85 : 1 }]}
+        style={[styles.sprite, { left, top, width: boxW, opacity: fainted ? 0.35 : slot.size < 0.7 ? 0.85 : 1 },
+          // Élan vers l'adversaire. `zIndex` relevé pendant le
+          // mouvement pour que l'attaquant passe DEVANT sa cible.
+          lunging && { zIndex: 20 }]}
       >
         {floatDamage != null && (
           <View style={styles.floatingDamageWrap}>
@@ -482,13 +504,22 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           {/* `size={fs}` : l'illustration reprend exactement la taille
               calculee pour l'emoji, donc la mise en page du terrain
               (anneaux, barres de vie, positions) reste identique. */}
-          <CreatureArt
-            creatureId={creatureId}
-            stageIndex={stageIndex}
-            emoji={emoji}
-            size={fs}
-            emojiStyle={{ fontSize: fs, lineHeight: fs + 12 }}
-          />
+          <Animated.View
+            style={lunging ? {
+              transform: [
+                { translateX: lungeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, lungeDir * Math.round(fs * 0.55)] }) },
+                { scale: lungeAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) },
+              ],
+            } : null}
+          >
+            <CreatureArt
+              creatureId={creatureId}
+              stageIndex={stageIndex}
+              emoji={emoji}
+              size={fs}
+              emojiStyle={{ fontSize: fs, lineHeight: fs + 12 }}
+            />
+          </Animated.View>
         </View>
         <Text style={[styles.spriteName, { fontSize: Math.max(9, Math.round(12 * slot.size)) }]} numberOfLines={1}>{name}</Text>
         <View style={[styles.spriteHpTrack, { width: Math.round(90 * slot.size) }]}>
@@ -530,6 +561,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           hp: f.hp, hpMax: f.stats.hp,
           mana: fi === activeIndex ? f.mana : null, manaMax: MANA_MAX,
           fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
+          lunging: lungeSide === 'player' && fi === activeIndex, lungeDir: 1,
           floatDamage: fi === activeIndex ? playerDamageFloat : null,
         });
       })}
@@ -545,6 +577,9 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           emoji: d.emoji, name: d.name,
           hp: o.hp, hpMax: o.stats.hp, fainted,
           ring: i === targetIndex && !fainted ? 'target' : null,
+          // L'adversaire actif est celui du slot de devant : c'est lui
+          // qui riposte. Il s'élance vers la GAUCHE (-1).
+          lunging: lungeSide === 'opponent' && i === 0, lungeDir: -1,
           onPress: () => chooseTarget(i), disabled: fainted || phase !== 'choosing', hpColor: '#FF5252',
           floatDamage: i === targetIndex ? opponentDamageFloat : null,
         });
