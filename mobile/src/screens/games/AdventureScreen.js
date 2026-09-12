@@ -1259,10 +1259,14 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
       {/* Recharge d'énergie payée en Diamants. Le débit est délégué au
           Clicker (qui détient la monnaie) ; ici on ne fait que remplir
           la jauge si le paiement a réussi. */}
-      {/* Bouton d'aide, en bas à gauche (demande du 12/09). */}
+      {/* Bouton d'aide, en bas à gauche. Masqué dès qu'un niveau est
+          ouvert : il se superposait au panneau de préparation, où il
+          n'a rien à faire. */}
+      {!levelPreview && (
       <TouchableOpacity style={styles.elemHelpBtn} onPress={() => setElemHelpOpen(true)}>
         <Text style={styles.elemHelpBtnText}>🔥 Éléments</Text>
       </TouchableOpacity>
+      )}
 
       {elemHelpOpen && <ElementHelpOverlay onClose={() => setElemHelpOpen(false)} />}
 

@@ -568,7 +568,6 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         outcome={outcome}
         levelNumber={levelNumber}
         battleStats={battleStats}
-        fighters={fighters}
         opponentCount={opponents.length}
         onContinue={() => onFinish(outcome, false, starsForBattle(battleStats, opponents.length))}
         onNextLevel={() => onFinish(outcome, true, starsForBattle(battleStats, opponents.length))}
@@ -832,20 +831,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   );
 }
 
-function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, opponentCount, onContinue, onNextLevel }) {
+function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel }) {
   const isWin = outcome === 'win';
   const stars = isWin ? starsForBattle(battleStats, opponentCount) : 0;
   const reward = isWin ? griffesReward(levelNumber) : 0;
-
-  // Répartition des dégâts par créature, triée par contribution — vide
-  // si un seul combattant a fait tout le combat (pas la peine d'un
-  // classement à un seul élément).
-  const breakdown = Object.entries(battleStats.perFighterDamage)
-    .map(([creatureId, dmg]) => {
-      const fighter = fighters.find((f) => f.creature.id === creatureId);
-      return { name: fighter ? fighter.creature.stages[0].name : creatureId, emoji: fighter ? fighter.creature.stages[0].emoji : '❓', dmg };
-    })
-    .sort((a, b) => b.dmg - a.dmg);
 
   return (
     <ImageBackground source={VICTORY_BG} style={styles.screen} resizeMode="cover">
@@ -903,18 +892,6 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, oppon
           </View>
         </View>
 
-        {breakdown.length > 1 && (
-          <View style={styles.recapBreakdownWrap}>
-            {/* Limité à 3 lignes : au-delà, le cadre repoussait les
-                boutons hors de l'écran. */}
-            {breakdown.slice(0, 3).map((b) => (
-              <View key={b.name} style={styles.recapBreakdownRow}>
-                <Text style={styles.recapBreakdownName} numberOfLines={1}>{b.emoji} {b.name}</Text>
-                <Text style={styles.recapBreakdownValue}>{b.dmg}</Text>
-              </View>
-            ))}
-          </View>
-        )}
       </ImageBackground>
 
         <View style={styles.resultBtnCol}>
@@ -1090,7 +1067,6 @@ const styles = StyleSheet.create({
   resultSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
 
   resultBtnNext: { backgroundColor: COLORS.good },
-  recapBreakdownWrap: { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(120,85,35,0.35)', paddingTop: 6 },
   resultBtn: { alignItems: 'center', backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.border },
   resultBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
 
@@ -1135,7 +1111,4 @@ const styles = StyleSheet.create({
   recapStat: { alignItems: 'center', flex: 1, minWidth: 0 },
   recapStatValue: { color: '#3d2609', fontSize: 17, fontWeight: '900' },
   recapStatLabel: { color: '#7a5a2e', fontSize: 9, fontWeight: '700', marginTop: 2, textAlign: 'center' },
-  recapBreakdownRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  recapBreakdownName: { color: '#4a2f10', fontSize: 12, fontWeight: '700' },
-  recapBreakdownValue: { color: '#8a5a12', fontSize: 12, fontWeight: '800' },
 });
