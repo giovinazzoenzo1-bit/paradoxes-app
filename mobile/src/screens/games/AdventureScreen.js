@@ -138,6 +138,46 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // ensemble, ici comme ailleurs.
   const { width: screenWidth } = useWindowDimensions();
 
+  // Hauteur RÉELLE de la rangée de cartes, mesurée plutôt que devinée :
+  // elle dépend de l'en-tête, de la barre du bas et des encoches, qui
+  // varient d'un téléphone à l'autre. Deviner une constante ici, ce
+  // serait refaire le bug de la règle 8.
+  const [deckRowH, setDeckRowH] = useState(0);
+  // Taille réelle du fond, pour savoir OÙ tombe le parchemin à l'écran.
+  const [bgSize, setBgSize] = useState({ w: 0, h: 0 });
+
+  // Emprise du parchemin MESURÉE sur l'image (colonnes claires) :
+  // 19,1% à 80,8% de sa largeur. Les cartes doivent tenir là-dedans, pas
+  // sur toute la largeur de l'écran — c'était le vrai défaut du 12/09,
+  // les cartes des bords se posaient sur la pierre.
+  const BG_RATIO = 2018 / 893;
+  const PARCH_L = 0.191;
+  const PARCH_R = 0.808;
+  let parchInsetL = 12;
+  let parchInsetR = 12;
+  if (bgSize.w > 0 && bgSize.h > 0) {
+    // `resizeMode="cover"` : l'image est agrandie pour couvrir puis
+    // CENTRÉE, donc une fraction de l'image ne vaut pas une fraction de
+    // l'écran. On refait le calcul au lieu de le supposer.
+    const renderedW = Math.max(bgSize.w, bgSize.h * BG_RATIO);
+    const offsetX = (bgSize.w - renderedW) / 2;
+    parchInsetL = Math.max(0, offsetX + PARCH_L * renderedW - 14);
+    parchInsetR = Math.max(0, bgSize.w - (offsetX + PARCH_R * renderedW) - 14);
+  }
+
+  // Ratio réel des cadres d'élément (420x~560) : les cartes doivent le
+  // respecter, sinon `resizeMode="stretch"` déforme le cadre. C'était la
+  // cause des « cadres trop grands » signalés le 12/09 — la carte
+  // occupait toute la place (width:'100%' + flex:1), soit un ratio ~1,0,
+  // et le cadre portrait était étiré en largeur jusqu'à déborder.
+  const CARD_RATIO = 0.75;
+  const rowInnerW = bgSize.w > 0 ? Math.max(0, bgSize.w - 28 - parchInsetL - parchInsetR) : 0;
+  const cardMaxW = rowInnerW > 0 ? (rowInnerW - 48) / 3 : 0; // 48 = respiration entre/autour des cartes
+  const cardMaxH = deckRowH > 0 ? deckRowH - 24 : 0; // 24 = bouton « Changer »
+  const CARD_H = cardMaxH > 0 && cardMaxW > 0 ? Math.min(cardMaxH, cardMaxW / CARD_RATIO) : 0;
+  const CARD_W = CARD_H * CARD_RATIO;
+  const CARD_ART = Math.round(Math.min(CARD_W * 0.62, CARD_H * 0.46));
+
   // Tout le mode Aventure se joue en PAYSAGE. L'appli entière est
   // déclarée en portrait dans app.json ; on bascule donc à l'entrée et
   // on REMET le portrait au démontage.
@@ -514,7 +554,12 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   }
 
   return (
-    <ImageBackground source={EXPLORATION_BG} style={styles.screen} resizeMode="cover">
+    <ImageBackground
+      source={EXPLORATION_BG}
+      style={styles.screen}
+      resizeMode="cover"
+      onLayout={(e) => setBgSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+    >
       {/* En-tête paysage : retour à gauche, Griffes au centre, accès aux
           Runes en HAUT À DROITE (même icône qu'avant, seulement
           déplacée). L'ancienne barre du bas disparaît : en paysage la
@@ -541,7 +586,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
       {/* Les 3 créatures du deck, côte à côte et occupant toute la
           largeur. C'est le MÊME deck que celui du clicker — une seule
           source de vérité, pas de sélection séparée. */}
-      <View style={styles.creatureRowLand}>
+      <View
+        style={[styles.creatureRowLand, { paddingLeft: parchInsetL, paddingRight: parchInsetR }]}
+        onLayout={(e) => setDeckRowH(e.nativeEvent.layout.height)}
+      >
         {deck.map((id, i) => {
           const creature = id ? CREATURES.find((c) => c.id === id) : null;
           const own = id ? ownedMap[id] : null;
@@ -552,10 +600,21 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
               <TouchableOpacity
                 style={[
                   styles.creatureSlotLand,
+                  // Taille FIXE en portrait (aucun pourcentage, aucun
+                  // aspectRatio : voir le bug Yoga en tête de fichier).
+                  CARD_H > 0 && { width: CARD_W, height: CARD_H },
                   // Le cadre illustré remplace la bordure colorée : les
                   // deux ensemble feraient double encadrement.
                   creature && !cardFrame && { borderColor: RARITY_COLOR[creature.rarity] },
                   cardFrame && styles.creatureSlotFramed,
+                  // Marges calées sur la bordure MESURÉE du cadre
+                  // (13% en largeur, 10% en hauteur), en pixels — une
+                  // marge en % se résoudrait sur la largeur même en
+                  // vertical (règle 13).
+                  cardFrame && CARD_H > 0 && {
+                    paddingHorizontal: Math.round(CARD_W * 0.13),
+                    paddingVertical: Math.round(CARD_H * 0.10),
+                  },
                 ]}
                 onPress={() => (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i))}
                 activeOpacity={0.8}
@@ -567,9 +626,9 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
                 )}
                 {display ? (
                   <>
-                    {/* Agrandie de 64 à 104 : la carte est désormais cadrée,
-                        la créature doit la remplir. */}
-                    <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={104} emojiStyle={styles.creatureEmojiLand} />
+                    {/* Taille de l'illustration dérivée de la carte, pour
+                        qu'elle la remplisse quelle que soit la place. */}
+                    <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={CARD_ART || 84} emojiStyle={styles.creatureEmojiLand} />
                     <Text style={styles.creatureNameLand} numberOfLines={1}>{display.name}</Text>
                     {/* Rareté et niveau retirés : le cadre porte déjà
                         l'élément, et la fiche détaillée donne le reste. */}
@@ -1842,20 +1901,22 @@ const styles = StyleSheet.create({
   runesTopBtnImage: { width: 38, height: 38 },
 
   // Les 3 créatures occupent toute la largeur, à parts égales.
-  creatureRowLand: { flexDirection: 'row', paddingHorizontal: 12, gap: 10, flex: 1 },
-  creatureCellLand: { flex: 1, alignItems: 'center' },
+  // Rangée centrée : les cartes ont désormais une taille fixe en
+  // portrait, elles ne remplissent plus la largeur. `space-evenly` les
+  // répartit dans le parchemin au lieu de les coller à gauche.
+  creatureRowLand: { flexDirection: 'row', gap: 12, flex: 1, alignItems: 'center', justifyContent: 'space-evenly' },
+  creatureCellLand: { alignItems: 'center' },
   creatureSlotLand: {
-    width: '100%', flex: 1, backgroundColor: COLORS.panel, borderRadius: 16,
+    backgroundColor: COLORS.panel, borderRadius: 16,
     borderWidth: 2, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center',
     paddingVertical: 8,
   },
-  // Avec un cadre illustré : plus de fond ni de bordure unie, et des
-  // marges calées sur la bordure MESURÉE du cadre (13% en largeur, 10%
-  // en hauteur). En pourcentage pour l'horizontal — c'est ce que RN sait
-  // résoudre — et en pixels pour le vertical (règle de survie n°13).
+  // Avec un cadre illustré : plus de fond ni de bordure unie. Les marges
+  // sont posées à l'appel, en pixels dérivés de la taille réelle de la
+  // carte (voir le rendu) — pas ici, où l'on ne connaît pas ses
+  // dimensions.
   creatureSlotFramed: {
     backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0,
-    paddingHorizontal: '14%', paddingVertical: 22,
   },
   creatureFrameImg: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
