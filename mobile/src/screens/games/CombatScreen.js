@@ -20,7 +20,10 @@ import { StatusBar } from 'expo-status-bar';
 // placeholder en formes. Élargi au ratio 2400x1080 par miroir flouté sur
 // les côtés pour éviter tout rognage vertical (la lune et le premier plan
 // restent visibles quel que soit l'écran), exporté en JPEG (512 Ko).
-const BG_IMG = require('../../../assets/combat/background.jpg');
+// Décor de champ de bataille (11/09). Remplace l'ancien fond : celui-ci
+// est dessiné en légère plongée, avec une zone centrale dégagée, donc
+// les créatures se posent dessus au lieu de flotter sur une image plate.
+const BG_IMG = require('../../../assets/combat/battlefield.jpg');
 import { COLORS } from './clickerTheme';
 import { stageForLevel, MANA_MAX, MANA_PER_TURN } from '../../games/clicker/clickerLogic';
 import {
@@ -702,9 +705,12 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0a0820' },
+  screen: { flex: 1, backgroundColor: '#7ec8f0' },
 
-  bgDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,4,20,0.34)' },
+  // Voile très léger : le décor de prairie est clair, l'ancien voile
+  // (calé sur un fond violet uni) l'aurait éteint. Juste assez pour que
+  // le texte blanc des barres reste lisible.
+  bgDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,10,20,0.12)' },
 
   closeBtn: {
     position: 'absolute', zIndex: 30, width: 34, height: 34, borderRadius: 17,
