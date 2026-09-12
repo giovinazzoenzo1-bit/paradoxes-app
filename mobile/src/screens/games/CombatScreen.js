@@ -744,55 +744,59 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
           </View>
         )}
         <Text style={styles.recapTitle}>📊 Récapitulatif</Text>
+        {/* Les 5 chiffres sur UNE rangée : en deux rangées, les boutons
+            passaient sous le bord de l'écran (signalé le 12/09). */}
         <View style={styles.recapRow}>
           <View style={styles.recapStat}>
             <Text style={styles.recapStatValue}>{battleStats.totalDamageDealt}</Text>
-            <Text style={styles.recapStatLabel}>Dégâts infligés</Text>
+            <Text style={styles.recapStatLabel}>Infligés</Text>
           </View>
           <View style={styles.recapStat}>
             <Text style={[styles.recapStatValue, { color: '#FF5252' }]}>{battleStats.totalDamageTaken}</Text>
-            <Text style={styles.recapStatLabel}>Dégâts reçus</Text>
+            <Text style={styles.recapStatLabel}>Reçus</Text>
           </View>
           <View style={styles.recapStat}>
             <Text style={styles.recapStatValue}>{battleStats.rounds}</Text>
-            <Text style={styles.recapStatLabel}>Tours joués</Text>
+            <Text style={styles.recapStatLabel}>Tours</Text>
           </View>
-        </View>
-        <View style={styles.recapRow}>
           <View style={styles.recapStat}>
             <Text style={[styles.recapStatValue, { color: COLORS.good }]}>{battleStats.opponentsDefeated}</Text>
-            <Text style={styles.recapStatLabel}>Adversaires vaincus</Text>
+            <Text style={styles.recapStatLabel}>Vaincus</Text>
           </View>
           <View style={styles.recapStat}>
             <Text style={[styles.recapStatValue, { color: COLORS.action }]}>{battleStats.fightersFainted}</Text>
-            <Text style={styles.recapStatLabel}>Tes créatures K.O.</Text>
+            <Text style={styles.recapStatLabel}>K.O.</Text>
           </View>
         </View>
 
         {breakdown.length > 1 && (
-          <>
-            <Text style={styles.recapSubTitle}>Dégâts par créature</Text>
-            {breakdown.map((b) => (
+          <View style={styles.recapBreakdownWrap}>
+            {/* Limité à 3 lignes : au-delà, le cadre repoussait les
+                boutons hors de l'écran. */}
+            {breakdown.slice(0, 3).map((b) => (
               <View key={b.name} style={styles.recapBreakdownRow}>
-                <Text style={styles.recapBreakdownName}>{b.emoji} {b.name}</Text>
-                <Text style={styles.recapBreakdownValue}>{b.dmg} dégâts</Text>
+                <Text style={styles.recapBreakdownName} numberOfLines={1}>{b.emoji} {b.name}</Text>
+                <Text style={styles.recapBreakdownValue}>{b.dmg}</Text>
               </View>
             ))}
-          </>
+          </View>
         )}
       </View>
 
       {!isWin && <Text style={styles.resultSubtitle}>Réessaie quand tu veux — rien n'est perdu.</Text>}
-      {/* Enchaîner directement évite de repasser par la carte et de la
-          faire défiler à chaque niveau. */}
-      {isWin && (
-        <TouchableOpacity style={[styles.resultBtn, styles.resultBtnNext]} onPress={onNextLevel}>
-          <Text style={styles.resultBtnText}>⚔️ Niveau suivant</Text>
+
+      {/* Boutons CÔTE À CÔTE : enchaîner ou revenir sont deux sorties de
+          même niveau, les empiler faisait descendre la seconde. */}
+      <View style={styles.resultBtnRow}>
+        {isWin && (
+          <TouchableOpacity style={[styles.resultBtn, styles.resultBtnNext]} onPress={onNextLevel}>
+            <Text style={styles.resultBtnText}>⚔️ Niveau suivant</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={styles.resultBtn} onPress={onContinue}>
+          <Text style={styles.resultBtnText}>Retour à la carte</Text>
         </TouchableOpacity>
-      )}
-      <TouchableOpacity style={styles.resultBtn} onPress={onContinue}>
-        <Text style={styles.resultBtnText}>Retour à la carte</Text>
-      </TouchableOpacity>
+      </View>
       </ScrollView>
     </ImageBackground>
   );
@@ -928,18 +932,20 @@ const styles = StyleSheet.create({
   // Ratio du bandeau conservé (1000x180) : `aspectRatio` plutôt qu'une
   // hauteur fixe, pour qu'il ne se déforme sur aucun écran.
   resultBanner: {
-    width: '70%', maxWidth: 380, aspectRatio: 1000 / 180,
+    width: '94%', maxWidth: 560, aspectRatio: 1000 / 180,
     alignItems: 'center', justifyContent: 'center',
   },
   resultBannerImg: { resizeMode: 'contain' },
   resultBannerText: {
-    color: '#fff', fontSize: 26, fontWeight: '900', letterSpacing: 1.5,
+    color: '#fff', fontSize: 30, fontWeight: '900', letterSpacing: 1.5,
     textShadowColor: 'rgba(0,0,0,0.75)', textShadowRadius: 5,
   },
   resultReward: { color: COLORS.action, fontSize: 15, fontWeight: '800', marginTop: 8 },
   resultSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
-  resultBtnNext: { backgroundColor: COLORS.good, marginBottom: 8 },
-  resultBtn: { backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 26, marginTop: 24, borderWidth: 1, borderColor: COLORS.border },
+  resultBtnRow: { flexDirection: 'row', gap: 10, marginTop: 12, alignSelf: 'stretch', maxWidth: 460, justifyContent: 'center' },
+  resultBtnNext: { backgroundColor: COLORS.good },
+  recapBreakdownWrap: { marginTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 6 },
+  resultBtn: { flex: 1, alignItems: 'center', backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.border },
   resultBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
 
   resultDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(20,10,0,0.18)' },
@@ -962,10 +968,9 @@ const styles = StyleSheet.create({
   },
   recapTitle: { color: COLORS.action, fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
   recapRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 6 },
-  recapStat: { alignItems: 'center', flex: 1 },
-  recapStatValue: { color: COLORS.text, fontSize: 18, fontWeight: '900' },
+  recapStat: { alignItems: 'center', flex: 1, minWidth: 0 },
+  recapStatValue: { color: COLORS.text, fontSize: 17, fontWeight: '900' },
   recapStatLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 2, textAlign: 'center' },
-  recapSubTitle: { color: COLORS.muted, fontSize: 10, fontWeight: '800', marginTop: 10, marginBottom: 4, textTransform: 'uppercase' },
   recapBreakdownRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   recapBreakdownName: { color: COLORS.text, fontSize: 12, fontWeight: '700' },
   recapBreakdownValue: { color: COLORS.action, fontSize: 12, fontWeight: '800' },
