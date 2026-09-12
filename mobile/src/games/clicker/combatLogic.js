@@ -334,7 +334,10 @@ export const TAP_CHALLENGE_INCOMPLETE_MULTIPLIER = 0.5; // pas fini à temps, at
 // physiquement impossible à haute vitesse). Plancher à 10 taps pour que
 // le mini-jeu garde un minimum de sens même pour un Mythique (2,8 → 9
 // arrondi, mais plafonné à 10) — pas de créature "quasi gratuite".
-export const TAP_CHALLENGE_MIN_COUNT = 10;
+// Plancher abaissé de 10 à 6 : avec la Dextérité au niveau 5 (-60%), un
+// Mythique tombait sinon systématiquement sur le plancher et la rune
+// n'avait plus aucun effet visible sur les créatures rapides.
+export const TAP_CHALLENGE_MIN_COUNT = 6;
 // `tapReductionPct` vient des Runes de Dextérité équipées (0 par défaut,
 // donc un appel sans rune se comporte exactement comme avant). Le
 // plancher de 10 taps s'applique APRÈS la réduction : une créature très
@@ -505,7 +508,7 @@ export const RUNE_BONUS_TABLE = {
   // L'Endurance a été REMPLACÉE par le mana le 11/09 : la rune qui la
   // boostait ne servait plus à rien. Remplacée par la Dextérité, qui
   // retire un % des taps exigés par le défi de combat.
-  dexterite: [0.06, 0.12, 0.19, 0.27, 0.37], // % de taps en MOINS sur le défi
+  dexterite: [0.12, 0.24, 0.36, 0.48, 0.60], // % de taps en MOINS sur le défi
   celerite: [0.10, 0.20, 0.35, 0.50, 0.70], // bonus ADDITIF sur le plafond du multiplicateur de dégâts (x2,5 de base)
 };
 
@@ -522,7 +525,18 @@ export function runeBonuses(equippedRunes) {
     const val = table[Math.max(0, Math.min(4, r.level - 1))];
     if (r.type === 'force') totals.atkPct += val;
     else if (r.type === 'vitalite') totals.hpPct += val;
-    else if (r.type === 'dexterite') totals.tapReductionPct += val;
+    else if (r.type === 'dexterite') {
+      totals.tapReductionPct += val;
+      // Part du bonus qui passe en dégâts. Nécessaire, pas décoratif :
+      // au-dessus de 6,25 taps/s le défi est DÉJÀ complété sous le seuil
+      // rapide, donc le multiplicateur est à son plafond x2,5 et retirer
+      // des taps ne rapporte plus rien (mesuré). `dmgMultBonus` est
+      // ajouté APRÈS le plafond dans CombatScreen, c'est donc le seul
+      // canal qui reste utile à haute cadence. Coefficient 0,4 : la
+      // Célérité (+0,70 au niveau 5) reste la rune de référence sur cet
+      // axe, la Dextérité n'y est que secondaire.
+      totals.dmgMultBonus += val * 0.4;
+    }
     else if (r.type === 'celerite') totals.dmgMultBonus += val;
   });
   return totals;

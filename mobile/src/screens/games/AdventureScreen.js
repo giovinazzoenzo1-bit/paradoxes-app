@@ -563,6 +563,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         ownedRunes={ownedRunes}
         onBuyRune={buyRandomRune}
         onFuseRunes={fuseRunes}
+        onBuyGriffes={buyGriffesWithDiamonds}
         onBack={() => setRunesOpen(false)}
       />
     );
@@ -1477,7 +1478,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 // type/niveau -> 1 rune au niveau supérieur). Sélection tactile simple :
 // touche une 1ère rune pour la sélectionner, touche une 2ème rune
 // compatible pour fusionner automatiquement.
-function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
+function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBuyGriffes, onBack }) {
   // Écran de fusion dédié (30/08) — remplace l'ancien mode "tape une
   // rune puis retape une pareille", pas très intuitif (fallait deviner
   // quelle rune correspondait à quelle autre). Regroupe automatiquement
@@ -1492,11 +1493,16 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
     <View style={styles.screen}>
       {/* Plein écran : la barre système casse l'immersion en paysage. */}
       <StatusBar hidden />
+      {/* Même disposition que le menu Aventure : retour à gauche, titre,
+          et le compteur de Griffes avec son « + » en HAUT À DROITE. Le
+          solde était auparavant un texte centré sans bouton — le joueur
+          voyait le prix d'une rune sans pouvoir recharger sur place. */}
       <View style={styles.header}>
         <BackButton onPress={onBack} />
         <Text style={styles.title}><Image source={RUNES_GEM} style={styles.inlineCurrencyIconTitle} resizeMode="contain" /> Runes</Text>
+        <View style={styles.headerSpacer} />
+        <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
       </View>
-      <Text style={styles.griffesText}>{griffes} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /></Text>
 
       <TouchableOpacity
         style={[styles.startBattleBtn, griffes < RUNE_COST && styles.actionBtnDisabledAdv]}
@@ -1742,6 +1748,7 @@ const styles = StyleSheet.create({
   // que l'utilisateur va fournir, à poser ici derrière le parchemin.
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  headerSpacer: { flex: 1 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
 
@@ -1781,7 +1788,6 @@ const styles = StyleSheet.create({
   levelNodeDone: { borderColor: COLORS.good, backgroundColor: COLORS.good },
   levelNodeText: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
 
-  griffesText: { color: COLORS.action, fontSize: 13, fontWeight: '800', textAlign: 'center', marginBottom: 14 },
   topStatsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 },
   energyBadge: { alignItems: 'center' },
   energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
