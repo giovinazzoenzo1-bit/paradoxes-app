@@ -335,8 +335,14 @@ export const TAP_CHALLENGE_INCOMPLETE_MULTIPLIER = 0.5; // pas fini à temps, at
 // le mini-jeu garde un minimum de sens même pour un Mythique (2,8 → 9
 // arrondi, mais plafonné à 10) — pas de créature "quasi gratuite".
 export const TAP_CHALLENGE_MIN_COUNT = 10;
-export function effectiveTapCount(clickSpeed) {
-  return Math.max(TAP_CHALLENGE_MIN_COUNT, Math.round(TAP_CHALLENGE_COUNT / clickSpeed));
+// `tapReductionPct` vient des Runes de Dextérité équipées (0 par défaut,
+// donc un appel sans rune se comporte exactement comme avant). Le
+// plancher de 10 taps s'applique APRÈS la réduction : une créature très
+// rapide bardée de runes ne peut pas descendre en dessous.
+export function effectiveTapCount(clickSpeed, tapReductionPct = 0) {
+  const base = Math.round(TAP_CHALLENGE_COUNT / clickSpeed);
+  const reduced = Math.round(base * (1 - Math.max(0, Math.min(0.8, tapReductionPct))));
+  return Math.max(TAP_CHALLENGE_MIN_COUNT, reduced);
 }
 
 // Multiplicateur de dégâts selon le temps mis pour les 50 taps.
@@ -496,7 +502,10 @@ export const MONSTER_TYPES = {
 export const RUNE_BONUS_TABLE = {
   force: [0.04, 0.08, 0.13, 0.19, 0.27], // % bonus ATQ
   vitalite: [0.05, 0.10, 0.16, 0.23, 0.32], // % bonus PV
-  endurance: [0.06, 0.12, 0.19, 0.27, 0.37], // % bonus Endurance max
+  // L'Endurance a été REMPLACÉE par le mana le 11/09 : la rune qui la
+  // boostait ne servait plus à rien. Remplacée par la Dextérité, qui
+  // retire un % des taps exigés par le défi de combat.
+  dexterite: [0.06, 0.12, 0.19, 0.27, 0.37], // % de taps en MOINS sur le défi
   celerite: [0.10, 0.20, 0.35, 0.50, 0.70], // bonus ADDITIF sur le plafond du multiplicateur de dégâts (x2,5 de base)
 };
 
@@ -505,7 +514,7 @@ export const RUNE_BONUS_TABLE = {
 // entre elles (pas de rendements décroissants supplémentaires entre
 // runes, seulement au sein de la progression de palier d'UNE rune).
 export function runeBonuses(equippedRunes) {
-  const totals = { atkPct: 0, hpPct: 0, endurancePct: 0, dmgMultBonus: 0 };
+  const totals = { atkPct: 0, hpPct: 0, tapReductionPct: 0, dmgMultBonus: 0 };
   (equippedRunes || []).forEach((r) => {
     if (!r) return;
     const table = RUNE_BONUS_TABLE[r.type];
@@ -513,7 +522,7 @@ export function runeBonuses(equippedRunes) {
     const val = table[Math.max(0, Math.min(4, r.level - 1))];
     if (r.type === 'force') totals.atkPct += val;
     else if (r.type === 'vitalite') totals.hpPct += val;
-    else if (r.type === 'endurance') totals.endurancePct += val;
+    else if (r.type === 'dexterite') totals.tapReductionPct += val;
     else if (r.type === 'celerite') totals.dmgMultBonus += val;
   });
   return totals;
@@ -539,11 +548,15 @@ export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0, 
     // de tap ne doit pas devenir plus dur à réussir en évoluant, seule
     // la PUISSANCE des attaques doit grandir.
     clickSpeed: base.clickSpeed,
-    endurance: Math.round(base.endurance * evoMult * (1 + bonus.endurancePct)),
+    endurance: Math.round(base.endurance * evoMult),
     // Exposé pour que CombatScreen l'ajoute au plafond du multiplicateur
     // de vitesse de tap (Rune de Célérité) — pas une vraie "stat" au
     // sens PV/ATQ/Endurance, juste transporté avec le reste.
     dmgMultBonus: bonus.dmgMultBonus,
+    // Réduction du nombre de taps exigés (Rune de Dextérité). Transporté
+    // comme dmgMultBonus : ce n'est pas une stat, CombatScreen l'utilise
+    // pour calculer le défi de tap.
+    tapReductionPct: bonus.tapReductionPct,
   };
 }
 

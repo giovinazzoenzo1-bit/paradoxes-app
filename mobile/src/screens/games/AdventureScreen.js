@@ -115,10 +115,25 @@ export const DEV_RESET_GRIFFES_KEY = 'adventure:dev:resetGriffes';
 const RUNE_TYPES = {
   force: { name: 'Rune de Force', icon: '⚔️', color: '#FF5252' },
   vitalite: { name: 'Rune de Vitalité', icon: '❤️', color: COLORS.good },
-  endurance: { name: "Rune d'Endurance", icon: '🔋', color: COLORS.action },
+  // L'Endurance a disparu du combat le 11/09 (remplacée par le mana) :
+  // sa rune ne servait plus à rien. Devient la Dextérité, qui retire des
+  // taps au défi de combat. Les runes d'Endurance DÉJÀ EN SAUVEGARDE
+  // sont converties au chargement — sans ça, RUNE_TYPES[type] serait
+  // undefined et l'écran des runes planterait sur def.icon.
+  dexterite: { name: 'Rune de Dextérité', icon: '🎯', color: COLORS.action },
   celerite: { name: 'Rune de Célérité', icon: '⚡', color: COLORS.neonCyan },
 };
 const RUNE_TYPE_KEYS = Object.keys(RUNE_TYPES);
+
+// Convertit les runes d'une sauvegarde ancienne. Toute rune dont le type
+// n'existe plus (aujourd'hui « endurance ») devient une Dextérité de
+// même niveau : le joueur ne perd rien, et surtout l'affichage ne tombe
+// pas sur un type inconnu.
+function migrateRunes(list) {
+  return (list || []).map((r) =>
+    r && !RUNE_TYPES[r.type] ? { ...r, type: 'dexterite' } : r
+  );
+}
 const RUNE_COST = 100;
 const RUNE_MAX_LEVEL = 5;
 let runeIdCounter = 0;
@@ -147,12 +162,12 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   const [bgSize, setBgSize] = useState({ w: 0, h: 0 });
 
   // Emprise du parchemin MESURÉE sur l'image (colonnes claires) :
-  // 16,7% à 83,1% de sa largeur — à REMESURER si l'image change. Les cartes doivent tenir là-dedans, pas
+  // 15,1% à 84,8% de sa largeur — à REMESURER si l'image change. Les cartes doivent tenir là-dedans, pas
   // sur toute la largeur de l'écran — c'était le vrai défaut du 12/09,
   // les cartes des bords se posaient sur la pierre.
-  const BG_RATIO = 1875 / 893;
-  const PARCH_L = 0.167;
-  const PARCH_R = 0.831;
+  const BG_RATIO = 1793 / 747;
+  const PARCH_L = 0.151;
+  const PARCH_R = 0.848;
   let parchInsetL = 12;
   let parchInsetR = 12;
   if (bgSize.w > 0 && bgSize.h > 0) {
@@ -227,7 +242,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           setCurrentUnlockedLevel(saved.currentUnlockedLevel || 1);
           setLevelStars(saved.levelStars || {});
           setGriffes(saved.griffes || 0);
-          setOwnedRunes(saved.ownedRunes || []);
+          setOwnedRunes(migrateRunes(saved.ownedRunes));
           // Recalcule l'énergie à partir du temps RÉELLEMENT écoulé
           // depuis la dernière sauvegarde (même principe que les gains
           // hors-ligne du clicker) — sans ça, fermer l'appli ne ferait
@@ -1481,14 +1496,14 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
         <BackButton onPress={onBack} />
         <Text style={styles.title}><Image source={RUNES_GEM} style={styles.inlineCurrencyIconTitle} resizeMode="contain" /> Runes</Text>
       </View>
-      <Text style={styles.griffesText}><Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /> {griffes} Griffes</Text>
+      <Text style={styles.griffesText}>{griffes} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /></Text>
 
       <TouchableOpacity
         style={[styles.startBattleBtn, griffes < RUNE_COST && styles.actionBtnDisabledAdv]}
         onPress={onBuyRune}
         disabled={griffes < RUNE_COST}
       >
-        <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /> Griffes</Text>
+        <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /></Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>

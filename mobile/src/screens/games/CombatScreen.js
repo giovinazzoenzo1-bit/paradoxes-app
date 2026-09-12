@@ -319,7 +319,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
 
   const activeFighter = fighters[activeIndex];
   const target = opponents[targetIndex];
-  const requiredTaps = effectiveTapCount(activeFighter.stats.clickSpeed);
+  const requiredTaps = effectiveTapCount(activeFighter.stats.clickSpeed, activeFighter.stats.tapReductionPct || 0);
 
   // Choisit une cible différente parmi les adversaires vivants — permis
   // seulement pendant le choix de compétence, pas en plein défi de tap.

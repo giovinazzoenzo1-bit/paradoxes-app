@@ -789,6 +789,45 @@ qui se chevauchent et fusionnent).
 `ThemedPanel`, `ThemedFrame`, `themedBox` et `themedLoreBox` ont été
 supprimés avec l'ancien système.
 
+## Runes — la Rune d'Endurance est devenue Dextérité (12/09)
+
+L'Endurance a été **remplacée par le mana le 11/09** : la rune qui la
+boostait ne servait donc plus à rien. Remplacée par la **Rune de
+Dextérité** 🎯, qui retire un pourcentage des **taps exigés par le défi
+de combat** (`effectiveTapCount`).
+
+| Niveau | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| Taps en moins | 6% | 12% | 19% | 27% | 37% |
+
+⚠️ **Migration obligatoire, pas cosmétique.** L'écran des runes lit
+`RUNE_TYPES[rune.type].icon` **sans garde** : une rune « endurance »
+encore en sauvegarde aurait donné `undefined.icon` et fait planter
+l'écran. `migrateRunes()` convertit au chargement tout type inconnu en
+Dextérité de même niveau — le joueur ne perd rien.
+
+⚠️ Le cumul est borné à **−80%**, et le plancher de 10 taps s'applique
+APRÈS la réduction : 3 runes niveau 5 sur un Mythique donnent 10 taps,
+jamais 0.
+
+### ⚠️ Mesuré : cette rune ne sert à RIEN à 150 ms d'autoclicker
+
+| Cadence | Sans rune | Rune niv.5 | Gain |
+|---|---|---|---|
+| 3,3/s | 25 taps, x1,83 | 16 taps, x2,34 | +28% |
+| 4,4/s | 25 taps, x2,18 | 16 taps, x2,50 | +14% |
+| 5,0/s | 25 taps, x2,31 | 16 taps, x2,50 | +8% |
+| **6,7/s (réglage de test)** | 25 taps, **x2,50** | 16 taps, x2,50 | **AUCUN** |
+
+Cause : au-dessus de **25/4 = 6,25 taps/s**, les 25 taps sont finis en
+moins de `TAP_CHALLENGE_FAST_THRESHOLD_SEC` (4 s), donc le multiplicateur
+maximum x2,50 est **déjà acquis sans rune**. La rune ne fait alors que
+gagner ~1,3 s de temps réel.
+
+**Le seul levier pour la rendre utile à cette cadence** : baisser
+`TAP_CHALLENGE_FAST_THRESHOLD_SEC` (4 → 2,5 s par exemple). Non fait —
+ça change la difficulté de TOUS les combats, décision à prendre à part.
+
 ## Les trois monnaies (11/09)
 
 | Monnaie | Rôle | Gagnée par | Dépensée en |
