@@ -738,8 +738,10 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
       >
         <Text style={styles.resultBannerText}>{isWin ? 'VICTOIRE !' : 'DÉFAITE'}</Text>
       </ImageBackground>
-      {/* Récapitulatif du combat — mêmes chiffres quelle que soit
-          l'issue, victoire ou défaite. */}
+      {/* Deux colonnes : le récapitulatif à gauche, les boutons empilés
+          à droite. En pleine largeur, le cadre débordait et il fallait
+          faire défiler pour atteindre les boutons. */}
+      <View style={styles.resultBody}>
       <ImageBackground source={RECAP_FRAME} style={styles.recapCard} imageStyle={styles.recapCardImg} resizeMode="stretch">
         {/* Le gain est DANS le cadre : posé sur le décor il se perdait
             dans les tons dorés du couchant (signalé le 12/09). */}
@@ -764,14 +766,6 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
             <Text style={styles.recapStatValue}>{battleStats.rounds}</Text>
             <Text style={styles.recapStatLabel}>Tours</Text>
           </View>
-          <View style={styles.recapStat}>
-            <Text style={[styles.recapStatValue, { color: COLORS.good }]}>{battleStats.opponentsDefeated}</Text>
-            <Text style={styles.recapStatLabel}>Vaincus</Text>
-          </View>
-          <View style={styles.recapStat}>
-            <Text style={[styles.recapStatValue, { color: COLORS.action }]}>{battleStats.fightersFainted}</Text>
-            <Text style={styles.recapStatLabel}>K.O.</Text>
-          </View>
         </View>
 
         {breakdown.length > 1 && (
@@ -788,19 +782,17 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
         )}
       </ImageBackground>
 
-      {!isWin && <Text style={styles.resultSubtitle}>Réessaie quand tu veux — rien n'est perdu.</Text>}
-
-      {/* Boutons CÔTE À CÔTE : enchaîner ou revenir sont deux sorties de
-          même niveau, les empiler faisait descendre la seconde. */}
-      <View style={styles.resultBtnRow}>
-        {isWin && (
-          <TouchableOpacity style={[styles.resultBtn, styles.resultBtnNext]} onPress={onNextLevel}>
-            <Text style={styles.resultBtnText}>⚔️ Niveau suivant</Text>
+        <View style={styles.resultBtnCol}>
+          {isWin && (
+            <TouchableOpacity style={[styles.resultBtn, styles.resultBtnNext]} onPress={onNextLevel}>
+              <Text style={styles.resultBtnText}>⚔️ Niveau suivant</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.resultBtn} onPress={onContinue}>
+            <Text style={styles.resultBtnText}>Retour à la carte</Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.resultBtn} onPress={onContinue}>
-          <Text style={styles.resultBtnText}>Retour à la carte</Text>
-        </TouchableOpacity>
+          {!isWin && <Text style={styles.resultSubtitle}>Rien n'est perdu.</Text>}
+        </View>
       </View>
       </ScrollView>
     </ImageBackground>
@@ -947,10 +939,10 @@ const styles = StyleSheet.create({
   },
   resultReward: { color: COLORS.action, fontSize: 15, fontWeight: '800', marginTop: 8 },
   resultSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
-  resultBtnRow: { flexDirection: 'row', gap: 10, marginTop: 12, alignSelf: 'stretch', maxWidth: 460, justifyContent: 'center' },
+
   resultBtnNext: { backgroundColor: COLORS.good },
   recapBreakdownWrap: { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(120,85,35,0.35)', paddingTop: 6 },
-  resultBtn: { flex: 1, alignItems: 'center', backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.border },
+  resultBtn: { alignItems: 'center', backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.border },
   resultBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
 
   resultDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(20,10,0,0.18)' },
@@ -969,10 +961,18 @@ const styles = StyleSheet.create({
   rewardBadgeText: { color: '#6b4410', fontSize: 16, fontWeight: '900' },
   // Marges calées sur la bordure MESURÉE du cadre (10% / 15%) : sans
   // elles, le contenu passerait sous les dorures.
-  recapCard: {
-    width: '100%', maxWidth: 460, marginTop: 6,
-    paddingHorizontal: '11%', paddingVertical: 26,
+  resultBody: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    width: '100%', maxWidth: 700, marginTop: 4,
   },
+  // Marges généreuses : la bordure du cadre mange 10% en largeur et 15%
+  // en hauteur, et la hauteur étant pilotée par le contenu, un
+  // pourcentage vertical serait résolu sur la LARGEUR (règle 13).
+  recapCard: {
+    flex: 1, minWidth: 0,
+    paddingHorizontal: 42, paddingVertical: 34,
+  },
+  resultBtnCol: { width: 168, gap: 10 },
   recapCardImg: { resizeMode: 'stretch' },
   recapTitle: { color: '#6b4410', fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
   recapRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 6 },
