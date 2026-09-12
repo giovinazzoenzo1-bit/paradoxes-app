@@ -826,6 +826,41 @@ gardent leurs noms (`coins`, `addCoins`, `spendCoins`). Renommer la clé
 effacerait le solde de tous les joueurs. **Seul l'affichage parle de
 Diamants.**
 
+## Boss de tap (11/09)
+
+Logique dans `src/games/clicker/tapBossLogic.js` (pure, simulable en
+Node). Apparaît au hasard toutes les **20-30 min de JEU ACTIF** — pas de
+temps réel, sinon il surgirait appli fermée et serait raté d'office.
+
+| Récompense | Temps pour 200 taps | Cadence |
+|---|---|---|
+| 3 💎 | < 30 s | 6,7 taps/s |
+| 2 💎 | < 45 s | 4,4 taps/s |
+| 1 💎 | < 60 s | 3,3 taps/s |
+
+⚠️ **Le chrono démarre au PREMIER TAP**, pas à l'apparition : un joueur
+qui a posé son téléphone perdrait sinon des secondes sans le savoir.
+
+⚠️ **Le tap compte pour le boss ET rapporte ses pièces normalement.**
+Sans ça, un boss surgissant en pleine récolte coûterait 60 secondes de
+revenu et le joueur aurait intérêt à l'ignorer — l'inverse de l'effet
+recherché.
+
+**Plafond : 21 💎/jour**, stocké avec la DATE (`clicker:tapBoss:v1`).
+Une date différente au chargement remet le compteur à zéro, donc pas de
+minuteur de minuit à gérer. Au-delà du plafond, le boss rapporte des
+**pièces** : il garde un intérêt au lieu de devenir une nuisance.
+
+**Détection de cadence anormale** : écart-type / moyenne des intervalles
+entre taps. Mesuré — humain ≈ 0,19 ; autoclicker parfait 0,00 ; avec du
+bruit 0,016. Seuil à 0,06, la séparation est nette.
+
+⚠️ Elle pose un **simple drapeau** (`clicker:tapRhythmFlag`) et ne
+sanctionne rien. Décidé ainsi parce qu'aujourd'hui aucune donnée ne
+remonte (pas de serveur) : le jour où une sanction sera choisie, la
+donnée doit déjà exister, sinon il faudra une mise à jour PLUS plusieurs
+jours de collecte avant de pouvoir agir.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

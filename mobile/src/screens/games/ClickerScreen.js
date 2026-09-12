@@ -89,9 +89,14 @@ import {
   RARITY_BADGE_LETTER,
 } from '../../games/clicker/clickerLogic';
 import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
-import { questDef } from '../../games/clicker/dailyLogic';
+import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
 import DiamondShop from './DiamondShop';
+import {
+  TAP_BOSS_STORAGE_KEY, TAP_BOSS_TAPS_REQUIRED, TAP_BOSS_TIME_LIMIT_MS,
+  diamondsForDuration, nextSpawnGapMs, grantableDiamonds,
+  isRhythmSuspicious, TAP_BOSS_DAILY_DIAMOND_CAP,
+} from '../../games/clicker/tapBossLogic';
 import {
   INCUBATOR_STORAGE_KEY, startIncubation, applyTap as incubatorApplyTap,
   applyVideo as incubatorApplyVideo, isReady as incubatorIsReady,
@@ -238,6 +243,27 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // l'œuf à faire éclore en cas de victoire change.
   const [guardianFight, setGuardianFight] = useState(null);
   const [mainEgg, setMainEgg] = useState(null);
+  // ---- Boss de tap (11/09) ----
+  // `boss` = { taps, startedAt } quand un combat est en cours.
+  // `startedAt` est null tant que le joueur n'a pas tapé : le chrono
+  // démarre au PREMIER TAP, pas à l'apparition — sinon un joueur qui a
+  // posé son téléphone perdrait des secondes sans le savoir.
+  const [boss, setBoss] = useState(null);
+  const bossRef = useRef(null);
+  bossRef.current = boss;
+  const [bossResult, setBossResult] = useState(null);
+  // Intervalles entre taps, pour la détection de cadence anormale.
+  const bossTapTimesRef = useRef([]);
+  // Diamants déjà gagnés AUJOURD'HUI (plafond quotidien).
+  const [diamondsToday, setDiamondsToday] = useState(0);
+  const diamondsTodayRef = useRef(0);
+  diamondsTodayRef.current = diamondsToday;
+  // Temps de jeu ACTIF accumulé depuis la dernière apparition, et seuil
+  // tiré au hasard. Basé sur le temps actif et non réel : sinon le boss
+  // surgirait appli fermée et serait raté d'office.
+  const bossActiveMsRef = useRef(0);
+  const bossGapRef = useRef(nextSpawnGapMs());
+
   const [diamondShopOpen, setDiamondShopOpen] = useState(false);
   const [incubatorOpen, setIncubatorOpen] = useState(false);
   // Rafraîchit l'affichage du temps restant. Le minuteur lui-même ne
@@ -285,15 +311,84 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     }
   }, [incubatingEgg, mainEgg, incubatorLoaded]);
 
+  // Rafraîchit l'affichage des compteurs. Tourne pendant une éclosion
+  // ET pendant un combat de boss : sans la seconde condition, le chrono
+  // du boss resterait figé à 60 s tant qu'aucun œuf n'incube.
   useEffect(() => {
-    if (!mainEgg) return undefined;
+    if (!mainEgg && !boss) return undefined;
     const id = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [mainEgg]);
+  }, [mainEgg, boss]);
   const mainEggRef = useRef(null);
   mainEggRef.current = mainEgg;
   const mainRemaining = mainEgg ? Math.max(0, mainEgg.endsAt - nowTick) : 0;
   const mainReady = !!mainEgg && mainRemaining <= 0;
+
+  // Plafond quotidien : on stocke la DATE avec le total. Une date
+  // différente au chargement remet le compteur à zéro — pas besoin de
+  // minuteur de minuit, la remise à zéro se fait à la première ouverture
+  // du jour suivant.
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(TAP_BOSS_STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          if (saved && saved.date === todayKey()) setDiamondsToday(saved.diamonds || 0);
+        }
+      } catch (e) {
+        // Illisible : on repart de zéro plutôt que de bloquer l'écran.
+      }
+    })();
+  }, []);
+
+  const addDiamondsToday = async (n) => {
+    const next = diamondsTodayRef.current + n;
+    diamondsTodayRef.current = next;
+    setDiamondsToday(next);
+    AsyncStorage.setItem(TAP_BOSS_STORAGE_KEY, JSON.stringify({ date: todayKey(), diamonds: next })).catch(() => {});
+  };
+
+  // Apparition du boss : uniquement sur l'accueil du Clicker, et
+  // seulement si aucun combat n'est déjà en cours.
+  useEffect(() => {
+    if (view !== 'tap') return undefined;
+    const id = setInterval(() => {
+      if (bossRef.current) return;
+      bossActiveMsRef.current += 1000;
+      if (bossActiveMsRef.current >= bossGapRef.current) {
+        bossActiveMsRef.current = 0;
+        bossGapRef.current = nextSpawnGapMs();
+        bossTapTimesRef.current = [];
+        setBoss({ taps: 0, startedAt: null });
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [view]);
+
+  // Fin du combat. Au-delà du plafond, le boss rapporte des PIÈCES au
+  // lieu de Diamants : il continue d'apparaître et garde un intérêt,
+  // plutôt que de devenir une nuisance qu'on ignore.
+  const resolveBoss = async (elapsedMs) => {
+    const earned = diamondsForDuration(elapsedMs);
+    const given = grantableDiamonds(earned, diamondsTodayRef.current);
+    if (given > 0) {
+      await addDiamondsToday(given);
+      addSharedCoins(given);
+    }
+    // Drapeau local de cadence anormale. Ne sanctionne rien aujourd'hui :
+    // il sert à ce que la donnée EXISTE le jour où une sanction sera
+    // décidée (sans serveur, rien ne remonte).
+    if (isRhythmSuspicious(bossTapTimesRef.current)) {
+      AsyncStorage.setItem('clicker:tapRhythmFlag', String(Date.now())).catch(() => {});
+    }
+    const coinBonus = given < earned || earned === 0
+      ? Math.max(200, Math.round(passiveIncomeRef.current * 300))
+      : 0;
+    if (coinBonus > 0) gainCoins(coinBonus);
+    setBoss(null);
+    setBossResult({ earned, given, coinBonus, failed: earned === 0 });
+  };
 
   const vibrationsRef = useRef(vibrations);
   vibrationsRef.current = vibrations;
@@ -1008,6 +1103,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
 
   const handleTap = (evt) => {
+    // Volontairement AVANT tout le reste et sans `return` : le tap
+    // compte pour le boss puis continue son chemin normal (pièces,
+    // critiques, minuteur d'œuf).
+    handleBossTap();
     const now = Date.now();
 
     // Transe : la fenêtre entre deux taps décide si le combo continue ou repart de 1.
@@ -1740,6 +1839,33 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     captureTapsRef.current = 0;
   };
 
+  // Tap pendant un combat de boss. Renvoie true si le tap a été
+  // consommé par le boss.
+  //
+  // ⚠️ Le tap rapporte AUSSI ses pièces normalement (l'appelant
+  // poursuit) : sinon un boss surgissant en pleine récolte coûterait
+  // 60 secondes de revenu, et le joueur aurait intérêt à l'ignorer —
+  // l'inverse de l'effet recherché.
+  const handleBossTap = () => {
+    const cur = bossRef.current;
+    if (!cur) return false;
+    const now = Date.now();
+    const startedAt = cur.startedAt || now;
+    bossTapTimesRef.current.push(now);
+    const next = { taps: cur.taps + 1, startedAt };
+    bossRef.current = next;
+    setBoss(next);
+    const elapsed = now - startedAt;
+    if (next.taps >= TAP_BOSS_TAPS_REQUIRED) {
+      bossRef.current = null;
+      resolveBoss(elapsed);
+    } else if (elapsed > TAP_BOSS_TIME_LIMIT_MS) {
+      bossRef.current = null;
+      resolveBoss(elapsed);
+    }
+    return true;
+  };
+
   const handleEggTap = () => {
     // Secousse à chaque coup porté sur la coquille. Séquence courte et
     // symétrique qui revient toujours à 0 : impossible que l'œuf reste
@@ -2284,6 +2410,47 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
       {/* Surcouche de l'incubateur, sœur des autres surcouches (et non
           imbriquée dans l'une d'elles). */}
+      {/* Bandeau du boss. `pointerEvents: 'none'` : le joueur tape
+          l'ŒUF pour frapper le boss, ce bandeau ne fait qu'afficher —
+          s'il captait les taps, il empêcherait de combattre. */}
+      {boss && view === 'tap' && (
+        <View style={styles.bossBanner}>
+          <Text style={styles.bossTitle}>
+            👹 BOSS — {boss.taps}/{TAP_BOSS_TAPS_REQUIRED}
+          </Text>
+          <View style={styles.bossBarTrack}>
+            <View style={[styles.bossBarFill, { width: `${Math.min(100, (boss.taps / TAP_BOSS_TAPS_REQUIRED) * 100)}%` }]} />
+          </View>
+          <Text style={styles.bossHint}>
+            {boss.startedAt
+              ? `${Math.max(0, Math.ceil((TAP_BOSS_TIME_LIMIT_MS - (nowTick - boss.startedAt)) / 1000))} s — plus vite = plus de 💎`
+              : "Tape l'œuf pour commencer !"}
+          </Text>
+        </View>
+      )}
+
+      {bossResult && (
+        <View style={styles.detailOverlay}>
+          <View style={styles.rewardPanel}>
+            <Text style={styles.detailEmoji}>{bossResult.failed ? '💨' : '💎'}</Text>
+            <Text style={styles.detailName}>
+              {bossResult.failed ? 'Le boss s\'échappe !' : `+${bossResult.given} Diamant${bossResult.given > 1 ? 's' : ''}`}
+            </Text>
+            {!bossResult.failed && bossResult.given < bossResult.earned && (
+              <Text style={styles.bossCapNote}>
+                Plafond de {TAP_BOSS_DAILY_DIAMOND_CAP} 💎 par jour atteint — le reste est converti en pièces.
+              </Text>
+            )}
+            {bossResult.coinBonus > 0 && (
+              <Text style={styles.bossCapNote}>+{formatNum(bossResult.coinBonus)} pièces</Text>
+            )}
+            <TouchableOpacity style={styles.feedBtn} onPress={() => setBossResult(null)}>
+              <Text style={styles.feedBtnText}>Continuer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {diamondShopOpen && (
         <DiamondShop
           diamonds={sharedCoins}
@@ -3198,6 +3365,26 @@ const styles = StyleSheet.create({
   // Remontée de ~5mm (~32dp — 1mm ≈ 6,3dp à la densité de référence
   // 160dpi) avec le cadre du deck, sur demande explicite.
   // Calée sur la pilule de pièces : même `top`, posée juste à sa gauche.
+  // Même emplacement que la bannière de pouvoir : juste sous le deck,
+  // position DÉRIVÉE de celle du cadre du deck pour rester solidaire.
+  bossBanner: {
+    position: 'absolute', left: SCREEN_W * 0.08, zIndex: 6,
+    top: SCREEN_H * (0.357 - TOP_BLOCK_SHIFT) - 32 + (SCREEN_W * 0.55 * (329 / 800)) + 6,
+    width: SCREEN_W * 0.84, alignItems: 'center',
+    backgroundColor: 'rgba(60,10,10,0.92)', borderRadius: 10,
+    paddingVertical: 7, paddingHorizontal: 10,
+    borderWidth: 2, borderColor: '#ff5a4a',
+    pointerEvents: 'none',
+  },
+  bossTitle: { color: '#ffd9d4', fontSize: 13, fontWeight: '900' },
+  bossBarTrack: {
+    width: '100%', height: 10, borderRadius: 5, marginTop: 5,
+    backgroundColor: 'rgba(0,0,0,0.5)', overflow: 'hidden',
+  },
+  bossBarFill: { height: '100%', backgroundColor: '#ff5a4a' },
+  bossHint: { color: '#ffb3aa', fontSize: 10, fontWeight: '700', marginTop: 4 },
+  bossCapNote: { color: COLORS.muted, fontSize: 11, textAlign: 'center', marginTop: 6, paddingHorizontal: 10 },
+
   diamondPill: {
     position: 'absolute', zIndex: 4,
     right: SCREEN_W - SCREEN_W * 0.303 + 6,
