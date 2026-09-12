@@ -385,16 +385,38 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     const skillDamage = skill.isBasic ? skill.damage : scaledSkillDamage(skill, curFighter.creature, curFighter.stats.attack);
     const playerDamage = computePlayerDamage(skillDamage, multiplier);
 
+    // ATTAQUE DE ZONE : frappe TOUS les adversaires encore debout.
+    // Elle n'était jusqu'ici qu'une étiquette sur le bouton — le code
+    // qui frappe plusieurs cibles n'existait pas (bug du 12/09).
     const newOpponentHp = Math.max(0, opp.hp - playerDamage);
-    let newOpponents = opponentsRef.current.map((o, i) => (i === targetIdx ? { ...o, hp: newOpponentHp } : o));
+    let newOpponents = opponentsRef.current.map((o, i) => {
+      if (skill.aoe) {
+        return o.hp > 0 ? { ...o, hp: Math.max(0, o.hp - playerDamage) } : o;
+      }
+      return i === targetIdx ? { ...o, hp: newOpponentHp } : o;
+    });
 
+    // RIPOSTE : c'est l'adversaire ciblé qui riposte s'il survit, SINON
+    // le premier encore debout.
+    //
+    // Avant, la riposte était conditionnée à la survie de la cible : le
+    // joueur tuant souvent en un coup, l'équipe adverse ne frappait
+    // presque jamais (2 dégâts reçus en 3 tours sur un combat réel).
+    // C'était la vraie cause du déséquilibre, bien plus que la valeur
+    // des dégâts.
     let opponentDamage = 0;
-    if (newOpponentHp > 0) {
-      const oppSkill = pickOpponentSkill({ ...opp, hp: newOpponentHp, mana: Math.min(MANA_MAX, opp.mana + MANA_PER_TURN) });
+    const retaliatorIdx = newOpponents[targetIdx] && newOpponents[targetIdx].hp > 0
+      ? targetIdx
+      : newOpponents.findIndex((o) => o.hp > 0);
+    if (retaliatorIdx >= 0) {
+      const retaliator = newOpponents[retaliatorIdx];
+      const oppSkill = pickOpponentSkill({ ...retaliator, mana: Math.min(MANA_MAX, retaliator.mana + MANA_PER_TURN) });
       newOpponents = newOpponents.map((o, i) =>
-        i === targetIdx ? { ...o, mana: Math.max(0, o.mana - (oppSkill.manaCost || 0)) } : o
+        i === retaliatorIdx ? { ...o, mana: Math.max(0, o.mana - (oppSkill.manaCost || 0)) } : o
       );
-      opponentDamage = oppSkill.isBasic ? oppSkill.damage : Math.round(scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack));
+      opponentDamage = oppSkill.isBasic
+        ? oppSkill.damage
+        : Math.round(scaledSkillDamage(oppSkill, retaliator.creature, retaliator.stats.attack));
     }
     opponentsRef.current = newOpponents;
     setOpponents(newOpponents);
@@ -642,26 +664,22 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         )}
       </View>
 
-      {/* Détail d'une attaque, sur appui long. Taper à côté ferme. */}
+      {/* Détail de la dernière attaque choisie, en bandeau au-dessus
+          des boutons — jamais une fenêtre bloquante : le combat ne doit
+          pas s'interrompre pour lire une description. */}
       {skillInfo && (
-        <View style={styles.skillInfoBackdrop}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setSkillInfo(null)} />
-          <View style={styles.skillInfoCard}>
-            <Text style={styles.skillInfoName}>{skillInfo.name}</Text>
-            <Text style={styles.skillInfoLine}>
-              {skillInfo.damage} dégâts{skillInfo.aoe ? ' · touche TOUS les ennemis' : ' · cible unique'}
-            </Text>
-            <Text style={styles.skillInfoLine}>
-              {skillInfo.special
-                ? `Coup spécial — nécessite la jauge pleine (${MANA_MAX}💧)`
-                : (skillInfo.manaCost || 0) === 0
-                ? 'Attaque de base — gratuite'
-                : `Coûte ${skillInfo.manaCost}💧`}
-            </Text>
-            <TouchableOpacity style={styles.skillInfoClose} onPress={() => setSkillInfo(null)}>
-              <Text style={styles.skillInfoCloseText}>Fermer</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.skillInfoCard}>
+          <Text style={styles.skillInfoName}>{skillInfo.name}</Text>
+          <Text style={styles.skillInfoLine}>
+            {skillInfo.damage} dégâts{skillInfo.aoe ? ' · touche TOUS les ennemis' : ''}
+          </Text>
+          <Text style={styles.skillInfoLine}>
+            {skillInfo.special
+              ? `Coup spécial · jauge pleine (${MANA_MAX}💧)`
+              : (skillInfo.manaCost || 0) === 0
+              ? 'Attaque de base · gratuite'
+              : `Coûte ${skillInfo.manaCost}💧`}
+          </Text>
         </View>
       )}
 
@@ -687,9 +705,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
                   // Un appui simple SÉLECTIONNE l'attaque ; un appui long
                   // affiche seulement son détail. Sans cette séparation,
                   // consulter une attaque reviendrait à la lancer.
-                  onPress={() => chooseSkill(skill, false)}
-                  onLongPress={() => setSkillInfo(skill)}
-                  delayLongPress={220}
+                  // Appui simple : sélectionne ET affiche le détail. Il
+                  // était auparavant sur appui LONG, que personne ne
+                  // découvre — l'information n'était donc jamais vue.
+                  onPress={() => { setSkillInfo(skill); chooseSkill(skill, false); }}
                   disabled={!canAfford}
                 >
                   <Text style={styles.skillBtnName} numberOfLines={2}>{skill.name}</Text>
@@ -903,22 +922,15 @@ const styles = StyleSheet.create({
   // d'œil des attaques ordinaires.
   skillBtnSpecial: { borderColor: '#f5c542', borderWidth: 2, backgroundColor: 'rgba(245,197,66,0.16)' },
 
-  skillInfoBackdrop: {
-    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 40,
-    backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24,
-  },
   skillInfoCard: {
-    minWidth: 240, maxWidth: 380, padding: 16, borderRadius: 14,
-    backgroundColor: '#101a26', borderWidth: 2, borderColor: '#f5c542',
-    alignItems: 'center',
+    position: 'absolute', right: 10, bottom: 108, zIndex: 12,
+    minWidth: 200, maxWidth: 300, padding: 12, borderRadius: 12,
+    backgroundColor: 'rgba(16,26,38,0.94)', borderWidth: 2, borderColor: '#f5c542',
+    // Décoratif : ne doit jamais intercepter un tap destiné au terrain.
+    pointerEvents: 'none',
   },
-  skillInfoName: { color: '#fff', fontSize: 16, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
-  skillInfoLine: { color: '#c8d6e5', fontSize: 12, fontWeight: '700', marginTop: 3, textAlign: 'center' },
-  skillInfoClose: {
-    marginTop: 12, paddingVertical: 8, paddingHorizontal: 22, borderRadius: 10,
-    backgroundColor: '#f5c542',
-  },
-  skillInfoCloseText: { color: '#0b0d16', fontSize: 13, fontWeight: '900' },
+  skillInfoName: { color: '#ffd76a', fontSize: 15, fontWeight: '900', marginBottom: 5 },
+  skillInfoLine: { color: '#e6eef7', fontSize: 12, fontWeight: '700', marginTop: 2 },
 
   skillBtnDisabled: { borderColor: COLORS.border, opacity: 0.4 },
   skillBtnName: { color: COLORS.text, fontSize: 10, fontWeight: '800', textAlign: 'center' },

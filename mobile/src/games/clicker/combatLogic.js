@@ -193,7 +193,11 @@ function opponentPowerBudgetPerMember(levelNumber) {
 
 // Multiplicateur d'attaque des adversaires. Ne touche QUE l'attaque :
 // les PV restent pilotés par le budget de puissance.
-export const OPPONENT_ATTACK_MULT = 1.5;
+// Relevé de 1,5 à 3,0 (12/09) : à 1,5 les adversaires ne faisaient
+// toujours quasi aucun dégât. La cause principale était ailleurs (ils ne
+// ripostaient que s'ils survivaient, voir CombatScreen), mais même
+// corrigée, leurs coups restaient trop faibles face aux PV du joueur.
+export const OPPONENT_ATTACK_MULT = 2.5;
 
 export function statsForOpponentCreature(creature, levelNumber) {
   const base = creature.baseHp != null
