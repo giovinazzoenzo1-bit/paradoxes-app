@@ -14,6 +14,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CreatureArt from '../../components/CreatureArt';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
 // Décor de combat fourni par l'utilisateur (30/08) — remplace le fond
@@ -158,7 +159,22 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const [skillInfo, setSkillInfo] = useState(null);
   // Attaque choisie mais PAS encore lancée : elle attend que le joueur
   // désigne sa cible.
+  const [lastExchange, setLastExchange] = useState(null);
   const [armedSkill, setArmedSkill] = useState(null);
+  // Rebond de la flèche de visée. Ne tourne QUE quand une attaque est
+  // armée : rien ne s'anime en fond le reste du temps.
+  const arrowBounce = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!armedSkill) { arrowBounce.setValue(0); return undefined; }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(arrowBounce, { toValue: -9, duration: 380, useNativeDriver: true }),
+        Animated.timing(arrowBounce, { toValue: 0, duration: 380, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [armedSkill]);
   const armedSkillRef = useRef(null);
   armedSkillRef.current = armedSkill;
   const [tapCount, setTapCount] = useState(0);
@@ -469,6 +485,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     const newFighters = fightersRef.current.map((f, i) => (i === curIdx ? { ...f, hp: newPlayerHp } : f));
     fightersRef.current = newFighters;
     setFighters(newFighters);
+    setLastExchange({
+      dealt: playerDamage,
+      taken: opponentDamage,
+      hpAfter: newPlayerHp,
+      hpMax: curFighter.stats.hp,
+    });
 
     // Dégâts flottants au-dessus de CHAQUE créature touchée (demande
     // explicite) — purement décoratif, la suite du combat ne les attend
@@ -579,9 +601,14 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
             <FloatingDamage key={`${key}-${roundKey}`} amount={floatDamage} color="#FF5252" />
           </View>
         )}
-        {/* Flèche au-dessus de la cible, à la place de l'ancien anneau :
-            elle désigne sans encercler, et laisse la créature lisible. */}
-        {ring === 'target' && !fainted && <Text style={styles.targetArrow}>▼</Text>}
+        {/* Flèche de visée : n'apparaît QUE lorsqu'une attaque est
+            armée — avant le choix, elle n'indique rien d'utile. Elle
+            rebondit pour être repérable au premier coup d'œil. */}
+        {ring === 'target' && !fainted && armedSkill && (
+          <Animated.View style={{ transform: [{ translateY: arrowBounce }] }}>
+            <Ionicons name="arrow-down" size={34} color="#ffcf3f" style={styles.targetArrow} />
+          </Animated.View>
+        )}
         <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }]}>
           {/* `size={fs}` : l'illustration reprend exactement la taille
               calculee pour l'emoji, donc la mise en page du terrain
@@ -710,14 +737,24 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
               entier. Le coût est déjà lisible sur le bouton, inutile de
               le répéter ici. */}
           <Text style={styles.skillInfoLine}>
-            {skillInfo.aoe ? 'Frappe tous les ennemis' : "Frappe l'ennemi"} et inflige {skillInfo.damage} dégâts.
+            {activeFighter.creature.stages[0].name} utilise {skillInfo.name} et inflige{' '}
+            {skillInfo.damage} dégâts{skillInfo.aoe ? ' à TOUS les ennemis' : ''}.
           </Text>
         </View>
       )}
 
       {phase === 'choosing' && (
         <View style={[styles.bottomWrap, { paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: insets.bottom }]}>
-          <Text style={styles.hintText}>▼ CHOIX DE COMPÉTENCE ▼</Text>
+          {/* DIAGNOSTIC (12/09) : affiche le dernier échange chiffré.
+              Le calcul donne ~35% de la barre par coup, l'utilisateur
+              en voit « 2 mm » — impossible de trancher en lisant le
+              code, donc on mesure à l'écran. À retirer une fois la
+              cause trouvée. */}
+          <Text style={styles.hintText}>
+            {lastExchange
+              ? `Tu as infligé ${lastExchange.dealt} · reçu ${lastExchange.taken} (PV ${lastExchange.hpAfter}/${lastExchange.hpMax})`
+              : '▼ CHOIX DE COMPÉTENCE ▼'}
+          </Text>
           <View style={styles.bottomBar}>
             {activeFighter.creature.skills
               // Le spécial reste INVISIBLE tant que la jauge n'est pas
@@ -877,8 +914,8 @@ const styles = StyleSheet.create({
   // est désormais signalée par une flèche au-dessus d'elle.
   spriteRing: { alignItems: 'center', justifyContent: 'center' },
   targetArrow: {
-    color: '#ffcf3f', fontSize: 26, fontWeight: '900', marginBottom: -4,
-    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4,
+    marginBottom: -4,
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 5,
   },
 
   ringActive: { borderColor: COLORS.action, backgroundColor: 'rgba(245,197,66,0.15)' },

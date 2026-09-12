@@ -46,7 +46,11 @@ export const MANA_PER_TURN = 1;
 
 // Coût des attaques régulières, dans l'ordre. La 1re est toujours
 // gratuite ; le spécial exige la jauge PLEINE.
-const SKILL_MANA_COSTS = [0, 2, 3];
+// Toutes les attaques régulières sont GRATUITES (12/09) : seul le coup
+// spécial consomme la jauge. Faire payer la 2e attaque bloquait le
+// joueur sur son attaque de base pendant deux tours sur trois, ce qui
+// annulait l'intérêt d'en avoir plusieurs.
+const SKILL_MANA_COSTS = [0, 0, 0];
 
 function buildCreatureSkills(creature) {
   const entries = creature.skills || [];
