@@ -22,7 +22,7 @@ import { StatusBar } from 'expo-status-bar';
 // restent visibles quel que soit l'écran), exporté en JPEG (512 Ko).
 const BG_IMG = require('../../../assets/combat/background.jpg');
 import { COLORS } from './clickerTheme';
-import { stageForLevel } from '../../games/clicker/clickerLogic';
+import { stageForLevel, MANA_MAX, MANA_PER_TURN } from '../../games/clicker/clickerLogic';
 import {
   combatStatsForCreatureTyped,
   opponentTeamForLevel,
@@ -114,7 +114,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const [fighters, setFighters] = useState(() =>
     team.map((member) => {
       const stats = combatStatsForCreatureTyped(member.creature, member.ownedLevel, member.evolutionTier || 0, member.equippedRunes || []);
-      return { creature: member.creature, ownedLevel: member.ownedLevel, stats, hp: stats.hp, endurance: stats.endurance };
+      return { creature: member.creature, ownedLevel: member.ownedLevel, stats, hp: stats.hp, mana: 0 };
     })
   );
   const [activeIndex, setActiveIndex] = useState(0);
@@ -122,7 +122,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const [opponents, setOpponents] = useState(() =>
     opponentTeamCreatures.map((creature) => {
       const stats = statsForOpponentCreatureTyped(creature, levelNumber);
-      return { creature, stats, hp: stats.hp, endurance: stats.endurance };
+      return { creature, stats, hp: stats.hp, mana: 0 };
     })
   );
   // Cible choisie par le JOUEUR (demande explicite : pouvoir choisir quel
@@ -131,6 +131,8 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
 
   const [phase, setPhase] = useState('choosing'); // 'choosing' | 'tapping' | 'done'
   const [selectedSkill, setSelectedSkill] = useState(null);
+  // Détail d'une attaque, affiché sur appui long.
+  const [skillInfo, setSkillInfo] = useState(null);
   const [tapCount, setTapCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(TAP_CHALLENGE_TIME_LIMIT_SEC);
   const [switchMessage, setSwitchMessage] = useState(null);
@@ -182,7 +184,11 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     if (!opponentGoesFirst()) return;
 
     const opp = opponentsRef.current[targetIndexRef.current];
-    const oppSkill = pickOpponentSkill(opp);
+    // Mana de l'adversaire monté AVANT son choix, sur la copie locale :
+    // passer par setOpponents aurait été asynchrone, et il aurait choisi
+    // avec la valeur du tour précédent.
+    const oppWithMana = { ...opp, mana: Math.min(MANA_MAX, opp.mana + MANA_PER_TURN) };
+    const oppSkill = pickOpponentSkill(oppWithMana);
     const oppDamage = oppSkill.isBasic
       ? oppSkill.damage
       : Math.round(scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack));
@@ -213,6 +219,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       }
       activeIndexRef.current = nextIdx;
       setActiveIndex(nextIdx);
+      // Le mana du combattant qui prend la main monte d'un cran. Sans
+      // ce gain, la jauge ne se remplirait jamais et le coup spécial
+      // resterait inaccessible toute la partie.
+      setFighters((prev) => prev.map((f, i) => (i === nextIdx ? { ...f, mana: Math.min(MANA_MAX, f.mana + MANA_PER_TURN) } : f)));
       setSwitchMessage(`${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`);
     } else {
       setSwitchMessage("L'adversaire attaque en premier !");
@@ -249,9 +259,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
 
   const chooseSkill = (skill, isBasic) => {
     if (phase !== 'choosing') return;
-    const cost = isBasic ? 0 : skill.enduranceCost;
-    if (activeFighter.endurance < cost) return;
-    setFighters((prev) => prev.map((f, i) => (i === activeIndex ? { ...f, endurance: f.endurance - cost } : f)));
+    const cost = isBasic ? 0 : (skill.manaCost || 0);
+    // Le spécial exige la jauge PLEINE, pas seulement d'avoir le coût :
+    // c'est ce qui en fait un moment attendu plutôt qu'une attaque de plus.
+    if (skill.special && activeFighter.mana < MANA_MAX) return;
+    if (activeFighter.mana < cost) return;
+    setFighters((prev) => prev.map((f, i) => (i === activeIndex ? { ...f, mana: f.mana - cost } : f)));
     selectedSkillRef.current = { ...skill, isBasic };
     setSelectedSkill({ ...skill, isBasic });
     tapCountRef.current = 0;
@@ -270,7 +283,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     setFighters((prev) =>
       prev.map((f, i) =>
         i === activeIndex
-          ? { ...f, endurance: Math.min(f.stats.endurance, f.endurance + Math.round(f.stats.endurance * RECHARGE_PERCENT)) }
+          ? { ...f, mana: MANA_MAX }
           : f
       )
     );
@@ -290,10 +303,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   };
 
   const pickOpponentSkill = (opp) => {
-    const affordable = opp.creature.skills.filter((s) => s.enduranceCost <= opp.endurance);
+    const affordable = (opp.creature.skills || []).filter(
+      (sk) => (sk.manaCost || 0) <= opp.mana && (!sk.special || opp.mana >= MANA_MAX)
+    );
     if (affordable.length === 0) {
       const basicDmg = Math.max(1, Math.round(opp.stats.attack * BASIC_ATTACK_RATIO));
-      return { name: 'Attaque de base', damage: basicDmg, enduranceCost: 0, isBasic: true };
+      return { name: 'Attaque de base', damage: basicDmg, manaCost: 0, isBasic: true };
     }
     const skill = affordable[Math.floor(Math.random() * affordable.length)];
     return { ...skill, isBasic: false };
@@ -321,9 +336,9 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
 
     let opponentDamage = 0;
     if (newOpponentHp > 0) {
-      const oppSkill = pickOpponentSkill({ ...opp, hp: newOpponentHp });
+      const oppSkill = pickOpponentSkill({ ...opp, hp: newOpponentHp, mana: Math.min(MANA_MAX, opp.mana + MANA_PER_TURN) });
       newOpponents = newOpponents.map((o, i) =>
-        i === targetIdx ? { ...o, endurance: Math.max(0, o.endurance - oppSkill.enduranceCost) } : o
+        i === targetIdx ? { ...o, mana: Math.max(0, o.mana - (oppSkill.manaCost || 0)) } : o
       );
       opponentDamage = oppSkill.isBasic ? oppSkill.damage : Math.round(scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack));
     }
@@ -382,6 +397,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       }
       activeIndexRef.current = nextIdx;
       setActiveIndex(nextIdx);
+      // Le mana du combattant qui prend la main monte d'un cran. Sans
+      // ce gain, la jauge ne se remplirait jamais et le coup spécial
+      // resterait inaccessible toute la partie.
+      setFighters((prev) => prev.map((f, i) => (i === nextIdx ? { ...f, mana: Math.min(MANA_MAX, f.mana + MANA_PER_TURN) } : f)));
       setSwitchMessage(`${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`);
       setTimeout(() => setSwitchMessage(null), 2200);
     } else {
@@ -389,6 +408,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       const nextIdx = nextLivingIndex(newFighters, curIdx);
       activeIndexRef.current = nextIdx;
       setActiveIndex(nextIdx);
+      // Le mana du combattant qui prend la main monte d'un cran. Sans
+      // ce gain, la jauge ne se remplirait jamais et le coup spécial
+      // resterait inaccessible toute la partie.
+      setFighters((prev) => prev.map((f, i) => (i === nextIdx ? { ...f, mana: Math.min(MANA_MAX, f.mana + MANA_PER_TURN) } : f)));
       setSwitchMessage(`Au tour de ${newFighters[nextIdx].creature.stages[0].name} !`);
       setTimeout(() => setSwitchMessage(null), 1400);
     }
@@ -425,7 +448,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   // devant (slot 0), les autres remplissent les slots 1 et 2.
   const playerOrder = [activeIndex, ...fighters.map((_, i) => i).filter((i) => i !== activeIndex)];
 
-  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, endurance, enduranceMax, fainted, ring, onPress, disabled, hpColor, floatDamage }) => {
+  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -459,9 +482,9 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         <View style={[styles.spriteHpTrack, { width: Math.round(90 * slot.size) }]}>
           <View style={[styles.spriteHpFill, { width: `${Math.max(0, hp / hpMax) * 100}%`, backgroundColor: hpColor }]} />
         </View>
-        {endurance != null && (
+        {mana != null && (
           <View style={[styles.spriteEndTrack, { width: Math.round(90 * slot.size) }]}>
-            <View style={[styles.spriteEndFill, { width: `${Math.max(0, endurance / enduranceMax) * 100}%` }]} />
+            <View style={[styles.spriteEndFill, { width: `${Math.max(0, Math.min(1, mana / manaMax)) * 100}%` }]} />
           </View>
         )}
         {ring === 'target' && !fainted && <Text style={styles.targetLabel}>🎯</Text>}
@@ -493,7 +516,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           creatureId: f.creature.id, stageIndex: stageForLevel(f.ownedLevel),
           emoji: d.emoji, name: d.name,
           hp: f.hp, hpMax: f.stats.hp,
-          endurance: fi === activeIndex ? f.endurance : null, enduranceMax: f.stats.endurance,
+          mana: fi === activeIndex ? f.mana : null, manaMax: MANA_MAX,
           fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
           floatDamage: fi === activeIndex ? playerDamageFloat : null,
         });
@@ -540,22 +563,58 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         )}
       </View>
 
+      {/* Détail d'une attaque, sur appui long. Taper à côté ferme. */}
+      {skillInfo && (
+        <View style={styles.skillInfoBackdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setSkillInfo(null)} />
+          <View style={styles.skillInfoCard}>
+            <Text style={styles.skillInfoName}>{skillInfo.name}</Text>
+            <Text style={styles.skillInfoLine}>
+              {skillInfo.damage} dégâts{skillInfo.aoe ? ' · touche TOUS les ennemis' : ' · cible unique'}
+            </Text>
+            <Text style={styles.skillInfoLine}>
+              {skillInfo.special
+                ? `Coup spécial — nécessite la jauge pleine (${MANA_MAX}💧)`
+                : (skillInfo.manaCost || 0) === 0
+                ? 'Attaque de base — gratuite'
+                : `Coûte ${skillInfo.manaCost}💧`}
+            </Text>
+            <TouchableOpacity style={styles.skillInfoClose} onPress={() => setSkillInfo(null)}>
+              <Text style={styles.skillInfoCloseText}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {phase === 'choosing' && (
         <View style={[styles.bottomWrap, { paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: insets.bottom }]}>
           <Text style={styles.hintText}>▼ CHOIX DE COMPÉTENCE ▼</Text>
           <View style={styles.bottomBar}>
             {activeFighter.creature.skills.map((skill) => {
-              const canAfford = activeFighter.endurance >= skill.enduranceCost;
+              const cost = skill.manaCost || 0;
+              // Le spécial exige la jauge PLEINE, pas seulement son coût.
+              const canAfford = skill.special
+                ? activeFighter.mana >= MANA_MAX
+                : activeFighter.mana >= cost;
               return (
                 <TouchableOpacity
                   key={skill.id}
-                  style={[styles.skillBtn, !canAfford && styles.skillBtnDisabled]}
+                  style={[styles.skillBtn, skill.special && styles.skillBtnSpecial, !canAfford && styles.skillBtnDisabled]}
+                  // Un appui simple SÉLECTIONNE l'attaque ; un appui long
+                  // affiche seulement son détail. Sans cette séparation,
+                  // consulter une attaque reviendrait à la lancer.
                   onPress={() => chooseSkill(skill, false)}
+                  onLongPress={() => setSkillInfo(skill)}
+                  delayLongPress={220}
                   disabled={!canAfford}
                 >
                   <Text style={styles.skillBtnName} numberOfLines={1}>{skill.name}</Text>
-                  <Text style={styles.skillBtnDamage}>{skill.damage} dégâts</Text>
-                  <Text style={[styles.skillBtnCost, !canAfford && styles.skillBtnCostMissing]}>{skill.enduranceCost} END</Text>
+                  <Text style={styles.skillBtnDamage}>
+                    {skill.damage} dégâts{skill.aoe ? ' · ZONE' : ''}
+                  </Text>
+                  <Text style={[styles.skillBtnCost, !canAfford && styles.skillBtnCostMissing]}>
+                    {skill.special ? `SPÉCIAL ${MANA_MAX}💧` : cost === 0 ? 'Gratuit' : `${cost}💧`}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -715,6 +774,27 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: COLORS.panel, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 4,
     alignItems: 'center', borderWidth: 1.5, borderColor: COLORS.action,
   },
+  // Coup spécial : liseré doré pour qu'il se distingue au premier coup
+  // d'œil des attaques ordinaires.
+  skillBtnSpecial: { borderColor: '#f5c542', borderWidth: 2, backgroundColor: 'rgba(245,197,66,0.16)' },
+
+  skillInfoBackdrop: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 40,
+    backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24,
+  },
+  skillInfoCard: {
+    minWidth: 240, maxWidth: 380, padding: 16, borderRadius: 14,
+    backgroundColor: '#101a26', borderWidth: 2, borderColor: '#f5c542',
+    alignItems: 'center',
+  },
+  skillInfoName: { color: '#fff', fontSize: 16, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
+  skillInfoLine: { color: '#c8d6e5', fontSize: 12, fontWeight: '700', marginTop: 3, textAlign: 'center' },
+  skillInfoClose: {
+    marginTop: 12, paddingVertical: 8, paddingHorizontal: 22, borderRadius: 10,
+    backgroundColor: '#f5c542',
+  },
+  skillInfoCloseText: { color: '#0b0d16', fontSize: 13, fontWeight: '900' },
+
   skillBtnDisabled: { borderColor: COLORS.border, opacity: 0.4 },
   skillBtnName: { color: COLORS.text, fontSize: 10, fontWeight: '800', textAlign: 'center' },
   skillBtnDamage: { color: COLORS.action, fontSize: 11, fontWeight: '900', marginTop: 3 },

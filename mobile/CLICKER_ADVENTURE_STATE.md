@@ -861,6 +861,52 @@ remonte (pas de serveur) : le jour où une sanction sera choisie, la
 donnée doit déjà exister, sinon il faudra une mise à jour PLUS plusieurs
 jours de collecte avant de pouvoir agir.
 
+## Refonte du combat — étape 1 : compétences et mana (11/09)
+
+**Nouveau modèle de compétences** (`buildCreatureSkills` dans
+`clickerLogic.js`) : **2 attaques** pour une créature commune, **3** à
+partir de rare, **+ 1 coup spécial**.
+
+⚠️ Les NOMS sont ceux qui existaient déjà. Ils avaient été écrits à la
+main, créature par créature, et collent à leur thème — en réinventer 90
+aurait fait perdre ce travail sans rien apporter. Les 2-3 premières
+compétences deviennent les attaques régulières, la dernière (la plus
+forte) devient le spécial, à 1,5x ses dégâts.
+
+⚠️ Le modèle est appliqué **après** la définition du tableau
+(`CREATURES.forEach`) : `mkSkills` s'exécute dans chaque littéral
+d'objet, où la rareté et le type de combat ne sont pas encore connus.
+
+**Le mana REMPLACE l'endurance** (décision du 11/09). Jauge de 0 à 5,
++1 par tour, pour le joueur comme pour les adversaires.
+
+| | Coût |
+|---|---|
+| Attaque 1 | gratuite — une créature n'est jamais bloquée |
+| Attaque 2 | 2💧 |
+| Attaque 3 (rare+) | 3💧 |
+| **Coup spécial** | jauge **PLEINE** (5💧) |
+
+⚠️ Le spécial exige la jauge pleine, pas seulement son coût : c'est ce
+qui en fait un moment attendu plutôt qu'une attaque de plus.
+
+⚠️ Le mana de l'adversaire monte sur une **copie locale** avant son
+choix. Passer par `setOpponents` aurait été asynchrone et il aurait
+choisi avec la valeur du tour précédent.
+
+**Attaque de ZONE** : la 2e attaque des créatures de type `soutien`
+(8 créatures). Frapper large est leur rôle, et ça donne un vrai choix
+tactique plutôt qu'un « tape le plus fort ».
+
+**Détail d'une attaque** : appui LONG sur le bouton. L'appui simple
+lance l'attaque — sans cette séparation, consulter reviendrait à jouer.
+
+### Reste à faire (étape 2)
+- Habillage visuel épuré, **en attente de l'image de champ de bataille**
+  (elle conditionne toute la mise en page)
+- Sélection de cible au tap : à vérifier au test, le mécanisme existe
+  déjà (`targetIndex`)
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

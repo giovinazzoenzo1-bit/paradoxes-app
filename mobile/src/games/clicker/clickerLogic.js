@@ -29,6 +29,55 @@ function mkSkills(entries) {
 // (crash réel rencontré : DeckPicker plantait pour les joueurs ayant déjà
 // "braisillon" ou "gouttelin" en collection/deck avant leur remplacement).
 // À compléter à chaque remplacement d'une créature d'origine par Gemini.
+// ---- Modèle de compétences de combat (11/09) ----
+//
+// Refonte : 2 attaques pour une créature COMMUNE, 3 à partir de RARE,
+// plus un COUP SPÉCIAL débloqué par une jauge de mana pleine.
+//
+// Les noms sont ceux qui existaient déjà : ils ont été écrits à la main,
+// créature par créature, et collent à leur thème. Les réinventer pour
+// 26 créatures aurait fait perdre ce travail sans rien apporter.
+//
+// Le mana REMPLACE l'endurance (décision du 11/09) : une seule jauge,
+// qui se remplit au fil des tours. L'attaque de base est gratuite, donc
+// une créature n'est jamais bloquée sans rien pouvoir faire.
+export const MANA_MAX = 5;
+export const MANA_PER_TURN = 1;
+
+// Coût des attaques régulières, dans l'ordre. La 1re est toujours
+// gratuite ; le spécial exige la jauge PLEINE.
+const SKILL_MANA_COSTS = [0, 2, 3];
+
+function buildCreatureSkills(creature) {
+  const entries = creature.skills || [];
+  const regularCount = creature.rarity === 'commun' ? 2 : 3;
+  const skills = entries.slice(0, regularCount).map((sk, i) => ({
+    id: `s${i + 1}`,
+    name: sk.name,
+    damage: sk.damage,
+    manaCost: SKILL_MANA_COSTS[i],
+    // Attaque de ZONE pour les créatures de soutien : c'est leur rôle
+    // de frapper large, et ça donne un vrai choix tactique au joueur
+    // plutôt qu'un simple « tape le plus fort ».
+    aoe: creature.combatType === 'soutien' && i === 1,
+    special: false,
+  }));
+  const last = entries[entries.length - 1];
+  if (last) {
+    skills.push({
+      id: 'special',
+      name: last.name,
+      // Le spécial doit se sentir : 1,5x les dégâts de la compétence
+      // la plus forte, contre une jauge entière.
+      damage: Math.max(1, Math.round(last.damage * 1.5)),
+      manaCost: MANA_MAX,
+      aoe: false,
+      special: true,
+    });
+  }
+  return skills;
+}
+
 export const CREATURE_ID_MIGRATIONS = {
   braisillon: 'pyrosile',
   gouttelin: 'caraploof',
@@ -256,6 +305,12 @@ export const CREATURES = [
     { name: 'Arcanis', emoji: '🌌' }, { name: 'Arcanis', emoji: '🌌' }, { name: 'Arcanis', emoji: '🌌' },
   ]},
 ];
+
+// Applique le nouveau modèle à TOUTES les créatures, une fois le tableau
+// défini — `buildCreatureSkills` a besoin de la rareté et du type de
+// combat, qui ne sont pas connus au moment où `mkSkills` s'exécute dans
+// chaque littéral d'objet.
+CREATURES.forEach((c) => { c.skills = buildCreatureSkills(c); });
 
 // 6 paliers désormais (au lieu de 4). "peu_commun" ET "mythique" sont
 // définis mais à poids 0 dans le gacha : AUCUNE des 10 créatures
