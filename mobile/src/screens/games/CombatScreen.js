@@ -88,10 +88,12 @@ const PLAYER_SLOTS = [
   { x: 0.36, y: 0.46, size: 0.78 },
   { x: 0.23, y: 0.26, size: 0.62 },
 ];
+// Adversaires décalés vers la droite (11/09) : ils empiétaient sur le
+// centre du terrain, où passe le sentier du décor.
 const OPPONENT_SLOTS = [
-  { x: 0.60, y: 0.48, size: 1.0 },
-  { x: 0.79, y: 0.26, size: 0.66 },
-  { x: 0.80, y: 0.60, size: 0.82 },
+  { x: 0.70, y: 0.48, size: 1.0 },
+  { x: 0.88, y: 0.26, size: 0.66 },
+  { x: 0.89, y: 0.60, size: 0.82 },
 ];
 const SPRITE_BASE = 74; // taille de l'emoji du sprite "devant" (size 1.0)
 
@@ -469,7 +471,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
             <FloatingDamage key={`${key}-${roundKey}`} amount={floatDamage} color="#FF5252" />
           </View>
         )}
-        <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }, ring === 'active' && styles.ringActive, ring === 'target' && styles.ringTarget]}>
+        {/* Flèche au-dessus de la cible, à la place de l'ancien anneau :
+            elle désigne sans encercler, et laisse la créature lisible. */}
+        {ring === 'target' && !fainted && <Text style={styles.targetArrow}>▼</Text>}
+        <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }]}>
           {/* `size={fs}` : l'illustration reprend exactement la taille
               calculee pour l'emoji, donc la mise en page du terrain
               (anneaux, barres de vie, positions) reste identique. */}
@@ -490,7 +495,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
             <View style={[styles.spriteEndFill, { width: `${Math.max(0, Math.min(1, mana / manaMax)) * 100}%` }]} />
           </View>
         )}
-        {ring === 'target' && !fainted && <Text style={styles.targetLabel}>🎯</Text>}
+
       </TouchableOpacity>
     );
   };
@@ -593,7 +598,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         <View style={[styles.bottomWrap, { paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: insets.bottom }]}>
           <Text style={styles.hintText}>▼ CHOIX DE COMPÉTENCE ▼</Text>
           <View style={styles.bottomBar}>
-            {activeFighter.creature.skills.map((skill) => {
+            {activeFighter.creature.skills
+              // Le spécial reste INVISIBLE tant que la jauge n'est pas
+              // pleine : afficher un bouton grisé qu'on ne peut pas
+              // utiliser encombre l'écran sans rien apprendre.
+              .filter((sk) => !sk.special || activeFighter.mana >= MANA_MAX)
+              .map((skill) => {
               const cost = skill.manaCost || 0;
               // Le spécial exige la jauge PLEINE, pas seulement son coût.
               const canAfford = skill.special
@@ -611,7 +621,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
                   delayLongPress={220}
                   disabled={!canAfford}
                 >
-                  <Text style={styles.skillBtnName} numberOfLines={1}>{skill.name}</Text>
+                  <Text style={styles.skillBtnName} numberOfLines={2}>{skill.name}</Text>
                   <Text style={styles.skillBtnDamage}>
                     {skill.damage} dégâts{skill.aoe ? ' · ZONE' : ''}
                   </Text>
@@ -720,7 +730,15 @@ const styles = StyleSheet.create({
   closeBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 
   sprite: { position: 'absolute', alignItems: 'center', zIndex: 5 },
-  spriteRing: { alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: 'transparent' },
+  // Simple conteneur de centrage : plus aucune bordure. Les anneaux
+  // autour des créatures ont été retirés (demande du 11/09), la cible
+  // est désormais signalée par une flèche au-dessus d'elle.
+  spriteRing: { alignItems: 'center', justifyContent: 'center' },
+  targetArrow: {
+    color: '#ffcf3f', fontSize: 26, fontWeight: '900', marginBottom: -4,
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4,
+  },
+
   ringActive: { borderColor: COLORS.action, backgroundColor: 'rgba(245,197,66,0.15)' },
   ringTarget: { borderColor: '#FF5252', backgroundColor: 'rgba(255,82,82,0.15)' },
   spriteName: {
@@ -730,7 +748,6 @@ const styles = StyleSheet.create({
   spriteHpFill: { height: '100%', borderRadius: 4 },
   spriteEndTrack: { height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', marginTop: 2 },
   spriteEndFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.action },
-  targetLabel: { fontSize: 12, marginTop: 1 },
 
   // `pointerEvents` dans le STYLE, jamais en prop (voir Regles de
   // survie) : la prop est ignoree depuis le SDK 57. Cette couche couvre
@@ -775,10 +792,21 @@ const styles = StyleSheet.create({
     color: '#fff', fontSize: 11, fontWeight: '900', textAlign: 'center', marginBottom: 4,
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3,
   },
-  bottomBar: { flexDirection: 'row', paddingHorizontal: 8, paddingBottom: 8, paddingTop: 6, gap: 6, backgroundColor: 'rgba(7,5,26,0.92)' },
+  // Barre alignée à DROITE et fond transparent : l'écran doit rester
+  // épuré, le décor visible. Les boutons ne sont plus étirés sur toute
+  // la largeur mais groupés en petits carrés.
+  bottomBar: {
+    flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-end',
+    paddingHorizontal: 10, paddingBottom: 8, paddingTop: 6, gap: 8,
+    backgroundColor: 'transparent',
+  },
+  // Petit carré (demande du 11/09) plutôt qu'un bouton étiré : les
+  // attaques se lisent d'un coup d'œil et laissent voir le terrain.
   skillBtn: {
-    flex: 1, backgroundColor: COLORS.panel, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 4,
-    alignItems: 'center', borderWidth: 1.5, borderColor: COLORS.action,
+    width: 86, height: 86, borderRadius: 14, paddingVertical: 6, paddingHorizontal: 4,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(16,26,38,0.92)',
+    borderWidth: 1.5, borderColor: COLORS.action,
   },
   // Coup spécial : liseré doré pour qu'il se distingue au premier coup
   // d'œil des attaques ordinaires.

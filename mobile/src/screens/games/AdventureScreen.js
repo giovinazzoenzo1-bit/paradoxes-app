@@ -710,7 +710,6 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
   const stats = combatStatsForCreatureTyped(creature, owned.level, evolutionTier, equippedRunes);
   const hpBonus = stats.hp - statsBase.hp;
   const atkBonus = stats.attack - statsBase.attack;
-  const enduranceBonus = stats.endurance - statsBase.endurance;
 
   const levelCost = levelUpCost(creature, owned.level);
   const evoMaxed = evolutionTier >= 2;
@@ -807,7 +806,11 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
             <ThemedBlock theme={theme} style={styles.mlStatsBox}>
               <MlStat icon="⚔️" label="ATTAQUE" value={stats.attack} bonus={atkBonus} color={COLORS.bad} />
               <MlStat icon="❤️" label="VIE" value={stats.hp} bonus={hpBonus} color={COLORS.good} />
-              <MlStat icon="⚡" label="ENDURANCE" value={stats.endurance} bonus={enduranceBonus} color={COLORS.action} />
+              {/* ENDURANCE retirée (11/09) : la stat ne pilote plus rien
+                  depuis que le mana l'a remplacée en combat, et elle
+                  n'est volontairement PAS remplacée par le mana — celui-ci
+                  est identique pour toutes les créatures (0 à 5), donc
+                  l'afficher dans une fiche n'apprendrait rien. */}
               <MlStat icon="👆" label="VITESSE" value={`×${stats.clickSpeed.toFixed(1).replace('.', ',')}`} bonus={0} color={COLORS.neonCyan} />
             </ThemedBlock>
 
