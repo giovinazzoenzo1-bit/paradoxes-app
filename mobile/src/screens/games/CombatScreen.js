@@ -53,6 +53,9 @@ import {
   elementRelation,
 } from '../../games/clicker/combatLogic';
 
+// Couleurs d'affinité, communes à la flèche de visée et aux pastilles.
+const ELEM_COLORS = { fort: '#3ddc84', neutre: '#ffb340', faible: '#ff5a4a' };
+
 const BASIC_ATTACK_RATIO = 0.4; // proportion de la stat ATQ brute, pour l'attaque de base gratuite
 const RECHARGE_PERCENT = 0.5; // "Recharge" (pub simulée) rend 50% de l'endurance max du combattant actif
 
@@ -590,7 +593,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   // devant (slot 0), les autres remplissent les slots 1 et 2.
   const playerOrder = [activeIndex, ...fighters.map((_, i) => i).filter((i) => i !== activeIndex)];
 
-  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir }) => {
+  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir, elemColor }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -616,8 +619,14 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
             rebondit pour être repérable au premier coup d'œil. */}
         {ring === 'target' && !fainted && armedSkill && (
           <Animated.View style={{ transform: [{ translateY: arrowBounce }] }}>
-            <Ionicons name="arrow-down" size={34} color="#ffcf3f" style={styles.targetArrow} />
+            <Ionicons name="arrow-down" size={34} color={elemColor || '#ffcf3f'} style={styles.targetArrow} />
           </Animated.View>
+        )}
+        {/* Pastille d'affinité sur CHAQUE adversaire : avec une attaque
+            armée, taper un adversaire lance le coup — le joueur n'a donc
+            aucun moyen de comparer cible par cible sans cet indicateur. */}
+        {elemColor && !fainted && ring !== 'target' && (
+          <View style={[styles.elemDot, { backgroundColor: elemColor }]} />
         )}
         <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }]}>
           {/* `size={fs}` : l'illustration reprend exactement la taille
@@ -704,6 +713,9 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           emoji: d.emoji, name: d.name,
           hp: o.hp, hpMax: o.stats.hp, fainted,
           ring: i === targetIndex && !fainted ? 'target' : null,
+          // Vert = ton élément domine le sien, orange = neutre, rouge =
+          // tu es en position défavorable.
+          elemColor: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)],
           // L'adversaire actif est celui du slot de devant : c'est lui
           // qui riposte. Il s'élance vers la GAUCHE (-1).
           lunging: !!lunge && lunge.side === 'opponent' && i === lunge.index, lungeDir: -1,
@@ -740,12 +752,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       {/* Détail de la dernière attaque choisie, en bandeau au-dessus
           des boutons — jamais une fenêtre bloquante : le combat ne doit
           pas s'interrompre pour lire une description. */}
-      {skillInfo && (
+      {skillInfo && armedSkill && (
         // Calé au-dessus du BOUTON pressé : les boutons font 86dp avec
         // 8dp d'écart et sont alignés à droite, donc le décalage depuis
         // le bord droit se déduit du rang du bouton.
-        <View style={[styles.skillInfoCard, { right: 10 + (skillInfo.fromRight || 0) * 94 }]}>
-          <Text style={styles.skillInfoName}>{skillInfo.name}</Text>
+        <View style={[styles.skillInfoCard, { right: 10 + (skillInfo.fromRight || 0) * 80 }]}>
+
           {/* Une seule phrase : le panneau masquait un adversaire
               entier. Le coût est déjà lisible sur le bouton, inutile de
               le répéter ici. */}
@@ -753,17 +765,8 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
             {activeFighter.creature.stages[0].name} utilise {skillInfo.name} et inflige{' '}
             {skillInfo.damage} dégâts{skillInfo.aoe ? ' à TOUS les ennemis' : ''}.
           </Text>
-          {/* Affinité contre la cible VISÉE : l'information n'a de sens
-              que face à un adversaire précis. */}
-          {opponents[targetIndex] && (() => {
-            const rel = elementRelation(activeFighter.creature.element, opponents[targetIndex].creature.element);
-            if (rel === 'neutre') return null;
-            return (
-              <Text style={rel === 'fort' ? styles.elemStrong : styles.elemWeak}>
-                {activeFighter.creature.element} {rel === 'fort' ? '▲ +30%' : '▼ −25%'} contre {opponents[targetIndex].creature.element}
-              </Text>
-            );
-          })()}
+          {/* L'affinité est lue sur les PASTILLES colorées des
+              adversaires, pas répétée ici. */}
         </View>
       )}
 
@@ -796,7 +799,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           <Text style={styles.hintText}>
             {lastExchange
               ? `Tu as infligé ${lastExchange.dealt} · reçu ${lastExchange.taken} (PV ${lastExchange.hpAfter}/${lastExchange.hpMax})`
-              : '▼ CHOIX DE COMPÉTENCE ▼'}
+              : ''}
           </Text>
           <View style={styles.bottomBar}>
             {activeFighter.creature.skills
@@ -957,6 +960,10 @@ const styles = StyleSheet.create({
   // autour des créatures ont été retirés (demande du 11/09), la cible
   // est désormais signalée par une flèche au-dessus d'elle.
   spriteRing: { alignItems: 'center', justifyContent: 'center' },
+  elemDot: {
+    width: 12, height: 12, borderRadius: 6, marginBottom: 2,
+    borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.55)',
+  },
   targetArrow: {
     marginBottom: -4,
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 5,
@@ -1023,7 +1030,7 @@ const styles = StyleSheet.create({
   // Petit carré (demande du 11/09) plutôt qu'un bouton étiré : les
   // attaques se lisent d'un coup d'œil et laissent voir le terrain.
   skillBtn: {
-    width: 86, height: 86, borderRadius: 14, paddingVertical: 6, paddingHorizontal: 4,
+    width: 72, height: 72, borderRadius: 12, paddingVertical: 4, paddingHorizontal: 3,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(16,26,38,0.92)',
     borderWidth: 1.5, borderColor: COLORS.action,
@@ -1052,21 +1059,20 @@ const styles = StyleSheet.create({
   },
   tapCountOf: { color: '#ffcf3f', fontSize: 13, fontWeight: '800', marginTop: -2 },
 
+  // Semi-transparent (0,94 -> 0,62) et plus petit : il masquait les
+  // adversaires placés derrière lui.
   skillInfoCard: {
-    position: 'absolute', right: 10, bottom: 104, zIndex: 12,
-    maxWidth: 200, padding: 8, borderRadius: 10,
-    backgroundColor: 'rgba(16,26,38,0.94)', borderWidth: 2, borderColor: '#f5c542',
+    position: 'absolute', right: 10, bottom: 92, zIndex: 12,
+    maxWidth: 160, padding: 6, borderRadius: 9,
+    backgroundColor: 'rgba(16,26,38,0.62)', borderWidth: 1, borderColor: 'rgba(245,197,66,0.7)',
     // Décoratif : ne doit jamais intercepter un tap destiné au terrain.
     pointerEvents: 'none',
   },
-  skillInfoName: { color: '#ffd76a', fontSize: 12, fontWeight: '900', marginBottom: 3 },
-  elemStrong: { color: '#7fffb0', fontSize: 10, fontWeight: '900', marginTop: 3 },
-  elemWeak: { color: '#ff9b91', fontSize: 10, fontWeight: '900', marginTop: 3 },
   skillInfoLine: { color: '#e6eef7', fontSize: 10, fontWeight: '700', lineHeight: 14 },
 
   skillBtnDisabled: { borderColor: COLORS.border, opacity: 0.4 },
-  skillBtnName: { color: COLORS.text, fontSize: 10, fontWeight: '800', textAlign: 'center' },
-  skillBtnDamage: { color: COLORS.action, fontSize: 11, fontWeight: '900', marginTop: 3 },
+  skillBtnName: { color: COLORS.text, fontSize: 9, fontWeight: '800', textAlign: 'center' },
+  skillBtnDamage: { color: COLORS.action, fontSize: 10, fontWeight: '900', marginTop: 2 },
   skillBtnCost: { color: COLORS.muted, fontSize: 8, fontWeight: '700', marginTop: 1 },
   skillBtnCostMissing: { color: '#FF5252' },
   rechargeBtn: {

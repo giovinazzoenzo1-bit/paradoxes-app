@@ -8,6 +8,7 @@ import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
@@ -1010,6 +1011,35 @@ function EnergyBadge({ energy, energyUpdatedAt }) {
   );
 }
 
+// Explication du système d'éléments. Volontairement COURTE : le joueur
+// l'ouvre en cours de partie, pas pour lire un manuel.
+function ElementHelpOverlay({ onClose }) {
+  return (
+    <View style={styles.elemHelpBackdrop}>
+      <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+      <View style={styles.elemHelpCard}>
+        <Text style={styles.elemHelpTitle}>Affinités élémentaires</Text>
+        <Text style={styles.elemHelpLine}>
+          Attaquer un élément que le tien domine inflige <Text style={styles.elemHelpStrong}>+30 %</Text> de dégâts.
+          L'inverse en inflige <Text style={styles.elemHelpWeak}>−25 %</Text>.
+        </Text>
+        <Text style={styles.elemHelpChain}>🔥 Feu ▸ 💨 Air ▸ 🌍 Terre ▸ ⚡ Foudre ▸ 💧 Eau ▸ 🔥</Text>
+        <Text style={styles.elemHelpLine}>
+          ✨ Lumière et 🌑 Ténèbres se frappent <Text style={styles.elemHelpStrong}>fort mutuellement</Text>.
+          {'\n'}🔮 Magie n'a ni avantage ni faiblesse.
+        </Text>
+        <Text style={styles.elemHelpFoot}>
+          En combat, une pastille colorée au-dessus de chaque adversaire indique
+          ta position : vert favorable, orange neutre, rouge défavorable.
+        </Text>
+        <TouchableOpacity style={styles.elemHelpClose} onPress={onClose}>
+          <Text style={styles.elemHelpCloseText}>Compris</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, diamonds = 0 }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
@@ -1032,6 +1062,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
 
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
+  const [elemHelpOpen, setElemHelpOpen] = useState(false);
 
   // Replacement au retour d'un combat. `onContentSizeChange` ne se
   // déclenche pas dans ce cas (la taille du contenu est inchangée), il
@@ -1100,6 +1131,8 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 
   return (
     <View style={styles.screen}>
+      {/* Plein écran : la barre système casse l'immersion en paysage. */}
+      <StatusBar hidden />
       <View style={styles.header}>
         <BackButton onPress={onBack} />
         <Text style={styles.title}>⚔️ Chapitres</Text>
@@ -1181,6 +1214,13 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
       {/* Recharge d'énergie payée en Diamants. Le débit est délégué au
           Clicker (qui détient la monnaie) ; ici on ne fait que remplir
           la jauge si le paiement a réussi. */}
+      {/* Bouton d'aide, en bas à gauche (demande du 12/09). */}
+      <TouchableOpacity style={styles.elemHelpBtn} onPress={() => setElemHelpOpen(true)}>
+        <Text style={styles.elemHelpBtnText}>🔥 Éléments</Text>
+      </TouchableOpacity>
+
+      {elemHelpOpen && <ElementHelpOverlay onClose={() => setElemHelpOpen(false)} />}
+
       {levelPreview && (
         <FighterSelectOverlay
           levelNumber={levelPreview}
@@ -1223,6 +1263,8 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
 
   return (
     <View style={styles.screen}>
+      {/* Plein écran : la barre système casse l'immersion en paysage. */}
+      <StatusBar hidden />
       <View style={styles.header}>
         <BackButton onPress={onBack} />
         <Text style={styles.title}>💎 Runes</Text>
@@ -1295,6 +1337,8 @@ function RuneFusionScreen({ ownedRunes, onFuseRunes, onBack }) {
 
   return (
     <View style={styles.screen}>
+      {/* Plein écran : la barre système casse l'immersion en paysage. */}
+      <StatusBar hidden />
       <View style={styles.header}>
         <BackButton onPress={onBack} />
         <Text style={styles.title}>🔀 Fusionner</Text>
@@ -1531,6 +1575,36 @@ const styles = StyleSheet.create({
   energyBadge: { alignItems: 'center' },
   energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
   energyBadgeCountdown: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1 },
+  elemHelpBtn: {
+    position: 'absolute', left: 12, bottom: 12, zIndex: 15,
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20,
+    backgroundColor: 'rgba(10,20,32,0.9)',
+    borderWidth: 1.5, borderColor: COLORS.action,
+  },
+  elemHelpBtnText: { color: COLORS.action, fontSize: 12, fontWeight: '900' },
+  elemHelpBackdrop: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 40,
+    backgroundColor: 'rgba(0,0,0,0.66)', alignItems: 'center', justifyContent: 'center', padding: 20,
+  },
+  elemHelpCard: {
+    maxWidth: 520, padding: 18, borderRadius: 16,
+    backgroundColor: COLORS.bg, borderWidth: 2, borderColor: COLORS.action,
+  },
+  elemHelpTitle: { color: COLORS.action, fontSize: 16, fontWeight: '900', textAlign: 'center', marginBottom: 10 },
+  elemHelpLine: { color: COLORS.text, fontSize: 12, fontWeight: '600', lineHeight: 18, marginBottom: 8 },
+  elemHelpChain: {
+    color: COLORS.text, fontSize: 13, fontWeight: '900', textAlign: 'center',
+    marginBottom: 10, letterSpacing: 0.3,
+  },
+  elemHelpStrong: { color: '#3ddc84', fontWeight: '900' },
+  elemHelpWeak: { color: '#ff5a4a', fontWeight: '900' },
+  elemHelpFoot: { color: COLORS.muted, fontSize: 11, fontWeight: '600', lineHeight: 16, marginBottom: 12 },
+  elemHelpClose: {
+    alignSelf: 'center', paddingVertical: 9, paddingHorizontal: 26,
+    borderRadius: 12, backgroundColor: COLORS.action,
+  },
+  elemHelpCloseText: { color: '#0b0d16', fontSize: 13, fontWeight: '900' },
+
   overlayBackBtn: {
     marginTop: 10, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12,
     alignItems: 'center', alignSelf: 'stretch',
