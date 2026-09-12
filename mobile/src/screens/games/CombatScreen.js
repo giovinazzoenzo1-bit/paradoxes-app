@@ -641,7 +641,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         </View>
         {mana != null && (
           <View style={[styles.spriteEndTrack, { width: Math.round(90 * slot.size) }]}>
-            <View style={[styles.spriteEndFill, { width: `${Math.max(0, Math.min(1, mana / manaMax)) * 100}%` }]} />
+            <View style={[styles.spriteEndFill, mana >= manaMax && styles.spriteEndFull, { width: `${Math.max(0, Math.min(1, mana / manaMax)) * 100}%` }]} />
           </View>
         )}
 
@@ -673,7 +673,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           creatureId: f.creature.id, stageIndex: stageForLevel(f.ownedLevel),
           emoji: d.emoji, name: d.name,
           hp: f.hp, hpMax: f.stats.hp,
-          mana: fi === activeIndex ? f.mana : null, manaMax: MANA_MAX,
+          // Jauge visible pour TOUS : le joueur doit voir laquelle de
+          // ses créatures approche de son ultime, pas seulement celle
+          // qui joue.
+          mana: f.mana, manaMax: MANA_MAX,
           fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
           lunging: !!lunge && lunge.side === 'player' && fi === lunge.index, lungeDir: 1,
           floatDamage: playerDamageFloat && playerDamageFloat.index === fi ? playerDamageFloat.amount : null,
@@ -711,12 +714,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         {phase === 'tapping' && (
           <>
             <Text style={styles.chosenSkillLabel}>{selectedSkill?.name}</Text>
-            <TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapZoneCombat}>
-              <Animated.View style={{ transform: [{ scale: punchScale }] }}>
-                <Text style={styles.tapPunchText}>👊</Text>
-              </Animated.View>
-            </TouchableOpacity>
-            <Text style={styles.tapCountText}>{tapCount} / {requiredTaps}</Text>
+            <Animated.View style={{ transform: [{ scale: punchScale }] }}>
+              <View style={styles.tapRing}>
+                <Text style={styles.tapCountBig}>{tapCount}</Text>
+                <Text style={styles.tapCountOf}>/ {requiredTaps}</Text>
+              </View>
+            </Animated.View>
             <View style={styles.timeTrack}>
               <View style={[styles.timeFill, { width: `${(timeLeft / TAP_CHALLENGE_TIME_LIMIT_SEC) * 100}%` }]} />
             </View>
@@ -743,8 +746,27 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         </View>
       )}
 
+      {/* Pendant le défi, TOUT l'écran est tapable (demande du 12/09) :
+          viser une petite zone au doigt pendant 25 taps chronométrés
+          était inutilement pénible. Posée en absolu au-dessus du
+          terrain, sous la barre du bas qui garde le chrono lisible. */}
+      {phase === 'tapping' && (
+        <TouchableOpacity
+          style={styles.tapEverywhere}
+          activeOpacity={1}
+          onPress={handleTap}
+        />
+      )}
+
       {phase === 'choosing' && (
-        <View style={[styles.bottomWrap, { paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: insets.bottom }]}>
+        <View style={[
+          styles.bottomWrap,
+          { paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: insets.bottom },
+          // Pendant le défi, la barre laisse PASSER les taps : elle est
+          // au-dessus de la zone plein écran (zIndex 20 contre 8), donc
+          // sans ça taper sur le compteur ne compterait pas.
+          phase === 'tapping' && styles.bottomWrapPassThrough,
+        ]}>
           {/* DIAGNOSTIC (12/09) : affiche le dernier échange chiffré.
               Le calcul donne ~35% de la barre par coup, l'utilisateur
               en voit « 2 mm » — impossible de trancher en lisant le
@@ -784,9 +806,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
                   <Text style={styles.skillBtnDamage}>
                     {skill.damage} dégâts{skill.aoe ? ' · ZONE' : ''}
                   </Text>
-                  <Text style={[styles.skillBtnCost, !canAfford && styles.skillBtnCostMissing]}>
-                    {skill.special ? `SPÉCIAL ${MANA_MAX}💧` : cost === 0 ? 'Gratuit' : `${cost}💧`}
-                  </Text>
+                  {/* Rien à afficher pour une attaque normale : elles
+                      sont toutes gratuites, le préciser est du bruit.
+                      Seul l'ultime annonce qu'il est spécial. */}
+                  {skill.special && <Text style={styles.skillBtnCost}>SPÉCIAL</Text>}
                 </TouchableOpacity>
               );
             })}
@@ -926,7 +949,10 @@ const styles = StyleSheet.create({
   spriteHpTrack: { height: 8, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', marginTop: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
   spriteHpFill: { height: '100%', borderRadius: 4 },
   spriteEndTrack: { height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', marginTop: 2 },
-  spriteEndFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.action },
+  // Bleue : c'est la jauge de MANA. Une fois pleine, l'ultime se
+  // débloque — la couleur doit la distinguer nettement de la vie.
+  spriteEndFill: { height: '100%', borderRadius: 3, backgroundColor: '#3ec6f0' },
+  spriteEndFull: { backgroundColor: '#7fe9ff' },
 
   // `pointerEvents` dans le STYLE, jamais en prop (voir Regles de
   // survie) : la prop est ignoree depuis le SDK 57. Cette couche couvre
@@ -945,13 +971,6 @@ const styles = StyleSheet.create({
     color: COLORS.action, fontSize: 13, fontWeight: '900', marginBottom: 8, textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3,
   },
-  tapZoneCombat: {
-    width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(23,19,49,0.92)',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: COLORS.neonPink,
-    shadowColor: COLORS.neonPink, shadowOpacity: 0.7, shadowRadius: 18, shadowOffset: { width: 0, height: 0 },
-  },
-  tapPunchText: { fontSize: 68 },
-  tapCountText: { color: '#fff', fontSize: 17, fontWeight: '900', marginTop: 8, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
   timeTrack: { width: 130, height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', marginTop: 6 },
   timeFill: { height: '100%', backgroundColor: COLORS.neonCyan, borderRadius: 3 },
   // Idem : purement decoratif (les degats qui s'envolent), ne doit
@@ -967,6 +986,7 @@ const styles = StyleSheet.create({
   },
 
   bottomWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 20 },
+  bottomWrapPassThrough: { pointerEvents: 'none' },
   hintText: {
     color: '#fff', fontSize: 11, fontWeight: '900', textAlign: 'center', marginBottom: 4,
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3,
@@ -993,6 +1013,23 @@ const styles = StyleSheet.create({
   // Attaque ARMÉE : liseré vert vif, pour voir d'un coup d'œil laquelle
   // partira au prochain tap sur un adversaire.
   skillBtnArmed: { borderColor: '#7fffb0', borderWidth: 2.5, backgroundColor: 'rgba(127,255,176,0.14)' },
+
+  // Zone de tap plein écran pendant le défi. zIndex sous la barre du
+  // bas (12) pour ne pas masquer le compteur ni le chrono.
+  tapEverywhere: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 8 },
+  // Compteur rond à la place de l'emoji poing : lisible d'un coup d'œil
+  // et cohérent avec le reste de l'interface.
+  tapRing: {
+    width: 108, height: 108, borderRadius: 54,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,20,30,0.72)',
+    borderWidth: 4, borderColor: '#ffcf3f',
+  },
+  tapCountBig: {
+    color: '#fff', fontSize: 38, fontWeight: '900', lineHeight: 42,
+    textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4,
+  },
+  tapCountOf: { color: '#ffcf3f', fontSize: 13, fontWeight: '800', marginTop: -2 },
 
   skillInfoCard: {
     position: 'absolute', right: 10, bottom: 104, zIndex: 12,
