@@ -28,6 +28,30 @@ const COMBAT_BTN = require('../../../assets/adventure/combat-btn.png');
 const GRIFFES_ICON = require('../../../assets/icons/griffes-icon.png');
 const RUNES_GEM = require('../../../assets/icons/runes-gem.png');
 
+// Panneau de la boutique de runes (Gemini, détouré ici). Les 3 cases
+// sont de vrais TROUS dans l'image : on y rend le contenu en code, donc
+// il reste modifiable sans repasser par Gemini. Fractions MESURÉES sur
+// l'asset, à remesurer si l'image change.
+const RUNES_SHOP_PANEL = require('../../../assets/icons/runes-shop-panel.png');
+const SHOP_PANEL_RATIO = 900 / 482;
+const SHOP_BANNER = { top: 0.008, bottom: 0.058, left: 0.322, right: 0.672 };
+const SHOP_SLOTS = [
+  { left: 0.0767, right: 0.3089 },
+  { left: 0.3856, right: 0.6133 },
+  { left: 0.6878, right: 0.9222 },
+];
+const SHOP_SLOT_Y = { top: 0.2427, bottom: 0.7178 };
+
+// Offres. Le pack et l'offre spéciale sont volontairement AVANTAGEUX :
+// c'est ce qui leur donne une raison d'exister à côté du tirage à
+// l'unité. Mesuré — avec 7 types, obtenir 2 runes d'un type PRÉCIS
+// demande ~14 tirages, soit 1400 Griffes ; l'offre spéciale livre ce
+// résultat pour 300.
+const RUNE_PACK_SIZE = 3;
+const RUNE_PACK_COST = 250;        // contre 300 à l'unité : -17%
+const RUNE_SPECIAL_COST = 300;     // une rune NIVEAU 2 d'un type imposé
+const RUNE_OFFER_KEY = 'adventure:runeOffer:v1';
+
 // Halo derrière chaque icône — un dégradé radial PRÉ-RENDU (Gaussian
 // blur fait une fois, pas à l'exécution) plutôt que des cercles plats
 // superposés : 2-3 anneaux d'opacité fixe créent des bandes visibles au
@@ -224,6 +248,30 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Runes possédées : [{ id, type, level }] — id unique généré à l'achat/
   // la fusion, type = l'une des 4 clés de RUNE_TYPES, level 1 à 5.
   const [ownedRunes, setOwnedRunes] = useState([]);
+  // Offre spéciale du jour : { date, type, purchased }. Stockée dans sa
+  // PROPRE clé — une offre ratée ne doit pas pouvoir corrompre la
+  // sauvegarde d'Aventure. Une date différente au chargement retire un
+  // nouveau type et remet l'achat à zéro : pas de minuteur de minuit.
+  const [specialOffer, setSpecialOffer] = useState(null);
+  useEffect(() => {
+    (async () => {
+      const today = new Date().toDateString();
+      let cur = null;
+      try {
+        const raw = await AsyncStorage.getItem(RUNE_OFFER_KEY);
+        if (raw) cur = JSON.parse(raw);
+      } catch {}
+      if (!cur || cur.date !== today || !RUNE_TYPES[cur.type]) {
+        cur = {
+          date: today,
+          type: RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)],
+          purchased: false,
+        };
+        AsyncStorage.setItem(RUNE_OFFER_KEY, JSON.stringify(cur)).catch(() => {});
+      }
+      setSpecialOffer(cur);
+    })();
+  }, []);
   // Énergie — 1 point toutes les 20 min, plafond 5, coûte 1 pour LANCER
   // un combat (voir startBattleWithEnergy plus bas).
   // Meilleur nombre d'étoiles par niveau, { [levelNumber]: 1..3 }. On
@@ -464,6 +512,37 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     trackEvent('runeBought', 1);
   };
 
+  // Pack : N runes aléatoires d'un coup, moins cher qu'à l'unité.
+  const buyRunePack = () => {
+    if (griffes < RUNE_PACK_COST) return;
+    setGriffes((g) => g - RUNE_PACK_COST);
+    const drawn = Array.from({ length: RUNE_PACK_SIZE }, () => ({
+      id: makeRuneId(),
+      type: RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)],
+      level: 1,
+      equippedCreatureId: null,
+    }));
+    setOwnedRunes((prev) => [...prev, ...drawn]);
+    trackEvent('runeBought', RUNE_PACK_SIZE);
+  };
+
+  // Offre spéciale : une rune de NIVEAU 2 d'un type imposé, tiré une
+  // fois par jour. Une seule fois par jour — sinon elle remplacerait
+  // complètement le tirage à l'unité, qu'elle bat largement.
+  const buySpecialOffer = () => {
+    if (!specialOffer || specialOffer.purchased) return;
+    if (griffes < RUNE_SPECIAL_COST) return;
+    setGriffes((g) => g - RUNE_SPECIAL_COST);
+    setOwnedRunes((prev) => [
+      ...prev,
+      { id: makeRuneId(), type: specialOffer.type, level: 2, equippedCreatureId: null },
+    ]);
+    const next = { ...specialOffer, purchased: true };
+    setSpecialOffer(next);
+    AsyncStorage.setItem(RUNE_OFFER_KEY, JSON.stringify(next)).catch(() => {});
+    trackEvent('runeBought', 2);
+  };
+
   // Fusionne 2 runes du MÊME type et MÊME niveau en une seule au niveau
   // supérieur (jamais au-delà du palier 5) — les deux runes d'origine
   // disparaissent. Si l'une des deux était équipée, la nouvelle rune
@@ -568,6 +647,9 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         griffes={griffes}
         ownedRunes={ownedRunes}
         onBuyRune={buyRandomRune}
+        onBuyPack={buyRunePack}
+        onBuySpecial={buySpecialOffer}
+        specialOffer={specialOffer}
         onFuseRunes={fuseRunes}
         onBuyGriffes={buyGriffesWithDiamonds}
         onBack={() => setRunesOpen(false)}
@@ -1491,12 +1573,89 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 // type/niveau -> 1 rune au niveau supérieur). Sélection tactile simple :
 // touche une 1ère rune pour la sélectionner, touche une 2ème rune
 // compatible pour fusionner automatiquement.
-function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBuyGriffes, onBack }) {
+// Boutique de runes : l'image porte le cadre et les 3 cases, le contenu
+// est rendu EN ABSOLU par-dessus, aux fractions mesurées sur l'asset.
+// Les cases sont de vrais trous, donc ce qu'on pose dedans se voit.
+function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, onBuySpecial }) {
+  const H = width / SHOP_PANEL_RATIO;
+  const slotTop = SHOP_SLOT_Y.top * H;
+  const slotH = (SHOP_SLOT_Y.bottom - SHOP_SLOT_Y.top) * H;
+  const offerDef = specialOffer ? RUNE_TYPES[specialOffer.type] : null;
+  const soldOut = specialOffer ? specialOffer.purchased : true;
+
+  const offers = [
+    {
+      key: 'special',
+      icon: offerDef ? offerDef.icon : '✨',
+      label: soldOut ? 'Épuisée' : 'Niv. 2',
+      cost: RUNE_SPECIAL_COST,
+      disabled: soldOut || griffes < RUNE_SPECIAL_COST,
+      onPress: onBuySpecial,
+    },
+    { key: 'pack', icon: '🎒', label: `x${RUNE_PACK_SIZE}`, cost: RUNE_PACK_COST,
+      disabled: griffes < RUNE_PACK_COST, onPress: onBuyPack },
+    { key: 'random', icon: '🎲', label: 'Aléatoire', cost: RUNE_COST,
+      disabled: griffes < RUNE_COST, onPress: onBuyRandom },
+  ];
+
+  return (
+    <View style={{ width, height: H }}>
+      <Image
+        source={RUNES_SHOP_PANEL}
+        style={{ position: 'absolute', width, height: H, pointerEvents: 'none' }}
+        resizeMode="stretch"
+      />
+      {/* Titre écrit DANS la bannière vide de l'image. */}
+      <View
+        style={{
+          position: 'absolute',
+          left: SHOP_BANNER.left * width,
+          width: (SHOP_BANNER.right - SHOP_BANNER.left) * width,
+          top: SHOP_BANNER.top * H,
+          height: (SHOP_BANNER.bottom - SHOP_BANNER.top) * H,
+          alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none',
+        }}
+      >
+        <Text style={styles.shopBannerText} numberOfLines={1}>BOUTIQUE</Text>
+      </View>
+
+      {offers.map((o, i) => {
+        const slot = SHOP_SLOTS[i];
+        return (
+          <TouchableOpacity
+            key={o.key}
+            style={{
+              position: 'absolute',
+              left: slot.left * width, width: (slot.right - slot.left) * width,
+              top: slotTop, height: slotH,
+              alignItems: 'center', justifyContent: 'center',
+              opacity: o.disabled ? 0.45 : 1,
+            }}
+            onPress={o.onPress}
+            disabled={o.disabled}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.shopOfferIcon}>{o.icon}</Text>
+            <Text style={styles.shopOfferLabel} numberOfLines={1}>{o.label}</Text>
+            <View style={styles.shopPriceRow}>
+              <Text style={styles.shopPriceText}>{o.cost}</Text>
+              <Image source={GRIFFES_ICON} style={styles.shopPriceIcon} resizeMode="contain" />
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, specialOffer, onFuseRunes, onBuyGriffes, onBack }) {
   // Écran de fusion dédié (30/08) — remplace l'ancien mode "tape une
   // rune puis retape une pareille", pas très intuitif (fallait deviner
   // quelle rune correspondait à quelle autre). Regroupe automatiquement
   // les runes identiques, un seul bouton clair par groupe.
   const [fusionOpen, setFusionOpen] = useState(false);
+  const [shopW, setShopW] = useState(0);
 
   if (fusionOpen) {
     return <RuneFusionScreen ownedRunes={ownedRunes} onFuseRunes={onFuseRunes} onBack={() => setFusionOpen(false)} />;
@@ -1517,23 +1676,18 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBuyGriffes
         <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
       </View>
 
-      <TouchableOpacity
-        style={[styles.startBattleBtn, griffes < RUNE_COST && styles.actionBtnDisabledAdv]}
-        onPress={onBuyRune}
-        disabled={griffes < RUNE_COST}
-      >
-        <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /></Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>
-        <Text style={styles.fusionModeBtnText}>🔀 Fusionner des runes</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.runeHint}>
-        Pour équiper une rune, va dans la fiche d'une créature. Ta collection complète est listée ci-dessous.
-      </Text>
-
-      <ScrollView contentContainerStyle={styles.runeGrid}>
+      {/* Paysage : la boutique occupe la colonne de DROITE, la
+          collection celle de gauche. La hauteur est la ressource rare en
+          paysage, on ne l'empile pas verticalement. */}
+      <View style={styles.runesBody}>
+        <View style={styles.runesLeftCol}>
+          <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>
+            <Text style={styles.fusionModeBtnText}>🔀 Fusionner des runes</Text>
+          </TouchableOpacity>
+          <Text style={styles.runeHint}>
+            Pour équiper une rune, va dans la fiche d'une créature.
+          </Text>
+          <ScrollView contentContainerStyle={styles.runeGrid}>
         {ownedRunes.length === 0 ? (
           <Text style={styles.runeEmptyText}>Aucune rune pour l'instant — achètes-en une ci-dessus !</Text>
         ) : (
@@ -1551,7 +1705,25 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBuyGriffes
               );
             })
         )}
-      </ScrollView>
+          </ScrollView>
+        </View>
+
+        {/* Boutique : panneau illustré en HAUT À DROITE. Sa largeur est
+            mesurée par onLayout et sa hauteur en découle (ratio de
+            l'image) — jamais l'inverse, sinon le cadre se déforme. */}
+        <View style={styles.runesRightCol} onLayout={(e) => setShopW(e.nativeEvent.layout.width)}>
+          {shopW > 0 && (
+            <RuneShopPanel
+              width={shopW}
+              griffes={griffes}
+              specialOffer={specialOffer}
+              onBuyRandom={onBuyRune}
+              onBuyPack={onBuyPack}
+              onBuySpecial={onBuySpecial}
+            />
+          )}
+        </View>
+      </View>
     </View>
   );
 }
@@ -1762,6 +1934,18 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   headerSpacer: { flex: 1 },
+  // Écran Runes en 2 colonnes (paysage) : collection à gauche, boutique
+  // illustrée à droite. En paysage la hauteur est la ressource rare, on
+  // n'empile pas verticalement.
+  runesBody: { flex: 1, flexDirection: 'row', gap: 12 },
+  runesLeftCol: { flex: 1 },
+  runesRightCol: { width: '46%', alignItems: 'stretch' },
+  shopBannerText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
+  shopOfferIcon: { fontSize: 30 },
+  shopOfferLabel: { color: '#f3e3c0', fontSize: 10, fontWeight: '800', marginTop: 2 },
+  shopPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
+  shopPriceText: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  shopPriceIcon: { width: 12, height: 12 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
 

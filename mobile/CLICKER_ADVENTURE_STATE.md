@@ -789,6 +789,64 @@ qui se chevauchent et fusionnent).
 `ThemedPanel`, `ThemedFrame`, `themedBox` et `themedLoreBox` ont été
 supprimés avec l'ancien système.
 
+## Boutique de runes illustrée (12/09)
+
+Panneau Gemini détouré (`assets/icons/runes-shop-panel.png`, 900x482),
+posé en HAUT À DROITE de l'écran Runes ; la collection occupe la colonne
+de gauche.
+
+⚠️ **Les 3 cases sont de vrais TROUS dans l'image** (alpha à 0) : le
+contenu est rendu EN CODE par-dessus, aux fractions mesurées sur
+l'asset. Il reste donc modifiable sans repasser par Gemini.
+
+| Repère | Fractions mesurées |
+|---|---|
+| Bannière | x 0,322-0,672 · y 0,008-0,058 |
+| Cases (y) | 0,2427 → 0,7178 |
+| Case 1 / 2 / 3 (x) | 0,077-0,309 / 0,386-0,613 / 0,688-0,922 |
+
+**À REMESURER si l'image change** (script : trous non connectés au bord).
+
+### Les 3 offres
+
+| Offre | Prix | Contenu |
+|---|---|---|
+| 🎲 Aléatoire | 100 | 1 rune niv.1 |
+| 🎒 Pack | **250** | 3 runes niv.1 (−17% contre 300) |
+| ✨ Spéciale | **300** | 1 rune **niv.2** d'un type imposé, 1×/jour |
+
+⚠️ **L'offre spéciale est volontairement très avantageuse** : mesuré,
+avec 7 types il faut ~14 tirages (1 400 Griffes) pour obtenir 2 runes
+d'un type PRÉCIS et pouvoir les fusionner. D'où la limite à **un achat
+par jour** — sans elle, elle remplacerait purement et simplement le
+tirage à l'unité.
+
+⚠️ Stockée dans sa PROPRE clé (`adventure:runeOffer:v1`), avec la DATE :
+une date différente au chargement retire un nouveau type et remet
+l'achat à zéro, donc pas de minuteur de minuit à gérer (même schéma que
+le boss de tap).
+
+### Détourage d'un PANNEAU — différent d'une icône
+
+Deux écarts par rapport à la méthode des icônes :
+
+⚠️ **Le magenta est AUSSI à l'intérieur** (les cases vides) et n'est pas
+connecté au bord. Ici le test de couleur GLOBAL est le bon outil, parce
+que le dessin (bois, métal, or) ne contient aucun rose — vérifié avant :
+les seuls pixels ambigus sont les transitions de bord.
+
+⚠️ **NE PAS décontaminer les bords sur ce type d'asset.** Retirer la
+magenta d'un pixel d'or à moitié transparent le fait virer au **VERT**
+(or − magenta = vert), et un liseré vert apparaissait tout autour des
+cases. La bonne méthode : seuil FRANC (distance > 170), érosion de 3 px
+pour manger l'anneau de transition, puis flou léger — les pixels
+restants sont déjà purs, il n'y a rien à corriger.
+
+⚠️ **Le filigrane Gemini était posé SUR le bois**, pas isolé dans un
+coin : « garder la plus grande zone connexe » ne pouvait pas l'enlever.
+Reconstruit en recopiant une bande de bois prise à la MÊME hauteur
+(le grain est horizontal), avec un fondu sur les bords du patch.
+
 ## Runes — 7 types (12/09)
 
 | Rune | Effet | Niv.1 → Niv.5 |
