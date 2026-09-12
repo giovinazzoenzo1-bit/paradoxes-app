@@ -223,6 +223,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   // faire rejouer leur animation depuis le début.
   const [roundKey, setRoundKey] = useState(0);
   const [opponentDamageFloat, setOpponentDamageFloat] = useState(null);
+  // { amount, index } — l'INDICE est figé au moment du coup. Relu via
+  // `activeIndex` à l'affichage, il désignait le combattant SUIVANT
+  // (même piège que l'élan d'attaque), donc le chiffre des dégâts reçus
+  // n'apparaissait pas sur la créature touchée.
   const [playerDamageFloat, setPlayerDamageFloat] = useState(null);
 
   // Pile ou face au tout début du combat : 1 chance sur 2 que
@@ -260,6 +264,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
 
     setRoundKey((k) => k + 1);
     setOpponentDamageFloat(null);
+    setPlayerDamageFloat(oppDamage > 0 ? { amount: oppDamage, index: curIdx } : null);
     setPlayerDamageFloat(oppDamage);
     setBattleStats((s) => ({
       ...s,
@@ -470,7 +475,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     // jamais.
     setRoundKey((k) => k + 1);
     setOpponentDamageFloat(playerDamage);
-    setPlayerDamageFloat(opponentDamage > 0 ? opponentDamage : null);
+    setPlayerDamageFloat(opponentDamage > 0 ? { amount: opponentDamage, index: curIdx } : null);
     setBattleStats((s) => ({
       totalDamageDealt: s.totalDamageDealt + playerDamage,
       totalDamageTaken: s.totalDamageTaken + opponentDamage,
@@ -644,7 +649,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           mana: fi === activeIndex ? f.mana : null, manaMax: MANA_MAX,
           fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
           lunging: !!lunge && lunge.side === 'player' && fi === lunge.index, lungeDir: 1,
-          floatDamage: fi === activeIndex ? playerDamageFloat : null,
+          floatDamage: playerDamageFloat && playerDamageFloat.index === fi ? playerDamageFloat.amount : null,
         });
       })}
 
@@ -701,21 +706,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         // le bord droit se déduit du rang du bouton.
         <View style={[styles.skillInfoCard, { right: 10 + (skillInfo.fromRight || 0) * 94 }]}>
           <Text style={styles.skillInfoName}>{skillInfo.name}</Text>
+          {/* Une seule phrase : le panneau masquait un adversaire
+              entier. Le coût est déjà lisible sur le bouton, inutile de
+              le répéter ici. */}
           <Text style={styles.skillInfoLine}>
-            {skillInfo.damage} dégâts{skillInfo.aoe ? ' · touche TOUS les ennemis' : ''}
+            {skillInfo.aoe ? 'Frappe tous les ennemis' : "Frappe l'ennemi"} et inflige {skillInfo.damage} dégâts.
           </Text>
-          <Text style={styles.skillInfoLine}>
-            {skillInfo.special
-              ? `Coup spécial · jauge pleine (${MANA_MAX}💧)`
-              : (skillInfo.manaCost || 0) === 0
-              ? 'Attaque de base · gratuite'
-              : `Coûte ${skillInfo.manaCost}💧`}
-          </Text>
-          {armedSkill && armedSkill.id === skillInfo.id && (
-            <Text style={styles.skillInfoTarget}>
-              {skillInfo.aoe ? '👉 Tape un adversaire pour frapper TOUT le groupe' : '👉 Tape un adversaire pour attaquer'}
-            </Text>
-          )}
         </View>
       )}
 
@@ -962,15 +958,14 @@ const styles = StyleSheet.create({
   skillBtnArmed: { borderColor: '#7fffb0', borderWidth: 2.5, backgroundColor: 'rgba(127,255,176,0.14)' },
 
   skillInfoCard: {
-    position: 'absolute', right: 10, bottom: 108, zIndex: 12,
-    minWidth: 200, maxWidth: 300, padding: 12, borderRadius: 12,
+    position: 'absolute', right: 10, bottom: 104, zIndex: 12,
+    maxWidth: 200, padding: 8, borderRadius: 10,
     backgroundColor: 'rgba(16,26,38,0.94)', borderWidth: 2, borderColor: '#f5c542',
     // Décoratif : ne doit jamais intercepter un tap destiné au terrain.
     pointerEvents: 'none',
   },
-  skillInfoName: { color: '#ffd76a', fontSize: 15, fontWeight: '900', marginBottom: 5 },
-  skillInfoTarget: { color: '#7fffb0', fontSize: 11, fontWeight: '800', marginTop: 5 },
-  skillInfoLine: { color: '#e6eef7', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  skillInfoName: { color: '#ffd76a', fontSize: 12, fontWeight: '900', marginBottom: 3 },
+  skillInfoLine: { color: '#e6eef7', fontSize: 10, fontWeight: '700', lineHeight: 14 },
 
   skillBtnDisabled: { borderColor: COLORS.border, opacity: 0.4 },
   skillBtnName: { color: COLORS.text, fontSize: 10, fontWeight: '800', textAlign: 'center' },
