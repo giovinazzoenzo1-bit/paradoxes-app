@@ -17,7 +17,6 @@ import { cardFrameForElement, CARD_FRAME_BORDER_X, CARD_FRAME_BORDER_Y } from '.
 // l'image est vierge.
 const EXPLORATION_BG = require('../../../assets/adventure/exploration-bg.jpg');
 const TITLE_BANNER = require('../../../assets/adventure/title-banner.png');
-const CURRENCY_PILL = require('../../../assets/adventure/currency-pill.png');
 const COMBAT_BTN = require('../../../assets/adventure/combat-btn.png');
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -79,6 +78,11 @@ const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
 // quotidien (~25-50 par semaine). À 15, une recharge d'énergie coûtait
 // une demi-semaine de gains pour un simple confort — le bouton restait
 // grisé en permanence.
+// Échange Diamants -> Griffes proposé par le « + » du compteur. Aligné
+// sur l'offre équivalente de la boutique du Clicker.
+export const GRIFFES_PACK = 250;
+export const GRIFFES_DIAMOND_COST = 25;
+
 export const ENERGY_DIAMOND_COST = 5;
 export const DEV_ADD_GRIFFES_KEY = 'adventure:dev:addGriffes';
 const DEV_GRIFFES_AMOUNT = 1000;
@@ -269,6 +273,30 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // ChapterMapScreen : c'est AdventureScreen qui détient l'énergie et
   // reçoit `onSpendDiamonds`. Placée plus bas, elle sortait en silence
   // faute de ces deux éléments (bug du 12/09).
+  const buyGriffesWithDiamonds = () => {
+    if (!onSpendDiamonds) return;
+    Alert.alert(
+      'Échanger des Diamants',
+      `${GRIFFES_DIAMOND_COST} 💎 contre ${GRIFFES_PACK} 🐾 Griffes ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Échanger',
+          onPress: async () => {
+            const ok = await onSpendDiamonds(GRIFFES_DIAMOND_COST);
+            if (!ok) {
+              Alert.alert('Diamants insuffisants', `Il t'en faut ${GRIFFES_DIAMOND_COST}.`);
+              return;
+            }
+            // Crédit DIRECT : on est déjà dans l'écran qui détient les
+            // Griffes, pas besoin de passer par la clé en attente.
+            setGriffes((g) => g + GRIFFES_PACK);
+          },
+        },
+      ]
+    );
+  };
+
   const buyEnergyWithDiamonds = async () => {
     if (!onSpendDiamonds) return;
     const ok = await onSpendDiamonds(ENERGY_DIAMOND_COST);
@@ -435,6 +463,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onLevelWon={handleLevelWon}
         onBack={() => setChapterMapOpen(false)}
         onBuyEnergy={buyEnergyWithDiamonds}
+        onBuyGriffes={buyGriffesWithDiamonds}
         diamonds={diamonds}
         levelStars={levelStars}
         onRecordStars={(lv, stars) => {
@@ -481,9 +510,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <Text style={styles.titleBannerText}>EXPLORATION</Text>
         </ImageBackground>
         <View style={styles.headerRight}>
-          <ImageBackground source={CURRENCY_PILL} style={styles.griffesPill} resizeMode="stretch">
-            <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
-          </ImageBackground>
+          <CurrencyCounter icon="🐾" amount={griffes} onPlus={buyGriffesWithDiamonds} />
           <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
             <Image source={require('../../../assets/icons/rune-button.png')} style={styles.runesTopBtnImage} resizeMode="contain" />
           </TouchableOpacity>
@@ -788,9 +815,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
     <ThemedProfileBackground theme={theme}>
       <View style={styles.profileTopBar}>
         <BackButton onPress={onBack} />
-        <ImageBackground source={CURRENCY_PILL} style={styles.griffesPill} resizeMode="stretch">
-          <Text style={styles.griffesPillText}>🐾 {griffes}</Text>
-        </ImageBackground>
+        <CurrencyCounter icon="🐾" amount={griffes} />
       </View>
 
       <View style={styles.profileBody}>
@@ -1073,7 +1098,26 @@ function ElementHelpOverlay({ onClose }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, diamonds = 0, levelStars = {}, onRecordStars }) {
+// Compteur de monnaie : icône, montant, et « + » rouge.
+//
+// Le « + » n'est pas décoratif : il propose l'échange Diamants → Griffes
+// (250 pour 25 💎), seule façon d'en obtenir sur-le-champ. Sans
+// `onPlus`, le bouton n'est simplement pas rendu.
+function CurrencyCounter({ icon, amount, onPlus, style }) {
+  return (
+    <View style={[styles.counterRow, style]}>
+      <Text style={styles.counterIcon}>{icon}</Text>
+      <Text style={styles.counterValue} numberOfLines={1}>{amount}</Text>
+      {onPlus && (
+        <TouchableOpacity style={styles.counterPlus} onPress={onPlus} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.counterPlusText}>+</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -1176,9 +1220,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         <Text style={styles.title}>⚔️ Chapitres</Text>
       </View>
       <View style={styles.topStatsRow}>
-        <ImageBackground source={CURRENCY_PILL} style={styles.griffesPill} resizeMode="stretch">
-          <Text style={styles.griffesPillText}>🐾 {griffes} Griffes</Text>
-        </ImageBackground>
+        <CurrencyCounter icon="🐾" amount={griffes} onPlus={onBuyGriffes} />
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
       </View>
 
@@ -1713,11 +1755,21 @@ const styles = StyleSheet.create({
   // 320x120) — appliqué aussi dans ChapterMapScreen ("menu combat").
   // Largeur fixe (pas de %+aspectRatio combinés, cause confirmée d'un
   // bug Yoga ailleurs dans le projet, voir CLICKER_ADVENTURE_STATE.md).
-  griffesPill: {
-    width: 92, height: 92 * (120 / 320),
-    alignItems: 'center', justifyContent: 'center',
+  // Compteur épuré (12/09) : plus de cadre ouvragé. Fond sombre
+  // translucide pour rester lisible sur n'importe quel décor.
+  counterRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingLeft: 8, paddingRight: 4, paddingVertical: 4, borderRadius: 16,
+    backgroundColor: 'rgba(8,14,24,0.72)',
   },
-  griffesPillText: { color: COLORS.action, fontSize: 13, fontWeight: '900' },
+  counterIcon: { fontSize: 15 },
+  counterValue: { color: '#fff', fontSize: 14, fontWeight: '900' },
+  counterPlus: {
+    width: 22, height: 22, borderRadius: 7,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#e03a3a', borderWidth: 1.5, borderColor: '#ff7a6b',
+  },
+  counterPlusText: { color: '#fff', fontSize: 15, fontWeight: '900', lineHeight: 17 },
   // Fond/bordure retirés (image réelle intégrée, cadre déjà peint dedans).
   runesTopBtn: {
     width: 38, height: 38, alignItems: 'center', justifyContent: 'center',
