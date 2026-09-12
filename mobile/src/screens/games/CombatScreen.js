@@ -191,9 +191,15 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   // revient. Valeur partagée par les deux camps — un seul sprite bouge à
   // la fois, celui dont c'est le tour.
   const lungeAnim = useRef(new Animated.Value(0)).current;
-  const [lungeSide, setLungeSide] = useState(null); // 'player' | 'opponent'
-  const playLunge = (side) => {
-    setLungeSide(side);
+  // { side, index } — l'INDICE est figé au déclenchement.
+  //
+  // ⚠️ Il était auparavant relu à l'affichage via `activeIndex`, qui
+  // change quand le tour avance dans la même séquence : au moment du
+  // rendu il désignait déjà le combattant SUIVANT, et c'était lui qui
+  // s'animait (bug du 12/09).
+  const [lunge, setLunge] = useState(null);
+  const playLunge = (side, index) => {
+    setLunge({ side, index });
     lungeAnim.setValue(0);
     // Rythme d'un coup porté : recul (anticipation), détente rapide,
     // TEMPS D'ARRÊT à l'impact, puis retour souple. Le temps d'arrêt est
@@ -204,7 +210,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       Animated.timing(lungeAnim, { toValue: 1, duration: 110, useNativeDriver: true }),
       Animated.delay(160),
       Animated.spring(lungeAnim, { toValue: 0, useNativeDriver: true, friction: 6, tension: 60 }),
-    ]).start(() => setLungeSide(null));
+    ]).start(() => setLunge(null));
   };
 
   // Chiffres de dégâts flottants — purement décoratifs (voir
@@ -234,7 +240,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     // s'affichent : sans ce décalage, le chiffre rouge apparaissait
     // pendant que la créature bougeait encore et on ne voyait pas qui
     // avait frappé (retour du 12/09).
-    playLunge('opponent');
+    playLunge('opponent', 0);
     const oppSkill = pickOpponentSkill(oppWithMana);
     const oppDamage = oppSkill.isBasic
       ? oppSkill.damage
@@ -364,7 +370,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const finishChallenge = (completed) => {
     if (challengeDoneRef.current) return;
     challengeDoneRef.current = true;
-    playLunge('player');
+    playLunge('player', activeIndexRef.current);
     const elapsedSec = (Date.now() - challengeStartRef.current) / 1000;
     const skill = selectedSkillRef.current;
     const curIdx = activeIndexRef.current;
@@ -587,7 +593,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           hp: f.hp, hpMax: f.stats.hp,
           mana: fi === activeIndex ? f.mana : null, manaMax: MANA_MAX,
           fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
-          lunging: lungeSide === 'player' && fi === activeIndex, lungeDir: 1,
+          lunging: !!lunge && lunge.side === 'player' && fi === lunge.index, lungeDir: 1,
           floatDamage: fi === activeIndex ? playerDamageFloat : null,
         });
       })}
@@ -605,7 +611,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           ring: i === targetIndex && !fainted ? 'target' : null,
           // L'adversaire actif est celui du slot de devant : c'est lui
           // qui riposte. Il s'élance vers la GAUCHE (-1).
-          lunging: lungeSide === 'opponent' && i === 0, lungeDir: -1,
+          lunging: !!lunge && lunge.side === 'opponent' && i === lunge.index, lungeDir: -1,
           onPress: () => chooseTarget(i), disabled: fainted || phase !== 'choosing', hpColor: '#FF5252',
           floatDamage: i === targetIndex ? opponentDamageFloat : null,
         });

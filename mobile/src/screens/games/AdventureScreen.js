@@ -243,6 +243,21 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Dépense 1 énergie pour lancer un combat — recalcule d'abord la
   // régénération au cas où du temps se serait écoulé depuis la dernière
   // vérification. Retourne false (et ne dépense rien) si pas assez.
+  // Recharge d'énergie en Diamants. DÉFINIE ICI et non dans
+  // ChapterMapScreen : c'est AdventureScreen qui détient l'énergie et
+  // reçoit `onSpendDiamonds`. Placée plus bas, elle sortait en silence
+  // faute de ces deux éléments (bug du 12/09).
+  const buyEnergyWithDiamonds = async () => {
+    if (!onSpendDiamonds) return;
+    const ok = await onSpendDiamonds(ENERGY_DIAMOND_COST);
+    if (!ok) {
+      Alert.alert('Diamants insuffisants', `Il te faut ${ENERGY_DIAMOND_COST} 💎 pour recharger l'énergie.`);
+      return;
+    }
+    setEnergy(ENERGY_MAX);
+    setEnergyUpdatedAt(Date.now());
+  };
+
   const startBattleWithEnergy = () => {
     const now = Date.now();
     const recalced = computeEnergyRegen(energy, energyUpdatedAt, now);
@@ -397,6 +412,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onStartBattle={startBattleWithEnergy}
         onLevelWon={handleLevelWon}
         onBack={() => setChapterMapOpen(false)}
+        onBuyEnergy={buyEnergyWithDiamonds}
       />
     );
   }
@@ -993,7 +1009,7 @@ function EnergyBadge({ energy, energyUpdatedAt }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -1012,16 +1028,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   };
 
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
-  const buyEnergyWithDiamonds = async () => {
-    if (!onSpendDiamonds) return;
-    const ok = await onSpendDiamonds(ENERGY_DIAMOND_COST);
-    if (!ok) {
-      Alert.alert('Diamants insuffisants', `Il te faut ${ENERGY_DIAMOND_COST} 💎 pour recharger l'énergie.`);
-      return;
-    }
-    setEnergy(ENERGY_MAX);
-    setEnergyUpdatedAt(Date.now());
-  };
+
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
   // TOUJOURS appelé avant tout retour anticipé (règle des Hooks React) —
   // c'était placé après le "if (activeBattle) return" et faisait planter
@@ -1172,7 +1179,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
             if (!onStartBattle()) return;
             setActiveBattle({ levelNumber: levelPreview });
           }}
-          onBuyEnergy={buyEnergyWithDiamonds}
+          onBuyEnergy={onBuyEnergy}
         />
       )}
     </View>
