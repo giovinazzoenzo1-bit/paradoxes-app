@@ -30,6 +30,11 @@ const BG_IMG = require('../../../assets/combat/battlefield.jpg');
 const VICTORY_BG = require('../../../assets/combat/victory.jpg');
 const VICTORY_BANNER = require('../../../assets/combat/victory-banner.png');
 const DEFEAT_BANNER = require('../../../assets/combat/defeat-banner.png');
+// Cadre du récapitulatif. Contrairement aux cadres de la fiche de
+// créature, son intérieur est PLEIN (planche de bois) : il sert donc de
+// fond complet, et le texte doit passer en SOMBRE pour rester lisible.
+// Bordure mesurée sur l'image : 10% en largeur, 15% en hauteur.
+const RECAP_FRAME = require('../../../assets/combat/recap-frame.png');
 import { COLORS } from './clickerTheme';
 import { stageForLevel, MANA_MAX, MANA_PER_TURN } from '../../games/clicker/clickerLogic';
 import {
@@ -735,7 +740,7 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
       </ImageBackground>
       {/* Récapitulatif du combat — mêmes chiffres quelle que soit
           l'issue, victoire ou défaite. */}
-      <View style={styles.recapCard}>
+      <ImageBackground source={RECAP_FRAME} style={styles.recapCard} imageStyle={styles.recapCardImg} resizeMode="stretch">
         {/* Le gain est DANS le cadre : posé sur le décor il se perdait
             dans les tons dorés du couchant (signalé le 12/09). */}
         {isWin && (
@@ -781,7 +786,7 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
             ))}
           </View>
         )}
-      </View>
+      </ImageBackground>
 
       {!isWin && <Text style={styles.resultSubtitle}>Réessaie quand tu veux — rien n'est perdu.</Text>}
 
@@ -944,7 +949,7 @@ const styles = StyleSheet.create({
   resultSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
   resultBtnRow: { flexDirection: 'row', gap: 10, marginTop: 12, alignSelf: 'stretch', maxWidth: 460, justifyContent: 'center' },
   resultBtnNext: { backgroundColor: COLORS.good },
-  recapBreakdownWrap: { marginTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 6 },
+  recapBreakdownWrap: { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(120,85,35,0.35)', paddingTop: 6 },
   resultBtn: { flex: 1, alignItems: 'center', backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.border },
   resultBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
 
@@ -958,20 +963,23 @@ const styles = StyleSheet.create({
   resultScroll: { flexGrow: 1, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 20 },
   rewardBadge: {
     alignSelf: 'center', marginBottom: 10, paddingVertical: 6, paddingHorizontal: 18,
-    borderRadius: 20, backgroundColor: 'rgba(245,197,66,0.18)',
+    borderRadius: 20, backgroundColor: 'rgba(90,55,10,0.14)',
     borderWidth: 1.5, borderColor: COLORS.action,
   },
-  rewardBadgeText: { color: COLORS.action, fontSize: 16, fontWeight: '900' },
+  rewardBadgeText: { color: '#6b4410', fontSize: 16, fontWeight: '900' },
+  // Marges calées sur la bordure MESURÉE du cadre (10% / 15%) : sans
+  // elles, le contenu passerait sous les dorures.
   recapCard: {
-    width: '100%', maxWidth: 420, backgroundColor: COLORS.panel, borderRadius: 16, padding: 14, marginTop: 8,
-    borderWidth: 1, borderColor: COLORS.border,
+    width: '100%', maxWidth: 460, marginTop: 6,
+    paddingHorizontal: '11%', paddingVertical: 26,
   },
-  recapTitle: { color: COLORS.action, fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
+  recapCardImg: { resizeMode: 'stretch' },
+  recapTitle: { color: '#6b4410', fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
   recapRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 6 },
   recapStat: { alignItems: 'center', flex: 1, minWidth: 0 },
-  recapStatValue: { color: COLORS.text, fontSize: 17, fontWeight: '900' },
-  recapStatLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 2, textAlign: 'center' },
+  recapStatValue: { color: '#3d2609', fontSize: 17, fontWeight: '900' },
+  recapStatLabel: { color: '#7a5a2e', fontSize: 9, fontWeight: '700', marginTop: 2, textAlign: 'center' },
   recapBreakdownRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  recapBreakdownName: { color: COLORS.text, fontSize: 12, fontWeight: '700' },
-  recapBreakdownValue: { color: COLORS.action, fontSize: 12, fontWeight: '800' },
+  recapBreakdownName: { color: '#4a2f10', fontSize: 12, fontWeight: '700' },
+  recapBreakdownValue: { color: '#8a5a12', fontSize: 12, fontWeight: '800' },
 });
