@@ -1010,12 +1010,22 @@ son propre centre).
 
 ### Fichiers ajoutés
 
-`mobile/assets/icons/diamond-icon.png`, `griffes-icon.png` (les icônes),
-`glow-gold.png`, `glow-cyan.png` (les halos pré-rendus). Tous les emojis
-🐾/💎 de `AdventureScreen.js` sont remplacés par ces images — compteur
-principal (3 emplacements), coûts de niveau/évolution, écran Runes,
-icône de recharge d'énergie. Seuls les 2 `Alert.alert` gardent l'emoji
-texte : une alerte native ne peut pas afficher d'image.
+`mobile/assets/icons/runes-gem.png`, `griffes-icon.png` (les icônes),
+`glow-gold.png`, `glow-cyan.png` (les halos pré-rendus).
+
+⚠️ **La gemme est l'icône des RUNES, pas des Diamants.** Erreur commise
+le 12/09 : « l'icône des gemmes » a été comprise comme la monnaie
+premium alors qu'elle désignait le bouton Runes. La gemme sert donc au
+**bouton Runes** (en haut à droite de l'Aventure, remplace
+`rune-button.png`, supprimé) et au **titre de l'écran Runes**.
+
+**Les Diamants n'ont PAS d'icône dédiée** : ils gardent l'emoji 💎
+partout (recharge d'énergie, alertes) et **aucun compteur dans
+l'Aventure**. Ne pas « corriger » cela sans demander — c'est l'état
+voulu.
+
+Les Griffes, elles, utilisent bien `griffes-icon.png` : compteur
+principal (3 emplacements), coûts de niveau/évolution, écran Runes.
 
 ### 14. `<Image>` sans `resizeMode` explicite ROGNE en haut/bas (défaut = `cover`, pas `contain`)
 

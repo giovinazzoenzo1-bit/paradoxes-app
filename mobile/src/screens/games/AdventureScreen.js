@@ -26,7 +26,7 @@ const COMBAT_BTN = require('../../../assets/adventure/combat-btn.png');
 // STATE.md) — le halo visible autour du compteur principal est fait EN
 // CODE via <CurrencyIcon>, pas dans l'image.
 const GRIFFES_ICON = require('../../../assets/icons/griffes-icon.png');
-const DIAMOND_ICON = require('../../../assets/icons/diamond-icon.png');
+const RUNES_GEM = require('../../../assets/icons/runes-gem.png');
 
 // Halo derrière chaque icône — un dégradé radial PRÉ-RENDU (Gaussian
 // blur fait une fois, pas à l'exécution) plutôt que des cercles plats
@@ -147,12 +147,12 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   const [bgSize, setBgSize] = useState({ w: 0, h: 0 });
 
   // Emprise du parchemin MESURÉE sur l'image (colonnes claires) :
-  // 19,1% à 80,8% de sa largeur. Les cartes doivent tenir là-dedans, pas
+  // 16,7% à 83,1% de sa largeur — à REMESURER si l'image change. Les cartes doivent tenir là-dedans, pas
   // sur toute la largeur de l'écran — c'était le vrai défaut du 12/09,
   // les cartes des bords se posaient sur la pierre.
-  const BG_RATIO = 2018 / 893;
-  const PARCH_L = 0.191;
-  const PARCH_R = 0.808;
+  const BG_RATIO = 1875 / 893;
+  const PARCH_L = 0.167;
+  const PARCH_R = 0.831;
   let parchInsetL = 12;
   let parchInsetR = 12;
   if (bgSize.w > 0 && bgSize.h > 0) {
@@ -571,14 +571,12 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <Text style={styles.titleBannerText}>EXPLORATION</Text>
         </ImageBackground>
         <View style={styles.headerRight}>
-          {/* Diamants AVANT les Griffes, même ordre que sur le Clicker
-              (💎 à gauche des pièces) : les deux écrans doivent lire
-              pareil. Pas de « + » ici, la boutique de Diamants vit dans
-              le Clicker et n'est pas atteignable depuis l'Aventure. */}
-          <CurrencyCounter currency="diamond" amount={diamonds} />
           <CurrencyCounter currency="griffes" amount={griffes} onPlus={buyGriffesWithDiamonds} />
           <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
-            <Image source={require('../../../assets/icons/rune-button.png')} style={styles.runesTopBtnImage} resizeMode="contain" />
+            {/* Gemme des Runes + halo cyan généré en code (même principe
+                que le compteur de Griffes). Remplace rune-button.png. */}
+            <Image source={GLOW_CYAN} style={styles.runesTopBtnGlow} resizeMode="contain" />
+            <Image source={RUNES_GEM} style={styles.runesTopBtnImage} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -1188,7 +1186,6 @@ function ElementHelpOverlay({ onClose }) {
 // pour le diamant, or pour la griffe.
 const CURRENCY_ICONS = {
   griffes: { source: GRIFFES_ICON, glow: GLOW_GOLD },
-  diamond: { source: DIAMOND_ICON, glow: GLOW_CYAN },
 };
 
 function CurrencyIcon({ kind, size = 22, haloed = true, style }) {
@@ -1337,10 +1334,6 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         <Text style={styles.title}>⚔️ Chapitres</Text>
       </View>
       <View style={styles.topStatsRow}>
-        {/* Diamants affichés ici aussi : c'est la monnaie qui recharge
-            l'énergie montrée juste à côté, le joueur doit voir son
-            solde avant de tomber à zéro. */}
-        <CurrencyCounter currency="diamond" amount={diamonds} />
         <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
       </View>
@@ -1486,7 +1479,7 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
       <StatusBar hidden />
       <View style={styles.header}>
         <BackButton onPress={onBack} />
-        <Text style={styles.title}><Image source={DIAMOND_ICON} style={styles.inlineCurrencyIconTitle} resizeMode="contain" /> Runes</Text>
+        <Text style={styles.title}><Image source={RUNES_GEM} style={styles.inlineCurrencyIconTitle} resizeMode="contain" /> Runes</Text>
       </View>
       <Text style={styles.griffesText}><Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /> {griffes} Griffes</Text>
 
@@ -1714,7 +1707,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
               onPress={onBuyEnergy}
               disabled={diamonds < ENERGY_DIAMOND_COST}
             >
-              <Image source={DIAMOND_ICON} style={styles.buyEnergyIcon} resizeMode="contain" />
+              <Text style={styles.buyEnergyIcon}>💎</Text>
               <Text style={styles.buyEnergyCost}>{ENERGY_DIAMOND_COST}</Text>
             </TouchableOpacity>
           )}
@@ -1825,7 +1818,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(42,127,168,0.22)',
     borderWidth: 1.5, borderColor: '#7fdcff',
   },
-  buyEnergyIcon: { width: 16, height: 16 },
+  buyEnergyIcon: { fontSize: 16 },
   buyEnergyCost: { color: '#7fdcff', fontSize: 12, fontWeight: '900', marginTop: 1 },
   energyCostText: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 10, marginBottom: 4 },
   fighterPick: {
@@ -1897,6 +1890,12 @@ const styles = StyleSheet.create({
   // Fond/bordure retirés (image réelle intégrée, cadre déjà peint dedans).
   runesTopBtn: {
     width: 38, height: 38, alignItems: 'center', justifyContent: 'center',
+  },
+  // Halo posé derrière la gemme, débordant du bouton (×2,4 comme les
+  // compteurs). Décoratif : il ne doit jamais voler le tap du bouton.
+  runesTopBtnGlow: {
+    position: 'absolute', width: 91, height: 91, left: -26.5, top: -26.5,
+    pointerEvents: 'none',
   },
   runesTopBtnImage: { width: 38, height: 38 },
 
