@@ -65,7 +65,11 @@ const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
 // Coût d'une recharge d'énergie en Diamants. Aligné sur l'offre
 // équivalente de la boutique du Clicker — deux prix différents pour la
 // même chose serait incompréhensible.
-export const ENERGY_DIAMOND_COST = 15;
+// Abaissé de 15 à 5 (12/09) : les Diamants viennent du calendrier
+// quotidien (~25-50 par semaine). À 15, une recharge d'énergie coûtait
+// une demi-semaine de gains pour un simple confort — le bouton restait
+// grisé en permanence.
+export const ENERGY_DIAMOND_COST = 5;
 export const DEV_ADD_GRIFFES_KEY = 'adventure:dev:addGriffes';
 const DEV_GRIFFES_AMOUNT = 1000;
 // Même schéma que ci-dessus pour recharger l'énergie au max depuis Options.
@@ -135,6 +139,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // ne conserve que le MEILLEUR : un joueur qui rejoue et fait moins bien
   // ne doit pas perdre son score.
   const [levelStars, setLevelStars] = useState({});
+  const levelStarsRef = useRef({});
+  levelStarsRef.current = levelStars;
   const [energy, setEnergy] = useState(ENERGY_MAX);
   const [energyUpdatedAt, setEnergyUpdatedAt] = useState(Date.now());
   const [progressLoaded, setProgressLoaded] = useState(false);
@@ -421,9 +427,20 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onBuyEnergy={buyEnergyWithDiamonds}
         diamonds={diamonds}
         levelStars={levelStars}
-        onRecordStars={(lv, stars) =>
-          setLevelStars((prev) => (prev[lv] >= stars ? prev : { ...prev, [lv]: stars }))
-        }
+        onRecordStars={(lv, stars) => {
+          // Étoiles GAGNÉES, pas simplement obtenues : on ne compte que
+          // le progrès par rapport au meilleur score précédent. Sans ça,
+          // rejouer un niveau déjà à 3 étoiles ferait monter les défis
+          // en boucle.
+          const gained = Math.max(0, stars - (levelStarsRef.current[lv] || 0));
+          if (gained > 0) {
+            trackEvent('starsEarned', gained);
+            setLevelStars((prev) => ({ ...prev, [lv]: stars }));
+          }
+          if (stars === 3 && (levelStarsRef.current[lv] || 0) < 3) {
+            trackEvent('threeStarLevel', 1);
+          }
+        }}
       />
     );
   }
@@ -1503,32 +1520,34 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
 
         <Text style={styles.energyCostText}>⚡ Coûte 1 énergie ({energy}/{ENERGY_MAX} disponible{energy > 1 ? 's' : ''})</Text>
 
-        <TouchableOpacity
-          style={[styles.startBattleBtn, (teamCount === 0 || energy <= 0) && styles.actionBtnDisabledAdv]}
-          onPress={onStart}
-          disabled={teamCount === 0 || energy <= 0}
-        >
-          <Text style={styles.startBattleBtnText}>
-            {teamCount === 0 ? 'Deck vide' : energy <= 0 ? '⚡ Plus d\'énergie' : '⚔️ Combattre'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.startRow}>
+          <TouchableOpacity
+            style={[styles.startBattleBtn, styles.startBattleBtnFlex, (teamCount === 0 || energy <= 0) && styles.actionBtnDisabledAdv]}
+            onPress={onStart}
+            disabled={teamCount === 0 || energy <= 0}
+          >
+            <Text style={styles.startBattleBtnText}>
+              {teamCount === 0 ? 'Deck vide' : energy <= 0 ? '⚡ Plus d\'énergie' : '⚔️ Combattre'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Petit carré à DROITE plutôt qu'une barre en dessous : la
+              recharge est une action secondaire, elle ne doit pas peser
+              autant que « Combattre ». */}
+          {energy <= 0 && onBuyEnergy && (
+            <TouchableOpacity
+              style={[styles.buyEnergyBtn, diamonds < ENERGY_DIAMOND_COST && styles.actionBtnDisabledAdv]}
+              onPress={onBuyEnergy}
+              disabled={diamonds < ENERGY_DIAMOND_COST}
+            >
+              <Text style={styles.buyEnergyIcon}>💎</Text>
+              <Text style={styles.buyEnergyCost}>{ENERGY_DIAMOND_COST}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Recharge en Diamants quand la jauge est vide : sans ça, le
             joueur n'a plus qu'à fermer l'appli et attendre. */}
-        {/* Le solde est AFFICHÉ et le bouton se grise s'il est
-            insuffisant : sans ça, un appui ne produisait rien de
-            visible et donnait l'impression d'un bouton cassé. */}
-        {energy <= 0 && onBuyEnergy && (
-          <TouchableOpacity
-            style={[styles.buyEnergyBtn, diamonds < ENERGY_DIAMOND_COST && styles.actionBtnDisabledAdv]}
-            onPress={onBuyEnergy}
-            disabled={diamonds < ENERGY_DIAMOND_COST}
-          >
-            <Text style={styles.buyEnergyBtnText}>
-              💎 {ENERGY_DIAMOND_COST} — Recharger l'énergie (tu as {diamonds})
-            </Text>
-          </TouchableOpacity>
-        )}
 
 
       </View>
@@ -1635,13 +1654,15 @@ const styles = StyleSheet.create({
   },
   elemHelpCloseText: { color: '#0b0d16', fontSize: 13, fontWeight: '900' },
 
+  startRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, alignSelf: 'stretch' },
+  startBattleBtnFlex: { flex: 1 },
   buyEnergyBtn: {
-    marginTop: 10, paddingVertical: 11, paddingHorizontal: 18, borderRadius: 12,
-    alignItems: 'center', alignSelf: 'stretch',
+    width: 54, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(42,127,168,0.22)',
     borderWidth: 1.5, borderColor: '#7fdcff',
   },
-  buyEnergyBtnText: { color: '#7fdcff', fontSize: 13, fontWeight: '900' },
+  buyEnergyIcon: { fontSize: 16 },
+  buyEnergyCost: { color: '#7fdcff', fontSize: 12, fontWeight: '900', marginTop: 1 },
   energyCostText: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 10, marginBottom: 4 },
   fighterPick: {
     width: 56, height: 56, borderRadius: 14, backgroundColor: COLORS.bg,

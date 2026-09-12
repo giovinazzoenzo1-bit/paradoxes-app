@@ -30,7 +30,9 @@ export const DIAMOND_OFFERS = [
     icon: '⚡',
     title: 'Énergie pleine',
     desc: "Recharge l'énergie d'Exploration au maximum",
-    cost: 15,
+    // Aligné sur ENERGY_DIAMOND_COST d'AdventureScreen : deux prix
+    // différents pour la même chose serait incompréhensible.
+    cost: 5,
   },
   {
     id: 'hatch',

@@ -46,6 +46,12 @@ export const DAILY_QUEST_POOL = [
   { id: 'hatch1', desc: 'Fais éclore 1 œuf', event: 'eggHatched', target: 1, reward: 40 },
   { id: 'hatchVideo2', desc: "Regarde 2 vidéos d'accélération", event: 'hatchVideo', target: 2, reward: 30 },
   { id: 'hatchTap600', desc: "Gagne 600 secondes d'éclosion en tapant", event: 'hatchSecondsSaved', target: 600, reward: 35 },
+  // ---- Étoiles d'Aventure (12/09) ----
+  // `starsEarned` ne compte que le PROGRÈS (voir AdventureScreen) :
+  // rejouer un niveau déjà à 3 étoiles ne rapporte rien, sinon le défi
+  // serait validable en boucle sur le premier niveau.
+  { id: 'stars3', desc: 'Gagne 3 étoiles en Aventure', event: 'starsEarned', target: 3, reward: 40 },
+  { id: 'perfect1', desc: 'Termine un niveau avec 3 étoiles', event: 'threeStarLevel', target: 1, reward: 45 },
 ];
 
 const QUESTS_PER_DAY = 3;
@@ -130,6 +136,8 @@ export const WEEKLY_QUEST_POOL = [
   { id: 'w_hatch5',       desc: 'Fais éclore 5 œufs',              event: 'eggHatched', target: 5, reward: 700 },
   { id: 'w_hatchVideo12', desc: "Regarde 12 vidéos d'accélération", event: 'hatchVideo', target: 12, reward: 550 },
   { id: 'w_hatchTap3600', desc: "Gagne 3 600 secondes d'éclosion en tapant", event: 'hatchSecondsSaved', target: 3600, reward: 600 },
+  { id: 'w_stars20',   desc: 'Gagne 20 étoiles en Aventure',            event: 'starsEarned',    target: 20, reward: 650 },
+  { id: 'w_perfect6',  desc: 'Termine 6 niveaux avec 3 étoiles',        event: 'threeStarLevel', target: 6,  reward: 700 },
 ];
 
 // 6 par semaine (au lieu de 3) : sur 10 défis disponibles, en tirer 6
@@ -206,6 +214,10 @@ export const ACHIEVEMENTS = [
   // Plafonné à 5 vidéos par œuf : 1 500 vidéos ≈ 300 œufs, donc ce
   // palier 5 tombe en même temps que celui des éclosions.
   { id: 'a_hatchVideo', desc: "Regarder des vidéos d'accélération", stat: 'hatchVideo', tiers: [10, 50, 200, 600, 1500] },
+  { id: 'a_stars',     desc: "Gagner des étoiles en Aventure",       stat: 'starsEarned',    tiers: [10, 40, 100, 200, 350] },
+  // Plafond à 120 : il y a 40 niveaux, donc 120 étoiles au maximum
+  // absolu. Le dernier palier demande la perfection sur TOUTE la carte.
+  { id: 'a_perfect',   desc: 'Terminer des niveaux avec 3 étoiles',   stat: 'threeStarLevel', tiers: [1, 5, 15, 30, 40] },
 ];
 
 export function achievementDef(id) {

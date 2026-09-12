@@ -925,6 +925,13 @@ mécaniquement plus dur à noter qu'un niveau à 1.
 Seul le **meilleur** score est conservé (`levelStars` dans la sauvegarde
 d'Aventure) : rejouer et faire moins bien ne fait rien perdre.
 
+**Défis liés** : 2 quotidiens, 2 hebdomadaires, 2 succès, sur les
+événements `starsEarned` et `threeStarLevel`.
+
+⚠️ `starsEarned` ne compte que le **PROGRÈS** par rapport au meilleur
+score précédent du niveau. Sans ça, rejouer un niveau déjà à 3 étoiles
+validerait les défis en boucle sur le premier niveau venu.
+
 Affichées en fin de combat et **sous chaque nœud terminé** de la carte,
 pour repérer d'un coup d'œil les niveaux à refaire.
 
