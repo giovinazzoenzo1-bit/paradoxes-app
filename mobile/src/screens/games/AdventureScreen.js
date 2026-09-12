@@ -48,6 +48,7 @@ import {
   LEVELS_PER_CHAPTER,
   opponentForLevel,
   griffesReward,
+  butinBonus,
   canEvolve,
   evolutionCost,
   ENERGY_MAX,
@@ -122,6 +123,11 @@ const RUNE_TYPES = {
   // undefined et l'écran des runes planterait sur def.icon.
   dexterite: { name: 'Rune de Dextérité', icon: '🎯', color: COLORS.action },
   celerite: { name: 'Rune de Célérité', icon: '⚡', color: COLORS.neonCyan },
+  // 3 runes ajoutées le 12/09 pour sortir du « tout offensif » : les 4
+  // premières poussaient toutes les dégâts ou les PV.
+  affinite: { name: "Rune d'Affinité", icon: '🔥', color: '#ff8a3d' },
+  butin: { name: 'Rune de Butin', icon: '💰', color: '#f2c14e' },
+  resilience: { name: 'Rune de Résilience', icon: '🛡️', color: '#7fdcff' },
 };
 const RUNE_TYPE_KEYS = Object.keys(RUNE_TYPES);
 
@@ -1316,7 +1322,14 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
             onRecordStars(lv, stars);
           }
           if (outcome === 'win') {
-            onLevelWon(activeBattle.levelNumber, griffesReward(activeBattle.levelNumber));
+            // Rune de Butin : bonus calculé sur TOUTES les runes
+            // équipées des 3 créatures du deck (plafonné à +100% dans
+            // butinBonus), pas sur la seule créature qui a porté le
+            // coup final — c'est l'équipe qui gagne le combat.
+            const deckRunes = ownedRunes.filter((r) => deck.includes(r.equippedCreatureId));
+            const rawReward = griffesReward(activeBattle.levelNumber);
+            const reward = Math.round(rawReward * (1 + butinBonus(deckRunes)));
+            onLevelWon(activeBattle.levelNumber, reward);
           }
           const nextLevel = activeBattle.levelNumber + 1;
 

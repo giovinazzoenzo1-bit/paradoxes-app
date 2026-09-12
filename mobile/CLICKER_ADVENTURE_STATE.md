@@ -789,6 +789,62 @@ qui se chevauchent et fusionnent).
 `ThemedPanel`, `ThemedFrame`, `themedBox` et `themedLoreBox` ont été
 supprimés avec l'ancien système.
 
+## Runes — 7 types (12/09)
+
+| Rune | Effet | Niv.1 → Niv.5 |
+|---|---|---|
+| ⚔️ Force | +% ATQ | +4% → +27% |
+| ❤️ Vitalité | +% PV | +5% → +32% |
+| ⚡ Célérité | + multiplicateur de dégâts | +0,10 → +0,70 |
+| 🎯 Dextérité | −% taps + dégâts | −12→−60%, +0,05→+0,24 |
+| 🔥 **Affinité** | + avantage élémentaire (1,30 de base) | +0,08 → **+0,45** |
+| 💰 **Butin** | +% Griffes à la victoire | +8% → **+45%** |
+| 🛡️ **Résilience** | survit 1× par combat, à X% des PV max | 6% → **30%** |
+
+**Valeur mesurée au niveau 5** : Force +27% dégâts · Célérité +28% ·
+Dextérité +10% · Affinité +9% à +21% selon la part d'attaques jouées en
+avantage (c'est voulu : elle récompense le pilotage du deck) ·
+Résilience ≈ +30% de PV effectifs une fois par combat · Butin +45% de
+Griffes, zéro impact en combat.
+
+⚠️ **Affinité ne touche QUE l'avantage**, pas la pénalité de faiblesse :
+c'est une rune offensive, pas une défense déguisée.
+
+⚠️ **Plafonds de cumul** (9 emplacements possibles sur un deck de 3) :
+Butin `+100%` max, Résilience `50%` des PV max. Sans eux, 9 runes de
+Butin donneraient +405%.
+
+⚠️ **Résilience est appliquée sur les DEUX chemins de dégâts subis** —
+la riposte ET le cas où l'adversaire ouvre le combat. Le second avait été
+oublié au premier jet : la créature y mourait malgré la rune.
+
+⚠️ `resilienceUsed` est porté par le COMBATTANT, donc la rune se
+recharge d'un combat à l'autre mais ne peut pas se déclencher deux fois
+dans le même.
+
+### ⚠️ Effet de bord mesuré : la fusion est 1,6× plus lente
+
+La fusion demande 2 runes IDENTIQUES, et le tirage est uniforme sur les
+types. Passer de 4 à 7 types dilue donc chaque type.
+
+| Types | Tirages pour une rune niv.5 | Coût |
+|---|---|---|
+| 4 (avant) | 48 | 4 800 Griffes |
+| **7 (maintenant)** | **77** | **7 700 Griffes** |
+
+**Levier si le rythme déplaît** : `RUNE_COST` 100 → **63** rétablit
+exactement la cadence d'avant. Non appliqué — décision à prendre.
+
+## Célérité s'applique à TOUTES les attaques (12/09)
+
+L'ancienne exception « sauf attaque de base » a été retirée : elle était
+**morte**. `SKILL_MANA_COSTS = [0, 0, 0]` — toutes les attaques
+régulières sont gratuites, seul l'ultime consomme la jauge — et côté
+joueur `chooseSkill(skill, false)` est le SEUL appel, donc `isBasic`
+n'était jamais vrai. La branche `isBasic` ne subsiste que comme repli de
+l'IA, lui-même inatteignable puisque toutes ses compétences régulières
+sont abordables.
+
 ## Runes — la Rune d'Endurance est devenue Dextérité (12/09)
 
 L'Endurance a été **remplacée par le mana le 11/09** : la rune qui la

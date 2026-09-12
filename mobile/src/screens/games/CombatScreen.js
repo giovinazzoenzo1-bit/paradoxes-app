@@ -266,8 +266,18 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
 
     const curIdx = activeIndexRef.current;
     const curFighter = fightersRef.current[curIdx];
-    const newPlayerHp = Math.max(0, curFighter.hp - oppDamage);
-    const newFighters = fightersRef.current.map((f, i) => (i === curIdx ? { ...f, hp: newPlayerHp } : f));
+    // Résilience aussi sur CE chemin : l'adversaire qui ouvre le combat
+    // pouvait tuer une créature que la rune aurait dû sauver.
+    let newPlayerHp = Math.max(0, curFighter.hp - oppDamage);
+    let resTriggered = false;
+    const resPct0 = curFighter.stats.resiliencePct || 0;
+    if (newPlayerHp <= 0 && resPct0 > 0 && !curFighter.resilienceUsed) {
+      newPlayerHp = Math.max(1, Math.round(curFighter.stats.hp * resPct0));
+      resTriggered = true;
+    }
+    const newFighters = fightersRef.current.map((f, i) =>
+      i === curIdx ? { ...f, hp: newPlayerHp, resilienceUsed: f.resilienceUsed || resTriggered } : f
+    );
     fightersRef.current = newFighters;
     setFighters(newFighters);
 
@@ -420,14 +430,19 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     const targetIdx = targetIndexRef.current;
     const opp = opponentsRef.current[targetIdx];
 
-    // Rune de Célérité : bonus ADDITIF sur le multiplicateur, seulement
-    // pour une vraie compétence (l'attaque de base a un multiplicateur
-    // fixe à x1, ce n'est pas ce que la rune est censée booster).
-    const multiplier = skill.isBasic ? 1 : damageMultiplierForTime(elapsedSec, completed) + (curFighter.stats.dmgMultBonus || 0);
+    // Rune de Célérité : bonus ADDITIF sur le multiplicateur, sur TOUTES
+    // les attaques (12/09). L'ancienne exception « sauf attaque de base »
+    // n'avait plus lieu d'être : les attaques régulières coûtent toutes
+    // 0 mana (SKILL_MANA_COSTS = [0,0,0]), seul l'ultime consomme la
+    // jauge, et côté joueur `chooseSkill(skill, false)` est le seul appel
+    // — la branche `isBasic` ne pouvait donc jamais se produire.
+    const multiplier = damageMultiplierForTime(elapsedSec, completed) + (curFighter.stats.dmgMultBonus || 0);
     const skillDamage = skill.isBasic ? skill.damage : scaledSkillDamage(skill, curFighter.creature, curFighter.stats.attack);
     // Affinité élémentaire : +30% si l'attaquant domine l'élément de sa
     // cible, -25% s'il y est vulnérable.
-    const elemMult = elementMultiplier(curFighter.creature.element, opp.creature.element);
+    const elemMult = elementMultiplier(
+      curFighter.creature.element, opp.creature.element, curFighter.stats.affinityBonus || 0
+    );
     const playerDamage = Math.max(1, Math.round(computePlayerDamage(skillDamage, multiplier) * elemMult));
 
     // ATTAQUE DE ZONE : frappe TOUS les adversaires encore debout.
@@ -480,8 +495,20 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       }
     }
 
-    const newPlayerHp = Math.max(0, curFighter.hp - opponentDamage);
-    const newFighters = fightersRef.current.map((f, i) => (i === curIdx ? { ...f, hp: newPlayerHp } : f));
+    // Rune de Résilience : le premier coup fatal du combat ne tue pas,
+    // la créature repart avec un % de ses PV max. `resilienceUsed` est
+    // porté par le combattant, donc la rune se recharge d'un combat à
+    // l'autre mais jamais deux fois dans le même.
+    let newPlayerHp = Math.max(0, curFighter.hp - opponentDamage);
+    let resilienceTriggered = false;
+    const resPct = curFighter.stats.resiliencePct || 0;
+    if (newPlayerHp <= 0 && resPct > 0 && !curFighter.resilienceUsed) {
+      newPlayerHp = Math.max(1, Math.round(curFighter.stats.hp * resPct));
+      resilienceTriggered = true;
+    }
+    const newFighters = fightersRef.current.map((f, i) =>
+      i === curIdx ? { ...f, hp: newPlayerHp, resilienceUsed: f.resilienceUsed || resilienceTriggered } : f
+    );
     fightersRef.current = newFighters;
     setFighters(newFighters);
     setLastExchange({

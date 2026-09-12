@@ -224,9 +224,15 @@ export const ELEMENT_WEAKNESS_MULT = 0.75;   // -25%
 // Multiplicateur de dégâts de `attackerElement` contre `defenderElement`.
 // Renvoie 1 si l'un des deux manque ou est neutre — jamais d'erreur sur
 // une créature dont l'élément ne serait pas renseigné.
-export function elementMultiplier(attackerElement, defenderElement) {
+// `affinityBonus` vient des Runes d'Affinité de l'attaquant (0 par
+// défaut : un appel sans rune se comporte exactement comme avant). Il ne
+// s'applique QUE sur l'avantage — être fort contre un élément devient
+// plus payant, mais une faiblesse reste une faiblesse.
+export function elementMultiplier(attackerElement, defenderElement, affinityBonus = 0) {
   if (!attackerElement || !defenderElement) return 1;
-  if ((ELEMENT_BEATS[attackerElement] || []).includes(defenderElement)) return ELEMENT_ADVANTAGE_MULT;
+  if ((ELEMENT_BEATS[attackerElement] || []).includes(defenderElement)) {
+    return ELEMENT_ADVANTAGE_MULT + Math.max(0, affinityBonus);
+  }
   if ((ELEMENT_BEATS[defenderElement] || []).includes(attackerElement)) return ELEMENT_WEAKNESS_MULT;
   return 1;
 }
@@ -509,15 +515,38 @@ export const RUNE_BONUS_TABLE = {
   // boostait ne servait plus à rien. Remplacée par la Dextérité, qui
   // retire un % des taps exigés par le défi de combat.
   dexterite: [0.12, 0.24, 0.36, 0.48, 0.60], // % de taps en MOINS sur le défi
-  celerite: [0.10, 0.20, 0.35, 0.50, 0.70], // bonus ADDITIF sur le plafond du multiplicateur de dégâts (x2,5 de base)
+  celerite: [0.10, 0.20, 0.35, 0.50, 0.70], // bonus ADDITIF sur le multiplicateur de dégâts (x2,5 de base)
+  // --- 12/09 : 3 runes ajoutées pour sortir du "tout offensif" ---
+  // Affinité : s'ajoute au multiplicateur d'AVANTAGE élémentaire (1,30
+  // de base). Ne touche PAS la pénalité de faiblesse — c'est une rune
+  // offensive qui récompense la composition du deck, pas une défense.
+  // Valeurs hautes assumées : elle ne sert que sur une partie des
+  // échanges, contrairement à Force qui vaut à chaque coup.
+  affinite: [0.08, 0.16, 0.25, 0.35, 0.45],
+  // Butin : % de Griffes en plus à la victoire. Aucune incidence sur le
+  // combat lui-même, donc elle peut être généreuse sans déséquilibrer.
+  butin: [0.08, 0.16, 0.25, 0.35, 0.45],
+  // Résilience : survit UNE fois par combat à un coup fatal, et repart
+  // avec ce % de ses PV max. Déterministe exprès — une chance de
+  // déclenchement aléatoire se vit comme une injustice quand elle rate.
+  resilience: [0.06, 0.10, 0.15, 0.22, 0.30],
 };
+
+// Plafonds de cumul. Les 3 créatures du deck ont 3 emplacements chacune,
+// soit 9 runes possibles : sans plafond, 9 Butin niveau 5 donneraient
+// +405% de Griffes et 9 Résilience feraient repartir à pleins PV.
+export const BUTIN_MAX_BONUS = 1.0;       // +100% de Griffes au maximum
+export const RESILIENCE_MAX_PCT = 0.5;    // renaissance à 50% des PV au maximum
 
 // Additionne les bonus de TOUTES les runes équipées (jusqu'à 3) sur une
 // créature — plusieurs runes du même type s'additionnent simplement
 // entre elles (pas de rendements décroissants supplémentaires entre
 // runes, seulement au sein de la progression de palier d'UNE rune).
 export function runeBonuses(equippedRunes) {
-  const totals = { atkPct: 0, hpPct: 0, tapReductionPct: 0, dmgMultBonus: 0 };
+  const totals = {
+    atkPct: 0, hpPct: 0, tapReductionPct: 0, dmgMultBonus: 0,
+    affinityBonus: 0, butinPct: 0, resiliencePct: 0,
+  };
   (equippedRunes || []).forEach((r) => {
     if (!r) return;
     const table = RUNE_BONUS_TABLE[r.type];
@@ -538,6 +567,9 @@ export function runeBonuses(equippedRunes) {
       totals.dmgMultBonus += val * 0.4;
     }
     else if (r.type === 'celerite') totals.dmgMultBonus += val;
+    else if (r.type === 'affinite') totals.affinityBonus += val;
+    else if (r.type === 'butin') totals.butinPct += val;
+    else if (r.type === 'resilience') totals.resiliencePct += val;
   });
   return totals;
 }
@@ -571,7 +603,17 @@ export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0, 
     // comme dmgMultBonus : ce n'est pas une stat, CombatScreen l'utilise
     // pour calculer le défi de tap.
     tapReductionPct: bonus.tapReductionPct,
+    // Runes du 12/09 — transportées avec les stats, comme dmgMultBonus.
+    affinityBonus: bonus.affinityBonus,
+    resiliencePct: Math.min(RESILIENCE_MAX_PCT, bonus.resiliencePct),
   };
+}
+
+// Bonus de Griffes apporté par TOUTES les runes de Butin du deck.
+// Prend la liste à plat des runes équipées sur les 3 créatures.
+export function butinBonus(allEquippedRunes) {
+  const b = runeBonuses(allEquippedRunes).butinPct;
+  return Math.min(BUTIN_MAX_BONUS, b);
 }
 
 // Même chose pour l'adversaire IA (stats déjà mises à l'échelle par
