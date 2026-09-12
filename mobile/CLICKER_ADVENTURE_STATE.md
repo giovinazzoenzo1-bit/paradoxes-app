@@ -935,6 +935,46 @@ validerait les défis en boucle sur le premier niveau venu.
 Affichées en fin de combat et **sous chaque nœud terminé** de la carte,
 pour repérer d'un coup d'œil les niveaux à refaire.
 
+## CHANTIER EN COURS — habillage de l'écran Exploration (12/09)
+
+Refonte visuelle en cours, assets générés par l'utilisateur via Gemini
+puis détourés ici. **Fait :** décor de fond, bannière de titre, bouton
+Combat, bouton retour partagé, 8 cadres de carte par élément, compteurs
+de monnaie épurés.
+
+**Reste à faire :**
+- Icône 💎 des Diamants (asset à venir) — remplacer l'emoji. Le **halo
+  bleu se fera EN CODE**, pas dans l'image : une lueur générée a des
+  bords flous qui se mélangent au magenta et se détourent mal.
+- Icône 🐾 des Griffes (asset à venir), même raisonnement.
+
+### Méthode de détourage — À RÉUTILISER
+
+Les assets arrivent sur fond **magenta pur** (#FF00FF), demandé
+explicitement dans les prompts.
+
+⚠️ **Remplissage depuis les BORDS, jamais un test de couleur global.**
+Le cadre Ténèbres a des fissures violet-magenta qu'un test global
+effacerait. Le fond est le seul magenta *connecté au bord de l'image*.
+
+⚠️ **Reprendre aussi les petits îlots magenta enfermés** dans le dessin :
+le trou au centre de l'anneau de la boussole n'est pas connecté au bord
+et survivait au remplissage, laissant un point magenta.
+
+⚠️ **Éroder de 2-3 px avant de lisser** l'alpha : sans ça, les pixels de
+transition laissent un liseré violet.
+
+⚠️ **Garder la plus grande zone connexe** : supprime le filigrane Gemini,
+toujours isolé dans un coin.
+
+Puis **quantifier à ~150 couleurs** : ces assets sont des aplats, le
+poids chute d'un tiers sans perte visible.
+
+### Consignes de prompt qui marchent
+Intérieur VIDE · fond magenta pur uni · un seul objet centré · aucun
+texte (on l'écrit par-dessus en code) · objet PLEIN sans ajour · mention
+explicite « aucune signature, aucun filigrane, aucune étoile ».
+
 ## Cadres de carte par élément (12/09)
 
 Les 8 éléments ont leur cadre (`assets/adventure/frames/`), table dans
