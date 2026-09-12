@@ -646,7 +646,7 @@ function LevelUpCard({ creature, ownedLevel, griffes, onLevelUp }) {
         onPress={onLevelUp}
         disabled={!affordable}
       >
-        <Text style={styles.startBattleBtnText}>Monter au niveau {ownedLevel + 1} — {cost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /> Griffes</Text>
+        <Text style={styles.startBattleBtnText}>Monter au niveau {ownedLevel + 1} — {cost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /> Griffes</Text>
       </TouchableOpacity>
     </View>
   );
@@ -670,7 +670,7 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
           onPress={onEvolve}
           disabled={griffes < cost}
         >
-          <Text style={styles.startBattleBtnText}>Évoluer — {cost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /> Griffes</Text>
+          <Text style={styles.startBattleBtnText}>Évoluer — {cost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /> Griffes</Text>
         </TouchableOpacity>
       ) : (
         <Text style={[styles.speciesNote, { marginTop: 8 }]}>Atteins le niveau {nextLevelNeeded} pour débloquer ce palier.</Text>
@@ -877,7 +877,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
             {theme && (
               <Image source={theme.button} style={styles.mlMainBtnImg} resizeMode="stretch" />
             )}
-            <Text style={[styles.mlMainBtnText, theme && styles.mlMainBtnTextThemed]}>NIVEAU {owned.level + 1} · {levelCost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /></Text>
+            <Text style={[styles.mlMainBtnText, theme && styles.mlMainBtnTextThemed]}>NIVEAU {owned.level + 1} · {levelCost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /></Text>
           </TouchableOpacity>
           </PulsingButton>
 
@@ -893,7 +893,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
               onPress={onEvolve}
               disabled={griffes < evoCost}
             >
-              <Text style={styles.mlEvoBtnText}>🌟 ÉVOLUER · {evoCost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /></Text>
+              <Text style={styles.mlEvoBtnText}>🌟 ÉVOLUER · {evoCost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /></Text>
             </TouchableOpacity>
           ) : (
             <Text style={styles.mlSubNote}>Niveau {nextEvoLevel} pour le palier suivant</Text>
@@ -1417,16 +1417,16 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onFuseRunes, onBack }) {
       <StatusBar hidden />
       <View style={styles.header}>
         <BackButton onPress={onBack} />
-        <Text style={styles.title}><Image source={DIAMOND_ICON} style={styles.inlineCurrencyIconTitle} /> Runes</Text>
+        <Text style={styles.title}><Image source={DIAMOND_ICON} style={styles.inlineCurrencyIconTitle} resizeMode="contain" /> Runes</Text>
       </View>
-      <Text style={styles.griffesText}><Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /> {griffes} Griffes</Text>
+      <Text style={styles.griffesText}><Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /> {griffes} Griffes</Text>
 
       <TouchableOpacity
         style={[styles.startBattleBtn, griffes < RUNE_COST && styles.actionBtnDisabledAdv]}
         onPress={onBuyRune}
         disabled={griffes < RUNE_COST}
       >
-        <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} /> Griffes</Text>
+        <Text style={styles.startBattleBtnText}>🎲 Rune aléatoire — {RUNE_COST} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /> Griffes</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>

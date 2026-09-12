@@ -1017,9 +1017,44 @@ principal (3 emplacements), coûts de niveau/évolution, écran Runes,
 icône de recharge d'énergie. Seuls les 2 `Alert.alert` gardent l'emoji
 texte : une alerte native ne peut pas afficher d'image.
 
+### 14. `<Image>` sans `resizeMode` explicite ROGNE en haut/bas (défaut = `cover`, pas `contain`)
+
+**Bug réel signalé par l'utilisateur** : les icônes Griffes/Diamants
+posées ci-dessus apparaissaient « mal détourées, coupées en haut et en
+bas ». Fausse piste suivie d'abord : passé un long moment à re-vérifier
+le détourage lui-même (pixel par pixel, comparaison avec l'image
+source) — les fichiers PNG sont corrects, intacts, non rognés. **Le bug
+n'était pas dans l'asset, il était dans la balise `<Image>`.**
+
+Cause réelle : 7 occurrences (coûts de niveau/évolution, titre et texte
+de l'écran Runes) utilisaient `<Image source={...} style={styles.
+inlineCurrencyIcon} />` **sans préciser `resizeMode`**. Or le défaut de
+React Native est **`cover`** (remplit toute la boîte en rognant ce qui
+dépasse), pas `contain` (réduit l'image entière pour qu'elle tienne).
+`diamond-icon.png` est portrait (240×320, pas carré) alors que la boîte
+CSS est carrée (14×14 ou 18×18) : `cover` l'agrandissait jusqu'à
+remplir la largeur, puis rognait symétriquement le haut ET le bas qui
+dépassaient — exactement le symptôme décrit. Simulé et confirmé avant
+de corriger (rendu 8× de `cover` vs `contain` à la vraie taille de 18px)
+plutôt que de recorriger à l'aveugle une 2e fois.
+
+**Corrigé** : `resizeMode="contain"` ajouté aux 7 occurrences. Le
+compteur principal (`CurrencyIcon`) n'était PAS affecté, il précisait
+déjà `contain`. Vérifié qu'aucune autre balise `<Image>` du fichier
+n'omet `resizeMode` (recherche automatisée sur tout le fichier, zéro
+résultat).
+
+⚠️ **Règle générale pour tout le projet** : toute `<Image>` avec une
+taille fixe (`width`/`height` en style) doit TOUJOURS préciser
+`resizeMode` explicitement. Sans lui, le rendu dépend d'un défaut
+silencieux qui ne casse rien à la compilation ni aux tests visuels
+rapides (une image carrée ou proche du carré ne montre presque rien),
+mais rogne réellement toute image dont le ratio diffère de sa boîte.
+
 ### Méthode de détourage — À RÉUTILISER (aplats uniquement, voir ci-dessus pour l'aérographe)
 
 Les assets arrivent sur fond **magenta pur** (#FF00FF), demandé
+
 explicitement dans les prompts.
 
 ⚠️ **Remplissage depuis les BORDS, jamais un test de couleur global.**
