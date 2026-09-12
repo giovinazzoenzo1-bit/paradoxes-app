@@ -197,6 +197,47 @@ function opponentPowerBudgetPerMember(levelNumber) {
 // toujours quasi aucun dégât. La cause principale était ailleurs (ils ne
 // ripostaient que s'ils survivaient, voir CombatScreen), mais même
 // corrigée, leurs coups restaient trop faibles face aux PV du joueur.
+// ---- Affinités élémentaires (12/09) ----
+//
+// Les 26 créatures avaient déjà un `element` (Feu, Eau, Air, Terre,
+// Foudre, Lumière, Magie, Ténèbres) qui n'était utilisé NULLE PART en
+// combat. Le coût de conception était payé, il ne rapportait rien.
+//
+// Cycle à 5 : Feu > Air > Terre > Foudre > Eau > Feu.
+// Lumière et Ténèbres se dominent MUTUELLEMENT (aucun des deux n'est
+// avantagé par défaut, ils se contrent l'un l'autre).
+// Magie est neutre : ni avantage ni faiblesse, dans les deux sens.
+const ELEMENT_BEATS = {
+  Feu: ['Air'],
+  Air: ['Terre'],
+  Terre: ['Foudre'],
+  Foudre: ['Eau'],
+  Eau: ['Feu'],
+  'Lumière': ['Ténèbres'],
+  'Ténèbres': ['Lumière'],
+  Magie: [],
+};
+
+export const ELEMENT_ADVANTAGE_MULT = 1.3;   // +30%, calé sur la référence
+export const ELEMENT_WEAKNESS_MULT = 0.75;   // -25%
+
+// Multiplicateur de dégâts de `attackerElement` contre `defenderElement`.
+// Renvoie 1 si l'un des deux manque ou est neutre — jamais d'erreur sur
+// une créature dont l'élément ne serait pas renseigné.
+export function elementMultiplier(attackerElement, defenderElement) {
+  if (!attackerElement || !defenderElement) return 1;
+  if ((ELEMENT_BEATS[attackerElement] || []).includes(defenderElement)) return ELEMENT_ADVANTAGE_MULT;
+  if ((ELEMENT_BEATS[defenderElement] || []).includes(attackerElement)) return ELEMENT_WEAKNESS_MULT;
+  return 1;
+}
+
+export function elementRelation(attackerElement, defenderElement) {
+  const m = elementMultiplier(attackerElement, defenderElement);
+  if (m > 1) return 'fort';
+  if (m < 1) return 'faible';
+  return 'neutre';
+}
+
 export const OPPONENT_ATTACK_MULT = 5.0;
 
 export function statsForOpponentCreature(creature, levelNumber) {

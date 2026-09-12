@@ -49,6 +49,8 @@ import {
   effectiveTapCount,
   scaledSkillDamage,
   TAP_CHALLENGE_TIME_LIMIT_SEC,
+  elementMultiplier,
+  elementRelation,
 } from '../../games/clicker/combatLogic';
 
 const BASIC_ATTACK_RATIO = 0.4; // proportion de la stat ATQ brute, pour l'attaque de base gratuite
@@ -267,9 +269,11 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     // avait frappé (retour du 12/09).
     playLunge('opponent', 0);
     const oppSkill = pickOpponentSkill(oppWithMana);
-    const oppDamage = oppSkill.isBasic
-      ? oppSkill.damage
-      : Math.round(scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack));
+    const defender = fightersRef.current[activeIndexRef.current];
+    const oppDamage = Math.max(1, Math.round(
+      (oppSkill.isBasic ? oppSkill.damage : scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack))
+      * elementMultiplier(opp.creature.element, defender.creature.element)
+    ));
 
     const curIdx = activeIndexRef.current;
     const curFighter = fightersRef.current[curIdx];
@@ -432,7 +436,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     // fixe à x1, ce n'est pas ce que la rune est censée booster).
     const multiplier = skill.isBasic ? 1 : damageMultiplierForTime(elapsedSec, completed) + (curFighter.stats.dmgMultBonus || 0);
     const skillDamage = skill.isBasic ? skill.damage : scaledSkillDamage(skill, curFighter.creature, curFighter.stats.attack);
-    const playerDamage = computePlayerDamage(skillDamage, multiplier);
+    // Affinité élémentaire : +30% si l'attaquant domine l'élément de sa
+    // cible, -25% s'il y est vulnérable.
+    const elemMult = elementMultiplier(curFighter.creature.element, opp.creature.element);
+    const playerDamage = Math.max(1, Math.round(computePlayerDamage(skillDamage, multiplier) * elemMult));
 
     // ATTAQUE DE ZONE : frappe TOUS les adversaires encore debout.
     // Elle n'était jusqu'ici qu'une étiquette sur le bouton — le code
@@ -463,9 +470,12 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       newOpponents = newOpponents.map((o, i) =>
         i === retaliatorIdx ? { ...o, mana: Math.max(0, o.mana - (oppSkill.manaCost || 0)) } : o
       );
-      opponentDamage = oppSkill.isBasic
+      const rawOppDamage = oppSkill.isBasic
         ? oppSkill.damage
-        : Math.round(scaledSkillDamage(oppSkill, retaliator.creature, retaliator.stats.attack));
+        : scaledSkillDamage(oppSkill, retaliator.creature, retaliator.stats.attack);
+      opponentDamage = Math.max(1, Math.round(
+        rawOppDamage * elementMultiplier(retaliator.creature.element, curFighter.creature.element)
+      ));
     }
     opponentsRef.current = newOpponents;
     setOpponents(newOpponents);
@@ -743,6 +753,17 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
             {activeFighter.creature.stages[0].name} utilise {skillInfo.name} et inflige{' '}
             {skillInfo.damage} dégâts{skillInfo.aoe ? ' à TOUS les ennemis' : ''}.
           </Text>
+          {/* Affinité contre la cible VISÉE : l'information n'a de sens
+              que face à un adversaire précis. */}
+          {opponents[targetIndex] && (() => {
+            const rel = elementRelation(activeFighter.creature.element, opponents[targetIndex].creature.element);
+            if (rel === 'neutre') return null;
+            return (
+              <Text style={rel === 'fort' ? styles.elemStrong : styles.elemWeak}>
+                {activeFighter.creature.element} {rel === 'fort' ? '▲ +30%' : '▼ −25%'} contre {opponents[targetIndex].creature.element}
+              </Text>
+            );
+          })()}
         </View>
       )}
 
@@ -1039,6 +1060,8 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   skillInfoName: { color: '#ffd76a', fontSize: 12, fontWeight: '900', marginBottom: 3 },
+  elemStrong: { color: '#7fffb0', fontSize: 10, fontWeight: '900', marginTop: 3 },
+  elemWeak: { color: '#ff9b91', fontSize: 10, fontWeight: '900', marginTop: 3 },
   skillInfoLine: { color: '#e6eef7', fontSize: 10, fontWeight: '700', lineHeight: 14 },
 
   skillBtnDisabled: { borderColor: COLORS.border, opacity: 0.4 },

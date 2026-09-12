@@ -907,6 +907,33 @@ lance l'attaque — sans cette séparation, consulter reviendrait à jouer.
 - Sélection de cible au tap : à vérifier au test, le mécanisme existe
   déjà (`targetIndex`)
 
+## Affinités élémentaires (12/09)
+
+Les 26 créatures avaient déjà un `element` **utilisé nulle part** en
+combat : le coût de conception était payé sans rien rapporter. Il pilote
+désormais les dégâts.
+
+**Cycle à 5** : Feu ▸ Air ▸ Terre ▸ Foudre ▸ Eau ▸ Feu
+**Lumière ↔ Ténèbres** : s'amplifient MUTUELLEMENT (+30% dans les deux
+sens). Chacun est donc sa propre menace, sans pénalité d'attaque.
+**Magie** : totalement neutre, dans les deux sens.
+
+| Relation | Multiplicateur |
+|---|---|
+| Avantage | **×1,30** (calé sur le jeu de référence : +30%) |
+| Faiblesse | **×0,75** |
+| Neutre | ×1 |
+
+Appliqué aux **trois** chemins de dégâts : attaque du joueur, riposte
+adverse, et le cas où l'adversaire joue en premier.
+
+⚠️ `elementMultiplier` renvoie 1 si un élément manque — une créature sans
+élément renseigné ne peut pas faire planter un combat.
+
+L'affinité s'affiche dans le panneau d'attaque, mais **seulement contre
+la cible visée** : hors contexte d'un adversaire précis, l'information
+n'aurait aucun sens.
+
 ## Navigation générale du Clicker
 
 Barre de navigation en bas de `ClickerScreen.js` : **Shop | Collection | Aventure** (icônes `@expo/vector-icons`, pas d'images externes). L'écran d'accueil (`view === 'tap'`) contient : pièces, revenu/s, **barre de défi**, deck de 3 créatures, l'œuf central.

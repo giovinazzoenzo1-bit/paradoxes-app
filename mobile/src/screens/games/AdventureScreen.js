@@ -93,7 +93,7 @@ function makeRuneId() {
 }
 
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, diamonds = 0 }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
   // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
   // combiné à aspectRatio sur un élément position:'absolute' se rend
@@ -413,6 +413,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onLevelWon={handleLevelWon}
         onBack={() => setChapterMapOpen(false)}
         onBuyEnergy={buyEnergyWithDiamonds}
+        diamonds={diamonds}
       />
     );
   }
@@ -1009,7 +1010,7 @@ function EnergyBadge({ energy, energyUpdatedAt }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, diamonds = 0 }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -1195,6 +1196,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
             setActiveBattle({ levelNumber: levelPreview });
           }}
           onBuyEnergy={onBuyEnergy}
+          diamonds={diamonds}
         />
       )}
     </View>
@@ -1379,7 +1381,7 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   );
 }
 
-function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart, onBuyEnergy }) {
+function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart, onBuyEnergy, diamonds = 0 }) {
   const opponent = opponentForLevel(levelNumber);
   const display = opponent.stages[0];
   const ownedMap = {};
@@ -1445,11 +1447,24 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
 
         {/* Recharge en Diamants quand la jauge est vide : sans ça, le
             joueur n'a plus qu'à fermer l'appli et attendre. */}
+        {/* Le solde est AFFICHÉ et le bouton se grise s'il est
+            insuffisant : sans ça, un appui ne produisait rien de
+            visible et donnait l'impression d'un bouton cassé. */}
         {energy <= 0 && onBuyEnergy && (
-          <TouchableOpacity style={styles.buyEnergyBtn} onPress={onBuyEnergy}>
-            <Text style={styles.buyEnergyBtnText}>💎 {ENERGY_DIAMOND_COST} — Recharger l'énergie</Text>
+          <TouchableOpacity
+            style={[styles.buyEnergyBtn, diamonds < ENERGY_DIAMOND_COST && styles.actionBtnDisabledAdv]}
+            onPress={onBuyEnergy}
+            disabled={diamonds < ENERGY_DIAMOND_COST}
+          >
+            <Text style={styles.buyEnergyBtnText}>
+              💎 {ENERGY_DIAMOND_COST} — Recharger l'énergie (tu as {diamonds})
+            </Text>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity style={styles.overlayBackBtn} onPress={onClose}>
+          <Text style={styles.overlayBackBtnText}>← Retour</Text>
+        </TouchableOpacity>
 
       </View>
     </View>
@@ -1516,6 +1531,12 @@ const styles = StyleSheet.create({
   energyBadge: { alignItems: 'center' },
   energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
   energyBadgeCountdown: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1 },
+  overlayBackBtn: {
+    marginTop: 10, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12,
+    alignItems: 'center', alignSelf: 'stretch',
+    backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.border,
+  },
+  overlayBackBtnText: { color: COLORS.muted, fontSize: 13, fontWeight: '800' },
   buyEnergyBtn: {
     marginTop: 10, paddingVertical: 11, paddingHorizontal: 18, borderRadius: 12,
     alignItems: 'center', alignSelf: 'stretch',
