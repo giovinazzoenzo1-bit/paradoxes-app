@@ -3,7 +3,7 @@
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground, Animated, Alert } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
@@ -61,6 +61,10 @@ const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
 // de sécurité que DEV_UNLOCK_ALL_KEY dans ClickerScreen.js : jamais
 // d'écriture directe dans la sauvegarde depuis un autre écran, juste un
 // drapeau lu et appliqué par AdventureScreen lui-même à son chargement.
+// Coût d'une recharge d'énergie en Diamants. Aligné sur l'offre
+// équivalente de la boutique du Clicker — deux prix différents pour la
+// même chose serait incompréhensible.
+export const ENERGY_DIAMOND_COST = 15;
 export const DEV_ADD_GRIFFES_KEY = 'adventure:dev:addGriffes';
 const DEV_GRIFFES_AMOUNT = 1000;
 // Même schéma que ci-dessus pour recharger l'énergie au max depuis Options.
@@ -89,7 +93,7 @@ function makeRuneId() {
 }
 
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
   // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
   // combiné à aspectRatio sur un élément position:'absolute' se rend
@@ -168,8 +172,12 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         await AsyncStorage.removeItem(DEV_RESET_GRIFFES_KEY);
       }
       const griffesFlag = await AsyncStorage.getItem(DEV_ADD_GRIFFES_KEY);
-      if (griffesFlag === '1') {
-        setGriffes((g) => g + DEV_GRIFFES_AMOUNT);
+      // Un MONTANT, plus un drapeau : `'1'` de l'ancien format vaut 1,
+      // donc on retombe sur le montant par défaut pour ne rien perdre
+      // d'une demande faite avant cette correction.
+      if (griffesFlag) {
+        const amount = parseInt(griffesFlag, 10) || 0;
+        setGriffes((g) => g + (amount > 1 ? amount : DEV_GRIFFES_AMOUNT));
         await AsyncStorage.removeItem(DEV_ADD_GRIFFES_KEY);
       }
       const energyFlag = await AsyncStorage.getItem(DEV_REFILL_ENERGY_KEY);
@@ -811,7 +819,9 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
                   n'est volontairement PAS remplacée par le mana — celui-ci
                   est identique pour toutes les créatures (0 à 5), donc
                   l'afficher dans une fiche n'apprendrait rien. */}
-              <MlStat icon="👆" label="VITESSE" value={`×${stats.clickSpeed.toFixed(1).replace('.', ',')}`} bonus={0} color={COLORS.neonCyan} />
+              {/* VITESSE retirée (12/09) : elle occupait une ligne pour
+                  une information qui ne pilote plus rien de visible
+                  depuis la refonte du combat. */}
             </ThemedBlock>
 
             <ThemedBlock theme={theme} style={styles.mlRunesBox}>
@@ -984,7 +994,34 @@ function EnergyBadge({ energy, energyUpdatedAt }) {
 }
 
 function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack }) {
+  // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
+  // en haut, obligeant à faire défiler à chaque visite pour retrouver où
+  // on en est (signalé le 12/09).
+  const mapScrollRef = useRef(null);
+  const mapAutoScrolledRef = useRef(false);
+  const scrollToCurrentLevel = () => {
+    // Une seule fois par ouverture : sans ce garde, chaque changement de
+    // taille du contenu ramènerait brutalement le joueur en place alors
+    // qu'il est peut-être en train d'explorer la carte.
+    if (mapAutoScrolledRef.current || !mapScrollRef.current) return;
+    mapAutoScrolledRef.current = true;
+    // Position dérivée du niveau : chaque niveau occupe ~86dp, on
+    // recule d'un demi-écran pour le placer au centre.
+    const y = Math.max(0, (currentUnlockedLevel - 1) * 86 - 160);
+    mapScrollRef.current.scrollTo({ y, animated: false });
+  };
+
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
+  const buyEnergyWithDiamonds = async () => {
+    if (!onSpendDiamonds) return;
+    const ok = await onSpendDiamonds(ENERGY_DIAMOND_COST);
+    if (!ok) {
+      Alert.alert('Diamants insuffisants', `Il te faut ${ENERGY_DIAMOND_COST} 💎 pour recharger l'énergie.`);
+      return;
+    }
+    setEnergy(ENERGY_MAX);
+    setEnergyUpdatedAt(Date.now());
+  };
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
   // TOUJOURS appelé avant tout retour anticipé (règle des Hooks React) —
   // c'était placé après le "if (activeBattle) return" et faisait planter
@@ -1012,12 +1049,15 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
       <CombatScreen
         team={team}
         levelNumber={activeBattle.levelNumber}
-        onFinish={(outcome) => {
+        onFinish={(outcome, goNext) => {
           if (outcome === 'win') {
             onLevelWon(activeBattle.levelNumber, griffesReward(activeBattle.levelNumber));
           }
+          const nextLevel = activeBattle.levelNumber + 1;
           setActiveBattle(null);
-          setLevelPreview(null);
+          // « Niveau suivant » : on rouvre directement l'écran de
+          // préparation du niveau d'après, sans repasser par la carte.
+          setLevelPreview(outcome === 'win' && goNext ? nextLevel : null);
         }}
       />
     );
@@ -1048,7 +1088,11 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView
+        ref={mapScrollRef}
+        contentContainerStyle={{ paddingBottom: 30 }}
+        onContentSizeChange={scrollToCurrentLevel}
+      >
         {Array.from({ length: chaptersToShow }, (_, chapterIdx) => chapterIdx + 1).map((chapterNum) => {
           // Positions converties en PIXELS tout de suite (x ET y dans la
           // même unité) — un vrai bug avait laissé x en fraction (0-1) et
@@ -1111,6 +1155,9 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         })}
       </ScrollView>
 
+      {/* Recharge d'énergie payée en Diamants. Le débit est délégué au
+          Clicker (qui détient la monnaie) ; ici on ne fait que remplir
+          la jauge si le paiement a réussi. */}
       {levelPreview && (
         <FighterSelectOverlay
           levelNumber={levelPreview}
@@ -1125,6 +1172,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
             if (!onStartBattle()) return;
             setActiveBattle({ levelNumber: levelPreview });
           }}
+          onBuyEnergy={buyEnergyWithDiamonds}
         />
       )}
     </View>
@@ -1309,7 +1357,7 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   );
 }
 
-function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart }) {
+function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart, onBuyEnergy }) {
   const opponent = opponentForLevel(levelNumber);
   const display = opponent.stages[0];
   const ownedMap = {};
@@ -1372,6 +1420,14 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
             {teamCount === 0 ? 'Deck vide' : energy <= 0 ? '⚡ Plus d\'énergie' : '⚔️ Combattre'}
           </Text>
         </TouchableOpacity>
+
+        {/* Recharge en Diamants quand la jauge est vide : sans ça, le
+            joueur n'a plus qu'à fermer l'appli et attendre. */}
+        {energy <= 0 && onBuyEnergy && (
+          <TouchableOpacity style={styles.buyEnergyBtn} onPress={onBuyEnergy}>
+            <Text style={styles.buyEnergyBtnText}>💎 {ENERGY_DIAMOND_COST} — Recharger l'énergie</Text>
+          </TouchableOpacity>
+        )}
 
       </View>
     </View>
@@ -1438,6 +1494,13 @@ const styles = StyleSheet.create({
   energyBadge: { alignItems: 'center' },
   energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
   energyBadgeCountdown: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1 },
+  buyEnergyBtn: {
+    marginTop: 10, paddingVertical: 11, paddingHorizontal: 18, borderRadius: 12,
+    alignItems: 'center', alignSelf: 'stretch',
+    backgroundColor: 'rgba(42,127,168,0.22)',
+    borderWidth: 1.5, borderColor: '#7fdcff',
+  },
+  buyEnergyBtnText: { color: '#7fdcff', fontSize: 13, fontWeight: '900' },
   energyCostText: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 10, marginBottom: 4 },
   fighterPick: {
     width: 56, height: 56, borderRadius: 14, backgroundColor: COLORS.bg,

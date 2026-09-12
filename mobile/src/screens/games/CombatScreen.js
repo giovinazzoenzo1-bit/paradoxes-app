@@ -105,7 +105,10 @@ const OPPONENT_SLOTS = [
   { x: 0.88, y: 0.20, size: 0.66 },
   { x: 0.89, y: 0.50, size: 0.82 },
 ];
-const SPRITE_BASE = 74; // taille de l'emoji du sprite "devant" (size 1.0)
+// Agrandi de 74 à 104 (12/09) : les illustrations de créatures
+// paraissaient minuscules sur le décor, qui occupe tout l'écran. Les
+// emplacements ayant été remontés, la place existe.
+const SPRITE_BASE = 104;
 
 export default function CombatScreen({ team, levelNumber, onFinish }) {
   const { width: W, height: H } = useWindowDimensions();
@@ -187,9 +190,15 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   const playLunge = (side) => {
     setLungeSide(side);
     lungeAnim.setValue(0);
+    // Rythme d'un coup porté : recul (anticipation), détente rapide,
+    // TEMPS D'ARRÊT à l'impact, puis retour souple. Le temps d'arrêt est
+    // ce qui rend le coup percutant — sans lui, l'aller-retour se lit
+    // comme un simple glissement (retour du 12/09 : « trop rapide »).
     Animated.sequence([
-      Animated.timing(lungeAnim, { toValue: 1, duration: 130, useNativeDriver: true }),
-      Animated.timing(lungeAnim, { toValue: 0, duration: 190, useNativeDriver: true }),
+      Animated.timing(lungeAnim, { toValue: -0.35, duration: 160, useNativeDriver: true }),
+      Animated.timing(lungeAnim, { toValue: 1, duration: 110, useNativeDriver: true }),
+      Animated.delay(160),
+      Animated.spring(lungeAnim, { toValue: 0, useNativeDriver: true, friction: 6, tension: 60 }),
     ]).start(() => setLungeSide(null));
   };
 
@@ -216,6 +225,10 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
     // passer par setOpponents aurait été asynchrone, et il aurait choisi
     // avec la valeur du tour précédent.
     const oppWithMana = { ...opp, mana: Math.min(MANA_MAX, opp.mana + MANA_PER_TURN) };
+    // Élan de l'adversaire lancé ici, AVANT que les dégâts ne
+    // s'affichent : sans ce décalage, le chiffre rouge apparaissait
+    // pendant que la créature bougeait encore et on ne voyait pas qui
+    // avait frappé (retour du 12/09).
     playLunge('opponent');
     const oppSkill = pickOpponentSkill(oppWithMana);
     const oppDamage = oppSkill.isBasic
@@ -470,6 +483,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         battleStats={battleStats}
         fighters={fighters}
         onContinue={() => onFinish(outcome)}
+        onNextLevel={() => onFinish(outcome, true)}
       />
     );
   }
@@ -509,8 +523,13 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
           <Animated.View
             style={lunging ? {
               transform: [
-                { translateX: lungeAnim.interpolate({ inputRange: [0, 1], outputRange: [0, lungeDir * Math.round(fs * 0.55)] }) },
-                { scale: lungeAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) },
+                // Amplitude portée à 1,1x la taille du sprite : le
+                // combattant va vraiment AU CONTACT au lieu d'esquisser
+                // un pas.
+                { translateX: lungeAnim.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [lungeDir * -Math.round(fs * 0.22), 0, lungeDir * Math.round(fs * 1.1)] }) },
+                { scale: lungeAnim.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [0.94, 1, 1.22] }) },
+                // Légère bascule vers l'avant, comme un coup d'épaule.
+                { rotate: lungeAnim.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [`${-lungeDir * 6}deg`, '0deg', `${lungeDir * 14}deg`] }) },
               ],
             } : null}
           >
@@ -683,7 +702,7 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   );
 }
 
-function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onContinue }) {
+function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onContinue, onNextLevel }) {
   const isWin = outcome === 'win';
   const reward = isWin ? griffesReward(levelNumber) : 0;
 
@@ -714,11 +733,16 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
       >
         <Text style={styles.resultBannerText}>{isWin ? 'VICTOIRE !' : 'DÉFAITE'}</Text>
       </ImageBackground>
-      {isWin && <Text style={styles.resultReward}>+{reward} 🐾 Griffes</Text>}
-
-      {/* Récapitulatif du combat (demande explicite) — mêmes chiffres
-          quelle que soit l'issue, victoire ou défaite. */}
+      {/* Récapitulatif du combat — mêmes chiffres quelle que soit
+          l'issue, victoire ou défaite. */}
       <View style={styles.recapCard}>
+        {/* Le gain est DANS le cadre : posé sur le décor il se perdait
+            dans les tons dorés du couchant (signalé le 12/09). */}
+        {isWin && (
+          <View style={styles.rewardBadge}>
+            <Text style={styles.rewardBadgeText}>+{reward} 🐾 Griffes</Text>
+          </View>
+        )}
         <Text style={styles.recapTitle}>📊 Récapitulatif</Text>
         <View style={styles.recapRow}>
           <View style={styles.recapStat}>
@@ -759,6 +783,13 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
       </View>
 
       {!isWin && <Text style={styles.resultSubtitle}>Réessaie quand tu veux — rien n'est perdu.</Text>}
+      {/* Enchaîner directement évite de repasser par la carte et de la
+          faire défiler à chaque niveau. */}
+      {isWin && (
+        <TouchableOpacity style={[styles.resultBtn, styles.resultBtnNext]} onPress={onNextLevel}>
+          <Text style={styles.resultBtnText}>⚔️ Niveau suivant</Text>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity style={styles.resultBtn} onPress={onContinue}>
         <Text style={styles.resultBtnText}>Retour à la carte</Text>
       </TouchableOpacity>
@@ -897,7 +928,7 @@ const styles = StyleSheet.create({
   // Ratio du bandeau conservé (1000x180) : `aspectRatio` plutôt qu'une
   // hauteur fixe, pour qu'il ne se déforme sur aucun écran.
   resultBanner: {
-    width: '86%', maxWidth: 460, aspectRatio: 1000 / 180,
+    width: '70%', maxWidth: 380, aspectRatio: 1000 / 180,
     alignItems: 'center', justifyContent: 'center',
   },
   resultBannerImg: { resizeMode: 'contain' },
@@ -907,6 +938,7 @@ const styles = StyleSheet.create({
   },
   resultReward: { color: COLORS.action, fontSize: 15, fontWeight: '800', marginTop: 8 },
   resultSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
+  resultBtnNext: { backgroundColor: COLORS.good, marginBottom: 8 },
   resultBtn: { backgroundColor: COLORS.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 26, marginTop: 24, borderWidth: 1, borderColor: COLORS.border },
   resultBtnText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
 
@@ -914,9 +946,18 @@ const styles = StyleSheet.create({
   // Défaite : voile sombre et froid par-dessus le même décor doré.
   resultDimLose: { backgroundColor: 'rgba(6,10,26,0.66)' },
   resultScrollView: { flex: 1, backgroundColor: 'transparent' },
-  resultScroll: { flexGrow: 1, alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 },
+  // Marges resserrées : il fallait faire défiler pour atteindre le
+  // bouton de retour, alors que tout tient à l'écran une fois le gain
+  // déplacé dans le cadre.
+  resultScroll: { flexGrow: 1, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 20 },
+  rewardBadge: {
+    alignSelf: 'center', marginBottom: 10, paddingVertical: 6, paddingHorizontal: 18,
+    borderRadius: 20, backgroundColor: 'rgba(245,197,66,0.18)',
+    borderWidth: 1.5, borderColor: COLORS.action,
+  },
+  rewardBadgeText: { color: COLORS.action, fontSize: 16, fontWeight: '900' },
   recapCard: {
-    width: '100%', maxWidth: 420, backgroundColor: COLORS.panel, borderRadius: 16, padding: 16, marginTop: 18,
+    width: '100%', maxWidth: 420, backgroundColor: COLORS.panel, borderRadius: 16, padding: 14, marginTop: 8,
     borderWidth: 1, borderColor: COLORS.border,
   },
   recapTitle: { color: COLORS.action, fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },

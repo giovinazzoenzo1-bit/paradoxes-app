@@ -133,9 +133,15 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
   // Même schéma que unlockAllCreatures — un drapeau lu par
   // AdventureScreen à son prochain chargement, jamais d'écriture directe
   // dans sa sauvegarde depuis ici.
+  // La clé stocke un MONTANT CUMULÉ, plus un simple drapeau '1'.
+  // Avec un drapeau, appuyer dix fois donnait toujours 1000 Griffes :
+  // la deuxième écriture écrasait la première (signalé le 12/09).
   const devAddGriffes = async () => {
-    await AsyncStorage.setItem(DEV_ADD_GRIFFES_KEY, '1');
-    Alert.alert('Fait', "1000 Griffes seront ajoutées à l'ouverture du mode Exploration.");
+    const raw = await AsyncStorage.getItem(DEV_ADD_GRIFFES_KEY);
+    const pending = raw ? parseInt(raw, 10) || 0 : 0;
+    const next = pending + 1000;
+    await AsyncStorage.setItem(DEV_ADD_GRIFFES_KEY, String(next));
+    Alert.alert('Fait', `${next} Griffes seront ajoutées à l'ouverture du mode Exploration.`);
   };
 
   const devResetGriffes = async () => {

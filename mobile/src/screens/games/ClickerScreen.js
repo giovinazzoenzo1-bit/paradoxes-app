@@ -2013,6 +2013,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   if (view === 'adventure') {
     return (
       <AdventureScreen
+        onSpendDiamonds={(cost) => spendSharedCoins(cost)}
         owned={owned}
         deck={deck}
         onBack={() => setView('tap')}
