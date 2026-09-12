@@ -935,6 +935,22 @@ validerait les défis en boucle sur le premier niveau venu.
 Affichées en fin de combat et **sous chaque nœud terminé** de la carte,
 pour repérer d'un coup d'œil les niveaux à refaire.
 
+## Cadres de carte par élément (12/09)
+
+Les 8 éléments ont leur cadre (`assets/adventure/frames/`), table dans
+`src/screens/games/cardFrames.js`. Bordure mesurée : **13 % en largeur,
+10 % en hauteur**.
+
+⚠️ **Détourage par REMPLISSAGE DEPUIS LES BORDS**, pas par test de
+couleur global. Le cadre Ténèbres a des fissures violet-magenta qu'un
+test global aurait effacées. Le fond est le seul magenta *connecté au
+bord* ; l'intérieur du cadre est récupéré à part (zone magenta large et
+centrale, non connectée). **Réutiliser cette méthode** pour tout asset
+dont l'illustration contient du violet ou du rose.
+
+Le cadre illustré REMPLACE la bordure colorée de rareté — les deux
+ensemble faisaient double encadrement.
+
 ## Affinités élémentaires (12/09)
 
 Les 26 créatures avaient déjà un `element` **utilisé nulle part** en
