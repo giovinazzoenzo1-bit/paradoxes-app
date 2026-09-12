@@ -18,6 +18,7 @@ import { cardFrameForElement, CARD_FRAME_BORDER_X, CARD_FRAME_BORDER_Y } from '.
 const EXPLORATION_BG = require('../../../assets/adventure/exploration-bg.jpg');
 const TITLE_BANNER = require('../../../assets/adventure/title-banner.png');
 const CURRENCY_PILL = require('../../../assets/adventure/currency-pill.png');
+const COMBAT_BTN = require('../../../assets/adventure/combat-btn.png');
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
@@ -469,20 +470,6 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
 
   return (
     <ImageBackground source={EXPLORATION_BG} style={styles.screen} resizeMode="cover">
-      {/* Parchemin détouré (fond transparent réel, pas un simple
-          rectangle recadré) — rétréci de 20% sur demande explicite,
-          posé sur le fond de pierre fourni par l'utilisateur juste
-          au-dessus. pointerEvents en STYLE (jamais en prop, voir
-          Règles de survie) : purement décoratif, ne doit jamais capter
-          un tap destiné au contenu au-dessus. */}
-      <Image
-        source={require('../../../assets/icons/adventure-parchment.png')}
-        style={[
-          styles.parchmentBg,
-          { width: screenWidth * 0.8, height: (screenWidth * 0.8) / (900 / 407) },
-        ]}
-        resizeMode="contain"
-      />
       {/* En-tête paysage : retour à gauche, Griffes au centre, accès aux
           Runes en HAUT À DROITE (même icône qu'avant, seulement
           déplacée). L'ancienne barre du bas disparaît : en paysage la
@@ -532,12 +519,12 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
                 )}
                 {display ? (
                   <>
-                    <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={64} emojiStyle={styles.creatureEmojiLand} />
+                    {/* Agrandie de 64 à 104 : la carte est désormais cadrée,
+                        la créature doit la remplir. */}
+                    <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={104} emojiStyle={styles.creatureEmojiLand} />
                     <Text style={styles.creatureNameLand} numberOfLines={1}>{display.name}</Text>
-                    <Text style={[styles.creatureRarity, { color: RARITY_COLOR[creature.rarity] }]}>
-                      {RARITY_LABEL[creature.rarity]}
-                    </Text>
-                    <Text style={styles.creatureLevelLand}>Niveau {own.level}</Text>
+                    {/* Rareté et niveau retirés : le cadre porte déjà
+                        l'élément, et la fiche détaillée donne le reste. */}
                   </>
                 ) : (
                   <>
@@ -575,13 +562,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
       )}
 
       <View style={styles.bottomLand}>
-        <Text style={styles.hintLand}>
-          {hasEmptySlot
-            ? 'Touche un emplacement vide pour choisir une créature.'
-            : 'Touche une créature pour ouvrir son profil.'}
-        </Text>
         <TouchableOpacity style={styles.combatBtnLand} onPress={() => setChapterMapOpen(true)}>
-          <Image source={require('../../../assets/icons/combat-button.png')} style={styles.combatBtnLandImage} resizeMode="contain" />
+          <ImageBackground source={COMBAT_BTN} style={styles.combatBtnImg} resizeMode="contain">
+            <Text style={styles.combatBtnText}>COMBAT</Text>
+          </ImageBackground>
         </TouchableOpacity>
       </View>
     </ImageBackground>
@@ -1586,20 +1570,10 @@ const styles = StyleSheet.create({
   // backgroundColor sert de repère sombre en attendant le fond noir
   // que l'utilisateur va fournir, à poser ici derrière le parchemin.
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
-  // Parchemin centré, à 80% de la largeur (rétréci de 20%) — largeur
-  // et hauteur calculées en pixels dans le JSX (screenWidth * 0.8),
-  // JAMAIS en %, voir le commentaire au-dessus du composant. zIndex
-  // bas : purement décoratif, tout le contenu réel (header, cartes,
-  // combat) doit rester au-dessus.
-  parchmentBg: {
-    position: 'absolute', alignSelf: 'center', top: '10%', zIndex: 0,
-    pointerEvents: 'none',
-  },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
 
-  creatureRarity: { fontSize: 9, fontWeight: '700', marginTop: 2 },
   editSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 6, paddingVertical: 3, paddingHorizontal: 8, backgroundColor: 'rgba(245,197,66,0.1)', borderRadius: 8 },
   editSlotBtnText: { color: COLORS.action, fontSize: 9, fontWeight: '700' },
 
@@ -1724,7 +1698,13 @@ const styles = StyleSheet.create({
   },
   // Bannière de titre : le texte s'écrit DANS le parchemin, dont le
   // centre a été demandé lisse à la génération pour cela.
-  titleBanner: { flex: 1, height: 52, marginHorizontal: 8, alignItems: 'center', justifyContent: 'center' },
+  // `position: absolute` centré sur TOUT l'écran : en `flex: 1` dans la
+  // rangée, le bouton retour à gauche et les compteurs à droite n'ont
+  // pas la même largeur, ce qui décalait le titre vers la gauche.
+  titleBanner: {
+    position: 'absolute', left: '50%', marginLeft: -170, top: 4,
+    width: 340, height: 52, alignItems: 'center', justifyContent: 'center',
+  },
   titleBannerText: {
     color: '#5a3d16', fontSize: 17, fontWeight: '900', letterSpacing: 2,
   },
@@ -1768,20 +1748,27 @@ const styles = StyleSheet.create({
   },
   creatureEmojiLand: { fontSize: 46 },
   creatureNameLand: { color: COLORS.text, fontSize: 12, fontWeight: '800', marginTop: 4 },
-  creatureLevelLand: { color: COLORS.muted, fontSize: 11, fontWeight: '700', marginTop: 2 },
   emptySlotEmojiLand: { fontSize: 40, opacity: 0.35 },
+  // `flex-end` et non `space-between` : le texte d'aide ayant été
+  // retiré, le bouton était le seul enfant et serait resté collé à
+  // gauche.
   bottomLand: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 8, gap: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
+    paddingHorizontal: 16, paddingVertical: 8,
   },
-  hintLand: { color: COLORS.muted, fontSize: 11, flex: 1 },
   // Fond doré retiré (image réelle intégrée à la place), juste un
   // conteneur pour la taper — même position bas-droite qu'avant
   // (bottomLand en row/space-between, ce bouton est le 2e élément).
   combatBtnLand: {
     alignItems: 'center', justifyContent: 'center',
   },
-  combatBtnLandImage: { width: 130, height: 43 },
+  // Agrandi de 130x43 à 230x55 : ratio de l'image conservé (700x167),
+  // le texte s'écrit dans sa plaque centrale.
+  combatBtnImg: { width: 230, height: 55, alignItems: 'center', justifyContent: 'center' },
+  combatBtnText: {
+    color: '#3a2608', fontSize: 15, fontWeight: '900', letterSpacing: 1.5,
+    marginLeft: 26,
+  },
 
   // ---------- Profil de créature (2 colonnes) ----------
 
