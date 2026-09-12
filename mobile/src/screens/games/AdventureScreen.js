@@ -1021,6 +1021,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
     // qu'il est peut-être en train d'explorer la carte.
     if (mapAutoScrolledRef.current || !mapScrollRef.current) return;
     mapAutoScrolledRef.current = true;
+
     // Position dérivée du niveau : chaque niveau occupe ~86dp, on
     // recule d'un demi-écran pour le placer au centre.
     const y = Math.max(0, (currentUnlockedLevel - 1) * 86 - 160);
@@ -1030,6 +1031,19 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
 
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
+
+  // Replacement au retour d'un combat. `onContentSizeChange` ne se
+  // déclenche pas dans ce cas (la taille du contenu est inchangée), il
+  // faut donc un effet explicite. Le garde est réarmé d'abord, sinon
+  // `scrollToCurrentLevel` sortirait immédiatement.
+  //
+  // ⚠️ Placé APRÈS la déclaration d'`activeBattle` : plus haut, il le
+  // lisait avant son initialisation.
+  useEffect(() => {
+    if (activeBattle) return;
+    mapAutoScrolledRef.current = false;
+    scrollToCurrentLevel();
+  }, [activeBattle, currentUnlockedLevel]);
   // TOUJOURS appelé avant tout retour anticipé (règle des Hooks React) —
   // c'était placé après le "if (activeBattle) return" et faisait planter
   // l'appli ("Rendered fewer hooks than expected") dès qu'on
@@ -1061,6 +1075,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
             onLevelWon(activeBattle.levelNumber, griffesReward(activeBattle.levelNumber));
           }
           const nextLevel = activeBattle.levelNumber + 1;
+
           setActiveBattle(null);
           // « Niveau suivant » : on rouvre directement l'écran de
           // préparation du niveau d'après, sans repasser par la carte.

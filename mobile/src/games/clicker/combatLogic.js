@@ -191,6 +191,10 @@ function opponentPowerBudgetPerMember(levelNumber) {
   return opponentPowerBudget(levelNumber) / opponentTeamSize(levelNumber);
 }
 
+// Multiplicateur d'attaque des adversaires. Ne touche QUE l'attaque :
+// les PV restent pilotés par le budget de puissance.
+export const OPPONENT_ATTACK_MULT = 1.5;
+
 export function statsForOpponentCreature(creature, levelNumber) {
   const base = creature.baseHp != null
     ? { hp: creature.baseHp, attack: creature.baseAttack, clickSpeed: creature.baseClickSpeed, endurance: creature.baseEndurance }
@@ -209,7 +213,10 @@ export function statsForOpponentCreature(creature, levelNumber) {
 
   return {
     hp: Math.max(1, Math.round(budget * hpRatio)),
-    attack: Math.max(1, Math.round(budget * (1 - hpRatio))),
+    // ATQ relevée de 50% (12/09, demande de l'utilisateur). Appliquée
+    // ICI et non sur le budget : relever le budget aurait aussi gonflé
+    // les PV, allongeant les combats au lieu de les rendre plus mordants.
+    attack: Math.max(1, Math.round(budget * (1 - hpRatio) * OPPONENT_ATTACK_MULT)),
     // Voir combatStatsForCreature : toujours dérivée de la rareté, jamais
     // de la valeur Gemini (systématiquement 1, donc plate/inutile).
     clickSpeed: RARITY_BASE_STATS[creature.rarity].clickSpeed,
