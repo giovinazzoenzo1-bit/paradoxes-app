@@ -67,8 +67,14 @@ function AppContent({ onFullReset }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
-      <View style={[styles.content, { paddingTop: insets.top }]}>
+      {/* Plein écran sur TOUTE l'appli (12/09) : la barre système casse
+          l'immersion. Posée ici plutôt qu'écran par écran — un seul
+          endroit à changer si on veut la rétablir. */}
+      <StatusBar hidden />
+      {/* Marge haute MINIMALE de 8dp : sans barre d'état, `insets.top`
+          peut tomber à 0 sur certains appareils et le bloc du haut
+          viendrait coller au bord de l'écran. */}
+      <View style={[styles.content, { paddingTop: Math.max(8, insets.top) }]}>
         <ClickerScreen
           key={clickerKey}
           onOpenOptions={() => setOverlay('options')}
