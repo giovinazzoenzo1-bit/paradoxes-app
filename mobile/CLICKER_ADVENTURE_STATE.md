@@ -801,9 +801,18 @@ l'asset. Il reste donc modifiable sans repasser par Gemini.
 
 | Repère | Fractions mesurées |
 |---|---|
-| Bannière | x 0,322-0,672 · y 0,008-0,058 |
+| Bannière (zone lisse) | x 0,330-0,686 · y 0,022-0,125 |
 | Cases (y) | 0,2427 → 0,7178 |
 | Case 1 / 2 / 3 (x) | 0,077-0,309 / 0,386-0,613 / 0,688-0,922 |
+| Légendes (bois, sous les cases) | y 0,735 → 0,905 |
+
+⚠️ **Piège sur la bannière** : le premier relevé (y 0,008-0,058) ne
+mesurait que la portion de la plaque dépassant AU-DESSUS du panneau,
+détectée en cherchant les lignes dont la largeur opaque est faible. Or
+la plaque redescend SUR le bois : la vraie zone lisse fait 0,022-0,125,
+soit 20 dp de haut au lieu de 10. Le titre en police 13 était donc
+coupé. **Mesurer une plaque par sa COULEUR (gris peu saturé), pas par la
+largeur opaque de ses lignes.**
 
 **À REMESURER si l'image change** (script : trous non connectés au bord).
 

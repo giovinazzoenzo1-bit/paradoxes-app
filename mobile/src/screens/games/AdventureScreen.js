@@ -34,7 +34,13 @@ const RUNES_GEM = require('../../../assets/icons/runes-gem.png');
 // l'asset, à remesurer si l'image change.
 const RUNES_SHOP_PANEL = require('../../../assets/icons/runes-shop-panel.png');
 const SHOP_PANEL_RATIO = 900 / 482;
-const SHOP_BANNER = { top: 0.008, bottom: 0.058, left: 0.322, right: 0.672 };
+// Zone LISSE de la plaque, remesurée le 12/09. L'ancien relevé
+// (0,008-0,058) n'attrapait que la partie de la plaque dépassant
+// AU-DESSUS du panneau, soit une boîte de 10 dp de haut : le titre en
+// police 13 y était coupé. La plaque descend en fait sur le bois.
+const SHOP_BANNER = { top: 0.022, bottom: 0.125, left: 0.330, right: 0.686 };
+// Bande de bois libre sous les cases, pour la légende de chaque offre.
+const SHOP_DESC_Y = { top: 0.735, bottom: 0.905 };
 const SHOP_SLOTS = [
   { left: 0.0767, right: 0.3089 },
   { left: 0.3856, right: 0.6133 },
@@ -1580,22 +1586,39 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
   const H = width / SHOP_PANEL_RATIO;
   const slotTop = SHOP_SLOT_Y.top * H;
   const slotH = (SHOP_SLOT_Y.bottom - SHOP_SLOT_Y.top) * H;
+  const descTop = SHOP_DESC_Y.top * H;
+  const descH = (SHOP_DESC_Y.bottom - SHOP_DESC_Y.top) * H;
   const offerDef = specialOffer ? RUNE_TYPES[specialOffer.type] : null;
   const soldOut = specialOffer ? specialOffer.purchased : true;
 
   const offers = [
     {
       key: 'special',
-      icon: offerDef ? offerDef.icon : '✨',
-      label: soldOut ? 'Épuisée' : 'Niv. 2',
+      // Une seule icône : celle du type effectivement en vente ce jour.
+      icons: [offerDef ? offerDef.icon : '✨'],
       cost: RUNE_SPECIAL_COST,
+      desc: soldOut ? 'Revient demain' : `${offerDef ? offerDef.name.replace('Rune de ', '').replace("Rune d'", '') : ''} niv.2\n1 par jour`,
       disabled: soldOut || griffes < RUNE_SPECIAL_COST,
       onPress: onBuySpecial,
     },
-    { key: 'pack', icon: '🎒', label: `x${RUNE_PACK_SIZE}`, cost: RUNE_PACK_COST,
-      disabled: griffes < RUNE_PACK_COST, onPress: onBuyPack },
-    { key: 'random', icon: '🎲', label: 'Aléatoire', cost: RUNE_COST,
-      disabled: griffes < RUNE_COST, onPress: onBuyRandom },
+    {
+      key: 'pack',
+      // 3 icônes côte à côte : le contenu du pack doit se LIRE, un sac
+      // fermé ne disait pas combien de runes il y avait dedans.
+      icons: ['⚔️', '❤️', '⚡'],
+      cost: RUNE_PACK_COST,
+      desc: '3 runes niv.1\nmoins cher',
+      disabled: griffes < RUNE_PACK_COST,
+      onPress: onBuyPack,
+    },
+    {
+      key: 'random',
+      icons: ['🎲'],
+      cost: RUNE_COST,
+      desc: '1 rune niv.1\nau hasard',
+      disabled: griffes < RUNE_COST,
+      onPress: onBuyRandom,
+    },
   ];
 
   return (
@@ -1605,7 +1628,7 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
         style={{ position: 'absolute', width, height: H, pointerEvents: 'none' }}
         resizeMode="stretch"
       />
-      {/* Titre écrit DANS la bannière vide de l'image. */}
+      {/* Titre écrit DANS la plaque vide de l'image. */}
       <View
         style={{
           position: 'absolute',
@@ -1617,32 +1640,55 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
           pointerEvents: 'none',
         }}
       >
-        <Text style={styles.shopBannerText} numberOfLines={1}>BOUTIQUE</Text>
+        <Text style={styles.shopBannerText} numberOfLines={1} adjustsFontSizeToFit>
+          BOUTIQUE DE RUNES
+        </Text>
       </View>
 
       {offers.map((o, i) => {
         const slot = SHOP_SLOTS[i];
+        const left = slot.left * width;
+        const w = (slot.right - slot.left) * width;
         return (
-          <TouchableOpacity
-            key={o.key}
-            style={{
-              position: 'absolute',
-              left: slot.left * width, width: (slot.right - slot.left) * width,
-              top: slotTop, height: slotH,
-              alignItems: 'center', justifyContent: 'center',
-              opacity: o.disabled ? 0.45 : 1,
-            }}
-            onPress={o.onPress}
-            disabled={o.disabled}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.shopOfferIcon}>{o.icon}</Text>
-            <Text style={styles.shopOfferLabel} numberOfLines={1}>{o.label}</Text>
-            <View style={styles.shopPriceRow}>
-              <Text style={styles.shopPriceText}>{o.cost}</Text>
-              <Image source={GRIFFES_ICON} style={styles.shopPriceIcon} resizeMode="contain" />
+          <React.Fragment key={o.key}>
+            <TouchableOpacity
+              style={{
+                position: 'absolute', left, width: w, top: slotTop, height: slotH,
+                alignItems: 'center', justifyContent: 'center',
+                opacity: o.disabled ? 0.45 : 1,
+              }}
+              onPress={o.onPress}
+              disabled={o.disabled}
+              activeOpacity={0.75}
+            >
+              <View style={styles.shopIconRow}>
+                {o.icons.map((ic, k) => (
+                  <Text
+                    key={k}
+                    style={o.icons.length > 1 ? styles.shopOfferIconSmall : styles.shopOfferIcon}
+                  >
+                    {ic}
+                  </Text>
+                ))}
+              </View>
+              <View style={styles.shopPriceRow}>
+                <Text style={styles.shopPriceText}>{o.cost}</Text>
+                <Image source={GRIFFES_ICON} style={styles.shopPriceIcon} resizeMode="contain" />
+              </View>
+            </TouchableOpacity>
+
+            {/* Légende sur le bois, sous la case : sans elle les 3 offres
+                ne se distinguaient que par leur prix. */}
+            <View
+              style={{
+                position: 'absolute', left, width: w, top: descTop, height: descH,
+                alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              <Text style={styles.shopOfferDesc} numberOfLines={2}>{o.desc}</Text>
             </View>
-          </TouchableOpacity>
+          </React.Fragment>
         );
       })}
     </View>
@@ -1941,8 +1987,10 @@ const styles = StyleSheet.create({
   runesLeftCol: { flex: 1 },
   runesRightCol: { width: '46%', alignItems: 'stretch' },
   shopBannerText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
+  shopIconRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   shopOfferIcon: { fontSize: 30 },
-  shopOfferLabel: { color: '#f3e3c0', fontSize: 10, fontWeight: '800', marginTop: 2 },
+  shopOfferIconSmall: { fontSize: 17 },
+  shopOfferDesc: { color: '#e8d5ab', fontSize: 8, fontWeight: '700', textAlign: 'center', lineHeight: 10 },
   shopPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
   shopPriceText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   shopPriceIcon: { width: 12, height: 12 },
