@@ -1051,6 +1051,59 @@ silencieux qui ne casse rien à la compilation ni aux tests visuels
 rapides (une image carrée ou proche du carré ne montre presque rien),
 mais rogne réellement toute image dont le ratio diffère de sa boîte.
 
+### 15. Un dégradé exporté en PNG doit retomber à alpha 0 AVANT son bord
+
+**Bug réel signalé par l'utilisateur (12/09)** : « autour de l'icône ce
+n'est pas transparent » — un **carré brun** visible autour du compteur
+de Griffes sur l'écran Chapitres.
+
+Cause : le PNG de halo avait **alpha = 25 sur tout son bord** au lieu de
+0. Le dégradé radial était simplement coupé net par le bord carré du
+fichier. De l'or (#f2c14e) à 10 % d'opacité sur un fond quasi noir donne
+exactement ce brun sale, et la coupure suit le carré de l'image.
+
+L'erreur de génération : les cercles concentriques étaient tracés avec
+un rayon allant jusqu'à **1,96 × le rayon de base**, soit 140 px dans un
+canevas de 256 — ils dépassaient le cadre, donc le dégradé n'avait pas
+la place de retomber à zéro.
+
+**Corrigé** : le halo est maintenant calculé en numpy avec une fenêtre
+`smoothstep` qui force l'alpha à 0 sur les 30 derniers % du rayon, plus
+un `alpha[r >= 1] = 0` explicite. Vérifié après export : bords et coins
+à 0.
+
+⚠️ **Deuxième règle apprise au passage : ne JAMAIS flouter les canaux
+RVB en même temps que l'alpha.** Un canevas RGBA vide a un RVB **noir**
+sous son alpha 0 ; le flou mélange donc la couleur du halo avec ce noir
+et sort une lueur terne et sale. La bonne méthode : **RVB constant sur
+toute l'image** (la couleur du halo partout, y compris dans les zones
+invisibles) et ne faire varier **que l'alpha**.
+
+⚠️ Vérification systématique pour tout futur dégradé exporté :
+contrôler `alpha[0].max()`, `alpha[-1].max()`, `alpha[:,0].max()`,
+`alpha[:,-1].max()` — les quatre doivent valoir **0**. Un rendu de
+contrôle sur fond sombre ne suffit pas toujours à le voir, alors que la
+mesure est immédiate.
+
+### Compteurs de monnaie — où ils s'affichent
+
+| Écran | Compteurs |
+|---|---|
+| Menu principal Aventure | 💎 Diamants · 🐾 Griffes (+) · bouton Runes |
+| Carte des Chapitres | 💎 Diamants · 🐾 Griffes (+) · ⚡ Énergie |
+| Fiche de créature | 🐾 Griffes seules |
+
+Les **Diamants ont été ajoutés aux deux premiers le 12/09** : ils n'y
+figuraient nulle part alors que ce sont eux qui paient la recharge
+d'énergie (affichée juste à côté) et l'échange contre des Griffes. Le
+joueur voyait le bouton « + » sans jamais savoir s'il avait de quoi
+payer.
+
+⚠️ Pas de « + » sur le compteur de Diamants : la boutique de Diamants
+vit dans le Clicker (`DiamondShop.js`) et n'est pas atteignable depuis
+l'Aventure. Un « + » qui ne mène nulle part serait pire que pas de
+bouton.
+
 ### Méthode de détourage — À RÉUTILISER (aplats uniquement, voir ci-dessus pour l'aérographe)
 
 Les assets arrivent sur fond **magenta pur** (#FF00FF), demandé

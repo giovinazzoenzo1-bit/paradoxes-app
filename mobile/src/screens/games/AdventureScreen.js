@@ -526,6 +526,11 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <Text style={styles.titleBannerText}>EXPLORATION</Text>
         </ImageBackground>
         <View style={styles.headerRight}>
+          {/* Diamants AVANT les Griffes, même ordre que sur le Clicker
+              (💎 à gauche des pièces) : les deux écrans doivent lire
+              pareil. Pas de « + » ici, la boutique de Diamants vit dans
+              le Clicker et n'est pas atteignable depuis l'Aventure. */}
+          <CurrencyCounter currency="diamond" amount={diamonds} />
           <CurrencyCounter currency="griffes" amount={griffes} onPlus={buyGriffesWithDiamonds} />
           <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
             <Image source={require('../../../assets/icons/rune-button.png')} style={styles.runesTopBtnImage} resizeMode="contain" />
@@ -1129,9 +1134,10 @@ const CURRENCY_ICONS = {
 
 function CurrencyIcon({ kind, size = 22, haloed = true, style }) {
   const def = CURRENCY_ICONS[kind] || CURRENCY_ICONS.griffes;
-  // Le halo déborde largement l'icône (×2,6) : c'est une lueur, elle
-  // doit se voir autour, pas juste la border du disque.
-  const glowSize = size * 2.6;
+  // Le halo déborde l'icône (×2,4) : c'est une lueur, elle doit se voir
+  // autour du disque. L'asset de halo retombe à alpha 0 AVANT son bord,
+  // sinon on voit un carré (bug du 12/09, voir règle 15).
+  const glowSize = size * 2.4;
   return (
     <View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}>
       {haloed && (
@@ -1272,6 +1278,10 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         <Text style={styles.title}>⚔️ Chapitres</Text>
       </View>
       <View style={styles.topStatsRow}>
+        {/* Diamants affichés ici aussi : c'est la monnaie qui recharge
+            l'énergie montrée juste à côté, le joueur doit voir son
+            solde avant de tomber à zéro. */}
+        <CurrencyCounter currency="diamond" amount={diamonds} />
         <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
       </View>
