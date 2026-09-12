@@ -238,6 +238,32 @@ export function elementRelation(attackerElement, defenderElement) {
   return 'neutre';
 }
 
+// ---- Notation en étoiles (12/09) ----
+//
+// Principe repris des jeux du genre (Summoners War, AFK Arena...) : les
+// étoiles ne récompensent pas la victoire elle-même, mais la MANIÈRE.
+// Chaque palier ajoute une contrainte de plus en plus exigeante :
+//
+//   1 ★ = gagner. Toujours acquis dès que le niveau est passé.
+//   2 ★ = gagner SANS PERDRE une seule créature. Récompense la
+//         préparation : bon deck, bonnes affinités élémentaires.
+//   3 ★ = gagner sans perte ET VITE. Récompense l'efficacité : frapper
+//         les faiblesses plutôt que d'user l'adversaire.
+//
+// Le seuil de rapidité dépend du NOMBRE d'adversaires, sinon un niveau
+// à 3 ennemis serait mécaniquement plus dur à noter qu'un niveau à 1.
+export function maxRoundsForThreeStars(opponentCount) {
+  return 2 * Math.max(1, opponentCount) + 1;
+}
+
+export function starsForBattle(stats, opponentCount) {
+  if (!stats) return 1;
+  let stars = 1;
+  if ((stats.fightersFainted || 0) === 0) stars = 2;
+  if (stars === 2 && (stats.rounds || 0) <= maxRoundsForThreeStars(opponentCount)) stars = 3;
+  return stars;
+}
+
 export const OPPONENT_ATTACK_MULT = 5.0;
 
 export function statsForOpponentCreature(creature, levelNumber) {

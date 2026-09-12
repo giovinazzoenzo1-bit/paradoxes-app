@@ -907,6 +907,27 @@ lance l'attaque — sans cette séparation, consulter reviendrait à jouer.
 - Sélection de cible au tap : à vérifier au test, le mécanisme existe
   déjà (`targetIndex`)
 
+## Notation en étoiles des combats (12/09)
+
+Principe repris des jeux du genre : les étoiles ne récompensent pas la
+victoire, mais la **manière**. Chaque palier ajoute une contrainte.
+
+| ★ | Condition | Ce que ça récompense |
+|---|---|---|
+| 1 | Gagner | acquis dès que le niveau passe |
+| 2 | + **aucune créature perdue** | la préparation : deck et affinités |
+| 3 | + **rapidement** | l'efficacité : frapper les faiblesses |
+
+⚠️ Le seuil de rapidité dépend du **nombre d'adversaires**
+(`2 × nombre + 1` tours), sinon un niveau à 3 ennemis serait
+mécaniquement plus dur à noter qu'un niveau à 1.
+
+Seul le **meilleur** score est conservé (`levelStars` dans la sauvegarde
+d'Aventure) : rejouer et faire moins bien ne fait rien perdre.
+
+Affichées en fin de combat et **sous chaque nœud terminé** de la carte,
+pour repérer d'un coup d'œil les niveaux à refaire.
+
 ## Affinités élémentaires (12/09)
 
 Les 26 créatures avaient déjà un `element` **utilisé nulle part** en

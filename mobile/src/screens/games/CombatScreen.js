@@ -50,6 +50,7 @@ import {
   TAP_CHALLENGE_TIME_LIMIT_SEC,
   elementMultiplier,
   elementRelation,
+  starsForBattle,
 } from '../../games/clicker/combatLogic';
 
 // Couleurs d'affinité, communes à la flèche de visée et aux pastilles.
@@ -568,8 +569,9 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
         levelNumber={levelNumber}
         battleStats={battleStats}
         fighters={fighters}
-        onContinue={() => onFinish(outcome)}
-        onNextLevel={() => onFinish(outcome, true)}
+        opponentCount={opponents.length}
+        onContinue={() => onFinish(outcome, false, starsForBattle(battleStats, opponents.length))}
+        onNextLevel={() => onFinish(outcome, true, starsForBattle(battleStats, opponents.length))}
       />
     );
   }
@@ -830,8 +832,9 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   );
 }
 
-function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onContinue, onNextLevel }) {
+function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, opponentCount, onContinue, onNextLevel }) {
   const isWin = outcome === 'win';
+  const stars = isWin ? starsForBattle(battleStats, opponentCount) : 0;
   const reward = isWin ? griffesReward(levelNumber) : 0;
 
   // Répartition des dégâts par créature, triée par contribution — vide
@@ -868,6 +871,15 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, fighters, onCon
       <ImageBackground source={RECAP_FRAME} style={styles.recapCard} imageStyle={styles.recapCardImg} resizeMode="stretch">
         {/* Le gain est DANS le cadre : posé sur le décor il se perdait
             dans les tons dorés du couchant (signalé le 12/09). */}
+        {isWin && (
+          <View style={styles.starsRow}>
+            {[1, 2, 3].map((n) => (
+              <Text key={n} style={[styles.star, n > stars && styles.starOff]}>
+                {n <= stars ? '★' : '☆'}
+              </Text>
+            ))}
+          </View>
+        )}
         {isWin && (
           <View style={styles.rewardBadge}>
             <Text style={styles.rewardBadgeText}>+{reward} 🐾 Griffes</Text>
@@ -1090,6 +1102,13 @@ const styles = StyleSheet.create({
   // bouton de retour, alors que tout tient à l'écran une fois le gain
   // déplacé dans le cadre.
   resultScroll: { flexGrow: 1, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 20 },
+  starsRow: { flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 6 },
+  star: {
+    color: '#ffcf3f', fontSize: 26,
+    textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3,
+  },
+  starOff: { color: 'rgba(120,90,40,0.5)' },
+
   rewardBadge: {
     alignSelf: 'center', marginBottom: 10, paddingVertical: 6, paddingHorizontal: 18,
     borderRadius: 20, backgroundColor: 'rgba(90,55,10,0.14)',

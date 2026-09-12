@@ -131,6 +131,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   const [ownedRunes, setOwnedRunes] = useState([]);
   // Énergie — 1 point toutes les 20 min, plafond 5, coûte 1 pour LANCER
   // un combat (voir startBattleWithEnergy plus bas).
+  // Meilleur nombre d'étoiles par niveau, { [levelNumber]: 1..3 }. On
+  // ne conserve que le MEILLEUR : un joueur qui rejoue et fait moins bien
+  // ne doit pas perdre son score.
+  const [levelStars, setLevelStars] = useState({});
   const [energy, setEnergy] = useState(ENERGY_MAX);
   const [energyUpdatedAt, setEnergyUpdatedAt] = useState(Date.now());
   const [progressLoaded, setProgressLoaded] = useState(false);
@@ -145,6 +149,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         if (raw) {
           const saved = JSON.parse(raw);
           setCurrentUnlockedLevel(saved.currentUnlockedLevel || 1);
+          setLevelStars(saved.levelStars || {});
           setGriffes(saved.griffes || 0);
           setOwnedRunes(saved.ownedRunes || []);
           // Recalcule l'énergie à partir du temps RÉELLEMENT écoulé
@@ -204,8 +209,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Sauvegarde à chaque changement.
   useEffect(() => {
     if (!progressLoaded) return;
-    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt }));
-  }, [currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, progressLoaded]);
+    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars }));
+  }, [currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars, progressLoaded]);
 
   // Pendant que l'écran Aventure est ouvert, revérifie la régénération
   // toutes les 30s — permet de VOIR l'énergie remonter en direct sans
@@ -415,6 +420,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onBack={() => setChapterMapOpen(false)}
         onBuyEnergy={buyEnergyWithDiamonds}
         diamonds={diamonds}
+        levelStars={levelStars}
+        onRecordStars={(lv, stars) =>
+          setLevelStars((prev) => (prev[lv] >= stars ? prev : { ...prev, [lv]: stars }))
+        }
       />
     );
   }
@@ -1040,7 +1049,7 @@ function ElementHelpOverlay({ onClose }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, diamonds = 0 }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, diamonds = 0, levelStars = {}, onRecordStars }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -1102,7 +1111,12 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
       <CombatScreen
         team={team}
         levelNumber={activeBattle.levelNumber}
-        onFinish={(outcome, goNext) => {
+        onFinish={(outcome, goNext, stars) => {
+          if (outcome === 'win' && stars) {
+            const lv = activeBattle.levelNumber;
+            // Uniquement si c'est MIEUX qu'avant.
+            onRecordStars(lv, stars);
+          }
           if (outcome === 'win') {
             onLevelWon(activeBattle.levelNumber, griffesReward(activeBattle.levelNumber));
           }
@@ -1201,6 +1215,20 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
                         <Ionicons name="checkmark" size={20} color="#0a3d24" />
                       ) : (
                         <Text style={styles.levelNodeText}>{levelIndexInChapter(levelNum)}</Text>
+                      )}
+                      {/* Étoiles sous le nœud : le joueur voit d'un
+                          coup d'œil les niveaux à refaire pour en
+                          gagner davantage. Affichées seulement sur les
+                          niveaux TERMINÉS — ailleurs elles n'auraient
+                          rien à dire. */}
+                      {levelStars[levelNum] > 0 && (
+                        <View style={styles.levelStars}>
+                          {[1, 2, 3].map((n) => (
+                            <Text key={n} style={[styles.levelStar, n > levelStars[levelNum] && styles.levelStarOff]}>
+                              {n <= levelStars[levelNum] ? '★' : '☆'}
+                            </Text>
+                          ))}
+                        </View>
                       )}
                     </TouchableOpacity>
                   );
@@ -1392,9 +1420,7 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   return (
     <View style={styles.overlay}>
       <View style={styles.overlayPanel}>
-        <TouchableOpacity style={styles.overlayClose} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Text style={styles.overlayCloseText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={onClose} style={styles.overlayClose} />
         <Text style={styles.overlayTitle}>Choisir une rune</Text>
         {available.length === 0 ? (
           <Text style={[styles.overlaySubtitle, { marginTop: 10 }]}>
@@ -1435,9 +1461,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
   return (
     <View style={styles.overlay}>
       <View style={styles.overlayPanel}>
-        <TouchableOpacity style={styles.overlayClose} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Text style={styles.overlayCloseText}>← Retour</Text>
-        </TouchableOpacity>
+        <BackButton onPress={onClose} style={styles.overlayClose} />
         <Text style={styles.overlayTitle}>
           Chapitre {chapterForLevel(levelNumber)} · Niveau {levelIndexInChapter(levelNumber)}
         </Text>
@@ -1506,9 +1530,6 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.overlayBackBtn} onPress={onClose}>
-          <Text style={styles.overlayBackBtnText}>← Retour</Text>
-        </TouchableOpacity>
 
       </View>
     </View>
@@ -1546,13 +1567,7 @@ const styles = StyleSheet.create({
     width: '100%', backgroundColor: COLORS.panel, borderRadius: 20, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 16, alignItems: 'center',
     borderWidth: 1, borderColor: COLORS.border,
   },
-  overlayClose: {
-    position: 'absolute', top: 10, left: 12, zIndex: 5,
-    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14,
-    backgroundColor: 'rgba(10,20,32,0.85)',
-    borderWidth: 1.5, borderColor: COLORS.border,
-  },
-  overlayCloseText: { color: COLORS.text, fontSize: 13, fontWeight: '900' },
+  overlayClose: { position: 'absolute', top: 10, left: 10, zIndex: 5 },
   overlayTitle: { color: COLORS.text, fontSize: 18, fontWeight: '900', marginTop: 10, textAlign: 'center' },
   overlaySubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 6, textAlign: 'center' },
 
@@ -1580,6 +1595,16 @@ const styles = StyleSheet.create({
   energyBadge: { alignItems: 'center' },
   energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
   energyBadgeCountdown: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1 },
+  levelStars: {
+    position: 'absolute', bottom: -13, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'center', gap: 1,
+  },
+  levelStar: {
+    fontSize: 11, color: '#ffcf3f',
+    textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 2,
+  },
+  levelStarOff: { color: 'rgba(120,90,40,0.75)' },
+
   elemHelpBtn: {
     position: 'absolute', left: 12, bottom: 12, zIndex: 15,
     paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20,
@@ -1610,12 +1635,6 @@ const styles = StyleSheet.create({
   },
   elemHelpCloseText: { color: '#0b0d16', fontSize: 13, fontWeight: '900' },
 
-  overlayBackBtn: {
-    marginTop: 10, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12,
-    alignItems: 'center', alignSelf: 'stretch',
-    backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.border,
-  },
-  overlayBackBtnText: { color: COLORS.muted, fontSize: 13, fontWeight: '800' },
   buyEnergyBtn: {
     marginTop: 10, paddingVertical: 11, paddingHorizontal: 18, borderRadius: 12,
     alignItems: 'center', alignSelf: 'stretch',
