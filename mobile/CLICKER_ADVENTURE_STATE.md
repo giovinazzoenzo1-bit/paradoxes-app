@@ -812,6 +812,46 @@ voie fiable est donc de **repousser un commit touchant `mobile/**`**.
 l'utilisateur ne voit rien : vérifier D'ABORD qu'un run existe pour le
 dernier sha.
 
+## ⚠️ `<Image style={StyleSheet.absoluteFill}>` se dessine à sa taille NATIVE (13/09)
+
+Bug réel : le bouton Inventaire apparaissait ÉNORME (≈480×95 dp) avec son
+texte coincé dans le coin haut-gauche, alors que le conteneur faisait
+28 dp de haut.
+
+Cause : une `<Image>` **sans `width`/`height` explicites** n'est pas
+contrainte de façon fiable par les seuls `left/right/top/bottom: 0` de
+`absoluteFill` — elle retombe sur les dimensions natives du fichier
+(520×134 ici). Le `Text`, lui, restait dans la boîte du conteneur, d'où
+le décalage.
+
+**Deux façons sûres, selon le cas :**
+- taille connue → `<Image style={{ position:'absolute', width: W, height: H }}>`
+  (c'est ce que font les panneaux Boutique, Forge et Inventaire) ;
+- taille dictée par le contenu → **`<ImageBackground>`**, qui se comporte
+  comme une `View` : l'image suit la boîte que le texte définit. C'est la
+  solution retenue pour la plaque, et déjà celle de `BackButton`.
+
+⚠️ Vérification : chercher `<Image` suivi de `absoluteFill` sans
+`width`. Un `TouchableOpacity` ou une `View` en `absoluteFill`, eux, ne
+posent aucun problème.
+
+## La croix du panneau d'inventaire a été EFFACÉE de l'asset (13/09)
+
+Elle était **dessinée dans l'image** : aucun placement de bouton ne
+pouvait la « remplacer », le `BackButton` se posait juste à côté. Effacée
+en recopiant le coin haut-GAUCHE miroité (cadre symétrique, ce coin n'a
+pas de croix), puis le `BackButton` occupe la place.
+
+⚠️ Règle : pour remplacer un élément DESSINÉ, il faut modifier l'asset —
+le code ne peut que poser par-dessus.
+
+## Les pierres apparaissent aussi dans la boutique (13/09)
+
+L'offre spéciale montre **la pierre du type réellement en vente ce
+jour** : le joueur doit voir quelle rune il achète avant de payer. Le
+pack montre 3 pierres (exemples — le tirage reste aléatoire sur les 7).
+Le tirage à l'unité garde le dé : c'est le hasard qu'il représente.
+
 ## ⚠️ Un style empilé APRÈS une boîte mesurée l'écrase (13/09)
 
 Bug réel : le détail de la rune sortait de son cadre. Cause —

@@ -1776,7 +1776,7 @@ function RuneInventory({ ownedRunes, onClose }) {
             tous les autres écrans. */}
         <BackButton
           onPress={onClose}
-          style={{ position: 'absolute', right: panelW * 0.01, top: panelH * 0.012 }}
+          style={{ position: 'absolute', right: panelW * 0.005, top: panelH * 0.022 }}
         />
       </View>
     </View>
@@ -1913,8 +1913,10 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
   const offers = [
     {
       key: 'special',
-      // Une seule icône : celle du type effectivement en vente ce jour.
-      icons: [offerDef ? offerDef.icon : '✨'],
+      // La PIERRE du type réellement en vente ce jour : le joueur doit
+      // voir quelle rune il achète avant de payer, pas une étoile.
+      arts: offerDef ? [offerDef.art] : [],
+      emoji: offerDef ? null : '✨',
       cost: RUNE_SPECIAL_COST,
       desc: soldOut ? 'Revient demain' : `${offerDef ? offerDef.name.replace('Rune de ', '').replace("Rune d'", '') : ''} niv.2\n1 par jour`,
       disabled: soldOut || griffes < RUNE_SPECIAL_COST,
@@ -1922,9 +1924,9 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
     },
     {
       key: 'pack',
-      // 3 icônes côte à côte : le contenu du pack doit se LIRE, un sac
-      // fermé ne disait pas combien de runes il y avait dedans.
-      icons: ['⚔️', '❤️', '⚡'],
+      // 3 pierres côte à côte : le contenu du pack doit se LIRE. Ce sont
+      // des exemples, le tirage reste aléatoire sur les 7 types.
+      arts: [RUNE_TYPES.force.art, RUNE_TYPES.vitalite.art, RUNE_TYPES.celerite.art],
       cost: RUNE_PACK_COST,
       desc: '3 runes niv.1\nmoins cher',
       disabled: griffes < RUNE_PACK_COST,
@@ -1932,7 +1934,10 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
     },
     {
       key: 'random',
-      icons: ['🎲'],
+      // Le dé reste un emoji : c'est le hasard qu'il représente, aucune
+      // pierre précise ne conviendrait.
+      arts: [],
+      emoji: '🎲',
       cost: RUNE_COST,
       desc: '1 rune niv.1\nau hasard',
       disabled: griffes < RUNE_COST,
@@ -1981,14 +1986,14 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
               activeOpacity={0.75}
             >
               <View style={styles.shopIconRow}>
-                {o.icons.map((ic, k) => (
-                  <Text
-                    key={k}
-                    style={{ fontSize: o.icons.length > 1 ? fsIconSmall : fsIcon }}
-                  >
-                    {ic}
-                  </Text>
-                ))}
+                {o.arts.length > 0
+                  ? o.arts.map((art, k) => {
+                      const sz = o.arts.length > 1 ? fsIconSmall * 1.7 : fsIcon * 1.5;
+                      return (
+                        <Image key={k} source={art} style={{ width: sz, height: sz }} resizeMode="contain" />
+                      );
+                    })
+                  : <Text style={{ fontSize: fsIcon }}>{o.emoji}</Text>}
               </View>
               <View style={styles.shopPriceRow}>
                 <Text style={[styles.shopPriceText, { fontSize: fsPrice }]}>{o.cost}</Text>
@@ -2077,13 +2082,19 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
               onPress={() => setInventoryOpen(true)}
               activeOpacity={0.8}
             >
-              {/* La plaque se cale sur le TEXTE (padding + hauteur
-                  fixe), elle ne prend plus la largeur de la colonne :
-                  à 100% elle faisait 379x98 dp et écrasait la boutique. */}
-              <Image source={WOOD_PLATE} style={StyleSheet.absoluteFill} resizeMode="stretch" />
-              <Text style={styles.woodPlateText} numberOfLines={1}>
-                INVENTAIRE ({ownedRunes.length})
-              </Text>
+              {/* ImageBackground et NON <Image style={absoluteFill}> :
+                  une Image sans largeur/hauteur explicites n'est pas
+                  contrainte de façon fiable et se dessinait à sa taille
+                  NATIVE (520x134), d'où une plaque géante avec le texte
+                  coincé dans son coin. ImageBackground se comporte comme
+                  une View : l'image suit la boîte du texte. */}
+              <ImageBackground
+                source={WOOD_PLATE}
+                style={styles.invOpenPlate}
+                resizeMode="stretch"
+              >
+                <Text style={styles.woodPlateText} numberOfLines={1}>INVENTAIRE</Text>
+              </ImageBackground>
             </TouchableOpacity>
           )}
         </View>
@@ -2247,9 +2258,10 @@ const styles = StyleSheet.create({
   runesRightCol: { flex: 1 },
   forgeZone: { alignItems: 'center' },
   // Plaque dimensionnée par son texte : hauteur fixe, largeur libre.
-  invOpenBtn: {
-    alignSelf: 'center', marginTop: 8,
-    height: 26, paddingHorizontal: 14,
+  invOpenBtn: { alignSelf: 'center', marginTop: 8 },
+  // La plaque se cale sur son texte : hauteur fixe, largeur libre.
+  invOpenPlate: {
+    height: 28, paddingHorizontal: 18,
     alignItems: 'center', justifyContent: 'center',
   },
   woodPlateText: { color: '#f3e3c0', fontSize: 10, fontWeight: '900', letterSpacing: 0.4 },
