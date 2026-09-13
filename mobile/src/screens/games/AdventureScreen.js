@@ -1358,6 +1358,20 @@ const CHAPTER_SCENES = {
     path: [[0.885, 0.833], [0.701, 0.812], [0.506, 0.825], [0.321, 0.745], [0.172, 0.597],
            [0.266, 0.459], [0.485, 0.381], [0.680, 0.433], [0.849, 0.294], [0.626, 0.144]],
   },
+  3: {
+    bg: require('../../../assets/adventure/chapter-3.jpg'),
+    // Guide suivi : plan C — DÉDUIT par mesure (9 de ses 10 points
+    // tombaient déjà sur le sol, contre 0 ou 1 pour les autres plans),
+    // pas supposé d'après l'ordre d'envoi des images.
+    path: [[0.132, 0.855], [0.370, 0.791], [0.616, 0.862], [0.838, 0.734], [0.644, 0.592],
+           [0.405, 0.538], [0.165, 0.447], [0.370, 0.309], [0.632, 0.250], [0.806, 0.203]],
+  },
+  4: {
+    bg: require('../../../assets/adventure/chapter-4.jpg'),
+    // Guide suivi : plan D (9/10 sur le sol).
+    path: [[0.475, 0.855], [0.231, 0.788], [0.103, 0.595], [0.332, 0.527], [0.593, 0.597],
+           [0.828, 0.577], [0.728, 0.338], [0.477, 0.288], [0.240, 0.250], [0.396, 0.200]],
+  },
 };
 
 // Renvoie des PIXELS (x et y dans la même unité — un ancien bug avait

@@ -918,6 +918,24 @@ la carte, exactement le bug déjà corrigé trois fois.
 (`adventure/chapter-1.jpg`) ; les chapitres sans décor retombent sur les
 4 tracés génériques.
 
+### Procédure définitive pour un nouveau décor
+
+1. **Déduire le plan suivi**, ne pas le supposer d'après l'ordre d'envoi :
+   tester les 4 plans contre le masque de sol et garder celui dont le
+   plus de points tombent dessus. Chapitres 3 et 4 : **9/10** pour C et
+   D respectivement, contre 0 ou 1 pour les autres — sans ambiguïté.
+2. **Recaler** chaque point du plan sur le maximum de la carte de
+   distance dans un rayon de 90 px (puis 140, 200, 280).
+3. **Exclure les zones d'en-tête AVANT la recherche**, pas après. Vérifié
+   sur le chapitre 3 : sans exclusion, le recalage remontait le niveau 10
+   sous les boutons de droite.
+4. Valider : écart min ≥ 46 dp, zéro croisement, aucun nœud sous un
+   bouton. Ch.3 : 95 dp / 0 / aucun. Ch.4 : 77 dp / 0 / aucun.
+
+⚠️ **Piège de calcul** sur l'exclusion : un nœud gêne si, EN
+COORDONNÉES ÉCRAN, `y − rayon < 58`. Écrire `y + rayon < 58` (mon erreur)
+ne bloque rien du tout.
+
 ### Deux méthodes de calage selon ce que l'IA a peint
 
 ⚠️ **Aucune méthode ne marche sur toutes les îles.** À vérifier à chaque
@@ -1207,6 +1225,19 @@ retour.
 que le combat utilise vraiment (`runeEffectText()`). Une description
 écrite à la main mentirait dès le premier rééquilibrage. Vérifié sur les
 7 types aux niveaux 1 et 5.
+
+⚠️ **Chercher le filigrane DANS TOUTE l'image, pas seulement les coins.**
+Sur le chapitre 2 je l'avais déclaré absent après n'avoir regardé que le
+coin bas-droit : il était en haut à droite, à moitié caché par un
+feuillage. Méthode : comparer chaque pixel à son voisinage flou (et non
+à un seuil global), puis monter une planche des 4 coins et VÉRIFIER À
+L'ŒIL.
+
+⚠️ **Deux façons d'effacer, selon le fond.** Sur une texture (bois,
+dalles, feuillage) : recopier une zone voisine, la source étant choisie
+par ressemblance des BORDURES. Sur un fond lisse (ciel, nuages) : la
+recopie laisse une couture rectangulaire visible — utiliser
+`cv2.inpaint` (Telea) sur un masque des seuls pixels de la marque.
 
 ⚠️ Le fond de la plaque était **(167, 61, 133)** — un magenta désaturé,
 pas le #FF00FF habituel. Un détourage calé en dur sur #FF00FF n'aurait
