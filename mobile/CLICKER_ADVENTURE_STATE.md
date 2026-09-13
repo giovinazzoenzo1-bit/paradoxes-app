@@ -845,6 +845,45 @@ pas de croix), puis le `BackButton` occupe la place.
 ⚠️ Règle : pour remplacer un élément DESSINÉ, il faut modifier l'asset —
 le code ne peut que poser par-dessus.
 
+## Carte des chapitres — une page par chapitre (13/09)
+
+Refonte complète : **un chapitre = une page plein écran**, on change de
+chapitre en glissant (`pagingEnabled`), et à l'intérieur d'un chapitre
+il n'y a plus AUCUN défilement.
+
+⚠️ **Les pages sont ordonnées À L'ENVERS** : chapitre 1 en BAS, les
+suivants AU-DESSUS. Le joueur gravit la carte — pour voir la suite il
+monte, il ne descend plus. `chapterPages = [N … 1]`, et l'index du
+chapitre courant vaut `chaptersToShow - currentChapter`.
+
+⚠️ De même dans un chapitre : **niveau 1 en bas, niveau 10 en haut**.
+
+⚠️ **`pagingEnabled` cale son pas sur la hauteur du ScrollView.** Chaque
+page doit donc mesurer EXACTEMENT cette hauteur, mesurée par `onLayout`.
+La moindre marge sur une page ferait dériver toutes les suivantes —
+`chapterBlock` n'a plus aucune marge.
+
+⚠️ **Rien n'est rendu tant que `pageH` vaut 0** : les positions se
+calculent à partir de la hauteur de page, et à 0 les nœuds partiraient
+en coordonnées négatives.
+
+### Géométrie recalculée
+
+| | Avant | Après |
+|---|---|---|
+| Taille d'un nœud | 46 | **38** |
+| Espacement vertical | 92 (fixe) | **déduit de la page** (~29) |
+| Amplitude du serpentin | 0,30 | **0,42** |
+
+En paysage la largeur est la ressource abondante : c'est elle qui écarte
+les nœuds maintenant que le vertical est serré. **Mesuré : distance
+minimale entre deux nœuds = 112 dp** pour des nœuds de 38, et le tracé
+tient dans la page à 280, 317 et 360 dp de haut.
+
+Le libellé « Chapitre N » est supprimé (chaque page EST un chapitre) et
+remplacé par des **pastilles au bord droit**. Griffes et énergie passent
+dans le coin haut droit, avec le reste de l'en-tête.
+
 ## Révélation animée des achats (13/09)
 
 Acheter dans la boutique ouvre une surcouche : les pierres obtenues

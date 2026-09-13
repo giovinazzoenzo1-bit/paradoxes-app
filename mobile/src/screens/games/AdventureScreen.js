@@ -1288,18 +1288,33 @@ function MlStat({ icon, label, value, bonus, color }) {
 // en paysage : un nettoyage de styles morts par expression régulière en
 // mode DOTALL a mangé leur bloc en même temps qu'un style voisin, et
 // l'écran Combat plantait sur « Property 'ROW_HEIGHT' doesn't exist ».
-const LEVEL_NODE_SIZE = 46;
-const ROW_HEIGHT = 92; // espace vertical entre deux niveaux
-const WAVE_AMPLITUDE = 0.30; // amplitude horizontale du serpentin, en fraction de la largeur
+const LEVEL_NODE_SIZE = 38;   // réduit : 10 niveaux doivent tenir sur une page
+// Plus de hauteur fixe par niveau (13/09) : un chapitre doit tenir
+// ENTIÈREMENT dans une page, donc l'espacement se déduit de la hauteur
+// disponible. `ROW_HEIGHT` est conservé, d'autres écrans l'importaient.
+const ROW_HEIGHT = 92;
+const MAP_PAD = 10;        // marge haut/bas d'une page
+const WAVE_FREQ = 1.25;    // sinuosité : réglée pour que 2 nœuds ne se touchent jamais
+// Amplitude portée de 0,30 à 0,42 : en paysage la largeur est la
+// ressource abondante, c'est elle qui écarte les nœuds maintenant que
+// l'espacement vertical n'est plus que ~29 dp. Mesuré : distance
+// minimale entre deux nœuds = 112 dp, pour des nœuds de 38.
+const WAVE_AMPLITUDE = 0.42;
 
 // Position (fraction 0-1 de la largeur, y en px depuis le haut du
 // chapitre) du niveau d'index `i` (0-9) dans son chapitre — une onde
 // continue plutôt que 3 positions fixes en alternance, pour que la
 // courbe entre deux niveaux consécutifs ait vraiment l'air organique.
-function nodePosition(i) {
-  const x = 0.5 + Math.sin(i * 0.95) * WAVE_AMPLITUDE;
-  const y = i * ROW_HEIGHT + LEVEL_NODE_SIZE;
-  return { x, y };
+// `pageH` = hauteur d'une page de chapitre. Le niveau 1 est EN BAS et la
+// suite MONTE : on gravit le chapitre, et le chapitre suivant est
+// au-dessus.
+function nodePosition(i, pageH) {
+  const span = Math.max(1, pageH - 2 * MAP_PAD - LEVEL_NODE_SIZE);
+  const step = span / (LEVELS_PER_CHAPTER - 1);
+  return {
+    x: 0.5 + Math.sin(i * WAVE_FREQ) * WAVE_AMPLITUDE,
+    y: pageH - MAP_PAD - LEVEL_NODE_SIZE / 2 - i * step,
+  };
 }
 
 // Point sur une courbe de Bézier quadratique.
@@ -1444,35 +1459,25 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // on en est (signalé le 12/09).
   const mapScrollRef = useRef(null);
   const mapAutoScrolledRef = useRef(false);
-  const scrollToCurrentLevel = () => {
-    // Une seule fois par ouverture : sans ce garde, chaque changement de
-    // taille du contenu ramènerait brutalement le joueur en place alors
-    // qu'il est peut-être en train d'explorer la carte.
-    if (mapAutoScrolledRef.current || !mapScrollRef.current) return;
-    mapAutoScrolledRef.current = true;
-
-    // Position dérivée du niveau : chaque niveau occupe ~86dp, on
-    // recule d'un demi-écran pour le placer au centre.
-    const y = Math.max(0, (currentUnlockedLevel - 1) * 86 - 160);
-    mapScrollRef.current.scrollTo({ y, animated: false });
-  };
+  // Hauteur d'une page = hauteur du défilement lui-même. MESURÉE : c'est
+  // elle qui dicte l'espacement des niveaux ET le pas de pagination, les
+  // deux doivent être rigoureusement identiques sinon les pages
+  // dérivent.
+  const [pageH, setPageH] = useState(0);
 
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
 
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
   const [elemHelpOpen, setElemHelpOpen] = useState(false);
 
-  // Replacement au retour d'un combat. `onContentSizeChange` ne se
-  // déclenche pas dans ce cas (la taille du contenu est inchangée), il
-  // faut donc un effet explicite. Le garde est réarmé d'abord, sinon
-  // `scrollToCurrentLevel` sortirait immédiatement.
+  // Replacement au retour d'un combat : on réarme simplement le garde,
+  // le saut se refera au prochain `onLayout` du défilement.
   //
   // ⚠️ Placé APRÈS la déclaration d'`activeBattle` : plus haut, il le
   // lisait avant son initialisation.
   useEffect(() => {
     if (activeBattle) return;
     mapAutoScrolledRef.current = false;
-    scrollToCurrentLevel();
   }, [activeBattle, currentUnlockedLevel]);
   // TOUJOURS appelé avant tout retour anticipé (règle des Hooks React) —
   // c'était placé après le "if (activeBattle) return" et faisait planter
@@ -1537,27 +1542,54 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   const currentChapter = chapterForLevel(currentUnlockedLevel);
   const chaptersToShow = currentChapter + 6;
   const pathWidth = screenWidth - 28; // marges de l'écran (padding: 14 de chaque côté)
-  const chapterHeight = (LEVELS_PER_CHAPTER - 1) * ROW_HEIGHT + LEVEL_NODE_SIZE * 2;
+
+  // Pages ORDONNÉES À L'ENVERS : le chapitre 1 est la page du BAS et les
+  // suivants sont AU-DESSUS. On gravit donc la carte — pour voir la
+  // suite on monte, on ne descend plus.
+  const chapterPages = Array.from({ length: chaptersToShow }, (_, i) => chaptersToShow - i);
+  const currentPageIndex = chaptersToShow - currentChapter;
+
+  // Positionnement initial sur le chapitre en cours. `onLayout` donne la
+  // hauteur, et c'est seulement une fois qu'on la connaît qu'on peut
+  // sauter à la bonne page.
+  const jumpToCurrentChapter = (h) => {
+    if (mapAutoScrolledRef.current || !mapScrollRef.current || !h) return;
+    mapAutoScrolledRef.current = true;
+    mapScrollRef.current.scrollTo({ y: currentPageIndex * h, animated: false });
+  };
 
   return (
     <View style={styles.screen}>
       {/* Plein écran : la barre système casse l'immersion en paysage. */}
       <StatusBar hidden />
+      {/* Griffes et énergie dans le COIN haut droit, comme sur les
+          autres écrans. Le libellé « Chapitre N » est retiré : chaque
+          page EST un chapitre, la pastille de droite dit lequel. */}
       <View style={styles.header}>
         <BackButton onPress={onBack} />
-        <Text style={styles.title}>⚔️ Chapitres</Text>
-      </View>
-      <View style={styles.topStatsRow}>
+        <Text style={styles.title}>⚔️ Combat</Text>
+        <View style={styles.headerSpacer} />
         <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
       </View>
 
+      {/* Un chapitre = une page, on change de chapitre en glissant,
+          comme un fil de vidéos. `pagingEnabled` cale le pas sur la
+          hauteur du ScrollView : c'est pourquoi chaque page utilise
+          EXACTEMENT `pageH`. */}
       <ScrollView
         ref={mapScrollRef}
-        contentContainerStyle={{ paddingBottom: 30 }}
-        onContentSizeChange={scrollToCurrentLevel}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        decelerationRate="fast"
+        style={styles.mapScroll}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          setPageH(h);
+          jumpToCurrentChapter(h);
+        }}
       >
-        {Array.from({ length: chaptersToShow }, (_, chapterIdx) => chapterIdx + 1).map((chapterNum) => {
+        {pageH > 0 && chapterPages.map((chapterNum) => {
           // Positions converties en PIXELS tout de suite (x ET y dans la
           // même unité) — un vrai bug avait laissé x en fraction (0-1) et
           // y déjà en pixels, ce qui envoyait les points de contrôle des
@@ -1566,13 +1598,12 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           // pointillés étaient bien calculés, juste invisibles car
           // positionnés à des milliers de pixels du cadre visible.
           const positions = Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) => {
-            const p = nodePosition(i);
+            const p = nodePosition(i, pageH);
             return { x: p.x * pathWidth, y: p.y };
           });
           return (
-            <View key={chapterNum} style={styles.chapterBlock}>
-              <Text style={styles.chapterTitle}>Chapitre {chapterNum}</Text>
-              <View style={[styles.chapterPath, { height: chapterHeight }]}>
+            <View key={chapterNum} style={[styles.chapterBlock, { height: pageH }]}>
+              <View style={[styles.chapterPath, { height: pageH }]}>
                 {/* Tracé courbe en pointillés entre chaque niveau consécutif —
                     dessiné EN PREMIER pour rester derrière les pastilles. */}
                 {positions.slice(0, -1).map((p0, i) => {
@@ -1632,6 +1663,17 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           );
         })}
       </ScrollView>
+
+      {/* Repère de chapitre : une pastille par page, la pleine indique
+          où l'on est. Remplace le libellé texte supprimé. */}
+      <View style={styles.chapterDots}>
+        {chapterPages.map((chapterNum) => (
+          <View
+            key={chapterNum}
+            style={[styles.chapterDot, chapterNum === currentChapter && styles.chapterDotOn]}
+          />
+        ))}
+      </View>
 
       {/* Recharge d'énergie payée en Diamants. Le débit est délégué au
           Clicker (qui détient la monnaie) ; ici on ne fait que remplir
@@ -2447,9 +2489,23 @@ const styles = StyleSheet.create({
   overlayTitle: { color: COLORS.text, fontSize: 18, fontWeight: '900', marginTop: 10, textAlign: 'center' },
   overlaySubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 6, textAlign: 'center' },
 
-  chapterBlock: { marginBottom: 28 },
-  chapterTitle: { color: COLORS.action, fontSize: 15, fontWeight: '900', marginBottom: 14, textAlign: 'center' },
+  // Une page = un chapitre. AUCUNE marge : `pagingEnabled` cale son pas
+  // sur la hauteur du ScrollView, la moindre marge ferait dériver les
+  // pages les unes après les autres.
+  chapterBlock: {},
   chapterPath: { width: '100%', position: 'relative' },
+  mapScroll: { flex: 1 },
+  // Pastilles de chapitre, collées au bord droit et hors du flux.
+  chapterDots: {
+    position: 'absolute', right: 4, top: 0, bottom: 0,
+    justifyContent: 'center', alignItems: 'center', gap: 6,
+    pointerEvents: 'none',
+  },
+  chapterDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: 'rgba(140,170,205,0.45)',
+  },
+  chapterDotOn: { backgroundColor: COLORS.action, width: 8, height: 8, borderRadius: 4 },
   pathDot: {
     position: 'absolute', width: 6, height: 6, borderRadius: 3,
     backgroundColor: COLORS.border,
@@ -2466,7 +2522,6 @@ const styles = StyleSheet.create({
   levelNodeDone: { borderColor: COLORS.good, backgroundColor: COLORS.good },
   levelNodeText: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
 
-  topStatsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 },
   energyBadge: { alignItems: 'center' },
   energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
   energyBadgeCountdown: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1 },
