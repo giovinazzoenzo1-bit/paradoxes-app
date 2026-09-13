@@ -887,6 +887,31 @@ chapitre 2) :
    corrigé sur le chapitre 2 : le dernier niveau visait l'îlot haut
    gauche, sous le bouton Retour — déplacé sur le sentier voisin.
 
+## Transition entre chapitres : fondu au défilement (13/09)
+
+Passer d'un ciel bleu (ch.1) à un fond cosmique noir (ch.2) donnait une
+couture brutale au glissement. Réglé par un **fondu piloté par la
+position de défilement** : chaque page est à pleine opacité quand elle
+est centrée et nulle à une page d'écart, donc à mi-glissement les deux
+voisines sont à 50 % sur le fond sombre.
+
+`Animated.ScrollView` + `Animated.event(..., { useNativeDriver: true })`
+sur `contentOffset.y`, puis `interpolate` de l'opacité par page.
+
+### Pourquoi pas les autres pistes
+
+| Piste | Verdict |
+|---|---|
+| Transitions peintes par Gemini | ❌ un asset par PAIRE de chapitres ; ajouter ou réordonner un chapitre les casse toutes |
+| Barre horizontale entre les pages | ❌ `pagingEnabled` cale son pas sur la hauteur du ScrollView — toute barre entre les pages décale toutes les suivantes |
+| Bouton « chapitre suivant » | ❌ évite le problème au lieu de le régler (reste possible comme raccourci) |
+
+⚠️ **Garde-fou sur la ref** : `Animated.ScrollView` transmet sa ref au
+ScrollView réel dans les versions récentes, mais l'ancienne API
+l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
+`scrollTo` introuvable ramènerait silencieusement le joueur en haut de
+la carte, exactement le bug déjà corrigé trois fois.
+
 ## Décor par chapitre — méthode (13/09)
 
 `CHAPTER_SCENES[n] = { bg, path }`. Le chapitre 1 a son île

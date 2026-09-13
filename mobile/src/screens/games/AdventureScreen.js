@@ -1525,6 +1525,10 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // deux doivent être rigoureusement identiques sinon les pages
   // dérivent.
   const [page, setPage] = useState({ w: 0, h: 0 });
+  // Position de défilement, pour faire fondre les pages l'une dans
+  // l'autre : sans ça on passe brutalement d'un ciel bleu à un fond noir
+  // en changeant de chapitre.
+  const scrollY = useRef(new Animated.Value(0)).current;
   const pageH = page.h;
 
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
@@ -1626,9 +1630,17 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // `pageH` propagé au bon moment. Ici la page dit elle-même où elle
   // est — aucune supposition, aucune course.
   const jumpToCurrentChapter = (y) => {
-    if (mapAutoScrolledRef.current || !mapScrollRef.current) return;
+    if (mapAutoScrolledRef.current) return;
+    // `Animated.ScrollView` transmet sa ref au ScrollView réel dans les
+    // versions récentes, mais l'ancienne API l'enveloppait derrière
+    // `getNode()`. On accepte les deux : impossible de tester ici, et un
+    // `scrollTo` introuvable ramènerait silencieusement le joueur en
+    // haut de la carte.
+    const sv = mapScrollRef.current;
+    const target = sv && (typeof sv.scrollTo === 'function' ? sv : sv.getNode && sv.getNode());
+    if (!target || typeof target.scrollTo !== 'function') return;
     mapAutoScrolledRef.current = true;
-    mapScrollRef.current.scrollTo({ y, animated: false });
+    target.scrollTo({ y, animated: false });
   };
 
   return (
@@ -1655,9 +1667,14 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           comme un fil de vidéos. `pagingEnabled` cale le pas sur la
           hauteur du ScrollView : c'est pourquoi chaque page utilise
           EXACTEMENT `pageH`. */}
-      <ScrollView
+      <Animated.ScrollView
         ref={mapScrollRef}
         pagingEnabled
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
         showsVerticalScrollIndicator={false}
         decelerationRate="fast"
         style={styles.mapScroll}
@@ -1665,7 +1682,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           setPage({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
         }
       >
-        {pageH > 0 && chapterPages.map((chapterNum) => {
+        {pageH > 0 && chapterPages.map((chapterNum, pageIdx) => {
           // Positions converties en PIXELS tout de suite (x ET y dans la
           // même unité) — un vrai bug avait laissé x en fraction (0-1) et
           // y déjà en pixels, ce qui envoyait les points de contrôle des
@@ -1678,9 +1695,23 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
             nodePosition(i, pathWidth, pageH, chapterNum)
           );
           return (
-            <View
+            <Animated.View
               key={chapterNum}
-              style={[styles.chapterBlock, { height: pageH }]}
+              style={[
+                styles.chapterBlock,
+                { height: pageH },
+                // Fondu : pleine opacité quand la page est centrée, nulle
+                // à une page d'écart. À mi-glissement les deux voisines
+                // sont à 50% sur le fond sombre, ce qui efface la couture
+                // entre deux décors très différents.
+                {
+                  opacity: scrollY.interpolate({
+                    inputRange: [(pageIdx - 1) * pageH, pageIdx * pageH, (pageIdx + 1) * pageH],
+                    outputRange: [0, 1, 0],
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ]}
               onLayout={
                 chapterNum === currentChapter
                   ? (e) => jumpToCurrentChapter(e.nativeEvent.layout.y)
@@ -1763,10 +1794,10 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
                   );
                 })}
               </View>
-            </View>
+            </Animated.View>
           );
         })}
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Repère de chapitre : une pastille par page, la pleine indique
           où l'on est. Remplace le libellé texte supprimé. */}
