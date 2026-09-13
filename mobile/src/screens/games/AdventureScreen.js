@@ -1901,7 +1901,11 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
   // les runes identiques, un seul bouton clair par groupe.
   const [fusionOpen, setFusionOpen] = useState(false);
   const [shopW, setShopW] = useState(0);
-  const [forgeW, setForgeW] = useState(0);
+  const [rightBox, setRightBox] = useState({ w: 0, h: 0 });
+  // La forge est limitée par la HAUTEUR (ratio 1,145, presque carré) :
+  // à pleine largeur de colonne elle ne laisserait rien à la collection.
+  const forgeMaxH = rightBox.h * 0.55;
+  const forgeW = rightBox.h > 0 ? Math.min(rightBox.w, forgeMaxH * FORGE_PANEL_RATIO) : 0;
 
   if (fusionOpen) {
     return <RuneFusionScreen ownedRunes={ownedRunes} onFuseRunes={onFuseRunes} onBack={() => setFusionOpen(false)} />;
@@ -1926,17 +1930,7 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
           collection celle de gauche. La hauteur est la ressource rare en
           paysage, on ne l'empile pas verticalement. */}
       <View style={styles.runesBody}>
-        {/* Colonne GAUCHE : l'atelier. La plaque dorée déclenche la
-            fusion automatique ; le bouton dessous mène à la fusion
-            manuelle, pour choisir une paire précise. */}
-        <View style={styles.runesLeftCol} onLayout={(e) => setForgeW(e.nativeEvent.layout.width)}>
-          {forgeW > 0 && <ForgePanel width={forgeW} onAutoFuse={onFuseAll} />}
-          <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>
-            <Text style={styles.fusionModeBtnText}>🔀 Fusion manuelle</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Colonne MILIEU : la boutique. */}
+        {/* GAUCHE : la boutique, sur toute la colonne. */}
         <View style={styles.runesShopCol} onLayout={(e) => setShopW(e.nativeEvent.layout.width)}>
           {shopW > 0 && (
             <RuneShopPanel
@@ -1948,11 +1942,19 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
               onBuySpecial={onBuySpecial}
             />
           )}
+          <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>
+            <Text style={styles.fusionModeBtnText}>🔀 Fusion manuelle</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Colonne DROITE : l'inventaire, qui récupère toute la place
-            restante — c'est lui qui grandit quand le joueur accumule. */}
-        <View style={styles.runesGridCol}>
+        {/* DROITE : l'atelier en haut, la collection dessous. */}
+        <View
+          style={styles.runesRightCol}
+          onLayout={(e) => setRightBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+        >
+          <View style={styles.forgeZone}>
+            {forgeW > 0 && <ForgePanel width={forgeW} onAutoFuse={onFuseAll} />}
+          </View>
           <ScrollView contentContainerStyle={styles.runeGrid}>
             {ownedRunes.length === 0 ? (
               <Text style={styles.runeEmptyText}>Aucune rune — achètes-en une dans la boutique.</Text>
@@ -2188,9 +2190,9 @@ const styles = StyleSheet.create({
   // illustrée à droite. En paysage la hauteur est la ressource rare, on
   // n'empile pas verticalement.
   runesBody: { flex: 1, flexDirection: 'row', gap: 12 },
-  runesLeftCol: { width: '25%' },
-  runesShopCol: { width: '33%' },
-  runesGridCol: { flex: 1 },
+  runesShopCol: { width: '46%' },
+  runesRightCol: { flex: 1 },
+  forgeZone: { alignItems: 'center' },
   shopBannerText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
   forgePlateText: { color: '#4a3410', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
   forgeResultWrap: {

@@ -853,40 +853,25 @@ l'œil : mesurer où sont le manche (bois : R > B+35) et la tête (métal :
 |R−B| < 30) dans chaque pose. Si les x sautent d'un côté à l'autre,
 l'animation cassera.
 
-### Écran Runes en 3 colonnes (12/09)
+### Écran Runes — disposition de la maquette (12/09)
 
-`forge 25%` · `boutique 33%` · `inventaire flex:1`. Les deux panneaux
-avaient été posés trop grands : il ne restait que 50 dp pour
-l'inventaire. Désormais ~323×317 dp, soit une vingtaine de runes
-visibles d'un coup.
+`boutique 46%` à gauche · `atelier` en haut à droite · `collection`
+dessous. Calquée sur la maquette Gemini.
 
-⚠️ Les tailles de texte et d'icône de la boutique sont **dérivées de la
-largeur du panneau** (`width * 0,085` pour une icône, etc., avec des
-planchers). Des tailles fixes ne tenaient plus dans les cases une fois
-le panneau rétréci — et ne tiendraient pas davantage sur un écran plus
-étroit.
+⚠️ **Les ratios des assets ne correspondent PAS à la maquette** : sur
+la maquette la boutique est presque carrée (1,02) et l'atelier large
+(1,71), alors que mes assets font 1,87 et 1,145. On reproduit donc la
+STRUCTURE, chaque panneau prenant la taille maximale que son ratio
+permet dans sa zone. La boutique ne remplit pas toute la hauteur de sa
+colonne : le bouton « Fusion manuelle » occupe le dessous.
 
-### `fuseAllRunes()` — deux partis pris
+⚠️ **L'atelier est contraint par la HAUTEUR, pas la largeur** : à 1,145
+il est presque carré, donc à pleine largeur de colonne il mangerait
+toute la hauteur et ne laisserait rien à la collection. Formule :
+`forgeW = min(largeurColonne, 0,55 × hauteurColonne × ratio)`, la
+colonne étant mesurée par `onLayout` (largeur ET hauteur).
 
-⚠️ **Les runes ÉQUIPÉES sont exclues.** `fuseRunes` sait pourtant gérer
-le cas, mais une fusion en masse pourrait déséquiper une créature sans
-prévenir (2 runes équipées sur 2 créatures → une seule survit). Un
-bouton « tout fusionner » ne doit jamais défaire ce que le joueur a
-délibérément mis en place.
-
-⚠️ **Une seule passe de `setState`**, pas N appels à `fuseRunes` :
-chaque appel relirait `ownedRunes` figé dans sa closure et les fusions
-s'écraseraient entre elles.
-
-La fusion est appliquée **au clic**, avant l'animation : quitter l'écran
-pendant les coups de marteau ne perd rien. Testé : 16 runes niveau 1 du
-même type → 15 fusions → 1 rune niveau 5 ; runes équipées intactes ;
-2 runes niveau 5 → 0 fusion.
-
-⚠️ **Détourage du marteau d'impact** : « garder la plus grande zone
-connexe » aurait supprimé les ÉCLATS, qui sont des composantes séparées.
-Règle utilisée : garder toute composante > 0,4% de la plus grande, et
-n'exclure que celles du coin bas-droit (le filigrane Gemini).
+Rendu mesuré : boutique 379×202 · atelier 199×174 · collection 434×137.
 
 ## Boutique de runes illustrée (12/09)
 
