@@ -40,7 +40,15 @@ const RUNES_SHOP_PANEL = require('../../../assets/icons/runes-shop-panel.png');
 // rectangle opaque autour du marteau.
 const FORGE_PANEL = require('../../../assets/icons/forge-panel-wide.png');
 // Panneau de collection + fond de l'écran Runes (13/09).
-const COLLECTION_PANEL = require('../../../assets/icons/collection-panel.png');
+// Panneau d'inventaire (13/09). Repères MESURÉS sur CET asset : les
+// deux zones intérieures sont sombres (pas des trous), le contenu se
+// pose donc par-dessus.
+const INVENTORY_PANEL = require('../../../assets/icons/inventory-panel.png');
+const INVENTORY_RATIO = 1000 / 572;
+const INV_GRID_ZONE = { left: 0.038, right: 0.704, top: 0.224, bottom: 0.939 };
+const INV_DETAIL_ZONE = { left: 0.719, right: 0.965, top: 0.224, bottom: 0.939 };
+const INV_TITLE = { left: 0.280, right: 0.680, top: 0.015, bottom: 0.085 };
+const INV_CLOSE = { left: 0.952, right: 0.998, top: 0.030, bottom: 0.105 };
 // Plaque en bois servant de bouton (13/09). Fond source MESURÉ à
 // (167,61,133) : Gemini avait rendu un magenta désaturé, pas le #FF00FF
 // habituel — un détourage calé sur #FF00FF n'aurait rien retiré.
@@ -67,10 +75,6 @@ function runeEffectText(type, level) {
   }
 }
 const RUNES_BG = require('../../../assets/adventure/runes-bg.jpg');
-const COLLECTION_RATIO = 900 / 288;
-const COLLECTION_BANNER = { left: 0.300, right: 0.699, top: 0.004, bottom: 0.153 };
-// Zone de bois utile, à l'intérieur du cadre métallique.
-const COLLECTION_INNER = { left: 0.030, right: 0.970, top: 0.175, bottom: 0.930 };
 const FORGE_HAMMER = require('../../../assets/icons/forge-hammer.png');
 const FORGE_HAMMER_HIT = require('../../../assets/icons/forge-hammer-hit.png');
 // Version LARGE (13/09) : l'ancien panneau était presque carré (1,145)
@@ -1678,30 +1682,41 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 // l'offre du jour restent intacts en revenant.
 function RuneInventory({ ownedRunes, onClose }) {
   const [selectedId, setSelectedId] = useState(null);
-  // Le cadre garde SON ratio (3,125). Avant, une boîte en 86%x88%
-  // l'étirait de 47% : le bois paraissait écrasé et la bannière
-  // disproportionnée. On part de la place dispo et on déduit.
-  const { width: winW, height: winH } = useWindowDimensions();
-  const panelW = Math.min(winW * 0.92, winH * 0.86 * COLLECTION_RATIO);
-  const panelH = panelW / COLLECTION_RATIO;
   const selected = ownedRunes.find((r) => r.id === selectedId) || null;
   const def = selected ? RUNE_TYPES[selected.type] : null;
 
+  // Le cadre garde SON ratio. Le forcer dans une boîte en % l'étirait de
+  // 47% : le décor paraissait écrasé et la bannière décalée.
+  const { width: winW, height: winH } = useWindowDimensions();
+  const panelW = Math.min(winW * 0.94, winH * 0.92 * INVENTORY_RATIO);
+  const panelH = panelW / INVENTORY_RATIO;
+  const box = (z) => ({
+    position: 'absolute',
+    left: z.left * panelW,
+    width: (z.right - z.left) * panelW,
+    top: z.top * panelH,
+    height: (z.bottom - z.top) * panelH,
+  });
+
   return (
     <View style={styles.invOverlay}>
-      <View style={[styles.invPanel, { width: panelW, height: panelH }]}>
-        <Image source={COLLECTION_PANEL} style={StyleSheet.absoluteFill} resizeMode="stretch" />
+      <View style={{ width: panelW, height: panelH }}>
+        <Image
+          source={INVENTORY_PANEL}
+          style={{ position: 'absolute', width: panelW, height: panelH, pointerEvents: 'none' }}
+          resizeMode="stretch"
+        />
 
-        {/* Titre dans la bannière vide de l'image. */}
-        <View style={styles.invBanner}>
+        {/* Titre dans la plaque vide du haut. */}
+        <View style={[box(INV_TITLE), styles.invCenter, { pointerEvents: 'none' }]}>
           <Text style={styles.invBannerText} numberOfLines={1} adjustsFontSizeToFit>
-            INVENTAIRE
+            INVENTAIRE DES RUNES
           </Text>
         </View>
 
-        <View style={styles.invBody}>
-          {/* Grille */}
-          <ScrollView style={styles.invGridCol} contentContainerStyle={styles.runeGrid}>
+        {/* Zone de gauche : la grille. */}
+        <View style={box(INV_GRID_ZONE)}>
+          <ScrollView contentContainerStyle={styles.runeGrid}>
             {ownedRunes.length === 0 ? (
               <Text style={styles.runeEmptyText}>Aucune rune — achètes-en une dans la boutique.</Text>
             ) : (
@@ -1714,10 +1729,7 @@ function RuneInventory({ ownedRunes, onClose }) {
                   return (
                     <TouchableOpacity
                       key={rune.id}
-                      style={[
-                        styles.runeCell,
-                        { borderColor: on ? '#ffd86b' : d.color, opacity: on ? 1 : 0.9 },
-                      ]}
+                      style={[styles.runeCell, { borderColor: on ? '#ffd86b' : d.color, opacity: on ? 1 : 0.9 }]}
                       onPress={() => setSelectedId(on ? null : rune.id)}
                       activeOpacity={0.8}
                     >
@@ -1729,32 +1741,31 @@ function RuneInventory({ ownedRunes, onClose }) {
                 })
             )}
           </ScrollView>
-
-          {/* Détail de la rune choisie */}
-          <View style={styles.invDetailCol}>
-            {selected ? (
-              <>
-                <Text style={styles.invDetailIcon}>{def.icon}</Text>
-                <Text style={[styles.invDetailName, { color: def.color }]} numberOfLines={2}>
-                  {def.name}
-                </Text>
-                <Text style={styles.invDetailLevel}>Niveau {selected.level} / {RUNE_MAX_LEVEL}</Text>
-                <Text style={styles.invDetailEffect}>{runeEffectText(selected.type, selected.level)}</Text>
-                <Text style={styles.invDetailState}>
-                  {selected.equippedCreatureId ? 'Équipée sur une créature' : 'Non équipée'}
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.invDetailHint}>
-                Touche une rune pour voir ce qu'elle fait.
-              </Text>
-            )}
-          </View>
         </View>
 
-        <TouchableOpacity style={styles.invCloseBtn} onPress={onClose} activeOpacity={0.8}>
-          <Text style={styles.invCloseText}>RETOUR</Text>
-        </TouchableOpacity>
+        {/* Zone de droite : le détail. */}
+        <View style={[box(INV_DETAIL_ZONE), styles.invDetailCol]}>
+          {selected ? (
+            <>
+              <Text style={styles.invDetailIcon}>{def.icon}</Text>
+              <Text style={[styles.invDetailName, { color: def.color }]} numberOfLines={2}>{def.name}</Text>
+              <Text style={styles.invDetailLevel}>Niveau {selected.level} / {RUNE_MAX_LEVEL}</Text>
+              <Text style={styles.invDetailEffect}>{runeEffectText(selected.type, selected.level)}</Text>
+              <Text style={styles.invDetailState}>
+                {selected.equippedCreatureId ? 'Équipée sur une créature' : 'Non équipée'}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.invDetailHint}>Touche une rune pour voir ce qu'elle fait.</Text>
+          )}
+        </View>
+
+        {/* La croix du cadre EST le bouton de fermeture. */}
+        <TouchableOpacity
+          style={box(INV_CLOSE)}
+          onPress={onClose}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        />
       </View>
     </View>
   );
@@ -2238,26 +2249,9 @@ const styles = StyleSheet.create({
   // est étiré (resizeMode stretch) et supporte de ne pas être à son
   // ratio natif.
   // Taille posée à l'appel (dérivée du ratio du cadre), pas ici.
-  invPanel: {},
-  invBanner: {
-    position: 'absolute',
-    left: `${COLLECTION_BANNER.left * 100}%`,
-    right: `${(1 - COLLECTION_BANNER.right) * 100}%`,
-    top: `${COLLECTION_BANNER.top * 100}%`,
-    height: `${(COLLECTION_BANNER.bottom - COLLECTION_BANNER.top) * 100}%`,
-    alignItems: 'center', justifyContent: 'center',
-    pointerEvents: 'none',
-  },
+  invCenter: { alignItems: 'center', justifyContent: 'center' },
   invBannerText: { color: '#e8d5ab', fontSize: 12, fontWeight: '900', letterSpacing: 1.2 },
   // Corps posé dans la zone de bois utile du cadre (fractions mesurées).
-  invBody: {
-    position: 'absolute', flexDirection: 'row',
-    left: `${COLLECTION_INNER.left * 100}%`,
-    right: `${(1 - COLLECTION_INNER.right) * 100}%`,
-    top: `${COLLECTION_INNER.top * 100}%`,
-    bottom: `${(1 - COLLECTION_INNER.bottom) * 100}%`,
-  },
-  invGridCol: { flex: 1 },
   invDetailCol: {
     width: '34%', marginLeft: 10, paddingLeft: 10,
     borderLeftWidth: 1, borderLeftColor: 'rgba(243,227,192,0.25)',
@@ -2275,14 +2269,6 @@ const styles = StyleSheet.create({
     color: COLORS.muted, fontSize: 10, fontWeight: '700',
     textAlign: 'center', paddingHorizontal: 4,
   },
-  invCloseBtn: {
-    // Dans la zone de bois utile : posé à 3%/2% il débordait du cadre.
-    position: 'absolute', right: '4.5%', top: '20%',
-    backgroundColor: 'rgba(8,14,24,0.85)',
-    borderWidth: 2, borderColor: '#c9a227',
-    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5,
-  },
-  invCloseText: { color: '#f3e3c0', fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
   shopBannerText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
   forgePlateText: { color: '#4a3410', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
   forgeResultWrap: {

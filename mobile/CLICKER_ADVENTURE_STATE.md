@@ -812,6 +812,38 @@ voie fiable est donc de **repousser un commit touchant `mobile/**`**.
 l'utilisateur ne voit rien : vérifier D'ABORD qu'un run existe pour le
 dernier sha.
 
+## Panneau d'inventaire dédié (13/09)
+
+`inventory-panel.png` (1000×572, ratio 1,748) remplace le cadre en bois.
+`collection-panel.png` supprimé, plus rien ne l'utilisait.
+
+| Repère (fractions) | Valeur |
+|---|---|
+| Zone grille (gauche) | x 0,038-0,704 · y 0,224-0,939 |
+| Zone détail (droite) | x 0,719-0,965 · y 0,224-0,939 |
+| Plaque de titre | x 0,280-0,680 · y 0,015-0,085 |
+| Croix de fermeture | x 0,952-0,998 · y 0,030-0,105 |
+
+⚠️ **Les deux zones intérieures sont SOMBRES, pas des trous** (Gemini ne
+les a pas rendues en magenta) : le contenu se pose PAR-DESSUS, il n'y a
+rien à détourer à l'intérieur.
+
+⚠️ **La croix dessinée EST le bouton** : un `TouchableOpacity` vide posé
+sur ses coordonnées, avec `hitSlop`. Pas de bouton en plus.
+
+⚠️ **Un cadre garde TOUJOURS son ratio.** La version précédente le
+forçait dans une boîte `86% × 88%` : ratio 2,12 contre 3,125 natif, soit
+**47 % d'étirement** — décor écrasé, bannière décalée. On part de la
+place disponible et on DÉDUIT la taille du ratio.
+
+### Effacer un filigrane posé sur un CADRE symétrique
+
+Ici le filigrane chevauchait le coin bas-droit : ni le détourage du fond
+ni « la plus grande zone connexe » ne pouvaient l'atteindre. Le cadre
+étant symétrique gauche/droite, le coin a été reconstruit en recopiant
+**son symétrique miroité** (`src[:, ::-1]` sur la même boîte), avec un
+fondu sur les bords.
+
 ## Inventaire des runes en surcouche (13/09)
 
 La collection n'est plus dans l'écran : un bouton **plaque en bois**
