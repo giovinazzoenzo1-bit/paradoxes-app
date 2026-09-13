@@ -918,6 +918,26 @@ la carte, exactement le bug déjà corrigé trois fois.
 (`adventure/chapter-1.jpg`) ; les chapitres sans décor retombent sur les
 4 tracés génériques.
 
+## Chapitres 1 à 8 en place (13/09)
+
+| Ch. | Thème | Plan | Calage |
+|---|---|---|---|
+| 1 | Forêt | A | 10 plateformes détectées |
+| 2 | Ruines de jungle | B | sol praticable |
+| 3 | Ruines envahies | C | sol praticable |
+| 4 | Île céleste | D | sol praticable |
+| 5-8 | Eau (lagons, geysers) | A, B, C, D | 10/8/9/10 sur plateformes |
+
+Le plan de chaque île a été **déduit par mesure**, jamais supposé
+d'après l'ordre d'envoi. Les 4 derniers étaient sans équivoque :
+proximité au bon plan de 0,009 à 0,053, contre 0,09 à 0,17 pour les
+autres.
+
+⚠️ **Quand l'IA peint des plateformes, les utiliser directement** :
+assigner chaque point du plan à la plateforme libre la plus proche
+(seuil 0,085), et ne retomber sur le sol praticable que si aucune n'est
+assez près. C'est ce qui donne 10/10 sur les chapitres 5 et 8.
+
 ### Procédure définitive pour un nouveau décor
 
 1. **Déduire le plan suivi**, ne pas le supposer d'après l'ordre d'envoi :
