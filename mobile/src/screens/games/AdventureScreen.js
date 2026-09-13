@@ -1307,35 +1307,57 @@ const MAP_PAD = 10;        // marge haut/bas d'une page
 //
 // Mesuré sur 825x317 : distance minimale entre 2 nœuds 102 dp (nœuds de
 // 38), pas de 150 à 210 dp, AUCUN croisement de segments.
+// Positions des 10 niveaux, en FRACTIONS DE LA PAGE (u = largeur,
+// v = hauteur DEPUIS LE HAUT), centre du nœud.
+//
+// Convention changée le 13/09 : avant, les coordonnées passaient par des
+// marges et la taille du nœud. Or le décor d'un chapitre est une image
+// qui couvre la page — pour poser un niveau sur une plateforme peinte,
+// il faut la MÊME unité que l'image, donc des fractions de page.
 const CHAPTER_PATHS = [
   // A — balayage gauche → droite, retour, montée
-  [[0.06, 0.04], [0.28, 0.12], [0.50, 0.06], [0.72, 0.16], [0.92, 0.36],
-   [0.74, 0.56], [0.52, 0.64], [0.30, 0.58], [0.12, 0.78], [0.38, 0.97]],
+  [[0.080, 0.876], [0.290, 0.810], [0.500, 0.859], [0.710, 0.778], [0.901, 0.614],
+   [0.729, 0.451], [0.519, 0.386], [0.309, 0.435], [0.138, 0.271], [0.386, 0.116]],
   // B — miroir : on part de la droite
-  [[0.94, 0.04], [0.72, 0.12], [0.50, 0.06], [0.28, 0.16], [0.08, 0.36],
-   [0.26, 0.56], [0.48, 0.64], [0.70, 0.58], [0.88, 0.78], [0.62, 0.97]],
-  // C — triple vague, montée plus régulière
-  [[0.10, 0.05], [0.36, 0.14], [0.62, 0.05], [0.88, 0.20], [0.66, 0.38],
-   [0.40, 0.46], [0.14, 0.56], [0.36, 0.74], [0.64, 0.82], [0.90, 0.96]],
-  // D — départ au centre puis grand tour
-  [[0.50, 0.03], [0.22, 0.13], [0.06, 0.36], [0.32, 0.46], [0.60, 0.38],
-   [0.88, 0.46], [0.74, 0.68], [0.48, 0.74], [0.22, 0.80], [0.40, 0.98]],
+  [[0.920, 0.876], [0.710, 0.810], [0.500, 0.859], [0.290, 0.778], [0.099, 0.614],
+   [0.271, 0.451], [0.481, 0.386], [0.691, 0.435], [0.862, 0.271], [0.614, 0.116]],
+  // C — triple vague
+  [[0.118, 0.868], [0.366, 0.794], [0.614, 0.868], [0.862, 0.745], [0.653, 0.598],
+   [0.405, 0.533], [0.157, 0.451], [0.366, 0.304], [0.634, 0.239], [0.882, 0.124]],
+  // D — départ au centre, grand tour
+  [[0.500, 0.884], [0.233, 0.802], [0.080, 0.614], [0.328, 0.533], [0.595, 0.598],
+   [0.862, 0.533], [0.729, 0.353], [0.481, 0.304], [0.233, 0.255], [0.405, 0.108]],
 ];
+
+// Décor propre à un chapitre. Le tracé est alors calé sur les
+// plateformes RÉELLEMENT peintes dans l'image, mesurées dessus — pas sur
+// un tracé générique qu'on espérerait voir coïncider.
+//
+// Le rapport de l'image (2,602) est celui de la page : les fractions de
+// l'image valent donc directement fractions de page.
+const CHAPTER_SCENES = {
+  1: {
+    bg: require('../../../assets/adventure/chapter-1.jpg'),
+    path: [[0.082, 0.846], [0.293, 0.784], [0.501, 0.837], [0.710, 0.760], [0.901, 0.600],
+           [0.727, 0.448], [0.519, 0.367], [0.310, 0.424], [0.138, 0.261], [0.385, 0.118]],
+  },
+};
 
 // Renvoie des PIXELS (x et y dans la même unité — un ancien bug avait
 // laissé x en fraction et y en pixels, envoyant les points de contrôle
 // des courbes hors écran).
-// `chapterNum` choisit le tracé : les chapitres consécutifs n'ont donc
-// jamais la même carte. Cycle sur les 4 variantes.
+// `chapterNum` choisit le tracé : celui du décor s'il y en a un, sinon
+// l'une des 4 variantes génériques, par cycle.
 function nodePosition(i, pathW, pageH, chapterNum = 1) {
-  const path = CHAPTER_PATHS[(chapterNum - 1) % CHAPTER_PATHS.length];
-  const [fx, fy] = path[i] || path[0];
-  const span = Math.max(1, pageH - 2 * MAP_PAD - LEVEL_NODE_SIZE);
+  const scene = CHAPTER_SCENES[chapterNum];
+  const path = scene ? scene.path : CHAPTER_PATHS[(chapterNum - 1) % CHAPTER_PATHS.length];
+  const [u, v] = path[i] || path[0];
+  // Bornes rentrées d'un demi-nœud, sinon les niveaux des extrémités
+  // seraient coupés par le bord de l'écran.
+  const half = LEVEL_NODE_SIZE / 2;
   return {
-    // Bornes rentrées d'un demi-nœud : sinon les niveaux des extrémités
-    // seraient coupés par le bord de l'écran.
-    x: fx * (pathW - LEVEL_NODE_SIZE) + LEVEL_NODE_SIZE / 2,
-    y: pageH - MAP_PAD - LEVEL_NODE_SIZE / 2 - fy * span,
+    x: Math.min(pathW - half, Math.max(half, u * pathW)),
+    y: Math.min(pageH - half, Math.max(half, v * pageH)),
   };
 }
 
@@ -1626,11 +1648,22 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           // mélangeait des échelles totalement différentes) : les
           // pointillés étaient bien calculés, juste invisibles car
           // positionnés à des milliers de pixels du cadre visible.
+          const scene = CHAPTER_SCENES[chapterNum];
           const positions = Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) =>
             nodePosition(i, pathWidth, pageH, chapterNum)
           );
           return (
             <View key={chapterNum} style={[styles.chapterBlock, { height: pageH }]}>
+              {/* Décor du chapitre. Posé avec une largeur ET une hauteur
+                  explicites (jamais absoluteFill seul sur une Image :
+                  elle se dessinerait à sa taille native). */}
+              {scene && (
+                <Image
+                  source={scene.bg}
+                  style={{ position: 'absolute', width: pathWidth, height: pageH, pointerEvents: 'none' }}
+                  resizeMode="cover"
+                />
+              )}
               <View style={[styles.chapterPath, { height: pageH }]}>
                 {/* Tracé courbe en pointillés entre chaque niveau consécutif —
                     dessiné EN PREMIER pour rester derrière les pastilles. */}
@@ -1641,6 +1674,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
                       key={`dot-${i}-${di}`}
                       style={[
                         styles.pathDot,
+                        scene && styles.pathDotOnScene,
                         { left: d.x - 3, top: d.y - 3 },
                       ]}
                     />
@@ -1655,6 +1689,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
                       key={levelNum}
                       style={[
                         styles.levelNode,
+                        scene && styles.levelNodeOnScene,
                         { left: pos.x - LEVEL_NODE_SIZE / 2, top: pos.y - LEVEL_NODE_SIZE / 2 },
                         state === 'current' && styles.levelNodeCurrent,
                         state === 'done' && styles.levelNodeDone,
@@ -2535,9 +2570,20 @@ const styles = StyleSheet.create({
   },
   levelNode: {
     position: 'absolute',
-    width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.panel,
+    // Dérivé de LEVEL_NODE_SIZE : la valeur était figée à 46 alors que
+    // la constante valait 38, donc le positionnement (qui utilise la
+    // constante) décalait chaque nœud de 4 px.
+    width: LEVEL_NODE_SIZE, height: LEVEL_NODE_SIZE, borderRadius: LEVEL_NODE_SIZE / 2,
+    backgroundColor: COLORS.panel,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
   },
+  // Sur un décor clair, la pastille sombre par défaut se noie : fond
+  // plus opaque et contour blanc pour la détacher.
+  levelNodeOnScene: {
+    backgroundColor: 'rgba(12,22,36,0.86)',
+    borderColor: 'rgba(255,255,255,0.85)', borderWidth: 2.5,
+  },
+  pathDotOnScene: { backgroundColor: 'rgba(255,255,255,0.92)' },
   levelNodeCurrent: {
     borderColor: COLORS.action, backgroundColor: 'rgba(245,197,66,0.15)',
     shadowColor: COLORS.action, shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },

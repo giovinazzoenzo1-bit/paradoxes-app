@@ -845,6 +845,45 @@ pas de croix), puis le `BackButton` occupe la place.
 ⚠️ Règle : pour remplacer un élément DESSINÉ, il faut modifier l'asset —
 le code ne peut que poser par-dessus.
 
+## Décor par chapitre — méthode (13/09)
+
+`CHAPTER_SCENES[n] = { bg, path }`. Le chapitre 1 a son île
+(`adventure/chapter-1.jpg`) ; les chapitres sans décor retombent sur les
+4 tracés génériques.
+
+### Le chemin n'est JAMAIS peint par l'IA
+
+Une image-guide (ligne rouge + 10 cercles numérotés, même rapport que la
+page) est fournie à Gemini, qui peint l'île AUTOUR. Le chemin et les
+nœuds restent dessinés en code.
+
+⚠️ **Puis on MESURE les plateformes réellement peintes** et on cale le
+tracé dessus — on ne suppose pas que l'IA a suivi le guide. Détection :
+zones claires peu saturées, de forme constante (~59×33 px). Sur le
+chapitre 1, 10 plateformes trouvées (une 11ᵉ détection était un nuage,
+écartée à la vérification visuelle). Gemini avait bien suivi : écart
+maximal de 0,03 avec le tracé générique — mais c'est la mesure qui fait
+foi.
+
+⚠️ **Rapport de l'image = rapport de la page** (2,602). C'est ce qui
+permet de lire les fractions de l'image directement comme fractions de
+page.
+
+⚠️ **Convention des tracés changée** : `CHAPTER_PATHS` est désormais en
+fractions de page `(u, v depuis le HAUT)`, plus en marges + taille de
+nœud. Sans ça, impossible de poser un niveau sur une plateforme peinte,
+les deux n'étant pas dans la même unité.
+
+⚠️ Sur un décor clair, la pastille sombre se noie : `levelNodeOnScene` et
+`pathDotOnScene` renforcent le contour en blanc.
+
+### ⚠️ Bug trouvé au passage : nœuds décalés de 4 px
+
+Le style `levelNode` avait `width: 46` EN DUR alors que
+`LEVEL_NODE_SIZE` valait 38, et c'est la constante qui sert au
+positionnement (`left: x - SIZE/2`). Chaque nœud était donc décalé de
+4 px. La taille dérive maintenant de la constante.
+
 ## Carte des chapitres — une page par chapitre (13/09)
 
 Refonte complète : **un chapitre = une page plein écran**, on change de
