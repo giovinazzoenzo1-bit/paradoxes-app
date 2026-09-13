@@ -812,6 +812,33 @@ voie fiable est donc de **repousser un commit touchant `mobile/**`**.
 l'utilisateur ne voit rien : vérifier D'ABORD qu'un run existe pour le
 dernier sha.
 
+## ⚠️ Un style empilé APRÈS une boîte mesurée l'écrase (13/09)
+
+Bug réel : le détail de la rune sortait de son cadre. Cause —
+
+```js
+<View style={[box(INV_DETAIL_ZONE), styles.invDetailCol]}>
+```
+
+`invDetailCol` gardait `width: '34%'` et `marginLeft: 10` de l'ancienne
+mise en page en colonnes. Le tableau de styles applique le DERNIER
+gagnant : la largeur mesurée (0,244 du panneau) était donc remplacée par
+0,34, et la marge décalait le tout. Mesuré sur la capture : **+93 px de
+décalage et 40 % trop large**.
+
+⚠️ **Une boîte positionnée par des fractions mesurées ne doit JAMAIS
+être suivie d'un style qui redéfinit `width`, `margin` ou `padding`
+horizontal.** Vérification automatisable : chercher les empilements
+`[box(...), styles.X]` et contrôler que `X` ne porte aucune dimension.
+
+⚠️ Vestige typique : ces propriétés venaient d'une mise en page
+abandonnée deux itérations plus tôt. Après un changement de structure,
+relire les styles réutilisés, pas seulement le JSX.
+
+Le bouton RETOUR commun remplace la croix dessinée (un seul geste de
+sortie), et le bouton d'ouverture de l'inventaire est désormais calé sur
+son texte : hauteur 26, padding 14, police 10.
+
 ## Pierres runiques dessinées (13/09)
 
 Les 7 emoji sont remplacés par des pierres illustrées

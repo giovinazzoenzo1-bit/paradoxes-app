@@ -48,7 +48,6 @@ const INVENTORY_RATIO = 1000 / 572;
 const INV_GRID_ZONE = { left: 0.038, right: 0.704, top: 0.224, bottom: 0.939 };
 const INV_DETAIL_ZONE = { left: 0.719, right: 0.965, top: 0.224, bottom: 0.939 };
 const INV_TITLE = { left: 0.280, right: 0.680, top: 0.015, bottom: 0.085 };
-const INV_CLOSE = { left: 0.952, right: 0.998, top: 0.030, bottom: 0.105 };
 // Plaque en bois servant de bouton (13/09). Fond source MESURÉ à
 // (167,61,133) : Gemini avait rendu un magenta désaturé, pas le #FF00FF
 // habituel — un détourage calé sur #FF00FF n'aurait rien retiré.
@@ -1772,19 +1771,13 @@ function RuneInventory({ ownedRunes, onClose }) {
           )}
         </View>
 
-        {/* La croix DESSINÉE sur le cadre est rendue tapable... */}
-        <TouchableOpacity
-          style={box(INV_CLOSE)}
+        {/* Le bouton RETOUR habituel de l'appli prend la place de la
+            croix dessinée : un seul geste de sortie, le même que sur
+            tous les autres écrans. */}
+        <BackButton
           onPress={onClose}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ position: 'absolute', right: panelW * 0.01, top: panelH * 0.012 }}
         />
-      </View>
-
-      {/* ...et le bouton RETOUR habituel de l'appli, au même endroit que
-          partout ailleurs (en haut à gauche) : l'utilisateur ne doit pas
-          avoir à chercher un bouton différent selon l'écran. */}
-      <View style={styles.invBackWrap}>
-        <BackButton onPress={onClose} />
       </View>
     </View>
   );
@@ -2255,14 +2248,11 @@ const styles = StyleSheet.create({
   forgeZone: { alignItems: 'center' },
   // Plaque dimensionnée par son texte : hauteur fixe, largeur libre.
   invOpenBtn: {
-    alignSelf: 'center', marginTop: 10,
-    height: 34, paddingHorizontal: 26,
+    alignSelf: 'center', marginTop: 8,
+    height: 26, paddingHorizontal: 14,
     alignItems: 'center', justifyContent: 'center',
   },
-  woodPlateText: { color: '#f3e3c0', fontSize: 12, fontWeight: '900', letterSpacing: 0.6 },
-  // Bouton retour de la surcouche, à la même place que sur tous les
-  // autres écrans.
-  invBackWrap: { position: 'absolute', left: 14, top: 12 },
+  woodPlateText: { color: '#f3e3c0', fontSize: 10, fontWeight: '900', letterSpacing: 0.4 },
   runeArt: { width: 30, height: 30 },
   invDetailArtBox: {
     width: 54, height: 54, borderWidth: 2, borderRadius: 10,
@@ -2285,11 +2275,10 @@ const styles = StyleSheet.create({
   invCenter: { alignItems: 'center', justifyContent: 'center' },
   invBannerText: { color: '#e8d5ab', fontSize: 12, fontWeight: '900', letterSpacing: 1.2 },
   // Corps posé dans la zone de bois utile du cadre (fractions mesurées).
-  invDetailCol: {
-    width: '34%', marginLeft: 10, paddingLeft: 10,
-    borderLeftWidth: 1, borderLeftColor: 'rgba(243,227,192,0.25)',
-    alignItems: 'center', justifyContent: 'center',
-  },
+  // AUCUNE largeur ici : elle vient de la zone MESURÉE sur l'asset,
+  // posée à l'appel. En remettre une l'écraserait (le tableau de styles
+  // applique le dernier gagnant) et le contenu sortirait du cadre.
+  invDetailCol: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   invDetailName: { fontSize: 12, fontWeight: '900', textAlign: 'center', marginTop: 4 },
   invDetailLevel: { color: '#e8d5ab', fontSize: 10, fontWeight: '800', marginTop: 2 },
   invDetailEffect: {
