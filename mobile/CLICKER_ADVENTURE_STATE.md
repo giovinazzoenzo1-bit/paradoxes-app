@@ -789,6 +789,29 @@ qui se chevauchent et fusionnent).
 `ThemedPanel`, `ThemedFrame`, `themedBox` et `themedLoreBox` ont été
 supprimés avec l'ancien système.
 
+## ⚠️ Un push peut NE PAS déclencher la publication (12/09)
+
+Arrivé une fois : le commit `a2e8f11` est bien monté sur `origin/main`,
+avec des fichiers sous `mobile/**`, le workflow était `active`, et
+pourtant **aucun run n'a été créé**. Tous les commits avant et après en
+ont eu un. Rien de cassé dans la configuration : GitHub a simplement
+raté l'événement.
+
+**Symptôme côté utilisateur** : « il n'y a pas de changement » alors que
+le code est poussé.
+
+**Vérification** (le sandbox n'a pas accès aux logs, mais l'API oui) :
+lister `/actions/runs` et chercher le `head_sha` du dernier commit. S'il
+n'apparaît pas, la publication n'a jamais tourné.
+
+**Relance** : `workflow_dispatch` par l'API renvoie **403** — le jeton de
+dev n'a pas le droit `actions: write` (déjà noté pour l'APK). La seule
+voie fiable est donc de **repousser un commit touchant `mobile/**`**.
+
+⚠️ Ne pas conclure trop vite à un bug d'affichage ou de cache Expo quand
+l'utilisateur ne voit rien : vérifier D'ABORD qu'un run existe pour le
+dernier sha.
+
 ## Atelier de forge + fusion automatique (12/09)
 
 Panneau `forge-panel.png` (enclume + plaque dorée) dans la colonne de
