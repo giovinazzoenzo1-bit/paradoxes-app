@@ -863,22 +863,39 @@ page doit donc mesurer EXACTEMENT cette hauteur, mesurée par `onLayout`.
 La moindre marge sur une page ferait dériver toutes les suivantes —
 `chapterBlock` n'a plus aucune marge.
 
+⚠️ **Le saut initial NE PEUT PAS se faire dans `onLayout`.** Bug réel :
+on atterrissait tout en haut au lieu du chapitre en cours. Au moment où
+`onLayout` se déclenche, les pages ne sont pas encore rendues (elles
+attendent `pageH`, posé par ce même handler) : le contenu mesure donc 0
+et le ScrollView ramène la position à 0. Il faut **`onContentSizeChange`**,
+qui se déclenche une fois les pages en place.
+
 ⚠️ **Rien n'est rendu tant que `pageH` vaut 0** : les positions se
 calculent à partir de la hauteur de page, et à 0 les nœuds partiraient
 en coordonnées négatives.
 
-### Géométrie recalculée
+### Le tracé est POSÉ À LA MAIN, pas calculé
 
-| | Avant | Après |
-|---|---|---|
-| Taille d'un nœud | 46 | **38** |
-| Espacement vertical | 92 (fixe) | **déduit de la page** (~29) |
-| Amplitude du serpentin | 0,30 | **0,42** |
+`CHAPTER_PATH` : 10 positions en fractions (largeur, hauteur depuis le
+bas). Toutes les formules essayées donnaient un mauvais résultat —
 
-En paysage la largeur est la ressource abondante : c'est elle qui écarte
-les nœuds maintenant que le vertical est serré. **Mesuré : distance
-minimale entre deux nœuds = 112 dp** pour des nœuds de 38, et le tracé
-tient dans la page à 280, 317 et 360 dp de haut.
+| Essai | Défaut |
+|---|---|
+| Sinusoïde 1 à 2,5 périodes | zigzag mécanique, gros vide au centre |
+| Serpentin 5 rangées × 2 | nœuds empilés verticalement, illisible |
+| Recherche aléatoire optimisée | meilleur écart, mais le chemin SE CROISE |
+
+Le tracé retenu balaie la largeur, tourne au bord, repart en sens
+inverse et monte — un vrai sentier. **Mesuré sur 825×317 : écart minimal
+102 dp (nœuds de 38), pas de 150 à 210 dp, ZÉRO croisement de
+segments.** Taille de nœud passée de 46 à 38.
+
+⚠️ Les x sont rentrés d'un demi-nœud (`fx * (pathW - NODE) + NODE/2`),
+sinon les niveaux des extrémités seraient coupés par le bord.
+
+⚠️ **Critère à vérifier pour tout nouveau tracé** : écart minimal ≥ taille
+de nœud + marge, ET aucun croisement entre segments non consécutifs. Un
+tracé qui se croise reste illisible même bien espacé.
 
 Le libellé « Chapitre N » est supprimé (chaque page EST un chapitre) et
 remplacé par des **pastilles au bord droit**. Griffes et énergie passent

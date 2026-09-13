@@ -1294,26 +1294,35 @@ const LEVEL_NODE_SIZE = 38;   // réduit : 10 niveaux doivent tenir sur une page
 // disponible. `ROW_HEIGHT` est conservé, d'autres écrans l'importaient.
 const ROW_HEIGHT = 92;
 const MAP_PAD = 10;        // marge haut/bas d'une page
-const WAVE_FREQ = 1.25;    // sinuosité : réglée pour que 2 nœuds ne se touchent jamais
-// Amplitude portée de 0,30 à 0,42 : en paysage la largeur est la
-// ressource abondante, c'est elle qui écarte les nœuds maintenant que
-// l'espacement vertical n'est plus que ~29 dp. Mesuré : distance
-// minimale entre deux nœuds = 112 dp, pour des nœuds de 38.
-const WAVE_AMPLITUDE = 0.42;
 
 // Position (fraction 0-1 de la largeur, y en px depuis le haut du
 // chapitre) du niveau d'index `i` (0-9) dans son chapitre — une onde
 // continue plutôt que 3 positions fixes en alternance, pour que la
 // courbe entre deux niveaux consécutifs ait vraiment l'air organique.
-// `pageH` = hauteur d'une page de chapitre. Le niveau 1 est EN BAS et la
-// suite MONTE : on gravit le chapitre, et le chapitre suivant est
-// au-dessus.
-function nodePosition(i, pageH) {
+// Tracé du chapitre : 10 positions POSÉES À LA MAIN, en fraction de la
+// largeur et de la hauteur (0 = bas). Une sinusoïde donnait un zigzag
+// mécanique et mal réparti ; ici le chemin balaie la largeur, tourne au
+// bord, repart en sens inverse et monte — lisible comme un vrai
+// sentier.
+//
+// Mesuré sur 825x317 : distance minimale entre 2 nœuds 102 dp (nœuds de
+// 38), pas de 150 à 210 dp, AUCUN croisement de segments.
+const CHAPTER_PATH = [
+  [0.06, 0.04], [0.28, 0.12], [0.50, 0.06], [0.72, 0.16], [0.92, 0.36],
+  [0.74, 0.56], [0.52, 0.64], [0.30, 0.58], [0.12, 0.78], [0.38, 0.97],
+];
+
+// Renvoie des PIXELS (x et y dans la même unité — un ancien bug avait
+// laissé x en fraction et y en pixels, envoyant les points de contrôle
+// des courbes hors écran).
+function nodePosition(i, pathW, pageH) {
+  const [fx, fy] = CHAPTER_PATH[i] || CHAPTER_PATH[0];
   const span = Math.max(1, pageH - 2 * MAP_PAD - LEVEL_NODE_SIZE);
-  const step = span / (LEVELS_PER_CHAPTER - 1);
   return {
-    x: 0.5 + Math.sin(i * WAVE_FREQ) * WAVE_AMPLITUDE,
-    y: pageH - MAP_PAD - LEVEL_NODE_SIZE / 2 - i * step,
+    // Bornes rentrées d'un demi-nœud : sinon les niveaux des extrémités
+    // seraient coupés par le bord de l'écran.
+    x: fx * (pathW - LEVEL_NODE_SIZE) + LEVEL_NODE_SIZE / 2,
+    y: pageH - MAP_PAD - LEVEL_NODE_SIZE / 2 - fy * span,
   };
 }
 
@@ -1552,10 +1561,15 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // Positionnement initial sur le chapitre en cours. `onLayout` donne la
   // hauteur, et c'est seulement une fois qu'on la connaît qu'on peut
   // sauter à la bonne page.
-  const jumpToCurrentChapter = (h) => {
-    if (mapAutoScrolledRef.current || !mapScrollRef.current || !h) return;
+  // ⚠️ Le saut ne peut PAS se faire dans `onLayout` : à ce moment les
+  // pages ne sont pas encore rendues (elles attendent `pageH`), le
+  // contenu mesure donc 0 et le ScrollView ramène la position à 0 — on
+  // atterrissait tout en haut au lieu du chapitre en cours.
+  // `onContentSizeChange` se déclenche une fois les pages en place.
+  const jumpToCurrentChapter = () => {
+    if (mapAutoScrolledRef.current || !mapScrollRef.current || !pageH) return;
     mapAutoScrolledRef.current = true;
-    mapScrollRef.current.scrollTo({ y: currentPageIndex * h, animated: false });
+    mapScrollRef.current.scrollTo({ y: currentPageIndex * pageH, animated: false });
   };
 
   return (
@@ -1583,11 +1597,8 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         showsVerticalScrollIndicator={false}
         decelerationRate="fast"
         style={styles.mapScroll}
-        onLayout={(e) => {
-          const h = e.nativeEvent.layout.height;
-          setPageH(h);
-          jumpToCurrentChapter(h);
-        }}
+        onLayout={(e) => setPageH(e.nativeEvent.layout.height)}
+        onContentSizeChange={jumpToCurrentChapter}
       >
         {pageH > 0 && chapterPages.map((chapterNum) => {
           // Positions converties en PIXELS tout de suite (x ET y dans la
@@ -1597,10 +1608,9 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           // mélangeait des échelles totalement différentes) : les
           // pointillés étaient bien calculés, juste invisibles car
           // positionnés à des milliers de pixels du cadre visible.
-          const positions = Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) => {
-            const p = nodePosition(i, pageH);
-            return { x: p.x * pathWidth, y: p.y };
-          });
+          const positions = Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) =>
+            nodePosition(i, pathWidth, pageH)
+          );
           return (
             <View key={chapterNum} style={[styles.chapterBlock, { height: pageH }]}>
               <View style={[styles.chapterPath, { height: pageH }]}>
