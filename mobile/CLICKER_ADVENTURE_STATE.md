@@ -845,6 +845,34 @@ pas de croix), puis le `BackButton` occupe la place.
 ⚠️ Règle : pour remplacer un élément DESSINÉ, il faut modifier l'asset —
 le code ne peut que poser par-dessus.
 
+## Révélation animée des achats (13/09)
+
+Acheter dans la boutique ouvre une surcouche : les pierres obtenues
+apparaissent une à une avec un « pop » (échelle 0,2 → 1,18 → 1) et un
+halo à leur couleur. Toucher l'écran ferme.
+
+⚠️ **Les 3 achats RENVOIENT les runes tirées** (`[rune]` / `drawn`), et
+`null` si l'achat n'a pas eu lieu (Griffes insuffisantes, offre du jour
+déjà prise). C'est ce `null` qui empêche l'animation de se déclencher
+sur un achat refusé.
+
+⚠️ **UNE seule `Animated.Value` pilote toute la séquence**, chaque pierre
+lisant une plage décalée de cette même valeur. Bien plus sûr que N
+animations parallèles : aucune désynchronisation possible et un seul
+`stop()` à faire au démontage.
+
+⚠️ Les plages d'interpolation doivent être **strictement croissantes**
+et rester `< 1`. Vérifié pour 1, 2 et 3 pierres avant de pousser — une
+borne non croissante fait planter RN à l'exécution, pas à la compilation.
+
+⚠️ Le halo est **recoloré par `tintColor`** : une seule image
+(`glow-gold.png`) sert aux 7 couleurs de runes, puisque `tintColor`
+remplace le RVB en gardant l'alpha.
+
+⚠️ La surcouche est rendue **en DERNIER** parmi ses frères : c'est
+l'ordre du JSX qui décide de l'empilement, elle doit passer au-dessus de
+l'inventaire.
+
 ## Les pierres apparaissent aussi dans la boutique (13/09)
 
 L'offre spéciale montre **la pierre du type réellement en vente ce

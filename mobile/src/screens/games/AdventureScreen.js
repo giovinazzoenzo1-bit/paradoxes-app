@@ -573,17 +573,21 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Achète une rune ALÉATOIRE contre 100 Griffes (toujours niveau 1, pas
   // encore équipée). Les bonus des runes affectent maintenant vraiment
   // les stats de combat (voir combatLogic.js/runeBonuses).
+  // Les 3 achats RENVOIENT les runes tirées, pour que l'écran puisse les
+  // montrer. Rien (undefined) si l'achat n'a pas eu lieu.
   const buyRandomRune = () => {
-    if (griffes < RUNE_COST) return;
+    if (griffes < RUNE_COST) return null;
     setGriffes((g) => g - RUNE_COST);
     const type = RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)];
-    setOwnedRunes((prev) => [...prev, { id: makeRuneId(), type, level: 1, equippedCreatureId: null }]);
+    const rune = { id: makeRuneId(), type, level: 1, equippedCreatureId: null };
+    setOwnedRunes((prev) => [...prev, rune]);
     trackEvent('runeBought', 1);
+    return [rune];
   };
 
   // Pack : N runes aléatoires d'un coup, moins cher qu'à l'unité.
   const buyRunePack = () => {
-    if (griffes < RUNE_PACK_COST) return;
+    if (griffes < RUNE_PACK_COST) return null;
     setGriffes((g) => g - RUNE_PACK_COST);
     const drawn = Array.from({ length: RUNE_PACK_SIZE }, () => ({
       id: makeRuneId(),
@@ -593,23 +597,23 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     }));
     setOwnedRunes((prev) => [...prev, ...drawn]);
     trackEvent('runeBought', RUNE_PACK_SIZE);
+    return drawn;
   };
 
   // Offre spéciale : une rune de NIVEAU 2 d'un type imposé, tiré une
   // fois par jour. Une seule fois par jour — sinon elle remplacerait
   // complètement le tirage à l'unité, qu'elle bat largement.
   const buySpecialOffer = () => {
-    if (!specialOffer || specialOffer.purchased) return;
-    if (griffes < RUNE_SPECIAL_COST) return;
+    if (!specialOffer || specialOffer.purchased) return null;
+    if (griffes < RUNE_SPECIAL_COST) return null;
     setGriffes((g) => g - RUNE_SPECIAL_COST);
-    setOwnedRunes((prev) => [
-      ...prev,
-      { id: makeRuneId(), type: specialOffer.type, level: 2, equippedCreatureId: null },
-    ]);
+    const rune = { id: makeRuneId(), type: specialOffer.type, level: 2, equippedCreatureId: null };
+    setOwnedRunes((prev) => [...prev, rune]);
     const next = { ...specialOffer, purchased: true };
     setSpecialOffer(next);
     AsyncStorage.setItem(RUNE_OFFER_KEY, JSON.stringify(next)).catch(() => {});
     trackEvent('runeBought', 2);
+    return [rune];
   };
 
   // Fusion automatique : enchaîne TOUTES les fusions possibles jusqu'à
@@ -1686,6 +1690,79 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 // Surcouche et non écran séparé : la règle 11 du projet rappelle qu'une
 // surcouche ne démonte pas l'écran en dessous — l'état de la boutique et
 // l'offre du jour restent intacts en revenant.
+// Révélation d'un achat : les pierres obtenues apparaissent une à une,
+// avec un halo à leur couleur.
+//
+// UNE seule Animated.Value pilote tout, et chaque pierre lit une plage
+// décalée de cette même valeur. Bien plus sûr que N animations
+// parallèles : pas de désynchronisation, et un seul `start()` à nettoyer.
+function RuneReveal({ runes, onClose }) {
+  const t = useRef(new Animated.Value(0)).current;
+  const STEP = 0.18;          // décalage entre 2 pierres
+  const SPAN = 0.55;          // durée d'apparition d'une pierre
+
+  useEffect(() => {
+    t.setValue(0);
+    const anim = Animated.timing(t, {
+      toValue: 1,
+      duration: 380 + runes.length * 170,
+      useNativeDriver: true,
+    });
+    anim.start();
+    // Arrêt si l'écran se démonte pendant l'animation.
+    return () => anim.stop();
+  }, [runes]);
+
+  const total = Math.max(1, 1 + (runes.length - 1) * STEP);
+
+  return (
+    <TouchableOpacity style={styles.revealOverlay} activeOpacity={1} onPress={onClose}>
+      <Text style={styles.revealTitle}>
+        {runes.length > 1 ? `${runes.length} NOUVELLES RUNES` : 'NOUVELLE RUNE'}
+      </Text>
+
+      <View style={styles.revealRow}>
+        {runes.map((rune, i) => {
+          const def = RUNE_TYPES[rune.type];
+          const d0 = (i * STEP) / total;
+          const d1 = (i * STEP + SPAN * 0.65) / total;
+          const d2 = (i * STEP + SPAN) / total;
+          // Léger dépassement à l'arrivée (1,18 puis 1) : c'est ce
+          // ressenti de « pop » qui fait lire le gain.
+          const scale = t.interpolate({
+            inputRange: [d0, d1, d2, 1],
+            outputRange: [0.2, 1.18, 1, 1],
+            extrapolate: 'clamp',
+          });
+          const opacity = t.interpolate({
+            inputRange: [d0, d1, 1],
+            outputRange: [0, 1, 1],
+            extrapolate: 'clamp',
+          });
+          return (
+            <Animated.View key={rune.id} style={[styles.revealItem, { opacity, transform: [{ scale }] }]}>
+              {/* Halo pré-rendu, RECOLORÉ à la teinte de la rune via
+                  tintColor : une seule image sert aux 7 couleurs. */}
+              <Image
+                source={GLOW_GOLD}
+                style={[styles.revealGlow, { tintColor: def.color }]}
+                resizeMode="contain"
+              />
+              <Image source={def.art} style={styles.revealArt} resizeMode="contain" />
+              <Text style={[styles.revealName, { color: def.color }]} numberOfLines={1}>
+                {def.name.replace('Rune de ', '').replace("Rune d'", '')}
+              </Text>
+              <Text style={styles.revealLevel}>Niv. {rune.level}</Text>
+            </Animated.View>
+          );
+        })}
+      </View>
+
+      <Text style={styles.revealHint}>Touche pour continuer</Text>
+    </TouchableOpacity>
+  );
+}
+
 function RuneInventory({ ownedRunes, onClose }) {
   const [selectedId, setSelectedId] = useState(null);
   const selected = ownedRunes.find((r) => r.id === selectedId) || null;
@@ -2035,6 +2112,15 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
   // les runes identiques, un seul bouton clair par groupe.
   const [shopW, setShopW] = useState(0);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  // Runes à révéler après un achat (null = rien à montrer).
+  const [reveal, setReveal] = useState(null);
+  // Emballe un achat : s'il a abouti, on montre ce qui est sorti. Un
+  // achat refusé (pas assez de Griffes, offre déjà prise) renvoie null
+  // et ne déclenche donc aucune animation.
+  const withReveal = (buy) => () => {
+    const got = buy();
+    if (got && got.length) setReveal(got);
+  };
   const [rightBox, setRightBox] = useState({ w: 0, h: 0 });
   // La collection est passée en SURCOUCHE (13/09) : l'atelier est seul
   // dans sa colonne et peut donc la remplir.
@@ -2067,9 +2153,9 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
               width={shopW}
               griffes={griffes}
               specialOffer={specialOffer}
-              onBuyRandom={onBuyRune}
-              onBuyPack={onBuyPack}
-              onBuySpecial={onBuySpecial}
+              onBuyRandom={withReveal(onBuyRune)}
+              onBuyPack={withReveal(onBuyPack)}
+              onBuySpecial={withReveal(onBuySpecial)}
             />
           )}
 
@@ -2113,6 +2199,10 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
       {inventoryOpen && (
         <RuneInventory ownedRunes={ownedRunes} onClose={() => setInventoryOpen(false)} />
       )}
+
+      {/* Rendu EN DERNIER : la révélation doit passer au-dessus de tout,
+          l'ordre des frères décide de l'empilement. */}
+      {reveal && <RuneReveal runes={reveal} onClose={() => setReveal(null)} />}
     </ImageBackground>
   );
 }
@@ -2259,6 +2349,27 @@ const styles = StyleSheet.create({
   forgeZone: { alignItems: 'center' },
   // Plaque dimensionnée par son texte : hauteur fixe, largeur libre.
   invOpenBtn: { alignSelf: 'center', marginTop: 8 },
+
+  // --- Révélation d'achat ---
+  revealOverlay: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    backgroundColor: 'rgba(4,7,14,0.88)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  revealTitle: {
+    color: '#f3e3c0', fontSize: 15, fontWeight: '900',
+    letterSpacing: 1.4, marginBottom: 18,
+  },
+  revealRow: { flexDirection: 'row', alignItems: 'center', gap: 22 },
+  revealItem: { alignItems: 'center', width: 92 },
+  // left CALCULÉ, pas laissé à l'align-items du parent : un enfant
+  // absolu sans inset dépend du moteur de mise en page, autant le poser.
+  // (92 - 130) / 2 = -19
+  revealGlow: { position: 'absolute', width: 130, height: 130, top: -28, left: -19 },
+  revealArt: { width: 72, height: 72 },
+  revealName: { fontSize: 12, fontWeight: '900', marginTop: 6 },
+  revealLevel: { color: '#e8d5ab', fontSize: 10, fontWeight: '800', marginTop: 1 },
+  revealHint: { color: COLORS.muted, fontSize: 10, fontWeight: '700', marginTop: 24 },
   // La plaque se cale sur son texte : hauteur fixe, largeur libre.
   invOpenPlate: {
     height: 28, paddingHorizontal: 18,
