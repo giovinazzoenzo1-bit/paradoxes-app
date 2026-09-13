@@ -859,9 +859,17 @@ x = 837). `stretch` remplit exactement, donc une fraction de l'image
 reste une fraction de page. Coût : ~20 % d'étirement vertical, invisible
 sur ce style illustré.
 
-⚠️ **Voiles sombres DERRIÈRE LES BOUTONS uniquement.** Un voile pleine
-largeur assombrissait le niveau 10, qui passe justement dans le trou
-central de l'en-tête. Deux zones : gauche 150 dp, droite 300 dp.
+⚠️ **AUCUN voile derrière l'en-tête.** Essayé pleine largeur (elle
+assombrissait le niveau 10), puis deux zones latérales : dans les deux
+cas on voyait des **rectangles gris posés sur le décor**. La bonne
+réponse est que chaque bouton porte SON PROPRE fond, épousant sa forme :
+plaque dorée pour Retour, pastille pour Éléments, pour les Griffes, et
+désormais pour l'Énergie aussi (elle n'en avait pas).
+
+⚠️ **Largeur de page MESURÉE, pas `screenWidth`.** Supposer la largeur de
+la fenêtre laissait une bande vide à gauche et un débordement à droite
+quand le conteneur est décalé (encoche, marge d'un parent). Le
+`onLayout` du défilement fournit largeur ET hauteur.
 
 ⚠️ **Conflit trouvé par le calcul** : le dernier nœud du tracé C tombait
 sous les boutons du coin haut droit une fois en plein écran. Descendu de
@@ -928,12 +936,13 @@ page doit donc mesurer EXACTEMENT cette hauteur, mesurée par `onLayout`.
 La moindre marge sur une page ferait dériver toutes les suivantes —
 `chapterBlock` n'a plus aucune marge.
 
-⚠️ **Le saut initial NE PEUT PAS se faire dans `onLayout`.** Bug réel :
-on atterrissait tout en haut au lieu du chapitre en cours. Au moment où
-`onLayout` se déclenche, les pages ne sont pas encore rendues (elles
-attendent `pageH`, posé par ce même handler) : le contenu mesure donc 0
-et le ScrollView ramène la position à 0. Il faut **`onContentSizeChange`**,
-qui se déclenche une fois les pages en place.
+⚠️ **Le saut initial est déclenché par le `onLayout` de LA PAGE du
+chapitre courant**, qui fournit directement son `y` dans le contenu.
+Deux tentatives ont échoué avant : le `onLayout` du ScrollView (les
+pages n'existent pas encore, contenu de hauteur 0, position ramenée à 0),
+puis `onContentSizeChange` (dépendant de l'état `pageH` propagé au bon
+moment). La page qui dit elle-même où elle est ne suppose rien et
+n'entre en course avec rien.
 
 ⚠️ **Rien n'est rendu tant que `pageH` vaut 0** : les positions se
 calculent à partir de la hauteur de page, et à 0 les nœuds partiraient

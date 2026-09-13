@@ -1510,7 +1510,8 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // elle qui dicte l'espacement des niveaux ET le pas de pagination, les
   // deux doivent être rigoureusement identiques sinon les pages
   // dérivent.
-  const [pageH, setPageH] = useState(0);
+  const [page, setPage] = useState({ w: 0, h: 0 });
+  const pageH = page.h;
 
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
 
@@ -1588,9 +1589,10 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // combatLogic.js/opponentPowerBudget).
   const currentChapter = chapterForLevel(currentUnlockedLevel);
   const chaptersToShow = currentChapter + 6;
-  // Plus aucun retrait : la page fait toute la largeur de l'écran, sinon
-  // le décor ne toucherait pas les bords.
-  const pathWidth = screenWidth;
+  // Largeur MESURÉE du défilement, pas `screenWidth` : si le conteneur
+  // est décalé (encoche, marge d'un parent), supposer la largeur de la
+  // fenêtre laissait une bande vide à gauche et débordait à droite.
+  const pathWidth = page.w || screenWidth;
 
   // Pages ORDONNÉES À L'ENVERS : le chapitre 1 est la page du BAS et les
   // suivants sont AU-DESSUS. On gravit donc la carte — pour voir la
@@ -1601,15 +1603,18 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // Positionnement initial sur le chapitre en cours. `onLayout` donne la
   // hauteur, et c'est seulement une fois qu'on la connaît qu'on peut
   // sauter à la bonne page.
-  // ⚠️ Le saut ne peut PAS se faire dans `onLayout` : à ce moment les
-  // pages ne sont pas encore rendues (elles attendent `pageH`), le
-  // contenu mesure donc 0 et le ScrollView ramène la position à 0 — on
-  // atterrissait tout en haut au lieu du chapitre en cours.
-  // `onContentSizeChange` se déclenche une fois les pages en place.
-  const jumpToCurrentChapter = () => {
-    if (mapAutoScrolledRef.current || !mapScrollRef.current || !pageH) return;
+  // ⚠️ Le saut est déclenché par le `onLayout` de la PAGE du chapitre
+  // courant, qui fournit directement son `y` dans le contenu.
+  //
+  // Les deux tentatives précédentes échouaient : dans le `onLayout` du
+  // ScrollView, les pages n'existaient pas encore (contenu de hauteur 0,
+  // position ramenée à 0) ; et `onContentSizeChange` dépendait de l'état
+  // `pageH` propagé au bon moment. Ici la page dit elle-même où elle
+  // est — aucune supposition, aucune course.
+  const jumpToCurrentChapter = (y) => {
+    if (mapAutoScrolledRef.current || !mapScrollRef.current) return;
     mapAutoScrolledRef.current = true;
-    mapScrollRef.current.scrollTo({ y: currentPageIndex * pageH, animated: false });
+    mapScrollRef.current.scrollTo({ y, animated: false });
   };
 
   return (
@@ -1619,12 +1624,6 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
     <View style={styles.mapScreen}>
       {/* Plein écran : la barre système casse l'immersion en paysage. */}
       <StatusBar hidden />
-      {/* Voiles sombres DERRIÈRE LES BOUTONS seulement, pas sur toute la
-          largeur : un voile pleine largeur assombrissait le niveau 10,
-          qui passe justement dans le trou central de l'en-tête.
-          Vérifié : aucun nœud des 5 tracés n'entre dans ces deux zones. */}
-      <View style={[styles.mapHeaderScrim, styles.mapScrimLeft]} />
-      <View style={[styles.mapHeaderScrim, styles.mapScrimRight]} />
       <View style={[styles.header, styles.mapHeader]}>
         <BackButton onPress={onBack} />
         <View style={styles.headerSpacer} />
@@ -1648,8 +1647,9 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         showsVerticalScrollIndicator={false}
         decelerationRate="fast"
         style={styles.mapScroll}
-        onLayout={(e) => setPageH(e.nativeEvent.layout.height)}
-        onContentSizeChange={jumpToCurrentChapter}
+        onLayout={(e) =>
+          setPage({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+        }
       >
         {pageH > 0 && chapterPages.map((chapterNum) => {
           // Positions converties en PIXELS tout de suite (x ET y dans la
@@ -1664,7 +1664,15 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
             nodePosition(i, pathWidth, pageH, chapterNum)
           );
           return (
-            <View key={chapterNum} style={[styles.chapterBlock, { height: pageH }]}>
+            <View
+              key={chapterNum}
+              style={[styles.chapterBlock, { height: pageH }]}
+              onLayout={
+                chapterNum === currentChapter
+                  ? (e) => jumpToCurrentChapter(e.nativeEvent.layout.y)
+                  : undefined
+              }
+            >
               {/* Décor du chapitre. Posé avec une largeur ET une hauteur
                   explicites (jamais absoluteFill seul sur une Image :
                   elle se dessinerait à sa taille native). */}
@@ -2579,13 +2587,6 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, top: 0, zIndex: 20,
     paddingHorizontal: 14, paddingTop: 8, marginBottom: 0,
   },
-  mapHeaderScrim: {
-    position: 'absolute', top: 0, height: 58, zIndex: 19,
-    backgroundColor: 'rgba(6,10,18,0.5)',
-    pointerEvents: 'none',
-  },
-  mapScrimLeft: { left: 0, width: 150 },
-  mapScrimRight: { right: 0, width: 300 },
   // Pastilles de chapitre, collées au bord droit et hors du flux.
   chapterDots: {
     position: 'absolute', right: 4, top: 0, bottom: 0,
@@ -2624,9 +2625,15 @@ const styles = StyleSheet.create({
   levelNodeDone: { borderColor: COLORS.good, backgroundColor: COLORS.good },
   levelNodeText: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
 
-  energyBadge: { alignItems: 'center' },
+  // Pastille sombre plutôt qu'un voile derrière l'en-tête : elle épouse
+  // le texte au lieu de dessiner un rectangle gris sur le décor.
+  energyBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(8,14,24,0.72)',
+    borderRadius: 14, paddingHorizontal: 9, paddingVertical: 3,
+  },
   energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
-  energyBadgeCountdown: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 1 },
+  energyBadgeCountdown: { color: '#9fb2c9', fontSize: 9, fontWeight: '700', marginTop: 1 },
   levelStars: {
     position: 'absolute', bottom: -13, left: 0, right: 0,
     flexDirection: 'row', justifyContent: 'center', gap: 1,
