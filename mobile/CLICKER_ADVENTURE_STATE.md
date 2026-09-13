@@ -812,6 +812,29 @@ voie fiable est donc de **repousser un commit touchant `mobile/**`**.
 l'utilisateur ne voit rien : vérifier D'ABORD qu'un run existe pour le
 dernier sha.
 
+## Inventaire des runes en surcouche (13/09)
+
+La collection n'est plus dans l'écran : un bouton **plaque en bois**
+(`wood-plate.png`) sous la boutique ouvre une **surcouche** avec le
+cadre `collection-panel.png` — grille à gauche, détail de la rune
+sélectionnée à droite, bouton RETOUR en haut à droite.
+
+⚠️ **Surcouche et non écran séparé** (règle 11) : l'écran Runes n'est
+pas démonté, donc la boutique et l'offre du jour sont intactes au
+retour.
+
+⚠️ **Le texte d'effet est CALCULÉ depuis `RUNE_BONUS_TABLE`**, la table
+que le combat utilise vraiment (`runeEffectText()`). Une description
+écrite à la main mentirait dès le premier rééquilibrage. Vérifié sur les
+7 types aux niveaux 1 et 5.
+
+⚠️ Le fond de la plaque était **(167, 61, 133)** — un magenta désaturé,
+pas le #FF00FF habituel. Un détourage calé en dur sur #FF00FF n'aurait
+rien retiré. **Toujours mesurer la couleur de fond** avant de détourer.
+
+L'atelier, seul dans sa colonne depuis que la collection est partie,
+passe à 0,95 de la hauteur disponible.
+
 ## Assets de l'écran Runes — version large (13/09)
 
 | Asset | Taille | Rôle |

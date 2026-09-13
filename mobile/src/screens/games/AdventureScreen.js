@@ -41,6 +41,31 @@ const RUNES_SHOP_PANEL = require('../../../assets/icons/runes-shop-panel.png');
 const FORGE_PANEL = require('../../../assets/icons/forge-panel-wide.png');
 // Panneau de collection + fond de l'écran Runes (13/09).
 const COLLECTION_PANEL = require('../../../assets/icons/collection-panel.png');
+// Plaque en bois servant de bouton (13/09). Fond source MESURÉ à
+// (167,61,133) : Gemini avait rendu un magenta désaturé, pas le #FF00FF
+// habituel — un détourage calé sur #FF00FF n'aurait rien retiré.
+const WOOD_PLATE = require('../../../assets/icons/wood-plate.png');
+const WOOD_PLATE_RATIO = 520 / 134;
+
+// Effet lisible d'une rune, à son niveau. Construit depuis la MÊME table
+// que le combat (`RUNE_BONUS_TABLE`) : une description écrite à la main
+// finirait par mentir dès le premier rééquilibrage.
+function runeEffectText(type, level) {
+  const table = RUNE_BONUS_TABLE[type];
+  if (!table) return '';
+  const v = table[Math.max(0, Math.min(table.length - 1, level - 1))];
+  const pct = `${Math.round(v * 100)}%`;
+  switch (type) {
+    case 'force': return `+${pct} d'attaque`;
+    case 'vitalite': return `+${pct} de points de vie`;
+    case 'celerite': return `+${v.toFixed(2)} au multiplicateur de dégâts`;
+    case 'dexterite': return `−${pct} de taps en combat · +${(v * 0.4).toFixed(2)} de dégâts`;
+    case 'affinite': return `+${v.toFixed(2)} sur l'avantage élémentaire`;
+    case 'butin': return `+${pct} de Griffes à la victoire`;
+    case 'resilience': return `Survit 1× par combat, à ${pct} des PV max`;
+    default: return '';
+  }
+}
 const RUNES_BG = require('../../../assets/adventure/runes-bg.jpg');
 const COLLECTION_RATIO = 900 / 288;
 const COLLECTION_BANNER = { left: 0.300, right: 0.699, top: 0.004, bottom: 0.153 };
@@ -110,6 +135,7 @@ import {
   opponentForLevel,
   griffesReward,
   butinBonus,
+  RUNE_BONUS_TABLE,
   canEvolve,
   evolutionCost,
   ENERGY_MAX,
@@ -1644,6 +1670,90 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 // qui bascule : changer la `source` d'une Image en cours d'animation
 // provoquerait un rendu JS à chaque coup, alors qu'opacité et transform
 // partent sur le driver natif.
+// Inventaire des runes, en surcouche. Panneau en bois illustré, grille
+// à gauche, détail de la rune choisie à droite.
+//
+// Surcouche et non écran séparé : la règle 11 du projet rappelle qu'une
+// surcouche ne démonte pas l'écran en dessous — l'état de la boutique et
+// l'offre du jour restent intacts en revenant.
+function RuneInventory({ ownedRunes, onClose }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const selected = ownedRunes.find((r) => r.id === selectedId) || null;
+  const def = selected ? RUNE_TYPES[selected.type] : null;
+
+  return (
+    <View style={styles.invOverlay}>
+      <View style={styles.invPanel}>
+        <Image source={COLLECTION_PANEL} style={StyleSheet.absoluteFill} resizeMode="stretch" />
+
+        {/* Titre dans la bannière vide de l'image. */}
+        <View style={styles.invBanner}>
+          <Text style={styles.invBannerText} numberOfLines={1} adjustsFontSizeToFit>
+            INVENTAIRE
+          </Text>
+        </View>
+
+        <View style={styles.invBody}>
+          {/* Grille */}
+          <ScrollView style={styles.invGridCol} contentContainerStyle={styles.runeGrid}>
+            {ownedRunes.length === 0 ? (
+              <Text style={styles.runeEmptyText}>Aucune rune — achètes-en une dans la boutique.</Text>
+            ) : (
+              ownedRunes
+                .slice()
+                .sort((a, b) => b.level - a.level || a.type.localeCompare(b.type))
+                .map((rune) => {
+                  const d = RUNE_TYPES[rune.type];
+                  const on = rune.id === selectedId;
+                  return (
+                    <TouchableOpacity
+                      key={rune.id}
+                      style={[
+                        styles.runeCell,
+                        { borderColor: on ? '#ffd86b' : d.color, opacity: on ? 1 : 0.9 },
+                      ]}
+                      onPress={() => setSelectedId(on ? null : rune.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.runeEmoji}>{d.icon}</Text>
+                      <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
+                      {rune.equippedCreatureId && <Text style={styles.runeEquippedTag}>équipée</Text>}
+                    </TouchableOpacity>
+                  );
+                })
+            )}
+          </ScrollView>
+
+          {/* Détail de la rune choisie */}
+          <View style={styles.invDetailCol}>
+            {selected ? (
+              <>
+                <Text style={styles.invDetailIcon}>{def.icon}</Text>
+                <Text style={[styles.invDetailName, { color: def.color }]} numberOfLines={2}>
+                  {def.name}
+                </Text>
+                <Text style={styles.invDetailLevel}>Niveau {selected.level} / {RUNE_MAX_LEVEL}</Text>
+                <Text style={styles.invDetailEffect}>{runeEffectText(selected.type, selected.level)}</Text>
+                <Text style={styles.invDetailState}>
+                  {selected.equippedCreatureId ? 'Équipée sur une créature' : 'Non équipée'}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.invDetailHint}>
+                Touche une rune pour voir ce qu'elle fait.
+              </Text>
+            )}
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.invCloseBtn} onPress={onClose} activeOpacity={0.8}>
+          <Text style={styles.invCloseText}>RETOUR</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 function ForgePanel({ width, onAutoFuse }) {
   const H = width / FORGE_PANEL_RATIO;
   const blow = useRef(new Animated.Value(0)).current;
@@ -1890,13 +2000,11 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
   // quelle rune correspondait à quelle autre). Regroupe automatiquement
   // les runes identiques, un seul bouton clair par groupe.
   const [shopW, setShopW] = useState(0);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   const [rightBox, setRightBox] = useState({ w: 0, h: 0 });
-  // La forge est limitée par la HAUTEUR (ratio 1,145, presque carré) :
-  // à pleine largeur de colonne elle ne laisserait rien à la collection.
-  // 0,55 et non 0,66 : le panneau large (ratio 2,10) à pleine largeur
-  // de colonne ferait 207 dp de haut et n'en laisserait que ~100 à la
-  // collection, soit une seule rangée de runes.
-  const forgeMaxH = rightBox.h * 0.55;
+  // La collection est passée en SURCOUCHE (13/09) : l'atelier est seul
+  // dans sa colonne et peut donc la remplir.
+  const forgeMaxH = rightBox.h * 0.95;
   const forgeW = rightBox.h > 0 ? Math.min(rightBox.w, forgeMaxH * FORGE_PANEL_RATIO) : 0;
 
   return (
@@ -1930,6 +2038,25 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
               onBuySpecial={onBuySpecial}
             />
           )}
+
+          {/* Bouton INVENTAIRE : la plaque en bois EST le bouton. Sa
+              hauteur découle de sa largeur (ratio de l'image), jamais
+              l'inverse, sinon le cadre se déforme. */}
+          {shopW > 0 && (
+            <TouchableOpacity
+              style={{
+                width: shopW, height: shopW / WOOD_PLATE_RATIO,
+                alignItems: 'center', justifyContent: 'center', marginTop: 10,
+              }}
+              onPress={() => setInventoryOpen(true)}
+              activeOpacity={0.8}
+            >
+              <Image source={WOOD_PLATE} style={StyleSheet.absoluteFill} resizeMode="stretch" />
+              <Text style={styles.woodPlateText} numberOfLines={1} adjustsFontSizeToFit>
+                INVENTAIRE ({ownedRunes.length})
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* DROITE : l'atelier en haut, la collection dessous. */}
@@ -1940,54 +2067,12 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
           <View style={styles.forgeZone}>
             {forgeW > 0 && <ForgePanel width={forgeW} onAutoFuse={onFuseAll} />}
           </View>
-          {/* Cadre illustré de la collection. Le panneau est POSÉ EN
-              FOND (il est opaque, ce n'est pas un cadre à trous) et les
-              runes défilent dans sa zone de bois utile, mesurée. */}
-          <View style={styles.collectionWrap}>
-            <Image
-              source={COLLECTION_PANEL}
-              style={StyleSheet.absoluteFill}
-              resizeMode="stretch"
-            />
-            <View
-              style={[
-                styles.collectionInner,
-                {
-                  left: `${COLLECTION_INNER.left * 100}%`,
-                  right: `${(1 - COLLECTION_INNER.right) * 100}%`,
-                  top: `${COLLECTION_INNER.top * 100}%`,
-                  bottom: `${(1 - COLLECTION_INNER.bottom) * 100}%`,
-                },
-              ]}
-            >
-              <ScrollView contentContainerStyle={styles.runeGrid}>
-                {ownedRunes.length === 0 ? (
-                  <Text style={styles.runeEmptyText}>Aucune rune — achètes-en une dans la boutique.</Text>
-                ) : (
-                  ownedRunes
-                    .slice()
-                    .sort((a, b) => b.level - a.level)
-                    .map((rune) => {
-                      const def = RUNE_TYPES[rune.type];
-                      return (
-                        <View key={rune.id} style={[styles.runeCell, { borderColor: def.color, opacity: 0.95 }]}>
-                          <Text style={styles.runeEmoji}>{def.icon}</Text>
-                          <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
-                          {rune.equippedCreatureId && <Text style={styles.runeEquippedTag}>équipée</Text>}
-                        </View>
-                      );
-                    })
-                )}
-              </ScrollView>
-            </View>
-            <View style={styles.collectionBanner}>
-              <Text style={styles.collectionBannerText} numberOfLines={1} adjustsFontSizeToFit>
-                COLLECTION
-              </Text>
-            </View>
-          </View>
         </View>
       </View>
+
+      {inventoryOpen && (
+        <RuneInventory ownedRunes={ownedRunes} onClose={() => setInventoryOpen(false)} />
+      )}
     </ImageBackground>
   );
 }
@@ -2132,9 +2217,19 @@ const styles = StyleSheet.create({
   runesShopCol: { width: '46%' },
   runesRightCol: { flex: 1 },
   forgeZone: { alignItems: 'center' },
-  collectionWrap: { flex: 1, marginTop: 6 },
-  collectionInner: { position: 'absolute' },
-  collectionBanner: {
+  woodPlateText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 0.8 },
+
+  // --- Inventaire des runes (surcouche, 13/09) ---
+  invOverlay: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    backgroundColor: 'rgba(4,7,14,0.82)',
+    alignItems: 'center', justifyContent: 'center', padding: 16,
+  },
+  // Largeur fixe en % + hauteur en % : PAS d'aspectRatio ici, le cadre
+  // est étiré (resizeMode stretch) et supporte de ne pas être à son
+  // ratio natif.
+  invPanel: { width: '86%', height: '88%' },
+  invBanner: {
     position: 'absolute',
     left: `${COLLECTION_BANNER.left * 100}%`,
     right: `${(1 - COLLECTION_BANNER.right) * 100}%`,
@@ -2143,7 +2238,40 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     pointerEvents: 'none',
   },
-  collectionBannerText: { color: '#e8d5ab', fontSize: 11, fontWeight: '900', letterSpacing: 1 },
+  invBannerText: { color: '#e8d5ab', fontSize: 12, fontWeight: '900', letterSpacing: 1.2 },
+  // Corps posé dans la zone de bois utile du cadre (fractions mesurées).
+  invBody: {
+    position: 'absolute', flexDirection: 'row',
+    left: `${COLLECTION_INNER.left * 100}%`,
+    right: `${(1 - COLLECTION_INNER.right) * 100}%`,
+    top: `${COLLECTION_INNER.top * 100}%`,
+    bottom: `${(1 - COLLECTION_INNER.bottom) * 100}%`,
+  },
+  invGridCol: { flex: 1 },
+  invDetailCol: {
+    width: '34%', marginLeft: 10, paddingLeft: 10,
+    borderLeftWidth: 1, borderLeftColor: 'rgba(243,227,192,0.25)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  invDetailIcon: { fontSize: 30 },
+  invDetailName: { fontSize: 12, fontWeight: '900', textAlign: 'center', marginTop: 4 },
+  invDetailLevel: { color: '#e8d5ab', fontSize: 10, fontWeight: '800', marginTop: 2 },
+  invDetailEffect: {
+    color: '#fff', fontSize: 11, fontWeight: '700',
+    textAlign: 'center', marginTop: 8, lineHeight: 15,
+  },
+  invDetailState: { color: COLORS.muted, fontSize: 9, fontWeight: '700', marginTop: 8 },
+  invDetailHint: {
+    color: COLORS.muted, fontSize: 10, fontWeight: '700',
+    textAlign: 'center', paddingHorizontal: 4,
+  },
+  invCloseBtn: {
+    position: 'absolute', right: '3%', top: '2%',
+    backgroundColor: 'rgba(8,14,24,0.85)',
+    borderWidth: 2, borderColor: '#c9a227',
+    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  invCloseText: { color: '#f3e3c0', fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
   shopBannerText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
   forgePlateText: { color: '#4a3410', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
   forgeResultWrap: {
