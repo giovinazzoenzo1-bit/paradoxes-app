@@ -1599,6 +1599,13 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // l'autre : sans ça on passe brutalement d'un ciel bleu à un fond noir
   // en changeant de chapitre.
   const scrollY = useRef(new Animated.Value(0)).current;
+  // Page actuellement à l'écran. Sert à ne MONTER que les décors
+  // voisins : un fond décodé pèse ~2,9 Mo, donc 30 chapitres montés
+  // d'un coup feraient 86 Mo de bitmaps. En se limitant à la page
+  // courante ±1, on reste à ~8,6 Mo quel que soit le nombre de
+  // chapitres. Le ±1 est indispensable : c'est la page voisine qui
+  // apparaît pendant le glissement.
+  const [visiblePage, setVisiblePage] = useState(null);
   const pageH = page.h;
 
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
@@ -1676,7 +1683,11 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // strictement croissante jusqu'au niveau 100 au moins, voir
   // combatLogic.js/opponentPowerBudget).
   const currentChapter = chapterForLevel(currentUnlockedLevel);
-  const chaptersToShow = currentChapter + 6;
+  // Au moins jusqu'au dernier chapitre ILLUSTRÉ : sinon un joueur au
+  // chapitre 1 ne voyait que 7 pages (1 + 6) alors que 12 îles sont
+  // dessinées — le travail d'illustration restait invisible.
+  const lastIllustrated = Math.max(...Object.keys(CHAPTER_SCENES).map(Number));
+  const chaptersToShow = Math.max(currentChapter + 6, lastIllustrated);
   // Largeur MESURÉE du défilement, pas `screenWidth` : si le conteneur
   // est décalé (encoche, marge d'un parent), supposer la largeur de la
   // fenêtre laissait une bande vide à gauche et débordait à droite.
@@ -1711,6 +1722,12 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
     if (!target || typeof target.scrollTo !== 'function') return;
     mapAutoScrolledRef.current = true;
     target.scrollTo({ y, animated: false });
+  };
+
+  // Page visible, déduite de la position de défilement à l'arrêt.
+  const onScrollSettled = (e) => {
+    const h = e.nativeEvent.layoutMeasurement.height;
+    if (h > 0) setVisiblePage(Math.round(e.nativeEvent.contentOffset.y / h));
   };
 
   return (
@@ -1751,6 +1768,8 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         onLayout={(e) =>
           setPage({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
         }
+        onMomentumScrollEnd={onScrollSettled}
+        onScrollEndDrag={onScrollSettled}
       >
         {pageH > 0 && chapterPages.map((chapterNum, pageIdx) => {
           // Positions converties en PIXELS tout de suite (x ET y dans la
@@ -1761,6 +1780,10 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           // pointillés étaient bien calculés, juste invisibles car
           // positionnés à des milliers de pixels du cadre visible.
           const scene = CHAPTER_SCENES[chapterNum];
+          // Avant le premier défilement, `visiblePage` est inconnu : on
+          // se rabat sur la page visée à l'ouverture.
+          const activePage = visiblePage == null ? currentPageIndex : visiblePage;
+          const bgMounted = Math.abs(pageIdx - activePage) <= 1;
           const positions = Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) =>
             nodePosition(i, pathWidth, pageH, chapterNum)
           );
@@ -1799,7 +1822,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
                   l'image reste une fraction de page et les niveaux
                   tombent pile sur les plateformes peintes. Coût : ~20%
                   d'étirement vertical, invisible sur ce style. */}
-              {scene && (
+              {scene && bgMounted && (
                 <Image
                   source={scene.bg}
                   style={{ position: 'absolute', width: pathWidth, height: pageH, pointerEvents: 'none' }}

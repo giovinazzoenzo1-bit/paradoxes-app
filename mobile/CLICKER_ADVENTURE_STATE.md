@@ -918,6 +918,25 @@ la carte, exactement le bug déjà corrigé trois fois.
 (`adventure/chapter-1.jpg`) ; les chapitres sans décor retombent sur les
 4 tracés génériques.
 
+## ⚠️ Nombre de pages affichées, et mémoire des décors (13/09)
+
+**Bug réel** : 12 îles dessinées, mais seulement **7 chapitres visibles**.
+`chaptersToShow` valait `currentChapter + 6` — un joueur au chapitre 1
+ne voyait donc que 7 pages et tout le travail d'illustration restait
+invisible. Corrigé : `Math.max(currentChapter + 6, dernier chapitre
+illustré)`. Au-delà du dernier illustré, la règle du +6 reprend, donc
+rien n'est retiré à un joueur avancé.
+
+⚠️ **Conséquence à ne pas ignorer** : un ScrollView monte TOUS ses
+enfants. Un fond décodé pèse ~2,9 Mo (1400×538 × 4 octets), soit 34 Mo à
+12 chapitres et **86 Mo à 30** — intenable.
+
+**Seul le décor des pages voisines est monté** (page courante ±1, suivie
+via `onMomentumScrollEnd` / `onScrollEndDrag`) : ~8,6 Mo quel que soit le
+nombre de chapitres. Le ±1 est indispensable, c'est la page voisine qui
+apparaît pendant le glissement. Avant le premier défilement,
+`visiblePage` est nul et l'on se rabat sur la page visée à l'ouverture.
+
 ## Chapitres 1 à 8 en place (13/09)
 
 | Ch. | Thème | Plan | Calage |
