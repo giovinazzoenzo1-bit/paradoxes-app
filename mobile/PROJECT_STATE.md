@@ -1206,3 +1206,49 @@ Toutes les décisions de conception (structure, mécanique de combat,
 écrans, ordre d'implémentation) sont dans **`mobile/ADVENTURE_MODE.md`**
 — fichier séparé pour ne pas alourdir davantage celui-ci. Rien n'est
 encore codé à ce stade, c'est un document de préparation.
+
+## Session du 13/09 — Runes, boutique, inventaire, carte illustrée
+
+**Où va quoi** : l'état détaillé (repères mesurés, tracés, règles) est
+dans `CLICKER_ADVENTURE_STATE.md`. Ici : ce qui a été fait et les pièges
+rencontrés, pour ne pas les refaire.
+
+### Réalisé
+- **Icônes Griffes/Runes** détourées, halo généré en code.
+- **Runes** : la Rune d'Endurance (devenue inutile depuis le mana) est
+  remplacée par la **Dextérité** ; ajout d'**Affinité**, **Butin**,
+  **Résilience** ; Célérité s'applique désormais à toutes les attaques.
+  7 runes au total, valeurs calées par simulation.
+- **Boutique de runes** illustrée : tirage à l'unité, pack de 3, offre
+  du jour (rune niv.2, 1×/jour), avec **révélation animée** de l'achat.
+- **Inventaire** en surcouche : grille + détail, effet écrit simplement
+  mais **calculé depuis `RUNE_BONUS_TABLE`**.
+- **Atelier de forge** : fusion automatique en un clic + animation de
+  marteau (2 sprites, `Animated`).
+- **Carte des chapitres refondue** : une page plein écran par chapitre,
+  on glisse comme un fil de vidéos, le chapitre 1 est en BAS (on
+  *monte*), fondu entre les pages.
+- **12 îles illustrées** (chapitres 1 à 12 = niveaux 1 à 120).
+
+### Problèmes rencontrés et cause réelle
+
+| Symptôme | Cause trouvée | Correction |
+|---|---|---|
+| Icônes « coupées en haut/bas » | `<Image>` sans `resizeMode` → défaut `cover`, qui rogne | `contain` partout (règle 14) |
+| Bouton Inventaire géant malgré 3 réductions | `<Image style={absoluteFill}>` sans largeur/hauteur → taille NATIVE | `ImageBackground` (règle : voir doc d'état) |
+| Carré gris autour d'une icône | alpha à 25 sur le bord du PNG de halo → dégradé coupé net | halo régénéré, alpha à 0 avant le bord |
+| Détail de rune hors de son cadre | style empilé APRÈS la boîte mesurée, redéfinissant `width` | dimensions retirées du style |
+| Carte ouverte sur le mauvais chapitre (3 fois) | saut déclenché avant que les pages existent | c'est la PAGE qui annonce son `y` via `onLayout` |
+| Bande noire / marge à gauche | `screenWidth` supposée ≠ largeur réelle du conteneur | largeur mesurée par `onLayout` |
+| Transition bleu → noir brutale | rien ne liait deux décors très différents | fondu piloté par le défilement |
+| « Rien n'a changé » | **GitHub n'a pas créé le run de publication** | vérifier `/actions/runs` pour le dernier sha, repousser |
+
+### Méthode qui a évité le plus d'erreurs
+1. **Mesurer avant de changer une valeur.** Réduire un chiffre trois fois
+   de suite sans chercher la cause a fait perdre du temps sur le bouton
+   Inventaire.
+2. **Déduire, ne pas supposer.** Le plan suivi par chaque île est
+   déterminé en le testant contre l'image, pas d'après le nom du fichier.
+   Une fois, l'ordre reconstruit à la main avait inversé le parcours.
+3. **Simuler le rendu** (PIL, à la vraie taille) avant de pousser.
+4. **Vérifier la publication**, pas seulement le `git push`.
