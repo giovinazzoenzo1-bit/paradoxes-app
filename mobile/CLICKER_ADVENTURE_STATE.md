@@ -789,6 +789,57 @@ qui se chevauchent et fusionnent).
 `ThemedPanel`, `ThemedFrame`, `themedBox` et `themedLoreBox` ont été
 supprimés avec l'ancien système.
 
+## Atelier de forge + fusion automatique (12/09)
+
+Panneau `forge-panel.png` (enclume + plaque dorée) dans la colonne de
+GAUCHE de l'écran Runes ; la plaque dorée **est** le bouton « FUSION
+AUTOMATIQUE ». Boutique + collection à droite.
+
+### Pourquoi l'animation est en CODE et pas en vidéo
+
+Question posée, tranchée par ces deux points :
+- une vidéo imposerait un module natif (`expo-video`) — le projet en
+  retire, il n'en ajoute pas ;
+- surtout, **la transparence vidéo n'est pas portable** iOS + Android
+  (pas d'alpha en MP4, WebM alpha non lu par iOS) : on aurait un
+  rectangle opaque autour du marteau.
+
+Deux sprites + `Animated` : aucune dépendance, timing contrôlé, poids
+négligeable.
+
+⚠️ Les deux poses sont **empilées et c'est leur OPACITÉ qui bascule**.
+Changer la `source` d'une `Image` à chaque coup forcerait un rendu JS,
+alors qu'opacité et `transform` partent sur le **driver natif**.
+
+| Repère (fractions de `forge-panel.png`) | Valeur |
+|---|---|
+| Plaque dorée (bouton) | x 0,255-0,740 · y 0,806-0,907 |
+| Point de frappe (enclume) | x 0,50 · y 0,455 |
+| Ancrage marteau levé | 0,50 / 0,25 · hauteur 0,46 |
+| Ancrage marteau impact | 0,42 / 0,74 · hauteur 0,42 |
+
+### `fuseAllRunes()` — deux partis pris
+
+⚠️ **Les runes ÉQUIPÉES sont exclues.** `fuseRunes` sait pourtant gérer
+le cas, mais une fusion en masse pourrait déséquiper une créature sans
+prévenir (2 runes équipées sur 2 créatures → une seule survit). Un
+bouton « tout fusionner » ne doit jamais défaire ce que le joueur a
+délibérément mis en place.
+
+⚠️ **Une seule passe de `setState`**, pas N appels à `fuseRunes` :
+chaque appel relirait `ownedRunes` figé dans sa closure et les fusions
+s'écraseraient entre elles.
+
+La fusion est appliquée **au clic**, avant l'animation : quitter l'écran
+pendant les coups de marteau ne perd rien. Testé : 16 runes niveau 1 du
+même type → 15 fusions → 1 rune niveau 5 ; runes équipées intactes ;
+2 runes niveau 5 → 0 fusion.
+
+⚠️ **Détourage du marteau d'impact** : « garder la plus grande zone
+connexe » aurait supprimé les ÉCLATS, qui sont des composantes séparées.
+Règle utilisée : garder toute composante > 0,4% de la plus grande, et
+n'exclure que celles du coin bas-droit (le filigrane Gemini).
+
 ## Boutique de runes illustrée (12/09)
 
 Panneau Gemini détouré (`assets/icons/runes-shop-panel.png`, 900x482),

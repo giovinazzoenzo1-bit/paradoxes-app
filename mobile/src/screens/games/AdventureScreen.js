@@ -33,6 +33,22 @@ const RUNES_GEM = require('../../../assets/icons/runes-gem.png');
 // il reste modifiable sans repasser par Gemini. Fractions MESURÉES sur
 // l'asset, à remesurer si l'image change.
 const RUNES_SHOP_PANEL = require('../../../assets/icons/runes-shop-panel.png');
+// Atelier de fusion : le panneau (enclume + plaque dorée) et les DEUX
+// poses du marteau. L'animation est faite en code avec Animated, pas en
+// vidéo : une vidéo imposerait un module natif et surtout la
+// transparence vidéo n'est pas portable iOS+Android — on aurait un
+// rectangle opaque autour du marteau.
+const FORGE_PANEL = require('../../../assets/icons/forge-panel.png');
+const FORGE_HAMMER = require('../../../assets/icons/forge-hammer.png');
+const FORGE_HAMMER_HIT = require('../../../assets/icons/forge-hammer-hit.png');
+const FORGE_PANEL_RATIO = 773 / 675;
+// Plaque dorée (le bouton), mesurée sur l'asset.
+const FORGE_PLATE = { left: 0.2549, right: 0.7400, top: 0.8059, bottom: 0.9067 };
+// Point de frappe sur l'enclume, et où se situe ce point DANS chaque
+// sprite — c'est ce qui aligne les deux poses sur le même impact.
+const FORGE_ANVIL = { x: 0.50, y: 0.455 };
+const FORGE_HAMMER_ANCHOR = { x: 0.50, y: 0.25, h: 0.46 };
+const FORGE_HIT_ANCHOR = { x: 0.42, y: 0.74, h: 0.42 };
 const SHOP_PANEL_RATIO = 900 / 482;
 // Zone LISSE de la plaque, remesurée le 12/09. L'ancien relevé
 // (0,008-0,058) n'attrapait que la partie de la plaque dépassant
@@ -549,6 +565,51 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     trackEvent('runeBought', 2);
   };
 
+  // Fusion automatique : enchaîne TOUTES les fusions possibles jusqu'à
+  // épuisement, en une seule mise à jour d'état.
+  //
+  // Deux partis pris :
+  //  - les runes ÉQUIPÉES sont exclues. fuseRunes sait pourtant gérer le
+  //    cas, mais fusionner en masse pourrait déséquiper une créature
+  //    sans prévenir (2 runes équipées sur 2 créatures -> 1 seule
+  //    survit). Un bouton « tout fusionner » ne doit jamais toucher à ce
+  //    que le joueur a délibérément mis en place.
+  //  - une seule passe de setState, pas N appels à fuseRunes : chaque
+  //    appel lirait `ownedRunes` figé dans la closure et les fusions se
+  //    marcheraient dessus.
+  //
+  // Renvoie le nombre de fusions effectuées, pour le retour visuel.
+  const fuseAllRunes = () => {
+    const equipped = ownedRunes.filter((r) => r.equippedCreatureId);
+    let pool = ownedRunes.filter((r) => !r.equippedCreatureId);
+    let count = 0;
+    let again = true;
+    while (again) {
+      again = false;
+      const groups = {};
+      pool.forEach((r) => {
+        if (r.level >= RUNE_MAX_LEVEL) return;
+        const k = `${r.type}:${r.level}`;
+        (groups[k] = groups[k] || []).push(r);
+      });
+      Object.values(groups).forEach((g) => {
+        while (g.length >= 2) {
+          const a = g.pop();
+          const b = g.pop();
+          pool = pool.filter((r) => r.id !== a.id && r.id !== b.id);
+          pool.push({ id: makeRuneId(), type: a.type, level: a.level + 1, equippedCreatureId: null });
+          count += 1;
+          again = true;
+        }
+      });
+    }
+    if (count > 0) {
+      setOwnedRunes([...equipped, ...pool]);
+      trackEvent('runeFused', count);
+    }
+    return count;
+  };
+
   // Fusionne 2 runes du MÊME type et MÊME niveau en une seule au niveau
   // supérieur (jamais au-delà du palier 5) — les deux runes d'origine
   // disparaissent. Si l'une des deux était équipée, la nouvelle rune
@@ -657,6 +718,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onBuySpecial={buySpecialOffer}
         specialOffer={specialOffer}
         onFuseRunes={fuseRunes}
+        onFuseAll={fuseAllRunes}
         onBuyGriffes={buyGriffesWithDiamonds}
         onBack={() => setRunesOpen(false)}
       />
@@ -1582,6 +1644,117 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 // Boutique de runes : l'image porte le cadre et les 3 cases, le contenu
 // est rendu EN ABSOLU par-dessus, aux fractions mesurées sur l'asset.
 // Les cases sont de vrais trous, donc ce qu'on pose dedans se voit.
+// Atelier de fusion. Le marteau frappe, les éclats jaillissent, puis le
+// résultat s'affiche. Les deux poses sont empilées et c'est leur OPACITÉ
+// qui bascule : changer la `source` d'une Image en cours d'animation
+// provoquerait un rendu JS à chaque coup, alors qu'opacité et transform
+// partent sur le driver natif.
+function ForgePanel({ width, onAutoFuse }) {
+  const H = width / FORGE_PANEL_RATIO;
+  const blow = useRef(new Animated.Value(0)).current;
+  const [result, setResult] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const hamH = H * FORGE_HAMMER_ANCHOR.h;
+  const hamW = hamH * (268 / 420);
+  const hitH = H * FORGE_HIT_ANCHOR.h;
+  const hitW = hitH * (560 / 492);
+
+  // 0 -> marteau levé, 1 -> marteau abattu.
+  const hamTranslate = blow.interpolate({ inputRange: [0, 1], outputRange: [-H * 0.20, 0] });
+  const hamRotate = blow.interpolate({ inputRange: [0, 1], outputRange: ['32deg', '4deg'] });
+  // Le sprite d'impact n'apparaît que sur la toute fin de la descente.
+  const hitOpacity = blow.interpolate({ inputRange: [0, 0.82, 1], outputRange: [0, 0, 1] });
+  const hamOpacity = blow.interpolate({ inputRange: [0, 0.82, 1], outputRange: [1, 1, 0] });
+
+  const strike = (times, done) => {
+    const one = Animated.sequence([
+      Animated.timing(blow, { toValue: 1, duration: 170, useNativeDriver: true }),
+      Animated.timing(blow, { toValue: 0, duration: 230, useNativeDriver: true }),
+    ]);
+    Animated.sequence(Array.from({ length: times }, () => one)).start(done);
+  };
+
+  const onPress = () => {
+    if (busy) return;
+    // La fusion est appliquée TOUT DE SUITE : l'animation n'est qu'un
+    // retour visuel. Si le joueur quitte l'écran pendant les coups de
+    // marteau, ses runes sont déjà fusionnées.
+    const count = onAutoFuse();
+    if (count === 0) {
+      setResult('Rien à fusionner');
+      return;
+    }
+    setBusy(true);
+    setResult(null);
+    strike(Math.min(3, count), () => {
+      setBusy(false);
+      setResult(`${count} fusion${count > 1 ? 's' : ''} !`);
+    });
+  };
+
+  return (
+    <View style={{ width, height: H }}>
+      <Image
+        source={FORGE_PANEL}
+        style={{ position: 'absolute', width, height: H, pointerEvents: 'none' }}
+        resizeMode="stretch"
+      />
+
+      <Animated.Image
+        source={FORGE_HAMMER}
+        resizeMode="contain"
+        style={{
+          position: 'absolute',
+          width: hamW, height: hamH,
+          left: width * FORGE_ANVIL.x - hamW * FORGE_HAMMER_ANCHOR.x,
+          top: H * FORGE_ANVIL.y - hamH * FORGE_HAMMER_ANCHOR.y - H * 0.10,
+          opacity: hamOpacity,
+          transform: [{ translateY: hamTranslate }, { rotate: hamRotate }],
+          pointerEvents: 'none',
+        }}
+      />
+      <Animated.Image
+        source={FORGE_HAMMER_HIT}
+        resizeMode="contain"
+        style={{
+          position: 'absolute',
+          width: hitW, height: hitH,
+          left: width * FORGE_ANVIL.x - hitW * FORGE_HIT_ANCHOR.x,
+          top: H * FORGE_ANVIL.y - hitH * FORGE_HIT_ANCHOR.y,
+          opacity: hitOpacity,
+          pointerEvents: 'none',
+        }}
+      />
+
+      {result && (
+        <View style={styles.forgeResultWrap} pointerEvents="none">
+          <Text style={styles.forgeResultText}>{result}</Text>
+        </View>
+      )}
+
+      {/* La plaque dorée EST le bouton. */}
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          left: FORGE_PLATE.left * width,
+          width: (FORGE_PLATE.right - FORGE_PLATE.left) * width,
+          top: FORGE_PLATE.top * H,
+          height: (FORGE_PLATE.bottom - FORGE_PLATE.top) * H,
+          alignItems: 'center', justifyContent: 'center',
+        }}
+        onPress={onPress}
+        disabled={busy}
+        activeOpacity={0.75}
+      >
+        <Text style={styles.forgePlateText} numberOfLines={1} adjustsFontSizeToFit>
+          FUSION AUTOMATIQUE
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, onBuySpecial }) {
   const H = width / SHOP_PANEL_RATIO;
   const slotTop = SHOP_SLOT_Y.top * H;
@@ -1695,13 +1868,14 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
   );
 }
 
-function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, specialOffer, onFuseRunes, onBuyGriffes, onBack }) {
+function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, specialOffer, onFuseRunes, onFuseAll, onBuyGriffes, onBack }) {
   // Écran de fusion dédié (30/08) — remplace l'ancien mode "tape une
   // rune puis retape une pareille", pas très intuitif (fallait deviner
   // quelle rune correspondait à quelle autre). Regroupe automatiquement
   // les runes identiques, un seul bouton clair par groupe.
   const [fusionOpen, setFusionOpen] = useState(false);
   const [shopW, setShopW] = useState(0);
+  const [forgeW, setForgeW] = useState(0);
 
   if (fusionOpen) {
     return <RuneFusionScreen ownedRunes={ownedRunes} onFuseRunes={onFuseRunes} onBack={() => setFusionOpen(false)} />;
@@ -1726,48 +1900,49 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
           collection celle de gauche. La hauteur est la ressource rare en
           paysage, on ne l'empile pas verticalement. */}
       <View style={styles.runesBody}>
-        <View style={styles.runesLeftCol}>
+        {/* Colonne GAUCHE : l'atelier. La plaque dorée déclenche la
+            fusion automatique ; le bouton dessous mène à la fusion
+            manuelle, pour choisir une paire précise. */}
+        <View style={styles.runesLeftCol} onLayout={(e) => setForgeW(e.nativeEvent.layout.width)}>
+          {forgeW > 0 && <ForgePanel width={forgeW} onAutoFuse={onFuseAll} />}
           <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>
-            <Text style={styles.fusionModeBtnText}>🔀 Fusionner des runes</Text>
+            <Text style={styles.fusionModeBtnText}>🔀 Fusion manuelle</Text>
           </TouchableOpacity>
-          <Text style={styles.runeHint}>
-            Pour équiper une rune, va dans la fiche d'une créature.
-          </Text>
-          <ScrollView contentContainerStyle={styles.runeGrid}>
-        {ownedRunes.length === 0 ? (
-          <Text style={styles.runeEmptyText}>Aucune rune pour l'instant — achètes-en une ci-dessus !</Text>
-        ) : (
-          ownedRunes
-            .slice()
-            .sort((a, b) => b.level - a.level)
-            .map((rune) => {
-              const def = RUNE_TYPES[rune.type];
-              return (
-                <View key={rune.id} style={[styles.runeCell, { borderColor: def.color, opacity: 0.9 }]}>
-                  <Text style={styles.runeEmoji}>{def.icon}</Text>
-                  <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
-                  {rune.equippedCreatureId && <Text style={styles.runeEquippedTag}>équipée</Text>}
-                </View>
-              );
-            })
-        )}
-          </ScrollView>
         </View>
 
-        {/* Boutique : panneau illustré en HAUT À DROITE. Sa largeur est
-            mesurée par onLayout et sa hauteur en découle (ratio de
-            l'image) — jamais l'inverse, sinon le cadre se déforme. */}
-        <View style={styles.runesRightCol} onLayout={(e) => setShopW(e.nativeEvent.layout.width)}>
-          {shopW > 0 && (
-            <RuneShopPanel
-              width={shopW}
-              griffes={griffes}
-              specialOffer={specialOffer}
-              onBuyRandom={onBuyRune}
-              onBuyPack={onBuyPack}
-              onBuySpecial={onBuySpecial}
-            />
-          )}
+        {/* Colonne DROITE : boutique en haut, collection dessous. */}
+        <View style={styles.runesRightCol}>
+          <View onLayout={(e) => setShopW(e.nativeEvent.layout.width)}>
+            {shopW > 0 && (
+              <RuneShopPanel
+                width={shopW}
+                griffes={griffes}
+                specialOffer={specialOffer}
+                onBuyRandom={onBuyRune}
+                onBuyPack={onBuyPack}
+                onBuySpecial={onBuySpecial}
+              />
+            )}
+          </View>
+          <ScrollView contentContainerStyle={styles.runeGrid}>
+            {ownedRunes.length === 0 ? (
+              <Text style={styles.runeEmptyText}>Aucune rune — achètes-en une dans la boutique.</Text>
+            ) : (
+              ownedRunes
+                .slice()
+                .sort((a, b) => b.level - a.level)
+                .map((rune) => {
+                  const def = RUNE_TYPES[rune.type];
+                  return (
+                    <View key={rune.id} style={[styles.runeCell, { borderColor: def.color, opacity: 0.9 }]}>
+                      <Text style={styles.runeEmoji}>{def.icon}</Text>
+                      <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
+                      {rune.equippedCreatureId && <Text style={styles.runeEquippedTag}>équipée</Text>}
+                    </View>
+                  );
+                })
+            )}
+          </ScrollView>
         </View>
       </View>
     </View>
@@ -1984,9 +2159,19 @@ const styles = StyleSheet.create({
   // illustrée à droite. En paysage la hauteur est la ressource rare, on
   // n'empile pas verticalement.
   runesBody: { flex: 1, flexDirection: 'row', gap: 12 },
-  runesLeftCol: { flex: 1 },
-  runesRightCol: { width: '46%', alignItems: 'stretch' },
+  runesLeftCol: { width: '38%' },
+  runesRightCol: { flex: 1 },
   shopBannerText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
+  forgePlateText: { color: '#4a3410', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
+  forgeResultWrap: {
+    position: 'absolute', left: 0, right: 0, top: '6%', alignItems: 'center',
+    pointerEvents: 'none',
+  },
+  forgeResultText: {
+    color: '#ffd86b', fontSize: 13, fontWeight: '900',
+    backgroundColor: 'rgba(8,14,24,0.75)', paddingHorizontal: 10, paddingVertical: 3,
+    borderRadius: 10, overflow: 'hidden',
+  },
   shopIconRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   shopOfferIcon: { fontSize: 30 },
   shopOfferIconSmall: { fontSize: 17 },
