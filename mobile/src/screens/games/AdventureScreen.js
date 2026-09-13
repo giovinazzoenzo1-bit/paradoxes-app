@@ -1323,7 +1323,10 @@ const CHAPTER_PATHS = [
    [0.271, 0.451], [0.481, 0.386], [0.691, 0.435], [0.862, 0.271], [0.614, 0.116]],
   // C — triple vague
   [[0.118, 0.868], [0.366, 0.794], [0.614, 0.868], [0.862, 0.745], [0.653, 0.598],
-   [0.405, 0.533], [0.157, 0.451], [0.366, 0.304], [0.634, 0.239], [0.882, 0.124]],
+   [0.405, 0.533], [0.157, 0.451], [0.366, 0.304], [0.634, 0.239], [0.882, 0.215]],
+  // ⚠️ Le dernier nœud de C a été DESCENDU (0,124 -> 0,215) : à 0,124 il
+  // tombait sous les boutons du coin haut droit une fois la carte passée
+  // en plein écran. Vérifié : écart minimal inchangé (96 dp).
   // D — départ au centre, grand tour
   [[0.500, 0.884], [0.233, 0.802], [0.080, 0.614], [0.328, 0.533], [0.595, 0.598],
    [0.862, 0.533], [0.729, 0.353], [0.481, 0.304], [0.233, 0.255], [0.405, 0.108]],
@@ -1585,7 +1588,9 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // combatLogic.js/opponentPowerBudget).
   const currentChapter = chapterForLevel(currentUnlockedLevel);
   const chaptersToShow = currentChapter + 6;
-  const pathWidth = screenWidth - 28; // marges de l'écran (padding: 14 de chaque côté)
+  // Plus aucun retrait : la page fait toute la largeur de l'écran, sinon
+  // le décor ne toucherait pas les bords.
+  const pathWidth = screenWidth;
 
   // Pages ORDONNÉES À L'ENVERS : le chapitre 1 est la page du BAS et les
   // suivants sont AU-DESSUS. On gravit donc la carte — pour voir la
@@ -1608,13 +1613,19 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   };
 
   return (
-    <View style={styles.screen}>
+    // PAS `styles.screen` ici : son `padding: 14` laissait une bande
+    // noire tout autour du décor. La carte occupe l'écran entier et
+    // l'en-tête flotte PAR-DESSUS.
+    <View style={styles.mapScreen}>
       {/* Plein écran : la barre système casse l'immersion en paysage. */}
       <StatusBar hidden />
-      {/* Griffes et énergie dans le COIN haut droit, comme sur les
-          autres écrans. Le libellé « Chapitre N » est retiré : chaque
-          page EST un chapitre, la pastille de droite dit lequel. */}
-      <View style={styles.header}>
+      {/* Voiles sombres DERRIÈRE LES BOUTONS seulement, pas sur toute la
+          largeur : un voile pleine largeur assombrissait le niveau 10,
+          qui passe justement dans le trou central de l'en-tête.
+          Vérifié : aucun nœud des 5 tracés n'entre dans ces deux zones. */}
+      <View style={[styles.mapHeaderScrim, styles.mapScrimLeft]} />
+      <View style={[styles.mapHeaderScrim, styles.mapScrimRight]} />
+      <View style={[styles.header, styles.mapHeader]}>
         <BackButton onPress={onBack} />
         <View style={styles.headerSpacer} />
         {/* Aide sur les éléments, juste à GAUCHE des Griffes : elle se
@@ -1657,11 +1668,19 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
               {/* Décor du chapitre. Posé avec une largeur ET une hauteur
                   explicites (jamais absoluteFill seul sur une Image :
                   elle se dessinerait à sa taille native). */}
+              {/* `stretch` et NON `cover` : en plein écran le rapport
+                  passe de 2,60 (image) à ~2,17 (écran). `cover`
+                  rognerait 17% de la largeur et rejetterait les niveaux
+                  1 et 5 HORS de l'écran (mesuré : x = -1 et x = 837).
+                  `stretch` remplit exactement, donc une fraction de
+                  l'image reste une fraction de page et les niveaux
+                  tombent pile sur les plateformes peintes. Coût : ~20%
+                  d'étirement vertical, invisible sur ce style. */}
               {scene && (
                 <Image
                   source={scene.bg}
                   style={{ position: 'absolute', width: pathWidth, height: pageH, pointerEvents: 'none' }}
-                  resizeMode="cover"
+                  resizeMode="stretch"
                 />
               )}
               <View style={[styles.chapterPath, { height: pageH }]}>
@@ -2553,6 +2572,20 @@ const styles = StyleSheet.create({
   chapterBlock: {},
   chapterPath: { width: '100%', position: 'relative' },
   mapScroll: { flex: 1 },
+  mapScreen: { flex: 1, backgroundColor: COLORS.bg },
+  // En-tête EN SURCOUCHE : il ne prend plus de place dans le flux, donc
+  // le décor commence bien à y = 0.
+  mapHeader: {
+    position: 'absolute', left: 0, right: 0, top: 0, zIndex: 20,
+    paddingHorizontal: 14, paddingTop: 8, marginBottom: 0,
+  },
+  mapHeaderScrim: {
+    position: 'absolute', top: 0, height: 58, zIndex: 19,
+    backgroundColor: 'rgba(6,10,18,0.5)',
+    pointerEvents: 'none',
+  },
+  mapScrimLeft: { left: 0, width: 150 },
+  mapScrimRight: { right: 0, width: 300 },
   // Pastilles de chapitre, collées au bord droit et hors du flux.
   chapterDots: {
     position: 'absolute', right: 4, top: 0, bottom: 0,

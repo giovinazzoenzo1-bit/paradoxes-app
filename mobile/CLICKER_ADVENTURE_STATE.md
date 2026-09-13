@@ -845,6 +845,32 @@ pas de croix), puis le `BackButton` occupe la place.
 ⚠️ Règle : pour remplacer un élément DESSINÉ, il faut modifier l'asset —
 le code ne peut que poser par-dessus.
 
+## Carte en PLEIN ÉCRAN (13/09)
+
+Le décor touche les 4 bords : plus de `padding: 14` sur l'écran (il
+laissait une bande noire), et l'en-tête est passé **en surcouche**
+(`position: absolute`) pour ne plus occuper de place dans le flux.
+`pathWidth` vaut désormais la largeur ENTIÈRE de l'écran.
+
+⚠️ **`stretch` et non `cover` pour le décor.** En plein écran le rapport
+passe de 2,60 (image) à ~2,17 (écran). Mesuré : avec `cover`, 17 % de la
+largeur est rognée et les niveaux 1 et 5 sortent de l'écran (x = −1 et
+x = 837). `stretch` remplit exactement, donc une fraction de l'image
+reste une fraction de page. Coût : ~20 % d'étirement vertical, invisible
+sur ce style illustré.
+
+⚠️ **Voiles sombres DERRIÈRE LES BOUTONS uniquement.** Un voile pleine
+largeur assombrissait le niveau 10, qui passe justement dans le trou
+central de l'en-tête. Deux zones : gauche 150 dp, droite 300 dp.
+
+⚠️ **Conflit trouvé par le calcul** : le dernier nœud du tracé C tombait
+sous les boutons du coin haut droit une fois en plein écran. Descendu de
+0,124 à 0,215 ; écart minimal inchangé (96 dp).
+
+**À revérifier à chaque nouveau tracé ou décor** : pour chaque nœud dont
+le bord haut est au-dessus de 58 dp, contrôler qu'il ne croise ni la
+zone gauche ni la zone droite.
+
 ## Décor par chapitre — méthode (13/09)
 
 `CHAPTER_SCENES[n] = { bg, path }`. Le chapitre 1 a son île
