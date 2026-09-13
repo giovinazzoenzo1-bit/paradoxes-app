@@ -38,15 +38,25 @@ const RUNES_SHOP_PANEL = require('../../../assets/icons/runes-shop-panel.png');
 // vidéo : une vidéo imposerait un module natif et surtout la
 // transparence vidéo n'est pas portable iOS+Android — on aurait un
 // rectangle opaque autour du marteau.
-const FORGE_PANEL = require('../../../assets/icons/forge-panel.png');
+const FORGE_PANEL = require('../../../assets/icons/forge-panel-wide.png');
+// Panneau de collection + fond de l'écran Runes (13/09).
+const COLLECTION_PANEL = require('../../../assets/icons/collection-panel.png');
+const RUNES_BG = require('../../../assets/adventure/runes-bg.jpg');
+const COLLECTION_RATIO = 900 / 288;
+const COLLECTION_BANNER = { left: 0.300, right: 0.699, top: 0.004, bottom: 0.153 };
+// Zone de bois utile, à l'intérieur du cadre métallique.
+const COLLECTION_INNER = { left: 0.030, right: 0.970, top: 0.175, bottom: 0.930 };
 const FORGE_HAMMER = require('../../../assets/icons/forge-hammer.png');
 const FORGE_HAMMER_HIT = require('../../../assets/icons/forge-hammer-hit.png');
-const FORGE_PANEL_RATIO = 773 / 675;
+// Version LARGE (13/09) : l'ancien panneau était presque carré (1,145)
+// et mangeait toute la hauteur de sa colonne. Repères REMESURÉS sur le
+// nouvel asset — ils ne sont pas transposables d'une image à l'autre.
+const FORGE_PANEL_RATIO = 900 / 428;
 // Plaque dorée (le bouton), mesurée sur l'asset.
-const FORGE_PLATE = { left: 0.2549, right: 0.7400, top: 0.8059, bottom: 0.9067 };
+const FORGE_PLATE = { left: 0.3622, right: 0.6322, top: 0.7850, bottom: 0.8949 };
 // Point de frappe sur l'enclume, et où se situe ce point DANS chaque
 // sprite — c'est ce qui aligne les deux poses sur le même impact.
-const FORGE_ANVIL = { x: 0.50, y: 0.455 };
+const FORGE_ANVIL = { x: 0.50, y: 0.420 };
 // L'asset du marteau levé a été MIROITÉ (12/09) : il avait le manche à
 // gauche (x 0,37) alors que la pose d'impact l'a à droite (x 0,65), donc
 // le marteau changeait de côté au moment de frapper. Après miroir les
@@ -1713,7 +1723,7 @@ function ForgePanel({ width, onAutoFuse }) {
       />
 
       {result && (
-        <View style={styles.forgeResultWrap} pointerEvents="none">
+        <View style={styles.forgeResultWrap}>
           <Text style={styles.forgeResultText}>{result}</Text>
         </View>
       )}
@@ -1883,11 +1893,14 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
   const [rightBox, setRightBox] = useState({ w: 0, h: 0 });
   // La forge est limitée par la HAUTEUR (ratio 1,145, presque carré) :
   // à pleine largeur de colonne elle ne laisserait rien à la collection.
-  const forgeMaxH = rightBox.h * 0.66;
+  // 0,55 et non 0,66 : le panneau large (ratio 2,10) à pleine largeur
+  // de colonne ferait 207 dp de haut et n'en laisserait que ~100 à la
+  // collection, soit une seule rangée de runes.
+  const forgeMaxH = rightBox.h * 0.55;
   const forgeW = rightBox.h > 0 ? Math.min(rightBox.w, forgeMaxH * FORGE_PANEL_RATIO) : 0;
 
   return (
-    <View style={styles.screen}>
+    <ImageBackground source={RUNES_BG} style={styles.screen} resizeMode="cover">
       {/* Plein écran : la barre système casse l'immersion en paysage. */}
       <StatusBar hidden />
       {/* Même disposition que le menu Aventure : retour à gauche, titre,
@@ -1927,28 +1940,55 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
           <View style={styles.forgeZone}>
             {forgeW > 0 && <ForgePanel width={forgeW} onAutoFuse={onFuseAll} />}
           </View>
-          <ScrollView contentContainerStyle={styles.runeGrid}>
-            {ownedRunes.length === 0 ? (
-              <Text style={styles.runeEmptyText}>Aucune rune — achètes-en une dans la boutique.</Text>
-            ) : (
-              ownedRunes
-                .slice()
-                .sort((a, b) => b.level - a.level)
-                .map((rune) => {
-                  const def = RUNE_TYPES[rune.type];
-                  return (
-                    <View key={rune.id} style={[styles.runeCell, { borderColor: def.color, opacity: 0.9 }]}>
-                      <Text style={styles.runeEmoji}>{def.icon}</Text>
-                      <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
-                      {rune.equippedCreatureId && <Text style={styles.runeEquippedTag}>équipée</Text>}
-                    </View>
-                  );
-                })
-            )}
-          </ScrollView>
+          {/* Cadre illustré de la collection. Le panneau est POSÉ EN
+              FOND (il est opaque, ce n'est pas un cadre à trous) et les
+              runes défilent dans sa zone de bois utile, mesurée. */}
+          <View style={styles.collectionWrap}>
+            <Image
+              source={COLLECTION_PANEL}
+              style={StyleSheet.absoluteFill}
+              resizeMode="stretch"
+            />
+            <View
+              style={[
+                styles.collectionInner,
+                {
+                  left: `${COLLECTION_INNER.left * 100}%`,
+                  right: `${(1 - COLLECTION_INNER.right) * 100}%`,
+                  top: `${COLLECTION_INNER.top * 100}%`,
+                  bottom: `${(1 - COLLECTION_INNER.bottom) * 100}%`,
+                },
+              ]}
+            >
+              <ScrollView contentContainerStyle={styles.runeGrid}>
+                {ownedRunes.length === 0 ? (
+                  <Text style={styles.runeEmptyText}>Aucune rune — achètes-en une dans la boutique.</Text>
+                ) : (
+                  ownedRunes
+                    .slice()
+                    .sort((a, b) => b.level - a.level)
+                    .map((rune) => {
+                      const def = RUNE_TYPES[rune.type];
+                      return (
+                        <View key={rune.id} style={[styles.runeCell, { borderColor: def.color, opacity: 0.95 }]}>
+                          <Text style={styles.runeEmoji}>{def.icon}</Text>
+                          <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
+                          {rune.equippedCreatureId && <Text style={styles.runeEquippedTag}>équipée</Text>}
+                        </View>
+                      );
+                    })
+                )}
+              </ScrollView>
+            </View>
+            <View style={styles.collectionBanner}>
+              <Text style={styles.collectionBannerText} numberOfLines={1} adjustsFontSizeToFit>
+                COLLECTION
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -2092,6 +2132,18 @@ const styles = StyleSheet.create({
   runesShopCol: { width: '46%' },
   runesRightCol: { flex: 1 },
   forgeZone: { alignItems: 'center' },
+  collectionWrap: { flex: 1, marginTop: 6 },
+  collectionInner: { position: 'absolute' },
+  collectionBanner: {
+    position: 'absolute',
+    left: `${COLLECTION_BANNER.left * 100}%`,
+    right: `${(1 - COLLECTION_BANNER.right) * 100}%`,
+    top: `${COLLECTION_BANNER.top * 100}%`,
+    height: `${(COLLECTION_BANNER.bottom - COLLECTION_BANNER.top) * 100}%`,
+    alignItems: 'center', justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+  collectionBannerText: { color: '#e8d5ab', fontSize: 11, fontWeight: '900', letterSpacing: 1 },
   shopBannerText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
   forgePlateText: { color: '#4a3410', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
   forgeResultWrap: {

@@ -812,6 +812,40 @@ voie fiable est donc de **repousser un commit touchant `mobile/**`**.
 l'utilisateur ne voit rien : vérifier D'ABORD qu'un run existe pour le
 dernier sha.
 
+## Assets de l'écran Runes — version large (13/09)
+
+| Asset | Taille | Rôle |
+|---|---|---|
+| `forge-panel-wide.png` | 900×428 (2,10) | remplace `forge-panel.png` (1,145), trop carré |
+| `collection-panel.png` | 900×288 (3,13) | cadre en bois autour de la collection |
+| `adventure/runes-bg.jpg` | 1400×594 | fond de forge, plein écran |
+
+⚠️ **Les repères NE SE TRANSPOSENT PAS d'un asset à l'autre.** Tout a été
+remesuré sur le panneau large : plaque dorée x 0,362-0,632 · y
+0,785-0,895, point de frappe x 0,50 · y 0,420. Réutiliser les anciennes
+valeurs aurait posé le marteau à côté de l'enclume.
+
+⚠️ **Le panneau de collection est OPAQUE**, ce n'est pas un cadre à
+trous comme la boutique : les runes sont posées PAR-DESSUS, dans la zone
+de bois utile (x 0,030-0,970 · y 0,175-0,930), également mesurée.
+
+⚠️ **L'atelier est bridé à 0,55 de la hauteur de colonne**, pas à sa
+pleine largeur : avec un ratio de 2,10 il ferait 207 dp de haut et ne
+laisserait que ~100 dp à la collection, soit une seule rangée de runes.
+
+### Effacer un filigrane POSÉ SUR une texture
+
+Sur ces trois images le filigrane Gemini est au milieu du décor (dalles,
+mur, bois), pas isolé sur le fond : « garder la plus grande zone
+connexe » ne peut rien. Méthode : **recopier une zone voisine prise à la
+MÊME hauteur**, avec un fondu sur les bords du patch. Le grain est
+horizontal sur les trois — prendre la source au-dessus ou en dessous
+traverserait un joint de pierre et se verrait.
+
+⚠️ Pour le localiser automatiquement, **exclure d'abord les pixels
+magenta** : le fond est plus clair que le décor et sort en tête du
+seuillage, ce qui masque le filigrane.
+
 ## Atelier de forge + fusion automatique (12/09)
 
 Panneau `forge-panel.png` (enclume + plaque dorée) en HAUT À DROITE de
