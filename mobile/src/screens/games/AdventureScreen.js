@@ -60,18 +60,21 @@ const WOOD_PLATE_RATIO = 520 / 134;
 // finirait par mentir dès le premier rééquilibrage.
 function runeEffectText(type, level) {
   const table = RUNE_BONUS_TABLE[type];
-  if (!table) return '';
+  if (!table) return { simple: '', value: '' };
   const v = table[Math.max(0, Math.min(table.length - 1, level - 1))];
   const pct = `${Math.round(v * 100)}%`;
+  // Deux morceaux : une phrase qu'un enfant comprend, et le chiffre
+  // exact en dessous. Le chiffre vient de la MÊME table que le combat,
+  // donc il ne peut pas mentir après un rééquilibrage.
   switch (type) {
-    case 'force': return `+${pct} d'attaque`;
-    case 'vitalite': return `+${pct} de points de vie`;
-    case 'celerite': return `+${v.toFixed(2)} au multiplicateur de dégâts`;
-    case 'dexterite': return `−${pct} de taps en combat · +${(v * 0.4).toFixed(2)} de dégâts`;
-    case 'affinite': return `+${v.toFixed(2)} sur l'avantage élémentaire`;
-    case 'butin': return `+${pct} de Griffes à la victoire`;
-    case 'resilience': return `Survit 1× par combat, à ${pct} des PV max`;
-    default: return '';
+    case 'force': return { simple: 'Tes coups font plus mal.', value: `+${pct} d'attaque` };
+    case 'vitalite': return { simple: 'Tu as plus de vie.', value: `+${pct} de vie` };
+    case 'celerite': return { simple: 'Tes attaques frappent plus fort.', value: `+${v.toFixed(2)} de dégâts` };
+    case 'dexterite': return { simple: 'Moins de tapes pour attaquer.', value: `−${pct} de tapes` };
+    case 'affinite': return { simple: 'Très fort contre le bon élément.', value: `+${v.toFixed(2)} si avantage` };
+    case 'butin': return { simple: 'Tu gagnes plus de griffes.', value: `+${pct} de griffes` };
+    case 'resilience': return { simple: 'Tu survis à un coup mortel.', value: `1× par combat, à ${pct} de vie` };
+    default: return { simple: '', value: '' };
   }
 }
 const RUNES_BG = require('../../../assets/adventure/runes-bg.jpg');
@@ -205,20 +208,20 @@ export const DEV_RESET_GRIFFES_KEY = 'adventure:dev:resetGriffes';
 // encore appliqués aux stats de combat, seule la structure achat/fusion
 // est fonctionnelle pour l'instant.
 const RUNE_TYPES = {
-  force: { name: 'Rune de Force', icon: '⚔️', color: '#FF5252' },
-  vitalite: { name: 'Rune de Vitalité', icon: '❤️', color: COLORS.good },
+  force: { name: 'Rune de Force', icon: '⚔️', color: '#FF5252', art: require('../../../assets/icons/runes/force.png') },
+  vitalite: { name: 'Rune de Vitalité', icon: '❤️', color: COLORS.good, art: require('../../../assets/icons/runes/vitalite.png') },
   // L'Endurance a disparu du combat le 11/09 (remplacée par le mana) :
   // sa rune ne servait plus à rien. Devient la Dextérité, qui retire des
   // taps au défi de combat. Les runes d'Endurance DÉJÀ EN SAUVEGARDE
   // sont converties au chargement — sans ça, RUNE_TYPES[type] serait
   // undefined et l'écran des runes planterait sur def.icon.
-  dexterite: { name: 'Rune de Dextérité', icon: '🎯', color: COLORS.action },
-  celerite: { name: 'Rune de Célérité', icon: '⚡', color: COLORS.neonCyan },
+  dexterite: { name: 'Rune de Dextérité', icon: '🎯', color: COLORS.action, art: require('../../../assets/icons/runes/dexterite.png') },
+  celerite: { name: 'Rune de Célérité', icon: '⚡', color: COLORS.neonCyan, art: require('../../../assets/icons/runes/celerite.png') },
   // 3 runes ajoutées le 12/09 pour sortir du « tout offensif » : les 4
   // premières poussaient toutes les dégâts ou les PV.
-  affinite: { name: "Rune d'Affinité", icon: '🔥', color: '#ff8a3d' },
-  butin: { name: 'Rune de Butin', icon: '💰', color: '#f2c14e' },
-  resilience: { name: 'Rune de Résilience', icon: '🛡️', color: '#7fdcff' },
+  affinite: { name: "Rune d'Affinité", icon: '🔥', color: '#ff8a3d', art: require('../../../assets/icons/runes/affinite.png') },
+  butin: { name: 'Rune de Butin', icon: '💰', color: '#f2c14e', art: require('../../../assets/icons/runes/butin.png') },
+  resilience: { name: 'Rune de Résilience', icon: '🛡️', color: '#7fdcff', art: require('../../../assets/icons/runes/resilience.png') },
 };
 const RUNE_TYPE_KEYS = Object.keys(RUNE_TYPES);
 
@@ -1193,7 +1196,11 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
                       {theme && (
                         <Image source={theme.runeSlot} style={styles.mlRuneSlotImg} resizeMode="contain" />
                       )}
-                      <Text style={styles.mlRuneEmoji}>{def ? def.icon : '＋'}</Text>
+                      {def ? (
+                        <Image source={def.art} style={styles.mlRuneArt} resizeMode="contain" />
+                      ) : (
+                        <Text style={styles.mlRuneEmoji}>＋</Text>
+                      )}
                       {rune && <Text style={styles.mlRuneLevel}>{rune.level}</Text>}
                     </TouchableOpacity>
                   );
@@ -1684,6 +1691,7 @@ function RuneInventory({ ownedRunes, onClose }) {
   const [selectedId, setSelectedId] = useState(null);
   const selected = ownedRunes.find((r) => r.id === selectedId) || null;
   const def = selected ? RUNE_TYPES[selected.type] : null;
+  const effect = selected ? runeEffectText(selected.type, selected.level) : null;
 
   // Le cadre garde SON ratio. Le forcer dans une boîte en % l'étirait de
   // 47% : le décor paraissait écrasé et la bannière décalée.
@@ -1733,7 +1741,7 @@ function RuneInventory({ ownedRunes, onClose }) {
                       onPress={() => setSelectedId(on ? null : rune.id)}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.runeEmoji}>{d.icon}</Text>
+                      <Image source={d.art} style={styles.runeArt} resizeMode="contain" />
                       <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
                       {rune.equippedCreatureId && <Text style={styles.runeEquippedTag}>équipée</Text>}
                     </TouchableOpacity>
@@ -1747,12 +1755,16 @@ function RuneInventory({ ownedRunes, onClose }) {
         <View style={[box(INV_DETAIL_ZONE), styles.invDetailCol]}>
           {selected ? (
             <>
-              <Text style={styles.invDetailIcon}>{def.icon}</Text>
+              {/* Pierre encadrée, comme sur la maquette. */}
+              <View style={[styles.invDetailArtBox, { borderColor: def.color }]}>
+                <Image source={def.art} style={styles.invDetailArt} resizeMode="contain" />
+              </View>
               <Text style={[styles.invDetailName, { color: def.color }]} numberOfLines={2}>{def.name}</Text>
               <Text style={styles.invDetailLevel}>Niveau {selected.level} / {RUNE_MAX_LEVEL}</Text>
-              <Text style={styles.invDetailEffect}>{runeEffectText(selected.type, selected.level)}</Text>
+              <Text style={styles.invDetailEffect}>{effect.simple}</Text>
+              <Text style={[styles.invDetailValue, { color: def.color }]}>{effect.value}</Text>
               <Text style={styles.invDetailState}>
-                {selected.equippedCreatureId ? 'Équipée sur une créature' : 'Non équipée'}
+                {selected.equippedCreatureId ? 'Équipée' : 'Non équipée'}
               </Text>
             </>
           ) : (
@@ -1760,12 +1772,19 @@ function RuneInventory({ ownedRunes, onClose }) {
           )}
         </View>
 
-        {/* La croix du cadre EST le bouton de fermeture. */}
+        {/* La croix DESSINÉE sur le cadre est rendue tapable... */}
         <TouchableOpacity
           style={box(INV_CLOSE)}
           onPress={onClose}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         />
+      </View>
+
+      {/* ...et le bouton RETOUR habituel de l'appli, au même endroit que
+          partout ailleurs (en haut à gauche) : l'utilisateur ne doit pas
+          avoir à chercher un bouton différent selon l'écran. */}
+      <View style={styles.invBackWrap}>
+        <BackButton onPress={onClose} />
       </View>
     </View>
   );
@@ -2061,18 +2080,15 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
               l'inverse, sinon le cadre se déforme. */}
           {shopW > 0 && (
             <TouchableOpacity
-              style={{
-                // 55% de la colonne, pas 100% : à pleine largeur la
-                // plaque faisait 379x98 dp et écrasait la boutique.
-                width: shopW * 0.55, height: (shopW * 0.55) / WOOD_PLATE_RATIO,
-                alignSelf: 'center',
-                alignItems: 'center', justifyContent: 'center', marginTop: 10,
-              }}
+              style={styles.invOpenBtn}
               onPress={() => setInventoryOpen(true)}
               activeOpacity={0.8}
             >
+              {/* La plaque se cale sur le TEXTE (padding + hauteur
+                  fixe), elle ne prend plus la largeur de la colonne :
+                  à 100% elle faisait 379x98 dp et écrasait la boutique. */}
               <Image source={WOOD_PLATE} style={StyleSheet.absoluteFill} resizeMode="stretch" />
-              <Text style={styles.woodPlateText} numberOfLines={1} adjustsFontSizeToFit>
+              <Text style={styles.woodPlateText} numberOfLines={1}>
                 INVENTAIRE ({ownedRunes.length})
               </Text>
             </TouchableOpacity>
@@ -2125,7 +2141,7 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
                     style={[styles.runeCell, { borderColor: def.color }]}
                     onPress={() => onPick(rune.id)}
                   >
-                    <Text style={styles.runeEmoji}>{def.icon}</Text>
+                    <Image source={def.art} style={styles.runeArt} resizeMode="contain" />
                     <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
                   </TouchableOpacity>
                 );
@@ -2237,7 +2253,24 @@ const styles = StyleSheet.create({
   runesShopCol: { width: '46%' },
   runesRightCol: { flex: 1 },
   forgeZone: { alignItems: 'center' },
-  woodPlateText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 0.8 },
+  // Plaque dimensionnée par son texte : hauteur fixe, largeur libre.
+  invOpenBtn: {
+    alignSelf: 'center', marginTop: 10,
+    height: 34, paddingHorizontal: 26,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  woodPlateText: { color: '#f3e3c0', fontSize: 12, fontWeight: '900', letterSpacing: 0.6 },
+  // Bouton retour de la surcouche, à la même place que sur tous les
+  // autres écrans.
+  invBackWrap: { position: 'absolute', left: 14, top: 12 },
+  runeArt: { width: 30, height: 30 },
+  invDetailArtBox: {
+    width: 54, height: 54, borderWidth: 2, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  invDetailArt: { width: 42, height: 42 },
+  invDetailValue: { fontSize: 11, fontWeight: '900', textAlign: 'center', marginTop: 3 },
 
   // --- Inventaire des runes (surcouche, 13/09) ---
   invOverlay: {
@@ -2257,7 +2290,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1, borderLeftColor: 'rgba(243,227,192,0.25)',
     alignItems: 'center', justifyContent: 'center',
   },
-  invDetailIcon: { fontSize: 30 },
   invDetailName: { fontSize: 12, fontWeight: '900', textAlign: 'center', marginTop: 4 },
   invDetailLevel: { color: '#e8d5ab', fontSize: 10, fontWeight: '800', marginTop: 2 },
   invDetailEffect: {
@@ -2394,7 +2426,6 @@ const styles = StyleSheet.create({
     width: 54, backgroundColor: COLORS.panel, borderRadius: 10, padding: 6, alignItems: 'center',
     borderWidth: 2,
   },
-  runeEmoji: { fontSize: 18 },
   runeLevel: { color: COLORS.text, fontSize: 9, fontWeight: '800', marginTop: 2 },
   actionBtnDisabledAdv: { opacity: 0.4 },
 
@@ -2651,6 +2682,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.panelLight, borderWidth: 1, borderColor: COLORS.border,
   },
   mlRuneEmoji: { fontSize: 18 },
+  mlRuneArt: { width: 22, height: 22 },
   mlRuneLevel: { color: COLORS.muted, fontSize: 9, fontWeight: '800' },
   mlAttrBox: {
     flex: 1.25, backgroundColor: COLORS.panel, borderRadius: 12, padding: 8,

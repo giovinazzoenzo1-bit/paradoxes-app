@@ -812,6 +812,47 @@ voie fiable est donc de **repousser un commit touchant `mobile/**`**.
 l'utilisateur ne voit rien : vérifier D'ABORD qu'un run existe pour le
 dernier sha.
 
+## Pierres runiques dessinées (13/09)
+
+Les 7 emoji sont remplacés par des pierres illustrées
+(`assets/icons/runes/{force,vitalite,celerite,dexterite,affinite,butin,resilience}.png`).
+Le champ `icon` (emoji) est CONSERVÉ dans `RUNE_TYPES` : une `Alert`
+native ne peut pas afficher d'image.
+
+⚠️ **Association vérifiée par la COULEUR, pas par l'ordre des fichiers** :
+teintes mesurées 1° (rouge/force), 155° (vert/vitalité), 183°
+(cyan/célérité), 268° (violet/dextérité), 22° (orange/affinité), 43°
+(doré/butin), saturation 0,11 (argent/résilience). Se fier au seul ordre
+d'envoi aurait pu intervertir deux runes sans que rien ne le signale.
+
+⚠️ Les pierres sont utilisées **partout** : grille d'inventaire, choix
+d'une rune à équiper, emplacements de la fiche créature. Laisser un
+emoji quelque part aurait trahi le reste.
+
+### Texte d'effet en DEUX morceaux
+
+`runeEffectText()` renvoie `{ simple, value }` : une phrase
+compréhensible par un enfant, puis le chiffre exact.
+
+| Rune | Phrase | Valeur (niv.5) |
+|---|---|---|
+| Force | Tes coups font plus mal. | +27% d'attaque |
+| Vitalité | Tu as plus de vie. | +32% de vie |
+| Célérité | Tes attaques frappent plus fort. | +0,70 de dégâts |
+| Dextérité | Moins de tapes pour attaquer. | −60% de tapes |
+| Affinité | Très fort contre le bon élément. | +0,45 si avantage |
+| Butin | Tu gagnes plus de griffes. | +45% de griffes |
+| Résilience | Tu survis à un coup mortel. | 1× par combat, à 30% de vie |
+
+⚠️ La valeur reste tirée de `RUNE_BONUS_TABLE` : la phrase peut être
+simplifiée, **le chiffre ne peut pas mentir** après un rééquilibrage.
+
+⚠️ Bouton d'ouverture dimensionné par son TEXTE (hauteur 34, padding
+26), pas par la largeur de colonne : à 100% il faisait 379×98 dp.
+
+⚠️ La surcouche utilise le `BackButton` commun, en haut à gauche comme
+partout ailleurs — la croix dessinée sur le cadre reste tapable en plus.
+
 ## Panneau d'inventaire dédié (13/09)
 
 `inventory-panel.png` (1000×572, ratio 1,748) remplace le cadre en bois.
