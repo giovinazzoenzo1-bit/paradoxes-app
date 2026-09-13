@@ -1347,18 +1347,16 @@ const CHAPTER_SCENES = {
   },
   2: {
     bg: require('../../../assets/adventure/chapter-2.jpg'),
-    // ⚠️ Cette île n'a PAS de plateformes rondes : la détection du
-    // chapitre 1 n'y trouvait que 2 disques. Le chemin a donc été
-    // construit autrement — masque du SOL PRATICABLE (dalles et
-    // sentiers, 7% de l'image), puis sommets de la carte de distance
-    // pour trouver les emplacements les plus dégagés, puis mise en ordre
-    // ascendante à la main.
+    // ⚠️ Cette île n'a PAS de plateformes rondes (la détection du
+    // chapitre 1 n'y trouvait que 2 disques). Le calage part donc du
+    // masque de SOL PRATICABLE (dalles et sentiers, 7% de l'image).
     //
-    // Tenter d'accrocher le tracé générique B sur ce sol avait échoué :
-    // certains niveaux sautaient de 800 px, ses cibles tombant dans
-    // l'eau ou les arbres.
-    path: [[0.321, 0.745], [0.506, 0.825], [0.701, 0.812], [0.869, 0.808], [0.682, 0.433],
-           [0.849, 0.294], [0.626, 0.144], [0.485, 0.382], [0.266, 0.459], [0.162, 0.275]],
+    // ⚠️ Mais l'ORDRE reste celui du guide (tracé B) : Gemini l'avait
+    // bien suivi. Chaque point du plan est simplement RECALÉ sur le sol
+    // le plus dégagé dans un rayon de 90 px — déplacement de 7 à 123 px,
+    // donc le dessin de l'île reste celui prévu.
+    path: [[0.885, 0.833], [0.701, 0.812], [0.506, 0.825], [0.321, 0.745], [0.172, 0.597],
+           [0.266, 0.459], [0.485, 0.381], [0.680, 0.433], [0.849, 0.294], [0.626, 0.144]],
   },
 };
 

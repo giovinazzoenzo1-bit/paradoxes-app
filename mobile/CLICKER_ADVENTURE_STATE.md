@@ -908,10 +908,21 @@ vert, 7% de l'image), puis **sommets de la carte de distance** pour
 trouver les emplacements les plus dégagés, puis mise en ordre ascendante
 à la main.
 
-⚠️ **Ne pas tenter d'accrocher un tracé générique sur le sol.** Essayé
-sur le chapitre 2 avec le tracé B : certains niveaux sautaient de
-**800 px**, ses cibles tombant dans l'eau ou les arbres. Le chemin se
-construit DEPUIS l'île, jamais l'inverse.
+⚠️ **L'ORDRE vient TOUJOURS du guide, jamais d'une reconstruction.**
+Erreur commise sur le chapitre 2 : j'avais rebâti un ordre ascendant
+depuis l'île, ce qui a inversé le sens du parcours (niveau 1 à gauche au
+lieu de la droite). Gemini avait pourtant bien suivi le plan — 5 des 10
+points du tracé B tombaient déjà sur du sol.
+
+**La bonne méthode** : garder l'ordre du guide et RECALER chaque point
+sur le sol le plus dégagé dans un rayon de 90 px (élargi à 140 puis 200
+si rien). Sur le chapitre 2, déplacements de 7 à 123 px seulement.
+
+⚠️ L'échec initial du recalage venait de l'algorithme, pas de la
+méthode : érosion 15×15 (ne laissait que 0,6% de l'image) et exclusion
+mutuelle des points, ce qui faisait sauter certains niveaux de 800 px.
+Chercher le **maximum de la carte de distance dans un rayon borné**,
+sans exclusion.
 
 ### Le chemin n'est JAMAIS peint par l'IA
 
