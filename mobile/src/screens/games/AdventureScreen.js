@@ -574,14 +574,13 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // épuisement, en une seule mise à jour d'état.
   //
   // Deux partis pris :
-  //  - les runes ÉQUIPÉES sont exclues. fuseRunes sait pourtant gérer le
-  //    cas, mais fusionner en masse pourrait déséquiper une créature
-  //    sans prévenir (2 runes équipées sur 2 créatures -> 1 seule
-  //    survit). Un bouton « tout fusionner » ne doit jamais toucher à ce
-  //    que le joueur a délibérément mis en place.
-  //  - une seule passe de setState, pas N appels à fuseRunes : chaque
-  //    appel lirait `ownedRunes` figé dans la closure et les fusions se
-  //    marcheraient dessus.
+  //  - les runes ÉQUIPÉES sont exclues : fusionner en masse pourrait
+  //    déséquiper une créature sans prévenir (2 runes équipées sur 2
+  //    créatures -> 1 seule survit). Un bouton « tout fusionner » ne
+  //    doit jamais toucher à ce que le joueur a mis en place.
+  //  - tout se fait en UNE passe de setState. Fusionner paire par paire
+  //    relirait `ownedRunes` figé dans la closure à chaque étape et les
+  //    fusions s'écraseraient entre elles.
   //
   // Renvoie le nombre de fusions effectuées, pour le retour visuel.
   const fuseAllRunes = () => {
@@ -619,24 +618,6 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // supérieur (jamais au-delà du palier 5) — les deux runes d'origine
   // disparaissent. Si l'une des deux était équipée, la nouvelle rune
   // fusionnée prend AUTOMATIQUEMENT sa place (pas de désarmement surprise).
-  const fuseRunes = (id1, id2) => {
-    // Vérification faite AVANT le setState (pas dans l'updater) : appeler
-    // trackEvent (un AUTRE setState) depuis l'intérieur d'un updater
-    // risquerait un double déclenchement en mode strict de React, qui
-    // peut ré-invoquer les fonctions d'updater pour détecter les effets
-    // de bord — ça compterait la quête deux fois pour une seule fusion.
-    const r1 = ownedRunes.find((r) => r.id === id1);
-    const r2 = ownedRunes.find((r) => r.id === id2);
-    const valid = r1 && r2 && r1.id !== r2.id && r1.type === r2.type && r1.level === r2.level && r1.level < RUNE_MAX_LEVEL;
-    if (!valid) return;
-
-    setOwnedRunes((prev) => {
-      const rest = prev.filter((r) => r.id !== id1 && r.id !== id2);
-      const inheritedSlot = r1.equippedCreatureId || r2.equippedCreatureId || null;
-      return [...rest, { id: makeRuneId(), type: r1.type, level: r1.level + 1, equippedCreatureId: inheritedSlot }];
-    });
-    trackEvent('runeFused', 1);
-  };
 
   // Équipe une rune NON équipée sur une créature — refuse si la créature
   // a déjà ses 3 emplacements pleins (garde-fou, la carte des 3 cases
@@ -722,7 +703,6 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onBuyPack={buyRunePack}
         onBuySpecial={buySpecialOffer}
         specialOffer={specialOffer}
-        onFuseRunes={fuseRunes}
         onFuseAll={fuseAllRunes}
         onBuyGriffes={buyGriffesWithDiamonds}
         onBack={() => setRunesOpen(false)}
@@ -1894,22 +1874,17 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
   );
 }
 
-function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, specialOffer, onFuseRunes, onFuseAll, onBuyGriffes, onBack }) {
+function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, specialOffer, onFuseAll, onBuyGriffes, onBack }) {
   // Écran de fusion dédié (30/08) — remplace l'ancien mode "tape une
   // rune puis retape une pareille", pas très intuitif (fallait deviner
   // quelle rune correspondait à quelle autre). Regroupe automatiquement
   // les runes identiques, un seul bouton clair par groupe.
-  const [fusionOpen, setFusionOpen] = useState(false);
   const [shopW, setShopW] = useState(0);
   const [rightBox, setRightBox] = useState({ w: 0, h: 0 });
   // La forge est limitée par la HAUTEUR (ratio 1,145, presque carré) :
   // à pleine largeur de colonne elle ne laisserait rien à la collection.
-  const forgeMaxH = rightBox.h * 0.55;
+  const forgeMaxH = rightBox.h * 0.66;
   const forgeW = rightBox.h > 0 ? Math.min(rightBox.w, forgeMaxH * FORGE_PANEL_RATIO) : 0;
-
-  if (fusionOpen) {
-    return <RuneFusionScreen ownedRunes={ownedRunes} onFuseRunes={onFuseRunes} onBack={() => setFusionOpen(false)} />;
-  }
 
   return (
     <View style={styles.screen}>
@@ -1942,9 +1917,6 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
               onBuySpecial={onBuySpecial}
             />
           )}
-          <TouchableOpacity style={styles.fusionModeBtn} onPress={() => setFusionOpen(true)}>
-            <Text style={styles.fusionModeBtnText}>🔀 Fusion manuelle</Text>
-          </TouchableOpacity>
         </View>
 
         {/* DROITE : l'atelier en haut, la collection dessous. */}
@@ -1984,79 +1956,6 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
 // bouton "Fusionner" unique et clair par groupe (au lieu de deviner
 // quelle rune correspond à quelle autre). Grisé/désactivé si moins de 2
 // exemplaires, ou si déjà au palier maximum.
-function RuneFusionScreen({ ownedRunes, onFuseRunes, onBack }) {
-  const groups = {};
-  ownedRunes.forEach((r) => {
-    const key = `${r.type}_${r.level}`;
-    (groups[key] = groups[key] || []).push(r);
-  });
-  const groupList = Object.values(groups).sort((a, b) => {
-    if (a[0].type !== b[0].type) return a[0].type.localeCompare(b[0].type);
-    return b[0].level - a[0].level;
-  });
-
-  const handleFuse = (group) => {
-    // Fusionne 2 runes NON équipées en priorité (pas de surprise sur le
-    // matériel d'une créature) — si moins de 2 sont libres, inclut une
-    // rune équipée (son emplacement est de toute façon reporté sur la
-    // nouvelle rune fusionnée, voir fuseRunes plus haut).
-    const unequipped = group.filter((r) => !r.equippedCreatureId);
-    const pool = unequipped.length >= 2 ? unequipped : group;
-    onFuseRunes(pool[0].id, pool[1].id);
-  };
-
-  return (
-    <View style={styles.screen}>
-      {/* Plein écran : la barre système casse l'immersion en paysage. */}
-      <StatusBar hidden />
-      <View style={styles.header}>
-        <BackButton onPress={onBack} />
-        <Text style={styles.title}>🔀 Fusionner</Text>
-      </View>
-      <Text style={styles.runeHint}>2 runes identiques (même type, même niveau) fusionnent en 1 rune au niveau supérieur.</Text>
-
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 30 }}>
-        {groupList.length === 0 ? (
-          <Text style={styles.runeEmptyText}>Aucune rune pour l'instant.</Text>
-        ) : (
-          groupList.map((group) => {
-            const rune = group[0];
-            const def = RUNE_TYPES[rune.type];
-            const isMaxed = rune.level >= RUNE_MAX_LEVEL;
-            const canFuse = group.length >= 2 && !isMaxed;
-            return (
-              <View key={rune.type + '_' + rune.level} style={[styles.fusionGroupCard, { borderColor: def.color }]}>
-                <View style={styles.fusionGroupInfo}>
-                  <Text style={styles.runeEmoji}>{def.icon}</Text>
-                  <View style={{ marginLeft: 10 }}>
-                    <Text style={styles.fusionGroupName}>{def.name}</Text>
-                    <Text style={styles.fusionGroupCount}>Niveau {rune.level} · possédées : {group.length}</Text>
-                  </View>
-                </View>
-                {isMaxed ? (
-                  <Text style={styles.fusionGroupMaxed}>Niveau max</Text>
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.fusionBtn, !canFuse && styles.fusionBtnDisabled]}
-                    onPress={() => handleFuse(group)}
-                    disabled={!canFuse}
-                  >
-                    <Text style={[styles.fusionBtnText, !canFuse && styles.fusionBtnTextDisabled]}>Fusionner → Niv. {rune.level + 1}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
-    </View>
-  );
-}
-
-
-// Sélecteur affiché quand on touche une case de rune VIDE dans la fiche
-// d'une créature — ne propose que les runes NON équipées ailleurs (une
-// rune ne peut être sur qu'une seule créature à la fois).
 function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   const available = ownedRunes.filter((r) => !r.equippedCreatureId);
   return (
@@ -2208,7 +2107,6 @@ const styles = StyleSheet.create({
   shopOfferDesc: { color: '#e8d5ab', fontSize: 8, fontWeight: '700', textAlign: 'center', lineHeight: 10 },
   shopPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
   shopPriceText: { color: '#fff', fontSize: 12, fontWeight: '900' },
-  backText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
 
   editSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 6, paddingVertical: 3, paddingHorizontal: 8, backgroundColor: 'rgba(245,197,66,0.1)', borderRadius: 8 },
@@ -2311,15 +2209,16 @@ const styles = StyleSheet.create({
   },
   startBattleBtnText: { color: '#241a00', fontSize: 15, fontWeight: '900' },
 
-  runeHint: { color: COLORS.muted, fontSize: 11, textAlign: 'center', marginTop: 14, marginBottom: 10, paddingHorizontal: 10 },
-  runeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingBottom: 30 },
+  runeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, paddingBottom: 20 },
   runeEmptyText: { color: COLORS.muted, fontSize: 13, textAlign: 'center', paddingVertical: 20, width: '100%' },
+  // Cellules réduites (12/09) : la collection doit tenir sous l'atelier
+  // et afficher beaucoup de runes d'un coup.
   runeCell: {
-    width: 84, backgroundColor: COLORS.panel, borderRadius: 14, padding: 12, alignItems: 'center',
+    width: 54, backgroundColor: COLORS.panel, borderRadius: 10, padding: 6, alignItems: 'center',
     borderWidth: 2,
   },
-  runeEmoji: { fontSize: 30 },
-  runeLevel: { color: COLORS.text, fontSize: 11, fontWeight: '800', marginTop: 4 },
+  runeEmoji: { fontSize: 18 },
+  runeLevel: { color: COLORS.text, fontSize: 9, fontWeight: '800', marginTop: 2 },
   actionBtnDisabledAdv: { opacity: 0.4 },
 
 
@@ -2432,29 +2331,11 @@ const styles = StyleSheet.create({
   // Delta de bonus affiché à côté de la stat concernée — couleur liée au
   // TYPE de rune (demande explicite : vert pour PV, rouge pour ATQ).
 
-  fusionModeBtn: {
-    borderRadius: 14, paddingVertical: 10, alignItems: 'center', marginTop: 10,
-    borderWidth: 1.5, borderColor: COLORS.neonCyan, backgroundColor: 'rgba(62,198,240,0.08)',
-  },
-  fusionModeBtnText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
   runeEquippedTag: { color: COLORS.action, fontSize: 8, fontWeight: '800', marginTop: 2 },
 
-  fusionGroupCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: COLORS.panel, borderRadius: 14, padding: 14, marginBottom: 10,
-    borderWidth: 1.5,
-  },
   // `minWidth: 0` : sans ça, Yoga refuse de rétrécir un élément flex
   // sous la largeur de son texte, et l'élément voisin (bouton, valeur)
   // sort de la ligne. Même défaut que les boutons d'achat du Shop.
-  fusionGroupInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 },
-  fusionGroupName: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
-  fusionGroupCount: { color: COLORS.muted, fontSize: 11, marginTop: 2 },
-  fusionGroupMaxed: { color: COLORS.muted, fontSize: 11, fontWeight: '700', fontStyle: 'italic' },
-  fusionBtn: { backgroundColor: COLORS.action, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
-  fusionBtnDisabled: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.border },
-  fusionBtnText: { color: '#241a00', fontSize: 11, fontWeight: '800' },
-  fusionBtnTextDisabled: { color: COLORS.muted },
 
   // ---------- Profil de créature, calqué sur Monster Legends ----------
   // Aucune ScrollView : tout doit tenir. Les hauteurs se partagent
@@ -2468,10 +2349,6 @@ const styles = StyleSheet.create({
   profileTopBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 6,
-  },
-  profileBackBtn: {
-    width: 38, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.panel, borderWidth: 1, borderColor: COLORS.border,
   },
   profileBody: { flex: 1, flexDirection: 'row', gap: 10 },
 
