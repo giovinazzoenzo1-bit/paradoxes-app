@@ -814,9 +814,9 @@ dernier sha.
 
 ## Atelier de forge + fusion automatique (12/09)
 
-Panneau `forge-panel.png` (enclume + plaque dorée) dans la colonne de
-GAUCHE de l'écran Runes ; la plaque dorée **est** le bouton « FUSION
-AUTOMATIQUE ». Boutique + collection à droite.
+Panneau `forge-panel.png` (enclume + plaque dorée) en HAUT À DROITE de
+l'écran Runes ; la plaque dorée **est** le bouton « FUSION AUTOMATIQUE ».
+Boutique à gauche, collection sous l'atelier.
 
 ### Pourquoi l'animation est en CODE et pas en vidéo
 
@@ -853,6 +853,41 @@ l'œil : mesurer où sont le manche (bois : R > B+35) et la tête (métal :
 |R−B| < 30) dans chaque pose. Si les x sautent d'un côté à l'autre,
 l'animation cassera.
 
+### `fuseAllRunes()` — deux partis pris
+
+⚠️ **Les runes ÉQUIPÉES sont exclues.** Une fusion en masse pourrait
+déséquiper une créature sans prévenir (2 runes équipées sur 2 créatures
+→ une seule survit). Un bouton « tout fusionner » ne doit jamais défaire
+ce que le joueur a délibérément mis en place.
+
+⚠️ **Tout se fait en UNE passe de `setState`.** Fusionner paire par
+paire relirait `ownedRunes` figé dans la closure à chaque étape et les
+fusions s'écraseraient entre elles.
+
+La fusion est appliquée **au clic**, avant l'animation : quitter l'écran
+pendant les coups de marteau ne perd rien. Testé : 16 runes niveau 1 du
+même type → 15 fusions → 1 rune niveau 5 ; runes équipées intactes ;
+2 runes niveau 5 → 0 fusion.
+
+### Fusion manuelle SUPPRIMÉE (12/09)
+
+Bouton, état `fusionOpen`, écran `RuneFusionScreen` et fonction
+`fuseRunes` retirés : la fusion automatique couvre le besoin, et garder
+l'écran sans point d'entrée aurait laissé ~70 lignes inatteignables.
+
+⚠️ Suppression en masse → **déclarations de premier niveau comparées
+avant/après** : 67 → 66, seule `RuneFusionScreen` a disparu, aucune
+référence orpheline. 14 styles devenus morts supprimés **par comptage
+d'accolades**, jamais par regex DOTALL.
+
+### ⚠️ Ne pas découper ce fichier avec `index("\n## ")`
+
+Cette section `fuseAllRunes()` avait été **effacée par accident** : une
+édition remplaçait un bloc allant d'un titre `###` jusqu'au prochain
+`##`, ce qui a avalé au passage toutes les sous-sections intermédiaires.
+Restaurée ici. Pour remplacer une sous-section, borner au prochain
+`###`, pas au prochain `##` — et relire le résultat.
+
 ### Écran Runes — disposition de la maquette (12/09)
 
 `boutique 46%` à gauche · `atelier` en haut à droite · `collection`
@@ -863,12 +898,12 @@ la maquette la boutique est presque carrée (1,02) et l'atelier large
 (1,71), alors que mes assets font 1,87 et 1,145. On reproduit donc la
 STRUCTURE, chaque panneau prenant la taille maximale que son ratio
 permet dans sa zone. La boutique ne remplit pas toute la hauteur de sa
-colonne : le bouton « Fusion manuelle » occupe le dessous.
+colonne.
 
 ⚠️ **L'atelier est contraint par la HAUTEUR, pas la largeur** : à 1,145
 il est presque carré, donc à pleine largeur de colonne il mangerait
 toute la hauteur et ne laisserait rien à la collection. Formule :
-`forgeW = min(largeurColonne, 0,55 × hauteurColonne × ratio)`, la
+`forgeW = min(largeurColonne, 0,66 × hauteurColonne × ratio)`, la
 colonne étant mesurée par `onLayout` (largeur ET hauteur).
 
 Rendu mesuré : boutique 379×202 · atelier 199×174 · collection 434×137.
