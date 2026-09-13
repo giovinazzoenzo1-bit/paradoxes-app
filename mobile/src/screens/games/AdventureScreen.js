@@ -1400,6 +1400,34 @@ const CHAPTER_SCENES = {
     path: [[0.501, 0.875], [0.233, 0.789], [0.081, 0.599], [0.328, 0.526], [0.596, 0.593],
            [0.864, 0.523], [0.730, 0.345], [0.481, 0.295], [0.233, 0.248], [0.405, 0.104]],
   },
+  9: {
+    bg: require('../../../assets/adventure/chapter-9.jpg'),
+    // Air — pics et ponts suspendus. Plan A déduit par mesure ; 10/10 des niveaux sur une
+    // plateforme peinte.
+    path: [[0.086, 0.862], [0.290, 0.798], [0.503, 0.851], [0.713, 0.767], [0.899, 0.603],
+           [0.732, 0.440], [0.524, 0.372], [0.310, 0.432], [0.136, 0.262], [0.383, 0.122]],
+  },
+  10: {
+    bg: require('../../../assets/adventure/chapter-10.jpg'),
+    // Air — plateaux et moulins. Plan B déduit par mesure ; 8/10 des niveaux sur une
+    // plateforme peinte.
+    path: [[0.904, 0.849], [0.708, 0.794], [0.503, 0.839], [0.293, 0.759], [0.123, 0.488],
+           [0.279, 0.435], [0.482, 0.376], [0.691, 0.427], [0.850, 0.270], [0.566, 0.178]],
+  },
+  11: {
+    bg: require('../../../assets/adventure/chapter-11.jpg'),
+    // Feu — coulées de lave. Plan C déduit par mesure ; 9/10 des niveaux sur une
+    // plateforme peinte.
+    path: [[0.119, 0.859], [0.366, 0.789], [0.616, 0.862], [0.864, 0.735], [0.652, 0.596],
+           [0.404, 0.525], [0.156, 0.445], [0.367, 0.297], [0.635, 0.234], [0.889, 0.202]],
+  },
+  12: {
+    bg: require('../../../assets/adventure/chapter-12.jpg'),
+    // Feu — cratères éteints. Plan D déduit par mesure ; 9/10 des niveaux sur une
+    // plateforme peinte.
+    path: [[0.502, 0.883], [0.236, 0.796], [0.085, 0.610], [0.329, 0.533], [0.596, 0.595],
+           [0.864, 0.528], [0.730, 0.351], [0.481, 0.303], [0.235, 0.265], [0.356, 0.050]],
+  },
 };
 
 // Renvoie des PIXELS (x et y dans la même unité — un ancien bug avait

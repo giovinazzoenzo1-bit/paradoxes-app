@@ -927,6 +927,17 @@ la carte, exactement le bug déjà corrigé trois fois.
 | 3 | Ruines envahies | C | sol praticable |
 | 4 | Île céleste | D | sol praticable |
 | 5-8 | Eau (lagons, geysers) | A, B, C, D | 10/8/9/10 sur plateformes |
+| 9-10 | Air (pics, moulins) | A, B | 10/10 et 8/10 |
+| 11-12 | Feu (lave, cratères) | C, D | 9/10 chacun |
+
+**12 chapitres illustrés** (niveaux 1 à 120). Au-delà, les tracés
+génériques prennent le relais sans rien casser.
+
+⚠️ **Détecteur de plateformes revu** : un seuil de couleur absolu ne
+marche que sur fond clair. Sur une île de lave ou de cendres, les
+plateformes sont sombres. Critère retenu : **plus claires que leur
+VOISINAGE** (`lum − flou local > 14`) et peu saturées. C'est ce qui
+donne 10/10 sur les pics rocheux et 9/10 sur la lave.
 
 Le plan de chaque île a été **déduit par mesure**, jamais supposé
 d'après l'ordre d'envoi. Les 4 derniers étaient sans équivoque :
@@ -1252,6 +1263,13 @@ coin bas-droit : il était en haut à droite, à moitié caché par un
 feuillage. Méthode : comparer chaque pixel à son voisinage flou (et non
 à un seuil global), puis monter une planche des 4 coins et VÉRIFIER À
 L'ŒIL.
+
+⚠️ **Toujours MESURER le contraste de la marque avant de choisir le
+seuil.** Celui qui marche sur un ciel clair rate une marque sur des
+nuages blancs. Et près d'un bord d'île, le contraste local explose : le
+masque avale alors toute la fenêtre. Dans ce cas, masque circulaire
+ciblé, en EXCLUANT les pixels de l'île (vert/brun) — sinon
+l'inpainting étale de l'herbe dans le ciel (vu sur le chapitre 10).
 
 ⚠️ **Deux façons d'effacer, selon le fond.** Sur une texture (bois,
 dalles, feuillage) : recopier une zone voisine, la source étant choisie
