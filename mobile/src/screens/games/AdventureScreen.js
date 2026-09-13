@@ -1678,12 +1678,18 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 // l'offre du jour restent intacts en revenant.
 function RuneInventory({ ownedRunes, onClose }) {
   const [selectedId, setSelectedId] = useState(null);
+  // Le cadre garde SON ratio (3,125). Avant, une boîte en 86%x88%
+  // l'étirait de 47% : le bois paraissait écrasé et la bannière
+  // disproportionnée. On part de la place dispo et on déduit.
+  const { width: winW, height: winH } = useWindowDimensions();
+  const panelW = Math.min(winW * 0.92, winH * 0.86 * COLLECTION_RATIO);
+  const panelH = panelW / COLLECTION_RATIO;
   const selected = ownedRunes.find((r) => r.id === selectedId) || null;
   const def = selected ? RUNE_TYPES[selected.type] : null;
 
   return (
     <View style={styles.invOverlay}>
-      <View style={styles.invPanel}>
+      <View style={[styles.invPanel, { width: panelW, height: panelH }]}>
         <Image source={COLLECTION_PANEL} style={StyleSheet.absoluteFill} resizeMode="stretch" />
 
         {/* Titre dans la bannière vide de l'image. */}
@@ -2045,7 +2051,10 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
           {shopW > 0 && (
             <TouchableOpacity
               style={{
-                width: shopW, height: shopW / WOOD_PLATE_RATIO,
+                // 55% de la colonne, pas 100% : à pleine largeur la
+                // plaque faisait 379x98 dp et écrasait la boutique.
+                width: shopW * 0.55, height: (shopW * 0.55) / WOOD_PLATE_RATIO,
+                alignSelf: 'center',
                 alignItems: 'center', justifyContent: 'center', marginTop: 10,
               }}
               onPress={() => setInventoryOpen(true)}
@@ -2228,7 +2237,8 @@ const styles = StyleSheet.create({
   // Largeur fixe en % + hauteur en % : PAS d'aspectRatio ici, le cadre
   // est étiré (resizeMode stretch) et supporte de ne pas être à son
   // ratio natif.
-  invPanel: { width: '86%', height: '88%' },
+  // Taille posée à l'appel (dérivée du ratio du cadre), pas ici.
+  invPanel: {},
   invBanner: {
     position: 'absolute',
     left: `${COLLECTION_BANNER.left * 100}%`,
@@ -2266,7 +2276,8 @@ const styles = StyleSheet.create({
     textAlign: 'center', paddingHorizontal: 4,
   },
   invCloseBtn: {
-    position: 'absolute', right: '3%', top: '2%',
+    // Dans la zone de bois utile : posé à 3%/2% il débordait du cadre.
+    position: 'absolute', right: '4.5%', top: '20%',
     backgroundColor: 'rgba(8,14,24,0.85)',
     borderWidth: 2, borderColor: '#c9a227',
     borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5,
