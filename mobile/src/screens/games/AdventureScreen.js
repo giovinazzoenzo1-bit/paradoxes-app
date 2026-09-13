@@ -1307,16 +1307,29 @@ const MAP_PAD = 10;        // marge haut/bas d'une page
 //
 // Mesuré sur 825x317 : distance minimale entre 2 nœuds 102 dp (nœuds de
 // 38), pas de 150 à 210 dp, AUCUN croisement de segments.
-const CHAPTER_PATH = [
-  [0.06, 0.04], [0.28, 0.12], [0.50, 0.06], [0.72, 0.16], [0.92, 0.36],
-  [0.74, 0.56], [0.52, 0.64], [0.30, 0.58], [0.12, 0.78], [0.38, 0.97],
+const CHAPTER_PATHS = [
+  // A — balayage gauche → droite, retour, montée
+  [[0.06, 0.04], [0.28, 0.12], [0.50, 0.06], [0.72, 0.16], [0.92, 0.36],
+   [0.74, 0.56], [0.52, 0.64], [0.30, 0.58], [0.12, 0.78], [0.38, 0.97]],
+  // B — miroir : on part de la droite
+  [[0.94, 0.04], [0.72, 0.12], [0.50, 0.06], [0.28, 0.16], [0.08, 0.36],
+   [0.26, 0.56], [0.48, 0.64], [0.70, 0.58], [0.88, 0.78], [0.62, 0.97]],
+  // C — triple vague, montée plus régulière
+  [[0.10, 0.05], [0.36, 0.14], [0.62, 0.05], [0.88, 0.20], [0.66, 0.38],
+   [0.40, 0.46], [0.14, 0.56], [0.36, 0.74], [0.64, 0.82], [0.90, 0.96]],
+  // D — départ au centre puis grand tour
+  [[0.50, 0.03], [0.22, 0.13], [0.06, 0.36], [0.32, 0.46], [0.60, 0.38],
+   [0.88, 0.46], [0.74, 0.68], [0.48, 0.74], [0.22, 0.80], [0.40, 0.98]],
 ];
 
 // Renvoie des PIXELS (x et y dans la même unité — un ancien bug avait
 // laissé x en fraction et y en pixels, envoyant les points de contrôle
 // des courbes hors écran).
-function nodePosition(i, pathW, pageH) {
-  const [fx, fy] = CHAPTER_PATH[i] || CHAPTER_PATH[0];
+// `chapterNum` choisit le tracé : les chapitres consécutifs n'ont donc
+// jamais la même carte. Cycle sur les 4 variantes.
+function nodePosition(i, pathW, pageH, chapterNum = 1) {
+  const path = CHAPTER_PATHS[(chapterNum - 1) % CHAPTER_PATHS.length];
+  const [fx, fy] = path[i] || path[0];
   const span = Math.max(1, pageH - 2 * MAP_PAD - LEVEL_NODE_SIZE);
   return {
     // Bornes rentrées d'un demi-nœud : sinon les niveaux des extrémités
@@ -1581,8 +1594,13 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           page EST un chapitre, la pastille de droite dit lequel. */}
       <View style={styles.header}>
         <BackButton onPress={onBack} />
-        <Text style={styles.title}>⚔️ Combat</Text>
         <View style={styles.headerSpacer} />
+        {/* Aide sur les éléments, juste à GAUCHE des Griffes : elle se
+            consulte avant un combat, sa place est dans l'en-tête et non
+            perdue dans un coin bas de l'écran. */}
+        <TouchableOpacity style={styles.elemHelpBtn} onPress={() => setElemHelpOpen(true)}>
+          <Text style={styles.elemHelpBtnText}>🔥 Éléments</Text>
+        </TouchableOpacity>
         <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
       </View>
@@ -1609,7 +1627,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           // pointillés étaient bien calculés, juste invisibles car
           // positionnés à des milliers de pixels du cadre visible.
           const positions = Array.from({ length: LEVELS_PER_CHAPTER }, (_, i) =>
-            nodePosition(i, pathWidth, pageH)
+            nodePosition(i, pathWidth, pageH, chapterNum)
           );
           return (
             <View key={chapterNum} style={[styles.chapterBlock, { height: pageH }]}>
@@ -1691,11 +1709,6 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
       {/* Bouton d'aide, en bas à gauche. Masqué dès qu'un niveau est
           ouvert : il se superposait au panneau de préparation, où il
           n'a rien à faire. */}
-      {!levelPreview && (
-      <TouchableOpacity style={styles.elemHelpBtn} onPress={() => setElemHelpOpen(true)}>
-        <Text style={styles.elemHelpBtnText}>🔥 Éléments</Text>
-      </TouchableOpacity>
-      )}
 
       {elemHelpOpen && <ElementHelpOverlay onClose={() => setElemHelpOpen(false)} />}
 
@@ -2546,8 +2559,9 @@ const styles = StyleSheet.create({
   levelStarOff: { color: 'rgba(120,90,40,0.75)' },
 
   elemHelpBtn: {
-    position: 'absolute', left: 12, bottom: 12, zIndex: 15,
-    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20,
+    // Dans le flux de l'en-tête (13/09) : plus de position absolue.
+    paddingVertical: 5, paddingHorizontal: 10, borderRadius: 14,
+    marginRight: 8,
     backgroundColor: 'rgba(10,20,32,0.9)',
     borderWidth: 1.5, borderColor: COLORS.action,
   },

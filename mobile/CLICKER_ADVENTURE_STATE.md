@@ -874,7 +874,7 @@ qui se déclenche une fois les pages en place.
 calculent à partir de la hauteur de page, et à 0 les nœuds partiraient
 en coordonnées négatives.
 
-### Le tracé est POSÉ À LA MAIN, pas calculé
+### Les tracés sont POSÉS À LA MAIN — 4 variantes, une par chapitre
 
 `CHAPTER_PATH` : 10 positions en fractions (largeur, hauteur depuis le
 bas). Toutes les formules essayées donnaient un mauvais résultat —
@@ -896,6 +896,24 @@ sinon les niveaux des extrémités seraient coupés par le bord.
 ⚠️ **Critère à vérifier pour tout nouveau tracé** : écart minimal ≥ taille
 de nœud + marge, ET aucun croisement entre segments non consécutifs. Un
 tracé qui se croise reste illisible même bien espacé.
+
+**`CHAPTER_PATHS` contient 4 tracés**, choisis par
+`(chapterNum - 1) % 4` : deux chapitres consécutifs n'ont donc jamais la
+même carte.
+
+| Tracé | Allure | Écart min | Croisements |
+|---|---|---|---|
+| A | balayage gauche → droite | 105 dp | 0 |
+| B | miroir, départ à droite | 105 dp | 0 |
+| C | triple vague | 79 dp | 0 |
+| D | départ au centre, grand tour | 88 dp | 0 |
+
+Les 4 ont été validés aux mêmes critères avant d'être retenus.
+
+Le titre « ⚔️ Combat » est retiré de l'en-tête, et le bouton **Éléments**
+quitte le coin bas gauche pour se placer **à gauche des Griffes** : il se
+consulte avant un combat, sa place est dans l'en-tête. Son style perd sa
+`position: 'absolute'` et son `zIndex`, il est maintenant dans le flux.
 
 Le libellé « Chapitre N » est supprimé (chaque page EST un chapitre) et
 remplacé par des **pastilles au bord droit**. Griffes et énergie passent
