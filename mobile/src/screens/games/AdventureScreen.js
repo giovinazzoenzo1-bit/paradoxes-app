@@ -47,7 +47,12 @@ const FORGE_PLATE = { left: 0.2549, right: 0.7400, top: 0.8059, bottom: 0.9067 }
 // Point de frappe sur l'enclume, et où se situe ce point DANS chaque
 // sprite — c'est ce qui aligne les deux poses sur le même impact.
 const FORGE_ANVIL = { x: 0.50, y: 0.455 };
-const FORGE_HAMMER_ANCHOR = { x: 0.50, y: 0.25, h: 0.46 };
+// L'asset du marteau levé a été MIROITÉ (12/09) : il avait le manche à
+// gauche (x 0,37) alors que la pose d'impact l'a à droite (x 0,65), donc
+// le marteau changeait de côté au moment de frapper. Après miroir les
+// deux poses ont le manche du même côté (0,63 et 0,65) et le coup se
+// lit comme un vrai balancement.
+const FORGE_HAMMER_ANCHOR = { x: 0.47, y: 0.34, h: 0.44 };
 const FORGE_HIT_ANCHOR = { x: 0.42, y: 0.74, h: 0.42 };
 const SHOP_PANEL_RATIO = 900 / 482;
 // Zone LISSE de la plaque, remesurée le 12/09. L'ancien relevé
@@ -1661,8 +1666,8 @@ function ForgePanel({ width, onAutoFuse }) {
   const hitW = hitH * (560 / 492);
 
   // 0 -> marteau levé, 1 -> marteau abattu.
-  const hamTranslate = blow.interpolate({ inputRange: [0, 1], outputRange: [-H * 0.20, 0] });
-  const hamRotate = blow.interpolate({ inputRange: [0, 1], outputRange: ['32deg', '4deg'] });
+  const hamTranslate = blow.interpolate({ inputRange: [0, 1], outputRange: [-H * 0.22, -H * 0.04] });
+  const hamRotate = blow.interpolate({ inputRange: [0, 1], outputRange: ['26deg', '4deg'] });
   // Le sprite d'impact n'apparaît que sur la toute fin de la descente.
   const hitOpacity = blow.interpolate({ inputRange: [0, 0.82, 1], outputRange: [0, 0, 1] });
   const hamOpacity = blow.interpolate({ inputRange: [0, 0.82, 1], outputRange: [1, 1, 0] });
@@ -1708,7 +1713,7 @@ function ForgePanel({ width, onAutoFuse }) {
           position: 'absolute',
           width: hamW, height: hamH,
           left: width * FORGE_ANVIL.x - hamW * FORGE_HAMMER_ANCHOR.x,
-          top: H * FORGE_ANVIL.y - hamH * FORGE_HAMMER_ANCHOR.y - H * 0.10,
+          top: H * FORGE_ANVIL.y - hamH * FORGE_HAMMER_ANCHOR.y,
           opacity: hamOpacity,
           transform: [{ translateY: hamTranslate }, { rotate: hamRotate }],
           pointerEvents: 'none',
@@ -1747,7 +1752,11 @@ function ForgePanel({ width, onAutoFuse }) {
         disabled={busy}
         activeOpacity={0.75}
       >
-        <Text style={styles.forgePlateText} numberOfLines={1} adjustsFontSizeToFit>
+        <Text
+          style={[styles.forgePlateText, { fontSize: Math.max(8, Math.round(width * 0.058)) }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
           FUSION AUTOMATIQUE
         </Text>
       </TouchableOpacity>
@@ -1763,6 +1772,14 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
   const descH = (SHOP_DESC_Y.bottom - SHOP_DESC_Y.top) * H;
   const offerDef = specialOffer ? RUNE_TYPES[specialOffer.type] : null;
   const soldOut = specialOffer ? specialOffer.purchased : true;
+  // Tailles DÉRIVÉES de la largeur : le panneau a rétréci pour laisser
+  // la place à l'inventaire, des tailles fixes ne tiendraient plus dans
+  // les cases. Planchers pour rester lisible sur petit écran.
+  const fsIcon = Math.max(14, Math.round(width * 0.085));
+  const fsIconSmall = Math.max(9, Math.round(width * 0.052));
+  const fsPrice = Math.max(9, Math.round(width * 0.042));
+  const fsDesc = Math.max(6, Math.round(width * 0.030));
+  const fsBanner = Math.max(8, Math.round(width * 0.042));
 
   const offers = [
     {
@@ -1813,8 +1830,8 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
           pointerEvents: 'none',
         }}
       >
-        <Text style={styles.shopBannerText} numberOfLines={1} adjustsFontSizeToFit>
-          BOUTIQUE DE RUNES
+        <Text style={[styles.shopBannerText, { fontSize: fsBanner }]} numberOfLines={1} adjustsFontSizeToFit>
+          BOUTIQUE
         </Text>
       </View>
 
@@ -1838,15 +1855,19 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
                 {o.icons.map((ic, k) => (
                   <Text
                     key={k}
-                    style={o.icons.length > 1 ? styles.shopOfferIconSmall : styles.shopOfferIcon}
+                    style={{ fontSize: o.icons.length > 1 ? fsIconSmall : fsIcon }}
                   >
                     {ic}
                   </Text>
                 ))}
               </View>
               <View style={styles.shopPriceRow}>
-                <Text style={styles.shopPriceText}>{o.cost}</Text>
-                <Image source={GRIFFES_ICON} style={styles.shopPriceIcon} resizeMode="contain" />
+                <Text style={[styles.shopPriceText, { fontSize: fsPrice }]}>{o.cost}</Text>
+                <Image
+                  source={GRIFFES_ICON}
+                  style={{ width: fsPrice, height: fsPrice }}
+                  resizeMode="contain"
+                />
               </View>
             </TouchableOpacity>
 
@@ -1859,7 +1880,12 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
                 pointerEvents: 'none',
               }}
             >
-              <Text style={styles.shopOfferDesc} numberOfLines={2}>{o.desc}</Text>
+              <Text
+                style={[styles.shopOfferDesc, { fontSize: fsDesc, lineHeight: fsDesc + 2 }]}
+                numberOfLines={2}
+              >
+                {o.desc}
+              </Text>
             </View>
           </React.Fragment>
         );
@@ -1910,20 +1936,23 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
           </TouchableOpacity>
         </View>
 
-        {/* Colonne DROITE : boutique en haut, collection dessous. */}
-        <View style={styles.runesRightCol}>
-          <View onLayout={(e) => setShopW(e.nativeEvent.layout.width)}>
-            {shopW > 0 && (
-              <RuneShopPanel
-                width={shopW}
-                griffes={griffes}
-                specialOffer={specialOffer}
-                onBuyRandom={onBuyRune}
-                onBuyPack={onBuyPack}
-                onBuySpecial={onBuySpecial}
-              />
-            )}
-          </View>
+        {/* Colonne MILIEU : la boutique. */}
+        <View style={styles.runesShopCol} onLayout={(e) => setShopW(e.nativeEvent.layout.width)}>
+          {shopW > 0 && (
+            <RuneShopPanel
+              width={shopW}
+              griffes={griffes}
+              specialOffer={specialOffer}
+              onBuyRandom={onBuyRune}
+              onBuyPack={onBuyPack}
+              onBuySpecial={onBuySpecial}
+            />
+          )}
+        </View>
+
+        {/* Colonne DROITE : l'inventaire, qui récupère toute la place
+            restante — c'est lui qui grandit quand le joueur accumule. */}
+        <View style={styles.runesGridCol}>
           <ScrollView contentContainerStyle={styles.runeGrid}>
             {ownedRunes.length === 0 ? (
               <Text style={styles.runeEmptyText}>Aucune rune — achètes-en une dans la boutique.</Text>
@@ -2159,8 +2188,9 @@ const styles = StyleSheet.create({
   // illustrée à droite. En paysage la hauteur est la ressource rare, on
   // n'empile pas verticalement.
   runesBody: { flex: 1, flexDirection: 'row', gap: 12 },
-  runesLeftCol: { width: '38%' },
-  runesRightCol: { flex: 1 },
+  runesLeftCol: { width: '25%' },
+  runesShopCol: { width: '33%' },
+  runesGridCol: { flex: 1 },
   shopBannerText: { color: '#f3e3c0', fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
   forgePlateText: { color: '#4a3410', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
   forgeResultWrap: {
@@ -2173,12 +2203,9 @@ const styles = StyleSheet.create({
     borderRadius: 10, overflow: 'hidden',
   },
   shopIconRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  shopOfferIcon: { fontSize: 30 },
-  shopOfferIconSmall: { fontSize: 17 },
   shopOfferDesc: { color: '#e8d5ab', fontSize: 8, fontWeight: '700', textAlign: 'center', lineHeight: 10 },
   shopPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
   shopPriceText: { color: '#fff', fontSize: 12, fontWeight: '900' },
-  shopPriceIcon: { width: 12, height: 12 },
   backText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
   title: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
 

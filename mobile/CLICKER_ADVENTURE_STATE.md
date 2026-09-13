@@ -838,8 +838,33 @@ alors qu'opacité et `transform` partent sur le **driver natif**.
 |---|---|
 | Plaque dorée (bouton) | x 0,255-0,740 · y 0,806-0,907 |
 | Point de frappe (enclume) | x 0,50 · y 0,455 |
-| Ancrage marteau levé | 0,50 / 0,25 · hauteur 0,46 |
+| Ancrage marteau levé | 0,47 / 0,34 · hauteur 0,44 |
 | Ancrage marteau impact | 0,42 / 0,74 · hauteur 0,42 |
+
+⚠️ **L'asset du marteau levé est MIROITÉ** (`FLIP_LEFT_RIGHT` appliqué
+au PNG, pas un `scaleX: -1` en style — pas de subtilité d'ordre des
+transforms). Sans ça le manche était à gauche au repos (x 0,37) et à
+droite à l'impact (x 0,65) : le marteau **changeait de côté** en
+frappant. Après miroir, manche à 0,63 et 0,65 — le coup se lit comme un
+vrai balancement autour d'une main fixe à droite.
+
+⚠️ **Vérifier un enchaînement de sprites par les CENTROÏDES**, pas à
+l'œil : mesurer où sont le manche (bois : R > B+35) et la tête (métal :
+|R−B| < 30) dans chaque pose. Si les x sautent d'un côté à l'autre,
+l'animation cassera.
+
+### Écran Runes en 3 colonnes (12/09)
+
+`forge 25%` · `boutique 33%` · `inventaire flex:1`. Les deux panneaux
+avaient été posés trop grands : il ne restait que 50 dp pour
+l'inventaire. Désormais ~323×317 dp, soit une vingtaine de runes
+visibles d'un coup.
+
+⚠️ Les tailles de texte et d'icône de la boutique sont **dérivées de la
+largeur du panneau** (`width * 0,085` pour une icône, etc., avec des
+planchers). Des tailles fixes ne tenaient plus dans les cases une fois
+le panneau rétréci — et ne tiendraient pas davantage sur un écran plus
+étroit.
 
 ### `fuseAllRunes()` — deux partis pris
 
