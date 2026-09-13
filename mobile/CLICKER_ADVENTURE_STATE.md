@@ -875,15 +875,43 @@ quand le conteneur est décalé (encoche, marge d'un parent). Le
 sous les boutons du coin haut droit une fois en plein écran. Descendu de
 0,124 à 0,215 ; écart minimal inchangé (96 dp).
 
-**À revérifier à chaque nouveau tracé ou décor** : pour chaque nœud dont
-le bord haut est au-dessus de 58 dp, contrôler qu'il ne croise ni la
-zone gauche ni la zone droite.
+**Liste de contrôle pour tout nouveau décor** (toutes vérifiées pour le
+chapitre 2) :
+1. rapport de l'image ≈ 2,60 ;
+2. filigrane Gemini présent ? (aucun sur le chapitre 2) ;
+3. chaque nœud est sur du sol praticable (rayon libre mesuré) ;
+4. écart minimal entre 2 nœuds ≥ 46 dp — chapitre 2 : **114 dp** ;
+5. aucun croisement entre segments non consécutifs — chapitre 2 : **0** ;
+6. aucun nœud sous les boutons de l'en-tête (bord haut < 58 dp et x dans
+   la zone gauche 0-134 ou droite 553-853). Un conflit a été trouvé et
+   corrigé sur le chapitre 2 : le dernier niveau visait l'îlot haut
+   gauche, sous le bouton Retour — déplacé sur le sentier voisin.
 
 ## Décor par chapitre — méthode (13/09)
 
 `CHAPTER_SCENES[n] = { bg, path }`. Le chapitre 1 a son île
 (`adventure/chapter-1.jpg`) ; les chapitres sans décor retombent sur les
 4 tracés génériques.
+
+### Deux méthodes de calage selon ce que l'IA a peint
+
+⚠️ **Aucune méthode ne marche sur toutes les îles.** À vérifier à chaque
+nouveau décor.
+
+**1. L'île a des PLATEFORMES visibles** (chapitre 1) → les détecter
+(zones claires peu saturées, forme constante) et poser un niveau sur
+chacune.
+
+**2. L'île n'en a PAS** (chapitre 2 : la détection n'y trouvait que 2
+disques) → masque du **sol praticable** (dalles et sentiers : clair, peu
+vert, 7% de l'image), puis **sommets de la carte de distance** pour
+trouver les emplacements les plus dégagés, puis mise en ordre ascendante
+à la main.
+
+⚠️ **Ne pas tenter d'accrocher un tracé générique sur le sol.** Essayé
+sur le chapitre 2 avec le tracé B : certains niveaux sautaient de
+**800 px**, ses cibles tombant dans l'eau ou les arbres. Le chemin se
+construit DEPUIS l'île, jamais l'inverse.
 
 ### Le chemin n'est JAMAIS peint par l'IA
 

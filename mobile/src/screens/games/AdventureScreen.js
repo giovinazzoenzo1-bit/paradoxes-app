@@ -1341,8 +1341,24 @@ const CHAPTER_PATHS = [
 const CHAPTER_SCENES = {
   1: {
     bg: require('../../../assets/adventure/chapter-1.jpg'),
+    // Calé sur les 10 plateformes rondes peintes, détectées sur l'image.
     path: [[0.082, 0.846], [0.293, 0.784], [0.501, 0.837], [0.710, 0.760], [0.901, 0.600],
            [0.727, 0.448], [0.519, 0.367], [0.310, 0.424], [0.138, 0.261], [0.385, 0.118]],
+  },
+  2: {
+    bg: require('../../../assets/adventure/chapter-2.jpg'),
+    // ⚠️ Cette île n'a PAS de plateformes rondes : la détection du
+    // chapitre 1 n'y trouvait que 2 disques. Le chemin a donc été
+    // construit autrement — masque du SOL PRATICABLE (dalles et
+    // sentiers, 7% de l'image), puis sommets de la carte de distance
+    // pour trouver les emplacements les plus dégagés, puis mise en ordre
+    // ascendante à la main.
+    //
+    // Tenter d'accrocher le tracé générique B sur ce sol avait échoué :
+    // certains niveaux sautaient de 800 px, ses cibles tombant dans
+    // l'eau ou les arbres.
+    path: [[0.321, 0.745], [0.506, 0.825], [0.701, 0.812], [0.869, 0.808], [0.682, 0.433],
+           [0.849, 0.294], [0.626, 0.144], [0.485, 0.382], [0.266, 0.459], [0.162, 0.275]],
   },
 };
 
