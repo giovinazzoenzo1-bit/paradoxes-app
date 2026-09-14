@@ -921,7 +921,46 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
-## Les pointillés suivent la VRAIE route peinte (13/09)
+## Itinéraires : la RÉFÉRENCE, ce sont les tracés de l'auteur (14/09)
+
+Après trois passes de calcul automatique restées imparfaites, l'auteur a
+**dessiné le chemin exact** (trait rouge) sur des captures des chapitres
+1-8, 10 et 11. `chapterRoutes.js` suit ces traits au pixel. **Ne pas les
+recalculer automatiquement.** Les chapitres 9 et 12 restent en calcul
+automatique jusqu'à réception de leur tracé.
+
+### Comment lire un tracé annoté (procédure, réutilisable)
+
+1. **Identifier le chapitre par corrélation** avec les fonds, pas à l'œil
+   (écart ×4 entre le bon chapitre et le suivant).
+2. **Couleur du trait mesurée** : (185, 53, 53), dispersion ±10. Seuil
+   de distance 17. ⚠️ La lave et les plantes rouges du ch11 passent le
+   seuil : on écarte les morceaux dont le squelette fait moins de 80 px
+   (un trait est une ligne, une plante est une tache).
+3. **Correspondance capture → page** : captures 2000×923 avec une bande
+   noire de 19 px en haut (les 8 dp de `paddingTop` de l'app).
+   `u = x / 2000`, `v = (y − 19) / 904`. Vérifiée : 10/10 niveaux sur
+   leur pastille sur 9 chapitres.
+4. **Niveaux déplacés par le trait** : un niveau à plus de 70 px du
+   trait est déplacé sur l'extrémité de trait la plus proche non déjà
+   occupée. Trois cas : ch10 niveaux 5 et 10, ch11 niveau 10 (les
+   plateformes peintes). Le seuil de 70 évite un faux déplacement quand
+   l'auteur commence le trait à côté de la pastille (ch11 niveau 1, à
+   50 px).
+5. **Plus court chemin contraint SUR le trait** entre niveaux
+   consécutifs (coût 1 dessus, 12 à moins de 10 px, 400 ailleurs), puis
+   simplification à 4 px de capture (≈ 1,7 dp).
+6. ⚠️ **Revérifier l'en-tête pour les niveaux déplacés** : le ch11
+   niveau 10 chevauchait le compteur de Griffes de 3 dp — descendu de
+   8 dp, il reste sur sa plateforme. Emprise réelle des boutons, mesurée
+   sur les captures : Éléments x 584-676 / y 13-43 dp, Griffes+Énergie
+   x 687-836 / y 13-44 dp.
+7. **Contrôle final** : superposer les pointillés obtenus SUR les captures
+   annotées, par-dessus le trait rouge — tout écart saute aux yeux.
+
+### Ce que les passes automatiques ont appris (gardé pour ch9/ch12)
+
+#### Calcul automatique (chapitres sans tracé annoté)
 
 `chapterRoutes.js` : par chapitre, **9 tronçons** (niveau 1→2 … 9→10),
 chacun une polyligne en fractions de page. Mesurés sur l'image — même
