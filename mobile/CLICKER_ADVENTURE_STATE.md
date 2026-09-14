@@ -804,9 +804,18 @@ le code est poussé.
 lister `/actions/runs` et chercher le `head_sha` du dernier commit. S'il
 n'apparaît pas, la publication n'a jamais tourné.
 
-**Relance** : `workflow_dispatch` par l'API renvoie **403** — le jeton de
-dev n'a pas le droit `actions: write` (déjà noté pour l'APK). La seule
-voie fiable est donc de **repousser un commit touchant `mobile/**`**.
+**Relance** : depuis le 14/09 le jeton a le droit `actions: write`, donc
+on relance directement par l'API — inutile de repousser un commit à vide :
+
+```
+POST /repos/giovinazzoenzo1-bit/paradoxes-app/actions/workflows/mobile-publish.yml/dispatches
+     {"ref": "main"}      -> 204 attendu
+```
+
+Vérifié de bout en bout : déclenchement manuel → `completed / success`.
+
+⚠️ Si la réponse est **403**, c'est que le jeton courant n'a que
+`actions: read`. Repli : repousser un commit touchant `mobile/**`.
 
 ⚠️ Ne pas conclure trop vite à un bug d'affichage ou de cache Expo quand
 l'utilisateur ne voit rien : vérifier D'ABORD qu'un run existe pour le
