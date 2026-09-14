@@ -914,44 +914,45 @@ la carte, exactement le bug déjà corrigé trois fois.
 
 ## Les pointillés suivent la VRAIE route peinte (13/09)
 
-Avant : une courbe de Bézier entre deux nœuds, avec un décalage
-perpendiculaire fixe. Elle ne connaissait pas l'île et coupait à travers
-l'eau, les arbres ou le vide.
+`chapterRoutes.js` : par chapitre, **9 tronçons** (niveau 1→2 … 9→10),
+chacun une polyligne en fractions de page. Mesurés sur l'image — même
+principe que les plans.
 
-Maintenant : `chapterRoutes.js` contient, par chapitre, la polyligne du
-chemin réel. Même principe que les plans — **on mesure l'image**.
+### Construction (4 étapes, chacune corrige un défaut constaté)
 
-### Comment elles sont calculées
+1. **Isoler l'ÎLE** par la texture (elle a des contours, le ciel et les
+   nuages sont lisses). Sans ça, 30 % du ciel rouge du chapitre 11 était
+   pris pour du sol et le chemin passait AU-DESSUS de l'île.
+2. **Apprendre la couleur du SENTIER** sur chaque île : disque autour de
+   chaque niveau (ils sont posés dessus), en ne gardant que les pixels
+   **peu saturés** — l'herbe et l'eau sont saturées, un sentier ne l'est
+   pas. Puis **palette de 2 teintes** (k-moyennes) : un sentier mêle
+   dalles claires et terre sombre, une couleur unique le ratait.
+3. **Seuil choisi AUTOMATIQUEMENT par île** (de 26 à 70 selon l'image).
+   ⚠️ Critère : le masque doit **RELIER les niveaux consécutifs**.
+   Choisir « le plus petit masque » donnait un réseau minuscule qui ne
+   reliait plus rien et le chemin partait hors piste.
+4. **Plus court chemin** sur une carte de coût : ~1 au centre du sentier,
+   120 hors sentier mais sur l'île, 1200 hors de l'île.
 
-1. **Isoler l'ÎLE** par la texture : l'île a beaucoup de contours, le
-   ciel et les nuages sont lisses. Énergie de gradient → seuil →
-   fermeture → plus grande zone connexe.
-2. **Carte de coût** : ~1 au centre des sentiers (via la carte de
-   distance du sol praticable), 50 hors sentier mais sur l'île, 3000
-   hors de l'île.
-3. **Plus court chemin** entre nœuds consécutifs
-   (`skimage.graph.route_through_array`), sur l'image réduite au tiers.
-4. **Simplification** Douglas-Peucker (ε = 0,006, soit ~5 dp d'écart) :
-   1025 points au total pour 12 chapitres, ~17 Ko.
-
-⚠️ **L'étape 1 est indispensable.** Sans elle, 30 % du ciel rouge du
-chapitre 11 était classé « sol praticable » (il est plus clair que sa
-moyenne locale) et le chemin passait PAR LE CIEL au-dessus de l'île.
-
-⚠️ Hors-piste résiduel après correction : 0 % sur 7 chapitres, ≤ 7 %
-ailleurs — ce sont les ponts et les franchissements entre morceaux
-d'île, normaux.
+⚠️ **Traversée des vides et cascades** : toute portion hors sentier de
+plus de 8 px est remplacée par une **ligne droite** entre son entrée et
+sa sortie — on fait comme s'il y avait un pont. Sans ça le chemin
+contournait et partait en hors-piste. Des pointillés dans le vide ne
+gênent pas, un détour absurde si.
 
 ### Rendu
 
-`routeDots()` sème les pastilles à **intervalle constant de distance
-parcourue** (17 dp), pas un nombre fixe par segment : sinon elles se
-tassent dans les virages et s'écartent dans les lignes droites. Celles
-à moins de 26 dp d'un niveau sont sautées, elles disparaîtraient sous sa
-pastille.
+⚠️ Pastilles réparties **également sur chaque tronçon** (~21 dp visés,
+pas ajusté à la longueur du tronçon). Un pas constant sur tout le chemin
+laissait des tronçons à 2 pastilles et d'autres à 6.
 
-Les chapitres sans itinéraire (au-delà du dernier illustré) gardent
-l'ancienne courbe — rien n'est cassé.
+⚠️ Pas de pastille à moins de **27 dp d'un niveau** (elle disparaîtrait
+dessous) ni à moins de **14 dp d'une autre** — c'est ce qui supprime les
+chevauchements quand le chemin repasse près de lui-même (double
+passage).
+
+Les chapitres sans itinéraire gardent l'ancienne courbe.
 
 ## Décor par chapitre — méthode (13/09)
 

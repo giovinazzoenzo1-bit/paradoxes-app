@@ -1460,31 +1460,41 @@ function bezierPoint(p0, p1, ctrl, t) {
 
 // Pointillés le long de l'itinéraire MESURÉ sur l'image du chapitre.
 //
-// Les points de `CHAPTER_ROUTES` décrivent la route peinte ; on y sème
-// des pastilles à intervalle CONSTANT en distance parcourue (et non un
-// nombre fixe par segment, qui donnerait des points serrés dans les
-// virages et espacés dans les lignes droites).
-//
-// Les pastilles trop proches d'un niveau sont sautées : elles
-// disparaîtraient sous la pastille du niveau.
-function routeDots(route, pathW, pageH, nodes, step = 17, clear = 26) {
-  const pts = route.map(([u, v]) => ({ x: u * pathW, y: v * pageH }));
-  const dots = [];
-  let carry = 0;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const a = pts[i];
-    const b = pts[i + 1];
-    const seg = Math.hypot(b.x - a.x, b.y - a.y);
-    if (seg < 0.001) continue;
-    for (let d = step - carry; d < seg; d += step) {
-      const t = d / seg;
-      const x = a.x + (b.x - a.x) * t;
-      const y = a.y + (b.y - a.y) * t;
-      if (!nodes.some((n) => Math.hypot(n.x - x, n.y - y) < clear)) dots.push({ x, y });
+// `CHAPTER_ROUTES[n]` contient 9 tronçons (niveau 1→2 … 9→10). Les
+// pastilles sont réparties ÉGALEMENT sur CHAQUE tronçon : on vise ~21 dp
+// d'écart, mais le pas exact est ajusté à la longueur du tronçon. Un pas
+// constant sur tout le chemin laissait des tronçons à 2 pastilles et
+// d'autres à 6.
+const DOT_TARGET = 21;   // écart visé entre 2 pastilles
+const DOT_CLEAR = 27;    // rayon autour d'un niveau où l'on n'en pose pas
+const DOT_APART = 14;    // distance mini entre 2 pastilles (double passage)
+
+function routeDots(route, pathW, pageH, nodes) {
+  const placed = [];
+  route.forEach((seg) => {
+    const pts = seg.map(([u, v]) => ({ x: u * pathW, y: v * pageH }));
+    const cum = [0];
+    for (let i = 0; i < pts.length - 1; i++) {
+      cum.push(cum[i] + Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y));
     }
-    carry = (carry + seg) % step;
-  }
-  return dots;
+    const total = cum[cum.length - 1];
+    if (total < 1) return;
+    const n = Math.max(2, Math.round(total / DOT_TARGET));
+    for (let k = 1; k < n; k++) {
+      const target = (total * k) / n;
+      let j = 0;
+      while (j < cum.length - 2 && cum[j + 1] < target) j += 1;
+      const t = (target - cum[j]) / Math.max(1e-6, cum[j + 1] - cum[j]);
+      const x = pts[j].x + (pts[j + 1].x - pts[j].x) * t;
+      const y = pts[j].y + (pts[j + 1].y - pts[j].y) * t;
+      if (nodes.some((nd) => Math.hypot(nd.x - x, nd.y - y) < DOT_CLEAR)) continue;
+      // Quand le chemin repasse près de lui-même, on ne redessine pas
+      // par-dessus : sinon les pastilles se chevauchent.
+      if (placed.some((d) => Math.hypot(d.x - x, d.y - y) < DOT_APART)) continue;
+      placed.push({ x, y });
+    }
+  });
+  return placed;
 }
 
 // Points intermédiaires (petits ronds) entre deux niveaux consécutifs,
