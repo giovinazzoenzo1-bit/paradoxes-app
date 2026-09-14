@@ -921,6 +921,31 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Étoiles de note en image (14/09)
+
+`assets/icons/star.png` remplace les caractères `★`/`☆` partout :
+carte des chapitres, écran de fin de combat, et palier d'évolution d'une
+créature (2 endroits). Composant commun `StarRow` dans
+`AdventureScreen.js`.
+
+⚠️ **Une seule image pour les 3 étoiles.** Les « vides » sont la MÊME
+image recolorée par `tintColor: '#4a3a1c'` — silhouette identique. Une
+simple baisse d'opacité laissait lire une étoile dorée pâlie, pas une
+étoile vide.
+
+⚠️ **Sur la carte, les étoiles passent AU-DESSUS du niveau**, mais
+repassent DESSOUS quand il n'y a pas la place (`starsFitAbove`). Sans ce
+repli, les niveaux 10 — collés au haut de l'écran — envoyaient leurs
+étoiles sous les boutons ou hors de l'écran. **Vérifié sur les 120
+niveaux : 6 cas basculent**, tous des niveaux 10.
+
+⚠️ Taille retenue **12 dp** (rangée de 40 dp pour un nœud de 38) après
+comparaison : à 13 dp avec un décalage de 15, ce sont **10** niveaux qui
+basculaient ; à 11 dp la lisibilité chutait sans gain réel.
+
+⚠️ `HEADER_BOXES` (emprise des boutons en dp) est MESURÉE sur des
+captures 2000×923, pas estimée. À remesurer si l'en-tête change.
+
 ## Itinéraires : la RÉFÉRENCE, ce sont les tracés de l'auteur (14/09)
 
 Après trois passes de calcul automatique restées imparfaites, l'auteur a

@@ -28,6 +28,54 @@ const COMBAT_BTN = require('../../../assets/adventure/combat-btn.png');
 // CODE via <CurrencyIcon>, pas dans l'image.
 const GRIFFES_ICON = require('../../../assets/icons/griffes-icon.png');
 const RUNES_GEM = require('../../../assets/icons/runes-gem.png');
+// Étoile de note (14/09). Une seule image pour les 3 étoiles : les
+// « vides » sont la MÊME image recolorée par `tintColor`, ce qui garde
+// exactement la même silhouette.
+const STAR_ICON = require('../../../assets/icons/star.png');
+
+// Emprise des boutons de l'en-tête, en dp, MESURÉE sur des captures
+// (2000x923). Sert à savoir si une rangée d'étoiles tient au-dessus d'un
+// niveau sans passer sous un bouton.
+const HEADER_BOXES = [
+  { x0: 14, x1: 134, y0: 8, y1: 43 },    // Retour
+  { x0: 584, x1: 676, y0: 13, y1: 43 },  // Éléments
+  { x0: 687, x1: 836, y0: 13, y1: 44 },  // Griffes + Énergie
+];
+const STAR_SIZE = 12;
+const STAR_GAP = 2;
+const STAR_OFFSET = 10;   // écart entre le nœud et la rangée
+
+// Rangée de 3 étoiles. `filled` = nombre d'étoiles gagnées.
+function StarRow({ filled, size = STAR_SIZE, style }) {
+  return (
+    <View style={[styles.starRow, { gap: STAR_GAP }, style]}>
+      {[1, 2, 3].map((n) => (
+        <Image
+          key={n}
+          source={STAR_ICON}
+          style={[{ width: size, height: size }, n > filled && styles.starRowEmpty]}
+          resizeMode="contain"
+        />
+      ))}
+    </View>
+  );
+}
+
+// Une rangée tient-elle AU-DESSUS du nœud ? Sinon elle repasse dessous.
+// Les niveaux 10 sont collés au haut de l'écran : sans ce repli, leurs
+// étoiles finiraient sous les boutons ou hors de l'écran (vérifié : 6
+// cas sur 120).
+function starsFitAbove(x, y) {
+  const rowW = 3 * STAR_SIZE + 2 * STAR_GAP;
+  const top = y - LEVEL_NODE_SIZE / 2 - STAR_OFFSET - STAR_SIZE;
+  const bottom = y - LEVEL_NODE_SIZE / 2 - STAR_OFFSET;
+  const left = x - rowW / 2;
+  const right = x + rowW / 2;
+  if (top < 2) return false;
+  return !HEADER_BOXES.some(
+    (b) => right > b.x0 && left < b.x1 && bottom > b.y0 && top < b.y1
+  );
+}
 
 // Panneau de la boutique de runes (Gemini, détouré ici). Les 3 cases
 // sont de vrais TROUS dans l'image : on y rend le contenu en code, donc
@@ -927,7 +975,10 @@ function EvolutionCard({ evolutionTier, ownedLevel, griffes, onEvolve }) {
   return (
     <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>🌟 Évolution</Text>
-      <Text style={styles.sectionBody}>Palier actuel : {'★'.repeat(evolutionTier + 1)}{'☆'.repeat(2 - evolutionTier)}</Text>
+      <View style={styles.sectionStarsRow}>
+        <Text style={styles.sectionBody}>Palier actuel :</Text>
+        <StarRow filled={evolutionTier + 1} size={14} />
+      </View>
       {maxed ? (
         <Text style={[styles.speciesNote, { marginTop: 8 }]}>Palier maximum atteint.</Text>
       ) : eligible ? (
@@ -1109,9 +1160,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
           <Text style={styles.mlName} numberOfLines={1}>{display.name}</Text>
 
           <View style={styles.mlStars}>
-            <Text style={styles.mlStarsText}>
-              {'★'.repeat(evolutionTier + 1)}{'☆'.repeat(2 - evolutionTier)}
-            </Text>
+            <StarRow filled={evolutionTier + 1} size={14} />
             <Text style={styles.mlLevelText}>
               Niveau {owned.level}{!evoMaxed && `/${levelSpanTo}`}
             </Text>
@@ -1917,13 +1966,14 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
                           niveaux TERMINÉS — ailleurs elles n'auraient
                           rien à dire. */}
                       {levelStars[levelNum] > 0 && (
-                        <View style={styles.levelStars}>
-                          {[1, 2, 3].map((n) => (
-                            <Text key={n} style={[styles.levelStar, n > levelStars[levelNum] && styles.levelStarOff]}>
-                              {n <= levelStars[levelNum] ? '★' : '☆'}
-                            </Text>
-                          ))}
-                        </View>
+                        <StarRow
+                          filled={levelStars[levelNum]}
+                          style={
+                            starsFitAbove(pos.x, pos.y)
+                              ? [styles.levelStars, { top: -(STAR_OFFSET + STAR_SIZE) }]
+                              : [styles.levelStars, { bottom: -(STAR_OFFSET + STAR_SIZE) }]
+                          }
+                        />
                       )}
                     </TouchableOpacity>
                   );
@@ -2814,15 +2864,14 @@ const styles = StyleSheet.create({
   },
   energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
   energyBadgeCountdown: { color: '#9fb2c9', fontSize: 9, fontWeight: '700', marginTop: 1 },
-  levelStars: {
-    position: 'absolute', bottom: -13, left: 0, right: 0,
-    flexDirection: 'row', justifyContent: 'center', gap: 1,
-  },
-  levelStar: {
-    fontSize: 11, color: '#ffcf3f',
-    textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 2,
-  },
-  levelStarOff: { color: 'rgba(120,90,40,0.75)' },
+  // Position verticale posée à l'appel (au-dessus, ou en dessous quand
+  // il n'y a pas la place).
+  levelStars: { position: 'absolute', left: 0, right: 0 },
+  starRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  sectionStarsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // Étoile non gagnée : MÊME image, simplement recolorée en sombre —
+  // une opacité seule laissait lire une étoile dorée pâlie.
+  starRowEmpty: { tintColor: '#4a3a1c', opacity: 0.85 },
 
   elemHelpBtn: {
     // Dans le flux de l'en-tête (13/09) : plus de position absolue.
@@ -3070,7 +3119,6 @@ const styles = StyleSheet.create({
   mlPortraitEmoji: { fontSize: 96 },
   mlName: { color: COLORS.text, fontSize: 15, fontWeight: '900', marginTop: 6 },
   mlStars: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
-  mlStarsText: { color: COLORS.action, fontSize: 14 },
   mlLevelText: { color: COLORS.text, fontSize: 13, fontWeight: '800' },
   mlLevelBarTrack: {
     width: '90%', height: 9, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.10)',

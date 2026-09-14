@@ -11,7 +11,7 @@
 // emojis actuels comme "skins". Croix pour quitter en haut à gauche.
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, ScrollView } from 'react-native';
+  View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, Image, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CreatureArt from '../../components/CreatureArt';
 import { StatusBar } from 'expo-status-bar';
@@ -35,6 +35,8 @@ const DEFEAT_BANNER = require('../../../assets/combat/defeat-banner.png');
 // fond complet, et le texte doit passer en SOMBRE pour rester lisible.
 // Bordure mesurée sur l'image : 10% en largeur, 15% en hauteur.
 const RECAP_FRAME = require('../../../assets/combat/recap-frame.png');
+// Étoile de note, commune à toute l'appli (14/09).
+const STAR_ICON = require('../../../assets/icons/star.png');
 import { COLORS } from './clickerTheme';
 import { stageForLevel, MANA_MAX, MANA_PER_TURN } from '../../games/clicker/clickerLogic';
 import {
@@ -890,9 +892,12 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
         {isWin && (
           <View style={styles.starsRow}>
             {[1, 2, 3].map((n) => (
-              <Text key={n} style={[styles.star, n > stars && styles.starOff]}>
-                {n <= stars ? '★' : '☆'}
-              </Text>
+              <Image
+                key={n}
+                source={STAR_ICON}
+                style={[styles.star, n > stars && styles.starOff]}
+                resizeMode="contain"
+              />
             ))}
           </View>
         )}
@@ -1106,11 +1111,11 @@ const styles = StyleSheet.create({
   // déplacé dans le cadre.
   resultScroll: { flexGrow: 1, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 20 },
   starsRow: { flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 6 },
-  star: {
-    color: '#ffcf3f', fontSize: 26,
-    textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3,
-  },
-  starOff: { color: 'rgba(120,90,40,0.5)' },
+  // Image et non plus caractère : 28 dp, soit l'équivalent visuel de
+  // l'ancienne police 26.
+  star: { width: 28, height: 28 },
+  // Étoile non gagnée : MÊME image recolorée en sombre.
+  starOff: { tintColor: '#4a3a1c', opacity: 0.85 },
 
   rewardBadge: {
     alignSelf: 'center', marginBottom: 10, paddingVertical: 6, paddingHorizontal: 18,
