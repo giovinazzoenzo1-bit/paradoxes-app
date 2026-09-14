@@ -932,8 +932,15 @@ principe que les plans.
    ⚠️ Critère : le masque doit **RELIER les niveaux consécutifs**.
    Choisir « le plus petit masque » donnait un réseau minuscule qui ne
    reliait plus rien et le chemin partait hors piste.
-4. **Plus court chemin** sur une carte de coût : ~1 au centre du sentier,
-   120 hors sentier mais sur l'île, 1200 hors de l'île.
+4. **Privilégier les voies LARGES.** ⚠️ Défaut constaté : les margelles
+   de bassins et les bordures de terrasses sont de la MÊME pierre claire
+   que les sentiers, donc le chemin les escaladait et coupait à travers
+   les terrasses. Mesuré : sous les niveaux la voie fait **16 à 30 px de
+   demi-largeur**, contre une **médiane de 5 à 7** pour l'ensemble du
+   masque — le discriminant est donc la largeur, pas la couleur.
+5. **Carte de coût** : ~1 sur une voie large (demi-largeur ≥ 11), 25 sur
+   une voie moyenne (≥ 6), 90 sur un liseré étroit, 300 hors sentier mais
+   sur l'île, 3000 hors de l'île. Puis plus court chemin.
 
 ⚠️ **Traversée des vides et cascades** : toute portion hors sentier de
 plus de 8 px est remplacée par une **ligne droite** entre son entrée et
