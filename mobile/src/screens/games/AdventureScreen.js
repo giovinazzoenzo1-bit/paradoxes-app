@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensio
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
+import { CHAPTER_ROUTES } from './chapterRoutes';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { cardFrameForElement, CARD_FRAME_BORDER_X, CARD_FRAME_BORDER_Y } from './cardFrames';
@@ -1457,6 +1458,35 @@ function bezierPoint(p0, p1, ctrl, t) {
   };
 }
 
+// Pointillés le long de l'itinéraire MESURÉ sur l'image du chapitre.
+//
+// Les points de `CHAPTER_ROUTES` décrivent la route peinte ; on y sème
+// des pastilles à intervalle CONSTANT en distance parcourue (et non un
+// nombre fixe par segment, qui donnerait des points serrés dans les
+// virages et espacés dans les lignes droites).
+//
+// Les pastilles trop proches d'un niveau sont sautées : elles
+// disparaîtraient sous la pastille du niveau.
+function routeDots(route, pathW, pageH, nodes, step = 17, clear = 26) {
+  const pts = route.map(([u, v]) => ({ x: u * pathW, y: v * pageH }));
+  const dots = [];
+  let carry = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i];
+    const b = pts[i + 1];
+    const seg = Math.hypot(b.x - a.x, b.y - a.y);
+    if (seg < 0.001) continue;
+    for (let d = step - carry; d < seg; d += step) {
+      const t = d / seg;
+      const x = a.x + (b.x - a.x) * t;
+      const y = a.y + (b.y - a.y) * t;
+      if (!nodes.some((n) => Math.hypot(n.x - x, n.y - y) < clear)) dots.push({ x, y });
+    }
+    carry = (carry + seg) % step;
+  }
+  return dots;
+}
+
 // Points intermédiaires (petits ronds) entre deux niveaux consécutifs,
 // le long d'une courbe (pas une ligne droite) — le point de contrôle est
 // décalé perpendiculairement au segment direct pour créer un vrai arc.
@@ -1832,9 +1862,11 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
               <View style={[styles.chapterPath, { height: pageH }]}>
                 {/* Tracé courbe en pointillés entre chaque niveau consécutif —
                     dessiné EN PREMIER pour rester derrière les pastilles. */}
-                {positions.slice(0, -1).map((p0, i) => {
-                  const p1 = positions[i + 1];
-                  return pathDots(p0, p1).map((d, di) => (
+                {(CHAPTER_ROUTES[chapterNum]
+                  ? [routeDots(CHAPTER_ROUTES[chapterNum], pathWidth, pageH, positions)]
+                  : positions.slice(0, -1).map((p0, i) => pathDots(p0, positions[i + 1]))
+                ).map((group, i) => {
+                  return group.map((d, di) => (
                     <View
                       key={`dot-${i}-${di}`}
                       style={[

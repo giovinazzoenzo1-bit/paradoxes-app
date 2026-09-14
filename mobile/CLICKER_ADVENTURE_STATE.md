@@ -912,6 +912,47 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Les pointillés suivent la VRAIE route peinte (13/09)
+
+Avant : une courbe de Bézier entre deux nœuds, avec un décalage
+perpendiculaire fixe. Elle ne connaissait pas l'île et coupait à travers
+l'eau, les arbres ou le vide.
+
+Maintenant : `chapterRoutes.js` contient, par chapitre, la polyligne du
+chemin réel. Même principe que les plans — **on mesure l'image**.
+
+### Comment elles sont calculées
+
+1. **Isoler l'ÎLE** par la texture : l'île a beaucoup de contours, le
+   ciel et les nuages sont lisses. Énergie de gradient → seuil →
+   fermeture → plus grande zone connexe.
+2. **Carte de coût** : ~1 au centre des sentiers (via la carte de
+   distance du sol praticable), 50 hors sentier mais sur l'île, 3000
+   hors de l'île.
+3. **Plus court chemin** entre nœuds consécutifs
+   (`skimage.graph.route_through_array`), sur l'image réduite au tiers.
+4. **Simplification** Douglas-Peucker (ε = 0,006, soit ~5 dp d'écart) :
+   1025 points au total pour 12 chapitres, ~17 Ko.
+
+⚠️ **L'étape 1 est indispensable.** Sans elle, 30 % du ciel rouge du
+chapitre 11 était classé « sol praticable » (il est plus clair que sa
+moyenne locale) et le chemin passait PAR LE CIEL au-dessus de l'île.
+
+⚠️ Hors-piste résiduel après correction : 0 % sur 7 chapitres, ≤ 7 %
+ailleurs — ce sont les ponts et les franchissements entre morceaux
+d'île, normaux.
+
+### Rendu
+
+`routeDots()` sème les pastilles à **intervalle constant de distance
+parcourue** (17 dp), pas un nombre fixe par segment : sinon elles se
+tassent dans les virages et s'écartent dans les lignes droites. Celles
+à moins de 26 dp d'un niveau sont sautées, elles disparaîtraient sous sa
+pastille.
+
+Les chapitres sans itinéraire (au-delà du dernier illustré) gardent
+l'ancienne courbe — rien n'est cassé.
+
 ## Décor par chapitre — méthode (13/09)
 
 `CHAPTER_SCENES[n] = { bg, path }`. Le chapitre 1 a son île
