@@ -172,8 +172,22 @@ export function opponentGoesFirst() {
 //
 // La croissance (1,062/niveau) est inchangée : le déséquilibre était sur
 // le NIVEAU de départ, pas sur la pente.
+// Rééquilibrage PvE du 14/09 — voir CLICKER_ADVENTURE_STATE.md.
+//
+// La courbe suit désormais EXACTEMENT celle du joueur (`levelMultiplier`),
+// décalée de 3 niveaux : l'économie permet de financer une créature au
+// niveau de l'étape +3 à +5 (mesuré). Le rapport de puissance reste donc
+// constant par construction, et le ralentissement après le niveau 50 est
+// hérité sans avoir à l'écrire deux fois.
+//
+// L'ancienne courbe (26 × 1,062^n) était EXPONENTIELLE alors que le
+// joueur progresse LINÉAIREMENT : au niveau 40 l'adversaire avait pris
+// un facteur 2,4 d'avance.
+//
+// Base 44 choisie par simulation : au-delà (50, 56, 62) une équipe
+// faible qui ne monte pas ses créatures descend à 46-93% de victoires.
 function opponentPowerBudget(levelNumber) {
-  return 26 * Math.pow(1.062, levelNumber - 1);
+  return 44 * levelMultiplier(levelNumber + 3);
 }
 
 // Budget PAR MEMBRE de l'équipe adverse — le budget ci-dessus reste la
@@ -187,8 +201,15 @@ function opponentPowerBudget(levelNumber) {
 // restaure la courbe totale d'origine : plus d'adversaires = plus de
 // cibles et de tours à jouer (vraie difficulté tactique), mais sans
 // spike de puissance brute à l'entrée de chaque chapitre.
+// ⚠️ Division par la RACINE de la taille d'équipe, pas par la taille.
+// Diviser par la taille entière faisait du CHAPITRE 1 le pic de
+// difficulté du jeu : le niveau 11 (2 adversaires) était DEUX FOIS plus
+// facile que le niveau 10 (mesuré : 45 de budget par adversaire au
+// niveau 10, 24 au niveau 11). L'exposant 0,3 ramène ce recul à 15%,
+// tout en évitant que la puissance TOTALE double d'un coup à l'entrée
+// d'un chapitre.
 function opponentPowerBudgetPerMember(levelNumber) {
-  return opponentPowerBudget(levelNumber) / opponentTeamSize(levelNumber);
+  return opponentPowerBudget(levelNumber) / Math.pow(opponentTeamSize(levelNumber), 0.3);
 }
 
 // Multiplicateur d'attaque des adversaires. Ne touche QUE l'attaque :
@@ -270,7 +291,24 @@ export function starsForBattle(stats, opponentCount) {
   return stars;
 }
 
-export const OPPONENT_ATTACK_MULT = 5.0;
+// ⚠️ RAMENÉ DE 5,0 À 0,3 le 14/09. C'était la cause du blocage signalé
+// (« les créatures adverses tuent mes monstres en un coup »).
+//
+// Les dégâts adverses ne sortent PAS directement de cette stat : ils
+// valent `dégâts de la compétence × (ATQ actuelle / ATQ de base)`. Avec
+// le multiplicateur à 5, ce rapport atteignait 8 à 12, et les
+// compétences frappaient à 49/65/98/147 contre 38 PV au niveau 9 —
+// chaque coup tuait. Conséquence : 2 étoiles (gagner SANS perdre de
+// créature) devenait mécaniquement impossible, donc pas de progression.
+//
+// Le 5,0 avait été posé pour corriger « les adversaires ne font aucun
+// dégât », mais la vraie cause était un bug de riposte (corrigé depuis,
+// voir CombatScreen) ; le multiplicateur, lui, était resté.
+//
+// Mesuré après changement : 2,1 à 7,8 coups encaissés selon le niveau,
+// plus aucun one-shot, et l'autoclicker ne fait plus gagner que ~0,4
+// tour — l'équilibrage ne repose plus sur lui.
+export const OPPONENT_ATTACK_MULT = 0.3;
 
 export function statsForOpponentCreature(creature, levelNumber) {
   const base = creature.baseHp != null

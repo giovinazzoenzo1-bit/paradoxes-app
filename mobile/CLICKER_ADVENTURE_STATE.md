@@ -921,6 +921,68 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Rééquilibrage PvE (14/09) — fin du one-shot
+
+**Signalement** : un joueur bloqué au chapitre 1 niveau 9, « les
+créatures adverses tuent mes monstres en un coup », « pas assez de
+Griffes ».
+
+⚠️ **Le manque de Griffes était la CONSÉQUENCE, pas la cause.**
+
+### Les deux causes réelles, mesurées
+
+1. **`OPPONENT_ATTACK_MULT` à 5,0.** Les dégâts adverses ne sortent pas
+   de cette stat directement : ils valent `dégâts de la compétence ×
+   (ATQ actuelle / ATQ de base)`. À 5,0 ce rapport atteignait **8 à 12**,
+   et les compétences frappaient à **49/65/98/147 contre 38 PV** au
+   niveau 9. Chaque coup tuait. Or **2 étoiles = gagner SANS perdre de
+   créature** : mécaniquement impossible, donc plus de progression.
+   Le 5,0 avait été posé pour corriger « les adversaires ne font aucun
+   dégât », mais la vraie cause était un bug de riposte corrigé depuis.
+2. **Le chapitre 1 était le pic de difficulté du jeu.** Le budget était
+   divisé par la taille d'équipe : 45 par adversaire au niveau 10, **24
+   au niveau 11** — le chapitre 2 était deux fois plus facile.
+
+### Réglages retenus
+
+| Paramètre | Avant | Après |
+|---|---|---|
+| `OPPONENT_ATTACK_MULT` | 5,0 | **0,3** |
+| Budget | 26 × 1,062^n (exponentiel) | **44 × `levelMultiplier(n+3)`** |
+| Division par taille d'équipe | ÷ n | **÷ n^0,3** |
+| Compétences des 8 communes | ratio dégâts/ATQ 0,85 | **× 1,4 → ratio 1,19** |
+
+⚠️ **Le budget suit désormais la courbe DU JOUEUR** (`levelMultiplier`),
+décalée de 3 niveaux — l'économie permet de financer une créature au
+niveau de l'étape +3 à +5 (mesuré). L'ancienne courbe exponentielle
+donnait à l'adversaire un facteur 2,4 d'avance au niveau 40.
+
+⚠️ **Base 44 et pas plus** : à 50, 56 ou 62, une équipe faible qui ne
+monte pas ses créatures tombe à 46-93 % de victoires.
+
+⚠️ **Les communes étaient DÉJÀ inutilisables avant** (0 à 27 % de
+victoires selon le niveau) — ce n'était pas une régression du
+rééquilibrage. Leur ratio dégâts/ATQ (0,85) était sous celui des peu
+communes (1,14) ; le × 1,4 l'aligne.
+
+### Résultats (100 combats par point, modèle exact : compétences, mana, riposte unique)
+
+| | Avant | Après |
+|---|---|---|
+| 3 communes | 0 à 100 % selon le niveau | **99-100 % partout** |
+| Équipe mixte, pire cas | — | **100 % partout** |
+| Créatures perdues | jusqu'à 2 sur 3 | **0** |
+| Coups encaissés | **1** (one-shot) | **2,1 à 7,8** |
+| Durée des combats | 1-4 tours | 2-6 tours |
+
+⚠️ **Le seuil 3 étoiles (2n+1) n'a PAS été touché** : il redevient
+atteignable de lui-même. Vérifié qu'il reste mérité — accordé à une
+équipe investie, refusé à une équipe faible à tous les niveaux.
+
+⚠️ **Mesuré SANS autoclicker** (référence 4 taps/s, vérifié de 2,5 à
+6,7). L'autoclicker ne fait plus gagner que ~0,4 tour : l'équilibrage
+ne repose plus sur lui.
+
 ## Étoiles de note en image (14/09)
 
 `assets/icons/star.png` remplace les caractères `★`/`☆` partout :

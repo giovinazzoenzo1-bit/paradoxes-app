@@ -108,14 +108,14 @@ export const CREATURES = [
   // (Gemini a donné "Attaquant"), rarity en minuscules sans accent.
   { id: 'pyrosile', element: 'Feu', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
     baseHp: 10, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
-    skills: mkSkills([['Morsure Chaude', 2, 5], ['Cendres Aveuglantes', 1, 10], ['Souffle de Braise', 3, 15], ['Tête Brûlée', 5, 25]]),
+    skills: mkSkills([['Morsure Chaude', 3, 5], ['Cendres Aveuglantes', 1, 10], ['Souffle de Braise', 4, 15], ['Tête Brûlée', 7, 25]]),
     lore: "Ce petit lézard volcanique se nourrit exclusivement de cendres chaudes trouvées près des cratères. Bien que de petite taille, il crache des flammèches capables de brûler gravement ses adversaires. Il est souvent le premier compagnon d'entraînement des jeunes pyromanciens.",
     stages: [
     { name: 'Pyrosile', emoji: '🦎' }, { name: 'Pyrosile', emoji: '🦎' }, { name: 'Pyrosile', emoji: '🦎' },
   ]},
   { id: 'caraploof', element: 'Eau', rarity: 'commun', baseIncome: 0.15, combatType: 'tank',
     baseHp: 15, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
-    skills: mkSkills([['Bulle Aqueuse', 1, 5], ['Jet Baveux', 2, 10], ['Charge Coquille', 2, 15], ['Éclaboussure Lourde', 3, 25]]),
+    skills: mkSkills([['Bulle Aqueuse', 1, 5], ['Jet Baveux', 3, 10], ['Charge Coquille', 3, 15], ['Éclaboussure Lourde', 4, 25]]),
     lore: "Caraploof est une petite tortue des ruisseaux dotée d'une coquille très dense qui absorbe parfaitement les chocs. Très lente et peu agressive, elle préfère encaisser les coups plutôt que de fuir, servant souvent de bouclier aux autres créatures de sa mare. On la trouve principalement assoupie sous les nénuphars.",
     stages: [
     { name: 'Caraploof', emoji: '🐢' }, { name: 'Caraploof', emoji: '🐢' }, { name: 'Caraploof', emoji: '🐢' },
@@ -124,21 +124,21 @@ export const CREATURES = [
     baseHp: 10, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
     // "Bourrasque" renommée en "Bourrasque Légère" — collision avec
     // l'attaque de Brisillon (Air, Rare, toujours présent pour l'instant).
-    skills: mkSkills([['Brise Légère', 2, 5], ['Plume Coupante', 3, 10], ['Bourrasque Légère', 4, 15], ['Piqué Tornade', 5, 25]]),
+    skills: mkSkills([['Brise Légère', 3, 5], ['Plume Coupante', 4, 10], ['Bourrasque Légère', 6, 15], ['Piqué Tornade', 7, 25]]),
     lore: "Ventis est un petit esprit aviaire formé de courants d'air tourbillonnants qui adore chasser dans les tempêtes. Ses ailes génèrent de violentes bourrasques capables de déséquilibrer n'importe quel agresseur. Bien qu'il soit très commun dans les plaines, son caractère imprévisible en fait un adversaire particulièrement vif.",
     stages: [
     { name: 'Ventis', emoji: '🐦' }, { name: 'Ventis', emoji: '🐦' }, { name: 'Ventis', emoji: '🐦' },
   ]},
   { id: 'bouldog', element: 'Terre', rarity: 'commun', baseIncome: 0.15, combatType: 'tank',
     baseHp: 14, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
-    skills: mkSkills([['Coup de Truffe', 1, 5], ['Jet de Cailloux', 2, 10], ['Morsure Terrestre', 2, 15], ['Chute de Gravier', 3, 25]]),
+    skills: mkSkills([['Coup de Truffe', 1, 5], ['Jet de Cailloux', 3, 10], ['Morsure Terrestre', 3, 15], ['Chute de Gravier', 4, 25]]),
     lore: "Ce petit chien de pierre patrouille inlassablement dans les carrières abandonnées pour protéger son territoire. Son corps fait de rocaille agglomérée lui permet d'encaisser de lourds impacts sans broncher. Bien qu'il soit affectueux avec ses maîtres, il reste un véritable mur de briques face aux ennemis.",
     stages: [
     { name: 'Bouldog', emoji: '🐕' }, { name: 'Bouldog', emoji: '🐕' }, { name: 'Bouldog', emoji: '🐕' },
   ]},
   { id: 'voltix', element: 'Foudre', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
     baseHp: 10, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
-    skills: mkSkills([['Étincelle Statique', 2, 5], ['Choc Poilu', 3, 10], ['Morsure Électrique', 4, 15], ['Décharge Flash', 5, 25]]),
+    skills: mkSkills([['Étincelle Statique', 3, 5], ['Choc Poilu', 4, 10], ['Morsure Électrique', 6, 15], ['Décharge Flash', 7, 25]]),
     lore: "Voltix est un petit rongeur survolté qui génère de l'électricité statique en frottant sa fourrure. Incapable de tenir en place, il décharge son énergie nerveuse sur tout ce qu'il touche. Bien que faible seul, un groupe de Voltix peut provoquer de sérieuses pannes de courant.",
     stages: [
     { name: 'Voltix', emoji: '🐹' }, { name: 'Voltix', emoji: '🐹' }, { name: 'Voltix', emoji: '🐹' },
@@ -152,21 +152,21 @@ export const CREATURES = [
   ]},
   { id: 'glyphon', element: 'Magie', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
     baseHp: 12, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
-    skills: mkSkills([['Onde Runique', 1, 5], ['Poussière de Mana', 2, 10], ['Aura Apaisante', 1, 15], ['Choc Arcanique', 3, 25]]),
+    skills: mkSkills([['Onde Runique', 1, 5], ['Poussière de Mana', 3, 10], ['Aura Apaisante', 1, 15], ['Choc Arcanique', 4, 25]]),
     lore: "Glyphon est une petite rune flottante qui s'est imprégnée de magie résiduelle dans les vieilles bibliothèques. Il s'attache souvent aux jeunes sorciers pour les aider à canaliser leurs premiers sorts. Bien qu'il soit fragile, sa présence apaise les esprits et renforce les enchantements de ses alliés.",
     stages: [
     { name: 'Glyphon', emoji: '🔮' }, { name: 'Glyphon', emoji: '🔮' }, { name: 'Glyphon', emoji: '🔮' },
   ]},
   { id: 'ombrillon', element: 'Ténèbres', rarity: 'commun', baseIncome: 0.15, combatType: 'attaquant',
     baseHp: 10, baseAttack: 3, baseClickSpeed: 1, baseEndurance: 100,
-    skills: mkSkills([["Griffe d'Ombre", 2, 5], ["Jet d'Obscurité", 3, 10], ['Regard Panique', 4, 15], ['Frappe Nocturne', 5, 25]]),
+    skills: mkSkills([["Griffe d'Ombre", 2, 5], ["Jet d'Obscurité", 3, 10], ['Regard Panique', 6, 15], ['Frappe Nocturne', 7, 25]]),
     lore: "Ombrillon est une petite entité née dans les recoins obscurs des vieilles caves. Bien qu'il soit chétif et souvent ignoré, il se nourrit des petites peurs pour gagner en agressivité. Ses frappes furtives surprennent toujours ceux qui s'aventurent sans torche dans le noir.",
     stages: [
     { name: 'Ombrillon', emoji: '🦇' }, { name: 'Ombrillon', emoji: '🦇' }, { name: 'Ombrillon', emoji: '🦇' },
   ]},
   { id: 'luxorbe', element: 'Lumière', rarity: 'commun', baseIncome: 0.15, combatType: 'soutien',
     baseHp: 12, baseAttack: 2, baseClickSpeed: 1, baseEndurance: 100,
-    skills: mkSkills([['Rayon Faible', 1, 5], ['Lueur Aveuglante', 2, 10], ['Éclat Chaleureux', 1, 15], ['Flash Purificateur', 3, 25]]),
+    skills: mkSkills([['Rayon Faible', 1, 5], ['Lueur Aveuglante', 3, 10], ['Éclat Chaleureux', 1, 15], ['Flash Purificateur', 4, 25]]),
     lore: "Luxorbe est une petite sphère rayonnante qui flotte dans les forêts anciennes pour guider les voyageurs perdus. Dépourvue de véritable corps physique, elle émet une aura apaisante qui revigore ses compagnons. Bien qu'inoffensive en apparence, sa lumière concentrée peut éblouir quiconque menace la paix des bois.",
     stages: [
     { name: 'Luxorbe', emoji: '✨' }, { name: 'Luxorbe', emoji: '✨' }, { name: 'Luxorbe', emoji: '✨' },
