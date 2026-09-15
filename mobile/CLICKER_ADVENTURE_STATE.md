@@ -1071,9 +1071,19 @@ part avec (on ne garde que la plus grosse composante).
 chacune sur son propre contenu ferait sauter le personnage d'une image à
 l'autre.
 
-**Réglages retenus** : segment 4,5 s → 6,0 s (le pic de mouvement, il
-lève le sabre et rugit), 18 images à **8 i/s**, 256 px, 848 Ko au total.
-Ramené de 12 à 8 i/s : à 12 le rugissement passait trop vite pour être lu.
+**Réglages retenus** : la vidéo ENTIÈRE, 120 images à 12 i/s en 224 px,
+palette de 64 couleurs, **4,1 Mo**.
+
+⚠️ **Vitesse d'ORIGINE conservée.** La source est à 24 i/s :
+échantillonner à 12 et rejouer à 12 garde la durée réelle (10 s), seule
+la finesse du mouvement baisse de moitié — invisible sur un dessin animé
+aux aplats.
+
+⚠️ **Deux erreurs commises avant d'y arriver, à ne pas refaire** :
+1. Avoir COUPÉ la vidéo à 1,5 s — on n'en voyait qu'un bout.
+2. Avoir baissé la cadence à 8 i/s pour « allonger » — ça produit un
+   RALENTI, pas une animation plus longue. Pour allonger, il faut PLUS
+   D'IMAGES, pas une cadence plus basse.
 
 ⚠️ **L'animation REMPLACE le gardien à son emplacement** : le sprite est
 retiré du terrain pendant la transition (`isBoss && phaseBreak`), sinon
@@ -1084,9 +1094,8 @@ sont calculées comme dans `renderSprite`, à partir de `GUARDIAN_SLOT`.
 emplacements. Plus bas, ça marchait par chance (le module est évalué
 avant le premier rendu) — un piège à la prochaine réorganisation.
 
-⚠️ **Durée de la transition calée sur la séquence** : 260 + 1750 + 240 =
-2250 ms, exactement 18 images à 8 i/s. Sans ça l'animation serait coupée
-en plein rugissement.
+⚠️ **Durée de la transition calée sur la séquence** : 300 + 9400 + 300 =
+10 000 ms, exactement 120 images à 12 i/s.
 
 ⚠️ Le voile porte `pointerEvents: 'none'` : il couvre tout l'écran et ne
 doit pas capter de clics.

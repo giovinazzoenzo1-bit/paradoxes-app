@@ -186,13 +186,13 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const startBossPhase2 = (maxHp) => {
     setPhaseBreak(true);
     phaseAnim.setValue(0);
-    // ⚠️ Durée calée sur la SÉQUENCE : 18 images à 8 i/s = 2250 ms.
-    // L'apparition et la disparition sont prises DEDANS (260 + 1750 +
-    // 240), sinon l'animation serait coupée en plein rugissement.
+    // ⚠️ Durée calée sur la SÉQUENCE : 120 images à 12 i/s = 10 000 ms.
+    // L'apparition et la disparition sont prises DEDANS (300 + 9400 +
+    // 300), sinon l'animation serait coupée avant la fin.
     Animated.sequence([
-      Animated.timing(phaseAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
-      Animated.delay(1750),
-      Animated.timing(phaseAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
+      Animated.timing(phaseAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(9400),
+      Animated.timing(phaseAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
     ]).start(() => {
       setPhaseBreak(false);
       setBossPhase(2);
@@ -1045,28 +1045,137 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 // recadrées sur une BOÎTE COMMUNE, sinon le tigre sauterait d'une image
 // à l'autre.
 const GUARDIAN_ROAR_FRAMES = [
-  require('../../../assets/creatures/gardien/rugissement/f00.png'),
-  require('../../../assets/creatures/gardien/rugissement/f01.png'),
-  require('../../../assets/creatures/gardien/rugissement/f02.png'),
-  require('../../../assets/creatures/gardien/rugissement/f03.png'),
-  require('../../../assets/creatures/gardien/rugissement/f04.png'),
-  require('../../../assets/creatures/gardien/rugissement/f05.png'),
-  require('../../../assets/creatures/gardien/rugissement/f06.png'),
-  require('../../../assets/creatures/gardien/rugissement/f07.png'),
-  require('../../../assets/creatures/gardien/rugissement/f08.png'),
-  require('../../../assets/creatures/gardien/rugissement/f09.png'),
-  require('../../../assets/creatures/gardien/rugissement/f10.png'),
-  require('../../../assets/creatures/gardien/rugissement/f11.png'),
-  require('../../../assets/creatures/gardien/rugissement/f12.png'),
-  require('../../../assets/creatures/gardien/rugissement/f13.png'),
-  require('../../../assets/creatures/gardien/rugissement/f14.png'),
-  require('../../../assets/creatures/gardien/rugissement/f15.png'),
-  require('../../../assets/creatures/gardien/rugissement/f16.png'),
-  require('../../../assets/creatures/gardien/rugissement/f17.png'),
+  require('../../../assets/creatures/gardien/rugissement/f000.png'),
+  require('../../../assets/creatures/gardien/rugissement/f001.png'),
+  require('../../../assets/creatures/gardien/rugissement/f002.png'),
+  require('../../../assets/creatures/gardien/rugissement/f003.png'),
+  require('../../../assets/creatures/gardien/rugissement/f004.png'),
+  require('../../../assets/creatures/gardien/rugissement/f005.png'),
+  require('../../../assets/creatures/gardien/rugissement/f006.png'),
+  require('../../../assets/creatures/gardien/rugissement/f007.png'),
+  require('../../../assets/creatures/gardien/rugissement/f008.png'),
+  require('../../../assets/creatures/gardien/rugissement/f009.png'),
+  require('../../../assets/creatures/gardien/rugissement/f010.png'),
+  require('../../../assets/creatures/gardien/rugissement/f011.png'),
+  require('../../../assets/creatures/gardien/rugissement/f012.png'),
+  require('../../../assets/creatures/gardien/rugissement/f013.png'),
+  require('../../../assets/creatures/gardien/rugissement/f014.png'),
+  require('../../../assets/creatures/gardien/rugissement/f015.png'),
+  require('../../../assets/creatures/gardien/rugissement/f016.png'),
+  require('../../../assets/creatures/gardien/rugissement/f017.png'),
+  require('../../../assets/creatures/gardien/rugissement/f018.png'),
+  require('../../../assets/creatures/gardien/rugissement/f019.png'),
+  require('../../../assets/creatures/gardien/rugissement/f020.png'),
+  require('../../../assets/creatures/gardien/rugissement/f021.png'),
+  require('../../../assets/creatures/gardien/rugissement/f022.png'),
+  require('../../../assets/creatures/gardien/rugissement/f023.png'),
+  require('../../../assets/creatures/gardien/rugissement/f024.png'),
+  require('../../../assets/creatures/gardien/rugissement/f025.png'),
+  require('../../../assets/creatures/gardien/rugissement/f026.png'),
+  require('../../../assets/creatures/gardien/rugissement/f027.png'),
+  require('../../../assets/creatures/gardien/rugissement/f028.png'),
+  require('../../../assets/creatures/gardien/rugissement/f029.png'),
+  require('../../../assets/creatures/gardien/rugissement/f030.png'),
+  require('../../../assets/creatures/gardien/rugissement/f031.png'),
+  require('../../../assets/creatures/gardien/rugissement/f032.png'),
+  require('../../../assets/creatures/gardien/rugissement/f033.png'),
+  require('../../../assets/creatures/gardien/rugissement/f034.png'),
+  require('../../../assets/creatures/gardien/rugissement/f035.png'),
+  require('../../../assets/creatures/gardien/rugissement/f036.png'),
+  require('../../../assets/creatures/gardien/rugissement/f037.png'),
+  require('../../../assets/creatures/gardien/rugissement/f038.png'),
+  require('../../../assets/creatures/gardien/rugissement/f039.png'),
+  require('../../../assets/creatures/gardien/rugissement/f040.png'),
+  require('../../../assets/creatures/gardien/rugissement/f041.png'),
+  require('../../../assets/creatures/gardien/rugissement/f042.png'),
+  require('../../../assets/creatures/gardien/rugissement/f043.png'),
+  require('../../../assets/creatures/gardien/rugissement/f044.png'),
+  require('../../../assets/creatures/gardien/rugissement/f045.png'),
+  require('../../../assets/creatures/gardien/rugissement/f046.png'),
+  require('../../../assets/creatures/gardien/rugissement/f047.png'),
+  require('../../../assets/creatures/gardien/rugissement/f048.png'),
+  require('../../../assets/creatures/gardien/rugissement/f049.png'),
+  require('../../../assets/creatures/gardien/rugissement/f050.png'),
+  require('../../../assets/creatures/gardien/rugissement/f051.png'),
+  require('../../../assets/creatures/gardien/rugissement/f052.png'),
+  require('../../../assets/creatures/gardien/rugissement/f053.png'),
+  require('../../../assets/creatures/gardien/rugissement/f054.png'),
+  require('../../../assets/creatures/gardien/rugissement/f055.png'),
+  require('../../../assets/creatures/gardien/rugissement/f056.png'),
+  require('../../../assets/creatures/gardien/rugissement/f057.png'),
+  require('../../../assets/creatures/gardien/rugissement/f058.png'),
+  require('../../../assets/creatures/gardien/rugissement/f059.png'),
+  require('../../../assets/creatures/gardien/rugissement/f060.png'),
+  require('../../../assets/creatures/gardien/rugissement/f061.png'),
+  require('../../../assets/creatures/gardien/rugissement/f062.png'),
+  require('../../../assets/creatures/gardien/rugissement/f063.png'),
+  require('../../../assets/creatures/gardien/rugissement/f064.png'),
+  require('../../../assets/creatures/gardien/rugissement/f065.png'),
+  require('../../../assets/creatures/gardien/rugissement/f066.png'),
+  require('../../../assets/creatures/gardien/rugissement/f067.png'),
+  require('../../../assets/creatures/gardien/rugissement/f068.png'),
+  require('../../../assets/creatures/gardien/rugissement/f069.png'),
+  require('../../../assets/creatures/gardien/rugissement/f070.png'),
+  require('../../../assets/creatures/gardien/rugissement/f071.png'),
+  require('../../../assets/creatures/gardien/rugissement/f072.png'),
+  require('../../../assets/creatures/gardien/rugissement/f073.png'),
+  require('../../../assets/creatures/gardien/rugissement/f074.png'),
+  require('../../../assets/creatures/gardien/rugissement/f075.png'),
+  require('../../../assets/creatures/gardien/rugissement/f076.png'),
+  require('../../../assets/creatures/gardien/rugissement/f077.png'),
+  require('../../../assets/creatures/gardien/rugissement/f078.png'),
+  require('../../../assets/creatures/gardien/rugissement/f079.png'),
+  require('../../../assets/creatures/gardien/rugissement/f080.png'),
+  require('../../../assets/creatures/gardien/rugissement/f081.png'),
+  require('../../../assets/creatures/gardien/rugissement/f082.png'),
+  require('../../../assets/creatures/gardien/rugissement/f083.png'),
+  require('../../../assets/creatures/gardien/rugissement/f084.png'),
+  require('../../../assets/creatures/gardien/rugissement/f085.png'),
+  require('../../../assets/creatures/gardien/rugissement/f086.png'),
+  require('../../../assets/creatures/gardien/rugissement/f087.png'),
+  require('../../../assets/creatures/gardien/rugissement/f088.png'),
+  require('../../../assets/creatures/gardien/rugissement/f089.png'),
+  require('../../../assets/creatures/gardien/rugissement/f090.png'),
+  require('../../../assets/creatures/gardien/rugissement/f091.png'),
+  require('../../../assets/creatures/gardien/rugissement/f092.png'),
+  require('../../../assets/creatures/gardien/rugissement/f093.png'),
+  require('../../../assets/creatures/gardien/rugissement/f094.png'),
+  require('../../../assets/creatures/gardien/rugissement/f095.png'),
+  require('../../../assets/creatures/gardien/rugissement/f096.png'),
+  require('../../../assets/creatures/gardien/rugissement/f097.png'),
+  require('../../../assets/creatures/gardien/rugissement/f098.png'),
+  require('../../../assets/creatures/gardien/rugissement/f099.png'),
+  require('../../../assets/creatures/gardien/rugissement/f100.png'),
+  require('../../../assets/creatures/gardien/rugissement/f101.png'),
+  require('../../../assets/creatures/gardien/rugissement/f102.png'),
+  require('../../../assets/creatures/gardien/rugissement/f103.png'),
+  require('../../../assets/creatures/gardien/rugissement/f104.png'),
+  require('../../../assets/creatures/gardien/rugissement/f105.png'),
+  require('../../../assets/creatures/gardien/rugissement/f106.png'),
+  require('../../../assets/creatures/gardien/rugissement/f107.png'),
+  require('../../../assets/creatures/gardien/rugissement/f108.png'),
+  require('../../../assets/creatures/gardien/rugissement/f109.png'),
+  require('../../../assets/creatures/gardien/rugissement/f110.png'),
+  require('../../../assets/creatures/gardien/rugissement/f111.png'),
+  require('../../../assets/creatures/gardien/rugissement/f112.png'),
+  require('../../../assets/creatures/gardien/rugissement/f113.png'),
+  require('../../../assets/creatures/gardien/rugissement/f114.png'),
+  require('../../../assets/creatures/gardien/rugissement/f115.png'),
+  require('../../../assets/creatures/gardien/rugissement/f116.png'),
+  require('../../../assets/creatures/gardien/rugissement/f117.png'),
+  require('../../../assets/creatures/gardien/rugissement/f118.png'),
+  require('../../../assets/creatures/gardien/rugissement/f119.png'),
 ];
-// Ralenti de 12 à 8 i/s : 18 images = 2250 ms au lieu de 1500. À 12 le
-// rugissement passait trop vite pour être lu.
-const GUARDIAN_ROAR_FPS = 8;
+// ⚠️ 12 i/s, et la séquence couvre la vidéo ENTIÈRE (120 images).
+//
+// La source est à 24 i/s : échantillonner à 12 et rejouer à 12 conserve
+// la DURÉE RÉELLE (10 s), seule la finesse du mouvement baisse de
+// moitié — invisible sur un dessin animé aux aplats.
+//
+// Deux erreurs corrigées ici : avoir coupé la vidéo à 1,5 s (on n'en
+// voyait qu'un bout), puis avoir baissé la cadence à 8 i/s, ce qui
+// donnait un RALENTI au lieu d'allonger l'animation.
+const GUARDIAN_ROAR_FPS = 12;
 
 
 // Joue la séquence UNE fois, puis reste sur la dernière image.
