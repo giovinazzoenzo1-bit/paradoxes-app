@@ -82,8 +82,10 @@ export const QUEST_SEQUENCE = [
       label: () => 'Termine le chapitre 1, niveau 10' },
     { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', target: 10, mode: 'absolute',
       label: () => 'Monte le Sanctuaire au niveau 10' },
-    { id: 'seq_hold100k', icon: '🏦', metric: 'coins', target: 140000, mode: 'absolute',
-      label: () => 'Aie 140 000 pièces en réserve' },
+    // Ramené de 140 000 à 100 000 (14/09) : trop élevé pour le niveau
+    // réel du joueur à ce stade du cycle.
+    { id: 'seq_hold100k', icon: '🏦', metric: 'coins', target: 100000, mode: 'absolute',
+      label: () => 'Aie 100 000 pièces en réserve' },
     { id: 'seq_passive50', icon: '📈', metric: 'passiveIncome', target: 70, mode: 'absolute',
       label: () => 'Atteins 70 pièces par seconde en auto-clic' },
   ],

@@ -1757,6 +1757,13 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
     const target = sv && (typeof sv.scrollTo === 'function' ? sv : sv.getNode && sv.getNode());
     if (!target || typeof target.scrollTo !== 'function') return false;
     target.scrollTo({ y, animated: false });
+    // ⚠️ INDISPENSABLE. `scrollY` n'est alimenté que par `onScroll`, et un
+    // défilement PROGRAMMÉ n'émet pas cet événement. Sans cette ligne,
+    // `scrollY` restait à 0 alors que le contenu était déjà à `y` : la
+    // page affichée tombait hors de sa plage d'interpolation, donc à une
+    // opacité de 0 — carte NOIRE jusqu'au premier glissement du joueur,
+    // qui déclenchait enfin `onScroll`.
+    scrollY.setValue(y);
     return true;
   };
 

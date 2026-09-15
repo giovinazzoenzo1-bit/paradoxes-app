@@ -76,6 +76,7 @@ import {
   CREATURE_POWERS,
   migrateCreatureId,
   RARITY_BADGE_LETTER,
+  trustedOfflineSeconds,
 } from '../../games/clicker/clickerLogic';
 import {
   nextQuestSet,
@@ -277,6 +278,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // `startedAt` est null tant que le joueur n'a pas tapé : le chrono
   // démarre au PREMIER TAP, pas à l'apparition — sinon un joueur qui a
   // posé son téléphone perdrait des secondes sans le savoir.
+  // Horloge de référence anti-triche : ne recule jamais, sauvegardée.
+  // ⚠️ Déclarée ICI, au-dessus de l'effet de chargement qui la lit — elle
+  // était plus bas et provoquait un accès avant initialisation.
+  const clockMaxRef = useRef(0);
   const [boss, setBoss] = useState(null);
   const bossRef = useRef(null);
   bossRef.current = boss;
@@ -638,6 +643,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [devReopenedIds, setDevReopenedIds] = useState([]);
   const devReopenedIdsRef = useRef([]);
   devReopenedIdsRef.current = devReopenedIds;
+  // ⚠️ VERROU : défis atteints au moins une fois dans ce cycle.
+  //
+  // Les défis en mode ABSOLU portent sur des valeurs qui peuvent
+  // REDESCENDRE : « aie 100 000 pièces » se dé-validait dès qu'on
+  // dépensait, et « atteins 70 pièces/s » dès qu'un bonus temporaire
+  // expirait. Le défi revenait alors en arrière, et le compteur de
+  // l'œuf avec lui.
+  //
+  // Un défi atteint est atteint : on le verrouille.
+  const [latchedQuestIds, setLatchedQuestIds] = useState([]);
+  const latchedQuestIdsRef = useRef([]);
+  latchedQuestIdsRef.current = latchedQuestIds;
   const [questBaselines, setQuestBaselines] = useState({});
   const questBaselinesRef = useRef({});
   questBaselinesRef.current = questBaselines;
@@ -753,7 +770,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         if (raw) {
           const saved = JSON.parse(raw);
           const nowSec = Date.now() / 1000;
-          const elapsed = saved.lastSave ? nowSec - saved.lastSave : 0;
+          // Temps hors-ligne FIABLE : voir `trustedOfflineSeconds`.
+          // Reculer l'horloge ne crédite rien, et l'avancer consomme
+          // d'avance le temps hors-ligne à venir.
+          const trusted = trustedOfflineSeconds(saved.lastSave, saved.clockMax, nowSec);
+          const elapsed = trusted.seconds;
+          clockMaxRef.current = trusted.clockMax;
           const savedVeilleur = saved.veilleurLevel || 0;
           const savedAutoClickers = saved.autoClickers || {};
           // Migration douce depuis l'ancien "Familier" à niveau unique (dev
@@ -899,6 +921,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setQuestBaselines(saved.questBaselines || {});
           setDevCompletedIds(saved.devCompletedIds || []);
           setDevReopenedIds(saved.devReopenedIds || []);
+          setLatchedQuestIds(saved.latchedQuestIds || []);
           setEggPhase(saved.eggPhase || 'collecting');
           setHatchTaps(saved.hatchTaps || 0);
           setCaptureTaps(saved.captureTaps || 0);
@@ -993,7 +1016,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, critDamageLevel, tapUpgrades, autoClickers, upgradeLevels, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
-    activeQuestIds, questTargets, questBaseline, questBaselines, devCompletedIds, devReopenedIds, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
+    activeQuestIds, questTargets, questBaseline, questBaselines, devCompletedIds, devReopenedIds, latchedQuestIds, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
   // Construit l'objet de sauvegarde à partir des REFS uniquement, donc
@@ -1033,11 +1056,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     questBaselines: questBaselinesRef.current,
     devCompletedIds: devCompletedIdsRef.current,
     devReopenedIds: devReopenedIdsRef.current,
+    latchedQuestIds: latchedQuestIdsRef.current,
     sequenceIndex: sequenceIndexRef.current,
     eggPhase: eggPhaseRef.current,
     hatchTaps: hatchTapsRef.current,
     captureTaps: captureTapsRef.current,
     lastSave: Date.now() / 1000,
+    // Repère anti-triche : sauvegardé avec le reste, sinon il repartirait
+    // à zéro à chaque redémarrage et la parade ne servirait à rien.
+    // `Math.max` : il ne doit JAMAIS reculer, même si l'horloge recule
+    // pendant que l'appli tourne.
+    clockMax: Math.max(clockMaxRef.current || 0, Date.now() / 1000),
   });
 
   // Sauvegarde immédiate à la sortie de l'écran. Annule d'abord le
@@ -1784,7 +1813,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // l'œuf, qui n'éclorait jamais.
   const isQuestDone = (id) =>
     !devReopenedIds.includes(id) &&
-    (devCompletedIds.includes(id) || questComplete(id, questStats, baselineFor(id), questTargets));
+    (latchedQuestIds.includes(id) ||
+      devCompletedIds.includes(id) ||
+      questComplete(id, questStats, baselineFor(id), questTargets));
+
+  // Pose le verrou dès qu'un défi est atteint, pour qu'une baisse de la
+  // valeur ne le défasse plus.
+  useEffect(() => {
+    if (!loaded) return;
+    const atteints = activeQuestIds.filter(
+      (id) => !latchedQuestIdsRef.current.includes(id)
+        && !devReopenedIdsRef.current.includes(id)
+        && questComplete(id, questStats, baselineFor(id), questTargets)
+    );
+    if (atteints.length) setLatchedQuestIds((prev) => [...prev, ...atteints]);
+  });
   const completedQuestCount = activeQuestIds.filter(isQuestDone).length;
 
   // Défi mis en avant sur l'écran d'accueil : le PREMIER non terminé des
@@ -1809,6 +1852,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (!target) return;
     setDevCompletedIds((prev) => prev.filter((id) => id !== target));
     setDevReopenedIds((prev) => (prev.includes(target) ? prev : [...prev, target]));
+    setLatchedQuestIds((prev) => prev.filter((id) => id !== target));
     setQuestBaselines((prev) => ({ ...prev, [target]: questStats }));
     // Métriques de type RECORD (meilleure tenue de Transe, meilleur
     // combo) : elles ne se rejouent pas avec une nouvelle référence.
@@ -1996,6 +2040,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setQuestBaselines({});
     setDevCompletedIds([]);
     setDevReopenedIds([]);
+    setLatchedQuestIds([]);
     setEggPhase('collecting');
     setHatchTaps(0);
     setCaptureTaps(0);

@@ -921,6 +921,58 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Correctifs du 14/09 (soir)
+
+### ⚠️ Carte d'Aventure NOIRE jusqu'au premier glissement
+
+Le fondu entre chapitres lit `scrollY`, alimenté UNIQUEMENT par
+`onScroll`. Or un défilement **programmé** n'émet pas cet événement :
+`scrollY` restait à 0 alors que le contenu était déjà positionné, donc
+la page affichée tombait hors de sa plage d'interpolation → opacité 0.
+Le premier glissement du joueur déclenchait enfin `onScroll` et tout
+apparaissait.
+
+**Correctif** : `scrollY.setValue(y)` juste après le `scrollTo`.
+**Règle** : tout défilement programmé doit synchroniser la valeur animée.
+
+### ⚠️ Défis qui REVIENNENT EN ARRIÈRE
+
+Un défi en mode ABSOLU porte sur une valeur qui peut REDESCENDRE :
+« aie 100 000 pièces » se dé-validait dès qu'on dépensait, « atteins 70
+pièces/s » dès qu'un bonus temporaire expirait. Le défi repassait alors
+en cours — **et le compteur de l'œuf reculait avec lui**.
+
+Les deux symptômes signalés avaient donc la MÊME cause.
+
+**Correctif** : `latchedQuestIds` — un défi atteint une fois reste acquis
+pour le cycle. Sauvegardé, remis à zéro au tirage, et levé par le bouton
+dev « défi précédent ».
+
+Cible du défi des pièces ramenée de 140 000 à **100 000**.
+
+### Gains hors-ligne : plafond 2 h + anti-changement d'heure
+
+Plafond ramené de 4 h à **2 h**.
+
+⚠️ Le temps hors-ligne se calculait sur l'horloge de l'appareil :
+avancer l'heure donnait des pièces, autant de fois qu'on voulait.
+
+**Parade** : `trustedOfflineSeconds` tient une horloge de référence
+(`clockMax`) qui **ne recule jamais**. On ne crédite que le temps écoulé
+au-delà de ce repère.
+- Reculer l'horloge ne rapporte rien.
+- Avancer de 10 h consomme d'avance le hors-ligne des 10 h suivantes.
+
+**Vérifié** : joueur normal intact (1 h → 1 h créditée, 6 h → 2 h
+plafonnées) ; après un bond de +10 h, plus aucun gain pendant 10 h
+réelles.
+
+⚠️ **Limite assumée** : sans serveur ni horloge monotone, on ne peut pas
+EMPÊCHER la manipulation — seulement la rendre non rentable.
+
+⚠️ `clockMax` est SAUVEGARDÉ, sinon il repartirait à zéro à chaque
+redémarrage et la parade ne servirait à rien.
+
 ## Le Gardien — combat en 2 manches (14/09)
 
 Le combat durait **3 tours** et ne coûtait que **9 % des PV** du joueur.

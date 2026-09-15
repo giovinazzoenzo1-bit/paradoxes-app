@@ -607,10 +607,40 @@ export function totalPassiveIncome(ownedCreatures) {
 // que la liste de créatures — les créatures ne produisent plus de revenu
 // passif automatique, seuls les générateurs de la boutique d'auto-clics
 // en produisent maintenant.
-const OFFLINE_CAP_SECONDS = 4 * 3600;
+// Ramené de 4 h à 2 h (14/09).
+export const OFFLINE_CAP_SECONDS = 2 * 3600;
+
 export function offlineEarnings(incomePerSecond, secondsElapsed) {
   const capped = Math.max(0, Math.min(secondsElapsed, OFFLINE_CAP_SECONDS));
   return Math.floor(incomePerSecond * capped);
+}
+
+// ---- Garde-fou contre le changement d'heure du téléphone ----
+//
+// Le temps hors-ligne se calcule sur l'horloge de l'appareil : avancer
+// l'heure donnait des pièces gratuites, autant de fois qu'on voulait.
+//
+// Parade : une HORLOGE DE RÉFÉRENCE qui ne recule jamais (`clockMax`).
+//   - On ne crédite que le temps écoulé AU-DELÀ de ce repère.
+//   - Reculer l'horloge ne rapporte donc rien, et pire : le repère reste
+//     en avant, si bien qu'avancer l'heure de 10 h puis revenir à
+//     l'heure réelle supprime tout gain hors-ligne pendant les 10 h qui
+//     suivent. La triche se paie elle-même.
+//
+// ⚠️ Limite assumée : sans serveur ni horloge système monotone, on ne
+// peut pas EMPÊCHER un joueur d'avancer son horloge. On rend seulement
+// l'opération non rentable — chaque bond reste plafonné à 2 h et
+// consomme d'avance le temps hors-ligne à venir.
+export function trustedOfflineSeconds(lastSave, clockMax, nowSec) {
+  if (!lastSave) return { seconds: 0, clockMax: Math.max(clockMax || 0, nowSec) };
+  // Horloge reculée : rien à créditer, et on GARDE l'ancien repère.
+  if (nowSec < (clockMax || 0)) {
+    return { seconds: 0, clockMax };
+  }
+  // On part du plus récent des deux : une session passée peut avoir
+  // avancé le repère plus loin que la dernière sauvegarde.
+  const depart = Math.max(lastSave, clockMax || 0);
+  return { seconds: Math.max(0, nowSec - depart), clockMax: nowSec };
 }
 
 // ---- Faveur des Esprits (coups critiques) ----
