@@ -128,6 +128,13 @@ const OPPONENT_SLOTS = [
 // emplacements ayant été remontés, la place existe.
 const SPRITE_BASE = 104;
 
+// Emplacement du GARDIEN en mode boss. Déclaré ICI, avec les autres
+// emplacements, et pas plus bas : la valeur est lue pendant le rendu du
+// composant, une déclaration après lui marchait par chance (le module
+// est évalué avant le premier rendu) mais c'est un piège à la prochaine
+// réorganisation.
+const GUARDIAN_SLOT = { x: 0.72, y: 0.46, size: 1.7 };
+
 // `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
 // niveau. Sert au combat de Gardien, qui affronte TOUJOURS le Gardien et
 // jamais une créature du roster prise au hasard.
@@ -179,12 +186,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const startBossPhase2 = (maxHp) => {
     setPhaseBreak(true);
     phaseAnim.setValue(0);
-    // ⚠️ Durée calée sur la SÉQUENCE : 18 images à 12 i/s = 1500 ms.
-    // L'apparition et la disparition sont prises DEDANS (260 + 1000 +
+    // ⚠️ Durée calée sur la SÉQUENCE : 18 images à 8 i/s = 2250 ms.
+    // L'apparition et la disparition sont prises DEDANS (260 + 1750 +
     // 240), sinon l'animation serait coupée en plein rugissement.
     Animated.sequence([
       Animated.timing(phaseAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
-      Animated.delay(1000),
+      Animated.delay(1750),
       Animated.timing(phaseAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
     ]).start(() => {
       setPhaseBreak(false);
@@ -846,17 +853,32 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       {/* Transition entre les deux manches. */}
       {phaseBreak && (
         <Animated.View style={[styles.phaseBreakWrap, { opacity: phaseAnim }]}>
-          {/* L'animation porte le message : le tigre rugit et lève son
-              sabre. Le texte reste dessous, en plus petit, pour nommer ce
-              qui se passe sans voler la vedette. */}
-          <GuardianRoar size={Math.min(260, H * 0.62)} />
-          <Text style={styles.phaseBreakText}>LE GARDIEN SE RELÈVE</Text>
+          {/* ⚠️ Posée À LA PLACE du gardien, pas au centre de l'écran :
+              le sprite est masqué pendant ce temps (voir `phaseBreak`
+              plus bas), l'animation prend donc littéralement sa place au
+              lieu de se superposer à lui. Coordonnées calculées comme
+              dans `renderSprite` pour tomber au pixel près. */}
+          <View
+            style={{
+              position: 'absolute',
+              left: GUARDIAN_SLOT.x * W - Math.round(SPRITE_BASE * GUARDIAN_SLOT.size * 1.7) / 2,
+              top: GUARDIAN_SLOT.y * H - Math.round(SPRITE_BASE * GUARDIAN_SLOT.size) / 2 - 10,
+              width: Math.round(SPRITE_BASE * GUARDIAN_SLOT.size * 1.7),
+              alignItems: 'center',
+            }}
+          >
+            <GuardianRoar size={Math.round(SPRITE_BASE * GUARDIAN_SLOT.size)} />
+            <Text style={styles.phaseBreakText}>LE GARDIEN SE RELÈVE</Text>
+          </View>
         </Animated.View>
       )}
 
       {/* Équipe adverse — tous tapables pour choisir la cible, à chaque
           tour (demande explicite), pas seulement une fois par combat. */}
-      {opponents.map((o, i) => {
+      {/* ⚠️ Le gardien est RETIRÉ du terrain pendant la transition :
+          l'animation le remplace à son emplacement. Sans ça, on verrait
+          le tigre immobile derrière le tigre animé. */}
+      {(isBoss && phaseBreak ? [] : opponents).map((o, i) => {
         // `stages[0]` : le Gardien n'a qu'une apparence, les créatures en
         // ont trois — l'index 0 est valide dans les deux cas.
         const d = o.creature.stages[0];
@@ -1042,7 +1064,10 @@ const GUARDIAN_ROAR_FRAMES = [
   require('../../../assets/creatures/gardien/rugissement/f16.png'),
   require('../../../assets/creatures/gardien/rugissement/f17.png'),
 ];
-const GUARDIAN_ROAR_FPS = 12;
+// Ralenti de 12 à 8 i/s : 18 images = 2250 ms au lieu de 1500. À 12 le
+// rugissement passait trop vite pour être lu.
+const GUARDIAN_ROAR_FPS = 8;
+
 
 // Joue la séquence UNE fois, puis reste sur la dernière image.
 function GuardianRoar({ size }) {
@@ -1408,6 +1433,9 @@ const styles = StyleSheet.create({
   phaseBreakWrap: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
     zIndex: 30, alignItems: 'center', justifyContent: 'center',
+    // Purement décoratif : il couvre tout l'écran et ne doit surtout pas
+    // capter de clics (règle de survie n°2).
+    pointerEvents: 'none',
   },
   phaseBreakText: {
     color: '#ffcf3f', fontSize: 18, fontWeight: '900', letterSpacing: 2,

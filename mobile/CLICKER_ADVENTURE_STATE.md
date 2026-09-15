@@ -1072,13 +1072,24 @@ chacune sur son propre contenu ferait sauter le personnage d'une image à
 l'autre.
 
 **Réglages retenus** : segment 4,5 s → 6,0 s (le pic de mouvement, il
-lève le sabre et rugit), 18 images à 12 i/s, 256 px, 848 Ko au total.
-Comparé : 8 i/s en 320 px et 10 i/s en 288 px pèsent pareil (~880 Ko),
-donc on prend le plus fluide.
+lève le sabre et rugit), 18 images à **8 i/s**, 256 px, 848 Ko au total.
+Ramené de 12 à 8 i/s : à 12 le rugissement passait trop vite pour être lu.
 
-⚠️ **Durée de la transition calée sur la séquence** : 260 + 1000 + 240 =
-1500 ms, exactement 18 images à 12 i/s. Sans ça l'animation serait
-coupée en plein rugissement.
+⚠️ **L'animation REMPLACE le gardien à son emplacement** : le sprite est
+retiré du terrain pendant la transition (`isBoss && phaseBreak`), sinon
+on verrait le tigre immobile derrière le tigre animé. Les coordonnées
+sont calculées comme dans `renderSprite`, à partir de `GUARDIAN_SLOT`.
+
+⚠️ `GUARDIAN_SLOT` est déclaré EN HAUT du fichier, avec les autres
+emplacements. Plus bas, ça marchait par chance (le module est évalué
+avant le premier rendu) — un piège à la prochaine réorganisation.
+
+⚠️ **Durée de la transition calée sur la séquence** : 260 + 1750 + 240 =
+2250 ms, exactement 18 images à 8 i/s. Sans ça l'animation serait coupée
+en plein rugissement.
+
+⚠️ Le voile porte `pointerEvents: 'none'` : il couvre tout l'écran et ne
+doit pas capter de clics.
 
 L'ancien texte « LE GARDIEN SE RELÈVE » reste, en plus petit sous
 l'animation.
