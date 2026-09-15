@@ -921,6 +921,33 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Le Gardien (14/09)
+
+Adversaire du combat qui protège l'éclosion d'un œuf. **Ce n'est PAS une
+créature du roster** : on ne peut ni l'obtenir, ni l'invoquer, ni le
+faire évoluer.
+
+⚠️ Défini dans `combatLogic.js` (`GUARDIAN_CREATURE`) et **surtout pas**
+dans `CREATURES` — sinon il apparaîtrait dans la collection, dans le
+gacha et parmi les adversaires d'Aventure, qui se construisent tous à
+partir de cette liste.
+
+⚠️ Une seule apparence, donc un seul `stages`. `creatureArtSource`
+ramène tout palier demandé au dernier disponible : une entrée d'art
+suffit, rien à adapter.
+
+⚠️ Ses compétences sont écrites À PLAT : `mkSkills` est privée à
+`clickerLogic`, et l'exporter juste pour ça élargirait sa surface
+publique sans raison. Le format produit est reproduit à l'identique.
+
+`CombatScreen` accepte désormais `opponentOverride`. Avant, le combat
+d'éclosion tirait une créature du roster au hasard — le joueur
+affrontait donc parfois sa propre espèce.
+
+Stats laissées à la formule commune : elles se calent sur le niveau du
+gardien comme un adversaire d'Aventure (PV 48 au niveau 1, 99 au niveau
+30). Profil de défenseur : un mur à franchir, pas un tueur.
+
 ## Sources de Diamants et Offrande (14/09)
 
 | Source | Montant | Fréquence |

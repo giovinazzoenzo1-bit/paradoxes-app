@@ -90,7 +90,10 @@ import {
   EGG_STAGES,
   eggStageForCompletedCount,
 } from '../../games/clicker/questLogic';
-import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
+import {
+  combatStatsForCreatureTyped,
+  GUARDIAN_CREATURE,
+} from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
 import DiamondShop from './DiamondShop';
@@ -3516,7 +3519,17 @@ function GuardianBattle({ team, level, onFinish }) {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
     };
   }, []);
-  return <CombatScreen team={team} levelNumber={level} onFinish={onFinish} />;
+  // Le Gardien, toujours, et seul : ce combat protège l'éclosion d'un
+  // œuf. Avant, il tirait une créature du roster au hasard — le joueur
+  // affrontait donc parfois sa propre espèce.
+  return (
+    <CombatScreen
+      team={team}
+      levelNumber={level}
+      onFinish={onFinish}
+      opponentOverride={[GUARDIAN_CREATURE]}
+    />
+  );
 }
 
 function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures }) {

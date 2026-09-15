@@ -124,6 +124,45 @@ export function opponentTeamSize(levelNumber) {
 // DIFFÉRENTES (pas 3x la même), toujours déterministe. Le décalage (+9,
 // +18) pris dans le roster trié par puissance pour varier les membres
 // sans avoir besoin d'un vrai tirage aléatoire.
+// ---- Le Gardien ----
+//
+// Adversaire du combat qui protège l'éclosion d'un œuf. Ce n'est PAS une
+// créature du roster : on ne peut ni l'obtenir, ni l'invoquer, ni le
+// faire évoluer. Il est donc défini ici et pas dans `CREATURES`, sinon
+// il apparaîtrait dans la collection, le gacha et les adversaires
+// d'Aventure.
+//
+// Une seule apparence, d'où un unique `stages`. `creatureArtSource`
+// ramène tout palier demandé au dernier disponible, donc une entrée
+// suffit.
+//
+// Stats laissées à la formule commune (`statsForOpponentCreatureTyped`)
+// : elles se calent sur le niveau du gardien, exactement comme un
+// adversaire d'Aventure. Le profil PV/ATQ est celui d'un défenseur —
+// c'est un mur qu'on doit franchir, pas un tueur.
+export const GUARDIAN_CREATURE = {
+  id: 'gardien',
+  element: 'Lumière',
+  rarity: 'epique',
+  combatType: 'defenseur',
+  baseHp: 90,
+  baseAttack: 12,
+  baseClickSpeed: 1.4,
+  baseEndurance: 130,
+  // Écrites à plat : `mkSkills` est PRIVÉE à clickerLogic. L'exporter
+  // juste pour ici élargirait sa surface publique sans raison ; le
+  // format produit est simplement reproduit à l'identique
+  // (id / name / damage / enduranceCost).
+  skills: [
+    { id: 's1', name: 'Griffe du Gardien', damage: 8, enduranceCost: 5 },
+    { id: 's2', name: 'Rugissement', damage: 11, enduranceCost: 10 },
+    { id: 's3', name: 'Garde Dorée', damage: 15, enduranceCost: 15 },
+    { id: 's4', name: 'Jugement du Tigre', damage: 22, enduranceCost: 25 },
+  ],
+  lore: "Nul ne franchit le seuil d'un œuf sans l'avoir affronté.",
+  stages: [{ name: 'Gardien', emoji: '🐯' }],
+};
+
 export function opponentTeamForLevel(levelNumber) {
   const size = opponentTeamSize(levelNumber);
   const team = [];

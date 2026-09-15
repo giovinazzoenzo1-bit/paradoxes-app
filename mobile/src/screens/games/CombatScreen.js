@@ -123,10 +123,13 @@ const OPPONENT_SLOTS = [
 // emplacements ayant été remontés, la place existe.
 const SPRITE_BASE = 104;
 
-export default function CombatScreen({ team, levelNumber, onFinish }) {
+// `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
+// niveau. Sert au combat de Gardien, qui affronte TOUJOURS le Gardien et
+// jamais une créature du roster prise au hasard.
+export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null }) {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const opponentTeamCreatures = useRef(opponentTeamForLevel(levelNumber)).current;
+  const opponentTeamCreatures = useRef(opponentOverride || opponentTeamForLevel(levelNumber)).current;
 
   // PAS de gestion d'orientation ici. Cet écran n'est rendu que depuis
   // AdventureScreen, qui verrouille déjà le paysage pour tout le mode et
@@ -717,6 +720,8 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
       {/* Équipe adverse — tous tapables pour choisir la cible, à chaque
           tour (demande explicite), pas seulement une fois par combat. */}
       {opponents.map((o, i) => {
+        // `stages[0]` : le Gardien n'a qu'une apparence, les créatures en
+        // ont trois — l'index 0 est valide dans les deux cas.
         const d = o.creature.stages[0];
         const fainted = o.hp <= 0;
         return renderSprite({

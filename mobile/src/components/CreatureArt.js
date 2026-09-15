@@ -27,6 +27,11 @@ const CREATURE_ART = {
     require('../../assets/creatures/caraploof/stage-1.png'),
     require('../../assets/creatures/caraploof/stage-2.png'),
   ],
+  // Le Gardien : une seule apparence. `creatureArtSource` ramène tout
+  // palier demandé au dernier disponible, donc une entrée suffit.
+  gardien: [
+    require('../../assets/creatures/gardien/gardien.png'),
+  ],
   ventis: [
     require('../../assets/creatures/ventis/stage-0.png'),
     require('../../assets/creatures/ventis/stage-1.png'),
