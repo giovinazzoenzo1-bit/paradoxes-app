@@ -131,7 +131,7 @@ const SPRITE_BASE = 104;
 // `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
 // niveau. Sert au combat de Gardien, qui affronte TOUJOURS le Gardien et
 // jamais une créature du roster prise au hasard.
-export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null }) {
+export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false }) {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const opponentTeamCreatures = useRef(opponentOverride || opponentTeamForLevel(levelNumber)).current;
@@ -372,6 +372,22 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     setPhase('choosing');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Combat de Gardien : pas de récapitulatif de fin. On rend la main
+  // tout de suite, la vraie récompense étant la créature qui éclot juste
+  // après.
+  //
+  // ⚠️ Passe par un EFFET et non par le rendu : appeler `onFinish`
+  // pendant le rendu déclencherait une mise à jour d'état du parent au
+  // milieu du rendu de l'enfant. Et il est placé ICI, avec les autres
+  // Hooks, donc AVANT le `if (phase === 'done')` — un Hook après un
+  // retour anticipé a déjà fait planter l'appli une fois.
+  const finDemandeeRef = useRef(false);
+  useEffect(() => {
+    if (!skipResultScreen || phase !== 'done' || finDemandeeRef.current) return;
+    finDemandeeRef.current = true;
+    onFinish(outcome, false, starsForBattle(battleStats, opponents.length));
+  }, [skipResultScreen, phase, outcome]);
 
   useEffect(() => {
     if (phase !== 'tapping') return;
@@ -667,6 +683,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   };
 
   if (phase === 'done') {
+    // L'effet ci-dessus a déjà rendu la main : on n'affiche rien plutôt
+    // qu'un récapitulatif qui clignoterait une frame.
+    if (skipResultScreen) return null;
     return (
       <CombatResultScreen
         outcome={outcome}

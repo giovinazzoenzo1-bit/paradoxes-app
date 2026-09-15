@@ -921,6 +921,62 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## ⚠️ Tirage de rune offert : RÉÉCRIT (15/09)
+
+Les deux versions précédentes passaient par une clé de stockage : le
+Clicker déposait, l'Aventure lisait **et effaçait**, puis gardait le
+tirage dans un état LOCAL. Or l'Aventure se démonte dès qu'on revient au
+Clicker : le tirage était perdu, et la clé déjà consommée ne le rendait
+jamais. D'où « ça ne se débloque toujours pas », signalé deux fois.
+
+**Correctif** : plus aucun transfert par le stockage. La disponibilité se
+DÉDUIT de l'état des défis —
+
+```
+freeRuneAvailable = défi 'seq_firstrune' actif ET tirage pas encore utilisé
+```
+
+Le Clicker connaît déjà les deux, il passe simplement un booléen.
+`clicker:freeRuneUsed:v1` est écrit quand le tirage sert. **Rien à perdre
+au démontage.**
+
+**Règle** : un état que deux écrans partagent se déduit d'une source
+commune ou se passe en prop — un transfert « dépose puis efface » se
+perd dès qu'un écran se démonte au mauvais moment.
+
+## Gardien : pas de récapitulatif, une annonce de créature
+
+Le combat de Gardien saute l'écran de fin d'Aventure (`skipResultScreen`)
+et rend la main tout de suite. La vraie récompense est la CRÉATURE qui
+éclot, annoncée par son propre panneau : « Félicitations ! Tu as
+débloqué X ». Deux écrans de victoire à la suite noyaient l'information.
+
+⚠️ La fin passe par un EFFET, pas par le rendu : appeler `onFinish`
+pendant le rendu déclencherait une mise à jour du parent au milieu du
+rendu de l'enfant. Et il est placé AVEC les autres Hooks, avant le
+`if (phase === 'done')` — vérifié : Hooks jusqu'à la ligne 392, premier
+retour du composant à 786.
+
+## Prix des améliorations relevés (15/09)
+
+Coûts de base **×2**, croissances **×1,16** (2,16 → 2,5 et proportionnel
+pour les autres paliers).
+
+Mesure : la rentabilisation du PREMIER niveau s'étalait de **7 à 622
+minutes** selon l'objet — certains étaient bradés, d'autres non. Le
+doublement relève le plancher ; la croissance renchérit surtout
+l'EMPILEMENT.
+
+| | Cumul niveau 10, avant → après |
+|---|---|
+| Griffe de Braisillon | 515 K → 3,3 M (×6,4) |
+| Écaille de Caraploof | 2,6 M → 17,1 M (×6,7) |
+| Plume de Ventis | 8,3 M → 56,2 M (×6,8) |
+
+⚠️ `UPGRADE_COST_MULT` n'a PAS été touché : il sert aussi à
+`levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
+`growth` des objets bougent.
+
 ## Boutique : améliorations liées aux créatures possédées (15/09)
 
 Chaque amélioration appartient à une CRÉATURE. Celles dont la créature

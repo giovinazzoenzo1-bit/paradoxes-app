@@ -7,7 +7,6 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensio
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
-import { PENDING_FREE_RUNE_KEY } from '../../games/clicker/questLogic';
 import { CHAPTER_ROUTES } from './chapterRoutes';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -302,7 +301,7 @@ function makeRuneId() {
 }
 
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, diamonds = 0 }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, freeRuneAvailable = false, onFreeRuneUsed, diamonds = 0 }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
   // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
   // combiné à aspectRatio sur un élément position:'absolute' se rend
@@ -662,34 +661,25 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // les stats de combat (voir combatLogic.js/runeBonuses).
   // Les 3 achats RENVOIENT les runes tirées, pour que l'écran puisse les
   // montrer. Rien (undefined) si l'achat n'a pas eu lieu.
-  // TIRAGE GRATUIT offert par le Clicker quand le défi des Runes arrive.
+  // TIRAGE GRATUIT offert quand le défi des Runes est en cours.
   //
-  // ⚠️ La rune n'est PAS donnée en silence : le joueur garde un tirage à
-  // utiliser dans la boutique. C'est cet usage qui valide le défi — il
-  // découvre donc l'écran des Runes par lui-même, sans rien dépenser.
-  const [freeRuneDraw, setFreeRuneDraw] = useState(false);
-  useEffect(() => {
-    let vivant = true;
-    AsyncStorage.getItem(PENDING_FREE_RUNE_KEY)
-      .then((du) => {
-        if (!vivant || !du) return;
-        AsyncStorage.removeItem(PENDING_FREE_RUNE_KEY).catch(() => {});
-        setFreeRuneDraw(true);
-      })
-      .catch(() => {});
-    return () => { vivant = false; };
-  }, []);
-
-  // Utilisation du tirage gratuit : même effet qu'un achat, coût nul.
-  // `trackEvent('runeBought')` est volontaire — c'est ce qui valide le
-  // défi, comme demandé.
+  // ⚠️ RÉÉCRIT le 15/09. La version précédente lisait une clé de
+  // stockage, l'EFFAÇAIT, et gardait le tirage dans un état local. En
+  // quittant l'Aventure, ce composant se démonte : le tirage était perdu
+  // et la clé déjà consommée ne le rendait jamais — bug signalé deux
+  // fois.
+  //
+  // Désormais AUCUN transfert par le stockage. Le Clicker, qui connaît
+  // l'état des défis, dit simplement si le tirage est disponible ; quand
+  // il est utilisé, il le signale en retour. Rien à perdre au démontage.
   const useFreeRuneDraw = () => {
-    if (!freeRuneDraw) return null;
-    setFreeRuneDraw(false);
+    if (!freeRuneAvailable) return null;
     const type = RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)];
     const rune = { id: makeRuneId(), type, level: 1, equippedCreatureId: null };
     setOwnedRunes((prev) => [...prev, rune]);
+    // Volontaire : c'est ce qui valide le défi des Runes.
     trackEvent('runeBought', 1);
+    if (onFreeRuneUsed) onFreeRuneUsed();
     return [rune];
   };
 
@@ -866,7 +856,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onBuyRune={buyRandomRune}
         onBuyPack={buyRunePack}
         onBuySpecial={buySpecialOffer}
-        freeRuneDraw={freeRuneDraw}
+        freeRuneDraw={freeRuneAvailable}
         onUseFreeDraw={useFreeRuneDraw}
         specialOffer={specialOffer}
         onFuseAll={fuseAllRunes}

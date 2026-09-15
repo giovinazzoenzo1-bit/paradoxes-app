@@ -945,27 +945,35 @@ export function tapUpgradeBonus(levels) {
 // déduction ratait `griffeBraisillon`, dont la créature a été remplacée
 // par Pyrosile (voir la table de migration). Sert à n'afficher comme
 // achetables que les améliorations des créatures POSSÉDÉES.
+// ⚠️ Prix relevés le 15/09 : coûts de base ×2 et croissance 2,16 → 2,5.
+//
+// Mesure : la rentabilisation du PREMIER niveau s'étalait de 7 à 622
+// minutes selon l'objet — certaines améliorations étaient bradées. Le
+// coût de base double pour relever le plancher, et la croissance plus
+// forte renchérit surtout l'EMPILEMENT : monter un objet au niveau 10
+// coûte désormais 6,7 fois plus (2,5 M → 17 M), alors que le premier
+// achat reste accessible à un joueur qui débute.
 export const UPGRADE_ITEMS = [
-  { id: 'griffeBraisillon', creatureId: 'pyrosile', name: 'Griffe de Braisillon', emoji: '🔥', tier: 1, cost: 640, effect: { type: 'tapFlat', value: 0.5 }, growth: 1.86, desc: '+0.5 pièce par tap' },
-  { id: 'ecailleCaraploof', creatureId: 'caraploof', name: 'Écaille de Caraploof', emoji: '🌊', tier: 1, cost: 960, effect: { type: 'autoClickerPct', value: 0.025 }, growth: 2.16, desc: '+2.5% sur les auto-clics' },
-  { id: 'crocBouldog', creatureId: 'bouldog', name: 'Croc de Bouldog', emoji: '🪨', tier: 1, cost: 1440, effect: { type: 'coinPct', value: 0.015 }, growth: 2.22, desc: '+1.5% sur toute la production' },
-  { id: 'plumeVentis', creatureId: 'ventis', name: 'Plume de Ventis', emoji: '🌬️', tier: 1, cost: 2000, effect: { type: 'critChancePct', value: 0.02 }, growth: 2.28, desc: '+2% de chance de coup critique' },
-  { id: 'etincelleVoltix', creatureId: 'voltix', name: 'Étincelle de Voltix', emoji: '⚡', tier: 1, cost: 2800, effect: { type: 'critMultPct', value: 0.05 }, growth: 2.04, desc: '+5% de dégâts critiques' },
-  { id: 'eclatLuxorbe', creatureId: 'luxorbe', name: 'Éclat de Luxorbe', emoji: '💡', tier: 2, cost: 6400, effect: { type: 'coinPct', value: 0.02 }, growth: 2.22, desc: '+2% sur toute la production' },
-  { id: 'ombreOmbrillon', creatureId: 'ombrillon', name: "Ombre d'Ombrillon", emoji: '🌑', tier: 2, cost: 8800, effect: { type: 'tapFlat', value: 1 }, growth: 1.86, desc: '+1 pièce par tap' },
-  { id: 'runeGlyphon', creatureId: 'glyphon', name: 'Rune de Glyphon', emoji: '🔮', tier: 2, cost: 12000, effect: { type: 'autoClickerPct', value: 0.035 }, growth: 2.16, desc: '+3.5% sur les auto-clics' },
-  { id: 'flammeFournax', creatureId: 'fournax', name: 'Flamme de Fournax', emoji: '🔥', tier: 2, cost: 16000, effect: { type: 'coinPct', value: 0.025 }, growth: 2.22, desc: '+2.5% sur toute la production' },
-  { id: 'perleAquamira', creatureId: 'aquamira', name: "Perle d'Aquamira", emoji: '🌊', tier: 2, cost: 20800, effect: { type: 'autoClickerPct', value: 0.04 }, growth: 2.16, desc: '+4% sur les auto-clics' },
-  { id: 'pierreTerracroc', creatureId: 'terracroc', name: 'Pierre de Terracroc', emoji: '🪨', tier: 3, cost: 40000, effect: { type: 'tapFlat', value: 1.5 }, growth: 1.86, desc: '+1.5 pièces par tap' },
-  { id: 'ventZephyrion', creatureId: 'zephyrion', name: 'Vent de Zephyrion', emoji: '🌬️', tier: 3, cost: 52000, effect: { type: 'critChancePct', value: 0.03 }, growth: 2.28, desc: '+3% de chance de coup critique' },
-  { id: 'noyauBrontobloc', creatureId: 'brontobloc', name: 'Noyau de Brontobloc', emoji: '⚡', tier: 3, cost: 64000, effect: { type: 'critMultPct', value: 0.075 }, growth: 2.04, desc: '+7.5% de dégâts critiques' },
-  { id: 'sceauMalefix', creatureId: 'malefix', name: 'Sceau de Malefix', emoji: '🔮', tier: 3, cost: 80000, effect: { type: 'coinPct', value: 0.03 }, growth: 2.22, desc: '+3% sur toute la production' },
-  { id: 'bouclierAegisolar', creatureId: 'aegisolar', name: "Bouclier d'Aegisolar", emoji: '✨', tier: 3, cost: 104000, effect: { type: 'autoClickerPct', value: 0.05 }, growth: 2.16, desc: '+5% sur les auto-clics' },
-  { id: 'voileNocturis', creatureId: 'nocturis', name: 'Voile de Nocturis', emoji: '🌑', tier: 4, cost: 200000, effect: { type: 'coinPct', value: 0.04 }, growth: 2.22, desc: '+4% sur toute la production' },
-  { id: 'racineRacinea', creatureId: 'racinea', name: 'Racine de Racinea', emoji: '🪨', tier: 4, cost: 256000, effect: { type: 'autoClickerPct', value: 0.06 }, growth: 2.16, desc: '+6% sur les auto-clics' },
-  { id: 'glypheRunicor', creatureId: 'runicor', name: 'Glyphe de Runicor', emoji: '🔮', tier: 4, cost: 320000, effect: { type: 'tapFlat', value: 3 }, growth: 1.86, desc: '+3 pièces par tap' },
-  { id: 'petaleBraiserose', creatureId: 'braiserose', name: 'Pétale de Braiserose', emoji: '🔥', tier: 4, cost: 400000, effect: { type: 'critChancePct', value: 0.04 }, growth: 2.28, desc: '+4% de chance de coup critique' },
-  { id: 'abysseAbyssorax', creatureId: 'abyssorax', name: "Abysse d'Abyssorax", emoji: '🌊', tier: 4, cost: 520000, effect: { type: 'critMultPct', value: 0.1 }, growth: 2.04, desc: '+10% de dégâts critiques' },
+  { id: 'griffeBraisillon', creatureId: 'pyrosile', name: 'Griffe de Braisillon', emoji: '🔥', tier: 1, cost: 1280, effect: { type: 'tapFlat', value: 0.5 }, growth: 2.15, desc: '+0.5 pièce par tap' },
+  { id: 'ecailleCaraploof', creatureId: 'caraploof', name: 'Écaille de Caraploof', emoji: '🌊', tier: 1, cost: 1920, effect: { type: 'autoClickerPct', value: 0.025 }, growth: 2.5, desc: '+2.5% sur les auto-clics' },
+  { id: 'crocBouldog', creatureId: 'bouldog', name: 'Croc de Bouldog', emoji: '🪨', tier: 1, cost: 2880, effect: { type: 'coinPct', value: 0.015 }, growth: 2.57, desc: '+1.5% sur toute la production' },
+  { id: 'plumeVentis', creatureId: 'ventis', name: 'Plume de Ventis', emoji: '🌬️', tier: 1, cost: 4000, effect: { type: 'critChancePct', value: 0.02 }, growth: 2.64, desc: '+2% de chance de coup critique' },
+  { id: 'etincelleVoltix', creatureId: 'voltix', name: 'Étincelle de Voltix', emoji: '⚡', tier: 1, cost: 5600, effect: { type: 'critMultPct', value: 0.05 }, growth: 2.36, desc: '+5% de dégâts critiques' },
+  { id: 'eclatLuxorbe', creatureId: 'luxorbe', name: 'Éclat de Luxorbe', emoji: '💡', tier: 2, cost: 12800, effect: { type: 'coinPct', value: 0.02 }, growth: 2.57, desc: '+2% sur toute la production' },
+  { id: 'ombreOmbrillon', creatureId: 'ombrillon', name: "Ombre d'Ombrillon", emoji: '🌑', tier: 2, cost: 17600, effect: { type: 'tapFlat', value: 1 }, growth: 2.15, desc: '+1 pièce par tap' },
+  { id: 'runeGlyphon', creatureId: 'glyphon', name: 'Rune de Glyphon', emoji: '🔮', tier: 2, cost: 24000, effect: { type: 'autoClickerPct', value: 0.035 }, growth: 2.5, desc: '+3.5% sur les auto-clics' },
+  { id: 'flammeFournax', creatureId: 'fournax', name: 'Flamme de Fournax', emoji: '🔥', tier: 2, cost: 32000, effect: { type: 'coinPct', value: 0.025 }, growth: 2.57, desc: '+2.5% sur toute la production' },
+  { id: 'perleAquamira', creatureId: 'aquamira', name: "Perle d'Aquamira", emoji: '🌊', tier: 2, cost: 41600, effect: { type: 'autoClickerPct', value: 0.04 }, growth: 2.5, desc: '+4% sur les auto-clics' },
+  { id: 'pierreTerracroc', creatureId: 'terracroc', name: 'Pierre de Terracroc', emoji: '🪨', tier: 3, cost: 80000, effect: { type: 'tapFlat', value: 1.5 }, growth: 2.15, desc: '+1.5 pièces par tap' },
+  { id: 'ventZephyrion', creatureId: 'zephyrion', name: 'Vent de Zephyrion', emoji: '🌬️', tier: 3, cost: 104000, effect: { type: 'critChancePct', value: 0.03 }, growth: 2.64, desc: '+3% de chance de coup critique' },
+  { id: 'noyauBrontobloc', creatureId: 'brontobloc', name: 'Noyau de Brontobloc', emoji: '⚡', tier: 3, cost: 128000, effect: { type: 'critMultPct', value: 0.075 }, growth: 2.36, desc: '+7.5% de dégâts critiques' },
+  { id: 'sceauMalefix', creatureId: 'malefix', name: 'Sceau de Malefix', emoji: '🔮', tier: 3, cost: 160000, effect: { type: 'coinPct', value: 0.03 }, growth: 2.57, desc: '+3% sur toute la production' },
+  { id: 'bouclierAegisolar', creatureId: 'aegisolar', name: "Bouclier d'Aegisolar", emoji: '✨', tier: 3, cost: 208000, effect: { type: 'autoClickerPct', value: 0.05 }, growth: 2.5, desc: '+5% sur les auto-clics' },
+  { id: 'voileNocturis', creatureId: 'nocturis', name: 'Voile de Nocturis', emoji: '🌑', tier: 4, cost: 400000, effect: { type: 'coinPct', value: 0.04 }, growth: 2.57, desc: '+4% sur toute la production' },
+  { id: 'racineRacinea', creatureId: 'racinea', name: 'Racine de Racinea', emoji: '🪨', tier: 4, cost: 512000, effect: { type: 'autoClickerPct', value: 0.06 }, growth: 2.5, desc: '+6% sur les auto-clics' },
+  { id: 'glypheRunicor', creatureId: 'runicor', name: 'Glyphe de Runicor', emoji: '🔮', tier: 4, cost: 640000, effect: { type: 'tapFlat', value: 3 }, growth: 2.15, desc: '+3 pièces par tap' },
+  { id: 'petaleBraiserose', creatureId: 'braiserose', name: 'Pétale de Braiserose', emoji: '🔥', tier: 4, cost: 800000, effect: { type: 'critChancePct', value: 0.04 }, growth: 2.64, desc: '+4% de chance de coup critique' },
+  { id: 'abysseAbyssorax', creatureId: 'abyssorax', name: "Abysse d'Abyssorax", emoji: '🌊', tier: 4, cost: 1040000, effect: { type: 'critMultPct', value: 0.1 }, growth: 2.36, desc: '+10% de dégâts critiques' },
 ];
 
 // Coût du PROCHAIN niveau d'une amélioration. Le facteur vient de

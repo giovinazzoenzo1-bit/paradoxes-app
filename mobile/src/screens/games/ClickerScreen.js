@@ -94,7 +94,6 @@ import {
   resolveQuestTarget,
   EGG_STAGES,
   eggStageForCompletedCount,
-  PENDING_FREE_RUNE_KEY,
   questLabel,
 } from '../../games/clicker/questLogic';
 import {
@@ -249,8 +248,8 @@ const PENDING_OFFERINGS_KEY = 'clicker:pendingOfferings:v1';
 // revenait — le bug signalé deux fois. Une clé propre, écrite sans
 // délai, supprime cette fenêtre.
 const LATCHED_QUESTS_KEY = 'clicker:latchedQuests:v1';
-// Le tirage de rune offert n'est accordé qu'UNE fois dans la partie.
-const FREE_RUNE_GRANTED_KEY = 'clicker:freeRuneGranted:v1';
+// Le tirage de rune offert n'est utilisable qu'UNE fois dans la partie.
+const FREE_RUNE_USED_KEY = 'clicker:freeRuneUsed:v1';
 
 function formatNum(n) {
   if (!Number.isFinite(n)) return '0'; // garde-fou : jamais NaN/Infinity affiché
@@ -306,6 +305,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Nombre de packs de Griffes déjà achetés en pièces : chaque achat
   // renchérit le suivant. Sauvegardé, sinon le prix repartirait au
   // plancher à chaque redémarrage.
+  // Tirage de rune offert DÉJÀ utilisé ? Écrit sans délai, comme le
+  // verrou des défis : une fermeture brutale ne doit pas le redonner.
+  const [freeRuneUsed, setFreeRuneUsed] = useState(false);
   const [griffesCoinBuys, setGriffesCoinBuys] = useState(0);
   const griffesCoinBuysRef = useRef(0);
   griffesCoinBuysRef.current = griffesCoinBuys;
@@ -988,6 +990,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setDevCompletedIds(saved.devCompletedIds || []);
           setDevReopenedIds(saved.devReopenedIds || []);
           setGriffesCoinBuys(saved.griffesCoinBuys || 0);
+          const runeUsed = await AsyncStorage.getItem(FREE_RUNE_USED_KEY);
+          if (runeUsed) setFreeRuneUsed(true);
           // La clé dédiée fait AUTORITÉ : elle est écrite sans délai,
           // donc toujours au moins aussi à jour que la sauvegarde.
           const verrouRaw = await AsyncStorage.getItem(LATCHED_QUESTS_KEY);
@@ -1921,30 +1925,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       devCompletedIds.includes(id) ||
       questComplete(id, questStats, baselineFor(id), questTargets));
 
-  // ⚠️ FILET pour le tirage de rune offert.
-  //
-  // Le dépôt a lieu au TIRAGE du cycle. Un joueur déjà arrivé au défi des
-  // Runes avant l'ajout de cette fonctionnalité ne l'a donc jamais reçu —
-  // il voyait le défi sans le tirage, cas signalé.
-  //
-  // Ici on rattrape : si le défi est actif et qu'il n'est pas encore
-  // validé, le tirage est déposé. `FREE_RUNE_GRANTED_KEY` garantit qu'il
-  // ne le soit QU'UNE FOIS, même après un rechargement.
-  useEffect(() => {
-    if (!loaded) return undefined;
-    if (!activeQuestIds.includes('seq_firstrune')) return undefined;
-    if (isQuestDone('seq_firstrune')) return undefined;
-    let vivant = true;
-    AsyncStorage.getItem(FREE_RUNE_GRANTED_KEY)
-      .then((deja) => {
-        if (!vivant || deja) return;
-        AsyncStorage.setItem(FREE_RUNE_GRANTED_KEY, '1').catch(() => {});
-        AsyncStorage.setItem(PENDING_FREE_RUNE_KEY, '1').catch(() => {});
-      })
-      .catch(() => {});
-    return () => { vivant = false; };
-  }, [loaded, activeQuestIds]);
-
   // Pose le verrou dès qu'un défi est atteint, pour qu'une baisse de la
   // valeur ne le défasse plus.
   useEffect(() => {
@@ -2181,9 +2161,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // d'en acheter une, encore faut-il pouvoir découvrir à quoi ça sert.
     // Les runes vivent dans l'Aventure, on dépose donc le dû dans une
     // clé qu'elle encaisse à son ouverture — même canal que les Griffes.
-    if (nextSet.ids.includes('seq_firstrune')) {
-      AsyncStorage.setItem(PENDING_FREE_RUNE_KEY, '1').catch(() => {});
-    }
     setQuestBaseline(statsAtDraw);
     // Les chronomètres par défi repartent à zéro : chaque défi du
     // nouveau cycle démarrera le sien quand il deviendra courant.
@@ -2386,6 +2363,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         griffesCoinBuys={griffesCoinBuys}
         ascensionCount={ascensionCount}
         onGriffesCoinBought={() => setGriffesCoinBuys((n) => n + 1)}
+        // ⚠️ Déduit de l'ÉTAT DES DÉFIS, pas d'un transfert par le
+        // stockage : tant que le défi des Runes est en cours et que le
+        // tirage n'a pas servi, il est disponible. Impossible à perdre
+        // en changeant d'écran.
+        freeRuneAvailable={activeQuestIds.includes('seq_firstrune') && !freeRuneUsed}
+        onFreeRuneUsed={() => {
+          setFreeRuneUsed(true);
+          AsyncStorage.setItem(FREE_RUNE_USED_KEY, '1').catch(() => {});
+        }}
         diamonds={sharedCoins}
         owned={owned}
         deck={deck}
@@ -2935,9 +2921,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               size={96}
               emojiStyle={styles.detailEmoji}
             />
-            <Text style={styles.detailName}>Capturé !</Text>
+            <Text style={styles.detailName}>Félicitations !</Text>
+            <Text style={styles.rewardUnlockLine}>
+              Tu as débloqué {rewardCreature.stages[0].name}
+            </Text>
             <Text style={[styles.creatureRarity, { color: RARITY_COLOR[rewardCreature.rarity] }]}>
-              {rewardCreature.stages[0].name} · {RARITY_LABEL[rewardCreature.rarity]}
+              {RARITY_LABEL[rewardCreature.rarity]}
             </Text>
             <TouchableOpacity style={styles.feedBtn} onPress={() => setRewardCreature(null)}>
               <Text style={styles.feedBtnText}>Super !</Text>
@@ -3898,6 +3887,11 @@ function GuardianBattle({ team, level, onFinish }) {
       levelNumber={level}
       onFinish={onFinish}
       opponentOverride={[GUARDIAN_CREATURE]}
+      // ⚠️ Pas de récapitulatif de fin comme en Aventure : ici la vraie
+      // récompense est la CRÉATURE qui éclot, annoncée juste après par
+      // son propre panneau. Deux écrans de victoire à la suite noieraient
+      // l'information qui compte.
+      skipResultScreen
     />
   );
 }
@@ -3979,6 +3973,8 @@ const styles = StyleSheet.create({
   // Gain de Diamants : icône et nombre dans deux `Text` SÉPARÉS — mêler
   // un emoji et une valeur dans un même `Text` a déjà fait disparaître
   // le nombre deux fois (prix du Shop, gains hors-ligne).
+  rewardUnlockLine: { color: COLORS.text, fontSize: 15, fontWeight: '800', textAlign: 'center', marginTop: 4 },
+
   bossWinRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   bossWinIcon: { fontSize: 24 },
   bossWinAmount: { color: COLORS.neonCyan, fontSize: 30, fontWeight: '900', flexShrink: 1 },
