@@ -179,10 +179,13 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const startBossPhase2 = (maxHp) => {
     setPhaseBreak(true);
     phaseAnim.setValue(0);
+    // ⚠️ Durée calée sur la SÉQUENCE : 18 images à 12 i/s = 1500 ms.
+    // L'apparition et la disparition sont prises DEDANS (260 + 1000 +
+    // 240), sinon l'animation serait coupée en plein rugissement.
     Animated.sequence([
-      Animated.timing(phaseAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
-      Animated.delay(520),
-      Animated.timing(phaseAnim, { toValue: 0, duration: 320, useNativeDriver: true }),
+      Animated.timing(phaseAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
+      Animated.delay(1000),
+      Animated.timing(phaseAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
     ]).start(() => {
       setPhaseBreak(false);
       setBossPhase(2);
@@ -842,12 +845,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 
       {/* Transition entre les deux manches. */}
       {phaseBreak && (
-        <Animated.View style={[styles.phaseBreakWrap, {
-          opacity: phaseAnim,
-          transform: [{ scale: phaseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) }],
-        }]}>
+        <Animated.View style={[styles.phaseBreakWrap, { opacity: phaseAnim }]}>
+          {/* L'animation porte le message : le tigre rugit et lève son
+              sabre. Le texte reste dessous, en plus petit, pour nommer ce
+              qui se passe sans voler la vedette. */}
+          <GuardianRoar size={Math.min(260, H * 0.62)} />
           <Text style={styles.phaseBreakText}>LE GARDIEN SE RELÈVE</Text>
-          <Text style={styles.phaseBreakSub}>Il récupère ses forces</Text>
         </Animated.View>
       )}
 
@@ -1007,6 +1010,61 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         </View>
       )}
     </View>
+  );
+}
+
+// Animation du Gardien qui se relève entre les deux manches.
+//
+// ⚠️ Séquence d'IMAGES et non une vidéo : le MP4 d'origine n'a pas de
+// canal alpha (H.264 n'en a pas), il se serait affiché en rectangle noir
+// par-dessus le terrain. Et l'appli n'embarque aucune bibliothèque
+// vidéo. Les images sont détourées (fond noir retiré par remplissage
+// depuis les bords, ce qui préserve les contours noirs du personnage) et
+// recadrées sur une BOÎTE COMMUNE, sinon le tigre sauterait d'une image
+// à l'autre.
+const GUARDIAN_ROAR_FRAMES = [
+  require('../../../assets/creatures/gardien/rugissement/f00.png'),
+  require('../../../assets/creatures/gardien/rugissement/f01.png'),
+  require('../../../assets/creatures/gardien/rugissement/f02.png'),
+  require('../../../assets/creatures/gardien/rugissement/f03.png'),
+  require('../../../assets/creatures/gardien/rugissement/f04.png'),
+  require('../../../assets/creatures/gardien/rugissement/f05.png'),
+  require('../../../assets/creatures/gardien/rugissement/f06.png'),
+  require('../../../assets/creatures/gardien/rugissement/f07.png'),
+  require('../../../assets/creatures/gardien/rugissement/f08.png'),
+  require('../../../assets/creatures/gardien/rugissement/f09.png'),
+  require('../../../assets/creatures/gardien/rugissement/f10.png'),
+  require('../../../assets/creatures/gardien/rugissement/f11.png'),
+  require('../../../assets/creatures/gardien/rugissement/f12.png'),
+  require('../../../assets/creatures/gardien/rugissement/f13.png'),
+  require('../../../assets/creatures/gardien/rugissement/f14.png'),
+  require('../../../assets/creatures/gardien/rugissement/f15.png'),
+  require('../../../assets/creatures/gardien/rugissement/f16.png'),
+  require('../../../assets/creatures/gardien/rugissement/f17.png'),
+];
+const GUARDIAN_ROAR_FPS = 12;
+
+// Joue la séquence UNE fois, puis reste sur la dernière image.
+function GuardianRoar({ size }) {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFrame((f) => {
+        if (f >= GUARDIAN_ROAR_FRAMES.length - 1) {
+          clearInterval(id);
+          return f;
+        }
+        return f + 1;
+      });
+    }, 1000 / GUARDIAN_ROAR_FPS);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <Image
+      source={GUARDIAN_ROAR_FRAMES[frame]}
+      style={{ width: size, height: size }}
+      resizeMode="contain"
+    />
   );
 }
 
@@ -1345,14 +1403,17 @@ const styles = StyleSheet.create({
   },
   bossShieldFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#5ad1ff' },
 
+  // Centré verticalement : l'animation est haute, un ancrage à 38 %
+  // l'aurait fait déborder en bas.
   phaseBreakWrap: {
-    position: 'absolute', left: 0, right: 0, top: '38%', zIndex: 30, alignItems: 'center',
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    zIndex: 30, alignItems: 'center', justifyContent: 'center',
   },
   phaseBreakText: {
-    color: '#ffcf3f', fontSize: 26, fontWeight: '900', letterSpacing: 2,
+    color: '#ffcf3f', fontSize: 18, fontWeight: '900', letterSpacing: 2,
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 8,
+    marginTop: 2,
   },
-  phaseBreakSub: { color: COLORS.text, fontSize: 13, fontWeight: '700', marginTop: 4 },
   recapCardImg: { resizeMode: 'stretch' },
   recapTitle: { color: '#6b4410', fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
   recapRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 6 },

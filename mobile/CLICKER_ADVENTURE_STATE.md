@@ -1052,6 +1052,37 @@ Ligne ajoutée là où le joueur a ses pièces sous les yeux. Prix NON fixe :
 d'écriture croisée** dans la sauvegarde de l'autre écran — même canal que
 l'Ascension et les défis.
 
+## Animation du Gardien entre les deux manches (15/09)
+
+Fournie par l'auteur en MP4 (Gemini, 1280×720, 10 s, fond noir).
+
+⚠️ **Un MP4 ne peut PAS être transparent** : H.264 n'a pas de canal
+alpha, la vidéo se serait affichée en rectangle noir par-dessus le
+terrain. Et l'appli n'embarque aucune bibliothèque vidéo (seulement
+Lottie). D'où une **séquence d'images PNG**, sans dépendance nouvelle.
+
+⚠️ **Aucun détourage manuel nécessaire.** Le fond est noir uni ET les
+contours du personnage sont noirs aussi — on les distingue par un
+REMPLISSAGE DEPUIS LES BORDS : le noir touchant le bord est du fond,
+celui enfermé dans la silhouette est un contour. Le filigrane Gemini
+part avec (on ne garde que la plus grosse composante).
+
+⚠️ **Recadrage sur une BOÎTE COMMUNE** à toutes les images. Recadrer
+chacune sur son propre contenu ferait sauter le personnage d'une image à
+l'autre.
+
+**Réglages retenus** : segment 4,5 s → 6,0 s (le pic de mouvement, il
+lève le sabre et rugit), 18 images à 12 i/s, 256 px, 848 Ko au total.
+Comparé : 8 i/s en 320 px et 10 i/s en 288 px pèsent pareil (~880 Ko),
+donc on prend le plus fluide.
+
+⚠️ **Durée de la transition calée sur la séquence** : 260 + 1000 + 240 =
+1500 ms, exactement 18 images à 12 i/s. Sans ça l'animation serait
+coupée en plein rugissement.
+
+L'ancien texte « LE GARDIEN SE RELÈVE » reste, en plus petit sous
+l'animation.
+
 ## Mini-boss : il remplace l'œuf (14/09)
 
 - Le **boss prend la place de l'œuf** pendant le combat.
