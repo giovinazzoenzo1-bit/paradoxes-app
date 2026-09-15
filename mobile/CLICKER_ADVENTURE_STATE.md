@@ -921,6 +921,43 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Mini-boss : il remplace l'œuf (14/09)
+
+- Le **boss prend la place de l'œuf** pendant le combat.
+- **Barre de VIE en bas** : 1 tap = 1 PV, donc **200 PV** pour 200 taps.
+  Le joueur voit des PV descendre, pas un compteur monter.
+- Menu de victoire : « **Boss vaincu !** » puis le gain de Diamants.
+
+⚠️ **Seule l'IMAGE change**, l'œuf n'est pas démonté. Son palier, ses
+animations et sa progression sont donc intacts au retour — c'est ce qui
+évite tout bug de changement d'œuf. Même emplacement et même zone
+tapable, donc aucune mise en page à revoir.
+
+⚠️ La logique de tap est déjà prévue pour ça : `handleTap` compte le coup
+pour le boss PUIS continue son chemin normal (pièces, critiques, minuteur
+d'œuf). Rien à modifier.
+
+⚠️ Position de la barre vérifiée par calcul : de 96 à 150 dp depuis le
+bas, contre 92 dp pour la barre de navigation — **4 dp de marge**, et
+elle passe sous le boss sans le couvrir.
+
+⚠️ Gain de Diamants affiché en DEUX `Text` séparés (icône / nombre). Mêler
+un emoji et une valeur dans un même `Text` a déjà fait disparaître le
+nombre deux fois (prix du Shop, gains hors-ligne).
+
+## ⚠️ Cible de défi : la définition prime sur la sauvegarde
+
+Les cibles sont figées au tirage du cycle et sauvegardées. Après un
+changement d'équilibrage, une partie en cours gardait l'ANCIENNE valeur
+alors que le libellé, lui, est recalculé : le défi affichait
+« 100 000 pièces » tout en en exigeant **140 000**.
+
+**Correctif** : une cible FIXE (`quest.target`) prime toujours sur la
+valeur sauvegardée. Se répare tout seul sur les parties en cours.
+
+⚠️ Seules les cibles CALCULÉES (effort en minutes) restent figées —
+sinon elles bougeraient au fil de la partie. Vérifié.
+
 ## Revenu passif : SOURCE UNIQUE (14/09)
 
 ⚠️ **Trois formules divergentes coexistaient** :

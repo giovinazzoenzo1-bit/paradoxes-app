@@ -182,6 +182,10 @@ const TAP_ZONE_H = SCREEN_H * 0.419;
 // même index). `require` doit recevoir un chemin STATIQUE — Metro
 // résout les images au moment du bundling, pas à l'exécution, donc un
 // tableau construit avec un chemin dynamique ne fonctionnerait pas.
+// Le mini-boss réutilise l'illustration du Gardien : c'est la seule
+// figure « adversaire » du jeu, en créer une autre n'apporterait rien.
+const GUARDIAN_ART = require('../../../assets/creatures/gardien/gardien.png');
+
 const EGG_IMAGES = [
   require('../../../assets/egg/egg-0-endormi.png'),
   require('../../../assets/egg/egg-1-fremissant.png'),
@@ -2596,7 +2600,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                       },
                     ]}
                   >
-                    {(
+                    {/* ⚠️ Pendant un combat de boss, le BOSS remplace
+                        l'œuf — même emplacement, même zone tapable, donc
+                        aucun changement de mise en page ni de gestion du
+                        tap. L'œuf n'est pas démonté : seule l'IMAGE
+                        change, si bien que son palier, ses animations et
+                        sa progression sont intacts au retour. */}
+                    {boss ? (
+                      <Image
+                        source={GUARDIAN_ART}
+                        style={styles.eggImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
                       <Image
                         source={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
                         style={styles.eggImage}
@@ -2787,11 +2803,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           s'il captait les taps, il empêcherait de combattre. */}
       {boss && view === 'tap' && (
         <View style={styles.bossBanner}>
+          {/* Barre de VIE : 1 tap = 1 PV, donc 200 PV pour 200 taps. Le
+              joueur lit des points de vie qui descendent plutôt qu'un
+              compteur qui monte — c'est un combat, pas une jauge de
+              remplissage. */}
           <Text style={styles.bossTitle}>
-            👹 BOSS — {boss.taps}/{TAP_BOSS_TAPS_REQUIRED}
+            👹 BOSS — {Math.max(0, TAP_BOSS_TAPS_REQUIRED - boss.taps)} PV
           </Text>
           <View style={styles.bossBarTrack}>
-            <View style={[styles.bossBarFill, { width: `${Math.min(100, (boss.taps / TAP_BOSS_TAPS_REQUIRED) * 100)}%` }]} />
+            <View style={[styles.bossBarFill, {
+              width: `${Math.max(0, 100 - Math.min(100, (boss.taps / TAP_BOSS_TAPS_REQUIRED) * 100))}%`,
+            }]} />
           </View>
           <Text style={styles.bossHint}>
             {boss.startedAt
@@ -2804,10 +2826,20 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {bossResult && (
         <View style={styles.detailOverlay}>
           <View style={styles.rewardPanel}>
-            <Text style={styles.detailEmoji}>{bossResult.failed ? '💨' : '💎'}</Text>
+            <Text style={styles.detailEmoji}>{bossResult.failed ? '💨' : '🎉'}</Text>
+            {/* Titre de victoire AVANT le gain : le joueur doit d'abord
+                comprendre qu'il a gagné, le montant vient ensuite. */}
             <Text style={styles.detailName}>
-              {bossResult.failed ? 'Le boss s\'échappe !' : `+${bossResult.given} Diamant${bossResult.given > 1 ? 's' : ''}`}
+              {bossResult.failed ? 'Le boss s\'échappe !' : 'Boss vaincu !'}
             </Text>
+            {!bossResult.failed && (
+              <View style={styles.bossWinRow}>
+                <Text style={styles.bossWinIcon}>💎</Text>
+                <Text style={styles.bossWinAmount} numberOfLines={1}>
+                  +{bossResult.given}
+                </Text>
+              </View>
+            )}
             {!bossResult.failed && bossResult.given < bossResult.earned && (
               <Text style={styles.bossCapNote}>
                 Plafond de {TAP_BOSS_DAILY_DIAMOND_CAP} 💎 par jour atteint — le reste est converti en pièces.
@@ -3856,9 +3888,20 @@ const styles = StyleSheet.create({
   // Calée sur la pilule de pièces : même `top`, posée juste à sa gauche.
   // Même emplacement que la bannière de pouvoir : juste sous le deck,
   // position DÉRIVÉE de celle du cadre du deck pour rester solidaire.
+  // Placée EN BAS (demande explicite) : le boss occupe le centre à la
+  // place de l'œuf, une barre en haut aurait été loin de lui et près des
+  // compteurs de monnaie.
+  // Gain de Diamants : icône et nombre dans deux `Text` SÉPARÉS — mêler
+  // un emoji et une valeur dans un même `Text` a déjà fait disparaître
+  // le nombre deux fois (prix du Shop, gains hors-ligne).
+  bossWinRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  bossWinIcon: { fontSize: 24 },
+  bossWinAmount: { color: COLORS.neonCyan, fontSize: 30, fontWeight: '900', flexShrink: 1 },
+
   bossBanner: {
+    bottom: 96,
     position: 'absolute', left: SCREEN_W * 0.08, zIndex: 6,
-    top: SCREEN_H * (0.357 - TOP_BLOCK_SHIFT) - 32 + (SCREEN_W * 0.55 * (329 / 800)) + 6,
+    
     width: SCREEN_W * 0.84, alignItems: 'center',
     backgroundColor: 'rgba(60,10,10,0.92)', borderRadius: 10,
     paddingVertical: 7, paddingHorizontal: 10,

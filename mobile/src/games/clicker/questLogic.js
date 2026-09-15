@@ -571,7 +571,14 @@ export function resolveQuestTarget(quest, stats) {
 export function questProgress(questId, stats, baseline = {}, targets = {}) {
   const q = findQuest(questId);
   if (!q) return 0;
-  const target = targets[questId] || resolveQuestTarget(q, baseline && baseline.totalEarned !== undefined ? baseline : stats);
+  // ⚠️ Une cible FIXE (`q.target`) prime TOUJOURS sur la valeur
+  // sauvegardée. Les cibles sont figées au tirage du cycle : après un
+  // changement d'équilibrage, une partie en cours gardait l'ANCIENNE
+  // valeur alors que le libellé, lui, est recalculé. Le défi affichait
+  // « 100 000 pièces » tout en en exigeant 140 000 — bug signalé.
+  // Seules les cibles CALCULÉES (effort en minutes) doivent rester
+  // figées, sinon elles bougeraient au fil de la partie.
+  const target = q.target || targets[questId] || resolveQuestTarget(q, baseline && baseline.totalEarned !== undefined ? baseline : stats);
   if (!target) return 0;
   const now = readMetric(q.metric, stats);
   const base = readMetric(q.metric, baseline);
@@ -607,7 +614,8 @@ export function questLabel(questId, target) {
 export function questDetail(questId, stats, baseline = {}, targets = {}) {
   const q = findQuest(questId);
   if (!q) return { icon: '🎯', label: '', progress: 0, target: 1, current: 0, done: false };
-  const target = targets[questId] || resolveQuestTarget(q, stats);
+  // Même règle qu'au-dessus : une cible fixe vient de la définition.
+  const target = q.target || targets[questId] || resolveQuestTarget(q, stats);
   const progress = questProgress(questId, stats, baseline, { ...targets, [questId]: target });
   return {
     icon: q.icon,
