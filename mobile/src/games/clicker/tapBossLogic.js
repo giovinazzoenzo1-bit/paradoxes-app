@@ -11,10 +11,35 @@ export const TAP_BOSS_STORAGE_KEY = 'clicker:tapBoss:v1';
 export const TAP_BOSS_TAPS_REQUIRED = 200;
 export const TAP_BOSS_TIME_LIMIT_MS = 60 * 1000;
 
-// Apparition : entre 20 et 30 minutes de JEU ACTIF (pas de temps réel —
-// sinon le boss surgirait pendant que l'appli est fermée et serait raté).
-export const TAP_BOSS_MIN_GAP_MS = 20 * 60 * 1000;
-export const TAP_BOSS_MAX_GAP_MS = 30 * 60 * 1000;
+// Apparition : mesurée en JEU ACTIF (pas en temps réel — sinon le boss
+// surgirait appli fermée et serait raté d'office).
+//
+// ⚠️ Le PREMIER boss d'une session arrive vite (4 min), les suivants
+// plus lentement. Avant, il fallait 20 à 30 minutes d'affilée : un
+// joueur qui fait des sessions de 10 minutes ne voyait donc JAMAIS de
+// boss, et n'avait aucun moyen d'obtenir des Diamants.
+export const TAP_BOSS_FIRST_GAP_MS = 4 * 60 * 1000;
+export const TAP_BOSS_MIN_GAP_MS = 10 * 60 * 1000;
+export const TAP_BOSS_MAX_GAP_MS = 15 * 60 * 1000;
+
+// ⚠️ GARDE-FOU ANTI-ABUS, en temps RÉEL cette fois.
+//
+// Le compteur de jeu actif repart à zéro à chaque ouverture de l'appli :
+// sans ce plancher, il suffirait de fermer et rouvrir toutes les 4
+// minutes pour enchaîner les boss et vider le plafond quotidien de
+// Diamants en quelques minutes.
+//
+// L'horodatage du dernier boss est SAUVEGARDÉ : le fermer/rouvrir ne le
+// remet pas à zéro, c'est tout l'intérêt.
+export const TAP_BOSS_REAL_COOLDOWN_MS = 60 * 60 * 1000;
+
+// Le boss peut-il apparaître ? Les DEUX conditions doivent être
+// remplies : assez de jeu actif, ET assez de temps réel écoulé.
+export function canSpawnBoss({ activeMs, gapMs, lastBossAt, now }) {
+  if (activeMs < gapMs) return false;
+  if (lastBossAt && now - lastBossAt < TAP_BOSS_REAL_COOLDOWN_MS) return false;
+  return true;
+}
 
 // Plafond quotidien de Diamants, toutes sources de boss confondues.
 //
@@ -44,7 +69,8 @@ export function diamondsForDuration(ms) {
 }
 
 // Délai avant la prochaine apparition, tiré au hasard dans la plage.
-export function nextSpawnGapMs(rand = Math.random) {
+export function nextSpawnGapMs(rand = Math.random, isFirst = false) {
+  if (isFirst) return TAP_BOSS_FIRST_GAP_MS;
   return TAP_BOSS_MIN_GAP_MS + rand() * (TAP_BOSS_MAX_GAP_MS - TAP_BOSS_MIN_GAP_MS);
 }
 

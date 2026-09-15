@@ -1026,7 +1026,9 @@ export function ritualReady(lastUsedMs, nowMs) {
 }
 
 // ---- Offrande (dépenser les pièces partagées appCoins de l'appli) ----
-export const OFFRANDE_APPCOINS_COST = 10;
+// Ramené de 10 à 1 le 14/09 : à 10, l'Offrande coûtait la moitié du
+// plafond QUOTIDIEN de Diamants (21) pour une récompense dérisoire.
+export const OFFRANDE_APPCOINS_COST = 1;
 export function offrandeReward(tapPower) {
   return Math.round(tapPower * 15);
 }

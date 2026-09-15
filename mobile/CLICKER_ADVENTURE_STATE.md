@@ -921,6 +921,41 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Boss de tap : cadence revue + garde-fou anti-abus (14/09)
+
+**Défaut** : il fallait 20 à 30 minutes de jeu ACTIF D'AFFILÉE. Un joueur
+qui fait des sessions de 10 minutes ne voyait donc **jamais** de boss —
+et n'avait aucun moyen d'obtenir des Diamants, seule source du jeu.
+
+| | Avant | Après |
+|---|---|---|
+| 1er boss d'une session | 20-30 min actives | **4 min actives** |
+| Suivants | 20-30 min | 10-15 min actives |
+| Plancher en temps RÉEL | aucun | **1 heure depuis le dernier boss** |
+
+⚠️ **Le plancher d'une heure est indispensable** : le compteur de jeu
+actif repart à zéro à chaque ouverture de l'appli. Sans lui, fermer et
+rouvrir toutes les 4 minutes suffirait à enchaîner les boss et à vider
+le plafond quotidien de Diamants en quelques minutes.
+
+⚠️ **L'horodatage du dernier boss est SAUVEGARDÉ**, et écrit dès
+l'apparition (pas à la résolution) : fermer l'appli juste après ne remet
+rien à zéro. Relu quelle que soit la date, pour survivre à minuit.
+
+**Vérifié par simulation** : 12 sessions de 5 min sur une heure ne
+donnent qu'**1 seul boss** ; une session normale de 10 min en donne 1
+(contre 0 avant) ; 5 sessions espacées de 3 h en donnent 5.
+
+## Offrande ramenée à 1 Diamant (14/09)
+
+À 10, elle coûtait la moitié du plafond QUOTIDIEN de Diamants (21).
+
+⚠️ **Sa récompense reste à revoir** : `offrandeReward` est LINÉAIRE
+(`tapPower × 15`) alors que les coûts DOUBLENT à chaque niveau. Mesuré :
+l'Offrande vaut 53 % d'une amélioration de Pacte au niveau 1, **1 % au
+niveau 10, 0,002 % au niveau 20**. Baisser le prix ne suffit donc pas —
+la formule elle-même est à changer (décision en attente).
+
 ## ⚠️ Montants invisibles en boutique (14/09) — 2e occurrence, autre cause
 
 Signalé deux fois. **Ce n'était PAS le même bug** que `6cff4ff`

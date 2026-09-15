@@ -97,7 +97,7 @@ import DiamondShop from './DiamondShop';
 import {
   TAP_BOSS_STORAGE_KEY, TAP_BOSS_TAPS_REQUIRED, TAP_BOSS_TIME_LIMIT_MS,
   diamondsForDuration, nextSpawnGapMs, grantableDiamonds,
-  isRhythmSuspicious, TAP_BOSS_DAILY_DIAMOND_CAP,
+  isRhythmSuspicious, TAP_BOSS_DAILY_DIAMOND_CAP, canSpawnBoss,
 } from '../../games/clicker/tapBossLogic';
 import {
   INCUBATOR_STORAGE_KEY, startIncubation, applyTap as incubatorApplyTap,
@@ -283,7 +283,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // tiré au hasard. Basé sur le temps actif et non réel : sinon le boss
   // surgirait appli fermée et serait raté d'office.
   const bossActiveMsRef = useRef(0);
-  const bossGapRef = useRef(nextSpawnGapMs());
+  // Premier boss de la session : délai court. Les suivants reprennent la
+  // plage normale.
+  const bossGapRef = useRef(nextSpawnGapMs(Math.random, true));
+  // ⚠️ Horodatage RÉEL du dernier boss, SAUVEGARDÉ. C'est lui qui rend le
+  // garde-fou inviolable : le compteur de jeu actif repart à zéro à
+  // chaque ouverture, donc sans cette date on pourrait enchaîner les
+  // boss en fermant et rouvrant l'appli toutes les 4 minutes.
+  const lastBossAtRef = useRef(0);
 
   const [diamondShopOpen, setDiamondShopOpen] = useState(false);
   const [incubatorOpen, setIncubatorOpen] = useState(false);
@@ -356,6 +363,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         if (raw) {
           const saved = JSON.parse(raw);
           if (saved && saved.date === todayKey()) setDiamondsToday(saved.diamonds || 0);
+          // Relu quelle que soit la DATE : le délai d'une heure doit
+          // survivre au passage de minuit comme au redémarrage.
+          if (saved && saved.lastBossAt) lastBossAtRef.current = saved.lastBossAt;
         }
       } catch (e) {
         // Illisible : on repart de zéro plutôt que de bloquer l'écran.
@@ -367,7 +377,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const next = diamondsTodayRef.current + n;
     diamondsTodayRef.current = next;
     setDiamondsToday(next);
-    AsyncStorage.setItem(TAP_BOSS_STORAGE_KEY, JSON.stringify({ date: todayKey(), diamonds: next })).catch(() => {});
+    AsyncStorage.setItem(
+      TAP_BOSS_STORAGE_KEY,
+      JSON.stringify({ date: todayKey(), diamonds: next, lastBossAt: lastBossAtRef.current })
+    ).catch(() => {});
   };
 
   // Apparition du boss : uniquement sur l'accueil du Clicker, et
@@ -377,10 +390,22 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const id = setInterval(() => {
       if (bossRef.current) return;
       bossActiveMsRef.current += 1000;
-      if (bossActiveMsRef.current >= bossGapRef.current) {
+      if (canSpawnBoss({
+        activeMs: bossActiveMsRef.current,
+        gapMs: bossGapRef.current,
+        lastBossAt: lastBossAtRef.current,
+        now: Date.now(),
+      })) {
         bossActiveMsRef.current = 0;
         bossGapRef.current = nextSpawnGapMs();
         bossTapTimesRef.current = [];
+        lastBossAtRef.current = Date.now();
+        // Écrit tout de suite : si l'appli est fermée juste après, le
+        // délai d'une heure doit déjà courir.
+        AsyncStorage.setItem(
+          TAP_BOSS_STORAGE_KEY,
+          JSON.stringify({ date: todayKey(), diamonds: diamondsTodayRef.current, lastBossAt: lastBossAtRef.current })
+        ).catch(() => {});
         setBoss({ taps: 0, startedAt: null });
       }
     }, 1000);
@@ -2767,7 +2792,9 @@ function ShopView({
             {/* Offrande, toujours juste après les 4 mécaniques historiques. */}
             <TouchableOpacity style={[styles.offrandeBtn, sharedCoins < OFFRANDE_APPCOINS_COST && styles.actionBtnDisabled]} onPress={onOffrande} disabled={sharedCoins < OFFRANDE_APPCOINS_COST}>
               <Text style={styles.offrandeBtnText}>💎 Offrande</Text>
-              <Text style={styles.offrandeBtnSubtext}>Échange {OFFRANDE_APPCOINS_COST} Diamants (tu en as {sharedCoins}) contre un bonus ici</Text>
+              <Text style={styles.offrandeBtnSubtext}>
+                Échange {OFFRANDE_APPCOINS_COST} Diamant{OFFRANDE_APPCOINS_COST > 1 ? 's' : ''} (tu en as {sharedCoins}) contre un bonus ici
+              </Text>
             </TouchableOpacity>
 
             {/* Ascension : elle vivait dans l'onglet Quêtes, qui n'existe
