@@ -2797,6 +2797,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           onBuyVeilleur={buyVeilleur}
           onBuyAutoClicker={buyAutoClicker}
           griffesCoinBuys={griffesCoinBuys}
+          owned={owned}
           onBuyGriffesWithCoins={buyGriffesWithCoinsFromShop}
           onBuyUpgradeItem={buyUpgradeItem}
           onOffrande={doOffrande}
@@ -3176,10 +3177,19 @@ function describeUpgradeTotal(item, level) {
 function ShopView({
   coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers = {}, upgradeLevels = {},
   applyDiscount, onBuyTapPower, onBuyCrit, onBuyCritDamage, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onBuyTapUpgrade,
-  griffesCoinBuys = 0, onBuyGriffesWithCoins,
+  griffesCoinBuys = 0, onBuyGriffesWithCoins, owned = [],
   critDamageLevel = 0, tapUpgrades = [], onOffrande,
   essence, essenceGainPreview, totalEarned, ascensionCount, onAscend,
 }) {
+  // Créatures possédées, en Set : la liste des améliorations est
+  // parcourue à chaque rendu, un `find` par ligne serait inutilement
+  // coûteux.
+  const ownedIds = new Set((owned || []).map((o) => o.id));
+  const creatureName = (id) => {
+    const c = CREATURES.find((x) => x.id === id);
+    return c ? c.stages[0].name : '???';
+  };
+
   const coreState = { tapPower, critLevel, critDamageLevel, sanctuaryLevel };
   const isUnlocked = (id) => coreUpgradeUnlocked(id, coreState);
   const [page, setPage] = useState('upgrades'); // 'upgrades' | 'autoclick'
@@ -3210,6 +3220,27 @@ function ShopView({
               <Text style={styles.offrandeBtnText}>💎 Offrande</Text>
               <Text style={styles.offrandeBtnSubtext}>
                 Échange {OFFRANDE_APPCOINS_COST} Diamant{OFFRANDE_APPCOINS_COST > 1 ? 's' : ''} (tu en as {sharedCoins}) contre un bonus ici
+              </Text>
+            </TouchableOpacity>
+
+            {/* Achat de Griffes avec les pièces du Clicker : c'est ici
+                que le joueur a ses pièces sous les yeux, pas dans
+                l'Aventure. Le prix N'EST PAS fixe — il suit la
+                progression convenue (20 000, 30 000, 40 000…) et le
+                rythme des Ascensions. */}
+            <TouchableOpacity
+              style={[styles.actionBtn, coins < griffesCoinCost(griffesCoinBuys, ascensionCount) && styles.actionBtnDisabled]}
+              onPress={onBuyGriffesWithCoins}
+              disabled={coins < griffesCoinCost(griffesCoinBuys, ascensionCount)}
+            >
+              <View style={styles.actionBtnLeft}>
+                <Text style={styles.actionBtnText}>🐾 {GRIFFES_COIN_PACK} Griffes</Text>
+                <Text style={styles.actionBtnSubtext}>
+                  Pour l'Aventure · le prochain pack coûtera plus cher
+                </Text>
+              </View>
+              <Text style={styles.actionBtnCost} numberOfLines={1}>
+                💰 {formatNum(griffesCoinCost(griffesCoinBuys, ascensionCount))}
               </Text>
             </TouchableOpacity>
 
@@ -3313,26 +3344,6 @@ function ShopView({
               </Text>
             </TouchableOpacity>
 
-            {/* Achat de Griffes avec les pièces du Clicker : c'est ici
-                que le joueur a ses pièces sous les yeux, pas dans
-                l'Aventure. Le prix N'EST PAS fixe — il suit la
-                progression convenue (20 000, 30 000, 40 000…) et le
-                rythme des Ascensions. */}
-            <TouchableOpacity
-              style={[styles.actionBtn, coins < griffesCoinCost(griffesCoinBuys, ascensionCount) && styles.actionBtnDisabled]}
-              onPress={onBuyGriffesWithCoins}
-              disabled={coins < griffesCoinCost(griffesCoinBuys, ascensionCount)}
-            >
-              <View style={styles.actionBtnLeft}>
-                <Text style={styles.actionBtnText}>🐾 {GRIFFES_COIN_PACK} Griffes</Text>
-                <Text style={styles.actionBtnSubtext}>
-                  Pour l'Aventure · le prochain pack coûtera plus cher
-                </Text>
-              </View>
-              <Text style={styles.actionBtnCost} numberOfLines={1}>
-                💰 {formatNum(griffesCoinCost(griffesCoinBuys, ascensionCount))}
-              </Text>
-            </TouchableOpacity>
 
 
             {/* Améliorations refondues (02/09) : de simples améliorations
@@ -3377,26 +3388,44 @@ function ShopView({
             })}
 
             <Text style={styles.shopTierHeader}>💎 Améliorations de créatures</Text>
-            {[...UPGRADE_ITEMS].sort((a, b) => a.cost - b.cost).map((item) => {
+            {/* ⚠️ Chaque amélioration appartient à une CRÉATURE. Celles
+                dont la créature n'est pas possédée sont GRISÉES et
+                rejetées en bas de liste, pas supprimées : le joueur voit
+                ce qu'il débloquera, et la liste ne se réorganise pas
+                sous ses yeux à chaque invocation.
+                Tri : possédées d'abord (par coût), puis les autres. */}
+            {[...UPGRADE_ITEMS]
+              .sort((a, b) => {
+                const pa = ownedIds.has(a.creatureId) ? 0 : 1;
+                const pb = ownedIds.has(b.creatureId) ? 0 : 1;
+                return pa !== pb ? pa - pb : a.cost - b.cost;
+              })
+              .map((item) => {
+              const possede = ownedIds.has(item.creatureId);
               const level = upgradeLevels[item.id] || 0;
               const cost = applyDiscount(upgradeItemCost(item, level));
               const canAfford = coins >= cost;
+              const bloque = !possede || !canAfford;
               return (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.actionBtn, !canAfford && styles.actionBtnDisabled]}
+                  style={[styles.actionBtn, bloque && styles.actionBtnDisabled, !possede && styles.actionBtnLockedTap]}
                   onPress={() => onBuyUpgradeItem(item.id)}
-                  disabled={!canAfford}
+                  disabled={bloque}
                 >
                   <View style={styles.actionBtnLeft}>
                     <Text style={styles.actionBtnText}>
-                      {item.emoji} {item.name} (nv {level})
+                      {possede ? `${item.emoji} ${item.name}` : `🔒 ${item.name}`} (nv {level})
                     </Text>
                     <Text style={styles.actionBtnSubtext}>
-                      {item.desc} par niveau{level > 0 ? ` · actuellement ${describeUpgradeTotal(item, level)}` : ''}
+                      {possede
+                        ? `${item.desc} par niveau${level > 0 ? ` · actuellement ${describeUpgradeTotal(item, level)}` : ''}`
+                        : `Nécessite ${creatureName(item.creatureId)}`}
                     </Text>
                   </View>
-                  <Text style={styles.actionBtnCost} numberOfLines={1}>💰 {formatNum(cost)}</Text>
+                  <Text style={styles.actionBtnCost} numberOfLines={1}>
+                    {possede ? `💰 ${formatNum(cost)}` : '🔒'}
+                  </Text>
                 </TouchableOpacity>
               );
             })}

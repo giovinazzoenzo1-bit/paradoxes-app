@@ -921,6 +921,29 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Boutique : améliorations liées aux créatures possédées (15/09)
+
+Chaque amélioration appartient à une CRÉATURE. Celles dont la créature
+n'est pas possédée sont **grisées et rejetées en bas de liste**, pas
+supprimées : le joueur voit ce qu'il débloquera, et la liste ne se
+réorganise pas sous ses yeux à chaque invocation.
+
+Tri : possédées d'abord (par coût croissant), puis les autres.
+
+⚠️ `creatureId` est inscrit EXPLICITEMENT dans `UPGRADE_ITEMS`, pas
+déduit du nom. La déduction ratait `griffeBraisillon`, dont la créature
+a été remplacée par Pyrosile (voir la table de migration). Vérifié : les
+20 améliorations pointent vers une créature existante.
+
+⚠️ `ownedIds` est un `Set` : la liste est parcourue à chaque rendu, un
+`find` par ligne serait inutilement coûteux.
+
+## Bouton d'achat de Griffes : sous l'Offrande
+
+Il avait d'abord été placé après le Veilleur, donc **hors écran sans
+faire défiler** — le joueur ne le trouvait pas. Remonté juste sous
+l'Offrande, à côté de l'autre échange de monnaie.
+
 ## Réglages du 14/09 (4)
 
 ### ⚠️ Bandeaux de pouvoir : empilés, pas superposés
