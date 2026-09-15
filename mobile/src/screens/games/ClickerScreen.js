@@ -234,6 +234,14 @@ const NUM_SUFFIXES = ['', 'K', 'M', 'Md', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No
 // clicker) : une récompense déjà payée ne doit pas pouvoir être perdue
 // par un incident sur la sauvegarde principale.
 const PENDING_OFFERINGS_KEY = 'clicker:pendingOfferings:v1';
+// Défis déjà atteints, écrits À PART et IMMÉDIATEMENT.
+//
+// ⚠️ La sauvegarde principale est DIFFÉRÉE de 600 ms. Si le joueur
+// validait un défi puis dépensait ses pièces et fermait l'appli dans
+// cette fenêtre, le verrou était perdu au rechargement et le défi
+// revenait — le bug signalé deux fois. Une clé propre, écrite sans
+// délai, supprime cette fenêtre.
+const LATCHED_QUESTS_KEY = 'clicker:latchedQuests:v1';
 
 function formatNum(n) {
   if (!Number.isFinite(n)) return '0'; // garde-fou : jamais NaN/Infinity affiché
@@ -943,7 +951,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setDevCompletedIds(saved.devCompletedIds || []);
           setDevReopenedIds(saved.devReopenedIds || []);
           setGriffesCoinBuys(saved.griffesCoinBuys || 0);
-          setLatchedQuestIds(saved.latchedQuestIds || []);
+          // La clé dédiée fait AUTORITÉ : elle est écrite sans délai,
+          // donc toujours au moins aussi à jour que la sauvegarde.
+          const verrouRaw = await AsyncStorage.getItem(LATCHED_QUESTS_KEY);
+          let verrou = saved.latchedQuestIds || [];
+          try {
+            const propre = verrouRaw ? JSON.parse(verrouRaw) : null;
+            if (Array.isArray(propre)) verrou = [...new Set([...verrou, ...propre])];
+          } catch (e3) { /* illisible : on garde celle de la sauvegarde */ }
+          setLatchedQuestIds(verrou);
           setEggPhase(saved.eggPhase || 'collecting');
           setHatchTaps(saved.hatchTaps || 0);
           setCaptureTaps(saved.captureTaps || 0);
@@ -1870,7 +1886,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         && questComplete(id, questStats, baselineFor(id), questTargets)
     );
     if (atteints.length) {
-      setLatchedQuestIds((prev) => [...prev, ...atteints]);
+      setLatchedQuestIds((prev) => {
+        const suivant = [...prev, ...atteints];
+        // Écriture IMMÉDIATE, sans attendre la sauvegarde différée.
+        AsyncStorage.setItem(LATCHED_QUESTS_KEY, JSON.stringify(suivant)).catch(() => {});
+        return suivant;
+      });
       // Félicitations : on annonce le PREMIER défi atteint de la salve.
       // Le verrou garantit qu'un défi ne sera annoncé qu'une fois, même
       // si sa valeur redescend ensuite.
@@ -1901,7 +1922,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (!target) return;
     setDevCompletedIds((prev) => prev.filter((id) => id !== target));
     setDevReopenedIds((prev) => (prev.includes(target) ? prev : [...prev, target]));
-    setLatchedQuestIds((prev) => prev.filter((id) => id !== target));
+    setLatchedQuestIds((prev) => {
+      const suivant = prev.filter((id) => id !== target);
+      AsyncStorage.setItem(LATCHED_QUESTS_KEY, JSON.stringify(suivant)).catch(() => {});
+      return suivant;
+    });
     setQuestBaselines((prev) => ({ ...prev, [target]: questStats }));
     // Métriques de type RECORD (meilleure tenue de Transe, meilleur
     // combo) : elles ne se rejouent pas avec une nouvelle référence.
@@ -2097,6 +2122,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setDevCompletedIds([]);
     setDevReopenedIds([]);
     setLatchedQuestIds([]);
+    AsyncStorage.removeItem(LATCHED_QUESTS_KEY).catch(() => {});
     setEggPhase('collecting');
     setHatchTaps(0);
     setCaptureTaps(0);
@@ -2855,9 +2881,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               <Text style={styles.offlineDuration}>
                 {Math.floor(offlineReport.seconds / 3600)} h {Math.round((offlineReport.seconds % 3600) / 60)} min de production
               </Text>
-              <Text style={styles.offlineAmount}>
-                💰 {formatNum(offlineReport.amount * (offlineDoubled ? 2 : 1))}
-              </Text>
+              {/* ⚠️ Emoji et NOMBRE dans deux `Text` SÉPARÉS.
+                  Réunis dans une seule chaîne, seul l'emoji était peint
+                  et le montant restait invisible — exactement le défaut
+                  déjà rencontré sur les prix de la boutique. Deux
+                  éléments distincts dans une rangée, chacun mesuré pour
+                  lui-même, supprime le problème. */}
+              <View style={styles.offlineAmountRow}>
+                <Text style={styles.offlineAmountIcon}>💰</Text>
+                <Text style={styles.offlineAmount} numberOfLines={1}>
+                  {formatNum(offlineReport.amount * (offlineDoubled ? 2 : 1))}
+                </Text>
+              </View>
               {offlineDoubled && <Text style={styles.offlineDoubledTag}>Doublé ✓</Text>}
               {!offlineDoubled && (
                 <TouchableOpacity
@@ -3978,7 +4013,14 @@ const styles = StyleSheet.create({
   },
   offlineTitle: { color: COLORS.text, fontSize: 17, fontWeight: '900' },
   offlineDuration: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
-  offlineAmount: { color: COLORS.action, fontSize: 30, fontWeight: '900', marginTop: 12 },
+  offlineAmountRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, marginTop: 12, alignSelf: 'stretch',
+  },
+  offlineAmountIcon: { fontSize: 26 },
+  // `flexShrink: 1` : sur un très gros montant c'est le NOMBRE qui se
+  // réduit, jamais l'icône qui déborderait.
+  offlineAmount: { color: COLORS.action, fontSize: 30, fontWeight: '900', flexShrink: 1 },
   offlineDoubledTag: { color: '#34d399', fontSize: 13, fontWeight: '800', marginTop: 4 },
   offlineAdBtn: {
     marginTop: 16, alignSelf: 'stretch',

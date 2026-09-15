@@ -921,6 +921,40 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Correctifs du 14/09 (5)
+
+### ⚠️ Verrou des défis : la sauvegarde DIFFÉRÉE était le trou
+
+Le verrou (`latchedQuestIds`) était correct, mais il ne partait sur
+disque qu'avec la sauvegarde principale, **différée de 600 ms**. Valider
+un défi, dépenser ses pièces et fermer l'appli dans cette fenêtre
+perdait le verrou : au rechargement le défi redevenait « à faire ».
+C'est pourquoi le bug est revenu après avoir été « corrigé ».
+
+**Correctif** : clé propre `clicker:latchedQuests:v1`, écrite
+**immédiatement** à chaque pose de verrou, et qui fait **autorité** sur
+la sauvegarde principale à la lecture (union des deux).
+
+Effacée au tirage d'un nouveau cycle et à l'usage du bouton dev « défi
+précédent » — les deux seuls cas où un défi doit redevenir faisable.
+
+**Règle** : toute donnée qu'une fermeture brutale ne doit PAS perdre
+s'écrit hors de la sauvegarde différée (voir aussi les horodatages de
+boss et les Diamants d'Offrande).
+
+### ⚠️ Montant invisible : le même défaut que les prix de boutique
+
+Le compte rendu hors-ligne affichait la bourse sans le nombre. Emoji et
+chiffres étaient dans UNE SEULE chaîne : seul l'emoji était peint.
+C'est exactement le défaut déjà rencontré sur les prix du Shop.
+
+**Correctif** : deux `Text` SÉPARÉS dans une rangée, chacun mesuré pour
+lui-même. Vérifié que le montant le plus long possible du jeu
+(« 142.00No ») tient dans la carte.
+
+**Règle** : ne jamais mêler un emoji et une valeur dans un même `Text`
+lorsqu'il s'agit d'un montant.
+
 ## Correctifs du 14/09 (4)
 
 ### ⚠️ Fenêtres plein écran : la règle
