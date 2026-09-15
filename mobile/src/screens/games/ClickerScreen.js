@@ -541,6 +541,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [devCompletedIds, setDevCompletedIds] = useState([]);
   const devCompletedIdsRef = useRef([]);
   devCompletedIdsRef.current = devCompletedIds;
+  // SYMÉTRIQUE de `devCompletedIds` : défis forcés « non terminés » par
+  // l'outil de dev.
+  //
+  // ⚠️ Indispensable, une simple remise à zéro de la référence de
+  // progression ne suffit pas : 45 des 76 défis sont en mode ABSOLU
+  // (« Monte Pacte au niveau 10 »). Leur condition reste vraie quoi qu'on
+  // fasse, le défi se revalidait donc immédiatement — d'où un bouton
+  // « défi précédent » qui semblait bloqué sur le même défi.
+  const [devReopenedIds, setDevReopenedIds] = useState([]);
+  const devReopenedIdsRef = useRef([]);
+  devReopenedIdsRef.current = devReopenedIds;
   const [questBaselines, setQuestBaselines] = useState({});
   const questBaselinesRef = useRef({});
   questBaselinesRef.current = questBaselines;
@@ -801,6 +812,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           );
           setQuestBaselines(saved.questBaselines || {});
           setDevCompletedIds(saved.devCompletedIds || []);
+          setDevReopenedIds(saved.devReopenedIds || []);
           setEggPhase(saved.eggPhase || 'collecting');
           setHatchTaps(saved.hatchTaps || 0);
           setCaptureTaps(saved.captureTaps || 0);
@@ -895,7 +907,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, critDamageLevel, tapUpgrades, autoClickers, upgradeLevels, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
-    activeQuestIds, questTargets, questBaseline, questBaselines, devCompletedIds, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
+    activeQuestIds, questTargets, questBaseline, questBaselines, devCompletedIds, devReopenedIds, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
   // Construit l'objet de sauvegarde à partir des REFS uniquement, donc
@@ -934,6 +946,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     questBaseline: questBaselineRef.current,
     questBaselines: questBaselinesRef.current,
     devCompletedIds: devCompletedIdsRef.current,
+    devReopenedIds: devReopenedIdsRef.current,
     sequenceIndex: sequenceIndexRef.current,
     eggPhase: eggPhaseRef.current,
     hatchTaps: hatchTapsRef.current,
@@ -1644,7 +1657,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // défi validé en dev serait terminé pour l'affichage mais pas pour
   // l'œuf, qui n'éclorait jamais.
   const isQuestDone = (id) =>
-    devCompletedIds.includes(id) || questComplete(id, questStats, baselineFor(id), questTargets);
+    !devReopenedIds.includes(id) &&
+    (devCompletedIds.includes(id) || questComplete(id, questStats, baselineFor(id), questTargets));
   const completedQuestCount = activeQuestIds.filter(isQuestDone).length;
 
   // Défi mis en avant sur l'écran d'accueil : le PREMIER non terminé des
@@ -1655,27 +1669,23 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // (l'affichage bascule alors sur la barre d'éclosion).
   const currentChallengeId = activeQuestIds.find((id) => !isQuestDone(id)) || null;
 
-  // Dernier défi VALIDÉ du cycle, dans l'ordre d'affichage — c'est celui
-  // que le bouton « défi précédent » rouvre. On repart de la fin pour
-  // tomber sur celui qu'on vient de finir, pas sur le premier du cycle.
+  // Dernier défi encore marqué terminé, en partant de la FIN du cycle :
+  // c'est celui que le bouton rouvre. À chaque appui on rouvre le
+  // précédent, donc on peut remonter tout le cycle appui après appui.
   const devPreviousChallengeId =
     [...activeQuestIds].reverse().find((id) => isQuestDone(id)) || null;
 
-  // ⚠️ Rouvrir un défi ne suffit PAS : si le défi avait été validé
-  // autrement que par l'outil de dev (le joueur l'a réellement accompli),
-  // il se revalidera aussitôt. On pose donc une nouvelle référence de
-  // progression pour ce défi — il redevient réellement à refaire.
   const onDevPreviousChallenge = () => {
     const target = devPreviousChallengeId;
+    // Une fois l'œuf en éclosion, il faut AUSSI repasser en collecte,
+    // sinon le bouton semble ne rien faire.
     if (eggPhase === 'hatching') setEggPhase('collecting');
     if (!target) return;
     setDevCompletedIds((prev) => prev.filter((id) => id !== target));
+    setDevReopenedIds((prev) => (prev.includes(target) ? prev : [...prev, target]));
     setQuestBaselines((prev) => ({ ...prev, [target]: questStats }));
-    // Les métriques de type RECORD (meilleure tenue de Transe, meilleur
-    // combo) ne se rejouent pas avec une simple nouvelle référence : un
-    // record déjà au-dessus de la cible revaliderait le défi aussitôt.
-    // Ce sont les deux de `RESET_ON_DRAW_METRICS` dans questLogic ; elles
-    // sont remises à zéro ici comme au tirage d'un cycle.
+    // Métriques de type RECORD (meilleure tenue de Transe, meilleur
+    // combo) : elles ne se rejouent pas avec une nouvelle référence.
     setMaxTranseHoldSec(0);
     setMaxCombo(1);
   };
@@ -1859,6 +1869,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // nouveau cycle démarrera le sien quand il deviendra courant.
     setQuestBaselines({});
     setDevCompletedIds([]);
+    setDevReopenedIds([]);
     setEggPhase('collecting');
     setHatchTaps(0);
     setCaptureTaps(0);
@@ -2162,28 +2173,31 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             />
           )}
 
-          {/* Outil de test : valide le défi affiché sans tricher sur les
-              stats du joueur (voir devCompletedIds). Même statut que la
-              section dev des Options, visible en phase de test. */}
-          {eggPhase === 'collecting' && currentChallengeId && (
-            <TouchableOpacity
-              style={styles.devSkipBtn}
-              onPress={() => setDevCompletedIds((prev) => (prev.includes(currentChallengeId) ? prev : [...prev, currentChallengeId]))}
-            >
-              <Text style={styles.devSkipBtnText}>🛠️ Valider ce défi (dev)</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Outil de test symétrique : REVENIR au défi précédent, pour
-              retester un défi sans devoir recommencer une partie.
-              Deux cas à traiter, pas un seul :
-                - en phase de collecte, on retire le dernier défi validé ;
-                - une fois l'œuf en éclosion, il faut AUSSI repasser en
-                  collecte, sinon le bouton semble ne rien faire. */}
-          {(devPreviousChallengeId || eggPhase === 'hatching') && (
-            <TouchableOpacity style={styles.devBackBtn} onPress={onDevPreviousChallenge}>
-              <Text style={styles.devSkipBtnText}>◀️ Défi précédent (dev)</Text>
-            </TouchableOpacity>
+          {/* Les deux outils de test, sur UNE SEULE rangée centrée.
+              Avant : deux boutons en position absolue empilés, celui du
+              haut passait par-dessus la case du dessus. Une rangée
+              `left: 0, right: 0` + `justifyContent: 'center'` les centre
+              ensemble et garantit qu'ils ne peuvent plus se chevaucher
+              ni déborder, quelle que soit la largeur de leurs libellés. */}
+          {eggPhase === 'collecting' && (currentChallengeId || devPreviousChallengeId) && (
+            <View style={styles.devToolsRow}>
+              {(devPreviousChallengeId || eggPhase === 'hatching') && (
+                <TouchableOpacity style={styles.devToolBtn} onPress={onDevPreviousChallenge}>
+                  <Text style={styles.devSkipBtnText}>◀️ Défi préc.</Text>
+                </TouchableOpacity>
+              )}
+              {currentChallengeId && (
+                <TouchableOpacity
+                  style={styles.devToolBtn}
+                  onPress={() => {
+                    setDevReopenedIds((prev) => prev.filter((id) => id !== currentChallengeId));
+                    setDevCompletedIds((prev) => (prev.includes(currentChallengeId) ? prev : [...prev, currentChallengeId]));
+                  }}
+                >
+                  <Text style={styles.devSkipBtnText}>🛠️ Valider ▶️</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
 
           <>
@@ -3534,15 +3548,13 @@ const styles = StyleSheet.create({
     color: COLORS.action, fontSize: 11, fontWeight: '900', textAlign: 'center',
   },
   // Remontée de ~2mm (~13dp) sur demande explicite.
-  devSkipBtn: {
-    position: 'absolute', left: SCREEN_W * 0.258, top: SCREEN_H * (0.303 - TOP_BLOCK_SHIFT) - 13, zIndex: 3,
-    paddingVertical: 5, paddingHorizontal: 12,
-    borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
+  // Rangée des outils de dev : centrée sur toute la largeur plutôt que
+  // posée à une abscisse fixe, donc impossible de chevaucher un voisin.
+  devToolsRow: {
+    position: 'absolute', left: 0, right: 0, top: SCREEN_H * (0.303 - TOP_BLOCK_SHIFT) - 13, zIndex: 3,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
   },
-  // Même rangée, juste au-dessus : les deux outils de dev restent
-  // ensemble et n'empiètent pas sur le reste de l'écran.
-  devBackBtn: {
-    position: 'absolute', left: SCREEN_W * 0.258, top: SCREEN_H * (0.303 - TOP_BLOCK_SHIFT) - 45, zIndex: 3,
+  devToolBtn: {
     paddingVertical: 5, paddingHorizontal: 12,
     borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
   },
