@@ -921,6 +921,48 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Réglages du 14/09 (4)
+
+### ⚠️ Bandeaux de pouvoir : empilés, pas superposés
+
+Les deux bandeaux (pouvoir actif, remise) portaient CHACUN la même
+position absolue : deux bandeaux actifs se recouvraient exactement. Et
+mesuré, leur cadre (x 31-362, y 350-376) mordait sur le bouton Quêtes
+(x 6-68, y 340-401).
+
+**Correctif** : une COLONNE porte la position, les bandeaux n'en ont
+plus. Elle gère 1, 2 ou 3 bandeaux sans réglage. Décalée à droite du
+bouton Quêtes (x 79-377, 16 dp de marge à droite), texte réduit à 10 et
+sur une seule ligne.
+
+### Pouvoirs de créature : +29 % en moyenne
+
+Mesure : la valeur d'un pouvoir = les taps gagnés pendant sa durée.
+
+| Rareté | Avant | Après | Gain |
+|---|---|---|---|
+| commun | ×2 | **×2,4** | +40 % |
+| peu commun | ×2,5 | **×3** | +33 % |
+| rare | ×3 | **×3,6** | +30 % |
+| épique | ×5 | **×6** | +25 % |
+| légendaire | ×10 | **×12** | +22 % |
+| mythique | ×15 | **×18** | +21 % |
+
+⚠️ La DURÉE ne bouge pas. Une hausse de durée aurait doublé la valeur
+(+62 à +125 % mesurés) — trop pour l'économie.
+
+Les raretés basses gagnent le plus : ce sont elles qui en ont besoin.
+
+### Achat de Griffes dans la boutique du Clicker
+
+Ligne ajoutée là où le joueur a ses pièces sous les yeux. Prix NON fixe :
+20 000, 30 000, 40 000… × le rythme des Ascensions.
+
+⚠️ Les Griffes vivent dans l'Aventure : le Clicker dépose le dû dans
+`PENDING_GRIFFES_KEY`, encaissé à la prochaine ouverture. **Jamais
+d'écriture croisée** dans la sauvegarde de l'autre écran — même canal que
+l'Ascension et les défis.
+
 ## Mini-boss : il remplace l'œuf (14/09)
 
 - Le **boss prend la place de l'œuf** pendant le combat.

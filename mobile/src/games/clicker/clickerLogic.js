@@ -455,7 +455,14 @@ export const SPAWN_VISIBLE_SEC = 4;
 // raretés sur 6, donnant undefined (puis NaN en aval) pour les créatures
 // Peu Commun/Mythique — corrigé en même temps, avant qu'un joueur tombe
 // sur ce bug via une bulle de pouvoir plutôt qu'en le découvrant plus tard.
-const RARITY_TAP_MULTIPLIER = { commun: 2, peu_commun: 2.5, rare: 3, epique: 5, legendaire: 10, mythique: 15 };
+// Relevés le 14/09. Mesure : la valeur d'un pouvoir = les taps gagnés
+// pendant sa durée. Gain moyen de +29 %, volontairement modéré —
+// doubler l'effet aurait écrasé le reste de l'économie.
+//   commun +40 % · peu_commun +33 % · rare +30 %
+//   epique +25 % · legendaire +22 % · mythique +21 %
+// Les raretés basses gagnent le plus : ce sont elles qui en ont besoin.
+// La DURÉE ne bouge pas, seul le multiplicateur.
+const RARITY_TAP_MULTIPLIER = { commun: 2.4, peu_commun: 3, rare: 3.6, epique: 6, legendaire: 12, mythique: 18 };
 const RARITY_DURATION_SEC = { commun: 10, peu_commun: 10, rare: 10, epique: 15, legendaire: 15, mythique: 15 };
 
 export const CREATURE_POWERS = {

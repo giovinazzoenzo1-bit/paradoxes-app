@@ -79,6 +79,8 @@ import {
   trustedOfflineSeconds,
   OFFLINE_CAP_SECONDS,
   passiveRate,
+  griffesCoinCost,
+  GRIFFES_COIN_PACK,
 } from '../../games/clicker/clickerLogic';
 import {
   nextQuestSet,
@@ -436,6 +438,26 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Fait apparaître le boss. Point d'entrée UNIQUE : l'apparition
   // normale et le bouton développeur passent par ici, donc il n'y a
   // aucun risque que l'un oublie une étape que l'autre fait.
+  // Achat de Griffes depuis la BOUTIQUE du Clicker.
+  //
+  // ⚠️ Les Griffes vivent dans l'Aventure : le Clicker ne peut pas les
+  // créditer lui-même. Il dépose le dû dans `PENDING_GRIFFES_KEY`, que
+  // l'Aventure encaisse à sa prochaine ouverture — exactement le canal
+  // déjà utilisé par l'Ascension et les défis. Jamais d'écriture croisée
+  // dans la sauvegarde de l'autre écran.
+  const buyGriffesWithCoinsFromShop = async () => {
+    const cout = griffesCoinCost(griffesCoinBuysRef.current, ascensionCountRef.current);
+    if (coinsRef.current < cout) return;
+    setCoins((c) => c - cout);
+    setGriffesCoinBuys((n) => n + 1);
+    try {
+      const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+      const pending = raw ? parseInt(raw, 10) || 0 : 0;
+      await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + GRIFFES_COIN_PACK));
+    } catch (e) { /* écriture impossible : on ne bloque pas l'écran */ }
+    spawnPopup(`+${GRIFFES_COIN_PACK} 🐾`, 110, 60, true);
+  };
+
   const spawnBoss = () => {
     const now = Date.now();
     bossActiveMsRef.current = 0;
@@ -2426,21 +2448,31 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           </ImageBackground>
           {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
 
-          {activePower && (
-            <View style={styles.powerBanner}>
-              <Text style={styles.powerBannerText}>
-                ⚡ {activePower.name} actif : x{activePower.tapMultiplier} tap
-                {activePower.effectType === 'passive_boost' ? ` + x${activePower.effectValue} revenu passif` : ''}
-                {' '}({Math.max(0, Math.ceil((activePower.expiresAt - Date.now()) / 1000))}s)
-              </Text>
-            </View>
-          )}
-
-          {pendingDiscount && (
-            <View style={[styles.powerBanner, styles.discountBanner]}>
-              <Text style={[styles.powerBannerText, styles.discountBannerText]}>
-                🏷️ {pendingDiscount.name} : -{Math.round(pendingDiscount.percent * 100)}% sur ton prochain achat
-              </Text>
+          {/* ⚠️ Bandeaux EMPILÉS dans une colonne, et non posés chacun à
+              la même position absolue — c'est ce qui les faisait se
+              recouvrir exactement quand deux étaient actifs. La colonne
+              gère 1, 2 ou 3 bandeaux sans réglage.
+              Décalés à DROITE du bouton Quêtes : mesuré, l'ancien cadre
+              (x 31-362, y 350-376) mordait sur ce bouton (x 6-68,
+              y 340-401). */}
+          {(activePower || pendingDiscount) && (
+            <View style={styles.powerBannerStack}>
+              {activePower && (
+                <View style={styles.powerBanner}>
+                  <Text style={styles.powerBannerText} numberOfLines={1}>
+                    ⚡ {activePower.name} ×{activePower.tapMultiplier}
+                    {activePower.effectType === 'passive_boost' ? ` · passif ×${activePower.effectValue}` : ''}
+                    {' '}· {Math.max(0, Math.ceil((activePower.expiresAt - Date.now()) / 1000))}s
+                  </Text>
+                </View>
+              )}
+              {pendingDiscount && (
+                <View style={[styles.powerBanner, styles.discountBanner]}>
+                  <Text style={[styles.powerBannerText, styles.discountBannerText]} numberOfLines={1}>
+                    🏷️ −{Math.round(pendingDiscount.percent * 100)}% au prochain achat
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -2764,6 +2796,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           onBuySanctuary={buySanctuary}
           onBuyVeilleur={buyVeilleur}
           onBuyAutoClicker={buyAutoClicker}
+          griffesCoinBuys={griffesCoinBuys}
+          onBuyGriffesWithCoins={buyGriffesWithCoinsFromShop}
           onBuyUpgradeItem={buyUpgradeItem}
           onOffrande={doOffrande}
           essence={essence}
@@ -3142,6 +3176,7 @@ function describeUpgradeTotal(item, level) {
 function ShopView({
   coins, sharedCoins, tapPower, critLevel, sanctuaryLevel, veilleurLevel, autoClickers = {}, upgradeLevels = {},
   applyDiscount, onBuyTapPower, onBuyCrit, onBuyCritDamage, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onBuyTapUpgrade,
+  griffesCoinBuys = 0, onBuyGriffesWithCoins,
   critDamageLevel = 0, tapUpgrades = [], onOffrande,
   essence, essenceGainPreview, totalEarned, ascensionCount, onAscend,
 }) {
@@ -3275,6 +3310,27 @@ function ShopView({
               </View>
               <Text style={styles.actionBtnCost} numberOfLines={1}>
                 {!isUnlocked('veilleur') ? '🔒' : veilleurMaxed(veilleurLevel) ? '⭐ MAX' : `💰 ${formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}`}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Achat de Griffes avec les pièces du Clicker : c'est ici
+                que le joueur a ses pièces sous les yeux, pas dans
+                l'Aventure. Le prix N'EST PAS fixe — il suit la
+                progression convenue (20 000, 30 000, 40 000…) et le
+                rythme des Ascensions. */}
+            <TouchableOpacity
+              style={[styles.actionBtn, coins < griffesCoinCost(griffesCoinBuys, ascensionCount) && styles.actionBtnDisabled]}
+              onPress={onBuyGriffesWithCoins}
+              disabled={coins < griffesCoinCost(griffesCoinBuys, ascensionCount)}
+            >
+              <View style={styles.actionBtnLeft}>
+                <Text style={styles.actionBtnText}>🐾 {GRIFFES_COIN_PACK} Griffes</Text>
+                <Text style={styles.actionBtnSubtext}>
+                  Pour l'Aventure · le prochain pack coûtera plus cher
+                </Text>
+              </View>
+              <Text style={styles.actionBtnCost} numberOfLines={1}>
+                💰 {formatNum(griffesCoinCost(griffesCoinBuys, ascensionCount))}
               </Text>
             </TouchableOpacity>
 
@@ -3956,19 +4012,28 @@ const styles = StyleSheet.create({
   // Position DÉRIVÉE de celle du cadre du deck (même formule + sa
   // hauteur) : les deux restent solidaires quoi qu'il arrive à
   // TOP_BLOCK_SHIFT, plutôt qu'une constante à resynchroniser à la main.
-  powerBanner: {
-    position: 'absolute', left: SCREEN_W * 0.08, zIndex: 4,
+  // Colonne qui porte la position : les bandeaux ne la portent plus
+  // eux-mêmes, sinon ils se superposent. `left` décalé à droite du
+  // bouton Quêtes (qui finit à 68 dp), largeur ajustée pour rester dans
+  // l'écran.
+  powerBannerStack: {
+    position: 'absolute', left: SCREEN_W * 0.20, zIndex: 4,
     top: SCREEN_H * (0.357 - TOP_BLOCK_SHIFT) - 32 + (SCREEN_W * 0.55 * (329 / 800)) + 6,
-    width: SCREEN_W * 0.84,
-    backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 10, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.action,
-    // Purement informative : elle recouvre le haut de la zone de tap et
-    // ne doit surtout pas lui voler de clics (règle de survie n°2).
+    width: SCREEN_W * 0.76,
+    gap: 4,
+    // Purement informatifs : ils recouvrent le haut de la zone de tap et
+    // ne doivent surtout pas lui voler de clics (règle de survie n°2).
     pointerEvents: 'none',
+  },
+  powerBanner: {
+    backgroundColor: 'rgba(245,197,66,0.15)', borderRadius: 8,
+    paddingVertical: 3, paddingHorizontal: 8,
+    borderWidth: 1, borderColor: COLORS.action,
   },
   discountBanner: { backgroundColor: 'rgba(46,127,184,0.15)', borderColor: '#3ec6f0' },
 
   discountBannerText: { color: '#3ec6f0' },
-  powerBannerText: { color: COLORS.action, fontSize: 12, fontWeight: '800', textAlign: 'center' },
+  powerBannerText: { color: COLORS.action, fontSize: 10, fontWeight: '800', textAlign: 'center' },
 
   // Barre de défi (écran d'accueil) — cadre réel (challenge-bar.png),
   // voir le composant ChallengeBar pour le détail des coordonnées.
