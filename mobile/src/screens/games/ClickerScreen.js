@@ -97,6 +97,7 @@ import {
   questLabel,
   RUNE_CYCLE_INDEX,
   questFeasible,
+  metricScopedToCycle,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -1920,7 +1921,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Baseline effectif d'un défi : le sien s'il a déjà démarré, sinon
   // celui du cycle (utilisé tant que le défi n'est pas devenu courant,
   // et pour les sauvegardes d'avant les baselines par défi).
-  const baselineFor = (id) => questBaselines[id] || questBaseline;
+  const baselineFor = (id) => {
+    // ⚠️ Les actions RARES (runes, Ascension, Offrande) se comptent
+    // depuis le début du CYCLE. Avec la référence par défi, un joueur
+    // ayant déjà équipé ses 3 runes plus tôt voyait le compteur repartir
+    // à zéro sans pouvoir en équiper d'autres — défi infaisable.
+    const q = findQuest(id);
+    if (q && metricScopedToCycle(q.metric)) return questBaseline;
+    return questBaselines[id] || questBaseline;
+  };
   // Point de vérité unique de « ce défi est-il terminé ». Tout le reste
   // (compteur du cycle, défi courant, éclosion) passe par ici, sinon un
   // défi validé en dev serait terminé pour l'affichage mais pas pour

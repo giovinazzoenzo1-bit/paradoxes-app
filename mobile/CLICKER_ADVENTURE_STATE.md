@@ -987,6 +987,32 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️ « Équipe 3 runes » ne se validait pas (15/09)
+
+La référence d'un défi en DELTA était prise au moment où il devient le
+défi COURANT — « tout ce qui a été accumulé avant ne compte pas ».
+
+Conséquence : un joueur ayant déjà équipé ses 3 runes plus tôt dans le
+cycle voyait le compteur repartir de zéro. Et comme ses 3 emplacements
+étaient pleins, il ne POUVAIT PLUS en équiper : défi infaisable sans
+deviner qu'il fallait déséquiper puis rééquiper.
+
+**Correctif** : les métriques d'ACTION RARE se comptent depuis le début
+du CYCLE (`CYCLE_SCOPED_METRICS`) : `runeBought`, `runeEquipped`,
+`runeFused`, `ascension`, `offering`. Ces actions sont rares, coûteuses
+et délibérées — les avoir faites pendant le cycle, c'est avoir fait le
+travail.
+
+⚠️ Les métriques d'ACCUMULATION (pièces gagnées, critiques, cibles
+dorées) GARDENT leur référence par défi. Les passer à la portée du cycle
+les validerait toutes seules, le joueur en accumulant en permanence.
+Vérifié : elles restent à 0 % dans le scénario où le défi des runes
+passe à 100 %.
+
+**Règle** : pour un défi en delta, se demander si l'action est SUBIE
+(accumulation continue) ou CHOISIE (action rare). Une action choisie doit
+compter sur tout le cycle.
+
 ## ⚠️⚠️ DÉFIS IMPOSSIBLES = ŒUF BLOQUÉ À VIE (15/09)
 
 **Le bug le plus grave rencontré.** « Monte Griffe de Braisillon au

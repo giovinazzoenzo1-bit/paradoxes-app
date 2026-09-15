@@ -568,6 +568,28 @@ export function resolveQuestTarget(quest, stats) {
 // (objet id -> valeur). Si une cible manque, on la recalcule à la volée
 // depuis les stats — ce n'est qu'un repli pour les sauvegardes d'avant
 // les cibles dynamiques, jamais le chemin normal.
+// ⚠️ Métriques d'ACTION RARE : elles se comptent depuis le début du
+// CYCLE, pas depuis le moment où le défi devient courant.
+//
+// Bug réel : « Équipe 3 runes » ne se validait pas pour un joueur qui
+// avait déjà équipé ses 3 runes plus tôt dans le cycle. Le compteur
+// repartait de zéro, et comme ses 3 emplacements étaient pleins il ne
+// POUVAIT PLUS en équiper — défi infaisable sans deviner qu'il fallait
+// déséquiper puis rééquiper.
+//
+// Ces actions sont rares, coûteuses et délibérées : le joueur qui les a
+// faites pendant le cycle a fait le travail, ça doit compter. Les
+// métriques d'ACCUMULATION (pièces gagnées, critiques, cibles dorées)
+// gardent leur référence par défi, sinon elles se valideraient toutes
+// seules — le joueur en accumule en permanence.
+export const CYCLE_SCOPED_METRICS = [
+  'runeBought', 'runeEquipped', 'runeFused', 'ascension', 'offering',
+];
+
+export function metricScopedToCycle(metric) {
+  return CYCLE_SCOPED_METRICS.includes(metric);
+}
+
 export function questProgress(questId, stats, baseline = {}, targets = {}) {
   const q = findQuest(questId);
   if (!q) return 0;
