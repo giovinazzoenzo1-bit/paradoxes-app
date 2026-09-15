@@ -921,6 +921,50 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Le Gardien — combat en 2 manches (14/09)
+
+Le combat durait **3 tours** et ne coûtait que **9 % des PV** du joueur.
+Objectif : l'allonger SANS le rendre punitif.
+
+| | Avant | Après |
+|---|---|---|
+| Tours | 3 | **7** |
+| PV encaissés | 9 % | **22 %** |
+| Attaque du gardien | — | **inchangée** |
+
+### Mécanique
+
+- **Bouclier** = 40 % des PV max. Il encaisse AVANT les PV.
+- **Manche 1** : s'arrête quand le gardien a perdu la moitié de ses PV.
+- **Animation**, puis il récupère **tout** (PV et bouclier).
+- **Manche 2** : jusqu'à zéro.
+- Total à entamer = 2 × bouclier + 1,5 × PV.
+
+⚠️ **Le 40 % vient d'une mesure, pas d'un réglage au jugé** : à 25 % le
+combat restait court (5 tours), à 60 % il dépassait la fourchette visée.
+40 % place à 7 tours / 22 %, sans toucher aux dégâts du gardien — c'est
+ce qui allonge le combat **sans** le durcir.
+
+⚠️ **Allonger un combat le durcit mécaniquement** (plus de tours = plus
+de ripostes). Si un jour on rallonge encore, il faudra baisser l'attaque
+du gardien en proportion pour rester neutre.
+
+### Affichage
+
+Barre de PV **pleine largeur en haut**, bouclier juste en dessous,
+repère à 50 % qui montre où s'arrête la manche 1. Posée en `position:
+absolute` : elle doit occuper toute la largeur quelle que soit la mise
+en page du terrain.
+
+⚠️ Vérifié que le bloc (55 dp) ne chevauche pas le sprite agrandi, dont
+le bord haut est à 82 dp.
+
+Le gardien est **agrandi de 70 %** (177 dp contre 104 pour une créature)
+et recentré, pour qu'il pèse à l'écran.
+
+⚠️ À la reprise, la main revient au JOUEUR (`setPhase('choosing')`) :
+sinon il encaisse un coup gratuit juste après l'animation.
+
 ## Le Gardien (14/09)
 
 Adversaire du combat qui protège l'éclosion d'un œuf. **Ce n'est PAS une

@@ -53,6 +53,9 @@ import {
   elementMultiplier,
   elementRelation,
   starsForBattle,
+  GUARDIAN_SHIELD_RATIO,
+  GUARDIAN_PHASE1_HP_LOSS,
+  applyGuardianDamage,
 } from '../../games/clicker/combatLogic';
 
 // Couleurs d'affinité, communes à la flèche de visée et aux pastilles.
@@ -153,12 +156,57 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   );
   const [activeIndex, setActiveIndex] = useState(0);
 
+  // ---- Combat de BOSS (le Gardien) ----
+  //
+  // Reconnu par `creature.boss`. Deux manches : la première s'arrête
+  // quand il a perdu la moitié de ses PV, la seconde lui rend TOUT
+  // (PV et bouclier) et va jusqu'à zéro.
+  const isBoss = !!(opponentTeamCreatures[0] && opponentTeamCreatures[0].boss);
+  const [bossPhase, setBossPhase] = useState(1);
+  const [bossShield, setBossShield] = useState(0);
+  const [phaseBreak, setPhaseBreak] = useState(false);
+  const phaseAnim = useRef(new Animated.Value(0)).current;
+  // Refs miroir : la résolution d'un tour lit ces valeurs hors du cycle
+  // de rendu, un état React y serait en retard d'un tour.
+  const bossShieldRef = useRef(0);
+  bossShieldRef.current = bossShield;
+  const bossPhaseRef = useRef(1);
+  bossPhaseRef.current = bossPhase;
+
+  // Passage à la manche 2 : animation, puis le gardien récupère TOUT.
+  const startBossPhase2 = (maxHp) => {
+    setPhaseBreak(true);
+    phaseAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(phaseAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.delay(520),
+      Animated.timing(phaseAnim, { toValue: 0, duration: 320, useNativeDriver: true }),
+    ]).start(() => {
+      setPhaseBreak(false);
+      setBossPhase(2);
+      setBossShield(Math.round(maxHp * GUARDIAN_SHIELD_RATIO));
+      setOpponents((prev) => prev.map((o, i) => (i === 0 ? { ...o, hp: maxHp } : o)));
+      // La main revient au joueur : la manche 2 commence par son tour,
+      // sinon il encaisse un coup gratuit juste après l'animation.
+      setPhase('choosing');
+      setArmedSkill(null);
+    });
+  };
+
   const [opponents, setOpponents] = useState(() =>
     opponentTeamCreatures.map((creature) => {
       const stats = statsForOpponentCreatureTyped(creature, levelNumber);
       return { creature, stats, hp: stats.hp, mana: 0 };
     })
   );
+  // Bouclier initial : 40 % des PV max du gardien. Posé dans un effet
+  // plutôt qu'à l'initialisation de l'état, parce qu'il dépend de stats
+  // calculées juste au-dessus.
+  useEffect(() => {
+    if (!isBoss || !opponents[0]) return;
+    setBossShield(Math.round(opponents[0].stats.hp * GUARDIAN_SHIELD_RATIO));
+  }, [isBoss]);
+
   // Cible choisie par le JOUEUR (demande explicite : pouvoir choisir quel
   // adversaire attaquer, pas une rotation automatique côté adversaire).
   const [targetIndex, setTargetIndex] = useState(0);
@@ -453,13 +501,31 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // ATTAQUE DE ZONE : frappe TOUS les adversaires encore debout.
     // Elle n'était jusqu'ici qu'une étiquette sur le bouton — le code
     // qui frappe plusieurs cibles n'existait pas (bug du 12/09).
-    const newOpponentHp = Math.max(0, opp.hp - playerDamage);
-    let newOpponents = opponentsRef.current.map((o, i) => {
-      if (skill.aoe) {
-        return o.hp > 0 ? { ...o, hp: Math.max(0, o.hp - playerDamage) } : o;
+    // BOSS : le bouclier encaisse avant les PV, et la manche 1 s'arrête
+    // à la moitié des PV au lieu d'aller jusqu'à zéro.
+    let newOpponentHp;
+    let newOpponents;
+    if (isBoss) {
+      const maxHp = opp.stats.hp;
+      const after = applyGuardianDamage({ hp: opp.hp, shield: bossShieldRef.current }, playerDamage);
+      // Plancher de la manche 1 : il ne peut pas descendre sous 50 %.
+      const floor = bossPhaseRef.current === 1 ? Math.ceil(maxHp * (1 - GUARDIAN_PHASE1_HP_LOSS)) : 0;
+      newOpponentHp = Math.max(floor, after.hp);
+      setBossShield(after.shield);
+      newOpponents = opponentsRef.current.map((o, i) => (i === targetIdx ? { ...o, hp: newOpponentHp } : o));
+      if (bossPhaseRef.current === 1 && newOpponentHp <= floor) {
+        startBossPhase2(maxHp);
+        return;
       }
-      return i === targetIdx ? { ...o, hp: newOpponentHp } : o;
-    });
+    } else {
+      newOpponentHp = Math.max(0, opp.hp - playerDamage);
+      newOpponents = opponentsRef.current.map((o, i) => {
+        if (skill.aoe) {
+          return o.hp > 0 ? { ...o, hp: Math.max(0, o.hp - playerDamage) } : o;
+        }
+        return i === targetIdx ? { ...o, hp: newOpponentHp } : o;
+      });
+    }
 
     // RIPOSTE : c'est l'adversaire ciblé qui riposte s'il survit, SINON
     // le premier encore debout.
@@ -717,6 +783,40 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         });
       })}
 
+      {/* BOSS : barre de vie pleine largeur tout en haut, bouclier juste
+          en dessous. Posée en absolu au-dessus du terrain pour occuper
+          vraiment toute la largeur, indépendamment de la mise en page
+          du combat. */}
+      {isBoss && opponents[0] && (
+        <View style={[styles.bossBarWrap, { paddingLeft: insets.left + 10, paddingRight: insets.right + 10 }]}>
+          <View style={styles.bossBarHeader}>
+            <Text style={styles.bossBarName}>🐯 GARDIEN</Text>
+            <Text style={styles.bossBarPhase}>Manche {bossPhase}/2</Text>
+          </View>
+          <View style={styles.bossHpTrack}>
+            <View style={[styles.bossHpFill, { width: `${Math.max(0, (opponents[0].hp / opponents[0].stats.hp) * 100)}%` }]} />
+            {/* Repère de mi-parcours : montre où s'arrête la manche 1. */}
+            {bossPhase === 1 && <View style={styles.bossHpHalfMark} />}
+          </View>
+          <View style={styles.bossShieldTrack}>
+            <View style={[styles.bossShieldFill, {
+              width: `${Math.max(0, (bossShield / Math.max(1, Math.round(opponents[0].stats.hp * GUARDIAN_SHIELD_RATIO))) * 100)}%`,
+            }]} />
+          </View>
+        </View>
+      )}
+
+      {/* Transition entre les deux manches. */}
+      {phaseBreak && (
+        <Animated.View style={[styles.phaseBreakWrap, {
+          opacity: phaseAnim,
+          transform: [{ scale: phaseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) }],
+        }]}>
+          <Text style={styles.phaseBreakText}>LE GARDIEN SE RELÈVE</Text>
+          <Text style={styles.phaseBreakSub}>Il récupère ses forces</Text>
+        </Animated.View>
+      )}
+
       {/* Équipe adverse — tous tapables pour choisir la cible, à chaque
           tour (demande explicite), pas seulement une fois par combat. */}
       {opponents.map((o, i) => {
@@ -725,7 +825,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         const d = o.creature.stages[0];
         const fainted = o.hp <= 0;
         return renderSprite({
-          key: `o${i}`, slot: OPPONENT_SLOTS[i],
+          key: `o${i}`,
+          // Le boss est plus imposant : emplacement recentré et agrandi
+          // de 70 %, pour qu'il pèse à l'écran au lieu de ressembler à
+          // une créature ordinaire.
+          slot: isBoss ? { x: 0.72, y: 0.46, size: 1.7 } : OPPONENT_SLOTS[i],
           creatureId: o.creature.id, stageIndex: 0,
           emoji: d.emoji, name: d.name,
           hp: o.hp, hpMax: o.stats.hp, fainted,
@@ -1173,6 +1277,41 @@ const styles = StyleSheet.create({
   // Pendant le délai de garde : visiblement inactifs, pour que le joueur
   // comprenne que ça n'a pas été ignoré au hasard.
   resultBtnLocked: { opacity: 0.45 },
+
+  // ---- Barre du Gardien ----
+  //
+  // Posée en ABSOLU en haut : elle doit occuper toute la largeur, quelle
+  // que soit la mise en page du terrain. Mesuré : le bloc fait 55 dp de
+  // haut et le sprite agrandi commence à 82 dp, donc aucun chevauchement.
+  bossBarWrap: {
+    position: 'absolute', left: 0, right: 0, top: 0, zIndex: 12,
+    paddingTop: 6, paddingBottom: 6,
+    backgroundColor: 'rgba(6,10,18,0.55)',
+  },
+  bossBarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  bossBarName: { color: '#ffcf3f', fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  bossBarPhase: { color: COLORS.muted, fontSize: 11, fontWeight: '800' },
+  bossHpTrack: {
+    height: 14, borderRadius: 7, backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', justifyContent: 'center',
+  },
+  bossHpFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#FF5252' },
+  // Repère à 50 % : le joueur voit où s'arrête la manche 1.
+  bossHpHalfMark: { position: 'absolute', left: '50%', top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.75)' },
+  bossShieldTrack: {
+    height: 8, borderRadius: 4, marginTop: 3, backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1, borderColor: 'rgba(90,209,255,0.35)', overflow: 'hidden',
+  },
+  bossShieldFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#5ad1ff' },
+
+  phaseBreakWrap: {
+    position: 'absolute', left: 0, right: 0, top: '38%', zIndex: 30, alignItems: 'center',
+  },
+  phaseBreakText: {
+    color: '#ffcf3f', fontSize: 26, fontWeight: '900', letterSpacing: 2,
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 8,
+  },
+  phaseBreakSub: { color: COLORS.text, fontSize: 13, fontWeight: '700', marginTop: 4 },
   recapCardImg: { resizeMode: 'stretch' },
   recapTitle: { color: '#6b4410', fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
   recapRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 6 },

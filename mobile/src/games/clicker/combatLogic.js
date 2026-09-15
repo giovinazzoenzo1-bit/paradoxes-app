@@ -140,6 +140,17 @@ export function opponentTeamSize(levelNumber) {
 // : elles se calent sur le niveau du gardien, exactement comme un
 // adversaire d'Aventure. Le profil PV/ATQ est celui d'un défenseur —
 // c'est un mur qu'on doit franchir, pas un tueur.
+export const GUARDIAN_SHIELD_RATIO = 0.4;   // bouclier = 40 % des PV max
+export const GUARDIAN_PHASE1_HP_LOSS = 0.5; // la manche 1 s'arrête à -50 % PV
+export const GUARDIAN_PHASES = 2;
+
+// Le bouclier encaisse AVANT les PV. Renvoie l'état après un coup.
+export function applyGuardianDamage({ hp, shield }, damage) {
+  const onShield = Math.min(shield, damage);
+  const rest = damage - onShield;
+  return { hp: Math.max(0, hp - rest), shield: shield - onShield };
+}
+
 export const GUARDIAN_CREATURE = {
   id: 'gardien',
   element: 'Lumière',
@@ -160,6 +171,22 @@ export const GUARDIAN_CREATURE = {
     { id: 's4', name: 'Jugement du Tigre', damage: 22, enduranceCost: 25 },
   ],
   lore: "Nul ne franchit le seuil d'un œuf sans l'avoir affronté.",
+  // Combat en DEUX MANCHES avec bouclier (14/09).
+  //
+  // Le combat durait 3 tours et ne coûtait que 9 % des PV du joueur —
+  // expédié. Objectif : l'allonger SANS le rendre punitif.
+  //
+  // Les dégâts entament d'abord le bouclier, puis les PV. La manche 1
+  // s'arrête quand le gardien a perdu la moitié de ses PV ; la manche 2
+  // lui rend TOUT (PV et bouclier) et doit aller jusqu'à zéro.
+  //
+  // Total à entamer = 2 × bouclier + 1,5 × PV.
+  //
+  // Bouclier à 40 % des PV, valeur CHOISIE PAR MESURE : le combat passe
+  // de 3 à 6 tours et de 9 % à 22 % des PV encaissés, sans toucher à
+  // l'attaque du gardien. À 25 % c'était encore trop court (5 tours), à
+  // 60 % on dépassait la fourchette visée.
+  boss: true,
   stages: [{ name: 'Gardien', emoji: '🐯' }],
 };
 
