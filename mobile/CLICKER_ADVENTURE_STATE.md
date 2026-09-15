@@ -921,6 +921,44 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Revenu passif : SOURCE UNIQUE (14/09)
+
+⚠️ **Trois formules divergentes coexistaient** :
+
+| Usage | Multiplicateurs appliqués |
+|---|---|
+| Affichage « +N/s » | base × pouvoir × sanctuaire × essence × ascension |
+| Tick en jeu | base × pouvoir × bonus auto-clic, puis `gainCoins` rajoutait sanctuaire × essence × ascension × bonus pièces |
+| Hors-ligne | base × veilleur × bonus auto-clic |
+
+Le chiffre affiché n'était donc le taux réel **ni en jeu ni hors ligne**,
+et le joueur ne pouvait pas rapprocher son gain de ce qu'il lisait —
+d'où le signalement « j'ai gagné 300 K alors que je fais 117/s ».
+
+**Correctif** : `passiveRate()` sert aux TROIS. Hors ligne, elle ajoute
+le bonus du Veilleur (sa raison d'être) et retire le pouvoir temporaire
+d'une créature, qui expire pendant l'absence.
+
+⚠️ Le tick crédite maintenant `pendingGainRef` DIRECTEMENT et ne passe
+plus par `gainCoins` : celui-ci rajoute sanctuaire, essence, ascension et
+bonus de pièces, déjà inclus dans `passiveRate`. Les compter deux fois
+gonflerait le revenu.
+
+⚠️ L'ancienne bannière « Pendant ton absence… » est retirée : elle
+faisait doublon avec la nouvelle fenêtre. Elle n'a jamais crédité quoi
+que ce soit — vérifié avant de conclure à un double crédit.
+
+**Sur le chiffre signalé** : le taux hors-ligne valait au plus 1,16× le
+taux en jeu. 300 000 pièces à ce rythme demandent 27 à 43 minutes, pas
+« quelques minutes ». Aucun double crédit trouvé.
+
+## Tirage de rune offert : filet de rattrapage
+
+⚠️ Le dépôt a lieu au TIRAGE du cycle. Un joueur déjà arrivé au défi des
+Runes avant l'ajout de la fonctionnalité ne l'a donc jamais reçu — cas
+signalé. Un effet rattrape : défi actif et non validé → tirage déposé,
+avec `clicker:freeRuneGranted:v1` pour qu'il ne le soit QU'UNE FOIS.
+
 ## Correctifs du 14/09 (5)
 
 ### ⚠️ Verrou des défis : la sauvegarde DIFFÉRÉE était le trou

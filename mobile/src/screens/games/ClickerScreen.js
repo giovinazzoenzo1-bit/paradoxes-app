@@ -78,6 +78,7 @@ import {
   RARITY_BADGE_LETTER,
   trustedOfflineSeconds,
   OFFLINE_CAP_SECONDS,
+  passiveRate,
 } from '../../games/clicker/clickerLogic';
 import {
   nextQuestSet,
@@ -242,6 +243,8 @@ const PENDING_OFFERINGS_KEY = 'clicker:pendingOfferings:v1';
 // revenait — le bug signalé deux fois. Une clé propre, écrite sans
 // délai, supprime cette fenêtre.
 const LATCHED_QUESTS_KEY = 'clicker:latchedQuests:v1';
+// Le tirage de rune offert n'est accordé qu'UNE fois dans la partie.
+const FREE_RUNE_GRANTED_KEY = 'clicker:freeRuneGranted:v1';
 
 function formatNum(n) {
   if (!Number.isFinite(n)) return '0'; // garde-fou : jamais NaN/Infinity affiché
@@ -535,7 +538,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Shop quittait l'appli au lieu de revenir en arrière.
   const panHandlers = useBackGesture(view !== 'tap' ? () => setView('tap') : onBack);
   const [selectedCreature, setSelectedCreature] = useState(null);
-  const [welcomeBack, setWelcomeBack] = useState(null);
   const [popups, setPopups] = useState([]);
   const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, leftPct, topPct}
   const [deck, setDeck] = useState([null, null, null]); // 3 emplacements, id de créature ou null
@@ -807,8 +809,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           if (!saved.autoClickers && saved.familiarLevel) {
             savedAutoClickers.esprit = saved.familiarLevel;
           }
-          const offlineUpgradeBoost = 1 + upgradeBonuses(saved.upgradeLevels || saved.purchasedUpgradeIds || {}).autoClickerPct;
-          const offlineIncome = totalAutoClickIncome(savedAutoClickers) * veilleurOfflineMultiplier(savedVeilleur) * offlineUpgradeBoost;
+          // Même fonction que l'affichage, avec le bonus du Veilleur en
+          // plus — c'est précisément sa raison d'être.
+          const offlineIncome = passiveRate({
+            autoClickers: savedAutoClickers,
+            upgradeLevels: saved.upgradeLevels || saved.purchasedUpgradeIds || {},
+            sanctuaryLevel: saved.sanctuaryLevel || 0,
+            essence: saved.essence || 0,
+            ascensionCount: (saved.lifetimeStats && saved.lifetimeStats.ascension) || 0,
+            offline: true,
+            veilleurLevel: savedVeilleur,
+          });
           const offline = Math.round(offlineEarnings(offlineIncome, elapsed));
           setCoins((saved.coins || 0) + offline);
           setTotalEarned((saved.totalEarned || 0) + offline);
@@ -963,7 +974,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setEggPhase(saved.eggPhase || 'collecting');
           setHatchTaps(saved.hatchTaps || 0);
           setCaptureTaps(saved.captureTaps || 0);
-          if (offline > 5) setWelcomeBack(offline);
         }
         // Drapeau dev "Débloquer tous les monstres" (posé depuis Options) :
         // fusion faite ICI, dans l'état en mémoire, puis persistée par la
@@ -1195,11 +1205,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   useEffect(() => {
     if (!loaded) return;
     const interval = setInterval(() => {
-      const base = totalAutoClickIncome(autoClickersRef.current);
-      const boost = activePowerRef.current && activePowerRef.current.effectType === 'passive_boost' ? activePowerRef.current.effectValue : 1;
-      const upgradeAutoBoost = 1 + upgradeBonuses(upgradeLevelsRef.current).autoClickerPct;
-      const income = base * boost * upgradeAutoBoost;
-      if (income > 0) gainCoins(income);
+      // ⚠️ On crédite DIRECTEMENT le taux complet, sans repasser par
+      // `gainCoins` : celui-ci rajoute sanctuaire, essence, ascension et
+      // bonus de pièces, qui sont DÉJÀ dans `passiveRate`. Les compter
+      // deux fois gonflerait le revenu passif.
+      const income = passiveRate({
+        autoClickers: autoClickersRef.current,
+        upgradeLevels: upgradeLevelsRef.current,
+        sanctuaryLevel: sanctuaryLevelRef.current,
+        essence: essenceRef.current,
+        ascensionCount: ascensionCountRef.current,
+        powerBoost: activePowerRef.current && activePowerRef.current.effectType === 'passive_boost' ? activePowerRef.current.effectValue : 1,
+      });
+      if (income > 0) pendingGainRef.current += income;
     }, 1000);
     return () => clearInterval(interval);
   }, [loaded]);
@@ -1711,12 +1729,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     );
   };
 
-  const passiveIncome =
-    totalAutoClickIncome(autoClickers) *
-    (activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1) *
-    sanctuaryMultiplier(sanctuaryLevel) *
-    essenceBonusMultiplier(essence) *
-    ascensionSpeedMultiplier(ascensionCount);
+  // Affichage : la MÊME fonction que le tick et que le hors-ligne. Avant,
+  // trois formules différentes coexistaient et le « +N/s » affiché ne
+  // correspondait à aucun gain réel.
+  const passiveIncome = passiveRate({
+    autoClickers, upgradeLevels, sanctuaryLevel, essence, ascensionCount,
+    powerBoost: activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1,
+  });
   // Ref tenue à jour : `buyWithDiamonds` est asynchrone et lirait
   // sinon une valeur figée au montage.
   const passiveIncomeRef = useRef(0);
@@ -1875,6 +1894,30 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     (latchedQuestIds.includes(id) ||
       devCompletedIds.includes(id) ||
       questComplete(id, questStats, baselineFor(id), questTargets));
+
+  // ⚠️ FILET pour le tirage de rune offert.
+  //
+  // Le dépôt a lieu au TIRAGE du cycle. Un joueur déjà arrivé au défi des
+  // Runes avant l'ajout de cette fonctionnalité ne l'a donc jamais reçu —
+  // il voyait le défi sans le tirage, cas signalé.
+  //
+  // Ici on rattrape : si le défi est actif et qu'il n'est pas encore
+  // validé, le tirage est déposé. `FREE_RUNE_GRANTED_KEY` garantit qu'il
+  // ne le soit QU'UNE FOIS, même après un rechargement.
+  useEffect(() => {
+    if (!loaded) return undefined;
+    if (!activeQuestIds.includes('seq_firstrune')) return undefined;
+    if (isQuestDone('seq_firstrune')) return undefined;
+    let vivant = true;
+    AsyncStorage.getItem(FREE_RUNE_GRANTED_KEY)
+      .then((deja) => {
+        if (!vivant || deja) return;
+        AsyncStorage.setItem(FREE_RUNE_GRANTED_KEY, '1').catch(() => {});
+        AsyncStorage.setItem(PENDING_FREE_RUNE_KEY, '1').catch(() => {});
+      })
+      .catch(() => {});
+    return () => { vivant = false; };
+  }, [loaded, activeQuestIds]);
 
   // Pose le verrou dès qu'un défi est atteint, pour qu'une baisse de la
   // valeur ne le défasse plus.
@@ -2395,12 +2438,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 🏷️ {pendingDiscount.name} : -{Math.round(pendingDiscount.percent * 100)}% sur ton prochain achat
               </Text>
             </View>
-          )}
-
-          {welcomeBack !== null && (
-            <TouchableOpacity style={styles.welcomeBanner} onPress={() => setWelcomeBack(null)}>
-              <Text style={styles.welcomeText}>🎉 Pendant ton absence, tes créatures ont gagné {formatNum(welcomeBack)} pièces !</Text>
-            </TouchableOpacity>
           )}
 
           {/* Écran d'accueil volontairement épuré : juste l'œuf, les
@@ -3867,11 +3904,6 @@ const styles = StyleSheet.create({
     color: COLORS.good, fontSize: 13, fontWeight: '700', textAlign: 'center',
   },
 
-  welcomeBanner: {
-    position: 'absolute', left: SCREEN_W * 0.08, top: SCREEN_H * (0.145 - TOP_BLOCK_SHIFT), width: SCREEN_W * 0.84, zIndex: 3,
-    backgroundColor: 'rgba(0,230,118,0.15)', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: COLORS.good,
-  },
-  welcomeText: { color: COLORS.good, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   // Déplacée SOUS le cadre du deck (11/09). Elle était à 0,095 de la
   // hauteur d'écran, c'est-à-dire en plein dans la carte de défi qui

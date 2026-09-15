@@ -607,6 +607,37 @@ export function totalPassiveIncome(ownedCreatures) {
 // que la liste de créatures — les créatures ne produisent plus de revenu
 // passif automatique, seuls les générateurs de la boutique d'auto-clics
 // en produisent maintenant.
+// ---- Revenu passif : SOURCE UNIQUE (14/09) ----
+//
+// ⚠️ Trois formules divergentes coexistaient :
+//   - AFFICHAGE : base × pouvoir × sanctuaire × essence × ascension
+//   - EN JEU    : base × pouvoir × bonus d'auto-clic, puis `gainCoins`
+//                 rajoutait sanctuaire × essence × ascension × bonus pièces
+//   - HORS-LIGNE: base × veilleur × bonus d'auto-clic
+//
+// Résultat : le « +117/s » affiché n'était le taux réel NI en jeu NI hors
+// ligne, et le joueur ne pouvait pas rapprocher son gain de ce chiffre.
+//
+// Une seule fonction sert maintenant aux trois usages.
+export function passiveRate({
+  autoClickers, upgradeLevels, sanctuaryLevel, essence, ascensionCount,
+  powerBoost = 1, offline = false, veilleurLevel = 0,
+}) {
+  const b = upgradeBonuses(upgradeLevels || {});
+  const base = totalAutoClickIncome(autoClickers || {});
+  const commun = base
+    * (1 + b.autoClickerPct)
+    * (1 + b.coinPct)
+    * sanctuaryMultiplier(sanctuaryLevel || 0)
+    * essenceBonusMultiplier(essence || 0)
+    * ascensionSpeedMultiplier(ascensionCount || 0);
+  // Hors ligne : le bonus du Veilleur s'applique, le pouvoir TEMPORAIRE
+  // d'une créature non — il expire pendant l'absence.
+  return offline
+    ? commun * veilleurOfflineMultiplier(veilleurLevel || 0)
+    : commun * powerBoost;
+}
+
 // Ramené de 4 h à 2 h (14/09).
 export const OFFLINE_CAP_SECONDS = 2 * 3600;
 
