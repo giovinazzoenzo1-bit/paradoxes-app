@@ -987,6 +987,60 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ OUTIL D'AUDIT DE LA PROGRESSION — `mobile/tools/audit-quetes.js`
+
+**Le point le plus important du projet** : la séquence compte ~25 œufs ×
+4 défis. Personne ne la jouera en entier pour vérifier qu'aucun défi
+n'est impossible, absurde ou interminable. Ce script la PARCOURT et la
+MESURE à la place.
+
+```
+NODE_PATH=<dossier avec @babel/core> node mobile/tools/audit-quetes.js
+```
+
+Il charge la VRAIE logique du jeu (pas une copie), simule un joueur qui
+progresse cycle après cycle, et applique DEUX critères :
+
+| Critère | Ce qu'il attrape |
+|---|---|
+| **Temps** estimé par défi | les cibles hors d'échelle |
+| **Corvée** (actions répétées) | « invoque 30 créatures » : peu cher, très pénible |
+
+⚠️ **Les deux critères sont nécessaires.** Le temps seul laissait passer
+« invoque 30 créatures » (coût dérisoire, 30 appuis successifs). La
+corvée seule laisserait passer « accumule 70 millions ».
+
+`proposerCibles()` cherche par dichotomie la plus grande cible tenant
+sous un plafond de minutes — l'équilibrage devient mécanique.
+
+### Premier passage : 425 h → 85 h
+
+| | Avant | Après |
+|---|---|---|
+| Durée totale de la séquence | **425 h** | **85 h** |
+| Défis hors d'échelle | 12 | 5 |
+| Défis-corvée | 2 | **0** |
+
+Pires cas corrigés : « Pacte niveau 20 » demandait **143 heures** à lui
+seul, « accumule 70 millions » 125 h, « Croc de Bouldog niveau 10 » 79 h.
+
+⚠️ **Contrôle de cohérence des LIBELLÉS** : trois défis affichaient un
+nombre différent de leur cible réelle (« Active 14 fois » pour une cible
+de 10). Les libellés à nombre EN DUR doivent être modifiés avec la
+cible ; ceux en `(t) => ...` suivent tout seuls et sont à préférer.
+
+⚠️ Les 5 alertes restantes viennent du plafond d'ÉNERGIE (5 combats par
+heure), pas des cibles. Ce n'est pas un défaut de défi.
+
+### Bouton dev « ⏭️ Cycle »
+
+Valide tout le cycle d'un coup. Indispensable pour atteindre la fin de
+la séquence en test : sans lui, les bugs des derniers œufs ne seraient
+jamais vus.
+
+**Règle** : relancer l'audit après TOUT changement d'équilibrage
+(production, coûts, cibles). C'est le filet qui protège le cœur du jeu.
+
 ## ⚠️ « Équipe 3 runes » ne se validait pas (15/09)
 
 La référence d'un défi en DELTA était prise au moment où il devient le

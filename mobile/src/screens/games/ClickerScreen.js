@@ -2579,6 +2579,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   <Text style={styles.devSkipBtnText}>◀️ Défi préc.</Text>
                 </TouchableOpacity>
               )}
+              {/* Outil de test : VALIDER TOUT LE CYCLE d'un coup.
+                  Sans lui, vérifier la séquence demanderait de jouer 25
+                  œufs × 4 défis — personne ne le fera, donc les bugs de
+                  fin de séquence ne seraient jamais vus. */}
+              {eggPhase === 'collecting' && activeQuestIds.length > 0 && (
+                <TouchableOpacity
+                  style={styles.devToolBtn}
+                  onPress={() => {
+                    setDevReopenedIds([]);
+                    setDevCompletedIds((prev) => [...new Set([...prev, ...activeQuestIds])]);
+                  }}
+                >
+                  <Text style={styles.devSkipBtnText}>⏭️ Cycle</Text>
+                </TouchableOpacity>
+              )}
               {eggPhase === 'collecting' && currentChallengeId && (
                 <TouchableOpacity
                   style={styles.devToolBtn}
