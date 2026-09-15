@@ -757,25 +757,21 @@ export function veilleurUpgradeCost(level) {
 //
 // Relie les deux économies : le Clicker finance l'Aventure.
 //
-// ⚠️ Le prix est ancré sur la PRODUCTION PASSIVE, pas sur un barème fixe.
-// Les pièces croissent exponentiellement : un prix qui monterait
-// lentement deviendrait trivial en une soirée. Ancré sur la production,
-// l'achat coûte le même EFFORT à tous les stades — 20 minutes de
-// production — quelle que soit la taille des nombres.
+// Progression SIMPLE et lisible : 20 000, 30 000, 40 000… soit +10 000
+// par achat. Le joueur voit tout de suite ce que coûtera le suivant.
 //
-// Essai écarté : un pourcentage du total gagné. Il donnait l'inverse de
-// l'effet voulu (203 min de production au début, 3 min en fin de jeu).
-//
-// Le plancher de 20 000 fixe le premier achat, quand la production
-// passive est encore nulle.
+// ⚠️ Multiplié par le rythme des ASCENSIONS. Chaque Ascension multiplie
+// la production par 1,3 : sans ce facteur, le prix serait divisé par 13
+// en valeur réelle au bout de 10 Ascensions et l'achat deviendrait
+// gratuit. Le prix suit donc exactement la même courbe que les gains.
 export const GRIFFES_COIN_PACK = 100;
-export const GRIFFES_COIN_FLOOR = 20000;
-export const GRIFFES_COIN_SECONDS = 20 * 60;
-export const GRIFFES_COIN_STEP = 1.25;   // chaque achat renchérit le suivant
+export const GRIFFES_COIN_BASE = 20000;
+export const GRIFFES_COIN_STEP = 10000;
 
-export function griffesCoinCost(passiveIncome, purchases) {
-  const base = Math.max(GRIFFES_COIN_FLOOR, (passiveIncome || 0) * GRIFFES_COIN_SECONDS);
-  return Math.round(base * Math.pow(GRIFFES_COIN_STEP, Math.max(0, purchases || 0)));
+export function griffesCoinCost(purchases, ascensionCount) {
+  const n = Math.max(0, purchases || 0);
+  const palier = GRIFFES_COIN_BASE + GRIFFES_COIN_STEP * n;
+  return Math.round(palier * ascensionSpeedMultiplier(ascensionCount));
 }
 
 export function veilleurMaxed(level) {

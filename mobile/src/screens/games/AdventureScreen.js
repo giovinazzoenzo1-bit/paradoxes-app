@@ -302,7 +302,7 @@ function makeRuneId() {
 }
 
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, passiveIncome = 0, griffesCoinBuys = 0, onGriffesCoinBought, diamonds = 0 }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, diamonds = 0 }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
   // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
   // combiné à aspectRatio sur un élément position:'absolute' se rend
@@ -531,7 +531,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // pièces du Clicker. La seconde relie les deux économies — le Clicker
   // finance l'Aventure — et son prix suit la PRODUCTION du joueur, donc
   // le même effort à tous les stades.
-  const coutGriffesEnPieces = griffesCoinCost(passiveIncome, griffesCoinBuys);
+  const coutGriffesEnPieces = griffesCoinCost(griffesCoinBuys, ascensionCount);
 
   const buyGriffesWithCoins = async () => {
     if (!onSpendCoins) return;

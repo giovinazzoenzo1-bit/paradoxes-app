@@ -930,26 +930,33 @@ la carte, exactement le bug déjà corrigé trois fois.
 | Rune offerte | déposée au tirage de ce cycle |
 | Achat de Griffes en pièces | 100 🐾, prix ancré sur la production |
 
-### ⚠️ Prix des Griffes : ancré sur la PRODUCTION, pas sur un barème
+### Prix des Griffes : progression simple × Ascensions
 
-Les pièces croissent exponentiellement : un prix qui monterait lentement
-deviendrait trivial en une soirée.
+`griffesCoinCost = (20 000 + 10 000 × achats) × 1,3^ascensions`
 
-`griffesCoinCost = max(20 000, production/s × 1200) × 1,25^achats`
+Palier lisible — 20 000, 30 000, 40 000… — le joueur voit tout de suite
+ce que coûtera le suivant.
 
-Soit **20 minutes de production** — le même EFFORT à tous les stades,
-quelle que soit la taille des nombres. Le plancher de 20 000 fixe le
-premier achat, quand la production passive est encore nulle.
+⚠️ **Le facteur d'Ascension n'est pas cosmétique.** Chaque Ascension
+multiplie la production par 1,3. Sans lui, le prix serait divisé par 13
+en valeur réelle au bout de 10 Ascensions et l'achat deviendrait
+gratuit. Le prix suit donc exactement la courbe des gains.
 
-| Stade | Coût de 100 Griffes |
-|---|---|
-| Tout début | 20 000 |
-| Après 1 h | 60 000 |
-| Mid game | 2 400 000 |
-| Avancé | 120 000 000 |
+| Achat | 0 ascension | 3 ascensions | 5 ascensions |
+|---|---|---|---|
+| 1er | 20 000 | 43 940 | 74 259 |
+| 2e | 30 000 | 65 910 | 111 388 |
+| 10e | 110 000 | 241 670 | 408 422 |
 
-⚠️ **Essai écarté** : un pourcentage du total gagné. Il donnait l'inverse
-de l'effet voulu — 203 min de production au début, 3 min en fin de jeu.
+### Félicitations à chaque défi d'éclosion
+
+Petit menu « Défi réussi ! » avec le libellé du défi et l'avancement
+(x/4 avant l'éclosion).
+
+⚠️ Branché sur l'effet de VERROU (`latchedQuestIds`), pas sur un test de
+complétion : le verrou repère l'instant exact où un défi est atteint et
+garantit qu'il ne sera annoncé QU'UNE FOIS, même si sa valeur redescend
+ensuite.
 
 ### ⚠️ Cycle d'imports évité de justesse
 

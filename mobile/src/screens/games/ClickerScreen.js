@@ -92,6 +92,7 @@ import {
   EGG_STAGES,
   eggStageForCompletedCount,
   PENDING_FREE_RUNE_KEY,
+  questLabel,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -291,6 +292,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [griffesCoinBuys, setGriffesCoinBuys] = useState(0);
   const griffesCoinBuysRef = useRef(0);
   griffesCoinBuysRef.current = griffesCoinBuys;
+  // Défi tout juste validé, à annoncer au joueur. `null` = rien à montrer.
+  const [questDone, setQuestDone] = useState(null);
   const [offlineReport, setOfflineReport] = useState(null);
   const [offlineAdLoading, setOfflineAdLoading] = useState(false);
   const [offlineDoubled, setOfflineDoubled] = useState(false);
@@ -1866,7 +1869,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         && !devReopenedIdsRef.current.includes(id)
         && questComplete(id, questStats, baselineFor(id), questTargets)
     );
-    if (atteints.length) setLatchedQuestIds((prev) => [...prev, ...atteints]);
+    if (atteints.length) {
+      setLatchedQuestIds((prev) => [...prev, ...atteints]);
+      // Félicitations : on annonce le PREMIER défi atteint de la salve.
+      // Le verrou garantit qu'un défi ne sera annoncé qu'une fois, même
+      // si sa valeur redescend ensuite.
+      setQuestDone(atteints[0]);
+    }
   });
   const completedQuestCount = activeQuestIds.filter(isQuestDone).length;
 
@@ -2279,8 +2288,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setCoins((c) => c - cost);
           return true;
         }}
-        passiveIncome={passiveIncome}
         griffesCoinBuys={griffesCoinBuys}
+        ascensionCount={ascensionCount}
         onGriffesCoinBought={() => setGriffesCoinBuys((n) => n + 1)}
         diamonds={sharedCoins}
         owned={owned}
@@ -2542,7 +2551,26 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   enfants — elles captent leur propre appui sans jamais
                   entrer en conflit avec le tap de l'œuf en dessous. */}
               {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
-              {/* Compte rendu des gains hors-ligne. Posé ICI, dans la couche
+              {/* Félicitations à chaque défi d'éclosion validé. */}
+          {questDone && (
+            <View style={styles.questDoneBackdrop}>
+              <View style={styles.questDoneCard}>
+                <Text style={styles.questDoneIcon}>🎉</Text>
+                <Text style={styles.questDoneTitle}>Défi réussi !</Text>
+                <Text style={styles.questDoneLabel}>
+                  {questLabel(questDone, questTargets[questDone])}
+                </Text>
+                <Text style={styles.questDoneProgress}>
+                  {completedQuestCount}/{activeQuestIds.length} avant l'éclosion
+                </Text>
+                <TouchableOpacity style={styles.questDoneBtn} onPress={() => setQuestDone(null)}>
+                  <Text style={styles.questDoneBtnText}>Continuer</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Compte rendu des gains hors-ligne. Posé ICI, dans la couche
               du jeu, pour couvrir l'écran dès l'ouverture. */}
           {offlineReport && (
             <View style={styles.offlineBackdrop}>
@@ -3901,6 +3929,26 @@ const styles = StyleSheet.create({
   // Diamant d'Offrande : plus petit que les autres bulles (il peut y en
   // avoir plusieurs autour de l'œuf en même temps) et aux couleurs du
   // Diamant, pour qu'on comprenne d'où il vient.
+  // ---- Félicitations de défi ----
+  questDoneBackdrop: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 58,
+    backgroundColor: 'rgba(4,8,16,0.78)', alignItems: 'center', justifyContent: 'center',
+  },
+  questDoneCard: {
+    width: '80%', maxWidth: 330, alignItems: 'center',
+    backgroundColor: COLORS.panel, borderRadius: 18, padding: 20,
+    borderWidth: 1.5, borderColor: '#34d399',
+  },
+  questDoneIcon: { fontSize: 34 },
+  questDoneTitle: { color: '#34d399', fontSize: 19, fontWeight: '900', marginTop: 6 },
+  questDoneLabel: { color: COLORS.text, fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 8 },
+  questDoneProgress: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 10 },
+  questDoneBtn: {
+    marginTop: 16, alignSelf: 'stretch', alignItems: 'center',
+    backgroundColor: '#34d399', borderRadius: 12, paddingVertical: 11,
+  },
+  questDoneBtnText: { color: '#06281c', fontSize: 14, fontWeight: '900' },
+
   // ---- Compte rendu des gains hors-ligne ----
   offlineBackdrop: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 60,
