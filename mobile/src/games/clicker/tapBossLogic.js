@@ -14,31 +14,43 @@ export const TAP_BOSS_TIME_LIMIT_MS = 60 * 1000;
 // Apparition : mesurée en JEU ACTIF (pas en temps réel — sinon le boss
 // surgirait appli fermée et serait raté d'office).
 //
-// ⚠️ Le PREMIER boss d'une session arrive vite (4 min), les suivants
-// plus lentement. Avant, il fallait 20 à 30 minutes d'affilée : un
-// joueur qui fait des sessions de 10 minutes ne voyait donc JAMAIS de
-// boss, et n'avait aucun moyen d'obtenir des Diamants.
-export const TAP_BOSS_FIRST_GAP_MS = 4 * 60 * 1000;
-export const TAP_BOSS_MIN_GAP_MS = 10 * 60 * 1000;
-export const TAP_BOSS_MAX_GAP_MS = 15 * 60 * 1000;
+// Le PREMIER boss d'une session arrive vite, les suivants demandent une
+// vraie session. Avant, il fallait 20 à 30 minutes d'affilée : un joueur
+// qui fait des sessions de 10 minutes ne voyait donc JAMAIS de boss, et
+// n'avait aucun moyen d'obtenir des Diamants.
+export const TAP_BOSS_FIRST_GAP_MS = 2 * 60 * 1000;
+export const TAP_BOSS_NEXT_GAP_MS = 20 * 60 * 1000;
 
-// ⚠️ GARDE-FOU ANTI-ABUS, en temps RÉEL cette fois.
+// ⚠️ GARDE-FOU ANTI-ABUS, en temps RÉEL cette fois : au plus 2 boss par
+// heure glissante.
 //
-// Le compteur de jeu actif repart à zéro à chaque ouverture de l'appli :
-// sans ce plancher, il suffirait de fermer et rouvrir toutes les 4
+// Le compteur de jeu actif repart à zéro à chaque ouverture de l'appli.
+// Sans ce plafond, il suffirait de fermer et rouvrir toutes les 2
 // minutes pour enchaîner les boss et vider le plafond quotidien de
 // Diamants en quelques minutes.
 //
-// L'horodatage du dernier boss est SAUVEGARDÉ : le fermer/rouvrir ne le
-// remet pas à zéro, c'est tout l'intérêt.
-export const TAP_BOSS_REAL_COOLDOWN_MS = 60 * 60 * 1000;
+// Les horodatages sont SAUVEGARDÉS : fermer/rouvrir ne les efface pas,
+// c'est tout l'intérêt.
+export const TAP_BOSS_MAX_PER_HOUR = 2;
+export const TAP_BOSS_HOUR_MS = 60 * 60 * 1000;
+
+// Ne garde que les apparitions de la dernière heure. Sert aussi à borner
+// la taille de ce qu'on sauvegarde.
+export function recentSpawns(spawnAts, now) {
+  return (spawnAts || []).filter((t) => now - t < TAP_BOSS_HOUR_MS);
+}
 
 // Le boss peut-il apparaître ? Les DEUX conditions doivent être
-// remplies : assez de jeu actif, ET assez de temps réel écoulé.
-export function canSpawnBoss({ activeMs, gapMs, lastBossAt, now }) {
+// remplies : assez de jeu actif, ET le quota horaire non atteint.
+export function canSpawnBoss({ activeMs, gapMs, spawnAts, now }) {
   if (activeMs < gapMs) return false;
-  if (lastBossAt && now - lastBossAt < TAP_BOSS_REAL_COOLDOWN_MS) return false;
-  return true;
+  return recentSpawns(spawnAts, now).length < TAP_BOSS_MAX_PER_HOUR;
+}
+
+// Délai avant la PROCHAINE apparition : court pour la première d'une
+// session, long ensuite.
+export function nextSpawnGapMs(isFirst = false) {
+  return isFirst ? TAP_BOSS_FIRST_GAP_MS : TAP_BOSS_NEXT_GAP_MS;
 }
 
 // Plafond quotidien de Diamants, toutes sources de boss confondues.
@@ -52,9 +64,6 @@ export function canSpawnBoss({ activeMs, gapMs, lastBossAt, now }) {
 // identique pour tous (21/jour, ~630/mois).
 export const TAP_BOSS_DAILY_DIAMOND_CAP = 21;
 
-// Paliers de récompense, à la VITESSE et non au nombre de taps : une
-// seule cible (200) avec un bonus de rapidité se lit d'un coup d'œil,
-// là où trois cibles différentes demandent de réfléchir.
 export const TAP_BOSS_TIERS = [
   { maxMs: 30 * 1000, diamonds: 3 },
   { maxMs: 45 * 1000, diamonds: 2 },
@@ -69,10 +78,6 @@ export function diamondsForDuration(ms) {
 }
 
 // Délai avant la prochaine apparition, tiré au hasard dans la plage.
-export function nextSpawnGapMs(rand = Math.random, isFirst = false) {
-  if (isFirst) return TAP_BOSS_FIRST_GAP_MS;
-  return TAP_BOSS_MIN_GAP_MS + rand() * (TAP_BOSS_MAX_GAP_MS - TAP_BOSS_MIN_GAP_MS);
-}
 
 // Diamants réellement crédités, une fois le plafond du jour appliqué.
 export function grantableDiamonds(earned, alreadyToday) {

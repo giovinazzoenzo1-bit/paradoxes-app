@@ -1004,30 +1004,45 @@ connue, les pages sont forcément rendues (elles ne le sont que dans ce
 cas). Une seconde tentative à la frame suivante couvre un décalage de
 contenu tardif.
 
-## Boss de tap : cadence revue + garde-fou anti-abus (14/09)
+## Boss de tap : règles d'apparition (14/09)
 
-**Défaut** : il fallait 20 à 30 minutes de jeu ACTIF D'AFFILÉE. Un joueur
-qui fait des sessions de 10 minutes ne voyait donc **jamais** de boss —
-et n'avait aucun moyen d'obtenir des Diamants, seule source du jeu.
+| | Valeur |
+|---|---|
+| 1er boss d'une session | **2 min de jeu actif** |
+| Suivants | **20 min de jeu actif** |
+| Plafond | **2 par heure glissante** (temps RÉEL) |
+| Plafond quotidien | 21 💎 (inchangé) |
 
-| | Avant | Après |
-|---|---|---|
-| 1er boss d'une session | 20-30 min actives | **4 min actives** |
-| Suivants | 20-30 min | 10-15 min actives |
-| Plancher en temps RÉEL | aucun | **1 heure depuis le dernier boss** |
+⚠️ **Le plafond horaire est le garde-fou.** Le compteur de jeu actif
+repart à zéro à chaque ouverture : sans lui, fermer et rouvrir toutes
+les 2 minutes suffirait à enchaîner les boss et à vider le plafond
+quotidien en quelques minutes.
 
-⚠️ **Le plancher d'une heure est indispensable** : le compteur de jeu
-actif repart à zéro à chaque ouverture de l'appli. Sans lui, fermer et
-rouvrir toutes les 4 minutes suffirait à enchaîner les boss et à vider
-le plafond quotidien de Diamants en quelques minutes.
+⚠️ **Les horodatages sont SAUVEGARDÉS** et écrits dès l'apparition (pas
+à la résolution) : fermer l'appli juste après ne remet rien à zéro.
 
-⚠️ **L'horodatage du dernier boss est SAUVEGARDÉ**, et écrit dès
-l'apparition (pas à la résolution) : fermer l'appli juste après ne remet
-rien à zéro. Relu quelle que soit la date, pour survivre à minuit.
+**Vérifié par simulation** :
 
-**Vérifié par simulation** : 12 sessions de 5 min sur une heure ne
-donnent qu'**1 seul boss** ; une session normale de 10 min en donne 1
-(contre 0 avant) ; 5 sessions espacées de 3 h en donnent 5.
+| Scénario | Boss |
+|---|---|
+| session de 5 min | 1 (à la minute 2) |
+| session de 25 min | 2 (minutes 2 et 22) |
+| session de 3 h | 6 (soit 2/heure) |
+| **triche : 30 sessions de 2 min en 1 h** | **2** |
+| 4 sessions de 10 min espacées | 4 |
+
+⚠️ **Point d'entrée UNIQUE `spawnBoss()`** : l'apparition normale et le
+bouton développeur passent par la même fonction, donc aucun risque que
+l'une oublie une étape que l'autre fait (remise à zéro du compteur,
+historique, sauvegarde).
+
+Bouton dev « 👹 Boss » dans la rangée d'outils. Il ne dépend pas de
+l'état de l'œuf, contrairement aux deux autres.
+
+⚠️ **Piège rencontré en réécrivant ce fichier** : le bloc remplacé
+contenait aussi `TAP_BOSS_DAILY_DIAMOND_CAP`, supprimé sans le vouloir
+alors qu'il restait UTILISÉ plus bas — l'app aurait planté. Comparer les
+exports avant/après est ce qui l'a détecté.
 
 ## Offrande ramenée à 1 Diamant (14/09)
 

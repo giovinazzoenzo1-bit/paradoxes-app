@@ -97,7 +97,7 @@ import DiamondShop from './DiamondShop';
 import {
   TAP_BOSS_STORAGE_KEY, TAP_BOSS_TAPS_REQUIRED, TAP_BOSS_TIME_LIMIT_MS,
   diamondsForDuration, nextSpawnGapMs, grantableDiamonds,
-  isRhythmSuspicious, TAP_BOSS_DAILY_DIAMOND_CAP, canSpawnBoss,
+  isRhythmSuspicious, TAP_BOSS_DAILY_DIAMOND_CAP, canSpawnBoss, recentSpawns,
 } from '../../games/clicker/tapBossLogic';
 import {
   INCUBATOR_STORAGE_KEY, startIncubation, applyTap as incubatorApplyTap,
@@ -290,12 +290,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const bossActiveMsRef = useRef(0);
   // Premier boss de la session : délai court. Les suivants reprennent la
   // plage normale.
-  const bossGapRef = useRef(nextSpawnGapMs(Math.random, true));
-  // ⚠️ Horodatage RÉEL du dernier boss, SAUVEGARDÉ. C'est lui qui rend le
-  // garde-fou inviolable : le compteur de jeu actif repart à zéro à
-  // chaque ouverture, donc sans cette date on pourrait enchaîner les
-  // boss en fermant et rouvrant l'appli toutes les 4 minutes.
-  const lastBossAtRef = useRef(0);
+  const bossGapRef = useRef(nextSpawnGapMs(true));
+  // ⚠️ Horodatages RÉELS des apparitions récentes, SAUVEGARDÉS. C'est eux
+  // qui rendent le quota inviolable : le compteur de jeu actif repart à
+  // zéro à chaque ouverture, donc sans cet historique on pourrait
+  // enchaîner les boss en fermant et rouvrant l'appli.
+  const bossSpawnAtsRef = useRef([]);
 
   const [diamondShopOpen, setDiamondShopOpen] = useState(false);
   const [incubatorOpen, setIncubatorOpen] = useState(false);
@@ -385,7 +385,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           if (saved && saved.date === todayKey()) setDiamondsToday(saved.diamonds || 0);
           // Relu quelle que soit la DATE : le délai d'une heure doit
           // survivre au passage de minuit comme au redémarrage.
-          if (saved && saved.lastBossAt) lastBossAtRef.current = saved.lastBossAt;
+          if (saved && Array.isArray(saved.bossSpawnAts)) {
+            bossSpawnAtsRef.current = recentSpawns(saved.bossSpawnAts, Date.now());
+          }
         }
       } catch (e) {
         // Illisible : on repart de zéro plutôt que de bloquer l'écran.
@@ -393,13 +395,31 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     })();
   }, []);
 
+  // Fait apparaître le boss. Point d'entrée UNIQUE : l'apparition
+  // normale et le bouton développeur passent par ici, donc il n'y a
+  // aucun risque que l'un oublie une étape que l'autre fait.
+  const spawnBoss = () => {
+    const now = Date.now();
+    bossActiveMsRef.current = 0;
+    bossGapRef.current = nextSpawnGapMs();
+    bossTapTimesRef.current = [];
+    bossSpawnAtsRef.current = [...recentSpawns(bossSpawnAtsRef.current, now), now];
+    // Écrit tout de suite : si l'appli est fermée juste après, le quota
+    // horaire doit déjà compter cette apparition.
+    AsyncStorage.setItem(
+      TAP_BOSS_STORAGE_KEY,
+      JSON.stringify({ date: todayKey(), diamonds: diamondsTodayRef.current, bossSpawnAts: bossSpawnAtsRef.current })
+    ).catch(() => {});
+    setBoss({ taps: 0, startedAt: null });
+  };
+
   const addDiamondsToday = async (n) => {
     const next = diamondsTodayRef.current + n;
     diamondsTodayRef.current = next;
     setDiamondsToday(next);
     AsyncStorage.setItem(
       TAP_BOSS_STORAGE_KEY,
-      JSON.stringify({ date: todayKey(), diamonds: next, lastBossAt: lastBossAtRef.current })
+      JSON.stringify({ date: todayKey(), diamonds: next, bossSpawnAts: bossSpawnAtsRef.current })
     ).catch(() => {});
   };
 
@@ -413,20 +433,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       if (canSpawnBoss({
         activeMs: bossActiveMsRef.current,
         gapMs: bossGapRef.current,
-        lastBossAt: lastBossAtRef.current,
+        spawnAts: bossSpawnAtsRef.current,
         now: Date.now(),
       })) {
-        bossActiveMsRef.current = 0;
-        bossGapRef.current = nextSpawnGapMs();
-        bossTapTimesRef.current = [];
-        lastBossAtRef.current = Date.now();
-        // Écrit tout de suite : si l'appli est fermée juste après, le
-        // délai d'une heure doit déjà courir.
-        AsyncStorage.setItem(
-          TAP_BOSS_STORAGE_KEY,
-          JSON.stringify({ date: todayKey(), diamonds: diamondsTodayRef.current, lastBossAt: lastBossAtRef.current })
-        ).catch(() => {});
-        setBoss({ taps: 0, startedAt: null });
+        spawnBoss();
       }
     }, 1000);
     return () => clearInterval(id);
@@ -2293,14 +2303,22 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               `left: 0, right: 0` + `justifyContent: 'center'` les centre
               ensemble et garantit qu'ils ne peuvent plus se chevaucher
               ni déborder, quelle que soit la largeur de leurs libellés. */}
-          {eggPhase === 'collecting' && (currentChallengeId || devPreviousChallengeId) && (
+          {/* La rangée s'affiche dès qu'UN outil est disponible : le
+              bouton boss ne dépend pas de l'état de l'œuf, contrairement
+              aux deux autres. */}
+          {(boss === null || currentChallengeId || devPreviousChallengeId) && (
             <View style={styles.devToolsRow}>
-              {(devPreviousChallengeId || eggPhase === 'hatching') && (
+              {boss === null && (
+                <TouchableOpacity style={styles.devToolBtn} onPress={spawnBoss}>
+                  <Text style={styles.devSkipBtnText}>👹 Boss</Text>
+                </TouchableOpacity>
+              )}
+              {eggPhase === 'collecting' && (devPreviousChallengeId || eggPhase === 'hatching') && (
                 <TouchableOpacity style={styles.devToolBtn} onPress={onDevPreviousChallenge}>
                   <Text style={styles.devSkipBtnText}>◀️ Défi préc.</Text>
                 </TouchableOpacity>
               )}
-              {currentChallengeId && (
+              {eggPhase === 'collecting' && currentChallengeId && (
                 <TouchableOpacity
                   style={styles.devToolBtn}
                   onPress={() => {
