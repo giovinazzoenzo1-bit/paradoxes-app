@@ -96,6 +96,7 @@ import {
   eggStageForCompletedCount,
   questLabel,
   RUNE_CYCLE_INDEX,
+  questFeasible,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -1891,6 +1892,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     critLevel,
     essence,
     ownedCount: owned.length,
+    // ⚠️ Les IDENTIFIANTS, pas seulement le nombre : un défi « monte
+    // l'objet X au niveau 5 » est IMPOSSIBLE si la créature de X n'est
+    // pas possédée, et il bloquerait l'œuf à jamais.
+    ownedIds: owned.map((o) => o.id),
     // Nombre de créatures réellement placées dans le deck : c'est CETTE
     // valeur, pas `ownedCount`, qui décide si l'Aventure est jouable
     // (AdventureScreen désactive le combat sur « Deck vide »).
@@ -1925,6 +1930,47 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     (latchedQuestIds.includes(id) ||
       devCompletedIds.includes(id) ||
       questComplete(id, questStats, baselineFor(id), questTargets));
+
+  // ⚠️ RÉPARATION DES CYCLES DÉJÀ TIRÉS.
+  //
+  // Un cycle est tiré UNE fois puis sauvegardé. Un défi devenu
+  // impossible après coup (créature non possédée alors que
+  // l'amélioration l'exige désormais) resterait donc dans la sauvegarde
+  // — et l'œuf, qui attend que TOUS les défis du cycle soient validés,
+  // ne pourrait plus jamais éclore.
+  //
+  // On remplace ici les défis irréalisables par un défi du pool, calculé
+  // sur l'état courant donc forcément faisable. Un défi DÉJÀ VALIDÉ est
+  // conservé même s'il est devenu infaisable : le joueur l'a mérité.
+  useEffect(() => {
+    if (!loaded || !activeQuestIds.length) return;
+    const casses = activeQuestIds.filter(
+      (id) => !isQuestDone(id) && !questFeasible(findQuest(id), questStats)
+    );
+    if (!casses.length) return;
+    const remplacement = pickQuestSet(activeQuestIds, questStats);
+    const libres = remplacement.ids.filter((id) => !activeQuestIds.includes(id));
+    if (!libres.length) return;
+    const nouveaux = activeQuestIds.map((id) => {
+      const i = casses.indexOf(id);
+      return i >= 0 && libres[i] ? libres[i] : id;
+    });
+    setActiveQuestIds(nouveaux);
+    setQuestTargets((prev) => {
+      const suivant = { ...prev };
+      casses.forEach((id, i) => {
+        if (libres[i]) suivant[libres[i]] = remplacement.targets[libres[i]];
+      });
+      return suivant;
+    });
+    // Chaque défi neuf part de l'état ACTUEL, sinon sa barre démarrerait
+    // à une valeur héritée du défi remplacé.
+    setQuestBaselines((prev) => {
+      const suivant = { ...prev };
+      casses.forEach((id, i) => { if (libres[i]) suivant[libres[i]] = questStats; });
+      return suivant;
+    });
+  }, [loaded, activeQuestIds, questStats.ownedCount]);
 
   // Pose le verrou dès qu'un défi est atteint, pour qu'une baisse de la
   // valeur ne le défasse plus.

@@ -987,6 +987,44 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ DÉFIS IMPOSSIBLES = ŒUF BLOQUÉ À VIE (15/09)
+
+**Le bug le plus grave rencontré.** « Monte Griffe de Braisillon au
+niveau 5 » était proposé à un joueur ne possédant pas Pyrosile. Depuis
+que les améliorations sont réservées aux créatures possédées, ce défi
+est INFAISABLE — et comme l'œuf attend que TOUS les défis du cycle
+soient validés, il ne pouvait plus jamais éclore.
+
+### Trois niveaux de correction
+
+1. **`questFeasible(quest, stats)`** réunit la condition propre du défi
+   (`available`) ET la possession de la créature requise par une
+   amélioration.
+2. **Au TIRAGE** d'un cycle : les défis irréalisables sont écartés au
+   même titre que les défis déjà accomplis, et remplacés par un défi du
+   pool calculé sur l'état courant.
+3. **RÉPARATION des cycles DÉJÀ tirés** : un cycle est sauvegardé, donc
+   les parties en cours gardaient le défi cassé. Un effet le remplace à
+   l'ouverture. ⚠️ Un défi déjà VALIDÉ est conservé même devenu
+   infaisable — le joueur l'a mérité.
+
+⚠️ `questStats` expose désormais **`ownedIds`** et pas seulement
+`ownedCount` : sans la liste, impossible de savoir si la créature d'une
+amélioration est possédée.
+
+⚠️ Le pool dynamique avait bien un `available()` sur ses 35 défis à
+risque, mais il ne testait que le PRIX, pas la possession. Il passe
+maintenant par `questFeasible` lui aussi.
+
+### Vérification
+
+**2592 défis tirés** — 4 profils de joueur × 12 collections aléatoires ×
+13 cycles — **0 irréalisable**.
+
+**Règle** : tout défi qui dépend d'un objet, d'une créature ou d'un
+déblocage DOIT passer par `questFeasible`. Un seul défi impossible bloque
+l'éclosion définitivement.
+
 ## Boutique : améliorations liées aux créatures possédées (15/09)
 
 Chaque amélioration appartient à une CRÉATURE. Celles dont la créature

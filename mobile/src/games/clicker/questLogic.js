@@ -656,6 +656,29 @@ export function questDetail(questId, stats, baseline = {}, targets = {}) {
 // jouable — on perdrait un défi au lieu de le réparer.
 const RESET_ON_DRAW_METRICS = ['maxTranseHoldSec', 'maxCombo'];
 
+// La créature dont dépend une amélioration est-elle possédée ?
+//
+// ⚠️ Depuis que les améliorations sont réservées aux créatures
+// possédées, un défi « monte l'objet X » devient IMPOSSIBLE sans elle —
+// et comme l'œuf attend que tous les défis du cycle soient validés, il
+// resterait bloqué à jamais. Cas réel : « Monte Griffe de Braisillon au
+// niveau 5 » proposé à un joueur qui n'a pas Pyrosile.
+export function upgradeCreatureOwned(metric, stats = {}) {
+  if (!metric || !metric.startsWith('upgrade:')) return true;
+  const item = UPGRADE_ITEMS.find((u) => u.id === metric.slice(8));
+  if (!item || !item.creatureId) return true;
+  return (stats.ownedIds || []).includes(item.creatureId);
+}
+
+// Un défi est-il RÉALISABLE dans l'état actuel ? Réunit sa condition
+// propre (`available`) et la possession de la créature requise.
+export function questFeasible(quest, stats = {}) {
+  if (!quest) return false;
+  if (!upgradeCreatureOwned(quest.metric, stats)) return false;
+  if (typeof quest.available === 'function' && !quest.available(stats)) return false;
+  return true;
+}
+
 export function questAlreadyDone(quest, stats = {}) {
   if (!quest || quest.mode !== 'absolute' || !quest.target) return false;
   if (RESET_ON_DRAW_METRICS.includes(quest.metric)) return false;
@@ -673,7 +696,10 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
     // les libellés de la séquence contiennent leur nombre EN DUR
     // (« ...pendant 42 secondes »). Changer la cible sans le texte
     // donnerait un défi qui ment sur son propre objectif.
-    const kept = cycle.filter((q) => !questAlreadyDone(q, stats));
+    // ⚠️ On écarte les défis déjà faits ET les IRRÉALISABLES (créature
+    // manquante). Sans ce second filtre, un défi impossible entrait dans
+    // le cycle et bloquait l'éclosion définitivement.
+    const kept = cycle.filter((q) => !questAlreadyDone(q, stats) && questFeasible(q, stats));
     const targets = {};
     kept.forEach((q) => { targets[q.id] = q.target; });
     const ids = kept.map((q) => q.id);
@@ -724,7 +750,7 @@ export function pickQuestSet(excludeIds = [], stats = {}) {
   // `questAlreadyDone` en plus de `available` : un défi du pool à cible
   // FIXE peut lui aussi être déjà accompli, et se validerait sans que le
   // joueur le voie.
-  const eligible = QUEST_POOL.filter(
+  const eligible = QUEST_POOL.filter((q) => questFeasible(q, stats)).filter(
     (q) => (!q.available || q.available(stats)) && !questAlreadyDone(q, stats)
   );
   let pool = eligible.filter((q) => !excludeIds.includes(q.id));
