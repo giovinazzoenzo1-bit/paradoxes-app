@@ -95,6 +95,7 @@ import {
   EGG_STAGES,
   eggStageForCompletedCount,
   questLabel,
+  RUNE_CYCLE_INDEX,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -2367,7 +2368,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // stockage : tant que le défi des Runes est en cours et que le
         // tirage n'a pas servi, il est disponible. Impossible à perdre
         // en changeant d'écran.
-        freeRuneAvailable={activeQuestIds.includes('seq_firstrune') && !freeRuneUsed}
+        // ⚠️ Déduit de la PROGRESSION (`sequenceIndex`), pas de la liste
+        // des défis actifs : celle-ci est sauvegardée au tirage du cycle,
+        // donc un joueur arrivé au cycle 5 avant l'ajout du défi n'a
+        // jamais eu `seq_firstrune` dedans — et le tirage ne venait
+        // jamais. La progression, elle, est fiable et rétroactive.
+        freeRuneAvailable={sequenceIndex >= RUNE_CYCLE_INDEX && !freeRuneUsed}
         onFreeRuneUsed={() => {
           setFreeRuneUsed(true);
           AsyncStorage.setItem(FREE_RUNE_USED_KEY, '1').catch(() => {});

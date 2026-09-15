@@ -929,16 +929,26 @@ tirage dans un état LOCAL. Or l'Aventure se démonte dès qu'on revient au
 Clicker : le tirage était perdu, et la clé déjà consommée ne le rendait
 jamais. D'où « ça ne se débloque toujours pas », signalé deux fois.
 
-**Correctif** : plus aucun transfert par le stockage. La disponibilité se
-DÉDUIT de l'état des défis —
+**Correctif (3e version, la bonne)** : plus aucun transfert par le
+stockage, et surtout plus aucune dépendance à la LISTE DES DÉFIS.
 
 ```
-freeRuneAvailable = défi 'seq_firstrune' actif ET tirage pas encore utilisé
+freeRuneAvailable = sequenceIndex >= RUNE_CYCLE_INDEX (4) ET tirage pas utilisé
 ```
 
-Le Clicker connaît déjà les deux, il passe simplement un booléen.
-`clicker:freeRuneUsed:v1` est écrit quand le tirage sert. **Rien à perdre
-au démontage.**
+⚠️ **Pourquoi pas « le défi est actif »** : `activeQuestIds` est
+SAUVEGARDÉ au tirage du cycle. Un joueur arrivé au cycle 5 AVANT l'ajout
+de `seq_firstrune` garde une liste qui ne le contient pas — la condition
+restait donc fausse à jamais, quelle que soit la suite. C'est ce qui a
+fait échouer la 2e version.
+
+La PROGRESSION (`sequenceIndex`), elle, est fiable et rétroactive : elle
+rattrape les parties en cours. `clicker:freeRuneUsed:v1` est écrit quand
+le tirage sert. **Rien à perdre au démontage.**
+
+**Règle** : ne jamais conditionner une fonctionnalité à une LISTE
+sauvegardée qu'on vient de modifier — les parties en cours gardent
+l'ancienne. Se raccrocher à un compteur de progression.
 
 **Règle** : un état que deux écrans partagent se déduit d'une source
 commune ou se passe en prop — un transfert « dépose puis efface » se

@@ -693,6 +693,15 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
 
 export const QUEST_SET_SIZE = 4;
 
+// Index (0-based) du cycle qui introduit les Runes.
+//
+// ⚠️ Le tirage offert se déduit de CET index, pas de la liste des défis
+// actifs. Cette liste est SAUVEGARDÉE au tirage du cycle : un joueur
+// arrivé au cycle 5 avant l'ajout du défi garde une liste qui ne le
+// contient pas, et la condition « le défi est actif » restait fausse à
+// jamais. La progression, elle, est fiable.
+export const RUNE_CYCLE_INDEX = 4;
+
 // Rune OFFERTE au joueur quand le défi qui introduit les Runes arrive.
 //
 // ⚠️ La clé vit ICI et pas dans un écran : le Clicker la dépose,
