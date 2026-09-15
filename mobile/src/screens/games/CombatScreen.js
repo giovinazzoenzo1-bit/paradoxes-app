@@ -860,8 +860,24 @@ export default function CombatScreen({ team, levelNumber, onFinish }) {
   );
 }
 
+// Délai avant que les boutons du récapitulatif deviennent actifs.
+//
+// ⚠️ Nécessaire parce que la zone de tap du combat couvre TOUT l'écran :
+// au moment où le récapitulatif s'affiche, le doigt du joueur est encore
+// en train de taper et tombe sur ce qui se trouve dessous. Déplacer les
+// boutons ne suffit donc pas — aucune position ne sort de la zone.
+//
+// 700 ms : bloque ~4,7 taps résiduels même à la cadence d'un autoclic
+// (6,7/s), tout en restant imperceptible pour qui veut vraiment appuyer.
+const RESULT_BTN_GUARD_MS = 700;
+
 function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel }) {
   const isWin = outcome === 'win';
+  const [btnsArmed, setBtnsArmed] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setBtnsArmed(true), RESULT_BTN_GUARD_MS);
+    return () => clearTimeout(id);
+  }, []);
   const stars = isWin ? starsForBattle(battleStats, opponentCount) : 0;
   const reward = isWin ? griffesReward(levelNumber) : 0;
 
@@ -928,11 +944,19 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
 
         <View style={styles.resultBtnCol}>
           {isWin && (
-            <TouchableOpacity style={[styles.resultBtn, styles.resultBtnNext]} onPress={onNextLevel}>
+            <TouchableOpacity
+              style={[styles.resultBtn, styles.resultBtnNext, !btnsArmed && styles.resultBtnLocked]}
+              onPress={onNextLevel}
+              disabled={!btnsArmed}
+            >
               <Text style={styles.resultBtnText}>⚔️ Niveau suivant</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.resultBtn} onPress={onContinue}>
+          <TouchableOpacity
+            style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]}
+            onPress={onContinue}
+            disabled={!btnsArmed}
+          >
             <Text style={styles.resultBtnText}>Retour à la carte</Text>
           </TouchableOpacity>
           {!isWin && <Text style={styles.resultSubtitle}>Rien n'est perdu.</Text>}
@@ -1136,7 +1160,14 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: 0,
     paddingHorizontal: 42, paddingVertical: 34,
   },
-  resultBtnCol: { width: 168, gap: 10 },
+  // `alignSelf: 'flex-start'` : les boutons remontent en haut de la
+  // rangée au lieu d'être centrés face au cadre — demande explicite, on
+  // clique moins dessus par accident en fin de combat. Mesuré : ça les
+  // remonte d'environ 45 dp.
+  resultBtnCol: { width: 168, gap: 10, alignSelf: 'flex-start' },
+  // Pendant le délai de garde : visiblement inactifs, pour que le joueur
+  // comprenne que ça n'a pas été ignoré au hasard.
+  resultBtnLocked: { opacity: 0.45 },
   recapCardImg: { resizeMode: 'stretch' },
   recapTitle: { color: '#6b4410', fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
   recapRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 6 },
