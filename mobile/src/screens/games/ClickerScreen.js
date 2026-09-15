@@ -2551,55 +2551,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   enfants — elles captent leur propre appui sans jamais
                   entrer en conflit avec le tap de l'œuf en dessous. */}
               {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
-              {/* Félicitations à chaque défi d'éclosion validé. */}
-          {questDone && (
-            <View style={styles.questDoneBackdrop}>
-              <View style={styles.questDoneCard}>
-                <Text style={styles.questDoneIcon}>🎉</Text>
-                <Text style={styles.questDoneTitle}>Défi réussi !</Text>
-                <Text style={styles.questDoneLabel}>
-                  {questLabel(questDone, questTargets[questDone])}
-                </Text>
-                <Text style={styles.questDoneProgress}>
-                  {completedQuestCount}/{activeQuestIds.length} avant l'éclosion
-                </Text>
-                <TouchableOpacity style={styles.questDoneBtn} onPress={() => setQuestDone(null)}>
-                  <Text style={styles.questDoneBtnText}>Continuer</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Compte rendu des gains hors-ligne. Posé ICI, dans la couche
-              du jeu, pour couvrir l'écran dès l'ouverture. */}
-          {offlineReport && (
-            <View style={styles.offlineBackdrop}>
-              <View style={styles.offlineCard}>
-                <Text style={styles.offlineTitle}>Pendant ton absence</Text>
-                <Text style={styles.offlineDuration}>
-                  {Math.floor(offlineReport.seconds / 3600)} h {Math.round((offlineReport.seconds % 3600) / 60)} min de production
-                </Text>
-                <Text style={styles.offlineAmount}>
-                  💰 {formatNum(offlineReport.amount * (offlineDoubled ? 2 : 1))}
-                </Text>
-                {offlineDoubled && <Text style={styles.offlineDoubledTag}>Doublé ✓</Text>}
-                {!offlineDoubled && (
-                  <TouchableOpacity
-                    style={[styles.offlineAdBtn, offlineAdLoading && styles.offlineAdBtnLoading]}
-                    onPress={doubleOfflineWithAd}
-                    disabled={offlineAdLoading}
-                  >
-                    {offlineAdLoading
-                      ? <ActivityIndicator size="small" color="#241a00" />
-                      : <Text style={styles.offlineAdBtnText}>📺 Doubler avec une pub</Text>}
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.offlineCloseBtn} onPress={closeOfflineReport}>
-                  <Text style={styles.offlineCloseText}>{offlineDoubled ? 'Continuer' : 'Récupérer'}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
+    
 
           {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
               {/* Diamants d'Offrande : autant que d'Offrandes faites, ils
@@ -2871,6 +2823,74 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         ownedCount={owned.length}
         totalCreatures={CREATURES.length}
       />
+      {/* ⚠️ Ces deux fenêtres vivent À LA RACINE de l'écran, PAS dans
+          `tapZone`. Placées dedans, leur `position: absolute` était
+          bornée par ce conteneur : le voile ne couvrait qu'une partie de
+          l'écran et la carte apparaissait décalée (bug constaté en
+          capture). Un voile plein écran doit être frère du contenu, pas
+          enfant d'une zone. */}
+        {/* Félicitations à chaque défi d'éclosion validé. */}
+        {questDone && (
+          <View style={styles.questDoneBackdrop}>
+            <View style={styles.questDoneCard}>
+              <Text style={styles.questDoneIcon}>🎉</Text>
+              <Text style={styles.questDoneTitle}>Défi réussi !</Text>
+              <Text style={styles.questDoneLabel}>
+                {questLabel(questDone, questTargets[questDone])}
+              </Text>
+              <Text style={styles.questDoneProgress}>
+                {completedQuestCount}/{activeQuestIds.length} avant l'éclosion
+              </Text>
+              <TouchableOpacity style={styles.questDoneBtn} onPress={() => setQuestDone(null)}>
+                <Text style={styles.questDoneBtnText}>Continuer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        {/* Compte rendu des gains hors-ligne. Posé ICI, dans la couche
+            du jeu, pour couvrir l'écran dès l'ouverture. */}
+        {offlineReport && (
+          <View style={styles.offlineBackdrop}>
+            <View style={styles.offlineCard}>
+              <Text style={styles.offlineTitle}>Pendant ton absence</Text>
+              <Text style={styles.offlineDuration}>
+                {Math.floor(offlineReport.seconds / 3600)} h {Math.round((offlineReport.seconds % 3600) / 60)} min de production
+              </Text>
+              <Text style={styles.offlineAmount}>
+                💰 {formatNum(offlineReport.amount * (offlineDoubled ? 2 : 1))}
+              </Text>
+              {offlineDoubled && <Text style={styles.offlineDoubledTag}>Doublé ✓</Text>}
+              {!offlineDoubled && (
+                <TouchableOpacity
+                  style={[styles.offlineAdBtn, offlineAdLoading && styles.offlineAdBtnLoading]}
+                  onPress={doubleOfflineWithAd}
+                  disabled={offlineAdLoading}
+                >
+                  {offlineAdLoading ? (
+                    <ActivityIndicator size="small" color="#241a00" />
+                  ) : (
+                    <>
+                      <View style={styles.offlineAdIcon}>
+                        <Text style={styles.offlineAdIconText}>📺</Text>
+                      </View>
+                      <Text style={styles.offlineAdBtnText}>Double en regardant une pub</Text>
+                      {/* Chevron DESSINÉ, pas une flèche de police : deux
+                          barres inclinées se rendent à l'identique sur
+                          tous les téléphones, contrairement à « → ». */}
+                      <View style={styles.offlineAdArrow}>
+                        <View style={[styles.offlineAdArrowBar, styles.offlineAdArrowTop]} />
+                        <View style={[styles.offlineAdArrowBar, styles.offlineAdArrowBottom]} />
+                      </View>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.offlineCloseBtn} onPress={closeOfflineReport}>
+                <Text style={styles.offlineCloseText}>{offlineDoubled ? 'Continuer' : 'Récupérer'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
     </ImageBackground>
   );
 }
@@ -3964,13 +3984,36 @@ const styles = StyleSheet.create({
   offlineAmount: { color: COLORS.action, fontSize: 30, fontWeight: '900', marginTop: 12 },
   offlineDoubledTag: { color: '#34d399', fontSize: 13, fontWeight: '800', marginTop: 4 },
   offlineAdBtn: {
-    marginTop: 16, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.action, borderRadius: 12, paddingVertical: 11, minHeight: 42,
+    marginTop: 16, alignSelf: 'stretch',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: COLORS.action, borderRadius: 12,
+    paddingVertical: 11, paddingHorizontal: 12, minHeight: 46,
   },
   offlineAdBtnLoading: { opacity: 0.75 },
-  offlineAdBtnText: { color: '#241a00', fontSize: 14, fontWeight: '900' },
-  offlineCloseBtn: { marginTop: 10, paddingVertical: 8, paddingHorizontal: 18 },
-  offlineCloseText: { color: COLORS.muted, fontSize: 13, fontWeight: '800' },
+  offlineAdIcon: {
+    width: 24, height: 24, borderRadius: 6,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(36,26,0,0.16)',
+  },
+  offlineAdIconText: { fontSize: 13 },
+  // `flexShrink: 1` : le libellé est long, c'est LUI qui se replie — sans
+  // ça il poussait le chevron hors du bouton.
+  offlineAdBtnText: { color: '#241a00', fontSize: 13, fontWeight: '900', flexShrink: 1 },
+  offlineAdArrow: { width: 11, height: 16, justifyContent: 'center' },
+  offlineAdArrowBar: {
+    position: 'absolute', left: 1, width: 10, height: 2.4,
+    borderRadius: 2, backgroundColor: '#241a00',
+  },
+  offlineAdArrowTop: { top: 4, transform: [{ rotate: '45deg' }] },
+  offlineAdArrowBottom: { bottom: 4, transform: [{ rotate: '-45deg' }] },
+  // Jaune lui aussi (demande explicite), mais en CONTOUR : lisible sans
+  // rivaliser avec le bouton de pub, qui garde le fond plein.
+  offlineCloseBtn: {
+    marginTop: 10, alignSelf: 'stretch', alignItems: 'center',
+    paddingVertical: 9, borderRadius: 12,
+    borderWidth: 1.5, borderColor: COLORS.action,
+  },
+  offlineCloseText: { color: COLORS.action, fontSize: 13, fontWeight: '900' },
 
   offeringBubble: {
     width: 42, height: 42, borderRadius: 21, backgroundColor: '#10304a',
