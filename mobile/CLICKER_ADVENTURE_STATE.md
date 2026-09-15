@@ -1052,68 +1052,42 @@ Ligne ajoutée là où le joueur a ses pièces sous les yeux. Prix NON fixe :
 d'écriture croisée** dans la sauvegarde de l'autre écran — même canal que
 l'Ascension et les défis.
 
-## Animation du Gardien entre les deux manches (15/09)
+## Animation du Gardien — RETIRÉE (15/09)
 
-Fournie par l'auteur en MP4 (Gemini, 1280×720, 10 s, fond noir).
+Une animation en séquence d'images a été tentée entre les deux manches,
+puis **retirée** : le rendu ne convenait pas et ne pouvait pas convenir
+par cette voie. Une vidéo PLEIN ÉCRAN est prévue à la place, à fournir
+plus tard.
 
-⚠️ **Un MP4 ne peut PAS être transparent** : H.264 n'a pas de canal
-alpha, la vidéo se serait affichée en rectangle noir par-dessus le
-terrain. Et l'appli n'embarque aucune bibliothèque vidéo (seulement
-Lottie). D'où une **séquence d'images PNG**, sans dépendance nouvelle.
+Ce qui a été appris, à garder pour la prochaine tentative :
 
-⚠️ **Aucun détourage manuel nécessaire.** Le fond est noir uni ET les
-contours du personnage sont noirs aussi — on les distingue par un
-REMPLISSAGE DEPUIS LES BORDS : le noir touchant le bord est du fond,
-celui enfermé dans la silhouette est un contour. Le filigrane Gemini
-part avec (on ne garde que la plus grosse composante).
+⚠️ **Un MP4 ne peut pas être transparent** (H.264 n'a pas de canal
+alpha), et l'appli n'embarque aucune bibliothèque vidéo — seulement
+Lottie. Une vidéo plein écran change la donne : plus besoin de
+transparence, donc un lecteur vidéo redevient envisageable (vérifier
+alors que le module existe bien dans Expo Go SDK 57 avant de l'utiliser).
 
-⚠️ **Recadrage sur une BOÎTE COMMUNE** à toutes les images. Recadrer
-chacune sur son propre contenu ferait sauter le personnage d'une image à
-l'autre.
+⚠️ **Détourage d'un fond noir** : le noir du FOND touche le bord de
+l'image, celui des CONTOURS est enfermé dans la silhouette. Un
+remplissage depuis les bords les sépare proprement, et ne garder que la
+plus grosse composante retire le filigrane Gemini. Aucune retouche
+manuelle nécessaire.
 
-**Réglages retenus** : la vidéo ENTIÈRE, 100 images à 10 i/s, canevas
-**269×200** (PAS carré), palette de 64 couleurs, **6,5 Mo**.
+⚠️ **Ne jamais forcer une animation dans un canevas CARRÉ** si sa boîte
+ne l'est pas : le sujet est réduit d'autant et paraît petit et délavé
+(mesuré : 61 % de la hauteur au lieu de 94 %).
 
-⚠️ **Le canevas CARRÉ était l'erreur.** La boîte de l'animation fait
-939×699 dans la vidéo (le personnage se déplace latéralement). Forcée
-dans un carré, sa hauteur tombait à 136 px sur 224 : il n'occupait que
-**61 %** du cadre et paraissait minuscule et délavé — d'où l'impression
-d'une opacité de 15 %. Au bon rapport, il en occupe **94 %**.
+⚠️ **Pour allonger une animation, il faut PLUS D'IMAGES, pas une cadence
+plus basse** — baisser la cadence produit un RALENTI. Échantillonner à
+N i/s et rejouer à N i/s conserve la vitesse d'origine.
 
-⚠️ **Cadrage horizontal au centile 15-85** : mesuré, ça ne rogne que
-**0,23 %** du personnage (une pointe de ruban) et libère 19 % de pixels.
+⚠️ **Coût** : 10 s d'animation détourée pèsent 4 à 7 Mo en images, contre
+13 Mo pour TOUS les assets du jeu. Une vidéo compressée sera bien plus
+légère.
 
-Affichée à **1,45× la taille du sprite** du gardien (344×200 dp contre
-177), vérifié qu'elle reste dans l'écran.
-
-⚠️ **Vitesse d'ORIGINE conservée.** La source est à 24 i/s :
-échantillonner à 12 et rejouer à 12 garde la durée réelle (10 s), seule
-la finesse du mouvement baisse de moitié — invisible sur un dessin animé
-aux aplats.
-
-⚠️ **Deux erreurs commises avant d'y arriver, à ne pas refaire** :
-1. Avoir COUPÉ la vidéo à 1,5 s — on n'en voyait qu'un bout.
-2. Avoir baissé la cadence à 8 i/s pour « allonger » — ça produit un
-   RALENTI, pas une animation plus longue. Pour allonger, il faut PLUS
-   D'IMAGES, pas une cadence plus basse.
-
-⚠️ **L'animation REMPLACE le gardien à son emplacement** : le sprite est
-retiré du terrain pendant la transition (`isBoss && phaseBreak`), sinon
-on verrait le tigre immobile derrière le tigre animé. Les coordonnées
-sont calculées comme dans `renderSprite`, à partir de `GUARDIAN_SLOT`.
-
-⚠️ `GUARDIAN_SLOT` est déclaré EN HAUT du fichier, avec les autres
-emplacements. Plus bas, ça marchait par chance (le module est évalué
-avant le premier rendu) — un piège à la prochaine réorganisation.
-
-⚠️ **Durée de la transition calée sur la séquence** : 300 + 9400 + 300 =
-10 000 ms, exactement 120 images à 12 i/s.
-
-⚠️ Le voile porte `pointerEvents: 'none'` : il couvre tout l'écran et ne
-doit pas capter de clics.
-
-L'ancien texte « LE GARDIEN SE RELÈVE » reste, en plus petit sous
-l'animation.
+La transition entre les deux manches est revenue au texte « LE GARDIEN
+SE RELÈVE ». Le reste de la mécanique (bouclier, 2 manches, barre de vie)
+est INCHANGÉ.
 
 ## Mini-boss : il remplace l'œuf (14/09)
 

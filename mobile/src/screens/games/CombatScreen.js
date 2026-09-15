@@ -128,12 +128,6 @@ const OPPONENT_SLOTS = [
 // emplacements ayant été remontés, la place existe.
 const SPRITE_BASE = 104;
 
-// Emplacement du GARDIEN en mode boss. Déclaré ICI, avec les autres
-// emplacements, et pas plus bas : la valeur est lue pendant le rendu du
-// composant, une déclaration après lui marchait par chance (le module
-// est évalué avant le premier rendu) mais c'est un piège à la prochaine
-// réorganisation.
-const GUARDIAN_SLOT = { x: 0.72, y: 0.46, size: 1.7 };
 
 // `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
 // niveau. Sert au combat de Gardien, qui affronte TOUJOURS le Gardien et
@@ -186,13 +180,10 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const startBossPhase2 = (maxHp) => {
     setPhaseBreak(true);
     phaseAnim.setValue(0);
-    // ⚠️ Durée calée sur la SÉQUENCE : 100 images à 10 i/s = 10 000 ms.
-    // L'apparition et la disparition sont prises DEDANS (300 + 9400 +
-    // 300), sinon l'animation serait coupée avant la fin.
     Animated.sequence([
-      Animated.timing(phaseAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.delay(9400),
-      Animated.timing(phaseAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      Animated.timing(phaseAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.delay(520),
+      Animated.timing(phaseAnim, { toValue: 0, duration: 320, useNativeDriver: true }),
     ]).start(() => {
       setPhaseBreak(false);
       setBossPhase(2);
@@ -852,33 +843,18 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 
       {/* Transition entre les deux manches. */}
       {phaseBreak && (
-        <Animated.View style={[styles.phaseBreakWrap, { opacity: phaseAnim }]}>
-          {/* ⚠️ Posée À LA PLACE du gardien, pas au centre de l'écran :
-              le sprite est masqué pendant ce temps (voir `phaseBreak`
-              plus bas), l'animation prend donc littéralement sa place au
-              lieu de se superposer à lui. Coordonnées calculées comme
-              dans `renderSprite` pour tomber au pixel près. */}
-          <View
-            style={{
-              position: 'absolute',
-              left: GUARDIAN_SLOT.x * W - Math.round(SPRITE_BASE * GUARDIAN_SLOT.size * 1.7) / 2,
-              top: GUARDIAN_SLOT.y * H - Math.round(SPRITE_BASE * GUARDIAN_SLOT.size) / 2 - 10,
-              width: Math.round(SPRITE_BASE * GUARDIAN_SLOT.size * 1.7),
-              alignItems: 'center',
-            }}
-          >
-            <GuardianRoar height={Math.round(SPRITE_BASE * GUARDIAN_SLOT.size * 1.45)} />
-            <Text style={styles.phaseBreakText}>LE GARDIEN SE RELÈVE</Text>
-          </View>
+        <Animated.View style={[styles.phaseBreakWrap, {
+          opacity: phaseAnim,
+          transform: [{ scale: phaseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) }],
+        }]}>
+          <Text style={styles.phaseBreakText}>LE GARDIEN SE RELÈVE</Text>
+          <Text style={styles.phaseBreakSub}>Il récupère ses forces</Text>
         </Animated.View>
       )}
 
       {/* Équipe adverse — tous tapables pour choisir la cible, à chaque
           tour (demande explicite), pas seulement une fois par combat. */}
-      {/* ⚠️ Le gardien est RETIRÉ du terrain pendant la transition :
-          l'animation le remplace à son emplacement. Sans ça, on verrait
-          le tigre immobile derrière le tigre animé. */}
-      {(isBoss && phaseBreak ? [] : opponents).map((o, i) => {
+      {opponents.map((o, i) => {
         // `stages[0]` : le Gardien n'a qu'une apparence, les créatures en
         // ont trois — l'index 0 est valide dans les deux cas.
         const d = o.creature.stages[0];
@@ -1032,160 +1008,6 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         </View>
       )}
     </View>
-  );
-}
-
-// Animation du Gardien qui se relève entre les deux manches.
-//
-// ⚠️ Séquence d'IMAGES et non une vidéo : le MP4 d'origine n'a pas de
-// canal alpha (H.264 n'en a pas), il se serait affiché en rectangle noir
-// par-dessus le terrain. Et l'appli n'embarque aucune bibliothèque
-// vidéo. Les images sont détourées (fond noir retiré par remplissage
-// depuis les bords, ce qui préserve les contours noirs du personnage) et
-// recadrées sur une BOÎTE COMMUNE, sinon le tigre sauterait d'une image
-// à l'autre.
-const GUARDIAN_ROAR_FRAMES = [
-  require('../../../assets/creatures/gardien/rugissement/f000.png'),
-  require('../../../assets/creatures/gardien/rugissement/f001.png'),
-  require('../../../assets/creatures/gardien/rugissement/f002.png'),
-  require('../../../assets/creatures/gardien/rugissement/f003.png'),
-  require('../../../assets/creatures/gardien/rugissement/f004.png'),
-  require('../../../assets/creatures/gardien/rugissement/f005.png'),
-  require('../../../assets/creatures/gardien/rugissement/f006.png'),
-  require('../../../assets/creatures/gardien/rugissement/f007.png'),
-  require('../../../assets/creatures/gardien/rugissement/f008.png'),
-  require('../../../assets/creatures/gardien/rugissement/f009.png'),
-  require('../../../assets/creatures/gardien/rugissement/f010.png'),
-  require('../../../assets/creatures/gardien/rugissement/f011.png'),
-  require('../../../assets/creatures/gardien/rugissement/f012.png'),
-  require('../../../assets/creatures/gardien/rugissement/f013.png'),
-  require('../../../assets/creatures/gardien/rugissement/f014.png'),
-  require('../../../assets/creatures/gardien/rugissement/f015.png'),
-  require('../../../assets/creatures/gardien/rugissement/f016.png'),
-  require('../../../assets/creatures/gardien/rugissement/f017.png'),
-  require('../../../assets/creatures/gardien/rugissement/f018.png'),
-  require('../../../assets/creatures/gardien/rugissement/f019.png'),
-  require('../../../assets/creatures/gardien/rugissement/f020.png'),
-  require('../../../assets/creatures/gardien/rugissement/f021.png'),
-  require('../../../assets/creatures/gardien/rugissement/f022.png'),
-  require('../../../assets/creatures/gardien/rugissement/f023.png'),
-  require('../../../assets/creatures/gardien/rugissement/f024.png'),
-  require('../../../assets/creatures/gardien/rugissement/f025.png'),
-  require('../../../assets/creatures/gardien/rugissement/f026.png'),
-  require('../../../assets/creatures/gardien/rugissement/f027.png'),
-  require('../../../assets/creatures/gardien/rugissement/f028.png'),
-  require('../../../assets/creatures/gardien/rugissement/f029.png'),
-  require('../../../assets/creatures/gardien/rugissement/f030.png'),
-  require('../../../assets/creatures/gardien/rugissement/f031.png'),
-  require('../../../assets/creatures/gardien/rugissement/f032.png'),
-  require('../../../assets/creatures/gardien/rugissement/f033.png'),
-  require('../../../assets/creatures/gardien/rugissement/f034.png'),
-  require('../../../assets/creatures/gardien/rugissement/f035.png'),
-  require('../../../assets/creatures/gardien/rugissement/f036.png'),
-  require('../../../assets/creatures/gardien/rugissement/f037.png'),
-  require('../../../assets/creatures/gardien/rugissement/f038.png'),
-  require('../../../assets/creatures/gardien/rugissement/f039.png'),
-  require('../../../assets/creatures/gardien/rugissement/f040.png'),
-  require('../../../assets/creatures/gardien/rugissement/f041.png'),
-  require('../../../assets/creatures/gardien/rugissement/f042.png'),
-  require('../../../assets/creatures/gardien/rugissement/f043.png'),
-  require('../../../assets/creatures/gardien/rugissement/f044.png'),
-  require('../../../assets/creatures/gardien/rugissement/f045.png'),
-  require('../../../assets/creatures/gardien/rugissement/f046.png'),
-  require('../../../assets/creatures/gardien/rugissement/f047.png'),
-  require('../../../assets/creatures/gardien/rugissement/f048.png'),
-  require('../../../assets/creatures/gardien/rugissement/f049.png'),
-  require('../../../assets/creatures/gardien/rugissement/f050.png'),
-  require('../../../assets/creatures/gardien/rugissement/f051.png'),
-  require('../../../assets/creatures/gardien/rugissement/f052.png'),
-  require('../../../assets/creatures/gardien/rugissement/f053.png'),
-  require('../../../assets/creatures/gardien/rugissement/f054.png'),
-  require('../../../assets/creatures/gardien/rugissement/f055.png'),
-  require('../../../assets/creatures/gardien/rugissement/f056.png'),
-  require('../../../assets/creatures/gardien/rugissement/f057.png'),
-  require('../../../assets/creatures/gardien/rugissement/f058.png'),
-  require('../../../assets/creatures/gardien/rugissement/f059.png'),
-  require('../../../assets/creatures/gardien/rugissement/f060.png'),
-  require('../../../assets/creatures/gardien/rugissement/f061.png'),
-  require('../../../assets/creatures/gardien/rugissement/f062.png'),
-  require('../../../assets/creatures/gardien/rugissement/f063.png'),
-  require('../../../assets/creatures/gardien/rugissement/f064.png'),
-  require('../../../assets/creatures/gardien/rugissement/f065.png'),
-  require('../../../assets/creatures/gardien/rugissement/f066.png'),
-  require('../../../assets/creatures/gardien/rugissement/f067.png'),
-  require('../../../assets/creatures/gardien/rugissement/f068.png'),
-  require('../../../assets/creatures/gardien/rugissement/f069.png'),
-  require('../../../assets/creatures/gardien/rugissement/f070.png'),
-  require('../../../assets/creatures/gardien/rugissement/f071.png'),
-  require('../../../assets/creatures/gardien/rugissement/f072.png'),
-  require('../../../assets/creatures/gardien/rugissement/f073.png'),
-  require('../../../assets/creatures/gardien/rugissement/f074.png'),
-  require('../../../assets/creatures/gardien/rugissement/f075.png'),
-  require('../../../assets/creatures/gardien/rugissement/f076.png'),
-  require('../../../assets/creatures/gardien/rugissement/f077.png'),
-  require('../../../assets/creatures/gardien/rugissement/f078.png'),
-  require('../../../assets/creatures/gardien/rugissement/f079.png'),
-  require('../../../assets/creatures/gardien/rugissement/f080.png'),
-  require('../../../assets/creatures/gardien/rugissement/f081.png'),
-  require('../../../assets/creatures/gardien/rugissement/f082.png'),
-  require('../../../assets/creatures/gardien/rugissement/f083.png'),
-  require('../../../assets/creatures/gardien/rugissement/f084.png'),
-  require('../../../assets/creatures/gardien/rugissement/f085.png'),
-  require('../../../assets/creatures/gardien/rugissement/f086.png'),
-  require('../../../assets/creatures/gardien/rugissement/f087.png'),
-  require('../../../assets/creatures/gardien/rugissement/f088.png'),
-  require('../../../assets/creatures/gardien/rugissement/f089.png'),
-  require('../../../assets/creatures/gardien/rugissement/f090.png'),
-  require('../../../assets/creatures/gardien/rugissement/f091.png'),
-  require('../../../assets/creatures/gardien/rugissement/f092.png'),
-  require('../../../assets/creatures/gardien/rugissement/f093.png'),
-  require('../../../assets/creatures/gardien/rugissement/f094.png'),
-  require('../../../assets/creatures/gardien/rugissement/f095.png'),
-  require('../../../assets/creatures/gardien/rugissement/f096.png'),
-  require('../../../assets/creatures/gardien/rugissement/f097.png'),
-  require('../../../assets/creatures/gardien/rugissement/f098.png'),
-  require('../../../assets/creatures/gardien/rugissement/f099.png'),
-];
-// ⚠️ 10 i/s, et la séquence couvre la vidéo ENTIÈRE (100 images).
-//
-// La source est à 24 i/s : échantillonner à 12 et rejouer à 12 conserve
-// la DURÉE RÉELLE (10 s), seule la finesse du mouvement baisse de
-// moitié — invisible sur un dessin animé aux aplats.
-//
-// Deux erreurs corrigées ici : avoir coupé la vidéo à 1,5 s (on n'en
-// voyait qu'un bout), puis avoir baissé la cadence à 8 i/s, ce qui
-// donnait un RALENTI au lieu d'allonger l'animation.
-const GUARDIAN_ROAR_FPS = 10;
-// Le canevas n'est PAS carré : la boîte de l'animation fait 939×699 dans
-// la vidéo. Forcée dans un carré, le personnage ne remplissait que 61 %
-// de la hauteur et paraissait minuscule et pâle. Au bon rapport, il en
-// occupe 94 %.
-const GUARDIAN_ROAR_RATIO = 269 / 200;
-
-
-// Joue la séquence UNE fois, puis reste sur la dernière image.
-function GuardianRoar({ height }) {
-  const [frame, setFrame] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => {
-      setFrame((f) => {
-        if (f >= GUARDIAN_ROAR_FRAMES.length - 1) {
-          clearInterval(id);
-          return f;
-        }
-        return f + 1;
-      });
-    }, 1000 / GUARDIAN_ROAR_FPS);
-    return () => clearInterval(id);
-  }, []);
-  return (
-    <Image
-      source={GUARDIAN_ROAR_FRAMES[frame]}
-      // Largeur DÉDUITE du rapport du canevas : un carré écraserait le
-      // personnage ou le laisserait flotter au milieu de vide.
-      style={{ width: Math.round(height * GUARDIAN_ROAR_RATIO), height }}
-      resizeMode="contain"
-    />
   );
 }
 
@@ -1534,10 +1356,10 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   phaseBreakText: {
-    color: '#ffcf3f', fontSize: 18, fontWeight: '900', letterSpacing: 2,
+    color: '#ffcf3f', fontSize: 26, fontWeight: '900', letterSpacing: 2,
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 8,
-    marginTop: 2,
   },
+  phaseBreakSub: { color: COLORS.text, fontSize: 13, fontWeight: '700', marginTop: 4 },
   recapCardImg: { resizeMode: 'stretch' },
   recapTitle: { color: '#6b4410', fontSize: 13, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
   recapRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 6 },
