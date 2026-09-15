@@ -927,7 +927,7 @@ la carte, exactement le bug déjà corrigé trois fois.
 |---|---|
 | Veilleur | coût −20 % (total niveau 10 : 214 830 → **171 864**) |
 | Défi des Runes | nouveau, au **cycle 5** (après la 4e éclosion) |
-| Rune offerte | déposée au tirage de ce cycle |
+| Tirage de rune OFFERT | valide ce défi |
 | Achat de Griffes en pièces | 100 🐾, prix ancré sur la production |
 
 ### Prix des Griffes : progression simple × Ascensions
@@ -957,6 +957,40 @@ Petit menu « Défi réussi ! » avec le libellé du défi et l'avancement
 complétion : le verrou repère l'instant exact où un défi est atteint et
 garantit qu'il ne sera annoncé QU'UNE FOIS, même si sa valeur redescend
 ensuite.
+
+### Défi des Runes : un défi EN PLUS, validé par le tirage offert
+
+⚠️ Le cycle 5 compte **5 défis et non 4** : celui des Runes s'AJOUTE, il
+ne remplace rien.
+
+⚠️ La rune n'est pas donnée en silence : le joueur reçoit un **tirage
+gratuit** qu'il utilise dans la boutique, et c'est cet usage qui valide
+le défi. Il découvre donc l'écran des Runes par lui-même, sans rien
+dépenser.
+
+Le tirage offert occupe la case « au hasard » de la boutique tant qu'il
+n'est pas consommé (l'asset n'a que 3 emplacements mesurés, une 4e case
+aurait débordé). Un coût nul s'affiche **GRATUIT** et non « 0 🐾 », qui
+se lirait comme un prix.
+
+⚠️ `eggStageForCompletedCount` borne à 4 : 5 défis validés ne sortent pas
+de la table des paliers. Vérifié — le cycle 3 avait déjà 5 défis.
+
+### Ascension : ce qu'elle remet à zéro (vérifié dans le code)
+
+| Remis à zéro | Conservé |
+|---|---|
+| pièces, total gagné | **créatures** |
+| Pacte, Faveur, critiques | **deck** |
+| Sanctuaire, Veilleur | **toute la progression d'Aventure** |
+| auto-clics, améliorations | essence, Griffes (créditées en plus) |
+| pouvoir actif, remise | défis d'œuf (le cycle CONTINUE) |
+
+L'Ascension ne touche donc QUE l'économie du clicker. C'est volontaire :
+perdre ses monstres et sa campagne rendrait le prestige punitif au lieu
+d'être une récompense — et la progression d'Aventure vit dans une autre
+sauvegarde, la réinitialiser d'ici serait l'écriture croisée qu'on
+s'interdit.
 
 ### ⚠️ Cycle d'imports évité de justesse
 

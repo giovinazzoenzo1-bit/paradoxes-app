@@ -105,12 +105,19 @@ export const QUEST_SEQUENCE = [
   [
     // ⚠️ Placé au CINQUIÈME cycle, donc après la 4e éclosion : avant, le
     // joueur n'a ni Griffes ni créatures à équiper, et une rune ne lui
-    // servirait à rien. Sert de tutoriel — une rune lui est offerte au
-    // tirage de ce cycle (voir PENDING_FREE_RUNE_KEY).
+    // servirait à rien.
+    //
+    // ⚠️ Ce cycle compte 5 défis et non 4 : celui-ci est un défi EN PLUS,
+    // pas un remplacement. Il se valide avec le TIRAGE GRATUIT offert à
+    // l'arrivée du cycle (voir PENDING_FREE_RUNE_KEY) — le joueur n'a
+    // donc rien à dépenser pour découvrir les Runes, il lui suffit
+    // d'utiliser son tirage.
     { id: 'seq_firstrune', icon: '🔮', metric: 'runeBought', target: 1, mode: 'delta',
       label: () => 'Achète une Rune et équipe-la' },
     { id: 'seq_offering5', icon: '💎', metric: 'offering', target: 7, mode: 'delta',
       label: () => 'Fais 7 Offrandes' },
+    { id: 'seq_griffe5', icon: '🔥', metric: 'upgrade:griffeBraisillon', target: 5, mode: 'absolute',
+      label: () => 'Monte Griffe de Braisillon au niveau 5' },
     { id: 'seq_adv_c2l10', icon: '⚔️', metric: 'advLevelReached', target: 20, mode: 'absolute',
       label: () => 'Termine le chapitre 2, niveau 10' },
     { id: 'seq_ascend1', icon: '🌟', metric: 'ascension', target: 1, mode: 'delta',

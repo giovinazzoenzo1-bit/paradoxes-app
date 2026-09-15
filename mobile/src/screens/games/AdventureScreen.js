@@ -662,24 +662,36 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // les stats de combat (voir combatLogic.js/runeBonuses).
   // Les 3 achats RENVOIENT les runes tirées, pour que l'écran puisse les
   // montrer. Rien (undefined) si l'achat n'a pas eu lieu.
-  // Rune OFFERTE déposée par le Clicker quand le défi des Runes arrive.
-  // Encaissée à l'ouverture de l'Aventure, puis la clé est effacée pour
-  // ne jamais l'offrir deux fois.
+  // TIRAGE GRATUIT offert par le Clicker quand le défi des Runes arrive.
   //
-  // ⚠️ Ne compte PAS comme `runeBought` : le défi doit rester à faire,
-  // la rune offerte sert à comprendre l'écran, pas à le valider.
+  // ⚠️ La rune n'est PAS donnée en silence : le joueur garde un tirage à
+  // utiliser dans la boutique. C'est cet usage qui valide le défi — il
+  // découvre donc l'écran des Runes par lui-même, sans rien dépenser.
+  const [freeRuneDraw, setFreeRuneDraw] = useState(false);
   useEffect(() => {
     let vivant = true;
     AsyncStorage.getItem(PENDING_FREE_RUNE_KEY)
       .then((du) => {
         if (!vivant || !du) return;
         AsyncStorage.removeItem(PENDING_FREE_RUNE_KEY).catch(() => {});
-        const type = RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)];
-        setOwnedRunes((prev) => [...prev, { id: makeRuneId(), type, level: 1, equippedCreatureId: null }]);
+        setFreeRuneDraw(true);
       })
       .catch(() => {});
     return () => { vivant = false; };
   }, []);
+
+  // Utilisation du tirage gratuit : même effet qu'un achat, coût nul.
+  // `trackEvent('runeBought')` est volontaire — c'est ce qui valide le
+  // défi, comme demandé.
+  const useFreeRuneDraw = () => {
+    if (!freeRuneDraw) return null;
+    setFreeRuneDraw(false);
+    const type = RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)];
+    const rune = { id: makeRuneId(), type, level: 1, equippedCreatureId: null };
+    setOwnedRunes((prev) => [...prev, rune]);
+    trackEvent('runeBought', 1);
+    return [rune];
+  };
 
   const buyRandomRune = () => {
     if (griffes < RUNE_COST) return null;
@@ -854,6 +866,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onBuyRune={buyRandomRune}
         onBuyPack={buyRunePack}
         onBuySpecial={buySpecialOffer}
+        freeRuneDraw={freeRuneDraw}
+        onUseFreeDraw={useFreeRuneDraw}
         specialOffer={specialOffer}
         onFuseAll={fuseAllRunes}
         onBuyGriffes={buyGriffesWithDiamonds}
@@ -2442,7 +2456,7 @@ function ForgePanel({ width, onAutoFuse }) {
   );
 }
 
-function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, onBuySpecial }) {
+function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, onBuySpecial, freeRuneDraw = false, onUseFreeDraw }) {
   const H = width / SHOP_PANEL_RATIO;
   const slotTop = SHOP_SLOT_Y.top * H;
   const slotH = (SHOP_SLOT_Y.bottom - SHOP_SLOT_Y.top) * H;
@@ -2487,10 +2501,13 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
       // pierre précise ne conviendrait.
       arts: [],
       emoji: '🎲',
-      cost: RUNE_COST,
-      desc: '1 rune niv.1\nau hasard',
-      disabled: griffes < RUNE_COST,
-      onPress: onBuyRandom,
+      // Tant qu'un tirage offert est en attente, c'est CETTE case qui
+      // sert : coût nul, libellé explicite. Une case de plus aurait
+      // débordé du panneau (3 emplacements mesurés dans l'asset).
+      cost: freeRuneDraw ? 0 : RUNE_COST,
+      desc: freeRuneDraw ? 'TIRAGE OFFERT\n1 rune niv.1' : '1 rune niv.1\nau hasard',
+      disabled: freeRuneDraw ? false : griffes < RUNE_COST,
+      onPress: freeRuneDraw ? onUseFreeDraw : onBuyRandom,
     },
   ];
 
@@ -2545,12 +2562,18 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
                   : <Text style={{ fontSize: fsIcon }}>{o.emoji}</Text>}
               </View>
               <View style={styles.shopPriceRow}>
-                <Text style={[styles.shopPriceText, { fontSize: fsPrice }]}>{o.cost}</Text>
+                {/* Un coût nul afficherait « 0 🐾 », ce qui se lit comme un
+                    prix. On écrit GRATUIT et on masque l'icône. */}
+                <Text style={[styles.shopPriceText, { fontSize: fsPrice }]}>
+                  {o.cost > 0 ? o.cost : 'GRATUIT'}
+                </Text>
+                {o.cost > 0 && (
                 <Image
                   source={GRIFFES_ICON}
                   style={{ width: fsPrice, height: fsPrice }}
                   resizeMode="contain"
                 />
+                )}
               </View>
             </TouchableOpacity>
 
