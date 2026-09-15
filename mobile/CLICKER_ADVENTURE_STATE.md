@@ -969,6 +969,27 @@ exactement sur la 1re (72 × 5 = 360°). Mesuré sur 12 Offrandes : écart
 minimal de 15 % de l'écran pour des bulles de 10,7 % — aucune
 superposition.
 
+## ⚠️ « Rendered fewer hooks than expected » — le piège s'est REPRODUIT
+
+Survenu au lancement du premier niveau (14/09). Cause : le `useEffect`
+du saut de carte avait été placé **après** le `if (activeBattle) return`
+de `ChapterMapScreen`. Dès qu'un combat démarrait, ce Hook n'était plus
+appelé — React comptait moins de Hooks d'un rendu à l'autre et plantait.
+
+C'est EXACTEMENT le piège déjà documenté quelques lignes plus haut dans
+ce même composant pour l'effet de réarmement. Il s'est reproduit parce
+que le nouveau Hook a été écrit près du code qu'il pilote, pas près des
+autres Hooks.
+
+**Règle** : dans `ChapterMapScreen`, tout Hook va AVANT
+`if (activeBattle)`. Les valeurs dont il a besoin se recalculent sur
+place (elles dérivent toutes de `currentUnlockedLevel`) plutôt que
+d'être lues plus bas.
+
+**Contrôle automatisable** — pour chaque composant, aucun appel `useX`
+de premier niveau ne doit se trouver après un `return` de premier niveau
+autre que le dernier. Vérifié sur tout le projet : 0 cas.
+
 ## Carte d'Aventure : le saut au bon chapitre (3e écriture)
 
 ⚠️ Les deux versions précédentes dépendaient d'un MINUTAGE et sont

@@ -1736,6 +1736,56 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // l'écran Aventure. L'équipe entière (les 3 créatures du deck, dans
   // l'ordre) combat à tour de rôle — plus de sélection d'une seule
   // créature avant le combat.
+  // ⚠️ TROISIÈME écriture de ce saut — les deux précédentes dépendaient
+  // d'un MINUTAGE et ont fini par retomber en panne :
+  //   1. `onLayout` du ScrollView : les pages n'existaient pas encore,
+  //      le contenu mesurait 0 et la position était ramenée à 0.
+  //   2. `onLayout` de la page du chapitre : ne se redéclenche PAS au
+  //      retour d'un combat (la mise en page n'a pas changé), donc on
+  //      revenait en haut de la carte.
+  //
+  // Ici le saut est piloté par un EFFET qui observe la hauteur de page,
+  // le chapitre visé et un jeton. Plus aucune course : dès que la
+  // hauteur est connue, les pages sont rendues (elles ne le sont que
+  // dans ce cas), donc le contenu existe forcément.
+  const doJump = (y) => {
+    // `Animated.ScrollView` transmet sa ref au ScrollView réel dans les
+    // versions récentes, mais l'ancienne API l'enveloppait derrière
+    // `getNode()`. On accepte les deux : un `scrollTo` introuvable
+    // ramènerait silencieusement le joueur en haut de la carte.
+    const sv = mapScrollRef.current;
+    const target = sv && (typeof sv.scrollTo === 'function' ? sv : sv.getNode && sv.getNode());
+    if (!target || typeof target.scrollTo !== 'function') return false;
+    target.scrollTo({ y, animated: false });
+    return true;
+  };
+
+  // ⚠️ CE HOOK DOIT RESTER ICI, AVANT le `if (activeBattle) return`.
+  // Placé après, il n'était pas appelé quand un combat démarrait :
+  // React voyait moins de Hooks d'un rendu à l'autre et plantait sur
+  // « Rendered fewer hooks than expected » dès le premier niveau lancé.
+  // C'est le MÊME piège que celui déjà documenté quelques lignes plus
+  // haut pour l'effet de réarmement.
+  //
+  // Les valeurs nécessaires sont recalculées ici plutôt que lues plus
+  // bas : elles dérivent toutes de `currentUnlockedLevel`, déjà
+  // disponible, et un Hook ne peut pas attendre une déclaration qui vit
+  // après un retour anticipé.
+  const jumpChapter = chapterForLevel(currentUnlockedLevel);
+  const jumpShown = Math.max(jumpChapter + 6, Math.max(...Object.keys(CHAPTER_SCENES).map(Number)));
+  const jumpIndex = jumpShown - jumpChapter;
+
+  useEffect(() => {
+    if (mapAutoScrolledRef.current) return undefined;
+    if (!pageH) return undefined;
+    // Une image posée après coup peut décaler le contenu : on retente à
+    // la frame suivante, c'est gratuit et ça couvre ce cas.
+    if (doJump(jumpIndex * pageH)) mapAutoScrolledRef.current = true;
+    const id = requestAnimationFrame(() => doJump(jumpIndex * pageH));
+    return () => cancelAnimationFrame(id);
+  }, [pageH, jumpIndex, mapJumpToken]);
+
+
   if (activeBattle) {
     const team = deck
       .filter((id) => id)
@@ -1805,40 +1855,6 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // Positionnement initial sur le chapitre en cours. `onLayout` donne la
   // hauteur, et c'est seulement une fois qu'on la connaît qu'on peut
   // sauter à la bonne page.
-  // ⚠️ TROISIÈME écriture de ce saut — les deux précédentes dépendaient
-  // d'un MINUTAGE et ont fini par retomber en panne :
-  //   1. `onLayout` du ScrollView : les pages n'existaient pas encore,
-  //      le contenu mesurait 0 et la position était ramenée à 0.
-  //   2. `onLayout` de la page du chapitre : ne se redéclenche PAS au
-  //      retour d'un combat (la mise en page n'a pas changé), donc on
-  //      revenait en haut de la carte.
-  //
-  // Ici le saut est piloté par un EFFET qui observe la hauteur de page,
-  // le chapitre visé et un jeton. Plus aucune course : dès que la
-  // hauteur est connue, les pages sont rendues (elles ne le sont que
-  // dans ce cas), donc le contenu existe forcément.
-  const doJump = (y) => {
-    // `Animated.ScrollView` transmet sa ref au ScrollView réel dans les
-    // versions récentes, mais l'ancienne API l'enveloppait derrière
-    // `getNode()`. On accepte les deux : un `scrollTo` introuvable
-    // ramènerait silencieusement le joueur en haut de la carte.
-    const sv = mapScrollRef.current;
-    const target = sv && (typeof sv.scrollTo === 'function' ? sv : sv.getNode && sv.getNode());
-    if (!target || typeof target.scrollTo !== 'function') return false;
-    target.scrollTo({ y, animated: false });
-    return true;
-  };
-
-  useEffect(() => {
-    if (mapAutoScrolledRef.current) return undefined;
-    if (!pageH || !chaptersToShow) return undefined;
-    // Une image posée après coup peut décaler le contenu : on retente à
-    // la frame suivante, c'est gratuit et ça couvre ce cas.
-    if (doJump(currentPageIndex * pageH)) mapAutoScrolledRef.current = true;
-    const id = requestAnimationFrame(() => doJump(currentPageIndex * pageH));
-    return () => cancelAnimationFrame(id);
-  }, [pageH, currentPageIndex, chaptersToShow, mapJumpToken]);
-
   // Page visible, déduite de la position de défilement à l'arrêt.
   const onScrollSettled = (e) => {
     const h = e.nativeEvent.layoutMeasurement.height;
