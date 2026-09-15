@@ -2830,22 +2830,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           capture). Un voile plein écran doit être frère du contenu, pas
           enfant d'une zone. */}
         {/* Félicitations à chaque défi d'éclosion validé. */}
+        {/* Volontairement MINUSCULE et SANS voile : ce n'est pas une
+            décision à prendre, juste une bonne nouvelle. Un voile plein
+            écran bloquerait le jeu pour rien et masquerait l'œuf, qui est
+            précisément ce que le joueur veut voir avancer. */}
         {questDone && (
-          <View style={styles.questDoneBackdrop}>
+          <TouchableOpacity
+            style={styles.questDoneWrap}
+            activeOpacity={0.9}
+            onPress={() => setQuestDone(null)}
+          >
             <View style={styles.questDoneCard}>
               <Text style={styles.questDoneIcon}>🎉</Text>
               <Text style={styles.questDoneTitle}>Défi réussi !</Text>
-              <Text style={styles.questDoneLabel}>
-                {questLabel(questDone, questTargets[questDone])}
-              </Text>
-              <Text style={styles.questDoneProgress}>
-                {completedQuestCount}/{activeQuestIds.length} avant l'éclosion
-              </Text>
-              <TouchableOpacity style={styles.questDoneBtn} onPress={() => setQuestDone(null)}>
-                <Text style={styles.questDoneBtnText}>Continuer</Text>
-              </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
         {/* Compte rendu des gains hors-ligne. Posé ICI, dans la couche
             du jeu, pour couvrir l'écran dès l'ouverture. */}
@@ -3950,24 +3949,22 @@ const styles = StyleSheet.create({
   // avoir plusieurs autour de l'œuf en même temps) et aux couleurs du
   // Diamant, pour qu'on comprenne d'où il vient.
   // ---- Félicitations de défi ----
-  questDoneBackdrop: {
+  // Pas de fond sombre : le conteneur est transparent, seule la petite
+  // carte est visible. Il reste plein écran uniquement pour CENTRER la
+  // carte, et se referme au premier appui.
+  questDoneWrap: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 58,
-    backgroundColor: 'rgba(4,8,16,0.78)', alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
   questDoneCard: {
-    width: '80%', maxWidth: 330, alignItems: 'center',
-    backgroundColor: COLORS.panel, borderRadius: 18, padding: 20,
+    alignItems: 'center',
+    paddingVertical: 14, paddingHorizontal: 26,
+    backgroundColor: 'rgba(11,17,32,0.96)', borderRadius: 16,
     borderWidth: 1.5, borderColor: '#34d399',
+    shadowColor: '#34d399', shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 0 },
   },
-  questDoneIcon: { fontSize: 34 },
-  questDoneTitle: { color: '#34d399', fontSize: 19, fontWeight: '900', marginTop: 6 },
-  questDoneLabel: { color: COLORS.text, fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 8 },
-  questDoneProgress: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 10 },
-  questDoneBtn: {
-    marginTop: 16, alignSelf: 'stretch', alignItems: 'center',
-    backgroundColor: '#34d399', borderRadius: 12, paddingVertical: 11,
-  },
-  questDoneBtnText: { color: '#06281c', fontSize: 14, fontWeight: '900' },
+  questDoneIcon: { fontSize: 30 },
+  questDoneTitle: { color: '#34d399', fontSize: 18, fontWeight: '900', marginTop: 4 },
 
   // ---- Compte rendu des gains hors-ligne ----
   offlineBackdrop: {

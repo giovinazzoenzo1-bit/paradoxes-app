@@ -683,6 +683,15 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   // devant (slot 0), les autres remplissent les slots 1 et 2.
   const playerOrder = [activeIndex, ...fighters.map((_, i) => i).filter((i) => i !== activeIndex)];
 
+  // Dégâts AFFICHÉS d'une attaque, à l'échelle du niveau du combattant.
+  // Utilisée par le bouton ET par le panneau de détail : deux calculs
+  // séparés finiraient tôt ou tard par se contredire.
+  const degatsAffiches = (skill) => Math.max(1, Math.round(
+    skill.isBasic
+      ? skill.damage
+      : scaledSkillDamage(skill, activeFighter.creature, activeFighter.stats.attack)
+  ));
+
   const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir, elemColor }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
@@ -890,7 +899,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               le répéter ici. */}
           <Text style={styles.skillInfoLine}>
             {activeFighter.creature.stages[0].name} utilise {skillInfo.name} et inflige{' '}
-            {skillInfo.damage} dégâts{skillInfo.aoe ? ' à TOUS les ennemis' : ''}.
+            {degatsAffiches(skillInfo)} dégâts{skillInfo.aoe ? ' à TOUS les ennemis' : ''}.
           </Text>
           {/* L'affinité est lue sur les PASTILLES colorées des
               adversaires, pas répétée ici. */}
@@ -954,8 +963,15 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
                   disabled={!canAfford}
                 >
                   <Text style={styles.skillBtnName} numberOfLines={2}>{skill.name}</Text>
+                  {/* ⚠️ Dégâts MIS À L'ÉCHELLE du niveau, pas la valeur de
+                      base. Le bouton affichait `skill.damage` brut : une
+                      créature niveau 20 annonçait donc les mêmes chiffres
+                      qu'au niveau 1, alors qu'elle frappe bien plus fort.
+                      On réutilise `scaledSkillDamage`, la FONCTION MÊME
+                      qui sert au calcul du coup — impossible que
+                      l'affichage et les dégâts divergent. */}
                   <Text style={styles.skillBtnDamage}>
-                    {skill.damage} dégâts{skill.aoe ? ' · ZONE' : ''}
+                    {degatsAffiches(skill)} dégâts{skill.aoe ? ' · ZONE' : ''}
                   </Text>
                   {/* Rien à afficher pour une attaque normale : elles
                       sont toutes gratuites, le préciser est du bruit.

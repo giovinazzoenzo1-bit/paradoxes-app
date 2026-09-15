@@ -86,7 +86,7 @@ export const QUEST_SEQUENCE = [
     // Ramené de 140 000 à 100 000 (14/09) : trop élevé pour le niveau
     // réel du joueur à ce stade du cycle.
     { id: 'seq_hold100k', icon: '🏦', metric: 'coins', target: 100000, mode: 'absolute',
-      label: () => 'Aie 100 000 pièces en réserve' },
+      label: () => 'Accumule 100 000 pièces en réserve' },
     { id: 'seq_passive50', icon: '📈', metric: 'passiveIncome', target: 70, mode: 'absolute',
       label: () => 'Atteins 70 pièces par seconde en auto-clic' },
   ],
@@ -143,7 +143,7 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', target: 5, mode: 'absolute',
       label: () => 'Monte Poigne Ancienne au niveau 5' },
     { id: 'seq_hold1M', icon: '🏦', metric: 'coins', target: 1400000, mode: 'absolute',
-      label: () => 'Aie 1,4 million de pièces en réserve' },
+      label: () => 'Accumule 1,4 million de pièces en réserve' },
     { id: 'seq_evolve1', icon: '🧬', metric: 'maxEvolutionTier', target: 1, mode: 'absolute',
       label: () => 'Fais évoluer une créature au palier 1' },
   ],
@@ -161,7 +161,7 @@ export const QUEST_SEQUENCE = [
   // --- Cycle 9 : profondeur ---
   [
     { id: 'seq_hold10M', icon: '🏦', metric: 'coins', target: 14000000, mode: 'absolute',
-      label: () => 'Aie 14 millions de pièces en réserve' },
+      label: () => 'Accumule 14 millions de pièces en réserve' },
     { id: 'seq_croc10', icon: '🪨', metric: 'upgrade:crocBouldog', target: 10, mode: 'absolute',
       label: () => 'Monte Croc de Bouldog au niveau 10' },
     { id: 'seq_fuse2', icon: '🔮', metric: 'runeFused', target: 3, mode: 'delta',
@@ -172,7 +172,7 @@ export const QUEST_SEQUENCE = [
   // --- Cycle 10 : seconde Ascension, dernier cycle scripté ---
   [
     { id: 'seq_hold50M', icon: '🏦', metric: 'coins', target: 70000000, mode: 'absolute',
-      label: () => 'Aie 70 millions de pièces en réserve' },
+      label: () => 'Accumule 70 millions de pièces en réserve' },
     // Remplacé pour la même raison : le Veilleur est plafonné à 10.
     { id: 'seq_veilleur20', icon: '🪄', metric: 'tapUpgrade:tap2', target: 5, mode: 'absolute',
       label: () => 'Monte Gantelet Runique au niveau 5' },

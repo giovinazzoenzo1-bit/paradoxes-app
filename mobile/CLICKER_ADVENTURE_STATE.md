@@ -921,6 +921,50 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Correctifs du 14/09 (4)
+
+### ⚠️ Fenêtres plein écran : la règle
+
+Le compte rendu hors-ligne et les félicitations de défi avaient été
+posés DANS `tapZone`. Leur `position: absolute` était donc bornée par ce
+conteneur : le voile ne couvrait qu'une bande de l'écran et la carte
+apparaissait décalée.
+
+**Règle** : un voile plein écran doit être **frère du contenu**, à la
+racine de l'écran — jamais enfant d'une zone.
+
+### Félicitations : petite bulle, sans voile
+
+Réduite à 🎉 + « Défi réussi ! », **sans fond sombre**. Le conteneur
+reste plein écran uniquement pour CENTRER la bulle, et se referme au
+premier appui.
+
+Ce n'est pas une décision à prendre, juste une bonne nouvelle : un voile
+bloquerait le jeu pour rien et masquerait l'œuf, que le joueur veut
+justement voir avancer. (Son à ajouter plus tard.)
+
+### ⚠️ Dégâts affichés qui ne suivaient pas le niveau
+
+Les boutons d'attaque affichaient `skill.damage`, la valeur de BASE. Une
+créature niveau 40 annonçait donc les mêmes chiffres qu'au niveau 1 :
+
+| Niveau | Affiché avant | Réel |
+|---|---|---|
+| 1 | 2/3/5/11 | 2/3/5/11 |
+| 20 | 2/3/5/11 | **5/8/13/29** |
+| 40 | 2/3/5/11 | **8/12/20/44** |
+
+Corrigé en réutilisant `scaledSkillDamage`, **la fonction même qui sert
+au calcul du coup** — l'affichage ne peut donc plus diverger des dégâts.
+
+⚠️ Le bouton ET le panneau de détail passent par une seule fonction
+(`degatsAffiches`). Deux calculs séparés finiraient par se contredire.
+
+### Libellés
+
+« Aie N pièces en réserve » → « **Accumule** N pièces en réserve »
+(4 défis concernés).
+
 ## Réglages du 14/09 (3)
 
 | Changement | Détail |
