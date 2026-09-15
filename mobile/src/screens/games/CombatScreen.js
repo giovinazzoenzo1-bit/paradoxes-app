@@ -56,7 +56,9 @@ import {
   GUARDIAN_SHIELD_RATIO,
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
+  guardianStats,
 } from '../../games/clicker/combatLogic';
+import { GUARDIAN_BASE_LEVEL } from '../../games/clicker/incubatorLogic';
 
 // Couleurs d'affinité, communes à la flèche de visée et aux pastilles.
 const ELEM_COLORS = { fort: '#3ddc84', neutre: '#ffb340', faible: '#ff5a4a' };
@@ -195,7 +197,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 
   const [opponents, setOpponents] = useState(() =>
     opponentTeamCreatures.map((creature) => {
-      const stats = statsForOpponentCreatureTyped(creature, levelNumber);
+      // Le Gardien passe par `guardianStats` : PV du PREMIER réduits de
+      // 30 %, dégâts relevés de 15 % à tous les niveaux.
+      const stats = creature.boss
+        ? guardianStats(levelNumber, GUARDIAN_BASE_LEVEL)
+        : statsForOpponentCreatureTyped(creature, levelNumber);
       return { creature, stats, hp: stats.hp, mana: 0 };
     })
   );

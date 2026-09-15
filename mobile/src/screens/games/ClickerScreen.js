@@ -77,6 +77,7 @@ import {
   migrateCreatureId,
   RARITY_BADGE_LETTER,
   trustedOfflineSeconds,
+  OFFLINE_CAP_SECONDS,
 } from '../../games/clicker/clickerLogic';
 import {
   nextQuestSet,
@@ -282,6 +283,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // ⚠️ Déclarée ICI, au-dessus de l'effet de chargement qui la lit — elle
   // était plus bas et provoquait un accès avant initialisation.
   const clockMaxRef = useRef(0);
+  // Compte rendu des gains hors-ligne : { amount, seconds } ou null.
+  const [offlineReport, setOfflineReport] = useState(null);
+  const [offlineAdLoading, setOfflineAdLoading] = useState(false);
+  const [offlineDoubled, setOfflineDoubled] = useState(false);
   const [boss, setBoss] = useState(null);
   const bossRef = useRef(null);
   bossRef.current = boss;
@@ -789,6 +794,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           const offline = Math.round(offlineEarnings(offlineIncome, elapsed));
           setCoins((saved.coins || 0) + offline);
           setTotalEarned((saved.totalEarned || 0) + offline);
+          // Compte rendu montré au joueur. Seuil à 1 pièce : inutile de
+          // l'interrompre pour un gain nul (session très courte, ou
+          // horloge reculée).
+          if (offline > 0) {
+            setOfflineReport({ amount: offline, seconds: Math.min(elapsed, OFFLINE_CAP_SECONDS) });
+          }
           setTapPower(saved.tapPower || 1);
           // Migration des identifiants renommés (créatures d'origine
           // remplacées par des versions Gemini) — sans ça, une sauvegarde
@@ -1326,6 +1337,26 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [mainAdLoading, setMainAdLoading] = useState(false);
   const mainAdTimerRef = useRef(null);
   useEffect(() => () => { if (mainAdTimerRef.current) clearTimeout(mainAdTimerRef.current); }, []);
+  // Double les gains hors-ligne contre une pub. Le montant est celui
+  // DÉJÀ crédité : on en ajoute autant.
+  const doubleOfflineWithAd = () => {
+    if (offlineAdLoading || offlineDoubled || !offlineReport) return;
+    setOfflineAdLoading(true);
+    setTimeout(() => {
+      setOfflineAdLoading(false);
+      setOfflineDoubled(true);
+      const bonus = offlineReport.amount;
+      setCoins((c) => c + bonus);
+      setTotalEarned((t) => t + bonus);
+      trackEvent('offlineDoubleAd', 1);
+    }, 1000);
+  };
+
+  const closeOfflineReport = () => {
+    setOfflineReport(null);
+    setOfflineDoubled(false);
+  };
+
   const handleMainEggVideo = () => {
     if (mainAdLoading || !mainEgg || !incubatorCanWatchVideo(mainEgg)) return;
     setMainAdLoading(true);
@@ -2484,7 +2515,38 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   enfants — elles captent leur propre appui sans jamais
                   entrer en conflit avec le tap de l'œuf en dessous. */}
               {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
-              {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
+              {/* Compte rendu des gains hors-ligne. Posé ICI, dans la couche
+              du jeu, pour couvrir l'écran dès l'ouverture. */}
+          {offlineReport && (
+            <View style={styles.offlineBackdrop}>
+              <View style={styles.offlineCard}>
+                <Text style={styles.offlineTitle}>Pendant ton absence</Text>
+                <Text style={styles.offlineDuration}>
+                  {Math.floor(offlineReport.seconds / 3600)} h {Math.round((offlineReport.seconds % 3600) / 60)} min de production
+                </Text>
+                <Text style={styles.offlineAmount}>
+                  💰 {formatNum(offlineReport.amount * (offlineDoubled ? 2 : 1))}
+                </Text>
+                {offlineDoubled && <Text style={styles.offlineDoubledTag}>Doublé ✓</Text>}
+                {!offlineDoubled && (
+                  <TouchableOpacity
+                    style={[styles.offlineAdBtn, offlineAdLoading && styles.offlineAdBtnLoading]}
+                    onPress={doubleOfflineWithAd}
+                    disabled={offlineAdLoading}
+                  >
+                    {offlineAdLoading
+                      ? <ActivityIndicator size="small" color="#241a00" />
+                      : <Text style={styles.offlineAdBtnText}>📺 Doubler avec une pub</Text>}
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.offlineCloseBtn} onPress={closeOfflineReport}>
+                  <Text style={styles.offlineCloseText}>{offlineDoubled ? 'Continuer' : 'Récupérer'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
               {/* Diamants d'Offrande : autant que d'Offrandes faites, ils
                   ne disparaissent jamais tant qu'on ne les ramasse pas. */}
               {pendingOfferings.map((o) => (
@@ -3812,6 +3874,29 @@ const styles = StyleSheet.create({
   // Diamant d'Offrande : plus petit que les autres bulles (il peut y en
   // avoir plusieurs autour de l'œuf en même temps) et aux couleurs du
   // Diamant, pour qu'on comprenne d'où il vient.
+  // ---- Compte rendu des gains hors-ligne ----
+  offlineBackdrop: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 60,
+    backgroundColor: 'rgba(4,8,16,0.82)', alignItems: 'center', justifyContent: 'center',
+  },
+  offlineCard: {
+    width: '82%', maxWidth: 340, alignItems: 'center',
+    backgroundColor: COLORS.panel, borderRadius: 18, padding: 20,
+    borderWidth: 1.5, borderColor: COLORS.action,
+  },
+  offlineTitle: { color: COLORS.text, fontSize: 17, fontWeight: '900' },
+  offlineDuration: { color: COLORS.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
+  offlineAmount: { color: COLORS.action, fontSize: 30, fontWeight: '900', marginTop: 12 },
+  offlineDoubledTag: { color: '#34d399', fontSize: 13, fontWeight: '800', marginTop: 4 },
+  offlineAdBtn: {
+    marginTop: 16, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.action, borderRadius: 12, paddingVertical: 11, minHeight: 42,
+  },
+  offlineAdBtnLoading: { opacity: 0.75 },
+  offlineAdBtnText: { color: '#241a00', fontSize: 14, fontWeight: '900' },
+  offlineCloseBtn: { marginTop: 10, paddingVertical: 8, paddingHorizontal: 18 },
+  offlineCloseText: { color: COLORS.muted, fontSize: 13, fontWeight: '800' },
+
   offeringBubble: {
     width: 42, height: 42, borderRadius: 21, backgroundColor: '#10304a',
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#5ad1ff',

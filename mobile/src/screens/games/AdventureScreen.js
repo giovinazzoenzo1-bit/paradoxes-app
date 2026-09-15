@@ -1600,11 +1600,20 @@ function EnergyBadge({ energy, energyUpdatedAt }) {
 
 // Explication du système d'éléments. Volontairement COURTE : le joueur
 // l'ouvre en cours de partie, pas pour lire un manuel.
+// Mémorise que l'aide sur les éléments a déjà été montrée.
+const ELEM_HELP_SEEN_KEY = 'adventure:elemHelpSeen:v1';
+
 function ElementHelpOverlay({ onClose }) {
   return (
     <View style={styles.elemHelpBackdrop}>
       <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
       <View style={styles.elemHelpCard}>
+        {/* Retour en HAUT À DROITE (demande explicite) : à la première
+            ouverture, le joueur découvre l'écran et doit voir tout de
+            suite comment en sortir. */}
+        <TouchableOpacity style={styles.elemHelpBack} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Text style={styles.elemHelpBackText}>✕</Text>
+        </TouchableOpacity>
         <Text style={styles.elemHelpTitle}>Affinités élémentaires</Text>
         <Text style={styles.elemHelpLine}>
           Attaquer un élément que le tien domine inflige <Text style={styles.elemHelpStrong}>+30 %</Text> de dégâts.
@@ -1711,6 +1720,20 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
   const [elemHelpOpen, setElemHelpOpen] = useState(false);
+  // Ouvert AUTOMATIQUEMENT à la toute première visite de la carte : les
+  // affinités décident des combats, un joueur qui les découvre après
+  // coup a déjà perdu des étoiles. Mémorisé, donc une seule fois.
+  useEffect(() => {
+    let vivant = true;
+    AsyncStorage.getItem(ELEM_HELP_SEEN_KEY)
+      .then((vu) => {
+        if (!vivant || vu) return;
+        setElemHelpOpen(true);
+        AsyncStorage.setItem(ELEM_HELP_SEEN_KEY, '1').catch(() => {});
+      })
+      .catch(() => {});
+    return () => { vivant = false; };
+  }, []);
 
   // Replacement au retour d'un combat : on réarme simplement le garde,
   // le saut se refera au prochain `onLayout` du défilement.
@@ -2942,6 +2965,14 @@ const styles = StyleSheet.create({
   elemHelpStrong: { color: '#3ddc84', fontWeight: '900' },
   elemHelpWeak: { color: '#ff5a4a', fontWeight: '900' },
   elemHelpFoot: { color: COLORS.muted, fontSize: 11, fontWeight: '600', lineHeight: 16, marginBottom: 12 },
+  elemHelpBack: {
+    position: 'absolute', top: 8, right: 10, zIndex: 5,
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)',
+  },
+  elemHelpBackText: { color: COLORS.text, fontSize: 15, fontWeight: '900' },
   elemHelpClose: {
     alignSelf: 'center', paddingVertical: 9, paddingHorizontal: 26,
     borderRadius: 12, backgroundColor: COLORS.action,

@@ -140,6 +140,39 @@ export function opponentTeamSize(levelNumber) {
 // : elles se calent sur le niveau du gardien, exactement comme un
 // adversaire d'Aventure. Le profil PV/ATQ est celui d'un défenseur —
 // c'est un mur qu'on doit franchir, pas un tueur.
+// Le PREMIER gardien était trop long à abattre : ses PV sont réduits de
+// 30 %. Uniquement le premier — les suivants restent à pleine valeur,
+// c'est une rampe d'entrée, pas un affaiblissement général.
+export const GUARDIAN_FIRST_HP_REDUCTION = 0.3;
+// Dégâts relevés à TOUS les niveaux : le combat dure plus longtemps
+// depuis les 2 manches, il doit aussi se faire sentir.
+//
+// ⚠️ Valeur 1,2 pour un effet RÉEL de +11 %, et non 1,15.
+//
+// Les dégâts du gardien valent 1 à 6 points : chacun est arrondi à
+// l'entier, ce qui absorbe les petits pourcentages. Mesuré sur 5 niveaux
+// de gardien, l'écart réellement obtenu ne prend que des valeurs
+// discrètes : 1,15 → +6 %, 1,2 → +11 %, 1,25 → +20 %. Il n'existe pas de
+// réglage donnant exactement +15 %, 1,2 en est le plus proche par le
+// dessous.
+export const GUARDIAN_DAMAGE_BOOST = 1.2;
+
+// Stats du Gardien : la formule commune, plus les deux ajustements
+// ci-dessus. `baseLevel` est le niveau du tout premier gardien.
+export function guardianStats(levelNumber, baseLevel) {
+  const st = statsForOpponentCreatureTyped(GUARDIAN_CREATURE, levelNumber);
+  const premier = baseLevel != null && levelNumber <= baseLevel;
+  return {
+    ...st,
+    hp: Math.max(1, Math.round(st.hp * (premier ? 1 - GUARDIAN_FIRST_HP_REDUCTION : 1))),
+    // ⚠️ PAS d'arrondi ici. La stat d'attaque du gardien vaut 2 ou 3 :
+    // arrondir absorbait entièrement le +15 % (2 × 1,15 = 2,3 → 2). Or
+    // les dégâts réels valent `compétence × attaque / attaque de base`,
+    // donc une attaque décimale propage bien le bonus jusqu'au coup.
+    attack: st.attack * GUARDIAN_DAMAGE_BOOST,
+  };
+}
+
 export const GUARDIAN_SHIELD_RATIO = 0.4;   // bouclier = 40 % des PV max
 export const GUARDIAN_PHASE1_HP_LOSS = 0.5; // la manche 1 s'arrête à -50 % PV
 export const GUARDIAN_PHASES = 2;
@@ -345,8 +378,17 @@ export function elementRelation(attackerElement, defenderElement) {
 //
 // Le seuil de rapidité dépend du NOMBRE d'adversaires, sinon un niveau
 // à 3 ennemis serait mécaniquement plus dur à noter qu'un niveau à 1.
+// Assoupli de `2n+1` à `2n+2` le 14/09 : 3 étoiles étaient trop dures.
+//
+// Mesuré sur 9 niveaux, par profil de joueur :
+//   2n+1 : rapide AVEC avantage élémentaire 9/9, mais rapide SEUL 4/9 —
+//          il fallait les DEUX, d'où la frustration.
+//   2n+2 : rapide seul 8/9, joueur moyen 8/9, LENT 4/9.
+//   2n+3 : lent 8/9 — l'étoile ne se mérite plus.
+// `2n+2` récompense donc jouer vite OU avec l'avantage, sans exiger les
+// deux, tout en restant hors de portée d'un jeu approximatif.
 export function maxRoundsForThreeStars(opponentCount) {
-  return 2 * Math.max(1, opponentCount) + 1;
+  return 2 * Math.max(1, opponentCount) + 2;
 }
 
 export function starsForBattle(stats, opponentCount) {

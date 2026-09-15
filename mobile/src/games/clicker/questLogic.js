@@ -76,8 +76,9 @@ export const QUEST_SEQUENCE = [
   ],
   // --- Cycle 3 : pouvoirs, Sanctuaire, revenu passif (5 défis) ---
   [
-    { id: 'seq_power5', icon: '✨', metric: 'powerActivated', target: 7, mode: 'delta',
-      label: () => 'Active 7 fois un pouvoir de créature' },
+    // Ramené de 7 à 5 (14/09) : trop long pour ce moment du cycle.
+    { id: 'seq_power5', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
+      label: () => 'Active 5 fois un pouvoir de créature' },
     { id: 'seq_adv_c1l10', icon: '⚔️', metric: 'advLevelReached', target: 10, mode: 'absolute',
       label: () => 'Termine le chapitre 1, niveau 10' },
     { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', target: 10, mode: 'absolute',

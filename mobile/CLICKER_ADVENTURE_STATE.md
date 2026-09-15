@@ -921,6 +921,54 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Réglages du 14/09 (2)
+
+| Changement | Valeur |
+|---|---|
+| PV du PREMIER gardien | **−30 %** (54 → 38, combat 7 → 5 tours) |
+| Dégâts du gardien, tous niveaux | **×1,2** |
+| Défi « active X pouvoirs » | 7 → **5** |
+| Seuil 3 étoiles | `2n+1` → **`2n+2`** |
+| Plafond hors-ligne | 2 h + compte rendu avec doublement par pub |
+| Aide sur les éléments | ouverte à la 1re visite, croix en haut à droite |
+
+### ⚠️ Le +15 % de dégâts n'est pas atteignable tel quel
+
+Les dégâts du gardien valent **1 à 6 points**, chacun arrondi à l'entier :
+les petits pourcentages disparaissent. Mesuré sur 5 niveaux, l'écart
+réellement obtenu ne prend que des valeurs discrètes :
+
+| Multiplicateur | Écart réel |
+|---|---|
+| 1,15 | +6 % |
+| **1,2** | **+11 %** |
+| 1,25 | +20 % |
+
+Aucun réglage ne donne +15 %. **1,2** est le plus proche par le dessous.
+
+⚠️ Même piège côté stat : appliquer le bonus à `attack` PUIS arrondir
+l'absorbait entièrement (2 × 1,15 = 2,3 → 2). L'attaque du gardien est
+donc laissée décimale, l'arrondi n'ayant lieu qu'au calcul du coup.
+
+### Seuil 3 étoiles — mesure par profil de joueur
+
+| Seuil | rapide + avantage | rapide seul | moyen | LENT |
+|---|---|---|---|---|
+| `2n+1` (avant) | 9/9 | **4/9** | 4/9 | 0/9 |
+| **`2n+2`** | 9/9 | **8/9** | 8/9 | **4/9** |
+| `2n+3` | 9/9 | 9/9 | 9/9 | 8/9 ❌ |
+
+Avant, il fallait la vitesse **ET** l'avantage élémentaire — d'où la
+frustration. `2n+2` récompense l'un OU l'autre, sans devenir gratuit :
+un joueur lent n'obtient encore que 4 niveaux sur 9.
+
+### Gains hors-ligne
+
+Compte rendu à l'ouverture (durée + montant), bouton « Doubler avec une
+pub », puis « Récupérer ». Le montant de base est DÉJÀ crédité : la pub
+en ajoute autant. Rien n'est affiché si le gain est nul (session courte
+ou horloge reculée).
+
 ## Correctifs du 14/09 (soir)
 
 ### ⚠️ Carte d'Aventure NOIRE jusqu'au premier glissement
