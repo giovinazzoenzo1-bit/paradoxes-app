@@ -3047,10 +3047,6 @@ const styles = StyleSheet.create({
 
   runeEquippedTag: { color: COLORS.action, fontSize: 8, fontWeight: '800', marginTop: 2 },
 
-  // `minWidth: 0` : sans ça, Yoga refuse de rétrécir un élément flex
-  // sous la largeur de son texte, et l'élément voisin (bouton, valeur)
-  // sort de la ligne. Même défaut que les boutons d'achat du Shop.
-
   // ---------- Profil de créature, calqué sur Monster Legends ----------
   // Aucune ScrollView : tout doit tenir. Les hauteurs se partagent
   // l'espace via `flex`, jamais via des valeurs fixes qui déborderaient

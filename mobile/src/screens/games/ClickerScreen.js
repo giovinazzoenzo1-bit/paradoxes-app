@@ -66,17 +66,6 @@ import {
   ritualReady,
   OFFRANDE_APPCOINS_COST,
   offrandeReward,
-  nextQuestSet,
-  pickQuestSet,
-  findQuest,
-  SEQUENCE_LENGTH,
-  QUEST_POOL,
-  QUEST_SET_SIZE,
-  questComplete,
-  questDetail,
-  resolveQuestTarget,
-  EGG_STAGES,
-  eggStageForCompletedCount,
   AUTOCLICKERS,
   autoClickerCost,
   totalAutoClickIncome,
@@ -88,6 +77,19 @@ import {
   migrateCreatureId,
   RARITY_BADGE_LETTER,
 } from '../../games/clicker/clickerLogic';
+import {
+  nextQuestSet,
+  pickQuestSet,
+  findQuest,
+  SEQUENCE_LENGTH,
+  QUEST_POOL,
+  QUEST_SET_SIZE,
+  questComplete,
+  questDetail,
+  resolveQuestTarget,
+  EGG_STAGES,
+  eggStageForCompletedCount,
+} from '../../games/clicker/questLogic';
 import { combatStatsForCreatureTyped } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -1652,6 +1654,31 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // vient justement de supprimer. Vaut `null` quand les 4 sont finies
   // (l'affichage bascule alors sur la barre d'éclosion).
   const currentChallengeId = activeQuestIds.find((id) => !isQuestDone(id)) || null;
+
+  // Dernier défi VALIDÉ du cycle, dans l'ordre d'affichage — c'est celui
+  // que le bouton « défi précédent » rouvre. On repart de la fin pour
+  // tomber sur celui qu'on vient de finir, pas sur le premier du cycle.
+  const devPreviousChallengeId =
+    [...activeQuestIds].reverse().find((id) => isQuestDone(id)) || null;
+
+  // ⚠️ Rouvrir un défi ne suffit PAS : si le défi avait été validé
+  // autrement que par l'outil de dev (le joueur l'a réellement accompli),
+  // il se revalidera aussitôt. On pose donc une nouvelle référence de
+  // progression pour ce défi — il redevient réellement à refaire.
+  const onDevPreviousChallenge = () => {
+    const target = devPreviousChallengeId;
+    if (eggPhase === 'hatching') setEggPhase('collecting');
+    if (!target) return;
+    setDevCompletedIds((prev) => prev.filter((id) => id !== target));
+    setQuestBaselines((prev) => ({ ...prev, [target]: questStats }));
+    // Les métriques de type RECORD (meilleure tenue de Transe, meilleur
+    // combo) ne se rejouent pas avec une simple nouvelle référence : un
+    // record déjà au-dessus de la cible revaliderait le défi aussitôt.
+    // Ce sont les deux de `RESET_ON_DRAW_METRICS` dans questLogic ; elles
+    // sont remises à zéro ici comme au tirage d'un cycle.
+    setMaxTranseHoldSec(0);
+    setMaxCombo(1);
+  };
   const currentChallenge = currentChallengeId
     ? questDetail(currentChallengeId, questStats, baselineFor(currentChallengeId), questTargets)
     : null;
@@ -2144,6 +2171,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               onPress={() => setDevCompletedIds((prev) => (prev.includes(currentChallengeId) ? prev : [...prev, currentChallengeId]))}
             >
               <Text style={styles.devSkipBtnText}>🛠️ Valider ce défi (dev)</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Outil de test symétrique : REVENIR au défi précédent, pour
+              retester un défi sans devoir recommencer une partie.
+              Deux cas à traiter, pas un seul :
+                - en phase de collecte, on retire le dernier défi validé ;
+                - une fois l'œuf en éclosion, il faut AUSSI repasser en
+                  collecte, sinon le bouton semble ne rien faire. */}
+          {(devPreviousChallengeId || eggPhase === 'hatching') && (
+            <TouchableOpacity style={styles.devBackBtn} onPress={onDevPreviousChallenge}>
+              <Text style={styles.devSkipBtnText}>◀️ Défi précédent (dev)</Text>
             </TouchableOpacity>
           )}
 
@@ -2887,11 +2926,13 @@ function ShopView({
                     </Text>
                   </View>
                   <TouchableOpacity
-                    style={[styles.shopBuyBtn, !canAfford && styles.actionBtnDisabled]}
+                    style={[styles.shopBuyBtn, !canAfford && styles.shopBuyBtnDisabled]}
                     onPress={() => onBuyAutoClicker(clicker.id)}
                     disabled={!canAfford}
                   >
-                    <Text style={styles.shopBuyBtnText} numberOfLines={1}>💰 {formatNum(cost)}</Text>
+                    <Text style={[styles.shopBuyBtnText, !canAfford && styles.shopBuyBtnTextDisabled]} numberOfLines={1}>
+                      💰 {formatNum(cost)}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -3498,6 +3539,13 @@ const styles = StyleSheet.create({
     paddingVertical: 5, paddingHorizontal: 12,
     borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
   },
+  // Même rangée, juste au-dessus : les deux outils de dev restent
+  // ensemble et n'empiètent pas sur le reste de l'écran.
+  devBackBtn: {
+    position: 'absolute', left: SCREEN_W * 0.258, top: SCREEN_H * (0.303 - TOP_BLOCK_SHIFT) - 45, zIndex: 3,
+    paddingVertical: 5, paddingHorizontal: 12,
+    borderRadius: 10, borderWidth: 1, borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.12)',
+  },
   devSkipBtnText: { color: '#b3a0ff', fontSize: 11, fontWeight: '800' },
   actionBtnLockedTap: { opacity: 0.45, borderStyle: 'dashed' },
   // Zone vide mesurée entre le bas de la pilule et le bord inférieur du
@@ -3951,6 +3999,17 @@ const styles = StyleSheet.create({
     alignItems: 'center', shadowColor: COLORS.action, shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
   },
   shopBuyBtnText: { color: '#241a00', fontSize: 13, fontWeight: '900' },
+  // ⚠️ NE PAS utiliser `actionBtnDisabled` (opacité 0,4) sur CE bouton.
+  // C'est le seul du Clicker à avoir un texte SOMBRE sur un fond CLAIR :
+  // dimmer l'ensemble fait tomber le contraste de 10,6:1 à **2,7:1**,
+  // sous le seuil de lisibilité, et le prix disparaît — d'où « on ne voit
+  // pas le prix » sur les paliers pas encore abordables (typiquement 1K
+  // à 10K en début de partie). Les autres boutons ont un texte CLAIR sur
+  // fond sombre, l'opacité ne les gêne pas.
+  //
+  // À la place : fond estompé mais texte doré plein. Mesuré : 8,0:1.
+  shopBuyBtnDisabled: { backgroundColor: 'rgba(245,197,66,0.18)', shadowOpacity: 0 },
+  shopBuyBtnTextDisabled: { color: COLORS.action },
 
   pickerTitle: { color: COLORS.text, fontSize: 17, fontWeight: '900', marginTop: 6 },
   pickerSubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 4, marginBottom: 14, textAlign: 'center' },
