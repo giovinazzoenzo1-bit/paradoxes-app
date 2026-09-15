@@ -210,15 +210,34 @@ export function disableClickerSave() {
   clickerSaveDisabled = true;
 }
 
+// Échelle de suffixes COMPLÈTE.
+//
+// ⚠️ L'ancienne version s'arrêtait à « T » : au-delà, elle renvoyait le
+// nombre entier suivi de T, soit `141976867225561694208.00T` — 27
+// caractères. Le coût du Pacte double à chaque niveau et les niveaux
+// sont illimités, donc ce cas est ATTEIGNABLE, et aucune largeur de
+// colonne ne peut l'absorber.
+//
+// Avec l'échelle ci-dessous, la chaîne la plus longue possible fait 7
+// caractères (« 142.00No »), ce qui tient dans les 84 dp réservés pour
+// le montant (mesuré : 77 dp nécessaires au pire cas).
+const NUM_SUFFIXES = ['', 'K', 'M', 'Md', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+
 function formatNum(n) {
   if (!Number.isFinite(n)) return '0'; // garde-fou : jamais NaN/Infinity affiché
   if (n < 1000) return Math.floor(n).toString();
-  if (n < 999_950) return (n / 1000).toFixed(1) + 'K'; // évite "1000.0K" juste sous 1M
-  if (n < 999_950_000) return (n / 1_000_000).toFixed(2) + 'M';
-  if (n < 999_950_000_000) return (n / 1_000_000_000).toFixed(2) + 'Md';
-  // Au-delà du milliard — nécessaire depuis l'ajout des auto-clics de
-  // palier 3 (jusqu'à 4 000 milliards de coût).
-  return (n / 1_000_000_000_000).toFixed(2) + 'T';
+  let v = n;
+  let tier = 0;
+  // `999.95` et non `1000` : sans ça on afficherait « 1000.0K » juste
+  // sous le million au lieu de passer au palier suivant.
+  while (v >= 999.95 && tier < NUM_SUFFIXES.length - 1) {
+    v /= 1000;
+    tier += 1;
+  }
+  // Au-delà de la dernière graduation, notation exponentielle plutôt
+  // qu'un nombre à rallonge.
+  if (v >= 999.95) return n.toExponential(1).replace('e+', 'e');
+  return v.toFixed(tier === 1 ? 1 : 2) + NUM_SUFFIXES[tier];
 }
 
 export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
@@ -2780,7 +2799,7 @@ function ShopView({
                 <Text style={styles.actionBtnText}>🔗 Pacte : {tapPower} → {tapPower + 1}</Text>
                 <Text style={styles.actionBtnSubtext}>+0,5 pièce par tap à chaque niveau (actuellement {tapDamage(tapPower).toFixed(1)})</Text>
               </View>
-              <Text style={styles.actionBtnCost}>💰 {formatNum(applyDiscount(tapPowerCost(tapPower)))}</Text>
+              <Text style={styles.actionBtnCost} numberOfLines={1}>💰 {formatNum(applyDiscount(tapPowerCost(tapPower)))}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -2796,7 +2815,7 @@ function ShopView({
                     : coreUpgradeRequirement('faveur')}
                 </Text>
               </View>
-              <Text style={styles.actionBtnCost}>{isUnlocked('faveur') ? `💰 ${formatNum(applyDiscount(critUpgradeCost(critLevel)))}` : '🔒'}</Text>
+              <Text style={styles.actionBtnCost} numberOfLines={1}>{isUnlocked('faveur') ? `💰 ${formatNum(applyDiscount(critUpgradeCost(critLevel)))}` : '🔒'}</Text>
             </TouchableOpacity>
 
             {/* Dégâts critiques : bouton distinct de la Faveur, qui ne
@@ -2814,7 +2833,7 @@ function ShopView({
                     : coreUpgradeRequirement('critDamage')}
                 </Text>
               </View>
-              <Text style={styles.actionBtnCost}>{isUnlocked('critDamage') ? `💰 ${formatNum(applyDiscount(critDamageUpgradeCost(critDamageLevel)))}` : '🔒'}</Text>
+              <Text style={styles.actionBtnCost} numberOfLines={1}>{isUnlocked('critDamage') ? `💰 ${formatNum(applyDiscount(critDamageUpgradeCost(critDamageLevel)))}` : '🔒'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -2830,7 +2849,7 @@ function ShopView({
                     : coreUpgradeRequirement('sanctuaire')}
                 </Text>
               </View>
-              <Text style={styles.actionBtnCost}>
+              <Text style={styles.actionBtnCost} numberOfLines={1}>
                 {!isUnlocked('sanctuaire') ? '🔒' : sanctuaryMaxed(sanctuaryLevel) ? '⭐ MAX' : `💰 ${formatNum(applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel)))}`}
               </Text>
             </TouchableOpacity>
@@ -2846,7 +2865,7 @@ function ShopView({
                   {isUnlocked('veilleur') ? '+5% de gains hors-ligne par niveau' : coreUpgradeRequirement('veilleur')}
                 </Text>
               </View>
-              <Text style={styles.actionBtnCost}>
+              <Text style={styles.actionBtnCost} numberOfLines={1}>
                 {!isUnlocked('veilleur') ? '🔒' : veilleurMaxed(veilleurLevel) ? '⭐ MAX' : `💰 ${formatNum(applyDiscount(veilleurUpgradeCost(veilleurLevel)))}`}
               </Text>
             </TouchableOpacity>
@@ -2888,7 +2907,7 @@ function ShopView({
                         : `Se débloque à ${TAP_UPGRADE_UNLOCK_LEVEL} niveaux de ${TAP_UPGRADES[index - 1].name}`}
                     </Text>
                   </View>
-                  <Text style={styles.actionBtnCost}>{unlocked ? `💰 ${formatNum(cost)}` : '🔒'}</Text>
+                  <Text style={styles.actionBtnCost} numberOfLines={1}>{unlocked ? `💰 ${formatNum(cost)}` : '🔒'}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -2913,7 +2932,7 @@ function ShopView({
                       {item.desc} par niveau{level > 0 ? ` · actuellement ${describeUpgradeTotal(item, level)}` : ''}
                     </Text>
                   </View>
-                  <Text style={styles.actionBtnCost}>💰 {formatNum(cost)}</Text>
+                  <Text style={styles.actionBtnCost} numberOfLines={1}>💰 {formatNum(cost)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -3927,7 +3946,24 @@ const styles = StyleSheet.create({
   actionBtnSubtext: { color: COLORS.muted, fontSize: 10, marginTop: 2 },
   // `flexShrink: 0` : le montant garde toujours sa largeur naturelle,
   // c'est le texte de gauche qui se replie.
-  actionBtnCost: { color: COLORS.action, fontSize: 13, fontWeight: '800', flexShrink: 0 },
+  // ⚠️ `flexShrink: 0` NE SUFFIT PAS — bug constaté et mesuré sur
+  // capture (14/09) : sur les lignes au libellé long (« Faveur des
+  // Esprits », « Dégâts critiques »), le montant était MESURÉ (il
+  // réservait bien ~92 px à droite de la bourse) mais JAMAIS PEINT.
+  // Vérifié au pixel : 1054 pixels dorés sur la ligne Sanctuaire contre
+  // 43 (bruit de compression) sur Faveur. Les lignes au libellé court
+  // (Pacte) affichaient pourtant un montant PLUS long (14.3K), donc ce
+  // n'était ni le format ni le nombre de caractères : c'est la
+  // négociation de largeur avec la colonne de gauche qui échouait.
+  //
+  // On supprime la négociation au lieu de la régler : largeur MINIMALE
+  // réservée d'office (assez pour « 💰 999.9K »), texte aligné à droite
+  // et sur une seule ligne. La colonne de gauche, déjà en
+  // `minWidth: 0 / flexShrink: 1`, se replie autour.
+  actionBtnCost: {
+    color: COLORS.action, fontSize: 13, fontWeight: '800',
+    flexShrink: 0, flexGrow: 0, minWidth: 84, textAlign: 'right',
+  },
   actionBtnDisabled: { opacity: 0.4 },
 
   // Paliers d'améliorations/auto-clics à débloquer (30/08).

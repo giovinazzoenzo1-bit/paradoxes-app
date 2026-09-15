@@ -921,6 +921,44 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## ⚠️ Montants invisibles en boutique (14/09) — 2e occurrence, autre cause
+
+Signalé deux fois. **Ce n'était PAS le même bug** que `6cff4ff`
+(débordement de ligne) : ce correctif est toujours en place et toutes les
+lignes de prix le portent.
+
+### Mesuré sur capture, pas supposé
+
+| Ligne | Libellé | Montant | Pixels dorés à droite |
+|---|---|---|---|
+| Pacte (estompée) | court | 14.3K | dessiné |
+| Sanctuaire | moyen | 168 | **1054** |
+| Faveur des Esprits | long | 1.3K | **43** (bruit JPEG) |
+| Dégâts critiques | long | 1.7K | **43** |
+
+Le montant réservait bien sa place (~92 px à droite de la bourse) mais
+n'était **jamais peint**. Ce n'était donc ni le format ni la longueur du
+nombre — une ligne au libellé COURT affichait un montant PLUS long
+(14.3K). C'est la **négociation de largeur** entre la colonne gauche et
+le montant qui échouait quand le libellé était long.
+
+⚠️ **`flexShrink: 0` ne suffit pas.** La négociation est supprimée, pas
+réglée : `minWidth: 84` + `textAlign: 'right'` + `numberOfLines={1}` sur
+les 7 montants. La colonne gauche (déjà `minWidth: 0 / flexShrink: 1`)
+se replie autour.
+
+### Second bug trouvé en vérifiant la largeur
+
+`formatNum` s'arrêtait au suffixe « T ». Au-delà elle renvoyait
+`141976867225561694208.00T` — **27 caractères**. Le coût du Pacte double
+à chaque niveau et les niveaux sont illimités : le cas est ATTEIGNABLE.
+Échelle complétée jusqu'à « Dc », puis notation exponentielle.
+
+⚠️ **La largeur réservée est justifiée par la mesure** : la chaîne la plus
+longue possible sur tout le domaine fait **8 caractères** (« 142.00No »),
+soit 77 dp — d'où les 84 dp. Vérifié en exécutant la fonction telle
+qu'elle est DANS le fichier, pas une copie.
+
 ## Rééquilibrage PvE (14/09) — fin du one-shot
 
 **Signalement** : un joueur bloqué au chapitre 1 niveau 9, « les
