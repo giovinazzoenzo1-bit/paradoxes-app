@@ -101,12 +101,16 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_adv_c2l5', icon: '⚔️', metric: 'advLevelReached', target: 15, mode: 'absolute',
       label: () => 'Termine le chapitre 2, niveau 5' },
   ],
-  // --- Cycle 5 : première Ascension ---
+  // --- Cycle 5 : première Ascension, et découverte des Runes ---
   [
+    // ⚠️ Placé au CINQUIÈME cycle, donc après la 4e éclosion : avant, le
+    // joueur n'a ni Griffes ni créatures à équiper, et une rune ne lui
+    // servirait à rien. Sert de tutoriel — une rune lui est offerte au
+    // tirage de ce cycle (voir PENDING_FREE_RUNE_KEY).
+    { id: 'seq_firstrune', icon: '🔮', metric: 'runeBought', target: 1, mode: 'delta',
+      label: () => 'Achète une Rune et équipe-la' },
     { id: 'seq_offering5', icon: '💎', metric: 'offering', target: 7, mode: 'delta',
       label: () => 'Fais 7 Offrandes' },
-    { id: 'seq_griffe5', icon: '🔥', metric: 'upgrade:griffeBraisillon', target: 5, mode: 'absolute',
-      label: () => 'Monte Griffe de Braisillon au niveau 5' },
     { id: 'seq_adv_c2l10', icon: '⚔️', metric: 'advLevelReached', target: 20, mode: 'absolute',
       label: () => 'Termine le chapitre 2, niveau 10' },
     { id: 'seq_ascend1', icon: '🌟', metric: 'ascension', target: 1, mode: 'delta',
@@ -673,6 +677,15 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
 }
 
 export const QUEST_SET_SIZE = 4;
+
+// Rune OFFERTE au joueur quand le défi qui introduit les Runes arrive.
+//
+// ⚠️ La clé vit ICI et pas dans un écran : le Clicker la dépose,
+// l'Aventure l'encaisse. La déclarer dans l'un des deux créait un CYCLE
+// d'imports (chacun important l'autre), exactement le piège évité en
+// extrayant ce fichier. `questLogic` est déjà importé par les deux, dans
+// un seul sens.
+export const PENDING_FREE_RUNE_KEY = 'adventure:pendingFreeRune:v1';
 
 // Tire 4 défis et résout leurs cibles d'un coup. Retourne
 // `{ ids, targets }` — les deux doivent être persistés ENSEMBLE : des

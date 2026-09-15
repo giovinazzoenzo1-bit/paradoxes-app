@@ -921,6 +921,50 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Réglages du 14/09 (3)
+
+| Changement | Détail |
+|---|---|
+| Veilleur | coût −20 % (total niveau 10 : 214 830 → **171 864**) |
+| Défi des Runes | nouveau, au **cycle 5** (après la 4e éclosion) |
+| Rune offerte | déposée au tirage de ce cycle |
+| Achat de Griffes en pièces | 100 🐾, prix ancré sur la production |
+
+### ⚠️ Prix des Griffes : ancré sur la PRODUCTION, pas sur un barème
+
+Les pièces croissent exponentiellement : un prix qui monterait lentement
+deviendrait trivial en une soirée.
+
+`griffesCoinCost = max(20 000, production/s × 1200) × 1,25^achats`
+
+Soit **20 minutes de production** — le même EFFORT à tous les stades,
+quelle que soit la taille des nombres. Le plancher de 20 000 fixe le
+premier achat, quand la production passive est encore nulle.
+
+| Stade | Coût de 100 Griffes |
+|---|---|
+| Tout début | 20 000 |
+| Après 1 h | 60 000 |
+| Mid game | 2 400 000 |
+| Avancé | 120 000 000 |
+
+⚠️ **Essai écarté** : un pourcentage du total gagné. Il donnait l'inverse
+de l'effet voulu — 203 min de production au début, 3 min en fin de jeu.
+
+### ⚠️ Cycle d'imports évité de justesse
+
+La clé de la rune offerte avait d'abord été déclarée dans
+`ClickerScreen`, que `AdventureScreen` a dû importer — or l'inverse
+existait déjà. **Cycle d'imports**, exactement le piège évité en
+extrayant `questLogic`.
+
+La clé vit donc dans `questLogic`, déjà importé par les deux écrans dans
+un seul sens. **Règle** : toute donnée partagée entre deux écrans se
+déclare dans un module de logique, jamais dans l'un des deux.
+
+⚠️ La rune offerte ne compte PAS comme `runeBought` : le défi doit rester
+à faire, elle sert à comprendre l'écran, pas à le valider.
+
 ## Réglages du 14/09 (2)
 
 | Changement | Valeur |

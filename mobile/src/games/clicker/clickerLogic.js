@@ -747,9 +747,37 @@ export function sanctuaryMaxed(level) {
 export function veilleurOfflineMultiplier(level) {
   return 1 + Math.min(VEILLEUR_MAX_LEVEL, Math.max(0, level || 0)) * 0.05;
 }
+// Coefficient ramené de 150 à 120 (−20 %) le 14/09 : le défi « Veilleur
+// niveau 10 » était trop long. Total pour atteindre le niveau 10 :
+// 214 830 → 171 864 pièces.
 export function veilleurUpgradeCost(level) {
-  return Math.round(150 * UPGRADE_COST_MULT * Math.pow(2, level));
+  return Math.round(120 * UPGRADE_COST_MULT * Math.pow(2, level));
 }
+// ---- Achat de Griffes avec les pièces du Clicker (14/09) ----
+//
+// Relie les deux économies : le Clicker finance l'Aventure.
+//
+// ⚠️ Le prix est ancré sur la PRODUCTION PASSIVE, pas sur un barème fixe.
+// Les pièces croissent exponentiellement : un prix qui monterait
+// lentement deviendrait trivial en une soirée. Ancré sur la production,
+// l'achat coûte le même EFFORT à tous les stades — 20 minutes de
+// production — quelle que soit la taille des nombres.
+//
+// Essai écarté : un pourcentage du total gagné. Il donnait l'inverse de
+// l'effet voulu (203 min de production au début, 3 min en fin de jeu).
+//
+// Le plancher de 20 000 fixe le premier achat, quand la production
+// passive est encore nulle.
+export const GRIFFES_COIN_PACK = 100;
+export const GRIFFES_COIN_FLOOR = 20000;
+export const GRIFFES_COIN_SECONDS = 20 * 60;
+export const GRIFFES_COIN_STEP = 1.25;   // chaque achat renchérit le suivant
+
+export function griffesCoinCost(passiveIncome, purchases) {
+  const base = Math.max(GRIFFES_COIN_FLOOR, (passiveIncome || 0) * GRIFFES_COIN_SECONDS);
+  return Math.round(base * Math.pow(GRIFFES_COIN_STEP, Math.max(0, purchases || 0)));
+}
+
 export function veilleurMaxed(level) {
   return (level || 0) >= VEILLEUR_MAX_LEVEL;
 }

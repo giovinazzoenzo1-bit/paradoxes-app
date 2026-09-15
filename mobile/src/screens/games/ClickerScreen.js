@@ -91,6 +91,7 @@ import {
   resolveQuestTarget,
   EGG_STAGES,
   eggStageForCompletedCount,
+  PENDING_FREE_RUNE_KEY,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -284,6 +285,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // était plus bas et provoquait un accès avant initialisation.
   const clockMaxRef = useRef(0);
   // Compte rendu des gains hors-ligne : { amount, seconds } ou null.
+  // Nombre de packs de Griffes déjà achetés en pièces : chaque achat
+  // renchérit le suivant. Sauvegardé, sinon le prix repartirait au
+  // plancher à chaque redémarrage.
+  const [griffesCoinBuys, setGriffesCoinBuys] = useState(0);
+  const griffesCoinBuysRef = useRef(0);
+  griffesCoinBuysRef.current = griffesCoinBuys;
   const [offlineReport, setOfflineReport] = useState(null);
   const [offlineAdLoading, setOfflineAdLoading] = useState(false);
   const [offlineDoubled, setOfflineDoubled] = useState(false);
@@ -932,6 +939,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setQuestBaselines(saved.questBaselines || {});
           setDevCompletedIds(saved.devCompletedIds || []);
           setDevReopenedIds(saved.devReopenedIds || []);
+          setGriffesCoinBuys(saved.griffesCoinBuys || 0);
           setLatchedQuestIds(saved.latchedQuestIds || []);
           setEggPhase(saved.eggPhase || 'collecting');
           setHatchTaps(saved.hatchTaps || 0);
@@ -1078,6 +1086,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // `Math.max` : il ne doit JAMAIS reculer, même si l'horloge recule
     // pendant que l'appli tourne.
     clockMax: Math.max(clockMaxRef.current || 0, Date.now() / 1000),
+    griffesCoinBuys: griffesCoinBuysRef.current,
   });
 
   // Sauvegarde immédiate à la sortie de l'écran. Annule d'abord le
@@ -2065,6 +2074,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const nextSet = nextQuestSet(nextIndex, activeQuestIdsRef.current, statsAtDraw);
     setActiveQuestIds(nextSet.ids);
     setQuestTargets(nextSet.targets);
+    // Rune OFFERTE au cycle qui introduit les Runes : le défi demande
+    // d'en acheter une, encore faut-il pouvoir découvrir à quoi ça sert.
+    // Les runes vivent dans l'Aventure, on dépose donc le dû dans une
+    // clé qu'elle encaisse à son ouverture — même canal que les Griffes.
+    if (nextSet.ids.includes('seq_firstrune')) {
+      AsyncStorage.setItem(PENDING_FREE_RUNE_KEY, '1').catch(() => {});
+    }
     setQuestBaseline(statsAtDraw);
     // Les chronomètres par défi repartent à zéro : chaque défi du
     // nouveau cycle démarrera le sien quand il deviendra courant.
@@ -2255,6 +2271,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       <AdventureScreen
         onSpendDiamonds={(cost) => spendSharedCoins(cost)}
         onAddDiamonds={(n) => addSharedCoins(n)}
+        // Dépense des PIÈCES du Clicker pour acheter des Griffes : c'est
+        // ici que vivent les pièces, l'Aventure ne peut pas y toucher
+        // elle-même.
+        onSpendCoins={async (cost) => {
+          if (coinsRef.current < cost) return false;
+          setCoins((c) => c - cost);
+          return true;
+        }}
+        passiveIncome={passiveIncome}
+        griffesCoinBuys={griffesCoinBuys}
+        onGriffesCoinBought={() => setGriffesCoinBuys((n) => n + 1)}
         diamonds={sharedCoins}
         owned={owned}
         deck={deck}

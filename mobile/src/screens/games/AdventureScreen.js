@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensio
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
+import { PENDING_FREE_RUNE_KEY } from '../../games/clicker/questLogic';
 import { CHAPTER_ROUTES } from './chapterRoutes';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -180,7 +181,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
 import CombatScreen from './CombatScreen';
 import { DeckPicker } from './DeckPicker';
-import { CREATURES, RARITY_LABEL, RARITY_COLOR, RARITY_BADGE_LETTER, stageForLevel, levelUpCost } from '../../games/clicker/clickerLogic';
+import {
+  CREATURES,
+  RARITY_LABEL,
+  RARITY_COLOR,
+  RARITY_BADGE_LETTER,
+  stageForLevel,
+  levelUpCost,
+  griffesCoinCost,
+  GRIFFES_COIN_PACK,
+} from '../../games/clicker/clickerLogic';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import {
   combatStatsForCreatureTyped,
@@ -292,7 +302,7 @@ function makeRuneId() {
 }
 
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, diamonds = 0 }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, passiveIncome = 0, griffesCoinBuys = 0, onGriffesCoinBought, diamonds = 0 }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
   // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
   // combiné à aspectRatio sur un élément position:'absolute' se rend
@@ -517,15 +527,34 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // ChapterMapScreen : c'est AdventureScreen qui détient l'énergie et
   // reçoit `onSpendDiamonds`. Placée plus bas, elle sortait en silence
   // faute de ces deux éléments (bug du 12/09).
+  // Deux façons d'obtenir des Griffes : les Diamants (premium) ou les
+  // pièces du Clicker. La seconde relie les deux économies — le Clicker
+  // finance l'Aventure — et son prix suit la PRODUCTION du joueur, donc
+  // le même effort à tous les stades.
+  const coutGriffesEnPieces = griffesCoinCost(passiveIncome, griffesCoinBuys);
+
+  const buyGriffesWithCoins = async () => {
+    if (!onSpendCoins) return;
+    const ok = await onSpendCoins(coutGriffesEnPieces);
+    if (!ok) {
+      Alert.alert('Pièces insuffisantes', `Il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`);
+      return;
+    }
+    setGriffes((g) => g + GRIFFES_COIN_PACK);
+    if (onGriffesCoinBought) onGriffesCoinBought();
+  };
+
   const buyGriffesWithDiamonds = () => {
     if (!onSpendDiamonds) return;
     Alert.alert(
-      'Échanger des Diamants',
-      `${GRIFFES_DIAMOND_COST} 💎 contre ${GRIFFES_PACK} 🐾 Griffes ?`,
+      'Obtenir des Griffes',
+      `💎 ${GRIFFES_DIAMOND_COST} Diamants → ${GRIFFES_PACK} 🐾\n`
+      + `💰 ${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces → ${GRIFFES_COIN_PACK} 🐾`,
       [
         { text: 'Annuler', style: 'cancel' },
+        { text: `💰 ${GRIFFES_COIN_PACK} Griffes`, onPress: buyGriffesWithCoins },
         {
-          text: 'Échanger',
+          text: `💎 ${GRIFFES_PACK} Griffes`,
           onPress: async () => {
             const ok = await onSpendDiamonds(GRIFFES_DIAMOND_COST);
             if (!ok) {
@@ -633,6 +662,25 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // les stats de combat (voir combatLogic.js/runeBonuses).
   // Les 3 achats RENVOIENT les runes tirées, pour que l'écran puisse les
   // montrer. Rien (undefined) si l'achat n'a pas eu lieu.
+  // Rune OFFERTE déposée par le Clicker quand le défi des Runes arrive.
+  // Encaissée à l'ouverture de l'Aventure, puis la clé est effacée pour
+  // ne jamais l'offrir deux fois.
+  //
+  // ⚠️ Ne compte PAS comme `runeBought` : le défi doit rester à faire,
+  // la rune offerte sert à comprendre l'écran, pas à le valider.
+  useEffect(() => {
+    let vivant = true;
+    AsyncStorage.getItem(PENDING_FREE_RUNE_KEY)
+      .then((du) => {
+        if (!vivant || !du) return;
+        AsyncStorage.removeItem(PENDING_FREE_RUNE_KEY).catch(() => {});
+        const type = RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)];
+        setOwnedRunes((prev) => [...prev, { id: makeRuneId(), type, level: 1, equippedCreatureId: null }]);
+      })
+      .catch(() => {});
+    return () => { vivant = false; };
+  }, []);
+
   const buyRandomRune = () => {
     if (griffes < RUNE_COST) return null;
     setGriffes((g) => g - RUNE_COST);
