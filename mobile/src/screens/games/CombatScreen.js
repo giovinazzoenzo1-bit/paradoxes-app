@@ -186,7 +186,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const startBossPhase2 = (maxHp) => {
     setPhaseBreak(true);
     phaseAnim.setValue(0);
-    // ⚠️ Durée calée sur la SÉQUENCE : 120 images à 12 i/s = 10 000 ms.
+    // ⚠️ Durée calée sur la SÉQUENCE : 100 images à 10 i/s = 10 000 ms.
     // L'apparition et la disparition sont prises DEDANS (300 + 9400 +
     // 300), sinon l'animation serait coupée avant la fin.
     Animated.sequence([
@@ -867,7 +867,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               alignItems: 'center',
             }}
           >
-            <GuardianRoar size={Math.round(SPRITE_BASE * GUARDIAN_SLOT.size)} />
+            <GuardianRoar height={Math.round(SPRITE_BASE * GUARDIAN_SLOT.size * 1.45)} />
             <Text style={styles.phaseBreakText}>LE GARDIEN SE RELÈVE</Text>
           </View>
         </Animated.View>
@@ -1145,28 +1145,8 @@ const GUARDIAN_ROAR_FRAMES = [
   require('../../../assets/creatures/gardien/rugissement/f097.png'),
   require('../../../assets/creatures/gardien/rugissement/f098.png'),
   require('../../../assets/creatures/gardien/rugissement/f099.png'),
-  require('../../../assets/creatures/gardien/rugissement/f100.png'),
-  require('../../../assets/creatures/gardien/rugissement/f101.png'),
-  require('../../../assets/creatures/gardien/rugissement/f102.png'),
-  require('../../../assets/creatures/gardien/rugissement/f103.png'),
-  require('../../../assets/creatures/gardien/rugissement/f104.png'),
-  require('../../../assets/creatures/gardien/rugissement/f105.png'),
-  require('../../../assets/creatures/gardien/rugissement/f106.png'),
-  require('../../../assets/creatures/gardien/rugissement/f107.png'),
-  require('../../../assets/creatures/gardien/rugissement/f108.png'),
-  require('../../../assets/creatures/gardien/rugissement/f109.png'),
-  require('../../../assets/creatures/gardien/rugissement/f110.png'),
-  require('../../../assets/creatures/gardien/rugissement/f111.png'),
-  require('../../../assets/creatures/gardien/rugissement/f112.png'),
-  require('../../../assets/creatures/gardien/rugissement/f113.png'),
-  require('../../../assets/creatures/gardien/rugissement/f114.png'),
-  require('../../../assets/creatures/gardien/rugissement/f115.png'),
-  require('../../../assets/creatures/gardien/rugissement/f116.png'),
-  require('../../../assets/creatures/gardien/rugissement/f117.png'),
-  require('../../../assets/creatures/gardien/rugissement/f118.png'),
-  require('../../../assets/creatures/gardien/rugissement/f119.png'),
 ];
-// ⚠️ 12 i/s, et la séquence couvre la vidéo ENTIÈRE (120 images).
+// ⚠️ 10 i/s, et la séquence couvre la vidéo ENTIÈRE (100 images).
 //
 // La source est à 24 i/s : échantillonner à 12 et rejouer à 12 conserve
 // la DURÉE RÉELLE (10 s), seule la finesse du mouvement baisse de
@@ -1175,11 +1155,16 @@ const GUARDIAN_ROAR_FRAMES = [
 // Deux erreurs corrigées ici : avoir coupé la vidéo à 1,5 s (on n'en
 // voyait qu'un bout), puis avoir baissé la cadence à 8 i/s, ce qui
 // donnait un RALENTI au lieu d'allonger l'animation.
-const GUARDIAN_ROAR_FPS = 12;
+const GUARDIAN_ROAR_FPS = 10;
+// Le canevas n'est PAS carré : la boîte de l'animation fait 939×699 dans
+// la vidéo. Forcée dans un carré, le personnage ne remplissait que 61 %
+// de la hauteur et paraissait minuscule et pâle. Au bon rapport, il en
+// occupe 94 %.
+const GUARDIAN_ROAR_RATIO = 269 / 200;
 
 
 // Joue la séquence UNE fois, puis reste sur la dernière image.
-function GuardianRoar({ size }) {
+function GuardianRoar({ height }) {
   const [frame, setFrame] = useState(0);
   useEffect(() => {
     const id = setInterval(() => {
@@ -1196,7 +1181,9 @@ function GuardianRoar({ size }) {
   return (
     <Image
       source={GUARDIAN_ROAR_FRAMES[frame]}
-      style={{ width: size, height: size }}
+      // Largeur DÉDUITE du rapport du canevas : un carré écraserait le
+      // personnage ou le laisserait flotter au milieu de vide.
+      style={{ width: Math.round(height * GUARDIAN_ROAR_RATIO), height }}
       resizeMode="contain"
     />
   );

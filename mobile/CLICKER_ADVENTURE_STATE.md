@@ -1071,8 +1071,20 @@ part avec (on ne garde que la plus grosse composante).
 chacune sur son propre contenu ferait sauter le personnage d'une image à
 l'autre.
 
-**Réglages retenus** : la vidéo ENTIÈRE, 120 images à 12 i/s en 224 px,
-palette de 64 couleurs, **4,1 Mo**.
+**Réglages retenus** : la vidéo ENTIÈRE, 100 images à 10 i/s, canevas
+**269×200** (PAS carré), palette de 64 couleurs, **6,5 Mo**.
+
+⚠️ **Le canevas CARRÉ était l'erreur.** La boîte de l'animation fait
+939×699 dans la vidéo (le personnage se déplace latéralement). Forcée
+dans un carré, sa hauteur tombait à 136 px sur 224 : il n'occupait que
+**61 %** du cadre et paraissait minuscule et délavé — d'où l'impression
+d'une opacité de 15 %. Au bon rapport, il en occupe **94 %**.
+
+⚠️ **Cadrage horizontal au centile 15-85** : mesuré, ça ne rogne que
+**0,23 %** du personnage (une pointe de ruban) et libère 19 % de pixels.
+
+Affichée à **1,45× la taille du sprite** du gardien (344×200 dp contre
+177), vérifié qu'elle reste dans l'écran.
 
 ⚠️ **Vitesse d'ORIGINE conservée.** La source est à 24 i/s :
 échantillonner à 12 et rejouer à 12 garde la durée réelle (10 s), seule
