@@ -27,6 +27,11 @@ const CREATURE_ART = {
     require('../../assets/creatures/caraploof/stage-1.png'),
     require('../../assets/creatures/caraploof/stage-2.png'),
   ],
+  ventis: [
+    require('../../assets/creatures/ventis/stage-0.png'),
+    require('../../assets/creatures/ventis/stage-1.png'),
+    require('../../assets/creatures/ventis/stage-2.png'),
+  ],
 };
 
 // Renvoie la source d'image du palier demandé, ou `null` si cette
