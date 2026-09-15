@@ -189,6 +189,7 @@ import {
   LEVELS_PER_CHAPTER,
   opponentForLevel,
   griffesReward,
+  chapterClearDiamonds,
   butinBonus,
   RUNE_BONUS_TABLE,
   canEvolve,
@@ -291,7 +292,7 @@ function makeRuneId() {
 }
 
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, diamonds = 0 }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, diamonds = 0 }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
   // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
   // combiné à aspectRatio sur un élément position:'absolute' se rend
@@ -576,6 +577,14 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   const handleLevelWon = (levelNumber, reward) => {
     setGriffes((g) => g + reward);
     trackEvent('battleWon', 1);
+    // Fin de chapitre : 10 Diamants, UNE SEULE FOIS. La condition
+    // `levelNumber === currentUnlockedLevelRef.current` garantit que
+    // c'est bien la première victoire sur ce niveau — sans elle, rejouer
+    // le niveau 10 en boucle serait une source infinie de Diamants.
+    const bonusDiamonds = chapterClearDiamonds(levelNumber);
+    if (bonusDiamonds > 0 && levelNumber === currentUnlockedLevelRef.current && onAddDiamonds) {
+      onAddDiamonds(bonusDiamonds);
+    }
     // Publie le niveau atteint pour que les défis de l'œuf (clicker)
     // puissent lire la progression d'Aventure. trackMax, pas trackEvent :
     // c'est un maximum, rejouer un niveau déjà battu ne doit pas le
@@ -1679,6 +1688,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // on en est (signalé le 12/09).
   const mapScrollRef = useRef(null);
   const mapAutoScrolledRef = useRef(false);
+  const [mapJumpToken, setMapJumpToken] = useState(0);
   // Hauteur d'une page = hauteur du défilement lui-même. MESURÉE : c'est
   // elle qui dicte l'espacement des niveaux ET le pas de pagination, les
   // deux doivent être rigoureusement identiques sinon les pages
@@ -1710,6 +1720,10 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   useEffect(() => {
     if (activeBattle) return;
     mapAutoScrolledRef.current = false;
+    // Le jeton force l'effet de saut à se rejouer : sans lui, ses
+    // dépendances (hauteur, index) n'ont pas changé au retour d'un
+    // combat et il ne se relancerait jamais.
+    setMapJumpToken((n) => n + 1);
   }, [activeBattle, currentUnlockedLevel]);
   // TOUJOURS appelé avant tout retour anticipé (règle des Hooks React) —
   // c'était placé après le "if (activeBattle) return" et faisait planter
@@ -1791,27 +1805,39 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   // Positionnement initial sur le chapitre en cours. `onLayout` donne la
   // hauteur, et c'est seulement une fois qu'on la connaît qu'on peut
   // sauter à la bonne page.
-  // ⚠️ Le saut est déclenché par le `onLayout` de la PAGE du chapitre
-  // courant, qui fournit directement son `y` dans le contenu.
+  // ⚠️ TROISIÈME écriture de ce saut — les deux précédentes dépendaient
+  // d'un MINUTAGE et ont fini par retomber en panne :
+  //   1. `onLayout` du ScrollView : les pages n'existaient pas encore,
+  //      le contenu mesurait 0 et la position était ramenée à 0.
+  //   2. `onLayout` de la page du chapitre : ne se redéclenche PAS au
+  //      retour d'un combat (la mise en page n'a pas changé), donc on
+  //      revenait en haut de la carte.
   //
-  // Les deux tentatives précédentes échouaient : dans le `onLayout` du
-  // ScrollView, les pages n'existaient pas encore (contenu de hauteur 0,
-  // position ramenée à 0) ; et `onContentSizeChange` dépendait de l'état
-  // `pageH` propagé au bon moment. Ici la page dit elle-même où elle
-  // est — aucune supposition, aucune course.
-  const jumpToCurrentChapter = (y) => {
-    if (mapAutoScrolledRef.current) return;
+  // Ici le saut est piloté par un EFFET qui observe la hauteur de page,
+  // le chapitre visé et un jeton. Plus aucune course : dès que la
+  // hauteur est connue, les pages sont rendues (elles ne le sont que
+  // dans ce cas), donc le contenu existe forcément.
+  const doJump = (y) => {
     // `Animated.ScrollView` transmet sa ref au ScrollView réel dans les
     // versions récentes, mais l'ancienne API l'enveloppait derrière
-    // `getNode()`. On accepte les deux : impossible de tester ici, et un
-    // `scrollTo` introuvable ramènerait silencieusement le joueur en
-    // haut de la carte.
+    // `getNode()`. On accepte les deux : un `scrollTo` introuvable
+    // ramènerait silencieusement le joueur en haut de la carte.
     const sv = mapScrollRef.current;
     const target = sv && (typeof sv.scrollTo === 'function' ? sv : sv.getNode && sv.getNode());
-    if (!target || typeof target.scrollTo !== 'function') return;
-    mapAutoScrolledRef.current = true;
+    if (!target || typeof target.scrollTo !== 'function') return false;
     target.scrollTo({ y, animated: false });
+    return true;
   };
+
+  useEffect(() => {
+    if (mapAutoScrolledRef.current) return undefined;
+    if (!pageH || !chaptersToShow) return undefined;
+    // Une image posée après coup peut décaler le contenu : on retente à
+    // la frame suivante, c'est gratuit et ça couvre ce cas.
+    if (doJump(currentPageIndex * pageH)) mapAutoScrolledRef.current = true;
+    const id = requestAnimationFrame(() => doJump(currentPageIndex * pageH));
+    return () => cancelAnimationFrame(id);
+  }, [pageH, currentPageIndex, chaptersToShow, mapJumpToken]);
 
   // Page visible, déduite de la position de défilement à l'arrêt.
   const onScrollSettled = (e) => {
@@ -1894,11 +1920,6 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
                   }),
                 },
               ]}
-              onLayout={
-                chapterNum === currentChapter
-                  ? (e) => jumpToCurrentChapter(e.nativeEvent.layout.y)
-                  : undefined
-              }
             >
               {/* Décor du chapitre. Posé avec une largeur ET une hauteur
                   explicites (jamais absoluteFill seul sur une Image :

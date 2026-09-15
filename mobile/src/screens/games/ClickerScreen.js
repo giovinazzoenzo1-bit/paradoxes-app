@@ -13,7 +13,7 @@ import AdventureScreen, { DEV_REFILL_ENERGY_KEY } from './AdventureScreen';
 import { useCoins } from '../../context/CoinsContext';
 import { useSettings } from '../../context/SettingsContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDaily, PENDING_GRIFFES_KEY, PENDING_CREATURES_KEY } from '../../context/DailyContext';
+import { useDaily, PENDING_GRIFFES_KEY, PENDING_CREATURES_KEY, PENDING_DIAMONDS_KEY } from '../../context/DailyContext';
 import {
   CREATURES,
   RARITY_LABEL,
@@ -223,6 +223,11 @@ export function disableClickerSave() {
 // le montant (mesuré : 77 dp nécessaires au pire cas).
 const NUM_SUFFIXES = ['', 'K', 'M', 'Md', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
 
+// Diamants d'Offrande en attente de ramassage. Clé PROPRE (pas celle du
+// clicker) : une récompense déjà payée ne doit pas pouvoir être perdue
+// par un incident sur la sauvegarde principale.
+const PENDING_OFFERINGS_KEY = 'clicker:pendingOfferings:v1';
+
 function formatNum(n) {
   if (!Number.isFinite(n)) return '0'; // garde-fou : jamais NaN/Infinity affiché
   if (n < 1000) return Math.floor(n).toString();
@@ -359,6 +364,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   useEffect(() => {
     (async () => {
       try {
+        // Diamants dus par les défis réclamés (quotidiens, hebdo,
+        // succès). Le Context ne peut pas les créditer lui-même : les
+        // Diamants vivent ici. On vide la clé APRÈS le crédit pour ne
+        // jamais payer deux fois.
+        const offRaw = await AsyncStorage.getItem(PENDING_OFFERINGS_KEY);
+        if (offRaw) {
+          const list = JSON.parse(offRaw);
+          if (Array.isArray(list)) setPendingOfferings(list);
+        }
+        const due = await AsyncStorage.getItem(PENDING_DIAMONDS_KEY);
+        const dueN = due ? parseInt(due, 10) || 0 : 0;
+        if (dueN > 0) {
+          await AsyncStorage.removeItem(PENDING_DIAMONDS_KEY);
+          addSharedCoins(dueN);
+        }
         const raw = await AsyncStorage.getItem(TAP_BOSS_STORAGE_KEY);
         if (raw) {
           const saved = JSON.parse(raw);
@@ -495,6 +515,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   tapUpgradesRef.current = tapUpgrades;
   const [comboCount, setComboCount] = useState(0); // niveau actuel de la Transe
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
+  // Diamants d'Offrande posés autour de l'œuf, EN ATTENTE de ramassage.
+  //
+  // ⚠️ Ils n'expirent JAMAIS et sont SAUVEGARDÉS : le joueur peut
+  // enchaîner 2, 3, 4 Offrandes puis les ramasser tranquillement, y
+  // compris après avoir fermé l'appli. C'est une récompense déjà payée
+  // (1 Diamant dépensé) — la perdre serait un vol.
+  const [pendingOfferings, setPendingOfferings] = useState([]);
+  const pendingOfferingsRef = useRef([]);
+  pendingOfferingsRef.current = pendingOfferings;
   const [ritualTarget, setRitualTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null — bulle "pub" (Rituel)
   const [autoClickers, setAutoClickers] = useState({}); // { esprit: 3, main: 1, ... }
   // Améliorations à débloquer, achetées une seule fois — liste d'ids
@@ -1646,9 +1675,49 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     spendSharedCoins(OFFRANDE_APPCOINS_COST).then((ok) => {
       if (!ok) return;
       trackEvent('offering', 1);
-      const reward = Math.round(gainCoins(offrandeReward(tapPowerRef.current)));
-      spawnPopup(`+${reward} 💎`, 110, 60);
+      // Le gain n'est PAS crédité tout de suite : il se dépose autour de
+      // l'œuf et attend d'être ramassé. Le montant est figé maintenant,
+      // au moment où le Diamant est dépensé.
+      const reward = offrandeReward(tapPowerRef.current);
+      setPendingOfferings((prev) => {
+        // Positions réparties autour de l'œuf. Pas de 150° et rayon qui
+        // grandit tous les 4 : paramètres CHOISIS PAR RECHERCHE, pas au
+        // jugé. Avec un pas de 72°, la 6e Offrande retombait exactement
+        // sur la 1re (72 × 5 = 360°). Mesuré sur 12 Offrandes : écart
+        // minimal de 15% de l'écran pour des bulles de 10,7% — aucune
+        // superposition possible, et tout reste dans l'écran.
+        const i = prev.length;
+        const angle = (i * 150 + 20) * (Math.PI / 180);
+        const ring = Math.floor(i / 4);
+        const rx = 24 + ring * 12;
+        const ry = 18 + ring * 9.6;
+        const next = [...prev, {
+          id: `off_${Date.now()}_${i}`,
+          reward,
+          leftPct: 50 + Math.cos(angle) * rx,
+          topPct: 46 + Math.sin(angle) * ry,
+        }];
+        savePendingOfferings(next);
+        return next;
+      });
     });
+  };
+
+  // Écriture immédiate : si l'appli se ferme juste après une Offrande,
+  // le Diamant posé doit être retrouvé au retour.
+  function savePendingOfferings(list) {
+    AsyncStorage.setItem(PENDING_OFFERINGS_KEY, JSON.stringify(list)).catch(() => {});
+  }
+
+  // Ramassage d'un Diamant d'Offrande.
+  const claimOffering = (id) => {
+    const item = pendingOfferingsRef.current.find((o) => o.id === id);
+    if (!item) return;
+    const next = pendingOfferingsRef.current.filter((o) => o.id !== id);
+    setPendingOfferings(next);
+    savePendingOfferings(next);
+    const gained = Math.round(gainCoins(item.reward));
+    spawnPopup(`+${gained}`, item.leftPct, item.topPct, true);
   };
 
   // ---- Système de quêtes + œuf ----
@@ -2096,6 +2165,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     return (
       <AdventureScreen
         onSpendDiamonds={(cost) => spendSharedCoins(cost)}
+        onAddDiamonds={(n) => addSharedCoins(n)}
         diamonds={sharedCoins}
         owned={owned}
         deck={deck}
@@ -2349,6 +2419,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   entrer en conflit avec le tap de l'œuf en dessous. */}
               {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
               {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
+              {/* Diamants d'Offrande : autant que d'Offrandes faites, ils
+                  ne disparaissent jamais tant qu'on ne les ramasse pas. */}
+              {pendingOfferings.map((o) => (
+                <OfferingBubble key={o.id} target={o} onClaim={() => claimOffering(o.id)} />
+              ))}
               {ritualTarget && <RitualBubble target={ritualTarget} onClaim={claimRitual} />}
 
               {/* Bouton vidéo à DROITE de l'œuf, seulement pendant
@@ -3253,6 +3328,33 @@ function GoldenTargetBubble({ target, onClaim }) {
 // bas. Même famille visuelle que la cible dorée mais teintée différemment
 // pour qu'on la distingue au premier coup d'œil, pulsation plus lente
 // (elle reste affichée plus longtemps, moins d'urgence).
+// Diamant d'Offrande posé autour de l'œuf. Pas de minuteur, pas
+// d'expiration : il attend d'être ramassé.
+function OfferingBubble({ target, onClaim }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.15, duration: 520, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 520, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return (
+    <TouchableOpacity
+      onPress={onClaim}
+      style={[styles.spawnBubbleWrap, { left: `${target.leftPct}%`, top: `${target.topPct}%` }]}
+      hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+    >
+      <Animated.View style={[styles.offeringBubble, { transform: [{ scale: pulse }] }]}>
+        <Text style={styles.offeringBubbleEmoji}>💎</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
 function RitualBubble({ target, onClaim }) {
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -3631,6 +3733,15 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#b96bff',
     shadowColor: '#b96bff', shadowOpacity: 0.8, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
   },
+  // Diamant d'Offrande : plus petit que les autres bulles (il peut y en
+  // avoir plusieurs autour de l'œuf en même temps) et aux couleurs du
+  // Diamant, pour qu'on comprenne d'où il vient.
+  offeringBubble: {
+    width: 42, height: 42, borderRadius: 21, backgroundColor: '#10304a',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#5ad1ff',
+    shadowColor: '#5ad1ff', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
+  },
+  offeringBubbleEmoji: { fontSize: 20 },
 
   // Barre de navigation du bas — Shop | Quêtes | Collection | Aventure.
   // Positionnement ABSOLU (voir header) — partagé par les 3 onglets

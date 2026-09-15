@@ -921,6 +921,68 @@ l'enveloppait derrière `getNode()`. Les deux sont acceptés — un
 `scrollTo` introuvable ramènerait silencieusement le joueur en haut de
 la carte, exactement le bug déjà corrigé trois fois.
 
+## Sources de Diamants et Offrande (14/09)
+
+| Source | Montant | Fréquence |
+|---|---|---|
+| Boss de tap | 1 à 3 💎 | plafond 21/jour |
+| **Fin de chapitre** | **10 💎** | une seule fois par chapitre |
+| Défis quotidiens (les 3 plus durs) | 1 💎 | ~1/jour |
+| Défis hebdomadaires | 3 💎 chacun | 18/semaine |
+| Succès | 2/5/10/20/40 💎 | une fois par palier |
+
+⚠️ **Fin de chapitre : UNIQUEMENT à la première victoire.** La condition
+`levelNumber === currentUnlockedLevel` le garantit — sans elle, rejouer
+le niveau 10 en boucle serait une source infinie de Diamants.
+
+⚠️ Les défis ne peuvent pas créditer les Diamants eux-mêmes (ils vivent
+dans le Clicker) : ils déposent le dû dans `PENDING_DIAMONDS_KEY`, que le
+Clicker encaisse à son ouverture puis EFFACE. Même canal que les Griffes.
+
+### Offrande : récompense refaite
+
+`tapPower × 15` était LINÉAIRE alors que les coûts DOUBLENT. Mesuré :
+53 % d'une amélioration au niveau 1, **1 % au niveau 10, 0,002 % au
+niveau 20**.
+
+⚠️ Essai intermédiaire ÉCARTÉ : « X minutes de production ». La
+production croît bien moins vite que les coûts — la valeur s'effondrait
+quand même (0,48 % au niveau 30) tout en étant absurde au début (96
+améliorations d'un coup au niveau 1).
+
+Retenu : **30 % de la prochaine amélioration de Pacte**. Seule ancre qui
+suit la courbe des coûts par construction. Mesuré : valeur constante à
+30 % du niveau 5 au niveau 50, et le plafond de 21 💎/jour vaut ~6
+améliorations.
+
+### Diamants d'Offrande autour de l'œuf
+
+⚠️ **Ils n'expirent JAMAIS et sont sauvegardés** (`PENDING_OFFERINGS_KEY`,
+clé propre). Le joueur peut enchaîner plusieurs Offrandes et les ramasser
+plus tard, y compris après avoir fermé l'appli : le Diamant est déjà
+dépensé, perdre la récompense serait un vol. Le montant est figé à la
+pose, pas au ramassage.
+
+⚠️ **Placement choisi par RECHERCHE, pas au jugé** : pas de 150°, rayon
+qui grandit tous les 4. Avec un pas de 72°, la 6e Offrande retombait
+exactement sur la 1re (72 × 5 = 360°). Mesuré sur 12 Offrandes : écart
+minimal de 15 % de l'écran pour des bulles de 10,7 % — aucune
+superposition.
+
+## Carte d'Aventure : le saut au bon chapitre (3e écriture)
+
+⚠️ Les deux versions précédentes dépendaient d'un MINUTAGE et sont
+retombées en panne :
+1. `onLayout` du ScrollView — les pages n'existaient pas encore.
+2. `onLayout` de la page du chapitre — **ne se redéclenche pas au retour
+   d'un combat** (la mise en page n'a pas changé).
+
+Désormais un EFFET observe hauteur de page, chapitre visé et un JETON
+réarmé au retour de combat. Plus aucune course : quand la hauteur est
+connue, les pages sont forcément rendues (elles ne le sont que dans ce
+cas). Une seconde tentative à la frame suivante couvre un décalage de
+contenu tardif.
+
 ## Boss de tap : cadence revue + garde-fou anti-abus (14/09)
 
 **Défaut** : il fallait 20 à 30 minutes de jeu ACTIF D'AFFILÉE. Un joueur

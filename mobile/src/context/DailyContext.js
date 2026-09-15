@@ -2,7 +2,8 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR,
   weekKey, pickWeeklyQuests, weeklyQuestDef,
-  ACHIEVEMENTS, achievementDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER } from '../games/clicker/dailyLogic';
+  ACHIEVEMENTS, achievementDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER,
+  achievementDiamonds } from '../games/clicker/dailyLogic';
 
 // Clé lue par AdventureScreen.js à son prochain chargement pour créditer
 // les récompenses de quêtes/streak — MÊME schéma de sécurité que
@@ -13,6 +14,23 @@ import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendar
 // plusieurs récompenses seraient réclamées avant qu'Aventure ne soit
 // rouverte.
 export const PENDING_GRIFFES_KEY = 'adventure:pendingGriffesReward';
+// Même principe pour les Diamants (14/09) : ce Context n'écrit JAMAIS
+// directement dans la sauvegarde d'un écran. Il dépose le dû ici, et le
+// Clicker (qui détient les Diamants) le crédite à sa prochaine ouverture.
+export const PENDING_DIAMONDS_KEY = 'clicker:pendingDiamondsReward';
+
+// Ajout au pot commun, tolérant à une valeur illisible.
+async function addPending(key, amount) {
+  if (!amount) return;
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    const pending = raw ? parseInt(raw, 10) || 0 : 0;
+    await AsyncStorage.setItem(key, String(pending + amount));
+  } catch (e) {
+    // Écriture impossible : on préfère perdre la récompense plutôt que
+    // de bloquer la réclamation et de laisser le joueur coincé.
+  }
+}
 // Creatures offertes par le calendrier de connexion. Le clicker (seul
 // proprietaire de la collection) les encaisse a son prochain chargement.
 // Valeur stockee : un JSON de tableau de raretes, ex. ["rare"].
@@ -249,9 +267,8 @@ export function DailyProvider({ children }) {
     const progress = questProgressRef.current[questId] || 0;
     if (progress < def.target) return false;
     setQuestClaimed((prev) => ({ ...prev, [questId]: true }));
-    const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
-    const pending = raw ? parseInt(raw, 10) || 0 : 0;
-    await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + def.reward));
+    await addPending(PENDING_GRIFFES_KEY, def.reward);
+    await addPending(PENDING_DIAMONDS_KEY, def.diamonds);
     return def.reward;
   }, []);
 
@@ -265,9 +282,8 @@ export function DailyProvider({ children }) {
     const progress = weeklyProgressRef.current[questId] || 0;
     if (progress < def.target) return false;
     setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));
-    const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
-    const pending = raw ? parseInt(raw, 10) || 0 : 0;
-    await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + def.reward));
+    await addPending(PENDING_GRIFFES_KEY, def.reward);
+    await addPending(PENDING_DIAMONDS_KEY, def.diamonds);
     return def.reward;
   }, []);
 
@@ -295,9 +311,9 @@ export function DailyProvider({ children }) {
     if ((lifetimeStatsRef.current[def.stat] || 0) < target) return false;
     const reward = achievementReward(claimed);
     setAchievementsClaimed((prev) => ({ ...prev, [id]: (Number(prev[id]) || 0) + 1 }));
-    const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
-    const pending = raw ? parseInt(raw, 10) || 0 : 0;
-    await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + reward));
+    await addPending(PENDING_GRIFFES_KEY, reward);
+    // Le palier RÉCLAMÉ est `claimed` (0 pour le premier), pas le suivant.
+    await addPending(PENDING_DIAMONDS_KEY, achievementDiamonds(claimed));
     return reward;
   }, [achievementsClaimed]);
 

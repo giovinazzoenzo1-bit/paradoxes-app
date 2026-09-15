@@ -1029,9 +1029,27 @@ export function ritualReady(lastUsedMs, nowMs) {
 // Ramené de 10 à 1 le 14/09 : à 10, l'Offrande coûtait la moitié du
 // plafond QUOTIDIEN de Diamants (21) pour une récompense dérisoire.
 export const OFFRANDE_APPCOINS_COST = 1;
+// ⚠️ Récompense refaite le 14/09. Elle valait `tapPower * 15`, soit une
+// croissance LINÉAIRE alors que les coûts DOUBLENT à chaque niveau.
+// Mesuré : l'Offrande valait 53% d'une amélioration de Pacte au niveau
+// 1, 1% au niveau 10 et 0,002% au niveau 20 — nulle en une heure de jeu.
+//
+// Essai intermédiaire écarté : « X minutes de production ». La
+// production croît bien plus lentement que les coûts, donc la valeur
+// s'effondrait quand même (0,48% au niveau 30) tout en étant absurde au
+// début (96 améliorations d'un coup au niveau 1).
+//
+// Retenu : une FRACTION DE LA PROCHAINE AMÉLIORATION. C'est la seule
+// ancre qui suit la courbe des coûts par construction, et elle se lit
+// simplement : « 1 Diamant = un tiers de ta prochaine amélioration ».
+export const OFFRANDE_UPGRADE_FRACTION = 0.3;
+
 export function offrandeReward(tapPower) {
-  return Math.round(tapPower * 15);
+  // Plancher : même au tout début, une Offrande doit donner de quoi se
+  // sentir, sinon elle est un piège.
+  return Math.max(25, Math.round(tapPowerCost(tapPower) * OFFRANDE_UPGRADE_FRACTION));
 }
+
 // ---- Défis et œuf : déplacés dans `questLogic.js` (14/09) ----
 // Ils occupaient ~700 lignes ici. Ce fichier ne les importe PAS (aucun
 // besoin), ce qui garantit l'absence de cycle d'imports.
