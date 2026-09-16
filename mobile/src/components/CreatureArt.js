@@ -32,6 +32,11 @@ const CREATURE_ART = {
   gardien: [
     require('../../assets/creatures/gardien/gardien.png'),
   ],
+  bouldog: [
+    require('../../assets/creatures/bouldog/stage-0.png'),
+    require('../../assets/creatures/bouldog/stage-1.png'),
+    require('../../assets/creatures/bouldog/stage-2.png'),
+  ],
   ventis: [
     require('../../assets/creatures/ventis/stage-0.png'),
     require('../../assets/creatures/ventis/stage-1.png'),

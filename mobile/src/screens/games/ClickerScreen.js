@@ -767,6 +767,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // distingue plus "je récolte des pièces" de "je casse l'œuf".
   const eggShake = useRef(new Animated.Value(0)).current;
 
+  // ---- Particules de l'œuf ----
+  //
+  // Les illustrations portent des poussières PEINTES, donc figées. Ces
+  // particules-ci sont DESSINÉES par le code : elles jaillissent à chaque
+  // tap puis retombent.
+  //
+  // ⚠️ UNE SEULE valeur animée pilote les 10 particules. Une valeur par
+  // particule multiplierait par 10 le travail à chaque tap — or
+  // l'autoclicker de l'utilisateur monte à ~7 taps/s.
+  //
+  // ⚠️ `useNativeDriver: true` : l'animation tourne sur le thread natif,
+  // sans repasser par React. Aucun `setState` n'est déclenché par un tap.
+  const eggBurst = useRef(new Animated.Value(0)).current;
+  const eggBurstAtRef = useRef(0);
+
   // Lueur du bouton cadeau qui respire (04/09, demande explicite).
   // useNativeDriver: true — tourne sur le thread natif, jamais recalculé
   // par React à chaque re-rendu de cet écran (contrairement au piège du
@@ -2263,6 +2278,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // Secousse à chaque coup porté sur la coquille. Séquence courte et
     // symétrique qui revient toujours à 0 : impossible que l'œuf reste
     // figé de travers si le joueur tape en rafale.
+    // Jaillissement des particules. RELANCÉ AU PLUS toutes les 140 ms :
+    // à 7 taps/s l'animation serait sinon redémarrée avant d'avoir joué,
+    // et les particules resteraient collées à l'œuf.
+    const maintenantBurst = Date.now();
+    if (maintenantBurst - eggBurstAtRef.current > 140) {
+      eggBurstAtRef.current = maintenantBurst;
+      eggBurst.setValue(0);
+      Animated.timing(eggBurst, { toValue: 1, duration: 460, useNativeDriver: true }).start();
+    }
+
     eggShake.stopAnimation(() => {
       eggShake.setValue(0);
       Animated.sequence([
@@ -2700,6 +2725,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                         tap. L'œuf n'est pas démonté : seule l'IMAGE
                         change, si bien que son palier, ses animations et
                         sa progression sont intacts au retour. */}
+                    {/* Particules posées SUR l'œuf. Jamais pendant un
+                        combat de boss : il a sa propre mise en scène. */}
+                    {!boss && (
+                      <EggParticles size={250} burst={eggBurst} stageIndex={eggStageIndex} />
+                    )}
                     {boss ? (
                       <Image
                         source={GUARDIAN_ART}
@@ -3104,6 +3134,60 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 // Calendrier de connexion, calque sur la maquette : grille irreguliere
 // (3 petites cases, 2 grandes, 2 moyennes) ou la taille signale
 // l'importance du lot, le jour 7 encadre en dore.
+// Particules qui jaillissent de l'œuf à chaque tap.
+//
+// Dessinées par le code, pas des images : aucun poids ajouté, et la
+// couleur suit le palier de l'œuf (gris au début, or à l'éclosion).
+//
+// ⚠️ Les positions de départ sont FIXES (calculées une seule fois hors
+// du composant). Les recalculer à chaque rendu ferait scintiller les
+// particules.
+const EGG_PARTICLE_COUNT = 10;
+const EGG_PARTICLES = Array.from({ length: EGG_PARTICLE_COUNT }, (_, i) => {
+  // Angle d'or : réparties en spirale plutôt qu'en cercle régulier, qui
+  // se lirait comme un motif et non comme de la poussière.
+  const angle = (i * 137.5 * Math.PI) / 180;
+  return {
+    angle,
+    rayon: 0.30 + (((i * 7) % 11) / 11) * 0.16,
+    taille: 3 + ((i * 5) % 3),
+    portee: 26 + ((i * 13) % 18),
+  };
+});
+const EGG_PARTICLE_COLORS = ['#8a8f99', '#c9a227', '#ffcf3f', '#ffd76a', '#fff0b0'];
+
+function EggParticles({ size, burst, stageIndex }) {
+  const couleur = EGG_PARTICLE_COLORS[Math.min(EGG_PARTICLE_COLORS.length - 1, Math.max(0, stageIndex || 0))];
+  return (
+    <View pointerEvents="none" style={[styles.eggParticleLayer, { width: size, height: size }]}>
+      {EGG_PARTICLES.map((p, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.eggParticle,
+            {
+              width: p.taille, height: p.taille, borderRadius: p.taille / 2,
+              backgroundColor: couleur,
+              opacity: burst.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0.35, 1, 0] }),
+              transform: [
+                { translateX: Animated.add(
+                    Math.cos(p.angle) * p.rayon * size,
+                    burst.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(p.angle) * p.portee] }),
+                  ) },
+                { translateY: Animated.add(
+                    Math.sin(p.angle) * p.rayon * size,
+                    burst.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(p.angle) * p.portee] }),
+                  ) },
+                { scale: burst.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.8, 1.25, 0.5] }) },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
 function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim, onClose }) {
   if (!Array.isArray(calendar) || calendar.length === 0) return null;
   const ready = !alreadyClaimedToday;
@@ -4597,6 +4681,10 @@ const styles = StyleSheet.create({
   },
   tapEmoji: { fontSize: 84 },
   eggImage: { width: 250, height: 250 },
+  // Couche des particules : superposée à l'œuf, centrée, SANS capture de
+  // clics — la zone de tap doit rester entière.
+  eggParticleLayer: { position: 'absolute', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  eggParticle: { position: 'absolute' },
   // Zone regroupant les textes sous l'œuf — position ABSOLUE, juste
   // sous tapZone (top 56,4% + hauteur fixe 290 + petite marge).
   // Zone regroupant les textes sous l'œuf — position ABSOLUE, juste
