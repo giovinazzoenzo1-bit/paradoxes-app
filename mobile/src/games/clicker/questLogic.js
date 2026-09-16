@@ -772,8 +772,17 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
     // manquante). Sans ce second filtre, un défi impossible entrait dans
     // le cycle et bloquait l'éclosion définitivement.
     const kept = cycle.filter((q) => !questAlreadyDone(q, stats) && questFeasible(q, stats));
+    // ⚠️ La cible est FIGÉE ici, au tirage. Pour les défis calibrés par
+    // EFFORT (`effortMin`), `q.target` est `undefined` : sans ce calcul,
+    // la cible était recalculée à CHAQUE RENDU sur l'état courant, et
+    // elle FUYAIT devant le joueur.
+    //
+    // Cas réels signalés : « Monte Pacte » dont la cible montait à mesure
+    // qu'on montait le Pacte (production en hausse ⇒ budget en hausse),
+    // et « Obtiens N pièces » qui se validait aussitôt après une
+    // Ascension (production repartie de zéro ⇒ budget minuscule).
     const targets = {};
-    kept.forEach((q) => { targets[q.id] = q.target; });
+    kept.forEach((q) => { targets[q.id] = q.target || resolveQuestTarget(q, stats); });
     const ids = kept.map((q) => q.id);
 
     const missing = cycle.length - kept.length;

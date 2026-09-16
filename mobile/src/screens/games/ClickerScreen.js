@@ -1756,6 +1756,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             setTotalEarned(0);
             setTapPower(1);
             setCritLevel(0);
+            // ⚠️ Oubliés jusqu'ici : ils restaient à leur niveau alors
+            // que le texte annonce « Faveur » et « améliorations ». Le
+            // joueur voyait la boutique ne PAS se réinitialiser.
+            setCritDamageLevel(0);
+            setTapUpgrades({});   // objet, pas tableau (voir sa déclaration)
             setAutoClickers({});
             setUpgradeLevels({});
             setSanctuaryLevel(0);

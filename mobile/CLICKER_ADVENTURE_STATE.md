@@ -987,6 +987,46 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ CIBLES NON FIGÉES : les défis fuyaient (15/09)
+
+Deux symptômes signalés après une Ascension, **une seule cause**.
+
+Au tirage d'un cycle, `nextQuestSet` figeait la cible par
+`targets[q.id] = q.target`. Or pour les 18 défis convertis en
+`effortMin`, **`q.target` vaut `undefined`** : la cible n'était jamais
+enregistrée et se RECALCULAIT à chaque rendu sur l'état courant.
+
+| Symptôme | Mécanique |
+|---|---|
+| « Monte Pacte » ne se valide jamais | monter le Pacte augmente la production ⇒ le budget monte ⇒ **la cible fuit** |
+| « Obtiens 7 200 pièces » validé aussitôt | après Ascension la production repart de zéro ⇒ budget minuscule ⇒ **cible dérisoire** |
+
+**Correctif** : `targets[q.id] = q.target || resolveQuestTarget(q, stats)`.
+La cible est calculée UNE FOIS au tirage, puis figée.
+
+⚠️ Le pool dynamique figeait déjà la sienne — seule la SÉQUENCE était
+touchée, et uniquement depuis la conversion en `effortMin`.
+
+**Règle** : une cible calculée doit être FIGÉE au tirage. Recalculée à
+la volée, elle suit l'état du joueur et devient inatteignable (ou
+triviale).
+
+Vérifié : cible du Pacte à 15 avant et après progression du joueur.
+
+## ⚠️ Ascension : deux améliorations oubliées
+
+`critDamageLevel` (Faveur) et `tapUpgrades` survivaient à l'Ascension,
+alors que le texte annonce « Faveur » et « améliorations ». D'où
+l'impression que **la boutique ne se réinitialisait pas** — elle
+gardait effectivement des niveaux.
+
+⚠️ `tapUpgrades` est un OBJET, pas un tableau : le remettre à `[]` aurait
+cassé les lectures par clé.
+
+**Contrôle** : comparer la liste des états REMIS À ZÉRO à celle des états
+AFFICHÉS par la boutique. C'est ce croisement qui a révélé les deux
+oublis.
+
 ## Panneau d'Ascension illustré + ESSENCE retirée (15/09)
 
 ### L'Alert système remplacée par un parchemin
