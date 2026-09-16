@@ -987,6 +987,56 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ LIBELLÉ ≠ CIBLE : « Pacte niveau 7 » validé au niveau 5 (15/09)
+
+**Cause introduite par moi.** Trois endroits calculaient la cible d'un
+défi, et PAS dans le même ordre :
+
+| | Ordre de priorité |
+|---|---|
+| `questLabel` | cible passée → `q.target` → 1 |
+| `questProgress` | `q.target` → cible sauvegardée → calcul |
+
+Le texte et la condition ne parlaient donc pas de la même chose.
+
+**Correctif** : `effectiveQuestTarget()` est le RÉSOLVEUR UNIQUE, utilisé
+par le libellé, la progression, la complétion et le détail. Ordre
+définitif : cible fixe de la définition → cible sauvegardée → calcul.
+
+⚠️ **Second défaut, même famille** : 7 défis de RYTHME avaient un libellé
+STATIQUE (`() => 'Obtiens 28 coups critiques'`) alors que leur cible suit
+désormais les Ascensions. À 3 Ascensions la cible valait 30 et le texte
+disait toujours 28. Tous rendus dynamiques.
+
+**Règle** : un libellé de défi ne doit JAMAIS contenir un nombre en dur.
+Il se construit à partir de la cible, sinon il ment dès qu'un réglage
+bouge.
+
+### Contrôle automatique ajouté : `auditLibelles()`
+
+Compare, pour CHAQUE défi et sur 3 profils de joueur, le nombre affiché
+au nombre réellement exigé. Faux positifs écartés explicitement
+(« 14 millions », « chapitre 2, niveau 5 », « Transe x2,5 ») — sinon le
+contrôle devient du bruit et on cesse de le lire.
+
+**Résultat : 0 écart**, et 440 contrôles croisés `questDetail` vs
+résolveur sans divergence.
+
+## ⚠️ Mémoire des défis de RECORD : il faut DEUX remises à zéro
+
+Le défi de Transe affichait « 8 s / 42 s » avant même de commencer.
+
+La remise à zéro existait, mais seulement au TIRAGE du cycle. Entre le
+tirage et le moment où ce défi devient courant, le joueur accumule du
+record en jouant les défis précédents.
+
+⚠️ **Les deux sont nécessaires, l'une ne remplace pas l'autre** :
+- au TIRAGE : empêche le défi d'être compté « terminé » d'emblée et donc
+  de ne jamais apparaître (bug du 07/09) ;
+- au défi COURANT : le fait partir de ZÉRO.
+
+Remplacer la première par la seconde ferait revenir le bug de 07/09.
+
 ## ⚠️ DÉCROCHAGE DU DÉBUT DE PARTIE : c'est l'ATTENTE (15/09)
 
 Mesuré avec l'outil d'audit, courbe des premiers œufs :

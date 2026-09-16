@@ -94,7 +94,6 @@ import {
   resolveQuestTarget,
   EGG_STAGES,
   eggStageForCompletedCount,
-  questLabel,
   RUNE_CYCLE_INDEX,
   questFeasible,
   metricScopedToCycle,
@@ -2097,6 +2096,29 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       setMaxCombo(1);
     }
   }, [activeQuestIds, loaded]);
+
+  // ⚠️ SECONDE remise à zéro, quand le défi de record devient COURANT.
+  //
+  // Celle du tirage (ci-dessus) empêche le défi d'être compté « terminé »
+  // d'emblée. Mais entre le tirage et le moment où ce défi arrive, le
+  // joueur accumule du record en jouant les défis précédents : la barre
+  // affichait « 8 s / 42 s » avant même que le défi commence.
+  //
+  // Les deux sont nécessaires, l'une ne remplace pas l'autre : celle du
+  // tirage rend le défi VISIBLE, celle-ci le fait partir de ZÉRO.
+  const recordResetForQuestRef = useRef(null);
+  useEffect(() => {
+    if (!loaded || !currentChallengeId) return;
+    if (recordResetForQuestRef.current === currentChallengeId) return;
+    const q = findQuest(currentChallengeId);
+    if (!q || (q.metric !== 'maxTranseHoldSec' && q.metric !== 'maxCombo')) return;
+    recordResetForQuestRef.current = currentChallengeId;
+    maxTranseHoldSecRef.current = 0;
+    setMaxTranseHoldSec(0);
+    transeStartRef.current = null;
+    maxComboRef.current = 1;
+    setMaxCombo(1);
+  }, [currentChallengeId, loaded]);
 
   // Démarre le chronomètre d'un défi au moment EXACT où il devient le
   // défi courant. Tout ce qui a été accumulé avant ne compte pas.

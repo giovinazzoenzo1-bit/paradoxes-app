@@ -61,12 +61,12 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_transe30', icon: '🔥', metric: 'maxTranseHoldSec', target: 42, mode: 'absolute',
       label: () => 'Reste en Transe x2,5 pendant 42 secondes' },
     { id: 'seq_golden3', icon: '⭐', metric: 'goldenClaimed', target: 4, mode: 'delta',
-      label: () => 'Touche 4 fois la cible dorée' },
+      label: (t) => `Touche ${t} fois la cible dorée` },
   ],
   // --- Cycle 2 : critiques, Offrande, premier combat ---
   [
     { id: 'seq_crit20', icon: '💥', metric: 'totalCrits', target: 28, mode: 'delta',
-      label: () => 'Obtiens 28 coups critiques' },
+      label: (t) => `Obtiens ${t} coups critiques` },
     { id: 'seq_offering2', icon: '💎', metric: 'offering', target: 1, mode: 'delta',
       label: () => 'Fais 1 Offrande' },
     { id: 'seq_adv_c1l1', icon: '⚔️', metric: 'advLevelReached', target: 3, mode: 'absolute',
@@ -78,7 +78,7 @@ export const QUEST_SEQUENCE = [
   [
     // Ramené de 7 à 5 (14/09) : trop long pour ce moment du cycle.
     { id: 'seq_power5', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
-      label: () => 'Active 5 fois un pouvoir de créature' },
+      label: (t) => `Active ${t} fois un pouvoir de créature` },
     { id: 'seq_adv_c1l10', icon: '⚔️', metric: 'advLevelReached', target: 10, mode: 'absolute',
       label: () => 'Termine le chapitre 1, niveau 10' },
     { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 25, mode: 'absolute',
@@ -93,11 +93,11 @@ export const QUEST_SEQUENCE = [
   // --- Cycle 4 : montée en puissance ---
   [
     { id: 'seq_golden6', icon: '⭐', metric: 'goldenClaimed', target: 8, mode: 'delta',
-      label: () => 'Touche 8 fois la cible dorée' },
+      label: (t) => `Touche ${t} fois la cible dorée` },
     { id: 'seq_veilleur10', icon: '🌙', metric: 'veilleurLevel', effortMin: 25, mode: 'absolute',
       label: (t) => `Monte le Veilleur au niveau ${t}` },
     { id: 'seq_crit40', icon: '💥', metric: 'totalCrits', target: 56, mode: 'delta',
-      label: () => 'Obtiens 56 coups critiques' },
+      label: (t) => `Obtiens ${t} coups critiques` },
     { id: 'seq_adv_c2l5', icon: '⚔️', metric: 'advLevelReached', target: 15, mode: 'absolute',
       label: () => 'Termine le chapitre 2, niveau 5' },
   ],
@@ -150,13 +150,13 @@ export const QUEST_SEQUENCE = [
   // --- Cycle 8 : rythme ---
   [
     { id: 'seq_power10', icon: '✨', metric: 'powerActivated', target: 10, mode: 'delta',
-      label: () => 'Active 10 fois un pouvoir de créature' },
+      label: (t) => `Active ${t} fois un pouvoir de créature` },
     { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', effortMin: 30, mode: 'absolute',
       label: (t) => `Possède ${t} Mains Spectrales` },
     { id: 'seq_adv_c3l10', icon: '⚔️', metric: 'advLevelReached', target: 30, mode: 'absolute',
       label: () => 'Termine le chapitre 3, niveau 10' },
     { id: 'seq_crit100', icon: '💥', metric: 'totalCrits', target: 140, mode: 'delta',
-      label: () => 'Obtiens 140 coups critiques' },
+      label: (t) => `Obtiens ${t} coups critiques` },
   ],
   // --- Cycle 9 : profondeur ---
   [
@@ -624,7 +624,7 @@ export function questProgress(questId, stats, baseline = {}, targets = {}) {
   // « 100 000 pièces » tout en en exigeant 140 000 — bug signalé.
   // Seules les cibles CALCULÉES (effort en minutes) doivent rester
   // figées, sinon elles bougeraient au fil de la partie.
-  const target = q.target || targets[questId] || resolveQuestTarget(q, baseline && baseline.totalEarned !== undefined ? baseline : stats);
+  const target = effectiveQuestTarget(questId, baseline && baseline.totalEarned !== undefined ? baseline : stats, targets);
   if (!target) return 0;
   const now = readMetric(q.metric, stats);
   const base = readMetric(q.metric, baseline);
@@ -651,17 +651,39 @@ export function questComplete(questId, stats, baseline = {}, targets = {}) {
 // Libellé d'un défi, construit à partir de la cible RÉSOLUE — il ne peut
 // donc pas mentir sur ce qui est demandé. C'est le piège tombé deux fois
 // avec les libellés figés : changer une cible sans régénérer le texte.
-export function questLabel(questId, target) {
+// ⚠️ RÉSOLVEUR UNIQUE de la cible d'un défi.
+//
+// Trois endroits la calculaient, et pas dans le même ordre : le libellé
+// privilégiait la cible SAUVEGARDÉE, la progression celle de la
+// DÉFINITION. Résultat : « Monte Pacte au niveau 7 » qui se validait au
+// niveau 5 — le texte et la condition ne parlaient pas de la même chose.
+//
+// Ordre unique et définitif :
+//   1. cible FIXE de la définition (`q.target`) — fait autorité, c'est
+//      elle qui suit les changements d'équilibrage ;
+//   2. cible SAUVEGARDÉE au tirage (défis calibrés par effort) ;
+//   3. calcul à la volée, en dernier recours.
+export function effectiveQuestTarget(questId, stats = {}, targets = {}) {
+  const q = findQuest(questId);
+  if (!q) return 1;
+  if (q.target) return resolveQuestTarget(q, stats);
+  return targets[questId] || resolveQuestTarget(q, stats);
+}
+
+export function questLabel(questId, target, stats = {}, targets = {}) {
   const q = findQuest(questId);
   if (!q) return '';
-  return q.label(target || q.target || 1);
+  // `target` explicite prioritaire pour les appels qui en fournissent un,
+  // sinon on passe par le résolveur commun.
+  const t = target || effectiveQuestTarget(questId, stats, targets);
+  return q.label(t || 1);
 }
 
 export function questDetail(questId, stats, baseline = {}, targets = {}) {
   const q = findQuest(questId);
   if (!q) return { icon: '🎯', label: '', progress: 0, target: 1, current: 0, done: false };
   // Même règle qu'au-dessus : une cible fixe vient de la définition.
-  const target = q.target || targets[questId] || resolveQuestTarget(q, stats);
+  const target = effectiveQuestTarget(questId, stats, targets);
   const progress = questProgress(questId, stats, baseline, { ...targets, [questId]: target });
   return {
     icon: q.icon,

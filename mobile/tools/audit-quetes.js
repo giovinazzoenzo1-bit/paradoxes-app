@@ -268,3 +268,40 @@ function auditCorvee(plafondActions = 12) {
   return res;
 }
 module.exports.auditCorvee = auditCorvee;
+
+// ---- Cohérence LIBELLÉ / CIBLE --------------------------------------
+//
+// Bug réel : « Monte Pacte au niveau 7 » se validait au niveau 5. Le
+// libellé et la condition lisaient la cible à deux endroits différents.
+// Ce contrôle compare, pour CHAQUE défi, le nombre affiché au nombre
+// réellement exigé.
+function auditLibelles() {
+  const etats = [
+    ['debut', { ...etatInitial(), tapPower: 4, autoClickers: { esprit: 3 }, passiveIncome: 6 }],
+    ['milieu', { ...etatInitial(), tapPower: 20, autoClickers: { esprit: 40 }, sanctuaryLevel: 5, passiveIncome: 400, coins: 3e5, totalEarned: 4e6 }],
+    ['avance', { ...etatInitial(), tapPower: 45, autoClickers: { esprit: 150 }, sanctuaryLevel: 10, essence: 200, ascension: 3, passiveIncome: 2e4, coins: 5e7, totalEarned: 9e8 }],
+  ];
+  const ecarts = [];
+  const tous = [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL];
+  etats.forEach(([lbl, s]) => {
+    s.ownedIds = C.CREATURES.map((c) => c.id);
+    tous.forEach((q) => {
+      const cible = Q.effectiveQuestTarget(q.id, s, {});
+      const texte = Q.questLabel(q.id, null, s, {});
+      // Nombres présents dans le libellé, séparateurs de milliers retirés
+      // ⚠️ Faux positifs à écarter, sinon le contrôle devient du bruit
+      // et on cesse de le lire :
+      //  - « 14 millions » : le nombre affiché n'est pas la cible brute ;
+      //  - « chapitre 2, niveau 5 » : deux nombres qui désignent un
+      //    niveau ABSOLU (15), aucun ne vaut la cible ;
+      //  - « Transe x2,5 » : la cible est en dixièmes.
+      if (/million|milliard|millier|chapitre|x\d/i.test(texte)) return;
+      const nums = (texte.replace(/\u202f|\u00a0/g, ' ').match(/\d[\d ]*/g) || [])
+        .map((x) => parseInt(x.replace(/ /g, ''), 10));
+      if (!nums.length) return;                    // libellé sans nombre : rien à vérifier
+      if (!nums.includes(Math.round(cible))) ecarts.push({ id: q.id, etat: lbl, cible, texte });
+    });
+  });
+  return ecarts;
+}
+module.exports.auditLibelles = auditLibelles;
