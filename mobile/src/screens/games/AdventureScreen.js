@@ -1299,7 +1299,11 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
             </Text>
           </View>
 
-          <View style={styles.mlLevelBarTrack}>
+          {/* ⚠️ Marge basse quand le bouton est THÉMÉ : celui-ci porte un
+              `marginTop: -30` pour coller son illustration, ce qui le
+              faisait recouvrir entièrement cette barre (9 dp de haut).
+              On rend la place que le bouton reprend. */}
+          <View style={[styles.mlLevelBarTrack, theme && styles.mlLevelBarTrackThemed]}>
             <View style={[styles.mlLevelBarFill, { width: `${Math.round(levelRatio * 100)}%` }]} />
           </View>
 
@@ -3367,6 +3371,9 @@ const styles = StyleSheet.create({
     marginTop: 4, overflow: 'hidden',
   },
   mlLevelBarFill: { height: '100%', backgroundColor: COLORS.neonCyan },
+  // 30 dp repris par le `marginTop: -30` du bouton thémé, + 4 de
+  // respiration pour que la pulsation ne vienne pas mordre non plus.
+  mlLevelBarTrackThemed: { marginBottom: 34 },
   mlMainBtn: {
     width: '100%', backgroundColor: COLORS.action, borderRadius: 12,
     paddingVertical: 9, alignItems: 'center', marginTop: 7,

@@ -544,8 +544,20 @@ export function attackRatio(creature, currentAttack) {
 // base — à appliquer sur les VRAIES compétences (skill.damage), jamais
 // sur l'attaque de base gratuite (déjà dérivée directement de l'ATQ
 // actuel, l'appliquer ici la compterait deux fois).
+// +10 % de dégâts pour TOUT LE MONDE (15/09), joueur comme adversaires.
+//
+// ⚠️ Appliqué ICI, dans la fonction commune, et pas des deux côtés
+// séparément : les deux camps passent par `scaledSkillDamage`, donc un
+// seul point de modification garantit qu'aucun des deux n'est oublié.
+//
+// ⚠️ Un bonus IDENTIQUE des deux côtés ne change PAS l'issue des
+// combats : il raccourcit les échanges d'environ 9 %, sans toucher à
+// l'équilibre. L'équilibrage mesuré (ratio adverse/joueur, nombre de
+// tours, étoiles) reste donc valable.
+export const GLOBAL_DAMAGE_BOOST = 1.10;
+
 export function scaledSkillDamage(skill, creature, currentAttack) {
-  return skill.damage * attackRatio(creature, currentAttack);
+  return skill.damage * attackRatio(creature, currentAttack) * GLOBAL_DAMAGE_BOOST;
 }
 
 // ---- Résolution d'un tour ----

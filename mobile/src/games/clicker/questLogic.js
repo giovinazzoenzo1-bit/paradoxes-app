@@ -92,7 +92,7 @@ export const QUEST_SEQUENCE = [
   ],
   // --- Cycle 4 : montée en puissance ---
   [
-    { id: 'seq_golden6', icon: '⭐', metric: 'goldenClaimed', target: 8, mode: 'delta',
+    { id: 'seq_golden6', icon: '⭐', metric: 'goldenClaimed', target: 5, mode: 'delta',
       label: (t) => `Touche ${t} fois la cible dorée` },
     { id: 'seq_veilleur10', icon: '🌙', metric: 'veilleurLevel', effortMin: 25, mode: 'absolute',
       label: (t) => `Monte le Veilleur au niveau ${t}` },
@@ -118,8 +118,12 @@ export const QUEST_SEQUENCE = [
       label: () => 'Fais 2 Offrandes' },
     { id: 'seq_griffe5', icon: '🔥', metric: 'upgrade:griffeBraisillon', effortMin: 25, mode: 'absolute',
       label: (t) => `Monte Griffe de Braisillon au niveau ${t}` },
-    { id: 'seq_adv_c2l10', icon: '⚔️', metric: 'advLevelReached', target: 20, mode: 'absolute',
-      label: () => 'Termine le chapitre 2, niveau 10' },
+    // ⚠️ Remplace l'ancien « chapitre 2, niveau 10 » : le cycle
+    // PRÉCÉDENT demandait déjà « chapitre 2, niveau 5 ». Deux défis
+    // d'Aventure dans le même chapitre à un cycle d'écart se lisaient
+    // comme le même défi répété. On varie de famille.
+    { id: 'seq_transe60', icon: '🔥', metric: 'maxTranseHoldSec', target: 60, mode: 'absolute',
+      label: (t) => `Tiens la Transe pendant ${t} secondes` },
     { id: 'seq_ascend1', icon: '🌟', metric: 'ascension', target: 1, mode: 'delta',
       label: () => "Fais l'Ascension" },
   ],

@@ -987,6 +987,44 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## Réglages du 15/09 (2)
+
+| Changement | Détail |
+|---|---|
+| Barre de niveau vs bouton | 34 dp de marge quand le bouton est thémé |
+| « Touche la cible dorée » | 8 → **5** |
+| Dégâts, joueur ET adversaires | **×1,10** |
+| `seq_adv_c2l10` | remplacé par un défi de Transe |
+
+### ⚠️ Barre bleue qui chevauchait le bouton
+
+Le bouton THÉMÉ porte `marginTop: -30` pour coller son illustration : il
+recouvrait entièrement la barre de niveau (9 dp). La barre reçoit
+maintenant 34 dp de marge basse quand le thème est actif — 11 dp d'écart
+restant, pulsation du bouton comprise (mesuré).
+
+### ⚠️ +10 % de dégâts appliqués AU POINT COMMUN
+
+Posés dans `scaledSkillDamage`, par où passent le joueur ET les
+adversaires. Un seul point de modification : impossible d'oublier un
+camp.
+
+⚠️ **Un bonus identique des deux côtés ne change PAS l'issue des
+combats.** Il raccourcit les échanges d'environ 9 %, sans toucher au
+rapport de force. Tout l'équilibrage mesuré (ratio adverse/joueur, tours,
+étoiles) reste donc valable — inutile de le refaire.
+
+### ⚠️ Deux défis d'Aventure trop semblables
+
+Le cycle 4 demandait « chapitre 2, niveau 5 » et le cycle 5 « chapitre 2,
+niveau 10 » : à un cycle d'écart, ça se lit comme le même défi répété.
+Le second est remplacé par un défi de Transe.
+
+Le cycle 5 compte désormais **5 familles distinctes sur 5 défis**.
+
+**Règle** : deux défis consécutifs ne doivent pas partager la même
+métrique, surtout dans le même chapitre.
+
 ## Correctifs d'interface (15/09)
 
 ### Double bouton retour sur la carte
