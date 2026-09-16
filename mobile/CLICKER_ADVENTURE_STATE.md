@@ -1003,12 +1003,29 @@ pièces gagnées à un joueur qui en avait 690 000.
 entière ne produit que 2 M. Le défi était infaisable à n'importe quel
 cycle. Seul le seuil pouvait bouger.
 
-**450 000** retenu par mesure : la 1re Ascension tombe pile au cycle 5,
-la 2e (seuil ×2) au cycle 7 — bien avant son défi du cycle 10. Vérifié :
-477 283 gagnés au cycle 5, 1 744 299 au cycle 10 contre 900 000 requis.
+**500 000**, valeur retenue par l'auteur. Mesuré : au cycle 5 le joueur
+a gagné 477 000 pièces, il lui manque donc **22 000 pièces ≈ 16 minutes**
+— le défi demande un dernier effort au lieu d'être acquis d'avance. La
+2e Ascension (seuil ×2) tombe au cycle 8, avant son défi du cycle 10.
 
-⚠️ La boucle de prestige est intacte : le seuil double toujours à chaque
-Ascension, et attendre rapporte toujours plus d'essence.
+### ⚠️ Défaut SÉPARÉ découvert en mesurant : attendre ne sert à rien
+
+`ascensionEssenceGain = floor((gagné / seuil) ^ 0,3)`
+
+| Multiple du seuil | Essence |
+|---|---|
+| ×1 à ×10 | **1** |
+| ×11 | 2 |
+| ×39 | 3 |
+| ×102 | 4 |
+
+⚠️ **Ascendre au plus tôt est TOUJOURS optimal.** Attendre ne rapporte
+rien avant d'avoir multiplié le seuil par 11, ce qui n'arrive jamais
+dans la séquence. La décision « quand ascendre ? » n'existe donc pas :
+l'exposant 0,3 écrase tout.
+
+Non corrigé — c'est un choix de conception, pas un bug. Le levier serait
+l'exposant (0,5 donnerait 2 points à ×4, 3 points à ×9).
 
 ### ⚠️ ANGLE MORT de l'outil d'audit, corrigé
 
