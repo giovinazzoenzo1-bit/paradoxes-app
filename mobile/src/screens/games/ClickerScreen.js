@@ -1736,6 +1736,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // s'affiche maintenant sur le parchemin illustré (`ascension-panel`),
   // rendu plus bas.
   const [ascensionPrompt, setAscensionPrompt] = useState(null);
+  // Largeur mesurée du panneau : sert à calculer ses marges en pixels.
+  const [ascPanelW, setAscPanelW] = useState(0);
 
   const doAscension = () => {
     if (!ascensionReady) return;
@@ -3094,10 +3096,24 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           entièrement illustré. */}
       {ascensionPrompt && (
         <View style={styles.ascPromptBackdrop}>
+          {/* ⚠️ Marges calculées EN PIXELS depuis la largeur mesurée, pas
+              en pourcentages. En React Native un padding en % se résout
+              sur la LARGEUR même pour le haut et le bas : le texte
+              débordait du parchemin et poussait le cadre. */}
           <ImageBackground
             source={ASCENSION_PANEL}
-            style={styles.ascPromptPanel}
-            imageStyle={styles.ascPromptPanelImg}
+            style={[styles.ascPromptPanel, ascPanelW > 0 && {
+              paddingLeft: Math.round(ascPanelW * 0.085),
+              paddingRight: Math.round(ascPanelW * 0.075),
+              paddingTop: Math.round(ascPanelW * 0.135),
+              paddingBottom: Math.round(ascPanelW * 0.075),
+              // Hauteur MINIMALE au rapport de l'illustration (640×668).
+              // Sans elle, le panneau se réduisait à son contenu et le
+              // cadre ouvragé était comprimé à 79 % de sa forme. Il peut
+              // grandir au-delà si un texte plus long l'exige.
+              minHeight: Math.round(ascPanelW * (668 / 640)),
+            }]}
+            onLayout={(e) => setAscPanelW(e.nativeEvent.layout.width)}
             resizeMode="stretch"
           >
             <Text style={styles.ascPromptTitle}>Ascension</Text>
@@ -4392,19 +4408,19 @@ const styles = StyleSheet.create({
   },
   // Rapport 640x668 de l'illustration : s'en écarter déformerait le
   // cadre ouvragé.
+  // ⚠️ PAS d'`aspectRatio` : si le texte dépasse la hauteur qu'il impose,
+  // la vue grandit quand même et le cadre ouvragé s'étire. On laisse le
+  // panneau suivre son contenu, et c'est la TAILLE DU TEXTE qui est
+  // calée pour tenir.
   ascPromptPanel: {
-    width: '90%', maxWidth: 360, aspectRatio: 640 / 668,
-    // Marges calées sur le cadre MESURÉ : 7 % sur les côtés, 10,5 % en
-    // haut (l'ornement descend), 4 % en bas.
-    paddingHorizontal: '10%', paddingTop: '14%', paddingBottom: '7%',
+    width: '92%', maxWidth: 380, alignSelf: 'center',
     justifyContent: 'flex-start',
   },
-  ascPromptPanelImg: { resizeMode: 'stretch' },
-  ascPromptTitle: { color: '#2a1a08', fontSize: 20, fontWeight: '900', marginBottom: 8 },
-  ascPromptText: { color: '#3a2a12', fontSize: 12.5, fontWeight: '700', lineHeight: 17, marginBottom: 8 },
+  ascPromptTitle: { color: '#2a1a08', fontSize: 19, fontWeight: '900', marginBottom: 7 },
+  ascPromptText: { color: '#3a2a12', fontSize: 12, fontWeight: '700', lineHeight: 16, marginBottom: 7 },
   ascPromptStrong: { fontWeight: '900', color: '#2a1a08' },
   ascPromptAsk: { color: '#3a2a12', fontSize: 13, fontWeight: '800', marginTop: 2 },
-  ascPromptRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 'auto' },
+  ascPromptRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 10 },
   ascPromptBtn: {
     paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6,
     backgroundColor: 'rgba(30,38,54,0.92)', borderWidth: 1.5, borderColor: '#6b5836',

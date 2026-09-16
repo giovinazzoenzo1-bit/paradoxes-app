@@ -1005,8 +1005,21 @@ chevauchent), donc l'intérieur a été reconstruit en pavant une tuile de
 parchemin propre, repérée automatiquement par faible écart-type et forte
 luminance.
 
-⚠️ `aspectRatio: 640/668` sur le panneau : s'en écarter déformerait le
-cadre ouvragé. Marges intérieures calées sur le cadre MESURÉ.
+### ⚠️ Dimensions : deux pièges corrigés
+
+**1. Marges en POURCENTAGE** — en React Native, un padding en `%` se
+résout sur la LARGEUR, y compris pour le haut et le bas. Le texte
+débordait du parchemin et poussait le cadre. Les marges sont désormais
+calculées EN PIXELS depuis la largeur mesurée (`onLayout`).
+
+**2. `aspectRatio` ne BORNE PAS la hauteur** — si le contenu dépasse, la
+vue grandit quand même et le cadre ouvragé s'étire. Remplacé par un
+`minHeight` au rapport de l'illustration (668/640) : le panneau garde sa
+forme, et peut grandir si un texte plus long l'exige.
+
+Zone intérieure MESURÉE de l'illustration : **88 % × 86 %**. Les marges
+retenues laissent 84 % × 80 %, donc le texte reste bien à l'intérieur —
+vérifié sur 360, 393 et 430 dp.
 
 ### ESSENCE retirée
 
