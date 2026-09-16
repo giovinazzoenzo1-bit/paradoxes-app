@@ -1736,8 +1736,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // s'affiche maintenant sur le parchemin illustré (`ascension-panel`),
   // rendu plus bas.
   const [ascensionPrompt, setAscensionPrompt] = useState(null);
-  // Largeur mesurée du panneau : sert à calculer ses marges en pixels.
-  const [ascPanelW, setAscPanelW] = useState(0);
 
   const doAscension = () => {
     if (!ascensionReady) return;
@@ -3096,44 +3094,40 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           entièrement illustré. */}
       {ascensionPrompt && (
         <View style={styles.ascPromptBackdrop}>
-          {/* ⚠️ Marges calculées EN PIXELS depuis la largeur mesurée, pas
-              en pourcentages. En React Native un padding en % se résout
-              sur la LARGEUR même pour le haut et le bas : le texte
-              débordait du parchemin et poussait le cadre. */}
           <ImageBackground
             source={ASCENSION_PANEL}
-            style={[styles.ascPromptPanel, ascPanelW > 0 && {
-              paddingLeft: Math.round(ascPanelW * 0.085),
-              paddingRight: Math.round(ascPanelW * 0.075),
-              paddingTop: Math.round(ascPanelW * 0.135),
-              paddingBottom: Math.round(ascPanelW * 0.075),
-              // Hauteur MINIMALE au rapport de l'illustration (640×668).
-              // Sans elle, le panneau se réduisait à son contenu et le
-              // cadre ouvragé était comprimé à 79 % de sa forme. Il peut
-              // grandir au-delà si un texte plus long l'exige.
-              minHeight: Math.round(ascPanelW * (668 / 640)),
-            }]}
-            onLayout={(e) => setAscPanelW(e.nativeEvent.layout.width)}
+            style={styles.ascPromptPanel}
             resizeMode="stretch"
           >
-            <Text style={styles.ascPromptTitle}>Ascension</Text>
-            <Text style={styles.ascPromptText}>
-              Tu remets à zéro ton économie (pièces, Pacte, Faveur, Sanctuaire, Veilleur, auto-clics, améliorations).
-            </Text>
-            <Text style={styles.ascPromptText}>
-              Tu <Text style={styles.ascPromptStrong}>GARDES</Text> tes créatures, ton deck et toute ta progression en Aventure.
-            </Text>
-            <Text style={styles.ascPromptText}>
-              Tu gagnes : {ascensionPrompt.griffes} Griffes, et une production ×{ascensionPrompt.vitesse.toFixed(2)} pour toujours.
-            </Text>
-            <Text style={styles.ascPromptAsk}>Continuer ?</Text>
-            <View style={styles.ascPromptRow}>
-              <TouchableOpacity style={styles.ascPromptBtn} onPress={() => setAscensionPrompt(null)}>
-                <Text style={styles.ascPromptBtnText}>ANNULER</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.ascPromptBtn, styles.ascPromptBtnGo]} onPress={confirmAscension}>
-                <Text style={[styles.ascPromptBtnText, styles.ascPromptBtnGoText]}>ASCENSIONNER</Text>
-              </TouchableOpacity>
+            {/* ⚠️ Le contenu vit dans une vue à LARGEUR EN POURCENTAGE,
+                pas dans un padding du panneau.
+                Deux tentatives ont échoué avant : un padding en % (qui se
+                résout sur la largeur même en vertical) puis un padding
+                calculé via `onLayout` (dépendant d'un événement qui doit
+                avoir eu lieu). Une largeur en % sur un ENFANT se résout
+                toujours sur la largeur du parent — c'est déterministe,
+                dès le premier rendu.
+                82 % pour une zone de parchemin mesurée à 88 %. */}
+            <View style={styles.ascPromptInner}>
+              <Text style={styles.ascPromptTitle} allowFontScaling={false}>Ascension</Text>
+              <Text style={styles.ascPromptText} allowFontScaling={false}>
+                Tu remets à zéro ton économie (pièces, Pacte, Faveur, Sanctuaire, Veilleur, auto-clics, améliorations).
+              </Text>
+              <Text style={styles.ascPromptText} allowFontScaling={false}>
+                Tu <Text style={styles.ascPromptStrong}>GARDES</Text> tes créatures, ton deck et toute ta progression en Aventure.
+              </Text>
+              <Text style={styles.ascPromptText} allowFontScaling={false}>
+                Tu gagnes : {ascensionPrompt.griffes} Griffes, et une production ×{ascensionPrompt.vitesse.toFixed(2)} pour toujours.
+              </Text>
+              <Text style={styles.ascPromptAsk} allowFontScaling={false}>Continuer ?</Text>
+              <View style={styles.ascPromptRow}>
+                <TouchableOpacity style={styles.ascPromptBtn} onPress={() => setAscensionPrompt(null)}>
+                  <Text style={styles.ascPromptBtnText} allowFontScaling={false} numberOfLines={1}>ANNULER</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.ascPromptBtn, styles.ascPromptBtnGo]} onPress={confirmAscension}>
+                  <Text style={[styles.ascPromptBtnText, styles.ascPromptBtnGoText]} allowFontScaling={false} numberOfLines={1}>ASCENSIONNER</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </ImageBackground>
         </View>
@@ -4412,10 +4406,18 @@ const styles = StyleSheet.create({
   // la vue grandit quand même et le cadre ouvragé s'étire. On laisse le
   // panneau suivre son contenu, et c'est la TAILLE DU TEXTE qui est
   // calée pour tenir.
+  // ⚠️ `aspectRatio` gardé ICI parce que le contenu est désormais borné
+  // par `ascPromptInner` : il ne peut plus forcer la vue à grandir, donc
+  // le cadre ouvragé ne s'étire pas.
   ascPromptPanel: {
-    width: '92%', maxWidth: 380, alignSelf: 'center',
-    justifyContent: 'flex-start',
+    width: '94%', maxWidth: 400, alignSelf: 'center',
+    aspectRatio: 640 / 668,
+    alignItems: 'center', justifyContent: 'flex-start',
   },
+  // Largeur en % du PANNEAU : 82 % pour un parchemin mesuré à 88 %.
+  // `marginTop` en % se résout aussi sur la largeur, ce qui est voulu :
+  // l'ornement du haut occupe une part constante de la largeur.
+  ascPromptInner: { width: '82%', marginTop: '13%', flex: 1 },
   ascPromptTitle: { color: '#2a1a08', fontSize: 19, fontWeight: '900', marginBottom: 7 },
   ascPromptText: { color: '#3a2a12', fontSize: 12, fontWeight: '700', lineHeight: 16, marginBottom: 7 },
   ascPromptStrong: { fontWeight: '900', color: '#2a1a08' },

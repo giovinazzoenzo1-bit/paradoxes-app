@@ -1005,21 +1005,35 @@ chevauchent), donc l'intérieur a été reconstruit en pavant une tuile de
 parchemin propre, repérée automatiquement par faible écart-type et forte
 luminance.
 
-### ⚠️ Dimensions : deux pièges corrigés
+### ⚠️ Dimensions : TROIS tentatives avant la bonne
 
-**1. Marges en POURCENTAGE** — en React Native, un padding en `%` se
-résout sur la LARGEUR, y compris pour le haut et le bas. Le texte
-débordait du parchemin et poussait le cadre. Les marges sont désormais
-calculées EN PIXELS depuis la largeur mesurée (`onLayout`).
+**1. Padding en POURCENTAGE** — en React Native, un padding en `%` se
+résout sur la LARGEUR, y compris pour le haut et le bas. Marges fausses,
+texte hors du parchemin.
 
-**2. `aspectRatio` ne BORNE PAS la hauteur** — si le contenu dépasse, la
-vue grandit quand même et le cadre ouvragé s'étire. Remplacé par un
-`minHeight` au rapport de l'illustration (668/640) : le panneau garde sa
-forme, et peut grandir si un texte plus long l'exige.
+**2. Padding calculé via `onLayout`** — dépend d'un événement qui doit
+avoir eu lieu : au premier rendu la marge vaut 0, et rien ne garantit la
+mise à jour. Le texte débordait encore.
 
-Zone intérieure MESURÉE de l'illustration : **88 % × 86 %**. Les marges
-retenues laissent 84 % × 80 %, donc le texte reste bien à l'intérieur —
-vérifié sur 360, 393 et 430 dp.
+**3. ✅ Vue intérieure à LARGEUR EN POURCENTAGE** — `width: '82%'` sur un
+ENFANT se résout toujours sur la largeur du parent, **dès le premier
+rendu**, sans événement ni calcul. C'est la seule des trois qui soit
+déterministe.
+
+**Règle** : pour borner un contenu dans une image de fond, utiliser une
+vue enfant en `width: '%'`, jamais un padding.
+
+⚠️ `allowFontScaling={false}` sur tous les textes du panneau : une
+taille de police système agrandie casserait une mise en page calculée au
+point près.
+
+⚠️ `aspectRatio` peut revenir maintenant que le contenu est borné par la
+vue intérieure : il ne peut plus forcer la vue à grandir, donc le cadre
+ne s'étire plus.
+
+Zone de parchemin MESURÉE : **88 %**. La vue intérieure en occupe 82 %,
+soit 6 points de marge. Boutons vérifiés : 201 dp requis pour 277
+disponibles au pire cas (écran 360 dp).
 
 ### ESSENCE retirée
 
