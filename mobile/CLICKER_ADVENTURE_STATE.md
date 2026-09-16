@@ -987,6 +987,43 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ Seuil d'Ascension : 5 M → 450 000 (15/09)
+
+Signalé : le défi « Fais l'Ascension » (cycle 5) demandait 5 000 000 de
+pièces gagnées à un joueur qui en avait 690 000.
+
+**Mesuré en suivant la séquence** :
+
+| Moment | Total gagné | Seuil |
+|---|---|---|
+| Cycle 5 (le défi) | **524 000** | 5 000 000 |
+| FIN de la séquence (cycle 10) | **1 960 000** | 5 000 000 |
+
+⚠️ **Déplacer le défi plus tard ne pouvait PAS marcher** : la séquence
+entière ne produit que 2 M. Le défi était infaisable à n'importe quel
+cycle. Seul le seuil pouvait bouger.
+
+**450 000** retenu par mesure : la 1re Ascension tombe pile au cycle 5,
+la 2e (seuil ×2) au cycle 7 — bien avant son défi du cycle 10. Vérifié :
+477 283 gagnés au cycle 5, 1 744 299 au cycle 10 contre 900 000 requis.
+
+⚠️ La boucle de prestige est intacte : le seuil double toujours à chaque
+Ascension, et attendre rapporte toujours plus d'essence.
+
+### ⚠️ ANGLE MORT de l'outil d'audit, corrigé
+
+Deux défauts laissaient passer ce défi infaisable :
+
+1. L'Ascension était estimée par un **forfait** (45 min) au lieu d'être
+   confrontée à son SEUIL. Elle mesure maintenant le temps nécessaire
+   pour atteindre le seuil restant.
+2. Le modèle ne CUMULAIT PAS les pièces gagnées au fil du parcours :
+   tout défi conditionné par un total à vie était estimé comme si le
+   joueur repartait de zéro.
+
+**Règle** : un défi conditionné par un SEUIL doit être confronté à ce
+seuil dans l'audit, jamais estimé au forfait.
+
 ## Économie des Diamants revue (15/09)
 
 **Décision de l'auteur** : la MAJORITÉ des défis doit rapporter des

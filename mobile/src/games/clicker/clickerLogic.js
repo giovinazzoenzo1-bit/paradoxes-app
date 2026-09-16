@@ -1059,7 +1059,17 @@ export function normalizeUpgradeLevels(levels) {
 // à chaque fois. Le seuil unique à 100M était hors de portée d'un
 // premier run (mesuré à plus de 5h de jeu), donc le défi « Fais
 // l'Ascension » du cycle 5 bloquait la séquence.
-export const ASCENSION_FIRST_THRESHOLD = 5000000; // 5M
+// Seuil de la 1re Ascension, ramené de 5 000 000 à 450 000 (15/09).
+//
+// ⚠️ MESURÉ : en suivant la séquence des défis, le joueur a gagné
+// 524 000 pièces au cycle 5 — là où le défi « Fais l'Ascension »
+// l'attend. À 5 M il en manquait 90 %. Pire : à la FIN de toute la
+// séquence il n'atteignait que 1,96 M, donc le défi était INFAISABLE
+// quel que soit le cycle où on l'aurait déplacé.
+//
+// 450 000 place la 1re Ascension au cycle 5 (pile son défi) et la 2e,
+// au double, au cycle 7 — bien avant son propre défi du cycle 10.
+export const ASCENSION_FIRST_THRESHOLD = 450000;
 export function ascensionThreshold(ascensionCount) {
   const n = Number.isFinite(ascensionCount) ? Math.max(0, ascensionCount) : 0;
   return ASCENSION_FIRST_THRESHOLD * Math.pow(2, n);

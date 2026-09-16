@@ -109,7 +109,15 @@ function minutesPour(q, cible, s) {
   if (m === 'runeEquippedTotal') return restant * 1;
   if (m === 'maxCreatureLevel') { let c = 0; for (let l = s.maxCreatureLevel; l < cible; l++) c += C.levelUpCost({ rarity: 'commun' }, l); return c / H.griffesParCombat * 3; }
   if (m === 'maxEvolutionTier') return 60;
-  if (m === 'ascension') return restant * 45;
+  // ⚠️ L'Ascension est conditionnée par un SEUIL de pièces gagnées à
+  // vie, pas par une action. Estimer un forfait laissait passer un défi
+  // INFAISABLE (seuil à 5 M alors que la séquence n'en produit que 2).
+  // On mesure le temps qu'il faut pour atteindre le seuil restant.
+  if (m === 'ascension') {
+    const seuil = C.ascensionThreshold(s.ascension || 0);
+    const manque = Math.max(0, seuil - (s.totalEarned || 0));
+    return manque / prod / 60 + restant * 10;
+  }
   if (m === 'ownedCount') return null;
   return null;
 }
@@ -157,6 +165,10 @@ function audit() {
     cycle.forEach((q) => {
       const cible = q.target || Q.resolveQuestTarget(q, s);
       const min = minutesPour(q, cible, s);
+      // ⚠️ Le joueur GAGNE des pièces pendant qu'il fait le défi. Sans
+      // ce cumul, tout défi conditionné par un seuil de pièces gagnées
+      // (l'Ascension) était estimé comme si le joueur repartait de zéro.
+      if (min != null) s.totalEarned = (s.totalEarned || 0) + production(s) * 60 * min;
       appliquer(q, cible, s);
       const estime = min == null ? null : Math.round(min);
       if (estime != null) { totalCycle += estime; total += estime; }
@@ -167,6 +179,10 @@ function audit() {
   return { lignes, total, etat: s };
 }
 module.exports.audit = audit;
+// Exportés pour les analyses ponctuelles (seuils, économie) : elles ont
+// besoin de rejouer le parcours avec leurs propres mesures.
+module.exports.etatInitial = etatInitial;
+module.exports.appliquer = appliquer;
 
 if (require.main === module) {
   const { lignes, total } = audit();
