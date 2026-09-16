@@ -57,7 +57,6 @@ import {
   sanctuaryUpgradeCost,
   veilleurOfflineMultiplier,
   veilleurUpgradeCost,
-  ascensionEssenceGain,
   ascensionThreshold,
   essenceBonusMultiplier,
   ascensionGriffesReward,
@@ -187,6 +186,11 @@ const TAP_ZONE_H = SCREEN_H * 0.419;
 // tableau construit avec un chemin dynamique ne fonctionnerait pas.
 // Le mini-boss réutilise l'illustration du Gardien : c'est la seule
 // figure « adversaire » du jeu, en créer une autre n'apporterait rien.
+// Panneau illustré du dialogue d'Ascension. Le texte est écrit PAR
+// DESSUS en code : les valeurs (Griffes, multiplicateur) changent à
+// chaque Ascension, une image avec le texte incrusté mentirait.
+const ASCENSION_PANEL = require('../../../assets/icons/ascension-panel.png');
+
 const GUARDIAN_ART = require('../../../assets/creatures/gardien/gardien.png');
 
 const EGG_IMAGES = [
@@ -1718,25 +1722,35 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Le seuil double à chaque Ascension (5M, 10M, 20M...), donc il faut
   // passer le compteur : sans lui, la 2e Ascension serait proposée dès
   // le seuil de la 1re.
-  const essenceGainPreview = ascensionEssenceGain(totalEarned, ascensionCount);
+  // ⚠️ L'ESSENCE est retirée (15/09). Elle donnait +1 % de production par
+  // point, mais la formule en puissance 0,3 rendait le gain quasi
+  // toujours de 1 point : un bonus de 1 %, invisible à côté du ×1,30 de
+  // l'Ascension. Deux récompenses pour un même geste, dont une sans
+  // effet perceptible, brouillaient le message.
+  //
+  // La condition d'Ascension ne passe donc plus par le gain d'essence
+  // mais directement par le SEUIL.
+  const ascensionReady = totalEarned >= ascensionThreshold(ascensionCount);
+  // ⚠️ Le panneau d'Ascension n'est PLUS une `Alert` système : elle
+  // impose son apparence iOS/Android et jurait avec le reste du jeu. Il
+  // s'affiche maintenant sur le parchemin illustré (`ascension-panel`),
+  // rendu plus bas.
+  const [ascensionPrompt, setAscensionPrompt] = useState(null);
+
   const doAscension = () => {
-    if (essenceGainPreview <= 0) return;
+    if (!ascensionReady) return;
     const ascensionNumber = (lifetimeStats.ascension || 0) + 1;
-    const griffesReward = ascensionGriffesReward(ascensionNumber);
-    const nextSpeed = ascensionSpeedMultiplier(ascensionNumber);
-    Alert.alert(
-      'Ascension',
-      `Tu remets à zéro ton économie (pièces, Pacte, Faveur, Sanctuaire, Veilleur, auto-clics, améliorations).\n\n`
-        + `Tu GARDES tes créatures, ton deck et toute ta progression en Aventure.\n\n`
-        + `Tu gagnes : ${griffesReward} Griffes, +${essenceGainPreview} essence, et une production x${nextSpeed.toFixed(2)} pour toujours.\n\nContinuer ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Ascensionner',
-          style: 'destructive',
-          onPress: async () => {
+    setAscensionPrompt({
+      griffes: ascensionGriffesReward(ascensionNumber),
+      vitesse: ascensionSpeedMultiplier(ascensionNumber),
+    });
+  };
+
+  const confirmAscension = () => {
+    setAscensionPrompt(null);
+    (async () => {
+          {
             trackEvent('ascension', 1);
-            setEssence((e) => e + essenceGainPreview);
             // Remise à zéro de la SEULE économie du clicker.
             setCoins(0);
             setTotalEarned(0);
@@ -1761,7 +1775,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             try {
               const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
               const pending = raw ? parseInt(raw, 10) || 0 : 0;
-              await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + griffesReward));
+              const du = ascensionGriffesReward((lifetimeStats.ascension || 0) + 1);
+              await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + du));
             } catch (_) {}
 
             // Les défis d'œuf CONTINUENT à la suite : ni le cycle en
@@ -1770,10 +1785,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             // — c'était la seule raison de re-tirer auparavant. Les
             // premiers défis seront simplement plus durs à relever avec
             // une économie repartie de zéro, ce qui est l'effet voulu.
-          },
-        },
-      ]
-    );
+          }
+    })();
   };
 
   // Affichage : la MÊME fonction que le tick et que le hors-ligne. Avant,
@@ -2916,7 +2929,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           onBuyUpgradeItem={buyUpgradeItem}
           onOffrande={doOffrande}
           essence={essence}
-          essenceGainPreview={essenceGainPreview}
+          ascensionReady={ascensionReady}
           ascensionCount={ascensionCount}
           totalEarned={totalEarned}
           onAscend={doAscension}
@@ -3076,7 +3089,41 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           l'écran et la carte apparaissait décalée (bug constaté en
           capture). Un voile plein écran doit être frère du contenu, pas
           enfant d'une zone. */}
-        {/* Félicitations à chaque défi d'éclosion validé. */}
+        {/* Panneau d'ASCENSION sur parchemin. Remplace l'Alert système,
+          qui imposait son apparence iOS/Android au milieu d'un jeu
+          entièrement illustré. */}
+      {ascensionPrompt && (
+        <View style={styles.ascPromptBackdrop}>
+          <ImageBackground
+            source={ASCENSION_PANEL}
+            style={styles.ascPromptPanel}
+            imageStyle={styles.ascPromptPanelImg}
+            resizeMode="stretch"
+          >
+            <Text style={styles.ascPromptTitle}>Ascension</Text>
+            <Text style={styles.ascPromptText}>
+              Tu remets à zéro ton économie (pièces, Pacte, Faveur, Sanctuaire, Veilleur, auto-clics, améliorations).
+            </Text>
+            <Text style={styles.ascPromptText}>
+              Tu <Text style={styles.ascPromptStrong}>GARDES</Text> tes créatures, ton deck et toute ta progression en Aventure.
+            </Text>
+            <Text style={styles.ascPromptText}>
+              Tu gagnes : {ascensionPrompt.griffes} Griffes, et une production ×{ascensionPrompt.vitesse.toFixed(2)} pour toujours.
+            </Text>
+            <Text style={styles.ascPromptAsk}>Continuer ?</Text>
+            <View style={styles.ascPromptRow}>
+              <TouchableOpacity style={styles.ascPromptBtn} onPress={() => setAscensionPrompt(null)}>
+                <Text style={styles.ascPromptBtnText}>ANNULER</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.ascPromptBtn, styles.ascPromptBtnGo]} onPress={confirmAscension}>
+                <Text style={[styles.ascPromptBtnText, styles.ascPromptBtnGoText]}>ASCENSIONNER</Text>
+              </TouchableOpacity>
+            </View>
+          </ImageBackground>
+        </View>
+      )}
+
+      {/* Félicitations à chaque défi d'éclosion validé. */}
         {/* Volontairement MINUSCULE et SANS voile : ce n'est pas une
             décision à prendre, juste une bonne nouvelle. Un voile plein
             écran bloquerait le jeu pour rien et masquerait l'œuf, qui est
@@ -3358,7 +3405,7 @@ function ShopView({
   applyDiscount, onBuyTapPower, onBuyCrit, onBuyCritDamage, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onBuyTapUpgrade,
   griffesCoinBuys = 0, onBuyGriffesWithCoins, owned = [],
   critDamageLevel = 0, tapUpgrades = [], onOffrande,
-  essence, essenceGainPreview, totalEarned, ascensionCount, onAscend,
+  essence, ascensionReady = false, totalEarned, ascensionCount, onAscend,
 }) {
   // Créatures possédées, en Set : la liste des améliorations est
   // parcourue à chaque rendu, un `find` par ligne serait inutilement
@@ -3429,15 +3476,15 @@ function ShopView({
                 qu'on veut garder épuré — et c'est le seul autre endroit
                 du clicker où l'on dépense sa progression. */}
             <TouchableOpacity
-              style={[styles.ascensionBtn, essenceGainPreview <= 0 && styles.actionBtnDisabled]}
+              style={[styles.ascensionBtn, !ascensionReady && styles.actionBtnDisabled]}
               onPress={onAscend}
-              disabled={essenceGainPreview <= 0}
+              disabled={!ascensionReady}
             >
               <Text style={styles.ascensionBtnText}>
                 🌟 Ascension {ascensionCount > 0 ? `(x${ascensionSpeedMultiplier(ascensionCount).toFixed(2)} production)` : ''}
               </Text>
               <Text style={styles.ascensionBtnSubtext}>
-                {essenceGainPreview > 0
+                {ascensionReady
                   ? `Remet ton économie à zéro · tu gardes créatures et Aventure · +${ascensionGriffesReward(ascensionCount + 1)} Griffes et production x${ascensionSpeedMultiplier(ascensionCount + 1).toFixed(2)}`
                   : `Gagne encore ${formatNum(ascensionThreshold(ascensionCount) - totalEarned)} pièces au total pour débloquer`}
               </Text>
@@ -4338,6 +4385,34 @@ const styles = StyleSheet.create({
   // Diamant d'Offrande : plus petit que les autres bulles (il peut y en
   // avoir plusieurs autour de l'œuf en même temps) et aux couleurs du
   // Diamant, pour qu'on comprenne d'où il vient.
+  // ---- Panneau d'Ascension ----
+  ascPromptBackdrop: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 70,
+    backgroundColor: 'rgba(4,8,16,0.80)', alignItems: 'center', justifyContent: 'center',
+  },
+  // Rapport 640x668 de l'illustration : s'en écarter déformerait le
+  // cadre ouvragé.
+  ascPromptPanel: {
+    width: '90%', maxWidth: 360, aspectRatio: 640 / 668,
+    // Marges calées sur le cadre MESURÉ : 7 % sur les côtés, 10,5 % en
+    // haut (l'ornement descend), 4 % en bas.
+    paddingHorizontal: '10%', paddingTop: '14%', paddingBottom: '7%',
+    justifyContent: 'flex-start',
+  },
+  ascPromptPanelImg: { resizeMode: 'stretch' },
+  ascPromptTitle: { color: '#2a1a08', fontSize: 20, fontWeight: '900', marginBottom: 8 },
+  ascPromptText: { color: '#3a2a12', fontSize: 12.5, fontWeight: '700', lineHeight: 17, marginBottom: 8 },
+  ascPromptStrong: { fontWeight: '900', color: '#2a1a08' },
+  ascPromptAsk: { color: '#3a2a12', fontSize: 13, fontWeight: '800', marginTop: 2 },
+  ascPromptRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 'auto' },
+  ascPromptBtn: {
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6,
+    backgroundColor: 'rgba(30,38,54,0.92)', borderWidth: 1.5, borderColor: '#6b5836',
+  },
+  ascPromptBtnGo: { backgroundColor: 'rgba(92,52,24,0.95)', borderColor: '#c9a227' },
+  ascPromptBtnText: { color: '#e8dcc0', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
+  ascPromptBtnGoText: { color: '#ffe9a8' },
+
   // ---- Félicitations de défi ----
   // Pas de fond sombre : le conteneur est transparent, seule la petite
   // carte est visible. Il reste plein écran uniquement pour CENTRER la

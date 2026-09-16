@@ -987,6 +987,45 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## Panneau d'Ascension illustré + ESSENCE retirée (15/09)
+
+### L'Alert système remplacée par un parchemin
+
+Le dialogue passait par `Alert.alert`, qui impose son apparence
+iOS/Android au milieu d'un jeu entièrement illustré. Il s'affiche
+maintenant sur `assets/icons/ascension-panel.png`.
+
+⚠️ **Le texte est écrit PAR-DESSUS en code, pas incrusté dans l'image.**
+Les valeurs (Griffes gagnées, multiplicateur) changent à chaque
+Ascension : une image à texte fixe mentirait dès la deuxième.
+
+⚠️ La maquette fournie avait son texte incrusté. Il a fallu le RETIRER :
+seuillage impossible (texte et parchemin ont des luminances qui se
+chevauchent), donc l'intérieur a été reconstruit en pavant une tuile de
+parchemin propre, repérée automatiquement par faible écart-type et forte
+luminance.
+
+⚠️ `aspectRatio: 640/668` sur le panneau : s'en écarter déformerait le
+cadre ouvragé. Marges intérieures calées sur le cadre MESURÉ.
+
+### ESSENCE retirée
+
+L'Ascension donnait « +N essence » EN PLUS du ×1,30 de production.
+
+⚠️ La formule `floor((gagné / seuil) ^ 0,3)` rendait le gain quasi
+toujours de **1 point**, soit **+1 %** de production — invisible à côté
+du ×1,30. Deux récompenses pour un même geste, dont une sans effet
+perceptible, brouillaient le message.
+
+La condition d'Ascension passe désormais par le SEUIL directement
+(`ascensionReady`) et non par le gain d'essence.
+
+⚠️ L'état `essence` est CONSERVÉ en lecture : les joueurs qui en ont
+gardent leur bonus. Mais `setEssence` n'est plus appelé que par le
+chargement — **plus aucune essence ne peut être gagnée**. Retirer l'état
+aurait cassé les sauvegardes existantes et la signature de
+`passiveRate`.
+
 ## ⚠️⚠️ Seuil d'Ascension : 5 M → 450 000 (15/09)
 
 Signalé : le défi « Fais l'Ascension » (cycle 5) demandait 5 000 000 de
