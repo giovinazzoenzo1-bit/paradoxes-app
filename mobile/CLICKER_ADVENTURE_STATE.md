@@ -1005,6 +1005,27 @@ chevauchent), donc l'intérieur a été reconstruit en pavant une tuile de
 parchemin propre, repérée automatiquement par faible écart-type et forte
 luminance.
 
+### Illustration VIERGE avec plaques de boutons dessinées
+
+L'auteur a fourni une version sans texte, avec les **deux plaques de
+boutons déjà dessinées**. Les boutons se posent EXACTEMENT dessus, en
+pourcentages MESURÉS sur l'image (641×668) :
+
+| | Position |
+|---|---|
+| Plaque gauche | x 15,0 % → 56,2 % |
+| Plaque droite | x 57,6 % → 94,7 % |
+| Bande | y 79,9 % → 94,8 % |
+
+Les boutons n'ont donc **aucun fond** : la plaque EST le bouton. Rien à
+dessiner, rien à faire correspondre à la main.
+
+Cadre élargi à **98 % de l'écran** (plafond 440).
+
+**Vérifié** sur 360, 393 et 430 dp : le texte occupe 125-139 dp pour
+246-294 disponibles, et les deux libellés tiennent dans leurs plaques
+(56 dp sur 145 minimum, 84 dp sur 131).
+
 ### Texte EN CODE, police réduite
 
 Le texte est écrit par-dessus l'illustration vierge, pas incrusté : les

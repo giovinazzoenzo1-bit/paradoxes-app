@@ -3094,18 +3094,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           entièrement illustré. */}
       {ascensionPrompt && (
         <View style={styles.ascPromptBackdrop}>
-          {/* Texte écrit EN CODE : les Griffes et le multiplicateur
-              changent à chaque Ascension, une image à texte fixe
-              mentirait dès la deuxième. */}
           <ImageBackground
             source={ASCENSION_PANEL}
             style={styles.ascPromptPanel}
             resizeMode="stretch"
           >
-            {/* Contenu borné par une vue enfant en LARGEUR RELATIVE : la
-                seule façon déterministe de rester dans le parchemin (un
-                padding en % se résout sur la largeur, un padding calculé
-                dépend d'un `onLayout` qui peut ne pas avoir eu lieu). */}
+            {/* Texte EN CODE : Griffes et multiplicateur changent à
+                chaque Ascension, une image à texte fixe mentirait dès la
+                deuxième. Borné par une vue enfant en LARGEUR RELATIVE,
+                seule façon déterministe de rester dans le parchemin. */}
             <View style={styles.ascPromptInner}>
               <Text style={styles.ascPromptTitle} allowFontScaling={false}>Ascension</Text>
               <Text style={styles.ascPromptText} allowFontScaling={false}>
@@ -3118,15 +3115,26 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 Tu gagnes : {ascensionPrompt.griffes} Griffes, et une production ×{ascensionPrompt.vitesse.toFixed(2)} pour toujours.
               </Text>
               <Text style={styles.ascPromptAsk} allowFontScaling={false}>Continuer ?</Text>
-              <View style={styles.ascPromptRow}>
-                <TouchableOpacity style={styles.ascPromptBtn} onPress={() => setAscensionPrompt(null)}>
-                  <Text style={styles.ascPromptBtnText} allowFontScaling={false} numberOfLines={1}>ANNULER</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.ascPromptBtn, styles.ascPromptBtnGo]} onPress={confirmAscension}>
-                  <Text style={[styles.ascPromptBtnText, styles.ascPromptBtnGoText]} allowFontScaling={false} numberOfLines={1}>ASCENSIONNER</Text>
-                </TouchableOpacity>
-              </View>
             </View>
+            {/* ⚠️ Les deux PLAQUES sont DESSINÉES dans l'illustration.
+                Les boutons se posent exactement dessus, en pourcentages
+                MESURÉS sur l'image (641×668) :
+                  gauche  x 15,0 % → 56,2 %
+                  droite  x 57,6 % → 94,7 %
+                  bande   y 79,9 % → 94,8 %
+                Ils n'ont donc aucun fond : la plaque EST le bouton. */}
+            <TouchableOpacity
+              style={[styles.ascPlate, styles.ascPlateLeft]}
+              onPress={() => setAscensionPrompt(null)}
+            >
+              <Text style={styles.ascPlateText} allowFontScaling={false} numberOfLines={1}>ANNULER</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.ascPlate, styles.ascPlateRight]}
+              onPress={confirmAscension}
+            >
+              <Text style={[styles.ascPlateText, styles.ascPlateTextGo]} allowFontScaling={false} numberOfLines={1}>ASCENSIONNER</Text>
+            </TouchableOpacity>
           </ImageBackground>
         </View>
       )}
@@ -4407,32 +4415,26 @@ const styles = StyleSheet.create({
   // ⚠️ `aspectRatio` gardé ICI parce que le contenu est désormais borné
   // par `ascPromptInner` : il ne peut plus forcer la vue à grandir, donc
   // le cadre ouvragé ne s'étire pas.
+  // Cadre ÉLARGI (98 % de l'écran, plafond 440) à la demande de l'auteur.
   ascPromptPanel: {
-    width: '94%', maxWidth: 400, alignSelf: 'center',
-    aspectRatio: 640 / 668,
+    width: '98%', maxWidth: 440, alignSelf: 'center',
+    aspectRatio: 641 / 668,
     alignItems: 'center', justifyContent: 'flex-start',
-    // Décalage vers la DROITE demandé. 0,05 mm vaut 0,31 dp, soit moins
-    // d'un pixel : invisible. On applique 2 dp, le plus petit écart
-    // réellement perceptible.
-    marginLeft: 4,
   },
+  // Plaques : positions MESURÉES sur l'illustration, en % du panneau.
+  ascPlate: {
+    position: 'absolute', top: '79.9%', height: '14.9%',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ascPlateLeft: { left: '15.0%', width: '41.2%' },
+  ascPlateRight: { left: '57.6%', width: '37.1%' },
+  ascPlateText: { color: '#e8dcc0', fontSize: 11.5, fontWeight: '900', letterSpacing: 0.4 },
+  ascPlateTextGo: { color: '#ffe9a8' },
   ascPromptInner: { width: '82%', marginTop: '13%', flex: 1 },
-  // Bande laissée libre dans l'illustration : 81,5 % à 95,5 % de la
-  // hauteur. `paddingBottom` en % se résout sur la LARGEUR, donc on
-  // positionne avec `marginBottom` en % de la même largeur — mesuré
-  // pour tomber dans la bande.
   ascPromptTitle: { color: '#2a1a08', fontSize: 16, fontWeight: '900', marginBottom: 6 },
   ascPromptText: { color: '#3a2a12', fontSize: 10.5, fontWeight: '700', lineHeight: 14, marginBottom: 6 },
   ascPromptStrong: { fontWeight: '900', color: '#2a1a08' },
   ascPromptAsk: { color: '#3a2a12', fontSize: 11, fontWeight: '800', marginTop: 1 },
-  ascPromptRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 'auto', marginBottom: 6 },
-  ascPromptBtn: {
-    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6,
-    backgroundColor: 'rgba(30,38,54,0.92)', borderWidth: 1.5, borderColor: '#6b5836',
-  },
-  ascPromptBtnGo: { backgroundColor: 'rgba(92,52,24,0.95)', borderColor: '#c9a227' },
-  ascPromptBtnText: { color: '#e8dcc0', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
-  ascPromptBtnGoText: { color: '#ffe9a8' },
 
   // ---- Félicitations de défi ----
   // Pas de fond sombre : le conteneur est transparent, seule la petite
