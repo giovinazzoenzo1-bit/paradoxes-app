@@ -1005,35 +1005,25 @@ chevauchent), donc l'intérieur a été reconstruit en pavant une tuile de
 parchemin propre, repérée automatiquement par faible écart-type et forte
 luminance.
 
-### ⚠️ Dimensions : TROIS tentatives avant la bonne
+### Version retenue : texte INCRUSTÉ + deux boutons posés
 
-**1. Padding en POURCENTAGE** — en React Native, un padding en `%` se
-résout sur la LARGEUR, y compris pour le haut et le bas. Marges fausses,
-texte hors du parchemin.
+Après trois tentatives pour reproduire le texte en code (padding en %,
+padding via `onLayout`, vue enfant en %), la solution retenue est la plus
+simple : **garder l'illustration telle quelle, texte compris**, et ne
+poser par-dessus que les deux boutons.
 
-**2. Padding calculé via `onLayout`** — dépend d'un événement qui doit
-avoir eu lieu : au premier rendu la marge vaut 0, et rien ne garantit la
-mise à jour. Le texte débordait encore.
+Seule la bande des boutons a été effacée de l'image (reconstruite en
+pavant une tuile de parchemin propre). Elle occupe **80,4 % à 95,4 %**
+de la hauteur ; les boutons y sont positionnés et vérifiés dedans
+(329-359 dp sur une bande de 310-367).
 
-**3. ✅ Vue intérieure à LARGEUR EN POURCENTAGE** — `width: '82%'` sur un
-ENFANT se résout toujours sur la largeur du parent, **dès le premier
-rendu**, sans événement ni calcul. C'est la seule des trois qui soit
-déterministe.
+⚠️ **Limite assumée** : le texte annonce « 60 Griffes » et « ×1,30 »,
+valeurs de la PREMIÈRE Ascension. Elles seront fausses aux suivantes. Si
+c'est gênant un jour, il faudra une image par palier ou revenir au texte
+en code.
 
-**Règle** : pour borner un contenu dans une image de fond, utiliser une
-vue enfant en `width: '%'`, jamais un padding.
-
-⚠️ `allowFontScaling={false}` sur tous les textes du panneau : une
-taille de police système agrandie casserait une mise en page calculée au
-point près.
-
-⚠️ `aspectRatio` peut revenir maintenant que le contenu est borné par la
-vue intérieure : il ne peut plus forcer la vue à grandir, donc le cadre
-ne s'étire plus.
-
-Zone de parchemin MESURÉE : **88 %**. La vue intérieure en occupe 82 %,
-soit 6 points de marge. Boutons vérifiés : 201 dp requis pour 277
-disponibles au pire cas (écran 360 dp).
+⚠️ `allowFontScaling={false}` sur les libellés des boutons : une police
+système agrandie les ferait déborder de la bande.
 
 ### ESSENCE retirée
 
