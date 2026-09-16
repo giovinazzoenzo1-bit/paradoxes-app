@@ -987,6 +987,52 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️ DÉCROCHAGE DU DÉBUT DE PARTIE : c'est l'ATTENTE (15/09)
+
+Mesuré avec l'outil d'audit, courbe des premiers œufs :
+
+| Œuf | Cycle | Cumul | vs précédent |
+|---|---|---|---|
+| 1 | 27 min | 0,5 h | — |
+| 2 | 66 min | 1,6 h | ×2,4 |
+| 3 | **126 min** | **3,6 h** | ×1,9 |
+
+⚠️ Le cycle 1 (27 min, 1er défi en 2 min) est BON — c'est l'accroche, ne
+pas y toucher. Le décrochage est au **3e œuf**.
+
+⚠️ **Et ce n'est pas un problème de difficulté.** Un défi d'AVENTURE
+mange 55 à 67 % de chaque cycle dès le 2e œuf. Cause : 5 énergies,
++1 toutes les 20 min. Le niveau 10 demande 10 combats = **108 min dont
+93 d'attente**. Le joueur ne part pas parce que c'est dur, mais parce
+qu'il n'a plus rien à faire.
+
+### Solution retenue : +1 énergie par PUBLICITÉ
+
+Décision de l'auteur : ne PAS augmenter l'énergie (ça braderait la
+difficulté pour tout le monde) mais offrir une pub facultative.
+
+**Plafond mesuré : 5 pubs par jour.**
+
+| Pubs | 3e œuf | Attente |
+|---|---|---|
+| 0 | 108 min | 93 min |
+| 3 | 52 min | 37 min |
+| **5** | **15 min** | **0 min** |
+| 8 | 15 min | 0 min (aucun gain de plus) |
+
+5 efface exactement l'attente ; au-delà le gain mesuré est NUL sur ce
+défi, les 10 combats étant déjà couverts.
+
+⚠️ Plafond par JOUR et non par heure : une pub dure ~30 s, un plafond
+horaire se contournerait en attendant l'heure suivante.
+
+⚠️ Le bouton pub est placé AVANT celui en Diamants : c'est l'option
+gratuite, elle doit être la première proposée au joueur à sec.
+
+⚠️ `ActivityIndicator` n'était pas importé dans AdventureScreen —
+l'écran aurait planté à l'affichage du bouton. Attrapé par le contrôle
+d'imports.
+
 ## ⚠️⚠️ OUTIL D'AUDIT DE LA PROGRESSION — `mobile/tools/audit-quetes.js`
 
 **Le point le plus important du projet** : la séquence compte ~25 œufs ×

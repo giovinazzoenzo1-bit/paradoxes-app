@@ -92,7 +92,16 @@ function minutesPour(q, cible, s) {
   if (m === 'powerActivated') return restant / H.pouvoirParMin;
   if (m === 'maxTranseHoldSec') return 2;
   if (m === 'maxCombo') return 2;
-  if (m === 'offering') return restant / H.diamantsParJour * 24 * 60;      // 1 Offrande = 1 💎
+  // ⚠️ Les Diamants ne tombent PAS au rythme du plafond quotidien. Ils
+  // viennent des boss de tap : le 1er à 2 min de jeu actif, les suivants
+  // à 20 min, au plus 2 par heure. Modéliser par le plafond journalier
+  // donnait 69 min pour UNE Offrande en début de partie — faux, et ça
+  // faisait passer le cycle 2 pour un mur qu'il n'est qu'en partie.
+  if (m === 'offering') {
+    const premier = 2;                       // 1er boss : 2 min actives
+    const suivants = Math.max(0, restant - 1) * 20;
+    return premier + suivants;
+  }
   if (m === 'totalSummons') { let c = 0; for (let n = s.ownedCount; n < s.ownedCount + restant; n++) c += C.summonCost(n); return c / prod / 60; }
   if (m === 'battleWon' || m === 'advLevelReached') return restant * (60 / H.energieMax) / 1; // énergie
   if (m === 'runeBought' || m === 'runeFused') return restant * 100 / H.griffesParCombat * 3;

@@ -3,7 +3,19 @@
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Image, ImageBackground, Animated, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  useWindowDimensions,
+  Image,
+  ImageBackground,
+  Animated,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
@@ -253,6 +265,22 @@ export const GRIFFES_PACK = 250;
 export const GRIFFES_DIAMOND_COST = 25;
 
 export const ENERGY_DIAMOND_COST = 5;
+
+// ---- Énergie par PUBLICITÉ ----
+//
+// Mesuré : atteindre le niveau 10 d'Aventure demande 10 combats, donc
+// 108 minutes dont 93 d'ATTENTE avec 5 énergies qui se rechargent en
+// 20 min. C'est là que le joueur décroche — pas parce que c'est dur,
+// mais parce qu'il n'a plus rien à faire.
+//
+// 5 pubs par jour effacent exactement cette attente (0 min au lieu de
+// 93) sans rendre l'énergie gratuite : au-delà de 5, le gain mesuré est
+// NUL sur ce défi, puisque les 10 combats sont déjà couverts.
+//
+// ⚠️ Plafond par JOUR et non par heure : une pub dure ~30 s, un plafond
+// horaire se contournerait en attendant l'heure suivante.
+export const ENERGY_AD_DAILY_MAX = 5;
+export const ENERGY_AD_KEY = 'adventure:energyAds:v1';
 export const DEV_ADD_GRIFFES_KEY = 'adventure:dev:addGriffes';
 const DEV_GRIFFES_AMOUNT = 1000;
 // Même schéma que ci-dessus pour recharger l'énergie au max depuis Options.
@@ -580,6 +608,43 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     setEnergyUpdatedAt(Date.now());
   };
 
+  // Pubs d'énergie déjà regardées AUJOURD'HUI. Stocké avec la date : au
+  // changement de jour, le compteur repart de lui-même.
+  const [energyAdsToday, setEnergyAdsToday] = useState(0);
+  const [energyAdLoading, setEnergyAdLoading] = useState(false);
+  useEffect(() => {
+    let vivant = true;
+    AsyncStorage.getItem(ENERGY_AD_KEY)
+      .then((raw) => {
+        if (!vivant || !raw) return;
+        const d = JSON.parse(raw);
+        if (d && d.date === new Date().toDateString()) setEnergyAdsToday(d.n || 0);
+      })
+      .catch(() => {});
+    return () => { vivant = false; };
+  }, []);
+
+  const watchAdForEnergy = () => {
+    if (energyAdLoading || energyAdsToday >= ENERGY_AD_DAILY_MAX) return;
+    const recalced = computeEnergyRegen(energy, energyUpdatedAt, Date.now());
+    if (recalced.energy >= ENERGY_MAX) {
+      Alert.alert('Énergie pleine', "Tu n'as pas besoin de recharger pour l'instant.");
+      return;
+    }
+    setEnergyAdLoading(true);
+    setTimeout(() => {
+      setEnergyAdLoading(false);
+      const maj = computeEnergyRegen(energy, energyUpdatedAt, Date.now());
+      // +1 seulement, jamais au-delà du maximum.
+      setEnergy(Math.min(ENERGY_MAX, maj.energy + 1));
+      setEnergyUpdatedAt(maj.lastUpdateAt);
+      const n = energyAdsToday + 1;
+      setEnergyAdsToday(n);
+      AsyncStorage.setItem(ENERGY_AD_KEY, JSON.stringify({ date: new Date().toDateString(), n })).catch(() => {});
+      trackEvent('energyAd', 1);
+    }, 1000);
+  };
+
   const startBattleWithEnergy = () => {
     const now = Date.now();
     const recalced = computeEnergyRegen(energy, energyUpdatedAt, now);
@@ -826,6 +891,9 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onLevelWon={handleLevelWon}
         onBack={() => setChapterMapOpen(false)}
         onBuyEnergy={buyEnergyWithDiamonds}
+        onWatchAdForEnergy={watchAdForEnergy}
+        adsLeft={ENERGY_AD_DAILY_MAX - energyAdsToday}
+        adLoading={energyAdLoading}
         onBuyGriffes={buyGriffesWithDiamonds}
         diamonds={diamonds}
         levelStars={levelStars}
@@ -1743,7 +1811,7 @@ function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -2139,6 +2207,9 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           }}
           onBuyEnergy={onBuyEnergy}
           diamonds={diamonds}
+          onWatchAdForEnergy={onWatchAdForEnergy}
+          adsLeft={adsLeft}
+          adLoading={adLoading}
         />
       )}
     </View>
@@ -2732,7 +2803,7 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   );
 }
 
-function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart, onBuyEnergy, diamonds = 0 }) {
+function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false }) {
   const opponent = opponentForLevel(levelNumber);
   const display = opponent.stages[0];
   const ownedMap = {};
@@ -2798,6 +2869,23 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
           {/* Petit carré à DROITE plutôt qu'une barre en dessous : la
               recharge est une action secondaire, elle ne doit pas peser
               autant que « Combattre ». */}
+          {/* Pub AVANT les Diamants : c'est l'option gratuite, elle doit
+              être la première proposée quand le joueur est à sec. */}
+          {energy <= 0 && onWatchAdForEnergy && adsLeft > 0 && (
+            <TouchableOpacity
+              style={[styles.buyEnergyBtn, styles.adEnergyBtn, adLoading && styles.actionBtnDisabledAdv]}
+              onPress={onWatchAdForEnergy}
+              disabled={adLoading}
+            >
+              {adLoading
+                ? <ActivityIndicator size="small" color="#241a00" />
+                : (<>
+                    <Text style={styles.buyEnergyIcon}>📺</Text>
+                    <Text style={styles.adEnergyCost}>+1</Text>
+                  </>)}
+            </TouchableOpacity>
+          )}
+
           {energy <= 0 && onBuyEnergy && (
             <TouchableOpacity
               style={[styles.buyEnergyBtn, diamonds < ENERGY_DIAMOND_COST && styles.actionBtnDisabledAdv]}
@@ -3042,6 +3130,10 @@ const styles = StyleSheet.create({
 
   startRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, alignSelf: 'stretch' },
   startBattleBtnFlex: { flex: 1 },
+  // Bouton PUB : même gabarit que celui en Diamants, couleur de l'action
+  // gratuite pour qu'on le distingue au premier coup d'œil.
+  adEnergyBtn: { backgroundColor: COLORS.action, borderColor: COLORS.action },
+  adEnergyCost: { color: '#241a00', fontSize: 12, fontWeight: '900' },
   buyEnergyBtn: {
     width: 54, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(42,127,168,0.22)',
