@@ -4421,13 +4421,19 @@ const styles = StyleSheet.create({
     aspectRatio: 641 / 668,
     alignItems: 'center', justifyContent: 'flex-start',
   },
-  // Plaques : positions MESURÉES sur l'illustration, en % du panneau.
+  // Plaques : positions REMESURÉES sur l'illustration finale.
+  //
+  // ⚠️ La première mesure était fausse (15 % au lieu de 31,4 % à gauche) :
+  // la détection avait pris l'ombre du parchemin pour la plaque. Les
+  // libellés tombaient donc à côté de leur plaque. Ici on ne retient que
+  // les blocs LARGES et PLATS (rapport largeur/hauteur > 1,8), ce qui
+  // écarte le cadre et les ombres.
   ascPlate: {
-    position: 'absolute', top: '79.9%', height: '14.9%',
+    position: 'absolute', top: '84.6%', height: '9.8%',
     alignItems: 'center', justifyContent: 'center',
   },
-  ascPlateLeft: { left: '15.0%', width: '41.2%' },
-  ascPlateRight: { left: '57.6%', width: '37.1%' },
+  ascPlateLeft: { left: '31.4%', width: '24.6%' },
+  ascPlateRight: { left: '57.9%', width: '34.6%' },
   ascPlateText: { color: '#e8dcc0', fontSize: 11.5, fontWeight: '900', letterSpacing: 0.4 },
   ascPlateTextGo: { color: '#ffe9a8' },
   ascPromptInner: { width: '82%', marginTop: '13%', flex: 1 },

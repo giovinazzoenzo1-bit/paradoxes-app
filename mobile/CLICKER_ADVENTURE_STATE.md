@@ -1013,9 +1013,19 @@ pourcentages MESURÉS sur l'image (641×668) :
 
 | | Position |
 |---|---|
-| Plaque gauche | x 15,0 % → 56,2 % |
-| Plaque droite | x 57,6 % → 94,7 % |
-| Bande | y 79,9 % → 94,8 % |
+| Plaque gauche | left **31,4 %**, largeur 24,6 % |
+| Plaque droite | left **57,9 %**, largeur 34,6 % |
+| Bande | top 84,6 %, hauteur 9,8 % |
+
+⚠️ **Première mesure FAUSSE** : 15 % au lieu de 31,4 % à gauche. La
+détection avait pris l'OMBRE du parchemin pour la plaque, et les
+libellés tombaient à côté. Corrigé en ne retenant que les blocs LARGES
+et PLATS (rapport largeur/hauteur > 1,8), ce qui écarte le cadre et les
+ombres.
+
+**Règle** : pour repérer un élément dans une illustration, filtrer sur sa
+FORME (rapport largeur/hauteur, taille minimale), pas seulement sur sa
+couleur — une ombre a la même couleur qu'une plaque.
 
 Les boutons n'ont donc **aucun fond** : la plaque EST le bouton. Rien à
 dessiner, rien à faire correspondre à la main.
