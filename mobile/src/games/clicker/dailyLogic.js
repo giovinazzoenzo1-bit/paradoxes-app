@@ -82,7 +82,34 @@ export function pickDailyQuests(dateKey) {
     const j = Math.floor(rand() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  return shuffled.slice(0, QUESTS_PER_DAY).map((q) => q.id);
+  // ⚠️ Tirage GARANTI : exactement 1 défi à Diamant par jour, les autres
+  // en Griffes seules.
+  //
+  // Un tirage purement aléatoire dans un pool où 23 % portent des
+  // Diamants donnerait 0 à 3 Diamants selon les jours — le joueur ne
+  // pourrait compter sur rien. La règle voulue est « 1 défi sur 3 »,
+  // elle doit donc être imposée, pas espérée.
+  return tirerAvecQuotaDiamant(shuffled, QUESTS_PER_DAY, 1).map((q) => q.id);
+}
+
+// Prend `total` défis dans une liste DÉJÀ mélangée, dont exactement
+// `quotaDiamant` portent des Diamants. Si le pool n'en contient pas
+// assez, on complète avec ce qui existe — jamais de trou.
+function tirerAvecQuotaDiamant(melanges, total, quotaDiamant) {
+  const avec = melanges.filter((q) => q.diamonds > 0);
+  const sans = melanges.filter((q) => !q.diamonds);
+  const choisis = [
+    ...avec.slice(0, quotaDiamant),
+    ...sans.slice(0, total - quotaDiamant),
+  ];
+  // Complément si une des deux familles est trop courte.
+  if (choisis.length < total) {
+    for (const q of melanges) {
+      if (choisis.length >= total) break;
+      if (!choisis.includes(q)) choisis.push(q);
+    }
+  }
+  return choisis.slice(0, total);
 }
 
 export function questDef(questId) {
@@ -128,27 +155,27 @@ export function weekKey(date = new Date()) {
 // toutes seules.
 export const WEEKLY_QUEST_POOL = [
   { id: 'w_win80battles', desc: 'Gagne 80 combats en Aventure', event: 'battleWon', target: 80, reward: 700, diamonds: 3 },
-  { id: 'w_crit8000',     desc: 'Obtiens 8 000 coups critiques', event: 'crit', target: 8000, reward: 600, diamonds: 3 },
-  { id: 'w_buyRune12',    desc: 'Achète 12 runes',              event: 'runeBought', target: 12, reward: 600, diamonds: 3 },
+  { id: 'w_crit8000',     desc: 'Obtiens 8 000 coups critiques', event: 'crit', target: 8000, reward: 900 },
+  { id: 'w_buyRune12',    desc: 'Achète 12 runes',              event: 'runeBought', target: 12, reward: 900 },
   // 4 et non 6 : la fusion exige DEUX runes identiques (même type ET
   // même niveau). Sur ~28 runes tirées au hasard parmi 4 types, on
   // obtient environ 7 paires — viser 6 revenait à exiger 100% de la
   // production hebdomadaire ET une chance parfaite au tirage.
   { id: 'w_fuseRune4',    desc: 'Fusionne 4 fois des runes',    event: 'runeFused', target: 4, reward: 650, diamonds: 3 },
-  { id: 'w_equipRune15',  desc: 'Équipe 15 runes',              event: 'runeEquipped', target: 15, reward: 500, diamonds: 3 },
-  { id: 'w_summon40',     desc: 'Invoque 40 créatures',         event: 'summon', target: 40, reward: 550, diamonds: 3 },
+  { id: 'w_equipRune15',  desc: 'Équipe 15 runes',              event: 'runeEquipped', target: 15, reward: 750 },
+  { id: 'w_summon40',     desc: 'Invoque 40 créatures',         event: 'summon', target: 40, reward: 825 },
   { id: 'w_earn250k',     desc: 'Gagne 250 000 pièces',         event: 'coinsEarned', target: 250000, reward: 500, diamonds: 3 },
-  { id: 'w_feed30',       desc: 'Nourris 30 fois une créature', event: 'creatureFed', target: 30, reward: 500, diamonds: 3 },
-  { id: 'w_offering10',   desc: 'Fais 10 Offrandes',            event: 'offering', target: 10, reward: 700, diamonds: 3 },
+  { id: 'w_feed30',       desc: 'Nourris 30 fois une créature', event: 'creatureFed', target: 30, reward: 750 },
+  { id: 'w_offering10',   desc: 'Fais 10 Offrandes',            event: 'offering', target: 10, reward: 1050 },
   { id: 'w_power60',      desc: 'Active 60 pouvoirs de créature', event: 'powerActivated', target: 60, reward: 550, diamonds: 3 },
   // 5 œufs et non 30+ : même raison que les quotidiens, c'est le rythme
   // de fin de partie (~1,7 œuf/jour, soit 12/semaine) qui fixe le
   // plafond réaliste, pas celui du début.
-  { id: 'w_hatch5',       desc: 'Fais éclore 5 œufs',              event: 'eggHatched', target: 5, reward: 700, diamonds: 3 },
-  { id: 'w_hatchVideo12', desc: "Regarde 12 vidéos d'accélération", event: 'hatchVideo', target: 12, reward: 550, diamonds: 3 },
+  { id: 'w_hatch5',       desc: 'Fais éclore 5 œufs',              event: 'eggHatched', target: 5, reward: 1050 },
+  { id: 'w_hatchVideo12', desc: "Regarde 12 vidéos d'accélération", event: 'hatchVideo', target: 12, reward: 825 },
   { id: 'w_hatchTap3600', desc: "Gagne 3 600 secondes d'éclosion en tapant", event: 'hatchSecondsSaved', target: 3600, reward: 600, diamonds: 3 },
-  { id: 'w_stars20',   desc: 'Gagne 20 étoiles en Aventure',            event: 'starsEarned',    target: 20, reward: 650, diamonds: 3 },
-  { id: 'w_perfect6',  desc: 'Termine 6 niveaux avec 3 étoiles',        event: 'threeStarLevel', target: 6,  reward: 700, diamonds: 3 },
+  { id: 'w_stars20',   desc: 'Gagne 20 étoiles en Aventure',            event: 'starsEarned',    target: 20, reward: 975 },
+  { id: 'w_perfect6',  desc: 'Termine 6 niveaux avec 3 étoiles',        event: 'threeStarLevel', target: 6,  reward: 1050 },
 ];
 
 // 6 par semaine (au lieu de 3) : sur 10 défis disponibles, en tirer 6
@@ -168,7 +195,9 @@ export function pickWeeklyQuests(wKey) {
     const j = Math.floor(rand() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  return shuffled.slice(0, QUESTS_PER_WEEK).map((q) => q.id);
+  // Même règle que les quotidiennes, à l'échelle de la semaine :
+  // 2 défis à Diamant sur 6, soit le même tiers.
+  return tirerAvecQuotaDiamant(shuffled, QUESTS_PER_WEEK, 2).map((q) => q.id);
 }
 
 export function weeklyQuestDef(questId) {

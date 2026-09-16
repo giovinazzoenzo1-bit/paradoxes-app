@@ -589,18 +589,6 @@ export function griffesReward(levelNumber) {
   return 5 + Math.floor(levelNumber * 1.5);
 }
 
-// Diamants offerts au DERNIER niveau d'un chapitre (14/09).
-//
-// ⚠️ À ne verser qu'à la PREMIÈRE victoire sur ce niveau : le joueur
-// peut rejouer un niveau déjà battu autant qu'il veut, ce serait une
-// source infinie de Diamants. Le contrôle se fait à l'appel, en
-// comparant au niveau le plus haut débloqué.
-export const CHAPTER_CLEAR_DIAMONDS = 10;
-
-export function chapterClearDiamonds(levelNumber) {
-  return levelNumber % LEVELS_PER_CHAPTER === 0 ? CHAPTER_CLEAR_DIAMONDS : 0;
-}
-
 // ---- Énergie (30/08) — 1 vie toutes les 20 min, plafond à 5 ----
 // Coûte 1 énergie pour LANCER un combat (pas remboursé en cas de
 // défaite — c'est bien "1 vie par tentative", pas "1 vie par victoire").

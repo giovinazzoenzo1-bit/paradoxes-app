@@ -210,7 +210,6 @@ import {
   LEVELS_PER_CHAPTER,
   opponentForLevel,
   griffesReward,
-  chapterClearDiamonds,
   butinBonus,
   RUNE_BONUS_TABLE,
   canEvolve,
@@ -670,14 +669,6 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   const handleLevelWon = (levelNumber, reward) => {
     setGriffes((g) => g + reward);
     trackEvent('battleWon', 1);
-    // Fin de chapitre : 10 Diamants, UNE SEULE FOIS. La condition
-    // `levelNumber === currentUnlockedLevelRef.current` garantit que
-    // c'est bien la première victoire sur ce niveau — sans elle, rejouer
-    // le niveau 10 en boucle serait une source infinie de Diamants.
-    const bonusDiamonds = chapterClearDiamonds(levelNumber);
-    if (bonusDiamonds > 0 && levelNumber === currentUnlockedLevelRef.current && onAddDiamonds) {
-      onAddDiamonds(bonusDiamonds);
-    }
     // Publie le niveau atteint pour que les défis de l'œuf (clicker)
     // puissent lire la progression d'Aventure. trackMax, pas trackEvent :
     // c'est un maximum, rejouer un niveau déjà battu ne doit pas le

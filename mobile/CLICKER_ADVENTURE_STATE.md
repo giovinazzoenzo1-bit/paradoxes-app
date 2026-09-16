@@ -987,6 +987,38 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## Économie des Diamants revue (15/09)
+
+**Décision de l'auteur** : la MAJORITÉ des défis doit rapporter des
+Griffes ; seul 1 défi quotidien sur 3 donne 1 Diamant. Les Diamants de
+fin de chapitre sont supprimés.
+
+| Source | Avant | Après |
+|---|---|---|
+| Boss de tap | 21/jour | 21/jour (inchangé) |
+| Défis quotidiens | aléatoire, 0 à 3 | **exactement 1/jour** |
+| Défis hebdos | 15/15 en donnaient | **5/15**, soit 2 tirés sur 6 |
+| Fin de chapitre | 10 | **0 — supprimé** |
+
+⚠️ **Le tirage est à QUOTA, pas aléatoire.** Un tirage au hasard dans un
+pool où 23 % portent des Diamants donnerait 0 à 3 Diamants selon les
+jours : le joueur ne pourrait compter sur rien. La règle « 1 défi sur
+3 » doit être IMPOSÉE par le tirage, pas espérée de la statistique.
+
+`tirerAvecQuotaDiamant()` prend N défis dont exactement K à Diamant, et
+complète si une famille est trop courte — jamais de trou dans le tirage.
+
+**Vérifié** : 30 jours simulés → 1,00 Diamant/jour, 0 jour hors règle.
+12 semaines → 2,00 défis à Diamant, 0 semaine hors règle.
+
+⚠️ Les 10 défis hebdos privés de Diamants reçoivent **+50 % de Griffes**
+en compensation : retirer une récompense sans rien rendre aurait
+dévalorisé la moitié du contenu hebdomadaire.
+
+⚠️ **Effet sur l'économie : quasi nul** (23,2 → 22,9 Diamants/jour) car
+les boss pèsent 92 % du total. Les prix de la boutique restent donc
+valables — inutile de les recalculer.
+
 ## Réglages du 15/09 (2)
 
 | Changement | Détail |
