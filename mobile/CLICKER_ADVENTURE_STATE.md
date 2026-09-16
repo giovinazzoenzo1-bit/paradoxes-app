@@ -1013,6 +1013,51 @@ corvée seule laisserait passer « accumule 70 millions ».
 `proposerCibles()` cherche par dichotomie la plus grande cible tenant
 sous un plafond de minutes — l'équilibrage devient mécanique.
 
+### ⚠️ LA VRAIE RÉPONSE : des cibles qui SE CALIBRENT SEULES
+
+Corriger les cibles une par une ne tient pas : chaque changement
+d'équilibrage (production, coûts, Ascension) les périme toutes.
+
+Le moteur de calibration EXISTAIT déjà (`resolveQuestTarget` +
+`questBudget` = production réelle × minutes d'effort) mais **seul le
+pool dynamique l'utilisait**. Les 18 défis de la séquence portant sur des
+PIÈCES sont passés dessus : ils déclarent maintenant un `effortMin` au
+lieu d'un `target`.
+
+⚠️ **Condition indispensable** : leur libellé doit devenir DYNAMIQUE
+(`(t) => ...`). Un libellé à nombre en dur mentirait sur sa propre cible.
+C'est ce qui bloquait cette conversion jusqu'ici.
+
+**Effet mesuré sur l'Ascension** — sans une seule valeur écrite en dur :
+
+| Défi | 0 asc | 1 asc | 3 asc | rapport |
+|---|---|---|---|---|
+| Accumule N pièces | 23 M | 30 M | 51 M | **×2,19** |
+| Obtiens N pièces | 39 M | 50 M | 85 M | ×2,18 |
+
+La production monte de 30 % par Ascension, les cibles suivent
+exactement. C'est déduit, pas paramétré.
+
+⚠️ Les défis de RYTHME (cibles dorées, critiques, pouvoirs, invocations)
+ne peuvent PAS se calibrer sur les pièces : leur rythme n'en dépend pas.
+Ils gardent une cible fixe **indexée sur les Ascensions à +20 %,
+plafonnée à ×3** — au-delà, un défi d'action durerait plus qu'une
+session.
+
+### Résultats : 425 h → 85 h → 22 h
+
+| | Cibles figées | Après correction manuelle | **Auto-calibrées** |
+|---|---|---|---|
+| Durée de la séquence | 425 h | 85 h | **22 h** |
+| Défis hors d'échelle | 12 | 5 | **3** |
+| Défis-corvée | 2 | 0 | **0** |
+
+Faisabilité revérifiée : **1080 défis tirés** sur 20 collections
+aléatoires × 4 niveaux d'Ascension × 13 cycles → **0 irréalisable**.
+
+Les 3 alertes restantes viennent du plafond d'ÉNERGIE et du plafond de
+DIAMANTS, pas des cibles.
+
 ### Premier passage : 425 h → 85 h
 
 | | Avant | Après |
