@@ -3094,23 +3094,38 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           entièrement illustré. */}
       {ascensionPrompt && (
         <View style={styles.ascPromptBackdrop}>
-          {/* ⚠️ Le TEXTE est incrusté dans l'illustration : on ne pose
-              par-dessus que les deux boutons, dans la bande laissée
-              libre (81,5 % à 95,5 % de la hauteur, mesurée sur l'image).
-              Limite assumée : le texte annonce 60 Griffes et ×1,30,
-              valeurs de la PREMIÈRE Ascension. */}
+          {/* Texte écrit EN CODE : les Griffes et le multiplicateur
+              changent à chaque Ascension, une image à texte fixe
+              mentirait dès la deuxième. */}
           <ImageBackground
             source={ASCENSION_PANEL}
             style={styles.ascPromptPanel}
             resizeMode="stretch"
           >
-            <View style={styles.ascPromptRow}>
-              <TouchableOpacity style={styles.ascPromptBtn} onPress={() => setAscensionPrompt(null)}>
-                <Text style={styles.ascPromptBtnText} allowFontScaling={false} numberOfLines={1}>ANNULER</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.ascPromptBtn, styles.ascPromptBtnGo]} onPress={confirmAscension}>
-                <Text style={[styles.ascPromptBtnText, styles.ascPromptBtnGoText]} allowFontScaling={false} numberOfLines={1}>ASCENSIONNER</Text>
-              </TouchableOpacity>
+            {/* Contenu borné par une vue enfant en LARGEUR RELATIVE : la
+                seule façon déterministe de rester dans le parchemin (un
+                padding en % se résout sur la largeur, un padding calculé
+                dépend d'un `onLayout` qui peut ne pas avoir eu lieu). */}
+            <View style={styles.ascPromptInner}>
+              <Text style={styles.ascPromptTitle} allowFontScaling={false}>Ascension</Text>
+              <Text style={styles.ascPromptText} allowFontScaling={false}>
+                Tu remets à zéro ton économie (pièces, Pacte, Faveur, Sanctuaire, Veilleur, auto-clics, améliorations).
+              </Text>
+              <Text style={styles.ascPromptText} allowFontScaling={false}>
+                Tu <Text style={styles.ascPromptStrong}>GARDES</Text> tes créatures, ton deck et toute ta progression en Aventure.
+              </Text>
+              <Text style={styles.ascPromptText} allowFontScaling={false}>
+                Tu gagnes : {ascensionPrompt.griffes} Griffes, et une production ×{ascensionPrompt.vitesse.toFixed(2)} pour toujours.
+              </Text>
+              <Text style={styles.ascPromptAsk} allowFontScaling={false}>Continuer ?</Text>
+              <View style={styles.ascPromptRow}>
+                <TouchableOpacity style={styles.ascPromptBtn} onPress={() => setAscensionPrompt(null)}>
+                  <Text style={styles.ascPromptBtnText} allowFontScaling={false} numberOfLines={1}>ANNULER</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.ascPromptBtn, styles.ascPromptBtnGo]} onPress={confirmAscension}>
+                  <Text style={[styles.ascPromptBtnText, styles.ascPromptBtnGoText]} allowFontScaling={false} numberOfLines={1}>ASCENSIONNER</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </ImageBackground>
         </View>
@@ -4395,16 +4410,22 @@ const styles = StyleSheet.create({
   ascPromptPanel: {
     width: '94%', maxWidth: 400, alignSelf: 'center',
     aspectRatio: 640 / 668,
-    justifyContent: 'flex-end',
+    alignItems: 'center', justifyContent: 'flex-start',
+    // Décalage vers la DROITE demandé. 0,05 mm vaut 0,31 dp, soit moins
+    // d'un pixel : invisible. On applique 2 dp, le plus petit écart
+    // réellement perceptible.
+    marginLeft: 4,
   },
+  ascPromptInner: { width: '82%', marginTop: '13%', flex: 1 },
   // Bande laissée libre dans l'illustration : 81,5 % à 95,5 % de la
   // hauteur. `paddingBottom` en % se résout sur la LARGEUR, donc on
   // positionne avec `marginBottom` en % de la même largeur — mesuré
   // pour tomber dans la bande.
-  ascPromptRow: {
-    flexDirection: 'row', justifyContent: 'center', gap: 10,
-    marginBottom: '7%', paddingHorizontal: '12%',
-  },
+  ascPromptTitle: { color: '#2a1a08', fontSize: 16, fontWeight: '900', marginBottom: 6 },
+  ascPromptText: { color: '#3a2a12', fontSize: 10.5, fontWeight: '700', lineHeight: 14, marginBottom: 6 },
+  ascPromptStrong: { fontWeight: '900', color: '#2a1a08' },
+  ascPromptAsk: { color: '#3a2a12', fontSize: 11, fontWeight: '800', marginTop: 1 },
+  ascPromptRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 'auto', marginBottom: 6 },
   ascPromptBtn: {
     paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6,
     backgroundColor: 'rgba(30,38,54,0.92)', borderWidth: 1.5, borderColor: '#6b5836',

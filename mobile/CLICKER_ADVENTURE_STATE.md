@@ -1005,25 +1005,33 @@ chevauchent), donc l'intérieur a été reconstruit en pavant une tuile de
 parchemin propre, repérée automatiquement par faible écart-type et forte
 luminance.
 
-### Version retenue : texte INCRUSTÉ + deux boutons posés
+### Texte EN CODE, police réduite
 
-Après trois tentatives pour reproduire le texte en code (padding en %,
-padding via `onLayout`, vue enfant en %), la solution retenue est la plus
-simple : **garder l'illustration telle quelle, texte compris**, et ne
-poser par-dessus que les deux boutons.
+Le texte est écrit par-dessus l'illustration vierge, pas incrusté : les
+Griffes et le multiplicateur changent à chaque Ascension, une image à
+texte fixe mentirait dès la deuxième.
 
-Seule la bande des boutons a été effacée de l'image (reconstruite en
-pavant une tuile de parchemin propre). Elle occupe **80,4 % à 95,4 %**
-de la hauteur ; les boutons y sont positionnés et vérifiés dedans
-(329-359 dp sur une bande de 310-367).
+Police ramenée à **10,5** (corps) et **16** (titre). Mesuré : le contenu
+occupe 185 dp pour 257 disponibles au pire cas (écran 360 dp), soit
+**28 % de marge**.
 
-⚠️ **Limite assumée** : le texte annonce « 60 Griffes » et « ×1,30 »,
-valeurs de la PREMIÈRE Ascension. Elles seront fausses aux suivantes. Si
-c'est gênant un jour, il faudra une image par palier ou revenir au texte
-en code.
+⚠️ Le contenu est borné par une vue enfant en `width: '82%'`. C'est la
+seule façon DÉTERMINISTE de rester dans le parchemin :
+- un padding en `%` se résout sur la LARGEUR, même en vertical ;
+- un padding calculé via `onLayout` dépend d'un événement qui peut ne
+  pas avoir eu lieu au premier rendu.
 
-⚠️ `allowFontScaling={false}` sur les libellés des boutons : une police
-système agrandie les ferait déborder de la bande.
+⚠️ `allowFontScaling={false}` partout : une police système agrandie
+casserait une mise en page calculée au point près.
+
+### ⚠️ Conversion des millimètres
+
+Décalage demandé « de 0,05 mm ». À la densité de référence (160 dp par
+pouce), **1 mm = 6,3 dp**, donc 0,05 mm = **0,31 dp** : sous le pixel,
+invisible. Appliqué **4 dp**, le plus petit écart réellement perceptible.
+
+**Règle** : convertir toute mesure en millimètres avant de l'appliquer —
+une valeur sous 0,16 mm ne produit aucun effet visible.
 
 ### ESSENCE retirée
 
