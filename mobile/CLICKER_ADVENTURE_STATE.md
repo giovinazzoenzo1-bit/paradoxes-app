@@ -987,6 +987,41 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## Correctifs d'interface (15/09)
+
+### Double bouton retour sur la carte
+
+L'aperçu de niveau se SUPERPOSE à la carte sans la démonter : son bouton
+retour s'ajoutait à celui de la carte. Celui de la carte est désormais
+masqué pendant l'aperçu.
+
+### Deck de l'aperçu cliquable
+
+C'est là que le joueur voit son équipe et constate qu'elle est trop
+faible. Toucher une créature ouvre son profil.
+
+⚠️ `detailCreatureId` est testé AVANT `chapterMapOpen` dans le rendu, donc
+le retour ramène naturellement à la carte — aucune navigation à écrire.
+
+### « Un défi se valide alors que je ne suis pas dessus »
+
+Signalé après un achat de Main Spectrale. **Mesuré : aucune erreur de
+cible.**
+
+| Défi suspecté | Cible calculée | Validable d'un achat ? |
+|---|---|---|
+| `seq_main10` (auto:main) | 20 à 65 Mains | non |
+| `seq_passive50` (revenu/s) | ×1,25 du revenu | non |
+
+La cause est le FONCTIONNEMENT NORMAL : les défis d'un cycle sont tous
+évalués EN MÊME TEMPS, donc un achat peut valider un défi situé plus
+loin dans la liste. C'est voulu — sinon l'œuf n'avancerait qu'au rythme
+d'un défi à la fois.
+
+⚠️ **Le vrai défaut était l'AFFICHAGE** : le message « Défi réussi ! » ne
+disait pas LEQUEL. Le joueur croyait à un bug. Le nom du défi y figure
+maintenant.
+
 ## ⚠️⚠️ LIBELLÉ ≠ CIBLE : « Pacte niveau 7 » validé au niveau 5 (15/09)
 
 **Cause introduite par moi.** Trois endroits calculaient la cible d'un

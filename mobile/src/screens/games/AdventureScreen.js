@@ -892,6 +892,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         onBack={() => setChapterMapOpen(false)}
         onBuyEnergy={buyEnergyWithDiamonds}
         onWatchAdForEnergy={watchAdForEnergy}
+        // Ouvre le profil par-dessus la carte : `detailCreatureId` est
+        // testé AVANT `chapterMapOpen` dans le rendu, donc le retour
+        // ramène naturellement à la carte.
+        onOpenCreature={(id) => setDetailCreatureId(id)}
         adsLeft={ENERGY_AD_DAILY_MAX - energyAdsToday}
         adLoading={energyAdLoading}
         onBuyGriffes={buyGriffesWithDiamonds}
@@ -1811,7 +1815,7 @@ function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -2019,7 +2023,10 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
       {/* Plein écran : la barre système casse l'immersion en paysage. */}
       <StatusBar hidden />
       <View style={[styles.header, styles.mapHeader]}>
-        <BackButton onPress={onBack} />
+        {/* ⚠️ Masqué pendant l'aperçu de niveau : cette fenêtre a DÉJÀ
+            son propre retour, et comme elle se superpose à la carte sans
+            la démonter, le joueur voyait DEUX boutons retour. */}
+        {!levelPreview && <BackButton onPress={onBack} />}
         <View style={styles.headerSpacer} />
         {/* Aide sur les éléments, juste à GAUCHE des Griffes : elle se
             consulte avant un combat, sa place est dans l'en-tête et non
@@ -2210,6 +2217,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           onWatchAdForEnergy={onWatchAdForEnergy}
           adsLeft={adsLeft}
           adLoading={adLoading}
+          onOpenCreature={onOpenCreature}
         />
       )}
     </View>
@@ -2803,7 +2811,7 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   );
 }
 
-function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false }) {
+function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
   const opponent = opponentForLevel(levelNumber);
   const display = opponent.stages[0];
   const ownedMap = {};
@@ -2836,7 +2844,17 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
             const own = id ? ownedMap[id] : null;
             const fighterDisplay = creature && own ? creature.stages[stageForLevel(own.level)] : null;
             return (
-              <View key={i} style={[styles.fighterPick, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}>
+              // ⚠️ Tapable : c'est ICI que le joueur voit son équipe et
+              // se rend compte qu'elle est trop faible. Devoir ressortir
+              // jusqu'à l'accueil pour améliorer une créature cassait le
+              // geste naturel.
+              <TouchableOpacity
+                key={i}
+                style={[styles.fighterPick, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
+                onPress={() => (creature && onOpenCreature ? onOpenCreature(id) : null)}
+                disabled={!creature || !onOpenCreature}
+                activeOpacity={0.75}
+              >
                 {fighterDisplay ? (
                   <CreatureArt
                     creatureId={id}
@@ -2848,7 +2866,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
                 ) : (
                   <Text style={{ fontSize: 24, opacity: 0.3 }}>🥚</Text>
                 )}
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>

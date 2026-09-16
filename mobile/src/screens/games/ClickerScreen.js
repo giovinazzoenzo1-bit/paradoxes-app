@@ -3090,6 +3090,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             <View style={styles.questDoneCard}>
               <Text style={styles.questDoneIcon}>🎉</Text>
               <Text style={styles.questDoneTitle}>Défi réussi !</Text>
+              {/* ⚠️ NOMMER le défi validé. Les défis d'un cycle sont tous
+                  évalués EN MÊME TEMPS : un achat peut donc valider un
+                  défi situé plus loin dans la liste. Sans son nom, le
+                  joueur voit « Défi réussi » sans savoir lequel et croit
+                  à un bug — signalé après un achat de Main Spectrale. */}
+              <Text style={styles.questDoneWhich} numberOfLines={2}>
+                {questDetail(questDone, questStats, baselineFor(questDone), questTargets).label}
+              </Text>
             </View>
           </TouchableOpacity>
         )}
@@ -4347,6 +4355,12 @@ const styles = StyleSheet.create({
   },
   questDoneIcon: { fontSize: 30 },
   questDoneTitle: { color: '#34d399', fontSize: 18, fontWeight: '900', marginTop: 4 },
+  // Nom du défi : discret sous le titre, LARGEUR BORNÉE — certains
+  // libellés sont longs et déborderaient de la petite bulle.
+  questDoneWhich: {
+    color: COLORS.text, fontSize: 12, fontWeight: '700',
+    textAlign: 'center', marginTop: 4, maxWidth: 220,
+  },
 
   // ---- Compte rendu des gains hors-ligne ----
   offlineBackdrop: {
