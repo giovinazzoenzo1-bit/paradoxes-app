@@ -542,9 +542,18 @@ export function ascensionActionMultiplier(ascensionCount) {
 export function resolveQuestTarget(quest, stats) {
   if (!quest) return 1;
   if (quest.target) {
-    // Cible fixe : seules les métriques de RYTHME suivent les Ascensions.
-    if (!METRIQUES_RYTHME.includes(quest.metric)) return quest.target;
-    return roundQuestTarget(quest.target * ascensionActionMultiplier(stats && stats.ascension));
+    const brute = METRIQUES_RYTHME.includes(quest.metric)
+      // Seules les métriques de RYTHME suivent les Ascensions.
+      ? roundQuestTarget(quest.target * ascensionActionMultiplier(stats && stats.ascension))
+      : quest.target;
+    // ⚠️ INVARIANT : un défi doit TOUJOURS demander plus que ce que le
+    // joueur a déjà. Une cible fixe sortait d'ici sans passer par le
+    // plancher appliqué plus bas aux cibles calculées : elle pouvait
+    // donc afficher un niveau DÉJÀ ATTEINT, que le joueur lisait comme
+    // un défi cassé.
+    if (quest.mode !== 'absolute') return brute;
+    const dejaLa = readMetric(quest.metric, stats);
+    return Math.max(brute, dejaLa + Math.max(quest.minStep || 1, Math.ceil(dejaLa * 0.15)));
   }
   const minutes = quest.effortMin || 15;
   const budget = questBudget(stats, minutes);

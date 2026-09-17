@@ -987,6 +987,34 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ INVARIANT : un défi doit demander PLUS que l'acquis (15/09)
+
+Signalé : un défi affichant un niveau DÉJÀ ATTEINT (« niveau 1 »).
+
+`resolveQuestTarget` appliquait un plancher — `acquis + max(minStep,
+15 %)` — qui garantit qu'un défi demande toujours davantage. Mais les
+défis à cible FIXE **sortaient de la fonction AVANT ce plancher** :
+
+```js
+if (quest.target) { ... return quest.target; }   // <- sortie prematuree
+```
+
+Une cible fixe pouvait donc tomber sous la valeur courante du joueur, et
+le défi se lisait comme cassé.
+
+**Correctif** : le plancher s'applique désormais AUSSI aux cibles fixes
+en mode absolu.
+
+**Vérifié par force brute** : 15 400 contrôles (200 profils aléatoires ×
+tous les défis absolus) → **0 défi demandant moins que l'acquis**.
+
+⚠️ Ce contrôle est le bon garde-fou pour cette famille de bugs : plutôt
+que de chercher QUEL défi s'affiche mal, on vérifie l'INVARIANT sur tous
+les défis et tous les profils.
+
+Aucun effet de bord : 18 h de séquence, 3 alertes, 0 écart libellé/cible,
+les deux Ascensions restent atteignables.
+
 ## Défis en PIÈCES : +45 % par Ascension (15/09)
 
 Une Ascension multiplie la production par 1,30. Comme le budget dérive
