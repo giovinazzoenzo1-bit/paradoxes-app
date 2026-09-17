@@ -311,7 +311,27 @@ function auditLibelles() {
       //  - « chapitre 2, niveau 5 » : deux nombres qui désignent un
       //    niveau ABSOLU (15), aucun ne vaut la cible ;
       //  - « Transe x2,5 » : la cible est en dixièmes.
-      if (/million|milliard|millier|chapitre|x\d/i.test(texte)) return;
+      // ⚠️ « chapitre » N'EST PLUS un faux positif.
+      //
+      // Il l'était tant que les libellés d'Aventure écrivaient leur
+      // chapitre en dur — et c'est justement ce qui a masqué un bug réel :
+      // le texte annonçait « chapitre 2, niveau 10 » pendant que la barre
+      // comptait sur 25. Un filtre destiné à réduire le bruit avait
+      // rendu le contrôle aveugle à la seule chose qu'il devait voir.
+      //
+      // Les libellés d'Aventure étant désormais dérivés de la cible, on
+      // les VÉRIFIE : chapitre et niveau doivent correspondre.
+      if (/chapitre/i.test(texte)) {
+        const mm = texte.match(/chapitre\s+(\d+).*?niveau\s+(\d+)/i);
+        if (mm) {
+          const attendu = (parseInt(mm[1], 10) - 1) * 10 + parseInt(mm[2], 10);
+          if (attendu !== Math.round(cible)) {
+            ecarts.push({ id: q.id, etat: lbl, cible, texte });
+          }
+        }
+        return;
+      }
+      if (/million|milliard|millier|x\d/i.test(texte)) return;
       const nums = (texte.replace(/\u202f|\u00a0/g, ' ').match(/\d[\d ]*/g) || [])
         .map((x) => parseInt(x.replace(/ /g, ''), 10));
       if (!nums.length) return;                    // libellé sans nombre : rien à vérifier

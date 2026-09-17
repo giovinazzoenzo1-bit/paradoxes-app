@@ -70,7 +70,7 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_offering2', icon: '💎', metric: 'offering', target: 1, mode: 'delta',
       label: () => 'Fais 1 Offrande' },
     { id: 'seq_adv_c1l1', icon: '⚔️', metric: 'advLevelReached', target: 3, mode: 'absolute',
-      label: () => 'Termine le chapitre 1, niveau 3' },
+      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'seq_esprit10', icon: '👻', metric: 'auto:esprit', effortMin: 20, mode: 'absolute',
       label: (t) => `Possède ${t} Esprits Frappeurs` },
   ],
@@ -80,7 +80,7 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_power5', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
       label: (t) => `Active ${t} fois un pouvoir de créature` },
     { id: 'seq_adv_c1l10', icon: '⚔️', metric: 'advLevelReached', target: 10, mode: 'absolute',
-      label: () => 'Termine le chapitre 1, niveau 10' },
+      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', target: 8, mode: 'absolute',
       label: (t) => `Monte le Sanctuaire au niveau ${t}` },
     // Ramené de 140 000 à 100 000 (14/09) : trop élevé pour le niveau
@@ -99,7 +99,7 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_crit40', icon: '💥', metric: 'totalCrits', target: 56, mode: 'delta',
       label: (t) => `Obtiens ${t} coups critiques` },
     { id: 'seq_adv_c2l5', icon: '⚔️', metric: 'advLevelReached', target: 15, mode: 'absolute',
-      label: () => 'Termine le chapitre 2, niveau 5' },
+      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
   ],
   // --- Cycle 5 : première Ascension, et découverte des Runes ---
   [
@@ -136,7 +136,7 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_rune1', icon: '🛒', metric: 'runeBought', target: 1, mode: 'delta',
       label: () => 'Achète 1 rune en Exploration' },
     { id: 'seq_adv_c3l5', icon: '⚔️', metric: 'advLevelReached', target: 20, mode: 'absolute',
-      label: () => 'Termine le chapitre 2, niveau 10' },
+      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
   ],
   // --- Cycle 7 : runes et évolution ---
   [
@@ -161,7 +161,7 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', effortMin: 30, mode: 'absolute',
       label: (t) => `Possède ${t} Mains Spectrales` },
     { id: 'seq_adv_c3l10', icon: '⚔️', metric: 'advLevelReached', target: 30, mode: 'absolute',
-      label: () => 'Termine le chapitre 3, niveau 10' },
+      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'seq_crit100', icon: '💥', metric: 'totalCrits', target: 140, mode: 'delta',
       label: (t) => `Obtiens ${t} coups critiques` },
   ],
@@ -174,7 +174,7 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_fuse2', icon: '🔮', metric: 'runeFused', target: 3, mode: 'delta',
       label: () => 'Fusionne 3 runes' },
     { id: 'seq_adv_c4l10', icon: '⚔️', metric: 'advLevelReached', target: 40, mode: 'absolute',
-      label: () => 'Termine le chapitre 4, niveau 10' },
+      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
   ],
   // --- Cycle 10 : seconde Ascension, dernier cycle scripté ---
   [
@@ -841,6 +841,23 @@ export function validateQuests(publishedMetrics = []) {
     if (ids.indexOf(id) !== i) problemes.push({ id, type: 'identifiant en double', detail: '' });
   });
   return problemes;
+}
+
+// Décrit un niveau d'Aventure ABSOLU sous la forme « chapitre C,
+// niveau L ».
+//
+// ⚠️ Calculé, jamais écrit en dur. Les libellés d'Aventure contenaient
+// leur chapitre et leur niveau dans le texte : après un changement de
+// cible, le texte annonçait « chapitre 2, niveau 10 » pendant que la
+// barre comptait sur 25 (l'ancienne cible, figée dans la sauvegarde).
+// Le joueur voyait un défi et une jauge qui ne parlaient pas du même
+// objectif.
+const NIVEAUX_PAR_CHAPITRE = 10;
+export function describeAdventureLevel(niveau) {
+  const n = Math.max(1, Math.round(niveau || 1));
+  const chapitre = Math.ceil(n / NIVEAUX_PAR_CHAPITRE);
+  const dans = ((n - 1) % NIVEAUX_PAR_CHAPITRE) + 1;
+  return `chapitre ${chapitre}, niveau ${dans}`;
 }
 
 export function questLabel(questId, target, stats = {}, targets = {}) {

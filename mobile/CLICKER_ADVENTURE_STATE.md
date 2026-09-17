@@ -987,6 +987,35 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ « Chapitre 2 niveau 10 » avec une barre à 22/25 (15/09)
+
+Le titre annonçait un objectif, la jauge en comptait un autre.
+
+**Cause** : les libellés d'Aventure écrivaient leur chapitre et leur
+niveau EN DUR. Après le changement de cible (25 → 20), le texte affichait
+la nouvelle valeur pendant que la barre utilisait la cible FIGÉE dans la
+sauvegarde (25). Les deux ne parlaient pas du même objectif.
+
+**Correctif** : les 6 libellés d'Aventure sont DÉRIVÉS de la cible via
+`describeAdventureLevel(niveau)`. Le texte suit la cible réelle, quelle
+qu'elle soit — y compris une ancienne cible figée.
+
+### ⚠️ Mon contrôle automatique était AVEUGLE à ce bug
+
+`auditLibelles` écartait « chapitre » comme faux positif, parce que
+« chapitre 2, niveau 10 » contient deux nombres dont aucun n'égale la
+cible absolue (20).
+
+⚠️ **Un filtre anti-bruit avait rendu le contrôle aveugle à la seule
+chose qu'il devait voir.** Il VÉRIFIE désormais ces libellés :
+`(chapitre − 1) × 10 + niveau` doit valoir la cible.
+
+**Prouvé** : en réintroduisant volontairement le bug, l'audit le signale.
+Un contrôle qu'on n'a pas vu échouer ne prouve rien.
+
+**Règle** : quand un contrôle écarte une catégorie comme « faux
+positif », vérifier que cette catégorie ne cache pas de vrais cas.
+
 ## ⚠️⚠️ DÉFIS ILLIMITÉS : la séquence se REJOUE (15/09)
 
 Au-delà des 10 cycles scriptés, la séquence **reboucle** avec une
