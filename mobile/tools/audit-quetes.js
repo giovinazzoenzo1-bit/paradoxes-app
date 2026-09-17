@@ -369,3 +369,30 @@ function auditCoherence() {
 }
 module.exports.auditCoherence = auditCoherence;
 module.exports.metriquesPubliees = metriquesPubliees;
+
+// ---- Cohérence MODE / libellé ----------------------------------------
+//
+// Un défi en `delta` compte une progression DEPUIS SON TIRAGE ; un défi
+// en `absolute` vise un TOTAL atteint. Se tromper de mode donne un défi
+// qui ne se valide jamais.
+//
+// Cas réel : « Fais une seconde Ascension » était en `delta` avec une
+// cible de 2, donc il réclamait 2 Ascensions DE PLUS — soit 3 au total
+// pour un joueur qui en avait déjà une. Le texte annonçait le rang, la
+// condition comptait un supplément.
+//
+// Un libellé qui parle d'un TOTAL ou d'un RANG (« atteins », « possède »,
+// « monte au niveau », « seconde ») avec un mode `delta` est suspect.
+const MOTS_DE_TOTAL = /atteins|poss[eè]de|monte|termine|seconde|deuxi[eè]me|troisi[eè]me|jusqu/i;
+
+function auditModes() {
+  const suspects = [];
+  const tous = [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL];
+  tous.forEach((q) => {
+    if (q.mode !== 'delta') return;
+    const texte = Q.questLabel(q.id, q.target || 5, {}, {});
+    if (MOTS_DE_TOTAL.test(texte)) suspects.push({ id: q.id, texte });
+  });
+  return suspects;
+}
+module.exports.auditModes = auditModes;

@@ -987,6 +987,38 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ « Fais une seconde Ascension » ne se validait JAMAIS (15/09)
+
+Signalé : le défi réclamait 2 Ascensions alors qu'il n'en fallait qu'une
+— la deuxième.
+
+**Cause** : mode `delta` au lieu d'`absolute`.
+
+- `delta` compte une progression **DEPUIS LE TIRAGE** du défi ;
+- `absolute` vise un **TOTAL atteint**.
+
+Avec `target: 2` en delta, le défi exigeait 2 Ascensions **DE PLUS** —
+soit **3 au total** pour un joueur qui en avait déjà une. Le texte
+annonçait un RANG, la condition comptait un SUPPLÉMENT.
+
+⚠️ `seq_ascend1` avait le même défaut : un joueur ayant déjà ascensionné
+devait recommencer pour valider « Fais l'Ascension ».
+
+**Correctif** : les deux passent en `absolute`, libellés dérivés de la
+cible. Vérifié : ascend1 valide à partir de 1, ascend2 à partir de 2.
+
+### Contrôle ajouté : `auditModes()`
+
+Signale tout défi en `delta` dont le libellé évoque un TOTAL ou un RANG
+(« atteins », « possède », « monte au niveau », « seconde »).
+
+**Prouvé** : en remettant volontairement le mode `delta`, l'audit
+signale le défi. Résultat actuel : 0 suspect sur 108 défis.
+
+⚠️ C'est le **4e contrôle** de la famille : cohérence structurelle,
+libellés, corvées, et maintenant modes. Chacun est né d'un bug réel
+signalé par l'auteur — aucun n'a été inventé à l'avance.
+
 ## 📌 À SUPPRIMER AVANT LA SORTIE — mode développeur
 
 **Décision de l'auteur : suppression DÉFINITIVE du code, pas un

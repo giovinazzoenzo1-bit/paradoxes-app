@@ -144,8 +144,12 @@ export const QUEST_SEQUENCE = [
     // comme le même défi répété. On varie de famille.
     { id: 'seq_transe60', icon: '🔥', metric: 'maxTranseHoldSec', target: 60, mode: 'absolute',
       label: (t) => `Tiens la Transe pendant ${t} secondes` },
-    { id: 'seq_ascend1', icon: '🌟', metric: 'ascension', target: 1, mode: 'delta',
-      label: () => "Fais l'Ascension" },
+    // ⚠️ `absolute`, PAS `delta`. En delta, la cible compte des
+    // Ascensions EN PLUS de celles déjà faites : un joueur qui en avait
+    // déjà une devait en faire une seconde pour valider « Fais
+    // l'Ascension ». Ici on vise un TOTAL atteint.
+    { id: 'seq_ascend1', icon: '🌟', metric: 'ascension', target: 1, mode: 'absolute',
+      label: (t) => (t <= 1 ? "Fais l'Ascension" : `Atteins ${t} Ascensions`) },
   ],
   // --- Cycle 6 : relance après Ascension ---
   [
@@ -207,8 +211,11 @@ export const QUEST_SEQUENCE = [
     // Remplacé pour la même raison : le Veilleur est plafonné à 10.
         { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', effortMin: 35, mode: 'absolute',
       label: (t) => `Monte une créature au niveau ${t}` },
-    { id: 'seq_ascend2', icon: '🌟', metric: 'ascension', target: 2, mode: 'delta',
-      label: () => 'Fais une seconde Ascension' },
+    // ⚠️ Même correction : en delta, ce défi exigeait 2 Ascensions de
+    // PLUS (soit 3 au total pour un joueur qui en avait déjà une) alors
+    // que le texte annonce « la seconde ». Il ne se validait jamais.
+    { id: 'seq_ascend2', icon: '🌟', metric: 'ascension', target: 2, mode: 'absolute',
+      label: (t) => (t === 2 ? 'Fais une seconde Ascension' : `Atteins ${t} Ascensions`) },
   ],
 ];
 // ⚠️ AUCUN défi ne doit dépendre de l'INVOCATION.
