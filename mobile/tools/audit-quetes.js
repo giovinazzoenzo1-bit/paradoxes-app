@@ -53,11 +53,37 @@ const H = {
   pouvoirParMin: 1.2,     // activations de pouvoir par minute
 };
 
-function production(s) {
+// ⚠️ L'INSTRUMENT sous-estimait la reconstruction d'APRÈS Ascension.
+//
+// Le revenu de TAP ne recevait aucun multiplicateur global, alors que
+// `gainCoins` (ClickerScreen) lui applique exactement les mêmes que le
+// passif : Sanctuaire, essence, Ascension et bonus de pièces. Or juste
+// après une Ascension le passif vaut ZÉRO : tout le revenu vient du tap,
+// donc c'est précisément là que l'écart comptait. Le ×1,30 par Ascension
+// était perdu, et l'audit annonçait un joueur qui rebâtit toujours à la
+// même vitesse quel que soit son nombre d'Ascensions — ce qui est faux.
+// Revenu PASSIF seul — c'est ce que `questStats.passiveIncome` contient
+// dans le jeu (`passiveRate`, sans le tap). L'audit doit publier la même
+// chose, sinon `questBudget` reçoit une valeur que le jeu ne lui donne
+// jamais et toutes les cibles en pièces sont gonflées.
+function passiveOnly(s) {
   return C.passiveRate({
     autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
     sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: s.ascension,
-  }) + C.tapDamage(s.tapPower) * H.tapsParSec;
+  });
+}
+
+function production(s) {
+  const passif = C.passiveRate({
+    autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
+    sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: s.ascension,
+  });
+  const multTap =
+    C.sanctuaryMultiplier(s.sanctuaryLevel || 0) *
+    C.essenceBonusMultiplier(s.essence || 0) *
+    C.ascensionSpeedMultiplier(s.ascension || 0) *
+    (1 + C.upgradeBonuses(s.upgradeLevels || {}).coinPct);
+  return passif + C.tapDamage(s.tapPower) * H.tapsParSec * multTap;
 }
 
 // Minutes estimées pour franchir un défi, selon sa métrique.
@@ -121,7 +147,7 @@ function minutesPour(q, cible, s) {
   if (m === 'ownedCount') return null;
   return null;
 }
-module.exports = { load, H, production, minutesPour, Q, C };
+module.exports = { load, H, production, passiveOnly, minutesPour, Q, C };
 
 // ---- Parcours de TOUTE la séquence ---------------------------------
 //
@@ -158,7 +184,7 @@ function appliquerAscension(s) {
   s.sanctuaryLevel = 0;
   s.veilleurLevel = 0;
   s.critLevel = 0;
-  s.passiveIncome = production(s);
+  s.passiveIncome = passiveOnly(s);
 }
 
 // Applique l'effet d'un défi accompli sur l'état du joueur.
@@ -177,7 +203,7 @@ function appliquer(q, cible, s) {
   else if (m.startsWith('tapUpgrade:')) s.tapUpgrades = { ...(s.tapUpgrades || {}), [m.slice(11)]: cible };
   else s[m] = Math.max(s[m] || 0, cible);
   if (m === 'totalSummons') { s.ownedCount += cible; }
-  s.passiveIncome = production(s);
+  s.passiveIncome = passiveOnly(s);
 }
 
 function audit() {
@@ -423,3 +449,88 @@ function auditModes() {
   return suspects;
 }
 module.exports.auditModes = auditModes;
+
+// ---- Divergence des cibles avec les ASCENSIONS ------------------------
+//
+// Bug réel de cette session : le défi qui SUIT une Ascension s'allongeait
+// indéfiniment. Cause — le budget ne voyait pas le revenu de TAP, or
+// juste après une Ascension le passif vaut ZÉRO et le tap est la seule
+// source ; un PLANCHER adossé au seuil d'Ascension avait été ajouté pour
+// compenser, mais ce seuil DOUBLE quand la production ne monte que de
+// 30 %. Mesuré avant correction, pour « obtiens N pièces » : 2 min à la
+// 0e Ascension, puis 48 · 74 · 113 · 174 min. Une divergence sans fin.
+//
+// Ce contrôle mesure le temps d'un défi JUSTE APRÈS chaque Ascension et
+// signale ceux qui s'allongent plus vite que la borne.
+//
+// Borne : les cibles montent de 45 % par Ascension et la production de
+// 30 %, donc le temps doit croître de ~11,5 % par Ascension — soit ×1,55
+// sur 4 Ascensions. On laisse passer jusqu'à ×2,2 avant d'alerter.
+// ⚠️ On mesure le TEMPS MAXIMAL atteint, pas le rapport début/fin.
+//
+// Première version : rapport `temps(asc 4) / temps(asc 0)`. Elle
+// signalait 4 défis de NIVEAU (Veilleur, améliorations) qui ne divergent
+// pas du tout — leur cible avance par niveaux ENTIERS dont le coût
+// double, donc leur temps fait des DENTS DE SCIE (17 · 46 · 35 · 27 · 60
+// min) et non une montée. Comparer deux extrémités d'une dent de scie ne
+// mesure rien. Le seuil en temps absolu répond directement à la question
+// posée par le bug : « ce défi devient-il interminable à force
+// d'Ascensions ? »
+// On compare le temps réel à la FENÊTRE que le défi déclare
+// (`effortMin`) : c'est exactement ce que le bug violait — un défi
+// annoncé pour 30 min qui en demandait 174.
+//
+// Dérive attendue : cibles +45 % par Ascension contre production +30 %,
+// soit ×1,55 sur 4 Ascensions. On alerte au-delà de ×2,5.
+const ASC_DEPASSEMENT_MAX = 2.5;
+
+function etatApresAscension(n) {
+  const s = etatInitial();
+  s.ownedIds = C.CREATURES.map((c) => c.id);
+  s.ascension = n;
+  s.passiveIncome = passiveOnly(s);
+  return s;
+}
+
+function auditAscension(depassementMax = ASC_DEPASSEMENT_MAX, ascMax = 4) {
+  const suspects = [];
+  // ⚠️ Mesuré à la cadence de RÉFÉRENCE, celle sur laquelle le budget est
+  // calibré. À 4 taps/s (joueur à la main) tout dure mécaniquement
+  // 6,7/4 = 1,67× plus longtemps, ce qui noierait la dérive qu'on
+  // cherche sous une pénalité constante sans rapport avec l'Ascension.
+  const cadence = H.tapsParSec;
+  H.tapsParSec = 6.7;
+  const tous = [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL];
+  const vus = new Set();
+  tous.forEach((q) => {
+    // Seuls les défis à cible CALCULÉE dépendent du budget.
+    if (!q.effortMin || vus.has(q.id)) return;
+    vus.add(q.id);
+    const temps = [];
+    for (let n = 0; n <= ascMax; n++) {
+      const s = etatApresAscension(n);
+      // ⚠️ N'ÉVALUER QUE LES DÉFIS RÉELLEMENT PROPOSABLES dans cet état.
+      //
+      // Sans ce filtre le contrôle sortait 31 alertes, dont « possède N
+      // Étoiles Filantes » à 6,4 MILLIARDS de minutes : un défi que le
+      // tirage n'offre jamais à un joueur qui vient d'ascendre, puisque
+      // `available()` l'écarte. Un contrôle qui hurle sur des cas
+      // impossibles cesse d'être lu — c'est aussi nuisible qu'un
+      // contrôle aveugle.
+      if (!Q.questFeasible(q, s)) continue;
+      const t = minutesPour(q, Q.resolveQuestTarget(q, s), s);
+      if (t != null) temps.push({ asc: n, min: Math.round(t) });
+    }
+    if (!temps.length) return;
+    const pire = temps.reduce((a, b) => (b.min > a.min ? b : a));
+    if (pire.min > q.effortMin * depassementMax) {
+      suspects.push({ id: q.id, fenetre: q.effortMin, asc: pire.asc, min: pire.min,
+                      fois: +(pire.min / q.effortMin).toFixed(1),
+                      courbe: temps.map((t) => t.min).join('/') });
+    }
+  });
+  H.tapsParSec = cadence;
+  return suspects;
+}
+module.exports.auditAscension = auditAscension;
+module.exports.etatApresAscension = etatApresAscension;

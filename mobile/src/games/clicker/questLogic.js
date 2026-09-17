@@ -22,7 +22,6 @@ import {
   SANCTUARY_MAX_LEVEL,
   UPGRADE_ITEMS,
   VEILLEUR_MAX_LEVEL,
-  ascensionThreshold,
   autoClickerCost,
   coreUpgradeUnlocked,
   critChance,
@@ -308,19 +307,24 @@ export function resolveQuestTarget(quest, stats) {
     return Math.max(brute, dejaLa + Math.max(quest.minStep || 1, Math.ceil(dejaLa * 0.15)));
   }
   const minutes = quest.effortMin || 15;
-  // ⚠️ PLANCHER de budget adossé aux ASCENSIONS.
+  // ⚠️ LE PLANCHER D'ASCENSION A ÉTÉ SUPPRIMÉ — il traitait un symptôme.
   //
-  // Après une Ascension la production repart de ZÉRO, donc un budget
-  // calculé sur elle s'effondre — d'où des cibles de 450 pièces à la 2e
-  // Ascension, identiques à celles de la 1re partie.
+  // Il valait `ascensionThreshold(asc - 1) × 0,05 × (minutes / 30)` et
+  // servait à relever des cibles qui s'effondraient après une Ascension.
+  // Mais la vraie cause était dans `estimatedIncomePerSecond`, qui ne
+  // voyait pas le revenu de TAP : or juste après une Ascension le passif
+  // vaut zéro et le tap est la SEULE source de revenu.
   //
-  // Le SEUIL d'Ascension, lui, double à chaque fois et ne retombe
-  // jamais : il dit où le joueur en est VRAIMENT, indépendamment de son
-  // économie du moment. On en prend 5 %, proportionné à la fenêtre
-  // d'effort du défi.
-  const asc = Math.max(0, Math.floor((stats && stats.ascension) || 0));
-  const plancher = asc > 0 ? ascensionThreshold(asc - 1) * 0.05 * (minutes / 30) : 0;
-  const budget = Math.max(questBudget(stats, minutes), plancher);
+  // Le plancher avait en plus son propre défaut : le seuil d'Ascension
+  // DOUBLE à chaque fois alors que la production ne monte que de 30 %.
+  // Le même défi passait donc de 48 min à la 1re Ascension à 174 min à la
+  // 4e — une divergence sans fin, pas un écart ponctuel.
+  //
+  // Avec un budget qui voit le tap, les cibles montent de 45 % par
+  // Ascension (intention affichée) et le temps reste stable : mesuré
+  // 30 / 33 / 37 / 42 / 46 min de la 0e à la 4e Ascension. Ne pas le
+  // réintroduire sans remesurer cette courbe.
+  const budget = questBudget(stats, minutes);
   const now = readMetric(quest.metric, stats);
   const metric = quest.metric;
   let raw;
@@ -674,9 +678,20 @@ export function questFeasible(quest, stats = {}) {
 }
 
 export function questAlreadyDone(quest, stats = {}) {
-  if (!quest || quest.mode !== 'absolute' || !quest.target) return false;
+  if (!quest || quest.mode !== 'absolute') return false;
   if (RESET_ON_DRAW_METRICS.includes(quest.metric)) return false;
-  return readMetric(quest.metric, stats) >= quest.target;
+  const acquis = readMetric(quest.metric, stats);
+  if (quest.target) return acquis >= quest.target;
+  // ⚠️ Les cibles CALCULÉES doivent être testées elles aussi.
+  //
+  // Le test exigeait `quest.target`, donc il ignorait les 20 défis
+  // convertis en `effortMin`. En temps normal `resolveQuestTarget`
+  // garantit une cible supérieure à l'acquis — SAUF sur une métrique
+  // PLAFONNÉE (Sanctuaire et Veilleur, bornés à 10) : un joueur déjà au
+  // plafond recevait `seq_veilleur10` avec une cible de 10 alors qu'il
+  // était à 10, donc un défi accompli d'emblée qui disparaissait sans
+  // avoir été vu. Mesuré : 36 cas sur 11 400 tirages.
+  return acquis >= resolveQuestTarget(quest, stats);
 }
 
 export function nextQuestSet(index, excludeIds = [], stats = {}) {

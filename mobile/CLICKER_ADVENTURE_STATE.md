@@ -987,7 +987,187 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
-# 🔴 À LIRE EN PREMIER — passation de la session du 15/09
+# 🔴 À LIRE EN PREMIER — passation de la session du 17/09
+
+## Le problème ouvert de la session précédente est RÉGLÉ
+
+Il était décrit comme « le défi qui suit une Ascension demande 25 000
+pièces alors que la production vient d'être remise à zéro — 104 min ».
+
+⚠️ **La piste proposée (réduire la fenêtre d'effort de ces défis) aurait
+traité un symptôme.** Et sur les 3 défis signalés, **2 n'avaient aucun
+rapport avec l'Ascension** :
+
+| Défi | Cause RÉELLE | Lié à l'Ascension ? |
+|---|---|---|
+| `seq_earn100k` (104 min) | budget aveugle au revenu de TAP | oui |
+| `seq_main10` (106 min) | cible FIXE sur un générateur cher | **non** |
+| `seq_adv_c4l10` (120 min) | pas de +10 au lieu de +5 → attente d'énergie | **non** |
+
+## ⚠️⚠️ LA CAUSE RÉELLE : `estimatedIncomePerSecond` ne voyait pas le tap
+
+Elle valait `passiveIncome + tapPower * 0,5`. Trois défauts cumulés :
+
+- `tapPower` est un **NIVEAU**, pas des dégâts (piège déjà documenté
+  ailleurs dans ce fichier, retombé dedans) ;
+- **aucune cadence de tap** : le joueur était supposé taper **1 fois par
+  seconde** au lieu des 6,7 de la référence ;
+- **aucun multiplicateur global**, alors que `gainCoins` applique au tap
+  exactement les mêmes qu'au passif (Sanctuaire, essence, Ascension,
+  bonus de pièces).
+
+Revenu de tap sous-estimé d'un facteur **~13**. En temps normal le passif
+masquait l'erreur. Mais **juste après une Ascension le passif vaut ZÉRO
+et le tap est la SEULE source de revenu** : le budget s'effondrait
+précisément là.
+
+### Le plancher était un pansement, et il DIVERGEAIT
+
+Pour compenser, un PLANCHER adossé au seuil d'Ascension avait été ajouté
+(`ascensionThreshold(asc-1) × 0,05`). Or ce seuil **DOUBLE** à chaque
+Ascension pendant que la production ne monte que de **30 %**. Le même
+défi, mesuré pour le joueur de référence (autoclicker 6,7/s) :
+
+| Ascension | 0 | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|---|
+| **Avant** | 2 min | 48 | 74 | 113 | **174 min** |
+| **Après** | 30 min | 33 | 37 | 42 | **46 min** |
+
+⚠️ **Ce n'était pas un écart ponctuel de 104 min, c'était une divergence
+sans fin.** Les 104 min n'étaient que le premier terme.
+
+**Correctif** : `estimatedIncomePerSecond` estime le revenu de tap à la
+cadence de référence avec les multiplicateurs de `gainCoins`, et le
+plancher est **SUPPRIMÉ**. Les cibles montent alors de 45 % par Ascension
+(l'intention affichée) par CONSTRUCTION, sans aucune valeur en dur.
+
+⚠️ **Ne pas réintroduire le plancher** sans remesurer la courbe ci-dessus.
+
+## ⚠️ `REFERENCE_TAPS_PER_SEC = 6,7` — la constante à connaître
+
+Dans `questBudget.js`. C'est la cadence de l'autoclicker à 150 ms, le
+rythme sur lequel tout l'équilibrage est calé. **La changer redimensionne
+TOUTES les cibles en pièces du jeu.**
+
+⚠️ **Coût assumé** : un joueur qui tape À LA MAIN (≈4/s) met 6,7/4 =
+**1,67× plus de temps** sur tout défi en pièces (50 min au lieu de 30).
+C'est un choix, pas un oubli — le levier est cette constante.
+
+## ⚠️ L'INSTRUMENT DE MESURE ÉTAIT FAUX LUI AUSSI
+
+Deux défauts dans `audit-quetes.js`, tous deux dans la zone diagnostiquée :
+
+1. **`production()` n'appliquait aucun multiplicateur au tap** — donc le
+   ×1,30 par Ascension était perdu, et l'audit décrivait un joueur qui
+   rebâtit toujours à la même vitesse quel que soit son nombre
+   d'Ascensions. Faux.
+2. **`passiveIncome` publiait passif + tap**, alors que le jeu
+   (`questStats`) publie le **passif seul**. `questBudget` recevait donc
+   une valeur que le jeu ne lui donne jamais, et toutes les cibles en
+   pièces étaient gonflées.
+
+⚠️ Les deux erreurs se COMPENSAIENT partiellement : corriger la première
+seule faisait apparaître un `seq_ascend1` à 281 min. **Vérifier les deux
+avant de conclure quoi que ce soit sur une mesure post-Ascension.**
+
+**Règle** : avant de corriger un déséquilibre, vérifier que l'instrument
+mesure bien ce que le JEU calcule. Croiser la formule du modèle avec la
+formule réelle, ligne à ligne.
+
+## 5e contrôle ajouté : `auditAscension()`
+
+Mesure le temps d'un défi JUSTE APRÈS chaque Ascension (0 à 4) et signale
+ceux qui dépassent **2,5× leur propre fenêtre déclarée** (`effortMin`).
+
+⚠️ **Trois versions avant d'avoir un contrôle utile** — à lire avant d'en
+écrire un autre :
+
+| Version | Défaut |
+|---|---|
+| rapport `temps(asc4) / temps(asc0)` | piégé par les **dents de scie** des cibles de NIVEAU (17/46/35/27/60 min) : leur cible avance par niveaux entiers dont le coût double. Comparer deux extrémités d'une dent de scie ne mesure rien. |
+| seuil en minutes absolues | **31 alertes**, dont « 6,4 milliards de minutes » sur des défis que le tirage n'offre jamais dans cet état. Un contrôle qui hurle sur des cas impossibles cesse d'être lu. |
+| **dépassement de la fenêtre déclarée**, filtré par `questFeasible`, mesuré à la cadence de référence | retenu — 0 alerte |
+
+**Prouvé** : en remettant le budget aveugle et le plancher, le contrôle
+signale **21 défis** (`seq_earn10k` ×5,8 sa fenêtre, `seq_pacte15` ×5,0).
+
+⚠️ Mesuré à 6,7/s et non à la cadence du modèle (4/s) : sinon la pénalité
+constante du joueur à la main (×1,67) noierait la dérive cherchée.
+
+## Deux autres défauts trouvés PAR LA FORCE BRUTE
+
+Sur 12 200 défis tirés (200 profils × 14 cycles) :
+
+### 1. `questAlreadyDone` ignorait les cibles CALCULÉES
+
+Il exigeait `quest.target`, donc il ne voyait aucun des 20 défis
+convertis en `effortMin`. En temps normal `resolveQuestTarget` garantit
+une cible supérieure à l'acquis — **sauf sur une métrique PLAFONNÉE**
+(Sanctuaire et Veilleur, bornés à 10). Un joueur déjà au plafond recevait
+`seq_veilleur10` avec une cible de 10 alors qu'il était à 10 : défi
+accompli d'emblée, disparu sans avoir été vu. **36 cas sur 11 400.**
+
+### 2. Le cycle 10 n'avait plus que TROIS défis
+
+Tous les autres en ont 4 ou 5. Un défi d'Aventure avait été perdu lors du
+remplacement de « Veilleur niveau 20 », et personne ne l'avait vu : un
+cycle court n'empêche rien, il rend juste la dernière éclosion scriptée
+gratuite. Retrouvé en **comptant les défis tirés par cycle**.
+
+Rétabli avec `seq_adv_c4l5` (niveau 35), ce qui complète en même temps
+l'échelle d'Aventure au pas de +5 voulu : **3 · 10 · 15 · 20 · 25 · 30 ·
+35**.
+
+## Résultats mesurés
+
+| | Avant | Après |
+|---|---|---|
+| `seq_earn100k` | 104 min | **54 min** (30 pour le joueur de référence) |
+| `seq_main10` | 106 min | **38 min** |
+| `seq_adv_c4l10` | 120 min | **60 min** |
+| Séquence totale | 19 h | **18 h** |
+| Alertes « trop long » | 3 | **0** |
+| Défis nés déjà accomplis | 36 / 11 400 | **0 / 12 200** |
+| Cycles incomplets | 1 | **0** |
+
+Les 2 alertes restantes sont des **métriques non modélisées** par l'audit
+(`passiveIncome`, `runesEquipped`), pas des défis trop longs.
+
+## Ce qui reste OUVERT
+
+- 🟨 **Cadence de référence à 6,7** : pénalise le joueur à la main de
+  1,67×. Décision à prendre, le levier est `REFERENCE_TAPS_PER_SEC`.
+- 🟨 `advWin10` du pool reste à 48 min, borné par l'**ÉNERGIE**
+  (4 combats), pas par une cible. Même famille que les alertes d'énergie
+  déjà documentées ; la solution retenue est la pub (+1 énergie, 5/jour).
+- Les défis d'Aventure coûtent 12 min par niveau dans le modèle, presque
+  uniquement de l'attente. C'est le poste le plus lourd de la séquence.
+
+## Comment travailler sur ce projet
+
+⚠️ **MESURER avant de changer une valeur.** L'intuition s'est trompée à
+chaque fois : le multiplicateur de répétition faisait passer une passe de
+17 h à 4266 h, et cette session la « fenêtre d'effort » proposée aurait
+laissé le vrai bug en place.
+
+⚠️ **Vérifier l'INSTRUMENT avant de conclure** (voir plus haut). Il était
+faux sur exactement la zone diagnostiquée.
+
+⚠️ **Lancer les 5 contrôles après CHAQUE changement** :
+```
+NODE_PATH=<dossier avec @babel/core> node mobile/tools/audit-quetes.js
+```
+plus `auditCoherence()`, `auditLibelles()`, `auditCorvee()`,
+`auditModes()`, `auditAscension()`.
+
+⚠️ **Prouver qu'un contrôle marche** en réintroduisant le bug qu'il doit
+voir. Les 5 l'ont été cette session.
+
+⚠️ **Un libellé ne contient JAMAIS de nombre en dur.**
+
+---
+
+# Passation de la session du 15/09 (historique)
 
 ## Ce qui a été fait cette session
 
@@ -1002,7 +1182,12 @@ l'EMPILEMENT.
    leur cible, métriques jamais publiées, modes delta/absolute inversés,
    défis infaisables.
 
-## ⚠️⚠️ LE PROBLÈME OUVERT, signalé par l'auteur
+## ✅ RÉSOLU LE 17/09 — l'ancien « problème ouvert »
+
+> Gardé pour mémoire. La cause supposée ici (fenêtre d'effort) n'était
+> PAS la bonne : voir la passation du 17/09 en haut de fichier.
+
+### Ce qui était écrit à l'époque
 
 **Le défi 23 (« Obtiens 25 000 pièces ») arrive JUSTE APRÈS l'Ascension
 du défi 22.** Or l'Ascension remet la production à zéro.

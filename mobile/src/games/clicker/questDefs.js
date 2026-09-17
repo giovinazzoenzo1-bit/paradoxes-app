@@ -182,7 +182,12 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'seq_power10', icon: '✨', metric: 'powerActivated', target: 10, mode: 'delta',
       label: (t) => `Active ${t} fois un pouvoir de créature` },
-    { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', target: 5, mode: 'absolute',
+    // ⚠️ Cible FIXE (5) convertie en `effortMin`. La Main Spectrale est
+    // un générateur cher : 5 unités coûtaient 82 min de production à ce
+    // stade, contre 12 à 30 pour les autres défis du cycle. Une cible
+    // fixe sur une métrique MONÉTAIRE ne se recalibre jamais — c'est
+    // exactement le défaut déjà corrigé sur les 18 défis en pièces.
+    { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', effortMin: 25, mode: 'absolute',
       label: (t) => `Possède ${t} Mains Spectrales` },
     { id: 'seq_adv_c3l10', icon: '⚔️', metric: 'advLevelReached', target: 25, mode: 'absolute',
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
@@ -199,7 +204,13 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Monte Croc de Bouldog au niveau ${t}` },
     { id: 'seq_fuse2', icon: '🔮', metric: 'runeFused', target: 1, mode: 'delta',
       label: (t) => `Fusionne ${t} rune${t > 1 ? 's' : ''}` },
-    { id: 'seq_adv_c4l10', icon: '⚔️', metric: 'advLevelReached', target: 35, mode: 'absolute',
+    // ⚠️ 35 → 30 : la suite des défis d'Aventure faisait
+    // 3 · 10 · 15 · 20 · 25 · **35**, soit un dernier pas de +10 alors
+    // que la règle du fichier (juste au-dessus) impose +5. Ce seul écart
+    // coûtait 10 niveaux d'affilée, soit 120 min dont 110 d'ATTENTE
+    // d'énergie — le défi le plus long de toute la séquence, et pas
+    // parce qu'il était difficile.
+    { id: 'seq_adv_c4l10', icon: '⚔️', metric: 'advLevelReached', target: 30, mode: 'absolute',
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'seq_tap3', icon: '🔱', metric: 'tapUpgrade:tap3', target: 1, mode: 'absolute',
       label: () => 'Débloque le Sceau de Puissance' },
@@ -209,8 +220,19 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_hold50M', icon: '🏦', metric: 'coins', effortMin: 40, mode: 'absolute',
       label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
     // Remplacé pour la même raison : le Veilleur est plafonné à 10.
-        { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', effortMin: 35, mode: 'absolute',
+    { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', effortMin: 35, mode: 'absolute',
       label: (t) => `Monte une créature au niveau ${t}` },
+    // ⚠️ Ce cycle n'avait plus que TROIS défis — tous les autres en ont
+    // 4 ou 5. Un défi d'Aventure avait été perdu lors du remplacement de
+    // « Veilleur niveau 20 » (le Veilleur est plafonné à 10), et la perte
+    // n'avait été vue par personne : un cycle plus court n'empêche rien,
+    // il rend juste la dernière éclosion scriptée gratuite. Retrouvé en
+    // comptant les défis tirés par cycle sur 200 profils.
+    //
+    // Le niveau 35 complète en même temps l'échelle d'Aventure au pas
+    // de +5 voulu : 3 · 10 · 15 · 20 · 25 · 30 · 35.
+    { id: 'seq_adv_c4l5', icon: '⚔️', metric: 'advLevelReached', target: 35, mode: 'absolute',
+      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     // ⚠️ Même correction : en delta, ce défi exigeait 2 Ascensions de
     // PLUS (soit 3 au total pour un joueur qui en avait déjà une) alors
     // que le texte annonce « la seconde ». Il ne se validait jamais.
