@@ -987,6 +987,31 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️ Libellés de DÉBLOCAGE mal formulés (15/09)
+
+Deux défis portent une métrique `tapUpgrade:` — un DÉBLOCAGE, qu'on
+possède ou non, donc de cible 1 — mais affichaient « Monte X au
+niveau 1 ». Le joueur lisait un défi déjà acquis.
+
+Pire : `seq_veilleur20` (métrique `tapUpgrade:tap2`, le **Gantelet
+Runique**) affichait « Monte le Veilleur au niveau 1 ». Ma conversion en
+masse des libellés avait apparié le mauvais texte à la métrique.
+
+Corrigés en « Débloque la Poigne Ancienne » et « Débloque le Gantelet
+Runique ».
+
+⚠️ **Contrôle ajouté** : croiser la MÉTRIQUE de chaque défi avec les mots
+de son libellé. Un défi sur le Veilleur doit contenir « veilleur », un
+défi sur les pièces « pièces », etc.
+
+⚠️ Défi `essence5` SUPPRIMÉ du pool : l'essence ne peut plus être gagnée
+depuis son retrait, le défi était donc infaisable.
+
+⚠️ Vérifié que les doublons de libellé du pool (pacteMid/pacteLong,
+sanctMid/sanctLong, autoTotalMid/autoTotalLong) ne peuvent JAMAIS sortir
+ensemble : le filtre « une seule métrique par jeu » les exclut déjà.
+300 tirages, 0 doublon — aucun garde-fou supplémentaire ajouté.
+
 ## ⚠️⚠️ CIBLES NON FIGÉES : les défis fuyaient (15/09)
 
 Deux symptômes signalés après une Ascension, **une seule cause**.

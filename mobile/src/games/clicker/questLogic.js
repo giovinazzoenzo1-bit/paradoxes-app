@@ -145,7 +145,7 @@ export const QUEST_SEQUENCE = [
     // Remplacé : le Sanctuaire est plafonné à 10, « niveau 15 » était
     // devenu littéralement impossible et bloquait l'œuf pour toujours.
     { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', effortMin: 25, mode: 'absolute',
-      label: (t) => `Monte Poigne Ancienne au niveau ${t}` },
+      label: () => 'Débloque la Poigne Ancienne' },
     { id: 'seq_hold1M', icon: '🏦', metric: 'coins', effortMin: 35, mode: 'absolute',
       label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
     { id: 'seq_evolve1', icon: '🧬', metric: 'maxEvolutionTier', target: 1, mode: 'absolute',
@@ -179,7 +179,7 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
     // Remplacé pour la même raison : le Veilleur est plafonné à 10.
     { id: 'seq_veilleur20', icon: '🪄', metric: 'tapUpgrade:tap2', effortMin: 30, mode: 'absolute',
-      label: (t) => `Monte le Veilleur au niveau ${t}` },
+      label: () => 'Débloque le Gantelet Runique' },
     { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', effortMin: 35, mode: 'absolute',
       label: (t) => `Monte une créature au niveau ${t}` },
     { id: 'seq_ascend2', icon: '🌟', metric: 'ascension', target: 2, mode: 'delta',
@@ -349,9 +349,6 @@ export const QUEST_POOL = [
   { id: 'feed15', family: 'collection', icon: '🍖', metric: 'maxCreatureLevel', mode: 'absolute', step: 15, minStep: 15,
     available: (s) => (s.ownedCount || 0) >= 1 && (s.maxCreatureLevel || 0) >= 5,
     label: (t) => `Nourris une créature jusqu'au niveau ${t}` },
-  { id: 'essence5', family: 'collection', icon: '🌟', metric: 'essence', mode: 'absolute', step: 5, minStep: 5,
-    available: (s) => (s.essence || 0) > 0,
-    label: (t) => `Accumule ${t} points d'essence` },
 
   // ---------- Défis Aventure ----------
   //
@@ -672,6 +669,27 @@ export function effectiveQuestTarget(questId, stats = {}, targets = {}) {
   if (!q) return 1;
   if (q.target) return resolveQuestTarget(q, stats);
   return targets[questId] || resolveQuestTarget(q, stats);
+}
+
+// Cibles manquantes d'un cycle DÉJÀ tiré.
+//
+// ⚠️ Les parties commencées avant que les cibles soient figées au tirage
+// n'en ont aucune d'enregistrée : elles se recalculent à chaque rendu et
+// suivent l'état du joueur. Après une Ascension, qui remet le Pacte à
+// zéro, la cible retombait à un niveau déjà franchi.
+//
+// On les fige une bonne fois, sur l'état courant.
+export function freezeMissingTargets(activeIds, stats = {}, targets = {}) {
+  let change = false;
+  const suivant = { ...targets };
+  (activeIds || []).forEach((id) => {
+    if (suivant[id]) return;
+    const q = findQuest(id);
+    if (!q) return;
+    suivant[id] = q.target || resolveQuestTarget(q, stats);
+    change = true;
+  });
+  return change ? suivant : null;
 }
 
 export function questLabel(questId, target, stats = {}, targets = {}) {

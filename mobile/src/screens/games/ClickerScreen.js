@@ -96,6 +96,7 @@ import {
   RUNE_CYCLE_INDEX,
   questFeasible,
   metricScopedToCycle,
+  freezeMissingTargets,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -2012,6 +2013,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       return suivant;
     });
   }, [loaded, activeQuestIds, questStats.ownedCount]);
+
+  // Fige les cibles absentes d'un cycle déjà tiré (parties commencées
+  // avant que le tirage ne les enregistre). Sans ça elles se
+  // recalculaient sans cesse et suivaient l'état du joueur.
+  useEffect(() => {
+    if (!loaded || !activeQuestIds.length) return;
+    const figees = freezeMissingTargets(activeQuestIds, questStats, questTargets);
+    if (figees) setQuestTargets(figees);
+  }, [loaded, activeQuestIds]);
 
   // Pose le verrou dès qu'un défi est atteint, pour qu'une baisse de la
   // valeur ne le défasse plus.
