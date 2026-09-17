@@ -133,7 +133,7 @@ function etatInitial() {
     tapPower: 1, coins: 0, totalEarned: 0, autoClickers: {}, upgradeLevels: {},
     sanctuaryLevel: 0, veilleurLevel: 0, critLevel: 0, critDamageLevel: 0,
     essence: 0, ascension: 0, ownedCount: 1, ownedIds: [], deckCount: 1,
-    maxCreatureLevel: 1, maxEvolutionTier: 0, advLevelReached: 0,
+    maxCreatureLevel: 1, maxEvolutionTier: 0, advLevelReached: 0, tapUpgrades: {},
     totalSummons: 0, totalCrits: 0, goldenClaimed: 0, offering: 0,
     powerActivated: 0, runeBought: 0, runeEquipped: 0, runeFused: 0,
     battleWon: 0, maxTranseHoldSec: 0, maxCombo: 1, tapUpgrades: [],
@@ -141,13 +141,40 @@ function etatInitial() {
   };
 }
 
+// ⚠️ Remet l'économie à zéro, comme le fait une vraie Ascension.
+//
+// Sans ça, l'audit simulait un joueur qui GARDE sa production après
+// l'Ascension : il annonçait « obtiens 55 000 pièces » pour le défi
+// suivant, alors qu'en jeu la production repart de zéro et la cible est
+// bien plus basse. L'outil mentait sur toute la partie d'après.
+function appliquerAscension(s) {
+  s.ascension = (s.ascension || 0) + 1;
+  s.coins = 0;
+  s.totalEarned = 0;
+  s.tapPower = 1;
+  s.autoClickers = {};
+  s.upgradeLevels = {};
+  s.tapUpgrades = {};
+  s.sanctuaryLevel = 0;
+  s.veilleurLevel = 0;
+  s.critLevel = 0;
+  s.passiveIncome = production(s);
+}
+
 // Applique l'effet d'un défi accompli sur l'état du joueur.
 function appliquer(q, cible, s) {
+  if (q.metric === 'ascension') {
+    // Le joueur monte AU TOTAL demandé : autant d'Ascensions qu'il faut.
+    const vise = Math.max(cible, 1);
+    while ((s.ascension || 0) < vise) appliquerAscension(s);
+    return;
+  }
   const m = q.metric || '';
   if (q.mode === 'delta') { s[m] = (s[m] || 0) + cible; }
   else if (m.startsWith('upgrade:')) s.upgradeLevels[m.slice(8)] = cible;
   else if (m.startsWith('auto:')) s.autoClickers[m.slice(5)] = cible;
-  else if (m.startsWith('tapUpgrade:')) s.tapUpgrades = [...new Set([...s.tapUpgrades, m.slice(11)])];
+  // `tapUpgrades` est un OBJET id -> niveau, pas une liste.
+  else if (m.startsWith('tapUpgrade:')) s.tapUpgrades = { ...(s.tapUpgrades || {}), [m.slice(11)]: cible };
   else s[m] = Math.max(s[m] || 0, cible);
   if (m === 'totalSummons') { s.ownedCount += cible; }
   s.passiveIncome = production(s);

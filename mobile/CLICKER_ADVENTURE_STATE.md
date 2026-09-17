@@ -987,6 +987,63 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+# 🔴 À LIRE EN PREMIER — passation de la session du 15/09
+
+## Ce qui a été fait cette session
+
+1. **Outil d'audit** (`mobile/tools/audit-quetes.js`) — mesure toute la
+   séquence au lieu de la jouer. 4 contrôles : cohérence structurelle,
+   libellés, corvées, modes.
+2. **Défis auto-calibrés** — les cibles en pièces dérivent de la
+   production réelle du joueur (425 h → 19 h de séquence).
+3. **Découpage en fichiers** — `questDefs.js` contient LES DÉFIS et rien
+   d'autre.
+4. **~20 bugs corrigés** : cibles qui fuyaient, libellés mentant sur
+   leur cible, métriques jamais publiées, modes delta/absolute inversés,
+   défis infaisables.
+
+## ⚠️⚠️ LE PROBLÈME OUVERT, signalé par l'auteur
+
+**Le défi 23 (« Obtiens 25 000 pièces ») arrive JUSTE APRÈS l'Ascension
+du défi 22.** Or l'Ascension remet la production à zéro.
+
+Mesuré : **104 minutes** pour ce seul défi, contre 20-30 min pour les
+autres. Deux autres défis sont dans le même cas (`seq_main10` 106 min,
+`seq_adv_c4l10` 120 min).
+
+⚠️ **L'audit MENTAIT là-dessus jusqu'à la fin de la session** : il ne
+simulait pas la remise à zéro et annonçait 55 000 pièces au lieu de
+25 000, avec un total de 17 h au lieu de 19 h. Corrigé en toute fin de
+session (`appliquerAscension`).
+
+**Piste à explorer** : les défis qui SUIVENT immédiatement une Ascension
+doivent avoir une fenêtre d'effort RÉDUITE, parce que le joueur repart
+de zéro. Aujourd'hui ils gardent la même (30 min), ce qui donne 104 min
+réelles. Mesurer avant de choisir la valeur.
+
+## Comment travailler sur ce projet
+
+⚠️ **MESURER avant de changer une valeur.** L'intuition s'est trompée à
+chaque fois cette session : le multiplicateur de répétition faisait
+passer une passe de 17 h à 4266 h, la montée du Gardien rendait le combat
+perdable, les niveaux ne peuvent pas être multipliés.
+
+⚠️ **Lancer les 4 contrôles après CHAQUE changement** :
+```
+NODE_PATH=<dossier avec @babel/core> node mobile/tools/audit-quetes.js
+```
+plus `auditCoherence()`, `auditLibelles()`, `auditCorvee()`,
+`auditModes()`.
+
+⚠️ **Prouver qu'un contrôle marche** en réintroduisant le bug qu'il
+doit voir. Deux contrôles étaient AVEUGLES parce qu'ils écartaient une
+catégorie « pour réduire le bruit » — et c'est cette catégorie qui
+contenait le bug.
+
+⚠️ **Un libellé ne contient JAMAIS de nombre en dur.**
+
+---
+
 ## ⚠️⚠️ Après une Ascension, les défis revenaient À L'IDENTIQUE (15/09)
 
 Signalé : « Pacte niveau 5 » et « obtiens 450 pièces » à la 2e Ascension,
