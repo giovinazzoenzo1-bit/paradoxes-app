@@ -1010,6 +1010,36 @@ dépende du porte-monnaie.
 Vérifié : identique à 5 000 et 30 000 pièces en poche, et suit la
 production (10/s → 23 K, 500/s → 550 K).
 
+### ⚠️ MAIS ce n'était PAS la cause du cas signalé
+
+L'auteur a corrigé : son niveau avait MONTÉ entre les deux tirages, donc
+la dépendance au porte-monnaie n'expliquait pas la baisse.
+
+**Vraie cause** : il existe **7 défis distincts** portant sur les pièces,
+avec des fenêtres d'effort de **15 à 75 minutes**. Pour un même joueur au
+même instant :
+
+| Fenêtre | Cible |
+|---|---|
+| 15 min (`holdShort`) | 34 500 |
+| 75 min (`holdLong`) | **88 000** |
+
+Rapport **×2,6** — le 80 K était un défi LONG, le 30 K un défi COURT.
+
+⚠️ Les 7 affichaient le MÊME texte : rien ne permettait de les
+distinguer, donc l'écart passait pour un bug. Les libellés sont
+désormais différenciés :
+- court → « Mets N pièces de côté »
+- moyen → « Accumule N pièces en réserve »
+- long → « Constitue un trésor de N pièces »
+
+⚠️ 5 libellés « Aie N pièces » subsistaient dans le POOL : la
+correction demandée plus tôt n'avait été appliquée qu'à la SÉQUENCE.
+
+**Règle** : deux défis de même famille mais d'exigences différentes
+doivent se distinguer par leur TEXTE, sinon l'écart de cible passe pour
+une incohérence.
+
 ## Gardien : montée des dégâts à partir du 5e œuf
 
 ⚠️ MESURÉ : ses dégâts STAGNAIENT (2,8 en moyenne jusqu'au 5e œuf,
