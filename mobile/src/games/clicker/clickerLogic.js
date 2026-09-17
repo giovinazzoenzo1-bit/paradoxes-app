@@ -881,6 +881,18 @@ export function coreUpgradeRequirement(id) {
 // Un palier verrouillé reste affiché mais grisé avec sa condition : le
 // joueur voit ce qui l'attend au lieu d'une boutique qui grandit sans
 // prévenir.
+// ⚠️ BONUS divisés par 2 à partir du 3e palier (15/09).
+//
+// MESURÉ : à 6,7 clics/s (la cadence de l'autoclicker de test), le
+// Sceau de Puissance rapportait 4,41 pièces/s par millier investi
+// contre 0,615 pour le meilleur auto-clic — **7× plus rentable**. Le
+// tap écrasait toute la branche passive.
+//
+// Divisés par 2 SANS toucher aux prix : le rapport tombe à 2,21, encore
+// devant le passif (c'est voulu, le tap demande de l'action) mais sans
+// le rendre inutile. Les 2 premiers paliers sont inchangés : ce sont
+// eux qui donnent au débutant l'impression d'avancer.
+//
 // ⚠️ Prix REVUS le 15/09 : écart entre paliers ramené de ×9 à ×4,5, et
 // croissance de 1,60 à 1,45.
 //
@@ -891,14 +903,14 @@ export function coreUpgradeRequirement(id) {
 export const TAP_UPGRADES = [
   { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 900, growth: 1.45 },
   { id: 'tap2', name: 'Gantelet Runique', emoji: '🪄', bonus: 2.5, cost: 4050, growth: 1.45 },
-  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 12, cost: 18225, growth: 1.45 },
-  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 52, cost: 82012, growth: 1.45 },
-  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 245, cost: 369056, growth: 1.45 },
-  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 1154, cost: 1660753, growth: 1.45 },
-  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 5455, cost: 7473389, growth: 1.45 },
-  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 27586, cost: 33630251, growth: 1.45 },
-  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 137705, cost: 151336129, growth: 1.45 },
-  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 687500, cost: 681012578, growth: 1.45 },
+  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 6, cost: 18225, growth: 1.45 },
+  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 26, cost: 82012, growth: 1.45 },
+  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 122.5, cost: 369056, growth: 1.45 },
+  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 577, cost: 1660753, growth: 1.45 },
+  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 2727.5, cost: 7473389, growth: 1.45 },
+  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 13793, cost: 33630251, growth: 1.45 },
+  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 68852.5, cost: 151336129, growth: 1.45 },
+  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 343750, cost: 681012578, growth: 1.45 },
 ];
 
 export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10;

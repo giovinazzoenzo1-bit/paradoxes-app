@@ -1026,6 +1026,28 @@ Vérifié : prix toujours strictement croissants, et le tap monté au
 niveau 5 sur 3 paliers rapporte 8,8× le passif — il redevient pertinent
 sans écraser le reste.
 
+### Bonus de tap divisés par 2 à partir du 3e palier
+
+⚠️ MESURÉ : à 6,7 clics/s (cadence de l'autoclicker de test), le Sceau
+de Puissance rapportait **4,41 pièces/s par millier investi** contre
+**0,615** pour le meilleur auto-clic — **7× plus rentable**. Le tap
+écrasait toute la branche passive.
+
+Bonus ÷2 du palier 3 au palier 10, **prix inchangés** : la rentabilité
+tombe à 2,21, encore devant le passif (c'est voulu, le tap demande de
+l'action) sans rendre les auto-clics inutiles.
+
+⚠️ Les 2 premiers paliers restent intacts : ce sont eux qui donnent au
+débutant l'impression d'avancer, et le problème de rentabilité ne
+commençait qu'au 3e.
+
+⚠️ **Baisser le bonus SANS toucher au prix était le bon geste.** Baisser
+les deux aurait laissé la rentabilité inchangée — donc n'aurait rien
+corrigé.
+
+Vérifié : bonus toujours strictement croissants, rentabilité stable
+(2,1 à 3,4) sur toute la gamme.
+
 ### Montée de créature — 41 combats pour le niveau 36
 
 `0,5 × L^1,20` → **`0,35 × L^1,05`**.
