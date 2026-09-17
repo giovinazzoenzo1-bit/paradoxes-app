@@ -1949,6 +1949,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // Compteurs Aventure À VIE (DailyContext).
     battleWon: lifetimeStats.battleWon || 0,
     runeEquipped: lifetimeStats.runeEquipped || 0,
+    // Nombre de runes RÉELLEMENT équipées, publié par l'Aventure.
+    // Insensible au déséquipement/rééquipement, contrairement à
+    // `runeEquipped` qui compte les gestes.
+    runesEquipped: lifetimeStats.runesEquipped || 0,
     runeBought: lifetimeStats.runeBought || 0,
   };
   // Baseline effectif d'un défi : le sien s'il a déjà démarré, sinon
@@ -2253,6 +2257,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     goldenClaimed: goldenClaimedRef.current,
     battleWon: lifetimeStats.battleWon || 0,
     runeEquipped: lifetimeStats.runeEquipped || 0,
+    runesEquipped: lifetimeStats.runesEquipped || 0,
     runeBought: lifetimeStats.runeBought || 0,
   });
 

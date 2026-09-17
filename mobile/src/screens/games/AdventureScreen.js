@@ -835,7 +835,20 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   const equipRune = (runeId, creatureId) => {
     const alreadyEquipped = ownedRunes.filter((r) => r.equippedCreatureId === creatureId).length;
     if (alreadyEquipped >= 3) return;
-    setOwnedRunes((prev) => prev.map((r) => (r.id === runeId ? { ...r, equippedCreatureId: creatureId } : r)));
+    setOwnedRunes((prev) => {
+      const suivant = prev.map((r) => (r.id === runeId ? { ...r, equippedCreatureId: creatureId } : r));
+      // ⚠️ On publie le NOMBRE de runes équipées, pas un compteur
+      // d'actions.
+      //
+      // `trackEvent('runeEquipped', 1)` comptait chaque geste : déséquiper
+      // puis rééquiper la MÊME rune faisait monter le compteur, et le
+      // défi « équipe N runes » se validait sans en posséder N.
+      //
+      // `trackMax` sur le nombre réellement équipé est insensible à ça :
+      // rééquiper la même rune redonne le même total.
+      trackMax('runesEquipped', suivant.filter((r) => r.equippedCreatureId).length);
+      return suivant;
+    });
     trackEvent('runeEquipped', 1);
   };
 
@@ -2660,6 +2673,18 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
           </React.Fragment>
         );
       })}
+    {/* ⚠️ Indication affichée UNIQUEMENT quand le joueur est bloqué.
+        Beaucoup ignorent qu'on peut convertir ses pièces du Clicker en
+        Griffes : sans ce rappel au moment précis où ils n'ont plus de
+        quoi acheter, ils croient devoir attendre. */}
+    {griffes < RUNE_COST && !freeRuneDraw && (
+      <View style={styles.shopHintWrap} pointerEvents="none">
+        <Text style={styles.shopHintText} numberOfLines={2}>
+          Pas assez de Griffes ? Touche le « + » à côté de tes Griffes
+          pour les acheter avec tes pièces du Clicker.
+        </Text>
+      </View>
+    )}
     </View>
   );
 }
@@ -3222,6 +3247,16 @@ const styles = StyleSheet.create({
   },
   counterPlusText: { color: '#fff', fontSize: 15, fontWeight: '900', lineHeight: 17 },
   // Fond/bordure retirés (image réelle intégrée, cadre déjà peint dedans).
+  // Rappel d'achat de Griffes : sur le bois, sous les offres, en jaune
+  // pour attirer l'œil sans masquer le panneau.
+  shopHintWrap: {
+    position: 'absolute', left: '6%', right: '6%', bottom: '2%',
+    alignItems: 'center',
+  },
+  shopHintText: {
+    color: COLORS.action, fontSize: 10.5, fontWeight: '800', textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4,
+  },
   runesTopBtn: {
     width: 38, height: 38, alignItems: 'center', justifyContent: 'center',
   },

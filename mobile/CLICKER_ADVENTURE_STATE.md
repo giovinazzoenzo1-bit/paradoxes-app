@@ -987,7 +987,43 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️ Défi des runes : glitch fermé, cible à 2 (15/09)
+
+`trackEvent('runeEquipped', 1)` comptait les **GESTES** : déséquiper puis
+rééquiper la MÊME rune faisait monter le compteur, et le défi se validait
+sans posséder le nombre demandé.
+
+**Correctif** : l'Aventure publie désormais `runesEquipped` par
+`trackMax` — le NOMBRE de runes réellement en place. Rééquiper la même
+rune redonne le même total : le glitch n'a plus de prise.
+
+Cible ramenée de **3 à 2**, et libellé rendu dynamique.
+
+⚠️ La métrique doit être exposée dans `questStats` ET dans l'instantané
+de référence. Ajoutée au seul instantané, le défi n'aurait pas progressé.
+
+## Achat de Griffes mis en avant
+
+Un joueur sans Griffes ne peut plus acheter de rune et croit devoir
+attendre. Un rappel apparaît **uniquement quand il est bloqué**
+(`griffes < RUNE_COST`) : « Touche le + à côté de tes Griffes pour les
+acheter avec tes pièces du Clicker ».
+
+⚠️ Affiché au moment précis du blocage, pas en permanence : un message
+toujours visible devient invisible.
+
 ## ⚠️⚠️ INVARIANT : un défi doit demander PLUS que l'acquis (15/09)
+
+⚠️ **CORRECTION du 15/09 (suite)** : ce plancher ne doit s'appliquer
+QU'AU TIRAGE. Appliqué à chaque évaluation, il faisait FUIR la cible —
+« équipe 2 runes » en réclamait 3 dès qu'on en avait 2.
+
+`effectiveQuestTarget` relit donc la cible FIGÉE en priorité, y compris
+pour les défis à cible fixe. Le plancher n'agit qu'une fois, au tirage.
+
+**Vérifié** : 5234 défis absolus tirés sur 150 profils × 13 cycles →
+**0 né déjà accompli**, et la cible ne bouge plus une fois figée.
+
 
 Signalé : un défi affichant un niveau DÉJÀ ATTEINT (« niveau 1 »).
 

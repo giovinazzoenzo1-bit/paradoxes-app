@@ -140,8 +140,11 @@ export const QUEST_SEQUENCE = [
   ],
   // --- Cycle 7 : runes et évolution ---
   [
-    { id: 'seq_equipRune2', icon: '🪬', metric: 'runeEquipped', target: 3, mode: 'delta',
-      label: () => 'Équipe 3 runes sur tes créatures' },
+    // Cible ramenée de 3 à 2, et métrique changée : `runeEquipped`
+    // comptait les GESTES (glitchable en déséquipant/rééquipant),
+    // `runesEquipped` compte les runes réellement en place.
+    { id: 'seq_equipRune2', icon: '🪬', metric: 'runesEquipped', target: 2, mode: 'absolute',
+      label: (t) => `Équipe ${t} runes sur tes créatures` },
     // Remplacé : le Sanctuaire est plafonné à 10, « niveau 15 » était
     // devenu littéralement impossible et bloquait l'œuf pour toujours.
     { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', effortMin: 25, mode: 'absolute',
@@ -377,7 +380,7 @@ export const QUEST_POOL = [
     available: (s) => (s.deckCount || 0) >= 1 && (s.runeBought || 0) >= 1,
     label: (t) => `Achète ${t} runes en Aventure` },
   // On ne peut équiper une rune qu'après en avoir acheté une.
-  { id: 'advEquipRune2', family: 'adventure', icon: '🪬', metric: 'runeEquipped', target: 2, mode: 'delta',
+  { id: 'advEquipRune2', family: 'adventure', icon: '🪬', metric: 'runesEquipped', target: 2, mode: 'absolute',
     available: (s) => (s.deckCount || 0) >= 1 && (s.runeBought || 0) >= 1,
     label: (t) => `Équipe ${t} runes sur tes créatures (Aventure)` },
 ];
@@ -701,8 +704,22 @@ export function questComplete(questId, stats, baseline = {}, targets = {}) {
 export function effectiveQuestTarget(questId, stats = {}, targets = {}) {
   const q = findQuest(questId);
   if (!q) return 1;
-  if (q.target) return resolveQuestTarget(q, stats);
-  return targets[questId] || resolveQuestTarget(q, stats);
+  // ⚠️ La cible FIGÉE au tirage fait autorité, y compris pour les défis
+  // à cible fixe.
+  //
+  // `resolveQuestTarget` applique un plancher « plus que l'acquis » —
+  // indispensable AU TIRAGE pour qu'un défi ne naisse pas déjà accompli.
+  // Mais l'appeler à chaque évaluation faisait FUIR la cible : « équipe
+  // 2 runes » en réclamait 3 dès qu'on en avait 2.
+  //
+  // Le plancher n'agit donc qu'une fois, au tirage ; ensuite on relit la
+  // valeur enregistrée.
+  if (targets[questId]) return targets[questId];
+  if (q.target && METRIQUES_RYTHME.includes(q.metric)) {
+    return roundQuestTarget(q.target * ascensionActionMultiplier(stats && stats.ascension));
+  }
+  if (q.target) return q.target;
+  return resolveQuestTarget(q, stats);
 }
 
 // Cibles manquantes d'un cycle DÉJÀ tiré.
