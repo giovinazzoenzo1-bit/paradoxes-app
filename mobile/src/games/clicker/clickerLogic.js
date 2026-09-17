@@ -399,7 +399,13 @@ export const RARITY_COST_FACTOR = { commun: 1, peu_commun: 1.3, rare: 1.6, epiqu
 // combat disponible à ce stade.
 export function levelUpCost(creature, level) {
   const rarityFactor = RARITY_COST_FACTOR[creature.rarity] || 1;
-  return Math.max(1, Math.round(0.5 * UPGRADE_COST_MULT * Math.pow(level, 1.2) * rarityFactor));
+  // ⚠️ Abaissé le 15/09 : 0,5 × L^1,20 → 0,35 × L^1,05.
+  //
+  // MESURÉ : monter une créature au niveau 36 coûtait 819 Griffes, soit
+  // **41 combats** — plus de 8 heures au rythme de l'énergie (5 par
+  // heure). Un défi demandant ce niveau devenait inatteignable.
+  // Désormais 360 Griffes, soit 18 combats.
+  return Math.max(1, Math.round(0.35 * UPGRADE_COST_MULT * Math.pow(level, 1.05) * rarityFactor));
 }
 
 // Coût d'une invocation (gacha), croissant avec le nombre de créatures
@@ -875,17 +881,24 @@ export function coreUpgradeRequirement(id) {
 // Un palier verrouillé reste affiché mais grisé avec sa condition : le
 // joueur voit ce qui l'attend au lieu d'une boutique qui grandit sans
 // prévenir.
+// ⚠️ Prix REVUS le 15/09 : écart entre paliers ramené de ×9 à ×4,5, et
+// croissance de 1,60 à 1,45.
+//
+// MESURÉ : chaque palier coûtait ~10× le précédent alors que la
+// production du joueur ne fait que TRIPLER sur la même période — d'où
+// l'impression de ne pas avancer. Monter le Gantelet au niveau 5
+// demandait 159 minutes de production ; désormais 28.
 export const TAP_UPGRADES = [
-  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1200, growth: 1.6 },
-  { id: 'tap2', name: 'Gantelet Runique', emoji: '🪄', bonus: 2.5, cost: 16500, growth: 1.62 },
-  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 12, cost: 153900, growth: 1.64 },
-  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 52, cost: 1392000, growth: 1.66 },
-  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 245, cost: 12090000, growth: 1.68 },
-  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 1154, cost: 108900000, growth: 1.7 },
-  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 5455, cost: 1008000000, growth: 1.72 },
-  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 27586, cost: 9324000000, growth: 1.74 },
-  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 137705, cost: 88920000000, growth: 1.76 },
-  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 687500, cost: 836400000000, growth: 1.78 },
+  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 900, growth: 1.45 },
+  { id: 'tap2', name: 'Gantelet Runique', emoji: '🪄', bonus: 2.5, cost: 4050, growth: 1.45 },
+  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 12, cost: 18225, growth: 1.45 },
+  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 52, cost: 82012, growth: 1.45 },
+  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 245, cost: 369056, growth: 1.45 },
+  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 1154, cost: 1660753, growth: 1.45 },
+  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 5455, cost: 7473389, growth: 1.45 },
+  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 27586, cost: 33630251, growth: 1.45 },
+  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 137705, cost: 151336129, growth: 1.45 },
+  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 687500, cost: 681012578, growth: 1.45 },
 ];
 
 export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10;

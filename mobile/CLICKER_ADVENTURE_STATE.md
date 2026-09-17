@@ -987,6 +987,55 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## Réglages du 15/09 (4)
+
+| Changement | Détail |
+|---|---|
+| Fusion de runes | 3 → **1** |
+| Aventure, dernier défi | niveau 40 → **35** (chapitre 4, niveau 5) |
+| Aventure, avant-dernier | niveau 30 → **25** |
+| Nouveaux défis | Gantelet nv 5 (cycle 8), Sceau de Puissance (cycle 9) |
+
+⚠️ **Pas de +5 pour les défis d'Aventure.** Ils sautaient de +10 (20 → 30
+→ 40), plaçant le défi très au-delà du joueur — il était au chapitre 4
+niveau 1 quand le défi exigeait le chapitre 4 niveau 10. Tout nouveau
+défi de ce type reprend ce pas.
+
+⚠️ Les défis de puissance de tap sont ÉCHELONNÉS (cycles 7, 8, 9), un par
+cycle : deux dans le même cycle faisaient doublon. Le doublon du
+Gantelet (ancien déblocage au cycle 10) a été supprimé.
+
+## ⚠️⚠️ PRIX : deux baisses MESURÉES (15/09)
+
+### Puissance de tap — l'écart entre PALIERS était la cause
+
+⚠️ Chaque palier coûtait **×9 le précédent** alors que la production du
+joueur ne fait que **tripler** sur la même période. D'où l'impression de
+ne pas avancer : ce n'était pas le prix d'un niveau, c'était l'écart
+entre paliers.
+
+Écart ramené à **×4,5**, croissance de 1,60 à **1,45**.
+
+| | Avant | Après |
+|---|---|---|
+| Poigne nv 1→5 | 25 min de production | **14 min** |
+| Gantelet nv 1→5 | 159 min | **28 min** |
+| Sceau nv 1→5 | 1475 min | **124 min** |
+
+Vérifié : prix toujours strictement croissants, et le tap monté au
+niveau 5 sur 3 paliers rapporte 8,8× le passif — il redevient pertinent
+sans écraser le reste.
+
+### Montée de créature — 41 combats pour le niveau 36
+
+`0,5 × L^1,20` → **`0,35 × L^1,05`**.
+
+⚠️ MESURÉ : le niveau 36 coûtait 819 Griffes, soit **41 combats**, plus
+de 8 heures au rythme de l'énergie. Un défi demandant ce niveau était
+inatteignable. Désormais **360 Griffes, 18 combats**.
+
+Effet sur la séquence : 18 h → **17 h**, alertes 4 → 3.
+
 ## ⚠️⚠️ LES DÉFIS ONT ENFIN LEUR FICHIER (15/09)
 
 `questLogic.js` pesait **1156 lignes, 40 exports, 8 responsabilités**

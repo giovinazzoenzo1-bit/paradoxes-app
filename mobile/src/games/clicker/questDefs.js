@@ -63,6 +63,12 @@ export const EGG_STAGES = [
 //
 // Un niveau d'Aventure est exprimé en niveau GLOBAL : 10 niveaux par
 // chapitre (`LEVELS_PER_CHAPTER`), donc chapitre 2 niveau 5 = niveau 15.
+// ⚠️ DÉFIS D'AVENTURE : progression de +5 NIVEAUX d'un défi au suivant.
+//
+// Les derniers sautaient de +10 (20 → 30 → 40), ce qui plaçait le défi
+// très au-delà du joueur : il était au chapitre 4 niveau 1 quand le défi
+// exigeait le chapitre 4 niveau 10. Tout nouveau défi de ce type reprend
+// ce pas de +5.
 export const QUEST_SEQUENCE = [
   // --- Cycle 1 : les bases du clicker ---
   [
@@ -172,10 +178,12 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Active ${t} fois un pouvoir de créature` },
     { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', target: 5, mode: 'absolute',
       label: (t) => `Possède ${t} Mains Spectrales` },
-    { id: 'seq_adv_c3l10', icon: '⚔️', metric: 'advLevelReached', target: 30, mode: 'absolute',
+    { id: 'seq_adv_c3l10', icon: '⚔️', metric: 'advLevelReached', target: 25, mode: 'absolute',
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'seq_crit100', icon: '💥', metric: 'totalCrits', target: 140, mode: 'delta',
       label: (t) => `Obtiens ${t} coups critiques` },
+    { id: 'seq_tap2lvl5', icon: '🪄', metric: 'tapUpgrade:tap2', target: 5, mode: 'absolute',
+      label: (t) => `Monte Gantelet Runique au niveau ${t}` },
   ],
   // --- Cycle 9 : profondeur ---
   [
@@ -183,19 +191,19 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
     { id: 'seq_croc10', icon: '🪨', metric: 'upgrade:crocBouldog', effortMin: 30, mode: 'absolute',
       label: (t) => `Monte Croc de Bouldog au niveau ${t}` },
-    { id: 'seq_fuse2', icon: '🔮', metric: 'runeFused', target: 3, mode: 'delta',
-      label: () => 'Fusionne 3 runes' },
-    { id: 'seq_adv_c4l10', icon: '⚔️', metric: 'advLevelReached', target: 40, mode: 'absolute',
+    { id: 'seq_fuse2', icon: '🔮', metric: 'runeFused', target: 1, mode: 'delta',
+      label: (t) => `Fusionne ${t} rune${t > 1 ? 's' : ''}` },
+    { id: 'seq_adv_c4l10', icon: '⚔️', metric: 'advLevelReached', target: 35, mode: 'absolute',
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
+    { id: 'seq_tap3', icon: '🔱', metric: 'tapUpgrade:tap3', target: 1, mode: 'absolute',
+      label: () => 'Débloque le Sceau de Puissance' },
   ],
   // --- Cycle 10 : seconde Ascension, dernier cycle scripté ---
   [
     { id: 'seq_hold50M', icon: '🏦', metric: 'coins', effortMin: 40, mode: 'absolute',
       label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
     // Remplacé pour la même raison : le Veilleur est plafonné à 10.
-    { id: 'seq_veilleur20', icon: '🪄', metric: 'tapUpgrade:tap2', effortMin: 30, mode: 'absolute',
-      label: () => 'Débloque le Gantelet Runique' },
-    { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', effortMin: 35, mode: 'absolute',
+        { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', effortMin: 35, mode: 'absolute',
       label: (t) => `Monte une créature au niveau ${t}` },
     { id: 'seq_ascend2', icon: '🌟', metric: 'ascension', target: 2, mode: 'delta',
       label: () => 'Fais une seconde Ascension' },
