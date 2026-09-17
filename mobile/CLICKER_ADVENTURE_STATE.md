@@ -109,7 +109,12 @@ de la zone de tap. `git checkout <commit> -- fichier` réintroduit le
 bug. Appliquer à la main uniquement ce qui est voulu, puis **vérifier la
 géométrie ci-dessus après coup**.
 
-### 5. La cadence réelle de l'utilisateur est ~142 clics/s
+### 5. La cadence réelle de l'utilisateur est ~142 clics/s — OUTIL DE TEST
+
+⚠️ **À lire avec la section « L'AUTOCLICKER N'EST PAS UNE RÉFÉRENCE
+D'ÉQUILIBRAGE » (passation du 17/09).** L'autoclicker sert à PARCOURIR le
+jeu vite, jamais à calibrer une cible. Les cibles se calent sur
+`HUMAN_TAPS_PER_SEC = 4`.
 
 Autoclicker mesuré sur un testeur externe. Toutes les simulations
 d'équilibrage de ce fichier supposent **5-7 clics/s** : à 142, l'économie
@@ -1026,12 +1031,12 @@ précisément là.
 Pour compenser, un PLANCHER adossé au seuil d'Ascension avait été ajouté
 (`ascensionThreshold(asc-1) × 0,05`). Or ce seuil **DOUBLE** à chaque
 Ascension pendant que la production ne monte que de **30 %**. Le même
-défi, mesuré pour le joueur de référence (autoclicker 6,7/s) :
+défi, mesuré pour un joueur qui tape à la main (4/s) :
 
 | Ascension | 0 | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|---|
-| **Avant** | 2 min | 48 | 74 | 113 | **174 min** |
-| **Après** | 30 min | 33 | 37 | 42 | **46 min** |
+| **Avant** | 4 min | 80 | 123 | 190 | **292 min** |
+| **Après** | 30 min | 32 | 37 | 42 | **47 min** |
 
 ⚠️ **Ce n'était pas un écart ponctuel de 104 min, c'était une divergence
 sans fin.** Les 104 min n'étaient que le premier terme.
@@ -1043,15 +1048,33 @@ plancher est **SUPPRIMÉ**. Les cibles montent alors de 45 % par Ascension
 
 ⚠️ **Ne pas réintroduire le plancher** sans remesurer la courbe ci-dessus.
 
-## ⚠️ `REFERENCE_TAPS_PER_SEC = 6,7` — la constante à connaître
+## ⚠️⚠️ L'AUTOCLICKER N'EST PAS UNE RÉFÉRENCE D'ÉQUILIBRAGE
 
-Dans `questBudget.js`. C'est la cadence de l'autoclicker à 150 ms, le
-rythme sur lequel tout l'équilibrage est calé. **La changer redimensionne
-TOUTES les cibles en pièces du jeu.**
+**Mise au point de l'auteur, le 17/09, et elle est juste.** Son
+autoclicker (150 ms en test, ~142/s en usage réel) sert UNIQUEMENT à
+parcourir le jeu plus vite pendant les tests. **Ce n'est pas un joueur**,
+et rien dans le code ne doit être calé dessus.
 
-⚠️ **Coût assumé** : un joueur qui tape À LA MAIN (≈4/s) met 6,7/4 =
-**1,67× plus de temps** sur tout défi en pièces (50 min au lieu de 30).
-C'est un choix, pas un oubli — le levier est cette constante.
+⚠️ Erreur commise et corrigée le même jour : `estimatedIncomePerSecond`
+avait d'abord été calée sur 6,7 taps/s. Conséquence mesurée — un vrai
+joueur, qui tape à la main, aurait mis **1,67× plus de temps** sur TOUT
+défi en pièces (50 min au lieu de 30). Une difficulté imposée à tout le
+monde à cause d'un outil de test.
+
+**La constante est `HUMAN_TAPS_PER_SEC = 4`** dans `questBudget.js`.
+
+⚠️ Elle doit rester **ÉGALE** à `HUMAIN` dans
+`mobile/tools/audit-quetes.js` (la cadence du modèle de joueur). Si les
+deux divergent, l'audit mesure un joueur que le budget ne vise pas, et
+l'écart se lit comme un défaut d'équilibrage qui n'existe pas.
+
+⚠️ **Conséquence pour TES tests** : avec l'autoclicker à 150 ms tu vas
+1,67× plus vite que le joueur visé — et ~35× plus vite à 142/s. Ne
+conclus pas « c'est trop facile » depuis une session à l'autoclicker.
+
+⚠️ Ce qui reste vrai de la règle 5 plus haut dans ce fichier : régler
+l'autoclicker à 150 ms pour TESTER. Ce qui est faux : en faire la base
+des cibles.
 
 ## ⚠️ L'INSTRUMENT DE MESURE ÉTAIT FAUX LUI AUSSI
 
@@ -1091,8 +1114,9 @@ ceux qui dépassent **2,5× leur propre fenêtre déclarée** (`effortMin`).
 **Prouvé** : en remettant le budget aveugle et le plancher, le contrôle
 signale **21 défis** (`seq_earn10k` ×5,8 sa fenêtre, `seq_pacte15` ×5,0).
 
-⚠️ Mesuré à 6,7/s et non à la cadence du modèle (4/s) : sinon la pénalité
-constante du joueur à la main (×1,67) noierait la dérive cherchée.
+⚠️ Mesuré à la cadence du budget, et le pire cas doit tomber à une
+Ascension ≥ 1 : sinon le contrôle sort des défis dont la courbe DESCEND
+(`seq_main10` : 65/50/38/30/23 min), l'inverse d'une divergence.
 
 ## Deux autres défauts trouvés PAR LA FORCE BRUTE
 
@@ -1122,10 +1146,10 @@ l'échelle d'Aventure au pas de +5 voulu : **3 · 10 · 15 · 20 · 25 · 30 ·
 
 | | Avant | Après |
 |---|---|---|
-| `seq_earn100k` | 104 min | **54 min** (30 pour le joueur de référence) |
-| `seq_main10` | 106 min | **38 min** |
+| `seq_earn100k` | 104 min | **30 min** |
+| `seq_main10` | 106 min | **22 min** |
 | `seq_adv_c4l10` | 120 min | **60 min** |
-| Séquence totale | 19 h | **18 h** |
+| Séquence totale | 19 h | **16 h** |
 | Alertes « trop long » | 3 | **0** |
 | Défis nés déjà accomplis | 36 / 11 400 | **0 / 12 200** |
 | Cycles incomplets | 1 | **0** |
@@ -1135,8 +1159,6 @@ Les 2 alertes restantes sont des **métriques non modélisées** par l'audit
 
 ## Ce qui reste OUVERT
 
-- 🟨 **Cadence de référence à 6,7** : pénalise le joueur à la main de
-  1,67×. Décision à prendre, le levier est `REFERENCE_TAPS_PER_SEC`.
 - 🟨 `advWin10` du pool reste à 48 min, borné par l'**ÉNERGIE**
   (4 combats), pas par une cible. Même famille que les alertes d'énergie
   déjà documentées ; la solution retenue est la pub (+1 énergie, 5/jour).

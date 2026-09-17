@@ -43,8 +43,13 @@ const C = load('clickerLogic');
 // Hypothèses EXPLICITES, à ajuster si le jeu change. Elles ne cherchent
 // pas la précision à la minute mais l'ORDRE DE GRANDEUR : c'est ce qui
 // révèle les défis hors d'échelle.
+// ⚠️ DOIT rester égal à `HUMAN_TAPS_PER_SEC` de `questBudget.js`.
+// L'autoclicker de l'auteur (150 ms, et 142/s en usage réel) est un
+// OUTIL DE TEST : il ne doit jamais servir de référence d'équilibrage,
+// ni ici ni dans le budget des défis.
+const HUMAIN = 4;
 const H = {
-  tapsParSec: 4,          // cadence humaine, sans autoclicker
+  tapsParSec: HUMAIN,     // cadence humaine, sans autoclicker
   minParSession: 20,      // durée d'une session type
   energieMax: 5,          // tentatives d'Aventure avant recharge
   diamantsParJour: 21,    // plafond des boss
@@ -494,12 +499,11 @@ function etatApresAscension(n) {
 
 function auditAscension(depassementMax = ASC_DEPASSEMENT_MAX, ascMax = 4) {
   const suspects = [];
-  // ⚠️ Mesuré à la cadence de RÉFÉRENCE, celle sur laquelle le budget est
-  // calibré. À 4 taps/s (joueur à la main) tout dure mécaniquement
-  // 6,7/4 = 1,67× plus longtemps, ce qui noierait la dérive qu'on
-  // cherche sous une pénalité constante sans rapport avec l'Ascension.
+  // ⚠️ Mesuré à la cadence sur laquelle le BUDGET est calibré, sinon un
+  // simple écart de cadence ajouterait une pénalité constante qui
+  // noierait la dérive qu'on cherche.
   const cadence = H.tapsParSec;
-  H.tapsParSec = 6.7;
+  H.tapsParSec = HUMAIN;
   const tous = [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL];
   const vus = new Set();
   tous.forEach((q) => {
@@ -523,7 +527,19 @@ function auditAscension(depassementMax = ASC_DEPASSEMENT_MAX, ascMax = 4) {
     }
     if (!temps.length) return;
     const pire = temps.reduce((a, b) => (b.min > a.min ? b : a));
-    if (pire.min > q.effortMin * depassementMax) {
+    // ⚠️ Le pire cas doit se produire APRÈS au moins une Ascension.
+    //
+    // Sinon le contrôle sort des défis dont la courbe DESCEND
+    // (`seq_main10` : 65/50/38/30/23 min) — l'inverse d'une divergence.
+    // Ce sont des défis quantifiés sur un générateur cher : la 1re unité
+    // pèse lourd pour un joueur à zéro, et l'Ascension les allège.
+    //
+    // Exclusion justifiée, comme l'exige la règle : un pire cas à
+    // l'Ascension 0 ne met en cause aucune Ascension, et il est DÉJÀ
+    // mesuré par `audit()` — dans l'état réel où le défi est tiré, ce qui
+    // est une meilleure sonde qu'une économie vide. `seq_main10` y vaut
+    // 22 min, pas 65.
+    if (pire.asc >= 1 && pire.min > q.effortMin * depassementMax) {
       suspects.push({ id: q.id, fenetre: q.effortMin, asc: pire.asc, min: pire.min,
                       fois: +(pire.min / q.effortMin).toFixed(1),
                       courbe: temps.map((t) => t.min).join('/') });

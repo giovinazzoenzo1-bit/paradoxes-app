@@ -23,12 +23,20 @@ export function ascensionCoinMultiplier(ascensionCount) {
   return Math.pow(ASCENSION_COIN_EXTRA, n);
 }
 
-// ⚠️ Cadence de RÉFÉRENCE de l'équilibrage : autoclicker à 150 ms.
+// ⚠️ Cadence d'un joueur qui tape À LA MAIN.
 //
-// C'est le rythme sur lequel toutes les mesures du projet sont calées.
-// Le changer redimensionne TOUTES les cibles en pièces du jeu — le faire
-// uniquement avec une simulation à l'appui.
-export const REFERENCE_TAPS_PER_SEC = 6.7;
+// ⚠️⚠️ NE JAMAIS CALER CETTE VALEUR SUR UN AUTOCLICKER. L'autoclicker de
+// l'auteur ne sert qu'à TESTER le jeu plus vite ; ce n'est pas un joueur.
+// L'avoir pris pour référence (6,7/s, soit 150 ms) rendait tout défi en
+// pièces 1,67x plus long pour un vrai joueur — une difficulté imposée à
+// tout le monde à cause d'un outil de test. Erreur commise le 17/09,
+// corrigée le jour même.
+//
+// 4 taps/s est déjà un rythme soutenu à la main, et c'est la valeur du
+// modèle de joueur de `mobile/tools/audit-quetes.js` : les deux doivent
+// rester ÉGALES, sinon l'audit mesure un joueur que le budget ne vise
+// pas. Le changer redimensionne TOUTES les cibles en pièces du jeu.
+export const HUMAN_TAPS_PER_SEC = 4;
 
 // Revenu estimé par seconde, toutes sources confondues.
 //
@@ -63,7 +71,7 @@ export function estimatedIncomePerSecond(stats) {
     essenceBonusMultiplier((stats && stats.essence) || 0) *
     ascensionSpeedMultiplier((stats && stats.ascension) || 0) *
     (1 + upgradeBonuses((stats && stats.upgradeLevels) || {}).coinPct);
-  return passive + tapDamage(level) * REFERENCE_TAPS_PER_SEC * globalMult;
+  return passive + tapDamage(level) * HUMAN_TAPS_PER_SEC * globalMult;
 }
 
 export function questBudget(stats, minutes) {
