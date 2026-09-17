@@ -987,6 +987,41 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ LES DÉFIS ONT ENFIN LEUR FICHIER (15/09)
+
+`questLogic.js` pesait **1156 lignes, 40 exports, 8 responsabilités**
+mélangées : définitions, calcul des cibles, progression, paliers d'œuf,
+multiplicateurs d'Ascension, répétition, contrôles, mise en forme.
+L'auteur avait raison de dire que c'était devenu illisible.
+
+### Découpage
+
+| Fichier | Lignes | Rôle |
+|---|---|---|
+| **`questDefs.js`** | **328** | **LES DÉFIS, et rien d'autre** |
+| `questFormat.js` | 32 | mise en forme des libellés, zéro logique |
+| `questBudget.js` | 30 | budget d'effort + multiplicateur d'Ascension |
+| `questLogic.js` | 834 | moteur : cibles, progression, tirage, contrôles |
+
+⚠️ **Pour ajouter ou régler un défi : `questDefs.js`, et nulle part
+ailleurs.** L'en-tête du fichier documente les champs attendus.
+
+⚠️ **Pourquoi `questBudget.js` existe** : trois conditions d'apparition
+du pool appellent `questBudget`. Sans ce fichier intermédiaire, les
+DONNÉES importeraient le MOTEUR pendant que le moteur importe les
+données — cycle d'imports.
+
+Graphe vérifié, sens unique :
+`questFormat` ← `questBudget` ← `questDefs` ← `questLogic`
+
+### Vérifications
+
+- **42 + 67 défis** chargés, identiques à avant
+- exports : 40 → 42, **aucun perdu** (le moteur ré-exporte tout, les
+  écrans n'ont pas changé d'import)
+- modules chargés dans les DEUX ordres : OK
+- audits : cohérence 0, libellés 0, corvées 0, séquence 18 h
+
 ## ⚠️⚠️ « 80 K puis 30 K » : la cible suivait le PORTE-MONNAIE (15/09)
 
 Signalé : même défi de pièces à 80 000, puis à 30 000 dix minutes plus
