@@ -987,6 +987,53 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## Réglages du 15/09 (3)
+
+| Changement | Détail |
+|---|---|
+| « Esprit Vagabond » | → **Esprit Frappeur** (vrai nom du générateur) |
+| Poigne Ancienne | déblocage → **niveau 5** |
+| Sanctuaire | → **niveau 8** |
+| Pacte après Ascension | → **niveau 9** |
+| « Chapitre 3, niveau 5 » | → **chapitre 2, niveau 10** (trop loin) |
+| Barre du mini-boss | ligne d'instructions RETIRÉE (illisible) |
+| Retour de l'aperçu de niveau | `zIndex` 5 → **40** |
+
+⚠️ Retour de l'aperçu : la panne n'a pas pu être REPRODUITE par lecture
+du code (le bouton est bien relié à `setLevelPreview(null)`). Cause la
+plus probable : l'illustration de l'adversaire, grande et centrée,
+passait devant lui et absorbait l'appui. Le `zIndex` élevé le met hors
+d'atteinte de ce recouvrement. **À reconfirmer en jeu.**
+
+## 📌 DEMANDES EN ATTENTE (à traiter quand les défis seront stables)
+
+1. **Mini-jeux** dans le menu principal du Clicker, pour casser la
+   répétitivité. Idée de l'auteur : une lueur qui se déplace, à toucher
+   le plus possible ; gains en pièces / Griffes / Diamants. En prévoir
+   plusieurs.
+2. **Boutique Diamants** : amélioration de l'effet de Transe, jusqu'à
+   **×4,5 en 10 niveaux**, payable en Diamants.
+3. **Déplacer l'Offrande** dans la boutique Diamants, en haut de liste,
+   pour épurer la boutique normale.
+4. **Œuf après la 1re Ascension** : éclot en 2 min 30 au lieu de 20 min.
+   La durée dépend du nombre de créatures (`incubationDurationMs`), 4
+   créatures donnent bien 20 min — à investiguer séparément, le minuteur
+   affiché était peut-être celui d'un œuf déjà entamé par les taps.
+
+## 📌 LOGIQUE À DÉGAGER : des défis en nombre illimité
+
+Constat de l'auteur : on peut **redonner les mêmes défis en montant la
+difficulté**, il suffit du bon ratio.
+
+Les briques existent déjà :
+- les cibles en PIÈCES se calibrent sur la production (×1,45/Ascension) ;
+- les cibles de RYTHME suivent les Ascensions (×1,20, plafond ×3) ;
+- `sequenceIndex` continue de grimper après la séquence scriptée et le
+  pool prend le relais.
+
+Ce qui manque : un **palier de répétition** (2e, 3e passage d'un même
+défi) avec son propre multiplicateur, distinct de celui des Ascensions.
+
 ## ⚠️ Défi des runes : glitch fermé, cible à 2 (15/09)
 
 `trackEvent('runeEquipped', 1)` comptait les **GESTES** : déséquiper puis

@@ -3054,7 +3054,10 @@ const styles = StyleSheet.create({
     width: '100%', backgroundColor: COLORS.panel, borderRadius: 20, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 16, alignItems: 'center',
     borderWidth: 1, borderColor: COLORS.border,
   },
-  overlayClose: { position: 'absolute', top: 10, left: 10, zIndex: 5 },
+  // ⚠️ zIndex ÉLEVÉ : l'illustration de l'adversaire est grande et
+  // centrée ; si elle déborde, elle passait devant ce bouton et
+  // absorbait l'appui — retour qui « ne marche pas ».
+  overlayClose: { position: 'absolute', top: 10, left: 10, zIndex: 40, elevation: 40 },
   overlayTitle: { color: COLORS.text, fontSize: 18, fontWeight: '900', marginTop: 10, textAlign: 'center' },
   overlaySubtitle: { color: COLORS.muted, fontSize: 12, marginTop: 6, textAlign: 'center' },
 

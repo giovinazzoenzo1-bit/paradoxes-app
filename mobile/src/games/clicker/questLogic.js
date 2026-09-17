@@ -72,7 +72,7 @@ export const QUEST_SEQUENCE = [
     { id: 'seq_adv_c1l1', icon: '⚔️', metric: 'advLevelReached', target: 3, mode: 'absolute',
       label: () => 'Termine le chapitre 1, niveau 3' },
     { id: 'seq_esprit10', icon: '👻', metric: 'auto:esprit', effortMin: 20, mode: 'absolute',
-      label: (t) => `Possède ${t} Esprits Vagabonds` },
+      label: (t) => `Possède ${t} Esprits Frappeurs` },
   ],
   // --- Cycle 3 : pouvoirs, Sanctuaire, revenu passif (5 défis) ---
   [
@@ -81,7 +81,7 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Active ${t} fois un pouvoir de créature` },
     { id: 'seq_adv_c1l10', icon: '⚔️', metric: 'advLevelReached', target: 10, mode: 'absolute',
       label: () => 'Termine le chapitre 1, niveau 10' },
-    { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 25, mode: 'absolute',
+    { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', target: 8, mode: 'absolute',
       label: (t) => `Monte le Sanctuaire au niveau ${t}` },
     // Ramené de 140 000 à 100 000 (14/09) : trop élevé pour le niveau
     // réel du joueur à ce stade du cycle.
@@ -131,12 +131,12 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'seq_earn100k', icon: '💰', metric: 'totalEarned', effortMin: 30, mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    { id: 'seq_pacte20', icon: '🔗', metric: 'tapPower', effortMin: 30, mode: 'absolute',
+    { id: 'seq_pacte20', icon: '🔗', metric: 'tapPower', target: 9, mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     { id: 'seq_rune1', icon: '🛒', metric: 'runeBought', target: 1, mode: 'delta',
       label: () => 'Achète 1 rune en Exploration' },
-    { id: 'seq_adv_c3l5', icon: '⚔️', metric: 'advLevelReached', target: 25, mode: 'absolute',
-      label: () => 'Termine le chapitre 3, niveau 5' },
+    { id: 'seq_adv_c3l5', icon: '⚔️', metric: 'advLevelReached', target: 20, mode: 'absolute',
+      label: () => 'Termine le chapitre 2, niveau 10' },
   ],
   // --- Cycle 7 : runes et évolution ---
   [
@@ -147,8 +147,8 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Équipe ${t} runes sur tes créatures` },
     // Remplacé : le Sanctuaire est plafonné à 10, « niveau 15 » était
     // devenu littéralement impossible et bloquait l'œuf pour toujours.
-    { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', effortMin: 25, mode: 'absolute',
-      label: () => 'Débloque la Poigne Ancienne' },
+    { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', target: 5, mode: 'absolute',
+      label: (t) => `Monte Poigne Ancienne au niveau ${t}` },
     { id: 'seq_hold1M', icon: '🏦', metric: 'coins', effortMin: 35, mode: 'absolute',
       label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
     { id: 'seq_evolve1', icon: '🧬', metric: 'maxEvolutionTier', target: 1, mode: 'absolute',

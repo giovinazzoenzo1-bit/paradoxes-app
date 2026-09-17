@@ -2997,11 +2997,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               width: `${Math.max(0, 100 - Math.min(100, (boss.taps / TAP_BOSS_TAPS_REQUIRED) * 100))}%`,
             }]} />
           </View>
-          <Text style={styles.bossHint}>
-            {boss.startedAt
-              ? `${Math.max(0, Math.ceil((TAP_BOSS_TIME_LIMIT_MS - (nowTick - boss.startedAt)) / 1000))} s — plus vite = plus de 💎`
-              : "Tape l'œuf pour commencer !"}
-          </Text>
         </View>
       )}
 
@@ -4268,7 +4263,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)', overflow: 'hidden',
   },
   bossBarFill: { height: '100%', backgroundColor: '#ff5a4a' },
-  bossHint: { color: '#ffb3aa', fontSize: 10, fontWeight: '700', marginTop: 4 },
   bossCapNote: { color: COLORS.muted, fontSize: 11, textAlign: 'center', marginTop: 6, paddingHorizontal: 10 },
 
   diamondPill: {
