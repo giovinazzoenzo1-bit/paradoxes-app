@@ -987,6 +987,38 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## Défis en PIÈCES : +45 % par Ascension (15/09)
+
+Une Ascension multiplie la production par 1,30. Comme le budget dérive
+de la production, les cibles en pièces montaient déjà de 30 % — donc à
+effort CONSTANT pour le joueur, l'Ascension était neutre sur les défis.
+
+Décision : elles doivent monter de **45 %**, pour que chaque Ascension
+resserre la vis.
+
+⚠️ **Piège évité** : appliquer 1,45 tel quel aurait donné
+1,30 × 1,45 = **×1,885**, bien au-delà de la consigne. On ajoute
+uniquement le COMPLÉMENT : 1,45 / 1,30 = **×1,1154** par Ascension.
+
+⚠️ Appliqué sur le **BUDGET** (`questBudget`) et non sur la cible finale :
+toutes les cibles dérivées en héritent d'un coup — pièces gagnées,
+pièces en réserve, revenu/s, niveaux d'améliorations, auto-clics.
+
+| Défi | 0 asc | 3 asc | Taux mesuré |
+|---|---|---|---|
+| Obtiens N pièces | 15 M | 47 M | **×1,463** |
+| Accumule N pièces | 23 M | 70 M | **×1,449** |
+| Obtiens N pièces (long) | 38 M | 120 M | **×1,467** |
+
+⚠️ Les défis de RYTHME gardent leur propre taux (**×1,20**), mesuré :
+cible dorée ×1,205, critiques ×1,186, pouvoirs ×1,216. Leur rythme ne
+dépend pas de la production, les indexer sur les pièces n'aurait aucun
+sens.
+
+**Vérifié** : les deux Ascensions restent atteignables (513 392 gagnés
+pour un seuil de 500 000 au cycle 5 ; 1 942 252 pour 1 000 000 au cycle
+10) et la durée totale ne dérive pas (17 h → 18 h).
+
 ## ⚠️ Libellés de DÉBLOCAGE mal formulés (15/09)
 
 Deux défis portent une métrique `tapUpgrade:` — un DÉBLOCAGE, qu'on

@@ -439,9 +439,34 @@ export function estimatedIncomePerSecond(stats) {
   return passive + perTap * 0.5;
 }
 
+// ---- Surcoût des défis en PIÈCES après une Ascension ----
+//
+// Une Ascension multiplie la production par 1,30, et comme le budget
+// dérive de la production, les cibles en pièces montaient déjà de 30 %
+// par Ascension — donc à effort CONSTANT pour le joueur.
+//
+// Décision : elles doivent monter de **45 %**, pour que chaque Ascension
+// resserre un peu la vis plutôt que d'être neutre.
+//
+// ⚠️ La production apportant déjà ×1,30, on ajoute seulement le
+// COMPLÉMENT : 1,45 / 1,30 = 1,1154 par Ascension. Appliquer 1,45 tel
+// quel donnerait 1,30 × 1,45 = ×1,885, soit bien plus que voulu.
+//
+// ⚠️ Ne concerne QUE les cibles dérivées du budget en pièces. Les défis
+// de RYTHME (cible dorée, critiques, pouvoirs, invocations) gardent leur
+// propre progression — leur rythme ne dépend pas de la production.
+export const ASCENSION_COIN_TARGET_RATE = 1.45;
+const ASCENSION_COIN_EXTRA = ASCENSION_COIN_TARGET_RATE / 1.30;
+
+export function ascensionCoinMultiplier(ascensionCount) {
+  const n = Math.max(0, ascensionCount || 0);
+  return Math.pow(ASCENSION_COIN_EXTRA, n);
+}
+
 // Budget de pièces qu'un joueur produit en `minutes` minutes de jeu.
 export function questBudget(stats, minutes) {
-  return estimatedIncomePerSecond(stats) * 60 * Math.max(1, minutes);
+  return estimatedIncomePerSecond(stats) * 60 * Math.max(1, minutes)
+    * ascensionCoinMultiplier(stats && stats.ascension);
 }
 
 // Combien de niveaux supplémentaires ce budget permet-il d'acheter, en
