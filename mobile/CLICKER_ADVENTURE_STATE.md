@@ -987,6 +987,58 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## 📌 À SUPPRIMER AVANT LA SORTIE — mode développeur
+
+**Décision de l'auteur : suppression DÉFINITIVE du code, pas un
+interrupteur.**
+
+⚠️ Raison, et elle est juste : l'app tourne sur le téléphone du joueur.
+Un drapeau `MODE_DEV` livré dans le code est lisible et retournable —
+porte fermée à clé avec la clé sur la serrure. Seul le code ABSENT est
+sûr.
+
+### Inventaire complet
+
+**ClickerScreen — rangée d'outils (4 boutons)**
+
+| Bouton | Effet |
+|---|---|
+| 👹 Boss | fait apparaître un mini-boss |
+| ◀️ Défi préc. | revient au défi précédent |
+| ⏭️ Cycle | valide tout le cycle |
+| 🛠️ Valider | valide le défi courant |
+
+Styles associés : `devToolsRow`, `devToolBtn`, `devSkipBtnText`.
+
+**Onglet Collection**
+- Bouton « 🥚 Invoquer une créature » (`onSummon` / `doSummon`)
+- ⚠️ En le retirant, vérifier qu'AUCUN défi ne dépend de `totalSummons`
+  (les 2 concernés ont déjà été supprimés le 15/09).
+
+**OptionsScreen — 4 raccourcis**
+
+| Clé | Effet |
+|---|---|
+| `DEV_UNLOCK_ALL_KEY` | débloque toutes les créatures |
+| `DEV_ADD_GRIFFES_KEY` | +1000 Griffes |
+| `DEV_REFILL_ENERGY_KEY` | recharge l'énergie |
+| `DEV_RESET_GRIFFES_KEY` | remet les Griffes à zéro |
+
+Définies dans `AdventureScreen.js` (lignes ~283) et importées par
+`OptionsScreen.js`.
+
+**État sauvegardé à nettoyer**
+- `devCompletedIds` et `devReopenedIds` : écrits dans la sauvegarde.
+  ⚠️ Les retirer du code NE SUFFIT PAS — une sauvegarde de test les
+  contient déjà. Prévoir de les ignorer au chargement, sinon des défis
+  resteraient marqués « validés en dev » chez un testeur devenu joueur.
+
+### Après suppression, à vérifier
+
+1. `pickQuestSet` ne dépend d'aucune métrique devenue inatteignable
+2. L'audit complet passe (cohérence, libellés, corvées)
+3. Aucun import orphelin entre OptionsScreen et AdventureScreen
+
 ## ⚠️⚠️ L'INVOCATION est réservée aux développeurs (15/09)
 
 Précision de l'auteur : le bouton « Invoquer une créature » n'est PAS
