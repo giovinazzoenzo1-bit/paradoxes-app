@@ -22,6 +22,7 @@ import {
   SANCTUARY_MAX_LEVEL,
   UPGRADE_ITEMS,
   VEILLEUR_MAX_LEVEL,
+  ascensionThreshold,
   autoClickerCost,
   coreUpgradeUnlocked,
   critChance,
@@ -74,6 +75,20 @@ export function metricIsLevel(metric) {
 }
 
 // Combien de fois la séquence a déjà été parcourue. 0 au premier passage.
+// ⚠️ Une ASCENSION compte comme une PASSE.
+//
+// Elle remet l'économie à zéro : le joueur refait exactement le même
+// parcours, il doit donc affronter le même cran de difficulté qu'une
+// répétition de séquence.
+//
+// Sans ça, les défis revenaient À L'IDENTIQUE après une Ascension
+// (« Pacte niveau 5 », « obtiens 450 pièces ») : le ×1,45 par Ascension
+// multipliait un budget reparti de ZÉRO, et 1,45 × presque rien reste
+// presque rien.
+export function effectiveTier(index, ascensionCount) {
+  return repeatTier(index) + Math.max(0, Math.floor(ascensionCount || 0));
+}
+
 export function repeatTier(index) {
   // Longueur lue sur le tableau : `SEQUENCE_LENGTH` est déclaré plus
   // bas et un `const` n'est pas utilisable avant sa ligne.
@@ -81,8 +96,8 @@ export function repeatTier(index) {
 }
 
 // Applique la progression de répétition à une cible FIXE.
-export function applyRepeatTier(quest, target, index) {
-  const tier = repeatTier(index);
+export function applyRepeatTier(quest, target, index, ascensionCount = 0) {
+  const tier = effectiveTier(index, ascensionCount);
   if (!tier || !quest) return target;
   if (metricIsLevel(quest.metric)) return target + REPEAT_LEVEL_STEP * tier;
   return Math.max(1, Math.round(target * Math.pow(REPEAT_COUNT_RATE, tier)));
@@ -293,7 +308,19 @@ export function resolveQuestTarget(quest, stats) {
     return Math.max(brute, dejaLa + Math.max(quest.minStep || 1, Math.ceil(dejaLa * 0.15)));
   }
   const minutes = quest.effortMin || 15;
-  const budget = questBudget(stats, minutes);
+  // ⚠️ PLANCHER de budget adossé aux ASCENSIONS.
+  //
+  // Après une Ascension la production repart de ZÉRO, donc un budget
+  // calculé sur elle s'effondre — d'où des cibles de 450 pièces à la 2e
+  // Ascension, identiques à celles de la 1re partie.
+  //
+  // Le SEUIL d'Ascension, lui, double à chaque fois et ne retombe
+  // jamais : il dit où le joueur en est VRAIMENT, indépendamment de son
+  // économie du moment. On en prend 5 %, proportionné à la fenêtre
+  // d'effort du défi.
+  const asc = Math.max(0, Math.floor((stats && stats.ascension) || 0));
+  const plancher = asc > 0 ? ascensionThreshold(asc - 1) * 0.05 * (minutes / 30) : 0;
+  const budget = Math.max(questBudget(stats, minutes), plancher);
   const now = readMetric(quest.metric, stats);
   const metric = quest.metric;
   let raw;
@@ -682,7 +709,7 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
       // La répétition ne touche que les cibles FIXES : les cibles
       // calculées suivent déjà la production, elle-même indexée sur les
       // Ascensions.
-      targets[q.id] = q.target ? applyRepeatTier(q, brute, index) : brute;
+      targets[q.id] = q.target ? applyRepeatTier(q, brute, index, stats && stats.ascension) : brute;
     });
     const ids = kept.map((q) => q.id);
 

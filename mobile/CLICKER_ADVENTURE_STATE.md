@@ -987,6 +987,52 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ Après une Ascension, les défis revenaient À L'IDENTIQUE (15/09)
+
+Signalé : « Pacte niveau 5 » et « obtiens 450 pièces » à la 2e Ascension,
+exactement comme à la 1re partie.
+
+**Trois causes cumulées** :
+
+### 1. Le ×1,45 multipliait un budget reparti de ZÉRO
+
+Une Ascension remet la production à zéro. Le budget tombait à ~670
+pièces, donc la cible à 450 — et 1,45 × presque rien reste presque rien.
+
+**Correctif** : un PLANCHER de budget adossé au SEUIL d'Ascension, qui
+double à chaque fois et ne retombe JAMAIS. 5 % du dernier seuil franchi,
+proportionné à la fenêtre d'effort.
+
+### 2. L'Ascension n'était pas comptée comme une répétition
+
+⚠️ Une Ascension remet l'économie à zéro : **c'est une répétition**. Le
+joueur refait le même parcours, il doit affronter le même cran de
+difficulté qu'une passe supplémentaire de séquence.
+
+`effectiveTier = passes de séquence + nombre d'Ascensions`.
+
+### 3. L'arrondi ÉCRASAIT la progression des niveaux
+
+Le coût du Pacte DOUBLE à chaque niveau : quadrupler le budget n'ajoute
+que 2 niveaux (10 → 11 → 12). Arrondi au multiple de 5, les trois
+devenaient **« 10 »** — le joueur voyait le même défi alors que la cible
+montait vraiment.
+
+Arrondi rendu EXACT sous 30, la plage où vivent les cibles de niveau.
+
+### Résultat mesuré, juste après chaque Ascension
+
+| Ascensions | Pièces | Pacte | Dorées | Sanctuaire |
+|---|---|---|---|---|
+| 0 | 540 | 5 | 4 | 8 |
+| 1 | 15 000 | 10 | 6 | 10 |
+| 2 | 30 000 | 11 | 9 | 12 |
+| 3 | 60 000 | 12 | 14 | 14 |
+
+⚠️ Les NIVEAUX montent lentement (+1 par Ascension) et c'est NORMAL :
+leur coût double à chaque palier, une progression plus rapide serait un
+mur. Les comptes et les pièces, eux, doublent.
+
 ## ⚠️⚠️ « Fais une seconde Ascension » ne se validait JAMAIS (15/09)
 
 Signalé : le défi réclamait 2 Ascensions alors qu'il n'en fallait qu'une

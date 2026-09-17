@@ -27,6 +27,14 @@ export function describeAdventureLevel(niveau) {
 export function roundQuestTarget(n) {
   if (!Number.isFinite(n) || n <= 0) return 1;
   if (n < 10) return Math.max(1, Math.round(n));
+  // ⚠️ Exact jusqu'à 30, pas arrondi au multiple de 5.
+  //
+  // Les cibles de NIVEAU vivent dans cette plage, et leur coût DOUBLE à
+  // chaque niveau : quadrupler le budget n'ajoute que 2 niveaux. Arrondi
+  // au multiple de 5, 10 / 11 / 12 devenaient tous « 10 » — le joueur
+  // voyait le même défi après chaque Ascension alors que la cible
+  // montait réellement.
+  if (n < 30) return Math.max(1, Math.round(n));
   if (n < 100) return Math.round(n / 5) * 5;
   const exp = Math.floor(Math.log10(n));
   const step = Math.pow(10, exp - 1);
