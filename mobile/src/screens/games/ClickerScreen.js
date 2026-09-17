@@ -1498,7 +1498,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       return;
     }
     setIncubatorOpen(false);
-    setGuardianFight({ source, level: guardianLevelForEgg(eggNumber) });
+    setGuardianFight({ source, level: guardianLevelForEgg(eggNumber), eggNumber });
   };
 
   // Fin du combat. Victoire : l'œuf éclot. Défaite : l'œuf n'est JAMAIS
@@ -2482,6 +2482,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       <GuardianBattle
         team={team}
         level={guardianFight.level}
+        eggNumber={guardianFight.eggNumber || 0}
         onFinish={finishGuardianFight}
       />
     );
@@ -4143,7 +4144,7 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
 // CombatScreen n'en gère pas lui-même (il n'était rendu que depuis
 // l'Aventure, qui verrouille déjà pour tout le mode). Le nettoyage
 // remet le portrait, car on revient ici sur l'écran du Clicker.
-function GuardianBattle({ team, level, onFinish }) {
+function GuardianBattle({ team, level, onFinish, eggNumber = 0 }) {
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
     return () => {
@@ -4164,6 +4165,7 @@ function GuardianBattle({ team, level, onFinish }) {
       // son propre panneau. Deux écrans de victoire à la suite noieraient
       // l'information qui compte.
       skipResultScreen
+      guardianEggNumber={eggNumber}
     />
   );
 }

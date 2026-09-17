@@ -987,6 +987,47 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ « 80 K puis 30 K » : la cible suivait le PORTE-MONNAIE (15/09)
+
+Signalé : même défi de pièces à 80 000, puis à 30 000 dix minutes plus
+tard, **sans Ascension entre les deux**.
+
+**Cause** : `raw = max(budget × 0,6 ; pièces × 1,5)`. Le second terme
+dominait dès qu'on avait épargné — donc **DÉPENSER ses pièces faisait
+BAISSER la cible du tirage suivant**. Reproduit :
+
+| Pièces en poche au tirage | Cible |
+|---|---|
+| 5 000 | 35 000 |
+| 55 000 | 83 000 |
+| 80 000 | **120 000** |
+
+**Correctif** : la cible s'ancre sur la PRODUCTION seule
+(`budget × 0,6`). Le plancher « plus que l'acquis » appliqué plus bas
+suffit à éviter un défi déjà accompli — inutile que la cible elle-même
+dépende du porte-monnaie.
+
+Vérifié : identique à 5 000 et 30 000 pièces en poche, et suit la
+production (10/s → 23 K, 500/s → 550 K).
+
+## Gardien : montée des dégâts à partir du 5e œuf
+
+⚠️ MESURÉ : ses dégâts STAGNAIENT (2,8 en moyenne jusqu'au 5e œuf,
+4,3 ensuite). Sa montée de niveau ne suffit pas — sa part d'attaque dans
+le budget est faible et l'arrondi à l'entier absorbe le reste.
+
+**+4 % par œuf à partir du 5e**, en PLUS du pourcentage global.
+
+⚠️ **1,04 et non 1,12.** À 1,12 la part des PV du joueur passait de 26 %
+au 5e œuf à **115 % au 20e** : le combat devenait perdable, alors que
+perdre son œuf après des heures d'incubation est précisément ce qu'on
+s'interdit. Les PV du joueur montant d'environ 8 % par niveau (≈1 niveau
+par œuf), 4 % par œuf suit cette croissance :
+
+| Œuf | 5 | 8 | 12 | 20 |
+|---|---|---|---|---|
+| Part des PV | 26 % | 37 % | 42 % | 33 % |
+
 ## ⚠️⚠️ « Poigne Ancienne niveau 5 » ne progressait JAMAIS (15/09)
 
 Le défi restait à 0 % quoi que fasse le joueur.

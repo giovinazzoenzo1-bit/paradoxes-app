@@ -158,7 +158,7 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'seq_power10', icon: '✨', metric: 'powerActivated', target: 10, mode: 'delta',
       label: (t) => `Active ${t} fois un pouvoir de créature` },
-    { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', effortMin: 30, mode: 'absolute',
+    { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', target: 5, mode: 'absolute',
       label: (t) => `Possède ${t} Mains Spectrales` },
     { id: 'seq_adv_c3l10', icon: '⚔️', metric: 'advLevelReached', target: 30, mode: 'absolute',
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
@@ -620,7 +620,20 @@ export function resolveQuestTarget(quest, stats) {
   } else if (metric === 'coins') {
     // Épargner demande de ne PAS tout réinvestir : on vise une fraction
     // de la production de la période, pas sa totalité.
-    raw = Math.max(budget * 0.6, now * 1.5);
+    //
+    // ⚠️ Ancré sur la PRODUCTION SEULE, plus sur les pièces en poche.
+    //
+    // L'ancienne formule prenait `max(budget × 0,6 ; pièces × 1,5)` : le
+    // second terme dominait dès qu'on avait épargné, si bien que
+    // DÉPENSER ses pièces faisait BAISSER la cible du tirage suivant.
+    // Cas réel signalé : même défi à 80 000 puis à 30 000 dix minutes
+    // plus tard, sans Ascension — le joueur avait simplement acheté
+    // entre les deux.
+    //
+    // Le plancher « plus que l'acquis » appliqué plus bas suffit à
+    // empêcher un défi déjà accompli ; inutile de faire dépendre la
+    // cible elle-même du porte-monnaie.
+    raw = budget * 0.6;
   } else if (metric === 'passiveIncome') {
     raw = Math.max(passiveIncomeAfterBudget(stats, budget), now * 1.25);
   } else if (metric === 'tapPower') {

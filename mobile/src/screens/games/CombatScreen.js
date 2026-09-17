@@ -132,7 +132,7 @@ const SPRITE_BASE = 104;
 // `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
 // niveau. Sert au combat de Gardien, qui affronte TOUJOURS le Gardien et
 // jamais une créature du roster prise au hasard.
-export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false }) {
+export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0 }) {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const opponentTeamCreatures = useRef(opponentOverride || opponentTeamForLevel(levelNumber)).current;
@@ -201,7 +201,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       // Le Gardien passe par `guardianStats` : PV du PREMIER réduits de
       // 30 %, dégâts relevés de 15 % à tous les niveaux.
       const stats = creature.boss
-        ? guardianStats(levelNumber, GUARDIAN_BASE_LEVEL)
+        // `eggNumber` : le Gardien frappe plus fort à partir du 5e œuf.
+        ? guardianStats(levelNumber, GUARDIAN_BASE_LEVEL, guardianEggNumber)
         : statsForOpponentCreatureTyped(creature, levelNumber);
       return { creature, stats, hp: stats.hp, mana: 0 };
     })

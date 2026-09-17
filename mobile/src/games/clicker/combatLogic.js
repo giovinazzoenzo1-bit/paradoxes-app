@@ -157,9 +157,36 @@ export const GUARDIAN_FIRST_HP_REDUCTION = 0.3;
 // dessous.
 export const GUARDIAN_DAMAGE_BOOST = 1.2;
 
-// Stats du Gardien : la formule commune, plus les deux ajustements
-// ci-dessus. `baseLevel` est le niveau du tout premier gardien.
-export function guardianStats(levelNumber, baseLevel) {
+// ---- Montée des dégâts à partir du 5e œuf ----
+//
+// ⚠️ MESURÉ : les dégâts du Gardien STAGNENT (2,8 en moyenne jusqu'au
+// 5e œuf, 4,3 ensuite). Sa montée de niveau ne suffit pas, parce que sa
+// part d'attaque dans le budget est faible et que l'arrondi à l'entier
+// absorbe le reste.
+//
+// À partir du 5e œuf, ses dégâts montent donc d'eux-mêmes, EN PLUS du
+// pourcentage global déjà appliqué (`GUARDIAN_DAMAGE_BOOST`).
+export const GUARDIAN_RAMP_FROM_EGG = 5;
+// ⚠️ 1,04 et non 1,12. MESURÉ : à 1,12 la part des PV du joueur passait
+// de 26 % au 5e œuf à 115 % au 20e — le combat devenait perdable, alors
+// que perdre son œuf après des heures d'incubation est précisément ce
+// qu'on s'interdit.
+//
+// Les PV du joueur montent d'environ 8 % par niveau de créature, soit
+// ~1 niveau par œuf. Une montée de 4 % par œuf suit cette croissance et
+// garde le combat entre 26 % et 42 % des PV du 5e au 20e œuf : le
+// Gardien se durcit sans jamais devenir un mur.
+export const GUARDIAN_RAMP_PER_EGG = 1.04;
+
+export function guardianEggRamp(eggNumber) {
+  const n = Math.max(0, Math.floor(eggNumber || 0) - GUARDIAN_RAMP_FROM_EGG + 1);
+  return Math.pow(GUARDIAN_RAMP_PER_EGG, n);
+}
+
+// Stats du Gardien : la formule commune, plus les ajustements ci-dessus.
+// `baseLevel` est le niveau du tout premier gardien, `eggNumber` le
+// numéro de l'œuf qu'il protège.
+export function guardianStats(levelNumber, baseLevel, eggNumber = 0) {
   const st = statsForOpponentCreatureTyped(GUARDIAN_CREATURE, levelNumber);
   const premier = baseLevel != null && levelNumber <= baseLevel;
   return {
@@ -169,7 +196,7 @@ export function guardianStats(levelNumber, baseLevel) {
     // arrondir absorbait entièrement le +15 % (2 × 1,15 = 2,3 → 2). Or
     // les dégâts réels valent `compétence × attaque / attaque de base`,
     // donc une attaque décimale propage bien le bonus jusqu'au coup.
-    attack: st.attack * GUARDIAN_DAMAGE_BOOST,
+    attack: st.attack * GUARDIAN_DAMAGE_BOOST * guardianEggRamp(eggNumber),
   };
 }
 
