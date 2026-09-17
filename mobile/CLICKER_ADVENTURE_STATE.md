@@ -987,6 +987,48 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ « Poigne Ancienne niveau 5 » ne progressait JAMAIS (15/09)
+
+Le défi restait à 0 % quoi que fasse le joueur.
+
+**Cause** : sa métrique `tapUpgrade:tap1` lit le champ `tapUpgrades` —
+**qui n'était pas publié dans `questStats`**. La lecture renvoyait
+`undefined`, converti en `0`. Le défi ne pouvait pas progresser d'un
+seul point.
+
+⚠️ La logique du défi était CORRECTE : testée avec un état complet, elle
+valide bien à 100 % au niveau 5. C'était un simple trou de publication.
+
+⚠️ **Deux défis touchés** : `seq_sanct15` (Poigne Ancienne) et
+`seq_veilleur20` (Gantelet Runique).
+
+### ⚠️ Mon garde-fou avait le MÊME angle mort que le précédent
+
+`validateQuests` IGNORAIT les métriques composées (`m.includes(':')`).
+Or ce sont justement elles qui dépendent d'un champ support.
+
+C'est la **deuxième fois** qu'un filtre destiné à éviter le bruit rend un
+contrôle aveugle à de vrais cas (après « chapitre » dans
+`auditLibelles`).
+
+**Correctif** : la validation vérifie désormais le CHAMP SUPPORT de
+chaque préfixe :
+
+| Préfixe | Champ lu |
+|---|---|
+| `upgrade:` | `upgradeLevels` |
+| `auto:` | `autoClickers` |
+| `tapUpgrade:` | `tapUpgrades` |
+
+Un préfixe inconnu est également signalé.
+
+**Prouvé** : en retirant volontairement le champ, la validation signale
+les deux défis concernés.
+
+**RÈGLE (2e occurrence)** : un contrôle qui EXCLUT une catégorie doit
+justifier pourquoi cette catégorie ne peut pas contenir de vrais cas.
+Ici comme pour « chapitre », l'exclusion cachait précisément le bug.
+
 ## ⚠️⚠️ « Chapitre 2 niveau 10 » avec une barre à 22/25 (15/09)
 
 Le titre annonçait un objectif, la jauge en comptait un autre.

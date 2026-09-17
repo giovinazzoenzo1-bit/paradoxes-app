@@ -1948,6 +1948,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     runeFused: lifetimeStats.runeFused || 0,
     // Compteurs Aventure À VIE (DailyContext).
     battleWon: lifetimeStats.battleWon || 0,
+    // ⚠️ Champ support des métriques `tapUpgrade:` — il manquait, donc
+    // « Monte Poigne Ancienne au niveau 5 » lisait `undefined` et
+    // restait à 0 % pour toujours.
+    tapUpgrades: tapUpgradesRef.current,
     runeEquipped: lifetimeStats.runeEquipped || 0,
     // Nombre de runes RÉELLEMENT équipées, publié par l'Aventure.
     // Insensible au déséquipement/rééquipement, contrairement à

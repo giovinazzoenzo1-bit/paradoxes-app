@@ -816,8 +816,28 @@ export function validateQuests(publishedMetrics = []) {
   const tous = [...QUEST_SEQUENCE.flat(), ...QUEST_POOL];
   tous.forEach((q) => {
     const m = q.metric || '';
-    const composee = m.includes(':');
-    if (!composee && !connues.has(m)) {
+    // ⚠️ Les métriques COMPOSÉES étaient IGNORÉES par ce contrôle.
+    //
+    // C'est ce qui a laissé passer « Monte Poigne Ancienne au niveau 5 » :
+    // sa métrique `tapUpgrade:tap1` lit le champ `tapUpgrades`, qui
+    // n'était pas publié — la valeur valait 0 pour toujours et le défi
+    // ne pouvait jamais progresser.
+    //
+    // On vérifie donc le CHAMP SUPPORT de chaque préfixe.
+    const CHAMPS_SUPPORT = {
+      'upgrade:': 'upgradeLevels',
+      'auto:': 'autoClickers',
+      'tapUpgrade:': 'tapUpgrades',
+    };
+    const prefixe = Object.keys(CHAMPS_SUPPORT).find((pre) => m.startsWith(pre));
+    if (prefixe) {
+      const champ = CHAMPS_SUPPORT[prefixe];
+      if (!connues.has(champ)) {
+        problemes.push({ id: q.id, type: 'champ support non publié', detail: `${m} → ${champ}` });
+      }
+    } else if (m.includes(':')) {
+      problemes.push({ id: q.id, type: 'préfixe de métrique inconnu', detail: m });
+    } else if (!connues.has(m)) {
       problemes.push({ id: q.id, type: 'métrique jamais publiée', detail: m });
     }
     // Trois façons LÉGITIMES de définir une cible : valeur fixe, budget
