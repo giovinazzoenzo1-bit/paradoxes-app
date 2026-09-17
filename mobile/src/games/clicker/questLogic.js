@@ -194,8 +194,59 @@ export const QUEST_SEQUENCE = [
 // retrouvent par id exactement comme ceux du pool dynamique.
 export const SEQUENCE_QUESTS = QUEST_SEQUENCE.flat();
 
+// ---- RÉPÉTITION de la séquence (15/09) ----
+//
+// La séquence scriptée compte 10 cycles. Au-delà, on la REJOUE en
+// montant la difficulté : le joueur retrouve des défis connus, mais plus
+// exigeants. Nombre de défis illimité, sans en écrire de nouveaux.
+//
+// ⚠️ Deux familles, deux progressions — c'est le point décisif :
+//   - les COMPTES (cibles dorées, critiques, pouvoirs, invocations…) se
+//     MULTIPLIENT : demander 2× plus de clics coûte 2× plus de temps ;
+//   - les NIVEAUX (Pacte, Sanctuaire, auto-clics, améliorations)
+//     s'ADDITIONNENT : leur coût DOUBLE à chaque niveau, donc multiplier
+//     le NIVEAU multiplie le coût de façon astronomique.
+//
+// Mesuré : multiplier aussi les niveaux faisait passer la 2e passe de
+// 17,5 h à **4266 h**. Avec la séparation, elle passe à 23 h — soit
+// ×1,32, une vraie montée sans mur.
+//
+// Les montants en PIÈCES ne sont pas touchés : ils se calibrent déjà sur
+// la production, elle-même indexée sur les Ascensions (×1,45).
+export const REPEAT_COUNT_RATE = 1.5;   // multiplicateur des comptes
+export const REPEAT_LEVEL_STEP = 2;     // niveaux ajoutés par passe
+
+const METRIQUES_NIVEAU = [
+  'tapPower', 'sanctuaryLevel', 'veilleurLevel', 'critLevel',
+  'maxCreatureLevel', 'maxEvolutionTier', 'advLevelReached',
+];
+
+export function metricIsLevel(metric) {
+  if (!metric) return false;
+  return METRIQUES_NIVEAU.includes(metric)
+    || metric.startsWith('upgrade:') || metric.startsWith('auto:') || metric.startsWith('tapUpgrade:');
+}
+
+// Combien de fois la séquence a déjà été parcourue. 0 au premier passage.
+export function repeatTier(index) {
+  // Longueur lue sur le tableau : `SEQUENCE_LENGTH` est déclaré plus
+  // bas et un `const` n'est pas utilisable avant sa ligne.
+  return Math.max(0, Math.floor((index || 0) / Math.max(1, QUEST_SEQUENCE.length)));
+}
+
+// Applique la progression de répétition à une cible FIXE.
+export function applyRepeatTier(quest, target, index) {
+  const tier = repeatTier(index);
+  if (!tier || !quest) return target;
+  if (metricIsLevel(quest.metric)) return target + REPEAT_LEVEL_STEP * tier;
+  return Math.max(1, Math.round(target * Math.pow(REPEAT_COUNT_RATE, tier)));
+}
+
 export function sequenceCycle(index) {
-  return QUEST_SEQUENCE[index] || null;
+  if (!QUEST_SEQUENCE.length) return null;
+  // ⚠️ On REBOUCLE au lieu de renvoyer `null` : la séquence se rejoue
+  // indéfiniment, la difficulté montant d'un cran à chaque tour.
+  return QUEST_SEQUENCE[(index || 0) % QUEST_SEQUENCE.length];
 }
 export const SEQUENCE_LENGTH = QUEST_SEQUENCE.length;
 
@@ -662,7 +713,13 @@ export function questProgress(questId, stats, baseline = {}, targets = {}) {
   // « 100 000 pièces » tout en en exigeant 140 000 — bug signalé.
   // Seules les cibles CALCULÉES (effort en minutes) doivent rester
   // figées, sinon elles bougeraient au fil de la partie.
-  const target = effectiveQuestTarget(questId, baseline && baseline.totalEarned !== undefined ? baseline : stats, targets);
+  // ⚠️ GARDE-FOU : la cible se résout sur les MÊMES arguments que le
+  // libellé (`stats`), jamais sur la référence.
+  //
+  // Avant, la progression la calculait sur la RÉFÉRENCE et le libellé
+  // sur l'état COURANT. Sur un défi indexé sur les Ascensions, les deux
+  // divergeaient : mesuré, le texte annonçait 15 et ça validait à 10.
+  const target = effectiveQuestTarget(questId, stats, targets);
   if (!target) return 0;
   const now = readMetric(q.metric, stats);
   const base = readMetric(q.metric, baseline);
@@ -741,6 +798,49 @@ export function freezeMissingTargets(activeIds, stats = {}, targets = {}) {
     change = true;
   });
   return change ? suivant : null;
+}
+
+// ---- GARDE-FOU : cohérence des défis ----
+//
+// Un défi est fait de morceaux INDÉPENDANTS (métrique, cible, mode,
+// libellé) et rien n'obligeait qu'ils soient d'accord. Une métrique mal
+// orthographiée ou jamais publiée renvoie 0 EN SILENCE : le défi ne
+// progresse jamais et rien ne le signale.
+//
+// `validateQuests` confronte chaque défi à la liste des métriques
+// réellement publiées par le jeu. À lancer dans l'audit après tout
+// changement.
+export function validateQuests(publishedMetrics = []) {
+  const connues = new Set(publishedMetrics);
+  const problemes = [];
+  const tous = [...QUEST_SEQUENCE.flat(), ...QUEST_POOL];
+  tous.forEach((q) => {
+    const m = q.metric || '';
+    const composee = m.includes(':');
+    if (!composee && !connues.has(m)) {
+      problemes.push({ id: q.id, type: 'métrique jamais publiée', detail: m });
+    }
+    // Trois façons LÉGITIMES de définir une cible : valeur fixe, budget
+    // d'effort en minutes, ou pas d'avancement (`step`, pour « monte de
+    // N de plus qu'actuellement »).
+    if (!q.target && !q.effortMin && !q.step) {
+      problemes.push({ id: q.id, type: 'aucune cible définissable', detail: '' });
+    }
+    if (q.target && q.effortMin) {
+      problemes.push({ id: q.id, type: 'cible ET effort déclarés', detail: '' });
+    }
+    if (typeof q.label !== 'function') {
+      problemes.push({ id: q.id, type: 'libellé manquant', detail: '' });
+    }
+    if (!['absolute', 'delta'].includes(q.mode)) {
+      problemes.push({ id: q.id, type: 'mode inconnu', detail: String(q.mode) });
+    }
+  });
+  const ids = tous.map((q) => q.id);
+  ids.forEach((id, i) => {
+    if (ids.indexOf(id) !== i) problemes.push({ id, type: 'identifiant en double', detail: '' });
+  });
+  return problemes;
 }
 
 export function questLabel(questId, target, stats = {}, targets = {}) {
@@ -851,7 +951,13 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
     // et « Obtiens N pièces » qui se validait aussitôt après une
     // Ascension (production repartie de zéro ⇒ budget minuscule).
     const targets = {};
-    kept.forEach((q) => { targets[q.id] = q.target || resolveQuestTarget(q, stats); });
+    kept.forEach((q) => {
+      const brute = q.target || resolveQuestTarget(q, stats);
+      // La répétition ne touche que les cibles FIXES : les cibles
+      // calculées suivent déjà la production, elle-même indexée sur les
+      // Ascensions.
+      targets[q.id] = q.target ? applyRepeatTier(q, brute, index) : brute;
+    });
     const ids = kept.map((q) => q.id);
 
     const missing = cycle.length - kept.length;

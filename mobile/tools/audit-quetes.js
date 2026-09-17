@@ -321,3 +321,31 @@ function auditLibelles() {
   return ecarts;
 }
 module.exports.auditLibelles = auditLibelles;
+
+// ---- Cohérence structurelle des défis ---------------------------------
+//
+// Lit les métriques RÉELLEMENT publiées par l'écran du Clicker et les
+// confronte aux métriques exigées par les défis. Une métrique mal
+// orthographiée ou oubliée renvoie 0 en silence : le défi ne progresse
+// jamais et rien ne le signale à l'exécution.
+function metriquesPubliees() {
+  const src = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'screens', 'games', 'ClickerScreen.js'), 'utf8');
+  const i = src.indexOf('const questStats = {');
+  const j = src.indexOf('\n  };', i);
+  const bloc = src.slice(i, j);
+  const cles = new Set();
+  // `cle: valeur`
+  for (const m of bloc.matchAll(/^\s*(\w+)\s*:/gm)) cles.add(m[1]);
+  // raccourcis `a, b, c,` sur une même ligne
+  for (const m of bloc.matchAll(/^\s{4}([\w,\s]+),\s*$/gm)) {
+    m[1].split(',').forEach((x) => { const t = x.trim(); if (t) cles.add(t); });
+  }
+  return [...cles];
+}
+
+function auditCoherence() {
+  return Q.validateQuests(metriquesPubliees());
+}
+module.exports.auditCoherence = auditCoherence;
+module.exports.metriquesPubliees = metriquesPubliees;

@@ -987,6 +987,63 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ DÉFIS ILLIMITÉS : la séquence se REJOUE (15/09)
+
+Au-delà des 10 cycles scriptés, la séquence **reboucle** avec une
+difficulté d'un cran supérieure. Nombre de défis illimité, sans en
+écrire un seul de plus.
+
+### ⚠️ Le point décisif : deux familles, deux progressions
+
+| Famille | Progression | Pourquoi |
+|---|---|---|
+| **COMPTES** (dorées, critiques, pouvoirs, invocations) | **×1,5** par passe | 2× plus de clics = 2× plus de temps |
+| **NIVEAUX** (Pacte, Sanctuaire, auto-clics, améliorations) | **+2** par passe | leur coût DOUBLE par niveau |
+| **MONTANTS** en pièces | inchangé | déjà calibrés sur la production (×1,45/Ascension) |
+
+⚠️ **Mesuré** : multiplier AUSSI les niveaux faisait passer la 2e passe
+de 17,5 h à **4266 h** — le coût d'un niveau étant exponentiel,
+multiplier le NUMÉRO de niveau explose. Avec la séparation : **23 h**,
+soit ×1,32. Une vraie montée, sans mur.
+
+## ⚠️⚠️ GARDE-FOUS ACTIVÉS (15/09)
+
+### 1. Une seule résolution de cible
+
+`questProgress` calculait la cible sur la RÉFÉRENCE pendant que le
+libellé la calculait sur l'état COURANT. Mesuré : **le texte annonçait
+15, ça validait à 10**.
+
+Les deux passent désormais par `effectiveQuestTarget(questId, stats,
+targets)` — **mêmes arguments**. La divergence est impossible par
+construction.
+
+### 2. Validation structurelle : `validateQuests()`
+
+Confronte chaque défi à la liste des métriques RÉELLEMENT publiées par
+le jeu, et vérifie : métrique existante, cible définissable (`target`,
+`effortMin` ou `step`), libellé présent, mode valide, identifiant unique.
+
+⚠️ Une métrique mal orthographiée renvoie **0 en silence** : le défi ne
+progresse jamais et rien ne le signale à l'exécution. C'est cette famille
+de bugs que le contrôle supprime.
+
+Lancé par `auditCoherence()` dans l'outil d'audit. **Résultat : aucun
+problème sur les 109 défis.**
+
+⚠️ Le contrôle a d'abord signalé `feed5`/`feed15` : ma validation
+ignorait `step`, une 3e façon LÉGITIME de définir une cible. Corrigée —
+un garde-fou trop strict fait plus de mal que pas de garde-fou.
+
+### État de l'audit après ces changements
+
+| Contrôle | Résultat |
+|---|---|
+| Durée de la séquence | 18 h, 4 alertes |
+| Écarts libellé/cible | **0** |
+| Défis-corvée | **0** |
+| Cohérence structurelle | **0 problème** |
+
 ## Réglages du 15/09 (3)
 
 | Changement | Détail |
