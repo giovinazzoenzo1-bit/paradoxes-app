@@ -987,6 +987,52 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+## ⚠️⚠️ L'INVOCATION est réservée aux développeurs (15/09)
+
+Précision de l'auteur : le bouton « Invoquer une créature » n'est PAS
+destiné aux joueurs. **Les créatures viennent donc UNIQUEMENT des œufs.**
+
+### Conséquence immédiate : 2 défis infaisables
+
+`summon10` et `summon30` demandaient d'invoquer. Pour un joueur sans
+accès au bouton, ils sont **impossibles** — et un seul défi impossible
+bloque l'éclosion DÉFINITIVEMENT. **Retirés.**
+
+⚠️ Il reste 65 défis au pool ; vérifié sur 200 tirages, un cycle se
+remplit toujours (4 défis minimum).
+
+### ⚠️ Le bouton n'est PAS protégé dans le code
+
+Il s'affiche pour TOUT LE MONDE dans l'onglet Collection, limité
+seulement par le prix en pièces. **À faire** : le masquer hors mode
+développeur, sinon la précision ci-dessus n'est pas appliquée.
+
+### Durée de vie réelle de la collection
+
+26 créatures = **26 œufs**. L'incubation seule (hors défis) :
+
+| Œuf | Durée | Cumul |
+|---|---|---|
+| 5 | 20 min | 1,2 h |
+| 10 | 49 min | 4,2 h |
+| 15 | 120 min | 11,4 h |
+| 20 | 290 min | 28,9 h |
+| 26 | 842 min | **85,5 h** |
+
+⚠️ Les « 17 h » de l'audit ne couvrent que les **10 premiers œufs**, et
+seulement le temps des DÉFIS — pas l'incubation, pas le plafond
+hors-ligne de 2 h, pas l'attente d'énergie.
+
+## ⚠️ Bug attrapé par le découpage en fichiers
+
+`VEILLEUR_MAX_LEVEL` et `SANCTUARY_MAX_LEVEL` étaient utilisés dans les
+conditions d'apparition du pool SANS être importés dans `questDefs.js` —
+ils venaient de `questLogic.js` avant la séparation. **L'app aurait
+planté** au premier tirage du pool.
+
+⚠️ Attrapé parce que l'audit EXÉCUTE réellement `pickQuestSet`. Une
+simple vérification de syntaxe ne l'aurait pas vu.
+
 ## Réglages du 15/09 (4)
 
 | Changement | Détail |

@@ -18,7 +18,9 @@
 //
 import {
   AUTOCLICKERS,
+  SANCTUARY_MAX_LEVEL,
   UPGRADE_ITEMS,
+  VEILLEUR_MAX_LEVEL,
   coreUpgradeUnlocked,
   critChance,
   critUpgradeCost,
@@ -209,6 +211,14 @@ export const QUEST_SEQUENCE = [
       label: () => 'Fais une seconde Ascension' },
   ],
 ];
+// ⚠️ AUCUN défi ne doit dépendre de l'INVOCATION.
+//
+// Les créatures viennent des ŒUFS ; le bouton « Invoquer » est destiné
+// aux développeurs. Un défi « Invoque N créatures » serait donc
+// INFAISABLE pour un joueur — et un seul défi infaisable bloque
+// l'éclosion DÉFINITIVEMENT.
+//
+// `summon10` et `summon30` ont été retirés pour cette raison (15/09).
 export const QUEST_POOL = [
   // ---------- Économie générale ----------
   { id: 'earnShort', family: 'economy', icon: '💰', metric: 'totalEarned', effortMin: 10, mode: 'delta',
@@ -283,12 +293,6 @@ export const QUEST_POOL = [
   // L'invocation coûte des pièces et son prix grimpe avec la
   // collection : inutile de proposer 10 invocations à qui n'a pas de
   // quoi en payer une seule.
-  { id: 'summon10', family: 'action', icon: '🔮', metric: 'totalSummons', target: 10, mode: 'delta',
-    available: (s) => questBudget(s, 20) >= summonCost(s.ownedCount || 0) * 10,
-    label: (t) => `Invoque ${t} créatures` },
-  { id: 'summon30', family: 'action', icon: '🔮', metric: 'totalSummons', target: 12, mode: 'delta',
-    available: (s) => (s.ownedCount || 0) >= 4 && questBudget(s, 30) >= summonCost(s.ownedCount || 0) * 30,
-    label: (t) => `Invoque ${t} créatures` },
 
   // ---------- Collection (pas monétaire : pas relatif) ----------
   // PAS de défi « possède N créatures différentes » : les créatures
