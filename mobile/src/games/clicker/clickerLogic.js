@@ -751,9 +751,31 @@ export function passiveRate({
 // Ramené de 4 h à 2 h (14/09).
 export const OFFLINE_CAP_SECONDS = 2 * 3600;
 
-export function offlineEarnings(incomePerSecond, secondsElapsed) {
+// ⚠️⚠️ PLAFOND EN PART DU SEUIL D'ASCENSION — sans lui, une nuit suffit.
+//
+// Le plafond de 2 h ne borne que le TEMPS, pas la VALEUR. Mesuré sur les
+// 6 premiers groupes, ce qu'une nuit hors ligne rapporte par rapport au
+// seuil de l'Ascension en cours :
+//
+//   groupe 1  26 %   ·  groupe 2  43 %  ·  groupe 3  24 %
+//   groupe 4  87 %   ·  groupe 5  47 %  ·  groupe 6  106 %
+//
+// Au 6e groupe, le joueur se réveille avec l'Ascension entière déjà
+// faite. Et la part varie du simple au quadruple d'un groupe à l'autre,
+// donc aucun réglage du temps ne peut la stabiliser : c'est la VALEUR
+// qu'il faut borner.
+//
+// Une nuit doit donner un coup de pouce, pas un raccourci : au plus
+// OFFLINE_MAX_SHARE du chemin vers la prochaine Ascension.
+export const OFFLINE_MAX_SHARE = 0.15;
+
+export function offlineEarnings(incomePerSecond, secondsElapsed, ascensionThresholdValue = Infinity) {
   const capped = Math.max(0, Math.min(secondsElapsed, OFFLINE_CAP_SECONDS));
-  return Math.floor(incomePerSecond * capped);
+  const brut = incomePerSecond * capped;
+  const plafond = Number.isFinite(ascensionThresholdValue)
+    ? ascensionThresholdValue * OFFLINE_MAX_SHARE
+    : Infinity;
+  return Math.floor(Math.min(brut, plafond));
 }
 
 // ---- Garde-fou contre le changement d'heure du téléphone ----

@@ -709,3 +709,47 @@ function auditEmballement(facteurMax = 3, passages = 5) {
   return suspects;
 }
 module.exports.auditEmballement = auditEmballement;
+
+// ---- Défis dont la condition `available` n'est JAMAIS vraie ----------
+//
+// Bug réel du 17/09 : deux défis d'objet testaient
+// `ownedIds.includes('braisillon')` alors que la créature de « Griffe de
+// Braisillon » s'appelle `pyrosile`. La condition était toujours fausse,
+// le défi n'était jamais tiré, et le pool le remplaçait en silence. Le
+// schéma affiché dans le doc ne correspondait donc pas au jeu, et aucun
+// contrôle ne le voyait.
+function auditAvailable() {
+  const muets = [];
+  // Joueur qui a TOUT : si `available` est encore faux ici, elle ne peut
+  // jamais être vraie.
+  const s = etatInitial();
+  s.ownedIds = C.CREATURES.map((c) => c.id);
+  s.ownedCount = s.ownedIds.length;
+  s.deckCount = 3;
+  // ⚠️ Un joueur DÉMESURÉ, pas juste avancé. Première version : le
+  // contrôle sortait 11 défis dont 9 parfaitement légitimes (combos,
+  // générateurs de haut palier) — leur condition devient vraie plus tard,
+  // pas jamais. Un contrôle qui hurle sur des cas normaux cesse d'être
+  // lu ; on met donc la sonde hors de portée de toute condition
+  // légitime, et ce qui résiste est vraiment mort.
+  s.tapPower = 200; s.passiveIncome = 1e12; s.coins = 1e15; s.totalEarned = 1e16;
+  s.maxCombo = 500; s.goldenClaimed = 5000; s.totalCrits = 1e6; s.powerActivated = 5000;
+  s.offering = 500; s.runeFused = 200; s.runesEquipped = 6; s.advLevelReached = 120;
+  s.maxEvolutionTier = 3; s.totalTaps = 1e7; s.threeStarLevel = 50; s.autoTotal = 500;
+  s.sanctuaryLevel = 20; s.veilleurLevel = 20; s.critLevel = 10; s.critDamageLevel = 10;
+  s.ascension = 3; s.runeBought = 20; s.maxCreatureLevel = 40; s.battleWon = 100;
+  s.tapUpgrades = {};
+  C.TAP_UPGRADES.forEach((t) => { s.tapUpgrades[t.id] = 10; });
+  s.autoClickers = {};
+  C.AUTOCLICKERS.forEach((a) => { s.autoClickers[a.id] = 50; });
+  s.upgradeLevels = {};
+  C.UPGRADE_ITEMS.forEach((u) => { s.upgradeLevels[u.id] = 3; });
+  [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL].forEach((q) => {
+    if (typeof q.available !== 'function') return;
+    let ok = false;
+    try { ok = !!q.available(s); } catch (e) { ok = false; }
+    if (!ok) muets.push({ id: q.id, metric: q.metric });
+  });
+  return muets;
+}
+module.exports.auditAvailable = auditAvailable;

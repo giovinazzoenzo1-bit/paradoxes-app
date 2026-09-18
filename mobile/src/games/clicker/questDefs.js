@@ -14,7 +14,7 @@
 //
 // ⚠️ Oublier de l'incrémenter = l'auteur ne voit pas son changement et
 // croit à un bug de publication. C'est arrivé le 17/09.
-export const QUEST_DEFS_VERSION = 5;
+export const QUEST_DEFS_VERSION = 7;
 
 // ════════════════════════════════════════════════════════════════
 //  LES DÉFIS — ce fichier ne contient QUE leur définition.
@@ -46,6 +46,20 @@ import {
 } from './clickerLogic';
 import { fmtQ, qtyQ, describeAdventureLevel } from './questFormat';
 import { questBudget } from './questBudget';
+
+// ⚠️ La créature d'un objet se DÉDUIT de `UPGRADE_ITEMS`, jamais écrite
+// en dur dans un `available`. « Griffe de Braisillon » appartient en
+// réalité à `pyrosile` : la condition `ownedIds.includes('braisillon')`
+// était toujours FAUSSE, donc le défi n'était jamais tiré et se faisait
+// remplacer en silence par un défi du pool. Aucun contrôle ne le voyait.
+const creatureDeLObjet = (itemId) => {
+  const it = UPGRADE_ITEMS.find((u) => u.id === itemId);
+  return it ? it.creatureId : null;
+};
+const possedeLObjet = (itemId) => (s) => {
+  const cid = creatureDeLObjet(itemId);
+  return !!cid && (s.ownedIds || []).includes(cid);
+};
 
 
 export const EGG_STAGES = [
@@ -98,11 +112,9 @@ export const QUEST_SEQUENCE = [
   // que d'ajouter un cas particulier au premier groupe.
   [
     // ⚠️ L'ACCROCHE — la part la plus petite de tout le jeu.
-    //
-    // C'est le tout premier défi qu'un joueur voit. Le doc répète depuis
-    // longtemps qu'il doit se boucler en 2-3 minutes : à 1,2 % du seuil
-    // il en demandait 25, et le joueur décrochait avant d'avoir compris
-    // à quoi sert le bouton.
+    // C'est le tout premier défi qu'un joueur voit : il doit se boucler
+    // en 2-3 minutes. À 1,2 % du seuil il en demandait 25, et le joueur
+    // décrochait avant d'avoir compris à quoi sert le bouton.
     { id: 'g_e1_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.0015, mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
     { id: 'g_e1_pacte', icon: '🔗', metric: 'tapPower', partAsc: 0.02, mode: 'absolute',
@@ -111,6 +123,9 @@ export const QUEST_SEQUENCE = [
     // « +15 % au-dessus de l'acquis » la poussait à 641 secondes.
     { id: 'g_e1_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 25, cap: 40, mode: 'absolute',
       label: (t) => `Reste en Transe x2,5 pendant ${t} secondes` },
+    // ⚠️ Générateur NOMMÉ, jamais un total. « Possède 7 auto-clics en
+    // tout » ne dit rien au joueur : il ne sait pas quoi acheter, et deux
+    // chemins différents valident le même défi.
     { id: 'g_e1_auto1', icon: '👻', metric: 'auto:esprit', partAsc: 0.03, mode: 'absolute',
       label: (t) => `Possède ${t} Esprits Frappeurs` },
     { id: 'g_e1_golden', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
@@ -131,14 +146,19 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g_e2_crit', icon: '💥', metric: 'totalCrits', target: 30, mode: 'delta',
       label: (t) => `Obtiens ${t} coups critiques` },
-    { id: 'g_e2_taps', icon: '👆', metric: 'totalTaps', target: 1200, mode: 'delta',
-      label: (t) => `Tape ${fmtQ(t)} fois` },
+    { id: 'g_e2_auto2', icon: '🖐️', metric: 'auto:main', partAsc: 0.06, mode: 'absolute',
+      label: (t) => `Possède ${t} Mains Spectrales` },
   ],
 
   // ══════════════════ ŒUF 3 — RENFORCER ══════════════════
   [
-    { id: 'g_e3_hold', icon: '💰', metric: 'coins', partAsc: 0.08, mode: 'absolute',
-      label: (t) => `Constitue un trésor de ${fmtQ(t)} pièces` },
+    // ⚠️ SEULE réserve du groupe avant l'œuf 5.
+    // « Accumule 38 000 pièces » suivi de « Constitue un trésor de
+    // 43 000 » se lisait comme le même défi deux fois. Les deux défis de
+    // trésor d'un groupe sont désormais séparés par deux œufs ET d'un
+    // facteur 5 au moins sur la cible.
+    { id: 'g_e3_hold', icon: '💰', metric: 'coins', partAsc: 0.10, mode: 'absolute',
+      label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
     { id: 'g_e3_veilleur', icon: '🌙', metric: 'veilleurLevel', partAsc: 0.07, mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('veilleur', s) && (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
       label: (t) => `Monte le Veilleur au niveau ${t}` },
@@ -156,7 +176,9 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'g_e4_rune', icon: '🔮', metric: 'runeBought', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Achète ${t} runes` : 'Achète une rune') },
-    { id: 'g_e4_creature', icon: '🐣', metric: 'maxCreatureLevel', step: 2, mode: 'absolute',
+    // ⚠️ Pas de +2 : monter une créature de deux niveaux ne se remarque
+    // pas. Le pas est assez grand pour être un objectif en soi.
+    { id: 'g_e4_creature', icon: '🐣', metric: 'maxCreatureLevel', step: 14, mode: 'absolute',
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Monte une créature au niveau ${t}` },
     { id: 'g_e4_stars', icon: '🌟', metric: 'threeStarLevel', target: 1, mode: 'delta',
@@ -168,24 +190,26 @@ export const QUEST_SEQUENCE = [
       available: (s) => coreUpgradeUnlocked('faveur', s),
       label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
     { id: 'g_e4_item', icon: '🔧', metric: 'upgrade:griffeBraisillon', partAsc: 0.05, mode: 'absolute',
-      available: (s) => (s.ownedIds || []).includes('braisillon'),
+      available: possedeLObjet('griffeBraisillon'),
       label: (t) => `Monte Griffe de Braisillon au niveau ${t}` },
   ],
 
   // ══════════════════ ŒUF 5 — MAÎTRISER ══════════════════
   [
-    { id: 'g_e5_hold', icon: '💰', metric: 'coins', partAsc: 0.20, mode: 'absolute',
-      label: (t) => `Constitue un trésor de ${fmtQ(t)} pièces` },
-    { id: 'g_e5_auto2', icon: '🖐️', metric: 'auto:main', partAsc: 0.18, mode: 'absolute',
-      label: (t) => `Possède ${t} Mains Spectrales` },
+    // Facteur 5 au moins sur la réserve de l'œuf 3 : c'est un cran, pas
+    // une répétition.
+    { id: 'g_e5_hold', icon: '💰', metric: 'coins', partAsc: 0.55, mode: 'absolute',
+      label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
+    { id: 'g_e5_auto3', icon: '🤖', metric: 'auto:automate', partAsc: 0.20, mode: 'absolute',
+      label: (t) => `Possède ${t} Automates Runiques` },
     { id: 'g_e5_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
       available: (s) => (s.deckCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g_e5_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, cap: 75, mode: 'absolute',
       label: (t) => `Tiens la Transe pendant ${t} secondes` },
-    { id: 'g_e5_fuse', icon: '⚗️', metric: 'runeFused', target: 1, mode: 'delta',
-      available: (s) => (s.runeBought || 0) >= 2,
-      label: (t) => (t > 1 ? `Fusionne ${t} fois des runes` : 'Fusionne 2 runes en 1') },
+    { id: 'g_e5_tapup', icon: '🪄', metric: 'tapUpgrade:tap2', partAsc: 0.12, mode: 'absolute',
+      available: (s) => (s.tapUpgrades || {}).tap1 >= 5,
+      label: (t) => `Monte le Gantelet Runique au niveau ${t}` },
   ],
 
   // ══════════════════ ŒUF 6 — FRANCHIR ══════════════════
@@ -194,13 +218,14 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'g_e6_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.30, mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    { id: 'g_e6_item', icon: '🔧', metric: 'upgrade:crocBouldog', partAsc: 0.12, mode: 'absolute',
-      available: (s) => (s.ownedIds || []).includes('bouldog'),
-      label: (t) => `Monte Croc de Bouldog au niveau ${t}` },
+    { id: 'g_e6_item', icon: '🌊', metric: 'upgrade:perleAquamira', partAsc: 0.12, mode: 'absolute',
+      available: possedeLObjet('perleAquamira'),
+      label: (t) => `Monte Perle d'Aquamira au niveau ${t}` },
+    { id: 'g_e6_adv', icon: '🗡️', metric: 'battleWon', target: 6, mode: 'delta',
+      available: (s) => (s.deckCount || 0) > 0,
+      label: (t) => `Gagne ${t} combats en Aventure` },
     { id: 'g_e6_offering', icon: '🕯️', metric: 'offering', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Fais ${t} Offrandes` : 'Fais une Offrande') },
-    { id: 'g_e6_taps', icon: '👆', metric: 'totalTaps', target: 4000, mode: 'delta',
-      label: (t) => `Tape ${fmtQ(t)} fois` },
     // ⚠️ `step: 1` et NON une cible en dur.
     //
     // Il n'existait que deux défis d'Ascension (`target: 1` et
@@ -228,10 +253,6 @@ export const QUEST_POOL = [
     label: (t) => `Gagne ${qtyQ(t, 'pièces')}` },
   { id: 'earnLong', family: 'economy', icon: '💰', metric: 'totalEarned', effortMin: 60, mode: 'delta',
     label: (t) => `Gagne ${qtyQ(t, 'pièces')}` },
-  { id: 'holdShort', family: 'economy', icon: '🏦', metric: 'coins', effortMin: 15, mode: 'absolute',
-    label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
-  { id: 'holdMid', family: 'economy', icon: '🏦', metric: 'coins', effortMin: 35, mode: 'absolute',
-    label: (t) => `Accumule ${qtyQ(t, 'pièces')} en réserve` },
   { id: 'holdLong', family: 'economy', icon: '🏦', metric: 'coins', effortMin: 75, mode: 'absolute',
     label: (t) => `Constitue un trésor de ${fmtQ(t)} pièces` },
   { id: 'passiveMid', family: 'economy', icon: '📈', metric: 'passiveIncome', effortMin: 30, mode: 'absolute',
@@ -279,10 +300,13 @@ export const QUEST_POOL = [
   { id: 'faveurMid', family: 'core', icon: '✨', metric: 'critLevel', effortMin: 20, mode: 'absolute',
     available: (s) => coreUpgradeUnlocked('faveur', s),
     label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
-  { id: 'autoTotalMid', family: 'core', icon: '🔧', metric: 'autoTotal', effortMin: 30, mode: 'absolute',
-    label: (t) => `Possède ${fmtQ(t)} auto-clics en tout` },
-  { id: 'autoTotalLong', family: 'core', icon: '🔧', metric: 'autoTotal', effortMin: 65, mode: 'absolute',
-    label: (t) => `Possède ${fmtQ(t)} auto-clics en tout` },
+  // ⚠️ « Possède N auto-clics EN TOUT » SUPPRIMÉ.
+  //
+  // Un total ne dit rien au joueur : il ne sait pas quoi acheter, et
+  // deux chemins très différents valident le même défi. Un générateur
+  // NOMMÉ (« Possède 4 Mains Spectrales ») indique la cible et pousse
+  // vers un palier précis de la boutique. Tous les défis de génération
+  // passent par `auto:<id>`.
 
   // ---------- Rythme d'action (cibles FIXES) ----------
   // Ces défis ne coûtent pas de pièces mais du temps de jeu actif : les
