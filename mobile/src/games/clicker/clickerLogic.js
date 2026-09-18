@@ -1143,7 +1143,13 @@ export function tapUpgradeBonus(levels) {
 // coûte désormais 6,7 fois plus (2,5 M → 17 M), alors que le premier
 // achat reste accessible à un joueur qui débute.
 export const UPGRADE_ITEMS = [
-  { id: 'griffeBraisillon', creatureId: 'pyrosile', name: 'Griffe de Braisillon', emoji: '🔥', tier: 1, cost: 1280, effect: { type: 'tapFlat', value: 0.5 }, growth: 2.15, desc: null },
+  // ⚠️ NOM CORRIGÉ le 17/09 : « Griffe de Braisillon » désignait une
+  // créature SUPPRIMÉE du roster (remplacée par Pyrosile le 29/08). Tous
+  // les autres objets portent le nom de leur créature — « Écaille de
+  // Caraploof » pour Caraploof — donc le joueur cherchait un Braisillon
+  // qui n'existe nulle part, et croyait le défi impossible.
+  // L'`id` ne change PAS : il est écrit dans les sauvegardes.
+  { id: 'griffeBraisillon', creatureId: 'pyrosile', name: 'Griffe de Pyrosile', emoji: '🔥', tier: 1, cost: 1280, effect: { type: 'tapFlat', value: 0.5 }, growth: 2.15, desc: null },
   { id: 'ecailleCaraploof', creatureId: 'caraploof', name: 'Écaille de Caraploof', emoji: '🌊', tier: 1, cost: 1920, effect: { type: 'autoClickerPct', value: 0.025 }, growth: 2.5, desc: '+2.5% sur les auto-clics' },
   { id: 'crocBouldog', creatureId: 'bouldog', name: 'Croc de Bouldog', emoji: '🪨', tier: 1, cost: 2880, effect: { type: 'coinPct', value: 0.015 }, growth: 2.57, desc: '+1.5% sur toute la production' },
   { id: 'plumeVentis', creatureId: 'ventis', name: 'Plume de Ventis', emoji: '🌬️', tier: 1, cost: 4000, effect: { type: 'critChancePct', value: 0.02 }, growth: 2.64, desc: '+2% de chance de coup critique' },

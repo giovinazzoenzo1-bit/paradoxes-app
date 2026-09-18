@@ -787,7 +787,10 @@ function auditFamilles(nbOeufs = 18) {
       appliquer(q, cible, s);
     });
     Object.entries(compte).forEach(([f, n]) => {
-      const max = f === 'economie' ? 1 : f === 'ascension' ? 1 : 2;
+      // ⚠️ Doit refléter `MAX_PAR_FAMILLE` du moteur. Un contrôle qui
+      // recopie une règle finit par mentir quand la règle bouge — on lit
+      // donc la même table.
+      const max = { economie: 1, runes: 1, creatures: 1, offrande: 1, ascension: 1 }[f] || 2;
       if (n > max) fautes.push({ oeuf: oeuf + 1, famille: f, nb: n, max });
     });
     const nv = C.CREATURES[Math.min(oeuf, C.CREATURES.length - 1)];

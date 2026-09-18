@@ -456,6 +456,16 @@ export function resolveQuestTarget(quest, stats) {
   // Le pas minimum est aussi RELATIF à l'existant : sur un compteur déjà
   // haut, « +1 » donne un défi affiché à 98% dès le tirage. On exige au
   // moins 15% de progression pour que la barre parte d'un état crédible.
+  // ⚠️ UN PAS DÉCLARÉ EST UN PAS EXACT — le plancher relatif ne s'y
+  // applique pas.
+  //
+  // Le plancher « au moins +15 % » existe pour les cibles CALCULÉES, qui
+  // peuvent sortir trop basses. Sur un défi à `step` explicite il
+  // écrasait le pas voulu : la campagne d'Aventure avançait de +5
+  // niveaux jusqu'au chapitre 4, puis +6, +7, +8, +9, +10 — parce que
+  // 15 % du niveau atteint dépassait 5. Elle cessait alors de se lire
+  // comme une suite, ce qui est exactement ce qu'on lui demande.
+  if (quest.step) return roundQuestTarget(now + quest.step);
   const floor = now + Math.max(quest.minStep || 1, Math.ceil(now * 0.15));
   const target = Math.max(rounded, floor);
   // Le plancher relatif pourrait repasser au-dessus d'un plafond dur.
@@ -809,6 +819,27 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
         targets[id] = sub.targets[id];
       });
     }
+    // ⚠️⚠️ L'ASCENSION EST TOUJOURS LE DERNIER DÉFI DE L'ŒUF.
+    //
+    // Signalé trois fois par l'auteur. Le défi d'Ascension était bien
+    // dans le cycle, en 5e position — mais les REMPLAÇANTS des défis non
+    // débloqués sont ajoutés À LA FIN, donc ils passaient après lui. Le
+    // joueur voyait « Fais ta 1re Ascension » puis « Possède 4 Mains
+    // Spectrales », ce qui donne l'impression que le groupe continue
+    // après l'Ascension alors qu'elle le CLÔT.
+    //
+    // Ordre imposé ici et pas dans les données : un remplaçant tiré au
+    // sort ne peut pas savoir où il doit s'insérer.
+    {
+      const iAsc = ids.findIndex((id) => {
+        const q = findQuest(id);
+        return q && q.metric === 'ascension';
+      });
+      if (iAsc >= 0 && iAsc !== ids.length - 1) {
+        const [asc] = ids.splice(iAsc, 1);
+        ids.push(asc);
+      }
+    }
     return { ids, targets, fromSequence: true };
   }
   return { ...pickQuestSet(excludeIds, stats), fromSequence: false };
@@ -869,7 +900,17 @@ export function familleDe(metric) {
 
 // Combien de défis d'une même famille un œuf tolère. L'économie est
 // limitée à UN : c'est la famille dont les défis se ressemblent le plus.
-const MAX_PAR_FAMILLE = { economie: 1, aventure: 2, ascension: 1 };
+// ⚠️ Les familles dont les défis se LISENT pareil sont plafonnées à UN.
+// « Achète une rune » + « Achète 2 runes en Aventure » dans le même œuf,
+// c'est le même défi deux fois. Idem pour les créatures (« monte au
+// niveau N » / « nourris jusqu'au niveau N ») et pour l'économie.
+// L'aventure tolère 2 : « atteindre un niveau » et « gagner des
+// combats » sont deux gestes différents. La boutique aussi : deux
+// améliorations distinctes se distinguent par leur nom.
+const MAX_PAR_FAMILLE = {
+  economie: 1, runes: 1, creatures: 1, offrande: 1, ascension: 1,
+  aventure: 2, rythme: 2, boutique: 2,
+};
 const MAX_PAR_FAMILLE_DEFAUT = 2;
 
 export function pickQuestSet(excludeIds = [], stats = {}, dejaPris = {}) {

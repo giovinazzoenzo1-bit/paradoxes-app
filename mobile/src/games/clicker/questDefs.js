@@ -14,7 +14,7 @@
 //
 // ⚠️ Oublier de l'incrémenter = l'auteur ne voit pas son changement et
 // croit à un bug de publication. C'est arrivé le 17/09.
-export const QUEST_DEFS_VERSION = 8;
+export const QUEST_DEFS_VERSION = 9;
 
 // ════════════════════════════════════════════════════════════════
 //  LES DÉFIS — ce fichier ne contient QUE leur définition.
@@ -162,9 +162,17 @@ export const QUEST_SEQUENCE = [
     { id: 'g_e3_veilleur', icon: '🌙', metric: 'veilleurLevel', partAsc: 0.07, mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('veilleur', s) && (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
       label: (t) => `Monte le Veilleur au niveau ${t}` },
-    { id: 'g_e3_battles', icon: '🗡️', metric: 'battleWon', target: 4, mode: 'delta',
+    // ⚠️ TROIS défis de NIVEAU d'Aventure par groupe (œufs 2, 3 et 5),
+    // chacun +5 niveaux, donc une campagne qui avance de 15 niveaux par
+    // Ascension et qui se lit comme une suite : chapitre 1 niveau 5,
+    // puis 10, puis chapitre 2 niveau 5…
+    //
+    // ⚠️ `advLevelReached` est ABSOLU et n'est PAS remis à zéro par une
+    // Ascension — l'Aventure est une campagne, pas une économie. Un
+    // `step` repart donc du niveau réellement atteint, jamais de zéro.
+    { id: 'g_e3_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
       available: (s) => (s.deckCount || 0) > 0,
-      label: (t) => `Gagne ${t} combats en Aventure` },
+      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g_e3_power', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
       label: (t) => `Active ${t} fois un pouvoir` },
     { id: 'g_e3_tapup', icon: '✊', metric: 'tapUpgrade:tap1', partAsc: 0.05, mode: 'absolute',
@@ -191,7 +199,7 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
     { id: 'g_e4_item', icon: '🔧', metric: 'upgrade:griffeBraisillon', partAsc: 0.05, mode: 'absolute',
       available: possedeLObjet('griffeBraisillon'),
-      label: (t) => `Monte Griffe de Braisillon au niveau ${t}` },
+      label: (t) => `Monte Griffe de Pyrosile au niveau ${t}` },
   ],
 
   // ══════════════════ ŒUF 5 — MAÎTRISER ══════════════════
@@ -201,7 +209,7 @@ export const QUEST_SEQUENCE = [
     { id: 'g_e5_hold', icon: '💰', metric: 'coins', partAsc: 0.55, mode: 'absolute',
       label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
     { id: 'g_e5_auto3', icon: '🤖', metric: 'auto:automate', partAsc: 0.20, mode: 'absolute',
-      label: (t) => `Possède ${t} Automates Runiques` },
+      label: (t) => `Achète ${t} Automates Runiques` },
     { id: 'g_e5_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
       available: (s) => (s.deckCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
@@ -266,9 +274,9 @@ export const QUEST_POOL = [
   // `totalTaps` : le seul défi qui ne dépend d'AUCUNE ressource. Aucun
   // risque de blocage, aucune précondition — il est toujours faisable.
   // Cible dérivée de la cadence de référence, jamais écrite en dur.
-  { id: 'tapCount', family: 'tap', icon: '👆', metric: 'totalTaps', target: 1200, mode: 'delta',
+  { id: 'tapCount', family: 'tap', icon: '👆', metric: 'totalTaps', target: 600, mode: 'delta',
     label: (t) => `Tape ${t.toLocaleString('fr-FR')} fois` },
-  { id: 'tapCountLong', family: 'tap', icon: '👆', metric: 'totalTaps', target: 4000, mode: 'delta',
+  { id: 'tapCountLong', family: 'tap', icon: '👆', metric: 'totalTaps', target: 2000, mode: 'delta',
     label: (t) => `Tape ${t.toLocaleString('fr-FR')} fois` },
   // `threeStarLevel` : se règle avec les combats DÉJÀ faits pour les
   // défis de niveau d'Aventure — de la variété sans une énergie de plus.
