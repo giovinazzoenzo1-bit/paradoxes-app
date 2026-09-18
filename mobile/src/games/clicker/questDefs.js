@@ -1,3 +1,21 @@
+// ⚠️⚠️ VERSION DES DÉFINITIONS DE DÉFIS — à INCRÉMENTER à chaque fois
+// qu'une cible, un libellé ou une famille change ici.
+//
+// Les défis sont VERROUILLÉS au tirage : leur cible est figée au moment
+// où l'œuf les distribue, et persistée. C'est voulu (sans ça la cible
+// suivrait le porte-monnaie du joueur et s'éloignerait sans fin). Mais
+// ça veut dire qu'un changement dans ce fichier n'a AUCUN effet sur
+// l'œuf en cours — il faudrait attendre l'œuf suivant pour le voir.
+//
+// Ce numéro règle le problème : au chargement, s'il a changé depuis la
+// dernière sauvegarde, les défis de l'œuf en cours sont RETIRÉS et
+// retirés au sort avec les nouvelles définitions. L'avancement de l'œuf
+// lui-même (cycle, éclosion, créatures, pièces) n'est pas touché.
+//
+// ⚠️ Oublier de l'incrémenter = l'auteur ne voit pas son changement et
+// croit à un bug de publication. C'est arrivé le 17/09.
+export const QUEST_DEFS_VERSION = 2;
+
 // ════════════════════════════════════════════════════════════════
 //  LES DÉFIS — ce fichier ne contient QUE leur définition.
 // ════════════════════════════════════════════════════════════════

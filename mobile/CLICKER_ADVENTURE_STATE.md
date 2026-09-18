@@ -1015,6 +1015,30 @@ accomplis.
 | 4 | Recalculer le barème des seuils d'Ascension | ✅ fait |
 | 5 | Réécrire les 30 défis par groupe d'Ascension | à faire |
 
+## ⚠️⚠️ `QUEST_DEFS_VERSION` — sinon tes changements de défis sont INVISIBLES
+
+Signalé par l'auteur : « je ne vois pas le changement des défis ». Ce
+n'était pas un bug de publication.
+
+**Les défis sont VERROUILLÉS au tirage.** Leur cible est figée au moment
+où l'œuf les distribue, puis persistée (`questTargets`,
+`activeQuestIds`, `latchedQuestIds`). C'est VOULU — sans ça la cible
+suivrait le porte-monnaie du joueur et s'éloignerait sans fin. Mais ça
+veut dire qu'un changement dans `questDefs.js` n'a **aucun effet sur
+l'œuf en cours**.
+
+`QUEST_DEFS_VERSION` en tête de `questDefs.js` règle le problème : au
+chargement, si le numéro a changé depuis la sauvegarde, les défis de
+l'œuf en cours sont jetés et retirés au sort avec les nouvelles
+définitions. Le reste (cycle, éclosion, créatures, pièces, Ascensions)
+n'est pas touché.
+
+⚠️ **L'INCRÉMENTER À CHAQUE CHANGEMENT** de cible, de libellé ou de
+famille dans `questDefs.js`. L'oublier = l'auteur ne voit pas son
+changement et croit à un bug de publication.
+
+---
+
 ## Nouveaux défis ajoutés le 17/09
 
 | Défi | Métrique | Où |

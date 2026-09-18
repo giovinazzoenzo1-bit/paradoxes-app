@@ -102,6 +102,7 @@ import {
   questFeasible,
   metricScopedToCycle,
   freezeMissingTargets,
+  QUEST_DEFS_VERSION,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -947,7 +948,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           const savedSeqIndex = saved.sequenceIndex || 0;
           setSequenceIndex(savedSeqIndex);
           // Un défi valide est soit dans la séquence, soit dans le pool.
-          const savedQuests = (saved.activeQuestIds || []).filter((id) => !!findQuest(id));
+          // ⚠️ Les définitions de défis ont-elles changé depuis la
+          // dernière session ? Les cibles sont FIGÉES au tirage, donc
+          // sans ce test un nouveau réglage n'apparaîtrait qu'à l'œuf
+          // suivant — et on croirait à un bug de publication.
+          //
+          // Si oui : on jette les défis de l'œuf en cours pour qu'ils
+          // soient retirés au sort avec les nouvelles définitions. Le
+          // reste de la partie (cycle, éclosion, créatures, pièces,
+          // Ascensions) n'est pas touché.
+          const defsChangees = (saved.questDefsVersion || 0) !== QUEST_DEFS_VERSION;
+          const savedQuests = defsChangees
+            ? []
+            : (saved.activeQuestIds || []).filter((id) => !!findQuest(id));
           // La séquence impose un nombre de défis par cycle (4 ou 5) ;
           // le pool dynamique en donne toujours 4. On compare donc à la
           // taille attendue du cycle courant, pas à une constante.
@@ -1034,8 +1047,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           if (runeUsed) setFreeRuneUsed(true);
           // La clé dédiée fait AUTORITÉ : elle est écrite sans délai,
           // donc toujours au moins aussi à jour que la sauvegarde.
-          const verrouRaw = await AsyncStorage.getItem(LATCHED_QUESTS_KEY);
-          let verrou = saved.latchedQuestIds || [];
+          const verrouRaw = defsChangees ? null : await AsyncStorage.getItem(LATCHED_QUESTS_KEY);
+          let verrou = defsChangees ? [] : (saved.latchedQuestIds || []);
+          if (defsChangees) AsyncStorage.removeItem(LATCHED_QUESTS_KEY).catch(() => {});
           try {
             const propre = verrouRaw ? JSON.parse(verrouRaw) : null;
             if (Array.isArray(propre)) verrou = [...new Set([...verrou, ...propre])];
@@ -1170,6 +1184,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     maxTranseHoldSec: maxTranseHoldSecRef.current,
     activeQuestIds: activeQuestIdsRef.current,
     questTargets: questTargetsRef.current,
+    // Sert au redraw automatique quand `questDefs.js` change.
+    questDefsVersion: QUEST_DEFS_VERSION,
     questBaseline: questBaselineRef.current,
     questBaselines: questBaselinesRef.current,
     devCompletedIds: devCompletedIdsRef.current,

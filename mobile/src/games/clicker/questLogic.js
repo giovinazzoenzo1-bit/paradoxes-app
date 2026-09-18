@@ -8,12 +8,12 @@
 // clickerLogic, donc pas de cycle d'imports.
 // Moteur des défis : cibles, progression, validation, tirage.
 // Les DÉFINITIONS vivent dans `questDefs.js`.
-import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL } from './questDefs';
+import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION } from './questDefs';
 import { fmtQ, qtyQ, roundQuestTarget, describeAdventureLevel } from './questFormat';
 import { questBudget, estimatedIncomePerSecond, ascensionCoinMultiplier, ASCENSION_COIN_TARGET_RATE } from './questBudget';
 
 // Ré-exportés pour que les écrans continuent d'importer depuis ici.
-export { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL };
+export { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION };
 export { fmtQ, qtyQ, describeAdventureLevel, roundQuestTarget };
 export { questBudget, estimatedIncomePerSecond, ascensionCoinMultiplier, ASCENSION_COIN_TARGET_RATE };
 
