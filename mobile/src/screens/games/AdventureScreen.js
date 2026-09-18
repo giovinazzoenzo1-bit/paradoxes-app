@@ -246,7 +246,11 @@ async function scheduleEnergyFullNotification(msFromNow) {
 // Sauvegarde séparée de celle du clicker classique — la progression
 // d'Aventure grossira avec le temps (niveaux, ressource Griffes...), pas
 // la peine d'alourdir davantage la sauvegarde déjà volumineuse du clicker.
-const ADVENTURE_STORAGE_KEY = 'adventure:state:v1';
+// ⚠️ v2 : remise à zéro conjointe de celle du Clicker (voir
+// `STORAGE_KEY` dans ClickerScreen.js). Garder l'Aventure en v1 pendant
+// que le Clicker repart de zéro donnerait un joueur au chapitre 5 avec
+// zéro pièce — ses défis d'Aventure naîtraient tous déjà accomplis.
+const ADVENTURE_STORAGE_KEY = 'adventure:state:v2';
 // Drapeau dev "Ajouter des Griffes" (posé depuis Options) — même schéma
 // de sécurité que DEV_UNLOCK_ALL_KEY dans ClickerScreen.js : jamais
 // d'écriture directe dans la sauvegarde depuis un autre écran, juste un

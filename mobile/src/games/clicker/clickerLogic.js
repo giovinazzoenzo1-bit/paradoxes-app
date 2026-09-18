@@ -900,17 +900,42 @@ export function coreUpgradeRequirement(id) {
 // production du joueur ne fait que TRIPLER sur la même période — d'où
 // l'impression de ne pas avancer. Monter le Gantelet au niveau 5
 // demandait 159 minutes de production ; désormais 28.
+// ⚠️⚠️ LES COÛTS CI-DESSOUS SONT CALÉS SUR L'ÉCHELLE DES AUTO-CLICS.
+// Ne pas les retoucher à la main sans refaire la mesure.
+//
+// Mesure du 17/09 — « coût pour gagner +1 pièce/seconde », la seule
+// comparaison qui ne dépend d'aucune hypothèse de jeu : les 10 paliers
+// de tap occupaient les 10 PREMIÈRES places de toute la boutique. Le
+// pire palier de tap (789) restait 3x plus rentable que le meilleur
+// auto-clic (2 275), et 575x plus rentable que l'auto-clic de même rang.
+//
+// Cause : le coût par pièce/s des paliers de tap était quasiment PLAT
+// (225 -> 495, il DESCENDAIT même en fin de liste) alors que celui des
+// auto-clics monte de x1,71 par rang. Conséquence mesurée : sur 6
+// Ascensions le joueur n'achetait que 2 générateurs sur 15 — tout le
+// reste de la boutique était mort, et la difficulté ne montait plus
+// (80/83/86/84/79/74 min par Ascension : elle DESCENDAIT).
+//
+// Correction : coût = 2275 x 1,71^rang x K x bonus x 4 / UPGRADE_COST_MULT,
+// avec K = 0,3. K est le rapport de rentabilité voulu face à l'auto-clic
+// de même rang : à 0,3 un palier de tap reste 3x meilleur, donc le jeu
+// ACTIF garde son avantage sans écraser le passif.
+//
+// Après correction : 105/114/132/149/174/206 min par Ascension (+9%,
+// +16%, +13%, +17%, +18%) et 5 générateurs sur 15 au lieu de 2.
+// Le `bonus` de chaque palier n'a PAS bougé : la sensation de puissance
+// est intacte, seul le prix change.
 export const TAP_UPGRADES = [
-  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 900, growth: 1.45 },
-  { id: 'tap2', name: 'Gantelet Runique', emoji: '🪄', bonus: 2.5, cost: 4050, growth: 1.45 },
-  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 6, cost: 18225, growth: 1.45 },
-  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 26, cost: 82012, growth: 1.45 },
-  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 122.5, cost: 369056, growth: 1.45 },
-  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 577, cost: 1660753, growth: 1.45 },
-  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 2727.5, cost: 7473389, growth: 1.45 },
-  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 13793, cost: 33630251, growth: 1.45 },
-  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 68852.5, cost: 151336129, growth: 1.45 },
-  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 343750, cost: 681012578, growth: 1.45 },
+  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1950, growth: 1.45 },
+  { id: 'tap2', name: 'Gantelet Runique', emoji: '🪄', bonus: 2.5, cost: 8336, growth: 1.45 },
+  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 6, cost: 34212, growth: 1.45 },
+  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 26, cost: 253511, growth: 1.45 },
+  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 122.5, cost: 2042467, growth: 1.45 },
+  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 577, cost: 16450950, growth: 1.45 },
+  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 2727.5, cost: 132976848, growth: 1.45 },
+  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 13793, cost: 1149916009, growth: 1.45 },
+  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 68852.5, cost: 9815743665, growth: 1.45 },
+  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 343750, cost: 83799670643, growth: 1.45 },
 ];
 
 export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10;

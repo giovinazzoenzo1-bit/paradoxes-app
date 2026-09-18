@@ -203,10 +203,23 @@ const EGG_IMAGES = [
 ];
 import { DeckPicker } from './DeckPicker';
 
-export const STORAGE_KEY = 'clicker:state:v1';
+// ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
+//
+// Tous les coûts, revenus et seuils du jeu changent d'échelle. Une
+// sauvegarde v1 relue telle quelle laisserait le joueur avec un magot
+// devenu dérisoire et un seuil d'Ascension hors de portée — il
+// RECULERAIT sans comprendre. Changer la clé au lieu d'écrire une
+// migration : la partie repart de zéro, la sauvegarde v1 reste sur le
+// disque (donc récupérable) et il n'y a aucun code de conversion à
+// maintenir ni à tester.
+//
+// ⚠️ Toute prochaine refonte qui touche aux échelles doit refaire ce
+// geste, ET sur `adventure:state` en même temps : les deux progressions
+// se répondent (les défis d'œuf lisent le niveau d'Aventure).
+export const STORAGE_KEY = 'clicker:state:v2';
 // Copie de la dernière sauvegarde brute quand un chargement échoue —
 // restaurable depuis Options (voir OptionsScreen.js).
-export const BACKUP_KEY = 'clicker:state:v1:backup';
+export const BACKUP_KEY = 'clicker:state:v2:backup';
 // Drapeau posé par le bouton dev "Débloquer tous les monstres" (Options) :
 // le clicker le lit au chargement et fait la fusion LUI-MÊME dans son
 // état en mémoire, puis l'efface. Options n'écrit plus jamais directement
@@ -254,7 +267,7 @@ const PENDING_OFFERINGS_KEY = 'clicker:pendingOfferings:v1';
 // cette fenêtre, le verrou était perdu au rechargement et le défi
 // revenait — le bug signalé deux fois. Une clé propre, écrite sans
 // délai, supprime cette fenêtre.
-const LATCHED_QUESTS_KEY = 'clicker:latchedQuests:v1';
+const LATCHED_QUESTS_KEY = 'clicker:latchedQuests:v2';
 // Le tirage de rune offert n'est utilisable qu'UNE fois dans la partie.
 const FREE_RUNE_USED_KEY = 'clicker:freeRuneUsed:v1';
 

@@ -992,7 +992,109 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
-# 🔴 À LIRE EN PREMIER — passation de la session du 17/09
+# 🔴 REFONTE D'ÉQUILIBRAGE EN COURS — 17/09, étape 1 sur 5
+
+⚠️ **Remise à zéro assumée.** Les clés de sauvegarde passent en **v2**
+(`clicker:state:v2`, `clicker:latchedQuests:v2`, `adventure:state:v2`).
+Les parties v1 ne sont plus lues — c'est voulu, et c'est plus sûr qu'une
+migration : aucun code de conversion à maintenir, et la sauvegarde v1
+reste sur le disque donc récupérable.
+
+⚠️ Toute refonte future qui change les échelles doit refaire ce geste, et
+sur les DEUX clés à la fois : les défis d'œuf lisent le niveau
+d'Aventure, donc garder l'Aventure en v1 ferait naître ses défis déjà
+accomplis.
+
+## Le plan validé (5 étapes, un push par étape)
+
+| # | Étape | État |
+|---|---|---|
+| 1 | Clés de sauvegarde v2 + recalage des paliers de tap | ✅ fait |
+| 2 | Aplatir Pacte / Sanctuaire / Veilleur (x2,00 -> x1,15) + relever les plafonds | à faire |
+| 3 | Multiplier x20 revenus, coûts, seuils, quotidiens, succès, Griffes | à faire |
+| 4 | Recalculer le barème des seuils d'Ascension | à faire |
+| 5 | Réécrire les 30 défis par groupe d'Ascension | à faire |
+
+## ⚠️⚠️ ÉTAPE 1 — pourquoi la boutique était morte
+
+Mesure faite sur la seule grandeur qui ne dépend d'aucune hypothèse de
+jeu : **le coût pour gagner +1 pièce/seconde.**
+
+Les 10 paliers de tap occupaient les **10 premières places de toute la
+boutique**. Le PIRE palier de tap (789) restait 3x plus rentable que le
+MEILLEUR auto-clic (2 275), et 575x plus rentable que l'auto-clic de
+même rang.
+
+Cause : le coût par pièce/s des paliers de tap était quasiment **PLAT**
+(225 -> 495, il DESCENDAIT même en fin de liste), alors que celui des
+auto-clics monte de x1,71 par rang.
+
+Conséquences mesurées sur 6 Ascensions :
+- **2 générateurs sur 15** achetés. Les 13 autres, morts.
+- La difficulté **DESCENDAIT** : 80/83/86/84/79/74 min par Ascension.
+
+Correction : `coût = 2275 x 1,71^rang x K x bonus x 4 / UPGRADE_COST_MULT`
+avec **K = 0,3** (un palier de tap reste 3x meilleur que l'auto-clic de
+même rang — le jeu ACTIF garde son avantage sans écraser le passif).
+Les `bonus` n'ont PAS bougé : la sensation de puissance est intacte.
+
+Après : **105/114/132/149/174/206 min** (+9% +16% +13% +17% +18%) et
+5 générateurs sur 15. Le classement est maintenant ALTERNÉ — palier de
+tap, auto-clic, palier de tap… — ce qui est le comportement voulu.
+
+## ⚠️ Trois pièges de mesure rencontrés dans cette étape
+
+1. **« Acheter ce qu'on peut se payer »** : l'Esprit Frappeur à 910
+   pièces étant toujours abordable, le joueur simulé en empilait 16 et
+   n'atteignait jamais la Main Spectrale. Faux.
+2. **« Épargner pour le meilleur ratio »** : le joueur met TOUT dans un
+   seul article. Faux aussi, dans l'autre sens.
+3. **Politique retenue** : minimiser `(temps pour se l'offrir) +
+   (temps de remboursement)`. C'est la seule qui arbitre.
+
+⚠️ **Avant de conclure qu'un équilibrage est cassé, vérifier que ce n'est
+pas la politique d'achat du simulateur qui l'est.** J'ai failli faire
+réécrire 15 générateurs sur une mesure fausse.
+
+## ⚠️ Ce qui NE marche pas, et pourquoi (idées écartées, mesurées)
+
+**« Gains x2 et coûts /2 pour avoir de plus gros chiffres »** :
+- divise la durée du jeu par 2 (105 -> 62 min pour la 1re Ascension) ;
+- ne donne **+1 seul niveau de Pacte** (12 -> 13). Même x20 : toujours 13.
+
+Cause : les niveaux sont **LOGARITHMIQUES** en argent. Le coût du Pacte
+DOUBLE par niveau, donc x4 d'argent = +2 niveaux. Pour passer du niveau
+7 au niveau 15 il faudrait x256 — et le jeu durerait 30 secondes.
+
+➡️ Le vrai levier pour de gros niveaux est **d'aplatir la croissance du
+coût par niveau**, pas de multiplier l'argent :
+
+| croissance/niveau | niveaux atteints (même budget) |
+|---|---|
+| x2,00 (Pacte, Sanctuaire, Veilleur) | 9 |
+| x1,45 | 16 |
+| x1,25 (auto-clics) | 24 |
+| x1,15 | **35** |
+| x1,10 | 48 |
+
+➡️ Multiplier revenus + coûts + seuils par le MÊME facteur est en
+revanche gratuit : c'est un changement d'unité, comme passer des euros
+aux centimes. C'est l'étape 3.
+
+## ⚠️ Le mur des générateurs (à connaître avant l'étape 4)
+
+Le dernier générateur (Étoile Filante) coûte **1 546 927 237 800 000**.
+Le seuil de la 6e Ascension vaut 160 000 000. Rapport : **x9 668 295**.
+
+Les 15 générateurs sont tarifés pour un jeu d'environ **19 Ascensions**,
+pas 6. Décision prise : on l'assume. Les 26 œufs se terminent vers la 5e
+Ascension, puis le jeu continue en Ascensions pures — c'est là que les
+générateurs 7 à 15 se débloquent. Ne PAS compresser leur échelle : ils
+perdraient toute sensation de palier.
+
+---
+
+# Passation de la session du 17/09 — correctifs (historique)
 
 ## Le problème ouvert de la session précédente est RÉGLÉ
 
