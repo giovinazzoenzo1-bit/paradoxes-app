@@ -992,6 +992,41 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+# ⚠️ « Failed to download remote update » sur Android
+
+Symptôme du 18/09 : l'iPhone charge la mise à jour, le Samsung affiche
+`java.io.IOException: Failed to download remote update`, parfois précédé
+de `lateinit property launcher has not been initialized`.
+
+**Ce n'est PAS le blocage documenté de `expo-updates`.** Vérifié :
+`runtimeVersion` vaut bien `57.0.0` sans préfixe `exposdk:`,
+`expo-updates` est absent de package.json, et `app.json` n'a pas bougé
+depuis le correctif `24ba5c0` du 3 septembre. Aucun fichier de
+configuration n'a été touché par les commits de cette session.
+
+Le message dit ce qu'il dit : Expo Go n'arrive pas à TÉLÉCHARGER le
+bundle. Il ne l'exécute jamais, donc notre JavaScript est hors de cause.
+
+⚠️ **Le projet embarque 14,5 Mo répartis sur 112 fichiers d'assets.**
+Expo Go les télécharge un par un avant de lancer l'appli : une seule
+requête qui échoue fait échouer toute la mise à jour. C'est pour ça que
+le Wi-Fi passe et la 5G non, et qu'un téléphone marche pendant que
+l'autre échoue sur la même mise à jour.
+
+Ordre des tentatives, du moins coûteux au plus coûteux :
+1. Wi-Fi plutôt que données mobiles, puis recharger ;
+2. Expo Go -> Stockage -> Vider le cache (la partie n'est PAS dedans) ;
+3. republier pour obtenir un nouveau manifeste ;
+4. en dernier, vider les DONNÉES d'Expo Go — ⚠️ ça efface la sauvegarde.
+
+⚠️ Piste de fond, non traitée : les 10 plus gros assets pèsent à eux
+seuls ~4 Mo (panneaux d'interface à 500 Ko pièce). Les compresser
+réduirait d'autant la fenêtre de casse au téléchargement. À faire avant
+la sortie, c'est aussi du temps de démarrage gagné pour tous les
+joueurs.
+
+---
+
 # 🟢 AJOUTER OU RÉGLER UN DÉFI — la marche à suivre
 
 1. Éditer **`mobile/src/games/clicker/questDefs.js`**, et rien d'autre.
