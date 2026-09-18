@@ -55,6 +55,12 @@ export const DAILY_QUEST_POOL = [
   { id: 'fuseRune1', desc: 'Fusionne 2 runes en 1', event: 'runeFused', target: 1, reward: 35 },
   { id: 'summon3', desc: 'Invoque 3 créatures (Élevage)', event: 'summon', target: 3, reward: 30 , diamonds: 1 },
   { id: 'crit10', desc: 'Obtiens 10 coups critiques (Élevage)', event: 'crit', target: 10, reward: 30 , diamonds: 1 },
+  // ⚠️ Compteur de TAPS — le seul défi qui ne dépend d'AUCUNE ressource :
+  // ni énergie, ni Griffes, ni pièces, ni pitié du hasard. Toujours
+  // faisable, quel que soit l'état du joueur. Calibré sur la cadence de
+  // référence (~4 taps/s à la main) : 1 000 taps = ~4 min, 3 000 = ~12.
+  { id: 'tap1000', desc: 'Tape 1 000 fois (Élevage)', event: 'taps', target: 1000, reward: 30 },
+  { id: 'tap3000', desc: 'Tape 3 000 fois (Élevage)', event: 'taps', target: 3000, reward: 60, diamonds: 1 },
   { id: 'earn2000', desc: `Gagne ${fmtPieces(2000 * COIN_SCALE)} pièces (Élevage)`, event: 'coinsEarned', target: 2000 * COIN_SCALE, reward: 30 },
   { id: 'feedCreature1', desc: 'Nourris une créature (Élevage)', event: 'creatureFed', target: 1, reward: 25 },
   // ---- Incubation (07/09) ----
@@ -164,6 +170,8 @@ export function weekKey(date = new Date()) {
 export const WEEKLY_QUEST_POOL = [
   { id: 'w_win80battles', desc: 'Gagne 80 combats en Aventure', event: 'battleWon', target: 80, reward: 700, diamonds: 3 },
   { id: 'w_crit8000',     desc: 'Obtiens 8 000 coups critiques', event: 'crit', target: 8000, reward: 900 },
+  // ~50 min de tap sur la semaine, à répartir comme le joueur veut.
+  { id: 'w_tap30000',     desc: 'Tape 30 000 fois',              event: 'taps', target: 30000, reward: 800, diamonds: 3 },
   { id: 'w_buyRune12',    desc: 'Achète 12 runes',              event: 'runeBought', target: 12, reward: 900 },
   // 4 et non 6 : la fusion exige DEUX runes identiques (même type ET
   // même niveau). Sur ~28 runes tirées au hasard parmi 4 types, on

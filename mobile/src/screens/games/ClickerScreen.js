@@ -1436,6 +1436,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // phase). `handleEggTap` est déclaré plus bas dans le composant :
     // pas de souci de TDZ, cette ligne ne s'exécute qu'au moment d'un
     // vrai appui, bien après l'initialisation.
+    // ⚠️ Compteur de TAPS à vie. Posé APRÈS le gain et l'animation pour
+    // ne rien ralentir sur le chemin critique du tap — à ~6,7 clics/s
+    // c'est le code le plus sollicité de l'appli.
+    //
+    // C'est le seul compteur qui ne dépend d'AUCUNE ressource : ni
+    // énergie, ni Griffes, ni pièces. Il alimente les quotidiens et les
+    // hebdos, et reste lisible par les défis d'œuf via `totalTaps`.
+    trackEvent('taps', 1);
+
     if (eggPhaseRef.current !== 'collecting') handleEggTap();
   };
 
@@ -1959,6 +1968,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // Compteurs À VIE venant de DailyContext. `advLevelReached` est
     // publié par l'Aventure via trackMax : c'est un maximum, pas un
     // cumul, donc rejouer un niveau déjà battu ne le fait pas monter.
+    // ⚠️ AJOUTER TOUTE NOUVELLE MÉTRIQUE AUX DEUX ENDROITS : ici et dans
+    // `buildQuestStatsSnapshot`. Le cliché sert de référence aux défis en
+    // mode `delta` ; une métrique absente du cliché y vaut 0, donc le
+    // défi part d'un total déjà acquis et naît accompli.
+    totalTaps: lifetimeStats.taps || 0,
+    // Suivi par l'Aventure depuis longtemps mais JAMAIS publié : aucun
+    // défi ne pouvait s'en servir. « 3 étoiles sur un niveau » se règle
+    // avec des combats DÉJÀ faits — de la variété sans une énergie de
+    // plus.
+    threeStarLevel: lifetimeStats.threeStarLevel || 0,
     offering: lifetimeStats.offering || 0,
     powerActivated: lifetimeStats.powerActivated || 0,
     ascension: lifetimeStats.ascension || 0,
@@ -2269,6 +2288,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     maxCombo: Math.round(maxComboRef.current * 10),
     maxTranseHoldSec: Math.floor(maxTranseHoldSecRef.current),
     maxEvolutionTier: ownedRef.current.reduce((m, o) => Math.max(m, o.evolutionTier || 0), 0),
+    // ⚠️ AJOUTER TOUTE NOUVELLE MÉTRIQUE AUX DEUX ENDROITS : ici et dans
+    // `buildQuestStatsSnapshot`. Le cliché sert de référence aux défis en
+    // mode `delta` ; une métrique absente du cliché y vaut 0, donc le
+    // défi part d'un total déjà acquis et naît accompli.
+    totalTaps: lifetimeStats.taps || 0,
+    // Suivi par l'Aventure depuis longtemps mais JAMAIS publié : aucun
+    // défi ne pouvait s'en servir. « 3 étoiles sur un niveau » se règle
+    // avec des combats DÉJÀ faits — de la variété sans une énergie de
+    // plus.
+    threeStarLevel: lifetimeStats.threeStarLevel || 0,
     offering: lifetimeStats.offering || 0,
     powerActivated: lifetimeStats.powerActivated || 0,
     ascension: lifetimeStats.ascension || 0,

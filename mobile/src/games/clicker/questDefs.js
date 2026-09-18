@@ -297,6 +297,29 @@ export const QUEST_POOL = [
     label: (t) => `Atteins ${qtyQ(t, 'pièces')} par seconde` },
 
   // ---------- Mécaniques historiques ----------
+  // ⚠️ Deux familles ajoutées le 17/09.
+  //
+  // `totalTaps` : le seul défi qui ne dépend d'AUCUNE ressource. Aucun
+  // risque de blocage, aucune précondition — il est toujours faisable.
+  // Cible dérivée de la cadence de référence, jamais écrite en dur.
+  { id: 'tapCount', family: 'tap', icon: '👆', metric: 'totalTaps', target: 1200, mode: 'delta',
+    label: (t) => `Tape ${t.toLocaleString('fr-FR')} fois` },
+  { id: 'tapCountLong', family: 'tap', icon: '👆', metric: 'totalTaps', target: 4000, mode: 'delta',
+    label: (t) => `Tape ${t.toLocaleString('fr-FR')} fois` },
+  // `threeStarLevel` : se règle avec les combats DÉJÀ faits pour les
+  // défis de niveau d'Aventure — de la variété sans une énergie de plus.
+  // ⚠️ Exige un deck : la précondition d'Aventure s'applique.
+  // ⚠️ Libellé SANS le nombre « 3 ». Première écriture : « Obtiens 3
+  // étoiles sur un niveau » — `auditLibelles()` l'a signalé à raison, le
+  // 3 désigne les étoiles et la cible vaut 1 NIVEAU. Deux nombres
+  // différents dans la même phrase, c'est exactement ce que le contrôle
+  // doit refuser, et c'est ainsi qu'un joueur lit une cible fausse.
+  // `available` : sans deck, l'Aventure est injouable et l'œuf bloque.
+  { id: 'advThreeStar', family: 'adventure', icon: '🌟', metric: 'threeStarLevel', target: 1, mode: 'delta',
+    available: (s) => (s.deckCount || 0) > 0,
+    label: (t) => (t > 1
+      ? `Décroche toutes les étoiles sur ${t} niveaux d'Aventure`
+      : "Décroche toutes les étoiles sur un niveau d'Aventure") },
   { id: 'pacteMid', family: 'core', icon: '🔗', metric: 'tapPower', effortMin: 20, mode: 'absolute',
     label: (t) => `Fais monter Pacte au niveau ${t}` },
   { id: 'pacteLong', family: 'core', icon: '🔗', metric: 'tapPower', effortMin: 50, mode: 'absolute',

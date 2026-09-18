@@ -1015,6 +1015,51 @@ accomplis.
 | 4 | Recalculer le barème des seuils d'Ascension | ✅ fait |
 | 5 | Réécrire les 30 défis par groupe d'Ascension | à faire |
 
+## Nouveaux défis ajoutés le 17/09
+
+| Défi | Métrique | Où |
+|---|---|---|
+| 👆 Tape N fois | `totalTaps` (NOUVEAU) | œuf + quotidien + hebdo |
+| 🌟 Décroche toutes les étoiles sur un niveau | `threeStarLevel` | œuf |
+
+**`totalTaps`** : compteur à vie posé dans `handleTap`, APRÈS le gain et
+l'animation pour ne rien ralentir sur le chemin critique. C'est le seul
+défi qui ne dépend d'**aucune ressource** — ni énergie, ni Griffes, ni
+pièces, ni hasard. Toujours faisable, quel que soit l'état du joueur.
+À ~4 taps/s : 1 000 taps = 4 min, 3 000 = 13 min, 30 000 = 2 h.
+
+**`threeStarLevel`** : suivi par l'Aventure depuis longtemps mais jamais
+publié aux défis d'œuf. Se règle avec les combats DÉJÀ faits pour les
+défis de niveau — de la variété sans une énergie de plus.
+
+### ⚠️ Idées ÉCARTÉES, et pourquoi
+
+- **« Possède N créatures » / « Place N créatures dans ton deck »** :
+  les œufs ne viennent QUE des défis, donc le nombre de créatures est
+  entièrement déterminé par l'avancement. Le défi est soit déjà accompli
+  à sa naissance, soit inatteignable. Remarque de l'auteur, et elle est
+  juste — cette famille ne peut pas exister ici.
+- **« Cumule N étoiles en Aventure »** : écarté par l'auteur.
+
+### ⚠️ Deux pièges rencontrés en les ajoutant
+
+1. **Une métrique doit être publiée à DEUX endroits** : `questStats` ET
+   `buildQuestStatsSnapshot`. Le cliché sert de référence aux défis en
+   mode `delta` ; une métrique absente y vaut 0, donc le défi part d'un
+   total déjà acquis et **naît accompli**. Un commentaire le rappelle
+   désormais dans les deux objets.
+2. **Le libellé « Obtiens 3 étoiles sur un niveau » a été refusé par
+   `auditLibelles()`, à raison** : le 3 désigne les étoiles, la cible
+   vaut 1 NIVEAU. Deux nombres différents dans la même phrase, c'est
+   exactement comme ça qu'un joueur lit une cible fausse. Reformulé sans
+   nombre : « Décroche toutes les étoiles sur un niveau d'Aventure ».
+
+### 🟨 Encore libre, non utilisé par aucun défi
+
+`critDamageLevel` — seule des 5 améliorations de base sans défi.
+
+---
+
 ## ⚠️⚠️ ÉTAPE 4 — barème des Ascensions, mesuré valeur par valeur
 
 `ASCENSION_THRESHOLDS` dans `clickerLogic.js` : **14 valeurs écrites en
