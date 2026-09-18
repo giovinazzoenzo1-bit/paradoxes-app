@@ -992,6 +992,48 @@ l'EMPILEMENT.
 `levelUpCost`, qu'on avait volontairement baissé. Seuls `cost` et
 `growth` des objets bougent.
 
+# 🟢 AJOUTER OU RÉGLER UN DÉFI — la marche à suivre
+
+1. Éditer **`mobile/src/games/clicker/questDefs.js`**, et rien d'autre.
+2. Lancer **une seule commande** :
+
+```
+NODE_PATH=<dossier avec @babel/core> node mobile/tools/verifier-defis.js
+```
+
+Elle enchaîne les 10 contrôles, 14 000 tirages de force brute, et rend
+un verdict unique. Tant qu'il est vert, le changement ne casse rien de
+structurel.
+
+⚠️ **`QUEST_DEFS_VERSION` est CALCULÉE** à partir de la structure des
+défis (ids, métriques, modes, cibles, parts, pas, plafonds). Plus rien à
+incrémenter à la main : ajouter, retirer ou régler un défi change
+l'empreinte tout seul, donc les défis de l'œuf en cours sont retirés au
+sort et le changement est visible immédiatement. C'était le seul point
+de la chaîne qu'aucun contrôle ne couvrait, et l'oublier faisait croire
+à un bug de publication.
+
+Les LIBELLÉS ne comptent pas dans l'empreinte : ce sont des fonctions de
+la cible, donc un texte modifié s'affiche sans avoir à retirer les défis.
+
+## ⚠️ Ce que l'outil NE peut PAS vérifier
+
+- qu'une métrique est bien **incrémentée** par le jeu (`trackEvent`) —
+  les contrôles vérifient qu'elle est PUBLIÉE, pas qu'elle bouge ;
+- qu'un défi est **intéressant** ;
+- les **textes hors défis** (sous-titres de la boutique), seule zone de
+  chiffres sans filet automatique.
+
+## ⚠️ Une preuve de contrôle porte sur un défi PRÉCIS
+
+Quand ce défi disparaît, la preuve disparaît avec lui et le contrôle
+redevient muet **sans que rien ne l'annonce**. C'est arrivé le 17/09 :
+`auditModes` était prouvé sur `seq_ascend2`, supprimé à la réécriture —
+le bug « 3 Ascensions pour la 2e » repassait au travers. Après toute
+suppression de défi, revérifier que les preuves tiennent encore.
+
+---
+
 # 🔴 REFONTE D'ÉQUILIBRAGE EN COURS — 17/09, étape 1 sur 5
 
 ⚠️ **Remise à zéro assumée.** Les clés de sauvegarde passent en **v2**

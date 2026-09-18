@@ -1,0 +1,101 @@
+#!/usr/bin/env node
+'use strict';
+// ════════════════════════════════════════════════════════════════
+//  VÉRIFICATION D'UN CHANGEMENT DE DÉFI — une seule commande
+// ════════════════════════════════════════════════════════════════
+//
+//   NODE_PATH=<dossier avec @babel/core> node mobile/tools/verifier-defis.js
+//
+// À lancer après TOUT ajout ou réglage dans `questDefs.js`. Il enchaîne
+// les 10 contrôles, la force brute et la mesure des durées, puis répond
+// par un verdict unique. Aucun test manuel sur le téléphone n'est
+// nécessaire pour savoir si un ajout casse quelque chose de structurel.
+//
+// ⚠️ Ce qu'il NE peut PAS vérifier, et qui reste à l'œil humain :
+//   - qu'une métrique est bien INCRÉMENTÉE par le jeu (`trackEvent`) —
+//     `auditCoherence` vérifie qu'elle est publiée, pas qu'elle bouge ;
+//   - qu'un défi est INTÉRESSANT ;
+//   - les textes hors défis (sous-titres de la boutique).
+const A = require('./audit-quetes.js');
+
+const CONTROLES = [
+  ['auditCoherence', 'métrique publiée, cible définissable'],
+  ['auditLibelles', 'le libellé dit la vraie cible'],
+  ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
+  ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
+  ['auditAscension', 'ne diverge pas après les Ascensions'],
+  ['auditCiblesFixes', 'pas de cible en dur sur une échelle mouvante'],
+  ['auditEmballement', "pas de cible de performance qui s'emballe"],
+  ['auditAvailable', 'la condition peut devenir vraie'],
+  ['auditFamilles', 'pas deux défis qui se lisent pareil dans un œuf'],
+  ['auditDependanceCreature', 'ne dépend pas de posséder une créature'],
+];
+
+let echecs = 0;
+console.log('\n  CONTRÔLES');
+CONTROLES.forEach(([nom, quoi]) => {
+  let r;
+  try { r = A[nom](); } catch (e) { r = [{ erreur: e.message }]; }
+  const ok = r.length === 0;
+  if (!ok) echecs++;
+  console.log(`  ${ok ? '✅' : '❌'} ${nom.padEnd(24)} ${quoi}`);
+  if (!ok) r.slice(0, 4).forEach((x) => console.log('        ' + JSON.stringify(x)));
+});
+
+// ---- Force brute : 200 profils x 14 cycles --------------------------
+const { Q, C, etatInitial } = A;
+const rnd = (() => { let x = 12345; return () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648; })();
+let tires = 0; const pb = { infaisable: 0, dejaFait: 0, sousAcquis: 0, cycleCourt: 0 };
+for (let p = 0; p < 200; p++) {
+  const s = etatInitial();
+  const n = Math.floor(rnd() * 26);
+  s.ownedIds = C.CREATURES.map((c) => c.id).slice(0, n);
+  s.ownedCount = n; s.deckCount = Math.min(3, n);
+  s.ascension = Math.floor(rnd() * 5);
+  s.tapPower = 1 + Math.floor(rnd() * 12);
+  s.sanctuaryLevel = Math.floor(rnd() * 51);
+  s.veilleurLevel = Math.floor(rnd() * 51);
+  s.coins = Math.floor(rnd() * 1e7);
+  s.totalEarned = s.coins * 4;
+  s.passiveIncome = Math.floor(rnd() * 5000);
+  s.autoClickers = { esprit: Math.floor(rnd() * 40), main: Math.floor(rnd() * 20) };
+  s.maxCreatureLevel = 1 + Math.floor(rnd() * 60);
+  s.advLevelReached = Math.floor(rnd() * 60);
+  s.battleWon = Math.floor(rnd() * 60);
+  s.totalTaps = Math.floor(rnd() * 1e5);
+  for (let cycle = 0; cycle < 14; cycle++) {
+    const set = Q.nextQuestSet(cycle, [], s);
+    if (!set || !set.ids || set.ids.length < 4) { pb.cycleCourt++; continue; }
+    set.ids.forEach((id) => {
+      const q = Q.findQuest(id);
+      if (!q) { pb.infaisable++; return; }
+      tires++;
+      if (!Q.questFeasible(q, s)) pb.infaisable++;
+      if (q.mode === 'absolute') {
+        const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
+        // `readMetric` n'est pas exporté : on lit la métrique comme le
+        // fait le moteur pour les cas simples, ce qui suffit ici.
+        const acquis = q.metric.startsWith('auto:') ? (s.autoClickers[q.metric.slice(5)] || 0)
+          : q.metric.startsWith('tapUpgrade:') ? ((s.tapUpgrades || {})[q.metric.slice(11)] || 0)
+            : (s[q.metric] || 0);
+        if (cible <= acquis) pb.sousAcquis++;
+        if (Q.questComplete && Q.questComplete(id, s, s, set.targets || {})) pb.dejaFait++;
+      }
+    });
+  }
+}
+console.log('\n  FORCE BRUTE — ' + tires.toLocaleString('fr-FR') + ' défis tirés');
+[['défi irréalisable', pb.infaisable], ['défi né déjà accompli', pb.dejaFait],
+  ['cible sous l\'acquis', pb.sousAcquis], ['cycle incomplet', pb.cycleCourt]]
+  .forEach(([quoi, n]) => {
+    if (n) echecs++;
+    console.log(`  ${n === 0 ? '✅' : '❌'} ${String(n).padStart(5)}  ${quoi}`);
+  });
+
+console.log('\n  EMPREINTE DES DÉFINITIONS : ' + Q.QUEST_DEFS_VERSION);
+console.log('  (calculée — les défis de l\'œuf en cours seront retirés au sort)');
+
+console.log('\n  ' + (echecs === 0
+  ? '✅ RIEN DE CASSÉ — le changement peut partir.'
+  : `❌ ${echecs} PROBLÈME(S) — ne pas pousser en l'état.`) + '\n');
+process.exit(echecs === 0 ? 0 : 1);

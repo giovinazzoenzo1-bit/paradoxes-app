@@ -1,20 +1,8 @@
-// ⚠️⚠️ VERSION DES DÉFINITIONS DE DÉFIS — à INCRÉMENTER à chaque fois
-// qu'une cible, un libellé ou une famille change ici.
-//
-// Les défis sont VERROUILLÉS au tirage : leur cible est figée au moment
-// où l'œuf les distribue, et persistée. C'est voulu (sans ça la cible
-// suivrait le porte-monnaie du joueur et s'éloignerait sans fin). Mais
-// ça veut dire qu'un changement dans ce fichier n'a AUCUN effet sur
-// l'œuf en cours — il faudrait attendre l'œuf suivant pour le voir.
-//
-// Ce numéro règle le problème : au chargement, s'il a changé depuis la
-// dernière sauvegarde, les défis de l'œuf en cours sont RETIRÉS et
-// retirés au sort avec les nouvelles définitions. L'avancement de l'œuf
-// lui-même (cycle, éclosion, créatures, pièces) n'est pas touché.
-//
-// ⚠️ Oublier de l'incrémenter = l'auteur ne voit pas son changement et
-// croit à un bug de publication. C'est arrivé le 17/09.
-export const QUEST_DEFS_VERSION = 10;
+// ⚠️ `QUEST_DEFS_VERSION` est déclarée EN FIN DE FICHIER : elle se
+// calcule à partir de QUEST_SEQUENCE et QUEST_POOL, qui doivent donc
+// être évalués avant. La placer ici lève « Cannot access before
+// initialization » au démarrage de l'appli.
+
 
 // ════════════════════════════════════════════════════════════════
 //  LES DÉFIS — ce fichier ne contient QUE leur définition.
@@ -395,3 +383,48 @@ export const QUEST_POOL = [
     available: (s) => (s.deckCount || 0) >= 1 && (s.runeBought || 0) >= 1,
     label: (t) => `Équipe ${t} runes sur tes créatures (Aventure)` },
 ];
+
+// ⚠️⚠️ VERSION DES DÉFINITIONS — CALCULÉE, plus jamais à la main.
+//
+// Les défis sont VERROUILLÉS au tirage : leur cible est figée quand
+// l'œuf les distribue, puis persistée. C'est voulu — sans ça la cible
+// suivrait le porte-monnaie du joueur et s'éloignerait sans fin. Mais ça
+// veut dire qu'un changement ici n'a AUCUN effet sur l'œuf en cours.
+//
+// Ce numéro le règle : au chargement, s'il diffère de celui de la
+// sauvegarde, les défis de l'œuf en cours sont retirés au sort avec les
+// nouvelles définitions (le reste de la partie n'est pas touché).
+//
+// ⚠️ Il était écrit à la main, et c'était le SEUL point de la chaîne
+// qu'aucun contrôle ne couvrait : l'oublier en ajoutant un défi, et
+// l'auteur ne voit pas son changement — il croit à un bug de
+// publication. C'est arrivé le 17/09.
+//
+// Il se calcule maintenant à partir de la STRUCTURE des défis : ids,
+// métriques, modes, cibles, parts, pas et plafonds. Ajouter, retirer ou
+// régler un défi change le numéro tout seul.
+//
+// Les LIBELLÉS ne sont volontairement pas dans le calcul : ils sont des
+// fonctions de la cible, donc un texte modifié s'affiche correctement
+// sans qu'il faille retirer les défis au sort.
+function empreinteDefis() {
+  const morceaux = [];
+  const decrire = (q) => morceaux.push([
+    q.id, q.metric, q.mode,
+    q.target == null ? '' : q.target,
+    q.partAsc == null ? '' : q.partAsc,
+    q.effortMin == null ? '' : q.effortMin,
+    q.step == null ? '' : q.step,
+    q.cap == null ? '' : q.cap,
+  ].join('|'));
+  QUEST_SEQUENCE.forEach((cycle) => cycle.forEach(decrire));
+  QUEST_POOL.forEach(decrire);
+  const texte = morceaux.join(';');
+  // Hachage simple et stable (djb2). Pas de dépendance, même résultat
+  // sur tous les téléphones.
+  let h = 5381;
+  for (let i = 0; i < texte.length; i++) h = ((h * 33) ^ texte.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+export const QUEST_DEFS_VERSION = empreinteDefis();
