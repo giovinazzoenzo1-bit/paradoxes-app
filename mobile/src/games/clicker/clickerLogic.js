@@ -1254,17 +1254,62 @@ export function normalizeUpgradeLevels(levels) {
 // complément au cycle 5 : le défi demande un dernier effort au lieu
 // d'être acquis d'avance. La 2e Ascension, au double, tombe au cycle 8,
 // avant son propre défi du cycle 10.
-// ⚠️ 500 000 était le seuil AVANT le changement d'unité. Il est conservé
-// tel quel et multiplié par COIN_SCALE : la 1re Ascension demande donc
-// 10 000 000 de pièces, qui valent exactement les 500 000 d'avant.
-// Écrire directement 10000000 ferait perdre ce lien.
-export const ASCENSION_FIRST_THRESHOLD = 500000 * COIN_SCALE;
+// ⚠️⚠️ BARÈME DES ASCENSIONS — chaque valeur est MESURÉE, pas devinée.
+//
+// Ancienne règle : `500 000 x 2^n`. Mesuré, elle ne produisait AUCUNE
+// progression de difficulté — les Ascensions duraient 101, 111, 115,
+// 116, 114 puis 112 min : elle DESCENDAIT. Cause : le x1,30 de
+// production par Ascension compose, et un pas fixe ne peut pas tenir
+// face à lui. Il faut un pas CROISSANT.
+//
+// Chaque seuil ci-dessous a été trouvé par recherche dichotomique sur
+// une simulation de l'économie réelle, pour viser une durée +15 % plus
+// longue que l'Ascension précédente. Durées mesurées, en minutes :
+//
+//   111 · 127 · 147 · 170 · 193 · 221 · 257 · 293 · 337 · 387 · 447
+//   · 511 · 592 · 673
+//
+// ⚠️ Écrits EN DUR à dessein : une valeur calculée à l'exécution pourrait
+// bouger d'une session à l'autre. Ici le joueur voit toujours le même
+// objectif. En contrepartie, TOUT changement d'équilibrage (coût d'une
+// amélioration, revenu d'un générateur, multiplicateur d'Ascension)
+// périme cette table : relancer la mesure et la réécrire.
+//
+// ⚠️ La 1re reste à 500 000 : c'est elle qui cale toute la suite, et sa
+// durée (1 h 51) est le point de référence de la rampe.
+//
+// Le barème s'arrête à la 14e parce que c'est là que le DERNIER
+// générateur (Étoile Filante) devient accessible. Au-delà, on prolonge
+// au rapport asymptotique mesuré (~x8).
+export const ASCENSION_THRESHOLDS = [
+  500000,              // 1re  — 111 min
+  1300000,             // 2e   — 127 min · débloque la Colonie de Familiers
+  3200000,             // 3e   — 147 min
+  11000000,            // 4e   — 170 min · Titan Mécanique
+  41000000,            // 5e   — 193 min
+  200000000,           // 6e   — 221 min · Golem de Cristal
+  1500000000,          // 7e   — 257 min · Dragon Miniature
+  13000000000,         // 8e   — 293 min · Phénix Renaissant
+  150000000000,        // 9e   — 337 min · Léviathan des Abysses
+  2000000000000,       // 10e  — 387 min · Titan de Foudre
+  21000000000000,      // 11e  — 447 min · Colosse de Pierre
+  170000000000000,     // 12e  — 511 min · Oracle Ancien
+  1400000000000000,    // 13e  — 592 min · Seigneur des Ombres
+  10000000000000000,   // 14e  — 673 min · Étoile Filante
+];
+
+// Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.
+export const ASCENSION_THRESHOLD_TAIL_RATIO = 8;
+
+export const ASCENSION_FIRST_THRESHOLD = ASCENSION_THRESHOLDS[0];
+
 export function ascensionThreshold(ascensionCount) {
-  const n = Number.isFinite(ascensionCount) ? Math.max(0, ascensionCount) : 0;
-  return ASCENSION_FIRST_THRESHOLD * Math.pow(2, n);
+  const n = Number.isFinite(ascensionCount) ? Math.max(0, Math.floor(ascensionCount)) : 0;
+  if (n < ASCENSION_THRESHOLDS.length) return ASCENSION_THRESHOLDS[n];
+  const dernier = ASCENSION_THRESHOLDS[ASCENSION_THRESHOLDS.length - 1];
+  return dernier * Math.pow(ASCENSION_THRESHOLD_TAIL_RATIO, n - ASCENSION_THRESHOLDS.length + 1);
 }
 
-// Conservé pour compatibilité d'affichage : c'est le seuil de la 1re.
 export const ASCENSION_MIN_LIFETIME_EARNED = ASCENSION_FIRST_THRESHOLD;
 
 export function ascensionEssenceGain(totalCoinsEarnedLifetime, ascensionCount = 0) {

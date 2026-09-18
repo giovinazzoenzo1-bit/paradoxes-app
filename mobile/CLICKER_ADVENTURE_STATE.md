@@ -1012,8 +1012,75 @@ accomplis.
 | 1 | Clés de sauvegarde v2 + recalage des paliers de tap | ✅ fait |
 | 2 | Aplatir Pacte / Sanctuaire / Veilleur + relever les plafonds | ✅ fait |
 | 3 | Multiplier x20 revenus, coûts, seuils, quotidiens, succès, Griffes | ✅ fait |
-| 4 | Recalculer le barème des seuils d'Ascension | à faire |
+| 4 | Recalculer le barème des seuils d'Ascension | ✅ fait |
 | 5 | Réécrire les 30 défis par groupe d'Ascension | à faire |
+
+## ⚠️⚠️ ÉTAPE 4 — barème des Ascensions, mesuré valeur par valeur
+
+`ASCENSION_THRESHOLDS` dans `clickerLogic.js` : **14 valeurs écrites en
+dur**, chacune trouvée par recherche dichotomique sur une simulation de
+l'économie réelle.
+
+### Pourquoi l'ancienne règle ne pouvait pas marcher
+
+`500 000 x 2^n`. Mesuré : les Ascensions duraient 101, 111, 115, 116,
+114 puis 112 min — **la difficulté DESCENDAIT**. Cause : le x1,30 de
+production par Ascension compose, et un pas FIXE ne peut pas tenir face
+à lui, quel que soit le pas. Même à x3 la courbe s'aplatit dès la 4e.
+
+⚠️ Vérifié que ce n'est pas le nombre de créatures : à créatures figées
+la courbe est identique.
+
+### Le barème retenu — rampe +15 % par Ascension
+
+| Asc | Seuil | Durée mesurée | Débloque |
+|---|---|---|---|
+| 1 | 500 000 | 111 min | |
+| 2 | 1 300 000 | 127 min | Colonie de Familiers |
+| 3 | 3 200 000 | 147 min | |
+| 4 | 11 000 000 | 170 min | Titan Mécanique |
+| 5 | 41 000 000 | 193 min | |
+| 6 | 200 000 000 | 221 min | Golem de Cristal |
+| 7 | 1,5 Md | 257 min | Dragon Miniature |
+| 8 | 13 Md | 293 min | Phénix Renaissant |
+| 9 | 150 Md | 337 min | Léviathan des Abysses |
+| 10 | 2 T | 387 min | Titan de Foudre |
+| 11 | 21 T | 447 min | Colosse de Pierre |
+| 12 | 170 T | 511 min | Oracle Ancien |
+| 13 | 1,4 Qa | 592 min | Seigneur des Ombres |
+| 14 | 10 Qa | 673 min | **Étoile Filante** |
+
+La table s'arrête à la 14e parce que c'est là que le DERNIER générateur
+devient accessible. Au-delà : `ASCENSION_THRESHOLD_TAIL_RATIO = 8`, le
+rapport asymptotique mesuré.
+
+⚠️ **Écrits EN DUR à dessein.** Une valeur calculée à l'exécution
+pourrait bouger d'une session à l'autre ; ici le joueur voit toujours le
+même objectif. En contrepartie, **tout changement d'équilibrage périme
+cette table** — coût d'une amélioration, revenu d'un générateur,
+multiplicateur d'Ascension. Relancer la mesure et la réécrire.
+
+⚠️ La 1re reste à 500 000 : c'est elle qui cale toute la suite.
+
+### ⚠️ Le simulateur recopiait le barème au lieu de le lire
+
+Première mesure après écriture de la table : 111/118/142/157/179/210, ce
+qui ne correspondait à rien. Le simulateur avait les anciens seuils
+écrits en dur dans son propre fichier. **Un simulateur lit les valeurs
+DU JEU, il ne les recopie jamais** — même règle que pour les fonctions
+(voir étape 3). C'est la quatrième fois de la session que l'instrument
+est le coupable.
+
+Après correction : **111 · 127 · 147 · 170 · 193 · 221 min**
+(+14% +16% +16% +14% +15%).
+
+### Affichage vérifié
+
+`formatNum` gère toute la table : 500.0K · 1.30M · 200.00M · 1.50Md ·
+2.00T · 1.40Qa · 10.00Qa. Les suffixes vont jusqu'à `Dc`, rien ne bascule
+en notation exponentielle avant la 30e Ascension.
+
+---
 
 ## ⚠️⚠️ ÉTAPE 3 bis — RETOUR AU PRINCIPE COOKIE CLICKER
 
