@@ -816,8 +816,12 @@ export function familiarUpgradeCost(level) {
 export const SANCTUARY_MAX_LEVEL = 10 * LEVEL_SPLIT;
 export const VEILLEUR_MAX_LEVEL = 10 * LEVEL_SPLIT;
 
+// ⚠️ Exporté pour que la BOUTIQUE affiche ce nombre au lieu de le
+// réécrire en dur : le texte annonçait « +2,5% par niveau » longtemps
+// après que le découpage des niveaux l'ait ramené à +0,5%.
+export const SANCTUARY_BONUS_PER_LEVEL = 0.025 / LEVEL_SPLIT;
 export function sanctuaryMultiplier(level) {
-  return 1 + Math.min(SANCTUARY_MAX_LEVEL, Math.max(0, level || 0)) * (0.025 / LEVEL_SPLIT);
+  return 1 + Math.min(SANCTUARY_MAX_LEVEL, Math.max(0, level || 0)) * SANCTUARY_BONUS_PER_LEVEL;
 }
 export function sanctuaryUpgradeCost(level) {
   return Math.round(60 * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, level));
@@ -831,8 +835,9 @@ export function sanctuaryMaxed(level) {
 // DOUBLE à chaque palier au lieu de +60%. Il coûtait 7x moins que le
 // Sanctuaire pour un défi qui vient plus tard dans la séquence — l'ordre
 // des défis et l'ordre des prix ne se contredisent plus.
+export const VEILLEUR_BONUS_PER_LEVEL = 0.05 / LEVEL_SPLIT;
 export function veilleurOfflineMultiplier(level) {
-  return 1 + Math.min(VEILLEUR_MAX_LEVEL, Math.max(0, level || 0)) * (0.05 / LEVEL_SPLIT);
+  return 1 + Math.min(VEILLEUR_MAX_LEVEL, Math.max(0, level || 0)) * VEILLEUR_BONUS_PER_LEVEL;
 }
 // Coefficient ramené de 150 à 120 (−20 %) le 14/09 : le défi « Veilleur
 // niveau 10 » était trop long. Total pour atteindre le niveau 10 :

@@ -1046,6 +1046,21 @@ cinquième du bonus. Le joueur simulé finissait avec un multiplicateur
 global de x1,04 au lieu de x1,20, sa production s'effondrait, et la 2e
 Ascension passait de **24 à 694 minutes**. Même défaut sur `seq_pacte20`.
 
+### ⚠️ La règle « aucun nombre en dur dans un libellé » vaut AUSSI pour la boutique
+
+Signalé par l'auteur en testant l'étape 2 : le bouton Pacte annonçait
+toujours « +0,5 pièce par tap à chaque niveau » alors que le découpage
+l'avait ramené à **+0,1**. Même défaut sur le Sanctuaire (« +2,5% » au
+lieu de +0,5%) et le Veilleur (« +5% » au lieu de +1%).
+
+`auditLibelles()` ne regarde que les défis : il n'a rien vu. Les trois
+textes lisent désormais `TAP_DAMAGE_PER_LEVEL`,
+`SANCTUARY_BONUS_PER_LEVEL` et `VEILLEUR_BONUS_PER_LEVEL`.
+
+⚠️ **Après tout changement d'échelle, relire les sous-titres de la
+boutique** dans `ClickerScreen.js` : ce sont les seuls textes de chiffres
+qu'aucun contrôle automatique ne couvre.
+
 ### 6e contrôle : `auditCiblesFixes()`
 
 Signale toute cible EN DUR sur une métrique dont l'échelle est définie

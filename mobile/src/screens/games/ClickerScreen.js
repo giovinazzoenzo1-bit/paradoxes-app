@@ -36,6 +36,9 @@ import {
   sanctuaryMaxed,
   veilleurMaxed,
   SANCTUARY_MAX_LEVEL,
+  SANCTUARY_BONUS_PER_LEVEL,
+  VEILLEUR_BONUS_PER_LEVEL,
+  TAP_DAMAGE_PER_LEVEL,
   VEILLEUR_MAX_LEVEL,
   rollCreature,
   rollCreatureOfRarity,
@@ -3546,7 +3549,12 @@ function ShopView({
             >
               <View style={styles.actionBtnLeft}>
                 <Text style={styles.actionBtnText}>🔗 Pacte : {tapPower} → {tapPower + 1}</Text>
-                <Text style={styles.actionBtnSubtext}>+0,5 pièce par tap à chaque niveau (actuellement {tapDamage(tapPower).toFixed(1)})</Text>
+                {/* ⚠️ Nombre DÉRIVÉ, jamais écrit en dur : ce texte
+                    annonçait « +0,5 par niveau » alors que le découpage
+                    des niveaux (LEVEL_SPLIT) l'a ramené à +0,1. La règle
+                    « un libellé ne contient jamais de nombre en dur »
+                    vaut pour la boutique comme pour les défis. */}
+                <Text style={styles.actionBtnSubtext}>+{TAP_DAMAGE_PER_LEVEL.toFixed(1).replace('.', ',')} pièce par tap à chaque niveau (actuellement {tapDamage(tapPower).toFixed(1)})</Text>
               </View>
               <Text style={styles.actionBtnCost} numberOfLines={1}>💰 {formatNum(applyDiscount(tapPowerCost(tapPower)))}</Text>
             </TouchableOpacity>
@@ -3594,7 +3602,7 @@ function ShopView({
                 <Text style={styles.actionBtnText}>{isUnlocked('sanctuaire') ? `🏛️ Sanctuaire (nv ${sanctuaryLevel}/${SANCTUARY_MAX_LEVEL})` : '🔒 ???'}</Text>
                 <Text style={styles.actionBtnSubtext}>
                   {isUnlocked('sanctuaire')
-                    ? '+2,5% sur TOUTE la production (tap + passif) par niveau'
+                    ? `+${(SANCTUARY_BONUS_PER_LEVEL * 100).toFixed(1).replace('.', ',')}% sur TOUTE la production (tap + passif) par niveau`
                     : coreUpgradeRequirement('sanctuaire')}
                 </Text>
               </View>
@@ -3611,7 +3619,7 @@ function ShopView({
               <View style={styles.actionBtnLeft}>
                 <Text style={styles.actionBtnText}>{isUnlocked('veilleur') ? `🌙 Veilleur (nv ${veilleurLevel}/${VEILLEUR_MAX_LEVEL})` : '🔒 ???'}</Text>
                 <Text style={styles.actionBtnSubtext}>
-                  {isUnlocked('veilleur') ? '+5% de gains hors-ligne par niveau' : coreUpgradeRequirement('veilleur')}
+                  {isUnlocked('veilleur') ? `+${(VEILLEUR_BONUS_PER_LEVEL * 100).toFixed(1).replace('.', ',')}% de gains hors-ligne par niveau` : coreUpgradeRequirement('veilleur')}
                 </Text>
               </View>
               <Text style={styles.actionBtnCost} numberOfLines={1}>
