@@ -88,7 +88,8 @@ function production(s) {
     C.essenceBonusMultiplier(s.essence || 0) *
     C.ascensionSpeedMultiplier(s.ascension || 0) *
     (1 + C.upgradeBonuses(s.upgradeLevels || {}).coinPct);
-  return passif + C.tapDamage(s.tapPower) * H.tapsParSec * multTap;
+  const paliers = C.tapUpgradeBonus(s.tapUpgrades || {});
+  return passif + (C.tapDamage(s.tapPower) + paliers) * H.tapsParSec * multTap;
 }
 
 // Minutes estimées pour franchir un défi, selon sa métrique.

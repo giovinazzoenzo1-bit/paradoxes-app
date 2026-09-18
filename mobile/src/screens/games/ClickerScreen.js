@@ -36,7 +36,9 @@ import {
   sanctuaryMaxed,
   veilleurMaxed,
   SANCTUARY_MAX_LEVEL,
+  COIN_SCALE,
   SANCTUARY_BONUS_PER_LEVEL,
+  describeUpgradeEffect,
   VEILLEUR_BONUS_PER_LEVEL,
   TAP_DAMAGE_PER_LEVEL,
   VEILLEUR_MAX_LEVEL,
@@ -544,7 +546,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       AsyncStorage.setItem('clicker:tapRhythmFlag', String(Date.now())).catch(() => {});
     }
     const coinBonus = given < earned || earned === 0
-      ? Math.max(200, Math.round(passiveIncomeRef.current * 300))
+      ? Math.max(200 * COIN_SCALE, Math.round(passiveIncomeRef.current * 300))
       : 0;
     if (coinBonus > 0) gainCoins(coinBonus);
     setBoss(null);
@@ -1550,7 +1552,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (offer.id === 'coins') {
       // Calé sur le revenu du joueur plutôt qu'un montant fixe : 1 000
       // pièces est énorme au début et dérisoire plus tard.
-      const amount = Math.max(500, Math.round(passiveIncomeRef.current * 600));
+      const amount = Math.max(500 * COIN_SCALE, Math.round(passiveIncomeRef.current * 600));
       gainCoins(amount);
       return `+${formatNum(amount)} pièces`;
     }
@@ -3702,7 +3704,7 @@ function ShopView({
                     </Text>
                     <Text style={styles.actionBtnSubtext}>
                       {possede
-                        ? `${item.desc} par niveau${level > 0 ? ` · actuellement ${describeUpgradeTotal(item, level)}` : ''}`
+                        ? `${describeUpgradeEffect(item)} par niveau${level > 0 ? ` · actuellement ${describeUpgradeTotal(item, level)}` : ''}`
                         : `Nécessite ${creatureName(item.creatureId)}`}
                     </Text>
                   </View>

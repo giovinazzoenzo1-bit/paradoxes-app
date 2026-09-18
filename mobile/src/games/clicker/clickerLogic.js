@@ -372,7 +372,7 @@ const STAGE_MULTIPLIER = [1, 2.2, 5];
 export function incomeForCreature(creature, level) {
   const stage = stageForLevel(level);
   const levelBonus = 1 + (level - 1) * 0.12;
-  return creature.baseIncome * STAGE_MULTIPLIER[stage] * levelBonus;
+  return creature.baseIncome * STAGE_MULTIPLIER[stage] * levelBonus * COIN_SCALE;
 }
 
 // Facteur de rareté partagé par tous les coûts d'amélioration.
@@ -411,7 +411,7 @@ export function levelUpCost(creature, level) {
 // Coût d'une invocation (gacha), croissant avec le nombre de créatures
 // déjà possédées (chaque nouvelle créature est un peu plus chère).
 export function summonCost(ownedCount) {
-  return Math.round(15 * Math.pow(1.13, ownedCount));
+  return Math.round(15 * COIN_SCALE * Math.pow(1.13, ownedCount));
 }
 
 // ---- Pacte (puissance de tap) ----
@@ -444,6 +444,26 @@ export function summonCost(ownedCount) {
 //
 // ⚠️ Écrire `Math.pow(2, 1 / LEVEL_SPLIT)` et JAMAIS « 1,15 » en dur :
 // une valeur arrondie ferait dériver la courbe sur 50 niveaux.
+// ⚠️⚠️ CHANGEMENT D'UNITÉ DE LA MONNAIE — x20 sur TOUT ce qui est une
+// somme de pièces : revenus, coûts, seuils, récompenses.
+//
+// C'est un changement d'UNITÉ, pas d'équilibrage : comme passer des
+// euros aux centimes. Tous les rapports sont préservés, donc toutes les
+// durées doivent rester IDENTIQUES — c'est le test de recette.
+//
+// But : des nombres qui donnent envie. La 1re Ascension passe de
+// 500 000 à 10 000 000 de pièces.
+//
+// ⚠️ Appliqué dans les FONCTIONS qui produisent une somme, jamais sur
+// les données elles-mêmes : les tableaux CREATURES, AUTOCLICKERS,
+// TAP_UPGRADES et UPGRADE_ITEMS comptent 26, 15, 10 et 20 entrées — en
+// oublier une seule casserait un rapport en silence.
+//
+// ⚠️ Ne PAS l'appliquer aux pourcentages (coinPct, autoClickerPct,
+// critChancePct), aux Griffes, aux Diamants ni aux appCoins : ce sont
+// d'autres monnaies ou des ratios sans unité.
+export const COIN_SCALE = 20;
+
 export const LEVEL_SPLIT = 5;
 export const LEVEL_COST_GROWTH = Math.pow(2, 1 / LEVEL_SPLIT);
 
@@ -467,7 +487,7 @@ export const LEVEL_BASE_ADJUST = LEVEL_COST_GROWTH - 1;
 export const TAP_DAMAGE_PER_LEVEL = 0.5 / LEVEL_SPLIT;
 export function tapDamage(level) {
   const lvl = Number.isFinite(level) ? Math.max(1, level) : 1;
-  return 1 + (lvl - 1) * TAP_DAMAGE_PER_LEVEL;
+  return (1 + (lvl - 1) * TAP_DAMAGE_PER_LEVEL) * COIN_SCALE;
 }
 // Coûts d'amélioration relevés de +40% le 07/09. Retour de test : les
 // défis « monte X au niveau N » étaient trop faciles. Pour ce type de
@@ -477,7 +497,7 @@ export function tapDamage(level) {
 // niveau est inchangée, donc la courbe garde sa forme.
 export const UPGRADE_COST_MULT = 1.4;
 export function tapPowerCost(currentTapPower) {
-  return Math.round(20 * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, currentTapPower - 1));
+  return Math.round(20 * COIN_SCALE * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, currentTapPower - 1));
 }
 
 // ---- Apparitions de créatures sur le bouton de tap ("le cookie") ----
@@ -741,7 +761,7 @@ export function critChance(level) {
   return Math.min(0.3, level * 0.0125); // +1,25%/niveau, plafonné à 30%
 }
 export function critUpgradeCost(level) {
-  return Math.round(120 * Math.pow(1.6, level));
+  return Math.round(120 * COIN_SCALE * Math.pow(1.6, level));
 }
 
 // Dégâts critiques, désormais indépendants de la chance. Niveau 0 = x2
@@ -752,7 +772,7 @@ export function critMultiplier(level) {
   return 2 + lvl * 0.5;
 }
 export function critDamageUpgradeCost(level) {
-  return Math.round(200 * Math.pow(1.7, level));
+  return Math.round(200 * COIN_SCALE * Math.pow(1.7, level));
 }
 export function rollCrit(level) {
   return Math.random() < critChance(level);
@@ -797,7 +817,7 @@ export function familiarIncome(level, tapPower) {
   return level * tapDamage(tapPower) * 0.5;
 }
 export function familiarUpgradeCost(level) {
-  return Math.round(40 * Math.pow(1.6, level));
+  return Math.round(40 * COIN_SCALE * Math.pow(1.6, level));
 }
 
 // ---- Sanctuaire (boost global %) ----
@@ -824,7 +844,7 @@ export function sanctuaryMultiplier(level) {
   return 1 + Math.min(SANCTUARY_MAX_LEVEL, Math.max(0, level || 0)) * SANCTUARY_BONUS_PER_LEVEL;
 }
 export function sanctuaryUpgradeCost(level) {
-  return Math.round(60 * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, level));
+  return Math.round(60 * COIN_SCALE * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, level));
 }
 export function sanctuaryMaxed(level) {
   return (level || 0) >= SANCTUARY_MAX_LEVEL;
@@ -843,7 +863,7 @@ export function veilleurOfflineMultiplier(level) {
 // niveau 10 » était trop long. Total pour atteindre le niveau 10 :
 // 214 830 → 171 864 pièces.
 export function veilleurUpgradeCost(level) {
-  return Math.round(120 * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, level));
+  return Math.round(120 * COIN_SCALE * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, level));
 }
 // ---- Achat de Griffes avec les pièces du Clicker (14/09) ----
 //
@@ -857,8 +877,8 @@ export function veilleurUpgradeCost(level) {
 // en valeur réelle au bout de 10 Ascensions et l'achat deviendrait
 // gratuit. Le prix suit donc exactement la même courbe que les gains.
 export const GRIFFES_COIN_PACK = 100;
-export const GRIFFES_COIN_BASE = 20000;
-export const GRIFFES_COIN_STEP = 10000;
+export const GRIFFES_COIN_BASE = 20000 * COIN_SCALE;
+export const GRIFFES_COIN_STEP = 10000 * COIN_SCALE;
 
 export function griffesCoinCost(purchases, ascensionCount) {
   const n = Math.max(0, purchases || 0);
@@ -1005,7 +1025,7 @@ export function normalizeTapUpgrades(value) {
 }
 
 export function tapUpgradeCost(item, level) {
-  return Math.round(item.cost * UPGRADE_COST_MULT * Math.pow(item.growth || 1.6, level));
+  return Math.round(item.cost * COIN_SCALE * UPGRADE_COST_MULT * Math.pow(item.growth || 1.6, level));
 }
 
 // Le palier `index` est ouvert si le PRÉCÉDENT a atteint le niveau 5
@@ -1020,9 +1040,14 @@ export function tapUpgradeUnlocked(index, tapPowerLevel, levels) {
 }
 
 // Somme des bonus de tap, chaque palier compté à son niveau.
+// ⚠️ Troisième et dernier terme du revenu de TAP, avec `tapDamage` et
+// `upgradeBonuses().tapFlat` : les TROIS s'additionnent dans
+// `ClickerScreen`, donc les trois doivent porter COIN_SCALE. En oublier
+// un rendrait sa famille 20x plus faible que les deux autres — et ça ne
+// se verrait nulle part, sinon par une boutique qui devient inutile.
 export function tapUpgradeBonus(levels) {
   const map = normalizeTapUpgrades(levels);
-  return TAP_UPGRADES.reduce((sum, u) => sum + u.bonus * (map[u.id] || 0), 0);
+  return TAP_UPGRADES.reduce((sum, u) => sum + u.bonus * (map[u.id] || 0), 0) * COIN_SCALE;
 }
 
 // ---- Améliorations (30/08, refondues le 02/09) ----
@@ -1055,24 +1080,24 @@ export function tapUpgradeBonus(levels) {
 // coûte désormais 6,7 fois plus (2,5 M → 17 M), alors que le premier
 // achat reste accessible à un joueur qui débute.
 export const UPGRADE_ITEMS = [
-  { id: 'griffeBraisillon', creatureId: 'pyrosile', name: 'Griffe de Braisillon', emoji: '🔥', tier: 1, cost: 1280, effect: { type: 'tapFlat', value: 0.5 }, growth: 2.15, desc: '+0.5 pièce par tap' },
+  { id: 'griffeBraisillon', creatureId: 'pyrosile', name: 'Griffe de Braisillon', emoji: '🔥', tier: 1, cost: 1280, effect: { type: 'tapFlat', value: 0.5 }, growth: 2.15, desc: null },
   { id: 'ecailleCaraploof', creatureId: 'caraploof', name: 'Écaille de Caraploof', emoji: '🌊', tier: 1, cost: 1920, effect: { type: 'autoClickerPct', value: 0.025 }, growth: 2.5, desc: '+2.5% sur les auto-clics' },
   { id: 'crocBouldog', creatureId: 'bouldog', name: 'Croc de Bouldog', emoji: '🪨', tier: 1, cost: 2880, effect: { type: 'coinPct', value: 0.015 }, growth: 2.57, desc: '+1.5% sur toute la production' },
   { id: 'plumeVentis', creatureId: 'ventis', name: 'Plume de Ventis', emoji: '🌬️', tier: 1, cost: 4000, effect: { type: 'critChancePct', value: 0.02 }, growth: 2.64, desc: '+2% de chance de coup critique' },
   { id: 'etincelleVoltix', creatureId: 'voltix', name: 'Étincelle de Voltix', emoji: '⚡', tier: 1, cost: 5600, effect: { type: 'critMultPct', value: 0.05 }, growth: 2.36, desc: '+5% de dégâts critiques' },
   { id: 'eclatLuxorbe', creatureId: 'luxorbe', name: 'Éclat de Luxorbe', emoji: '💡', tier: 2, cost: 12800, effect: { type: 'coinPct', value: 0.02 }, growth: 2.57, desc: '+2% sur toute la production' },
-  { id: 'ombreOmbrillon', creatureId: 'ombrillon', name: "Ombre d'Ombrillon", emoji: '🌑', tier: 2, cost: 17600, effect: { type: 'tapFlat', value: 1 }, growth: 2.15, desc: '+1 pièce par tap' },
+  { id: 'ombreOmbrillon', creatureId: 'ombrillon', name: "Ombre d'Ombrillon", emoji: '🌑', tier: 2, cost: 17600, effect: { type: 'tapFlat', value: 1 }, growth: 2.15, desc: null },
   { id: 'runeGlyphon', creatureId: 'glyphon', name: 'Rune de Glyphon', emoji: '🔮', tier: 2, cost: 24000, effect: { type: 'autoClickerPct', value: 0.035 }, growth: 2.5, desc: '+3.5% sur les auto-clics' },
   { id: 'flammeFournax', creatureId: 'fournax', name: 'Flamme de Fournax', emoji: '🔥', tier: 2, cost: 32000, effect: { type: 'coinPct', value: 0.025 }, growth: 2.57, desc: '+2.5% sur toute la production' },
   { id: 'perleAquamira', creatureId: 'aquamira', name: "Perle d'Aquamira", emoji: '🌊', tier: 2, cost: 41600, effect: { type: 'autoClickerPct', value: 0.04 }, growth: 2.5, desc: '+4% sur les auto-clics' },
-  { id: 'pierreTerracroc', creatureId: 'terracroc', name: 'Pierre de Terracroc', emoji: '🪨', tier: 3, cost: 80000, effect: { type: 'tapFlat', value: 1.5 }, growth: 2.15, desc: '+1.5 pièces par tap' },
+  { id: 'pierreTerracroc', creatureId: 'terracroc', name: 'Pierre de Terracroc', emoji: '🪨', tier: 3, cost: 80000, effect: { type: 'tapFlat', value: 1.5 }, growth: 2.15, desc: null },
   { id: 'ventZephyrion', creatureId: 'zephyrion', name: 'Vent de Zephyrion', emoji: '🌬️', tier: 3, cost: 104000, effect: { type: 'critChancePct', value: 0.03 }, growth: 2.64, desc: '+3% de chance de coup critique' },
   { id: 'noyauBrontobloc', creatureId: 'brontobloc', name: 'Noyau de Brontobloc', emoji: '⚡', tier: 3, cost: 128000, effect: { type: 'critMultPct', value: 0.075 }, growth: 2.36, desc: '+7.5% de dégâts critiques' },
   { id: 'sceauMalefix', creatureId: 'malefix', name: 'Sceau de Malefix', emoji: '🔮', tier: 3, cost: 160000, effect: { type: 'coinPct', value: 0.03 }, growth: 2.57, desc: '+3% sur toute la production' },
   { id: 'bouclierAegisolar', creatureId: 'aegisolar', name: "Bouclier d'Aegisolar", emoji: '✨', tier: 3, cost: 208000, effect: { type: 'autoClickerPct', value: 0.05 }, growth: 2.5, desc: '+5% sur les auto-clics' },
   { id: 'voileNocturis', creatureId: 'nocturis', name: 'Voile de Nocturis', emoji: '🌑', tier: 4, cost: 400000, effect: { type: 'coinPct', value: 0.04 }, growth: 2.57, desc: '+4% sur toute la production' },
   { id: 'racineRacinea', creatureId: 'racinea', name: 'Racine de Racinea', emoji: '🪨', tier: 4, cost: 512000, effect: { type: 'autoClickerPct', value: 0.06 }, growth: 2.5, desc: '+6% sur les auto-clics' },
-  { id: 'glypheRunicor', creatureId: 'runicor', name: 'Glyphe de Runicor', emoji: '🔮', tier: 4, cost: 640000, effect: { type: 'tapFlat', value: 3 }, growth: 2.15, desc: '+3 pièces par tap' },
+  { id: 'glypheRunicor', creatureId: 'runicor', name: 'Glyphe de Runicor', emoji: '🔮', tier: 4, cost: 640000, effect: { type: 'tapFlat', value: 3 }, growth: 2.15, desc: null },
   { id: 'petaleBraiserose', creatureId: 'braiserose', name: 'Pétale de Braiserose', emoji: '🔥', tier: 4, cost: 800000, effect: { type: 'critChancePct', value: 0.04 }, growth: 2.64, desc: '+4% de chance de coup critique' },
   { id: 'abysseAbyssorax', creatureId: 'abyssorax', name: "Abysse d'Abyssorax", emoji: '🌊', tier: 4, cost: 1040000, effect: { type: 'critMultPct', value: 0.1 }, growth: 2.36, desc: '+10% de dégâts critiques' },
 ];
@@ -1083,7 +1108,7 @@ export const UPGRADE_ITEMS = [
 // le reste (pourcentage de production) grimpe plus vite qu'un +N par
 // tap, donc s'auto-limite sans qu'on ait besoin d'interdire l'achat.
 export function upgradeItemCost(item, level) {
-  return Math.round(item.cost * UPGRADE_COST_MULT * Math.pow(item.growth || 1.7, level));
+  return Math.round(item.cost * COIN_SCALE * UPGRADE_COST_MULT * Math.pow(item.growth || 1.7, level));
 }
 
 // Taux de convergence de la chance de crit : chaque niveau rapporte 75%
@@ -1106,6 +1131,19 @@ function geometricTotal(value, level, decay) {
 // exactement les bonus déjà acquis par les joueurs existants. Sans ce
 // repli, une vieille sauvegarde perdrait silencieusement tous ses
 // bonus d'améliorations au premier lancement.
+// ⚠️ Les 4 objets `tapFlat` avaient leur somme ÉCRITE EN DUR dans `desc`
+// (« +0.5 pièce par tap »). Après le changement d'unité c'est +10. Même
+// piège que les sous-titres de la boutique : le texte doit être DÉRIVÉ.
+// `desc: null` sur ces objets, et le texte se calcule ici.
+export function describeUpgradeEffect(item) {
+  if (item.desc) return item.desc;
+  if (item.effect.type === 'tapFlat') {
+    const v = item.effect.value * COIN_SCALE;
+    return `+${v % 1 === 0 ? v : v.toFixed(1).replace('.', ',')} pièce${v > 1 ? 's' : ''} par tap`;
+  }
+  return '';
+}
+
 export function upgradeBonuses(levels) {
   const totals = { coinPct: 0, tapFlat: 0, autoClickerPct: 0, critChancePct: 0, critMultPct: 0 };
   const map = normalizeUpgradeLevels(levels);
@@ -1118,7 +1156,10 @@ export function upgradeBonuses(levels) {
     totals[u.effect.type] +=
       u.effect.type === 'critChancePct'
         ? geometricTotal(u.effect.value, lvl, CRIT_CHANCE_DECAY)
-        : u.effect.value * lvl;
+        // ⚠️ `tapFlat` est une SOMME de pièces (elle s'ajoute à
+        // `tapDamage`), les autres effets sont des POURCENTAGES. Seule
+        // la première suit le changement d'unité.
+        : u.effect.value * lvl * (u.effect.type === 'tapFlat' ? COIN_SCALE : 1);
   });
   return totals;
 }
@@ -1172,7 +1213,11 @@ export function normalizeUpgradeLevels(levels) {
 // complément au cycle 5 : le défi demande un dernier effort au lieu
 // d'être acquis d'avance. La 2e Ascension, au double, tombe au cycle 8,
 // avant son propre défi du cycle 10.
-export const ASCENSION_FIRST_THRESHOLD = 500000;
+// ⚠️ 500 000 était le seuil AVANT le changement d'unité. Il est conservé
+// tel quel et multiplié par COIN_SCALE : la 1re Ascension demande donc
+// 10 000 000 de pièces, qui valent exactement les 500 000 d'avant.
+// Écrire directement 10000000 ferait perdre ce lien.
+export const ASCENSION_FIRST_THRESHOLD = 500000 * COIN_SCALE;
 export function ascensionThreshold(ascensionCount) {
   const n = Number.isFinite(ascensionCount) ? Math.max(0, ascensionCount) : 0;
   return ASCENSION_FIRST_THRESHOLD * Math.pow(2, n);
@@ -1236,15 +1281,18 @@ export function ascensionGriffesReward(ascensionNumber) {
 // ---- Rituel (bouton "fausse pub" — pas de vrai SDK pour l'instant) ----
 export const RITUAL_COOLDOWN_SEC = 180; // 3 minutes entre 2 utilisations
 export function ritualReward(tapPower, passiveIncome) {
-  // ⚠️ Lisait `tapPower` — un NIVEAU — comme s'il s'agissait d'une
-  // puissance. Avec le découpage des niveaux, la récompense aurait été
-  // multipliée par 5 sans que rien ne le justifie. On passe par
-  // `tapDamage`, qui est la vraie puissance : la formule ci-dessous
-  // rend EXACTEMENT l'ancienne valeur à puissance égale, et ne bougera
-  // plus si LEVEL_SPLIT change un jour.
-  const puissance = tapDamage(tapPower);
-  return Math.round((puissance - 1) * (100 / TAP_DAMAGE_PER_LEVEL) / LEVEL_SPLIT + 100 + passiveIncome * 120);
+  // ⚠️ Écrit en ANCIENS niveaux, à dessein.
+  //
+  // Cette formule a déjà été cassée deux fois : elle lisait `tapPower`
+  // (un NIVEAU) comme une puissance, ce qui l'aurait multipliée par 5 au
+  // découpage des niveaux. On repasse explicitement en « anciens
+  // niveaux » — insensible à LEVEL_SPLIT — et on applique COIN_SCALE au
+  // seul terme qui est une somme de pièces. `passiveIncome` en est déjà
+  // une : il ne doit PAS être rescalé.
+  const niveauHistorique = (Math.max(1, tapPower || 1) - 1) / LEVEL_SPLIT + 1;
+  return Math.round(niveauHistorique * 100 * COIN_SCALE + passiveIncome * 120);
 }
+
 export function ritualReady(lastUsedMs, nowMs) {
   return nowMs - lastUsedMs >= RITUAL_COOLDOWN_SEC * 1000;
 }
@@ -1271,7 +1319,7 @@ export const OFFRANDE_UPGRADE_FRACTION = 0.3;
 export function offrandeReward(tapPower) {
   // Plancher : même au tout début, une Offrande doit donner de quoi se
   // sentir, sinon elle est un piège.
-  return Math.max(25, Math.round(tapPowerCost(tapPower) * OFFRANDE_UPGRADE_FRACTION));
+  return Math.max(25 * COIN_SCALE, Math.round(tapPowerCost(tapPower) * OFFRANDE_UPGRADE_FRACTION));
 }
 
 // ---- Défis et œuf : déplacés dans `questLogic.js` (14/09) ----
@@ -1326,16 +1374,19 @@ export const AUTOCLICKERS = [
 // s'étale sur un vrai run (3 générateurs à 30min, 6 à 4h, 10 à 12h).
 export const AUTOCLICKER_COST_GROWTH = 1.25;
 export function autoClickerCost(clicker, ownedCount) {
-  return Math.round(clicker.baseCost * UPGRADE_COST_MULT * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount));
+  return Math.round(clicker.baseCost * COIN_SCALE * UPGRADE_COST_MULT * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount));
 }
 
 // Revenu total/s de tous les générateurs possédés.
 // ownedAutoClickers : { esprit: 3, main: 1, ... }
+// ⚠️ Seul point d'entrée du revenu PASSIF (`passiveRate` en dépend
+// entièrement) : mettre COIN_SCALE ici et nulle part ailleurs dans la
+// chaîne passive, sinon il s'applique deux fois.
 export function totalAutoClickIncome(ownedAutoClickers) {
   let sum = 0;
   for (const clicker of AUTOCLICKERS) {
     const count = ownedAutoClickers[clicker.id] || 0;
     sum += count * clicker.baseIncome;
   }
-  return sum;
+  return sum * COIN_SCALE;
 }

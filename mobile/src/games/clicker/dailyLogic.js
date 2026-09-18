@@ -12,6 +12,14 @@
 // Date au format 'YYYY-MM-DD', dans le fuseau LOCAL de l'appareil — pas
 // UTC, sinon la "journée" du joueur changerait à une heure absurde selon
 // son fuseau plutôt qu'à minuit chez lui.
+import { COIN_SCALE } from './clickerLogic';
+
+// ⚠️ Les cibles en pièces des quotidiens et des succès suivent le
+// changement d'unité, sinon les quotidiens deviennent gratuits et les
+// succès se débloquent tous d'un coup. Le libellé est DÉRIVÉ de la
+// cible : il n'y a qu'un seul nombre à changer.
+const fmtPieces = (n) => n.toLocaleString('fr-FR');
+
 export function todayKey(date = new Date()) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -47,7 +55,7 @@ export const DAILY_QUEST_POOL = [
   { id: 'fuseRune1', desc: 'Fusionne 2 runes en 1', event: 'runeFused', target: 1, reward: 35 },
   { id: 'summon3', desc: 'Invoque 3 créatures (Élevage)', event: 'summon', target: 3, reward: 30 , diamonds: 1 },
   { id: 'crit10', desc: 'Obtiens 10 coups critiques (Élevage)', event: 'crit', target: 10, reward: 30 , diamonds: 1 },
-  { id: 'earn2000', desc: 'Gagne 2 000 pièces (Élevage)', event: 'coinsEarned', target: 2000, reward: 30 },
+  { id: 'earn2000', desc: `Gagne ${fmtPieces(2000 * COIN_SCALE)} pièces (Élevage)`, event: 'coinsEarned', target: 2000 * COIN_SCALE, reward: 30 },
   { id: 'feedCreature1', desc: 'Nourris une créature (Élevage)', event: 'creatureFed', target: 1, reward: 25 },
   // ---- Incubation (07/09) ----
   // Cibles calées sur le rythme de FIN de partie, pas de début : un œuf
@@ -164,7 +172,7 @@ export const WEEKLY_QUEST_POOL = [
   { id: 'w_fuseRune4',    desc: 'Fusionne 4 fois des runes',    event: 'runeFused', target: 4, reward: 650, diamonds: 3 },
   { id: 'w_equipRune15',  desc: 'Équipe 15 runes',              event: 'runeEquipped', target: 15, reward: 750 },
   { id: 'w_summon40',     desc: 'Invoque 40 créatures',         event: 'summon', target: 40, reward: 825 },
-  { id: 'w_earn250k',     desc: 'Gagne 250 000 pièces',         event: 'coinsEarned', target: 250000, reward: 500, diamonds: 3 },
+  { id: 'w_earn250k',     desc: `Gagne ${fmtPieces(250000 * COIN_SCALE)} pièces`, event: 'coinsEarned', target: 250000 * COIN_SCALE, reward: 500, diamonds: 3 },
   { id: 'w_feed30',       desc: 'Nourris 30 fois une créature', event: 'creatureFed', target: 30, reward: 750 },
   { id: 'w_offering10',   desc: 'Fais 10 Offrandes',            event: 'offering', target: 10, reward: 1050 },
   { id: 'w_power60',      desc: 'Active 60 pouvoirs de créature', event: 'powerActivated', target: 60, reward: 550, diamonds: 3 },
@@ -246,7 +254,7 @@ export const ACHIEVEMENTS = [
   // Les pièces croissent de façon exponentielle avec la progression :
   // les paliers doivent suivre la même courbe, sinon les trois derniers
   // tomberaient le même jour.
-  { id: 'a_coins',   desc: 'Gagner des pièces',            stat: 'coinsEarned',     tiers: [50000, 1000000, 25000000, 500000000, 10000000000] },
+  { id: 'a_coins',   desc: 'Gagner des pièces',            stat: 'coinsEarned',     tiers: [50000, 1000000, 25000000, 500000000, 10000000000].map((t) => t * COIN_SCALE) },
   { id: 'a_summon',  desc: 'Invoquer des créatures',       stat: 'summon',          tiers: [10, 50, 150, 400, 1000] },
   { id: 'a_fuse',    desc: 'Fusionner des runes',          stat: 'runeFused',       tiers: [3, 15, 50, 150, 400] },
   { id: 'a_feed',    desc: 'Nourrir des créatures',        stat: 'creatureFed',     tiers: [10, 50, 200, 600, 1500] },

@@ -1011,9 +1011,77 @@ accomplis.
 |---|---|---|
 | 1 | Clés de sauvegarde v2 + recalage des paliers de tap | ✅ fait |
 | 2 | Aplatir Pacte / Sanctuaire / Veilleur + relever les plafonds | ✅ fait |
-| 3 | Multiplier x20 revenus, coûts, seuils, quotidiens, succès, Griffes | à faire |
+| 3 | Multiplier x20 revenus, coûts, seuils, quotidiens, succès, Griffes | ✅ fait |
 | 4 | Recalculer le barème des seuils d'Ascension | à faire |
 | 5 | Réécrire les 30 défis par groupe d'Ascension | à faire |
+
+## ⚠️⚠️ ÉTAPE 3 — changement d'unité de la monnaie (COIN_SCALE = 20)
+
+`COIN_SCALE = 20` dans `clickerLogic.js`. TOUTE somme de pièces est
+multipliée par 20 : revenus, coûts, seuils, récompenses, quotidiens,
+succès, Griffes, bourses de pièces.
+
+**1re Ascension : 10 000 000 de pièces. 1 tap au départ : 20 pièces.**
+
+### ⚠️ C'est un changement d'UNITÉ, pas d'équilibrage
+
+Comme passer des euros aux centimes. Tous les rapports sont préservés,
+donc **toutes les durées doivent rester IDENTIQUES** — c'est le test de
+recette, et il est passé :
+
+```
+avant : 101  111  129  148  173  205 min
+après : 101  111  129  148  173  205 min
+```
+
+⚠️ Si une seule somme est oubliée, sa famille devient 20x trop faible ou
+trop chère et le test le montre immédiatement. Ne jamais toucher à
+COIN_SCALE sans relancer cette comparaison.
+
+### ⚠️ Appliqué dans les FONCTIONS, jamais sur les données
+
+Les tableaux `CREATURES`, `AUTOCLICKERS`, `TAP_UPGRADES` et
+`UPGRADE_ITEMS` comptent 26, 15, 10 et 20 entrées. En oublier une seule
+casserait un rapport en silence. COIN_SCALE vit donc dans les fonctions
+qui PRODUISENT une somme : `tapDamage`, `totalAutoClickIncome`,
+`tapUpgradeBonus`, les fonctions de coût, `ascensionThreshold`,
+`ritualReward`, `offrandeReward`, `incomeForCreature`.
+
+⚠️ **Ne PAS l'appliquer** aux pourcentages (`coinPct`, `autoClickerPct`,
+`critChancePct`), aux Griffes, aux Diamants ni aux appCoins : autres
+monnaies ou ratios sans unité. Dans `upgradeBonuses`, seul `tapFlat` est
+une somme — les autres effets sont des pourcentages.
+
+### ⚠️ Le revenu de TAP a TROIS termes, ils doivent tous porter l'échelle
+
+`ClickerScreen` additionne `tapDamage()` + `upgradeBonuses().tapFlat` +
+`tapUpgradeBonus()`. En oublier un rend sa famille 20x plus faible que
+les deux autres, **et ça ne se voit nulle part** sinon par une boutique
+qui devient inutile. Les trois portent COIN_SCALE.
+
+### ⚠️ Encore des nombres en dur dans des textes
+
+Les 4 objets `tapFlat` avaient leur somme écrite dans `desc`
+(« +0.5 pièce par tap »). Leur `desc` est passé à `null` et le texte est
+calculé par `describeUpgradeEffect()`. Idem pour les libellés des
+quotidiens, désormais dérivés de leur cible.
+
+### ⚠️ Le simulateur a menti une fois de plus
+
+Premier résultat du test de recette : 101 -> 167 min, ce qui aurait
+signifié un équilibrage cassé. En réalité le simulateur resommait
+`TAP_UPGRADES[].bonus` À LA MAIN au lieu d'appeler `tapUpgradeBonus()` :
+il ratait donc le changement d'unité. **Règle : un simulateur doit
+appeler les fonctions DU JEU, jamais réimplémenter leur calcul.**
+
+### 🟨 Reste à traiter à l'étape 5
+
+Le 1er défi du jeu demande « Obtiens 58 000 pièces », soit 12 minutes.
+Le doc dit depuis longtemps que l'accroche doit être de ~2 minutes. À
+régler en réécrivant les défis, en raisonnant en PART du chemin vers
+l'Ascension (58 000 / 10 000 000 = 0,58 %).
+
+---
 
 ## ⚠️⚠️ ÉTAPE 2 — découpage des niveaux par LEVEL_SPLIT
 
