@@ -14,7 +14,7 @@
 //
 // ⚠️ Oublier de l'incrémenter = l'auteur ne voit pas son changement et
 // croit à un bug de publication. C'est arrivé le 17/09.
-export const QUEST_DEFS_VERSION = 9;
+export const QUEST_DEFS_VERSION = 10;
 
 // ════════════════════════════════════════════════════════════════
 //  LES DÉFIS — ce fichier ne contient QUE leur définition.
@@ -52,14 +52,8 @@ import { questBudget } from './questBudget';
 // réalité à `pyrosile` : la condition `ownedIds.includes('braisillon')`
 // était toujours FAUSSE, donc le défi n'était jamais tiré et se faisait
 // remplacer en silence par un défi du pool. Aucun contrôle ne le voyait.
-const creatureDeLObjet = (itemId) => {
-  const it = UPGRADE_ITEMS.find((u) => u.id === itemId);
-  return it ? it.creatureId : null;
-};
-const possedeLObjet = (itemId) => (s) => {
-  const cid = creatureDeLObjet(itemId);
-  return !!cid && (s.ownedIds || []).includes(cid);
-};
+
+
 
 
 export const EGG_STAGES = [
@@ -197,9 +191,13 @@ export const QUEST_SEQUENCE = [
     { id: 'g_e4_faveur', icon: '🍀', metric: 'critLevel', partAsc: 0.04, mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('faveur', s),
       label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
-    { id: 'g_e4_item', icon: '🔧', metric: 'upgrade:griffeBraisillon', partAsc: 0.05, mode: 'absolute',
-      available: possedeLObjet('griffeBraisillon'),
-      label: (t) => `Monte Griffe de Pyrosile au niveau ${t}` },
+    // ⚠️ Remplace un défi d'objet de créature, supprimés parce qu'ils
+    // étaient impossibles : ils pouvaient être tirés pour un joueur qui
+    // ne possède pas la créature, et bloquaient l'œuf. Un palier de tap
+    // est achetable par TOUT joueur.
+    { id: 'g_e4_tapup', icon: '🔱', metric: 'tapUpgrade:tap3', partAsc: 0.06, mode: 'absolute',
+      available: (s) => ((s.tapUpgrades || {}).tap2 || 0) >= 5,
+      label: (t) => `Monte le Sceau de Puissance au niveau ${t}` },
   ],
 
   // ══════════════════ ŒUF 5 — MAÎTRISER ══════════════════
@@ -226,9 +224,11 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'g_e6_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.30, mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    { id: 'g_e6_item', icon: '🌊', metric: 'upgrade:perleAquamira', partAsc: 0.12, mode: 'absolute',
-      available: possedeLObjet('perleAquamira'),
-      label: (t) => `Monte Perle d'Aquamira au niveau ${t}` },
+    // Les Dégâts critiques : la seule des 5 améliorations de base qui
+    // n'avait aucun défi, et elle renforce le TAP.
+    { id: 'g_e6_critdmg', icon: '💢', metric: 'critDamageLevel', partAsc: 0.10, mode: 'absolute',
+      available: (s) => coreUpgradeUnlocked('critDamage', s),
+      label: (t) => `Monte les Dégâts critiques au niveau ${t}` },
     { id: 'g_e6_adv', icon: '🗡️', metric: 'battleWon', target: 6, mode: 'delta',
       available: (s) => (s.deckCount || 0) > 0,
       label: (t) => `Gagne ${t} combats en Aventure` },

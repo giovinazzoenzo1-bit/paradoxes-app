@@ -802,3 +802,26 @@ function auditFamilles(nbOeufs = 18) {
   return fautes;
 }
 module.exports.auditFamilles = auditFamilles;
+
+// ---- Défis qui dépendent de POSSÉDER une créature précise -----------
+//
+// Bug réel, signalé trois fois par l'auteur. Les 20 défis d'objet de
+// créature étaient générés avec un `available` qui ne testait QUE le
+// prix, jamais l'appartenance de la créature. La boutique, elle,
+// verrouille le bouton (« Nécessite <créature> »). Le défi pouvait donc
+// être tiré pour un joueur qui n'a pas la créature — et bloquait son œuf
+// DÉFINITIVEMENT.
+//
+// La famille a été supprimée. Ce contrôle empêche qu'elle revienne :
+// aucun défi ne doit viser une amélioration de créature.
+function auditDependanceCreature() {
+  const fautes = [];
+  [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL].forEach((q) => {
+    if (!q || !q.metric) return;
+    if (!q.metric.startsWith('upgrade:')) return;
+    const item = C.UPGRADE_ITEMS.find((u) => u.id === q.metric.slice(8));
+    fautes.push({ id: q.id, metric: q.metric, creature: item ? item.creatureId : '?' });
+  });
+  return fautes;
+}
+module.exports.auditDependanceCreature = auditDependanceCreature;

@@ -981,21 +981,30 @@ export function eggStageForCompletedCount(completedCount) {
 // les tableaux existants plutôt qu'écrits à la main : ajouter une
 // amélioration au jeu ajoute automatiquement son défi, et aucun libellé
 // ne peut se désynchroniser d'un renommage.
-UPGRADE_ITEMS.forEach((item) => {
-  QUEST_POOL.push({
-    id: `up_${item.id}`,
-    family: 'upgrade',
-    icon: item.emoji,
-    metric: `upgrade:${item.id}`,
-    effortMin: 30,
-    mode: 'absolute',
-    available: (s) => {
-      const lvl = normalizeUpgradeLevels(s.upgradeLevels)[item.id] || 0;
-      return lvl > 0 || upgradeItemCost(item, 0) <= questBudget(s, 30);
-    },
-    label: (t) => `Monte ${item.name} au niveau ${t}`,
-  });
-});
+// ⚠️⚠️ LES DÉFIS D'OBJET DE CRÉATURE SONT SUPPRIMÉS — ils étaient
+// IMPOSSIBLES, et le renommage de l'objet n'y changeait rien.
+//
+// Ils étaient générés ici pour les 20 objets, avec un `available` qui ne
+// testait QUE le prix :
+//
+//     available: (s) => lvl > 0 || upgradeItemCost(item, 0) <= questBudget(s, 30)
+//
+// Il ne vérifiait JAMAIS que le joueur possède la créature de l'objet.
+// Or la boutique verrouille le bouton (« Nécessite <créature> ») tant
+// qu'elle n'est pas dans la collection. Le défi pouvait donc être tiré
+// pour un joueur qui n'aura peut-être jamais cette créature, et il
+// BLOQUAIT SON ŒUF DÉFINITIVEMENT.
+//
+// C'est la panne signalée trois fois par l'auteur sur « Griffe de
+// Braisillon ». J'avais d'abord cru à un problème de nom : le nom était
+// bien faux, mais ce n'était pas la cause.
+//
+// Décision : supprimer la famille plutôt que d'ajouter le test
+// d'appartenance. Un défi qui dépend de posséder UNE créature précise
+// parmi 26 reste fragile même corrigé — il dépend d'un tirage que le
+// joueur ne contrôle pas. Les défis de boutique passent désormais par ce
+// que TOUT joueur peut acheter : le Pacte, les paliers de tap, les
+// générateurs, le Sanctuaire et le Veilleur.
 
 AUTOCLICKERS.forEach((clicker) => {
   QUEST_POOL.push({

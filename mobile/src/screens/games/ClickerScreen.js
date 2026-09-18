@@ -1972,6 +1972,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     sanctuaryLevel,
     veilleurLevel,
     critLevel,
+    critDamageLevel,
     essence,
     ownedCount: owned.length,
     // ⚠️ Les IDENTIFIANTS, pas seulement le nombre : un défi « monte
