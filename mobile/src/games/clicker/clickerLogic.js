@@ -1463,8 +1463,8 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // tient. Monter les prix seuls écrasait la courbe (10/s à 1h), monter
 // les revenus seuls la faisait exploser.
 export const AUTOCLICKERS = [
-  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 650, baseIncome: 0.6, tier: 1 },
-  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 8571, baseIncome: 4, tier: 1 },
+  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 650, baseIncome: 0.4, tier: 1 },
+  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 11120, baseIncome: 4, tier: 1 },
   { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 76030, baseIncome: 16, tier: 1 },
   { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 723160, baseIncome: 89, tier: 1 },
   { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 6447000, baseIncome: 464, tier: 1 },
