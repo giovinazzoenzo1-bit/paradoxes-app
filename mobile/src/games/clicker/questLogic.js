@@ -23,6 +23,8 @@ import {
   UPGRADE_ITEMS,
   VEILLEUR_MAX_LEVEL,
   autoClickerCost,
+  TAP_UPGRADES,
+  tapUpgradeCost,
   coreUpgradeUnlocked,
   critChance,
   critUpgradeCost,
@@ -365,6 +367,14 @@ export function resolveQuestTarget(quest, stats) {
   } else if (metric.startsWith('auto:')) {
     const clicker = AUTOCLICKERS.find((c) => c.id === metric.slice(5));
     raw = clicker ? levelsAffordable((n) => autoClickerCost(clicker, n), now, budget) : now + 1;
+  } else if (metric.startsWith('tapUpgrade:')) {
+    // ⚠️ Cette branche MANQUAIT : les paliers de tap tombaient dans le
+    // cas générique « avance d'un pas », donc leur cible ne regardait
+    // pas le budget. Écrire `effortMin` sur un de ces défis n'avait
+    // aucun effet — et leurs cibles fixes ont périmé dès que le prix des
+    // paliers a changé (recalage du 17/09).
+    const palier = TAP_UPGRADES.find((t) => t.id === metric.slice(11));
+    raw = palier ? levelsAffordable((lv) => tapUpgradeCost(palier, lv), now, budget) : now + 1;
   } else if (metric === 'autoTotal') {
     // Combien d'unités de PLUS le budget achète, en le dépensant sur le
     // générateur qui en rend le plus — c'est ce qu'un joueur ferait pour

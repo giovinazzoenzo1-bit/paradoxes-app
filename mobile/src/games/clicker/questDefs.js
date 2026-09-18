@@ -101,7 +101,16 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Active ${t} fois un pouvoir de créature` },
     { id: 'seq_adv_c1l10', icon: '⚔️', metric: 'advLevelReached', target: 10, mode: 'absolute',
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', target: 8, mode: 'absolute',
+    // ⚠️ Cible FIXE (8) convertie en `effortMin`. Elle était écrite en
+    // ANCIENS niveaux : après le découpage par LEVEL_SPLIT, viser 8 ne
+    // donnait plus qu'un cinquième du bonus de Sanctuaire. Le joueur
+    // simulé finissait la séquence avec un multiplicateur global de
+    // x1,04 au lieu de x1,20 — toute sa production s'effondrait, et la
+    // 2e Ascension passait de 24 à 694 minutes.
+    //
+    // Une cible fixe sur une métrique de NIVEAU ne survit à aucun
+    // changement d'échelle. En `effortMin` elle se recalcule seule.
+    { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 22, mode: 'absolute',
       label: (t) => `Monte le Sanctuaire au niveau ${t}` },
     // Ramené de 140 000 à 100 000 (14/09) : trop élevé pour le niveau
     // réel du joueur à ce stade du cycle.
@@ -155,7 +164,8 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'seq_earn100k', icon: '💰', metric: 'totalEarned', effortMin: 30, mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    { id: 'seq_pacte20', icon: '🔗', metric: 'tapPower', target: 9, mode: 'absolute',
+    // ⚠️ Même correction, même cause : 9 ANCIENS niveaux de Pacte.
+    { id: 'seq_pacte20', icon: '🔗', metric: 'tapPower', effortMin: 25, mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     { id: 'seq_rune1', icon: '🛒', metric: 'runeBought', target: 1, mode: 'delta',
       label: () => 'Achète 1 rune en Exploration' },
@@ -171,7 +181,7 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Équipe ${t} runes sur tes créatures` },
     // Remplacé : le Sanctuaire est plafonné à 10, « niveau 15 » était
     // devenu littéralement impossible et bloquait l'œuf pour toujours.
-    { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', target: 5, mode: 'absolute',
+    { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', effortMin: 18, mode: 'absolute',
       label: (t) => `Monte Poigne Ancienne au niveau ${t}` },
     { id: 'seq_hold1M', icon: '🏦', metric: 'coins', effortMin: 35, mode: 'absolute',
       label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
@@ -193,7 +203,7 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'seq_crit100', icon: '💥', metric: 'totalCrits', target: 140, mode: 'delta',
       label: (t) => `Obtiens ${t} coups critiques` },
-    { id: 'seq_tap2lvl5', icon: '🪄', metric: 'tapUpgrade:tap2', target: 5, mode: 'absolute',
+    { id: 'seq_tap2lvl5', icon: '🪄', metric: 'tapUpgrade:tap2', effortMin: 18, mode: 'absolute',
       label: (t) => `Monte Gantelet Runique au niveau ${t}` },
   ],
   // --- Cycle 9 : profondeur ---
@@ -212,7 +222,7 @@ export const QUEST_SEQUENCE = [
     // parce qu'il était difficile.
     { id: 'seq_adv_c4l10', icon: '⚔️', metric: 'advLevelReached', target: 30, mode: 'absolute',
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'seq_tap3', icon: '🔱', metric: 'tapUpgrade:tap3', target: 1, mode: 'absolute',
+    { id: 'seq_tap3', icon: '🔱', metric: 'tapUpgrade:tap3', effortMin: 15, mode: 'absolute',
       label: () => 'Débloque le Sceau de Puissance' },
   ],
   // --- Cycle 10 : seconde Ascension, dernier cycle scripté ---

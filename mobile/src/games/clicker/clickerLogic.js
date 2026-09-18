@@ -425,7 +425,46 @@ export function summonCost(ownedCount) {
 // et son coût DOUBLE à chaque palier au lieu de croître de 55% : le
 // Pacte était la façon la plus rapide de démarrer, il devient un
 // investissement qu'on ne peut plus monter indéfiniment au début.
-export const TAP_DAMAGE_PER_LEVEL = 0.5;
+// ⚠️⚠️ DÉCOUPAGE DES NIVEAUX — ne pas toucher sans relire ce bloc.
+//
+// Pacte, Sanctuaire et Veilleur coûtaient x2 PAR NIVEAU. Conséquence
+// mesurée : quel que soit l'argent donné au joueur, il plafonnait vers
+// le niveau 9-12. Les niveaux sont LOGARITHMIQUES en argent — x4
+// d'argent ne donne que +2 niveaux, et x20 n'en donne toujours que +1
+// de plus. Aucun multiplicateur ne produira jamais « Pacte niveau 45 ».
+//
+// Le seul levier est d'APLATIR la croissance du coût. On découpe donc
+// chaque ancien niveau en LEVEL_SPLIT niveaux : le coût croît de
+// 2^(1/5) au lieu de 2, et chaque niveau apporte 1/5 du bonus.
+//
+// ⚠️ La transformation est NEUTRE en équilibrage, par construction :
+// LEVEL_SPLIT nouveaux niveaux coûtent exactement ce que coûtait UN
+// ancien niveau, et apportent exactement le même bonus. Seuls les
+// NOMBRES affichés changent — c'était le but.
+//
+// ⚠️ Écrire `Math.pow(2, 1 / LEVEL_SPLIT)` et JAMAIS « 1,15 » en dur :
+// une valeur arrondie ferait dériver la courbe sur 50 niveaux.
+export const LEVEL_SPLIT = 5;
+export const LEVEL_COST_GROWTH = Math.pow(2, 1 / LEVEL_SPLIT);
+
+// ⚠️ SANS CE FACTEUR LE DÉCOUPAGE N'EST PAS NEUTRE — piège vérifié par
+// la mesure le 17/09.
+//
+// Découper x2 en cinq x1,1487 préserve bien le coût du DERNIER niveau,
+// mais pas la SOMME : une série de raison 2 vaut ~2x son dernier terme,
+// une série de raison 1,1487 en vaut ~7,7x. Mesuré sans correction :
+// atteindre la puissance de l'ancien Pacte 12 passait de 57 316 à
+// 385 451 pièces, soit x6,7 — le découpage aurait discrètement rendu
+// Pacte, Sanctuaire et Veilleur sept fois plus chers.
+//
+// Le coefficient de BASE doit donc être multiplié par (raison - 1) :
+//   somme_ancienne = base x (2^n - 1) / (2 - 1)
+//   somme_nouvelle = base' x (2^n - 1) / (g - 1)
+// d'où base' = base x (g - 1). Le coût cumulé redevient IDENTIQUE à
+// puissance égale, quel que soit le niveau.
+export const LEVEL_BASE_ADJUST = LEVEL_COST_GROWTH - 1;
+
+export const TAP_DAMAGE_PER_LEVEL = 0.5 / LEVEL_SPLIT;
 export function tapDamage(level) {
   const lvl = Number.isFinite(level) ? Math.max(1, level) : 1;
   return 1 + (lvl - 1) * TAP_DAMAGE_PER_LEVEL;
@@ -438,7 +477,7 @@ export function tapDamage(level) {
 // niveau est inchangée, donc la courbe garde sa forme.
 export const UPGRADE_COST_MULT = 1.4;
 export function tapPowerCost(currentTapPower) {
-  return Math.round(20 * UPGRADE_COST_MULT * Math.pow(2, currentTapPower - 1));
+  return Math.round(20 * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, currentTapPower - 1));
 }
 
 // ---- Apparitions de créatures sur le bouton de tap ("le cookie") ----
@@ -750,8 +789,12 @@ export function goldenBonus(tapPower) {
 // Un compagnon tape pour le joueur en continu — traduit en revenu/s
 // supplémentaire proportionnel à la puissance de tap actuelle (pas un
 // montant fixe qui deviendrait négligeable en fin de partie).
+// ⚠️ CODE MORT — vérifié le 17/09, aucun appel dans toute l'appli.
+// Laissé en place mais corrigé : il lisait lui aussi `tapPower` (un
+// NIVEAU) comme une puissance. Si quelqu'un le rebranche un jour, il ne
+// doit pas rapporter 5x trop.
 export function familiarIncome(level, tapPower) {
-  return level * tapPower * 0.5;
+  return level * tapDamage(tapPower) * 0.5;
 }
 export function familiarUpgradeCost(level) {
   return Math.round(40 * Math.pow(1.6, level));
@@ -770,14 +813,14 @@ export function familiarUpgradeCost(level) {
 // respectivement toute la production et tous les gains hors-ligne, donc
 // les laisser monter sans fin faisait d'elles un passage obligé qui
 // écrasait tous les autres achats.
-export const SANCTUARY_MAX_LEVEL = 10;
-export const VEILLEUR_MAX_LEVEL = 10;
+export const SANCTUARY_MAX_LEVEL = 10 * LEVEL_SPLIT;
+export const VEILLEUR_MAX_LEVEL = 10 * LEVEL_SPLIT;
 
 export function sanctuaryMultiplier(level) {
-  return 1 + Math.min(SANCTUARY_MAX_LEVEL, Math.max(0, level || 0)) * 0.025;
+  return 1 + Math.min(SANCTUARY_MAX_LEVEL, Math.max(0, level || 0)) * (0.025 / LEVEL_SPLIT);
 }
 export function sanctuaryUpgradeCost(level) {
-  return Math.round(60 * UPGRADE_COST_MULT * Math.pow(2.0, level));
+  return Math.round(60 * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, level));
 }
 export function sanctuaryMaxed(level) {
   return (level || 0) >= SANCTUARY_MAX_LEVEL;
@@ -789,13 +832,13 @@ export function sanctuaryMaxed(level) {
 // Sanctuaire pour un défi qui vient plus tard dans la séquence — l'ordre
 // des défis et l'ordre des prix ne se contredisent plus.
 export function veilleurOfflineMultiplier(level) {
-  return 1 + Math.min(VEILLEUR_MAX_LEVEL, Math.max(0, level || 0)) * 0.05;
+  return 1 + Math.min(VEILLEUR_MAX_LEVEL, Math.max(0, level || 0)) * (0.05 / LEVEL_SPLIT);
 }
 // Coefficient ramené de 150 à 120 (−20 %) le 14/09 : le défi « Veilleur
 // niveau 10 » était trop long. Total pour atteindre le niveau 10 :
 // 214 830 → 171 864 pièces.
 export function veilleurUpgradeCost(level) {
-  return Math.round(120 * UPGRADE_COST_MULT * Math.pow(2, level));
+  return Math.round(120 * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, level));
 }
 // ---- Achat de Griffes avec les pièces du Clicker (14/09) ----
 //
@@ -844,7 +887,9 @@ export function veilleurMaxed(level) {
 // dès le départ le chemin complet.
 export const CORE_UNLOCKS = [
   { id: 'pacte', requires: null },
-  { id: 'faveur', requires: { key: 'tapPower', level: 5, label: 'Monte Pacte au niveau 5' } },
+  // ⚠️ Seuil exprimé en NIVEAUX : il suit le découpage, sinon la Faveur
+  // s'ouvrirait 5x plus tôt qu'avant.
+  { id: 'faveur', requires: { key: 'tapPower', level: 5 * LEVEL_SPLIT, label: `Monte Pacte au niveau ${5 * LEVEL_SPLIT}` } },
   { id: 'critDamage', requires: { key: 'critLevel', level: 1, label: 'Achète 1 Faveur des Esprits' } },
   { id: 'sanctuaire', requires: { key: 'critDamageLevel', level: 1, label: 'Achète 1 Dégâts critiques' } },
   { id: 'veilleur', requires: { key: 'sanctuaryLevel', level: 1, label: 'Achète 1 Sanctuaire' } },
@@ -938,7 +983,8 @@ export const TAP_UPGRADES = [
   { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 343750, cost: 83799670643, growth: 1.45 },
 ];
 
-export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10;
+// ⚠️ Même raison : seuil en niveaux, il suit le découpage.
+export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10 * LEVEL_SPLIT;
 export const TAP_UPGRADE_UNLOCK_LEVEL = 5;
 
 // Accepte l'ancien format (tableau d'ids achetés une fois) comme
@@ -1185,7 +1231,14 @@ export function ascensionGriffesReward(ascensionNumber) {
 // ---- Rituel (bouton "fausse pub" — pas de vrai SDK pour l'instant) ----
 export const RITUAL_COOLDOWN_SEC = 180; // 3 minutes entre 2 utilisations
 export function ritualReward(tapPower, passiveIncome) {
-  return Math.round(tapPower * 100 + passiveIncome * 120);
+  // ⚠️ Lisait `tapPower` — un NIVEAU — comme s'il s'agissait d'une
+  // puissance. Avec le découpage des niveaux, la récompense aurait été
+  // multipliée par 5 sans que rien ne le justifie. On passe par
+  // `tapDamage`, qui est la vraie puissance : la formule ci-dessous
+  // rend EXACTEMENT l'ancienne valeur à puissance égale, et ne bougera
+  // plus si LEVEL_SPLIT change un jour.
+  const puissance = tapDamage(tapPower);
+  return Math.round((puissance - 1) * (100 / TAP_DAMAGE_PER_LEVEL) / LEVEL_SPLIT + 100 + passiveIncome * 120);
 }
 export function ritualReady(lastUsedMs, nowMs) {
   return nowMs - lastUsedMs >= RITUAL_COOLDOWN_SEC * 1000;

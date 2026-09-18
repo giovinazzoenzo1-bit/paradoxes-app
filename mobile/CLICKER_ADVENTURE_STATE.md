@@ -1010,10 +1010,65 @@ accomplis.
 | # | Étape | État |
 |---|---|---|
 | 1 | Clés de sauvegarde v2 + recalage des paliers de tap | ✅ fait |
-| 2 | Aplatir Pacte / Sanctuaire / Veilleur (x2,00 -> x1,15) + relever les plafonds | à faire |
+| 2 | Aplatir Pacte / Sanctuaire / Veilleur + relever les plafonds | ✅ fait |
 | 3 | Multiplier x20 revenus, coûts, seuils, quotidiens, succès, Griffes | à faire |
 | 4 | Recalculer le barème des seuils d'Ascension | à faire |
 | 5 | Réécrire les 30 défis par groupe d'Ascension | à faire |
+
+## ⚠️⚠️ ÉTAPE 2 — découpage des niveaux par LEVEL_SPLIT
+
+`LEVEL_SPLIT = 5` et `LEVEL_COST_GROWTH = 2^(1/5)` dans `clickerLogic.js`.
+Chaque ancien niveau de Pacte, Sanctuaire et Veilleur devient 5 niveaux :
+coût x1,1487 au lieu de x2, bonus divisé par 5, plafonds 10 -> 50.
+
+Résultat : Pacte **40** en début de partie, **70** au milieu, **173** en
+fin. Sanctuaire et Veilleur montent à 50. Durées inchangées
+(101/111/129/148/173/205 min).
+
+### ⚠️ Trois pièges, tous attrapés par la mesure et non par la relecture
+
+**1. Le découpage n'est PAS neutre sans corriger le coefficient de base.**
+Découper x2 en cinq x1,1487 préserve le coût du DERNIER niveau mais pas
+la SOMME : une série de raison 2 vaut ~2x son dernier terme, une de
+raison 1,1487 en vaut ~7,7x. Mesuré : atteindre la puissance de l'ancien
+Pacte 12 passait de 57 316 à 385 451 pièces, soit **x6,7**. D'où
+`LEVEL_BASE_ADJUST = LEVEL_COST_GROWTH - 1`, qui rétablit l'égalité
+exacte (écart mesuré : 0,0 %).
+
+**2. Deux fonctions lisaient `tapPower` — un NIVEAU — comme une
+PUISSANCE.** `ritualReward` aurait rendu 5x trop. Corrigée pour passer
+par `tapDamage`. `familiarIncome` avait le même défaut : c'est du CODE
+MORT (aucun appel dans l'appli, vérifié) mais il est corrigé aussi.
+
+**3. Des cibles FIXES écrites en ANCIENS niveaux.** `seq_sanct10` visait
+« Sanctuaire 8 » en dur : après le découpage, 8 ne valait plus qu'un
+cinquième du bonus. Le joueur simulé finissait avec un multiplicateur
+global de x1,04 au lieu de x1,20, sa production s'effondrait, et la 2e
+Ascension passait de **24 à 694 minutes**. Même défaut sur `seq_pacte20`.
+
+### 6e contrôle : `auditCiblesFixes()`
+
+Signale toute cible EN DUR sur une métrique dont l'échelle est définie
+ailleurs dans le code (niveaux, pièces, générateurs, paliers de tap).
+Ces défis-là doivent s'écrire en `effortMin` et se recalculer seuls.
+
+Les métriques de COMPTAGE (combats gagnés, runes, offrandes, niveau
+d'Aventure) gardent leurs cibles fixes : leur échelle est un nombre
+d'actions, elle ne bouge pas quand on rééquilibre l'économie.
+
+⚠️ Il a immédiatement trouvé 3 défis de plus (`seq_sanct15`,
+`seq_tap2lvl5`, `seq_tap3`), tous sur des paliers de tap dont le prix
+venait d'être multiplié par ~10 à l'étape 1.
+
+### ⚠️ Deux trous découverts en voulant les corriger
+
+- `resolveQuestTarget` n'avait **aucune branche `tapUpgrade:`** : ces
+  défis tombaient dans le cas générique « avance d'un pas ». Écrire
+  `effortMin` dessus n'avait donc aucun effet. Branche ajoutée.
+- `minutesPour` dans l'audit renvoyait **12 minutes EN DUR** pour ces
+  mêmes défis : l'instrument ne voyait aucun changement de prix. Corrigé.
+
+---
 
 ## ⚠️⚠️ ÉTAPE 1 — pourquoi la boutique était morte
 

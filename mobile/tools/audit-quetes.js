@@ -117,7 +117,17 @@ function minutesPour(q, cible, s) {
     let c = 0; for (let n = (s.autoClickers[a.id] || 0); n < cible; n++) c += C.autoClickerCost(a, n);
     return c / prod / 60;
   }
-  if (m.startsWith('tapUpgrade:')) return 12; // paliers de tap : quelques minutes
+  if (m.startsWith('tapUpgrade:')) {
+    // ⚠️ Renvoyait 12 minutes EN DUR : l'audit ne voyait donc aucun
+    // changement de prix des paliers de tap, alors qu'ils ont été
+    // multipliés par ~10 le 17/09. On compte le coût réel, comme pour
+    // toutes les autres métriques de niveau.
+    const palier = C.TAP_UPGRADES.find((t) => t.id === m.slice(11));
+    if (!palier) return null;
+    let c = 0;
+    for (let l = ((s.tapUpgrades || {})[palier.id] || 0); l < cible; l++) c += C.tapUpgradeCost(palier, l);
+    return c / prod / 60;
+  } // paliers de tap : quelques minutes
   if (m === 'totalCrits') return restant / (H.tapsParSec * Math.max(0.02, C.critChance(s.critLevel))) / 60;
   if (m === 'goldenClaimed') return restant / H.doreeParMin;
   if (m === 'powerActivated') return restant / H.pouvoirParMin;
@@ -550,3 +560,47 @@ function auditAscension(depassementMax = ASC_DEPASSEMENT_MAX, ascMax = 4) {
 }
 module.exports.auditAscension = auditAscension;
 module.exports.etatApresAscension = etatApresAscension;
+
+// ---- Cibles FIXES sur une métrique à ÉCHELLE DÉRIVÉE ----------------
+//
+// Bug réel du 17/09 : `seq_sanct10` visait « Sanctuaire niveau 8 » en
+// dur. Après le découpage des niveaux par LEVEL_SPLIT, 8 ne valait plus
+// qu'un CINQUIÈME du bonus visé. Le joueur finissait la séquence avec un
+// multiplicateur global de x1,04 au lieu de x1,20, toute sa production
+// s'effondrait, et la 2e Ascension passait de 24 à 694 minutes. Même
+// défaut sur `seq_pacte20` (9 anciens niveaux).
+//
+// Règle : une métrique dont l'ÉCHELLE est définie ailleurs dans le code
+// (niveaux, pièces) ne doit JAMAIS porter de cible en dur — sinon elle
+// périme en silence au premier changement d'équilibrage. Ces défis-là
+// s'écrivent en `effortMin` et se recalculent seuls.
+//
+// Les métriques de COMPTAGE (combats gagnés, runes achetées, offrandes,
+// niveau d'Aventure) gardent leurs cibles fixes : leur échelle est un
+// nombre d'actions, elle ne bouge pas quand on rééquilibre l'économie.
+const METRIQUES_A_ECHELLE = [
+  'tapPower', 'sanctuaryLevel', 'veilleurLevel', 'critLevel', 'critDamageLevel',
+  'coins', 'totalEarned', 'passiveIncome', 'autoTotal',
+];
+
+function metriqueAEchelle(m) {
+  if (!m) return false;
+  if (METRIQUES_A_ECHELLE.includes(m)) return true;
+  // Générateurs et améliorations : leur coût est une courbe, donc leur
+  // échelle aussi.
+  return m.startsWith('auto:') || m.startsWith('upgrade:') || m.startsWith('tapUpgrade:');
+}
+
+function auditCiblesFixes() {
+  const suspects = [];
+  const vus = new Set();
+  [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL].forEach((q) => {
+    if (!q || vus.has(q.id)) return;
+    vus.add(q.id);
+    if (!q.target || q.effortMin) return;
+    if (!metriqueAEchelle(q.metric)) return;
+    suspects.push({ id: q.id, metric: q.metric, target: q.target });
+  });
+  return suspects;
+}
+module.exports.auditCiblesFixes = auditCiblesFixes;
