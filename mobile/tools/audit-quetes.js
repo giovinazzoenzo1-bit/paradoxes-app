@@ -497,11 +497,37 @@ module.exports.metriquesPubliees = metriquesPubliees;
 // « monte au niveau », « seconde ») avec un mode `delta` est suspect.
 const MOTS_DE_TOTAL = /atteins|poss[eè]de|monte|termine|seconde|deuxi[eè]me|troisi[eè]me|jusqu/i;
 
+// ⚠️ MÉTRIQUES INTERDITES EN MODE `delta`.
+//
+// Une métrique qui décrit un ÉTAT ATTEINT (nombre d'Ascensions, niveau
+// de Pacte, niveau d'Aventure, niveau de créature) ne peut pas s'écrire
+// « N de plus » : le libellé annonce un total, le moteur compte un
+// écart. C'est exactement le bug signalé par l'auteur — « Fais ta 2e
+// Ascension » en mode delta avec une cible de 2 demandait DEUX
+// Ascensions de plus, donc trois en tout.
+//
+// Le contrôle ne regardait que le TEXTE du libellé, via une liste de
+// mots. « Fais ta 2e Ascension » ne contient aucun de ces mots : il
+// passait au travers. On teste maintenant la MÉTRIQUE, qui ne dépend
+// d'aucune tournure de phrase.
+const METRIQUES_D_ETAT = [
+  'ascension', 'tapPower', 'sanctuaryLevel', 'veilleurLevel', 'critLevel',
+  'critDamageLevel', 'advLevelReached', 'maxCreatureLevel', 'maxEvolutionTier',
+  'passiveIncome', 'coins', 'autoTotal', 'maxCombo', 'maxTranseHoldSec',
+  'ownedCount', 'deckCount',
+];
+
 function auditModes() {
   const suspects = [];
   const tous = [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL];
   tous.forEach((q) => {
     if (q.mode !== 'delta') return;
+    const m = q.metric || '';
+    if (METRIQUES_D_ETAT.includes(m) || m.startsWith('auto:')
+      || m.startsWith('upgrade:') || m.startsWith('tapUpgrade:')) {
+      suspects.push({ id: q.id, metric: m, pourquoi: "métrique d'ÉTAT en mode delta" });
+      return;
+    }
     const texte = Q.questLabel(q.id, q.target || 5, {}, {});
     if (MOTS_DE_TOTAL.test(texte)) suspects.push({ id: q.id, texte });
   });
