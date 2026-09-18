@@ -38,7 +38,14 @@ jobs:
       # être touchées par la CI.
 
       - name: Installe EAS CLI
-        run: npm install -g eas-cli
+        # ⚠️ VERSION FIGÉE. Sans numéro, chaque publication prenait la
+        # DERNIÈRE version d'eas-cli publiée sur npm — donc l'outil qui
+        # fabrique la mise à jour pouvait changer tout seul, du jour au
+        # lendemain, sans le moindre commit. Un démarrage qui casse « sans
+        # qu'on ait rien touché » devient alors impossible à expliquer.
+        # 24.7.0 est la version avec laquelle les publications du 18/09
+        # ont été faites. La monter volontairement, jamais par accident.
+        run: npm install -g eas-cli@24.7.0
 
       - name: Lie le projet Expo existant (idempotent, sûr à répéter)
         env:
