@@ -14,7 +14,7 @@
 //
 // ⚠️ Oublier de l'incrémenter = l'auteur ne voit pas son changement et
 // croit à un bug de publication. C'est arrivé le 17/09.
-export const QUEST_DEFS_VERSION = 4;
+export const QUEST_DEFS_VERSION = 5;
 
 // ════════════════════════════════════════════════════════════════
 //  LES DÉFIS — ce fichier ne contient QUE leur définition.
@@ -90,203 +90,126 @@ export const EGG_STAGES = [
 // exigeait le chapitre 4 niveau 10. Tout nouveau défi de ce type reprend
 // ce pas de +5.
 export const QUEST_SEQUENCE = [
-  // --- Cycle 1 : les bases du clicker ---
+  // ══════════════════ ŒUF 1 — RELANCER ══════════════════
+  // Aucun défi d'Aventure ni de Rune ici : au tout premier œuf le joueur
+  // n'a AUCUNE créature, donc pas de deck, donc pas de combat ni de
+  // Griffes. Un défi injouable bloquerait l'œuf pour toujours. Le
+  // schéma se répétant à chaque groupe, on le retire du SCHÉMA plutôt
+  // que d'ajouter un cas particulier au premier groupe.
   [
-    { id: 'seq_earn10k', icon: '💰', metric: 'totalEarned', effortMin: 12, mode: 'delta',
+    // ⚠️ L'ACCROCHE — la part la plus petite de tout le jeu.
+    //
+    // C'est le tout premier défi qu'un joueur voit. Le doc répète depuis
+    // longtemps qu'il doit se boucler en 2-3 minutes : à 1,2 % du seuil
+    // il en demandait 25, et le joueur décrochait avant d'avoir compris
+    // à quoi sert le bouton.
+    { id: 'g_e1_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.0015, mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    // ⚠️ PREMIER DÉFI ÉCRIT EN `partAsc` — la bonne façon.
-    //
-    // 5 % du chemin vers la prochaine Ascension. `effortMin` disait « 64
-    // minutes » pour la même cible, parce qu'il suppose un revenu GELÉ
-    // alors qu'acheter du Pacte augmente le revenu. Mesuré niveau par
-    // niveau : un joueur qui réinvestit atteint Pacte 8 en 12 minutes.
-    //
-    // Et la part se met à l'échelle seule, sans aucun multiplicateur :
-    // c'est le barème des seuils qui porte la rampe. 2 % donne une
-    // montée d'un niveau par Ascension — Pacte 7 · 8 · 9 · 10 · 10 —
-    // pour 7 à 15 minutes à chaque fois.
-    //
-    // ⚠️ 2 % et pas 3 % : les deux donnent 7 au premier défi, mais 3 %
-    // saute ensuite directement à 9. Mesuré avant de choisir.
-    { id: 'seq_pacte15', icon: '🔗', metric: 'tapPower', partAsc: 0.02, mode: 'absolute',
+    { id: 'g_e1_pacte', icon: '🔗', metric: 'tapPower', partAsc: 0.02, mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
-    // ⚠️ Le libellé écrivait « 42 secondes » EN DUR et n'a jamais lu sa
-    // cible. `auditLibelles()` ne le voyait pas : il écartait tout texte
-    // contenant « x<chiffre> » à cause du « x2,5 ». Filtre corrigé.
-    { id: 'seq_transe30', icon: '🔥', metric: 'maxTranseHoldSec', target: 25, mode: 'absolute',
+    // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
+    // « +15 % au-dessus de l'acquis » la poussait à 641 secondes.
+    { id: 'g_e1_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 25, cap: 40, mode: 'absolute',
       label: (t) => `Reste en Transe x2,5 pendant ${t} secondes` },
-    { id: 'seq_golden3', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
-      label: (t) => `Touche ${t} fois la cible dorée` },
-  ],
-  // --- Cycle 2 : critiques, Offrande, premier combat ---
-  [
-    { id: 'seq_crit20', icon: '💥', metric: 'totalCrits', target: 28, mode: 'delta',
-      label: (t) => `Obtiens ${t} coups critiques` },
-    { id: 'seq_offering2', icon: '💎', metric: 'offering', target: 1, mode: 'delta',
-      label: () => 'Fais 1 Offrande' },
-    { id: 'seq_adv_c1l1', icon: '⚔️', metric: 'advLevelReached', target: 3, mode: 'absolute',
-      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'seq_esprit10', icon: '👻', metric: 'auto:esprit', effortMin: 20, mode: 'absolute',
+    { id: 'g_e1_auto1', icon: '👻', metric: 'auto:esprit', partAsc: 0.03, mode: 'absolute',
       label: (t) => `Possède ${t} Esprits Frappeurs` },
-  ],
-  // --- Cycle 3 : pouvoirs, Sanctuaire, revenu passif (5 défis) ---
-  [
-    // Ramené de 7 à 5 (14/09) : trop long pour ce moment du cycle.
-    { id: 'seq_power5', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
-      label: (t) => `Active ${t} fois un pouvoir de créature` },
-    { id: 'seq_adv_c1l10', icon: '⚔️', metric: 'advLevelReached', target: 10, mode: 'absolute',
-      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    // ⚠️ Cible FIXE (8) convertie en `effortMin`. Elle était écrite en
-    // ANCIENS niveaux : après le découpage par LEVEL_SPLIT, viser 8 ne
-    // donnait plus qu'un cinquième du bonus de Sanctuaire. Le joueur
-    // simulé finissait la séquence avec un multiplicateur global de
-    // x1,04 au lieu de x1,20 — toute sa production s'effondrait, et la
-    // 2e Ascension passait de 24 à 694 minutes.
-    //
-    // Une cible fixe sur une métrique de NIVEAU ne survit à aucun
-    // changement d'échelle. En `effortMin` elle se recalcule seule.
-    { id: 'seq_sanct10', icon: '🏛️', metric: 'sanctuaryLevel', effortMin: 22, mode: 'absolute',
-      label: (t) => `Monte le Sanctuaire au niveau ${t}` },
-    // Ramené de 140 000 à 100 000 (14/09) : trop élevé pour le niveau
-    // réel du joueur à ce stade du cycle.
-    { id: 'seq_hold100k', icon: '🏦', metric: 'coins', effortMin: 30, mode: 'absolute',
-      label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
-    { id: 'seq_passive50', icon: '📈', metric: 'passiveIncome', effortMin: 25, mode: 'absolute',
-      label: (t) => `Atteins ${fmtQ(t)} pièces par seconde` },
-  ],
-  // --- Cycle 4 : montée en puissance ---
-  [
-    // ⚠️ Suit le premier défi de cible dorée (3), sinon les deux se
-    // lisent comme le même défi.
-    { id: 'seq_golden6', icon: '⭐', metric: 'goldenClaimed', target: 4, mode: 'delta',
+    { id: 'g_e1_golden', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
       label: (t) => `Touche ${t} fois la cible dorée` },
-    { id: 'seq_veilleur10', icon: '🌙', metric: 'veilleurLevel', effortMin: 25, mode: 'absolute',
+  ],
+
+  // ══════════════════ ŒUF 2 — AUTOMATISER ══════════════════
+  // La première créature est arrivée et s'équipe toute seule : l'Aventure
+  // devient jouable, et avec elle les Griffes.
+  [
+    { id: 'g_e2_passive', icon: '⚙️', metric: 'passiveIncome', partAsc: 0.05, mode: 'absolute',
+      label: (t) => `Atteins ${fmtQ(t)} pièces par seconde` },
+    { id: 'g_e2_sanct', icon: '🏛️', metric: 'sanctuaryLevel', partAsc: 0.06, mode: 'absolute',
+      available: (s) => coreUpgradeUnlocked('sanctuaire', s) && (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
+      label: (t) => `Monte le Sanctuaire au niveau ${t}` },
+    { id: 'g_e2_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
+      available: (s) => (s.deckCount || 0) > 0,
+      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
+    { id: 'g_e2_crit', icon: '💥', metric: 'totalCrits', target: 30, mode: 'delta',
+      label: (t) => `Obtiens ${t} coups critiques` },
+    { id: 'g_e2_taps', icon: '👆', metric: 'totalTaps', target: 1200, mode: 'delta',
+      label: (t) => `Tape ${fmtQ(t)} fois` },
+  ],
+
+  // ══════════════════ ŒUF 3 — RENFORCER ══════════════════
+  [
+    { id: 'g_e3_hold', icon: '💰', metric: 'coins', partAsc: 0.08, mode: 'absolute',
+      label: (t) => `Constitue un trésor de ${fmtQ(t)} pièces` },
+    { id: 'g_e3_veilleur', icon: '🌙', metric: 'veilleurLevel', partAsc: 0.07, mode: 'absolute',
+      available: (s) => coreUpgradeUnlocked('veilleur', s) && (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
       label: (t) => `Monte le Veilleur au niveau ${t}` },
-    { id: 'seq_crit40', icon: '💥', metric: 'totalCrits', target: 56, mode: 'delta',
-      label: (t) => `Obtiens ${t} coups critiques` },
-    { id: 'seq_adv_c2l5', icon: '⚔️', metric: 'advLevelReached', target: 15, mode: 'absolute',
-      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
+    { id: 'g_e3_battles', icon: '🗡️', metric: 'battleWon', target: 4, mode: 'delta',
+      available: (s) => (s.deckCount || 0) > 0,
+      label: (t) => `Gagne ${t} combats en Aventure` },
+    { id: 'g_e3_power', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
+      label: (t) => `Active ${t} fois un pouvoir` },
+    { id: 'g_e3_tapup', icon: '✊', metric: 'tapUpgrade:tap1', partAsc: 0.05, mode: 'absolute',
+      available: (s) => (s.tapPower || 1) >= 10,
+      label: (t) => `Monte la Poigne Ancienne au niveau ${t}` },
   ],
-  // --- Cycle 5 : première Ascension, et découverte des Runes ---
+
+  // ══════════════════ ŒUF 4 — ÉQUIPER ══════════════════
   [
-    // ⚠️ Placé au CINQUIÈME cycle, donc après la 4e éclosion : avant, le
-    // joueur n'a ni Griffes ni créatures à équiper, et une rune ne lui
-    // servirait à rien.
-    //
-    // ⚠️ Ce cycle compte 5 défis et non 4 : celui-ci est un défi EN PLUS,
-    // pas un remplacement. Il se valide avec le TIRAGE GRATUIT offert à
-    // l'arrivée du cycle (voir PENDING_FREE_RUNE_KEY) — le joueur n'a
-    // donc rien à dépenser pour découvrir les Runes, il lui suffit
-    // d'utiliser son tirage.
-    { id: 'seq_firstrune', icon: '🔮', metric: 'runeBought', target: 1, mode: 'delta',
-      label: () => 'Achète une Rune et équipe-la' },
-    { id: 'seq_offering5', icon: '💎', metric: 'offering', target: 2, mode: 'delta',
-      label: () => 'Fais 2 Offrandes' },
-    { id: 'seq_griffe5', icon: '🔥', metric: 'upgrade:griffeBraisillon', effortMin: 25, mode: 'absolute',
-      label: (t) => `Monte Griffe de Braisillon au niveau ${t}` },
-    // ⚠️ Remplace l'ancien « chapitre 2, niveau 10 » : le cycle
-    // PRÉCÉDENT demandait déjà « chapitre 2, niveau 5 ». Deux défis
-    // d'Aventure dans le même chapitre à un cycle d'écart se lisaient
-    // comme le même défi répété. On varie de famille.
-    // ⚠️ Suit le premier défi de Transe : 25 -> 45, même écart relatif
-    // qu'avant (42 -> 60). Les deux se lisent ensemble.
-    { id: 'seq_transe60', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, mode: 'absolute',
-      label: (t) => `Tiens la Transe pendant ${t} secondes` },
-    // ⚠️ `absolute`, PAS `delta`. En delta, la cible compte des
-    // Ascensions EN PLUS de celles déjà faites : un joueur qui en avait
-    // déjà une devait en faire une seconde pour valider « Fais
-    // l'Ascension ». Ici on vise un TOTAL atteint.
-    { id: 'seq_ascend1', icon: '🌟', metric: 'ascension', target: 1, mode: 'absolute',
-      label: (t) => (t <= 1 ? "Fais l'Ascension" : `Atteins ${t} Ascensions`) },
-  ],
-  // --- Cycle 6 : relance après Ascension ---
-  [
-    { id: 'seq_earn100k', icon: '💰', metric: 'totalEarned', effortMin: 30, mode: 'delta',
-      label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    // ⚠️ Même correction, même cause : 9 ANCIENS niveaux de Pacte.
-    { id: 'seq_pacte20', icon: '🔗', metric: 'tapPower', effortMin: 25, mode: 'absolute',
-      label: (t) => `Monte Pacte au niveau ${t}` },
-    { id: 'seq_rune1', icon: '🛒', metric: 'runeBought', target: 1, mode: 'delta',
-      label: () => 'Achète 1 rune en Exploration' },
-    { id: 'seq_adv_c3l5', icon: '⚔️', metric: 'advLevelReached', target: 20, mode: 'absolute',
-      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-  ],
-  // --- Cycle 7 : runes et évolution ---
-  [
-    // Cible ramenée de 3 à 2, et métrique changée : `runeEquipped`
-    // comptait les GESTES (glitchable en déséquipant/rééquipant),
-    // `runesEquipped` compte les runes réellement en place.
-    { id: 'seq_equipRune2', icon: '🪬', metric: 'runesEquipped', target: 2, mode: 'absolute',
-      label: (t) => `Équipe ${t} runes sur tes créatures` },
-    // Remplacé : le Sanctuaire est plafonné à 10, « niveau 15 » était
-    // devenu littéralement impossible et bloquait l'œuf pour toujours.
-    { id: 'seq_sanct15', icon: '✊', metric: 'tapUpgrade:tap1', effortMin: 18, mode: 'absolute',
-      label: (t) => `Monte Poigne Ancienne au niveau ${t}` },
-    { id: 'seq_hold1M', icon: '🏦', metric: 'coins', effortMin: 35, mode: 'absolute',
-      label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
-    { id: 'seq_evolve1', icon: '🧬', metric: 'maxEvolutionTier', target: 1, mode: 'absolute',
-      label: () => 'Fais évoluer une créature au palier 1' },
-  ],
-  // --- Cycle 8 : rythme ---
-  [
-    { id: 'seq_power10', icon: '✨', metric: 'powerActivated', target: 10, mode: 'delta',
-      label: (t) => `Active ${t} fois un pouvoir de créature` },
-    // ⚠️ Cible FIXE (5) convertie en `effortMin`. La Main Spectrale est
-    // un générateur cher : 5 unités coûtaient 82 min de production à ce
-    // stade, contre 12 à 30 pour les autres défis du cycle. Une cible
-    // fixe sur une métrique MONÉTAIRE ne se recalibre jamais — c'est
-    // exactement le défaut déjà corrigé sur les 18 défis en pièces.
-    { id: 'seq_main10', icon: '🖐️', metric: 'auto:main', effortMin: 25, mode: 'absolute',
-      label: (t) => `Possède ${t} Mains Spectrales` },
-    { id: 'seq_adv_c3l10', icon: '⚔️', metric: 'advLevelReached', target: 25, mode: 'absolute',
-      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'seq_crit100', icon: '💥', metric: 'totalCrits', target: 140, mode: 'delta',
-      label: (t) => `Obtiens ${t} coups critiques` },
-    { id: 'seq_tap2lvl5', icon: '🪄', metric: 'tapUpgrade:tap2', effortMin: 18, mode: 'absolute',
-      label: (t) => `Monte Gantelet Runique au niveau ${t}` },
-  ],
-  // --- Cycle 9 : profondeur ---
-  [
-    { id: 'seq_hold10M', icon: '🏦', metric: 'coins', effortMin: 40, mode: 'absolute',
-      label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
-    { id: 'seq_croc10', icon: '🪨', metric: 'upgrade:crocBouldog', effortMin: 30, mode: 'absolute',
-      label: (t) => `Monte Croc de Bouldog au niveau ${t}` },
-    { id: 'seq_fuse2', icon: '🔮', metric: 'runeFused', target: 1, mode: 'delta',
-      label: (t) => `Fusionne ${t} rune${t > 1 ? 's' : ''}` },
-    // ⚠️ 35 → 30 : la suite des défis d'Aventure faisait
-    // 3 · 10 · 15 · 20 · 25 · **35**, soit un dernier pas de +10 alors
-    // que la règle du fichier (juste au-dessus) impose +5. Ce seul écart
-    // coûtait 10 niveaux d'affilée, soit 120 min dont 110 d'ATTENTE
-    // d'énergie — le défi le plus long de toute la séquence, et pas
-    // parce qu'il était difficile.
-    { id: 'seq_adv_c4l10', icon: '⚔️', metric: 'advLevelReached', target: 30, mode: 'absolute',
-      label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'seq_tap3', icon: '🔱', metric: 'tapUpgrade:tap3', effortMin: 15, mode: 'absolute',
-      label: () => 'Débloque le Sceau de Puissance' },
-  ],
-  // --- Cycle 10 : seconde Ascension, dernier cycle scripté ---
-  [
-    { id: 'seq_hold50M', icon: '🏦', metric: 'coins', effortMin: 40, mode: 'absolute',
-      label: (t) => `Accumule ${fmtQ(t)} pièces en réserve` },
-    // Remplacé pour la même raison : le Veilleur est plafonné à 10.
-    { id: 'seq_feed30', icon: '🍖', metric: 'maxCreatureLevel', effortMin: 35, mode: 'absolute',
+    { id: 'g_e4_rune', icon: '🔮', metric: 'runeBought', target: 1, mode: 'delta',
+      label: (t) => (t > 1 ? `Achète ${t} runes` : 'Achète une rune') },
+    { id: 'g_e4_creature', icon: '🐣', metric: 'maxCreatureLevel', step: 2, mode: 'absolute',
+      available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Monte une créature au niveau ${t}` },
-    // ⚠️ Ce cycle n'avait plus que TROIS défis — tous les autres en ont
-    // 4 ou 5. Un défi d'Aventure avait été perdu lors du remplacement de
-    // « Veilleur niveau 20 » (le Veilleur est plafonné à 10), et la perte
-    // n'avait été vue par personne : un cycle plus court n'empêche rien,
-    // il rend juste la dernière éclosion scriptée gratuite. Retrouvé en
-    // comptant les défis tirés par cycle sur 200 profils.
-    //
-    // Le niveau 35 complète en même temps l'échelle d'Aventure au pas
-    // de +5 voulu : 3 · 10 · 15 · 20 · 25 · 30 · 35.
-    { id: 'seq_adv_c4l5', icon: '⚔️', metric: 'advLevelReached', target: 35, mode: 'absolute',
+    { id: 'g_e4_stars', icon: '🌟', metric: 'threeStarLevel', target: 1, mode: 'delta',
+      available: (s) => (s.deckCount || 0) > 0,
+      label: (t) => (t > 1
+        ? `Décroche toutes les étoiles sur ${t} niveaux d'Aventure`
+        : "Décroche toutes les étoiles sur un niveau d'Aventure") },
+    { id: 'g_e4_faveur', icon: '🍀', metric: 'critLevel', partAsc: 0.04, mode: 'absolute',
+      available: (s) => coreUpgradeUnlocked('faveur', s),
+      label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
+    { id: 'g_e4_item', icon: '🔧', metric: 'upgrade:griffeBraisillon', partAsc: 0.05, mode: 'absolute',
+      available: (s) => (s.ownedIds || []).includes('braisillon'),
+      label: (t) => `Monte Griffe de Braisillon au niveau ${t}` },
+  ],
+
+  // ══════════════════ ŒUF 5 — MAÎTRISER ══════════════════
+  [
+    { id: 'g_e5_hold', icon: '💰', metric: 'coins', partAsc: 0.20, mode: 'absolute',
+      label: (t) => `Constitue un trésor de ${fmtQ(t)} pièces` },
+    { id: 'g_e5_auto2', icon: '🖐️', metric: 'auto:main', partAsc: 0.18, mode: 'absolute',
+      label: (t) => `Possède ${t} Mains Spectrales` },
+    { id: 'g_e5_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
+      available: (s) => (s.deckCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    // ⚠️ Même correction : en delta, ce défi exigeait 2 Ascensions de
-    // PLUS (soit 3 au total pour un joueur qui en avait déjà une) alors
-    // que le texte annonce « la seconde ». Il ne se validait jamais.
-    { id: 'seq_ascend2', icon: '🌟', metric: 'ascension', target: 2, mode: 'absolute',
-      label: (t) => (t === 2 ? 'Fais une seconde Ascension' : `Atteins ${t} Ascensions`) },
+    { id: 'g_e5_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, cap: 75, mode: 'absolute',
+      label: (t) => `Tiens la Transe pendant ${t} secondes` },
+    { id: 'g_e5_fuse', icon: '⚗️', metric: 'runeFused', target: 1, mode: 'delta',
+      available: (s) => (s.runeBought || 0) >= 2,
+      label: (t) => (t > 1 ? `Fusionne ${t} fois des runes` : 'Fusionne 2 runes en 1') },
+  ],
+
+  // ══════════════════ ŒUF 6 — FRANCHIR ══════════════════
+  // Le dernier effort avant l'Ascension. Les parts sont les plus grosses
+  // du groupe : c'est là que le joueur finit de remplir le seuil.
+  [
+    { id: 'g_e6_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.30, mode: 'delta',
+      label: (t) => `Obtiens ${fmtQ(t)} pièces` },
+    { id: 'g_e6_item', icon: '🔧', metric: 'upgrade:crocBouldog', partAsc: 0.12, mode: 'absolute',
+      available: (s) => (s.ownedIds || []).includes('bouldog'),
+      label: (t) => `Monte Croc de Bouldog au niveau ${t}` },
+    { id: 'g_e6_offering', icon: '🕯️', metric: 'offering', target: 1, mode: 'delta',
+      label: (t) => (t > 1 ? `Fais ${t} Offrandes` : 'Fais une Offrande') },
+    { id: 'g_e6_taps', icon: '👆', metric: 'totalTaps', target: 4000, mode: 'delta',
+      label: (t) => `Tape ${fmtQ(t)} fois` },
+    // ⚠️ `step: 1` et NON une cible en dur.
+    //
+    // Il n'existait que deux défis d'Ascension (`target: 1` et
+    // `target: 2`) : passé la 2e, plus AUCUN défi n'en demandait, et la
+    // séquence cessait de structurer le jeu pour les 16 œufs suivants.
+    // Avec un pas, chaque passage du groupe demande l'Ascension
+    // SUIVANTE, indéfiniment.
+    { id: 'g_e6_ascend', icon: '🌟', metric: 'ascension', step: 1, mode: 'absolute',
+      label: (t) => `Fais ta ${t}${t === 1 ? 're' : 'e'} Ascension` },
   ],
 ];
 // ⚠️ AUCUN défi ne doit dépendre de l'INVOCATION.
@@ -364,9 +287,9 @@ export const QUEST_POOL = [
   // ---------- Rythme d'action (cibles FIXES) ----------
   // Ces défis ne coûtent pas de pièces mais du temps de jeu actif : les
   // convertir en budget n'aurait aucun sens.
-  { id: 'combo25', family: 'action', icon: '🔥', metric: 'maxCombo', target: 25, mode: 'absolute',
+  { id: 'combo25', family: 'action', icon: '🔥', metric: 'maxCombo', target: 25, cap: 60, mode: 'absolute',
     label: () => 'Atteins un multiplicateur de Transe x2,5' },
-  { id: 'combo30', family: 'action', icon: '🔥', metric: 'maxCombo', target: 30, mode: 'absolute',
+  { id: 'combo30', family: 'action', icon: '🔥', metric: 'maxCombo', target: 30, cap: 80, mode: 'absolute',
     available: (s) => (s.maxCombo || 0) >= 20,
     label: () => 'Atteins un multiplicateur de Transe x3' },
   // `critChance(0)` vaut exactement 0 : sans Faveur des Esprits, aucun

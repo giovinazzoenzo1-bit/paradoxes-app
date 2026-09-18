@@ -662,3 +662,50 @@ function auditCiblesFixes() {
   return suspects;
 }
 module.exports.auditCiblesFixes = auditCiblesFixes;
+
+// ---- Cibles ABSOLUES qui s'emballent au fil des passages -------------
+//
+// Bug réel du 17/09 : le plancher « toujours +15 % au-dessus de ce que le
+// joueur a déjà » se recompose à chaque passage de la séquence. La tenue
+// de Transe passait de 25 s à 56, puis 641 SECONDES au 4e groupe — dix
+// minutes de Transe ininterrompue, impossible.
+//
+// On rejoue la séquence sur 5 passages et on signale toute cible
+// absolue qui dépasse 3x sa valeur du premier passage sans déclarer de
+// `cap`.
+function auditEmballement(facteurMax = 3, passages = 5) {
+  const suspects = [];
+  const s = etatInitial();
+  s.ownedIds = C.CREATURES.map((c) => c.id);
+  s.ownedCount = s.ownedIds.length;
+  s.deckCount = 3;
+  const premiere = {};
+  const pire = {};
+  for (let p = 0; p < passages; p++) {
+    Q.QUEST_SEQUENCE.forEach((cycle, ci) => {
+      cycle.forEach((q) => {
+        if (q.mode !== 'absolute') return;
+        const cible = q.target || q.partAsc || q.step ? Q.resolveQuestTarget(q, s) : null;
+        if (cible == null) return;
+        if (premiere[q.id] == null) premiere[q.id] = cible;
+        pire[q.id] = Math.max(pire[q.id] || 0, cible);
+        const min = minutesPour(q, cible, s);
+        if (min != null) s.totalEarned = (s.totalEarned || 0) + production(s) * 60 * min;
+        appliquer(q, cible, s);
+      });
+    });
+  }
+  Q.QUEST_SEQUENCE.flat().forEach((q) => {
+    if (q.mode !== 'absolute' || q.cap) return;
+    if (!premiere[q.id] || premiere[q.id] <= 0) return;
+    // Les métriques de PROGRESSION montent normalement : on ne regarde
+    // que celles qui mesurent une PERFORMANCE, bornée par l'humain.
+    if (!['maxTranseHoldSec', 'maxCombo'].includes(q.metric)) return;
+    const f = pire[q.id] / premiere[q.id];
+    if (f > facteurMax) {
+      suspects.push({ id: q.id, metric: q.metric, premiere: premiere[q.id], pire: pire[q.id], fois: +f.toFixed(1) });
+    }
+  });
+  return suspects;
+}
+module.exports.auditEmballement = auditEmballement;

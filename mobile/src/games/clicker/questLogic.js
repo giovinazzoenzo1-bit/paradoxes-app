@@ -307,7 +307,19 @@ export function resolveQuestTarget(quest, stats) {
     // un défi cassé.
     if (quest.mode !== 'absolute') return brute;
     const dejaLa = readMetric(quest.metric, stats);
-    return Math.max(brute, dejaLa + Math.max(quest.minStep || 1, Math.ceil(dejaLa * 0.15)));
+    const monte = Math.max(brute, dejaLa + Math.max(quest.minStep || 1, Math.ceil(dejaLa * 0.15)));
+    // ⚠️⚠️ PLAFOND — sans lui, une cible ABSOLUE s'emballe sans fin.
+    //
+    // Le plancher « toujours +15 % au-dessus de ce que le joueur a déjà »
+    // se recompose à chaque passage de la séquence : la tenue de Transe
+    // passait de 25 s à 56, puis 60, puis 641 SECONDES au 4e groupe —
+    // dix minutes de Transe ininterrompue, impossible et absurde.
+    //
+    // Les métriques de PERFORMANCE (tenir une Transe, un combo) ont un
+    // maximum humain : elles doivent déclarer leur plafond. Les
+    // métriques de PROGRESSION (niveaux, pièces) n'en ont pas et n'en
+    // déclarent donc pas.
+    return quest.cap ? Math.min(monte, quest.cap) : monte;
   }
   // ⚠️⚠️ DEUX FAÇONS D'EXPRIMER L'EFFORT D'UN DÉFI — préférer `partAsc`.
   //
@@ -336,7 +348,12 @@ export function resolveQuestTarget(quest, stats) {
   //
   // La part dit l'AMBITION du défi, la borne dit ce qui est
   // ATTEIGNABLE : on prend le plus petit des deux.
-  const PART_PLAFOND_MIN = 90;
+  // ⚠️ 45 et non 90 : mesuré, à 90 la borne laissait passer des défis à
+  // 139 minutes après la 4e Ascension. `questBudget` porte en plus le
+  // multiplicateur de pièces d'Ascension (~x1,55 à la 4e), donc la
+  // fenêtre réelle vaut toujours plus que le chiffre écrit ici.
+  // Balayage : 90 -> 3 alertes, 60 -> 2, 45 -> 0.
+  const PART_PLAFOND_MIN = 45;
   const budget = quest.partAsc
     ? Math.min(
       quest.partAsc * ascensionThreshold(Math.max(0, Math.floor((stats && stats.ascension) || 0))),
