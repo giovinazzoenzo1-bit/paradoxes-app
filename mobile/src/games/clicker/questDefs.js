@@ -14,7 +14,7 @@
 //
 // ⚠️ Oublier de l'incrémenter = l'auteur ne voit pas son changement et
 // croit à un bug de publication. C'est arrivé le 17/09.
-export const QUEST_DEFS_VERSION = 3;
+export const QUEST_DEFS_VERSION = 4;
 
 // ════════════════════════════════════════════════════════════════
 //  LES DÉFIS — ce fichier ne contient QUE leur définition.
@@ -101,10 +101,14 @@ export const QUEST_SEQUENCE = [
     // alors qu'acheter du Pacte augmente le revenu. Mesuré niveau par
     // niveau : un joueur qui réinvestit atteint Pacte 8 en 12 minutes.
     //
-    // Et la part se met à l'échelle seule : 5 % donne Pacte 8 à la 1re
-    // Ascension, puis 9, 10, 12, 14 aux suivantes, sans aucun
-    // multiplicateur — c'est le barème des seuils qui porte la rampe.
-    { id: 'seq_pacte15', icon: '🔗', metric: 'tapPower', partAsc: 0.05, mode: 'absolute',
+    // Et la part se met à l'échelle seule, sans aucun multiplicateur :
+    // c'est le barème des seuils qui porte la rampe. 2 % donne une
+    // montée d'un niveau par Ascension — Pacte 7 · 8 · 9 · 10 · 10 —
+    // pour 7 à 15 minutes à chaque fois.
+    //
+    // ⚠️ 2 % et pas 3 % : les deux donnent 7 au premier défi, mais 3 %
+    // saute ensuite directement à 9. Mesuré avant de choisir.
+    { id: 'seq_pacte15', icon: '🔗', metric: 'tapPower', partAsc: 0.02, mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     // ⚠️ Le libellé écrivait « 42 secondes » EN DUR et n'a jamais lu sa
     // cible. `auditLibelles()` ne le voyait pas : il écartait tout texte

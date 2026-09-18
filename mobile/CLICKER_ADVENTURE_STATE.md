@@ -1035,8 +1035,12 @@ réinvestit y arrive en **12 minutes**.
 `partAsc` décrit la vraie grandeur, et se met à l'échelle tout seul : le
 barème des seuils porte déjà la rampe +15 %, donc une part CONSTANTE
 donne une difficulté qui monte exactement comme prévu, sans aucun
-multiplicateur. Mesuré, 5 % du seuil : Pacte 8 · 9 · 9 · 10 · 10 de la
-1re à la 5e Ascension.
+multiplicateur. Mesuré, 2 % du seuil : **Pacte 7 · 8 · 9 · 10 · 10** de la
+1re à la 5e Ascension, pour 7 à 15 minutes à chaque fois — un niveau de
+plus par Ascension.
+
+⚠️ 2 % et pas 3 % : les deux donnent 7 au premier défi, mais 3 % saute
+ensuite directement à 9. Mesuré avant de choisir.
 
 ### ⚠️ `partAsc` doit être BORNÉ, sinon il diverge
 
