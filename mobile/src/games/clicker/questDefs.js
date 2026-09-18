@@ -76,11 +76,26 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'seq_earn10k', icon: '💰', metric: 'totalEarned', effortMin: 12, mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    { id: 'seq_pacte15', icon: '🔗', metric: 'tapPower', effortMin: 20, mode: 'absolute',
+    // ⚠️ `effortMin: 64` pour une cible de 8 — le nombre paraît énorme,
+    // il ne l'est pas.
+    //
+    // `questBudget` calcule « ce que je gagne en N minutes À REVENU
+    // GELÉ ». Or acheter du Pacte AUGMENTE le revenu : le joueur qui
+    // réinvestit atteint Pacte 8 en 12 MINUTES réelles (mesuré niveau
+    // par niveau), pas en 64. Les 15 240 pièces que ça coûte valent 3 %
+    // du chemin vers la 1re Ascension.
+    //
+    // ⚠️ À REMPLACER à l'étape 5 par une part explicite du seuil
+    // d'Ascension : c'est la seule façon d'écrire ces cibles sans que le
+    // chiffre déclaré mente sur l'effort réel.
+    { id: 'seq_pacte15', icon: '🔗', metric: 'tapPower', effortMin: 64, mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
-    { id: 'seq_transe30', icon: '🔥', metric: 'maxTranseHoldSec', target: 42, mode: 'absolute',
-      label: () => 'Reste en Transe x2,5 pendant 42 secondes' },
-    { id: 'seq_golden3', icon: '⭐', metric: 'goldenClaimed', target: 4, mode: 'delta',
+    // ⚠️ Le libellé écrivait « 42 secondes » EN DUR et n'a jamais lu sa
+    // cible. `auditLibelles()` ne le voyait pas : il écartait tout texte
+    // contenant « x<chiffre> » à cause du « x2,5 ». Filtre corrigé.
+    { id: 'seq_transe30', icon: '🔥', metric: 'maxTranseHoldSec', target: 25, mode: 'absolute',
+      label: (t) => `Reste en Transe x2,5 pendant ${t} secondes` },
+    { id: 'seq_golden3', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
       label: (t) => `Touche ${t} fois la cible dorée` },
   ],
   // --- Cycle 2 : critiques, Offrande, premier combat ---
@@ -121,7 +136,9 @@ export const QUEST_SEQUENCE = [
   ],
   // --- Cycle 4 : montée en puissance ---
   [
-    { id: 'seq_golden6', icon: '⭐', metric: 'goldenClaimed', target: 5, mode: 'delta',
+    // ⚠️ Suit le premier défi de cible dorée (3), sinon les deux se
+    // lisent comme le même défi.
+    { id: 'seq_golden6', icon: '⭐', metric: 'goldenClaimed', target: 4, mode: 'delta',
       label: (t) => `Touche ${t} fois la cible dorée` },
     { id: 'seq_veilleur10', icon: '🌙', metric: 'veilleurLevel', effortMin: 25, mode: 'absolute',
       label: (t) => `Monte le Veilleur au niveau ${t}` },
@@ -151,7 +168,9 @@ export const QUEST_SEQUENCE = [
     // PRÉCÉDENT demandait déjà « chapitre 2, niveau 5 ». Deux défis
     // d'Aventure dans le même chapitre à un cycle d'écart se lisaient
     // comme le même défi répété. On varie de famille.
-    { id: 'seq_transe60', icon: '🔥', metric: 'maxTranseHoldSec', target: 60, mode: 'absolute',
+    // ⚠️ Suit le premier défi de Transe : 25 -> 45, même écart relatif
+    // qu'avant (42 -> 60). Les deux se lisent ensemble.
+    { id: 'seq_transe60', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, mode: 'absolute',
       label: (t) => `Tiens la Transe pendant ${t} secondes` },
     // ⚠️ `absolute`, PAS `delta`. En delta, la cible compte des
     // Ascensions EN PLUS de celles déjà faites : un joueur qui en avait

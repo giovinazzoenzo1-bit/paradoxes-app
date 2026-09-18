@@ -400,11 +400,31 @@ function auditLibelles() {
         }
         return;
       }
-      if (/million|milliard|millier|x\d/i.test(texte)) return;
-      const nums = (texte.replace(/\u202f|\u00a0/g, ' ').match(/\d[\d ]*/g) || [])
-        .map((x) => parseInt(x.replace(/ /g, ''), 10));
+      // ⚠️ TROISIÈME FOIS que ce contrôle est rendu aveugle par un filtre
+      // « anti-bruit ». Il écartait tout libellé contenant `x<chiffre>`,
+      // à cause du multiplicateur de Transe (« Transe x2,5 »). Résultat :
+      // `seq_transe30` annonçait « pendant 42 secondes » EN DUR, sans
+      // jamais lire sa cible, et le contrôle ne l'a jamais vu.
+      //
+      // On ne saute plus le libellé : on RETIRE le token multiplicateur
+      // et on vérifie ce qui reste.
+      const nettoye = texte.replace(/[x\u00d7]\s*\d+([.,]\d+)?/gi, ' ');
+      // ⚠️ Lire les DÉCIMALES : « 1.7 millions » se découpait en 1 et 7,
+      // et le contrôle sortait deux faux positifs.
+      const nums = (nettoye.replace(/\u202f|\u00a0/g, ' ').match(/\d[\d ]*([.,]\d+)?/g) || [])
+        .map((x) => parseFloat(x.replace(/ /g, '').replace(',', '.')));
       if (!nums.length) return;                    // libellé sans nombre : rien à vérifier
-      if (!nums.includes(Math.round(cible))) ecarts.push({ id: q.id, etat: lbl, cible, texte });
+      // Nombres abrégés (« 14 millions ») : la cible vaut le nombre
+      // multiplié par son ordre de grandeur.
+      const echelles = /milliard/i.test(nettoye) ? [1e9]
+        : /million/i.test(nettoye) ? [1e6]
+        : /millier/i.test(nettoye) ? [1e3] : [1];
+      const cibleArrondie = Math.round(cible);
+      const ok = nums.some((n) => echelles.some((e) => {
+        const v = n * e;
+        return e === 1 ? v === cibleArrondie : Math.abs(v - cible) / Math.max(1, cible) < 0.1;
+      }));
+      if (!ok) ecarts.push({ id: q.id, etat: lbl, cible, texte });
     });
   });
   return ecarts;
