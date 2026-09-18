@@ -462,7 +462,20 @@ export function summonCost(ownedCount) {
 // ⚠️ Ne PAS l'appliquer aux pourcentages (coinPct, autoClickerPct,
 // critChancePct), aux Griffes, aux Diamants ni aux appCoins : ce sont
 // d'autres monnaies ou des ratios sans unité.
-export const COIN_SCALE = 20;
+// ⚠️ REVENU À 1 le 17/09, sur décision de l'auteur : principe Cookie
+// Clicker. Le clic vaut 1 pièce, le 1er générateur coûte quelques
+// centaines, et les GROS CHIFFRES viennent de la PROGRESSION (le barème
+// des Ascensions monte à 160 millions), pas d'un changement d'unité.
+//
+// Mesuré : à 20 pièces par tap le jeu affichait 10 000 000 dès la 1re
+// Ascension, mais « 1 pièce par tap » avec un 1er générateur à 18 200
+// demandait 76 MINUTES de tap avant le premier achat. Les deux ne
+// tiennent pas ensemble. Référence Cookie Clicker : clic = 1 cookie,
+// 1er bâtiment = 15 cookies, et le 1er prestige se compte en milliards.
+//
+// La constante reste en place : elle documente le choix et permet de
+// refaire un changement d'unité d'un seul geste si besoin.
+export const COIN_SCALE = 1;
 
 export const LEVEL_SPLIT = 5;
 export const LEVEL_COST_GROWTH = Math.pow(2, 1 / LEVEL_SPLIT);
@@ -484,7 +497,32 @@ export const LEVEL_COST_GROWTH = Math.pow(2, 1 / LEVEL_SPLIT);
 // puissance égale, quel que soit le niveau.
 export const LEVEL_BASE_ADJUST = LEVEL_COST_GROWTH - 1;
 
-export const TAP_DAMAGE_PER_LEVEL = 0.5 / LEVEL_SPLIT;
+// ⚠️ Le Pacte monte de 1 EN 1 : `tapDamage(niveau) = niveau`. Niveau 1
+// = 1 pièce par tap, niveau 40 = 40. C'est lisible, et c'est ce que le
+// joueur voit monter.
+//
+// ⚠️ Le Pacte ne suit donc PLUS `LEVEL_SPLIT` (qui ne gouverne plus que
+// le Sanctuaire et le Veilleur). Son gain par niveau a été multiplié par
+// 10 : son coût de base l'est aussi (voir `PACTE_BASE_COST`), sinon il
+// devient dix fois plus rentable que tout le reste de la boutique.
+export const TAP_DAMAGE_PER_LEVEL = 1;
+
+// ⚠️ Le Pacte a sa PROPRE courbe de coût, indépendante de LEVEL_SPLIT.
+//
+// Mesuré en balayant croissance x base : avec un gain de +1 par niveau,
+// aplatir le coût rend le Pacte imbattable. Le tap est 10x plus fort à
+// niveau égal qu'avec l'ancien +0,1, donc le nombre de niveaux doit
+// baisser d'autant pour que l'équilibrage tienne.
+//
+//   croissance x1,15 -> Pacte 47, Ascensions 53..175 min  (trop rapide)
+//   croissance x1,50 -> Pacte 20, Ascensions 71..190 min
+//   croissance x2,00 -> Pacte 11, Ascensions 111..210 min  <- retenu
+//
+// C'est le principe Cookie Clicker : le clic est le DÉMARREUR, pas le
+// moteur. Peu de niveaux, très lisibles (1, 2, 3... pièces par tap), et
+// ce sont les générateurs qui portent l'économie ensuite.
+export const PACTE_COST_GROWTH = 2;
+export const PACTE_BASE_COST = 120;
 export function tapDamage(level) {
   const lvl = Number.isFinite(level) ? Math.max(1, level) : 1;
   return (1 + (lvl - 1) * TAP_DAMAGE_PER_LEVEL) * COIN_SCALE;
@@ -497,7 +535,7 @@ export function tapDamage(level) {
 // niveau est inchangée, donc la courbe garde sa forme.
 export const UPGRADE_COST_MULT = 1.4;
 export function tapPowerCost(currentTapPower) {
-  return Math.round(20 * COIN_SCALE * LEVEL_BASE_ADJUST * UPGRADE_COST_MULT * Math.pow(LEVEL_COST_GROWTH, currentTapPower - 1));
+  return Math.round(PACTE_BASE_COST * COIN_SCALE * Math.pow(PACTE_COST_GROWTH, currentTapPower - 1));
 }
 
 // ---- Apparitions de créatures sur le bouton de tap ("le cookie") ----
@@ -912,9 +950,11 @@ export function veilleurMaxed(level) {
 // dès le départ le chemin complet.
 export const CORE_UNLOCKS = [
   { id: 'pacte', requires: null },
-  // ⚠️ Seuil exprimé en NIVEAUX : il suit le découpage, sinon la Faveur
-  // s'ouvrirait 5x plus tôt qu'avant.
-  { id: 'faveur', requires: { key: 'tapPower', level: 5 * LEVEL_SPLIT, label: `Monte Pacte au niveau ${5 * LEVEL_SPLIT}` } },
+  // ⚠️ Seuil en niveaux de PACTE, donc calé sur la courbe du Pacte et non
+  // sur LEVEL_SPLIT. Il était à 5 x LEVEL_SPLIT = 25 : avec un Pacte qui
+  // plafonne vers 11, la Faveur ne se serait JAMAIS ouverte, et toute la
+  // chaîne derrière (Dégâts critiques, Sanctuaire, Veilleur) avec elle.
+  { id: 'faveur', requires: { key: 'tapPower', level: 5, label: 'Monte Pacte au niveau 5' } },
   { id: 'critDamage', requires: { key: 'critLevel', level: 1, label: 'Achète 1 Faveur des Esprits' } },
   { id: 'sanctuaire', requires: { key: 'critDamageLevel', level: 1, label: 'Achète 1 Dégâts critiques' } },
   { id: 'veilleur', requires: { key: 'sanctuaryLevel', level: 1, label: 'Achète 1 Sanctuaire' } },
@@ -1008,8 +1048,9 @@ export const TAP_UPGRADES = [
   { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 343750, cost: 83799670643, growth: 1.45 },
 ];
 
-// ⚠️ Même raison : seuil en niveaux, il suit le découpage.
-export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10 * LEVEL_SPLIT;
+// ⚠️ Même correction : à 10 x LEVEL_SPLIT = 50, les 10 paliers de tap ne
+// se seraient jamais ouverts non plus.
+export const TAP_UPGRADE_FIRST_PACTE_LEVEL = 10;
 export const TAP_UPGRADE_UNLOCK_LEVEL = 5;
 
 // Accepte l'ancien format (tableau d'ids achetés une fois) comme
@@ -1289,8 +1330,10 @@ export function ritualReward(tapPower, passiveIncome) {
   // niveaux » — insensible à LEVEL_SPLIT — et on applique COIN_SCALE au
   // seul terme qui est une somme de pièces. `passiveIncome` en est déjà
   // une : il ne doit PAS être rescalé.
-  const niveauHistorique = (Math.max(1, tapPower || 1) - 1) / LEVEL_SPLIT + 1;
-  return Math.round(niveauHistorique * 100 * COIN_SCALE + passiveIncome * 120);
+  // `tapDamage` vaut exactement le niveau depuis que le Pacte monte de 1
+  // en 1 : la formule retrouve donc l'originale, et reste juste si la
+  // courbe du Pacte change encore.
+  return Math.round(tapDamage(tapPower) * 100 * COIN_SCALE + passiveIncome * 120);
 }
 
 export function ritualReady(lastUsedMs, nowMs) {

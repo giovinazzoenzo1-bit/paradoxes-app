@@ -1015,7 +1015,81 @@ accomplis.
 | 4 | Recalculer le barème des seuils d'Ascension | à faire |
 | 5 | Réécrire les 30 défis par groupe d'Ascension | à faire |
 
+## ⚠️⚠️ ÉTAPE 3 bis — RETOUR AU PRINCIPE COOKIE CLICKER
+
+Décision de l'auteur après test : **le clic vaut 1 pièce et monte de 1
+en 1**. Les gros chiffres doivent venir de la PROGRESSION, pas d'un
+changement d'unité. `COIN_SCALE` est ramené à **1**.
+
+### Pourquoi le x20 ne pouvait pas coexister avec « 1 pièce par tap »
+
+Mesuré : à 1 pièce par tap avec un 1er générateur à 18 200, il fallait
+**76 MINUTES de tap** avant le premier achat. À 20 pièces par tap, 4
+minutes. Les deux demandes sont incompatibles ; c'est l'échelle de
+DÉPART qui doit rester petite.
+
+### Références Cookie Clicker (relevées le 17/09)
+
+| | Cookie Clicker | Paradox |
+|---|---|---|
+| clic de base | 1 cookie | **1 pièce** |
+| 1er générateur | 15 cookies | 910 pièces |
+| coût par unité possédée | x1,15 | x1,25 |
+| coût de base, palier -> palier | ~x10 | x8,7 |
+| revenu de base, palier -> palier | ~x8 | x5,2 |
+| **coût par unité de revenu, palier -> palier** | **~x1,25** | **x1,71** |
+
+⚠️ La dernière ligne est le seul vrai écart : chez eux un palier
+supérieur est à peine moins rentable, chez nous 71 % moins. C'est pour
+ça que nos 15 générateurs sont tarifés pour 19 Ascensions.
+
+### ⚠️ Le Pacte a sa PROPRE courbe, décorrélée de LEVEL_SPLIT
+
+`tapDamage(niveau) = niveau`. 1, 2, 3... pièces par tap.
+`PACTE_COST_GROWTH = 2`, `PACTE_BASE_COST = 120`.
+
+Le gain par niveau est 10x celui de l'ancien +0,1 : le nombre de niveaux
+doit donc baisser d'autant. Balayage mesuré :
+
+| croissance | Pacte atteint | durées des 6 Ascensions |
+|---|---|---|
+| x1,15 | 47 | 53 .. 175 min (trop rapide) |
+| x1,50 | 20 | 71 .. 190 min |
+| **x2,00** | **11** | **111 .. 210 min** <- retenu |
+
+C'est le principe Cookie Clicker : **le clic est le DÉMARREUR, pas le
+moteur.** Peu de niveaux, très lisibles, et ce sont les générateurs qui
+portent l'économie ensuite.
+
+⚠️ Sanctuaire et Veilleur gardent LEVEL_SPLIT (50 niveaux) : ce sont des
+bonus en POURCENTAGE, une longue échelle y est lisible.
+
+### ⚠️⚠️ Le piège qui aurait tout bloqué
+
+Deux seuils étaient exprimés en niveaux de Pacte et calés sur
+LEVEL_SPLIT :
+- la **Faveur des Esprits** s'ouvrait à Pacte **25** ;
+- les **10 paliers de tap** à Pacte **50**.
+
+Avec un Pacte qui plafonne vers 11, **aucun des deux ne se serait jamais
+ouvert** — et derrière la Faveur il y a Dégâts critiques, Sanctuaire et
+Veilleur, donc la moitié de la boutique. Ramenés à 5 et 10.
+
+⚠️ **Règle** : un seuil exprimé en niveaux d'une mécanique doit être
+relu à CHAQUE changement de la courbe de cette mécanique. Ils ne
+déclenchent aucune erreur — la boutique reste simplement verrouillée
+pour toujours.
+
+Équilibrage final : **111 · 118 · 142 · 157 · 179 · 210 min**
+(+6% +20% +11% +14% +17%).
+
+---
+
 ## ⚠️⚠️ ÉTAPE 3 — changement d'unité de la monnaie (COIN_SCALE = 20)
+
+⚠️ **ANNULÉE par l'étape 3 bis ci-dessus.** Section conservée parce que
+le raisonnement sur la neutralité d'un changement d'unité reste valable
+si l'idée revient un jour.
 
 `COIN_SCALE = 20` dans `clickerLogic.js`. TOUTE somme de pièces est
 multipliée par 20 : revenus, coûts, seuils, récompenses, quotidiens,
