@@ -1013,7 +1013,61 @@ accomplis.
 | 2 | Aplatir Pacte / Sanctuaire / Veilleur + relever les plafonds | ✅ fait |
 | 3 | Multiplier x20 revenus, coûts, seuils, quotidiens, succès, Griffes | ✅ fait |
 | 4 | Recalculer le barème des seuils d'Ascension | ✅ fait |
-| 5 | Réécrire les 30 défis par groupe d'Ascension | à faire |
+| 5a | `partAsc` : écrire l'effort en PART du seuil d'Ascension | ✅ fait |
+| 5b | Réécrire les 30 défis par groupe d'Ascension | à faire |
+
+## ⚠️⚠️ ÉTAPE 5a — `partAsc`, l'effort en PART du chemin vers l'Ascension
+
+Nouvelle façon d'écrire l'effort d'un défi, **à préférer à `effortMin`**
+pour tout ce qui s'achète.
+
+```
+{ metric: 'tapPower', partAsc: 0.05 }   // 5 % du chemin vers l'Ascension
+```
+
+### Pourquoi `effortMin` ment sur les défis d'ACHAT
+
+`effortMin` dit « ce que je gagne en N minutes À REVENU GELÉ ». Or
+acheter du Pacte ou un générateur AUGMENTE le revenu. Mesuré : viser
+« Pacte 8 » demandait d'écrire `effortMin: 64` alors qu'un joueur qui
+réinvestit y arrive en **12 minutes**.
+
+`partAsc` décrit la vraie grandeur, et se met à l'échelle tout seul : le
+barème des seuils porte déjà la rampe +15 %, donc une part CONSTANTE
+donne une difficulté qui monte exactement comme prévu, sans aucun
+multiplicateur. Mesuré, 5 % du seuil : Pacte 8 · 9 · 9 · 10 · 10 de la
+1re à la 5e Ascension.
+
+### ⚠️ `partAsc` doit être BORNÉ, sinon il diverge
+
+Une part constante diverge sur les métriques dont le coût DOUBLE par
+niveau. Mesuré sur le Pacte à 5 % : la cible monte de ~1,6 niveau par
+Ascension (le seuil est multiplié par ~3) alors que la production REPART
+DE ZÉRO. Temps réel : **12 · 26 · 35 · 87 · 225 minutes**. Toutes les
+parts divergent, seule l'échelle change (à 0,5 % : 3 · 3 · 7 · 9 · 21).
+
+D'où la borne : `budget = min(part × seuil, questBudget(stats, 90))`.
+**La part dit l'AMBITION, la borne dit ce qui est ATTEIGNABLE.**
+Après borne : 12 · 15 · 12 · 15 · 12 min.
+
+### ⚠️ L'instrument comptait à revenu GELÉ, lui aussi
+
+`minutesPour` divisait le coût TOTAL d'un achat par la production de
+DÉPART. Il annonçait 64 min pour « Pacte 8 » (12 en vrai) et jusqu'à
+2 868 min après une Ascension. Il achète désormais niveau par niveau en
+recalculant la production après CHAQUE achat, comme le joueur.
+
+⚠️ Cinquième fois de la session que l'instrument est le coupable.
+
+### Règles de cohérence ajoutées
+
+- `partAsc` compte comme une définition de cible valide (sinon
+  `auditCoherence` signalait « aucune cible définissable ») ;
+- `target` + `partAsc` ensemble = erreur, comme `target` + `effortMin` ;
+- `effortMin` + `partAsc` ensemble = erreur : `partAsc` gagnerait en
+  silence et `effortMin` deviendrait un commentaire trompeur.
+
+---
 
 ## ⚠️⚠️ `QUEST_DEFS_VERSION` — sinon tes changements de défis sont INVISIBLES
 

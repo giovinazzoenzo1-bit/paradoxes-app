@@ -14,7 +14,7 @@
 //
 // ⚠️ Oublier de l'incrémenter = l'auteur ne voit pas son changement et
 // croit à un bug de publication. C'est arrivé le 17/09.
-export const QUEST_DEFS_VERSION = 2;
+export const QUEST_DEFS_VERSION = 3;
 
 // ════════════════════════════════════════════════════════════════
 //  LES DÉFIS — ce fichier ne contient QUE leur définition.
@@ -94,19 +94,17 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'seq_earn10k', icon: '💰', metric: 'totalEarned', effortMin: 12, mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    // ⚠️ `effortMin: 64` pour une cible de 8 — le nombre paraît énorme,
-    // il ne l'est pas.
+    // ⚠️ PREMIER DÉFI ÉCRIT EN `partAsc` — la bonne façon.
     //
-    // `questBudget` calcule « ce que je gagne en N minutes À REVENU
-    // GELÉ ». Or acheter du Pacte AUGMENTE le revenu : le joueur qui
-    // réinvestit atteint Pacte 8 en 12 MINUTES réelles (mesuré niveau
-    // par niveau), pas en 64. Les 15 240 pièces que ça coûte valent 3 %
-    // du chemin vers la 1re Ascension.
+    // 5 % du chemin vers la prochaine Ascension. `effortMin` disait « 64
+    // minutes » pour la même cible, parce qu'il suppose un revenu GELÉ
+    // alors qu'acheter du Pacte augmente le revenu. Mesuré niveau par
+    // niveau : un joueur qui réinvestit atteint Pacte 8 en 12 minutes.
     //
-    // ⚠️ À REMPLACER à l'étape 5 par une part explicite du seuil
-    // d'Ascension : c'est la seule façon d'écrire ces cibles sans que le
-    // chiffre déclaré mente sur l'effort réel.
-    { id: 'seq_pacte15', icon: '🔗', metric: 'tapPower', effortMin: 64, mode: 'absolute',
+    // Et la part se met à l'échelle seule : 5 % donne Pacte 8 à la 1re
+    // Ascension, puis 9, 10, 12, 14 aux suivantes, sans aucun
+    // multiplicateur — c'est le barème des seuils qui porte la rampe.
+    { id: 'seq_pacte15', icon: '🔗', metric: 'tapPower', partAsc: 0.05, mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     // ⚠️ Le libellé écrivait « 42 secondes » EN DUR et n'a jamais lu sa
     // cible. `auditLibelles()` ne le voyait pas : il écartait tout texte

@@ -22,6 +22,7 @@ import {
   SANCTUARY_MAX_LEVEL,
   UPGRADE_ITEMS,
   VEILLEUR_MAX_LEVEL,
+  ascensionThreshold,
   autoClickerCost,
   TAP_UPGRADES,
   tapUpgradeCost,
@@ -308,7 +309,40 @@ export function resolveQuestTarget(quest, stats) {
     const dejaLa = readMetric(quest.metric, stats);
     return Math.max(brute, dejaLa + Math.max(quest.minStep || 1, Math.ceil(dejaLa * 0.15)));
   }
-  const minutes = quest.effortMin || 15;
+  // ⚠️⚠️ DEUX FAÇONS D'EXPRIMER L'EFFORT D'UN DÉFI — préférer `partAsc`.
+  //
+  // `effortMin` dit « ce que je gagne en N minutes À REVENU GELÉ ». Le
+  // défaut : acheter du Pacte ou un générateur AUGMENTE le revenu, donc
+  // pour les défis d'ACHAT le chiffre déclaré ment. Mesuré : viser
+  // « Pacte 8 » demandait `effortMin: 64` alors qu'un joueur qui
+  // réinvestit y arrive en 12 MINUTES réelles.
+  //
+  // `partAsc` dit « ce défi consomme X % du chemin vers la prochaine
+  // Ascension ». C'est la grandeur qui décrit vraiment l'effort, et elle
+  // se met à l'échelle toute seule : le barème des seuils porte déjà la
+  // rampe +15 % par Ascension, donc une part constante donne une
+  // difficulté qui monte exactement comme prévu, sans multiplicateur.
+  //
+  // ⚠️ `partAsc` est prioritaire quand les deux sont présents.
+  //
+  // ⚠️ `partAsc` est BORNÉ par ce que le joueur peut réellement produire.
+  //
+  // Sans cette borne, une part constante DIVERGE sur les métriques dont
+  // le coût double par niveau. Mesuré sur le Pacte, part 5 % : la cible
+  // monte de ~1,6 niveau par Ascension (le seuil est multiplié par ~3)
+  // alors que la production REPART DE ZÉRO à chaque Ascension. Temps
+  // réel mesuré : 12 · 26 · 35 · 87 · 225 minutes. Toutes les parts
+  // divergent, seule l'échelle change.
+  //
+  // La part dit l'AMBITION du défi, la borne dit ce qui est
+  // ATTEIGNABLE : on prend le plus petit des deux.
+  const PART_PLAFOND_MIN = 90;
+  const budget = quest.partAsc
+    ? Math.min(
+      quest.partAsc * ascensionThreshold(Math.max(0, Math.floor((stats && stats.ascension) || 0))),
+      questBudget(stats, PART_PLAFOND_MIN),
+    )
+    : questBudget(stats, quest.effortMin || 15);
   // ⚠️ LE PLANCHER D'ASCENSION A ÉTÉ SUPPRIMÉ — il traitait un symptôme.
   //
   // Il valait `ascensionThreshold(asc - 1) × 0,05 × (minutes / 30)` et
@@ -326,7 +360,6 @@ export function resolveQuestTarget(quest, stats) {
   // Ascension (intention affichée) et le temps reste stable : mesuré
   // 30 / 33 / 37 / 42 / 46 min de la 0e à la 4e Ascension. Ne pas le
   // réintroduire sans remesurer cette courbe.
-  const budget = questBudget(stats, minutes);
   const now = readMetric(quest.metric, stats);
   const metric = quest.metric;
   let raw;
@@ -577,14 +610,19 @@ export function validateQuests(publishedMetrics = []) {
     } else if (!connues.has(m)) {
       problemes.push({ id: q.id, type: 'métrique jamais publiée', detail: m });
     }
-    // Trois façons LÉGITIMES de définir une cible : valeur fixe, budget
-    // d'effort en minutes, ou pas d'avancement (`step`, pour « monte de
-    // N de plus qu'actuellement »).
-    if (!q.target && !q.effortMin && !q.step) {
+    // QUATRE façons LÉGITIMES de définir une cible : valeur fixe, part du
+    // seuil d'Ascension (`partAsc`, à préférer), budget d'effort en
+    // minutes, ou pas d'avancement (`step`).
+    if (!q.target && !q.effortMin && !q.partAsc && !q.step) {
       problemes.push({ id: q.id, type: 'aucune cible définissable', detail: '' });
     }
-    if (q.target && q.effortMin) {
+    if (q.target && (q.effortMin || q.partAsc)) {
       problemes.push({ id: q.id, type: 'cible ET effort déclarés', detail: '' });
+    }
+    // ⚠️ Les deux écritures d'effort ensemble : `partAsc` gagnerait en
+    // silence et `effortMin` deviendrait un commentaire trompeur.
+    if (q.effortMin && q.partAsc) {
+      problemes.push({ id: q.id, type: 'effortMin ET partAsc déclarés', detail: '' });
     }
     if (typeof q.label !== 'function') {
       problemes.push({ id: q.id, type: 'libellé manquant', detail: '' });

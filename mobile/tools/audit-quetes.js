@@ -94,6 +94,30 @@ function production(s) {
 
 // Minutes estimées pour franchir un défi, selon sa métrique.
 // `null` = infaisable (doit être signalé).
+// ⚠️⚠️ LE JOUEUR RÉINVESTIT — ne pas compter à revenu GELÉ.
+//
+// Les défis d'ACHAT (Pacte, générateurs, Sanctuaire, améliorations,
+// paliers de tap) augmentent la production à mesure qu'on les paie.
+// Diviser le coût TOTAL par la production de DÉPART surestime
+// énormément : mesuré, « Pacte 8 » ressortait à 64 minutes alors qu'un
+// joueur qui réinvestit y arrive en 12. L'écart explose après une
+// Ascension, là où la production repart de zéro — le contrôle
+// `auditAscension` a signalé « 2 868 min » sur un défi qui en coûte
+// quelques dizaines.
+//
+// On achète donc niveau par niveau en recalculant la production après
+// CHAQUE achat, comme le joueur.
+function tempsAchatsCumules(s, appliquer, coutFn, de, a) {
+  const copie = JSON.parse(JSON.stringify(s));
+  let secondes = 0;
+  for (let i = de; i < a; i++) {
+    const prod = Math.max(1, production(copie));
+    secondes += coutFn(i) / prod;
+    appliquer(copie, i + 1);
+  }
+  return secondes / 60;
+}
+
 function minutesPour(q, cible, s) {
   const prod = Math.max(1, production(s));
   const m = q.metric || '';
@@ -103,20 +127,20 @@ function minutesPour(q, cible, s) {
 
   if (m === 'totalEarned' || m === 'coins') return restant / prod / 60;
   if (m === 'passiveIncome') return null; // dépend des achats, traité à part
-  if (m === 'tapPower') { let c = 0; for (let l = s.tapPower; l < cible; l++) c += C.tapPowerCost(l); return c / prod / 60; }
-  if (m === 'sanctuaryLevel') { let c = 0; for (let l = s.sanctuaryLevel; l < cible; l++) c += C.sanctuaryUpgradeCost(l); return c / prod / 60; }
-  if (m === 'veilleurLevel') { let c = 0; for (let l = s.veilleurLevel; l < cible; l++) c += C.veilleurUpgradeCost(l); return c / prod / 60; }
+  if (m === 'tapPower') return tempsAchatsCumules(s, (x, n) => { x.tapPower = n; }, C.tapPowerCost, s.tapPower, cible);
+  if (m === 'sanctuaryLevel') return tempsAchatsCumules(s, (x, n) => { x.sanctuaryLevel = n; }, C.sanctuaryUpgradeCost, s.sanctuaryLevel, cible);
+  if (m === 'veilleurLevel') return tempsAchatsCumules(s, (x, n) => { x.veilleurLevel = n; }, C.veilleurUpgradeCost, s.veilleurLevel, cible);
   if (m.startsWith('upgrade:')) {
     const it = C.UPGRADE_ITEMS.find((u) => u.id === m.slice(8));
     if (!it) return null;
-    let c = 0; for (let l = (s.upgradeLevels[it.id] || 0); l < cible; l++) c += C.upgradeItemCost(it, l);
-    return c / prod / 60;
+    return tempsAchatsCumules(s, (x, n) => { x.upgradeLevels[it.id] = n; },
+      (l) => C.upgradeItemCost(it, l), (s.upgradeLevels[it.id] || 0), cible);
   }
   if (m.startsWith('auto:')) {
     const a = C.AUTOCLICKERS.find((x) => x.id === m.slice(5));
     if (!a) return null;
-    let c = 0; for (let n = (s.autoClickers[a.id] || 0); n < cible; n++) c += C.autoClickerCost(a, n);
-    return c / prod / 60;
+    return tempsAchatsCumules(s, (x, n) => { x.autoClickers[a.id] = n; },
+      (n) => C.autoClickerCost(a, n), (s.autoClickers[a.id] || 0), cible);
   }
   if (m.startsWith('tapUpgrade:')) {
     // ⚠️ Renvoyait 12 minutes EN DUR : l'audit ne voyait donc aucun
@@ -125,9 +149,8 @@ function minutesPour(q, cible, s) {
     // toutes les autres métriques de niveau.
     const palier = C.TAP_UPGRADES.find((t) => t.id === m.slice(11));
     if (!palier) return null;
-    let c = 0;
-    for (let l = ((s.tapUpgrades || {})[palier.id] || 0); l < cible; l++) c += C.tapUpgradeCost(palier, l);
-    return c / prod / 60;
+    return tempsAchatsCumules(s, (x, n) => { x.tapUpgrades = { ...(x.tapUpgrades || {}), [palier.id]: n }; },
+      (l) => C.tapUpgradeCost(palier, l), ((s.tapUpgrades || {})[palier.id] || 0), cible);
   } // paliers de tap : quelques minutes
   if (m === 'totalCrits') return restant / (H.tapsParSec * Math.max(0.02, C.critChance(s.critLevel))) / 60;
   if (m === 'goldenClaimed') return restant / H.doreeParMin;
@@ -539,7 +562,7 @@ function auditAscension(depassementMax = ASC_DEPASSEMENT_MAX, ascMax = 4) {
   const vus = new Set();
   tous.forEach((q) => {
     // Seuls les défis à cible CALCULÉE dépendent du budget.
-    if (!q.effortMin || vus.has(q.id)) return;
+    if ((!q.effortMin && !q.partAsc) || vus.has(q.id)) return;
     vus.add(q.id);
     const temps = [];
     for (let n = 0; n <= ascMax; n++) {
@@ -570,7 +593,21 @@ function auditAscension(depassementMax = ASC_DEPASSEMENT_MAX, ascMax = 4) {
     // mesuré par `audit()` — dans l'état réel où le défi est tiré, ce qui
     // est une meilleure sonde qu'une économie vide. `seq_main10` y vaut
     // 22 min, pas 65.
-    if (pire.asc >= 1 && pire.min > q.effortMin * depassementMax) {
+    // ⚠️ Deux règles, parce que les deux écritures ne déclarent pas la
+    // même chose. `effortMin` annonce une fenêtre en minutes : on vérifie
+    // qu'elle n'est pas dépassée. `partAsc` annonce une PART du chemin
+    // vers l'Ascension, pas une durée — on vérifie alors simplement que
+    // le défi ne devient jamais interminable, au même plafond que le
+    // reste de l'audit.
+    if (pire.asc < 1) return;
+    if (q.partAsc) {
+      if (pire.min > 90) {
+        suspects.push({ id: q.id, part: q.partAsc, asc: pire.asc, min: pire.min,
+                        courbe: temps.map((t) => t.min).join('/') });
+      }
+      return;
+    }
+    if (pire.min > q.effortMin * depassementMax) {
       suspects.push({ id: q.id, fenetre: q.effortMin, asc: pire.asc, min: pire.min,
                       fois: +(pire.min / q.effortMin).toFixed(1),
                       courbe: temps.map((t) => t.min).join('/') });
