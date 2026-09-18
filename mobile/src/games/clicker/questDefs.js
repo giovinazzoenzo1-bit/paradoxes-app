@@ -14,7 +14,7 @@
 //
 // ⚠️ Oublier de l'incrémenter = l'auteur ne voit pas son changement et
 // croit à un bug de publication. C'est arrivé le 17/09.
-export const QUEST_DEFS_VERSION = 7;
+export const QUEST_DEFS_VERSION = 8;
 
 // ════════════════════════════════════════════════════════════════
 //  LES DÉFIS — ce fichier ne contient QUE leur définition.
@@ -254,7 +254,7 @@ export const QUEST_POOL = [
   { id: 'earnLong', family: 'economy', icon: '💰', metric: 'totalEarned', effortMin: 60, mode: 'delta',
     label: (t) => `Gagne ${qtyQ(t, 'pièces')}` },
   { id: 'holdLong', family: 'economy', icon: '🏦', metric: 'coins', effortMin: 75, mode: 'absolute',
-    label: (t) => `Constitue un trésor de ${fmtQ(t)} pièces` },
+    label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
   { id: 'passiveMid', family: 'economy', icon: '📈', metric: 'passiveIncome', effortMin: 30, mode: 'absolute',
     label: (t) => `Atteins ${qtyQ(t, 'pièces')} par seconde` },
   { id: 'passiveLong', family: 'economy', icon: '📈', metric: 'passiveIncome', effortMin: 70, mode: 'absolute',

@@ -753,3 +753,49 @@ function auditAvailable() {
   return muets;
 }
 module.exports.auditAvailable = auditAvailable;
+
+// ---- Deux défis qui se lisent PAREIL dans le même œuf ----------------
+//
+// Bug réel du 17/09, signalé par l'auteur sur capture d'écran : un œuf
+// contenait « Mets 78 000 pièces de côté » ET « Constitue un trésor de
+// 180 000 pièces » ET « Gagne 41 000 pièces ». Trois métriques
+// différentes (`coins`, `coins`, `totalEarned`) mais UNE SEULE chose du
+// point de vue du joueur — et le troisième paraît absurde après le
+// deuxième.
+//
+// Cause : quand un défi du schéma n'est pas encore débloqué (Sanctuaire,
+// Veilleur, paliers de tap), le pool comble le trou SANS regarder ce que
+// l'œuf contient déjà.
+//
+// Ce contrôle rejoue les œufs et signale tout dépassement du plafond de
+// famille — l'ÉCONOMIE étant limitée à un seul défi par œuf.
+function auditFamilles(nbOeufs = 18) {
+  const fautes = [];
+  const s = etatInitial();
+  s.ownedIds = []; s.ownedCount = 0; s.deckCount = 0;
+  for (let oeuf = 0; oeuf < nbOeufs; oeuf++) {
+    const set = Q.nextQuestSet(oeuf, [], s);
+    const compte = {};
+    set.ids.forEach((id) => {
+      const q = Q.findQuest(id);
+      if (!q) return;
+      const f = Q.familleDe(q.metric);
+      compte[f] = (compte[f] || 0) + 1;
+      const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
+      const min = minutesPour(q, cible, s);
+      if (min != null) s.totalEarned = (s.totalEarned || 0) + production(s) * 60 * min;
+      appliquer(q, cible, s);
+    });
+    Object.entries(compte).forEach(([f, n]) => {
+      const max = f === 'economie' ? 1 : f === 'ascension' ? 1 : 2;
+      if (n > max) fautes.push({ oeuf: oeuf + 1, famille: f, nb: n, max });
+    });
+    const nv = C.CREATURES[Math.min(oeuf, C.CREATURES.length - 1)];
+    if (nv && !s.ownedIds.includes(nv.id)) s.ownedIds.push(nv.id);
+    s.ownedCount = s.ownedIds.length;
+    s.deckCount = Math.min(3, s.ownedCount);
+    s.passiveIncome = passiveOnly(s);
+  }
+  return fautes;
+}
+module.exports.auditFamilles = auditFamilles;

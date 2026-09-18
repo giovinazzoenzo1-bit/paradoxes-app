@@ -795,7 +795,15 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
 
     const missing = cycle.length - kept.length;
     if (missing > 0) {
-      const sub = pickQuestSet([...excludeIds, ...ids], stats);
+      // ⚠️ On transmet ce que l'œuf contient DÉJÀ, sinon le remplaçant
+      // duplique la famille du schéma (voir `familleDe`).
+      const dejaPris = { metriques: [], familles: {} };
+      kept.forEach((q) => {
+        dejaPris.metriques.push(q.metric);
+        const f = familleDe(q.metric);
+        dejaPris.familles[f] = (dejaPris.familles[f] || 0) + 1;
+      });
+      const sub = pickQuestSet([...excludeIds, ...ids], stats, dejaPris);
       sub.ids.slice(0, missing).forEach((id) => {
         ids.push(id);
         targets[id] = sub.targets[id];
@@ -835,7 +843,36 @@ export const PENDING_FREE_RUNE_KEY = 'adventure:pendingFreeRune:v1';
 // (`available`) : proposer « possède 30 Étoiles Filantes » à quelqu'un
 // qui n'a pas encore les moyens du premier générateur donnerait un défi
 // techniquement résoluble mais absurde.
-export function pickQuestSet(excludeIds = [], stats = {}) {
+// ⚠️⚠️ LA FAMILLE SE DÉDUIT DE LA MÉTRIQUE — ne pas la déclarer à la main.
+//
+// Trois métriques différentes racontent la MÊME chose au joueur :
+// `totalEarned` (« gagne N pièces »), `coins` (« mets N de côté ») et
+// `passiveIncome` (« atteins N par seconde »). Elles étaient dans trois
+// familles distinctes, donc rien n'empêchait un œuf d'en contenir deux.
+// Résultat signalé par l'auteur : « Constitue un trésor de 180 000 »
+// suivi de « Gagne 41 000 » — deux défis qui se lisent pareil, et dont
+// le second paraît absurde après le premier.
+//
+// Une seule famille ÉCONOMIE, et au plus UN défi d'économie par œuf.
+export function familleDe(metric) {
+  const m = metric || '';
+  if (['totalEarned', 'coins', 'passiveIncome'].includes(m)) return 'economie';
+  if (['advLevelReached', 'battleWon', 'threeStarLevel'].includes(m)) return 'aventure';
+  if (['goldenClaimed', 'totalCrits', 'powerActivated', 'maxCombo',
+    'maxTranseHoldSec', 'totalTaps'].includes(m)) return 'rythme';
+  if (['runeBought', 'runeFused', 'runesEquipped', 'runeEquipped'].includes(m)) return 'runes';
+  if (['maxCreatureLevel', 'maxEvolutionTier', 'ownedCount', 'deckCount'].includes(m)) return 'creatures';
+  if (m === 'ascension') return 'ascension';
+  if (m === 'offering') return 'offrande';
+  return 'boutique';
+}
+
+// Combien de défis d'une même famille un œuf tolère. L'économie est
+// limitée à UN : c'est la famille dont les défis se ressemblent le plus.
+const MAX_PAR_FAMILLE = { economie: 1, aventure: 2, ascension: 1 };
+const MAX_PAR_FAMILLE_DEFAUT = 2;
+
+export function pickQuestSet(excludeIds = [], stats = {}, dejaPris = {}) {
   // `questAlreadyDone` en plus de `available` : un défi du pool à cible
   // FIXE peut lui aussi être déjà accompli, et se validerait sans que le
   // joueur le voie.
@@ -855,14 +892,18 @@ export function pickQuestSet(excludeIds = [], stats = {}) {
   // d'affilée, ou deux paliers du même objectif côte à côte — ce qui
   // ressemble à un bug plus qu'à un choix.
   const chosen = [];
-  const usedMetrics = new Set();
-  const familyCount = {};
-  const MAX_PER_FAMILY = 2;
+  // ⚠️ On repart des métriques et familles DÉJÀ dans l'œuf, pas d'un
+  // compteur vierge. Les remplaçants comblent les trous du schéma : sans
+  // ça, un œuf dont le défi de Sanctuaire n'est pas encore débloqué
+  // recevait un second défi d'ÉCONOMIE à côté de celui du schéma.
+  const usedMetrics = new Set(dejaPris.metriques || []);
+  const familyCount = { ...(dejaPris.familles || {}) };
+  const plafond = (fam) => (MAX_PAR_FAMILLE[fam] || MAX_PAR_FAMILLE_DEFAUT);
   for (const q of shuffled) {
     if (chosen.length >= QUEST_SET_SIZE) break;
     if (usedMetrics.has(q.metric)) continue;
-    const fam = q.family || 'autre';
-    if ((familyCount[fam] || 0) >= MAX_PER_FAMILY) continue;
+    const fam = familleDe(q.metric);
+    if ((familyCount[fam] || 0) >= plafond(fam)) continue;
     usedMetrics.add(q.metric);
     familyCount[fam] = (familyCount[fam] || 0) + 1;
     chosen.push(q);
