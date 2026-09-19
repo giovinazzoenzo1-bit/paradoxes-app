@@ -118,7 +118,56 @@ function tempsAchatsCumules(s, appliquer, coutFn, de, a) {
   return secondes / 60;
 }
 
+// ⚠️⚠️ LE DÉFI D'ASCENSION SE MESURE AVEC L'ÉCONOMIE, PAS À PRODUCTION
+// GELÉE.
+//
+// Il demande d'atteindre le SEUIL d'Ascension — plusieurs heures de jeu
+// pendant lesquelles le joueur réinvestit en permanence. Le compter en
+// divisant le seuil par la production du moment donnait 16 636 062
+// minutes pour la 4e Ascension, là où le simulateur d'économie mesure
+// 3,4 heures. C'est ce seul défi qui faisait ressortir le groupe 4 à
+// 279 670 heures dans la liste de référence.
+//
+// On rejoue donc l'économie : achats au meilleur rapport, production
+// recalculée après chacun, exactement comme un joueur.
+function heuresPourSeuil(ascension, seuil) {
+  const st = etatInitial();
+  st.ascension = ascension;
+  let t = 0, garde = 0;
+  while ((st.totalEarned || 0) < seuil && garde++ < 8000) {
+    const r = Math.max(1, production(st));
+    const opts = [];
+    const essaie = (cout, appliquerAchat) => {
+      if (!isFinite(cout) || cout <= 0) return;
+      const copie = JSON.parse(JSON.stringify(st));
+      appliquerAchat(copie);
+      const gain = production(copie) - r;
+      if (gain > 0) opts.push({ cout, gain, appliquerAchat });
+    };
+    essaie(C.tapPowerCost(st.tapPower), (x) => { x.tapPower += 1; });
+    C.AUTOCLICKERS.forEach((a) => {
+      const n = (st.autoClickers || {})[a.id] || 0;
+      essaie(C.autoClickerCost(a, n), (x) => { x.autoClickers[a.id] = n + 1; });
+    });
+    if (!opts.length) { t += (seuil - (st.totalEarned || 0)) / r; break; }
+    opts.forEach((o) => { o.score = Math.max(0, (o.cout - (st.coins || 0)) / r) + o.cout / o.gain; });
+    opts.sort((a, b) => a.score - b.score);
+    const v = opts[0];
+    const attente = Math.max(0, (v.cout - (st.coins || 0)) / r);
+    const restant = (seuil - (st.totalEarned || 0)) / r;
+    if (attente >= restant) { t += restant; break; }
+    t += attente;
+    st.coins = (st.coins || 0) + r * attente - v.cout;
+    st.totalEarned = (st.totalEarned || 0) + r * attente;
+    v.appliquerAchat(st);
+  }
+  return t / 60;
+}
+
 function minutesPour(q, cible, s) {
+  if (q.metric === 'ascension') {
+    return heuresPourSeuil(s.ascension || 0, C.ascensionThreshold(s.ascension || 0));
+  }
   const prod = Math.max(1, production(s));
   const m = q.metric || '';
   const delta = q.mode === 'delta';

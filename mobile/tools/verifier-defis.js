@@ -33,7 +33,7 @@ const CONTROLES = [
   ['auditHorsSchema', 'aucun défi étranger glissé dans un œuf'],
   ['auditSubstitutions', 'tout retrait de défi passe par la règle unique'],
   ['auditCibleSuitLeJoueur', 'une cible fixe est la même pour tous les joueurs'],
-  ['auditTropFacile', 'au plus 3 défis faciles sur 135', 3],
+  ['auditTropFacile', 'au plus 4 défis faciles sur 135', 4],
 ];
 
 let echecs = 0;

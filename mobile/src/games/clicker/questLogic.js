@@ -406,6 +406,15 @@ export function resolveQuestTarget(quest, stats) {
       : monte;
     // ⚠️ Le plafond suit la même échelle que la cible : figé, il
     // écraserait la montée dès le 2e groupe.
+    // ⚠️ `capAbsolu` : un plafond qui NE suit PAS l'échelle de groupe.
+    //
+    // `cap` est mis à l'échelle comme la cible — indispensable pour la
+    // tenue de Transe, dont la difficulté doit monter. Mais un défi de
+    // générateur a besoin de l'inverse : quel que soit le groupe,
+    // personne n'empile 60 exemplaires du même générateur, il monte de
+    // palier. Mesuré : les 45 derniers exemplaires coûtaient 128 470
+    // minutes à eux seuls, parce que le prix monte de 25 % par unité.
+    if (quest.capAbsolu) return Math.min(avecReste, quest.capAbsolu);
     if (!quest.cap) return avecReste;
     const plafond = quest.echelle
       ? Math.round(quest.cap * echelleGroupe(quest.echelle, groupe))

@@ -112,6 +112,10 @@ export const ECHELLES_GROUPE = {
   // à chaque groupe : il faut donc environ +3,3 niveaux par groupe pour
   // garder le même effort. Mesuré — à l'ancienne échelle, « Monte Pacte
   // au niveau 9 » tombait à 3 minutes au 3e groupe.
+  // ⚠️ Les défis concernés portent un `capAbsolu` : le coût d'un niveau
+  // DOUBLE, donc au-delà d'une vingtaine de niveaux le prix explose
+  // (Pacte 24 = 700 millions de pièces). L'échelle fait monter la cible,
+  // le plafond absolu l'empêche de devenir un mur.
   niveau: [1, 1.45, 1.9, 2.4, 3.2, 4.0],
   // Nombre d'unités d'un générateur : les paliers supérieurs prennent le
   // relais, donc la quantité du palier bas ne doit pas exploser.
@@ -120,6 +124,11 @@ export const ECHELLES_GROUPE = {
   // multiplié par ~10 par groupe : il peut donc s'en offrir une dizaine
   // de plus à chaque fois. L'ancienne échelle demandait 7 Esprits au 2e
   // groupe — bouclé en 3 minutes.
+  // ⚠️ Plafonnée à 25 exemplaires par les défis eux-mêmes (`cap: 25`).
+  // Sans plafond, l'échelle demandait 60 Mains Spectrales au 4e groupe :
+  // le prix monte de 25 % par exemplaire, donc les 45 derniers coûtaient
+  // 128 470 minutes à eux seuls. Aucun joueur n'empile 60 exemplaires du
+  // même générateur — il monte de palier.
   unites: [1, 2.5, 4, 5.5, 7.5, 10],
   // Actions répétées (critiques, taps, dorées, pouvoirs) : le joueur ne
   // tape pas plus vite après une Ascension. On monte doucement, sinon le
@@ -179,9 +188,9 @@ export const QUEST_SEQUENCE = [
     // gagne désormais plus vite, donc Pacte 6 (2 604 pièces) tombait à
     // 3 minutes. Le niveau 7 en coûte 5 292, soit sept fois le défi de
     // pièces voisin du même œuf — l'ordre de grandeur voulu.
-    { id: 'g1_pacte', icon: '🔗', metric: 'tapPower', target: 7, cap: 9, echelle: 'niveau', mode: 'absolute',
+    { id: 'g1_pacte', icon: '🔗', metric: 'tapPower', target: 7, capAbsolu: 20, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
-    { id: 'g1_esprit', icon: '👻', metric: 'auto:esprit', target: 5, echelle: 'unites', mode: 'absolute',
+    { id: 'g1_esprit', icon: '👻', metric: 'auto:esprit', target: 5, capAbsolu: 32, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
     // « +15 % au-dessus de l'acquis » l'a déjà poussée à 641 secondes.
@@ -202,7 +211,7 @@ export const QUEST_SEQUENCE = [
     // Dégâts critiques -> Sanctuaire -> Veilleur. Chaque maillon est un
     // défi, dans l'ordre, sinon le suivant n'est pas débloqué et le pool
     // le remplace (bug du 19/09, 8 défis sur 12 œufs remplacés).
-    { id: 'g2_faveur', icon: '🍀', metric: 'critLevel', target: 8, cap: 12, echelle: 'niveau', mode: 'absolute',
+    { id: 'g2_faveur', icon: '🍀', metric: 'critLevel', target: 8, capAbsolu: 20, echelle: 'niveau', mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('faveur', s),
       label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
     { id: 'g2_adv', icon: '⚔️', metric: 'advLevelReached', target: 5, echelle: 'aventure', mode: 'absolute',
@@ -233,7 +242,7 @@ export const QUEST_SEQUENCE = [
     { id: 'g2_taps', icon: '👆', metric: 'totalTaps', target: 800, minStep: 200,
       echelle: 'actions', mode: 'absolute',
       label: (t) => `Atteins ${fmtQ(t)} taps au total` },
-    { id: 'g2_main', icon: '🖐️', metric: 'auto:main', target: 2, echelle: 'unites', mode: 'absolute',
+    { id: 'g2_main', icon: '🖐️', metric: 'auto:main', target: 2, capAbsolu: 32, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
   ],
 
@@ -257,7 +266,7 @@ export const QUEST_SEQUENCE = [
     // viser 14 le faisait passer à 480 000 pièces et 205 minutes — un
     // mur au milieu du 3e œuf. Deux crans de trop suffisent à casser un
     // défi quand le coût double.
-    { id: 'g3_critdmg', icon: '💢', metric: 'critDamageLevel', target: 10, cap: 26, echelle: 'niveau', mode: 'absolute',
+    { id: 'g3_critdmg', icon: '💢', metric: 'critDamageLevel', target: 10, capAbsolu: 24, echelle: 'niveau', mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('critDamage', s),
       label: (t) => `Monte les Dégâts critiques au niveau ${t}` },
     { id: 'g3_adv', icon: '⚔️', metric: 'advLevelReached', target: 10, echelle: 'aventure', mode: 'absolute',
@@ -271,7 +280,7 @@ export const QUEST_SEQUENCE = [
     // ⚠️ 6 -> 10. Le joueur en possède DÉJÀ 5 depuis l'œuf 1 : viser 6
     // ne demandait qu'un seul achat, une minute. 10 unités coûtent
     // l'ordre de grandeur du budget de l'œuf.
-    { id: 'g3_esprit', icon: '👻', metric: 'auto:esprit', target: 10, echelle: 'unites', mode: 'absolute',
+    { id: 'g3_esprit', icon: '👻', metric: 'auto:esprit', target: 10, capAbsolu: 32, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
   ],
 
@@ -330,7 +339,7 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
     // 5 -> 6 : le joueur en a déjà 4 à ce stade, viser 5 n'était qu'un
     // achat. 6 correspond au budget de l'œuf.
-    { id: 'g5_main', icon: '🖐️', metric: 'auto:main', target: 11, echelle: 'unites', mode: 'absolute',
+    { id: 'g5_main', icon: '🖐️', metric: 'auto:main', target: 11, capAbsolu: 32, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
@@ -356,7 +365,7 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'g6_coins', icon: '🪙', metric: 'totalEarned', target: 120000, echelle: 'pieces', mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    { id: 'g6_pacte', icon: '🔗', metric: 'tapPower', target: 10, cap: 12, echelle: 'niveau', mode: 'absolute',
+    { id: 'g6_pacte', icon: '🔗', metric: 'tapPower', target: 10, capAbsolu: 23, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     { id: 'g6_combats', icon: '🗡️', metric: 'battleWon', target: 5, echelle: 'aventure', mode: 'delta',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
@@ -569,7 +578,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 10;
+export const QUEST_ENGINE_VERSION = 11;
 
 function empreinteDefis() {
   const morceaux = [];
