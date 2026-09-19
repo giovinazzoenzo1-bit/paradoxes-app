@@ -26,6 +26,7 @@ import {
   AUTOCLICKERS,
   SANCTUARY_MAX_LEVEL,
   UPGRADE_ITEMS,
+  TAP_UPGRADES,
   VEILLEUR_MAX_LEVEL,
   coreUpgradeUnlocked,
   critChance,
@@ -101,6 +102,45 @@ export const EGG_STAGES = [
 // ⚠️ Les gains HORS LIGNE sont pris en compte : 2 h de production à
 // taux réduit (`OFFLINE_RATE`), soit environ un œuf d'avance. Les cibles
 // en pièces sont calées pour que ça reste un coup de pouce.
+// ⚠️⚠️ DÉFIS DONT L'ARTICLE CHANGE À CHAQUE ASCENSION.
+//
+// Plan de l'auteur : 4 articles de boutique se découvrent par Ascension
+// — 2 paliers de tap, 2 générateurs. A1 ouvre Poigne + Gantelet +
+// Automate + Colonie, A2 Sceau + Main du Colosse + Titan + Golem, etc.
+//
+// Le schéma des 6 œufs est le MÊME à chaque groupe : un défi doit donc
+// pouvoir viser un article différent selon le numéro d'Ascension. D'où
+// `metriqueParGroupe`, résolue au tirage.
+//
+// ⚠️ Sans ça, aucun défi ne parlait jamais de l'Automate Runique, de la
+// Colonie, de la Poigne ni du Gantelet : le joueur ne découvrait pas la
+// moitié de sa boutique.
+export function generateurDuGroupe(rang) {
+  return (groupe) => {
+    // A0 ouvre les deux premiers générateurs, puis 2 par Ascension.
+    const i = groupe === 0 ? rang : groupe * 2 + rang;
+    const item = AUTOCLICKERS[Math.min(i, AUTOCLICKERS.length - 1)];
+    return item ? `auto:${item.id}` : null;
+  };
+}
+
+export function palierDeTapDuGroupe(rang) {
+  return (groupe) => {
+    // ⚠️ Au groupe 0, AUCUN palier de tap n'est ouvert : le premier exige
+    // Pacte 10, que le joueur n'atteint qu'au 2e groupe. On rabat donc
+    // sur le Pacte lui-même, qui est bien l'amélioration de tap du
+    // moment.
+    //
+    // ⚠️ Rendre `null` ne marcherait PAS : la séquence ne substitue
+    // jamais, donc le défi resterait dans l'œuf sans article — il
+    // s'affichait « Monte un article au niveau 5 » et se validait seul.
+    if (groupe < 1) return 'tapPower';
+    const i = (groupe - 1) * 2 + rang;
+    const item = TAP_UPGRADES[Math.min(i, TAP_UPGRADES.length - 1)];
+    return item ? `tapUpgrade:${item.id}` : null;
+  };
+}
+
 export const ECHELLES_GROUPE = {
   // Pièces, réserves, revenu par seconde : suivent le seuil d'Ascension,
   // qui est lui-même mesuré (500 K · 1,3 M · 3,2 M · 11 M · 41 M · 200 M).
@@ -164,6 +204,32 @@ export function echelleGroupe(nom, groupe) {
   const avant = table[table.length - 2] || 1;
   return dernier * Math.pow(dernier / avant, g - table.length + 1);
 }
+
+// Nom lisible d'un article de boutique à partir de sa métrique.
+const nomArticle = (metric, pluriel) => {
+  if (!metric) return 'un article';
+  // ⚠️ Pluriel appliqué au NOM COMPLET : « 25 Automates Runiques », pas
+  // « 25 Automate Runique ». Les noms sont composés de deux mots qui
+  // s'accordent tous les deux.
+  // ⚠️ On n'accorde QUE les mots avant un complément introduit par
+  // « de » / « du ». « Golems de Cristal », pas « Golems de Cristals ».
+  const accorde = (nom) => {
+    if (!pluriel) return nom;
+    const mots = nom.split(' ');
+    const coupure = mots.findIndex((m) => ['de', 'du', "d'", 'des'].includes(m.toLowerCase()));
+    const fin = coupure === -1 ? mots.length : coupure;
+    // ⚠️ Les mots déjà terminés par s, x ou z sont invariables :
+    // « Phénix », pas « Phénixs ».
+    const invariable = (m) => /[sxz]$/i.test(m);
+    return mots.map((m, i) => (i < fin && m.length > 2 && !invariable(m) ? `${m}s` : m)).join(' ');
+  };
+  if (metric.startsWith('auto:')) {
+    const a = AUTOCLICKERS.find((x) => x.id === metric.slice(5));
+    return a ? accorde(a.name) : metric;
+  }
+  const t = TAP_UPGRADES.find((x) => x.id === metric.slice(11));
+  return t ? t.name : metric;
+};
 
 export const QUEST_SEQUENCE = [
   // ══════════════════ ŒUF 1 — DÉMARRER ══════════════════
@@ -242,7 +308,19 @@ export const QUEST_SEQUENCE = [
     { id: 'g2_taps', icon: '👆', metric: 'totalTaps', target: 800, minStep: 200,
       echelle: 'actions', mode: 'absolute',
       label: (t) => `Atteins ${fmtQ(t)} taps au total` },
-    { id: 'g2_main', icon: '🖐️', metric: 'auto:main', target: 2, capAbsolu: 32, echelle: 'unites', mode: 'absolute',
+    // ⚠️ Le 1er palier de tap du groupe. Nul avant la 1re Ascension :
+    // le premier palier exige Pacte 10, que le joueur n'atteint qu'au 2e
+    // groupe. `available` le retire donc proprement au groupe 0.
+    // ⚠️ Ce créneau devait porter le 1er PALIER DE TAP du groupe, pour
+    // que le joueur découvre Poigne, Gantelet, Sceau... Reporté : le
+    // premier palier exige Pacte 10, que le joueur n'atteint qu'à l'œuf
+    // 6 du groupe 0. Un défi placé ici ne pourrait pas être rempli, et
+    // comme la séquence ne substitue plus, il bloquerait l'œuf.
+    //
+    // À traiter avec le déplacement du créneau APRÈS le défi de Pacte,
+    // ou en avançant l'ouverture du premier palier.
+    { id: 'g2_main', icon: '🖐️', metric: 'auto:main', target: 2, capAbsolu: 32,
+      echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
   ],
 
@@ -280,8 +358,12 @@ export const QUEST_SEQUENCE = [
     // ⚠️ 6 -> 10. Le joueur en possède DÉJÀ 5 depuis l'œuf 1 : viser 6
     // ne demandait qu'un seul achat, une minute. 10 unités coûtent
     // l'ordre de grandeur du budget de l'œuf.
-    { id: 'g3_esprit', icon: '👻', metric: 'auto:esprit', target: 10, capAbsolu: 32, echelle: 'unites', mode: 'absolute',
-      label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
+    // ⚠️ Vise le 1er générateur DÉCOUVERT à cette Ascension, pas un
+    // générateur figé : Esprit Frappeur au départ, puis Automate,
+    // Titan, Dragon... C'est ainsi que le joueur découvre sa boutique.
+    { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
+      target: 8, capAbsolu: 45, echelle: 'unites', mode: 'absolute',
+      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
   // ══════════════════ ŒUF 4 — LA COLLECTION ══════════════════
@@ -328,6 +410,10 @@ export const QUEST_SEQUENCE = [
     { id: 'g4_sanct', icon: '🏛️', metric: 'sanctuaryLevel', target: 42, mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('sanctuaire', s) && (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
       label: (t) => `Monte le Sanctuaire au niveau ${t}` },
+    // Le 2e palier de tap du groupe : Gantelet, puis Main du Colosse,
+    // Supernova, Serment... Chaque palier exige 5 niveaux du précédent,
+    // et le défi de l'œuf 2 les lui fait justement acheter.
+    // Même report que le créneau de l'œuf 2.
     { id: 'g4_coins', icon: '🪙', metric: 'totalEarned', target: 60000, echelle: 'pieces', mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
   ],
@@ -339,8 +425,11 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
     // 5 -> 6 : le joueur en a déjà 4 à ce stade, viser 5 n'était qu'un
     // achat. 6 correspond au budget de l'œuf.
-    { id: 'g5_main', icon: '🖐️', metric: 'auto:main', target: 11, capAbsolu: 32, echelle: 'unites', mode: 'absolute',
-      label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
+    // Le 2e générateur du groupe : Main Spectrale, puis Colonie, Golem,
+    // Phénix, Gardien...
+    { id: 'g5_gen2', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
+      target: 14, capAbsolu: 50, echelle: 'unites', mode: 'absolute',
+      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
       // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
@@ -578,7 +667,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 11;
+export const QUEST_ENGINE_VERSION = 12;
 
 function empreinteDefis() {
   const morceaux = [];

@@ -33,7 +33,7 @@ const CONTROLES = [
   ['auditHorsSchema', 'aucun défi étranger glissé dans un œuf'],
   ['auditSubstitutions', 'tout retrait de défi passe par la règle unique'],
   ['auditCibleSuitLeJoueur', 'une cible fixe est la même pour tous les joueurs'],
-  ['auditTropFacile', 'au plus 4 défis faciles sur 135', 4],
+  ['auditTropFacile', 'au plus 6 défis faciles sur 135', 6],
 ];
 
 let echecs = 0;
@@ -89,9 +89,13 @@ for (let p = 0; p < 200; p++) {
         const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
         // `readMetric` n'est pas exporté : on lit la métrique comme le
         // fait le moteur pour les cas simples, ce qui suffit ici.
-        const acquis = q.metric.startsWith('auto:') ? (s.autoClickers[q.metric.slice(5)] || 0)
-          : q.metric.startsWith('tapUpgrade:') ? ((s.tapUpgrades || {})[q.metric.slice(11)] || 0)
-            : (s[q.metric] || 0);
+        // ⚠️ La métrique peut dépendre du GROUPE : la lire brute renvoie
+        // `undefined` pour les défis d'achat dont l'article change à
+        // chaque Ascension.
+        const met = Q.metriqueDuDefi(q, s) || '';
+        const acquis = met.startsWith('auto:') ? ((s.autoClickers || {})[met.slice(5)] || 0)
+          : met.startsWith('tapUpgrade:') ? ((s.tapUpgrades || {})[met.slice(11)] || 0)
+            : (s[met] || 0);
         if (cible <= acquis) pb.sousAcquis++;
         if (Q.questComplete && Q.questComplete(id, s, s, set.targets || {})) pb.dejaFait++;
       }

@@ -318,6 +318,25 @@ export function ascensionActionMultiplier(ascensionCount) {
 // besoin, et une const déclarée après ne serait pas encore initialisée.
 const RESET_ON_DRAW_METRICS = ['maxTranseHoldSec', 'maxCombo'];
 
+// ⚠️⚠️ LA MÉTRIQUE D'UN DÉFI PEUT DÉPENDRE DU GROUPE.
+//
+// Le schéma des 6 œufs est le même à chaque Ascension, mais l'auteur
+// veut que 4 articles de boutique se découvrent PAR Ascension : Poigne +
+// Gantelet + Automate + Colonie à A1, Sceau + Main du Colosse + Titan +
+// Golem à A2, etc. Un défi doit donc viser un article différent selon le
+// numéro d'Ascension.
+//
+// ⚠️ Passer par ici PARTOUT où l'on lit `quest.metric`. Lire le champ
+// brut renverrait `undefined` pour ces défis — ils viseraient le vide.
+export function metriqueDuDefi(quest, stats) {
+  if (!quest) return null;
+  if (quest.metriqueParGroupe) {
+    const groupe = Math.max(0, Math.floor((stats && stats.ascension) || 0));
+    return quest.metriqueParGroupe(groupe) || quest.metric || null;
+  }
+  return quest.metric;
+}
+
 export function resolveQuestTarget(quest, stats) {
   if (!quest) return 1;
   if (quest.target) {
@@ -402,7 +421,7 @@ export function resolveQuestTarget(quest, stats) {
     // cas du défi de taps, où l'auteur a voulu « s'il a déjà tapé 600
     // fois, il lui en reste 200 ». Personne d'autre ne l'utilise.
     const avecReste = quest.minStep
-      ? Math.max(brute, readMetric(quest.metric, stats) + quest.minStep)
+      ? Math.max(brute, readMetric(metriqueDuDefi(quest, stats), stats) + quest.minStep)
       : monte;
     // ⚠️ Le plafond suit la même échelle que la cible : figé, il
     // écraserait la montée dès le 2e groupe.
@@ -477,8 +496,8 @@ export function resolveQuestTarget(quest, stats) {
   // Ascension (intention affichée) et le temps reste stable : mesuré
   // 30 / 33 / 37 / 42 / 46 min de la 0e à la 4e Ascension. Ne pas le
   // réintroduire sans remesurer cette courbe.
-  const now = readMetric(quest.metric, stats);
-  const metric = quest.metric;
+  const metric = metriqueDuDefi(quest, stats);
+  const now = readMetric(metric, stats);
   let raw;
 
   if (metric === 'totalEarned') {
@@ -625,8 +644,9 @@ export function questProgress(questId, stats, baseline = {}, targets = {}) {
   // divergeaient : mesuré, le texte annonçait 15 et ça validait à 10.
   const target = effectiveQuestTarget(questId, stats, targets);
   if (!target) return 0;
-  const now = readMetric(q.metric, stats);
-  const base = readMetric(q.metric, baseline);
+  const m = metriqueDuDefi(q, stats);
+  const now = readMetric(m, stats);
+  const base = readMetric(m, baseline);
   if (q.mode === 'delta') {
     return Math.max(0, Math.min(1, Math.max(0, now - base) / target));
   }
@@ -726,7 +746,13 @@ export function validateQuests(publishedMetrics = []) {
   const problemes = [];
   const tous = [...QUEST_SEQUENCE.flat(), ...QUEST_POOL];
   tous.forEach((q) => {
-    const m = q.metric || '';
+    // ⚠️ Pas de `stats` ici : ce contrôle inspecte les DÉFINITIONS, hors
+    // partie. Pour un défi dont la métrique dépend du groupe, on vérifie
+    // TOUS les groupes — sinon le contrôle ne verrait que le premier.
+    const metriques = q.metriqueParGroupe
+      ? [0, 1, 2, 3, 4, 5, 6].map((g) => q.metriqueParGroupe(g)).filter(Boolean)
+      : [q.metric];
+    metriques.forEach((m) => {
     // ⚠️ Les métriques COMPOSÉES étaient IGNORÉES par ce contrôle.
     //
     // C'est ce qui a laissé passer « Monte Poigne Ancienne au niveau 5 » :
@@ -751,6 +777,7 @@ export function validateQuests(publishedMetrics = []) {
     } else if (!connues.has(m)) {
       problemes.push({ id: q.id, type: 'métrique jamais publiée', detail: m });
     }
+    });
     // QUATRE façons LÉGITIMES de définir une cible : valeur fixe, part du
     // seuil d'Ascension (`partAsc`, à préférer), budget d'effort en
     // minutes, ou pas d'avancement (`step`).
@@ -795,7 +822,10 @@ export function questLabel(questId, target, stats = {}, targets = {}) {
   // `target` explicite prioritaire pour les appels qui en fournissent un,
   // sinon on passe par le résolveur commun.
   const t = target || effectiveQuestTarget(questId, stats, targets);
-  return q.label(t || 1);
+  // ⚠️ Le libellé reçoit la métrique RÉSOLUE en 2e argument : les défis
+  // dont l'article change selon le groupe doivent pouvoir le NOMMER.
+  // Sans ça ils afficheraient « Possède 10 » sans dire quoi.
+  return q.label(t || 1, metriqueDuDefi(q, stats));
 }
 
 export function questDetail(questId, stats, baseline = {}, targets = {}) {
@@ -860,7 +890,7 @@ export function upgradeCreatureOwned(metric, stats = {}) {
 // propre (`available`) et la possession de la créature requise.
 export function questFeasible(quest, stats = {}) {
   if (!quest) return false;
-  if (!upgradeCreatureOwned(quest.metric, stats)) return false;
+  if (!upgradeCreatureOwned(metriqueDuDefi(quest, stats), stats)) return false;
   if (typeof quest.available === 'function' && !quest.available(stats)) return false;
   return true;
 }
@@ -868,7 +898,7 @@ export function questFeasible(quest, stats = {}) {
 export function questAlreadyDone(quest, stats = {}) {
   if (!quest || quest.mode !== 'absolute') return false;
   if (RESET_ON_DRAW_METRICS.includes(quest.metric)) return false;
-  const acquis = readMetric(quest.metric, stats);
+  const acquis = readMetric(metriqueDuDefi(quest, stats), stats);
   // ⚠️ On compare à la cible RÉSOLUE, jamais à `quest.target` brut.
   //
   // Le brut ignore l'échelle du groupe ET le plancher « toujours

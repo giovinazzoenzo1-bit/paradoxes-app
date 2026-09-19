@@ -1104,9 +1104,10 @@ function auditTropFacile(nbOeufs = 26) {
       if (!q) return;
       numero += 1;
       const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
-      const acquis = q.metric.startsWith('auto:') ? ((s.autoClickers || {})[q.metric.slice(5)] || 0)
-        : q.metric.startsWith('tapUpgrade:') ? ((s.tapUpgrades || {})[q.metric.slice(11)] || 0)
-          : (s[q.metric] || 0);
+      const met = Q.metriqueDuDefi(q, s) || '';
+      const acquis = met.startsWith('auto:') ? ((s.autoClickers || {})[met.slice(5)] || 0)
+        : met.startsWith('tapUpgrade:') ? ((s.tapUpgrades || {})[met.slice(11)] || 0)
+          : (s[met] || 0);
       const min = minutesPour(q, cible, s);
       const raisons = [];
       // ⚠️ Le critère de DURÉE ne vaut pas pour les défis d'ADRESSE.
