@@ -154,9 +154,12 @@ export const QUEST_SEQUENCE = [
     // même place, et l'Aventure perdait dès que le deck était vide.
     // Un cycle peut compter 6 défis : l'œuf éclot quand tous sont
     // validés, jamais à un compte fixe.
-    { id: 'g_e2_taps', icon: '👆', metric: 'totalTaps', target: 600, mode: 'delta',
+    { id: 'g_e2_taps', icon: '👆', metric: 'totalTaps', target: 800, mode: 'delta',
       label: (t) => `Tape ${fmtQ(t)} fois` },
-    { id: 'g_e2_auto2', icon: '🖐️', metric: 'auto:main', partAsc: 0.06, mode: 'absolute',
+    // ⚠️ Part montée de 6 % à 11 % : à ce stade le joueur possède DÉJÀ
+    // 2 Mains Spectrales en suivant ses défis, donc viser 2 donnait un
+    // défi accompli d'emblée. Signalé sur l'œuf 2.
+    { id: 'g_e2_auto2', icon: '🖐️', metric: 'auto:main', partAsc: 0.11, mode: 'absolute',
       label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
   ],
 

@@ -2028,7 +2028,25 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // à zéro sans pouvoir en équiper d'autres — défi infaisable.
     const q = findQuest(id);
     if (q && metricScopedToCycle(q.metric)) return questBaseline;
-    return questBaselines[id] || questBaseline;
+    if (questBaselines[id]) return questBaselines[id];
+    // ⚠️ UN DÉFI QUI N'A PAS COMMENCÉ COMPTE ZÉRO.
+    //
+    // Sans référence propre, on retombait sur celle du TIRAGE de l'œuf :
+    // tout ce que le joueur accumulait en faisant les défis PRÉCÉDENTS
+    // comptait pour les suivants. Signalé sur l'œuf 2 — « les coups
+    // critiques sont enregistrés même avant le défi », et l'œuf éclosait
+    // d'un coup dès qu'un seul défi était validé, parce que les autres
+    // étaient déjà remplis à leur naissance.
+    //
+    // La référence par défi (`questBaselines[id]`) est posée quand le
+    // défi devient COURANT. Tant qu'elle n'existe pas, on prend l'état
+    // ACTUEL : le défi part donc de zéro au moment où il démarre.
+    //
+    // ⚠️ Ne s'applique qu'au mode `delta`. En `absolute` la progression
+    // est la valeur réelle rapportée à la cible — le joueur doit y lire
+    // le même nombre que dans sa barre du haut.
+    if (q && q.mode === 'delta') return questStats;
+    return questBaseline;
   };
   // Point de vérité unique de « ce défi est-il terminé ». Tout le reste
   // (compteur du cycle, défi courant, éclosion) passe par ici, sinon un
