@@ -145,7 +145,7 @@ export const QUEST_SEQUENCE = [
   [
     // L'ACCROCHE. Le tout premier défi du jeu doit se boucler en 2-3
     // minutes, sinon le joueur décroche avant d'avoir compris le bouton.
-    { id: 'g1_coins', icon: '🪙', metric: 'totalEarned', target: 1000, echelle: 'pieces', mode: 'delta',
+    { id: 'g1_coins', icon: '🪙', metric: 'totalEarned', target: 750, echelle: 'pieces', mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
     // ⚠️ `cap` OBLIGATOIRE sur le Pacte : son coût DOUBLE par niveau,
     // donc un seul cran de trop coûte le double du précédent. Sans
@@ -154,7 +154,7 @@ export const QUEST_SEQUENCE = [
     // seul défi.
     { id: 'g1_pacte', icon: '🔗', metric: 'tapPower', target: 6, cap: 8, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
-    { id: 'g1_esprit', icon: '👻', metric: 'auto:esprit', target: 3, echelle: 'unites', mode: 'absolute',
+    { id: 'g1_esprit', icon: '👻', metric: 'auto:esprit', target: 5, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
     // « +15 % au-dessus de l'acquis » l'a déjà poussée à 641 secondes.
