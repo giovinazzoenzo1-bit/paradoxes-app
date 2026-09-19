@@ -186,8 +186,17 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g2_crits', icon: '💥', metric: 'totalCrits', target: 30, echelle: 'actions', mode: 'delta',
       label: (t) => `Obtiens ${t} coup${t > 1 ? 's' : ''} critique${t > 1 ? 's' : ''}` },
-    { id: 'g2_taps', icon: '👆', metric: 'totalTaps', target: 800, echelle: 'actions', mode: 'delta',
-      label: (t) => `Tape ${fmtQ(t)} fois` },
+    // ⚠️ Compté sur le TOTAL de taps de la partie, pas depuis le début
+    // du défi.
+    //
+    // En `delta`, un joueur qui avait déjà tapé 600 fois devait en faire
+    // 800 DE PLUS. En `absolute`, la cible est un total : il lui en
+    // reste 200. `minStep` garantit qu'il en reste toujours au moins 200
+    // à faire, même à un joueur qui en a déjà des milliers — sinon le
+    // défi naîtrait accompli.
+    { id: 'g2_taps', icon: '👆', metric: 'totalTaps', target: 800, minStep: 200,
+      echelle: 'actions', mode: 'absolute',
+      label: (t) => `Atteins ${fmtQ(t)} taps au total` },
     { id: 'g2_main', icon: '🖐️', metric: 'auto:main', target: 2, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
   ],
