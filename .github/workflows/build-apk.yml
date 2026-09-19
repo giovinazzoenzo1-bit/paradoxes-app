@@ -29,13 +29,40 @@ jobs:
       - name: Installe les dépendances (versions figées du lock)
         run: npm ci
 
+      # Version figée, même raison que dans mobile-publish.yml.
       - name: Installe EAS CLI
-        run: npm install -g eas-cli
+        run: npm install -g eas-cli@24.7.0
 
       - name: Lie le projet Expo existant
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: eas init --account paradoxes-app1 --non-interactive --force
+
+      # ⚠️⚠️ `expo-updates` est ajouté ICI, dans le job, et JAMAIS committé
+      # dans le projet.
+      #
+      # Sans lui, l'APK embarque le bundle une fois pour toutes et il faut
+      # le réinstaller à chaque changement. Avec lui, l'APK suit le canal
+      # `main` (déjà déclaré dans le profil `preview` d'eas.json) et reçoit
+      # les mises à jour comme Expo Go : on ferme, on rouvre, c'est à jour.
+      #
+      # ⚠️ Pourquoi pas dans package.json : c'est le piège n°1 du projet
+      # (voir 24ba5c0). `expo-updates` présent dans le dépôt a déjà bloqué
+      # le démarrage sous Expo Go. En l'ajoutant seulement dans le job,
+      # le projet reste EXACTEMENT tel qu'il est pour Expo Go — l'iPhone
+      # ne risque rien, quoi qu'il arrive à l'APK.
+      #
+      # `eas update:configure` écrit `updates.url` avec le bon projectId.
+      # C'était l'autre moitié du piège : `expo-updates` SANS `updates.url`
+      # bloque sur « Checking for new update » à l'infini.
+      - name: Ajoute expo-updates pour que l'APK reçoive les mises à jour
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          npx expo install expo-updates
+          eas update:configure --non-interactive
+          echo "--- app.json après configuration ---"
+          node -e "const a=require('./app.json').expo;console.log(JSON.stringify({runtimeVersion:a.runtimeVersion,updates:a.updates},null,2))"
 
       # --wait attend la fin du build (10-20 min) pour que le lien de téléchargement
       # apparaisse directement dans les logs, plutôt que d'avoir à le chercher ailleurs.
@@ -44,3 +71,27 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           CI: "1"
         run: eas build --platform android --profile preview --non-interactive --wait
+
+      # ⚠️ Le lien doit être lisible depuis un TÉLÉPHONE : l'appli GitHub
+      # affiche les logs, pas les résumés de job. On l'imprime donc en
+      # gros dans les logs, et dans le résumé.
+      - name: Affiche le lien de téléchargement de l'APK
+        if: always()
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          URL=$(eas build:list --platform android --limit 1 --json --non-interactive 2>/dev/null \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const b=JSON.parse(d)[0];console.log(b.artifacts&&(b.artifacts.buildUrl||b.artifacts.applicationArchiveUrl)||'')}catch(e){console.log('')}})" || true)
+          echo "=================================================="
+          echo "LIEN DE TELECHARGEMENT DE L'APK :"
+          if [ -n "$URL" ]; then echo "$URL"; else
+            echo "(introuvable — voir https://expo.dev/accounts/paradoxes-app1/projects/paradox-1/builds)"
+          fi
+          echo "=================================================="
+          {
+            echo "## Télécharger l'APK"
+            echo ""
+            if [ -n "$URL" ]; then echo "$URL"; fi
+            echo ""
+            echo "Tous les builds : https://expo.dev/accounts/paradoxes-app1/projects/paradox-1/builds"
+          } >> "$GITHUB_STEP_SUMMARY" || true
