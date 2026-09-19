@@ -9,6 +9,7 @@ import { INCUBATOR_STORAGE_KEY } from '../games/clicker/incubatorLogic';
 import { DEV_ADD_GRIFFES_KEY, DEV_REFILL_ENERGY_KEY, DEV_RESET_GRIFFES_KEY } from './games/AdventureScreen';
 import { CREATURES } from '../games/clicker/clickerLogic';
 import { COLORS } from './games/clickerTheme';
+import { BUILD_SHA, BUILD_TIME } from '../version';
 
 // Menu Paramètres — panneau MODAL, même gabarit que le menu Quêtes
 // (07/09). Le mode développeur n'est plus affiché en vrac dans la page :
@@ -250,6 +251,12 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
           </TouchableOpacity>
 
           <Text style={styles.version}>Paradox — version de test</Text>
+          {/* ⚠️ Date du dernier envoi, écrite par le robot de publication.
+              Sans elle, impossible de distinguer « le défi est faux » de
+              « mon téléphone n'a pas la mise à jour » — confusion qui a
+              coûté une heure le 19/09. */}
+          <Text style={styles.version}>Mise à jour : {BUILD_TIME}</Text>
+          <Text style={styles.version}>Build {BUILD_SHA}</Text>
         </ScrollView>
 
         {/* Accès au mode développeur, en bas et visuellement à part : ce

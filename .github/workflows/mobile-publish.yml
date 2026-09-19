@@ -52,6 +52,26 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: eas init --account paradoxes-app1 --non-interactive --force
 
+      # ⚠️ Écrit la date de publication DANS le bundle, juste avant de
+      # l'envoyer. L'auteur n'a aucun autre moyen de savoir si son
+      # téléphone a chargé la dernière version : le 19/09 il a signalé
+      # trois fois des « bugs » de défis qui étaient l'ancienne version
+      # en cache. La date s'affiche dans les Options.
+      #
+      # Heure de Paris, parce que c'est celle qu'il lit sur son écran.
+      - name: Inscrit la date de publication dans le bundle
+        run: |
+          DATE=$(TZ=Europe/Paris date '+%d/%m/%Y à %H:%M')
+          SHA_COURT=$(echo "${{ github.sha }}" | cut -c1-7)
+          cat > src/version.js <<EOF
+          // ⚠️ FICHIER GÉNÉRÉ à chaque publication — ne pas éditer à la
+          // main, la prochaine publication écrasera la modification.
+          export const BUILD_SHA = '$SHA_COURT';
+          export const BUILD_TIME = '$DATE';
+          EOF
+          echo "--- version.js publié ---"
+          cat src/version.js
+
       - name: Publie la mise à jour (EAS Update)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
