@@ -2,6 +2,7 @@
   "expo": {
     "name": "Paradox",
     "slug": "paradox-1",
+    "privacy": "public",
     "owner": "paradoxes-app1",
     "version": "1.0.0",
     "orientation": "portrait",
