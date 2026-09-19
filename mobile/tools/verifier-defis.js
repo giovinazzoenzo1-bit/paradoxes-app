@@ -21,6 +21,7 @@ const A = require('./audit-quetes.js');
 const CONTROLES = [
   ['auditCoherence', 'métrique publiée, cible définissable'],
   ['auditLibelles', 'le libellé dit la vraie cible'],
+  ['auditLibelleSansArticle', 'aucun libellé sans son article'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
   ['auditAscension', 'ne diverge pas après les Ascensions'],

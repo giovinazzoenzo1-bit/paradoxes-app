@@ -1226,3 +1226,35 @@ function auditCibleSuitLeJoueur() {
   return ecarts;
 }
 module.exports.auditCibleSuitLeJoueur = auditCibleSuitLeJoueur;
+
+// ---- Libellé incomplet faute de métrique -----------------------------
+//
+// Bug réel du 19/09 : « Possède 14 un article ». Le libellé d'un défi
+// dont l'article dépend du groupe reçoit la métrique en 2e argument ;
+// `questLabel` la passait, `questDetail` non. Le joueur lisait un défi
+// qui ne dit pas quoi faire.
+//
+// Ce contrôle appelle CHAQUE libellé sans métrique et signale ceux qui
+// produisent un texte incomplet — c'est-à-dire ceux qui en ont besoin.
+// Il vérifie ensuite que les deux chemins d'affichage la fournissent.
+function auditLibelleSansArticle() {
+  const fautes = [];
+  const fs = require('fs');
+  const src = fs.readFileSync(__dirname + '/../src/games/clicker/questLogic.js', 'utf8');
+  // Tout appel `q.label(` doit passer un 2e argument.
+  (src.match(/q\.label\([^)]*\)/g) || []).forEach((appel) => {
+    if (!appel.includes(',')) fautes.push({ appel, probleme: 'métrique non transmise' });
+  });
+  // Et aucun défi ne doit produire « un article » avec ses stats réelles.
+  [0, 1, 2, 3].forEach((g) => {
+    const s = { ascension: g, autoClickers: {}, upgradeLevels: {}, tapUpgrades: {} };
+    Q.QUEST_SEQUENCE.flat().forEach((q) => {
+      const texte = q.label(10, Q.metriqueDuDefi(q, s)) || '';
+      if (/un article|undefined|NaN/.test(texte)) {
+        fautes.push({ id: q.id, groupe: g, texte });
+      }
+    });
+  });
+  return fautes;
+}
+module.exports.auditLibelleSansArticle = auditLibelleSansArticle;

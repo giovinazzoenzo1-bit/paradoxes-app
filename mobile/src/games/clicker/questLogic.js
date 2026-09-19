@@ -836,7 +836,14 @@ export function questDetail(questId, stats, baseline = {}, targets = {}) {
   const progress = questProgress(questId, stats, baseline, { ...targets, [questId]: target });
   return {
     icon: q.icon,
-    label: q.label(target),
+    // ⚠️ La métrique RÉSOLUE doit être passée ici aussi. Sans elle, un
+    // défi dont l'article dépend du groupe affichait « Possède 14 un
+    // article » — le libellé ne savait pas quoi nommer. Signalé le 19/09.
+    //
+    // ⚠️ `questLabel` le faisait déjà ; c'est `questDetail`, l'autre
+    // chemin d'affichage, qui l'avait manqué. Toute nouvelle fonction
+    // qui construit un libellé doit passer `metriqueDuDefi(q, stats)`.
+    label: q.label(target, metriqueDuDefi(q, stats)),
     progress,
     target,
     current: Math.min(target, Math.floor(progress * target + 1e-9)),
