@@ -934,6 +934,12 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
       // tirages, 4 438 défis étaient figés SOUS ce que le joueur avait
       // déjà, donc nés accomplis. C'est le tirage qui fige, donc c'est
       // ici que la résolution doit avoir lieu — nulle part ailleurs.
+      // ⚠️ Un défi à PAS RELATIF (`step`) n'est pas figé ici : il se
+      // résout quand il devient le défi COURANT, des défis plus tard.
+      // Le figer au tirage donnait « monte une créature au niveau 5 » à
+      // un joueur qui en avait une au 127, parce qu'au moment du tirage
+      // il n'en possédait aucune.
+      if (q.step) return;
       const brute = resolveQuestTarget(q, stats);
       // La répétition ne touche que les cibles FIXES : les cibles
       // calculées suivent déjà la production, elle-même indexée sur les

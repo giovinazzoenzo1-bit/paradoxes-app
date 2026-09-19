@@ -2306,9 +2306,30 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   useEffect(() => {
     if (!loaded || !currentChallengeId) return;
     if (questBaselinesRef.current[currentChallengeId]) return;
+    const instantane = buildQuestStatsSnapshot();
     setQuestBaselines((prev) => (
-      prev[currentChallengeId] ? prev : { ...prev, [currentChallengeId]: buildQuestStatsSnapshot() }
+      prev[currentChallengeId] ? prev : { ...prev, [currentChallengeId]: instantane }
     ));
+    // ⚠️⚠️ UN DÉFI À PAS RELATIF SE CALCULE QUAND IL COMMENCE, PAS AU
+    // TIRAGE DE L'ŒUF.
+    //
+    // « +5 au-dessus de ta meilleure créature » était figé au moment où
+    // l'œuf distribuait ses défis — donc plusieurs défis plus tôt.
+    // Signalé le 19/09 : l'auteur avait une créature au niveau 127 et le
+    // défi demandait le NIVEAU 5, parce qu'au tirage il n'en possédait
+    // aucune (0 + 5). Le défi naissait accompli.
+    //
+    // On le résout ici, à l'instant où il devient le défi courant, puis
+    // on le fige comme les autres. Figer reste indispensable : recalculé
+    // à chaque rendu, il monterait de 5 à chaque niveau gagné et ne se
+    // terminerait jamais.
+    const q = findQuest(currentChallengeId);
+    if (q && q.step && !questTargetsRef.current[currentChallengeId]) {
+      const cible = resolveQuestTarget(q, instantane);
+      setQuestTargets((prev) => (
+        prev[currentChallengeId] ? prev : { ...prev, [currentChallengeId]: cible }
+      ));
+    }
   }, [currentChallengeId, loaded]);
 
   // Palier visuel de l'œuf (0-4), réaffiché sur l'accueil : il existait
