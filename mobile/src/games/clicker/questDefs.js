@@ -98,10 +98,9 @@ export const EGG_STAGES = [
 // durée d'un groupe ne passe que de 1,6 h à 2,8 h entre le 1er et le 4e,
 // pendant que les cibles en pièces sont multipliées par 22.
 //
-// ⚠️ Les gains HORS LIGNE sont pris en compte : une nuit rapporte au
-// plus 15 % du seuil de l'Ascension en cours (OFFLINE_MAX_SHARE), ce qui
-// représente à peu près un œuf d'avance. Les cibles en pièces sont
-// calées pour que ça reste un coup de pouce, jamais un groupe offert.
+// ⚠️ Les gains HORS LIGNE sont pris en compte : 2 h de production à
+// taux réduit (`OFFLINE_RATE`), soit environ un œuf d'avance. Les cibles
+// en pièces sont calées pour que ça reste un coup de pouce.
 export const ECHELLES_GROUPE = {
   // Pièces, réserves, revenu par seconde : suivent le seuil d'Ascension,
   // qui est lui-même mesuré (500 K · 1,3 M · 3,2 M · 11 M · 41 M · 200 M).
@@ -546,7 +545,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 7;
+export const QUEST_ENGINE_VERSION = 8;
 
 function empreinteDefis() {
   const morceaux = [];

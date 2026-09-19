@@ -892,12 +892,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             offline: true,
             veilleurLevel: savedVeilleur,
           });
-          // ⚠️ Le seuil de l'Ascension EN COURS est passé en 3e argument :
-          // sans lui le plafond en part ne s'applique pas et une nuit
-          // peut rendre l'Ascension entière (mesuré : 106 % au 6e groupe).
+          // Hors ligne : 2 h de production à taux réduit (OFFLINE_RATE).
           const offline = Math.round(offlineEarnings(
-            offlineIncome, elapsed,
-            ascensionThreshold((saved.lifetimeStats && saved.lifetimeStats.ascension) || 0)));
+            offlineIncome, elapsed));
           setCoins((saved.coins || 0) + offline);
           setTotalEarned((saved.totalEarned || 0) + offline);
           // Compte rendu montré au joueur. Seuil à 1 pièce : inutile de

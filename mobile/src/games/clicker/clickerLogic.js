@@ -753,31 +753,27 @@ export function passiveRate({
 // Ramené de 4 h à 2 h (14/09).
 export const OFFLINE_CAP_SECONDS = 2 * 3600;
 
-// ⚠️⚠️ PLAFOND EN PART DU SEUIL D'ASCENSION — sans lui, une nuit suffit.
+// ⚠️⚠️ TAUX HORS LIGNE — le joueur touche 2 h de production, mais pas à
+// plein tarif.
 //
-// Le plafond de 2 h ne borne que le TEMPS, pas la VALEUR. Mesuré sur les
-// 6 premiers groupes, ce qu'une nuit hors ligne rapporte par rapport au
-// seuil de l'Ascension en cours :
+// Le plafond de 2 h seul ne suffit pas ICI, parce que le revenu passif
+// est énorme par rapport aux seuils : mesuré, 2 h de passif valaient
+// 28 % du seuil au groupe 1 et 106 % au groupe 6. Un joueur revenant
+// toutes les 2 h progressait donc PLUS VITE en fermant l'appli qu'en
+// jouant.
 //
-//   groupe 1  26 %   ·  groupe 2  43 %  ·  groupe 3  24 %
-//   groupe 4  87 %   ·  groupe 5  47 %  ·  groupe 6  106 %
-//
-// Au 6e groupe, le joueur se réveille avec l'Ascension entière déjà
-// faite. Et la part varie du simple au quadruple d'un groupe à l'autre,
-// donc aucun réglage du temps ne peut la stabiliser : c'est la VALEUR
-// qu'il faut borner.
-//
-// Une nuit doit donner un coup de pouce, pas un raccourci : au plus
-// OFFLINE_MAX_SHARE du chemin vers la prochaine Ascension.
-export const OFFLINE_MAX_SHARE = 0.15;
+// C'est le choix de l'auteur, et c'est ce que font la plupart des idle
+// games : ils annoncent « 2 h de gains » et créditent une fraction du
+// taux. À 25 %, une session hors ligne revient à ~15-25 % du seuil.
+export const OFFLINE_RATE = 0.25;
 
-export function offlineEarnings(incomePerSecond, secondsElapsed, ascensionThresholdValue = Infinity) {
+// ⚠️ Le plafond en PART DU SEUIL a été retiré le 19/09 : l'auteur veut
+// le fonctionnement standard des idle games — 2 h de production, à taux
+// réduit (voir `OFFLINE_RATE`). Le 3e argument est conservé pour ne pas
+// casser les appels existants, mais n'est plus utilisé.
+export function offlineEarnings(incomePerSecond, secondsElapsed) {
   const capped = Math.max(0, Math.min(secondsElapsed, OFFLINE_CAP_SECONDS));
-  const brut = incomePerSecond * capped;
-  const plafond = Number.isFinite(ascensionThresholdValue)
-    ? ascensionThresholdValue * OFFLINE_MAX_SHARE
-    : Infinity;
-  return Math.floor(Math.min(brut, plafond));
+  return Math.floor(incomePerSecond * capped * OFFLINE_RATE);
 }
 
 // ---- Garde-fou contre le changement d'heure du téléphone ----
@@ -1312,24 +1308,41 @@ export function normalizeUpgradeLevels(levels) {
 // générateur (Étoile Filante) devient accessible. Au-delà, on prolonge
 // au rapport asymptotique mesuré (~x8).
 export const ASCENSION_THRESHOLDS = [
-  500000,              // 1re  — 111 min
-  1300000,             // 2e   — 127 min · débloque la Colonie de Familiers
-  3200000,             // 3e   — 147 min
-  11000000,            // 4e   — 170 min · Titan Mécanique
-  41000000,            // 5e   — 193 min
-  200000000,           // 6e   — 221 min · Golem de Cristal
-  1500000000,          // 7e   — 257 min · Dragon Miniature
-  13000000000,         // 8e   — 293 min · Phénix Renaissant
-  150000000000,        // 9e   — 337 min · Léviathan des Abysses
-  2000000000000,       // 10e  — 387 min · Titan de Foudre
-  21000000000000,      // 11e  — 447 min · Colosse de Pierre
-  170000000000000,     // 12e  — 511 min · Oracle Ancien
-  1400000000000000,    // 13e  — 592 min · Seigneur des Ombres
-  10000000000000000,   // 14e  — 673 min · Étoile Filante
+  // ⚠️⚠️ TABLE MESURÉE PAR SIMULATION le 19/09 — jamais calculée à la
+  // main, jamais obtenue en multipliant l'ancienne table.
+  //
+  // Chaque valeur est le seuil qui donne au groupe la durée visée avec
+  // le bonus d'Ascension en vigueur (x2, x2,5, x3, x3,5... cumulatif).
+  // Recherche par dichotomie sur le simulateur d'économie, joueur à la
+  // main à 4 taps/s.
+  //
+  // ⚠️ MONTER LE BONUS SANS MONTER CES SEUILS VIDE LE JEU. Mesuré : avec
+  // le nouveau bonus et les anciens seuils, le groupe A5 tombait de
+  // 4,4 h à 0,0 h. Bonus, seuils et prix de boutique bougent ENSEMBLE.
+  //
+  // ⚠️ Tout changement d'équilibrage périme cette table. La remesurer
+  // avec `mobile/tools/tableau-equilibrage.js` avant de s'y fier.
+  //
+  // ⚠️ Au-delà d'A5 les valeurs dépassent la précision sûre de
+  // JavaScript (9e15) et ne sont PAS atteignables en l'état. C'est
+  // assumé : la collection ne compte que 26 créatures, donc le joueur
+  // termine le contenu pendant A5. Les valeurs suivantes existent pour
+  // que le barème reste défini, et devront être remesurées le jour où
+  // des créatures seront ajoutées.
+  485000,              // A0  — 1,6 h
+  3420000,             // A1  — 1,9 h
+  58500000,            // A2  — 2,2 h
+  4790000000,          // A3  — 2,8 h
+  1120000000000,       // A4  — 3,4 h
+  123000000000000,     // A5  — 4,4 h · fin de la collection (26e créature)
+  24500000000000000,   // A6  — au-delà de la précision sûre
+  1220000000000000000, // A7
+  15100000000000000000,   // A8
+  191000000000000000000,  // A9
 ];
 
 // Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.
-export const ASCENSION_THRESHOLD_TAIL_RATIO = 8;
+export const ASCENSION_THRESHOLD_TAIL_RATIO = 13;
 
 export const ASCENSION_FIRST_THRESHOLD = ASCENSION_THRESHOLDS[0];
 
@@ -1368,9 +1381,42 @@ export function essenceBonusMultiplier(essence) {
 // production du clicker, donc le run suivant est franchement plus rapide
 // sans que le joueur ait à tout reconstruire depuis rien.
 export const ASCENSION_SPEED_BONUS = 0.3;
+// ⚠️⚠️ BONUS D'ASCENSION — formule choisie par l'auteur le 19/09.
+//
+// La 1re Ascension donne x2, la 2e x3, la 3e x4... et les bonus se
+// CUMULENT : x2, puis x6, puis x24, puis x120. Le joueur sent
+// immédiatement que l'Ascension sert à quelque chose — c'était tout
+// l'objectif, et l'ancien x1,30 ne le donnait pas.
+//
+// ⚠️ CE BONUS NE CHANGE PAS LE POUVOIR D'ACHAT, seulement la VITESSE.
+// Le joueur gagne environ le SEUIL pendant un groupe puis ascensionne :
+// ce qu'il peut acheter dépend du seuil, pas du bonus. Confondre les
+// deux m'a fait raisonner faux sur trois échanges.
+//
+// ⚠️ DONC LES SEUILS DOIVENT MONTER AUTANT. Sans ça le groupe A5
+// tomberait de 20 h à 6 minutes. Bonus, seuils et prix de boutique
+// bougent ENSEMBLE, jamais l'un seul. Voir
+// `mobile/tools/tableau-equilibrage.js`, qui les affiche côte à côte
+// précisément pour que l'erreur devienne visible.
+//
+// ⚠️ Limite connue : au-delà d'A8 les nombres dépassent la précision
+// sûre de JavaScript (9e15). Décision assumée — un joueur acharné met
+// deux semaines à y arriver, et le stockage des grands nombres se
+// traitera quand le besoin sera réel.
 export function ascensionSpeedMultiplier(ascensionCount) {
-  const n = Number.isFinite(ascensionCount) ? Math.max(0, ascensionCount) : 0;
-  return Math.pow(1 + ASCENSION_SPEED_BONUS, n);
+  const n = Number.isFinite(ascensionCount) ? Math.max(0, Math.floor(ascensionCount)) : 0;
+  let cumul = 1;
+  // ⚠️ COURBE ADOUCIE : x2, x2,5, x3, x3,5... et non x2, x3, x4.
+  //
+  // La version brute poussait les seuils au-delà de ce que JavaScript
+  // sait compter juste (9e15) dès la 6e Ascension — soit trois semaines
+  // de jeu pour un joueur acharné. Mesuré par simulation, pas déduit :
+  // le seuil d'A6 ressortait à 8,1e17.
+  //
+  // La demi-marche garde la sensation (x2 puis x5 puis x15 cumulés) et
+  // recule le mur de plusieurs Ascensions.
+  for (let i = 1; i <= n; i++) cumul *= (1.5 + 0.5 * i);
+  return cumul;
 }
 
 // Griffes offertes par la n-ième Ascension (n commence à 1).
