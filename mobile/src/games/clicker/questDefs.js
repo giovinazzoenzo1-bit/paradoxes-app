@@ -475,6 +475,24 @@ export const QUEST_POOL = [
 // Les LIBELLÉS ne sont volontairement pas dans le calcul : ils sont des
 // fonctions de la cible, donc un texte modifié s'affiche correctement
 // sans qu'il faille retirer les défis au sort.
+// ⚠️⚠️ VERSION DU MOTEUR DE TIRAGE — à INCRÉMENTER dès qu'on change la
+// façon dont les défis sont CHOISIS dans `questLogic.js`, ou dont leur
+// cible est RÉSOLUE.
+//
+// L'empreinte ci-dessous se calcule sur les DÉFINITIONS. Un correctif du
+// MOTEUR ne la faisait donc pas bouger : le 19/09, la séquence a cessé
+// de substituer les défis du schéma, mais l'auteur a continué de voir
+// l'ancien tirage — un défi du pool à la place de la Faveur des Esprits.
+// Le correctif était bien dans son appli et ne s'appliquait qu'au
+// PROCHAIN œuf.
+//
+// ⚠️ La constante vit ICI et non dans `questLogic.js` : `questDefs` ne
+// peut pas importer `questLogic`, qui l'importe déjà. Cycle d'imports.
+//
+// ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
+// heures passées à chercher dans les défis au lieu du moteur.
+export const QUEST_ENGINE_VERSION = 2;
+
 function empreinteDefis() {
   const morceaux = [];
   const decrire = (q) => morceaux.push([
@@ -487,7 +505,11 @@ function empreinteDefis() {
   ].join('|'));
   QUEST_SEQUENCE.forEach((cycle) => cycle.forEach(decrire));
   QUEST_POOL.forEach(decrire);
-  const texte = morceaux.join(';');
+  // ⚠️ La version du MOTEUR entre dans l'empreinte : changer la façon
+  // dont les défis sont choisis doit aussi faire retirer ceux en cours.
+  // Sans ça, un correctif du moteur reste invisible sur l'œuf courant —
+  // bug du 19/09.
+  const texte = morceaux.join(';') + '|moteur:' + QUEST_ENGINE_VERSION;
   // Hachage simple et stable (djb2). Pas de dépendance, même résultat
   // sur tous les téléphones.
   let h = 5381;
