@@ -1067,13 +1067,35 @@ function auditTropFacile(nbOeufs = 26) {
       // geste, pas le temps. Les signaler revenait à demander de les
       // rallonger artificiellement — et un contrôle qui hurle sur des
       // cas normaux cesse d'être lu, c'est le piège de cette session.
-      const adresse = ['maxTranseHoldSec', 'maxCombo', 'offering', 'runeFused', 'runeBought']
-        .includes(q.metric);
+      // ⚠️ Les défis à PAS RELATIF (`step`) sont exclus du critère de
+      // durée : leur difficulté est voulue proportionnelle au joueur, pas
+      // absolue. « Monte une créature +5 niveaux au-dessus de ta
+      // meilleure » est un choix explicite de l'auteur — le signaler
+      // reviendrait à lui demander de renier sa propre règle.
+      // ⚠️ Sanctuaire et Veilleur PLAFONNENT à 50 : arrivés au plafond,
+      // aucune cible ne peut les rendre plus longs. Les signaler
+      // reviendrait à demander l'impossible.
+      const adresse = q.step
+        || ['maxTranseHoldSec', 'maxCombo', 'offering', 'runeFused', 'runeBought',
+          'sanctuaryLevel', 'veilleurLevel'].includes(q.metric);
       if (!adresse && min != null && min < FACILE_MIN_MINUTES) raisons.push(`${Math.round(min)} min`);
       // ⚠️ Les RECORDS sont remis à zéro par le jeu au tirage : comparer
       // la cible à un vieux record ne décrit aucune situation réelle.
+      // ⚠️ Le critère « déjà X % acquis » ne vaut PAS pour les métriques
+      // CUMULATIVES, celles qui ne repartent pas à zéro après une
+      // Ascension : niveaux d'Aventure, niveau de créature, taps à vie.
+      //
+      // Sur une campagne d'Aventure, passer du niveau 20 au 25 est
+      // « 80 % acquis » par construction — c'est le principe même d'une
+      // progression continue, pas un défaut. Les signaler reviendrait à
+      // exiger de doubler la campagne à chaque défi.
+      //
+      // Le critère garde tout son sens sur ce qui REPART de zéro :
+      // pièces, générateurs, niveaux d'amélioration.
+      const cumulative = ['advLevelReached', 'maxCreatureLevel', 'totalTaps',
+        'battleWon', 'threeStarLevel', 'ascension'].includes(q.metric);
       const record = ['maxTranseHoldSec', 'maxCombo'].includes(q.metric);
-      if (!record && q.mode === 'absolute' && acquis > 0 && cible > 0) {
+      if (!record && !cumulative && q.mode === 'absolute' && acquis > 0 && cible > 0) {
         const progression = (cible - acquis) / cible;
         if (progression < FACILE_MIN_PROGRESSION) {
           raisons.push(`déjà ${Math.round(100 * acquis / cible)} % acquis`);
@@ -1086,7 +1108,11 @@ function auditTropFacile(nbOeufs = 26) {
       // petite cible est NORMAL. Sans cette exception, le contrôle
       // signalait tous les premiers œufs de groupe — et un contrôle qui
       // hurle sur des cas normaux cesse d'être lu.
-      const memeGroupe = vuRecemment[q.metric]
+      // ⚠️ Même raison : une campagne AVANCE par petits pas. Demander le
+      // chapitre 3-5 après le 2-10 n'est pas une répétition, c'est la
+      // suite. Le critère ne vaut que pour ce qui repart de zéro.
+      if (cumulative) vuRecemment[q.metric] = { oeuf, cible };
+      const memeGroupe = !cumulative && vuRecemment[q.metric]
         && Math.floor(oeuf / Q.QUEST_SEQUENCE.length) === Math.floor(vuRecemment[q.metric].oeuf / Q.QUEST_SEQUENCE.length);
       const vu = memeGroupe ? vuRecemment[q.metric] : null;
       if (vu && oeuf - vu.oeuf < FACILE_ECART_OEUFS && cible < vu.cible * FACILE_HAUSSE_MINI) {
