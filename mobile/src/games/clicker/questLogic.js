@@ -556,7 +556,14 @@ export function resolveQuestTarget(quest, stats) {
   // niveaux jusqu'au chapitre 4, puis +6, +7, +8, +9, +10 — parce que
   // 15 % du niveau atteint dépassait 5. Elle cessait alors de se lire
   // comme une suite, ce qui est exactement ce qu'on lui demande.
-  if (quest.step) return roundQuestTarget(now + quest.step);
+  // ⚠️ PAS d'arrondi sur un pas déclaré : il déforme le pas.
+  //
+  // `roundQuestTarget` arrondit aux dizaines ou aux cinquantaines selon
+  // l'ordre de grandeur. Mesuré sur « +5 au-dessus de ta meilleure
+  // créature » : à 127 il rendait 130 (+3), à 340 il rendait 350 (+10).
+  // Un pas déclaré doit être EXACTEMENT ce pas, sinon le défi ne dit
+  // plus ce qu'il annonce.
+  if (quest.step) return now + quest.step;
   const floor = now + Math.max(quest.minStep || 1, Math.ceil(now * 0.15));
   const target = Math.max(rounded, floor);
   // Le plancher relatif pourrait repasser au-dessus d'un plafond dur.

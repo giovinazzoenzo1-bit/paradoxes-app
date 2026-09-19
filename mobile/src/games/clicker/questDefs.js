@@ -258,7 +258,19 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'g4_rune', icon: '🔮', metric: 'runeBought', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Achète ${t} runes` : 'Achète une rune') },
-    { id: 'g4_creature', icon: '🐣', metric: 'maxCreatureLevel', target: 15, echelle: 'aventure', mode: 'absolute',
+    // ⚠️ SEUL défi volontairement RELATIF au joueur, et c'est un choix
+    // assumé de l'auteur, pas un reste de l'ancien système.
+    //
+    // Une cible fixe ne marche pas ici : le niveau des créatures ne
+    // repart PAS à zéro après une Ascension et n'a pas de plafond, donc
+    // « niveau 15 » est un mur au début et un défi offert plus tard.
+    // « +5 au-dessus de ta meilleure créature » garde le même sens à
+    // tous les stades de la partie, et c'est lisible dans le document :
+    // la règle y est écrite, même si le nombre affiché varie.
+    //
+    // ⚠️ `step` et non `target` : c'est ce qui le fait sortir du contrôle
+    // `auditCibleSuitLeJoueur`, qui exige l'inverse pour tous les autres.
+    { id: 'g4_creature', icon: '🐣', metric: 'maxCreatureLevel', step: 5, mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
       // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
       // dans `questStats`.
@@ -534,7 +546,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 4;
+export const QUEST_ENGINE_VERSION = 5;
 
 function empreinteDefis() {
   const morceaux = [];
