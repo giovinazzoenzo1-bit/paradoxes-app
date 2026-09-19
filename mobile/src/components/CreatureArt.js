@@ -42,6 +42,22 @@ const CREATURE_ART = {
     require('../../assets/creatures/ventis/stage-1.png'),
     require('../../assets/creatures/ventis/stage-2.png'),
   ],
+  // ⚠️ Voltix : souris samouraï au bandeau jaune. Affectation DÉDUITE de
+  // l'élément (Foudre = jaune) et du rôle (attaquant = katana). À
+  // corriger si l'artiste visait une autre créature — il suffit de
+  // renommer le dossier et cette clé.
+  voltix: [
+    require('../../assets/creatures/voltix/stage-0.png'),
+    require('../../assets/creatures/voltix/stage-1.png'),
+    require('../../assets/creatures/voltix/stage-2.png'),
+  ],
+  // Aegisolar : « aegis » (bouclier) + « solar ». Golem doré au bouclier,
+  // Lumière et tank — le nom et le dessin disent la même chose.
+  aegisolar: [
+    require('../../assets/creatures/aegisolar/stage-0.png'),
+    require('../../assets/creatures/aegisolar/stage-1.png'),
+    require('../../assets/creatures/aegisolar/stage-2.png'),
+  ],
 };
 
 // Renvoie la source d'image du palier demandé, ou `null` si cette
