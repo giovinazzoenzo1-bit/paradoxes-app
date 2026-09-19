@@ -851,3 +851,46 @@ function auditDependanceCreature() {
   return fautes;
 }
 module.exports.auditDependanceCreature = auditDependanceCreature;
+
+// ---- Défis du SCHÉMA remplacés par le pool --------------------------
+//
+// Bug réel du 19/09, signalé par l'auteur : « les défis que j'ai ne
+// correspondent pas au .md ». Il avait raison.
+//
+// La boutique se déverrouille en cascade — Pacte 5 -> Faveur -> Dégâts
+// critiques -> Sanctuaire -> Veilleur — mais le schéma demandait le
+// Sanctuaire dès l'œuf 2, alors que RIEN ne poussait le joueur à acheter
+// les deux maillons d'avant. Le défi était donc écarté faute de
+// déblocage et le pool le remplaçait en silence : 8 défis sur 12 œufs.
+//
+// Ce contrôle rejoue un joueur qui suit SES DÉFIS et rien d'autre, et
+// signale tout défi du schéma qui se fait remplacer. Zéro est la seule
+// valeur acceptable : le schéma est ce que l'auteur valide, le pool
+// n'est là que pour les cycles au-delà de la séquence.
+function auditRemplacements(nbOeufs = 12) {
+  const fautes = [];
+  const s = etatInitial();
+  s.ownedIds = []; s.ownedCount = 0; s.deckCount = 0;
+  const prevu = Q.QUEST_SEQUENCE.map((c) => c.map((q) => q.id));
+  for (let oeuf = 0; oeuf < nbOeufs; oeuf++) {
+    const set = Q.nextQuestSet(oeuf, [], s);
+    prevu[oeuf % Q.QUEST_SEQUENCE.length].forEach((id) => {
+      if (!set.ids.includes(id)) fautes.push({ oeuf: oeuf + 1, id });
+    });
+    set.ids.forEach((id) => {
+      const q = Q.findQuest(id);
+      if (!q) return;
+      const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
+      const min = minutesPour(q, cible, s);
+      if (min != null) s.totalEarned = (s.totalEarned || 0) + production(s) * 60 * min;
+      appliquer(q, cible, s);
+    });
+    const nv = C.CREATURES[Math.min(oeuf, C.CREATURES.length - 1)];
+    if (nv && !s.ownedIds.includes(nv.id)) s.ownedIds.push(nv.id);
+    s.ownedCount = s.ownedIds.length;
+    s.deckCount = Math.min(3, s.ownedCount);
+    s.passiveIncome = passiveOnly(s);
+  }
+  return fautes;
+}
+module.exports.auditRemplacements = auditRemplacements;

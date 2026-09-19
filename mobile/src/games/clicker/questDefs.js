@@ -109,9 +109,9 @@ export const QUEST_SEQUENCE = [
     // tout » ne dit rien au joueur : il ne sait pas quoi acheter, et deux
     // chemins différents valident le même défi.
     { id: 'g_e1_auto1', icon: '👻', metric: 'auto:esprit', partAsc: 0.018, mode: 'absolute',
-      label: (t) => `Possède ${t} Esprits Frappeurs` },
+      label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
     { id: 'g_e1_golden', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
-      label: (t) => `Touche ${t} fois la cible dorée` },
+      label: (t) => (t > 1 ? `Touche ${t} fois la cible dorée` : 'Touche la cible dorée') },
   ],
 
   // ══════════════════ ŒUF 2 — AUTOMATISER ══════════════════
@@ -120,9 +120,23 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'g_e2_passive', icon: '⚙️', metric: 'passiveIncome', partAsc: 0.05, mode: 'absolute',
       label: (t) => `Atteins ${fmtQ(t)} pièces par seconde` },
-    { id: 'g_e2_sanct', icon: '🏛️', metric: 'sanctuaryLevel', partAsc: 0.06, mode: 'absolute',
-      available: (s) => coreUpgradeUnlocked('sanctuaire', s) && (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
-      label: (t) => `Monte le Sanctuaire au niveau ${t}` },
+    // ⚠️⚠️ L'ORDRE DE CETTE CHAÎNE N'EST PAS DÉCORATIF.
+    //
+    // La boutique se déverrouille en cascade :
+    //   Pacte 5 -> Faveur -> Dégâts critiques -> Sanctuaire -> Veilleur
+    //
+    // Le schéma demandait le Sanctuaire dès l'œuf 2 alors que RIEN ne
+    // poussait le joueur à acheter la Faveur ni les Dégâts critiques.
+    // Le défi était donc écarté faute de déblocage et le pool le
+    // remplaçait : mesuré, 8 défis du schéma sur 12 œufs finissaient
+    // remplacés, et la liste affichée ne correspondait plus à celle du
+    // document de référence.
+    //
+    // Chaque maillon est désormais UN DÉFI, dans l'ordre : le joueur qui
+    // suit ses défis ouvre mécaniquement le maillon suivant.
+    { id: 'g_e2_faveur', icon: '🍀', metric: 'critLevel', partAsc: 0.04, mode: 'absolute',
+      available: (s) => coreUpgradeUnlocked('faveur', s),
+      label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
     { id: 'g_e2_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
       // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
       // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
@@ -134,7 +148,7 @@ export const QUEST_SEQUENCE = [
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g_e2_crit', icon: '💥', metric: 'totalCrits', target: 30, mode: 'delta',
-      label: (t) => `Obtiens ${t} coups critiques` },
+      label: (t) => `Obtiens ${t} coup${t > 1 ? 's' : ''} critique${t > 1 ? 's' : ''}` },
     // ⚠️ 6e défi de l'œuf 2 : le Sanctuaire et le premier palier
     // d'Aventure doivent apparaître TOUS LES DEUX. Ils se disputaient la
     // même place, et l'Aventure perdait dès que le deck était vide.
@@ -143,7 +157,7 @@ export const QUEST_SEQUENCE = [
     { id: 'g_e2_taps', icon: '👆', metric: 'totalTaps', target: 600, mode: 'delta',
       label: (t) => `Tape ${fmtQ(t)} fois` },
     { id: 'g_e2_auto2', icon: '🖐️', metric: 'auto:main', partAsc: 0.06, mode: 'absolute',
-      label: (t) => `Possède ${t} Mains Spectrales` },
+      label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
   ],
 
   // ══════════════════ ŒUF 3 — RENFORCER ══════════════════
@@ -155,9 +169,10 @@ export const QUEST_SEQUENCE = [
     // facteur 5 au moins sur la cible.
     { id: 'g_e3_hold', icon: '💰', metric: 'coins', partAsc: 0.10, mode: 'absolute',
       label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
-    { id: 'g_e3_veilleur', icon: '🌙', metric: 'veilleurLevel', partAsc: 0.07, mode: 'absolute',
-      available: (s) => coreUpgradeUnlocked('veilleur', s) && (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
-      label: (t) => `Monte le Veilleur au niveau ${t}` },
+    // 2e maillon : ouvert par la Faveur de l'œuf 2, ouvre le Sanctuaire.
+    { id: 'g_e3_critdmg', icon: '💢', metric: 'critDamageLevel', partAsc: 0.05, mode: 'absolute',
+      available: (s) => coreUpgradeUnlocked('critDamage', s),
+      label: (t) => `Monte les Dégâts critiques au niveau ${t}` },
     // ⚠️ TROIS défis de NIVEAU d'Aventure par groupe (œufs 2, 3 et 5),
     // chacun +5 niveaux, donc une campagne qui avance de 15 niveaux par
     // Ascension et qui se lit comme une suite : chapitre 1 niveau 5,
@@ -177,10 +192,13 @@ export const QUEST_SEQUENCE = [
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g_e3_power', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
-      label: (t) => `Active ${t} fois un pouvoir` },
-    { id: 'g_e3_tapup', icon: '✊', metric: 'tapUpgrade:tap1', partAsc: 0.05, mode: 'absolute',
-      available: (s) => (s.tapPower || 1) >= 10,
-      label: (t) => `Monte la Poigne Ancienne au niveau ${t}` },
+      label: (t) => (t > 1 ? `Active ${t} fois un pouvoir` : 'Active un pouvoir') },
+    // ⚠️ Les PALIERS DE TAP sortent du schéma : le premier exige Pacte 10
+    // et chacun exige 5 niveaux du précédent. Rien ne garantit qu'un
+    // joueur y soit au bon œuf, donc ils étaient systématiquement
+    // remplacés. Ils restent dans le pool, où un remplacement est normal.
+    { id: 'g_e3_auto3', icon: '🤖', metric: 'auto:automate', partAsc: 0.16, mode: 'absolute',
+      label: (t) => `Achète ${t} Automate${t > 1 ? 's' : ''} Runique${t > 1 ? 's' : ''}` },
   ],
 
   // ══════════════════ ŒUF 4 — ÉQUIPER ══════════════════
@@ -204,16 +222,16 @@ export const QUEST_SEQUENCE = [
       label: (t) => (t > 1
         ? `Décroche toutes les étoiles sur ${t} niveaux d'Aventure`
         : "Décroche toutes les étoiles sur un niveau d'Aventure") },
-    { id: 'g_e4_faveur', icon: '🍀', metric: 'critLevel', partAsc: 0.04, mode: 'absolute',
-      available: (s) => coreUpgradeUnlocked('faveur', s),
-      label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
+    // 3e maillon : ouvert par les Dégâts critiques de l'œuf 3.
+    { id: 'g_e4_sanct', icon: '🏛️', metric: 'sanctuaryLevel', partAsc: 0.10, mode: 'absolute',
+      available: (s) => coreUpgradeUnlocked('sanctuaire', s) && (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
+      label: (t) => `Monte le Sanctuaire au niveau ${t}` },
     // ⚠️ Remplace un défi d'objet de créature, supprimés parce qu'ils
     // étaient impossibles : ils pouvaient être tirés pour un joueur qui
     // ne possède pas la créature, et bloquaient l'œuf. Un palier de tap
     // est achetable par TOUT joueur.
-    { id: 'g_e4_tapup', icon: '🔱', metric: 'tapUpgrade:tap3', partAsc: 0.06, mode: 'absolute',
-      available: (s) => ((s.tapUpgrades || {}).tap2 || 0) >= 5,
-      label: (t) => `Monte le Sceau de Puissance au niveau ${t}` },
+    { id: 'g_e4_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.08, mode: 'delta',
+      label: (t) => `Obtiens ${fmtQ(t)} pièces` },
   ],
 
   // ══════════════════ ŒUF 5 — MAÎTRISER ══════════════════
@@ -223,7 +241,7 @@ export const QUEST_SEQUENCE = [
     { id: 'g_e5_hold', icon: '💰', metric: 'coins', partAsc: 0.55, mode: 'absolute',
       label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
     { id: 'g_e5_auto3', icon: '🤖', metric: 'auto:automate', partAsc: 0.20, mode: 'absolute',
-      label: (t) => `Achète ${t} Automates Runiques` },
+      label: (t) => `Achète ${t} Automate${t > 1 ? 's' : ''} Runique${t > 1 ? 's' : ''}` },
     { id: 'g_e5_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
       // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
       // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
@@ -236,9 +254,10 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g_e5_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, cap: 75, mode: 'absolute',
       label: (t) => `Tiens la Transe pendant ${t} secondes` },
-    { id: 'g_e5_tapup', icon: '🪄', metric: 'tapUpgrade:tap2', partAsc: 0.12, mode: 'absolute',
-      available: (s) => (s.tapUpgrades || {}).tap1 >= 5,
-      label: (t) => `Monte le Gantelet Runique au niveau ${t}` },
+    // 4e et dernier maillon : ouvert par le Sanctuaire de l'œuf 4.
+    { id: 'g_e5_veilleur', icon: '🌙', metric: 'veilleurLevel', partAsc: 0.12, mode: 'absolute',
+      available: (s) => coreUpgradeUnlocked('veilleur', s) && (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
+      label: (t) => `Monte le Veilleur au niveau ${t}` },
   ],
 
   // ══════════════════ ŒUF 6 — FRANCHIR ══════════════════
@@ -249,9 +268,17 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
     // Les Dégâts critiques : la seule des 5 améliorations de base qui
     // n'avait aucun défi, et elle renforce le TAP.
-    { id: 'g_e6_critdmg', icon: '💢', metric: 'critDamageLevel', partAsc: 0.10, mode: 'absolute',
-      available: (s) => coreUpgradeUnlocked('critDamage', s),
-      label: (t) => `Monte les Dégâts critiques au niveau ${t}` },
+    // ⚠️ Cette place a porté deux mauvais défis avant celui-ci.
+    //
+    // Les Dégâts critiques d'abord : doublon avec l'œuf 3. Puis le
+    // Sanctuaire : il PLAFONNE à 50 et l'œuf 4 y monte déjà, donc son
+    // `available` devenait faux et le pool le remplaçait — le contrôle
+    // `auditRemplacements` l'a attrapé avant la publication.
+    //
+    // Le Pacte n'a ni plafond ni prérequis : il est toujours disponible,
+    // et c'est un dernier coup de pouce cohérent juste avant l'Ascension.
+    { id: 'g_e6_pacte', icon: '🔗', metric: 'tapPower', partAsc: 0.22, mode: 'absolute',
+      label: (t) => `Monte Pacte au niveau ${t}` },
     { id: 'g_e6_adv', icon: '🗡️', metric: 'battleWon', target: 6, mode: 'delta',
       // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
       // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
@@ -261,7 +288,7 @@ export const QUEST_SEQUENCE = [
       // c'est le défi de Sanctuaire qui apparaît ». Posséder une
       // créature suffit : le deck se remplit en deux gestes.
       available: (s) => (s.ownedCount || 0) > 0,
-      label: (t) => `Gagne ${t} combats en Aventure` },
+      label: (t) => `Gagne ${t} combat${t > 1 ? 's' : ''} en Aventure` },
     { id: 'g_e6_offering', icon: '🕯️', metric: 'offering', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Fais ${t} Offrandes` : 'Fais une Offrande') },
     // ⚠️ `step: 1` et NON une cible en dur.
@@ -361,21 +388,21 @@ export const QUEST_POOL = [
   // pour un joueur qui n'a pas encore de quoi se la payer.
   { id: 'crit20', family: 'action', icon: '💥', metric: 'totalCrits', target: 20, mode: 'delta',
     available: (s) => coreUpgradeUnlocked('faveur', s) && ((s.critLevel || 0) >= 1 || (s.coins || 0) >= critUpgradeCost(0) || questBudget(s, 5) >= critUpgradeCost(0)),
-    label: (t) => `Obtiens ${t} coups critiques` },
+    label: (t) => `Obtiens ${t} coup${t > 1 ? 's' : ''} critique${t > 1 ? 's' : ''}` },
   { id: 'crit100', family: 'action', icon: '💥', metric: 'totalCrits', target: 100, mode: 'delta',
     available: (s) => coreUpgradeUnlocked('faveur', s) && (s.critLevel || 0) >= 2,
-    label: (t) => `Obtiens ${t} coups critiques` },
+    label: (t) => `Obtiens ${t} coup${t > 1 ? 's' : ''} critique${t > 1 ? 's' : ''}` },
   { id: 'crit400', family: 'action', icon: '💥', metric: 'totalCrits', target: 200, mode: 'delta',
     available: (s) => coreUpgradeUnlocked('faveur', s) && (s.critLevel || 0) >= 5,
-    label: (t) => `Obtiens ${t} coups critiques` },
+    label: (t) => `Obtiens ${t} coup${t > 1 ? 's' : ''} critique${t > 1 ? 's' : ''}` },
   { id: 'golden3', family: 'action', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
-    label: (t) => `Touche ${t} fois la cible dorée` },
+    label: (t) => (t > 1 ? `Touche ${t} fois la cible dorée` : 'Touche la cible dorée') },
   // La cible dorée n'apparaît qu'une fois toutes les 45-90 secondes :
   // 10 captures demandent une bonne dizaine de minutes de présence
   // continue. Réservé à un joueur qui en a déjà attrapé.
   { id: 'golden10', family: 'action', icon: '⭐', metric: 'goldenClaimed', target: 10, mode: 'delta',
     available: (s) => (s.goldenClaimed || 0) >= 3,
-    label: (t) => `Touche ${t} fois la cible dorée` },
+    label: (t) => (t > 1 ? `Touche ${t} fois la cible dorée` : 'Touche la cible dorée') },
   // L'invocation coûte des pièces et son prix grimpe avec la
   // collection : inutile de proposer 10 invocations à qui n'a pas de
   // quoi en payer une seule.

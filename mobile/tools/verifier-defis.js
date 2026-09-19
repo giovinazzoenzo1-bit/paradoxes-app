@@ -29,6 +29,7 @@ const CONTROLES = [
   ['auditAvailable', 'la condition peut devenir vraie'],
   ['auditFamilles', 'pas deux défis qui se lisent pareil dans un œuf'],
   ['auditDependanceCreature', 'ne dépend pas de posséder une créature'],
+  ['auditRemplacements', 'le schéma affiché est bien celui qui est joué'],
 ];
 
 let echecs = 0;
