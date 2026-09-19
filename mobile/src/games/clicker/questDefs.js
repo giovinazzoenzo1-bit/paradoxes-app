@@ -169,17 +169,20 @@ export const QUEST_SEQUENCE = [
   // devient jouable, et avec elle les Griffes.
   // Mesuré en fin d'œuf : ~36 000 gagnés, 6 pièces/s, Pacte 9, 1 Main.
   [
-    { id: 'g2_passif', icon: '⚙️', metric: 'passiveIncome', target: 8, echelle: 'pieces', mode: 'absolute',
+    { id: 'g2_passif', icon: '⚙️', metric: 'passiveIncome', target: 7, echelle: 'pieces', mode: 'absolute',
       label: (t) => `Atteins ${fmtQ(t)} pièces par seconde` },
     // 1er maillon de la chaîne de boutique : Pacte 5 -> Faveur ->
     // Dégâts critiques -> Sanctuaire -> Veilleur. Chaque maillon est un
     // défi, dans l'ordre, sinon le suivant n'est pas débloqué et le pool
     // le remplace (bug du 19/09, 8 défis sur 12 œufs remplacés).
-    { id: 'g2_faveur', icon: '🍀', metric: 'critLevel', target: 3, cap: 5, echelle: 'niveau', mode: 'absolute',
+    { id: 'g2_faveur', icon: '🍀', metric: 'critLevel', target: 8, cap: 12, echelle: 'niveau', mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('faveur', s),
       label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
     { id: 'g2_adv', icon: '⚔️', metric: 'advLevelReached', target: 5, echelle: 'aventure', mode: 'absolute',
-      available: (s) => (s.ownedCount || 0) > 0,
+      // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
+      // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
+      // dans `questStats`.
+      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g2_crits', icon: '💥', metric: 'totalCrits', target: 30, echelle: 'actions', mode: 'delta',
       label: (t) => `Obtiens ${t} coup${t > 1 ? 's' : ''} critique${t > 1 ? 's' : ''}` },
@@ -200,7 +203,10 @@ export const QUEST_SEQUENCE = [
       available: (s) => coreUpgradeUnlocked('critDamage', s),
       label: (t) => `Monte les Dégâts critiques au niveau ${t}` },
     { id: 'g3_adv', icon: '⚔️', metric: 'advLevelReached', target: 10, echelle: 'aventure', mode: 'absolute',
-      available: (s) => (s.ownedCount || 0) > 0,
+      // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
+      // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
+      // dans `questStats`.
+      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g3_pouvoirs', icon: '✨', metric: 'powerActivated', target: 5, echelle: 'actions', mode: 'delta',
       label: (t) => (t > 1 ? `Active ${t} fois un pouvoir` : 'Active un pouvoir') },
@@ -215,10 +221,16 @@ export const QUEST_SEQUENCE = [
     { id: 'g4_rune', icon: '🔮', metric: 'runeBought', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Achète ${t} runes` : 'Achète une rune') },
     { id: 'g4_creature', icon: '🐣', metric: 'maxCreatureLevel', target: 15, echelle: 'aventure', mode: 'absolute',
-      available: (s) => (s.ownedCount || 0) > 0,
+      // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
+      // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
+      // dans `questStats`.
+      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
       label: (t) => `Monte une créature au niveau ${t}` },
     { id: 'g4_etoiles', icon: '🌟', metric: 'threeStarLevel', target: 1, echelle: 'aventure', mode: 'delta',
-      available: (s) => (s.ownedCount || 0) > 0,
+      // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
+      // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
+      // dans `questStats`.
+      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
       label: (t) => (t > 1
         ? `Décroche toutes les étoiles sur ${t} niveaux d'Aventure`
         : "Décroche toutes les étoiles sur un niveau d'Aventure") },
@@ -238,7 +250,10 @@ export const QUEST_SEQUENCE = [
     { id: 'g5_main', icon: '🖐️', metric: 'auto:main', target: 5, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
-      available: (s) => (s.ownedCount || 0) > 0,
+      // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
+      // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
+      // dans `questStats`.
+      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     // 4e et dernier maillon : ouvert par le Sanctuaire de l'œuf 4.
     { id: 'g5_veilleur', icon: '🌙', metric: 'veilleurLevel', target: 5, cap: 8, echelle: 'niveau', mode: 'absolute',
@@ -257,7 +272,10 @@ export const QUEST_SEQUENCE = [
     { id: 'g6_pacte', icon: '🔗', metric: 'tapPower', target: 10, cap: 12, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     { id: 'g6_combats', icon: '🗡️', metric: 'battleWon', target: 5, echelle: 'aventure', mode: 'delta',
-      available: (s) => (s.ownedCount || 0) > 0,
+      // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
+      // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
+      // dans `questStats`.
+      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
       label: (t) => `Gagne ${t} combat${t > 1 ? 's' : ''} en Aventure` },
     { id: 'g6_offrande', icon: '🕯️', metric: 'offering', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Fais ${t} Offrandes` : 'Fais une Offrande') },

@@ -372,6 +372,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // sert qu'à réafficher, et il ne tourne que quand un œuf éclot.
   const [nowTick, setNowTick] = useState(Date.now());
   const [incubatingEgg, setIncubatingEgg] = useState(null);
+  const incubatingEggRef = useRef(null);
+  incubatingEggRef.current = incubatingEgg;
   const [incubatorLoaded, setIncubatorLoaded] = useState(false);
 
   useEffect(() => {
@@ -992,6 +994,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               critLevel: saved.critLevel || 0,
               essence: saved.essence || 0,
               ownedCount: (saved.owned || []).length,
+              creaturesAVenir: (saved.owned || []).length + (saved.incubatingEgg ? 1 : 0),
               deckCount: (saved.deck || []).filter(Boolean).length,
               maxCreatureLevel: (saved.owned || []).reduce((m, o) => Math.max(m, o.level || 0), 0),
               autoTotal: Object.values(saved.autoClickers || {}).reduce((a, b) => a + (b || 0), 0),
@@ -1975,6 +1978,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     critDamageLevel,
     essence,
     ownedCount: owned.length,
+    // ⚠️ L'œuf EN COURS D'INCUBATION compte comme une créature à venir.
+    //
+    // Le tirage des défis du cycle suivant a lieu dans
+    // `startEggIncubation`, donc AVANT que la créature n'arrive. Les
+    // défis d'Aventure, conditionnés à `ownedCount > 0`, étaient tous
+    // écartés à ce moment-là et remplacés par des défis du pool : à
+    // l'œuf 2 le joueur ne voyait JAMAIS le mode Aventure, alors que
+    // c'est précisément là qu'il doit le découvrir. Signalé le 19/09.
+    creaturesAVenir: owned.length + (incubatingEgg ? 1 : 0),
     // ⚠️ Les IDENTIFIANTS, pas seulement le nombre : un défi « monte
     // l'objet X au niveau 5 » est IMPOSSIBLE si la créature de X n'est
     // pas possédée, et il bloquerait l'œuf à jamais.
@@ -2052,7 +2064,24 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // (compteur du cycle, défi courant, éclosion) passe par ici, sinon un
   // défi validé en dev serait terminé pour l'affichage mais pas pour
   // l'œuf, qui n'éclorait jamais.
+  // ⚠️ UN DÉFI DE RECORD N'EST PAS TERMINÉ TANT QU'IL N'A PAS COMMENCÉ.
+  //
+  // La tenue de Transe et le combo sont remis à zéro quand le défi
+  // devient COURANT. Mais rien n'empêchait de le marquer terminé AVANT :
+  // le joueur tenait une Transe en faisant les défis précédents, le
+  // record montait, et le défi naissait validé — il n'avait alors jamais
+  // l'occasion de devenir courant, donc la remise à zéro n'arrivait
+  // jamais. Signalé le 19/09 sur l'œuf 1.
+  //
+  // Tant que le défi n'a pas sa référence propre — posée au moment où il
+  // devient courant — il ne peut pas être terminé.
+  const recordPasCommence = (id) => {
+    const q = findQuest(id);
+    if (!q || !['maxTranseHoldSec', 'maxCombo'].includes(q.metric)) return false;
+    return !questBaselines[id];
+  };
   const isQuestDone = (id) =>
+    !recordPasCommence(id) &&
     !devReopenedIds.includes(id) &&
     (latchedQuestIds.includes(id) ||
       devCompletedIds.includes(id) ||
@@ -2323,6 +2352,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     tapUpgrades: tapUpgradesRef.current,
     essence: essenceRef.current,
     ownedCount: ownedRef.current.length,
+    creaturesAVenir: ownedRef.current.length + (incubatingEggRef.current ? 1 : 0),
     deckCount: deckRef.current.filter(Boolean).length,
     maxCreatureLevel: ownedRef.current.reduce((m, o) => Math.max(m, o.level || 0), 0),
     maxCombo: Math.round(maxComboRef.current * 10),
