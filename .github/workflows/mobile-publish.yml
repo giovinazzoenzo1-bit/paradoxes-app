@@ -101,7 +101,20 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          PID=$(node -e "try{const a=require('./app.json');console.log(a.expo.extra.eas.projectId)}catch(e){console.log('')}" 2>/dev/null || true)
+          # ⚠️ Le projectId n'est PAS dans app.json : `eas init` l'écrit
+          # dans le fichier au moment du run, mais ce fichier n'est jamais
+          # recommité, donc la lecture depuis app.json renvoyait TOUJOURS
+          # vide et le lien n'a jamais été affiché une seule fois.
+          #
+          # On le demande donc à EAS, qui le connaît, avec repli sur
+          # app.json si jamais il y figure.
+          PID=$(eas project:info --json 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{console.log(JSON.parse(d).id||'')}catch(e){console.log('')}})" || true)
+          if [ -z "$PID" ]; then
+            PID=$(eas project:info 2>/dev/null | sed -n 's/.*ID[[:space:]]*\([0-9a-f-]\{36\}\).*/\1/p' | head -1 || true)
+          fi
+          if [ -z "$PID" ]; then
+            PID=$(node -e "try{const a=require('./app.json');console.log(a.expo.extra.eas.projectId||'')}catch(e){console.log('')}" 2>/dev/null || true)
+          fi
           # Affiché AUSSI dans les logs, pas seulement dans le résumé :
           # l'appli mobile GitHub n'affiche pas les résumés de job, seuls
           # les logs y sont lisibles. Sans ça, le lien est invisible pour
