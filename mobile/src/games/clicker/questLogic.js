@@ -367,21 +367,25 @@ export function resolveQuestTarget(quest, stats) {
     if (RESET_ON_DRAW_METRICS.includes(quest.metric)) {
       return quest.cap ? Math.min(brute, quest.cap) : brute;
     }
-    const dejaLa = readMetric(quest.metric, stats);
-    // ⚠️ PAS de plancher en POURCENTAGE sur une cible à échelle.
+    // ⚠️⚠️ AUCUN PLANCHER SUR UNE CIBLE FIXE. La cible EST la cible.
     //
-    // Le plancher « au moins +15 % au-dessus de l'acquis » sert aux
-    // cibles CALCULÉES, qui peuvent sortir trop basses. Sur une cible
-    // fixe il se compose d'un œuf au suivant : la réserve demandée
-    // passait de 25 000 à des milliards au 3e groupe, et la séquence
-    // entière ressortait à 2 millions d'heures. C'est l'échelle du
-    // GROUPE qui porte la progression, pas un pourcentage glissant.
+    // Il restait ici un « toujours au moins 1 de plus que ce que le
+    // joueur a déjà ». C'était la DERNIÈRE pièce du système qui adapte
+    // les défis au joueur — celui qu'on a passé la journée à retirer.
     //
-    // On garde seulement l'invariant : demander plus que l'acquis.
-    const plancher = quest.echelle
-      ? dejaLa + (quest.minStep || 1)
-      : dejaLa + Math.max(quest.minStep || 1, Math.ceil(dejaLa * 0.15));
-    const monte = Math.max(brute, plancher);
+    // Preuve fournie par l'auteur : « Monte une créature au niveau 15 »
+    // s'affichait NIVEAU 128 chez lui, parce qu'il avait une créature au
+    // 127. Le défi suivait son état au lieu d'être celui du document.
+    //
+    // Conséquence acceptée : un joueur très en avance peut voir un défi
+    // déjà rempli à sa distribution. C'est un défi offert, pas une
+    // panne — et c'est infiniment préférable à une cible qui fuit devant
+    // lui. Le document de référence dit 15, le jeu dit 15.
+    //
+    // ⚠️ Ne vaut QUE pour les cibles fixes (`quest.target`). Le reste de
+    // la fonction, plus bas, traite les cibles calculées, qui ont encore
+    // besoin d'un plancher pour ne pas sortir sous l'acquis.
+    const monte = brute;
     // ⚠️⚠️ PLAFOND — sans lui, une cible ABSOLUE s'emballe sans fin.
     //
     // Le plancher « toujours +15 % au-dessus de ce que le joueur a déjà »
@@ -393,13 +397,20 @@ export function resolveQuestTarget(quest, stats) {
     // maximum humain : elles doivent déclarer leur plafond. Les
     // métriques de PROGRESSION (niveaux, pièces) n'en ont pas et n'en
     // déclarent donc pas.
+    // ⚠️ SEULE EXCEPTION : un défi qui déclare `minStep` demande
+    // explicitement qu'il reste toujours quelque chose à faire. C'est le
+    // cas du défi de taps, où l'auteur a voulu « s'il a déjà tapé 600
+    // fois, il lui en reste 200 ». Personne d'autre ne l'utilise.
+    const avecReste = quest.minStep
+      ? Math.max(brute, readMetric(quest.metric, stats) + quest.minStep)
+      : monte;
     // ⚠️ Le plafond suit la même échelle que la cible : figé, il
     // écraserait la montée dès le 2e groupe.
-    if (!quest.cap) return monte;
+    if (!quest.cap) return avecReste;
     const plafond = quest.echelle
       ? Math.round(quest.cap * echelleGroupe(quest.echelle, groupe))
       : quest.cap;
-    return Math.min(monte, plafond);
+    return Math.min(avecReste, plafond);
   }
   // ⚠️⚠️ DEUX FAÇONS D'EXPRIMER L'EFFORT D'UN DÉFI — préférer `partAsc`.
   //

@@ -1109,3 +1109,44 @@ function auditTropFacile(nbOeufs = 26) {
   return trouves;
 }
 module.exports.auditTropFacile = auditTropFacile;
+
+// ---- Une cible fixe dépend-elle encore du joueur ? ------------------
+//
+// L'auteur, preuve à l'appui : « Monte une créature au niveau 15 »
+// s'affichait NIVEAU 128 chez lui, parce qu'il avait une créature au
+// 127. Un plancher « toujours au moins 1 de plus que l'acquis » était
+// resté dans la résolution — la dernière pièce du système qui adapte
+// les défis au joueur.
+//
+// Ce contrôle résout chaque défi à cible fixe sur DEUX joueurs du même
+// groupe : un débutant et un joueur très avancé. La cible doit être
+// IDENTIQUE. C'est la garantie que le document de référence dit ce que
+// le jeu affiche, pour tout le monde.
+function auditCibleSuitLeJoueur() {
+  const ecarts = [];
+  const faible = (g) => ({
+    ascension: g, tapPower: 1, coins: 0, totalEarned: 0, passiveIncome: 0,
+    sanctuaryLevel: 0, veilleurLevel: 0, critLevel: 0, critDamageLevel: 0,
+    maxCreatureLevel: 1, advLevelReached: 0, totalTaps: 0, maxTranseHoldSec: 0,
+    ownedCount: 3, creaturesAVenir: 3, deckCount: 3,
+    autoClickers: {}, upgradeLevels: {}, tapUpgrades: {}, essence: 0,
+  });
+  const fort = (g) => ({
+    ...faible(g), tapPower: 40, coins: 1e9, totalEarned: 1e10, passiveIncome: 1e6,
+    sanctuaryLevel: 50, veilleurLevel: 50, critLevel: 30, critDamageLevel: 30,
+    maxCreatureLevel: 127, advLevelReached: 120, totalTaps: 1e6, maxTranseHoldSec: 400,
+    autoClickers: { esprit: 300, main: 200, automate: 100 },
+  });
+  Q.QUEST_SEQUENCE.flat().forEach((q) => {
+    if (!q.target) return;
+    // Le défi de taps demande EXPLICITEMENT qu'il reste à faire.
+    if (q.minStep) return;
+    [0, 1, 3].forEach((g) => {
+      const a = Q.resolveQuestTarget(q, faible(g));
+      const b = Q.resolveQuestTarget(q, fort(g));
+      if (a !== b) ecarts.push({ id: q.id, groupe: g, debutant: a, avance: b });
+    });
+  });
+  return ecarts;
+}
+module.exports.auditCibleSuitLeJoueur = auditCibleSuitLeJoueur;
