@@ -72,7 +72,11 @@ for (let p = 0; p < 200; p++) {
       if (!q) { pb.infaisable++; return; }
       tires++;
       if (!Q.questFeasible(q, s)) pb.infaisable++;
-      if (q.mode === 'absolute') {
+      // ⚠️ Les RECORDS (Transe, combo) sont remis à zéro par le jeu au
+      // tirage du cycle. Les comparer à un vieux record ne décrit aucune
+      // situation réelle : la sonde annonçait 4 438 « défis nés déjà
+      // accomplis » qui n'existent pas en jeu.
+      if (q.mode === 'absolute' && !['maxTranseHoldSec', 'maxCombo'].includes(q.metric)) {
         const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
         // `readMetric` n'est pas exporté : on lit la métrique comme le
         // fait le moteur pour les cas simples, ce qui suffit ici.

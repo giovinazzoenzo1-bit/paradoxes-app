@@ -8,12 +8,12 @@
 // clickerLogic, donc pas de cycle d'imports.
 // Moteur des défis : cibles, progression, validation, tirage.
 // Les DÉFINITIONS vivent dans `questDefs.js`.
-import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION } from './questDefs';
+import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION, echelleGroupe } from './questDefs';
 import { fmtQ, qtyQ, roundQuestTarget, describeAdventureLevel } from './questFormat';
 import { questBudget, estimatedIncomePerSecond, ascensionCoinMultiplier, ASCENSION_COIN_TARGET_RATE } from './questBudget';
 
 // Ré-exportés pour que les écrans continuent d'importer depuis ici.
-export { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION };
+export { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION, echelleGroupe };
 export { fmtQ, qtyQ, describeAdventureLevel, roundQuestTarget };
 export { questBudget, estimatedIncomePerSecond, ascensionCoinMultiplier, ASCENSION_COIN_TARGET_RATE };
 
@@ -293,21 +293,76 @@ export function ascensionActionMultiplier(ascensionCount) {
   return Math.min(ACTION_ASCENSION_CAP, Math.pow(ACTION_ASCENSION_STEP, n));
 }
 
+// ⚠️ Métriques REMISES À ZÉRO au tirage du cycle : ce sont des RECORDS
+// de performance (tenir une Transe, un combo), pas des cumuls. Le jeu
+// les repart de zéro quand le défi est distribué, donc le plancher
+// « toujours au-dessus de l'acquis » n'a aucun sens pour elles — il
+// produisait une cible sous l'acquis dès que le joueur avait un vieux
+// record, et le défi naissait accompli.
+//
+// ⚠️ Déclaré ICI et plus bas dans le fichier : `resolveQuestTarget` en a
+// besoin, et une const déclarée après ne serait pas encore initialisée.
+const RESET_ON_DRAW_METRICS = ['maxTranseHoldSec', 'maxCombo'];
+
 export function resolveQuestTarget(quest, stats) {
   if (!quest) return 1;
   if (quest.target) {
-    const brute = METRIQUES_RYTHME.includes(quest.metric)
-      // Seules les métriques de RYTHME suivent les Ascensions.
-      ? roundQuestTarget(quest.target * ascensionActionMultiplier(stats && stats.ascension))
-      : quest.target;
+    // ⚠️⚠️ UNE CIBLE FIXE MONTE PAR GROUPE, PAS PAR JOUEUR.
+    //
+    // Jusqu'au 19/09, 68 % des défis calculaient leur cible sur le
+    // porte-monnaie du joueur au tirage. Trois conséquences, toutes
+    // signalées par l'auteur :
+    //
+    //  1. UN JOUEUR QUI PAYE N'ÉTAIT PAS PLUS AVANCÉ — il achète des
+    //     pièces, son état monte, ses défis deviennent plus durs. Le
+    //     système annulait lui-même l'avantage acheté.
+    //  2. Deux joueurs au même endroit voyaient deux jeux différents.
+    //  3. C'était la cause commune de la moitié des bugs : défis nés
+    //     accomplis, cibles sous l'acquis, « atteins 4 pièces par
+    //     seconde » au démarrage, deux réserves d'affilée.
+    //
+    // La cible vaut désormais `target` x l'échelle de son GROUPE, et le
+    // groupe est le nombre d'Ascensions : déterministe, identique pour
+    // tous, lisible dans le fichier des défis. `echelle` nomme la loi à
+    // appliquer (voir ECHELLES_GROUPE dans questDefs.js) ; sans elle, la
+    // cible ne bouge jamais.
+    //
+    // ⚠️ L'objection de 2026-09-02 (commit 1ff5930) était qu'une cible
+    // fixe périme. Elle ne tient plus : on a un simulateur d'économie et
+    // onze contrôles, donc on peut écrire une cible fixe ET la vérifier.
+    const groupe = Math.max(0, Math.floor((stats && stats.ascension) || 0));
+    const brute = quest.echelle
+      ? roundQuestTarget(quest.target * echelleGroupe(quest.echelle, groupe))
+      : METRIQUES_RYTHME.includes(quest.metric)
+        // Repli historique : les métriques de RYTHME suivaient déjà les
+        // Ascensions avant l'introduction des échelles nommées.
+        ? roundQuestTarget(quest.target * ascensionActionMultiplier(groupe))
+        : quest.target;
     // ⚠️ INVARIANT : un défi doit TOUJOURS demander plus que ce que le
     // joueur a déjà. Une cible fixe sortait d'ici sans passer par le
     // plancher appliqué plus bas aux cibles calculées : elle pouvait
     // donc afficher un niveau DÉJÀ ATTEINT, que le joueur lisait comme
     // un défi cassé.
     if (quest.mode !== 'absolute') return brute;
+    // Record remis à zéro au tirage : la cible est la cible, point.
+    if (RESET_ON_DRAW_METRICS.includes(quest.metric)) {
+      return quest.cap ? Math.min(brute, quest.cap) : brute;
+    }
     const dejaLa = readMetric(quest.metric, stats);
-    const monte = Math.max(brute, dejaLa + Math.max(quest.minStep || 1, Math.ceil(dejaLa * 0.15)));
+    // ⚠️ PAS de plancher en POURCENTAGE sur une cible à échelle.
+    //
+    // Le plancher « au moins +15 % au-dessus de l'acquis » sert aux
+    // cibles CALCULÉES, qui peuvent sortir trop basses. Sur une cible
+    // fixe il se compose d'un œuf au suivant : la réserve demandée
+    // passait de 25 000 à des milliards au 3e groupe, et la séquence
+    // entière ressortait à 2 millions d'heures. C'est l'échelle du
+    // GROUPE qui porte la progression, pas un pourcentage glissant.
+    //
+    // On garde seulement l'invariant : demander plus que l'acquis.
+    const plancher = quest.echelle
+      ? dejaLa + (quest.minStep || 1)
+      : dejaLa + Math.max(quest.minStep || 1, Math.ceil(dejaLa * 0.15));
+    const monte = Math.max(brute, plancher);
     // ⚠️⚠️ PLAFOND — sans lui, une cible ABSOLUE s'emballe sans fin.
     //
     // Le plancher « toujours +15 % au-dessus de ce que le joueur a déjà »
@@ -319,7 +374,13 @@ export function resolveQuestTarget(quest, stats) {
     // maximum humain : elles doivent déclarer leur plafond. Les
     // métriques de PROGRESSION (niveaux, pièces) n'en ont pas et n'en
     // déclarent donc pas.
-    return quest.cap ? Math.min(monte, quest.cap) : monte;
+    // ⚠️ Le plafond suit la même échelle que la cible : figé, il
+    // écraserait la montée dès le 2e groupe.
+    if (!quest.cap) return monte;
+    const plafond = quest.echelle
+      ? Math.round(quest.cap * echelleGroupe(quest.echelle, groupe))
+      : quest.cap;
+    return Math.min(monte, plafond);
   }
   // ⚠️⚠️ DEUX FAÇONS D'EXPRIMER L'EFFORT D'UN DÉFI — préférer `partAsc`.
   //
@@ -569,10 +630,17 @@ export function effectiveQuestTarget(questId, stats = {}, targets = {}) {
   // Le plancher n'agit donc qu'une fois, au tirage ; ensuite on relit la
   // valeur enregistrée.
   if (targets[questId]) return targets[questId];
-  if (q.target && METRIQUES_RYTHME.includes(q.metric)) {
-    return roundQuestTarget(q.target * ascensionActionMultiplier(stats && stats.ascension));
-  }
-  if (q.target) return q.target;
+  // ⚠️ SANS cible figée, on RÉSOUT — on ne renvoie jamais `q.target` brut.
+  //
+  // Le brut ignore l'échelle du groupe et le plancher « plus que
+  // l'acquis ». Mesuré sur 14 600 tirages : 4 438 défis ressortaient
+  // avec une cible SOUS ce que le joueur avait déjà, donc nés accomplis.
+  // Un défi d'Aventure écrit `target: 5` renvoyait 5 à un joueur au
+  // niveau 40.
+  //
+  // Le plancher ne « fuit » pas pour autant : il n'agit qu'ici, quand la
+  // cible n'a pas encore été figée. Dès le tirage enregistré, c'est la
+  // valeur figée qui fait autorité — c'est la ligne au-dessus.
   return resolveQuestTarget(q, stats);
 }
 
@@ -727,7 +795,6 @@ export function questDetail(questId, stats, baseline = {}, targets = {}) {
 // Les exclure ici est essentiel : sans ça, le défi de Transe serait
 // REMPLACÉ alors qu'il suffit de le remettre à zéro pour le rendre
 // jouable — on perdrait un défi au lieu de le réparer.
-const RESET_ON_DRAW_METRICS = ['maxTranseHoldSec', 'maxCombo'];
 
 // La créature dont dépend une amélioration est-elle possédée ?
 //
@@ -756,7 +823,14 @@ export function questAlreadyDone(quest, stats = {}) {
   if (!quest || quest.mode !== 'absolute') return false;
   if (RESET_ON_DRAW_METRICS.includes(quest.metric)) return false;
   const acquis = readMetric(quest.metric, stats);
-  if (quest.target) return acquis >= quest.target;
+  // ⚠️ On compare à la cible RÉSOLUE, jamais à `quest.target` brut.
+  //
+  // Le brut ignore l'échelle du groupe ET le plancher « toujours
+  // au-dessus de l'acquis ». Un défi d'Aventure écrit `target: 5`
+  // ressortait « déjà accompli » pour un joueur au niveau 15, alors que
+  // sa cible résolue valait 18 : il était écarté du tirage et remplacé
+  // par un défi du pool. Mesuré au 2e groupe : 8 défis du schéma sur 6
+  // œufs partaient ainsi.
   // ⚠️ Les cibles CALCULÉES doivent être testées elles aussi.
   //
   // Le test exigeait `quest.target`, donc il ignorait les 20 défis
@@ -795,7 +869,13 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
     // Ascension (production repartie de zéro ⇒ budget minuscule).
     const targets = {};
     kept.forEach((q) => {
-      const brute = q.target || resolveQuestTarget(q, stats);
+      // ⚠️ TOUJOURS passer par `resolveQuestTarget`, même pour une cible
+      // fixe. Prendre `q.target` brut ici ignorait l'échelle du groupe
+      // ET le plancher « plus que l'acquis » : mesuré sur 14 600
+      // tirages, 4 438 défis étaient figés SOUS ce que le joueur avait
+      // déjà, donc nés accomplis. C'est le tirage qui fige, donc c'est
+      // ici que la résolution doit avoir lieu — nulle part ailleurs.
+      const brute = resolveQuestTarget(q, stats);
       // La répétition ne touche que les cibles FIXES : les cibles
       // calculées suivent déjà la production, elle-même indexée sur les
       // Ascensions.

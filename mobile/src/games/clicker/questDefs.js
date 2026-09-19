@@ -85,223 +85,186 @@ export const EGG_STAGES = [
 // très au-delà du joueur : il était au chapitre 4 niveau 1 quand le défi
 // exigeait le chapitre 4 niveau 10. Tout nouveau défi de ce type reprend
 // ce pas de +5.
+// ⚠️⚠️ ÉCHELLES PAR GROUPE — comment une cible fixe monte d'un groupe
+// d'Ascension au suivant.
+//
+// Un groupe = une Ascension. L'indice 0 est le premier groupe.
+// Ces tables sont MESURÉES sur le simulateur d'économie, pas devinées,
+// et elles sont les mêmes pour tous les joueurs.
+//
+// L'intention : le joueur doit SENTIR qu'il va plus vite après une
+// Ascension, alors que les cibles ont objectivement grossi. C'est le cas
+// parce que sa production monte plus vite que les cibles — mesuré, la
+// durée d'un groupe ne passe que de 1,6 h à 2,8 h entre le 1er et le 4e,
+// pendant que les cibles en pièces sont multipliées par 22.
+//
+// ⚠️ Les gains HORS LIGNE sont pris en compte : une nuit rapporte au
+// plus 15 % du seuil de l'Ascension en cours (OFFLINE_MAX_SHARE), ce qui
+// représente à peu près un œuf d'avance. Les cibles en pièces sont
+// calées pour que ça reste un coup de pouce, jamais un groupe offert.
+export const ECHELLES_GROUPE = {
+  // Pièces, réserves, revenu par seconde : suivent le seuil d'Ascension,
+  // qui est lui-même mesuré (500 K · 1,3 M · 3,2 M · 11 M · 41 M · 200 M).
+  pieces: [1, 2.6, 6.4, 22, 82, 400],
+  // Niveaux d'amélioration : le coût double par niveau, donc la cible ne
+  // peut monter que de quelques crans — au-delà elle devient un mur.
+  niveau: [1, 1.15, 1.3, 1.5, 1.7, 1.9],
+  // Nombre d'unités d'un générateur : les paliers supérieurs prennent le
+  // relais, donc la quantité du palier bas ne doit pas exploser.
+  unites: [1, 1.4, 2, 2.8, 3.8, 5],
+  // Actions répétées (critiques, taps, dorées, pouvoirs) : le joueur ne
+  // tape pas plus vite après une Ascension. On monte doucement, sinon le
+  // défi devient une corvée de durée pure.
+  actions: [1, 1.3, 1.6, 2, 2.4, 2.8],
+  // Combats et niveaux d'Aventure : bornés par l'ÉNERGIE, pas par
+  // l'économie. Une Ascension ne rend pas l'énergie plus rapide, donc
+  // ces cibles bougent à peine.
+  aventure: [1, 1.2, 1.4, 1.6, 1.8, 2],
+};
+
+// Au-delà de la table, on prolonge au dernier rapport mesuré.
+export function echelleGroupe(nom, groupe) {
+  const table = ECHELLES_GROUPE[nom];
+  if (!table) return 1;
+  const g = Math.max(0, Math.floor(groupe || 0));
+  if (g < table.length) return table[g];
+  const dernier = table[table.length - 1];
+  const avant = table[table.length - 2] || 1;
+  return dernier * Math.pow(dernier / avant, g - table.length + 1);
+}
+
 export const QUEST_SEQUENCE = [
-  // ══════════════════ ŒUF 1 — RELANCER ══════════════════
-  // Aucun défi d'Aventure ni de Rune ici : au tout premier œuf le joueur
-  // n'a AUCUNE créature, donc pas de deck, donc pas de combat ni de
-  // Griffes. Un défi injouable bloquerait l'œuf pour toujours. Le
-  // schéma se répétant à chaque groupe, on le retire du SCHÉMA plutôt
-  // que d'ajouter un cas particulier au premier groupe.
+  // ══════════════════ ŒUF 1 — DÉMARRER ══════════════════
+  // Ni Aventure ni Rune : au tout premier œuf le joueur n'a AUCUNE
+  // créature, donc pas de deck, donc pas de combat ni de Griffes. Un
+  // défi injouable bloquerait l'œuf pour toujours. Retiré du SCHÉMA
+  // plutôt que traité en cas particulier du premier groupe.
+  //
+  // Mesuré : un joueur arrive au bout de cet œuf avec ~14 000 pièces
+  // gagnées, Pacte 8, 3 Esprits Frappeurs, 2 pièces/s de passif.
   [
-    // ⚠️ L'ACCROCHE — la part la plus petite de tout le jeu.
-    // C'est le tout premier défi qu'un joueur voit : il doit se boucler
-    // en 2-3 minutes. À 1,2 % du seuil il en demandait 25, et le joueur
-    // décrochait avant d'avoir compris à quoi sert le bouton.
-    { id: 'g_e1_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.0015, mode: 'delta',
+    // L'ACCROCHE. Le tout premier défi du jeu doit se boucler en 2-3
+    // minutes, sinon le joueur décroche avant d'avoir compris le bouton.
+    { id: 'g1_coins', icon: '🪙', metric: 'totalEarned', target: 1000, echelle: 'pieces', mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    { id: 'g_e1_pacte', icon: '🔗', metric: 'tapPower', partAsc: 0.01, mode: 'absolute',
+    // ⚠️ `cap` OBLIGATOIRE sur le Pacte : son coût DOUBLE par niveau,
+    // donc un seul cran de trop coûte le double du précédent. Sans
+    // plafond, le plancher « plus que l'acquis » le faisait grimper d'œuf
+    // en œuf jusqu'au niveau 34 — mesuré, 18 millions de minutes pour un
+    // seul défi.
+    { id: 'g1_pacte', icon: '🔗', metric: 'tapPower', target: 6, cap: 8, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
-    // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
-    // « +15 % au-dessus de l'acquis » la poussait à 641 secondes.
-    { id: 'g_e1_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 25, cap: 40, mode: 'absolute',
-      label: (t) => `Reste en Transe x2,5 pendant ${t} secondes` },
-    // ⚠️ Générateur NOMMÉ, jamais un total. « Possède 7 auto-clics en
-    // tout » ne dit rien au joueur : il ne sait pas quoi acheter, et deux
-    // chemins différents valident le même défi.
-    { id: 'g_e1_auto1', icon: '👻', metric: 'auto:esprit', partAsc: 0.018, mode: 'absolute',
+    { id: 'g1_esprit', icon: '👻', metric: 'auto:esprit', target: 3, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
-    { id: 'g_e1_golden', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
+    // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
+    // « +15 % au-dessus de l'acquis » l'a déjà poussée à 641 secondes.
+    { id: 'g1_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 25, cap: 45, mode: 'absolute',
+      label: (t) => `Reste en Transe x2,5 pendant ${t} secondes` },
+    { id: 'g1_golden', icon: '⭐', metric: 'goldenClaimed', target: 3, echelle: 'actions', mode: 'delta',
       label: (t) => (t > 1 ? `Touche ${t} fois la cible dorée` : 'Touche la cible dorée') },
   ],
 
-  // ══════════════════ ŒUF 2 — AUTOMATISER ══════════════════
-  // La première créature est arrivée et s'équipe toute seule : l'Aventure
+  // ══════════════════ ŒUF 2 — PREMIERS COMBATS ══════════════════
+  // La première créature est arrivée et s'équipe seule : l'Aventure
   // devient jouable, et avec elle les Griffes.
+  // Mesuré en fin d'œuf : ~36 000 gagnés, 6 pièces/s, Pacte 9, 1 Main.
   [
-    { id: 'g_e2_passive', icon: '⚙️', metric: 'passiveIncome', partAsc: 0.05, mode: 'absolute',
+    { id: 'g2_passif', icon: '⚙️', metric: 'passiveIncome', target: 8, echelle: 'pieces', mode: 'absolute',
       label: (t) => `Atteins ${fmtQ(t)} pièces par seconde` },
-    // ⚠️⚠️ L'ORDRE DE CETTE CHAÎNE N'EST PAS DÉCORATIF.
-    //
-    // La boutique se déverrouille en cascade :
-    //   Pacte 5 -> Faveur -> Dégâts critiques -> Sanctuaire -> Veilleur
-    //
-    // Le schéma demandait le Sanctuaire dès l'œuf 2 alors que RIEN ne
-    // poussait le joueur à acheter la Faveur ni les Dégâts critiques.
-    // Le défi était donc écarté faute de déblocage et le pool le
-    // remplaçait : mesuré, 8 défis du schéma sur 12 œufs finissaient
-    // remplacés, et la liste affichée ne correspondait plus à celle du
-    // document de référence.
-    //
-    // Chaque maillon est désormais UN DÉFI, dans l'ordre : le joueur qui
-    // suit ses défis ouvre mécaniquement le maillon suivant.
-    { id: 'g_e2_faveur', icon: '🍀', metric: 'critLevel', partAsc: 0.04, mode: 'absolute',
+    // 1er maillon de la chaîne de boutique : Pacte 5 -> Faveur ->
+    // Dégâts critiques -> Sanctuaire -> Veilleur. Chaque maillon est un
+    // défi, dans l'ordre, sinon le suivant n'est pas débloqué et le pool
+    // le remplace (bug du 19/09, 8 défis sur 12 œufs remplacés).
+    { id: 'g2_faveur', icon: '🍀', metric: 'critLevel', target: 3, cap: 5, echelle: 'niveau', mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('faveur', s),
       label: (t) => `Monte la Faveur des Esprits au niveau ${t}` },
-    { id: 'g_e2_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
-      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
-      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
-      // des créatures mais n'a pas encore garni son deck voyait tous ses
-      // défis d'Aventure disparaître en silence, remplacés par des défis
-      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
-      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
-      // créature suffit : le deck se remplit en deux gestes.
+    { id: 'g2_adv', icon: '⚔️', metric: 'advLevelReached', target: 5, echelle: 'aventure', mode: 'absolute',
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'g_e2_crit', icon: '💥', metric: 'totalCrits', target: 30, mode: 'delta',
+    { id: 'g2_crits', icon: '💥', metric: 'totalCrits', target: 30, echelle: 'actions', mode: 'delta',
       label: (t) => `Obtiens ${t} coup${t > 1 ? 's' : ''} critique${t > 1 ? 's' : ''}` },
-    // ⚠️ 6e défi de l'œuf 2 : le Sanctuaire et le premier palier
-    // d'Aventure doivent apparaître TOUS LES DEUX. Ils se disputaient la
-    // même place, et l'Aventure perdait dès que le deck était vide.
-    // Un cycle peut compter 6 défis : l'œuf éclot quand tous sont
-    // validés, jamais à un compte fixe.
-    { id: 'g_e2_taps', icon: '👆', metric: 'totalTaps', target: 800, mode: 'delta',
+    { id: 'g2_taps', icon: '👆', metric: 'totalTaps', target: 800, echelle: 'actions', mode: 'delta',
       label: (t) => `Tape ${fmtQ(t)} fois` },
-    // ⚠️ Part montée de 6 % à 11 % : à ce stade le joueur possède DÉJÀ
-    // 2 Mains Spectrales en suivant ses défis, donc viser 2 donnait un
-    // défi accompli d'emblée. Signalé sur l'œuf 2.
-    { id: 'g_e2_auto2', icon: '🖐️', metric: 'auto:main', partAsc: 0.11, mode: 'absolute',
+    { id: 'g2_main', icon: '🖐️', metric: 'auto:main', target: 2, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
   ],
 
-  // ══════════════════ ŒUF 3 — RENFORCER ══════════════════
+  // ══════════════════ ŒUF 3 — S'ÉQUIPER ══════════════════
+  // Mesuré en fin d'œuf : ~86 000 gagnés, 20 pièces/s, 6 Esprits,
+  // 4 Mains.
   [
-    // ⚠️ SEULE réserve du groupe avant l'œuf 5.
-    // « Accumule 38 000 pièces » suivi de « Constitue un trésor de
-    // 43 000 » se lisait comme le même défi deux fois. Les deux défis de
-    // trésor d'un groupe sont désormais séparés par deux œufs ET d'un
-    // facteur 5 au moins sur la cible.
-    { id: 'g_e3_hold', icon: '💰', metric: 'coins', partAsc: 0.10, mode: 'absolute',
+    { id: 'g3_reserve', icon: '💰', metric: 'coins', target: 25000, echelle: 'pieces', mode: 'absolute',
       label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
     // 2e maillon : ouvert par la Faveur de l'œuf 2, ouvre le Sanctuaire.
-    { id: 'g_e3_critdmg', icon: '💢', metric: 'critDamageLevel', partAsc: 0.05, mode: 'absolute',
+    { id: 'g3_critdmg', icon: '💢', metric: 'critDamageLevel', target: 3, cap: 5, echelle: 'niveau', mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('critDamage', s),
       label: (t) => `Monte les Dégâts critiques au niveau ${t}` },
-    // ⚠️ TROIS défis de NIVEAU d'Aventure par groupe (œufs 2, 3 et 5),
-    // chacun +5 niveaux, donc une campagne qui avance de 15 niveaux par
-    // Ascension et qui se lit comme une suite : chapitre 1 niveau 5,
-    // puis 10, puis chapitre 2 niveau 5…
-    //
-    // ⚠️ `advLevelReached` est ABSOLU et n'est PAS remis à zéro par une
-    // Ascension — l'Aventure est une campagne, pas une économie. Un
-    // `step` repart donc du niveau réellement atteint, jamais de zéro.
-    { id: 'g_e3_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
-      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
-      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
-      // des créatures mais n'a pas encore garni son deck voyait tous ses
-      // défis d'Aventure disparaître en silence, remplacés par des défis
-      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
-      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
-      // créature suffit : le deck se remplit en deux gestes.
+    { id: 'g3_adv', icon: '⚔️', metric: 'advLevelReached', target: 10, echelle: 'aventure', mode: 'absolute',
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'g_e3_power', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
+    { id: 'g3_pouvoirs', icon: '✨', metric: 'powerActivated', target: 5, echelle: 'actions', mode: 'delta',
       label: (t) => (t > 1 ? `Active ${t} fois un pouvoir` : 'Active un pouvoir') },
-    // ⚠️ Les PALIERS DE TAP sortent du schéma : le premier exige Pacte 10
-    // et chacun exige 5 niveaux du précédent. Rien ne garantit qu'un
-    // joueur y soit au bon œuf, donc ils étaient systématiquement
-    // remplacés. Ils restent dans le pool, où un remplacement est normal.
-    { id: 'g_e3_auto3', icon: '🤖', metric: 'auto:automate', partAsc: 0.16, mode: 'absolute',
-      label: (t) => `Achète ${t} Automate${t > 1 ? 's' : ''} Runique${t > 1 ? 's' : ''}` },
+    { id: 'g3_esprit', icon: '👻', metric: 'auto:esprit', target: 6, echelle: 'unites', mode: 'absolute',
+      label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
   ],
 
-  // ══════════════════ ŒUF 4 — ÉQUIPER ══════════════════
+  // ══════════════════ ŒUF 4 — LA COLLECTION ══════════════════
+  // L'œuf le plus tourné vers l'Aventure : rune, créature, étoiles.
+  // Mesuré en fin d'œuf : ~170 000 gagnés, Pacte 10.
   [
-    { id: 'g_e4_rune', icon: '🔮', metric: 'runeBought', target: 1, mode: 'delta',
+    { id: 'g4_rune', icon: '🔮', metric: 'runeBought', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Achète ${t} runes` : 'Achète une rune') },
-    // ⚠️ Pas de +2 : monter une créature de deux niveaux ne se remarque
-    // pas. Le pas est assez grand pour être un objectif en soi.
-    { id: 'g_e4_creature', icon: '🐣', metric: 'maxCreatureLevel', step: 14, mode: 'absolute',
+    { id: 'g4_creature', icon: '🐣', metric: 'maxCreatureLevel', target: 15, echelle: 'aventure', mode: 'absolute',
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Monte une créature au niveau ${t}` },
-    { id: 'g_e4_stars', icon: '🌟', metric: 'threeStarLevel', target: 1, mode: 'delta',
-      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
-      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
-      // des créatures mais n'a pas encore garni son deck voyait tous ses
-      // défis d'Aventure disparaître en silence, remplacés par des défis
-      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
-      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
-      // créature suffit : le deck se remplit en deux gestes.
+    { id: 'g4_etoiles', icon: '🌟', metric: 'threeStarLevel', target: 1, echelle: 'aventure', mode: 'delta',
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => (t > 1
         ? `Décroche toutes les étoiles sur ${t} niveaux d'Aventure`
         : "Décroche toutes les étoiles sur un niveau d'Aventure") },
     // 3e maillon : ouvert par les Dégâts critiques de l'œuf 3.
-    { id: 'g_e4_sanct', icon: '🏛️', metric: 'sanctuaryLevel', partAsc: 0.10, mode: 'absolute',
+    { id: 'g4_sanct', icon: '🏛️', metric: 'sanctuaryLevel', target: 5, cap: 8, echelle: 'niveau', mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('sanctuaire', s) && (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
       label: (t) => `Monte le Sanctuaire au niveau ${t}` },
-    // ⚠️ Remplace un défi d'objet de créature, supprimés parce qu'ils
-    // étaient impossibles : ils pouvaient être tirés pour un joueur qui
-    // ne possède pas la créature, et bloquaient l'œuf. Un palier de tap
-    // est achetable par TOUT joueur.
-    { id: 'g_e4_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.08, mode: 'delta',
+    { id: 'g4_coins', icon: '🪙', metric: 'totalEarned', target: 60000, echelle: 'pieces', mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
   ],
 
-  // ══════════════════ ŒUF 5 — MAÎTRISER ══════════════════
+  // ══════════════════ ŒUF 5 — MONTER EN PUISSANCE ══════════════════
+  // Mesuré en fin d'œuf : ~300 000 gagnés, 134 pièces/s de revenu.
   [
-    // Facteur 5 au moins sur la réserve de l'œuf 3 : c'est un cran, pas
-    // une répétition.
-    { id: 'g_e5_hold', icon: '💰', metric: 'coins', partAsc: 0.55, mode: 'absolute',
+    { id: 'g5_reserve', icon: '💰', metric: 'coins', target: 90000, echelle: 'pieces', mode: 'absolute',
       label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
-    { id: 'g_e5_auto3', icon: '🤖', metric: 'auto:automate', partAsc: 0.20, mode: 'absolute',
-      label: (t) => `Achète ${t} Automate${t > 1 ? 's' : ''} Runique${t > 1 ? 's' : ''}` },
-    { id: 'g_e5_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
-      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
-      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
-      // des créatures mais n'a pas encore garni son deck voyait tous ses
-      // défis d'Aventure disparaître en silence, remplacés par des défis
-      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
-      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
-      // créature suffit : le deck se remplit en deux gestes.
+    { id: 'g5_main', icon: '🖐️', metric: 'auto:main', target: 5, echelle: 'unites', mode: 'absolute',
+      label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
+    { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'g_e5_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, cap: 75, mode: 'absolute',
-      label: (t) => `Tiens la Transe pendant ${t} secondes` },
     // 4e et dernier maillon : ouvert par le Sanctuaire de l'œuf 4.
-    { id: 'g_e5_veilleur', icon: '🌙', metric: 'veilleurLevel', partAsc: 0.12, mode: 'absolute',
+    { id: 'g5_veilleur', icon: '🌙', metric: 'veilleurLevel', target: 5, cap: 8, echelle: 'niveau', mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('veilleur', s) && (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
       label: (t) => `Monte le Veilleur au niveau ${t}` },
+    { id: 'g5_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, cap: 80, mode: 'absolute',
+      label: (t) => `Tiens la Transe pendant ${t} secondes` },
   ],
 
   // ══════════════════ ŒUF 6 — FRANCHIR ══════════════════
-  // Le dernier effort avant l'Ascension. Les parts sont les plus grosses
-  // du groupe : c'est là que le joueur finit de remplir le seuil.
+  // Le dernier effort. Mesuré : le joueur y passe de 300 000 à 500 000
+  // pièces gagnées, et l'Ascension demande le reste.
   [
-    { id: 'g_e6_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.30, mode: 'delta',
+    { id: 'g6_coins', icon: '🪙', metric: 'totalEarned', target: 120000, echelle: 'pieces', mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    // Les Dégâts critiques : la seule des 5 améliorations de base qui
-    // n'avait aucun défi, et elle renforce le TAP.
-    // ⚠️ Cette place a porté deux mauvais défis avant celui-ci.
-    //
-    // Les Dégâts critiques d'abord : doublon avec l'œuf 3. Puis le
-    // Sanctuaire : il PLAFONNE à 50 et l'œuf 4 y monte déjà, donc son
-    // `available` devenait faux et le pool le remplaçait — le contrôle
-    // `auditRemplacements` l'a attrapé avant la publication.
-    //
-    // Le Pacte n'a ni plafond ni prérequis : il est toujours disponible,
-    // et c'est un dernier coup de pouce cohérent juste avant l'Ascension.
-    { id: 'g_e6_pacte', icon: '🔗', metric: 'tapPower', partAsc: 0.22, mode: 'absolute',
+    { id: 'g6_pacte', icon: '🔗', metric: 'tapPower', target: 10, cap: 12, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
-    { id: 'g_e6_adv', icon: '🗡️', metric: 'battleWon', target: 6, mode: 'delta',
-      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
-      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
-      // des créatures mais n'a pas encore garni son deck voyait tous ses
-      // défis d'Aventure disparaître en silence, remplacés par des défis
-      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
-      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
-      // créature suffit : le deck se remplit en deux gestes.
+    { id: 'g6_combats', icon: '🗡️', metric: 'battleWon', target: 5, echelle: 'aventure', mode: 'delta',
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Gagne ${t} combat${t > 1 ? 's' : ''} en Aventure` },
-    { id: 'g_e6_offering', icon: '🕯️', metric: 'offering', target: 1, mode: 'delta',
+    { id: 'g6_offrande', icon: '🕯️', metric: 'offering', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Fais ${t} Offrandes` : 'Fais une Offrande') },
-    // ⚠️ `step: 1` et NON une cible en dur.
-    //
-    // Il n'existait que deux défis d'Ascension (`target: 1` et
-    // `target: 2`) : passé la 2e, plus AUCUN défi n'en demandait, et la
-    // séquence cessait de structurer le jeu pour les 16 œufs suivants.
-    // Avec un pas, chaque passage du groupe demande l'Ascension
-    // SUIVANTE, indéfiniment.
-    { id: 'g_e6_ascend', icon: '🌟', metric: 'ascension', step: 1, mode: 'absolute',
+    // ⚠️ `step: 1` et NON une cible en dur. Il n'existait que deux défis
+    // d'Ascension (`target: 1` et `target: 2`) : passé la 2e, plus aucun
+    // défi n'en demandait et la séquence cessait de structurer le jeu.
+    { id: 'g6_ascend', icon: '🌟', metric: 'ascension', step: 1, mode: 'absolute',
       label: (t) => `Fais ta ${t}${t === 1 ? 're' : 'e'} Ascension` },
   ],
 ];

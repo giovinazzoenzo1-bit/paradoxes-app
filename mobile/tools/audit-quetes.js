@@ -681,7 +681,11 @@ function auditCiblesFixes() {
   [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL].forEach((q) => {
     if (!q || vus.has(q.id)) return;
     vus.add(q.id);
-    if (!q.target || q.effortMin) return;
+    // ⚠️ Règle mise à jour le 19/09 : une cible fixe est désormais la
+    // NORME, à condition de déclarer son échelle de groupe (`echelle`).
+    // Ce qui reste interdit, c'est une cible fixe qui ne monterait
+    // JAMAIS sur une métrique dont l'échelle bouge avec la partie.
+    if (!q.target || q.effortMin || q.echelle) return;
     if (!metriqueAEchelle(q.metric)) return;
     suspects.push({ id: q.id, metric: q.metric, target: q.target });
   });
