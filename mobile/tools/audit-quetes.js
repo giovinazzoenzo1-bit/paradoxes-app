@@ -1333,3 +1333,40 @@ function auditTamponsAscension() {
   return fautes;
 }
 module.exports.auditTamponsAscension = auditTamponsAscension;
+
+// ---- La boutique garde-t-elle sa valeur à chaque Ascension ? --------
+//
+// Bug réel du 19/09 : « je dev jusqu'à A5 et en 10 minutes j'achète 5
+// Étoiles Filantes ».
+//
+// Les prix de boutique étaient FIXES alors que le revenu du joueur est
+// multiplié par le bonus d'Ascension. Se payer le 1er Esprit Frappeur
+// prenait 228 secondes à A0, 1 seconde à A5, rien du tout à A8 : le
+// joueur repartait de zéro mais TOUT était gratuit, donc il remontait
+// la boutique entière en quelques minutes.
+//
+// Ce contrôle mesure, à chaque Ascension, le temps qu'il faut pour se
+// payer le premier exemplaire de chaque générateur en tapant. Il doit
+// être le MÊME partout : c'est la définition d'une boutique qui garde
+// sa valeur.
+function auditPrixParAscension(tolerance = 0.15) {
+  const fautes = [];
+  const TAPS = 4;
+  C.AUTOCLICKERS.forEach((g) => {
+    const temps = [0, 1, 2, 3, 4, 5].map((a) => {
+      const revenu = C.tapDamage(1) * TAPS * C.ascensionSpeedMultiplier(a);
+      return C.autoClickerCost(g, 0, a) / revenu;
+    });
+    const min = Math.min(...temps);
+    const max = Math.max(...temps);
+    if (max > min * (1 + tolerance)) {
+      fautes.push({
+        article: g.name,
+        secondesA0: Math.round(temps[0]),
+        secondesA5: Math.round(temps[5]),
+      });
+    }
+  });
+  return fautes;
+}
+module.exports.auditPrixParAscension = auditPrixParAscension;

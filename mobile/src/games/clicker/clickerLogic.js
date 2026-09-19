@@ -1085,8 +1085,11 @@ export function normalizeTapUpgrades(value) {
   return value && typeof value === 'object' ? value : {};
 }
 
-export function tapUpgradeCost(item, level) {
-  return Math.round(item.cost * COIN_SCALE * UPGRADE_COST_MULT * Math.pow(item.growth || 1.6, level));
+export function tapUpgradeCost(item, level, ascensionCount = 0) {
+  // Même règle que les générateurs : voir `autoClickerCost`.
+  return Math.round(item.cost * COIN_SCALE * UPGRADE_COST_MULT
+    * Math.pow(item.growth || 1.6, level)
+    * prixMultiplicateurAscension(ascensionCount));
 }
 
 // Le palier `index` est ouvert si le PRÉCÉDENT a atteint le niveau 5
@@ -1323,22 +1326,24 @@ export const ASCENSION_THRESHOLDS = [
   // ⚠️ Tout changement d'équilibrage périme cette table. La remesurer
   // avec `mobile/tools/tableau-equilibrage.js` avant de s'y fier.
   //
-  // ⚠️ Au-delà d'A5 les valeurs dépassent la précision sûre de
-  // JavaScript (9e15) et ne sont PAS atteignables en l'état. C'est
+  // ⚠️ Depuis que les PRIX de boutique montent avec l'Ascension
+  // (`prixMultiplicateurAscension`), les seuils n'explosent plus : la
+  // progression est régulière jusqu'à A9 et reste dans la précision
+  // sûre de JavaScript. Le mur est reporté bien au-delà du contenu. C'est
   // assumé : la collection ne compte que 26 créatures, donc le joueur
   // termine le contenu pendant A5. Les valeurs suivantes existent pour
   // que le barème reste défini, et devront être remesurées le jour où
   // des créatures seront ajoutées.
-  422000,                  // A0  — 1,6 h
-  9440000,                 // A1  — 1,9 h
-  6960000000,              // A2  — 2,2 h
-  3030000000000,           // A3  — 2,8 h
-  110000000000000,         // A4  — 3,4 h
-  1250000000000000,        // A5  — 4,4 h · fin de la collection (26e créature)
-  7500000000000000,        // A6  — dernier seuil dans la précision sûre
-  37200000000000000,       // A7  — au-delà
-  174000000000000000,      // A8
-  1000000000000000000,     // A9
+  422000,                // A0  — 1,6 h
+  2710000,               // A1  — 1,9 h
+  13900000,              // A2  — 2,2 h
+  115000000,             // A3  — 2,8 h
+  892000000,             // A4  — 3,4 h
+  12200000000,           // A5  — 4,4 h · fin de la collection (26e créature)
+  350000000000,          // A6  — 6,3 h
+  13200000000000,        // A7  — 8,8 h
+  336000000000000,       // A8  — 11 h
+  11900000000000000,     // A9  — 14 h
 ];
 
 // Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.
@@ -1574,8 +1579,38 @@ export const AUTOCLICKERS = [
 // la progression devenait complètement plate ensuite ; à 1,25 elle
 // s'étale sur un vrai run (3 générateurs à 30min, 6 à 4h, 10 à 12h).
 export const AUTOCLICKER_COST_GROWTH = 1.25;
-export function autoClickerCost(clicker, ownedCount) {
-  return Math.round(clicker.baseCost * COIN_SCALE * UPGRADE_COST_MULT * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount));
+// ⚠️⚠️ LES PRIX MONTENT AVEC L'ASCENSION, comme les seuils.
+//
+// Le prix du 1er Esprit Frappeur était FIXE à 910 pièces, à toutes les
+// Ascensions — alors que le revenu du joueur est multiplié par le bonus.
+// Mesuré : se le payer prenait 228 secondes à A0, 1 seconde à A5,
+// rien du tout à A8.
+//
+// Conséquence : après une Ascension le joueur repart de zéro mais TOUT
+// est gratuit. Il remontait toute la boutique en quelques minutes,
+// Étoile Filante comprise — signalé par l'auteur à A5 comme à A8. La
+// « Bourse de pièces » n'y était pour rien, elle ne faisait
+// qu'accélérer une boucle déjà présente.
+//
+// Règle, la même que pour les seuils : quand le bonus monte, ce qu'il
+// ACHÈTE doit monter autant. Le premier Esprit coûte donc toujours ~228
+// secondes de jeu, à n'importe quelle Ascension.
+//
+// ⚠️ On applique le bonus PLEIN, celui du tap — pas la racine du passif.
+//
+// Juste après une Ascension le joueur n'a AUCUN générateur : son seul
+// revenu est le tap, multiplié par le bonus plein. C'est donc à lui que
+// les prix doivent se comparer. Mesuré avec la racine : se payer le 1er
+// Esprit prenait encore 16 secondes à A5 contre 228 à A0 — la boutique
+// restait bradée.
+export function prixMultiplicateurAscension(ascensionCount) {
+  return ascensionSpeedMultiplier(ascensionCount || 0);
+}
+
+export function autoClickerCost(clicker, ownedCount, ascensionCount = 0) {
+  return Math.round(clicker.baseCost * COIN_SCALE * UPGRADE_COST_MULT
+    * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount)
+    * prixMultiplicateurAscension(ascensionCount));
 }
 
 // Revenu total/s de tous les générateurs possédés.

@@ -276,7 +276,7 @@ function passiveIncomeAfterBudget(stats, budget) {
   let bestGain = 0;
   for (const clicker of AUTOCLICKERS) {
     const have = owned[clicker.id] || 0;
-    const reachable = levelsAffordable((n) => autoClickerCost(clicker, n), have, budget);
+    const reachable = levelsAffordable((n) => autoClickerCost(clicker, n, stats && stats.ascension), have, budget);
     const gain = (reachable - have) * clicker.baseIncome;
     if (gain > bestGain) bestGain = gain;
   }
@@ -535,7 +535,7 @@ export function resolveQuestTarget(quest, stats) {
     raw = item ? levelsAffordable((lv) => upgradeItemCost(item, lv), now, budget) : now + 1;
   } else if (metric.startsWith('auto:')) {
     const clicker = AUTOCLICKERS.find((c) => c.id === metric.slice(5));
-    raw = clicker ? levelsAffordable((n) => autoClickerCost(clicker, n), now, budget) : now + 1;
+    raw = clicker ? levelsAffordable((n) => autoClickerCost(clicker, n, stats && stats.ascension), now, budget) : now + 1;
   } else if (metric.startsWith('tapUpgrade:')) {
     // ⚠️ Cette branche MANQUAIT : les paliers de tap tombaient dans le
     // cas générique « avance d'un pas », donc leur cible ne regardait
@@ -543,7 +543,7 @@ export function resolveQuestTarget(quest, stats) {
     // aucun effet — et leurs cibles fixes ont périmé dès que le prix des
     // paliers a changé (recalage du 17/09).
     const palier = TAP_UPGRADES.find((t) => t.id === metric.slice(11));
-    raw = palier ? levelsAffordable((lv) => tapUpgradeCost(palier, lv), now, budget) : now + 1;
+    raw = palier ? levelsAffordable((lv) => tapUpgradeCost(palier, lv, stats && stats.ascension), now, budget) : now + 1;
   } else if (metric === 'autoTotal') {
     // Combien d'unités de PLUS le budget achète, en le dépensant sur le
     // générateur qui en rend le plus — c'est ce qu'un joueur ferait pour
@@ -552,7 +552,7 @@ export function resolveQuestTarget(quest, stats) {
     let bestCount = 0;
     for (const clicker of AUTOCLICKERS) {
       const have = owned[clicker.id] || 0;
-      const reachable = levelsAffordable((n) => autoClickerCost(clicker, n), have, budget);
+      const reachable = levelsAffordable((n) => autoClickerCost(clicker, n, stats && stats.ascension), have, budget);
       if (reachable - have > bestCount) bestCount = reachable - have;
     }
     raw = now + bestCount;
@@ -1223,7 +1223,7 @@ AUTOCLICKERS.forEach((clicker) => {
     mode: 'absolute',
     available: (s) => {
       const have = (s.autoClickers || {})[clicker.id] || 0;
-      return have > 0 || autoClickerCost(clicker, 0) <= questBudget(s, 30);
+      return have > 0 || autoClickerCost(clicker, 0, s && s.ascension) <= questBudget(s, 30);
     },
     label: (t) => `Possède ${fmtQ(t)} ${pluralQ(clicker.name)}`,
   });

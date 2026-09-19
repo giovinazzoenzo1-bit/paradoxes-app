@@ -667,7 +667,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 13;
+export const QUEST_ENGINE_VERSION = 14;
 
 function empreinteDefis() {
   const morceaux = [];

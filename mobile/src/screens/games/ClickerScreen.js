@@ -1742,7 +1742,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const buyAutoClicker = (clickerId) => {
     const clicker = AUTOCLICKERS.find((a) => a.id === clickerId);
     const owned = autoClickersRef.current[clickerId] || 0;
-    const cost = applyDiscount(autoClickerCost(clicker, owned));
+    const cost = applyDiscount(autoClickerCost(clicker, owned, ascensionCountRef.current));
     if (coinsRef.current < cost) return;
     setCoins((c) => c - cost);
     setAutoClickers((prev) => ({ ...prev, [clickerId]: (prev[clickerId] || 0) + 1 }));
@@ -1772,7 +1772,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // un bouton grisé reste sinon cliquable.
     if (!tapUpgradeUnlocked(index, tapPowerRef.current, tapUpgradesRef.current)) return;
     const level = tapUpgradesRef.current[upgradeId] || 0;
-    const cost = applyDiscount(tapUpgradeCost(TAP_UPGRADES[index], level));
+    const cost = applyDiscount(tapUpgradeCost(TAP_UPGRADES[index], level, ascensionCountRef.current));
     if (coinsRef.current < cost) return;
     setCoins((c) => c - cost);
     setTapUpgrades((prev) => ({ ...prev, [upgradeId]: (prev[upgradeId] || 0) + 1 }));
@@ -3876,7 +3876,7 @@ function ShopView({
             {TAP_UPGRADES.map((item, index) => {
               const level = tapUpgrades[item.id] || 0;
               const unlocked = tapUpgradeUnlocked(index, tapPower, tapUpgrades);
-              const cost = applyDiscount(tapUpgradeCost(item, level));
+              const cost = applyDiscount(tapUpgradeCost(item, level, ascensionCount));
               const canBuy = unlocked && coins >= cost;
               return (
                 <TouchableOpacity
@@ -3955,7 +3955,7 @@ function ShopView({
                 travail tout seul. */}
             {[...AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost).map((clicker) => {
               const ownedCount = autoClickers[clicker.id] || 0;
-              const cost = applyDiscount(autoClickerCost(clicker, ownedCount));
+              const cost = applyDiscount(autoClickerCost(clicker, ownedCount, ascensionCount));
               const canAfford = coins >= cost;
               return (
                 <View key={clicker.id} style={styles.shopRow}>
