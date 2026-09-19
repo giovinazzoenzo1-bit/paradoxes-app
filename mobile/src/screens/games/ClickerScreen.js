@@ -2214,6 +2214,32 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const devPreviousChallengeId =
     [...activeQuestIds].reverse().find((id) => isQuestDone(id)) || null;
 
+  // ⚠️⚠️ VALIDER EN DEV UN DÉFI D'ASCENSION DOIT FAIRE L'ASCENSION.
+  //
+  // Les boutons de dev se contentaient de COCHER le défi. Pour tous les
+  // autres c'est sans conséquence, mais le défi d'Ascension est le seul
+  // dont la validation change l'état du jeu : sans Ascension réelle, le
+  // compteur reste à 0, donc le groupe reste le 1er et TOUS les défis
+  // suivants gardent les cibles du groupe 1.
+  //
+  // Signalé le 19/09 : « je passe la première Ascension, les défis
+  // repartent à zéro mais ce sont exactement les mêmes ». Le moteur
+  // faisait bien monter les cibles — c'est l'Ascension qui n'avait
+  // jamais eu lieu.
+  //
+  // ⚠️ Sans ça, tester la séquence au bouton de dev ne teste QUE le
+  // groupe 1, en donnant l'illusion de tester les 26 œufs.
+  const devValider = (ids) => {
+    const liste = Array.isArray(ids) ? ids : [ids];
+    setDevReopenedIds((prev) => prev.filter((id) => !liste.includes(id)));
+    setDevCompletedIds((prev) => [...new Set([...prev, ...liste])]);
+    const asc = liste.find((id) => {
+      const q = findQuest(id);
+      return q && q.metric === 'ascension';
+    });
+    if (asc) confirmAscension();
+  };
+
   const onDevPreviousChallenge = () => {
     const target = devPreviousChallengeId;
     // Une fois l'œuf en éclosion, il faut AUSSI repasser en collecte,
@@ -2850,7 +2876,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   style={styles.devToolBtn}
                   onPress={() => {
                     setDevReopenedIds([]);
-                    setDevCompletedIds((prev) => [...new Set([...prev, ...activeQuestIds])]);
+                    devValider(activeQuestIds);
                   }}
                 >
                   <Text style={styles.devSkipBtnText}>⏭️ Cycle</Text>
@@ -2859,10 +2885,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               {eggPhase === 'collecting' && currentChallengeId && (
                 <TouchableOpacity
                   style={styles.devToolBtn}
-                  onPress={() => {
-                    setDevReopenedIds((prev) => prev.filter((id) => id !== currentChallengeId));
-                    setDevCompletedIds((prev) => (prev.includes(currentChallengeId) ? prev : [...prev, currentChallengeId]));
-                  }}
+                  onPress={() => devValider(currentChallengeId)}
                 >
                   <Text style={styles.devSkipBtnText}>🛠️ Valider ▶️</Text>
                 </TouchableOpacity>
