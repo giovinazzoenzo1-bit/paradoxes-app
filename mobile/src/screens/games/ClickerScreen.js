@@ -103,6 +103,7 @@ import {
   metricScopedToCycle,
   freezeMissingTargets,
   QUEST_DEFS_VERSION,
+  questLabel,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,

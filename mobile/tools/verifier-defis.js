@@ -97,6 +97,42 @@ console.log('\n  FORCE BRUTE — ' + tires.toLocaleString('fr-FR') + ' défis ti
     console.log(`  ${n === 0 ? '✅' : '❌'} ${String(n).padStart(5)}  ${quoi}`);
   });
 
+// ---- Symboles du moteur utilisés sans être importés ----------------
+//
+// ⚠️ Babel compile sans broncher un identifiant jamais importé : il ne
+// fait pas d'analyse de portée. L'erreur n'apparaît qu'à l'exécution, en
+// plein écran, sur le téléphone — « Property 'questLabel' doesn't
+// exist », 19/09. Ce contrôle croise ce que `questLogic` exporte avec ce
+// que l'écran importe et appelle.
+{
+  const fs = require('fs');
+  const src = fs.readFileSync(__dirname + '/../src/screens/games/ClickerScreen.js', 'utf8');
+  const m = src.match(/import \{([^}]*)\} from '\.\.\/\.\.\/games\/clicker\/questLogic';/);
+  const moteur = new Set(
+    (fs.readFileSync(__dirname + '/../src/games/clicker/questLogic.js', 'utf8')
+      .match(/export (?:function|const) (\w+)/g) || [])
+      .map((x) => x.split(' ').pop()),
+  );
+  const manquants = [];
+  if (m) {
+    const importes = new Set(m[1].split('\n').map((x) => x.trim().replace(/,$/, ''))
+      .filter((x) => x && !x.startsWith('//')));
+    const corps = src.slice(m.index + m[0].length);
+    moteur.forEach((n) => {
+      if (importes.has(n)) return;
+      // Appelé comme fonction, et pas précédé d'un point (donc pas une
+      // propriété d'objet ni une variable de contexte homonyme).
+      const re = new RegExp('(?<![\\w.])' + n + '\\s*\\(', 'g');
+      const decl = new RegExp('(?:const|let|var|function)\\s+' + n + '\\b');
+      if (re.test(corps) && !decl.test(corps) && !corps.includes(n + ',')) manquants.push(n);
+    });
+  }
+  const ok = manquants.length === 0;
+  if (!ok) echecs++;
+  console.log(`\n  IMPORTS\n  ${ok ? '✅' : '❌'} symboles du moteur appelés sans import`);
+  if (!ok) console.log('        ' + manquants.join(', '));
+}
+
 console.log('\n  EMPREINTE DES DÉFINITIONS : ' + Q.QUEST_DEFS_VERSION);
 console.log('  (calculée — les défis de l\'œuf en cours seront retirés au sort)');
 
