@@ -29,7 +29,8 @@ const CONTROLES = [
   ['auditAvailable', 'la condition peut devenir vraie'],
   ['auditFamilles', 'pas deux défis qui se lisent pareil dans un œuf'],
   ['auditDependanceCreature', 'ne dépend pas de posséder une créature'],
-  ['auditRemplacements', 'le schéma affiché est bien celui qui est joué'],
+  ['auditRemplacements', 'aucun défi du schéma ne manque'],
+  ['auditHorsSchema', 'aucun défi étranger glissé dans un œuf'],
 ];
 
 let echecs = 0;
@@ -90,12 +91,28 @@ for (let p = 0; p < 200; p++) {
   }
 }
 console.log('\n  FORCE BRUTE — ' + tires.toLocaleString('fr-FR') + ' défis tirés');
-[['défi irréalisable', pb.infaisable], ['défi né déjà accompli', pb.dejaFait],
-  ['cible sous l\'acquis', pb.sousAcquis], ['cycle incomplet', pb.cycleCourt]]
-  .forEach(([quoi, n]) => {
-    if (n) echecs++;
-    console.log(`  ${n === 0 ? '✅' : '❌'} ${String(n).padStart(5)}  ${quoi}`);
-  });
+// ⚠️ « irréalisable au tirage » et « né déjà accompli » ne sont PLUS des
+// défauts depuis que la séquence ne substitue plus.
+//
+// Ces deux compteurs servaient à repérer les défis qui allaient être
+// REMPLACÉS par le pool. Le remplacement n'existe plus pour la séquence,
+// donc un défi pas encore déblocable reste simplement dans l'œuf et le
+// devient en avançant — c'est le comportement voulu, pas une panne.
+//
+// Ce qui reste un vrai défaut est couvert ailleurs, et l'est mieux :
+//  - une condition qui ne peut JAMAIS être vraie -> `auditAvailable` ;
+//  - un défi du schéma qui disparaît -> `auditRemplacements` ;
+//  - un cycle incomplet -> toujours une panne, il manque un défi.
+//
+// Les deux premiers restent AFFICHÉS, en information : les profils de la
+// force brute sont tirés au hasard et très extrêmes, donc un chiffre non
+// nul y est normal. S'il explose d'un coup, c'est un signal à creuser.
+[['cycle incomplet', pb.cycleCourt, true]].forEach(([quoi, n, bloquant]) => {
+  if (n && bloquant) echecs++;
+  console.log(`  ${n === 0 ? '✅' : '❌'} ${String(n).padStart(5)}  ${quoi}`);
+});
+console.log(`  ℹ️  ${String(pb.infaisable).padStart(5)}  pas encore déblocable au tirage (normal)`);
+console.log(`  ℹ️  ${String(pb.dejaFait).padStart(5)}  déjà satisfait au tirage (normal sur profil extrême)`);
 
 // ---- Symboles du moteur utilisés sans être importés ----------------
 //

@@ -857,7 +857,29 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
     // ⚠️ On écarte les défis déjà faits ET les IRRÉALISABLES (créature
     // manquante). Sans ce second filtre, un défi impossible entrait dans
     // le cycle et bloquait l'éclosion définitivement.
-    const kept = cycle.filter((q) => !questAlreadyDone(q, stats) && questFeasible(q, stats));
+    // ⚠️⚠️ LA SÉQUENCE NE SUBSTITUE PLUS JAMAIS.
+    //
+    // Avant, un défi du schéma écarté (pas encore débloqué, ou jugé déjà
+    // accompli) était remplacé par un défi du POOL. Trois conséquences,
+    // toutes signalées par l'auteur, build à jour :
+    //
+    //  - il voyait « Pacte niveau 6 » revenir après les Mains Spectrales,
+    //    et « atteins 4 pièces par seconde » : des défis du pool, jamais
+    //    demandés, aux cibles CALCULÉES sur son porte-monnaie — le
+    //    système qu'on venait justement d'abandonner ;
+    //  - les défis du schéma qu'il attendait (Faveur, Aventure) ne
+    //    s'affichaient pas ;
+    //  - la liste du jeu ne correspondait donc jamais au document de
+    //    référence, quoi qu'on règle dans les défis eux-mêmes.
+    //
+    // Les 31 défis du schéma SONT les défis. Le pool ne sert plus qu'aux
+    // cycles situés au-delà de la séquence écrite.
+    //
+    // ⚠️ Sans danger de blocage : chaque prérequis du schéma est un défi
+    // ANTÉRIEUR du même schéma (Pacte -> Faveur -> Dégâts critiques ->
+    // Sanctuaire -> Veilleur), et les défis se jouent dans l'ordre. Un
+    // défi pas encore déblocable le devient en avançant.
+    const kept = cycle.slice();
     // ⚠️ La cible est FIGÉE ici, au tirage. Pour les défis calibrés par
     // EFFORT (`effortMin`), `q.target` est `undefined` : sans ce calcul,
     // la cible était recalculée à CHAQUE RENDU sur l'état courant, et
@@ -883,6 +905,9 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
     });
     const ids = kept.map((q) => q.id);
 
+    // `kept` vaut tout le cycle : ce bloc ne s'exécute plus jamais pour
+    // la séquence. Conservé pour les cycles hors séquence, qui passent
+    // par le même chemin.
     const missing = cycle.length - kept.length;
     if (missing > 0) {
       // ⚠️ On transmet ce que l'œuf contient DÉJÀ, sinon le remplaçant

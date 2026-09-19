@@ -898,3 +898,48 @@ function auditRemplacements(nbOeufs = 12) {
   return fautes;
 }
 module.exports.auditRemplacements = auditRemplacements;
+
+// ---- Un défi HORS SCHÉMA dans un œuf de la séquence -----------------
+//
+// Complément de `auditRemplacements`, qui ne voyait que les défis
+// MANQUANTS. Celui-ci voit aussi les INTRUS : un défi du pool glissé
+// dans un œuf de la séquence.
+//
+// C'est ce que l'auteur a vu le 19/09, build à jour : « Pacte niveau 6 »
+// revenu après les Mains Spectrales, puis « atteins 4 pièces par
+// seconde » — deux défis du pool, jamais demandés, aux cibles calculées
+// sur son porte-monnaie. Le document de référence ne les contenait pas.
+//
+// La séquence ne substitue plus : tout écart, dans un sens comme dans
+// l'autre, est une panne.
+function auditHorsSchema(nbOeufs = 12) {
+  const fautes = [];
+  const s = etatInitial();
+  s.ownedIds = []; s.ownedCount = 0; s.deckCount = 0;
+  for (let oeuf = 0; oeuf < nbOeufs; oeuf++) {
+    // Le joueur suit la chaîne de boutique que ses défis lui imposent.
+    if ((s.tapPower || 1) >= 5) {
+      s.critLevel = Math.max(1, s.critLevel || 0);
+      s.critDamageLevel = Math.max(1, s.critDamageLevel || 0);
+    }
+    const set = Q.nextQuestSet(oeuf, [], s);
+    const schema = Q.QUEST_SEQUENCE[oeuf % Q.QUEST_SEQUENCE.length].map((q) => q.id);
+    set.ids.filter((id) => !schema.includes(id))
+      .forEach((id) => fautes.push({ oeuf: oeuf + 1, intrus: id }));
+    set.ids.forEach((id) => {
+      const q = Q.findQuest(id);
+      if (!q) return;
+      const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
+      const min = minutesPour(q, cible, s);
+      if (min != null) s.totalEarned = (s.totalEarned || 0) + production(s) * 60 * min;
+      appliquer(q, cible, s);
+    });
+    const nv = C.CREATURES[Math.min(oeuf, C.CREATURES.length - 1)];
+    if (nv && !s.ownedIds.includes(nv.id)) s.ownedIds.push(nv.id);
+    s.ownedCount = s.ownedIds.length;
+    s.deckCount = Math.min(3, s.ownedCount);
+    s.passiveIncome = passiveOnly(s);
+  }
+  return fautes;
+}
+module.exports.auditHorsSchema = auditHorsSchema;
