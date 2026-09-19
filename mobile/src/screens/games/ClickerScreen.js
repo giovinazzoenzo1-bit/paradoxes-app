@@ -2861,7 +2861,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               )}
               {eggPhase === 'collecting' && (devPreviousChallengeId || eggPhase === 'hatching') && (
                 <TouchableOpacity style={styles.devToolBtn} onPress={onDevPreviousChallenge}>
-                  <Text style={styles.devSkipBtnText}>◀️ Défi préc.</Text>
+                  <Text style={styles.devSkipBtnText}>◀️ Défi</Text>
                 </TouchableOpacity>
               )}
               {/* Outil de test : VALIDER TOUT LE CYCLE d'un coup.
@@ -2884,7 +2884,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   style={styles.devToolBtn}
                   onPress={() => devValider(currentChallengeId)}
                 >
-                  <Text style={styles.devSkipBtnText}>🛠️ Valider ▶️</Text>
+                  <Text style={styles.devSkipBtnText}>🛠️ Valider</Text>
                 </TouchableOpacity>
               )}
               {/* ⚠️ Outil de TEST : franchit une Ascension d'un coup, sans
@@ -2895,7 +2895,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   numéro d'Ascension. Ce bouton donne aussi les Griffes et
                   le bonus, donc l'état obtenu est celui d'un vrai joueur. */}
               <TouchableOpacity style={styles.devToolBtn} onPress={confirmAscension}>
-                <Text style={styles.devSkipBtnText}>🌟 Ascension +1</Text>
+                <Text style={styles.devSkipBtnText}>🌟 Asc +1</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -4598,6 +4598,11 @@ const styles = StyleSheet.create({
   devToolsRow: {
     position: 'absolute', left: 0, right: 0, top: SCREEN_H * (0.303 - TOP_BLOCK_SHIFT) - 13, zIndex: 3,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
+    // ⚠️ `flexWrap` OBLIGATOIRE. Sans lui, la rangée garde tous les
+    // boutons sur une seule ligne quelle que soit la largeur de l'écran :
+    // le 5e (« Ascension +1 ») sortait du cadre et devenait invisible.
+    // Signalé le 19/09 — le bouton existait, il était juste hors écran.
+    flexWrap: 'wrap', paddingHorizontal: 8, rowGap: 6,
   },
   devToolBtn: {
     paddingVertical: 5, paddingHorizontal: 12,
