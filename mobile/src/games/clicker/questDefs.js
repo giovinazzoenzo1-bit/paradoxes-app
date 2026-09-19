@@ -130,6 +130,14 @@ export function generateurDuGroupe(rang) {
     // ⚠️ Au groupe 0 le joueur n'a que les deux premiers générateurs :
     // reculer de 2 ou 3 crans renverrait un palier qu'il n'a pas encore
     // les moyens d'acheter. On borne donc au plus haut palier ouvert.
+    // ⚠️ `rang` 0 vise le palier le PLUS RÉCENT du groupe, `rang` 1 celui
+    // d'en dessous. Reculer davantage rendait les défis dérisoires :
+    // mesuré, « Possède 6 Esprits Frappeurs » tombait à 0 minute dès le
+    // 2e groupe parce que les bas paliers ne coûtent plus rien.
+    // ⚠️ Remonter d'un cran a été ESSAYÉ et mesuré : les défis
+    // devenaient infaisables au 5e groupe (« 6 Hérauts d'Orage » = 2x le
+    // seuil) sans réduire le nombre de défis trop faciles. On reste donc
+    // au palier le plus récent du groupe et à celui d'en dessous.
     const plusHaut = groupe === 0 ? 1 : groupe * 2;
     const i = Math.max(0, Math.min(plusHaut, plusHaut - rang));
     const item = AUTOCLICKERS[Math.min(i, AUTOCLICKERS.length - 1)];
@@ -235,7 +243,12 @@ const nomArticle = (metric, pluriel) => {
   const accorde = (nom) => {
     if (!pluriel) return nom;
     const mots = nom.split(' ');
-    const coupure = mots.findIndex((m) => ['de', 'du', "d'", 'des'].includes(m.toLowerCase()));
+    // ⚠️ Une apostrophe COLLE au mot suivant : « d'Orage » est un seul
+    // mot pour `split(' ')`. Sans ce test, « Héraut d'Orage » donnait
+    // « Hérauts d'Orages ».
+    const complement = (m) => ['de', 'du', 'des'].includes(m.toLowerCase())
+      || /^d[’']/.test(m);
+    const coupure = mots.findIndex(complement);
     const fin = coupure === -1 ? mots.length : coupure;
     // ⚠️ Les mots déjà terminés par s, x ou z sont invariables :
     // « Phénix », pas « Phénixs ».
@@ -710,7 +723,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 15;
+export const QUEST_ENGINE_VERSION = 16;
 
 function empreinteDefis() {
   const morceaux = [];

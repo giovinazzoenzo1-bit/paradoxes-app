@@ -1057,9 +1057,9 @@ export function coreUpgradeRequirement(id) {
 // est intacte, seul le prix change.
 export const TAP_UPGRADES = [
   { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1950, growth: 1.45 },
-  { id: 'tap2', name: 'Gantelet Runique', emoji: '🪄', bonus: 2.5, cost: 5735, growth: 1.45 },
+  { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2.5, cost: 5735, growth: 1.45 },
   { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 6, cost: 16194, growth: 1.45 },
-  { id: 'tap4', name: 'Main du Colosse', emoji: '🗿', bonus: 26, cost: 82556, growth: 1.45 },
+  { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 26, cost: 82556, growth: 1.45 },
   { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 122.5, cost: 457609, growth: 1.45 },
   { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 577, cost: 2535805, growth: 1.45 },
   { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 2727.5, cost: 14102166, growth: 1.45 },
@@ -1571,6 +1571,21 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // ⚠️ Les PRIX sont proportionnels au rendement (voir plus bas) : changer
 // l'un SANS l'autre remet un palier hors course. Le contrôle
 // `auditPrixParAscension` le vérifie.
+// ⚠️ NOMS — quatre collisions de vocabulaire corrigées le 19/09.
+//
+// L'auteur : « Titan de Foudre n'a jamais existé ». Exact : ce
+// générateur, comme les neuf derniers, a été ajouté le 02/09 dans un
+// commit de données pures, sans validation. Il doublonnait « Titan
+// Mécanique », et trois autres paires se chevauchaient de la même
+// façon : « Main » (Spectrale / du Colosse), « Runique » (Automate /
+// Gantelet), « Colosse » (de Pierre / Main du).
+//
+// Deux noms trop proches, c'est un joueur qui achète le mauvais article
+// et un défi qui n'avance pas — exactement ce qui est arrivé.
+//
+// ⚠️ Un contrôle peut vérifier qu'un nom EXISTE dans le code, jamais
+// qu'il appartient à l'univers du jeu. Tout ajout de contenu doit être
+// validé par l'auteur, pas déduit.
 export const AUTOCLICKERS = [
   { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 650, baseIncome: 0.6, tier: 1 },
   { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 1682, baseIncome: 1.32, tier: 1 },
@@ -1582,7 +1597,7 @@ export const AUTOCLICKERS = [
   { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 506898, baseIncome: 150, tier: 2 },
   { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 1307997, baseIncome: 329, tier: 2 },
   { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 3386338, baseIncome: 724, tier: 2 },
-  { id: 'titanfoudre', name: 'Titan de Foudre', emoji: '⚡', baseCost: 8749233, baseIncome: 1590, tier: 3 },
+  { id: 'titanfoudre', name: 'Héraut d\u2019Orage', emoji: '⚡', baseCost: 8749233, baseIncome: 1590, tier: 3 },
   { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 22722758, baseIncome: 3510, tier: 3 },
   { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 58720450, baseIncome: 7710, tier: 3 },
   { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 152322828, baseIncome: 17000, tier: 3 },
