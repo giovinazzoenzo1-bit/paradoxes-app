@@ -2737,20 +2737,25 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               joueur n'ait jamais deux barres concurrentes à l'écran. */}
           {eggPhase === 'collecting' ? (
             currentChallenge && (
-              <ChallengeBar
-                icon={currentChallenge.icon}
-                label={currentChallenge.label}
-                current={currentChallenge.current}
-                target={currentChallenge.target}
-                cycleIndex={completedQuestCount}
-                cycleTotal={activeQuestIds.length}
-                apercuCycle={activeQuestIds.map((id) => ({
-                  id,
-                  texte: questLabel(id, null, questStats, questTargets),
-                  fait: isQuestDone(id),
-                  courant: id === currentChallengeId,
-                }))}
-              />
+              <>
+                <ChallengeBar
+                  icon={currentChallenge.icon}
+                  label={currentChallenge.label}
+                  current={currentChallenge.current}
+                  target={currentChallenge.target}
+                  cycleIndex={completedQuestCount}
+                  cycleTotal={activeQuestIds.length}
+                />
+                {/* Sous la carte, jamais dedans : voir `ApercuCycle`. */}
+                <ApercuCycle
+                  defis={activeQuestIds.map((id) => ({
+                    id,
+                    texte: questLabel(id, null, questStats, questTargets),
+                    fait: isQuestDone(id),
+                    courant: id === currentChallengeId,
+                  }))}
+                />
+              </>
             )
           ) : (
             /* `countLabel` affiche le TEMPS RESTANT, pas « 5/500 » :
@@ -4207,7 +4212,34 @@ const CHALLENGE_GEM_X_PCT = [20.6, 33.0, 44.8, 57.2, 69.1, 80.9];
 // « absents » qui étaient simplement devant lui — le seul moyen de les
 // parcourir était le bouton de DEV « défi précédent », qui ne remonte
 // que les défis DÉJÀ terminés.
-function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel, apercuCycle }) {
+// ⚠️ Liste des défis de l'œuf — RENDUE À PART, sous la carte.
+//
+// Première tentative : à l'intérieur de `ChallengeBar`. Mais cette carte
+// est en `position: absolute` avec un `aspectRatio` calé sur son image
+// de fond : sa hauteur ne s'adapte pas à son contenu. La liste débordait
+// donc par-dessus le titre et la barre de progression, rendant tout
+// illisible — signalé sur capture le 19/09.
+//
+// Elle vit maintenant dans son propre bloc, positionné juste sous la
+// carte, avec sa propre hauteur.
+function ApercuCycle({ defis }) {
+  if (!defis || !defis.length) return null;
+  return (
+    <View style={styles.apercuCycle}>
+      {defis.map((d, i) => (
+        <Text
+          key={d.id}
+          style={[styles.apercuLigne, d.fait && styles.apercuFait, d.courant && styles.apercuCourant]}
+          numberOfLines={1}
+        >
+          {d.fait ? '✅' : d.courant ? '▶️' : '•'} {i + 1}. {d.texte}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
   const ratio = target > 0 ? Math.min(1, current / target) : 0;
   const filled = Math.floor(ratio * segments);
@@ -4273,21 +4305,6 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
         </View>
       )}
 
-      {/* Les défis de l'œuf, du premier au dernier. Terminé, courant, ou
-          à venir — le joueur voit où il va. */}
-      {!!(apercuCycle && apercuCycle.length) && (
-        <View style={styles.apercuCycle}>
-          {apercuCycle.map((d, i) => (
-            <Text
-              key={d.id}
-              style={[styles.apercuLigne, d.fait && styles.apercuFait, d.courant && styles.apercuCourant]}
-              numberOfLines={1}
-            >
-              {d.fait ? '✅' : d.courant ? '▶️' : '•'} {i + 1}. {d.texte}
-            </Text>
-          ))}
-        </View>
-      )}
     </ImageBackground>
   );
 }
@@ -4551,7 +4568,18 @@ const styles = StyleSheet.create({
     position: 'absolute', left: '8%', right: '8%', top: '74.75%', height: '21.85%',
     alignItems: 'center', justifyContent: 'center',
   },
-  apercuCycle: { marginTop: 6, paddingHorizontal: 10, paddingBottom: 6 },
+  // ⚠️ Positionné sous la carte de défi, qui est absolue et de hauteur
+  // FIXE (aspectRatio calé sur son image). Le calcul reprend exactement
+  // les mêmes valeurs que `challengeCard` : même gauche, même largeur,
+  // et un haut égal au bas de la carte.
+  apercuCycle: {
+    position: 'absolute', zIndex: 3,
+    left: SCREEN_W * 0.061,
+    top: SCREEN_H * (0.157 - TOP_BLOCK_SHIFT) - 13 + (SCREEN_W * 0.88) / CHALLENGE_CARD_ASPECT_RATIO + 4,
+    width: SCREEN_W * 0.88,
+    paddingHorizontal: 12, paddingVertical: 6,
+    backgroundColor: 'rgba(8,14,26,0.82)', borderRadius: 10,
+  },
   apercuLigne: { color: COLORS.muted, fontSize: 11, lineHeight: 16 },
   apercuFait: { opacity: 0.45, textDecorationLine: 'line-through' },
   apercuCourant: { color: COLORS.text, fontWeight: '700' },
