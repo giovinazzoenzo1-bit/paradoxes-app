@@ -552,7 +552,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const coinBonus = given < earned || earned === 0
       ? Math.max(200 * COIN_SCALE, Math.round(passiveIncomeRef.current * 300))
       : 0;
-    if (coinBonus > 0) gainCoins(coinBonus);
+    // ⚠️ Crédit DIRECT : `coinBonus` est déjà calé sur le revenu passif,
+    // lequel intègre le bonus d'Ascension. Passer par `gainCoins` le
+    // comptait une deuxième fois — x2 après la 1re Ascension, x15 après
+    // la 3e. Voir la règle dans `buyWithDiamonds`.
+    if (coinBonus > 0) pendingGainRef.current += coinBonus;
     setBoss(null);
     setBossResult({ earned, given, coinBonus, failed: earned === 0 });
   };
@@ -1609,7 +1613,22 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       // Calé sur le revenu du joueur plutôt qu'un montant fixe : 1 000
       // pièces est énorme au début et dérisoire plus tard.
       const amount = Math.max(500 * COIN_SCALE, Math.round(passiveIncomeRef.current * 600));
-      gainCoins(amount);
+      // ⚠️⚠️ CRÉDIT DIRECT, SANS PASSER PAR `gainCoins`.
+      //
+      // `gainCoins` applique tous les multiplicateurs globaux, dont le
+      // bonus d'Ascension. Un achat en Diamants en ressortait donc
+      // multiplié par 2 après la 1re Ascension, par 15 après la 3e —
+      // signalé par l'auteur le 19/09.
+      //
+      // Le montant est DÉJÀ calé sur le revenu du joueur, lequel intègre
+      // déjà ce bonus : l'appliquer une seconde fois le comptait deux
+      // fois. Ce qui s'achète avec de la monnaie réelle doit valoir
+      // exactement ce qui est annoncé.
+      //
+      // ⚠️ Même règle pour toute récompense FIXE à venir (cadeaux,
+      // calendrier, compensations) : `gainCoins` est réservé à ce que le
+      // joueur PRODUIT, jamais à ce qu'on lui donne.
+      pendingGainRef.current += amount;
       return `+${formatNum(amount)} pièces`;
     }
     if (offer.id === 'griffes') {
@@ -1883,7 +1902,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const claimRitual = () => {
     if (!ritualTargetRef.current) return;
-    const reward = Math.round(gainCoins(ritualReward(tapPowerRef.current, passiveIncome)));
+    // ⚠️ Même défaut : `ritualReward` prend `passiveIncome` en entrée,
+    // qui contient déjà le bonus d'Ascension.
+    const reward = Math.round(ritualReward(tapPowerRef.current, passiveIncome));
+    pendingGainRef.current += reward;
     setLastRitualAt(Date.now());
     setRitualTarget(null);
     spawnPopup(`+${reward} 🕯️`, 110, 60, true);

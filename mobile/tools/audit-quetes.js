@@ -1258,3 +1258,31 @@ function auditLibelleSansArticle() {
   return fautes;
 }
 module.exports.auditLibelleSansArticle = auditLibelleSansArticle;
+
+// ---- Récompense qui compte le bonus d'Ascension deux fois ------------
+//
+// Bug réel du 19/09, signalé par l'auteur : « le shop avec les diamants
+// donne double récompense après une Ascension ».
+//
+// `gainCoins` applique tous les multiplicateurs globaux, dont le bonus
+// d'Ascension. C'est juste pour ce que le joueur PRODUIT. Mais une
+// récompense déjà calée sur son revenu passif contient DÉJÀ ce bonus :
+// la repasser par `gainCoins` le compte deux fois — x2 après la 1re
+// Ascension, x15 après la 3e. Sur un achat en Diamants, c'est de la
+// monnaie réelle qui ne vaut pas ce qui est annoncé.
+//
+// Ce contrôle lit la SOURCE et signale tout appel à `gainCoins` dont
+// l'argument dépend du revenu passif.
+function auditRecompenseDoublee() {
+  const fs = require('fs');
+  const src = fs.readFileSync(__dirname + '/../src/screens/games/ClickerScreen.js', 'utf8');
+  const fautes = [];
+  src.split('\n').forEach((ligne, i) => {
+    if (!/gainCoins\s*\(/.test(ligne)) return;
+    if (/passiveIncome|passiveRate/.test(ligne)) {
+      fautes.push({ ligne: i + 1, code: ligne.trim().slice(0, 80) });
+    }
+  });
+  return fautes;
+}
+module.exports.auditRecompenseDoublee = auditRecompenseDoublee;
