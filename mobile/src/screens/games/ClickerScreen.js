@@ -2743,6 +2743,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 target={currentChallenge.target}
                 cycleIndex={completedQuestCount}
                 cycleTotal={activeQuestIds.length}
+                apercuCycle={activeQuestIds.map((id) => ({
+                  id,
+                  texte: questLabel(id, null, questStats, questTargets),
+                  fait: isQuestDone(id),
+                  courant: id === currentChallengeId,
+                }))}
               />
             )
           ) : (
@@ -4193,7 +4199,14 @@ const CHALLENGE_CARD_ASPECT_RATIO = 900 / 295;
 // de positions, pas un bug de logique de remplissage.
 const CHALLENGE_GEM_X_PCT = [20.6, 33.0, 44.8, 57.2, 69.1, 80.9];
 
-function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel }) {
+// ⚠️ `apercuCycle` : les défis de l'œuf en un coup d'œil.
+//
+// L'écran n'affichait QUE le défi courant. Les suivants étaient donc
+// invisibles, et l'auteur a passé une heure à signaler des défis
+// « absents » qui étaient simplement devant lui — le seul moyen de les
+// parcourir était le bouton de DEV « défi précédent », qui ne remonte
+// que les défis DÉJÀ terminés.
+function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel, apercuCycle }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
   const ratio = target > 0 ? Math.min(1, current / target) : 0;
   const filled = Math.floor(ratio * segments);
@@ -4256,6 +4269,22 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
           <Text style={styles.challengeCycle} numberOfLines={2}>
             Défi {Math.min(cycleIndex + 1, cycleTotal)} sur {cycleTotal} avant l'éclosion
           </Text>
+        </View>
+      )}
+
+      {/* Les défis de l'œuf, du premier au dernier. Terminé, courant, ou
+          à venir — le joueur voit où il va. */}
+      {!!(apercuCycle && apercuCycle.length) && (
+        <View style={styles.apercuCycle}>
+          {apercuCycle.map((d, i) => (
+            <Text
+              key={d.id}
+              style={[styles.apercuLigne, d.fait && styles.apercuFait, d.courant && styles.apercuCourant]}
+              numberOfLines={1}
+            >
+              {d.fait ? '✅' : d.courant ? '▶️' : '•'} {i + 1}. {d.texte}
+            </Text>
+          ))}
         </View>
       )}
     </ImageBackground>
@@ -4521,6 +4550,10 @@ const styles = StyleSheet.create({
     position: 'absolute', left: '8%', right: '8%', top: '74.75%', height: '21.85%',
     alignItems: 'center', justifyContent: 'center',
   },
+  apercuCycle: { marginTop: 6, paddingHorizontal: 10, paddingBottom: 6 },
+  apercuLigne: { color: COLORS.muted, fontSize: 11, lineHeight: 16 },
+  apercuFait: { opacity: 0.45, textDecorationLine: 'line-through' },
+  apercuCourant: { color: COLORS.text, fontWeight: '700' },
   challengeCycle: { color: COLORS.muted, fontSize: 10, fontWeight: '700', textAlign: 'center' },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },
