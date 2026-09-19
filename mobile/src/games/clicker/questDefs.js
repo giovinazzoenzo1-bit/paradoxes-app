@@ -119,8 +119,22 @@ export const ECHELLES_GROUPE = {
   // Combats et niveaux d'Aventure : bornés par l'ÉNERGIE, pas par
   // l'économie. Une Ascension ne rend pas l'énergie plus rapide, donc
   // ces cibles bougent à peine.
-  aventure: [1, 1.2, 1.4, 1.6, 1.8, 2],
+  // ⚠️ MULTIPLIER l'Aventure était une erreur : c'est une CAMPAGNE, pas
+  // une économie. Le joueur GARDE ses niveaux après une Ascension, donc
+  // multiplier « termine le niveau 5 » par 1,2 donne 6 à un joueur qui
+  // en est au 20e — mesuré, 96 % du défi déjà acquis. La campagne doit
+  // AVANCER : voir `PAS_AVENTURE_PAR_GROUPE`.
+  aventure: [1, 1, 1, 1, 1, 1],
 };
+
+// ⚠️ De combien la campagne d'Aventure avance à chaque groupe.
+//
+// Les trois défis de niveau d'un groupe visent 5, 10 et 15. Au groupe
+// suivant ils visent 20, 25 et 30, et ainsi de suite : la campagne
+// continue là où elle s'est arrêtée. C'est une ADDITION, pas un facteur,
+// parce que les niveaux d'Aventure se cumulent d'une Ascension à
+// l'autre — contrairement aux pièces, qui repartent de zéro.
+export const PAS_AVENTURE_PAR_GROUPE = 15;
 
 // Au-delà de la table, on prolonge au dernier rapport mesuré.
 export function echelleGroupe(nom, groupe) {
@@ -184,7 +198,11 @@ export const QUEST_SEQUENCE = [
       // dans `questStats`.
       available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'g2_crits', icon: '💥', metric: 'totalCrits', target: 30, echelle: 'actions', mode: 'delta',
+    // ⚠️ 30 -> 45. Le contrôle le mesurait à 1 minute parce qu'il suppose
+    // la Faveur déjà montée ; avec la Faveur au niveau 1, 30 critiques
+    // prennent 6 minutes. 45 place le défi autour de 9 minutes, dans
+    // l'ordre de grandeur des autres défis de l'œuf.
+    { id: 'g2_crits', icon: '💥', metric: 'totalCrits', target: 45, echelle: 'actions', mode: 'delta',
       label: (t) => `Obtiens ${t} coup${t > 1 ? 's' : ''} critique${t > 1 ? 's' : ''}` },
     // ⚠️ Compté sur le TOTAL de taps de la partie, pas depuis le début
     // du défi.
@@ -208,7 +226,15 @@ export const QUEST_SEQUENCE = [
     { id: 'g3_reserve', icon: '💰', metric: 'coins', target: 25000, echelle: 'pieces', mode: 'absolute',
       label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
     // 2e maillon : ouvert par la Faveur de l'œuf 2, ouvre le Sanctuaire.
-    { id: 'g3_critdmg', icon: '💢', metric: 'critDamageLevel', target: 3, cap: 5, echelle: 'niveau', mode: 'absolute',
+    // ⚠️ Niveau 3 -> 9. À 3, le défi coûtait 918 pièces à un joueur qui
+    // en gagne 660 par MINUTE : bouclé en une minute vingt. Le niveau 9
+    // coûte 33 400 pièces, soit l'ordre de grandeur du défi voisin de
+    // l'œuf (25 000 mis de côté).
+    //
+    // ⚠️ RÈGLE à appliquer à tout défi d'achat : sa cible se cale sur le
+    // COÛT des défis voisins du même œuf, pas sur un niveau qui « fait
+    // bien ». Un niveau ne dit rien, un coût se compare.
+    { id: 'g3_critdmg', icon: '💢', metric: 'critDamageLevel', target: 9, cap: 16, echelle: 'niveau', mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('critDamage', s),
       label: (t) => `Monte les Dégâts critiques au niveau ${t}` },
     { id: 'g3_adv', icon: '⚔️', metric: 'advLevelReached', target: 10, echelle: 'aventure', mode: 'absolute',
@@ -219,7 +245,10 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g3_pouvoirs', icon: '✨', metric: 'powerActivated', target: 5, echelle: 'actions', mode: 'delta',
       label: (t) => (t > 1 ? `Active ${t} fois un pouvoir` : 'Active un pouvoir') },
-    { id: 'g3_esprit', icon: '👻', metric: 'auto:esprit', target: 6, echelle: 'unites', mode: 'absolute',
+    // ⚠️ 6 -> 10. Le joueur en possède DÉJÀ 5 depuis l'œuf 1 : viser 6
+    // ne demandait qu'un seul achat, une minute. 10 unités coûtent
+    // l'ordre de grandeur du budget de l'œuf.
+    { id: 'g3_esprit', icon: '👻', metric: 'auto:esprit', target: 10, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
   ],
 
@@ -244,7 +273,15 @@ export const QUEST_SEQUENCE = [
         ? `Décroche toutes les étoiles sur ${t} niveaux d'Aventure`
         : "Décroche toutes les étoiles sur un niveau d'Aventure") },
     // 3e maillon : ouvert par les Dégâts critiques de l'œuf 3.
-    { id: 'g4_sanct', icon: '🏛️', metric: 'sanctuaryLevel', target: 5, cap: 8, echelle: 'niveau', mode: 'absolute',
+    // ⚠️ Niveau 5 -> 42, et PAS d'échelle de groupe.
+    //
+    // Le coût du Sanctuaire est concentré tout en haut : le niveau 20 ne
+    // coûte que 1 259 pièces, le 42 en coûte 28 000. Viser 5 revenait à
+    // demander zéro effort. Et comme la mécanique PLAFONNE à 50, une
+    // échelle de groupe la saturerait dès le 2e groupe — elle n'en a
+    // donc pas : le joueur repart de zéro à chaque Ascension et refait
+    // le même chemin, ce qui est déjà une progression.
+    { id: 'g4_sanct', icon: '🏛️', metric: 'sanctuaryLevel', target: 42, mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('sanctuaire', s) && (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
       label: (t) => `Monte le Sanctuaire au niveau ${t}` },
     { id: 'g4_coins', icon: '🪙', metric: 'totalEarned', target: 60000, echelle: 'pieces', mode: 'delta',
@@ -256,7 +293,9 @@ export const QUEST_SEQUENCE = [
   [
     { id: 'g5_reserve', icon: '💰', metric: 'coins', target: 90000, echelle: 'pieces', mode: 'absolute',
       label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
-    { id: 'g5_main', icon: '🖐️', metric: 'auto:main', target: 5, echelle: 'unites', mode: 'absolute',
+    // 5 -> 6 : le joueur en a déjà 4 à ce stade, viser 5 n'était qu'un
+    // achat. 6 correspond au budget de l'œuf.
+    { id: 'g5_main', icon: '🖐️', metric: 'auto:main', target: 6, echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
@@ -265,7 +304,11 @@ export const QUEST_SEQUENCE = [
       available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     // 4e et dernier maillon : ouvert par le Sanctuaire de l'œuf 4.
-    { id: 'g5_veilleur', icon: '🌙', metric: 'veilleurLevel', target: 5, cap: 8, echelle: 'niveau', mode: 'absolute',
+    // ⚠️ Même correction que le Sanctuaire : coût concentré en haut,
+    // mécanique plafonnée à 50, donc pas d'échelle de groupe. Le niveau
+    // 40 coûte 42 800 pièces, cohérent avec les 90 000 mis de côté
+    // demandés dans le même œuf.
+    { id: 'g5_veilleur', icon: '🌙', metric: 'veilleurLevel', target: 40, mode: 'absolute',
       available: (s) => coreUpgradeUnlocked('veilleur', s) && (s.veilleurLevel || 0) < VEILLEUR_MAX_LEVEL,
       label: (t) => `Monte le Veilleur au niveau ${t}` },
     { id: 'g5_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, cap: 80, mode: 'absolute',

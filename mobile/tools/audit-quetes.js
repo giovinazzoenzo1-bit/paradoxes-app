@@ -697,7 +697,18 @@ function auditCiblesFixes() {
     // NORME, à condition de déclarer son échelle de groupe (`echelle`).
     // Ce qui reste interdit, c'est une cible fixe qui ne monterait
     // JAMAIS sur une métrique dont l'échelle bouge avec la partie.
-    if (!q.target || q.effortMin || q.echelle) return;
+    // ⚠️ Les niveaux d'Aventure n'ont pas d'`echelle` : ils AVANCENT par
+    // addition (`PAS_AVENTURE_PAR_GROUPE`), parce que la campagne se
+    // poursuit d'une Ascension à l'autre. Ce n'est pas une cible figée.
+    // ⚠️ Trois cas légitimes de cible fixe SANS échelle :
+    //  - `advLevelReached` : la campagne AVANCE par addition
+    //    (`PAS_AVENTURE_PAR_GROUPE`), elle ne se multiplie pas ;
+    //  - Sanctuaire et Veilleur : ces mécaniques PLAFONNENT à 50 et leur
+    //    coût est concentré tout en haut. Une échelle de groupe les
+    //    saturerait dès le 2e groupe. Le joueur repart de zéro à chaque
+    //    Ascension et refait le chemin, ce qui est déjà la progression.
+    const capee = ['sanctuaryLevel', 'veilleurLevel', 'advLevelReached'].includes(q.metric);
+    if (!q.target || q.effortMin || q.echelle || capee) return;
     if (!metriqueAEchelle(q.metric)) return;
     suspects.push({ id: q.id, metric: q.metric, target: q.target });
   });
@@ -1049,14 +1060,35 @@ function auditTropFacile(nbOeufs = 26) {
           : (s[q.metric] || 0);
       const min = minutesPour(q, cible, s);
       const raisons = [];
-      if (min != null && min < FACILE_MIN_MINUTES) raisons.push(`${Math.round(min)} min`);
-      if (q.mode === 'absolute' && acquis > 0 && cible > 0) {
+      // ⚠️ Le critère de DURÉE ne vaut pas pour les défis d'ADRESSE.
+      //
+      // « Tiens la Transe 25 secondes » ou « Fais une Offrande » se
+      // mesurent en secondes par construction : leur difficulté est le
+      // geste, pas le temps. Les signaler revenait à demander de les
+      // rallonger artificiellement — et un contrôle qui hurle sur des
+      // cas normaux cesse d'être lu, c'est le piège de cette session.
+      const adresse = ['maxTranseHoldSec', 'maxCombo', 'offering', 'runeFused', 'runeBought']
+        .includes(q.metric);
+      if (!adresse && min != null && min < FACILE_MIN_MINUTES) raisons.push(`${Math.round(min)} min`);
+      // ⚠️ Les RECORDS sont remis à zéro par le jeu au tirage : comparer
+      // la cible à un vieux record ne décrit aucune situation réelle.
+      const record = ['maxTranseHoldSec', 'maxCombo'].includes(q.metric);
+      if (!record && q.mode === 'absolute' && acquis > 0 && cible > 0) {
         const progression = (cible - acquis) / cible;
         if (progression < FACILE_MIN_PROGRESSION) {
           raisons.push(`déjà ${Math.round(100 * acquis / cible)} % acquis`);
         }
       }
-      const vu = vuRecemment[q.metric];
+      // ⚠️ Ne PAS comparer de part et d'autre d'une ASCENSION.
+      //
+      // Le 7e œuf est le 1er du groupe 2 : le joueur vient de tout
+      // perdre et sa production repart de zéro. Lui redemander une
+      // petite cible est NORMAL. Sans cette exception, le contrôle
+      // signalait tous les premiers œufs de groupe — et un contrôle qui
+      // hurle sur des cas normaux cesse d'être lu.
+      const memeGroupe = vuRecemment[q.metric]
+        && Math.floor(oeuf / Q.QUEST_SEQUENCE.length) === Math.floor(vuRecemment[q.metric].oeuf / Q.QUEST_SEQUENCE.length);
+      const vu = memeGroupe ? vuRecemment[q.metric] : null;
       if (vu && oeuf - vu.oeuf < FACILE_ECART_OEUFS && cible < vu.cible * FACILE_HAUSSE_MINI) {
         raisons.push(`déjà demandé à l'œuf ${vu.oeuf + 1} (cible ${vu.cible})`);
       }

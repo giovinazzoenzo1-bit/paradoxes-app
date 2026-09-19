@@ -8,7 +8,7 @@
 // clickerLogic, donc pas de cycle d'imports.
 // Moteur des défis : cibles, progression, validation, tirage.
 // Les DÉFINITIONS vivent dans `questDefs.js`.
-import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION, echelleGroupe } from './questDefs';
+import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION, echelleGroupe, PAS_AVENTURE_PAR_GROUPE } from './questDefs';
 import { fmtQ, qtyQ, roundQuestTarget, describeAdventureLevel } from './questFormat';
 import { questBudget, estimatedIncomePerSecond, ascensionCoinMultiplier, ASCENSION_COIN_TARGET_RATE } from './questBudget';
 
@@ -98,11 +98,25 @@ export function repeatTier(index) {
 }
 
 // Applique la progression de répétition à une cible FIXE.
-export function applyRepeatTier(quest, target, index, ascensionCount = 0) {
-  const tier = effectiveTier(index, ascensionCount);
-  if (!tier || !quest) return target;
-  if (metricIsLevel(quest.metric)) return target + REPEAT_LEVEL_STEP * tier;
-  return Math.max(1, Math.round(target * Math.pow(REPEAT_COUNT_RATE, tier)));
+// ⚠️⚠️ NEUTRALISÉ le 19/09 — c'était une QUATRIÈME échelle, invisible.
+//
+// Cette fonction gonflait les cibles fixes à chaque tour de séquence, en
+// plus de l'échelle de groupe (`ECHELLES_GROUPE`) déjà appliquée par
+// `resolveQuestTarget`. Les deux se multipliaient en silence.
+//
+// Conséquences mesurées : « Reste en Transe pendant 641 secondes » —
+// dix minutes de Transe ininterrompue — alors que ce défi déclare
+// `target: 25, cap: 45` et que `resolveQuestTarget` rend bien 25. Le
+// plafond était contourné, parce que le gonflement arrivait APRÈS lui.
+//
+// Elle date d'avant les échelles de groupe, quand la difficulté ne
+// montait nulle part ailleurs. Aujourd'hui elle fait double emploi.
+//
+// ⚠️ On la neutralise sans la supprimer : elle est exportée et utilisée
+// ailleurs. Elle rend la cible telle quelle, et l'échelle de groupe
+// reste le SEUL endroit où une cible monte.
+export function applyRepeatTier(quest, target) {
+  return target;
 }
 
 export function sequenceCycle(index) {
@@ -331,8 +345,13 @@ export function resolveQuestTarget(quest, stats) {
     // fixe périme. Elle ne tient plus : on a un simulateur d'économie et
     // onze contrôles, donc on peut écrire une cible fixe ET la vérifier.
     const groupe = Math.max(0, Math.floor((stats && stats.ascension) || 0));
-    const brute = quest.echelle
-      ? roundQuestTarget(quest.target * echelleGroupe(quest.echelle, groupe))
+    // ⚠️ L'Aventure AVANCE au lieu d'être multipliée : la campagne se
+    // poursuit d'un groupe à l'autre, les niveaux ne repartent pas de
+    // zéro après une Ascension.
+    const brute = quest.metric === 'advLevelReached'
+      ? quest.target + PAS_AVENTURE_PAR_GROUPE * groupe
+      : quest.echelle
+        ? roundQuestTarget(quest.target * echelleGroupe(quest.echelle, groupe))
       : METRIQUES_RYTHME.includes(quest.metric)
         // Repli historique : les métriques de RYTHME suivaient déjà les
         // Ascensions avant l'introduction des échelles nommées.
