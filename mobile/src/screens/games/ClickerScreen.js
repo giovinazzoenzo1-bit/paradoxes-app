@@ -103,6 +103,7 @@ import {
   metricScopedToCycle,
   freezeMissingTargets,
   QUEST_DEFS_VERSION,
+  SEQUENCE_QUESTS,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -1011,7 +1012,28 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             // est un fil fixe, y substituer un défi aléatoire casserait
             // l'ordre de découverte voulu. Seuls les défis du pool
             // dynamique sont revalidés.
+            // ⚠️⚠️ LE COMMENTAIRE CI-DESSUS DISAIT VRAI, LE CODE NON.
+            //
+            // « Les défis SCRIPTÉS ne sont jamais remplacés » — mais le
+            // filtre s'appliquait à TOUS les défis sauvegardés, et les
+            // remplaçants venaient du POOL. Un défi du schéma dont la
+            // précondition n'était pas remplie AU CHARGEMENT se faisait
+            // donc remplacer par un défi aléatoire, à chaque ouverture
+            // de l'appli.
+            //
+            // C'est la DEUXIÈME substitution du jeu. Celle du tirage a
+            // été supprimée hier ; celle-ci est restée, et elle seule
+            // suffisait à faire réapparaître des défis jamais demandés —
+            // « Touche 3 fois la cible dorée » à la place de la Faveur
+            // des Esprits, signalé le 19/09.
+            //
+            // Seuls les défis du POOL sont revalidés ici. Un défi du
+            // schéma reste en place : sa précondition est un défi
+            // ANTÉRIEUR du même schéma, donc elle finit toujours par
+            // être remplie.
+            const estScripte = (id) => SEQUENCE_QUESTS.some((q) => q.id === id);
             const stillOk = savedQuests.filter((id) => {
+              if (estScripte(id)) return true;
               const q = findQuest(id);
               return !q || !q.available || q.available(statsAtLoad);
             });
@@ -1022,7 +1044,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             }
             const resolved = {};
             finalQuests.forEach((id) => {
-              const q = QUEST_POOL.find((x) => x.id === id);
+              // ⚠️ `findQuest` et non `QUEST_POOL.find` : ce dernier ne
+              // trouve JAMAIS un défi du schéma, donc `resolveQuestTarget`
+              // recevait `undefined` et rendait 1. Un défi scripté sans
+              // cible sauvegardée affichait « 0/1 » et se validait au
+              // premier point.
+              const q = findQuest(id);
               resolved[id] = savedTargets[id] || resolveQuestTarget(q, statsAtLoad);
             });
             setActiveQuestIds(finalQuests);
@@ -2100,8 +2127,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // conservé même s'il est devenu infaisable : le joueur l'a mérité.
   useEffect(() => {
     if (!loaded || !activeQuestIds.length) return;
+    // ⚠️⚠️ TROISIÈME substitution — et elle tourne EN CONTINU pendant
+    // la partie, pas seulement au tirage ou au chargement.
+    //
+    // Un défi du SCHÉMA dont la précondition n'était pas encore remplie
+    // se faisait remplacer par un défi du pool à la première seconde de
+    // jeu. C'est ainsi que « Touche 3 fois la cible dorée » a pris la
+    // place de la Faveur des Esprits sous les yeux de l'auteur.
+    //
+    // Les défis scriptés sont exclus : leur précondition est un défi
+    // ANTÉRIEUR du même schéma, donc elle finit toujours par être
+    // remplie. Seuls les défis du POOL peuvent devenir irréalisables
+    // pour de bon — c'est pour eux que ce mécanisme existe.
     const casses = activeQuestIds.filter(
-      (id) => !isQuestDone(id) && !questFeasible(findQuest(id), questStats)
+      (id) => !SEQUENCE_QUESTS.some((q) => q.id === id)
+        && !isQuestDone(id) && !questFeasible(findQuest(id), questStats)
     );
     if (!casses.length) return;
     const remplacement = pickQuestSet(activeQuestIds, questStats);
