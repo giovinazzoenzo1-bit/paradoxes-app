@@ -324,10 +324,16 @@ export const QUEST_POOL = [
   // `totalTaps` : le seul défi qui ne dépend d'AUCUNE ressource. Aucun
   // risque de blocage, aucune précondition — il est toujours faisable.
   // Cible dérivée de la cadence de référence, jamais écrite en dur.
-  { id: 'tapCount', family: 'tap', icon: '👆', metric: 'totalTaps', target: 600, mode: 'delta',
-    label: (t) => `Tape ${t.toLocaleString('fr-FR')} fois` },
-  { id: 'tapCountLong', family: 'tap', icon: '👆', metric: 'totalTaps', target: 2000, mode: 'delta',
-    label: (t) => `Tape ${t.toLocaleString('fr-FR')} fois` },
+  // ⚠️ « Tape 600 fois » et « Tape 2 000 fois » SUPPRIMÉS du pool.
+  //
+  // L'auteur n'a jamais demandé ces défis et les a vus apparaître dans
+  // son œuf : le pool comble les trous du schéma, et ces deux-là s'y
+  // glissaient. Le seul défi de taps du jeu est celui du schéma
+  // (`g2_taps`), écrit noir sur blanc dans le document de référence.
+  //
+  // ⚠️ RÈGLE : le pool ne doit contenir QUE des défis que l'auteur a
+  // validés. Tout ce qui n'est pas dans le document de référence n'a
+  // rien à faire dans un œuf de la séquence.
   // `threeStarLevel` : se règle avec les combats DÉJÀ faits pour les
   // défis de niveau d'Aventure — de la variété sans une énergie de plus.
   // ⚠️ Exige un deck : la précondition d'Aventure s'applique.

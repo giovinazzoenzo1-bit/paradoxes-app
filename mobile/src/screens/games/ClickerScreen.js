@@ -103,7 +103,6 @@ import {
   metricScopedToCycle,
   freezeMissingTargets,
   QUEST_DEFS_VERSION,
-  questLabel,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -372,7 +371,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // dépend PAS de ce tick (tout vient de l'horodatage de fin) : il ne
   // sert qu'à réafficher, et il ne tourne que quand un œuf éclot.
   const [nowTick, setNowTick] = useState(Date.now());
-  const [apercuOuvert, setApercuOuvert] = useState(false);
   const [incubatingEgg, setIncubatingEgg] = useState(null);
   const incubatingEggRef = useRef(null);
   incubatingEggRef.current = incubatingEgg;
@@ -2745,7 +2743,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 target={currentChallenge.target}
                 cycleIndex={completedQuestCount}
                 cycleTotal={activeQuestIds.length}
-                onPress={() => setApercuOuvert(true)}
               />
             )
           ) : (
@@ -3090,18 +3087,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           pendingDiscount={pendingDiscount}
           nextSummonCost={nextSummonCost}
           onSummon={doSummon}
-        />
-      )}
-
-      {apercuOuvert && (
-        <ApercuCycle
-          defis={activeQuestIds.map((id) => ({
-            id,
-            texte: questLabel(id, null, questStats, questTargets),
-            fait: isQuestDone(id),
-            courant: id === currentChallengeId,
-          }))}
-          onClose={() => setApercuOuvert(false)}
         />
       )}
 
@@ -4208,61 +4193,7 @@ const CHALLENGE_CARD_ASPECT_RATIO = 900 / 295;
 // de positions, pas un bug de logique de remplissage.
 const CHALLENGE_GEM_X_PCT = [20.6, 33.0, 44.8, 57.2, 69.1, 80.9];
 
-// ⚠️ `apercuCycle` : les défis de l'œuf en un coup d'œil.
-//
-// L'écran n'affichait QUE le défi courant. Les suivants étaient donc
-// invisibles, et l'auteur a passé une heure à signaler des défis
-// « absents » qui étaient simplement devant lui — le seul moyen de les
-// parcourir était le bouton de DEV « défi précédent », qui ne remonte
-// que les défis DÉJÀ terminés.
-// ⚠️ Liste des défis de l'œuf — EN FENÊTRE, pas en bloc flottant.
-//
-// Deux tentatives ratées avant celle-ci, toutes deux signalées sur
-// capture :
-//  1. à l'intérieur de `ChallengeBar` — cette carte a une hauteur FIXE
-//     (aspectRatio calé sur son image), la liste débordait par-dessus le
-//     titre et la barre ;
-//  2. en bloc absolu sous la carte — la zone du dessous est déjà occupée
-//     par les boutons de dev et le sélecteur d'œufs, eux aussi en
-//     absolu, donc superposition à nouveau.
-//
-// Toute cette zone de l'écran est en positionnement absolu : rien ne
-// pousse rien, donc ajouter un bloc revient à parier sur de la place
-// libre. Une fenêtre modale, elle, recouvre l'écran entier — elle ne
-// peut chevaucher aucun élément, quelle que soit la taille du téléphone.
-//
-// Elle s'ouvre en touchant la carte de défi.
-function ApercuCycle({ defis, onClose }) {
-  if (!defis || !defis.length) return null;
-  return (
-    <View style={styles.calOverlay}>
-      <View style={styles.calPanel}>
-        <TouchableOpacity style={styles.calClose} onPress={onClose}>
-          <Text style={styles.calCloseText}>✕</Text>
-        </TouchableOpacity>
-        <Text style={styles.calPanelTitle}>DÉFIS DE CET ŒUF</Text>
-        <View style={{ marginTop: 10 }}>
-          {defis.map((d, i) => (
-            <Text
-              key={d.id}
-              style={[styles.apercuLigne, d.fait && styles.apercuFait, d.courant && styles.apercuCourant]}
-            >
-              {d.fait ? '✅' : d.courant ? '▶️' : '•'} {i + 1}. {d.texte}
-            </Text>
-          ))}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// ⚠️ `onPress` s'applique au CONTENU, pas au conteneur.
-//
-// `challengeCard` est en `position: absolute` : l'envelopper dans un
-// TouchableOpacity changerait son parent de référence et déplacerait
-// toute la carte. Le toucher vit donc à l'intérieur, en remplissant la
-// carte.
-function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel, onPress }) {
+function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
   const ratio = target > 0 ? Math.min(1, current / target) : 0;
   const filled = Math.floor(ratio * segments);
@@ -4273,13 +4204,6 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
       style={styles.challengeCard}
       resizeMode="stretch"
     >
-      {!!onPress && (
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={0.85}
-          onPress={onPress}
-        />
-      )}
       {/* Étiquette du défi — zone vide mesurée au-dessus du cercle. */}
       <View style={styles.challengeLabelZone}>
         <Text style={styles.challengeLabel} numberOfLines={2}>
@@ -4334,7 +4258,6 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
           </Text>
         </View>
       )}
-
     </ImageBackground>
   );
 }
@@ -4598,9 +4521,6 @@ const styles = StyleSheet.create({
     position: 'absolute', left: '8%', right: '8%', top: '74.75%', height: '21.85%',
     alignItems: 'center', justifyContent: 'center',
   },
-  apercuLigne: { color: COLORS.muted, fontSize: 13, lineHeight: 22 },
-  apercuFait: { opacity: 0.45, textDecorationLine: 'line-through' },
-  apercuCourant: { color: COLORS.text, fontWeight: '700' },
   challengeCycle: { color: COLORS.muted, fontSize: 10, fontWeight: '700', textAlign: 'center' },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },
