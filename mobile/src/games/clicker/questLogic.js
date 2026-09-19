@@ -905,25 +905,16 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
     });
     const ids = kept.map((q) => q.id);
 
-    // `kept` vaut tout le cycle : ce bloc ne s'exécute plus jamais pour
-    // la séquence. Conservé pour les cycles hors séquence, qui passent
-    // par le même chemin.
-    const missing = cycle.length - kept.length;
-    if (missing > 0) {
-      // ⚠️ On transmet ce que l'œuf contient DÉJÀ, sinon le remplaçant
-      // duplique la famille du schéma (voir `familleDe`).
-      const dejaPris = { metriques: [], familles: {} };
-      kept.forEach((q) => {
-        dejaPris.metriques.push(q.metric);
-        const f = familleDe(q.metric);
-        dejaPris.familles[f] = (dejaPris.familles[f] || 0) + 1;
-      });
-      const sub = pickQuestSet([...excludeIds, ...ids], stats, dejaPris);
-      sub.ids.slice(0, missing).forEach((id) => {
-        ids.push(id);
-        targets[id] = sub.targets[id];
-      });
-    }
+    // ⚠️ LE BLOC DE REMPLACEMENT A ÉTÉ SUPPRIMÉ, PAS DÉSACTIVÉ.
+    //
+    // Depuis que `kept` vaut tout le cycle, il ne pouvait plus
+    // s'exécuter. Le garder revenait à laisser dans le code un chemin
+    // capable de glisser un défi du pool dans un œuf de la séquence —
+    // exactement le bug qu'on vient de passer la journée à traquer, en
+    // sommeil, prêt à se réveiller au premier changement de `kept`.
+    //
+    // Du code mort qui peut casser une garantie n'est pas du code mort :
+    // c'est un piège avec un délai.
     // ⚠️⚠️ L'ASCENSION EST TOUJOURS LE DERNIER DÉFI DE L'ŒUF.
     //
     // Signalé trois fois par l'auteur. Le défi d'Ascension était bien
@@ -1017,6 +1008,28 @@ const MAX_PAR_FAMILLE = {
   aventure: 2, rythme: 2, boutique: 2,
 };
 const MAX_PAR_FAMILLE_DEFAUT = 2;
+
+// ⚠️⚠️ POINT DE VÉRITÉ UNIQUE : « ce défi peut-il être remplacé ? »
+//
+// Le jeu comptait TROIS endroits capables de retirer un défi de l'œuf :
+// au tirage, au chargement de la sauvegarde, et en continu pendant la
+// partie. Chacun avait sa propre condition, écrite à la main. Résultat :
+// supprimer la substitution au tirage n'a rien changé chez l'auteur,
+// parce que les deux autres continuaient — et il a vu un défi de l'œuf 1
+// prendre la place de la Faveur des Esprits sous ses yeux.
+//
+// Une seule règle, ici : un défi de la SÉQUENCE n'est jamais remplacé.
+// Sa précondition est toujours un défi ANTÉRIEUR du même schéma, donc
+// elle finit par être remplie — il n'y a rien à réparer, juste à
+// avancer. Seuls les défis du POOL peuvent devenir irréalisables pour de
+// bon, et c'est pour eux que le mécanisme existe.
+//
+// ⚠️ TOUT code qui retire un défi d'un œuf DOIT passer par ici. Écrire
+// sa propre condition, c'est recréer le bug — et le contrôle
+// `auditSubstitutions` refuse justement toute exception.
+export function peutEtreRemplace(questId) {
+  return !SEQUENCE_QUESTS.some((q) => q.id === questId);
+}
 
 export function pickQuestSet(excludeIds = [], stats = {}, dejaPris = {}) {
   // `questAlreadyDone` en plus de `available` : un défi du pool à cible

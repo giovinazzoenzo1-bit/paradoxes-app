@@ -103,7 +103,7 @@ import {
   metricScopedToCycle,
   freezeMissingTargets,
   QUEST_DEFS_VERSION,
-  SEQUENCE_QUESTS,
+  peutEtreRemplace,
 } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
@@ -1031,9 +1031,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             // schéma reste en place : sa précondition est un défi
             // ANTÉRIEUR du même schéma, donc elle finit toujours par
             // être remplie.
-            const estScripte = (id) => SEQUENCE_QUESTS.some((q) => q.id === id);
             const stillOk = savedQuests.filter((id) => {
-              if (estScripte(id)) return true;
+              if (!peutEtreRemplace(id)) return true;
               const q = findQuest(id);
               return !q || !q.available || q.available(statsAtLoad);
             });
@@ -2140,7 +2139,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // remplie. Seuls les défis du POOL peuvent devenir irréalisables
     // pour de bon — c'est pour eux que ce mécanisme existe.
     const casses = activeQuestIds.filter(
-      (id) => !SEQUENCE_QUESTS.some((q) => q.id === id)
+      (id) => peutEtreRemplace(id)
         && !isQuestDone(id) && !questFeasible(findQuest(id), questStats)
     );
     if (!casses.length) return;

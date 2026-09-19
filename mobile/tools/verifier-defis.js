@@ -31,6 +31,7 @@ const CONTROLES = [
   ['auditDependanceCreature', 'ne dépend pas de posséder une créature'],
   ['auditRemplacements', 'aucun défi du schéma ne manque'],
   ['auditHorsSchema', 'aucun défi étranger glissé dans un œuf'],
+  ['auditSubstitutions', 'tout retrait de défi passe par la règle unique'],
 ];
 
 let echecs = 0;

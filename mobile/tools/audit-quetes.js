@@ -943,3 +943,56 @@ function auditHorsSchema(nbOeufs = 12) {
   return fautes;
 }
 module.exports.auditHorsSchema = auditHorsSchema;
+
+// ---- Tout retrait de défi passe-t-il par la règle unique ? ----------
+//
+// Le jeu comptait TROIS endroits capables de retirer un défi d'un œuf :
+// au tirage, au chargement, et en continu pendant la partie. Chacun
+// avait sa propre condition écrite à la main, et deux d'entre elles ne
+// distinguaient PAS les défis scriptés. Supprimer la première n'a donc
+// rien changé pour l'auteur : il a vu un défi de l'œuf 1 prendre la
+// place de la Faveur des Esprits pendant qu'il jouait.
+//
+// Ce contrôle lit le CODE de l'écran et du moteur, et vérifie que chaque
+// appel à `pickQuestSet` — la seule fonction qui fabrique des
+// remplaçants — est gardé par `peutEtreRemplace`, la règle unique.
+//
+// ⚠️ Il lit la SOURCE, pas le comportement : c'est le seul moyen de
+// repérer un QUATRIÈME chemin qu'on ajouterait demain sans y penser. Un
+// contrôle de comportement ne verrait que les chemins qu'il connaît.
+function auditSubstitutions() {
+  const fs = require('fs');
+  const fautes = [];
+  const fichiers = [
+    ['ClickerScreen.js', __dirname + '/../src/screens/games/ClickerScreen.js'],
+    ['questLogic.js', __dirname + '/../src/games/clicker/questLogic.js'],
+  ];
+  fichiers.forEach(([nom, chemin]) => {
+    const src = fs.readFileSync(chemin, 'utf8');
+    const lignes = src.split('\n');
+    // ⚠️ On COMPTE, on ne regarde pas le voisinage.
+    //
+    // Première version : la garde devait se trouver dans les 25 lignes
+    // précédentes. Un deuxième appel glissé juste après un appel gardé
+    // passait donc au travers — vérifié, le contrôle ne le voyait pas.
+    // Une garde par appel : impossible d'en ajouter un sans la sienne.
+    const appels = [];
+    lignes.forEach((ligne, i) => {
+      if (!/pickQuestSet\s*\(/.test(ligne)) return;
+      // La déclaration de la fonction elle-même, et l'usage interne du
+      // tirage hors séquence, ne sont pas des retraits de défi.
+      if (/export function pickQuestSet/.test(ligne)) return;
+      if (/fromSequence: false/.test(ligne)) return;
+      appels.push({ ligne: i + 1, code: ligne.trim().slice(0, 70) });
+    });
+    const gardes = (src.match(/peutEtreRemplace\s*\(/g) || []).length;
+    if (appels.length > gardes) {
+      appels.slice(gardes).forEach((a) => fautes.push({
+        fichier: nom, ligne: a.ligne, code: a.code,
+        detail: `${appels.length} appel(s) pour ${gardes} garde(s)`,
+      }));
+    }
+  });
+  return fautes;
+}
+module.exports.auditSubstitutions = auditSubstitutions;
