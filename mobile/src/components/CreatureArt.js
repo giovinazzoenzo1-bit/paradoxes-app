@@ -42,10 +42,8 @@ const CREATURE_ART = {
     require('../../assets/creatures/ventis/stage-1.png'),
     require('../../assets/creatures/ventis/stage-2.png'),
   ],
-  // ⚠️ Voltix : souris samouraï au bandeau jaune. Affectation DÉDUITE de
-  // l'élément (Foudre = jaune) et du rôle (attaquant = katana). À
-  // corriger si l'artiste visait une autre créature — il suffit de
-  // renommer le dossier et cette clé.
+  // Voltix : souris samouraï au bandeau jaune. Affectation CONFIRMÉE par
+  // l'auteur le 19/09.
   voltix: [
     require('../../assets/creatures/voltix/stage-0.png'),
     require('../../assets/creatures/voltix/stage-1.png'),

@@ -522,7 +522,9 @@ export const TAP_DAMAGE_PER_LEVEL = 1;
 // moteur. Peu de niveaux, très lisibles (1, 2, 3... pièces par tap), et
 // ce sont les générateurs qui portent l'économie ensuite.
 export const PACTE_COST_GROWTH = 2;
-export const PACTE_BASE_COST = 120;
+// ⚠️ 120 -> 84 : baisse de 30 % demandée le 19/09, appliquée à TOUS les
+// niveaux d'un coup puisque la courbe est `base x 2^(niveau-1)`.
+export const PACTE_BASE_COST = 84;
 export function tapDamage(level) {
   const lvl = Number.isFinite(level) ? Math.max(1, level) : 1;
   return (1 + (lvl - 1) * TAP_DAMAGE_PER_LEVEL) * COIN_SCALE;
@@ -1464,7 +1466,7 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // les revenus seuls la faisait exploser.
 export const AUTOCLICKERS = [
   { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 650, baseIncome: 0.6, tier: 1 },
-  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 8571, baseIncome: 4, tier: 1 },
+  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 6786, baseIncome: 4, tier: 1 },
   { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 76030, baseIncome: 16, tier: 1 },
   { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 723160, baseIncome: 89, tier: 1 },
   { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 6447000, baseIncome: 464, tier: 1 },
