@@ -2887,6 +2887,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   <Text style={styles.devSkipBtnText}>🛠️ Valider ▶️</Text>
                 </TouchableOpacity>
               )}
+              {/* ⚠️ Outil de TEST : franchit une Ascension d'un coup, sans
+                  passer par les six œufs du groupe.
+                  Valider les défis un par un demandait 31 appuis pour
+                  changer de groupe, alors que l'essentiel de ce qu'on
+                  vérifie — cibles, échelles, prix — dépend UNIQUEMENT du
+                  numéro d'Ascension. Ce bouton donne aussi les Griffes et
+                  le bonus, donc l'état obtenu est celui d'un vrai joueur. */}
+              <TouchableOpacity style={styles.devToolBtn} onPress={confirmAscension}>
+                <Text style={styles.devSkipBtnText}>🌟 Ascension +1</Text>
+              </TouchableOpacity>
             </View>
           )}
 
