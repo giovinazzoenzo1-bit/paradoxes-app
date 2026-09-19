@@ -23,6 +23,7 @@ const CONTROLES = [
   ['auditLibelles', 'le libellé dit la vraie cible'],
   ['auditLibelleSansArticle', 'aucun libellé sans son article'],
   ['auditRecompenseDoublee', 'aucune récompense ne double le bonus d Ascension'],
+  ['auditTamponsAscension', 'les gains en attente sont vidés à l Ascension'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
   ['auditAscension', 'ne diverge pas après les Ascensions'],

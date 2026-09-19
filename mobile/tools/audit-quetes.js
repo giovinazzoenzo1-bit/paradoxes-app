@@ -1286,3 +1286,50 @@ function auditRecompenseDoublee() {
   return fautes;
 }
 module.exports.auditRecompenseDoublee = auditRecompenseDoublee;
+
+// ---- Compteurs tamponnés non remis à zéro à l'Ascension --------------
+//
+// Bug réel du 19/09 : « je suis à A8 avec le bouton dev et en moins de
+// 3 minutes j'ai pu acheter 50 Étoiles Filantes ».
+//
+// Les pièces sont accumulées dans `pendingGainRef` et versées toutes les
+// 100 ms. L'Ascension faisait `setCoins(0)` sans toucher au tampon : ce
+// qui y attendait était versé JUSTE APRÈS la remise à zéro. Chaque
+// Ascension rendait donc au joueur ce qu'elle venait de lui prendre, et
+// le nouveau bonus s'appliquait ensuite à ce report.
+//
+// Ce contrôle lit la SOURCE et vérifie que chaque `...Ref` servant de
+// tampon est bien remis à zéro dans la routine d'Ascension.
+function auditTamponsAscension() {
+  const fs = require('fs');
+  const src = fs.readFileSync(__dirname + '/../src/screens/games/ClickerScreen.js', 'utf8');
+  const fautes = [];
+  // ⚠️ SEULS les tampons qui alimentent les PIÈCES sont concernés.
+  //
+  // Première version : toute ref incrémentée. Elle signalait
+  // `totalCritsRef`, `goldenClaimedRef`, `totalSummonsRef` — des
+  // compteurs À VIE qui doivent justement survivre à l'Ascension. Un
+  // contrôle qui réclame de casser des choses justes ne sera pas suivi.
+  //
+  // On repère donc les refs dont le contenu finit dans `setCoins`.
+  const tampons = new Set();
+  const lignes = src.split('\n');
+  lignes.forEach((ligne, i) => {
+    const m = ligne.match(/setCoins\(\(c\) => c \+ (\w+)\)/);
+    if (!m) return;
+    // La variable vient d'une ref lue juste au-dessus.
+    const avant = lignes.slice(Math.max(0, i - 4), i).join('\n');
+    const src2 = avant.match(/const \w+ = (\w+Ref)\.current/);
+    if (src2) tampons.add(src2[1]);
+  });
+  const i = src.indexOf('const confirmAscension');
+  if (i === -1) return [{ probleme: 'confirmAscension introuvable' }];
+  const routine = src.slice(i, i + 4000);
+  tampons.forEach((t) => {
+    if (!new RegExp(t + '\\.current = 0').test(routine)) {
+      fautes.push({ tampon: t, probleme: 'non remis à zéro par l\'Ascension' });
+    }
+  });
+  return fautes;
+}
+module.exports.auditTamponsAscension = auditTamponsAscension;

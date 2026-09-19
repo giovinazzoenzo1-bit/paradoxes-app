@@ -1846,6 +1846,25 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           {
             trackEvent('ascension', 1);
             // Remise à zéro de la SEULE économie du clicker.
+            // ⚠️⚠️ VIDER LE TAMPON DE GAINS AVANT de remettre à zéro.
+            //
+            // Les pièces sont accumulées dans `pendingGainRef` et
+            // versées toutes les 100 ms. `setCoins(0)` ne le touchait
+            // pas : tout ce qui attendait dans le tampon était versé
+            // JUSTE APRÈS la remise à zéro, donc conservé d'une
+            // Ascension à l'autre.
+            //
+            // Signalé le 19/09 : l'auteur enchaîne huit Ascensions au
+            // bouton de dev et se retrouve capable d'acheter 50 Étoiles
+            // Filantes en trois minutes. Chaque passage lui rendait ce
+            // qu'il venait de perdre, et le bonus d'Ascension
+            // s'appliquait ensuite à ce report.
+            //
+            // ⚠️ La même remise à zéro doit valoir pour TOUT compteur
+            // tamponné qu'on ajouterait plus tard : ce qui est en
+            // attente appartient à la partie qu'on est en train de
+            // clore.
+            pendingGainRef.current = 0;
             setCoins(0);
             setTotalEarned(0);
             setTapPower(1);
