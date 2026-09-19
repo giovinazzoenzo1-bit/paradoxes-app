@@ -1370,3 +1370,67 @@ function auditPrixParAscension(tolerance = 0.15) {
   return fautes;
 }
 module.exports.auditPrixParAscension = auditPrixParAscension;
+
+// ---- Défis INFAISABLES, mesurés sur la vraie progression ------------
+//
+// ⚠️ Ce contrôle remplace celui de `verif-exhaustive.js`, qui partait
+// d'un état FIGÉ (6 Esprits, 4 Mains à tous les groupes). Les deux se
+// contredisaient : le même défi ressortait « infaisable » ici et « 0
+// minute » là-bas, simplement parce qu'ils ne supposaient pas le même
+// joueur. Deux instruments qui ne partagent pas leur état ne peuvent
+// pas être comparés — c'est le piège qui a déjà fait perdre des heures
+// sur les durées de groupe.
+//
+// Ici on rejoue la séquence, donc on sait ce que le joueur POSSÈDE
+// vraiment quand le défi tombe.
+function auditInfaisable(nbOeufs = 26, partMax = 0.6) {
+  const trouves = [];
+  const s = etatInitial();
+  s.ownedIds = []; s.ownedCount = 0; s.deckCount = 0;
+  let numero = 0;
+  for (let oeuf = 0; oeuf < nbOeufs; oeuf++) {
+    if ((s.tapPower || 1) >= 5) {
+      s.critLevel = Math.max(1, s.critLevel || 0);
+      s.critDamageLevel = Math.max(1, s.critDamageLevel || 0);
+    }
+    const set = Q.nextQuestSet(oeuf, [], s);
+    set.ids.forEach((id) => {
+      const q = Q.findQuest(id);
+      if (!q) return;
+      numero += 1;
+      const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
+      const met = Q.metriqueDuDefi(q, s) || '';
+      if (met.startsWith('auto:') || met.startsWith('tapUpgrade:')) {
+        const estAuto = met.startsWith('auto:');
+        const item = estAuto
+          ? C.AUTOCLICKERS.find((x) => x.id === met.slice(5))
+          : C.TAP_UPGRADES.find((x) => x.id === met.slice(11));
+        if (item) {
+          const possede = estAuto ? ((s.autoClickers || {})[item.id] || 0)
+            : ((s.tapUpgrades || {})[item.id] || 0);
+          let cout = 0;
+          for (let n = possede; n < cible && n < possede + 300; n++) {
+            cout += estAuto ? C.autoClickerCost(item, n, s.ascension)
+              : C.tapUpgradeCost(item, n, s.ascension);
+          }
+          const seuil = C.ascensionThreshold(s.ascension || 0);
+          if (cout > seuil * partMax) {
+            trouves.push({ n: numero, oeuf: oeuf + 1, id,
+              texte: Q.questLabel(id, null, s, set.targets || {}),
+              part: Math.round(100 * cout / seuil) });
+          }
+        }
+      }
+      const m = minutesPour(q, cible, s);
+      if (m != null) s.totalEarned = (s.totalEarned || 0) + production(s) * 60 * m;
+      appliquer(q, cible, s);
+    });
+    const nv = C.CREATURES[Math.min(oeuf, C.CREATURES.length - 1)];
+    if (nv && !s.ownedIds.includes(nv.id)) s.ownedIds.push(nv.id);
+    s.ownedCount = s.ownedIds.length;
+    s.deckCount = Math.min(3, s.ownedCount);
+    s.passiveIncome = passiveOnly(s);
+  }
+  return trouves;
+}
+module.exports.auditInfaisable = auditInfaisable;

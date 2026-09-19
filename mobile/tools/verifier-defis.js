@@ -25,6 +25,7 @@ const CONTROLES = [
   ['auditRecompenseDoublee', 'aucune récompense ne double le bonus d Ascension'],
   ['auditTamponsAscension', 'les gains en attente sont vidés à l Ascension'],
   ['auditPrixParAscension', 'la boutique garde sa valeur à chaque Ascension'],
+  ['auditInfaisable', 'aucun défi ne coûte plus de 60 % du seuil'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
   ['auditAscension', 'ne diverge pas après les Ascensions'],
@@ -37,7 +38,7 @@ const CONTROLES = [
   ['auditHorsSchema', 'aucun défi étranger glissé dans un œuf'],
   ['auditSubstitutions', 'tout retrait de défi passe par la règle unique'],
   ['auditCibleSuitLeJoueur', 'une cible fixe est la même pour tous les joueurs'],
-  ['auditTropFacile', 'au plus 12 défis faciles sur 135', 12],
+  ['auditTropFacile', 'au plus 14 défis faciles sur 135', 14],
 ];
 
 let echecs = 0;

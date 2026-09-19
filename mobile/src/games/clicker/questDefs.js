@@ -134,12 +134,20 @@ export function generateurDuGroupe(rang) {
     // d'en dessous. Reculer davantage rendait les défis dérisoires :
     // mesuré, « Possède 6 Esprits Frappeurs » tombait à 0 minute dès le
     // 2e groupe parce que les bas paliers ne coûtent plus rien.
-    // ⚠️ Remonter d'un cran a été ESSAYÉ et mesuré : les défis
-    // devenaient infaisables au 5e groupe (« 6 Hérauts d'Orage » = 2x le
-    // seuil) sans réduire le nombre de défis trop faciles. On reste donc
-    // au palier le plus récent du groupe et à celui d'en dessous.
-    const plusHaut = groupe === 0 ? 1 : groupe * 2;
-    const i = Math.max(0, Math.min(plusHaut, plusHaut - rang));
+    // ⚠️⚠️ UN SEUL nouveau palier par Ascension, pas deux.
+    //
+    // Avec deux, le palier visé à A5 était le Héraut d'Orage (11e) : «
+    // possède 3 Hérauts d'Orage » alors que le joueur en est au Golem.
+    // L'auteur l'a dit ainsi — « le défi approprié à ce moment-là serait
+    // possède 4 Golems de Cristal ». Avec un palier par groupe, A5 tombe
+    // exactement sur le Golem.
+    //
+    // Deux paliers par groupe demandaient x25 de rendement quand le
+    // seuil ne monte que de x5 à x8 : la boutique s'éloignait toujours.
+    // Un seul palier par groupe la fait suivre, et les 15 générateurs
+    // couvrent les 15 Ascensions du barème.
+    const plusHaut = groupe;
+    const i = Math.max(0, Math.min(AUTOCLICKERS.length - 1, plusHaut - rang));
     const item = AUTOCLICKERS[Math.min(i, AUTOCLICKERS.length - 1)];
     return item ? `auto:${item.id}` : null;
   };
@@ -308,7 +316,7 @@ export const QUEST_SEQUENCE = [
     // L'Esprit Frappeur en dur reste la moins mauvaise option : c'est le
     // premier générateur du jeu, l'œuf 1 est le seul endroit où il est
     // encore cher, et il n'entre en conflit avec aucune autre famille.
-    { id: 'g1_esprit', icon: '👻', metric: 'auto:esprit', target: 8, capAbsolu: 10,
+    { id: 'g1_esprit', icon: '👻', metric: 'auto:esprit', target: 10, capAbsolu: 14,
       echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
@@ -418,7 +426,7 @@ export const QUEST_SEQUENCE = [
     // générateur figé : Esprit Frappeur au départ, puis Automate,
     // Titan, Dragon... C'est ainsi que le joueur découvre sa boutique.
     { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
-      target: 3, capAbsolu: 5, echelle: 'unites', mode: 'absolute',
+      target: 8, capAbsolu: 12, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
@@ -484,7 +492,7 @@ export const QUEST_SEQUENCE = [
     // Le 2e générateur du groupe : Main Spectrale, puis Colonie, Golem,
     // Phénix, Gardien...
     { id: 'g5_gen2', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 6, capAbsolu: 8, echelle: 'unites', mode: 'absolute',
+      target: 12, capAbsolu: 16, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
@@ -723,7 +731,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 16;
+export const QUEST_ENGINE_VERSION = 17;
 
 function empreinteDefis() {
   const morceaux = [];
