@@ -99,7 +99,7 @@ export const QUEST_SEQUENCE = [
     // décrochait avant d'avoir compris à quoi sert le bouton.
     { id: 'g_e1_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.0015, mode: 'delta',
       label: (t) => `Obtiens ${fmtQ(t)} pièces` },
-    { id: 'g_e1_pacte', icon: '🔗', metric: 'tapPower', partAsc: 0.02, mode: 'absolute',
+    { id: 'g_e1_pacte', icon: '🔗', metric: 'tapPower', partAsc: 0.01, mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
     // « +15 % au-dessus de l'acquis » la poussait à 641 secondes.
@@ -108,7 +108,7 @@ export const QUEST_SEQUENCE = [
     // ⚠️ Générateur NOMMÉ, jamais un total. « Possède 7 auto-clics en
     // tout » ne dit rien au joueur : il ne sait pas quoi acheter, et deux
     // chemins différents valident le même défi.
-    { id: 'g_e1_auto1', icon: '👻', metric: 'auto:esprit', partAsc: 0.03, mode: 'absolute',
+    { id: 'g_e1_auto1', icon: '👻', metric: 'auto:esprit', partAsc: 0.018, mode: 'absolute',
       label: (t) => `Possède ${t} Esprits Frappeurs` },
     { id: 'g_e1_golden', icon: '⭐', metric: 'goldenClaimed', target: 3, mode: 'delta',
       label: (t) => `Touche ${t} fois la cible dorée` },
@@ -124,10 +124,24 @@ export const QUEST_SEQUENCE = [
       available: (s) => coreUpgradeUnlocked('sanctuaire', s) && (s.sanctuaryLevel || 0) < SANCTUARY_MAX_LEVEL,
       label: (t) => `Monte le Sanctuaire au niveau ${t}` },
     { id: 'g_e2_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
-      available: (s) => (s.deckCount || 0) > 0,
+      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
+      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
+      // des créatures mais n'a pas encore garni son deck voyait tous ses
+      // défis d'Aventure disparaître en silence, remplacés par des défis
+      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
+      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
+      // créature suffit : le deck se remplit en deux gestes.
+      available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g_e2_crit', icon: '💥', metric: 'totalCrits', target: 30, mode: 'delta',
       label: (t) => `Obtiens ${t} coups critiques` },
+    // ⚠️ 6e défi de l'œuf 2 : le Sanctuaire et le premier palier
+    // d'Aventure doivent apparaître TOUS LES DEUX. Ils se disputaient la
+    // même place, et l'Aventure perdait dès que le deck était vide.
+    // Un cycle peut compter 6 défis : l'œuf éclot quand tous sont
+    // validés, jamais à un compte fixe.
+    { id: 'g_e2_taps', icon: '👆', metric: 'totalTaps', target: 600, mode: 'delta',
+      label: (t) => `Tape ${fmtQ(t)} fois` },
     { id: 'g_e2_auto2', icon: '🖐️', metric: 'auto:main', partAsc: 0.06, mode: 'absolute',
       label: (t) => `Possède ${t} Mains Spectrales` },
   ],
@@ -153,7 +167,14 @@ export const QUEST_SEQUENCE = [
     // Ascension — l'Aventure est une campagne, pas une économie. Un
     // `step` repart donc du niveau réellement atteint, jamais de zéro.
     { id: 'g_e3_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
-      available: (s) => (s.deckCount || 0) > 0,
+      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
+      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
+      // des créatures mais n'a pas encore garni son deck voyait tous ses
+      // défis d'Aventure disparaître en silence, remplacés par des défis
+      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
+      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
+      // créature suffit : le deck se remplit en deux gestes.
+      available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g_e3_power', icon: '✨', metric: 'powerActivated', target: 5, mode: 'delta',
       label: (t) => `Active ${t} fois un pouvoir` },
@@ -172,7 +193,14 @@ export const QUEST_SEQUENCE = [
       available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Monte une créature au niveau ${t}` },
     { id: 'g_e4_stars', icon: '🌟', metric: 'threeStarLevel', target: 1, mode: 'delta',
-      available: (s) => (s.deckCount || 0) > 0,
+      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
+      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
+      // des créatures mais n'a pas encore garni son deck voyait tous ses
+      // défis d'Aventure disparaître en silence, remplacés par des défis
+      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
+      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
+      // créature suffit : le deck se remplit en deux gestes.
+      available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => (t > 1
         ? `Décroche toutes les étoiles sur ${t} niveaux d'Aventure`
         : "Décroche toutes les étoiles sur un niveau d'Aventure") },
@@ -197,7 +225,14 @@ export const QUEST_SEQUENCE = [
     { id: 'g_e5_auto3', icon: '🤖', metric: 'auto:automate', partAsc: 0.20, mode: 'absolute',
       label: (t) => `Achète ${t} Automates Runiques` },
     { id: 'g_e5_adv', icon: '⚔️', metric: 'advLevelReached', step: 5, mode: 'absolute',
-      available: (s) => (s.deckCount || 0) > 0,
+      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
+      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
+      // des créatures mais n'a pas encore garni son deck voyait tous ses
+      // défis d'Aventure disparaître en silence, remplacés par des défis
+      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
+      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
+      // créature suffit : le deck se remplit en deux gestes.
+      available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Termine le ${describeAdventureLevel(t)}` },
     { id: 'g_e5_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, cap: 75, mode: 'absolute',
       label: (t) => `Tiens la Transe pendant ${t} secondes` },
@@ -218,7 +253,14 @@ export const QUEST_SEQUENCE = [
       available: (s) => coreUpgradeUnlocked('critDamage', s),
       label: (t) => `Monte les Dégâts critiques au niveau ${t}` },
     { id: 'g_e6_adv', icon: '🗡️', metric: 'battleWon', target: 6, mode: 'delta',
-      available: (s) => (s.deckCount || 0) > 0,
+      // ⚠️ `ownedCount` et NON `deckCount` : `deckCount` compte les
+      // créatures PLACÉES dans le deck d'Aventure. Un joueur qui possède
+      // des créatures mais n'a pas encore garni son deck voyait tous ses
+      // défis d'Aventure disparaître en silence, remplacés par des défis
+      // du pool. Symptôme signalé : « à la place de chapitre 1 niveau 5,
+      // c'est le défi de Sanctuaire qui apparaît ». Posséder une
+      // créature suffit : le deck se remplit en deux gestes.
+      available: (s) => (s.ownedCount || 0) > 0,
       label: (t) => `Gagne ${t} combats en Aventure` },
     { id: 'g_e6_offering', icon: '🕯️', metric: 'offering', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Fais ${t} Offrandes` : 'Fais une Offrande') },
