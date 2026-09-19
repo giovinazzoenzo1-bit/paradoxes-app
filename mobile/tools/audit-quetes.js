@@ -130,6 +130,18 @@ function minutesPour(q, cible, s) {
   if (m === 'tapPower') return tempsAchatsCumules(s, (x, n) => { x.tapPower = n; }, C.tapPowerCost, s.tapPower, cible);
   if (m === 'sanctuaryLevel') return tempsAchatsCumules(s, (x, n) => { x.sanctuaryLevel = n; }, C.sanctuaryUpgradeCost, s.sanctuaryLevel, cible);
   if (m === 'veilleurLevel') return tempsAchatsCumules(s, (x, n) => { x.veilleurLevel = n; }, C.veilleurUpgradeCost, s.veilleurLevel, cible);
+  // ⚠️ TROU DE L'INSTRUMENT, comblé le 19/09.
+  //
+  // `critLevel` et `critDamageLevel` n'étaient pas modélisés : la mesure
+  // rendait `?`, et un `?` se lit comme « pas d'info » alors qu'il veut
+  // dire « je ne sais pas mesurer ». C'est comme ça que « Monte les
+  // Dégâts critiques au niveau 3 » — 918 pièces, moins d'une minute et
+  // demie — m'a échappé alors que l'auteur l'a vu du premier coup d'œil.
+  //
+  // ⚠️ Un `?` dans un tableau de mesures n'est JAMAIS neutre : c'est un
+  // angle mort, et c'est exactement là que se cachent les défauts.
+  if (m === 'critLevel') return tempsAchatsCumules(s, (x, n) => { x.critLevel = n; }, C.critUpgradeCost, s.critLevel, cible);
+  if (m === 'critDamageLevel') return tempsAchatsCumules(s, (x, n) => { x.critDamageLevel = n; }, C.critDamageUpgradeCost, s.critDamageLevel, cible);
   if (m.startsWith('upgrade:')) {
     const it = C.UPGRADE_ITEMS.find((u) => u.id === m.slice(8));
     if (!it) return null;
@@ -996,3 +1008,72 @@ function auditSubstitutions() {
   return fautes;
 }
 module.exports.auditSubstitutions = auditSubstitutions;
+
+// ---- Défis TROP FACILES ---------------------------------------------
+//
+// Demandé par l'auteur après en avoir repéré deux à l'œil sur le seul
+// œuf 3 — dont un que mon instrument ne savait même pas mesurer.
+//
+// On rejoue les 26 œufs en suivant la séquence, et on compare pour
+// chaque défi ce que le joueur A DÉJÀ à ce que le défi DEMANDE. Trois
+// signaux, chacun suffisant :
+//
+//  - moins de `MIN_MINUTES` d'effort réel ;
+//  - il reste moins de `MIN_PROGRESSION` de chemin depuis l'acquis ;
+//  - la même métrique déjà visée moins de `ECART_OEUFS` œufs plus tôt
+//    avec une cible à peine plus haute.
+const FACILE_MIN_MINUTES = 3;
+const FACILE_MIN_PROGRESSION = 0.25;
+const FACILE_ECART_OEUFS = 4;
+const FACILE_HAUSSE_MINI = 1.5;
+
+function auditTropFacile(nbOeufs = 26) {
+  const trouves = [];
+  const s = etatInitial();
+  s.ownedIds = []; s.ownedCount = 0; s.deckCount = 0;
+  const vuRecemment = {};   // metric -> { oeuf, cible }
+  let numero = 0;
+  for (let oeuf = 0; oeuf < nbOeufs; oeuf++) {
+    if ((s.tapPower || 1) >= 5) {
+      s.critLevel = Math.max(1, s.critLevel || 0);
+      s.critDamageLevel = Math.max(1, s.critDamageLevel || 0);
+    }
+    const set = Q.nextQuestSet(oeuf, [], s);
+    set.ids.forEach((id) => {
+      const q = Q.findQuest(id);
+      if (!q) return;
+      numero += 1;
+      const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
+      const acquis = q.metric.startsWith('auto:') ? ((s.autoClickers || {})[q.metric.slice(5)] || 0)
+        : q.metric.startsWith('tapUpgrade:') ? ((s.tapUpgrades || {})[q.metric.slice(11)] || 0)
+          : (s[q.metric] || 0);
+      const min = minutesPour(q, cible, s);
+      const raisons = [];
+      if (min != null && min < FACILE_MIN_MINUTES) raisons.push(`${Math.round(min)} min`);
+      if (q.mode === 'absolute' && acquis > 0 && cible > 0) {
+        const progression = (cible - acquis) / cible;
+        if (progression < FACILE_MIN_PROGRESSION) {
+          raisons.push(`déjà ${Math.round(100 * acquis / cible)} % acquis`);
+        }
+      }
+      const vu = vuRecemment[q.metric];
+      if (vu && oeuf - vu.oeuf < FACILE_ECART_OEUFS && cible < vu.cible * FACILE_HAUSSE_MINI) {
+        raisons.push(`déjà demandé à l'œuf ${vu.oeuf + 1} (cible ${vu.cible})`);
+      }
+      vuRecemment[q.metric] = { oeuf, cible };
+      if (raisons.length) {
+        trouves.push({ n: numero, oeuf: oeuf + 1, id, texte: Q.questLabel(id, null, s, set.targets || {}), pourquoi: raisons });
+      }
+      const m = minutesPour(q, cible, s);
+      if (m != null) s.totalEarned = (s.totalEarned || 0) + production(s) * 60 * m;
+      appliquer(q, cible, s);
+    });
+    const nv = C.CREATURES[Math.min(oeuf, C.CREATURES.length - 1)];
+    if (nv && !s.ownedIds.includes(nv.id)) s.ownedIds.push(nv.id);
+    s.ownedCount = s.ownedIds.length;
+    s.deckCount = Math.min(3, s.ownedCount);
+    s.passiveIncome = passiveOnly(s);
+  }
+  return trouves;
+}
+module.exports.auditTropFacile = auditTropFacile;
