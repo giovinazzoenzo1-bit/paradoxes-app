@@ -115,10 +115,23 @@ export const EGG_STAGES = [
 // ⚠️ Sans ça, aucun défi ne parlait jamais de l'Automate Runique, de la
 // Colonie, de la Poigne ni du Gantelet : le joueur ne découvrait pas la
 // moitié de sa boutique.
+// ⚠️ `rang` 0 vise le 1er générateur découvert au groupe, `rang` 1 le
+// PRÉCÉDENT — pas le second du groupe.
+//
+// Mesuré : deux paliers d'un même groupe sont séparés d'un facteur 3 en
+// prix. Les demander tous les deux dans le même budget rendait le
+// second infaisable dès A3 (« Possède 6 Phénix » = 5x le seuil). Viser
+// le palier d'en dessous garde deux défis d'achat distincts par groupe,
+// tous deux réalisables, et le joueur découvre quand même le nouveau
+// palier par le premier défi.
 export function generateurDuGroupe(rang) {
   return (groupe) => {
     // A0 ouvre les deux premiers générateurs, puis 2 par Ascension.
-    const i = groupe === 0 ? rang : groupe * 2 + rang;
+    // ⚠️ Au groupe 0 le joueur n'a que les deux premiers générateurs :
+    // reculer de 2 ou 3 crans renverrait un palier qu'il n'a pas encore
+    // les moyens d'acheter. On borne donc au plus haut palier ouvert.
+    const plusHaut = groupe === 0 ? 1 : groupe * 2;
+    const i = Math.max(0, Math.min(plusHaut, plusHaut - rang));
     const item = AUTOCLICKERS[Math.min(i, AUTOCLICKERS.length - 1)];
     return item ? `auto:${item.id}` : null;
   };
@@ -164,12 +177,18 @@ export const ECHELLES_GROUPE = {
   // multiplié par ~10 par groupe : il peut donc s'en offrir une dizaine
   // de plus à chaque fois. L'ancienne échelle demandait 7 Esprits au 2e
   // groupe — bouclé en 3 minutes.
-  // ⚠️ Plafonnée à 25 exemplaires par les défis eux-mêmes (`cap: 25`).
-  // Sans plafond, l'échelle demandait 60 Mains Spectrales au 4e groupe :
-  // le prix monte de 25 % par exemplaire, donc les 45 derniers coûtaient
-  // 128 470 minutes à eux seuls. Aucun joueur n'empile 60 exemplaires du
-  // même générateur — il monte de palier.
-  unites: [1, 2.5, 4, 5.5, 7.5, 10],
+  // ⚠️⚠️ PAS D'ÉCHELLE SUR LE NOMBRE D'EXEMPLAIRES.
+  //
+  // Le prix d'un générateur monte de 25 % à chaque exemplaire : 50
+  // unités coûtent 21 000 fois la première. Demander « 50 Golems » au 3e
+  // groupe revenait donc à demander 10 000 fois le seuil de l'Ascension
+  // — l'auteur a mis 20 minutes à acheter UN Titan quand le défi en
+  // réclamait 45.
+  //
+  // La difficulté d'un groupe vient du PALIER visé, qui change à chaque
+  // Ascension, pas de la quantité. Une dizaine d'exemplaires reste la
+  // bonne mesure à tous les niveaux.
+  unites: [1, 1, 1, 1, 1, 1],
   // Actions répétées (critiques, taps, dorées, pouvoirs) : le joueur ne
   // tape pas plus vite après une Ascension. On monte doucement, sinon le
   // défi devient une corvée de durée pure.
@@ -244,7 +263,7 @@ export const QUEST_SEQUENCE = [
     // L'ACCROCHE. Le tout premier défi du jeu doit se boucler en 2-3
     // minutes, sinon le joueur décroche avant d'avoir compris le bouton.
     { id: 'g1_coins', icon: '🪙', metric: 'totalEarned', target: 750, echelle: 'pieces', mode: 'delta',
-      label: (t) => `Obtiens ${fmtQ(t)} pièces` },
+      label: (t) => `Obtiens ${qtyQ(t, 'pièces')}` },
     // ⚠️ `cap` OBLIGATOIRE sur le Pacte : son coût DOUBLE par niveau,
     // donc un seul cran de trop coûte le double du précédent. Sans
     // plafond, le plancher « plus que l'acquis » le faisait grimper d'œuf
@@ -256,7 +275,28 @@ export const QUEST_SEQUENCE = [
     // pièces voisin du même œuf — l'ordre de grandeur voulu.
     { id: 'g1_pacte', icon: '🔗', metric: 'tapPower', target: 7, capAbsolu: 20, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
-    { id: 'g1_esprit', icon: '👻', metric: 'auto:esprit', target: 5, capAbsolu: 32, echelle: 'unites', mode: 'absolute',
+    // ⚠️ DEUX défis d'achat par groupe, pas quatre.
+    //
+    // Essayé : quatre défis visant chacun un palier différent du groupe.
+    // Impossible à équilibrer — les paliers sont séparés d'un facteur 3
+    // en prix, donc les hauts sont infaisables et les bas dérisoires
+    // (mesuré : « 6 Phénix » = 5x le seuil, « 8 Esprits » = 0 minute).
+    // Les deux défis d'achat qui suivent le groupe sont `g3_gen1` et
+    // `g5_gen2` ; ce créneau-ci reste un défi de RYTHME.
+    // ⚠️ Ce créneau a porté quatre variantes avant de revenir ici,
+    // toutes écartées PAR LA MESURE :
+    //   - un défi d'achat suivant le groupe : dérisoire dès A2, parce
+    //     que les paliers bas ne coûtent plus rien ;
+    //   - les dorées, puis les taps : troisième défi de RYTHME dans un
+    //     œuf qui en compte déjà deux ;
+    //   - les critiques : doublon avec l'œuf 2 ;
+    //   - la réserve de pièces : deuxième défi d'ÉCONOMIE de l'œuf.
+    //
+    // L'Esprit Frappeur en dur reste la moins mauvaise option : c'est le
+    // premier générateur du jeu, l'œuf 1 est le seul endroit où il est
+    // encore cher, et il n'entre en conflit avec aucune autre famille.
+    { id: 'g1_esprit', icon: '👻', metric: 'auto:esprit', target: 8, capAbsolu: 10,
+      echelle: 'unites', mode: 'absolute',
       label: (t) => `Possède ${t} Esprit${t > 1 ? 's' : ''} Frappeur${t > 1 ? 's' : ''}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
     // « +15 % au-dessus de l'acquis » l'a déjà poussée à 641 secondes.
@@ -272,7 +312,7 @@ export const QUEST_SEQUENCE = [
   // Mesuré en fin d'œuf : ~36 000 gagnés, 6 pièces/s, Pacte 9, 1 Main.
   [
     { id: 'g2_passif', icon: '⚙️', metric: 'passiveIncome', target: 7, echelle: 'pieces', mode: 'absolute',
-      label: (t) => `Atteins ${fmtQ(t)} pièces par seconde` },
+      label: (t) => `Atteins ${qtyQ(t, 'pièces')} par seconde` },
     // 1er maillon de la chaîne de boutique : Pacte 5 -> Faveur ->
     // Dégâts critiques -> Sanctuaire -> Veilleur. Chaque maillon est un
     // défi, dans l'ordre, sinon le suivant n'est pas débloqué et le pool
@@ -305,9 +345,11 @@ export const QUEST_SEQUENCE = [
     // reste 200. `minStep` garantit qu'il en reste toujours au moins 200
     // à faire, même à un joueur qui en a déjà des milliers — sinon le
     // défi naîtrait accompli.
-    { id: 'g2_taps', icon: '👆', metric: 'totalTaps', target: 800, minStep: 200,
-      echelle: 'actions', mode: 'absolute',
-      label: (t) => `Atteins ${fmtQ(t)} taps au total` },
+    // ⚠️ `totalTaps` est déjà pris par l'œuf 1 : ce créneau vise les
+    // combats, la seule famille encore libre dans cet œuf.
+    { id: 'g2_taps', icon: '🗡️', metric: 'battleWon', target: 4, echelle: 'aventure', mode: 'delta',
+      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
+      label: (t) => `Gagne ${t} combat${t > 1 ? 's' : ''} en Aventure` },
     // ⚠️ Le 1er palier de tap du groupe. Nul avant la 1re Ascension :
     // le premier palier exige Pacte 10, que le joueur n'atteint qu'au 2e
     // groupe. `available` le retire donc proprement au groupe 0.
@@ -319,9 +361,10 @@ export const QUEST_SEQUENCE = [
     //
     // À traiter avec le déplacement du créneau APRÈS le défi de Pacte,
     // ou en avançant l'ouverture du premier palier.
-    { id: 'g2_main', icon: '🖐️', metric: 'auto:main', target: 2, capAbsolu: 32,
-      echelle: 'unites', mode: 'absolute',
-      label: (t) => `Possède ${t} Main${t > 1 ? 's' : ''} Spectrale${t > 1 ? 's' : ''}` },
+    // Même raison : ce créneau redevient un défi d'ACTION.
+    { id: 'g2_main', icon: '👆', metric: 'totalTaps', target: 1500, minStep: 300,
+      echelle: 'actions', mode: 'absolute',
+      label: (t) => `Atteins ${fmtQ(t)} taps au total` },
   ],
 
   // ══════════════════ ŒUF 3 — S'ÉQUIPER ══════════════════
@@ -329,7 +372,7 @@ export const QUEST_SEQUENCE = [
   // 4 Mains.
   [
     { id: 'g3_reserve', icon: '💰', metric: 'coins', target: 25000, echelle: 'pieces', mode: 'absolute',
-      label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
+      label: (t) => `Mets ${qtyQ(t, 'pièces')} de côté` },
     // 2e maillon : ouvert par la Faveur de l'œuf 2, ouvre le Sanctuaire.
     // ⚠️ Niveau 3 -> 9. À 3, le défi coûtait 918 pièces à un joueur qui
     // en gagne 660 par MINUTE : bouclé en une minute vingt. Le niveau 9
@@ -362,7 +405,7 @@ export const QUEST_SEQUENCE = [
     // générateur figé : Esprit Frappeur au départ, puis Automate,
     // Titan, Dragon... C'est ainsi que le joueur découvre sa boutique.
     { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
-      target: 8, capAbsolu: 45, echelle: 'unites', mode: 'absolute',
+      target: 3, capAbsolu: 5, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
@@ -415,20 +458,20 @@ export const QUEST_SEQUENCE = [
     // et le défi de l'œuf 2 les lui fait justement acheter.
     // Même report que le créneau de l'œuf 2.
     { id: 'g4_coins', icon: '🪙', metric: 'totalEarned', target: 60000, echelle: 'pieces', mode: 'delta',
-      label: (t) => `Obtiens ${fmtQ(t)} pièces` },
+      label: (t) => `Obtiens ${qtyQ(t, 'pièces')}` },
   ],
 
   // ══════════════════ ŒUF 5 — MONTER EN PUISSANCE ══════════════════
   // Mesuré en fin d'œuf : ~300 000 gagnés, 134 pièces/s de revenu.
   [
     { id: 'g5_reserve', icon: '💰', metric: 'coins', target: 90000, echelle: 'pieces', mode: 'absolute',
-      label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
+      label: (t) => `Mets ${qtyQ(t, 'pièces')} de côté` },
     // 5 -> 6 : le joueur en a déjà 4 à ce stade, viser 5 n'était qu'un
     // achat. 6 correspond au budget de l'œuf.
     // Le 2e générateur du groupe : Main Spectrale, puis Colonie, Golem,
     // Phénix, Gardien...
     { id: 'g5_gen2', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 14, capAbsolu: 50, echelle: 'unites', mode: 'absolute',
+      target: 6, capAbsolu: 8, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
@@ -453,7 +496,7 @@ export const QUEST_SEQUENCE = [
   // pièces gagnées, et l'Ascension demande le reste.
   [
     { id: 'g6_coins', icon: '🪙', metric: 'totalEarned', target: 120000, echelle: 'pieces', mode: 'delta',
-      label: (t) => `Obtiens ${fmtQ(t)} pièces` },
+      label: (t) => `Obtiens ${qtyQ(t, 'pièces')}` },
     { id: 'g6_pacte', icon: '🔗', metric: 'tapPower', target: 10, capAbsolu: 23, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     { id: 'g6_combats', icon: '🗡️', metric: 'battleWon', target: 5, echelle: 'aventure', mode: 'delta',
@@ -488,7 +531,7 @@ export const QUEST_POOL = [
   { id: 'earnLong', family: 'economy', icon: '💰', metric: 'totalEarned', effortMin: 60, mode: 'delta',
     label: (t) => `Gagne ${qtyQ(t, 'pièces')}` },
   { id: 'holdLong', family: 'economy', icon: '🏦', metric: 'coins', effortMin: 75, mode: 'absolute',
-    label: (t) => `Mets ${fmtQ(t)} pièces de côté` },
+    label: (t) => `Mets ${qtyQ(t, 'pièces')} de côté` },
   { id: 'passiveMid', family: 'economy', icon: '📈', metric: 'passiveIncome', effortMin: 30, mode: 'absolute',
     label: (t) => `Atteins ${qtyQ(t, 'pièces')} par seconde` },
   { id: 'passiveLong', family: 'economy', icon: '📈', metric: 'passiveIncome', effortMin: 70, mode: 'absolute',
@@ -667,7 +710,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 14;
+export const QUEST_ENGINE_VERSION = 15;
 
 function empreinteDefis() {
   const morceaux = [];

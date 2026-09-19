@@ -3,12 +3,27 @@
 // ⚠️ Fichier séparé pour que `questDefs.js` (les DONNÉES) puisse écrire
 // ses libellés sans importer le moteur — ce qui créerait un cycle.
 
+// ⚠️ Formatage FRANÇAIS, vérifié défi par défi le 19/09.
+//
+// Trois défauts corrigés, tous visibles par le joueur :
+//  - « 1.3 millions » : point décimal anglais au lieu de la virgule ;
+//  - « 1.3 millions » : pluriel alors que le nombre est inférieur à 2 ;
+//  - « 1,3 million pièces » : il manque le « de ».
+//
+// Le pluriel d'un grand nombre suit le nombre qui le précède : on écrit
+// « 1,3 million » et « 2,6 millions ».
+const grandNombre = (v, diviseur, singulier, pluriel) => {
+  const q = v / diviseur;
+  const texte = q.toFixed(1).replace(/\.0$/, '').replace('.', ',');
+  return `${texte} ${q >= 2 ? pluriel : singulier}`;
+};
+
 export const fmtQ = (n) => {
   const v = Math.round(n);
-  if (v >= 1e15) return `${+(v / 1e15).toFixed(1)} millions de milliards`;
-  if (v >= 1e12) return `${+(v / 1e12).toFixed(1)} billions`;
-  if (v >= 1e9) return `${+(v / 1e9).toFixed(1)} milliards`;
-  if (v >= 1e6) return `${+(v / 1e6).toFixed(1)} millions`;
+  if (v >= 1e15) return grandNombre(v, 1e15, 'million de milliards', 'millions de milliards');
+  if (v >= 1e12) return grandNombre(v, 1e12, 'billion', 'billions');
+  if (v >= 1e9) return grandNombre(v, 1e9, 'milliard', 'milliards');
+  if (v >= 1e6) return grandNombre(v, 1e6, 'million', 'millions');
   return v.toLocaleString('fr-FR');
 };
 
