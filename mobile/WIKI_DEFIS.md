@@ -40,6 +40,8 @@ payée.
 | **Jamais deux défis d'ACHAT d'affilée**, y compris d'un œuf au suivant | 20/09 |
 | **Aucun défi d'AVENTURE dans l'œuf 1** — le joueur n'a pas de créature | 20/09 |
 | Le **premier défi du jeu** est celui des pièces, pas un achat | 20/09 |
+| Le **deuxième défi du jeu est le Pacte** — départ du tuto | 20/09 |
+| Jamais deux défis de la **même métrique** dans le même œuf | 20/09 |
 | Les défis d'achat disent **« Achète N »**, jamais « Possède N » | 20/09 |
 | Un défi d'achat ne réclame **jamais plus que ce qui reste** dans le groupe | 20/09 |
 | Le **bonus d'un palier de tap double** à chaque palier : 1, 2, 4, 8… | 20/09 |
