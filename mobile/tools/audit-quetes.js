@@ -1136,7 +1136,18 @@ function auditTropFacile(nbOeufs = 26) {
       // ⚠️ Sanctuaire et Veilleur PLAFONNENT à 50 : arrivés au plafond,
       // aucune cible ne peut les rendre plus longs. Les signaler
       // reviendrait à demander l'impossible.
-      const adresse = q.step
+      // ⚠️ Un défi d'ACHAT ne se juge pas au TEMPS mais au COÛT.
+      //
+      // « Possède 2 Mains Spectrales » ressort à 0 minute dès que le
+      // joueur a le revenu : l'achat est instantané. Ça ne dit rien de
+      // sa difficulté, qui tient au PRIX — et le prix est déjà contrôlé
+      // par `auditInfaisable`, qui le rapporte au seuil du groupe.
+      //
+      // Mesurer la bonne grandeur, plutôt que multiplier les alertes :
+      // ce critère-ci reste celui des défis qui demandent d'ACCUMULER.
+      const metA = Q.metriqueDuDefi(q, s) || '';
+      const achat = metA.startsWith('auto:') || metA.startsWith('tapUpgrade:');
+      const adresse = q.step || achat
         || ['maxTranseHoldSec', 'maxCombo', 'offering', 'runeFused', 'runeBought',
           'sanctuaryLevel', 'veilleurLevel'].includes(q.metric);
       if (!adresse && min != null && min < FACILE_MIN_MINUTES) raisons.push(`${Math.round(min)} min`);
@@ -1175,7 +1186,12 @@ function auditTropFacile(nbOeufs = 26) {
       if (cumulative) vuRecemment[q.metric] = { oeuf, cible };
       const memeGroupe = !cumulative && vuRecemment[q.metric]
         && Math.floor(oeuf / Q.QUEST_SEQUENCE.length) === Math.floor(vuRecemment[q.metric].oeuf / Q.QUEST_SEQUENCE.length);
-      const vu = memeGroupe ? vuRecemment[q.metric] : null;
+      // ⚠️ Un défi d'ACHAT peut viser le même article qu'un autre du
+      // groupe : au 1er groupe il n'existe que deux générateurs pour
+      // trois créneaux. Les quantités demandées diffèrent (2, 4, 8),
+      // donc ce sont bien trois défis distincts — les signaler comme
+      // des répétitions serait du bruit.
+      const vu = (memeGroupe && !achat) ? vuRecemment[q.metric] : null;
       if (vu && oeuf - vu.oeuf < FACILE_ECART_OEUFS && cible < vu.cible * FACILE_HAUSSE_MINI) {
         raisons.push(`déjà demandé à l'œuf ${vu.oeuf + 1} (cible ${vu.cible})`);
       }

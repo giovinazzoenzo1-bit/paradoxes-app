@@ -146,7 +146,16 @@ export function generateurDuGroupe(rang) {
     // seuil ne monte que de x5 à x8 : la boutique s'éloignait toujours.
     // Un seul palier par groupe la fait suivre, et les 15 générateurs
     // couvrent les 15 Ascensions du barème.
-    const plusHaut = groupe;
+    // ⚠️ DEUX générateurs par Ascension, comme les PRIX le supposent.
+    //
+    // Le résolveur était resté à un seul palier par groupe alors que le
+    // barème de prix cale les indices 2(a-1) et 2(a-1)+1 sur
+    // l'Ascension a. Les deux doivent s'accorder, sinon le défi vise un
+    // palier que le prix n'a pas préparé.
+    //
+    //     A4 -> Dragon Miniature · Phénix Renaissant
+    //     A5 -> Léviathan des Abysses · Gardien Céleste
+    const plusHaut = Math.max(1, groupe * 2 - 1);
     const i = Math.max(0, Math.min(AUTOCLICKERS.length - 1, plusHaut - rang));
     const item = AUTOCLICKERS[Math.min(i, AUTOCLICKERS.length - 1)];
     return item ? `auto:${item.id}` : null;
@@ -163,7 +172,14 @@ export function palierDeTapDuGroupe(rang) {
     // ⚠️ Rendre `null` ne marcherait PAS : la séquence ne substitue
     // jamais, donc le défi resterait dans l'œuf sans article — il
     // s'affichait « Monte un article au niveau 5 » et se validait seul.
-    if (groupe < 1) return 'tapPower';
+    // ⚠️ Au groupe 0, AUCUN palier de tap n'est ouvert — le premier exige
+    // Pacte 10. Se rabattre sur le Pacte donnait TROIS défis « Monte
+    // Pacte » dans le même groupe, l'œuf 1 en ayant déjà un.
+    //
+    // Les deux améliorations de frappe réellement disponibles à ce stade
+    // sont la Faveur des Esprits et les Dégâts critiques : ce sont elles
+    // que ces créneaux visent au groupe 0.
+    if (groupe < 1) return rang === 0 ? 'critLevel' : 'critDamageLevel';
     const i = (groupe - 1) * 2 + rang;
     const item = TAP_UPGRADES[Math.min(i, TAP_UPGRADES.length - 1)];
     return item ? `tapUpgrade:${item.id}` : null;
@@ -253,6 +269,11 @@ export function echelleGroupe(nom, groupe) {
 // Nom lisible d'un article de boutique à partir de sa métrique.
 const nomArticle = (metric, pluriel) => {
   if (!metric) return 'un article';
+  // ⚠️ Au groupe 0 aucun palier de tap n'est ouvert : les défis de tap
+  // se rabattent sur le Pacte, qu'il faut nommer comme le joueur le voit.
+  if (metric === 'tapPower') return 'Pacte';
+  if (metric === 'critLevel') return 'la Faveur des Esprits';
+  if (metric === 'critDamageLevel') return 'les Dégâts critiques';
   // ⚠️ Pluriel appliqué au NOM COMPLET : « 25 Automates Runiques », pas
   // « 25 Automate Runique ». Les noms sont composés de deux mots qui
   // s'accordent tous les deux.
@@ -337,7 +358,11 @@ export const QUEST_SEQUENCE = [
     // L'Esprit Frappeur en dur reste la moins mauvaise option : c'est le
     // premier générateur du jeu, l'œuf 1 est le seul endroit où il est
     // encore cher, et il n'entre en conflit avec aucune autre famille.
-    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(4), target: 10, capAbsolu: 25,
+    // ⚠️ Cible ramenée à 5 au 1er groupe : l'auteur a jugé 10 Esprits « trop
+    // compliqué, ça demande beaucoup trop d'argent ». Et il vise le palier
+    // du GROUPE, pas l'Esprit en dur — deux défis affichaient le même
+    // article.
+    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(2), target: 8, capAbsolu: 6,
       echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
@@ -404,9 +429,6 @@ export const QUEST_SEQUENCE = [
     // À traiter avec le déplacement du créneau APRÈS le défi de Pacte,
     // ou en avançant l'ouverture du premier palier.
     // Même raison : ce créneau redevient un défi d'ACTION.
-    { id: 'g2_main', icon: '👆', metric: 'totalTaps', target: 1500, minStep: 300,
-      echelle: 'actions', mode: 'absolute',
-      label: (t) => `Atteins ${fmtQ(t)} taps au total` },
   ],
 
   // ══════════════════ ŒUF 3 — S'ÉQUIPER ══════════════════
@@ -456,7 +478,7 @@ export const QUEST_SEQUENCE = [
     // générateur figé : Esprit Frappeur au départ, puis Automate,
     // Titan, Dragon... C'est ainsi que le joueur découvre sa boutique.
     { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
-      target: 5, capAbsolu: 8, echelle: 'unites', mode: 'absolute',
+      target: 2, capAbsolu: 2, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
@@ -508,8 +530,12 @@ export const QUEST_SEQUENCE = [
     // Supernova, Serment... Chaque palier exige 5 niveaux du précédent,
     // et le défi de l'œuf 2 les lui fait justement acheter.
     // Même report que le créneau de l'œuf 2.
-    { id: 'g4_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.14, mode: 'delta',
-      label: (t) => `Obtiens ${qtyQ(t, 'pièces')}` },
+    // ⚠️ Défi de PALIER DE TAP — il n'en existait AUCUN, alors que la
+    // boutique en compte dix. L'auteur : « il faut aussi ajouter des
+    // défis d'amélioration de tap et d'autoclick ».
+    { id: 'g4_tap0', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(0),
+      target: 8, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
+      label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
   ],
 
   // ══════════════════ ŒUF 5 — MONTER EN PUISSANCE ══════════════════
@@ -522,7 +548,7 @@ export const QUEST_SEQUENCE = [
     // Le 2e générateur du groupe : Main Spectrale, puis Colonie, Golem,
     // Phénix, Gardien...
     { id: 'g5_gen2', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 10, capAbsolu: 14, echelle: 'unites', mode: 'absolute',
+      target: 4, capAbsolu: 4, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
@@ -556,11 +582,46 @@ export const QUEST_SEQUENCE = [
       // dans `questStats`.
       available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
       label: (t) => `Gagne ${t} combat${t > 1 ? 's' : ''} en Aventure` },
+    // ⚠️ L'œuf 6 comptait DEUX défis d'économie (`g6_coins` et celui-ci).
+    // Ce créneau prend la famille libre de l'œuf : les cibles dorées.
+    { id: 'g6_gain', icon: '⭐', metric: 'goldenClaimed', target: 9, echelle: 'actions', mode: 'delta',
+      label: (t) => `Touche ${t} fois la cible dorée` },
     { id: 'g6_offrande', icon: '🕯️', metric: 'offering', target: 1, mode: 'delta',
       label: (t) => (t > 1 ? `Fais ${t} Offrandes` : 'Fais une Offrande') },
     // ⚠️ `step: 1` et NON une cible en dur. Il n'existait que deux défis
     // d'Ascension (`target: 1` et `target: 2`) : passé la 2e, plus aucun
     // défi n'en demandait et la séquence cessait de structurer le jeu.
+  ],
+  // ⚠️⚠️ SEPTIÈME ŒUF — ajouté le 19/09 à la demande de l'auteur : « je
+  // ne veux pas qu'un œuf ait 5 défis et un autre 6 ».
+  //
+  // L'œuf 2 en comptait 6, tous les autres 5. Plutôt que de supprimer un
+  // défi, on en ajoute un œuf : le groupe passe de 31 à 35 défis, et la
+  // place gagnée accueille les défis d'AMÉLIORATION qui manquaient —
+  // paliers de tap et générateurs supplémentaires.
+  //
+  // ⚠️ L'Ascension reste le DERNIER défi du dernier œuf : c'est elle qui
+  // clôt le groupe.
+  [
+    { id: 'g7_reserve', icon: '💰', metric: 'coins', target: 150000, echelle: 'pieces', mode: 'absolute',
+      label: (t) => `Mets ${qtyQ(t, 'pièces')} de côté` },
+    // ⚠️ SECOND palier de tap du groupe, et non un 4e générateur.
+    //
+    // Avec quatre défis de générateur, le 1er groupe en affichait TROIS
+    // sur l'Esprit Frappeur — il n'existe que deux générateurs à ce
+    // stade. L'auteur : « il y a plusieurs défis Esprit Frappeur à
+    // chaque fois ». Trois défis de générateur et deux de tap donnent
+    // cinq articles distincts dès le 2e groupe.
+    { id: 'g7_tap1', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(1),
+      target: 10, capAbsolu: 7, echelle: 'niveau', mode: 'absolute',
+      label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
+    { id: 'g7_taps', icon: '👆', metric: 'totalTaps', target: 1500, minStep: 300,
+      echelle: 'actions', mode: 'absolute',
+      label: (t) => `Atteins ${fmtQ(t)} taps au total` },
+    // ⚠️ Plafond obligatoire : sans lui l'échelle porte la cible à 120 taps
+    // d'affilée au 6e groupe, ce qu'aucun joueur ne tient.
+    { id: 'g7_combo', icon: '🔥', metric: 'maxCombo', target: 30, cap: 50, echelle: 'actions', mode: 'absolute',
+      label: (t) => `Enchaîne ${t} taps sans pause` },
     { id: 'g6_ascend', icon: '🌟', metric: 'ascension', step: 1, mode: 'absolute',
       label: (t) => `Fais ta ${t}${t === 1 ? 're' : 'e'} Ascension` },
   ],
@@ -761,7 +822,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 28;
+export const QUEST_ENGINE_VERSION = 29;
 
 function empreinteDefis() {
   const morceaux = [];
