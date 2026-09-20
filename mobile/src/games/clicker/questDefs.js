@@ -336,7 +336,7 @@ export const QUEST_SEQUENCE = [
     // gagne désormais plus vite, donc Pacte 6 (2 604 pièces) tombait à
     // 3 minutes. Le niveau 7 en coûte 5 292, soit sept fois le défi de
     // pièces voisin du même œuf — l'ordre de grandeur voulu.
-    { id: 'g1_pacte', icon: '🔗', metric: 'tapPower', target: 7, capAbsolu: 24, echelle: 'niveau', mode: 'absolute',
+    { id: 'g1_pacte', icon: '🔗', metric: 'tapPower', target: 4, capAbsolu: 24, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     // ⚠️ DEUX défis d'achat par groupe, pas quatre.
     //
@@ -369,8 +369,8 @@ export const QUEST_SEQUENCE = [
     // au 3e défi. Mesuré avant correction : l'œuf 1 coûtait 31 % du
     // seuil et l'œuf 7 seulement 13 % — exactement l'inverse.
     { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(2), target: 3, capAbsolu: 4,
-      echelle: 'unites', mode: 'absolute',
-      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
+      echelle: 'unites', mode: 'delta',
+      label: (t, m) => `Achète ${t} ${nomArticle(m, t > 1)}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
     // « +15 % au-dessus de l'acquis » l'a déjà poussée à 641 secondes.
     { id: 'g1_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 25, cap: 150, echelle: 'transe', mode: 'absolute',
@@ -455,8 +455,8 @@ export const QUEST_SEQUENCE = [
     // décourageant, alors qu'en acheter 7 puis 8 plus tard, le joueur a
     // le temps de gagner des pièces entre les deux ».
     { id: 'g2_gen0b', icon: '👻', metriqueParGroupe: generateurDuGroupe(2),
-      target: 5, capAbsolu: 6, echelle: 'unites', mode: 'absolute',
-      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
+      target: 5, capAbsolu: 6, echelle: 'unites', mode: 'delta',
+      label: (t, m) => `Achète ${t} ${nomArticle(m, t > 1)}` },
   ],
 
   // ══════════════════ ŒUF 3 — S'ÉQUIPER ══════════════════
@@ -506,12 +506,12 @@ export const QUEST_SEQUENCE = [
     // générateur figé : Esprit Frappeur au départ, puis Automate,
     // Titan, Dragon... C'est ainsi que le joueur découvre sa boutique.
     { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 3, capAbsolu: 5, echelle: 'unites', mode: 'absolute',
-      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
+      target: 3, capAbsolu: 5, echelle: 'unites', mode: 'delta',
+      label: (t, m) => `Achète ${t} ${nomArticle(m, t > 1)}` },
     // Seconde étape du palier de tap récent.
     { id: 'g3_tap1b', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(1),
-      target: 4, capAbsolu: 6, echelle: 'niveau', mode: 'absolute',
-      label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
+      target: 4, capAbsolu: 6, echelle: 'niveau', mode: 'delta',
+      label: (t, m) => `Monte ${nomArticle(m)} de ${t} niveau${t > 1 ? 'x' : ''}` },
   ],
 
   // ══════════════════ ŒUF 4 — LA COLLECTION ══════════════════
@@ -566,12 +566,12 @@ export const QUEST_SEQUENCE = [
     // boutique en compte dix. L'auteur : « il faut aussi ajouter des
     // défis d'amélioration de tap et d'autoclick ».
     { id: 'g4_tap0', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(0),
-      target: 4, capAbsolu: 6, echelle: 'niveau', mode: 'absolute',
-      label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
+      target: 4, capAbsolu: 6, echelle: 'niveau', mode: 'delta',
+      label: (t, m) => `Monte ${nomArticle(m)} de ${t} niveau${t > 1 ? 'x' : ''}` },
     // Seconde étape du palier de tap ancien.
     { id: 'g4_tap0b', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(1),
-      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
-      label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
+      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'delta',
+      label: (t, m) => `Monte ${nomArticle(m)} de ${t} niveau${t > 1 ? 'x' : ''}` },
   ],
 
   // ══════════════════ ŒUF 5 — MONTER EN PUISSANCE ══════════════════
@@ -584,8 +584,8 @@ export const QUEST_SEQUENCE = [
     // Le 2e générateur du groupe : Main Spectrale, puis Colonie, Golem,
     // Phénix, Gardien...
     { id: 'g5_gen2', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
-      target: 2, capAbsolu: 3, echelle: 'unites', mode: 'absolute',
-      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
+      target: 2, capAbsolu: 3, echelle: 'unites', mode: 'delta',
+      label: (t, m) => `Achète ${t} ${nomArticle(m, t > 1)}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
       // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
@@ -604,8 +604,8 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Tiens la Transe pendant ${t} secondes` },
     // Seconde étape du générateur du milieu.
     { id: 'g5_gen1b', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 5, capAbsolu: 7, echelle: 'unites', mode: 'absolute',
-      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
+      target: 5, capAbsolu: 7, echelle: 'unites', mode: 'delta',
+      label: (t, m) => `Achète ${t} ${nomArticle(m, t > 1)}` },
   ],
 
   // ══════════════════ ŒUF 6 — FRANCHIR ══════════════════
@@ -633,8 +633,8 @@ export const QUEST_SEQUENCE = [
     // défi n'en demandait et la séquence cessait de structurer le jeu.
     // Seconde étape du générateur le plus récent.
     { id: 'g6_gen2b', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
-      target: 3, capAbsolu: 4, echelle: 'unites', mode: 'absolute',
-      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
+      target: 3, capAbsolu: 4, echelle: 'unites', mode: 'delta',
+      label: (t, m) => `Achète ${t} ${nomArticle(m, t > 1)}` },
   ],
   // ⚠️⚠️ SEPTIÈME ŒUF — ajouté le 19/09 à la demande de l'auteur : « je
   // ne veux pas qu'un œuf ait 5 défis et un autre 6 ».
@@ -657,8 +657,8 @@ export const QUEST_SEQUENCE = [
     // chaque fois ». Trois défis de générateur et deux de tap donnent
     // cinq articles distincts dès le 2e groupe.
     { id: 'g7_tap1', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(0),
-      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
-      label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
+      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'delta',
+      label: (t, m) => `Monte ${nomArticle(m)} de ${t} niveau${t > 1 ? 'x' : ''}` },
     { id: 'g7_taps', icon: '👆', metric: 'totalTaps', target: 1500, minStep: 300,
       echelle: 'actions', mode: 'absolute',
       label: (t) => `Atteins ${fmtQ(t)} taps au total` },
@@ -868,7 +868,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 35;
+export const QUEST_ENGINE_VERSION = 36;
 
 function empreinteDefis() {
   const morceaux = [];

@@ -556,7 +556,11 @@ module.exports.metriquesPubliees = metriquesPubliees;
 //
 // Un libellé qui parle d'un TOTAL ou d'un RANG (« atteins », « possède »,
 // « monte au niveau », « seconde ») avec un mode `delta` est suspect.
-const MOTS_DE_TOTAL = /atteins|poss[eè]de|monte|termine|seconde|deuxi[eè]me|troisi[eè]me|jusqu/i;
+// ⚠️ « Monte X AU niveau N » est un TOTAL ; « monte X DE N niveaux » est
+// un DELTA. Le mot « monte » seul ne tranche pas — c'est la préposition
+// qui porte le sens, et la confondre faisait rejeter quatre défis
+// parfaitement formulés.
+const MOTS_DE_TOTAL = /atteins|poss[eè]de|monte\s+\S+.*\bau niveau\b|termine|seconde|deuxi[eè]me|troisi[eè]me|jusqu/i;
 
 // ⚠️ MÉTRIQUES INTERDITES EN MODE `delta`.
 //
@@ -584,6 +588,18 @@ function auditModes() {
   tous.forEach((q) => {
     if (q.mode !== 'delta') return;
     const m = q.metric || '';
+    // ⚠️ EXCEPTION VOULUE : un défi d'ACHAT en mode delta dit « achète N
+    // de plus », et son compteur part de zéro quand il commence.
+    //
+    // L'auteur, le 20/09 : « le défi doit être ACHETER N esprits et pas
+    // POSSÉDER N, car dans ton ordre le défi s'annule de lui-même ».
+    // Exact — en mode absolu, un défi demandant 5 Esprits était déjà
+    // rempli si un défi précédent en avait fait acheter 5.
+    //
+    // Le mode delta est donc le BON mode pour un achat. L'interdiction
+    // visait les métriques d'état comme `coins`, où « gagner 100 de
+    // plus » n'a pas de sens stable.
+    if (m.startsWith('auto:') || m.startsWith('tapUpgrade:')) return;
     if (METRIQUES_D_ETAT.includes(m) || m.startsWith('auto:')
       || m.startsWith('upgrade:') || m.startsWith('tapUpgrade:')) {
       suspects.push({ id: q.id, metric: m, pourquoi: "métrique d'ÉTAT en mode delta" });

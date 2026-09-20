@@ -959,6 +959,18 @@ export function estDefiAchat(quest, stats) {
 export function alternerAchats(cycle, stats, dernierEtaitAchat = false) {
   const achats = cycle.filter((q) => estDefiAchat(q, stats));
   const autres = cycle.filter((q) => !estDefiAchat(q, stats));
+  // ⚠️ Le TOUT PREMIER défi du jeu doit être celui des pièces, pas un
+  // achat : le joueur n'a rien à dépenser en arrivant. L'auteur, le
+  // 20/09 : « pour le premier défi il faut mettre celui à 750, et
+  // deuxième le Pacte ».
+  if (!dernierEtaitAchat && autres.length && autres[0].metric === 'totalEarned') {
+    const sortie = [autres.shift()];
+    let prec = false;
+    while (achats.length || autres.length) {
+      if (!prec && achats.length) { sortie.push(achats.shift()); prec = true; } else if (autres.length) { sortie.push(autres.shift()); prec = false; } else { sortie.push(achats.shift()); prec = true; }
+    }
+    return sortie;
+  }
   // ⚠️ Pas assez de défis « autres » pour séparer : on rend l'œuf tel
   // quel plutôt que de produire un ordre faux en silence.
   if (achats.length > autres.length + (dernierEtaitAchat ? 0 : 1)) return cycle;

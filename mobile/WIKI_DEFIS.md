@@ -14,6 +14,8 @@ payée.
 |---|---|
 | **Jamais deux défis d'ACHAT d'affilée**, y compris d'un œuf au suivant | 20/09 |
 | **Aucun défi d'AVENTURE dans l'œuf 1** — le joueur n'a pas de créature | 20/09 |
+| Le **premier défi du jeu** est celui des pièces, pas un achat | 20/09 |
+| Les défis d'achat disent **« Achète N »**, jamais « Possède N » | 20/09 |
 | Le **bonus d'un palier de tap double** à chaque palier : 1, 2, 4, 8… | 20/09 |
 | **7 œufs de 6 défis** par Ascension, soit 42 défis | 20/09 |
 | **2 nouveaux générateurs + 2 nouveaux paliers de tap** par Ascension | 19/09 |
@@ -30,6 +32,29 @@ payée.
 ⚠️ **Le document de la conversation** surligne les défis d'ACHAT en
 rouge et ceux d'AVENTURE en vert, dans des blocs `diff` — Markdown n'a
 aucune autre façon d'afficher de la couleur.
+
+---
+
+### 🎲 Comment les défis sont tirés
+
+**La liste est écrite à l'avance.** `QUEST_SEQUENCE` contient les 7 œufs
+de 6 défis, dans cet ordre. Aucun tirage au sort.
+
+Ce qui est **calculé au moment où l'œuf est distribué** :
+
+| | |
+|---|---|
+| La **cible** | base × échelle du groupe, puis FIGÉE pour cet œuf |
+| L'**article** visé par un défi d'achat | selon le numéro d'Ascension |
+| L'**ordre** dans l'œuf | réarrangé pour alterner achats et autres défis |
+
+Exemple : le défi des pièces porte `target: 750`. Au groupe 0 il demande
+750, au groupe 1 → 9 000, au groupe 3 → 530 000.
+
+⚠️ **« ACHÈTE N » et non « POSSÈDE N ».** En mode absolu, un défi
+demandant 5 Esprits était déjà rempli si un défi précédent en avait fait
+acheter 5 — il s'annulait tout seul. En mode delta, le compteur part de
+zéro quand le défi commence.
 
 ---
 
