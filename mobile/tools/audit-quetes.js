@@ -1563,3 +1563,21 @@ function auditInstantanesAJour() {
   return fautes;
 }
 module.exports.auditInstantanesAJour = auditInstantanesAJour;
+
+// ⚠️ CONTRÔLE ÉCARTÉ, et la raison mérite d'être gardée.
+//
+// J'ai écrit un contrôle qui compare les champs LUS sur la sauvegarde à
+// ceux qui y sont réellement ÉCRITS, pour attraper le bug du 19/09 :
+// `saved.lifetimeStats` n'existe pas dans la sauvegarde du clicker, et
+// la lecture valait zéro sans la moindre erreur — c'est ce qui donnait
+// les défis du groupe 0 à un joueur à l'Ascension 5.
+//
+// Il sortait 39 alertes, presque toutes fausses : la sauvegarde s'écrit
+// en plusieurs endroits et avec des raccourcis que l'analyse de source
+// ne sait pas suivre. Un contrôle qui hurle sur des cas normaux cesse
+// d'être lu — c'est la règle du projet, et elle s'applique aussi à mes
+// propres contrôles.
+//
+// La bonne parade ici n'est pas un contrôle mais une règle : un champ
+// qui vit dans un CONTEXTE ne se lit jamais sur la sauvegarde d'un
+// écran. On le prend à sa source.

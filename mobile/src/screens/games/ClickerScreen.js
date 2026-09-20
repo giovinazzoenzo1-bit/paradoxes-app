@@ -865,6 +865,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // venait d'effacer, et la réinitialisation semblait toujours sans
     // effet. Un effet, lui, s'exécute APRÈS ce démontage.
     clickerSaveDisabled = false;
+    // ⚠️ Attendre DailyContext : il porte le nombre d'Ascensions, et
+    // sans lui les défis sont tirés pour un joueur à zéro Ascension.
+    if (!dailyLoaded) return;
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -877,6 +880,26 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           const trusted = trustedOfflineSeconds(saved.lastSave, saved.clockMax, nowSec);
           const elapsed = trusted.seconds;
           clockMaxRef.current = trusted.clockMax;
+          // ⚠️⚠️ LE NOMBRE D'ASCENSIONS N'EST PAS DANS CETTE SAUVEGARDE.
+          //
+          // `lifetimeStats` appartient à DailyContext et vit sous SA
+          // propre clé de stockage. `saved.lifetimeStats` est donc
+          // toujours `undefined` ici, et les trois lectures qui en
+          // dépendaient valaient zéro : gains hors ligne, seuil affiché,
+          // et surtout le TIRAGE DES DÉFIS.
+          //
+          // C'est la cause du symptôme signalé six fois par l'auteur :
+          // « tous les défis des ascensions sont pareils », « chaque
+          // début d'Ascension recommence à 750 pièces ». Sa capture
+          // d'écran l'a prouvé — les Options affichaient « Ascensions :
+          // 5 » pendant que le défi demandait « Pacte niveau 7 », la
+          // valeur du groupe 0.
+          //
+          // ⚠️ Lire un champ absent ne provoque AUCUNE erreur : on
+          // obtient `undefined`, puis zéro par le `|| 0`. Le jeu
+          // fonctionnait parfaitement, pour un joueur qui n'a jamais
+          // ascensionné.
+          const ascensionAuChargement = lifetimeStats.ascension || 0;
           const savedVeilleur = saved.veilleurLevel || 0;
           const savedAutoClickers = saved.autoClickers || {};
           // Migration douce depuis l'ancien "Familier" à niveau unique (dev
@@ -892,7 +915,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             upgradeLevels: saved.upgradeLevels || saved.purchasedUpgradeIds || {},
             sanctuaryLevel: saved.sanctuaryLevel || 0,
             essence: saved.essence || 0,
-            ascensionCount: (saved.lifetimeStats && saved.lifetimeStats.ascension) || 0,
+            ascensionCount: ascensionAuChargement,
             offline: true,
             veilleurLevel: savedVeilleur,
           });
@@ -1009,7 +1032,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             creaturesAVenir: (saved.owned || []).length + (saved.incubatingEgg ? 1 : 0),
             deckCount: (saved.deck || []).filter(Boolean).length,
             maxCreatureLevel: (saved.owned || []).reduce((m, o) => Math.max(m, o.level || 0), 0),
-            ascension: (saved.lifetimeStats && saved.lifetimeStats.ascension) || 0,
+            ascension: ascensionAuChargement,
             autoTotal: Object.values(saved.autoClickers || {}).reduce((a, b) => a + (b || 0), 0),
             };
           if (savedQuests.length === expectedSize) {
@@ -1184,7 +1207,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       }
       setLoaded(true);
     })();
-  }, []);
+    // ⚠️ DÉPEND DE `dailyLoaded`. DailyContext se charge de façon
+    // INDÉPENDANTE, et c'est lui qui porte le nombre d'Ascensions. Avec
+    // une liste de dépendances vide, ce chargement pouvait s'exécuter
+    // AVANT lui : `lifetimeStats` valait alors `{}` et les défis étaient
+    // tirés pour un joueur à zéro Ascension.
+  }, [dailyLoaded]);
 
   // DailyContext (source de lifetimeStats, les compteurs Aventure à
   // vie) se charge de façon INDÉPENDANTE de ce chargement-ci — il peut
