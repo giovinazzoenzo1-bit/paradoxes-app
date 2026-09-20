@@ -21,9 +21,10 @@ import { BUILD_SHA, BUILD_TIME } from '../version';
 // tant qu'aucune lib audio n'est installée.
 export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
   const { addCoins } = useCoins();
-  const { resetLifetimeStats } = useDaily();
+  const { resetLifetimeStats, lifetimeStats } = useDaily();
   const { vibrations, ambientFx, toggleSetting } = useSettings();
   const [devOpen, setDevOpen] = useState(false);
+  const ascensionsVues = (lifetimeStats && lifetimeStats.ascension) || 0;
 
   // Remise à zéro complète : efface TOUT le stockage local (pièces,
   // sauvegarde du clicker, réglages...) plutôt que d'énumérer chaque clé
@@ -257,6 +258,15 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
               coûté une heure le 19/09. */}
           <Text style={styles.version}>Mise à jour : {BUILD_TIME}</Text>
           <Text style={styles.version}>Build {BUILD_SHA}</Text>
+          {/* ⚠️ DIAGNOSTIC — le nombre d'Ascensions TEL QUE LE JEU LE
+              VOIT, pas tel qu'on le suppose.
+              L'auteur signale depuis plusieurs mises à jour que tous les
+              groupes affichent les mêmes défis. Trois causes ont déjà été
+              trouvées et corrigées sans régler le symptôme ; je ne peux
+              pas voir son écran, et le doc du projet prescrit exactement
+              ça : faire écrire l'information là où le téléphone
+              l'affiche, au lieu de continuer à déduire. */}
+          <Text style={styles.version}>Ascensions : {ascensionsVues}</Text>
         </ScrollView>
 
         {/* Accès au mode développeur, en bas et visuellement à part : ce
