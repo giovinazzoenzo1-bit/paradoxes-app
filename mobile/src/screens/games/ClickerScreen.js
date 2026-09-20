@@ -2113,7 +2113,20 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     threeStarLevel: lifetimeStats.threeStarLevel || 0,
     offering: lifetimeStats.offering || 0,
     powerActivated: lifetimeStats.powerActivated || 0,
-    ascension: lifetimeStats.ascension || 0,
+    // ⚠️⚠️ LIRE LA RÉF, PAS LA VALEUR DU RENDU.
+    //
+    // `lifetimeStats` est capturé au rendu où la fonction a été créée.
+    // Le tirage des défis part d'un enchaînement d'appels déclenché par
+    // l'Ascension elle-même : il lisait donc le compteur d'AVANT, soit
+    // zéro au premier passage. Le joueur voyait les défis du groupe 0
+    // quel que soit son nombre d'Ascensions — « tous les défis des
+    // ascensions sont pareils ».
+    //
+    // `ascensionCountRef` est tenue à jour à chaque rendu et n'a pas ce
+    // défaut. Le reste du fichier l'utilise déjà partout ailleurs (prix
+    // de boutique, multiplicateurs) ; ces deux instantanés étaient les
+    // seuls à lire la valeur capturée.
+    ascension: ascensionCountRef.current,
     advLevelReached: lifetimeStats.advLevelReached || 0,
     runeFused: lifetimeStats.runeFused || 0,
     // Compteurs Aventure À VIE (DailyContext).
@@ -2529,7 +2542,20 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     threeStarLevel: lifetimeStats.threeStarLevel || 0,
     offering: lifetimeStats.offering || 0,
     powerActivated: lifetimeStats.powerActivated || 0,
-    ascension: lifetimeStats.ascension || 0,
+    // ⚠️⚠️ LIRE LA RÉF, PAS LA VALEUR DU RENDU.
+    //
+    // `lifetimeStats` est capturé au rendu où la fonction a été créée.
+    // Le tirage des défis part d'un enchaînement d'appels déclenché par
+    // l'Ascension elle-même : il lisait donc le compteur d'AVANT, soit
+    // zéro au premier passage. Le joueur voyait les défis du groupe 0
+    // quel que soit son nombre d'Ascensions — « tous les défis des
+    // ascensions sont pareils ».
+    //
+    // `ascensionCountRef` est tenue à jour à chaque rendu et n'a pas ce
+    // défaut. Le reste du fichier l'utilise déjà partout ailleurs (prix
+    // de boutique, multiplicateurs) ; ces deux instantanés étaient les
+    // seuls à lire la valeur capturée.
+    ascension: ascensionCountRef.current,
     advLevelReached: lifetimeStats.advLevelReached || 0,
     runeFused: lifetimeStats.runeFused || 0,
     totalSummons: totalSummonsRef.current,

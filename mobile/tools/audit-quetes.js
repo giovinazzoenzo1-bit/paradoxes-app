@@ -1522,3 +1522,44 @@ function auditEtatComplet() {
   return fautes;
 }
 module.exports.auditEtatComplet = auditEtatComplet;
+
+// ---- Les instantanés lisent-ils des valeurs À JOUR ? ----------------
+//
+// Bug réel du 19/09 : « tous les défis des ascensions sont pareils ».
+//
+// Les deux instantanés de stats envoyés au moteur lisaient
+// `lifetimeStats.ascension`, une valeur CAPTURÉE au rendu où la fonction
+// a été créée. Or le tirage des défis part d'un enchaînement déclenché
+// par l'Ascension elle-même : il lisait le compteur d'AVANT, donc zéro.
+// Le joueur recevait les défis du groupe 0 quel que soit son avancement.
+//
+// ⚠️ Le reste du fichier utilisait déjà `ascensionCountRef` partout
+// (prix, multiplicateurs). Ces deux-là étaient les seuls à lire la
+// valeur du rendu — et c'est exactement le genre d'incohérence qu'aucun
+// test de logique ne peut voir, puisque la fonction est correcte : c'est
+// le MOMENT de sa lecture qui ne l'est pas.
+function auditInstantanesAJour() {
+  const fs = require('fs');
+  const src = fs.readFileSync(__dirname + '/../src/screens/games/ClickerScreen.js', 'utf8');
+  const fautes = [];
+  // Champs qui changent en cours de partie et qui ont une ref dédiée.
+  const aRef = { ascension: 'ascensionCountRef', tapPower: 'tapPowerRef', coins: 'coinsRef' };
+  src.split('\n').forEach((ligne, i) => {
+    if (/^\s*(\/\/|\*)/.test(ligne)) return;
+    Object.entries(aRef).forEach(([champ, ref]) => {
+      if (!new RegExp('^\\s*' + champ + ':').test(ligne)) return;
+      if (!src.includes('const ' + ref)) return;
+      // ⚠️ Les lectures de la SAUVEGARDE (`saved.`) sont légitimes : au
+      // chargement, les refs ne sont pas encore renseignées. Les
+      // signaler reviendrait à demander de lire une valeur qui n'existe
+      // pas encore.
+      if (/saved\./.test(ligne)) return;
+      // Dans un instantané, le champ doit venir de la ref.
+      if (!new RegExp(ref).test(ligne) && /\w+\.\w+/.test(ligne)) {
+        fautes.push({ ligne: i + 1, champ, attendu: ref, code: ligne.trim().slice(0, 60) });
+      }
+    });
+  });
+  return fautes;
+}
+module.exports.auditInstantanesAJour = auditInstantanesAJour;
