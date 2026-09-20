@@ -13,6 +13,8 @@ payée.
 | Règle | Depuis |
 |---|---|
 | **Jamais deux défis d'ACHAT d'affilée**, y compris d'un œuf au suivant | 20/09 |
+| **Aucun défi d'AVENTURE dans l'œuf 1** — le joueur n'a pas de créature | 20/09 |
+| Le **bonus d'un palier de tap double** à chaque palier : 1, 2, 4, 8… | 20/09 |
 | **7 œufs de 6 défis** par Ascension, soit 42 défis | 20/09 |
 | **2 nouveaux générateurs + 2 nouveaux paliers de tap** par Ascension | 19/09 |
 | Les anciens articles **reviennent** dans les défis des Ascensions suivantes | 19/09 |
@@ -28,6 +30,22 @@ payée.
 ⚠️ **Le document de la conversation** surligne les défis d'ACHAT en
 rouge et ceux d'AVENTURE en vert, dans des blocs `diff` — Markdown n'a
 aucune autre façon d'afficher de la couleur.
+
+---
+
+### ⚠️ Deux pièges rencontrés en appliquant ces règles
+
+**Un facteur appliqué à des valeurs déjà ajustées compose l'erreur.**
+Une dizaine de recalibrages successifs avaient aplati toute l'échelle :
+rendements de 0,23 à 2,7 sur quinze paliers, bonus de tap tombés à
+0,005 — que le jeu affiche « +0 » puisqu'il arrondit. Reconstruire
+depuis les PRINCIPES vaut mieux que corriger une n-ième fois.
+
+**Une règle correcte sur le papier peut produire une échelle plate.**
+Aligner le bonus de tap sur la « valeur au coin dépensé » du générateur
+de même rang donnait 1 PARTOUT, parce que les paliers de tap coûtent
+bien moins cher que les générateurs. Toujours vérifier la sortie, pas
+seulement le raisonnement.
 
 ---
 

@@ -368,7 +368,7 @@ export const QUEST_SEQUENCE = [
     // perdre à l'Ascension, on ne lui demande pas son défi le plus lourd
     // au 3e défi. Mesuré avant correction : l'œuf 1 coûtait 31 % du
     // seuil et l'œuf 7 seulement 13 % — exactement l'inverse.
-    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(2), target: 3, capAbsolu: 5,
+    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(2), target: 3, capAbsolu: 4,
       echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
@@ -379,9 +379,19 @@ export const QUEST_SEQUENCE = [
       label: (t) => (t > 1 ? `Touche ${t} fois la cible dorée` : 'Touche la cible dorée') },
     // ⚠️ 6 défis par œuf, uniformément. L'auteur : « je préfère quand
     // même faire 6 défis par œuf » plutôt que d'ajouter un 8e œuf.
-    { id: 'g1_combats', icon: '🗡️', metric: 'battleWon', target: 2, echelle: 'aventure', mode: 'delta',
-      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
-      label: (t) => `Gagne ${t} combat${t > 1 ? 's' : ''} en Aventure` },
+    // ⚠️⚠️ PAS D'AVENTURE DANS L'ŒUF 1 — signalé par l'auteur le 20/09.
+    //
+    // Le joueur n'a AUCUNE créature avant l'éclosion du premier œuf :
+    // l'Aventure refuse de démarrer sur un deck vide. `available` ne
+    // suffit pas, puisque la séquence ne substitue jamais — le défi
+    // serait simplement impossible et bloquerait l'œuf.
+    //
+    // ⚠️ La règle vaut pour TOUT l'œuf 1, à chaque Ascension : après une
+    // Ascension le joueur garde ses créatures, mais le schéma est le
+    // même pour tous les groupes et doit valoir au cas le plus
+    // contraint — le tout premier œuf du jeu.
+    { id: 'g1_combo', icon: '🔥', metric: 'maxCombo', target: 20, cap: 40, echelle: 'actions', mode: 'absolute',
+      label: (t) => `Enchaîne ${t} taps sans pause` },
   ],
 
   // ══════════════════ ŒUF 2 — PREMIERS COMBATS ══════════════════
@@ -445,7 +455,7 @@ export const QUEST_SEQUENCE = [
     // décourageant, alors qu'en acheter 7 puis 8 plus tard, le joueur a
     // le temps de gagner des pièces entre les deux ».
     { id: 'g2_gen0b', icon: '👻', metriqueParGroupe: generateurDuGroupe(2),
-      target: 6, capAbsolu: 9, echelle: 'unites', mode: 'absolute',
+      target: 5, capAbsolu: 6, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
@@ -496,11 +506,11 @@ export const QUEST_SEQUENCE = [
     // générateur figé : Esprit Frappeur au départ, puis Automate,
     // Titan, Dragon... C'est ainsi que le joueur découvre sa boutique.
     { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 9, capAbsolu: 13, echelle: 'unites', mode: 'absolute',
+      target: 3, capAbsolu: 5, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     // Seconde étape du palier de tap récent.
     { id: 'g3_tap1b', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(1),
-      target: 12, capAbsolu: 15, echelle: 'niveau', mode: 'absolute',
+      target: 4, capAbsolu: 6, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
   ],
 
@@ -556,11 +566,11 @@ export const QUEST_SEQUENCE = [
     // boutique en compte dix. L'auteur : « il faut aussi ajouter des
     // défis d'amélioration de tap et d'autoclick ».
     { id: 'g4_tap0', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(0),
-      target: 12, capAbsolu: 15, echelle: 'niveau', mode: 'absolute',
+      target: 4, capAbsolu: 6, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
     // Seconde étape du palier de tap ancien.
     { id: 'g4_tap0b', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(1),
-      target: 16, capAbsolu: 20, echelle: 'niveau', mode: 'absolute',
+      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
   ],
 
@@ -574,7 +584,7 @@ export const QUEST_SEQUENCE = [
     // Le 2e générateur du groupe : Main Spectrale, puis Colonie, Golem,
     // Phénix, Gardien...
     { id: 'g5_gen2', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
-      target: 3, capAbsolu: 5, echelle: 'unites', mode: 'absolute',
+      target: 2, capAbsolu: 3, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
@@ -594,7 +604,7 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Tiens la Transe pendant ${t} secondes` },
     // Seconde étape du générateur du milieu.
     { id: 'g5_gen1b', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 13, capAbsolu: 18, echelle: 'unites', mode: 'absolute',
+      target: 5, capAbsolu: 7, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
@@ -623,7 +633,7 @@ export const QUEST_SEQUENCE = [
     // défi n'en demandait et la séquence cessait de structurer le jeu.
     // Seconde étape du générateur le plus récent.
     { id: 'g6_gen2b', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
-      target: 6, capAbsolu: 9, echelle: 'unites', mode: 'absolute',
+      target: 3, capAbsolu: 4, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
   // ⚠️⚠️ SEPTIÈME ŒUF — ajouté le 19/09 à la demande de l'auteur : « je
@@ -647,7 +657,7 @@ export const QUEST_SEQUENCE = [
     // chaque fois ». Trois défis de générateur et deux de tap donnent
     // cinq articles distincts dès le 2e groupe.
     { id: 'g7_tap1', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(0),
-      target: 16, capAbsolu: 20, echelle: 'niveau', mode: 'absolute',
+      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
     { id: 'g7_taps', icon: '👆', metric: 'totalTaps', target: 1500, minStep: 300,
       echelle: 'actions', mode: 'absolute',
@@ -858,7 +868,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 34;
+export const QUEST_ENGINE_VERSION = 35;
 
 function empreinteDefis() {
   const morceaux = [];
