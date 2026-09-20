@@ -947,9 +947,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             offline: true,
             veilleurLevel: savedVeilleur,
           });
-          // Hors ligne : 2 h de production à taux réduit (OFFLINE_RATE).
+          // ⚠️ Le SEUIL de l'Ascension en cours est passé en 3e argument :
+          // c'est lui qui borne le gain à 3-5 %. Sans lui, l'ancien calcul
+          // s'applique — et il donnait 0,1 % du seuil sur un groupe et
+          // 72 % sur un autre.
           const offline = Math.round(offlineEarnings(
-            offlineIncome, elapsed));
+            offlineIncome, elapsed, ascensionThreshold(ascensionAuChargement)));
           setCoins((saved.coins || 0) + offline);
           setTotalEarned((saved.totalEarned || 0) + offline);
           // Compte rendu montré au joueur. Seuil à 1 pièce : inutile de

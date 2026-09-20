@@ -2242,6 +2242,7 @@ function simulerGroupe(ascension, tapsParSec) {
   };
   const seuil = C.ascensionThreshold(a);
   let t = 0, garde = 0, passifFinal = 0;
+  const jalons = [];
   while (s.totalEarned < seuil && garde++ < 20000) {
     const r = rev();
     const options = [{ cout: C.tapPowerCost(s.tapPower), appliquer: (x) => { x.tapPower += 1; } }];
@@ -2274,14 +2275,53 @@ function simulerGroupe(ascension, tapsParSec) {
     const restant = (seuil - s.totalEarned) / r;
     if (attente >= restant) { t += restant; break; }
     t += attente;
+    jalons.push({ t, passif: C.passiveRate({
+      autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
+      sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a }) });
     s.coins += r * attente - v.cout;
     s.totalEarned += r * attente;
     v.appliquer(s);
   }
+  // ⚠️ Le passif MOYEN, pas celui de la fin. L'auteur : « le joueur
+  // n'obtient pas le maximum de gains hors ligne dès le début, il
+  // commence à 0 ». Mesurer le passif final surestimait l'apport du
+  // hors ligne d'un facteur dix sur les premiers groupes.
   passifFinal = C.passiveRate({
     autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
     sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a,
   });
-  return { heures: t / 3600, passif: passifFinal, seuil, production: rev() };
+  // Passif MOYEN pondéré par le temps : ce qu'un joueur qui se
+  // déconnecte à un moment quelconque du groupe obtient en espérance.
+  let somme = 0, prec = 0;
+  jalons.forEach((j) => { somme += j.passif * (j.t - prec); prec = j.t; });
+  const passifMoyen = t > 0 ? somme / t : 0;
+  return { heures: t / 3600, passif: passifFinal, passifMoyen, seuil, production: rev(), jalons };
 }
 module.exports.simulerGroupe = simulerGroupe;
+
+// ---- Le hors ligne reste-t-il dans sa fourchette ? ------------------
+//
+// Règle de l'auteur : 3 à 5 % du seuil pour deux heures pleines.
+//
+// ⚠️ On mesure à PLUSIEURS moments du groupe, pas seulement à la fin.
+// L'auteur a relevé l'erreur : « le joueur n'obtient pas le maximum dès
+// le début, il commence à 0 ». Mesuré à la fin, un groupe affichait 72 %
+// du seuil ; en moyenne, 0,1 %. Prendre le dernier instant pour
+// référence surestimait l'apport d'un facteur plusieurs centaines.
+function auditHorsLigne(min = 0.029, max = 0.051) {
+  const fautes = [];
+  for (let a = 0; a < 6; a++) {
+    const r = simulerGroupe(a);
+    if (!r.jalons || !r.jalons.length) continue;
+    [0.1, 0.25, 0.5, 0.75, 0.99].forEach((f) => {
+      const j = r.jalons[Math.max(0, Math.min(r.jalons.length - 1, Math.floor(r.jalons.length * f)))];
+      if (!j) return;
+      const part = C.offlineEarnings(j.passif, C.OFFLINE_CAP_SECONDS, r.seuil) / r.seuil;
+      if (part < min || part > max) {
+        fautes.push({ groupe: a, moment: Math.round(f * 100) + ' %', part: +(part * 100).toFixed(1) });
+      }
+    });
+  }
+  return fautes;
+}
+module.exports.auditHorsLigne = auditHorsLigne;

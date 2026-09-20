@@ -59,6 +59,8 @@ payée.
 | Aucun défi ne **précède le déblocage** de son sujet | 20/09 |
 | Le **seuil se déduit du coût** des défis, pas l'inverse | 20/09 |
 | Durées visées : **2,8 / 3,5 / 5 / 6,5 / 8 / 10 h** au tap à la main | 20/09 |
+| Le hors ligne vaut **3 à 5 % du seuil** pour 2 h pleines | 20/09 |
+| Toute mesure passe par **`simulerGroupe`**, jamais une simulation à part | 20/09 |
 | Une cible ÉCRITE (`fige: true`) ne se recalcule jamais | 20/09 |
 | Le **document est régénéré** après tout changement de défi | 20/09 |
 | Sanctuaire et Veilleur gardent « monte au niveau N » — ils plafonnent | 20/09 |
@@ -200,17 +202,29 @@ rendait le jeu sept fois plus rapide qu'il ne l'est.
 ⚠️ **Un contrôle qui mesure avec son propre instrument ne contrôle que
 lui-même.** Ne jamais recoder une simulation à côté : appeler celle-ci.
 
-### 🌙 Ce que le hors ligne apporte
+### 🌙 Le hors ligne : 3 à 5 % du seuil
 
-2 h plafonnées, à 25 % du revenu passif.
+Le gain vaut ce que produit le passif, **borné entre 3 % et 5 % du seuil
+de l'Ascension en cours**, au prorata du temps écoulé (2 h pleines).
 
-| A0 | A1 | A2 | A3 | A4 | A5 |
-|---|---|---|---|---|---|
-| 1 % | **72 %** | 33 % | 6 % | 3 % | 1 % |
+| 30 min | 1 h | 2 h |
+|---|---|---|
+| 1,2 % | 2,5 % | **3 à 5 %** |
 
-⚠️ **Le déséquilibre est visible** : une seule session hors ligne couvre
-72 % du seuil à A1, et 1 % à A5. Le hors ligne offre les groupes courts
-et n'aide pas les longs — l'inverse de ce qu'il devrait faire.
+⚠️ **Un simple TAUX ne peut pas marcher.** À 25 % du passif, l'apport
+moyen allait de 0,1 % du seuil à l'Ascension 1 à 4,4 % à l'Ascension 2.
+Pour amener tout le monde à 4 %, il aurait fallu un taux de 668 % sur un
+groupe et 23 % sur le suivant — le passif moyen est trop irrégulier.
+
+⚠️⚠️ **NE JAMAIS MESURER LE HORS LIGNE SUR LE PASSIF DE FIN DE GROUPE.**
+C'est l'auteur qui a relevé l'erreur : « le joueur n'obtient pas le
+maximum dès le début, il commence à 0 ». À l'Ascension 1, le hors ligne
+couvrait 72 % du seuil pour qui se déconnectait au tout dernier instant,
+et **0,1 % en moyenne**. Mesurer la fin surestimait l'apport d'un facteur
+plusieurs centaines, et j'ai annoncé ce chiffre faux avant qu'il me
+corrige.
+
+`auditHorsLigne` mesure à cinq moments du groupe, pas seulement à la fin.
 
 ### ⏱️ Régler la DURÉE d'un groupe
 

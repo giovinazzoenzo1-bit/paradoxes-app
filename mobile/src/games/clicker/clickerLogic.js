@@ -767,13 +767,37 @@ export const OFFLINE_CAP_SECONDS = 2 * 3600;
 // taux. À 25 %, une session hors ligne revient à ~15-25 % du seuil.
 export const OFFLINE_RATE = 0.25;
 
-// ⚠️ Le plafond en PART DU SEUIL a été retiré le 19/09 : l'auteur veut
-// le fonctionnement standard des idle games — 2 h de production, à taux
-// réduit (voir `OFFLINE_RATE`). Le 3e argument est conservé pour ne pas
-// casser les appels existants, mais n'est plus utilisé.
-export function offlineEarnings(incomePerSecond, secondsElapsed) {
+// ⚠️⚠️ LE GAIN HORS LIGNE EST BORNÉ EN PART DU SEUIL : 3 % à 5 % pour
+// deux heures pleines. Demande de l'auteur du 20/09.
+//
+// POURQUOI PAS UN SIMPLE TAUX. Mesuré : à 25 % du passif, l'apport
+// moyen allait de 0,1 % du seuil à l'Ascension 1 à 4,4 % à l'Ascension
+// 2. Pour amener tout le monde à 4 %, il aurait fallu un taux de 668 %
+// sur un groupe et 23 % sur le suivant — le passif moyen est bien trop
+// irrégulier d'un groupe à l'autre pour qu'un taux unique convienne.
+//
+// ⚠️⚠️ ET LE PASSIF DE FIN DE GROUPE N'EST PAS LE BON REPÈRE. L'auteur :
+// « le joueur n'obtient pas le maximum dès le début, il commence à 0 ».
+// Exact — à l'Ascension 1, le hors ligne couvre 72 % du seuil si on se
+// déconnecte au tout dernier instant, et 0,1 % en moyenne sur le groupe.
+// Mesurer la fin surestimait l'apport d'un facteur plusieurs centaines.
+//
+// LA RÈGLE : le gain vaut ce que produit le passif, mais jamais moins de
+// 3 % ni plus de 5 % du seuil de l'Ascension en cours, au prorata du
+// temps écoulé. Un joueur qui a monté ses générateurs touche le haut de
+// la fourchette ; celui qui débute touche quand même le bas.
+export const OFFLINE_PART_MIN = 0.03;
+export const OFFLINE_PART_MAX = 0.05;
+
+export function offlineEarnings(incomePerSecond, secondsElapsed, seuilAscension) {
   const capped = Math.max(0, Math.min(secondsElapsed, OFFLINE_CAP_SECONDS));
-  return Math.floor(incomePerSecond * capped * OFFLINE_RATE);
+  const partDuTemps = capped / OFFLINE_CAP_SECONDS;
+  const brut = incomePerSecond * capped * OFFLINE_RATE;
+  // Sans seuil connu (vieil appel), on garde l'ancien comportement.
+  if (!seuilAscension || !isFinite(seuilAscension)) return Math.floor(brut);
+  const plancher = seuilAscension * OFFLINE_PART_MIN * partDuTemps;
+  const plafond = seuilAscension * OFFLINE_PART_MAX * partDuTemps;
+  return Math.floor(Math.max(plancher, Math.min(brut, plafond)));
 }
 
 // ---- Garde-fou contre le changement d'heure du téléphone ----
