@@ -1648,7 +1648,12 @@ function auditNomsEnDur() {
   const parcours = (d) => fs.readdirSync(d, { withFileTypes: true }).forEach((e) => {
     const p = path.join(d, e.name);
     if (e.isDirectory()) return parcours(p);
-    if (!e.name.endsWith('.js') || p.includes('clickerLogic')) return;
+    // ⚠️ `defisEcrits.js` contient les 252 défis avec leur texte final,
+    // noms d'articles compris — c'est sa raison d'être. Le contrôle vise
+    // le CODE qui construirait un nom à la main, pas une table de
+    // libellés figés.
+    if (!e.name.endsWith('.js') || p.includes('clickerLogic')
+      || p.includes('defisEcrits')) return;
     fs.readFileSync(p, 'utf8').split('\n').forEach((ligne, i) => {
       // ⚠️ Les commentaires sont exclus, y compris ceux qui ferment un
       // bloc JSX (`*/}`) : ils citent des noms pour expliquer un bug
