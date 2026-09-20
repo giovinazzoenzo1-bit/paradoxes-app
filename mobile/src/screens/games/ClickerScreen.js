@@ -618,6 +618,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const tapUpgradesRef = useRef({});
   tapUpgradesRef.current = tapUpgrades;
   const [comboCount, setComboCount] = useState(0); // niveau actuel de la Transe
+  // ⚠️⚠️ RECORD DE TAPS D'AFFILÉE — à ne pas confondre avec `maxCombo`,
+  // qui est le MULTIPLICATEUR de Transe (x2,5 stocké 25).
+  //
+  // Le défi « Enchaîne N taps sans pause » lisait `maxCombo` : il
+  // mesurait donc un multiplicateur en croyant compter des taps, et son
+  // libellé mentait. L'auteur l'a vu autrement — « il compte le record
+  // qu'on a fait avant » — parce que le multiplicateur, lui, ne repart
+  // pas à zéro au tirage.
+  const [maxTapStreak, setMaxTapStreak] = useState(0);
+  const maxTapStreakRef = useRef(0);
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
   // Diamants d'Offrande posés autour de l'œuf, EN ATTENTE de ramassage.
   //
@@ -1528,6 +1538,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     comboCountRef.current = newCombo;
     lastTapTimeRef.current = now;
     setComboCount(newCombo);
+    // Le record de taps d'affilée suit le compteur, pas le multiplicateur.
+    if (newCombo > maxTapStreakRef.current) {
+      maxTapStreakRef.current = newCombo;
+      setMaxTapStreak(newCombo);
+    }
     const newTranseMult = transeMultiplier(newCombo);
     if (newTranseMult > maxComboRef.current) {
       maxComboRef.current = newTranseMult;
@@ -2171,6 +2186,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // entier affichable dans la barre segmentée.
   const questStats = {
     maxCombo: Math.round(maxCombo * 10),
+    maxTapStreak,
     totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower,
     coins,
     passiveIncome,
@@ -2485,11 +2501,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     recordResetForSetRef.current = key;
     const hasRecordQuest = activeQuestIds.some((id) => {
       const q = findQuest(id);
-      return q && (q.metric === 'maxTranseHoldSec' || q.metric === 'maxCombo');
+      // ⚠️ `maxTapStreak` doit figurer ici, sinon le record de taps n'est
+      // jamais remis à zéro et le défi naît déjà rempli.
+      return q && ['maxTranseHoldSec', 'maxCombo', 'maxTapStreak'].includes(q.metric);
     });
     if (hasRecordQuest) {
       maxTranseHoldSecRef.current = 0;
       setMaxTranseHoldSec(0);
+      // ⚠️ Le record de taps d'affilée repart aussi de zéro : sans ça,
+      // un exploit réalisé AVANT le tirage remplissait le défi d'avance.
+      // C'est ce que l'auteur a vu — « il compte le record qu'on a fait
+      // avant ».
+      maxTapStreakRef.current = 0;
+      setMaxTapStreak(0);
       transeStartRef.current = null;
       maxComboRef.current = 1;
       setMaxCombo(1);

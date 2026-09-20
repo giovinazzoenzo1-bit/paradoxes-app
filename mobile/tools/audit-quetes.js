@@ -1177,6 +1177,11 @@ function auditTropFacile(nbOeufs = 26) {
       // ce critère-ci reste celui des défis qui demandent d'ACCUMULER.
       const metA = Q.metriqueDuDefi(q, s) || '';
       const achat = metA.startsWith('auto:') || metA.startsWith('tapUpgrade:');
+      // ⚠️ L'ŒUF 1 DU JEU EST UN TUTORIEL. Ses défis sont VOULUS rapides
+      // — l'auteur a demandé le Pacte en 2e défi pour apprendre la
+      // boutique au joueur. Les compter comme « trop faciles » reviendrait
+      // à refuser un tutoriel qui remplit son rôle.
+      if (oeuf === 0) return;
       const adresse = q.step || achat
         || ['maxTranseHoldSec', 'maxCombo', 'offering', 'runeFused', 'runeBought',
           'sanctuaryLevel', 'veilleurLevel'].includes(q.metric);

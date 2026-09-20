@@ -341,7 +341,11 @@ export function ascensionActionMultiplier(ascensionCount) {
 //
 // ⚠️ Déclaré ICI et plus bas dans le fichier : `resolveQuestTarget` en a
 // besoin, et une const déclarée après ne serait pas encore initialisée.
-const RESET_ON_DRAW_METRICS = ['maxTranseHoldSec', 'maxCombo'];
+// ⚠️ Métriques de RECORD : elles repartent de zéro au tirage, sinon un
+// exploit passé remplit le défi d'avance. `maxTapStreak` s'y ajoute —
+// c'est le vrai compteur de taps d'affilée, `maxCombo` n'étant que le
+// multiplicateur de Transe.
+const RESET_ON_DRAW_METRICS = ['maxTranseHoldSec', 'maxCombo', 'maxTapStreak'];
 
 // ⚠️⚠️ LA MÉTRIQUE D'UN DÉFI PEUT DÉPENDRE DU GROUPE.
 //
@@ -1251,7 +1255,11 @@ export function familleDe(metric) {
   if (['totalEarned', 'coins', 'passiveIncome'].includes(m)) return 'economie';
   if (['advLevelReached', 'battleWon', 'threeStarLevel'].includes(m)) return 'aventure';
   if (['goldenClaimed', 'totalCrits', 'powerActivated', 'maxCombo',
-    'maxTranseHoldSec', 'totalTaps'].includes(m)) return 'rythme';
+    // ⚠️ `maxTapStreak` est une métrique de RYTHME, comme `maxCombo`
+    // dont il prend la place. Sans cette ligne il tombait dans la
+    // famille par défaut, libérait un créneau, et un quatrième défi de
+    // boutique s'installait dans l'œuf.
+    'maxTranseHoldSec', 'totalTaps', 'maxTapStreak'].includes(m)) return 'rythme';
   if (['runeBought', 'runeFused', 'runesEquipped', 'runeEquipped'].includes(m)) return 'runes';
   if (['maxCreatureLevel', 'maxEvolutionTier', 'ownedCount', 'deckCount'].includes(m)) return 'creatures';
   if (m === 'ascension') return 'ascension';

@@ -42,6 +42,9 @@ payée.
 | Le **premier défi du jeu** est celui des pièces, pas un achat | 20/09 |
 | Le **deuxième défi du jeu est le Pacte** — départ du tuto | 20/09 |
 | Jamais deux défis de la **même métrique** dans le même œuf | 20/09 |
+| Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
+| Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
+| L'**œuf 1 est un tutoriel** : ses défis sont volontairement rapides | 20/09 |
 | Les défis d'achat disent **« Achète N »**, jamais « Possède N » | 20/09 |
 | Un défi d'achat ne réclame **jamais plus que ce qui reste** dans le groupe | 20/09 |
 | Le **bonus d'un palier de tap double** à chaque palier : 1, 2, 4, 8… | 20/09 |
@@ -126,6 +129,7 @@ rarement dans un défi ; elle naît dans leur suite.**
 | `auditTropFacile` | Cible trop basse ou déjà acquise : la relever, ou changer la famille du défi. |
 | `auditAchatsColles` | Deux achats se suivent : intercaler un défi d'une autre famille. |
 | `auditDefisEcrits` | Structure du fichier cassée : 6 défis par œuf, identifiants uniques, Ascension en dernier. |
+| `auditMetriquesIncrementees` (bis) | ⚠️ Il dit qu'une métrique EXISTE, pas qu'elle mesure ce que son libellé annonce. « Enchaîne N taps » lisait le MULTIPLICATEUR de Transe pendant des semaines : le contrôle était vert, le défi mentait. **Relire le libellé contre la métrique à chaque ajout.** |
 | `auditDocConforme` | Le document remis à l'auteur ne dit plus ce que le jeu affiche : **régénérer le document**, ou trouver le recalcul qui s'applique par-dessus une cible figée. |
 | `auditLibelles` · `auditLibelleSansArticle` | Le texte ne dit pas la vraie cible, ou ne nomme pas son article. |
 
