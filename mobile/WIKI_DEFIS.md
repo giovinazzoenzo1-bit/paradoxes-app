@@ -64,34 +64,67 @@ zéro quand le défi commence.
 
 ---
 
-### 🧰 LES CONTRÔLES À LANCER SOUVENT
+### 🧰 LES CONTRÔLES — quoi lancer, et quoi faire quand c'est rouge
 
 ```
-node mobile/tools/verifier-defis.js
+NODE_PATH=<dossier avec @babel/core> node mobile/tools/verifier-defis.js
 ```
 
-Trente contrôles. Les six qui regardent le GROUPE ENTIER sont les plus
-précieux — ce sont eux qui attrapent ce qu'un examen défi par défi ne
-peut pas voir :
+Trente-deux contrôles. Vert = le changement peut partir. Chacun est né
+d'un bug réel et a été **prouvé** en réintroduisant ce bug.
 
-| Contrôle | Ce qu'il empêche |
+#### Les contrôles de GROUPE — les plus précieux
+
+Ils regardent l'enchaînement, pas le défi isolé. **Une cassure naît
+rarement dans un défi ; elle naît dans leur suite.**
+
+| Contrôle | Si c'est rouge |
 |---|---|
-| `auditBudgetGroupe` | que les défis d'achat d'un groupe s'écartent des 90 % du seuil |
-| `auditCoutCroissant` | qu'un défi coûte moins cher que le précédent |
-| `auditPlafondAchats` | qu'un joueur en avance se voie réclamer l'impossible |
-| `auditArticlesOrphelins` | qu'un article de boutique ne soit jamais demandé |
-| `auditEquilibreFamilles` | qu'un groupe dérive vers tout-achat ou tout-Aventure |
-| `auditPrerequisTenus` | qu'un défi précède le déblocage de son sujet |
+| `auditBudgetGroupe` | Recalculer le seuil : `coût des achats du groupe / 0,90`. Ne jamais ajuster les défis pour coller au seuil — c'est le seuil qui suit. |
+| `auditCoutCroissant` | Réordonner le groupe en simulant : à chaque étape, prendre l'achat le moins cher **au moment où on le prend**. Trier sur les prix unitaires ne suffit pas. |
+| `auditPlafondAchats` | Vérifier que `plafondAchatsGroupe` lit bien `defisEcrits.js`. Sinon, baisser la cible du défi visé. |
+| `auditDureeCroissante` | Monter le seuil du groupe qui retombe. C'est **lui** qui fait foi sur les durées, pas les outils de travail. |
+| `auditEquilibreFamilles` | Remplacer un défi de la famille en excès par un de la famille manquante. |
+| `auditArticlesOrphelins` | Un article n'est demandé nulle part : lui donner un défi, ou vérifier qu'il est bien hors du contenu écrit. |
+| `auditPrerequisTenus` | Déplacer le défi APRÈS celui qui débloque son sujet — ou relever la cible de ce dernier. |
 
-⚠️ **Ce qu'ils ont trouvé le jour où ils ont été écrits :** des défis
-d'achat à 692 % du seuil à A0 (infaisable) et 2 % à A1 (le joueur passait
-le groupe sur un seul défi) ; quatre paliers de tap demandés alors que le
-Pacte n'était qu'au niveau 6, ce qui aurait **bloqué l'œuf
-définitivement**.
+#### Les contrôles de DÉFI
 
-⚠️ Aucun des vingt-six contrôles précédents ne voyait cela. Ils
-vérifiaient chaque défi ISOLÉMENT. **Une cassure naît rarement dans un
-défi — elle naît dans leur ENCHAÎNEMENT.**
+| Contrôle | Si c'est rouge |
+|---|---|
+| `auditMetriquesIncrementees` | **Danger maximal.** Une métrique que le jeu n'augmente jamais bloque l'œuf pour toujours. Vérifier l'écriture dans l'écran, ou corriger la table des métriques dérivées. |
+| `auditInfaisable` | La cible dépasse 60 % du seuil : la baisser. |
+| `auditTropFacile` | Cible trop basse ou déjà acquise : la relever, ou changer la famille du défi. |
+| `auditAchatsColles` | Deux achats se suivent : intercaler un défi d'une autre famille. |
+| `auditDefisEcrits` | Structure du fichier cassée : 6 défis par œuf, identifiants uniques, Ascension en dernier. |
+| `auditLibelles` · `auditLibelleSansArticle` | Le texte ne dit pas la vraie cible, ou ne nomme pas son article. |
+
+#### Les contrôles de CODE
+
+Ils lisent la source, pas les données. Ils attrapent ce qu'aucun test de
+logique ne voit.
+
+| Contrôle | Si c'est rouge |
+|---|---|
+| `auditEtatComplet` | Un appel au moteur reçoit un fragment d'état. Passer l'état complet — un fragment ne lève aucune erreur, il rend des zéros. |
+| `auditInstantanesAJour` | Un instantané lit une valeur capturée au rendu. Lire la `ref`. |
+| `auditResetSurChangement` | La sauvegarde réimpose l'ancien état après une mise à jour. Conditionner à `defsChangees`. |
+| `auditNomsEnDur` | Un nom d'article est écrit ailleurs que dans `clickerLogic.js`. |
+| `auditSubstitutions` | Un chemin retire un défi sans passer par `peutEtreRemplace`. |
+| `auditTamponsAscension` · `auditRecompenseDoublee` | Des pièces survivent à l'Ascension, ou le bonus est compté deux fois. |
+
+### ⚠️ Trois règles de méthode pour les contrôles eux-mêmes
+
+**Un contrôle non prouvé ne vaut rien.** On le vérifie en réintroduisant
+le bug : s'il reste vert, il ne sert à rien.
+
+**Un contrôle qui hurle sur des cas normaux cesse d'être lu.** Plusieurs
+ont dû être restreints après coup — ils signalaient leur propre
+documentation, ou des situations inatteignables.
+
+**Deux instruments qui ne partagent pas leur état ne peuvent pas être
+comparés.** Ce piège a coûté du temps trois fois. En cas de désaccord,
+c'est le contrôle de la suite qui fait foi.
 
 ### 🔍 Le contrôle du coût croissant
 

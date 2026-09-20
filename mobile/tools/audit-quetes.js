@@ -2064,3 +2064,125 @@ function auditPrerequisTenus() {
   return fautes;
 }
 module.exports.auditPrerequisTenus = auditPrerequisTenus;
+
+// ---- Chaque métrique est-elle réellement INCRÉMENTÉE par le jeu ? ---
+//
+// ⚠️ C'EST L'ANGLE MORT LE PLUS DANGEREUX, et il est documenté depuis le
+// début sans avoir jamais été couvert : les contrôles vérifient qu'une
+// métrique est PUBLIÉE, jamais que le jeu l'augmente.
+//
+// Un défi portant sur une métrique que personne n'incrémente ne se
+// termine JAMAIS. L'œuf est bloqué, la partie est morte, et rien dans le
+// code ne signale quoi que ce soit — la métrique existe, elle vaut zéro.
+//
+// On cherche donc, dans l'écran de jeu, une écriture qui fasse monter
+// chaque métrique : `setX(v + 1)`, `x += `, `trackEvent('x')`, etc.
+function auditMetriquesIncrementees() {
+  const fs = require('fs');
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const sources = ['/../src/screens/games/ClickerScreen.js',
+    '/../src/screens/games/AdventureScreen.js',
+    '/../src/screens/games/CombatScreen.js',
+    '/../src/context/DailyContext.js']
+    .map((f) => { try { return fs.readFileSync(__dirname + f, 'utf8'); } catch (e) { return ''; } })
+    .join('\n');
+  const fautes = [];
+  const vues = new Set();
+  D.DEFIS_ECRITS.flat().forEach((q) => {
+    const m = q.metric || '';
+    if (vues.has(m)) return;
+    vues.add(m);
+    // ⚠️ MÉTRIQUES DÉRIVÉES : elles ne sont pas incrémentées, elles sont
+    // CALCULÉES à partir d'autre chose. Les signaler serait une fausse
+    // alerte — mais il faut vérifier leur SOURCE, sinon l'angle mort se
+    // déplace simplement d'un cran.
+    const DERIVEES = {
+      totalTaps: 'taps',              // compteur à vie de DailyContext
+      passiveIncome: 'autoClickers',  // somme des générateurs possédés
+      maxCreatureLevel: 'owned',      // plus haut niveau de la collection
+    };
+    const reel = DERIVEES[m] || m;
+    // Les métriques composées sont incrémentées via leur conteneur.
+    const nom = m.startsWith('auto:') ? 'autoClickers'
+      : m.startsWith('tapUpgrade:') ? 'tapUpgrades'
+        : m.startsWith('upgrade:') ? 'upgradeLevels' : reel;
+    // Une écriture qui AUGMENTE : affectation incrémentale, setter avec
+    // + 1, ou événement suivi.
+    // ⚠️ Motifs écrits SANS échappement double : le bloc précédent les
+    // doublait, produisant des expressions invalides qui plantaient le
+    // contrôle au lieu de le faire échouer proprement.
+    const maj = nom[0].toUpperCase() + nom.slice(1);
+    const motifs = [
+      nom + '\\s*\\+=',
+      nom + '[^\\n]{0,40}\\+\\s*1',
+      'set' + maj + '\\s*\\(',
+      "trackEvent\\(\\s*'" + nom + "'",
+      "trackMax\\(\\s*'" + nom + "'",
+      nom + '\\s*:\\s*[^,\\n]*\\+',
+    ].map((r) => new RegExp(r));
+    if (!motifs.some((r) => r.test(sources))) {
+      fautes.push({ metrique: m, source: reel,
+        probleme: 'aucune écriture qui la fasse monter' });
+    }
+  });
+  return fautes;
+}
+module.exports.auditMetriquesIncrementees = auditMetriquesIncrementees;
+
+// ---- La durée d'un groupe monte-t-elle à chaque Ascension ? ---------
+//
+// Règle de l'auteur : « un peu facile au début et de plus en plus
+// compliqué ». Une durée qui retombe après un pic donne le sentiment que
+// le jeu se termine.
+//
+// ⚠️ La durée ne se lit nulle part : elle se MESURE en rejouant
+// l'économie. C'est le seul contrôle qui simule une partie entière.
+function auditDureeCroissante(baisseMax = 0.15) {
+  const TAPS = 4;
+  const duree = (a) => {
+    const s = etatInitial();
+    s.ascension = a;
+    const seuil = C.ascensionThreshold(a);
+    let t = 0, garde = 0;
+    while ((s.totalEarned || 0) < seuil && garde++ < 8000) {
+      const r = Math.max(1, production(s));
+      const opts = [];
+      const essaie = (cout, appliquer2) => {
+        if (!isFinite(cout) || cout <= 0) return;
+        const c = JSON.parse(JSON.stringify(s));
+        appliquer2(c);
+        const gain = production(c) - r;
+        if (gain > 0) opts.push({ cout, gain, appliquer2 });
+      };
+      essaie(C.tapPowerCost(s.tapPower), (x) => { x.tapPower += 1; });
+      C.AUTOCLICKERS.forEach((g) => {
+        const n = (s.autoClickers || {})[g.id] || 0;
+        essaie(C.autoClickerCost(g, n, a), (x) => { x.autoClickers[g.id] = n + 1; });
+      });
+      if (!opts.length) { t += (seuil - (s.totalEarned || 0)) / r; break; }
+      opts.forEach((o) => { o.score = Math.max(0, (o.cout - (s.coins || 0)) / r) + o.cout / o.gain; });
+      opts.sort((x, y) => x.score - y.score);
+      const v = opts[0];
+      const attente = Math.max(0, (v.cout - (s.coins || 0)) / r);
+      const restant = (seuil - (s.totalEarned || 0)) / r;
+      if (attente >= restant) { t += restant; break; }
+      t += attente;
+      s.coins = (s.coins || 0) + r * attente - v.cout;
+      s.totalEarned = (s.totalEarned || 0) + r * attente;
+      v.appliquer2(s);
+    }
+    return t / 3600;
+  };
+  const fautes = [];
+  let precedente = null;
+  for (let a = 0; a < 6; a++) {
+    const h = duree(a);
+    if (precedente !== null && h < precedente * (1 - baisseMax)) {
+      fautes.push({ groupe: a, heures: +h.toFixed(1), avant: +precedente.toFixed(1) });
+    }
+    precedente = h;
+  }
+  return fautes;
+}
+module.exports.auditDureeCroissante = auditDureeCroissante;
