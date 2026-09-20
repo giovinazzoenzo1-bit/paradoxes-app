@@ -1642,3 +1642,35 @@ function auditNomsEnDur() {
   return fautes;
 }
 module.exports.auditNomsEnDur = auditNomsEnDur;
+
+// ---- Jamais deux défis d'achat d'affilée ----------------------------
+//
+// Règle de l'auteur du 20/09 : « jamais deux défis d'achat d'affilée ».
+// Deux achats consécutifs enchaînent deux fois le même geste — ouvrir la
+// boutique, dépenser. Les alterner donne du rythme.
+//
+// ⚠️ La règle vaut aussi ENTRE DEUX ŒUFS : le dernier défi d'un œuf et
+// le premier du suivant. C'est là qu'elle se casse le plus facilement,
+// parce qu'on regarde un œuf à la fois en la vérifiant à l'œil.
+function auditAchatsColles(nbOeufs = 28) {
+  const fautes = [];
+  const s = etatInitial();
+  s.ownedCount = 6; s.creaturesAVenir = 6; s.tapPower = 12;
+  s.critLevel = 3; s.critDamageLevel = 3;
+  let precedent = null;
+  for (let oeuf = 0; oeuf < nbOeufs; oeuf++) {
+    s.ascension = Math.floor(oeuf / Q.QUEST_SEQUENCE.length);
+    const set = Q.nextQuestSet(oeuf, [], s);
+    set.ids.forEach((id) => {
+      const q = Q.findQuest(id);
+      if (!q) return;
+      const achat = Q.estDefiAchat(q, s);
+      if (achat && precedent) {
+        fautes.push({ oeuf: oeuf + 1, id, apres: precedent });
+      }
+      precedent = achat ? id : null;
+    });
+  }
+  return fautes;
+}
+module.exports.auditAchatsColles = auditAchatsColles;

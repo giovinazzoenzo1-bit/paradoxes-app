@@ -30,6 +30,7 @@ const CONTROLES = [
   ['auditEtatComplet', 'le moteur reçoit l état complet du joueur'],
   ['auditInstantanesAJour', 'les instantanés lisent des valeurs à jour'],
   ['auditNomsEnDur', 'aucun nom d article écrit en dur hors de clickerLogic'],
+  ['auditAchatsColles', 'jamais deux défis d achat d affilée'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
   ['auditAscension', 'ne diverge pas après les Ascensions'],
@@ -42,7 +43,7 @@ const CONTROLES = [
   ['auditHorsSchema', 'aucun défi étranger glissé dans un œuf'],
   ['auditSubstitutions', 'tout retrait de défi passe par la règle unique'],
   ['auditCibleSuitLeJoueur', 'une cible fixe est la même pour tous les joueurs'],
-  ['auditTropFacile', 'au plus 6 défis faciles sur 175', 6],
+  ['auditTropFacile', 'au plus 13 défis faciles sur 252', 13],
 ];
 
 let echecs = 0;

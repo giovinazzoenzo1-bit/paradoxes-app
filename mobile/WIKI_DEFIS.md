@@ -4,6 +4,33 @@ Un tableau par FAMILLE de défis. Les défis se répètent d'une Ascension à l'
 
 ---
 
+## 📌 RÈGLES POSÉES PAR L'AUTEUR — à relire avant TOUT changement de défi
+
+Cette section est la première à consulter. Chaque règle vient d'une
+demande explicite ; ne pas la respecter, c'est refaire une erreur déjà
+payée.
+
+| Règle | Depuis |
+|---|---|
+| **Jamais deux défis d'ACHAT d'affilée**, y compris d'un œuf au suivant | 20/09 |
+| **7 œufs de 6 défis** par Ascension, soit 42 défis | 20/09 |
+| **2 nouveaux générateurs + 2 nouveaux paliers de tap** par Ascension | 19/09 |
+| Les anciens articles **reviennent** dans les défis des Ascensions suivantes | 19/09 |
+| Chaque achat est **scindé en deux étapes** dans des œufs différents | 20/09 |
+| Les cibles d'un même article **ne redescendent jamais** dans un groupe | 20/09 |
+| Les défis d'achat montent en **coût** au fil du groupe | 19/09 |
+| Les défis d'achat consomment **90 % du seuil**, 10 % de farm final | 19/09 |
+| La difficulté **monte à chaque Ascension**, sans jamais redescendre | 19/09 |
+| Un défi d'achat se repère à sa **métrique**, jamais à son texte | 20/09 |
+| Les noms d'articles ne vivent QUE dans `clickerLogic.js` | 20/09 |
+| Un nombre de pièces ne veut rien dire **hors de son Ascension** | 19/09 |
+
+⚠️ **Le document de la conversation** surligne les défis d'ACHAT en
+rouge et ceux d'AVENTURE en vert, dans des blocs `diff` — Markdown n'a
+aucune autre façon d'afficher de la couleur.
+
+---
+
 ## Comment lire ce wiki
 
 | Colonne | Ce que ça veut dire |

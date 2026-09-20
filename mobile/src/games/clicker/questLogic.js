@@ -938,8 +938,47 @@ export function questAlreadyDone(quest, stats = {}) {
   return acquis >= resolveQuestTarget(quest, stats);
 }
 
+// ⚠️⚠️ JAMAIS DEUX DÉFIS D'ACHAT D'AFFILÉE — règle de l'auteur du 20/09.
+//
+// Deux achats consécutifs enchaînent deux fois le même geste : ouvrir la
+// boutique, dépenser. Les alterner avec un défi d'Aventure, de clic ou
+// de mise de côté donne du rythme.
+//
+// ⚠️ La règle vaut aussi ENTRE DEUX ŒUFS : le dernier défi d'un œuf et
+// le premier du suivant ne peuvent pas être tous deux des achats.
+export const METRIQUES_ACHAT = ['tapPower', 'critLevel', 'critDamageLevel',
+  'sanctuaryLevel', 'veilleurLevel'];
+
+export function estDefiAchat(quest, stats) {
+  const m = metriqueDuDefi(quest, stats) || '';
+  return m.startsWith('auto:') || m.startsWith('tapUpgrade:')
+    || METRIQUES_ACHAT.includes(m);
+}
+
+// Réordonne un œuf pour qu'aucun achat n'en suive un autre.
+export function alternerAchats(cycle, stats, dernierEtaitAchat = false) {
+  const achats = cycle.filter((q) => estDefiAchat(q, stats));
+  const autres = cycle.filter((q) => !estDefiAchat(q, stats));
+  // ⚠️ Pas assez de défis « autres » pour séparer : on rend l'œuf tel
+  // quel plutôt que de produire un ordre faux en silence.
+  if (achats.length > autres.length + (dernierEtaitAchat ? 0 : 1)) return cycle;
+  const sortie = [];
+  let prec = dernierEtaitAchat;
+  while (achats.length || autres.length) {
+    if (!prec && achats.length) { sortie.push(achats.shift()); prec = true; } else if (autres.length) { sortie.push(autres.shift()); prec = false; } else { sortie.push(achats.shift()); prec = true; }
+  }
+  return sortie;
+}
+
 export function nextQuestSet(index, excludeIds = [], stats = {}) {
-  const cycle = sequenceCycle(index);
+  // ⚠️ L'œuf est réordonné pour alterner achats et autres défis. On
+  // regarde le dernier défi de l'œuf PRÉCÉDENT, la règle valant aussi
+  // d'un œuf à l'autre.
+  const brut = sequenceCycle(index);
+  const avant = index > 0 ? sequenceCycle(index - 1) : null;
+  const finAchat = avant && avant.length
+    ? estDefiAchat(avant[avant.length - 1], stats) : false;
+  const cycle = brut ? alternerAchats(brut, stats, finAchat) : brut;
   if (cycle) {
     // Les défis déjà accomplis sont REMPLACÉS par des défis du pool
     // dynamique, dont la cible est calculée à partir de l'état courant
