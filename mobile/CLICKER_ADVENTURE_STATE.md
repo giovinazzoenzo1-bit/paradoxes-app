@@ -15,9 +15,15 @@ code.
 NODE_PATH=<dossier avec @babel/core> node mobile/tools/verifier-defis.js
 ```
 
-16 contrôles + 14 600 tirages de force brute + l'empreinte. Vert = le
+22 contrôles + une vérification exhaustive (186 combinaisons) + 14 600 tirages de force brute + l'empreinte. Vert = le
 changement peut partir. Chaque contrôle est né d'un bug réel et a été
 **prouvé** en réintroduisant ce bug.
+
+⚠️ **Deux instruments qui ne partagent pas leur état ne peuvent pas être
+comparés.** Deux fois dans la même session : sur les durées de groupe,
+puis sur le coût des défis, où le même défi ressortait « infaisable »
+d'un côté et « 0 minute » de l'autre — parce qu'ils ne supposaient pas
+le même joueur.
 
 ⚠️ Un contrôle non prouvé ne vaut rien. Et une preuve porte sur un défi
 PRÉCIS : quand ce défi disparaît, la preuve disparaît avec lui et le
@@ -207,7 +213,48 @@ initiative a produit deux bugs en trois commits avant d'être retiré.
 
 ---
 
-## 6. Équilibrage
+## 6. Boutique et Ascensions — les règles qui se tiennent
+
+Quatre barèmes qui ne peuvent PAS bouger séparément :
+
+| | Règle |
+|---|---|
+| **Bonus d'Ascension** | x2, x2,5, x3... cumulatif (x2, x5, x15, x53, x210) |
+| **Seuils** | montent avec le bonus, sinon le groupe se vide |
+| **Prix de boutique** | montent avec le bonus (`prixMultiplicateurAscension`) |
+| **Rendements** | x5 par palier, prix PROPORTIONNELS au rendement |
+
+⚠️ **UN seul nouveau palier par Ascension.** Avec deux, la boutique
+demandait x25 de rendement par groupe quand le seuil ne monte que de x5
+à x8 : les paliers s'éloignaient 3 à 5 fois plus vite que le pouvoir
+d'achat. Les 15 générateurs couvrent les 15 Ascensions.
+
+⚠️ **Les prix FIXES étaient le pire bug de l'équilibrage.** Le 1er
+Esprit coûtait 910 pièces à toutes les Ascensions alors que le revenu
+est multiplié par le bonus : 228 secondes de jeu à A0, 1 seconde à A5.
+Le joueur remontait toute la boutique en minutes.
+
+⚠️ **`gainCoins` est réservé à ce que le joueur PRODUIT.** Toute
+récompense qu'on lui DONNE se crédite directement — sinon le bonus
+d'Ascension est compté deux fois (x15 à A3 sur un achat en Diamants).
+
+⚠️ **L'Ascension doit vider `pendingGainRef`.** Les pièces sont versées
+toutes les 100 ms ; sans ça, ce qui attendait était recrédité juste
+après la remise à zéro.
+
+⚠️ **Un changement d'échelle révèle des bugs anciens sans les créer.**
+Les deux points ci-dessus existaient depuis longtemps ; l'ancien bonus
+à x1,30 les rendait invisibles.
+
+⚠️ **Deux noms de boutique trop proches = un joueur qui achète le mauvais
+article.** « Titan de Foudre » doublonnait « Titan Mécanique » ; renommé
+Héraut d'Orage. Un contrôle peut vérifier qu'un nom EXISTE, jamais qu'il
+appartient à l'univers du jeu : tout ajout de contenu se valide avec
+l'auteur.
+
+---
+
+## 7. Équilibrage
 
 Joueur à la main, 4 taps/s. L'autoclicker de l'auteur (~142/s) est un
 outil de test, **jamais** une référence d'équilibrage.
