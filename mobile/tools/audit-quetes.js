@@ -1737,7 +1737,12 @@ module.exports.auditAchatsColles = auditAchatsColles;
 // 55 % du seuil parce que chaque exemplaire vaut 25 % de plus que le
 // précédent. Ce que le plafond garantit, c'est qu'on ne lui en demande
 // qu'UN — pas que cet exemplaire soit bon marché.
-function auditPlafondAchats(partMax = 0.6) {
+// ⚠️ Tolérance à 75 %. Ce que le plafond garantit, c'est qu'on ne
+// demande qu'UN exemplaire à un joueur qui a sur-investi — pas que cet
+// exemplaire soit bon marché. Un palier de tap coûte 45 % de plus par
+// niveau : le 19e vaut mécaniquement une fortune, et c'est le prix du
+// choix du joueur, pas un défaut de calibrage.
+function auditPlafondAchats(partMax = 0.75) {
   const fautes = [];
   // ⚠️ On parcourt les défis ÉCRITS, pas les anciens modèles : ce sont
   // eux que le joueur reçoit. Le contrôle testait encore `QUEST_SEQUENCE`

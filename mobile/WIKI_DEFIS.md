@@ -58,6 +58,7 @@ payée.
 | Tout article **atteignable** est demandé par au moins un défi | 20/09 |
 | Aucun défi ne **précède le déblocage** de son sujet | 20/09 |
 | Le **seuil se déduit du coût** des défis, pas l'inverse | 20/09 |
+| Durées visées : **2,8 / 3,5 / 5 / 6,5 / 8 / 10 h** au tap à la main | 20/09 |
 | Une cible ÉCRITE (`fige: true`) ne se recalcule jamais | 20/09 |
 | Le **document est régénéré** après tout changement de défi | 20/09 |
 | Sanctuaire et Veilleur gardent « monte au niveau N » — ils plafonnent | 20/09 |
@@ -183,6 +184,31 @@ groupe, en prenant à chaque étape l'achat le moins cher **au moment où
 on le prend**.
 
 ---
+
+### ⏱️ Régler la DURÉE d'un groupe
+
+**Le levier :** multiplier les PRIX des articles que ce groupe vise ET
+son SEUIL par le même facteur multiplie sa durée d'autant. Le joueur
+achète le même matériel k fois plus cher, produit au même rythme, et met
+k fois plus longtemps.
+
+⚠️ **Ne toucher qu'au seuil ne marche pas** : la durée monte, mais les
+défis d'achat ne valent plus que 90/k % du seuil et le joueur passe le
+groupe sur un seul défi. Les deux barèmes bougent ENSEMBLE.
+
+⚠️ **Lire dans le fichier quels articles un groupe vise**, ne jamais le
+déduire d'un index. Le déduire donnait un décalage d'un groupe : je
+multipliais les prix du Léviathan en croyant agir sur l'Ascension 4, qui
+vise en fait Golem, Dragon et Phénix. Le groupe ne réagissait pas, et
+j'ai cherché ailleurs pendant plusieurs passes.
+
+⚠️ **Amortir la correction à 45 %.** Les groupes ne sont pas
+indépendants — les défis d'un groupe visent aussi des articles du
+précédent — donc une correction franche fait osciller les voisins. Avec
+l'amortissement, six passes suffisent.
+
+⚠️ **Le seuil se recalcule à CHAQUE passe** (coût / 0,90), sinon le
+budget dérive pendant qu'on poursuit la durée.
 
 ### 🧮 Le calculateur d'achats
 

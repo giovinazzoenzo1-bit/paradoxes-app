@@ -1086,16 +1086,16 @@ export function coreUpgradeRequirement(id) {
 // que les générateurs, donc la valeur par coin ne les distingue pas.
 // Une règle correcte sur le papier peut produire une échelle plate.
 export const TAP_UPGRADES = [
-  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1185, growth: 1.45 },
-  { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2, cost: 1897, growth: 1.45 },
-  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 4, cost: 1583, growth: 1.45 },
-  { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 8, cost: 2533, growth: 1.45 },
-  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 16, cost: 3358, growth: 1.45 },
-  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 32, cost: 5373, growth: 1.45 },
-  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 64, cost: 6007, growth: 1.45 },
-  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 128, cost: 9612, growth: 1.45 },
-  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 256, cost: 13405, growth: 1.45 },
-  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 512, cost: 21449, growth: 1.45 },
+  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1399, growth: 1.45 },
+  { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2, cost: 2237, growth: 1.45 },
+  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 4, cost: 17330, growth: 1.45 },
+  { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 8, cost: 27729, growth: 1.45 },
+  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 16, cost: 51523, growth: 1.45 },
+  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 32, cost: 82442, growth: 1.45 },
+  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 64, cost: 25472, growth: 1.45 },
+  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 128, cost: 40763, growth: 1.45 },
+  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 256, cost: 24845, growth: 1.45 },
+  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 512, cost: 39753, growth: 1.45 },
 ];
 
 // ⚠️ Même correction : à 10 x LEVEL_SPLIT = 50, les 10 paliers de tap ne
@@ -1340,6 +1340,18 @@ export function normalizeUpgradeLevels(levels) {
 // Le barème s'arrête à la 14e parce que c'est là que le DERNIER
 // générateur (Étoile Filante) devient accessible. Au-delà, on prolonge
 // au rapport asymptotique mesuré (~x8).
+// ⚠️⚠️ DURÉES VISÉES PAR L'AUTEUR : 2,8 / 3,5 / 5 / 6,5 / 8 / 10 h.
+//
+// LE LEVIER : multiplier les PRIX d'un groupe ET son SEUIL par le même
+// facteur multiplie sa durée d'autant, sans toucher au budget des 90 %.
+// Le joueur achète le même matériel pour k fois plus cher, produit au
+// même rythme, et met donc k fois plus longtemps.
+//
+// ⚠️ Ne toucher qu'au seuil allongerait la durée mais viderait le
+// groupe : les défis d'achat ne représenteraient plus que 90/k % du
+// seuil, et le joueur passerait le plus clair du groupe sur un seul
+// défi. Les deux barèmes doivent bouger ENSEMBLE.
+//
 // ⚠️⚠️ SEUILS DÉDUITS DU COÛT DES DÉFIS, et non l'inverse.
 //
 // Règle de l'auteur : les défis d'achat d'un groupe coûtent 90 % du
@@ -1375,16 +1387,16 @@ export const ASCENSION_THRESHOLDS = [
   // termine le contenu pendant A5. Les valeurs suivantes existent pour
   // que le barème reste défini, et devront être remesurées le jour où
   // des créatures seront ajoutées.
-  3200721,               // A0
-  12081800,              // A1
-  121539520,             // A2
-  1785846083,            // A3
-  15790296612,           // A4
-  281901966658,          // A5 · fin de la collection
-  2748325471810,         // A6
-  26794041164542,        // A7
-  261221114198798,       // A8
-  2546703204799268,      // A9
+  3137106,               // A0  — 2,8 h
+  13408541,              // A1  — 3,5 h
+  995947312,             // A2  — 5 h
+  21121441694,           // A3  — 6,5 h
+  87521678741,           // A4  — 8 h
+  514427993542,          // A5  — 10 h · fin de la collection
+  2313168989082,         // A6
+  11563836966150,        // A7
+  63598844337173,        // A8
+  381590556048967,       // A9
 ];
 
 // Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.
@@ -1684,18 +1696,18 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // 15 % par palier. Changer un prix sans son rendement remet un palier
 // hors course — voir `auditPrixParAscension`.
 export const AUTOCLICKERS = [
-  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 771, baseIncome: 0.6, tier: 1 },
-  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 2074, baseIncome: 1.44, tier: 1 },
-  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 5580, baseIncome: 3.46, tier: 1 },
-  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 14975, baseIncome: 8.29, tier: 1 },
-  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 40260, baseIncome: 19.9, tier: 1 },
-  { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 108308, baseIncome: 47.8, tier: 2 },
-  { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 291844, baseIncome: 115, tier: 2 },
-  { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 781634, baseIncome: 275, tier: 2 },
-  { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 2101032, baseIncome: 660, tier: 2 },
-  { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 5668965, baseIncome: 1590, tier: 2 },
-  { id: 'titanfoudre', name: 'Héraut d\u2019Orage', emoji: '⚡', baseCost: 15174287, baseIncome: 3800, tier: 3 },
-  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 40833208, baseIncome: 9130, tier: 3 },
+  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 700, baseIncome: 0.6, tier: 1 },
+  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 1795, baseIncome: 1.44, tier: 1 },
+  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 61085, baseIncome: 3.46, tier: 1 },
+  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 156197, baseIncome: 8.29, tier: 1 },
+  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 617748, baseIncome: 19.9, tier: 1 },
+  { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 3414717, baseIncome: 47.8, tier: 2 },
+  { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 1237724, baseIncome: 115, tier: 2 },
+  { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 1279784, baseIncome: 275, tier: 2 },
+  { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 3894055, baseIncome: 660, tier: 2 },
+  { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 10506866, baseIncome: 1590, tier: 2 },
+  { id: 'titanfoudre', name: 'Héraut d\u2019Orage', emoji: '⚡', baseCost: 1979613, baseIncome: 3800, tier: 3 },
+  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 5327033, baseIncome: 9130, tier: 3 },
   { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 109699553, baseIncome: 21900, tier: 3 },
   { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 295096806, baseIncome: 52600, tier: 3 },
   { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 791712190, baseIncome: 126000, tier: 3 },
