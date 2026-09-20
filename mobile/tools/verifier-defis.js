@@ -29,6 +29,7 @@ const CONTROLES = [
   ['auditResetSurChangement', 'une maj des défis efface l ancien état'],
   ['auditEtatComplet', 'le moteur reçoit l état complet du joueur'],
   ['auditInstantanesAJour', 'les instantanés lisent des valeurs à jour'],
+  ['auditNomsEnDur', 'aucun nom d article écrit en dur hors de clickerLogic'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
   ['auditAscension', 'ne diverge pas après les Ascensions'],

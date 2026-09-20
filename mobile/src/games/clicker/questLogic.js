@@ -1106,9 +1106,20 @@ export function familleDe(metric) {
 // améliorations distinctes se distinguent par leur nom.
 const MAX_PAR_FAMILLE = {
   economie: 1, runes: 1, creatures: 1, offrande: 1, ascension: 1,
-  aventure: 2, rythme: 2, boutique: 2,
+  // ⚠️ La boutique passe à 3 et le rythme à 3 : les œufs comptent
+  // désormais SIX défis au lieu de cinq, et les défis d'achat sont
+  // scindés en deux étapes réparties dans des œufs différents. À deux
+  // par œuf, il devenait impossible de les placer.
+  aventure: 2, rythme: 3, boutique: 3,
 };
 const MAX_PAR_FAMILLE_DEFAUT = 2;
+
+// ⚠️ Exposé pour que les outils lisent CETTE table au lieu d'en
+// recopier une. Une copie ne suit pas les changements : relever le
+// plafond ici ne changeait rien au contrôle, qui refusait toujours.
+export function plafondFamille(famille) {
+  return MAX_PAR_FAMILLE[famille] || MAX_PAR_FAMILLE_DEFAUT;
+}
 
 // ⚠️⚠️ POINT DE VÉRITÉ UNIQUE : « ce défi peut-il être remplacé ? »
 //

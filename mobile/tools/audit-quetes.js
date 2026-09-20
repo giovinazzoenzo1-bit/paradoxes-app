@@ -903,7 +903,12 @@ function auditFamilles(nbOeufs = 18) {
       // ⚠️ Doit refléter `MAX_PAR_FAMILLE` du moteur. Un contrôle qui
       // recopie une règle finit par mentir quand la règle bouge — on lit
       // donc la même table.
-      const max = { economie: 1, runes: 1, creatures: 1, offrande: 1, ascension: 1 }[f] || 2;
+      // ⚠️ La table était RECOPIÉE ici. Relever le plafond dans le
+      // moteur ne changeait donc rien au contrôle, qui continuait de
+      // refuser — exactement le piège que son propre commentaire
+      // annonçait. Le moteur l'expose maintenant, et il n'y a plus
+      // qu'une seule table.
+      const max = Q.plafondFamille(f);
       if (n > max) fautes.push({ oeuf: oeuf + 1, famille: f, nb: n, max });
     });
     const nv = C.CREATURES[Math.min(oeuf, C.CREATURES.length - 1)];
@@ -1597,3 +1602,43 @@ module.exports.auditInstantanesAJour = auditInstantanesAJour;
 // La bonne parade ici n'est pas un contrôle mais une règle : un champ
 // qui vit dans un CONTEXTE ne se lit jamais sur la sauvegarde d'un
 // écran. On le prend à sa source.
+
+// ---- Un nom d'article écrit en dur quelque part ? -------------------
+//
+// L'auteur, après « Titan de Foudre n'a jamais existé » puis « Gardien
+// Céleste n'existe pas » : « assure-toi d'avoir les bons noms d'item de
+// partout ».
+//
+// Les noms ne vivent QUE dans `clickerLogic.js`. Partout ailleurs, un
+// article se désigne par son identifiant et son nom se lit via
+// `nomArticle()`. Écrire un nom en dur crée une copie qui ne suivra pas
+// un renommage — et le joueur lit alors un article qui n'existe plus.
+//
+// ⚠️ Les COMMENTAIRES sont exclus : ils citent des noms pour expliquer un
+// bug passé, ce qui est légitime et sans effet sur le jeu.
+function auditNomsEnDur() {
+  const fs = require('fs');
+  const path = require('path');
+  const noms = [...C.AUTOCLICKERS.map((a) => a.name), ...C.TAP_UPGRADES.map((t) => t.name)];
+  const fautes = [];
+  const racine = __dirname + '/../src';
+  const parcours = (d) => fs.readdirSync(d, { withFileTypes: true }).forEach((e) => {
+    const p = path.join(d, e.name);
+    if (e.isDirectory()) return parcours(p);
+    if (!e.name.endsWith('.js') || p.includes('clickerLogic')) return;
+    fs.readFileSync(p, 'utf8').split('\n').forEach((ligne, i) => {
+      // ⚠️ Les commentaires sont exclus, y compris ceux qui ferment un
+      // bloc JSX (`*/}`) : ils citent des noms pour expliquer un bug
+      // passé, ce qui est légitime et sans effet sur le jeu.
+      if (/^\s*(\/\/|\*|\/\*)/.test(ligne) || /\*\/\}?\s*$/.test(ligne)) return;
+      noms.forEach((n) => {
+        if (ligne.includes(n)) {
+          fautes.push({ fichier: p.split('/src/')[1], ligne: i + 1, nom: n });
+        }
+      });
+    });
+  });
+  parcours(racine);
+  return fautes;
+}
+module.exports.auditNomsEnDur = auditNomsEnDur;

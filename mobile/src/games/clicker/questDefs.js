@@ -377,6 +377,11 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Reste en Transe x2,5 pendant ${t} secondes` },
     { id: 'g1_golden', icon: '⭐', metric: 'goldenClaimed', target: 3, echelle: 'actions', mode: 'delta',
       label: (t) => (t > 1 ? `Touche ${t} fois la cible dorée` : 'Touche la cible dorée') },
+    // ⚠️ 6 défis par œuf, uniformément. L'auteur : « je préfère quand
+    // même faire 6 défis par œuf » plutôt que d'ajouter un 8e œuf.
+    { id: 'g1_combats', icon: '🗡️', metric: 'battleWon', target: 2, echelle: 'aventure', mode: 'delta',
+      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
+      label: (t) => `Gagne ${t} combat${t > 1 ? 's' : ''} en Aventure` },
   ],
 
   // ══════════════════ ŒUF 2 — PREMIERS COMBATS ══════════════════
@@ -435,6 +440,13 @@ export const QUEST_SEQUENCE = [
     // À traiter avec le déplacement du créneau APRÈS le défi de Pacte,
     // ou en avançant l'ouverture du premier palier.
     // Même raison : ce créneau redevient un défi d'ACTION.
+    // ⚠️ SECONDE ÉTAPE du défi d'achat de l'œuf 1, quelques défis plus
+    // loin. L'auteur : « acheter 15 Esprits d'un coup peut être
+    // décourageant, alors qu'en acheter 7 puis 8 plus tard, le joueur a
+    // le temps de gagner des pièces entre les deux ».
+    { id: 'g2_gen0b', icon: '👻', metriqueParGroupe: generateurDuGroupe(2),
+      target: 6, capAbsolu: 9, echelle: 'unites', mode: 'absolute',
+      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
   // ══════════════════ ŒUF 3 — S'ÉQUIPER ══════════════════
@@ -486,6 +498,10 @@ export const QUEST_SEQUENCE = [
     { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
       target: 3, capAbsolu: 5, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
+    // Seconde étape du palier de tap récent.
+    { id: 'g3_tap1b', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(0),
+      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
+      label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
   ],
 
   // ══════════════════ ŒUF 4 — LA COLLECTION ══════════════════
@@ -542,6 +558,10 @@ export const QUEST_SEQUENCE = [
     { id: 'g4_tap0', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(1),
       target: 5, capAbsolu: 8, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
+    // Seconde étape du palier de tap ancien.
+    { id: 'g4_tap0b', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(1),
+      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
+      label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
   ],
 
   // ══════════════════ ŒUF 5 — MONTER EN PUISSANCE ══════════════════
@@ -572,6 +592,10 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Monte le Veilleur au niveau ${t}` },
     { id: 'g5_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 45, cap: 80, mode: 'absolute',
       label: (t) => `Tiens la Transe pendant ${t} secondes` },
+    // Seconde étape du générateur du milieu.
+    { id: 'g5_gen1b', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
+      target: 6, capAbsolu: 9, echelle: 'unites', mode: 'absolute',
+      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
   // ══════════════════ ŒUF 6 — FRANCHIR ══════════════════
@@ -597,6 +621,10 @@ export const QUEST_SEQUENCE = [
     // ⚠️ `step: 1` et NON une cible en dur. Il n'existait que deux défis
     // d'Ascension (`target: 1` et `target: 2`) : passé la 2e, plus aucun
     // défi n'en demandait et la séquence cessait de structurer le jeu.
+    // Seconde étape du générateur le plus récent.
+    { id: 'g6_gen2b', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
+      target: 5, capAbsolu: 8, echelle: 'unites', mode: 'absolute',
+      label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
   // ⚠️⚠️ SEPTIÈME ŒUF — ajouté le 19/09 à la demande de l'auteur : « je
   // ne veux pas qu'un œuf ait 5 défis et un autre 6 ».
@@ -628,6 +656,8 @@ export const QUEST_SEQUENCE = [
     // d'affilée au 6e groupe, ce qu'aucun joueur ne tient.
     { id: 'g7_combo', icon: '🔥', metric: 'maxCombo', target: 30, cap: 50, echelle: 'actions', mode: 'absolute',
       label: (t) => `Enchaîne ${t} taps sans pause` },
+    { id: 'g7_pouvoirs', icon: '✨', metric: 'powerActivated', target: 9, echelle: 'actions', mode: 'delta',
+      label: (t) => (t > 1 ? `Active ${t} fois un pouvoir` : 'Active un pouvoir') },
     { id: 'g6_ascend', icon: '🌟', metric: 'ascension', step: 1, mode: 'absolute',
       label: (t) => `Fais ta ${t}${t === 1 ? 're' : 'e'} Ascension` },
   ],
@@ -828,7 +858,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 31;
+export const QUEST_ENGINE_VERSION = 32;
 
 function empreinteDefis() {
   const morceaux = [];

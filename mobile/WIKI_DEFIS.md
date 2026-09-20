@@ -27,14 +27,28 @@ Il en reste **10 %** que le joueur doit farmer pour lancer son Ascension.
 
 **2. Ce budget se répartit en pourcentages entre les défis d'achat.**
 
-| Œuf | Défi | Part du budget |
+| Œuf | Défi d'achat | Étape |
 |---|---|---|
-| 1 | Générateur le plus **ancien** | 12 % |
-| 3 | Générateur du milieu | 16 % |
-| 4 | Palier de tap ancien | 20 % |
-| 5 | Générateur le plus **récent** | 24 % |
-| 7 | Palier de tap récent | 28 % |
-| | **Total** | **100 %** |
+| 1 | Générateur le plus **ancien** | 1re |
+| 2 | Générateur le plus ancien | **2e** |
+| 3 | Générateur du milieu · palier de tap récent | 1re · 2e |
+| 4 | Palier de tap ancien | 1re **et** 2e |
+| 5 | Générateur le plus **récent** · générateur du milieu | 1re · 2e |
+| 6 | Générateur le plus récent | **2e** |
+| 7 | Palier de tap récent | 1re |
+
+**10 défis d'achat par Ascension**, sur 42 défis au total.
+
+⚠️ **CHAQUE ACHAT EST SCINDÉ EN DEUX ÉTAPES**, placées dans des œufs
+différents. L'auteur : « acheter 15 Esprits d'un coup peut être
+décourageant, alors qu'en acheter 7 puis 8 plus tard, le joueur a le
+temps de gagner des pièces entre les deux ». L'objectif final est le
+même, l'effort est mieux réparti.
+
+⚠️ Le coût se compte sur la cible FINALE, pas sur la somme des deux
+étapes — la seconde ne paie que les exemplaires supplémentaires.
+Confondre les deux m'a fait mesurer 289 % du seuil là où il n'y en avait
+que 88.
 
 ⚠️ **L'ordre suit le COÛT : du moins cher au plus cher.** Le joueur vient
 de tout perdre à l'Ascension — on ne lui demande pas son défi le plus
@@ -79,8 +93,9 @@ Le joueur doit sentir qu'il lui reste **un petit effort** avant une grosse réco
 
 | Ascension | Défis d'achat | Farm final |
 |---|---|---|
-| A1 | 82 % | 18 % |
-| A5 | 91 % | 9 % |
+| A1 | 84 % | 16 % |
+| A3 | 91 % | 9 % |
+| A5 | 88 % | 12 % |
 
 Et l'ordre dans le groupe, à l'Ascension 5 :
 
@@ -382,7 +397,7 @@ Changer l'un sans les autres casse le jeu :
 ⚠️ Le verrou est le **prix**, pas une condition. À son Ascension, deux exemplaires coûtent un défi ; à l'Ascension d'avant, trois à six fois plus.
 
 ### Règles de composition d'un œuf
-- **7 œufs** par Ascension, **5 défis** chacun — soit **35 défis par groupe**
+- **7 œufs** par Ascension, **6 défis** chacun — soit **42 défis par groupe**
 - Jamais deux défis de la même famille dans le même œuf
 - L'**Ascension** est toujours le dernier défi du 7e œuf
 - Un défi ne doit **jamais** coûter plus de **60 %** du seuil de son Ascension
