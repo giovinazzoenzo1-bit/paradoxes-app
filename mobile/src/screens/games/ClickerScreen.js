@@ -1950,6 +1950,30 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     (async () => {
           {
             trackEvent('ascension', 1);
+            // ⚠️⚠️ L'ASCENSION DOIT RETIRER LES DÉFIS DE L'ŒUF EN COURS.
+            //
+            // Sans ça, le joueur garde les défis calibrés pour le groupe
+            // qu'il vient de QUITTER — « Obtiens 750 pièces » juste après
+            // sa 5e Ascension. Signalé par l'auteur après la correction
+            // du tirage initial : le rattrapage ne joue qu'au chargement,
+            // donc ascensionner en cours de partie ne changeait rien.
+            //
+            // ⚠️ `trackEvent` est ASYNCHRONE : `ascensionCountRef` vaut
+            // encore l'ancienne valeur à cet instant. On tire donc avec
+            // `+ 1`, sinon on redessine le groupe qu'on quitte.
+            //
+            // ⚠️ Les RÉFÉRENCES de progression partent avec : elles
+            // mesuraient l'avancement depuis un état qui vient d'être
+            // effacé.
+            const ascApres = (ascensionCountRef.current || 0) + 1;
+            const statsApres = { ...buildQuestStatsSnapshot(), ascension: ascApres };
+            const setApres = nextQuestSet(sequenceIndexRef.current, [], statsApres);
+            questDrawAscRef.current = ascApres;
+            setActiveQuestIds(setApres.ids);
+            setQuestTargets(setApres.targets);
+            setQuestBaselines({});
+            setDevCompletedIds([]);
+            setDevReopenedIds([]);
             // Remise à zéro de la SEULE économie du clicker.
             // ⚠️⚠️ VIDER LE TAMPON DE GAINS AVANT de remettre à zéro.
             //
