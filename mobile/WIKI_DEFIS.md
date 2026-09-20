@@ -23,7 +23,8 @@ payée.
 | Les anciens articles **reviennent** dans les défis des Ascensions suivantes | 19/09 |
 | Chaque achat est **scindé en deux étapes** dans des œufs différents | 20/09 |
 | Les cibles d'un même article **ne redescendent jamais** dans un groupe | 20/09 |
-| Les défis d'achat montent en **coût** au fil du groupe | 19/09 |
+| Le **coût** d'un défi d'achat ne redescend JAMAIS dans un groupe | 20/09 |
+| Sanctuaire et Veilleur gardent « monte au niveau N » — ils plafonnent | 20/09 |
 | Les défis d'achat consomment **90 % du seuil**, 10 % de farm final | 19/09 |
 | La difficulté **monte à chaque Ascension**, sans jamais redescendre | 19/09 |
 | Un défi d'achat se repère à sa **métrique**, jamais à son texte | 20/09 |
@@ -56,6 +57,30 @@ Exemple : le défi des pièces porte `target: 750`. Au groupe 0 il demande
 demandant 5 Esprits était déjà rempli si un défi précédent en avait fait
 acheter 5 — il s'annulait tout seul. En mode delta, le compteur part de
 zéro quand le défi commence.
+
+---
+
+### 🔍 Le contrôle du coût croissant
+
+Idée de l'auteur : « le défi 152 est plus cher que le 156 alors qu'il est
+avant — est-ce que ton calculateur pourrait dénoncer ce genre de
+malfaçon ? »
+
+Oui. `auditCoutCroissant` calcule le **coût réel** de chaque défi
+d'achat — pas sa cible, pas son rang — en tenant le compte de ce que le
+joueur a déjà acheté dans le groupe, et refuse tout défi moins cher que
+le précédent.
+
+⚠️ Il a trouvé **34 défis mal placés** du premier coup, dont un à 19
+millions au groupe 0 — soit 46 fois le seuil de l'Ascension. Un défi
+infaisable que les autres contrôles ne voyaient pas, parce qu'ils
+regardaient chaque défi isolément sans tenir le compte des achats
+précédents.
+
+⚠️ Trier sur le coût « à froid » ne suffit pas : acheter le 10e
+exemplaire coûte plus cher que le 3e. Le tri se fait donc en SIMULANT le
+groupe, en prenant à chaque étape l'achat le moins cher **au moment où
+on le prend**.
 
 ---
 

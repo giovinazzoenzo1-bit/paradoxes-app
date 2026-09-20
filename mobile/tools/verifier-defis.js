@@ -32,6 +32,7 @@ const CONTROLES = [
   ['auditNomsEnDur', 'aucun nom d article écrit en dur hors de clickerLogic'],
   ['auditAchatsColles', 'jamais deux défis d achat d affilée'],
   ['auditPlafondAchats', 'un défi d achat reste faisable pour un joueur en avance'],
+  ['auditCoutCroissant', 'le coût d un défi d achat ne redescend jamais'],
   ['auditDefisEcrits', 'le fichier des 252 défis est cohérent et fait foi'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],

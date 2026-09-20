@@ -1813,3 +1813,66 @@ function auditDefisEcrits() {
   return fautes;
 }
 module.exports.auditDefisEcrits = auditDefisEcrits;
+
+// ---- Le coût d'un défi d'achat monte-t-il au fil du groupe ? --------
+//
+// Idée de l'auteur, le 20/09 : « le défi 152 est logiquement plus cher
+// que le 156, alors qu'il est avant. Je me demande si ton calculateur
+// pourrait dénoncer ce genre de malfaçon si on lui donne cette
+// logique ».
+//
+// Oui, et c'est exactement ce que fait ce contrôle. Il calcule le COÛT
+// RÉEL de chaque défi d'achat — pas sa cible, pas son rang — et vérifie
+// qu'il ne redescend jamais à l'intérieur d'un groupe.
+//
+// ⚠️ Le coût dépend de ce que le joueur POSSÈDE DÉJÀ : acheter le 10e
+// exemplaire coûte plus cher que le 3e. On rejoue donc le groupe en
+// tenant le compte, au lieu de comparer des prix unitaires.
+function auditCoutCroissant(tolerance = 0.5) {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const fautes = [];
+  const NIVEAUX = ['tapPower', 'critLevel', 'critDamageLevel',
+    'sanctuaryLevel', 'veilleurLevel'];
+  for (let groupe = 0; groupe < 6; groupe++) {
+    const possede = {};
+    let precedent = null;
+    let numero = groupe * 42;
+    for (let e = 0; e < 7; e++) {
+      const oeuf = D.DEFIS_ECRITS[groupe * 7 + e] || [];
+      oeuf.forEach((q) => {
+        numero += 1;
+        const m = q.metric || '';
+        const estAuto = m.startsWith('auto:');
+        const estTap = m.startsWith('tapUpgrade:');
+        if (!estAuto && !estTap && !NIVEAUX.includes(m)) return;
+        const item = estAuto ? C.AUTOCLICKERS.find((x) => x.id === m.slice(5))
+          : estTap ? C.TAP_UPGRADES.find((x) => x.id === m.slice(11)) : null;
+        const deja = possede[m] || 0;
+        // En mode delta la cible est un NOMBRE D'ACHATS ; en absolu,
+        // c'est un niveau à atteindre depuis ce qu'on a déjà.
+        const aAcheter = q.mode === 'delta' ? q.target : Math.max(0, q.target - deja);
+        let cout = 0;
+        for (let n = deja; n < deja + aAcheter; n++) {
+          if (estAuto) cout += C.autoClickerCost(item, n, groupe);
+          else if (estTap) cout += C.tapUpgradeCost(item, n, groupe);
+          else if (m === 'tapPower') cout += C.tapPowerCost(n);
+          else if (m === 'critLevel') cout += C.critUpgradeCost(n);
+          else if (m === 'critDamageLevel') cout += C.critDamageUpgradeCost(n);
+          else if (m === 'sanctuaryLevel') cout += C.sanctuaryUpgradeCost(n);
+          else if (m === 'veilleurLevel') cout += C.veilleurUpgradeCost(n);
+        }
+        possede[m] = deja + aAcheter;
+        if (cout <= 0) return;
+        if (precedent && cout < precedent.cout * (1 - tolerance)) {
+          fautes.push({ groupe, defi: numero, texte: q.label(q.target),
+            cout: Math.round(cout), avant: precedent.defi,
+            coutAvant: Math.round(precedent.cout) });
+        }
+        precedent = { defi: numero, cout };
+      });
+    }
+  }
+  return fautes;
+}
+module.exports.auditCoutCroissant = auditCoutCroissant;
