@@ -7,6 +7,12 @@ une erreur déjà payée. Le reste se lit dans le code, qui est commenté.
 de refaire une erreur coûteuse ? Sinon, ça va en commentaire dans le
 code.
 
+⚠️⚠️ **SI UN BUG NE SE REPRODUIT PAS DANS LE BAC À SABLE, COMMENCER PAR
+LA SECTION 5.** Afficher le chiffre dans le jeu avant d'écrire le
+moindre correctif. Sept correctifs à l'aveugle le 19/09, tous sur des
+causes réelles, aucune n'étant la bonne — un affichage de deux chiffres
+a réglé l'affaire en une capture d'écran.
+
 ---
 
 ## 1. La commande avant tout push touchant aux défis
@@ -72,7 +78,9 @@ push sur `main` touchant `mobile/**` ; il ferme et rouvre l'appli.
 
 ⚠️ **Les logs GitHub Actions ne sont PAS accessibles depuis le bac à
 sable** (hôte hors liste blanche). Pour diagnostiquer, faire écrire
-l'information là où le téléphone l'affiche.
+l'information là où le téléphone l'affiche — **voir le protocole
+complet en section 5, qui est la méthode à appliquer par défaut sur
+tout bug qu'on ne peut pas reproduire ici.**
 
 **La date de publication dans les Options.** `mobile/src/version.js` est
 réécrit par le robot avant chaque `eas update` : heure de Paris +
@@ -178,7 +186,60 @@ groupe : elle les saturerait dès le 2e.
 
 ---
 
-## 5. Les pièges de méthode
+## 5. LA MÉTHODE QUI MARCHE : afficher le chiffre dans le jeu
+
+⚠️ **À faire dès le PREMIER signalement, pas au septième.**
+
+Le 19/09, l'auteur a signalé sept fois que tous les groupes montraient
+les mêmes défis. J'ai poussé sept correctifs, tous sur des causes
+RÉELLES — cibles figées conservées par la sauvegarde, tirage recevant un
+fragment d'état, compteur lu à un instant périmé, champ absent de la
+sauvegarde — et **aucune n'était la sienne**.
+
+Ce qui a résolu l'affaire en une capture d'écran : afficher deux
+chiffres dans le jeu.
+
+```
+A:5 T:-1
+```
+
+- `A` = le nombre d'Ascensions au dernier rendu
+- `T` = le nombre d'Ascensions enregistré AU MOMENT du tirage des défis
+
+Le `-1` signifiait « aucun tirage n'a jamais eu lieu ». En un coup
+d'œil, sept hypothèses éliminées et la vraie cause désignée : les défis
+de départ, figés au groupe 0, n'étaient jamais retirés.
+
+### Pourquoi la relecture du code ne suffit pas
+
+⚠️ **Le chemin par lequel une valeur N'ARRIVE PAS est invisible à la
+lecture.** On vérifie les chemins qu'on connaît ; jamais celui qu'on a
+oublié. Un compteur affiché montre l'ABSENCE ; une relecture, non.
+
+⚠️ Lire un champ absent ne provoque AUCUNE erreur : on obtient
+`undefined`, puis zéro par le `|| 0`. Le jeu fonctionnait parfaitement —
+pour un joueur qui n'a jamais ascensionné.
+
+### Le protocole, pour tout bug non reproductible dans le bac à sable
+
+1. **Afficher la valeur suspecte dans le jeu** — mode dev, écran
+   Options, peu importe : là où le téléphone la montre.
+2. **Afficher aussi la valeur AU MOMENT où elle a été utilisée**, pas
+   seulement la valeur courante. C'est l'écart entre les deux qui
+   désigne le coupable.
+3. **Demander la capture** et n'écrire aucun correctif avant de
+   l'avoir.
+4. **Énumérer à l'avance ce que chaque résultat signifierait.** Si deux
+   valeurs possibles mènent au même endroit, le diagnostic est mal
+   choisi.
+5. Corriger, puis **laisser l'affichage en place** jusqu'à confirmation.
+
+⚠️ Sans cette manipulation, chaque correctif est un coup dans le noir —
+et l'auteur a eu raison de dire que je cassais des choses au hasard.
+
+---
+
+## 6. Les pièges de méthode
 
 **L'instrument ment plus souvent que le jeu.** Cinq fois en une session,
 la panne était dans l'outil de mesure. Un simulateur appelle les
@@ -213,7 +274,7 @@ initiative a produit deux bugs en trois commits avant d'être retiré.
 
 ---
 
-## 6. Boutique et Ascensions — les règles qui se tiennent
+## 7. Boutique et Ascensions — les règles qui se tiennent
 
 Quatre barèmes qui ne peuvent PAS bouger séparément :
 
@@ -254,7 +315,7 @@ l'auteur.
 
 ---
 
-## 7. Équilibrage
+## 8. Équilibrage
 
 Joueur à la main, 4 taps/s. L'autoclicker de l'auteur (~142/s) est un
 outil de test, **jamais** une référence d'équilibrage.
