@@ -656,6 +656,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [sequenceIndex, setSequenceIndex] = useState(0);
   const sequenceIndexRef = useRef(0);
   sequenceIndexRef.current = sequenceIndex;
+  // ⚠️⚠️ DÉFIS DE DÉPART — figés au GROUPE 0, et c'est voulu : à ce
+  // stade DailyContext n'a pas fini de charger, on ne peut pas connaître
+  // le nombre d'Ascensions.
+  //
+  // ⚠️ MAIS ILS DOIVENT ÊTRE RETIRÉS ENSUITE. Sans sauvegarde à charger
+  // — après une réinitialisation de l'Élevage, par exemple — le
+  // chargement ne passait par AUCUN des deux chemins de tirage, et ces
+  // défis de groupe 0 restaient affichés pour toujours.
+  //
+  // C'est LA cause du symptôme signalé sept fois : « Obtiens 750
+  // pièces » à l'Ascension 5. Le diagnostic « A:5 T:-1 » l'a prouvé —
+  // T:-1 signifie qu'aucun tirage n'avait jamais eu lieu.
+  //
+  // Le tirage de rattrapage se trouve dans l'effet plus bas, déclenché
+  // dès que `dailyLoaded` passe à vrai.
   const initialQuests = useState(() => nextQuestSet(0))[0];
   const [activeQuestIds, setActiveQuestIds] = useState(initialQuests.ids);
   const [questTargets, setQuestTargets] = useState(initialQuests.targets);
@@ -1217,6 +1232,29 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // AVANT lui : `lifetimeStats` valait alors `{}` et les défis étaient
     // tirés pour un joueur à zéro Ascension.
   }, [dailyLoaded]);
+
+  // ⚠️ RATTRAPAGE DU TIRAGE INITIAL.
+  //
+  // Les défis de départ sont tirés au groupe 0 (voir `initialQuests`).
+  // Si le chargement n'a trouvé aucune sauvegarde, rien ne les remplace
+  // — le joueur garde les défis du tout premier œuf quelle que soit son
+  // Ascension. On retire ici, une seule fois, dès que le nombre
+  // d'Ascensions est connu.
+  const rattrapageFaitRef = useRef(false);
+  useEffect(() => {
+    if (!loaded || !dailyLoaded || rattrapageFaitRef.current) return;
+    rattrapageFaitRef.current = true;
+    // Un tirage a déjà eu lieu avec le bon état : rien à faire.
+    if (questDrawAscRef.current >= 0) return;
+    const asc = lifetimeStats.ascension || 0;
+    if (asc <= 0) return;
+    const stats = buildQuestStatsSnapshot();
+    const set = nextQuestSet(sequenceIndexRef.current, [], stats);
+    questDrawAscRef.current = stats.ascension;
+    setActiveQuestIds(set.ids);
+    setQuestTargets(set.targets);
+    setQuestBaselines({});
+  }, [loaded, dailyLoaded, lifetimeStats]);
 
   // DailyContext (source de lifetimeStats, les compteurs Aventure à
   // vie) se charge de façon INDÉPENDANTE de ce chargement-ci — il peut
