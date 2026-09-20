@@ -127,35 +127,17 @@ GROUPES.forEach((groupe) => {
         }
       }
 
-      // 5. LE COÛT est-il réalisable ?
+      // 5. LE COÛT est vérifié AILLEURS, sur la vraie progression.
       //
-      // ⚠️ La vérification de FORME ne suffit pas. « Possède 45 Titans
-      // de Foudre » est bien écrit, l'article existe, la boutique
-      // l'affiche — et il coûte 16 MILLIONS de fois le seuil de son
-      // Ascension. Un défi peut être parfaitement valide et totalement
-      // infaisable.
+      // ⚠️ Ce fichier part d'un état FIGÉ, le même à tous les groupes.
+      // Calculer un coût là-dessus faisait ressortir « infaisable » des
+      // défis que `auditInfaisable` — qui rejoue la séquence et sait ce
+      // que le joueur possède — mesure comme normaux. Deux instruments
+      // qui ne partagent pas leur état ne peuvent pas être comparés :
+      // c'est le piège qui a coûté le plus de temps dans ce projet.
       //
-      // Règle : ce qu'un défi demande d'acheter ne doit pas dépasser le
-      // seuil de l'Ascension en cours. Au-delà, le joueur ascensionne
-      // avant d'avoir fini.
-      if (metric.startsWith('auto:') || metric.startsWith('tapUpgrade:')) {
-        const estAuto = metric.startsWith('auto:');
-        const item = estAuto
-          ? C.AUTOCLICKERS.find((x) => x.id === metric.slice(5))
-          : C.TAP_UPGRADES.find((x) => x.id === metric.slice(11));
-        if (item && Number.isFinite(cible)) {
-          const possede = estAuto ? (s.autoClickers[item.id] || 0) : (s.tapUpgrades[item.id] || 0);
-          let cout = 0;
-          for (let n = possede; n < cible && n < possede + 200; n++) {
-            cout += estAuto ? C.autoClickerCost(item, n, groupe) : C.tapUpgradeCost(item, n, groupe);
-          }
-          const seuil = C.ascensionThreshold(groupe);
-          if (cout > seuil) {
-            ajoute('🟥', groupe, q.id, 'coût supérieur au seuil du groupe',
-              `${texte} = ${Math.round(cout / seuil)}x le seuil`);
-          }
-        }
-      }
+      // Le coût est donc contrôlé par `auditInfaisable`, et ce fichier
+      // s'en tient à ce qu'il peut juger sans état : la FORME des défis.
 
       // 6. Réalisable ?
       try {

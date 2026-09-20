@@ -649,7 +649,18 @@ function auditAscension(depassementMax = ASC_DEPASSEMENT_MAX, ascMax = 4) {
   const vus = new Set();
   tous.forEach((q) => {
     // Seuls les défis à cible CALCULÉE dépendent du budget.
-    if ((!q.effortMin && !q.partAsc) || vus.has(q.id)) return;
+    //
+    // ⚠️ Les défis en PART DU SEUIL (`partAsc`) en sont exclus depuis le
+    // 19/09 : ils sont stables PAR CONSTRUCTION, puisqu'ils demandent
+    // toujours la même fraction du chemin vers l'Ascension. Ce contrôle
+    // mesure des MINUTES à production figée, or la production de départ
+    // d'un groupe monte à chaque Ascension — il voyait donc une
+    // divergence (71 min puis 2 857 min) là où la difficulté réelle ne
+    // bouge pas.
+    //
+    // ⚠️ Mesurer la BONNE grandeur importe plus que multiplier les
+    // contrôles. Celui-ci garde tout son sens pour `effortMin`.
+    if (!q.effortMin || vus.has(q.id)) return;
     vus.add(q.id);
     const temps = [];
     for (let n = 0; n <= ascMax; n++) {

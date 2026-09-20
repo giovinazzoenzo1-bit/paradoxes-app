@@ -473,11 +473,23 @@ export function resolveQuestTarget(quest, stats) {
   // fenêtre réelle vaut toujours plus que le chiffre écrit ici.
   // Balayage : 90 -> 3 alertes, 60 -> 2, 45 -> 0.
   const PART_PLAFOND_MIN = 45;
+  // ⚠️⚠️ PAS DE PLAFOND DE PRODUCTION SUR UNE PART DU SEUIL.
+  //
+  // Le budget était borné par ce que le joueur produit AU MOMENT DU
+  // TIRAGE. Or le tirage suit immédiatement l'Ascension, quand sa
+  // production vient d'être remise à zéro : le plafond s'appliquait donc
+  // toujours, et la cible retombait sur son plancher.
+  //
+  // Signalé le 19/09 : à l'Ascension 5, « Obtiens 750 pièces » — la
+  // valeur du tout premier œuf du jeu — alors que le seuil du groupe est
+  // à 12,2 milliards.
+  //
+  // Une part du seuil décrit le chemin vers l'Ascension, pas un effort
+  // instantané : le joueur PRODUIRA pendant le groupe, c'est tout
+  // l'objet du défi. Le plafond reste pour les défis exprimés en minutes
+  // d'effort, où il garde son sens.
   const budget = quest.partAsc
-    ? Math.min(
-      quest.partAsc * ascensionThreshold(Math.max(0, Math.floor((stats && stats.ascension) || 0))),
-      questBudget(stats, PART_PLAFOND_MIN),
-    )
+    ? quest.partAsc * ascensionThreshold(Math.max(0, Math.floor((stats && stats.ascension) || 0)))
     : questBudget(stats, quest.effortMin || 15);
   // ⚠️ LE PLANCHER D'ASCENSION A ÉTÉ SUPPRIMÉ — il traitait un symptôme.
   //
