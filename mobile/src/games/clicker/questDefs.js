@@ -173,7 +173,7 @@ export function palierDeTapDuGroupe(rang) {
 export const ECHELLES_GROUPE = {
   // Pièces, réserves, revenu par seconde : suivent le seuil d'Ascension,
   // qui est lui-même mesuré (500 K · 1,3 M · 3,2 M · 11 M · 41 M · 200 M).
-  pieces: [1, 2.6, 6.4, 22, 82, 400],
+  pieces: [1, 12, 90, 700, 4200, 13333],
   // Niveaux d'amélioration : le coût double par niveau, donc la cible ne
   // peut monter que de quelques crans — au-delà elle devient un mur.
   // ⚠️ Relevée le 19/09 : [1, 1,15, 1,3...] était trop faible. Le coût
@@ -185,7 +185,7 @@ export const ECHELLES_GROUPE = {
   // DOUBLE, donc au-delà d'une vingtaine de niveaux le prix explose
   // (Pacte 24 = 700 millions de pièces). L'échelle fait monter la cible,
   // le plafond absolu l'empêche de devenir un mur.
-  niveau: [1, 1.45, 1.9, 2.4, 3.2, 4.0],
+  niveau: [1, 1.45, 1.9, 2.4, 2.8, 3.14],
   // Nombre d'unités d'un générateur : les paliers supérieurs prennent le
   // relais, donc la quantité du palier bas ne doit pas exploser.
   // ⚠️ Relevée le 19/09, même raison que `niveau`. Le prix d'un
@@ -207,14 +207,18 @@ export const ECHELLES_GROUPE = {
   // ⚠️ Relevée sur les chiffres de l'auteur : il veut 25 exemplaires au
   // 5e groupe là où la table plate en donnait 10. Mesuré — 25 Mains
   // Spectrales coûtent 9,7 % du seuil à A5, l'effort visé.
-  unites: [1, 1.3, 1.6, 1.9, 2.2, 2.5],
+  unites: [1, 1.15, 1.3, 1.45, 1.6, 1.7],
   // Actions répétées (critiques, taps, dorées, pouvoirs) : le joueur ne
   // tape pas plus vite après une Ascension. On monte doucement, sinon le
   // défi devient une corvée de durée pure.
   // ⚠️ Relevée : l'auteur veut 14 cibles dorées au 5e groupe contre 8,
   // et 130 secondes de Transe contre 25. Les deux défis partagent cette
   // échelle, qui porte désormais la montée des défis d'ADRESSE.
-  actions: [1, 1.5, 2.2, 3, 3.8, 4.7],
+  actions: [1, 1.7, 2.5, 3.3, 4, 4.67],
+  // ⚠️ Échelle propre à la tenue de Transe : l'auteur la veut à 130
+  // secondes au 5e groupe, là où les autres défis d'adresse montent
+  // moins vite. Tenir une Transe longue est un geste, pas un cumul.
+  transe: [1, 1.8, 2.7, 3.6, 4.4, 5.2],
   // Combats et niveaux d'Aventure : bornés par l'ÉNERGIE, pas par
   // l'économie. Une Ascension ne rend pas l'énergie plus rapide, donc
   // ces cibles bougent à peine.
@@ -293,7 +297,14 @@ export const QUEST_SEQUENCE = [
     // donnait 300 000 pièces au 5e groupe, soit 0,08 % d'un seuil à 12,2
     // milliards — un défi qui se validait tout seul. Une part suit le
     // barème des seuils sans aucun facteur à deviner.
-    { id: 'g1_coins', icon: '🪙', metric: 'totalEarned', partAsc: 0.04, mode: 'delta',
+    // ⚠️ Cible du 5e groupe fixée par l'auteur : 10 millions de pièces.
+    // L'échelle `pieces` est calée pour y arriver depuis 750.
+    //
+    // ⚠️ Il sait que cela ne fait que 0,08 % du seuil d'Ascension — je le
+    // lui ai mesuré. C'est SON arbitrage : un défi d'entrée d'œuf doit
+    // rester rapide, la difficulté du groupe étant portée par les
+    // quatre autres.
+    { id: 'g1_coins', icon: '🪙', metric: 'totalEarned', target: 750, echelle: 'pieces', mode: 'delta',
       label: (t) => `Obtiens ${qtyQ(t, 'pièces')}` },
     // ⚠️ `cap` OBLIGATOIRE sur le Pacte : son coût DOUBLE par niveau,
     // donc un seul cran de trop coûte le double du précédent. Sans
@@ -304,7 +315,7 @@ export const QUEST_SEQUENCE = [
     // gagne désormais plus vite, donc Pacte 6 (2 604 pièces) tombait à
     // 3 minutes. Le niveau 7 en coûte 5 292, soit sept fois le défi de
     // pièces voisin du même œuf — l'ordre de grandeur voulu.
-    { id: 'g1_pacte', icon: '🔗', metric: 'tapPower', target: 7, capAbsolu: 20, echelle: 'niveau', mode: 'absolute',
+    { id: 'g1_pacte', icon: '🔗', metric: 'tapPower', target: 7, capAbsolu: 24, echelle: 'niveau', mode: 'absolute',
       label: (t) => `Monte Pacte au niveau ${t}` },
     // ⚠️ DEUX défis d'achat par groupe, pas quatre.
     //
@@ -326,12 +337,12 @@ export const QUEST_SEQUENCE = [
     // L'Esprit Frappeur en dur reste la moins mauvaise option : c'est le
     // premier générateur du jeu, l'œuf 1 est le seul endroit où il est
     // encore cher, et il n'entre en conflit avec aucune autre famille.
-    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(2), target: 10, capAbsolu: 14,
+    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(4), target: 10, capAbsolu: 17,
       echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
     // « +15 % au-dessus de l'acquis » l'a déjà poussée à 641 secondes.
-    { id: 'g1_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 25, cap: 150, echelle: 'actions', mode: 'absolute',
+    { id: 'g1_transe', icon: '🔥', metric: 'maxTranseHoldSec', target: 25, cap: 150, echelle: 'transe', mode: 'absolute',
       label: (t) => `Reste en Transe x2,5 pendant ${t} secondes` },
     { id: 'g1_golden', icon: '⭐', metric: 'goldenClaimed', target: 3, echelle: 'actions', mode: 'delta',
       label: (t) => (t > 1 ? `Touche ${t} fois la cible dorée` : 'Touche la cible dorée') },
@@ -741,7 +752,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 18;
+export const QUEST_ENGINE_VERSION = 19;
 
 function empreinteDefis() {
   const morceaux = [];
