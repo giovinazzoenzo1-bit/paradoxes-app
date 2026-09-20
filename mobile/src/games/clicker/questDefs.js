@@ -496,11 +496,11 @@ export const QUEST_SEQUENCE = [
     // générateur figé : Esprit Frappeur au départ, puis Automate,
     // Titan, Dragon... C'est ainsi que le joueur découvre sa boutique.
     { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 3, capAbsolu: 5, echelle: 'unites', mode: 'absolute',
+      target: 9, capAbsolu: 13, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     // Seconde étape du palier de tap récent.
-    { id: 'g3_tap1b', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(0),
-      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
+    { id: 'g3_tap1b', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(1),
+      target: 12, capAbsolu: 15, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
   ],
 
@@ -555,12 +555,12 @@ export const QUEST_SEQUENCE = [
     // ⚠️ Défi de PALIER DE TAP — il n'en existait AUCUN, alors que la
     // boutique en compte dix. L'auteur : « il faut aussi ajouter des
     // défis d'amélioration de tap et d'autoclick ».
-    { id: 'g4_tap0', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(1),
-      target: 5, capAbsolu: 8, echelle: 'niveau', mode: 'absolute',
+    { id: 'g4_tap0', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(0),
+      target: 12, capAbsolu: 15, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
     // Seconde étape du palier de tap ancien.
     { id: 'g4_tap0b', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(1),
-      target: 7, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
+      target: 16, capAbsolu: 20, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
   ],
 
@@ -594,7 +594,7 @@ export const QUEST_SEQUENCE = [
       label: (t) => `Tiens la Transe pendant ${t} secondes` },
     // Seconde étape du générateur du milieu.
     { id: 'g5_gen1b', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 6, capAbsolu: 9, echelle: 'unites', mode: 'absolute',
+      target: 13, capAbsolu: 18, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
@@ -623,7 +623,7 @@ export const QUEST_SEQUENCE = [
     // défi n'en demandait et la séquence cessait de structurer le jeu.
     // Seconde étape du générateur le plus récent.
     { id: 'g6_gen2b', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
-      target: 5, capAbsolu: 8, echelle: 'unites', mode: 'absolute',
+      target: 6, capAbsolu: 9, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
   // ⚠️⚠️ SEPTIÈME ŒUF — ajouté le 19/09 à la demande de l'auteur : « je
@@ -647,7 +647,7 @@ export const QUEST_SEQUENCE = [
     // chaque fois ». Trois défis de générateur et deux de tap donnent
     // cinq articles distincts dès le 2e groupe.
     { id: 'g7_tap1', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(0),
-      target: 5, capAbsolu: 8, echelle: 'niveau', mode: 'absolute',
+      target: 16, capAbsolu: 20, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
     { id: 'g7_taps', icon: '👆', metric: 'totalTaps', target: 1500, minStep: 300,
       echelle: 'actions', mode: 'absolute',
@@ -858,7 +858,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 32;
+export const QUEST_ENGINE_VERSION = 33;
 
 function empreinteDefis() {
   const morceaux = [];
