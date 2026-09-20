@@ -207,7 +207,7 @@ export const ECHELLES_GROUPE = {
   // ⚠️ Relevée sur les chiffres de l'auteur : il veut 25 exemplaires au
   // 5e groupe là où la table plate en donnait 10. Mesuré — 25 Mains
   // Spectrales coûtent 9,7 % du seuil à A5, l'effort visé.
-  unites: [1, 1.15, 1.3, 1.45, 1.6, 1.7],
+  unites: [1, 1.3, 1.6, 1.9, 2.2, 2.5],
   // Actions répétées (critiques, taps, dorées, pouvoirs) : le joueur ne
   // tape pas plus vite après une Ascension. On monte doucement, sinon le
   // défi devient une corvée de durée pure.
@@ -337,7 +337,7 @@ export const QUEST_SEQUENCE = [
     // L'Esprit Frappeur en dur reste la moins mauvaise option : c'est le
     // premier générateur du jeu, l'œuf 1 est le seul endroit où il est
     // encore cher, et il n'entre en conflit avec aucune autre famille.
-    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(4), target: 10, capAbsolu: 17,
+    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(4), target: 10, capAbsolu: 25,
       echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
@@ -752,7 +752,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 19;
+export const QUEST_ENGINE_VERSION = 20;
 
 function empreinteDefis() {
   const morceaux = [];
