@@ -2186,3 +2186,48 @@ function auditDureeCroissante(baisseMax = 0.15) {
   return fautes;
 }
 module.exports.auditDureeCroissante = auditDureeCroissante;
+
+// ---- Le document remis à l'auteur dit-il la même chose que le jeu ? -
+//
+// ⚠️ CE CONTRÔLE MANQUAIT, et son absence s'est vue immédiatement :
+// après un réordonnancement des défis, le document n'a pas été
+// régénéré. L'auteur a lu « Achète 4 niveaux de Pacte » là où le jeu
+// affichait « Faveur des Esprits », et a cru à un bug du jeu.
+//
+// ⚠️ Je l'avais listé comme « idée » au lieu de l'écrire. C'était
+// pourtant le seul capable d'attraper cette classe de défaut : un
+// document juste au moment où il est produit, faux dès la modification
+// suivante.
+//
+// Le document est la SORTIE, le fichier des défis la SOURCE. Ils doivent
+// coïncider défi par défi, dans l'ordre.
+function auditDocConforme(chemin) {
+  const fs = require('fs');
+  const doc = chemin || '/mnt/user-data/outputs/defis-paradox.md';
+  let texte;
+  try { texte = fs.readFileSync(doc, 'utf8'); } catch (e) {
+    return [{ probleme: 'document introuvable : ' + doc }];
+  }
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  // Les lignes du document : « - 2. 🔗 Achète 4 niveaux de Pacte ».
+  const lus = {};
+  texte.split('\n').forEach((l) => {
+    const m = l.match(/^[-+ ]\s*(\d+)\.\s+\S+\s+(.*)$/);
+    if (m) lus[Number(m[1])] = m[2].trim();
+  });
+  if (!Object.keys(lus).length) return [{ probleme: 'aucun défi lisible dans le document' }];
+  const ecarts = [];
+  let n = 0;
+  D.DEFIS_ECRITS.forEach((oeuf) => oeuf.forEach((q) => {
+    n += 1;
+    const attendu = lus[n];
+    if (attendu === undefined) return;
+    const jeu = q.label(q.target).replace(/[\u202f\u00a0]/g, ' ').trim();
+    if (attendu.replace(/[\u202f\u00a0]/g, ' ').trim() !== jeu) {
+      ecarts.push({ defi: n, document: attendu, jeu });
+    }
+  }));
+  return ecarts;
+}
+module.exports.auditDocConforme = auditDocConforme;

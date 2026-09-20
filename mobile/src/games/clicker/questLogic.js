@@ -450,7 +450,27 @@ export function resolveQuestTarget(quest, stats) {
     // mode delta — c'est cette ligne-là qui rendait le plafond inopérant
     // quand je l'avais placé plus bas : un défi d'achat est en mode
     // delta, donc il sortait de la fonction avant d'être plafonné.
+    // ⚠️⚠️ UNE CIBLE ÉCRITE NE SE RECALCULE PAS.
+    //
+    // Les défis de `defisEcrits.js` portent leur cible FINALE, déjà mise
+    // à l'échelle au moment de la génération. Le moteur leur appliquait
+    // encore `ascensionActionMultiplier` sur les métriques de rythme :
+    // la cible était donc mise à l'échelle DEUX FOIS, et le document
+    // remis à l'auteur ne correspondait plus au jeu sur 35 défis.
+    //
+    // ⚠️ C'est exactement le défaut que la bascule devait supprimer. Il
+    // a survécu parce qu'on a changé la SOURCE des défis sans retirer le
+    // recalcul qui s'appliquait par-dessus.
     const mAchat = metriqueDuDefi(quest, stats) || '';
+    // ⚠️ L'ORDRE COMPTE : plafonner d'abord, figer ensuite.
+    //
+    // Placé AVANT, le `fige` court-circuitait le calculateur d'achats —
+    // un joueur en avance se voyait de nouveau réclamer l'impossible.
+    // « Cible finale » veut dire « ne pas remettre d'échelle », pas
+    // « ne rien adapter » : la réduction pour un joueur en avance reste
+    // légitime, puisqu'elle ne peut que DIMINUER la demande.
+    if (quest.fige && !mAchat.startsWith('auto:')
+      && !mAchat.startsWith('tapUpgrade:')) return quest.target;
     if (quest.mode === 'delta'
       && (mAchat.startsWith('auto:') || mAchat.startsWith('tapUpgrade:'))) {
       const plafond = plafondAchatsGroupe(mAchat, stats);
@@ -1135,7 +1155,18 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
       // La répétition ne touche que les cibles FIXES : les cibles
       // calculées suivent déjà la production, elle-même indexée sur les
       // Ascensions.
-      targets[q.id] = q.target ? applyRepeatTier(q, brute, index, stats && stats.ascension) : brute;
+      // ⚠️ UNE CIBLE FIGÉE NE PASSE PAS PAR `applyRepeatTier`.
+      //
+      // Troisième couche de mise à l'échelle trouvée sur le même
+      // chemin : `resolveQuestTarget`, puis le multiplicateur de rythme,
+      // puis celle-ci. Chacune était légitime quand les défis venaient
+      // de modèles ; toutes sont fausses sur une cible déjà finale.
+      //
+      // ⚠️ Chercher UN recalcul et s'arrêter au premier trouvé ne suffit
+      // pas : il faut suivre le chemin complet d'une cible, du fichier
+      // jusqu'à l'affichage.
+      targets[q.id] = q.fige ? q.target
+        : (q.target ? applyRepeatTier(q, brute, index, stats && stats.ascension) : brute);
     });
     const ids = kept.map((q) => q.id);
 

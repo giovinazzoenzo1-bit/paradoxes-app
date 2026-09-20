@@ -39,6 +39,7 @@ const CONTROLES = [
   ['auditPrerequisTenus', 'aucun défi ne précède le déblocage de son sujet'],
   ['auditMetriquesIncrementees', 'chaque métrique est bien incrémentée par le jeu'],
   ['auditDureeCroissante', 'la durée d un groupe ne retombe jamais'],
+  ['auditDocConforme', 'le document remis à l auteur correspond au jeu'],
   ['auditDefisEcrits', 'le fichier des 252 défis est cohérent et fait foi'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],

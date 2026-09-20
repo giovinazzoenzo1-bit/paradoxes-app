@@ -53,6 +53,8 @@ payée.
 | Tout article **atteignable** est demandé par au moins un défi | 20/09 |
 | Aucun défi ne **précède le déblocage** de son sujet | 20/09 |
 | Le **seuil se déduit du coût** des défis, pas l'inverse | 20/09 |
+| Une cible ÉCRITE (`fige: true`) ne se recalcule jamais | 20/09 |
+| Le **document est régénéré** après tout changement de défi | 20/09 |
 | Sanctuaire et Veilleur gardent « monte au niveau N » — ils plafonnent | 20/09 |
 | Les défis d'achat consomment **90 % du seuil**, 10 % de farm final | 19/09 |
 | La difficulté **monte à chaque Ascension**, sans jamais redescendre | 19/09 |
@@ -122,6 +124,7 @@ rarement dans un défi ; elle naît dans leur suite.**
 | `auditTropFacile` | Cible trop basse ou déjà acquise : la relever, ou changer la famille du défi. |
 | `auditAchatsColles` | Deux achats se suivent : intercaler un défi d'une autre famille. |
 | `auditDefisEcrits` | Structure du fichier cassée : 6 défis par œuf, identifiants uniques, Ascension en dernier. |
+| `auditDocConforme` | Le document remis à l'auteur ne dit plus ce que le jeu affiche : **régénérer le document**, ou trouver le recalcul qui s'applique par-dessus une cible figée. |
 | `auditLibelles` · `auditLibelleSansArticle` | Le texte ne dit pas la vraie cible, ou ne nomme pas son article. |
 
 #### Les contrôles de CODE
