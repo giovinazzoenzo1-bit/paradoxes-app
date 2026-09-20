@@ -839,6 +839,32 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               width: `${Math.max(0, (bossShield / Math.max(1, Math.round(opponents[0].stats.hp * GUARDIAN_SHIELD_RATIO))) * 100)}%`,
             }]} />
           </View>
+          {/* ⚠️ OUTIL DE TEST — gagne le combat immédiatement.
+              Le combat de Gardien est le passage le plus long de la
+              boucle d'œuf : sans ce raccourci, vérifier un défi situé
+              après lui demande de le refaire en entier à chaque essai.
+              Demandé par l'auteur le 20/09 pour « vite valider les œufs
+              et tester en profondeur ».
+              ⚠️ On vide les PV et le bouclier AVANT de déclarer la
+              victoire, au lieu de sauter directement à l'issue : les
+              récompenses et l'affichage lisent l'état des adversaires,
+              et un Gardien déclaré mort mais encore à pleine vie les
+              ferait mentir.
+              ⚠️ À retirer avec les autres outils de dev avant la
+              sortie. */}
+          {phase !== 'done' && (
+            <TouchableOpacity
+              style={styles.devWinBtn}
+              onPress={() => {
+                setOpponents((prev) => prev.map((o) => ({ ...o, hp: 0 })));
+                setBossShield(0);
+                setOutcome('win');
+                setPhase('done');
+              }}
+            >
+              <Text style={styles.devWinBtnText}>🛠️ Gagner le combat</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -1341,6 +1367,13 @@ const styles = StyleSheet.create({
   bossHpFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#FF5252' },
   // Repère à 50 % : le joueur voit où s'arrête la manche 1.
   bossHpHalfMark: { position: 'absolute', left: '50%', top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.75)' },
+  devWinBtn: {
+    alignSelf: 'center', marginTop: 8,
+    paddingVertical: 5, paddingHorizontal: 14,
+    borderRadius: 10, borderWidth: 1,
+    borderColor: '#7a5cff', backgroundColor: 'rgba(122,92,255,0.18)',
+  },
+  devWinBtnText: { color: '#b3a0ff', fontSize: 11, fontWeight: '800' },
   bossShieldTrack: {
     height: 8, borderRadius: 4, marginTop: 3, backgroundColor: 'rgba(0,0,0,0.55)',
     borderWidth: 1, borderColor: 'rgba(90,209,255,0.35)', overflow: 'hidden',
