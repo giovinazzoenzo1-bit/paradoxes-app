@@ -59,7 +59,7 @@ payée.
 | Aucun défi ne **précède le déblocage** de son sujet | 20/09 |
 | Le **seuil se déduit du coût** des défis, pas l'inverse | 20/09 |
 | Durées visées : **2,8 / 3,5 / 5 / 6,5 / 8 / 10 h** au tap à la main | 20/09 |
-| Le hors ligne vaut **3 à 5 % du seuil** pour 2 h pleines | 20/09 |
+| Hors ligne : **moyenne 3-5 %** du seuil, **pic 7 %** max, pour 2 h | 20/09 |
 | Toute mesure passe par **`simulerGroupe`**, jamais une simulation à part | 20/09 |
 | Une cible ÉCRITE (`fige: true`) ne se recalcule jamais | 20/09 |
 | Le **document est régénéré** après tout changement de défi | 20/09 |
@@ -207,9 +207,18 @@ lui-même.** Ne jamais recoder une simulation à côté : appeler celle-ci.
 Le gain vaut ce que produit le passif, **borné entre 3 % et 5 % du seuil
 de l'Ascension en cours**, au prorata du temps écoulé (2 h pleines).
 
-| 30 min | 1 h | 2 h |
+| Plancher | Plafond ponctuel | MOYENNE visée |
 |---|---|---|
-| 1,2 % | 2,5 % | **3 à 5 %** |
+| 3 % | 7 % | **3 à 5 %** |
+
+Mesuré : moyennes de 3,0 à 4,0 % selon le groupe, pics jusqu'à 7 %.
+Pour une absence plus courte, au prorata : 1,2 % à 30 min, 2,5 % à 1 h.
+
+⚠️ **C'est la MOYENNE du groupe qui doit tenir dans 3-5 %**, pas chaque
+instant. Un pic au moment où le joueur a tout acheté est légitime — c'est
+même ce qui récompense son investissement. Avec un plafond à 5 %, tous
+les groupes restaient collés au plancher et monter ses générateurs ne
+changeait rien au hors ligne.
 
 ⚠️ **Un simple TAUX ne peut pas marcher.** À 25 % du passif, l'apport
 moyen allait de 0,1 % du seuil à l'Ascension 1 à 4,4 % à l'Ascension 2.

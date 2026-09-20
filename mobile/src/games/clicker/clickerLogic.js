@@ -787,7 +787,14 @@ export const OFFLINE_RATE = 0.25;
 // temps écoulé. Un joueur qui a monté ses générateurs touche le haut de
 // la fourchette ; celui qui débute touche quand même le bas.
 export const OFFLINE_PART_MIN = 0.03;
-export const OFFLINE_PART_MAX = 0.05;
+// ⚠️ Plafond à 7 %, autorisé par l'auteur le 20/09 : « peut-être mesurer
+// 7 % grand maximum ». Il laisse de la place au joueur qui a monté ses
+// générateurs, sans que la MOYENNE du groupe sorte de 3-5 %.
+//
+// Avec un plafond à 5 %, presque tous les groupes restaient collés au
+// plancher : le passif ne dépassait jamais le minimum, et monter ses
+// générateurs ne changeait rien au hors ligne.
+export const OFFLINE_PART_MAX = 0.07;
 
 export function offlineEarnings(incomePerSecond, secondsElapsed, seuilAscension) {
   const capped = Math.max(0, Math.min(secondsElapsed, OFFLINE_CAP_SECONDS));

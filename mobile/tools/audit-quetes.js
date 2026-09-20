@@ -2308,19 +2308,27 @@ module.exports.simulerGroupe = simulerGroupe;
 // le début, il commence à 0 ». Mesuré à la fin, un groupe affichait 72 %
 // du seuil ; en moyenne, 0,1 %. Prendre le dernier instant pour
 // référence surestimait l'apport d'un facteur plusieurs centaines.
-function auditHorsLigne(min = 0.029, max = 0.051) {
+// ⚠️ On contrôle la MOYENNE du groupe (3 à 5 %) ET le maximum ponctuel
+// (7 %). L'auteur veut la moyenne dans sa fourchette, pas chaque
+// instant : un pic au moment où le joueur a tout acheté est légitime.
+function auditHorsLigne(moyMin = 0.029, moyMax = 0.051, maxPonctuel = 0.071) {
   const fautes = [];
   for (let a = 0; a < 6; a++) {
     const r = simulerGroupe(a);
     if (!r.jalons || !r.jalons.length) continue;
-    [0.1, 0.25, 0.5, 0.75, 0.99].forEach((f) => {
-      const j = r.jalons[Math.max(0, Math.min(r.jalons.length - 1, Math.floor(r.jalons.length * f)))];
-      if (!j) return;
+    let somme = 0, prec = 0, maxi = 0;
+    r.jalons.forEach((j) => {
       const part = C.offlineEarnings(j.passif, C.OFFLINE_CAP_SECONDS, r.seuil) / r.seuil;
-      if (part < min || part > max) {
-        fautes.push({ groupe: a, moment: Math.round(f * 100) + ' %', part: +(part * 100).toFixed(1) });
-      }
+      somme += part * (j.t - prec); prec = j.t;
+      if (part > maxi) maxi = part;
     });
+    const moyenne = prec > 0 ? somme / prec : 0;
+    if (moyenne < moyMin || moyenne > moyMax) {
+      fautes.push({ groupe: a, quoi: 'moyenne', part: +(moyenne * 100).toFixed(1) });
+    }
+    if (maxi > maxPonctuel) {
+      fautes.push({ groupe: a, quoi: 'pic', part: +(maxi * 100).toFixed(1) });
+    }
   }
   return fautes;
 }
