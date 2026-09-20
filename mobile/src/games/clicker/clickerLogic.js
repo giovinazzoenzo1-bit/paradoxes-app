@@ -1055,17 +1055,39 @@ export function coreUpgradeRequirement(id) {
 // +16%, +13%, +17%, +18%) et 5 générateurs sur 15 au lieu de 2.
 // Le `bonus` de chaque palier n'a PAS bougé : la sensation de puissance
 // est intacte, seul le prix change.
+// ⚠️⚠️ PALIERS DE TAP — même règle que les générateurs, demandée par
+// l'auteur : deux paliers par Ascension, prix calé sur la rampe.
+//
+//     A1  Poigne Ancienne · Gantelet d'Obsidienne
+//     A2  Sceau de Puissance · Poing de Granit
+//     A3  Éclat Primordial · Coeur de Supernova
+//     A4  Griffe du Vide · Serment Éternel
+//     A5  Fracture du Réel · Volonté du Paradoxe
+//
+// ⚠️ ILS ÉTAIENT HORS DE PORTÉE, ce qui explique qu'aucun joueur ne les
+// achetait. Mesuré : monter « Volonté du Paradoxe » au niveau 5 coûtait
+// 83 841 % du seuil de son Ascension. Ils visent désormais la MOITIÉ de
+// la rampe des générateurs : ils COMPLÈTENT les générateurs, ils ne les
+// remplacent pas, et le joueur doit pouvoir faire les deux.
+//
+// ⚠️ LE BONUS SUIT LE PRIX. Baisser les prix sans toucher aux bonus
+// rendait les paliers si rentables que les groupes tombaient de 4,4 h à
+// 0,0 h. Le rendement au coin dépensé est aligné sur celui d'un
+// générateur de même rang : un palier de tap vaut autant, jamais plus.
+//
+// ⚠️ Il n'y a que 10 paliers, donc plus rien de neuf après A5. Assumé —
+// l'auteur prévoit d'en ajouter dans une mise à jour.
 export const TAP_UPGRADES = [
-  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1950, growth: 1.45 },
-  { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2.5, cost: 5735, growth: 1.45 },
-  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 6, cost: 16194, growth: 1.45 },
-  { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 26, cost: 82556, growth: 1.45 },
-  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 122.5, cost: 457609, growth: 1.45 },
-  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 577, cost: 2535805, growth: 1.45 },
-  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 2727.5, cost: 14102166, growth: 1.45 },
-  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 13793, cost: 83899789, growth: 1.45 },
-  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 68852.5, cost: 492723096, growth: 1.45 },
-  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 343750, cost: 2894056375, growth: 1.45 },
+  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 0.0142, cost: 62, growth: 1.45 },
+  { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 0.0242, cost: 124, growth: 1.45 },
+  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 0.0609, cost: 366, growth: 1.45 },
+  { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 0.104, cost: 732, growth: 1.45 },
+  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 0.217, cost: 1799, growth: 1.45 },
+  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 0.369, cost: 3599, growth: 1.45 },
+  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 0.667, cost: 7672, growth: 1.45 },
+  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 1.13, cost: 15345, growth: 1.45 },
+  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 1.8, cost: 28650, growth: 1.45 },
+  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 3.05, cost: 57300, growth: 1.45 },
 ];
 
 // ⚠️ Même correction : à 10 x LEVEL_SPLIT = 50, les 10 paliers de tap ne
@@ -1334,16 +1356,16 @@ export const ASCENSION_THRESHOLDS = [
   // termine le contenu pendant A5. Les valeurs suivantes existent pour
   // que le barème reste défini, et devront être remesurées le jour où
   // des créatures seront ajoutées.
-  428000,                // A0  — 1,6 h
-  2970000,               // A1  — 1,9 h
-  14000000,              // A2  — 2,2 h
-  115000000,             // A3  — 2,8 h
-  892000000,             // A4  — 3,4 h
-  12200000000,           // A5  — 4,4 h · fin de la collection
-  350000000000,          // A6  — 6,3 h
-  13200000000000,        // A7  — 8,8 h
-  336000000000000,       // A8  — 11 h
-  11900000000000000,     // A9  — 14 h
+  421000,                  // A0  — 1,6 h
+  1000000,                 // A1  — 1,9 h
+  2920000,                 // A2  — 2,2 h
+  13100000,                // A3  — 2,8 h
+  71900000,                // A4  — 3,4 h
+  491000000,               // A5  — 4,4 h · fin de la collection
+  4180000000,              // A6  — 6,3 h
+  36500000000,             // A7  — 8,8 h
+  291000000000,            // A8  — 11 h
+  2540000000000,           // A9  — 14 h
 ];
 
 // Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.
@@ -1606,7 +1628,18 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // l'un par l'autre aurait cassé ce qui marchait : la rampe part de
 // l'existant et monte jusqu'à son repère, puis se détend.
 //
-//     A1 0,14 %   A3 0,79 %   A5 1,66 %   A8 0,20 %
+//     A1 0,14 %   A3 0,79 %   A5 1,66 %   A6 2,66 %   A8 6,87 %
+//
+// ⚠️ LA RAMPE NE REDESCEND JAMAIS. Première version : elle culminait à
+// A5 puis retombait à 0,20 % à A8. L'auteur a tranché — « un peu facile
+// au début et de plus en plus compliqué ». Une difficulté qui retombe
+// après le pic donne le sentiment que le jeu se termine.
+//
+// ⚠️ SEULS LES PALIERS D'APRÈS A5 ONT ÉTÉ RELEVÉS. Recalculer TOUS les
+// prix depuis la rampe faisait boucler prix et seuils l'un sur l'autre :
+// mesuré, trois itérations donnaient 462 h, puis 0,9 h, puis 4,1 h par
+// groupe — divergence, pas convergence. Ne toucher qu'aux paliers que le
+// joueur n'atteint pas encore laisse l'économie mesurée intacte.
 //
 // ⚠️ Les rendements restent PROPORTIONNELS aux prix, avec le frein de
 // 15 % par palier. Changer un prix sans son rendement remet un palier
@@ -1622,11 +1655,11 @@ export const AUTOCLICKERS = [
   { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 163972, baseIncome: 48.4, tier: 2 },
   { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 305367, baseIncome: 76.7, tier: 2 },
   { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 610733, baseIncome: 130, tier: 2 },
-  { id: 'titanfoudre', name: 'Héraut d\u2019Orage', emoji: '⚡', baseCost: 1010999, baseIncome: 183, tier: 3 },
-  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 2021999, baseIncome: 312, tier: 3 },
-  { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 3012470, baseIncome: 395, tier: 3 },
-  { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 6024940, baseIncome: 671, tier: 3 },
-  { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 8160222, baseIncome: 773, tier: 3 },
+  { id: 'titanfoudre', name: 'Héraut d\u2019Orage', emoji: '⚡', baseCost: 2085048, baseIncome: 377, tier: 3 },
+  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 4170096, baseIncome: 643, tier: 3 },
+  { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 25305451, baseIncome: 3320, tier: 3 },
+  { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 50610901, baseIncome: 5640, tier: 3 },
+  { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 187987815, baseIncome: 17800, tier: 3 },
 ];
 
 // Coût pour acheter UNE unité de plus d'un générateur donné, sachant
