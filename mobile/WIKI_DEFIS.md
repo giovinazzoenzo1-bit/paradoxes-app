@@ -185,6 +185,33 @@ on le prend**.
 
 ---
 
+### 📏 UN SEUL SIMULATEUR
+
+`simulerGroupe(ascension, tapsParSec)` dans `audit-quetes.js`. Tout
+l'appelle : `duree.js`, `auditDureeCroissante`, toute mesure future.
+
+⚠️ **Il y en avait deux, et ils se contredisaient** : 2,9 h et 9,4 h pour
+le même groupe. J'ai cherché le défaut dans l'équilibrage pendant
+plusieurs passes alors qu'il était dans mes instruments — l'un ignorait
+les paliers de tap, l'autre les achetait **sans vérifier qu'ils sont
+VERROUILLÉS** tant que le Pacte n'est pas au niveau 10. Le second
+rendait le jeu sept fois plus rapide qu'il ne l'est.
+
+⚠️ **Un contrôle qui mesure avec son propre instrument ne contrôle que
+lui-même.** Ne jamais recoder une simulation à côté : appeler celle-ci.
+
+### 🌙 Ce que le hors ligne apporte
+
+2 h plafonnées, à 25 % du revenu passif.
+
+| A0 | A1 | A2 | A3 | A4 | A5 |
+|---|---|---|---|---|---|
+| 1 % | **72 %** | 33 % | 6 % | 3 % | 1 % |
+
+⚠️ **Le déséquilibre est visible** : une seule session hors ligne couvre
+72 % du seuil à A1, et 1 % à A5. Le hors ligne offre les groupes courts
+et n'aide pas les longs — l'inverse de ce qu'il devrait faire.
+
 ### ⏱️ Régler la DURÉE d'un groupe
 
 **Le levier :** multiplier les PRIX des articles que ce groupe vise ET

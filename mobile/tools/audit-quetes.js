@@ -2149,45 +2149,14 @@ module.exports.auditMetriquesIncrementees = auditMetriquesIncrementees;
 // ⚠️ La durée ne se lit nulle part : elle se MESURE en rejouant
 // l'économie. C'est le seul contrôle qui simule une partie entière.
 function auditDureeCroissante(baisseMax = 0.15) {
-  const TAPS = 4;
-  const duree = (a) => {
-    const s = etatInitial();
-    s.ascension = a;
-    const seuil = C.ascensionThreshold(a);
-    let t = 0, garde = 0;
-    while ((s.totalEarned || 0) < seuil && garde++ < 8000) {
-      const r = Math.max(1, production(s));
-      const opts = [];
-      const essaie = (cout, appliquer2) => {
-        if (!isFinite(cout) || cout <= 0) return;
-        const c = JSON.parse(JSON.stringify(s));
-        appliquer2(c);
-        const gain = production(c) - r;
-        if (gain > 0) opts.push({ cout, gain, appliquer2 });
-      };
-      essaie(C.tapPowerCost(s.tapPower), (x) => { x.tapPower += 1; });
-      C.AUTOCLICKERS.forEach((g) => {
-        const n = (s.autoClickers || {})[g.id] || 0;
-        essaie(C.autoClickerCost(g, n, a), (x) => { x.autoClickers[g.id] = n + 1; });
-      });
-      if (!opts.length) { t += (seuil - (s.totalEarned || 0)) / r; break; }
-      opts.forEach((o) => { o.score = Math.max(0, (o.cout - (s.coins || 0)) / r) + o.cout / o.gain; });
-      opts.sort((x, y) => x.score - y.score);
-      const v = opts[0];
-      const attente = Math.max(0, (v.cout - (s.coins || 0)) / r);
-      const restant = (seuil - (s.totalEarned || 0)) / r;
-      if (attente >= restant) { t += restant; break; }
-      t += attente;
-      s.coins = (s.coins || 0) + r * attente - v.cout;
-      s.totalEarned = (s.totalEarned || 0) + r * attente;
-      v.appliquer2(s);
-    }
-    return t / 3600;
-  };
+  // ⚠️ Appelle LE simulateur unique. Il avait le sien : il mesurait donc
+  // autre chose que `duree.js`, et les deux se contredisaient sans que
+  // rien ne le signale. Un contrôle qui mesure avec son propre
+  // instrument ne contrôle que lui-même.
   const fautes = [];
   let precedente = null;
   for (let a = 0; a < 6; a++) {
-    const h = duree(a);
+    const h = simulerGroupe(a).heures;
     if (precedente !== null && h < precedente * (1 - baisseMax)) {
       fautes.push({ groupe: a, heures: +h.toFixed(1), avant: +precedente.toFixed(1) });
     }
@@ -2241,3 +2210,78 @@ function auditDocConforme(chemin) {
   return ecarts;
 }
 module.exports.auditDocConforme = auditDocConforme;
+
+// ---- LE simulateur de groupe, seul et unique ------------------------
+//
+// ⚠️⚠️ DEUX SIMULATEURS QUI NE PARTAGENT PAS LEUR ÉTAT NE PEUVENT PAS
+// ÊTRE COMPARÉS. Ce piège a coûté du temps quatre fois : `duree.js` et
+// le contrôle donnaient 2,9 h et 9,4 h pour le même groupe, et j'ai
+// cherché le défaut dans l'équilibrage alors qu'il était dans mes
+// instruments.
+//
+// Il n'y a donc plus qu'UNE fonction. `duree.js`, `auditDureeCroissante`
+// et toute mesure future l'appellent. Un désaccord devient impossible.
+function simulerGroupe(ascension, tapsParSec) {
+  const a = ascension;
+  const taps = tapsParSec || H.tapsParSec;
+  const s = etatInitial();
+  s.ascension = a;
+  s.tapPower = 1;
+  s.coins = 0;
+  s.totalEarned = 0;
+  const rev = () => {
+    const passif = C.passiveRate({
+      autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
+      sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a,
+    });
+    const mult = C.sanctuaryMultiplier(s.sanctuaryLevel || 0)
+      * C.essenceBonusMultiplier(s.essence || 0)
+      * C.ascensionSpeedMultiplier(a)
+      * (1 + C.upgradeBonuses(s.upgradeLevels || {}).coinPct);
+    return passif + (C.tapDamage(s.tapPower) + C.tapUpgradeBonus(s.tapUpgrades || {})) * taps * mult;
+  };
+  const seuil = C.ascensionThreshold(a);
+  let t = 0, garde = 0, passifFinal = 0;
+  while (s.totalEarned < seuil && garde++ < 20000) {
+    const r = rev();
+    const options = [{ cout: C.tapPowerCost(s.tapPower), appliquer: (x) => { x.tapPower += 1; } }];
+    C.AUTOCLICKERS.forEach((g) => {
+      const n = (s.autoClickers || {})[g.id] || 0;
+      options.push({ cout: C.autoClickerCost(g, n, a), appliquer: (x) => { x.autoClickers[g.id] = n + 1; } });
+    });
+    // ⚠️ UN PALIER DE TAP SE DÉBLOQUE. Sans cette garde, le simulateur
+    // achetait des paliers verrouillés et rendait le jeu sept fois plus
+    // rapide qu'il ne l'est — c'est l'écart qui opposait mes deux
+    // instruments : l'un ignorait les paliers, l'autre les prenait tous.
+    C.TAP_UPGRADES.forEach((u, idx) => {
+      const n = (s.tapUpgrades || {})[u.id] || 0;
+      if (!C.tapUpgradeUnlocked(idx, s.tapPower, s.tapUpgrades || {})) return;
+      options.push({ cout: C.tapUpgradeCost(u, n, a), appliquer: (x) => { x.tapUpgrades[u.id] = n + 1; } });
+    });
+    options.forEach((o) => {
+      const cp = { ...s, autoClickers: { ...s.autoClickers }, tapUpgrades: { ...s.tapUpgrades } };
+      o.appliquer(cp);
+      const sauve = { ac: s.autoClickers, tu: s.tapUpgrades, tp: s.tapPower };
+      s.autoClickers = cp.autoClickers; s.tapUpgrades = cp.tapUpgrades; s.tapPower = cp.tapPower;
+      o.gain = rev() - r;
+      s.autoClickers = sauve.ac; s.tapUpgrades = sauve.tu; s.tapPower = sauve.tp;
+      o.score = o.gain > 0 ? Math.max(0, (o.cout - s.coins) / r) + o.cout / o.gain : Infinity;
+    });
+    options.sort((x, y) => x.score - y.score);
+    const v = options[0];
+    if (!v || !isFinite(v.score)) { t += (seuil - s.totalEarned) / r; break; }
+    const attente = Math.max(0, (v.cout - s.coins) / r);
+    const restant = (seuil - s.totalEarned) / r;
+    if (attente >= restant) { t += restant; break; }
+    t += attente;
+    s.coins += r * attente - v.cout;
+    s.totalEarned += r * attente;
+    v.appliquer(s);
+  }
+  passifFinal = C.passiveRate({
+    autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
+    sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a,
+  });
+  return { heures: t / 3600, passif: passifFinal, seuil, production: rev() };
+}
+module.exports.simulerGroupe = simulerGroupe;
