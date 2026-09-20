@@ -702,6 +702,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   activeQuestIdsRef.current = activeQuestIds;
   const questBaselineRef = useRef({});
   questBaselineRef.current = questBaseline;
+  // ⚠️ Retient le nombre d'Ascensions AU MOMENT du tirage des défis en
+  // cours. Sert uniquement au diagnostic affiché dans la barre de dev.
+  const questDrawAscRef = useRef(-1);
   const questTargetsRef = useRef({});
   questTargetsRef.current = questTargets;
   // Instantané des stats pris quand CHAQUE défi devient le défi courant,
@@ -1111,6 +1114,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             // l'état COMPLET. En passer un fragment ne provoque aucune
             // erreur : le moteur lit des zéros et répond faux.
             const fresh = nextQuestSet(savedSeqIndex, savedQuests, statsAtLoad);
+            questDrawAscRef.current = statsAtLoad.ascension;
             setActiveQuestIds(fresh.ids);
             setQuestTargets(fresh.targets);
           }
@@ -2615,6 +2619,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const nextIndex = sequenceIndexRef.current + 1;
     setSequenceIndex(nextIndex);
     const nextSet = nextQuestSet(nextIndex, activeQuestIdsRef.current, statsAtDraw);
+    questDrawAscRef.current = statsAtDraw.ascension;
     setActiveQuestIds(nextSet.ids);
     setQuestTargets(nextSet.targets);
     // Rune OFFERTE au cycle qui introduit les Runes : le défi demande
@@ -3027,6 +3032,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               <TouchableOpacity style={styles.devToolBtn} onPress={confirmAscension}>
                 <Text style={styles.devSkipBtnText}>🌟 Asc +1</Text>
               </TouchableOpacity>
+              {/* ⚠️ DIAGNOSTIC — ce que le moteur a RÉELLEMENT reçu.
+                  `A` : le nombre d'Ascensions au dernier rendu.
+                  `T` : le nombre d'Ascensions enregistré AU MOMENT où
+                        les défis en cours ont été tirés.
+                  Si A vaut 5 et T vaut 0, les défis affichés sont ceux
+                  d'un joueur à zéro Ascension — et le problème est que
+                  rien ne les a retirés depuis. Six correctifs à
+                  l'aveugle sans ce chiffre ; il fallait le montrer. */}
+              <Text style={styles.devSkipBtnText}>
+                A:{ascensionCountRef.current} T:{questDrawAscRef.current}
+              </Text>
             </View>
           )}
 
