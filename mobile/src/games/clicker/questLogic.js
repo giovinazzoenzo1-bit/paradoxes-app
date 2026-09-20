@@ -385,12 +385,20 @@ export function metriqueDuDefi(quest, stats) {
 // jamais l'augmenter. Un joueur en retard voit donc toujours la cible
 // annoncée dans le document.
 export function plafondAchatsGroupe(metric, stats) {
+  // ⚠️ On somme les défis ÉCRITS du GROUPE du joueur, pas les anciens
+  // modèles. Après la bascule, `QUEST_SEQUENCE` ne décrit plus ce que le
+  // joueur reçoit : le plafond calculé dessus était faux, et le
+  // calculateur ne protégeait plus personne.
+  const groupe = Math.max(0, Math.floor((stats && stats.ascension) || 0));
+  const debut = Math.min(groupe, Math.floor(DEFIS_ECRITS.length / OEUFS_PAR_ASCENSION) - 1)
+    * OEUFS_PAR_ASCENSION;
   let total = 0;
-  QUEST_SEQUENCE.forEach((cycle) => cycle.forEach((q) => {
-    if (q.mode !== 'delta') return;
-    if (metriqueDuDefi(q, stats) !== metric) return;
-    total += q.target || 0;
-  }));
+  for (let e = 0; e < OEUFS_PAR_ASCENSION; e++) {
+    (DEFIS_ECRITS[debut + e] || []).forEach((q) => {
+      if (q.mode !== 'delta' || q.metric !== metric) return;
+      total += q.target || 0;
+    });
+  }
   return total;
 }
 

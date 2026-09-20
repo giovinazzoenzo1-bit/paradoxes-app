@@ -24,6 +24,10 @@ payée.
 | Chaque achat est **scindé en deux étapes** dans des œufs différents | 20/09 |
 | Les cibles d'un même article **ne redescendent jamais** dans un groupe | 20/09 |
 | Le **coût** d'un défi d'achat ne redescend JAMAIS dans un groupe | 20/09 |
+| Les défis d'achat d'un groupe coûtent **80 à 100 %** de son seuil | 20/09 |
+| Tout article **atteignable** est demandé par au moins un défi | 20/09 |
+| Aucun défi ne **précède le déblocage** de son sujet | 20/09 |
+| Le **seuil se déduit du coût** des défis, pas l'inverse | 20/09 |
 | Sanctuaire et Veilleur gardent « monte au niveau N » — ils plafonnent | 20/09 |
 | Les défis d'achat consomment **90 % du seuil**, 10 % de farm final | 19/09 |
 | La difficulté **monte à chaque Ascension**, sans jamais redescendre | 19/09 |
@@ -59,6 +63,35 @@ acheter 5 — il s'annulait tout seul. En mode delta, le compteur part de
 zéro quand le défi commence.
 
 ---
+
+### 🧰 LES CONTRÔLES À LANCER SOUVENT
+
+```
+node mobile/tools/verifier-defis.js
+```
+
+Trente contrôles. Les six qui regardent le GROUPE ENTIER sont les plus
+précieux — ce sont eux qui attrapent ce qu'un examen défi par défi ne
+peut pas voir :
+
+| Contrôle | Ce qu'il empêche |
+|---|---|
+| `auditBudgetGroupe` | que les défis d'achat d'un groupe s'écartent des 90 % du seuil |
+| `auditCoutCroissant` | qu'un défi coûte moins cher que le précédent |
+| `auditPlafondAchats` | qu'un joueur en avance se voie réclamer l'impossible |
+| `auditArticlesOrphelins` | qu'un article de boutique ne soit jamais demandé |
+| `auditEquilibreFamilles` | qu'un groupe dérive vers tout-achat ou tout-Aventure |
+| `auditPrerequisTenus` | qu'un défi précède le déblocage de son sujet |
+
+⚠️ **Ce qu'ils ont trouvé le jour où ils ont été écrits :** des défis
+d'achat à 692 % du seuil à A0 (infaisable) et 2 % à A1 (le joueur passait
+le groupe sur un seul défi) ; quatre paliers de tap demandés alors que le
+Pacte n'était qu'au niveau 6, ce qui aurait **bloqué l'œuf
+définitivement**.
+
+⚠️ Aucun des vingt-six contrôles précédents ne voyait cela. Ils
+vérifiaient chaque défi ISOLÉMENT. **Une cassure naît rarement dans un
+défi — elle naît dans leur ENCHAÎNEMENT.**
 
 ### 🔍 Le contrôle du coût croissant
 

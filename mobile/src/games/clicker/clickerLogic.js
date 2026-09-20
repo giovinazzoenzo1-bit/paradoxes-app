@@ -1340,6 +1340,17 @@ export function normalizeUpgradeLevels(levels) {
 // Le barème s'arrête à la 14e parce que c'est là que le DERNIER
 // générateur (Étoile Filante) devient accessible. Au-delà, on prolonge
 // au rapport asymptotique mesuré (~x8).
+// ⚠️⚠️ SEUILS DÉDUITS DU COÛT DES DÉFIS, et non l'inverse.
+//
+// Règle de l'auteur : les défis d'achat d'un groupe coûtent 90 % du
+// seuil, les 10 % restants étant le farm final avant l'Ascension.
+// Le seuil se calcule donc : coût total des achats du groupe / 0,90.
+//
+// ⚠️ C'est `auditBudgetGroupe` qui a révélé l'ampleur du problème : les
+// défis d'achat coûtaient 692 % du seuil à A0 (infaisable) et 2 % à A1
+// (le joueur passait le groupe à farmer un seul défi). Aucun des 26
+// autres contrôles ne le voyait — ils vérifiaient chaque défi
+// ISOLÉMENT, jamais le groupe entier.
 export const ASCENSION_THRESHOLDS = [
   // ⚠️⚠️ TABLE MESURÉE PAR SIMULATION le 19/09 — jamais calculée à la
   // main, jamais obtenue en multipliant l'ancienne table.
@@ -1364,16 +1375,16 @@ export const ASCENSION_THRESHOLDS = [
   // termine le contenu pendant A5. Les valeurs suivantes existent pour
   // que le barème reste défini, et devront être remesurées le jour où
   // des créatures seront ajoutées.
-  416000,                // A0  — 1,6 h
-  653000000,             // A1  — 1,9 h
-  2270000000,            // A2  — 2,2 h
-  9800000000,            // A3  — 2,8 h
-  44900000000,           // A4  — 3,4 h
-  253000000000,          // A5  — 4,4 h · fin de la collection
-  1790000000000,         // A6  — 6,3 h
-  13400000000000,        // A7  — 8,8 h
-  96100000000000,        // A8  — 11 h
-  765000000000000,       // A9  — 14 h
+  3200721,               // A0
+  12081800,              // A1
+  121539520,             // A2
+  1785846083,            // A3
+  15790296612,           // A4
+  281901966658,          // A5 · fin de la collection
+  2748325471810,         // A6
+  26794041164542,        // A7
+  261221114198798,       // A8
+  2546703204799268,      // A9
 ];
 
 // Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.

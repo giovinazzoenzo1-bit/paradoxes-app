@@ -262,7 +262,16 @@ function etatInitial() {
     maxCreatureLevel: 1, maxEvolutionTier: 0, advLevelReached: 0, tapUpgrades: {},
     totalSummons: 0, totalCrits: 0, goldenClaimed: 0, offering: 0,
     powerActivated: 0, runeBought: 0, runeEquipped: 0, runeFused: 0,
-    battleWon: 0, maxTranseHoldSec: 0, maxCombo: 1, tapUpgrades: [],
+    // ⚠️ `tapUpgrades` était déclaré DEUX FOIS dans cet objet, et la
+    // seconde déclaration — un tableau vide — écrasait la première.
+    // Toute lecture d'un palier de tap rendait donc zéro, et le
+    // calculateur d'achats ne plafonnait jamais rien : il croyait le
+    // joueur à zéro niveau quoi qu'il possède.
+    //
+    // ⚠️ JavaScript ne signale PAS une clé en double dans un littéral —
+    // il garde silencieusement la dernière. Une faute de frappe invisible
+    // qui a fait échouer un contrôle pendant vingt minutes.
+    battleWon: 0, maxTranseHoldSec: 0, maxCombo: 1,
     passiveIncome: 0, autoTotal: 0,
   };
 }
@@ -1725,12 +1734,17 @@ module.exports.auditAchatsColles = auditAchatsColles;
 // qu'UN — pas que cet exemplaire soit bon marché.
 function auditPlafondAchats(partMax = 0.6) {
   const fautes = [];
+  // ⚠️ On parcourt les défis ÉCRITS, pas les anciens modèles : ce sont
+  // eux que le joueur reçoit. Le contrôle testait encore `QUEST_SEQUENCE`
+  // après la bascule et mesurait donc des défis qui n'existent plus.
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
   [0, 1, 2, 3, 4, 5].forEach((groupe) => {
-    Q.QUEST_SEQUENCE.flat().forEach((q) => {
+    (D.DEFIS_ECRITS.slice(groupe * 7, groupe * 7 + 7).flat()).forEach((q) => {
       if (q.mode !== 'delta') return;
       const s = etatInitial();
       s.ascension = groupe;
-      const m = Q.metriqueDuDefi(q, s) || '';
+      const m = q.metric || '';
       if (!m.startsWith('auto:') && !m.startsWith('tapUpgrade:')) return;
       const estAuto = m.startsWith('auto:');
       const item = estAuto ? C.AUTOCLICKERS.find((x) => x.id === m.slice(5))
@@ -1876,3 +1890,177 @@ function auditCoutCroissant(tolerance = 0.5) {
   return fautes;
 }
 module.exports.auditCoutCroissant = auditCoutCroissant;
+
+// ---- La règle des 90 % est-elle tenue, groupe par groupe ? ----------
+//
+// Demandé par l'auteur le 20/09 : « calculer le prix de revient de tous
+// les défis d'achat pour chaque Ascension, pour savoir si la règle des
+// 90 % est validée ».
+//
+// RAPPEL DE LA RÈGLE : les défis d'achat d'un groupe coûtent ensemble
+// ~90 % du seuil de l'Ascension. Les 10 % restants sont le farm final
+// avant de pouvoir ascensionner — un dernier petit effort avant une
+// grosse récompense, que l'auteur juge essentiel à la rétention.
+//
+// ⚠️ On additionne le COÛT RÉEL, en tenant le compte de ce que le joueur
+// a déjà acheté dans le groupe. Additionner des prix unitaires donnerait
+// un total faux : le 10e exemplaire coûte bien plus cher que le 3e.
+function auditBudgetGroupe(min = 0.80, max = 1.00) {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const NIV = ['tapPower', 'critLevel', 'critDamageLevel',
+    'sanctuaryLevel', 'veilleurLevel'];
+  const fautes = [];
+  for (let g = 0; g < 6; g++) {
+    const possede = {};
+    let total = 0;
+    for (let e = 0; e < 7; e++) {
+      (D.DEFIS_ECRITS[g * 7 + e] || []).forEach((q) => {
+        const m = q.metric || '';
+        const auto = m.startsWith('auto:');
+        const tap = m.startsWith('tapUpgrade:');
+        if (!auto && !tap && !NIV.includes(m)) return;
+        const it = auto ? C.AUTOCLICKERS.find((x) => x.id === m.slice(5))
+          : tap ? C.TAP_UPGRADES.find((x) => x.id === m.slice(11)) : null;
+        const deja = possede[m] || 0;
+        const n = q.mode === 'delta' ? q.target : Math.max(0, q.target - deja);
+        for (let i = deja; i < deja + n; i++) {
+          if (auto) total += C.autoClickerCost(it, i, g);
+          else if (tap) total += C.tapUpgradeCost(it, i, g);
+          else if (m === 'tapPower') total += C.tapPowerCost(i);
+          else if (m === 'critLevel') total += C.critUpgradeCost(i);
+          else if (m === 'critDamageLevel') total += C.critDamageUpgradeCost(i);
+          else if (m === 'sanctuaryLevel') total += C.sanctuaryUpgradeCost(i);
+          else total += C.veilleurUpgradeCost(i);
+        }
+        possede[m] = deja + n;
+      });
+    }
+    const part = total / C.ascensionThreshold(g);
+    if (part < min || part > max) {
+      fautes.push({ groupe: g, part: Math.round(part * 100),
+        farmFinal: Math.round((1 - part) * 100) });
+    }
+  }
+  return fautes;
+}
+module.exports.auditBudgetGroupe = auditBudgetGroupe;
+
+// ---- Tout article de la boutique est-il demandé au moins une fois ? -
+//
+// Un article qu'aucun défi ne nomme est un article que le joueur ne
+// découvrira jamais — c'est la plainte d'origine de l'auteur : « aucun
+// défi ne parle d'acheter Automate Runique ni Colonie de Familiers ».
+// Le contrôle empêche qu'elle revienne, par exemple si un défi est
+// supprimé ou déplacé.
+function auditArticlesOrphelins() {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const vus = new Set();
+  D.DEFIS_ECRITS.flat().forEach((q) => vus.add(q.metric));
+  const fautes = [];
+  // ⚠️ Seuls les articles que le contenu ÉCRIT peut atteindre comptent.
+  // Deux générateurs s'ouvrent par Ascension et six Ascensions sont
+  // écrites : les paliers au-delà du 12e appartiennent à du contenu qui
+  // n'existe pas encore. Les signaler serait réclamer des défis pour des
+  // articles que personne ne verra.
+  // Deux générateurs par Ascension, six Ascensions écrites (0 à 5) :
+  // les dix premiers paliers sont atteignables, les suivants
+  // appartiennent à l'Ascension 6 et au-delà, qui n'existe pas encore.
+  const ATTEIGNABLES = 10;
+  C.AUTOCLICKERS.slice(0, ATTEIGNABLES).forEach((a) => {
+    if (!vus.has('auto:' + a.id)) fautes.push({ article: a.name, type: 'générateur' });
+  });
+  C.TAP_UPGRADES.forEach((t) => {
+    if (!vus.has('tapUpgrade:' + t.id)) fautes.push({ article: t.name, type: 'palier de tap' });
+  });
+  return fautes;
+}
+module.exports.auditArticlesOrphelins = auditArticlesOrphelins;
+
+// ---- L'équilibre entre familles de défis tient-il ? -----------------
+//
+// L'auteur veut « un bon ratio de types de défis : achat, aventure,
+// action de clic, mettre des pièces de côté ». Un groupe qui dérive vers
+// tout-achat ou tout-Aventure devient monotone — et la dérive se fait
+// par petites touches, invisible défi par défi.
+function auditEquilibreFamilles(ecartMax = 0.5) {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const NIV = ['tapPower', 'critLevel', 'critDamageLevel',
+    'sanctuaryLevel', 'veilleurLevel'];
+  const AVENT = ['advLevelReached', 'battleWon', 'threeStarLevel',
+    'powerActivated', 'runeBought', 'runeFused', 'maxCreatureLevel'];
+  const ECO = ['totalEarned', 'coins', 'passiveIncome'];
+  const famille = (m) => {
+    if (m.startsWith('auto:') || m.startsWith('tapUpgrade:') || NIV.includes(m)) return 'achat';
+    if (AVENT.includes(m)) return 'aventure';
+    if (ECO.includes(m)) return 'economie';
+    if (m === 'ascension') return 'ascension';
+    return 'action';
+  };
+  const parGroupe = [];
+  for (let g = 0; g < 6; g++) {
+    const compte = { achat: 0, aventure: 0, economie: 0, action: 0 };
+    for (let e = 0; e < 7; e++) {
+      (D.DEFIS_ECRITS[g * 7 + e] || []).forEach((q) => {
+        const f = famille(q.metric || '');
+        if (compte[f] !== undefined) compte[f] += 1;
+      });
+    }
+    parGroupe.push(compte);
+  }
+  // Chaque famille doit rester proche de sa moyenne sur les six groupes.
+  const fautes = [];
+  ['achat', 'aventure', 'economie', 'action'].forEach((f) => {
+    const vals = parGroupe.map((c) => c[f]);
+    const moy = vals.reduce((a, b) => a + b, 0) / vals.length;
+    vals.forEach((v, g) => {
+      if (moy > 0 && Math.abs(v - moy) / moy > ecartMax) {
+        fautes.push({ groupe: g, famille: f, compte: v, moyenne: Math.round(moy) });
+      }
+    });
+  });
+  return fautes;
+}
+module.exports.auditEquilibreFamilles = auditEquilibreFamilles;
+
+// ---- Un défi est-il réclamé avant que son sujet existe ? ------------
+//
+// Bug réel : un défi d'Aventure dans l'œuf 1, alors que le joueur n'a
+// aucune créature. Plus largement, un défi dont le sujet n'est pas
+// encore débloqué ne peut pas être rempli — et comme la séquence ne
+// substitue plus, il bloque l'œuf DÉFINITIVEMENT.
+function auditPrerequisTenus() {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const AVENT = ['advLevelReached', 'battleWon', 'threeStarLevel',
+    'powerActivated', 'runeBought', 'runeFused', 'maxCreatureLevel'];
+  const fautes = [];
+  // L'œuf 1 du tout premier groupe précède la première créature.
+  (D.DEFIS_ECRITS[0] || []).forEach((q) => {
+    if (AVENT.includes(q.metric)) {
+      fautes.push({ oeuf: 1, id: q.id, probleme: "Aventure avant la première créature" });
+    }
+  });
+  // Un palier de tap exige le Pacte 10 : il ne peut pas être demandé
+  // avant qu'un défi de Pacte ait fait atteindre ce niveau.
+  for (let g = 0; g < 6; g++) {
+    let pacte = 0;
+    for (let e = 0; e < 7; e++) {
+      (D.DEFIS_ECRITS[g * 7 + e] || []).forEach((q) => {
+        // ⚠️ Le Pacte repart du niveau 1 après une Ascension : acheter
+        // N niveaux mène au niveau N + 1.
+        if (q.metric === 'tapPower') {
+          pacte = q.mode === 'delta' ? Math.max(pacte, 1) + q.target : Math.max(pacte, q.target);
+        }
+        if (q.metric.startsWith('tapUpgrade:') && pacte < 10) {
+          fautes.push({ oeuf: g * 7 + e + 1, id: q.id,
+            probleme: 'palier de tap demandé avec Pacte ' + pacte + ' (10 requis)' });
+        }
+      });
+    }
+  }
+  return fautes;
+}
+module.exports.auditPrerequisTenus = auditPrerequisTenus;
