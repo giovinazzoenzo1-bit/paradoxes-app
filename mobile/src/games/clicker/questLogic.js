@@ -8,6 +8,7 @@
 // clickerLogic, donc pas de cycle d'imports.
 // Moteur des défis : cibles, progression, validation, tirage.
 // Les DÉFINITIONS vivent dans `questDefs.js`.
+import { DEFIS_ECRITS } from './defisEcrits';
 import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION, echelleGroupe, PAS_AVENTURE_PAR_GROUPE } from './questDefs';
 import { fmtQ, qtyQ, roundQuestTarget, describeAdventureLevel } from './questFormat';
 import { questBudget, estimatedIncomePerSecond, ascensionCoinMultiplier, ASCENSION_COIN_TARGET_RATE } from './questBudget';
@@ -119,13 +120,27 @@ export function applyRepeatTier(quest, target) {
   return target;
 }
 
+// ⚠️⚠️ LES DÉFIS VIENNENT DU FICHIER ÉCRIT, plus des modèles.
+//
+// `DEFIS_ECRITS` contient les 252 défis un par un, dans l'ordre : 42
+// œufs, sept par Ascension. L'index d'un œuf est donc
+// `ascension * 7 + rang dans le groupe`, et il n'y a plus rien à
+// résoudre — ni cible, ni article, ni ordre.
+//
+// ⚠️ Au-delà du 42e œuf, on REJOUE LA DERNIÈRE ASCENSION écrite plutôt
+// que de reboucler au début : un joueur arrivé là a une production sans
+// rapport avec celle du premier groupe, et lui redonner « obtiens 750
+// pièces » serait absurde.
+export const OEUFS_PAR_ASCENSION = 7;
+
 export function sequenceCycle(index) {
-  if (!QUEST_SEQUENCE.length) return null;
-  // ⚠️ On REBOUCLE au lieu de renvoyer `null` : la séquence se rejoue
-  // indéfiniment, la difficulté montant d'un cran à chaque tour.
-  return QUEST_SEQUENCE[(index || 0) % QUEST_SEQUENCE.length];
+  if (!DEFIS_ECRITS.length) return null;
+  const i = Math.max(0, index || 0);
+  if (i < DEFIS_ECRITS.length) return DEFIS_ECRITS[i];
+  const dernierGroupe = DEFIS_ECRITS.length - OEUFS_PAR_ASCENSION;
+  return DEFIS_ECRITS[dernierGroupe + (i % OEUFS_PAR_ASCENSION)];
 }
-export const SEQUENCE_LENGTH = QUEST_SEQUENCE.length;
+export const SEQUENCE_LENGTH = OEUFS_PAR_ASCENSION;
 
 // ---- Défis de l'œuf (refonte 02/09) ----
 //
@@ -186,9 +201,19 @@ const pluralQ = (name) => {
 // Retrouve un défi par id, qu'il vienne de la séquence scriptée ou du
 // pool dynamique. Toutes les fonctions publiques passent par ici, donc
 // les deux systèmes se lisent exactement pareil côté écran.
+// ⚠️ Les défis ÉCRITS d'abord : ce sont eux que le jeu distribue. Les
+// modèles et le pool restent consultables pour les sauvegardes d'avant
+// la bascule, dont les identifiants n'existent plus dans le fichier.
+const DEFIS_ECRITS_PLAT = DEFIS_ECRITS.flat();
+
 export function findQuest(questId) {
-  return SEQUENCE_QUESTS.find((q) => q.id === questId) || QUEST_POOL.find((q) => q.id === questId) || null;
+  return DEFIS_ECRITS_PLAT.find((q) => q.id === questId)
+    || SEQUENCE_QUESTS.find((q) => q.id === questId)
+    || QUEST_POOL.find((q) => q.id === questId) || null;
 }
+
+// ⚠️ Tous les défis écrits sont SCRIPTÉS : aucun ne se remplace.
+const IDS_ECRITS = new Set(DEFIS_ECRITS_PLAT.map((q) => q.id));
 
 function readMetric(metric, stats) {
   if (!stats) return 0;
@@ -1029,11 +1054,17 @@ export function nextQuestSet(index, excludeIds = [], stats = {}) {
   // ⚠️ L'œuf est réordonné pour alterner achats et autres défis. On
   // regarde le dernier défi de l'œuf PRÉCÉDENT, la règle valant aussi
   // d'un œuf à l'autre.
-  const brut = sequenceCycle(index);
-  const avant = index > 0 ? sequenceCycle(index - 1) : null;
-  const finAchat = avant && avant.length
-    ? estDefiAchat(avant[avant.length - 1], stats) : false;
-  const cycle = brut ? alternerAchats(brut, stats, finAchat) : brut;
+  // ⚠️⚠️ PLUS AUCUN RÉARRANGEMENT. L'ordre est celui du fichier écrit.
+  //
+  // `alternerAchats` réordonnait l'œuf au tirage pour séparer les défis
+  // d'achat. Ce n'est plus nécessaire : le fichier a été généré APRÈS
+  // cette alternance, donc l'ordre y est déjà bon — et le recalculer
+  // faisait diverger le jeu de ce qui est écrit, exactement le défaut
+  // qu'on vient de supprimer.
+  //
+  // La fonction reste exportée : elle sert à REGÉNÉRER le fichier quand
+  // on en modifie l'ordre, pas à le corriger à l'exécution.
+  const cycle = sequenceCycle(index);
   if (cycle) {
     // Les défis déjà accomplis sont REMPLACÉS par des défis du pool
     // dynamique, dont la cible est calculée à partir de l'état courant
@@ -1234,6 +1265,7 @@ export function plafondFamille(famille) {
 // sa propre condition, c'est recréer le bug — et le contrôle
 // `auditSubstitutions` refuse justement toute exception.
 export function peutEtreRemplace(questId) {
+  if (IDS_ECRITS.has(questId)) return false;
   return !SEQUENCE_QUESTS.some((q) => q.id === questId);
 }
 

@@ -32,7 +32,7 @@ const CONTROLES = [
   ['auditNomsEnDur', 'aucun nom d article écrit en dur hors de clickerLogic'],
   ['auditAchatsColles', 'jamais deux défis d achat d affilée'],
   ['auditPlafondAchats', 'un défi d achat reste faisable pour un joueur en avance'],
-  ['auditDefisEcrits', 'le fichier des 252 défis dit la même chose que le moteur'],
+  ['auditDefisEcrits', 'le fichier des 252 défis est cohérent et fait foi'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
   ['auditAscension', 'ne diverge pas après les Ascensions'],
@@ -41,8 +41,8 @@ const CONTROLES = [
   ['auditAvailable', 'la condition peut devenir vraie'],
   ['auditFamilles', 'pas deux défis qui se lisent pareil dans un œuf'],
   ['auditDependanceCreature', 'ne dépend pas de posséder une créature'],
-  ['auditRemplacements', 'aucun défi du schéma ne manque'],
-  ['auditHorsSchema', 'aucun défi étranger glissé dans un œuf'],
+
+
   ['auditSubstitutions', 'tout retrait de défi passe par la règle unique'],
   ['auditCibleSuitLeJoueur', 'une cible fixe est la même pour tous les joueurs'],
   ['auditTropFacile', 'au plus 13 défis faciles sur 252', 13],

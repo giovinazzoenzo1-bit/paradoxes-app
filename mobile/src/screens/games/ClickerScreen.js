@@ -1966,8 +1966,20 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             // mesuraient l'avancement depuis un état qui vient d'être
             // effacé.
             const ascApres = (ascensionCountRef.current || 0) + 1;
+            // ⚠️⚠️ SAUTER À L'ŒUF DU NOUVEAU GROUPE.
+            //
+            // Les 252 défis sont écrits dans l'ordre : l'œuf numéro N
+            // appartient à l'Ascension `N / 7`. Sans ce saut, un joueur
+            // passant à l'Ascension 4 au bouton de dev garderait son
+            // index d'œuf et recevrait le défi numéro 1 au lieu du 145.
+            //
+            // L'auteur l'avait prévu avant même la bascule : « je pense
+            // que ça va casser l'ordre des défis ».
+            const oeufDuGroupe = ascApres * SEQUENCE_LENGTH;
+            setSequenceIndex(oeufDuGroupe);
+            sequenceIndexRef.current = oeufDuGroupe;
             const statsApres = { ...buildQuestStatsSnapshot(), ascension: ascApres };
-            const setApres = nextQuestSet(sequenceIndexRef.current, [], statsApres);
+            const setApres = nextQuestSet(oeufDuGroupe, [], statsApres);
             questDrawAscRef.current = ascApres;
             setActiveQuestIds(setApres.ids);
             setQuestTargets(setApres.targets);

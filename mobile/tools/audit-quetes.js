@@ -1781,25 +1781,35 @@ module.exports.auditPlafondAchats = auditPlafondAchats;
 function auditDefisEcrits() {
   let D;
   try { D = load('defisEcrits'); } catch (e) { return [{ probleme: 'fichier absent' }]; }
-  const ecarts = [];
-  for (let g = 0; g < 6; g++) {
-    const s = etatInitial();
-    s.ascension = g; s.tapPower = 12; s.critLevel = 3; s.critDamageLevel = 3;
-    s.ownedCount = 6; s.creaturesAVenir = 6; s.deckCount = 3;
-    for (let o = 0; o < 7; o++) {
-      const set = Q.nextQuestSet(g * 7 + o, [], s);
-      const ecrit = D.DEFIS_ECRITS[g * 7 + o] || [];
-      set.ids.forEach((id, i) => {
-        const q = Q.findQuest(id);
-        if (!q || !ecrit[i]) { ecarts.push({ groupe: g, oeuf: o + 1, manquant: id }); return; }
-        const moteur = q.label(Q.effectiveQuestTarget(id, s, set.targets || {}),
-          Q.metriqueDuDefi(q, s));
-        if (moteur !== ecrit[i].label()) {
-          ecarts.push({ groupe: g, oeuf: o + 1, moteur, fichier: ecrit[i].label() });
-        }
-      });
+  const fautes = [];
+  const vus = new Set();
+  D.DEFIS_ECRITS.forEach((oeuf, i) => {
+    if (oeuf.length !== 6) fautes.push({ oeuf: i + 1, probleme: oeuf.length + ' défis au lieu de 6' });
+    oeuf.forEach((q) => {
+      if (vus.has(q.id)) fautes.push({ oeuf: i + 1, probleme: 'identifiant en double : ' + q.id });
+      vus.add(q.id);
+      if (!q.metric) fautes.push({ oeuf: i + 1, probleme: 'métrique absente : ' + q.id });
+      if (!q.target || q.target <= 0) fautes.push({ oeuf: i + 1, probleme: 'cible nulle : ' + q.id });
+      if (typeof q.label !== 'function') fautes.push({ oeuf: i + 1, probleme: 'libellé absent : ' + q.id });
+    });
+    // L'Ascension clôt chaque groupe de sept œufs.
+    if ((i + 1) % 7 === 0) {
+      const dernier = oeuf[oeuf.length - 1];
+      if (!dernier || dernier.metric !== 'ascension') {
+        fautes.push({ oeuf: i + 1, probleme: "le 7e œuf ne finit pas par l'Ascension" });
+      }
     }
-  }
-  return ecarts;
+  });
+  // Le tirage doit rendre EXACTEMENT l'œuf écrit, dans le même ordre.
+  D.DEFIS_ECRITS.forEach((oeuf, i) => {
+    const s2 = etatInitial();
+    s2.ascension = Math.floor(i / 7);
+    const set = Q.nextQuestSet(i, [], s2);
+    const attendu = oeuf.map((q) => q.id).join(',');
+    if (set.ids.join(',') !== attendu) {
+      fautes.push({ oeuf: i + 1, probleme: 'le tirage ne rend pas l\'œuf écrit' });
+    }
+  });
+  return fautes;
 }
 module.exports.auditDefisEcrits = auditDefisEcrits;
