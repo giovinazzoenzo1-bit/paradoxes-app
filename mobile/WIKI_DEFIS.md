@@ -27,14 +27,23 @@ Il en reste **10 %** que le joueur doit farmer pour lancer son Ascension.
 
 **2. Ce budget se répartit en pourcentages entre les défis d'achat.**
 
-| Défi | Part du budget |
-|---|---|
-| Générateur le plus récent | 22 % |
-| Générateur d'en dessous | 20 % |
-| Générateur le plus ancien | 18 % |
-| 1er palier de tap | 16 % |
-| 2e palier de tap | 14 % |
-| **Total** | **100 %** |
+| Œuf | Défi | Part du budget |
+|---|---|---|
+| 1 | Générateur le plus **ancien** | 12 % |
+| 3 | Générateur du milieu | 16 % |
+| 4 | Palier de tap ancien | 20 % |
+| 5 | Générateur le plus **récent** | 24 % |
+| 7 | Palier de tap récent | 28 % |
+| | **Total** | **100 %** |
+
+⚠️ **L'ordre suit le COÛT : du moins cher au plus cher.** Le joueur vient
+de tout perdre à l'Ascension — on ne lui demande pas son défi le plus
+lourd au 3e défi du groupe. Mesuré avant correction : l'œuf 1 coûtait
+31 % du seuil et l'œuf 7 seulement 13 %, exactement l'inverse.
+
+⚠️ **Les cibles sont UNIFORMES** (3 exemplaires, niveau 5). C'est le
+PALIER visé qui porte la progression du coût, pas la quantité. Faire
+varier les deux les compose et casse l'ordre.
 
 **3. Le prix de chaque article se déduit de sa part et de la cible du défi.**
 
@@ -70,13 +79,18 @@ Le joueur doit sentir qu'il lui reste **un petit effort** avant une grosse réco
 
 | Ascension | Défis d'achat | Farm final |
 |---|---|---|
-| A1 | 72 % | 28 % |
-| A2 | 92 % | 8 % |
-| A3 | 88 % | 12 % |
-| A4 | 87 % | 13 % |
-| A5 | 95 % | 5 % |
+| A1 | 82 % | 18 % |
+| A5 | 91 % | 9 % |
 
-🟨 A1 est encore un peu généreux (28 % de farm final). À resserrer si tu le sens trop long en jouant.
+Et l'ordre dans le groupe, à l'Ascension 5 :
+
+| Œuf | Défi | Coût |
+|---|---|---|
+| 1 | Possède 5 Phénix Renaissants | 12 % |
+| 3 | Possède 5 Léviathans des Abysses | 14 % |
+| 4 | Monte Volonté du Paradoxe au niveau 8 | 18 % |
+| 5 | Possède 5 Gardiens Célestes | 22 % |
+| 7 | Monte Fracture du Réel au niveau 8 | 25 % |
 
 ---
 

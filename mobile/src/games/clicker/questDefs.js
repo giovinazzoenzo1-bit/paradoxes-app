@@ -362,7 +362,13 @@ export const QUEST_SEQUENCE = [
     // compliqué, ça demande beaucoup trop d'argent ». Et il vise le palier
     // du GROUPE, pas l'Esprit en dur — deux défis affichaient le même
     // article.
-    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(2), target: 8, capAbsolu: 6,
+    // ⚠️ ŒUF 1 — le palier le plus ANCIEN, donc le MOINS CHER.
+    //
+    // L'ordre des défis d'achat suit le coût : le joueur vient de tout
+    // perdre à l'Ascension, on ne lui demande pas son défi le plus lourd
+    // au 3e défi. Mesuré avant correction : l'œuf 1 coûtait 31 % du
+    // seuil et l'œuf 7 seulement 13 % — exactement l'inverse.
+    { id: 'g1_esprit', icon: '👻', metriqueParGroupe: generateurDuGroupe(2), target: 3, capAbsolu: 5,
       echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     // ⚠️ `cap` OBLIGATOIRE sur une tenue de Transe : sans lui le plancher
@@ -477,8 +483,8 @@ export const QUEST_SEQUENCE = [
     // ⚠️ Vise le 1er générateur DÉCOUVERT à cette Ascension, pas un
     // générateur figé : Esprit Frappeur au départ, puis Automate,
     // Titan, Dragon... C'est ainsi que le joueur découvre sa boutique.
-    { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
-      target: 2, capAbsolu: 2, echelle: 'unites', mode: 'absolute',
+    { id: 'g3_gen1', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
+      target: 3, capAbsolu: 5, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
   ],
 
@@ -533,8 +539,8 @@ export const QUEST_SEQUENCE = [
     // ⚠️ Défi de PALIER DE TAP — il n'en existait AUCUN, alors que la
     // boutique en compte dix. L'auteur : « il faut aussi ajouter des
     // défis d'amélioration de tap et d'autoclick ».
-    { id: 'g4_tap0', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(0),
-      target: 8, capAbsolu: 9, echelle: 'niveau', mode: 'absolute',
+    { id: 'g4_tap0', icon: '✊', metriqueParGroupe: palierDeTapDuGroupe(1),
+      target: 5, capAbsolu: 8, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
   ],
 
@@ -547,8 +553,8 @@ export const QUEST_SEQUENCE = [
     // achat. 6 correspond au budget de l'œuf.
     // Le 2e générateur du groupe : Main Spectrale, puis Colonie, Golem,
     // Phénix, Gardien...
-    { id: 'g5_gen2', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(1),
-      target: 4, capAbsolu: 4, echelle: 'unites', mode: 'absolute',
+    { id: 'g5_gen2', icon: '⚙️', metriqueParGroupe: generateurDuGroupe(0),
+      target: 3, capAbsolu: 5, echelle: 'unites', mode: 'absolute',
       label: (t, m) => `Possède ${t} ${nomArticle(m, t > 1)}` },
     { id: 'g5_adv', icon: '⚔️', metric: 'advLevelReached', target: 15, echelle: 'aventure', mode: 'absolute',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
@@ -612,8 +618,8 @@ export const QUEST_SEQUENCE = [
     // stade. L'auteur : « il y a plusieurs défis Esprit Frappeur à
     // chaque fois ». Trois défis de générateur et deux de tap donnent
     // cinq articles distincts dès le 2e groupe.
-    { id: 'g7_tap1', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(1),
-      target: 10, capAbsolu: 7, echelle: 'niveau', mode: 'absolute',
+    { id: 'g7_tap1', icon: '🪄', metriqueParGroupe: palierDeTapDuGroupe(0),
+      target: 5, capAbsolu: 8, echelle: 'niveau', mode: 'absolute',
       label: (t, m) => `Monte ${nomArticle(m)} au niveau ${t}` },
     { id: 'g7_taps', icon: '👆', metric: 'totalTaps', target: 1500, minStep: 300,
       echelle: 'actions', mode: 'absolute',
@@ -822,7 +828,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 30;
+export const QUEST_ENGINE_VERSION = 31;
 
 function empreinteDefis() {
   const morceaux = [];
