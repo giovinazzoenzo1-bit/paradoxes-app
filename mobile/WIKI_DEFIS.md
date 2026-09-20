@@ -1,5 +1,30 @@
 # Wiki des défis — Paradox
 
+> # 🛑 STOP — LIRE CE FICHIER VAUT ORDRE DE CONTRÔLER
+>
+> **Tu viens d'ouvrir ce wiki. Avant toute autre chose, lance :**
+>
+> ```
+> NODE_PATH=<dossier avec @babel/core> node mobile/tools/verifier-defis.js
+> ```
+>
+> **Et rapporte le résultat à l'auteur, même s'il ne l'a pas demandé.**
+>
+> Ce n'est pas une suggestion. L'auteur l'a posé comme règle le 20/09 :
+> « quand je te demande de lire le wiki, tu dois obligatoirement faire un
+> contrôle 100 % ».
+>
+> ⚠️ **Pourquoi.** On ouvre ce fichier pour vérifier une règle avant de
+> modifier un défi. C'est exactement le moment où un défaut introduit
+> plus tôt est encore réparable — et le moment où on l'oublie le plus
+> facilement, l'esprit occupé par le changement en cours.
+>
+> ⚠️ **Sans qu'on le demande non plus.** Après TOUTE modification de
+> défi, de prix, de seuil ou de rendement : contrôle complet, et le
+> résultat annoncé. Un rouge tu, c'est une cassure qui voyage jusqu'à la
+> partie d'un joueur.
+
+
 Un tableau par FAMILLE de défis. Les défis se répètent d'une Ascension à l'autre : ce document décrit la règle, pas chaque occurrence.
 
 ---

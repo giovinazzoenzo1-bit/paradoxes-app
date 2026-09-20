@@ -15,6 +15,17 @@ a réglé l'affaire en une capture d'écran.
 
 ---
 
+## 0. ⚠️ OUVRIR `WIKI_DEFIS.md` = LANCER LE CONTRÔLE
+
+Règle de l'auteur du 20/09 : lire le wiki des défis oblige à lancer le
+contrôle complet et à en rapporter le résultat, même sans demande.
+
+Et après TOUTE modification de défi, de prix, de seuil ou de rendement :
+contrôle complet, résultat annoncé. Un rouge tu voyage jusqu'à la partie
+d'un joueur.
+
+---
+
 ## 1. La commande avant tout push touchant aux défis
 
 ```
