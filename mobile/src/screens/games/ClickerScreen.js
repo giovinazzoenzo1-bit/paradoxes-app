@@ -976,7 +976,24 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           const expectedSize = savedSeqIndex < SEQUENCE_LENGTH
             ? nextQuestSet(savedSeqIndex).ids.length
             : QUEST_SET_SIZE;
-          const savedTargets = saved.questTargets || {};
+          // ⚠️⚠️ LES CIBLES FIGÉES DOIVENT PARTIR AVEC LES DÉFIS.
+          //
+          // Quand l'empreinte change, `savedQuests` est vidé pour forcer
+          // un nouveau tirage — mais `saved.questTargets` était conservé
+          // tel quel. Les défis retirés récupéraient donc les cibles de
+          // l'ANCIENNE version, et le joueur continuait de voir les
+          // anciens chiffres après une mise à jour.
+          //
+          // Signalé le 19/09, plusieurs fois : « sur le jeu c'est encore
+          // les anciens défis ». Ce n'était ni le cache d'Expo ni une
+          // publication manquée — c'était la sauvegarde qui réimposait
+          // les vieilles cibles.
+          //
+          // ⚠️ Même règle pour les RÉFÉRENCES de progression
+          // (`questBaselines`) : gardées, elles mesureraient l'avancement
+          // d'un défi par rapport à un point de départ qui n'a plus
+          // cours.
+          const savedTargets = defsChangees ? {} : (saved.questTargets || {});
           if (savedQuests.length === expectedSize) {
             // Sauvegardes d'AVANT les cibles dynamiques : aucune cible
             // stockée. On les résout une fois à partir des stats
@@ -1074,7 +1091,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               tapPower: saved.tapPower || 1,
             }
           );
-          setQuestBaselines(saved.questBaselines || {});
+          // ⚠️ Même raison que les cibles : une référence de progression
+          // datant de l'ancienne version mesurerait le chemin parcouru
+          // depuis un point de départ qui n'existe plus.
+          setQuestBaselines(defsChangees ? {} : (saved.questBaselines || {}));
           setDevCompletedIds(saved.devCompletedIds || []);
           setDevReopenedIds(saved.devReopenedIds || []);
           setGriffesCoinBuys(saved.griffesCoinBuys || 0);

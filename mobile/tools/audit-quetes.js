@@ -1445,3 +1445,43 @@ function auditInfaisable(nbOeufs = 26, partMax = 0.6) {
   return trouves;
 }
 module.exports.auditInfaisable = auditInfaisable;
+
+// ---- Une mise à jour des défis efface-t-elle bien l'ancien état ? ---
+//
+// Bug réel du 19/09, signalé plusieurs fois : « sur le jeu c'est encore
+// les anciens défis ». Ce n'était ni le cache d'Expo ni une publication
+// manquée.
+//
+// Quand l'empreinte des définitions change, l'écran vide la liste des
+// défis pour forcer un nouveau tirage — mais il gardait les CIBLES
+// figées et les RÉFÉRENCES de progression de la sauvegarde. Les défis
+// fraîchement tirés récupéraient donc les chiffres de l'ancienne
+// version.
+//
+// Ce contrôle lit la source et exige que tout ce qui est restauré
+// depuis la sauvegarde et lié aux défis soit conditionné à
+// `defsChangees`.
+function auditResetSurChangement() {
+  const fs = require('fs');
+  const src = fs.readFileSync(__dirname + '/../src/screens/games/ClickerScreen.js', 'utf8');
+  const fautes = [];
+  const lies = ['questTargets', 'questBaselines', 'activeQuestIds'];
+  // ⚠️ Ignorer les COMMENTAIRES, et regarder les deux lignes qui
+  // précèdent : un test ternaire s'écrit souvent sur plusieurs lignes,
+  // et la condition ne figure pas sur celle qui cite le champ.
+  // Sans ces deux précautions le contrôle signalait sa propre
+  // documentation — du bruit qui fait ignorer les vraies alertes.
+  const lignes = src.split('\n');
+  lignes.forEach((ligne, i) => {
+    if (/^\s*(\/\/|\*)/.test(ligne)) return;
+    lies.forEach((champ) => {
+      if (!new RegExp('saved\\.' + champ).test(ligne)) return;
+      const contexte = lignes.slice(Math.max(0, i - 2), i + 1).join('\n');
+      if (!/defsChangees/.test(contexte)) {
+        fautes.push({ ligne: i + 1, champ, code: ligne.trim().slice(0, 70) });
+      }
+    });
+  });
+  return fautes;
+}
+module.exports.auditResetSurChangement = auditResetSurChangement;
