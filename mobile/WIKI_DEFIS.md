@@ -37,7 +37,21 @@ Il en reste **10 %** que le joueur doit farmer pour lancer son Ascension.
 | 6 | Générateur le plus récent | **2e** |
 | 7 | Palier de tap récent | 1re |
 
-**10 défis d'achat par Ascension**, sur 42 défis au total.
+**13 à 15 défis d'achat par Ascension**, sur 42 défis au total.
+
+Ils se répartissent ainsi :
+
+| Nature | Nombre |
+|---|---|
+| Générateurs (3 articles × 2 étapes) | 6 |
+| Paliers de tap (2 articles × 2 étapes) | 4 |
+| Pacte | 2 |
+| Sanctuaire et Veilleur | 2 |
+
+⚠️ **Un défi d'achat se repère à sa MÉTRIQUE, jamais à son texte.** Le
+repérer sur le libellé ratait « Monte le Sanctuaire », « Monte le
+Veilleur » et tout ce qui ne commence pas par un mot connu — quatre défis
+oubliés sur quatorze.
 
 ⚠️ **CHAQUE ACHAT EST SCINDÉ EN DEUX ÉTAPES**, placées dans des œufs
 différents. L'auteur : « acheter 15 Esprits d'un coup peut être
