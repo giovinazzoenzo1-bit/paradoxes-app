@@ -413,7 +413,16 @@ export const QUEST_SEQUENCE = [
   // Mesuré en fin d'œuf : ~86 000 gagnés, 20 pièces/s, 6 Esprits,
   // 4 Mains.
   [
-    { id: 'g3_reserve', icon: '💰', metric: 'coins', partAsc: 0.10, mode: 'absolute',
+    // ⚠️ CIBLE FIXE, plus une part du seuil.
+    //
+    // En part du seuil, la cible passe par le calcul de budget, qui
+    // applique un plancher « plus que l'acquis ». Sur une métrique
+    // d'ÉTAT comme `coins`, cela rendait le défi dépendant du
+    // porte-monnaie : un joueur avec 900 milliards se voyait demander
+    // « mets 1 billion de côté ». Détecté en comparant le document au
+    // jeu sur TROIS profils de joueur — un seul profil ne l'aurait pas
+    // montré.
+    { id: 'g3_reserve', icon: '💰', metric: 'coins', target: 25000, echelle: 'pieces', mode: 'absolute',
       label: (t) => `Mets ${qtyQ(t, 'pièces')} de côté` },
     // 2e maillon : ouvert par la Faveur de l'œuf 2, ouvre le Sanctuaire.
     // ⚠️ Niveau 3 -> 9. À 3, le défi coûtait 918 pièces à un joueur qui
@@ -506,7 +515,7 @@ export const QUEST_SEQUENCE = [
   // ══════════════════ ŒUF 5 — MONTER EN PUISSANCE ══════════════════
   // Mesuré en fin d'œuf : ~300 000 gagnés, 134 pièces/s de revenu.
   [
-    { id: 'g5_reserve', icon: '💰', metric: 'coins', partAsc: 0.2, mode: 'absolute',
+    { id: 'g5_reserve', icon: '💰', metric: 'coins', target: 90000, echelle: 'pieces', mode: 'absolute',
       label: (t) => `Mets ${qtyQ(t, 'pièces')} de côté` },
     // 5 -> 6 : le joueur en a déjà 4 à ce stade, viser 5 n'était qu'un
     // achat. 6 correspond au budget de l'œuf.
@@ -752,7 +761,7 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 26;
+export const QUEST_ENGINE_VERSION = 27;
 
 function empreinteDefis() {
   const morceaux = [];

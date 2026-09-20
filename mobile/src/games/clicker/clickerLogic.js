@@ -1586,22 +1586,47 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // ⚠️ Un contrôle peut vérifier qu'un nom EXISTE dans le code, jamais
 // qu'il appartient à l'univers du jeu. Tout ajout de contenu doit être
 // validé par l'auteur, pas déduit.
+// ⚠️⚠️ BARÈME CALÉ SUR « DEUX ACHATS PAR ASCENSION » — demande de
+// l'auteur du 19/09, après avoir validé l'effort d'un défi à
+// l'Ascension 5 (202 millions de pièces).
+//
+// RÈGLE : deux générateurs se découvrent par Ascension, et le prix de
+// chacun est calé pour que DEUX exemplaires coûtent l'effort d'un défi
+// de cette Ascension. Le 2e générateur du groupe coûte le double du 1er.
+//
+// ⚠️ Le verrou est le PRIX, pas une condition. Mesuré : à son Ascension
+// deux exemplaires coûtent un défi (x1,0) ; à l'Ascension précédente
+// x2 à x7 — atteignable en s'acharnant, jamais par accident ; deux
+// Ascensions avant, x6 à x35, hors de portée. Aucune condition
+// artificielle n'est nécessaire.
+//
+// ⚠️ L'effort d'un défi suit une RAMPE, pas une part constante du seuil.
+// Le repère de l'auteur (1,66 % du seuil à A5) est douze fois plus
+// exigeant que le début de partie qu'il avait validé (0,14 %). Écraser
+// l'un par l'autre aurait cassé ce qui marchait : la rampe part de
+// l'existant et monte jusqu'à son repère, puis se détend.
+//
+//     A1 0,14 %   A3 0,79 %   A5 1,66 %   A8 0,20 %
+//
+// ⚠️ Les rendements restent PROPORTIONNELS aux prix, avec le frein de
+// 15 % par palier. Changer un prix sans son rendement remet un palier
+// hors course — voir `auditPrixParAscension`.
 export const AUTOCLICKERS = [
-  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 650, baseIncome: 0.6, tier: 1 },
-  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 3824, baseIncome: 3, tier: 1 },
-  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 22491, baseIncome: 15, tier: 1 },
-  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 132302, baseIncome: 75, tier: 1 },
-  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 778247, baseIncome: 375, tier: 1 },
-  { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 4590134, baseIncome: 1880, tier: 2 },
-  { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 26943337, baseIncome: 9380, tier: 2 },
-  { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 158490220, baseIncome: 46900, tier: 2 },
-  { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 930307577, baseIncome: 234000, tier: 2 },
-  { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 5472397510, baseIncome: 1170000, tier: 2 },
-  { id: 'titanfoudre', name: 'Héraut d\u2019Orage', emoji: '⚡', baseCost: 32245600207, baseIncome: 5860000, tier: 3 },
-  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 189680001217, baseIncome: 29300000, tier: 3 },
-  { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 1111956642347, baseIncome: 146000000, tier: 3 },
-  { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 6558841758243, baseIncome: 732000000, tier: 3 },
-  { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 38581422107312, baseIncome: 3660000000, tier: 3 },
+  { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 651, baseIncome: 0.6, tier: 1 },
+  { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 1302, baseIncome: 1.02, tier: 1 },
+  { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 3878, baseIncome: 2.58, tier: 1 },
+  { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 7757, baseIncome: 4.39, tier: 1 },
+  { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 19260, baseIncome: 9.27, tier: 1 },
+  { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 38521, baseIncome: 15.8, tier: 2 },
+  { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 81986, baseIncome: 28.5, tier: 2 },
+  { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 163972, baseIncome: 48.4, tier: 2 },
+  { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 305367, baseIncome: 76.7, tier: 2 },
+  { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 610733, baseIncome: 130, tier: 2 },
+  { id: 'titanfoudre', name: 'Héraut d\u2019Orage', emoji: '⚡', baseCost: 1010999, baseIncome: 183, tier: 3 },
+  { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 2021999, baseIncome: 312, tier: 3 },
+  { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 3012470, baseIncome: 395, tier: 3 },
+  { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 6024940, baseIncome: 671, tier: 3 },
+  { id: 'etoilefilante', name: 'Étoile Filante', emoji: '⭐', baseCost: 8160222, baseIncome: 773, tier: 3 },
 ];
 
 // Coût pour acheter UNE unité de plus d'un générateur donné, sachant
