@@ -1762,3 +1762,39 @@ function auditPlafondAchats(partMax = 0.6) {
   return fautes;
 }
 module.exports.auditPlafondAchats = auditPlafondAchats;
+
+// ---- Le fichier écrit dit-il la même chose que le moteur ? ----------
+//
+// `defisEcrits.js` contient les 252 défis un par un. Tant que le jeu
+// tourne encore sur le moteur, les deux doivent dire EXACTEMENT la même
+// chose — c'est la preuve que basculer ne changera rien pour un joueur
+// en cours de partie.
+//
+// ⚠️ Ce contrôle est la seule chose qui autorise la bascule. Sans lui,
+// remplacer un moteur par une table revient à réécrire le jeu à
+// l'aveugle.
+function auditDefisEcrits() {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return [{ probleme: 'fichier absent' }]; }
+  const ecarts = [];
+  for (let g = 0; g < 6; g++) {
+    const s = etatInitial();
+    s.ascension = g; s.tapPower = 12; s.critLevel = 3; s.critDamageLevel = 3;
+    s.ownedCount = 6; s.creaturesAVenir = 6; s.deckCount = 3;
+    for (let o = 0; o < 7; o++) {
+      const set = Q.nextQuestSet(g * 7 + o, [], s);
+      const ecrit = D.DEFIS_ECRITS[g * 7 + o] || [];
+      set.ids.forEach((id, i) => {
+        const q = Q.findQuest(id);
+        if (!q || !ecrit[i]) { ecarts.push({ groupe: g, oeuf: o + 1, manquant: id }); return; }
+        const moteur = q.label(Q.effectiveQuestTarget(id, s, set.targets || {}),
+          Q.metriqueDuDefi(q, s));
+        if (moteur !== ecrit[i].label()) {
+          ecarts.push({ groupe: g, oeuf: o + 1, moteur, fichier: ecrit[i].label() });
+        }
+      });
+    }
+  }
+  return ecarts;
+}
+module.exports.auditDefisEcrits = auditDefisEcrits;
