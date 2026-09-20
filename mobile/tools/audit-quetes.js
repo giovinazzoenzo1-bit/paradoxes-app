@@ -1485,3 +1485,40 @@ function auditResetSurChangement() {
   return fautes;
 }
 module.exports.auditResetSurChangement = auditResetSurChangement;
+
+// ---- Le moteur reçoit-il l'état COMPLET du joueur ? -----------------
+//
+// Bug réel du 19/09 : à l'Ascension 5, le joueur voyait les défis du
+// tout premier œuf, et son œuf éclosait en deux défis.
+//
+// Le tirage de secours appelait `nextQuestSet(index, ids, { totalEarned
+// })` — un FRAGMENT d'état. Sans `ascension`, le moteur croit le joueur
+// au groupe 0 et tire les cibles de départ, qu'un joueur avancé remplit
+// instantanément.
+//
+// ⚠️ Passer un fragment ne provoque AUCUNE erreur : le moteur lit des
+// zéros et répond faux. C'est la pire catégorie de bug — silencieuse et
+// plausible.
+//
+// Ce contrôle lit la source et vérifie qu'aucun appel au moteur ne
+// reçoit un objet littéral en guise d'état.
+function auditEtatComplet() {
+  const fs = require('fs');
+  const src = fs.readFileSync(__dirname + '/../src/screens/games/ClickerScreen.js', 'utf8');
+  const fautes = [];
+  const moteur = ['nextQuestSet', 'pickQuestSet', 'resolveQuestTarget', 'questFeasible',
+    'effectiveQuestTarget', 'questProgress'];
+  src.split('\n').forEach((ligne, i) => {
+    if (/^\s*(\/\/|\*)/.test(ligne)) return;
+    moteur.forEach((fn) => {
+      const m = ligne.match(new RegExp(fn + '\\(([^)]*)\\)'));
+      if (!m) return;
+      // Un objet littéral passé en argument = un fragment d'état.
+      if (/\{\s*\w+\s*:/.test(m[1])) {
+        fautes.push({ ligne: i + 1, fonction: fn, code: ligne.trim().slice(0, 70) });
+      }
+    });
+  });
+  return fautes;
+}
+module.exports.auditEtatComplet = auditEtatComplet;

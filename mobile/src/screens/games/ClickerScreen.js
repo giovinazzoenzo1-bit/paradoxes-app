@@ -994,6 +994,24 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           // d'un défi par rapport à un point de départ qui n'a plus
           // cours.
           const savedTargets = defsChangees ? {} : (saved.questTargets || {});
+          const statsAtLoad = {
+            totalEarned: saved.totalEarned || 0,
+            coins: saved.coins || 0,
+            passiveIncome: totalAutoClickIncome(saved.autoClickers || {}),
+            tapPower: saved.tapPower || 1,
+            autoClickers: saved.autoClickers || {},
+            upgradeLevels: saved.upgradeLevels || {},
+            sanctuaryLevel: saved.sanctuaryLevel || 0,
+            veilleurLevel: saved.veilleurLevel || 0,
+            critLevel: saved.critLevel || 0,
+            essence: saved.essence || 0,
+            ownedCount: (saved.owned || []).length,
+            creaturesAVenir: (saved.owned || []).length + (saved.incubatingEgg ? 1 : 0),
+            deckCount: (saved.deck || []).filter(Boolean).length,
+            maxCreatureLevel: (saved.owned || []).reduce((m, o) => Math.max(m, o.level || 0), 0),
+            ascension: (saved.lifetimeStats && saved.lifetimeStats.ascension) || 0,
+            autoTotal: Object.values(saved.autoClickers || {}).reduce((a, b) => a + (b || 0), 0),
+            };
           if (savedQuests.length === expectedSize) {
             // Sauvegardes d'AVANT les cibles dynamiques : aucune cible
             // stockée. On les résout une fois à partir des stats
@@ -1001,23 +1019,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             // ce repli, questProgress recalculerait une cible à chaque
             // rendu et le défi s'éloignerait à mesure que le joueur
             // progresse, sans jamais se terminer.
-            const statsAtLoad = {
-              totalEarned: saved.totalEarned || 0,
-              coins: saved.coins || 0,
-              passiveIncome: totalAutoClickIncome(saved.autoClickers || {}),
-              tapPower: saved.tapPower || 1,
-              autoClickers: saved.autoClickers || {},
-              upgradeLevels: saved.upgradeLevels || {},
-              sanctuaryLevel: saved.sanctuaryLevel || 0,
-              veilleurLevel: saved.veilleurLevel || 0,
-              critLevel: saved.critLevel || 0,
-              essence: saved.essence || 0,
-              ownedCount: (saved.owned || []).length,
-              creaturesAVenir: (saved.owned || []).length + (saved.incubatingEgg ? 1 : 0),
-              deckCount: (saved.deck || []).filter(Boolean).length,
-              maxCreatureLevel: (saved.owned || []).reduce((m, o) => Math.max(m, o.level || 0), 0),
-              autoTotal: Object.values(saved.autoClickers || {}).reduce((a, b) => a + (b || 0), 0),
-            };
+
             // Un défi sauvegardé peut être devenu INFAISABLE : c'est le
             // cas signalé après une réinitialisation, où « gagne 3
             // combats » avait été tiré alors que le joueur n'avait
@@ -1072,7 +1074,20 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             setActiveQuestIds(finalQuests);
             setQuestTargets(resolved);
           } else {
-            const fresh = nextQuestSet(savedSeqIndex, savedQuests, { totalEarned: saved.totalEarned || 0 });
+            // ⚠️⚠️ LE TIRAGE DOIT RECEVOIR L'ÉTAT COMPLET, Ascension
+            // comprise.
+            //
+            // Il ne recevait que `{ totalEarned }`. Sans `ascension`, le
+            // moteur croit le joueur au GROUPE 0 et tire les défis du
+            // tout premier œuf : c'est ce qui faisait dire à l'auteur
+            // « c'est encore les anciens défis » à l'Ascension 5, et ce
+            // qui faisait éclore l'œuf en deux défis — un joueur avancé
+            // remplit instantanément des cibles de départ.
+            //
+            // ⚠️ Toute fonction du moteur qui prend `stats` a besoin de
+            // l'état COMPLET. En passer un fragment ne provoque aucune
+            // erreur : le moteur lit des zéros et répond faux.
+            const fresh = nextQuestSet(savedSeqIndex, savedQuests, statsAtLoad);
             setActiveQuestIds(fresh.ids);
             setQuestTargets(fresh.targets);
           }

@@ -27,6 +27,7 @@ const CONTROLES = [
   ['auditPrixParAscension', 'la boutique garde sa valeur à chaque Ascension'],
   ['auditInfaisable', 'aucun défi ne coûte plus de 60 % du seuil'],
   ['auditResetSurChangement', 'une maj des défis efface l ancien état'],
+  ['auditEtatComplet', 'le moteur reçoit l état complet du joueur'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
   ['auditAscension', 'ne diverge pas après les Ascensions'],
