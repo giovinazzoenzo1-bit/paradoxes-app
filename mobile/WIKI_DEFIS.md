@@ -16,6 +16,7 @@ payée.
 | **Aucun défi d'AVENTURE dans l'œuf 1** — le joueur n'a pas de créature | 20/09 |
 | Le **premier défi du jeu** est celui des pièces, pas un achat | 20/09 |
 | Les défis d'achat disent **« Achète N »**, jamais « Possède N » | 20/09 |
+| Un défi d'achat ne réclame **jamais plus que ce qui reste** dans le groupe | 20/09 |
 | Le **bonus d'un palier de tap double** à chaque palier : 1, 2, 4, 8… | 20/09 |
 | **7 œufs de 6 défis** par Ascension, soit 42 défis | 20/09 |
 | **2 nouveaux générateurs + 2 nouveaux paliers de tap** par Ascension | 19/09 |
@@ -55,6 +56,40 @@ Exemple : le défi des pièces porte `target: 750`. Au groupe 0 il demande
 demandant 5 Esprits était déjà rempli si un défi précédent en avait fait
 acheter 5 — il s'annulait tout seul. En mode delta, le compteur part de
 zéro quand le défi commence.
+
+---
+
+### 🧮 Le calculateur d'achats
+
+Un joueur qui a beaucoup investi ne doit jamais se retrouver bloqué.
+
+**Le problème.** Le prix d'un générateur monte de **25 % par
+exemplaire** : le 20e coûte 87 fois le premier. Un défi disant « achète
+5 de plus » est donc trivial pour un joueur en retard et **impossible**
+pour un joueur en avance. Exactement l'inverse de ce qu'on veut.
+
+**La règle.** On sait à l'avance combien le GROUPE ENTIER demandera —
+c'est la somme des cibles de ses défis visant cet article. Si le joueur
+en possède déjà autant, le défi ne réclame plus qu'**un** exemplaire.
+
+À l'Ascension 0, le groupe demande **16 Esprits Frappeurs** au total :
+
+| Le joueur en a | Le défi en demande |
+|---|---|
+| 0 | 3 |
+| 7 | 3 |
+| 13 | 3 |
+| **15** | **1** |
+| 30 | **1** |
+
+⚠️ **L'adaptation ne peut que RÉDUIRE la demande, jamais l'augmenter.**
+Un joueur en retard voit donc toujours la cible annoncée dans le
+document. C'est ce qui la distingue des anciennes cibles dynamiques,
+qui fuyaient devant le joueur.
+
+⚠️ Ce que le plafond garantit, c'est qu'on ne demande qu'UN exemplaire —
+pas que cet exemplaire soit bon marché. Un joueur à 24 Esprits paie 55 %
+du seuil pour le 25e : c'est le prix de son propre sur-investissement.
 
 ---
 

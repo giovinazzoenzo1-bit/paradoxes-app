@@ -337,6 +337,38 @@ export function metriqueDuDefi(quest, stats) {
   return quest.metric;
 }
 
+// ⚠️⚠️ CALCULATEUR D'ACHATS — plafond par article et par groupe.
+//
+// Problème signalé par l'auteur le 20/09 : « si un joueur a tryhard les
+// niveaux d'Esprit Frappeur et qu'un défi lui demande d'en racheter 5,
+// il ne pourra peut-être pas — 3 millions de pièces à l'Ascension 0,
+// c'est impossible ».
+//
+// Le prix d'un générateur monte de 25 % par exemplaire : au 20e, il
+// coûte 87 fois le premier. Un défi en mode DELTA demandant « achète 5
+// de plus » devient donc infaisable pour un joueur en avance, alors
+// qu'il est trivial pour un joueur en retard. C'est l'inverse de ce
+// qu'on veut.
+//
+// LA RÈGLE : on sait à l'avance combien d'exemplaires le GROUPE ENTIER
+// demandera — c'est la somme des cibles de ses défis visant cet article.
+// Si le joueur en possède déjà autant, le défi ne réclame plus qu'UN
+// exemplaire. Il n'est jamais puni d'avoir investi.
+//
+// ⚠️ Cette adaptation au joueur est VOULUE, comme celle du défi de
+// créature. Elle est bornée : elle ne peut que RÉDUIRE la demande,
+// jamais l'augmenter. Un joueur en retard voit donc toujours la cible
+// annoncée dans le document.
+export function plafondAchatsGroupe(metric, stats) {
+  let total = 0;
+  QUEST_SEQUENCE.forEach((cycle) => cycle.forEach((q) => {
+    if (q.mode !== 'delta') return;
+    if (metriqueDuDefi(q, stats) !== metric) return;
+    total += q.target || 0;
+  }));
+  return total;
+}
+
 export function resolveQuestTarget(quest, stats) {
   if (!quest) return 1;
   if (quest.target) {
@@ -381,6 +413,17 @@ export function resolveQuestTarget(quest, stats) {
     // plancher appliqué plus bas aux cibles calculées : elle pouvait
     // donc afficher un niveau DÉJÀ ATTEINT, que le joueur lisait comme
     // un défi cassé.
+    // ⚠️⚠️ CALCULATEUR D'ACHATS, appliqué AVANT la sortie des défis en
+    // mode delta — c'est cette ligne-là qui rendait le plafond inopérant
+    // quand je l'avais placé plus bas : un défi d'achat est en mode
+    // delta, donc il sortait de la fonction avant d'être plafonné.
+    const mAchat = metriqueDuDefi(quest, stats) || '';
+    if (quest.mode === 'delta'
+      && (mAchat.startsWith('auto:') || mAchat.startsWith('tapUpgrade:'))) {
+      const plafond = plafondAchatsGroupe(mAchat, stats);
+      const restant = Math.max(1, plafond - readMetric(mAchat, stats));
+      return Math.min(brute, restant);
+    }
     if (quest.mode !== 'absolute') return brute;
     // Record remis à zéro au tirage : la cible est la cible, point.
     if (RESET_ON_DRAW_METRICS.includes(quest.metric)) {

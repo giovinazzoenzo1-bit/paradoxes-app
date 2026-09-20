@@ -1265,6 +1265,13 @@ function auditCibleSuitLeJoueur() {
     if (!q.target) return;
     // Le défi de taps demande EXPLICITEMENT qu'il reste à faire.
     if (q.minStep) return;
+    // ⚠️ Les défis d'ACHAT s'adaptent VOLONTAIREMENT au joueur depuis le
+    // 20/09 : `plafondAchatsGroupe` réduit la demande quand il possède
+    // déjà ce que le groupe réclame. L'adaptation est BORNÉE — elle ne
+    // peut que réduire, jamais augmenter — donc un joueur en retard voit
+    // toujours la cible annoncée dans le document.
+    if (q.mode === 'delta' && /^(auto:|tapUpgrade:)/.test(
+      Q.metriqueDuDefi(q, { ascension: 0 }) || '')) return;
     [0, 1, 3].forEach((g) => {
       const a = Q.resolveQuestTarget(q, faible(g));
       const b = Q.resolveQuestTarget(q, fort(g));
@@ -1690,3 +1697,68 @@ function auditAchatsColles(nbOeufs = 28) {
   return fautes;
 }
 module.exports.auditAchatsColles = auditAchatsColles;
+
+// ---- Un défi d'achat peut-il devenir infaisable ? -------------------
+//
+// Problème posé par l'auteur le 20/09 : « si un joueur a tryhard les
+// niveaux d'Esprit Frappeur et qu'un défi lui demande d'en racheter 5,
+// il ne pourra peut-être pas — 3 millions de pièces à l'Ascension 0 ».
+//
+// Le prix d'un générateur monte de 25 % par exemplaire : au 20e il
+// coûte 87 fois le premier. Un défi en mode DELTA devenait donc
+// impossible pour un joueur EN AVANCE, alors qu'il reste trivial pour
+// un joueur en retard.
+//
+// `plafondAchatsGroupe` borne la demande à ce qui reste à acheter dans
+// le groupe. Ce contrôle vérifie qu'un joueur très en avance ne se voit
+// jamais réclamer plus d'un exemplaire, et que le coût reste sous le
+// seuil de son Ascension.
+// ⚠️ Tolérance à 60 %, la même que `auditInfaisable`. Un joueur qui a
+// sur-investi paie le prix de son propre choix : le 24e Esprit coûte
+// 55 % du seuil parce que chaque exemplaire vaut 25 % de plus que le
+// précédent. Ce que le plafond garantit, c'est qu'on ne lui en demande
+// qu'UN — pas que cet exemplaire soit bon marché.
+function auditPlafondAchats(partMax = 0.6) {
+  const fautes = [];
+  [0, 1, 2, 3, 4, 5].forEach((groupe) => {
+    Q.QUEST_SEQUENCE.flat().forEach((q) => {
+      if (q.mode !== 'delta') return;
+      const s = etatInitial();
+      s.ascension = groupe;
+      const m = Q.metriqueDuDefi(q, s) || '';
+      if (!m.startsWith('auto:') && !m.startsWith('tapUpgrade:')) return;
+      const estAuto = m.startsWith('auto:');
+      const item = estAuto ? C.AUTOCLICKERS.find((x) => x.id === m.slice(5))
+        : C.TAP_UPGRADES.find((x) => x.id === m.slice(11));
+      if (!item) return;
+      // ⚠️ Joueur en avance, mais RÉALISTE : la moitié de plus que le
+      // plafond. Tester trois fois le plafond n'avait pas de sens — le
+      // prix monte de 25 % par exemplaire, donc le 48e Esprit coûte
+      // 66 000 fois le premier et aucun joueur n'y arrive à l'Ascension
+      // 0. Un contrôle doit décrire une situation ATTEIGNABLE, sinon il
+      // refuse des réglages corrects.
+      // ⚠️ L'AVANCE RÉALISTE DÉPEND DE LA PENTE DU PRIX. Un générateur
+      // monte de 25 % par exemplaire, un palier de tap de 45 % : à
+      // plafond égal, le joueur peut aller bien plus loin sur le
+      // premier que sur le second. Tester la même avance sur les deux
+      // refusait des réglages corrects.
+      const plafond = Q.plafondAchatsGroupe(m, s);
+      const possede = Math.round(plafond * (estAuto ? 1.5 : 1.15));
+      if (estAuto) s.autoClickers[item.id] = possede;
+      else s.tapUpgrades[item.id] = possede;
+      const cible = Q.resolveQuestTarget(q, s);
+      let cout = 0;
+      for (let n = possede; n < possede + cible; n++) {
+        cout += estAuto ? C.autoClickerCost(item, n, groupe)
+          : C.tapUpgradeCost(item, n, groupe);
+      }
+      const seuil = C.ascensionThreshold(groupe);
+      if (cout > seuil * partMax) {
+        fautes.push({ id: q.id, groupe, article: item.name, cible,
+          part: Math.round(100 * cout / seuil) });
+      }
+    });
+  });
+  return fautes;
+}
+module.exports.auditPlafondAchats = auditPlafondAchats;

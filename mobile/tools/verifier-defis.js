@@ -31,6 +31,7 @@ const CONTROLES = [
   ['auditInstantanesAJour', 'les instantanés lisent des valeurs à jour'],
   ['auditNomsEnDur', 'aucun nom d article écrit en dur hors de clickerLogic'],
   ['auditAchatsColles', 'jamais deux défis d achat d affilée'],
+  ['auditPlafondAchats', 'un défi d achat reste faisable pour un joueur en avance'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
   ['auditAscension', 'ne diverge pas après les Ascensions'],
