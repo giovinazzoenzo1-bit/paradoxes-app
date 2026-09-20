@@ -16,23 +16,67 @@ Un tableau par FAMILLE de défis. Les défis se répètent d'une Ascension à l'
 
 ---
 
-## 🎯 Le ratio qui décide de tout
+## 🎯 LA MÉTHODE — comment fixer les prix (règle de l'auteur)
 
-**La part du seuil d'Ascension.** C'est la seule mesure qui garde son sens à tous les stades du jeu.
+**Le budget d'une Ascension, c'est son seuil.** Tout se calcule à partir de là.
 
-> Un défi d'achat coûte X % de ce qu'il te faut pour ta prochaine Ascension.
+### En trois étapes
 
-| Ascension | Part du seuil | Concrètement |
+**1. Le budget des défis d'achat = 90 % du seuil.**
+Il en reste **10 %** que le joueur doit farmer pour lancer son Ascension.
+
+**2. Ce budget se répartit en pourcentages entre les défis d'achat.**
+
+| Défi | Part du budget |
+|---|---|
+| Générateur le plus récent | 22 % |
+| Générateur d'en dessous | 20 % |
+| Générateur le plus ancien | 18 % |
+| 1er palier de tap | 16 % |
+| 2e palier de tap | 14 % |
+| **Total** | **100 %** |
+
+**3. Le prix de chaque article se déduit de sa part et de la cible du défi.**
+
+### Exemple à l'Ascension 0 — seuil 421 000
+
+| | |
+|---|---|
+| Budget des défis d'achat | 379 000 (90 %) |
+| Reste à farmer | **42 000 (10 %)** |
+| Part du générateur le plus récent | 22 % → 83 000 |
+| Cible du défi | 2 exemplaires |
+| **Prix de l'article** | **41 500 pièce** |
+
+### Pourquoi ce dernier farm est VOULU
+
+Le joueur doit sentir qu'il lui reste **un petit effort** avant une grosse récompense. Si l'Ascension tombe toute cuite en finissant le dernier défi, il perd ce moment — et avec lui une raison de revenir.
+
+⚠️ À l'inverse, si ce reste est trop grand (30 % ou plus), il passe des heures sur un seul défi et décroche.
+
+➡️ **La fourchette est 5 % à 15 %.** En dessous c'est offert, au-dessus c'est décourageant.
+
+### Pourquoi la méthode est solide
+
+- 🟩 **Le joueur ne peut jamais être bloqué** : le budget est calculé depuis le seuil qu'il atteindra de toute façon.
+- 🟩 **Ajouter ou retirer un défi** ne demande que de redistribuer les pourcentages. Le total reste calé.
+- 🟩 **Chaque Ascension se règle toute seule** : c'est le même calcul avec un seuil plus grand.
+
+### ⚠️ Ce qui n'est PAS un problème
+
+**Dépenser n'éloigne jamais de l'Ascension.** Le seuil compte les pièces GAGNÉES, pas celles qui restent en poche. Mesuré : le joueur dépense déjà 82 à 100 % du seuil pendant un groupe et ascensionne quand même — c'est justement en dépensant qu'il produit assez pour y arriver.
+
+### Où on en est
+
+| Ascension | Défis d'achat | Farm final |
 |---|---|---|
-| A1 | 0,41 % | facile, on découvre |
-| A2 | 2,09 % | |
-| A3 | 6,95 % | |
-| A4 | 18,86 % | |
-| A5 | **41,14 %** | un défi d'achat = 40 % du chemin vers l'Ascension |
+| A1 | 72 % | 28 % |
+| A2 | 92 % | 8 % |
+| A3 | 88 % | 12 % |
+| A4 | 87 % | 13 % |
+| A5 | 95 % | 5 % |
 
-**Pour fixer un nouvel objectif**, ne raisonne pas en pièces — raisonne en part du seuil. « Ce défi doit coûter 20 % de mon Ascension » se traduit tout seul à n'importe quel niveau.
-
-⚠️ La difficulté **ne redescend jamais**. Chaque Ascension demande une part plus grande que la précédente.
+🟨 A1 est encore un peu généreux (28 % de farm final). À resserrer si tu le sens trop long en jouant.
 
 ---
 
