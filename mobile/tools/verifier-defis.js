@@ -40,6 +40,7 @@ const CONTROLES = [
   ['auditMetriquesIncrementees', 'chaque métrique est bien incrémentée par le jeu'],
   ['auditDureeCroissante', 'la durée d un groupe ne retombe jamais'],
   ['auditHorsLigne', '2 h hors ligne valent 10 min de jeu, jamais plus'],
+  ['auditFaisableAuMoment', 'un défi est faisable AU MOMENT où il arrive'],
   ['auditDocConforme', 'le document remis à l auteur correspond au jeu'],
   ['auditDefisEcrits', 'le fichier des 252 défis est cohérent et fait foi'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],

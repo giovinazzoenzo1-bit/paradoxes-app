@@ -42,6 +42,8 @@ payée.
 | Le **premier défi du jeu** est celui des pièces, pas un achat | 20/09 |
 | Le **deuxième défi du jeu est le Pacte** — départ du tuto | 20/09 |
 | Jamais deux défis de la **même métrique** dans le même œuf | 20/09 |
+| Un défi doit être **faisable au moment où il ARRIVE**, pas en fin de groupe | 21/09 |
+| Deux défis de passif par groupe : **facile à l'œuf 2, exigeant à l'œuf 6** | 21/09 |
 | Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
 | Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
 | L'**œuf 1 est un tutoriel** : ses défis sont volontairement rapides | 20/09 |
@@ -122,6 +124,7 @@ rarement dans un défi ; elle naît dans leur suite.**
 | `auditEquilibreFamilles` | Remplacer un défi de la famille en excès par un de la famille manquante. |
 | `auditArticlesOrphelins` | Un article n'est demandé nulle part : lui donner un défi, ou vérifier qu'il est bien hors du contenu écrit. |
 | `auditPrerequisTenus` | Déplacer le défi APRÈS celui qui débloque son sujet — ou relever la cible de ce dernier. |
+| `auditFaisableAuMoment` | Le défi réclame plus que ce que le joueur a **à l'endroit où il tombe**. Le déplacer plus tard, ou baisser sa cible au niveau atteint à ce moment-là. |
 
 #### Les contrôles de DÉFI
 
@@ -248,6 +251,33 @@ l'amortissement, six passes suffisent.
 
 ⚠️ **Le seuil se recalcule à CHAQUE passe** (coût / 0,90), sinon le
 budget dérive pendant qu'on poursuit la durée.
+
+### ⏳ Mesurer AU MOMENT où le défi arrive
+
+⚠️⚠️ **Le piège qui a coûté le plus cher le 21/09, deux fois le même
+jour.** Mesurer l'état du joueur en FIN de groupe décrit quelqu'un qui a
+DÉJÀ tout fait — jamais celui qui reçoit le défi.
+
+- Le hors ligne affichait 72 % du seuil au dernier instant, 0,1 % en
+  moyenne.
+- « Atteins 29 000 pièces par seconde » était « atteignable » avec
+  1,6 million par seconde en fin de groupe. À l'œuf 2, où il tombait, le
+  joueur avait **zéro**.
+
+**Le profil réel du passif** : il reste à zéro pendant deux œufs — le
+joueur achète du tap, plus rentable en début de groupe — puis explose à
+partir du troisième. Un défi de passif précoce ne peut donc demander que
+ce que donnent quelques générateurs bon marché.
+
+⚠️ `auditFaisableAuMoment` compare la cible à l'état du joueur **à la fin
+de l'œuf où le défi tombe**. Référence : le plus grand du passif simulé
+et de celui de trois exemplaires du générateur **le moins cher** — pas
+du plus productif sous un seuil de coût, qui laissait passer des paliers
+hauts aux dernières Ascensions.
+
+⚠️ **Un libellé ne doit jamais écrire son nombre en dur.** La cible du
+défi valait 10 et le texte disait encore « 29 000 » : le joueur aurait
+lu un défi impossible pour un défi à sa portée.
 
 ### 🧮 Le calculateur d'achats
 

@@ -2242,7 +2242,9 @@ function simulerGroupe(ascension, tapsParSec) {
   };
   const seuil = C.ascensionThreshold(a);
   let t = 0, garde = 0, passifFinal = 0;
-  const jalons = [];
+  // Jalon de DÉPART : sans lui, un défi de l'œuf 1 n'aurait aucun état
+  // de référence et le contrôle de faisabilité le laisserait passer.
+  const jalons = [{ t: 0, passif: 0 }];
   while (s.totalEarned < seuil && garde++ < 20000) {
     const r = rev();
     const options = [{ cout: C.tapPowerCost(s.tapPower), appliquer: (x) => { x.tapPower += 1; } }];
@@ -2338,3 +2340,73 @@ function auditHorsLigne(tolerance = 0.02) {
   return fautes;
 }
 module.exports.auditHorsLigne = auditHorsLigne;
+
+// ---- Le défi est-il faisable AU MOMENT OÙ IL ARRIVE ? ---------------
+//
+// Demandé par l'auteur le 21/09, après le défi « Atteins 29 000 pièces
+// par seconde » : il le trouvait « compliqué et abusé ». Il avait
+// raison — à l'œuf 2 de l'Ascension 4, le passif du joueur est à 0.
+// Le défi réclamait 29 000 fois ce qu'il avait.
+//
+// ⚠️⚠️ C'EST LA DEUXIÈME FOIS LE MÊME JOUR QUE CE PIÈGE COÛTE CHER. Mes
+// contrôles mesuraient la situation en FIN de groupe (1,6 million par
+// seconde) et concluaient « atteignable ». Le hors ligne avait la même
+// faute : 72 % du seuil au dernier instant, 0,1 % en moyenne. Mesurer la
+// fin d'un groupe décrit un joueur qui a DÉJÀ tout fait — jamais celui
+// qui reçoit le défi.
+//
+// LA RÈGLE : un défi tombé dans l'œuf e doit pouvoir être rempli avant
+// la fin de cet œuf. On lit l'état du joueur au moment où l'œuf SUIVANT
+// commencerait, et la cible doit être atteinte.
+//
+// ⚠️ La métrique est LUE dans la simulation (`jalons`), jamais estimée à
+// part : un contrôle qui mesure avec son propre instrument ne contrôle
+// que lui-même.
+function auditFaisableAuMoment(marge = 1.0) {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const fautes = [];
+  const sims = {};
+  D.DEFIS_ECRITS.forEach((oeuf, i) => {
+    const g = Math.floor(i / 7);
+    const e = i % 7;
+    if (g > 5) return;
+    const r = sims[g] || (sims[g] = simulerGroupe(g));
+    if (!r.jalons || !r.jalons.length) return;
+    // Fin de l'œuf e = début de l'œuf e + 1, en temps de jeu.
+    const tFin = ((e + 1) / 7) * r.heures * 3600;
+    let etat = r.jalons[0];
+    r.jalons.forEach((j) => { if (j.t <= tFin) etat = j; });
+    // ⚠️ Le simulateur optimise le REVENU, pas les défis : en début de
+    // groupe il achète du tap et laisse le passif à zéro. Un joueur qui
+    // SUIT le défi achèterait quelques générateurs. On retient donc le
+    // plus grand de deux : le passif simulé, ou celui de trois
+    // exemplaires du générateur le moins cher — ce qu'un joueur obtient
+    // pour presque rien s'il le décide.
+    // ⚠️ Le générateur le MOINS CHER, pas le plus productif sous un seuil
+    // de coût. Filtrer « moins de 5 % du seuil » laissait passer des
+    // paliers hauts aux dernières Ascensions, dont le seuil est énorme :
+    // le contrôle retenait le Colosse de Pierre (198 000/s) comme
+    // référence « bon marché » à l'Ascension 4, et acceptait donc un défi
+    // à 29 000/s tombé à un moment où le joueur n'a rien.
+    let moinsCher = null;
+    C.AUTOCLICKERS.forEach((it) => {
+      const cout = [0, 1, 2].reduce((acc, n) => acc + C.autoClickerCost(it, n, g), 0);
+      if (!moinsCher || cout < moinsCher.cout) moinsCher = { it, cout };
+    });
+    const bonMarche = moinsCher ? C.passiveRate({
+      autoClickers: { [moinsCher.it.id]: 3 }, upgradeLevels: {},
+      sanctuaryLevel: 0, essence: 0, ascensionCount: g }) : 0;
+    oeuf.forEach((q) => {
+      if (q.metric !== 'passiveIncome') return;
+      const atteint = Math.max(etat ? etat.passif : 0, bonMarche);
+      if (q.target > atteint * marge) {
+        fautes.push({ defi: q.id, oeuf: i + 1, texte: q.label(q.target),
+          demande: q.target, aCeMoment: Math.round(atteint),
+          ecart: +(q.target / Math.max(1, atteint)).toFixed(1) });
+      }
+    });
+  });
+  return fautes;
+}
+module.exports.auditFaisableAuMoment = auditFaisableAuMoment;
