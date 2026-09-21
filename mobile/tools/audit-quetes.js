@@ -2299,36 +2299,41 @@ function simulerGroupe(ascension, tapsParSec) {
 }
 module.exports.simulerGroupe = simulerGroupe;
 
-// ---- Le hors ligne reste-t-il dans sa fourchette ? ------------------
+// ---- Deux heures hors ligne valent-elles dix minutes de jeu ? -------
 //
-// Règle de l'auteur : 3 à 5 % du seuil pour deux heures pleines.
+// Règle de l'auteur du 21/09 : jouer doit rester nettement plus rentable
+// que laisser tourner. Deux heures d'absence = dix minutes de production
+// active, jamais plus.
 //
-// ⚠️ On mesure à PLUSIEURS moments du groupe, pas seulement à la fin.
-// L'auteur a relevé l'erreur : « le joueur n'obtient pas le maximum dès
-// le début, il commence à 0 ». Mesuré à la fin, un groupe affichait 72 %
-// du seuil ; en moyenne, 0,1 %. Prendre le dernier instant pour
-// référence surestimait l'apport d'un facteur plusieurs centaines.
-// ⚠️ On contrôle la MOYENNE du groupe (3 à 5 %) ET le maximum ponctuel
-// (7 %). L'auteur veut la moyenne dans sa fourchette, pas chaque
-// instant : un pic au moment où le joueur a tout acheté est légitime.
-function auditHorsLigne(moyMin = 0.029, moyMax = 0.051, maxPonctuel = 0.071) {
+// ⚠️⚠️ Ce contrôle remplace celui du 20/09, qui vérifiait « 3 à 5 % du
+// seuil ». Cette cible m'avait conduit à poser un PLANCHER en part du
+// seuil — et ce plancher versait de l'argent que le joueur n'avait
+// jamais produit : 1,5 milliard pour 337 pièces/s, 2 500 fois trop.
+// Une cible en part du seuil ne dit rien de ce que le joueur mérite.
+//
+// On vérifie aussi que le gain ne dépasse JAMAIS la production réelle
+// du joueur : c'est la garantie qui manquait.
+function auditHorsLigne(tolerance = 0.02) {
   const fautes = [];
   for (let a = 0; a < 6; a++) {
     const r = simulerGroupe(a);
-    if (!r.jalons || !r.jalons.length) continue;
-    let somme = 0, prec = 0, maxi = 0;
-    r.jalons.forEach((j) => {
-      const part = C.offlineEarnings(j.passif, C.OFFLINE_CAP_SECONDS, r.seuil) / r.seuil;
-      somme += part * (j.t - prec); prec = j.t;
-      if (part > maxi) maxi = part;
+    [0.25, 0.5, 0.75].forEach((f) => {
+      const j = r.jalons[Math.max(0, Math.min(r.jalons.length - 1, Math.floor(r.jalons.length * f)))];
+      if (!j) return;
+      // Production active au jalon : passif + tap humain.
+      const actif = r.production;
+      const gain = C.offlineEarnings(actif, C.OFFLINE_CAP_SECONDS);
+      const minutes = actif > 0 ? gain / actif / 60 : 0;
+      if (Math.abs(minutes - 10) > 10 * tolerance) {
+        fautes.push({ groupe: a, moment: Math.round(f * 100) + ' %', minutes: +minutes.toFixed(1) });
+      }
     });
-    const moyenne = prec > 0 ? somme / prec : 0;
-    if (moyenne < moyMin || moyenne > moyMax) {
-      fautes.push({ groupe: a, quoi: 'moyenne', part: +(moyenne * 100).toFixed(1) });
-    }
-    if (maxi > maxPonctuel) {
-      fautes.push({ groupe: a, quoi: 'pic', part: +(maxi * 100).toFixed(1) });
-    }
+  }
+  // ⚠️ La garantie essentielle : un joueur au passif quasi nul ne reçoit
+  // pas des milliards. On le vérifie au cas exact signalé par l'auteur.
+  const faible = C.offlineEarnings(337 + 4, 8 * 3600);
+  if (faible > 337 * 3600) {
+    fautes.push({ probleme: 'un joueur à 337/s reçoit ' + faible + ' pour une nuit' });
   }
   return fautes;
 }

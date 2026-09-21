@@ -105,6 +105,9 @@ import {
   QUEST_DEFS_VERSION,
   peutEtreRemplace,
 } from '../../games/clicker/questLogic';
+// ⚠️ Rythme de tap HUMAIN (sans autoclicker) : sert à estimer la
+// production active au moment du départ, pour le calcul du hors ligne.
+import { HUMAN_TAPS_PER_SEC } from '../../games/clicker/questBudget';
 import {
   combatStatsForCreatureTyped,
   GUARDIAN_CREATURE,
@@ -947,12 +950,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             offline: true,
             veilleurLevel: savedVeilleur,
           });
-          // ⚠️ Le SEUIL de l'Ascension en cours est passé en 3e argument :
-          // c'est lui qui borne le gain à 3-5 %. Sans lui, l'ancien calcul
-          // s'applique — et il donnait 0,1 % du seuil sur un groupe et
-          // 72 % sur un autre.
+          // ⚠️ Le hors ligne se cale sur la production ACTIVE (tap au
+          // rythme humain + passif), pas sur le passif seul — voir
+          // `offlineEarnings`. Deux heures d'absence valent dix minutes de
+          // jeu : jouer reste douze fois plus rentable que laisser tourner.
+          const tapAuChargement = (tapDamage(saved.tapPower || 1)
+            + tapUpgradeBonus(saved.tapUpgrades || {}))
+            * HUMAN_TAPS_PER_SEC * ascensionSpeedMultiplier(ascensionAuChargement);
           const offline = Math.round(offlineEarnings(
-            offlineIncome, elapsed, ascensionThreshold(ascensionAuChargement)));
+            offlineIncome + tapAuChargement, elapsed));
           setCoins((saved.coins || 0) + offline);
           setTotalEarned((saved.totalEarned || 0) + offline);
           // Compte rendu montré au joueur. Seuil à 1 pièce : inutile de

@@ -767,44 +767,37 @@ export const OFFLINE_CAP_SECONDS = 2 * 3600;
 // taux. À 25 %, une session hors ligne revient à ~15-25 % du seuil.
 export const OFFLINE_RATE = 0.25;
 
-// ⚠️⚠️ LE GAIN HORS LIGNE EST BORNÉ EN PART DU SEUIL : 3 % à 5 % pour
-// deux heures pleines. Demande de l'auteur du 20/09.
+// ⚠️⚠️ HORS LIGNE : DEUX HEURES D'ABSENCE VALENT DIX MINUTES DE JEU.
 //
-// POURQUOI PAS UN SIMPLE TAUX. Mesuré : à 25 % du passif, l'apport
-// moyen allait de 0,1 % du seuil à l'Ascension 1 à 4,4 % à l'Ascension
-// 2. Pour amener tout le monde à 4 %, il aurait fallu un taux de 668 %
-// sur un groupe et 23 % sur le suivant — le passif moyen est bien trop
-// irrégulier d'un groupe à l'autre pour qu'un taux unique convienne.
+// Règle de l'auteur du 21/09 : « farmer au tap doit être équilibré avec
+// le fait de farmer les gains hors ligne, sinon c'est trop facile ».
+// Jouer doit rester nettement plus rentable que laisser tourner — ici
+// douze fois plus.
 //
-// ⚠️⚠️ ET LE PASSIF DE FIN DE GROUPE N'EST PAS LE BON REPÈRE. L'auteur :
-// « le joueur n'obtient pas le maximum dès le début, il commence à 0 ».
-// Exact — à l'Ascension 1, le hors ligne couvre 72 % du seuil si on se
-// déconnecte au tout dernier instant, et 0,1 % en moyenne sur le groupe.
-// Mesurer la fin surestimait l'apport d'un facteur plusieurs centaines.
+// Le gain se cale sur la PRODUCTION ACTIVE du joueur (tap + passif) au
+// moment où il part, pas sur son seul passif :
+//   - le passif seul valait moins d'UNE minute de jeu pour 2 h
+//     d'absence, sur presque tous les groupes ;
+//   - caler sur l'actif rend le hors ligne indépendant de la force des
+//     autoclickers, qui peuvent donc être renforcés sans le rendre
+//     abusif. Les deux réglages sont séparés.
 //
-// LA RÈGLE : le gain vaut ce que produit le passif, mais jamais moins de
-// 3 % ni plus de 5 % du seuil de l'Ascension en cours, au prorata du
-// temps écoulé. Un joueur qui a monté ses générateurs touche le haut de
-// la fourchette ; celui qui débute touche quand même le bas.
-export const OFFLINE_PART_MIN = 0.03;
-// ⚠️ Plafond à 7 %, autorisé par l'auteur le 20/09 : « peut-être mesurer
-// 7 % grand maximum ». Il laisse de la place au joueur qui a monté ses
-// générateurs, sans que la MOYENNE du groupe sorte de 3-5 %.
-//
-// Avec un plafond à 5 %, presque tous les groupes restaient collés au
-// plancher : le passif ne dépassait jamais le minimum, et monter ses
-// générateurs ne changeait rien au hors ligne.
-export const OFFLINE_PART_MAX = 0.07;
+// ⚠️⚠️ PLUS AUCUN PLANCHER EN PART DU SEUIL. La version du 20/09 versait
+// au moins 3 % du seuil QUEL QUE SOIT le revenu du joueur. L'auteur est
+// passé de 337 pièces/s à 1,5 MILLIARD de gain en une nuit, soit 2 500
+// fois ce qu'il avait réellement produit. Un plancher en part du seuil
+// fabrique de l'argent à partir de rien, et d'autant plus que le seuil
+// est haut. Le joueur ne reçoit plus jamais plus que dix minutes de sa
+// propre production.
+export const OFFLINE_EQUIVALENT_ACTIF_SEC = 10 * 60;
 
-export function offlineEarnings(incomePerSecond, secondsElapsed, seuilAscension) {
-  const capped = Math.max(0, Math.min(secondsElapsed, OFFLINE_CAP_SECONDS));
+// `productionActiveParSec` : ce que le joueur gagne en jouant (tap au
+// rythme humain + passif). `secondesEcoulees` : temps d'absence, plafonné
+// à OFFLINE_CAP_SECONDS.
+export function offlineEarnings(productionActiveParSec, secondesEcoulees) {
+  const capped = Math.max(0, Math.min(secondesEcoulees, OFFLINE_CAP_SECONDS));
   const partDuTemps = capped / OFFLINE_CAP_SECONDS;
-  const brut = incomePerSecond * capped * OFFLINE_RATE;
-  // Sans seuil connu (vieil appel), on garde l'ancien comportement.
-  if (!seuilAscension || !isFinite(seuilAscension)) return Math.floor(brut);
-  const plancher = seuilAscension * OFFLINE_PART_MIN * partDuTemps;
-  const plafond = seuilAscension * OFFLINE_PART_MAX * partDuTemps;
-  return Math.floor(Math.max(plancher, Math.min(brut, plafond)));
+  return Math.floor(Math.max(0, productionActiveParSec) * OFFLINE_EQUIVALENT_ACTIF_SEC * partDuTemps);
 }
 
 // ---- Garde-fou contre le changement d'heure du téléphone ----

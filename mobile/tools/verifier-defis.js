@@ -39,7 +39,7 @@ const CONTROLES = [
   ['auditPrerequisTenus', 'aucun défi ne précède le déblocage de son sujet'],
   ['auditMetriquesIncrementees', 'chaque métrique est bien incrémentée par le jeu'],
   ['auditDureeCroissante', 'la durée d un groupe ne retombe jamais'],
-  ['auditHorsLigne', 'le gain hors ligne reste entre 3 et 5 % du seuil'],
+  ['auditHorsLigne', '2 h hors ligne valent 10 min de jeu, jamais plus'],
   ['auditDocConforme', 'le document remis à l auteur correspond au jeu'],
   ['auditDefisEcrits', 'le fichier des 252 défis est cohérent et fait foi'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],

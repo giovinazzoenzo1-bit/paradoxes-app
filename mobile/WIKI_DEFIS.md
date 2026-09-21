@@ -59,7 +59,7 @@ payée.
 | Aucun défi ne **précède le déblocage** de son sujet | 20/09 |
 | Le **seuil se déduit du coût** des défis, pas l'inverse | 20/09 |
 | Durées visées : **2,8 / 3,5 / 5 / 6,5 / 8 / 10 h** au tap à la main | 20/09 |
-| Hors ligne : **moyenne 3-5 %** du seuil, **pic 7 %** max, pour 2 h | 20/09 |
+| Hors ligne : **2 h d'absence = 10 min de jeu actif**, jamais plus | 21/09 |
 | Toute mesure passe par **`simulerGroupe`**, jamais une simulation à part | 20/09 |
 | Une cible ÉCRITE (`fige: true`) ne se recalcule jamais | 20/09 |
 | Le **document est régénéré** après tout changement de défi | 20/09 |
@@ -202,38 +202,27 @@ rendait le jeu sept fois plus rapide qu'il ne l'est.
 ⚠️ **Un contrôle qui mesure avec son propre instrument ne contrôle que
 lui-même.** Ne jamais recoder une simulation à côté : appeler celle-ci.
 
-### 🌙 Le hors ligne : 3 à 5 % du seuil
+### 🌙 Le hors ligne : 2 h d'absence = 10 min de jeu
 
-Le gain vaut ce que produit le passif, **borné entre 3 % et 5 % du seuil
-de l'Ascension en cours**, au prorata du temps écoulé (2 h pleines).
+**Règle de l'auteur (21/09) :** farmer au tap doit rester nettement plus
+rentable que laisser tourner. Deux heures d'absence valent dix minutes
+de production active — jouer est donc **douze fois plus rentable**.
 
-| Plancher | Plafond ponctuel | MOYENNE visée |
-|---|---|---|
-| 3 % | 7 % | **3 à 5 %** |
+Le gain se cale sur la **production active** (tap au rythme humain +
+passif) au moment du départ, au prorata du temps, plafonné à 2 h.
 
-Mesuré : moyennes de 3,0 à 4,0 % selon le groupe, pics jusqu'à 7 %.
-Pour une absence plus courte, au prorata : 1,2 % à 30 min, 2,5 % à 1 h.
+⚠️⚠️ **JAMAIS DE PLANCHER EN PART DU SEUIL.** Le 20/09 j'en avais posé un
+(« au moins 3 % du seuil »), pour atteindre une cible de 3-5 %. Il
+versait de l'argent que le joueur n'avait **jamais produit** : l'auteur
+est passé de 337 pièces/s à **1,5 milliard en une nuit**, 2 500 fois sa
+vraie production. Plus le seuil est haut, plus le cadeau est énorme.
 
-⚠️ **C'est la MOYENNE du groupe qui doit tenir dans 3-5 %**, pas chaque
-instant. Un pic au moment où le joueur a tout acheté est légitime — c'est
-même ce qui récompense son investissement. Avec un plafond à 5 %, tous
-les groupes restaient collés au plancher et monter ses générateurs ne
-changeait rien au hors ligne.
+➡️ **Une cible en part du seuil ne dit rien de ce que le joueur mérite.**
+Le hors ligne ne verse jamais plus que dix minutes de SA production.
 
-⚠️ **Un simple TAUX ne peut pas marcher.** À 25 % du passif, l'apport
-moyen allait de 0,1 % du seuil à l'Ascension 1 à 4,4 % à l'Ascension 2.
-Pour amener tout le monde à 4 %, il aurait fallu un taux de 668 % sur un
-groupe et 23 % sur le suivant — le passif moyen est trop irrégulier.
-
-⚠️⚠️ **NE JAMAIS MESURER LE HORS LIGNE SUR LE PASSIF DE FIN DE GROUPE.**
-C'est l'auteur qui a relevé l'erreur : « le joueur n'obtient pas le
-maximum dès le début, il commence à 0 ». À l'Ascension 1, le hors ligne
-couvrait 72 % du seuil pour qui se déconnectait au tout dernier instant,
-et **0,1 % en moyenne**. Mesurer la fin surestimait l'apport d'un facteur
-plusieurs centaines, et j'ai annoncé ce chiffre faux avant qu'il me
-corrige.
-
-`auditHorsLigne` mesure à cinq moments du groupe, pas seulement à la fin.
+⚠️ **Caler sur l'actif, pas sur le passif**, sépare deux réglages : on peut
+renforcer les autoclickers sans rendre le hors ligne abusif. Calé sur le
+passif seul, deux heures d'absence valaient moins d'une minute de jeu.
 
 ### ⏱️ Régler la DURÉE d'un groupe
 
