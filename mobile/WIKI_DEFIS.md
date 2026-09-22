@@ -63,6 +63,7 @@ payée.
 | Durées visées : **2,8 / 3,5 / 5 / 6,5 / 8 / 10 h** au tap à la main | 20/09 |
 | Hors ligne **standard** : autoclickers × 25 % × temps, 2 h max, **sans plancher** | 21/09 |
 | Toute valeur qui décide de l'Ascension doit rester un **nombre fini** | 21/09 |
+| Le **diagnostic ne doit jamais casser** le jeu qu'il surveille | 21/09 |
 | Toute mesure passe par **`simulerGroupe`**, jamais une simulation à part | 20/09 |
 | Une cible ÉCRITE (`fige: true`) ne se recalcule jamais | 20/09 |
 | Le **document est régénéré** après tout changement de défi | 20/09 |
@@ -137,6 +138,7 @@ rarement dans un défi ; elle naît dans leur suite.**
 | `auditAchatsColles` | Deux achats se suivent : intercaler un défi d'une autre famille. |
 | `auditDefisEcrits` | Structure du fichier cassée : 6 défis par œuf, identifiants uniques, Ascension en dernier. |
 | `auditMetriquesIncrementees` (bis) | ⚠️ Il dit qu'une métrique EXISTE, pas qu'elle mesure ce que son libellé annonce. « Enchaîne N taps » lisait le MULTIPLICATEUR de Transe pendant des semaines : le contrôle était vert, le défi mentait. **Relire le libellé contre la métrique à chaque ajout.** |
+| `auditSignalement` | Le détecteur rate une panne, crie sur un état sain, ou **le filet de sécurité d'`index.js` plante**. Ce dernier cas est le plus grave : sans filet, une erreur au démarrage redevient un écran blanc muet. Remettre chaque dépendance du filet dans son propre `try`. |
 | `auditDocConforme` | Le document remis à l'auteur ne dit plus ce que le jeu affiche : **régénérer le document**, ou trouver le recalcul qui s'applique par-dessus une cible figée. |
 | `auditLibelles` · `auditLibelleSansArticle` | Le texte ne dit pas la vraie cible, ou ne nomme pas son article. |
 

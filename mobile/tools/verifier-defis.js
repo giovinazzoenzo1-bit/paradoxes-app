@@ -41,6 +41,7 @@ const CONTROLES = [
   ['auditDureeCroissante', 'la durée d un groupe ne retombe jamais'],
   ['auditHorsLigne', 'hors ligne standard, et aucune entrée ne bloque l Ascension'],
   ['auditFaisableAuMoment', 'un défi est faisable AU MOMENT où il arrive'],
+  ['auditSignalement', 'le signalement marche et le filet de sécurité tient'],
   ['auditDocConforme', 'le document remis à l auteur correspond au jeu'],
   ['auditDefisEcrits', 'le fichier des 252 défis est cohérent et fait foi'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],

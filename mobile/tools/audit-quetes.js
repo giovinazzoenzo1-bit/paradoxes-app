@@ -2417,3 +2417,125 @@ function auditFaisableAuMoment(marge = 1.0) {
   return fautes;
 }
 module.exports.auditFaisableAuMoment = auditFaisableAuMoment;
+
+// ---- Le système de signalement fonctionne-t-il, et ne casse-t-il rien ?
+//
+// Demandé par l'auteur le 21/09 : savoir si un joueur est bloqué, et
+// recevoir un rapport. Il ne peut RIEN vérifier de tout ça sur son
+// téléphone — ni le détecteur, ni le rapport, ni surtout le filet de
+// sécurité d'`index.js`, qui ne se déclenche que quand tout a planté.
+// Ce contrôle le fait à sa place, à chaque vérification.
+//
+// ⚠️⚠️ LE FILET EST ATTAQUÉ POUR DE VRAI : `index.js` est rejoué avec de
+// faux modules, dont certains cassés exprès. Il doit TOUJOURS appeler le
+// gestionnaire d'origine et ne JAMAIS planter lui-même — sinon on
+// retombe sur l'écran blanc muet qu'il existe pour empêcher.
+//
+// ⚠️ Premier essai de ce test : il annonçait « tout va bien » alors que
+// le filet ne mémorisait rien. Le banc ne convertissait pas les modules
+// comme le fait l'app (`modules: 'commonjs'` manquant) : chaque `require`
+// échouait, et les `try` avalaient l'erreur en silence. Un test qui
+// passe n'est pas un test qui marche — il faut vérifier qu'il voit ce
+// qu'il prétend voir.
+function auditSignalement() {
+  const fautes = [];
+  const Dg = load('diagnostic');
+  const bon = { coins: 100, totalEarned: 5000, seuil: 1e6,
+    defis: [{ id: 'a', trouve: true, label: 'X', current: 3, target: 10, progress: 0.3, done: false }],
+    suivi: {} };
+  // 1. Aucun faux positif sur un état sain.
+  if (Dg.detecterBlocages(bon).length) fautes.push({ probleme: 'faux positif sur un état sain' });
+  // 2. Chaque panne bloquante est détectée.
+  const pannes = [
+    ['totalEarned NaN', { ...bon, totalEarned: NaN }, 'totalEarned'],
+    ['totalEarned infini', { ...bon, totalEarned: Infinity }, 'totalEarned'],
+    ['pièces négatives', { ...bon, coins: -5 }, 'coins'],
+    ['seuil nul', { ...bon, seuil: 0 }, 'seuil'],
+    ['aucun défi', { ...bon, defis: [] }, 'aucunDefi'],
+    ['défi introuvable', { ...bon, defis: [{ ...bon.defis[0], trouve: false }] }, 'inconnu:a'],
+    ['cible invalide', { ...bon, defis: [{ ...bon.defis[0], target: NaN }] }, 'cible:a'],
+    ['progression NaN', { ...bon, defis: [{ ...bon.defis[0], current: NaN }] }, 'progression:a'],
+    ['immobile 3 h', { ...bon, suivi: { a: { current: 3, stagneSec: 3 * 3600 } } }, 'stagnation:a'],
+  ];
+  pannes.forEach(([nom, etat, code]) => {
+    if (!Dg.detecterBlocages(etat).some((p) => p.code === code)) {
+      fautes.push({ probleme: 'panne non détectée : ' + nom });
+    }
+  });
+  // Un défi TERMINÉ n'est jamais « bloqué », même immobile.
+  const fini = { ...bon, defis: [{ ...bon.defis[0], done: true }], suivi: { a: { current: 3, stagneSec: 99999 } } };
+  if (Dg.detecterBlocages(fini).length) fautes.push({ probleme: 'un défi terminé est signalé bloqué' });
+  // 3. Le suivi de stagnation : immobile cumule, bouger remet à zéro.
+  let s1 = Dg.suivreStagnation({}, [{ id: 'a', current: 3 }], 60);
+  s1 = Dg.suivreStagnation(s1, [{ id: 'a', current: 3 }], 60);
+  if (s1.a.stagneSec !== 60) fautes.push({ probleme: 'la stagnation ne cumule pas' });
+  if (Dg.suivreStagnation(s1, [{ id: 'a', current: 4 }], 60).a.stagneSec !== 0) {
+    fautes.push({ probleme: 'un progrès ne remet pas la stagnation à zéro' });
+  }
+  // 4. Le rapport : complet, et borné même avec des entrées énormes.
+  const r = Dg.construireRapport({ instantane: { ...bon, ascension: 4, oeuf: 29, problemes: [] },
+    build: { sha: 'abc1234', time: 'T' }, appareil: 'android 14' });
+  ['abc1234', 'Ascension : 4', 'Œuf : 30', 'android 14', 'X —'].forEach((m) => {
+    if (!r.includes(m)) fautes.push({ probleme: 'le rapport ne contient pas « ' + m + ' »' });
+  });
+  const enorme = Dg.construireRapport({ instantane: { ...bon, defis: Array(400).fill(bon.defis[0]) } });
+  if (enorme.length > Dg.RAPPORT_LONGUEUR_MAX) fautes.push({ probleme: 'rapport trop long : ' + enorme.length });
+  if (!/ce que tu faisais/.test(enorme)) fautes.push({ probleme: 'la troncature a coupé l\'invitation finale' });
+  // 5. Le lien mail : bonne adresse, corps restitué à l'identique.
+  const lien = Dg.lienMailto('Sujet', 'ligne 1\nligne 2');
+  if (!lien.startsWith('mailto:' + Dg.EMAIL_SIGNALEMENT + '?subject=')) fautes.push({ probleme: 'lien mail mal formé' });
+  const corps = decodeURIComponent(lien.split('&body=')[1] || '');
+  if (corps !== 'ligne 1\r\nligne 2') fautes.push({ probleme: 'le corps du mail n\'est pas restitué' });
+  // 6. L'adresse n'existe qu'à UN endroit : la changer ne doit pas
+  //    laisser une copie envoyer vers l'ancienne.
+  const fsx = require('fs'); const px = require('path');
+  const racine = px.join(__dirname, '..');
+  const lire = (d) => fsx.readdirSync(d, { withFileTypes: true }).flatMap((e) => {
+    const p = px.join(d, e.name);
+    if (e.isDirectory()) return e.name === 'node_modules' ? [] : lire(p);
+    return p.endsWith('.js') ? [p] : [];
+  });
+  const copies = [...lire(px.join(racine, 'src')), px.join(racine, 'index.js')]
+    .filter((f) => fsx.readFileSync(f, 'utf8').includes(Dg.EMAIL_SIGNALEMENT)
+      && !f.endsWith('diagnostic.js'));
+  copies.forEach((f) => fautes.push({ probleme: "l'adresse est recopiée dans " + px.relative(racine, f) }));
+  // 7. LE FILET DE SÉCURITÉ, attaqué.
+  const vm = require('vm');
+  const cjs = (f) => babel.transformSync(fsx.readFileSync(f, 'utf8'), {
+    presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]], filename: f }).code;
+  const indexSrc = cjs(px.join(racine, 'index.js'));
+  const scenario = (nom, { rn = true, as = true, dg = true, erreur = new Error('boum') }) => {
+    const t = { memorise: false, bouton: false, origine: false, lien: '' };
+    let handler = null;
+    const sb = {
+      global: { ErrorUtils: { getGlobalHandler: () => () => { t.origine = true; }, setGlobalHandler: (h) => { handler = h; } } },
+      require: (m) => {
+        if (m === 'react-native') { if (!rn) throw new Error('x');
+          return { Alert: { alert: (a, b, btns) => { const x = (btns || []).find((y) => /Signaler/.test(y.text));
+            if (x) { t.bouton = true; x.onPress(); } } },
+          Linking: { openURL: (u) => { t.lien = u; return Promise.resolve(); } } }; }
+        if (m === '@react-native-async-storage/async-storage') { if (!as) throw new Error('x');
+          return { default: { setItem: () => { t.memorise = true; return Promise.resolve(); } } }; }
+        if (m === './src/games/clicker/diagnostic') { if (!dg) throw new Error('x'); return Dg; }
+        if (m === 'expo') return { registerRootComponent: () => {} };
+        if (m === './App') return { default: () => null };
+        return require(m);
+      }, console, module: { exports: {} }, exports: {},
+    };
+    try { vm.runInNewContext(indexSrc, sb); handler(erreur, true); } catch (e) {
+      fautes.push({ probleme: 'le filet PLANTE (' + nom + ') : ' + e.message }); return t;
+    }
+    if (!t.origine) fautes.push({ probleme: "le filet n'appelle pas le gestionnaire d'origine (" + nom + ')' });
+    return t;
+  };
+  const normal = scenario('cas normal', {});
+  if (!normal.memorise) fautes.push({ probleme: "le filet ne mémorise pas l'erreur" });
+  if (!normal.bouton) fautes.push({ probleme: 'le filet ne propose pas de signaler' });
+  if (!normal.lien.startsWith('mailto:' + Dg.EMAIL_SIGNALEMENT)) fautes.push({ probleme: 'le filet ouvre un mauvais lien' });
+  [['sans React Native', { rn: false }], ['sans stockage', { as: false }],
+    ['sans diagnostic', { dg: false }], ['tout cassé', { rn: false, as: false, dg: false }],
+    ['erreur nulle', { erreur: null }], ['erreur texte', { erreur: 'x' }], ['erreur vide', { erreur: {} }],
+  ].forEach(([n, o]) => scenario(n, o));
+  return fautes;
+}
+module.exports.auditSignalement = auditSignalement;

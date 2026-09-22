@@ -26,6 +26,56 @@ d'un joueur.
 
 ---
 
+## 0 bis. 🐞 SIGNALEMENT DES BUGS — comment l'auteur est prévenu
+
+Depuis le 21/09, un joueur bloqué peut prévenir l'auteur. Avant, il était
+AVEUGLE : les erreurs s'affichaient sur le téléphone du joueur, jamais
+chez lui.
+
+| Quoi | Où |
+|---|---|
+| **Adresse de réception** | `EMAIL_SIGNALEMENT` dans `src/games/clicker/diagnostic.js` — **la seule ligne à changer** |
+| Détection des blocages (pure, testée) | `src/games/clicker/diagnostic.js` |
+| Envoi (mail, sinon partage) | `src/signalement.js` |
+| Détection automatique, chaque minute | `ClickerScreen.js`, après `currentChallengeId` |
+| Bouton « 🐞 Signaler un problème » | Options, fin de la section Jeu |
+| Plantages : mémorisés + bouton « Signaler » | `index.js`, le filet de sécurité |
+
+**Ce qui est détecté** : compteur de pièces invalide (bloque l'Ascension
+pour toujours), seuil invalide, aucun défi en cours, défi introuvable,
+cible ou progression illisible, défi immobile depuis 3 h de jeu actif.
+
+⚠️⚠️ **AUCUN MODULE NATIF AJOUTÉ.** Uniquement `Linking`, `Share` et
+`Platform`, qui font partie de React Native. Les modules natifs ont déjà
+bloqué le démarrage trois fois. `package.json` n'a pas bougé.
+
+⚠️⚠️ **LE DIAGNOSTIC NE DOIT JAMAIS CASSER LE JEU QU'IL SURVEILLE.** Tout
+est enveloppé dans des `try`. Dans `index.js`, chaque dépendance est
+chargée À LA DEMANDE dans son propre `try`, et le gestionnaire d'origine
+est TOUJOURS appelé : ce fichier est le dernier rempart, s'il plantait on
+retomberait sur l'écran blanc muet.
+
+⚠️ Sur une erreur FATALE dans une app publiée, le système peut fermer
+l'app avant que le joueur appuie sur « Signaler » : l'erreur est donc
+mémorisée et proposée au lancement suivant. La capture FIABLE des
+plantages sur le store reste le rôle de Sentry, à ajouter au lancement.
+
+`auditSignalement` vérifie tout ça à chaque contrôle — y compris en
+ATTAQUANT le filet de sécurité avec de faux modules cassés exprès.
+
+### Corriger un bug sans passer par le store
+
+**Oui, pour tout ce qui est JavaScript** — défis, équilibrage, logique,
+textes, écrans. Chaque push publie une mise à jour (`eas update`), et
+l'APK Android, construit par `build-apk.yml` avec `expo-updates` injecté
+au moment du build, la reçoit au lancement suivant. On peut aussi
+republier une version stable par-dessus une mise à jour fautive.
+
+🟥 **Demande le store** : ajouter un module natif, changer une
+permission, monter le SDK. Et il n'existe **aucun build iOS** à ce jour.
+
+---
+
 ## 1. La commande avant tout push touchant aux défis
 
 ```

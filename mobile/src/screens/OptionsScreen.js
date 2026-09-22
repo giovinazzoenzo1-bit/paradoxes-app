@@ -10,6 +10,9 @@ import { DEV_ADD_GRIFFES_KEY, DEV_REFILL_ENERGY_KEY, DEV_RESET_GRIFFES_KEY } fro
 import { CREATURES } from '../games/clicker/clickerLogic';
 import { COLORS } from './games/clickerTheme';
 import { BUILD_SHA, BUILD_TIME } from '../version';
+// Signalement d'un problème — voir `games/clicker/diagnostic.js`.
+import { DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY } from '../games/clicker/diagnostic';
+import { envoyerRapport } from '../signalement';
 
 // Menu Paramètres — panneau MODAL, même gabarit que le menu Quêtes
 // (07/09). Le mode développeur n'est plus affiché en vrac dans la page :
@@ -29,6 +32,20 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
   // Remise à zéro complète : efface TOUT le stockage local (pièces,
   // sauvegarde du clicker, réglages...) plutôt que d'énumérer chaque clé
   // à la main — plus fiable, et couvre automatiquement tout ajout futur.
+  // ⚠️ Le rapport se construit depuis l'INSTANTANÉ enregistré par l'écran
+  // de jeu, pas depuis l'écran lui-même : si c'est lui qui a planté, le
+  // joueur peut encore signaler d'ici. L'instantané a au plus une minute.
+  const signalerProbleme = async () => {
+    let instantane = null;
+    let derniereErreur = null;
+    try { instantane = JSON.parse((await AsyncStorage.getItem(DIAGNOSTIC_INSTANTANE_KEY)) || 'null'); } catch (e) { /* rien */ }
+    try { derniereErreur = JSON.parse((await AsyncStorage.getItem(DIAGNOSTIC_ERREUR_KEY)) || 'null'); } catch (e) { /* rien */ }
+    const resultat = await envoyerRapport({ instantane, derniereErreur });
+    if (resultat === 'echec') {
+      Alert.alert('Envoi impossible', "Aucune appli de mail ni de partage n'a pu s'ouvrir sur ce téléphone.");
+    }
+  };
+
   const resetWholeApp = () => {
     Alert.alert(
       "Réinitialiser toute l'appli ?",
@@ -243,6 +260,13 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
             onPress={() => toggleSetting('ambientFx')}
           />
 
+          {/* ⚠️ Toujours disponible, même sans problème détecté : le joueur
+              peut signaler ce que le détecteur ne sait pas voir. */}
+          <TouchableOpacity style={styles.reportBtn} onPress={signalerProbleme}>
+            <Text style={styles.reportBtnText}>🐞 Signaler un problème</Text>
+            <Text style={styles.reportBtnSub}>Envoie un rapport au créateur du jeu</Text>
+          </TouchableOpacity>
+
           <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Réinitialisation</Text>
           <TouchableOpacity style={styles.dangerBtn} onPress={resetClicker}>
             <Text style={styles.dangerBtnText}>🐾 Réinitialiser Élevage</Text>
@@ -348,6 +372,13 @@ const styles = StyleSheet.create({
   },
   switchKnobOn: { backgroundColor: COLORS.good, marginLeft: 20 },
 
+  reportBtn: {
+    marginTop: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14,
+    borderWidth: 1, borderColor: 'rgba(122,92,255,0.55)', backgroundColor: 'rgba(122,92,255,0.14)',
+    alignItems: 'center',
+  },
+  reportBtnText: { color: '#cbbcff', fontSize: 16, fontWeight: '800' },
+  reportBtnSub: { color: 'rgba(203,188,255,0.7)', fontSize: 12, marginTop: 3 },
   dangerBtn: {
     backgroundColor: 'rgba(255,82,82,0.12)',
     borderRadius: 12, paddingVertical: 12, alignItems: 'center',

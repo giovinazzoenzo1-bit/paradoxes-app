@@ -105,6 +105,9 @@ import {
   QUEST_DEFS_VERSION,
   peutEtreRemplace,
 } from '../../games/clicker/questLogic';
+// Signalement des blocages — voir `games/clicker/diagnostic.js`.
+import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY } from '../../games/clicker/diagnostic';
+import { envoyerRapport } from '../../signalement';
 import {
   combatStatsForCreatureTyped,
   GUARDIAN_CREATURE,
@@ -2423,6 +2426,98 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // vient justement de supprimer. Vaut `null` quand les 4 sont finies
   // (l'affichage bascule alors sur la barre d'éclosion).
   const currentChallengeId = activeQuestIds.find((id) => !isQuestDone(id)) || null;
+
+  // ⚠️⚠️ DÉTECTION DES BLOCAGES (21/09) — voir `diagnostic.js`.
+  //
+  // Toutes les minutes : on photographie l'état, on cherche une panne
+  // qui bloquerait le joueur, on enregistre l'instantané (les Options
+  // s'en servent si cet écran plante), et on propose de signaler tout
+  // problème NOUVEAU — une seule fois par session et par problème.
+  //
+  // ⚠️ Les ingrédients passent par une REF réécrite à chaque rendu. Un
+  // `setInterval` capture les valeurs du rendu où il a été créé : sans
+  // ref, il examinerait pour toujours l'état de la première minute — le
+  // piège des valeurs périmées, déjà payé trois fois sur ce projet.
+  const diagRef = useRef(null);
+  diagRef.current = { activeQuestIds, questStats, questTargets, baselineFor, isQuestDone };
+  const diagSuiviRef = useRef({});
+  const diagProposesRef = useRef(new Set());
+  const diagDernierTickRef = useRef(Date.now());
+  useEffect(() => {
+    if (!loaded) return undefined;
+    const tick = () => {
+      try {
+        const d = diagRef.current;
+        if (!d) return;
+        // ⚠️ Temps ACTIF, plafonné à 2 min par tick. Appli en arrière-plan,
+        // les minuteurs s'arrêtent : sans plafond, huit heures de sommeil
+        // compteraient comme huit heures d'immobilité.
+        const maintenant = Date.now();
+        const dt = Math.min(120, Math.max(0, (maintenant - diagDernierTickRef.current) / 1000));
+        diagDernierTickRef.current = maintenant;
+        const defis = (d.activeQuestIds || []).map((id) => {
+          const q = findQuest(id);
+          const det = questDetail(id, d.questStats, d.baselineFor(id), d.questTargets);
+          return { id, trouve: !!q, label: det.label, current: det.current,
+            target: det.target, progress: det.progress, done: d.isQuestDone(id) };
+        });
+        diagSuiviRef.current = suivreStagnation(diagSuiviRef.current, defis, dt);
+        const asc = ascensionCountRef.current || 0;
+        const etat = {
+          coins: coinsRef.current, totalEarned: totalEarnedRef.current,
+          seuil: ascensionThreshold(asc), defis, suivi: diagSuiviRef.current,
+        };
+        const problemes = detecterBlocages(etat);
+        const instantane = { ...etat, ascension: asc, oeuf: sequenceIndexRef.current,
+          problemes, at: maintenant, suivi: undefined };
+        AsyncStorage.setItem(DIAGNOSTIC_INSTANTANE_KEY, JSON.stringify(instantane)).catch(() => {});
+        const nouveaux = problemes.filter((p) => !diagProposesRef.current.has(p.code));
+        if (!nouveaux.length) return;
+        nouveaux.forEach((p) => diagProposesRef.current.add(p.code));
+        Alert.alert(
+          '⚠️ Tu sembles bloqué',
+          nouveaux.map((p) => '• ' + p.texte).join('\n')
+            + '\n\nSi c\'est un bug, signale-le : ton rapport part directement chez le créateur du jeu.',
+          [
+            { text: 'Non merci', style: 'cancel' },
+            { text: '📧 Signaler', onPress: () => { envoyerRapport({ instantane }).catch(() => {}); } },
+          ]
+        );
+      } catch (e) {
+        // ⚠️ Le diagnostic ne doit JAMAIS casser le jeu qu'il surveille.
+      }
+    };
+    const id = setInterval(tick, 60 * 1000);
+    return () => clearInterval(id);
+  }, [loaded]);
+
+  // Au lancement : une erreur a-t-elle été mémorisée la dernière fois ?
+  // Sur une erreur fatale, l'app a pu se fermer avant que le joueur
+  // puisse la signaler — on la lui propose maintenant, une seule fois.
+  useEffect(() => {
+    if (!loaded) return;
+    (async () => {
+      try {
+        const brut = await AsyncStorage.getItem(DIAGNOSTIC_ERREUR_KEY);
+        if (!brut) return;
+        const erreur = JSON.parse(brut);
+        if (!erreur || erreur.proposee) return;
+        await AsyncStorage.setItem(DIAGNOSTIC_ERREUR_KEY, JSON.stringify({ ...erreur, proposee: true }));
+        let instantane = null;
+        try { instantane = JSON.parse(await AsyncStorage.getItem(DIAGNOSTIC_INSTANTANE_KEY) || 'null'); } catch (e) { /* rien */ }
+        Alert.alert(
+          '💥 Le jeu a rencontré une erreur',
+          'La dernière fois, une erreur s\'est produite. Tu veux l\'envoyer au créateur du jeu pour qu\'il la corrige ?',
+          [
+            { text: 'Non merci', style: 'cancel' },
+            { text: '📧 Signaler', onPress: () => { envoyerRapport({ instantane, derniereErreur: erreur }).catch(() => {}); } },
+          ]
+        );
+      } catch (e) {
+        // Rien : un diagnostic illisible ne doit pas gêner le lancement.
+      }
+    })();
+  }, [loaded]);
 
   // Dernier défi encore marqué terminé, en partant de la FIN du cycle :
   // c'est celui que le bouton rouvre. À chaque appui on rouvre le
