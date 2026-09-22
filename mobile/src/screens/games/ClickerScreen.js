@@ -2379,17 +2379,31 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   //
   // Tant que le défi n'a pas sa référence propre — posée au moment où il
   // devient courant — il ne peut pas être terminé.
-  const recordPasCommence = (id) => {
-    const q = findQuest(id);
-    if (!q || !['maxTranseHoldSec', 'maxCombo'].includes(q.metric)) return false;
-    return !questBaselines[id];
-  };
+  //
+  // ⚠️⚠️ GÉNÉRALISÉ LE 21/09 : TOUT défi, plus seulement deux records.
+  //
+  // La liste ne contenait que `maxTranseHoldSec` et `maxCombo`. Elle
+  // oubliait les taps d'affilée — d'où le défi 7 invisible signalé par
+  // l'auteur — mais aussi tous les défis « atteins N » : pièces mises de
+  // côté, revenu par seconde, niveau d'Aventure, taps à vie… Chacun
+  // pouvait se remplir PENDANT les défis précédents, et sauter sans
+  // jamais s'afficher. Même famille que ses « il n'y a pas le défi 7 /
+  // pas eu le défi 8 ».
+  //
+  // LA RÈGLE : un défi ne peut être validé qu'APRÈS être apparu — c'est
+  // l'instant où il reçoit sa référence propre. S'il est déjà rempli à ce
+  // moment-là, il se valide aussitôt : le joueur voit « Défi réussi », il
+  // n'est plus escamoté.
+  //
+  // ⚠️ Un défi déjà VERROUILLÉ, ou validé par l'outil de dev, reste fait :
+  // la règle ne s'applique qu'au calcul en direct. Sinon, après une mise à
+  // jour, les défis déjà acquis d'un œuf en cours se rouvriraient.
+  const pasEncoreApparu = (id) => !questBaselines[id];
   const isQuestDone = (id) =>
-    !recordPasCommence(id) &&
     !devReopenedIds.includes(id) &&
     (latchedQuestIds.includes(id) ||
       devCompletedIds.includes(id) ||
-      questComplete(id, questStats, baselineFor(id), questTargets));
+      (!pasEncoreApparu(id) && questComplete(id, questStats, baselineFor(id), questTargets)));
 
   // ⚠️ RÉPARATION DES CYCLES DÉJÀ TIRÉS.
   //
@@ -2466,16 +2480,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // été vu : c'est le « il n'y a pas le défi 7 » signalé le 21/09.
     // Son record ne repart à zéro qu'au moment où il devient visible ;
     // avant, il ne doit pas compter.
-    const RECORDS = ['maxTranseHoldSec', 'maxCombo', 'maxTapStreak'];
-    const courant = activeQuestIds.find((id) => !latchedQuestIdsRef.current.includes(id)
-      && !devReopenedIdsRef.current.includes(id)) || null;
-    const atteints = activeQuestIds.filter((id) => {
-      const q = findQuest(id);
-      if (q && RECORDS.includes(q.metric) && id !== courant) return false;
-      return !latchedQuestIdsRef.current.includes(id)
-        && !devReopenedIdsRef.current.includes(id)
-        && questComplete(id, questStats, baselineFor(id), questTargets);
-    });
+    // Même règle que `isQuestDone` : un défi pas encore apparu ne peut
+    // pas être verrouillé, quelle que soit sa métrique.
+    const atteints = activeQuestIds.filter((id) => (
+      !pasEncoreApparu(id)
+      && !latchedQuestIdsRef.current.includes(id)
+      && !devReopenedIdsRef.current.includes(id)
+      && questComplete(id, questStats, baselineFor(id), questTargets)
+    ));
     if (atteints.length) {
       setLatchedQuestIds((prev) => {
         const suivant = [...prev, ...atteints];
@@ -2751,6 +2763,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       setQuestTargets((prev) => (
         prev[currentChallengeId] ? prev : { ...prev, [currentChallengeId]: cible }
       ));
+    }
+    // ⚠️ LE DÉFI DE TAPS aussi : « il te reste toujours 200 à 300 taps »
+    // se mesure au moment où il APPARAÎT. Figé à la distribution de
+    // l'œuf, ses 300 taps se faisaient en 75 secondes pendant le défi 1.
+    // Ici la cible peut MONTER — c'est voulu, et sans danger : il suffit
+    // de taper.
+    if (q && q.minStep) {
+      const cible = resolveQuestTarget(q, instantane);
+      if (Number.isFinite(cible) && cible >= 1) {
+        setQuestTargets((prev) => ({ ...prev, [currentChallengeId]: Math.floor(cible) }));
+      }
     }
     // ⚠️⚠️ UN DÉFI D'ACHAT SE RECALCULE AUSSI QUAND IL APPARAÎT.
     //

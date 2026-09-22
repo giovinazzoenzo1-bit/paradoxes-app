@@ -44,14 +44,12 @@ const CONTROLES = [
   ['auditSignalement', 'le signalement marche et le filet de sécurité tient'],
   ['auditLibelleMode', 'le libellé dit ce que le défi mesure (Achète = delta)'],
   ['auditCibleBudget', 'la règle du total est juste, sûre, et appliquée quand le défi apparaît'],
+  ['auditDefiInvisible', 'aucun défi ne peut sauter sans s afficher'],
   ['auditDocConforme', 'le document remis à l auteur correspond au jeu'],
   ['auditDefisEcrits', 'le fichier des 252 défis est cohérent et fait foi'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],
   ['auditModes', "pas de métrique d'ÉTAT en mode delta"],
-  ['auditAscension', 'ne diverge pas après les Ascensions'],
-  ['auditCiblesFixes', 'pas de cible en dur sur une échelle mouvante'],
   ['auditEmballement', "pas de cible de performance qui s'emballe"],
-  ['auditAvailable', 'la condition peut devenir vraie'],
   ['auditFamilles', 'pas deux défis qui se lisent pareil dans un œuf'],
   ['auditDependanceCreature', 'ne dépend pas de posséder une créature'],
 
@@ -61,11 +59,44 @@ const CONTROLES = [
   ['auditTropFacile', 'au plus 22 défis faciles sur 252', 22],
 ];
 
+// ⚠️⚠️ CONTRÔLES RETIRÉS, avec leur raison. Un contrôle qui existe sans
+// tourner est signalé plus bas : s'il est ici, c'est une décision, pas un
+// oubli.
+const RETRAITES = {
+  audit: 'ancien rapport général sur les modèles abandonnés le 20/09',
+  auditPool: 'le pool de remplacement ne sert plus aucun joueur : aucun des 252 défis écrits n\'est remplaçable',
+  auditRemplacements: 'comparait le jeu aux anciens modèles, abandonnés le 20/09',
+  auditHorsSchema: 'comparait le jeu aux anciens modèles, abandonnés le 20/09',
+  auditCiblesFixes: 'lisait les anciens modèles ; couvert par auditCibleSuitLeJoueur, rebranché sur les 252 défis',
+  auditAscension: 'lisait les anciens modèles ; couvert par auditBudgetGroupe, auditDureeCroissante et auditFaisableAuMoment',
+  auditAvailable: 'lisait les anciens modèles ; les défis écrits n\'ont plus de condition — couvert par auditPrerequisTenus',
+};
+
 let echecs = 0;
 console.log('\n  CONTRÔLES');
+// ⚠️⚠️ UNE PANNE N'EST JAMAIS COUVERTE PAR LA TOLÉRANCE.
+//
+// Avant le 21/09, un contrôle qui PLANTAIT rendait une seule « anomalie ».
+// Avec une tolérance (22 pour auditTropFacile), il passait donc au VERT
+// en silence : un contrôle cassé ressemblait à un contrôle satisfait.
+// Désormais un contrôle introuvable, qui plante, ou qui ne rend pas une
+// liste, est un échec — quelle que soit sa tolérance.
+const vus = new Set();
 CONTROLES.forEach(([nom, quoi, tolerance = 0]) => {
   let r;
-  try { r = A[nom](); } catch (e) { r = [{ erreur: e.message }]; }
+  let panne = null;
+  if (vus.has(nom)) panne = 'contrôle listé deux fois';
+  vus.add(nom);
+  if (!panne && typeof A[nom] !== 'function') panne = 'contrôle introuvable (renommé ou supprimé ?)';
+  if (!panne) {
+    try { r = A[nom](); } catch (e) { panne = 'le contrôle PLANTE : ' + e.message; }
+  }
+  if (!panne && !Array.isArray(r)) panne = 'le contrôle ne rend pas une liste (' + typeof r + ')';
+  if (panne) {
+    echecs++;
+    console.log(`  💥 ${nom.padEnd(24)} ${panne}`);
+    return;
+  }
   // ⚠️ Une tolérance n'est PAS un aveuglement : le seuil reste bas et le
   // nombre s'affiche, donc une régression (on est passé de 32 à 2) se
   // voit immédiatement. Ici, deux défis de fin de partie portent sur des
@@ -189,6 +220,19 @@ console.log(`  ℹ️  ${String(pb.dejaFait).padStart(5)}  déjà satisfait au t
 
 console.log('\n  EMPREINTE DES DÉFINITIONS : ' + Q.QUEST_DEFS_VERSION);
 console.log('  (calculée — les défis de l\'œuf en cours seront retirés au sort)');
+
+// ⚠️ UN CONTRÔLE QUI EXISTE SANS TOURNER est un contrôle oublié : il ne
+// protège plus rien, et personne ne le voit. Le 21/09, dix contrôles
+// lisaient encore les anciens modèles et restaient verts quoi qu'on
+// écrive dans les vrais défis — le genre de chose qui ne se voit
+// qu'en listant ce qui tourne VRAIMENT.
+const oublies = Object.keys(A)
+  .filter((k) => /^audit/.test(k) && typeof A[k] === 'function')
+  .filter((k) => !vus.has(k) && !RETRAITES[k]);
+oublies.forEach((k) => { echecs++; console.log(`  💥 ${k.padEnd(24)} existe mais ne tourne jamais (ni lancé, ni retiré)`); });
+const contradictions = [...vus].filter((k) => RETRAITES[k]);
+contradictions.forEach((k) => { echecs++; console.log(`  💥 ${k.padEnd(24)} à la fois lancé ET retiré`); });
+console.log(`\n  ${vus.size} contrôles lancés · ${Object.keys(RETRAITES).length} retirés avec leur raison`);
 
 console.log('\n  ' + (echecs === 0
   ? '✅ RIEN DE CASSÉ — le changement peut partir.'

@@ -51,6 +51,10 @@ payée.
 | La 2ᵉ Transe d'un groupe n'est **jamais plus courte** que la 1re | 21/09 |
 | L'**œuf 1 de l'Ascension 0** est fixé par l'auteur : il échappe à l'ordre des coûts | 21/09 |
 | Le mini-boss s'annonce : **« ⚠️ Attention, boss en approche » 3 · 2 · 1** | 21/09 |
+| **Aucun défi ne se valide avant d'être APPARU**, quelle que soit sa métrique | 21/09 |
+| Un seul défi d'achat ne coûte **jamais plus de 60 %** du seuil — Pacte, Faveur et Dégâts critiques compris | 21/09 |
+| Les **étapes d'un même article gardent leur ordre** : il décide quels niveaux chaque défi couvre | 21/09 |
+| Tout nouveau contrôle arrive **avec son sabotage** dans `verifier-controles.js` | 21/09 |
 | Deux défis de passif par groupe : **facile à l'œuf 2, exigeant à l'œuf 6** | 21/09 |
 | Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
 | Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
@@ -163,6 +167,51 @@ logique ne voit.
 | `auditNomsEnDur` | Un nom d'article est écrit ailleurs que dans `clickerLogic.js`. |
 | `auditSubstitutions` | Un chemin retire un défi sans passer par `peutEtreRemplace`. |
 | `auditTamponsAscension` · `auditRecompenseDoublee` | Des pièces survivent à l'Ascension, ou le bonus est compté deux fois. |
+
+### 🛡️ LE CONTRÔLE DES CONTRÔLES — à lancer avec le reste
+
+```
+NODE_PATH=<dossier avec @babel/core> node mobile/tools/verifier-controles.js
+```
+
+Pour **chaque** contrôle de la suite, un **sabotage réel** dans les
+fichiers du jeu — le défaut précis qu'il doit attraper. On l'applique, on
+lance le contrôle seul, il DOIT crier, on restaure. Les fichiers sont
+comparés **octet par octet** à la fin : un sabotage oublié serait publié
+au prochain push.
+
+**Pourquoi il existe** : le 21/09, il a trouvé que **dix contrôles
+lisaient encore les anciens modèles de défis**, abandonnés la veille. Ils
+restaient verts quoi qu'on écrive dans les vrais défis. Et
+`auditInfaisable` ne calculait pas le coût du Pacte, de la Faveur ni des
+Dégâts critiques : un défi à 40 niveaux de Pacte passait sans alerte —
+et le contrôle réparé a aussitôt trouvé un défi réel à **74 % du seuil**.
+
+⚠️⚠️ **RÈGLE : tout nouveau contrôle arrive AVEC son sabotage** dans
+`verifier-controles.js`. Sinon ce dernier échoue : « lancé par la suite,
+mais JAMAIS prouvé ». Un contrôle qui n'a jamais crié ne vaut rien — il
+ressemble à un contrôle satisfait.
+
+⚠️ Un sabotage « PÉRIMÉ » (son repère a disparu du code) est un échec,
+pas un passe-droit : il force à le tenir à jour.
+
+### 🔒 La suite est blindée
+
+- **Une panne n'est jamais couverte par la tolérance.** Avant, un
+  contrôle qui PLANTAIT comptait pour une anomalie : avec une tolérance
+  de 22, il passait au vert en silence.
+- **Un contrôle introuvable** (renommé, supprimé) est un échec.
+- **Un contrôle qui existe sans tourner** est un échec — sauf s'il figure
+  dans `RETRAITES`, avec sa raison écrite. Retirer un contrôle devient une
+  décision, jamais un oubli.
+
+| Retiré | Raison |
+|---|---|
+| `auditPool` | le pool de remplacement ne sert plus aucun joueur |
+| `auditRemplacements`, `auditHorsSchema`, `audit` | comparaient aux anciens modèles |
+| `auditCiblesFixes` | couvert par `auditCibleSuitLeJoueur`, rebranché |
+| `auditAscension` | couvert par le budget, les durées et `auditFaisableAuMoment` |
+| `auditAvailable` | les défis écrits n'ont plus de condition ; couvert par `auditPrerequisTenus` |
 
 ### ⚠️ Trois règles de méthode pour les contrôles eux-mêmes
 

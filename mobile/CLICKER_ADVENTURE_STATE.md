@@ -76,6 +76,19 @@ permission, monter le SDK. Et il n'existe **aucun build iOS** à ce jour.
 
 ---
 
+## 0 ter. 🛡️ DEUX COMMANDES, pas une
+
+```
+node mobile/tools/verifier-defis.js       les 36 contrôles
+node mobile/tools/verifier-controles.js   la preuve que chacun sait crier
+```
+
+La première dit si le jeu est sain. La seconde dit si **les contrôles
+eux-mêmes** le sont : un sabotage réel par contrôle, qui doit être
+attrapé. Le 21/09, elle a trouvé dix contrôles aveugles aux vrais défis.
+
+---
+
 ## 1. La commande avant tout push touchant aux défis
 
 ```

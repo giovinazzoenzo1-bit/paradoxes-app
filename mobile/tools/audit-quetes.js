@@ -437,9 +437,14 @@ function actionsRequises(q, cible) {
 function auditCorvee(plafondActions = 12) {
   const res = [];
   const vus = new Set();
-  [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL].forEach((q) => {
+  load('defisEcrits').DEFIS_ECRITS.flat().forEach((q) => {
     if (!q.target || vus.has(q.id)) return;
     vus.add(q.id);
+    // ⚠️ Les cibles dorées et les pouvoirs n'arrivent qu'à leur APPARITION
+    // (environ une par minute) : ce ne sont pas des appuis d'affilée sur un
+    // bouton. Rebranché sur les vraies valeurs le 21/09, ce contrôle les
+    // signalait — il n'avait jusqu'ici vu que celles de l'Ascension 0.
+    if (['goldenClaimed', 'powerActivated'].includes(q.metric)) return;
     const a = actionsRequises(q, q.target);
     if (a && a.nb > plafondActions) res.push({ id: q.id, ...a });
   });
@@ -454,73 +459,37 @@ module.exports.auditCorvee = auditCorvee;
 // Ce contrôle compare, pour CHAQUE défi, le nombre affiché au nombre
 // réellement exigé.
 function auditLibelles() {
-  const etats = [
-    ['debut', { ...etatInitial(), tapPower: 4, autoClickers: { esprit: 3 }, passiveIncome: 6 }],
-    ['milieu', { ...etatInitial(), tapPower: 20, autoClickers: { esprit: 40 }, sanctuaryLevel: 5, passiveIncome: 400, coins: 3e5, totalEarned: 4e6 }],
-    ['avance', { ...etatInitial(), tapPower: 45, autoClickers: { esprit: 150 }, sanctuaryLevel: 10, essence: 200, ascension: 3, passiveIncome: 2e4, coins: 5e7, totalEarned: 9e8 }],
-  ];
-  const ecarts = [];
-  const tous = [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL];
-  etats.forEach(([lbl, s]) => {
-    s.ownedIds = C.CREATURES.map((c) => c.id);
-    tous.forEach((q) => {
-      const cible = Q.effectiveQuestTarget(q.id, s, {});
-      const texte = Q.questLabel(q.id, null, s, {});
-      // Nombres présents dans le libellé, séparateurs de milliers retirés
-      // ⚠️ Faux positifs à écarter, sinon le contrôle devient du bruit
-      // et on cesse de le lire :
-      //  - « 14 millions » : le nombre affiché n'est pas la cible brute ;
-      //  - « chapitre 2, niveau 5 » : deux nombres qui désignent un
-      //    niveau ABSOLU (15), aucun ne vaut la cible ;
-      //  - « Transe x2,5 » : la cible est en dixièmes.
-      // ⚠️ « chapitre » N'EST PLUS un faux positif.
-      //
-      // Il l'était tant que les libellés d'Aventure écrivaient leur
-      // chapitre en dur — et c'est justement ce qui a masqué un bug réel :
-      // le texte annonçait « chapitre 2, niveau 10 » pendant que la barre
-      // comptait sur 25. Un filtre destiné à réduire le bruit avait
-      // rendu le contrôle aveugle à la seule chose qu'il devait voir.
-      //
-      // Les libellés d'Aventure étant désormais dérivés de la cible, on
-      // les VÉRIFIE : chapitre et niveau doivent correspondre.
-      if (/chapitre/i.test(texte)) {
-        const mm = texte.match(/chapitre\s+(\d+).*?niveau\s+(\d+)/i);
-        if (mm) {
-          const attendu = (parseInt(mm[1], 10) - 1) * 10 + parseInt(mm[2], 10);
-          if (attendu !== Math.round(cible)) {
-            ecarts.push({ id: q.id, etat: lbl, cible, texte });
-          }
-        }
-        return;
-      }
-      // ⚠️ TROISIÈME FOIS que ce contrôle est rendu aveugle par un filtre
-      // « anti-bruit ». Il écartait tout libellé contenant `x<chiffre>`,
-      // à cause du multiplicateur de Transe (« Transe x2,5 »). Résultat :
-      // `seq_transe30` annonçait « pendant 42 secondes » EN DUR, sans
-      // jamais lire sa cible, et le contrôle ne l'a jamais vu.
-      //
-      // On ne saute plus le libellé : on RETIRE le token multiplicateur
-      // et on vérifie ce qui reste.
-      const nettoye = texte.replace(/[x\u00d7]\s*\d+([.,]\d+)?/gi, ' ');
-      // ⚠️ Lire les DÉCIMALES : « 1.7 millions » se découpait en 1 et 7,
-      // et le contrôle sortait deux faux positifs.
-      const nums = (nettoye.replace(/\u202f|\u00a0/g, ' ').match(/\d[\d ]*([.,]\d+)?/g) || [])
-        .map((x) => parseFloat(x.replace(/ /g, '').replace(',', '.')));
-      if (!nums.length) return;                    // libellé sans nombre : rien à vérifier
-      // Nombres abrégés (« 14 millions ») : la cible vaut le nombre
-      // multiplié par son ordre de grandeur.
-      const echelles = /milliard/i.test(nettoye) ? [1e9]
-        : /million/i.test(nettoye) ? [1e6]
-        : /millier/i.test(nettoye) ? [1e3] : [1];
-      const cibleArrondie = Math.round(cible);
-      const ok = nums.some((n) => echelles.some((e) => {
-        const v = n * e;
-        return e === 1 ? v === cibleArrondie : Math.abs(v - cible) / Math.max(1, cible) < 0.1;
-      }));
-      if (!ok) ecarts.push({ id: q.id, etat: lbl, cible, texte });
+  // ⚠️ REBRANCHÉ le 21/09 sur les 252 défis ÉCRITS. Il lisait les anciens
+  // modèles et restait vert quoi qu'on écrive dans le vrai fichier.
+  //
+  // Deux règles :
+  //  1. le libellé affiche la cible réellement exigée ;
+  //  2. un libellé à TEXTE FIGÉ n'est permis que si la cible ne peut
+  //     jamais changer en cours de partie. Bug réel : « Atteins 29 000
+  //     pièces par seconde » écrit en dur, quand la cible valait 10 ; et
+  //     « Atteins 2 600 taps » figé alors que ce défi s'adapte.
+  const F = load('questFormat');
+  const montre = (texte, t) => {
+    const propre = String(texte).replace(/[\u202f\u00a0]/g, ' ');
+    return [String(t), F.fmtQ(t), F.describeAdventureLevel ? F.describeAdventureLevel(t) : null]
+      .filter(Boolean).some((v) => propre.includes(String(v).replace(/[\u202f\u00a0]/g, ' ')));
+  };
+  const fautes = [];
+  load('defisEcrits').DEFIS_ECRITS.flat().forEach((q) => {
+    const fige = /^\s*\(\s*\)\s*=>/.test(String(q.label));
+    const peutChanger = !!(q.step || q.minStep || (q.mode === 'delta' && Q.estAchatAdaptable(q.metric)));
+    if (fige && peutChanger) {
+      fautes.push({ id: q.id, probleme: 'texte figé sur un défi dont la cible change en cours de partie' });
+    }
+    const essais = fige ? [q.target] : [2, 7, 13, 250, 12500, q.target];
+    essais.forEach((t) => {
+      if (t < 2) return; // « Active un pouvoir » : pas de chiffre à 1, c'est voulu
+      let texte;
+      try { texte = q.label(t); } catch (e) { return; } // couvert par auditDefisEcrits
+      if (!montre(texte, t)) fautes.push({ id: q.id, cible: t, texte, probleme: "le libellé n'affiche pas la cible" });
     });
   });
-  return ecarts;
+  return fautes;
 }
 module.exports.auditLibelles = auditLibelles;
 
@@ -592,34 +561,22 @@ const METRIQUES_D_ETAT = [
 ];
 
 function auditModes() {
-  const suspects = [];
-  const tous = [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL];
-  tous.forEach((q) => {
+  // ⚠️ REBRANCHÉ le 21/09 sur les 252 défis ÉCRITS.
+  //
+  // Une métrique d'ÉTAT (solde, revenu par seconde, niveau d'un bâtiment
+  // plafonné…) n'a pas de sens en mode delta : « gagne 100 de revenu en
+  // plus » ne se lit pas. Seuls les ACHATS sans plafond y ont droit —
+  // « Achète N », qui compte à partir de maintenant.
+  const fautes = [];
+  load('defisEcrits').DEFIS_ECRITS.flat().forEach((q) => {
     if (q.mode !== 'delta') return;
     const m = q.metric || '';
-    // ⚠️ EXCEPTION VOULUE : un défi d'ACHAT en mode delta dit « achète N
-    // de plus », et son compteur part de zéro quand il commence.
-    //
-    // L'auteur, le 20/09 : « le défi doit être ACHETER N esprits et pas
-    // POSSÉDER N, car dans ton ordre le défi s'annule de lui-même ».
-    // Exact — en mode absolu, un défi demandant 5 Esprits était déjà
-    // rempli si un défi précédent en avait fait acheter 5.
-    //
-    // Le mode delta est donc le BON mode pour un achat. L'interdiction
-    // visait les métriques d'état comme `coins`, où « gagner 100 de
-    // plus » n'a pas de sens stable.
-    // Tout achat SANS niveau maximum est un « Achète N » légitime en
-    // delta — Pacte, Faveur et Dégâts critiques compris depuis le 21/09.
     if (Q.estAchatAdaptable(m)) return;
-    if (METRIQUES_D_ETAT.includes(m) || m.startsWith('auto:')
-      || m.startsWith('upgrade:') || m.startsWith('tapUpgrade:')) {
-      suspects.push({ id: q.id, metric: m, pourquoi: "métrique d'ÉTAT en mode delta" });
-      return;
+    if (METRIQUES_D_ETAT.includes(m)) {
+      fautes.push({ id: q.id, metric: m, probleme: "métrique d'ÉTAT en mode delta" });
     }
-    const texte = Q.questLabel(q.id, q.target || 5, {}, {});
-    if (MOTS_DE_TOTAL.test(texte)) suspects.push({ id: q.id, texte });
   });
-  return suspects;
+  return fautes;
 }
 module.exports.auditModes = auditModes;
 
@@ -813,40 +770,22 @@ module.exports.auditCiblesFixes = auditCiblesFixes;
 // On rejoue la séquence sur 5 passages et on signale toute cible
 // absolue qui dépasse 3x sa valeur du premier passage sans déclarer de
 // `cap`.
-function auditEmballement(facteurMax = 3, passages = 5) {
-  const suspects = [];
-  const s = etatInitial();
-  s.ownedIds = C.CREATURES.map((c) => c.id);
-  s.ownedCount = s.ownedIds.length;
-  s.deckCount = 3;
-  const premiere = {};
-  const pire = {};
-  for (let p = 0; p < passages; p++) {
-    Q.QUEST_SEQUENCE.forEach((cycle, ci) => {
-      cycle.forEach((q) => {
-        if (q.mode !== 'absolute') return;
-        const cible = q.target || q.partAsc || q.step ? Q.resolveQuestTarget(q, s) : null;
-        if (cible == null) return;
-        if (premiere[q.id] == null) premiere[q.id] = cible;
-        pire[q.id] = Math.max(pire[q.id] || 0, cible);
-        const min = minutesPour(q, cible, s);
-        if (min != null) s.totalEarned = (s.totalEarned || 0) + production(s) * 60 * min;
-        appliquer(q, cible, s);
-      });
-    });
-  }
-  Q.QUEST_SEQUENCE.flat().forEach((q) => {
-    if (q.mode !== 'absolute' || q.cap) return;
-    if (!premiere[q.id] || premiere[q.id] <= 0) return;
-    // Les métriques de PROGRESSION montent normalement : on ne regarde
-    // que celles qui mesurent une PERFORMANCE, bornée par l'humain.
-    if (!['maxTranseHoldSec', 'maxCombo'].includes(q.metric)) return;
-    const f = pire[q.id] / premiere[q.id];
-    if (f > facteurMax) {
-      suspects.push({ id: q.id, metric: q.metric, premiere: premiere[q.id], pire: pire[q.id], fois: +f.toFixed(1) });
-    }
+function auditEmballement() {
+  // ⚠️ REBRANCHÉ le 21/09 sur les 252 défis ÉCRITS.
+  //
+  // Les défis de PERFORMANCE ont une limite humaine : au-delà, le défi
+  // n'est plus difficile, il est impossible. Limites posées par l'auteur
+  // ou mesurées sur le jeu actuel :
+  //   - taps d'affilée : 400 au maximum (règle de l'auteur, 20/09) ;
+  //   - Transe tenue : 180 s ;
+  //   - multiplicateur de Transe : x5,0 (stocké 50).
+  const LIMITES = { maxTapStreak: 400, maxTranseHoldSec: 180, maxCombo: 50 };
+  const fautes = [];
+  load('defisEcrits').DEFIS_ECRITS.flat().forEach((q) => {
+    const lim = LIMITES[q.metric];
+    if (lim && q.target > lim) fautes.push({ id: q.id, metric: q.metric, cible: q.target, limite: lim });
   });
-  return suspects;
+  return fautes;
 }
 module.exports.auditEmballement = auditEmballement;
 
@@ -961,7 +900,7 @@ module.exports.auditFamilles = auditFamilles;
 // aucun défi ne doit viser une amélioration de créature.
 function auditDependanceCreature() {
   const fautes = [];
-  [...Q.QUEST_SEQUENCE.flat(), ...Q.QUEST_POOL].forEach((q) => {
+  load('defisEcrits').DEFIS_ECRITS.flat().forEach((q) => {
     if (!q || !q.metric) return;
     if (!q.metric.startsWith('upgrade:')) return;
     const item = C.UPGRADE_ITEMS.find((u) => u.id === q.metric.slice(8));
@@ -1263,38 +1202,33 @@ module.exports.auditTropFacile = auditTropFacile;
 // IDENTIQUE. C'est la garantie que le document de référence dit ce que
 // le jeu affiche, pour tout le monde.
 function auditCibleSuitLeJoueur() {
-  const ecarts = [];
-  const faible = (g) => ({
-    ascension: g, tapPower: 1, coins: 0, totalEarned: 0, passiveIncome: 0,
-    sanctuaryLevel: 0, veilleurLevel: 0, critLevel: 0, critDamageLevel: 0,
-    maxCreatureLevel: 1, advLevelReached: 0, totalTaps: 0, maxTranseHoldSec: 0,
-    ownedCount: 3, creaturesAVenir: 3, deckCount: 3,
-    autoClickers: {}, upgradeLevels: {}, tapUpgrades: {}, essence: 0,
-  });
-  const fort = (g) => ({
-    ...faible(g), tapPower: 40, coins: 1e9, totalEarned: 1e10, passiveIncome: 1e6,
-    sanctuaryLevel: 50, veilleurLevel: 50, critLevel: 30, critDamageLevel: 30,
-    maxCreatureLevel: 127, advLevelReached: 120, totalTaps: 1e6, maxTranseHoldSec: 400,
-    autoClickers: { esprit: 300, main: 200, automate: 100 },
-  });
-  Q.QUEST_SEQUENCE.flat().forEach((q) => {
-    if (!q.target) return;
-    // Le défi de taps demande EXPLICITEMENT qu'il reste à faire.
-    if (q.minStep) return;
-    // ⚠️ Les défis d'ACHAT s'adaptent VOLONTAIREMENT au joueur depuis le
-    // 20/09 : `plafondAchatsGroupe` réduit la demande quand il possède
-    // déjà ce que le groupe réclame. L'adaptation est BORNÉE — elle ne
-    // peut que réduire, jamais augmenter — donc un joueur en retard voit
-    // toujours la cible annoncée dans le document.
-    if (q.mode === 'delta' && Q.estAchatAdaptable(
-      Q.metriqueDuDefi(q, { ascension: 0 }) || '')) return;
-    [0, 1, 3].forEach((g) => {
-      const a = Q.resolveQuestTarget(q, faible(g));
-      const b = Q.resolveQuestTarget(q, fort(g));
-      if (a !== b) ecarts.push({ id: q.id, groupe: g, debutant: a, avance: b });
-    });
-  });
-  return ecarts;
+  // ⚠️ REBRANCHÉ le 21/09 sur les 252 défis ÉCRITS.
+  //
+  // Une cible ÉCRITE est la même pour tout le monde. Bug réel du 20/09 :
+  // le moteur remettait son échelle par-dessus des cibles déjà finales,
+  // DEUX fois, et 35 défis affichaient autre chose que le document.
+  //
+  // Seules exceptions voulues : la règle du TOTAL des achats (qui ne peut
+  // que réduire), le défi de créature (+5 au-dessus de ta meilleure) et
+  // celui des taps (il en reste toujours à faire).
+  const debutant = etatInitial();
+  const avance = etatInitial();
+  Object.assign(avance, { tapPower: 40, coins: 9e11, totalEarned: 4e12, critLevel: 25,
+    critDamageLevel: 25, sanctuaryLevel: 50, veilleurLevel: 50, totalTaps: 900000,
+    goldenClaimed: 500, powerActivated: 400, battleWon: 200, maxCreatureLevel: 90 });
+  const fautes = [];
+  load('defisEcrits').DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((q) => {
+    if (q.step || q.minStep) return;
+    if (q.mode === 'delta' && Q.estAchatAdaptable(q.metric)) return;
+    const g = Math.floor(i / 7);
+    debutant.ascension = g; avance.ascension = g;
+    const a = Q.resolveQuestTarget(q, debutant);
+    const b = Q.resolveQuestTarget(q, avance);
+    if (a !== q.target || b !== q.target) {
+      fautes.push({ id: q.id, ecrite: q.target, debutant: a, avance: b });
+    }
+  }));
+  return fautes;
 }
 module.exports.auditCibleSuitLeJoueur = auditCibleSuitLeJoueur;
 
@@ -1309,21 +1243,18 @@ module.exports.auditCibleSuitLeJoueur = auditCibleSuitLeJoueur;
 // produisent un texte incomplet — c'est-à-dire ceux qui en ont besoin.
 // Il vérifie ensuite que les deux chemins d'affichage la fournissent.
 function auditLibelleSansArticle() {
+  // ⚠️ REBRANCHÉ le 21/09 sur les 252 défis ÉCRITS.
+  //
+  // Un texte cassé que le joueur lit tel quel : « Possède 14 un
+  // article », « Achète 6 niveaux de une créature » (resté en ligne une
+  // journée), « undefined », « NaN »…
+  const MAUVAIS = /un article|undefined|NaN|\bnull\b|\[object|de une |de le |de les |\s{2,}/;
   const fautes = [];
-  const fs = require('fs');
-  const src = fs.readFileSync(__dirname + '/../src/games/clicker/questLogic.js', 'utf8');
-  // Tout appel `q.label(` doit passer un 2e argument.
-  (src.match(/q\.label\([^)]*\)/g) || []).forEach((appel) => {
-    if (!appel.includes(',')) fautes.push({ appel, probleme: 'métrique non transmise' });
-  });
-  // Et aucun défi ne doit produire « un article » avec ses stats réelles.
-  [0, 1, 2, 3].forEach((g) => {
-    const s = { ascension: g, autoClickers: {}, upgradeLevels: {}, tapUpgrades: {} };
-    Q.QUEST_SEQUENCE.flat().forEach((q) => {
-      const texte = q.label(10, Q.metriqueDuDefi(q, s)) || '';
-      if (/un article|undefined|NaN/.test(texte)) {
-        fautes.push({ id: q.id, groupe: g, texte });
-      }
+  load('defisEcrits').DEFIS_ECRITS.flat().forEach((q) => {
+    [1, 2, q.target].forEach((t) => {
+      let texte;
+      try { texte = q.label(t); } catch (e) { return; }
+      if (MAUVAIS.test(String(texte))) fautes.push({ id: q.id, texte, probleme: 'texte cassé' });
     });
   });
   return fautes;
@@ -1454,53 +1385,47 @@ module.exports.auditPrixParAscension = auditPrixParAscension;
 //
 // Ici on rejoue la séquence, donc on sait ce que le joueur POSSÈDE
 // vraiment quand le défi tombe.
-function auditInfaisable(nbOeufs = 26, partMax = 0.6) {
+function auditInfaisable(partMax = 0.6) {
+  // ⚠️⚠️ RÉÉCRIT LE 21/09 — le contrôle des contrôles l'a trouvé AVEUGLE.
+  //
+  // Un défi à 40 niveaux de Pacte, d'un coût astronomique, passait sans
+  // la moindre alerte. Deux trous :
+  //   - il ne calculait le coût QUE des générateurs et paliers de tap : le
+  //     Pacte, la Faveur et les Dégâts critiques lui échappaient ;
+  //   - il lisait « Achète 3 » comme « atteins 3 » : un joueur possédant
+  //     déjà 5 exemplaires y voyait un coût nul.
+  //
+  // Il suit désormais les 252 défis écrits, groupe par groupe, en tenant
+  // le compte de ce que les défis précédents ont fait acheter — avec LA
+  // fonction de coût du moteur, la même que `auditBudgetGroupe`. Un seul
+  // instrument : deux calculs de coût qui divergent se contredisent sans
+  // que personne le voie.
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
   const trouves = [];
-  const s = etatInitial();
-  s.ownedIds = []; s.ownedCount = 0; s.deckCount = 0;
-  let numero = 0;
-  for (let oeuf = 0; oeuf < nbOeufs; oeuf++) {
-    if ((s.tapPower || 1) >= 5) {
-      s.critLevel = Math.max(1, s.critLevel || 0);
-      s.critDamageLevel = Math.max(1, s.critDamageLevel || 0);
-    }
-    const set = Q.nextQuestSet(oeuf, [], s);
-    set.ids.forEach((id) => {
-      const q = Q.findQuest(id);
-      if (!q) return;
-      numero += 1;
-      const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
-      const met = Q.metriqueDuDefi(q, s) || '';
-      if (met.startsWith('auto:') || met.startsWith('tapUpgrade:')) {
-        const estAuto = met.startsWith('auto:');
-        const item = estAuto
-          ? C.AUTOCLICKERS.find((x) => x.id === met.slice(5))
-          : C.TAP_UPGRADES.find((x) => x.id === met.slice(11));
-        if (item) {
-          const possede = estAuto ? ((s.autoClickers || {})[item.id] || 0)
-            : ((s.tapUpgrades || {})[item.id] || 0);
-          let cout = 0;
-          for (let n = possede; n < cible && n < possede + 300; n++) {
-            cout += estAuto ? C.autoClickerCost(item, n, s.ascension)
-              : C.tapUpgradeCost(item, n, s.ascension);
-          }
-          const seuil = C.ascensionThreshold(s.ascension || 0);
-          if (cout > seuil * partMax) {
-            trouves.push({ n: numero, oeuf: oeuf + 1, id,
-              texte: Q.questLabel(id, null, s, set.targets || {}),
-              part: Math.round(100 * cout / seuil) });
-          }
+  for (let g = 0; g < 6; g++) {
+    const seuil = C.ascensionThreshold(g);
+    const possede = {};
+    for (let e = 0; e < 7; e++) {
+      (D.DEFIS_ECRITS[g * 7 + e] || []).forEach((q) => {
+        const m = q.metric || '';
+        const plafonne = m === 'sanctuaryLevel' || m === 'veilleurLevel';
+        if (!Q.estAchatAdaptable(m) && !plafonne) return;
+        const deja = possede[m] !== undefined ? possede[m] : Q.niveauDeBase(m);
+        const n = q.mode === 'delta' ? q.target : Math.max(0, q.target - deja);
+        let cout = 0;
+        for (let i = deja; i < deja + n && i < deja + 400; i++) {
+          cout += m === 'sanctuaryLevel' ? C.sanctuaryUpgradeCost(i)
+            : m === 'veilleurLevel' ? C.veilleurUpgradeCost(i)
+              : Q.coutNiveauAchat(m, i, g);
         }
-      }
-      const m = minutesPour(q, cible, s);
-      if (m != null) s.totalEarned = (s.totalEarned || 0) + production(s) * 60 * m;
-      appliquer(q, cible, s);
-    });
-    const nv = C.CREATURES[Math.min(oeuf, C.CREATURES.length - 1)];
-    if (nv && !s.ownedIds.includes(nv.id)) s.ownedIds.push(nv.id);
-    s.ownedCount = s.ownedIds.length;
-    s.deckCount = Math.min(3, s.ownedCount);
-    s.passiveIncome = passiveOnly(s);
+        possede[m] = deja + n;
+        if (!Number.isFinite(cout) || cout > seuil * partMax) {
+          trouves.push({ id: q.id, texte: q.label(q.target),
+            part: Number.isFinite(cout) ? Math.round(100 * cout / seuil) : 'infini' });
+        }
+      });
+    }
   }
   return trouves;
 }
@@ -2669,3 +2594,63 @@ function auditCibleBudget() {
   return fautes;
 }
 module.exports.auditCibleBudget = auditCibleBudget;
+
+
+// ---- Un défi peut-il sauter sans jamais s'afficher ? ----------------
+//
+// LA FAMILLE DE BUGS LA PLUS SIGNALÉE PAR L'AUTEUR : « il n'y a pas le
+// défi 7 », « il n'y a pas eu le défi 8 ». Un défi rempli pendant les
+// défis PRÉCÉDENTS sautait sans jamais apparaître.
+//
+// Trois verrous, vérifiés ensemble — chacun a déjà manqué au moins une
+// fois :
+//  1. le jeu ne valide un défi qu'APRÈS son apparition, pour TOUTES les
+//     métriques (la garde n'en couvrait que deux) ;
+//  2. le défi de taps, qui compte les taps À VIE, s'adapte au joueur
+//     vétéran — le marqueur « cible figée » court-circuitait cette
+//     adaptation, et « Atteins 2 600 taps » naissait rempli au groupe 1
+//     pour TOUS les joueurs ;
+//  3. ce même défi se recalcule à son apparition.
+function auditDefiInvisible() {
+  const fautes = [];
+  const fs = require('fs'); const path = require('path');
+  const ecran = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  // 1. La garde s'applique à TOUT défi : aucune liste de métriques.
+  const garde = ecran.match(/const pasEncoreApparu = \(id\) => ([^;]+);/);
+  if (!garde) fautes.push({ probleme: 'la garde « pas encore apparu » a disparu' });
+  else if (/metric|includes\(/.test(garde[1])) {
+    fautes.push({ probleme: 'la garde ne couvre que certaines métriques : ' + garde[1] });
+  } else if (!/questBaselines/.test(garde[1])) {
+    // ⚠️ Une garde qui ne lit plus la référence du défi est une garde
+    // NEUTRALISÉE (`=> false`) : elle existe, elle a le bon nom, et elle ne
+    // protège plus rien. Trouvé en écrivant le contrôle des contrôles.
+    fautes.push({ probleme: 'la garde ne vérifie plus la référence du défi : ' + garde[1] });
+  }
+  const done = ecran.match(/const isQuestDone = \(id\) =>([\s\S]*?);\n/);
+  if (!done || !/!pasEncoreApparu\(id\) && questComplete\(/.test(done[1])) {
+    fautes.push({ probleme: 'isQuestDone valide un défi sans vérifier qu\'il est apparu' });
+  }
+  const verrou = ecran.match(/const atteints = activeQuestIds\.filter\(([\s\S]*?)\);\n/);
+  if (!verrou || !/!pasEncoreApparu\(id\)/.test(verrou[1])) {
+    fautes.push({ probleme: 'le verrou fige un défi sans vérifier qu\'il est apparu' });
+  }
+  // 3. Le défi de taps se recalcule à son apparition.
+  const debut = ecran.indexOf('if (questBaselinesRef.current[currentChallengeId]) return;');
+  const fin = ecran.indexOf('}, [currentChallengeId, loaded]);', debut);
+  if (!/q\.minStep/.test(ecran.slice(debut, fin))) {
+    fautes.push({ probleme: 'le défi de taps ne se recalcule pas quand il apparaît' });
+  }
+  // 2. Moteur : un joueur vétéran n'a jamais un défi de taps déjà rempli.
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return fautes; }
+  D.DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((q) => {
+    if (!q.minStep) return;
+    [0, 42000, 900000].forEach((n) => {
+      const s = etatInitial(); s.ascension = Math.floor(i / 7); s[q.metric] = n;
+      const t = Q.resolveQuestTarget(q, s);
+      if (!(t > n)) fautes.push({ id: q.id, avec: n, cible: t, probleme: 'défi déjà rempli pour ce joueur' });
+    });
+  }));
+  return fautes;
+}
+module.exports.auditDefiInvisible = auditDefiInvisible;

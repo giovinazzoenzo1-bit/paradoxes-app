@@ -601,7 +601,20 @@ export function resolveQuestTarget(quest, stats) {
     // « ne rien adapter » : la réduction pour un joueur en avance reste
     // légitime, puisqu'elle ne peut que DIMINUER la demande.
     const adaptable = quest.mode === 'delta' && estAchatAdaptable(mAchat);
-    if (quest.fige && !adaptable) return quest.target;
+    // ⚠️⚠️ `fige` NE COURT-CIRCUITE PAS les défis qui s'adaptent EXPRÈS.
+    //
+    // Bug trouvé le 21/09 en blindant les contrôles : ce raccourci rendait
+    // la cible écrite AVANT d'atteindre la logique `minStep` plus bas. Or
+    // le défi de taps compte les taps À VIE : un joueur finit l'Ascension
+    // 0 avec ~40 000 taps, donc « Atteins 2 600 taps au total » naissait
+    // déjà rempli au groupe 1 — pour TOUS les joueurs. Il n'apparaissait
+    // jamais. La règle de l'auteur, « il te reste toujours 200 à 300 taps
+    // à faire », était morte en silence.
+    //
+    // `fige` veut dire « ne pas remettre d'échelle ». Il ne doit jamais
+    // empêcher les adaptations voulues : `minStep` (taps) et `step`
+    // (créature +5).
+    if (quest.fige && !adaptable && !quest.minStep && !quest.step) return quest.target;
     if (adaptable) {
       // La règle du TOTAL de l'auteur — voir `cibleAchatCumulee`.
       return cibleAchatCumulee(quest, stats, brute);
@@ -981,7 +994,10 @@ export function freezeMissingTargets(activeIds, stats = {}, targets = {}) {
 export function validateQuests(publishedMetrics = []) {
   const connues = new Set(publishedMetrics);
   const problemes = [];
-  const tous = [...QUEST_SEQUENCE.flat(), ...QUEST_POOL];
+  // ⚠️ Les 252 défis ÉCRITS — ceux que le joueur reçoit. Cette fonction
+  // parcourait les anciens modèles, abandonnés le 20/09 : `auditCoherence`
+  // restait vert quoi qu'on écrive dans le vrai fichier des défis.
+  const tous = DEFIS_ECRITS.flat();
   tous.forEach((q) => {
     // ⚠️ Pas de `stats` ici : ce contrôle inspecte les DÉFINITIONS, hors
     // partie. Pour un défi dont la métrique dépend du groupe, on vérifie
