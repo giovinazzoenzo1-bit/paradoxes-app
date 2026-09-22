@@ -3192,12 +3192,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             <View style={styles.devToolsRow}>
               {boss === null && (
                 <TouchableOpacity style={styles.devToolBtn} onPress={spawnBoss}>
-                  <Text style={styles.devSkipBtnText}>👹 Boss</Text>
+                  <Text style={styles.devSkipBtnText} numberOfLines={1}>👹 Boss</Text>
                 </TouchableOpacity>
               )}
               {eggPhase === 'collecting' && (devPreviousChallengeId || eggPhase === 'hatching') && (
                 <TouchableOpacity style={styles.devToolBtn} onPress={onDevPreviousChallenge}>
-                  <Text style={styles.devSkipBtnText}>◀️ Défi</Text>
+                  <Text style={styles.devSkipBtnText} numberOfLines={1}>◀️ Défi</Text>
                 </TouchableOpacity>
               )}
               {/* Outil de test : VALIDER TOUT LE CYCLE d'un coup.
@@ -3212,7 +3212,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                     devValider(activeQuestIds);
                   }}
                 >
-                  <Text style={styles.devSkipBtnText}>⏭️ Cycle</Text>
+                  <Text style={styles.devSkipBtnText} numberOfLines={1}>⏭️ Cycle</Text>
                 </TouchableOpacity>
               )}
               {eggPhase === 'collecting' && currentChallengeId && (
@@ -3220,7 +3220,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   style={styles.devToolBtn}
                   onPress={() => devValider(currentChallengeId)}
                 >
-                  <Text style={styles.devSkipBtnText}>🛠️ Valider</Text>
+                  {/* ⚠️ Le MOT d'abord, l'emoji ensuite, sur UNE ligne.
+                      Signalé par l'auteur le 21/09 : ce bouton n'affichait
+                      que « 🛠️ » sur son téléphone, le mot « Valider »
+                      restant invisible. Le glyphe 🛠 n'a pas d'aspect emoji
+                      par défaut et se rend mal sur certaines polices
+                      Android. Avec le mot en tête, le libellé reste lisible
+                      même si le symbole échoue — et il porte le même nom
+                      que son jumeau « ◀️ Défi », qui s'affiche bien. */}
+                  <Text style={styles.devSkipBtnText} numberOfLines={1}>Défi ▶️</Text>
                 </TouchableOpacity>
               )}
               {/* ⚠️ Outil de TEST : franchit une Ascension d'un coup, sans
@@ -3231,7 +3239,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   numéro d'Ascension. Ce bouton donne aussi les Griffes et
                   le bonus, donc l'état obtenu est celui d'un vrai joueur. */}
               <TouchableOpacity style={styles.devToolBtn} onPress={confirmAscension}>
-                <Text style={styles.devSkipBtnText}>🌟 Asc +1</Text>
+                <Text style={styles.devSkipBtnText} numberOfLines={1}>🌟 Asc +1</Text>
               </TouchableOpacity>
               {/* ⚠️ DIAGNOSTIC — ce que le moteur a RÉELLEMENT reçu.
                   `A` : le nombre d'Ascensions au dernier rendu.
