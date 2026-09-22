@@ -1777,10 +1777,52 @@ export function prixMultiplicateurAscension(ascensionCount) {
   return ascensionSpeedMultiplier(ascensionCount || 0);
 }
 
+// ⚠️ LES 3 PREMIERS EXEMPLAIRES coûtent 35 % de plus (demande de
+// l'auteur, 21/09 : « augmente un petit peu les prix des 3 premiers
+// niveaux d'Esprit et de Main Spectrale », puis « fais la suite logique
+// pour les Ascensions suivantes »).
+//
+// LA SUITE LOGIQUE : à chaque Ascension, les générateurs que SES DÉFIS
+// demandent — Esprit et Main à l'A0, puis ceux des groupes suivants.
+// Liste lue dans le fichier des défis ; `auditMajorationPrix` vérifie
+// qu'elle y correspond toujours.
+//
+// ⚠️⚠️ PAS « TOUS LES GÉNÉRATEURS, PARTOUT ». Essayé le 21/09 : mesuré,
+// l'A1 passait de 3,4 h à 2,7 h (SOUS l'A0) et l'A2 de 5,0 h à 3,4 h. Le
+// simulateur achète au plus rentable : renchérir tous les générateurs lui
+// faisait délaisser de vieux générateurs peu utiles, et il accélérait
+// artificiellement. Ciblée, la hausse garde les durées : 3,0 / 3,4 / 5,0
+// / 6,5 / 7,7 / 10,2 h.
+//
+// ⚠️ Le 4e exemplaire ne coûte JAMAIS moins que le 3e : avec ×1,25 par
+// exemplaire, le 3e majoré (×2,11) dépasserait le 4e normal (×1,95). Un
+// prix qui redescend ressemble à un bug : le 4e est aligné sur le 3e.
+export const PREMIERS_EXEMPLAIRES_NB = 3;
+export const PREMIERS_EXEMPLAIRES_MAJORATION = 0.35;
+export const GENERATEURS_MAJORES_PAR_ASCENSION = [
+  ['esprit', 'main'],                 // A0
+  ['esprit', 'main'],                 // A1
+  ['main', 'automate', 'colonie'],    // A2
+  ['colonie', 'titan', 'golem'],      // A3
+  ['phenix', 'dragonnet', 'golem'],   // A4
+  ['phenix', 'leviathan', 'gardien'], // A5 — et au-delà, qui rejoue l'A5
+];
+
+export function generateurMajore(id, ascensionCount = 0) {
+  const g = Math.min(Math.max(0, Math.floor(ascensionCount || 0)), GENERATEURS_MAJORES_PAR_ASCENSION.length - 1);
+  return GENERATEURS_MAJORES_PAR_ASCENSION[g].includes(id);
+}
+
 export function autoClickerCost(clicker, ownedCount, ascensionCount = 0) {
-  return Math.round(clicker.baseCost * COIN_SCALE * UPGRADE_COST_MULT
-    * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount)
-    * prixMultiplicateurAscension(ascensionCount));
+  const n = Math.max(0, Math.floor(ownedCount || 0));
+  const base = clicker.baseCost * COIN_SCALE * UPGRADE_COST_MULT
+    * prixMultiplicateurAscension(ascensionCount);
+  const courbe = (k) => base * Math.pow(AUTOCLICKER_COST_GROWTH, k);
+  if (!generateurMajore(clicker.id, ascensionCount)) return Math.round(courbe(n));
+  const majore = (k) => courbe(k) * (1 + PREMIERS_EXEMPLAIRES_MAJORATION);
+  let cout = n < PREMIERS_EXEMPLAIRES_NB ? majore(n) : courbe(n);
+  if (n === PREMIERS_EXEMPLAIRES_NB) cout = Math.max(cout, majore(n - 1));
+  return Math.round(cout);
 }
 
 // Revenu total/s de tous les générateurs possédés.

@@ -55,6 +55,11 @@ payée.
 | Un seul défi d'achat ne coûte **jamais plus de 60 %** du seuil — Pacte, Faveur et Dégâts critiques compris | 21/09 |
 | Les **étapes d'un même article gardent leur ordre** : il décide quels niveaux chaque défi couvre | 21/09 |
 | Tout nouveau contrôle arrive **avec son sabotage** dans `verifier-controles.js` | 21/09 |
+| **Pièces de côté = 5 min de production** au moment où le défi arrive (étalon de l'auteur : 18 000 au défi 11) | 21/09 |
+| Taps d'affilée : **140 → 180 à l'A0**, puis montée continue jusqu'à **400** à l'A5 | 21/09 |
+| **+35 %** sur les 3 premiers exemplaires des générateurs **que chaque Ascension demande** — jamais tous | 21/09 |
+| Une cible **hors achats ne redescend jamais** dans un groupe | 21/09 |
+| Chaque Ascension reste à **±15 % de sa durée cible** | 21/09 |
 | Deux défis de passif par groupe : **facile à l'œuf 2, exigeant à l'œuf 6** | 21/09 |
 | Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
 | Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
@@ -167,6 +172,29 @@ logique ne voit.
 | `auditNomsEnDur` | Un nom d'article est écrit ailleurs que dans `clickerLogic.js`. |
 | `auditSubstitutions` | Un chemin retire un défi sans passer par `peutEtreRemplace`. |
 | `auditTamponsAscension` · `auditRecompenseDoublee` | Des pièces survivent à l'Ascension, ou le bonus est compté deux fois. |
+
+### ⏱️ Mesure réelle de l'auteur (21/09)
+
+**20 minutes pour atteindre le défi 17** de l'Ascension 0, en comptant 2
+vidéos pour les œufs et 2 pour 7 niveaux d'Aventure. Son verdict : « on
+est vraiment pas mal ». Le simulateur donne 3,0 h pour les 42 défis de
+l'A0 — les premiers œufs, tutoriel compris, sont volontairement rapides.
+Prochaine mesure prévue : les défis suivants, chronométrés.
+
+### ⚠️ Étendre une demande « à la suite logique » : MESURER d'abord
+
+Le 21/09, « +35 % sur les 3 premiers Esprits et Mains » a d'abord été
+étendu à TOUS les générateurs de TOUTES les Ascensions. Mesuré : l'A1
+tombait de 3,4 h à 2,7 h (sous l'A0), l'A2 de 5,0 h à 3,4 h. Le
+simulateur achète au plus rentable ; renchérir tous les générateurs lui
+faisait délaisser de vieux générateurs peu utiles, et il accélérait.
+Ciblée sur les générateurs que chaque Ascension DEMANDE (lus dans le
+fichier des défis), la hausse garde les durées. `auditDureeCible` et
+`auditMajorationPrix` le tiennent désormais.
+
+⚠️ Le wiki listait les générateurs par Ascension de travers (A1 : «
+Automate + Colonie » ; le fichier demande Esprit + Main). **On lit le
+fichier, jamais le wiki**, pour savoir ce qu'un groupe demande.
 
 ### 🛡️ LE CONTRÔLE DES CONTRÔLES — à lancer avec le reste
 

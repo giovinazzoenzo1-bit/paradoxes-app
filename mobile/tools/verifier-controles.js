@@ -98,8 +98,10 @@ const SABOTAGES = [
   ['auditPrixParAscension', F.clicker, "les prix ne suivent plus l'Ascension : boutique gratuite à A5 (bug réel)",
     // Repère À DEUX LIGNES : la dernière existe aussi dans le coût des
     // paliers de tap, et un repère ambigu rendait ce sabotage « périmé ».
-    remplace('    * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount)\n    * prixMultiplicateurAscension(ascensionCount));',
-      '    * Math.pow(AUTOCLICKER_COST_GROWTH, ownedCount)\n    * 1);')],
+    // ⚠️ Repère mis à jour le 21/09 : la formule a changé avec la
+    // majoration des 3 premiers exemplaires. C'est exactement le rôle d'un
+    // sabotage « périmé » : forcer à le tenir à jour.
+    remplace('    * prixMultiplicateurAscension(ascensionCount);\n  const courbe', '    * 1;\n  const courbe')],
   ['auditInfaisable', F.defis, 'un défi coûte bien plus que le seuil',
     surDefi((b) => b.metric === 'tapPower' && b.g === 0, cible(40))],
   ['auditResetSurChangement', F.ecran, "la sauvegarde réimpose les anciennes références après une mise à jour (bug réel)",
@@ -164,6 +166,19 @@ const SABOTAGES = [
     remplace('  const addDiamondsToday = async (n) => {', '  const _retrait = () => pickQuestSet(0, [], {});\n  const addDiamondsToday = async (n) => {')],
   ['auditCibleSuitLeJoueur', F.logique, 'le moteur remet son échelle sur des cibles déjà finales (bug réel, 35 défis)',
     remplace('    if (quest.fige && !adaptable && !quest.minStep && !quest.step) return quest.target;', '')],
+  ['auditCibleMonte', F.defis, "« Enchaîne 140 taps » puis « Enchaîne 120 taps » (bug réel, défis 15 et 35)",
+    // Le PREMIER défi de taps de l'A0 passe au-dessus du second : la
+    // cible redescend, exactement comme 140 puis 120.
+    surDefi((b) => b.metric === 'maxTapStreak' && b.g === 0, cible(300))],
+  // ⚠️ Pas « le seuil −40 % » : dans une économie qui accélère, les
+  // derniers 40 % du seuil se gagnent vite, et la durée ne bouge que de
+  // ~10 % — dans la marge. Le sabotage était trop faible, pas le contrôle.
+  // On rejoue donc LE VRAI BUG du 21/09 : la hausse sur tous les
+  // générateurs, partout (A1 à 2,7 h, A2 à 3,4 h).
+  ['auditDureeCible', F.clicker, 'la hausse des premiers prix étendue à TOUS les générateurs (bug réel du 21/09)',
+    remplace('  return GENERATEURS_MAJORES_PAR_ASCENSION[g].includes(id);', '  return true;')],
+  ['auditMajorationPrix', F.clicker, "la Main de l'A0 n'est plus majorée alors que ses défis la demandent",
+    remplace("  ['esprit', 'main'],                 // A0", "  ['esprit'],                         // A0")],
   ['auditTropFacile', F.defis, 'des dizaines de défis réduits à rien',
     surDefis((b) => ['totalEarned', 'goldenClaimed', 'coins'].includes(b.metric), cible(1))],
 ];

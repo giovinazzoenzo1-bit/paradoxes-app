@@ -1357,7 +1357,14 @@ function auditPrixParAscension(tolerance = 0.15) {
   C.AUTOCLICKERS.forEach((g) => {
     const temps = [0, 1, 2, 3, 4, 5].map((a) => {
       const revenu = C.tapDamage(1) * TAPS * C.ascensionSpeedMultiplier(a);
-      return C.autoClickerCost(g, 0, a) / revenu;
+      // ⚠️ On mesure la valeur de BASE de la boutique : la hausse VOULUE
+      // de 35 % sur les premiers exemplaires des générateurs qu'une
+      // Ascension demande (21/09) est retirée du calcul. Sans ça, ce
+      // contrôle confondait une majoration délibérée et bornée avec le
+      // vrai bug qu'il surveille — des prix qui ne suivent plus
+      // l'Ascension (228 s à A0, 1 s à A5).
+      const majoration = C.generateurMajore(g.id, a) ? 1 + C.PREMIERS_EXEMPLAIRES_MAJORATION : 1;
+      return C.autoClickerCost(g, 0, a) / majoration / revenu;
     });
     const min = Math.min(...temps);
     const max = Math.max(...temps);
@@ -2195,7 +2202,10 @@ function simulerGroupe(ascension, tapsParSec) {
   let t = 0, garde = 0, passifFinal = 0;
   // Jalon de DÉPART : sans lui, un défi de l'œuf 1 n'aurait aucun état
   // de référence et le contrôle de faisabilité le laisserait passer.
-  const jalons = [{ t: 0, passif: 0 }];
+  // ⚠️ Chaque jalon note aussi la PRODUCTION (tap + passif) du moment.
+  // Ajout du 21/09 : c'est l'étalon des défis « Mets N pièces de côté ».
+  // Rien d'autre ne change dans le calcul.
+  const jalons = [{ t: 0, passif: 0, production: rev() }];
   while (s.totalEarned < seuil && garde++ < 20000) {
     const r = rev();
     const options = [{ cout: C.tapPowerCost(s.tapPower), appliquer: (x) => { x.tapPower += 1; } }];
@@ -2228,7 +2238,7 @@ function simulerGroupe(ascension, tapsParSec) {
     const restant = (seuil - s.totalEarned) / r;
     if (attente >= restant) { t += restant; break; }
     t += attente;
-    jalons.push({ t, passif: C.passiveRate({
+    jalons.push({ t, production: r, passif: C.passiveRate({
       autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
       sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a }) });
     s.coins += r * attente - v.cout;
@@ -2654,3 +2664,98 @@ function auditDefiInvisible() {
   return fautes;
 }
 module.exports.auditDefiInvisible = auditDefiInvisible;
+
+// ---- Une cible peut-elle REDESCENDRE dans un groupe ? ---------------
+//
+// Signalé par l'auteur le 21/09 : « les défis 15 et 35 ne sont pas
+// logiques » — « Enchaîne 140 taps » puis, plus loin, « Enchaîne 120
+// taps ». Et les pièces de côté : 90 000, 150 000, puis 25 000.
+//
+// ⚠️ CAUSE : mon outil de réordonnancement avait mélangé AU HASARD les
+// défis hors achats pour placer les achats par coût croissant. Aucun
+// contrôle ne vérifiait qu'une cible hors achats ne redescend pas : la
+// règle « une cible ne redescend jamais » n'était tenue que pour les
+// achats, par leur coût.
+//
+// Ici : pour chaque métrique d'un groupe, les cibles écrites, dans
+// l'ordre où le joueur les rencontre, ne baissent jamais. Exclus : les
+// achats (leur COÛT monte, voir auditCoutCroissant — un nombre peut
+// baisser quand chaque niveau coûte plus cher), et les défis qui
+// s'adaptent au joueur en cours de partie (taps à vie, créature +5).
+function auditCibleMonte() {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const fautes = [];
+  for (let g = 0; g < 6; g++) {
+    const vu = {};
+    D.DEFIS_ECRITS.slice(g * 7, g * 7 + 7).flat().forEach((q, k) => {
+      const m = q.metric || '';
+      if (m === 'ascension' || q.step || q.minStep) return;
+      if (Q.estDefiAchat({ metric: m }, {})) return;
+      if (vu[m] && q.target < vu[m].cible) {
+        fautes.push({ groupe: g, metric: m, defi: g * 42 + k + 1, cible: q.target,
+          avant: vu[m].cible, defiAvant: vu[m].defi, probleme: 'la cible redescend' });
+      }
+      vu[m] = { cible: q.target, defi: g * 42 + k + 1 };
+    });
+  }
+  return fautes;
+}
+module.exports.auditCibleMonte = auditCibleMonte;
+
+// ---- Les durées restent-elles proches des CIBLES de l'auteur ? -------
+//
+// Règle de l'auteur (20/09) : 2,8 / 3,5 / 5 / 6,5 / 8 / 10 h par
+// Ascension, au tap à la main. `auditDureeCroissante` vérifie seulement
+// qu'elles MONTENT, avec une marge.
+//
+// ⚠️ TROUVÉ LE 21/09 par le contrôle « 100 % » : en étendant une hausse
+// de prix à tous les générateurs, l'A1 est tombée de 3,4 h à 2,7 h — sous
+// l'A0 — et l'A2 de 5,0 h à 3,4 h. Aucun contrôle ne l'a bloqué : une
+// baisse de 3 % passait la marge de « croissante », et rien ne comparait
+// aux cibles. Tolérance : ±15 %.
+const DUREES_CIBLES = [2.8, 3.5, 5, 6.5, 8, 10];
+function auditDureeCible(tolerance = 0.15) {
+  const fautes = [];
+  DUREES_CIBLES.forEach((cibleH, g) => {
+    const h = simulerGroupe(g).heures;
+    if (Math.abs(h - cibleH) > cibleH * tolerance) {
+      fautes.push({ groupe: g, heures: +h.toFixed(1), cible: cibleH,
+        ecart: Math.round(100 * (h - cibleH) / cibleH) + ' %' });
+    }
+  });
+  return fautes;
+}
+module.exports.auditDureeCible = auditDureeCible;
+
+// ---- La majoration des premiers prix vise-t-elle les bons générateurs ?
+//
+// Demande de l'auteur (21/09) : +35 % sur les 3 premiers exemplaires des
+// générateurs que chaque Ascension demande. La liste vit dans le moteur
+// (`GENERATEURS_MAJORES_PAR_ASCENSION`) ; elle doit correspondre aux
+// défis ÉCRITS — si un défi change de générateur, la majoration doit
+// suivre. Et aucun prix ne redescend d'un exemplaire au suivant.
+function auditMajorationPrix() {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const fautes = [];
+  for (let g = 0; g < 6; g++) {
+    const demandes = new Set();
+    D.DEFIS_ECRITS.slice(g * 7, g * 7 + 7).flat().forEach((q) => {
+      if ((q.metric || '').startsWith('auto:')) demandes.add(q.metric.slice(5));
+    });
+    const majores = new Set(C.GENERATEURS_MAJORES_PAR_ASCENSION[g] || []);
+    const manque = [...demandes].filter((x) => !majores.has(x));
+    const enTrop = [...majores].filter((x) => !demandes.has(x));
+    if (manque.length || enTrop.length) fautes.push({ groupe: g, nonMajores: manque, majoresSansDefi: enTrop });
+    C.AUTOCLICKERS.forEach((it) => {
+      for (let n = 0; n < 8; n++) {
+        if (C.autoClickerCost(it, n + 1, g) < C.autoClickerCost(it, n, g)) {
+          fautes.push({ groupe: g, generateur: it.id, exemplaire: n + 2, probleme: 'le prix redescend' });
+        }
+      }
+    });
+  }
+  return fautes;
+}
+module.exports.auditMajorationPrix = auditMajorationPrix;
