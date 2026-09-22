@@ -767,37 +767,40 @@ export const OFFLINE_CAP_SECONDS = 2 * 3600;
 // taux. À 25 %, une session hors ligne revient à ~15-25 % du seuil.
 export const OFFLINE_RATE = 0.25;
 
-// ⚠️⚠️ HORS LIGNE : DEUX HEURES D'ABSENCE VALENT DIX MINUTES DE JEU.
+// ⚠️⚠️ HORS LIGNE — LE CALCUL STANDARD DES IDLE GAMES (21/09).
 //
-// Règle de l'auteur du 21/09 : « farmer au tap doit être équilibré avec
-// le fait de farmer les gains hors ligne, sinon c'est trop facile ».
-// Jouer doit rester nettement plus rentable que laisser tourner — ici
-// douze fois plus.
+//     gain = production des AUTOCLICKERS × 25 % × temps d'absence
+//            plafonné à 2 heures, SANS plancher.
 //
-// Le gain se cale sur la PRODUCTION ACTIVE du joueur (tap + passif) au
-// moment où il part, pas sur son seul passif :
-//   - le passif seul valait moins d'UNE minute de jeu pour 2 h
-//     d'absence, sur presque tous les groupes ;
-//   - caler sur l'actif rend le hors ligne indépendant de la force des
-//     autoclickers, qui peuvent donc être renforcés sans le rendre
-//     abusif. Les deux réglages sont séparés.
+// Vérifié chez Cookie Clicker, Idle Miner Tycoon et AdVenture
+// Capitalist : le pourcentage varie énormément selon le jeu (de 5 % à
+// 100 %), mais UNE constante vaut chez tous — le hors ligne ne compte
+// que la production AUTOMATIQUE, jamais le tap. L'auteur préfère ce
+// calcul reconnu.
 //
-// ⚠️⚠️ PLUS AUCUN PLANCHER EN PART DU SEUIL. La version du 20/09 versait
-// au moins 3 % du seuil QUEL QUE SOIT le revenu du joueur. L'auteur est
-// passé de 337 pièces/s à 1,5 MILLIARD de gain en une nuit, soit 2 500
-// fois ce qu'il avait réellement produit. Un plancher en part du seuil
-// fabrique de l'argent à partir de rien, et d'autant plus que le seuil
-// est haut. Le joueur ne reçoit plus jamais plus que dix minutes de sa
-// propre production.
-export const OFFLINE_EQUIVALENT_ACTIF_SEC = 10 * 60;
-
-// `productionActiveParSec` : ce que le joueur gagne en jouant (tap au
-// rythme humain + passif). `secondesEcoulees` : temps d'absence, plafonné
-// à OFFLINE_CAP_SECONDS.
-export function offlineEarnings(productionActiveParSec, secondesEcoulees) {
-  const capped = Math.max(0, Math.min(secondesEcoulees, OFFLINE_CAP_SECONDS));
-  const partDuTemps = capped / OFFLINE_CAP_SECONDS;
-  return Math.floor(Math.max(0, productionActiveParSec) * OFFLINE_EQUIVALENT_ACTIF_SEC * partDuTemps);
+// ⚠️ La règle précédente (« dix minutes de jeu actif ») incluait le tap :
+// aucun jeu de référence ne fait ça. Elle est abandonnée.
+//
+// ⚠️⚠️ JAMAIS DE PLANCHER EN PART DU SEUIL. Celui du 20/09 a versé 1,5
+// milliard à un joueur qui produisait 337 pièces par seconde.
+//
+// ⚠️⚠️ CETTE FONCTION REND TOUJOURS UN ENTIER FINI, POSITIF OU NUL.
+// Son résultat s'ajoute à `totalEarned`, qui décide de l'Ascension :
+//     ascensionReady = totalEarned >= seuil
+// Un seul `NaN` renvoyé ici rendrait `totalEarned` égal à `NaN` pour
+// toujours — il est sauvegardé — et `NaN >= seuil` étant toujours FAUX,
+// le joueur ne pourrait PLUS JAMAIS ascensionner, sans le moindre
+// message d'erreur. L'auteur ne peut pas vérifier ce cas lui-même :
+// c'est à cette fonction de ne jamais le produire. Toute entrée
+// douteuse — absente, négative, infinie, non numérique — rend 0.
+export function offlineEarnings(passifParSec, secondesEcoulees) {
+  const passif = Number(passifParSec);
+  const secondes = Number(secondesEcoulees);
+  if (!Number.isFinite(passif) || passif <= 0) return 0;
+  if (!Number.isFinite(secondes) || secondes <= 0) return 0;
+  const plafonne = Math.min(secondes, OFFLINE_CAP_SECONDS);
+  const gain = Math.floor(passif * plafonne * OFFLINE_RATE);
+  return Number.isFinite(gain) && gain > 0 ? gain : 0;
 }
 
 // ---- Garde-fou contre le changement d'heure du téléphone ----

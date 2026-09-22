@@ -105,9 +105,6 @@ import {
   QUEST_DEFS_VERSION,
   peutEtreRemplace,
 } from '../../games/clicker/questLogic';
-// ⚠️ Rythme de tap HUMAIN (sans autoclicker) : sert à estimer la
-// production active au moment du départ, pour le calcul du hors ligne.
-import { HUMAN_TAPS_PER_SEC } from '../../games/clicker/questBudget';
 import {
   combatStatsForCreatureTyped,
   GUARDIAN_CREATURE,
@@ -950,17 +947,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             offline: true,
             veilleurLevel: savedVeilleur,
           });
-          // ⚠️ Le hors ligne se cale sur la production ACTIVE (tap au
-          // rythme humain + passif), pas sur le passif seul — voir
-          // `offlineEarnings`. Deux heures d'absence valent dix minutes de
-          // jeu : jouer reste douze fois plus rentable que laisser tourner.
-          const tapAuChargement = (tapDamage(saved.tapPower || 1)
-            + tapUpgradeBonus(saved.tapUpgrades || {}))
-            * HUMAN_TAPS_PER_SEC * ascensionSpeedMultiplier(ascensionAuChargement);
-          const offline = Math.round(offlineEarnings(
-            offlineIncome + tapAuChargement, elapsed));
-          setCoins((saved.coins || 0) + offline);
-          setTotalEarned((saved.totalEarned || 0) + offline);
+          // ⚠️ Hors ligne : production des AUTOCLICKERS seule, à 25 %,
+          // plafonnée à 2 h — le calcul standard des idle games. Le tap
+          // n'y entre pas.
+          const offline = offlineEarnings(offlineIncome, elapsed);
+          // ⚠️⚠️ La somme est bornée à un nombre FINI. `totalEarned` décide
+          // de l'Ascension : s'il devenait NaN ou infini, il serait
+          // sauvegardé ainsi, et le joueur ne pourrait plus jamais
+          // ascensionner. `offlineEarnings` rend déjà un entier sûr ; on
+          // protège aussi la valeur SAUVEGARDÉE, qui peut venir d'une
+          // version antérieure.
+          const sur = (v) => (Number.isFinite(v) && v > 0 ? v : 0);
+          setCoins(sur(saved.coins) + offline);
+          setTotalEarned(sur(saved.totalEarned) + offline);
           // Compte rendu montré au joueur. Seuil à 1 pièce : inutile de
           // l'interrompre pour un gain nul (session très courte, ou
           // horloge reculée).

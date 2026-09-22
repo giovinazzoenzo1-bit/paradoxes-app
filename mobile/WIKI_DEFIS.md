@@ -61,7 +61,8 @@ payée.
 | Aucun défi ne **précède le déblocage** de son sujet | 20/09 |
 | Le **seuil se déduit du coût** des défis, pas l'inverse | 20/09 |
 | Durées visées : **2,8 / 3,5 / 5 / 6,5 / 8 / 10 h** au tap à la main | 20/09 |
-| Hors ligne : **2 h d'absence = 10 min de jeu actif**, jamais plus | 21/09 |
+| Hors ligne **standard** : autoclickers × 25 % × temps, 2 h max, **sans plancher** | 21/09 |
+| Toute valeur qui décide de l'Ascension doit rester un **nombre fini** | 21/09 |
 | Toute mesure passe par **`simulerGroupe`**, jamais une simulation à part | 20/09 |
 | Une cible ÉCRITE (`fige: true`) ne se recalcule jamais | 20/09 |
 | Le **document est régénéré** après tout changement de défi | 20/09 |
@@ -205,27 +206,34 @@ rendait le jeu sept fois plus rapide qu'il ne l'est.
 ⚠️ **Un contrôle qui mesure avec son propre instrument ne contrôle que
 lui-même.** Ne jamais recoder une simulation à côté : appeler celle-ci.
 
-### 🌙 Le hors ligne : 2 h d'absence = 10 min de jeu
+### 🌙 Le hors ligne : le calcul standard des idle games
 
-**Règle de l'auteur (21/09) :** farmer au tap doit rester nettement plus
-rentable que laisser tourner. Deux heures d'absence valent dix minutes
-de production active — jouer est donc **douze fois plus rentable**.
+```
+gain = production des AUTOCLICKERS × 25 % × temps d'absence
+       plafonné à 2 heures, sans plancher
+```
 
-Le gain se cale sur la **production active** (tap au rythme humain +
-passif) au moment du départ, au prorata du temps, plafonné à 2 h.
+**Vérifié le 21/09** chez Cookie Clicker (5 % pendant 1 h au départ,
+jusqu'à 91 % une fois tout amélioré), Idle Miner Tycoon (~10 %, doublable
+par une pub) et AdVenture Capitalist (100 % avec les managers). **Le
+pourcentage varie énormément ; une seule constante vaut chez tous : le
+hors ligne ne compte que la production AUTOMATIQUE, jamais le tap.**
 
-⚠️⚠️ **JAMAIS DE PLANCHER EN PART DU SEUIL.** Le 20/09 j'en avais posé un
-(« au moins 3 % du seuil »), pour atteindre une cible de 3-5 %. Il
-versait de l'argent que le joueur n'avait **jamais produit** : l'auteur
-est passé de 337 pièces/s à **1,5 milliard en une nuit**, 2 500 fois sa
-vraie production. Plus le seuil est haut, plus le cadeau est énorme.
+⚠️ J'avais affirmé le 19/09 que « la plupart font 25 % sur 2 h » sans
+l'avoir vérifié. Faux : il n'y a pas de pourcentage standard. Le 25 % est
+un choix, au milieu de la fourchette.
 
-➡️ **Une cible en part du seuil ne dit rien de ce que le joueur mérite.**
-Le hors ligne ne verse jamais plus que dix minutes de SA production.
+⚠️⚠️ **JAMAIS DE PLANCHER EN PART DU SEUIL.** Le 20/09 j'en avais posé un :
+il a versé 1,5 milliard à un joueur qui produisait 337 pièces/s.
 
-⚠️ **Caler sur l'actif, pas sur le passif**, sépare deux réglages : on peut
-renforcer les autoclickers sans rendre le hors ligne abusif. Calé sur le
-passif seul, deux heures d'absence valaient moins d'une minute de jeu.
+⚠️⚠️ **LE RISQUE CACHÉ : BLOQUER L'ASCENSION POUR TOUJOURS.** Le gain
+s'ajoute à `totalEarned`, qui décide de l'Ascension. Un seul `NaN` le
+rendrait `NaN` pour toujours — il est sauvegardé — et `NaN >= seuil` est
+toujours faux : le joueur ne pourrait plus jamais ascensionner, sans
+message d'erreur. **L'auteur ne peut pas vérifier ce cas lui-même.**
+`offlineEarnings` rend donc TOUJOURS un entier fini, positif ou nul ;
+`auditHorsLigne` l'attaque avec vingt entrées pourries à chaque
+contrôle.
 
 ### ⏱️ Régler la DURÉE d'un groupe
 

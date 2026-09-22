@@ -2301,42 +2301,49 @@ function simulerGroupe(ascension, tapsParSec) {
 }
 module.exports.simulerGroupe = simulerGroupe;
 
-// ---- Deux heures hors ligne valent-elles dix minutes de jeu ? -------
+// ---- Le hors ligne suit-il le calcul standard, et ne casse-t-il rien ?
 //
-// Règle de l'auteur du 21/09 : jouer doit rester nettement plus rentable
-// que laisser tourner. Deux heures d'absence = dix minutes de production
-// active, jamais plus.
+// Règle de l'auteur du 21/09, après vérification chez Cookie Clicker,
+// Idle Miner Tycoon et AdVenture Capitalist : production des
+// AUTOCLICKERS × 25 % × temps, plafonnée à 2 h, sans plancher. Le tap
+// n'y entre pas.
 //
-// ⚠️⚠️ Ce contrôle remplace celui du 20/09, qui vérifiait « 3 à 5 % du
-// seuil ». Cette cible m'avait conduit à poser un PLANCHER en part du
-// seuil — et ce plancher versait de l'argent que le joueur n'avait
-// jamais produit : 1,5 milliard pour 337 pièces/s, 2 500 fois trop.
-// Une cible en part du seuil ne dit rien de ce que le joueur mérite.
-//
-// On vérifie aussi que le gain ne dépasse JAMAIS la production réelle
-// du joueur : c'est la garantie qui manquait.
-function auditHorsLigne(tolerance = 0.02) {
+// ⚠️⚠️ LE RISQUE QUE L'AUTEUR NE PEUT PAS VÉRIFIER LUI-MÊME : le gain
+// s'ajoute à `totalEarned`, qui décide de l'Ascension. Un seul `NaN`
+// rendrait `totalEarned` égal à `NaN` pour toujours — il est sauvegardé
+// — et `NaN >= seuil` est toujours FAUX : le joueur ne pourrait plus
+// jamais ascensionner, sans aucun message. Ce contrôle ATTAQUE donc la
+// fonction avec toutes les entrées pourries possibles.
+function auditHorsLigne() {
   const fautes = [];
-  for (let a = 0; a < 6; a++) {
-    const r = simulerGroupe(a);
-    [0.25, 0.5, 0.75].forEach((f) => {
-      const j = r.jalons[Math.max(0, Math.min(r.jalons.length - 1, Math.floor(r.jalons.length * f)))];
-      if (!j) return;
-      // Production active au jalon : passif + tap humain.
-      const actif = r.production;
-      const gain = C.offlineEarnings(actif, C.OFFLINE_CAP_SECONDS);
-      const minutes = actif > 0 ? gain / actif / 60 : 0;
-      if (Math.abs(minutes - 10) > 10 * tolerance) {
-        fautes.push({ groupe: a, moment: Math.round(f * 100) + ' %', minutes: +minutes.toFixed(1) });
+  const R = C.OFFLINE_RATE, CAP = C.OFFLINE_CAP_SECONDS;
+  // 1. Le calcul standard, au cas exact signalé par l'auteur.
+  const attendu = Math.floor(337 * CAP * R);
+  if (C.offlineEarnings(337, 8 * 3600) !== attendu) {
+    fautes.push({ probleme: 'calcul non standard : 337/s une nuit ne donne pas ' + attendu });
+  }
+  // 2. Jamais plus que 25 % de 2 h de passif : pas de plancher caché.
+  [1, 50, 337, 5000, 2e6].forEach((p) => {
+    if (C.offlineEarnings(p, 30 * 86400) > p * CAP * R) {
+      fautes.push({ probleme: 'plancher caché : ' + p + '/s reçoit plus que sa production' });
+    }
+  });
+  // 3. Le tap ne compte pas : un passif nul rend zéro.
+  if (C.offlineEarnings(0, CAP) !== 0) fautes.push({ probleme: 'un passif nul rapporte quelque chose' });
+  // 4. ATTAQUE : aucune entrée ne doit produire un résultat dangereux.
+  const pourris = [undefined, null, NaN, -1, -Infinity, Infinity, '', 'abc', {}, []];
+  const bons = [337, 7200];
+  pourris.forEach((v) => {
+    [[v, bons[1]], [bons[0], v]].forEach(([p, t]) => {
+      const g = C.offlineEarnings(p, t);
+      if (!Number.isInteger(g) || g < 0 || !Number.isFinite(g)) {
+        fautes.push({ probleme: 'entrée ' + String(v) + ' -> sortie dangereuse ' + String(g) });
       }
     });
-  }
-  // ⚠️ La garantie essentielle : un joueur au passif quasi nul ne reçoit
-  // pas des milliards. On le vérifie au cas exact signalé par l'auteur.
-  const faible = C.offlineEarnings(337 + 4, 8 * 3600);
-  if (faible > 337 * 3600) {
-    fautes.push({ probleme: 'un joueur à 337/s reçoit ' + faible + ' pour une nuit' });
-  }
+  });
+  // 5. La conséquence réelle : l'Ascension reste atteignable.
+  const total = 0 + C.offlineEarnings(NaN, NaN);
+  if (!(total >= 0)) fautes.push({ probleme: "l'Ascension deviendrait impossible" });
   return fautes;
 }
 module.exports.auditHorsLigne = auditHorsLigne;
