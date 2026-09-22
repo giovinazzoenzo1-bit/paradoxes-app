@@ -42,6 +42,8 @@ const CONTROLES = [
   ['auditHorsLigne', 'hors ligne standard, et aucune entrée ne bloque l Ascension'],
   ['auditFaisableAuMoment', 'un défi est faisable AU MOMENT où il arrive'],
   ['auditSignalement', 'le signalement marche et le filet de sécurité tient'],
+  ['auditLibelleMode', 'le libellé dit ce que le défi mesure (Achète = delta)'],
+  ['auditCibleBudget', 'le calculateur selon le budget ne bloque jamais un œuf'],
   ['auditDocConforme', 'le document remis à l auteur correspond au jeu'],
   ['auditDefisEcrits', 'le fichier des 252 défis est cohérent et fait foi'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],

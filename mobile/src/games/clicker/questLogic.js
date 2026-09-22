@@ -30,6 +30,7 @@ import {
   coreUpgradeUnlocked,
   critChance,
   critUpgradeCost,
+  critDamageUpgradeCost,
   normalizeTapUpgrades,
   normalizeUpgradeLevels,
   sanctuaryUpgradeCost,
@@ -388,6 +389,116 @@ export function metriqueDuDefi(quest, stats) {
 // créature. Elle est bornée : elle ne peut que RÉDUIRE la demande,
 // jamais l'augmenter. Un joueur en retard voit donc toujours la cible
 // annoncée dans le document.
+// ⚠️⚠️ CALCULATEUR D'ACHATS SELON LE BUDGET (21/09).
+//
+// Le problème, signalé par l'auteur sur le défi « Achète 4 niveaux de
+// Dégâts critiques » : « j'avais déjà acheté 3 critiques avant que le
+// défi apparaisse, et il m'a demandé d'en acheter 4 EN PLUS. Assez
+// compliqué pour un début de partie. » Même chose sur « Achète 3 Esprits
+// Frappeurs » avec 5 Esprits déjà possédés.
+//
+// Chaque niveau coûte PLUS que le précédent (×1,6 pour la Faveur, ×2
+// pour le Pacte, ×1,25 pour un générateur). Le défi avait été calibré en
+// supposant que le joueur n'en avait pas encore : acheter les niveaux 4
+// à 7 coûte bien plus que les niveaux 0 à 3 prévus.
+//
+// LA RÈGLE — ce que l'auteur demande, « sans réduire le total d'achat » :
+// ce qui reste CONSTANT, c'est le COÛT prévu du défi, pas le nombre de
+// niveaux. On calcule ce que le défi aurait coûté au joueur prévu, puis
+// combien de niveaux ce même montant achète au joueur RÉEL, depuis son
+// niveau actuel. Le joueur en avance en achète moins ; il dépense autant.
+//
+// ⚠️⚠️ GARANTIES, parce qu'une erreur ici bloquerait un œuf :
+//   - la cible ne MONTE jamais au-dessus de celle écrite (un joueur en
+//     retard voit exactement le défi du document) ;
+//   - elle ne descend jamais sous 1 ;
+//   - elle est toujours un ENTIER FINI ; au moindre calcul douteux, on
+//     rend la cible écrite, telle quelle.
+// Seuls les achats SANS niveau maximum sont adaptés — Pacte, Faveur,
+// Dégâts critiques, générateurs, paliers de tap : un niveau de plus est
+// toujours achetable, donc la cible adaptée l'est aussi. Le Sanctuaire et
+// le Veilleur plafonnent à 50 : ils gardent « monte au niveau N ».
+const METRIQUES_ACHAT_ADAPTABLES = ['tapPower', 'critLevel', 'critDamageLevel'];
+
+export function estAchatAdaptable(metric) {
+  const m = metric || '';
+  return m.startsWith('auto:') || m.startsWith('tapUpgrade:')
+    || METRIQUES_ACHAT_ADAPTABLES.includes(m);
+}
+
+// Niveau de départ après une Ascension : le Pacte repart de 1, tout le
+// reste de 0.
+export function niveauDeBase(metric) {
+  return metric === 'tapPower' ? 1 : 0;
+}
+
+// Coût du niveau `niveau` (le passage de `niveau` à `niveau + 1`).
+// ⚠️ UNE SEULE fonction pour le jeu ET les contrôles. Deux calculs de
+// coût qui divergent, c'est deux instruments qui ne partagent pas leur
+// état — le piège qui a déjà coûté le plus cher sur ce projet.
+export function coutNiveauAchat(metric, niveau, ascension) {
+  const m = metric || '';
+  const n = Math.max(0, Math.floor(Number(niveau) || 0));
+  const a = Math.max(0, Math.floor(Number(ascension) || 0));
+  if (m.startsWith('auto:')) {
+    const it = AUTOCLICKERS.find((x) => x.id === m.slice(5));
+    return it ? autoClickerCost(it, n, a) : NaN;
+  }
+  if (m.startsWith('tapUpgrade:')) {
+    const it = TAP_UPGRADES.find((x) => x.id === m.slice(11));
+    return it ? tapUpgradeCost(it, n, a) : NaN;
+  }
+  if (m === 'tapPower') return tapPowerCost(n);
+  if (m === 'critLevel') return critUpgradeCost(n);
+  if (m === 'critDamageLevel') return critDamageUpgradeCost(n);
+  return NaN;
+}
+
+// Niveau PRÉVU juste avant ce défi : le niveau de base, plus tout ce que
+// les défis PRÉCÉDENTS du même groupe font acheter du même article. C'est
+// l'hypothèse sur laquelle le coût du défi a été calibré.
+export function niveauPrevuAvant(quest) {
+  if (!quest || !quest.id) return 0;
+  const idx = DEFIS_ECRITS.findIndex((oeuf) => oeuf.some((q) => q.id === quest.id));
+  if (idx < 0) return niveauDeBase(quest.metric);
+  const debut = idx - (idx % OEUFS_PAR_ASCENSION);
+  let niveau = niveauDeBase(quest.metric);
+  for (let i = debut; i <= idx; i++) {
+    for (const q of DEFIS_ECRITS[i]) {
+      if (q.id === quest.id) return niveau;
+      if (q.metric === quest.metric && q.mode === 'delta') niveau += q.target || 0;
+    }
+  }
+  return niveau;
+}
+
+export function cibleSelonBudget(quest, stats, cibleEcrite) {
+  const ecrite = Math.max(1, Math.floor(Number(cibleEcrite) || (quest && quest.target) || 1));
+  try {
+    const metric = quest && quest.metric;
+    if (!quest || quest.mode !== 'delta' || !estAchatAdaptable(metric)) return ecrite;
+    const asc = (stats && stats.ascension) || 0;
+    const avant = niveauPrevuAvant(quest);
+    let prevu = 0;
+    for (let i = avant; i < avant + ecrite; i++) prevu += coutNiveauAchat(metric, i, asc);
+    const reel = Math.max(0, Math.floor(readMetric(metric, stats || {})));
+    if (!Number.isFinite(prevu) || prevu <= 0 || !Number.isFinite(reel)) return ecrite;
+    let n = 0;
+    let depense = 0;
+    while (n < ecrite) {
+      const c = coutNiveauAchat(metric, reel + n, asc);
+      if (!Number.isFinite(c) || c <= 0) return ecrite;
+      if (depense + c > prevu * 1.0001) break;
+      depense += c;
+      n += 1;
+    }
+    const cible = Math.max(1, Math.min(ecrite, n));
+    return Number.isInteger(cible) ? cible : ecrite;
+  } catch (e) {
+    return ecrite;
+  }
+}
+
 export function plafondAchatsGroupe(metric, stats) {
   // ⚠️ On somme les défis ÉCRITS du GROUPE du joueur, pas les anciens
   // modèles. Après la bascule, `QUEST_SEQUENCE` ne décrit plus ce que le
@@ -473,13 +584,17 @@ export function resolveQuestTarget(quest, stats) {
     // « Cible finale » veut dire « ne pas remettre d'échelle », pas
     // « ne rien adapter » : la réduction pour un joueur en avance reste
     // légitime, puisqu'elle ne peut que DIMINUER la demande.
-    if (quest.fige && !mAchat.startsWith('auto:')
-      && !mAchat.startsWith('tapUpgrade:')) return quest.target;
-    if (quest.mode === 'delta'
-      && (mAchat.startsWith('auto:') || mAchat.startsWith('tapUpgrade:'))) {
+    const adaptable = quest.mode === 'delta' && estAchatAdaptable(mAchat);
+    if (quest.fige && !adaptable) return quest.target;
+    if (adaptable) {
+      // Deux garde-fous, on retient le plus bas : le COÛT prévu du défi
+      // (voir `cibleSelonBudget`) et le TOTAL que le groupe réclame (voir
+      // `plafondAchatsGroupe`). Chacun ne peut que réduire la demande.
+      const parBudget = cibleSelonBudget(quest, stats, brute);
       const plafond = plafondAchatsGroupe(mAchat, stats);
-      const restant = Math.max(1, plafond - readMetric(mAchat, stats));
-      return Math.min(brute, restant);
+      const restant = plafond > 0 ? Math.max(1, plafond - readMetric(mAchat, stats)) : parBudget;
+      const cible = Math.min(parBudget, restant);
+      return Number.isInteger(cible) && cible >= 1 ? cible : Math.max(1, Math.floor(brute) || 1);
     }
     if (quest.mode !== 'absolute') return brute;
     // Record remis à zéro au tirage : la cible est la cible, point.

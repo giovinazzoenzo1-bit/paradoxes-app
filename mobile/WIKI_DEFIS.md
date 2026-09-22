@@ -43,6 +43,14 @@ payée.
 | Le **deuxième défi du jeu est le Pacte** — départ du tuto | 20/09 |
 | Jamais deux défis de la **même métrique** dans le même œuf | 20/09 |
 | Un défi doit être **faisable au moment où il ARRIVE**, pas en fin de groupe | 21/09 |
+| Pacte, Faveur, Dégâts critiques : **« Achète N »** (delta). Sanctuaire et Veilleur : « au niveau N » (ils plafonnent) | 21/09 |
+| Le texte et le mode disent la même chose : **« Achète » = delta, « au niveau » = absolu** | 21/09 |
+| Un défi d'achat s'adapte au **niveau réel** du joueur : même COÛT, jamais plus que la cible écrite, jamais moins de 1 | 21/09 |
+| Un défi de **record** (Transe, taps d'affilée) ne se valide que lorsqu'il est **affiché** | 21/09 |
+| Les taps d'affilée comptent **depuis l'apparition du défi**, pas depuis le début de la série | 21/09 |
+| La 2ᵉ Transe d'un groupe n'est **jamais plus courte** que la 1re | 21/09 |
+| L'**œuf 1 de l'Ascension 0** est fixé par l'auteur : il échappe à l'ordre des coûts | 21/09 |
+| Le mini-boss s'annonce : **« ⚠️ Attention, boss en approche » 3 · 2 · 1** | 21/09 |
 | Deux défis de passif par groupe : **facile à l'œuf 2, exigeant à l'œuf 6** | 21/09 |
 | Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
 | Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
@@ -288,6 +296,54 @@ hauts aux dernières Ascensions.
 ⚠️ **Un libellé ne doit jamais écrire son nombre en dur.** La cible du
 défi valait 10 et le texte disait encore « 29 000 » : le joueur aurait
 lu un défi impossible pour un défi à sa portée.
+
+### 💰 Le calculateur selon le budget
+
+**Le problème** (21/09) : « j'avais déjà acheté 3 critiques avant que le
+défi apparaisse, et il m'a demandé d'en acheter 4 EN PLUS ». Chaque
+niveau coûte plus cher que le précédent : le défi, calibré pour un
+joueur qui n'en avait pas, devenait bien plus coûteux que prévu.
+
+**La règle** : c'est le **coût** du défi qui reste constant, pas le
+nombre de niveaux. On calcule ce que le défi aurait coûté au joueur
+prévu, puis combien de niveaux ce montant achète au joueur réel.
+
+| Défi 6 — Achète 4 Dégâts critiques | |
+|---|---|
+| tu en as 0 | Achète **4** |
+| tu en as 3 | Achète **1** |
+
+| Défi — Achète 3 Esprits Frappeurs | |
+|---|---|
+| tu en as 0 | Achète **3** |
+| tu en as 5 | Achète **1** |
+
+⚠️⚠️ **Garanties**, vérifiées par `auditCibleBudget` sur chacun des 252
+défis, à douze niveaux et avec des états pourris : un entier entre 1 et
+la cible écrite ; jamais plus que la cible écrite ; plus le joueur est
+avancé, moins on lui demande. Une cible fausse ici bloquerait un œuf
+pour toujours — la séquence ne remplace plus aucun défi.
+
+Seuls les achats **sans niveau maximum** sont adaptés. Le Sanctuaire et
+le Veilleur plafonnent : ils gardent « monte au niveau N ».
+
+### ⚠️ Régénérer `defisEcrits.js` : ne JAMAIS sérialiser un libellé
+
+Le 21/09, un outil a réécrit le fichier en recopiant `String(q.label)`
+depuis le module CHARGÉ — c'est-à-dire le code **après** sa
+transformation par Babel. `fmtQ` est devenu `(0, _questFormat.fmtQ)`,
+un nom qui n'existe pas dans l'app : **chaque défi de revenu passif
+aurait planté à l'affichage**. La compilation passait — le code est
+syntaxiquement valide.
+
+➡️ On modifie **le texte source**, ligne par ligne. Le module chargé sert
+à CALCULER, jamais à ÉCRIRE. `auditDefisEcrits` refuse toute trace de
+code transformé et exécute chaque libellé.
+
+⚠️ Un outil de réordonnancement doit lire les définitions **du moteur**
+(`estDefiAchat`, `familleDe`, `plafondFamille`) : ma première version
+recopiait sa propre idée d'un « achat », oubliait le Sanctuaire et le
+Veilleur, et collait des achats les uns aux autres.
 
 ### 🧮 Le calculateur d'achats
 

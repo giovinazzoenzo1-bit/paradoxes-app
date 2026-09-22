@@ -608,7 +608,9 @@ function auditModes() {
     // Le mode delta est donc le BON mode pour un achat. L'interdiction
     // visait les métriques d'état comme `coins`, où « gagner 100 de
     // plus » n'a pas de sens stable.
-    if (m.startsWith('auto:') || m.startsWith('tapUpgrade:')) return;
+    // Tout achat SANS niveau maximum est un « Achète N » légitime en
+    // delta — Pacte, Faveur et Dégâts critiques compris depuis le 21/09.
+    if (Q.estAchatAdaptable(m)) return;
     if (METRIQUES_D_ETAT.includes(m) || m.startsWith('auto:')
       || m.startsWith('upgrade:') || m.startsWith('tapUpgrade:')) {
       suspects.push({ id: q.id, metric: m, pourquoi: "métrique d'ÉTAT en mode delta" });
@@ -1284,7 +1286,7 @@ function auditCibleSuitLeJoueur() {
     // déjà ce que le groupe réclame. L'adaptation est BORNÉE — elle ne
     // peut que réduire, jamais augmenter — donc un joueur en retard voit
     // toujours la cible annoncée dans le document.
-    if (q.mode === 'delta' && /^(auto:|tapUpgrade:)/.test(
+    if (q.mode === 'delta' && Q.estAchatAdaptable(
       Q.metriqueDuDefi(q, { ascension: 0 }) || '')) return;
     [0, 1, 3].forEach((g) => {
       const a = Q.resolveQuestTarget(q, faible(g));
@@ -1806,9 +1808,37 @@ function auditDefisEcrits() {
   let D;
   try { D = load('defisEcrits'); } catch (e) { return [{ probleme: 'fichier absent' }]; }
   const fautes = [];
+  // ⚠️⚠️ AUCUNE TRACE DE CODE TRANSFORMÉ DANS LA SOURCE.
+  //
+  // Bug du 21/09 : en regénérant ce fichier, un outil a recopié le code
+  // des libellés APRÈS sa transformation par Babel. `fmtQ` est devenu
+  // `(0, _questFormat.fmtQ)` — un nom qui n'existe pas dans l'app, Babel
+  // renommant l'import quand il voit ce nom déjà pris. Chaque défi de
+  // revenu passif aurait planté À L'AFFICHAGE, et la compilation passait
+  // quand même : le code est syntaxiquement valide.
+  //
+  // ⚠️ Ne JAMAIS regénérer ce fichier en sérialisant `String(q.label)`
+  // d'un module chargé : c'est le code transformé. Partir du texte
+  // source.
+  const source = require('fs').readFileSync(
+    require('path').join(__dirname, '../src/games/clicker/defisEcrits.js'), 'utf8');
+  const traces = source.match(/\(0, _\w+|_interopRequire\w*|_questFormat/g);
+  if (traces) fautes.push({ probleme: traces.length + ' trace(s) de code transformé : ' + traces[0] });
   const vus = new Set();
   D.DEFIS_ECRITS.forEach((oeuf, i) => {
     if (oeuf.length !== 6) fautes.push({ oeuf: i + 1, probleme: oeuf.length + ' défis au lieu de 6' });
+    // Chaque libellé doit s'EXÉCUTER — un nom introuvable ne se voit pas
+    // à la compilation, seulement à l'affichage.
+    oeuf.forEach((q) => {
+      [1, 2, 7, q.target].forEach((t) => {
+        try {
+          const x = q.label(t);
+          if (typeof x !== 'string' || !x.trim()) fautes.push({ oeuf: i + 1, probleme: 'libellé vide : ' + q.id });
+        } catch (err) {
+          fautes.push({ oeuf: i + 1, probleme: 'libellé qui PLANTE (' + q.id + ') : ' + err.message });
+        }
+      });
+    });
     oeuf.forEach((q) => {
       if (vus.has(q.id)) fautes.push({ oeuf: i + 1, probleme: 'identifiant en double : ' + q.id });
       vus.add(q.id);
@@ -1872,23 +1902,25 @@ function auditCoutCroissant(tolerance = 0.5) {
         if (!estAuto && !estTap && !NIVEAUX.includes(m)) return;
         const item = estAuto ? C.AUTOCLICKERS.find((x) => x.id === m.slice(5))
           : estTap ? C.TAP_UPGRADES.find((x) => x.id === m.slice(11)) : null;
-        const deja = possede[m] || 0;
+        // ⚠️ Niveau de départ réel : le Pacte repart de 1, pas de 0.
+        const deja = possede[m] !== undefined ? possede[m] : Q.niveauDeBase(m);
         // En mode delta la cible est un NOMBRE D'ACHATS ; en absolu,
         // c'est un niveau à atteindre depuis ce qu'on a déjà.
         const aAcheter = q.mode === 'delta' ? q.target : Math.max(0, q.target - deja);
         let cout = 0;
         for (let n = deja; n < deja + aAcheter; n++) {
-          if (estAuto) cout += C.autoClickerCost(item, n, groupe);
-          else if (estTap) cout += C.tapUpgradeCost(item, n, groupe);
-          else if (m === 'tapPower') cout += C.tapPowerCost(n);
-          else if (m === 'critLevel') cout += C.critUpgradeCost(n);
-          else if (m === 'critDamageLevel') cout += C.critDamageUpgradeCost(n);
-          else if (m === 'sanctuaryLevel') cout += C.sanctuaryUpgradeCost(n);
+          // ⚠️ LA fonction de coût du moteur, pas une copie.
+          if (m === 'sanctuaryLevel') cout += C.sanctuaryUpgradeCost(n);
           else if (m === 'veilleurLevel') cout += C.veilleurUpgradeCost(n);
+          else cout += Q.coutNiveauAchat(m, n, groupe);
         }
         possede[m] = deja + aAcheter;
         if (cout <= 0) return;
-        if (precedent && cout < precedent.cout * (1 - tolerance)) {
+        // ⚠️ L'ŒUF 1 DE L'ASCENSION 0 EST EXEMPTÉ. C'est le tutoriel, et
+        // l'auteur y a fixé chaque défi à sa place (« 2 = Pacte, 4 =
+        // Faveur 7 »). L'ordre des coûts y cède à l'ordre pédagogique.
+        const tutoriel = groupe === 0 && e === 0;
+        if (!tutoriel && precedent && cout < precedent.cout * (1 - tolerance)) {
           fautes.push({ groupe, defi: numero, texte: q.label(q.target),
             cout: Math.round(cout), avant: precedent.defi,
             coutAvant: Math.round(precedent.cout) });
@@ -1927,21 +1959,15 @@ function auditBudgetGroupe(min = 0.80, max = 1.00) {
     for (let e = 0; e < 7; e++) {
       (D.DEFIS_ECRITS[g * 7 + e] || []).forEach((q) => {
         const m = q.metric || '';
-        const auto = m.startsWith('auto:');
-        const tap = m.startsWith('tapUpgrade:');
-        if (!auto && !tap && !NIV.includes(m)) return;
-        const it = auto ? C.AUTOCLICKERS.find((x) => x.id === m.slice(5))
-          : tap ? C.TAP_UPGRADES.find((x) => x.id === m.slice(11)) : null;
-        const deja = possede[m] || 0;
+        // ⚠️ LA fonction de coût du moteur — jamais une copie. Un contrôle
+        // qui calcule ses coûts à sa façon mesure autre chose que le jeu.
+        if (!NIV.includes(m) && !m.startsWith('auto:') && !m.startsWith('tapUpgrade:')) return;
+        const deja = possede[m] !== undefined ? possede[m] : Q.niveauDeBase(m);
         const n = q.mode === 'delta' ? q.target : Math.max(0, q.target - deja);
         for (let i = deja; i < deja + n; i++) {
-          if (auto) total += C.autoClickerCost(it, i, g);
-          else if (tap) total += C.tapUpgradeCost(it, i, g);
-          else if (m === 'tapPower') total += C.tapPowerCost(i);
-          else if (m === 'critLevel') total += C.critUpgradeCost(i);
-          else if (m === 'critDamageLevel') total += C.critDamageUpgradeCost(i);
-          else if (m === 'sanctuaryLevel') total += C.sanctuaryUpgradeCost(i);
-          else total += C.veilleurUpgradeCost(i);
+          total += (m === 'sanctuaryLevel') ? C.sanctuaryUpgradeCost(i)
+            : (m === 'veilleurLevel') ? C.veilleurUpgradeCost(i)
+            : Q.coutNiveauAchat(m, i, g);
         }
         possede[m] = deja + n;
       });
@@ -2539,3 +2565,91 @@ function auditSignalement() {
   return fautes;
 }
 module.exports.auditSignalement = auditSignalement;
+
+
+// ---- Le libellé dit-il ce que le défi mesure vraiment ? -------------
+//
+// Bug réel du 21/09, sur les défis 2 et 8 : « Achète 4 niveaux de
+// Pacte » était réglé en mode ABSOLU, c'est-à-dire « atteins le niveau
+// 4 ». Le texte mentait. Et le défi 8, « Achète 6 niveaux de Pacte »,
+// voulait dire « atteins le niveau 6 » : déjà rempli par tout joueur
+// ayant dépassé ce niveau pendant l'œuf 1 — il n'apparaissait jamais.
+// L'auteur : « il n'y a pas eu le défi, peut-être mauvais calcul du
+// défi précédent ».
+//
+// LA RÈGLE : « Achète N » compte ce qu'on achète À PARTIR DE MAINTENANT
+// (delta) ; « au niveau N » est un niveau à atteindre (absolu). Le mot
+// et le mode doivent dire la même chose.
+function auditLibelleMode() {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const fautes = [];
+  D.DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((q) => {
+    const texte = q.label(q.target);
+    if (/^Ach[eè]te/.test(texte) && q.mode !== 'delta') {
+      fautes.push({ oeuf: i + 1, id: q.id, texte, probleme: '« Achète » mais le défi mesure un niveau atteint' });
+    }
+    if (/au niveau/.test(texte) && q.mode !== 'absolute') {
+      fautes.push({ oeuf: i + 1, id: q.id, texte, probleme: '« au niveau » mais le défi compte des achats' });
+    }
+  }));
+  return fautes;
+}
+module.exports.auditLibelleMode = auditLibelleMode;
+
+// ---- Le calculateur selon le budget ne peut-il jamais bloquer un œuf ?
+//
+// L'auteur, le 21/09 : un système qui tienne compte du niveau du joueur
+// « sans permettre que ça puisse bugger, car ça peut être dangereux pour
+// le jeu ». Une cible fausse ici — nulle, négative, non entière,
+// infinie — rendrait un défi impossible, et comme la séquence ne
+// remplace plus aucun défi, l'œuf serait bloqué POUR TOUJOURS.
+//
+// Ce contrôle attaque `cibleSelonBudget` sur CHAQUE défi d'achat
+// adaptable des 252, à des dizaines de niveaux, et avec des états
+// pourris. Il vérifie les trois garanties promises :
+//   - toujours un ENTIER entre 1 et la cible écrite ;
+//   - jamais plus que la cible écrite, même pour un joueur en retard ;
+//   - plus le joueur est avancé, moins on lui demande — jamais plus.
+function auditCibleBudget() {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const fautes = [];
+  const nombres = [0, 1, 2, 3, 5, 8, 12, 20, 35, 60, 100, 500];
+  D.DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((q) => {
+    if (q.mode !== 'delta' || !Q.estAchatAdaptable(q.metric)) return;
+    const g = Math.floor(i / 7);
+    const etat = (n) => {
+      const s = { ascension: g, autoClickers: {}, tapUpgrades: {}, upgradeLevels: {},
+        tapPower: 1, critLevel: 0, critDamageLevel: 0 };
+      if (q.metric.startsWith('auto:')) s.autoClickers[q.metric.slice(5)] = n;
+      else if (q.metric.startsWith('tapUpgrade:')) s.tapUpgrades[q.metric.slice(11)] = n;
+      else s[q.metric] = n;
+      return s;
+    };
+    let precedente = Infinity;
+    nombres.forEach((n) => {
+      const t = Q.cibleSelonBudget(q, etat(n), q.target);
+      if (!Number.isInteger(t) || t < 1 || t > q.target) {
+        fautes.push({ id: q.id, niveau: n, probleme: 'cible hors de [1, ' + q.target + '] : ' + t });
+      }
+      if (t > precedente) fautes.push({ id: q.id, niveau: n, probleme: 'plus avancé, on demande PLUS' });
+      precedente = t;
+    });
+    // Au niveau prévu, la cible écrite est rendue telle quelle.
+    const prevu = Q.niveauPrevuAvant(q);
+    if (Q.cibleSelonBudget(q, etat(prevu), q.target) !== q.target) {
+      fautes.push({ id: q.id, probleme: 'au niveau prévu (' + prevu + '), la cible écrite n\'est pas rendue' });
+    }
+    // États pourris : jamais d'exception, toujours un entier ≥ 1.
+    [undefined, null, {}, { ascension: NaN }, etat(NaN), etat(-5), etat(Infinity)].forEach((s) => {
+      let t;
+      try { t = Q.cibleSelonBudget(q, s, q.target); } catch (e) {
+        fautes.push({ id: q.id, probleme: 'PLANTE sur un état pourri : ' + e.message }); return;
+      }
+      if (!Number.isInteger(t) || t < 1) fautes.push({ id: q.id, probleme: 'état pourri -> ' + t });
+    });
+  }));
+  return fautes;
+}
+module.exports.auditCibleBudget = auditCibleBudget;

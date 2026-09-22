@@ -349,6 +349,23 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [boss, setBoss] = useState(null);
   const bossRef = useRef(null);
   bossRef.current = boss;
+  // ⚠️ COMPTE À REBOURS avant l'apparition du boss (demande du 21/09 :
+  // « un petit compteur 3, 2, 1 avec les mots attention boss en
+  // approche »). Vaut 3, 2, 1 pendant l'annonce, `null` sinon.
+  //
+  // ⚠️ Pendant l'annonce, `boss` vaut encore `null` : sans ce drapeau, la
+  // minuterie d'apparition — qui tourne chaque seconde — relancerait une
+  // annonce par-dessus la première.
+  const [bossAnnonce, setBossAnnonce] = useState(null);
+  const bossAnnonceRef = useRef(null);
+  bossAnnonceRef.current = bossAnnonce;
+  const bossAnnonceTimersRef = useRef([]);
+  const annulerAnnonceBoss = () => {
+    bossAnnonceTimersRef.current.forEach((t) => clearTimeout(t));
+    bossAnnonceTimersRef.current = [];
+    bossAnnonceRef.current = null;
+    setBossAnnonce(null);
+  };
   const [bossResult, setBossResult] = useState(null);
   // Intervalles entre taps, pour la détection de cadence anormale.
   const bossTapTimesRef = useRef([]);
@@ -507,6 +524,26 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setBoss({ taps: 0, startedAt: null });
   };
 
+  // Annonce 3 · 2 · 1, puis apparition. Le quota horaire n'est compté
+  // qu'à l'APPARITION (dans `spawnBoss`) : une annonce annulée ne coûte
+  // rien au joueur.
+  const annoncerBoss = () => {
+    if (bossRef.current || bossAnnonceRef.current) return;
+    annulerAnnonceBoss();
+    bossAnnonceRef.current = 3;
+    setBossAnnonce(3);
+    bossAnnonceTimersRef.current = [
+      setTimeout(() => { bossAnnonceRef.current = 2; setBossAnnonce(2); }, 1000),
+      setTimeout(() => { bossAnnonceRef.current = 1; setBossAnnonce(1); }, 2000),
+      setTimeout(() => {
+        bossAnnonceTimersRef.current = [];
+        bossAnnonceRef.current = null;
+        setBossAnnonce(null);
+        if (!bossRef.current) spawnBoss();
+      }, 3000),
+    ];
+  };
+
   const addDiamondsToday = async (n) => {
     const next = diamondsTodayRef.current + n;
     diamondsTodayRef.current = next;
@@ -522,7 +559,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   useEffect(() => {
     if (view !== 'tap') return undefined;
     const id = setInterval(() => {
-      if (bossRef.current) return;
+      if (bossRef.current || bossAnnonceRef.current) return;
       bossActiveMsRef.current += 1000;
       if (canSpawnBoss({
         activeMs: bossActiveMsRef.current,
@@ -530,10 +567,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         spawnAts: bossSpawnAtsRef.current,
         now: Date.now(),
       })) {
-        spawnBoss();
+        annoncerBoss();
       }
     }, 1000);
-    return () => clearInterval(id);
+    // ⚠️ Le joueur quitte l'accueil pendant l'annonce : on l'annule. Le
+    // boss n'apparaît que sur l'accueil ; sans ça il surgirait sur un
+    // autre écran.
+    return () => { clearInterval(id); annulerAnnonceBoss(); };
   }, [view]);
 
   // Fin du combat. Au-delà du plafond, le boss rapporte des PIÈCES au
@@ -631,6 +671,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // pas à zéro au tirage.
   const [maxTapStreak, setMaxTapStreak] = useState(0);
   const maxTapStreakRef = useRef(0);
+  // Longueur de la série de taps au moment où le défi est apparu.
+  const tapStreakOffsetRef = useRef(0);
   const [goldenTarget, setGoldenTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null
   // Diamants d'Offrande posés autour de l'œuf, EN ATTENTE de ramassage.
   //
@@ -1549,10 +1591,25 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     comboCountRef.current = newCombo;
     lastTapTimeRef.current = now;
     setComboCount(newCombo);
-    // Le record de taps d'affilée suit le compteur, pas le multiplicateur.
-    if (newCombo > maxTapStreakRef.current) {
-      maxTapStreakRef.current = newCombo;
-      setMaxTapStreak(newCombo);
+    // ⚠️⚠️ Le record de taps compte DEPUIS L'APPARITION DU DÉFI, pas
+    // depuis le début de la série.
+    //
+    // Signalé le 21/09 : « le défi 7 n'apparaît pas ». Une série DÉJÀ
+    // lancée continuait de compter : 300 taps d'affilée avant le défi, et
+    // « Enchaîne 120 taps » était validé avant même d'être affiché.
+    //
+    // On retient donc la longueur de la série au moment où le défi
+    // apparaît (`tapStreakOffsetRef`), et on ne compte que ce qui vient
+    // après. Si la série s'est interrompue entre-temps — elle repart
+    // alors de 1 —, l'écart n'a plus de sens et on repart de zéro.
+    //
+    // ⚠️ On ne touche PAS à `comboCount` : c'est lui qui porte la Transe,
+    // et la remettre à zéro à chaque éclosion punirait le joueur.
+    if (newCombo <= tapStreakOffsetRef.current) tapStreakOffsetRef.current = 0;
+    const serieDuDefi = newCombo - tapStreakOffsetRef.current;
+    if (serieDuDefi > maxTapStreakRef.current) {
+      maxTapStreakRef.current = serieDuDefi;
+      setMaxTapStreak(serieDuDefi);
     }
     const newTranseMult = transeMultiplier(newCombo);
     if (newTranseMult > maxComboRef.current) {
@@ -2399,11 +2456,24 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // valeur ne le défasse plus.
   useEffect(() => {
     if (!loaded) return;
-    const atteints = activeQuestIds.filter(
-      (id) => !latchedQuestIdsRef.current.includes(id)
+    // ⚠️⚠️ UN DÉFI DE RECORD NE SE VALIDE QUE LORSQU'IL EST AFFICHÉ.
+    //
+    // Ce contrôle examine les six défis de l'œuf à chaque rendu. Un
+    // record — Transe tenue, taps d'affilée — pouvait donc être battu
+    // pendant un défi PRÉCÉDENT et le défi être validé sans jamais avoir
+    // été vu : c'est le « il n'y a pas le défi 7 » signalé le 21/09.
+    // Son record ne repart à zéro qu'au moment où il devient visible ;
+    // avant, il ne doit pas compter.
+    const RECORDS = ['maxTranseHoldSec', 'maxCombo', 'maxTapStreak'];
+    const courant = activeQuestIds.find((id) => !latchedQuestIdsRef.current.includes(id)
+      && !devReopenedIdsRef.current.includes(id)) || null;
+    const atteints = activeQuestIds.filter((id) => {
+      const q = findQuest(id);
+      if (q && RECORDS.includes(q.metric) && id !== courant) return false;
+      return !latchedQuestIdsRef.current.includes(id)
         && !devReopenedIdsRef.current.includes(id)
-        && questComplete(id, questStats, baselineFor(id), questTargets)
-    );
+        && questComplete(id, questStats, baselineFor(id), questTargets);
+    });
     if (atteints.length) {
       setLatchedQuestIds((prev) => {
         const suivant = [...prev, ...atteints];
@@ -2637,7 +2707,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (!loaded || !currentChallengeId) return;
     if (recordResetForQuestRef.current === currentChallengeId) return;
     const q = findQuest(currentChallengeId);
-    if (!q || (q.metric !== 'maxTranseHoldSec' && q.metric !== 'maxCombo')) return;
+    // ⚠️ `maxTapStreak` manquait ici : son record n'était jamais remis à
+    // zéro au moment où le défi devenait visible.
+    if (!q || !['maxTranseHoldSec', 'maxCombo', 'maxTapStreak'].includes(q.metric)) return;
+    maxTapStreakRef.current = 0;
+    setMaxTapStreak(0);
+    tapStreakOffsetRef.current = comboCountRef.current;
     recordResetForQuestRef.current = currentChallengeId;
     maxTranseHoldSecRef.current = 0;
     setMaxTranseHoldSec(0);
@@ -3190,8 +3265,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               aux deux autres. */}
           {(boss === null || currentChallengeId || devPreviousChallengeId) && (
             <View style={styles.devToolsRow}>
-              {boss === null && (
-                <TouchableOpacity style={styles.devToolBtn} onPress={spawnBoss}>
+              {boss === null && bossAnnonce === null && (
+                <TouchableOpacity style={styles.devToolBtn} onPress={annoncerBoss}>
                   <Text style={styles.devSkipBtnText} numberOfLines={1}>👹 Boss</Text>
                 </TouchableOpacity>
               )}
@@ -3550,6 +3625,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {/* Bandeau du boss. `pointerEvents: 'none'` : le joueur tape
           l'ŒUF pour frapper le boss, ce bandeau ne fait qu'afficher —
           s'il captait les taps, il empêcherait de combattre. */}
+      {/* ⚠️ Annonce du boss. `pointerEvents: 'none'` comme le bandeau :
+          elle ne doit jamais empêcher de taper. */}
+      {bossAnnonce !== null && view === 'tap' && (
+        <View style={styles.bossAnnonce} pointerEvents="none">
+          <Text style={styles.bossAnnonceTitre}>⚠️ Attention, boss en approche</Text>
+          <Text style={styles.bossAnnonceChiffre}>{bossAnnonce}</Text>
+        </View>
+      )}
       {boss && view === 'tap' && (
         <View style={styles.bossBanner}>
           {/* Barre de VIE : 1 tap = 1 PV, donc 200 PV pour 200 taps. Le
@@ -4950,6 +5033,13 @@ const styles = StyleSheet.create({
   // Remontée de ~2mm (~13dp) sur demande explicite.
   // Rangée des outils de dev : centrée sur toute la largeur plutôt que
   // posée à une abscisse fixe, donc impossible de chevaucher un voisin.
+  bossAnnonce: {
+    position: 'absolute', left: 24, right: 24, top: SCREEN_H * 0.40, zIndex: 20,
+    alignItems: 'center', paddingVertical: 14, borderRadius: 18,
+    backgroundColor: 'rgba(20,6,6,0.78)', borderWidth: 1.5, borderColor: '#ff5a3c',
+  },
+  bossAnnonceTitre: { color: '#ffb199', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 },
+  bossAnnonceChiffre: { color: '#ff5a3c', fontSize: 56, fontWeight: '900', marginTop: 2 },
   devToolsRow: {
     position: 'absolute', left: 0, right: 0, top: SCREEN_H * (0.303 - TOP_BLOCK_SHIFT) - 13, zIndex: 3,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
