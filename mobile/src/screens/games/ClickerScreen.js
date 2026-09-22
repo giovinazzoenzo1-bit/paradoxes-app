@@ -104,6 +104,8 @@ import {
   freezeMissingTargets,
   QUEST_DEFS_VERSION,
   peutEtreRemplace,
+  cibleAchatCumulee,
+  estAchatAdaptable,
 } from '../../games/clicker/questLogic';
 // Signalement des blocages — voir `games/clicker/diagnostic.js`.
 import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY } from '../../games/clicker/diagnostic';
@@ -2749,6 +2751,28 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       setQuestTargets((prev) => (
         prev[currentChallengeId] ? prev : { ...prev, [currentChallengeId]: cible }
       ));
+    }
+    // ⚠️⚠️ UN DÉFI D'ACHAT SE RECALCULE AUSSI QUAND IL APPARAÎT.
+    //
+    // C'était LA pièce manquante, signalée le 21/09 : « au défi 1 j'ai
+    // acheté 4 Pactes pour aller plus vite, et le défi 2 m'en demande 6
+    // DE PLUS ». Sa cible avait été figée à la distribution de l'œuf,
+    // quand le joueur n'avait encore rien acheté. Le point de départ, lui,
+    // était pris ici, au moment où le défi apparaît — avec les 4 Pactes
+    // déjà achetés. Il fallait donc en racheter 6 par-dessus.
+    //
+    // On recalcule ici, au MÊME instant que le point de départ, avec la
+    // règle du total (`cibleAchatCumulee`) : le défi demande ce qui manque
+    // pour atteindre le total prévu. La cible ne peut que BAISSER — le
+    // joueur ne gagne jamais de niveaux en moins.
+    if (q && q.mode === 'delta' && estAchatAdaptable(q.metric)) {
+      const cible = cibleAchatCumulee(q, instantane, q.target);
+      if (Number.isInteger(cible) && cible >= 1) {
+        setQuestTargets((prev) => {
+          const avant = prev[currentChallengeId] || q.target;
+          return cible < avant ? { ...prev, [currentChallengeId]: cible } : prev;
+        });
+      }
     }
   }, [currentChallengeId, loaded]);
 

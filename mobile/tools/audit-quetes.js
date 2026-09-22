@@ -2597,59 +2597,75 @@ function auditLibelleMode() {
 }
 module.exports.auditLibelleMode = auditLibelleMode;
 
-// ---- Le calculateur selon le budget ne peut-il jamais bloquer un œuf ?
+// ---- La règle du TOTAL : juste, sûre, et appliquée au BON MOMENT ? ----
 //
-// L'auteur, le 21/09 : un système qui tienne compte du niveau du joueur
-// « sans permettre que ça puisse bugger, car ça peut être dangereux pour
-// le jeu ». Une cible fausse ici — nulle, négative, non entière,
-// infinie — rendrait un défi impossible, et comme la séquence ne
-// remplace plus aucun défi, l'œuf serait bloqué POUR TOUJOURS.
+// Règle de l'auteur du 21/09 : un défi d'achat demande ce qui manque pour
+// atteindre le TOTAL prévu — « si le joueur a déjà 6 Pactes au défi 2, il
+// ne lui en demandera qu'1, et seulement 2 au 24 ».
 //
-// Ce contrôle attaque `cibleSelonBudget` sur CHAQUE défi d'achat
-// adaptable des 252, à des dizaines de niveaux, et avec des états
-// pourris. Il vérifie les trois garanties promises :
-//   - toujours un ENTIER entre 1 et la cible écrite ;
-//   - jamais plus que la cible écrite, même pour un joueur en retard ;
-//   - plus le joueur est avancé, moins on lui demande — jamais plus.
+// ⚠️⚠️ LE BUG QUE CE CONTRÔLE EMPÊCHE DE REVENIR : la règle existait, mais
+// ne s'appliquait qu'à la DISTRIBUTION de l'œuf. Le joueur achetait 4
+// Pactes pendant le défi 1, et le défi 2 lui en demandait encore 6 DE
+// PLUS. Tester la fonction seule ne l'aurait jamais montré — elle était
+// juste. C'est son APPEL qui manquait. On vérifie donc aussi que l'écran
+// l'appelle à l'instant où le défi apparaît.
 function auditCibleBudget() {
   let D;
   try { D = load('defisEcrits'); } catch (e) { return []; }
   const fautes = [];
-  const nombres = [0, 1, 2, 3, 5, 8, 12, 20, 35, 60, 100, 500];
-  D.DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((q) => {
+  const etat = (q, n) => {
+    const s = { ascension: 0, autoClickers: {}, tapUpgrades: {}, upgradeLevels: {},
+      tapPower: 1, critLevel: 0, critDamageLevel: 0 };
+    if (q.metric.startsWith('auto:')) s.autoClickers[q.metric.slice(5)] = n;
+    else if (q.metric.startsWith('tapUpgrade:')) s.tapUpgrades[q.metric.slice(11)] = n;
+    else s[q.metric] = n;
+    return s;
+  };
+  // 1. Garanties, sur chaque défi d'achat des 252.
+  D.DEFIS_ECRITS.forEach((oeuf) => oeuf.forEach((q) => {
     if (q.mode !== 'delta' || !Q.estAchatAdaptable(q.metric)) return;
-    const g = Math.floor(i / 7);
-    const etat = (n) => {
-      const s = { ascension: g, autoClickers: {}, tapUpgrades: {}, upgradeLevels: {},
-        tapPower: 1, critLevel: 0, critDamageLevel: 0 };
-      if (q.metric.startsWith('auto:')) s.autoClickers[q.metric.slice(5)] = n;
-      else if (q.metric.startsWith('tapUpgrade:')) s.tapUpgrades[q.metric.slice(11)] = n;
-      else s[q.metric] = n;
-      return s;
-    };
+    const avant = Q.niveauPrevuAvant(q);
     let precedente = Infinity;
-    nombres.forEach((n) => {
-      const t = Q.cibleSelonBudget(q, etat(n), q.target);
+    for (let n = 0; n <= avant + q.target + 40; n++) {
+      const t = Q.cibleAchatCumulee(q, etat(q, n), q.target);
       if (!Number.isInteger(t) || t < 1 || t > q.target) {
-        fautes.push({ id: q.id, niveau: n, probleme: 'cible hors de [1, ' + q.target + '] : ' + t });
+        fautes.push({ id: q.id, probleme: 'cible hors de [1, ' + q.target + '] à ' + n + ' : ' + t });
+        break;
       }
-      if (t > precedente) fautes.push({ id: q.id, niveau: n, probleme: 'plus avancé, on demande PLUS' });
+      if (t > precedente) { fautes.push({ id: q.id, probleme: 'plus avancé, on demande PLUS' }); break; }
       precedente = t;
-    });
-    // Au niveau prévu, la cible écrite est rendue telle quelle.
-    const prevu = Q.niveauPrevuAvant(q);
-    if (Q.cibleSelonBudget(q, etat(prevu), q.target) !== q.target) {
-      fautes.push({ id: q.id, probleme: 'au niveau prévu (' + prevu + '), la cible écrite n\'est pas rendue' });
     }
-    // États pourris : jamais d'exception, toujours un entier ≥ 1.
-    [undefined, null, {}, { ascension: NaN }, etat(NaN), etat(-5), etat(Infinity)].forEach((s) => {
+    // Juste ce qui manque pour le total prévu.
+    const k = Math.floor(q.target / 2);
+    if (Q.cibleAchatCumulee(q, etat(q, avant + k), q.target) !== Math.max(1, q.target - k)) {
+      fautes.push({ id: q.id, probleme: 'ne demande pas ce qui manque pour le total prévu' });
+    }
+    [undefined, null, {}, etat(q, NaN), etat(q, -5), etat(q, Infinity)].forEach((s) => {
       let t;
-      try { t = Q.cibleSelonBudget(q, s, q.target); } catch (e) {
+      try { t = Q.cibleAchatCumulee(q, s, q.target); } catch (e) {
         fautes.push({ id: q.id, probleme: 'PLANTE sur un état pourri : ' + e.message }); return;
       }
       if (!Number.isInteger(t) || t < 1) fautes.push({ id: q.id, probleme: 'état pourri -> ' + t });
     });
   }));
+  // 2. Le cas exact de l'auteur, Ascension 0.
+  const pactes = D.DEFIS_ECRITS.slice(0, 7).flat().filter((q) => q.metric === 'tapPower');
+  if (pactes.length >= 2) {
+    const [p2, p24] = pactes;
+    const vu = (q, niv) => Q.cibleAchatCumulee(q, { tapPower: niv }, q.target);
+    if (vu(p2, 5) !== 2) fautes.push({ probleme: '4 Pactes d\'avance : le défi 2 devrait en demander 2, il en demande ' + vu(p2, 5) });
+    if (vu(p2, 7) !== 1) fautes.push({ probleme: '6 Pactes au défi 2 : il devrait en demander 1' });
+    if (vu(p24, 8) !== 2) fautes.push({ probleme: 'au défi 24 avec le niveau 8 : il devrait en demander 2' });
+  }
+  // 3. L'APPEL au bon moment : là où le point de départ du défi est pris.
+  const ecran = require('fs').readFileSync(
+    require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  const debut = ecran.indexOf('if (questBaselinesRef.current[currentChallengeId]) return;');
+  const fin = ecran.indexOf('}, [currentChallengeId, loaded]);', debut);
+  const effet = debut >= 0 && fin > debut ? ecran.slice(debut, fin) : '';
+  if (!/cibleAchatCumulee\(/.test(effet)) {
+    fautes.push({ probleme: "l'écran ne recalcule PAS la cible quand le défi apparaît — le bug du défi 2 revient" });
+  }
   return fautes;
 }
 module.exports.auditCibleBudget = auditCibleBudget;

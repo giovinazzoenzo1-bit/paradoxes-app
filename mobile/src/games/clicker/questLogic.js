@@ -472,28 +472,44 @@ export function niveauPrevuAvant(quest) {
   return niveau;
 }
 
-export function cibleSelonBudget(quest, stats, cibleEcrite) {
+// ⚠️⚠️ LA RÈGLE DU TOTAL — celle de l'auteur, le 21/09, mot pour mot :
+//
+//   « On doit acheter 9 Pactes pour accomplir l'A0 en tout. La bonne idée
+//   serait de demander un TOTAL de 6 Pactes au défi 2, et pour finir 3
+//   Pactes en plus au 24. Mais si le joueur a déjà 6 Pactes au 2, le
+//   défi ne lui en demandera qu'1 seul en plus, et seulement 2 au 24. »
+//
+// Chaque défi d'achat a un TOTAL PRÉVU : le niveau atteint par les défis
+// précédents du groupe, plus sa propre cible. Il demande ce qui manque
+// pour y arriver — jamais moins d'1, jamais plus que la cible écrite.
+//
+//     cible = min(cible écrite, max(1, total prévu − ce que le joueur a))
+//
+// Exemple réel de l'auteur, Ascension 0 (le Pacte part du niveau 1) :
+//     défi 2, total prévu 7 : il a acheté 4 Pactes (niveau 5)  -> 2
+//                             il en a déjà 6 (niveau 7)       -> 1
+//     défi 24, total prévu 10 : il est au niveau 8            -> 2
+//
+// ⚠️⚠️ CALCULÉE AU MOMENT OÙ LE DÉFI APPARAÎT. La version précédente ne
+// l'était qu'à la distribution de l'œuf, quand le joueur n'avait encore
+// rien acheté : « Achète 6 », puis il achetait 4 Pactes pendant le défi
+// 1, et le défi 2 lui en demandait quand même 6 DE PLUS — 25 000 pièces
+// à taper en début de partie. L'écran rappelle désormais cette fonction
+// à l'instant où le défi devient visible (voir `ClickerScreen.js`).
+//
+// ⚠️ Elle ne peut que RÉDUIRE : un joueur n'est jamais pénalisé d'avoir
+// pris de l'avance. Toujours un ENTIER entre 1 et la cible écrite ; au
+// moindre calcul douteux, la cible écrite telle quelle.
+export function cibleAchatCumulee(quest, stats, cibleEcrite) {
   const ecrite = Math.max(1, Math.floor(Number(cibleEcrite) || (quest && quest.target) || 1));
   try {
     const metric = quest && quest.metric;
     if (!quest || quest.mode !== 'delta' || !estAchatAdaptable(metric)) return ecrite;
-    const asc = (stats && stats.ascension) || 0;
-    const avant = niveauPrevuAvant(quest);
-    let prevu = 0;
-    for (let i = avant; i < avant + ecrite; i++) prevu += coutNiveauAchat(metric, i, asc);
-    const reel = Math.max(0, Math.floor(readMetric(metric, stats || {})));
-    if (!Number.isFinite(prevu) || prevu <= 0 || !Number.isFinite(reel)) return ecrite;
-    let n = 0;
-    let depense = 0;
-    while (n < ecrite) {
-      const c = coutNiveauAchat(metric, reel + n, asc);
-      if (!Number.isFinite(c) || c <= 0) return ecrite;
-      if (depense + c > prevu * 1.0001) break;
-      depense += c;
-      n += 1;
-    }
-    const cible = Math.max(1, Math.min(ecrite, n));
-    return Number.isInteger(cible) ? cible : ecrite;
+    const totalPrevu = niveauPrevuAvant(quest) + (Number(quest.target) || 0);
+    const possede = Math.floor(readMetric(metric, stats || {}));
+    if (!Number.isFinite(totalPrevu) || !Number.isFinite(possede)) return ecrite;
+    const cible = Math.min(ecrite, Math.max(1, totalPrevu - possede));
+    return Number.isInteger(cible) && cible >= 1 ? cible : ecrite;
   } catch (e) {
     return ecrite;
   }
@@ -587,14 +603,8 @@ export function resolveQuestTarget(quest, stats) {
     const adaptable = quest.mode === 'delta' && estAchatAdaptable(mAchat);
     if (quest.fige && !adaptable) return quest.target;
     if (adaptable) {
-      // Deux garde-fous, on retient le plus bas : le COÛT prévu du défi
-      // (voir `cibleSelonBudget`) et le TOTAL que le groupe réclame (voir
-      // `plafondAchatsGroupe`). Chacun ne peut que réduire la demande.
-      const parBudget = cibleSelonBudget(quest, stats, brute);
-      const plafond = plafondAchatsGroupe(mAchat, stats);
-      const restant = plafond > 0 ? Math.max(1, plafond - readMetric(mAchat, stats)) : parBudget;
-      const cible = Math.min(parBudget, restant);
-      return Number.isInteger(cible) && cible >= 1 ? cible : Math.max(1, Math.floor(brute) || 1);
+      // La règle du TOTAL de l'auteur — voir `cibleAchatCumulee`.
+      return cibleAchatCumulee(quest, stats, brute);
     }
     if (quest.mode !== 'absolute') return brute;
     // Record remis à zéro au tirage : la cible est la cible, point.

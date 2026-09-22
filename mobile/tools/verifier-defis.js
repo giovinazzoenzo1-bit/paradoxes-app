@@ -43,7 +43,7 @@ const CONTROLES = [
   ['auditFaisableAuMoment', 'un défi est faisable AU MOMENT où il arrive'],
   ['auditSignalement', 'le signalement marche et le filet de sécurité tient'],
   ['auditLibelleMode', 'le libellé dit ce que le défi mesure (Achète = delta)'],
-  ['auditCibleBudget', 'le calculateur selon le budget ne bloque jamais un œuf'],
+  ['auditCibleBudget', 'la règle du total est juste, sûre, et appliquée quand le défi apparaît'],
   ['auditDocConforme', 'le document remis à l auteur correspond au jeu'],
   ['auditDefisEcrits', 'le fichier des 252 défis est cohérent et fait foi'],
   ['auditCorvee', "pas de défi-corvée (N appuis d'affilée)"],

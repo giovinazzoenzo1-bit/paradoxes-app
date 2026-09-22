@@ -45,7 +45,7 @@ payée.
 | Un défi doit être **faisable au moment où il ARRIVE**, pas en fin de groupe | 21/09 |
 | Pacte, Faveur, Dégâts critiques : **« Achète N »** (delta). Sanctuaire et Veilleur : « au niveau N » (ils plafonnent) | 21/09 |
 | Le texte et le mode disent la même chose : **« Achète » = delta, « au niveau » = absolu** | 21/09 |
-| Un défi d'achat s'adapte au **niveau réel** du joueur : même COÛT, jamais plus que la cible écrite, jamais moins de 1 | 21/09 |
+| Un défi d'achat demande **ce qui manque pour le TOTAL prévu**, calculé quand il APPARAÎT — jamais plus que la cible écrite, jamais moins de 1 | 21/09 |
 | Un défi de **record** (Transe, taps d'affilée) ne se valide que lorsqu'il est **affiché** | 21/09 |
 | Les taps d'affilée comptent **depuis l'apparition du défi**, pas depuis le début de la série | 21/09 |
 | La 2ᵉ Transe d'un groupe n'est **jamais plus courte** que la 1re | 21/09 |
@@ -297,35 +297,42 @@ hauts aux dernières Ascensions.
 défi valait 10 et le texte disait encore « 29 000 » : le joueur aurait
 lu un défi impossible pour un défi à sa portée.
 
-### 💰 Le calculateur selon le budget
+### 💰 La règle du TOTAL pour les défis d'achat
 
-**Le problème** (21/09) : « j'avais déjà acheté 3 critiques avant que le
-défi apparaisse, et il m'a demandé d'en acheter 4 EN PLUS ». Chaque
-niveau coûte plus cher que le précédent : le défi, calibré pour un
-joueur qui n'en avait pas, devenait bien plus coûteux que prévu.
+**La règle de l'auteur**, mot pour mot : « On doit acheter 9 Pactes pour
+accomplir l'A0 en tout. Il faut demander un TOTAL de 6 Pactes au défi 2,
+et 3 de plus au 24. Si le joueur a déjà 6 Pactes au 2, le défi ne lui en
+demandera qu'1 seul, et seulement 2 au 24. »
 
-**La règle** : c'est le **coût** du défi qui reste constant, pas le
-nombre de niveaux. On calcule ce que le défi aurait coûté au joueur
-prévu, puis combien de niveaux ce montant achète au joueur réel.
+```
+cible = min(cible écrite, max(1, total prévu − ce que le joueur a))
+```
 
-| Défi 6 — Achète 4 Dégâts critiques | |
-|---|---|
-| tu en as 0 | Achète **4** |
-| tu en as 3 | Achète **1** |
+Le **total prévu** d'un défi = ce que les défis précédents du groupe font
+acheter + sa propre cible.
 
-| Défi — Achète 3 Esprits Frappeurs | |
-|---|---|
-| tu en as 0 | Achète **3** |
-| tu en as 5 | Achète **1** |
+| Ascension 0 — Pacte | Défi 2 | Défi 24 |
+|---|---|---|
+| Joueur au rythme | Achète **6** | Achète **3** → total 9 |
+| 4 Pactes achetés d'avance | Achète **2** | Achète **3** |
+| 6 Pactes déjà au défi 2 | Achète **1** | Achète **2** |
 
-⚠️⚠️ **Garanties**, vérifiées par `auditCibleBudget` sur chacun des 252
-défis, à douze niveaux et avec des états pourris : un entier entre 1 et
-la cible écrite ; jamais plus que la cible écrite ; plus le joueur est
-avancé, moins on lui demande. Une cible fausse ici bloquerait un œuf
-pour toujours — la séquence ne remplace plus aucun défi.
+⚠️⚠️ **CALCULÉE AU MOMENT OÙ LE DÉFI APPARAÎT**, jamais seulement à la
+distribution de l'œuf. Le 21/09, la cible était figée à la distribution,
+quand le joueur n'avait encore rien acheté : il achetait 4 Pactes pendant
+le défi 1, et le défi 2 lui en demandait 6 DE PLUS — 25 000 pièces à
+taper en début de partie. La fonction était juste ; c'est son **appel**
+qui manquait. `auditCibleBudget` vérifie désormais que l'écran l'appelle
+au bon endroit.
 
-Seuls les achats **sans niveau maximum** sont adaptés. Le Sanctuaire et
-le Veilleur plafonnent : ils gardent « monte au niveau N ».
+⚠️ J'avais d'abord remplacé cette règle par un calcul « selon le coût »,
+plus compliqué, qui donnait d'autres chiffres (1 au lieu de 2). L'auteur
+avait déjà posé la règle du total : c'est elle qui fait foi.
+
+**Garanties**, vérifiées sur chacun des 252 défis : un entier entre 1 et
+la cible écrite ; jamais plus pour un joueur plus avancé ; aucun plantage
+sur un état pourri. Seuls les achats **sans niveau maximum** sont
+concernés — le Sanctuaire et le Veilleur gardent « monte au niveau N ».
 
 ### ⚠️ Régénérer `defisEcrits.js` : ne JAMAIS sérialiser un libellé
 
