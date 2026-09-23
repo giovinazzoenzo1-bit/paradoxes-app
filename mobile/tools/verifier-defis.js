@@ -60,7 +60,7 @@ const CONTROLES = [
 
   ['auditSubstitutions', 'tout retrait de défi passe par la règle unique'],
   ['auditCibleSuitLeJoueur', 'une cible fixe est la même pour tous les joueurs'],
-  ['auditTropFacile', 'au plus 22 défis faciles sur 252', 22],
+  ['auditTropFacile', 'au plus 22 défis faciles sur 336', 22],
 ];
 
 // ⚠️⚠️ CONTRÔLES RETIRÉS, avec leur raison. Un contrôle qui existe sans

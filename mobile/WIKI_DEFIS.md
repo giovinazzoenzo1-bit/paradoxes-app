@@ -62,6 +62,8 @@ payée.
 | Chaque Ascension reste à **±15 % de sa durée cible** | 21/09 |
 | Un défi d'ÉTAT se recalcule à son apparition : passif **+20 %**, Aventure **+5 niveaux**, de côté **+5 min de production**, Sanctuaire/Veilleur **+2** | 21/09 |
 | Les achats sont **répartis sur tout le groupe**, jamais tassés au début | 21/09 |
+| **8 défis par œuf** (« le joueur aura l'impression de mériter son œuf ») : les 2 ajoutés sont des **activités**, jamais des achats | 21/09 |
+| Un étalonnage ne s'accroche **jamais à un identifiant** de défi : en secondes, ou en valeur | 21/09 |
 | Deux défis de passif par groupe : **facile à l'œuf 2, exigeant à l'œuf 6** | 21/09 |
 | Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
 | Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
@@ -408,6 +410,33 @@ hauts aux dernières Ascensions.
 ⚠️ **Un libellé ne doit jamais écrire son nombre en dur.** La cible du
 défi valait 10 et le texte disait encore « 29 000 » : le joueur aurait
 lu un défi impossible pour un défi à sa portée.
+
+### 🥚 8 défis par œuf (21/09)
+
+**Pourquoi des activités et pas des achats** : ajouter des étapes d'achat
+cassait l'échelle des coûts validée par l'auteur — cloner le plus gros
+palier multipliait le budget par 1 900, et de petites étapes créaient des
+écarts qu'une boucle de réparation faisait OSCILLER. Deux activités par
+œuf (combats, cibles dorées, critiques, pièces de côté…) donnent le
+sentiment de mériter l'œuf sans toucher au budget : seuils et durées
+inchangés.
+
+Outil : `mobile/tools/ajouter-defis.py`. Il évite chaque piège mesuré —
+pas de libellé figé cloné, clones qui montent (×2) au-dessus du
+précédent, plafonds humains (400 taps, 180 s), 7 exemplaires maximum par
+métrique et par groupe, aucun Pacte (sa règle « 6 + 3 = 9 » est celle de
+l'auteur). Dans le tutoriel : « 20 coups critiques » et « pièces de
+côté » — un pouvoir y serait impossible, le joueur n'a pas de créature.
+
+⚠️ L'étalonnage « de côté » s'accrochait à l'identifiant du défi 11 : le
+réordonnancement l'a renommé, et l'étalon s'est rabattu sur le tutoriel,
+fixé à 18 000 pièces après un défi 1 à 750. Étalon désormais en SECONDES
+(94 s de production, la valeur de ses 18 000).
+
+⚠️ `auditTropFacile` ne juge plus les records ni les défis d'état : le
+jeu les recalcule à leur apparition. Juger leur cible écrite donnait 15
+fausses alarmes au passage à 8 défis. Défis d'origine signalés : 21, leur
+niveau d'avant.
 
 ### 🎯 Tous les défis s'adaptent au joueur
 

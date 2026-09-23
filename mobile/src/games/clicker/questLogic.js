@@ -1499,12 +1499,18 @@ export function familleDe(metric) {
 // combats » sont deux gestes différents. La boutique aussi : deux
 // améliorations distinctes se distinguent par leur nom.
 const MAX_PAR_FAMILLE = {
-  economie: 1, runes: 1, creatures: 1, offrande: 1, ascension: 1,
+  // ⚠️ 8 défis par œuf depuis le 21/09 (« le joueur aura l'impression
+  // de mériter son œuf »). L'économie passe à 2 : 8 défis d'économie
+  // pour 7 œufs, un seul par œuf était arithmétiquement impossible.
+  economie: 2, runes: 1, creatures: 1, offrande: 1, ascension: 1,
   // ⚠️ La boutique passe à 3 et le rythme à 3 : les œufs comptent
   // désormais SIX défis au lieu de cinq, et les défis d'achat sont
   // scindés en deux étapes réparties dans des œufs différents. À deux
   // par œuf, il devenait impossible de les placer.
-  aventure: 2, rythme: 3, boutique: 3,
+  // ⚠️ La boutique passe à 4 avec les 8 défis par œuf : ~23 défis
+  // d'achat par groupe pour 21 places à 3 par œuf — aucun ordre valide
+  // n'existait. À 4, on alterne exactement achat / autre.
+  aventure: 2, rythme: 3, boutique: 4,
 };
 const MAX_PAR_FAMILLE_DEFAUT = 2;
 

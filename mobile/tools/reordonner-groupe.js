@@ -140,7 +140,7 @@ function valide(ordre){
 }
 const pos0={...pos};
 let meilleur=construire(false), score=valide(meilleur)?violations(meilleur):1e12;
-for(let t=0;t<6000;t++){const c=construire(true);if(!valide(c))continue;const sc=violations(c);if(sc<score){score=sc;meilleur=c;}}
+for(let t=0;t<20000;t++){const c=construire(true);if(!valide(c))continue;const sc=violations(c);if(sc<score){score=sc;meilleur=c;}}
 console.log('meilleur ordre : '+Math.floor(score/1000)+' écart(s) de coût restant(s)');
 const ordre=meilleur;
 const nouveaux=(fixe?[fixe]:[]).concat([0,1,2,3,4,5,6].slice(0,fixe?6:7).map(k=>ordre.slice(k*TAILLE,k*TAILLE+TAILLE)));

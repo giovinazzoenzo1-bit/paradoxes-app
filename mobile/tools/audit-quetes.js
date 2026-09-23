@@ -1104,6 +1104,18 @@ function auditTropFacile(nbOeufs = 26) {
       numero += 1;
       const cible = Q.effectiveQuestTarget(id, s, set.targets || {});
       const met = Q.metriqueDuDefi(q, s) || '';
+      // ⚠️ DÉFIS RECALCULÉS À LEUR APPARITION : ce contrôle juge la cible
+      // ÉCRITE, pas celle que le joueur verra. Depuis le 21/09 :
+      //   - un RECORD (taps d'affilée, Transe) repart de zéro quand le
+      //     défi s'affiche — « déjà 78 % acquis » n'a plus de sens ;
+      //   - un défi d'ÉTAT (revenu/s, Aventure, pièces de côté,
+      //     Sanctuaire, Veilleur) demande +20 %, +5 niveaux, +5 minutes…
+      //     au-dessus de ce que le joueur a — il ne peut pas naître facile.
+      // Leur difficulté est garantie par le jeu, et prouvée par
+      // `auditCibleEtat` et `auditDefiInvisible` (chacun avec son
+      // sabotage). Les juger ici sur leur cible écrite produisait des
+      // alarmes fausses — 15 au passage à 8 défis par œuf.
+      if (['maxTapStreak', 'maxTranseHoldSec', 'maxCombo'].includes(met) || Q.estEtatAdapte(met)) return;
       const acquis = met.startsWith('auto:') ? ((s.autoClickers || {})[met.slice(5)] || 0)
         : met.startsWith('tapUpgrade:') ? ((s.tapUpgrades || {})[met.slice(11)] || 0)
           : (s[met] || 0);
@@ -1775,7 +1787,8 @@ function auditDefisEcrits() {
   if (traces) fautes.push({ probleme: traces.length + ' trace(s) de code transformé : ' + traces[0] });
   const vus = new Set();
   D.DEFIS_ECRITS.forEach((oeuf, i) => {
-    if (oeuf.length !== 6) fautes.push({ oeuf: i + 1, probleme: oeuf.length + ' défis au lieu de 6' });
+    // ⚠️ 8 défis par œuf depuis le 21/09 — demande de l'auteur.
+    if (oeuf.length !== 8) fautes.push({ oeuf: i + 1, probleme: oeuf.length + ' défis au lieu de 8' });
     // Chaque libellé doit s'EXÉCUTER — un nom introuvable ne se voit pas
     // à la compilation, seulement à l'affichage.
     oeuf.forEach((q) => {
