@@ -175,8 +175,12 @@ const SABOTAGES = [
   // ~10 % — dans la marge. Le sabotage était trop faible, pas le contrôle.
   // On rejoue donc LE VRAI BUG du 21/09 : la hausse sur tous les
   // générateurs, partout (A1 à 2,7 h, A2 à 3,4 h).
-  ['auditDureeCible', F.clicker, 'la hausse des premiers prix étendue à TOUS les générateurs (bug réel du 21/09)',
-    remplace('  return GENERATEURS_MAJORES_PAR_ASCENSION[g].includes(id);', '  return true;')],
+  // ⚠️ Sabotage remplacé le 21/09 : l'ancien (hausse sur tous les
+  // générateurs) ne déplaçait plus les durées, le simulateur corrigé
+  // n'achetant presque aucun générateur avant l'A2. Un sabotage doit
+  // rester DOULOUREUX pour prouver quoi que ce soit.
+  ['auditDureeCible', F.clicker, 'la puissance du tap triplée : tout le jeu se boucle trop vite',
+    (src) => src.replace(/export const TAP_DAMAGE_PER_LEVEL = ([\d.]+);/, (m, v) => 'export const TAP_DAMAGE_PER_LEVEL = ' + (Number(v) * 3) + ';')],
   ['auditMajorationPrix', F.clicker, "la Main de l'A0 n'est plus majorée alors que ses défis la demandent",
     remplace("  ['esprit', 'main'],                 // A0", "  ['esprit'],                         // A0")],
   ['auditTropFacile', F.defis, 'des dizaines de défis réduits à rien',

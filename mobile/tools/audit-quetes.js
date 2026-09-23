@@ -50,6 +50,10 @@ const C = load('clickerLogic');
 const HUMAIN = 4;
 const H = {
   tapsParSec: HUMAIN,     // cadence humaine, sans autoclicker
+  // ⚠️ Multiplicateur du TAP couvrant Transe, critiques et pouvoirs de
+  // créature, moins le temps passé hors du tap (menus, boutique,
+  // Aventure). Calé sur les chronos RÉELS de l'auteur, pas deviné.
+  facteurJoueurReel: 2.48,
   minParSession: 20,      // durée d'une session type
   energieMax: 5,          // tentatives d'Aventure avant recharge
   diamantsParJour: 21,    // plafond des boss
@@ -469,10 +473,19 @@ function auditLibelles() {
   //     pièces par seconde » écrit en dur, quand la cible valait 10 ; et
   //     « Atteins 2 600 taps » figé alors que ce défi s'adapte.
   const F = load('questFormat');
+  // ⚠️ Le nombre doit apparaître ENTIER, pas comme fragment d'un autre.
+  // Le 21/09, la cible d'un défi est tombée à 2, et le faux libellé
+  // « Atteins 29 000 pièces par seconde » passait le contrôle : il
+  // contenait bien un « 2 ». Un contrôle qui compare des morceaux de
+  // texte finit toujours par accepter n'importe quoi.
   const montre = (texte, t) => {
     const propre = String(texte).replace(/[\u202f\u00a0]/g, ' ');
+    const entier = (v) => {
+      const x = String(v).replace(/[\u202f\u00a0]/g, ' ').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp('(^|[^0-9])' + x + '([^0-9]|$)').test(propre);
+    };
     return [String(t), F.fmtQ(t), F.describeAdventureLevel ? F.describeAdventureLevel(t) : null]
-      .filter(Boolean).some((v) => propre.includes(String(v).replace(/[\u202f\u00a0]/g, ' ')));
+      .filter(Boolean).some(entier);
   };
   const fautes = [];
   load('defisEcrits').DEFIS_ECRITS.flat().forEach((q) => {
@@ -2196,7 +2209,26 @@ function simulerGroupe(ascension, tapsParSec) {
       * C.essenceBonusMultiplier(s.essence || 0)
       * C.ascensionSpeedMultiplier(a)
       * (1 + C.upgradeBonuses(s.upgradeLevels || {}).coinPct);
-    return passif + (C.tapDamage(s.tapPower) + C.tapUpgradeBonus(s.tapUpgrades || {})) * taps * mult;
+    // ⚠️⚠️ LE TAP EST MULTIPLIÉ PAR CE QUE LE JOUEUR FAIT VRAIMENT.
+    //
+    // Le jeu calcule : tap × pouvoir de créature × Transe × critique.
+    // Le simulateur ignorait les TROIS, et annonçait 3,0 h pour l'A0 quand
+    // l'auteur en mesurait 1 h 05 — « tu t'es trompé dans tes calculs ».
+    //
+    // Chacun est énorme pris seul : Transe ×3 après 50 taps, critiques
+    // ×1,26 au début de l'A0 et ×2,78 à la fin, pouvoir de créature ×12
+    // pendant 15 s par minute. Les empiler donnerait ×14 et une Ascension
+    // en 12 minutes : faux aussi, parce que le joueur passe du temps dans
+    // les menus, la boutique et l'Aventure, ne tient pas la Transe en
+    // continu et n'attrape pas toutes les bulles.
+    //
+    // ⚠️ On ne DEVINE donc pas ces facteurs : un seul coefficient, CALÉ SUR
+    // LES CHRONOS RÉELS de l'auteur (21/09) :
+    //     défi 17 atteint en 20 min · défi 32 en 50 min · A0 en 1 h 05
+    // Il vaut ce qu'il vaut : la mesure, pas l'intuition. À revoir dès
+    // qu'un chrono le contredit.
+    return passif + (C.tapDamage(s.tapPower) + C.tapUpgradeBonus(s.tapUpgrades || {}))
+      * taps * mult * H.facteurJoueurReel;
   };
   const seuil = C.ascensionThreshold(a);
   let t = 0, garde = 0, passifFinal = 0;
@@ -2714,7 +2746,18 @@ module.exports.auditCibleMonte = auditCibleMonte;
 // l'A0 — et l'A2 de 5,0 h à 3,4 h. Aucun contrôle ne l'a bloqué : une
 // baisse de 3 % passait la marge de « croissante », et rien ne comparait
 // aux cibles. Tolérance : ±15 %.
-const DUREES_CIBLES = [2.8, 3.5, 5, 6.5, 8, 10];
+// ⚠️⚠️ CE SONT LES DURÉES RÉELLES MESURÉES, pas les cibles de conception.
+//
+// L'auteur avait validé 2,8 / 3,5 / 5 / 6,5 / 8 / 10 h — mais ces
+// chiffres venaient d'un simulateur qui ignorait la Transe, les critiques
+// et les pouvoirs de créature. Ses chronos du 21/09 (défi 17 en 20 min,
+// défi 32 en 50 min, A0 en 1 h 05) ont montré l'écart : le jeu réel dure
+// 14 h au total, pas 35,7 h.
+//
+// Ces valeurs protègent donc contre une DÉRIVE du rythme actuel. Étirer
+// le jeu jusqu'aux cibles d'origine est une décision de l'auteur, pas une
+// correction : elle multiplierait tous les seuils par ~2,5.
+const DUREES_CIBLES = [1.1, 1.1, 1.4, 2.9, 3.3, 4.2];
 function auditDureeCible(tolerance = 0.15) {
   const fautes = [];
   DUREES_CIBLES.forEach((cibleH, g) => {

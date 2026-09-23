@@ -173,6 +173,39 @@ logique ne voit.
 | `auditSubstitutions` | Un chemin retire un défi sans passer par `peutEtreRemplace`. |
 | `auditTamponsAscension` · `auditRecompenseDoublee` | Des pièces survivent à l'Ascension, ou le bonus est compté deux fois. |
 
+### ⏱️⏱️ LE SIMULATEUR EST CALÉ SUR LES CHRONOS RÉELS (21/09)
+
+⚠️⚠️ **Mes durées étaient fausses d'un facteur 2,5.** Le simulateur
+calculait le tap SANS la Transe (×3 après 50 taps), SANS les critiques
+(×1,26 au début de l'A0, ×2,78 à la fin) et SANS les pouvoirs de créature
+(×12 pendant 15 s par minute) — alors que le jeu multiplie les trois.
+L'auteur : « je vais mettre 1 h 05 pour finir l'A0, tu t'es trompé dans
+tes calculs ». Il avait raison.
+
+Empiler ces facteurs donnerait ×14 et une Ascension en 12 minutes, ce qui
+serait faux aussi : le joueur passe du temps dans les menus, la boutique
+et l'Aventure, ne tient pas la Transe en continu, n'attrape pas toutes les
+bulles. **On ne devine donc pas : un seul coefficient, `facteurJoueurReel`
+= ×2,48 sur le tap, CALÉ sur ses chronos.**
+
+| Point de mesure | Simulé | Mesuré |
+|---|---|---|
+| Défi 17 | 25 min | 20 min (avec pubs) |
+| Défi 32 | 48 min | 50 min |
+| A0 complète | 65 min | 65 min |
+
+**Durées réelles : 1,1 / 1,1 / 1,4 / 2,9 / 3,3 / 4,2 h — 14 h au total**,
+et non 35,7 h. À revoir dès qu'un chrono contredit le simulateur.
+
+⚠️ Conséquence à trancher : le jeu dure 14 h, pas les 35,7 h annoncées.
+Étirer jusqu'aux cibles d'origine (2,8 / 3,5 / 5 / 6,5 / 8 / 10 h)
+multiplierait tous les seuils par ~2,5. **Décision de l'auteur.**
+
+⚠️ Autre conséquence mesurée : avec le simulateur juste, un joueur optimal
+n'achète PRESQUE AUCUN générateur avant l'A2 — le tap écrase tout. Les
+défis de passif de l'A0 et de l'A1 tombent à « Atteins 2 pièces par
+seconde ». Le chantier « rendre les autoclickers utiles » est chiffré.
+
 ### ⏱️ Mesure réelle de l'auteur (21/09)
 
 **20 minutes pour atteindre le défi 17** de l'Ascension 0, en comptant 2
