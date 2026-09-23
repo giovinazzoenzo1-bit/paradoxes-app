@@ -656,9 +656,32 @@ export function pickFromDeck(deckIds) {
 // tout seul sur les autres, sans table à maintenir : c'est ce qui fait
 // monter naturellement la rareté moyenne à mesure que la collection se
 // remplit.
-export function rollCreature(ownedIds) {
+// ⚠️ PLAFOND DE RARETÉ DES PREMIERS ŒUFS (21/09). L'auteur a tiré une
+// ÉPIQUE en toute première créature et une MYTHIQUE à l'œuf 3 : leurs
+// pouvoirs rendaient la suite triviale (générateurs de l'A2 achetés à
+// l'A0). « On va devoir patcher ça à maximum créature rare jusqu'à
+// l'œuf 3. » Tant que le joueur possède moins de 3 créatures, le tirage
+// d'un ŒUF ne peut pas dépasser `rare`. Les invocations payantes
+// n'appellent pas avec ce plafond.
+export const ORDRE_RARETES = ['commun', 'peu_commun', 'rare', 'epique', 'legendaire', 'mythique'];
+export const OEUFS_PLAFONNES = 3;
+export const RARETE_MAX_PREMIERS_OEUFS = 'rare';
+
+export function rareteMaxPourOeuf(nbCreaturesPossedees) {
+  const n = Math.max(0, Math.floor(Number(nbCreaturesPossedees) || 0));
+  return n < OEUFS_PLAFONNES ? RARETE_MAX_PREMIERS_OEUFS : null;
+}
+
+export function rollCreature(ownedIds, rareteMax = null) {
   const owned = ownedIds instanceof Set ? ownedIds : new Set(ownedIds || []);
   let pickable = CREATURES.filter((c) => !owned.has(c.id));
+  // Plafond de rareté : on ne retire les raretés trop hautes que s'il
+  // RESTE au moins une créature permise — jamais de tirage vide.
+  const rangMax = rareteMax ? ORDRE_RARETES.indexOf(rareteMax) : -1;
+  if (rangMax >= 0) {
+    const permis = pickable.filter((c) => ORDRE_RARETES.indexOf(c.rarity) <= rangMax);
+    if (permis.length) pickable = permis;
+  }
   // Collection complète : on retombe sur le roster entier plutôt que de
   // ne rien rendre. L'œuf redonne alors un doublon, qui monte un niveau
   // — les éclosions gardent un intérêt une fois les 26 obtenues.
@@ -1854,10 +1877,31 @@ export function generateurMajore(id, ascensionCount = 0) {
   return GENERATEURS_MAJORES_PAR_ASCENSION[g].includes(id);
 }
 
+// ⚠️ UN GÉNÉRATEUR EST CHER AVANT SON HEURE, comme les paliers de tap
+// (21/09). L'auteur, grâce à des créatures trop fortes, a acheté la
+// Colonie de Familiers et l'Automate Runique — demandés à l'A2 — dès
+// l'œuf 3 de l'A0 : « on n'est pas censé débloquer la Colonie ». Même
+// modèle que les paliers : jamais fermé, mais la racine de l'écart de
+// seuil en plus avant l'Ascension qui le demande. Les générateurs qu'aucun
+// défi ne demande encore (contenu futur) sont rattachés au-delà de l'A5.
+export const GENERATEUR_ASCENSION = {
+  esprit: 0, main: 0, automate: 2, colonie: 2, titan: 3, golem: 3,
+  dragonnet: 4, phenix: 4, leviathan: 5, gardien: 5,
+  titanfoudre: 6, colosse: 6, oracle: 7, seigneurombres: 7, etoilefilante: 8,
+};
+export function surprimeGenerateur(clicker, ascensionCount = 0) {
+  const a = Math.max(0, Math.floor(ascensionCount || 0));
+  const g = GENERATEUR_ASCENSION[clicker && clicker.id];
+  if (g === undefined || a >= g) return 1;
+  const r = Math.sqrt(ascensionThreshold(g) / ascensionThreshold(a));
+  return Number.isFinite(r) && r > 1 ? r : 1;
+}
+
 export function autoClickerCost(clicker, ownedCount, ascensionCount = 0) {
   const n = Math.max(0, Math.floor(ownedCount || 0));
   const base = clicker.baseCost * COIN_SCALE * UPGRADE_COST_MULT
-    * prixMultiplicateurAscension(ascensionCount);
+    * prixMultiplicateurAscension(ascensionCount)
+    * surprimeGenerateur(clicker, ascensionCount);
   const courbe = (k) => base * Math.pow(AUTOCLICKER_COST_GROWTH, k);
   if (!generateurMajore(clicker.id, ascensionCount)) return Math.round(courbe(n));
   const majore = (k) => courbe(k) * (1 + PREMIERS_EXEMPLAIRES_MAJORATION);

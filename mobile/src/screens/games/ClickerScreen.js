@@ -43,6 +43,7 @@ import {
   TAP_DAMAGE_PER_LEVEL,
   VEILLEUR_MAX_LEVEL,
   rollCreature,
+  rareteMaxPourOeuf,
   rollCreatureOfRarity,
   offlineEarnings,
   shouldSpawn,
@@ -1743,7 +1744,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // œufs et pour la victoire contre un gardien — dupliquer aurait
   // garanti que les variantes divergent.
   const grantHatchedCreature = () => {
-    const creature = rollCreature(ownedRef.current.map((o) => o.id));
+    // ⚠️ Plafond de rareté des 3 premiers œufs — voir `rareteMaxPourOeuf`.
+    const creature = rollCreature(ownedRef.current.map((o) => o.id),
+      rareteMaxPourOeuf(ownedRef.current.length));
     addCreatureToOwned(creature);
     trackEvent('eggHatched', 1);
     setRewardCreature(creature);

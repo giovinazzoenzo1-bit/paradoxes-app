@@ -67,6 +67,8 @@ payée.
 | Transe et cible dorée **montent petit à petit**, en chaîne continue sur les 6 Ascensions | 21/09 |
 | Un palier de tap n'est **jamais fermé** : avant son Ascension, il coûte la **racine de l'écart de seuil** en plus | 21/09 |
 | Ajustement par Ascension sur le **seuil ET les prix** ensemble (règle des 90 % intacte) | 21/09 |
+| Les **3 premiers œufs** ne donnent jamais mieux qu'une créature **rare** | 21/09 |
+| Un **générateur** est cher avant l'Ascension qui le demande, comme les paliers — jamais fermé | 21/09 |
 | Deux défis de passif par groupe : **facile à l'œuf 2, exigeant à l'œuf 6** | 21/09 |
 | Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
 | Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
@@ -413,6 +415,34 @@ hauts aux dernières Ascensions.
 ⚠️ **Un libellé ne doit jamais écrire son nombre en dur.** La cible du
 défi valait 10 et le texte disait encore « 29 000 » : le joueur aurait
 lu un défi impossible pour un défi à sa portée.
+
+### ⚡ PROCHAIN CHANTIER — les pouvoirs, idée de l'auteur (21/09)
+
+« Tu vas ajouter le compteur sur l'œuf. Quand le joueur appuie une
+première fois sur le deck, la créature apparaît autour de l'œuf ; quand
+il appuie une dernière fois, ça active le pouvoir. Pour les créatures
+mythiques, le temps d'attente est bien plus long que pour une peu
+commune, pour équilibrer les pouvoirs cheatés des mythiques. »
+
+- Compte à rebours affiché SUR L'ŒUF ;
+- 1er appui sur le deck : la créature apparaît autour de l'œuf ;
+- 2e appui : le pouvoir s'active ;
+- temps de recharge selon la rareté.
+
+Proposition à MESURER avant d'appliquer (gain moyen du tap = 1 + durée ÷
+recharge × (multiplicateur − 1), pouvoir de 15 s) : commun ×2,4 toutes
+les 60 s → ×1,35 ; mythique ×18 toutes les 5 min → ×1,85 ; légendaire
+×12 toutes les 3 min → ×1,92. Les raretés deviennent comparables au lieu
+d'écraser la partie.
+
+### ⏱️ Chronos de l'auteur, 3e passage (21/09) — avec pubs d'œufs, énergie au max en mode dev
+
+1 œuf en 7 min · 2 à 10 min · 3 à 21 min · 4 à 31 min (300 000 pièces
+en poche, 100 000 en moins d'une minute de tap, 37 pièces par tap) ·
+Sceau de Puissance acheté à 26 min. Il avait tiré une ÉPIQUE en première
+créature et une MYTHIQUE à l'œuf 3, et acheté la Colonie et l'Automate
+(prévus pour l'A2) dès l'œuf 3 grâce à elles. Corrigé : rareté plafonnée
+à « rare » jusqu'à l'œuf 3, générateurs chers avant leur heure.
 
 ### ⏱️ Chronos de l'auteur, 2e passage (21/09, en speedrun, œufs passés au bouton pub dev)
 

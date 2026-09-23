@@ -47,6 +47,7 @@ const CONTROLES = [
   ['auditDefiInvisible', 'aucun défi ne peut sauter sans s afficher'],
   ['auditCibleMonte', 'une cible hors achats ne redescend jamais dans un groupe'],
   ['auditCibleEtat', 'les défis d état s adaptent à ce que le joueur a déjà'],
+  ['auditDebutDePartie', 'rare au maximum jusqu à l œuf 3, générateurs à leur Ascension'],
   ['auditDureeCible', 'chaque Ascension reste à ±15 % de sa durée cible'],
   ['auditMajorationPrix', 'la hausse des premiers prix vise les générateurs des défis'],
   ['auditDocConforme', 'le document remis à l auteur correspond au jeu'],

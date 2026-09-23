@@ -101,7 +101,10 @@ const SABOTAGES = [
     // ⚠️ Repère mis à jour le 21/09 : la formule a changé avec la
     // majoration des 3 premiers exemplaires. C'est exactement le rôle d'un
     // sabotage « périmé » : forcer à le tenir à jour.
-    remplace('    * prixMultiplicateurAscension(ascensionCount);\n  const courbe', '    * 1;\n  const courbe')],
+    // ⚠️ Repère mis à jour le 21/09 : la formule porte désormais aussi
+    // la surprime « avant son heure ».
+    remplace('    * prixMultiplicateurAscension(ascensionCount)\n    * surprimeGenerateur(clicker, ascensionCount);',
+      '    * 1\n    * surprimeGenerateur(clicker, ascensionCount);')],
   ['auditInfaisable', F.defis, 'un défi coûte bien plus que le seuil',
     surDefi((b) => b.metric === 'tapPower' && b.g === 0, cible(40))],
   ['auditResetSurChangement', F.ecran, "la sauvegarde réimpose les anciennes références après une mise à jour (bug réel)",
@@ -187,6 +190,8 @@ const SABOTAGES = [
     remplace('  tap1: 1, tap2: 1, tap3: 2,', '  tap1: 1, tap2: 3, tap3: 2,')],
   ['auditCibleEtat', F.ecran, "les défis d'état ne se recalculent plus à leur apparition (« Atteins 2/s » quand tu en produis 27)",
     remplace('      const cible = cibleEtatAdaptee(q, instantane, q.target);', '      const cible = q.target;')],
+  ['auditDebutDePartie', F.clicker, 'une mythique possible dès le premier œuf (bug réel du 21/09)',
+    remplace("export const RARETE_MAX_PREMIERS_OEUFS = 'rare';", "export const RARETE_MAX_PREMIERS_OEUFS = 'mythique';")],
   ['auditTropFacile', F.defis, 'des dizaines de défis réduits à rien',
     surDefis((b) => ['totalEarned', 'goldenClaimed', 'coins'].includes(b.metric), cible(1))],
 ];

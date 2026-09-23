@@ -1397,7 +1397,9 @@ function auditPrixParAscension(tolerance = 0.15) {
       // monte prix ET seuil ensemble pour allonger les groupes. On le
       // retire du calcul, comme la majoration — ce contrôle surveille des
       // prix qui ne SUIVRAIENT PLUS l'Ascension, pas une calibration.
-      return C.autoClickerCost(g, 0, a) / majoration / C.ajustementAscension(a) / revenu;
+      // La surprime « avant son heure » (21/09) est délibérée aussi.
+      return C.autoClickerCost(g, 0, a) / majoration / C.ajustementAscension(a)
+        / C.surprimeGenerateur(g, a) / revenu;
     });
     const min = Math.min(...temps);
     const max = Math.max(...temps);
@@ -2778,7 +2780,7 @@ module.exports.auditCibleMonte = auditCibleMonte;
 // Ces valeurs protègent donc contre une DÉRIVE du rythme actuel. Étirer
 // le jeu jusqu'aux cibles d'origine est une décision de l'auteur, pas une
 // correction : elle multiplierait tous les seuils par ~2,5.
-const DUREES_CIBLES = [2.6, 3.4, 4.3, 5.9, 6.7, 8.0];
+const DUREES_CIBLES = [2.3, 3.9, 4.3, 6.2, 6.8, 8.1];
 function auditDureeCible(tolerance = 0.15) {
   const fautes = [];
   DUREES_CIBLES.forEach((cibleH, g) => {
@@ -2913,3 +2915,35 @@ function auditCibleEtat() {
   return fautes;
 }
 module.exports.auditCibleEtat = auditCibleEtat;
+
+
+// ---- Les 3 premiers œufs ne donnent-ils jamais mieux que rare ? ------
+//
+// Demande de l'auteur (21/09) après une ÉPIQUE en première créature et
+// une MYTHIQUE à l'œuf 3 : « maximum créature rare jusqu'à l'œuf 3 ».
+// Et chaque générateur est rattaché à l'Ascension qui le demande : un
+// générateur demandé AVANT son rattachement y coûterait une surprime.
+function auditDebutDePartie() {
+  const fautes = [];
+  const rang = (r) => C.ORDRE_RARETES.indexOf(r);
+  for (let nb = 0; nb < 3; nb++) {
+    for (let i = 0; i < 3000; i++) {
+      const c = C.rollCreature([], C.rareteMaxPourOeuf(nb));
+      if (rang(c.rarity) > rang('rare')) { fautes.push({ oeuf: nb + 1, rarete: c.rarity }); break; }
+    }
+  }
+  const ecran = require('fs').readFileSync(require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if (!/rollCreature\(ownedRef\.current\.map\(\(o\) => o\.id\),\s*rareteMaxPourOeuf\(/.test(ecran)) {
+    fautes.push({ probleme: "l'éclosion d'un œuf n'applique pas le plafond de rareté" });
+  }
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return fautes; }
+  D.DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((q) => {
+    if (!(q.metric || '').startsWith('auto:')) return;
+    const id = q.metric.slice(5); const g = Math.floor(i / 7);
+    const prevu = C.GENERATEUR_ASCENSION[id];
+    if (prevu === undefined || prevu > g) fautes.push({ groupe: g, generateur: id, prevu, probleme: 'demandé avant son Ascension' });
+  }));
+  return fautes;
+}
+module.exports.auditDebutDePartie = auditDebutDePartie;
