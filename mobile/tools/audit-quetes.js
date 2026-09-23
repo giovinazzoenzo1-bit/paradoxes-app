@@ -1393,7 +1393,11 @@ function auditPrixParAscension(tolerance = 0.15) {
       // vrai bug qu'il surveille — des prix qui ne suivent plus
       // l'Ascension (228 s à A0, 1 s à A5).
       const majoration = C.generateurMajore(g.id, a) ? 1 + C.PREMIERS_EXEMPLAIRES_MAJORATION : 1;
-      return C.autoClickerCost(g, 0, a) / majoration / revenu;
+      // ⚠️ L'ajustement par Ascension (21/09) est lui aussi délibéré : il
+      // monte prix ET seuil ensemble pour allonger les groupes. On le
+      // retire du calcul, comme la majoration — ce contrôle surveille des
+      // prix qui ne SUIVRAIENT PLUS l'Ascension, pas une calibration.
+      return C.autoClickerCost(g, 0, a) / majoration / C.ajustementAscension(a) / revenu;
     });
     const min = Math.min(...temps);
     const max = Math.max(...temps);
@@ -2774,7 +2778,7 @@ module.exports.auditCibleMonte = auditCibleMonte;
 // Ces valeurs protègent donc contre une DÉRIVE du rythme actuel. Étirer
 // le jeu jusqu'aux cibles d'origine est une décision de l'auteur, pas une
 // correction : elle multiplierait tous les seuils par ~2,5.
-const DUREES_CIBLES = [1.1, 1.1, 1.4, 2.9, 3.3, 4.2];
+const DUREES_CIBLES = [2.6, 3.4, 4.3, 5.9, 6.7, 8.0];
 function auditDureeCible(tolerance = 0.15) {
   const fautes = [];
   DUREES_CIBLES.forEach((cibleH, g) => {
@@ -2808,6 +2812,16 @@ function auditMajorationPrix() {
     const manque = [...demandes].filter((x) => !majores.has(x));
     const enTrop = [...majores].filter((x) => !demandes.has(x));
     if (manque.length || enTrop.length) fautes.push({ groupe: g, nonMajores: manque, majoresSansDefi: enTrop });
+    // ⚠️ Chaque palier de tap coûte son prix normal à partir de
+    // l'Ascension dont les défis le demandent — lue dans le fichier.
+    D.DEFIS_ECRITS.slice(g * 7, g * 7 + 7).flat().forEach((q) => {
+      if (!(q.metric || '').startsWith('tapUpgrade:')) return;
+      const id = q.metric.slice(11);
+      const prevu = C.PALIER_TAP_ASCENSION[id];
+      if (prevu === undefined || prevu > g) {
+        fautes.push({ groupe: g, palier: id, prevu, probleme: 'palier demandé avant son Ascension : il y coûte une surprime' });
+      }
+    });
     C.AUTOCLICKERS.forEach((it) => {
       for (let n = 0; n < 8; n++) {
         if (C.autoClickerCost(it, n + 1, g) < C.autoClickerCost(it, n, g)) {

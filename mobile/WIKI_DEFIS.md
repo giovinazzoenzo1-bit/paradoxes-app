@@ -65,6 +65,8 @@ payée.
 | **8 défis par œuf** (« le joueur aura l'impression de mériter son œuf ») : les 2 ajoutés sont des **activités**, jamais des achats | 21/09 |
 | Un étalonnage ne s'accroche **jamais à un identifiant** de défi : en secondes, ou en valeur | 21/09 |
 | Transe et cible dorée **montent petit à petit**, en chaîne continue sur les 6 Ascensions | 21/09 |
+| Un palier de tap n'est **jamais fermé** : avant son Ascension, il coûte la **racine de l'écart de seuil** en plus | 21/09 |
+| Ajustement par Ascension sur le **seuil ET les prix** ensemble (règle des 90 % intacte) | 21/09 |
 | Deux défis de passif par groupe : **facile à l'œuf 2, exigeant à l'œuf 6** | 21/09 |
 | Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
 | Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
@@ -424,9 +426,18 @@ l'A0, pour 2,3 % du seuil. Et les prix de base à partir du palier 7 sont
 CASSÉS : Fracture du Réel (+256/tap) coûte 24 845, moins que la Griffe
 du Vide (+64/tap, 25 472), elle-même moins que le Serment (40 763).
 Prix par +1 de tap : de 6 065 (palier 3) à 557 (palier 7).
-➡️ CHANTIER SUIVANT : courbe de prix des paliers (règle d'origine :
-« même valeur au coin », prix proportionnel au bonus) + ouverture par
-Ascension. Il touche le budget et la durée des 6 Ascensions.
+➡️ CORRIGÉ le jour même, sur le modèle de l'auteur tiré de Hero Heroes
+Clicker (« ne pas les fermer, mais monter le premier achat vachement
+haut » ; le prochain objet y coûte ~22 min de production) : un palier
+coûte son prix normal à partir de l'Ascension dont les défis le
+demandent, et la RACINE de l'écart de seuil en plus avant. À l'A0 : les
+paliers 3-4 à 14-22 % du seuil, 5 à 8 à 190-300 %. Ajustement par
+Ascension (1 · 1,3 · 1 · 1,7 · 1,9 · 1,9) sur seuil ET prix pour garder
+des durées en montée : **2,6 / 3,4 / 4,3 / 5,9 / 6,7 / 8,0 h, 31 h au
+total** (contre 14 h avant). ⚠️ Les prix de BASE des paliers 7 à 10 sont
+toujours mal ordonnés entre eux (Fracture moins chère que Griffe) ; la
+surprime les rend inaccessibles avant leur heure, mais la courbe reste à
+redresser.
 
 Transe et cible dorée : les clones ×2 donnaient 30 → 45 → 90 → 180 s
 et 3 → 9 → 18 → 36. Remplacés par des chaînes continues : Transe +8 %

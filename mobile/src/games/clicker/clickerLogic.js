@@ -1142,11 +1142,41 @@ export function normalizeTapUpgrades(value) {
   return value && typeof value === 'object' ? value : {};
 }
 
+// ⚠️⚠️ UN PALIER DE TAP EST CHER AVANT SON HEURE — jamais fermé (21/09).
+//
+// Mesuré : l'auteur avait l'Éclat Primordial (prévu pour l'A3) dès l'œuf
+// 3 de l'A0, pour 2,3 % du seuil ; les paliers suivants s'achetaient pour
+// 1 à 4 %. Tout s'emballait : 123 000 pièces de côté en 30 s, Ascension
+// possible au défi 32 sur 56.
+//
+// Son modèle, tiré de Hero Heroes Clicker : « ne pas les fermer, mais
+// monter le premier achat vachement haut » — le prochain objet y coûte
+// ~22 minutes de production. Un palier coûte donc son prix normal à
+// partir de l'Ascension dont les défis le demandent, et avant, la RACINE
+// de l'écart de seuil en plus. Mesuré à l'A0 : les paliers 3-4 à 14-22 %
+// du seuil (atteignables en épargnant, comme le « ???? » de sa
+// référence), les paliers 5 à 8 à 190-300 % (hors de portée, pas fermés).
+//
+// ⚠️ Ascension de chaque palier lue dans le fichier des défis ;
+// `auditMajorationPrix` vérifie qu'elle y correspond toujours.
+export const PALIER_TAP_ASCENSION = {
+  tap1: 1, tap2: 1, tap3: 2, tap4: 2, tap5: 3,
+  tap6: 3, tap7: 4, tap8: 4, tap9: 5, tap10: 5,
+};
+export function surprimeAvantLHeure(item, ascensionCount = 0) {
+  const a = Math.max(0, Math.floor(ascensionCount || 0));
+  const g = PALIER_TAP_ASCENSION[item && item.id];
+  if (g === undefined || a >= g) return 1;
+  const r = Math.sqrt(ascensionThreshold(g) / ascensionThreshold(a));
+  return Number.isFinite(r) && r > 1 ? r : 1;
+}
+
 export function tapUpgradeCost(item, level, ascensionCount = 0) {
   // Même règle que les générateurs : voir `autoClickerCost`.
   return Math.round(item.cost * COIN_SCALE * UPGRADE_COST_MULT
     * Math.pow(item.growth || 1.6, level)
-    * prixMultiplicateurAscension(ascensionCount));
+    * prixMultiplicateurAscension(ascensionCount)
+    * surprimeAvantLHeure(item, ascensionCount));
 }
 
 // Le palier `index` est ouvert si le PRÉCÉDENT a atteint le niveau 5
@@ -1433,7 +1463,7 @@ export const ASCENSION_FIRST_THRESHOLD = ASCENSION_THRESHOLDS[0];
 
 export function ascensionThreshold(ascensionCount) {
   const n = Number.isFinite(ascensionCount) ? Math.max(0, Math.floor(ascensionCount)) : 0;
-  if (n < ASCENSION_THRESHOLDS.length) return ASCENSION_THRESHOLDS[n];
+  if (n < ASCENSION_THRESHOLDS.length) return ASCENSION_THRESHOLDS[n] * ajustementAscension(n);
   const dernier = ASCENSION_THRESHOLDS[ASCENSION_THRESHOLDS.length - 1];
   return dernier * Math.pow(ASCENSION_THRESHOLD_TAIL_RATIO, n - ASCENSION_THRESHOLDS.length + 1);
 }
@@ -1773,8 +1803,19 @@ export const AUTOCLICKER_COST_GROWTH = 1.25;
 // les prix doivent se comparer. Mesuré avec la racine : se payer le 1er
 // Esprit prenait encore 16 secondes à A5 contre 228 à A0 — la boutique
 // restait bradée.
+// ⚠️⚠️ AJUSTEMENT PAR ASCENSION (21/09), appliqué au SEUIL et aux PRIX
+// ensemble : les achats restent à 90 % du seuil (règle de l'auteur), et
+// la durée du groupe suit. Mesuré avec la surprime des paliers de tap :
+// sans lui, l'A2 (4,2 h) dépassait l'A3 (3,4 h). Avec lui : 2,6 / 3,4 /
+// 4,3 / 5,9 / 6,7 / 8,0 h — en montée, proches des cibles d'origine.
+export const AJUSTEMENT_ASCENSION = [1, 1.3, 1, 1.7, 1.9, 1.9];
+export function ajustementAscension(ascensionCount) {
+  const a = Math.max(0, Math.floor(ascensionCount || 0));
+  return AJUSTEMENT_ASCENSION[Math.min(a, AJUSTEMENT_ASCENSION.length - 1)];
+}
+
 export function prixMultiplicateurAscension(ascensionCount) {
-  return ascensionSpeedMultiplier(ascensionCount || 0);
+  return ascensionSpeedMultiplier(ascensionCount || 0) * ajustementAscension(ascensionCount);
 }
 
 // ⚠️ LES 3 PREMIERS EXEMPLAIRES coûtent 35 % de plus (demande de
