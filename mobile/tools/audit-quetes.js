@@ -490,7 +490,11 @@ function auditLibelles() {
   const fautes = [];
   load('defisEcrits').DEFIS_ECRITS.flat().forEach((q) => {
     const fige = /^\s*\(\s*\)\s*=>/.test(String(q.label));
-    const peutChanger = !!(q.step || q.minStep || (q.mode === 'delta' && Q.estAchatAdaptable(q.metric)));
+    // ⚠️ Les défis d'ÉTAT s'adaptent aussi depuis le 21/09 (revenu par
+    // seconde, Aventure, pièces de côté, Sanctuaire, Veilleur) : un texte
+    // figé y mentirait tout autant.
+    const peutChanger = !!(q.step || q.minStep || Q.estEtatAdapte(q.metric)
+      || (q.mode === 'delta' && Q.estAchatAdaptable(q.metric)));
     if (fige && peutChanger) {
       fautes.push({ id: q.id, probleme: 'texte figé sur un défi dont la cible change en cours de partie' });
     }
@@ -2802,3 +2806,83 @@ function auditMajorationPrix() {
   return fautes;
 }
 module.exports.auditMajorationPrix = auditMajorationPrix;
+
+// ---- Les défis d'ÉTAT s'adaptent-ils vraiment au joueur ? -----------
+//
+// Demande de l'auteur le 21/09, après « Atteins 2 pièces par seconde »
+// alors qu'il en produisait 27 : « ce défi est complètement useless, il
+// faut le même système de calcul pour TOUS les types de défis. »
+//
+// Ses trois exemples sont ici des tests :
+//   27 pièces/s              -> le défi en demande 32
+//   chapitre 1, niveau 10    -> le défi demande chapitre 2, niveau 5
+//   47 000 de côté           -> ce qu'il a + 5 minutes de sa production,
+//                               donc moins s'il tape peu (10 pièces/tap)
+//
+// ⚠️ Comme pour les achats, tester la fonction ne suffit pas : c'est son
+// APPEL au moment où le défi apparaît qui a manqué la dernière fois. On
+// vérifie les deux.
+function auditCibleEtat() {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const fautes = [];
+  const t = D.DEFIS_ECRITS.flat();
+  const base = { ascension: 0, autoClickers: {}, tapUpgrades: {}, upgradeLevels: {}, tapPower: 1 };
+  const prend = (m) => t.find((q) => q.metric === m && q.mode === 'absolute');
+  // 1. Les trois exemples de l'auteur.
+  const qp = prend('passiveIncome');
+  if (qp && Q.cibleEtatAdaptee(qp, { ...base, passiveIncome: 27 }, qp.target) !== 32) {
+    fautes.push({ probleme: '27 pièces/s doit donner 32, et donne '
+      + Q.cibleEtatAdaptee(qp, { ...base, passiveIncome: 27 }, qp.target) });
+  }
+  const qa = prend('advLevelReached');
+  if (qa && Q.cibleEtatAdaptee(qa, { ...base, advLevelReached: 10 }, qa.target) !== 15) {
+    fautes.push({ probleme: 'chapitre 1 niveau 10 doit donner le niveau 15' });
+  }
+  const qc = prend('coins');
+  if (qc) {
+    const fort = { ...base, coins: 47000, tapPower: 35, passiveIncome: 27 };
+    const faible = { ...base, coins: 47000, tapPower: 10 };
+    const a = Q.cibleEtatAdaptee(qc, fort, qc.target);
+    const b = Q.cibleEtatAdaptee(qc, faible, qc.target);
+    if (!(a > b)) fautes.push({ probleme: 'les pièces de côté ne suivent pas la production' });
+    if (b <= 47000) fautes.push({ probleme: 'un défi de côté peut naître déjà rempli' });
+  }
+  // 2. Garanties sur TOUS les défis d'état : jamais sous la cible écrite,
+  //    jamais au-dessus d'un plafond, jamais déjà rempli, jamais de
+  //    valeur folle sur un état pourri.
+  t.forEach((q) => {
+    if (q.mode !== 'absolute' || !Q.estEtatAdapte(q.metric)) return;
+    [0, 3, 17, 260, 5000, 90000].forEach((n) => {
+      const s = { ...base, [q.metric]: n };
+      const c = Q.cibleEtatAdaptee(q, s, q.target);
+      if (!Number.isInteger(c) || c < 1 || c < q.target) {
+        fautes.push({ id: q.id, avec: n, cible: c, probleme: 'cible invalide ou sous la cible écrite' });
+        return;
+      }
+      const plafond = q.metric === 'sanctuaryLevel' ? C.SANCTUARY_MAX_LEVEL
+        : q.metric === 'veilleurLevel' ? C.VEILLEUR_MAX_LEVEL : null;
+      if (plafond && c > plafond) fautes.push({ id: q.id, probleme: 'au-dessus du maximum du bâtiment' });
+      if (!plafond && n >= q.target && c <= n) {
+        fautes.push({ id: q.id, avec: n, cible: c, probleme: 'défi déjà rempli à son apparition' });
+      }
+    });
+    [undefined, null, {}, { [q.metric]: NaN }, { [q.metric]: -5 }, { [q.metric]: Infinity }].forEach((s) => {
+      let c;
+      try { c = Q.cibleEtatAdaptee(q, s, q.target); } catch (e) {
+        fautes.push({ id: q.id, probleme: 'PLANTE sur un état pourri : ' + e.message }); return;
+      }
+      if (!Number.isInteger(c) || c < 1) fautes.push({ id: q.id, probleme: 'état pourri -> ' + c });
+    });
+  });
+  // 3. L'écran appelle bien le recalcul quand le défi apparaît.
+  const ecran = require('fs').readFileSync(
+    require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  const debut = ecran.indexOf('if (questBaselinesRef.current[currentChallengeId]) return;');
+  const fin = ecran.indexOf('}, [currentChallengeId, loaded]);', debut);
+  if (!/cibleEtatAdaptee\(/.test(ecran.slice(debut, fin))) {
+    fautes.push({ probleme: "l'écran ne recalcule pas les défis d'état quand ils apparaissent" });
+  }
+  return fautes;
+}
+module.exports.auditCibleEtat = auditCibleEtat;

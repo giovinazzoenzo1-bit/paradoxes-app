@@ -71,7 +71,18 @@ function construire(alea){
   while(achats.length||reste.length){
     const oeufCourant=Math.floor(ordre.length/6);
     const dansOeuf=new Set(ordre.slice(oeufCourant*6).map(q=>q.metric));
-    if(!prec&&achats.length){
+    // ⚠️⚠️ LES ACHATS SONT RÉPARTIS SUR TOUT LE GROUPE, pas placés le plus
+    // tôt possible. Mesuré le 21/09 : le dernier défi d'achat tombait au
+    // 32e des 42 dans LES SIX Ascensions, 90 % du budget était réclamé
+    // entre le 24e et le 36e, et les dix derniers défis n'avaient plus
+    // aucun contenu économique — l'auteur finissait ses défis puis
+    // farmait 41 % du seuil sans rien à faire. « Pas bon pour la
+    // rétention », et il avait raison.
+    const placesRestantes = achats.length + reste.length;
+    const ecart = placesRestantes / Math.max(1, achats.length);
+    const cDejaPlaces = ordre.filter(q=>achat(q.metric)).length - (fixe?fixe.filter(q=>achat(q.metric)).length:0);
+    const tempsDAcheter = achats.length && (ordre.length + 0.001) >= cDejaPlaces * ecart;
+    if(!prec&&achats.length&&(tempsDAcheter||!reste.length)){
       // ⚠️ Les étapes d'un MÊME article gardent leur ordre prévu : c'est
       // lui qui décide quels niveaux chaque défi couvre. Les inverser
       // donnait les niveaux bon marché au petit défi et laissait au grand

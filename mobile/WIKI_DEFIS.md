@@ -60,6 +60,8 @@ payée.
 | **+35 %** sur les 3 premiers exemplaires des générateurs **que chaque Ascension demande** — jamais tous | 21/09 |
 | Une cible **hors achats ne redescend jamais** dans un groupe | 21/09 |
 | Chaque Ascension reste à **±15 % de sa durée cible** | 21/09 |
+| Un défi d'ÉTAT se recalcule à son apparition : passif **+20 %**, Aventure **+5 niveaux**, de côté **+5 min de production**, Sanctuaire/Veilleur **+2** | 21/09 |
+| Les achats sont **répartis sur tout le groupe**, jamais tassés au début | 21/09 |
 | Deux défis de passif par groupe : **facile à l'œuf 2, exigeant à l'œuf 6** | 21/09 |
 | Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
 | Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
@@ -406,6 +408,39 @@ hauts aux dernières Ascensions.
 ⚠️ **Un libellé ne doit jamais écrire son nombre en dur.** La cible du
 défi valait 10 et le texte disait encore « 29 000 » : le joueur aurait
 lu un défi impossible pour un défi à sa portée.
+
+### 🎯 Tous les défis s'adaptent au joueur
+
+**Demande de l'auteur (21/09)**, après « Atteins 2 pièces par seconde »
+alors qu'il en produisait 27 : « ce défi est complètement useless. Il
+faut le même système de calcul pour TOUS les types de défis. »
+
+| Type de défi | Règle à l'apparition | Son exemple |
+|---|---|---|
+| Achat | ce qui manque pour le total prévu | 4 Pactes déjà → en demande 2 |
+| Revenu/seconde | **+20 %** de la production actuelle | 27/s → **32/s** |
+| Aventure | **+5 niveaux** | chap 1 niv 10 → **chap 2 niv 5** |
+| Pièces de côté | ce qu'il a **+ 5 min de production** | 47 000 → 97 000, ou 59 000 s'il tape peu |
+| Sanctuaire, Veilleur | +2 niveaux, plafonné à 50 | |
+| Records, taps à vie, créature | repartent de zéro / +5 | |
+
+⚠️ Ces cibles ne peuvent que MONTER, jamais descendre sous la valeur
+écrite, et restent atteignables par construction : +20 % de passif
+s'achète, +5 niveaux se jouent, 5 minutes s'attendent.
+
+⚠️ Un défi d'état qui s'adapte ne peut plus avoir de libellé à texte
+figé : `auditLibelles` le refuse. C'est ainsi qu'on a découvert que les
+18 défis d'Aventure affichaient un chapitre ÉCRIT EN DUR — « chapitre 1,
+niveau 15 » au lieu de « chapitre 2, niveau 5 ».
+
+### 📉 Les achats répartis sur tout le groupe
+
+Mesuré le 21/09, dans LES SIX Ascensions : le dernier défi d'achat
+tombait au 32e sur 42, et 90 % du budget était réclamé entre le 24e et le
+36e. L'auteur finissait ses défis puis farmait 41 % du seuil sans rien à
+faire — « pas bon pour la rétention ». L'outil de réordonnancement plaçait
+les achats le plus TÔT possible ; il les répartit désormais régulièrement.
+Dernier achat : défi 39-40.
 
 ### 💰 La règle du TOTAL pour les défis d'achat
 

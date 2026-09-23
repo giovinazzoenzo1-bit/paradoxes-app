@@ -106,6 +106,8 @@ import {
   peutEtreRemplace,
   cibleAchatCumulee,
   estAchatAdaptable,
+  cibleEtatAdaptee,
+  estEtatAdapte,
 } from '../../games/clicker/questLogic';
 // Signalement des blocages — voir `games/clicker/diagnostic.js`.
 import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY } from '../../games/clicker/diagnostic';
@@ -2773,6 +2775,23 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       const cible = resolveQuestTarget(q, instantane);
       if (Number.isFinite(cible) && cible >= 1) {
         setQuestTargets((prev) => ({ ...prev, [currentChallengeId]: Math.floor(cible) }));
+      }
+    }
+    // ⚠️⚠️ UN DÉFI D'ÉTAT SE RECALCULE QUAND IL APPARAÎT (21/09).
+    //
+    // Demande de l'auteur après avoir vu « Atteins 2 pièces par seconde »
+    // alors qu'il en produisait 27 : « ce défi est complètement useless,
+    // il faut le même système de calcul pour tous les types de défis ».
+    // Revenu par seconde, Aventure, pièces de côté, Sanctuaire, Veilleur :
+    // la cible se cale sur ce que le joueur a DÉJÀ — voir
+    // `cibleEtatAdaptee`. Elle ne peut que MONTER.
+    if (q && q.mode === 'absolute' && estEtatAdapte(q.metric)) {
+      const cible = cibleEtatAdaptee(q, instantane, q.target);
+      if (Number.isInteger(cible) && cible >= 1) {
+        setQuestTargets((prev) => {
+          const avant = prev[currentChallengeId] || q.target;
+          return cible > avant ? { ...prev, [currentChallengeId]: cible } : prev;
+        });
       }
     }
     // ⚠️⚠️ UN DÉFI D'ACHAT SE RECALCULE AUSSI QUAND IL APPARAÎT.

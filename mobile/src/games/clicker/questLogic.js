@@ -31,6 +31,11 @@ import {
   critChance,
   critUpgradeCost,
   critDamageUpgradeCost,
+  tapDamage,
+  tapUpgradeBonus,
+  ascensionSpeedMultiplier,
+  SANCTUARY_MAX_LEVEL as SANCTUAIRE_MAX,
+  VEILLEUR_MAX_LEVEL as VEILLEUR_MAX,
   normalizeTapUpgrades,
   normalizeUpgradeLevels,
   sanctuaryUpgradeCost,
@@ -500,6 +505,82 @@ export function niveauPrevuAvant(quest) {
 // ⚠️ Elle ne peut que RÉDUIRE : un joueur n'est jamais pénalisé d'avoir
 // pris de l'avance. Toujours un ENTIER entre 1 et la cible écrite ; au
 // moindre calcul douteux, la cible écrite telle quelle.
+// ⚠️⚠️ LES DÉFIS D'ÉTAT S'ADAPTENT AU JOUEUR (21/09).
+//
+// Demande de l'auteur, après avoir vu « Atteins 2 pièces par seconde »
+// alors qu'il en produisait 27 : « le défi 27 est complètement useless.
+// Il faut le même système de calcul pour TOUS les types de défis. »
+// Ses exemples, devenus les règles :
+//
+//   « Si le joueur a déjà 27/s, le défi doit demander 32 »
+//        -> revenu par seconde : +20 %  (27 x 1,2 = 32)
+//   « Si le joueur est chap 1 niveau 10, le défi doit demander
+//     chap 2 niveau 5 »
+//        -> Aventure : +5 niveaux (un chapitre fait 10 niveaux)
+//   « S'il a 47 000 de côté, le défi doit demander 90 000 — calculé par
+//     rapport aux coins par tap : avec 10 coins/tap, 60 000 »
+//        -> pièces de côté : ce qu'il a + 5 MINUTES de sa production.
+//           C'est bien le tap qui commande : à 10 pièces par tap et 4
+//           taps/s, cinq minutes valent 12 000 ; à 140 pièces par tap,
+//           elles en valent 168 000.
+//
+// Les autres types n'en ont pas besoin : les défis d'ACHAT suivent la
+// règle du total, les défis de COMPTAGE (combats, cibles dorées,
+// offrandes…) comptent depuis leur apparition, et les RECORDS repartent
+// de zéro quand le défi s'affiche.
+//
+// ⚠️⚠️ CETTE CIBLE NE PEUT QUE MONTER — jamais descendre sous la cible
+// écrite. Et elle reste ATTEIGNABLE par construction : +20 % de passif
+// s'achète, +5 niveaux d'Aventure se jouent, 5 minutes de production
+// s'attendent. Le Sanctuaire et le Veilleur plafonnent à 50 : on ne
+// dépasse jamais leur maximum, sinon l'œuf serait bloqué pour toujours.
+export const ADAPT_PASSIF_HAUSSE = 0.2;      // +20 %
+export const ADAPT_AVENTURE_NIVEAUX = 5;     // un demi-chapitre
+export const ADAPT_COTE_SECONDES = 300;      // 5 minutes de production
+export const ADAPT_NIVEAU_PAS = 2;           // Sanctuaire, Veilleur
+
+const METRIQUES_ETAT_ADAPTEES = ['passiveIncome', 'advLevelReached', 'coins',
+  'sanctuaryLevel', 'veilleurLevel'];
+
+export function estEtatAdapte(metric) {
+  return METRIQUES_ETAT_ADAPTEES.includes(metric);
+}
+
+// Production par seconde du joueur : passif + tap au rythme humain.
+export function productionParSeconde(stats) {
+  const s = stats || {};
+  const asc = Math.max(0, Math.floor(Number(s.ascension) || 0));
+  const passif = Number(s.passiveIncome) || 0;
+  const tap = (tapDamage(Number(s.tapPower) || 1) + tapUpgradeBonus(s.tapUpgrades || {}))
+    * TAPS_HUMAINS_PAR_SEC * ascensionSpeedMultiplier(asc);
+  const total = passif + tap;
+  return Number.isFinite(total) && total > 0 ? total : 0;
+}
+export const TAPS_HUMAINS_PAR_SEC = 4;
+
+export function cibleEtatAdaptee(quest, stats, cibleEcrite) {
+  const ecrite = Math.max(1, Math.floor(Number(cibleEcrite) || (quest && quest.target) || 1));
+  try {
+    const m = quest && quest.metric;
+    if (!quest || quest.mode !== 'absolute' || !estEtatAdapte(m)) return ecrite;
+    const actuel = Math.max(0, Number(readMetric(m, stats || {})) || 0);
+    let voulu = ecrite;
+    // ⚠️ Arrondi, pas plafond : 27 x 1,2 = 32,4 -> 32, la valeur exacte
+    // de l'exemple donné par l'auteur.
+    if (m === 'passiveIncome') voulu = Math.round(actuel * (1 + ADAPT_PASSIF_HAUSSE));
+    else if (m === 'advLevelReached') voulu = Math.floor(actuel) + ADAPT_AVENTURE_NIVEAUX;
+    else if (m === 'coins') voulu = Math.ceil(actuel + ADAPT_COTE_SECONDES * productionParSeconde(stats));
+    else voulu = Math.floor(actuel) + ADAPT_NIVEAU_PAS;
+    let cible = Math.max(ecrite, voulu);
+    if (m === 'sanctuaryLevel') cible = Math.min(cible, SANCTUAIRE_MAX);
+    if (m === 'veilleurLevel') cible = Math.min(cible, VEILLEUR_MAX);
+    cible = Math.floor(cible);
+    return Number.isFinite(cible) && cible >= 1 ? cible : ecrite;
+  } catch (e) {
+    return ecrite;
+  }
+}
+
 export function cibleAchatCumulee(quest, stats, cibleEcrite) {
   const ecrite = Math.max(1, Math.floor(Number(cibleEcrite) || (quest && quest.target) || 1));
   try {

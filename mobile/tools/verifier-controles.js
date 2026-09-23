@@ -183,6 +183,8 @@ const SABOTAGES = [
     (src) => src.replace(/export const TAP_DAMAGE_PER_LEVEL = ([\d.]+);/, (m, v) => 'export const TAP_DAMAGE_PER_LEVEL = ' + (Number(v) * 3) + ';')],
   ['auditMajorationPrix', F.clicker, "la Main de l'A0 n'est plus majorée alors que ses défis la demandent",
     remplace("  ['esprit', 'main'],                 // A0", "  ['esprit'],                         // A0")],
+  ['auditCibleEtat', F.ecran, "les défis d'état ne se recalculent plus à leur apparition (« Atteins 2/s » quand tu en produis 27)",
+    remplace('      const cible = cibleEtatAdaptee(q, instantane, q.target);', '      const cible = q.target;')],
   ['auditTropFacile', F.defis, 'des dizaines de défis réduits à rien',
     surDefis((b) => ['totalEarned', 'goldenClaimed', 'coins'].includes(b.metric), cible(1))],
 ];
