@@ -429,6 +429,20 @@ commune, pour équilibrer les pouvoirs cheatés des mythiques. »
 - 2e appui : le pouvoir s'active ;
 - temps de recharge selon la rareté.
 
+✅ **DÉCIDÉ (21/09) : le deck REMPLACE complètement la bulle** qui
+apparaît toutes les 60 s. L'auteur : « ça fait juste en sorte que le
+joueur reste 1 min de plus, puis 45 s, puis 3 min — rétention max ». Le
+pouvoir n'est plus un hasard à saisir en 4 secondes : c'est un rendez-vous
+que le joueur attend, et la recharge est la raison de rester.
+
+⚠️ Points à trancher en ouvrant le chantier, AVANT de coder :
+  - un compte à rebours par créature du deck, ou un seul partagé ;
+  - ce qui se passe si le joueur quitte l'écran pendant l'activation ;
+  - les défis « Active N fois un pouvoir » : ils comptent les
+    activations par le deck (vérifier `powerActivated`) ;
+  - la recharge continue-t-elle hors ligne ?
+Mesurer ensuite la durée des Ascensions : le gain moyen du tap change.
+
 Proposition à MESURER avant d'appliquer (gain moyen du tap = 1 + durée ÷
 recharge × (multiplicateur − 1), pouvoir de 15 s) : commun ×2,4 toutes
 les 60 s → ×1,35 ; mythique ×18 toutes les 5 min → ×1,85 ; légendaire
