@@ -64,6 +64,7 @@ payée.
 | Les achats sont **répartis sur tout le groupe**, jamais tassés au début | 21/09 |
 | **8 défis par œuf** (« le joueur aura l'impression de mériter son œuf ») : les 2 ajoutés sont des **activités**, jamais des achats | 21/09 |
 | Un étalonnage ne s'accroche **jamais à un identifiant** de défi : en secondes, ou en valeur | 21/09 |
+| Transe et cible dorée **montent petit à petit**, en chaîne continue sur les 6 Ascensions | 21/09 |
 | Deux défis de passif par groupe : **facile à l'œuf 2, exigeant à l'œuf 6** | 21/09 |
 | Les défis de **taps d'affilée** vont de 120 à 400, jamais moins | 20/09 |
 | Un **record** repart de zéro au tirage — jamais l'exploit d'avant | 20/09 |
@@ -410,6 +411,27 @@ hauts aux dernières Ascensions.
 ⚠️ **Un libellé ne doit jamais écrire son nombre en dur.** La cible du
 défi valait 10 et le texte disait encore « 29 000 » : le joueur aurait
 lu un défi impossible pour un défi à sa portée.
+
+### ⏱️ Chronos de l'auteur, 2e passage (21/09, en speedrun, œufs passés au bouton pub dev)
+
+2 premiers œufs en 11 min · 3 œufs à 25 min · défi 32 à 41 min — et
+**Ascension possible dès le défi 32 sur 56**.
+
+⚠️⚠️ CAUSE MESURÉE : les paliers de tap. Un palier se débloque quand le
+précédent atteint le niveau 5, et ils sont si bon marché que l'auteur
+avait l'Éclat Primordial (prévu pour l'A2, +16/tap) dès l'œuf 3 de
+l'A0, pour 2,3 % du seuil. Et les prix de base à partir du palier 7 sont
+CASSÉS : Fracture du Réel (+256/tap) coûte 24 845, moins que la Griffe
+du Vide (+64/tap, 25 472), elle-même moins que le Serment (40 763).
+Prix par +1 de tap : de 6 065 (palier 3) à 557 (palier 7).
+➡️ CHANTIER SUIVANT : courbe de prix des paliers (règle d'origine :
+« même valeur au coin », prix proportionnel au bonus) + ouverture par
+Ascension. Il touche le budget et la durée des 6 Ascensions.
+
+Transe et cible dorée : les clones ×2 donnaient 30 → 45 → 90 → 180 s
+et 3 → 9 → 18 → 36. Remplacés par des chaînes continues : Transe +8 %
+par défi (30 → 180 s sur les 24), cible dorée calée sur les repères de
+l'auteur (5 à l'œuf 3, ~9 vers l'œuf 10), 65 au maximum.
 
 ### 🥚 8 défis par œuf (21/09)
 
