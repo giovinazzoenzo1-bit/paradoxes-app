@@ -2145,10 +2145,23 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     autoClickers, upgradeLevels, sanctuaryLevel, essence, ascensionCount,
     powerBoost: activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1,
   });
+  // ⚠️⚠️ PASSIF DE BASE, sans pouvoir actif (24/09). Bug pressenti par
+  // l'auteur avant qu'il n'arrive : un défi « Mets N de côté » ou
+  // « Atteins N par seconde » qui apparaît PENDANT un pouvoir (x3 sur le
+  // passif, x12 sur le tap) se calerait sur des chiffres gonflés et
+  // deviendrait irréalisable une fois le pouvoir retombé. Les cibles
+  // adaptatives lisent CE passif-là, jamais le boosté.
+  const passiveIncomeBase = passiveRate({
+    autoClickers, upgradeLevels, sanctuaryLevel, essence, ascensionCount, powerBoost: 1,
+  });
   // Ref tenue à jour : `buyWithDiamonds` est asynchrone et lirait
   // sinon une valeur figée au montage.
   const passiveIncomeRef = useRef(0);
   passiveIncomeRef.current = passiveIncome;
+  // Même chose pour le passif de BASE : la photo prise à l'apparition d'un
+  // défi (`buildQuestStatsSnapshot`) le lit par cette ref.
+  const passiveIncomeBaseRef = useRef(0);
+  passiveIncomeBaseRef.current = passiveIncomeBase;
 
   const claimRitual = () => {
     if (!ritualTargetRef.current) return;
@@ -2264,7 +2277,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     maxTapStreak,
     totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower,
     coins,
-    passiveIncome,
+    // ⚠️⚠️ LES DÉFIS NE VOIENT JAMAIS UN PASSIF BOOSTÉ PAR UN POUVOIR.
+    // Bug pressenti par l'auteur (21/09) : un défi « Atteins N par
+    // seconde » ou « Mets N de côté » qui apparaît PENDANT un pouvoir x3
+    // sur le passif se calerait sur un chiffre gonflé et deviendrait
+    // irréalisable une fois le pouvoir retombé. Le passif de base servait
+    // déjà de référence, mais le calcul adaptatif lisait encore le
+    // boosté : c'est `passiveIncome` que tout le moteur des défis lit.
+    passiveIncome: passiveIncomeBase,
+    passiveIncomeBase,
     autoTotal: Object.values(autoClickers).reduce((sum, n) => sum + (n || 0), 0),
     autoClickers,
     upgradeLevels,
@@ -2889,7 +2910,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const buildQuestStatsSnapshot = () => ({
     totalEarned: totalEarnedRef.current,
     coins: coinsRef.current,
-    passiveIncome,
+    // ⚠️ Passif de BASE, sans pouvoir actif : c'est sur cette photo que la
+    // cible d'un défi d'état se calcule à son apparition.
+    passiveIncome: passiveIncomeBaseRef.current,
+    passiveIncomeBase: passiveIncomeBaseRef.current,
     tapPower: tapPowerRef.current,
     autoClickers: autoClickersRef.current,
     autoTotal: Object.values(autoClickersRef.current).reduce((a, b) => a + (b || 0), 0),

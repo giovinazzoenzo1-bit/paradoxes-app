@@ -550,7 +550,8 @@ export function estEtatAdapte(metric) {
 export function productionParSeconde(stats) {
   const s = stats || {};
   const asc = Math.max(0, Math.floor(Number(s.ascension) || 0));
-  const passif = Number(s.passiveIncome) || 0;
+  // ⚠️ Passif de BASE : jamais celui gonflé par un pouvoir actif (24/09).
+  const passif = Number(s.passiveIncomeBase !== undefined ? s.passiveIncomeBase : s.passiveIncome) || 0;
   const tap = (tapDamage(Number(s.tapPower) || 1) + tapUpgradeBonus(s.tapUpgrades || {}))
     * TAPS_HUMAINS_PAR_SEC * ascensionSpeedMultiplier(asc);
   const total = passif + tap;
@@ -563,7 +564,11 @@ export function cibleEtatAdaptee(quest, stats, cibleEcrite) {
   try {
     const m = quest && quest.metric;
     if (!quest || quest.mode !== 'absolute' || !estEtatAdapte(m)) return ecrite;
-    const actuel = Math.max(0, Number(readMetric(m, stats || {})) || 0);
+    // ⚠️ Pour le revenu par seconde, on lit le passif de BASE (sans pouvoir
+    // actif) : un pouvoir x3 en cours rendrait la cible irréalisable après.
+    const brut = m === 'passiveIncome' && stats && stats.passiveIncomeBase !== undefined
+      ? stats.passiveIncomeBase : readMetric(m, stats || {});
+    const actuel = Math.max(0, Number(brut) || 0);
     let voulu = ecrite;
     // ⚠️ Arrondi, pas plafond : 27 x 1,2 = 32,4 -> 32, la valeur exacte
     // de l'exemple donné par l'auteur.

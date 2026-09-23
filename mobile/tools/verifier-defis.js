@@ -61,7 +61,12 @@ const CONTROLES = [
 
   ['auditSubstitutions', 'tout retrait de défi passe par la règle unique'],
   ['auditCibleSuitLeJoueur', 'une cible fixe est la même pour tous les joueurs'],
-  ['auditTropFacile', 'au plus 22 défis faciles sur 336', 22],
+  // ⚠️ Tolérance REBASÉE le 21/09 : 22 datait d'une base de 21 défis
+  // signalés. Depuis que les records, les défis d'état, les cibles dorées
+  // et les pouvoirs en sont exclus (rythmés par le jeu ou recalculés à
+  // l'apparition), la base est de 11 : à 22, onze défis vidés passaient
+  // sans un mot — le contrôle des contrôles l'a vu. Base + 3 de marge.
+  ['auditTropFacile', 'au plus 14 défis faciles sur 336', 14],
 ];
 
 // ⚠️⚠️ CONTRÔLES RETIRÉS, avec leur raison. Un contrôle qui existe sans

@@ -54,6 +54,14 @@ const H = {
   // créature, moins le temps passé hors du tap (menus, boutique,
   // Aventure). Calé sur les chronos RÉELS de l'auteur, pas deviné.
   facteurJoueurReel: 2.48,
+  // ⚠️ PAUSES D'ÉNERGIE (24/09). L'auteur : « je n'ai pas compté le repos
+  // pour les 5 énergies de l'Aventure : le joueur est hors ligne à ce
+  // moment-là, ~1 h 15, et 9 fois dans l'Ascension (on est censé passer
+  // le chapitre 4 niveau 5) ». Toutes les 10 min de jeu actif, une pause
+  // de 1 h 15 dont les gains hors ligne sont crédités par LA fonction du
+  // jeu (`offlineEarnings`).
+  pauseToutesLesSec: 600,
+  pauseDureeSec: 4500,
   minParSession: 20,      // durée d'une session type
   energieMax: 5,          // tentatives d'Aventure avant recharge
   diamantsParJour: 21,    // plafond des boss
@@ -1116,6 +1124,12 @@ function auditTropFacile(nbOeufs = 26) {
       // sabotage). Les juger ici sur leur cible écrite produisait des
       // alarmes fausses — 15 au passage à 8 défis par œuf.
       if (['maxTapStreak', 'maxTranseHoldSec', 'maxCombo'].includes(met) || Q.estEtatAdapte(met)) return;
+      // ⚠️ Cibles dorées et pouvoirs : leurs chaînes sont fixées par
+      // l'auteur pour la RÉTENTION (5 cibles à l'œuf 3, 11 pouvoirs à
+      // l'œuf 6…). Elles sont rythmées par l'apparition des cibles et la
+      // recharge des pouvoirs, pas par la difficulté : « trop facile » n'a
+      // rien à y juger, et pousserait à les remonter contre sa règle.
+      if (['goldenClaimed', 'powerActivated'].includes(met)) return;
       const acquis = met.startsWith('auto:') ? ((s.autoClickers || {})[met.slice(5)] || 0)
         : met.startsWith('tapUpgrade:') ? ((s.tapUpgrades || {})[met.slice(11)] || 0)
           : (s[met] || 0);
@@ -2261,7 +2275,16 @@ function simulerGroupe(ascension, tapsParSec) {
   // Ajout du 21/09 : c'est l'étalon des défis « Mets N pièces de côté ».
   // Rien d'autre ne change dans le calcul.
   const jalons = [{ t: 0, passif: 0, production: rev() }];
+  let prochainePause = H.pauseToutesLesSec;
   while (s.totalEarned < seuil && garde++ < 20000) {
+    // Pause d'énergie : gains hors ligne crédités, temps actif inchangé.
+    if (H.pauseToutesLesSec > 0 && t >= prochainePause) {
+      prochainePause += H.pauseToutesLesSec;
+      const pf = C.passiveRate({ autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
+        sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a });
+      const gain = C.offlineEarnings(pf, H.pauseDureeSec);
+      s.coins += gain; s.totalEarned += gain;
+    }
     const r = rev();
     const options = [{ cout: C.tapPowerCost(s.tapPower), appliquer: (x) => { x.tapPower += 1; } }];
     C.AUTOCLICKERS.forEach((g) => {
@@ -2904,9 +2927,17 @@ function auditCibleEtat() {
       if (!Number.isInteger(c) || c < 1) fautes.push({ id: q.id, probleme: 'état pourri -> ' + c });
     });
   });
-  // 3. L'écran appelle bien le recalcul quand le défi apparaît.
+  // 3. L'écran appelle bien le recalcul quand le défi apparaît — et la
+  //    photo qu'il lui donne porte le passif de BASE, jamais celui gonflé
+  //    par un pouvoir x3 (bug pressenti par l'auteur le 21/09).
   const ecran = require('fs').readFileSync(
     require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if (!/passiveIncome: passiveIncomeBaseRef\.current,/.test(ecran)) {
+    fautes.push({ probleme: "la photo d'apparition donne le passif BOOSTÉ aux défis : cible irréalisable après un pouvoir" });
+  }
+  if (!/passiveIncome: passiveIncomeBase,/.test(ecran)) {
+    fautes.push({ probleme: 'les défis lisent le passif boosté pour leur progression' });
+  }
   const debut = ecran.indexOf('if (questBaselinesRef.current[currentChallengeId]) return;');
   const fin = ecran.indexOf('}, [currentChallengeId, loaded]);', debut);
   if (!/cibleEtatAdaptee\(/.test(ecran.slice(debut, fin))) {

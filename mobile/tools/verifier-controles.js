@@ -192,8 +192,14 @@ const SABOTAGES = [
     remplace('      const cible = cibleEtatAdaptee(q, instantane, q.target);', '      const cible = q.target;')],
   ['auditDebutDePartie', F.clicker, 'une mythique possible dès le premier œuf (bug réel du 21/09)',
     remplace("export const RARETE_MAX_PREMIERS_OEUFS = 'rare';", "export const RARETE_MAX_PREMIERS_OEUFS = 'mythique';")],
+  ['auditCibleEtat', F.ecran, 'la photo d\'apparition redonne le passif boosté par un pouvoir (bug pressenti)',
+    remplace('    passiveIncome: passiveIncomeBaseRef.current,', '    passiveIncome: passiveIncomeRef.current,')],
+  // ⚠️ Vise des types que le contrôle juge ENCORE : cibles dorées, pouvoirs,
+  // records et défis d'état en sont exclus depuis le 21/09 (rythmés par le
+  // jeu ou recalculés à l'apparition), et l'ancien sabotage était devenu
+  // aveugle.
   ['auditTropFacile', F.defis, 'des dizaines de défis réduits à rien',
-    surDefis((b) => ['totalEarned', 'goldenClaimed', 'coins'].includes(b.metric), cible(1))],
+    surDefis((b) => b.metric.startsWith('auto:') || ['tapPower', 'critLevel', 'critDamageLevel'].includes(b.metric), cible(1))],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------
