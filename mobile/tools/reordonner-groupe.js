@@ -30,6 +30,11 @@ const Q=A.Q;const D=A.load('defisEcrits');
 const F=require('path').join(__dirname,'../src/games/clicker/defisEcrits.js');
 const src=fs.readFileSync(F,'utf8');const lignes=src.split('\n');
 const GROUPE=Number(process.argv[2]||0);
+// ⚠️⚠️ LA TAILLE D'UN ŒUF EST LUE DANS LE FICHIER. Elle était écrite en
+// dur (6) à cinq endroits : passé à 8 défis par œuf le 21/09, l'outil a
+// découpé les groupes par 6 et PERDU 82 défis d'un coup. Un nombre en dur
+// qui décrit une donnée finit toujours par mentir sur cette donnée.
+const TAILLE=D.DEFIS_ECRITS[GROUPE*7].length;
 // Blocs source : 3 lignes par défi, repérés par leur id.
 const bloc={};
 lignes.forEach((l,i)=>{const m=l.match(/id: '([^']+)'/);if(m)bloc[m[1]]=lignes.slice(i,i+3);});
@@ -69,8 +74,8 @@ function construire(alea){
   let prec = fixe ? achat(fixe[fixe.length-1].metric) : false;
   let pacteFait = (posL.tapPower||1) >= 10;
   while(achats.length||reste.length){
-    const oeufCourant=Math.floor(ordre.length/6);
-    const dansOeuf=new Set(ordre.slice(oeufCourant*6).map(q=>q.metric));
+    const oeufCourant=Math.floor(ordre.length/TAILLE);
+    const dansOeuf=new Set(ordre.slice(oeufCourant*TAILLE).map(q=>q.metric));
     // ⚠️⚠️ LES ACHATS SONT RÉPARTIS SUR TOUT LE GROUPE, pas placés le plus
     // tôt possible. Mesuré le 21/09 : le dernier défi d'achat tombait au
     // 32e des 42 dans LES SIX Ascensions, 90 % du budget était réclamé
@@ -126,7 +131,7 @@ function violations(ordre){
 // alternance achat / autre, pas deux fois la même métrique dans un œuf.
 function valide(ordre){
   const seq=(fixe?fixe:[]).concat(ordre);
-  for(let e=0;e<7;e++){const o=seq.slice(e*6,e*6+6);const ms=o.map(q=>q.metric);
+  for(let e=0;e<7;e++){const o=seq.slice(e*TAILLE,e*TAILLE+TAILLE);const ms=o.map(q=>q.metric);
     if(new Set(ms).size!==ms.length)return false;
     // ⚠️ Plafonds de famille lus DANS LE MOTEUR, pas recopiés.
     const cpt={};for(const m of ms){const f=Q.familleDe(m);cpt[f]=(cpt[f]||0)+1;if(cpt[f]>Q.plafondFamille(f))return false;}}
@@ -138,7 +143,7 @@ let meilleur=construire(false), score=valide(meilleur)?violations(meilleur):1e12
 for(let t=0;t<6000;t++){const c=construire(true);if(!valide(c))continue;const sc=violations(c);if(sc<score){score=sc;meilleur=c;}}
 console.log('meilleur ordre : '+Math.floor(score/1000)+' écart(s) de coût restant(s)');
 const ordre=meilleur;
-const nouveaux=(fixe?[fixe]:[]).concat([0,1,2,3,4,5,6].slice(0,fixe?6:7).map(k=>ordre.slice(k*6,k*6+6)));
+const nouveaux=(fixe?[fixe]:[]).concat([0,1,2,3,4,5,6].slice(0,fixe?6:7).map(k=>ordre.slice(k*TAILLE,k*TAILLE+TAILLE)));
 // Réécriture : on remplace le contenu de chaque œuf du groupe par les
 // blocs source, id recalé sur la nouvelle position.
 const sortie=[];let i=0;
