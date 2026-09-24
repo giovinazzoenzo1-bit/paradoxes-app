@@ -390,8 +390,12 @@ coûts sans relancer `reordonner-groupe.js` : défis d'achat moins chers
 que le précédent aux A1-A5, 2 avant, 13 après, invisibles sous la
 tolérance de 50 %. Mesurer avec la tolérance ZÉRO, pas avec le contrôle.
 
-**Deux instances peuvent partager le bac à sable** (« Réessayer » en
-relance une). `git fetch` avant chaque commit, comparer avant de pousser.
+**Plusieurs copies de Claude peuvent écrire en même temps** (« Réessayer »
+après une réponse coupée, ou deux conversations) : quatre fois le 24/09.
+Première commande de toute réponse qui écrit : `sh mobile/tools/garde.sh
+prendre <étiquette>`, `rendre` après le push. Et aucune attente de
+publication (`sleep`) dans une réponse : les longues sont celles qui se
+coupent.
 
 **Ne pas ajouter ce qui n'est pas demandé.** Un menu ajouté de ma propre
 initiative a produit deux bugs en trois commits avant d'être retiré.

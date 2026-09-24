@@ -10,6 +10,7 @@ git clone https://<TOKEN>@github.com/giovinazzoenzo1-bit/paradoxes-app.git
 cd paradoxes-app
 mkdir -p /home/claude/auditenv && cd /home/claude/auditenv && npm init -y >/dev/null && npm i @babel/core @babel/preset-env @babel/preset-react >/dev/null && cd -
 ```
+0. **Garde anti-doublon, à CHAQUE réponse qui écrit** : `sh mobile/tools/garde.sh prendre <étiquette>` en première commande, `rendre` après le push. STOP = ne rien écrire et prévenir l'auteur. Aucune attente de publication (`sleep`) dans une réponse : vérifier `actions/runs` au message suivant.
 1. Lire **en entier** `mobile/CLICKER_ADVENTURE_STATE.md`, puis `mobile/WIKI_DEFIS.md`, puis `mobile/A_FAIRE.md`.
 2. Lancer les contrôles et rapporter le résultat :
 ```
@@ -42,7 +43,7 @@ python3 mobile/tools/generer-doc.py        # régénère mobile/DEFIS_PARADOX.md
 - Signalement des bugs : bouton dans les Options + détection automatique + filet d'`index.js` → mail à `EMAIL_SIGNALEMENT` (une seule ligne, dans `diagnostic.js`).
 - Chronos de l'auteur (4e passage, pubs d'œufs) : 1 œuf 7 min · 2 à 13 · 3 à 24 · 4 à 40 · 5 à 60 · 6 à 1 h 18 (« vraiment bien »).
 
-## 4. Les passes restantes (demandées par l'auteur, à faire une par conversation)
+## 4. Les passes restantes (demandées par l'auteur — dans la MÊME conversation, décision du 24/09)
 
 ### Passe 2 — paliers de tap ×2,5 — FAITE (24/09)
 `growth` 1,45 → **2,5** sur les 10 paliers, Pacte intact. Mesuré avant : le tap faisait 96-100 % de la production, générateurs morts ; ×2,5 seul mettait l'A2 à 17 h. Compensé par `AJUSTEMENT_ASCENSION` (dichotomie), 24 cibles de défis recalées (paliers en part du seuil : niveau final 7/8 · 8/9 · 10/9 · 10/10 · 10/10 ; Pacte A2 9→6, A3 13→11 ; Dégâts critiques A2 19→17 ; Golems A3 5→9), `QUEST_ENGINE_VERSION` 58, `auditPlafondAchats` lit la pente. Budgets 88 / 89 / 85 / 82 / 86 %.
@@ -70,4 +71,4 @@ Décidé : **remplace la bulle**. Compte à rebours sur l'œuf ; 1er appui sur l
 - Réponses **courtes, structurées, code couleur** 🟩🟥🟨🟦, une recommandation tranchée ; pas de question sauf strictement nécessaire.
 - Il teste sur son téléphone et donne des **chronos** : ce sont les mesures de référence. Il speedrun parfois (pubs d'œufs, énergie max en dev) : le dire dans les calibrations.
 - Il refuse ce qui n'est pas mesuré ; il repère les défis « inutiles » (déjà remplis) et les « abusés ».
-- Quand une réponse plante, c'est la taille de la conversation : **une passe par conversation**, et vérifier `git status` en arrivant (une tentative ratée peut avoir laissé des fichiers modifiés non mesurés — c'est arrivé le 24/09).
+- **Il reste sur UNE conversation** (abonnement Max, refus explicite d'en changer, 24/09). Réponses courtes : peu de commandes, sorties filtrées à quelques lignes, jamais de fichier entier affiché, pas d'attente de publication. Une réponse coupée relance une copie (« Réessayer ») : c'est `garde.sh` qui protège le dépôt.
