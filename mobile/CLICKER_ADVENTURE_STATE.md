@@ -26,6 +26,15 @@ d'un joueur.
 
 ---
 
+## 0. 📋 LIRE D'ABORD `PASSATION.md`
+
+État au 24/09, ordre de démarrage, commandes des contrôles, passes
+restantes (2 : prix des paliers ×2,5 · 3 : œuf 7 à valider · 4 :
+pouvoirs par le deck) et façon de travailler de l'auteur. Puis ce
+fichier, puis `WIKI_DEFIS.md`, puis `A_FAIRE.md`.
+
+---
+
 ## 0 bis. 🐞 SIGNALEMENT DES BUGS — comment l'auteur est prévenu
 
 Depuis le 21/09, un joueur bloqué peut prévenir l'auteur. Avant, il était

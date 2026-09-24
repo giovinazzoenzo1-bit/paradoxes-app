@@ -2190,7 +2190,10 @@ module.exports.auditDureeCroissante = auditDureeCroissante;
 // coïncider défi par défi, dans l'ordre.
 function auditDocConforme(chemin) {
   const fs = require('fs');
-  const doc = chemin || '/mnt/user-data/outputs/defis-paradox.md';
+  // ⚠️ La copie DU DÉPÔT (24/09) : le document vivait hors du dépôt, dans
+  // un dossier de session, et une nouvelle conversation démarrait sans
+  // lui. Généré par `mobile/tools/generer-doc.py`.
+  const doc = chemin || require('path').join(__dirname, '../DEFIS_PARADOX.md');
   let texte;
   try { texte = fs.readFileSync(doc, 'utf8'); } catch (e) {
     return [{ probleme: 'document introuvable : ' + doc }];

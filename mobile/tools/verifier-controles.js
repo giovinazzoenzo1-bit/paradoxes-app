@@ -40,7 +40,7 @@ const F = {
   ecran: path.join(RACINE, 'src/screens/games/ClickerScreen.js'),
   index: path.join(RACINE, 'index.js'),
   diag: path.join(RACINE, 'src/games/clicker/diagnostic.js'),
-  doc: '/mnt/user-data/outputs/defis-paradox.md',
+  doc: path.join(RACINE, 'DEFIS_PARADOX.md'),
 };
 
 // ---- Outils pour viser un défi par son identifiant ------------------
