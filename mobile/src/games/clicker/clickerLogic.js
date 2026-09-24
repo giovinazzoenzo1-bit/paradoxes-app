@@ -663,6 +663,22 @@ export function restantPouvoirMs(recharges, creatureId, now) {
   const t = recharges && recharges[creatureId];
   return t ? Math.max(0, t - now) : 0;
 }
+// ⚠️ BUG SIGNALÉ PAR L'AUTEUR (24/09) : « quand on change de créature dans
+// le deck et qu'on la choisit, on obtient directement le pouvoir ». Toute
+// créature qui ARRIVE dans le deck démarre sa recharge COMPLÈTE — jamais
+// raccourcie si elle rechargeait déjà (la retirer puis la remettre la
+// relance à zéro). Changer une créature de place n'est pas une arrivée.
+// Renvoie le MÊME objet s'il n'y a aucune arrivée.
+export function rechargesApresChangementDeck(recharges, avant, apres, now) {
+  const arrivees = (apres || []).filter((id) => id && !(avant || []).includes(id));
+  if (!arrivees.length) return recharges;
+  const r = { ...(recharges || {}) };
+  arrivees.forEach((id) => {
+    const c = CREATURES.find((x) => x.id === id);
+    if (c) r[id] = Math.max(r[id] || 0, now + rechargePouvoirMs(c));
+  });
+  return r;
+}
 export function rechargesApresActivation(recharges, creature, now) {
   return { ...(recharges || {}), [creature.id]: now + rechargePouvoirMs(creature) };
 }

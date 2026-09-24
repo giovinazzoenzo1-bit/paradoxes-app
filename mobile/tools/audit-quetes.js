@@ -3237,3 +3237,33 @@ function auditGardienEmpreinte() {
 }
 module.exports.empreinteCombat = empreinteCombat;
 module.exports.auditGardienEmpreinte = auditGardienEmpreinte;
+
+// ---- Changer de créature ne donne pas un pouvoir gratuit (24/09) ----
+//
+// Bug signalé par l'auteur : « quand on change de créature dans le deck et
+// qu'on la choisit, on obtient directement le pouvoir — il faut à tout
+// prix patcher, sinon ça casse le jeu complètement ». Ce contrôle vérifie
+// la RÈGLE (toute arrivée dans le deck démarre la recharge complète ;
+// changer de place n'en est pas une ; jamais raccourcie) ET son CÂBLAGE :
+// ClickerScreen l'applique sur l'état du deck, là où passent l'écran
+// principal, le menu Exploration et le remplissage automatique.
+function auditRechargeDeck() {
+  const fautes = [];
+  const f = C.rechargesApresChangementDeck;
+  const com = C.CREATURES.find((c) => c.rarity === 'commun');
+  const myth = C.CREATURES.find((c) => c.rarity === 'mythique');
+  const t = 1e9;
+  const r = f({}, [com.id, null, null], [com.id, myth.id, null], t);
+  if (!r[myth.id] || r[myth.id] - t !== C.rechargePouvoirMs(myth)) fautes.push({ probleme: 'une créature placée dans le deck est prête tout de suite' });
+  if (r[com.id]) fautes.push({ probleme: 'la créature déjà dans le deck voit sa recharge relancée' });
+  if (f(r, [com.id, myth.id, null], [myth.id, com.id, null], t + 5000) !== r) fautes.push({ probleme: 'changer une créature de place relance sa recharge' });
+  const long = { [myth.id]: t + 10 * C.rechargePouvoirMs(myth) };
+  if (f(long, [null, null, null], [myth.id, null, null], t)[myth.id] !== long[myth.id]) fautes.push({ probleme: 'une recharge en cours est raccourcie' });
+  const ecran = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if (!/rechargesApresChangementDeck\(rechargesRef\.current, avant, deck, Date\.now\(\)\)/.test(ecran)
+    || !/\}, \[deck, loaded\]\);/.test(ecran)) {
+    fautes.push({ probleme: "ClickerScreen n'applique plus la règle sur l'état du deck" });
+  }
+  return fautes;
+}
+module.exports.auditRechargeDeck = auditRechargeDeck;

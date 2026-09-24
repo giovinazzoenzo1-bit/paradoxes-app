@@ -52,6 +52,7 @@ import {
   pouvoirPret,
   restantPouvoirMs,
   rechargesApresActivation,
+  rechargesApresChangementDeck,
   SPAWN_INTERVAL_SEC,
   SPAWN_VISIBLE_SEC,
   critChance,
@@ -700,6 +701,27 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     }, 1000);
     return () => clearInterval(id);
   }, [recharges]);
+  // ⚠️ Changer de créature ne donne PLUS un pouvoir immédiat (bug signalé
+  // par l'auteur, 24/09). Branché sur l'ÉTAT du deck, pas sur chaque
+  // bouton : écran principal, menu Exploration (même `assignToDeck`),
+  // remplissage automatique — et tout futur chemin — passent par ici. Le
+  // deck chargé au démarrage sert de référence : sinon chaque ouverture
+  // de l'app relancerait toutes les recharges.
+  const deckAvantRef = useRef(null);
+  useEffect(() => {
+    if (!loaded) return;
+    const avant = deckAvantRef.current;
+    deckAvantRef.current = deck;
+    if (!avant) return;
+    const r = rechargesApresChangementDeck(rechargesRef.current, avant, deck, Date.now());
+    if (r !== rechargesRef.current) { rechargesRef.current = r; setRecharges(r); }
+    // La créature invoquée autour de l'œuf quitte le deck : elle repart.
+    const inv = spawnedCreatureRef.current;
+    if (inv && inv.fromDeck && !deck.includes(inv.creature.id)) {
+      spawnedCreatureRef.current = null;
+      setSpawnedCreature(null);
+    }
+  }, [deck, loaded]);
   const [pendingDiscount, setPendingDiscount] = useState(null); // {percent, name} — consommé au prochain achat
   const [critLevel, setCritLevel] = useState(0);
   // Dégâts critiques : amélioration SÉPARÉE de la Faveur des Esprits,

@@ -266,6 +266,14 @@ rotation, mana) est entre les marqueurs « RÈGLES DU COMBAT » :
 `auditGardienEmpreinte` refuse le push s'il change. Ne mettre à jour
 `EMPREINTE_COMBAT` qu'APRÈS avoir revérifié `simulerCombatGardien`.
 
+### Une règle anti-triche se branche sur l'ÉTAT, pas sur les boutons (24/09)
+Bug signalé par l'auteur : changer de créature dans le deck donnait un
+pouvoir immédiat, en boucle. Deux chemins mènent au deck (écran principal
+et menu Exploration), plus le remplissage automatique : la règle vit
+dans `rechargesApresChangementDeck`, appliquée par un effet sur l'état du
+deck — un futur chemin ne peut pas l'oublier. `auditRechargeDeck` vérifie
+la règle ET son câblage.
+
 ### Le nombre d'œufs par Ascension est LU, jamais `× 7` (24/09)
 `OEUFS_PAR_GROUPE = [6, 6, 7, 7, 7, 7]` depuis la suppression de l'œuf 7
 de l'A0 et de l'A1. Toute position passe par `debutGroupe`,
