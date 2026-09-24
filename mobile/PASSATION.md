@@ -51,6 +51,11 @@ Demande : « parfait à l'œuf 2, trop facile ensuite ; attaques de zone pas tou
 - **Retour de test de l'auteur (24/09), fait** : « bien équilibré en combats » ; menu de fin de combat (victoire / défaite) ; photo v2 = SON DECK (places vides complétées par ses meilleures créatures) au lieu des 3 meilleures de la collection (écart affiché de 6-7 points) ; `margeGardien(puissance)` (4 %, puis 5 %, puis décroissante à la demande de l'auteur : 5 % jusqu'à 100 de puissance, 2 % dès 700, en douceur) : Gardien affiché = deck × marge, calé pour qu'un deck à ce niveau le batte 2 fois sur 3 (mesuré : 30-38 % au niveau affiché, 36-52 % sans amélioration ; l'écart ≈ 3 montées de niveau).
 - **Reste** : le test de l'auteur en jeu. Ancien texte du plan : calibrage au début de chaque œuf à partir de l'œuf 3 (l'œuf 2 garde l'ancien Gardien), stocké dans l'œuf, calculé en différé ; puissance Gardien / deck affichée avant le combat ; puissance du deck dans le menu Aventure ; EMPREINTE des règles restées dans CombatScreen (rotation, mana, premier coup) sous contrôle, pour que la simulation ne dérive jamais en silence.
 
+## 3 ter. CHANTIER EN COURS — passe 4, les pouvoirs par le deck (24/09)
+Choix validés par l'auteur : une recharge PAR CRÉATURE (liée à la créature) ; tout en horodatage (recharge hors ligne, pouvoir actif qui s'arrête à l'heure même écran quitté) ; les défis « Active N pouvoirs » doivent compter les activations du deck ; un seul pouvoir actif à la fois.
+- **4a FAIT** : `clickerLogic` — `POWER_COOLDOWN_SEC` (commune 90 s … mythique 360 s, MESURÉ contre la bulle : −6 à +10 % sur les decks normaux, −25 % pour épique/légendaire/mythique = le nerf voulu), `pouvoirPret`, `restantPouvoirMs`, `rechargesApresActivation`.
+- **4b À FAIRE** : l'écran — compte à rebours sur l'œuf, 1er appui sur une créature du deck = elle apparaît autour de l'œuf, 2e appui = activation ; retrait de la bulle ; sauvegarde des recharges ; `powerActivated` incrémenté par le deck.
+
 ## 4. Les passes restantes (demandées par l'auteur — dans la MÊME conversation, décision du 24/09)
 
 ### Passe 2 — paliers de tap ×2,5 — FAITE (24/09)

@@ -618,6 +618,49 @@ export function powerForCreature(creature, tapPower) {
   };
 }
 
+// ---- Pouvoirs par le DECK (passe 4, 24/09) ----
+//
+// Décision de l'auteur (21/09) : le deck REMPLACE la bulle. « Quand le
+// joueur appuie une première fois sur le deck, la créature apparaît autour
+// de l'œuf ; quand il appuie une dernière fois, ça active le pouvoir. Pour
+// les mythiques, le temps d'attente est bien plus long, pour équilibrer
+// leurs pouvoirs cheatés. » Choix validés le 24/09 : une recharge PAR
+// CRÉATURE (liée à la créature, pas à l'emplacement : la changer de place
+// ne remet pas le compteur à zéro) ; tout en horodatage — la recharge
+// court hors ligne, un pouvoir actif s'arrête à l'heure prévue même si
+// l'écran est quitté ; un seul pouvoir actif à la fois (comme la bulle).
+//
+// Recharges MESURÉES contre la bulle (une créature du deck au hasard toutes
+// les 60 s), gain moyen du tap = 1 + Σ durée ÷ recharge × (multiplicateur
+// − 1) :
+//   1 commune (œuf 2)             ×1,23 -> ×1,16  (−6 %)
+//   commune + rare (œuf 3)        ×1,33 -> ×1,33  (0 %)
+//   commune + 2 rares (A0)        ×1,37 -> ×1,50  (+10 %)
+//   2 rares + épique (A1)         ×1,71 -> ×1,76  (+3 %)
+//   rare + épique + légendaire    ×2,48 -> ×2,28  (−8 %)
+//   épique + légendaire + mythique ×3,75 -> ×2,81 (−25 % : le nerf voulu)
+// La durée des Ascensions ne bouge presque pas (le coefficient calé sur
+// les chronos de l'auteur inclut les pouvoirs de la bulle).
+// ⚠️ Rythme d'activation : 0,75 à 1,5 pouvoir/min selon le deck (bulle : 1).
+// Un deck riche en mythiques active moins souvent : les défis « Active N
+// fois un pouvoir » des dernières Ascensions y durent plus longtemps.
+export const POWER_COOLDOWN_SEC = { commun: 90, peu_commun: 120, rare: 150, epique: 180, legendaire: 240, mythique: 360 };
+export function rechargePouvoirMs(creature) {
+  return ((creature && POWER_COOLDOWN_SEC[creature.rarity]) || 150) * 1000;
+}
+// `recharges` : { [idCréature]: horodatage où son pouvoir redevient prêt }.
+export function pouvoirPret(recharges, creatureId, now) {
+  const t = recharges && recharges[creatureId];
+  return !t || now >= t;
+}
+export function restantPouvoirMs(recharges, creatureId, now) {
+  const t = recharges && recharges[creatureId];
+  return t ? Math.max(0, t - now) : 0;
+}
+export function rechargesApresActivation(recharges, creature, now) {
+  return { ...(recharges || {}), [creature.id]: now + rechargePouvoirMs(creature) };
+}
+
 // Détermine si une nouvelle créature doit apparaître, selon le temps
 // écoulé depuis la dernière apparition (en millisecondes, via Date.now()
 // ou performance.now() — peu importe l'unité tant qu'elle est cohérente
