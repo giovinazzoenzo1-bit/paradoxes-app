@@ -3196,3 +3196,34 @@ function auditGardienCalibre() {
   return fautes;
 }
 module.exports.auditGardienCalibre = auditGardienCalibre;
+
+// ---- Le vrai combat et la simulation du Gardien ne divergent pas ----
+//
+// Les règles PARTAGÉES (coup, riposte et zone, encaissement, dégâts du
+// joueur) vivent dans combatLogic : le combat et la simulation les
+// appellent toutes les deux. Ce que `simulerCombatGardien` reproduit EN
+// PLUS (premier coup, rotation, mana, relève sans riposte) vit dans
+// CombatScreen, entre les marqueurs « RÈGLES DU COMBAT ». Toute
+// modification de ce passage (commentaires et espaces ignorés) change son
+// empreinte : ce contrôle refuse le push tant que la simulation n'a pas
+// été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
+// tester à la main (sa demande du 24/09).
+const EMPREINTE_COMBAT = '26934301';
+function empreinteCombat() {
+  const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
+  const b = src.indexOf('// ⚔️ RÈGLES DU COMBAT — FIN');
+  if (a < 0 || b < a) return null;
+  const code = src.slice(a, b).split('\n').map((l) => l.replace(/\/\/.*$/, '').trim()).filter(Boolean).join('\n');
+  let h = 2166136261;
+  for (let i = 0; i < code.length; i++) { h ^= code.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(16);
+}
+function auditGardienEmpreinte() {
+  const e = empreinteCombat();
+  if (!e) return [{ probleme: 'marqueurs « RÈGLES DU COMBAT » introuvables dans CombatScreen' }];
+  return e === EMPREINTE_COMBAT ? [] : [{ probleme: 'le code du combat a changé (empreinte ' + e
+    + ') : vérifier que simulerCombatGardien suit encore, relancer auditGardienCalibre, puis mettre à jour EMPREINTE_COMBAT' }];
+}
+module.exports.empreinteCombat = empreinteCombat;
+module.exports.auditGardienEmpreinte = auditGardienEmpreinte;

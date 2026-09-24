@@ -54,6 +54,11 @@ import {
   elementRelation,
   starsForBattle,
   GUARDIAN_SHIELD_RATIO,
+  coupSurGardien,
+  riposteGardien,
+  encaisser,
+  degatsDuJoueur,
+  guardianStatsCalibrees,
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
   guardianStats,
@@ -132,7 +137,7 @@ const SPRITE_BASE = 104;
 // `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
 // niveau. Sert au combat de Gardien, qui affronte TOUJOURS le Gardien et
 // jamais une créature du roster prise au hasard.
-export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0 }) {
+export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null }) {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const opponentTeamCreatures = useRef(opponentOverride || opponentTeamForLevel(levelNumber)).current;
@@ -202,7 +207,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       // 30 %, dégâts relevés de 15 % à tous les niveaux.
       const stats = creature.boss
         // `eggNumber` : le Gardien frappe plus fort à partir du 5e œuf.
-        ? guardianStats(levelNumber, GUARDIAN_BASE_LEVEL, guardianEggNumber)
+        // `guardianCalibrage` : le Gardien calé sur le deck du début de
+        // l'œuf (combatLogic.calibrerGardien). Absent : l'ancien Gardien.
+        ? (guardianCalibrage
+          ? guardianStatsCalibrees(guardianStats(levelNumber, GUARDIAN_BASE_LEVEL, guardianEggNumber), guardianCalibrage)
+          : guardianStats(levelNumber, GUARDIAN_BASE_LEVEL, guardianEggNumber))
         : statsForOpponentCreatureTyped(creature, levelNumber);
       return { creature, stats, hp: stats.hp, mana: 0 };
     })
@@ -297,6 +306,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   // n'apparaissait pas sur la créature touchée.
   const [playerDamageFloat, setPlayerDamageFloat] = useState(null);
 
+  // ⚔️ RÈGLES DU COMBAT — DÉBUT (sous empreinte : auditGardienEmpreinte)
+  // Ce passage porte ce que `simulerCombatGardien` (combatLogic) reproduit
+  // pour calibrer le Gardien : premier coup, rotation, mana, relève sans
+  // riposte. Le modifier change l'empreinte : le contrôle refuse le push
+  // tant que la simulation n'a pas été revérifiée.
   // Pile ou face au tout début du combat : 1 chance sur 2 que
   // l'adversaire frappe en premier, avant le premier choix du joueur.
   // Transition IMMÉDIATE vers 'choosing' (pas de bouton "Continuer", pas
@@ -318,15 +332,23 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // pendant que la créature bougeait encore et on ne voyait pas qui
     // avait frappé (retour du 12/09).
     playLunge('opponent', 0);
-    const oppSkill = pickOpponentSkill(oppWithMana);
-    const defender = fightersRef.current[activeIndexRef.current];
-    const oppDamage = Math.max(1, Math.round(
-      (oppSkill.isBasic ? oppSkill.damage : scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack))
-      * elementMultiplier(opp.creature.element, defender.creature.element)
-    ));
-
     const curIdx = activeIndexRef.current;
     const curFighter = fightersRef.current[curIdx];
+    // Gardien : riposte PARTAGÉE avec la simulation qui le calibre
+    // (combatLogic.riposteGardien), attaque de zone comprise. Les autres
+    // adversaires gardent leur tirage de compétence.
+    const riposte0 = isBoss ? riposteGardien(opp.stats, fightersRef.current, curIdx) : null;
+    let oppDamage;
+    if (riposte0) {
+      oppDamage = riposte0.degats[curIdx];
+    } else {
+      const oppSkill = pickOpponentSkill(oppWithMana);
+      const defender = fightersRef.current[activeIndexRef.current];
+      oppDamage = Math.max(1, Math.round(
+        (oppSkill.isBasic ? oppSkill.damage : scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack))
+        * elementMultiplier(opp.creature.element, defender.creature.element)
+      ));
+    }
     // Résilience aussi sur CE chemin : l'adversaire qui ouvre le combat
     // pouvait tuer une créature que la rune aurait dû sauver.
     let newPlayerHp = Math.max(0, curFighter.hp - oppDamage);
@@ -336,9 +358,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       newPlayerHp = Math.max(1, Math.round(curFighter.stats.hp * resPct0));
       resTriggered = true;
     }
-    const newFighters = fightersRef.current.map((f, i) =>
-      i === curIdx ? { ...f, hp: newPlayerHp, resilienceUsed: f.resilienceUsed || resTriggered } : f
-    );
+    // Zone : les autres créatures encaissent leur part (Résilience comprise).
+    const newFighters = fightersRef.current.map((f, i) => {
+      if (i === curIdx) return { ...f, hp: newPlayerHp, resilienceUsed: f.resilienceUsed || resTriggered };
+      const d = riposte0 ? riposte0.degats[i] : 0;
+      return d > 0 ? { ...f, ...encaisser(f, d) } : f;
+    });
     fightersRef.current = newFighters;
     setFighters(newFighters);
 
@@ -350,7 +375,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       ...s,
       totalDamageTaken: s.totalDamageTaken + oppDamage,
       rounds: s.rounds + 1,
-      fightersFainted: s.fightersFainted + (newPlayerHp <= 0 ? 1 : 0),
+      fightersFainted: s.fightersFainted + newFighters.filter((f) => f.hp <= 0).length,
     }));
 
     if (newPlayerHp <= 0) {
@@ -368,7 +393,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       setFighters((prev) => prev.map((f, i) => (i === nextIdx ? { ...f, mana: Math.min(MANA_MAX, f.mana + MANA_PER_TURN) } : f)));
       setSwitchMessage(`${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`);
     } else {
-      setSwitchMessage("L'adversaire attaque en premier !");
+      setSwitchMessage(riposte0 && riposte0.zone
+        ? "🌀 Le Gardien ouvre le combat sur toute l'équipe !"
+        : "L'adversaire attaque en premier !");
     }
     setTimeout(() => setSwitchMessage(null), 2200);
     setPhase('choosing');
@@ -520,7 +547,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     const elemMult = elementMultiplier(
       curFighter.creature.element, opp.creature.element, curFighter.stats.affinityBonus || 0
     );
-    const playerDamage = Math.max(1, Math.round(computePlayerDamage(skillDamage, multiplier) * elemMult));
+    // Règle PARTAGÉE avec la simulation qui calibre le Gardien (mêmes
+    // calculs que multiplier / skillDamage / elemMult ci-dessus).
+    const playerDamage = degatsDuJoueur(skill, curFighter, opp.creature, elapsedSec, completed);
 
     // ATTAQUE DE ZONE : frappe TOUS les adversaires encore debout.
     // Elle n'était jusqu'ici qu'une étiquette sur le bouton — le code
@@ -530,17 +559,20 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     let newOpponentHp;
     let newOpponents;
     if (isBoss) {
+      // Règle PARTAGÉE (combatLogic.coupSurGardien) : bouclier d'abord,
+      // plancher de la manche 1, relève à PV pleins avec un nouveau
+      // bouclier (posé par startBossPhase2, mêmes valeurs).
       const maxHp = opp.stats.hp;
-      const after = applyGuardianDamage({ hp: opp.hp, shield: bossShieldRef.current }, playerDamage);
-      // Plancher de la manche 1 : il ne peut pas descendre sous 50 %.
-      const floor = bossPhaseRef.current === 1 ? Math.ceil(maxHp * (1 - GUARDIAN_PHASE1_HP_LOSS)) : 0;
-      newOpponentHp = Math.max(floor, after.hp);
-      setBossShield(after.shield);
-      newOpponents = opponentsRef.current.map((o, i) => (i === targetIdx ? { ...o, hp: newOpponentHp } : o));
-      if (bossPhaseRef.current === 1 && newOpponentHp <= floor) {
+      const coup = coupSurGardien(
+        { hp: opp.hp, shield: bossShieldRef.current, phase: bossPhaseRef.current, maxHp }, playerDamage);
+      if (coup.releve) {
+        setBossShield(0);
         startBossPhase2(maxHp);
         return;
       }
+      newOpponentHp = coup.hp;
+      setBossShield(coup.shield);
+      newOpponents = opponentsRef.current.map((o, i) => (i === targetIdx ? { ...o, hp: newOpponentHp } : o));
     } else {
       newOpponentHp = Math.max(0, opp.hp - playerDamage);
       newOpponents = opponentsRef.current.map((o, i) => {
@@ -563,7 +595,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     const retaliatorIdx = newOpponents[targetIdx] && newOpponents[targetIdx].hp > 0
       ? targetIdx
       : newOpponents.findIndex((o) => o.hp > 0);
-    if (retaliatorIdx >= 0) {
+    // Gardien : riposte PARTAGÉE avec la simulation, zone comprise.
+    let riposte = null;
+    if (isBoss && retaliatorIdx >= 0) {
+      riposte = riposteGardien(newOpponents[retaliatorIdx].stats, fightersRef.current, curIdx);
+      opponentDamage = riposte.degats[curIdx];
+    } else if (retaliatorIdx >= 0) {
       const retaliator = newOpponents[retaliatorIdx];
       const oppSkill = pickOpponentSkill({ ...retaliator, mana: Math.min(MANA_MAX, retaliator.mana + MANA_PER_TURN) });
       newOpponents = newOpponents.map((o, i) =>
@@ -601,9 +638,14 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       newPlayerHp = Math.max(1, Math.round(curFighter.stats.hp * resPct));
       resilienceTriggered = true;
     }
-    const newFighters = fightersRef.current.map((f, i) =>
-      i === curIdx ? { ...f, hp: newPlayerHp, resilienceUsed: f.resilienceUsed || resilienceTriggered } : f
-    );
+    const avant = fightersRef.current;
+    const newFighters = avant.map((f, i) => {
+      if (i === curIdx) return { ...f, hp: newPlayerHp, resilienceUsed: f.resilienceUsed || resilienceTriggered };
+      const d = riposte ? riposte.degats[i] : 0;
+      return d > 0 ? { ...f, ...encaisser(f, d) } : f;
+    });
+    const tombes = newFighters.filter((f, i) => f.hp <= 0 && avant[i].hp > 0).length;
+    if (riposte && riposte.zone) setSwitchMessage("🌀 Le Gardien frappe toute l'équipe !");
     fightersRef.current = newFighters;
     setFighters(newFighters);
     setLastExchange({
@@ -624,7 +666,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       totalDamageTaken: s.totalDamageTaken + opponentDamage,
       rounds: s.rounds + 1,
       opponentsDefeated: s.opponentsDefeated + (newOpponentHp <= 0 ? 1 : 0),
-      fightersFainted: s.fightersFainted + (newPlayerHp <= 0 ? 1 : 0),
+      fightersFainted: s.fightersFainted + tombes,
       perFighterDamage: {
         ...s.perFighterDamage,
         [curFighter.creature.id]: (s.perFighterDamage[curFighter.creature.id] || 0) + playerDamage,
@@ -677,6 +719,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     setPhase('choosing');
   };
 
+  // ⚔️ RÈGLES DU COMBAT — FIN
   const confirmQuit = () => {
     Alert.alert('Quitter le combat ?', 'Tu ne gagneras aucune récompense et reviendras à la carte.', [
       { text: 'Annuler', style: 'cancel' },
