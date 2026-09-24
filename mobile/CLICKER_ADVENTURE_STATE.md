@@ -239,6 +239,27 @@ changé dans ce fichier exige le bump : sinon l'œuf en cours garde
 l'ancienne cible, qui peut être devenue impossible à vie (24/09 :
 « Achète 10 niveaux de Poigne » valait 45 000 % du seuil).
 
+### Le nombre d'œufs par Ascension est LU, jamais `× 7` (24/09)
+`OEUFS_PAR_GROUPE = [6, 6, 7, 7, 7, 7]` depuis la suppression de l'œuf 7
+de l'A0 et de l'A1. Toute position passe par `debutGroupe`,
+`groupeDeOeuf`, `tailleGroupe`, `oeufsDuGroupe` ; `auditStructureOeufs`
+crie si la table ne correspond plus au fichier.
+
+⚠️ La sauvegarde garde un index GLOBAL d'œuf : changer la disposition
+change l'œuf qu'il désigne (un joueur de l'A2 passait dans l'A3). Elle
+enregistre donc sa disposition, et `migrerIndexOeuf` convertit. Toute
+future modification du nombre d'œufs passe par là.
+
+⚠️ Bug trouvé en le faisant : `SEQUENCE_LENGTH` valait 7 (œufs d'UNE
+Ascension) et servait de « longueur de la séquence ». Dès l'A1, la
+taille attendue d'un œuf tombait à 4 au lieu de 8 : chaque réouverture
+de l'app refaisait le tirage et recalculait les cibles adaptatives. Une
+constante qui change de sens garde son nom — et ment en silence.
+
+⚠️ `git status` se lit EN ENTIER. Une tentative interrompue a laissé
+13 fichiers modifiés ; `git status -sb | head -1` n'affiche que la
+branche et les cachait.
+
 ### Valider en dev une Ascension doit FAIRE l'Ascension
 Sinon le compteur reste à 0, le groupe reste le 1er, et parcourir les 26
 œufs au bouton de dev ne teste QUE le groupe 1 — en donnant l'illusion

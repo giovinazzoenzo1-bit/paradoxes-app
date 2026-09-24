@@ -879,7 +879,9 @@ export const QUEST_POOL = [
 // l'outil renomme les identifiants selon leur nouvel œuf, et le fichier
 // des défis n'est pas haché — sans ce bump, un œuf en cours gardait des
 // identifiants qui n'existent plus.
-export const QUEST_ENGINE_VERSION = 60;
+// ⚠️ 61 (24/09) : œuf 7 de l'A0 et de l'A1 supprimé, Ascension en fin
+// d'œuf 6. Les identifiants de ces deux Ascensions changent (e7 -> e6).
+export const QUEST_ENGINE_VERSION = 61;
 
 function empreinteDefis() {
   const morceaux = [];

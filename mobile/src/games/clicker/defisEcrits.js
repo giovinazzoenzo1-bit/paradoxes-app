@@ -40,6 +40,21 @@
 // l'affichage du défi.
 import { fmtQ, qtyQ, describeAdventureLevel } from './questFormat';
 
+// ⚠️⚠️ ŒUFS PAR ASCENSION — la seule source de la structure (24/09).
+//
+// Demande de l'auteur : « l'œuf 7 de l'A0 fout la merde de partout »
+// (défi 52 : deux achats de Dégâts critiques, ~1,3 M), « même délire
+// pour l'œuf 14 à la A1 » — « en réalité je veux juste un décalage ».
+// L'œuf 7 de l'A0 et de l'A1 est supprimé, leur Ascension passe en fin
+// d'œuf 6. Le seuil ne bouge pas : après l'œuf 6, le joueur finit de
+// farmer (il lui restait 537 K sur 3,14 M), puis ascensionne.
+//
+// ⚠️ Le moteur, l'écran et TOUS les outils lisent ce tableau. Écrire
+// « 7 » en dur quelque part, c'est recréer le décalage entre l'index
+// d'un œuf et son Ascension. `auditStructureOeufs` vérifie que chaque
+// groupe finit par son Ascension, et nulle part ailleurs.
+export const OEUFS_PAR_GROUPE = [6, 6, 7, 7, 7, 7];
+
 export const DEFIS_ECRITS = [
   // ── Ascension 0 · œuf 1 ──
   [
@@ -202,31 +217,7 @@ export const DEFIS_ECRITS = [
     { id: 'a0e6_crits', icon: '💥', metric: 'totalCrits',
       target: 120, mode: 'delta', fige: true,
       label: t => `Obtiens ${t} coups critiques` },
-  ],
-  // ── Ascension 0 · œuf 7 ──
-  [
-    { id: 'a0e7_adv', icon: '⚔️', metric: 'advLevelReached',
-      target: 30, mode: 'absolute', fige: true,
-      label: t => `Termine le ${describeAdventureLevel(t)}` },
-    { id: 'a0e7_plusC', icon: '✨', metric: 'powerActivated',
-      target: 12, mode: 'delta', fige: true,
-      label: t => `Active ${t} fois un pouvoir` },
-    { id: 'a0e7_combats', icon: '🗡️', metric: 'battleWon',
-      target: 5, mode: 'delta', fige: true,
-      label: t => `Gagne ${t} combats en Aventure` },
-    { id: 'a0e7_critdmg', icon: '💢', metric: 'critDamageLevel',
-      target: 2, mode: 'delta', fige: true,
-      label: t => `Achète ${t} niveau${t > 1 ? 'x' : ''} de Dégâts critiques` },
-    { id: 'a0e7_passif', icon: '⚙️', metric: 'passiveIncome',
-      target: 18, mode: 'absolute', fige: true,
-      label: t => `Atteins ${fmtQ(t)} pièces par seconde` },
-    { id: 'a0e7_plusB', icon: '⭐', metric: 'goldenClaimed',
-      target: 7, mode: 'delta', fige: true,
-      label: t => `Touche ${t} fois la cible dorée` },
-    { id: 'a0e7_plusB2', icon: '💥', metric: 'totalCrits',
-      target: 240, mode: 'delta', fige: true,
-      label: t => `Obtiens ${t} coups critiques` },
-    { id: 'a0e7_ascend', icon: '🌟', metric: 'ascension',
+    { id: 'a0e6_ascend', icon: '🌟', metric: 'ascension',
       target: 1, mode: 'absolute', fige: true, step: 1,
       label: t => `Fais ta ${t}${t === 1 ? 're' : 'e'} Ascension` },
   ],
@@ -391,31 +382,7 @@ export const DEFIS_ECRITS = [
     { id: 'a1e6_reserve', icon: '💰', metric: 'coins',
       target: 110000, mode: 'absolute', fige: true,
       label: t => `Mets ${qtyQ(t, 'pièces')} de côté` },
-  ],
-  // ── Ascension 1 · œuf 7 ──
-  [
-    { id: 'a1e7_plusC', icon: '🔥', metric: 'maxTranseHoldSec',
-      target: 52, mode: 'absolute', fige: true,
-      label: t => `Tiens la Transe pendant ${t} secondes` },
-    { id: 'a1e7_pacte', icon: '🔗', metric: 'tapPower',
-      target: 5, mode: 'delta', fige: true,
-      label: t => `Achète ${t} niveau${t > 1 ? 'x' : ''} de Pacte` },
-    { id: 'a1e7_plusB', icon: '⭐', metric: 'goldenClaimed',
-      target: 12, mode: 'delta', fige: true,
-      label: t => `Touche ${t} fois la cible dorée` },
-    { id: 'a1e7_combo', icon: '🔥', metric: 'maxTapStreak',
-      target: 400, mode: 'absolute', fige: true,
-      label: t => `Enchaîne ${t} taps sans pause` },
-    { id: 'a1e7_tap0b', icon: '✊', metric: 'tapUpgrade:tap2',
-      target: 4, mode: 'delta', fige: true,
-      label: t => `Achète ${t} niveau${t > 1 ? 'x' : ''} de Gantelet d’Obsidienne` },
-    { id: 'a1e7_plusB2', icon: '⚙️', metric: 'passiveIncome',
-      target: 37, mode: 'absolute', fige: true,
-      label: t => `Atteins ${fmtQ(t)} pièces par seconde` },
-    { id: 'a1e7_combats', icon: '🗡️', metric: 'battleWon',
-      target: 5, mode: 'delta', fige: true,
-      label: t => `Gagne ${t} combats en Aventure` },
-    { id: 'a1e7_ascend', icon: '🌟', metric: 'ascension',
+    { id: 'a1e6_ascend', icon: '🌟', metric: 'ascension',
       target: 2, mode: 'absolute', fige: true, step: 1,
       label: t => `Fais ta ${t}e Ascension` },
   ],

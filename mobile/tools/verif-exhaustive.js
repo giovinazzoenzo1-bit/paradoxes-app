@@ -29,9 +29,10 @@ const GROUPES = [0, 1, 2, 3, 4, 5];
 // propre groupe (un défi de l'A3 n'est jamais distribué à l'A0) : 336
 // combinaisons. Même sabotage : il crie.
 const D = A.load('defisEcrits');
-const OEUFS = 7;
-const defisDuGroupe = (g) => D.DEFIS_ECRITS.slice(g * OEUFS, g * OEUFS + OEUFS);
-const NB_PAR_GROUPE = defisDuGroupe(0).flat().length;
+// Bornes des groupes LUES dans le moteur (6 œufs à l'A0 et l'A1 depuis le
+// 24/09, 7 ensuite) — jamais `g * 7`.
+const defisDuGroupe = (g) => D.DEFIS_ECRITS.slice(Q.debutGroupe(g), Q.debutGroupe(g) + Q.tailleGroupe(g));
+const NB_TOTAL = GROUPES.reduce((n, g) => n + defisDuGroupe(g).flat().length, 0);
 const anomalies = [];
 const ajoute = (gravite, groupe, id, quoi, detail) =>
   anomalies.push({ gravite, groupe, id, quoi, detail });
@@ -61,8 +62,8 @@ const NOMS_BOUTIQUE = new Set([
 ]);
 
 console.log('\n' + '═'.repeat(76));
-console.log('  VÉRIFICATION EXHAUSTIVE — ' + NB_PAR_GROUPE
-  + ' défis x ' + GROUPES.length + ' groupes');
+console.log('  VÉRIFICATION EXHAUSTIVE — ' + NB_TOTAL
+  + ' défis sur ' + GROUPES.length + ' groupes');
 console.log('═'.repeat(76));
 
 GROUPES.forEach((groupe) => {

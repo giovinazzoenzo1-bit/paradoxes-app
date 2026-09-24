@@ -14,9 +14,9 @@ mkdir -p /home/claude/auditenv && cd /home/claude/auditenv && npm init -y >/dev/
 2. Lancer les contrôles et rapporter le résultat :
 ```
 export NODE_PATH=/home/claude/auditenv/node_modules
-node mobile/tools/verifier-defis.js        # les 43 contrôles du jeu (dont l'exhaustif)
-node mobile/tools/verifier-controles.js    # la preuve que chaque contrôle sait crier (45 sabotages)
-node mobile/tools/verif-exhaustive.js      # les 336 VRAIS défis (il testait les 42 anciens modèles avant le 24/09)
+node mobile/tools/verifier-defis.js        # les 44 contrôles du jeu (dont l'exhaustif et la structure des œufs)
+node mobile/tools/verifier-controles.js    # la preuve que chaque contrôle sait crier (46 sabotages)
+node mobile/tools/verif-exhaustive.js      # les 322 VRAIS défis (il testait les 42 anciens modèles avant le 24/09)
 node mobile/tools/duree.js                 # durée simulée de chaque Ascension
 python3 mobile/tools/generer-doc.py        # régénère mobile/DEFIS_PARADOX.md (vérifié par auditDocConforme)
 ```
@@ -54,7 +54,11 @@ python3 mobile/tools/generer-doc.py        # régénère mobile/DEFIS_PARADOX.md
 
 Non fait, reporté : les coûts de BASE des paliers 7 à 10 mal ordonnés — mesuré le 24/09 : les prix EFFECTIFS à leur Ascension sont croissants (3 k → 8,4 M), seule la dépense par +1 tap ne l'est pas (42 k à l'A3, 16-21 k aux A4-A5) ; poids réel 0,1-0,5 % du seuil au niveau 5. Règle d'origine « prix ∝ bonus », à mesurer si l'auteur le veut.
 
-### Passe 3 — supprimer l'œuf 7 (À VALIDER par l'auteur)
+### Passe 3 — supprimer l'œuf 7 de l'A0 et de l'A1 — FAITE (24/09)
+Décision de l'auteur : « oui fais ça », « en réalité je veux juste un décalage ». `OEUFS_PAR_GROUPE = [6, 6, 7, 7, 7, 7]` (40 œufs, 322 défis) : A0 et A1 = leurs œufs 1-6 à l'identique + l'Ascension en fin d'œuf 6 (9 défis) ; A2-A5 identiques. Seuil inchangé : achats 43 % (A0) et 30 % (A1) du seuil, bornes propres dans `auditBudgetGroupe`. Toute position d'œuf passe par `debutGroupe` / `groupeDeOeuf` / `tailleGroupe` ; la sauvegarde garde sa disposition et `migrerIndexOeuf` la convertit (un joueur de l'ancien œuf 7 retombe sur l'œuf 6, qui porte l'Ascension). Bug ancien corrigé au passage : dès l'A1, chaque réouverture recalculait les cibles de l'œuf en cours (`SEQUENCE_LENGTH` = 7 servait de taille de séquence). `QUEST_ENGINE_VERSION` 61. Nouveau contrôle `auditStructureOeufs` + sabotage.
+Mesuré à l'A0, au rythme de l'auteur (6,7 taps/s, sans pause) : **1 h 55** (6 œufs ~1 h 41 + ~15 min de farm), contre 1 h 43 avec l'œuf 7 avant le ×2,5. ⚠️ L'A1 n'a pas de chrono : son œuf 7 portait 57 % des achats, le farm après l'œuf 6 y sera plus long qu'à l'A0 — à mesurer par l'auteur.
+
+Historique de la demande :
 « L'œuf 7 de l'A0 fout la merde de partout » (défi 52 = 2 achats critiques ≈ 1,3 M ; ascension déjà possible avant). Idem œuf 14 (A1). Passer à 6 œufs par Ascension change la collection (26 créatures → finies pendant l'A4) et l'outil de réordonnancement lit la taille d'œuf dans le fichier, mais `nbOeufs`, `OEUFS_PAR_ASCENSION`, `generer-doc.py` et les contrôles supposent 7. Alternative si refus : plafonner le coût d'un seul défi (< 15 % du seuil).
 
 ### Passe 4 — les pouvoirs par le deck

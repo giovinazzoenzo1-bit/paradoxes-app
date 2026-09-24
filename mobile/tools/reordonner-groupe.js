@@ -34,7 +34,11 @@ const GROUPE=Number(process.argv[2]||0);
 // dur (6) à cinq endroits : passé à 8 défis par œuf le 21/09, l'outil a
 // découpé les groupes par 6 et PERDU 82 défis d'un coup. Un nombre en dur
 // qui décrit une donnée finit toujours par mentir sur cette donnée.
-const TAILLE=D.DEFIS_ECRITS[GROUPE*7].length;
+// ⚠️ Même leçon pour les GROUPES (24/09) : `GROUPE*7` supposait 7 œufs par
+// Ascension. L'A0 et l'A1 en ont 6, et leur dernier œuf porte l'Ascension
+// en plus (9 défis). Bornes lues dans le moteur ; taille lue sur le 1er
+// œuf ; le dernier œuf prend le reste.
+const TAILLE=D.DEFIS_ECRITS[Q.debutGroupe(GROUPE)].length;
 // Blocs source : 3 lignes par défi, repérés par leur id.
 const bloc={};
 lignes.forEach((l,i)=>{const m=l.match(/id: '([^']+)'/);if(m)bloc[m[1]]=lignes.slice(i,i+3);});
@@ -45,7 +49,7 @@ const NIV=['tapPower','critLevel','critDamageLevel'];
 const achat=(m)=>Q.estDefiAchat({metric:m},{});
 const adaptable=(m)=>Q.estAchatAdaptable(m);
 const g=GROUPE;
-const oeufs=D.DEFIS_ECRITS.slice(g*7,g*7+7);
+const oeufs=D.DEFIS_ECRITS.slice(Q.debutGroupe(g),Q.debutGroupe(g)+Q.tailleGroupe(g));
 // L'œuf 1 de l'Ascension 0 est FIGÉ : c'est le tutoriel de l'auteur.
 const fixe = g===0 ? oeufs[0] : null;
 const tous=(fixe?oeufs.slice(1):oeufs).flat();
@@ -143,7 +147,8 @@ let meilleur=construire(false), score=valide(meilleur)?violations(meilleur):1e12
 for(let t=0;t<20000;t++){const c=construire(true);if(!valide(c))continue;const sc=violations(c);if(sc<score){score=sc;meilleur=c;}}
 console.log('meilleur ordre : '+Math.floor(score/1000)+' écart(s) de coût restant(s)');
 const ordre=meilleur;
-const nouveaux=(fixe?[fixe]:[]).concat([0,1,2,3,4,5,6].slice(0,fixe?6:7).map(k=>ordre.slice(k*TAILLE,k*TAILLE+TAILLE)));
+const N_OEUFS=oeufs.length-(fixe?1:0);
+const nouveaux=(fixe?[fixe]:[]).concat(Array.from({length:N_OEUFS},(_,k)=>k===N_OEUFS-1?ordre.slice(k*TAILLE):ordre.slice(k*TAILLE,k*TAILLE+TAILLE)));
 // Réécriture : on remplace le contenu de chaque œuf du groupe par les
 // blocs source, id recalé sur la nouvelle position.
 const sortie=[];let i=0;

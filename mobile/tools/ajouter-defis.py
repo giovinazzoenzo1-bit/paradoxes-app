@@ -17,6 +17,13 @@
 import re, sys
 P = sys.argv[1] if len(sys.argv) > 1 else 'mobile/src/games/clicker/defisEcrits.js'
 L = open(P).read().split('\n')
+# ⚠️ GARDE (24/09) : outil à usage unique du 21/09 (6 -> 8 défis par
+# œuf), écrit pour 7 œufs par groupe (`range(7)`). Depuis la suppression
+# de l'œuf 7 de l'A0 et de l'A1, la structure n'est plus uniforme : le
+# relancer décalerait les défis d'un groupe dans l'autre. Il refuse.
+_m = re.search(r'OEUFS_PAR_GROUPE = \[([^\]]*)\]', '\n'.join(L))
+if not _m or set(x.strip() for x in _m.group(1).split(',')) != {'7'}:
+    sys.exit("ajouter-defis.py : structure non uniforme (OEUFS_PAR_GROUPE) — outil à usage unique, ne pas relancer.")
 FAMILLE = {'coins':'economie','totalEarned':'economie','passiveIncome':'economie',
   'maxTapStreak':'rythme','maxTranseHoldSec':'rythme','goldenClaimed':'rythme','powerActivated':'rythme',
   'totalCrits':'rythme','totalTaps':'rythme','advLevelReached':'aventure','battleWon':'aventure',

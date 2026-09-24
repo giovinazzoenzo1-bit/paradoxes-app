@@ -5,7 +5,7 @@
 # est aussi déposée dans /mnt/user-data/outputs/ si ce dossier existe.
 import os, re, subprocess, sys
 RACINE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-env = dict(os.environ); env.setdefault('NODE_PATH', '/home/claude/auditenv/node_modules'); env['NB_OEUFS'] = '42'
+env = dict(os.environ); env.setdefault('NODE_PATH', '/home/claude/auditenv/node_modules'); env['NB_OEUFS'] = 'tout'
 r = subprocess.run(['node', os.path.join(RACINE, 'mobile/tools/liste.js')], capture_output=True, text=True, env=env, cwd=RACINE)
 src = r.stdout
 # ⚠️ Jamais un document vide en silence : le 24/09, un document de 20
@@ -17,9 +17,22 @@ out = ['# Défis Paradox — la liste\n', "> 🔴 **Rouge = défis d'ACHAT.**  �
        "_Document **vérifié contre le jeu** par `auditDocConforme`._\n",
        "_⚠️ **Les chiffres ci-dessous sont des planchers.** Chaque défi se recalcule au moment où il apparaît, selon ce que tu as déjà : achat → seulement ce qui manque pour le total prévu ; revenu/s → +20 % ; pièces de côté → + 5 min de production ; Aventure → +5 niveaux ; records → repartent de zéro._\n",
        "## ⚠️ Repère Ascension → œufs\n", "| Après | Œufs | Défis |", "|---|---|---|"]
-for a in range(6):
-    out.append("| %d Ascension%s | %d-%d | %d-%d |" % (a, 's' if a > 1 else '', a*7+1, a*7+7, a*7*T+1, (a+1)*7*T))
-out += ["", "_**7 œufs de %d défis** par Ascension. La collection s'arrête à la **26e créature** — pendant la 5e Ascension._\n" % T]
+# ⚠️ Tableau calculé sur ce que liste.js a RÉELLEMENT sorti (œufs et
+# défis de chaque groupe), jamais sur `a*7` : depuis le 24/09, l'A0 et
+# l'A1 ont 6 œufs (l'œuf 7 supprimé, l'Ascension en fin d'œuf 6).
+groupes = []
+for l in src.split('\n'):
+    if l.startswith('GROUPE'): groupes.append({'oeufs': [], 'defis': []}); continue
+    if not groupes: continue
+    m = re.match(r'^\s*ŒUF (\d+)', l)
+    if m: groupes[-1]['oeufs'].append(int(m.group(1))); continue
+    m = re.match(r'^\S*\s+(\d+)\.\s', l)
+    if m: groupes[-1]['defis'].append(int(m.group(1)))
+for a, gr in enumerate(groupes):
+    if not gr['oeufs'] or not gr['defis']: continue
+    out.append("| %d Ascension%s | %d-%d | %d-%d |" % (a, 's' if a > 1 else '', gr['oeufs'][0], gr['oeufs'][-1], gr['defis'][0], gr['defis'][-1]))
+tailles = [len(g['oeufs']) for g in groupes]
+out += ["", "_**%s œufs** par Ascension (A0 à A5), %d défis par œuf — l'œuf qui porte l'Ascension de l'A0 et de l'A1 en a un de plus. La collection s'arrête à la **26e créature**._\n" % (' / '.join(str(n) for n in tailles), T)]
 grp = -1; bloc = []
 def vider():
     global bloc

@@ -91,7 +91,9 @@ import {
   nextQuestSet,
   pickQuestSet,
   findQuest,
-  SEQUENCE_LENGTH,
+  debutGroupe,
+  migrerIndexOeuf,
+  OEUFS_PAR_GROUPE,
   QUEST_POOL,
   QUEST_SET_SIZE,
   questComplete,
@@ -710,9 +712,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // objectifs différents au prochain chargement, et un défi presque fini
   // repartirait de zéro (ou serait validé d'emblée) selon le sens où le
   // revenu a bougé entre-temps.
-  // Avancement dans la séquence de démarrage scriptée. Tant qu'il est
-  // sous SEQUENCE_LENGTH, les défis viennent de la séquence ; ensuite le
-  // jeu bascule définitivement sur le pool dynamique.
+  // Index GLOBAL de l'œuf en cours dans les défis écrits. Au-delà des
+  // œufs écrits, le moteur rejoue la dernière Ascension (`sequenceCycle`).
+  // ⚠️ Sa correspondance avec l'Ascension passe par `debutGroupe` : le
+  // nombre d'œufs par Ascension n'est plus le même partout (24/09).
   const [sequenceIndex, setSequenceIndex] = useState(0);
   const sequenceIndexRef = useRef(0);
   sequenceIndexRef.current = sequenceIndex;
@@ -1063,7 +1066,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           // un id disparu du pool renverrait une progression de 0 pour
           // toujours et bloquerait l'œuf définitivement. On retire donc
           // au tirage adapté à la progression du joueur.
-          const savedSeqIndex = saved.sequenceIndex || 0;
+          // ⚠️ Sauvegarde d'avant la suppression de l'œuf 7 (A0, A1) :
+          // l'index y suit l'ancienne disposition. Sans migration, un
+          // joueur de l'A2 sauterait deux œufs, un autre changerait
+          // d'Ascension. Voir `migrerIndexOeuf`.
+          const savedSeqIndex = migrerIndexOeuf(saved.sequenceIndex || 0, saved.oeufsParGroupe);
           setSequenceIndex(savedSeqIndex);
           // Un défi valide est soit dans la séquence, soit dans le pool.
           // ⚠️ Les définitions de défis ont-elles changé depuis la
@@ -1082,9 +1089,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           // La séquence impose un nombre de défis par cycle (4 ou 5) ;
           // le pool dynamique en donne toujours 4. On compare donc à la
           // taille attendue du cycle courant, pas à une constante.
-          const expectedSize = savedSeqIndex < SEQUENCE_LENGTH
-            ? nextQuestSet(savedSeqIndex).ids.length
-            : QUEST_SET_SIZE;
+          // ⚠️⚠️ BUG CORRIGÉ LE 24/09 : la condition était
+          // `savedSeqIndex < SEQUENCE_LENGTH`, et SEQUENCE_LENGTH valait 7
+          // (œufs d'UNE Ascension), plus la longueur de la séquence. Dès
+          // l'A1, la taille attendue devenait celle du pool (4) au lieu
+          // des 8 défis de l'œuf : chaque réouverture refaisait le tirage
+          // et RECALCULAIT les cibles adaptatives (« Mets N de côté »
+          // repartait de « ce que tu as + 5 min »). Un œuf écrit a sa
+          // propre taille, partout, rejeu compris.
+          const expectedSize = nextQuestSet(savedSeqIndex).ids.length;
           // ⚠️⚠️ LES CIBLES FIGÉES DOIVENT PARTIR AVEC LES DÉFIS.
           //
           // Quand l'empreinte change, `savedQuests` est vidé pour forcer
@@ -1400,6 +1413,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     devReopenedIds: devReopenedIdsRef.current,
     latchedQuestIds: latchedQuestIdsRef.current,
     sequenceIndex: sequenceIndexRef.current,
+    // La disposition avec laquelle l'index a été écrit : c'est ce qui
+    // permet de le migrer si le nombre d'œufs par Ascension change.
+    oeufsParGroupe: OEUFS_PAR_GROUPE,
     eggPhase: eggPhaseRef.current,
     hatchTaps: hatchTapsRef.current,
     captureTaps: captureTapsRef.current,
@@ -2058,14 +2074,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             const ascApres = (ascensionCountRef.current || 0) + 1;
             // ⚠️⚠️ SAUTER À L'ŒUF DU NOUVEAU GROUPE.
             //
-            // Les 252 défis sont écrits dans l'ordre : l'œuf numéro N
-            // appartient à l'Ascension `N / 7`. Sans ce saut, un joueur
+            // Les défis sont écrits dans l'ordre, groupe par groupe, et
+            // le premier œuf d'une Ascension est LU dans la structure
+            // (`debutGroupe`) : 6 œufs à l'A0 et l'A1 depuis le 24/09,
+            // 7 ensuite. `ascension × 7` y serait faux. Sans ce saut, un joueur
             // passant à l'Ascension 4 au bouton de dev garderait son
             // index d'œuf et recevrait le défi numéro 1 au lieu du 145.
             //
             // L'auteur l'avait prévu avant même la bascule : « je pense
             // que ça va casser l'ordre des défis ».
-            const oeufDuGroupe = ascApres * SEQUENCE_LENGTH;
+            const oeufDuGroupe = debutGroupe(ascApres);
             setSequenceIndex(oeufDuGroupe);
             sequenceIndexRef.current = oeufDuGroupe;
             const statsApres = { ...buildQuestStatsSnapshot(), ascension: ascApres };

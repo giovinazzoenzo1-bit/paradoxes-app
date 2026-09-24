@@ -34,9 +34,20 @@ let numero = 0;
 let minGroupe = 0;
 let gagneGroupe = 0;
 
-for (let oeuf = 0; oeuf < Number(process.env.NB_OEUFS || 26); oeuf++) {
-  const groupe = Math.floor(oeuf / 6);
-  if (oeuf % 6 === 0) {
+// ⚠️⚠️ GROUPES LUS DANS LE MOTEUR (24/09). Ce découpage était
+// `Math.floor(oeuf / 6)` — resté de l'époque des 6 défis par œuf — alors
+// que le jeu avait 7 œufs par Ascension. Le document remis à l'auteur
+// plaçait donc « Fais ta 1re Ascension » sous « Après 1 Ascension », et
+// « Fais ta 3e Ascension » (défi 168) sous « Après 3 Ascensions » : ses
+// deux remarques du 23/09 (« j'aurais dû ascensionner comme dit dans le
+// .md », « défi 168 pas logique du tout ») venaient de là.
+// NB_OEUFS=tout : tous les œufs écrits.
+const NB_OEUFS = process.env.NB_OEUFS === 'tout'
+  ? Q.debutGroupe(Q.OEUFS_PAR_GROUPE.length) : Number(process.env.NB_OEUFS || 26);
+console.log('STRUCTURE ' + Q.OEUFS_PAR_GROUPE.join(','));
+for (let oeuf = 0; oeuf < NB_OEUFS; oeuf++) {
+  const groupe = Q.groupeDeOeuf(oeuf);
+  if (Q.rangDansGroupe(oeuf) === 0) {
     const seuil = C.ascensionThreshold(s.ascension || 0);
     console.log(`\n${'═'.repeat(64)}`);
     console.log(`GROUPE ${groupe + 1} — objectif : Ascension ${(s.ascension || 0) + 1} `

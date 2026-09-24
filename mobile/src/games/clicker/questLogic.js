@@ -8,7 +8,7 @@
 // clickerLogic, donc pas de cycle d'imports.
 // Moteur des défis : cibles, progression, validation, tirage.
 // Les DÉFINITIONS vivent dans `questDefs.js`.
-import { DEFIS_ECRITS } from './defisEcrits';
+import { DEFIS_ECRITS, OEUFS_PAR_GROUPE } from './defisEcrits';
 import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION, echelleGroupe, PAS_AVENTURE_PAR_GROUPE } from './questDefs';
 import { fmtQ, qtyQ, roundQuestTarget, describeAdventureLevel } from './questFormat';
 import { questBudget, estimatedIncomePerSecond, ascensionCoinMultiplier, ASCENSION_COIN_TARGET_RATE } from './questBudget';
@@ -128,25 +128,91 @@ export function applyRepeatTier(quest, target) {
 
 // ⚠️⚠️ LES DÉFIS VIENNENT DU FICHIER ÉCRIT, plus des modèles.
 //
-// `DEFIS_ECRITS` contient les 252 défis un par un, dans l'ordre : 42
-// œufs, sept par Ascension. L'index d'un œuf est donc
-// `ascension * 7 + rang dans le groupe`, et il n'y a plus rien à
-// résoudre — ni cible, ni article, ni ordre.
+// `DEFIS_ECRITS` contient les défis un par un, dans l'ordre, œuf par
+// œuf. Il n'y a plus rien à résoudre — ni cible, ni article, ni ordre.
 //
-// ⚠️ Au-delà du 42e œuf, on REJOUE LA DERNIÈRE ASCENSION écrite plutôt
-// que de reboucler au début : un joueur arrivé là a une production sans
+// ⚠️⚠️ LE NOMBRE D'ŒUFS PAR ASCENSION EST LU, PLUS SUPPOSÉ (24/09).
+// Il valait 7 partout, écrit en dur (`OEUFS_PAR_ASCENSION`). L'auteur a
+// supprimé l'œuf 7 de l'A0 et de l'A1 : `OEUFS_PAR_GROUPE` (dans
+// `defisEcrits.js`) vaut [6, 6, 7, 7, 7, 7]. Toute position d'œuf passe
+// par les fonctions ci-dessous — `ascension × 7` renverrait un joueur
+// de l'A2 dans l'A3.
+//
+// ⚠️ Au-delà des œufs écrits, on REJOUE LA DERNIÈRE ASCENSION plutôt que
+// de reboucler au début : un joueur arrivé là a une production sans
 // rapport avec celle du premier groupe, et lui redonner « obtiens 750
 // pièces » serait absurde.
-export const OEUFS_PAR_ASCENSION = 7;
+export { OEUFS_PAR_GROUPE };
+
+// Fonctions paramétrées par une disposition (liste de tailles), pour que
+// la migration des sauvegardes puisse lire l'ANCIENNE disposition avec
+// exactement le même calcul que la nouvelle.
+function debutDans(tailles, groupe) {
+  const n = tailles.length;
+  const g = Math.max(0, Math.floor(Number(groupe) || 0));
+  let d = 0;
+  for (let k = 0; k < Math.min(g, n); k++) d += tailles[k];
+  return g < n ? d : d + (g - n) * tailles[n - 1];
+}
+function groupeDans(tailles, index) {
+  const n = tailles.length;
+  const i = Math.max(0, Math.floor(Number(index) || 0));
+  let d = 0;
+  for (let g = 0; g < n; g++) {
+    if (i < d + tailles[g]) return g;
+    d += tailles[g];
+  }
+  return n + Math.floor((i - d) / tailles[n - 1]);
+}
+export function tailleGroupe(groupe) {
+  const g = Math.max(0, Math.floor(Number(groupe) || 0));
+  return OEUFS_PAR_GROUPE[Math.min(g, OEUFS_PAR_GROUPE.length - 1)];
+}
+export function debutGroupe(groupe) { return debutDans(OEUFS_PAR_GROUPE, groupe); }
+export function groupeDeOeuf(index) { return groupeDans(OEUFS_PAR_GROUPE, index); }
+export function rangDansGroupe(index) {
+  return Math.max(0, Math.floor(Number(index) || 0)) - debutGroupe(groupeDeOeuf(index));
+}
+// Les œufs ÉCRITS d'un groupe (le dernier groupe écrit au-delà).
+export function oeufsDuGroupe(groupe) {
+  const g = Math.min(Math.max(0, Math.floor(Number(groupe) || 0)), OEUFS_PAR_GROUPE.length - 1);
+  const d = debutGroupe(g);
+  return DEFIS_ECRITS.slice(d, d + OEUFS_PAR_GROUPE[g]);
+}
 
 export function sequenceCycle(index) {
   if (!DEFIS_ECRITS.length) return null;
   const i = Math.max(0, index || 0);
   if (i < DEFIS_ECRITS.length) return DEFIS_ECRITS[i];
-  const dernierGroupe = DEFIS_ECRITS.length - OEUFS_PAR_ASCENSION;
-  return DEFIS_ECRITS[dernierGroupe + (i % OEUFS_PAR_ASCENSION)];
+  const dernier = OEUFS_PAR_GROUPE.length - 1;
+  const debutDernier = debutGroupe(dernier);
+  return DEFIS_ECRITS[debutDernier + ((i - DEFIS_ECRITS.length) % OEUFS_PAR_GROUPE[dernier])];
 }
-export const SEQUENCE_LENGTH = OEUFS_PAR_ASCENSION;
+
+// ⚠️⚠️ MIGRATION DE L'INDEX D'ŒUF SAUVEGARDÉ (24/09).
+//
+// La sauvegarde garde un index GLOBAL d'œuf. Quand la disposition change,
+// le même index désigne un autre œuf — voire un autre groupe : sans
+// migration, un joueur au 1er œuf de l'A2 (index 14) serait envoyé au 3e,
+// et un joueur au 7e œuf de l'A2 (index 20) dans l'A3.
+//
+// On lit groupe et rang dans l'ANCIENNE disposition (écrite dans la
+// sauvegarde, ou 7 partout si elle n'y est pas : c'était la seule avant
+// le 24/09), puis on les replace dans la nouvelle. Un rang qui n'existe
+// plus (l'œuf 7 supprimé) devient le dernier œuf du groupe, celui qui
+// porte désormais l'Ascension. L'index ne sert qu'à choisir les défis :
+// créatures, pièces et Ascensions ne sont pas touchées.
+export const DISPOSITION_AVANT_DECALAGE = [7, 7, 7, 7, 7, 7];
+export function migrerIndexOeuf(index, dispositionSauvegardee) {
+  const i = Math.max(0, Math.floor(Number(index) || 0));
+  const ancienne = Array.isArray(dispositionSauvegardee) && dispositionSauvegardee.length
+    && dispositionSauvegardee.every((n) => Number.isInteger(n) && n > 0)
+    ? dispositionSauvegardee : DISPOSITION_AVANT_DECALAGE;
+  if (ancienne.join(',') === OEUFS_PAR_GROUPE.join(',')) return i;
+  const g = groupeDans(ancienne, i);
+  const rang = i - debutDans(ancienne, g);
+  return debutGroupe(g) + Math.min(rang, tailleGroupe(g) - 1);
+}
 
 // ---- Défis de l'œuf (refonte 02/09) ----
 //
@@ -466,7 +532,7 @@ export function niveauPrevuAvant(quest) {
   if (!quest || !quest.id) return 0;
   const idx = DEFIS_ECRITS.findIndex((oeuf) => oeuf.some((q) => q.id === quest.id));
   if (idx < 0) return niveauDeBase(quest.metric);
-  const debut = idx - (idx % OEUFS_PAR_ASCENSION);
+  const debut = debutGroupe(groupeDeOeuf(idx));
   let niveau = niveauDeBase(quest.metric);
   for (let i = debut; i <= idx; i++) {
     for (const q of DEFIS_ECRITS[i]) {
@@ -607,15 +673,13 @@ export function plafondAchatsGroupe(metric, stats) {
   // joueur reçoit : le plafond calculé dessus était faux, et le
   // calculateur ne protégeait plus personne.
   const groupe = Math.max(0, Math.floor((stats && stats.ascension) || 0));
-  const debut = Math.min(groupe, Math.floor(DEFIS_ECRITS.length / OEUFS_PAR_ASCENSION) - 1)
-    * OEUFS_PAR_ASCENSION;
   let total = 0;
-  for (let e = 0; e < OEUFS_PAR_ASCENSION; e++) {
-    (DEFIS_ECRITS[debut + e] || []).forEach((q) => {
+  oeufsDuGroupe(groupe).forEach((oeuf) => {
+    oeuf.forEach((q) => {
       if (q.mode !== 'delta' || q.metric !== metric) return;
       total += q.target || 0;
     });
-  }
+  });
   return total;
 }
 

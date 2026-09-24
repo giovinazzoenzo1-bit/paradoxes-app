@@ -38,6 +38,13 @@ function load(name) {
 }
 const Q = load('questLogic');
 const C = load('clickerLogic');
+// ⚠️⚠️ STRUCTURE DES GROUPES : LUE dans le moteur, jamais « 7 » en dur
+// (24/09). Vingt calculs `g * 7`, `i / 7`, `i % 7` supposaient 7 œufs par
+// Ascension ; l'A0 et l'A1 en ont 6 depuis la suppression de l'œuf 7.
+// Avec l'ancien calcul, les contrôles auraient mesuré l'A1 sur un œuf de
+// l'A2 — verts sur un jeu qui n'existe pas.
+const oeufsDe = (D, g) => D.DEFIS_ECRITS.slice(Q.debutGroupe(g), Q.debutGroupe(g) + Q.tailleGroupe(g));
+const numeroAvant = (D, g) => D.DEFIS_ECRITS.slice(0, Q.debutGroupe(g)).flat().length;
 
 // ---- Modèle de joueur ----------------------------------------------
 // Hypothèses EXPLICITES, à ajuster si le jeu change. Elles ne cherchent
@@ -1268,7 +1275,7 @@ function auditCibleSuitLeJoueur() {
   load('defisEcrits').DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((q) => {
     if (q.step || q.minStep) return;
     if (q.mode === 'delta' && Q.estAchatAdaptable(q.metric)) return;
-    const g = Math.floor(i / 7);
+    const g = Q.groupeDeOeuf(i);
     debutant.ascension = g; avance.ascension = g;
     const a = Q.resolveQuestTarget(q, debutant);
     const b = Q.resolveQuestTarget(q, avance);
@@ -1467,8 +1474,8 @@ function auditInfaisable(partMax = 0.6) {
   for (let g = 0; g < 6; g++) {
     const seuil = C.ascensionThreshold(g);
     const possede = {};
-    for (let e = 0; e < 7; e++) {
-      (D.DEFIS_ECRITS[g * 7 + e] || []).forEach((q) => {
+    for (let e = 0; e < Q.tailleGroupe(g); e++) {
+      (D.DEFIS_ECRITS[Q.debutGroupe(g) + e] || []).forEach((q) => {
         const m = q.metric || '';
         const plafonne = m === 'sanctuaryLevel' || m === 'veilleurLevel';
         if (!Q.estAchatAdaptable(m) && !plafonne) return;
@@ -1738,7 +1745,7 @@ function auditPlafondAchats(partMax = 0.75) {
   let D;
   try { D = load('defisEcrits'); } catch (e) { return []; }
   [0, 1, 2, 3, 4, 5].forEach((groupe) => {
-    (D.DEFIS_ECRITS.slice(groupe * 7, groupe * 7 + 7).flat()).forEach((q) => {
+    (oeufsDe(D, groupe).flat()).forEach((q) => {
       if (q.mode !== 'delta') return;
       const s = etatInitial();
       s.ascension = groupe;
@@ -1822,8 +1829,13 @@ function auditDefisEcrits() {
   if (traces) fautes.push({ probleme: traces.length + ' trace(s) de code transformé : ' + traces[0] });
   const vus = new Set();
   D.DEFIS_ECRITS.forEach((oeuf, i) => {
-    // ⚠️ 8 défis par œuf depuis le 21/09 — demande de l'auteur.
-    if (oeuf.length !== 8) fautes.push({ oeuf: i + 1, probleme: oeuf.length + ' défis au lieu de 8' });
+    // ⚠️ 8 défis par œuf depuis le 21/09 — demande de l'auteur. Le dernier
+    // œuf d'un groupe peut en avoir 9 : l'A0 et l'A1 y portent l'Ascension
+    // déplacée de l'œuf 7 supprimé (24/09).
+    const dernierDuGroupe = Q.rangDansGroupe(i) === Q.tailleGroupe(Q.groupeDeOeuf(i)) - 1;
+    if (!(oeuf.length === 8 || (dernierDuGroupe && oeuf.length === 9))) {
+      fautes.push({ oeuf: i + 1, probleme: oeuf.length + ' défis' });
+    }
     // Chaque libellé doit s'EXÉCUTER — un nom introuvable ne se voit pas
     // à la compilation, seulement à l'affichage.
     oeuf.forEach((q) => {
@@ -1844,17 +1856,17 @@ function auditDefisEcrits() {
       if (typeof q.label !== 'function') fautes.push({ oeuf: i + 1, probleme: 'libellé absent : ' + q.id });
     });
     // L'Ascension clôt chaque groupe de sept œufs.
-    if ((i + 1) % 7 === 0) {
+    if (Q.rangDansGroupe(i) === Q.tailleGroupe(Q.groupeDeOeuf(i)) - 1) {
       const dernier = oeuf[oeuf.length - 1];
       if (!dernier || dernier.metric !== 'ascension') {
-        fautes.push({ oeuf: i + 1, probleme: "le 7e œuf ne finit pas par l'Ascension" });
+        fautes.push({ oeuf: i + 1, probleme: "le dernier œuf du groupe ne finit pas par l'Ascension" });
       }
     }
   });
   // Le tirage doit rendre EXACTEMENT l'œuf écrit, dans le même ordre.
   D.DEFIS_ECRITS.forEach((oeuf, i) => {
     const s2 = etatInitial();
-    s2.ascension = Math.floor(i / 7);
+    s2.ascension = Q.groupeDeOeuf(i);
     const set = Q.nextQuestSet(i, [], s2);
     const attendu = oeuf.map((q) => q.id).join(',');
     if (set.ids.join(',') !== attendu) {
@@ -1888,9 +1900,9 @@ function auditCoutCroissant(tolerance = 0.5) {
   for (let groupe = 0; groupe < 6; groupe++) {
     const possede = {};
     let precedent = null;
-    let numero = groupe * 42;
-    for (let e = 0; e < 7; e++) {
-      const oeuf = D.DEFIS_ECRITS[groupe * 7 + e] || [];
+    let numero = numeroAvant(D, groupe);
+    for (let e = 0; e < Q.tailleGroupe(groupe); e++) {
+      const oeuf = D.DEFIS_ECRITS[Q.debutGroupe(groupe) + e] || [];
       oeuf.forEach((q) => {
         numero += 1;
         const m = q.metric || '';
@@ -1944,6 +1956,14 @@ module.exports.auditCoutCroissant = auditCoutCroissant;
 // ⚠️ On additionne le COÛT RÉEL, en tenant le compte de ce que le joueur
 // a déjà acheté dans le groupe. Additionner des prix unitaires donnerait
 // un total faux : le 10e exemplaire coûte bien plus cher que le 3e.
+// ⚠️⚠️ A0 ET A1 : BORNES PROPRES, décision de l'auteur du 24/09.
+// « Annuler l'œuf 7 », « en réalité je veux juste un décalage » : l'œuf 7
+// part avec ses achats (49 % du seuil à l'A0, 57 % à l'A1), le seuil ne
+// bouge pas. Les achats tombent à 43 % et 30 % : le reste se farme après
+// l'œuf 6. MESURÉ à l'A0 sur son propre chrono : il lui restait 537 K
+// sur 3,14 M, soit ~15 min à son rythme. L'A1 n'a pas encore de chrono.
+// Des bornes et non une exemption : une dérive se voit encore.
+const BUDGET_DECALAGE = { 0: [0.35, 0.55], 1: [0.22, 0.40] };
 function auditBudgetGroupe(min = 0.80, max = 1.00) {
   let D;
   try { D = load('defisEcrits'); } catch (e) { return []; }
@@ -1953,8 +1973,8 @@ function auditBudgetGroupe(min = 0.80, max = 1.00) {
   for (let g = 0; g < 6; g++) {
     const possede = {};
     let total = 0;
-    for (let e = 0; e < 7; e++) {
-      (D.DEFIS_ECRITS[g * 7 + e] || []).forEach((q) => {
+    for (let e = 0; e < Q.tailleGroupe(g); e++) {
+      (D.DEFIS_ECRITS[Q.debutGroupe(g) + e] || []).forEach((q) => {
         const m = q.metric || '';
         // ⚠️ LA fonction de coût du moteur — jamais une copie. Un contrôle
         // qui calcule ses coûts à sa façon mesure autre chose que le jeu.
@@ -1970,7 +1990,8 @@ function auditBudgetGroupe(min = 0.80, max = 1.00) {
       });
     }
     const part = total / C.ascensionThreshold(g);
-    if (part < min || part > max) {
+    const [bas, haut] = BUDGET_DECALAGE[g] || [min, max];
+    if (part < bas || part > haut) {
       fautes.push({ groupe: g, part: Math.round(part * 100),
         farmFinal: Math.round((1 - part) * 100) });
     }
@@ -2035,8 +2056,8 @@ function auditEquilibreFamilles(ecartMax = 0.5) {
   const parGroupe = [];
   for (let g = 0; g < 6; g++) {
     const compte = { achat: 0, aventure: 0, economie: 0, action: 0 };
-    for (let e = 0; e < 7; e++) {
-      (D.DEFIS_ECRITS[g * 7 + e] || []).forEach((q) => {
+    for (let e = 0; e < Q.tailleGroupe(g); e++) {
+      (D.DEFIS_ECRITS[Q.debutGroupe(g) + e] || []).forEach((q) => {
         const f = famille(q.metric || '');
         if (compte[f] !== undefined) compte[f] += 1;
       });
@@ -2080,15 +2101,15 @@ function auditPrerequisTenus() {
   // avant qu'un défi de Pacte ait fait atteindre ce niveau.
   for (let g = 0; g < 6; g++) {
     let pacte = 0;
-    for (let e = 0; e < 7; e++) {
-      (D.DEFIS_ECRITS[g * 7 + e] || []).forEach((q) => {
+    for (let e = 0; e < Q.tailleGroupe(g); e++) {
+      (D.DEFIS_ECRITS[Q.debutGroupe(g) + e] || []).forEach((q) => {
         // ⚠️ Le Pacte repart du niveau 1 après une Ascension : acheter
         // N niveaux mène au niveau N + 1.
         if (q.metric === 'tapPower') {
           pacte = q.mode === 'delta' ? Math.max(pacte, 1) + q.target : Math.max(pacte, q.target);
         }
         if (q.metric.startsWith('tapUpgrade:') && pacte < 10) {
-          fautes.push({ oeuf: g * 7 + e + 1, id: q.id,
+          fautes.push({ oeuf: Q.debutGroupe(g) + e + 1, id: q.id,
             probleme: 'palier de tap demandé avec Pacte ' + pacte + ' (10 requis)' });
         }
       });
@@ -2443,13 +2464,13 @@ function auditFaisableAuMoment(marge = 1.0) {
   const fautes = [];
   const sims = {};
   D.DEFIS_ECRITS.forEach((oeuf, i) => {
-    const g = Math.floor(i / 7);
-    const e = i % 7;
+    const g = Q.groupeDeOeuf(i);
+    const e = Q.rangDansGroupe(i);
     if (g > 5) return;
     const r = sims[g] || (sims[g] = simulerGroupe(g));
     if (!r.jalons || !r.jalons.length) return;
     // Fin de l'œuf e = début de l'œuf e + 1, en temps de jeu.
-    const tFin = ((e + 1) / 7) * r.heures * 3600;
+    const tFin = ((e + 1) / Q.tailleGroupe(g)) * r.heures * 3600;
     let etat = r.jalons[0];
     r.jalons.forEach((j) => { if (j.t <= tFin) etat = j; });
     // ⚠️ Le simulateur optimise le REVENU, pas les défis : en début de
@@ -2507,13 +2528,13 @@ function auditCoteEtalon(secondes = 94, min = 0.5, max = 2.0) {
   const fautes = [];
   const sims = {};
   D.DEFIS_ECRITS.forEach((oeuf, i) => {
-    const g = Math.floor(i / 7);
-    const e = i % 7;
+    const g = Q.groupeDeOeuf(i);
+    const e = Q.rangDansGroupe(i);
     // L'A0 est le tutoriel réglé à la main avec l'auteur : exempté.
     if (g < 1 || g > 5) return;
     const r = sims[g] || (sims[g] = simulerGroupe(g));
     if (!r.jalons || !r.jalons.length) return;
-    const tFin = ((e + 1) / 7) * r.heures * 3600;
+    const tFin = ((e + 1) / Q.tailleGroupe(g)) * r.heures * 3600;
     let etat = r.jalons[0];
     r.jalons.forEach((j) => { if (j.t <= tFin) etat = j; });
     const etalon = secondes * Math.max(1, etat.production || 0);
@@ -2735,7 +2756,7 @@ function auditCibleBudget() {
     });
   }));
   // 2. Le cas exact de l'auteur, Ascension 0.
-  const pactes = D.DEFIS_ECRITS.slice(0, 7).flat().filter((q) => q.metric === 'tapPower');
+  const pactes = oeufsDe(D, 0).flat().filter((q) => q.metric === 'tapPower');
   if (pactes.length >= 2) {
     const [p2, p24] = pactes;
     const vu = (q, niv) => Q.cibleAchatCumulee(q, { tapPower: niv }, q.target);
@@ -2807,7 +2828,7 @@ function auditDefiInvisible() {
   D.DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((q) => {
     if (!q.minStep) return;
     [0, 42000, 900000].forEach((n) => {
-      const s = etatInitial(); s.ascension = Math.floor(i / 7); s[q.metric] = n;
+      const s = etatInitial(); s.ascension = Q.groupeDeOeuf(i); s[q.metric] = n;
       const t = Q.resolveQuestTarget(q, s);
       if (!(t > n)) fautes.push({ id: q.id, avec: n, cible: t, probleme: 'défi déjà rempli pour ce joueur' });
     });
@@ -2839,15 +2860,15 @@ function auditCibleMonte() {
   const fautes = [];
   for (let g = 0; g < 6; g++) {
     const vu = {};
-    D.DEFIS_ECRITS.slice(g * 7, g * 7 + 7).flat().forEach((q, k) => {
+    oeufsDe(D, g).flat().forEach((q, k) => {
       const m = q.metric || '';
       if (m === 'ascension' || q.step || q.minStep) return;
       if (Q.estDefiAchat({ metric: m }, {})) return;
       if (vu[m] && q.target < vu[m].cible) {
-        fautes.push({ groupe: g, metric: m, defi: g * 42 + k + 1, cible: q.target,
+        fautes.push({ groupe: g, metric: m, defi: numeroAvant(D, g) + k + 1, cible: q.target,
           avant: vu[m].cible, defiAvant: vu[m].defi, probleme: 'la cible redescend' });
       }
-      vu[m] = { cible: q.target, defi: g * 42 + k + 1 };
+      vu[m] = { cible: q.target, defi: numeroAvant(D, g) + k + 1 };
     });
   }
   return fautes;
@@ -2911,7 +2932,7 @@ function auditMajorationPrix() {
   const fautes = [];
   for (let g = 0; g < 6; g++) {
     const demandes = new Set();
-    D.DEFIS_ECRITS.slice(g * 7, g * 7 + 7).flat().forEach((q) => {
+    oeufsDe(D, g).flat().forEach((q) => {
       if ((q.metric || '').startsWith('auto:')) demandes.add(q.metric.slice(5));
     });
     const majores = new Set(C.GENERATEURS_MAJORES_PAR_ASCENSION[g] || []);
@@ -2920,7 +2941,7 @@ function auditMajorationPrix() {
     if (manque.length || enTrop.length) fautes.push({ groupe: g, nonMajores: manque, majoresSansDefi: enTrop });
     // ⚠️ Chaque palier de tap coûte son prix normal à partir de
     // l'Ascension dont les défis le demandent — lue dans le fichier.
-    D.DEFIS_ECRITS.slice(g * 7, g * 7 + 7).flat().forEach((q) => {
+    oeufsDe(D, g).flat().forEach((q) => {
       if (!(q.metric || '').startsWith('tapUpgrade:')) return;
       const id = q.metric.slice(11);
       const prevu = C.PALIER_TAP_ASCENSION[id];
@@ -3052,7 +3073,7 @@ function auditDebutDePartie() {
   try { D = load('defisEcrits'); } catch (e) { return fautes; }
   D.DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((q) => {
     if (!(q.metric || '').startsWith('auto:')) return;
-    const id = q.metric.slice(5); const g = Math.floor(i / 7);
+    const id = q.metric.slice(5); const g = Q.groupeDeOeuf(i);
     const prevu = C.GENERATEUR_ASCENSION[id];
     if (prevu === undefined || prevu > g) fautes.push({ groupe: g, generateur: id, prevu, probleme: 'demandé avant son Ascension' });
   }));
@@ -3086,3 +3107,41 @@ function auditExhaustif() {
   return fautes.length ? fautes : [{ probleme: 'panne : ' + (r.stderr || sortie).slice(0, 120) }];
 }
 module.exports.auditExhaustif = auditExhaustif;
+
+// ---- La structure des groupes est-elle celle que le jeu croit ? ------
+//
+// Ajouté le 24/09 avec la suppression de l'œuf 7 de l'A0 et de l'A1. Le
+// moteur, l'écran (saut d'œuf à l'Ascension, migration des sauvegardes)
+// et tous les outils lisent `OEUFS_PAR_GROUPE`. S'il ne correspond plus au
+// fichier, l'index d'un œuf désigne un autre groupe que son Ascension.
+// Vérifie : le total d'œufs, que chaque groupe finit par SON Ascension
+// (cible = groupe + 1), qu'il n'y en a nulle part ailleurs, et 8 défis par
+// œuf (9 pour l'œuf qui porte l'Ascension).
+function auditStructureOeufs() {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return [{ probleme: 'fichier absent' }]; }
+  const fautes = [];
+  const T = D.OEUFS_PAR_GROUPE || [];
+  const total = T.reduce((a, n) => a + n, 0);
+  if (!T.length || total !== D.DEFIS_ECRITS.length) {
+    fautes.push({ probleme: `OEUFS_PAR_GROUPE totalise ${total} œufs, le fichier en a ${D.DEFIS_ECRITS.length}` });
+    return fautes;
+  }
+  T.forEach((n, g) => {
+    oeufsDe(D, g).forEach((oeuf, e) => {
+      const dernierOeuf = e === n - 1;
+      oeuf.forEach((q, k) => {
+        if (q.metric !== 'ascension') return;
+        if (!dernierOeuf || k !== oeuf.length - 1) fautes.push({ groupe: g, oeuf: e + 1, probleme: 'Ascension hors de la fin du groupe : ' + q.id });
+        if (q.target !== g + 1) fautes.push({ groupe: g, probleme: `Ascension ${q.target} dans le groupe ${g}` });
+      });
+      // 8 défis par œuf ; l'œuf qui porte l'Ascension en a 8 ou 9 (9 quand
+      // elle y a été déplacée depuis un œuf supprimé).
+      const bon = dernierOeuf ? (oeuf.length === 8 || oeuf.length === 9) : oeuf.length === 8;
+      if (!bon) fautes.push({ groupe: g, oeuf: e + 1, probleme: `${oeuf.length} défis` });
+      if (dernierOeuf && !oeuf.some((q) => q.metric === 'ascension')) fautes.push({ groupe: g, probleme: 'le groupe ne finit pas par son Ascension' });
+    });
+  });
+  return fautes;
+}
+module.exports.auditStructureOeufs = auditStructureOeufs;
