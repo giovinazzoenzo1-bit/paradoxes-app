@@ -32,7 +32,7 @@ python3 mobile/tools/generer-doc.py        # régénère mobile/DEFIS_PARADOX.md
 - Mettre à jour `WIKI_DEFIS.md` / `CLICKER_ADVENTURE_STATE.md` à chaque changement structurant, avec la **cause réelle** des bugs, et `A_FAIRE.md` pour toute demande future de l'auteur.
 - Message de commit = récit complet (cause, mesure, décision) : c'est la mémoire du projet.
 
-## 3. État au 24/09 (dernier commit : 77882eb)
+## 3. État au 24/09 (dernier commit : b3ea6aa)
 - **336 défis** écrits un par un : 6 Ascensions × 7 œufs × **8 défis** (`mobile/src/games/clicker/defisEcrits.js`, source de vérité). Document : `mobile/DEFIS_PARADOX.md`.
 - **Tous les défis s'adaptent à l'apparition** : achat → ce qui manque pour le total prévu (règle du total de l'auteur) ; revenu/s → +20 % ; pièces de côté → +5 min de production ; Aventure → +5 niveaux ; Sanctuaire/Veilleur → +2 (plafond 50) ; records → repartent de zéro ; jamais calculés sur un passif boosté par un pouvoir.
 - Simulateur `simulerGroupe` (dans `audit-quetes.js`) **calé sur les chronos réels** : `H.facteurJoueurReel = 2,48` sur le tap (Transe, critiques, pouvoirs). Durées : **2,3 / 3,9 / 4,3 / 6,2 / 6,8 / 8,1 h**.
