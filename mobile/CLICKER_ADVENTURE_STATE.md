@@ -233,6 +233,12 @@ tirage et le correctif semblait ne rien faire.
 peut pas importer `questLogic`) entre dans le calcul. **À incrémenter
 dès qu'on change la façon dont les défis sont choisis ou résolus.**
 
+⚠️ **`defisEcrits.js` — les vrais défis — n'entre PAS dans l'empreinte**
+(elle hache `QUEST_SEQUENCE`, l'ancien modèle). Toute cible ou libellé
+changé dans ce fichier exige le bump : sinon l'œuf en cours garde
+l'ancienne cible, qui peut être devenue impossible à vie (24/09 :
+« Achète 10 niveaux de Poigne » valait 45 000 % du seuil).
+
 ### Valider en dev une Ascension doit FAIRE l'Ascension
 Sinon le compteur reste à 0, le groupe reste le 1er, et parcourir les 26
 œufs au bouton de dev ne teste QUE le groupe 1 — en donnant l'illusion
@@ -403,9 +409,12 @@ l'auteur.
 Joueur à la main, 4 taps/s. L'autoclicker de l'auteur (~142/s) est un
 outil de test, **jamais** une référence d'équilibrage.
 
-| Groupe | 1 | 2 | 3 | 4 |
-|---|---|---|---|---|
-| Durée | 8,1 h | 9,1 h | 11,5 h | 19,6 h |
+| Groupe | A0 | A1 | A2 | A3 | A4 | A5 |
+|---|---|---|---|---|---|---|
+| Durée (sim, 24/09) | 3,0 h | 3,9 h | 4,3 h | 6,2 h | 6,8 h | 8,1 h |
+
+Ce sont les `DUREES_CIBLES` de `audit-quetes.js` (±15 %) : elles gardent
+le rythme, elles ne le décident pas.
 
 Gains hors ligne plafonnés à **15 % du seuil de l'Ascension en cours**
 (`OFFLINE_MAX_SHARE`). Le plafond de 2 h ne bornait que le TEMPS, pas la
@@ -413,6 +422,47 @@ VALEUR : une nuit rendait jusqu'à 106 % de l'Ascension.
 
 ⚠️ `ASCENSION_THRESHOLDS` est une table de 14 valeurs **mesurées**. Tout
 changement d'équilibrage la périme.
+
+### Les paliers de tap ÉTAIENT l'économie (24/09)
+
+Croissance ×2,5 par niveau (demande de l'auteur, était 1,45). Mesuré
+avant : le tap faisait **96 à 100 %** de la production à tous les groupes,
+les générateurs 0 à 4 %. Le simulateur n'achetait que 4 générateurs sur
+15 ; les défis forçaient les autres.
+
+⚠️ **×2,5 SEUL = A2 à 17 h au lieu de 4,3, A3-A5 ×2,5.** Aucune croissance
+au-dessus de 1,45 ne gardait les durées : les paliers 3-10 (bonus 4 à
+512) plafonnent et rien ne prend le relais. Une valeur demandée par
+l'auteur se mesure quand même AVANT d'être poussée — la session d'avant
+l'avait écrite sans mesurer, puis annulée.
+
+Le levier de compensation est `AJUSTEMENT_ASCENSION` (seuil + prix
+ensemble), remesuré par **dichotomie groupe par groupe, en boucle** : la
+surprime des paliers lit les seuils des groupes suivants, donc l'A2
+déplace l'A1 et l'A0. Trois pièges rencontrés en l'appliquant :
+
+1. **L'ajustement ne touche pas les prix fixes** (Pacte, Faveur, Dégâts
+   critiques, Sanctuaire, Veilleur). L'A0 est donc non compensable (86 %
+   de son budget) et passe de 2,2 à 3,0 h — assumé, c'est l'effet direct
+   de la demande. Et à l'A2 (÷5), « 9 niveaux de Pacte » devenait 12 % du
+   seuil pour +9 tap sur 2 300 : `auditCoutCroissant` l'a vu, cibles
+   ramenées à leur poids d'avant (2,9 %).
+2. **Les parts des paliers sont quantifiées ×2,5 et invariantes à
+   l'ajustement** : seule une combinaison de niveaux finaux tient le
+   budget 80-100 %, et c'est le niveau FINAL qui compte (60 % du cumul).
+3. **Le joueur « en avance » d'`auditPlafondAchats` dépend de la pente** :
+   +15 % de niveaux valait pour 1,45 ; à ×2,5 il possédait 118 % du seuil
+   sur un article. L'avance est lue dans `growth` (1,15 → 1,045).
+
+Après : tap/clic à l'A2 1 068 (7 886 avant), passif 0 à 14 %. Les
+générateurs restent faibles : chantier suivant, pas celui-ci.
+
+⚠️ **Les pauses d'énergie se comptent, elles ne se cadencent pas.** Le
+simulateur en créditait une toutes les 10 min de jeu actif, soit 17 à
+25 par groupe, pour une règle de l'auteur à 9 par Ascension : le nombre
+de recharges dépend des combats à faire, pas du temps passé à taper.
+Poids mesuré : 10 % sur la durée de l'A0. Toute mesure faite avec
+l'ancien modèle est périmée (`H.pausesParGroupe`).
 
 **Ouvert** : `auditTropFacile` est rouge sur les groupes 2 à 5 — des
 défis encore trop faciles, à caler œuf par œuf avec la règle du §4.

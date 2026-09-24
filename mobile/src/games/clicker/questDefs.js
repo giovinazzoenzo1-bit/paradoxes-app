@@ -868,7 +868,11 @@ export const QUEST_POOL = [
 //
 // ⚠️ L'oublier, c'est reproduire ce bug : un correctif invisible, et des
 // heures passées à chercher dans les défis au lieu du moteur.
-export const QUEST_ENGINE_VERSION = 57;
+// ⚠️ 58 (24/09) : cibles des 20 défis de paliers de tap recalées pour la
+// croissance ×2,5. `defisEcrits.js` n'entre PAS dans l'empreinte : sans
+// ce bump, un œuf en cours gardait « Achète 10 niveaux de Poigne », qui
+// vaut désormais 45 000 % du seuil — un défi impossible, à vie.
+export const QUEST_ENGINE_VERSION = 58;
 
 function empreinteDefis() {
   const morceaux = [];

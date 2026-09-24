@@ -1135,17 +1135,44 @@ export function coreUpgradeRequirement(id) {
 // rang donnait 1 PARTOUT : les paliers de tap coûtent bien moins cher
 // que les générateurs, donc la valeur par coin ne les distingue pas.
 // Une règle correcte sur le papier peut produire une échelle plate.
+//
+// ⚠️⚠️ CROISSANCE ×2,5 PAR NIVEAU (24/09, demande de l'auteur du 21/09 :
+// « Poigne coûte 5,4 K pour +1 par tap, le Pacte 34 K pour le même +1 ;
+// passer la croissance par niveau à ×2,5 »). Le Pacte reste à ×2.
+//
+// MESURÉ avant : à Pacte 10, +1 de tap coûtait 43 k au Pacte, 4,6 k à
+// la Poigne, 3,7 k au Gantelet — Poigne 5 + Gantelet 5 = +15/tap pour
+// 144 k, quand le Pacte demandait 1,3 M pour +4. Et le tap faisait 96 à
+// 100 % de la production à TOUS les groupes : les générateurs étaient
+// morts (passif 0 à 4 %).
+//
+// À ×2,5 un palier plafonne de lui-même vers le niveau 7-10 (le niveau
+// suivant coûte 2,5× le précédent, comme le Pacte) : il redevient un
+// démarreur, pas le moteur.
+//
+// ⚠️ ×2,5 SEUL fait passer l'A2 de 4,3 h à 17 h (+300 %), l'A3-A5 ×2,5 :
+// les paliers ÉTAIENT l'économie. Compensé par `AJUSTEMENT_ASCENSION`
+// (seuil et prix ensemble), remesuré par dichotomie — voir là-bas. L'A0
+// n'est pas compensable (86 % de son budget d'achats est en prix fixes)
+// et passe de 2,2 à 2,85 h : c'est l'effet direct de la demande, la
+// cible de conception d'origine était 2,8 h.
+//
+// ⚠️ Les 20 défis « Achète N niveaux de <palier> » ont été recalés en
+// PART DU SEUIL (les anciennes cibles à 16-22 niveaux valaient 45 000 %
+// du seuil à ×2,5). Les parts sont quantifiées par la croissance et
+// invariantes à l'ajustement : niveau final 7/8 (A1), 8/9, 9/10, 10/10,
+// 10/10 (A5). Toute modification de `growth` périme ces cibles.
 export const TAP_UPGRADES = [
-  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1399, growth: 1.45 },
-  { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2, cost: 2237, growth: 1.45 },
-  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 4, cost: 17330, growth: 1.45 },
-  { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 8, cost: 27729, growth: 1.45 },
-  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 16, cost: 51523, growth: 1.45 },
-  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 32, cost: 82442, growth: 1.45 },
-  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 64, cost: 25472, growth: 1.45 },
-  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 128, cost: 40763, growth: 1.45 },
-  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 256, cost: 24845, growth: 1.45 },
-  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 512, cost: 39753, growth: 1.45 },
+  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1399, growth: 2.5 },
+  { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2, cost: 2237, growth: 2.5 },
+  { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 4, cost: 17330, growth: 2.5 },
+  { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 8, cost: 27729, growth: 2.5 },
+  { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 16, cost: 51523, growth: 2.5 },
+  { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 32, cost: 82442, growth: 2.5 },
+  { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 64, cost: 25472, growth: 2.5 },
+  { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 128, cost: 40763, growth: 2.5 },
+  { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 256, cost: 24845, growth: 2.5 },
+  { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 512, cost: 39753, growth: 2.5 },
 ];
 
 // ⚠️ Même correction : à 10 x LEVEL_SPLIT = 50, les 10 paliers de tap ne
@@ -1831,7 +1858,33 @@ export const AUTOCLICKER_COST_GROWTH = 1.25;
 // la durée du groupe suit. Mesuré avec la surprime des paliers de tap :
 // sans lui, l'A2 (4,2 h) dépassait l'A3 (3,4 h). Avec lui : 2,6 / 3,4 /
 // 4,3 / 5,9 / 6,7 / 8,0 h — en montée, proches des cibles d'origine.
-export const AJUSTEMENT_ASCENSION = [1, 1.3, 1, 1.7, 1.9, 1.9];
+//
+// ⚠️⚠️ REMESURÉ le 24/09 pour la croissance ×2,5 des paliers de tap
+// (était 1 / 1,3 / 1 / 1,7 / 1,9 / 1,9). Dichotomie sur `simulerGroupe`,
+// groupe par groupe et en boucle jusqu'à convergence — la surprime des
+// paliers d'un groupe lit le seuil des groupes SUIVANTS, donc changer
+// l'A2 déplace l'A1 et l'A0. Cible : les durées mesurées de
+// `DUREES_CIBLES` (2,9 / 3,9 / 4,3 / 6,2 / 6,8 / 8,1 h).
+//
+// Ce qu'il ne touche PAS : le Pacte, la Faveur, les Dégâts critiques, le
+// Sanctuaire et le Veilleur, aux prix fixes. C'est pour ça que l'A0 reste
+// à 1 : ces prix fixes font 86 % de son budget d'achats, et baisser son
+// seuil les portait à 118 % (règle 80-100 % cassée, tutoriel à réécrire).
+//
+// ⚠️ Mesuré avec les 9 pauses d'énergie par groupe (règle de l'auteur) :
+// avec « une pause toutes les 10 min » (17 à 25 par groupe), les valeurs
+// sortaient 3 à 4 % plus hautes.
+//
+// ⚠️ L'A2 tombe à 0,187 (÷5) : à ×1,45 son économie reposait sur l'achat
+// des paliers de l'A3-A5 « avant l'heure » (tap/clic 7 886 contre 107 à
+// l'A1). À ×2,5 ils plafonnent ; le seuil et les prix suivent, la part des
+// défis d'achat reste la même. Seuils effectifs : 3,1 M / 11,6 M / 186 M /
+// 13,1 Md / 60 Md / 370 Md.
+//
+// ⚠️ Ces six valeurs se REMESURENT (tools : dichotomie sur le simulateur)
+// à chaque changement de prix, de rendement ou de croissance. Jamais à
+// la main.
+export const AJUSTEMENT_ASCENSION = [1, 0.868, 0.187, 0.618, 0.690, 0.720];
 export function ajustementAscension(ascensionCount) {
   const a = Math.max(0, Math.floor(ascensionCount || 0));
   return AJUSTEMENT_ASCENSION[Math.min(a, AJUSTEMENT_ASCENSION.length - 1)];

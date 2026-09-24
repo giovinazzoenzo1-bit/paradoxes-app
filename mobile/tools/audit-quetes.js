@@ -57,10 +57,15 @@ const H = {
   // ⚠️ PAUSES D'ÉNERGIE (24/09). L'auteur : « je n'ai pas compté le repos
   // pour les 5 énergies de l'Aventure : le joueur est hors ligne à ce
   // moment-là, ~1 h 15, et 9 fois dans l'Ascension (on est censé passer
-  // le chapitre 4 niveau 5) ». Toutes les 10 min de jeu actif, une pause
-  // de 1 h 15 dont les gains hors ligne sont crédités par LA fonction du
-  // jeu (`offlineEarnings`).
-  pauseToutesLesSec: 600,
+  // le chapitre 4 niveau 5) ». Les gains hors ligne de chaque pause sont
+  // crédités par LA fonction du jeu (`offlineEarnings`).
+  //
+  // ⚠️ 9 PAUSES PAR GROUPE, réparties sur sa durée — pas « une toutes les
+  // 10 min ». La première version en créditait 17 à l'A0 et 25 à l'A2
+  // (mesuré) : le nombre de recharges dépend des COMBATS à faire, pas du
+  // temps passé à taper. Le simulateur estime d'abord la durée sans
+  // pause, puis place les 9 pauses à intervalles réguliers.
+  pausesParGroupe: 9,
   pauseDureeSec: 4500,
   minParSession: 20,      // durée d'une session type
   energieMax: 5,          // tentatives d'Aventure avant recharge
@@ -1755,7 +1760,17 @@ function auditPlafondAchats(partMax = 0.75) {
       // premier que sur le second. Tester la même avance sur les deux
       // refusait des réglages corrects.
       const plafond = Q.plafondAchatsGroupe(m, s);
-      const possede = Math.round(plafond * (estAuto ? 1.5 : 1.15));
+      // ⚠️ LA PENTE EST LUE, plus écrite en dur (24/09). Le 1,15 des
+      // paliers valait pour une croissance de 1,45 : à ×2,5 un seul
+      // niveau au-delà du plafond coûte 2,5× tout le dernier palier
+      // demandé, et le joueur « en avance » de 15 % possédait 118 % du
+      // seuil sur un seul article — situation inatteignable, le contrôle
+      // refusait des réglages corrects. L'avance en niveaux se réduit avec
+      // la pente : 1 + 0,15 × 0,45 / (croissance − 1), soit 1,15 à ×1,45
+      // (la valeur historique) et 1,045 à ×2,5 (« possède le total du
+      // groupe », et le défi lui demande le niveau suivant).
+      const avanceTap = 1 + 0.15 * (0.45 / (Math.max(1.01, item.growth || 1.6) - 1));
+      const possede = Math.round(plafond * (estAuto ? 1.5 : avanceTap));
       if (estAuto) s.autoClickers[item.id] = possede;
       else s.tapUpgrades[item.id] = possede;
       const cible = Q.resolveQuestTarget(q, s);
@@ -2232,9 +2247,15 @@ module.exports.auditDocConforme = auditDocConforme;
 //
 // Il n'y a donc plus qu'UNE fonction. `duree.js`, `auditDureeCroissante`
 // et toute mesure future l'appellent. Un désaccord devient impossible.
-function simulerGroupe(ascension, tapsParSec) {
+function simulerGroupe(ascension, tapsParSec, options) {
   const a = ascension;
   const taps = tapsParSec || H.tapsParSec;
+  // Intervalle entre deux pauses : la durée SANS pause divisée en N+1.
+  // Une seule passe préalable, sans pause, sert d'estimation.
+  const sansPause = options && options.sansPause;
+  const nbPauses = sansPause ? 0 : (H.pausesParGroupe || 0);
+  const intervallePause = nbPauses > 0
+    ? simulerGroupe(a, taps, { sansPause: true }).tActif / (nbPauses + 1) : 0;
   const s = etatInitial();
   s.ascension = a;
   s.tapPower = 1;
@@ -2278,11 +2299,13 @@ function simulerGroupe(ascension, tapsParSec) {
   // Ajout du 21/09 : c'est l'étalon des défis « Mets N pièces de côté ».
   // Rien d'autre ne change dans le calcul.
   const jalons = [{ t: 0, passif: 0, production: rev() }];
-  let prochainePause = H.pauseToutesLesSec;
+  let prochainePause = intervallePause;
+  let pausesFaites = 0;
   while (s.totalEarned < seuil && garde++ < 20000) {
     // Pause d'énergie : gains hors ligne crédités, temps actif inchangé.
-    if (H.pauseToutesLesSec > 0 && t >= prochainePause) {
-      prochainePause += H.pauseToutesLesSec;
+    if (nbPauses > 0 && pausesFaites < nbPauses && t >= prochainePause) {
+      prochainePause += intervallePause;
+      pausesFaites += 1;
       const pf = C.passiveRate({ autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
         sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a });
       const gain = C.offlineEarnings(pf, H.pauseDureeSec);
@@ -2339,7 +2362,10 @@ function simulerGroupe(ascension, tapsParSec) {
   let somme = 0, prec = 0;
   jalons.forEach((j) => { somme += j.passif * (j.t - prec); prec = j.t; });
   const passifMoyen = t > 0 ? somme / t : 0;
-  return { heures: t / 3600, passif: passifFinal, passifMoyen, seuil, production: rev(), jalons };
+  // `etat` : l'état FINAL du joueur simulé (Pacte, paliers, générateurs),
+  // pour lire d'où vient la production — ajouté le 24/09 pour mesurer la
+  // croissance des paliers de tap. Lecture seule, rien d'autre ne change.
+  return { heures: t / 3600, tActif: t, pauses: pausesFaites, passif: passifFinal, passifMoyen, seuil, production: rev(), jalons, etat: s };
 }
 module.exports.simulerGroupe = simulerGroupe;
 
@@ -2806,7 +2832,15 @@ module.exports.auditCibleMonte = auditCibleMonte;
 // Ces valeurs protègent donc contre une DÉRIVE du rythme actuel. Étirer
 // le jeu jusqu'aux cibles d'origine est une décision de l'auteur, pas une
 // correction : elle multiplierait tous les seuils par ~2,5.
-const DUREES_CIBLES = [2.3, 3.9, 4.3, 6.2, 6.8, 8.1];
+//
+// ⚠️ A0 : 2,3 -> 3,0 le 24/09. Croissance ×2,5 des paliers de tap
+// (demande de l'auteur) : l'A0 n'est pas compensable par l'ajustement
+// (prix fixes = 86 % de son budget) et passe de 2,2 à 2,96 h, mesuré
+// avec les 9 pauses d'énergie par groupe.
+// C'est l'effet direct de « les paliers sont la cause des gros scores dès
+// le début » — pas une dérive. Les groupes 1 à 5 sont compensés et
+// gardent leur durée.
+const DUREES_CIBLES = [3.0, 3.9, 4.3, 6.2, 6.8, 8.1];
 function auditDureeCible(tolerance = 0.15) {
   const fautes = [];
   DUREES_CIBLES.forEach((cibleH, g) => {
