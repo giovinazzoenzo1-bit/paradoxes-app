@@ -358,6 +358,20 @@ exports du moteur avec les imports de l'écran.
 **Une carte à `aspectRatio` fixe ne grandit pas** : y ajouter un élément
 le fait déborder par-dessus le reste.
 
+**Un outil lancé à part échappe au contrôle des contrôles.**
+`verif-exhaustive.js` parcourait encore `QUEST_SEQUENCE` (42 anciens
+modèles) un mois après la bascule vers `defisEcrits.js` : vert avec un
+libellé cassé dans un vrai défi, et exigé par la passation pour pousser.
+Branché comme `auditExhaustif`, avec sabotage (24/09).
+
+**Après tout changement de prix : réordonner.** La passe 2 a changé les
+coûts sans relancer `reordonner-groupe.js` : défis d'achat moins chers
+que le précédent aux A1-A5, 2 avant, 13 après, invisibles sous la
+tolérance de 50 %. Mesurer avec la tolérance ZÉRO, pas avec le contrôle.
+
+**Deux instances peuvent partager le bac à sable** (« Réessayer » en
+relance une). `git fetch` avant chaque commit, comparer avant de pousser.
+
 **Ne pas ajouter ce qui n'est pas demandé.** Un menu ajouté de ma propre
 initiative a produit deux bugs en trois commits avant d'être retiré.
 

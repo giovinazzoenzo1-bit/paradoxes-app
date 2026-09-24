@@ -118,10 +118,10 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 + 58. ⚔️ Termine le chapitre 2, niveau 10
 + 59. ✨ Active 13 fois un pouvoir
   60. ⭐ Touche 8 fois la cible dorée
-- 61. 🏛️ Monte le Sanctuaire au niveau 42
+- 61. ⚙️ Achète 3 Mains Spectrales
   62. 💰 Mets 45 000 pièces de côté
 + 63. 🐣 Monte une créature au niveau 6
-- 64. ⚙️ Achète 3 Mains Spectrales
+- 64. 🏛️ Monte le Sanctuaire au niveau 42
 ```
 
 ### ŒUF 9  →  Luxorbe
@@ -143,7 +143,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 - 75. 🔗 Achète 9 niveaux de Pacte
   76. 🪙 Obtiens 9 000 pièces
 + 77. ⚔️ Termine le chapitre 3, niveau 10
-- 78. 🍀 Achète 12 niveaux de Faveur des Esprits
+- 78. ⚙️ Achète 4 Mains Spectrales
   79. 🔥 Enchaîne 195 taps sans pause
 + 80. ✨ Active 15 fois un pouvoir
 ```
@@ -151,13 +151,13 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ### ŒUF 11  →  Solarion
 ```diff
 + 81. ⚔️ Termine le chapitre 6, niveau 10
-- 82. ⚙️ Achète 4 Mains Spectrales
+- 82. 🍀 Achète 12 niveaux de Faveur des Esprits
   83. ⭐ Touche 9 fois la cible dorée
   84. ⚙️ Atteins 28 pièces par seconde
-- 85. ✊ Achète 5 niveaux de Poigne Ancienne
+- 85. 🪄 Achète 4 niveaux de Gantelet d’Obsidienne
   86. 🔥 Tiens la Transe pendant 44 secondes
   87. 💰 Mets 85 000 pièces de côté
-- 88. 🪄 Achète 4 niveaux de Gantelet d’Obsidienne
+- 88. 👻 Achète 7 Esprits Frappeurs
 ```
 
 ### ŒUF 12  →  Aquamira
@@ -165,10 +165,10 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
   89. 🔥 Tiens la Transe pendant 48 secondes
   90. 🔥 Enchaîne 210 taps sans pause
 + 91. ⚔️ Termine le chapitre 12, niveau 10
-- 92. 👻 Achète 7 Esprits Frappeurs
+- 92. ✊ Achète 5 niveaux de Poigne Ancienne
   93. 💰 Mets 98 000 pièces de côté
   94. 👆 Atteins 2 600 taps au total
-- 95. 💢 Achète 15 niveaux de Dégâts critiques
+- 95. ⚙️ Achète 7 Esprits Frappeurs
 + 96. 🗡️ Gagne 4 combats en Aventure
 ```
 
@@ -180,10 +180,10 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ```diff
   97. ⚙️ Atteins 32 pièces par seconde
   98. ⭐ Touche 10 fois la cible dorée
-- 99. ⚙️ Achète 7 Esprits Frappeurs
+- 99. 💢 Achète 15 niveaux de Dégâts critiques
 + 100. 🗡️ Gagne 5 combats en Aventure
   101. 🕯️ Fais une Offrande
-- 102. 🔗 Achète 5 niveaux de Pacte
+- 102. 🪄 Achète 2 niveaux de Poigne Ancienne
   103. 🔥 Enchaîne 400 taps sans pause
   104. 💰 Mets 110 000 pièces de côté
 ```
@@ -191,7 +191,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ### ŒUF 14  →  Zephyrion
 ```diff
   105. 🔥 Tiens la Transe pendant 52 secondes
-- 106. 🪄 Achète 2 niveaux de Poigne Ancienne
+- 106. 🔗 Achète 5 niveaux de Pacte
   107. ⭐ Touche 12 fois la cible dorée
   108. 🔥 Enchaîne 400 taps sans pause
 - 109. ✊ Achète 4 niveaux de Gantelet d’Obsidienne
@@ -202,14 +202,14 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 
 ### ŒUF 15  →  Brontobloc
 ```diff
-- 113. 🏛️ Monte le Sanctuaire au niveau 42
+- 113. 👻 Achète 5 Mains Spectrales
 + 114. ⚔️ Termine le chapitre 4, niveau 5
   115. 👆 Atteins 3 800 taps au total
 + 116. ✨ Active 16 fois un pouvoir
-- 117. 🌙 Monte le Veilleur au niveau 40
+- 117. 🏛️ Monte le Sanctuaire au niveau 42
 + 118. 🔮 Achète une rune
   119. 🪙 Obtiens 68 000 pièces
-- 120. 🔗 Achète 9 niveaux de Pacte
+- 120. 🌙 Monte le Veilleur au niveau 40
 ```
 
 ### ŒUF 16  →  Malefix
@@ -217,7 +217,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
   121. ⚙️ Atteins 47 pièces par seconde
   122. 💥 Obtiens 500 coups critiques
   123. ⭐ Touche 13 fois la cible dorée
-- 124. 👻 Achète 5 Mains Spectrales
+- 124. 🔗 Achète 9 niveaux de Pacte
 + 125. ✨ Active 17 fois un pouvoir
 + 126. ⚔️ Termine le chapitre 4, niveau 10
 - 127. 🍀 Achète 15 niveaux de Faveur des Esprits
@@ -231,7 +231,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 - 131. 👻 Achète 13 Mains Spectrales
 + 132. ✨ Active 18 fois un pouvoir
 + 133. 🐣 Monte une créature au niveau 6
-- 134. ✊ Achète 5 niveaux de Sceau de Puissance
+- 134. ⚙️ Achète 5 Automates Runiques
   135. 💥 Obtiens 1000 coups critiques
   136. 🔥 Reste en Transe x2,5 pendant 56 secondes
 ```
@@ -239,10 +239,10 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ### ŒUF 18  →  Racinea
 ```diff
   137. 💰 Mets 880 000 pièces de côté
-- 138. ⚙️ Achète 5 Automates Runiques
+- 138. ⚙️ Achète 3 Colonies de Familiers
 + 139. 🗡️ Gagne 5 combats en Aventure
   140. 🔥 Enchaîne 230 taps sans pause
-- 141. ⚙️ Achète 3 Colonies de Familiers
+- 141. ✊ Achète 5 niveaux de Sceau de Puissance
 + 142. ⚔️ Termine le chapitre 5, niveau 5
   143. 🔥 Tiens la Transe pendant 60 secondes
 - 144. 🪄 Achète 5 niveaux de Poing de Granit
@@ -260,7 +260,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 - 148. 💢 Achète 17 niveaux de Dégâts critiques
 + 149. ⚔️ Termine le chapitre 9, niveau 10
   150. 🔥 Tiens la Transe pendant 65 secondes
-- 151. ⚙️ Achète 5 Colonies de Familiers
+- 151. 🔗 Achète 6 niveaux de Pacte
   152. ⭐ Touche 15 fois la cible dorée
 ```
 
@@ -268,7 +268,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ```diff
   153. ⭐ Touche 17 fois la cible dorée
 + 154. 🌟 Décroche toutes les étoiles sur un niveau d'Aventure
-- 155. 🔗 Achète 6 niveaux de Pacte
+- 155. ⚙️ Achète 5 Colonies de Familiers
 + 156. ⚔️ Termine le chapitre 18, niveau 10
   157. 🔥 Enchaîne 400 taps sans pause
 - 158. ⚙️ Achète 8 Automates Runiques
@@ -316,10 +316,10 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ```diff
   185. 💥 Obtiens 1320 coups critiques
   186. 🔥 Tiens la Transe pendant 82 secondes
-- 187. 💢 Achète 24 niveaux de Dégâts critiques
+- 187. 🔗 Achète 11 niveaux de Pacte
   188. 🕯️ Fais une Offrande
 + 189. ⚔️ Termine le chapitre 6, niveau 5
-- 190. ✊ Achète 6 niveaux de Éclat Primordial
+- 190. 💢 Achète 24 niveaux de Dégâts critiques
   191. ⭐ Touche 21 fois la cible dorée
 + 192. 🔮 Achète une rune
 ```
@@ -331,13 +331,13 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ### ŒUF 25  →  Tartaroth
 ```diff
   193. ⚙️ Atteins 40 pièces par seconde
-- 194. 🪄 Achète 6 niveaux de Coeur de Supernova
+- 194. ⚙️ Achète 6 Titans Mécaniques
   195. 💰 Mets 84 millions de pièces de côté
 + 196. 🗡️ Gagne 5 combats en Aventure
-- 197. ⚙️ Achète 6 Titans Mécaniques
+- 197. ✊ Achète 6 niveaux de Éclat Primordial
   198. 🔥 Tiens la Transe pendant 89 secondes
   199. ⭐ Touche 24 fois la cible dorée
-- 200. 🔗 Achète 11 niveaux de Pacte
+- 200. 👻 Achète 8 Colonies de Familiers
 ```
 
 ### ŒUF 26  →  Arcanis
@@ -345,7 +345,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
   201. ⚙️ Atteins 40 000 pièces par seconde
   202. 🔥 Tiens la Transe pendant 96 secondes
   203. 🔥 Enchaîne 290 taps sans pause
-- 204. 👻 Achète 8 Colonies de Familiers
+- 204. 🪄 Achète 6 niveaux de Coeur de Supernova
   205. 💰 Mets 100 millions de pièces de côté
 + 206. ✨ Active 20 fois un pouvoir
 - 207. ⚙️ Achète 4 Golems de Cristal
@@ -359,7 +359,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 - 211. ⚙️ Achète 8 Titans Mécaniques
   212. 🔥 Enchaîne 400 taps sans pause
   213. ⭐ Touche 27 fois la cible dorée
-- 214. ⚙️ Achète 9 Golems de Cristal
+- 214. ✊ Achète 3 niveaux de Coeur de Supernova
 + 215. 🗡️ Gagne 5 combats en Aventure
   216. ⚙️ Atteins 92 000 pièces par seconde
 ```
@@ -367,10 +367,10 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ### ŒUF 28  →  Arcanis
 ```diff
   217. 🔥 Enchaîne 400 taps sans pause
-- 218. 🪄 Achète 4 niveaux de Éclat Primordial
+- 218. ⚙️ Achète 9 Golems de Cristal
 + 219. ⚔️ Termine le chapitre 24, niveau 10
   220. ⭐ Touche 30 fois la cible dorée
-- 221. ✊ Achète 3 niveaux de Coeur de Supernova
+- 221. 🪄 Achète 4 niveaux de Éclat Primordial
   222. ⚙️ Atteins 160 000 pièces par seconde
   223. 💰 Mets 130 millions de pièces de côté
   224. 🌟 Fais ta 4e Ascension
@@ -408,10 +408,10 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ```diff
 + 241. 🗡️ Gagne 5 combats en Aventure
   242. ⚙️ Atteins 47 pièces par seconde
-- 243. 🔗 Achète 12 niveaux de Pacte
+- 243. ✊ Achète 6 niveaux de Griffe du Vide
 + 244. ✨ Active 22 fois un pouvoir
   245. 👆 Atteins 6 000 taps au total
-- 246. ✊ Achète 6 niveaux de Griffe du Vide
+- 246. 🪄 Achète 6 niveaux de Serment Éternel
   247. ⭐ Touche 33 fois la cible dorée
 + 248. ⚔️ Termine le chapitre 7, niveau 10
 ```
@@ -419,7 +419,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ### ŒUF 32  →  Arcanis
 ```diff
   249. ⭐ Touche 37 fois la cible dorée
-- 250. 🪄 Achète 6 niveaux de Serment Éternel
+- 250. 🔗 Achète 12 niveaux de Pacte
   251. 💰 Mets 350 millions de pièces de côté
   252. 💥 Obtiens 1600 coups critiques
 - 253. ⚙️ Achète 4 Phénix Renaissants
@@ -535,7 +535,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 - 323. 🪄 Achète 4 niveaux de Fracture du Réel
 + 324. ✨ Active 27 fois un pouvoir
   325. ⚙️ Atteins 1,1 million pièces par seconde
-- 326. ⚙️ Achète 5 Gardiens Célestes
+- 326. ✊ Achète 4 niveaux de Volonté du Paradoxe
   327. 💰 Mets 2,2 milliards de pièces de côté
 + 328. ⚔️ Termine le chapitre 36, niveau 10
 ```
@@ -543,7 +543,7 @@ _**7 œufs de 8 défis** par Ascension. La collection s'arrête à la **26e cré
 ### ŒUF 42  →  Arcanis
 ```diff
   329. ⚙️ Atteins 1,4 million pièces par seconde
-- 330. ✊ Achète 4 niveaux de Volonté du Paradoxe
+- 330. ⚙️ Achète 5 Gardiens Célestes
   331. 🔥 Tiens la Transe pendant 180 secondes
   332. 💰 Mets 2,5 milliards de pièces de côté
 - 333. ⚙️ Achète 8 Léviathans des Abysses

@@ -17,6 +17,21 @@ const A = require('/home/claude/paradoxes-app/mobile/tools/audit-quetes.js');
 const { Q, C } = A;
 
 const GROUPES = [0, 1, 2, 3, 4, 5];
+// ⚠️⚠️ LES VRAIS DÉFIS, PAS LES ANCIENS MODÈLES (24/09).
+//
+// Cet outil parcourait `QUEST_SEQUENCE` : les 42 modèles d'AVANT la
+// bascule vers `defisEcrits.js`. Il annonçait « 252 combinaisons, aucune
+// anomalie » sur des défis que le joueur ne reçoit plus — et la passation
+// en faisait une condition pour pousser. Prouvé : un libellé cassé dans
+// un vrai défi (« Achète undefined niveaux ») le laissait VERT.
+//
+// Il parcourt désormais les 56 défis écrits de CHAQUE groupe, dans leur
+// propre groupe (un défi de l'A3 n'est jamais distribué à l'A0) : 336
+// combinaisons. Même sabotage : il crie.
+const D = A.load('defisEcrits');
+const OEUFS = 7;
+const defisDuGroupe = (g) => D.DEFIS_ECRITS.slice(g * OEUFS, g * OEUFS + OEUFS);
+const NB_PAR_GROUPE = defisDuGroupe(0).flat().length;
 const anomalies = [];
 const ajoute = (gravite, groupe, id, quoi, detail) =>
   anomalies.push({ gravite, groupe, id, quoi, detail });
@@ -46,13 +61,13 @@ const NOMS_BOUTIQUE = new Set([
 ]);
 
 console.log('\n' + '═'.repeat(76));
-console.log('  VÉRIFICATION EXHAUSTIVE — ' + Q.QUEST_SEQUENCE.flat().length
+console.log('  VÉRIFICATION EXHAUSTIVE — ' + NB_PAR_GROUPE
   + ' défis x ' + GROUPES.length + ' groupes');
 console.log('═'.repeat(76));
 
 GROUPES.forEach((groupe) => {
   const s = etatPour(groupe);
-  Q.QUEST_SEQUENCE.forEach((cycle, oeuf) => {
+  defisDuGroupe(groupe).forEach((cycle, oeuf) => {
     cycle.forEach((q) => {
       const metric = Q.metriqueDuDefi(q, s);
 
@@ -159,7 +174,7 @@ anomalies.forEach((a) => {
 });
 if (!anomalies.length) {
   console.log('\n  ✅ AUCUNE ANOMALIE sur les '
-    + (Q.QUEST_SEQUENCE.flat().length * GROUPES.length) + ' combinaisons testées.\n');
+    + GROUPES.reduce((n, g) => n + defisDuGroupe(g).flat().length, 0) + ' combinaisons testées.\n');
 } else {
   Object.entries(parQuoi).sort().forEach(([cle, liste]) => {
     console.log(`\n  ${cle} — ${liste.length} cas`);

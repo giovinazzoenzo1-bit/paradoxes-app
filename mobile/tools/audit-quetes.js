@@ -3059,3 +3059,30 @@ function auditDebutDePartie() {
   return fautes;
 }
 module.exports.auditDebutDePartie = auditDebutDePartie;
+
+// ---- La vérification exhaustive, branchée dans la suite -------------
+//
+// ⚠️ TROUVÉ LE 24/09 : `verif-exhaustive.js` parcourait `QUEST_SEQUENCE`,
+// les 42 modèles d'avant la bascule, et non les 336 défis que le joueur
+// reçoit. Il restait vert avec un libellé cassé dans un vrai défi — et la
+// passation en faisait une condition pour pousser. Un outil à part ne
+// passe jamais par le contrôle des contrôles : c'est pour ça qu'il a pu
+// devenir aveugle sans que personne le voie.
+//
+// Ce contrôle le lance tel quel (processus séparé, le script reste la
+// source unique) et compte ses anomalies. Son sabotage vit dans
+// `verifier-controles.js` : s'il redevient aveugle, la suite le dit.
+function auditExhaustif() {
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'verif-exhaustive.js')],
+    { encoding: 'utf8', env: process.env, timeout: 120000 });
+  const sortie = r.stdout || '';
+  if (/AUCUNE ANOMALIE/.test(sortie)) return [];
+  const fautes = [];
+  sortie.split('\n').forEach((l) => {
+    const m = l.match(/^\s*(\S.*?) — (\d+) cas/);
+    if (m) for (let i = 0; i < Number(m[2]); i++) fautes.push({ anomalie: m[1] });
+  });
+  return fautes.length ? fautes : [{ probleme: 'panne : ' + (r.stderr || sortie).slice(0, 120) }];
+}
+module.exports.auditExhaustif = auditExhaustif;

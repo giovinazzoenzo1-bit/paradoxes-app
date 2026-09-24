@@ -14,9 +14,9 @@ mkdir -p /home/claude/auditenv && cd /home/claude/auditenv && npm init -y >/dev/
 2. Lancer les contrôles et rapporter le résultat :
 ```
 export NODE_PATH=/home/claude/auditenv/node_modules
-node mobile/tools/verifier-defis.js        # les 41 contrôles du jeu
-node mobile/tools/verifier-controles.js    # la preuve que chaque contrôle sait crier (43 sabotages)
-node mobile/tools/verif-exhaustive.js      # 252 combinaisons de tirage
+node mobile/tools/verifier-defis.js        # les 43 contrôles du jeu (dont l'exhaustif)
+node mobile/tools/verifier-controles.js    # la preuve que chaque contrôle sait crier (45 sabotages)
+node mobile/tools/verif-exhaustive.js      # les 336 VRAIS défis (il testait les 42 anciens modèles avant le 24/09)
 node mobile/tools/duree.js                 # durée simulée de chaque Ascension
 python3 mobile/tools/generer-doc.py        # régénère mobile/DEFIS_PARADOX.md (vérifié par auditDocConforme)
 ```
@@ -49,6 +49,9 @@ python3 mobile/tools/generer-doc.py        # régénère mobile/DEFIS_PARADOX.md
 ⚠️ **A0 non compensable** (prix fixes = 86 % de son budget) : 2,2 → **3,0 h** en sim (~1 h 30 réel pour l'auteur au lieu de 1 h 05). Effet direct de sa demande, **à confirmer par lui**.
 ⚠️ Transition : un joueur en cours de groupe A1+ avec des paliers achetés à 1,45 se verra demander 1 niveau au nouveau prix ; une Ascension remet les paliers à zéro.
 **Complément (24/09, 2e commit)** : la chaîne prévue ici demandait aussi le **recalcul des défis d'état** — ni l'une ni l'autre des deux instances ne l'avait fait. Mesuré : les cibles « Mets N de côté » valaient 2 à 7 fois l'étalon (94 s de production) aux A2-A5, le tap ayant été divisé par 2 à 7 ; les floors de passif étaient à 8-17 % de l'atteignable. **40 cibles recalculées** (passif = 80 % de l'atteignable à la fin de l'œuf, croissant ; de côté = 94 s de production, +15 % mini entre deux), A0 intact. Nouveau contrôle `auditCoteEtalon` + sabotage. `QUEST_ENGINE_VERSION` 59.
+**Clôture de la chaîne (24/09, 3e commit)** : le **réordonnancement** n'avait été lancé par aucune instance. Mesuré : 2 défis d'achat moins chers que le précédent aux A1-A5 avant la passe 2, **13 après** (la tolérance de 50 % d'`auditCoutCroissant` les laissait passer). `reordonner-groupe.js` 1 à 5 → **1** (A1, ×0,85) ; A0 intacte ; contenu identique par groupe ; aucun défi d'état ne change d'œuf (les 40 cibles restent justes). L'outil renomme les identifiants selon l'œuf : `QUEST_ENGINE_VERSION` 60. Et `verif-exhaustive.js` testait les **anciens modèles** (vert avec un libellé cassé dans un vrai défi) : il lit `DEFIS_ECRITS`, et `auditExhaustif` le branche dans la suite avec son sabotage.
+⚠️ **À TRANCHER PAR L'AUTEUR — le rythme de ses 6 premiers œufs.** Le simulateur retrouve son chrono avec l'ancien réglage (2,6 M gagnés en 75 min à 6,7 taps/s sans pause ; lui : 6 œufs et 2,6 M en 78 min). Avec ×2,5 : **101 min** pour les mêmes 2,6 M (×1,35), donc ses 6 œufs validés passent vers **~1 h 40**. Mécanique : moins de gros scores = moins de pièces par minute. Pour garder 1 h 18 avec ×2,5, il faut baisser d'environ 25 % le coût des défis d'achat de l'A0 (œufs 2 à 6, tutoriel intact) ; à faire avec la passe 3, qui reconstruit l'A0 de toute façon.
+
 Non fait, reporté : les coûts de BASE des paliers 7 à 10 mal ordonnés — mesuré le 24/09 : les prix EFFECTIFS à leur Ascension sont croissants (3 k → 8,4 M), seule la dépense par +1 tap ne l'est pas (42 k à l'A3, 16-21 k aux A4-A5) ; poids réel 0,1-0,5 % du seuil au niveau 5. Règle d'origine « prix ∝ bonus », à mesurer si l'auteur le veut.
 
 ### Passe 3 — supprimer l'œuf 7 (À VALIDER par l'auteur)

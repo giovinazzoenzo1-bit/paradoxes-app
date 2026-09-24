@@ -875,7 +875,11 @@ export const QUEST_POOL = [
 // ⚠️ 59 (24/09, suite) : les 40 cibles d'état (passif, pièces de côté)
 // recalculées sur la nouvelle économie. Même raison : le fichier des
 // défis n'est pas haché.
-export const QUEST_ENGINE_VERSION = 59;
+// ⚠️ 60 (24/09) : groupes 1 à 5 réordonnés (coût des achats croissant) ;
+// l'outil renomme les identifiants selon leur nouvel œuf, et le fichier
+// des défis n'est pas haché — sans ce bump, un œuf en cours gardait des
+// identifiants qui n'existent plus.
+export const QUEST_ENGINE_VERSION = 60;
 
 function empreinteDefis() {
   const morceaux = [];
