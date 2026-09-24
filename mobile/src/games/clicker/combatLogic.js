@@ -248,7 +248,15 @@ export const GUARDIAN_WIN_TARGET = 1 / 3;
 // calé pour qu'un deck de puissance (deck du début de l'œuf × MARGE) le
 // batte 2 fois sur 3, et sa puissance AFFICHÉE vaut deck × MARGE : un
 // petit effort visible et atteignable, plus un mur.
-export const GUARDIAN_POWER_MARGIN = 1.04;
+// ⚠️ 1,04 -> 1,05 (24/09, l'auteur : « à 2 points d'écart il y a des
+// chances de victoire, fais une plus grosse différence »). MESURÉ : aux
+// niveaux moyens et hauts, +1 à 2 points de victoires pour le Gardien ;
+// en début de partie (œufs 3 à 6, coups de 1-2 PV), sans amélioration il
+// gagne 51 à 61 % (62 % sur 3 communes niveau 1, le pire deck du jeu) ;
+// à HAUT niveau jusqu'à 77 % (3 légendaires niv 35 : combats presque
+// déterministes, la marge fait basculer la plupart). Au niveau affiché,
+// 24 à 38 % partout.
+export const GUARDIAN_POWER_MARGIN = 1.05;
 // Attaque de zone (« pas toujours ») : une riposte sur quatre ; la cible
 // prend le coup entier, les autres créatures vivantes 60 % de ce coup.
 export const GUARDIAN_AOE_CHANCE = 0.25;

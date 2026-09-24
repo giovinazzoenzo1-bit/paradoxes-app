@@ -254,8 +254,9 @@ l'ATTAQUE seule, et on garde le côté facile d'un palier.
 
 ⚠️ Photo v2 : le deck JOUÉ, pas les 3 meilleures de la collection (qui
 affichaient un Gardien 6-7 points au-dessus du deck, « compliqué à
-rattraper à haut niveau »). Marge 1,04 : Gardien affiché = deck × 1,04,
-calé pour qu'un deck de cette puissance gagne 2 fois sur 3.
+rattraper à haut niveau »). Marge 1,05 : Gardien affiché = deck × 1,05,
+calé pour qu'un deck de cette puissance gagne 2 fois sur 3. Passée à
+1,05 à la demande de l'auteur (« à 2 points d'écart on gagne encore »).
 
 ⚠️⚠️ UNE SEULE SOURCE DE RÈGLES : coup, riposte, zone, encaissement sont
 dans `combatLogic` et CombatScreen les appelle. Le reste (premier coup,

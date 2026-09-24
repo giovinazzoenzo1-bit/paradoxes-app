@@ -3194,9 +3194,14 @@ function auditGardienCalibre() {
     for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea, marge: K.GUARDIAN_POWER_MARGIN })) g++;
     if (g / 800 < 0.15 || g / 800 > 0.45) fautes.push({ deck, gardienGagne: Math.round(100 * g / 800) + ' %' });
     // Contre le deck du début de l'œuf, sans effort : jamais un mur.
+    // 80 % : marge de 5 % voulue par l'auteur (24/09). MESURÉ : 51-62 % sur
+    // les decks des œufs 3-6, 77 % sur 3 légendaires niveau 35 — à haut
+    // niveau les combats sont presque déterministes, quelques % de
+    // puissance font basculer la plupart d'entre eux. Au-delà de 80 %,
+    // c'est un mur (ou un calibrage cassé).
     let g0 = 0;
     for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea })) g0++;
-    if (g0 / 800 > 0.55) fautes.push({ deck, sansEffort: Math.round(100 * g0 / 800) + ' %' });
+    if (g0 / 800 > 0.80) fautes.push({ deck, sansEffort: Math.round(100 * g0 / 800) + ' %' });
   });
   return fautes;
 }
