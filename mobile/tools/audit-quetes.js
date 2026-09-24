@@ -2486,6 +2486,50 @@ function auditFaisableAuMoment(marge = 1.0) {
 }
 module.exports.auditFaisableAuMoment = auditFaisableAuMoment;
 
+// ---- Les cibles « Mets N de côté » suivent-elles encore l'étalon ? ----
+//
+// Règle de l'auteur : une cible écrite de côté vaut 94 secondes de
+// production (la valeur de ses 18 000 au défi 11) à la fin de l'œuf où
+// elle tombe ; le jeu monte ensuite à « ce qu'il a + 5 minutes » à
+// l'apparition. Une cible écrite trop HAUTE passe devant cette règle et
+// réclame plus que 5 minutes ; trop BASSE, elle ne sert plus à rien.
+//
+// ⚠️ TROUVÉ LE 24/09 : la passe 2 (paliers ×2,5) a divisé la production
+// par 2 à 7 selon le groupe, et aucun contrôle ne regardait ce ratio —
+// `auditFaisableAuMoment` ne juge que le passif. « Mets 32 M de côté » à
+// l'A2 valait 7 fois l'étalon, soit 11 minutes de production au lieu de
+// 5. Quarante cibles d'état ont dû être recalculées après coup.
+// Tolérance large (÷2, ×2) : l'arrondi et le « +15 % mini entre deux »
+// écartent déjà les cibles de l'étalon exact.
+function auditCoteEtalon(secondes = 94, min = 0.5, max = 2.0) {
+  let D;
+  try { D = load('defisEcrits'); } catch (e) { return []; }
+  const fautes = [];
+  const sims = {};
+  D.DEFIS_ECRITS.forEach((oeuf, i) => {
+    const g = Math.floor(i / 7);
+    const e = i % 7;
+    // L'A0 est le tutoriel réglé à la main avec l'auteur : exempté.
+    if (g < 1 || g > 5) return;
+    const r = sims[g] || (sims[g] = simulerGroupe(g));
+    if (!r.jalons || !r.jalons.length) return;
+    const tFin = ((e + 1) / 7) * r.heures * 3600;
+    let etat = r.jalons[0];
+    r.jalons.forEach((j) => { if (j.t <= tFin) etat = j; });
+    const etalon = secondes * Math.max(1, etat.production || 0);
+    oeuf.forEach((q) => {
+      if (q.metric !== 'coins' || q.mode !== 'absolute') return;
+      const ratio = q.target / etalon;
+      if (ratio < min || ratio > max) {
+        fautes.push({ defi: q.id, oeuf: i + 1, ecrit: q.target,
+          etalon: Math.round(etalon), ratio: +ratio.toFixed(2) });
+      }
+    });
+  });
+  return fautes;
+}
+module.exports.auditCoteEtalon = auditCoteEtalon;
+
 // ---- Le système de signalement fonctionne-t-il, et ne casse-t-il rien ?
 //
 // Demandé par l'auteur le 21/09 : savoir si un joueur est bloqué, et

@@ -7,7 +7,7 @@
 ## Équilibrage
 - [ ] 21/09 — **Dégâts du Gardien** à revoir.
 - [ ] 21/09 — **Griffes** : les défis en donnent beaucoup trop, à optimiser.
-- [ ] 24/09 — **Coûts de base des paliers 7 à 10** mal ordonnés (Fracture +256/tap moins chère que Griffe +64) : à ×2,5 ils pèsent 14-22 % du seuil à l'A4-A5 contre 47-52 % à l'A1-A3. Règle « prix ∝ bonus », à mesurer.
+- [ ] 24/09 — **Coûts de base des paliers 7 à 10** : prix effectifs croissants (3 k → 8,4 M), mais la dépense par +1 tap n'est pas monotone (42 k à l'A3, 16-21 k aux A4-A5). Poids 0,1-0,5 % du seuil au niveau 5 : faible. Règle « prix ∝ bonus », à faire seulement si tu le veux.
 - [ ] 21/09 — **Défi 52 (A0)** : deux achats de Dégâts critiques ≈ 1,3 M — lié à l'œuf 7.
 
 ## Structure
@@ -20,3 +20,4 @@
 - [x] 21/09 — Défis adaptatifs : jamais calculés sur un passif boosté par un pouvoir.
 - [x] 21/09 — Paliers de tap : croissance ×2,5 par niveau (Pacte intact), 24 défis recalés, ajustement par Ascension remesuré. Fait le 24/09 — ⚠️ A0 passe de 2,2 à 3,0 h (sim), effet direct de la demande, à confirmer.
 - [x] 21/09 — Simulateur : 9 pauses hors ligne de 1 h 15 par Ascension, réparties sur le groupe (`H.pausesParGroupe`). Fait le 24/09.
+- [x] 24/09 — Passe 2, complément : 40 cibles d'état (passif, de côté) recalculées sur la nouvelle économie ; contrôle `auditCoteEtalon` ajouté.

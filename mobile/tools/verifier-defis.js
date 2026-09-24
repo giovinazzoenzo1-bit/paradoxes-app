@@ -41,6 +41,7 @@ const CONTROLES = [
   ['auditDureeCroissante', 'la durée d un groupe ne retombe jamais'],
   ['auditHorsLigne', 'hors ligne standard, et aucune entrée ne bloque l Ascension'],
   ['auditFaisableAuMoment', 'un défi est faisable AU MOMENT où il arrive'],
+  ['auditCoteEtalon', 'une cible de côté vaut 94 s de production à son œuf (÷2, ×2)'],
   ['auditSignalement', 'le signalement marche et le filet de sécurité tient'],
   ['auditLibelleMode', 'le libellé dit ce que le défi mesure (Achète = delta)'],
   ['auditCibleBudget', 'la règle du total est juste, sûre, et appliquée quand le défi apparaît'],

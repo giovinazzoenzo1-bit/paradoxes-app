@@ -872,7 +872,10 @@ export const QUEST_POOL = [
 // croissance ×2,5. `defisEcrits.js` n'entre PAS dans l'empreinte : sans
 // ce bump, un œuf en cours gardait « Achète 10 niveaux de Poigne », qui
 // vaut désormais 45 000 % du seuil — un défi impossible, à vie.
-export const QUEST_ENGINE_VERSION = 58;
+// ⚠️ 59 (24/09, suite) : les 40 cibles d'état (passif, pièces de côté)
+// recalculées sur la nouvelle économie. Même raison : le fichier des
+// défis n'est pas haché.
+export const QUEST_ENGINE_VERSION = 59;
 
 function empreinteDefis() {
   const morceaux = [];

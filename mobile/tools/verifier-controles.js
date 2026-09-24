@@ -142,6 +142,8 @@ const SABOTAGES = [
     remplace('  return Number.isFinite(gain) && gain > 0 ? gain : 0;', '  return Math.max(gain, 1500000000);')],
   ['auditFaisableAuMoment', F.defis, "« Atteins 29 000 pièces/s » à l'œuf 2, passif à zéro (bug réel)",
     surDefi((b) => b.metric === 'passiveIncome' && b.e === 2, cible(29000))],
+  ['auditCoteEtalon', F.defis, "« Mets 32 M de côté » à l'A2 : 7 fois l'étalon de 94 s de production (bug réel du 24/09)",
+    surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, cible(32000000))],
   ['auditSignalement', F.index, 'le filet de sécurité plante quand le stockage manque',
     remplace('    // 1. Mémoriser, pour la proposer au prochain lancement.',
       "    require('@react-native-async-storage/async-storage').default.setItem('x', 'y');\n    // 1. Mémoriser, pour la proposer au prochain lancement.")],

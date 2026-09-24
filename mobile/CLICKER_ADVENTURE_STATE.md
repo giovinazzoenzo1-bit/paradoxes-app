@@ -457,6 +457,23 @@ déplace l'A1 et l'A0. Trois pièges rencontrés en l'appliquant :
 Après : tap/clic à l'A2 1 068 (7 886 avant), passif 0 à 14 %. Les
 générateurs restent faibles : chantier suivant, pas celui-ci.
 
+4. ⚠️⚠️ **Changer l'économie périme les cibles d'ÉTAT écrites.** Les
+   « Mets N de côté » et « Atteins N/s » ont un floor écrit calé sur la
+   production simulée (de côté = 94 s de production à la fin de l'œuf ;
+   passif = 80 % de l'atteignable). Après la passe 2, le tap divisé par
+   2 à 7 laissait « Mets 32 M de côté » à 7 fois l'étalon (11 min de
+   production au lieu de 5), et AUCUN contrôle ne le voyait :
+   `auditFaisableAuMoment` ne juge que le passif. Deux instances ont
+   poussé la même passe sans le faire, alors que la passation l'écrivait
+   en toutes lettres. Désormais : `auditCoteEtalon`, et tout changement
+   de prix, de rendement ou de croissance recalcule les 40 cibles d'état
+   (A1-A5 ; l'A0 est réglé à la main avec l'auteur).
+
+5. ⚠️ **Deux instances d'une même conversation peuvent pousser.** Le
+   « Réessayer » de l'auteur a lancé une seconde instance qui a poussé la
+   passe 2 pendant que la première la faisait aussi. Toujours `git fetch`
+   avant de commiter, et comparer avant de pousser un doublon.
+
 ⚠️ **Les pauses d'énergie se comptent, elles ne se cadencent pas.** Le
 simulateur en créditait une toutes les 10 min de jeu actif, soit 17 à
 25 par groupe, pour une règle de l'auteur à 9 par Ascension : le nombre
