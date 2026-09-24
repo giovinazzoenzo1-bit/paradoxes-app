@@ -242,21 +242,31 @@ export function applyGuardianDamage({ hp, shield }, damage) {
 // lequel tout l'équilibrage est calé.
 export const PUISSANCE_TAPS_PAR_SEC = 6.7;
 export const GUARDIAN_WIN_TARGET = 1 / 3;
-// Marge (demande de l'auteur après test, 24/09 : « baisse la différence,
-// joueur 50 – gardien 52 ; à haut niveau c'est vraiment compliqué d'up
-// les créatures pour atteindre la puissance requise »). Le Gardien est
-// calé pour qu'un deck de puissance (deck du début de l'œuf × MARGE) le
-// batte 2 fois sur 3, et sa puissance AFFICHÉE vaut deck × MARGE : un
-// petit effort visible et atteignable, plus un mur.
-// ⚠️ 1,04 -> 1,05 (24/09, l'auteur : « à 2 points d'écart il y a des
-// chances de victoire, fais une plus grosse différence »). MESURÉ : aux
-// niveaux moyens et hauts, +1 à 2 points de victoires pour le Gardien ;
-// en début de partie (œufs 3 à 6, coups de 1-2 PV), sans amélioration il
-// gagne 51 à 61 % (62 % sur 3 communes niveau 1, le pire deck du jeu) ;
-// à HAUT niveau jusqu'à 77 % (3 légendaires niv 35 : combats presque
-// déterministes, la marge fait basculer la plupart). Au niveau affiché,
-// 24 à 38 % partout.
-export const GUARDIAN_POWER_MARGIN = 1.05;
+// MARGE du Gardien : il est calé pour qu'un deck de puissance
+// (deck du début de l'œuf × marge) le batte 2 fois sur 3, et sa puissance
+// AFFICHÉE vaut deck × marge — un petit effort visible, jamais un mur.
+//
+// Historique des demandes de l'auteur (24/09) : 4 % (« joueur 50 –
+// gardien 52 ») ; puis 5 % (« à 2 points d'écart on gagne encore ») ;
+// puis « par paliers : c'est au niveau de puissance 500 que 25 points
+// sont compliqués à farmer ».
+// ⚠️ MESURÉ à 5 % partout : jusqu'à 77 % de victoires du Gardien sans
+// amélioration à haut niveau (combats presque déterministes).
+// D'où une marge qui DESCEND avec la puissance : 5 % jusqu'à 100, 2 % dès
+// 700, entre les deux en douceur (échelle logarithmique). Pas de vrais
+// paliers : un deck passant un seuil verrait le Gardien affiché BAISSER.
+// Deck × marge reste croissant (vérifié).
+export const GUARDIAN_MARGIN_MAX = 1.05;
+export const GUARDIAN_MARGIN_MIN = 1.02;
+const MARGE_DEBUT = 100;
+const MARGE_FIN = 700;
+export function margeGardien(puissance) {
+  const p = Number(puissance) || 0;
+  if (p <= MARGE_DEBUT) return GUARDIAN_MARGIN_MAX;
+  if (p >= MARGE_FIN) return GUARDIAN_MARGIN_MIN;
+  const t = Math.log(p / MARGE_DEBUT) / Math.log(MARGE_FIN / MARGE_DEBUT);
+  return GUARDIAN_MARGIN_MAX - (GUARDIAN_MARGIN_MAX - GUARDIAN_MARGIN_MIN) * t;
+}
 // Attaque de zone (« pas toujours ») : une riposte sur quatre ; la cible
 // prend le coup entier, les autres créatures vivantes 60 % de ce coup.
 export const GUARDIAN_AOE_CHANCE = 0.25;
@@ -474,7 +484,7 @@ export function guardianStatsScaled(base, k) {
 // le taux saute. Les PV restent ceux de la formule ; l'attaque varie en
 // continu. 400 combats : 150 laissaient ±10 points.
 export function calibrerGardien(membres, baseStats,
-  { essais = 400, cible = GUARDIAN_WIN_TARGET, marge = GUARDIAN_POWER_MARGIN } = {}) {
+  { essais = 400, cible = GUARDIAN_WIN_TARGET, marge = margeGardien(puissanceDeck(membres)) } = {}) {
   const n = (membres || []).filter((m) => m && m.creature).length || 1;
   const p0 = puissanceGardien(baseStats, n);
   const depart = p0 > 0 ? puissanceDeck(membres) * marge / p0 : 1;

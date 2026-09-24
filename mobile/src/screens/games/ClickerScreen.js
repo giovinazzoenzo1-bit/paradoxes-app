@@ -121,7 +121,7 @@ import {
   puissanceDeck,
   calibrageGardienSur,
   guardianStats,
-  GUARDIAN_POWER_MARGIN,
+  margeGardien,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -676,7 +676,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // (demande de l'auteur : voir s'il doit améliorer ses créatures).
   const ligneGardien = (egg) => {
     if (owned.length + 1 < 3 || !egg || !egg.gardienPhoto) return null;
-    const g = Math.round(egg.gardienPhoto.puissance * GUARDIAN_POWER_MARGIN);
+    const g = Math.round(egg.gardienPhoto.puissance * margeGardien(egg.gardienPhoto.puissance));
     return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck}${puissanceDuDeck < g ? ' — améliore tes créatures' : ''}`;
   }; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
@@ -1819,7 +1819,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setGuardianFight({ source, level: guardianLevelForEgg(eggNumber), eggNumber,
       calibrage: calibrageDuCombat(oeufEnJeu, ownedRef.current, eggNumber, deckRef.current),
       puissanceGardien: oeufEnJeu && oeufEnJeu.gardienPhoto && eggNumber >= 3
-        ? Math.round(oeufEnJeu.gardienPhoto.puissance * GUARDIAN_POWER_MARGIN) : null });
+        ? Math.round(oeufEnJeu.gardienPhoto.puissance * margeGardien(oeufEnJeu.gardienPhoto.puissance)) : null });
   };
 
   // Fin du combat. Victoire : l'œuf éclot. Défaite : l'œuf n'est JAMAIS

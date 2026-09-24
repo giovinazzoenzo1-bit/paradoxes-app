@@ -254,7 +254,9 @@ l'ATTAQUE seule, et on garde le côté facile d'un palier.
 
 ⚠️ Photo v2 : le deck JOUÉ, pas les 3 meilleures de la collection (qui
 affichaient un Gardien 6-7 points au-dessus du deck, « compliqué à
-rattraper à haut niveau »). Marge 1,05 : Gardien affiché = deck × 1,05,
+rattraper à haut niveau »). Marge `margeGardien` : 5 % jusqu'à 100 de
+puissance, 2 % dès 700 (vers 500, +12 points ≈ 1,7 montée de niveau au
+lieu de +25). Gardien affiché = deck × marge,
 calé pour qu'un deck de cette puissance gagne 2 fois sur 3. Passée à
 1,05 à la demande de l'auteur (« à 2 points d'écart on gagne encore »).
 
