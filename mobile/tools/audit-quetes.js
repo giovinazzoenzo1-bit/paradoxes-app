@@ -3189,9 +3189,14 @@ function auditGardienCalibre() {
       fautes.push({ deck, probleme: 'correctif collé à une borne (' + r.correction.toFixed(2) + ') : simulation cassée ?' });
     }
     const st = K.guardianStatsCalibrees(base, r);
+    // Contre le deck + MARGE (la puissance affichée) : ~1 fois sur 3.
     let g = 0;
-    for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea })) g++;
+    for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea, marge: K.GUARDIAN_POWER_MARGIN })) g++;
     if (g / 800 < 0.15 || g / 800 > 0.45) fautes.push({ deck, gardienGagne: Math.round(100 * g / 800) + ' %' });
+    // Contre le deck du début de l'œuf, sans effort : jamais un mur.
+    let g0 = 0;
+    for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea })) g0++;
+    if (g0 / 800 > 0.55) fautes.push({ deck, sansEffort: Math.round(100 * g0 / 800) + ' %' });
   });
   return fautes;
 }

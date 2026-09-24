@@ -242,6 +242,13 @@ export function applyGuardianDamage({ hp, shield }, damage) {
 // lequel tout l'équilibrage est calé.
 export const PUISSANCE_TAPS_PAR_SEC = 6.7;
 export const GUARDIAN_WIN_TARGET = 1 / 3;
+// Marge (demande de l'auteur après test, 24/09 : « baisse la différence,
+// joueur 50 – gardien 52 ; à haut niveau c'est vraiment compliqué d'up
+// les créatures pour atteindre la puissance requise »). Le Gardien est
+// calé pour qu'un deck de puissance (deck du début de l'œuf × MARGE) le
+// batte 2 fois sur 3, et sa puissance AFFICHÉE vaut deck × MARGE : un
+// petit effort visible et atteignable, plus un mur.
+export const GUARDIAN_POWER_MARGIN = 1.04;
 // Attaque de zone (« pas toujours ») : une riposte sur quatre ; la cible
 // prend le coup entier, les autres créatures vivantes 60 % de ce coup.
 export const GUARDIAN_AOE_CHANCE = 0.25;
@@ -383,9 +390,11 @@ function graineDuDeck(membres) {
 // Combattants préparés UNE fois par calibrage : stats, meilleure
 // compétence, spéciale, taps. MESURÉ : les recalculer à chacun des
 // milliers de combats simulés coûtait l'essentiel du temps.
-function preparerCombattants(membres) {
+// `marge` : PV et attaque multipliés (le deck « + MARGE » du calibrage).
+function preparerCombattants(membres, marge = 1) {
   return (membres || []).filter((m) => m && m.creature).map((m) => {
-    const stats = statsDuMembre(m);
+    const brutes = statsDuMembre(m);
+    const stats = marge === 1 ? brutes : { ...brutes, hp: brutes.hp * marge, attack: brutes.attack * marge };
     const skills = m.creature.skills || [];
     return {
       creature: m.creature,
@@ -439,8 +448,8 @@ function simulerPrepares(prepares, gStats, tapsParSec, alea) {
 }
 
 export function simulerCombatGardien(membres, gStats,
-  { tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random } = {}) {
-  return simulerPrepares(preparerCombattants(membres), gStats, tapsParSec, alea);
+  { tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random, marge = 1 } = {}) {
+  return simulerPrepares(preparerCombattants(membres, marge), gStats, tapsParSec, alea);
 }
 
 export function guardianStatsScaled(base, k) {
@@ -456,12 +465,13 @@ export function guardianStatsScaled(base, k) {
 // et 60 % — des PV en plus ajoutent UN TOUR ENTIER au combat d'un coup,
 // le taux saute. Les PV restent ceux de la formule ; l'attaque varie en
 // continu. 400 combats : 150 laissaient ±10 points.
-export function calibrerGardien(membres, baseStats, { essais = 400, cible = GUARDIAN_WIN_TARGET } = {}) {
+export function calibrerGardien(membres, baseStats,
+  { essais = 400, cible = GUARDIAN_WIN_TARGET, marge = GUARDIAN_POWER_MARGIN } = {}) {
   const n = (membres || []).filter((m) => m && m.creature).length || 1;
   const p0 = puissanceGardien(baseStats, n);
-  const depart = p0 > 0 ? puissanceDeck(membres) / p0 : 1;
+  const depart = p0 > 0 ? puissanceDeck(membres) * marge / p0 : 1;
   const graine = graineDuDeck(membres);
-  const prepares = preparerCombattants(membres);
+  const prepares = preparerCombattants(membres, marge);
   const tauxGardien = (c) => {
     const st = { ...guardianStatsScaled(baseStats, depart), attack: Math.max(1, baseStats.attack * depart * c) };
     const alea = aleaGraine(graine);

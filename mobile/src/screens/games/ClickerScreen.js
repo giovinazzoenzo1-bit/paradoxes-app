@@ -121,6 +121,7 @@ import {
   puissanceDeck,
   calibrageGardienSur,
   guardianStats,
+  GUARDIAN_POWER_MARGIN,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -661,16 +662,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const puissanceDuDeck = useMemo(() => puissanceDeck(membresDuDeck(deck, owned)), [deck, owned]);
   // Œufs commencés avant la mise à jour : la photo manquante est prise dès
   // que la collection est chargée (le Gardien se calera sur ce deck-là).
+  // ⚠️ Photos de la 1re version (3 meilleures de la COLLECTION, sans `v`)
+  // reprises aussi : elles créaient l'écart de 6-7 points vu par l'auteur.
+  const sansPhotoV2 = (e) => e && (!e.gardienPhoto || e.gardienPhoto.v !== 2);
   useEffect(() => {
     if (!owned.length) return;
-    if (mainEgg && !mainEgg.gardienPhoto) setMainEgg((p) => (p && !p.gardienPhoto ? avecPhotoGardien(p, owned) : p));
-    if (incubatingEgg && !incubatingEgg.gardienPhoto) setIncubatingEgg((p) => (p && !p.gardienPhoto ? avecPhotoGardien(p, owned) : p));
+    if (sansPhotoV2(mainEgg)) setMainEgg((p) => (sansPhotoV2(p) ? avecPhotoGardien(p, owned, deck) : p));
+    if (sansPhotoV2(incubatingEgg)) setIncubatingEgg((p) => (sansPhotoV2(p) ? avecPhotoGardien(p, owned, deck) : p));
   }, [mainEgg, incubatingEgg, owned]);
+  // Petit menu de fin de combat de Gardien (demande de l'auteur).
+  const [resultatGardien, setResultatGardien] = useState(null);
   // « Gardien X · Ton deck Y » : ce que le joueur lit avant de combattre
   // (demande de l'auteur : voir s'il doit améliorer ses créatures).
   const ligneGardien = (egg) => {
     if (owned.length + 1 < 3 || !egg || !egg.gardienPhoto) return null;
-    const g = egg.gardienPhoto.puissance;
+    const g = Math.round(egg.gardienPhoto.puissance * GUARDIAN_POWER_MARGIN);
     return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck}${puissanceDuDeck < g ? ' — améliore tes créatures' : ''}`;
   }; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
@@ -1811,7 +1817,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // Calibrage au LANCEMENT (≈ 0,2 s) sur la photo du début de l'œuf.
     const oeufEnJeu = source === 'main' ? mainEggRef.current : incubatingEgg;
     setGuardianFight({ source, level: guardianLevelForEgg(eggNumber), eggNumber,
-      calibrage: calibrageDuCombat(oeufEnJeu, ownedRef.current, eggNumber) });
+      calibrage: calibrageDuCombat(oeufEnJeu, ownedRef.current, eggNumber, deckRef.current),
+      puissanceGardien: oeufEnJeu && oeufEnJeu.gardienPhoto && eggNumber >= 3
+        ? Math.round(oeufEnJeu.gardienPhoto.puissance * GUARDIAN_POWER_MARGIN) : null });
   };
 
   // Fin du combat. Victoire : l'œuf éclot. Défaite : l'œuf n'est JAMAIS
@@ -1821,6 +1829,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const fight = guardianFight;
     setGuardianFight(null);
     if (!fight) return;
+    setResultatGardien({ issue: outcome, gardien: fight.puissanceGardien, deck: puissanceDuDeck });
     if (outcome === 'win') {
       if (fight.source === 'main') {
         mainEggRef.current = null;
@@ -1885,7 +1894,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const startEggIncubation = () => {
     if (incubatingEgg) return;
-    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned));
+    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck));
     startNewEggCycle();
     setIncubatorOpen(true);
   };
@@ -2912,7 +2921,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // Le minuteur naît en même temps que la phase, et UNIQUEMENT
         // ici : le créer dans un effet séparé le ferait repartir de zéro
         // à chaque rendu tant que la phase reste 'hatching'.
-        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current));
+        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current));
         return 'hatching';
       });
     }
@@ -3873,6 +3882,32 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             </Text>
             <TouchableOpacity style={styles.feedBtn} onPress={() => setRewardCreature(null)}>
               <Text style={styles.feedBtnText}>Super !</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {/* Petit menu de fin de combat de Gardien (demande de l'auteur,
+          24/09). Au-dessus de la révélation de la créature : « Voir ma
+          créature » la découvre en dessous. */}
+      {resultatGardien && (
+        <View style={[styles.detailOverlay, styles.resultatGardienFond]}>
+          <View style={styles.resultatGardienCarte}>
+            <Text style={styles.resultatGardienTitre}>
+              {resultatGardien.issue === 'win' ? '🏆 Gardien vaincu !' : "💀 Le Gardien l'emporte"}
+            </Text>
+            <Text style={styles.resultatGardienTexte}>
+              {resultatGardien.issue === 'win' ? 'Ton œuf éclot.' : 'Ton œuf est en sécurité. Nouvel essai dans 10 min.'}
+            </Text>
+            {resultatGardien.gardien ? (
+              <Text style={styles.resultatGardienPuissance}>
+                ⚔️ Gardien {resultatGardien.gardien} · 🛡️ Ton deck {resultatGardien.deck}
+              </Text>
+            ) : null}
+            {resultatGardien.issue !== 'win' ? (
+              <Text style={styles.resultatGardienConseil}>Améliore tes créatures dans l'Aventure pour augmenter tes chances.</Text>
+            ) : null}
+            <TouchableOpacity style={styles.resultatGardienBouton} onPress={() => setResultatGardien(null)}>
+              <Text style={styles.resultatGardienBoutonTexte}>{resultatGardien.issue === 'win' ? 'Voir ma créature' : 'OK'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -4941,19 +4976,26 @@ function membresDuDeck(ids, ownedList) {
       evolutionTier: own ? own.evolutionTier || 0 : 0, equippedRunes: [] } : null;
   }).filter(Boolean);
 }
-// Photo prise au DÉBUT de chaque œuf : les 3 meilleures créatures
-// possédées (niveau, évolution) et leur puissance. Le Gardien s'y cale :
-// améliorer ses créatures PENDANT l'incubation fait pencher le combat,
-// alléger son deck exprès n'y change rien.
-function photoGardien(ownedList) {
-  const membres = membresDuDeck((ownedList || []).map((o) => o.id), ownedList)
-    .map((m) => ({ m, p: puissanceDeck([m]) })).sort((a, b) => b.p - a.p).slice(0, 3).map((x) => x.m);
-  return { membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
+// Photo prise au DÉBUT de chaque œuf : TON DECK (niveau, évolution) et sa
+// puissance ; une place vide est complétée par ta meilleure créature
+// restante (vider son deck exprès n'allège pas le Gardien). Le Gardien
+// s'y cale : améliorer ses créatures PENDANT l'incubation fait pencher
+// le combat.
+// ⚠️ v2 (24/09, retour de l'auteur) : la v1 prenait les 3 meilleures de
+// la COLLECTION — plus fortes que le deck joué, d'où un écart affiché de
+// 6-7 points, « compliqué à rattraper à haut niveau ».
+function photoGardien(ownedList, deckIds) {
+  const duDeck = membresDuDeck(deckIds, ownedList);
+  const pris = new Set(duDeck.map((m) => m.creature.id));
+  const reste = membresDuDeck((ownedList || []).map((o) => o.id).filter((id) => !pris.has(id)), ownedList)
+    .map((m) => ({ m, p: puissanceDeck([m]) })).sort((a, b) => b.p - a.p).map((x) => x.m);
+  const membres = [...duDeck, ...reste].slice(0, 3);
+  return { v: 2, membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
     puissance: puissanceDeck(membres) };
 }
-function avecPhotoGardien(egg, ownedList) {
+function avecPhotoGardien(egg, ownedList, deckIds) {
   if (!egg) return egg;
-  try { return { ...egg, gardienPhoto: photoGardien(ownedList) }; } catch (e) { return egg; }
+  try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds) }; } catch (e) { return egg; }
 }
 function membresDeLaPhoto(photo) {
   return ((photo && photo.membres) || []).map((x) => {
@@ -4964,10 +5006,10 @@ function membresDeLaPhoto(photo) {
 // Calibrage au lancement du combat : même photo et même œuf = même
 // Gardien à chaque essai (tirages à graine). Œuf 2 : l'ancien Gardien,
 // « parfait » pour l'auteur. Jamais d'exception : null = ancien Gardien.
-function calibrageDuCombat(egg, ownedList, eggNumber) {
+function calibrageDuCombat(egg, ownedList, eggNumber, deckIds) {
   if (eggNumber < 3) return null;
   try {
-    const membres = membresDeLaPhoto((egg && egg.gardienPhoto) || photoGardien(ownedList));
+    const membres = membresDeLaPhoto((egg && egg.gardienPhoto) || photoGardien(ownedList, deckIds));
     if (!membres.length) return null;
     return calibrageGardienSur(membres, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber));
   } catch (e) {
@@ -5039,6 +5081,15 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 }
 
 const styles = StyleSheet.create({
+  resultatGardienFond: { zIndex: 1000, elevation: 1000, justifyContent: 'center', alignItems: 'center' },
+  resultatGardienCarte: { width: '82%', maxWidth: 360, backgroundColor: '#1E1633', borderRadius: 18, padding: 20,
+    alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,215,120,0.7)' },
+  resultatGardienTitre: { color: '#FFE9A8', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
+  resultatGardienTexte: { color: '#fff', fontSize: 15, textAlign: 'center', marginBottom: 10 },
+  resultatGardienPuissance: { color: '#FFE9A8', fontSize: 14, fontWeight: '700', textAlign: 'center', marginBottom: 8 },
+  resultatGardienConseil: { color: '#C9C3E0', fontSize: 13, textAlign: 'center', marginBottom: 12 },
+  resultatGardienBouton: { backgroundColor: '#F2B233', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 26, marginTop: 4 },
+  resultatGardienBoutonTexte: { color: '#2A1B00', fontSize: 16, fontWeight: '800' },
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
   // Positionnement ABSOLU en % du plein écran (04/09) — sur demande

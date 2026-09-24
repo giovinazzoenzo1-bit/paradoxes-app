@@ -252,6 +252,11 @@ moyenne 14 %), corriger PV et attaque ensemble (le taux saute d'un tour
 entier), le milieu de dichotomie sur des coups de 2-3 PV. On corrige
 l'ATTAQUE seule, et on garde le côté facile d'un palier.
 
+⚠️ Photo v2 : le deck JOUÉ, pas les 3 meilleures de la collection (qui
+affichaient un Gardien 6-7 points au-dessus du deck, « compliqué à
+rattraper à haut niveau »). Marge 1,04 : Gardien affiché = deck × 1,04,
+calé pour qu'un deck de cette puissance gagne 2 fois sur 3.
+
 ⚠️⚠️ UNE SEULE SOURCE DE RÈGLES : coup, riposte, zone, encaissement sont
 dans `combatLogic` et CombatScreen les appelle. Le reste (premier coup,
 rotation, mana) est entre les marqueurs « RÈGLES DU COMBAT » :
