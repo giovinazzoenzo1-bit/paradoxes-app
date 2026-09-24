@@ -43,6 +43,11 @@ python3 mobile/tools/generer-doc.py        # régénère mobile/DEFIS_PARADOX.md
 - Signalement des bugs : bouton dans les Options + détection automatique + filet d'`index.js` → mail à `EMAIL_SIGNALEMENT` (une seule ligne, dans `diagnostic.js`).
 - Chronos de l'auteur (4e passage, pubs d'œufs) : 1 œuf 7 min · 2 à 13 · 3 à 24 · 4 à 40 · 5 à 60 · 6 à 1 h 18 (« vraiment bien »).
 
+## 3 bis. CHANTIER EN COURS — le Gardien se cale sur le deck (24/09)
+Demande : « parfait à l'œuf 2, trop facile ensuite ; attaques de zone pas toujours ; qu'il se recalibre souvent ; qu'il gagne 1/3 » + puissance du deck affichée (avant le combat, et en permanence dans le menu Aventure). MESURÉ avant : le Gardien ne gagnait JAMAIS (œufs 2 à 40).
+- **2a FAIT (moteur, non branché)** : `combatLogic.js` — `puissanceDeck` (√(PV × dégâts), affichage) ; règles PARTAGÉES `coupSurGardien`, `riposteGardien` (zone : 1 riposte sur 4, 60 % aux autres), `encaisser`, `degatsDuJoueur` ; `simulerCombatGardien` ; `calibrerGardien` (départ à puissance égale, puis correctif de l'ATTAQUE seule, 400 combats, côté facile sur les paliers) ; `calibrageGardienSur` (jamais d'exception, sinon ancien Gardien). Mesuré sur 33 decks : 17 à 39 %, centré 31 %, ≤ 0,15 s. Contrôle `auditGardienCalibre` + sabotage.
+- **2b À FAIRE** : CombatScreen appelle les règles partagées (et la zone, avec un signal visible) ; calibrage au début de chaque œuf à partir de l'œuf 3 (l'œuf 2 garde l'ancien Gardien), stocké dans l'œuf, calculé en différé ; puissance Gardien / deck affichée avant le combat ; puissance du deck dans le menu Aventure ; EMPREINTE des règles restées dans CombatScreen (rotation, mana, premier coup) sous contrôle, pour que la simulation ne dérive jamais en silence.
+
 ## 4. Les passes restantes (demandées par l'auteur — dans la MÊME conversation, décision du 24/09)
 
 ### Passe 2 — paliers de tap ×2,5 — FAITE (24/09)

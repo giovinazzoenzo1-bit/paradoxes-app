@@ -1,7 +1,7 @@
 // Logique pure du mode Aventure / Combat — voir mobile/ADVENTURE_MODE.md
 // pour le design complet. Aucun écran ne dépend encore de ce fichier :
 // c'est l'étape 1 du plan de construction (fonctions testables d'abord).
-import { CREATURES } from './clickerLogic';
+import { CREATURES, MANA_MAX, MANA_PER_TURN } from './clickerLogic';
 
 // ---- Stats de combat par rareté ----
 // Recalibré (29/08) à partir d'un exemple réel produit par le
@@ -209,6 +209,279 @@ export function applyGuardianDamage({ hp, shield }, damage) {
   const onShield = Math.min(shield, damage);
   const rest = damage - onShield;
   return { hp: Math.max(0, hp - rest), shield: shield - onShield };
+}
+
+// ---- Le Gardien se cale sur le deck (24/09) ----
+//
+// L'auteur : « les dégâts du gardien sont parfaits pour l'œuf 2, mais
+// après, trop facile de le tuer ; des attaques de zone mais pas toujours ;
+// qu'il se recalibre souvent ; qu'il gagne 1/3 pour que les joueurs
+// doivent améliorer leurs créatures ». Et : « un calcul pour évaluer la
+// puissance, écrite avant de pouvoir combattre », le deck évalué en
+// permanence dans le menu Aventure.
+//
+// MESURÉ avant (simulateur, 2 000 combats par œuf) : le Gardien ne
+// gagnait JAMAIS, de l'œuf 2 à l'œuf 40 ; l'équipe finissait avec 82 à
+// 95 % de ses PV. Dès l'œuf 3 on combat à 2 puis 3 créatures (3 fois les
+// PV) et sa force suivait le numéro d'œuf, pas l'équipe.
+//
+// ⚠️ UNE FORMULE NE SUFFIT PAS : à puissance égale (√(PV × dégâts) des
+// deux côtés), le Gardien gagnait de 25 à 78 % selon le deck —
+// gaspillage des gros coups à la manche 1, arrondis, coups perdus sur une
+// créature presque morte. Le jeu SIMULE donc le combat contre le deck du
+// début de l'œuf, et règle le Gardien pour qu'il en gagne
+// GUARDIAN_WIN_TARGET. La puissance (√(PV × dégâts)) sert à l'AFFICHAGE.
+//
+// ⚠️⚠️ UNE SEULE SOURCE DE RÈGLES : le coup du joueur, la riposte (zone
+// comprise) et l'encaissement sont ICI, et CombatScreen les appelle. Ce
+// que la simulation reproduit en plus (rotation, mana, premier coup) est
+// sous empreinte : `auditGardienCalibre` crie si le combat change sans
+// que la simulation suive.
+
+// Tap de référence : le rythme de l'auteur (autoclicker 150 ms), sur
+// lequel tout l'équilibrage est calé.
+export const PUISSANCE_TAPS_PAR_SEC = 6.7;
+export const GUARDIAN_WIN_TARGET = 1 / 3;
+// Attaque de zone (« pas toujours ») : une riposte sur quatre ; la cible
+// prend le coup entier, les autres créatures vivantes 60 % de ce coup.
+export const GUARDIAN_AOE_CHANCE = 0.25;
+export const GUARDIAN_AOE_RATIO = 0.6;
+// Le calibrage part d'un Gardien à la MÊME puissance que le deck (la
+// formule donne l'ordre de grandeur), puis la simulation affine un
+// correctif. MESURÉ : partir des stats de niveau demandait ×10 dès l'œuf
+// 20 et dépassait toute borne à l'œuf 40 (le Gardien de base y est
+// dérisoire). Bornes du correctif : un FILET — la formule ne se trompe
+// pas d'un facteur 4 ; un correctif collé à une borne = simulation
+// cassée (le contrôle le dit).
+export const GUARDIAN_CORRECTION_MIN = 0.25;
+export const GUARDIAN_CORRECTION_MAX = 4;
+
+// Dégâts moyens d'un tour : meilleure compétence, et la spéciale une
+// fois tous les MANA_MAX / MANA_PER_TURN tours, au tap de référence.
+function degatsMoyensDuTour(creature, stats) {
+  const skills = creature.skills || [];
+  const meilleur = skills.filter((k) => !k.special).reduce((m, k) => Math.max(m, k.damage), 0);
+  const spe = skills.find((k) => k.special);
+  const cycle = MANA_MAX / MANA_PER_TURN;
+  const brut = spe ? ((cycle - 1) * meilleur + spe.damage) / cycle : meilleur;
+  const taps = effectiveTapCount(stats.clickSpeed, stats.tapReductionPct || 0);
+  const mult = damageMultiplierForTime(taps / PUISSANCE_TAPS_PAR_SEC, true) + (stats.dmgMultBonus || 0);
+  return brut * attackRatio(creature, stats.attack) * GLOBAL_DAMAGE_BOOST * mult;
+}
+
+const statsDuMembre = (m) => combatStatsForCreatureTyped(m.creature, m.ownedLevel || m.level || 1,
+  m.evolutionTier || 0, m.equippedRunes || []);
+
+// Puissance d'un deck, pour l'affichage : √(PV totaux × dégâts moyens
+// d'un tour). Monte avec les niveaux, les évolutions et les runes.
+// `membres` : la forme envoyée au combat — [{ creature, ownedLevel,
+// evolutionTier, equippedRunes }] (`level` accepté aussi).
+export function puissanceDeck(membres) {
+  const f = (membres || []).filter((m) => m && m.creature).map((m) => {
+    const st = statsDuMembre(m);
+    return { pv: st.hp, dmg: degatsMoyensDuTour(m.creature, st) };
+  });
+  if (!f.length) return 0;
+  const pv = f.reduce((t, x) => t + x.pv, 0);
+  const dmg = f.reduce((t, x) => t + x.dmg, 0) / f.length;
+  return Math.round(Math.sqrt(pv * dmg));
+}
+
+// Puissance du Gardien sur la même échelle : il doit abattre ΣPV, on
+// doit lui retirer 2,3 fois ses PV (boucliers et deux manches).
+const GARDIEN_PV_EFFECTIFS = GUARDIAN_SHIELD_RATIO + GUARDIAN_PHASE1_HP_LOSS + 1 + GUARDIAN_SHIELD_RATIO;
+// La zone frappe les AUTRES créatures vivantes en plus de la cible.
+export function facteurZone(nbCombattants) {
+  return 1 + GUARDIAN_AOE_CHANCE * GUARDIAN_AOE_RATIO * Math.max(0, (nbCombattants || 1) - 1);
+}
+export function puissanceGardien(stats, nbCombattants = 3) {
+  const G = GUARDIAN_CREATURE;
+  const moyen = G.skills.reduce((t, k) => t + k.damage, 0) / G.skills.length;
+  const coup = moyen * attackRatio(G, stats.attack) * GLOBAL_DAMAGE_BOOST;
+  return Math.round(Math.sqrt(GARDIEN_PV_EFFECTIFS * stats.hp * coup * facteurZone(nbCombattants)));
+}
+
+// ---- Les règles partagées avec CombatScreen ----
+
+// Coup du joueur : bouclier d'abord ; la manche 1 s'arrête à
+// −GUARDIAN_PHASE1_HP_LOSS, puis le Gardien se relève à PV pleins avec un
+// nouveau bouclier. `releve` : la manche vient de basculer (l'écran joue
+// l'animation, et ce tour-là il ne riposte pas) ; `plancher` : les PV à
+// afficher pendant l'animation.
+export function coupSurGardien({ hp, shield, phase, maxHp }, degats) {
+  const apres = applyGuardianDamage({ hp, shield }, degats);
+  if (phase === 1) {
+    const plancher = Math.ceil(maxHp * (1 - GUARDIAN_PHASE1_HP_LOSS));
+    if (apres.hp <= plancher) {
+      return { hp: maxHp, shield: Math.round(maxHp * GUARDIAN_SHIELD_RATIO), phase: 2, maxHp, releve: true, plancher };
+    }
+    return { hp: apres.hp, shield: apres.shield, phase: 1, maxHp, releve: false };
+  }
+  return { hp: apres.hp, shield: apres.shield, phase: 2, maxHp, releve: false };
+}
+
+// Riposte : une compétence au hasard ; GUARDIAN_AOE_CHANCE du temps,
+// attaque de ZONE. Renvoie les dégâts par combattant (0 = pas touché).
+export function riposteGardien(gStats, combattants, cible, alea = Math.random) {
+  const G = GUARDIAN_CREATURE;
+  const competence = G.skills[Math.floor(alea() * G.skills.length)];
+  const brut = scaledSkillDamage(competence, G, gStats.attack);
+  const zone = alea() < GUARDIAN_AOE_CHANCE;
+  const degats = combattants.map((c, i) => {
+    if (!c || c.hp <= 0 || (i !== cible && !zone)) return 0;
+    const part = i === cible ? 1 : GUARDIAN_AOE_RATIO;
+    return Math.max(1, Math.round(brut * elementMultiplier(G.element, c.creature.element) * part));
+  });
+  return { competence, zone, degats };
+}
+
+// Encaisser un coup. La Résilience (une fois par combat) laisse la
+// créature debout à une part de ses PV max.
+export function encaisser(c, degats) {
+  let hp = Math.max(0, c.hp - degats);
+  let resilienceUsed = !!c.resilienceUsed;
+  const res = (c.stats && c.stats.resiliencePct) || 0;
+  if (hp <= 0 && degats > 0 && res > 0 && !resilienceUsed) {
+    hp = Math.max(1, Math.round(c.stats.hp * res));
+    resilienceUsed = true;
+  }
+  return { hp, resilienceUsed };
+}
+
+// Dégâts du coup du joueur (compétence, temps du défi de taps, élément).
+export function degatsDuJoueur(competence, combattant, cibleCreature, secondes, complet) {
+  const mult = damageMultiplierForTime(secondes, complet) + (combattant.stats.dmgMultBonus || 0);
+  const brut = competence.isBasic ? competence.damage
+    : scaledSkillDamage(competence, combattant.creature, combattant.stats.attack);
+  const elem = elementMultiplier(combattant.creature.element, cibleCreature.element,
+    combattant.stats.affinityBonus || 0);
+  return Math.max(1, Math.round(computePlayerDamage(brut, mult) * elem));
+}
+
+// ---- La simulation et le calibrage ----
+
+// Tirages reproductibles (même graine = mêmes combats).
+function aleaGraine(graine) {
+  let a = graine >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function graineDuDeck(membres) {
+  let h = 2166136261;
+  (membres || []).forEach((m) => {
+    const s = m && m.creature ? `${m.creature.id}:${m.ownedLevel || m.level || 1}:${m.evolutionTier || 0};` : '-;';
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  });
+  return h >>> 0;
+}
+
+// ⚠️ REPRODUIT CombatScreen pour ce qui n'est pas partagé : rotation à
+// chaque tour vers la créature vivante suivante (+MANA_PER_TURN à celle
+// qui entre), spéciale à mana pleine sinon la meilleure compétence,
+// 50 % de chances que le Gardien frappe en premier, pas de riposte le
+// tour où il se relève. Renvoie true si le JOUEUR gagne.
+export function simulerCombatGardien(membres, gStats,
+  { tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random } = {}) {
+  const f = (membres || []).filter((m) => m && m.creature).map((m) => {
+    const stats = statsDuMembre(m);
+    return { creature: m.creature, stats, hp: stats.hp, mana: 0, resilienceUsed: false };
+  });
+  if (!f.length) return false;
+  let g = { hp: gStats.hp, shield: Math.round(gStats.hp * GUARDIAN_SHIELD_RATIO), phase: 1, maxHp: gStats.hp };
+  const suivante = (i) => {
+    for (let k = 1; k <= f.length; k++) { const j = (i + k) % f.length; if (f[j].hp > 0) return j; }
+    return -1;
+  };
+  const subir = (cible) => {
+    riposteGardien(gStats, f, cible, alea).degats.forEach((d, i) => { if (d > 0) Object.assign(f[i], encaisser(f[i], d)); });
+  };
+  let act = 0;
+  f[0].mana = Math.min(MANA_MAX, MANA_PER_TURN);
+  if (alea() < 0.5) {
+    subir(act);
+    if (f[act].hp <= 0) { act = suivante(act); if (act < 0) return false; }
+  }
+  for (let tour = 0; tour < 500; tour++) {
+    const x = f[act];
+    const skills = x.creature.skills || [];
+    const spe = skills.find((k) => k.special && x.mana >= MANA_MAX);
+    const comp = spe || skills.filter((k) => !k.special).sort((a, b) => b.damage - a.damage)[0];
+    if (!comp) return false;
+    if (spe) x.mana -= spe.manaCost || MANA_MAX;
+    const taps = effectiveTapCount(x.stats.clickSpeed, x.stats.tapReductionPct || 0);
+    g = coupSurGardien(g, degatsDuJoueur(comp, x, GUARDIAN_CREATURE, taps / tapsParSec, true));
+    if (g.releve) continue;
+    if (g.hp <= 0) return true;
+    subir(act);
+    const nx = suivante(act);
+    if (nx < 0) return false;
+    act = nx;
+    f[act].mana = Math.min(MANA_MAX, f[act].mana + MANA_PER_TURN);
+  }
+  return false;
+}
+
+export function guardianStatsScaled(base, k) {
+  return { ...base, hp: Math.max(1, Math.round(base.hp * k)), attack: Math.max(1, base.attack * k) };
+}
+
+// Le facteur à appliquer aux stats de niveau du Gardien pour qu'il gagne
+// GUARDIAN_WIN_TARGET des combats contre CE deck. Départ : le Gardien à
+// puissance égale ; puis dichotomie logarithmique sur le correctif de
+// son ATTAQUE seule, avec les MÊMES tirages à chaque essai (graine du
+// deck) : réponse stable et reproductible.
+// ⚠️ MESURÉ : corriger PV et attaque ensemble laissait des decks entre 3
+// et 60 % — des PV en plus ajoutent UN TOUR ENTIER au combat d'un coup,
+// le taux saute. Les PV restent ceux de la formule ; l'attaque varie en
+// continu. 400 combats : 150 laissaient ±10 points.
+export function calibrerGardien(membres, baseStats, { essais = 400, cible = GUARDIAN_WIN_TARGET } = {}) {
+  const n = (membres || []).filter((m) => m && m.creature).length || 1;
+  const p0 = puissanceGardien(baseStats, n);
+  const depart = p0 > 0 ? puissanceDeck(membres) / p0 : 1;
+  const graine = graineDuDeck(membres);
+  const tauxGardien = (c) => {
+    const st = { ...guardianStatsScaled(baseStats, depart), attack: Math.max(1, baseStats.attack * depart * c) };
+    const alea = aleaGraine(graine);
+    let g = 0;
+    for (let i = 0; i < essais; i++) if (!simulerCombatGardien(membres, st, { alea })) g++;
+    return g / essais;
+  };
+  let lo = Math.log(GUARDIAN_CORRECTION_MIN), hi = Math.log(GUARDIAN_CORRECTION_MAX);
+  for (let i = 0; i < 12; i++) {
+    const mid = (lo + hi) / 2;
+    if (tauxGardien(Math.exp(mid)) > cible) hi = mid; else lo = mid;
+  }
+  // ⚠️ `lo`, pas le milieu : le plus fort réglage MESURÉ sous la cible.
+  // Aux bas niveaux, les coups valent 2 ou 3 PV : le taux avance par
+  // paliers, et le milieu tombait sur le palier du dessus (Gardien à
+  // 50-57 % contre des communes niveau 1). En cas de palier, le côté
+  // facile.
+  const correction = Math.exp(lo);
+  return { facteurPv: depart, facteurAttaque: depart * correction, correction };
+}
+
+// Les stats de combat du Gardien pour un calibrage donné.
+export function guardianStatsCalibrees(baseStats, { facteurPv, facteurAttaque }) {
+  return { ...baseStats, hp: Math.max(1, Math.round(baseStats.hp * facteurPv)),
+    attack: Math.max(1, baseStats.attack * facteurAttaque) };
+}
+
+// Pour le JEU : jamais d'exception. En cas d'échec, facteur 1 = l'ancien
+// Gardien (stats de niveau).
+export function calibrageGardienSur(membres, baseStats) {
+  const ancien = { facteurPv: 1, facteurAttaque: 1 };
+  try {
+    const r = calibrerGardien(membres, baseStats);
+    const ok = [r.facteurPv, r.facteurAttaque].every((x) => Number.isFinite(x) && x > 0);
+    return ok ? { facteurPv: r.facteurPv, facteurAttaque: r.facteurAttaque } : ancien;
+  } catch (e) {
+    return ancien;
+  }
 }
 
 export const GUARDIAN_CREATURE = {

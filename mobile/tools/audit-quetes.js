@@ -3160,3 +3160,39 @@ function auditPoigneA0(min = 0.425, max = 0.575) {
   return r >= min && r <= max ? [] : [{ ratio: +r.toFixed(2), attendu: 'la moitié du Pacte' }];
 }
 module.exports.auditPoigneA0 = auditPoigneA0;
+
+// ---- Le Gardien calé sur le deck gagne ~1 fois sur 3 (24/09) --------
+//
+// L'auteur : « faire en sorte qu'il gagne 1/3, pour que les joueurs
+// doivent améliorer leurs créatures ». Le jeu simule le combat contre le
+// deck du début de l'œuf et règle l'attaque du Gardien (combatLogic).
+//
+// Ce contrôle recalibre sur des decks de référence (bas, moyen, haut
+// niveau ; 1 à 3 créatures ; toutes raretés), puis rejoue 800 combats
+// NEUFS à tirages fixes : le Gardien doit gagner entre 15 et 45 %
+// (MESURÉ le 24/09 sur 33 decks : 17 à 39 %, centré sur 31 %). Il crie
+// aussi si le correctif colle à une borne — la simulation serait cassée.
+function auditGardienCalibre() {
+  const K = load('combatLogic');
+  const I = load('incubatorLogic');
+  let a = 12345;
+  const alea = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const fautes = [];
+  [['commun', 3, 1], ['rare', 1, 5], ['rare', 3, 10], ['epique', 2, 20], ['legendaire', 3, 35]].forEach(([rar, n, niv]) => {
+    const membres = C.CREATURES.filter((c) => c.rarity === rar).slice(0, n).map((c) => ({ creature: c, ownedLevel: niv }));
+    const oeuf = Math.max(3, niv + 1);
+    const base = K.guardianStats(I.guardianLevelForEgg(oeuf), I.GUARDIAN_BASE_LEVEL, oeuf);
+    const r = K.calibrerGardien(membres, base);
+    const deck = n + ' ' + rar + ' niv ' + niv;
+    if (r.correction <= K.GUARDIAN_CORRECTION_MIN * 1.01 || r.correction >= K.GUARDIAN_CORRECTION_MAX * 0.99) {
+      fautes.push({ deck, probleme: 'correctif collé à une borne (' + r.correction.toFixed(2) + ') : simulation cassée ?' });
+    }
+    const st = K.guardianStatsCalibrees(base, r);
+    let g = 0;
+    for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea })) g++;
+    if (g / 800 < 0.15 || g / 800 > 0.45) fautes.push({ deck, gardienGagne: Math.round(100 * g / 800) + ' %' });
+  });
+  return fautes;
+}
+module.exports.auditGardienCalibre = auditGardienCalibre;

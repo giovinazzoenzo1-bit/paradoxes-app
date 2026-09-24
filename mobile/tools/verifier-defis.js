@@ -42,6 +42,7 @@ const CONTROLES = [
   ['auditHorsLigne', 'hors ligne standard, et aucune entrée ne bloque l Ascension'],
   ['auditFaisableAuMoment', 'un défi est faisable AU MOMENT où il arrive'],
   ['auditCoteEtalon', 'une cible de côté vaut 94 s de production à son œuf (÷2, ×2)'],
+  ['auditGardienCalibre', 'le Gardien calé sur le deck gagne ~1 fois sur 3 (15-45 %)'],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],

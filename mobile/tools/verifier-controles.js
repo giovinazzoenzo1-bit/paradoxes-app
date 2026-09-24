@@ -41,6 +41,7 @@ const F = {
   index: path.join(RACINE, 'index.js'),
   diag: path.join(RACINE, 'src/games/clicker/diagnostic.js'),
   doc: path.join(RACINE, 'DEFIS_PARADOX.md'),
+  combat: path.join(RACINE, 'src/games/clicker/combatLogic.js'),
 };
 
 // ---- Outils pour viser un défi par son identifiant ------------------
@@ -146,6 +147,8 @@ const SABOTAGES = [
     surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, cible(32000000))],
   ['auditStructureOeufs', F.defis, "la structure déclarée ne correspond plus aux œufs (A0 à 7 œufs, A5 à 6) : l'index d'un œuf changerait de groupe",
     remplace('export const OEUFS_PAR_GROUPE = [6, 6, 7, 7, 7, 7];', 'export const OEUFS_PAR_GROUPE = [7, 6, 7, 7, 7, 6];')],
+  ['auditGardienCalibre', F.combat, "le Gardien visé à 90 % de victoires au lieu d'1 sur 3 : le calibrage le suit, le contrôle doit le voir",
+    remplace('export const GUARDIAN_WIN_TARGET = 1 / 3;', 'export const GUARDIAN_WIN_TARGET = 0.9;')],
   ['auditExhaustif', F.defis, "un libellé cassé dans un vrai défi (l'outil testait les anciens modèles : vert quand même, 24/09)",
     surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, (b) => b.replace('label: t => `', 'label: t => `undefined '))],
   ['auditPoigneA0', F.clicker, "Poigne remise à 1 399 : 1/11 du prix du Pacte pour le même +1 (le « cheat » du 21/09)",
