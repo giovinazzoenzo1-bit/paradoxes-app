@@ -8,6 +8,13 @@
 - [ ] 21/09 — **Griffes** : les défis en donnent beaucoup trop, à optimiser.
 - [ ] 24/09 — **Coûts de base des paliers 7 à 10** : prix effectifs croissants (3 k → 8,4 M), mais la dépense par +1 tap n'est pas monotone (42 k à l'A3, 16-21 k aux A4-A5). Poids 0,1-0,5 % du seuil au niveau 5 : faible. Règle « prix ∝ bonus », à faire seulement si tu le veux.
 
+## Tests de l'auteur (« une autre fois »)
+- [ ] 24/09 — **Chronos A0 + A1** : heure de fin de l'œuf 6, puis de l'Ascension, pour chacune. L'A1 n'a jamais été mesurée depuis la suppression de l'œuf 7.
+- [ ] 24/09 — **Gardien** : nombre de victoires / défaites, et l'écart de puissance affiché colle-t-il à la difficulté ressentie ?
+- [ ] 24/09 — **Pouvoirs du deck** : rythme bon, trop rapide ou trop lent ?
+- [ ] Ensuite (Claude) : recaler le simulateur sur ces chronos (les pouvoirs du deck donnent +10 à +25 % en début de partie) ; décider du décalage de l'œuf 7 pour A2-A5 selon le farm après l'œuf 6 de l'A1.
+- [ ] À surveiller : Gardien à haut niveau sans amélioration ; défis « Active N pouvoirs » des dernières Ascensions avec un deck plein de mythiques (moins d'activations par minute).
+
 ## Structure
 
 ## Faits (à rayer au fur et à mesure)
