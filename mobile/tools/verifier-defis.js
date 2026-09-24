@@ -45,6 +45,7 @@ const CONTROLES = [
   ['auditGardienCalibre', 'le Gardien calé sur le deck gagne ~1 fois sur 3 (15-45 %)'],
   ['auditGardienEmpreinte', "le code du combat n'a pas changé sans que la simulation du Gardien suive"],
   ['auditRechargeDeck', "changer de créature dans le deck ne donne pas un pouvoir gratuit (règle + câblage)"],
+  ['auditGriffesBonus', 'succès, hebdos et quotidiens ne doublent pas le revenu de Griffes du combat'],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],

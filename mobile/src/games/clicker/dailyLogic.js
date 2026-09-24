@@ -167,31 +167,34 @@ export function weekKey(date = new Date()) {
 // seule session. L'ancienne version (12 combats, 60 critiques) tombait
 // à 7% et 0,4% d'une semaine — d'où le fait qu'elles se validaient
 // toutes seules.
+// ⚠️ Récompenses ÷4 le 24/09 (500-1 050 -> 125-260 Griffes). MESURÉ : 6
+// hebdos par semaine rapportaient ~4 500 Griffes, 1,6 fois TOUT le revenu
+// du combat d'un joueur régulier (~2 800). Désormais ~40 %.
 export const WEEKLY_QUEST_POOL = [
-  { id: 'w_win80battles', desc: 'Gagne 80 combats en Aventure', event: 'battleWon', target: 80, reward: 700, diamonds: 3 },
-  { id: 'w_crit8000',     desc: 'Obtiens 8 000 coups critiques', event: 'crit', target: 8000, reward: 900 },
+  { id: 'w_win80battles', desc: 'Gagne 80 combats en Aventure', event: 'battleWon', target: 80, reward: 175, diamonds: 3 },
+  { id: 'w_crit8000',     desc: 'Obtiens 8 000 coups critiques', event: 'crit', target: 8000, reward: 225 },
   // ~50 min de tap sur la semaine, à répartir comme le joueur veut.
-  { id: 'w_tap30000',     desc: 'Tape 30 000 fois',              event: 'taps', target: 30000, reward: 800, diamonds: 3 },
-  { id: 'w_buyRune12',    desc: 'Achète 12 runes',              event: 'runeBought', target: 12, reward: 900 },
+  { id: 'w_tap30000',     desc: 'Tape 30 000 fois',              event: 'taps', target: 30000, reward: 200, diamonds: 3 },
+  { id: 'w_buyRune12',    desc: 'Achète 12 runes',              event: 'runeBought', target: 12, reward: 225 },
   // 4 et non 6 : la fusion exige DEUX runes identiques (même type ET
   // même niveau). Sur ~28 runes tirées au hasard parmi 4 types, on
   // obtient environ 7 paires — viser 6 revenait à exiger 100% de la
   // production hebdomadaire ET une chance parfaite au tirage.
-  { id: 'w_fuseRune4',    desc: 'Fusionne 4 fois des runes',    event: 'runeFused', target: 4, reward: 650, diamonds: 3 },
-  { id: 'w_equipRune15',  desc: 'Équipe 15 runes',              event: 'runeEquipped', target: 15, reward: 750 },
-  { id: 'w_summon40',     desc: 'Invoque 40 créatures',         event: 'summon', target: 40, reward: 825 },
-  { id: 'w_earn250k',     desc: `Gagne ${fmtPieces(250000 * COIN_SCALE)} pièces`, event: 'coinsEarned', target: 250000 * COIN_SCALE, reward: 500, diamonds: 3 },
-  { id: 'w_feed30',       desc: 'Nourris 30 fois une créature', event: 'creatureFed', target: 30, reward: 750 },
-  { id: 'w_offering10',   desc: 'Fais 10 Offrandes',            event: 'offering', target: 10, reward: 1050 },
-  { id: 'w_power60',      desc: 'Active 60 pouvoirs de créature', event: 'powerActivated', target: 60, reward: 550, diamonds: 3 },
+  { id: 'w_fuseRune4',    desc: 'Fusionne 4 fois des runes',    event: 'runeFused', target: 4, reward: 160, diamonds: 3 },
+  { id: 'w_equipRune15',  desc: 'Équipe 15 runes',              event: 'runeEquipped', target: 15, reward: 190 },
+  { id: 'w_summon40',     desc: 'Invoque 40 créatures',         event: 'summon', target: 40, reward: 205 },
+  { id: 'w_earn250k',     desc: `Gagne ${fmtPieces(250000 * COIN_SCALE)} pièces`, event: 'coinsEarned', target: 250000 * COIN_SCALE, reward: 125, diamonds: 3 },
+  { id: 'w_feed30',       desc: 'Nourris 30 fois une créature', event: 'creatureFed', target: 30, reward: 190 },
+  { id: 'w_offering10',   desc: 'Fais 10 Offrandes',            event: 'offering', target: 10, reward: 260 },
+  { id: 'w_power60',      desc: 'Active 60 pouvoirs de créature', event: 'powerActivated', target: 60, reward: 140, diamonds: 3 },
   // 5 œufs et non 30+ : même raison que les quotidiens, c'est le rythme
   // de fin de partie (~1,7 œuf/jour, soit 12/semaine) qui fixe le
   // plafond réaliste, pas celui du début.
-  { id: 'w_hatch5',       desc: 'Fais éclore 5 œufs',              event: 'eggHatched', target: 5, reward: 1050 },
-  { id: 'w_hatchVideo12', desc: "Regarde 12 vidéos d'accélération", event: 'hatchVideo', target: 12, reward: 825 },
-  { id: 'w_hatchTap3600', desc: "Gagne 3 600 secondes d'éclosion en tapant", event: 'hatchSecondsSaved', target: 3600, reward: 600, diamonds: 3 },
-  { id: 'w_stars20',   desc: 'Gagne 20 étoiles en Aventure',            event: 'starsEarned',    target: 20, reward: 975 },
-  { id: 'w_perfect6',  desc: 'Termine 6 niveaux avec 3 étoiles',        event: 'threeStarLevel', target: 6,  reward: 1050 },
+  { id: 'w_hatch5',       desc: 'Fais éclore 5 œufs',              event: 'eggHatched', target: 5, reward: 260 },
+  { id: 'w_hatchVideo12', desc: "Regarde 12 vidéos d'accélération", event: 'hatchVideo', target: 12, reward: 205 },
+  { id: 'w_hatchTap3600', desc: "Gagne 3 600 secondes d'éclosion en tapant", event: 'hatchSecondsSaved', target: 3600, reward: 150, diamonds: 3 },
+  { id: 'w_stars20',   desc: 'Gagne 20 étoiles en Aventure',            event: 'starsEarned',    target: 20, reward: 245 },
+  { id: 'w_perfect6',  desc: 'Termine 6 niveaux avec 3 étoiles',        event: 'threeStarLevel', target: 6,  reward: 260 },
 ];
 
 // 6 par semaine (au lieu de 3) : sur 10 défis disponibles, en tirer 6
@@ -245,7 +248,15 @@ export function weeklyQuestDef(questId) {
 // La progression se LIT dans lifetimeStats, jamais stockée en double.
 // `mode: 'max'` pour un RECORD et non un cumul (niveau atteint en
 // Aventure), alimenté par trackMax.
-export const ACHIEVEMENT_TIER_REWARDS = [150, 400, 1000, 2500, 6000];
+// ⚠️ ÷10 le 24/09 (était 150 / 400 / 1 000 / 2 500 / 6 000). L'auteur : « en
+// validant tous les succès vers la fin de l'A0, on récupérait à peu près
+// 8 000 Griffes — largement trop cheaté ». MESURÉ : les paliers 1-2 des 13
+// succès tombent tous pendant l'A0, soit 13 × 550 = 7 150 Griffes ≈ 360
+// combats d'Aventure (≈ 72 h d'énergie), alors que les montées de niveau
+// sont calées sur le revenu du COMBAT (commune au niveau 25 ≈ 270
+// Griffes). Désormais ≈ 715 Griffes sur l'A0 (≈ 7 runes, ≈ 36 combats).
+// Les diamants des succès ne changent pas.
+export const ACHIEVEMENT_TIER_REWARDS = [15, 40, 100, 250, 600];
 // Diamants par palier de succès, versés UNE SEULE FOIS chacun.
 export const ACHIEVEMENT_TIER_DIAMONDS = [2, 5, 10, 20, 40];
 export function achievementDiamonds(tierIndex) {

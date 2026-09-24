@@ -43,6 +43,7 @@ const F = {
   doc: path.join(RACINE, 'DEFIS_PARADOX.md'),
   combat: path.join(RACINE, 'src/games/clicker/combatLogic.js'),
   combatEcran: path.join(RACINE, 'src/screens/games/CombatScreen.js'),
+  daily: path.join(RACINE, 'src/games/clicker/dailyLogic.js'),
 };
 
 // ---- Outils pour viser un défi par son identifiant ------------------
@@ -156,6 +157,8 @@ const SABOTAGES = [
     remplace('if (c) r[id] = Math.max(r[id] || 0, now + rechargePouvoirMs(c));', 'if (c) r[id] = Math.max(r[id] || 0, now);')],
   ['auditRechargeDeck', F.ecran, "la règle existe mais l'écran ne l'applique plus au deck",
     remplace('const r = rechargesApresChangementDeck(rechargesRef.current, avant, deck, Date.now());', 'const r = rechargesRef.current;')],
+  ['auditGriffesBonus', F.daily, "les succès remis à 150 / 400 / 1 000… (les 8 000 Griffes de l'A0 signalées par l'auteur)",
+    remplace('export const ACHIEVEMENT_TIER_REWARDS = [15, 40, 100, 250, 600];', 'export const ACHIEVEMENT_TIER_REWARDS = [150, 400, 1000, 2500, 6000];')],
   ['auditExhaustif', F.defis, "un libellé cassé dans un vrai défi (l'outil testait les anciens modèles : vert quand même, 24/09)",
     surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, (b) => b.replace('label: t => `', 'label: t => `undefined '))],
   ['auditPoigneA0', F.clicker, "Poigne remise à 1 399 : 1/11 du prix du Pacte pour le même +1 (le « cheat » du 21/09)",

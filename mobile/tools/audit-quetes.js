@@ -3267,3 +3267,23 @@ function auditRechargeDeck() {
   return fautes;
 }
 module.exports.auditRechargeDeck = auditRechargeDeck;
+
+// ---- Les Griffes bonus ne doublent pas le revenu du combat (24/09) ----
+//
+// Les montées de niveau des créatures sont payées en Griffes, calées sur
+// le revenu du COMBAT (limité par l'énergie). L'auteur : « 8 000 Griffes en
+// validant les succès de l'A0, largement trop cheaté ». Ce contrôle garde
+// les bonus sous leurs plafonds mesurés : paliers 1-2 des succès (tous
+// atteints dès l'A0) ≤ 1 000 Griffes au total ; un hebdo ≤ 300 ; un
+// quotidien ≤ 100.
+function auditGriffesBonus() {
+  const D = load('dailyLogic');
+  const fautes = [];
+  const r = D.ACHIEVEMENT_TIER_REWARDS;
+  const a0 = D.ACHIEVEMENTS.length * (r[0] + r[1]);
+  if (a0 > 1000) fautes.push({ probleme: 'succès de l\'A0 : ' + a0 + ' Griffes (plafond 1 000)' });
+  D.WEEKLY_QUEST_POOL.filter((q) => q.reward > 300).forEach((q) => fautes.push({ hebdo: q.id, griffes: q.reward }));
+  (D.DAILY_QUEST_POOL || []).filter((q) => q.reward > 100).forEach((q) => fautes.push({ quotidien: q.id, griffes: q.reward }));
+  return fautes;
+}
+module.exports.auditGriffesBonus = auditGriffesBonus;

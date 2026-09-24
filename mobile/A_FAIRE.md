@@ -5,7 +5,6 @@
 > Une ligne par demande, avec la date. On raye quand c'est fait.
 
 ## Équilibrage
-- [ ] 21/09 — **Griffes** : les défis en donnent beaucoup trop, à optimiser.
 - [ ] 24/09 — **Coûts de base des paliers 7 à 10** : prix effectifs croissants (3 k → 8,4 M), mais la dépense par +1 tap n'est pas monotone (42 k à l'A3, 16-21 k aux A4-A5). Poids 0,1-0,5 % du seuil au niveau 5 : faible. Règle « prix ∝ bonus », à faire seulement si tu le veux.
 
 ## Tests de l'auteur (« une autre fois »)
@@ -28,3 +27,4 @@
 - [x] 24/09 — **Poigne Ancienne** recalculée : « bien de pouvoir la up à A0, mais pas trop cheaté ». 1er niveau = moitié du Pacte 10→11, ×1,45 : 8 niveaux à l'A0, rythme inchangé.
 - [x] 21/09 — Gardien : se cale sur les 3 meilleures créatures au début de chaque œuf (gagne ~1 fois sur 3, mesuré 17-39 %), attaques de zone 1 fois sur 4, puissance affichée avant le combat et dans l'Aventure ; œuf 2 inchangé. Fait le 24/09.
 - [x] 21/09 — Pouvoirs par le deck : appui = la créature apparaît autour de l'œuf, 2e appui = pouvoir, appui long = changer de créature ; recharge par rareté (commune 1 min … mythique 4 min 30) ; compte à rebours sur l'œuf ; plus de bulle. Fait le 24/09.
+- [x] 21/09 — Griffes : succès ÷10 (15/40/100/250/600 : l'A0 donnait 7 150 Griffes ≈ 360 combats, désormais 715), hebdos ÷4 (≈ 1 200/semaine, 43 % du revenu du combat), quotidiens inchangés ; contrôle `auditGriffesBonus`. Fait le 24/09.
