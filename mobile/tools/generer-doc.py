@@ -6,7 +6,12 @@
 import os, re, subprocess, sys
 RACINE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 env = dict(os.environ); env.setdefault('NODE_PATH', '/home/claude/auditenv/node_modules'); env['NB_OEUFS'] = '42'
-src = subprocess.run(['node', os.path.join(RACINE, 'mobile/tools/liste.js')], capture_output=True, text=True, env=env, cwd=RACINE).stdout
+r = subprocess.run(['node', os.path.join(RACINE, 'mobile/tools/liste.js')], capture_output=True, text=True, env=env, cwd=RACINE)
+src = r.stdout
+# ⚠️ Jamais un document vide en silence : le 24/09, un document de 20
+# lignes a été écrit et POUSSÉ avec un contrôle rouge.
+if r.returncode != 0 or src.count('GROUPE') < 6:
+    sys.stderr.write('liste.js a échoué ou n\'a rien rendu :\n' + r.stderr[-800:] + '\n'); sys.exit(1)
 T = 8
 out = ['# Défis Paradox — la liste\n', "> 🔴 **Rouge = défis d'ACHAT.**  🟢 **Vert = défis d'AVENTURE.**\n",
        "_Document **vérifié contre le jeu** par `auditDocConforme`._\n",
