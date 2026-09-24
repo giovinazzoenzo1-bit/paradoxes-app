@@ -49,6 +49,9 @@ import {
   shouldSpawn,
   pickFromDeck,
   powerForCreature,
+  pouvoirPret,
+  restantPouvoirMs,
+  rechargesApresActivation,
   SPAWN_INTERVAL_SEC,
   SPAWN_VISIBLE_SEC,
   critChance,
@@ -682,6 +685,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
+  // Pouvoirs par le deck (passe 4) : { [idCréature]: horodatage où son
+  // pouvoir redevient prêt }. Sauvegardé ; la recharge court hors ligne.
+  const [recharges, setRecharges] = useState({});
+  const rechargesRef = useRef({});
+  rechargesRef.current = recharges;
+  // Un rendu par seconde tant qu'une recharge court (comptes à rebours).
+  const [, setHorloge] = useState(0);
+  useEffect(() => {
+    if (!Object.values(recharges || {}).some((t) => t > Date.now())) return undefined;
+    const id = setInterval(() => {
+      setHorloge(Date.now());
+      if (!Object.values(rechargesRef.current || {}).some((t) => t > Date.now())) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [recharges]);
   const [pendingDiscount, setPendingDiscount] = useState(null); // {percent, name} — consommé au prochain achat
   const [critLevel, setCritLevel] = useState(0);
   // Dégâts critiques : amélioration SÉPARÉE de la Faveur des Esprits,
@@ -1068,6 +1086,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           });
           setOwned(dedupedOwned);
           setDeck((saved.deck || [null, null, null]).map((id) => (id ? migrateCreatureId(id) : id)));
+          setRecharges(saved.recharges && typeof saved.recharges === 'object' ? saved.recharges : {});
           setCritLevel(saved.critLevel || 0);
           setCritDamageLevel(saved.critDamageLevel || 0);
           // Migration douce : l'ancien format était un tableau d'ids
@@ -1416,6 +1435,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     tapPower: tapPowerRef.current,
     owned: ownedRef.current,
     deck: deckRef.current,
+    recharges: rechargesRef.current,
     critLevel: critLevelRef.current,
     critDamageLevel: critDamageLevelRef.current,
     tapUpgrades: tapUpgradesRef.current,
@@ -1574,17 +1594,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
       if (spawnedCreatureRef.current && now > spawnedCreatureRef.current.expiresAt) {
         setSpawnedCreature(null);
-      } else if (!spawnedCreatureRef.current && viewRef.current === 'tap' && shouldSpawn(lastSpawnTimeRef.current, now)) {
-        const picked = pickFromDeck(deckRef.current);
-        if (picked) {
-          lastSpawnTimeRef.current = now;
-          const pos = randomRingPosition();
-          setSpawnedCreature({ creature: picked, expiresAt: now + SPAWN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
-        }
-        // Deck vide : on ne met PAS à jour lastSpawnTimeRef, pour qu'une
-        // apparition devienne possible dès qu'une créature est ajoutée au
-        // deck, sans devoir attendre un cycle complet de plus.
       }
+      // ⚠️ Passe 4 (24/09) : plus d'apparition automatique toutes les 60 s.
+      // Le DECK remplace la bulle (décision de l'auteur, 21/09) : la
+      // créature apparaît quand le joueur appuie sur elle (pressDeckSlot).
 
       if (activePowerRef.current && now > activePowerRef.current.expiresAt) {
         setActivePower(null);
@@ -1927,10 +1940,58 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     resolveHatch('incubator');
   };
 
+  // ---- Pouvoirs par le deck (passe 4, 24/09) ----
+  // Appui sur une créature du deck : 1er appui, elle apparaît autour de
+  // l'œuf ; 2e appui (sur elle, ou de nouveau sur le deck), son pouvoir
+  // s'active et sa recharge démarre. Appui LONG : changer de créature —
+  // retour de l'auteur : « avant, pour changer de deck, il fallait appuyer
+  // sur une des créatures du deck » ; l'appui simple sert désormais au
+  // pouvoir. Place vide : l'appui simple ouvre le choix.
+  const pressDeckSlot = (i) => {
+    const id = deckRef.current[i];
+    const creature = id ? CREATURES.find((c) => c.id === id) : null;
+    if (!creature) { setPickerSlot(i); return; }
+    const now = Date.now();
+    if (!pouvoirPret(rechargesRef.current, id, now)) {
+      spawnPopup(`⏳ ${minSec(restantPouvoirMs(rechargesRef.current, id, now))}`, 110, 60);
+      return;
+    }
+    const deja = spawnedCreatureRef.current;
+    if (deja && deja.fromDeck && deja.creature.id === id) { claimPower(); return; }
+    const pos = randomRingPosition();
+    const invoquee = { creature, expiresAt: Infinity, leftPct: pos.leftPct, topPct: pos.topPct, fromDeck: true };
+    spawnedCreatureRef.current = invoquee;
+    setSpawnedCreature(invoquee);
+  };
+  // Compte à rebours SUR l'œuf : « ⚡ Pouvoir prêt » dès qu'une créature du
+  // deck peut être invoquée, sinon le temps avant la prochaine.
+  const badgePouvoir = () => {
+    const ids = (deck || []).filter(Boolean);
+    if (!ids.length) return null;
+    const now = Date.now();
+    if (ids.some((id) => pouvoirPret(recharges, id, now))) return '⚡ Pouvoir prêt';
+    return `⚡ ${minSec(Math.min(...ids.map((id) => restantPouvoirMs(recharges, id, now))))}`;
+  };
+
   const claimPower = () => {
-    trackEvent('powerActivated', 1);
     const spawned = spawnedCreatureRef.current;
     if (!spawned) return;
+    // Un seul pouvoir actif à la fois (comme la bulle) : la créature reste
+    // autour de l'œuf, on l'active quand le pouvoir en cours se termine.
+    const now = Date.now();
+    if (activePowerRef.current && now <= activePowerRef.current.expiresAt) {
+      spawnPopup('⚡ Pouvoir déjà actif', 110, 60);
+      return;
+    }
+    trackEvent('powerActivated', 1);
+    if (spawned.fromDeck) {
+      // Références mises à jour TOUT DE SUITE : un double appui rapide ne
+      // doit pas activer deux fois le même pouvoir avant le rendu.
+      const nv = rechargesApresActivation(rechargesRef.current, spawned.creature, now);
+      rechargesRef.current = nv;
+      setRecharges(nv);
+    }
+    spawnedCreatureRef.current = null;
     const power = powerForCreature(spawned.creature, tapPowerRef.current);
 
     if (power.effectType === 'discount_next') {
@@ -1941,7 +2002,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     } else {
       // coins_burst et passive_boost passent tous les deux par le buff actif
       // (coins_burst donne aussi un bonus immédiat en plus du multiplicateur de tap).
-      setActivePower({ ...power, expiresAt: Date.now() + power.durationSec * 1000 });
+      const actif = { ...power, expiresAt: Date.now() + power.durationSec * 1000 };
+      activePowerRef.current = actif;
+      setActivePower(actif);
       if (power.bonusCoins > 0) {
         const finalBonus = Math.round(gainCoins(power.bonusCoins));
         spawnPopup(`+${finalBonus}`, 110, 60);
@@ -3534,7 +3597,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               style={styles.deckFrame}
               resizeMode="stretch"
             >
-              <DeckRow deck={deck} owned={owned} onSlotPress={setPickerSlot} />
+              <DeckRow deck={deck} owned={owned} onSlotPress={pressDeckSlot} onSlotLongPress={setPickerSlot} recharges={recharges} />
             </ImageBackground>
 
             <View style={styles.tapZone}>
@@ -3595,6 +3658,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               {/* Bulles de pouvoir : toutes FRÈRES du bouton tapable, pas
                   enfants — elles captent leur propre appui sans jamais
                   entrer en conflit avec le tap de l'œuf en dessous. */}
+              {/* Compte à rebours du prochain pouvoir, SUR l'œuf (passe 4). */}
+              {badgePouvoir() ? (
+                <View style={styles.eggPowerBadge} pointerEvents="none">
+                  <Text style={styles.eggPowerBadgeText}>{badgePouvoir()}</Text>
+                </View>
+              ) : null}
               {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
     
 
@@ -4194,7 +4263,14 @@ const DECK_SLOT_GAP_PX = 19; // ~3mm
 const DECK_SLOT_CENTER_GAP_PCT = ((DECK_SLOT_DIAMETER_PX + DECK_SLOT_GAP_PX) / DECK_FRAME_W_PX) * 100;
 const DECK_SLOT_X_PCT = [50 - DECK_SLOT_CENTER_GAP_PCT, 50, 50 + DECK_SLOT_CENTER_GAP_PCT];
 
-function DeckRow({ deck, owned, onSlotPress }) {
+// « 1:05 » à partir d'une durée en millisecondes.
+function minSec(ms) {
+  const s = Math.ceil((ms || 0) / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function DeckRow({ deck, owned, onSlotPress, onSlotLongPress, recharges }) {
+  const maintenant = Date.now();
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
 
@@ -4213,12 +4289,19 @@ function DeckRow({ deck, owned, onSlotPress }) {
               creature && { borderColor: RARITY_COLOR[creature.rarity] },
             ]}
             onPress={() => onSlotPress(i)}
+            onLongPress={() => (onSlotLongPress ? onSlotLongPress(i) : onSlotPress(i))}
+            delayLongPress={350}
           >
             {display ? (
               <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={26} emojiStyle={styles.deckSlotEmoji} />
             ) : (
               <Text style={styles.deckSlotEmpty}>🥚</Text>
             )}
+            {creature && recharges && !pouvoirPret(recharges, id, maintenant) ? (
+              <View style={styles.deckSlotRecharge} pointerEvents="none">
+                <Text style={styles.deckSlotRechargeText}>{minSec(restantPouvoirMs(recharges, id, maintenant))}</Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         );
       })}
@@ -5081,6 +5164,12 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 }
 
 const styles = StyleSheet.create({
+  deckSlotRecharge: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  deckSlotRechargeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  eggPowerBadge: { position: 'absolute', top: 4, alignSelf: 'center', zIndex: 6, backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
+  eggPowerBadgeText: { color: '#FFE9A8', fontSize: 12, fontWeight: '800' },
   resultatGardienFond: { zIndex: 1000, elevation: 1000, justifyContent: 'center', alignItems: 'center' },
   resultatGardienCarte: { width: '82%', maxWidth: 360, backgroundColor: '#1E1633', borderRadius: 18, padding: 20,
     alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,215,120,0.7)' },

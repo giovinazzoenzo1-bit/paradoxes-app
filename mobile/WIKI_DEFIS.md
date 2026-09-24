@@ -419,7 +419,9 @@ hauts aux dernières Ascensions.
 défi valait 10 et le texte disait encore « 29 000 » : le joueur aurait
 lu un défi impossible pour un défi à sa portée.
 
-### ⚡ PROCHAIN CHANTIER — les pouvoirs, idée de l'auteur (21/09)
+### ⚡ FAIT (24/09, passe 4) — les pouvoirs par le deck, idée de l'auteur (21/09)
+
+Réglages retenus : recharge PAR CRÉATURE (commune 1 min, peu commune 1 min 20, rare 1 min 50, épique 2 min 30, légendaire 3 min 20, mythique 4 min 30), horodatée (court hors ligne) ; un seul pouvoir actif à la fois ; APPUI LONG sur une créature du deck pour la changer. Le texte d'origine suit.
 
 « Tu vas ajouter le compteur sur l'œuf. Quand le joueur appuie une
 première fois sur le deck, la créature apparaît autour de l'œuf ; quand

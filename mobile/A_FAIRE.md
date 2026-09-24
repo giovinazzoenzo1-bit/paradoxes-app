@@ -9,7 +9,6 @@
 - [ ] 24/09 — **Coûts de base des paliers 7 à 10** : prix effectifs croissants (3 k → 8,4 M), mais la dépense par +1 tap n'est pas monotone (42 k à l'A3, 16-21 k aux A4-A5). Poids 0,1-0,5 % du seuil au niveau 5 : faible. Règle « prix ∝ bonus », à faire seulement si tu le veux.
 
 ## Structure
-- [ ] 21/09 — **Pouvoirs par le deck** : compte à rebours sur l'œuf, 1er appui = créature autour de l'œuf, 2e = activation, recharge selon la rareté ; remplace la bulle. Spécification au wiki.
 
 ## Faits (à rayer au fur et à mesure)
 - [x] 21/09 — Combats : jamais plus de 5 par défi, tous les groupes.
@@ -21,3 +20,4 @@
 - [x] 21/09 — Œuf 7 supprimé à l'A0 et à l'A1 (« juste un décalage ») : l'Ascension ferme l'œuf 6, seuil inchangé ; le défi 52 part avec. Fait le 24/09.
 - [x] 24/09 — **Poigne Ancienne** recalculée : « bien de pouvoir la up à A0, mais pas trop cheaté ». 1er niveau = moitié du Pacte 10→11, ×1,45 : 8 niveaux à l'A0, rythme inchangé.
 - [x] 21/09 — Gardien : se cale sur les 3 meilleures créatures au début de chaque œuf (gagne ~1 fois sur 3, mesuré 17-39 %), attaques de zone 1 fois sur 4, puissance affichée avant le combat et dans l'Aventure ; œuf 2 inchangé. Fait le 24/09.
+- [x] 21/09 — Pouvoirs par le deck : appui = la créature apparaît autour de l'œuf, 2e appui = pouvoir, appui long = changer de créature ; recharge par rareté (commune 1 min … mythique 4 min 30) ; compte à rebours sur l'œuf ; plus de bulle. Fait le 24/09.

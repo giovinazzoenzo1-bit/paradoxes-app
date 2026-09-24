@@ -644,7 +644,13 @@ export function powerForCreature(creature, tapPower) {
 // ⚠️ Rythme d'activation : 0,75 à 1,5 pouvoir/min selon le deck (bulle : 1).
 // Un deck riche en mythiques active moins souvent : les défis « Active N
 // fois un pouvoir » des dernières Ascensions y durent plus longtemps.
-export const POWER_COOLDOWN_SEC = { commun: 90, peu_commun: 120, rare: 150, epique: 180, legendaire: 240, mythique: 360 };
+// ⚠️ 24/09, choix de l'auteur : « commune à 1 min, jusqu'à mythique à
+// 4 min 30 » (progression géométrique entre les deux). MESURÉ contre la
+// bulle : 1 commune 0 %, commune + rare +10 %, commune + 2 rares +25 %,
+// 2 rares + épique +16 %, rare + épique + légendaire +3 %, épique +
+// légendaire + mythique −13 %. Plus de pouvoirs en début et milieu de
+// partie : les A0-A1 vont un peu plus vite. 0,9 à 2,1 pouvoirs/min.
+export const POWER_COOLDOWN_SEC = { commun: 60, peu_commun: 80, rare: 110, epique: 150, legendaire: 200, mythique: 270 };
 export function rechargePouvoirMs(creature) {
   return ((creature && POWER_COOLDOWN_SEC[creature.rarity]) || 150) * 1000;
 }

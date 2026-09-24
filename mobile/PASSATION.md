@@ -54,7 +54,8 @@ Demande : « parfait à l'œuf 2, trop facile ensuite ; attaques de zone pas tou
 ## 3 ter. CHANTIER EN COURS — passe 4, les pouvoirs par le deck (24/09)
 Choix validés par l'auteur : une recharge PAR CRÉATURE (liée à la créature) ; tout en horodatage (recharge hors ligne, pouvoir actif qui s'arrête à l'heure même écran quitté) ; les défis « Active N pouvoirs » doivent compter les activations du deck ; un seul pouvoir actif à la fois.
 - **4a FAIT** : `clickerLogic` — `POWER_COOLDOWN_SEC` (commune 90 s … mythique 360 s, MESURÉ contre la bulle : −6 à +10 % sur les decks normaux, −25 % pour épique/légendaire/mythique = le nerf voulu), `pouvoirPret`, `restantPouvoirMs`, `rechargesApresActivation`.
-- **4b À FAIRE** : l'écran — compte à rebours sur l'œuf, 1er appui sur une créature du deck = elle apparaît autour de l'œuf, 2e appui = activation ; retrait de la bulle ; sauvegarde des recharges ; `powerActivated` incrémenté par le deck.
+- **4b FAIT** : recharges au choix de l'auteur (commune 1 min … mythique 4 min 30 ; mesuré +10 à +25 % de gain en début et milieu de partie, −13 % pour les decks à mythique). Appui simple sur une créature du deck = elle apparaît autour de l'œuf (la bulle existante, sans expiration), 2e appui = activation ; APPUI LONG = changer de créature (l'auteur : « avant, pour changer de deck, il fallait appuyer sur une créature du deck ») ; place vide = choix. Plus d'apparition automatique. Compte à rebours sur l'œuf (« ⚡ Pouvoir prêt » / « ⚡ 0:42 ») et sur chaque créature en recharge. Recharges sauvegardées, horodatées. Un seul pouvoir actif à la fois ; références mises à jour tout de suite (pas de double activation). `powerActivated` compté à l'activation réelle seulement (il l'était même sans créature apparue).
+- **Reste** : le test de l'auteur.
 
 ## 4. Les passes restantes (demandées par l'auteur — dans la MÊME conversation, décision du 24/09)
 
