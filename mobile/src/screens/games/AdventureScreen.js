@@ -218,6 +218,7 @@ import {
   ENERGY_REGEN_MS,
   computeEnergyRegen,
   msUntilNextEnergy,
+  puissanceDeck,
 } from '../../games/clicker/combatLogic';
 
 // NOTIFICATIONS RETIREES (03/09).
@@ -331,6 +332,22 @@ function makeRuneId() {
   return `rune_${Date.now()}_${runeIdCounter}`;
 }
 
+
+// Puissance du deck (demande de l'auteur : « évaluer le deck en permanence
+// et le mettre dans le menu Aventure »). Même calcul que la ligne affichée
+// avant le combat de Gardien — sans les runes, que ce combat n'applique pas.
+function puissanceDuDeckAventure(deck, owned) {
+  try {
+    return puissanceDeck((deck || []).filter(Boolean).map((id) => {
+      const own = (owned || []).find((o) => o.id === id);
+      const creature = CREATURES.find((c) => c.id === id);
+      return creature ? { creature, ownedLevel: own ? own.level : 1,
+        evolutionTier: own ? own.evolutionTier || 0 : 0, equippedRunes: [] } : null;
+    }).filter(Boolean));
+  } catch (e) {
+    return 0;
+  }
+}
 
 export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, freeRuneAvailable = false, onFreeRuneUsed, diamonds = 0 }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
@@ -964,6 +981,9 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <Text style={styles.titleBannerText}>EXPLORATION</Text>
         </ImageBackground>
         <View style={styles.headerRight}>
+          <View style={styles.puissancePill}>
+            <Text style={styles.puissancePillText}>🛡️ Puissance {puissanceDuDeckAventure(deck, owned)}</Text>
+          </View>
           <CurrencyCounter currency="griffes" amount={griffes} onPlus={buyGriffesWithDiamonds} />
           <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
             {/* Gemme des Runes + halo cyan généré en code (même principe
@@ -2950,6 +2970,9 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
 }
 
 const styles = StyleSheet.create({
+  puissancePill: { backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4,
+    marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,215,120,0.6)', justifyContent: 'center' },
+  puissancePillText: { color: '#FFE9A8', fontWeight: '700', fontSize: 13 },
   // backgroundColor sert de repère sombre en attendant le fond noir
   // que l'utilisateur va fournir, à poser ici derrière le parchemin.
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },

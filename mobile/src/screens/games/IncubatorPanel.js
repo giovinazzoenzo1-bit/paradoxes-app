@@ -15,7 +15,7 @@ const EGG_IMG = require('../../../assets/egg/egg-2-fissure.png');
 // Le gardien d'œuf (combat à la fin du minuteur) n'est PAS dans cette
 // version : ici l'éclosion donne directement la créature. Il viendra
 // s'intercaler entre « minuteur à zéro » et « éclosion ».
-export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBack, guardianRequired }) {
+export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBack, guardianRequired, guardianInfo = null }) {
   // Ré-affichage chaque seconde. Le minuteur lui-même ne dépend PAS de
   // ce timer : tout est calculé depuis l'horodatage de fin, donc fermer
   // l'appli ne fait rien perdre. Ce tick ne sert qu'à rafraîchir
@@ -140,6 +140,9 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                     <Text style={[styles.hatchBtnText, guardianRequired && styles.hatchBtnGuardianText]}>
                       {guardianRequired ? '⚔️ Affronter le gardien' : '🐣 Faire éclore'}
                     </Text>
+                    {guardianRequired && guardianInfo ? (
+                      <Text style={styles.guardianInfo}>{guardianInfo}</Text>
+                    ) : null}
                   </TouchableOpacity>
                 )
               ) : (
@@ -253,6 +256,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
   hatchBtnGuardianText: { color: '#fff' },
+  guardianInfo: { color: '#FFE9A8', fontSize: 11, marginTop: 3, textAlign: 'center' },
   hatchBtnWaiting: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.border },
   hatchBtnWaitingText: { color: COLORS.muted, fontSize: 13, fontWeight: '800' },
 

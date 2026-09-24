@@ -380,17 +380,31 @@ function graineDuDeck(membres) {
   return h >>> 0;
 }
 
-// ⚠️ REPRODUIT CombatScreen pour ce qui n'est pas partagé : rotation à
-// chaque tour vers la créature vivante suivante (+MANA_PER_TURN à celle
-// qui entre), spéciale à mana pleine sinon la meilleure compétence,
-// 50 % de chances que le Gardien frappe en premier, pas de riposte le
-// tour où il se relève. Renvoie true si le JOUEUR gagne.
-export function simulerCombatGardien(membres, gStats,
-  { tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random } = {}) {
-  const f = (membres || []).filter((m) => m && m.creature).map((m) => {
+// Combattants préparés UNE fois par calibrage : stats, meilleure
+// compétence, spéciale, taps. MESURÉ : les recalculer à chacun des
+// milliers de combats simulés coûtait l'essentiel du temps.
+function preparerCombattants(membres) {
+  return (membres || []).filter((m) => m && m.creature).map((m) => {
     const stats = statsDuMembre(m);
-    return { creature: m.creature, stats, hp: stats.hp, mana: 0, resilienceUsed: false };
+    const skills = m.creature.skills || [];
+    return {
+      creature: m.creature,
+      stats,
+      meilleure: skills.filter((k) => !k.special).sort((a, b) => b.damage - a.damage)[0] || null,
+      speciale: skills.find((k) => k.special) || null,
+      taps: effectiveTapCount(stats.clickSpeed, stats.tapReductionPct || 0),
+    };
   });
+}
+
+// ⚠️ REPRODUIT CombatScreen pour ce qui n'est pas partagé (passage sous
+// empreinte, voir `auditGardienEmpreinte`) : rotation à chaque tour vers
+// la créature vivante suivante (+MANA_PER_TURN à celle qui entre),
+// spéciale à mana pleine sinon la meilleure compétence, 50 % de chances
+// que le Gardien frappe en premier, pas de riposte le tour où il se
+// relève. Renvoie true si le JOUEUR gagne.
+function simulerPrepares(prepares, gStats, tapsParSec, alea) {
+  const f = prepares.map((p) => ({ ...p, hp: p.stats.hp, mana: 0, resilienceUsed: false }));
   if (!f.length) return false;
   let g = { hp: gStats.hp, shield: Math.round(gStats.hp * GUARDIAN_SHIELD_RATIO), phase: 1, maxHp: gStats.hp };
   const suivante = (i) => {
@@ -408,13 +422,11 @@ export function simulerCombatGardien(membres, gStats,
   }
   for (let tour = 0; tour < 500; tour++) {
     const x = f[act];
-    const skills = x.creature.skills || [];
-    const spe = skills.find((k) => k.special && x.mana >= MANA_MAX);
-    const comp = spe || skills.filter((k) => !k.special).sort((a, b) => b.damage - a.damage)[0];
+    const spe = x.speciale && x.mana >= MANA_MAX ? x.speciale : null;
+    const comp = spe || x.meilleure;
     if (!comp) return false;
     if (spe) x.mana -= spe.manaCost || MANA_MAX;
-    const taps = effectiveTapCount(x.stats.clickSpeed, x.stats.tapReductionPct || 0);
-    g = coupSurGardien(g, degatsDuJoueur(comp, x, GUARDIAN_CREATURE, taps / tapsParSec, true));
+    g = coupSurGardien(g, degatsDuJoueur(comp, x, GUARDIAN_CREATURE, x.taps / tapsParSec, true));
     if (g.releve) continue;
     if (g.hp <= 0) return true;
     subir(act);
@@ -424,6 +436,11 @@ export function simulerCombatGardien(membres, gStats,
     f[act].mana = Math.min(MANA_MAX, f[act].mana + MANA_PER_TURN);
   }
   return false;
+}
+
+export function simulerCombatGardien(membres, gStats,
+  { tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random } = {}) {
+  return simulerPrepares(preparerCombattants(membres), gStats, tapsParSec, alea);
 }
 
 export function guardianStatsScaled(base, k) {
@@ -444,11 +461,12 @@ export function calibrerGardien(membres, baseStats, { essais = 400, cible = GUAR
   const p0 = puissanceGardien(baseStats, n);
   const depart = p0 > 0 ? puissanceDeck(membres) / p0 : 1;
   const graine = graineDuDeck(membres);
+  const prepares = preparerCombattants(membres);
   const tauxGardien = (c) => {
     const st = { ...guardianStatsScaled(baseStats, depart), attack: Math.max(1, baseStats.attack * depart * c) };
     const alea = aleaGraine(graine);
     let g = 0;
-    for (let i = 0; i < essais; i++) if (!simulerCombatGardien(membres, st, { alea })) g++;
+    for (let i = 0; i < essais; i++) if (!simulerPrepares(prepares, st, PUISSANCE_TAPS_PAR_SEC, alea)) g++;
     return g / essais;
   };
   let lo = Math.log(GUARDIAN_CORRECTION_MIN), hi = Math.log(GUARDIAN_CORRECTION_MAX);

@@ -3,7 +3,7 @@
 // niveau et évoluer. Revenu passif hors-ligne inclus (plafonné à 4h).
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
@@ -118,6 +118,9 @@ import { envoyerRapport } from '../../signalement';
 import {
   combatStatsForCreatureTyped,
   GUARDIAN_CREATURE,
+  puissanceDeck,
+  calibrageGardienSur,
+  guardianStats,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -135,6 +138,7 @@ import {
   VIDEO_REDUCTION_RATIO, MAX_VIDEOS_PER_EGG,
   guardianRequired, guardianLevelForEgg, guardianReady, guardianRetryRemainingMs,
   applyGuardianDefeat,
+  GUARDIAN_BASE_LEVEL,
 } from '../../games/clicker/incubatorLogic';
 import CombatScreen from './CombatScreen';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -651,7 +655,24 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [selectedCreature, setSelectedCreature] = useState(null);
   const [popups, setPopups] = useState([]);
   const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, leftPct, topPct}
-  const [deck, setDeck] = useState([null, null, null]); // 3 emplacements, id de créature ou null
+  const [deck, setDeck] = useState([null, null, null]);
+  // ---- Le Gardien calé sur le deck (24/09) ----
+  // Puissance du deck affichée avant le combat (et dans l'Aventure).
+  const puissanceDuDeck = useMemo(() => puissanceDeck(membresDuDeck(deck, owned)), [deck, owned]);
+  // Œufs commencés avant la mise à jour : la photo manquante est prise dès
+  // que la collection est chargée (le Gardien se calera sur ce deck-là).
+  useEffect(() => {
+    if (!owned.length) return;
+    if (mainEgg && !mainEgg.gardienPhoto) setMainEgg((p) => (p && !p.gardienPhoto ? avecPhotoGardien(p, owned) : p));
+    if (incubatingEgg && !incubatingEgg.gardienPhoto) setIncubatingEgg((p) => (p && !p.gardienPhoto ? avecPhotoGardien(p, owned) : p));
+  }, [mainEgg, incubatingEgg, owned]);
+  // « Gardien X · Ton deck Y » : ce que le joueur lit avant de combattre
+  // (demande de l'auteur : voir s'il doit améliorer ses créatures).
+  const ligneGardien = (egg) => {
+    if (owned.length + 1 < 3 || !egg || !egg.gardienPhoto) return null;
+    const g = egg.gardienPhoto.puissance;
+    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck}${puissanceDuDeck < g ? ' — améliore tes créatures' : ''}`;
+  }; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
@@ -1787,7 +1808,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       return;
     }
     setIncubatorOpen(false);
-    setGuardianFight({ source, level: guardianLevelForEgg(eggNumber), eggNumber });
+    // Calibrage au LANCEMENT (≈ 0,2 s) sur la photo du début de l'œuf.
+    const oeufEnJeu = source === 'main' ? mainEggRef.current : incubatingEgg;
+    setGuardianFight({ source, level: guardianLevelForEgg(eggNumber), eggNumber,
+      calibrage: calibrageDuCombat(oeufEnJeu, ownedRef.current, eggNumber) });
   };
 
   // Fin du combat. Victoire : l'œuf éclot. Défaite : l'œuf n'est JAMAIS
@@ -1861,7 +1885,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const startEggIncubation = () => {
     if (incubatingEgg) return;
-    setIncubatingEgg(startIncubation(owned.length));
+    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned));
     startNewEggCycle();
     setIncubatorOpen(true);
   };
@@ -2888,7 +2912,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // Le minuteur naît en même temps que la phase, et UNIQUEMENT
         // ici : le créer dans un effet séparé le ferait repartir de zéro
         // à chaque rendu tant que la phase reste 'hatching'.
-        setMainEgg((prev) => prev || startIncubation(ownedRef.current.length));
+        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current));
         return 'hatching';
       });
     }
@@ -3205,6 +3229,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         team={team}
         level={guardianFight.level}
         eggNumber={guardianFight.eggNumber || 0}
+        calibrage={guardianFight.calibrage || null}
         onFinish={finishGuardianFight}
       />
     );
@@ -3638,7 +3663,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 ) : guardianRequired(owned.length) ? (
                   <TouchableOpacity style={styles.guardianCta} onPress={() => resolveHatch('main')}>
                     <Text style={styles.guardianCtaText}>⚔️ Affronter le gardien</Text>
-                    <Text style={styles.guardianCtaSub}>Bats-le pour faire éclore l'œuf</Text>
+                    <Text style={styles.guardianCtaSub}>{ligneGardien(mainEgg) || "Bats-le pour faire éclore l'œuf"}</Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity style={[styles.guardianCta, styles.hatchCta]} onPress={() => resolveHatch('main')}>
@@ -3806,6 +3831,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         <IncubatorPanel
           egg={incubatingEgg}
           guardianRequired={guardianRequired(owned.length)}
+          guardianInfo={ligneGardien(incubatingEgg)}
           onTap={incubatorTap}
           onWatchVideo={incubatorVideo}
           onHatch={hatchIncubatedEgg}
@@ -4905,7 +4931,50 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
 // CombatScreen n'en gère pas lui-même (il n'était rendu que depuis
 // l'Aventure, qui verrouille déjà pour tout le mode). Le nettoyage
 // remet le portrait, car on revient ici sur l'écran du Clicker.
-function GuardianBattle({ team, level, onFinish, eggNumber = 0 }) {
+// ---- Le Gardien calé sur le deck (24/09) ----
+// Membres au format du combat, depuis des ids et la collection.
+function membresDuDeck(ids, ownedList) {
+  return (ids || []).filter(Boolean).map((id) => {
+    const own = (ownedList || []).find((o) => o.id === id);
+    const creature = CREATURES.find((c) => c.id === id);
+    return creature ? { creature, ownedLevel: own ? own.level : 1,
+      evolutionTier: own ? own.evolutionTier || 0 : 0, equippedRunes: [] } : null;
+  }).filter(Boolean);
+}
+// Photo prise au DÉBUT de chaque œuf : les 3 meilleures créatures
+// possédées (niveau, évolution) et leur puissance. Le Gardien s'y cale :
+// améliorer ses créatures PENDANT l'incubation fait pencher le combat,
+// alléger son deck exprès n'y change rien.
+function photoGardien(ownedList) {
+  const membres = membresDuDeck((ownedList || []).map((o) => o.id), ownedList)
+    .map((m) => ({ m, p: puissanceDeck([m]) })).sort((a, b) => b.p - a.p).slice(0, 3).map((x) => x.m);
+  return { membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
+    puissance: puissanceDeck(membres) };
+}
+function avecPhotoGardien(egg, ownedList) {
+  if (!egg) return egg;
+  try { return { ...egg, gardienPhoto: photoGardien(ownedList) }; } catch (e) { return egg; }
+}
+function membresDeLaPhoto(photo) {
+  return ((photo && photo.membres) || []).map((x) => {
+    const creature = CREATURES.find((c) => c.id === x.id);
+    return creature ? { creature, ownedLevel: x.level || 1, evolutionTier: x.evo || 0, equippedRunes: [] } : null;
+  }).filter(Boolean);
+}
+// Calibrage au lancement du combat : même photo et même œuf = même
+// Gardien à chaque essai (tirages à graine). Œuf 2 : l'ancien Gardien,
+// « parfait » pour l'auteur. Jamais d'exception : null = ancien Gardien.
+function calibrageDuCombat(egg, ownedList, eggNumber) {
+  if (eggNumber < 3) return null;
+  try {
+    const membres = membresDeLaPhoto((egg && egg.gardienPhoto) || photoGardien(ownedList));
+    if (!membres.length) return null;
+    return calibrageGardienSur(membres, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber));
+  } catch (e) {
+    return null;
+  }
+}
+function GuardianBattle({ team, level, onFinish, eggNumber = 0, calibrage = null }) {
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
     return () => {
@@ -4927,6 +4996,7 @@ function GuardianBattle({ team, level, onFinish, eggNumber = 0 }) {
       // l'information qui compte.
       skipResultScreen
       guardianEggNumber={eggNumber}
+      guardianCalibrage={calibrage}
     />
   );
 }

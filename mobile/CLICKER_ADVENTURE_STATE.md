@@ -239,6 +239,25 @@ changé dans ce fichier exige le bump : sinon l'œuf en cours garde
 l'ancienne cible, qui peut être devenue impossible à vie (24/09 :
 « Achète 10 niveaux de Poigne » valait 45 000 % du seuil).
 
+### Le Gardien se cale sur le deck — par SIMULATION (24/09)
+Demande : « parfait à l'œuf 2, trop facile après ; qu'il gagne 1/3 pour
+que les joueurs doivent améliorer leurs créatures ». Mesuré avant : il ne
+gagnait JAMAIS (œufs 2 à 40). `combatLogic` : photo des 3 meilleures
+créatures au début de l'œuf, calibrage au lancement (`calibrerGardien`),
+attaques de zone. Mesuré après : 17 à 39 % sur 33 decks.
+
+⚠️ Écarté, mesuré : une FORMULE (25 à 78 % à puissance égale), la
+formule de l'auteur (PV + attaque, Gardien copiant le deck : 0 à 47 %,
+moyenne 14 %), corriger PV et attaque ensemble (le taux saute d'un tour
+entier), le milieu de dichotomie sur des coups de 2-3 PV. On corrige
+l'ATTAQUE seule, et on garde le côté facile d'un palier.
+
+⚠️⚠️ UNE SEULE SOURCE DE RÈGLES : coup, riposte, zone, encaissement sont
+dans `combatLogic` et CombatScreen les appelle. Le reste (premier coup,
+rotation, mana) est entre les marqueurs « RÈGLES DU COMBAT » :
+`auditGardienEmpreinte` refuse le push s'il change. Ne mettre à jour
+`EMPREINTE_COMBAT` qu'APRÈS avoir revérifié `simulerCombatGardien`.
+
 ### Le nombre d'œufs par Ascension est LU, jamais `× 7` (24/09)
 `OEUFS_PAR_GROUPE = [6, 6, 7, 7, 7, 7]` depuis la suppression de l'œuf 7
 de l'A0 et de l'A1. Toute position passe par `debutGroupe`,
