@@ -20,3 +20,4 @@
 - [x] 21/09 — Simulateur : 9 pauses hors ligne de 1 h 15 par Ascension, réparties sur le groupe (`H.pausesParGroupe`). Fait le 24/09.
 - [x] 24/09 — Passe 2, complément : 40 cibles d'état (passif, de côté) recalculées sur la nouvelle économie ; contrôle `auditCoteEtalon` ajouté.
 - [x] 21/09 — Œuf 7 supprimé à l'A0 et à l'A1 (« juste un décalage ») : l'Ascension ferme l'œuf 6, seuil inchangé ; le défi 52 part avec. Fait le 24/09.
+- [x] 24/09 — **Poigne Ancienne** recalculée : « bien de pouvoir la up à A0, mais pas trop cheaté ». 1er niveau = moitié du Pacte 10→11, ×1,45 : 8 niveaux à l'A0, rythme inchangé.

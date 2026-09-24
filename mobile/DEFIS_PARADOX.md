@@ -168,7 +168,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 - 92. 💢 Achète 15 niveaux de Dégâts critiques
 + 93. 🗡️ Gagne 5 combats en Aventure
   94. 🕯️ Fais une Offrande
-- 95. 🪄 Achète 2 niveaux de Poigne Ancienne
+- 95. 🪄 Achète 4 niveaux de Poigne Ancienne
   96. 🔥 Enchaîne 400 taps sans pause
   97. 💰 Mets 110 000 pièces de côté
   98. 🌟 Fais ta 2e Ascension

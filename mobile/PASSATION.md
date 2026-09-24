@@ -61,6 +61,8 @@ Mesuré à l'A0, au rythme de l'auteur (6,7 taps/s, sans pause) : **1 h 55** (6 
 Historique de la demande :
 « L'œuf 7 de l'A0 fout la merde de partout » (défi 52 = 2 achats critiques ≈ 1,3 M ; ascension déjà possible avant). Idem œuf 14 (A1). Passer à 6 œufs par Ascension change la collection (26 créatures → finies pendant l'A4) et l'outil de réordonnancement lit la taille d'œuf dans le fichier, mais `nbOeufs`, `OEUFS_PAR_ASCENSION`, `generer-doc.py` et les contrôles supposent 7. Alternative si refus : plafonner le coût d'un seul défi (< 15 % du seuil).
 
+**Poigne Ancienne recalculée (24/09)** : 1er niveau à l'A0 = moitié du Pacte 10→11 (21,5 k), ×1,45 — 8 niveaux à l'A0, rythme de l'auteur inchangé ; 2e étape A1 2 → 4 ; `auditPoigneA0` + sabotage ; `QUEST_ENGINE_VERSION` 62.
+
 ### Passe 4 — les pouvoirs par le deck
 Décidé : **remplace la bulle**. Compte à rebours sur l'œuf ; 1er appui sur le deck = la créature apparaît autour de l'œuf ; 2e appui = activation ; recharge selon la rareté (proposition mesurée : commun ×2,4 / 60 s, légendaire ×12 / 3 min, mythique ×18 / 5 min). Recommandations : un compte à rebours par créature, pouvoir maintenu si on quitte l'écran, `powerActivated` compte les activations du deck, recharge qui tourne hors ligne. Recalibrer ensuite `facteurJoueurReel`.
 

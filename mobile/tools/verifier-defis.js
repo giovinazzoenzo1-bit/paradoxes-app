@@ -43,6 +43,7 @@ const CONTROLES = [
   ['auditFaisableAuMoment', 'un défi est faisable AU MOMENT où il arrive'],
   ['auditCoteEtalon', 'une cible de côté vaut 94 s de production à son œuf (÷2, ×2)'],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
+  ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],
   ['auditSignalement', 'le signalement marche et le filet de sécurité tient'],
   ['auditLibelleMode', 'le libellé dit ce que le défi mesure (Achète = delta)'],

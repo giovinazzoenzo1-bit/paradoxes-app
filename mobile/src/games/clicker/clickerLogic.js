@@ -1162,8 +1162,18 @@ export function coreUpgradeRequirement(id) {
 // du seuil à ×2,5). Les parts sont quantifiées par la croissance et
 // invariantes à l'ajustement : niveau final 7/8 (A1), 8/9, 9/10, 10/10,
 // 10/10 (A5). Toute modification de `growth` périme ces cibles.
+// ⚠️⚠️ POIGNE ANCIENNE, L'EXCEPTION (24/09). L'auteur : « c'était bien
+// de pouvoir la up à A0, mais il faut que ce soit pas trop cheaté ».
+// À ×2,5 son 1er niveau restait à 3,8 k quand le Pacte 10→11 en coûte 43 :
+// 1/11 du prix pour le même +1, le « cheat » du 21/09 — et on n'en
+// montait plus que 5. MESURÉ sur une grille (prix du niveau 1 × pente) :
+// 1er niveau à l'A0 = la MOITIÉ du Pacte au moment où elle s'ouvre
+// (21,5 k), pente ×1,45. 8 niveaux à l'A0, jamais moins de la moitié du
+// Pacte du même instant, rythme de l'auteur inchangé (6 œufs 102 min
+// contre 101), A1 3,8 h, budget A1 23 %. `cost` = 21 504 / (1,4 × surprime
+// A0) : la surprime lit le seuil de l'A1 — `auditPoigneA0` garde le ratio.
 export const TAP_UPGRADES = [
-  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 1399, growth: 2.5 },
+  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 7973, growth: 1.45 },
   { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2, cost: 2237, growth: 2.5 },
   { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 4, cost: 17330, growth: 2.5 },
   { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 8, cost: 27729, growth: 2.5 },

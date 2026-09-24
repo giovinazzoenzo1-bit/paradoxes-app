@@ -881,7 +881,11 @@ export const QUEST_POOL = [
 // identifiants qui n'existent plus.
 // ⚠️ 61 (24/09) : œuf 7 de l'A0 et de l'A1 supprimé, Ascension en fin
 // d'œuf 6. Les identifiants de ces deux Ascensions changent (e7 -> e6).
-export const QUEST_ENGINE_VERSION = 61;
+// ⚠️ 62 (24/09) : Poigne Ancienne repricée (moitié du Pacte à l'A0,
+// ×1,45) ; sa 2e étape de l'A1 passe de 2 à 4 niveaux, sinon son coût
+// retombait de 63 % sous l'achat précédent. Le fichier des défis n'est
+// pas haché : sans ce bump, un œuf en cours gardait l'ancienne cible.
+export const QUEST_ENGINE_VERSION = 62;
 
 function empreinteDefis() {
   const morceaux = [];

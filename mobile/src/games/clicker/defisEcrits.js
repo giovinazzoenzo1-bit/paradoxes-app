@@ -374,7 +374,7 @@ export const DEFIS_ECRITS = [
       target: 1, mode: 'delta', fige: true,
       label: () => 'Fais une Offrande' },
     { id: 'a1e6_tap', icon: '🪄', metric: 'tapUpgrade:tap1',
-      target: 2, mode: 'delta', fige: true,
+      target: 4, mode: 'delta', fige: true,
       label: t => `Achète ${t} niveau${t > 1 ? 'x' : ''} de Poigne Ancienne` },
     { id: 'a1e6_plusC', icon: '🔥', metric: 'maxTapStreak',
       target: 400, mode: 'absolute', fige: true,

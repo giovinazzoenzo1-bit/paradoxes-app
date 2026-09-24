@@ -489,6 +489,16 @@ déplace l'A1 et l'A0. Trois pièges rencontrés en l'appliquant :
    +15 % de niveaux valait pour 1,45 ; à ×2,5 il possédait 118 % du seuil
    sur un article. L'avance est lue dans `growth` (1,15 → 1,045).
 
+**Poigne Ancienne est l'exception** (24/09, demande de l'auteur : « montable
+à l'A0, pas trop cheatée ») : 1er niveau à l'A0 = moitié du Pacte 10→11,
+×1,45, mesuré sur une grille. 8 niveaux à l'A0 au lieu de 5, rythme
+inchangé. Sa 2e étape de l'A1 passe de 2 à 4 niveaux (coût croissant).
+
+⚠️ **Un réordonnancement peut déplacer des défis d'ÉTAT.** Pour corriger
+un seul coût, il avait envoyé « Atteins 21/s » à l'œuf 1 de l'A1, où le
+passif repart de zéro. Si un seul défi gêne, ajuster SA cible est plus
+sûr que tout réordonner — puis mesurer à tolérance zéro.
+
 Après : tap/clic à l'A2 1 068 (7 886 avant), passif 0 à 14 %. Les
 générateurs restent faibles : chantier suivant, pas celui-ci.
 

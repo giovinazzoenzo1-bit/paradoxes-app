@@ -37,6 +37,7 @@ payée.
 
 | Règle | Depuis |
 |---|---|
+| **Poigne Ancienne, exception au ×2,5** : montable à l'A0 sans être cheatée — son 1er niveau à l'A0 vaut la **moitié du Pacte 10→11** (21,5 k), puis ×1,45. 8 niveaux à l'A0 ; gardé par `auditPoigneA0` | 24/09 |
 | **A0 et A1 : 6 œufs**, l'œuf 7 est supprimé (« juste un décalage ») : l'Ascension ferme l'œuf 6, qui a donc 9 défis ; le seuil ne bouge pas, le reste se farme (~15 min à l'A0). A2 à A5 : 7 œufs. Le nombre d'œufs se LIT dans `OEUFS_PAR_GROUPE`, jamais `× 7` | 24/09 |
 | **Paliers de tap : ×2,5 par niveau** (comme le Pacte, ×2). Un palier plafonne vers le niveau 7-10 : démarreur, pas moteur. Les défis « Achète N niveaux » se calent en **part du seuil** (final 7/8 · 8/9 · 10/9 · 10/10 · 10/10 de l'A1 à l'A5) ; l'ajustement par Ascension est remesuré par dichotomie, puis les **cibles d'état sont recalculées** (passif = 80 % de l'atteignable à l'œuf, de côté = 94 s de production — contrôle `auditCoteEtalon`) | 24/09 |
 | **Jamais deux défis d'ACHAT d'affilée**, y compris d'un œuf au suivant | 20/09 |

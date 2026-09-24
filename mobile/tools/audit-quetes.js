@@ -2333,10 +2333,10 @@ function simulerGroupe(ascension, tapsParSec, options) {
       s.coins += gain; s.totalEarned += gain;
     }
     const r = rev();
-    const options = [{ cout: C.tapPowerCost(s.tapPower), appliquer: (x) => { x.tapPower += 1; } }];
+    const options = [{ quoi: 'pacte', cout: C.tapPowerCost(s.tapPower), appliquer: (x) => { x.tapPower += 1; } }];
     C.AUTOCLICKERS.forEach((g) => {
       const n = (s.autoClickers || {})[g.id] || 0;
-      options.push({ cout: C.autoClickerCost(g, n, a), appliquer: (x) => { x.autoClickers[g.id] = n + 1; } });
+      options.push({ quoi: 'auto:' + g.id, cout: C.autoClickerCost(g, n, a), appliquer: (x) => { x.autoClickers[g.id] = n + 1; } });
     });
     // ⚠️ UN PALIER DE TAP SE DÉBLOQUE. Sans cette garde, le simulateur
     // achetait des paliers verrouillés et rendait le jeu sept fois plus
@@ -2345,7 +2345,7 @@ function simulerGroupe(ascension, tapsParSec, options) {
     C.TAP_UPGRADES.forEach((u, idx) => {
       const n = (s.tapUpgrades || {})[u.id] || 0;
       if (!C.tapUpgradeUnlocked(idx, s.tapPower, s.tapUpgrades || {})) return;
-      options.push({ cout: C.tapUpgradeCost(u, n, a), appliquer: (x) => { x.tapUpgrades[u.id] = n + 1; } });
+      options.push({ quoi: 'tap:' + u.id, cout: C.tapUpgradeCost(u, n, a), appliquer: (x) => { x.tapUpgrades[u.id] = n + 1; } });
     });
     options.forEach((o) => {
       const cp = { ...s, autoClickers: { ...s.autoClickers }, tapUpgrades: { ...s.tapUpgrades } };
@@ -2363,7 +2363,9 @@ function simulerGroupe(ascension, tapsParSec, options) {
     const restant = (seuil - s.totalEarned) / r;
     if (attente >= restant) { t += restant; break; }
     t += attente;
-    jalons.push({ t, production: r, passif: C.passiveRate({
+    // `quoi` et `cout` : le JOURNAL des achats (24/09), pour comparer un
+    // palier au Pacte du même instant. Lecture seule.
+    jalons.push({ t, quoi: v.quoi, cout: v.cout, production: r, passif: C.passiveRate({
       autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
       sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a }) });
     s.coins += r * attente - v.cout;
@@ -3145,3 +3147,16 @@ function auditStructureOeufs() {
   return fautes;
 }
 module.exports.auditStructureOeufs = auditStructureOeufs;
+
+// ---- Poigne Ancienne : montable à l'A0, jamais « cheatée » -----------
+// Règle de l'auteur (24/09) : son 1er niveau à l'A0 vaut la MOITIÉ du
+// Pacte au moment où elle s'ouvre (Pacte 10→11), à ±15 %. Mesuré avant :
+// 1/11. Sa surprime lit le seuil de l'A1, qu'un ajustement remesuré peut
+// déplacer sans toucher à Poigne : ce contrôle le verrait.
+function auditPoigneA0(min = 0.425, max = 0.575) {
+  const P = C.TAP_UPGRADES.find((t) => t.id === 'tap1');
+  if (!P) return [{ probleme: 'Poigne Ancienne introuvable' }];
+  const r = C.tapUpgradeCost(P, 0, 0) / C.tapPowerCost(C.TAP_UPGRADE_FIRST_PACTE_LEVEL);
+  return r >= min && r <= max ? [] : [{ ratio: +r.toFixed(2), attendu: 'la moitié du Pacte' }];
+}
+module.exports.auditPoigneA0 = auditPoigneA0;

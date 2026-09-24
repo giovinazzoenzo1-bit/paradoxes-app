@@ -148,6 +148,8 @@ const SABOTAGES = [
     remplace('export const OEUFS_PAR_GROUPE = [6, 6, 7, 7, 7, 7];', 'export const OEUFS_PAR_GROUPE = [7, 6, 7, 7, 7, 6];')],
   ['auditExhaustif', F.defis, "un libellé cassé dans un vrai défi (l'outil testait les anciens modèles : vert quand même, 24/09)",
     surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, (b) => b.replace('label: t => `', 'label: t => `undefined '))],
+  ['auditPoigneA0', F.clicker, "Poigne remise à 1 399 : 1/11 du prix du Pacte pour le même +1 (le « cheat » du 21/09)",
+    remplace("cost: 7973, growth: 1.45 }", "cost: 1399, growth: 1.45 }")],
   ['auditSignalement', F.index, 'le filet de sécurité plante quand le stockage manque',
     remplace('    // 1. Mémoriser, pour la proposer au prochain lancement.',
       "    require('@react-native-async-storage/async-storage').default.setItem('x', 'y');\n    // 1. Mémoriser, pour la proposer au prochain lancement.")],
