@@ -439,16 +439,16 @@ export function degatsDuJoueur(competence, combattant, cibleCreature, secondes, 
 // valeur null ou 0 = absent.
 export const MANA_DEPART = 2; // sinon, en combat court, aucun sort avant le 2e tour
 export const SORTS = {
-  bouclier:    { nom: 'Bouclier',      icone: '🛡️', cout: 3, type: 'tank' },
-  poison:      { nom: 'Venin',         icone: '☠️', cout: 3, type: 'tank' },
-  provocation: { nom: 'Provocation',   icone: '🔱', cout: 2, type: 'tank' },
-  soin:        { nom: 'Soin',          icone: '💚', cout: 3, type: 'soutien' },
-  boost:       { nom: 'Boost',         icone: '🔥', cout: 2, type: 'soutien' },
-  vitesse:     { nom: 'Vitesse',       icone: '⚡', cout: 3, type: 'soutien', gratuit: true },
-  marque:      { nom: 'Marque',        icone: '🎯', cout: 2, type: 'soutien' },
-  zone:        { nom: 'Zone',          icone: '🌀', cout: 3, type: 'attaquant' },
-  execution:   { nom: 'Exécution',     icone: '🗡️', cout: 2, type: 'attaquant' },
-  pacte:       { nom: 'Pacte de sang', icone: '🩸', cout: 2, type: 'attaquant' },
+  bouclier:    { nom: 'Bouclier',      icone: '🛡️', cout: 3, type: 'tank', desc: '45 % des PV perdus' },
+  poison:      { nom: 'Venin',         icone: '☠️', cout: 3, type: 'tank', desc: '70 % + venin 2 tours' },
+  provocation: { nom: 'Provocation',   icone: '🔱', cout: 2, type: 'tank', desc: 'attire les coups 2 tours' },
+  soin:        { nom: 'Soin',          icone: '💚', cout: 3, type: 'soutien', desc: '30 % des PV perdus' },
+  boost:       { nom: 'Boost',         icone: '🔥', cout: 2, type: 'soutien', desc: '+35 % × 3 attaques' },
+  vitesse:     { nom: 'Vitesse',       icone: '⚡', cout: 3, type: 'soutien', desc: '−35 % de taps · gratuit', gratuit: true },
+  marque:      { nom: 'Marque',        icone: '🎯', cout: 2, type: 'soutien', desc: '+35 % sur 2 coups' },
+  zone:        { nom: 'Zone',          icone: '🌀', cout: 3, type: 'attaquant', desc: '40 % à tous' },
+  execution:   { nom: 'Exécution',     icone: '🗡️', cout: 2, type: 'attaquant', desc: '×2 sous 30 % de PV' },
+  pacte:       { nom: 'Pacte de sang', icone: '🩸', cout: 2, type: 'attaquant', desc: '×2 · coûte 15 % de PV' },
 };
 // Les chiffres, décidés avec l'auteur (24/09) :
 export const EFFETS = {
@@ -568,7 +568,10 @@ export function lancerSort(sortId, allies, lanceur, ennemis, cible) {
 // bouclier et encaissement (Résilience) ; le venin du défenseur
 // empoisonne l'attaquant. `consommer` : false pour les coups 2 et 3 d'une
 // ZONE (un seul boost consommé pour toute la zone).
-export function frapper(attaquant, defenseur, degats, consommer = true) {
+// Les MODIFICATEURS d'un coup seuls (boost et poison de l'attaquant,
+// marque et provocation du défenseur ; consomme boost et marque) — sans
+// bouclier ni PV. Sert au Gardien, dont les PV passent par `coupSurGardien`.
+export function modifierCoup(attaquant, defenseur, degats, consommer = true) {
   const E = EFFETS;
   const ea = etatsDe(attaquant);
   const ed = etatsDe(defenseur);
@@ -585,7 +588,20 @@ export function frapper(attaquant, defenseur, degats, consommer = true) {
     D = avecEtats(D, { marque: ed.marque.coups > 1 ? { ...ed.marque, coups: ed.marque.coups - 1 } : null });
   }
   if (ed.provocation > 0) d *= 1 - E.provocationReduction;
-  d = Math.max(1, Math.round(d));
+  return { attaquant: A, defenseur: D, degats: Math.max(1, Math.round(d)) };
+}
+// L'attaque normale la plus forte d'une créature : ce que frappent les
+// sorts offensifs (zone, exécution, pacte, venin, vitesse).
+export function meilleureAttaque(creature) {
+  return (creature.skills || []).filter((k) => !k.special).sort((a, b) => b.damage - a.damage)[0] || null;
+}
+export function frapper(attaquant, defenseur, degats, consommer = true) {
+  const E = EFFETS;
+  const ed = etatsDe(defenseur);
+  const m = modifierCoup(attaquant, defenseur, degats, consommer);
+  let A = m.attaquant;
+  let D = m.defenseur;
+  const d = m.degats;
   let reste = d;
   const bouclier = etatsDe(D).bouclier || 0;
   if (bouclier > 0) {

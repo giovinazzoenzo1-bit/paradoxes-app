@@ -70,6 +70,11 @@ import {
   tapsAvecEtats,
   iconesEtats,
   MANA_DEPART,
+  competencesAvecSort,
+  lancerSort,
+  modifierCoup,
+  meilleureAttaque,
+  SORTS,
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
   guardianStats,
@@ -139,6 +144,18 @@ const SPRITE_BASE = 104;
 // `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
 // niveau. Sert au combat de Gardien, qui affronte TOUJOURS le Gardien et
 // jamais une créature du roster prise au hasard.
+// Le message court affiché quand un sort est lancé (« 🛡️ Bouclier +41
+// sur Caraploof »). Affichage seulement : l'effet vient du moteur.
+function messageDeSort(sortId, evenements, allies) {
+  const s = SORTS[sortId];
+  const nom = (i) => (allies[i] ? allies[i].creature.stages[0].name : '');
+  const e = (evenements || []).find((x) => x.type === 'bouclier' || x.type === 'soin' || x.type === 'boost');
+  if (sortId === 'bouclier' && e) return `${s.icone} Bouclier +${e.valeur} sur ${nom(e.cible)}`;
+  if (sortId === 'soin' && e) return `${s.icone} Soin +${e.valeur} sur ${nom(e.cible)}`;
+  if (sortId === 'boost' && e) return `${s.icone} Boost +35 % sur ${nom(e.cible)}`;
+  return `${s.icone} ${s.nom} !`;
+}
+
 export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null }) {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -473,7 +490,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const launchArmedSkill = () => {
     const skill = armedSkillRef.current;
     if (!skill || phase !== 'choosing') return;
-    const cost = skill.isBasic ? 0 : (skill.manaCost || 0);
+    // Un SORT n'est pas débité ici : `lancerSort` (moteur) le paie à la
+    // résolution — sinon il le serait deux fois.
+    const cost = skill.isBasic || skill.sort ? 0 : (skill.manaCost || 0);
     setFighters((prev) => prev.map((f, i) => (i === activeIndex ? { ...f, mana: f.mana - cost } : f)));
     selectedSkillRef.current = skill;
     setSelectedSkill(skill);
@@ -540,24 +559,55 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     const elemMult = elementMultiplier(
       curFighter.creature.element, opp.creature.element, curFighter.stats.affinityBonus || 0
     );
-    // Règle PARTAGÉE avec la simulation qui calibre le Gardien (mêmes
-    // calculs que multiplier / skillDamage / elemMult ci-dessus).
-    const playerDamage = degatsDuJoueur(skill, curFighter, opp.creature, elapsedSec, completed);
-
-    // ATTAQUE DE ZONE : frappe TOUS les adversaires encore debout.
-    // Elle n'était jusqu'ici qu'une étiquette sur le bouton — le code
-    // qui frappe plusieurs cibles n'existait pas (bug du 12/09).
-    // BOSS : le bouclier encaisse avant les PV, et la manche 1 s'arrête
-    // à la moitié des PV au lieu d'aller jusqu'à zéro.
+    // ---- SORTS (étape 3b, 24/09) -----------------------------------------
+    // Un sort passe par le MOTEUR : `lancerSort` paie le mana (la
+    // confirmation ne l'a pas débité), applique l'effet (bouclier, soin,
+    // venin, boost, marque, provocation, vitesse…) et dit ce que la créature
+    // frappe ENSUITE : rien, une part d'un coup normal, ou une zone. Tous les
+    // coups passent par `frapper` / `modifierCoup` : sans état en cours,
+    // exactement les dégâts d'avant.
+    let coupSort = { part: 1 };
+    if (skill.sort) {
+      const r = lancerSort(skill.sort, fightersRef.current, curIdx, opponentsRef.current, targetIdx);
+      coupSort = r.coup;
+      fightersRef.current = r.allies;
+      setFighters(r.allies);
+      opponentsRef.current = r.ennemis;
+      setOpponents(r.ennemis);
+      setSwitchMessage(messageDeSort(skill.sort, r.evenements, r.allies));
+      setTimeout(() => setSwitchMessage(null), 1800);
+    }
+    let attaquant = fightersRef.current[curIdx];
+    // Ce que frappe un sort offensif : l'attaque normale la plus forte.
+    const frappe = skill.sort ? meilleureAttaque(attaquant.creature) : skill;
+    const part = coupSort ? (coupSort.zone || coupSort.part || 1) : 0;
+    // Règle PARTAGÉE avec la simulation qui calibre le Gardien.
+    const coupSur = (cible) => (part > 0 && frappe
+      ? Math.max(1, Math.round(degatsDuJoueur(frappe, attaquant, cible.creature, elapsedSec, completed) * part))
+      : 0);
+    let playerDamage = 0;
+    let degatsTotaux = 0;
     let newOpponentHp;
     let newOpponents;
+    const cibleActuelle = opponentsRef.current[targetIdx];
     if (isBoss) {
+      let bossApres = cibleActuelle;
+      const brut = coupSur(cibleActuelle);
+      if (brut > 0) {
+        const m = modifierCoup(attaquant, cibleActuelle, brut);
+        attaquant = m.attaquant;
+        bossApres = m.defenseur;
+        playerDamage = m.degats;
+      }
+      degatsTotaux = playerDamage;
+      fightersRef.current = fightersRef.current.map((x, i) => (i === curIdx ? attaquant : x));
+      setFighters(fightersRef.current);
       // Règle PARTAGÉE (combatLogic.coupSurGardien) : bouclier d'abord,
       // plancher de la manche 1, relève à PV pleins avec un nouveau
       // bouclier (posé par startBossPhase2, mêmes valeurs).
-      const maxHp = opp.stats.hp;
+      const maxHp = cibleActuelle.stats.hp;
       const coup = coupSurGardien(
-        { hp: opp.hp, shield: bossShieldRef.current, phase: bossPhaseRef.current, maxHp }, playerDamage);
+        { hp: cibleActuelle.hp, shield: bossShieldRef.current, phase: bossPhaseRef.current, maxHp }, playerDamage);
       if (coup.releve) {
         setBossShield(0);
         startBossPhase2(maxHp);
@@ -565,25 +615,35 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       }
       newOpponentHp = coup.hp;
       setBossShield(coup.shield);
-      newOpponents = opponentsRef.current.map((o, i) => (i === targetIdx ? { ...o, hp: newOpponentHp } : o));
+      newOpponents = opponentsRef.current.map((o, i) => (i === targetIdx ? { ...bossApres, hp: newOpponentHp } : o));
     } else {
-      newOpponentHp = Math.max(0, opp.hp - playerDamage);
-      newOpponents = opponentsRef.current.map((o, i) => {
-        if (skill.aoe) {
-          return o.hp > 0 ? { ...o, hp: Math.max(0, o.hp - playerDamage) } : o;
-        }
-        return i === targetIdx ? { ...o, hp: newOpponentHp } : o;
-      });
+      newOpponents = opponentsRef.current.slice();
+      if (part > 0) {
+        // Zone : chaque ennemi vivant, UN SEUL boost consommé ; l'attaquant
+        // d'AVANT sert à tous les coups (un boost à sa dernière attaque
+        // ne doit pas manquer aux coups 2 et 3) ; un ennemi venimeux touché
+        // empoisonne l'attaquant.
+        const cibles = coupSort && coupSort.zone
+          ? newOpponents.map((_, i) => i).filter((i) => newOpponents[i].hp > 0)
+          : [targetIdx];
+        const base = attaquant;
+        let apres = attaquant;
+        cibles.forEach((i, k) => {
+          const x = frapper(base, newOpponents[i], coupSur(newOpponents[i]), k === 0);
+          if (k === 0) apres = x.attaquant;
+          else if (x.attaquant.etats && x.attaquant.etats.poison && !(apres.etats && apres.etats.poison)) {
+            apres = { ...apres, etats: { ...apres.etats, poison: x.attaquant.etats.poison } };
+          }
+          newOpponents[i] = x.defenseur;
+          degatsTotaux += x.degats;
+          if (i === targetIdx) playerDamage = x.degats;
+        });
+        attaquant = apres;
+      }
+      fightersRef.current = fightersRef.current.map((x, i) => (i === curIdx ? attaquant : x));
+      setFighters(fightersRef.current);
+      newOpponentHp = newOpponents[targetIdx].hp;
     }
-
-    // RIPOSTE : c'est l'adversaire ciblé qui riposte s'il survit, SINON
-    // le premier encore debout.
-    //
-    // Avant, la riposte était conditionnée à la survie de la cible : le
-    // joueur tuant souvent en un coup, l'équipe adverse ne frappait
-    // presque jamais (2 dégâts reçus en 3 tours sur un combat réel).
-    // C'était la vraie cause du déséquilibre, bien plus que la valeur
-    // des dégâts.
     let opponentDamage = 0;
     const retaliatorIdx = choisirRiposteur(newOpponents, targetIdx);
     // ⚠️ MOTEUR DES SORTS (24/09) : la riposte frappe `cibleDeRiposte`
@@ -644,17 +704,17 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // explicite) — purement décoratif, la suite du combat ne les attend
     // jamais.
     setRoundKey((k) => k + 1);
-    setOpponentDamageFloat(playerDamage);
+    setOpponentDamageFloat(playerDamage > 0 ? playerDamage : null);
     setPlayerDamageFloat(opponentDamage > 0 ? { amount: opponentDamage, index: tRip >= 0 ? tRip : curIdx } : null);
     setBattleStats((s) => ({
-      totalDamageDealt: s.totalDamageDealt + playerDamage,
+      totalDamageDealt: s.totalDamageDealt + degatsTotaux,
       totalDamageTaken: s.totalDamageTaken + opponentDamage,
       rounds: s.rounds + 1,
       opponentsDefeated: s.opponentsDefeated + (newOpponentHp <= 0 ? 1 : 0),
       fightersFainted: s.fightersFainted + tombes,
       perFighterDamage: {
         ...s.perFighterDamage,
-        [curFighter.creature.id]: (s.perFighterDamage[curFighter.creature.id] || 0) + playerDamage,
+        [curFighter.creature.id]: (s.perFighterDamage[curFighter.creature.id] || 0) + degatsTotaux,
       },
     }));
 
@@ -987,7 +1047,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               le répéter ici. */}
           <Text style={styles.skillInfoLine}>
             {activeFighter.creature.stages[0].name} utilise {skillInfo.name} et inflige{' '}
-            {degatsAffiches(skillInfo)} dégâts{skillInfo.aoe ? ' à TOUS les ennemis' : ''}.
+            {skillInfo.sort ? `${SORTS[skillInfo.sort].desc} · ${skillInfo.manaCost} mana` : `${degatsAffiches(skillInfo)} dégâts`}.
           </Text>
           {/* L'affinité est lue sur les PASTILLES colorées des
               adversaires, pas répétée ici. */}
@@ -1026,7 +1086,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               : ''}
           </Text>
           <View style={styles.bottomBar}>
-            {activeFighter.creature.skills
+            {competencesAvecSort(activeFighter.creature)
               // Le spécial reste INVISIBLE tant que la jauge n'est pas
               // pleine : afficher un bouton grisé qu'on ne peut pas
               // utiliser encombre l'écran sans rien apprendre.
@@ -1040,7 +1100,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               return (
                 <TouchableOpacity
                   key={skill.id}
-                  style={[styles.skillBtn, skill.special && styles.skillBtnSpecial, armedSkill && armedSkill.id === skill.id && styles.skillBtnArmed, !canAfford && styles.skillBtnDisabled]}
+                  style={[styles.skillBtn, !canAfford && styles.skillBtnOff, skill.special && styles.skillBtnSpecial, armedSkill && armedSkill.id === skill.id && styles.skillBtnArmed, !canAfford && styles.skillBtnDisabled]}
                   // Un appui simple SÉLECTIONNE l'attaque ; un appui long
                   // affiche seulement son détail. Sans cette séparation,
                   // consulter une attaque reviendrait à la lancer.
@@ -1050,7 +1110,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
                   onPress={() => { setSkillInfo({ ...skill, fromRight: arr.length - 1 - idx }); chooseSkill(skill, false); }}
                   disabled={!canAfford}
                 >
-                  <Text style={styles.skillBtnName} numberOfLines={2}>{skill.name}</Text>
+                  <Text style={styles.skillBtnName} numberOfLines={2}>{skill.sort ? `${skill.icone} ${skill.name}` : skill.name}</Text>
                   {/* ⚠️ Dégâts MIS À L'ÉCHELLE du niveau, pas la valeur de
                       base. Le bouton affichait `skill.damage` brut : une
                       créature niveau 20 annonçait donc les mêmes chiffres
@@ -1059,12 +1119,13 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
                       qui sert au calcul du coup — impossible que
                       l'affichage et les dégâts divergent. */}
                   <Text style={styles.skillBtnDamage}>
-                    {degatsAffiches(skill)} dégâts{skill.aoe ? ' · ZONE' : ''}
+                    {skill.sort ? SORTS[skill.sort].desc : `${degatsAffiches(skill)} dégâts`}
                   </Text>
                   {/* Rien à afficher pour une attaque normale : elles
                       sont toutes gratuites, le préciser est du bruit.
                       Seul l'ultime annonce qu'il est spécial. */}
                   {skill.special && <Text style={styles.skillBtnCost}>SPÉCIAL</Text>}
+                  {skill.sort && <Text style={styles.skillBtnCost}>{skill.manaCost} mana</Text>}
                 </TouchableOpacity>
               );
             })}
@@ -1187,6 +1248,7 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
 }
 
 const styles = StyleSheet.create({
+  skillBtnOff: { opacity: 0.35 },
   spriteEtats: { position: 'absolute', top: -5, fontSize: 10, color: '#fff', fontWeight: '700' },
   spriteEtatsDroite: { left: '100%', marginLeft: 4 },
   spriteEtatsGauche: { right: '100%', marginRight: 4 },

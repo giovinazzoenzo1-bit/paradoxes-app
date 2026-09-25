@@ -3218,7 +3218,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '42922f77';
+const EMPREINTE_COMBAT = '6c031958';
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
