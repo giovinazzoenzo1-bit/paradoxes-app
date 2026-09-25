@@ -735,15 +735,20 @@ function preparerCombattants(membres, marge = 1) {
 // que le Gardien frappe en premier, pas de riposte le tour où il se
 // relève. Renvoie true si le JOUEUR gagne.
 function simulerPrepares(prepares, gStats, tapsParSec, alea) {
-  const f = prepares.map((p) => ({ ...p, hp: p.stats.hp, mana: 0, resilienceUsed: false }));
+  // Comme l'écran (24/09) : MANA_DEPART pour tous, pas de +1 à la première.
+  const f = prepares.map((p) => ({ ...p, hp: p.stats.hp, mana: MANA_DEPART, resilienceUsed: false, etats: {} }));
+  let tour = 0;
   if (!f.length) return false;
   let g = { hp: gStats.hp, shield: Math.round(gStats.hp * GUARDIAN_SHIELD_RATIO), phase: 1, maxHp: gStats.hp };
   const suivante = (i) => prochainVivant(f, i);
-  const subir = (cible) => {
-    riposteGardien(gStats, f, cible, alea).degats.forEach((d, i) => { if (d > 0) Object.assign(f[i], encaisser(f[i], d)); });
+  // Fureur comme l'écran : le premier coup (tour 0) n'en a pas, chaque
+  // riposte de la boucle compte un tour.
+  const subir = (cible, fureur = 1) => {
+    riposteGardien(gStats, f, cible, alea).degats.forEach((d, i) => {
+      if (d > 0) Object.assign(f[i], encaisser(f[i], Math.max(1, Math.round(d * fureur))));
+    });
   };
   let act = 0;
-  f[0].mana = Math.min(MANA_MAX, MANA_PER_TURN);
   if (alea() < 0.5) {
     subir(act);
     if (f[act].hp <= 0) { act = suivante(act); if (act < 0) return false; }
@@ -757,7 +762,8 @@ function simulerPrepares(prepares, gStats, tapsParSec, alea) {
     g = coupSurGardien(g, degatsDuJoueur(comp, x, GUARDIAN_CREATURE, x.taps / tapsParSec, true));
     if (g.releve) continue;
     if (g.hp <= 0) return true;
-    subir(act);
+    tour += 1;
+    subir(act, multiplicateurFureur(tour));
     const nx = suivante(act);
     if (nx < 0) return false;
     act = nx;

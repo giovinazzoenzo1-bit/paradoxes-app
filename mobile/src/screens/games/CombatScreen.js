@@ -63,6 +63,13 @@ import {
   premierVivant as firstLivingIndex,
   choisirRiposteur,
   riposteAdversaire,
+  frapper,
+  cibleDeRiposte,
+  finDeTour,
+  multiplicateurFureur,
+  tapsAvecEtats,
+  iconesEtats,
+  MANA_DEPART,
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
   guardianStats,
@@ -154,7 +161,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const [fighters, setFighters] = useState(() =>
     team.map((member) => {
       const stats = combatStatsForCreatureTyped(member.creature, member.ownedLevel, member.evolutionTier || 0, member.equippedRunes || []);
-      return { creature: member.creature, ownedLevel: member.ownedLevel, stats, hp: stats.hp, mana: 0 };
+      return { creature: member.creature, ownedLevel: member.ownedLevel, stats, hp: stats.hp, mana: MANA_DEPART, etats: {} };
     })
   );
   const [activeIndex, setActiveIndex] = useState(0);
@@ -208,9 +215,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           ? guardianStatsCalibrees(guardianStats(levelNumber, GUARDIAN_BASE_LEVEL, guardianEggNumber), guardianCalibrage)
           : guardianStats(levelNumber, GUARDIAN_BASE_LEVEL, guardianEggNumber))
         : statsForOpponentCreatureTyped(creature, levelNumber);
-      return { creature, stats, hp: stats.hp, mana: 0 };
+      return { creature, stats, hp: stats.hp, mana: MANA_DEPART, etats: {} };
     })
   );
+  // Tours de riposte, pour la Fureur (moteur des sorts, 24/09).
+  const toursRef = useRef(0);
   // Bouclier initial : 40 % des PV max du gardien. Posé dans un effet
   // plutôt qu'à l'initialisation de l'état, parce qu'il dépend de stats
   // calculées juste au-dessus.
@@ -426,7 +435,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 
   const activeFighter = fighters[activeIndex];
   const target = opponents[targetIndex];
-  const requiredTaps = effectiveTapCount(activeFighter.stats.clickSpeed, activeFighter.stats.tapReductionPct || 0);
+  const requiredTaps = tapsAvecEtats(activeFighter);
 
   // Choisit une cible différente parmi les adversaires vivants — permis
   // seulement pendant le choix de compétence, pas en plein défi de tap.
@@ -577,48 +586,49 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // des dégâts.
     let opponentDamage = 0;
     const retaliatorIdx = choisirRiposteur(newOpponents, targetIdx);
-    // Gardien : riposte PARTAGÉE avec la simulation, zone comprise.
+    // ⚠️ MOTEUR DES SORTS (24/09) : la riposte frappe `cibleDeRiposte`
+    // (provocation d'abord, évitement du venimeux — TOUJOURS une cible tant
+    // qu'une créature vit), chaque coup passe par `frapper` (bouclier,
+    // marque, provocation, venin, poison) avec la Fureur, puis `finDeTour`
+    // (poison, compteurs) sur les deux équipes. Un K.O. peut toucher une
+    // autre créature que l'active (zone, poison) : la suite lit `newFighters`.
+    toursRef.current += 1;
+    const fureur = multiplicateurFureur(toursRef.current);
+    const avant = fightersRef.current;
+    const tRip = cibleDeRiposte(avant, curIdx);
     let riposte = null;
-    if (isBoss && retaliatorIdx >= 0) {
-      riposte = riposteGardien(newOpponents[retaliatorIdx].stats, fightersRef.current, curIdx);
-      opponentDamage = riposte.degats[curIdx];
-    } else if (retaliatorIdx >= 0) {
-      // Règle PARTAGÉE : mana GARDÉE (bug du 24/09), compétence au hasard.
-      const r = riposteAdversaire(newOpponents[retaliatorIdx], curFighter);
+    let degatsRiposte = [];
+    if (isBoss && retaliatorIdx >= 0 && tRip >= 0) {
+      riposte = riposteGardien(newOpponents[retaliatorIdx].stats, avant, tRip);
+      degatsRiposte = riposte.degats;
+    } else if (retaliatorIdx >= 0 && tRip >= 0) {
+      const r = riposteAdversaire(newOpponents[retaliatorIdx], avant[tRip]);
       newOpponents = newOpponents.map((o, i) => (i === retaliatorIdx ? { ...o, mana: r.mana } : o));
-      opponentDamage = r.degats;
+      degatsRiposte = avant.map((_, i) => (i === tRip ? r.degats : 0));
     }
+    let riposteur = retaliatorIdx >= 0 ? newOpponents[retaliatorIdx] : null;
+    opponentDamage = 0;
+    let newFighters = avant.map((f, i) => {
+      const dg = degatsRiposte[i] || 0;
+      if (dg <= 0 || !riposteur) return f;
+      const x = frapper(riposteur, f, dg * fureur, i === tRip);
+      riposteur = x.attaquant;
+      if (i === tRip) opponentDamage = x.degats;
+      return x.defenseur;
+    });
+    if (riposteur) newOpponents = newOpponents.map((o, i) => (i === retaliatorIdx ? riposteur : o));
+    newFighters = finDeTour(newFighters).equipe;
+    newOpponents = finDeTour(newOpponents).equipe;
     opponentsRef.current = newOpponents;
     setOpponents(newOpponents);
-
-    // Si la cible tombe, on repositionne automatiquement la sélection
-    // sur le premier adversaire encore vivant — le joueur reste libre de
-    // choisir une AUTRE cible ensuite (à CHAQUE tour, demande explicite).
-    if (newOpponentHp <= 0) {
+    if (!(newOpponents[targetIdx] && newOpponents[targetIdx].hp > 0)) {
       const nextTarget = firstLivingIndex(newOpponents);
       if (nextTarget !== -1 && nextTarget !== targetIdx) {
         targetIndexRef.current = nextTarget;
         setTargetIndex(nextTarget);
       }
     }
-
-    // Rune de Résilience : le premier coup fatal du combat ne tue pas,
-    // la créature repart avec un % de ses PV max. `resilienceUsed` est
-    // porté par le combattant, donc la rune se recharge d'un combat à
-    // l'autre mais jamais deux fois dans le même.
-    let newPlayerHp = Math.max(0, curFighter.hp - opponentDamage);
-    let resilienceTriggered = false;
-    const resPct = curFighter.stats.resiliencePct || 0;
-    if (newPlayerHp <= 0 && resPct > 0 && !curFighter.resilienceUsed) {
-      newPlayerHp = Math.max(1, Math.round(curFighter.stats.hp * resPct));
-      resilienceTriggered = true;
-    }
-    const avant = fightersRef.current;
-    const newFighters = avant.map((f, i) => {
-      if (i === curIdx) return { ...f, hp: newPlayerHp, resilienceUsed: f.resilienceUsed || resilienceTriggered };
-      const d = riposte ? riposte.degats[i] : 0;
-      return d > 0 ? { ...f, ...encaisser(f, d) } : f;
-    });
+    const newPlayerHp = newFighters[curIdx].hp;
     const tombes = newFighters.filter((f, i) => f.hp <= 0 && avant[i].hp > 0).length;
     if (riposte && riposte.zone) setSwitchMessage("🌀 Le Gardien frappe toute l'équipe !");
     fightersRef.current = newFighters;
@@ -626,8 +636,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     setLastExchange({
       dealt: playerDamage,
       taken: opponentDamage,
-      hpAfter: newPlayerHp,
-      hpMax: curFighter.stats.hp,
+      hpAfter: newFighters[tRip >= 0 ? tRip : curIdx].hp,
+      hpMax: newFighters[tRip >= 0 ? tRip : curIdx].stats.hp,
     });
 
     // Dégâts flottants au-dessus de CHAQUE créature touchée (demande
@@ -635,7 +645,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // jamais.
     setRoundKey((k) => k + 1);
     setOpponentDamageFloat(playerDamage);
-    setPlayerDamageFloat(opponentDamage > 0 ? { amount: opponentDamage, index: curIdx } : null);
+    setPlayerDamageFloat(opponentDamage > 0 ? { amount: opponentDamage, index: tRip >= 0 ? tRip : curIdx } : null);
     setBattleStats((s) => ({
       totalDamageDealt: s.totalDamageDealt + playerDamage,
       totalDamageTaken: s.totalDamageTaken + opponentDamage,
@@ -731,7 +741,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       : scaledSkillDamage(skill, activeFighter.creature, activeFighter.stats.attack)
   ));
 
-  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir, elemColor }) => {
+  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir, elemColor , etats = null, etatsCote = 'droite' }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -790,8 +800,19 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           </Animated.View>
         </View>
         <Text style={[styles.spriteName, { fontSize: Math.max(9, Math.round(12 * slot.size)) }]} numberOfLines={1}>{name}</Text>
-        <View style={[styles.spriteHpTrack, { width: Math.round(90 * slot.size) }]}>
-          <View style={[styles.spriteHpFill, { width: `${Math.max(0, hp / hpMax) * 100}%`, backgroundColor: hpColor }]} />
+        {/* Barre de PV + ligne d'états (bonus / malus) à DROITE pour nos
+            créatures, à GAUCHE pour les adversaires — demande de l'auteur
+            (24/09) ; emojis en attendant ses logos. En absolu : ne décale
+            rien dans la mise en page. */}
+        <View style={{ width: Math.round(90 * slot.size) }}>
+          <View style={[styles.spriteHpTrack, { width: Math.round(90 * slot.size) }]}>
+            <View style={[styles.spriteHpFill, { width: `${Math.max(0, hp / hpMax) * 100}%`, backgroundColor: hpColor }]} />
+          </View>
+          {etats && etats.length > 0 && (
+            <Text style={[styles.spriteEtats, etatsCote === 'gauche' ? styles.spriteEtatsGauche : styles.spriteEtatsDroite]} numberOfLines={1}>
+              {etats.map((e) => e.icone + e.texte).join(' ')}
+            </Text>
+          )}
         </View>
         {mana != null && (
           <View style={[styles.spriteEndTrack, { width: Math.round(90 * slot.size) }]}>
@@ -831,6 +852,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           // ses créatures approche de son ultime, pas seulement celle
           // qui joue.
           mana: f.mana, manaMax: MANA_MAX,
+          etats: iconesEtats(f), etatsCote: 'droite',
           fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
           lunging: !!lunge && lunge.side === 'player' && fi === lunge.index, lungeDir: 1,
           floatDamage: playerDamageFloat && playerDamageFloat.index === fi ? playerDamageFloat.amount : null,
@@ -913,6 +935,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           creatureId: o.creature.id, stageIndex: 0,
           emoji: d.emoji, name: d.name,
           hp: o.hp, hpMax: o.stats.hp, fainted,
+          etats: iconesEtats(o), etatsCote: 'gauche',
           ring: i === targetIndex && !fainted ? 'target' : null,
           // Vert = ton élément domine le sien, orange = neutre, rouge =
           // tu es en position défavorable.
@@ -1164,6 +1187,9 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
 }
 
 const styles = StyleSheet.create({
+  spriteEtats: { position: 'absolute', top: -5, fontSize: 10, color: '#fff', fontWeight: '700' },
+  spriteEtatsDroite: { left: '100%', marginLeft: 4 },
+  spriteEtatsGauche: { right: '100%', marginRight: 4 },
   screen: { flex: 1, backgroundColor: '#7ec8f0' },
 
   // Voile très léger : le décor de prairie est clair, l'ancien voile

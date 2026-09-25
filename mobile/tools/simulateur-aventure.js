@@ -34,7 +34,7 @@ function combattants(membres) {
   return membres.map((m) => {
     const stats = K.combatStatsForCreatureTyped(m.creature, m.level, evoPour(m.level), []);
     const skills = m.creature.skills || [];
-    return { creature: m.creature, stats, hp: stats.hp, mana: 0, resilienceUsed: false,
+    return { creature: m.creature, stats, hp: stats.hp, mana: K.MANA_DEPART, resilienceUsed: false, etats: {},
       meilleure: skills.filter((k) => !k.special).sort((a, b) => b.damage - a.damage)[0],
       speciale: skills.find((k) => k.special) || null,
       taps: K.effectiveTapCount(stats.clickSpeed, stats.tapReductionPct || 0) };
@@ -47,18 +47,18 @@ function combatAventureDetail(membres, niveau, alea, tapsParSec = 6.7, humain = 
   const f = combattants(membres);
   const o = K.opponentTeamForLevel(niveau).map((c) => {
     const stats = K.statsForOpponentCreatureTyped(c, niveau);
-    return { creature: c, stats, hp: stats.hp, mana: 0 };
+    return { creature: c, stats, hp: stats.hp, mana: K.MANA_DEPART, etats: {} };
   });
   // Règles du MOTEUR PARTAGÉ (combatLogic), les mêmes que l'écran.
   const vivantF = (i) => K.prochainVivant(f, i);
   const cibleO = () => K.premierVivant(o);
-  const riposte = (oi, fi) => {
+  let tour = 0;
+  const riposte = (oi, fi, fureur = 1) => {
     const r = K.riposteAdversaire(o[oi], f[fi], alea);
     o[oi].mana = r.mana;
-    Object.assign(f[fi], K.encaisser(f[fi], r.degats));
+    Object.assign(f[fi], K.encaisser(f[fi], Math.max(1, Math.round(r.degats * fureur))));
   };
   let act = 0;
-  f[0].mana = Math.min(C.MANA_MAX, C.MANA_PER_TURN);
   if (alea() < 0.5) { riposte(0, act); if (f[act].hp <= 0) { act = vivantF(act); if (act < 0) return { gagne: false, tours: 0 }; } }
   for (let tour = 0; tour < 600; tour++) {
     const x = f[act];
@@ -70,7 +70,8 @@ function combatAventureDetail(membres, niveau, alea, tapsParSec = 6.7, humain = 
     o[t].hp = Math.max(0, o[t].hp - K.degatsDuJoueur(comp, x, o[t].creature, x.taps / tapsParSec, true));
     const r = K.choisirRiposteur(o, t);
     if (r < 0) return { gagne: true, tours: tour + 1 };
-    riposte(r, act);
+    tour += 1;
+    riposte(r, act, K.multiplicateurFureur(tour));
     const nx = vivantF(act);
     if (nx < 0) return { gagne: false, tours: tour + 1 };
     act = nx;
