@@ -47,6 +47,7 @@ const CONTROLES = [
   ['auditRechargeDeck', "changer de créature dans le deck ne donne pas un pouvoir gratuit (règle + câblage)"],
   ['auditGriffesBonus', 'succès, hebdos et quotidiens ne doublent pas le revenu de Griffes du combat'],
   ['auditManaAdverse', "les adversaires de l'Aventure gardent leur mana et lancent leur spéciale"],
+  ['auditSortsMoteur', 'sorts : chiffres validés, et personne n\'est jamais bloqué (2 000 combats aléatoires)'],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],

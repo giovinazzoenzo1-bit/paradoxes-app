@@ -425,6 +425,248 @@ export function degatsDuJoueur(competence, combattant, cibleCreature, secondes, 
   return Math.max(1, Math.round(computePlayerDamage(brut, mult) * elem));
 }
 
+// ---- Les SORTS (24/09) ------------------------------------------------
+//
+// L'auteur : « chaque champion a 2 ou 3 attaques qui ne diffèrent que par
+// les dégâts : le joueur prend la plus forte, aucun intérêt ». Chaque
+// créature reçoit UN sort (données : étape 2), payé en MANA — le 2e rôle
+// du mana : grisé si la créature n'en a pas assez. Chiffres validés avec
+// l'auteur le 24/09. Tout vit ICI : l'écran et les simulations appellent
+// ces fonctions, une nouvelle mécanique ne s'écrit qu'une fois.
+//
+// Un combattant (des deux côtés) : { creature, stats, hp, mana,
+// resilienceUsed, etats }. `etats` porte les bonus et malus en cours ; une
+// valeur null ou 0 = absent.
+export const MANA_DEPART = 2; // sinon, en combat court, aucun sort avant le 2e tour
+export const SORTS = {
+  bouclier:    { nom: 'Bouclier',      icone: '🛡️', cout: 3, type: 'tank' },
+  poison:      { nom: 'Venin',         icone: '☠️', cout: 3, type: 'tank' },
+  provocation: { nom: 'Provocation',   icone: '🔱', cout: 2, type: 'tank' },
+  soin:        { nom: 'Soin',          icone: '💚', cout: 3, type: 'soutien' },
+  boost:       { nom: 'Boost',         icone: '🔥', cout: 2, type: 'soutien' },
+  vitesse:     { nom: 'Vitesse',       icone: '⚡', cout: 3, type: 'soutien', gratuit: true },
+  marque:      { nom: 'Marque',        icone: '🎯', cout: 2, type: 'soutien' },
+  zone:        { nom: 'Zone',          icone: '🌀', cout: 3, type: 'attaquant' },
+  execution:   { nom: 'Exécution',     icone: '🗡️', cout: 2, type: 'attaquant' },
+  pacte:       { nom: 'Pacte de sang', icone: '🩸', cout: 2, type: 'attaquant' },
+};
+// Les chiffres, décidés avec l'auteur (24/09) :
+export const EFFETS = {
+  bouclierPartPerdue: 0.45,  // « à 10 % de PV, bouclier de 40 % des PV max »
+  soinPartPerdue: 0.30,      // UNE créature (la plus blessée), 30 % des PV perdus
+  poisonFrappe: 0.70,        // le Venin frappe quand même, à 70 %
+  veninTours: 2,             // le lanceur est venimeux 2 tours
+  poisonTours: 2,            // qui le frappe est empoisonné 2 tours :
+  poisonMalus: 0.30,         //   −30 % d'attaque
+  poisonParTour: 0.05,       //   et −5 % de ses PV max par tour
+  zonePart: 0.40,            // 40 % d'un coup sur CHAQUE ennemi (35 % : sort mort)
+  boostBonus: 0.35,          // +35 % sur les 3 prochaines attaques de l'allié
+  boostAttaques: 3,          //   qui frappe le plus fort
+  vitesseReduction: 0.35,    // −35 % de taps, toute l'équipe, tout le combat ; ne coûte pas le tour
+  marqueBonus: 0.35,         // la cible prend +35 % sur les 2 prochains coups
+  marqueCoups: 2,
+  executionSeuil: 0.30,      // ×2 sous 30 % de PV, ×0,6 sinon
+  executionFort: 2,
+  executionFaible: 0.6,
+  pacteMult: 2,              // ×2, pour 15 % de ses propres PV max
+  pacteCoutPv: 0.15,
+  provocationTours: 2,       // les ennemis doivent frapper le Tank 2 tours,
+  provocationReduction: 0.20, //   qui encaisse 20 % de moins
+  fureurTour: 30,            // après 30 tours : ennemis +50 % (aucun combat sans fin)
+  fureurMult: 1.5,
+};
+
+const etatsDe = (c) => (c && c.etats) || {};
+const avecEtats = (c, maj) => ({ ...c, etats: { ...etatsDe(c), ...maj } });
+const pvMax = (c) => c.stats.hp;
+const vivant = (c) => !!c && c.hp > 0;
+const coupMoyen = (c) => {
+  const k = (c.creature.skills || []).filter((x) => !x.special).sort((a, b) => b.damage - a.damage)[0];
+  return k ? scaledSkillDamage(k, c.creature, c.stats.attack) : c.stats.attack;
+};
+
+export function sortDisponible(c, sortId) {
+  const s = SORTS[sortId];
+  return !!s && vivant(c) && (c.mana || 0) >= s.cout;
+}
+// L'allié vivant le plus blessé (en % de ses PV) ; -1 si aucun.
+export function plusBlesse(equipe) {
+  let best = -1; let r = 2;
+  equipe.forEach((c, i) => { if (vivant(c) && c.hp / pvMax(c) < r) { r = c.hp / pvMax(c); best = i; } });
+  return best;
+}
+// L'allié vivant qui frappe le plus fort, hors lanceur (lui s'il est seul).
+export function plusFort(equipe, lanceur) {
+  let best = -1; let a = -1;
+  equipe.forEach((c, i) => { if (vivant(c) && i !== lanceur && coupMoyen(c) > a) { a = coupMoyen(c); best = i; } });
+  return best >= 0 ? best : lanceur;
+}
+
+// Lance le sort `sortId` de `allies[lanceur]` ; `ennemis[cible]` = l'ennemi
+// visé. Paie le mana. Renvoie { allies, ennemis, coup, evenements } —
+// `coup` dit ce que le lanceur frappe ENSUITE : null (le sort remplace
+// l'attaque), { part } (fraction d'un coup normal sur la cible) ou
+// { zone } (fraction d'un coup sur CHAQUE ennemi vivant).
+export function lancerSort(sortId, allies, lanceur, ennemis, cible) {
+  const E = EFFETS;
+  const A = allies.slice();
+  const N = ennemis.slice();
+  const ev = [{ type: 'sort', sort: sortId, lanceur }];
+  A[lanceur] = { ...A[lanceur], mana: (A[lanceur].mana || 0) - SORTS[sortId].cout };
+  const fin = (coup) => ({ allies: A, ennemis: N, coup, evenements: ev });
+  switch (sortId) {
+    case 'bouclier': {
+      const t = plusBlesse(A);
+      const v = Math.round(E.bouclierPartPerdue * (pvMax(A[t]) - A[t].hp));
+      A[t] = avecEtats(A[t], { bouclier: Math.max(etatsDe(A[t]).bouclier || 0, v) });
+      ev.push({ type: 'bouclier', cible: t, valeur: v });
+      return fin(null);
+    }
+    case 'soin': {
+      const t = plusBlesse(A);
+      const v = Math.round(E.soinPartPerdue * (pvMax(A[t]) - A[t].hp));
+      A[t] = { ...A[t], hp: Math.min(pvMax(A[t]), A[t].hp + v) };
+      ev.push({ type: 'soin', cible: t, valeur: v });
+      return fin(null);
+    }
+    case 'poison':
+      A[lanceur] = avecEtats(A[lanceur], { venin: E.veninTours });
+      return fin({ part: E.poisonFrappe });
+    case 'provocation':
+      A[lanceur] = avecEtats(A[lanceur], { provocation: E.provocationTours });
+      return fin(null);
+    case 'boost': {
+      const t = plusFort(A, lanceur);
+      A[t] = avecEtats(A[t], { boost: { attaques: E.boostAttaques, bonus: E.boostBonus } });
+      ev.push({ type: 'boost', cible: t });
+      return fin(null);
+    }
+    case 'vitesse':
+      for (let i = 0; i < A.length; i++) A[i] = avecEtats(A[i], { vitesse: E.vitesseReduction });
+      return fin({ part: 1 }); // ne coûte pas le tour : attaque normale ensuite
+    case 'marque':
+      if (vivant(N[cible])) N[cible] = avecEtats(N[cible], { marque: { coups: E.marqueCoups, bonus: E.marqueBonus } });
+      return fin(null);
+    case 'zone':
+      return fin({ zone: E.zonePart });
+    case 'execution': {
+      const x = N[cible];
+      return fin({ part: vivant(x) && x.hp / pvMax(x) < E.executionSeuil ? E.executionFort : E.executionFaible });
+    }
+    case 'pacte': {
+      const c = A[lanceur];
+      A[lanceur] = { ...c, hp: Math.max(1, c.hp - Math.round(E.pacteCoutPv * pvMax(c))) };
+      return fin({ part: E.pacteMult });
+    }
+    default:
+      return fin({ part: 1 });
+  }
+}
+
+// Un coup de `attaquant` sur `defenseur` (dégâts bruts, éléments compris).
+// Boost et poison de l'attaquant, marque et provocation du défenseur, puis
+// bouclier et encaissement (Résilience) ; le venin du défenseur
+// empoisonne l'attaquant. `consommer` : false pour les coups 2 et 3 d'une
+// ZONE (un seul boost consommé pour toute la zone).
+export function frapper(attaquant, defenseur, degats, consommer = true) {
+  const E = EFFETS;
+  const ea = etatsDe(attaquant);
+  const ed = etatsDe(defenseur);
+  let A = attaquant;
+  let D = defenseur;
+  let d = degats;
+  if (ea.boost && ea.boost.attaques > 0) {
+    d *= 1 + ea.boost.bonus;
+    if (consommer) A = avecEtats(A, { boost: ea.boost.attaques > 1 ? { ...ea.boost, attaques: ea.boost.attaques - 1 } : null });
+  }
+  if (ea.poison && ea.poison.tours > 0) d *= 1 - ea.poison.malus;
+  if (ed.marque && ed.marque.coups > 0) {
+    d *= 1 + ed.marque.bonus;
+    D = avecEtats(D, { marque: ed.marque.coups > 1 ? { ...ed.marque, coups: ed.marque.coups - 1 } : null });
+  }
+  if (ed.provocation > 0) d *= 1 - E.provocationReduction;
+  d = Math.max(1, Math.round(d));
+  let reste = d;
+  const bouclier = etatsDe(D).bouclier || 0;
+  if (bouclier > 0) {
+    const abs = Math.min(bouclier, reste);
+    reste -= abs;
+    D = avecEtats(D, { bouclier: bouclier - abs || null });
+  }
+  if (reste > 0) D = { ...D, ...encaisser(D, reste) };
+  if (ed.venin > 0) A = avecEtats(A, { poison: { tours: E.poisonTours, malus: E.poisonMalus, parTour: E.poisonParTour } });
+  return { attaquant: A, defenseur: D, degats: d };
+}
+
+// Qui l'adversaire frappe : une créature qui PROVOQUE d'abord ; sinon
+// l'active, sauf si elle est venimeuse et qu'une AUTRE (non venimeuse) vit.
+// ⚠️ Le bug redouté par l'auteur (24/09) : un ennemi qui ne frappe plus
+// personne quand il ne reste qu'une créature — ou quand TOUTES sont
+// venimeuses. Tant qu'une créature vit, il y a toujours une cible
+// (`auditSortsMoteur` le vérifie sur des milliers de combats).
+export function cibleDeRiposte(equipe, actif) {
+  const prov = equipe.findIndex((c) => vivant(c) && etatsDe(c).provocation > 0);
+  if (prov >= 0) return prov;
+  const depart = vivant(equipe[actif]) ? actif : prochainVivant(equipe, actif);
+  if (depart < 0) return -1;
+  if (!(etatsDe(equipe[depart]).venin > 0)) return depart;
+  for (let k = 1; k < equipe.length; k++) {
+    const i = (depart + k) % equipe.length;
+    if (vivant(equipe[i]) && !(etatsDe(equipe[i]).venin > 0)) return i;
+  }
+  return depart;
+}
+// Qui le joueur peut frapper : un ennemi qui provoque l'impose ; sinon sa
+// cible si elle vit, sinon le premier vivant. Même garantie de cible.
+export function cibleDuJoueur(adversaires, voulue) {
+  const prov = adversaires.findIndex((c) => vivant(c) && etatsDe(c).provocation > 0);
+  if (prov >= 0) return prov;
+  return vivant(adversaires[voulue]) ? voulue : premierVivant(adversaires);
+}
+
+// Fin d'un tour, pour UNE équipe : le poison mord (5 % des PV max, il peut
+// achever), puis les compteurs de tours baissent.
+export function finDeTour(equipe) {
+  const ev = [];
+  const eq = equipe.map((c, i) => {
+    if (!vivant(c)) return c;
+    const e = etatsDe(c);
+    let x = c;
+    if (e.poison && e.poison.tours > 0) {
+      const d = Math.max(1, Math.round(e.poison.parTour * pvMax(c)));
+      x = { ...x, hp: Math.max(0, x.hp - d) };
+      ev.push({ type: 'poison', cible: i, valeur: d });
+      x = avecEtats(x, { poison: e.poison.tours > 1 ? { ...e.poison, tours: e.poison.tours - 1 } : null });
+    }
+    if (e.venin > 0) x = avecEtats(x, { venin: e.venin - 1 || null });
+    if (e.provocation > 0) x = avecEtats(x, { provocation: e.provocation - 1 || null });
+    return x;
+  });
+  return { equipe: eq, evenements: ev };
+}
+
+export function multiplicateurFureur(tour) {
+  return tour > EFFETS.fureurTour ? EFFETS.fureurMult : 1;
+}
+// Taps demandés, sort de Vitesse compris.
+export function tapsAvecEtats(c) {
+  return effectiveTapCount(c.stats.clickSpeed, (c.stats.tapReductionPct || 0) + Math.round(100 * (etatsDe(c).vitesse || 0)));
+}
+// Pour l'affichage à côté des barres de PV : les états en cours, avec leur
+// icône (demande de l'auteur, 24/09 ; vrais logos plus tard).
+export function iconesEtats(c) {
+  const e = etatsDe(c);
+  const r = [];
+  if (e.bouclier > 0) r.push({ icone: SORTS.bouclier.icone, texte: String(e.bouclier) });
+  if (e.venin > 0) r.push({ icone: SORTS.poison.icone, texte: String(e.venin) });
+  if (e.poison && e.poison.tours > 0) r.push({ icone: '🤢', texte: String(e.poison.tours) });
+  if (e.provocation > 0) r.push({ icone: SORTS.provocation.icone, texte: String(e.provocation) });
+  if (e.boost && e.boost.attaques > 0) r.push({ icone: SORTS.boost.icone, texte: String(e.boost.attaques) });
+  if (e.marque && e.marque.coups > 0) r.push({ icone: SORTS.marque.icone, texte: String(e.marque.coups) });
+  if (e.vitesse > 0) r.push({ icone: SORTS.vitesse.icone, texte: '' });
+  return r;
+}
+
 // ---- La simulation et le calibrage ----
 
 // Tirages reproductibles (même graine = mêmes combats).

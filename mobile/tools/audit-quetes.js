@@ -3308,3 +3308,102 @@ function auditManaAdverse() {
   return [{ probleme: "après 12 ripostes, l'adversaire n'a jamais pu lancer sa spéciale (mana non gardée ?)" }];
 }
 module.exports.auditManaAdverse = auditManaAdverse;
+
+// ---- Le moteur des sorts : chiffres validés, et personne n'est bloqué ----
+//
+// Sorts décidés avec l'auteur le 24/09 (combatLogic : SORTS, EFFETS). Deux
+// parties : (1) chaque chiffre, sur ses propres exemples (« à 10 % de PV,
+// bouclier de 40 % ») ; (2) des milliers de combats ALÉATOIRES, sorts des
+// deux côtés : l'ennemi a TOUJOURS une cible tant qu'une créature vit (le
+// bug qu'il redoutait : plus qu'une créature, ou toutes venimeuses), les
+// PV restent entre 0 et le max, rien ne devient NaN, et chaque combat
+// finit (Fureur).
+function auditSortsMoteur() {
+  const K = load('combatLogic');
+  const E = K.EFFETS;
+  const fautes = [];
+  const verif = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
+  const base = C.CREATURES[0];
+  const fx = (hp, max, etats = {}, mana = 5) => ({ creature: base,
+    stats: { ...K.combatStatsForCreatureTyped(base, 10, 0, []), hp: max }, hp, mana, resilienceUsed: false, etats });
+  // (1) les chiffres
+  let r = K.lancerSort('bouclier', [fx(10, 100)], 0, [fx(50, 50)], 0);
+  verif(r.allies[0].etats.bouclier === 41 && r.allies[0].mana === 5 - K.SORTS.bouclier.cout, 'bouclier : 10 % de PV devraient donner 41 (≈ 40 % des PV max) et coûter son mana');
+  r = K.lancerSort('soin', [fx(90, 100), fx(50, 100)], 0, [fx(50, 50)], 0);
+  verif(r.allies[1].hp === 65 && r.allies[0].hp === 90, 'soin : 30 % des PV perdus, sur la PLUS blessée seulement');
+  verif(K.lancerSort('zone', [fx(50, 50)], 0, [fx(50, 50)], 0).coup.zone === 0.4, 'zone : 40 % sur chaque ennemi');
+  const fort = { ...fx(100, 100), creature: C.CREATURES.find((c) => c.rarity === 'mythique') };
+  r = K.lancerSort('boost', [fx(100, 100), fort], 0, [fx(50, 50)], 0);
+  verif(r.allies[1].etats.boost && r.allies[1].etats.boost.attaques === 3, "boost : sur l'allié qui frappe le plus fort, 3 attaques");
+  const apres = K.frapper(r.allies[1], fx(1000, 1000), 100);
+  verif(apres.degats === 135 && apres.attaquant.etats.boost.attaques === 2, 'boost : +35 % et une attaque consommée');
+  const v = K.frapper(fx(100, 100), fx(100, 100, { venin: 2 }), 10);
+  verif(v.attaquant.etats.poison && v.attaquant.etats.poison.tours === 2, 'venin : qui frappe une créature venimeuse est empoisonné');
+  verif(K.frapper(v.attaquant, fx(1000, 1000), 100).degats === 70, "poison : −30 % d'attaque");
+  const t = K.finDeTour([v.attaquant]).equipe[0];
+  verif(t.hp === 95 && t.etats.poison.tours === 1, 'poison : −5 % des PV max par tour, puis le compteur baisse');
+  verif(K.cibleDeRiposte([fx(50, 100, { venin: 2 }), fx(50, 100)], 0) === 1, "l'ennemi évite la créature venimeuse s'il en a une autre");
+  verif(K.cibleDeRiposte([fx(50, 100, { venin: 2 }), fx(0, 100)], 0) === 0, "une seule créature en vie, venimeuse : l'ennemi la frappe quand même");
+  verif(K.cibleDeRiposte([fx(50, 100, { venin: 2 }), fx(50, 100, { venin: 1 })], 0) >= 0, "toutes venimeuses : l'ennemi frappe quand même");
+  verif(K.cibleDeRiposte([fx(50, 100), fx(50, 100, { provocation: 2 })], 0) === 1, 'provocation : les ennemis frappent le Tank');
+  verif(K.frapper(fx(100, 100), fx(1000, 1000, { provocation: 2 }), 100).degats === 80, 'provocation : le Tank encaisse 20 % de moins');
+  verif(K.lancerSort('execution', [fx(50, 50)], 0, [fx(20, 100)], 0).coup.part === 2
+    && K.lancerSort('execution', [fx(50, 50)], 0, [fx(50, 100)], 0).coup.part === 0.6, 'exécution : ×2 sous 30 %, ×0,6 sinon');
+  r = K.lancerSort('pacte', [fx(10, 100)], 0, [fx(50, 50)], 0);
+  verif(r.allies[0].hp === 1 && r.coup.part === 2, 'pacte : ×2, coûte 15 % des PV sans jamais tuer le lanceur');
+  const lent = fx(100, 100);
+  verif(K.tapsAvecEtats({ ...lent, etats: { vitesse: E.vitesseReduction } }) < K.tapsAvecEtats(lent), 'vitesse : moins de taps');
+  verif(!K.sortDisponible(fx(100, 100, {}, 1), 'bouclier'), 'sans assez de mana, le sort est indisponible (grisé)');
+  // (2) des milliers de combats aléatoires
+  let a = 20240924;
+  const alea = () => { a = (a + 0x6D2B79F5) >>> 0; let x = a; x = Math.imul(x ^ (x >>> 15), x | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const pick = (arr) => arr[Math.floor(alea() * arr.length)];
+  const sorts = Object.keys(K.SORTS);
+  const coupDe = (c) => { const k = (c.creature.skills || []).filter((s) => !s.special).sort((x, y) => y.damage - x.damage)[0];
+    return k ? K.scaledSkillDamage(k, c.creature, c.stats.attack) : c.stats.attack; };
+  const sain = (eq) => eq.every((c) => Number.isFinite(c.hp) && c.hp >= 0 && c.hp <= c.stats.hp && (c.mana || 0) >= 0
+    && !((c.etats || {}).bouclier < 0));
+  let bloques = 0; let absurdes = 0; let infinis = 0;
+  for (let n = 0; n < 2000; n++) {
+    const niv = 1 + Math.floor(alea() * 40);
+    const creer = (c, st) => ({ creature: c, stats: st, hp: st.hp, mana: K.MANA_DEPART, resilienceUsed: false, etats: {}, sort: pick(sorts) });
+    let J = Array.from({ length: 1 + Math.floor(alea() * 3) }, () => { const c = pick(C.CREATURES); return creer(c, K.combatStatsForCreatureTyped(c, niv, 0, [])); });
+    let N = Array.from({ length: 1 + Math.floor(alea() * 3) }, () => { const c = pick(C.CREATURES); return creer(c, K.statsForOpponentCreatureTyped(c, niv)); });
+    let actif = 0; let cible = 0; let fini = false;
+    for (let tour = 1; tour <= 400 && !fini; tour++) {
+      cible = K.cibleDuJoueur(N, cible);
+      if (cible < 0 || !(N[cible].hp > 0)) { bloques++; break; }
+      let coup = { part: 1 };
+      if (alea() < 0.5 && K.sortDisponible(J[actif], J[actif].sort)) { const x = K.lancerSort(J[actif].sort, J, actif, N, cible); J = x.allies; N = x.ennemis; coup = x.coup; }
+      if (coup) {
+        const d = Math.max(1, Math.round(coupDe(J[actif]) * 2.5));
+        (coup.zone ? N.map((_, i) => i).filter((i) => N[i].hp > 0) : [cible]).forEach((i, k) => {
+          const x = K.frapper(J[actif], N[i], d * (coup.zone || coup.part), k === 0); J[actif] = x.attaquant; N[i] = x.defenseur; });
+      }
+      if (K.premierVivant(N) < 0) { fini = true; break; }
+      const rip = K.choisirRiposteur(N, cible);
+      const t2 = K.cibleDeRiposte(J, actif);
+      if (rip < 0 || t2 < 0 || !(J[t2].hp > 0)) { bloques++; break; }
+      let coupE = { part: 1 };
+      if (alea() < 0.3 && K.sortDisponible(N[rip], N[rip].sort)) { const x = K.lancerSort(N[rip].sort, N, rip, J, t2); N = x.allies; J = x.ennemis; coupE = x.coup; }
+      if (coupE) {
+        const d = Math.max(1, Math.round(coupDe(N[rip]) * K.multiplicateurFureur(tour)));
+        (coupE.zone ? J.map((_, i) => i).filter((i) => J[i].hp > 0) : [t2]).forEach((i, k) => {
+          const x = K.frapper(N[rip], J[i], d * (coupE.zone || coupE.part), k === 0); N[rip] = x.attaquant; J[i] = x.defenseur; });
+      }
+      N[rip] = { ...N[rip], mana: Math.min(C.MANA_MAX, N[rip].mana + C.MANA_PER_TURN) };
+      J = K.finDeTour(J).equipe; N = K.finDeTour(N).equipe;
+      if (!sain(J) || !sain(N)) { absurdes++; break; }
+      if (K.premierVivant(J) < 0 || K.premierVivant(N) < 0) { fini = true; break; }
+      actif = K.prochainVivant(J, actif);
+      J[actif] = { ...J[actif], mana: Math.min(C.MANA_MAX, J[actif].mana + C.MANA_PER_TURN) };
+    }
+    if (!fini) infinis++;
+  }
+  verif(bloques === 0, bloques + ' combats où un camp n\'avait plus de cible alors qu\'une créature vivait');
+  verif(absurdes === 0, absurdes + ' combats avec des PV, du mana ou un bouclier absurdes');
+  verif(infinis === bloques + absurdes, (infinis - bloques - absurdes) + ' combats sans fin malgré la Fureur');
+  return fautes;
+}
+module.exports.auditSortsMoteur = auditSortsMoteur;
