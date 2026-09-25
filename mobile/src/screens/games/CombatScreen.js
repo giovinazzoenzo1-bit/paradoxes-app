@@ -59,6 +59,10 @@ import {
   encaisser,
   degatsDuJoueur,
   guardianStatsCalibrees,
+  prochainVivant as nextLivingIndex,
+  premierVivant as firstLivingIndex,
+  choisirRiposteur,
+  riposteAdversaire,
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
   guardianStats,
@@ -68,20 +72,11 @@ import { GUARDIAN_BASE_LEVEL } from '../../games/clicker/incubatorLogic';
 // Couleurs d'affinité, communes à la flèche de visée et aux pastilles.
 const ELEM_COLORS = { fort: '#3ddc84', neutre: '#ffb340', faible: '#ff5a4a' };
 
-const BASIC_ATTACK_RATIO = 0.4; // proportion de la stat ATQ brute, pour l'attaque de base gratuite
 const RECHARGE_PERCENT = 0.5; // "Recharge" (pub simulée) rend 50% de l'endurance max du combattant actif
 
-function nextLivingIndex(fighters, fromIndex) {
-  const n = fighters.length;
-  for (let step = 1; step <= n; step++) {
-    const idx = (fromIndex + step) % n;
-    if (fighters[idx].hp > 0) return idx;
-  }
-  return -1;
-}
-function firstLivingIndex(fighters) {
-  return fighters.findIndex((f) => f.hp > 0);
-}
+// `nextLivingIndex` et `firstLivingIndex` viennent du moteur partagé
+// (combatLogic : prochainVivant, premierVivant) — importés sous leur nom
+// d'origine, les appels ne changent pas.
 
 // Nombre de dégâts flottant, affiché AU-DESSUS de la créature qui vient
 // de subir l'attaque (demande explicite) — monte et s'efface tout seul.
@@ -323,10 +318,6 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     if (!opponentGoesFirst()) return;
 
     const opp = opponentsRef.current[targetIndexRef.current];
-    // Mana de l'adversaire monté AVANT son choix, sur la copie locale :
-    // passer par setOpponents aurait été asynchrone, et il aurait choisi
-    // avec la valeur du tour précédent.
-    const oppWithMana = { ...opp, mana: Math.min(MANA_MAX, opp.mana + MANA_PER_TURN) };
     // Élan de l'adversaire lancé ici, AVANT que les dégâts ne
     // s'affichent : sans ce décalage, le chiffre rouge apparaissait
     // pendant que la créature bougeait encore et on ne voyait pas qui
@@ -342,12 +333,14 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     if (riposte0) {
       oppDamage = riposte0.degats[curIdx];
     } else {
-      const oppSkill = pickOpponentSkill(oppWithMana);
-      const defender = fightersRef.current[activeIndexRef.current];
-      oppDamage = Math.max(1, Math.round(
-        (oppSkill.isBasic ? oppSkill.damage : scaledSkillDamage(oppSkill, opp.creature, opp.stats.attack))
-        * elementMultiplier(opp.creature.element, defender.creature.element)
-      ));
+      // Règle PARTAGÉE (combatLogic.riposteAdversaire) : sa mana gagnée est
+      // GARDÉE (bug du 24/09 : elle ne l'était pas, et les adversaires ne
+      // lançaient jamais leur spéciale).
+      const r0 = riposteAdversaire(opp, curFighter);
+      oppDamage = r0.degats;
+      const avecMana = opponentsRef.current.map((o, i) => (i === targetIndexRef.current ? { ...o, mana: r0.mana } : o));
+      opponentsRef.current = avecMana;
+      setOpponents(avecMana);
     }
     // Résilience aussi sur CE chemin : l'adversaire qui ouvre le combat
     // pouvait tuer une créature que la rune aurait dû sauver.
@@ -511,17 +504,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     }
   };
 
-  const pickOpponentSkill = (opp) => {
-    const affordable = (opp.creature.skills || []).filter(
-      (sk) => (sk.manaCost || 0) <= opp.mana && (!sk.special || opp.mana >= MANA_MAX)
-    );
-    if (affordable.length === 0) {
-      const basicDmg = Math.max(1, Math.round(opp.stats.attack * BASIC_ATTACK_RATIO));
-      return { name: 'Attaque de base', damage: basicDmg, manaCost: 0, isBasic: true };
-    }
-    const skill = affordable[Math.floor(Math.random() * affordable.length)];
-    return { ...skill, isBasic: false };
-  };
+  // Le tirage de compétence adverse vit dans le moteur partagé
+  // (combatLogic.riposteAdversaire), utilisé aussi par les simulations.
 
   const finishChallenge = (completed) => {
     if (challengeDoneRef.current) return;
@@ -592,26 +576,17 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // C'était la vraie cause du déséquilibre, bien plus que la valeur
     // des dégâts.
     let opponentDamage = 0;
-    const retaliatorIdx = newOpponents[targetIdx] && newOpponents[targetIdx].hp > 0
-      ? targetIdx
-      : newOpponents.findIndex((o) => o.hp > 0);
+    const retaliatorIdx = choisirRiposteur(newOpponents, targetIdx);
     // Gardien : riposte PARTAGÉE avec la simulation, zone comprise.
     let riposte = null;
     if (isBoss && retaliatorIdx >= 0) {
       riposte = riposteGardien(newOpponents[retaliatorIdx].stats, fightersRef.current, curIdx);
       opponentDamage = riposte.degats[curIdx];
     } else if (retaliatorIdx >= 0) {
-      const retaliator = newOpponents[retaliatorIdx];
-      const oppSkill = pickOpponentSkill({ ...retaliator, mana: Math.min(MANA_MAX, retaliator.mana + MANA_PER_TURN) });
-      newOpponents = newOpponents.map((o, i) =>
-        i === retaliatorIdx ? { ...o, mana: Math.max(0, o.mana - (oppSkill.manaCost || 0)) } : o
-      );
-      const rawOppDamage = oppSkill.isBasic
-        ? oppSkill.damage
-        : scaledSkillDamage(oppSkill, retaliator.creature, retaliator.stats.attack);
-      opponentDamage = Math.max(1, Math.round(
-        rawOppDamage * elementMultiplier(retaliator.creature.element, curFighter.creature.element)
-      ));
+      // Règle PARTAGÉE : mana GARDÉE (bug du 24/09), compétence au hasard.
+      const r = riposteAdversaire(newOpponents[retaliatorIdx], curFighter);
+      newOpponents = newOpponents.map((o, i) => (i === retaliatorIdx ? { ...o, mana: r.mana } : o));
+      opponentDamage = r.degats;
     }
     opponentsRef.current = newOpponents;
     setOpponents(newOpponents);

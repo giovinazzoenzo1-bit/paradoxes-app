@@ -3218,7 +3218,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '26934301';
+const EMPREINTE_COMBAT = '681e99db';
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -3287,3 +3287,24 @@ function auditGriffesBonus() {
   return fautes;
 }
 module.exports.auditGriffesBonus = auditGriffesBonus;
+
+// ---- Les adversaires de l'Aventure lancent leur spéciale (24/09) ----
+//
+// Bug trouvé en mesurant l'Aventure : la mana gagnée par un adversaire
+// n'était jamais gardée (+1 seulement pour le tirage), il ne lançait donc
+// JAMAIS sa spéciale. La règle vit dans le moteur partagé
+// (`riposteAdversaire`) ; ce contrôle vérifie qu'un adversaire atteint la
+// mana pleine et peut lancer sa spéciale en quelques ripostes.
+function auditManaAdverse() {
+  const K = load('combatLogic');
+  const adv = C.CREATURES.find((c) => (c.skills || []).some((k) => k.special));
+  const cible = { creature: C.CREATURES[0] };
+  let o = { creature: adv, stats: K.statsForOpponentCreatureTyped(adv, 10), mana: 0 };
+  for (let t = 0; t < 12; t++) {
+    const r = K.riposteAdversaire(o, cible, () => 0.999); // dernière payable : la spéciale dès qu'elle l'est
+    if (r.competence.special) return [];
+    o = { ...o, mana: r.mana };
+  }
+  return [{ probleme: "après 12 ripostes, l'adversaire n'a jamais pu lancer sa spéciale (mana non gardée ?)" }];
+}
+module.exports.auditManaAdverse = auditManaAdverse;

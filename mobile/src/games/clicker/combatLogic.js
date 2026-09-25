@@ -327,6 +327,48 @@ export function puissanceGardien(stats, nbCombattants = 3) {
 }
 
 // ---- Les règles partagées avec CombatScreen ----
+//
+// ⚠️ MOTEUR UNIQUE (24/09). L'auteur va ajouter des mécaniques (boucliers,
+// zone, poison…) : chaque règle du combat vit ICI, une seule fois, et le
+// vrai combat comme les deux simulations (Gardien, Aventure) l'appellent.
+// Une règle recopiée dans l'écran finirait par diverger en silence.
+
+// Attaque de base (aucune compétence payable) : part de l'ATQ brute.
+export const BASIC_ATTACK_RATIO = 0.4;
+// Prochaine créature vivante après `depuis` (elle-même en dernier recours).
+export function prochainVivant(liste, depuis) {
+  const n = liste.length;
+  for (let k = 1; k <= n; k++) { const i = (depuis + k) % n; if (liste[i].hp > 0) return i; }
+  return -1;
+}
+export function premierVivant(liste) {
+  return liste.findIndex((x) => x.hp > 0);
+}
+// Qui riposte : la cible si elle vit encore, sinon la première vivante.
+export function choisirRiposteur(adversaires, cible) {
+  return adversaires[cible] && adversaires[cible].hp > 0 ? cible : premierVivant(adversaires);
+}
+// Riposte d'un adversaire ordinaire (le Gardien a la sienne) : +MANA_PER_TURN,
+// compétence au hasard parmi les payables (la spéciale demande la mana
+// pleine), attaque de base si aucune.
+// ⚠️ BUG CORRIGÉ le 24/09 : la mana gagnée n'était JAMAIS gardée (+1
+// seulement pour le tirage) — les adversaires de l'Aventure ne lançaient
+// jamais leur spéciale. Elle est désormais conservée d'un tour à l'autre.
+export function riposteAdversaire(adv, cible, alea = Math.random) {
+  const mana = Math.min(MANA_MAX, (adv.mana || 0) + MANA_PER_TURN);
+  const payables = (adv.creature.skills || []).filter((k) => (k.manaCost || 0) <= mana && (!k.special || mana >= MANA_MAX));
+  let competence;
+  let brut;
+  if (!payables.length) {
+    brut = Math.max(1, Math.round(adv.stats.attack * BASIC_ATTACK_RATIO));
+    competence = { name: 'Attaque de base', damage: brut, manaCost: 0, isBasic: true };
+  } else {
+    competence = payables[Math.floor(alea() * payables.length)];
+    brut = scaledSkillDamage(competence, adv.creature, adv.stats.attack);
+  }
+  const degats = Math.max(1, Math.round(brut * elementMultiplier(adv.creature.element, cible.creature.element)));
+  return { competence, degats, mana: Math.max(0, mana - (competence.manaCost || 0)) };
+}
 
 // Coup du joueur : bouclier d'abord ; la manche 1 s'arrête à
 // −GUARDIAN_PHASE1_HP_LOSS, puis le Gardien se relève à PV pleins avec un
@@ -434,10 +476,7 @@ function simulerPrepares(prepares, gStats, tapsParSec, alea) {
   const f = prepares.map((p) => ({ ...p, hp: p.stats.hp, mana: 0, resilienceUsed: false }));
   if (!f.length) return false;
   let g = { hp: gStats.hp, shield: Math.round(gStats.hp * GUARDIAN_SHIELD_RATIO), phase: 1, maxHp: gStats.hp };
-  const suivante = (i) => {
-    for (let k = 1; k <= f.length; k++) { const j = (i + k) % f.length; if (f[j].hp > 0) return j; }
-    return -1;
-  };
+  const suivante = (i) => prochainVivant(f, i);
   const subir = (cible) => {
     riposteGardien(gStats, f, cible, alea).degats.forEach((d, i) => { if (d > 0) Object.assign(f[i], encaisser(f[i], d)); });
   };

@@ -62,7 +62,9 @@ Choix validés par l'auteur : une recharge PAR CRÉATURE (liée à la créature)
 Demande de l'auteur : mesurer « comme pour le Gardien » (simulation), pour savoir si les Griffes (combat + bonus) font monter les créatures trop vite. Outil : `mobile/tools/simulateur-aventure.js` (fonctions du jeu, boucle de CombatScreen reproduite, mode humain).
 - **MESURÉ** : un deck de 3 rares NIVEAU 1 gagne 100 % des combats jusqu'au niveau 30 de l'Aventure (3 étoiles), 80-87 % au niveau 40 ; un deck niveau 10 gagne tout. Les adversaires (budget de puissance par membre) ne grossissent que ×2,5 du niveau 1 au 40 (99 PV / 12 att au niveau 40), les créatures ×4 plus les évolutions. Le « chantier » du brief du matin (ratio 2,3 → 8,6) est périmé : depuis les correctifs du 14/09 (budget par équipe, fin du one-shot), c'est l'inverse.
 - **BUG trouvé** : la mana adverse n'est jamais enregistrée (+1 seulement pour le tirage) — les adversaires de l'Aventure ne lancent JAMAIS leur spéciale.
-- **À DÉCIDER par l'auteur** : la courbe visée (ex. « niveau d'Aventure N = créatures ≈ N »), puis caler les adversaires par simulation et verrouiller par un contrôle ; ensuite seulement régler le rythme des Griffes.
+- **DÉCIDÉ (24/09)** : ordre = 1) moteur unique, 2) nouvelles compétences de l'auteur, 3) calibrage de l'Aventure (niveau N ≈ créatures niveau N, 2 victoires sur 3), 4) rythme des Griffes.
+- **Étape 1 FAITE** : `combatLogic` porte aussi `prochainVivant`, `premierVivant`, `choisirRiposteur`, `riposteAdversaire` (mana GARDÉE : bug corrigé), `BASIC_ATTACK_RATIO` ; CombatScreen et les deux simulateurs les appellent ; l'ancien tirage de l'écran supprimé. Gardien : calibrage identique au millionième. Aventure avec les spéciales : deck niveau 1 à 100 % (niv 20), 81 % (30), 47 % (40) — encore bien trop facile. `auditManaAdverse` + sabotage.
+- **Ancien texte** — à décider par l'auteur : la courbe visée (ex. « niveau d'Aventure N = créatures ≈ N »), puis caler les adversaires par simulation et verrouiller par un contrôle ; ensuite seulement régler le rythme des Griffes.
 
 ## 4. Les passes restantes (demandées par l'auteur — dans la MÊME conversation, décision du 24/09)
 

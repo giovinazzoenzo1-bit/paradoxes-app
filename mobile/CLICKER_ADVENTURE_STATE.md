@@ -239,6 +239,14 @@ changé dans ce fichier exige le bump : sinon l'œuf en cours garde
 l'ancienne cible, qui peut être devenue impossible à vie (24/09 :
 « Achète 10 niveaux de Poigne » valait 45 000 % du seuil).
 
+### Un seul moteur de combat (24/09)
+Toute règle du combat vit dans `combatLogic` (coup, riposte adverse et
+du Gardien, zone, encaissement, qui riposte, prochaine créature vivante)
+et CombatScreen comme les simulateurs l'appellent. Une nouvelle mécanique
+(bouclier, poison…) s'y ajoute UNE fois ; l'empreinte des règles restées
+dans l'écran (ordre du tour, animations) refuse un push non revérifié.
+Bug trouvé en le faisant : la mana adverse n'était jamais gardée.
+
 ### Le Gardien se cale sur le deck — par SIMULATION (24/09)
 Demande : « parfait à l'œuf 2, trop facile après ; qu'il gagne 1/3 pour
 que les joueurs doivent améliorer leurs créatures ». Mesuré avant : il ne

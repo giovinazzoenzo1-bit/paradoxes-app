@@ -14,9 +14,8 @@
 //     pleine, sinon sa meilleure compétence ; tap au rythme de l'auteur ;
 //   - la cible riposte si elle vit, sinon la première adverse vivante ;
 //     compétence tirée au hasard parmi celles payables ;
-//   - ⚠️ comme dans le jeu au 24/09 : la mana adverse n'est JAMAIS
-//     enregistrée (+1 seulement pour le tirage) — les adversaires ne
-//     lancent donc jamais leur spéciale ;
+//   - la mana adverse est GARDÉE (bug corrigé le 24/09 : elle ne l'était
+//     pas, les adversaires ne lançaient jamais leur spéciale) ;
 //   - 50 % de chances que la cible frappe en premier ; rotation de
 //     l'équipe à chaque tour (+1 mana à la créature qui entre).
 // Sans runes (le deck « nu ») : un joueur équipé fait mieux.
@@ -48,19 +47,15 @@ function combatAventureDetail(membres, niveau, alea, tapsParSec = 6.7, humain = 
   const f = combattants(membres);
   const o = K.opponentTeamForLevel(niveau).map((c) => {
     const stats = K.statsForOpponentCreatureTyped(c, niveau);
-    return { creature: c, stats, hp: stats.hp };
+    return { creature: c, stats, hp: stats.hp, mana: 0 };
   });
-  const vivantF = (i) => { for (let k = 1; k <= f.length; k++) { const j = (i + k) % f.length; if (f[j].hp > 0) return j; } return -1; };
-  const cibleO = () => o.findIndex((x) => x.hp > 0);
+  // Règles du MOTEUR PARTAGÉ (combatLogic), les mêmes que l'écran.
+  const vivantF = (i) => K.prochainVivant(f, i);
+  const cibleO = () => K.premierVivant(o);
   const riposte = (oi, fi) => {
-    const x = o[oi];
-    const payables = (x.creature.skills || []).filter((k) => (k.manaCost || 0) <= Math.min(C.MANA_MAX, 0 + C.MANA_PER_TURN)
-      && (!k.special || Math.min(C.MANA_MAX, 0 + C.MANA_PER_TURN) >= C.MANA_MAX));
-    const brut = payables.length
-      ? K.scaledSkillDamage(payables[Math.floor(alea() * payables.length)], x.creature, x.stats.attack)
-      : Math.max(1, Math.round(x.stats.attack * 0.4));
-    const d = Math.max(1, Math.round(brut * K.elementMultiplier(x.creature.element, f[fi].creature.element)));
-    Object.assign(f[fi], K.encaisser(f[fi], d));
+    const r = K.riposteAdversaire(o[oi], f[fi], alea);
+    o[oi].mana = r.mana;
+    Object.assign(f[fi], K.encaisser(f[fi], r.degats));
   };
   let act = 0;
   f[0].mana = Math.min(C.MANA_MAX, C.MANA_PER_TURN);
@@ -73,7 +68,7 @@ function combatAventureDetail(membres, niveau, alea, tapsParSec = 6.7, humain = 
     if (spe) x.mana -= spe.manaCost || C.MANA_MAX;
     const t = cibleO();
     o[t].hp = Math.max(0, o[t].hp - K.degatsDuJoueur(comp, x, o[t].creature, x.taps / tapsParSec, true));
-    const r = o[t].hp > 0 ? t : cibleO();
+    const r = K.choisirRiposteur(o, t);
     if (r < 0) return { gagne: true, tours: tour + 1 };
     riposte(r, act);
     const nx = vivantF(act);
