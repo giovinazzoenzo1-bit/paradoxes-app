@@ -52,6 +52,27 @@ export const MANA_PER_TURN = 1;
 // annulait l'intérêt d'en avoir plusieurs.
 const SKILL_MANA_COSTS = [0, 0, 0];
 
+// ---- Le SORT de chaque créature (24/09, répartition validée par l'auteur) ----
+// Un sort par créature, pris dans les sorts de son TYPE (combatLogic :
+// SORTS). Les ids seulement ici : clickerLogic ne peut pas importer
+// combatLogic (qui l'importe déjà). La liste de compétences avec le sort
+// se construit par `competencesAvecSort` (combatLogic).
+export const SORT_DE_CREATURE = {
+  // Attaquants
+  pyrosile: 'zone', ventis: 'zone', voltix: 'zone', solarion: 'zone',
+  ombrillon: 'execution', abyssorax: 'execution', solstral: 'execution',
+  terracroc: 'pacte', malefix: 'pacte', arcanis: 'pacte',
+  // Tanks
+  caraploof: 'bouclier', aegisolar: 'bouclier', runicor: 'bouclier',
+  fournax: 'poison', cumulox: 'poison', tartaroth: 'poison',
+  bouldog: 'provocation', brontobloc: 'provocation',
+  // Soutiens
+  luxorbe: 'soin', aquamira: 'soin',
+  braiserose: 'boost', voltarel: 'boost',
+  zephyrion: 'vitesse', racinea: 'vitesse',
+  glyphon: 'marque', nocturis: 'marque',
+};
+
 function buildCreatureSkills(creature) {
   const entries = creature.skills || [];
   const regularCount = creature.rarity === 'commun' ? 2 : 3;

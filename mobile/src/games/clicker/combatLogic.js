@@ -1,7 +1,7 @@
 // Logique pure du mode Aventure / Combat — voir mobile/ADVENTURE_MODE.md
 // pour le design complet. Aucun écran ne dépend encore de ce fichier :
 // c'est l'étape 1 du plan de construction (fonctions testables d'abord).
-import { CREATURES, MANA_MAX, MANA_PER_TURN } from './clickerLogic';
+import { CREATURES, MANA_MAX, MANA_PER_TURN, SORT_DE_CREATURE } from './clickerLogic';
 
 // ---- Stats de combat par rareté ----
 // Recalibré (29/08) à partir d'un exemple réel produit par le
@@ -643,6 +643,26 @@ export function finDeTour(equipe) {
     return x;
   });
   return { equipe: eq, evenements: ev };
+}
+
+// Les compétences d'une créature AVEC son sort (l'écran s'en servira à
+// l'étape 3) : le sort remplace la compétence normale la plus FAIBLE ; la
+// meilleure reste, la spéciale ne change pas — les calculs de puissance et
+// de calibrage, qui lisent la meilleure et la spéciale, sont inchangés.
+// ⚠️ L'ancienne « zone » des Soutiens (2e compétence : 100 % sur TOUS les
+// ennemis, soit 300 % contre 3 — le « trop cheaté » senti par l'auteur)
+// disparaît : la zone devient le sort des Attaquants, à 40 % par ennemi.
+export function competencesAvecSort(creature) {
+  const skills = (creature.skills || []).map((k) => ({ ...k, aoe: false }));
+  const id = SORT_DE_CREATURE[creature.id];
+  if (!id || !SORTS[id]) return skills;
+  const normales = skills.filter((k) => !k.special);
+  if (normales.length < 2) return skills; // jamais retirer la seule attaque
+  const faible = normales.reduce((m, k) => (k.damage < m.damage ? k : m), normales[0]);
+  return skills.map((k) => (k === faible
+    ? { id: 'sort', name: SORTS[id].nom, icone: SORTS[id].icone, sort: id, manaCost: SORTS[id].cout,
+      damage: 0, special: false, aoe: false }
+    : k));
 }
 
 export function multiplicateurFureur(tour) {

@@ -165,6 +165,8 @@ const SABOTAGES = [
     remplace('  return depart;\n}\n// Qui le joueur peut frapper', '  return -1;\n}\n// Qui le joueur peut frapper')],
   ['auditSortsMoteur', F.combat, 'le bouclier divisé par 10 (un chiffre validé qui dérive)',
     remplace('bouclierPartPerdue: 0.45,', 'bouclierPartPerdue: 0.045,')],
+  ['auditSortsDonnees', F.clicker, "une créature reçoit un sort d'un autre type (Soin pour un Attaquant)",
+    remplace("pyrosile: 'zone',", "pyrosile: 'soin',")],
   ['auditExhaustif', F.defis, "un libellé cassé dans un vrai défi (l'outil testait les anciens modèles : vert quand même, 24/09)",
     surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, (b) => b.replace('label: t => `', 'label: t => `undefined '))],
   ['auditPoigneA0', F.clicker, "Poigne remise à 1 399 : 1/11 du prix du Pacte pour le même +1 (le « cheat » du 21/09)",

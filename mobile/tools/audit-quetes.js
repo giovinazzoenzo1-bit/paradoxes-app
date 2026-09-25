@@ -3407,3 +3407,33 @@ function auditSortsMoteur() {
   return fautes;
 }
 module.exports.auditSortsMoteur = auditSortsMoteur;
+
+// ---- Chaque créature a son sort, de son type (24/09) ----
+//
+// Répartition validée par l'auteur (clickerLogic : SORT_DE_CREATURE). Ce
+// contrôle vérifie : chaque créature a un sort qui existe et qui est de
+// SON type ; les effectifs par sort sont ceux décidés ; la liste de
+// compétences avec le sort (`competencesAvecSort`) garde la meilleure
+// attaque et la spéciale, n'a qu'un sort, et plus aucune zone gratuite.
+function auditSortsDonnees() {
+  const K = load('combatLogic');
+  const fautes = [];
+  const voulu = { zone: 4, execution: 3, pacte: 3, bouclier: 3, poison: 3, provocation: 2, soin: 2, boost: 2, vitesse: 2, marque: 2 };
+  const compte = {};
+  C.CREATURES.forEach((c) => {
+    const id = C.SORT_DE_CREATURE[c.id];
+    const s = K.SORTS[id];
+    if (!s) { fautes.push({ creature: c.id, probleme: 'aucun sort, ou un sort inconnu' }); return; }
+    if (s.type !== c.combatType) fautes.push({ creature: c.id, probleme: 'sort ' + id + ' (' + s.type + ') pour une créature ' + c.combatType });
+    compte[id] = (compte[id] || 0) + 1;
+    const avec = K.competencesAvecSort(c);
+    const meilleure = Math.max(...(c.skills || []).filter((k) => !k.special).map((k) => k.damage));
+    if (avec.filter((k) => k.sort).length !== 1) fautes.push({ creature: c.id, probleme: 'pas exactement un sort dans ses compétences' });
+    if (!avec.some((k) => !k.special && !k.sort && k.damage === meilleure)) fautes.push({ creature: c.id, probleme: 'la meilleure attaque a disparu' });
+    if (!avec.some((k) => k.special)) fautes.push({ creature: c.id, probleme: 'la spéciale a disparu' });
+    if (avec.some((k) => k.aoe)) fautes.push({ creature: c.id, probleme: 'une zone gratuite reste' });
+  });
+  Object.keys(voulu).forEach((id) => { if ((compte[id] || 0) !== voulu[id]) fautes.push({ sort: id, attendu: voulu[id], trouve: compte[id] || 0 }); });
+  return fautes;
+}
+module.exports.auditSortsDonnees = auditSortsDonnees;
