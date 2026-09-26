@@ -3585,11 +3585,21 @@ function auditDefaite() {
   const n = 20;
   const deck = K.decksDeReferenceAventure(n)[0].map((c) => ({ creature: c, ownedLevel: n, evolutionTier: K.evoPourNiveau(n) }));
   const bas = deck.map((m) => ({ ...m, ownedLevel: 10 }));
-  const a = K.niveauxManquants(deck, 40), b = K.niveauxManquants(bas, 40);
-  doit(b > a, 'un deck plus faible ne manque pas de plus de niveaux');
-  doit(K.niveauxManquants(deck.map((m) => ({ ...m, ownedLevel: 60 })), 20) === 0, 'un deck au-dessus de la puissance conseillée « manque » de niveaux');
+  // 26/09 : le diagnostic suit la MÊME mesure exacte que l'aperçu — cohérent
+  // (0 ⇔ ta puissance ≥ conseillée) et MINIMAL (X niveaux suffisent, X − 1 non).
+  const Cr = (id) => require('./audit-quetes.js').C.CREATURES.find((c) => c.id === id);
+  const eqm = (liste) => liste.map(([id, niv, evo]) => ({ creature: Cr(id), ownedLevel: niv, evolutionTier: evo, equippedRunes: [] }));
+  for (const [lv, eq] of [[19, eqm([['bouldog', 34, 1], ['ventis', 13, 0]])], [46, eqm([['nocturis', 57, 2]])], [77, eqm([['brontobloc', 99, 2], ['bouldog', 89, 2], ['voltarel', 56, 2]])]]) {
+    const pa = K.puissanceAventure(eq, lv), cons = K.puissanceConseillee(lv), d = K.niveauxManquantsExact(eq, lv);
+    doit(K.victoiresAuNiveau(eq, lv) === pa.victoires, 'niveau ' + lv + ' : la défaite ne mesure pas comme l\'aperçu');
+    doit((d === 0) === (pa.puissance >= cons), 'niveau ' + lv + ' : « ' + d + ' niveaux manquants » contredit la puissance affichée (' + pa.puissance + ' / ' + cons + ')');
+    if (d > 0 && d < K.MANQUE_MAX) {
+      doit(K.puissanceAventure(K.monterEquipe(eq, d), lv).puissance >= cons, 'niveau ' + lv + ' : ' + d + ' niveaux de plus ne suffisent pas');
+      doit(K.puissanceAventure(K.monterEquipe(eq, d - 1), lv).puissance < cons, 'niveau ' + lv + ' : ' + d + " n'est pas le minimum (" + (d - 1) + ' suffisent)');
+    }
+  }
   const S = lire('CombatScreen.js'), A = lire('AdventureScreen.js'), Cl = lire('ClickerScreen.js');
-  doit(S.includes("manque={outcome === 'lose' ? niveauxManquants(team, levelNumber) : 0}"), "l'écran de fin ne calcule plus le retard");
+  doit(S.includes("manque={outcome === 'lose' ? manqueExact : 0}") && S.includes('const d = niveauxManquantsExact(team, levelNumber, { filetBaisse });'), "l'écran de fin ne calcule plus le retard sur la mesure exacte");
   doit(S.includes("presque={outcome === 'lose' && presqueGagne(opponents)}"), "l'écran de fin ne calcule plus le « presque »");
   doit(S.includes('Il te manquait environ ${manque} niveau'), "l'écran de défaite n'affiche plus le diagnostic");
   doit(A.includes('aideDefaite={{'), "le lancement des combats ne transmet plus les solutions de défaite");
@@ -3839,9 +3849,10 @@ function auditPuissanceExacte() {
     [89, [m('luxorbe', 96, 2), m('cumulox', 106, 2)]],
   ];
   let s = 777; const rnd = () => { s = (s * 1103515245 + 12345) >>> 0; return s / 4294967296; };
-  const pool = C.CREATURES.filter((c) => ['commun', 'peu_commun', 'rare', 'epique'].includes(c.rarity));
+  // 26/09 : les 227 niveaux et TOUTES les raretés (légendaires, mythiques).
+  const pool = C.CREATURES;
   for (let t = 0; t < 40; t++) {
-    const lv = 1 + Math.floor(rnd() * 100); const eq = [];
+    const lv = 1 + Math.floor(rnd() * 227); const eq = [];
     for (let i = 0, n = 1 + Math.floor(rnd() * 3); i < n; i++) { const c = pool[Math.floor(rnd() * pool.length)]; if (!eq.find((x) => x.creature.id === c.id)) { const nv = Math.max(1, Math.round(lv * (0.6 + rnd() * 0.9))); eq.push(m(c.id, nv, nv >= 50 ? 2 : nv >= 25 ? 1 : 0)); } }
     equipes.push([lv, eq]);
   }

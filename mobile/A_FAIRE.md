@@ -84,4 +84,6 @@
 - [x] **Mode Aventure validé par l'auteur (26/09)**
 - [x] Puissance exacte (pixel perfect) : aperçu, menu Aventure, Gardien ; Élixir exclu
 - [x] garde.sh : étiquette de verrou unique fournie par le script (incident des deux copies)
-- [ ] Écran de défaite : « Il te manquait X niveaux » et « retente ta chance » sur la MÊME mesure exacte
+- [x] Écran de défaite sur la MÊME mesure exacte (cohérent, minimal) ; contrôle de puissance étendu aux 227 niveaux
+- [ ] Test de l'auteur au rythme réel : noter l'heure de chaque éclosion (rythme œufs / Aventure)
+- [ ] Fluidité sur téléphone : calcul de puissance (≤ ~1 s au pire) et diagnostic de défaite (≈ 0,3 s dans node)

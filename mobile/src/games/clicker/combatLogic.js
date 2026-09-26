@@ -1905,6 +1905,48 @@ export function puissanceAventure(membres, niveau, { filetBaisse = 0, elixirActi
   const couleur = r.victoires >= PUISSANCE_CIBLE_AVENTURE ? 'vert' : r.victoires >= PUISSANCE_ORANGE ? 'orange' : 'rouge';
   return { puissance, victoires: r.victoires, couleur };
 }
+// ---- Écran de défaite sur la MÊME mesure (26/09, demande de l'auteur) ----
+// Avant : « Il te manquait X niveaux » / « retente ta chance » venaient de
+// l'ANCIENNE formule — ils pouvaient contredire la puissance exacte affichée
+// juste avant. Désormais : la chance au niveau réel se mesure EXACTEMENT
+// comme dans `puissanceAventure` (même graine, 100 combats, meilleur des deux
+// styles, filet compté, Élixir EXCLU) → 0 niveau manquant ⇔ ta puissance ≥
+// conseillée (la défaite était de la malchance : « retente » dit vrai).
+export function victoiresAuNiveau(membres, niveau, filetBaisse = 0) {
+  const joueurs = (membres || []).filter((m) => m && m.creature).map((m) => ({ creature: m.creature, stats: statsDuMembre(m) }));
+  if (!joueurs.length) return 0;
+  const kNiveau = multiplicateurAventure(niveau);
+  let meilleur = 0;
+  for (const politique of [choixJoueur, choixSansSorts]) {
+    const alea = aleaGraine(niveau * 7919 + 17);
+    let g = 0;
+    for (let e = 0; e < PUISSANCE_COMBATS_NIVEAU; e++) {
+      if (simulerCombat(joueurs, adversairesAventure(niveau, { k: kNiveau * 1, filetBaisse }), { alea, politique }).gagne) g++;
+    }
+    meilleur = Math.max(meilleur, g / PUISSANCE_COMBATS_NIVEAU);
+  }
+  return meilleur;
+}
+// L'équipe avec d niveaux de plus par créature, évolutions comprises (25, 50).
+export function monterEquipe(membres, d) {
+  return (membres || []).filter((m) => m && m.creature).map((m) => {
+    const niv = (m.ownedLevel || m.level || 1) + d;
+    return { ...m, ownedLevel: niv, evolutionTier: Math.max(m.evolutionTier || 0, evoPourNiveau(niv)) };
+  });
+}
+// Le PLUS PETIT nombre de niveaux qui fait passer la chance à la cible (6/10).
+export const MANQUE_MAX = 50;
+export function niveauxManquantsExact(membres, niveau, { filetBaisse = 0 } = {}) {
+  const base = (membres || []).filter((m) => m && m.creature);
+  if (!base.length) return 0;
+  const passe = (d) => victoiresAuNiveau(monterEquipe(base, d), niveau, filetBaisse) >= PUISSANCE_CIBLE_AVENTURE;
+  if (passe(0)) return 0;
+  let lo = 0, hi = 1;
+  while (hi < MANQUE_MAX && !passe(hi)) { lo = hi; hi = Math.min(MANQUE_MAX, hi * 2); }
+  if (!passe(hi)) return MANQUE_MAX;
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (passe(mid)) hi = mid; else lo = mid; }
+  return hi;
+}
 // « Ton deck » face au Gardien : même Gardien que le combat (`gStats` :
 // calibré, Élixir compris), même équipe (sans runes), 2 victoires sur 3.
 const echelleGardien = (g, x) => ({ ...g, hp: Math.max(1, Math.round(g.hp * x)), attack: Math.max(1, g.attack * x) });

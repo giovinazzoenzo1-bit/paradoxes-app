@@ -781,3 +781,19 @@ suffixe aléatoire** (« R-puissance#a3f9 ») — une copie « au hasard » choi
 le même. Réutiliser EXACTEMENT l'étiquette affichée. Testé sur un clone :
 une 2e copie avec la même étiquette est arrêtée. Et : découper les gros
 chantiers en réponses courtes.
+
+
+## 26/09 — Écran de défaite sur la MÊME mesure exacte
+
+« Il te manquait X niveaux » et « retente ta chance » venaient encore de
+l'ANCIENNE formule : ils pouvaient contredire la puissance exacte affichée
+juste avant le combat. Désormais (`niveauxManquantsExact`, combatLogic) : la
+chance au niveau réel se mesure EXACTEMENT comme l'aperçu
+(`victoiresAuNiveau` : même graine, 100 combats, meilleur des deux styles,
+filet du combat compté, Élixir EXCLU). 0 niveau ⇔ ta puissance ≥ conseillée
+(« pas de chance cette fois, retente ! » dit vrai) ; sinon X = le PLUS PETIT
+nombre de niveaux (évolutions comprises, `monterEquipe`) qui fait passer à
+6/10. Calcul en différé à la défaite (« Analyse de ton combat… », ≈ 0,3 s
+dans node au niveau 19). Contrôle `auditDefaite` : cohérence avec l'aperçu,
+X suffit et X − 1 non ; 2 sabotages. `auditPuissanceExacte` couvre désormais
+les 227 niveaux et toutes les raretés.

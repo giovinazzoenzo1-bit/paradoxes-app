@@ -79,7 +79,7 @@ import {
   cibleDuJoueur,
   appliquerElixir,
   appliquerBaisse,
-  niveauxManquants,
+  niveauxManquantsExact,
   presqueGagne,
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
@@ -275,6 +275,24 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const [timeLeft, setTimeLeft] = useState(TAP_CHALLENGE_TIME_LIMIT_SEC);
   const [switchMessage, setSwitchMessage] = useState(null);
   const [outcome, setOutcome] = useState(null); // null | 'win' | 'lose'
+  // « Il te manquait X niveaux » (26/09) : la MÊME mesure exacte que la
+  // puissance de l'aperçu (combatLogic.niveauxManquantsExact), en différé à
+  // la défaite — « … » le temps du calcul. Aventure seulement (`aideDefaite`) ;
+  // filet du combat compté, Élixir EXCLU.
+  const [manqueExact, setManqueExact] = useState(null);
+  useEffect(() => {
+    if (outcome !== 'lose' || !aideDefaite) return undefined;
+    let annule = false;
+    const t = setTimeout(() => {
+      try {
+        const d = niveauxManquantsExact(team, levelNumber, { filetBaisse });
+        if (!annule) setManqueExact(d);
+      } catch (e) {
+        if (!annule) setManqueExact(0);
+      }
+    }, 60);
+    return () => { annule = true; clearTimeout(t); };
+  }, [outcome]);
   // Statistiques accumulées pendant le combat, pour le récapitulatif de
   // fin (demande explicite) — mises à jour à chaque tour (premier coup
   // adverse inclus) et jamais réinitialisées avant la fin du combat.
@@ -815,7 +833,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         onContinue={() => onFinish(outcome, false, starsForBattle(battleStats, opponents.length))}
         onNextLevel={() => onFinish(outcome, true, starsForBattle(battleStats, opponents.length))}
         aide={aideDefaite}
-        manque={outcome === 'lose' ? niveauxManquants(team, levelNumber) : 0}
+        manque={outcome === 'lose' ? manqueExact : 0}
         presque={outcome === 'lose' && presqueGagne(opponents)}
         premiereVictoire={premiereVictoire}
       />
@@ -1293,9 +1311,11 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
             <View style={styles.aideBloc}>
               {presque && <Text style={styles.aidePresque}>🔥 Tu y étais presque !</Text>}
               <Text style={styles.aideDiag}>
-                {manque > 0
-                  ? `Il te manquait environ ${manque} niveau${manque > 1 ? 'x' : ''}.`
-                  : 'Ton deck a la puissance conseillée : retente ta chance !'}
+                {manque == null
+                  ? 'Analyse de ton combat…'
+                  : manque > 0
+                    ? `Il te manquait environ ${manque} niveau${manque > 1 ? 'x' : ''}.`
+                    : 'Ta puissance était suffisante : pas de chance cette fois, retente !'}
               </Text>
               {/* 26/09 (test de l'auteur) : une créature seule face à 2 ou 3
                   ennemis perd presque toujours (MESURÉ : 0 % au niveau 11) —
