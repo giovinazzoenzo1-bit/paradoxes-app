@@ -1222,6 +1222,8 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
   }, []);
   const stars = isWin ? starsForBattle(battleStats, opponentCount) : 0;
   const reward = isWin ? griffesReward(levelNumber) : 0;
+  // Défaite avec aides (Aventure) : mise en page compacte, tout visible sans défiler.
+  const compact = !isWin && !!aide;
 
   return (
     <ImageBackground source={VICTORY_BG} style={styles.screen} resizeMode="cover">
@@ -1234,17 +1236,84 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
           demandée lisse à la génération, précisément pour ça. */}
       <ImageBackground
         source={isWin ? VICTORY_BANNER : DEFEAT_BANNER}
-        style={styles.resultBanner}
+        style={[styles.resultBanner, compact && styles.resultBannerCompact]}
         imageStyle={styles.resultBannerImg}
         resizeMode="contain"
       >
         <Text style={styles.resultBannerText}>{isWin ? 'VICTOIRE !' : 'DÉFAITE'}</Text>
       </ImageBackground>
-      {/* Deux colonnes : le récapitulatif à gauche, les boutons empilés
-          à droite. En pleine largeur, le cadre débordait et il fallait
-          faire défiler pour atteindre les boutons. */}
+      {/* Deux colonnes : le récapitulatif à gauche, les boutons à droite.
+          ⚠️ 26/09 (demande de l'auteur) : en DÉFAITE avec aides, tout doit
+          se voir SANS DÉFILER. MESURÉ : ≈ 520 points de haut pour ≈ 390 en
+          paysage (diagnostic sur 4-5 lignes dans une colonne de 168, 5
+          boutons empilés). Désormais : diagnostic SOUS le récapitulatif
+          (colonne large), aides en grille 2 × 2 compacte, bandeau réduit —
+          ≈ 260 points. La victoire ne change pas (elle tenait déjà). */}
       <View style={styles.resultBody}>
-      <ImageBackground source={RECAP_FRAME} style={styles.recapCard} imageStyle={styles.recapCardImg} resizeMode="stretch">
+      {compact ? (
+        <View style={styles.resultLeft}>
+        <ImageBackground source={RECAP_FRAME} style={[styles.recapCard, compact && styles.recapCardCompact]} imageStyle={styles.recapCardImg} resizeMode="stretch">
+          {/* Le gain est DANS le cadre : posé sur le décor il se perdait
+              dans les tons dorés du couchant (signalé le 12/09). */}
+          {isWin && (
+            <View style={styles.starsRow}>
+              {[1, 2, 3].map((n) => (
+                <Image
+                  key={n}
+                  source={STAR_ICON}
+                  style={[styles.star, n > stars && styles.starOff]}
+                  resizeMode="contain"
+                />
+              ))}
+            </View>
+          )}
+          {isWin && (
+            <View style={styles.rewardBadge}>
+              <Text style={styles.rewardBadgeText}>
+                {premiereVictoire ? `+${reward} 🐾 Griffes` : 'Niveau déjà gagné : pas de Griffes'}
+              </Text>
+            </View>
+          )}
+          <Text style={styles.recapTitle}>📊 Récapitulatif</Text>
+          {/* Les 5 chiffres sur UNE rangée : en deux rangées, les boutons
+              passaient sous le bord de l'écran (signalé le 12/09). */}
+          <View style={styles.recapRow}>
+            <View style={styles.recapStat}>
+              <Text style={styles.recapStatValue}>{battleStats.totalDamageDealt}</Text>
+              <Text style={styles.recapStatLabel}>Infligés</Text>
+            </View>
+            <View style={styles.recapStat}>
+              <Text style={[styles.recapStatValue, { color: '#FF5252' }]}>{battleStats.totalDamageTaken}</Text>
+              <Text style={styles.recapStatLabel}>Reçus</Text>
+            </View>
+            <View style={styles.recapStat}>
+              <Text style={styles.recapStatValue}>{battleStats.rounds}</Text>
+              <Text style={styles.recapStatLabel}>Tours</Text>
+            </View>
+          </View>
+
+        </ImageBackground>
+          <View style={styles.aideDiagBloc}>
+            {presque && <Text style={styles.aidePresque}>🔥 Tu y étais presque !</Text>}
+            <Text style={styles.aideDiag}>
+              {manque == null
+                ? 'Analyse de ton combat…'
+                : manque > 0
+                  ? `Il te manquait environ ${manque} niveau${manque > 1 ? 'x' : ''}.`
+                  : 'Ta puissance était suffisante : pas de chance cette fois, retente !'}
+            </Text>
+            {/* 26/09 (test de l'auteur) : une créature seule face à 2 ou 3
+                ennemis perd presque toujours (MESURÉ : 0 % au niveau 11) —
+                le calibrage suppose les œufs éclos. On le DIT. */}
+            {nbCreatures > 0 && nbCreatures < opponentCount && (
+              <Text style={styles.aideDiag}>
+                {`🥚 ${nbCreatures} créature${nbCreatures > 1 ? 's' : ''} contre ${opponentCount} adversaires : fais éclore ton prochain œuf.`}
+              </Text>
+            )}
+          </View>
+        </View>
+      ) : (
+      <ImageBackground source={RECAP_FRAME} style={[styles.recapCard, compact && styles.recapCardCompact]} imageStyle={styles.recapCardImg} resizeMode="stretch">
         {/* Le gain est DANS le cadre : posé sur le décor il se perdait
             dans les tons dorés du couchant (signalé le 12/09). */}
         {isWin && (
@@ -1285,71 +1354,66 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
         </View>
 
       </ImageBackground>
+      )}
 
-        <View style={styles.resultBtnCol}>
-          {isWin && (
-            <TouchableOpacity
-              style={[styles.resultBtn, styles.resultBtnNext, !btnsArmed && styles.resultBtnLocked]}
-              onPress={onNextLevel}
-              disabled={!btnsArmed}
-            >
-              <Text style={styles.resultBtnText}>⚔️ Niveau suivant</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]}
-            onPress={onContinue}
-            disabled={!btnsArmed}
-          >
-            <Text style={styles.resultBtnText}>Retour à la carte</Text>
-          </TouchableOpacity>
-          {!isWin && !aide && <Text style={styles.resultSubtitle}>Rien n'est perdu.</Text>}
-          {/* ÉCRAN DE DÉFAITE (demande de l'auteur, 26/09) : comprendre
-              pourquoi, et voir la solution tout de suite. « Presque » et
-              le retard sont des calculs VRAIS (combatLogic). */}
-          {!isWin && aide && (
-            <View style={styles.aideBloc}>
-              {presque && <Text style={styles.aidePresque}>🔥 Tu y étais presque !</Text>}
-              <Text style={styles.aideDiag}>
-                {manque == null
-                  ? 'Analyse de ton combat…'
-                  : manque > 0
-                    ? `Il te manquait environ ${manque} niveau${manque > 1 ? 'x' : ''}.`
-                    : 'Ta puissance était suffisante : pas de chance cette fois, retente !'}
-              </Text>
-              {/* 26/09 (test de l'auteur) : une créature seule face à 2 ou 3
-                  ennemis perd presque toujours (MESURÉ : 0 % au niveau 11) —
-                  le calibrage suppose les œufs éclos. On le DIT. */}
-              {nbCreatures > 0 && nbCreatures < opponentCount && (
-                <Text style={styles.aideDiag}>
-                  {`🥚 ${nbCreatures} créature${nbCreatures > 1 ? 's' : ''} contre ${opponentCount} adversaires : fais éclore ton prochain œuf.`}
-                </Text>
-              )}
+        {compact ? (
+          <View style={[styles.resultBtnCol, styles.resultBtnColCompact]}>
+            {/* ÉCRAN DE DÉFAITE (demande de l'auteur, 26/09) : comprendre
+                pourquoi, et voir la solution tout de suite. Grille 2 × 2 :
+                l'aide gratuite (monter) en vert, les aides payantes à côté. */}
+            <View style={styles.resultGrid}>
               <TouchableOpacity
-                style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]}
+                style={[styles.resultBtn, styles.resultBtnDemi, styles.resultBtnNext, !btnsArmed && styles.resultBtnLocked]}
                 disabled={!btnsArmed}
                 onPress={() => { onContinue(); if (aide.onMonter) aide.onMonter(); }}
               >
-                <Text style={styles.resultBtnText}>⬆️ Monter mes créatures</Text>
+                <Text style={[styles.resultBtnText, styles.resultBtnTextDemi]}>{'⬆️ Monter\nmes créatures'}</Text>
               </TouchableOpacity>
               {aide.onPackGriffes && (
-                <TouchableOpacity style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onPackGriffes}>
-                  <Text style={styles.resultBtnText}>🐾 Pack de Griffes · 💎 {aide.coutPack}</Text>
+                <TouchableOpacity style={[styles.resultBtn, styles.resultBtnDemi, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onPackGriffes}>
+                  <Text style={[styles.resultBtnText, styles.resultBtnTextDemi]}>{`🐾 Pack de Griffes\n💎 ${aide.coutPack}`}</Text>
                 </TouchableOpacity>
               )}
               {aide.onElixir && (
-                <TouchableOpacity style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onElixir}>
-                  <Text style={styles.resultBtnText}>🧪 Élixir de faiblesse · 💎 {aide.coutElixir}</Text>
+                <TouchableOpacity style={[styles.resultBtn, styles.resultBtnDemi, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onElixir}>
+                  <Text style={[styles.resultBtnText, styles.resultBtnTextDemi]}>{`🧪 Élixir de faiblesse\n💎 ${aide.coutElixir}`}</Text>
                 </TouchableOpacity>
               )}
               {aide.onVideoEnergie && aide.adsLeft > 0 && (
-                <TouchableOpacity style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onVideoEnergie}>
-                  <Text style={styles.resultBtnText}>📺 +1 énergie (vidéo)</Text>
+                <TouchableOpacity style={[styles.resultBtn, styles.resultBtnDemi, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onVideoEnergie}>
+                  <Text style={[styles.resultBtnText, styles.resultBtnTextDemi]}>{'📺 +1 énergie\n(vidéo)'}</Text>
                 </TouchableOpacity>
               )}
             </View>
-          )}
-        </View>
+            <TouchableOpacity
+              style={[styles.resultBtn, styles.resultBtnRetour, !btnsArmed && styles.resultBtnLocked]}
+              onPress={onContinue}
+              disabled={!btnsArmed}
+            >
+              <Text style={styles.resultBtnText}>Retour à la carte</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.resultBtnCol}>
+            {isWin && (
+              <TouchableOpacity
+                style={[styles.resultBtn, styles.resultBtnNext, !btnsArmed && styles.resultBtnLocked]}
+                onPress={onNextLevel}
+                disabled={!btnsArmed}
+              >
+                <Text style={styles.resultBtnText}>⚔️ Niveau suivant</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]}
+              onPress={onContinue}
+              disabled={!btnsArmed}
+            >
+              <Text style={styles.resultBtnText}>Retour à la carte</Text>
+            </TouchableOpacity>
+            {!isWin && <Text style={styles.resultSubtitle}>Rien n'est perdu.</Text>}
+          </View>
+        )}
       </View>
       </ScrollView>
     </ImageBackground>
@@ -1563,6 +1627,16 @@ const styles = StyleSheet.create({
   // rangée au lieu d'être centrés face au cadre — demande explicite, on
   // clique moins dessus par accident en fin de combat. Mesuré : ça les
   // remonte d'environ 45 dp.
+  // Défaite avec aides, sans défilement (26/09) : ≈ 260 points de haut.
+  resultBannerCompact: { maxWidth: 400 },
+  resultLeft: { flex: 1, minWidth: 0, gap: 8 },
+  recapCardCompact: { flex: 0, paddingVertical: 20, paddingHorizontal: 34 },
+  aideDiagBloc: { gap: 4, paddingHorizontal: 6 },
+  resultBtnColCompact: { width: 300, gap: 8 },
+  resultGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
+  resultBtnDemi: { width: '48.5%', minHeight: 46, justifyContent: 'center', paddingVertical: 7, paddingHorizontal: 6 },
+  resultBtnTextDemi: { fontSize: 12, textAlign: 'center', lineHeight: 16 },
+  resultBtnRetour: { paddingVertical: 10 },
   resultBtnCol: { width: 168, gap: 10, alignSelf: 'flex-start' },
   // Pendant le délai de garde : visiblement inactifs, pour que le joueur
   // comprenne que ça n'a pas été ignoré au hasard.

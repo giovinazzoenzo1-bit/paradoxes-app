@@ -797,3 +797,15 @@ nombre de niveaux (évolutions comprises, `monterEquipe`) qui fait passer à
 dans node au niveau 19). Contrôle `auditDefaite` : cohérence avec l'aperçu,
 X suffit et X − 1 non ; 2 sabotages. `auditPuissanceExacte` couvre désormais
 les 227 niveaux et toutes les raretés.
+
+
+## 26/09 — Écran de défaite : tout visible sans défiler (demande de l'auteur)
+
+MESURÉ : en paysage (≈ 390 points de haut), la défaite avec aides demandait
+≈ 520 points — diagnostic sur 4-5 lignes dans une colonne de 168 points et
+5 boutons empilés. Nouvelle mise en page (`compact` = défaite avec aides) :
+bandeau réduit (largeur max 400), diagnostic SOUS le récapitulatif (colonne
+large, 1 ligne par phrase), aides en grille 2 × 2 (titre + prix sur 2
+lignes, « Monter mes créatures » en vert car gratuit), « Retour à la carte »
+en dessous → ≈ 290 points. Victoire et défaite sans aides (Gardien)
+inchangées. Le ScrollView reste en filet pour les très petits écrans.
