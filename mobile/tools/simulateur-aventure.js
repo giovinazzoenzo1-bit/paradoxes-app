@@ -30,68 +30,22 @@ function aleaGraine(graine) {
 }
 const evoPour = (niv) => (niv >= 50 ? 2 : niv >= 25 ? 1 : 0); // deck optimisé : évolué dès que possible
 
-function combattants(membres) {
-  return membres.map((m) => {
-    const stats = K.combatStatsForCreatureTyped(m.creature, m.level, evoPour(m.level), []);
-    const skills = m.creature.skills || [];
-    return { creature: m.creature, stats, hp: stats.hp, mana: K.MANA_DEPART, resilienceUsed: false, etats: {},
-      meilleure: skills.filter((k) => !k.special).sort((a, b) => b.damage - a.damage)[0],
-      speciale: skills.find((k) => k.special) || null,
-      taps: K.effectiveTapCount(stats.clickSpeed, stats.tapReductionPct || 0) };
-  });
+// ⚠️ Depuis l'étape 5 des sorts (24/09) : la boucle UNIQUE du moteur
+// (`simulerCombat`, la même que le calibrage du Gardien), joueur sensé
+// (`choixJoueur`, sorts compris). Plus de boucle recopiée ici.
+// `humain` : un joueur qui tape moins vite et choisit ses attaques normales
+// au hasard (il lance quand même sorts et spéciale).
+function politiqueHumaine(J, act, A, cible, estBoss) {
+  const c = K.choixJoueur(J, act, A, cible, estBoss);
+  if (c.sort || (c.competence && c.competence.special)) return c;
+  const regs = (J[act].creature.skills || []).filter((k) => !k.special);
+  return { competence: regs[Math.floor(Math.random() * regs.length)] };
 }
-
-// `humain` : compétence régulière tirée au hasard (un joueur ne choisit pas
-// toujours la meilleure). Renvoie { gagne, tours }.
 function combatAventureDetail(membres, niveau, alea, tapsParSec = 6.7, humain = false) {
-  const f = combattants(membres);
-  const o = K.opponentTeamForLevel(niveau).map((c) => {
-    const stats = K.statsForOpponentCreatureTyped(c, niveau);
-    return { creature: c, stats, hp: stats.hp, mana: K.MANA_DEPART, etats: {} };
-  });
-  // Règles du MOTEUR PARTAGÉ (combatLogic), les mêmes que l'écran.
-  const vivantF = (i) => K.prochainVivant(f, i);
-  const cibleO = () => K.premierVivant(o);
-  let tour = 0;
-  // Le tour ennemi du MOTEUR (sorts compris, étape 4) ; les coups passent
-  // par `frapper` × Fureur, comme l'écran.
-  const riposte = (oi, fi, fureur = 1) => {
-    const a = K.actionAdversaire(o, oi, f, fi, alea);
-    a.adversaires.forEach((x, i) => { o[i] = x; });
-    a.joueurs.forEach((x, i) => { f[i] = x; });
-    let rip = o[oi];
-    a.degats.forEach((d, i) => {
-      if (d > 0) { const x = K.frapper(rip, f[i], d * fureur, i === fi); rip = x.attaquant; f[i] = x.defenseur; }
-    });
-    o[oi] = rip;
-  };
-  let act = 0;
-  if (alea() < 0.5) { riposte(0, act); if (f[act].hp <= 0) { act = vivantF(act); if (act < 0) return { gagne: false, tours: 0 }; } }
-  for (let tour = 0; tour < 600; tour++) {
-    const x = f[act];
-    const spe = x.speciale && x.mana >= C.MANA_MAX ? x.speciale : null;
-    const regs = (x.creature.skills || []).filter((k) => !k.special);
-    const comp = spe || (humain ? regs[Math.floor(alea() * regs.length)] : x.meilleure);
-    if (spe) x.mana -= spe.manaCost || C.MANA_MAX;
-    // Comme l'écran : un ennemi qui provoque impose la cible ; le coup passe
-    // par `frapper` (marque, provocation, venin qui empoisonne).
-    const t = K.cibleDuJoueur(o, cibleO());
-    const coupJ = K.frapper(x, o[t], K.degatsDuJoueur(comp, x, o[t].creature, x.taps / tapsParSec, true));
-    f[act] = coupJ.attaquant;
-    o[t] = coupJ.defenseur;
-    const r = K.choisirRiposteur(o, t);
-    if (r < 0) return { gagne: true, tours: tour + 1 };
-    tour += 1;
-    riposte(r, K.cibleDeRiposte(f, act), K.multiplicateurFureur(tour));
-    K.finDeTour(f).equipe.forEach((y, i) => { f[i] = y; });
-    K.finDeTour(o).equipe.forEach((y, i) => { o[i] = y; });
-    if (cibleO() < 0) return { gagne: true, tours: tour + 1 };
-    const nx = vivantF(act);
-    if (nx < 0) return { gagne: false, tours: tour + 1 };
-    act = nx;
-    f[act].mana = Math.min(C.MANA_MAX, f[act].mana + C.MANA_PER_TURN);
-  }
-  return { gagne: false, tours: 600 };
+  const joueurs = membres.map((m) => ({ creature: m.creature,
+    stats: K.combatStatsForCreatureTyped(m.creature, m.level, evoPour(m.level), []) }));
+  const adversaires = K.opponentTeamForLevel(niveau).map((c) => ({ creature: c, stats: K.statsForOpponentCreatureTyped(c, niveau) }));
+  return K.simulerCombat(joueurs, adversaires, { tapsParSec, alea, politique: humain ? politiqueHumaine : K.choixJoueur });
 }
 function combatAventure(membres, niveau, alea, tapsParSec = 6.7) {
   return combatAventureDetail(membres, niveau, alea, tapsParSec).gagne;

@@ -815,53 +815,162 @@ function preparerCombattants(membres, marge = 1) {
   });
 }
 
-// ⚠️ REPRODUIT CombatScreen pour ce qui n'est pas partagé (passage sous
-// empreinte, voir `auditGardienEmpreinte`) : rotation à chaque tour vers
-// la créature vivante suivante (+MANA_PER_TURN à celle qui entre),
-// spéciale à mana pleine sinon la meilleure compétence, 50 % de chances
-// que le Gardien frappe en premier, pas de riposte le tour où il se
-// relève. Renvoie true si le JOUEUR gagne.
-function simulerPrepares(prepares, gStats, tapsParSec, alea) {
-  // Comme l'écran (24/09) : MANA_DEPART pour tous, pas de +1 à la première.
-  const f = prepares.map((p) => ({ ...p, hp: p.stats.hp, mana: MANA_DEPART, resilienceUsed: false, etats: {} }));
-  let tour = 0;
-  if (!f.length) return false;
-  let g = { hp: gStats.hp, shield: Math.round(gStats.hp * GUARDIAN_SHIELD_RATIO), phase: 1, maxHp: gStats.hp };
-  const suivante = (i) => prochainVivant(f, i);
-  // Fureur comme l'écran : le premier coup (tour 0) n'en a pas, chaque
-  // riposte de la boucle compte un tour.
-  const subir = (cible, fureur = 1) => {
-    riposteGardien(gStats, f, cible, alea).degats.forEach((d, i) => {
-      if (d > 0) Object.assign(f[i], encaisser(f[i], Math.max(1, Math.round(d * fureur))));
-    });
-  };
-  let act = 0;
-  if (alea() < 0.5) {
-    subir(act);
-    if (f[act].hp <= 0) { act = suivante(act); if (act < 0) return false; }
+// ---- LA simulation de combat (étape 5, 24/09) --------------------------
+//
+// UNE seule boucle, qui reproduit CombatScreen tour par tour, pour le
+// calibrage du Gardien ET la mesure de l'Aventure : premier coup (50 %),
+// coup du joueur (sort, spéciale ou attaque, par `frapper` / `modifierCoup`
+// et `coupSurGardien`), riposte (Gardien ou `actionAdversaire`) × Fureur,
+// `finDeTour`, K.O. et rotation. Le joueur y est joué par `choixJoueur`,
+// un joueur SENSÉ : sans lui, le calibrage supposerait un joueur qui ne se
+// sert jamais de ses sorts.
+//
+// PROUVÉ le 24/09 : jouée SANS sorts, cette boucle redonne le calibrage
+// du Gardien de l'ancienne boucle au millionième (mêmes tirages, dans le
+// même ordre).
+
+// Le choix d'un joueur sensé pour la créature active : les urgences, puis
+// la spéciale à mana pleine, puis les sorts offensifs quand ils
+// rapportent, sinon la meilleure attaque.
+export function choixJoueur(joueurs, actif, adversaires, cible, estBoss = false) {
+  const x = joueurs[actif];
+  const id = SORT_DE_CREATURE[x.creature.id];
+  const peut = !!id && sortDisponible(x, id);
+  const pc = (c) => c.hp / pvMax(c);
+  const blesse = plusBlesse(joueurs);
+  const cibleA = adversaires[cible];
+  const spe = (x.creature.skills || []).find((k) => k.special);
+  if (peut && id === 'soin' && blesse >= 0 && pc(joueurs[blesse]) < 0.5) return { sort: id };
+  if (peut && id === 'bouclier' && blesse >= 0 && pc(joueurs[blesse]) < 0.4) return { sort: id };
+  if (peut && id === 'provocation' && !(etatsDe(x).provocation > 0) && pc(x) > 0.5
+    && joueurs.some((j, i) => i !== actif && vivant(j) && pc(j) < 0.4)) return { sort: id };
+  if (spe && (x.mana || 0) >= MANA_MAX) return { competence: spe };
+  if (peut) {
+    if (id === 'zone' && adversaires.filter(vivant).length >= 3) return { sort: id }; // 40 % × 3 > 100 %
+    if (id === 'execution' && vivant(cibleA) && pc(cibleA) < EFFETS.executionSeuil) return { sort: id };
+    if (id === 'pacte' && pc(x) > 0.6) return { sort: id };
+    if (id === 'poison' && !(etatsDe(x).venin > 0)) return { sort: id };
+    // Boost et Marque COÛTENT le tour : un joueur sensé ne les lance que
+    // s'ils rapportent plus qu'une attaque. MESURÉ : lancés sans ce calcul,
+    // ils rendaient le joueur plus FAIBLE que sans sorts (une Marque devant
+    // deux Tanks ne rapporte presque rien).
+    const coupDe = (c) => { const k = meilleureAttaque(c.creature); return k ? scaledSkillDamage(k, c.creature, c.stats.attack) : 0; };
+    if (id === 'boost' && joueurs.filter(vivant).length >= 2) {
+      const t = plusFort(joueurs, actif);
+      if (!etatsDe(joueurs[t]).boost && EFFETS.boostBonus * EFFETS.boostAttaques * coupDe(joueurs[t]) > coupDe(x)) return { sort: id };
+    }
+    if (id === 'marque' && vivant(cibleA) && !etatsDe(cibleA).marque) {
+      const s1 = prochainVivant(joueurs, actif);
+      const s2 = s1 >= 0 ? prochainVivant(joueurs, s1) : -1;
+      const gain = EFFETS.marqueBonus * ((s1 >= 0 ? coupDe(joueurs[s1]) : 0) + (s2 >= 0 ? coupDe(joueurs[s2]) : 0));
+      if (gain > coupDe(x)) return { sort: id };
+    }
   }
-  for (let tour = 0; tour < 500; tour++) {
-    const x = f[act];
-    const spe = x.speciale && x.mana >= MANA_MAX ? x.speciale : null;
-    const comp = spe || x.meilleure;
-    if (!comp) return false;
-    if (spe) x.mana -= spe.manaCost || MANA_MAX;
-    g = coupSurGardien(g, degatsDuJoueur(comp, x, GUARDIAN_CREATURE, x.taps / tapsParSec, true));
-    if (g.releve) continue;
-    if (g.hp <= 0) return true;
-    tour += 1;
-    subir(act, multiplicateurFureur(tour));
-    const nx = suivante(act);
-    if (nx < 0) return false;
-    act = nx;
-    f[act].mana = Math.min(MANA_MAX, f[act].mana + MANA_PER_TURN);
-  }
-  return false;
+  return { competence: meilleureAttaque(x.creature) };
+}
+// Le joueur de l'ANCIENNE boucle (spéciale à mana pleine, sinon la
+// meilleure attaque, jamais de sort) : sert à la preuve d'équivalence.
+export function choixSansSorts(joueurs, actif) {
+  const x = joueurs[actif];
+  const spe = (x.creature.skills || []).find((k) => k.special);
+  return { competence: spe && (x.mana || 0) >= MANA_MAX ? spe : meilleureAttaque(x.creature) };
 }
 
+// `joueurs` / `adversaires` : [{ creature, stats }] (les PV, le mana et les
+// états sont remis à neuf). `gStats` : un combat de Gardien (adversaires =
+// [Gardien]). Renvoie { gagne, tours }.
+export function simulerCombat(joueurs, adversaires, {
+  gStats = null, tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random, politique = choixJoueur,
+} = {}) {
+  let J = joueurs.map((c) => ({ ...c, hp: c.stats.hp, mana: MANA_DEPART, resilienceUsed: false, etats: {} }));
+  let A = adversaires.map((c) => ({ ...c, hp: c.stats.hp, mana: MANA_DEPART, etats: {} }));
+  const estBoss = !!gStats;
+  let bouclier = estBoss ? Math.round(gStats.hp * GUARDIAN_SHIELD_RATIO) : 0;
+  let phase = 1;
+  let act = 0;
+  let cible = 0;
+  let tour = 0;
+  // Premier coup (50 %) : la cible frappe la créature active, sans sort.
+  if (alea() < 0.5) {
+    let deg;
+    if (estBoss) deg = riposteGardien(A[0].stats, J, act, alea).degats;
+    else { const r = riposteAdversaire(A[cible], J[act], alea); A[cible] = { ...A[cible], mana: r.mana }; deg = J.map((_, i) => (i === act ? r.degats : 0)); }
+    J = J.map((f, i) => (deg[i] > 0 ? { ...f, ...encaisser(f, deg[i]) } : f));
+    if (!(J[act].hp > 0)) { act = prochainVivant(J, act); if (act < 0) return { gagne: false, tours: 0 }; }
+  }
+  for (let n = 0; n < 600; n++) {
+    cible = cibleDuJoueur(A, cible);
+    if (cible < 0) return { gagne: true, tours: tour };
+    const choix = politique(J, act, A, cible, estBoss);
+    let coup = { part: 1 };
+    let comp = choix.competence;
+    if (choix.sort) {
+      const r = lancerSort(choix.sort, J, act, A, cible);
+      J = r.allies; A = r.ennemis; coup = r.coup;
+      comp = meilleureAttaque(J[act].creature);
+    } else if (comp && comp.special) {
+      J[act] = { ...J[act], mana: J[act].mana - (comp.manaCost || MANA_MAX) };
+    }
+    const x = J[act];
+    const part = coup ? (coup.zone || coup.part || 1) : 0;
+    const coupSur = (c) => (part > 0 && comp
+      ? Math.max(1, Math.round(degatsDuJoueur(comp, x, c.creature, tapsAvecEtats(x) / tapsParSec, true) * part)) : 0);
+    if (estBoss) {
+      let degats = 0;
+      const brut = coupSur(A[0]);
+      if (brut > 0) { const m = modifierCoup(x, A[0], brut); J[act] = m.attaquant; A[0] = m.defenseur; degats = m.degats; }
+      const r = coupSurGardien({ hp: A[0].hp, shield: bouclier, phase, maxHp: A[0].stats.hp }, degats);
+      A[0] = { ...A[0], hp: r.hp };
+      bouclier = r.shield;
+      if (r.releve) { phase = 2; continue; } // comme l'écran : pas de riposte, la même créature rejoue
+    } else if (part > 0) {
+      const cibles = coup.zone ? A.map((_, i) => i).filter((i) => A[i].hp > 0) : [cible];
+      const base = J[act];
+      let apres = base;
+      cibles.forEach((i, k) => {
+        const y = frapper(base, A[i], coupSur(A[i]), k === 0);
+        if (k === 0) apres = y.attaquant;
+        else if (y.attaquant.etats && y.attaquant.etats.poison && !(apres.etats && apres.etats.poison)) apres = { ...apres, etats: { ...apres.etats, poison: y.attaquant.etats.poison } };
+        A[i] = y.defenseur;
+      });
+      J[act] = apres;
+    }
+    if (premierVivant(A) < 0) return { gagne: true, tours: tour + 1 };
+    tour += 1;
+    const fureur = multiplicateurFureur(tour);
+    const rip = choisirRiposteur(A, cible);
+    const tRip = cibleDeRiposte(J, act);
+    if (rip >= 0 && tRip >= 0) {
+      let deg;
+      if (estBoss) deg = riposteGardien(A[rip].stats, J, tRip, alea).degats;
+      else { const a = actionAdversaire(A, rip, J, tRip, alea); A = a.adversaires; J = a.joueurs; deg = a.degats; }
+      let riposteur = A[rip];
+      J = J.map((f, i) => {
+        const dg = deg[i] || 0;
+        if (dg <= 0) return f;
+        const y = frapper(riposteur, f, dg * fureur, i === tRip);
+        riposteur = y.attaquant;
+        return y.defenseur;
+      });
+      A[rip] = riposteur;
+    }
+    J = finDeTour(J).equipe;
+    A = finDeTour(A).equipe;
+    if (premierVivant(A) < 0) return { gagne: true, tours: tour };
+    const nx = prochainVivant(J, act);
+    if (nx < 0) return { gagne: false, tours: tour };
+    act = nx;
+    J[act] = { ...J[act], mana: Math.min(MANA_MAX, J[act].mana + MANA_PER_TURN) };
+  }
+  return { gagne: false, tours: 600 };
+}
+
+// Un combat de Gardien : la boucle unique, le Gardien en face.
+const gardienEnFace = (gStats) => [{ creature: GUARDIAN_CREATURE, stats: gStats }];
 export function simulerCombatGardien(membres, gStats,
-  { tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random, marge = 1 } = {}) {
-  return simulerPrepares(preparerCombattants(membres, marge), gStats, tapsParSec, alea);
+  { tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random, marge = 1, politique = choixJoueur } = {}) {
+  return simulerCombat(preparerCombattants(membres, marge), gardienEnFace(gStats),
+    { gStats, tapsParSec, alea, politique }).gagne;
 }
 
 export function guardianStatsScaled(base, k) {
@@ -877,8 +986,21 @@ export function guardianStatsScaled(base, k) {
 // et 60 % — des PV en plus ajoutent UN TOUR ENTIER au combat d'un coup,
 // le taux saute. Les PV restent ceux de la formule ; l'attaque varie en
 // continu. 400 combats : 150 laissaient ±10 points.
-export function calibrerGardien(membres, baseStats,
-  { essais = 400, cible = GUARDIAN_WIN_TARGET, marge = margeGardien(puissanceDeck(membres)) } = {}) {
+// ⚠️ Sans `politique` : calé sur le MEILLEUR des deux styles de jeu (avec
+// les sorts du joueur sensé, ou sans aucun sort). MESURÉ le 24/09 : selon
+// le deck, les sorts rendent l'équipe plus forte (mixte : +20 %) ou plus
+// faible (3 Attaquants, Pacte trop tôt : −29 %) ; un vrai joueur peut
+// toujours ne pas lancer un sort qui ne rapporte rien — le Gardien n'est
+// donc jamais trop facile pour un bon joueur.
+export function calibrerGardien(membres, baseStats, options = {}) {
+  if (!options.politique) {
+    const a = calibrerGardien(membres, baseStats, { ...options, politique: choixJoueur });
+    const b = calibrerGardien(membres, baseStats, { ...options, politique: choixSansSorts });
+    return a.facteurAttaque >= b.facteurAttaque ? a : b;
+  }
+  // 300 combats × 10 étapes par style : MESURÉ 360 ms à 400 × 12 pour les
+  // deux styles (1 à 2 s de gel sur téléphone au lancement du combat).
+  const { essais = 300, cible = GUARDIAN_WIN_TARGET, marge = margeGardien(puissanceDeck(membres)), politique } = options;
   const n = (membres || []).filter((m) => m && m.creature).length || 1;
   const p0 = puissanceGardien(baseStats, n);
   const depart = p0 > 0 ? puissanceDeck(membres) * marge / p0 : 1;
@@ -888,11 +1010,11 @@ export function calibrerGardien(membres, baseStats,
     const st = { ...guardianStatsScaled(baseStats, depart), attack: Math.max(1, baseStats.attack * depart * c) };
     const alea = aleaGraine(graine);
     let g = 0;
-    for (let i = 0; i < essais; i++) if (!simulerPrepares(prepares, st, PUISSANCE_TAPS_PAR_SEC, alea)) g++;
+    for (let i = 0; i < essais; i++) if (!simulerCombat(prepares, gardienEnFace(st), { gStats: st, alea, politique }).gagne) g++;
     return g / essais;
   };
   let lo = Math.log(GUARDIAN_CORRECTION_MIN), hi = Math.log(GUARDIAN_CORRECTION_MAX);
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 10; i++) {
     const mid = (lo + hi) / 2;
     if (tauxGardien(Math.exp(mid)) > cible) hi = mid; else lo = mid;
   }

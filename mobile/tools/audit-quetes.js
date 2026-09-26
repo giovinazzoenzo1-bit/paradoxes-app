@@ -3190,17 +3190,19 @@ function auditGardienCalibre() {
     }
     const st = K.guardianStatsCalibrees(base, r);
     // Contre le deck + MARGE (la puissance affichée) : ~1 fois sur 3.
-    let g = 0;
-    for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea, marge: K.margeGardien(K.puissanceDeck(membres)) })) g++;
-    if (g / 800 < 0.15 || g / 800 > 0.45) fautes.push({ deck, gardienGagne: Math.round(100 * g / 800) + ' %' });
+    // Contre le MEILLEUR des deux styles (sorts du joueur sensé, ou aucun
+    // sort) — celui sur lequel le Gardien se cale.
+    const taux = (marge) => Math.min(...[K.choixJoueur, K.choixSansSorts].map((politique) => { let n = 0;
+      for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea, marge, politique })) n++; return n / 800; }));
+    const g = 800 * taux(K.margeGardien(K.puissanceDeck(membres)));
     // Contre le deck du début de l'œuf, sans effort : jamais un mur.
     // 70 % : marge décroissante (5 % -> 2 %, demande de l'auteur 24/09).
     // MESURÉ : 36-50 % aux niveaux moyens et hauts, 64 % au pire sur les
     // decks les plus faibles du début. (À 5 % partout, 77 % à haut niveau :
     // c'est ce que ce contrôle a trouvé.) Au-delà, un mur ou un calibrage
     // cassé.
-    let g0 = 0;
-    for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea })) g0++;
+    if (g / 800 < 0.15 || g / 800 > 0.45) fautes.push({ deck, gardienGagne: Math.round(100 * g / 800) + ' %' });
+    const g0 = 800 * taux(1);
     if (g0 / 800 > 0.70) fautes.push({ deck, sansEffort: Math.round(100 * g0 / 800) + ' %' });
   });
   return fautes;
