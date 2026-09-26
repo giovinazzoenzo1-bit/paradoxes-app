@@ -41,12 +41,10 @@ const C = A.C;
 const aleaGraine = (g) => { let a = g >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
 const pool = (r) => C.CREATURES.filter((c) => c.rarity === r);
-const evoPour = (n) => (n >= 50 ? 2 : n >= 25 ? 1 : 0);
-function decksDeReference(n) {
-  const taille = n <= 2 ? 1 : n <= 6 ? 2 : 3;
-  const rar = ['rare', 'rare', 'epique'];
-  return [0, 1, 2, 3, 4].map((v) => rar.slice(0, taille).map((r, i) => { const p = pool(r); return p[(v * 3 + i) % p.length]; }));
-}
+// ⚠️ Depuis le 26/09, les decks de référence vivent dans le MOTEUR : le
+// jeu s'en sert pour afficher la « puissance conseillée ». Une seule source.
+const evoPour = (n) => K.evoPourNiveau(n);
+const decksDeReference = (n) => K.decksDeReferenceAventure(n);
 // `niveauDeck` : le niveau des créatures (par défaut celui de l'Aventure).
 function tauxJoueur(deck, n, k, essais = 400, niveauDeck = n) {
   const joueurs = deck.map((c) => ({ creature: c, stats: K.combatStatsForCreatureTyped(c, niveauDeck, evoPour(niveauDeck), []) }));

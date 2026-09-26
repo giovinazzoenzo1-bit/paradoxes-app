@@ -219,6 +219,7 @@ import {
   computeEnergyRegen,
   msUntilNextEnergy,
   puissanceDeck,
+  puissanceConseillee,
 } from '../../games/clicker/combatLogic';
 
 // NOTIFICATIONS RETIREES (03/09).
@@ -349,7 +350,7 @@ function puissanceDuDeckAventure(deck, owned) {
   }
 }
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, freeRuneAvailable = false, onFreeRuneUsed, diamonds = 0 }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, freeRuneAvailable = false, onFreeRuneUsed, diamonds = 0, elixirCombats = 0, onElixirUsed }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
   // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
   // combiné à aspectRatio sur un élément position:'absolute' se rend
@@ -905,6 +906,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   if (chapterMapOpen) {
     return (
       <ChapterMapScreen
+        elixirCombats={elixirCombats}
+        onElixirUsed={onElixirUsed}
         currentUnlockedLevel={currentUnlockedLevel}
         owned={owned}
         deck={deck}
@@ -984,6 +987,11 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <View style={styles.puissancePill}>
             <Text style={styles.puissancePillText}>🛡️ Puissance {puissanceDuDeckAventure(deck, owned)}</Text>
           </View>
+          {elixirCombats > 0 && (
+            <View style={styles.puissancePill}>
+              <Text style={styles.puissancePillText}>🧪 {elixirCombats}</Text>
+            </View>
+          )}
           <CurrencyCounter currency="griffes" amount={griffes} onPlus={buyGriffesWithDiamonds} />
           <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
             {/* Gemme des Runes + halo cyan généré en code (même principe
@@ -1847,7 +1855,7 @@ function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -1987,7 +1995,10 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
       <CombatScreen
         team={team}
         levelNumber={activeBattle.levelNumber}
+        elixirActif={elixirCombats > 0}
         onFinish={(outcome, goNext, stars) => {
+          // Une charge d'Élixir par combat mené, gagné ou perdu.
+          if (elixirCombats > 0 && onElixirUsed) onElixirUsed();
           if (outcome === 'win' && stars) {
             const lv = activeBattle.levelNumber;
             // Uniquement si c'est MIEUX qu'avant.
@@ -2869,6 +2880,18 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
         <Text style={styles.overlayTitle}>
           Chapitre {chapterForLevel(levelNumber)} · Niveau {levelIndexInChapter(levelNumber)}
         </Text>
+        {(() => {
+          // Puissance conseillée (demande de l'auteur, 26/09) : vert si ton
+          // deck l'atteint, orange à moins de 10 % en dessous, rouge sinon.
+          const cons = puissanceConseillee(levelNumber);
+          const moi = puissanceDuDeckAventure(deck, owned);
+          const coul = moi >= cons ? '#3DDC84' : moi >= cons * 0.9 ? '#FFB74D' : '#FF6B6B';
+          return (
+            <Text style={[styles.conseilleeText, { color: coul }]}>
+              🛡️ Ta puissance {moi} · conseillée {cons}
+            </Text>
+          );
+        })()}
         <CreatureArt
           creatureId={opponent.id}
           stageIndex={0}
@@ -2970,6 +2993,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
 }
 
 const styles = StyleSheet.create({
+  conseilleeText: { fontWeight: '800', fontSize: 14, textAlign: 'center', marginTop: 2 },
   puissancePill: { backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4,
     marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,215,120,0.6)', justifyContent: 'center' },
   puissancePillText: { color: '#FFE9A8', fontWeight: '700', fontSize: 13 },

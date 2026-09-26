@@ -3500,3 +3500,58 @@ function auditAventureCalibree() {
   return fautes;
 }
 module.exports.auditAventureCalibree = auditAventureCalibree;
+
+// ---- L'Élixir de faiblesse : −10 %, et branché de bout en bout (26/09) ----
+//
+// Acheté au shop diamant, compté chez le clicker (parent commun), SAUVEGARDÉ,
+// transmis à l'Aventure (ChapterMapScreen lance les combats) et au Gardien,
+// appliqué dans CombatScreen APRÈS le calibrage, une charge par combat.
+// Leçon du jour : les lignes du lancement de combat étaient d'abord écrites
+// dans un sous-composant qui ne recevait pas l'Élixir — plantage garanti à
+// l'exécution, invisible à la compilation. D'où le croisement des props.
+function auditElixir() {
+  const K = load('combatLogic');
+  const fs = require('fs');
+  const lire = (f) => fs.readFileSync(require('path').join(__dirname, '../src/screens/games', f), 'utf8');
+  const fautes = [];
+  const e = K.appliquerElixir({ hp: 200, attack: 12, clickSpeed: 1 });
+  if (e.hp !== 180 || Math.abs(e.attack - 10.8) > 1e-9 || e.clickSpeed !== 1) fautes.push({ probleme: 'l\'Élixir ne retire pas exactement 10 % des PV et de l\'attaque' });
+  const S = lire('CombatScreen.js'), A = lire('AdventureScreen.js'), Cl = lire('ClickerScreen.js'), D = lire('DiamondShop.js');
+  const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
+  doit(S.includes('const stats = elixirActif ? appliquerElixir(stats0) : stats0;'), "CombatScreen n'applique plus l'Élixir aux adversaires");
+  doit(D.includes("id: 'elixir'"), "l'Élixir n'est plus en vente au shop diamant");
+  doit(Cl.includes("offer.id === 'elixir'"), "le clicker ne traite plus l'achat de l'Élixir");
+  doit(Cl.includes('elixirCombats: elixirCombatsRef.current,'), "l'Élixir n'est plus SAUVEGARDÉ (perdu à la réouverture)");
+  doit(Cl.includes('setElixirCombats(saved.elixirCombats || 0);'), "l'Élixir n'est plus restauré à l'ouverture");
+  doit(/finishGuardianFight = \(outcome\) => \{\s*\/\/[^\n]*\n\s*if \(elixirCombatsRef\.current > 0\) setElixirCombats/.test(Cl), 'le combat de Gardien ne consomme plus de charge');
+  doit(A.includes('if (elixirCombats > 0 && onElixirUsed) onElixirUsed();'), "le combat d'Aventure ne consomme plus de charge");
+  // Croisement props déclarées / passées (règle du projet).
+  const sig = (src, nom) => src.split('\n').find((x) => new RegExp('^(export default )?function ' + nom + '\\(').test(x)) || '';
+  const passes = (src, comp, prop) => { const out = []; let i = 0; while ((i = src.indexOf('<' + comp + '\n', i)) >= 0) { const j = src.indexOf('/>', i); out.push(src.slice(i, j).includes(prop + '=')); i = j; } return out; };
+  [['CombatScreen', S, 'elixirActif', [A, Cl]], ['GuardianBattle', Cl, 'elixirActif', [Cl]], ['AdventureScreen', A, 'elixirCombats', [Cl]],
+    ['AdventureScreen', A, 'onElixirUsed', [Cl]], ['ChapterMapScreen', A, 'elixirCombats', [A]], ['ChapterMapScreen', A, 'onElixirUsed', [A]]]
+    .forEach(([comp, src, prop, users]) => {
+      if (!sig(src, comp).includes(prop)) fautes.push({ probleme: comp + ' ne déclare pas ' + prop });
+      users.forEach((u) => { const p = passes(u, comp, prop); if (!p.length || !p.every(Boolean)) fautes.push({ probleme: 'un appel de ' + comp + ' ne passe pas ' + prop }); });
+    });
+  return fautes;
+}
+module.exports.auditElixir = auditElixir;
+
+// ---- La puissance conseillée : positive, et elle monte avec le niveau ----
+function auditPuissanceConseillee() {
+  const K = load('combatLogic');
+  const fautes = [];
+  let prec = 0;
+  for (let n = 1; n <= 150; n++) {
+    const p = K.puissanceConseillee(n);
+    if (!(p > 0)) { fautes.push({ niveau: n, probleme: 'puissance conseillée nulle' }); break; }
+    if (p < prec) { fautes.push({ niveau: n, probleme: 'la puissance conseillée baisse', avant: prec, apres: p }); break; }
+    prec = p;
+  }
+  if (!(K.puissanceConseillee(40) > K.puissanceConseillee(20))) fautes.push({ probleme: 'niveau 40 pas plus exigeant que le 20' });
+  const outil = require('fs').readFileSync(require('path').join(__dirname, 'calibrer-aventure.js'), 'utf8');
+  if (!outil.includes('K.decksDeReferenceAventure(n)')) fautes.push({ probleme: "l'outil de calibrage n'utilise plus les decks du moteur (deux sources)" });
+  return fautes;
+}
+module.exports.auditPuissanceConseillee = auditPuissanceConseillee;

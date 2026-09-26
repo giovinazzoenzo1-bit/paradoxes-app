@@ -77,6 +77,7 @@ import {
   SORTS,
   actionAdversaire,
   cibleDuJoueur,
+  appliquerElixir,
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
   guardianStats,
@@ -158,7 +159,7 @@ function messageDeSort(sortId, evenements, allies) {
   return `${s.icone} ${s.nom} !`;
 }
 
-export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null }) {
+export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null, elixirActif = false }) {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const opponentTeamCreatures = useRef(opponentOverride || opponentTeamForLevel(levelNumber)).current;
@@ -226,7 +227,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     opponentTeamCreatures.map((creature) => {
       // Le Gardien passe par `guardianStats` : PV du PREMIER réduits de
       // 30 %, dégâts relevés de 15 % à tous les niveaux.
-      const stats = creature.boss
+      const stats0 = creature.boss
         // `eggNumber` : le Gardien frappe plus fort à partir du 5e œuf.
         // `guardianCalibrage` : le Gardien calé sur le deck du début de
         // l'œuf (combatLogic.calibrerGardien). Absent : l'ancien Gardien.
@@ -234,6 +235,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           ? guardianStatsCalibrees(guardianStats(levelNumber, GUARDIAN_BASE_LEVEL, guardianEggNumber), guardianCalibrage)
           : guardianStats(levelNumber, GUARDIAN_BASE_LEVEL, guardianEggNumber))
         : statsForOpponentCreatureTyped(creature, levelNumber);
+      // Élixir de faiblesse (shop diamant) : APRÈS le calibrage, adversaires
+      // et Gardien −10 % — un avantage réel, que le calculateur ne voit pas.
+      const stats = elixirActif ? appliquerElixir(stats0) : stats0;
       return { creature, stats, hp: stats.hp, mana: MANA_DEPART, etats: {} };
     })
   );
@@ -906,6 +910,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   return (
     <View style={[styles.screen, { marginTop: -insets.top }]}>
       <StatusBar hidden />
+      {elixirActif && (
+        <View style={[styles.elixirBadge, { top: insets.top + 6 }]} pointerEvents="none">
+          <Text style={styles.elixirBadgeText}>🧪 Élixir : ennemis −10 %</Text>
+        </View>
+      )}
 
       {/* Décor de combat. Voile sombre par-dessus : le décor est très
           détaillé/lumineux, sans ça les sprites et les barres de vie s'y
@@ -1267,6 +1276,8 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
 }
 
 const styles = StyleSheet.create({
+  elixirBadge: { position: 'absolute', left: 10, zIndex: 20, backgroundColor: 'rgba(76,29,149,0.85)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  elixirBadgeText: { color: '#fff', fontWeight: '800', fontSize: 12 },
   skillBtnOff: { opacity: 0.35 },
   spriteEtats: { position: 'absolute', top: -5, fontSize: 10, color: '#fff', fontWeight: '700' },
   spriteEtatsDroite: { left: '100%', marginLeft: 4 },

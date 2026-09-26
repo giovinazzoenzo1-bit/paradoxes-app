@@ -681,6 +681,38 @@ export function competencesAvecSort(creature) {
     : k));
 }
 
+// ---- L'ÉLIXIR DE FAIBLESSE (26/09, shop diamant) ----------------------
+// Décision de l'auteur : ennemis −10 % pendant 5 combats (Aventure ET
+// Gardien), appliqué APRÈS le calibrage — le calculateur ne le voit pas,
+// c'est un avantage réel. ⚠️ Plafond −10 % : MESURÉ, −20 % donne 100 % de
+// victoires et efface 4 niveaux de retard.
+export const ELIXIR = { reduction: 0.10, combats: 5 };
+export function appliquerElixir(stats) {
+  const k = 1 - ELIXIR.reduction;
+  return { ...stats, hp: Math.max(1, Math.round(stats.hp * k)), attack: Math.max(1, stats.attack * k) };
+}
+
+// ---- Les decks de RÉFÉRENCE de l'Aventure et la PUISSANCE CONSEILLÉE ----
+// UNE source pour le calibrage (tools/calibrer-aventure.js) ET l'affichage
+// « puissance conseillée » avant chaque combat (demande de l'auteur,
+// 26/09) : un deck de cette puissance gagne à peu près ce que vise le
+// calibrage. Recalibrer = changer ces decks ici, les deux suivent.
+export function evoPourNiveau(n) {
+  return n >= 50 ? 2 : n >= 25 ? 1 : 0;
+}
+export function decksDeReferenceAventure(n) {
+  const taille = n <= 2 ? 1 : n <= 6 ? 2 : 3;
+  const rar = ['rare', 'rare', 'epique'];
+  const pool = (r) => CREATURES.filter((c) => c.rarity === r);
+  return [0, 1, 2, 3, 4].map((v) => rar.slice(0, taille).map((r, i) => { const p = pool(r); return p[(v * 3 + i) % p.length]; }));
+}
+export function puissanceConseillee(n) {
+  const niv = Math.max(1, Math.floor(n || 1));
+  const v = decksDeReferenceAventure(niv).map((deck) => puissanceDeck(deck.map((c) => ({
+    creature: c, ownedLevel: niv, evolutionTier: evoPourNiveau(niv), equippedRunes: [] })))).sort((a, b) => a - b);
+  return v[Math.floor(v.length / 2)];
+}
+
 export function multiplicateurFureur(tour) {
   return tour > EFFETS.fureurTour ? EFFETS.fureurMult : 1;
 }

@@ -44,6 +44,7 @@ const F = {
   combat: path.join(RACINE, 'src/games/clicker/combatLogic.js'),
   combatEcran: path.join(RACINE, 'src/screens/games/CombatScreen.js'),
   daily: path.join(RACINE, 'src/games/clicker/dailyLogic.js'),
+  aventure: path.join(RACINE, 'src/screens/games/AdventureScreen.js'),
 };
 
 // ---- Outils pour viser un défi par son identifiant ------------------
@@ -171,6 +172,14 @@ const SABOTAGES = [
     remplace("      return blesse >= 0 && pc(adversaires[blesse]) < 0.5 ? id : null;", "      return id;")],
   ['auditAventureCalibree', F.combat, "la table de l'Aventure effacée (l'ancienne Aventure trop facile revient)",
     (s) => s.replace(/export const AVENTURE_MULTIPLICATEURS = \[[^\]]*\];/, 'export const AVENTURE_MULTIPLICATEURS = null;')],
+  ['auditElixir', F.combatEcran, "l'écran de combat n'applique plus l'Élixir (acheté pour rien)",
+    remplace('const stats = elixirActif ? appliquerElixir(stats0) : stats0;', 'const stats = stats0;')],
+  ['auditElixir', F.ecran, "l'Élixir n'est plus sauvegardé (perdu à la réouverture)",
+    remplace('    elixirCombats: elixirCombatsRef.current,\n', '')],
+  ['auditElixir', F.aventure, "le sous-composant qui lance les combats ne reçoit plus l'Élixir (plantage à l'exécution)",
+    remplace('onOpenCreature, elixirCombats = 0, onElixirUsed }) {', 'onOpenCreature }) {')],
+  ['auditPuissanceConseillee', F.combat, 'la puissance conseillée ne dépend plus du niveau',
+    remplace('const niv = Math.max(1, Math.floor(n || 1));', 'const niv = 1;')],
   ['auditExhaustif', F.defis, "un libellé cassé dans un vrai défi (l'outil testait les anciens modèles : vert quand même, 24/09)",
     surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, (b) => b.replace('label: t => `', 'label: t => `undefined '))],
   ['auditPoigneA0', F.clicker, "Poigne remise à 1 399 : 1/11 du prix du Pacte pour le même +1 (le « cheat » du 21/09)",

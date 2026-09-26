@@ -35,6 +35,14 @@ export const DIAMOND_OFFERS = [
     cost: 5,
   },
   {
+    id: 'elixir',
+    icon: '🧪',
+    title: 'Élixir de faiblesse',
+    desc: 'Ennemis −10 % pendant tes 5 prochains combats (Aventure et Gardien)',
+    // Prix provisoire (26/09) : à fixer avec l'auteur.
+    cost: 30,
+  },
+  {
     id: 'hatch',
     icon: '🥚',
     title: 'Éclosion immédiate',

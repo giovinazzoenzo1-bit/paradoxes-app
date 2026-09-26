@@ -126,6 +126,7 @@ import {
   calibrageGardienSur,
   guardianStats,
   margeGardien,
+  ELIXIR,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -357,6 +358,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [griffesCoinBuys, setGriffesCoinBuys] = useState(0);
   const griffesCoinBuysRef = useRef(0);
   griffesCoinBuysRef.current = griffesCoinBuys;
+  // Élixir de faiblesse (shop diamant, 26/09) : combats restants. Ici, chez
+  // le parent commun du shop, de l'Aventure et du Gardien ; sauvegardé.
+  const [elixirCombats, setElixirCombats] = useState(0);
+  const elixirCombatsRef = useRef(0);
+  elixirCombatsRef.current = elixirCombats;
   // Défi tout juste validé, à annoncer au joueur. `null` = rien à montrer.
   const [questDone, setQuestDone] = useState(null);
   const [offlineReport, setOfflineReport] = useState(null);
@@ -1304,6 +1310,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setDevCompletedIds(saved.devCompletedIds || []);
           setDevReopenedIds(saved.devReopenedIds || []);
           setGriffesCoinBuys(saved.griffesCoinBuys || 0);
+          setElixirCombats(saved.elixirCombats || 0);
           const runeUsed = await AsyncStorage.getItem(FREE_RUNE_USED_KEY);
           if (runeUsed) setFreeRuneUsed(true);
           // La clé dédiée fait AUTORITÉ : elle est écrite sans délai,
@@ -1495,6 +1502,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // pendant que l'appli tourne.
     clockMax: Math.max(clockMaxRef.current || 0, Date.now() / 1000),
     griffesCoinBuys: griffesCoinBuysRef.current,
+    elixirCombats: elixirCombatsRef.current,
   });
 
   // Sauvegarde immédiate à la sortie de l'écran. Annule d'abord le
@@ -1861,6 +1869,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // perdu, seule une attente de 10 min est imposée — la sanction est le
   // temps, pas la perte.
   const finishGuardianFight = (outcome) => {
+    // Une charge d'Élixir consommée par combat de Gardien mené.
+    if (elixirCombatsRef.current > 0) setElixirCombats((c) => Math.max(0, c - 1));
     const fight = guardianFight;
     setGuardianFight(null);
     if (!fight) return;
@@ -1919,6 +1929,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (offer.id === 'energy') {
       await AsyncStorage.setItem(DEV_REFILL_ENERGY_KEY, '1');
       return "L'énergie sera pleine à l'ouverture du mode Exploration.";
+    }
+    if (offer.id === 'elixir') {
+      setElixirCombats((c) => c + ELIXIR.combats);
+      return `🧪 Élixir actif : ennemis −${Math.round(ELIXIR.reduction * 100)} % pendant tes ${ELIXIR.combats} prochains combats (Aventure et Gardien).`;
     }
     if (offer.id === 'hatch') {
       setIncubatingEgg((prev) => (prev ? { ...prev, endsAt: Date.now() } : prev));
@@ -3324,6 +3338,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         level={guardianFight.level}
         eggNumber={guardianFight.eggNumber || 0}
         calibrage={guardianFight.calibrage || null}
+        elixirActif={elixirCombats > 0}
         onFinish={finishGuardianFight}
       />
     );
@@ -3343,6 +3358,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           return true;
         }}
         griffesCoinBuys={griffesCoinBuys}
+        elixirCombats={elixirCombats}
+        onElixirUsed={() => setElixirCombats((c) => Math.max(0, c - 1))}
         ascensionCount={ascensionCount}
         onGriffesCoinBought={() => setGriffesCoinBuys((n) => n + 1)}
         // ⚠️ Déduit de l'ÉTAT DES DÉFIS, pas d'un transfert par le
@@ -5121,7 +5138,7 @@ function calibrageDuCombat(egg, ownedList, eggNumber, deckIds) {
     return null;
   }
 }
-function GuardianBattle({ team, level, onFinish, eggNumber = 0, calibrage = null }) {
+function GuardianBattle({ team, level, onFinish, eggNumber = 0, calibrage = null, elixirActif = false }) {
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
     return () => {
@@ -5144,6 +5161,7 @@ function GuardianBattle({ team, level, onFinish, eggNumber = 0, calibrage = null
       skipResultScreen
       guardianEggNumber={eggNumber}
       guardianCalibrage={calibrage}
+      elixirActif={elixirActif}
     />
   );
 }

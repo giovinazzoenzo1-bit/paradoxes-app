@@ -33,3 +33,21 @@
 - [x] **Gardien : on n'y touche pas** — il reste calé sur le deck du joueur (photo à chaque œuf). Pas de plafond : « le système ajoute des défis de niveau de créature automatiquement ».
 - [ ] **Élixir de faiblesse** (à acheter dans le SHOP DIAMANT) : ennemis −10 % pendant 5 combats, affiché avec un compteur. S'applique APRÈS le calibrage (Aventure ET Gardien). ⚠️ Plafond −10 % : MESURÉ, −20 % = 100 % de victoires et efface 4 niveaux de retard (12 % -> 88 %).
 - [ ] **Monétisation (plus tard)** : jamais d'avantage caché lié au montant payé ; packs de Griffes + consommables affichés. Prérequis : build native (EAS) + comptes développeur (Expo Go ne permet pas d'encaisser).
+
+### Monétisation et ressenti de la pression (26/09) — validé par l'auteur
+- [x] **Élixir de faiblesse** (push 1) : shop diamant, 30 💎 (PRIX PROVISOIRE), ennemis −10 % pendant 5 combats, Aventure ET Gardien, appliqué APRÈS le calibrage, sauvegardé, pastille 🧪 dans l'Aventure et badge en combat.
+- [x] **Puissance conseillée** avant chaque combat (push 1), en vert / orange / rouge. ⚠️ Calculée sur les decks de référence ACTUELS (2 rares + 1 épique, ≈ 2 victoires sur 3) : à suivre quand on recalibrera l'Aventure pour le joueur gratuit.
+- [ ] **Push 2** — écran de défaite : « Il te manquait environ X niveaux » (calcul vrai), 3 boutons (monter mes créatures · pack de Griffes 💎 · Élixir 💎 ou +1 énergie contre vidéo), « Tu y étais presque ! » seulement si c'est vrai ; + point 5 : l'achat se ressent tout de suite (message d'effet, puissance +X %).
+- [ ] **Push 3** — pack de départ au milieu de l'A1 (Griffes + 1 Élixir, pas cher, une seule fois).
+
+### Économie des Griffes et Aventure (26/09) — décisions de l'auteur, à reprendre APRÈS les pushs 2-3
+- Naissance des nouvelles créatures à **80 %** du niveau de la meilleure (il veut garder 80 %).
+- **Aucune Griffe en rejouant un niveau déjà gagné** (seule la 1re victoire paie) — à coder.
+- **3 packs de Griffes contre pièces par Ascension** (4 pour un acharné) — prix à recalculer pour le garantir ; taille des packs selon l'Ascension (+75/A validable).
+- Joueur gratuit : **6 victoires sur 10** ; ~2 niveaux de retard par Ascension ; petit payeur ~7,5/10.
+- Mesuré : succès réels ≈ 3 840 Griffes sur la partie (pas 13 065) ; les coûts ont des « événements » (A3 : meilleures créatures) — une formule fixe ne donne pas un manque parfaitement régulier.
+
+### Défis (APRÈS l'Aventure)
+- [ ] **10 défis d'Aventure doublés** par `ajouter-defis.py` le 23/09 (commit e66fd45) : A1 30→60→120 … A5 →360 ; remettre de 5 en 5 (35/40, 50/55, 65/70, 80/85, 95/100) + corriger l'outil + contrôle (≤ +10 niveaux d'un œuf à l'autre).
+- [ ] Règle de l'auteur : on garde « Gagne 4 combats », et **le défi de combat suivant demande 6 combats** (une barre d'énergie + 1 → vidéo).
+
