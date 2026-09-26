@@ -53,10 +53,17 @@ function combatAventureDetail(membres, niveau, alea, tapsParSec = 6.7, humain = 
   const vivantF = (i) => K.prochainVivant(f, i);
   const cibleO = () => K.premierVivant(o);
   let tour = 0;
+  // Le tour ennemi du MOTEUR (sorts compris, étape 4) ; les coups passent
+  // par `frapper` × Fureur, comme l'écran.
   const riposte = (oi, fi, fureur = 1) => {
-    const r = K.riposteAdversaire(o[oi], f[fi], alea);
-    o[oi].mana = r.mana;
-    Object.assign(f[fi], K.encaisser(f[fi], Math.max(1, Math.round(r.degats * fureur))));
+    const a = K.actionAdversaire(o, oi, f, fi, alea);
+    a.adversaires.forEach((x, i) => { o[i] = x; });
+    a.joueurs.forEach((x, i) => { f[i] = x; });
+    let rip = o[oi];
+    a.degats.forEach((d, i) => {
+      if (d > 0) { const x = K.frapper(rip, f[i], d * fureur, i === fi); rip = x.attaquant; f[i] = x.defenseur; }
+    });
+    o[oi] = rip;
   };
   let act = 0;
   if (alea() < 0.5) { riposte(0, act); if (f[act].hp <= 0) { act = vivantF(act); if (act < 0) return { gagne: false, tours: 0 }; } }
@@ -66,12 +73,19 @@ function combatAventureDetail(membres, niveau, alea, tapsParSec = 6.7, humain = 
     const regs = (x.creature.skills || []).filter((k) => !k.special);
     const comp = spe || (humain ? regs[Math.floor(alea() * regs.length)] : x.meilleure);
     if (spe) x.mana -= spe.manaCost || C.MANA_MAX;
-    const t = cibleO();
-    o[t].hp = Math.max(0, o[t].hp - K.degatsDuJoueur(comp, x, o[t].creature, x.taps / tapsParSec, true));
+    // Comme l'écran : un ennemi qui provoque impose la cible ; le coup passe
+    // par `frapper` (marque, provocation, venin qui empoisonne).
+    const t = K.cibleDuJoueur(o, cibleO());
+    const coupJ = K.frapper(x, o[t], K.degatsDuJoueur(comp, x, o[t].creature, x.taps / tapsParSec, true));
+    f[act] = coupJ.attaquant;
+    o[t] = coupJ.defenseur;
     const r = K.choisirRiposteur(o, t);
     if (r < 0) return { gagne: true, tours: tour + 1 };
     tour += 1;
-    riposte(r, act, K.multiplicateurFureur(tour));
+    riposte(r, K.cibleDeRiposte(f, act), K.multiplicateurFureur(tour));
+    K.finDeTour(f).equipe.forEach((y, i) => { f[i] = y; });
+    K.finDeTour(o).equipe.forEach((y, i) => { o[i] = y; });
+    if (cibleO() < 0) return { gagne: true, tours: tour + 1 };
     const nx = vivantF(act);
     if (nx < 0) return { gagne: false, tours: tour + 1 };
     act = nx;

@@ -75,6 +75,8 @@ import {
   modifierCoup,
   meilleureAttaque,
   SORTS,
+  actionAdversaire,
+  cibleDuJoueur,
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
   guardianStats,
@@ -543,7 +545,16 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     const skill = selectedSkillRef.current;
     const curIdx = activeIndexRef.current;
     const curFighter = fightersRef.current[curIdx];
-    const targetIdx = targetIndexRef.current;
+    // Un ennemi qui PROVOQUE impose la cible (moteur : cibleDuJoueur).
+    const targetIdx = cibleDuJoueur(opponentsRef.current, targetIndexRef.current);
+    if (targetIdx >= 0 && targetIdx !== targetIndexRef.current) {
+      targetIndexRef.current = targetIdx;
+      setTargetIndex(targetIdx);
+      if ((opponentsRef.current[targetIdx].etats || {}).provocation > 0) {
+        setSwitchMessage(`🔱 ${opponentsRef.current[targetIdx].creature.stages[0].name} provoque !`);
+        setTimeout(() => setSwitchMessage(null), 1500);
+      }
+    }
     const opp = opponentsRef.current[targetIdx];
 
     // Rune de Célérité : bonus ADDITIF sur le multiplicateur, sur TOUTES
@@ -656,19 +667,27 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     const fureur = multiplicateurFureur(toursRef.current);
     const avant = fightersRef.current;
     const tRip = cibleDeRiposte(avant, curIdx);
+    let baseJ = avant; // nos créatures, après un éventuel sort ennemi (marque)
     let riposte = null;
     let degatsRiposte = [];
     if (isBoss && retaliatorIdx >= 0 && tRip >= 0) {
       riposte = riposteGardien(newOpponents[retaliatorIdx].stats, avant, tRip);
       degatsRiposte = riposte.degats;
     } else if (retaliatorIdx >= 0 && tRip >= 0) {
-      const r = riposteAdversaire(newOpponents[retaliatorIdx], avant[tRip]);
-      newOpponents = newOpponents.map((o, i) => (i === retaliatorIdx ? { ...o, mana: r.mana } : o));
-      degatsRiposte = avant.map((_, i) => (i === tRip ? r.degats : 0));
+      // Le tour ennemi du MOTEUR (étape 4) : son sort s'il le décide, sinon
+      // son attaque. Une marque a pu être posée sur une de nos créatures.
+      const a = actionAdversaire(newOpponents, retaliatorIdx, avant, tRip);
+      newOpponents = a.adversaires;
+      baseJ = a.joueurs;
+      degatsRiposte = a.degats;
+      if (a.sort) {
+        setSwitchMessage(`😈 ${newOpponents[retaliatorIdx].creature.stages[0].name} lance ${SORTS[a.sort].icone} ${SORTS[a.sort].nom} !`);
+        setTimeout(() => setSwitchMessage(null), 1800);
+      }
     }
     let riposteur = retaliatorIdx >= 0 ? newOpponents[retaliatorIdx] : null;
     opponentDamage = 0;
-    let newFighters = avant.map((f, i) => {
+    let newFighters = baseJ.map((f, i) => {
       const dg = degatsRiposte[i] || 0;
       if (dg <= 0 || !riposteur) return f;
       const x = frapper(riposteur, f, dg * fureur, i === tRip);

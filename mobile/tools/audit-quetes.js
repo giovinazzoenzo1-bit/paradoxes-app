@@ -3218,7 +3218,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '6c031958';
+const EMPREINTE_COMBAT = 'f2f10ffe';
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -3437,3 +3437,34 @@ function auditSortsDonnees() {
   return fautes;
 }
 module.exports.auditSortsDonnees = auditSortsDonnees;
+
+// ---- Les ennemis de l'Aventure lancent leurs sorts à bon escient ----
+//
+// Étape 4 des sorts (24/09). Chaque règle de décision sur un cas où le sort
+// DOIT sortir et un cas où il ne doit PAS : un ennemi qui se soigne à PV
+// pleins ou lance une zone contre une seule créature gâche son tour —
+// l'auteur s'en apercevrait tout de suite.
+function auditSortsAdverses() {
+  const K = load('combatLogic');
+  const fautes = [];
+  const par = (sort) => C.CREATURES.find((c) => C.SORT_DE_CREATURE[c.id] === sort);
+  const cmb = (c, pc, mana = 5, etats = {}) => { const st = K.statsForOpponentCreatureTyped(c, 20);
+    // pc = 0 : vraiment K.O. (0 PV) — le « au moins 1 PV » rendait la
+    // créature vivante, et le test accusait le moteur à tort.
+    return { creature: c, stats: st, hp: pc === 0 ? 0 : Math.max(1, Math.round(st.hp * pc)), mana, etats }; };
+  const j = (pc) => cmb(C.CREATURES[0], pc);
+  const cas = (nom, attendu, obtenu) => { if (attendu !== obtenu) fautes.push({ cas: nom, attendu, obtenu }); };
+  const d = K.decisionSortAdversaire;
+  cas('soin : un allié à 30 %', 'soin', d([cmb(par('soin'), 1), cmb(par('zone'), 0.3)], 0, [j(1)], 0));
+  cas('soin : tout le monde à PV pleins', null, d([cmb(par('soin'), 1), cmb(par('zone'), 1)], 0, [j(1)], 0));
+  cas('zone : 2 créatures en face', 'zone', d([cmb(par('zone'), 1)], 0, [j(1), j(1)], 0));
+  cas('zone : une seule créature en face', null, d([cmb(par('zone'), 1)], 0, [j(1), j(0)], 0));
+  cas('exécution : cible à 20 %', 'execution', d([cmb(par('execution'), 1)], 0, [j(0.2)], 0));
+  cas('exécution : cible à 80 %', null, d([cmb(par('execution'), 1)], 0, [j(0.8)], 0));
+  cas('vitesse : jamais pour un ennemi', null, d([cmb(par('vitesse'), 1)], 0, [j(1), j(1)], 0));
+  cas('sans assez de mana', null, d([cmb(par('zone'), 1, 0)], 0, [j(1), j(1)], 0));
+  const a = K.actionAdversaire([cmb(par('zone'), 1)], 0, [j(1), j(1), j(0)], 0);
+  cas('zone : touche les 2 créatures vivantes, pas la K.O.', '1,1,0', a.degats.map((x) => (x > 0 ? 1 : 0)).join(','));
+  return fautes;
+}
+module.exports.auditSortsAdverses = auditSortsAdverses;

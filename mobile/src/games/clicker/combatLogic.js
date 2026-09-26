@@ -703,6 +703,77 @@ export function iconesEtats(c) {
   return r;
 }
 
+// ---- Les SORTS des ennemis de l'AVENTURE (étape 4, 24/09) ------------
+//
+// L'auteur : « je veux que les ennemis aient aussi des pouvoirs en mode
+// Aventure ; pour le Gardien, pas pour l'instant ». Chaque ennemi a le sort
+// de SA créature (SORT_DE_CREATURE) et le lance quand c'est utile, s'il a
+// le mana ; sinon il attaque (riposteAdversaire). Une seule logique pour le
+// vrai combat ET la simulation de l'Aventure.
+
+// Le sort que l'ennemi `idx` lance ce tour-ci, ou null (il attaque).
+export function decisionSortAdversaire(adversaires, idx, joueurs, cible) {
+  const adv = adversaires[idx];
+  const id = SORT_DE_CREATURE[adv.creature.id];
+  if (!id || !SORTS[id]) return null;
+  const mana = Math.min(MANA_MAX, (adv.mana || 0) + MANA_PER_TURN);
+  if (mana < SORTS[id].cout) return null;
+  const pc = (c) => c.hp / pvMax(c);
+  const blesse = plusBlesse(adversaires);
+  const cibleJ = joueurs[cible];
+  switch (id) {
+    case 'soin':
+    case 'bouclier':
+      return blesse >= 0 && pc(adversaires[blesse]) < 0.5 ? id : null;
+    case 'zone':
+      return joueurs.filter(vivant).length >= 2 ? id : null;
+    case 'execution':
+      return vivant(cibleJ) && pc(cibleJ) < EFFETS.executionSeuil ? id : null;
+    case 'boost':
+      return adversaires.filter(vivant).length >= 2 && !etatsDe(adversaires[plusFort(adversaires, idx)]).boost ? id : null;
+    case 'poison':
+      return !(etatsDe(adv).venin > 0) ? id : null;
+    case 'provocation':
+      return !(etatsDe(adv).provocation > 0)
+        && adversaires.some((a, i) => i !== idx && vivant(a) && pc(a) < 0.5) ? id : null;
+    case 'marque':
+      return vivant(cibleJ) && !etatsDe(cibleJ).marque && pc(cibleJ) > 0.5 ? id : null;
+    case 'pacte':
+      return pc(adv) > 0.5 ? id : null;
+    default:
+      return null; // Vitesse : un ennemi ne tape pas, il attaque
+  }
+}
+
+// Le tour de l'ennemi `idx` : son sort s'il le décide, sinon son attaque.
+// Renvoie { adversaires, joueurs (une marque a pu y être posée), degats
+// (par créature du joueur, AVANT `frapper` et la Fureur), sort, zone }.
+export function actionAdversaire(adversaires, idx, joueurs, cible, alea = Math.random) {
+  const sort = decisionSortAdversaire(adversaires, idx, joueurs, cible);
+  if (sort) {
+    const avecMana = adversaires.map((a, i) => (i === idx ? { ...a, mana: Math.min(MANA_MAX, (a.mana || 0) + MANA_PER_TURN) } : a));
+    const r = lancerSort(sort, avecMana, idx, joueurs, cible);
+    let degats = joueurs.map(() => 0);
+    if (r.coup) {
+      const lanceur = r.allies[idx];
+      const k = meilleureAttaque(lanceur.creature);
+      const coup = k ? scaledSkillDamage(k, lanceur.creature, lanceur.stats.attack) : lanceur.stats.attack * BASIC_ATTACK_RATIO;
+      const part = r.coup.zone || r.coup.part || 1;
+      degats = r.ennemis.map((j, i) => (vivant(j) && (r.coup.zone || i === cible)
+        ? Math.max(1, Math.round(coup * elementMultiplier(lanceur.creature.element, j.creature.element) * part)) : 0));
+    }
+    return { adversaires: r.allies, joueurs: r.ennemis, degats, sort, zone: !!(r.coup && r.coup.zone) };
+  }
+  const r = riposteAdversaire(adversaires[idx], joueurs[cible], alea);
+  return {
+    adversaires: adversaires.map((a, i) => (i === idx ? { ...a, mana: r.mana } : a)),
+    joueurs,
+    degats: joueurs.map((_, i) => (i === cible ? r.degats : 0)),
+    sort: null,
+    zone: false,
+  };
+}
+
 // ---- La simulation et le calibrage ----
 
 // Tirages reproductibles (même graine = mêmes combats).
