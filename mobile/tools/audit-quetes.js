@@ -3587,7 +3587,7 @@ function auditDefaite() {
   doit(S.includes("presque={outcome === 'lose' && presqueGagne(opponents)}"), "l'écran de fin ne calcule plus le « presque »");
   doit(S.includes('Il te manquait environ ${manque} niveau'), "l'écran de défaite n'affiche plus le diagnostic");
   doit(A.includes('aideDefaite={{'), "le lancement des combats ne transmet plus les solutions de défaite");
-  doit((A.match(/annoncerGriffes\(GRIFFES_(PACK|COIN_PACK)\);/g) || []).length === 2, "un achat de Griffes ne se ressent plus (point 5)");
+  doit(A.includes('annoncerGriffes(GRIFFES_PACK);') && A.includes('annoncerGriffes(taille);'), "un achat de Griffes ne se ressent plus (point 5)");
   const sig = (src, nom) => src.split('\n').find((x) => new RegExp('^(export default )?function ' + nom + '\\(').test(x)) || '';
   const passes = (src, comp, prop) => { const out = []; let i = 0; while ((i = src.indexOf('<' + comp + '\n', i)) >= 0) { const j = src.indexOf('/>', i); out.push(src.slice(i, j).includes(prop + '=')); i = j; } return out; };
   [['CombatScreen', S, 'aideDefaite', [A]], ['AdventureScreen', A, 'onBuyElixir', [Cl]], ['ChapterMapScreen', A, 'onBuyElixir', [A]],
@@ -3599,3 +3599,30 @@ function auditDefaite() {
   return fautes;
 }
 module.exports.auditDefaite = auditDefaite;
+
+// ---- Les packs de Griffes contre pièces : 3 par Ascension (26/09) ----
+//
+// Décision de l'auteur : « 3 packs par Ascension, 4 s'il tryharde comme un
+// fou ». Prix = part du SEUIL de l'Ascension en cours, qui monte à chaque
+// pack ; compteur remis à zéro à chaque Ascension ; taille 100 + 75 par
+// Ascension. MESURÉ avant : 90 packs achetés d'un coup à l'A3.
+function auditPacks() {
+  const L2 = load('clickerLogic');
+  const fs = require('fs');
+  const lire = (f) => fs.readFileSync(require('path').join(__dirname, '../src/screens/games', f), 'utf8');
+  const fautes = [];
+  for (let a = 0; a <= 5; a++) {
+    if (L2.taillePackGriffes(a) !== 100 + 75 * a) fautes.push({ ascension: a, probleme: 'taille du pack', attendu: 100 + 75 * a, trouve: L2.taillePackGriffes(a) });
+    const seuil = L2.ascensionThreshold(a), p = [0, 1, 2, 3, 4].map((n) => L2.griffesCoinCost(n, a));
+    if (p[0] + p[1] + p[2] > 0.5 * seuil) fautes.push({ ascension: a, probleme: 'les 3 packs normaux coûtent plus de la moitié du seuil' });
+    if (p[0] + p[1] + p[2] < 0.2 * seuil) fautes.push({ ascension: a, probleme: 'les 3 packs normaux coûtent moins de 20 % du seuil (on en achèterait des dizaines)' });
+    if (p[3] < 2.5 * p[0]) fautes.push({ ascension: a, probleme: 'le 4e pack n\'est pas un vrai effort' });
+    if (p[4] < 2 * seuil) fautes.push({ ascension: a, probleme: 'le 5e pack reste abordable' });
+  }
+  const Cl = lire('ClickerScreen.js'), Av = lire('AdventureScreen.js');
+  if (!/setCoins\(0\);\n[^\n]*\n[^\n]*\n\s*setGriffesCoinBuys\(0\);/.test(Cl)) fautes.push({ probleme: "le compteur de packs n'est plus remis à zéro à l'Ascension" });
+  if (!Cl.includes('packsParAscension: true,') || !Cl.includes('setGriffesCoinBuys(saved.packsParAscension ?')) fautes.push({ probleme: 'la remise à zéro unique des anciennes sauvegardes a disparu' });
+  [Cl, Av].forEach((src, i) => { if (/[+{]\s*GRIFFES_COIN_PACK\b|\$\{GRIFFES_COIN_PACK\}/.test(src)) fautes.push({ probleme: (i ? 'AdventureScreen' : 'ClickerScreen') + ' crédite ou affiche encore un pack de taille fixe' }); });
+  return fautes;
+}
+module.exports.auditPacks = auditPacks;

@@ -202,6 +202,7 @@ import {
   levelUpCost,
   griffesCoinCost,
   GRIFFES_COIN_PACK,
+  taillePackGriffes,
 } from '../../games/clicker/clickerLogic';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import {
@@ -609,8 +610,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
       Alert.alert('Pièces insuffisantes', `Il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`);
       return;
     }
-    setGriffes((g) => g + GRIFFES_COIN_PACK);
-    annoncerGriffes(GRIFFES_COIN_PACK);
+    // Taille du pack selon l'Ascension (26/09) : 100 + 75 par Ascension.
+    const taille = taillePackGriffes(ascensionCount);
+    setGriffes((g) => g + taille);
+    annoncerGriffes(taille);
     if (onGriffesCoinBought) onGriffesCoinBought();
   };
 
@@ -642,10 +645,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     Alert.alert(
       'Obtenir des Griffes',
       `💎 ${GRIFFES_DIAMOND_COST} Diamants → ${GRIFFES_PACK} 🐾\n`
-      + `💰 ${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces → ${GRIFFES_COIN_PACK} 🐾`,
+      + `💰 ${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces → ${taillePackGriffes(ascensionCount)} 🐾`,
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: `💰 ${GRIFFES_COIN_PACK} Griffes`, onPress: buyGriffesWithCoins },
+        { text: `💰 ${taillePackGriffes(ascensionCount)} Griffes`, onPress: buyGriffesWithCoins },
         {
           text: `💎 ${GRIFFES_PACK} Griffes`,
           onPress: async () => {

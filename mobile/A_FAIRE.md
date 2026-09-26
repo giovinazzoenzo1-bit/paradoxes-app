@@ -57,6 +57,6 @@
 - [x] Filet de sécurité (`FILET_SECURITE`) : 5 / 7 / 10 défaites de suite → −20 / −40 / −60 %, ce niveau seulement, anti-triche 90 % du meilleur deck possible, badge 🛟, compteur sauvegardé.
 - [x] Griffes réglage A (`griffesReward`), à la PREMIÈRE victoire seulement ; « Niveau déjà gagné : pas de Griffes ».
 - [x] Tables 140 niveaux : `AVENTURE_MULTIPLICATEURS` + `PUISSANCE_CONSEILLEE` ; `auditParcours` (30 joueurs, à chaque push) remplace l'ancien contrôle.
-- [ ] **Morceau B** : packs contre pièces — 3 par Ascension (4 pour un acharné), taille 100 + 75 × Ascension, compteur remis à zéro à chaque Ascension (le simulateur le suppose déjà).
+- [x] **Morceau B FAIT** : packs contre pièces — prix = part du SEUIL de l'Ascension (10 / 15 / 20 % puis 60 % le 4e, 300 % au-delà : 3 packs ≈ 15 à 70 min de production de fin d'Ascension, le 4e ≈ 20 à 95 min de plus), taille 100 + 75 × Ascension, compteur remis à zéro à chaque Ascension (+ remise à zéro unique des anciennes sauvegardes). `auditPacks` + 3 sabotages.
 - [ ] Ensuite : défis (10 cibles doublées ; « défi suivant = 6 combats »), puis recaler le simulateur sur les chronos réels de l'auteur.
 

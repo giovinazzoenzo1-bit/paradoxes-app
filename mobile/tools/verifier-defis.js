@@ -54,6 +54,7 @@ const CONTROLES = [
   ['auditElixir', "l'Élixir retire 10 % et il est branché de bout en bout (shop, sauvegarde, Aventure, Gardien)"],
   ['auditPuissanceConseillee', 'la puissance conseillée est positive et monte avec le niveau'],
   ['auditDefaite', "l'écran de défaite dit vrai (presque, retard) et il est branché ; l'achat de Griffes se ressent"],
+  ['auditPacks', 'packs de Griffes contre pièces : 3 par Ascension, prix sur le seuil, taille 100 + 75 par Ascension'],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],

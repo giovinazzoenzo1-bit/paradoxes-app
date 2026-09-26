@@ -1101,10 +1101,21 @@ export const GRIFFES_COIN_PACK = 100;
 export const GRIFFES_COIN_BASE = 20000 * COIN_SCALE;
 export const GRIFFES_COIN_STEP = 10000 * COIN_SCALE;
 
+// ⚠️ 26/09 — décision de l'auteur : « le joueur pourra acheter 3 packs de
+// Griffes avec les pièces par Ascension, 4 s'il tryharde comme un fou ».
+// MESURÉ avant : le prix (20 k → 4,2 M) ne suivait pas l'économie (seuil
+// d'Ascension 3,1 M → 370 Md) — 90 packs achetés d'un coup à l'A3.
+// Désormais : un pourcentage du SEUIL de l'Ascension en cours, qui monte à
+// chaque pack ; `purchases` = packs achetés DANS CETTE Ascension (remis à
+// zéro à chaque Ascension, ClickerScreen). Taille : 100 + 75 par Ascension.
+export const GRIFFES_PACK_FRACTIONS = [0.10, 0.15, 0.20, 0.60, 3.0]; // 1er, 2e, 3e, 4e (acharné), 5e et plus
+export function taillePackGriffes(ascensionCount) {
+  return GRIFFES_COIN_PACK + 75 * Math.max(0, Math.floor(Number(ascensionCount) || 0));
+}
 export function griffesCoinCost(purchases, ascensionCount) {
-  const n = Math.max(0, purchases || 0);
-  const palier = GRIFFES_COIN_BASE + GRIFFES_COIN_STEP * n;
-  return Math.round(palier * ascensionSpeedMultiplier(ascensionCount));
+  const n = Math.max(0, Math.floor(Number(purchases) || 0));
+  const f = GRIFFES_PACK_FRACTIONS[Math.min(n, GRIFFES_PACK_FRACTIONS.length - 1)];
+  return Math.round(ascensionThreshold(ascensionCount) * f);
 }
 
 export function veilleurMaxed(level) {

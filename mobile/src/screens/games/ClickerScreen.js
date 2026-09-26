@@ -91,6 +91,7 @@ import {
   passiveRate,
   griffesCoinCost,
   GRIFFES_COIN_PACK,
+  taillePackGriffes,
 } from '../../games/clicker/clickerLogic';
 import {
   nextQuestSet,
@@ -527,9 +528,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     try {
       const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
       const pending = raw ? parseInt(raw, 10) || 0 : 0;
-      await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + GRIFFES_COIN_PACK));
+      await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + taillePackGriffes(ascensionCountRef.current)));
     } catch (e) { /* écriture impossible : on ne bloque pas l'écran */ }
-    spawnPopup(`+${GRIFFES_COIN_PACK} 🐾`, 110, 60, true);
+    spawnPopup(`+${taillePackGriffes(ascensionCountRef.current)} 🐾`, 110, 60, true);
   };
 
   const spawnBoss = () => {
@@ -1310,7 +1311,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setQuestBaselines(defsChangees ? {} : (saved.questBaselines || {}));
           setDevCompletedIds(saved.devCompletedIds || []);
           setDevReopenedIds(saved.devReopenedIds || []);
-          setGriffesCoinBuys(saved.griffesCoinBuys || 0);
+          // 26/09 : le compteur compte les packs DE L'ASCENSION en cours. Une
+          // ancienne sauvegarde contient tous ceux de la partie : remis à zéro
+          // UNE fois, sinon les prochains packs seraient hors de prix.
+          setGriffesCoinBuys(saved.packsParAscension ? (saved.griffesCoinBuys || 0) : 0);
           setElixirCombats(saved.elixirCombats || 0);
           const runeUsed = await AsyncStorage.getItem(FREE_RUNE_USED_KEY);
           if (runeUsed) setFreeRuneUsed(true);
@@ -1503,6 +1507,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // pendant que l'appli tourne.
     clockMax: Math.max(clockMaxRef.current || 0, Date.now() / 1000),
     griffesCoinBuys: griffesCoinBuysRef.current,
+    packsParAscension: true,
     elixirCombats: elixirCombatsRef.current,
   });
 
@@ -2263,6 +2268,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             // clore.
             pendingGainRef.current = 0;
             setCoins(0);
+            // Packs de Griffes contre pièces : 3 PAR ASCENSION (26/09) — le
+            // compteur qui fait monter le prix repart de zéro.
+            setGriffesCoinBuys(0);
             setTotalEarned(0);
             setTapPower(1);
             setCritLevel(0);
@@ -4452,7 +4460,7 @@ function ShopView({
               disabled={coins < griffesCoinCost(griffesCoinBuys, ascensionCount)}
             >
               <View style={styles.actionBtnLeft}>
-                <Text style={styles.actionBtnText}>🐾 {GRIFFES_COIN_PACK} Griffes</Text>
+                <Text style={styles.actionBtnText}>🐾 {taillePackGriffes(ascensionCount)} Griffes</Text>
                 <Text style={styles.actionBtnSubtext}>
                   Pour l'Aventure · le prochain pack coûtera plus cher
                 </Text>
