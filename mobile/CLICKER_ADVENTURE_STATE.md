@@ -602,3 +602,44 @@ l'ancien modèle est périmée (`H.pausesParGroupe`).
 
 **Ouvert** : `auditTropFacile` est rouge sur les groupes 2 à 5 — des
 défis encore trop faciles, à caler œuf par œuf avec la règle du §4.
+
+
+## 26/09 — Test réel de l'auteur : l'économie des Griffes était mal répartie
+
+**Le test** (énergie au maximum en mode développeur) : une seule créature,
+Terracroc, montée de 1 à 59 en 20 minutes grâce à 603 Griffes de quêtes et
+succès (4 fois les combats) ; Aventure poussée jusqu'au niveau 26 ; puis
+3 défaites sur 4 alors que l'écran affichait « puissance 156, conseillée 142 ».
+
+**Causes réelles (trois erreurs du simulateur, pas du jeu) :**
+1. **La « naissance à 80 % » n'a JAMAIS été codée dans le jeu** : le jeu fait
+   naître au niveau 1 (`addCreatureToOwned`). Seul le simulateur la supposait
+   → la difficulté était calculée pour un jeu plus facile (A4-A5 : moins de
+   4 victoires sur 10 dans le vrai jeu). Simulateur aligné : `naissance: 0`.
+2. **Le joueur simulé s'interdisait de monter au-dessus du niveau d'Aventure
+   + 1** : le jeu n'a aucun plafond et un vrai joueur dépense tout. Le plafond
+   cachait jusqu'à 19 000 Griffes non dépensées en A2. Plafond retiré.
+3. **Les quêtes étaient modélisées à 315 Griffes par jour, étalées** ; en
+   vrai, les hebdomadaires (« 20 étoiles » 245, « 6 niveaux parfaits » 260…)
+   tombent toutes au début.
+
+**Correction (décision de l'auteur) :** les récompenses des quêtes du jour
+et de la semaine suivent le niveau d'Aventure (`recompenseQuete` dans
+combatLogic : ×1 au niveau 25, ×0,24 au niveau 5, ×17 au niveau 100). Une
+seule règle pour le versement (DailyContext), l'affichage (Progrès) et le
+simulateur. Succès et calendrier inchangés. Contrôle `auditQuetesNiveau`.
+
+**Recalibrage** sur 60 joueurs (le calibrage sur 40 laissait l'A1 à 5,0
+victoires sur 10, sous la limite du contrôle) : 0 bloqué, 5,4 à 6,5 victoires
+sur 10 dans toutes les Ascensions, cran −60 % du filet rare (≤ 0,13 fois par
+joueur). Les créatures passent au-dessus du niveau d'Aventure en A2 (environ
++27), puis en dessous dès l'A3 (les meilleures naissent au niveau 1).
+
+**Mesure sur la « puissance »** (reste à corriger) : à puissance égale
+(≈ 150), 3 créatures gagnent à 100 % au niveau 26, une créature seule à 55 %.
+La formule ne voit pas le nombre de créatures. L'auteur veut GARDER la
+puissance (plus parlante qu'un pourcentage) mais la rendre juste.
+
+**Piège à retenir :** un simulateur qui suppose une règle du jeu doit la
+LIRE dans le jeu, jamais la recopier. Vérifier dans le code du jeu que
+chaque hypothèse du simulateur existe vraiment.

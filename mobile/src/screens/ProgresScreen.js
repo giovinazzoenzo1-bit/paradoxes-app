@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'rea
 import { useDaily } from '../context/DailyContext';
 import { questDef, weeklyQuestDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER } from '../games/clicker/dailyLogic';
 import { COLORS } from './games/clickerTheme';
+import { recompenseQuete } from '../games/clicker/combatLogic';
 
 // Menu Quêtes — panneau MODAL (ne couvre plus tout l'écran, on voit le
 // menu du Clicker autour), refondu le 07/09 d'après la maquette fournie :
@@ -27,8 +28,11 @@ export default function ProgresScreen({ onBack }) {
   const {
     loaded, questIds, questProgress, questClaimed, claimQuest,
     weeklyIds, weeklyProgress, weeklyClaimed, claimWeekly,
-    achievements, achievementsClaimed, achievementProgress, claimAchievement,
+    achievements, achievementsClaimed, achievementProgress, claimAchievement, lifetimeStats,
   } = useDaily();
+  // 26/09 : les quêtes du jour et de la semaine affichent la récompense
+  // RÉELLE à ton niveau d'Aventure (la même règle que le versement).
+  const niveauAventure = (lifetimeStats || {}).advLevelReached || 1;
   const [tab, setTab] = useState('daily');
   const [busyId, setBusyId] = useState(null); // évite un double-tap pendant l'écriture AsyncStorage
 
@@ -56,7 +60,7 @@ export default function ProgresScreen({ onBack }) {
   // d'affichage sont identiques (barre plafonnée à la cible, bouton
   // actif seulement si terminé et pas encore réclamé). Dupliquer aurait
   // garanti que les trois divergent au premier ajustement.
-  const renderRow = (key, def, rawProgress, claimed, onClaim) => {
+  const renderRow = (key, def, rawProgress, claimed, onClaim, recompense = null) => {
     const progress = Math.min(def.target, Math.floor(rawProgress || 0));
     const done = progress >= def.target;
     const pct = Math.min(100, (progress / def.target) * 100);
@@ -78,7 +82,7 @@ export default function ProgresScreen({ onBack }) {
           disabled={!done || claimed || busyId === key}
         >
           <Text style={[styles.questClaimBtnText, (!done || claimed) && styles.questClaimBtnTextDisabled]}>
-            {claimed ? '✓' : `+${def.reward}`}
+            {claimed ? '✓' : `+${recompense != null ? recompense : def.reward}`}
           </Text>
         </TouchableOpacity>
       </View>
@@ -90,7 +94,7 @@ export default function ProgresScreen({ onBack }) {
       {questIds.map((qid) => {
         const def = questDef(qid);
         if (!def) return null;
-        return renderRow(qid, def, questProgress[qid], !!questClaimed[qid], () => handleClaim(qid, claimQuest));
+        return renderRow(qid, def, questProgress[qid], !!questClaimed[qid], () => handleClaim(qid, claimQuest), recompenseQuete(def.reward, niveauAventure));
       })}
       <Text style={styles.footnote}>
         Nouvelles quêtes chaque jour à minuit. Récompenses créditées à ta prochaine ouverture du mode Exploration.
@@ -103,7 +107,7 @@ export default function ProgresScreen({ onBack }) {
       {(weeklyIds || []).map((qid) => {
         const def = weeklyQuestDef(qid);
         if (!def) return null;
-        return renderRow(qid, def, weeklyProgress?.[qid], !!weeklyClaimed?.[qid], () => handleClaim(qid, claimWeekly));
+        return renderRow(qid, def, weeklyProgress?.[qid], !!weeklyClaimed?.[qid], () => handleClaim(qid, claimWeekly), recompenseQuete(def.reward, niveauAventure));
       })}
       <Text style={styles.footnote}>
         Objectifs ~6× plus gros que les quotidiens, à faire en 7 jours. Remise à zéro chaque lundi.

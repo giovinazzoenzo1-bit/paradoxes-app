@@ -52,7 +52,10 @@ const OEUFS_PAR_ASC = A.load('defisEcrits').OEUFS_PAR_GROUPE;
 const FIN_OEUF = OEUFS_PAR_ASC.map((n, a) => OEUFS_PAR_ASC.slice(0, a + 1).reduce((x, y) => x + y, 0));
 
 const REGLAGES = {
-  naissance: 0.8,
+  // ⚠️ 26/09 : le JEU fait naître les créatures au niveau 1 (ClickerScreen,
+  // addCreatureToOwned) — la « naissance à 80 % » n'a jamais été codée ; le
+  // simulateur la supposait à tort. Aligné sur le jeu (0 → niveau 1).
+  naissance: 0,
   oeufsParAsc: OEUFS_PAR_ASC,
   niveauxOeufs: NIVEAUX_OEUFS,
   finsAventure: FIN_OEUF.map((k) => NIVEAUX_OEUFS[k - 1]),
@@ -61,7 +64,10 @@ const REGLAGES = {
   runesParAsc: 3, // 1 pour le défi + 2 volontaires
   prixRune: 100,
   succesParAsc: [175, 260, 760, 1545, 500, 600], // modèle mesuré le 26/09
-  quetesParJour: 315,
+  // Quêtes : le calendrier (≈ 39/jour) est fixe ; les quêtes du jour et de
+  // la semaine (≈ 276/jour au niveau 25) suivent le niveau d'Aventure — la
+  // règle DU JEU (combatLogic.facteurQuetes).
+  quetesDuJour: (niv) => 39 + 276 * K.facteurQuetes(niv),
   heuresJeuParJour: 12,
   energieMax: 5,
   energieParHeure: 3,
@@ -97,7 +103,10 @@ function nouveauJoueur(graine, R = REGLAGES) {
   const monter = () => {
     for (let n = 0; n < 500; n++) {
       const t = j.trio().sort((x, y) => x.niv - y.niv)[0];
-      if (!t || t.niv >= j.niveau + 1) return;
+      // ⚠️ 26/09 : AUCUN plafond (le jeu n'en a pas) — le vrai joueur dépense
+      // tout (test de l'auteur : Terracroc niveau 59 au niveau 26). L'ancien
+      // plafond « niveau d'Aventure + 1 » cachait 19 000 Griffes non dépensées.
+      if (!t) return;
       const cout = L.levelUpCost(t.c, t.niv) + coutEvo(t.evo, evoPour(t.niv + 1));
       if (cout > j.griffes) return;
       j.griffes -= cout; t.niv += 1; t.evo = Math.max(t.evo, evoPour(t.niv));
@@ -106,7 +115,7 @@ function nouveauJoueur(graine, R = REGLAGES) {
   const avancerTemps = (h) => {
     j.heures += h;
     const jour = Math.floor(j.heures / R.heuresJeuParJour);
-    if (jour > j.dernierJour) { j.griffes += (jour - j.dernierJour) * R.quetesParJour; j.dernierJour = jour; }
+    while (j.dernierJour < jour) { j.griffes += R.quetesDuJour(j.niveau); j.dernierJour += 1; }
   };
   j.joueurs = () => j.trio().map((p) => ({ creature: p.c, stats: K.combatStatsForCreatureTyped(p.c, p.niv, p.evo, []) }));
   j.adversaires = (l, k, baisse = 0) => K.opponentTeamForLevel(l).map((c) => { const st = K.statsForOpponentCreatureTyped(c, l, k);

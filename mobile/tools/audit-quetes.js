@@ -3676,3 +3676,26 @@ function auditValidation() {
   return fautes;
 }
 module.exports.auditValidation = auditValidation;
+
+// ---- Les récompenses des quêtes suivent le niveau d'Aventure (26/09) ----
+//
+// Test réel de l'auteur : 603 Griffes de quêtes et succès en quelques
+// minutes au début (4 fois les combats), et trop peu en fin de partie. La
+// règle (`recompenseQuete`) vaut ×1 au niveau 25, moins avant, plus après ;
+// le versement (DailyContext) ET l'affichage (Progrès) doivent l'appliquer.
+function auditQuetesNiveau() {
+  const K = load('combatLogic');
+  const fs = require('fs');
+  const lire = (f) => fs.readFileSync(require('path').join(__dirname, '..', f), 'utf8');
+  const fautes = [];
+  const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
+  doit(Math.abs(K.facteurQuetes(25) - 1) < 1e-9, 'au niveau 25, une quête ne vaut plus sa valeur écrite');
+  doit(K.recompenseQuete(245, 5) <= 70, 'au niveau 5, « 20 étoiles » paie trop (le début redevient trop généreux)');
+  let prec = 0; for (let n = 1; n <= 227; n++) { const v = K.recompenseQuete(245, n); if (v < prec) { fautes.push({ niveau: n, probleme: 'la récompense baisse avec le niveau' }); break; } prec = v; }
+  const Dc = lire('src/context/DailyContext.js'), Pr = lire('src/screens/ProgresScreen.js');
+  doit((Dc.match(/const griffes = recompenseQuete\(def\.reward, \(lifetimeStatsRef\.current \|\| \{\}\)\.advLevelReached\);/g) || []).length === 2, 'une quête (du jour ou de la semaine) verse encore sa valeur écrite');
+  doit(!/addPending\(PENDING_GRIFFES_KEY, def\.reward\)/.test(Dc), 'une quête crédite encore def.reward sans le niveau');
+  doit((Pr.match(/recompenseQuete\(def\.reward, niveauAventure\)/g) || []).length === 2, "l'écran Progrès n'affiche pas la vraie récompense");
+  return fautes;
+}
+module.exports.auditQuetesNiveau = auditQuetesNiveau;

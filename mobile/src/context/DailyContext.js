@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { recompenseQuete } from '../games/clicker/combatLogic';
 import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR,
   weekKey, pickWeeklyQuests, weeklyQuestDef,
   ACHIEVEMENTS, achievementDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER,
@@ -267,9 +268,11 @@ export function DailyProvider({ children }) {
     const progress = questProgressRef.current[questId] || 0;
     if (progress < def.target) return false;
     setQuestClaimed((prev) => ({ ...prev, [questId]: true }));
-    await addPending(PENDING_GRIFFES_KEY, def.reward);
+    // 26/09 : la récompense suit le niveau d'Aventure (combatLogic).
+    const griffes = recompenseQuete(def.reward, (lifetimeStatsRef.current || {}).advLevelReached);
+    await addPending(PENDING_GRIFFES_KEY, griffes);
     await addPending(PENDING_DIAMONDS_KEY, def.diamonds);
-    return def.reward;
+    return griffes;
   }, []);
 
   // Réclame une quête HEBDOMADAIRE terminée. Même chemin de crédit que
@@ -282,9 +285,11 @@ export function DailyProvider({ children }) {
     const progress = weeklyProgressRef.current[questId] || 0;
     if (progress < def.target) return false;
     setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));
-    await addPending(PENDING_GRIFFES_KEY, def.reward);
+    // 26/09 : la récompense suit le niveau d'Aventure (combatLogic).
+    const griffes = recompenseQuete(def.reward, (lifetimeStatsRef.current || {}).advLevelReached);
+    await addPending(PENDING_GRIFFES_KEY, griffes);
     await addPending(PENDING_DIAMONDS_KEY, def.diamonds);
-    return def.reward;
+    return griffes;
   }, []);
 
   // Réclame un SUCCÈS. La progression n'est pas stockée : on la relit

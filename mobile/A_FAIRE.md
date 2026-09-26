@@ -65,3 +65,9 @@
 - [x] Conséquence MESURÉE : l'Aventure va jusqu'au niveau 227 (fins d'Ascension 25 / 60 / 101 / 144 / 185 / 227) — le simulateur lit désormais ce rythme DANS LES DÉFIS ; tables recalibrées sur 227 niveaux ; vérifié : 0 bloqué sur 60, ≈ 6 à 7 victoires sur 10, ≈ 13 jours de jeu. En A4-A5, les créatures ont 6 à 13 niveaux de retard (la difficulté en tient compte).
 - [x] **Bouton « Valider » des défis FAIT** (demande de l'auteur) : le panneau du défi devient un bouton vert une fois le défi réussi ; il faut appuyer pour passer au suivant (comme les autres jeux) — le joueur voit aussi s'il avait déjà réussi un défi avant qu'il apparaisse.
 
+
+## 26/09 — Après le test réel de l'auteur
+- [x] Naissance au niveau 1 (déjà le cas dans le jeu ; simulateur aligné)
+- [x] Quêtes qui suivent le niveau d'Aventure + recalibrage complet
+- [ ] **Puissance plus juste** : tenir compte du nombre de créatures (une créature seule face à 3 ennemis gagne à 55 % là où 3 créatures de même puissance gagnent à 100 %)
+- [ ] Tests de l'auteur SANS l'énergie du mode développeur (rythme réel)
