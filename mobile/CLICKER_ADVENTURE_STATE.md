@@ -239,6 +239,16 @@ changé dans ce fichier exige le bump : sinon l'œuf en cours garde
 l'ancienne cible, qui peut être devenue impossible à vie (24/09 :
 « Achète 10 niveaux de Poigne » valait 45 000 % du seuil).
 
+### Piège : un bouton autour d'un élément en POSITION ABSOLUE (26/09)
+Symptôme : le panneau du défi passait bien au vert, mais l'appui « Valider »
+ne faisait RIEN. Cause : le panneau (`challengeCard`) est en position
+absolue ; enveloppé tel quel dans un `TouchableOpacity`, le bouton avait une
+taille de ZÉRO — le panneau s'affichait hors de sa zone, et un appui hors de
+la zone d'un bouton ne lui est jamais transmis (aucune erreur, rien à la
+compilation). Règle : c'est le BOUTON qui porte la position et la taille,
+l'élément le remplit (`width/height: '100%'`). `auditValidation` le vérifie,
+avec un sabotage qui reproduit le bug.
+
 ### L'Aventure est calibrée par simulation (24/09)
 Décision de l'auteur : niveau N de l'Aventure ≈ créatures niveau N pour
 gagner 2 combats sur 3. `AVENTURE_MULTIPLICATEURS` (combatLogic, 40

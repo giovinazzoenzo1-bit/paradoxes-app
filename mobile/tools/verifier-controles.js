@@ -202,6 +202,8 @@ const SABOTAGES = [
     remplace('const currentChallengeId = activeQuestIds.find((id) => !isQuestValidated(id)) || null;', 'const currentChallengeId = activeQuestIds.find((id) => !isQuestDone(id)) || null;')],
   ['auditValidation', F.ecran, "les défis validés ne sont plus remis à zéro au nouvel œuf (le suivant serait sauté)",
     remplace('    setValidatedQuestIds([]);\n    AsyncStorage.removeItem(VALIDATED_QUESTS_KEY)', '    AsyncStorage.removeItem(VALIDATED_QUESTS_KEY)')],
+  ['auditValidation', F.ecran, "le bouton Valider redevient de taille zéro (le bug du 26/09 : panneau vert qui ne réagit pas)",
+    remplace('<TouchableOpacity style={[styles.challengeCard, styles.challengeCardCliquable]} activeOpacity={0.85}', '<TouchableOpacity activeOpacity={0.85}')],
   ['auditExhaustif', F.defis, "un libellé cassé dans un vrai défi (l'outil testait les anciens modèles : vert quand même, 24/09)",
     surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, (b) => b.replace('label: t => `', 'label: t => `undefined '))],
   ['auditPoigneA0', F.clicker, "Poigne remise à 1 399 : 1/11 du prix du Pacte pour le même +1 (le « cheat » du 21/09)",

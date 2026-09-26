@@ -3667,7 +3667,12 @@ function auditValidation() {
   doit(/setLatchedQuestIds\(\[\]\);\n\s*AsyncStorage\.removeItem\(LATCHED_QUESTS_KEY\)[^\n]*\n\s*setValidatedQuestIds\(\[\]\);/.test(Cl), "les défis validés ne sont pas remis à zéro au nouvel œuf");
   doit(Cl.includes("Array.isArray(saved.validatedQuestIds) ? saved.validatedQuestIds : verrou"), 'une ancienne sauvegarde perdrait ses défis déjà réussis');
   doit(Cl.includes('reussi={currentChallengeReussi}') && Cl.includes('onValider={validerDefi}'), "le panneau du défi ne reçoit pas le bouton « Valider »");
-  doit(/return reussi && onValider \? \(\s*<TouchableOpacity[^>]*onPress=\{onValider\}/.test(Cl), "le panneau vert n'est pas appuyable");
+  // ⚠️ Bug du 26/09 : le panneau est en position absolue — le BOUTON doit
+  // porter sa position et sa taille, sinon il fait zéro pixel et l'appui
+  // tombe hors de sa zone (le panneau s'affichait vert… et ne réagissait pas).
+  doit(/return cliquable \? \(\s*<TouchableOpacity style=\{\[styles\.challengeCard, styles\.challengeCardCliquable\]\}[^>]*onPress=\{onValider\}/.test(Cl),
+    "le bouton Valider ne porte pas la position du panneau (bouton de taille zéro : l'appui ne passe pas)");
+  doit(Cl.includes("style={cliquable ? styles.challengeCardDedans : styles.challengeCard}"), "le panneau cliquable ne remplit pas son bouton");
   return fautes;
 }
 module.exports.auditValidation = auditValidation;

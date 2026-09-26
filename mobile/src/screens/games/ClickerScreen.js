@@ -5092,10 +5092,17 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
   const ratio = target > 0 ? Math.min(1, current / target) : 0;
   const filled = Math.floor(ratio * segments);
 
+  // ⚠️ BUG DU 26/09 (« le bouton Valider ne marche pas ») : le panneau est
+  // en POSITION ABSOLUE ; enveloppé tel quel dans un bouton, le bouton
+  // n'avait AUCUNE taille — le panneau s'affichait hors de sa zone, et un
+  // appui hors de la zone d'un bouton ne lui est jamais transmis. Quand le
+  // panneau est cliquable, c'est donc le BOUTON qui porte la position et la
+  // taille, et le panneau le remplit.
+  const cliquable = !!(reussi && onValider);
   const carte = (
     <ImageBackground
       source={require('../../../assets/icons/challenge-bar.png')}
-      style={styles.challengeCard}
+      style={cliquable ? styles.challengeCardDedans : styles.challengeCard}
       resizeMode="stretch"
     >
       {/* Défi RÉUSSI (26/09) : voile vert — tout le panneau devient le
@@ -5157,8 +5164,9 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
       )}
     </ImageBackground>
   );
-  return reussi && onValider ? (
-    <TouchableOpacity activeOpacity={0.85} onPress={onValider} accessibilityRole="button" accessibilityLabel="Valider le défi">
+  return cliquable ? (
+    <TouchableOpacity style={[styles.challengeCard, styles.challengeCardCliquable]} activeOpacity={0.85} onPress={onValider}
+      accessibilityRole="button" accessibilityLabel="Valider le défi">
       {carte}
     </TouchableOpacity>
   ) : carte;
@@ -5504,6 +5512,10 @@ const styles = StyleSheet.create({
   },
   challengeCycle: { color: COLORS.muted, fontSize: 10, fontWeight: '700', textAlign: 'center' },
   challengeCycleReussi: { color: '#34d399', fontSize: 12, fontWeight: '900' },
+  // Le panneau DANS son bouton : il le remplit (le bouton porte la position).
+  challengeCardDedans: { width: '100%', height: '100%' },
+  // Au-dessus de la rangée de boutons de test, qui touche son bord bas.
+  challengeCardCliquable: { zIndex: 4 },
   challengeReussiVoile: { position: 'absolute', left: 6, right: 6, top: 6, bottom: 6, backgroundColor: 'rgba(16,185,129,0.28)', borderRadius: 14, borderWidth: 2, borderColor: '#34d399' },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },
