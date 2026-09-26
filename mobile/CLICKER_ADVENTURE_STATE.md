@@ -684,3 +684,29 @@ les coups » ; « le bouclier ne marche pas, aucune icône ».
 (dépense tout, sorts au bon moment) rend le jeu trop dur pour un humain qui
 découvre. Toujours vérifier le DÉBUTANT : créature neuve, pas encore
 améliorée, première créature la plus faible.
+
+
+## 26/09 — 3e test réel : bloqué au chapitre 2 niveau 3 avec 2 créatures
+
+**Le test :** Bouldog niveau 14 bloque au niveau 11 (voulu : 2 ennemis) ;
+monté au niveau 34 (422 Griffes), toujours bloqué → 2e œuf → passe 11, puis
+12 après amélioration, mais bloque au niveau 13 malgré « puissance 57,
+conseillée 55 ». Remarque de l'auteur : si c'est si serré, pas de Griffes
+pour les runes (sans compter les packs contre pièces).
+
+**Cause réelle :** le joueur de référence était trop riche et trop avancé :
+- il faisait éclore chaque œuf dès son défi d'Aventure atteint (3 créatures
+  dès le niveau 9) — or les autres défis de l'œuf (clicker) prennent du
+  temps : l'auteur n'en avait que 2 au niveau 13 ;
+- il comptait 3 packs contre pièces dès le niveau 1 (300 Griffes en A0).
+
+**Correction :** joueur de référence réaliste (simulateur) — `retardOeufs: 1`
+(un œuf de retard, tous rattrapés en fin d'Ascension), `packsParAsc: 0` (les
+packs deviennent un bonus), 3 runes achetées par Ascension. Recalibrage :
+8,1 à 8,9 victoires sur 10, malchanceux 3,5 à 6,4, 0 bloqué ; l'équipe de
+l'auteur passe les niveaux 11 à 15 à 99-100 % (niveau 13 : 0 % avant).
+
+**Constat qui reste :** les combats ont très peu de hasard — pour une
+équipe donnée, un niveau se gagne presque toujours ou se perd presque
+toujours. Une équipe faible (Bouldog 20 + Ventis 10) tombe encore sur des
+murs (niveaux 13, 15 : 0 %) que seul le filet (après 5 défaites) fait passer.

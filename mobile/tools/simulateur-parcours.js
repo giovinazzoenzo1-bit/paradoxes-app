@@ -59,7 +59,15 @@ const REGLAGES = {
   oeufsParAsc: OEUFS_PAR_ASC,
   niveauxOeufs: NIVEAUX_OEUFS,
   finsAventure: FIN_OEUF.map((k) => NIVEAUX_OEUFS[k - 1]),
-  packsParAsc: 3,
+  // ⚠️ 26/09 (3e test de l'auteur, bloqué au chapitre 2 niveau 3 avec 2
+  // créatures) : le joueur de RÉFÉRENCE n'achète PAS de packs contre pièces
+  // (l'auteur ne les a pas utilisés ; ce sont des bonus, pas une obligation)
+  // et il a UN ŒUF DE RETARD : les autres défis de l'œuf (clicker) prennent
+  // du temps — l'auteur n'avait que 2 créatures au niveau 13, le simulateur
+  // 3 (œuf 3 éclos dès le niveau 9). Ses 3 runes par Ascension restent
+  // achetées : les Griffes doivent suffire aux runes ET aux niveaux.
+  packsParAsc: 0,
+  retardOeufs: 1,
   taillePack: (a) => 100 + 75 * a,
   runesParAsc: 3, // 1 pour le défi + 2 volontaires
   prixRune: 100,
@@ -124,7 +132,10 @@ function nouveauJoueur(graine, R = REGLAGES) {
   j.preparer = (l, a) => {
     const debut = a ? R.finsAventure[a - 1] : 0, fin = R.finsAventure[a];
     // L'œuf k éclôt dès que le niveau exigé par SES défis est franchi.
-    const vise = R.niveauxOeufs.filter((n) => n < l).length;
+    // Un œuf de retard (R.retardOeufs) ; en fin d'Ascension, tous ses œufs
+    // sont éclos (l'Ascension les exige).
+    const vise = l >= fin ? R.niveauxOeufs.filter((n) => n <= fin).length
+      : Math.max(1, R.niveauxOeufs.filter((n) => n < l).length - (R.retardOeufs || 0));
     while (j.oeufsFaits < vise) { eclore(); j.oeufsFaits++; }
     j.griffes += (R.succesParAsc[a] + R.packsParAsc * R.taillePack(a)) / (fin - debut);
     if (l === debut + 1) j.runes = 0;
