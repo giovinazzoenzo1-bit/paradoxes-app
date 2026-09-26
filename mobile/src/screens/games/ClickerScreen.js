@@ -128,6 +128,8 @@ import {
   calibrageGardienSur,
   guardianStats,
   margeGardien,
+  puissanceFaceAuGardien,
+  guardianStatsCalibrees,
   ELIXIR,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
@@ -688,10 +690,48 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [resultatGardien, setResultatGardien] = useState(null);
   // « Gardien X · Ton deck Y » : ce que le joueur lit avant de combattre
   // (demande de l'auteur : voir s'il doit améliorer ses créatures).
-  const ligneGardien = (egg) => {
+  // ⚠️ PUISSANCE EXACTE (26/09, « pixel perfect ») : « Ton deck » se MESURE
+  // contre le VRAI Gardien du prochain combat (même calibrage, même équipe ;
+  // ⚠️ Élixir EXCLU, décision de l'auteur) : « Ton deck ≥ Gardien » ⇔ tu le bats au moins 2 fois sur 3
+  // (combatLogic.puissanceFaceAuGardien). En différé ; « … » le temps du calcul.
+  // Calibrage mis en cache par œuf et RÉUTILISÉ au lancement du combat.
+  const calibrageCacheRef = useRef(new Map());
+  const calibrageMemo = (egg, ownedList, eggNumber, deckIds) => {
+    const photo = egg && egg.gardienPhoto;
+    const cle = eggNumber + '|' + (photo ? JSON.stringify(photo.membres)
+      : 'direct:' + JSON.stringify([deckIds, (ownedList || []).map((o) => [o.id, o.level, o.evolutionTier || 0])]));
+    if (!calibrageCacheRef.current.has(cle)) calibrageCacheRef.current.set(cle, calibrageDuCombat(egg, ownedList, eggNumber, deckIds));
+    return calibrageCacheRef.current.get(cle);
+  };
+  const [deckFaceGardien, setDeckFaceGardien] = useState({});
+  const cleFaceGardien = JSON.stringify([owned.length, (mainEgg && mainEgg.gardienPhoto) ? mainEgg.gardienPhoto.membres : null,
+    (incubatingEgg && incubatingEgg.gardienPhoto) ? incubatingEgg.gardienPhoto.membres : null,
+    deck, owned.map((o) => [o.id, o.level || 1, o.evolutionTier || 0])]);
+  useEffect(() => {
+    let annule = false;
+    const t = setTimeout(() => {
+      const eggNumber = owned.length + 1;
+      const mesurer = (egg) => {
+        if (eggNumber < 3 || !egg || !egg.gardienPhoto) return null;
+        const g = Math.round(egg.gardienPhoto.puissance * margeGardien(egg.gardienPhoto.puissance));
+        const base = guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber);
+        const cal = calibrageMemo(egg, owned, eggNumber, deck);
+        const g0 = cal ? guardianStatsCalibrees(base, cal) : base;
+        return puissanceFaceAuGardien(membresDuDeck(deck, owned), g0, g);
+      };
+      try {
+        const r = { main: mesurer(mainEgg), incub: mesurer(incubatingEgg) };
+        if (!annule) setDeckFaceGardien(r);
+      } catch (e) {}
+    }, 120);
+    return () => { annule = true; clearTimeout(t); };
+  }, [cleFaceGardien]);
+  const ligneGardien = (egg, cle) => {
     if (owned.length + 1 < 3 || !egg || !egg.gardienPhoto) return null;
     const g = Math.round(egg.gardienPhoto.puissance * margeGardien(egg.gardienPhoto.puissance));
-    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck}${puissanceDuDeck < g ? ' — améliore tes créatures' : ''}`;
+    const moi = deckFaceGardien[cle];
+    if (moi == null) return `⚔️ Gardien ${g} · 🛡️ Ton deck …`;
+    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${moi}${moi < g ? ' — améliore tes créatures' : ''}`;
   }; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -1887,7 +1927,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // Calibrage au LANCEMENT (≈ 0,2 s) sur la photo du début de l'œuf.
     const oeufEnJeu = source === 'main' ? mainEggRef.current : incubatingEgg;
     setGuardianFight({ source, level: guardianLevelForEgg(eggNumber), eggNumber,
-      calibrage: calibrageDuCombat(oeufEnJeu, ownedRef.current, eggNumber, deckRef.current),
+      calibrage: calibrageMemo(oeufEnJeu, ownedRef.current, eggNumber, deckRef.current),
       puissanceGardien: oeufEnJeu && oeufEnJeu.gardienPhoto && eggNumber >= 3
         ? Math.round(oeufEnJeu.gardienPhoto.puissance * margeGardien(oeufEnJeu.gardienPhoto.puissance)) : null });
   };
@@ -1901,7 +1941,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const fight = guardianFight;
     setGuardianFight(null);
     if (!fight) return;
-    setResultatGardien({ issue: outcome, gardien: fight.puissanceGardien, deck: puissanceDuDeck });
+    const exact = deckFaceGardien[fight.source === 'main' ? 'main' : 'incub'];
+    setResultatGardien({ issue: outcome, gardien: fight.puissanceGardien, deck: exact != null ? exact : puissanceDuDeck });
     if (outcome === 'win') {
       if (fight.source === 'main') {
         mainEggRef.current = null;
@@ -3401,21 +3442,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Rendu AVANT tout le reste et en retour anticipé, comme l'Aventure :
   // le combat occupe l'écran entier en paysage.
   if (guardianFight) {
-    const team = deck
-      .filter((id) => id)
-      .map((id) => {
-        const own = owned.find((o) => o.id === id);
-        return {
-          creature: CREATURES.find((c) => c.id === id),
-          ownedLevel: own ? own.level : 1,
-          evolutionTier: own ? own.evolutionTier || 0 : 0,
-          // Pas de runes ici : elles vivent dans la sauvegarde de
-          // l'Aventure, que cet écran ne lit pas. Le gardien se combat
-          // donc sans bonus de runes — à brancher si le déséquilibre
-          // se confirme au test.
-          equippedRunes: [],
-        };
-      });
+    // ⚠️ La MÊME équipe que la puissance « Ton deck » (26/09) :
+    // `membresDuDeck` — sans runes (elles vivent dans la sauvegarde de
+    // l'Aventure, que cet écran ne lit pas : le Gardien se combat sans
+    // bonus de runes).
+    const team = membresDuDeck(deck, owned);
     return (
       <GuardianBattle
         team={team}
@@ -3867,7 +3898,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 ) : guardianRequired(owned.length) ? (
                   <TouchableOpacity style={styles.guardianCta} onPress={() => resolveHatch('main')}>
                     <Text style={styles.guardianCtaText}>⚔️ Affronter le gardien</Text>
-                    <Text style={styles.guardianCtaSub}>{ligneGardien(mainEgg) || "Bats-le pour faire éclore l'œuf"}</Text>
+                    <Text style={styles.guardianCtaSub}>{ligneGardien(mainEgg, 'main') || "Bats-le pour faire éclore l'œuf"}</Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity style={[styles.guardianCta, styles.hatchCta]} onPress={() => resolveHatch('main')}>
@@ -4036,7 +4067,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         <IncubatorPanel
           egg={incubatingEgg}
           guardianRequired={guardianRequired(owned.length)}
-          guardianInfo={ligneGardien(incubatingEgg)}
+          guardianInfo={ligneGardien(incubatingEgg, 'incub')}
           onTap={incubatorTap}
           onWatchVideo={incubatorVideo}
           onHatch={hatchIncubatedEgg}

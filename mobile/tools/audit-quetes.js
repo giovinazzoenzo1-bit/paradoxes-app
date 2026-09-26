@@ -3804,3 +3804,66 @@ function auditBoutonAscension() {
   return fautes;
 }
 module.exports.auditBoutonAscension = auditBoutonAscension;
+
+// ---- Puissance EXACTE (26/09, demande de l'auteur : « pixel perfect ») ----
+//
+// « Ta puissance ≥ conseillée » ⇔ « tu gagnes au moins 6 fois sur 10 », pour
+// TOUTE équipe (nombre de créatures, sorts, éléments, runes). Vérifié contre un
+// recomptage INDÉPENDANT (200 combats, autre hasard) ; zone floue 50-70 %
+// écartée (le hasard de mesure y décide). Élixir EXCLU (décision de l'auteur).
+function auditPuissanceExacte() {
+  const K = load('combatLogic');
+  const C = require('./audit-quetes.js').C || module.exports.C;
+  const fs = require('fs'), path = require('path');
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const fautes = [];
+  const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
+  const g = (id) => C.CREATURES.find((c) => c.id === id);
+  const m = (id, n, e) => ({ creature: g(id), ownedLevel: n, evolutionTier: e || 0, equippedRunes: [] });
+  // Le cas de l'auteur : niveau 19 → 0 % réel (l'ancienne formule disait 57/58).
+  const r19 = K.puissanceAventure([m('bouldog', 34, 1), m('ventis', 13)], 19);
+  doit(r19.puissance < K.puissanceConseillee(19) && r19.couleur === 'rouge', 'cas de l\'auteur (niveau 19, 0 % réel) : pas affiché sous la conseillée en rouge');
+  const r16 = K.puissanceAventure([m('bouldog', 34, 1), m('ventis', 13)], 16);
+  doit(r16.puissance >= K.puissanceConseillee(16) && r16.couleur === 'vert', 'cas de l\'auteur (niveau 16, 100 % réel) : pas affiché au-dessus en vert');
+  // L'arrondi ne trahit jamais le seuil.
+  doit(K._chiffreExact(87, 0.999) === 86 && K._chiffreExact(87, 1) === 87 && K._chiffreExact(87, 1.004) === 87, "l'arrondi affiche « égal » sous le seuil");
+  // Échantillon : verdict affiché contre recomptage indépendant. En tête, des
+  // PIÈGES où l'ANCIENNE formule se trompait nettement (trouvés le 26/09 :
+  // Nocturis seul niv. 46 « suffisant » pour 5 % réels ; trio niv. 77
+  // « insuffisant » pour 100 %) — sans eux, le contrôle ne voyait pas le
+  // retour de l'ancienne formule (sabotage AVEUGLE). Toujours comparés au
+  // RÉEL : ils restent valables après un recalibrage.
+  const equipes = [
+    [46, [m('nocturis', 57, 2)]],
+    [77, [m('brontobloc', 99, 2), m('bouldog', 89, 2), m('voltarel', 56, 2)]],
+    [89, [m('luxorbe', 96, 2), m('cumulox', 106, 2)]],
+  ];
+  let s = 777; const rnd = () => { s = (s * 1103515245 + 12345) >>> 0; return s / 4294967296; };
+  const pool = C.CREATURES.filter((c) => ['commun', 'peu_commun', 'rare', 'epique'].includes(c.rarity));
+  for (let t = 0; t < 40; t++) {
+    const lv = 1 + Math.floor(rnd() * 100); const eq = [];
+    for (let i = 0, n = 1 + Math.floor(rnd() * 3); i < n; i++) { const c = pool[Math.floor(rnd() * pool.length)]; if (!eq.find((x) => x.creature.id === c.id)) { const nv = Math.max(1, Math.round(lv * (0.6 + rnd() * 0.9))); eq.push(m(c.id, nv, nv >= 50 ? 2 : nv >= 25 ? 1 : 0)); } }
+    equipes.push([lv, eq]);
+  }
+  for (let t = 0; t < equipes.length; t++) {
+    const [lv, eq] = equipes[t];
+    const r = K.puissanceAventure(eq, lv);
+    let reel = 0;
+    for (const politique of [K.choixJoueur, K.choixSansSorts]) {
+      let z = lv * 31 + t; const alea = () => { z = (z * 1664525 + 1013904223) >>> 0; return z / 4294967296; };
+      const j = eq.map((x) => ({ creature: x.creature, stats: K.combatStatsForCreatureTyped(x.creature, x.ownedLevel, x.evolutionTier, []) }));
+      const adv = K.adversairesAventure(lv); let w = 0;
+      for (let e = 0; e < 200; e++) if (K.simulerCombat(j, adv, { alea, politique }).gagne) w++;
+      reel = Math.max(reel, w / 200);
+    }
+    if (reel > 0.5 && reel < 0.7) continue;
+    if ((r.puissance >= K.puissanceConseillee(lv)) !== (reel >= 0.6)) fautes.push({ niveau: lv, equipe: eq.map((x) => x.creature.id + x.ownedLevel).join('+'), affiche: r.puissance + ' / ' + K.puissanceConseillee(lv), reel: Math.round(reel * 100) + ' %' });
+  }
+  // Élixir exclu des 3 affichages ; le filet reste (il change vraiment le combat).
+  const Av = lire('src/screens/games/AdventureScreen.js'), Cl = lire('src/screens/games/ClickerScreen.js');
+  doit(!/puissanceAventure\([^;]*elixir/i.test(Av), "l'Élixir compte dans la puissance d'Aventure (menu ou aperçu)");
+  doit(!/puissanceFaceAuGardien\([^;]*[Ee]lixir/.test(Cl), "l'Élixir compte dans « Ton deck » face au Gardien");
+  doit((Av.match(/puissanceAventure\(membresPourCombat\(deck, owned, ownedRunes\)/g) || []).length === 2, "le menu ET l'aperçu ne mesurent pas la MÊME équipe que le combat");
+  return fautes;
+}
+module.exports.auditPuissanceExacte = auditPuissanceExacte;

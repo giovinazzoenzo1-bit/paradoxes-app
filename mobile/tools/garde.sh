@@ -28,6 +28,17 @@ case "$1" in
   prendre|forcer)
     git fetch -q origin 2>/dev/null
     proprio=$(cat "$V" 2>/dev/null)
+    # ⚠️ 26/09 : deux copies de Claude (message relancé par « Réessayer »)
+    # avaient pris la MÊME étiquette « R-puissance » : chacune se croyait
+    # propriétaire, le garde ne voyait rien. Le hasard vient désormais du
+    # SCRIPT (une copie « au hasard » choisit le même suffixe) : sans « # »,
+    # l'étiquette reçoit un suffixe aléatoire. RÉUTILISER EXACTEMENT
+    # l'étiquette affichée (prendre, rendre). Un verrou déjà tenu sous une
+    # ancienne étiquette sans « # » reste reprenable par elle.
+    case "$2" in
+      *'#'*) ;;
+      *) if [ "$proprio" != "$2" ]; then set -- "$1" "$2#$(od -An -N2 -tx1 /dev/urandom | tr -d ' \n')"; fi ;;
+    esac
     if [ "$1" = prendre ] && [ -n "$proprio" ] && [ "$proprio" != "$2" ]; then
       age=$(( $(date +%s) - $(stat -c %Y "$V") ))
       if [ "$age" -lt 600 ]; then
@@ -43,7 +54,7 @@ case "$1" in
         echo "STOP : local $(git log -1 --format=%h) ≠ GitHub $(git log -1 --format=%h origin/main) — lire le commit, puis git pull --ff-only"; exit 1
       fi
     fi
-    echo "$2" > "$V"; echo "OK : verrou « $2 »" ;;
+    echo "$2" > "$V"; echo "OK : verrou « $2 » — réutilise EXACTEMENT cette étiquette" ;;
   rendre)
     if [ "$(cat "$V" 2>/dev/null)" = "$2" ]; then rm -f "$V"; echo "verrou rendu"; else echo "verrou pas à nous : laissé"; fi ;;
   *) echo "usage : garde.sh prendre|rendre|forcer <étiquette>"; exit 2 ;;

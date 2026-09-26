@@ -1804,3 +1804,120 @@ export function butinBonus(allEquippedRunes) {
 export function opponentStatsForLevelTyped(levelNumber) {
   return statsForOpponentCreatureTyped(opponentForLevel(levelNumber), levelNumber);
 }
+
+// ════════════════════════════════════════════════════════════════════
+//  PUISSANCE EXACTE (26/09, demande de l'auteur : « pixel perfect »)
+// ════════════════════════════════════════════════════════════════════
+// Constat (tests de l'auteur) : « puissance 156, conseillée 142 » en vert et
+// 3 défaites sur 4 ; ailleurs « je gagne même plus bas en puissance ». La
+// formule √(PV × dégâts) ne voit ni le nombre d'ennemis, ni les sorts, ni
+// les éléments, ni les runes. MESURÉ : à « puissance » égale (≈ 150), trois
+// créatures gagnaient à 100 %, une seule à 55 %.
+//
+// La puissance AFFICHÉE se MESURE désormais en rejouant le VRAI combat :
+//   ta puissance = référence × le plus grand facteur d'ennemis que TON
+//   équipe bat au moins autant que la cible.
+// Aventure : référence = puissance conseillée, cible 6 sur 10 (le sens de
+// « conseillée »). Gardien : référence = le chiffre du Gardien, cible 2 sur
+// 3 (le sens de son calibrage). Donc « ta puissance ≥ référence » ⇔ « tu
+// gagnes au moins la cible » — exact par construction, pour TOUTE équipe.
+// Stats des créatures et tables d'ennemis INCHANGÉES. Hasard à graine :
+// même équipe, même niveau → même chiffre. Meilleur des deux styles (avec
+// ou sans sorts), comme le calibrage du Gardien.
+// `puissanceDeck` reste pour les usages INTERNES (anti-triche, photo).
+export const PUISSANCE_CIBLE_AVENTURE = 0.6;
+export const PUISSANCE_CIBLE_GARDIEN = 1 - GUARDIAN_WIN_TARGET;
+// 30 combats par essai : MESURÉ, 12 laissaient ±14 % de hasard (la photo
+// d'un deck à 60 % s'affichait « ≥ Gardien », visé 2 sur 3). 8 étapes : le
+// chiffre à ±1,5 % — le verdict, lui, se lit sur la chance au niveau réel.
+const PUISSANCE_ITERATIONS = 8;
+const PUISSANCE_COMBATS = 30;
+// La chance au niveau RÉEL décide du verdict (et du vert) : 100 combats.
+// MESURÉ avec 30 : 119 verdicts justes sur 120, le raté à 48 % réels jugé
+// « ≥ conseillée » (hasard de mesure au ras du seuil).
+const PUISSANCE_COMBATS_NIVEAU = 100;
+const PUISSANCE_BORNE = 50;
+// Couleurs de l'aperçu, sur la VRAIE chance au niveau réel (même
+// simulation) : l'ancien orange « à moins de 10 % sous la conseillée »
+// affichait « presque » pour 0 % de victoires (combats presque sans hasard :
+// MESURÉ, 7 % sous la conseillée → 0 %).
+export const PUISSANCE_ORANGE = 0.3;
+// Mesure une équipe : `facteur` = le plus grand facteur d'ennemis battu au
+// moins `cible` fois ; `victoires` = la chance au niveau RÉEL (facteur 1).
+// Meilleur des deux styles de jeu pour les deux.
+function mesurerEquipe(unCombat, { cible, combats, graine }) {
+  let facteur = 1 / PUISSANCE_BORNE, victoires = 0;
+  for (const politique of [choixJoueur, choixSansSorts]) {
+    const taux = (f, n = combats) => {
+      const alea = aleaGraine(graine);
+      let g = 0;
+      for (let e = 0; e < n; e++) if (unCombat(f, alea, politique)) g++;
+      return g / n;
+    };
+    const auNiveau = taux(1, PUISSANCE_COMBATS_NIVEAU);
+    victoires = Math.max(victoires, auNiveau);
+    let lo, hi, f;
+    if (auNiveau >= cible) {
+      lo = 0; hi = Math.log(PUISSANCE_BORNE);
+      if (taux(PUISSANCE_BORNE) >= cible) f = PUISSANCE_BORNE;
+    } else {
+      lo = Math.log(1 / PUISSANCE_BORNE); hi = 0;
+      if (taux(1 / PUISSANCE_BORNE) < cible) f = 1 / PUISSANCE_BORNE;
+    }
+    if (f == null) {
+      for (let i = 0; i < PUISSANCE_ITERATIONS; i++) {
+        const mid = (lo + hi) / 2;
+        if (taux(Math.exp(mid)) >= cible) lo = mid; else hi = mid;
+      }
+      f = Math.exp(lo); // le plus grand facteur MESURÉ à la cible
+    }
+    facteur = Math.max(facteur, f);
+  }
+  return { facteur, victoires };
+}
+// ⚠️ Pixel perfect jusqu'à l'ARRONDI : sous la cible (facteur < 1), le chiffre
+// reste STRICTEMENT sous la référence ; à la cible, au moins égal. Sinon
+// 0,999 × 87 s'affichait « 87 · conseillée 87 » pour une équipe qui perd.
+function chiffreExact(reference, facteur) {
+  const ref = Math.round(Number(reference) || 0);
+  const v = Math.round(ref * facteur);
+  return facteur >= 1 ? Math.max(ref, v) : Math.min(ref - 1, v);
+}
+// Adversaires d'un niveau d'Aventure EXACTEMENT comme CombatScreen : stats
+// du niveau (table, ou `k`) → filet de sécurité → Élixir (auditPuissanceExacte).
+export function adversairesAventure(niveau, { k = null, filetBaisse = 0, elixirActif = false } = {}) {
+  return opponentTeamForLevel(niveau).map((creature) => {
+    const base = k == null ? statsForOpponentCreatureTyped(creature, niveau) : statsForOpponentCreatureTyped(creature, niveau, k);
+    const s0 = filetBaisse > 0 ? appliquerBaisse(base, filetBaisse) : base;
+    return { creature, stats: elixirActif ? appliquerElixir(s0) : s0 };
+  });
+}
+// `membres` : l'équipe envoyée au combat (runes comprises). Renvoie
+// { puissance, victoires, couleur } — couleur sur la vraie chance.
+export function puissanceAventure(membres, niveau, { filetBaisse = 0, elixirActif = false } = {}) {
+  const joueurs = (membres || []).filter((m) => m && m.creature).map((m) => ({ creature: m.creature, stats: statsDuMembre(m) }));
+  if (!joueurs.length) return { puissance: 0, victoires: 0, couleur: 'rouge' };
+  const kNiveau = multiplicateurAventure(niveau);
+  const r = mesurerEquipe((x, alea, politique) => simulerCombat(joueurs,
+    adversairesAventure(niveau, { k: kNiveau * x, filetBaisse, elixirActif }), { alea, politique }).gagne,
+  { cible: PUISSANCE_CIBLE_AVENTURE, combats: PUISSANCE_COMBATS, graine: niveau * 7919 + 17 });
+  const puissance = chiffreExact(puissanceConseillee(niveau), r.facteur);
+  const couleur = r.victoires >= PUISSANCE_CIBLE_AVENTURE ? 'vert' : r.victoires >= PUISSANCE_ORANGE ? 'orange' : 'rouge';
+  return { puissance, victoires: r.victoires, couleur };
+}
+// « Ton deck » face au Gardien : même Gardien que le combat (`gStats` :
+// calibré, Élixir compris), même équipe (sans runes), 2 victoires sur 3.
+const echelleGardien = (g, x) => ({ ...g, hp: Math.max(1, Math.round(g.hp * x)), attack: Math.max(1, g.attack * x) });
+export function puissanceFaceAuGardien(membres, gStats, reference) {
+  const m = (membres || []).filter((x) => x && x.creature);
+  if (!m.length || !gStats) return 0;
+  const prepares = preparerCombattants(m);
+  const r = mesurerEquipe((x, alea, politique) => {
+    const st = echelleGardien(gStats, x);
+    return simulerCombat(prepares, gardienEnFace(st), { gStats: st, alea, politique }).gagne;
+  }, { cible: PUISSANCE_CIBLE_GARDIEN, combats: PUISSANCE_COMBATS, graine: graineDuDeck(m) });
+  return chiffreExact(reference, r.facteur);
+}
+
+// Pour les contrôles (auditPuissanceExacte).
+export const _chiffreExact = (r, f) => chiffreExact(r, f);

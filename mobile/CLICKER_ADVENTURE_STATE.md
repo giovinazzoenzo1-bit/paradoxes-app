@@ -747,3 +747,37 @@ défi déjà réussi (partie décalée), elle sauterait un groupe entier. Grisé
 le bouton explique : « Débloquée par le défi « Fais ta Ne Ascension » ».
 
 Contrôles `auditVerrouAventure` et `auditBoutonAscension` + 4 sabotages.
+
+
+## 26/09 — Puissance EXACTE (« pixel perfect », demande de l'auteur)
+
+**Constat :** la formule √(PV × dégâts) ne voyait ni le nombre de créatures,
+ni les sorts, ni les éléments, ni les runes (« 156 contre 142 » en vert pour
+3 défaites sur 4 ; « 57 contre 58 » pour 0 % de victoires au niveau 19).
+
+**Correction :** « ta puissance » se MESURE en rejouant le vrai combat
+(`puissanceAventure`, `puissanceFaceAuGardien`, combatLogic) : référence ×
+le plus grand facteur d'ennemis que TON équipe bat encore à la cible (6/10
+en Aventure, 2/3 face au Gardien). Donc « ta puissance ≥ conseillée » ⇔ « tu
+gagnes au moins la cible », exact par construction. Verdict et couleur sur
+100 combats au niveau réel (30 laissaient un raté au ras du seuil), arrondi
+qui ne trahit jamais le seuil (`chiffreExact`), hasard à graine (même équipe
+→ même chiffre), en différé (« … » le temps du calcul, ≈ 50 ms dans node).
+Stats des créatures et tables d'ennemis INCHANGÉES. **Élixir EXCLU**
+(décision de l'auteur) ; le filet de sécurité reste compté (il change
+vraiment le combat). 3 affichages : aperçu d'un niveau, pastille du menu
+Aventure, « Ton deck » face au Gardien. Contrôle `auditPuissanceExacte`
+(recomptage indépendant de 200 combats) + 2 sabotages.
+
+## 26/09 — Incident : deux copies de Claude sur le même dépôt
+
+Le message de l'auteur a été relancé (« Réessayer » sur mobile après des
+réponses trop longues) : une copie coupée avait laissé la puissance exacte à
+moitié écrite (non poussée), et les deux copies avaient pris la MÊME
+étiquette de verrou (« R-puissance ») → le garde ne voyait rien. Reprise
+selon la règle (verrou > 10 min, travail relu en entier) ; l'Élixir, compté
+par la copie coupée, retiré. **garde.sh corrigé : le SCRIPT ajoute un
+suffixe aléatoire** (« R-puissance#a3f9 ») — une copie « au hasard » choisit
+le même. Réutiliser EXACTEMENT l'étiquette affichée. Testé sur un clone :
+une 2e copie avec la même étiquette est arrêtée. Et : découper les gros
+chantiers en réponses courtes.

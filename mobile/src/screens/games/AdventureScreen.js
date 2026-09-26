@@ -207,6 +207,7 @@ import {
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import { niveauMaxAventure } from '../../games/clicker/questLogic';
 import {
+  puissanceAventure,
   combatStatsForCreatureTyped,
   chapterForLevel,
   levelIndexInChapter,
@@ -628,7 +629,28 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // que les Griffes permettent, sur la créature du deck la plus basse.
   // Une défaite compte pour le filet de sécurité seulement avec ses
   // meilleures créatures (anti-triche : 90 % du meilleur deck possible).
+  // Pastille « 🛡️ Puissance » du menu (26/09, exacte) : ta puissance face à
+  // ton PROCHAIN niveau jouable — le même chiffre et la même couleur que
+  // son aperçu (runes et filet compris ; ⚠️ Élixir EXCLU, décision de
+  // l'auteur : la puissance mesure ton équipe, pas tes boosts). En différé.
+  const niveauMenu = Math.max(1, Math.min(currentUnlockedLevel, niveauMaxAventure(ascensionCount)));
+  const [puissanceMenu, setPuissanceMenu] = useState(null);
+  const clePuissanceMenu = JSON.stringify([niveauMenu, deck, (owned || []).map((o) => [o.id, o.level, o.evolutionTier || 0]),
+    (ownedRunes || []).filter((r) => r.equippedCreatureId), defaitesDeSuite[niveauMenu] || 0]);
+  useEffect(() => {
+    let annule = false;
+    const t = setTimeout(() => {
+      try {
+        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes), niveauMenu,
+          { filetBaisse: baisseFilet(defaitesDeSuite[niveauMenu] || 0) });
+        if (!annule) setPuissanceMenu(r);
+      } catch (e) {}
+    }, 200);
+    return () => { annule = true; clearTimeout(t); };
+  }, [clePuissanceMenu]);
   const noterDefaite = (levelNumber) => {
+    // Calcul INTERNE (ancienne formule des deux côtés : « joues-tu tes
+    // meilleures créatures ? ») — la puissance AFFICHÉE est exacte ailleurs.
     const moi = puissanceDuDeckAventure(deck, owned);
     if (moi >= FILET_SEUIL_ANTI_TRICHE * meilleurePuissancePossible(owned)) {
       setDefaitesDeSuite((d) => ({ ...d, [levelNumber]: (d[levelNumber] || 0) + 1 }));
@@ -1055,7 +1077,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         </ImageBackground>
         <View style={styles.headerRight}>
           <View style={styles.puissancePill}>
-            <Text style={styles.puissancePillText}>🛡️ Puissance {puissanceDuDeckAventure(deck, owned)}</Text>
+            <Text style={[styles.puissancePillText, puissanceMenu && { color: puissanceMenu.couleur === 'vert' ? '#3DDC84' : puissanceMenu.couleur === 'orange' ? '#FFB74D' : '#FF6B6B' }]}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
           </View>
           {elixirCombats > 0 && (
             <View style={styles.puissancePill}>
@@ -1925,6 +1947,20 @@ function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
   );
 }
 
+// L'équipe envoyée au combat d'Aventure — UNE construction, pour le combat
+// ET pour la puissance de l'aperçu (26/09) : runes équipées sur CETTE
+// créature précise (ce qui les rend actives en combat, voir CombatScreen).
+function membresPourCombat(deck, owned, ownedRunes) {
+  return (deck || [])
+    .filter((id) => id)
+    .map((id) => ({
+      creature: CREATURES.find((c) => c.id === id),
+      ownedLevel: owned.find((o) => o.id === id).level,
+      evolutionTier: owned.find((o) => o.id === id).evolutionTier || 0,
+      equippedRunes: (ownedRunes || []).filter((r) => r.equippedCreatureId === id),
+    }));
+}
+
 // Plus long préfixe de niveaux 1, 2, 3… tous à 3 étoiles (26/09) : publié
 // pour le garde-fou du verrou d'Aventure (questLogic.plusRienAEtoiler).
 function prefixeTroisEtoiles(etoiles) {
@@ -2067,16 +2103,8 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
 
 
   if (activeBattle) {
-    const team = deck
-      .filter((id) => id)
-      .map((id) => ({
-        creature: CREATURES.find((c) => c.id === id),
-        ownedLevel: owned.find((o) => o.id === id).level,
-        evolutionTier: owned.find((o) => o.id === id).evolutionTier || 0,
-        // Runes équipées sur CETTE créature précise — c'est ce qui rend
-        // les runes réellement actives en combat (voir CombatScreen.js).
-        equippedRunes: ownedRunes.filter((r) => r.equippedCreatureId === id),
-      }));
+    // ⚠️ La MÊME construction que la puissance de l'aperçu (26/09).
+    const team = membresPourCombat(deck, owned, ownedRunes);
     return (
       <CombatScreen
         team={team}
@@ -2358,6 +2386,10 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
           levelNumber={levelPreview}
           owned={owned}
           deck={deck}
+          // Puissance exacte (26/09) : les MÊMES runes et filet que le combat.
+          // ⚠️ Élixir EXCLU (décision de l'auteur).
+          ownedRunes={ownedRunes}
+          filetBaisse={baisseFilet(defaitesDeSuite[levelPreview] || 0)}
           energy={energy}
           onClose={() => setLevelPreview(null)}
           onStart={() => {
@@ -2979,12 +3011,32 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   );
 }
 
-function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
+function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filetBaisse = 0, energy, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
   const opponent = opponentForLevel(levelNumber);
   const display = opponent.stages[0];
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
   const teamCount = deck.filter((id) => id).length;
+  // ⚠️ PUISSANCE EXACTE (26/09, « pixel perfect ») : mesurée en rejouant le
+  // VRAI combat de ce niveau (combatLogic.puissanceAventure), en différé —
+  // « … » le temps du calcul. Clé de dépendance en texte : le parent se
+  // redessine chaque seconde (minuteur d'énergie), sans rien changer.
+  const [mesure, setMesure] = useState(null);
+  const cleMesure = JSON.stringify([levelNumber, deck, (owned || []).map((o) => [o.id, o.level, o.evolutionTier || 0]),
+    (ownedRunes || []).filter((r) => r.equippedCreatureId), filetBaisse]);
+  useEffect(() => {
+    let annule = false;
+    setMesure(null);
+    const t = setTimeout(() => {
+      try {
+        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes), levelNumber, { filetBaisse });
+        if (!annule) setMesure(r);
+      } catch (e) {
+        if (!annule) setMesure(null);
+      }
+    }, 30);
+    return () => { annule = true; clearTimeout(t); };
+  }, [cleMesure]);
 
   return (
     <View style={styles.overlay}>
@@ -2994,14 +3046,15 @@ function FighterSelectOverlay({ levelNumber, owned, deck, energy, onClose, onSta
           Chapitre {chapterForLevel(levelNumber)} · Niveau {levelIndexInChapter(levelNumber)}
         </Text>
         {(() => {
-          // Puissance conseillée (demande de l'auteur, 26/09) : vert si ton
-          // deck l'atteint, orange à moins de 10 % en dessous, rouge sinon.
+          // Puissance conseillée (demande de l'auteur, 26/09). ⚠️ Couleurs sur
+          // la VRAIE chance à ce niveau (même simulation) : vert ≥ 6 sur 10
+          // (⇔ ta puissance ≥ conseillée), orange 3 à 6, rouge < 3. L'ancien
+          // orange (« à moins de 10 % ») annonçait « presque » pour 0 %.
           const cons = puissanceConseillee(levelNumber);
-          const moi = puissanceDuDeckAventure(deck, owned);
-          const coul = moi >= cons ? '#3DDC84' : moi >= cons * 0.9 ? '#FFB74D' : '#FF6B6B';
+          const coul = !mesure ? COLORS.muted : mesure.couleur === 'vert' ? '#3DDC84' : mesure.couleur === 'orange' ? '#FFB74D' : '#FF6B6B';
           return (
             <Text style={[styles.conseilleeText, { color: coul }]}>
-              🛡️ Ta puissance {moi} · conseillée {cons}
+              🛡️ Ta puissance {mesure ? mesure.puissance : '…'} · conseillée {cons}
             </Text>
           );
         })()}

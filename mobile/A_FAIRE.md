@@ -82,3 +82,6 @@
 - [x] Bouton d'Ascension : seulement quand le défi « Fais ta Ne Ascension » est en cours
 - [x] Test de l'auteur : verrou 🌟 au niveau 26, Ascension au bon défi, niveau 26 débloqué — CONFIRMÉ (26/09)
 - [x] **Mode Aventure validé par l'auteur (26/09)**
+- [x] Puissance exacte (pixel perfect) : aperçu, menu Aventure, Gardien ; Élixir exclu
+- [x] garde.sh : étiquette de verrou unique fournie par le script (incident des deux copies)
+- [ ] Écran de défaite : « Il te manquait X niveaux » et « retente ta chance » sur la MÊME mesure exacte

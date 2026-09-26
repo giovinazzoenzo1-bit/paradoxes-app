@@ -104,3 +104,7 @@ Décidé : **remplace la bulle**. Compte à rebours sur l'œuf ; 1er appui sur l
 - Il teste sur son téléphone et donne des **chronos** : ce sont les mesures de référence. Il speedrun parfois (pubs d'œufs, énergie max en dev) : le dire dans les calibrations.
 - Il refuse ce qui n'est pas mesuré ; il repère les défis « inutiles » (déjà remplis) et les « abusés ».
 - **Il reste sur UNE conversation** (abonnement Max, refus explicite d'en changer, 24/09). Réponses courtes : peu de commandes, sorties filtrées à quelques lignes, jamais de fichier entier affiché, pas d'attente de publication. Une réponse coupée relance une copie (« Réessayer ») : c'est `garde.sh` qui protège le dépôt.
+
+**Verrou (26/09) :** `sh mobile/tools/garde.sh prendre R-sujet` affiche une
+étiquette UNIQUE (« R-sujet#a3f9 ») : la réutiliser EXACTEMENT pour chaque
+`prendre` suivant et pour `rendre`.
