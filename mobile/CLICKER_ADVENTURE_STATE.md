@@ -239,6 +239,23 @@ changé dans ce fichier exige le bump : sinon l'œuf en cours garde
 l'ancienne cible, qui peut être devenue impossible à vie (24/09 :
 « Achète 10 niveaux de Poigne » valait 45 000 % du seuil).
 
+### L'Aventure est calibrée par simulation (24/09)
+Décision de l'auteur : niveau N de l'Aventure ≈ créatures niveau N pour
+gagner 2 combats sur 3. `AVENTURE_MULTIPLICATEURS` (combatLogic, 40
+valeurs) multiplie PV et attaque des adversaires ; elle est CALCULÉE par
+`tools/calibrer-aventure.js --ecrire` — ne jamais la retoucher à la main.
+Avant : un deck de niveau 2 gagnait au niveau 40. Après : 61-81 % à son
+niveau ; ±2 niveaux ≈ ∓20-40 points. Pièges mesurés : pas de lissage entre
+niveaux (chaque niveau a ses adversaires), côté facile de la dichotomie,
+decks de référence alignés sur la collection d'un nouveau joueur.
+
+### Les sorts (24/09)
+Chaque créature a UN sort payé en mana (SORT_DE_CREATURE, SORTS, EFFETS) ;
+les ennemis de l'Aventure aussi (`actionAdversaire`), pas le Gardien. Tout
+dans combatLogic ; UNE boucle de simulation (`simulerCombat`) reproduit
+l'écran ; le Gardien se cale sur le MEILLEUR style (avec / sans sorts).
+Ligne d'états à côté des barres de PV (`iconesEtats`).
+
 ### Un seul moteur de combat (24/09)
 Toute règle du combat vit dans `combatLogic` (coup, riposte adverse et
 du Gardien, zone, encaissement, qui riposte, prochaine créature vivante)

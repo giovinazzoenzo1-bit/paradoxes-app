@@ -169,6 +169,8 @@ const SABOTAGES = [
     remplace("pyrosile: 'zone',", "pyrosile: 'soin',")],
   ['auditSortsAdverses', F.combat, "un ennemi se soigne même à PV pleins (décision gâchée)",
     remplace("      return blesse >= 0 && pc(adversaires[blesse]) < 0.5 ? id : null;", "      return id;")],
+  ['auditAventureCalibree', F.combat, "la table de l'Aventure effacée (l'ancienne Aventure trop facile revient)",
+    (s) => s.replace(/export const AVENTURE_MULTIPLICATEURS = \[[^\]]*\];/, 'export const AVENTURE_MULTIPLICATEURS = null;')],
   ['auditExhaustif', F.defis, "un libellé cassé dans un vrai défi (l'outil testait les anciens modèles : vert quand même, 24/09)",
     surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, (b) => b.replace('label: t => `', 'label: t => `undefined '))],
   ['auditPoigneA0', F.clicker, "Poigne remise à 1 399 : 1/11 du prix du Pacte pour le même +1 (le « cheat » du 21/09)",

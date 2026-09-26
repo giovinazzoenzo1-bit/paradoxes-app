@@ -50,6 +50,7 @@ const CONTROLES = [
   ['auditSortsMoteur', 'sorts : chiffres validés, et personne n\'est jamais bloqué (2 000 combats aléatoires)'],
   ['auditSortsDonnees', 'chaque créature a son sort, de son type, sans perdre sa meilleure attaque'],
   ['auditSortsAdverses', "les ennemis de l'Aventure lancent leurs sorts à bon escient"],
+  ['auditAventureCalibree', "l'Aventure est calibrée : niveau N ≈ créatures niveau N (2 victoires sur 3)"],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],

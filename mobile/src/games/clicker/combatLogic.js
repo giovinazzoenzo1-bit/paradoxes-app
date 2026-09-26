@@ -1319,12 +1319,35 @@ export function opponentStatsForLevel(levelNumber) {
 // Version typée (avec modificateur de rôle) pour une créature adverse
 // arbitraire — même règle que côté joueur : pas de multiplicateur de
 // type pour les créatures Gemini (déjà pris en compte par Gemini lui-même).
-export function statsForOpponentCreatureTyped(creature, levelNumber) {
+// ---- Le calibrage de l'AVENTURE (étape 5b des sorts, 24/09) ----------
+//
+// Décision de l'auteur : « au niveau N de l'Aventure, des créatures
+// d'environ niveau N pour gagner 2 combats sur 3 ». MESURÉ avant : un deck
+// de NIVEAU 2 gagnait 2 fois sur 3 au niveau 40 — les correctifs du 14/09
+// (budget par équipe, fin du one-shot) avaient trop corrigé.
+// Un multiplicateur par niveau sur les PV et l'attaque des adversaires,
+// CALCULÉ par `tools/calibrer-aventure.js` (simulation : pour chaque niveau,
+// le multiplicateur où le deck de référence de niveau N gagne 2 fois sur
+// 3, joué par `choixJoueur`). Ne jamais le retoucher à la main : relancer
+// l'outil. `auditAventureCalibree` le vérifie à chaque push.
+export const AVENTURE_MULTIPLICATEURS = [
+  1.87, 2.08, 3.62, 3.1, 4.29, 3.7, 11.73, 8.16, 10.74, 9.28, 6.8, 8.74, 8.74, 7.25, 7.56, 8.15, 8.55, 7.57, 6.49, 6.35, 6.81, 7.51, 7.25, 6.65, 10.95, 8.62, 8.81, 8.21, 8.55, 8.5, 9.26, 8.85, 9.78, 8.1, 8.86, 8.16, 8.03, 9.14, 9.67, 9,
+];
+export function multiplicateurAventure(levelNumber) {
+  const t = AVENTURE_MULTIPLICATEURS;
+  if (!t || !t.length) return 1;
+  const i = Math.max(1, Math.floor(levelNumber || 1));
+  return t[Math.min(i, t.length) - 1];
+}
+
+// `k` : le multiplicateur (par défaut celui du niveau) ; l'outil de
+// calibrage passe le sien pendant sa recherche.
+export function statsForOpponentCreatureTyped(creature, levelNumber, k = multiplicateurAventure(levelNumber)) {
   const base = statsForOpponentCreature(creature, levelNumber);
   const typeMod = creature.baseHp != null ? { hpMult: 1, attackMult: 1 } : (MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant);
   return {
-    hp: Math.round(base.hp * typeMod.hpMult),
-    attack: Math.round(base.attack * typeMod.attackMult),
+    hp: Math.max(1, Math.round(base.hp * typeMod.hpMult * k)),
+    attack: Math.max(1, Math.round(base.attack * typeMod.attackMult * k)),
     clickSpeed: base.clickSpeed,
     endurance: base.endurance,
   };
