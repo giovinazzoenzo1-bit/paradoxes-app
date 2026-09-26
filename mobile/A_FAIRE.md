@@ -80,4 +80,5 @@
 - [ ] Puissance plus juste (type de créature + nombre de créatures)
 - [x] Aventure verrouillée à la fin de chaque Ascension (25, 60, 101, 144, 185, 227), garde-fou 3 étoiles
 - [x] Bouton d'Ascension : seulement quand le défi « Fais ta Ne Ascension » est en cours
-- [ ] Test de l'auteur : partie en cours au niveau 26 → nœud 🌟 et message ; Ascension au bon moment → niveau 26 débloqué
+- [x] Test de l'auteur : verrou 🌟 au niveau 26, Ascension au bon défi, niveau 26 débloqué — CONFIRMÉ (26/09)
+- [x] **Mode Aventure validé par l'auteur (26/09)**
