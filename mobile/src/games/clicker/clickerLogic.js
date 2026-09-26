@@ -758,7 +758,28 @@ export function rareteMaxPourOeuf(nbCreaturesPossedees) {
   return n < OEUFS_PLAFONNES ? RARETE_MAX_PREMIERS_OEUFS : null;
 }
 
-export function rollCreature(ownedIds, rareteMax = null) {
+// ---- GARANTIE SUR LES ŒUFS (26/09, décision de l'auteur) ----------------
+// MESURÉ : au même niveau, un joueur chanceux a un deck 2 fois plus fort
+// qu'un malchanceux, et nos combats n'ont presque pas de hasard — le quart
+// le plus malchanceux perdait tout le temps. Au plus tard à l'œuf N, le
+// joueur possède au moins `nombre` créatures de rareté ≥ `rarete`.
+export const GARANTIE_OEUFS = [
+  { oeuf: 6, rarete: 'rare', nombre: 1 },
+  { oeuf: 12, rarete: 'rare', nombre: 2 },
+  { oeuf: 16, rarete: 'epique', nombre: 1 },
+  { oeuf: 22, rarete: 'epique', nombre: 2 },
+];
+// La rareté MINIMALE imposée à l'œuf qu'on va faire éclore (ou null).
+export function rareteGarantiePourOeuf(ownedIds) {
+  const ids = ownedIds instanceof Set ? [...ownedIds] : (ownedIds || []);
+  const g = GARANTIE_OEUFS.find((x) => x.oeuf === ids.length + 1);
+  if (!g) return null;
+  const rang = ORDRE_RARETES.indexOf(g.rarete);
+  const deja = ids.map((id) => CREATURES.find((c) => c.id === id)).filter((c) => c && ORDRE_RARETES.indexOf(c.rarity) >= rang).length;
+  return deja < g.nombre ? g.rarete : null;
+}
+
+export function rollCreature(ownedIds, rareteMax = null, rareteMin = null) {
   const owned = ownedIds instanceof Set ? ownedIds : new Set(ownedIds || []);
   let pickable = CREATURES.filter((c) => !owned.has(c.id));
   // Plafond de rareté : on ne retire les raretés trop hautes que s'il
@@ -771,6 +792,12 @@ export function rollCreature(ownedIds, rareteMax = null) {
   // Collection complète : on retombe sur le roster entier plutôt que de
   // ne rien rendre. L'œuf redonne alors un doublon, qui monte un niveau
   // — les éclosions gardent un intérêt une fois les 26 obtenues.
+  // Garantie : rareté minimale imposée (GARANTIE_OEUFS), si elle existe encore.
+  if (rareteMin) {
+    const rangMin = ORDRE_RARETES.indexOf(rareteMin);
+    const assez = pickable.filter((c) => ORDRE_RARETES.indexOf(c.rarity) >= rangMin);
+    if (assez.length) pickable = assez;
+  }
   if (pickable.length === 0) pickable = CREATURES;
 
   const availableRarities = Object.entries(RARITY_WEIGHTS).filter(

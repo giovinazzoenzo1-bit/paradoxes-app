@@ -221,6 +221,7 @@ import {
   msUntilNextEnergy,
   puissanceDeck,
   puissanceConseillee,
+  baisseFilet,
 } from '../../games/clicker/combatLogic';
 
 // NOTIFICATIONS RETIREES (03/09).
@@ -338,6 +339,22 @@ function makeRuneId() {
 // Puissance du deck (demande de l'auteur : « évaluer le deck en permanence
 // et le mettre dans le menu Aventure »). Même calcul que la ligne affichée
 // avant le combat de Gardien — sans les runes, que ce combat n'applique pas.
+// Anti-triche du filet de sécurité (26/09) : la puissance du MEILLEUR deck
+// possible (les 3 créatures possédées les plus fortes). Une défaite ne
+// compte que si le deck joué en atteint 90 % — perdre exprès avec des
+// créatures niveau 1 ne déclenche rien.
+function meilleurePuissancePossible(owned) {
+  try {
+    const membres = (owned || []).map((o) => { const creature = CREATURES.find((c) => c.id === o.id);
+      return creature ? { creature, ownedLevel: o.level || 1, evolutionTier: o.evolutionTier || 0, equippedRunes: [] } : null; }).filter(Boolean);
+    const top = membres.map((m) => ({ m, p: puissanceDeck([m]) })).sort((a, b) => b.p - a.p).slice(0, 3).map((x) => x.m);
+    return puissanceDeck(top);
+  } catch (e) {
+    return 0;
+  }
+}
+export const FILET_SEUIL_ANTI_TRICHE = 0.9;
+
 function puissanceDuDeckAventure(deck, owned) {
   try {
     return puissanceDeck((deck || []).filter(Boolean).map((id) => {
@@ -422,6 +439,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
   const [runesOpen, setRunesOpen] = useState(false);
   const [currentUnlockedLevel, setCurrentUnlockedLevel] = useState(1);
+  // Filet de sécurité (26/09) : défaites DE SUITE par niveau, sauvegardées.
+  const [defaitesDeSuite, setDefaitesDeSuite] = useState({});
   const [griffes, setGriffes] = useState(0);
   // Runes possédées : [{ id, type, level }] — id unique généré à l'achat/
   // la fusion, type = l'une des 4 clés de RUNE_TYPES, level 1 à 5.
@@ -472,6 +491,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         if (raw) {
           const saved = JSON.parse(raw);
           setCurrentUnlockedLevel(saved.currentUnlockedLevel || 1);
+          setDefaitesDeSuite(saved.defaitesDeSuite || {});
           setLevelStars(saved.levelStars || {});
           setGriffes(saved.griffes || 0);
           setOwnedRunes(migrateRunes(saved.ownedRunes));
@@ -532,8 +552,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Sauvegarde à chaque changement.
   useEffect(() => {
     if (!progressLoaded) return;
-    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars }));
-  }, [currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars, progressLoaded]);
+    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite }));
+  }, [currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite, progressLoaded]);
 
   // Pendant que l'écran Aventure est ouvert, revérifie la régénération
   // toutes les 30s — permet de VOIR l'énergie remonter en direct sans
@@ -596,6 +616,14 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
 
   // Point 5 (26/09) : un achat doit se RESSENTIR tout de suite — on dit ce
   // que les Griffes permettent, sur la créature du deck la plus basse.
+  // Une défaite compte pour le filet de sécurité seulement avec ses
+  // meilleures créatures (anti-triche : 90 % du meilleur deck possible).
+  const noterDefaite = (levelNumber) => {
+    const moi = puissanceDuDeckAventure(deck, owned);
+    if (moi >= FILET_SEUIL_ANTI_TRICHE * meilleurePuissancePossible(owned)) {
+      setDefaitesDeSuite((d) => ({ ...d, [levelNumber]: (d[levelNumber] || 0) + 1 }));
+    }
+  };
   const annoncerGriffes = (gain) => {
     try {
       const total = griffes + gain;
@@ -707,7 +735,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // niveau de progression actuel (rejouer un niveau déjà acquis ne fait
   // pas avancer davantage), et crédite la récompense.
   const handleLevelWon = (levelNumber, reward) => {
-    setGriffes((g) => g + reward);
+    // Décision de l'auteur (26/09) : les Griffes seulement à la PREMIÈRE
+    // victoire d'un niveau — rejouer un niveau déjà gagné n'en donne pas.
+    if (levelNumber === currentUnlockedLevelRef.current) setGriffes((g) => g + reward);
+    setDefaitesDeSuite((d) => (d[levelNumber] ? { ...d, [levelNumber]: 0 } : d));
     trackEvent('battleWon', 1);
     // Publie le niveau atteint pour que les défis de l'œuf (clicker)
     // puissent lire la progression d'Aventure. trackMax, pas trackEvent :
@@ -924,6 +955,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   if (chapterMapOpen) {
     return (
       <ChapterMapScreen
+        defaitesDeSuite={defaitesDeSuite}
+        onDefaite={noterDefaite}
         onBuyElixir={onBuyElixir}
         elixirCombats={elixirCombats}
         onElixirUsed={onElixirUsed}
@@ -1874,7 +1907,7 @@ function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir, defaitesDeSuite = {}, onDefaite }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -2015,6 +2048,8 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         team={team}
         levelNumber={activeBattle.levelNumber}
         elixirActif={elixirCombats > 0}
+        filetBaisse={baisseFilet(defaitesDeSuite[activeBattle.levelNumber] || 0)}
+        premiereVictoire={activeBattle.levelNumber === currentUnlockedLevel}
         aideDefaite={{
           // La créature du deck la plus basse : là où un niveau rapporte le plus.
           onMonter: onOpenCreature ? () => {
@@ -2033,6 +2068,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         onFinish={(outcome, goNext, stars) => {
           // Une charge d'Élixir par combat mené, gagné ou perdu.
           if (elixirCombats > 0 && onElixirUsed) onElixirUsed();
+          if (outcome === 'lose' && onDefaite) onDefaite(activeBattle.levelNumber);
           if (outcome === 'win' && stars) {
             const lv = activeBattle.levelNumber;
             // Uniquement si c'est MIEUX qu'avant.

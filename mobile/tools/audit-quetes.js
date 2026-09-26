@@ -3068,7 +3068,8 @@ function auditDebutDePartie() {
     }
   }
   const ecran = require('fs').readFileSync(require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
-  if (!/rollCreature\(ownedRef\.current\.map\(\(o\) => o\.id\),\s*rareteMaxPourOeuf\(/.test(ecran)) {
+  // 26/09 : l'appel porte aussi la GARANTIE sur les œufs — on exige les deux.
+  if (!/rollCreature\(idsPossedes, rareteMaxPourOeuf\(idsPossedes\.length\), rareteGarantiePourOeuf\(idsPossedes\)\)/.test(ecran)) {
     fautes.push({ probleme: "l'éclosion d'un œuf n'applique pas le plafond de rareté" });
   }
   let D;
@@ -3471,35 +3472,38 @@ function auditSortsAdverses() {
 }
 module.exports.auditSortsAdverses = auditSortsAdverses;
 
-// ---- L'Aventure est calibrée : niveau N ≈ créatures niveau N (24/09) ----
+// ---- Le PARCOURS COMPLET d'un joueur gratuit : personne n'est bloqué (26/09) ----
 //
-// Décision de l'auteur : au niveau N de l'Aventure, des créatures de
-// niveau N gagnent environ 2 combats sur 3. La table AVENTURE_MULTIPLICATEURS
-// est CALCULÉE par tools/calibrer-aventure.js. Ce contrôle rejoue le deck de
-// référence : 50-85 % de victoires à son niveau, et NETTEMENT moins (−15
-// points) avec des créatures 5 niveaux plus bas — sinon les niveaux ne
-// comptent pas (l'Aventure d'avant : un deck de niveau 2 gagnait au 40).
-function auditAventureCalibree() {
-  const K = load('combatLogic');
-  const T = require('./calibrer-aventure.js');
-  const t = K.AVENTURE_MULTIPLICATEURS;
-  if (!Array.isArray(t) || t.length !== 40) return [{ probleme: 'table AVENTURE_MULTIPLICATEURS absente ou incomplète' }];
+// Demandé par l'auteur : « j'ai peur qu'il y ait des bugs dangereux » — un
+// joueur bloqué pour de bon. 30 joueurs gratuits simulés (tools/simulateur-
+// parcours.js : vrais œufs avec la garantie, naissance à 80 %, Griffes du
+// jeu à la 1re victoire, runes, énergie, VRAIS combats, filet de sécurité)
+// rejouent la partie entière avec la table du jeu. MESURÉ avant : l'ancienne
+// table bloquait 22 joueurs sur 30 au niveau 2 et 7 au niveau 7.
+// Plus la garantie sur les œufs, cas par cas (décision de l'auteur : rien
+// n'est forcé si le joueur a DÉJÀ la rareté).
+function auditParcours() {
+  const P = require('./simulateur-parcours.js');
+  const L2 = load('clickerLogic');
   const fautes = [];
-  // MÉDIANE des 5 decks de référence, comme le calibrage : MESURÉ, un deck
-  // seul va de 22 % à 97 % à son niveau (à niveau égal, deux decks n'ont
-  // pas la même force — comme pour le Gardien).
-  const mediane = (n, niveauDeck) => { const v = T.decksDeReference(n)
-    .map((deck) => T.tauxJoueur(deck, n, K.multiplicateurAventure(n), 200, niveauDeck)).sort((x, y) => x - y); return v[2]; };
-  for (const n of [5, 10, 20, 30, 40]) {
-    const auNiveau = mediane(n, n);
-    const enDessous = mediane(n, Math.max(1, n - 5));
-    if (auNiveau < 0.5 || auNiveau > 0.85) fautes.push({ niveau: n, victoiresAuNiveau: Math.round(100 * auNiveau) + ' %', attendu: '50-85 %' });
-    if (enDessous > auNiveau - 0.15) fautes.push({ niveau: n, probleme: '5 niveaux de moins ne changent presque rien',
-      auNiveau: Math.round(100 * auNiveau) + ' %', enDessous: Math.round(100 * enDessous) + ' %' });
-  }
+  P.synthese(30).forEach((x) => {
+    if (x.bloques) fautes.push({ ascension: x.a, probleme: x.bloques + ' joueur(s) gratuit(s) BLOQUÉ(S)' });
+    if (!(x.victoiresSur10 >= 5 && x.victoiresSur10 <= 7.5)) fautes.push({ ascension: x.a, victoiresSur10: +x.victoiresSur10.toFixed(1), attendu: '5 à 7,5' });
+    if (x.filet10 > 0.5) fautes.push({ ascension: x.a, probleme: 'le cran −60 % du filet se déclenche trop souvent', parJoueur: +x.filet10.toFixed(2) });
+  });
+  const ids = (r, n) => C.CREATURES.filter((c) => c.rarity === r).slice(0, n).map((c) => c.id);
+  const com = ids('commun', 8), peu = ids('peu_commun', 6);
+  const g = L2.rareteGarantiePourOeuf;
+  if (g(com.slice(0, 5)) !== 'rare') fautes.push({ probleme: 'œuf 6 sans aucune Rare : la garantie ne force pas de Rare' });
+  if (g([...com.slice(0, 4), ...ids('rare', 1)]) !== null) fautes.push({ probleme: "œuf 6 avec DÉJÀ une Rare : la garantie en force une quand même" });
+  if (g([...com.slice(0, 4), ...ids('legendaire', 1)]) !== null) fautes.push({ probleme: 'une Légendaire ne compte pas comme « au moins Rare »' });
+  if (g([...com, ...peu.slice(0, 2), ...ids('rare', 1)]) !== 'rare') fautes.push({ probleme: "œuf 12 avec 1 seule Rare : la garantie n'en force pas une 2e" });
+  if (g([...com, ...ids('rare', 3)]) !== null) fautes.push({ probleme: 'œuf 12 avec DÉJÀ 3 Rares : la garantie en force une quand même' });
+  if (g([...com, ...peu, ...ids('rare', 1)]) !== 'epique') fautes.push({ probleme: "œuf 16 sans Épique : la garantie n'en force pas" });
+  if (g([...com, ...peu, ...ids('epique', 1)]) !== null) fautes.push({ probleme: "œuf 16 avec DÉJÀ une Épique : la garantie en force une quand même" });
   return fautes;
 }
-module.exports.auditAventureCalibree = auditAventureCalibree;
+module.exports.auditParcours = auditParcours;
 
 // ---- L'Élixir de faiblesse : −10 %, et branché de bout en bout (26/09) ----
 //

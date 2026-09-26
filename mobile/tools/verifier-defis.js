@@ -50,7 +50,7 @@ const CONTROLES = [
   ['auditSortsMoteur', 'sorts : chiffres validés, et personne n\'est jamais bloqué (2 000 combats aléatoires)'],
   ['auditSortsDonnees', 'chaque créature a son sort, de son type, sans perdre sa meilleure attaque'],
   ['auditSortsAdverses', "les ennemis de l'Aventure lancent leurs sorts à bon escient"],
-  ['auditAventureCalibree', "l'Aventure est calibrée : niveau N ≈ créatures niveau N (2 victoires sur 3)"],
+  ['auditParcours', "parcours complet de 30 joueurs gratuits : personne n'est bloqué, ≈ 6 victoires sur 10 ; garantie des œufs juste"],
   ['auditElixir', "l'Élixir retire 10 % et il est branché de bout en bout (shop, sauvegarde, Aventure, Gardien)"],
   ['auditPuissanceConseillee', 'la puissance conseillée est positive et monte avec le niveau'],
   ['auditDefaite', "l'écran de défaite dit vrai (presque, retard) et il est branché ; l'achat de Griffes se ressent"],

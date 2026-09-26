@@ -687,9 +687,14 @@ export function competencesAvecSort(creature) {
 // c'est un avantage réel. ⚠️ Plafond −10 % : MESURÉ, −20 % donne 100 % de
 // victoires et efface 4 niveaux de retard.
 export const ELIXIR = { reduction: 0.10, combats: 5 };
-export function appliquerElixir(stats) {
-  const k = 1 - ELIXIR.reduction;
+// Une BAISSE des ennemis (PV et attaque), commune à l'Élixir et au filet de
+// sécurité ; appliquée APRÈS le calibrage.
+export function appliquerBaisse(stats, baisse) {
+  const k = 1 - (baisse || 0);
   return { ...stats, hp: Math.max(1, Math.round(stats.hp * k)), attack: Math.max(1, stats.attack * k) };
+}
+export function appliquerElixir(stats) {
+  return appliquerBaisse(stats, ELIXIR.reduction);
 }
 
 // ---- Les decks de RÉFÉRENCE de l'Aventure et la PUISSANCE CONSEILLÉE ----
@@ -707,10 +712,12 @@ export function decksDeReferenceAventure(n) {
   return [0, 1, 2, 3, 4].map((v) => rar.slice(0, taille).map((r, i) => { const p = pool(r); return p[(v * 3 + i) % p.length]; }));
 }
 export function puissanceConseillee(n) {
+  // Depuis le 26/09 : la puissance du joueur visé par le calibrage du
+  // parcours (PUISSANCE_CONSEILLEE) — un deck de cette puissance gagne à
+  // peu près 6 fois sur 10.
   const niv = Math.max(1, Math.floor(n || 1));
-  const v = decksDeReferenceAventure(niv).map((deck) => puissanceDeck(deck.map((c) => ({
-    creature: c, ownedLevel: niv, evolutionTier: evoPourNiveau(niv), equippedRunes: [] })))).sort((a, b) => a - b);
-  return v[Math.floor(v.length / 2)];
+  const t = PUISSANCE_CONSEILLEE;
+  return t[Math.min(niv, t.length) - 1];
 }
 
 // ---- L'ÉCRAN DE DÉFAITE (26/09, demande de l'auteur) ------------------
@@ -739,6 +746,20 @@ export function presqueGagne(adversaires) {
   const max = (adversaires || []).reduce((s, o) => s + ((o && o.stats && o.stats.hp) || 0), 0);
   const reste = (adversaires || []).reduce((s, o) => s + Math.max(0, (o && o.hp) || 0), 0);
   return max > 0 && reste > 0 && reste / max <= SEUIL_PRESQUE;
+}
+
+// ---- LE FILET DE SÉCURITÉ (26/09, décision de l'auteur) ----------------
+// Défaites DE SUITE sur un même niveau, avec ses meilleures créatures :
+// 5 → ennemis −20 %, 7 → −40 %, 10 → −60 %. Ce niveau seulement, remis à
+// zéro par la victoire. Garantit que PERSONNE ne reste bloqué.
+export const FILET_SECURITE = [
+  { defaites: 10, baisse: 0.60 },
+  { defaites: 7, baisse: 0.40 },
+  { defaites: 5, baisse: 0.20 },
+];
+export function baisseFilet(defaitesDeSuite) {
+  const f = FILET_SECURITE.find((x) => (defaitesDeSuite || 0) >= x.defaites);
+  return f ? f.baisse : 0;
 }
 
 export function multiplicateurFureur(tour) {
@@ -1379,7 +1400,19 @@ export function opponentStatsForLevel(levelNumber) {
 // Version typée (avec modificateur de rôle) pour une créature adverse
 // arbitraire — même règle que côté joueur : pas de multiplicateur de
 // type pour les créatures Gemini (déjà pris en compte par Gemini lui-même).
-// ---- Le calibrage de l'AVENTURE (étape 5b des sorts, 24/09) ----------
+// ---- Le calibrage de l'AVENTURE — sur le PARCOURS du joueur gratuit ----
+//
+// ⚠️ 26/09 : la table est CALCULÉE par `tools/calibrer-parcours.js` — une
+// population de joueurs gratuits simulés (vrais œufs avec la GARANTIE,
+// naissance à 80 %, Griffes réglage A à la 1re victoire seulement, runes,
+// énergie, filet de sécurité) avance niveau par niveau ; à chaque niveau,
+// le joueur un peu MALCHANCEUX (30e centile) gagne 6 fois sur 10 (décision
+// de l'auteur, option 2). Vérifié sur 60 autres joueurs : aucun bloqué sur
+// toute la partie, ≈ 6 victoires sur 10 par Ascension. L'ancienne table
+// (calée sur « 2 rares + 1 épique ») BLOQUAIT les joueurs gratuits aux
+// niveaux 2 et 7. Ne jamais la retoucher à la main : relancer l'outil.
+//
+// ---- Historique : le calibrage du 24/09 (étape 5b des sorts) ----------
 //
 // Décision de l'auteur : « au niveau N de l'Aventure, des créatures
 // d'environ niveau N pour gagner 2 combats sur 3 ». MESURÉ avant : un deck
@@ -1391,7 +1424,13 @@ export function opponentStatsForLevel(levelNumber) {
 // 3, joué par `choixJoueur`). Ne jamais le retoucher à la main : relancer
 // l'outil. `auditAventureCalibree` le vérifie à chaque push.
 export const AVENTURE_MULTIPLICATEURS = [
-  1.87, 2.08, 3.62, 3.1, 4.29, 3.7, 11.73, 8.16, 10.74, 9.28, 6.8, 8.74, 8.74, 7.25, 7.56, 8.15, 8.55, 7.57, 6.49, 6.35, 6.81, 7.51, 7.25, 6.65, 10.95, 8.62, 8.81, 8.21, 8.55, 8.5, 9.26, 8.85, 9.78, 8.1, 8.86, 8.16, 8.03, 9.14, 9.67, 9,
+  0.65, 0.62, 1.12, 1.3, 1.8, 1.88, 2.16, 2.19, 2.26, 2.25, 2.27, 2.81, 4.3, 3.25, 3.32, 4.23, 4, 3.76, 3.31, 3.34, 3.63, 4.29, 4.22, 3.97, 4.53, 4.1, 4.21, 4.45, 5.24, 5.02, 5.02, 5.02, 5.82, 5.32, 5.25, 5.07, 5.13, 5.6, 6.15, 5.69, 6.65, 5.74, 5.06, 6.64, 6.3, 5.89, 6.3, 8.05, 7.04, 8.71, 11.58, 9.33, 11.05, 10.89, 12.31, 12.58, 13.47, 14.8, 17.31, 14.25, 14.14, 14.48, 15.84, 15.79, 18.2, 18.3, 19.67, 22.27, 14.19, 18.43, 20.42, 17.88, 22.55, 26.05, 22.63, 19.38, 27.64, 20.1, 20.06, 21.99, 23.42, 23.72, 27.15, 26.76, 29.55, 27.1, 36.74, 34.13, 29.02, 34.13, 36.35, 33.94, 29.6, 35.06, 22.19, 36.87, 35.06, 31.93, 35.12, 41.98, 39.06, 40.06, 41.9, 33.58, 33.7, 35.51, 35.63, 37.88, 34.87, 34.06, 41.23, 31.07, 36.02, 35.12, 30.19, 34.62, 36.74, 34.06, 29.76, 36.74, 22.35, 36.87, 35.12, 32.04, 34.31, 41.53, 39.27, 37.07, 42.36, 33.04, 31.02, 34.68, 34.81, 36.35, 32.86, 33.82, 41.9, 31.24, 35.63, 33.58,
+];
+// Puissance du joueur VISÉ (30e centile des joueurs gratuits simulés) à
+// chaque niveau : la « puissance conseillée » affichée. Même calcul que la
+// table ci-dessus (tools/calibrer-parcours.js), jamais en baisse.
+export const PUISSANCE_CONSEILLEE = [
+  12, 13, 19, 21, 23, 34, 35, 43, 45, 46, 53, 59, 89, 91, 93, 101, 105, 108, 111, 121, 123, 127, 130, 144, 173, 186, 188, 212, 220, 227, 231, 251, 255, 266, 273, 280, 287, 292, 296, 301, 349, 352, 361, 374, 380, 383, 397, 452, 460, 541, 633, 651, 701, 714, 748, 767, 773, 955, 997, 1005, 1010, 1110, 1113, 1133, 1140, 1187, 1194, 1203, 1379, 1381, 1388, 1399, 1606, 1614, 1617, 1708, 1715, 1723, 1731, 1897, 1907, 1913, 1988, 1992, 1998, 2007, 2696, 2708, 2718, 2731, 2744, 2753, 2763, 2775, 2785, 2797, 2805, 2819, 2829, 2838, 2848, 2861, 2872, 2880, 2890, 2899, 2907, 2919, 2931, 2942, 2952, 2961, 2971, 2979, 2990, 2999, 3010, 3019, 3029, 3040, 3048, 3059, 3069, 3076, 3089, 3096, 3107, 3117, 3127, 3136, 3143, 3151, 3164, 3172, 3181, 3192, 3200, 3211, 3221, 3229,
 ];
 export function multiplicateurAventure(levelNumber) {
   const t = AVENTURE_MULTIPLICATEURS;
@@ -1530,8 +1569,14 @@ export function resolveRound(playerHp, opponentHp, opponentAttack, playerDamage)
 }
 
 // ---- Récompense (ressource "Griffes", nom provisoire) ----
+// Réglage A (validé par l'auteur le 26/09) : jamais en baisse, un palier en
+// entrant dans l'A3 (niveau 66, les meilleures créatures arrivent). Versée à
+// la PREMIÈRE victoire d'un niveau seulement (AdventureScreen).
 export function griffesReward(levelNumber) {
-  return 5 + Math.floor(levelNumber * 1.5);
+  const l = Math.max(1, Math.floor(levelNumber || 1));
+  if (l <= 20) return 5 + Math.floor(1.5 * l);
+  if (l <= 65) return 5 + Math.floor(1.5 * l * (l / 20));
+  return Math.max(5 + Math.floor(1.5 * 65 * (65 / 20)), Math.round(640 * Math.pow(l / 66, 0.75)));
 }
 
 // ---- Énergie (30/08) — 1 vie toutes les 20 min, plafond à 5 ----

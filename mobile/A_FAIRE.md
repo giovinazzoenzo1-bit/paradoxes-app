@@ -51,3 +51,12 @@
 - [ ] **10 défis d'Aventure doublés** par `ajouter-defis.py` le 23/09 (commit e66fd45) : A1 30→60→120 … A5 →360 ; remettre de 5 en 5 (35/40, 50/55, 65/70, 80/85, 95/100) + corriger l'outil + contrôle (≤ +10 niveaux d'un œuf à l'autre).
 - [ ] Règle de l'auteur : on garde « Gagne 4 combats », et **le défi de combat suivant demande 6 combats** (une barre d'énergie + 1 → vidéo).
 
+### Aventure calibrée sur le PARCOURS du joueur gratuit (26/09) — morceau A FAIT
+- [x] Simulateur de parcours complet (`tools/simulateur-parcours.js`) + calibrage sur le parcours (`tools/calibrer-parcours.js`) : le joueur UN PEU MALCHANCEUX (30e centile) gagne 6 fois sur 10 (option 2 de l'auteur). Vérifié : 0 joueur bloqué sur 60, ≈ 6 victoires sur 10 à chaque Ascension ; les 10 % les moins chanceux ≈ 2/10 jusqu'à l'A3 (le filet les fait passer), 5/10 ensuite.
+- [x] Garantie sur les œufs (`GARANTIE_OEUFS`) : 1 Rare au 6e, 2 au 12e, 1 Épique au 16e, 2 au 22e — RIEN n'est forcé si le joueur a déjà la rareté (demande de l'auteur). NB : le 22e est toujours déjà satisfait (19 créatures seulement sous Épique).
+- [x] Filet de sécurité (`FILET_SECURITE`) : 5 / 7 / 10 défaites de suite → −20 / −40 / −60 %, ce niveau seulement, anti-triche 90 % du meilleur deck possible, badge 🛟, compteur sauvegardé.
+- [x] Griffes réglage A (`griffesReward`), à la PREMIÈRE victoire seulement ; « Niveau déjà gagné : pas de Griffes ».
+- [x] Tables 140 niveaux : `AVENTURE_MULTIPLICATEURS` + `PUISSANCE_CONSEILLEE` ; `auditParcours` (30 joueurs, à chaque push) remplace l'ancien contrôle.
+- [ ] **Morceau B** : packs contre pièces — 3 par Ascension (4 pour un acharné), taille 100 + 75 × Ascension, compteur remis à zéro à chaque Ascension (le simulateur le suppose déjà).
+- [ ] Ensuite : défis (10 cibles doublées ; « défi suivant = 6 combats »), puis recaler le simulateur sur les chronos réels de l'auteur.
+

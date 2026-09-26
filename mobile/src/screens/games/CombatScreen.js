@@ -78,6 +78,7 @@ import {
   actionAdversaire,
   cibleDuJoueur,
   appliquerElixir,
+  appliquerBaisse,
   niveauxManquants,
   presqueGagne,
   GUARDIAN_PHASE1_HP_LOSS,
@@ -161,7 +162,7 @@ function messageDeSort(sortId, evenements, allies) {
   return `${s.icone} ${s.nom} !`;
 }
 
-export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null, elixirActif = false, aideDefaite = null }) {
+export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null, elixirActif = false, aideDefaite = null, filetBaisse = 0, premiereVictoire = true }) {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const opponentTeamCreatures = useRef(opponentOverride || opponentTeamForLevel(levelNumber)).current;
@@ -229,7 +230,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     opponentTeamCreatures.map((creature) => {
       // Le Gardien passe par `guardianStats` : PV du PREMIER réduits de
       // 30 %, dégâts relevés de 15 % à tous les niveaux.
-      const stats0 = creature.boss
+      const statsBase = creature.boss
         // `eggNumber` : le Gardien frappe plus fort à partir du 5e œuf.
         // `guardianCalibrage` : le Gardien calé sur le deck du début de
         // l'œuf (combatLogic.calibrerGardien). Absent : l'ancien Gardien.
@@ -239,6 +240,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         : statsForOpponentCreatureTyped(creature, levelNumber);
       // Élixir de faiblesse (shop diamant) : APRÈS le calibrage, adversaires
       // et Gardien −10 % — un avantage réel, que le calculateur ne voit pas.
+      // Filet de sécurité (26/09) : après 5 / 7 / 10 défaites de suite sur ce
+      // niveau, ennemis −20 / −40 / −60 % (AdventureScreen compte les défaites).
+      const stats0 = filetBaisse > 0 ? appliquerBaisse(statsBase, filetBaisse) : statsBase;
       const stats = elixirActif ? appliquerElixir(stats0) : stats0;
       return { creature, stats, hp: stats.hp, mana: MANA_DEPART, etats: {} };
     })
@@ -812,6 +816,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         aide={aideDefaite}
         manque={outcome === 'lose' ? niveauxManquants(team, levelNumber) : 0}
         presque={outcome === 'lose' && presqueGagne(opponents)}
+        premiereVictoire={premiereVictoire}
       />
     );
   }
@@ -918,6 +923,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       {elixirActif && (
         <View style={[styles.elixirBadge, { top: insets.top + 6 }]} pointerEvents="none">
           <Text style={styles.elixirBadgeText}>🧪 Élixir : ennemis −10 %</Text>
+        </View>
+      )}
+      {filetBaisse > 0 && (
+        <View style={[styles.elixirBadge, styles.filetBadge, { top: insets.top + (elixirActif ? 34 : 6) }]} pointerEvents="none">
+          <Text style={styles.elixirBadgeText}>🛟 Coup de pouce : ennemis −{Math.round(filetBaisse * 100)} %</Text>
         </View>
       )}
 
@@ -1184,7 +1194,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 // (6,7/s), tout en restant imperceptible pour qui veut vraiment appuyer.
 const RESULT_BTN_GUARD_MS = 700;
 
-function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false }) {
+function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false, premiereVictoire = true }) {
   const isWin = outcome === 'win';
   const [btnsArmed, setBtnsArmed] = useState(false);
   useEffect(() => {
@@ -1232,7 +1242,9 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
         )}
         {isWin && (
           <View style={styles.rewardBadge}>
-            <Text style={styles.rewardBadgeText}>+{reward} 🐾 Griffes</Text>
+            <Text style={styles.rewardBadgeText}>
+              {premiereVictoire ? `+${reward} 🐾 Griffes` : 'Niveau déjà gagné : pas de Griffes'}
+            </Text>
           </View>
         )}
         <Text style={styles.recapTitle}>📊 Récapitulatif</Text>
@@ -1316,6 +1328,7 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
 }
 
 const styles = StyleSheet.create({
+  filetBadge: { backgroundColor: 'rgba(13,110,70,0.9)' },
   aideBloc: { gap: 8, marginTop: 4 },
   aidePresque: { color: '#FFB74D', fontWeight: '900', fontSize: 14, textAlign: 'center' },
   aideDiag: { color: '#fff', fontWeight: '700', fontSize: 13, textAlign: 'center' },

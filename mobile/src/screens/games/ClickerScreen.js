@@ -44,6 +44,7 @@ import {
   VEILLEUR_MAX_LEVEL,
   rollCreature,
   rareteMaxPourOeuf,
+  rareteGarantiePourOeuf,
   rollCreatureOfRarity,
   offlineEarnings,
   shouldSpawn,
@@ -1831,8 +1832,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // garanti que les variantes divergent.
   const grantHatchedCreature = () => {
     // ⚠️ Plafond de rareté des 3 premiers œufs — voir `rareteMaxPourOeuf`.
-    const creature = rollCreature(ownedRef.current.map((o) => o.id),
-      rareteMaxPourOeuf(ownedRef.current.length));
+    // Garantie sur les œufs (26/09) : une rareté minimale SEULEMENT si le
+    // joueur n'a pas encore ce qu'il faut (clickerLogic.GARANTIE_OEUFS).
+    const idsPossedes = ownedRef.current.map((o) => o.id);
+    const creature = rollCreature(idsPossedes, rareteMaxPourOeuf(idsPossedes.length), rareteGarantiePourOeuf(idsPossedes));
     addCreatureToOwned(creature);
     trackEvent('eggHatched', 1);
     setRewardCreature(creature);
