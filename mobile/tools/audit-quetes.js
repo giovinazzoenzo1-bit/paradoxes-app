@@ -3649,3 +3649,25 @@ function auditDefisAventure() {
   return fautes;
 }
 module.exports.auditDefisAventure = auditDefisAventure;
+
+// ---- Le bouton « Valider » des défis (26/09) ----
+//
+// Demande de l'auteur : un défi réussi rend son panneau VERT, et il faut
+// appuyer dessus pour passer au suivant (comme les autres jeux) — le joueur
+// voit aussi qu'un défi était déjà réussi au moment où il apparaît.
+// « Réussi » (verrouillé, automatique) ≠ « validé » (un appui).
+function auditValidation() {
+  const fs = require('fs');
+  const Cl = fs.readFileSync(require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  const fautes = [];
+  const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
+  doit(Cl.includes('const currentChallengeId = activeQuestIds.find((id) => !isQuestValidated(id)) || null;'), 'le défi courant avance tout seul (sans validation)');
+  doit(Cl.includes('const completedQuestCount = activeQuestIds.filter(isQuestValidated).length;'), "l'œuf avance aux défis réussis, pas aux défis validés");
+  doit(/const validerDefi = \(\) => \{[\s\S]{0,600}AsyncStorage\.setItem\(VALIDATED_QUESTS_KEY/.test(Cl), "la validation n'est pas sauvegardée");
+  doit(/setLatchedQuestIds\(\[\]\);\n\s*AsyncStorage\.removeItem\(LATCHED_QUESTS_KEY\)[^\n]*\n\s*setValidatedQuestIds\(\[\]\);/.test(Cl), "les défis validés ne sont pas remis à zéro au nouvel œuf");
+  doit(Cl.includes("Array.isArray(saved.validatedQuestIds) ? saved.validatedQuestIds : verrou"), 'une ancienne sauvegarde perdrait ses défis déjà réussis');
+  doit(Cl.includes('reussi={currentChallengeReussi}') && Cl.includes('onValider={validerDefi}'), "le panneau du défi ne reçoit pas le bouton « Valider »");
+  doit(/return reussi && onValider \? \(\s*<TouchableOpacity[^>]*onPress=\{onValider\}/.test(Cl), "le panneau vert n'est pas appuyable");
+  return fautes;
+}
+module.exports.auditValidation = auditValidation;

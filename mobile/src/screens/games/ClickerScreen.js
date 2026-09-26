@@ -297,6 +297,8 @@ const PENDING_OFFERINGS_KEY = 'clicker:pendingOfferings:v1';
 // revenait — le bug signalé deux fois. Une clé propre, écrite sans
 // délai, supprime cette fenêtre.
 const LATCHED_QUESTS_KEY = 'clicker:latchedQuests:v2';
+// Défis VALIDÉS d'un appui (26/09, demande de l'auteur).
+const VALIDATED_QUESTS_KEY = 'clicker:validatedQuests:v1';
 // Le tirage de rune offert n'est utilisable qu'UNE fois dans la partie.
 const FREE_RUNE_USED_KEY = 'clicker:freeRuneUsed:v1';
 
@@ -897,6 +899,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [latchedQuestIds, setLatchedQuestIds] = useState([]);
   const latchedQuestIdsRef = useRef([]);
   latchedQuestIdsRef.current = latchedQuestIds;
+  // Défis VALIDÉS (26/09, demande de l'auteur) : un défi réussi doit être
+  // validé d'un appui sur son panneau (devenu vert) pour passer au suivant,
+  // comme dans les autres jeux. « Réussi » (verrouillé) ≠ « validé ».
+  const [validatedQuestIds, setValidatedQuestIds] = useState([]);
+  const validatedQuestIdsRef = useRef([]);
+  validatedQuestIdsRef.current = validatedQuestIds;
   const [questBaselines, setQuestBaselines] = useState({});
   const questBaselinesRef = useRef({});
   questBaselinesRef.current = questBaselines;
@@ -1328,6 +1336,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             if (Array.isArray(propre)) verrou = [...new Set([...verrou, ...propre])];
           } catch (e3) { /* illisible : on garde celle de la sauvegarde */ }
           setLatchedQuestIds(verrou);
+          // Une ANCIENNE sauvegarde n'a pas de défis validés : ceux déjà
+          // réussis y comptent comme validés — la partie en cours est gardée.
+          let valides = defsChangees ? [] : (Array.isArray(saved.validatedQuestIds) ? saved.validatedQuestIds : verrou);
+          const validesRaw = defsChangees ? null : await AsyncStorage.getItem(VALIDATED_QUESTS_KEY);
+          if (defsChangees) AsyncStorage.removeItem(VALIDATED_QUESTS_KEY).catch(() => {});
+          try {
+            const pv = validesRaw ? JSON.parse(validesRaw) : null;
+            if (Array.isArray(pv)) valides = [...new Set([...valides, ...pv])];
+          } catch (e4) { /* illisible : on garde celle de la sauvegarde */ }
+          setValidatedQuestIds(valides);
           setEggPhase(saved.eggPhase || 'collecting');
           setHatchTaps(saved.hatchTaps || 0);
           setCaptureTaps(saved.captureTaps || 0);
@@ -1449,7 +1467,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, critDamageLevel, tapUpgrades, autoClickers, upgradeLevels, sanctuaryLevel,
     veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
-    activeQuestIds, questTargets, questBaseline, questBaselines, devCompletedIds, devReopenedIds, latchedQuestIds, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
+    activeQuestIds, questTargets, questBaseline, questBaselines, devCompletedIds, devReopenedIds, latchedQuestIds, validatedQuestIds, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
   // Construit l'objet de sauvegarde à partir des REFS uniquement, donc
@@ -1493,6 +1511,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     devCompletedIds: devCompletedIdsRef.current,
     devReopenedIds: devReopenedIdsRef.current,
     latchedQuestIds: latchedQuestIdsRef.current,
+    validatedQuestIds: validatedQuestIdsRef.current,
     sequenceIndex: sequenceIndexRef.current,
     // La disposition avec laquelle l'index a été écrit : c'est ce qui
     // permet de le migrer si le nombre d'œufs par Ascension change.
@@ -2698,10 +2717,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       // Félicitations : on annonce le PREMIER défi atteint de la salve.
       // Le verrou garantit qu'un défi ne sera annoncé qu'une fois, même
       // si sa valeur redescend ensuite.
-      setQuestDone(atteints[0]);
+      // (26/09) Plus de fenêtre ici : le panneau devient VERT, et la fenêtre
+      // « Défi réussi ! » s'ouvre au moment où le joueur VALIDE.
     }
   });
-  const completedQuestCount = activeQuestIds.filter(isQuestDone).length;
+  // Validé : le joueur a appuyé sur le panneau vert (ou bouton de test).
+  const isQuestValidated = (id) =>
+    !devReopenedIds.includes(id) && (validatedQuestIds.includes(id) || devCompletedIds.includes(id));
+  // ⚠️ 26/09 : compte les défis VALIDÉS (stade de l'œuf, « Défi X sur 8 »,
+  // éclosion) — plus les défis seulement réussis.
+  const completedQuestCount = activeQuestIds.filter(isQuestValidated).length;
 
   // Défi mis en avant sur l'écran d'accueil : le PREMIER non terminé des
   // 4 du cycle. Un seul à la fois, volontairement — la barre segmentée
@@ -2709,7 +2734,20 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // et empiler 4 barres sur l'accueil recréerait l'onglet Quêtes qu'on
   // vient justement de supprimer. Vaut `null` quand les 4 sont finies
   // (l'affichage bascule alors sur la barre d'éclosion).
-  const currentChallengeId = activeQuestIds.find((id) => !isQuestDone(id)) || null;
+  const currentChallengeId = activeQuestIds.find((id) => !isQuestValidated(id)) || null;
+  // Réussi mais pas encore validé : le panneau devient un bouton vert.
+  const currentChallengeReussi = !!currentChallengeId && isQuestDone(currentChallengeId);
+  const validerDefi = () => {
+    const id = currentChallengeId;
+    if (!id || !isQuestDone(id)) return;
+    setValidatedQuestIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const suivant = [...prev, id];
+      AsyncStorage.setItem(VALIDATED_QUESTS_KEY, JSON.stringify(suivant)).catch(() => {});
+      return suivant;
+    });
+    setQuestDone(id); // « 🎉 Défi réussi ! » au moment de VALIDER
+  };
 
   // ⚠️⚠️ DÉTECTION DES BLOCAGES (21/09) — voir `diagnostic.js`.
   //
@@ -2846,6 +2884,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setLatchedQuestIds((prev) => {
       const suivant = prev.filter((id) => id !== target);
       AsyncStorage.setItem(LATCHED_QUESTS_KEY, JSON.stringify(suivant)).catch(() => {});
+      return suivant;
+    });
+    setValidatedQuestIds((prev) => {
+      const suivant = prev.filter((id) => id !== target);
+      AsyncStorage.setItem(VALIDATED_QUESTS_KEY, JSON.stringify(suivant)).catch(() => {});
       return suivant;
     });
     setQuestBaselines((prev) => ({ ...prev, [target]: questStats }));
@@ -3177,6 +3220,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setDevReopenedIds([]);
     setLatchedQuestIds([]);
     AsyncStorage.removeItem(LATCHED_QUESTS_KEY).catch(() => {});
+    setValidatedQuestIds([]);
+    AsyncStorage.removeItem(VALIDATED_QUESTS_KEY).catch(() => {});
     setEggPhase('collecting');
     setHatchTaps(0);
     setCaptureTaps(0);
@@ -3509,6 +3554,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 target={currentChallenge.target}
                 cycleIndex={completedQuestCount}
                 cycleTotal={activeQuestIds.length}
+                reussi={currentChallengeReussi}
+                onValider={validerDefi}
               />
             )
           ) : (
@@ -5040,17 +5087,20 @@ const CHALLENGE_CARD_ASPECT_RATIO = 900 / 295;
 // de positions, pas un bug de logique de remplissage.
 const CHALLENGE_GEM_X_PCT = [20.6, 33.0, 44.8, 57.2, 69.1, 80.9];
 
-function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel }) {
+function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel, reussi = false, onValider = null }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
   const ratio = target > 0 ? Math.min(1, current / target) : 0;
   const filled = Math.floor(ratio * segments);
 
-  return (
+  const carte = (
     <ImageBackground
       source={require('../../../assets/icons/challenge-bar.png')}
       style={styles.challengeCard}
       resizeMode="stretch"
     >
+      {/* Défi RÉUSSI (26/09) : voile vert — tout le panneau devient le
+          bouton « Valider ». */}
+      {reussi && <View pointerEvents="none" style={styles.challengeReussiVoile} />}
       {/* Étiquette du défi — zone vide mesurée au-dessus du cercle. */}
       <View style={styles.challengeLabelZone}>
         <Text style={styles.challengeLabel} numberOfLines={2}>
@@ -5100,13 +5150,18 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
 
       {cycleTotal > 0 && (
         <View style={styles.challengeCycleZone}>
-          <Text style={styles.challengeCycle} numberOfLines={2}>
-            Défi {Math.min(cycleIndex + 1, cycleTotal)} sur {cycleTotal} avant l'éclosion
+          <Text style={[styles.challengeCycle, reussi && styles.challengeCycleReussi]} numberOfLines={2}>
+            {reussi ? '✅ Réussi ! Appuie pour valider' : `Défi ${Math.min(cycleIndex + 1, cycleTotal)} sur ${cycleTotal} avant l'éclosion`}
           </Text>
         </View>
       )}
     </ImageBackground>
   );
+  return reussi && onValider ? (
+    <TouchableOpacity activeOpacity={0.85} onPress={onValider} accessibilityRole="button" accessibilityLabel="Valider le défi">
+      {carte}
+    </TouchableOpacity>
+  ) : carte;
 }
 
 // Combat de gardien : enveloppe CombatScreen en verrouillant le PAYSAGE.
@@ -5448,6 +5503,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   challengeCycle: { color: COLORS.muted, fontSize: 10, fontWeight: '700', textAlign: 'center' },
+  challengeCycleReussi: { color: '#34d399', fontSize: 12, fontWeight: '900' },
+  challengeReussiVoile: { position: 'absolute', left: 6, right: 6, top: 6, bottom: 6, backgroundColor: 'rgba(16,185,129,0.28)', borderRadius: 14, borderWidth: 2, borderColor: '#34d399' },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },
   spawnBubble: {
