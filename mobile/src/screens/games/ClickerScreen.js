@@ -2207,7 +2207,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   //
   // La condition d'Ascension ne passe donc plus par le gain d'essence
   // mais directement par le SEUIL.
-  const ascensionReady = totalEarned >= ascensionThreshold(ascensionCount);
+  // Seuil de pièces atteint. ⚠️ Ce n'est plus suffisant (26/09) : voir
+  // `ascensionReady`, défini après le défi en cours.
+  const seuilAscensionAtteint = totalEarned >= ascensionThreshold(ascensionCount);
   // ⚠️ Le panneau d'Ascension n'est PLUS une `Alert` système : elle
   // impose son apparence iOS/Android et jurait avec le reste du jeu. Il
   // s'affiche maintenant sur le parchemin illustré (`ascension-panel`),
@@ -2522,6 +2524,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // avec des combats DÉJÀ faits — de la variété sans une énergie de
     // plus.
     threeStarLevel: lifetimeStats.threeStarLevel || 0,
+    // Garde-fou du verrou d'Aventure (questLogic.plusRienAEtoiler), 26/09.
+    troisEtoilesJusquA: lifetimeStats.troisEtoilesJusquA || 0,
     offering: lifetimeStats.offering || 0,
     powerActivated: lifetimeStats.powerActivated || 0,
     // ⚠️⚠️ LIRE LA RÉF, PAS LA VALEUR DU RENDU.
@@ -2737,6 +2741,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const currentChallengeId = activeQuestIds.find((id) => !isQuestValidated(id)) || null;
   // Réussi mais pas encore validé : le panneau devient un bouton vert.
   const currentChallengeReussi = !!currentChallengeId && isQuestDone(currentChallengeId);
+  // ⚠️⚠️ 26/09 (décision de l'auteur) : l'Ascension ne s'achète QUE quand le
+  // défi « Fais ta Ne Ascension » est le défi EN COURS, et pas déjà réussi.
+  // Une Ascension faite plus tôt saute au 1er œuf du groupe suivant : les
+  // œufs restants du groupe étaient PERDUS. Et si le défi est déjà réussi
+  // (vieille partie décalée), on le VALIDE — une nouvelle Ascension
+  // sauterait un groupe entier.
+  const defiAscensionEnCours = !!currentChallengeId && !currentChallengeReussi
+    && (findQuest(currentChallengeId) || {}).metric === 'ascension';
+  const ascensionReady = seuilAscensionAtteint && defiAscensionEnCours;
   const validerDefi = () => {
     const id = currentChallengeId;
     if (!id || !isQuestDone(id)) return;
@@ -3158,6 +3171,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // avec des combats DÉJÀ faits — de la variété sans une énergie de
     // plus.
     threeStarLevel: lifetimeStats.threeStarLevel || 0,
+    // Garde-fou du verrou d'Aventure (questLogic.plusRienAEtoiler), 26/09.
+    troisEtoilesJusquA: lifetimeStats.troisEtoilesJusquA || 0,
     offering: lifetimeStats.offering || 0,
     powerActivated: lifetimeStats.powerActivated || 0,
     // ⚠️⚠️ LIRE LA RÉF, PAS LA VALEUR DU RENDU.
@@ -3917,6 +3932,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           onOffrande={doOffrande}
           essence={essence}
           ascensionReady={ascensionReady}
+          defiAscensionEnCours={defiAscensionEnCours}
           ascensionCount={ascensionCount}
           totalEarned={totalEarned}
           onAscend={doAscension}
@@ -4452,7 +4468,7 @@ function ShopView({
   applyDiscount, onBuyTapPower, onBuyCrit, onBuyCritDamage, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onBuyTapUpgrade,
   griffesCoinBuys = 0, onBuyGriffesWithCoins, owned = [],
   critDamageLevel = 0, tapUpgrades = [], onOffrande,
-  essence, ascensionReady = false, totalEarned, ascensionCount, onAscend,
+  essence, ascensionReady = false, defiAscensionEnCours = false, totalEarned, ascensionCount, onAscend,
 }) {
   // Créatures possédées, en Set : la liste des améliorations est
   // parcourue à chaque rendu, un `find` par ligne serait inutilement
@@ -4533,7 +4549,9 @@ function ShopView({
               <Text style={styles.ascensionBtnSubtext}>
                 {ascensionReady
                   ? `Remet ton économie à zéro · tu gardes créatures et Aventure · +${ascensionGriffesReward(ascensionCount + 1)} Griffes et production x${ascensionSpeedMultiplier(ascensionCount + 1).toFixed(2)}`
-                  : `Gagne encore ${formatNum(ascensionThreshold(ascensionCount) - totalEarned)} pièces au total pour débloquer`}
+                  : !defiAscensionEnCours
+                    ? `🔒 Débloquée par le défi « Fais ta ${ascensionCount + 1}${ascensionCount === 0 ? 're' : 'e'} Ascension » : termine d'abord les défis de tes œufs`
+                    : `Gagne encore ${formatNum(ascensionThreshold(ascensionCount) - totalEarned)} pièces au total pour débloquer`}
               </Text>
             </TouchableOpacity>
 

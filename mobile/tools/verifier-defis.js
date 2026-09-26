@@ -60,6 +60,8 @@ const CONTROLES = [
   ['auditQuetesNiveau', "les quêtes du jour et de la semaine suivent le niveau d'Aventure (versement et affichage)"],
   ['auditApprentissage', "chapitre 1 = apprentissage : chaque 1re créature possible gagne les niveaux 1 à 10 avec les Griffes d'un débutant"],
   ['auditFilet', 'filet de sécurité rapide : aide après 3, 5 et 7 défaites de suite (−20, −40, −60 %)'],
+  ['auditVerrouAventure', "l'Aventure s'arrête à la fin de l'Ascension, sans jamais bloquer un défi (niveaux, 3 étoiles) ; posé aux 3 entrées"],
+  ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],

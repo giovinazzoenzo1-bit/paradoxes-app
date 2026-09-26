@@ -205,6 +205,7 @@ import {
   taillePackGriffes,
 } from '../../games/clicker/clickerLogic';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
+import { niveauMaxAventure } from '../../games/clicker/questLogic';
 import {
   combatStatsForCreatureTyped,
   chapterForLevel,
@@ -555,6 +556,12 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     if (!progressLoaded) return;
     AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite }));
   }, [currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite, progressLoaded]);
+
+  // 26/09 : publie jusqu'où TOUS les niveaux sont à 3 étoiles (garde-fou du
+  // verrou d'Aventure) — aussi au chargement, pour les parties existantes.
+  useEffect(() => {
+    if (progressLoaded) trackMax('troisEtoilesJusquA', prefixeTroisEtoiles(levelStars));
+  }, [progressLoaded]);
 
   // Pendant que l'écran Aventure est ouvert, revérifie la régénération
   // toutes les 30s — permet de VOIR l'énergie remonter en direct sans
@@ -964,6 +971,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         elixirCombats={elixirCombats}
         onElixirUsed={onElixirUsed}
         currentUnlockedLevel={currentUnlockedLevel}
+        // Verrou de fin d'Ascension (26/09) : calculé sur le compteur
+        // d'Ascensions RÉEL — il monte dès l'Ascension faite.
+        niveauMaxAscension={niveauMaxAventure(ascensionCount)}
+        prochaineAscension={(ascensionCount || 0) + 1}
         owned={owned}
         deck={deck}
         griffes={griffes}
@@ -996,6 +1007,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           }
           if (stars === 3 && (levelStarsRef.current[lv] || 0) < 3) {
             trackEvent('threeStarLevel', 1);
+          }
+          if (stars === 3) {
+            const apres = { ...levelStarsRef.current, [lv]: 3 };
+            trackMax('troisEtoilesJusquA', prefixeTroisEtoiles(apres));
           }
         }}
       />
@@ -1910,7 +1925,15 @@ function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir, defaitesDeSuite = {}, onDefaite }) {
+// Plus long préfixe de niveaux 1, 2, 3… tous à 3 étoiles (26/09) : publié
+// pour le garde-fou du verrou d'Aventure (questLogic.plusRienAEtoiler).
+function prefixeTroisEtoiles(etoiles) {
+  let n = 0;
+  while (((etoiles || {})[n + 1] || 0) >= 3) n += 1;
+  return n;
+}
+
+function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity, prochaineAscension = 1, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir, defaitesDeSuite = {}, onDefaite }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -1938,6 +1961,14 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
   const [levelPreview, setLevelPreview] = useState(null); // numéro de niveau ou null
 
   const [activeBattle, setActiveBattle] = useState(null); // { levelNumber } ou null
+  // ⚠️ 26/09 (décision de l'auteur) : l'Aventure s'arrête à la fin de chaque
+  // Ascension. Le plafond vient du compteur d'Ascensions RÉEL : dès
+  // l'Ascension faite il monte, aucun joueur ne reste bloqué. Vérifié aux 3
+  // entrées : la carte, « Niveau suivant », le lancement du combat.
+  const montrerVerrouAscension = () => {
+    const n = prochaineAscension;
+    Alert.alert('🌟 Ascension requise', `Bravo, tu as terminé l'Aventure de cette Ascension !\n\nFais ta ${n}${n === 1 ? 're' : 'e'} Ascension pour débloquer la suite.`);
+  };
   const [elemHelpOpen, setElemHelpOpen] = useState(false);
   // Ouvert AUTOMATIQUEMENT à la toute première visite de la carte : les
   // affinités décident des combats, un joueur qui les découvre après
@@ -2092,7 +2123,12 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
           setActiveBattle(null);
           // « Niveau suivant » : on rouvre directement l'écran de
           // préparation du niveau d'après, sans repasser par la carte.
-          setLevelPreview(outcome === 'win' && goNext ? nextLevel : null);
+          if (outcome === 'win' && goNext && nextLevel > niveauMaxAscension) {
+            setLevelPreview(null);
+            montrerVerrouAscension();
+          } else {
+            setLevelPreview(outcome === 'win' && goNext ? nextLevel : null);
+          }
         }}
       />
     );
@@ -2249,7 +2285,8 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
 
                 {positions.map((pos, i) => {
                   const levelNum = (chapterNum - 1) * LEVELS_PER_CHAPTER + i + 1;
-                  const state = levelNum < currentUnlockedLevel ? 'done' : levelNum === currentUnlockedLevel ? 'current' : 'locked';
+                  const state = levelNum > niveauMaxAscension && levelNum <= currentUnlockedLevel ? 'ascension'
+                    : levelNum < currentUnlockedLevel ? 'done' : levelNum === currentUnlockedLevel ? 'current' : 'locked';
                   return (
                     <TouchableOpacity
                       key={levelNum}
@@ -2260,10 +2297,12 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
                         state === 'current' && styles.levelNodeCurrent,
                         state === 'done' && styles.levelNodeDone,
                       ]}
-                      onPress={() => state !== 'locked' && setLevelPreview(levelNum)}
+                      onPress={() => (state === 'ascension' ? montrerVerrouAscension() : state !== 'locked' && setLevelPreview(levelNum))}
                       disabled={state === 'locked'}
                     >
-                      {state === 'locked' ? (
+                      {state === 'ascension' ? (
+                        <Text style={styles.levelNodeText}>🌟</Text>
+                      ) : state === 'locked' ? (
                         <Ionicons name="lock-closed" size={16} color={COLORS.muted} />
                       ) : state === 'done' ? (
                         <Ionicons name="checkmark" size={20} color="#0a3d24" />
@@ -2325,6 +2364,7 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
             // 1 énergie par TENTATIVE (pas remboursée en cas de défaite,
             // c'est bien "1 vie", pas "1 vie par victoire") — bloque le
             // lancement si le joueur n'en a plus.
+            if (levelPreview > niveauMaxAscension) { setLevelPreview(null); montrerVerrouAscension(); return; }
             if (!onStartBattle()) return;
             setActiveBattle({ levelNumber: levelPreview });
           }}

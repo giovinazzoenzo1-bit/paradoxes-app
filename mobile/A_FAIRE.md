@@ -78,3 +78,6 @@
 - [x] Joueur de référence réaliste : un œuf de retard, pas de packs, runes achetées
 - [x] Murs des équipes faibles : filet RAPIDE (aide après 3, 5, 7 défaites au lieu de 5, 7, 10), décision de l'auteur
 - [ ] Puissance plus juste (type de créature + nombre de créatures)
+- [x] Aventure verrouillée à la fin de chaque Ascension (25, 60, 101, 144, 185, 227), garde-fou 3 étoiles
+- [x] Bouton d'Ascension : seulement quand le défi « Fais ta Ne Ascension » est en cours
+- [ ] Test de l'auteur : partie en cours au niveau 26 → nœud 🌟 et message ; Ascension au bon moment → niveau 26 débloqué

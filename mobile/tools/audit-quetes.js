@@ -3739,3 +3739,68 @@ function auditFilet() {
   return fautes;
 }
 module.exports.auditFilet = auditFilet;
+
+// ---- Verrou de fin d'Ascension dans l'Aventure (26/09, décision de l'auteur) ----
+//
+// L'Aventure s'arrête à la fin de l'Ascension en cours (25, 60, 101…). Exigence
+// de l'auteur : AUCUN joueur ne doit rester bloqué. On vérifie donc : (1) les
+// fins sont LUES dans les défis et égales à celles du simulateur ; (2) aucun
+// défi « Atteins le niveau N » ne dépasse la fin de son Ascension ; (3) le
+// défi « 3 étoiles » ne peut pas rester coincé derrière le verrou ; (4) le
+// verrou est posé aux 3 entrées, sur le compteur d'Ascensions RÉEL ; (5) la
+// mesure « 3 étoiles jusqu'au niveau N » est publiée et lue aux deux endroits.
+function auditVerrouAventure() {
+  const Q = load('questLogic');
+  const D = load('defisEcrits');
+  const P = require('./simulateur-parcours.js');
+  const fs = require('fs'), path = require('path');
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const fautes = [];
+  const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
+  // (1)
+  P.REGLAGES.finsAventure.forEach((fin, a) => doit(Q.niveauMaxAventure(a) === fin, 'Ascension ' + a + ' : fin du jeu ' + Q.niveauMaxAventure(a) + ' ≠ simulateur ' + fin));
+  doit(Q.niveauMaxAventure(D.OEUFS_PAR_GROUPE.length) === Infinity, 'après les Ascensions écrites, un verrou subsiste');
+  // (2) aucun défi « Atteins le niveau N » au-delà de la fin de son Ascension
+  let k = 0;
+  D.OEUFS_PAR_GROUPE.forEach((n, a) => {
+    for (let i = 0; i < n; i++, k++) (D.DEFIS_ECRITS[k] || []).forEach((d) => {
+      if (d.metric === 'advLevelReached' && d.target > Q.niveauMaxAventure(a)) fautes.push({ defi: d.id, cible: d.target, fin: Q.niveauMaxAventure(a), probleme: 'défi impossible : niveau derrière le verrou' });
+    });
+  });
+  // (3) garde-fou « 3 étoiles » : sur un VRAI défi, tout étoilé jusqu'au verrou → réussi
+  const etoile = [].concat(...D.DEFIS_ECRITS).find((d) => d.metric === 'threeStarLevel' && d.mode === 'delta');
+  const base = { threeStarLevel: 5, ascension: 0, troisEtoilesJusquA: 25 };
+  doit(etoile && Q.questProgress(etoile.id, { ...base }, { ...base }) === 1, '« 3 étoiles » peut rester coincé quand tout est déjà étoilé jusqu\'au verrou');
+  doit(etoile && Q.questProgress(etoile.id, { ...base, troisEtoilesJusquA: 10 }, { ...base, troisEtoilesJusquA: 10 }) === 0, 'le garde-fou « 3 étoiles » se déclenche alors qu\'il reste des niveaux à étoiler');
+  // (4) verrou aux 3 entrées, sur le compteur d'Ascensions réel
+  const Av = lire('src/screens/games/AdventureScreen.js');
+  doit(Av.includes('niveauMaxAscension={niveauMaxAventure(ascensionCount)}'), "le plafond n'est pas calculé sur le compteur d'Ascensions réel");
+  doit(Av.includes("const state = levelNum > niveauMaxAscension && levelNum <= currentUnlockedLevel ? 'ascension'"), 'la carte ne montre pas le verrou d\'Ascension');
+  doit(Av.includes('if (outcome === \'win\' && goNext && nextLevel > niveauMaxAscension) {'), '« Niveau suivant » passe le verrou');
+  doit(Av.includes('if (levelPreview > niveauMaxAscension) { setLevelPreview(null); montrerVerrouAscension(); return; }\n            if (!onStartBattle()) return;'), 'le lancement du combat passe le verrou (ou coûte de l\'énergie avant de refuser)');
+  // (5) mesure publiée (chargement + étoiles) et lue dans les DEUX photos de stats
+  doit((Av.match(/trackMax\('troisEtoilesJusquA'/g) || []).length === 2, "la mesure « 3 étoiles jusqu'au niveau N » n'est pas publiée au chargement ET aux étoiles");
+  doit((lire('src/screens/games/ClickerScreen.js').match(/troisEtoilesJusquA: lifetimeStats\.troisEtoilesJusquA \|\| 0,/g) || []).length === 2, "la mesure n'est pas dans les DEUX photos de statistiques des défis");
+  return fautes;
+}
+module.exports.auditVerrouAventure = auditVerrouAventure;
+
+// ---- Le bouton d'Ascension (26/09, décision de l'auteur) ----
+//
+// L'Ascension ne s'achète QUE quand le défi « Fais ta Ne Ascension » est le
+// défi EN COURS et pas encore réussi : faite plus tôt, elle sautait au 1er
+// œuf du groupe suivant et les œufs restants étaient PERDUS ; faite sur un
+// défi déjà réussi (vieille partie décalée), elle sauterait un groupe entier.
+function auditBoutonAscension() {
+  const fs = require('fs'), path = require('path');
+  const C = fs.readFileSync(path.join(__dirname, '..', 'src/screens/games/ClickerScreen.js'), 'utf8');
+  const fautes = [];
+  const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
+  doit(C.includes('const ascensionReady = seuilAscensionAtteint && defiAscensionEnCours;'), "l'Ascension s'achète sans que son défi soit en cours");
+  doit(C.includes('const defiAscensionEnCours = !!currentChallengeId && !currentChallengeReussi\n    && (findQuest(currentChallengeId) || {}).metric === \'ascension\';'), "le défi d'Ascension « en cours » n'exige plus qu'il soit le défi courant NON réussi");
+  doit(/const doAscension = \(\) => \{\n    if \(!ascensionReady\) return;/.test(C), "l'action d'Ascension ne revérifie plus la règle");
+  doit(C.includes('disabled={!ascensionReady}'), "le bouton n'est plus grisé");
+  doit(C.includes('Débloquée par le défi « Fais ta'), "le bouton grisé n'explique plus pourquoi");
+  return fautes;
+}
+module.exports.auditBoutonAscension = auditBoutonAscension;

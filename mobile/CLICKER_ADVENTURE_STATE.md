@@ -712,3 +712,38 @@ toujours. Une équipe faible (Bouldog 20 + Ventis 10) tombe encore sur des
 murs (niveaux 13, 15 : 0 %) que seul le filet (après 5 défaites) fait passer.
 
 **Filet rapide (26/09, décision de l'auteur) :** aide après 3, 5 et 7 défaites de suite (−20, −40, −60 %), au lieu de 5, 7 et 10. La difficulté normale ne change pas (le calibrage mesure sans filet) ; l'anti-triche (90 % de la meilleure équipe) reste. Contrôle `auditFilet`.
+
+
+## 26/09 — Verrou de fin d'Ascension + bouton d'Ascension (décisions de l'auteur)
+
+**Constat (4e test) :** avec 2 créatures, l'auteur passait le niveau 25 puis se
+faisait écraser au 26 (conseillée 87 → 103, Arcanis mythique). Cause : le
+niveau 25 est la FIN de l'Ascension 0 ; dès le 26, l'Aventure est calibrée
+pour des joueurs qui ont fait leur Ascension (6 œufs). Rien ne l'arrêtait ni
+ne l'expliquait.
+
+**1. Verrou d'Aventure.** `niveauMaxAventure(ascensionCount)` (questLogic),
+LU dans les défis par la même règle que le simulateur : 25, 60, 101, 144,
+185, 227, puis aucun verrou. Posé aux 3 entrées de ChapterMapScreen (carte :
+nœud 🌟 + message ; « Niveau suivant » ; lancement du combat, AVANT de
+consommer l'énergie). Calculé sur le compteur d'Ascensions RÉEL (prop
+`ascensionCount` = lifetimeStats.ascension) : il monte dès l'Ascension faite.
+
+**Pièges évités (exigence : aucun joueur bloqué) :**
+- défis « Atteins le niveau N » : tous ≤ la fin de leur Ascension (contrôlé) ;
+- « Gagne N combats » : chaque victoire compte, rejouer inclus → faisable ;
+- « 3 étoiles sur un niveau » ne compte que les NOUVEAUX niveaux à 3 étoiles :
+  si tout est déjà étoilé jusqu'au verrou, il devenait IMPOSSIBLE (œuf et
+  Ascension bloqués). Garde-fou : l'Aventure publie `troisEtoilesJusquA`
+  (préfixe de niveaux à 3 étoiles, trackMax, aussi au chargement) ; si ce
+  préfixe atteint le verrou, le défi se valide (`plusRienAEtoiler`). Mesure
+  ajoutée aux DEUX photos de statistiques des défis.
+
+**2. Bouton d'Ascension.** Achetable seulement si le défi « Fais ta Ne
+Ascension » est le défi EN COURS et pas encore réussi (`defiAscensionEnCours`),
+en plus du seuil de pièces. Cause réelle : une Ascension faite plus tôt saute
+au 1er œuf du groupe suivant — les œufs restants étaient PERDUS ; faite sur un
+défi déjà réussi (partie décalée), elle sauterait un groupe entier. Grisé,
+le bouton explique : « Débloquée par le défi « Fais ta Ne Ascension » ».
+
+Contrôles `auditVerrouAventure` et `auditBoutonAscension` + 4 sabotages.

@@ -1044,6 +1044,11 @@ export function questProgress(questId, stats, baseline = {}, targets = {}) {
   // divergeaient : mesuré, le texte annonçait 15 et ça validait à 10.
   const target = effectiveQuestTarget(questId, stats, targets);
   if (!target) return 0;
+  // ⚠️ 26/09 — GARDE-FOU DU VERROU D'AVENTURE : « 3 étoiles sur un niveau »
+  // ne compte que les NOUVEAUX niveaux à 3 étoiles. Si tous les niveaux
+  // jouables avant le verrou le sont déjà, plus rien ne peut progresser :
+  // défi impossible → œuf impossible → Ascension impossible. Il se valide.
+  if (q.metric === 'threeStarLevel' && q.mode === 'delta' && plusRienAEtoiler(stats)) return 1;
   const m = metriqueDuDefi(q, stats);
   const now = readMetric(m, stats);
   const base = readMetric(m, baseline);
@@ -1721,3 +1726,44 @@ AUTOCLICKERS.forEach((clicker) => {
     label: (t) => `Possède ${fmtQ(t)} ${pluralQ(clicker.name)}`,
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+//  FIN DE L'AVENTURE DE CHAQUE ASCENSION (26/09, décision de l'auteur)
+// ════════════════════════════════════════════════════════════════════
+// L'Aventure s'arrête à la fin de l'Ascension en cours : au-delà, elle est
+// calibrée pour des joueurs qui ont fait l'Ascension suivante (3e test de
+// l'auteur : écrasé au niveau 26 avec 2 créatures, sans explication).
+//
+// ⚠️ LUE DANS LES DÉFIS, jamais recopiée — même règle que le simulateur
+// (`niveauxDesOeufs`) : « Atteins le niveau N » fixe le niveau, « Gagne N
+// combats » avance de N. Le dernier œuf d'une Ascension donne sa fin
+// (25, 60, 101, 144, 185, 227). Au-delà des Ascensions écrites : aucun
+// verrou. Tout défi « Atteins le niveau N » d'une Ascension est donc
+// ≤ sa fin : le verrou ne peut jamais bloquer un défi (auditVerrouAventure).
+let niveauxDesOeufsCache = null;
+export function niveauxAventureDesOeufs() {
+  if (!niveauxDesOeufsCache) {
+    let E = 0;
+    niveauxDesOeufsCache = DEFIS_ECRITS.map((oeuf) => {
+      oeuf.forEach((d) => {
+        if (d.metric === 'battleWon') E += d.target || 0;
+        if (d.metric === 'advLevelReached') E = Math.max(E, d.target || 0);
+      });
+      return E;
+    });
+  }
+  return niveauxDesOeufsCache;
+}
+export function niveauMaxAventure(ascensionCount) {
+  const a = Math.max(0, Math.floor(Number(ascensionCount) || 0));
+  if (a >= OEUFS_PAR_GROUPE.length) return Infinity;
+  const dernierOeuf = OEUFS_PAR_GROUPE.slice(0, a + 1).reduce((x, y) => x + y, 0);
+  return niveauxAventureDesOeufs()[dernierOeuf - 1];
+}
+// Tous les niveaux jouables (jusqu'au verrou) sont-ils déjà à 3 étoiles ?
+// `troisEtoilesJusquA` : plus long préfixe 1, 2, 3… à 3 étoiles, publié par
+// l'Aventure (il ne fait que monter : trackMax).
+export function plusRienAEtoiler(stats) {
+  const s = stats || {};
+  return (s.troisEtoilesJusquA || 0) >= niveauMaxAventure(s.ascension || 0);
+}
