@@ -60,3 +60,8 @@
 - [x] **Morceau B FAIT** : packs contre pièces — prix = part du SEUIL de l'Ascension (10 / 15 / 20 % puis 60 % le 4e, 300 % au-delà : 3 packs ≈ 15 à 70 min de production de fin d'Ascension, le 4e ≈ 20 à 95 min de plus), taille 100 + 75 × Ascension, compteur remis à zéro à chaque Ascension (+ remise à zéro unique des anciennes sauvegardes). `auditPacks` + 3 sabotages.
 - [ ] Ensuite : défis (10 cibles doublées ; « défi suivant = 6 combats »), puis recaler le simulateur sur les chronos réels de l'auteur.
 
+### Défis d'Aventure corrigés (26/09) — FAIT
+- [x] Règle de l'auteur : +5 niveaux par défi d'Aventure, +6 juste après « Gagne 4 combats » ou plus (les victoires font avancer d'autant). 27 cibles sur 28 recalculées ; fin des 10 cibles doublées ; `ajouter-defis.py` ne double plus jamais un niveau ; QUEST_ENGINE_VERSION 63 ; `auditDefisAventure` + sabotage.
+- [x] Conséquence MESURÉE : l'Aventure va jusqu'au niveau 227 (fins d'Ascension 25 / 60 / 101 / 144 / 185 / 227) — le simulateur lit désormais ce rythme DANS LES DÉFIS ; tables recalibrées sur 227 niveaux ; vérifié : 0 bloqué sur 60, ≈ 6 à 7 victoires sur 10, ≈ 13 jours de jeu. En A4-A5, les créatures ont 6 à 13 niveaux de retard (la difficulté en tient compte).
+- [ ] **Bouton « Valider » des défis** (demande de l'auteur) : le panneau du défi devient un bouton vert une fois le défi réussi ; il faut appuyer pour passer au suivant (comme les autres jeux) — le joueur voit aussi s'il avait déjà réussi un défi avant qu'il apparaisse.
+

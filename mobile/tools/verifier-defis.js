@@ -55,6 +55,7 @@ const CONTROLES = [
   ['auditPuissanceConseillee', 'la puissance conseillée est positive et monte avec le niveau'],
   ['auditDefaite', "l'écran de défaite dit vrai (presque, retard) et il est branché ; l'achat de Griffes se ressent"],
   ['auditPacks', 'packs de Griffes contre pièces : 3 par Ascension, prix sur le seuil, taille 100 + 75 par Ascension'],
+  ['auditDefisAventure', "défis d'Aventure : +5 par défi, +6 juste après « Gagne 4 combats » ; aucune cible doublée"],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],

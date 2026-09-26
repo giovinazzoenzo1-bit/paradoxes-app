@@ -885,7 +885,10 @@ export const QUEST_POOL = [
 // ×1,45) ; sa 2e étape de l'A1 passe de 2 à 4 niveaux, sinon son coût
 // retombait de 63 % sous l'achat précédent. Le fichier des défis n'est
 // pas haché : sans ce bump, un œuf en cours gardait l'ancienne cible.
-export const QUEST_ENGINE_VERSION = 62;
+// 63 (26/09) : les 28 défis d'Aventure recalculés — règle de l'auteur (+5 par
+// défi, +6 juste après « Gagne 4 combats » ou plus, les victoires faisant
+// avancer d'autant) ; fin des 10 cibles doublées par ajouter-defis.py.
+export const QUEST_ENGINE_VERSION = 63;
 
 function empreinteDefis() {
   const morceaux = [];

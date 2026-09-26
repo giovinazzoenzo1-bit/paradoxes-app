@@ -3626,3 +3626,26 @@ function auditPacks() {
   return fautes;
 }
 module.exports.auditPacks = auditPacks;
+
+// ---- Les défis d'Aventure suivent la règle de l'auteur (26/09) ----
+//
+// +5 niveaux par défi d'Aventure ; +6 juste après un « Gagne 4 combats » (ou
+// plus) — une barre d'énergie ne suffit pas, il faut une vidéo ou attendre ;
+// les victoires demandées font avancer d'autant. Bug corrigé le 26/09 :
+// ajouter-defis.py avait DOUBLÉ 10 cibles (A1 : 30 → 60 → 120 … A5 → 360),
+// des défis impossibles puisque la cible écrite est un plancher.
+function auditDefisAventure() {
+  const D = load('defisEcrits');
+  const fautes = [];
+  let E = 0, apres = false;
+  D.DEFIS_ECRITS.forEach((oeuf, i) => oeuf.forEach((d) => {
+    if (d.metric === 'battleWon') { E += d.target; if (d.target >= 4) apres = true; }
+    if (d.metric === 'advLevelReached') {
+      const attendu = E + (apres ? 6 : 5);
+      if (d.target !== attendu) fautes.push({ oeuf: i + 1, defi: d.id, cible: d.target, attendu });
+      E = d.target; apres = false;
+    }
+  }));
+  return fautes;
+}
+module.exports.auditDefisAventure = auditDefisAventure;

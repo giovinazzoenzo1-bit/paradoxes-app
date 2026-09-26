@@ -81,6 +81,9 @@ for g in range(6):
         else: m=None
         if m:
             src=dernier[m]; t=int(round(max(src['target'],haut.get(m,0))*2))
+            # ⚠️ 26/09 : JAMAIS de doublement pour un NIVEAU (advLevelReached) —
+            # le doublement a fabriqué 10 défis « chapitre 12 … 36 » (commit e66fd45).
+            if m=='advLevelReached': t=int(max(src['target'],haut.get(m,0)))+5
             if m in LIMITE: t=min(t,LIMITE[m])
             haut[m]=t
             ajouts.append((g,e,'plusB',src,max(1,t))); compte[m]+=1; famc[fam(m)]=famc.get(fam(m),0)+1
@@ -90,6 +93,9 @@ for g in range(6):
         else: m=None
         if m:
             src=dernier[m]; t=int(round(max(src['target'],haut.get(m,0))*2))
+            # ⚠️ 26/09 : JAMAIS de doublement pour un NIVEAU (advLevelReached) —
+            # le doublement a fabriqué 10 défis « chapitre 12 … 36 » (commit e66fd45).
+            if m=='advLevelReached': t=int(max(src['target'],haut.get(m,0)))+5
             if m in LIMITE: t=min(t,LIMITE[m])
             haut[m]=t
             ajouts.append((g,e,'plusC',src,max(1,t))); compte[m]+=1; famc[fam(m)]=famc.get(fam(m),0)+1

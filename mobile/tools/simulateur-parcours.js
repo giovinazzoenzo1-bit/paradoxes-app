@@ -34,10 +34,28 @@ const K = A.load('combatLogic');
 const L = A.load('clickerLogic');
 const C = A.C;
 
+// Le rythme de l'Aventure LU DANS LES DÉFIS (26/09) — une seule source :
+// le niveau d'Aventure attendu à la fin de chaque œuf (les victoires
+// demandées font avancer d'autant, les défis d'Aventure fixent le niveau).
+// ⚠️ MESURÉ : l'ancienne constante (15 / 40 / … / 140) ignorait les
+// victoires ; le vrai rythme va bien plus loin.
+function niveauxDesOeufs() {
+  const D = A.load('defisEcrits');
+  let E = 0;
+  return D.DEFIS_ECRITS.map((oeuf) => { oeuf.forEach((d) => {
+    if (d.metric === 'battleWon') E += d.target;
+    if (d.metric === 'advLevelReached') E = Math.max(E, d.target);
+  }); return E; });
+}
+const NIVEAUX_OEUFS = niveauxDesOeufs();
+const OEUFS_PAR_ASC = A.load('defisEcrits').OEUFS_PAR_GROUPE;
+const FIN_OEUF = OEUFS_PAR_ASC.map((n, a) => OEUFS_PAR_ASC.slice(0, a + 1).reduce((x, y) => x + y, 0));
+
 const REGLAGES = {
   naissance: 0.8,
-  oeufsParAsc: [6, 6, 7, 7, 7, 7],
-  finsAventure: [15, 40, 65, 90, 115, 140],
+  oeufsParAsc: OEUFS_PAR_ASC,
+  niveauxOeufs: NIVEAUX_OEUFS,
+  finsAventure: FIN_OEUF.map((k) => NIVEAUX_OEUFS[k - 1]),
   packsParAsc: 3,
   taillePack: (a) => 100 + 75 * a,
   runesParAsc: 3, // 1 pour le défi + 2 volontaires
@@ -95,8 +113,9 @@ function nouveauJoueur(graine, R = REGLAGES) {
     return { creature: c, stats: { ...st, hp: Math.max(1, Math.round(st.hp * (1 - baisse))), attack: Math.max(1, st.attack * (1 - baisse)) } }; });
   // Avant le niveau l de l'Ascension a : œufs, revenus répartis, runes, montées.
   j.preparer = (l, a) => {
-    const debut = a ? R.finsAventure[a - 1] : 0, fin = R.finsAventure[a], nO = R.oeufsParAsc[a];
-    const vise = R.oeufsParAsc.slice(0, a).reduce((x, y) => x + y, 0) + Math.ceil(nO * (l - debut) / (fin - debut));
+    const debut = a ? R.finsAventure[a - 1] : 0, fin = R.finsAventure[a];
+    // L'œuf k éclôt dès que le niveau exigé par SES défis est franchi.
+    const vise = R.niveauxOeufs.filter((n) => n < l).length;
     while (j.oeufsFaits < vise) { eclore(); j.oeufsFaits++; }
     j.griffes += (R.succesParAsc[a] + R.packsParAsc * R.taillePack(a)) / (fin - debut);
     if (l === debut + 1) j.runes = 0;
@@ -154,7 +173,7 @@ function synthese(joueurs = 60, R = REGLAGES, kDe) {
   }
   return lignes;
 }
-module.exports = { REGLAGES, nouveauJoueur, parcoursJoueur, synthese };
+module.exports = { REGLAGES, nouveauJoueur, parcoursJoueur, synthese, niveauxDesOeufs };
 
 if (require.main === module) {
   const n = Number(process.argv[2]) || 60;
