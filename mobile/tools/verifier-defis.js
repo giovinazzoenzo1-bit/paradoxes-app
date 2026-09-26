@@ -53,6 +53,7 @@ const CONTROLES = [
   ['auditAventureCalibree', "l'Aventure est calibrée : niveau N ≈ créatures niveau N (2 victoires sur 3)"],
   ['auditElixir', "l'Élixir retire 10 % et il est branché de bout en bout (shop, sauvegarde, Aventure, Gardien)"],
   ['auditPuissanceConseillee', 'la puissance conseillée est positive et monte avec le niveau'],
+  ['auditDefaite', "l'écran de défaite dit vrai (presque, retard) et il est branché ; l'achat de Griffes se ressent"],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],

@@ -3555,3 +3555,43 @@ function auditPuissanceConseillee() {
   return fautes;
 }
 module.exports.auditPuissanceConseillee = auditPuissanceConseillee;
+
+// ---- L'écran de défaite dit VRAI, et il est branché (26/09) ----
+//
+// Demande de l'auteur : comprendre pourquoi on perd et voir la solution.
+// « Tu y étais presque ! » seulement si c'est vrai (adversaires sous 20 % de
+// leurs PV) ; « Il te manquait environ X niveaux » calculé sur la vraie
+// puissance du deck. Plus : l'achat de Griffes se RESSENT (point 5).
+function auditDefaite() {
+  const K = load('combatLogic');
+  const fs = require('fs');
+  const lire = (f) => fs.readFileSync(require('path').join(__dirname, '../src/screens/games', f), 'utf8');
+  const fautes = [];
+  const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
+  const adv = (pc) => [{ hp: Math.round(100 * pc), stats: { hp: 100 } }];
+  doit(K.presqueGagne(adv(0.1)) === true, '« presque » absent alors que l\'ennemi finit à 10 % de ses PV');
+  doit(K.presqueGagne(adv(0.5)) === false, '« presque » affiché alors que l\'ennemi a encore 50 % de ses PV (inventé)');
+  doit(K.presqueGagne(adv(0)) === false, '« presque » affiché après une victoire');
+  const n = 20;
+  const deck = K.decksDeReferenceAventure(n)[0].map((c) => ({ creature: c, ownedLevel: n, evolutionTier: K.evoPourNiveau(n) }));
+  const bas = deck.map((m) => ({ ...m, ownedLevel: 10 }));
+  const a = K.niveauxManquants(deck, 40), b = K.niveauxManquants(bas, 40);
+  doit(b > a, 'un deck plus faible ne manque pas de plus de niveaux');
+  doit(K.niveauxManquants(deck.map((m) => ({ ...m, ownedLevel: 60 })), 20) === 0, 'un deck au-dessus de la puissance conseillée « manque » de niveaux');
+  const S = lire('CombatScreen.js'), A = lire('AdventureScreen.js'), Cl = lire('ClickerScreen.js');
+  doit(S.includes("manque={outcome === 'lose' ? niveauxManquants(team, levelNumber) : 0}"), "l'écran de fin ne calcule plus le retard");
+  doit(S.includes("presque={outcome === 'lose' && presqueGagne(opponents)}"), "l'écran de fin ne calcule plus le « presque »");
+  doit(S.includes('Il te manquait environ ${manque} niveau'), "l'écran de défaite n'affiche plus le diagnostic");
+  doit(A.includes('aideDefaite={{'), "le lancement des combats ne transmet plus les solutions de défaite");
+  doit((A.match(/annoncerGriffes\(GRIFFES_(PACK|COIN_PACK)\);/g) || []).length === 2, "un achat de Griffes ne se ressent plus (point 5)");
+  const sig = (src, nom) => src.split('\n').find((x) => new RegExp('^(export default )?function ' + nom + '\\(').test(x)) || '';
+  const passes = (src, comp, prop) => { const out = []; let i = 0; while ((i = src.indexOf('<' + comp + '\n', i)) >= 0) { const j = src.indexOf('/>', i); out.push(src.slice(i, j).includes(prop + '=')); i = j; } return out; };
+  [['CombatScreen', S, 'aideDefaite', [A]], ['AdventureScreen', A, 'onBuyElixir', [Cl]], ['ChapterMapScreen', A, 'onBuyElixir', [A]],
+    ['CombatResultScreen', S, 'aide', [S]], ['CombatResultScreen', S, 'manque', [S]], ['CombatResultScreen', S, 'presque', [S]]]
+    .forEach(([comp, src, prop, users]) => {
+      if (!sig(src, comp).includes(prop)) fautes.push({ probleme: comp + ' ne déclare pas ' + prop });
+      users.forEach((u) => { const p = passes(u, comp, prop); if (!p.length || !p.every(Boolean)) fautes.push({ probleme: 'un appel de ' + comp + ' ne passe pas ' + prop }); });
+    });
+  return fautes;
+}
+module.exports.auditDefaite = auditDefaite;

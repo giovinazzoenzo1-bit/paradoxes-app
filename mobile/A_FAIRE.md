@@ -37,7 +37,7 @@
 ### Monétisation et ressenti de la pression (26/09) — validé par l'auteur
 - [x] **Élixir de faiblesse** (push 1) : shop diamant, 30 💎 (PRIX PROVISOIRE), ennemis −10 % pendant 5 combats, Aventure ET Gardien, appliqué APRÈS le calibrage, sauvegardé, pastille 🧪 dans l'Aventure et badge en combat.
 - [x] **Puissance conseillée** avant chaque combat (push 1), en vert / orange / rouge. ⚠️ Calculée sur les decks de référence ACTUELS (2 rares + 1 épique, ≈ 2 victoires sur 3) : à suivre quand on recalibrera l'Aventure pour le joueur gratuit.
-- [ ] **Push 2** — écran de défaite : « Il te manquait environ X niveaux » (calcul vrai), 3 boutons (monter mes créatures · pack de Griffes 💎 · Élixir 💎 ou +1 énergie contre vidéo), « Tu y étais presque ! » seulement si c'est vrai ; + point 5 : l'achat se ressent tout de suite (message d'effet, puissance +X %).
+- [x] **Push 2 FAIT** — écran de défaite : « Il te manquait environ X niveaux » (calcul vrai), 3 boutons (monter mes créatures · pack de Griffes 💎 · Élixir 💎 ou +1 énergie contre vidéo), « Tu y étais presque ! » seulement si c'est vrai ; + point 5 : l'achat se ressent tout de suite (message d'effet, puissance +X %).
 - [ ] **Push 3** — pack de départ au milieu de l'A1 (Griffes + 1 Élixir, pas cher, une seule fois).
 
 ### Économie des Griffes et Aventure (26/09) — décisions de l'auteur, à reprendre APRÈS les pushs 2-3

@@ -130,7 +130,7 @@ import {
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
-import DiamondShop from './DiamondShop';
+import DiamondShop, { DIAMOND_OFFERS } from './DiamondShop';
 import {
   TAP_BOSS_STORAGE_KEY, TAP_BOSS_TAPS_REQUIRED, TAP_BOSS_TIME_LIMIT_MS,
   diamondsForDuration, nextSpawnGapMs, grantableDiamonds,
@@ -1941,6 +1941,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     return null;
   };
 
+  // Élixir acheté HORS du shop (écran de défaite, 26/09) : même logique que
+  // le shop (buyWithDiamonds), avec confirmation avant de dépenser.
+  const acheterElixir = () => {
+    const offre = DIAMOND_OFFERS.find((o) => o.id === 'elixir');
+    if (!offre) return;
+    Alert.alert('🧪 Élixir de faiblesse', `${offre.desc}\n\nAcheter pour 💎 ${offre.cost} ?`, [
+      { text: 'Annuler', style: 'cancel' },
+      { text: `💎 ${offre.cost}`, onPress: async () => {
+        const msg = await buyWithDiamonds(offre);
+        Alert.alert(msg ? '🧪 Élixir actif' : 'Diamants insuffisants', msg || `Il t'en faut ${offre.cost}.`);
+      } },
+    ]);
+  };
   const startEggIncubation = () => {
     if (incubatingEgg) return;
     setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck));
@@ -3359,6 +3372,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         }}
         griffesCoinBuys={griffesCoinBuys}
         elixirCombats={elixirCombats}
+        onBuyElixir={acheterElixir}
         onElixirUsed={() => setElixirCombats((c) => Math.max(0, c - 1))}
         ascensionCount={ascensionCount}
         onGriffesCoinBought={() => setGriffesCoinBuys((n) => n + 1)}

@@ -713,6 +713,34 @@ export function puissanceConseillee(n) {
   return v[Math.floor(v.length / 2)];
 }
 
+// ---- L'ÉCRAN DE DÉFAITE (26/09, demande de l'auteur) ------------------
+// « Il te manquait environ X niveaux » : combien de niveaux, sur TOUTES les
+// créatures du deck, pour atteindre la puissance conseillée. Un calcul
+// VRAI (sans runes, comme la puissance affichée).
+export function niveauxManquants(membres, niveau) {
+  const cible = puissanceConseillee(niveau);
+  const base = (membres || []).filter((m) => m && m.creature).map((m) => ({ creature: m.creature,
+    ownedLevel: m.ownedLevel || m.level || 1, evolutionTier: m.evolutionTier || 0, equippedRunes: [] }));
+  if (!base.length) return 0;
+  for (let d = 0; d <= 50; d++) {
+    // ⚠️ Les ÉVOLUTIONS comptent (25 et 50), comme dans la puissance
+    // conseillée : sans elles, un deck non évolué ne rattrapait jamais la
+    // référence et l'écran annonçait « 50 niveaux » (trouvé par le contrôle).
+    if (puissanceDeck(base.map((m) => ({ ...m, ownedLevel: m.ownedLevel + d,
+      evolutionTier: Math.max(m.evolutionTier, evoPourNiveau(m.ownedLevel + d)) }))) >= cible) return d;
+  }
+  return 50;
+}
+// « Tu y étais presque ! » : SEULEMENT si c'est vrai — les adversaires
+// finissent sous 20 % de leurs PV totaux. Jamais inventé (confiance des
+// joueurs, règles des stores).
+export const SEUIL_PRESQUE = 0.2;
+export function presqueGagne(adversaires) {
+  const max = (adversaires || []).reduce((s, o) => s + ((o && o.stats && o.stats.hp) || 0), 0);
+  const reste = (adversaires || []).reduce((s, o) => s + Math.max(0, (o && o.hp) || 0), 0);
+  return max > 0 && reste > 0 && reste / max <= SEUIL_PRESQUE;
+}
+
 export function multiplicateurFureur(tour) {
   return tour > EFFETS.fureurTour ? EFFETS.fureurMult : 1;
 }

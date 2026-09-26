@@ -78,6 +78,8 @@ import {
   actionAdversaire,
   cibleDuJoueur,
   appliquerElixir,
+  niveauxManquants,
+  presqueGagne,
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
   guardianStats,
@@ -159,7 +161,7 @@ function messageDeSort(sortId, evenements, allies) {
   return `${s.icone} ${s.nom} !`;
 }
 
-export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null, elixirActif = false }) {
+export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null, elixirActif = false, aideDefaite = null }) {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const opponentTeamCreatures = useRef(opponentOverride || opponentTeamForLevel(levelNumber)).current;
@@ -807,6 +809,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         opponentCount={opponents.length}
         onContinue={() => onFinish(outcome, false, starsForBattle(battleStats, opponents.length))}
         onNextLevel={() => onFinish(outcome, true, starsForBattle(battleStats, opponents.length))}
+        aide={aideDefaite}
+        manque={outcome === 'lose' ? niveauxManquants(team, levelNumber) : 0}
+        presque={outcome === 'lose' && presqueGagne(opponents)}
       />
     );
   }
@@ -1179,7 +1184,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 // (6,7/s), tout en restant imperceptible pour qui veut vraiment appuyer.
 const RESULT_BTN_GUARD_MS = 700;
 
-function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel }) {
+function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false }) {
   const isWin = outcome === 'win';
   const [btnsArmed, setBtnsArmed] = useState(false);
   useEffect(() => {
@@ -1267,7 +1272,42 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
           >
             <Text style={styles.resultBtnText}>Retour à la carte</Text>
           </TouchableOpacity>
-          {!isWin && <Text style={styles.resultSubtitle}>Rien n'est perdu.</Text>}
+          {!isWin && !aide && <Text style={styles.resultSubtitle}>Rien n'est perdu.</Text>}
+          {/* ÉCRAN DE DÉFAITE (demande de l'auteur, 26/09) : comprendre
+              pourquoi, et voir la solution tout de suite. « Presque » et
+              le retard sont des calculs VRAIS (combatLogic). */}
+          {!isWin && aide && (
+            <View style={styles.aideBloc}>
+              {presque && <Text style={styles.aidePresque}>🔥 Tu y étais presque !</Text>}
+              <Text style={styles.aideDiag}>
+                {manque > 0
+                  ? `Il te manquait environ ${manque} niveau${manque > 1 ? 'x' : ''}.`
+                  : 'Ton deck a la puissance conseillée : retente ta chance !'}
+              </Text>
+              <TouchableOpacity
+                style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]}
+                disabled={!btnsArmed}
+                onPress={() => { onContinue(); if (aide.onMonter) aide.onMonter(); }}
+              >
+                <Text style={styles.resultBtnText}>⬆️ Monter mes créatures</Text>
+              </TouchableOpacity>
+              {aide.onPackGriffes && (
+                <TouchableOpacity style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onPackGriffes}>
+                  <Text style={styles.resultBtnText}>🐾 Pack de Griffes · 💎 {aide.coutPack}</Text>
+                </TouchableOpacity>
+              )}
+              {aide.onElixir && (
+                <TouchableOpacity style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onElixir}>
+                  <Text style={styles.resultBtnText}>🧪 Élixir de faiblesse · 💎 {aide.coutElixir}</Text>
+                </TouchableOpacity>
+              )}
+              {aide.onVideoEnergie && aide.adsLeft > 0 && (
+                <TouchableOpacity style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onVideoEnergie}>
+                  <Text style={styles.resultBtnText}>📺 +1 énergie (vidéo)</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
       </View>
       </ScrollView>
@@ -1276,6 +1316,9 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
 }
 
 const styles = StyleSheet.create({
+  aideBloc: { gap: 8, marginTop: 4 },
+  aidePresque: { color: '#FFB74D', fontWeight: '900', fontSize: 14, textAlign: 'center' },
+  aideDiag: { color: '#fff', fontWeight: '700', fontSize: 13, textAlign: 'center' },
   elixirBadge: { position: 'absolute', left: 10, zIndex: 20, backgroundColor: 'rgba(76,29,149,0.85)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   elixirBadgeText: { color: '#fff', fontWeight: '800', fontSize: 12 },
   skillBtnOff: { opacity: 0.35 },

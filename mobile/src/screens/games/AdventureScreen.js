@@ -16,6 +16,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { DIAMOND_OFFERS } from './DiamondShop';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
@@ -350,7 +351,7 @@ function puissanceDuDeckAventure(deck, owned) {
   }
 }
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, freeRuneAvailable = false, onFreeRuneUsed, diamonds = 0, elixirCombats = 0, onElixirUsed }) {
+export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, freeRuneAvailable = false, onFreeRuneUsed, diamonds = 0, elixirCombats = 0, onElixirUsed, onBuyElixir }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
   // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
   // combiné à aspectRatio sur un élément position:'absolute' se rend
@@ -589,9 +590,25 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
       return;
     }
     setGriffes((g) => g + GRIFFES_COIN_PACK);
+    annoncerGriffes(GRIFFES_COIN_PACK);
     if (onGriffesCoinBought) onGriffesCoinBought();
   };
 
+  // Point 5 (26/09) : un achat doit se RESSENTIR tout de suite — on dit ce
+  // que les Griffes permettent, sur la créature du deck la plus basse.
+  const annoncerGriffes = (gain) => {
+    try {
+      const total = griffes + gain;
+      const ids = (deck || []).filter(Boolean);
+      const cible = ids.map((id) => ({ id, own: (owned || []).find((o) => o.id === id), creature: CREATURES.find((c) => c.id === id) }))
+        .filter((x) => x.own && x.creature).sort((a, b) => a.own.level - b.own.level)[0];
+      let n = 0;
+      if (cible) { let reste = total; let lv = cible.own.level; while (n < 99) { const c = levelUpCost(cible.creature, lv); if (c > reste) break; reste -= c; lv++; n++; } }
+      Alert.alert(`🐾 +${gain} Griffes`, cible
+        ? `Tu as ${total} Griffes : de quoi monter ${cible.creature.stages[0].name} de ${n} niveau${n > 1 ? 'x' : ''}.`
+        : `Tu as ${total} Griffes.`);
+    } catch (e) { /* message optionnel : jamais bloquant */ }
+  };
   const buyGriffesWithDiamonds = () => {
     if (!onSpendDiamonds) return;
     Alert.alert(
@@ -612,6 +629,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
             // Crédit DIRECT : on est déjà dans l'écran qui détient les
             // Griffes, pas besoin de passer par la clé en attente.
             setGriffes((g) => g + GRIFFES_PACK);
+            annoncerGriffes(GRIFFES_PACK);
           },
         },
       ]
@@ -906,6 +924,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   if (chapterMapOpen) {
     return (
       <ChapterMapScreen
+        onBuyElixir={onBuyElixir}
         elixirCombats={elixirCombats}
         onElixirUsed={onElixirUsed}
         currentUnlockedLevel={currentUnlockedLevel}
@@ -1855,7 +1874,7 @@ function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
   );
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed }) {
+function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -1996,6 +2015,21 @@ function ChapterMapScreen({ currentUnlockedLevel, owned, deck, griffes, ownedRun
         team={team}
         levelNumber={activeBattle.levelNumber}
         elixirActif={elixirCombats > 0}
+        aideDefaite={{
+          // La créature du deck la plus basse : là où un niveau rapporte le plus.
+          onMonter: onOpenCreature ? () => {
+            const ids = (deck || []).filter(Boolean);
+            const bas = ids.map((id) => ({ id, own: (owned || []).find((o) => o.id === id) })).filter((x) => x.own)
+              .sort((a, b) => a.own.level - b.own.level)[0];
+            if (bas) onOpenCreature(bas.id);
+          } : null,
+          onPackGriffes: onBuyGriffes || null,
+          coutPack: GRIFFES_DIAMOND_COST,
+          onElixir: onBuyElixir || null,
+          coutElixir: (DIAMOND_OFFERS.find((o) => o.id === 'elixir') || {}).cost,
+          onVideoEnergie: onWatchAdForEnergy || null,
+          adsLeft,
+        }}
         onFinish={(outcome, goNext, stars) => {
           // Une charge d'Élixir par combat mené, gagné ou perdu.
           if (elixirCombats > 0 && onElixirUsed) onElixirUsed();
