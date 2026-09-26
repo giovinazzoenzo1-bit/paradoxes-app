@@ -3330,6 +3330,9 @@ function auditSortsMoteur() {
   const fx = (hp, max, etats = {}, mana = 5) => ({ creature: base,
     stats: { ...K.combatStatsForCreatureTyped(base, 10, 0, []), hp: max }, hp, mana, resilienceUsed: false, etats });
   // (1) les chiffres
+  // 26/09 : PV pleins → le MINIMUM (20 % des PV max), jamais 0 (« le bouclier ne marche pas »).
+  const plein = K.lancerSort('bouclier', [fx(100, 100)], 0, [fx(50, 50)], 0);
+  verif(plein.allies[0].etats.bouclier === 20, 'bouclier PV pleins : devrait valoir le minimum de 20 (20 % des PV max), pas ' + (plein.allies[0].etats || {}).bouclier);
   let r = K.lancerSort('bouclier', [fx(10, 100)], 0, [fx(50, 50)], 0);
   verif(r.allies[0].etats.bouclier === 41 && r.allies[0].mana === 5 - K.SORTS.bouclier.cout, 'bouclier : 10 % de PV devraient donner 41 (≈ 40 % des PV max) et coûter son mana');
   r = K.lancerSort('soin', [fx(90, 100), fx(50, 100)], 0, [fx(50, 50)], 0);
@@ -3488,7 +3491,10 @@ function auditParcours() {
   const fautes = [];
   P.synthese(30).forEach((x) => {
     if (x.bloques) fautes.push({ ascension: x.a, probleme: x.bloques + ' joueur(s) gratuit(s) BLOQUÉ(S)' });
-    if (!(x.victoiresSur10 >= 5 && x.victoiresSur10 <= 7.5)) fautes.push({ ascension: x.a, victoiresSur10: +x.victoiresSur10.toFixed(1), attendu: '5 à 7,5' });
+    // Option A (26/09) : calée sur les 10 % les plus malchanceux à 6/10 →
+    // la moyenne monte vers 8/10 (MESURÉ 7,9 à 8,6) ; les malchanceux ≥ 3.
+    if (!(x.victoiresSur10 >= 6.5 && x.victoiresSur10 <= 9.2)) fautes.push({ ascension: x.a, victoiresSur10: +x.victoiresSur10.toFixed(1), attendu: '6,5 à 9,2' });
+    if (x.victoires10eCentile < 3) fautes.push({ ascension: x.a, probleme: 'les 10 % les plus malchanceux gagnent moins de 3 combats sur 10', victoires: +x.victoires10eCentile.toFixed(1) });
     if (x.filet10 > 0.5) fautes.push({ ascension: x.a, probleme: 'le cran −60 % du filet se déclenche trop souvent', parJoueur: +x.filet10.toFixed(2) });
   });
   const ids = (r, n) => C.CREATURES.filter((c) => c.rarity === r).slice(0, n).map((c) => c.id);
@@ -3699,3 +3705,23 @@ function auditQuetesNiveau() {
   return fautes;
 }
 module.exports.auditQuetesNiveau = auditQuetesNiveau;
+
+// ---- Chapitre 1 = apprentissage (26/09) ----
+//
+// Test réel de l'auteur : Caraploof niveau 1 perdait le niveau 1 ; niveau 14,
+// elle perdait le niveau 3 (4 fois sur 5). Chaque 1re créature possible, au
+// niveau qu'un débutant atteint avec ses seules Griffes de victoires, doit
+// gagner les niveaux 1 à 10 (9/10 au niveau 1, 8/10 ensuite ; marge de 10
+// points pour le hasard), avec la table DU JEU.
+function auditApprentissage() {
+  const CP = require('./calibrer-parcours.js'); // chargé ici : évite la boucle de require
+  const K = load('combatLogic');
+  const fautes = [];
+  for (let l = 1; l <= CP.APPRENTISSAGE.niveaux; l++) {
+    const cible = (l === 1 ? CP.APPRENTISSAGE.cibleNiveau1 : CP.APPRENTISSAGE.cible) - 0.1;
+    const r = CP.tauxDebutant(l, K.AVENTURE_MULTIPLICATEURS[l - 1], 100);
+    if (r.pire < cible) fautes.push({ niveau: l, creature: r.qui, victoires: Math.round(r.pire * 100) + ' %', attendu: 'au moins ' + Math.round(cible * 100) + ' %' });
+  }
+  return fautes;
+}
+module.exports.auditApprentissage = auditApprentissage;

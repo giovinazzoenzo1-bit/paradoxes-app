@@ -811,6 +811,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         levelNumber={levelNumber}
         battleStats={battleStats}
         opponentCount={opponents.length}
+        nbCreatures={(team || []).filter(Boolean).length}
         onContinue={() => onFinish(outcome, false, starsForBattle(battleStats, opponents.length))}
         onNextLevel={() => onFinish(outcome, true, starsForBattle(battleStats, opponents.length))}
         aide={aideDefaite}
@@ -1194,7 +1195,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 // (6,7/s), tout en restant imperceptible pour qui veut vraiment appuyer.
 const RESULT_BTN_GUARD_MS = 700;
 
-function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false, premiereVictoire = true }) {
+function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false, premiereVictoire = true, nbCreatures = 3 }) {
   const isWin = outcome === 'win';
   const [btnsArmed, setBtnsArmed] = useState(false);
   useEffect(() => {
@@ -1296,6 +1297,14 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
                   ? `Il te manquait environ ${manque} niveau${manque > 1 ? 'x' : ''}.`
                   : 'Ton deck a la puissance conseillée : retente ta chance !'}
               </Text>
+              {/* 26/09 (test de l'auteur) : une créature seule face à 2 ou 3
+                  ennemis perd presque toujours (MESURÉ : 0 % au niveau 11) —
+                  le calibrage suppose les œufs éclos. On le DIT. */}
+              {nbCreatures > 0 && nbCreatures < opponentCount && (
+                <Text style={styles.aideDiag}>
+                  {`🥚 ${nbCreatures} créature${nbCreatures > 1 ? 's' : ''} contre ${opponentCount} adversaires : fais éclore ton prochain œuf.`}
+                </Text>
+              )}
               <TouchableOpacity
                 style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]}
                 disabled={!btnsArmed}

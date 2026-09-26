@@ -643,3 +643,44 @@ puissance (plus parlante qu'un pourcentage) mais la rendre juste.
 **Piège à retenir :** un simulateur qui suppose une règle du jeu doit la
 LIRE dans le jeu, jamais la recopier. Vérifier dans le code du jeu que
 chaque hypothèse du simulateur existe vraiment.
+
+
+## 26/09 — 2e test réel (nouvelle partie, Caraploof) : le début était injouable
+
+**Le test :** Caraploof (commune, tank) niveau 1 perd le niveau 1 ; montée
+au niveau 14, elle bloque au niveau 3. « À puissance égale je perds à tous
+les coups » ; « le bouclier ne marche pas, aucune icône ».
+
+**Causes réelles :**
+1. **Bouclier** = 45 % des PV DÉJÀ perdus : lancé PV pleins, il valait 0 —
+   mana perdue, aucune icône. Le joueur simulé ne le lançait que blessé, d'où
+   l'écart. Correction : minimum 20 % des PV max (`EFFETS.bouclierMinimum`).
+   Le Soin a la même logique (30 % des PV perdus) mais un soin à PV pleins
+   est normalement inutile.
+2. **Le joueur de référence du calibrage était trop fort au début** : il
+   dépense tout avant chaque combat (≈ niveau 15 au niveau 3) et le 30e rang
+   laissait tomber les malchanceux du 1er œuf. Or les 1res créatures sont très
+   inégales : au niveau 1, Ventis gagnait 2 %, Terracroc 100 %.
+3. **Mesure clé** : le niveau 3 (Voltix, 51 PV) était plus dur que le niveau 5
+   pour Caraploof niveau 14 (31 PV) : ce n'était pas le multiplicateur mais
+   la composition des ennemis face à une créature faible.
+
+**Correction (décision de l'auteur) :**
+- **Option A** : le calibrage vise les 10 % les PLUS malchanceux à 6/10
+  (`CENTILE = 0.10`) → moyenne ≈ 8,2 à 8,9 victoires sur 10, malchanceux
+  3,3 à 6,6, 0 bloqué, filet presque jamais au-delà de −20 %.
+- **Chapitre 1 = apprentissage** (`plafondsApprentissage` dans
+  calibrer-parcours.js) : niveaux 1 à 10 plafonnés pour que CHAQUE 1re
+  créature possible (raretés du 1er œuf lues dans le jeu : commune à rare)
+  gagne avec les Griffes d'un débutant (1res victoires seulement) : 9/10 au
+  niveau 1 avec une créature niveau 1, 8/10 ensuite. Contrôle
+  `auditApprentissage` + sabotage.
+- **Mur voulu au niveau 11** (2 ennemis dont une épique) : une créature
+  seule y perd (MESURÉ 0 %) ; le calibrage suppose les œufs 2 et 3 éclos.
+  L'écran de défaite le DIT : « 🥚 1 créature contre 2 adversaires : fais
+  éclore ton prochain œuf » (prop `nbCreatures`).
+
+**Piège à retenir :** calibrer sur un joueur qui joue parfaitement
+(dépense tout, sorts au bon moment) rend le jeu trop dur pour un humain qui
+découvre. Toujours vérifier le DÉBUTANT : créature neuve, pas encore
+améliorée, première créature la plus faible.

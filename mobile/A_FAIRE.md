@@ -71,3 +71,7 @@
 - [x] Quêtes qui suivent le niveau d'Aventure + recalibrage complet
 - [ ] **Puissance plus juste** : tenir compte du nombre de créatures (une créature seule face à 3 ennemis gagne à 55 % là où 3 créatures de même puissance gagnent à 100 %)
 - [ ] Tests de l'auteur SANS l'énergie du mode développeur (rythme réel)
+- [x] Bouclier : minimum 20 % des PV max (il valait 0 à PV pleins)
+- [x] Option A (10 % les plus malchanceux à 6/10) + chapitre 1 d'apprentissage
+- [x] Écran de défaite : « fais éclore ton prochain œuf » quand on a moins de créatures que d'adversaires
+- [ ] Tests de l'auteur : nouvelle partie, rythme réel, ressenti du chapitre 1 puis de l'entrée du chapitre 2
