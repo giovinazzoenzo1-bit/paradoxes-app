@@ -240,7 +240,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         : statsForOpponentCreatureTyped(creature, levelNumber);
       // Élixir de faiblesse (shop diamant) : APRÈS le calibrage, adversaires
       // et Gardien −10 % — un avantage réel, que le calculateur ne voit pas.
-      // Filet de sécurité (26/09) : après 5 / 7 / 10 défaites de suite sur ce
+      // Filet de sécurité (26/09) : après 3 / 5 / 7 défaites de suite sur ce
       // niveau, ennemis −20 / −40 / −60 % (AdventureScreen compte les défaites).
       const stats0 = filetBaisse > 0 ? appliquerBaisse(statsBase, filetBaisse) : statsBase;
       const stats = elixirActif ? appliquerElixir(stats0) : stats0;

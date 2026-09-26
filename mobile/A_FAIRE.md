@@ -76,5 +76,5 @@
 - [x] Écran de défaite : « fais éclore ton prochain œuf » quand on a moins de créatures que d'adversaires
 - [ ] Tests de l'auteur : nouvelle partie, rythme réel, ressenti du chapitre 1 puis de l'entrée du chapitre 2
 - [x] Joueur de référence réaliste : un œuf de retard, pas de packs, runes achetées
-- [ ] Murs des équipes faibles (combats presque sans hasard) : décision de l'auteur sur le réglage
+- [x] Murs des équipes faibles : filet RAPIDE (aide après 3, 5, 7 défaites au lieu de 5, 7, 10), décision de l'auteur
 - [ ] Puissance plus juste (type de créature + nombre de créatures)

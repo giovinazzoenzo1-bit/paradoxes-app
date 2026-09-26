@@ -59,6 +59,7 @@ const CONTROLES = [
   ['auditValidation', "un défi réussi se VALIDE d'un appui (panneau vert) ; sauvegardé, remis à zéro par œuf, anciennes parties gardées"],
   ['auditQuetesNiveau', "les quêtes du jour et de la semaine suivent le niveau d'Aventure (versement et affichage)"],
   ['auditApprentissage', "chapitre 1 = apprentissage : chaque 1re créature possible gagne les niveaux 1 à 10 avec les Griffes d'un débutant"],
+  ['auditFilet', 'filet de sécurité rapide : aide après 3, 5 et 7 défaites de suite (−20, −40, −60 %)'],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
   ['auditStructureOeufs', 'chaque groupe finit par son Ascension, et la structure lue est la vraie'],

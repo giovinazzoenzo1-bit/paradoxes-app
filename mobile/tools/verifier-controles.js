@@ -209,6 +209,8 @@ const SABOTAGES = [
     remplace("    setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));\n    // 26/09 : la récompense suit le niveau d'Aventure (combatLogic).\n    const griffes = recompenseQuete(def.reward, (lifetimeStatsRef.current || {}).advLevelReached);", "    setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));\n    const griffes = def.reward;")],
   ['auditApprentissage', F.combat, "le niveau 3 redevient 5 fois plus dur (Caraploof perd dès le début)",
     remplace("export const AVENTURE_MULTIPLICATEURS = [\n  0.39, 0.61, 0.62,", "export const AVENTURE_MULTIPLICATEURS = [\n  0.39, 0.61, 3.1,")],
+  ['auditFilet', F.combat, "le filet redevient lent (aide après 5 défaites au lieu de 3)",
+    remplace("  { defaites: 3, baisse: 0.20 },", "  { defaites: 5, baisse: 0.20 },")],
   ['auditExhaustif', F.defis, "un libellé cassé dans un vrai défi (l'outil testait les anciens modèles : vert quand même, 24/09)",
     surDefi((b) => b.metric === 'coins' && b.g === 2 && b.e === 7, (b) => b.replace('label: t => `', 'label: t => `undefined '))],
   ['auditPoigneA0', F.clicker, "Poigne remise à 1 399 : 1/11 du prix du Pacte pour le même +1 (le « cheat » du 21/09)",

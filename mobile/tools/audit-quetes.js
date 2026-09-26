@@ -3725,3 +3725,17 @@ function auditApprentissage() {
   return fautes;
 }
 module.exports.auditApprentissage = auditApprentissage;
+
+// ---- Le filet de sécurité rapide (26/09, décision de l'auteur) ----
+//
+// 3 défaites de suite → −20 %, 5 → −40 %, 7 → −60 % (avant : 5 / 7 / 10).
+// Les combats ont peu de hasard : une équipe un peu faible perd presque
+// toujours ; le filet rapide évite ≈ 2 combats perdus par « mur ».
+function auditFilet() {
+  const K = load('combatLogic');
+  const fautes = [];
+  const voulu = [[0, 0], [2, 0], [3, 0.2], [4, 0.2], [5, 0.4], [6, 0.4], [7, 0.6], [30, 0.6]];
+  for (const [d, b] of voulu) if (K.baisseFilet(d) !== b) fautes.push({ defaites: d, baisse: K.baisseFilet(d), attendu: b });
+  return fautes;
+}
+module.exports.auditFilet = auditFilet;

@@ -710,3 +710,5 @@ l'auteur passe les niveaux 11 à 15 à 99-100 % (niveau 13 : 0 % avant).
 équipe donnée, un niveau se gagne presque toujours ou se perd presque
 toujours. Une équipe faible (Bouldog 20 + Ventis 10) tombe encore sur des
 murs (niveaux 13, 15 : 0 %) que seul le filet (après 5 défaites) fait passer.
+
+**Filet rapide (26/09, décision de l'auteur) :** aide après 3, 5 et 7 défaites de suite (−20, −40, −60 %), au lieu de 5, 7 et 10. La difficulté normale ne change pas (le calibrage mesure sans filet) ; l'anti-triche (90 % de la meilleure équipe) reste. Contrôle `auditFilet`.

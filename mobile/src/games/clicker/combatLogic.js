@@ -754,12 +754,15 @@ export function presqueGagne(adversaires) {
 
 // ---- LE FILET DE SÉCURITÉ (26/09, décision de l'auteur) ----------------
 // Défaites DE SUITE sur un même niveau, avec ses meilleures créatures :
-// 5 → ennemis −20 %, 7 → −40 %, 10 → −60 %. Ce niveau seulement, remis à
+// 3 → ennemis −20 %, 5 → −40 %, 7 → −60 %. Ce niveau seulement, remis à
 // zéro par la victoire. Garantit que PERSONNE ne reste bloqué.
+// ⚠️ 26/09 (3e test de l'auteur) : filet RAPIDE (avant : 5 / 7 / 10). Les
+// combats ont peu de hasard : une équipe un peu faible perd presque
+// toujours ; MESURÉ : ≈ 2 combats de moins par « mur » (8 → 6, 6,9 → 4,9).
 export const FILET_SECURITE = [
-  { defaites: 10, baisse: 0.60 },
-  { defaites: 7, baisse: 0.40 },
-  { defaites: 5, baisse: 0.20 },
+  { defaites: 7, baisse: 0.60 },
+  { defaites: 5, baisse: 0.40 },
+  { defaites: 3, baisse: 0.20 },
 ];
 export function baisseFilet(defaitesDeSuite) {
   const f = FILET_SECURITE.find((x) => (defaitesDeSuite || 0) >= x.defaites);
