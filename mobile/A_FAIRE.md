@@ -28,3 +28,8 @@
 - [x] 21/09 — Gardien : se cale sur les 3 meilleures créatures au début de chaque œuf (gagne ~1 fois sur 3, mesuré 17-39 %), attaques de zone 1 fois sur 4, puissance affichée avant le combat et dans l'Aventure ; œuf 2 inchangé. Fait le 24/09.
 - [x] 21/09 — Pouvoirs par le deck : appui = la créature apparaît autour de l'œuf, 2e appui = pouvoir, appui long = changer de créature ; recharge par rareté (commune 1 min … mythique 4 min 30) ; compte à rebours sur l'œuf ; plus de bulle. Fait le 24/09.
 - [x] 21/09 — Griffes : succès ÷10 (15/40/100/250/600 : l'A0 donnait 7 150 Griffes ≈ 360 combats, désormais 715), hebdos ÷4 (≈ 1 200/semaine, 43 % du revenu du combat), quotidiens inchangés ; contrôle `auditGriffesBonus`. Fait le 24/09.
+
+### Décisions de l'auteur (24/09, après le calibrage de l'Aventure)
+- [x] **Gardien : on n'y touche pas** — il reste calé sur le deck du joueur (photo à chaque œuf). Pas de plafond : « le système ajoute des défis de niveau de créature automatiquement ».
+- [ ] **Élixir de faiblesse** (à acheter dans le SHOP DIAMANT) : ennemis −10 % pendant 5 combats, affiché avec un compteur. S'applique APRÈS le calibrage (Aventure ET Gardien). ⚠️ Plafond −10 % : MESURÉ, −20 % = 100 % de victoires et efface 4 niveaux de retard (12 % -> 88 %).
+- [ ] **Monétisation (plus tard)** : jamais d'avantage caché lié au montant payé ; packs de Griffes + consommables affichés. Prérequis : build native (EAS) + comptes développeur (Expo Go ne permet pas d'encaisser).
