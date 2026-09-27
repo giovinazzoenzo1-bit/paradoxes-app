@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, ImageBackground, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Image, ImageBackground, TouchableOpacity, StyleSheet, Animated, Easing, Vibration } from 'react-native';
 
 // ════════════════════════════════════════════════════════════════════
 //  FENÊTRES DU THÈME FORÊT (27/09, images Gemini de l'auteur)
@@ -64,6 +64,114 @@ export function FenetreBois({ titre, children, largeur = 310, onFermer = null })
           <Image source={FERMER} resizeMode="contain" style={{ width: 42, height: 42 }} />
         </TouchableOpacity>
       ) : null}
+    </View>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  EFFETS (27/09, demandes de l'auteur)
+// ════════════════════════════════════════════════════════════════════
+// Couleur des champignons fluo du fond (mesurée sur assets/menu/fond.jpg).
+export const CYAN_CHAMPIGNON = '#62faeb';
+
+// Petite vibration de réussite (achat, récompense). ⚠️ Vibration de React
+// Native, comme le coup critique : sur iPhone la durée est fixe (≈ 0,4 s) —
+// une vibration courte sur iPhone demandera expo-haptics (voir A_FAIRE).
+export function vibrerSucces(actif) {
+  if (actif) Vibration.vibrate(25);
+}
+
+// Lueur d'un pouvoir PRÊT : halo rond cyan (disques empilés en dégradé) qui
+// respire + 4 étoiles qui scintillent chacune à son tour. UNE animation (pilote
+// natif), transparente au toucher PAR LE STYLE (règle SDK 57).
+const LUEUR_DISQUES = Array.from({ length: 9 }, (_, i) => 1 - i * 0.09);
+// Phases réparties et fenêtres de ±0,11 : il y a presque toujours une étoile
+// allumée (avec ±0,08, des creux sans aucune étoile).
+const LUEUR_ETOILES = [0.15, 0.39, 0.63, 0.86].map((phase, i) => ({ phase, angle: (i * Math.PI) / 2 + Math.PI / 4 }));
+export function LueurPouvoir({ taille, style = null }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const boucle = Animated.loop(Animated.timing(t, { toValue: 1, duration: 1600, easing: Easing.linear, useNativeDriver: true }));
+    boucle.start();
+    return () => boucle.stop();
+  }, []);
+  return (
+    <View style={[{ position: 'absolute', width: taille, height: taille, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }, style]}>
+      <Animated.View style={{
+        position: 'absolute', width: taille, height: taille, alignItems: 'center', justifyContent: 'center',
+        opacity: t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.7, 1, 0.7] }),
+        transform: [{ scale: t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.93, 1.07, 0.93] }) }],
+      }}>
+        {LUEUR_DISQUES.map((f, i) => (
+          <View key={i} style={{ position: 'absolute', width: Math.round(taille * f), height: Math.round(taille * f), borderRadius: Math.round(taille * f / 2), backgroundColor: CYAN_CHAMPIGNON, opacity: 0.09 }} />
+        ))}
+      </Animated.View>
+      {/* Étoiles DESSINÉES (2 barres croisées + point) : le caractère « ✦ »
+          n'existe pas dans toutes les polices (invisible au banc). */}
+      {LUEUR_ETOILES.map((e, i) => {
+        const et = Math.max(12, Math.round(taille * 0.28));
+        return (
+          <Animated.View key={i} style={{
+            position: 'absolute', width: et, height: et, alignItems: 'center', justifyContent: 'center',
+            // En « + » (pas tourné) : tournée de 45°, elle ressemblait à une
+            // croix de fermeture « × ».
+            transform: [{ translateX: Math.round(Math.cos(e.angle) * taille * 0.42) }, { translateY: Math.round(Math.sin(e.angle) * taille * 0.42) }],
+            // PALIER allumé (±0,04) + rampes : mesuré au banc, une pointe
+            // brève ne dépassait pas 0,45 d'opacité — trop discret.
+            opacity: t.interpolate({ inputRange: [0, e.phase - 0.12, e.phase - 0.06, e.phase + 0.06, e.phase + 0.12, 1], outputRange: [0, 0, 1, 1, 0, 0] }),
+          }}>
+            <View style={[styles.etoileHalo, { width: Math.round(et * 0.8), height: Math.round(et * 0.8), borderRadius: Math.round(et * 0.4) }]} />
+            <View style={[styles.etoileBarre, { width: 3, height: et }]} />
+            <View style={[styles.etoileBarre, { width: et, height: 3 }]} />
+            <View style={styles.etoileCoeur} />
+          </Animated.View>
+        );
+      })}
+    </View>
+  );
+}
+
+// Effet de validation (achat, quête, jour du calendrier) : éclat doré au
+// centre (flash, onde, étincelles) et le gain qui monte. Remplace les
+// fenêtres blanches de confirmation. Transparent au toucher PAR LE STYLE.
+const EFFET_ETINCELLES = Array.from({ length: 12 }, (_, i) => ({ angle: (i / 12) * Math.PI * 2, portee: 70 + (i % 3) * 22 }));
+export function EffetRecompense({ texte, sousTexte = null }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const a = Animated.timing(t, { toValue: 1, duration: 1300, easing: Easing.out(Easing.quad), useNativeDriver: true });
+    a.start();
+    return () => a.stop();
+  }, []);
+  return (
+    <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 60 }]}>
+      <Animated.View style={[styles.effetFlash, {
+        opacity: t.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0.9, 0, 0] }),
+        transform: [{ scale: t.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0.3, 1.4, 1.4] }) }],
+      }]} />
+      <Animated.View style={[styles.effetOnde, {
+        opacity: t.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.95, 0.3, 0] }),
+        transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.3, 2.6] }) }],
+      }]} />
+      {EFFET_ETINCELLES.map((e, i) => (
+        <Animated.View key={i} style={[styles.effetEtincelle, {
+          backgroundColor: i % 2 ? '#fff3b0' : '#f7cf57',
+          opacity: t.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 0.8, 0] }),
+          transform: [
+            { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(e.angle) * e.portee] }) },
+            { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(e.angle) * e.portee] }) },
+            { scale: t.interpolate({ inputRange: [0, 1], outputRange: [1.2, 0.3] }) },
+          ],
+        }]} />
+      ))}
+      <Animated.View style={{ alignItems: 'center',
+        opacity: t.interpolate({ inputRange: [0, 0.8, 1], outputRange: [1, 1, 0] }),
+        transform: [
+          { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [0, -70] }) },
+          { scale: t.interpolate({ inputRange: [0, 0.15, 0.3, 1], outputRange: [0.5, 1.2, 1, 1] }) },
+        ] }}>
+        <Text style={styles.effetTexte}>{texte}</Text>
+        {sousTexte ? <Text style={styles.effetSous}>{sousTexte}</Text> : null}
+      </Animated.View>
     </View>
   );
 }
@@ -217,6 +325,14 @@ const styles = StyleSheet.create({
   titreZone: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   titre: { color: '#fff7d6', fontSize: 20, fontWeight: '900', includeFontPadding: false, textAlignVertical: 'center', textShadowColor: 'rgba(15,40,10,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
   bouton: { alignSelf: 'center', marginTop: 8 },
+  etoileHalo: { position: 'absolute', backgroundColor: CYAN_CHAMPIGNON, opacity: 0.8 },
+  etoileBarre: { position: 'absolute', borderRadius: 1.5, backgroundColor: '#f4fffd' },
+  etoileCoeur: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#ffffff' },
+  effetFlash: { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,226,140,0.85)' },
+  effetOnde: { position: 'absolute', width: 110, height: 110, borderRadius: 55, borderWidth: 5, borderColor: '#f7cf57' },
+  effetEtincelle: { position: 'absolute', width: 10, height: 10, borderRadius: 5 },
+  effetTexte: { color: '#ffe38a', fontSize: 30, fontWeight: '900', textAlign: 'center', textShadowColor: 'rgba(40,20,0,0.95)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 2 } },
+  effetSous: { color: '#fff7e0', fontSize: 14, fontWeight: '800', textAlign: 'center', marginTop: 2, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4 },
   interTexte: { position: 'absolute', top: 8, color: '#ffe6a8', fontSize: 9, fontWeight: '900', includeFontPadding: false },
   reglageTitre: { color: '#fff7e0', fontSize: 15, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 3 },
   reglageDetail: { color: '#e6d6b0', fontSize: 10.5, marginTop: 2, includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 2 },

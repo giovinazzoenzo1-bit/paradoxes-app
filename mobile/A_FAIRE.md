@@ -94,3 +94,5 @@
 - [ ] **Combats : les créatures ENNEMIES regardent vers la gauche** (vers le joueur) — retourner leur image (`transform: [{ scaleX: -1 }]`), comme la créature qui attaque l'œuf du côté droit au menu (`lancerAttaque`).
 - [ ] **Œufs : dernier stade en 2 calques** (l'œuf seul + ses éclats séparés, pour les animer indépendamment ; éclats qui explosent à l'éclosion). Reporté : Gemini comprend mal la consigne. Dossier et prompts prêts : `design/a-integrer/04-oeufs-incubateur/`.
 - [x] **Boutique : icône des Griffes** (reçue et intégrée le 27/09) (prompt 39, `02-boutique/PROMPTS-PIECES.md`) — tuile provisoire 🐾 en attendant ; l'ajouter à `ICONES` dans DiamondShop.js.
+- [ ] **Sons** (demande de l'auteur, 27/09) : achat, récompense, jour du calendrier, et plus tard le reste.
+- [ ] **Vibration courte sur iPhone** : la Vibration de React Native dure ≈ 0,4 s sur iOS (durée fixe). Il faudra `expo-haptics` (vérifier la version compatible SDK 57 ET que la publication passe, les logs du robot n'étant pas visibles).

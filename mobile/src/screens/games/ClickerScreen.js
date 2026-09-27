@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Easing, View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
-import { FenetreBois, BoutonBois, BoutonLarge, largeurInterieureFenetre, COURONNE, CRISTAL, SABLIER } from './fenetreBois';
+import { FenetreBois, BoutonBois, BoutonLarge, largeurInterieureFenetre, COURONNE, CRISTAL, SABLIER, LueurPouvoir, EffetRecompense, vibrerSucces } from './fenetreBois';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen, { DEV_REFILL_ENERGY_KEY } from './AdventureScreen';
@@ -2480,8 +2480,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (!got) return;
     if (got.type === 'appCoins') spawnPopup(`+${got.amount} 💎`, 110, 60);
     else if (got.type === 'griffes') spawnPopup(`+${got.amount} 🐾`, 110, 60);
-    else if (got.type === 'creature') Alert.alert('🥚 Créature Rare !', "Elle t'attend dans ta Collection.");
-    else if (got.type === 'skin') Alert.alert('🎨 Bon pour un skin', "Le système de skins arrive bientôt — ton bon est conservé.");
+    // 27/09 : plus de fenêtre blanche (créature, skin) — l'effet doré du
+    // calendrier l'annonce.
   };
 
   const doOffrande = () => {
@@ -4049,6 +4049,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           currentDay={calendarDay}
           alreadyClaimedToday={streakClaimedDate === today}
           onClaim={handleClaimCalendar}
+          vibrations={vibrations}
           onClose={() => setCalendarOpen(false)}
         />
       )}
@@ -4399,8 +4400,25 @@ const CAL_ICONES = {
   creature: require('../../../assets/calendrier/icone-oeuf.png'),
   skin: require('../../../assets/calendrier/icone-palette.png'),
 };
-function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim, onClose }) {
+function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim, onClose, vibrations = true }) {
+  // ⚠️ Hook AVANT l'arrêt anticipé (ordre des hooks constant d'un rendu à
+  // l'autre, sinon React plante).
+  const [effet, setEffet] = useState(null);
   if (!Array.isArray(calendar) || calendar.length === 0) return null;
+  // 27/09 (demande de l'auteur) : vibration + effet doré à la place des
+  // fenêtres blanches.
+  const reclamer = () => {
+    const d = calendar.find((x) => x.day === currentDay);
+    vibrerSucces(vibrations);
+    if (d) {
+      const special = d.type === 'creature' || d.type === 'skin';
+      const sous = d.type === 'creature' ? "Elle t'attend dans ta Collection" : d.type === 'skin' ? 'Les skins arrivent bientôt' : null;
+      const id = Date.now();
+      setEffet({ id, texte: special ? `${d.label} !` : `+${d.label}`, sousTexte: sous });
+      setTimeout(() => setEffet((e) => (e && e.id === id ? null : e)), 1400);
+    }
+    onClaim();
+  };
   const ready = !alreadyClaimedToday;
   const claimedCount = (currentDay - 1) + (ready ? 0 : 1);
 
@@ -4415,7 +4433,7 @@ function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim
       <TouchableOpacity
         key={d.day}
         style={{ width: l, height: h, alignItems: 'center', justifyContent: 'center' }}
-        onPress={claimable ? onClaim : undefined}
+        onPress={claimable ? reclamer : undefined}
         disabled={!claimable}
         activeOpacity={claimable ? 0.7 : 1}
       >
@@ -4452,9 +4470,10 @@ function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim
         </View>
 
         {ready && (
-          <BoutonLarge couleur="vert" largeur={CAL_INT} hauteur={50} texte={`RÉCUPÉRER LE JOUR ${currentDay}`} onPress={onClaim} />
+          <BoutonLarge couleur="vert" largeur={CAL_INT} hauteur={50} texte={`RÉCUPÉRER LE JOUR ${currentDay}`} onPress={reclamer} />
         )}
       </FenetreBois>
+      {effet && <EffetRecompense key={effet.id} texte={effet.texte} sousTexte={effet.sousTexte} />}
     </View>
   );
 }
@@ -4509,6 +4528,9 @@ function DeckRow({ deck, owned, onSlotPress, onSlotLongPress, recharges }) {
             onLongPress={() => (onSlotLongPress ? onSlotLongPress(i) : onSlotPress(i))}
             delayLongPress={350}
           >
+            {/* 27/09 (demande de l'auteur) : pouvoir PRÊT → lueur cyan des
+                champignons qui scintille DERRIÈRE la créature. */}
+            {creature && recharges && pouvoirPret(recharges, id, maintenant) ? <LueurPouvoir taille={66} style={{ left: -10, top: -10 }} /> : null}
             {display ? (
               <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={46} emojiStyle={styles.deckSlotEmoji} />
             ) : (
@@ -5059,6 +5081,8 @@ function SpawnedCreatureBubble({ spawned, onClaim }) {
           { borderColor: color, transform: [...drift.getTranslateTransform(), { scale: pulse }] },
         ]}
       >
+        {/* 27/09 : même lueur de pouvoir prêt quand la créature se balade. */}
+        <LueurPouvoir taille={86} style={{ left: -11, top: -11 }} />
         <CreatureArt
           creatureId={spawned.creature.id}
           stageIndex={0}

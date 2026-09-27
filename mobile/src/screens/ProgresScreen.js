@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image, Dimensions } from 'react-native';
-import { GrandPanneau, BoutonLarge, largeurInterieure } from './games/fenetreBois';
+import { GrandPanneau, BoutonLarge, largeurInterieure, EffetRecompense, vibrerSucces } from './games/fenetreBois';
+import { useSettings } from '../context/SettingsContext';
 
 // 27/09 : Quêtes du thème forêt (pièces Gemini 45-51 de l'auteur, kit partagé
 // fenetreBois). Tailles en NOMBRES (règle du 27/09).
@@ -60,6 +61,8 @@ export default function ProgresScreen({ onBack }) {
   // RÉELLE à ton niveau d'Aventure (la même règle que le versement).
   const niveauAventure = (lifetimeStats || {}).advLevelReached || 1;
   const [tab, setTab] = useState('daily');
+  const [effet, setEffet] = useState(null);
+  const { vibrations } = useSettings();
   const [busyId, setBusyId] = useState(null); // évite un double-tap pendant l'écriture AsyncStorage
 
   // Un seul gestionnaire pour les 3 types : seule la fonction de
@@ -70,7 +73,12 @@ export default function ProgresScreen({ onBack }) {
     const reward = await claimFn(id);
     setBusyId(null);
     if (reward) {
-      Alert.alert('Récompense !', `+${reward} 🐾 Griffes — récupère-les en ouvrant le mode Exploration.`);
+      // 27/09 (demande de l'auteur) : plus de fenêtre blanche — petite
+      // vibration + effet doré (la note du bas rappelle l'Exploration).
+      vibrerSucces(vibrations);
+      const idEffet = Date.now();
+      setEffet({ id: idEffet, texte: `+${reward} Griffes`, sousTexte: 'À récupérer en Exploration' });
+      setTimeout(() => setEffet((e) => (e && e.id === idEffet ? null : e)), 1400);
     }
   };
 
@@ -237,6 +245,7 @@ export default function ProgresScreen({ onBack }) {
             : renderAchievements()}
         </ScrollView>
       </GrandPanneau>
+      {effet && <EffetRecompense key={effet.id} texte={effet.texte} sousTexte={effet.sousTexte} />}
     </View>
   );
 }

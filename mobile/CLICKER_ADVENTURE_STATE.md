@@ -1099,3 +1099,24 @@ Scène `scenes/calendrier.jsx` (?scene=calendrier / calendrier-pris).
   bannière (sinon la queue du ruban passait par-dessus).
 - ⚠️ Piège évité : un commentaire `//` posé dans du JSX s'afficherait comme du
   TEXTE à l'écran — toujours `{/* … */}` dans le JSX.
+
+
+## 27/09 — Effets de validation + lueur du pouvoir prêt
+
+- **Validation** (Boutique : achat ; Quêtes : récupérer ; Calendrier : jour) :
+  `vibrerSucces(vibrations)` (Vibration de React Native, comme le coup
+  critique, seulement si le réglage Vibrations est activé) + `EffetRecompense`
+  (éclat doré au centre, gain qui monte). **Plus de fenêtres blanches de
+  réussite** (« Acheté ! », « Récompense ! », « Créature Rare ! », « Bon pour
+  un skin ») ; la fenêtre d'ERREUR « Aucun œuf en incubation » reste.
+  Calendrier : hook d'état déclaré AVANT l'arrêt anticipé (ordre des hooks).
+- **Lueur du pouvoir prêt** (`LueurPouvoir`) : halo rond cyan des champignons
+  (`#62faeb`, mesuré sur le fond) qui respire + 4 étoiles « + » qui
+  s'allument à tour de rôle. Dans la case du deck (pouvoir prêt) et derrière
+  la créature qui se balade autour de l'œuf.
+  Mesuré au banc (sonde d'opacité) : 1re version trop discrète (pointe à
+  0,45) → palier allumé, étoiles plus grandes, halo cyan ; en « + » (tournées
+  de 45°, elles ressemblaient à une croix de fermeture). Le caractère « ✦ »
+  était soupçonné à tort : l'animation tournait, c'était le contraste.
+- ⚠️ Piège : `cut -c` sur une sortie accentuée peut couper un caractère en deux
+  (sortie illisible) — lire avec Python.

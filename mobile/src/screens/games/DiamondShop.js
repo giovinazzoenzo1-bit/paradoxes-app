@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image, Dimensions } from 'react-native';
 import { COLORS } from './clickerTheme';
-import { GrandPanneau, largeurInterieure, CRISTAL } from './fenetreBois';
+import { GrandPanneau, largeurInterieure, CRISTAL, EffetRecompense, vibrerSucces } from './fenetreBois';
+import { useSettings } from '../../context/SettingsContext';
 
 // 27/09 : Boutique du thème forêt (pièces Gemini 37-44 de l'auteur, kit
 // partagé fenetreBois). Tailles en NOMBRES (règle du 27/09).
@@ -77,6 +78,8 @@ export const DIAMOND_OFFERS = [
 
 export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg }) {
   const [busy, setBusy] = useState(null);
+  const [effet, setEffet] = useState(null);
+  const { vibrations } = useSettings();
 
   const handleBuy = async (offer) => {
     if (busy || diamonds < offer.cost) return;
@@ -89,7 +92,14 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg }) 
     setBusy(offer.id);
     const label = await onBuy(offer);
     setBusy(null);
-    if (label) Alert.alert('Acheté !', label);
+    // 27/09 (demande de l'auteur) : plus de fenêtre blanche « Acheté ! » —
+    // petite vibration + effet doré avec ce qui a été acheté.
+    if (label) {
+      vibrerSucces(vibrations);
+      const id = Date.now();
+      setEffet({ id, texte: 'Acheté !', sousTexte: label });
+      setTimeout(() => setEffet((e) => (e && e.id === id ? null : e)), 1400);
+    }
   };
 
   return (
@@ -150,6 +160,7 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg }) 
           </Text>
         </ScrollView>
       </GrandPanneau>
+      {effet && <EffetRecompense key={effet.id} texte={effet.texte} sousTexte={effet.sousTexte} />}
     </View>
   );
 }
