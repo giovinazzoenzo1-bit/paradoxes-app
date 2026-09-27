@@ -10,7 +10,7 @@ import {
   TAP_UPGRADE_UNLOCK_LEVEL, TAP_UPGRADE_FIRST_PACTE_LEVEL,
 } from '../../games/clicker/clickerLogic';
 import { useSettings } from '../../context/SettingsContext';
-import { TOILE_L, TOILE_H, ZOOM_MIN, ZOOM_MAX, ZOOM_DEPART, ZOOM_TEXTE_REF, CENTRE, POS, CHAINE_TAP, CHAINE_AUTO, TITRES, ETIQUETTE, COMPENSATION_MAX } from '../../games/clicker/arbreDisposition';
+import { TOILE_L, TOILE_H, ZOOM_MIN, ZOOM_MAX, ZOOM_DEPART, ZOOM_TEXTE_REF, ZOOM_COMPENSATION_MIN, CENTRE, POS, CHAINE_TAP, CHAINE_AUTO, TITRES, ETIQUETTE, COMPENSATION_MAX } from '../../games/clicker/arbreDisposition';
 import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge, FenetreBois, BanniereTitre, largeurInterieureFenetre, CRISTAL, GrandPanneau, largeurInterieure } from './fenetreBois';
 import BackButton from '../../components/BackButton';
 
@@ -375,7 +375,9 @@ function PastillePrix({ texte, ok, largeur = 86, hauteur = 30, onPress }) {
 function ArbreBoutique(props) {
   const { vibrations } = useSettings();
   const [echelle, setEchelle] = useState(ZOOM_DEPART);
-  const compense = Math.max(1, Math.min(COMPENSATION_MAX, ZOOM_TEXTE_REF / echelle));
+  // Compensation plafonnée à ZOOM_COMPENSATION_MIN : plus bas, tout rétrécit
+  // ensemble (vue d'ensemble du dézoom « à fond »).
+  const compense = Math.max(1, Math.min(COMPENSATION_MAX, ZOOM_TEXTE_REF / Math.max(echelle, ZOOM_COMPENSATION_MIN)));
   const [ficheId, setFicheId] = useState(null);
   const [reliques, setReliques] = useState(false);
   const formatNum = props.formatNum || ((n) => String(Math.round(n)));

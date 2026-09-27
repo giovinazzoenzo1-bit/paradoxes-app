@@ -27,7 +27,13 @@
 
 export const TOILE_L = 1712;
 export const TOILE_H = 2401;
-export const ZOOM_MIN = 0.5;     // vue d'ensemble
+// Dézoom « à fond » (demande de l'auteur) : l'arbre entier tient dans l'écran
+// (390 / 1712 ≈ 0,23 en largeur ; marge pour un arbre plus large).
+export const ZOOM_MIN = 0.18;
+// La compensation des textes S'ARRÊTE ici : en dessous, tout rétrécit
+// ensemble (vue d'ensemble) — aucun nouveau chevauchement possible, l'audit
+// reste valable (il teste la compensation maximale, atteinte à ce zoom).
+export const ZOOM_COMPENSATION_MIN = 0.5;
 export const ZOOM_MAX = 3;       // « encore plus zoomer » (retour de l'auteur)
 // À l'ouverture : tout le cœur de l'arbre visible — vérifié au banc.
 export const ZOOM_DEPART = 0.6;
@@ -38,7 +44,7 @@ export const ZOOM_TEXTE_REF = 0.78;
 
 // Étiquettes : nom (1-2 lignes) + ligne de GAIN + pastille de prix ; textes
 // compensés au zoom, de ×1 (à ZOOM_TEXTE_REF et au-delà) à
-// ×ZOOM_TEXTE_REF / ZOOM_MIN (dézoomé au maximum).
+// ×ZOOM_TEXTE_REF / ZOOM_COMPENSATION_MIN (plafond de la compensation).
 export const ETIQUETTE = { largeur: 160, police: 12.5, interligne: 15, gainPolice: 10.5, gainInterligne: 13, pastilleH: 26, marge: 4, titrePolice: 17 };
 export const COMPENSATION_MAX = 1.8;
 

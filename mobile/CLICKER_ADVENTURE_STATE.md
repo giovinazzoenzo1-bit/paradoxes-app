@@ -1265,3 +1265,15 @@ lieu de 4215 de haut), 0 collision. Reliques / Passif sur les côtés
   Pacte) se périmait à chaque disposition — la suite l'a signalé « aveugle ».
 - Verrou : `garde.sh forcer` utilisé après avoir VÉRIFIÉ que les 2 fichiers
   signalés étaient mes propres modifications (scène de banc + lien du banc).
+
+**Dézoom « à fond » (27/09)** : ZOOM_MIN 0,18 (l'arbre entier tient dans
+l'écran) ; la compensation des textes s'ARRÊTE à ZOOM_COMPENSATION_MIN 0,5
+(en dessous, tout rétrécit ensemble : aucun nouveau chevauchement, l'audit
+teste toujours la compensation maximale).
+
+⚠️ **Ordre des auto-clics** (constat du 27/09, rien modifié) : l'arbre (comme
+l'ancienne boutique) les trie par PRIX DE BASE, mais le prix RÉEL inclut une
+surprime « avant l'heure » (palier 3) : à l'Ascension 0, Héraut d'Orage
+(2,0e9) passe avant Golem de Cristal (3,1e8), Colosse de Pierre (5,4e9) avant
+Gardien Céleste (5,1e9). Proposé à l'auteur : trier par prix réel à
+l'Ascension courante (stable pendant une Ascension).

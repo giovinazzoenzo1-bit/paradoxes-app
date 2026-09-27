@@ -3975,7 +3975,7 @@ function auditArbreSansChevauchement() {
     const x = Math.max(a[1], Math.min(b[1], a[3])); const y = Math.max(a[2], Math.min(b[2], a[4]));
     return Math.hypot(x - b[1], y - b[2]) < b[3] + m;
   };
-  const cmax = Math.min(D.COMPENSATION_MAX, D.ZOOM_TEXTE_REF / D.ZOOM_MIN);
+  const cmax = Math.min(D.COMPENSATION_MAX, D.ZOOM_TEXTE_REF / D.ZOOM_COMPENSATION_MIN);
   for (const c of [1, cmax]) {
     const T = titres(c);
     for (let i = 0; i < N.length; i++) {
