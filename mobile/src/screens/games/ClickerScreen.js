@@ -5372,7 +5372,10 @@ const CHALLENGE_GEM_X_PCT = [21.5, 32.6, 43.7, 54.8, 65.9, 77.0];
 function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel, reussi = false, onValider = null }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
   const ratio = target > 0 ? Math.min(1, current / target) : 0;
-  const filled = Math.floor(ratio * segments);
+  // ⚠️ 27/09 (retour de l'auteur) : remplir sur les 6 segments AFFICHÉS — calculé
+  // sur `segments` (= la cible si < 6), « Achète 4 niveaux » à 4/4 ne dorait
+  // que 4 segments sur 6.
+  const filled = Math.floor(ratio * CHALLENGE_GEM_X_PCT.length);
 
   // ⚠️ BUG DU 26/09 (« le bouton Valider ne marche pas ») : le panneau est
   // en POSITION ABSOLUE ; enveloppé tel quel dans un bouton, le bouton
@@ -5676,7 +5679,8 @@ const styles = StyleSheet.create({
 
   coinsPill: {
     position: 'absolute', left: SCREEN_W * 0.303, top: SCREEN_H * (0.096 - TOP_BLOCK_SHIFT) - 32, zIndex: 3,
-    width: 165, aspectRatio: 480 / 208,
+    // 27/09 : réduite (165 → 140), demande de l'auteur.
+    width: 140, aspectRatio: 480 / 208,
     alignItems: 'center', justifyContent: 'center',
   },
   // Zone de texte dans l'espace vide à droite du sac peint (mesuré sur
