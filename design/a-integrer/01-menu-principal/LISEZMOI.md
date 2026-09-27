@@ -20,4 +20,4 @@ Ne pas modifier : c'est la référence de départ.
 
 ## Prompts Gemini
 
-À venir : écrits par Claude quand on attaque cette section.
+Prêts : voir `PROMPTS.md` (19 éléments, dans l'ordre de dépôt).
