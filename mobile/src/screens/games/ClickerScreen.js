@@ -4083,7 +4083,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         </View>
       )}
 
-      {bossResult && (
+      {bossResult && !resultatGardien && !rewardCreature && (
         <View style={styles.detailOverlay}>
           {/* 27/09 : fenêtre du thème forêt (demande de l'auteur). */}
           <FenetreBois titre={bossResult.failed ? 'Le boss s\'échappe !' : 'Boss vaincu !'}>
@@ -4149,7 +4149,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           l'écran d'accueil (l'onglet Quêtes n'existe plus), donc cet
           overlay est remonté au niveau de l'écran entier — sinon la
           récompense serait invisible au moment exact où elle tombe. */}
-      {rewardCreature && (
+      {/* 27/09 (retour de l'auteur) : UNE fenêtre à la fois — la créature
+          n'apparaît qu'après la fermeture de « Gardien vaincu ! ». */}
+      {rewardCreature && !resultatGardien && (
         <View style={styles.detailOverlay}>
           {/* 27/09 (demande de l'auteur) : la créature EN GRAND au milieu de
               la fenêtre du thème forêt. */}

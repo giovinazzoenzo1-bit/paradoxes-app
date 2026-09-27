@@ -113,9 +113,13 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                 </Text>
               </View>
 
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: `${pct}%` }, ready && { backgroundColor: COLORS.good }]} />
-                <Text style={styles.barLabel}>{pct} %</Text>
+              {/* 27/09 (retour de l'auteur) : le pourcentage, puis une petite
+                  barre de chargement dessous. Largeurs en NOMBRES : la barre
+                  à « 100 % » d'un bloc sans largeur fixe se réduisait, sur
+                  téléphone, à une pastille ronde autour du texte. */}
+              <Text style={[styles.pctTexte, ready && styles.pctTexteFini]}>{pct} %</Text>
+              <View style={styles.miniBarre}>
+                <View style={[styles.miniBarreRemplie, { width: Math.round((MINI_BARRE_L - 2) * pct / 100) }, ready && styles.miniBarreFinie]} />
               </View>
 
               {ready ? (
@@ -172,7 +176,13 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
   );
 }
 
+const MINI_BARRE_L = 170;
 const styles = StyleSheet.create({
+  pctTexte: { color: '#ffe6a8', fontSize: 14, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 3 },
+  pctTexteFini: { color: COLORS.good },
+  miniBarre: { width: MINI_BARRE_L, height: 9, borderRadius: 5, backgroundColor: 'rgba(20,12,6,0.9)', borderWidth: 1, borderColor: '#9a7440', overflow: 'hidden', marginTop: 4, marginBottom: 12 },
+  miniBarreRemplie: { height: 7, borderRadius: 4, backgroundColor: '#f2c14e' },
+  miniBarreFinie: { backgroundColor: COLORS.good },
   // 27/09 : sablier à côté du temps restant (thème forêt).
   timerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   timerSablier: { width: 22, height: 34 },

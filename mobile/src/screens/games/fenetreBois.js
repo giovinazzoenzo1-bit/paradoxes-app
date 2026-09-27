@@ -49,7 +49,9 @@ export function FenetreBois({ titre, children, largeur = 310, onFermer = null })
       ) : null}
       {/* Dessinée APRÈS le panneau : elle passe par-dessus son bord. */}
       <ImageBackground source={BANNIERE} resizeMode="contain" style={[styles.banniere, { width: lBanniere, height: hBanniere }]}>
-        <View style={styles.titreZone}>
+        {/* Zone du titre en NOMBRES (pas en %) : sur téléphone, le titre de
+            l'incubateur tombait trop bas (retour de l'auteur, 27/09). */}
+        <View style={[styles.titreZone, { left: Math.round(lBanniere * 0.17), width: Math.round(lBanniere * 0.66), top: Math.round(hBanniere * 0.36), height: Math.round(hBanniere * 0.44) }]}>
           <Text style={styles.titre} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{titre}</Text>
         </View>
       </ImageBackground>
@@ -92,8 +94,8 @@ export function BoutonBois({ texte, sousTexte = null, couleur = 'vert', onPress,
 
 const styles = StyleSheet.create({
   banniere: { position: 'absolute', top: 0, alignSelf: 'center' },
-  titreZone: { position: 'absolute', left: '17%', right: '17%', top: '36%', bottom: '20%', alignItems: 'center', justifyContent: 'center' },
-  titre: { color: '#fff7d6', fontSize: 20, fontWeight: '900', textShadowColor: 'rgba(15,40,10,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
+  titreZone: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  titre: { color: '#fff7d6', fontSize: 20, fontWeight: '900', includeFontPadding: false, textAlignVertical: 'center', textShadowColor: 'rgba(15,40,10,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
   bouton: { alignSelf: 'center', marginTop: 8 },
   fermer: { position: 'absolute', right: 12, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(40,24,12,0.92)', borderWidth: 1.5, borderColor: '#d9a441', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   fermerTexte: { color: '#ffe6a8', fontSize: 15, fontWeight: '900' },

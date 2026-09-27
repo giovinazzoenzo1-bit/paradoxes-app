@@ -1003,3 +1003,23 @@ sur la cible) ; case des pièces 140.
   pas après la 1re ligne d'un import sur plusieurs lignes (le compilateur
   l'attrape, mais ça coûte un aller-retour).
 Scène de banc `scenes/fenetres2.jsx` (créature, incubateur en cours, prêt).
+
+**2e retour de l'auteur sur les fenêtres (27/09)** :
+- **Fenêtres superposées** (« Gardien vaincu ! » par-dessus « Nouvelle
+  créature ! ») → UNE à la fois : la créature attend la fermeture du Gardien,
+  le mini boss attend les deux.
+- **Pastille ronde « 12 % » dans l'incubateur** — cause réelle : barre à
+  `width: '100%'` d'un bloc SANS largeur fixe (centré par le panneau) ; sur
+  téléphone, le calcul tourne en rond et la barre se réduit à son texte (le
+  navigateur, lui, la dessinait). → pourcentage + petite barre de largeur en
+  NOMBRES (`MINI_BARRE_L`).
+- **Vert sur les côtés du bouton rouge** — cause réelle : la recoloration ne
+  prenait que le RECTANGLE central de l'émail ; ses bouts arrondis restaient
+  verts. → recoloration de l'émail d'UN SEUL TENANT (plus grande zone verte
+  connexe, trous bouchés) ; les feuilles, morceaux séparés, restent vertes.
+- **Titre « Incubateur » trop bas** → zone du titre en NOMBRES et
+  `includeFontPadding: false` (marge de police d'Android).
+- ⚠️ **RÈGLE (3 bugs du même genre ce jour)** : dans ces fenêtres, tailles et
+  positions en NOMBRES — pas de % sur un ImageBackground, ni de `width: '100%'`
+  dans un bloc sans largeur fixe. Le banc (navigateur) ne reproduit PAS ces
+  écarts : seul le téléphone les montre.
