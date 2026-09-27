@@ -50,8 +50,9 @@ export function FenetreBois({ titre, children, largeur = 310, onFermer = null })
       {/* Dessinée APRÈS le panneau : elle passe par-dessus son bord. */}
       <ImageBackground source={BANNIERE} resizeMode="contain" style={[styles.banniere, { width: lBanniere, height: hBanniere }]}>
         {/* Zone du titre en NOMBRES (pas en %) : sur téléphone, le titre de
-            l'incubateur tombait trop bas (retour de l'auteur, 27/09). */}
-        <View style={[styles.titreZone, { left: Math.round(lBanniere * 0.17), width: Math.round(lBanniere * 0.66), top: Math.round(hBanniere * 0.36), height: Math.round(hBanniere * 0.44) }]}>
+            l'incubateur tombait trop bas (retour de l'auteur, 27/09) ; puis
+            remontée d'≈ 14 points (2e retour : « de quelques millimètres »). */}
+        <View style={[styles.titreZone, { left: Math.round(lBanniere * 0.17), width: Math.round(lBanniere * 0.66), top: Math.round(hBanniere * 0.24), height: Math.round(hBanniere * 0.42) }]}>
           <Text style={styles.titre} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{titre}</Text>
         </View>
       </ImageBackground>
@@ -65,8 +66,23 @@ export function FenetreBois({ titre, children, largeur = 310, onFermer = null })
 // marge sur son conteneur — une marge en % sur l'ImageBackground réduisait,
 // SUR TÉLÉPHONE, l'image à ≈ 66 % du bouton, calée à gauche (le texte
 // débordait, on voyait le décor derrière) ; le navigateur, lui, l'étirait.
+// Largeur « visuelle » d'un texte en caractères : émojis et symboles comptent
+// plus large qu'une lettre.
+function longueurVisible(t) {
+  return Array.from(t || '').reduce((n, c) => n + (c.codePointAt(0) > 0x2000 ? 1.4 : 1), 0);
+}
 export function BoutonBois({ texte, sousTexte = null, couleur = 'vert', onPress, largeur = 250, hauteur = null, icone = null, desactive = false, children = null }) {
   const h = hauteur || Math.round(largeur / RATIO_BOUTON);
+  // ⚠️ 27/09 (retour de l'auteur : « écritures trop grosses ») : la taille du
+  // texte est CALCULÉE pour tenir sur l'émail (≈ 66 % de la largeur) —
+  // adjustsFontSizeToFit ne réduit rien sur son téléphone Android.
+  const lIcone = icone ? Math.round(h * 0.42) + 6 : 0;
+  const tailleTexte = Math.max(10, Math.min(15, Math.floor((largeur * 0.66 - lIcone) / (0.62 * Math.max(1, longueurVisible(texte))))));
+  // Sous-texte : sur UNE ligne s'il reste lisible (≥ 9), sinon sur DEUX si le
+  // bouton est assez haut — plutôt qu'écrire en 7, illisible.
+  const sous1 = sousTexte ? Math.floor((largeur * 0.66) / (0.56 * Math.max(1, longueurVisible(sousTexte)))) : 0;
+  const lignesSous = sousTexte && sous1 < 9 && h >= 58 ? 2 : 1;
+  const tailleSous = sousTexte ? Math.max(7, Math.min(10, lignesSous === 2 ? Math.min(9, sous1 * 2) : sous1)) : 0;
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -80,10 +96,10 @@ export function BoutonBois({ texte, sousTexte = null, couleur = 'vert', onPress,
           <>
             <View style={styles.boutonLigne}>
               {icone ? <Image source={icone} style={{ width: Math.round(h * 0.42), height: Math.round(h * 0.42), marginRight: 6 }} resizeMode="contain" /> : null}
-              <Text style={styles.boutonTexte} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{texte}</Text>
+              <Text style={[styles.boutonTexte, { fontSize: tailleTexte }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{texte}</Text>
             </View>
             {sousTexte ? (
-              <Text style={styles.boutonSous} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{sousTexte}</Text>
+              <Text style={[styles.boutonSous, { fontSize: tailleSous, lineHeight: tailleSous + 2, textAlign: 'center' }]} numberOfLines={lignesSous} adjustsFontSizeToFit minimumFontScale={0.6}>{sousTexte}</Text>
             ) : null}
           </>
         )}
@@ -100,6 +116,6 @@ const styles = StyleSheet.create({
   fermer: { position: 'absolute', right: 12, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(40,24,12,0.92)', borderWidth: 1.5, borderColor: '#d9a441', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   fermerTexte: { color: '#ffe6a8', fontSize: 15, fontWeight: '900' },
   boutonLigne: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  boutonTexte: { color: '#fff', fontSize: 15, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.75)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
-  boutonSous: { color: 'rgba(255,255,255,0.92)', fontSize: 10, fontWeight: '800', marginTop: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 2 },
+  boutonTexte: { color: '#fff', fontSize: 15, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.75)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
+  boutonSous: { color: 'rgba(255,255,255,0.92)', fontSize: 10, fontWeight: '800', marginTop: 1, includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 2 },
 });

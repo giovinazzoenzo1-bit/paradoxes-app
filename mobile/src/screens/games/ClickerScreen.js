@@ -3964,7 +3964,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 guardianRetryRemainingMs(mainEgg, nowTick) > 0 ? (
                   // Après une défaite : l'œuf n'est PAS perdu, seule une
                   // attente sépare le joueur d'un nouvel essai.
-                  <BoutonBois couleur="rouge" desactive largeur={Math.round(SCREEN_W * 0.8)} hauteur={58} texte="⚔️ Nouvel essai contre le Gardien" sousTexte={`dans ${formatRemaining(guardianRetryRemainingMs(mainEgg, nowTick))}`} />
+                  <BoutonBois couleur="rouge" desactive largeur={Math.round(SCREEN_W * 0.8)} hauteur={58} texte="⚔️ Nouvel essai" sousTexte={`dans ${formatRemaining(guardianRetryRemainingMs(mainEgg, nowTick))}`} />
                 ) : guardianRequired(owned.length) ? (
                   <BoutonBois couleur="rouge" largeur={Math.round(SCREEN_W * 0.8)} hauteur={64} texte="⚔️ Affronter le gardien" sousTexte={ligneGardien(mainEgg, 'main') || "Bats-le pour faire éclore l'œuf"} onPress={() => resolveHatch('main')} />
                 ) : (
@@ -3977,7 +3977,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   proposer alors ne mènerait nulle part. On y accède par
                   le bouton animé de la colonne de gauche. */}
               {!incubatingEgg && eggPhase === 'hatching' && (
-                <BoutonBois couleur="bleu" largeur={Math.round(SCREEN_W * 0.66)} hauteur={50} icone={SABLIER} texte="Mettre en incubation" sousTexte={formatRemaining(incubationDurationMs(owned.length))} onPress={startEggIncubation} />
+                <BoutonBois couleur="bleu" largeur={Math.round(SCREEN_W * 0.74)} hauteur={52} icone={SABLIER} texte="Mettre en incubation" sousTexte={formatRemaining(incubationDurationMs(owned.length))} onPress={startEggIncubation} />
               )}
               {comboCount > 1 ? (
                 <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>

@@ -22,7 +22,8 @@ createRoot(document.getElementById('root')).render(
       <BoutonBois texte="Voir ma créature" onPress={rien} />
     </FenetreBois>
     <BoutonBois couleur="rouge" largeur={312} hauteur={64} texte="⚔️ Affronter le gardien" sousTexte="Gardien 24 · Ton deck 22 — améliore tes créatures" onPress={rien} />
-    <BoutonBois couleur="bleu" largeur={257} hauteur={50} icone={SABLIER} texte="Mettre en incubation" sousTexte="34 min 36" onPress={rien} />
+    <BoutonBois couleur="bleu" largeur={289} hauteur={52} icone={SABLIER} texte="Mettre en incubation" sousTexte="34 min 36" onPress={rien} />
+    <BoutonBois couleur="rouge" desactive largeur={312} hauteur={58} texte="⚔️ Nouvel essai" sousTexte="dans 9 min 12" />
     <BoutonBois couleur="vert" largeur={273} hauteur={56} texte="🐣 Faire éclore l'œuf" onPress={rien} />
   </View>,
 );

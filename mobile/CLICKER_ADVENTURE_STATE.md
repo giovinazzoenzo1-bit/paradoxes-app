@@ -1023,3 +1023,11 @@ Scène de banc `scenes/fenetres2.jsx` (créature, incubateur en cours, prêt).
   positions en NOMBRES — pas de % sur un ImageBackground, ni de `width: '100%'`
   dans un bloc sans largeur fixe. Le banc (navigateur) ne reproduit PAS ces
   écarts : seul le téléphone les montre.
+
+**3e retour (27/09)** : titres des bannières remontés d'≈ 14 points (zone
+`hBanniere × 0.24`, hauteur `× 0.42`) ; **taille du texte des boutons
+CALCULÉE** (`BoutonBois` : largeur de l'émail ≈ 66 % ÷ longueur visible du
+texte, émojis comptés ×1,4 ; 10 à 15 pour le texte, sous-texte sur 2 lignes
+s'il tomberait sous 9) — `adjustsFontSizeToFit` ne réduit rien sur le
+téléphone Android de l'auteur. « Nouvel essai » raccourci, bouton
+d'incubation élargi (74 % de l'écran).
