@@ -87,3 +87,5 @@
 - [x] Écran de défaite sur la MÊME mesure exacte (cohérent, minimal) ; contrôle de puissance étendu aux 227 niveaux
 - [ ] Test de l'auteur au rythme réel : noter l'heure de chaque éclosion (rythme œufs / Aventure)
 - [ ] Fluidité sur téléphone : calcul de puissance (≤ ~1 s au pire) et diagnostic de défaite (≈ 0,3 s dans node)
+- [x] Menu principal redessiné (19 images Gemini) — à valider par l'auteur sur téléphone (lueur de la caisse : teinte à vérifier)
+- [ ] Sections de design suivantes (voir design/a-integrer/PLAN.md)

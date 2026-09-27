@@ -3421,7 +3421,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   if (!loaded) {
     return (
-      <ImageBackground source={require('../../../assets/icons/home-background.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
+      <ImageBackground source={require('../../../assets/menu/fond.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
         <Text style={styles.loadingText}>Chargement…</Text>
       </ImageBackground>
     );
@@ -3505,7 +3505,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }
 
   return (
-    <ImageBackground source={require('../../../assets/icons/home-background.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
+    <ImageBackground source={require('../../../assets/menu/fond.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
       <View style={styles.headerRow}>
         {/* Case "Élevage" retirée complètement, sur demande explicite —
             il ne reste que le bouton retour, sans fond. Contextuel :
@@ -3526,7 +3526,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           surcouche. Même raison pour le bouton Quêtes plus bas. */}
       {view === 'tap' && onOpenOptions && (
         <TouchableOpacity style={styles.optionsBtn} onPress={onOpenOptions}>
-          <Text style={styles.optionsBtnIcon}>⚙️</Text>
+          <Image source={require('../../../assets/menu/bouton-parametres.png')} style={styles.optionsBtnImage} resizeMode="contain" />
         </TouchableOpacity>
       )}
 
@@ -3536,11 +3536,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               de la pilule de pièces pour que les deux restent
               solidaires si le bloc du haut est redéplacé. */}
           <TouchableOpacity style={styles.diamondPill} onPress={() => setDiamondShopOpen(true)}>
-            <Text style={styles.diamondPillText}>💎 {formatNum(sharedCoins)}</Text>
+            <ImageBackground source={require('../../../assets/menu/compteur-diamants.png')} style={styles.diamondPillImage} resizeMode="contain">
+              <View style={styles.diamondPillTextWrap}>
+                <Text style={styles.diamondPillText} numberOfLines={1}>{formatNum(sharedCoins)}</Text>
+              </View>
+            </ImageBackground>
           </TouchableOpacity>
 
           <ImageBackground
-            source={require('../../../assets/icons/coins-pill.png')}
+            source={require('../../../assets/menu/compteur-pieces.png')}
             style={styles.coinsPill}
             resizeMode="stretch"
           >
@@ -3701,6 +3705,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 d'espaceur, chaque bloc est indépendant et ne peut plus
                 dériver de l'autre. */}
             <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
+              {/* 27/09 : la lueur rouge était PEINTE dans l'ancienne image ; elle
+                  est désormais faite par le jeu, et seulement quand la
+                  récompense du jour est à prendre (comme la pastille). */}
+              {streakClaimedDate !== today && (
+                <Animated.Image
+                  source={require('../../../assets/icons/glow-gold.png')}
+                  style={[styles.calBtnGlow, { transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.12] }) }] }]}
+                  resizeMode="contain"
+                  pointerEvents="none"
+                />
+              )}
               {/* Icône unique, qui respire légèrement (scale) — plus de
                   duplicata derrière (créait un effet fantôme, 2 cadeaux
                   superposés, signalé par l'utilisateur). */}
@@ -3710,7 +3725,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   { transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] },
                 ]}
               >
-                <Image source={require('../../../assets/icons/gift.png')} style={styles.calBtnImage} resizeMode="cover" />
+                <Image source={require('../../../assets/menu/caisse-cadeau.png')} style={styles.calBtnImage} resizeMode="contain" />
               </Animated.View>
               {streakClaimedDate !== today && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
@@ -3723,7 +3738,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 point rouge du cadeau. */}
             {onOpenQuests && (
               <TouchableOpacity style={styles.questsBtn} onPress={onOpenQuests}>
-                <Text style={styles.questsBtnIcon}>📜</Text>
+                <Image source={require('../../../assets/menu/parchemin.png')} style={styles.leftBtnImage} resizeMode="contain" />
                 {hasClaimableQuest && <View style={styles.calBtnDot} />}
               </TouchableOpacity>
             )}
@@ -3744,13 +3759,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   },
                 ]}
               >
-                <Text style={styles.incubatorBtnIcon}>🥚</Text>
+                <Image source={require('../../../assets/menu/petit-nid.png')} style={styles.leftBtnImage} resizeMode="contain" />
               </Animated.View>
               {incubatingEgg && incubatorIsReady(incubatingEgg) && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
 
             <ImageBackground
-              source={require('../../../assets/icons/deck-frame.png')}
+              source={require('../../../assets/menu/cadre-deck.png')}
               style={styles.deckFrame}
               resizeMode="stretch"
             >
@@ -3758,6 +3773,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             </ImageBackground>
 
             <View style={styles.tapZone}>
+              {/* 27/09 : le nid de la maquette, DERRIÈRE l'œuf (dessiné avant). */}
+              <Image source={require('../../../assets/menu/grand-nid.png')} style={styles.eggNest} resizeMode="contain" pointerEvents="none" />
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapTouch}>
                   <Animated.View
                     style={[
@@ -4419,7 +4436,9 @@ const DECK_FRAME_W_PX = SCREEN_W * 0.55;
 const DECK_SLOT_DIAMETER_PX = 38;
 const DECK_SLOT_GAP_PX = 19; // ~3mm
 const DECK_SLOT_CENTER_GAP_PCT = ((DECK_SLOT_DIAMETER_PX + DECK_SLOT_GAP_PX) / DECK_FRAME_W_PX) * 100;
-const DECK_SLOT_X_PCT = [50 - DECK_SLOT_CENTER_GAP_PCT, 50, 50 + DECK_SLOT_CENTER_GAP_PCT];
+// 27/09 : centres des 3 cases de pierre MESURÉS sur le nouveau cadre
+// (assets/menu/cadre-deck.png, regroupement des pixels de pierre grise).
+const DECK_SLOT_X_PCT = [22.2, 49.4, 76.4];
 
 // « 1:05 » à partir d'une durée en millisecondes.
 function minSec(ms) {
@@ -5126,7 +5145,7 @@ const CHALLENGE_MAX_SEGMENTS = 6;
 // du cercle/gemmes, "Défi X sur Y" dans la zone vide en dessous) —
 // signalé par l'utilisateur, correspond aussi à l'emplacement exact de
 // la maquette Gemini d'origine.
-const CHALLENGE_CARD_ASPECT_RATIO = 900 / 295;
+const CHALLENGE_CARD_ASPECT_RATIO = 1050 / 371; // assets/menu/panneau-defi.png (27/09)
 // Re-mesuré (05/09) directement sur une capture réelle de l'appli,
 // carte défi + cristaux visibles ensemble — les anciennes valeurs
 // (mesurées sur challenge-bar.png isolé, avant intégration) étaient
@@ -5134,7 +5153,9 @@ const CHALLENGE_CARD_ASPECT_RATIO = 900 / 295;
 // pile sur l'emplacement visuel de la gemme 2, signalé "cristal
 // manquant sur la 1ère case" alors que le vrai souci était un décalage
 // de positions, pas un bug de logique de remplissage.
-const CHALLENGE_GEM_X_PCT = [20.6, 33.0, 44.8, 57.2, 69.1, 80.9];
+// 27/09 : 6 segments posés DANS la rainure du nouveau panneau (42-70 % de sa
+// hauteur), entre le médaillon et le compteur.
+const CHALLENGE_GEM_X_PCT = [21.5, 32.6, 43.7, 54.8, 65.9, 77.0];
 
 function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel, reussi = false, onValider = null }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
@@ -5150,7 +5171,7 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
   const cliquable = !!(reussi && onValider);
   const carte = (
     <ImageBackground
-      source={require('../../../assets/icons/challenge-bar.png')}
+      source={require('../../../assets/menu/panneau-defi.png')}
       style={cliquable ? styles.challengeCardDedans : styles.challengeCard}
       resizeMode="stretch"
     >
@@ -5166,7 +5187,7 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
 
       {/* Icône du défi, centrée sur le cercle peint dans l'image. */}
       <View style={styles.challengeIconZone}>
-        <Text style={styles.challengeIconText}>{icon}</Text>
+        <Image source={require('../../../assets/menu/medaillon-etoile.png')} style={styles.challengeMedaillon} resizeMode="contain" />
       </View>
 
       {/* Cristal lumineux par gemme REMPLIE (asset réel, remplace
@@ -5176,16 +5197,14 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
           remplacé : signalé que la 1ère case ne recevait jamais son
           cristal, cette forme élimine tout doute sur les clés React).
           Les gemmes non remplies restent grisées telles quelles. */}
-      {CHALLENGE_GEM_X_PCT.map((pct, i) =>
-        i < filled ? (
-          <Image
-            key={pct}
-            source={require('../../../assets/icons/gem-filled.png')}
-            style={[styles.challengeGemFilled, { left: `${pct}%` }]}
-            resizeMode="contain"
-          />
-        ) : null
-      )}
+      {CHALLENGE_GEM_X_PCT.map((pct, i) => (
+        <Image
+          key={pct}
+          source={i < filled ? require('../../../assets/menu/segment-plein.png') : require('../../../assets/menu/segment-vide.png')}
+          style={[styles.challengeGemFilled, { left: `${pct}%` }]}
+          resizeMode="contain"
+        />
+      ))}
 
       {/* adjustsFontSizeToFit : la place entre la 6e gemme et le bord du
           cadre est mesurée mais reste étroite — un gros nombre (ex.
@@ -5308,7 +5327,7 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
   // ClickerScreen n'est pas dans sa portee.
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 6 }]}>
+    <ImageBackground source={require('../../../assets/menu/barre-navigation.png')} resizeMode="stretch" style={[styles.bottomBar, { paddingBottom: insets.bottom + 6 }]}>
       {/* Chaque onglet : icone dans une case encadree de cyan, libelle
           dessous — le motif de la maquette. La case active passe en
           dore, couleur d'accent du jeu partout ailleurs. Icones = vrais
@@ -5316,27 +5335,27 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
           l'utilisateur (mobile/assets/icons/), plus des Ionicons du
           tout début du projet. */}
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('shop')}>
-        <View style={[styles.navBox, view === 'shop' && styles.navBoxActive]}>
-          <Image source={require('../../../assets/icons/nav-shop.png')} style={styles.navBoxImage} resizeMode="contain" />
-        </View>
+        <ImageBackground source={require('../../../assets/menu/cadre-nav.png')} resizeMode="contain" style={[styles.navBox, view === 'shop' && styles.navBoxActive]}>
+          <Image source={require('../../../assets/menu/icone-boutique.png')} style={styles.navBoxImage} resizeMode="contain" />
+        </ImageBackground>
         <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>SHOP</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('collection')}>
-        <View style={[styles.navBox, view === 'collection' && styles.navBoxActive]}>
-          <Image source={require('../../../assets/icons/nav-collection.png')} style={styles.navBoxImage} resizeMode="contain" />
+        <ImageBackground source={require('../../../assets/menu/cadre-nav.png')} resizeMode="contain" style={[styles.navBox, view === 'collection' && styles.navBoxActive]}>
+          <Image source={require('../../../assets/menu/icone-collection.png')} style={styles.navBoxImage} resizeMode="contain" />
           <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{ownedCount}</Text></View>
-        </View>
+        </ImageBackground>
         <Text style={[styles.bottomBarLabel, view === 'collection' && styles.bottomBarLabelActive]}>COLLECTION</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={onAdventurePress}>
-        <View style={styles.navBox}>
-          <Image source={require('../../../assets/icons/nav-exploration.png')} style={styles.navBoxImage} resizeMode="contain" />
-        </View>
+        <ImageBackground source={require('../../../assets/menu/cadre-nav.png')} resizeMode="contain" style={styles.navBox}>
+          <Image source={require('../../../assets/menu/icone-exploration.png')} style={styles.navBoxImage} resizeMode="contain" />
+        </ImageBackground>
         <Text style={styles.bottomBarLabel}>EXPLORATION</Text>
       </TouchableOpacity>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -5419,25 +5438,18 @@ const styles = StyleSheet.create({
   bossBarFill: { height: '100%', backgroundColor: '#ff5a4a' },
   bossCapNote: { color: COLORS.muted, fontSize: 11, textAlign: 'center', marginTop: 6, paddingHorizontal: 10 },
 
-  diamondPill: {
-    position: 'absolute', zIndex: 4,
-    right: SCREEN_W - SCREEN_W * 0.303 + 6,
-    top: SCREEN_H * (0.096 - TOP_BLOCK_SHIFT) - 32 + 14,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
-    backgroundColor: 'rgba(10,26,40,0.9)',
-    borderWidth: 1.5, borderColor: '#7fdcff',
-  },
-  diamondPillText: { color: '#7fdcff', fontSize: 12, fontWeight: '900' },
+  diamondPill: { position: 'absolute', zIndex: 4, right: SCREEN_W - SCREEN_W * 0.303 + 2, top: SCREEN_H * (0.096 - TOP_BLOCK_SHIFT) - 32 + 15 },
+  diamondPillText: { color: '#d6f4ff', fontSize: 13, fontWeight: '900', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 3 },
 
   coinsPill: {
     position: 'absolute', left: SCREEN_W * 0.303, top: SCREEN_H * (0.096 - TOP_BLOCK_SHIFT) - 32, zIndex: 3,
-    width: 165, aspectRatio: 460 / 180,
+    width: 165, aspectRatio: 480 / 208,
     alignItems: 'center', justifyContent: 'center',
   },
   // Zone de texte dans l'espace vide à droite du sac peint (mesuré sur
   // le nouvel asset : le sac + son cadre occupent ~36% de la largeur).
   coinsPillTextWrap: {
-    position: 'absolute', left: '38%', right: '8%', top: 0, bottom: 0,
+    position: 'absolute', left: '36%', right: '9%', top: 0, bottom: 0,
     alignItems: 'center', justifyContent: 'center',
   },
   coinsPillText: {
@@ -5494,13 +5506,13 @@ const styles = StyleSheet.create({
   // Zone vide mesurée entre le bord supérieur du cadre et le cercle
   // (9,3% à 39,8% de la hauteur).
   challengeLabelZone: {
-    position: 'absolute', left: '8%', right: '8%', top: '9.3%', height: '30.5%',
+    position: 'absolute', left: '8%', right: '8%', top: '11%', height: '29%',
     alignItems: 'center', justifyContent: 'center',
   },
   challengeLabel: { color: COLORS.text, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   // Cercle peint à 7,2% / 57,5% du cadre, ~7,7% de diamètre.
   challengeIconZone: {
-    position: 'absolute', left: '2.8%', top: '46%', width: '9%', height: '23%',
+    position: 'absolute', left: '4%', top: '41%', width: '11%', height: '30%',
     alignItems: 'center', justifyContent: 'center',
   },
   challengeIconText: { fontSize: 15 },
@@ -5513,16 +5525,16 @@ const styles = StyleSheet.create({
   // ratio propre de l'asset (240/77) plutôt que forcée, pour ne pas le
   // déformer.
   challengeGemFilled: {
-    position: 'absolute', top: '57.5%',
-    width: SCREEN_W * 0.88 * 0.106, height: (SCREEN_W * 0.88 * 0.106) / (240 / 77),
-    marginLeft: -(SCREEN_W * 0.88 * 0.106) / 2, marginTop: -((SCREEN_W * 0.88 * 0.106) / (240 / 77)) / 2,
+    position: 'absolute', top: '56%',
+    width: SCREEN_W * 0.88 * 0.106, height: (SCREEN_W * 0.88 * 0.106) / (120 / 45),
+    marginLeft: -(SCREEN_W * 0.88 * 0.106) / 2, marginTop: -((SCREEN_W * 0.88 * 0.106) / (120 / 45)) / 2,
   },
   // Fraction actuelle/cible — dans la marge à droite de la 6e gemme,
   // avant le bord arrondi du cadre (place mesurée : ~4% de large, d'où
   // adjustsFontSizeToFit sur le Text lui-même : un gros nombre se
   // réduit plutôt que d'être coupé, signalé caché par l'utilisateur).
   challengeCountWrap: {
-    position: 'absolute', right: '1.5%', top: '46%', width: '11%', height: '23%',
+    position: 'absolute', right: '4%', top: '41%', width: '11%', height: '30%',
     alignItems: 'center', justifyContent: 'center',
   },
   challengeCount: {
@@ -5556,7 +5568,7 @@ const styles = StyleSheet.create({
   // Zone vide mesurée entre le bas de la pilule et le bord inférieur du
   // cadre (74,75% à 96,6% de la hauteur).
   challengeCycleZone: {
-    position: 'absolute', left: '8%', right: '8%', top: '74.75%', height: '21.85%',
+    position: 'absolute', left: '8%', right: '8%', top: '71%', height: '18%',
     alignItems: 'center', justifyContent: 'center',
   },
   challengeCycle: { color: COLORS.muted, fontSize: 10, fontWeight: '700', textAlign: 'center' },
@@ -5729,18 +5741,14 @@ const styles = StyleSheet.create({
   // appareils, sans dependre de la taille de l'encoche.
   bottomBar: {
     position: 'absolute', left: 0, bottom: 0, zIndex: 5,
-    flexDirection: 'row', width: SCREEN_W, borderTopWidth: 2, borderTopColor: COLORS.action,
-    paddingTop: 8, backgroundColor: COLORS.bg,
+    flexDirection: 'row', width: SCREEN_W, borderTopWidth: 0, borderTopColor: COLORS.action,
+    paddingTop: 16, backgroundColor: 'transparent',
     shadowColor: COLORS.action, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: -4 }, elevation: 4,
   },
   bottomBarItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
   // Case encadree autour de l'icone, comme sur la maquette.
-  navBox: {
-    width: 52, height: 48, borderRadius: 10,
-    borderWidth: 1, borderColor: '#2a6f96', backgroundColor: 'rgba(16,40,64,0.6)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  navBoxImage: { width: 40, height: 40 },
+  navBox: { width: 58, height: 58, alignItems: 'center', justifyContent: 'center' },
+  navBoxImage: { width: 38, height: 38 },
   navBoxActive: {
     borderColor: COLORS.action, backgroundColor: 'rgba(246,195,67,0.12)',
     shadowColor: COLORS.action, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
@@ -5767,7 +5775,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
-  calBtnImageWrap: { width: 62, height: 62, borderRadius: 31, overflow: 'hidden' },
+  calBtnImageWrap: { width: 62, height: 62 },
 
   // Bouton Quêtes — même `left` que le cadeau, `top` = celui du cadeau
   // + 72 (62 de haut + 10 d'écart). Exprimé à partir de la même formule
@@ -5876,6 +5884,14 @@ const styles = StyleSheet.create({
     width: 44, height: 44,
     alignItems: 'center', justifyContent: 'center',
   },
+  // Menu principal redessiné (27/09, images Gemini de l'auteur, assets/menu/).
+  optionsBtnImage: { width: 46, height: 46 },
+  diamondPillImage: { width: 104, aspectRatio: 420 / 167 },
+  diamondPillTextWrap: { position: 'absolute', left: '33%', right: '10%', top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  leftBtnImage: { width: 52, height: 52 },
+  calBtnGlow: { position: 'absolute', width: 104, height: 104, left: -21, top: -21, tintColor: '#ff3b30', opacity: 0.9 },
+  eggNest: { position: 'absolute', width: 250, aspectRatio: 720 / 394, left: (SCREEN_W - 250) / 2, top: TAP_ZONE_H / 2 - 8 },
+  challengeMedaillon: { width: '100%', height: '100%' },
   optionsBtnIcon: { fontSize: 22 },
   calBtnImage: { width: 62, height: 62 },
   calBtnDot: {
@@ -5937,7 +5953,7 @@ const styles = StyleSheet.create({
   // suivent automatiquement (DECK_SLOT_X_PCT est en % de CE cadre).
   deckFrame: {
     position: 'absolute', left: SCREEN_W * 0.225, top: SCREEN_H * (0.357 - TOP_BLOCK_SHIFT) - 32, zIndex: 3,
-    width: SCREEN_W * 0.55, aspectRatio: 800 / 329,
+    width: SCREEN_W * 0.55, aspectRatio: 620 / 262,
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
   // row : chaque emplacement tombe exactement sur le panneau peint.
@@ -5956,10 +5972,10 @@ const styles = StyleSheet.create({
   // Rescalé avec le cadre (75% -> 55%, ratio 0,733 : 26 -> 19).
   // Doublées (19 -> 38, sur demande explicite : voir DECK_SLOT_DIAMETER_PX).
   deckSlot: {
-    position: 'absolute', top: '49%', width: 38, height: 38, borderRadius: 19,
+    position: 'absolute', top: '55.5%', width: 38, height: 38, borderRadius: 19,
     marginLeft: -19, marginTop: -19,
-    backgroundColor: 'rgba(8,19,31,0.35)',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.border,
+    backgroundColor: 'transparent',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 0, borderColor: COLORS.border,
   },
   deckSlotEmoji: { fontSize: 19 },
   deckSlotEmpty: { fontSize: 16, opacity: 0.7 },

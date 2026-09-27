@@ -809,3 +809,31 @@ large, 1 ligne par phrase), aides en grille 2 × 2 (titre + prix sur 2
 lignes, « Monter mes créatures » en vert car gratuit), « Retour à la carte »
 en dessous → ≈ 290 points. Victoire et défaite sans aides (Gardien)
 inchangées. Le ScrollView reste en filet pour les très petits écrans.
+
+
+## 27/09 — Menu principal redessiné (images Gemini de l'auteur)
+
+Cible : une maquette Gemini du menu (mêmes textes que le jeu, habillés
+d'images). 19 images générées sur fond magenta, déposées dans
+`design/a-integrer/01-menu-principal` (ordre = heure d'enregistrement,
+vérifiée par le format et le contenu), détourées (`design/outils/detourer.py`)
+puis réduites à leur taille d'affichage dans `mobile/assets/menu/` (2,5 Mo
+contre 12 Mo bruts).
+
+Remplacements dans ClickerScreen : fond ; ⚙️ → roue dentée en bois ; « 💎 N »
+→ cadre + cristal ; pilule de pièces → planche + sac ; caisse, 📜 → parchemin,
+🥚 → petit nid ; nouveau cadre du deck (centres des 3 cases MESURÉS sur
+l'image : 22,2 / 49,4 / 76,4 %, à 55,5 %) ; grand nid DERRIÈRE l'œuf ;
+panneau de défi reconstruit (cadre vide + médaillon étoile + 6 segments
+vides OU pleins, posés dans la rainure mesurée à 42-70 % de la hauteur) ;
+barre de navigation en bois + cadre de pierre + icône séparée.
+La lueur rouge de la caisse était PEINTE dans l'ancienne image : elle est
+faite par le code (glow-gold teinté), seulement quand la récompense du jour
+est à prendre. Anciennes images (icons/…) laissées en place, plus utilisées
+par le menu.
+
+**Banc de capture** : il applique maintenant la même transformation que
+Metro (const/let → var) — sinon une lecture anticipée inoffensive sur le
+téléphone (« Cannot access 'view' before initialization ») bloquait le rendu
+web du menu. Scène `scenes/menu.jsx` (les 3 fournisseurs d'App.js), format
+portrait 390 × 844.

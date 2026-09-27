@@ -2,6 +2,9 @@
   "private": true,
   "description": "Banc de capture Paradox : les VRAIS écrans du jeu rendus en web (react-native-web) dans un navigateur invisible, à la taille d'un téléphone. Outil de Claude — jamais importé par l'appli.",
   "dependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/plugin-transform-block-scoping": "7.29.7",
+    "@babel/preset-react": "7.29.7",
     "@sparticuz/chromium": "131.0.1",
     "esbuild": "0.25.12",
     "puppeteer-core": "23.11.1",

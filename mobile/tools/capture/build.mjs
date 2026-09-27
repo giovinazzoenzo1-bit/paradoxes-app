@@ -3,6 +3,8 @@ import * as esbuild from 'esbuild';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+const exiger = createRequire(import.meta.url);
 const ICI = path.dirname(fileURLToPath(import.meta.url));
 const NATIFS = path.join(ICI, 'stubs/natifs.js');
 const doublures = /^(expo-status-bar|react-native-safe-area-context|expo-screen-orientation|expo-navigation-bar|@expo\/vector-icons.*|@react-native-async-storage\/async-storage|lottie-react-native)$/;
@@ -15,8 +17,22 @@ const plugin = {
       contents: 'module.exports = { uri: "data:image/' + (a.path.endsWith('png') ? 'png' : 'jpeg') + ';base64,' + fs.readFileSync(a.path).toString('base64') + '" };',
       loader: 'js',
     }));
+    // Le code de l'appli passe par la MÊME transformation que Metro sur le
+    // téléphone (const/let → var) : sans elle, une lecture anticipée
+    // inoffensive sur l'appareil (« Cannot access 'view' before
+    // initialization ») bloquait le rendu web du menu principal.
+    const babel = exiger('@babel/core');
+    const commeMetro = (code, fichier) => babel.transformSync(code, {
+      filename: fichier, babelrc: false, configFile: false,
+      presets: [[exiger.resolve('@babel/preset-react'), { runtime: 'classic' }]],
+      plugins: [exiger.resolve('@babel/plugin-transform-block-scoping')],
+    }).code;
     // CombatResultScreen n'est pas exporté par l'appli : on l'expose ICI, à la volée.
-    b.onLoad({ filter: /CombatScreen\.js$/ }, (a) => ({ contents: fs.readFileSync(a.path, 'utf8') + '\nexport { CombatResultScreen };\n', loader: 'jsx' }));
+    b.onLoad({ filter: /\/src\/.*\.js$/ }, (a) => {
+      let code = fs.readFileSync(a.path, 'utf8');
+      if (a.path.endsWith('CombatScreen.js')) code += '\nexport { CombatResultScreen };\n';
+      return { contents: commeMetro(code, a.path), loader: 'js' };
+    });
   },
 };
 await esbuild.build({

@@ -14,3 +14,6 @@ avant de l'envoyer. Jamais importé par l'appli.
 - La capture mesure le débordement vertical : 0 px = rien à faire défiler.
 - Fidélité ≈ 95 % : mise en page, tailles et textes justes ; polices, émojis et
   ombres un peu différents d'iOS / Android.
+
+- Le code de l'appli passe par la MÊME transformation que Metro (const/let → var, JSX) : le rendu web se comporte comme le téléphone.
+- Scènes : `scenes/resultat.jsx` (fin de combat, paysage), `scenes/menu.jsx` (menu principal, `TAILLE=390x844`).
