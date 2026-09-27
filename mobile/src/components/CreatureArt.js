@@ -56,6 +56,22 @@ const CREATURE_ART = {
     require('../../assets/creatures/aegisolar/stage-1.png'),
     require('../../assets/creatures/aegisolar/stage-2.png'),
   ],
+  // 27/09 : dessinées par le frère de l'auteur (design/a-integrer/creatures).
+  glyphon: [
+    require('../../assets/creatures/glyphon/stage-0.png'),
+    require('../../assets/creatures/glyphon/stage-1.png'),
+    require('../../assets/creatures/glyphon/stage-2.png'),
+  ],
+  ombrillon: [
+    require('../../assets/creatures/ombrillon/stage-0.png'),
+    require('../../assets/creatures/ombrillon/stage-1.png'),
+    require('../../assets/creatures/ombrillon/stage-2.png'),
+  ],
+  malefix: [
+    require('../../assets/creatures/malefix/stage-0.png'),
+    require('../../assets/creatures/malefix/stage-1.png'),
+    require('../../assets/creatures/malefix/stage-2.png'),
+  ],
 };
 
 // Renvoie la source d'image du palier demandé, ou `null` si cette

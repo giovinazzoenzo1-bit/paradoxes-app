@@ -21,22 +21,22 @@ Chaque dossier = une section de l'appli : sa fiche (`LISEZMOI.md`), ses images a
 | `12-icones-communes` | Icônes partagées : Griffes, pièces, diamants, retour, halos | 5 |
 | `13-themes-elements` | Thème visuel par élément (fond, bouton, cadre, emplacement de rune) | 4 |
 
-## Créatures (6/26 dessinées)
+## Créatures (9/26 dessinées)
 
 | Créature | Rareté | Élément | Sort | État |
 |---|---|---|---|---|
 | Bouldog | commun | Terre | provocation | ✅ 3 stades dessinés |
 | Caraploof | commun | Eau | bouclier | ✅ 3 stades dessinés |
-| Glyphon | commun | Magie | marque | 🟥 à créer (3 stades) |
+| Glyphon | commun | Magie | marque | ✅ 3 stades dessinés (intégrés le 27/09) |
 | Luxorbe | commun | Lumière | soin | 🟥 à créer (3 stades) |
-| Ombrillon | commun | Ténèbres | execution | 🟥 à créer (3 stades) |
+| Ombrillon | commun | Ténèbres | execution | ✅ 3 stades dessinés (intégrés le 27/09) |
 | Pyrosile | commun | Feu | zone | ✅ 3 stades dessinés |
 | Ventis | commun | Air | zone | ✅ 3 stades dessinés |
 | Voltix | commun | Foudre | zone | ✅ 3 stades dessinés |
 | Aquamira | peu commun | Eau | soin | 🟥 à créer (3 stades) |
 | Brontobloc | peu commun | Foudre | provocation | 🟥 à créer (3 stades) |
 | Fournax | peu commun | Feu | poison | 🟥 à créer (3 stades) |
-| Malefix | peu commun | Magie | pacte | 🟥 à créer (3 stades) |
+| Malefix | peu commun | Magie | pacte | ✅ 3 stades dessinés (intégrés le 27/09) |
 | Terracroc | peu commun | Terre | pacte | 🟥 à créer (3 stades) |
 | Zephyrion | peu commun | Air | vitesse | 🟥 à créer (3 stades) |
 | Aegisolar | rare | Lumière | bouclier | ✅ 3 stades dessinés |

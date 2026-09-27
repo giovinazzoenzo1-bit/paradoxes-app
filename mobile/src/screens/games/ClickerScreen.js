@@ -3738,7 +3738,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 point rouge du cadeau. */}
             {onOpenQuests && (
               <TouchableOpacity style={styles.questsBtn} onPress={onOpenQuests}>
-                <Image source={require('../../../assets/menu/parchemin.png')} style={styles.leftBtnImage} resizeMode="contain" />
+                <Image source={require('../../../assets/menu/parchemin.png')} style={styles.questsBtnImage} resizeMode="contain" />
                 {hasClaimableQuest && <View style={styles.calBtnDot} />}
               </TouchableOpacity>
             )}
@@ -3832,12 +3832,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               {/* Bulles de pouvoir : toutes FRÈRES du bouton tapable, pas
                   enfants — elles captent leur propre appui sans jamais
                   entrer en conflit avec le tap de l'œuf en dessous. */}
-              {/* Compte à rebours du prochain pouvoir, SUR l'œuf (passe 4). */}
-              {badgePouvoir() ? (
-                <View style={styles.eggPowerBadge} pointerEvents="none">
-                  <Text style={styles.eggPowerBadgeText}>{badgePouvoir()}</Text>
-                </View>
-              ) : null}
+              {/* 27/09 (demande de l'auteur) : le compte à rebours du pouvoir
+                  AU-DESSUS de l'œuf est retiré — il faisait doublon ; il reste
+                  sur la case de la créature, dans le deck. */}
               {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
     
 
@@ -5775,7 +5772,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#ff2d2d', shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8,
   },
-  calBtnImageWrap: { width: 62, height: 62 },
+  calBtnImageWrap: { width: 62, height: 62, alignItems: 'center', justifyContent: 'center' },
 
   // Bouton Quêtes — même `left` que le cadeau, `top` = celui du cadeau
   // + 72 (62 de haut + 10 d'écart). Exprimé à partir de la même formule
@@ -5889,11 +5886,19 @@ const styles = StyleSheet.create({
   diamondPillImage: { width: 104, aspectRatio: 420 / 167 },
   diamondPillTextWrap: { position: 'absolute', left: '33%', right: '10%', top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   leftBtnImage: { width: 52, height: 52 },
-  calBtnGlow: { position: 'absolute', width: 104, height: 104, left: -21, top: -21, tintColor: '#ff3b30', opacity: 0.9 },
-  eggNest: { position: 'absolute', width: 250, aspectRatio: 720 / 394, left: (SCREEN_W - 250) / 2, top: TAP_ZONE_H / 2 - 8 },
+  questsBtnImage: { width: 42, height: 42 },
+  calBtnGlow: { position: 'absolute', width: 90, height: 90, left: -14, top: -14, tintColor: '#ff3b30', opacity: 0.9 },
+  // ⚠️ 27/09 (retour de l'auteur, sur téléphone) : avec seulement largeur +
+  // aspectRatio, en position absolue, le nid tombait ≈ 130 points trop bas
+  // sur l'appareil (hauteur d'origine de l'image retenue ; le navigateur, lui,
+  // appliquait la proportion). Hauteur EXPLICITE (250 × 394 / 720) et même
+  // décalage horizontal que l'œuf (tapTouch : translateX 13).
+  eggNest: { position: 'absolute', width: 250, height: 137, left: (SCREEN_W - 250) / 2 + 13, top: TAP_ZONE_H / 2 - 8 },
   challengeMedaillon: { width: '100%', height: '100%' },
   optionsBtnIcon: { fontSize: 22 },
-  calBtnImage: { width: 62, height: 62 },
+  // 27/09 : caisse et parchemin réduits (« un peu trop gros ») ; la zone
+  // tactile du bouton reste de 62 points.
+  calBtnImage: { width: 48, height: 48 },
   calBtnDot: {
     position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6,
     backgroundColor: COLORS.action, borderWidth: 2, borderColor: COLORS.bg,

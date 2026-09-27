@@ -837,3 +837,21 @@ Metro (const/let → var) — sinon une lecture anticipée inoffensive sur le
 téléphone (« Cannot access 'view' before initialization ») bloquait le rendu
 web du menu. Scène `scenes/menu.jsx` (les 3 fournisseurs d'App.js), format
 portrait 390 × 844.
+
+
+## 27/09 — Retours de l'auteur sur le menu + 3 créatures
+
+- **Nid sous l'œuf (cause réelle)** : image en position absolue avec seulement
+  largeur + `aspectRatio` → sur le téléphone, le nid tombait ≈ 130 points
+  trop bas (hauteur d'origine de l'image retenue), alors que le navigateur du
+  banc appliquait la proportion. **Piège à retenir : jamais d'`aspectRatio`
+  seul sur une `Image` en absolu — hauteur explicite.** Nid aligné aussi sur le
+  décalage horizontal de l'œuf (tapTouch : translateX 13).
+- Caisse (48) et parchemin (42) réduits ; zone tactile inchangée (62).
+- Compte à rebours du pouvoir AU-DESSUS de l'œuf retiré (doublon : il reste
+  sur la case du deck).
+- **Glyphon, Ombrillon, Maléfix** (dessins du frère de l'auteur) ajoutés à
+  `CREATURE_ART`. Leurs dessins n'occupaient que 23 à 65 % de l'image (norme
+  en jeu MESURÉE : 57 / 72 / 84 % selon le stade) → recadrés et remis à la
+  norme depuis les originaux 1024 px, progression bébé → adulte gardée.
+  Scène de banc `scenes/creatures.jsx` (rendu par le vrai CreatureArt).

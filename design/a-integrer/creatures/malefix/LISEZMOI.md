@@ -3,7 +3,7 @@
 - Rareté : peu commun
 - Élément : Magie
 - Sort : pacte
-- État : 🟥 à créer (3 stades)
+- État : ✅ 3 stades intégrés le 27/09 (remis à la norme de taille : 57 / 72 / 84 %)
 
 **Déposer ici** : https://github.com/giovinazzoenzo1-bit/paradoxes-app/upload/main/design/a-integrer/creatures/malefix
 
