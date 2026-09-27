@@ -29,3 +29,5 @@ From the calendar screen you just made, draw ONLY the egg icon of 'Jour 3' (a cr
 ```
 From the calendar screen you just made, draw ONLY the painter's palette icon of 'Jour 7' (wooden palette with colorful paint spots), alone, without any box around it. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
+
+✅ Intégrées le 27/09. Les 4 menus secondaires (Paramètres, Boutique, Quêtes, Calendrier) sont faits.

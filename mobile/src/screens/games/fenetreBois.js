@@ -31,6 +31,9 @@ const RATIO_PANNEAU = 900 / 1145;
 const RATIO_BANNIERE = 900 / 349;
 const RATIO_BOUTON = 420 / 161;
 
+// Largeur disponible pour le contenu d'une FenetreBois (marge de 15 % du
+// panneau de chaque côté) — à utiliser plutôt que recopier ces marges.
+export const largeurInterieureFenetre = (largeur) => Math.round(largeur) - 2 * Math.round(largeur * 0.15);
 export function FenetreBois({ titre, children, largeur = 310, onFermer = null }) {
   const lBanniere = Math.round(largeur * 0.92);
   const hBanniere = Math.round(lBanniere / RATIO_BANNIERE);
@@ -44,21 +47,23 @@ export function FenetreBois({ titre, children, largeur = 310, onFermer = null })
           minHeight: Math.round((largeur / RATIO_PANNEAU) * 0.72),
           alignItems: 'center',
           paddingTop: Math.round(hBanniere * 0.62),
-          paddingHorizontal: Math.round(largeur * 0.15),
+          paddingHorizontal: Math.round(largeur * 0.15), // = largeurInterieureFenetre
           paddingBottom: Math.round(largeur * 0.12),
         }}
       >
         {children}
       </ImageBackground>
-      {onFermer ? (
-        <TouchableOpacity style={[styles.fermer, { top: Math.round(hBanniere * 0.5) + 10 }]} onPress={onFermer} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Text style={styles.fermerTexte}>✕</Text>
-        </TouchableOpacity>
-      ) : null}
       {/* Dessinée APRÈS le panneau : elle passe par-dessus son bord. */}
       <View style={[styles.banniere, { width: lBanniere, height: hBanniere }]}>
         <BanniereTitre titre={titre} largeur={lBanniere} />
       </View>
+      {/* 27/09 : la croix ronde EN BOIS (pièce Gemini), dessinée APRÈS la
+          bannière pour passer par-dessus, sur le coin du panneau. */}
+      {onFermer ? (
+        <TouchableOpacity style={[styles.fermer, { top: Math.round(hBanniere * 0.5) - 12 }]} onPress={onFermer} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Image source={FERMER} resizeMode="contain" style={{ width: 42, height: 42 }} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -215,7 +220,7 @@ const styles = StyleSheet.create({
   interTexte: { position: 'absolute', top: 8, color: '#ffe6a8', fontSize: 9, fontWeight: '900', includeFontPadding: false },
   reglageTitre: { color: '#fff7e0', fontSize: 15, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 3 },
   reglageDetail: { color: '#e6d6b0', fontSize: 10.5, marginTop: 2, includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 2 },
-  fermer: { position: 'absolute', right: 12, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(40,24,12,0.92)', borderWidth: 1.5, borderColor: '#d9a441', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  fermer: { position: 'absolute', right: -6, width: 42, height: 42, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   fermerTexte: { color: '#ffe6a8', fontSize: 15, fontWeight: '900' },
   boutonLigne: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   boutonTexte: { color: '#fff', fontSize: 15, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.75)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },

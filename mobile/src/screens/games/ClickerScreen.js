@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Easing, View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
-import { FenetreBois, BoutonBois, COURONNE, CRISTAL, SABLIER } from './fenetreBois';
+import { FenetreBois, BoutonBois, BoutonLarge, largeurInterieureFenetre, COURONNE, CRISTAL, SABLIER } from './fenetreBois';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen, { DEV_REFILL_ENERGY_KEY } from './AdventureScreen';
@@ -4377,61 +4377,84 @@ function EggParticles({ size, burst, stageIndex }) {
   );
 }
 
+// 27/09 : calendrier du thème forêt (pièces Gemini 52-55 de l'auteur + kit
+// partagé). Même grille qu'avant (3 petites cases, puis 2 lignes de 2).
+// Tailles en NOMBRES (règle du 27/09).
+const CAL_L = Math.min(Math.round(SCREEN_W * 0.94), 380);
+const CAL_INT = largeurInterieureFenetre(CAL_L);
+const CAL_PETITE_L = Math.floor((CAL_INT - 12) / 3);
+const CAL_PETITE_H = Math.round(CAL_PETITE_L / 1.19);
+const CAL_LARGE_L = Math.floor((CAL_INT - 6) / 2);
+const CAL_LARGE_H = Math.round(CAL_LARGE_L / 2.162);
+const CAL_IMG = {
+  petite: require('../../../assets/calendrier/case-petite.png'),
+  large: require('../../../assets/calendrier/case-large.png'),
+  rail: require('../../../assets/fenetres/rail-barre.png'),
+  remplissage: require('../../../assets/fenetres/remplissage-barre.png'),
+  coche: require('../../../assets/menu/medaillon-coche.png'),
+};
+const CAL_ICONES = {
+  griffes: require('../../../assets/fenetres/pattes.png'),
+  appCoins: CRISTAL,
+  creature: require('../../../assets/calendrier/icone-oeuf.png'),
+  skin: require('../../../assets/calendrier/icone-palette.png'),
+};
 function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim, onClose }) {
   if (!Array.isArray(calendar) || calendar.length === 0) return null;
   const ready = !alreadyClaimedToday;
   const claimedCount = (currentDay - 1) + (ready ? 0 : 1);
 
-  const cell = (d, style) => {
+  const cell = (d, l, h, image) => {
     const isToday = d.day === currentDay;
     const isPast = d.day < currentDay;
     const claimable = isToday && ready;
     const isSupreme = d.day === 7;
+    const icone = CAL_ICONES[d.type];
+    const ic = Math.round(h * 0.36);
     return (
       <TouchableOpacity
         key={d.day}
-        style={[styles.calBox, style, isSupreme && styles.calBoxSupreme,
-          isPast && styles.calBoxPast, isToday && styles.calBoxToday,
-          claimable && styles.calBoxClaimable]}
+        style={{ width: l, height: h, alignItems: 'center', justifyContent: 'center' }}
         onPress={claimable ? onClaim : undefined}
         disabled={!claimable}
         activeOpacity={claimable ? 0.7 : 1}
       >
-        <Text style={styles.calBoxIcon}>{d.icon}</Text>
-        <Text style={[styles.calBoxDay, isSupreme && styles.calBoxDaySupreme]}>JOUR {d.day}</Text>
-        <Text style={[styles.calBoxLabel, isSupreme && styles.calBoxLabelSupreme]} numberOfLines={2}>
-          {d.label}
-        </Text>
-        {isPast && <Text style={styles.calBoxCheck}>✓</Text>}
+        <Image source={image} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: l, height: h }} />
+        {icone
+          ? <Image source={icone} resizeMode="contain" style={{ width: ic, height: ic }} />
+          : <Text style={styles.calBoxIcon}>{d.icon}</Text>}
+        <Text style={[styles.calCaseJour, isSupreme && styles.calCaseSupreme]}>JOUR {d.day}</Text>
+        <Text style={[styles.calCaseLabel, isSupreme && styles.calCaseSupreme]} numberOfLines={1}>{d.label}</Text>
+        {/* Jour pris : VOILE sombre (pas une transparence de toute la case,
+            qui éteindrait aussi le médaillon), médaillon coché par-dessus. */}
+        {isPast ? <View style={[styles.calCaseVoile, { width: l, height: h }]} /> : null}
+        {isToday ? <View style={[styles.calCaseDuJour, { width: l, height: h }]} /> : null}
+        {isPast ? <Image source={CAL_IMG.coche} resizeMode="contain" style={styles.calCaseCoche} /> : null}
       </TouchableOpacity>
     );
   };
 
   return (
     <View style={styles.calOverlay}>
-      <View style={styles.calPanel}>
-        <TouchableOpacity onPress={onClose} style={styles.calClose}>
-          <Ionicons name="close" size={20} color={COLORS.muted} />
-        </TouchableOpacity>
-
-        <Text style={styles.calPanelTitle}>CALENDRIER DE RÉCOMPENSES</Text>
+      <FenetreBois titre="Calendrier" largeur={CAL_L} onFermer={onClose}>
         <Text style={styles.calPanelSub}>SEMAINE DE CONNEXION</Text>
 
-        <View style={styles.calGridRow}>{calendar.slice(0, 3).map((d) => cell(d, styles.calBoxSmall))}</View>
-        <View style={styles.calGridRow}>{calendar.slice(3, 5).map((d) => cell(d, styles.calBoxLarge))}</View>
-        <View style={styles.calGridRow}>{calendar.slice(5, 7).map((d) => cell(d, styles.calBoxMedium))}</View>
+        <View style={styles.calLigne}>{calendar.slice(0, 3).map((d) => cell(d, CAL_PETITE_L, CAL_PETITE_H, CAL_IMG.petite))}</View>
+        <View style={styles.calLigne}>{calendar.slice(3, 5).map((d) => cell(d, CAL_LARGE_L, CAL_LARGE_H, CAL_IMG.large))}</View>
+        <View style={styles.calLigne}>{calendar.slice(5, 7).map((d) => cell(d, CAL_LARGE_L, CAL_LARGE_H, CAL_IMG.large))}</View>
 
         <Text style={styles.calFooter}>CONNEXIONS RÉCLAMÉES : {claimedCount} / 7</Text>
-        <View style={styles.calProgressTrack}>
-          <View style={[styles.calProgressFill, { width: `${(claimedCount / 7) * 100}%` }]} />
+        <View style={styles.calBarre}>
+          <Image source={CAL_IMG.rail} resizeMode="stretch" style={styles.calBarreRail} />
+          {claimedCount > 0 ? (
+            <Image source={CAL_IMG.remplissage} resizeMode="stretch" style={[styles.calBarreRemplie, { width: Math.max(8, Math.round((CAL_INT - 6) * claimedCount / 7)) }]} />
+          ) : null}
         </View>
 
         {ready && (
-          <TouchableOpacity style={styles.calBigBtn} onPress={onClaim}>
-            <Text style={styles.calBigBtnText}>RÉCUPÉRER LE JOUR {currentDay}</Text>
-          </TouchableOpacity>
+          <BoutonLarge couleur="vert" largeur={CAL_INT} hauteur={50} texte={`RÉCUPÉRER LE JOUR ${currentDay}`} onPress={onClaim} />
         )}
-      </View>
+      </FenetreBois>
     </View>
   );
 }
@@ -6131,7 +6154,7 @@ const styles = StyleSheet.create({
   },
   calClose: { position: 'absolute', top: 8, right: 8, padding: 6, zIndex: 10 },
   calPanelTitle: { color: COLORS.text, fontSize: 15, fontWeight: '900', textAlign: 'center', letterSpacing: 0.5, marginTop: 2 },
-  calPanelSub: { color: COLORS.action, fontSize: 10, fontWeight: '800', textAlign: 'center', letterSpacing: 1, marginTop: 3, marginBottom: 10 },
+  calPanelSub: { color: '#f0d48a', fontSize: 10, fontWeight: '800', textAlign: 'center', letterSpacing: 1, marginTop: 3, marginBottom: 10 },
   calGridRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   calBox: {
     backgroundColor: COLORS.panelLight, borderRadius: 8,
@@ -6151,7 +6174,7 @@ const styles = StyleSheet.create({
   calBoxLabel: { color: COLORS.muted, fontSize: 7.5, fontWeight: '700', textAlign: 'center', marginTop: 1 },
   calBoxLabelSupreme: { color: COLORS.action, fontWeight: '900' },
   calBoxCheck: { position: 'absolute', top: 3, right: 5, color: COLORS.good, fontSize: 11, fontWeight: '900' },
-  calFooter: { color: COLORS.muted, fontSize: 9, fontWeight: '800', textAlign: 'center', letterSpacing: 0.8, marginTop: 4 },
+  calFooter: { color: '#f0d48a', fontSize: 9, fontWeight: '800', textAlign: 'center', letterSpacing: 0.8, marginTop: 4 },
   calProgressTrack: {
     height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)',
     marginTop: 5, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border,
@@ -6288,6 +6311,17 @@ const styles = StyleSheet.create({
   tapTexteCrit: { color: '#FF8A3D', fontSize: 24 },
   // 27/09 : plus de rond autour des bulles → icônes un peu plus grandes.
   bulleIcone: { width: 50, height: 50 },
+  // Calendrier du thème forêt (27/09).
+  calLigne: { width: CAL_INT, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  calCaseJour: { color: '#fff7e0', fontSize: 11, fontWeight: '900', marginTop: 2, includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  calCaseLabel: { color: '#e6d6b0', fontSize: 9.5, fontWeight: '700', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 2 },
+  calCaseSupreme: { color: '#f7cf57' },
+  calCaseVoile: { position: 'absolute', left: 0, top: 0, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.42)' },
+  calCaseDuJour: { position: 'absolute', left: 0, top: 0, borderRadius: 9, borderWidth: 2.5, borderColor: '#f7cf57' },
+  calCaseCoche: { position: 'absolute', top: -6, right: -6, width: 26, height: 26 },
+  calBarre: { width: CAL_INT, height: 18, marginTop: 4, marginBottom: 2 },
+  calBarreRail: { position: 'absolute', left: 0, top: 0, width: CAL_INT, height: 18 },
+  calBarreRemplie: { position: 'absolute', left: 3, top: 3, height: 12 },
   // Fenêtres du thème forêt (27/09).
   fenetreCouronne: { width: 118, height: 118, marginBottom: 2 },
   fenetreCristal: { width: 22, height: 42 },

@@ -1085,3 +1085,17 @@ Ligne de quête : planche normale + barre + plaque « +N » (pattes) ; à
 récupérer → planche DORÉE + BoutonLarge « Récupérer » (`sansMarge`) ;
 récupérée → estompée « ✓ ». Les quêtes récompensent TOUJOURS en Griffes.
 Scène `scenes/quetes.jsx` (vraies quêtes du jour, à zéro au banc).
+
+**Calendrier (4e sur 4, 27/09) — les menus du menu principal sont TOUS
+refaits.** DailyCalendarModal sur FenetreBois + pièces 52-55
+(`assets/calendrier/` : petite case, case large, icône œuf, icône palette) ;
+même grille 3 + 2 + 2 ; icône selon le TYPE de récompense (`CAL_ICONES` :
+griffes → pattes, appCoins → cristal, creature → œuf, skin → palette) ; jour
+pris = VOILE sombre + médaillon coché par-dessus (une transparence de toute la
+case éteignait aussi le médaillon) ; jour du jour = liseré doré ; barre dorée ;
+BoutonLarge « RÉCUPÉRER LE JOUR N ». Kit : `largeurInterieureFenetre(l)`.
+Scène `scenes/calendrier.jsx` (?scene=calendrier / calendrier-pris).
+- FenetreBois : croix ronde EN BOIS (image FERMER), dessinée APRÈS la
+  bannière (sinon la queue du ruban passait par-dessus).
+- ⚠️ Piège évité : un commentaire `//` posé dans du JSX s'afficherait comme du
+  TEXTE à l'écran — toujours `{/* … */}` dans le JSX.
