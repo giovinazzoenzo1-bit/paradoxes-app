@@ -853,7 +853,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       : scaledSkillDamage(skill, activeFighter.creature, activeFighter.stats.attack)
   ));
 
-  const renderSprite = ({ key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir, elemColor , etats = null, etatsCote = 'droite' }) => {
+  const renderSprite = ({ adversaire = false, key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir, elemColor , etats = null, etatsCote = 'droite' }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -902,12 +902,16 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               ],
             } : null}
           >
+            {/* 27/09 (demande de l'auteur) : les ADVERSAIRES regardent vers la
+                gauche, vers nos créatures — miroir sur l'IMAGE seule (ni le
+                nom ni les PV), à l'intérieur du bond (mouvement inchangé). */}
             <CreatureArt
               creatureId={creatureId}
               stageIndex={stageIndex}
               emoji={emoji}
               size={fs}
-              emojiStyle={{ fontSize: fs, lineHeight: fs + 12 }}
+              style={adversaire ? MIROIR : null}
+              emojiStyle={[{ fontSize: fs, lineHeight: fs + 12 }, adversaire ? MIROIR : null]}
             />
           </Animated.View>
         </View>
@@ -1064,7 +1068,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           elemColor: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)],
           // L'adversaire actif est celui du slot de devant : c'est lui
           // qui riposte. Il s'élance vers la GAUCHE (-1).
-          lunging: !!lunge && lunge.side === 'opponent' && i === lunge.index, lungeDir: -1,
+          lunging: !!lunge && lunge.side === 'opponent' && i === lunge.index, lungeDir: -1, adversaire: true,
           onPress: () => chooseTarget(i), disabled: fainted || phase !== 'choosing', hpColor: '#FF5252',
           floatDamage: i === targetIndex ? opponentDamageFloat : null,
         });
@@ -1419,6 +1423,9 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
     </ImageBackground>
   );
 }
+
+// Image retournée horizontalement (créatures adverses, 27/09).
+const MIROIR = { transform: [{ scaleX: -1 }] };
 
 const styles = StyleSheet.create({
   filetBadge: { backgroundColor: 'rgba(13,110,70,0.9)' },

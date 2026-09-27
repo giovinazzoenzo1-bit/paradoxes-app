@@ -1120,3 +1120,11 @@ Scène `scenes/calendrier.jsx` (?scene=calendrier / calendrier-pris).
   était soupçonné à tort : l'animation tournait, c'était le contraste.
 - ⚠️ Piège : `cut -c` sur une sortie accentuée peut couper un caractère en deux
   (sortie illisible) — lire avec Python.
+
+**Combats (27/09)** : les ADVERSAIRES regardent vers la gauche — marqueur
+explicite `adversaire: true` à l'appel de renderSprite (CombatScreen), miroir
+`MIROIR` (scaleX −1) sur l'IMAGE seule via la prop `style` de CreatureArt
+(et sur l'émoji des créatures pas encore dessinées), à l'intérieur de
+l'animation du bond (mouvement inchangé) ; ni le nom ni les PV ne sont
+retournés. L'aperçu avant combat (adversaire seul, centré) n'est pas retourné.
+Scène `scenes/miroir.jsx`.
