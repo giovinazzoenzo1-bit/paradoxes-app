@@ -4530,7 +4530,7 @@ function DeckRow({ deck, owned, onSlotPress, onSlotLongPress, recharges }) {
           >
             {/* 27/09 (demande de l'auteur) : pouvoir PRÊT → lueur cyan des
                 champignons qui scintille DERRIÈRE la créature. */}
-            {creature && recharges && pouvoirPret(recharges, id, maintenant) ? <LueurPouvoir taille={66} style={{ left: -10, top: -10 }} /> : null}
+            {creature && recharges && pouvoirPret(recharges, id, maintenant) ? <LueurPouvoir taille={78} style={{ left: -16, top: -16 }} /> : null}
             {display ? (
               <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={46} emojiStyle={styles.deckSlotEmoji} />
             ) : (
@@ -5082,7 +5082,7 @@ function SpawnedCreatureBubble({ spawned, onClaim }) {
         ]}
       >
         {/* 27/09 : même lueur de pouvoir prêt quand la créature se balade. */}
-        <LueurPouvoir taille={86} style={{ left: -11, top: -11 }} />
+        <LueurPouvoir taille={98} style={{ left: -17, top: -17 }} />
         <CreatureArt
           creatureId={spawned.creature.id}
           stageIndex={0}

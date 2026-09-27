@@ -81,52 +81,52 @@ export function vibrerSucces(actif) {
   if (actif) Vibration.vibrate(25);
 }
 
-// Lueur d'un pouvoir PRÊT : halo rond cyan (disques empilés en dégradé) qui
-// respire + 4 étoiles qui scintillent chacune à son tour. UNE animation (pilote
-// natif), transparente au toucher PAR LE STYLE (règle SDK 57).
-const LUEUR_DISQUES = Array.from({ length: 9 }, (_, i) => 1 - i * 0.09);
-// Phases réparties et fenêtres de ±0,11 : il y a presque toujours une étoile
-// allumée (avec ±0,08, des creux sans aucune étoile).
-const LUEUR_ETOILES = [0.15, 0.39, 0.63, 0.86].map((phase, i) => ({ phase, angle: (i * Math.PI) / 2 + Math.PI / 4 }));
+// Lueur d'un pouvoir PRÊT (2e version, retour de l'auteur 27/09 : « on voit
+// des ronds de plus en plus grands », « le truc qui tourne » déplaisait).
+// → Deux VRAIES images de dégradé radial (générées, 256 niveaux + grain :
+// aucun anneau possible), couleur des champignons incluse (pas de tintColor).
+// Plus rien ne tourne : c'est la LUMIÈRE qui scintille — halo qui respire
+// lentement + cœur plus clair qui vacille sur un rythme irrégulier.
+// Pilote natif ; transparente au toucher PAR LE STYLE (règle SDK 57).
+const LUEUR_HALO = require('../../../assets/fenetres/lueur-cyan.png');
+const LUEUR_COEUR = require('../../../assets/fenetres/lueur-cyan-coeur.png');
 export function LueurPouvoir({ taille, style = null }) {
-  const t = useRef(new Animated.Value(0)).current;
+  const lent = useRef(new Animated.Value(0)).current;
+  const vif = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const boucle = Animated.loop(Animated.timing(t, { toValue: 1, duration: 1600, easing: Easing.linear, useNativeDriver: true }));
-    boucle.start();
-    return () => boucle.stop();
+    const respire = Animated.loop(Animated.sequence([
+      Animated.timing(lent, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(lent, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    // Rythme volontairement irrégulier : un vacillement, pas une pulsation.
+    const vacille = Animated.loop(Animated.sequence([
+      Animated.timing(vif, { toValue: 1, duration: 320, useNativeDriver: true }),
+      Animated.timing(vif, { toValue: 0.35, duration: 220, useNativeDriver: true }),
+      Animated.timing(vif, { toValue: 0.85, duration: 260, useNativeDriver: true }),
+      Animated.timing(vif, { toValue: 0.1, duration: 480, useNativeDriver: true }),
+      Animated.timing(vif, { toValue: 0.6, duration: 300, useNativeDriver: true }),
+      Animated.timing(vif, { toValue: 0, duration: 420, useNativeDriver: true }),
+    ]));
+    respire.start();
+    vacille.start();
+    return () => { respire.stop(); vacille.stop(); };
   }, []);
+  const coeur = Math.round(taille * 0.72);
   return (
     <View style={[{ position: 'absolute', width: taille, height: taille, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }, style]}>
-      <Animated.View style={{
-        position: 'absolute', width: taille, height: taille, alignItems: 'center', justifyContent: 'center',
-        opacity: t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.7, 1, 0.7] }),
-        transform: [{ scale: t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.93, 1.07, 0.93] }) }],
-      }}>
-        {LUEUR_DISQUES.map((f, i) => (
-          <View key={i} style={{ position: 'absolute', width: Math.round(taille * f), height: Math.round(taille * f), borderRadius: Math.round(taille * f / 2), backgroundColor: CYAN_CHAMPIGNON, opacity: 0.09 }} />
-        ))}
-      </Animated.View>
-      {/* Étoiles DESSINÉES (2 barres croisées + point) : le caractère « ✦ »
-          n'existe pas dans toutes les polices (invisible au banc). */}
-      {LUEUR_ETOILES.map((e, i) => {
-        const et = Math.max(12, Math.round(taille * 0.28));
-        return (
-          <Animated.View key={i} style={{
-            position: 'absolute', width: et, height: et, alignItems: 'center', justifyContent: 'center',
-            // En « + » (pas tourné) : tournée de 45°, elle ressemblait à une
-            // croix de fermeture « × ».
-            transform: [{ translateX: Math.round(Math.cos(e.angle) * taille * 0.42) }, { translateY: Math.round(Math.sin(e.angle) * taille * 0.42) }],
-            // PALIER allumé (±0,04) + rampes : mesuré au banc, une pointe
-            // brève ne dépassait pas 0,45 d'opacité — trop discret.
-            opacity: t.interpolate({ inputRange: [0, e.phase - 0.12, e.phase - 0.06, e.phase + 0.06, e.phase + 0.12, 1], outputRange: [0, 0, 1, 1, 0, 0] }),
-          }}>
-            <View style={[styles.etoileHalo, { width: Math.round(et * 0.8), height: Math.round(et * 0.8), borderRadius: Math.round(et * 0.4) }]} />
-            <View style={[styles.etoileBarre, { width: 3, height: et }]} />
-            <View style={[styles.etoileBarre, { width: et, height: 3 }]} />
-            <View style={styles.etoileCoeur} />
-          </Animated.View>
-        );
-      })}
+      <Animated.Image
+        source={LUEUR_HALO}
+        resizeMode="stretch"
+        style={{ position: 'absolute', width: taille, height: taille,
+          opacity: lent.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }),
+          transform: [{ scale: lent.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.08] }) }] }}
+      />
+      <Animated.Image
+        source={LUEUR_COEUR}
+        resizeMode="stretch"
+        style={{ position: 'absolute', width: coeur, height: coeur,
+          opacity: vif.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.85] }) }}
+      />
     </View>
   );
 }
@@ -325,9 +325,6 @@ const styles = StyleSheet.create({
   titreZone: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   titre: { color: '#fff7d6', fontSize: 20, fontWeight: '900', includeFontPadding: false, textAlignVertical: 'center', textShadowColor: 'rgba(15,40,10,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
   bouton: { alignSelf: 'center', marginTop: 8 },
-  etoileHalo: { position: 'absolute', backgroundColor: CYAN_CHAMPIGNON, opacity: 0.8 },
-  etoileBarre: { position: 'absolute', borderRadius: 1.5, backgroundColor: '#f4fffd' },
-  etoileCoeur: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#ffffff' },
   effetFlash: { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,226,140,0.85)' },
   effetOnde: { position: 'absolute', width: 110, height: 110, borderRadius: 55, borderWidth: 5, borderColor: '#f7cf57' },
   effetEtincelle: { position: 'absolute', width: 10, height: 10, borderRadius: 5 },

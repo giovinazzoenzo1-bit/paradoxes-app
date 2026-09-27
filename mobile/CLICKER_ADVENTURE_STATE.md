@@ -1128,3 +1128,17 @@ explicite `adversaire: true` à l'appel de renderSprite (CombatScreen), miroir
 l'animation du bond (mouvement inchangé) ; ni le nom ni les PV ne sont
 retournés. L'aperçu avant combat (adversaire seul, centré) n'est pas retourné.
 Scène `scenes/miroir.jsx`.
+
+**Lueur du pouvoir prêt — 2e version (retour de l'auteur, 27/09)** : « on voit
+des ronds de plus en plus grands » (disques empilés = marches visibles) et
+« le truc qui tourne » (étoiles allumées à tour de rôle) déplaisaient.
+→ **Vraies images de dégradé radial** générées par script
+(`assets/fenetres/lueur-cyan.png` et `lueur-cyan-coeur.png` : gaussienne
+nulle au bord, 256 niveaux de transparence + grain anti-escalier, couleur
+des champignons INCLUSE — pas de tintColor, peu fiable) ; plus rien ne
+tourne : le halo respire (1,8 s) et le cœur clair vacille sur un rythme
+irrégulier. Deck 78 points (déborde sur l'anneau de pierre), bulle 98.
+**RÈGLE : pour un dégradé, une image générée — jamais des disques empilés.**
+Reste en disques empilés : le halo de la créature qui surgit à l'activation
+(`HALO_DISQUES`, couleur selon l'élément) — même remède possible (une image
+par élément) si l'auteur le demande.
