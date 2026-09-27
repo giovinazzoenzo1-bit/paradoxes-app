@@ -904,3 +904,15 @@ voulu (la zone s'arrête avant le texte d'aide et la barre du bas).
 Cadre 55 → 62 % de l'écran (centré, à 6 points de la caisse), cases et
 créatures 26 → 46 points (avant : 15-22 points visibles). Scène de banc
 `scenes/deck.jsx` (vrai DeckRow exposé à la volée par le banc).
+
+
+## 27/09 — Bouton « Valider » du défi réussi (images Gemini de l'auteur)
+
+Prompts 20 (bouton en bois doré, émail émeraude) et 21 (médaillon coche en
+lianes). Déposées dans `01-menu-principal/` (rangées dans `valider/`),
+détourées, réduites (`assets/menu/bouton-valider.png`, `medaillon-coche.png`).
+État RÉUSSI : médaillon coche à la place de l'étoile ; le bouton illustré
+« Valider » (pulsation douce, pilote natif) remplace le texte du bas ; le
+voile vert devient un liseré doré discret. La structure protégée du
+26/09 (le TouchableOpacity porte la position, le panneau le remplit) est
+INCHANGÉE : tout le panneau reste le bouton. Scène de banc `scenes/defi.jsx`.

@@ -5190,6 +5190,18 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
   // panneau est cliquable, c'est donc le BOUTON qui porte la position et la
   // taille, et le panneau le remplit.
   const cliquable = !!(reussi && onValider);
+  // 27/09 : bouton « Valider » illustré (images Gemini de l'auteur) qui pulse
+  // doucement tant que le défi réussi n'est pas validé.
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!reussi) { pulse.setValue(0); return undefined; }
+    const boucle = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 650, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 650, useNativeDriver: true }),
+    ]));
+    boucle.start();
+    return () => boucle.stop();
+  }, [reussi]);
   const carte = (
     <ImageBackground
       source={require('../../../assets/menu/panneau-defi.png')}
@@ -5208,7 +5220,7 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
 
       {/* Icône du défi, centrée sur le cercle peint dans l'image. */}
       <View style={styles.challengeIconZone}>
-        <Image source={require('../../../assets/menu/medaillon-etoile.png')} style={styles.challengeMedaillon} resizeMode="contain" />
+        <Image source={reussi ? require('../../../assets/menu/medaillon-coche.png') : require('../../../assets/menu/medaillon-etoile.png')} style={styles.challengeMedaillon} resizeMode="contain" />
       </View>
 
       {/* Cristal lumineux par gemme REMPLIE (asset réel, remplace
@@ -5244,12 +5256,21 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
         </Text>
       </View>
 
-      {cycleTotal > 0 && (
+      {!reussi && cycleTotal > 0 && (
         <View style={styles.challengeCycleZone}>
           <Text style={[styles.challengeCycle, reussi && styles.challengeCycleReussi]} numberOfLines={2}>
-            {reussi ? '✅ Réussi ! Appuie pour valider' : `Défi ${Math.min(cycleIndex + 1, cycleTotal)} sur ${cycleTotal} avant l'éclosion`}
+            {`Défi ${Math.min(cycleIndex + 1, cycleTotal)} sur ${cycleTotal} avant l'éclosion`}
           </Text>
         </View>
+      )}
+      {/* 27/09 : défi RÉUSSI → le bouton illustré « Valider » remplace le texte
+          du bas (tout le panneau reste le bouton : on appuie où on veut). */}
+      {reussi && (
+        <Animated.View style={[styles.challengeValiderZone, { transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] }) }] }]}>
+          <ImageBackground source={require('../../../assets/menu/bouton-valider.png')} style={styles.challengeValiderBtn} resizeMode="contain">
+            <Text style={styles.challengeValiderTexte}>Valider</Text>
+          </ImageBackground>
+        </Animated.View>
       )}
     </ImageBackground>
   );
@@ -5598,7 +5619,8 @@ const styles = StyleSheet.create({
   challengeCardDedans: { width: '100%', height: '100%' },
   // Au-dessus de la rangée de boutons de test, qui touche son bord bas.
   challengeCardCliquable: { zIndex: 4 },
-  challengeReussiVoile: { position: 'absolute', left: 6, right: 6, top: 6, bottom: 6, backgroundColor: 'rgba(16,185,129,0.28)', borderRadius: 14, borderWidth: 2, borderColor: '#34d399' },
+  // 27/09 : liseré doré discret (le voile vert masquait les illustrations).
+  challengeReussiVoile: { position: 'absolute', left: 5, right: 5, top: 5, bottom: 5, borderRadius: 14, borderWidth: 2, borderColor: 'rgba(255,214,102,0.95)', backgroundColor: 'rgba(255,214,102,0.07)' },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },
   spawnBubble: {
@@ -5919,6 +5941,9 @@ const styles = StyleSheet.create({
   // décalage horizontal que l'œuf (tapTouch : translateX 13).
   eggNest: { position: 'absolute', width: EGG_SIZE, height: Math.round(EGG_SIZE * 394 / 720), left: '50%', marginLeft: -EGG_SIZE / 2, top: TAP_ZONE_H / 2 - Math.round(EGG_SIZE * 0.032), pointerEvents: 'none' },
   challengeMedaillon: { width: '100%', height: '100%' },
+  challengeValiderZone: { position: 'absolute', left: 0, right: 0, top: '66%', height: 44, alignItems: 'center', justifyContent: 'center' },
+  challengeValiderBtn: { width: 140, height: 42, alignItems: 'center', justifyContent: 'center' },
+  challengeValiderTexte: { color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: 0.6, textShadowColor: 'rgba(6,60,30,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
   optionsBtnIcon: { fontSize: 22 },
   // 27/09 : caisse et parchemin réduits (« un peu trop gros ») ; la zone
   // tactile du bouton reste de 62 points.
