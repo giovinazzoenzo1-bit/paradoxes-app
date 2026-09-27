@@ -17,6 +17,7 @@ Chaque dossier = une section de l'appli : sa fiche (`LISEZMOI.md`), ses images a
 | `08-fin-de-combat` | Victoire et défaite : fonds, bandeaux, cadre du récapitulatif, étoiles | 5 |
 | `09-gardien` | Combat du Gardien : décor et bandeau | 0 |
 | `10-defis-progres` | Défis, quêtes, succès, calendrier | 0 |
+| `16-parametres` | Paramètres (options, réglages) | 0 |
 | `11-runes-et-forge` | Runes (7 types), boutique et forge | 14 |
 | `12-icones-communes` | Icônes partagées : Griffes, pièces, diamants, retour, halos | 5 |
 | `13-themes-elements` | Thème visuel par élément (fond, bouton, cadre, emplacement de rune) | 4 |
@@ -58,3 +59,13 @@ Chaque dossier = une section de l'appli : sa fiche (`LISEZMOI.md`), ses images a
 2. Tu génères, puis tu déposes les images dans le dossier (lien dans sa fiche).
 3. Claude les récupère, les identifie, les optimise, les intègre dans `mobile/assets/` et capture le rendu avant / après.
 4. Tu valides ; Claude vide les images intégrées du dossier.
+
+
+## Méthode des menus secondaires (27/09)
+
+1. **Maquette** : Gemini reçoit IMAGE 1 (nouveau menu principal) + IMAGE 2 (le menu à refaire) et redessine TOUT l'écran, même disposition. Prompts : `PROMPTS-MAQUETTES.md` de chaque section.
+2. **Pièces, case par case** : Claude liste les pièces à découper d'après la maquette, puis un prompt d'extraction par pièce (fond magenta), dans la même conversation Gemini. Modèle :
+
+```
+From the screen you just made, draw ONLY the [ÉLÉMENT], alone, empty (no text, no numbers), centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
+```
