@@ -1067,3 +1067,12 @@ une écriture partielle — l'écran appelait des composants non importés.
 **Le compilateur ne le voit pas** (un nom inconnu compile). Repartir de la
 sauvegarde et tout refaire d'un bloc, puis vérifier que chaque nom utilisé
 est déclaré.
+
+**Boutique (2e sur 4, 27/09)** : DiamondShop sur le kit (GrandPanneau,
+planche, cristal) + pièces 37-44 : plaque du solde, bouton de prix (bleu vif
+si achetable, estompé sinon — le doré de la maquette n'avait pas de règle),
+ruban d'angle « Meilleure offre » (champ `badge` des offres, posé sur
+l'énergie comme la maquette validée), icônes d'offre dans `assets/boutique/`.
+⚠️ **Icône des Griffes manquante** (image 39 non reçue ; les suivantes étaient
+décalées d'un numéro — rangées par CONTENU) : tuile provisoire dessinée par le
+code avec 🐾, à remplacer (clé `griffes` de ICONES). Scène `scenes/boutique.jsx`.
