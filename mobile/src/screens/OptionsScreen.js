@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../context/CoinsContext';
 import { useDaily } from '../context/DailyContext';
@@ -13,6 +13,13 @@ import { BUILD_SHA, BUILD_TIME } from '../version';
 // Signalement d'un problème — voir `games/clicker/diagnostic.js`.
 import { DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY } from '../games/clicker/diagnostic';
 import { envoyerRapport } from '../signalement';
+import { GrandPanneau, BoutonBois, BoutonLarge, LigneReglage, largeurInterieure } from './games/fenetreBois';
+
+// 27/09 : grand menu du thème forêt — tailles en NOMBRES.
+const { width: ECRAN_L, height: ECRAN_H } = Dimensions.get('window');
+const PANNEAU_L = Math.min(Math.round(ECRAN_L * 0.94), 400);
+const PANNEAU_H = Math.round(Math.min(ECRAN_H * 0.76, PANNEAU_L / 0.56));
+const INTERIEUR = largeurInterieure(PANNEAU_L);
 
 // Menu Paramètres — panneau MODAL, même gabarit que le menu Quêtes
 // (07/09). Le mode développeur n'est plus affiché en vrac dans la page :
@@ -173,16 +180,9 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
     Alert.alert('Fait', "L'énergie sera remise au max à l'ouverture du mode Exploration.");
   };
 
+  // 27/09 : planche de réglage du thème forêt (kit partagé fenetreBois).
   const Toggle = ({ label, hint, value, onPress }) => (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.rowText}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        {!!hint && <Text style={styles.rowHint}>{hint}</Text>}
-      </View>
-      <View style={[styles.switchTrack, value && styles.switchTrackOn]}>
-        <View style={[styles.switchKnob, value && styles.switchKnobOn]} />
-      </View>
-    </TouchableOpacity>
+    <LigneReglage largeur={INTERIEUR} titre={label} detail={hint} valeur={value} onPress={onPress} />
   );
 
   // ---- Panneau du mode développeur ----
@@ -237,15 +237,8 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
           lui-même fermerait aussi. */}
       <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onBack} />
 
-      <View style={styles.panel}>
-        <View style={styles.panelHeader}>
-          <Text style={styles.panelTitle}>Paramètres</Text>
-          <TouchableOpacity style={styles.closeBtn} onPress={onBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.closeBtnText}>✕</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
+      <GrandPanneau titre="Paramètres" largeur={PANNEAU_L} hauteur={PANNEAU_H} onFermer={onBack}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionTitle}>Jeu</Text>
           <Toggle
             label="Vibrations"
@@ -262,18 +255,11 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
 
           {/* ⚠️ Toujours disponible, même sans problème détecté : le joueur
               peut signaler ce que le détecteur ne sait pas voir. */}
-          <TouchableOpacity style={styles.reportBtn} onPress={signalerProbleme}>
-            <Text style={styles.reportBtnText}>🐞 Signaler un problème</Text>
-            <Text style={styles.reportBtnSub}>Envoie un rapport au créateur du jeu</Text>
-          </TouchableOpacity>
+          <BoutonLarge couleur="vert" largeur={INTERIEUR} hauteur={70} texte="🐞 Signaler un problème" sousTexte="Envoie un rapport au créateur du jeu" onPress={signalerProbleme} />
 
           <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Réinitialisation</Text>
-          <TouchableOpacity style={styles.dangerBtn} onPress={resetClicker}>
-            <Text style={styles.dangerBtnText}>🐾 Réinitialiser Élevage</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.dangerBtn, styles.dangerBtnStrong]} onPress={resetWholeApp}>
-            <Text style={styles.dangerBtnText}>🗑️ Réinitialiser toute l'appli</Text>
-          </TouchableOpacity>
+          <BoutonLarge couleur="rouge" largeur={INTERIEUR} hauteur={54} texte="🐾 Réinitialiser Élevage" onPress={resetClicker} />
+          <BoutonLarge couleur="rouge" largeur={INTERIEUR} hauteur={54} texte="🗑️ Réinitialiser toute l'appli" onPress={resetWholeApp} />
 
           <Text style={styles.version}>Paradox — version de test</Text>
           {/* ⚠️ Date du dernier envoi, écrite par le robot de publication.
@@ -295,10 +281,8 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
 
         {/* Accès au mode développeur, en bas et visuellement à part : ce
             ne sont pas des réglages de joueur. */}
-        <TouchableOpacity style={styles.bottomBtn} onPress={() => setDevOpen(true)}>
-          <Text style={styles.bottomBtnText}>🛠️ Mode développeur</Text>
-        </TouchableOpacity>
-      </View>
+        <BoutonBois texte="🛠️ Mode développeur" largeur={230} hauteur={50} onPress={() => setDevOpen(true)} />
+      </GrandPanneau>
     </View>
   );
 }
@@ -340,7 +324,7 @@ const styles = StyleSheet.create({
   bodyContent: { padding: 12 },
 
   sectionTitle: {
-    color: COLORS.muted, fontSize: 11, fontWeight: '900',
+    color: '#f0d48a', fontSize: 11, fontWeight: '900',
     textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8,
   },
 
@@ -388,7 +372,7 @@ const styles = StyleSheet.create({
   dangerBtnStrong: { backgroundColor: 'rgba(255,82,82,0.22)', borderColor: '#FF5252' },
   dangerBtnText: { color: '#FF5252', fontWeight: '800', fontSize: 14 },
 
-  version: { color: COLORS.muted, fontSize: 10, textAlign: 'center', marginTop: 10 },
+  version: { color: '#dccbaa', fontSize: 10, textAlign: 'center', marginTop: 10 },
 
   // ---- Bouton du bas (accès dev / retour) ----
   bottomBtn: {

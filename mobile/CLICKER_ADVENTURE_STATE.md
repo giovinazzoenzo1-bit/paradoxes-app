@@ -1042,3 +1042,28 @@ d'incubation élargi (74 % de l'écran).
   réglage du 06/09) PARTAGÉ par tapTouch et eggTimer — le minuteur restait
   centré sur l'écran.
 - Incubateur : ligne « taps · durée initiale » retirée.
+
+
+## 27/09 — Menus secondaires : Paramètres (1er sur 4)
+
+Méthode (voir design/a-integrer/PLAN.md) : maquette Gemini de l'écran entier
+(IMAGE 1 = nouveau menu principal, IMAGE 2 = l'ancien menu), puis pièces
+découpées case par case. Les 4 maquettes sont reçues (Paramètres, Boutique,
+Quêtes, Calendrier).
+
+**Kit partagé des grands menus** (`fenetreBois.js`, images `assets/fenetres/`) :
+`BanniereTitre` (la bannière seule, aussi utilisée par FenetreBois),
+`GrandPanneau` (panneau vertical + bannière + croix ronde en bois ;
+`largeurInterieure(l)` pour le contenu), `LigneReglage` (planche moussue +
+`Interrupteur` : rail en bois, bouton rond émeraude / gris), `BoutonLarge`
+(cadre doré, émail vert / rouge ; émail mesuré centré à 49 %). Bouton gris =
+pierre désaturée seule ; bouton large rouge = émail recoloré d'un seul tenant.
+Paramètres (OptionsScreen) branché dessus, logique inchangée. Scène de banc
+`scenes/parametres.jsx`.
+
+⚠️ **Piège évité** : un remplacement (ligne présente 2 fois : la zone qui
+défile existe aussi dans le panneau développeur) a arrêté le script APRÈS
+une écriture partielle — l'écran appelait des composants non importés.
+**Le compilateur ne le voit pas** (un nom inconnu compile). Repartir de la
+sauvegarde et tout refaire d'un bloc, puis vérifier que chaque nom utilisé
+est déclaré.

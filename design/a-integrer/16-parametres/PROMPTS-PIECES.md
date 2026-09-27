@@ -41,3 +41,5 @@ From the settings screen you just made, draw ONLY the round emerald knob of the 
 ```
 From the settings screen you just made, draw ONLY the big green button ('Signaler un problème'), completely EMPTY: no text, no icon; keep its golden frame and its emerald enamel. About 4 units wide for 1 unit tall, in a 16:9 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
+
+✅ Intégrées le 27/09 dans le kit partagé (`assets/fenetres/`).
