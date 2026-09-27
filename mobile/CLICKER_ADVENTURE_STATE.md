@@ -957,3 +957,15 @@ INCHANGÉE : tout le panneau reste le bouton. Scène de banc `scenes/defi.jsx`.
   effet) ; le panneau (bouton Valider, médaillon coche) suffit.
 - **Ménage** : 41 images brutes déjà intégrées et validées retirées de
   `design/a-integrer` (récupérables dans l'historique Git).
+
+**Retours de l'auteur sur les pouvoirs (27/09)** :
+- Le flash rectangulaire (limité à la zone de l'œuf) laissait voir ses bords
+  → `PowerFlash` sur TOUT l'écran (bords = ceux du téléphone), sous l'œuf et
+  les panneaux ; autour de la créature qui surgit, halo en dégradé de 14
+  disques presque transparents (6 laissaient voir des anneaux).
+- La créature n'attaque plus que de la gauche : elle APPARAÎT AU TAP, à un
+  endroit différent autour de l'œuf (côtés, dessus, diagonales, jamais
+  par-dessous), fonce, recule, s'efface — UNE seule, qui se replace à chaque
+  tap (`lancerAttaque`) ; RETOURNÉE du côté droit pour regarder l'œuf.
+  ⚠️ Arrêter les animations du tap précédent avant de repartir : à 150 ms,
+  l'ancien fondu effaçait la nouvelle apparition.

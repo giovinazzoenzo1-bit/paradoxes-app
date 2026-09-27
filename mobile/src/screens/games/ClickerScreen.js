@@ -1007,8 +1007,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // rebond d'échelle déjà présent sur un tap normal — le joueur ne
   // distingue plus "je récolte des pièces" de "je casse l'œuf".
   const eggShake = useRef(new Animated.Value(0)).current;
-  // 27/09 : bond de la créature qui frappe l'œuf pendant son pouvoir.
-  const attaqueAnim = useRef(new Animated.Value(0)).current;
+  // 27/09 : la créature qui frappe l'œuf pendant son pouvoir — UNE seule, qui
+  // apparaît AU TAP à un endroit différent autour de l'œuf (valeurs animées :
+  // aucun état par tap). Voir lancerAttaque.
+  const attaque = useRef({ x: new Animated.Value(0), y: new Animated.Value(0), flip: new Animated.Value(1), vie: new Animated.Value(0) }).current;
 
   // ---- Particules de l'œuf ----
   //
@@ -1833,14 +1835,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // bond (pilote natif, aucun état) + l'impact à la couleur de son élément.
     const pouvoirEnCours = activePowerRef.current && now <= activePowerRef.current.expiresAt && activePowerRef.current.creatureId ? activePowerRef.current : null;
     spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit, true, pouvoirEnCours ? couleurElementDe(pouvoirEnCours.creatureId) : null);
-    if (pouvoirEnCours) {
-      attaqueAnim.stopAnimation();
-      attaqueAnim.setValue(0);
-      Animated.sequence([
-        Animated.timing(attaqueAnim, { toValue: 1, duration: 70, useNativeDriver: true }),
-        Animated.spring(attaqueAnim, { toValue: 0, friction: 5, tension: 120, useNativeDriver: true }),
-      ]).start();
-    }
+    if (pouvoirEnCours) lancerAttaque(attaque);
     // 27/09 : un critique fait trembler l'œuf — la SECOUSSE SEULE. ⚠️ Ne pas
     // appeler handleEggTap ici : pendant l'éclosion, chaque appel retire 1 s
     // au minuteur (un critique en aurait retiré 2).
@@ -3809,6 +3804,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               <DeckRow deck={deck} owned={owned} onSlotPress={pressDeckSlot} onSlotLongPress={setPickerSlot} recharges={recharges} />
             </ImageBackground>
 
+            {/* 27/09 : flash de l'élément sur TOUT l'écran, sous l'œuf et les
+                panneaux (limité à la zone de l'œuf, ses bords se voyaient). */}
+            {powerCast && <PowerFlash key={'flash' + powerCast.id} couleur={couleurElementDe(powerCast.creatureId)} />}
             <View style={styles.tapZone}>
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapTouch}>
                   {/* 27/09 : le nid est DANS le conteneur de l'œuf (derrière lui,
@@ -3868,7 +3866,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                     <PowerAttacker
                       creatureId={activePower.creatureId}
                       stage={stageForLevel(((owned || []).find((o) => o.id === activePower.creatureId) || { level: 1 }).level)}
-                      attaque={attaqueAnim}
+                      attaque={attaque}
                     />
                   )}
               </TouchableOpacity>
@@ -5079,6 +5077,7 @@ function couleurElementDe(creatureId) {
 }
 // Activation : flash de l'élément, la créature surgit en grand avec le nom
 // de son pouvoir, puis s'efface (1,3 s).
+const HALO_DISQUES = Array.from({ length: 14 }, (_, i) => 1 - i * 0.06);
 function PowerCastEffect({ cast }) {
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -5090,7 +5089,15 @@ function PowerCastEffect({ cast }) {
   const c = CREATURES.find((x) => x.id === cast.creatureId) || {};
   return (
     <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none', alignItems: 'center', justifyContent: 'center' }]}>
-      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: couleur, opacity: t.interpolate({ inputRange: [0, 0.1, 0.35, 1], outputRange: [0, 0.42, 0, 0] }) }]} />
+      {/* Halo à bords DOUX : 14 disques presque invisibles seuls, empilés en
+          dégradé (6 disques laissaient voir des anneaux). */}
+      {HALO_DISQUES.map((f, i) => (
+        <Animated.View key={i} style={[styles.powerHalo, {
+          width: 280 * f, height: 280 * f, borderRadius: 140 * f, marginLeft: -140 * f, marginTop: -140 * f, backgroundColor: couleur,
+          opacity: t.interpolate({ inputRange: [0, 0.12, 0.7, 1], outputRange: [0, 0.032, 0.032, 0] }),
+          transform: [{ scale: t.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.4, 1.05, 1.15] }) }],
+        }]} />
+      ))}
       <Animated.View style={{ alignItems: 'center',
         opacity: t.interpolate({ inputRange: [0, 0.08, 0.78, 1], outputRange: [0, 1, 1, 0] }),
         transform: [{ scale: t.interpolate({ inputRange: [0, 0.15, 0.25, 1], outputRange: [0.3, 1.12, 1, 1] }) }] }}>
@@ -5121,17 +5128,58 @@ function PowerAura({ couleur }) {
     />
   );
 }
-// Pendant le pouvoir : la créature se tient à gauche de l'œuf et BONDIT sur
-// lui à chaque tap (valeur `attaque` relancée par handleTap, pilote natif).
+// Flash de l'élément sur tout l'écran (0,9 s), sous l'œuf et les panneaux.
+function PowerFlash({ couleur }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const a = Animated.timing(t, { toValue: 1, duration: 900, useNativeDriver: true });
+    a.start();
+    return () => a.stop();
+  }, []);
+  return <Animated.View style={[styles.powerFlash, { backgroundColor: couleur, opacity: t.interpolate({ inputRange: [0, 0.12, 1], outputRange: [0, 0.4, 0] }) }]} />;
+}
+// Pendant le pouvoir, à CHAQUE tap : la créature surgit à un endroit
+// différent autour de l'œuf (côtés, dessus, diagonales — jamais par-dessous,
+// c'est le nid), fonce dedans, recule et s'efface. UNE seule créature, qui se
+// replace à chaque tap (demande de l'auteur : « pas 10× la même autour »). Du
+// côté droit, elle est RETOURNÉE pour regarder l'œuf.
+const ANGLES_ATTAQUE = [180, 205, 230, 255, 285, 310, 335, 0, 160, 20];
+let dernierAngleAttaque = -1;
+function lancerAttaque(a) {
+  let k = Math.floor(Math.random() * ANGLES_ATTAQUE.length);
+  if (k === dernierAngleAttaque) k = (k + 1) % ANGLES_ATTAQUE.length;
+  dernierAngleAttaque = k;
+  const r = (ANGLES_ATTAQUE[k] * Math.PI) / 180;
+  const x = Math.cos(r) * EGG_SIZE * 0.42;
+  const y = Math.sin(r) * EGG_SIZE * 0.5;
+  // ⚠️ Arrêter les animations du tap précédent AVANT de repartir : à 150 ms
+  // (autoclicker), l'ancien fondu effacerait sinon la nouvelle apparition.
+  if (a.mouvement) a.mouvement.stop();
+  if (a.fondu) a.fondu.stop();
+  a.x.setValue(x);
+  a.y.setValue(y);
+  a.vie.setValue(1);
+  a.flip.setValue(x > 1 ? -1 : 1);
+  a.mouvement = Animated.sequence([
+    Animated.parallel([
+      Animated.timing(a.x, { toValue: x * 0.55, duration: 70, useNativeDriver: true }),
+      Animated.timing(a.y, { toValue: y * 0.55, duration: 70, useNativeDriver: true }),
+    ]),
+    Animated.parallel([
+      Animated.spring(a.x, { toValue: x, friction: 6, tension: 120, useNativeDriver: true }),
+      Animated.spring(a.y, { toValue: y, friction: 6, tension: 120, useNativeDriver: true }),
+    ]),
+  ]);
+  a.mouvement.start();
+  a.fondu = Animated.sequence([Animated.delay(260), Animated.timing(a.vie, { toValue: 0, duration: 220, useNativeDriver: true })]);
+  a.fondu.start();
+}
 function PowerAttacker({ creatureId, stage, attaque }) {
   const c = CREATURES.find((x) => x.id === creatureId) || {};
   return (
     <Animated.View style={[styles.powerAttacker, {
-      transform: [
-        { translateX: attaque.interpolate({ inputRange: [0, 1], outputRange: [0, 58] }) },
-        { rotate: attaque.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '12deg'] }) },
-        { scale: attaque.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) },
-      ],
+      opacity: attaque.vie,
+      transform: [{ translateX: attaque.x }, { translateY: attaque.y }, { scaleX: attaque.flip }],
     }]}>
       <CreatureArt creatureId={creatureId} stageIndex={stage} emoji={c.emoji || '✨'} size={96} emojiStyle={styles.powerAttackerEmoji} />
     </Animated.View>
@@ -6248,9 +6296,10 @@ const styles = StyleSheet.create({
   bulleIcone: { width: 50, height: 50 },
   // Pouvoirs (27/09) : aura derrière l'œuf, créature qui attaque à sa gauche.
   powerAura: { position: 'absolute', width: EGG_SIZE * 1.5, height: EGG_SIZE * 1.5, left: '50%', marginLeft: -EGG_SIZE * 0.75, top: TAP_ZONE_H / 2 - EGG_SIZE * 0.75, pointerEvents: 'none' },
-  // Collée au DESSIN de l'œuf (≈ 30 % de sa largeur depuis le centre, pas le
-  // bord de l'image qui a une marge transparente) : son bond le percute.
-  powerAttacker: { position: 'absolute', width: 96, height: 96, left: '50%', marginLeft: -EGG_SIZE * 0.3 - 86, top: TAP_ZONE_H / 2 - 40, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' },
+  // Ancrée au CENTRE de l'œuf ; lancerAttaque la place autour (translate).
+  powerAttacker: { position: 'absolute', width: 96, height: 96, left: '50%', marginLeft: -48, top: TAP_ZONE_H / 2 - 48, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' },
+  powerFlash: { position: 'absolute', left: 0, top: 0, width: SCREEN_W, height: SCREEN_H, zIndex: 1, pointerEvents: 'none' },
+  powerHalo: { position: 'absolute', left: '50%', top: '50%' },
   powerAttackerEmoji: { fontSize: 56 },
   powerCastEmoji: { fontSize: 110 },
   powerCastNom: { marginTop: 4, fontSize: 22, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 2 } },
