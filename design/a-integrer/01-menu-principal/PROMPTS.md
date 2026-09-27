@@ -135,3 +135,19 @@ A horizontal validation button for a completed quest: a rounded plank of polishe
 ```
 A round success medallion: a bright green check mark made of twisted green vines with small leaves, set on a round disc of golden-honey wood with a thin gold ring. Square 1:1 image. Style: hand-painted fantasy mobile game UI asset, cozy magical forest theme, weathered warm brown wood, bright green moss, thin vines, smooth blue-grey pebbles, soft painterly shading, clean crisp edges, high detail, same art style as the reference screenshot. One single isolated object, centered, fully visible with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture, no vignette. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
+
+## Bulles du menu (27/09) — déposer dans `01-menu-principal/bulles`
+
+Lien : https://github.com/giovinazzoenzo1-bit/paradoxes-app/upload/main/design/a-integrer/01-menu-principal/bulles
+
+**22. Pierre runique (remplace la bougie du Rituel)**
+
+```
+A small magic rune stone icon, readable at a very small size: a rounded smooth grey stone with patches of green moss, a bold carved rune on its front filled with bright emerald-green and golden light (the light stays INSIDE the carving), a tiny fern sprouting at its base. Simple strong silhouette. Square 1:1 image. Style: hand-painted fantasy mobile game UI asset, cozy magical forest theme, weathered warm brown wood, bright green moss, thin vines, smooth blue-grey pebbles, soft painterly shading, clean crisp edges, high detail, same art style as the reference screenshot. One single isolated object, centered, fully visible with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture, no vignette. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
+```
+
+**23. Gland doré (remplace le ✨ de la cible dorée)**
+
+```
+A shiny golden acorn icon, readable at a very small size: a polished metallic gold acorn with warm highlights, a textured golden cap, a short stem with one small fresh green leaf. Simple strong silhouette, looks precious and rewarding. Square 1:1 image. Style: hand-painted fantasy mobile game UI asset, cozy magical forest theme, weathered warm brown wood, bright green moss, thin vines, smooth blue-grey pebbles, soft painterly shading, clean crisp edges, high detail, same art style as the reference screenshot. One single isolated object, centered, fully visible with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture, no vignette. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
+```
