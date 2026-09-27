@@ -3966,7 +3966,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   // attente sépare le joueur d'un nouvel essai.
                   <BoutonBois couleur="rouge" desactive largeur={Math.round(SCREEN_W * 0.8)} hauteur={58} texte="⚔️ Nouvel essai" sousTexte={`dans ${formatRemaining(guardianRetryRemainingMs(mainEgg, nowTick))}`} />
                 ) : guardianRequired(owned.length) ? (
-                  <BoutonBois couleur="rouge" largeur={Math.round(SCREEN_W * 0.8)} hauteur={64} texte="⚔️ Affronter le gardien" sousTexte={ligneGardien(mainEgg, 'main') || "Bats-le pour faire éclore l'œuf"} onPress={() => resolveHatch('main')} />
+                  <BoutonBois couleur="rouge" largeur={Math.round(SCREEN_W * 0.8)} hauteur={80} texte="⚔️ Affronter le gardien" sousTexte={ligneGardien(mainEgg, 'main') || "Bats-le pour faire éclore l'œuf"} onPress={() => resolveHatch('main')} />
                 ) : (
                   <BoutonBois couleur="vert" largeur={Math.round(SCREEN_W * 0.7)} hauteur={56} texte="🐣 Faire éclore l'œuf" onPress={() => resolveHatch('main')} />
                 )
@@ -3977,7 +3977,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   proposer alors ne mènerait nulle part. On y accède par
                   le bouton animé de la colonne de gauche. */}
               {!incubatingEgg && eggPhase === 'hatching' && (
-                <BoutonBois couleur="bleu" largeur={Math.round(SCREEN_W * 0.74)} hauteur={52} icone={SABLIER} texte="Mettre en incubation" sousTexte={formatRemaining(incubationDurationMs(owned.length))} onPress={startEggIncubation} />
+                <BoutonBois couleur="bleu" largeur={Math.round(SCREEN_W * 0.74)} hauteur={52} texte="Mettre en incubation" onPress={startEggIncubation} />
               )}
               {comboCount > 1 ? (
                 <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
@@ -5061,6 +5061,9 @@ function couleurElementDe(creatureId) {
 }
 // Activation : flash de l'élément, la créature surgit en grand avec le nom
 // de son pouvoir, puis s'efface (1,3 s).
+// Décalage horizontal de l'œuf (≈ 2 mm à droite, 06/09), partagé par son
+// minuteur pour qu'ils restent alignés.
+const DECALAGE_OEUF_X = 13;
 const HALO_DISQUES = Array.from({ length: 14 }, (_, i) => 1 - i * 0.06);
 function PowerCastEffect({ cast }) {
   const t = useRef(new Animated.Value(0)).current;
@@ -6045,6 +6048,7 @@ const styles = StyleSheet.create({
 
   // Temps restant sous l'œuf.
   eggTimer: {
+    transform: [{ translateX: DECALAGE_OEUF_X }], // aligné sur l'œuf (27/09)
     color: COLORS.text, fontSize: 20, fontWeight: '900', marginBottom: 6,
     textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4,
   },
@@ -6228,11 +6232,13 @@ const styles = StyleSheet.create({
   // milieu. Le niveau de View intermediaire a ete supprime au passage,
   // le TouchableOpacity fait le centrage lui-meme.
   //
-  // translateX 13 : decalage de ~2mm vers la droite demande le 06/09.
+  // translateX : decalage de ~2mm vers la droite demande le 06/09.
+  // ⚠️ 27/09 : PARTAGÉ avec le minuteur sous l'œuf (DECALAGE_OEUF_X) — le
+  // minuteur restait centré sur l'écran, donc à gauche de l'œuf.
   tapTouch: {
     width: '100%', height: TAP_ZONE_H,
     alignItems: 'center', justifyContent: 'center',
-    transform: [{ translateX: 13 }],
+    transform: [{ translateX: DECALAGE_OEUF_X }],
   },
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.

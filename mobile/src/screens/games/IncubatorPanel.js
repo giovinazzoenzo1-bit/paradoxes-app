@@ -135,7 +135,7 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                   <BoutonBois
                     couleur={guardianRequired ? 'rouge' : 'vert'}
                     largeur={250}
-                    hauteur={60}
+                    hauteur={70}
                     texte={guardianRequired ? '⚔️ Affronter le gardien' : '🐣 Faire éclore'}
                     sousTexte={guardianRequired && guardianInfo ? guardianInfo : null}
                     onPress={onHatch}
@@ -165,9 +165,6 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                 </>
               )}
 
-              <Text style={styles.stats}>
-                {egg.tapsUsed || 0} taps · durée initiale {formatRemaining(egg.totalMs)}
-              </Text>
             </>
           )}
         </View>

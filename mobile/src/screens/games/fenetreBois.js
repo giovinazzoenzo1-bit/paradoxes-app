@@ -91,7 +91,9 @@ export function BoutonBois({ texte, sousTexte = null, couleur = 'vert', onPress,
       style={[styles.bouton, { width: largeur, height: h, opacity: desactive ? 0.6 : 1 }]}
     >
       <Image source={BOUTONS[couleur] || BOUTONS.vert} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: largeur, height: h }} />
-      <View style={{ width: largeur, height: h, paddingHorizontal: Math.round(largeur * 0.17), alignItems: 'center', justifyContent: 'center' }}>
+      {/* Texte centré sur l'ÉMAIL, pas sur l'image : l'émail occupe 30 à 80 %
+          de la hauteur (centre à 55 %, mesuré) — d'où le décalage vers le bas. */}
+      <View style={{ width: largeur, height: h, paddingHorizontal: Math.round(largeur * 0.17), paddingTop: Math.round(h * 0.1), alignItems: 'center', justifyContent: 'center' }}>
         {children || (
           <>
             <View style={styles.boutonLigne}>

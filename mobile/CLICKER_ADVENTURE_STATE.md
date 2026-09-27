@@ -1031,3 +1031,14 @@ texte, émojis comptés ×1,4 ; 10 à 15 pour le texte, sous-texte sur 2 lignes
 s'il tomberait sous 9) — `adjustsFontSizeToFit` ne réduit rien sur le
 téléphone Android de l'auteur. « Nouvel essai » raccourci, bouton
 d'incubation élargi (74 % de l'écran).
+
+**4e retour (27/09) — finitions** :
+- Texte des boutons centré sur l'ÉMAIL et non sur l'image (émail mesuré :
+  30 à 80 % de la hauteur, centre à 55 % → `paddingTop: h × 0,1`) ; c'est
+  pour ça que les 3 lignes d'« Affronter le gardien » débordaient en haut.
+  Bouton plus haut : 80 (écran principal), 70 (incubateur).
+- Bouton bleu : « Mettre en incubation » seul (plus de temps ni d'icône).
+- Minuteur sous l'œuf aligné sur l'œuf : `DECALAGE_OEUF_X` (13, ≈ 2 mm,
+  réglage du 06/09) PARTAGÉ par tapTouch et eggTimer — le minuteur restait
+  centré sur l'écran.
+- Incubateur : ligne « taps · durée initiale » retirée.
