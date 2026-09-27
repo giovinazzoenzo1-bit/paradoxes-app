@@ -136,6 +136,7 @@ import {
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
 import DiamondShop, { DIAMOND_OFFERS } from './DiamondShop';
+import BoutiqueArbre from './ArbreBoutique';
 import {
   TAP_BOSS_STORAGE_KEY, TAP_BOSS_TAPS_REQUIRED, TAP_BOSS_TIME_LIMIT_MS,
   diamondsForDuration, nextSpawnGapMs, grantableDiamonds,
@@ -3997,8 +3998,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         </>
       )}
 
+      {/* 27/09 (demande de l'auteur) : la boutique devient un ARBRE de
+          compétences explorable (ArbreBoutique) — mêmes props, mêmes achats ;
+          l'ancienne liste (ShopView) reste le FILET si l'arbre plantait. */}
       {view === 'shop' && (
-        <ShopView
+        <BoutiqueArbre
+          Secours={ShopView}
+          formatNum={formatNum}
           coins={coins}
           sharedCoins={sharedCoins}
           tapPower={tapPower}

@@ -1142,3 +1142,34 @@ irrégulier. Deck 78 points (déborde sur l'anneau de pierre), bulle 98.
 Reste en disques empilés : le halo de la créature qui surgit à l'activation
 (`HALO_DISQUES`, couleur selon l'élément) — même remède possible (une image
 par élément) si l'auteur le demande.
+
+
+## 27/09 — Boutique en ARBRE de compétences « dans l'espace » (étape 1 sur 3)
+
+`screens/games/ArbreBoutique.js` remplace l'affichage de la boutique
+(`BoutiqueArbre Secours={ShopView}` : **si l'arbre plante, l'ancienne liste
+s'affiche** — filet d'erreur React).
+- **Disposition** : Ascension au centre (anneau de progression vers le seuil),
+  Griffes à gauche, Offrande à droite, Reliques dessous (ouvre le panneau des
+  20 objets de créatures) ; en haut Pacte → Faveur / Dégâts critiques → 10
+  améliorations sur 2 branches (plus loin = plus cher ; 1er verrou de chaque
+  branche en « ??? », les suivants cachés) ; en bas Sanctuaire / Veilleur puis
+  15 auto-clics sur 3 racines, révélés 2 par 2.
+- **Économie INCHANGÉE** : mêmes fonctions de prix / verrou / achat que
+  ShopView (importées de clickerLogic ; achats = les MÊMES props). L'achat
+  relit le nœud FRAIS (pas de fermeture périmée).
+- **Moteur maison** (⚠️ PAS de react-native-gesture-handler : cause de l'écran
+  blanc, voir index.js) : PanResponder + Animated ; glisser, pincer (zoom
+  autour des doigts, coordonnées pageX − position de la carte), élan borné
+  sur le pilote natif, boutons + / − / recentrer ; ZÉRO rendu React pendant
+  un geste ; nœuds et branches mémorisés (le jeu rafraîchit ses chiffres
+  souvent). Parallaxe : 2 couches d'étoiles générées (0,2 et 0,4 de la
+  vitesse). Détail selon le zoom (< 0,66 : médaillons seuls). Ouverture à
+  0,78. Décor généré par script : `assets/arbre/`.
+- Banc : scène `scenes/arbre.jsx`. ⚠️ Au banc, un glisser à la SOURIS qui
+  démarre sur un nœud ouvre le nœud (le navigateur ne transfère pas la main
+  comme un téléphone) : démarrer les essais dans le vide. Le pincement à 2
+  doigts et la fluidité réelle ne se testent QUE sur téléphone.
+- **Étape 2 (Gemini)** : grand arbre en 2 images, médaillons, médaillon
+  Ascension, plaque de prix, icônes. **Étape 3** : branches qui s'illuminent à
+  l'achat, lucioles, effets.

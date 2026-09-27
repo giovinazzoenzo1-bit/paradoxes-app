@@ -96,3 +96,5 @@
 - [x] **Boutique : icône des Griffes** (reçue et intégrée le 27/09) (prompt 39, `02-boutique/PROMPTS-PIECES.md`) — tuile provisoire 🐾 en attendant ; l'ajouter à `ICONES` dans DiamondShop.js.
 - [ ] **Sons** (demande de l'auteur, 27/09) : achat, récompense, jour du calendrier, et plus tard le reste.
 - [ ] **Vibration courte sur iPhone** : la Vibration de React Native dure ≈ 0,4 s sur iOS (durée fixe). Il faudra `expo-haptics` (vérifier la version compatible SDK 57 ET que la publication passe, les logs du robot n'étant pas visibles).
+- [ ] **Arbre de la boutique, étape 2 (Gemini)** : grand arbre (2 images : ramure / racines), médaillon de nœud, médaillon Ascension, plaque de prix, icônes par lots.
+- [ ] **Arbre de la boutique, étape 3** : illumination des branches à l'achat (animation), lucioles, effets d'achat.

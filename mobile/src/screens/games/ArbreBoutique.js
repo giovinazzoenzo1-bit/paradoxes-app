@@ -1,0 +1,476 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, Image, TouchableOpacity, PanResponder, Animated, Easing, StyleSheet, ScrollView } from 'react-native';
+import {
+  TAP_UPGRADES, UPGRADE_ITEMS, AUTOCLICKERS, TAP_DAMAGE_PER_LEVEL,
+  tapPowerCost, critUpgradeCost, critDamageUpgradeCost, sanctuaryUpgradeCost, sanctuaryMaxed,
+  veilleurUpgradeCost, veilleurMaxed, tapUpgradeCost, tapUpgradeUnlocked, upgradeItemCost,
+  autoClickerCost, griffesCoinCost, taillePackGriffes, coreUpgradeUnlocked, ascensionSpeedMultiplier,
+  ascensionThreshold, OFFRANDE_APPCOINS_COST, SANCTUARY_MAX_LEVEL, VEILLEUR_MAX_LEVEL,
+} from '../../games/clicker/clickerLogic';
+import { useSettings } from '../../context/SettingsContext';
+import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge } from './fenetreBois';
+
+// ════════════════════════════════════════════════════════════════════
+//  BOUTIQUE EN ARBRE DE COMPÉTENCES « DANS L'ESPACE » (27/09)
+// ════════════════════════════════════════════════════════════════════
+// Demande de l'auteur : un arbre (Ascension au centre, dégâts de tap en haut,
+// auto-clics en bas, Griffes et Offrande de part et d'autre), qu'on explore
+// librement — glisser, pincer pour zoomer, élan — « comme dans l'espace ».
+//
+// ⚠️⚠️ AUCUNE dépendance ajoutée. react-native-gesture-handler a été LA cause
+// de l'écran blanc (voir index.js, bisection) : on ne le remet pas. Moteur
+// maison : PanResponder + Animated. FLUIDITÉ = ZÉRO rendu React pendant un
+// geste : les doigts ne font que `setValue` sur des valeurs animées ; l'élan
+// après le lâcher tourne sur le PILOTE NATIF.
+//
+// ⚠️ ÉCONOMIE INCHANGÉE : mêmes fonctions de prix, de verrou et d'achat que
+// l'ancienne liste (ShopView) — seule la présentation change. Si l'arbre
+// plante, `BoutiqueArbre` affiche l'ancienne boutique (filet de sécurité).
+//
+// ⚠️ Tailles et positions en NOMBRES (règle du 27/09).
+
+const TOILE_L = 900;   // taille du « ciel » explorable, en points
+const TOILE_H = 1580;
+const ZOOM_MIN = 0.42; // vue d'ensemble : l'arbre entier comme une constellation
+const ZOOM_MAX = 1.7;
+const ZOOM_DETAIL = 0.66; // en dessous : médaillons seuls (noms et prix masqués)
+const ZOOM_DEPART = 0.78; // à l'ouverture : tout le cœur de l'arbre visible (Griffes et Offrande compris)
+
+const IMG = {
+  ciel: require('../../../assets/arbre/ciel.jpg'),
+  etoilesLoin: require('../../../assets/arbre/etoiles-loin.png'),
+  etoilesPres: require('../../../assets/arbre/etoiles-pres.png'),
+  traitAllume: require('../../../assets/arbre/trait-allume.png'),
+  traitEteint: require('../../../assets/arbre/trait-eteint.png'),
+  lueur: require('../../../assets/fenetres/lueur-cyan.png'),
+};
+
+// Positions (points de la toile). Chaînes : l'élément i va sur la chaîne
+// i % n, à la profondeur ⌊i / n⌋ — plus c'est loin du tronc, plus c'est cher.
+const CENTRE = { x: 450, y: 790 };
+const CHAINES_TAP = [
+  [[290, 450], [232, 360], [192, 270], [180, 180], [214, 92]],
+  [[610, 450], [668, 360], [708, 270], [720, 180], [686, 92]],
+];
+const CHAINES_AUTO = [
+  [[450, 1100], [450, 1200], [450, 1300], [450, 1400], [450, 1500]],
+  [[302, 1116], [252, 1216], [216, 1316], [196, 1416], [190, 1510]],
+  [[598, 1116], [648, 1216], [684, 1316], [704, 1416], [710, 1510]],
+];
+
+// ── Le modèle : chaque nœud avec son prix, son état, son achat ──────────
+function construireNoeuds(p) {
+  const f = p.formatNum || ((n) => String(Math.round(n)));
+  const remise = p.applyDiscount || ((c) => c);
+  const coreState = { tapPower: p.tapPower, critLevel: p.critLevel, critDamageLevel: p.critDamageLevel, sanctuaryLevel: p.sanctuaryLevel };
+  const debloque = (id) => coreUpgradeUnlocked(id, coreState);
+  const etat = (verrou, max, prix, solde) => (verrou ? 'verrouille' : max ? 'max' : solde >= prix ? 'achetable' : 'cher');
+  const N = [];
+  const ajouter = (n) => N.push({ taille: 76, devise: 'pieces', allume: false, ...n });
+
+  // Centre : Ascension, Griffes (gauche), Offrande (droite), Reliques (bas)
+  const seuil = ascensionThreshold(p.ascensionCount);
+  ajouter({
+    id: 'ascension', x: CENTRE.x, y: CENTRE.y, taille: 150, emoji: '🌟', nom: 'Ascension',
+    niveau: p.ascensionCount > 0 ? `×${ascensionSpeedMultiplier(p.ascensionCount).toFixed(2)}` : '',
+    etat: p.ascensionReady ? 'achetable' : 'cher', prix: null, onPress: p.ascensionReady ? p.onAscend : null,
+    progres: seuil > 0 ? Math.min(1, (p.totalEarned || 0) / seuil) : 0, allume: true,
+    detail: p.ascensionReady
+      ? 'Remet ton économie à zéro — tu gardes tes créatures et l\'Aventure.'
+      : !p.defiAscensionEnCours
+        ? `Débloquée par le défi « Fais ta ${p.ascensionCount + 1}${p.ascensionCount === 0 ? 're' : 'e'} Ascension ».`
+        : `Gagne encore ${f(Math.max(0, seuil - (p.totalEarned || 0)))} pièces au total pour débloquer.`,
+  });
+  const prixGriffes = griffesCoinCost(p.griffesCoinBuys, p.ascensionCount);
+  ajouter({ id: 'griffes', parent: 'ascension', x: 262, y: 800, taille: 88, emoji: '🐾', nom: `${taillePackGriffes(p.ascensionCount)} Griffes`,
+    prix: prixGriffes, etat: etat(false, false, prixGriffes, p.coins), onPress: p.onBuyGriffesWithCoins, allume: true,
+    detail: 'Des Griffes pour faire progresser tes créatures en Aventure.' });
+  ajouter({ id: 'offrande', parent: 'ascension', x: 638, y: 800, taille: 88, emoji: '💎', nom: 'Offrande', devise: 'diamants',
+    prix: OFFRANDE_APPCOINS_COST, etat: etat(false, false, OFFRANDE_APPCOINS_COST, p.sharedCoins), onPress: p.onOffrande, allume: true,
+    detail: 'Offre des diamants aux esprits de la forêt contre une récompense.' });
+  ajouter({ id: 'reliques', parent: 'ascension', x: CENTRE.x, y: 965, taille: 84, emoji: '📜', nom: 'Reliques', prix: null,
+    etat: 'achetable', ouvreReliques: true, allume: true, detail: 'Les améliorations liées à tes créatures.' });
+
+  // Haut : les dégâts de tap
+  const prixPacte = remise(tapPowerCost(p.tapPower));
+  ajouter({ id: 'pacte', parent: 'ascension', x: CENTRE.x, y: 612, emoji: '🔗', nom: 'Pacte', niveau: `${p.tapPower}`,
+    prix: prixPacte, etat: etat(false, false, prixPacte, p.coins), onPress: p.onBuyTapPower, allume: p.tapPower > 1,
+    detail: `+${TAP_DAMAGE_PER_LEVEL.toFixed(1).replace('.', ',')} pièce par tap à chaque niveau.` });
+  const prixFaveur = remise(critUpgradeCost(p.critLevel));
+  ajouter({ id: 'faveur', parent: 'pacte', x: 340, y: 545, emoji: '✨', nom: 'Faveur des Esprits', niveau: `nv ${p.critLevel}`,
+    prix: prixFaveur, etat: etat(!debloque('faveur'), false, prixFaveur, p.coins), onPress: p.onBuyCrit, allume: p.critLevel > 0,
+    detail: 'Augmente tes chances de coup critique.' });
+  const prixCrit = remise(critDamageUpgradeCost(p.critDamageLevel));
+  ajouter({ id: 'critDamage', parent: 'pacte', x: 560, y: 545, emoji: '💥', nom: 'Dégâts critiques', niveau: `nv ${p.critDamageLevel}`,
+    prix: prixCrit, etat: etat(!debloque('critDamage'), false, prixCrit, p.coins), onPress: p.onBuyCritDamage, allume: p.critDamageLevel > 0,
+    detail: 'Augmente la force de tes coups critiques.' });
+  // 10 améliorations : le 1er verrou de chaque chaîne s'affiche « ??? », les
+  // suivants sont cachés (mystère sans surcharge).
+  const vuVerrou = [false, false];
+  TAP_UPGRADES.forEach((item, i) => {
+    const c = i % 2; const d = Math.floor(i / 2); const [x, y] = CHAINES_TAP[c][d];
+    const niveau = (p.tapUpgrades && p.tapUpgrades[item.id]) || 0;
+    const ouvert = tapUpgradeUnlocked(i, p.tapPower, p.tapUpgrades);
+    if (!ouvert) { if (vuVerrou[c]) return; vuVerrou[c] = true; }
+    const prix = remise(tapUpgradeCost(item, niveau, p.ascensionCount));
+    ajouter({ id: item.id, parent: d === 0 ? (c === 0 ? 'faveur' : 'critDamage') : TAP_UPGRADES[i - 2].id, x, y,
+      emoji: item.emoji, nom: item.name, niveau: `nv ${niveau}`, prix, etat: etat(!ouvert, false, prix, p.coins),
+      onPress: () => p.onBuyTapUpgrade(item.id), allume: niveau > 0, detail: `Puissance de tap +${item.bonus} par niveau.` });
+  });
+
+  // Bas : Sanctuaire et Veilleur à la base des racines, puis les auto-clics
+  const maxS = sanctuaryMaxed(p.sanctuaryLevel); const prixS = remise(sanctuaryUpgradeCost(p.sanctuaryLevel));
+  ajouter({ id: 'sanctuaire', parent: 'reliques', x: 318, y: 1005, emoji: '🏛️', nom: 'Sanctuaire', niveau: `${p.sanctuaryLevel}/${SANCTUARY_MAX_LEVEL}`,
+    prix: prixS, etat: etat(!debloque('sanctuaire'), maxS, prixS, p.coins), onPress: p.onBuySanctuary, allume: p.sanctuaryLevel > 0,
+    detail: 'Augmente tes gains passifs.' });
+  const maxV = veilleurMaxed(p.veilleurLevel); const prixV = remise(veilleurUpgradeCost(p.veilleurLevel));
+  ajouter({ id: 'veilleur', parent: 'reliques', x: 582, y: 1005, emoji: '🌙', nom: 'Veilleur', niveau: `${p.veilleurLevel}/${VEILLEUR_MAX_LEVEL}`,
+    prix: prixV, etat: etat(!debloque('veilleur'), maxV, prixV, p.coins), onPress: p.onBuyVeilleur, allume: p.veilleurLevel > 0,
+    detail: 'Augmente tes gains hors-ligne.' });
+  // Auto-clics triés par prix ; révélés 2 par 2 : les possédés, le suivant,
+  // puis un « ??? ».
+  const tries = [...AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost);
+  let dernierPossede = -1;
+  tries.forEach((c, i) => { if (((p.autoClickers && p.autoClickers[c.id]) || 0) > 0) dernierPossede = i; });
+  tries.forEach((c, i) => {
+    if (i > dernierPossede + 2) return;
+    const ch = i % 3; const d = Math.floor(i / 3); const [x, y] = CHAINES_AUTO[ch][d];
+    const possede = (p.autoClickers && p.autoClickers[c.id]) || 0;
+    const mystere = i === dernierPossede + 2;
+    const prix = remise(autoClickerCost(c, possede, p.ascensionCount));
+    ajouter({ id: c.id, parent: d === 0 ? ['reliques', 'sanctuaire', 'veilleur'][ch] : tries[i - 3].id, x, y,
+      emoji: c.emoji, nom: c.name, niveau: possede > 0 ? `×${possede}` : '', prix, etat: etat(mystere, false, prix, p.coins),
+      onPress: () => p.onBuyAutoClicker(c.id), allume: possede > 0,
+      detail: `Possédé : ${possede} · +${c.baseIncome.toFixed(1)}/s chacun.` });
+  });
+  return N;
+}
+
+// ── Le moteur « espace » : glisser, pincer, élan ─────────────────────────
+function borne(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function EspaceZoomable({ onDetail, children, fond }) {
+  const tx = useRef(new Animated.Value(0)).current;
+  const ty = useRef(new Animated.Value(0)).current;
+  const s = useRef(new Animated.Value(1)).current;
+  const etat = useRef({ tx: 0, ty: 0, s: ZOOM_DEPART, l: 0, h: 0, px: 0, py: 0, pret: false }).current;
+  const boite = useRef(null);
+  const geste = useRef({ depart: null, pince: null }).current;
+  const detailAvant = useRef(true);
+
+  const limiter = (x, y, z) => {
+    // On peut amener chaque bord de la toile jusqu'au milieu de l'écran.
+    const { l, h } = etat;
+    return [borne(x, l / 2 - TOILE_L * z, l / 2), borne(y, h / 2 - TOILE_H * z, h / 2), z];
+  };
+  const appliquer = (x, y, z) => {
+    const [bx, by, bz] = limiter(x, y, borne(z, ZOOM_MIN, ZOOM_MAX));
+    etat.tx = bx; etat.ty = by; etat.s = bz;
+    tx.setValue(bx); ty.setValue(by); s.setValue(bz);
+  };
+  const signalerDetail = () => {
+    const d = etat.s >= ZOOM_DETAIL;
+    if (d !== detailAvant.current) { detailAvant.current = d; onDetail && onDetail(d); }
+  };
+  const arreter = () => { tx.stopAnimation(); ty.stopAnimation(); s.stopAnimation(); };
+  const animerVers = (x, y, z, duree) => {
+    const [bx, by, bz] = limiter(x, y, borne(z, ZOOM_MIN, ZOOM_MAX));
+    etat.tx = bx; etat.ty = by; etat.s = bz;
+    const e = Easing.out(Easing.cubic);
+    Animated.parallel([
+      Animated.timing(tx, { toValue: bx, duration: duree, easing: e, useNativeDriver: true }),
+      Animated.timing(ty, { toValue: by, duration: duree, easing: e, useNativeDriver: true }),
+      Animated.timing(s, { toValue: bz, duration: duree, easing: e, useNativeDriver: true }),
+    ]).start();
+    signalerDetail();
+  };
+  const recentrer = (duree = 420) => animerVers(etat.l / 2 - CENTRE.x * ZOOM_DEPART, etat.h / 2 - CENTRE.y * ZOOM_DEPART, ZOOM_DEPART, duree);
+  const zoomerAutourDuCentre = (facteur) => {
+    const z = borne(etat.s * facteur, ZOOM_MIN, ZOOM_MAX);
+    const cx = (etat.l / 2 - etat.tx) / etat.s; const cy = (etat.h / 2 - etat.ty) / etat.s;
+    animerVers(etat.l / 2 - cx * z, etat.h / 2 - cy * z, z, 260);
+  };
+
+  const pan = useRef(PanResponder.create({
+    // Un simple toucher reste aux nœuds (achat) ; on ne prend la main qu'au
+    // déplacement ou à deux doigts.
+    onStartShouldSetPanResponder: () => false,
+    onStartShouldSetPanResponderCapture: (e) => e.nativeEvent.touches.length >= 2,
+    onMoveShouldSetPanResponder: (e, g) => e.nativeEvent.touches.length >= 2 || Math.abs(g.dx) > 6 || Math.abs(g.dy) > 6,
+    onMoveShouldSetPanResponderCapture: (e, g) => e.nativeEvent.touches.length >= 2 || Math.abs(g.dx) > 10 || Math.abs(g.dy) > 10,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: () => {
+      arreter();
+      geste.depart = { tx: etat.tx, ty: etat.ty, dx: 0, dy: 0 };
+      geste.pince = null;
+    },
+    onPanResponderMove: (e, g) => {
+      const t = e.nativeEvent.touches;
+      if (t.length >= 2) {
+        // ⚠️ pageX (écran) − position de la carte : locationX serait relatif
+        // à l'élément touché (souvent un nœud), le zoom partirait de travers.
+        const mx = (t[0].pageX + t[1].pageX) / 2 - etat.px; const my = (t[0].pageY + t[1].pageY) / 2 - etat.py;
+        const d = Math.hypot(t[0].pageX - t[1].pageX, t[0].pageY - t[1].pageY) || 1;
+        if (!geste.pince) {
+          geste.pince = { d0: d, cx: (mx - etat.tx) / etat.s, cy: (my - etat.ty) / etat.s, s0: etat.s };
+        }
+        // Le point de la toile sous les doigts y reste : zoom « autour des doigts ».
+        const z = borne(geste.pince.s0 * (d / geste.pince.d0), ZOOM_MIN, ZOOM_MAX);
+        appliquer(mx - geste.pince.cx * z, my - geste.pince.cy * z, z);
+      } else {
+        if (geste.pince) { geste.pince = null; geste.depart = { tx: etat.tx, ty: etat.ty, dx: g.dx, dy: g.dy }; }
+        appliquer(geste.depart.tx + g.dx - geste.depart.dx, geste.depart.ty + g.dy - geste.depart.dy, etat.s);
+      }
+    },
+    onPanResponderRelease: (e, g) => {
+      // Élan : on prolonge le mouvement selon la vitesse du lâcher, puis on
+      // freine en douceur (pilote natif, borné : aucun dépassement).
+      if (geste.pince) { signalerDetail(); return; }
+      animerVers(etat.tx + g.vx * 320, etat.ty + g.vy * 320, etat.s, 700);
+    },
+    onPanResponderTerminate: () => signalerDetail(),
+  })).current;
+
+  // Parallaxe : les étoiles lointaines glissent 5 fois moins vite que
+  // l'arbre, les proches 2,5 fois moins — la profondeur de « l'espace ».
+  const tuile = 512;
+  const couche = (facteur) => ({
+    transform: [
+      { translateX: Animated.subtract(Animated.modulo(Animated.multiply(tx, facteur), tuile), tuile) },
+      { translateY: Animated.subtract(Animated.modulo(Animated.multiply(ty, facteur), tuile), tuile) },
+    ],
+  });
+
+  return (
+    <View
+      ref={boite}
+      style={StyleSheet.absoluteFill}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        const premier = !etat.pret; etat.l = width; etat.h = height; etat.pret = true;
+        if (boite.current && boite.current.measureInWindow) boite.current.measureInWindow((x, y) => { etat.px = x || 0; etat.py = y || 0; });
+        if (premier) { appliquer(width / 2 - CENTRE.x * ZOOM_DEPART, height / 2 - CENTRE.y * ZOOM_DEPART, ZOOM_DEPART); }
+      }}
+      {...pan.panHandlers}
+    >
+      <Image source={IMG.ciel} resizeMode="stretch" style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} />
+      <Animated.View style={[styles.couche, couche(0.2)]}>
+        <Image source={IMG.etoilesLoin} resizeMode="repeat" style={styles.coucheImage} />
+      </Animated.View>
+      <Animated.View style={[styles.couche, couche(0.4)]}>
+        <Image source={IMG.etoilesPres} resizeMode="repeat" style={styles.coucheImage} />
+      </Animated.View>
+      {fond}
+      <Animated.View style={[styles.toile, { transform: [{ translateX: tx }, { translateY: ty }, { scale: s }] }]}>
+        {children}
+      </Animated.View>
+      <View style={styles.commandes}>
+        <TouchableOpacity style={styles.commande} onPress={() => zoomerAutourDuCentre(1.3)}><Text style={styles.commandeTexte}>＋</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.commande} onPress={() => zoomerAutourDuCentre(1 / 1.3)}><Text style={styles.commandeTexte}>－</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.commande} onPress={() => recentrer()}><Text style={styles.commandeTexte}>◎</Text></TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ── Une branche : trait lumineux entre deux nœuds (image étirée, tournée) ──
+const Branche = React.memo(function Branche({ a, b, allume }) {
+  const dx = b.x - a.x; const dy = b.y - a.y; const L = Math.hypot(dx, dy); const ep = allume ? 14 : 10;
+  return (
+    <Image
+      source={allume ? IMG.traitAllume : IMG.traitEteint}
+      resizeMode="stretch"
+      style={{ position: 'absolute', left: (a.x + b.x) / 2 - L / 2, top: (a.y + b.y) / 2 - ep / 2, width: L, height: ep,
+        transform: [{ rotate: `${Math.atan2(dy, dx)}rad` }] }}
+    />
+  );
+}, (x, y) => x.allume === y.allume && x.a.x === y.a.x && x.a.y === y.a.y && x.b.x === y.b.x && x.b.y === y.b.y);
+
+// ── Un nœud : médaillon + (de près) nom, niveau, prix ──────────────────────
+const COULEUR_ETAT = { achetable: '#f7cf57', cher: '#6d7f86', verrouille: '#3a4a50', max: '#f7cf57' };
+const Noeud = React.memo(function Noeud({ n, detail, pouls, onAppui, onAppuiLong, formatNum }) {
+  const t = n.taille; const verrou = n.etat === 'verrouille';
+  return (
+    <View style={{ position: 'absolute', left: n.x - t / 2, top: n.y - t / 2, width: t, alignItems: 'center' }}>
+      {n.etat === 'achetable' && !verrou ? (
+        <Animated.Image source={IMG.lueur} resizeMode="stretch" style={{ position: 'absolute', left: -t * 0.35, top: -t * 0.35, width: t * 1.7, height: t * 1.7, opacity: pouls, pointerEvents: 'none' }} />
+      ) : null}
+      <TouchableOpacity
+        activeOpacity={0.75}
+        onPress={() => onAppui(n.id)}
+        onLongPress={() => onAppuiLong(n.id)}
+        delayLongPress={320}
+        style={[styles.medaillon, { width: t, height: t, borderRadius: t / 2, borderColor: COULEUR_ETAT[n.etat] }, verrou && styles.medaillonVerrou]}
+      >
+        <Text style={{ fontSize: Math.round(t * (n.id === 'ascension' ? 0.42 : 0.44)) }}>{verrou ? '🔒' : n.emoji}</Text>
+        {n.progres != null && !verrou ? (
+          <View style={[styles.anneau, { width: t - 10, height: 6, bottom: 12 }]}>
+            <View style={{ width: Math.round((t - 12) * n.progres), height: 4, borderRadius: 2, backgroundColor: CYAN_CHAMPIGNON }} />
+          </View>
+        ) : null}
+      </TouchableOpacity>
+      {detail ? (
+        <View style={styles.etiquette}>
+          <Text style={styles.nom} numberOfLines={2}>{verrou ? '???' : n.nom}{!verrou && n.niveau ? ` · ${n.niveau}` : ''}</Text>
+          {!verrou && n.prix != null ? (
+            <Text style={[styles.prix, n.etat === 'cher' && styles.prixCher]} numberOfLines={1}>
+              {n.etat === 'max' ? '⭐ MAX' : `${n.devise === 'diamants' ? '💎' : '💰'} ${formatNum(n.prix)}`}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}, (x, y) => x.detail === y.detail && x.n.etat === y.n.etat && x.n.prix === y.n.prix && x.n.niveau === y.n.niveau
+  && x.n.nom === y.n.nom && x.n.progres === y.n.progres && x.n.x === y.n.x && x.n.y === y.n.y);
+
+// ── L'arbre ────────────────────────────────────────────────────────────
+function ArbreBoutique(props) {
+  const { vibrations } = useSettings();
+  const [detail, setDetail] = useState(true);
+  const [ficheId, setFicheId] = useState(null);
+  const [reliques, setReliques] = useState(false);
+  const formatNum = props.formatNum || ((n) => String(Math.round(n)));
+  const noeuds = useMemo(() => construireNoeuds(props), [props]);
+  const parId = useMemo(() => Object.fromEntries(noeuds.map((n) => [n.id, n])), [noeuds]);
+  // ⚠️ Un nœud mémorisé garde un ANCIEN objet : l'achat relit le nœud FRAIS
+  // (gestionnaire et solde du dernier rendu) — jamais une fermeture périmée.
+  const frais = useRef(parId); frais.current = parId;
+  const fiche = ficheId ? parId[ficheId] : null;
+  // UNE animation partagée par toutes les lueurs d'achat possible (pas une par nœud).
+  const pouls = useRef(new Animated.Value(0.5)).current;
+  useEffect(() => {
+    const b = Animated.loop(Animated.sequence([
+      Animated.timing(pouls, { toValue: 0.95, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(pouls, { toValue: 0.45, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    b.start();
+    return () => b.stop();
+  }, []);
+
+  const vib = useRef(vibrations); vib.current = vibrations;
+  const acheter = useCallback((id) => {
+    const n = frais.current[id];
+    if (!n) return;
+    if (n.ouvreReliques) { setReliques(true); return; }
+    if (n.etat !== 'achetable' || !n.onPress) { setFicheId(id); return; }
+    n.onPress();
+    vibrerSucces(vib.current);
+  }, []);
+
+  return (
+    <View style={styles.racine}>
+      <EspaceZoomable onDetail={setDetail}>
+        {noeuds.filter((n) => n.parent && parId[n.parent]).map((n) => (
+          <Branche key={'b' + n.id} a={parId[n.parent]} b={n} allume={n.allume && parId[n.parent].allume} />
+        ))}
+        {noeuds.map((n) => (
+          <Noeud key={n.id} n={n} detail={detail} pouls={pouls} onAppui={acheter} onAppuiLong={setFicheId} formatNum={formatNum} />
+        ))}
+      </EspaceZoomable>
+
+      <View style={[styles.bandeau, { pointerEvents: 'none' }]}>
+        <Text style={styles.titre}>Arbre des améliorations</Text>
+        <Text style={styles.solde}>💰 {formatNum(props.coins || 0)}   ·   💎 {props.sharedCoins || 0}</Text>
+      </View>
+
+      {fiche ? (
+        <View style={styles.ficheFond}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setFicheId(null)} />
+          <View style={styles.fiche}>
+            <Text style={styles.ficheTitre}>{fiche.etat === 'verrouille' ? '🔒 ???' : `${fiche.emoji} ${fiche.nom}`}</Text>
+            {fiche.niveau ? <Text style={styles.ficheLigne}>Niveau : {fiche.niveau}</Text> : null}
+            <Text style={styles.ficheLigne}>{fiche.etat === 'verrouille' ? 'Pas encore débloqué — continue de progresser.' : fiche.detail}</Text>
+            {fiche.prix != null && fiche.etat !== 'verrouille' && fiche.etat !== 'max' ? (
+              <BoutonLarge
+                couleur={fiche.etat === 'achetable' ? 'vert' : 'rouge'}
+                largeur={260}
+                hauteur={54}
+                desactive={fiche.etat !== 'achetable'}
+                texte={`Acheter · ${fiche.devise === 'diamants' ? '💎' : '💰'} ${formatNum(fiche.prix)}`}
+                onPress={() => { acheter(fiche.id); setFicheId(null); }}
+              />
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
+      {reliques ? (
+        <View style={styles.ficheFond}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setReliques(false)} />
+          <View style={[styles.fiche, { maxHeight: '70%' }]}>
+            <Text style={styles.ficheTitre}>📜 Reliques des créatures</Text>
+            <ScrollView style={{ alignSelf: 'stretch' }}>
+              {[...UPGRADE_ITEMS]
+                .sort((a, b) => {
+                  const pos = new Set((props.owned || []).map((o) => o.id));
+                  return (pos.has(a.creatureId) ? 0 : 1) - (pos.has(b.creatureId) ? 0 : 1);
+                })
+                .map((item) => {
+                  const possedee = (props.owned || []).some((o) => o.id === item.creatureId);
+                  const niveau = (props.upgradeLevels && props.upgradeLevels[item.id]) || 0;
+                  const prix = (props.applyDiscount || ((c) => c))(upgradeItemCost(item, niveau));
+                  const ok = possedee && (props.coins || 0) >= prix;
+                  return (
+                    <TouchableOpacity key={item.id} disabled={!ok} onPress={() => { props.onBuyUpgradeItem(item.id); vibrerSucces(vibrations); }} style={[styles.relique, !possedee && { opacity: 0.45 }]}>
+                      <Text style={styles.reliqueEmoji}>{possedee ? item.emoji : '🔒'}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reliqueNom}>{possedee ? `${item.name} · nv ${niveau}` : '???'}</Text>
+                        <Text style={styles.reliqueDesc} numberOfLines={2}>{possedee ? item.desc : 'Obtiens la créature liée pour la découvrir.'}</Text>
+                      </View>
+                      {possedee ? <Text style={[styles.prix, !ok && styles.prixCher]}>💰 {formatNum(prix)}</Text> : null}
+                    </TouchableOpacity>
+                  );
+                })}
+            </ScrollView>
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+// ── Filet de sécurité : si l'arbre plante, l'ancienne boutique s'affiche ──
+class FiletArbre extends React.Component {
+  constructor(p) { super(p); this.state = { erreur: null }; }
+  static getDerivedStateFromError(erreur) { return { erreur }; }
+  componentDidCatch(erreur) { try { console.warn('Arbre de la boutique en erreur :', erreur && erreur.message); } catch (e) {} }
+  render() { return this.state.erreur ? this.props.secours : this.props.children; }
+}
+export default function BoutiqueArbre({ Secours, ...props }) {
+  return (
+    <FiletArbre secours={Secours ? <Secours {...props} /> : null}>
+      <ArbreBoutique {...props} />
+    </FiletArbre>
+  );
+}
+export { construireNoeuds, TOILE_L, TOILE_H };
+
+const styles = StyleSheet.create({
+  // Même cadre que l'ancienne boutique (64 points pour les compteurs du haut).
+  racine: { flex: 1, width: '100%', marginTop: 64, overflow: 'hidden', backgroundColor: '#061018' },
+  couche: { position: 'absolute', left: 0, top: 0, width: 2048, height: 2560 },
+  coucheImage: { width: 2048, height: 2560 },
+  toile: { position: 'absolute', left: 0, top: 0, width: TOILE_L, height: TOILE_H, transformOrigin: 'top left' },
+  medaillon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(14,30,34,0.92)', borderWidth: 3 },
+  medaillonVerrou: { backgroundColor: 'rgba(10,16,20,0.92)' },
+  anneau: { position: 'absolute', borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.55)', padding: 1, justifyContent: 'center' },
+  etiquette: { width: 150, alignItems: 'center', marginTop: 4 },
+  nom: { color: '#fff7e0', fontSize: 12, fontWeight: '900', textAlign: 'center', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 4 },
+  prix: { color: '#ffe38a', fontSize: 12, fontWeight: '900', marginTop: 2, includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 4 },
+  prixCher: { color: '#8fa3a8' },
+  // Au-dessus de la barre de navigation (posée par-dessus le bas).
+  commandes: { position: 'absolute', right: 12, bottom: 150, gap: 10 },
+  commande: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(10,26,30,0.85)', borderWidth: 1.5, borderColor: CYAN_CHAMPIGNON, alignItems: 'center', justifyContent: 'center' },
+  commandeTexte: { color: '#eafffb', fontSize: 20, fontWeight: '900', includeFontPadding: false },
+  bandeau: { position: 'absolute', left: 0, right: 0, top: 0, paddingTop: 10, paddingBottom: 8, alignItems: 'center', backgroundColor: 'rgba(4,12,16,0.55)' },
+  titre: { color: '#f0d48a', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
+  solde: { color: '#eafffb', fontSize: 12, fontWeight: '800', marginTop: 2 },
+  ficheFond: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'flex-end', padding: 16 },
+  fiche: { width: '100%', maxWidth: 420, alignItems: 'center', backgroundColor: 'rgba(12,28,32,0.97)', borderRadius: 18, borderWidth: 1.5, borderColor: CYAN_CHAMPIGNON, padding: 16, marginBottom: 12 },
+  ficheTitre: { color: '#fff7e0', fontSize: 18, fontWeight: '900', marginBottom: 6, textAlign: 'center' },
+  ficheLigne: { color: '#d8e8e6', fontSize: 13, textAlign: 'center', marginBottom: 4 },
+  relique: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(98,250,235,0.18)', gap: 10 },
+  reliqueEmoji: { fontSize: 26, width: 34, textAlign: 'center' },
+  reliqueNom: { color: '#fff7e0', fontSize: 13, fontWeight: '900' },
+  reliqueDesc: { color: '#b9cccb', fontSize: 11 },
+});
