@@ -93,4 +93,4 @@
 ## Plus tard (demandes de l'auteur, 27/09)
 - [ ] **Combats : les créatures ENNEMIES regardent vers la gauche** (vers le joueur) — retourner leur image (`transform: [{ scaleX: -1 }]`), comme la créature qui attaque l'œuf du côté droit au menu (`lancerAttaque`).
 - [ ] **Œufs : dernier stade en 2 calques** (l'œuf seul + ses éclats séparés, pour les animer indépendamment ; éclats qui explosent à l'éclosion). Reporté : Gemini comprend mal la consigne. Dossier et prompts prêts : `design/a-integrer/04-oeufs-incubateur/`.
-- [ ] **Boutique : icône des Griffes** (prompt 39, `02-boutique/PROMPTS-PIECES.md`) — tuile provisoire 🐾 en attendant ; l'ajouter à `ICONES` dans DiamondShop.js.
+- [x] **Boutique : icône des Griffes** (reçue et intégrée le 27/09) (prompt 39, `02-boutique/PROMPTS-PIECES.md`) — tuile provisoire 🐾 en attendant ; l'ajouter à `ICONES` dans DiamondShop.js.

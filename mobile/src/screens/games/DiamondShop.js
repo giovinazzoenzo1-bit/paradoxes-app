@@ -14,10 +14,12 @@ const PLANCHE = require('../../../assets/fenetres/planche.png');
 const PLAQUE = require('../../../assets/fenetres/plaque-solde.png');
 const BOUTON_PRIX = require('../../../assets/fenetres/bouton-prix.png');
 const RUBAN = require('../../../assets/fenetres/ruban-angle.png');
-// ⚠️ Icône des Griffes pas encore reçue (image 39 manquante le 27/09) :
-// tuile provisoire dessinée par le code avec l'émoji de l'offre.
+// Icône de chaque offre (tuile de pierre). Une offre SANS image garde une
+// tuile dessinée par le code avec son émoji (ce qui a servi aux Griffes le
+// temps de recevoir leur image).
 const ICONES = {
   coins: require('../../../assets/boutique/icone-bourse.png'),
+  griffes: require('../../../assets/boutique/icone-griffes.png'),
   energy: require('../../../assets/boutique/icone-energie.png'),
   elixir: require('../../../assets/boutique/icone-elixir.png'),
   hatch: require('../../../assets/boutique/icone-eclosion.png'),
