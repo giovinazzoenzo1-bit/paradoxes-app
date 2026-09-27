@@ -1219,3 +1219,22 @@ au SOLDE seulement (pas au total gagné : l'Ascension reste honnête), puis
 remontage immédiat comme « Débloquer tous les monstres ». 10³⁰ = plus haut
 palier affichable (« No ») ; mesuré : aucune somme ne permet de « tout
 acheter » (Pacte nv 200 = 6,75e61). Aussi « 💎 +1 000 Diamants ».
+
+**Arbre LOGIQUE (2e version, retours de l'auteur, 27/09)** :
+- Branches = thèmes ET dépendances réelles : « PUISSANCE DE TAP » = Pacte →
+  les 10 améliorations en UNE chaîne (règle du jeu : chacune s'ouvre au niveau
+  TAP_UPGRADE_UNLOCK_LEVEL de la précédente, la 1re au niveau
+  TAP_UPGRADE_FIRST_PACTE_LEVEL du Pacte) ; « CRITIQUES » = Pacte → Faveur
+  des Esprits (chance) → Dégâts critiques (force) ; « AUTO-CLICS » = les 15 en
+  une chaîne par prix ; « PASSIF » = Sanctuaire → Veilleur ; Reliques à part.
+  Titres de branche peints sur la carte (TITRES).
+- **Ligne de GAIN** sous chaque nom (calculée par les fonctions du jeu, rien
+  en dur : critChance / critMultiplier en différence d'un niveau, etc.) ; sur
+  un nœud verrouillé, la CONDITION pour l'ouvrir (« 🔒 Poigne Ancienne nv 5 »,
+  coreUpgradeRequirement pour les bases).
+- **La pastille de prix achète aussi** (conteneur d'étiquette en 'box-none').
+- Zoom maximum 3. Disposition recherchée par script (outil local
+  disposition_logique.py → arbreDisposition.js) : la plus compacte sans
+  collision parmi 24 valides ; toile 1220 × 4215.
+- L'audit anti-chevauchement modélise maintenant la ligne de gain et les
+  titres ; sabotage recalé (Faveur collée au Pacte).

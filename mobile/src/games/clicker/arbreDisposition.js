@@ -5,49 +5,80 @@
 // auditArbreSansChevauchement (tools/audit-quetes.js). Aucune dépendance à
 // l'affichage : lisible par les outils.
 //
-// Retour de l'auteur : « attention au chevauchement, éloigne les items ».
-// MESURÉ : l'ancienne disposition avait 28 collisions au zoom d'ouverture et
-// 41 dézoomée. Celle-ci = l'ancienne écartée de ×1,4 en largeur et ×2,05 en
-// hauteur (plus petite hauteur sans collision, recherche exhaustive), Griffes
-// et Offrande ramenées à ±200 du centre (visibles à l'ouverture) : 0 collision
-// au zoom d'ouverture comme dézoomé au maximum, noms réels, tout visible.
+// 2e version, LOGIQUE (retour de l'auteur, 27/09) : chaque branche = un thème
+// et une dépendance réelle du jeu.
+// - Ramure : Pacte → « PUISSANCE DE TAP » (les 10 améliorations en UNE chaîne :
+//   chacune s'ouvre au niveau 5 de la précédente — tapUpgradeUnlocked) ; et
+//   « CRITIQUES » : Faveur des Esprits (chance) → Dégâts critiques (force).
+// - Racines : « AUTO-CLICS » (les 15 en une chaîne, par prix) ; « PASSIF » :
+//   Sanctuaire → Veilleur ; Reliques à gauche. Griffes / Offrande de part et
+//   d'autre de l'Ascension.
+// Écartements trouvés par recherche : la plus compacte sans AUCUNE collision
+// (nœuds, noms, gains, prix, titres) au zoom de référence comme dézoomé.
 
-export const TOILE_L = 1056;
-export const TOILE_H = 3287;
+export const TOILE_L = 1220;
+export const TOILE_H = 4215;
 export const ZOOM_MIN = 0.5;     // vue d'ensemble
-export const ZOOM_MAX = 1.7;
-// À l'ouverture : tout le cœur de l'arbre visible (Pacte, Faveur, Dégâts
-// critiques, Griffes, Offrande, Reliques, Sanctuaire, Veilleur) — vérifié au banc.
+export const ZOOM_MAX = 3;       // « encore plus zoomer » (retour de l'auteur)
+// À l'ouverture : tout le cœur de l'arbre visible — vérifié au banc.
 export const ZOOM_DEPART = 0.6;
 // Zoom où les textes sont à leur taille de base ; en dessous ils grossissent
 // (compensation) pour rester lisibles. SÉPARÉ du zoom d'ouverture : baisser
 // l'ouverture ne doit pas rapetisser les textes.
 export const ZOOM_TEXTE_REF = 0.78;
 
-// Étiquettes (nom + prix) : textes compensés au zoom, de ×1 (à ZOOM_TEXTE_REF
-// et au-delà) à ×ZOOM_TEXTE_REF / ZOOM_MIN (dézoomé au maximum).
-export const ETIQUETTE = { largeur: 160, police: 12.5, interligne: 15, pastilleH: 26, marge: 4 };
+// Étiquettes : nom (1-2 lignes) + ligne de GAIN + pastille de prix ; textes
+// compensés au zoom, de ×1 (à ZOOM_TEXTE_REF et au-delà) à
+// ×ZOOM_TEXTE_REF / ZOOM_MIN (dézoomé au maximum).
+export const ETIQUETTE = { largeur: 160, police: 12.5, interligne: 15, gainPolice: 10.5, gainInterligne: 13, pastilleH: 26, marge: 4, titrePolice: 17 };
 export const COMPENSATION_MAX = 1.8;
 
-export const CENTRE = { x: 528, y: 1551 };
+export const CENTRE = { x: 590, y: 1855 };
 export const POS = {
-  griffes: [328, 1571],
-  offrande: [728, 1571],
-  reliques: [528, 1910],
-  pacte: [528, 1186],
-  faveur: [374, 1049],
-  critDamage: [682, 1049],
-  sanctuaire: [343, 1992],
-  veilleur: [713, 1992],
+  griffes: [330, 1825],
+  offrande: [850, 1825],
+  reliques: [170, 2155],
+  pacte: [590, 1555],
+  faveur: [810, 1355],
+  critDamage: [990, 1175],
+  sanctuaire: [1010, 2155],
+  veilleur: [1050, 2385],
 };
-// Chaînes : l'élément i va sur la chaîne i % n, à la profondeur ⌊i / n⌋ —
-// plus c'est loin du tronc, plus c'est cher.
-export const CHAINES_TAP = [
-  [[304, 854], [223, 670], [167, 485], [150, 301], [198, 120]],
-  [[752, 854], [833, 670], [889, 485], [906, 301], [858, 120]],
+// Chaîne « Puissance de tap » : l'amélioration i (ordre de TAP_UPGRADES).
+export const CHAINE_TAP = [
+  [440, 1365],
+  [190, 1240],
+  [440, 1115],
+  [190, 990],
+  [440, 865],
+  [190, 740],
+  [440, 615],
+  [190, 490],
+  [440, 365],
+  [190, 240],
 ];
-export const CHAINES_AUTO = [
-  [[528, 2187], [528, 2391], [528, 2597], [528, 2801], [528, 3007]],
-  [[321, 2219], [251, 2424], [200, 2629], [172, 2834], [164, 3027]],
-  [[735, 2219], [805, 2424], [856, 2629], [884, 2834], [892, 3027]],
+// Chaîne « Auto-clics » : l'auto-clic i (triés par prix de base).
+export const CHAINE_AUTO = [
+  [465, 2185],
+  [715, 2310],
+  [465, 2435],
+  [715, 2560],
+  [465, 2685],
+  [715, 2810],
+  [465, 2935],
+  [715, 3060],
+  [465, 3185],
+  [715, 3310],
+  [465, 3435],
+  [715, 3560],
+  [465, 3685],
+  [715, 3810],
+  [465, 3935],
+];
+// Titres de branche, peints sur la carte.
+export const TITRES = [
+  { texte: 'PUISSANCE DE TAP', x: 315, y: 130 },
+  { texte: 'CRITIQUES', x: 900, y: 1065 },
+  { texte: 'AUTO-CLICS', x: 590, y: 2075 },
+  { texte: 'PASSIF', x: 1030, y: 2045 },
 ];

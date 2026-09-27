@@ -6,9 +6,11 @@ import {
   veilleurUpgradeCost, veilleurMaxed, tapUpgradeCost, tapUpgradeUnlocked, upgradeItemCost,
   autoClickerCost, griffesCoinCost, taillePackGriffes, coreUpgradeUnlocked, ascensionSpeedMultiplier,
   ascensionThreshold, OFFRANDE_APPCOINS_COST, SANCTUARY_MAX_LEVEL, VEILLEUR_MAX_LEVEL,
+  coreUpgradeRequirement, critChance, critMultiplier, offrandeReward, SANCTUARY_BONUS_PER_LEVEL, VEILLEUR_BONUS_PER_LEVEL,
+  TAP_UPGRADE_UNLOCK_LEVEL, TAP_UPGRADE_FIRST_PACTE_LEVEL,
 } from '../../games/clicker/clickerLogic';
 import { useSettings } from '../../context/SettingsContext';
-import { TOILE_L, TOILE_H, ZOOM_MIN, ZOOM_MAX, ZOOM_DEPART, ZOOM_TEXTE_REF, CENTRE, POS, CHAINES_TAP, CHAINES_AUTO, ETIQUETTE, COMPENSATION_MAX } from '../../games/clicker/arbreDisposition';
+import { TOILE_L, TOILE_H, ZOOM_MIN, ZOOM_MAX, ZOOM_DEPART, ZOOM_TEXTE_REF, CENTRE, POS, CHAINE_TAP, CHAINE_AUTO, TITRES, ETIQUETTE, COMPENSATION_MAX } from '../../games/clicker/arbreDisposition';
 import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge, FenetreBois, BanniereTitre, largeurInterieureFenetre, CRISTAL } from './fenetreBois';
 import BackButton from '../../components/BackButton';
 
@@ -49,21 +51,29 @@ const IMG = {
   rond: require('../../../assets/fenetres/bouton-rond-vert.png'),
 };
 
-// ── Le modèle : chaque nœud avec son prix, son état, son achat ──────────
+// ── Le modèle : chaque nœud avec son prix, son état, son GAIN, son achat ──
+// Branches LOGIQUES (2e version, retour de l'auteur) : chaque branche = un
+// thème ET une dépendance réelle du jeu (voir arbreDisposition.js). La ligne
+// de GAIN dit ce que rapporte l'élément ; sur un nœud verrouillé, ce qu'il
+// faut faire pour l'ouvrir. Aucun nombre écrit en dur : tout vient des
+// fonctions et constantes du jeu.
 function construireNoeuds(p) {
   const f = p.formatNum || ((n) => String(Math.round(n)));
+  const nb = (x, d = 2) => Number(x.toFixed(d)).toString().replace('.', ',');
   const remise = p.applyDiscount || ((c) => c);
   const coreState = { tapPower: p.tapPower, critLevel: p.critLevel, critDamageLevel: p.critDamageLevel, sanctuaryLevel: p.sanctuaryLevel };
   const debloque = (id) => coreUpgradeUnlocked(id, coreState);
   const etat = (verrou, max, prix, solde) => (verrou ? 'verrouille' : max ? 'max' : solde >= prix ? 'achetable' : 'cher');
   const N = [];
   const ajouter = (n) => N.push({ taille: 76, devise: 'pieces', allume: false, ...n });
+  const exigence = (id) => `🔒 ${coreUpgradeRequirement(id)}`;
 
-  // Centre : Ascension, Griffes (gauche), Offrande (droite), Reliques (bas)
+  // ── Centre : Ascension, Griffes (gauche), Offrande (droite)
   const seuil = ascensionThreshold(p.ascensionCount);
   ajouter({
     id: 'ascension', x: CENTRE.x, y: CENTRE.y, taille: 150, emoji: '🌟', nom: 'Ascension',
     niveau: p.ascensionCount > 0 ? `×${ascensionSpeedMultiplier(p.ascensionCount).toFixed(2)}` : '',
+    gain: `prochaine ×${nb(ascensionSpeedMultiplier(p.ascensionCount + 1))}`,
     etat: p.ascensionReady ? 'achetable' : 'cher', prix: null, onPress: p.ascensionReady ? p.onAscend : null,
     progres: seuil > 0 ? Math.min(1, (p.totalEarned || 0) / seuil) : 0, allume: true,
     detail: p.ascensionReady
@@ -74,65 +84,76 @@ function construireNoeuds(p) {
   });
   const prixGriffes = griffesCoinCost(p.griffesCoinBuys, p.ascensionCount);
   ajouter({ id: 'griffes', parent: 'ascension', x: POS.griffes[0], y: POS.griffes[1], taille: 88, emoji: '🐾', nom: `${taillePackGriffes(p.ascensionCount)} Griffes`,
-    prix: prixGriffes, etat: etat(false, false, prixGriffes, p.coins), onPress: p.onBuyGriffesWithCoins, allume: true,
-    detail: 'Des Griffes pour faire progresser tes créatures en Aventure.' });
+    gain: 'pour l\'Aventure', prix: prixGriffes, etat: etat(false, false, prixGriffes, p.coins), onPress: p.onBuyGriffesWithCoins, allume: true,
+    detail: 'Des Griffes pour faire progresser tes créatures en Aventure. Le pack suivant coûtera plus cher.' });
   ajouter({ id: 'offrande', parent: 'ascension', x: POS.offrande[0], y: POS.offrande[1], taille: 88, emoji: '💎', nom: 'Offrande', devise: 'diamants',
-    prix: OFFRANDE_APPCOINS_COST, etat: etat(false, false, OFFRANDE_APPCOINS_COST, p.sharedCoins), onPress: p.onOffrande, allume: true,
-    detail: 'Offre des diamants aux esprits de la forêt contre une récompense.' });
+    gain: `≈ +${f(offrandeReward(p.tapPower))} pièces`, prix: OFFRANDE_APPCOINS_COST, etat: etat(false, false, OFFRANDE_APPCOINS_COST, p.sharedCoins),
+    onPress: p.onOffrande, allume: true, detail: `Échange ${OFFRANDE_APPCOINS_COST} diamant${OFFRANDE_APPCOINS_COST > 1 ? 's' : ''} contre un bonus de pièces.` });
   ajouter({ id: 'reliques', parent: 'ascension', x: POS.reliques[0], y: POS.reliques[1], taille: 84, emoji: '📜', nom: 'Reliques', prix: null,
-    etat: 'achetable', ouvreReliques: true, allume: true, detail: 'Les améliorations liées à tes créatures.' });
+    gain: 'bonus des créatures', etat: 'achetable', ouvreReliques: true, allume: true, detail: 'Les améliorations liées à tes créatures.' });
 
-  // Haut : les dégâts de tap
+  // ── PUISSANCE DE TAP : Pacte → les 10 améliorations en UNE chaîne (chacune
+  // s'ouvre au niveau 5 de la précédente : la branche montre la dépendance).
   const prixPacte = remise(tapPowerCost(p.tapPower));
   ajouter({ id: 'pacte', parent: 'ascension', x: POS.pacte[0], y: POS.pacte[1], emoji: '🔗', nom: 'Pacte', niveau: `${p.tapPower}`,
-    prix: prixPacte, etat: etat(false, false, prixPacte, p.coins), onPress: p.onBuyTapPower, allume: p.tapPower > 1,
-    detail: `+${TAP_DAMAGE_PER_LEVEL.toFixed(1).replace('.', ',')} pièce par tap à chaque niveau.` });
-  const prixFaveur = remise(critUpgradeCost(p.critLevel));
-  ajouter({ id: 'faveur', parent: 'pacte', x: POS.faveur[0], y: POS.faveur[1], emoji: '✨', nom: 'Faveur des Esprits', niveau: `nv ${p.critLevel}`,
-    prix: prixFaveur, etat: etat(!debloque('faveur'), false, prixFaveur, p.coins), onPress: p.onBuyCrit, allume: p.critLevel > 0,
-    detail: 'Augmente tes chances de coup critique.' });
-  const prixCrit = remise(critDamageUpgradeCost(p.critDamageLevel));
-  ajouter({ id: 'critDamage', parent: 'pacte', x: POS.critDamage[0], y: POS.critDamage[1], emoji: '💥', nom: 'Dégâts critiques', niveau: `nv ${p.critDamageLevel}`,
-    prix: prixCrit, etat: etat(!debloque('critDamage'), false, prixCrit, p.coins), onPress: p.onBuyCritDamage, allume: p.critDamageLevel > 0,
-    detail: 'Augmente la force de tes coups critiques.' });
-  // 10 améliorations : le 1er verrou de chaque chaîne s'affiche « ??? », les
-  // suivants sont cachés (mystère sans surcharge).
-  const vuVerrou = [false, false];
+    gain: `+${nb(TAP_DAMAGE_PER_LEVEL, 1)} / tap / nv`, prix: prixPacte, etat: etat(false, false, prixPacte, p.coins), onPress: p.onBuyTapPower, allume: p.tapPower > 1,
+    detail: `+${nb(TAP_DAMAGE_PER_LEVEL, 1)} pièce par tap à chaque niveau.` });
+  let prochainVerrou = false;
   TAP_UPGRADES.forEach((item, i) => {
-    const c = i % 2; const d = Math.floor(i / 2); const [x, y] = CHAINES_TAP[c][d];
+    const pos = CHAINE_TAP[i]; if (!pos) return;
     const niveau = (p.tapUpgrades && p.tapUpgrades[item.id]) || 0;
     const ouvert = tapUpgradeUnlocked(i, p.tapPower, p.tapUpgrades);
-    if (!ouvert) { if (vuVerrou[c]) return; vuVerrou[c] = true; }
+    if (!ouvert) { if (prochainVerrou) return; prochainVerrou = true; } // seul le PROCHAIN verrou est montré
     const prix = remise(tapUpgradeCost(item, niveau, p.ascensionCount));
-    ajouter({ id: item.id, parent: d === 0 ? (c === 0 ? 'faveur' : 'critDamage') : TAP_UPGRADES[i - 2].id, x, y,
+    const condition = i === 0 ? `🔒 Pacte nv ${TAP_UPGRADE_FIRST_PACTE_LEVEL}` : `🔒 ${TAP_UPGRADES[i - 1].name} nv ${TAP_UPGRADE_UNLOCK_LEVEL}`;
+    ajouter({ id: item.id, parent: i === 0 ? 'pacte' : TAP_UPGRADES[i - 1].id, x: pos[0], y: pos[1],
       emoji: item.emoji, nom: item.name, niveau: `nv ${niveau}`, prix, etat: etat(!ouvert, false, prix, p.coins),
-      onPress: () => p.onBuyTapUpgrade(item.id), allume: niveau > 0, detail: `Puissance de tap +${item.bonus} par niveau.` });
+      gain: ouvert ? `+${f(item.bonus)} / tap / nv` : condition,
+      onPress: () => p.onBuyTapUpgrade(item.id), allume: niveau > 0,
+      detail: ouvert ? `+${f(item.bonus)} par tap et par niveau${niveau > 0 ? ` · actuellement +${f(item.bonus * niveau)}` : ''}.` : condition });
   });
 
-  // Bas : Sanctuaire et Veilleur à la base des racines, puis les auto-clics
-  const maxS = sanctuaryMaxed(p.sanctuaryLevel); const prixS = remise(sanctuaryUpgradeCost(p.sanctuaryLevel));
-  ajouter({ id: 'sanctuaire', parent: 'reliques', x: POS.sanctuaire[0], y: POS.sanctuaire[1], emoji: '🏛️', nom: 'Sanctuaire', niveau: `${p.sanctuaryLevel}/${SANCTUARY_MAX_LEVEL}`,
-    prix: prixS, etat: etat(!debloque('sanctuaire'), maxS, prixS, p.coins), onPress: p.onBuySanctuary, allume: p.sanctuaryLevel > 0,
-    detail: 'Augmente tes gains passifs.' });
-  const maxV = veilleurMaxed(p.veilleurLevel); const prixV = remise(veilleurUpgradeCost(p.veilleurLevel));
-  ajouter({ id: 'veilleur', parent: 'reliques', x: POS.veilleur[0], y: POS.veilleur[1], emoji: '🌙', nom: 'Veilleur', niveau: `${p.veilleurLevel}/${VEILLEUR_MAX_LEVEL}`,
-    prix: prixV, etat: etat(!debloque('veilleur'), maxV, prixV, p.coins), onPress: p.onBuyVeilleur, allume: p.veilleurLevel > 0,
-    detail: 'Augmente tes gains hors-ligne.' });
-  // Auto-clics triés par prix ; révélés 2 par 2 : les possédés, le suivant,
-  // puis un « ??? ».
+  // ── CRITIQUES : Faveur des Esprits (chance) → Dégâts critiques (force)
+  const prixFaveur = remise(critUpgradeCost(p.critLevel));
+  const okFaveur = debloque('faveur');
+  ajouter({ id: 'faveur', parent: 'pacte', x: POS.faveur[0], y: POS.faveur[1], emoji: '✨', nom: 'Faveur des Esprits', niveau: `nv ${p.critLevel}`,
+    gain: okFaveur ? `+${nb((critChance(p.critLevel + 1) - critChance(p.critLevel)) * 100)} % crit / nv` : exigence('faveur'),
+    prix: prixFaveur, etat: etat(!okFaveur, false, prixFaveur, p.coins), onPress: p.onBuyCrit, allume: p.critLevel > 0,
+    detail: okFaveur ? `${nb(critChance(p.critLevel) * 100)} % de chance de coup critique.` : exigence('faveur') });
+  const prixCrit = remise(critDamageUpgradeCost(p.critDamageLevel));
+  const okCrit = debloque('critDamage');
+  ajouter({ id: 'critDamage', parent: 'faveur', x: POS.critDamage[0], y: POS.critDamage[1], emoji: '💥', nom: 'Dégâts critiques', niveau: `nv ${p.critDamageLevel}`,
+    gain: okCrit ? `+${nb(critMultiplier(p.critDamageLevel + 1) - critMultiplier(p.critDamageLevel), 1)} force crit / nv` : exigence('critDamage'),
+    prix: prixCrit, etat: etat(!okCrit, false, prixCrit, p.coins), onPress: p.onBuyCritDamage, allume: p.critDamageLevel > 0,
+    detail: okCrit ? `Coup critique ×${nb(critMultiplier(p.critDamageLevel), 1)}.` : exigence('critDamage') });
+
+  // ── PASSIF : Sanctuaire → Veilleur
+  const maxS = sanctuaryMaxed(p.sanctuaryLevel); const prixS = remise(sanctuaryUpgradeCost(p.sanctuaryLevel)); const okS = debloque('sanctuaire');
+  ajouter({ id: 'sanctuaire', parent: 'ascension', x: POS.sanctuaire[0], y: POS.sanctuaire[1], emoji: '🏛️', nom: 'Sanctuaire', niveau: `${p.sanctuaryLevel}/${SANCTUARY_MAX_LEVEL}`,
+    gain: okS ? `+${nb(SANCTUARY_BONUS_PER_LEVEL * 100, 1)} % production / nv` : exigence('sanctuaire'),
+    prix: prixS, etat: etat(!okS, maxS, prixS, p.coins), onPress: p.onBuySanctuary, allume: p.sanctuaryLevel > 0,
+    detail: okS ? 'Augmente TOUTE ta production (tap + passif).' : exigence('sanctuaire') });
+  const maxV = veilleurMaxed(p.veilleurLevel); const prixV = remise(veilleurUpgradeCost(p.veilleurLevel)); const okV = debloque('veilleur');
+  ajouter({ id: 'veilleur', parent: 'sanctuaire', x: POS.veilleur[0], y: POS.veilleur[1], emoji: '🌙', nom: 'Veilleur', niveau: `${p.veilleurLevel}/${VEILLEUR_MAX_LEVEL}`,
+    gain: okV ? `+${nb(VEILLEUR_BONUS_PER_LEVEL * 100, 1)} % hors-ligne / nv` : exigence('veilleur'),
+    prix: prixV, etat: etat(!okV, maxV, prixV, p.coins), onPress: p.onBuyVeilleur, allume: p.veilleurLevel > 0,
+    detail: okV ? 'Augmente tes gains quand tu ne joues pas.' : exigence('veilleur') });
+
+  // ── AUTO-CLICS : les 15 en UNE chaîne, par prix ; révélés 2 par 2 (les
+  // possédés, le suivant, puis un « ??? »).
   const tries = [...AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost);
   let dernierPossede = -1;
   tries.forEach((c, i) => { if (((p.autoClickers && p.autoClickers[c.id]) || 0) > 0) dernierPossede = i; });
   tries.forEach((c, i) => {
-    if (i > dernierPossede + 2) return;
-    const ch = i % 3; const d = Math.floor(i / 3); const [x, y] = CHAINES_AUTO[ch][d];
+    const pos = CHAINE_AUTO[i]; if (!pos || i > dernierPossede + 2) return;
     const possede = (p.autoClickers && p.autoClickers[c.id]) || 0;
     const mystere = i === dernierPossede + 2;
     const prix = remise(autoClickerCost(c, possede, p.ascensionCount));
-    ajouter({ id: c.id, parent: d === 0 ? ['reliques', 'sanctuaire', 'veilleur'][ch] : tries[i - 3].id, x, y,
+    ajouter({ id: c.id, parent: i === 0 ? 'ascension' : tries[i - 1].id, x: pos[0], y: pos[1],
       emoji: c.emoji, nom: c.name, niveau: possede > 0 ? `×${possede}` : '', prix, etat: etat(mystere, false, prix, p.coins),
+      gain: mystere ? `🔒 achète ${tries[i - 1].name}` : `+${nb(c.baseIncome, 1)} /s chacun`,
       onPress: () => p.onBuyAutoClicker(c.id), allume: possede > 0,
-      detail: `Possédé : ${possede} · +${c.baseIncome.toFixed(1)}/s chacun.` });
+      detail: mystere ? `🔒 Achète d'abord ${tries[i - 1].name}.` : `Possédé : ${possede} · +${nb(c.baseIncome, 1)}/s chacun.` });
   });
   return N;
 }
@@ -309,22 +330,30 @@ const Noeud = React.memo(function Noeud({ n, compense, pouls, onAppui, onAppuiLo
       </TouchableOpacity>
       {/* Le NOM juste dessous, le PRIX encore dessous (retour de l'auteur) —
           compensés au zoom pour rester lisibles de loin. En nombres. */}
-      <View style={{ width: Math.round(ETIQUETTE.largeur * c), marginLeft: Math.round((t - ETIQUETTE.largeur * c) / 2), alignItems: 'center', marginTop: Math.round(ETIQUETTE.marge * c), pointerEvents: 'none' }}>
+      {/* 'box-none' : la pastille de prix reçoit le toucher (achat), le reste laisse
+          passer les doigts vers la carte. */}
+      <View style={{ width: Math.round(ETIQUETTE.largeur * c), marginLeft: Math.round((t - ETIQUETTE.largeur * c) / 2), alignItems: 'center', marginTop: Math.round(ETIQUETTE.marge * c), pointerEvents: 'box-none' }}>
         <Text style={[styles.nom, { fontSize: Math.round(ETIQUETTE.police * c), lineHeight: Math.round(ETIQUETTE.interligne * c) }]} numberOfLines={2}>
           {verrou ? '???' : n.nom}{!verrou && n.niveau ? ` · ${n.niveau}` : ''}
         </Text>
+        {/* Ce que rapporte l'élément (ou, verrouillé, comment l'ouvrir). */}
+        {n.gain ? (
+          <Text style={[styles.gain, { fontSize: Math.round(ETIQUETTE.gainPolice * c), lineHeight: Math.round(ETIQUETTE.gainInterligne * c) }, verrou && styles.gainVerrou]} numberOfLines={1}>{n.gain}</Text>
+        ) : null}
         {!verrou && n.etat === 'max' ? (
           <Text style={[styles.nom, { fontSize: Math.round(12 * c), color: '#f7cf57' }]}>⭐ MAX</Text>
         ) : !verrou && prixTexte ? (
-          <View style={{ width: pl, height: ph, marginTop: Math.round(3 * c), alignItems: 'center', justifyContent: 'center' }}>
+          // La pastille de prix ACHÈTE aussi (retour de l'auteur).
+          <TouchableOpacity activeOpacity={0.7} onPress={() => onAppui(n.id)} onLongPress={() => onAppuiLong(n.id)} delayLongPress={320}
+            style={{ width: pl, height: ph, marginTop: Math.round(3 * c), alignItems: 'center', justifyContent: 'center' }}>
             <Image source={n.etat === 'achetable' ? IMG.prixOr : IMG.prixGris} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: pl, height: ph }} />
             <Text style={[styles.prix, { fontSize: Math.round(12 * c) }, n.etat !== 'achetable' && styles.prixCher]} numberOfLines={1}>{prixTexte}</Text>
-          </View>
+          </TouchableOpacity>
         ) : null}
       </View>
     </View>
   );
-}, (x, y) => x.compense === y.compense && x.n.etat === y.n.etat && x.n.prix === y.n.prix && x.n.niveau === y.n.niveau
+}, (x, y) => x.compense === y.compense && x.n.etat === y.n.etat && x.n.prix === y.n.prix && x.n.niveau === y.n.niveau && x.n.gain === y.n.gain
   && x.n.nom === y.n.nom && x.n.progres === y.n.progres && x.n.x === y.n.x && x.n.y === y.n.y);
 
 // ── L'arbre ────────────────────────────────────────────────────────────
@@ -368,6 +397,9 @@ function ArbreBoutique(props) {
       <EspaceZoomable onEchelle={setEchelle}>
         {noeuds.filter((n) => n.parent && parId[n.parent]).map((n) => (
           <Branche key={'b' + n.id} a={parId[n.parent]} b={n} allume={n.allume && parId[n.parent].allume} />
+        ))}
+        {TITRES.map((T) => (
+          <Text key={T.texte} style={[styles.titreBranche, { left: T.x - 170, top: T.y - Math.round(ETIQUETTE.titrePolice * compense * 0.7), fontSize: Math.round(ETIQUETTE.titrePolice * compense) }]}>{T.texte}</Text>
         ))}
         {noeuds.map((n) => (
           <Noeud key={n.id} n={n} compense={compense} pouls={pouls} onAppui={acheter} onAppuiLong={setFicheId} formatNum={formatNum} />
@@ -486,6 +518,9 @@ const styles = StyleSheet.create({
   anneau: { position: 'absolute', borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.55)', padding: 1, justifyContent: 'center' },
   nom: { color: '#fff7e0', fontSize: 12, fontWeight: '900', textAlign: 'center', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 4 },
   prix: { color: '#3a2208', fontSize: 12, fontWeight: '900', includeFontPadding: false },
+  gain: { color: '#8ff0e0', fontWeight: '800', textAlign: 'center', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 3 },
+  gainVerrou: { color: '#ffcf6b' },
+  titreBranche: { position: 'absolute', width: 340, textAlign: 'center', color: '#f0d48a', fontWeight: '900', letterSpacing: 1.5, includeFontPadding: false, pointerEvents: 'none', textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 6 },
   prixCher: { color: '#e0e6e6' },
   // Au-dessus de la barre de navigation (posée par-dessus le bas).
   commandes: { position: 'absolute', right: 12, bottom: 150, gap: 10 },

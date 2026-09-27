@@ -231,7 +231,7 @@ const SABOTAGES = [
   ['auditZoneTapLibre', F.ecran, "le calque des « +X » repasse en PROPRIÉTÉ pointerEvents (ignorée sur téléphone : taps bloqués)",
     remplace("              <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>", "              <View pointerEvents=\"none\" style={StyleSheet.absoluteFill}>")],
   ['auditArbreSansChevauchement', F.arbre, "Faveur des Esprits collée au Pacte (le chevauchement signalé le 27/09)",
-    remplace('  faveur: [374, 1049],', '  faveur: [558, 1186],')],
+    remplace('  faveur: [810, 1355],', '  faveur: [620, 1555],')],
   ['auditPointerEventsStyle', F.aventure, "une propriété pointerEvents réapparaît (ignorée sur téléphone)",
     remplace("<View style={[styles.shopHintWrap, { pointerEvents: 'none' }]}>", "<View style={styles.shopHintWrap} pointerEvents=\"none\">")],
   ['auditExhaustif', F.defis, "un libellé cassé dans un vrai défi (l'outil testait les anciens modèles : vert quand même, 24/09)",

@@ -3926,9 +3926,10 @@ module.exports.auditPointerEventsStyle = auditPointerEventsStyle;
 // Retour de l'auteur (capture) : noms et nœuds qui se chevauchaient —
 // mesuré : 28 collisions au zoom d'ouverture, 41 dézoomé. Reconstruit TOUS
 // les nœuds (pire cas : tout visible, noms RÉELS, niveaux à 2 chiffres) avec
-// le modèle d'étiquette de l'arbre (arbreDisposition.js, source unique) et
-// exige 0 collision au zoom d'ouverture comme dézoomé au maximum (textes
-// compensés), tout nœud dans la toile, une place pour chaque amélioration.
+// le modèle d'étiquette de l'arbre (arbreDisposition.js, source unique) :
+// nom (1-2 lignes) + ligne de GAIN + pastille de prix, et les TITRES de
+// branche. Exige 0 collision au zoom de référence comme dézoomé au maximum
+// (textes compensés), tout dans la toile, une place pour chaque élément.
 function auditArbreSansChevauchement() {
   const D = require('../src/games/clicker/arbreDisposition.js');
   const L = require('../src/games/clicker/clickerLogic.js');
@@ -3948,21 +3949,25 @@ function auditArbreSansChevauchement() {
   aj('critDamage', D.POS.critDamage, 'Dégâts critiques · nv 12');
   aj('sanctuaire', D.POS.sanctuaire, 'Sanctuaire · 12/50');
   aj('veilleur', D.POS.veilleur, 'Veilleur · 12/50');
-  L.TAP_UPGRADES.forEach((u, i) => aj('tap:' + u.name, (D.CHAINES_TAP[i % 2] || [])[Math.floor(i / 2)], u.name + ' · nv 12'));
-  [...L.AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost)
-    .forEach((u, i) => aj('auto:' + u.name, (D.CHAINES_AUTO[i % 3] || [])[Math.floor(i / 3)], u.name + ' · ×12'));
+  L.TAP_UPGRADES.forEach((u, i) => aj('tap:' + u.name, D.CHAINE_TAP[i], u.name + ' · nv 12'));
+  [...L.AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost).forEach((u, i) => aj('auto:' + u.name, D.CHAINE_AUTO[i], u.name + ' · ×12'));
   const boites = (n, c) => {
     const B = [['rond', n.x, n.y, n.t / 2]];
     const fs = E.police * c; const wt = n.nom.length * 0.57 * fs; const lg = E.largeur * c;
     const lignes = Math.min(2, Math.max(1, Math.ceil(wt / lg))); const w = Math.min(lg, wt);
-    const haut = n.y + n.t / 2 + E.marge * c; const h = lignes * E.interligne * c;
-    B.push(['rect', n.x - w / 2, haut, n.x + w / 2, haut + h]);
+    const haut = n.y + n.t / 2 + E.marge * c;
+    const h = lignes * E.interligne * c + E.gainInterligne * c; // nom + ligne de gain
+    B.push(['rect', n.x - lg / 2, haut, n.x + lg / 2, haut + h]);
     if (n.prix) {
       const pl = Math.max(64, Math.min(118, 9 * 7.5 + 26)) * c;
       B.push(['rect', n.x - pl / 2, haut + h + 3 * c, n.x + pl / 2, haut + h + 3 * c + E.pastilleH * c]);
     }
     return B;
   };
+  const titres = (c) => (D.TITRES || []).map((T) => {
+    const w = T.texte.length * 0.62 * E.titrePolice * c; const h = E.titrePolice * 1.3 * c;
+    return ['rect', T.x - w / 2, T.y - h / 2, T.x + w / 2, T.y + h / 2, T.texte];
+  });
   const touche = (a, b, m = 6) => {
     if (a[0] === 'rond' && b[0] === 'rond') return Math.hypot(a[1] - b[1], a[2] - b[2]) < a[3] + b[3] + m;
     if (a[0] === 'rect' && b[0] === 'rect') return !(a[3] + m <= b[1] || b[3] + m <= a[1] || a[4] + m <= b[2] || b[4] + m <= a[2]);
@@ -3972,13 +3977,19 @@ function auditArbreSansChevauchement() {
   };
   const cmax = Math.min(D.COMPENSATION_MAX, D.ZOOM_TEXTE_REF / D.ZOOM_MIN);
   for (const c of [1, cmax]) {
-    for (let i = 0; i < N.length; i++) for (let j = i + 1; j < N.length; j++) {
-      const A = boites(N[i], c); const Bb = boites(N[j], c);
-      if (A.some((a) => Bb.some((b) => touche(a, b)))) pb.push(`${N[i].id} ↔ ${N[j].id} (textes ×${c.toFixed(2)})`);
+    const T = titres(c);
+    for (let i = 0; i < N.length; i++) {
+      const A = boites(N[i], c);
+      for (let j = i + 1; j < N.length; j++) {
+        const Bb = boites(N[j], c);
+        if (A.some((a) => Bb.some((b) => touche(a, b)))) pb.push(`${N[i].id} ↔ ${N[j].id} (textes ×${c.toFixed(2)})`);
+      }
+      T.forEach((t) => { if (A.some((a) => touche(a, t))) pb.push(`${N[i].id} ↔ titre « ${t[5]} » (textes ×${c.toFixed(2)})`); });
     }
+    for (let i = 0; i < T.length; i++) for (let j = i + 1; j < T.length; j++) if (touche(T[i], T[j])) pb.push(`titres « ${T[i][5]} » ↔ « ${T[j][5]} »`);
   }
   N.forEach((n) => {
-    if (n.x < n.t / 2 || n.y < n.t / 2 || n.x > D.TOILE_L - n.t / 2 || n.y > D.TOILE_H - n.t / 2 - 60) pb.push(`${n.id} : hors de la toile`);
+    if (n.x < n.t / 2 || n.y < n.t / 2 || n.x > D.TOILE_L - n.t / 2 || n.y > D.TOILE_H - n.t / 2 - 90) pb.push(`${n.id} : hors de la toile`);
   });
   return pb;
 }
