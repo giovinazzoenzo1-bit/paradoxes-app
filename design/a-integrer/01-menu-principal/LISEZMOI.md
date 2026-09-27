@@ -27,3 +27,4 @@ Prêts : voir `PROMPTS.md` (19 éléments, dans l'ordre de dépôt).
 ✅ Intégré le 27/09 (`mobile/assets/menu/`), en attente de validation de l'auteur. Les images brutes restent ici jusqu'à validation.
 
 ✅ Bouton « Valider » et médaillon coche (prompts 20-21) intégrés le 27/09.
+✅ Bulles : pierre runique (Rituel) et gland doré (bonus doré), prompts 22-23, intégrées le 27/09.

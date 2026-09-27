@@ -4,7 +4,7 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
+import { Easing, View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { Ionicons } from '@expo/vector-icons';
@@ -1734,9 +1734,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     return () => clearInterval(interval);
   }, [loaded]);
 
-  const spawnPopup = (text, x, y, isCrit) => {
+  const spawnPopup = (text, x, y, isCrit, tap = false) => {
     const id = popupIdRef.current++;
-    setPopups((p) => [...p, { id, text, x, y, isCrit }]);
+    setPopups((p) => [...p, { id, text, x, y, isCrit, tap }]);
     setTimeout(() => setPopups((p) => p.filter((pp) => pp.id !== id)), 700);
   };
 
@@ -1826,7 +1826,20 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     ]).start();
     const x = evt.nativeEvent.locationX || 60;
     const y = evt.nativeEvent.locationY || 60;
-    spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit);
+    spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit, true);
+    // 27/09 : un critique fait trembler l'œuf — la SECOUSSE SEULE. ⚠️ Ne pas
+    // appeler handleEggTap ici : pendant l'éclosion, chaque appel retire 1 s
+    // au minuteur (un critique en aurait retiré 2).
+    if (isCrit) {
+      eggShake.stopAnimation(() => {
+        eggShake.setValue(0);
+        Animated.sequence([
+          Animated.timing(eggShake, { toValue: 1, duration: 45, useNativeDriver: true }),
+          Animated.timing(eggShake, { toValue: -1, duration: 45, useNativeDriver: true }),
+          Animated.timing(eggShake, { toValue: 0, duration: 45, useNativeDriver: true }),
+        ]).start();
+      });
+    }
 
     // 02/09 : l'onglet Quêtes a disparu, l'œuf de l'écran d'accueil EST
     // désormais le véritable œuf à casser. Quand les 4 défis sont
@@ -2413,7 +2426,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     pendingGainRef.current += reward;
     setLastRitualAt(Date.now());
     setRitualTarget(null);
-    spawnPopup(`+${reward} 🕯️`, 110, 60, true);
+    spawnPopup(`+${reward} 🌿`, 110, 60, true);
   };
 
   // Ajoute une créature à la collection (nouvelle entrée, ou niveau +1 si
@@ -3846,9 +3859,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   Contrôles auditZoneTapLibre et auditPointerEventsStyle. */}
               <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
                 {popups.map((p) => (
-                  <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y, pointerEvents: 'none' }]}>
-                    {p.text}
-                  </Animated.Text>
+                  <TapEffect key={p.id} x={p.x} y={p.y} text={p.text} crit={p.isCrit} tap={p.tap} />
                 ))}
               </View>
               {/* Bulles de pouvoir : toutes FRÈRES du bouton tapable, pas
@@ -5055,6 +5066,66 @@ function SpawnedCreatureBubble({ spawned, onClaim }) {
 // Cible dorée : pulsation plus rapide (courte durée de vie, doit se voir
 // tout de suite), pas de dérive — l'urgence vient du rythme, pas du
 // mouvement.
+// ---- EFFET DE TAP (27/09, demande de l'auteur) ----------------------------
+// Onde de choc + étincelles + « +X » qui rebondit et monte, depuis le point
+// touché. Tout tourne sur le PILOTE NATIF (hors fil JS : tient le rythme de
+// l'autoclicker) et naît / meurt avec le « +X » : AUCUN état de plus par tap.
+// Onde et étincelles réservées aux vrais taps (`tap`) ; les autres messages
+// (« Pouvoir déjà actif », gains…) gardent seulement le texte animé.
+// Transparent au toucher PAR LE STYLE (règle SDK 57, bug de tap du 27/09).
+const TAP_EFFET_MS = 650;
+const TAP_ETINCELLES = [0, 1, 2, 3, 4, 5].map((i) => ({ angle: (i / 6) * Math.PI * 2 + 0.35, portee: 26 + (i % 3) * 7 }));
+function TapEffect({ x, y, text, crit, tap }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const a = Animated.timing(t, { toValue: 1, duration: TAP_EFFET_MS, easing: Easing.out(Easing.quad), useNativeDriver: true });
+    a.start();
+    return () => a.stop();
+  }, []);
+  const couleur = crit ? '#FF8A3D' : '#FFD54A';
+  const anneau = crit ? 74 : 54;
+  const loin = crit ? 1.6 : 1;
+  return (
+    <View style={[styles.tapEffet, { left: x - 100, top: y - 100, pointerEvents: 'none' }]}>
+      {tap && (
+        <Animated.View style={[styles.tapFlash, {
+          width: anneau * 0.7, height: anneau * 0.7, borderRadius: anneau * 0.35, marginLeft: -anneau * 0.35, marginTop: -anneau * 0.35,
+          backgroundColor: crit ? 'rgba(255,170,90,0.85)' : 'rgba(255,236,150,0.8)',
+          opacity: t.interpolate({ inputRange: [0, 0.35, 1], outputRange: [1, 0, 0] }),
+          transform: [{ scale: t.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0.4, 1.2, 1.2] }) }],
+        }]} />
+      )}
+      {tap && (
+        <Animated.View style={[styles.tapAnneau, {
+          width: anneau, height: anneau, borderRadius: anneau / 2, marginLeft: -anneau / 2, marginTop: -anneau / 2, borderColor: couleur,
+          opacity: t.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.95, 0.35, 0] }),
+          transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.25, crit ? 1.9 : 1.45] }) }],
+        }]} />
+      )}
+      {tap && TAP_ETINCELLES.map((e, i) => (
+        <Animated.View key={i} style={[styles.tapEtincelle, {
+          backgroundColor: i % 2 ? '#FFF3B0' : couleur,
+          opacity: t.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 0.8, 0] }),
+          transform: [
+            { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(e.angle) * e.portee * loin] }) },
+            { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(e.angle) * e.portee * loin] }) },
+            { scale: t.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) },
+          ],
+        }]} />
+      ))}
+      <Animated.Text style={[styles.tapTexte, crit && styles.tapTexteCrit, {
+        opacity: t.interpolate({ inputRange: [0, 0.75, 1], outputRange: [1, 1, 0] }),
+        transform: [
+          { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [-14, -58] }) },
+          { scale: t.interpolate({ inputRange: [0, 0.15, 0.3, 1], outputRange: [0.5, crit ? 1.35 : 1.2, 1, 1] }) },
+        ],
+      }]}>
+        {text}
+      </Animated.Text>
+    </View>
+  );
+}
+
 function GoldenTargetBubble({ target, onClaim }) {
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -5076,7 +5147,7 @@ function GoldenTargetBubble({ target, onClaim }) {
       hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
     >
       <Animated.View style={[styles.goldenBubble, { transform: [{ scale: pulse }] }]}>
-        <Text style={styles.spawnBubbleEmoji}>✨</Text>
+        <Image source={require('../../../assets/menu/gland-dore.png')} style={styles.bulleIcone} resizeMode="contain" />
       </Animated.View>
     </TouchableOpacity>
   );
@@ -5134,7 +5205,7 @@ function RitualBubble({ target, onClaim }) {
       hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
     >
       <Animated.View style={[styles.ritualBubble, { transform: [{ scale: pulse }] }]}>
-        <Text style={styles.spawnBubbleEmoji}>🕯️</Text>
+        <Image source={require('../../../assets/menu/pierre-runique.png')} style={styles.bulleIcone} resizeMode="contain" />
       </Animated.View>
     </TouchableOpacity>
   );
@@ -6108,6 +6179,14 @@ const styles = StyleSheet.create({
   eggStageLabel: { color: COLORS.action, fontSize: 11, fontWeight: '800', marginTop: 2, opacity: 0.8, textAlign: 'center' },
   comboText: { color: '#FF7043', fontSize: 12, fontWeight: '900', textAlign: 'center' },
   popup: { position: 'absolute', color: COLORS.action, fontSize: 16, fontWeight: '900' },
+  // Effet de tap (27/09) : ancre 200 × 200 centrée sur le doigt.
+  tapEffet: { position: 'absolute', width: 200, height: 200 },
+  tapFlash: { position: 'absolute', left: 100, top: 100 },
+  tapAnneau: { position: 'absolute', left: 100, top: 100, borderWidth: 4, backgroundColor: 'transparent' },
+  tapEtincelle: { position: 'absolute', left: 100, top: 100, width: 8, height: 8, borderRadius: 4, marginLeft: -4, marginTop: -4 },
+  tapTexte: { position: 'absolute', left: 20, top: 100, width: 160, textAlign: 'center', color: '#FFD54A', fontSize: 18, fontWeight: '900', textShadowColor: 'rgba(40,20,0,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
+  tapTexteCrit: { color: '#FF8A3D', fontSize: 24 },
+  bulleIcone: { width: 40, height: 40 },
   popupCrit: { color: '#FF7043', fontSize: 20 },
 
   actionBtn: {

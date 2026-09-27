@@ -916,3 +916,25 @@ détourées, réduites (`assets/menu/bouton-valider.png`, `medaillon-coche.png`)
 voile vert devient un liseré doré discret. La structure protégée du
 26/09 (le TouchableOpacity porte la position, le panneau le remplit) est
 INCHANGÉE : tout le panneau reste le bouton. Scène de banc `scenes/defi.jsx`.
+
+
+## 27/09 — Effets de tap stylés + icônes des bulles (étape 1 de 2)
+
+- **Effet de tap** (`TapEffect`) : flash d'impact, onde de choc, 6 étincelles,
+  « +X » qui rebondit et monte — orange et plus grand sur un critique, et
+  l'œuf tremble. Tout sur le PILOTE NATIF, greffé sur le « +X » existant
+  (aucun état de plus par tap). Onde et étincelles réservées aux vrais taps
+  (5e paramètre `tap` de spawnPopup) : les messages « Pouvoir déjà actif »,
+  gains… gardent le texte seul. Calque et effet transparents au toucher PAR
+  LE STYLE. Sonde de taps : **20 / 20 aux 5 endroits** avec les effets.
+- **⚠️ Piège évité : ne JAMAIS appeler `handleEggTap` pour un effet visuel.**
+  Elle secoue l'œuf MAIS, pendant l'éclosion, retire 1 s au minuteur : un
+  critique aurait retiré 2 s. Le critique fait la secousse seule, écrite en
+  place.
+- **Bulles** : pierre runique (Rituel, ex-bougie 🕯️) et gland doré (bonus doré,
+  ex-✨), images Gemini de l'auteur (prompts 22-23). Popup du Rituel : 🌿.
+- Scène de banc `scenes/tap.jsx` (effets relancés en boucle, figés à mi-course).
+
+**Étape 2 (à faire)** : activation d'un pouvoir (flash de l'élément, créature
+en grand avec le nom du pouvoir, aura autour de l'œuf) et créature qui
+attaque l'œuf à chaque tap pendant son pouvoir — validé par l'auteur.
