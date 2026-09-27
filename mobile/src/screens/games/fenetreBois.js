@@ -23,7 +23,7 @@ const RATIO_PANNEAU = 900 / 1145;
 const RATIO_BANNIERE = 900 / 349;
 const RATIO_BOUTON = 420 / 161;
 
-export function FenetreBois({ titre, children, largeur = 310 }) {
+export function FenetreBois({ titre, children, largeur = 310, onFermer = null }) {
   const lBanniere = Math.round(largeur * 0.92);
   const hBanniere = Math.round(lBanniere / RATIO_BANNIERE);
   return (
@@ -42,6 +42,11 @@ export function FenetreBois({ titre, children, largeur = 310 }) {
       >
         {children}
       </ImageBackground>
+      {onFermer ? (
+        <TouchableOpacity style={[styles.fermer, { top: Math.round(hBanniere * 0.5) + 10 }]} onPress={onFermer} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text style={styles.fermerTexte}>✕</Text>
+        </TouchableOpacity>
+      ) : null}
       {/* Dessinée APRÈS le panneau : elle passe par-dessus son bord. */}
       <ImageBackground source={BANNIERE} resizeMode="contain" style={[styles.banniere, { width: lBanniere, height: hBanniere }]}>
         <View style={styles.titreZone}>
@@ -52,9 +57,13 @@ export function FenetreBois({ titre, children, largeur = 310 }) {
   );
 }
 
-// ⚠️ Le TouchableOpacity PORTE la taille et l'image le REMPLIT (leçon du
-// 26/09 : un bouton autour d'un élément en position absolue fait zéro pixel).
-export function BoutonBois({ texte, sousTexte = null, couleur = 'vert', onPress, largeur = 220, hauteur = null, icone = null, desactive = false }) {
+// ⚠️ Le TouchableOpacity PORTE la taille (leçon du 26/09 : un bouton autour
+// d'un élément en position absolue fait zéro pixel). ⚠️⚠️ 27/09 (retour de
+// l'auteur) : l'image de fond a une taille EXPLICITE en nombres, et AUCUNE
+// marge sur son conteneur — une marge en % sur l'ImageBackground réduisait,
+// SUR TÉLÉPHONE, l'image à ≈ 66 % du bouton, calée à gauche (le texte
+// débordait, on voyait le décor derrière) ; le navigateur, lui, l'étirait.
+export function BoutonBois({ texte, sousTexte = null, couleur = 'vert', onPress, largeur = 250, hauteur = null, icone = null, desactive = false, children = null }) {
   const h = hauteur || Math.round(largeur / RATIO_BOUTON);
   return (
     <TouchableOpacity
@@ -63,15 +72,20 @@ export function BoutonBois({ texte, sousTexte = null, couleur = 'vert', onPress,
       activeOpacity={0.85}
       style={[styles.bouton, { width: largeur, height: h, opacity: desactive ? 0.6 : 1 }]}
     >
-      <ImageBackground source={BOUTONS[couleur] || BOUTONS.vert} resizeMode="stretch" style={styles.boutonImage}>
-        <View style={styles.boutonLigne}>
-          {icone ? <Image source={icone} style={{ width: Math.round(h * 0.42), height: Math.round(h * 0.42), marginRight: 6 }} resizeMode="contain" /> : null}
-          <Text style={styles.boutonTexte} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{texte}</Text>
-        </View>
-        {sousTexte ? (
-          <Text style={styles.boutonSous} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{sousTexte}</Text>
-        ) : null}
-      </ImageBackground>
+      <Image source={BOUTONS[couleur] || BOUTONS.vert} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: largeur, height: h }} />
+      <View style={{ width: largeur, height: h, paddingHorizontal: Math.round(largeur * 0.17), alignItems: 'center', justifyContent: 'center' }}>
+        {children || (
+          <>
+            <View style={styles.boutonLigne}>
+              {icone ? <Image source={icone} style={{ width: Math.round(h * 0.42), height: Math.round(h * 0.42), marginRight: 6 }} resizeMode="contain" /> : null}
+              <Text style={styles.boutonTexte} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{texte}</Text>
+            </View>
+            {sousTexte ? (
+              <Text style={styles.boutonSous} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{sousTexte}</Text>
+            ) : null}
+          </>
+        )}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -81,8 +95,9 @@ const styles = StyleSheet.create({
   titreZone: { position: 'absolute', left: '17%', right: '17%', top: '36%', bottom: '20%', alignItems: 'center', justifyContent: 'center' },
   titre: { color: '#fff7d6', fontSize: 20, fontWeight: '900', textShadowColor: 'rgba(15,40,10,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
   bouton: { alignSelf: 'center', marginTop: 8 },
-  boutonImage: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: '17%' },
+  fermer: { position: 'absolute', right: 12, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(40,24,12,0.92)', borderWidth: 1.5, borderColor: '#d9a441', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  fermerTexte: { color: '#ffe6a8', fontSize: 15, fontWeight: '900' },
   boutonLigne: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  boutonTexte: { color: '#fff', fontSize: 16, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.75)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
+  boutonTexte: { color: '#fff', fontSize: 15, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.75)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
   boutonSous: { color: 'rgba(255,255,255,0.92)', fontSize: 10, fontWeight: '800', marginTop: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 2 },
 });

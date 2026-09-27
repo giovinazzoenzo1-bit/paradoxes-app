@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Animated } from 'react-native';
 import { COLORS } from './clickerTheme';
+import { FenetreBois, BoutonBois, SABLIER } from './fenetreBois';
 import {
   remainingMs, isReady, progressRatio, formatRemaining,
   canWatchVideo, MAX_VIDEOS_PER_EGG, VIDEO_REDUCTION_RATIO, TAP_REDUCTION_MS,
@@ -70,13 +71,8 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
           fermerait aussi le menu. */}
       <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onBack} />
 
-      <View style={styles.panel}>
-        <View style={styles.panelHeader}>
-          <Text style={styles.panelTitle}>Incubateur</Text>
-          <TouchableOpacity style={styles.closeBtn} onPress={onBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.closeBtnText}>✕</Text>
-          </TouchableOpacity>
-        </View>
+      {/* 27/09 (demande de l'auteur) : fenêtre du thème forêt. */}
+      <FenetreBois titre="Incubateur" onFermer={onBack} largeur={320}>
 
         <View style={styles.body}>
           {!egg ? (
@@ -110,9 +106,12 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                 />
               </TouchableOpacity>
 
-              <Text style={[styles.timer, ready && styles.timerReady]}>
-                {formatRemaining(remainingMs(egg, now))}
-              </Text>
+              <View style={styles.timerRow}>
+                <Image source={SABLIER} style={styles.timerSablier} resizeMode="contain" />
+                <Text style={[styles.timer, ready && styles.timerReady]}>
+                  {formatRemaining(remainingMs(egg, now))}
+                </Text>
+              </View>
 
               <View style={styles.barTrack}>
                 <View style={[styles.barFill, { width: `${pct}%` }, ready && { backgroundColor: COLORS.good }]} />
@@ -123,49 +122,42 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                 // Après une défaite contre le gardien, l'œuf reste : seul
                 // le délai avant nouvel essai bloque le bouton.
                 guardianRetryRemainingMs(egg, now) > 0 ? (
-                  <View style={[styles.hatchBtn, styles.hatchBtnWaiting]}>
-                    <Text style={styles.hatchBtnWaitingText}>
-                      ⚔️ Nouvel essai dans {formatRemaining(guardianRetryRemainingMs(egg, now))}
-                    </Text>
-                  </View>
+                  <BoutonBois couleur="rouge" desactive largeur={250} hauteur={58} texte="⚔️ Nouvel essai" sousTexte={`dans ${formatRemaining(guardianRetryRemainingMs(egg, now))}`} />
                 ) : (
                   // Rouge quand c'est un gardien, vert quand l'œuf éclot
                   // directement : même code couleur que l'écran
                   // principal, la même action doit se reconnaître au
                   // premier coup d'œil des deux côtés.
-                  <TouchableOpacity
-                    style={[styles.hatchBtn, guardianRequired && styles.hatchBtnGuardian]}
+                  <BoutonBois
+                    couleur={guardianRequired ? 'rouge' : 'vert'}
+                    largeur={250}
+                    hauteur={60}
+                    texte={guardianRequired ? '⚔️ Affronter le gardien' : '🐣 Faire éclore'}
+                    sousTexte={guardianRequired && guardianInfo ? guardianInfo : null}
                     onPress={onHatch}
-                  >
-                    <Text style={[styles.hatchBtnText, guardianRequired && styles.hatchBtnGuardianText]}>
-                      {guardianRequired ? '⚔️ Affronter le gardien' : '🐣 Faire éclore'}
-                    </Text>
-                    {guardianRequired && guardianInfo ? (
-                      <Text style={styles.guardianInfo}>{guardianInfo}</Text>
-                    ) : null}
-                  </TouchableOpacity>
+                  />
                 )
               ) : (
                 <>
                   <Text style={styles.hint}>
                     Tape l'œuf pour gagner {TAP_REDUCTION_MS / 1000} seconde par tap.
                   </Text>
-                  <TouchableOpacity
-                    style={[styles.videoBtn, (!canWatchVideo(egg) || adLoading) && styles.videoBtnDisabled]}
+                  <BoutonBois
+                    couleur="bleu"
+                    largeur={250}
+                    hauteur={56}
+                    desactive={!canWatchVideo(egg) || adLoading}
                     onPress={handleVideo}
-                    disabled={!canWatchVideo(egg) || adLoading}
+                    texte={`📺 Vidéo : −${Math.round(VIDEO_REDUCTION_RATIO * 100)} %`}
+                    sousTexte={`${egg.videosUsed || 0} / ${MAX_VIDEOS_PER_EGG} vidéos`}
                   >
                     {adLoading ? (
                       <View style={styles.adLoadingRow}>
-                        <ActivityIndicator size="small" color={COLORS.neonCyan} />
+                        <ActivityIndicator size="small" color="#fff" />
                         <Text style={styles.adLoadingText}>Publicité…</Text>
                       </View>
-                    ) : (
-                      <Text style={[styles.videoBtnText, !canWatchVideo(egg) && styles.videoBtnTextDisabled]}>
-                        📺 Vidéo — {Math.round(VIDEO_REDUCTION_RATIO * 100)} % ({egg.videosUsed || 0}/{MAX_VIDEOS_PER_EGG})
-                      </Text>
-                    )}
-                  </TouchableOpacity>
+                    ) : null}
+                  </BoutonBois>
                 </>
               )}
 
@@ -175,12 +167,15 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
             </>
           )}
         </View>
-      </View>
+      </FenetreBois>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // 27/09 : sablier à côté du temps restant (thème forêt).
+  timerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  timerSablier: { width: 22, height: 34 },
   // `position: absolute` + `zIndex: 30` : sans ça le panneau se rendait
   // DERRIÈRE les éléments du Clicker, qui sont eux-mêmes en absolu avec
   // des zIndex de 3 à 5 (signalé sur capture le 07/09). Les autres

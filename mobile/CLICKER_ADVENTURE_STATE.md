@@ -985,3 +985,21 @@ nouvel essai (rouge désactivé). Scène de banc `scenes/fenetres.jsx`.
 Reste : le menu de l'incubateur (IncubatorPanel) dans le même style.
 Aussi corrigé : défi terminé = 6 segments dorés (le remplissage se calculait
 sur la cible) ; case des pièces 140.
+
+**Retours de l'auteur sur les fenêtres (27/09)** :
+- **Boutons trop étroits, texte qui déborde, décor visible derrière** — cause
+  réelle : `paddingHorizontal: '17%'` sur l'ImageBackground du bouton. Sur
+  TÉLÉPHONE, l'image intérieure (absolue, largeur « 100 % ») se calcule sur la
+  largeur MOINS ces marges → ≈ 66 % du bouton, calée à gauche ; le navigateur
+  du banc, lui, l'étirait sur toute la largeur. **Piège à retenir : jamais de
+  marge en % sur un ImageBackground ; image de fond à taille EXPLICITE en
+  nombres, texte dans sa propre boîte.** `BoutonBois` réécrit ainsi.
+- **Fenêtre « Nouvelle créature ! »** (révélation après éclosion) : la
+  créature en grand au centre (170), nom, rareté, bouton « Super ! ».
+- **Menu de l'incubateur** (IncubatorPanel) dans le style forêt : bannière,
+  croix de fermeture (`onFermer`), sablier à côté du temps restant, boutons
+  dorés (vidéo en saphir, éclosion en émeraude ou rubis) ; logique inchangée.
+- **Piège (2 fois)** : insérer un import APRÈS un import d'une seule ligne —
+  pas après la 1re ligne d'un import sur plusieurs lignes (le compilateur
+  l'attrape, mais ça coûte un aller-retour).
+Scène de banc `scenes/fenetres2.jsx` (créature, incubateur en cours, prêt).

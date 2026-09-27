@@ -4151,25 +4151,22 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           récompense serait invisible au moment exact où elle tombe. */}
       {rewardCreature && (
         <View style={styles.detailOverlay}>
-          <View style={styles.rewardPanel}>
+          {/* 27/09 (demande de l'auteur) : la créature EN GRAND au milieu de
+              la fenêtre du thème forêt. */}
+          <FenetreBois titre="Nouvelle créature !">
             <CreatureArt
               creatureId={rewardCreature.id}
               stageIndex={0}
               emoji={rewardCreature.stages[0].emoji}
-              size={96}
-              emojiStyle={styles.detailEmoji}
+              size={170}
+              emojiStyle={styles.fenetreCreatureEmoji}
             />
-            <Text style={styles.detailName}>Félicitations !</Text>
-            <Text style={styles.rewardUnlockLine}>
-              Tu as débloqué {rewardCreature.stages[0].name}
-            </Text>
+            <Text style={styles.fenetreCreatureNom}>{rewardCreature.stages[0].name}</Text>
             <Text style={[styles.creatureRarity, { color: RARITY_COLOR[rewardCreature.rarity] }]}>
               {RARITY_LABEL[rewardCreature.rarity]}
             </Text>
-            <TouchableOpacity style={styles.feedBtn} onPress={() => setRewardCreature(null)}>
-              <Text style={styles.feedBtnText}>Super !</Text>
-            </TouchableOpacity>
-          </View>
+            <BoutonBois texte="Super !" onPress={() => setRewardCreature(null)} />
+          </FenetreBois>
         </View>
       )}
       {/* Petit menu de fin de combat de Gardien (demande de l'auteur,
@@ -6287,6 +6284,8 @@ const styles = StyleSheet.create({
   fenetreCouronne: { width: 118, height: 118, marginBottom: 2 },
   fenetreCristal: { width: 22, height: 42 },
   fenetreEmoji: { fontSize: 54, marginBottom: 4 },
+  fenetreCreatureEmoji: { fontSize: 96 },
+  fenetreCreatureNom: { color: '#fff7d6', fontSize: 22, fontWeight: '900', marginTop: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4 },
   // Pouvoirs (27/09) : aura derrière l'œuf, créature qui attaque à sa gauche.
   powerAura: { position: 'absolute', width: EGG_SIZE * 1.5, height: EGG_SIZE * 1.5, left: '50%', marginLeft: -EGG_SIZE * 0.75, top: TAP_ZONE_H / 2 - EGG_SIZE * 0.75, pointerEvents: 'none' },
   // Ancrée au CENTRE de l'œuf ; lancerAttaque la place autour (translate).
