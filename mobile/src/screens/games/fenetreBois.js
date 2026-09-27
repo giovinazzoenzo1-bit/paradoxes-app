@@ -141,13 +141,13 @@ export function LigneReglage({ largeur, titre, detail = null, valeur, onPress })
 // Grand bouton rectangulaire (cadre doré, émail vert ou rouge). Même règle
 // que BoutonBois : le bouton porte sa taille, l'image a une taille explicite,
 // la taille du texte est calculée pour tenir sur l'émail (≈ 86 %).
-export function BoutonLarge({ texte, sousTexte = null, couleur = 'vert', onPress, largeur, hauteur = null, desactive = false }) {
+export function BoutonLarge({ texte, sousTexte = null, couleur = 'vert', onPress, largeur, hauteur = null, desactive = false, sansMarge = false }) {
   const h = hauteur || Math.round(largeur / RATIO_LARGE);
   const utile = largeur * 0.84;
   const tailleTexte = Math.max(11, Math.min(16, Math.floor(utile / (0.62 * Math.max(1, longueurVisible(texte))))));
   const tailleSous = sousTexte ? Math.max(8, Math.min(11, Math.floor(utile / (0.56 * Math.max(1, longueurVisible(sousTexte)))))) : 0;
   return (
-    <TouchableOpacity onPress={onPress} disabled={desactive || !onPress} activeOpacity={0.85} style={{ width: largeur, height: h, marginTop: 8, opacity: desactive ? 0.6 : 1 }}>
+    <TouchableOpacity onPress={onPress} disabled={desactive || !onPress} activeOpacity={0.85} style={{ width: largeur, height: h, marginTop: sansMarge ? 0 : 8, opacity: desactive ? 0.6 : 1 }}>
       <Image source={LARGES[couleur] || LARGES.vert} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: largeur, height: h }} />
       <View style={{ width: largeur, height: h, paddingHorizontal: Math.round(largeur * 0.08), alignItems: 'center', justifyContent: 'center' }}>
         <Text style={[styles.boutonTexte, { fontSize: tailleTexte }]} numberOfLines={1}>{texte}</Text>

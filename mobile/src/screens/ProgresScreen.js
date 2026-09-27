@@ -1,5 +1,31 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image, Dimensions } from 'react-native';
+import { GrandPanneau, BoutonLarge, largeurInterieure } from './games/fenetreBois';
+
+// 27/09 : Quêtes du thème forêt (pièces Gemini 45-51 de l'auteur, kit partagé
+// fenetreBois). Tailles en NOMBRES (règle du 27/09).
+const { width: ECRAN_L, height: ECRAN_H } = Dimensions.get('window');
+const PANNEAU_L = Math.min(Math.round(ECRAN_L * 0.94), 400);
+const PANNEAU_H = Math.round(Math.min(ECRAN_H * 0.78, PANNEAU_L / 0.56));
+const INTERIEUR = largeurInterieure(PANNEAU_L);
+const LIGNE_H = 84;
+const LIGNE_PAD = Math.round(INTERIEUR * 0.06);
+const DROITE_L = 88;
+const MILIEU_L = INTERIEUR - 2 * LIGNE_PAD - DROITE_L - 8;
+const BARRE_H = 18;
+const ONGLET_L = Math.floor((INTERIEUR - 8) / 3);
+const IMG = {
+  planche: require('../../assets/fenetres/planche.png'),
+  plancheDoree: require('../../assets/fenetres/planche-doree.png'),
+  rail: require('../../assets/fenetres/rail-barre.png'),
+  remplissage: require('../../assets/fenetres/remplissage-barre.png'),
+  plaque: require('../../assets/fenetres/plaque-recompense.png'),
+  pattes: require('../../assets/fenetres/pattes.png'),
+  ongletActif: require('../../assets/fenetres/onglet-actif.png'),
+  ongletInactif: require('../../assets/fenetres/onglet-inactif.png'),
+};
+// Taille du libellé d'onglet CALCULÉE pour tenir (le téléphone ne réduit pas).
+const tailleOnglet = (t) => Math.max(8, Math.min(13, Math.floor((ONGLET_L * 0.82) / (0.58 * t.length))));
 import { useDaily } from '../context/DailyContext';
 import { questDef, weeklyQuestDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER } from '../games/clicker/dailyLogic';
 import { COLORS } from './games/clickerTheme';
@@ -19,7 +45,7 @@ import { recompenseQuete } from '../games/clicker/combatLogic';
 // Onglet "Log-In" retiré le 07/09 : il aurait fait doublon avec le
 // calendrier du bouton cadeau, comme le bloc streak retiré juste avant.
 const TABS = [
-  { key: 'daily', label: 'Quotidiennement' },
+  { key: 'daily', label: 'Quotidien' }, // 27/09 : raccourci pour tenir dans l'onglet
   { key: 'weekly', label: 'Hebdomadaire' },
   { key: 'success', label: 'Succès' },
 ];
@@ -64,27 +90,38 @@ export default function ProgresScreen({ onBack }) {
     const progress = Math.min(def.target, Math.floor(rawProgress || 0));
     const done = progress >= def.target;
     const pct = Math.min(100, (progress / def.target) * 100);
+    const gain = recompense != null ? recompense : def.reward;
+    const aRecuperer = done && !claimed;
+    // 27/09 : planche DORÉE quand la quête est à récupérer ; estompée une fois
+    // récupérée. Barre : rail + remplissage doré, largeurs en NOMBRES.
     return (
-      <View key={key} style={styles.questRow}>
-        <View style={styles.questGem}>
-          <Text style={styles.questGemIcon}>🐾</Text>
-        </View>
-        <View style={styles.questMiddle}>
-          <Text style={styles.questDesc} numberOfLines={2}>{def.desc}</Text>
-          <View style={styles.questBarTrack}>
-            <View style={[styles.questBarFill, { width: `${pct}%` }, claimed && { backgroundColor: COLORS.muted }]} />
-            <Text style={styles.questBarLabel}>{formatCount(progress)}/{formatCount(def.target)}</Text>
+      <View key={key} style={[styles.ligne, claimed && { opacity: 0.6 }]}>
+        <Image source={aRecuperer ? IMG.plancheDoree : IMG.planche} resizeMode="stretch" style={styles.lignePlanche} />
+        <View style={styles.ligneMilieu}>
+          <Text style={styles.ligneTexte} numberOfLines={2}>{def.desc}</Text>
+          <View style={styles.barre}>
+            <Image source={IMG.rail} resizeMode="stretch" style={styles.barreRail} />
+            {pct > 0 ? (
+              <Image source={IMG.remplissage} resizeMode="stretch" style={[styles.barreRemplie, { width: Math.max(8, Math.round((MILIEU_L - 6) * pct / 100)) }]} />
+            ) : null}
+            <Text style={styles.barreTexte}>{formatCount(progress)}/{formatCount(def.target)}</Text>
           </View>
         </View>
-        <TouchableOpacity
-          style={[styles.questClaimBtn, (!done || claimed) && styles.questClaimBtnDisabled]}
-          onPress={onClaim}
-          disabled={!done || claimed || busyId === key}
-        >
-          <Text style={[styles.questClaimBtnText, (!done || claimed) && styles.questClaimBtnTextDisabled]}>
-            {claimed ? '✓' : `+${recompense != null ? recompense : def.reward}`}
-          </Text>
-        </TouchableOpacity>
+        {aRecuperer ? (
+          <BoutonLarge couleur="vert" sansMarge largeur={DROITE_L} hauteur={46} texte="Récupérer" sousTexte={`+${gain} Griffes`} onPress={busyId === key ? null : onClaim} />
+        ) : (
+          <View style={styles.plaque}>
+            <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImage} />
+            {claimed ? (
+              <Text style={styles.plaqueTexte}>✓</Text>
+            ) : (
+              <>
+                <Image source={IMG.pattes} resizeMode="contain" style={styles.plaquePattes} />
+                <Text style={styles.plaqueTexte} numberOfLines={1}>+{gain}</Text>
+              </>
+            )}
+          </View>
+        )}
       </View>
     );
   };
@@ -127,14 +164,15 @@ export default function ProgresScreen({ onBack }) {
 
         if (maxed) {
           return (
-            <View key={a.id} style={[styles.questRow, styles.questRowDone]}>
-              <View style={styles.questGem}><Text style={styles.questGemIcon}>🏆</Text></View>
-              <View style={styles.questMiddle}>
-                <Text style={styles.questDesc} numberOfLines={2}>{a.desc}</Text>
+            <View key={a.id} style={[styles.ligne, { opacity: 0.75 }]}>
+              <Image source={IMG.planche} resizeMode="stretch" style={styles.lignePlanche} />
+              <View style={styles.ligneMilieu}>
+                <Text style={styles.ligneTexte} numberOfLines={2}>🏆 {a.desc}</Text>
                 <Text style={styles.tierLabel}>Terminé — palier 5/5</Text>
               </View>
-              <View style={[styles.questClaimBtn, styles.questClaimBtnDisabled]}>
-                <Text style={styles.questClaimBtnTextDisabled}>✓</Text>
+              <View style={styles.plaque}>
+                <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImage} />
+                <Text style={styles.plaqueTexte}>✓</Text>
               </View>
             </View>
           );
@@ -176,15 +214,20 @@ export default function ProgresScreen({ onBack }) {
           le panneau lui-même déclencherait aussi la fermeture. */}
       <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onBack} />
 
-      <View style={styles.panel}>
-        <View style={styles.panelHeader}>
-          <Text style={styles.panelTitle}>Quêtes</Text>
-          <TouchableOpacity style={styles.closeBtn} onPress={onBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.closeBtnText}>✕</Text>
-          </TouchableOpacity>
+      <GrandPanneau titre="Quêtes" largeur={PANNEAU_L} hauteur={PANNEAU_H} onFermer={onBack}>
+        {/* 27/09 : onglets EN HAUT, sous la bannière (maquette validée). */}
+        <View style={styles.onglets}>
+          {TABS.map((t) => (
+            <TouchableOpacity key={t.key} style={styles.onglet} onPress={() => setTab(t.key)}>
+              <Image source={tab === t.key ? IMG.ongletActif : IMG.ongletInactif} resizeMode="stretch" style={styles.ongletImage} />
+              <Text style={[styles.ongletTexte, { fontSize: tailleOnglet(t.label) }, tab !== t.key && styles.ongletTexteInactif]} numberOfLines={1}>
+                {t.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
           {!loaded
             ? renderEmpty('Chargement…')
             : tab === 'daily'
@@ -193,26 +236,30 @@ export default function ProgresScreen({ onBack }) {
             ? renderWeekly()
             : renderAchievements()}
         </ScrollView>
-
-        <View style={styles.tabsRow}>
-          {TABS.map((t) => (
-            <TouchableOpacity
-              key={t.key}
-              style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
-              onPress={() => setTab(t.key)}
-            >
-              <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]} numberOfLines={1}>
-                {t.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+      </GrandPanneau>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // 27/09 : Quêtes du thème forêt.
+  onglets: { width: INTERIEUR, height: 40, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  onglet: { width: ONGLET_L, height: 40, alignItems: 'center', justifyContent: 'center' },
+  ongletImage: { position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: 40 },
+  ongletTexte: { color: '#fff7e0', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 3 },
+  ongletTexteInactif: { color: '#d8c7a4' },
+  ligne: { width: INTERIEUR, height: LIGNE_H, flexDirection: 'row', alignItems: 'center', paddingHorizontal: LIGNE_PAD, marginBottom: 8 },
+  lignePlanche: { position: 'absolute', left: 0, top: 0, width: INTERIEUR, height: LIGNE_H },
+  ligneMilieu: { width: MILIEU_L, marginRight: 8 },
+  ligneTexte: { color: '#fff7e0', fontSize: 13, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 3 },
+  barre: { width: MILIEU_L, height: BARRE_H, marginTop: 6, justifyContent: 'center' },
+  barreRail: { position: 'absolute', left: 0, top: 0, width: MILIEU_L, height: BARRE_H },
+  barreRemplie: { position: 'absolute', left: 3, top: 3, height: BARRE_H - 6 },
+  barreTexte: { color: '#fff', fontSize: 10, fontWeight: '900', textAlign: 'center', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 3 },
+  plaque: { width: DROITE_L, height: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  plaqueImage: { position: 'absolute', left: 0, top: 0, width: DROITE_L, height: 46 },
+  plaquePattes: { width: 22, height: 22, marginRight: 4 },
+  plaqueTexte: { color: '#ffe6a8', fontSize: 14, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 3 },
   // Fond assombri : le menu du Clicker reste visible autour du panneau,
   // comme sur la maquette (le menu ne prend plus tout l'écran).
   backdrop: {
@@ -291,10 +338,10 @@ const styles = StyleSheet.create({
   questClaimBtnText: { color: '#241a00', fontSize: 13, fontWeight: '900' },
   questClaimBtnTextDisabled: { color: COLORS.muted },
 
-  footnote: { color: COLORS.muted, fontSize: 10, textAlign: 'center', marginTop: 6, paddingHorizontal: 8 },
+  footnote: { color: '#dccbaa', fontSize: 10, textAlign: 'center', marginTop: 6, paddingHorizontal: 8 },
 
   tierLabel: {
-    color: COLORS.action, fontSize: 10, fontWeight: '900',
+    color: '#f0d48a', fontSize: 10, fontWeight: '900',
     marginBottom: 3, marginLeft: 2, letterSpacing: 0.3,
   },
   questRowDone: { opacity: 0.65, borderColor: COLORS.good },

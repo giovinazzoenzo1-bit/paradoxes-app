@@ -1076,3 +1076,12 @@ l'énergie comme la maquette validée), icônes d'offre dans `assets/boutique/`.
 ⚠️ **Icône des Griffes manquante** (image 39 non reçue ; les suivantes étaient
 décalées d'un numéro — rangées par CONTENU) : tuile provisoire dessinée par le
 code avec 🐾, à remplacer (clé `griffes` de ICONES). Scène `scenes/boutique.jsx`.
+
+**Quêtes (3e sur 4, 27/09)** : ProgresScreen sur le kit + pièces 45-51 dans
+`assets/fenetres/` (onglets actif / inactif, planche dorée, rail et
+remplissage de barre, plaque de récompense, pattes). Onglets déplacés EN HAUT
+(maquette validée) ; « Quotidiennement » → « Quotidien » (tenait en 8 pts).
+Ligne de quête : planche normale + barre + plaque « +N » (pattes) ; à
+récupérer → planche DORÉE + BoutonLarge « Récupérer » (`sansMarge`) ;
+récupérée → estompée « ✓ ». Les quêtes récompensent TOUJOURS en Griffes.
+Scène `scenes/quetes.jsx` (vraies quêtes du jour, à zéro au banc).
