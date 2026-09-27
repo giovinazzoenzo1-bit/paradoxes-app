@@ -3878,3 +3878,46 @@ function auditPuissanceExacte() {
   return fautes;
 }
 module.exports.auditPuissanceExacte = auditPuissanceExacte;
+
+// ---- La zone de l'œuf reste libre au toucher (27/09, bug de tap) ----
+//
+// Bug revenu 2 fois (07/09 : texte d'aide et barre du bas par-dessus la
+// zone ; 27/09 : les « +X » posés AU POINT TOUCHÉ, 0,7 s, avalaient les taps
+// suivants — MESURÉ au banc tactile : 10 à 12 taps comptés sur 20 à 150 ms).
+// Tout ce qui est posé sur la zone sans être un bouton doit être
+// transparent au toucher.
+function auditZoneTapLibre() {
+  const fs = require('fs'), path = require('path');
+  const C = fs.readFileSync(path.join(__dirname, '..', 'src/screens/games/ClickerScreen.js'), 'utf8');
+  const fautes = [];
+  const i = C.indexOf('{popups.map((p) => (');
+  const avant = i > 0 ? C.slice(Math.max(0, i - 200), i) : '';
+  // FORME STYLE exigée : la propriété pointerEvents est ignorée depuis le SDK 57.
+  if (!/<View style=\{\[StyleSheet\.absoluteFill, \{ pointerEvents: 'none' \}\]\}>\s*$/.test(avant)) fautes.push({ probleme: 'les « +X » de tap ne sont plus dans un calque transparent au toucher PAR LE STYLE (ils avalent les taps suivants)' });
+  const n = C.indexOf('\n  eggNest: {'); const ligne = n > 0 ? C.slice(n, C.indexOf('\n', n + 1)) : '';
+  if (!ligne.includes("pointerEvents: 'none'")) fautes.push({ probleme: "le nid n'est plus transparent au toucher par le style" });
+  return fautes;
+}
+module.exports.auditZoneTapLibre = auditZoneTapLibre;
+
+// ---- pointerEvents : TOUJOURS dans le style (règle depuis le SDK 57) ----
+//
+// La PROPRIÉTÉ `pointerEvents="none"` est ignorée par le téléphone (seul le
+// style est lu — commit 5defa31). 27/09 : une correction du bug de tap écrite
+// en propriété aurait bloqué TOUS les taps de l'œuf (MESURÉ au banc rendu
+// fidèle : 0 à 1 tap compté sur 20) ; 10 propriétés traînaient dans l'appli.
+function auditPointerEventsStyle() {
+  const fs = require('fs'), path = require('path');
+  const racine = path.join(__dirname, '..', 'src'); const fautes = [];
+  (function parcours(d) {
+    for (const f of fs.readdirSync(d)) {
+      const p = path.join(d, f);
+      if (fs.statSync(p).isDirectory()) parcours(p);
+      else if (p.endsWith('.js')) fs.readFileSync(p, 'utf8').split('\n').forEach((l, k) => {
+        if (/pointerEvents="/.test(l) && !/^\s*(\/\/|\*|\{\/\*)/.test(l)) fautes.push({ fichier: path.relative(racine, p), ligne: k + 1, probleme: 'pointerEvents en PROPRIÉTÉ (ignorée sur téléphone) : le mettre dans le style' });
+      });
+    }
+  })(racine);
+  return fautes;
+}
+module.exports.auditPointerEventsStyle = auditPointerEventsStyle;

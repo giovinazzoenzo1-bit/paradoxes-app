@@ -940,12 +940,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     <View style={[styles.screen, { marginTop: -insets.top }]}>
       <StatusBar hidden />
       {elixirActif && (
-        <View style={[styles.elixirBadge, { top: insets.top + 6 }]} pointerEvents="none">
+        <View style={[styles.elixirBadge, { top: insets.top + 6, pointerEvents: 'none' }]}>
           <Text style={styles.elixirBadgeText}>🧪 Élixir : ennemis −10 %</Text>
         </View>
       )}
       {filetBaisse > 0 && (
-        <View style={[styles.elixirBadge, styles.filetBadge, { top: insets.top + (elixirActif ? 34 : 6) }]} pointerEvents="none">
+        <View style={[styles.elixirBadge, styles.filetBadge, { top: insets.top + (elixirActif ? 34 : 6), pointerEvents: 'none' }]}>
           <Text style={styles.elixirBadgeText}>🛟 Coup de pouce : ennemis −{Math.round(filetBaisse * 100)} %</Text>
         </View>
       )}

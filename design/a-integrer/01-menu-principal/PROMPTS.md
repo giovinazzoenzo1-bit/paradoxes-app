@@ -119,3 +119,19 @@ A book icon without any frame around it: a thick leather-bound brown book with a
 ```
 A compass icon without any frame around it: a round brass compass with an ivory compass-rose dial and a dark red needle, and a small silver four-pointed sparkle above it. Square 1:1 image. Style: hand-painted fantasy mobile game UI asset, cozy magical forest theme, weathered warm brown wood, bright green moss, thin vines, smooth blue-grey pebbles, soft painterly shading, clean crisp edges, high detail, same art style as the reference screenshot. One single isolated object, centered, fully visible with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture, no vignette. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
+
+## Bouton « Valider » du défi réussi (27/09) — déposer dans `01-menu-principal/valider`
+
+Lien : https://github.com/giovinazzoenzo1-bit/paradoxes-app/upload/main/design/a-integrer/01-menu-principal/valider
+
+**20. Bouton « Valider »**
+
+```
+A horizontal validation button for a completed quest: a rounded plank of polished golden-honey wood with a thick raised border, an empty bright emerald-green enamel panel in its center, two small round golden studs at the left and right ends, and a few fresh green leaves sprouting from its top corners. It must look rewarding and clickable. About 3.5 times wider than tall, centered in a 16:9 image. Style: hand-painted fantasy mobile game UI asset, cozy magical forest theme, weathered warm brown wood, bright green moss, thin vines, smooth blue-grey pebbles, soft painterly shading, clean crisp edges, high detail, same art style as the reference screenshot. One single isolated object, centered, fully visible with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture, no vignette. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
+```
+
+**21. Médaillon coche**
+
+```
+A round success medallion: a bright green check mark made of twisted green vines with small leaves, set on a round disc of golden-honey wood with a thin gold ring. Square 1:1 image. Style: hand-painted fantasy mobile game UI asset, cozy magical forest theme, weathered warm brown wood, bright green moss, thin vines, smooth blue-grey pebbles, soft painterly shading, clean crisp edges, high detail, same art style as the reference screenshot. One single isolated object, centered, fully visible with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture, no vignette. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
+```

@@ -108,3 +108,5 @@ Décidé : **remplace la bulle**. Compte à rebours sur l'œuf ; 1er appui sur l
 **Verrou (26/09) :** `sh mobile/tools/garde.sh prendre R-sujet` affiche une
 étiquette UNIQUE (« R-sujet#a3f9 ») : la réutiliser EXACTEMENT pour chaque
 `prendre` suivant et pour `rendre`.
+
+**pointerEvents (27/09)** : TOUJOURS dans le style (`{ pointerEvents: 'none' }`), jamais en propriété — ignorée sur téléphone depuis le SDK 57. Le banc de capture l'ignore aussi, pour être fidèle. Contrôle `auditPointerEventsStyle`.

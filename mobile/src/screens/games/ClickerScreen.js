@@ -3719,7 +3719,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   source={require('../../../assets/icons/glow-gold.png')}
                   style={[styles.calBtnGlow, { transform: [{ scale: giftGlowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.12] }) }] }]}
                   resizeMode="contain"
-                  pointerEvents="none"
                 />
               )}
               {/* Icône unique, qui respire légèrement (scale) — plus de
@@ -3784,7 +3783,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                       dessiné avant) : il partage son centrage et son décalage,
                       donc reste dessous sur tout appareil (retour de l'auteur :
                       calculé à part, il était 2-3 mm à droite sur téléphone). */}
-                  <Image source={require('../../../assets/menu/grand-nid.png')} style={styles.eggNest} resizeMode="contain" pointerEvents="none" />
+                  <Image source={require('../../../assets/menu/grand-nid.png')} style={styles.eggNest} resizeMode="contain" />
                   <Animated.View
                     style={[
                       styles.tapButton,
@@ -3833,11 +3832,25 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                     )}
                 </Animated.View>
               </TouchableOpacity>
-              {popups.map((p) => (
-                <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y }]}>
-                  {p.text}
-                </Animated.Text>
-              ))}
+              {/* ⚠️⚠️ 27/09 — BUG DE TAP (retour de l'auteur, PROUVÉ au banc) : chaque
+                  « +X » apparaît AU POINT TOUCHÉ (locationX/Y) et reste 0,7 s ;
+                  posé PAR-DESSUS la zone sans être transparent au toucher, il
+                  avalait les taps suivants au même endroit — MESURÉ : 10 à 12
+                  taps comptés sur 20 (autoclicker 150 ms). Le calque est
+                  transparent au toucher : les taps passent jusqu'à l'œuf.
+                  RÈGLE : tout ce qui est posé sur la zone de l'œuf sans être un
+                  bouton doit être transparent au toucher PAR LE STYLE
+                  (pointerEvents: 'none') : la PROPRIÉTÉ est ignorée depuis le
+                  SDK 57 — écrite ainsi, ce calque couvrant toute la zone aurait
+                  bloqué TOUS les taps (MESURÉ au banc fidèle : 0 à 1 sur 20).
+                  Contrôles auditZoneTapLibre et auditPointerEventsStyle. */}
+              <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
+                {popups.map((p) => (
+                  <Animated.Text key={p.id} style={[styles.popup, p.isCrit && styles.popupCrit, { left: p.x, top: p.y, pointerEvents: 'none' }]}>
+                    {p.text}
+                  </Animated.Text>
+                ))}
+              </View>
               {/* Bulles de pouvoir : toutes FRÈRES du bouton tapable, pas
                   enfants — elles captent leur propre appui sans jamais
                   entrer en conflit avec le tap de l'œuf en dessous. */}
@@ -4023,7 +4036,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {/* ⚠️ Annonce du boss. `pointerEvents: 'none'` comme le bandeau :
           elle ne doit jamais empêcher de taper. */}
       {bossAnnonce !== null && view === 'tap' && (
-        <View style={styles.bossAnnonce} pointerEvents="none">
+        <View style={[styles.bossAnnonce, { pointerEvents: 'none' }]}>
           <Text style={styles.bossAnnonceTitre}>⚠️ Attention, boss en approche</Text>
           <Text style={styles.bossAnnonceChiffre}>{bossAnnonce}</Text>
         </View>
@@ -4339,7 +4352,7 @@ const EGG_PARTICLE_COLORS = ['#8a8f99', '#c9a227', '#ffcf3f', '#ffd76a', '#fff0b
 function EggParticles({ size, burst, stageIndex }) {
   const couleur = EGG_PARTICLE_COLORS[Math.min(EGG_PARTICLE_COLORS.length - 1, Math.max(0, stageIndex || 0))];
   return (
-    <View pointerEvents="none" style={[styles.eggParticleLayer, { width: size, height: size }]}>
+    <View style={[styles.eggParticleLayer, { width: size, height: size, pointerEvents: 'none' }]}>
       {EGG_PARTICLES.map((p, i) => (
         <Animated.View
           key={i}
@@ -4445,6 +4458,8 @@ const DECK_SLOT_CENTER_GAP_PCT = ((DECK_SLOT_DIAMETER_PX + DECK_SLOT_GAP_PX) / D
 // 27/09 : centres des 3 cases de pierre MESURÉS sur le nouveau cadre
 // (assets/menu/cadre-deck.png, regroupement des pixels de pierre grise).
 const DECK_SLOT_X_PCT = [22.2, 49.4, 76.4];
+// 27/09 : cadre élargi (62 % de l'écran), cases 46 points, créatures dessinées
+// à 46 points (26 avant : 15-22 points visibles, « on les voit à peine »).
 
 // « 1:05 » à partir d'une durée en millisecondes.
 function minSec(ms) {
@@ -4476,12 +4491,12 @@ function DeckRow({ deck, owned, onSlotPress, onSlotLongPress, recharges }) {
             delayLongPress={350}
           >
             {display ? (
-              <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={26} emojiStyle={styles.deckSlotEmoji} />
+              <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={46} emojiStyle={styles.deckSlotEmoji} />
             ) : (
               <Text style={styles.deckSlotEmpty}>🥚</Text>
             )}
             {creature && recharges && !pouvoirPret(recharges, id, maintenant) ? (
-              <View style={styles.deckSlotRecharge} pointerEvents="none">
+              <View style={[styles.deckSlotRecharge, { pointerEvents: 'none' }]}>
                 <Text style={styles.deckSlotRechargeText}>{minSec(restantPouvoirMs(recharges, id, maintenant))}</Text>
               </View>
             ) : null}
@@ -5183,7 +5198,7 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
     >
       {/* Défi RÉUSSI (26/09) : voile vert — tout le panneau devient le
           bouton « Valider ». */}
-      {reussi && <View pointerEvents="none" style={styles.challengeReussiVoile} />}
+      {reussi && <View style={[styles.challengeReussiVoile, { pointerEvents: 'none' }]} />}
       {/* Étiquette du défi — zone vide mesurée au-dessus du cercle. */}
       <View style={styles.challengeLabelZone}>
         <Text style={styles.challengeLabel} numberOfLines={2}>
@@ -5896,13 +5911,13 @@ const styles = StyleSheet.create({
   diamondPillTextWrap: { position: 'absolute', left: '33%', right: '10%', top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   leftBtnImage: { width: 52, height: 52 },
   questsBtnImage: { width: 42, height: 42 },
-  calBtnGlow: { position: 'absolute', width: 90, height: 90, left: -14, top: -14, tintColor: '#ff3b30', opacity: 0.9 },
+  calBtnGlow: { position: 'absolute', width: 90, height: 90, left: -14, top: -14, tintColor: '#ff3b30', opacity: 0.9, pointerEvents: 'none' },
   // ⚠️ 27/09 (retour de l'auteur, sur téléphone) : avec seulement largeur +
   // aspectRatio, en position absolue, le nid tombait ≈ 130 points trop bas
   // sur l'appareil (hauteur d'origine de l'image retenue ; le navigateur, lui,
   // appliquait la proportion). Hauteur EXPLICITE (250 × 394 / 720) et même
   // décalage horizontal que l'œuf (tapTouch : translateX 13).
-  eggNest: { position: 'absolute', width: EGG_SIZE, height: Math.round(EGG_SIZE * 394 / 720), left: '50%', marginLeft: -EGG_SIZE / 2, top: TAP_ZONE_H / 2 - Math.round(EGG_SIZE * 0.032) },
+  eggNest: { position: 'absolute', width: EGG_SIZE, height: Math.round(EGG_SIZE * 394 / 720), left: '50%', marginLeft: -EGG_SIZE / 2, top: TAP_ZONE_H / 2 - Math.round(EGG_SIZE * 0.032), pointerEvents: 'none' },
   challengeMedaillon: { width: '100%', height: '100%' },
   optionsBtnIcon: { fontSize: 22 },
   // 27/09 : caisse et parchemin réduits (« un peu trop gros ») ; la zone
@@ -5966,8 +5981,8 @@ const styles = StyleSheet.create({
   // du centre décalé (58,3%) hérité d'un ancien réglage. Les créatures
   // suivent automatiquement (DECK_SLOT_X_PCT est en % de CE cadre).
   deckFrame: {
-    position: 'absolute', left: SCREEN_W * 0.225, top: SCREEN_H * (0.357 - TOP_BLOCK_SHIFT) - 32, zIndex: 3,
-    width: SCREEN_W * 0.55, aspectRatio: 620 / 262,
+    position: 'absolute', left: SCREEN_W * 0.19, top: SCREEN_H * (0.357 - TOP_BLOCK_SHIFT) - 32, zIndex: 3,
+    width: SCREEN_W * 0.62, aspectRatio: 620 / 262,
   },
   // Positionné en absolu (voir DECK_SLOT_X_PCT), plus de flexDirection
   // row : chaque emplacement tombe exactement sur le panneau peint.
@@ -5986,13 +6001,13 @@ const styles = StyleSheet.create({
   // Rescalé avec le cadre (75% -> 55%, ratio 0,733 : 26 -> 19).
   // Doublées (19 -> 38, sur demande explicite : voir DECK_SLOT_DIAMETER_PX).
   deckSlot: {
-    position: 'absolute', top: '55.5%', width: 38, height: 38, borderRadius: 19,
-    marginLeft: -19, marginTop: -19,
+    position: 'absolute', top: '55.5%', width: 46, height: 46, borderRadius: 23,
+    marginLeft: -23, marginTop: -23,
     backgroundColor: 'transparent',
     alignItems: 'center', justifyContent: 'center', borderWidth: 0, borderColor: COLORS.border,
   },
   deckSlotEmoji: { fontSize: 19 },
-  deckSlotEmpty: { fontSize: 16, opacity: 0.7 },
+  deckSlotEmpty: { fontSize: 22, opacity: 0.7 },
 
   // Écran d'accueil : positionnement ABSOLU (voir header) — tapArea
   // (le flex qui centrait tout et causait débordements/désyncs à

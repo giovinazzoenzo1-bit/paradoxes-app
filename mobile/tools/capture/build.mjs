@@ -30,7 +30,24 @@ const plugin = {
     // CombatResultScreen n'est pas exporté par l'appli : on l'expose ICI, à la volée.
     b.onLoad({ filter: /\/src\/.*\.js$/ }, (a) => {
       let code = fs.readFileSync(a.path, 'utf8');
+      // FIDÈLE AU TÉLÉPHONE (SDK 57) : `pointerEvents` écrit en PROPRIÉTÉ y est
+      // IGNORÉ (seul le style compte — commit 5defa31). Le navigateur, lui,
+      // l'appliquait : le banc validait une correction qui, sur l'appareil,
+      // aurait bloqué TOUS les taps (27/09). On retire donc la propriété ici.
+      code = code.replace(/\s+pointerEvents="[a-z-]+"/g, '');
       if (a.path.endsWith('CombatScreen.js')) code += '\nexport { CombatResultScreen };\n';
+      // Composants internes du menu, exposés pour les scènes du banc.
+      if (a.path.endsWith('ClickerScreen.js')) code += '\nexport { DeckRow, styles as __stylesClicker };\n';
+      // EMULE_TOUCHER=1 : le navigateur ne donne pas la position du doigt
+      // (locationX/Y) au jeu, le téléphone OUI. On l'imite pour la zone de
+      // l'œuf (tap sur la zone elle-même : origine = tapTouch, décalé de 13) —
+      // UNIQUEMENT dans le banc, le code de l'appli n'est pas modifié.
+      if (process.env.EMULE_TOUCHER === '1' && a.path.endsWith('ClickerScreen.js')) {
+        const avant = code;
+        code = code.replace('const x = evt.nativeEvent.locationX || 60;', 'const x = (evt.nativeEvent.pageX - 13) || 60;')
+          .replace('const y = evt.nativeEvent.locationY || 60;', 'const y = (evt.nativeEvent.pageY - TAP_ZONE_TOP) || 60;');
+        if (code === avant) throw new Error('EMULE_TOUCHER : lignes du tap introuvables');
+      }
       return { contents: commeMetro(code, a.path), loader: 'js' };
     });
   },

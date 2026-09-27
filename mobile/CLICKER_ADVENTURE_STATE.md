@@ -864,3 +864,43 @@ portrait 390 × 844.
   retrouvait 2-3 mm à droite sur téléphone (l'œuf y est au centre exact de
   l'écran, sans les 13 points de décalage du code). Dans le même conteneur,
   il partage centrage et décalage sur tout appareil.
+
+
+## 27/09 — BUG DE TAP (3e apparition) : cause réelle et règle
+
+**Symptômes (auteur, téléphone)** : 2 ou 3 taps perdus sur 4-5, selon
+l'endroit, aussi à l'autoclicker ; loin de l'œuf, presque plus rien.
+**Cause réelle** : chaque « +X » apparaît AU POINT TOUCHÉ (locationX/Y de
+l'élément touché) et reste 0,7 s, posé PAR-DESSUS la zone de l'œuf SANS être
+transparent au toucher → les taps suivants au même endroit tombaient sur le
+texte, jamais sur l'œuf. Le grand nid et l'œuf agrandis ont multiplié les
+cas où le « +X » atterrit sous le doigt.
+**Preuve** : banc tactile (`tools/capture/taps.mjs`, 20 taps à 150 ms en 5
+endroits) avec `EMULE_TOUCHER=1` (le navigateur ne fournit pas locationX :
+le banc l'imite comme le téléphone, sans toucher au code de l'appli) :
+10 à 12 / 20 avant, 20 / 20 après. `tools/capture/sonde.mjs` montre
+l'élément sous le tap suivant.
+**Correction** : les « +X » dans un calque transparent au toucher **PAR LE
+STYLE** (`style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}`), et
+chaque « +X » aussi.
+**⚠️ Incident de reprise (27/09)** : une 1re version (copie coupée, non
+envoyée) écrivait `pointerEvents="none"` en PROPRIÉTÉ. Le navigateur du banc
+l'appliquait (20/20), mais le TÉLÉPHONE l'ignore depuis le SDK 57 (commit
+5defa31) : ce calque couvrant toute la zone aurait bloqué TOUS les taps —
+MESURÉ une fois le banc rendu fidèle : 0 à 1 tap compté sur 20. Le banc
+retire désormais la propriété `pointerEvents` avant rendu (comme l'appareil).
+Après correction : **20 / 20 aux 5 endroits** (centre, bas de l'œuf, nid,
+gauche, droite de la zone).
+**RÈGLES** : (1) tout ce qui est posé sur la zone de l'œuf sans être un bouton
+est transparent au toucher ; (2) `pointerEvents` TOUJOURS dans le style,
+jamais en propriété — 10 propriétés traînaient, toutes converties. Contrôles
+`auditZoneTapLibre` et `auditPointerEventsStyle` + sabotages.
+Hors de la zone de l'œuf (trop haut, trop bas), un tap ne compte pas : c'est
+voulu (la zone s'arrête avant le texte d'aide et la barre du bas).
+(1re apparition, 07/09 : texte d'aide et barre du bas par-dessus la zone.)
+
+## 27/09 — Deck agrandi
+
+Cadre 55 → 62 % de l'écran (centré, à 6 points de la caisse), cases et
+créatures 26 → 46 points (avant : 15-22 points visibles). Scène de banc
+`scenes/deck.jsx` (vrai DeckRow exposé à la volée par le banc).

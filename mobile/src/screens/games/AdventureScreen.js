@@ -2858,7 +2858,7 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
         Griffes : sans ce rappel au moment précis où ils n'ont plus de
         quoi acheter, ils croient devoir attendre. */}
     {griffes < RUNE_COST && !freeRuneDraw && (
-      <View style={styles.shopHintWrap} pointerEvents="none">
+      <View style={[styles.shopHintWrap, { pointerEvents: 'none' }]}>
         <Text style={styles.shopHintText} numberOfLines={2}>
           Pas assez de Griffes ? Touche le « + » à côté de tes Griffes
           pour les acheter avec tes pièces du Clicker.
