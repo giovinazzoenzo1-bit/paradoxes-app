@@ -1238,3 +1238,30 @@ acheter » (Pacte nv 200 = 6,75e61). Aussi « 💎 +1 000 Diamants ».
   collision parmi 24 valides ; toile 1220 × 4215.
 - L'audit anti-chevauchement modélise maintenant la ligne de gain et les
   titres ; sabotage recalé (Faveur collée au Pacte).
+
+**Arbre — 3e version, COURONNES (retours de l'auteur, 27/09)** : les longues
+chaînes déplaisaient (« tout sur une seule branche ») ; son image de
+référence (éléments en arcs autour de l'Ascension) retenue. Même logique de
+déblocage, mais la chaîne SERPENTE de couronne en couronne (outil local
+disposition_couronnes2.py) : en haut 3 / 5 / 5 (Poigne, PACTE au sommet,
+Faveur ; Gantelet … Dégâts critiques au bout ; les 5 dernières), en bas 4 / 5
+/ 6 auto-clics (couronnes qui s'élargissent) ; ouverture ±45°, rayon de
+chaque couronne calculé pour l'espace des étiquettes. Toile 1712 × 2401 (au
+lieu de 4215 de haut), 0 collision. Reliques / Passif sur les côtés
+(x ±560, hors écran à l'ouverture : se révèlent en glissant).
+- **Fiche = vrai menu** : fond presque opaque (rgba 0,94), FenetreBois
+  élargie : médaillon, niveau, « Ce que ça rapporte » / « Pour le débloquer »,
+  détail, barre de progression (Ascension), bouton d'achat.
+- **Reliques** : GrandPanneau, prix en pastilles dorées / grises qui achètent
+  (le style de prix était devenu brun foncé : invisible sur le bois) ; texte
+  tiré de l'effet (`describeUpgradeEffect`) — 4 reliques sans champ desc
+  affichaient « null » ; verrouillée : « Nécessite <créature> ».
+- ⚠️ **Piège évité : `describeUpgradeTotal` n'est PAS exportée** par
+  clickerLogic (interne à ClickerScreen) — l'importer aurait planté le panneau
+  au téléphone, la compilation passant. **Vérifier que chaque nom importé
+  existe VRAIMENT** (fait : 33 + 13 imports de l'arbre).
+- Sabotage de l'audit anti-chevauchement rendu INDÉPENDANT des coordonnées
+  (étiquettes élargies à 420 → 48 collisions) : l'ancien (Faveur collée au
+  Pacte) se périmait à chaque disposition — la suite l'a signalé « aveugle ».
+- Verrou : `garde.sh forcer` utilisé après avoir VÉRIFIÉ que les 2 fichiers
+  signalés étaient mes propres modifications (scène de banc + lien du banc).

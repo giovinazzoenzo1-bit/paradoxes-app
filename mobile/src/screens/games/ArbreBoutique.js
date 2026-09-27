@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, PanResponder, Animated, Easing, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import {
-  TAP_UPGRADES, UPGRADE_ITEMS, AUTOCLICKERS, TAP_DAMAGE_PER_LEVEL,
+  TAP_UPGRADES, UPGRADE_ITEMS, AUTOCLICKERS, TAP_DAMAGE_PER_LEVEL, CREATURES, describeUpgradeEffect,
   tapPowerCost, critUpgradeCost, critDamageUpgradeCost, sanctuaryUpgradeCost, sanctuaryMaxed,
   veilleurUpgradeCost, veilleurMaxed, tapUpgradeCost, tapUpgradeUnlocked, upgradeItemCost,
   autoClickerCost, griffesCoinCost, taillePackGriffes, coreUpgradeUnlocked, ascensionSpeedMultiplier,
@@ -11,7 +11,7 @@ import {
 } from '../../games/clicker/clickerLogic';
 import { useSettings } from '../../context/SettingsContext';
 import { TOILE_L, TOILE_H, ZOOM_MIN, ZOOM_MAX, ZOOM_DEPART, ZOOM_TEXTE_REF, CENTRE, POS, CHAINE_TAP, CHAINE_AUTO, TITRES, ETIQUETTE, COMPENSATION_MAX } from '../../games/clicker/arbreDisposition';
-import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge, FenetreBois, BanniereTitre, largeurInterieureFenetre, CRISTAL } from './fenetreBois';
+import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge, FenetreBois, BanniereTitre, largeurInterieureFenetre, CRISTAL, GrandPanneau, largeurInterieure } from './fenetreBois';
 import BackButton from '../../components/BackButton';
 
 // ════════════════════════════════════════════════════════════════════
@@ -36,7 +36,12 @@ import BackButton from '../../components/BackButton';
 const CENTRE_ECRAN_Y = 0.57;
 
 const { width: ECRAN_L, height: ECRAN_H } = Dimensions.get('window');
-const FICHE_L = Math.min(Math.round(ECRAN_L * 0.9), 360);
+// Fiche : un VRAI menu (retour de l'auteur : illisible avec l'arbre derrière).
+const FICHE_L = Math.min(Math.round(ECRAN_L * 0.92), 380);
+// Reliques : grand panneau vertical, comme la Boutique et les Quêtes.
+const RELIQUES_L = Math.min(Math.round(ECRAN_L * 0.94), 400);
+const RELIQUES_H = Math.round(Math.min(ECRAN_H * 0.78, RELIQUES_L / 0.56));
+const RELIQUES_INT = largeurInterieure(RELIQUES_L);
 const FICHE_INT = largeurInterieureFenetre(FICHE_L);
 const IMG_PLAQUE = require('../../../assets/fenetres/plaque-solde.png');
 const IMG = {
@@ -356,6 +361,16 @@ const Noeud = React.memo(function Noeud({ n, compense, pouls, onAppui, onAppuiLo
 }, (x, y) => x.compense === y.compense && x.n.etat === y.n.etat && x.n.prix === y.n.prix && x.n.niveau === y.n.niveau && x.n.gain === y.n.gain
   && x.n.nom === y.n.nom && x.n.progres === y.n.progres && x.n.x === y.n.x && x.n.y === y.n.y);
 
+// Pastille de prix (dorée si achetable, grise sinon), touchable : achète.
+function PastillePrix({ texte, ok, largeur = 86, hauteur = 30, onPress }) {
+  return (
+    <TouchableOpacity activeOpacity={0.7} disabled={!onPress} onPress={onPress} style={{ width: largeur, height: hauteur, alignItems: 'center', justifyContent: 'center' }}>
+      <Image source={ok ? IMG.prixOr : IMG.prixGris} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: largeur, height: hauteur }} />
+      <Text style={[styles.prix, { fontSize: 12.5 }, !ok && styles.prixCher]} numberOfLines={1}>{texte}</Text>
+    </TouchableOpacity>
+  );
+}
+
 // ── L'arbre ────────────────────────────────────────────────────────────
 function ArbreBoutique(props) {
   const { vibrations } = useSettings();
@@ -427,17 +442,30 @@ function ArbreBoutique(props) {
       </View>
 
       {fiche ? (
-        <View style={styles.ficheFond}>
+        <View style={styles.menuFond}>
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setFicheId(null)} />
           <FenetreBois titre={fiche.etat === 'verrouille' ? '???' : fiche.nom} largeur={FICHE_L} onFermer={() => setFicheId(null)}>
-            <Text style={styles.ficheEmoji}>{fiche.etat === 'verrouille' ? '🔒' : fiche.emoji}</Text>
-            {fiche.niveau ? <Text style={styles.ficheLigne}>Niveau : {fiche.niveau}</Text> : null}
-            <Text style={styles.ficheLigne}>{fiche.etat === 'verrouille' ? 'Pas encore débloqué — continue de progresser.' : fiche.detail}</Text>
+            <View style={[styles.ficheMedaillon, { borderColor: COULEUR_ETAT[fiche.etat] }]}>
+              <Text style={styles.ficheEmoji}>{fiche.etat === 'verrouille' ? '🔒' : fiche.emoji}</Text>
+            </View>
+            {fiche.niveau && fiche.etat !== 'verrouille' ? <Text style={styles.ficheNiveau}>Niveau actuel : {fiche.niveau}</Text> : null}
+            {fiche.gain ? (
+              <View style={[styles.ficheBloc, { width: FICHE_INT }]}>
+                <Text style={styles.ficheIntitule}>{fiche.etat === 'verrouille' ? 'Pour le débloquer' : 'Ce que ça rapporte'}</Text>
+                <Text style={[styles.ficheGain, fiche.etat === 'verrouille' && styles.gainVerrou]}>{fiche.gain}</Text>
+              </View>
+            ) : null}
+            {fiche.detail && fiche.detail !== fiche.gain ? <Text style={[styles.ficheLigne, { width: FICHE_INT }]}>{fiche.detail}</Text> : null}
+            {fiche.progres != null ? (
+              <View style={[styles.ficheBarre, { width: FICHE_INT }]}>
+                <View style={{ width: Math.round((FICHE_INT - 4) * fiche.progres), height: 8, borderRadius: 4, backgroundColor: CYAN_CHAMPIGNON }} />
+              </View>
+            ) : null}
             {fiche.id === 'ascension' ? (
               <BoutonLarge
                 couleur={fiche.etat === 'achetable' ? 'vert' : 'rouge'}
                 largeur={FICHE_INT}
-                hauteur={54}
+                hauteur={56}
                 desactive={fiche.etat !== 'achetable'}
                 texte="🌟 Faire l'Ascension"
                 onPress={() => { setFicheId(null); if (props.onAscend) props.onAscend(); }}
@@ -446,21 +474,23 @@ function ArbreBoutique(props) {
               <BoutonLarge
                 couleur={fiche.etat === 'achetable' ? 'vert' : 'rouge'}
                 largeur={FICHE_INT}
-                hauteur={54}
+                hauteur={56}
                 desactive={fiche.etat !== 'achetable'}
                 texte={`Acheter · ${fiche.devise === 'diamants' ? '💎' : '💰'} ${formatNum(fiche.prix)}`}
-                onPress={() => { acheter(fiche.id); setFicheId(null); }}
+                sousTexte={fiche.etat === 'achetable' ? null : 'Pas assez de pièces'}
+                onPress={() => acheter(fiche.id)}
               />
-            ) : null}
+            ) : fiche.etat === 'max' ? <Text style={styles.ficheNiveau}>⭐ Niveau maximum atteint</Text> : null}
           </FenetreBois>
         </View>
       ) : null}
 
       {reliques ? (
-        <View style={styles.ficheFond}>
+        <View style={styles.menuFond}>
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setReliques(false)} />
-          <FenetreBois titre="Reliques" largeur={FICHE_L} onFermer={() => setReliques(false)}>
-            <ScrollView style={{ width: FICHE_INT, maxHeight: Math.round(ECRAN_H * 0.5) }}>
+          <GrandPanneau titre="Reliques" largeur={RELIQUES_L} hauteur={RELIQUES_H} onFermer={() => setReliques(false)}>
+            <Text style={[styles.reliquesIntro, { width: RELIQUES_INT }]}>Les améliorations de tes créatures. Chaque relique s'ouvre avec sa créature.</Text>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
               {[...UPGRADE_ITEMS]
                 .sort((a, b) => {
                   const pos = new Set((props.owned || []).map((o) => o.id));
@@ -471,19 +501,29 @@ function ArbreBoutique(props) {
                   const niveau = (props.upgradeLevels && props.upgradeLevels[item.id]) || 0;
                   const prix = (props.applyDiscount || ((c) => c))(upgradeItemCost(item, niveau));
                   const ok = possedee && (props.coins || 0) >= prix;
+                  const acheterRelique = ok ? () => { props.onBuyUpgradeItem(item.id); vibrerSucces(vibrations); } : null;
                   return (
-                    <TouchableOpacity key={item.id} disabled={!ok} onPress={() => { props.onBuyUpgradeItem(item.id); vibrerSucces(vibrations); }} style={[styles.relique, !possedee && { opacity: 0.45 }]}>
+                    <View key={item.id} style={[styles.relique, { width: RELIQUES_INT }, !possedee && { opacity: 0.5 }]}>
                       <Text style={styles.reliqueEmoji}>{possedee ? item.emoji : '🔒'}</Text>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.reliqueNom}>{possedee ? `${item.name} · nv ${niveau}` : '???'}</Text>
-                        <Text style={styles.reliqueDesc} numberOfLines={2}>{possedee ? item.desc : 'Obtiens la créature liée pour la découvrir.'}</Text>
+                      <View style={{ width: RELIQUES_INT - 34 - 10 - 92 - 10 }}>
+                        <Text style={styles.reliqueNom} numberOfLines={1}>{possedee ? `${item.name} · nv ${niveau}` : '???'}</Text>
+                        {/* Texte TIRÉ DE L'EFFET (describeUpgradeEffect, comme l'ancienne
+                            boutique) : 4 reliques n'ont pas de champ desc, « null »
+                            s'affichait. ⚠️ describeUpgradeTotal n'est PAS exportée par
+                            clickerLogic (interne à ClickerScreen) : ne pas l'importer.
+                            Verrouillée : QUELLE créature il faut. */}
+                        <Text style={styles.reliqueDesc} numberOfLines={2}>
+                          {possedee
+                            ? `${describeUpgradeEffect(item)} / nv`
+                            : `🔒 Nécessite ${(CREATURES.find((c) => c.id === item.creatureId) || { stages: [{ name: '???' }] }).stages[0].name}`}
+                        </Text>
                       </View>
-                      {possedee ? <Text style={[styles.prix, !ok && styles.prixCher]}>💰 {formatNum(prix)}</Text> : null}
-                    </TouchableOpacity>
+                      {possedee ? <PastillePrix texte={`💰 ${formatNum(prix)}`} ok={ok} largeur={92} hauteur={32} onPress={acheterRelique} /> : null}
+                    </View>
                   );
                 })}
             </ScrollView>
-          </FenetreBois>
+          </GrandPanneau>
         </View>
       ) : null}
     </View>
@@ -535,9 +575,18 @@ const styles = StyleSheet.create({
   plaqueCristal: { width: 12, height: 22, marginRight: 6 },
   plaqueTexte: { color: '#ffe38a', fontSize: 14, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   titreZone: { position: 'absolute', left: 0, right: 0, top: 88, alignItems: 'center' },
-  // Fiche CENTRÉE (au bas de l'écran, son bouton passait sous la barre).
-  ficheFond: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 16 },
-  ficheEmoji: { fontSize: 46, marginBottom: 4 },
+  // Vrai menu : fond PRESQUE OPAQUE (avec l'arbre visible derrière, la fiche
+  // était illisible — retour de l'auteur), centré (en bas, le bouton passait
+  // sous la barre).
+  menuFond: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 20, backgroundColor: 'rgba(2,8,10,0.94)', alignItems: 'center', justifyContent: 'center', padding: 12 },
+  ficheMedaillon: { width: 86, height: 86, borderRadius: 43, borderWidth: 3, backgroundColor: 'rgba(14,30,34,0.95)', alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  ficheEmoji: { fontSize: 44 },
+  ficheNiveau: { color: '#f0d48a', fontSize: 14, fontWeight: '900', marginBottom: 6, textAlign: 'center' },
+  ficheBloc: { backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10, marginBottom: 8, alignItems: 'center' },
+  ficheIntitule: { color: '#d8c7a4', fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2 },
+  ficheGain: { color: '#8ff0e0', fontSize: 17, fontWeight: '900', textAlign: 'center' },
+  ficheBarre: { height: 12, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.5)', padding: 2, marginBottom: 8, justifyContent: 'center' },
+  reliquesIntro: { color: '#dccbaa', fontSize: 11.5, textAlign: 'center', marginBottom: 8 },
   ficheLigne: { color: '#d8e8e6', fontSize: 13, textAlign: 'center', marginBottom: 4 },
   relique: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(98,250,235,0.18)', gap: 10 },
   reliqueEmoji: { fontSize: 26, width: 34, textAlign: 'center' },

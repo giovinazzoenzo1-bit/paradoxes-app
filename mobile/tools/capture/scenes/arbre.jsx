@@ -14,7 +14,7 @@ createRoot(document.getElementById('root')).render(
       <BoutiqueArbre
         onRetour={rien} formatNum={f} coins={141800} sharedCoins={78} tapPower={12} critLevel={8} critDamageLevel={5}
         sanctuaryLevel={4} veilleurLevel={0} autoClickers={Object.fromEntries(tries.slice(0, 7).map((c, i) => [c.id, 7 - i]))} upgradeLevels={{}} tapUpgrades={{}}
-        applyDiscount={(c) => c} griffesCoinBuys={0} owned={[{ id: 'glyphon', level: 5 }]}
+        applyDiscount={(c) => c} griffesCoinBuys={0} owned={[{ id: 'glyphon', level: 5 }, { id: 'pyrosile', level: 3 }, { id: 'caraploof', level: 2 }]}
         ascensionReady={false} defiAscensionEnCours ascensionCount={1} totalEarned={60000} essence={0}
         onBuyTapPower={rien} onBuyCrit={rien} onBuyCritDamage={rien} onBuyTapUpgrade={rien} onBuySanctuary={rien}
         onBuyVeilleur={rien} onBuyAutoClicker={rien} onBuyGriffesWithCoins={rien} onBuyUpgradeItem={rien} onOffrande={rien} onAscend={rien}
