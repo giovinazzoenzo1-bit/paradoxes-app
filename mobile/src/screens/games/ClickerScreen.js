@@ -4005,6 +4005,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         <BoutiqueArbre
           Secours={ShopView}
           formatNum={formatNum}
+          onRetour={() => setView('tap')}
           coins={coins}
           sharedCoins={sharedCoins}
           tapPower={tapPower}

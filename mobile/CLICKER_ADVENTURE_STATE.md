@@ -1173,3 +1173,26 @@ s'affiche** — filet d'erreur React).
 - **Étape 2 (Gemini)** : grand arbre en 2 images, médaillons, médaillon
   Ascension, plaque de prix, icônes. **Étape 3** : branches qui s'illuminent à
   l'achat, lucioles, effets.
+
+**Arbre — retours de l'auteur (27/09)** : « très fluide » ✅ (moteur maison
+validé sur téléphone). Corrigé :
+- **Plein écran** : racine en absolu sur tout l'écran (zIndex 4, sous la barre
+  de navigation à 5) ; l'arbre repose le BackButton (prop `onRetour`), soldes
+  en plaques de bois (plaque-solde + cristal), bannière « Améliorations ».
+  L'Ascension s'ouvre à 57 % de la hauteur (l'en-tête ne recouvre pas l'arbre).
+- **Noms toujours sous les nœuds, prix en pastille dessous** (`prix-or` /
+  `prix-gris` = bouton de prix de la Boutique, émail recoloré) ; texte
+  COMPENSÉ au zoom (×1 à ×1,8 selon ZOOM_DEPART / échelle, palier au dixième,
+  rendu seulement quand le palier change) ; ZOOM_MIN 0,5 ; plus de masquage
+  selon le zoom.
+- **Fiche centrée** dans une FenetreBois (en bas, son bouton passait sous la
+  barre) ; **toucher l'Ascension ouvre TOUJOURS sa fiche** avec « Faire
+  l'Ascension » (grisé tant qu'elle n'est pas débloquée) — plus d'Ascension
+  directe au toucher (action irréversible).
+- Boutons + / − / ◎ = boutons ronds émeraude du kit ; Reliques dans une
+  FenetreBois.
+- ⚠️ Piège (script) : délimiter un bloc par un motif générique (`});`) peut
+  attraper une fin BEAUCOUP plus loin → toujours la vraie ligne de fin, et
+  vérifier ce qui suit. Et une vérification « nom présent ≥ 2 fois » est
+  fausse pour un style (`styles.X` + `X:`) ou une prop reçue : vérifier
+  usages ⊂ définitions.

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, PanResponder, Animated, Easing, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, PanResponder, Animated, Easing, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import {
   TAP_UPGRADES, UPGRADE_ITEMS, AUTOCLICKERS, TAP_DAMAGE_PER_LEVEL,
   tapPowerCost, critUpgradeCost, critDamageUpgradeCost, sanctuaryUpgradeCost, sanctuaryMaxed,
@@ -8,7 +8,8 @@ import {
   ascensionThreshold, OFFRANDE_APPCOINS_COST, SANCTUARY_MAX_LEVEL, VEILLEUR_MAX_LEVEL,
 } from '../../games/clicker/clickerLogic';
 import { useSettings } from '../../context/SettingsContext';
-import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge } from './fenetreBois';
+import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge, FenetreBois, BanniereTitre, largeurInterieureFenetre, CRISTAL } from './fenetreBois';
+import BackButton from '../../components/BackButton';
 
 // ════════════════════════════════════════════════════════════════════
 //  BOUTIQUE EN ARBRE DE COMPÉTENCES « DANS L'ESPACE » (27/09)
@@ -31,11 +32,17 @@ import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge } from './fenetreBois';
 
 const TOILE_L = 900;   // taille du « ciel » explorable, en points
 const TOILE_H = 1580;
-const ZOOM_MIN = 0.42; // vue d'ensemble : l'arbre entier comme une constellation
+const ZOOM_MIN = 0.5; // vue d'ensemble (noms encore lisibles grâce à la compensation)
 const ZOOM_MAX = 1.7;
-const ZOOM_DETAIL = 0.66; // en dessous : médaillons seuls (noms et prix masqués)
 const ZOOM_DEPART = 0.78; // à l'ouverture : tout le cœur de l'arbre visible (Griffes et Offrande compris)
+// L'Ascension s'ouvre un peu SOUS le milieu de l'écran : l'en-tête (RETOUR,
+// soldes, bannière) ne recouvre pas le haut de l'arbre.
+const CENTRE_ECRAN_Y = 0.57;
 
+const { width: ECRAN_L, height: ECRAN_H } = Dimensions.get('window');
+const FICHE_L = Math.min(Math.round(ECRAN_L * 0.9), 360);
+const FICHE_INT = largeurInterieureFenetre(FICHE_L);
+const IMG_PLAQUE = require('../../../assets/fenetres/plaque-solde.png');
 const IMG = {
   ciel: require('../../../assets/arbre/ciel.jpg'),
   etoilesLoin: require('../../../assets/arbre/etoiles-loin.png'),
@@ -43,6 +50,9 @@ const IMG = {
   traitAllume: require('../../../assets/arbre/trait-allume.png'),
   traitEteint: require('../../../assets/arbre/trait-eteint.png'),
   lueur: require('../../../assets/fenetres/lueur-cyan.png'),
+  prixOr: require('../../../assets/arbre/prix-or.png'),
+  prixGris: require('../../../assets/arbre/prix-gris.png'),
+  rond: require('../../../assets/fenetres/bouton-rond-vert.png'),
 };
 
 // Positions (points de la toile). Chaînes : l'élément i va sur la chaîne
@@ -148,14 +158,14 @@ function construireNoeuds(p) {
 
 // ── Le moteur « espace » : glisser, pincer, élan ─────────────────────────
 function borne(v, a, b) { return Math.max(a, Math.min(b, v)); }
-function EspaceZoomable({ onDetail, children, fond }) {
+function EspaceZoomable({ onEchelle, children, fond }) {
   const tx = useRef(new Animated.Value(0)).current;
   const ty = useRef(new Animated.Value(0)).current;
   const s = useRef(new Animated.Value(1)).current;
   const etat = useRef({ tx: 0, ty: 0, s: ZOOM_DEPART, l: 0, h: 0, px: 0, py: 0, pret: false }).current;
   const boite = useRef(null);
   const geste = useRef({ depart: null, pince: null }).current;
-  const detailAvant = useRef(true);
+  const echelleAvant = useRef(ZOOM_DEPART);
 
   const limiter = (x, y, z) => {
     // On peut amener chaque bord de la toile jusqu'au milieu de l'écran.
@@ -167,9 +177,11 @@ function EspaceZoomable({ onDetail, children, fond }) {
     etat.tx = bx; etat.ty = by; etat.s = bz;
     tx.setValue(bx); ty.setValue(by); s.setValue(bz);
   };
+  // Après un geste : l'échelle, arrondie au dixième, sert à garder les noms
+  // lisibles (un rendu seulement quand le palier change, jamais pendant).
   const signalerDetail = () => {
-    const d = etat.s >= ZOOM_DETAIL;
-    if (d !== detailAvant.current) { detailAvant.current = d; onDetail && onDetail(d); }
+    const e = Math.round(etat.s * 10) / 10;
+    if (e !== echelleAvant.current) { echelleAvant.current = e; onEchelle && onEchelle(e); }
   };
   const arreter = () => { tx.stopAnimation(); ty.stopAnimation(); s.stopAnimation(); };
   const animerVers = (x, y, z, duree) => {
@@ -183,7 +195,7 @@ function EspaceZoomable({ onDetail, children, fond }) {
     ]).start();
     signalerDetail();
   };
-  const recentrer = (duree = 420) => animerVers(etat.l / 2 - CENTRE.x * ZOOM_DEPART, etat.h / 2 - CENTRE.y * ZOOM_DEPART, ZOOM_DEPART, duree);
+  const recentrer = (duree = 420) => animerVers(etat.l / 2 - CENTRE.x * ZOOM_DEPART, etat.h * CENTRE_ECRAN_Y - CENTRE.y * ZOOM_DEPART, ZOOM_DEPART, duree);
   const zoomerAutourDuCentre = (facteur) => {
     const z = borne(etat.s * facteur, ZOOM_MIN, ZOOM_MAX);
     const cx = (etat.l / 2 - etat.tx) / etat.s; const cy = (etat.h / 2 - etat.ty) / etat.s;
@@ -248,7 +260,7 @@ function EspaceZoomable({ onDetail, children, fond }) {
         const { width, height } = e.nativeEvent.layout;
         const premier = !etat.pret; etat.l = width; etat.h = height; etat.pret = true;
         if (boite.current && boite.current.measureInWindow) boite.current.measureInWindow((x, y) => { etat.px = x || 0; etat.py = y || 0; });
-        if (premier) { appliquer(width / 2 - CENTRE.x * ZOOM_DEPART, height / 2 - CENTRE.y * ZOOM_DEPART, ZOOM_DEPART); }
+        if (premier) { appliquer(width / 2 - CENTRE.x * ZOOM_DEPART, height * CENTRE_ECRAN_Y - CENTRE.y * ZOOM_DEPART, ZOOM_DEPART); }
       }}
       {...pan.panHandlers}
     >
@@ -264,9 +276,12 @@ function EspaceZoomable({ onDetail, children, fond }) {
         {children}
       </Animated.View>
       <View style={styles.commandes}>
-        <TouchableOpacity style={styles.commande} onPress={() => zoomerAutourDuCentre(1.3)}><Text style={styles.commandeTexte}>＋</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.commande} onPress={() => zoomerAutourDuCentre(1 / 1.3)}><Text style={styles.commandeTexte}>－</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.commande} onPress={() => recentrer()}><Text style={styles.commandeTexte}>◎</Text></TouchableOpacity>
+        {[['＋', () => zoomerAutourDuCentre(1.3)], ['－', () => zoomerAutourDuCentre(1 / 1.3)], ['◎', () => recentrer()]].map(([sym, f]) => (
+          <TouchableOpacity key={sym} style={styles.commande} onPress={f}>
+            <Image source={IMG.rond} resizeMode="contain" style={styles.commandeImage} />
+            <Text style={styles.commandeTexte}>{sym}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -287,8 +302,11 @@ const Branche = React.memo(function Branche({ a, b, allume }) {
 
 // ── Un nœud : médaillon + (de près) nom, niveau, prix ──────────────────────
 const COULEUR_ETAT = { achetable: '#f7cf57', cher: '#6d7f86', verrouille: '#3a4a50', max: '#f7cf57' };
-const Noeud = React.memo(function Noeud({ n, detail, pouls, onAppui, onAppuiLong, formatNum }) {
-  const t = n.taille; const verrou = n.etat === 'verrouille';
+const Noeud = React.memo(function Noeud({ n, compense, pouls, onAppui, onAppuiLong, formatNum }) {
+  const t = n.taille; const verrou = n.etat === 'verrouille'; const c = compense;
+  const prixTexte = n.prix != null ? `${n.devise === 'diamants' ? '💎' : '💰'} ${formatNum(n.prix)}` : null;
+  const pl = Math.round(Math.max(64, Math.min(118, (prixTexte ? prixTexte.length : 0) * 7.5 + 26)) * c);
+  const ph = Math.round(26 * c);
   return (
     <View style={{ position: 'absolute', left: n.x - t / 2, top: n.y - t / 2, width: t, alignItems: 'center' }}>
       {n.etat === 'achetable' && !verrou ? (
@@ -308,25 +326,31 @@ const Noeud = React.memo(function Noeud({ n, detail, pouls, onAppui, onAppuiLong
           </View>
         ) : null}
       </TouchableOpacity>
-      {detail ? (
-        <View style={styles.etiquette}>
-          <Text style={styles.nom} numberOfLines={2}>{verrou ? '???' : n.nom}{!verrou && n.niveau ? ` · ${n.niveau}` : ''}</Text>
-          {!verrou && n.prix != null ? (
-            <Text style={[styles.prix, n.etat === 'cher' && styles.prixCher]} numberOfLines={1}>
-              {n.etat === 'max' ? '⭐ MAX' : `${n.devise === 'diamants' ? '💎' : '💰'} ${formatNum(n.prix)}`}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
+      {/* Le NOM juste dessous, le PRIX encore dessous (retour de l'auteur) —
+          compensés au zoom pour rester lisibles de loin. En nombres. */}
+      <View style={{ width: Math.round(160 * c), marginLeft: Math.round((t - 160 * c) / 2), alignItems: 'center', marginTop: Math.round(4 * c), pointerEvents: 'none' }}>
+        <Text style={[styles.nom, { fontSize: Math.round(12.5 * c), lineHeight: Math.round(15 * c) }]} numberOfLines={2}>
+          {verrou ? '???' : n.nom}{!verrou && n.niveau ? ` · ${n.niveau}` : ''}
+        </Text>
+        {!verrou && n.etat === 'max' ? (
+          <Text style={[styles.nom, { fontSize: Math.round(12 * c), color: '#f7cf57' }]}>⭐ MAX</Text>
+        ) : !verrou && prixTexte ? (
+          <View style={{ width: pl, height: ph, marginTop: Math.round(3 * c), alignItems: 'center', justifyContent: 'center' }}>
+            <Image source={n.etat === 'achetable' ? IMG.prixOr : IMG.prixGris} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: pl, height: ph }} />
+            <Text style={[styles.prix, { fontSize: Math.round(12 * c) }, n.etat !== 'achetable' && styles.prixCher]} numberOfLines={1}>{prixTexte}</Text>
+          </View>
+        ) : null}
+      </View>
     </View>
   );
-}, (x, y) => x.detail === y.detail && x.n.etat === y.n.etat && x.n.prix === y.n.prix && x.n.niveau === y.n.niveau
+}, (x, y) => x.compense === y.compense && x.n.etat === y.n.etat && x.n.prix === y.n.prix && x.n.niveau === y.n.niveau
   && x.n.nom === y.n.nom && x.n.progres === y.n.progres && x.n.x === y.n.x && x.n.y === y.n.y);
 
 // ── L'arbre ────────────────────────────────────────────────────────────
 function ArbreBoutique(props) {
   const { vibrations } = useSettings();
-  const [detail, setDetail] = useState(true);
+  const [echelle, setEchelle] = useState(ZOOM_DEPART);
+  const compense = Math.max(1, Math.min(1.8, ZOOM_DEPART / echelle));
   const [ficheId, setFicheId] = useState(null);
   const [reliques, setReliques] = useState(false);
   const formatNum = props.formatNum || ((n) => String(Math.round(n)));
@@ -352,54 +376,78 @@ function ArbreBoutique(props) {
     const n = frais.current[id];
     if (!n) return;
     if (n.ouvreReliques) { setReliques(true); return; }
-    if (n.etat !== 'achetable' || !n.onPress) { setFicheId(id); return; }
+    // L'Ascension (irréversible) ouvre TOUJOURS sa fiche, avec son bouton.
+    if (id === 'ascension' || n.etat !== 'achetable' || !n.onPress) { setFicheId(id); return; }
     n.onPress();
     vibrerSucces(vib.current);
   }, []);
 
   return (
     <View style={styles.racine}>
-      <EspaceZoomable onDetail={setDetail}>
+      <EspaceZoomable onEchelle={setEchelle}>
         {noeuds.filter((n) => n.parent && parId[n.parent]).map((n) => (
           <Branche key={'b' + n.id} a={parId[n.parent]} b={n} allume={n.allume && parId[n.parent].allume} />
         ))}
         {noeuds.map((n) => (
-          <Noeud key={n.id} n={n} detail={detail} pouls={pouls} onAppui={acheter} onAppuiLong={setFicheId} formatNum={formatNum} />
+          <Noeud key={n.id} n={n} compense={compense} pouls={pouls} onAppui={acheter} onAppuiLong={setFicheId} formatNum={formatNum} />
         ))}
       </EspaceZoomable>
 
-      <View style={[styles.bandeau, { pointerEvents: 'none' }]}>
-        <Text style={styles.titre}>Arbre des améliorations</Text>
-        <Text style={styles.solde}>💰 {formatNum(props.coins || 0)}   ·   💎 {props.sharedCoins || 0}</Text>
+      {/* En-tête du thème forêt, par-dessus la carte (les zones vides laissent
+          passer les doigts vers la carte). */}
+      <View style={[styles.entete, { pointerEvents: 'box-none' }]}>
+        <BackButton onPress={props.onRetour} style={styles.retour} />
+        <View style={[styles.soldes, { pointerEvents: 'none' }]}>
+          <View style={styles.plaque}>
+            <Image source={IMG_PLAQUE} resizeMode="stretch" style={styles.plaqueImage} />
+            <Text style={styles.plaqueTexte} numberOfLines={1}>💰 {formatNum(props.coins || 0)}</Text>
+          </View>
+          <View style={styles.plaque}>
+            <Image source={IMG_PLAQUE} resizeMode="stretch" style={styles.plaqueImage} />
+            <Image source={CRISTAL} resizeMode="contain" style={styles.plaqueCristal} />
+            <Text style={styles.plaqueTexte} numberOfLines={1}>{props.sharedCoins || 0}</Text>
+          </View>
+        </View>
+      </View>
+      <View style={[styles.titreZone, { pointerEvents: 'none' }]}>
+        <BanniereTitre titre="Améliorations" largeur={220} />
       </View>
 
       {fiche ? (
         <View style={styles.ficheFond}>
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setFicheId(null)} />
-          <View style={styles.fiche}>
-            <Text style={styles.ficheTitre}>{fiche.etat === 'verrouille' ? '🔒 ???' : `${fiche.emoji} ${fiche.nom}`}</Text>
+          <FenetreBois titre={fiche.etat === 'verrouille' ? '???' : fiche.nom} largeur={FICHE_L} onFermer={() => setFicheId(null)}>
+            <Text style={styles.ficheEmoji}>{fiche.etat === 'verrouille' ? '🔒' : fiche.emoji}</Text>
             {fiche.niveau ? <Text style={styles.ficheLigne}>Niveau : {fiche.niveau}</Text> : null}
             <Text style={styles.ficheLigne}>{fiche.etat === 'verrouille' ? 'Pas encore débloqué — continue de progresser.' : fiche.detail}</Text>
-            {fiche.prix != null && fiche.etat !== 'verrouille' && fiche.etat !== 'max' ? (
+            {fiche.id === 'ascension' ? (
               <BoutonLarge
                 couleur={fiche.etat === 'achetable' ? 'vert' : 'rouge'}
-                largeur={260}
+                largeur={FICHE_INT}
+                hauteur={54}
+                desactive={fiche.etat !== 'achetable'}
+                texte="🌟 Faire l'Ascension"
+                onPress={() => { setFicheId(null); if (props.onAscend) props.onAscend(); }}
+              />
+            ) : fiche.prix != null && fiche.etat !== 'verrouille' && fiche.etat !== 'max' ? (
+              <BoutonLarge
+                couleur={fiche.etat === 'achetable' ? 'vert' : 'rouge'}
+                largeur={FICHE_INT}
                 hauteur={54}
                 desactive={fiche.etat !== 'achetable'}
                 texte={`Acheter · ${fiche.devise === 'diamants' ? '💎' : '💰'} ${formatNum(fiche.prix)}`}
                 onPress={() => { acheter(fiche.id); setFicheId(null); }}
               />
             ) : null}
-          </View>
+          </FenetreBois>
         </View>
       ) : null}
 
       {reliques ? (
         <View style={styles.ficheFond}>
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setReliques(false)} />
-          <View style={[styles.fiche, { maxHeight: '70%' }]}>
-            <Text style={styles.ficheTitre}>📜 Reliques des créatures</Text>
-            <ScrollView style={{ alignSelf: 'stretch' }}>
+          <FenetreBois titre="Reliques" largeur={FICHE_L} onFermer={() => setReliques(false)}>
+            <ScrollView style={{ width: FICHE_INT, maxHeight: Math.round(ECRAN_H * 0.5) }}>
               {[...UPGRADE_ITEMS]
                 .sort((a, b) => {
                   const pos = new Set((props.owned || []).map((o) => o.id));
@@ -422,7 +470,7 @@ function ArbreBoutique(props) {
                   );
                 })}
             </ScrollView>
-          </View>
+          </FenetreBois>
         </View>
       ) : null}
     </View>
@@ -446,28 +494,34 @@ export default function BoutiqueArbre({ Secours, ...props }) {
 export { construireNoeuds, TOILE_L, TOILE_H };
 
 const styles = StyleSheet.create({
-  // Même cadre que l'ancienne boutique (64 points pour les compteurs du haut).
-  racine: { flex: 1, width: '100%', marginTop: 64, overflow: 'hidden', backgroundColor: '#061018' },
+  // PLEIN ÉCRAN (retour de l'auteur) : sous la barre de navigation (zIndex 5),
+  // au-dessus de tout le reste ; l'arbre repose son propre bouton RETOUR.
+  racine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 4, overflow: 'hidden', backgroundColor: '#061018' },
   couche: { position: 'absolute', left: 0, top: 0, width: 2048, height: 2560 },
   coucheImage: { width: 2048, height: 2560 },
   toile: { position: 'absolute', left: 0, top: 0, width: TOILE_L, height: TOILE_H, transformOrigin: 'top left' },
   medaillon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(14,30,34,0.92)', borderWidth: 3 },
   medaillonVerrou: { backgroundColor: 'rgba(10,16,20,0.92)' },
   anneau: { position: 'absolute', borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.55)', padding: 1, justifyContent: 'center' },
-  etiquette: { width: 150, alignItems: 'center', marginTop: 4 },
   nom: { color: '#fff7e0', fontSize: 12, fontWeight: '900', textAlign: 'center', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 4 },
-  prix: { color: '#ffe38a', fontSize: 12, fontWeight: '900', marginTop: 2, includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 4 },
-  prixCher: { color: '#8fa3a8' },
+  prix: { color: '#3a2208', fontSize: 12, fontWeight: '900', includeFontPadding: false },
+  prixCher: { color: '#e0e6e6' },
   // Au-dessus de la barre de navigation (posée par-dessus le bas).
   commandes: { position: 'absolute', right: 12, bottom: 150, gap: 10 },
-  commande: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(10,26,30,0.85)', borderWidth: 1.5, borderColor: CYAN_CHAMPIGNON, alignItems: 'center', justifyContent: 'center' },
-  commandeTexte: { color: '#eafffb', fontSize: 20, fontWeight: '900', includeFontPadding: false },
-  bandeau: { position: 'absolute', left: 0, right: 0, top: 0, paddingTop: 10, paddingBottom: 8, alignItems: 'center', backgroundColor: 'rgba(4,12,16,0.55)' },
-  titre: { color: '#f0d48a', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
-  solde: { color: '#eafffb', fontSize: 12, fontWeight: '800', marginTop: 2 },
-  ficheFond: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'flex-end', padding: 16 },
-  fiche: { width: '100%', maxWidth: 420, alignItems: 'center', backgroundColor: 'rgba(12,28,32,0.97)', borderRadius: 18, borderWidth: 1.5, borderColor: CYAN_CHAMPIGNON, padding: 16, marginBottom: 12 },
-  ficheTitre: { color: '#fff7e0', fontSize: 18, fontWeight: '900', marginBottom: 6, textAlign: 'center' },
+  commande: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
+  commandeImage: { position: 'absolute', left: 0, top: 0, width: 50, height: 50 },
+  commandeTexte: { color: '#ffffff', fontSize: 20, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  entete: { position: 'absolute', left: 0, right: 0, top: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 12 },
+  retour: { position: 'relative', left: 0, top: 0 },
+  soldes: { gap: 6, alignItems: 'flex-end' },
+  plaque: { width: 124, height: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  plaqueImage: { position: 'absolute', left: 0, top: 0, width: 124, height: 38 },
+  plaqueCristal: { width: 12, height: 22, marginRight: 6 },
+  plaqueTexte: { color: '#ffe38a', fontSize: 14, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  titreZone: { position: 'absolute', left: 0, right: 0, top: 88, alignItems: 'center' },
+  // Fiche CENTRÉE (au bas de l'écran, son bouton passait sous la barre).
+  ficheFond: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  ficheEmoji: { fontSize: 46, marginBottom: 4 },
   ficheLigne: { color: '#d8e8e6', fontSize: 13, textAlign: 'center', marginBottom: 4 },
   relique: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(98,250,235,0.18)', gap: 10 },
   reliqueEmoji: { fontSize: 26, width: 34, textAlign: 'center' },
