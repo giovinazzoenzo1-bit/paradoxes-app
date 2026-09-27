@@ -376,7 +376,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const elixirCombatsRef = useRef(0);
   elixirCombatsRef.current = elixirCombats;
   // Défi tout juste validé, à annoncer au joueur. `null` = rien à montrer.
-  const [questDone, setQuestDone] = useState(null);
   const [offlineReport, setOfflineReport] = useState(null);
   const [offlineAdLoading, setOfflineAdLoading] = useState(false);
   const [offlineDoubled, setOfflineDoubled] = useState(false);
@@ -2819,7 +2818,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       AsyncStorage.setItem(VALIDATED_QUESTS_KEY, JSON.stringify(suivant)).catch(() => {});
       return suivant;
     });
-    setQuestDone(id); // « 🎉 Défi réussi ! » au moment de VALIDER
+    // 27/09 (demande de l'auteur) : plus de fenêtre « 🎉 Défi réussi ! » à la
+    // validation — le panneau (bouton Valider, médaillon coche) suffit.
   };
 
   // ⚠️⚠️ DÉTECTION DES BLOCAGES (21/09) — voir `diagnostic.js`.
@@ -4250,31 +4250,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         </View>
       )}
 
-      {/* Félicitations à chaque défi d'éclosion validé. */}
-        {/* Volontairement MINUSCULE et SANS voile : ce n'est pas une
-            décision à prendre, juste une bonne nouvelle. Un voile plein
-            écran bloquerait le jeu pour rien et masquerait l'œuf, qui est
-            précisément ce que le joueur veut voir avancer. */}
-        {questDone && (
-          <TouchableOpacity
-            style={styles.questDoneWrap}
-            activeOpacity={0.9}
-            onPress={() => setQuestDone(null)}
-          >
-            <View style={styles.questDoneCard}>
-              <Text style={styles.questDoneIcon}>🎉</Text>
-              <Text style={styles.questDoneTitle}>Défi réussi !</Text>
-              {/* ⚠️ NOMMER le défi validé. Les défis d'un cycle sont tous
-                  évalués EN MÊME TEMPS : un achat peut donc valider un
-                  défi situé plus loin dans la liste. Sans son nom, le
-                  joueur voit « Défi réussi » sans savoir lequel et croit
-                  à un bug — signalé après un achat de Main Spectrale. */}
-              <Text style={styles.questDoneWhich} numberOfLines={2}>
-                {questDetail(questDone, questStats, baselineFor(questDone), questTargets).label}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
         {/* Compte rendu des gains hors-ligne. Posé ICI, dans la couche
             du jeu, pour couvrir l'écran dès l'ouverture. */}
         {offlineReport && (
@@ -5055,7 +5030,7 @@ function SpawnedCreatureBubble({ spawned, onClaim }) {
           creatureId={spawned.creature.id}
           stageIndex={0}
           emoji={display.emoji}
-          size={38}
+          size={64}
           emojiStyle={styles.spawnBubbleEmoji}
         />
       </Animated.View>
@@ -5694,22 +5669,12 @@ const styles = StyleSheet.create({
   challengeReussiVoile: { position: 'absolute', left: 5, right: 5, top: 5, bottom: 5, borderRadius: 14, borderWidth: 2, borderColor: 'rgba(255,214,102,0.95)', backgroundColor: 'rgba(255,214,102,0.07)' },
 
   spawnBubbleWrap: { position: 'absolute', zIndex: 10, marginLeft: -27, marginTop: -27 },
-  spawnBubble: {
-    width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.panel,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2.5,
-    shadowColor: '#fff', shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
-  },
+  // 27/09 (demande de l'auteur) : bulles SANS rond — ni fond, ni bordure, ni
+  // halo ; seule l'icône (ou la créature) flotte et pulse.
+  spawnBubble: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center' },
   spawnBubbleEmoji: { fontSize: 28 },
-  goldenBubble: {
-    width: 54, height: 54, borderRadius: 27, backgroundColor: '#3d2f00',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: COLORS.action,
-    shadowColor: COLORS.action, shadowOpacity: 0.9, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
-  },
-  ritualBubble: {
-    width: 54, height: 54, borderRadius: 27, backgroundColor: '#2a1f42',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#b96bff',
-    shadowColor: '#b96bff', shadowOpacity: 0.8, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
-  },
+  goldenBubble: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
+  ritualBubble: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
   // Diamant d'Offrande : plus petit que les autres bulles (il peut y en
   // avoir plusieurs autour de l'œuf en même temps) et aux couleurs du
   // Diamant, pour qu'on comprenne d'où il vient.
@@ -5831,11 +5796,7 @@ const styles = StyleSheet.create({
   },
   offlineCloseText: { color: COLORS.action, fontSize: 13, fontWeight: '900' },
 
-  offeringBubble: {
-    width: 42, height: 42, borderRadius: 21, backgroundColor: '#10304a',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#5ad1ff',
-    shadowColor: '#5ad1ff', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
-  },
+  offeringBubble: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   offeringBubbleEmoji: { fontSize: 20 },
 
   // Barre de navigation du bas — Shop | Quêtes | Collection | Aventure.
@@ -6186,7 +6147,8 @@ const styles = StyleSheet.create({
   tapEtincelle: { position: 'absolute', left: 100, top: 100, width: 8, height: 8, borderRadius: 4, marginLeft: -4, marginTop: -4 },
   tapTexte: { position: 'absolute', left: 20, top: 100, width: 160, textAlign: 'center', color: '#FFD54A', fontSize: 18, fontWeight: '900', textShadowColor: 'rgba(40,20,0,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
   tapTexteCrit: { color: '#FF8A3D', fontSize: 24 },
-  bulleIcone: { width: 40, height: 40 },
+  // 27/09 : plus de rond autour des bulles → icônes un peu plus grandes.
+  bulleIcone: { width: 50, height: 50 },
   popupCrit: { color: '#FF7043', fontSize: 20 },
 
   actionBtn: {

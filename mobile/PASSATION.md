@@ -110,3 +110,5 @@ Décidé : **remplace la bulle**. Compte à rebours sur l'œuf ; 1er appui sur l
 `prendre` suivant et pour `rendre`.
 
 **pointerEvents (27/09)** : TOUJOURS dans le style (`{ pointerEvents: 'none' }`), jamais en propriété — ignorée sur téléphone depuis le SDK 57. Le banc de capture l'ignore aussi, pour être fidèle. Contrôle `auditPointerEventsStyle`.
+
+**Fichiers montrés à l'auteur (27/09, sa demande)** : les captures et fichiers présentés (`/mnt/user-data/outputs`) sont SUPPRIMÉS au tour suivant, une fois vus, pour lui faire de la place. Les images brutes du design sont retirées du dépôt une fois intégrées ET validées.

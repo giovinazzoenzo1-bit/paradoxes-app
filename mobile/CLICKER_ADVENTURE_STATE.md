@@ -938,3 +938,12 @@ INCHANGÉE : tout le panneau reste le bouton. Scène de banc `scenes/defi.jsx`.
 **Étape 2 (à faire)** : activation d'un pouvoir (flash de l'élément, créature
 en grand avec le nom du pouvoir, aura autour de l'œuf) et créature qui
 attaque l'œuf à chaque tap pendant son pouvoir — validé par l'auteur.
+
+- **Bulles SANS rond (27/09, demande de l'auteur)** : créature du pouvoir,
+  gland doré, pierre runique, diamant d'Offrande — ni fond, ni bordure, ni
+  halo ; créature 64 points, icônes 50. Scène de banc `scenes/bulles.jsx`.
+- **Fenêtre « 🎉 Défi réussi ! » retirée** (demande de l'auteur) : purement
+  décorative (ouverte à la validation, fermée d'un toucher, aucun autre
+  effet) ; le panneau (bouton Valider, médaillon coche) suffit.
+- **Ménage** : 41 images brutes déjà intégrées et validées retirées de
+  `design/a-integrer` (récupérables dans l'historique Git).
