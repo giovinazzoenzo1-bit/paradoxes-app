@@ -741,6 +741,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
+  // 27/09 : mise en scène de l'activation d'un pouvoir (1,3 s).
+  const [powerCast, setPowerCast] = useState(null);
   // Pouvoirs par le deck (passe 4) : { [idCréature]: horodatage où son
   // pouvoir redevient prêt }. Sauvegardé ; la recharge court hors ligne.
   const [recharges, setRecharges] = useState({});
@@ -1005,6 +1007,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // rebond d'échelle déjà présent sur un tap normal — le joueur ne
   // distingue plus "je récolte des pièces" de "je casse l'œuf".
   const eggShake = useRef(new Animated.Value(0)).current;
+  // 27/09 : bond de la créature qui frappe l'œuf pendant son pouvoir.
+  const attaqueAnim = useRef(new Animated.Value(0)).current;
 
   // ---- Particules de l'œuf ----
   //
@@ -1733,9 +1737,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     return () => clearInterval(interval);
   }, [loaded]);
 
-  const spawnPopup = (text, x, y, isCrit, tap = false) => {
+  const spawnPopup = (text, x, y, isCrit, tap = false, teinte = null) => {
     const id = popupIdRef.current++;
-    setPopups((p) => [...p, { id, text, x, y, isCrit, tap }]);
+    setPopups((p) => [...p, { id, text, x, y, isCrit, tap, teinte }]);
     setTimeout(() => setPopups((p) => p.filter((pp) => pp.id !== id)), 700);
   };
 
@@ -1825,7 +1829,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     ]).start();
     const x = evt.nativeEvent.locationX || 60;
     const y = evt.nativeEvent.locationY || 60;
-    spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit, true);
+    // 27/09 : pendant un pouvoir, la créature FRAPPE l'œuf à chaque tap : son
+    // bond (pilote natif, aucun état) + l'impact à la couleur de son élément.
+    const pouvoirEnCours = activePowerRef.current && now <= activePowerRef.current.expiresAt && activePowerRef.current.creatureId ? activePowerRef.current : null;
+    spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit, true, pouvoirEnCours ? couleurElementDe(pouvoirEnCours.creatureId) : null);
+    if (pouvoirEnCours) {
+      attaqueAnim.stopAnimation();
+      attaqueAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(attaqueAnim, { toValue: 1, duration: 70, useNativeDriver: true }),
+        Animated.spring(attaqueAnim, { toValue: 0, friction: 5, tension: 120, useNativeDriver: true }),
+      ]).start();
+    }
     // 27/09 : un critique fait trembler l'œuf — la SECOUSSE SEULE. ⚠️ Ne pas
     // appeler handleEggTap ici : pendant l'éclosion, chaque appel retire 1 s
     // au minuteur (un critique en aurait retiré 2).
@@ -2128,6 +2143,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     }
     spawnedCreatureRef.current = null;
     const power = powerForCreature(spawned.creature, tapPowerRef.current);
+    // 27/09 : flash de l'élément + la créature surgit avec le nom du pouvoir.
+    const castId = Date.now();
+    setPowerCast({ id: castId, creatureId: spawned.creature.id, name: power.name });
+    setTimeout(() => setPowerCast((c) => (c && c.id === castId ? null : c)), 1400);
 
     if (power.effectType === 'discount_next') {
       // Réduit le coût du tout prochain achat (tap/invocation/nourrir),
@@ -3796,6 +3815,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                       dessiné avant) : il partage son centrage et son décalage,
                       donc reste dessous sur tout appareil (retour de l'auteur :
                       calculé à part, il était 2-3 mm à droite sur téléphone). */}
+                  {activePower && activePower.creatureId && <PowerAura couleur={couleurElementDe(activePower.creatureId)} />}
                   <Image source={require('../../../assets/menu/grand-nid.png')} style={styles.eggNest} resizeMode="contain" />
                   <Animated.View
                     style={[
@@ -3844,6 +3864,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                       />
                     )}
                 </Animated.View>
+                  {activePower && activePower.creatureId && (
+                    <PowerAttacker
+                      creatureId={activePower.creatureId}
+                      stage={stageForLevel(((owned || []).find((o) => o.id === activePower.creatureId) || { level: 1 }).level)}
+                      attaque={attaqueAnim}
+                    />
+                  )}
               </TouchableOpacity>
               {/* ⚠️⚠️ 27/09 — BUG DE TAP (retour de l'auteur, PROUVÉ au banc) : chaque
                   « +X » apparaît AU POINT TOUCHÉ (locationX/Y) et reste 0,7 s ;
@@ -3859,9 +3886,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   Contrôles auditZoneTapLibre et auditPointerEventsStyle. */}
               <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
                 {popups.map((p) => (
-                  <TapEffect key={p.id} x={p.x} y={p.y} text={p.text} crit={p.isCrit} tap={p.tap} />
+                  <TapEffect key={p.id} x={p.x} y={p.y} text={p.text} crit={p.isCrit} tap={p.tap} teinte={p.teinte} />
                 ))}
               </View>
+              {powerCast && <PowerCastEffect key={powerCast.id} cast={powerCast} />}
               {/* Bulles de pouvoir : toutes FRÈRES du bouton tapable, pas
                   enfants — elles captent leur propre appui sans jamais
                   entrer en conflit avec le tap de l'œuf en dessous. */}
@@ -5041,6 +5069,75 @@ function SpawnedCreatureBubble({ spawned, onClaim }) {
 // Cible dorée : pulsation plus rapide (courte durée de vie, doit se voir
 // tout de suite), pas de dérive — l'urgence vient du rythme, pas du
 // mouvement.
+// ---- POUVOIRS DES CRÉATURES : mise en scène (27/09, demande de l'auteur) ----
+// Couleur de chaque élément (flash, aura, impacts). Tout est transparent au
+// toucher PAR LE STYLE et tourne sur le pilote natif.
+const COULEUR_ELEMENT = { Feu: '#ff6a2b', Eau: '#3fa9ff', Terre: '#c8913f', Air: '#9fe8ff', Foudre: '#ffe14a', 'Lumière': '#fff0a0', 'Ténèbres': '#a07bff', Magie: '#ff66d9' };
+function couleurElementDe(creatureId) {
+  const c = CREATURES.find((x) => x.id === creatureId);
+  return (c && COULEUR_ELEMENT[c.element || c.type]) || '#FFD54A';
+}
+// Activation : flash de l'élément, la créature surgit en grand avec le nom
+// de son pouvoir, puis s'efface (1,3 s).
+function PowerCastEffect({ cast }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const a = Animated.timing(t, { toValue: 1, duration: 1300, useNativeDriver: true });
+    a.start();
+    return () => a.stop();
+  }, []);
+  const couleur = couleurElementDe(cast.creatureId);
+  const c = CREATURES.find((x) => x.id === cast.creatureId) || {};
+  return (
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none', alignItems: 'center', justifyContent: 'center' }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: couleur, opacity: t.interpolate({ inputRange: [0, 0.1, 0.35, 1], outputRange: [0, 0.42, 0, 0] }) }]} />
+      <Animated.View style={{ alignItems: 'center',
+        opacity: t.interpolate({ inputRange: [0, 0.08, 0.78, 1], outputRange: [0, 1, 1, 0] }),
+        transform: [{ scale: t.interpolate({ inputRange: [0, 0.15, 0.25, 1], outputRange: [0.3, 1.12, 1, 1] }) }] }}>
+        <CreatureArt creatureId={cast.creatureId} stageIndex={2} emoji={c.emoji || '✨'} size={180} emojiStyle={styles.powerCastEmoji} />
+        <Text style={[styles.powerCastNom, { color: couleur }]}>⚡ {cast.name} !</Text>
+      </Animated.View>
+    </View>
+  );
+}
+// Pendant le pouvoir : aura douce de l'élément derrière l'œuf (qui pulse).
+function PowerAura({ couleur }) {
+  const p = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const boucle = Animated.loop(Animated.sequence([
+      Animated.timing(p, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(p, { toValue: 0, duration: 700, useNativeDriver: true }),
+    ]));
+    boucle.start();
+    return () => boucle.stop();
+  }, []);
+  return (
+    <Animated.Image
+      source={require('../../../assets/icons/glow-gold.png')}
+      resizeMode="contain"
+      style={[styles.powerAura, { tintColor: couleur,
+        opacity: p.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.8] }),
+        transform: [{ scale: p.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.08] }) }] }]}
+    />
+  );
+}
+// Pendant le pouvoir : la créature se tient à gauche de l'œuf et BONDIT sur
+// lui à chaque tap (valeur `attaque` relancée par handleTap, pilote natif).
+function PowerAttacker({ creatureId, stage, attaque }) {
+  const c = CREATURES.find((x) => x.id === creatureId) || {};
+  return (
+    <Animated.View style={[styles.powerAttacker, {
+      transform: [
+        { translateX: attaque.interpolate({ inputRange: [0, 1], outputRange: [0, 58] }) },
+        { rotate: attaque.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '12deg'] }) },
+        { scale: attaque.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) },
+      ],
+    }]}>
+      <CreatureArt creatureId={creatureId} stageIndex={stage} emoji={c.emoji || '✨'} size={96} emojiStyle={styles.powerAttackerEmoji} />
+    </Animated.View>
+  );
+}
+
 // ---- EFFET DE TAP (27/09, demande de l'auteur) ----------------------------
 // Onde de choc + étincelles + « +X » qui rebondit et monte, depuis le point
 // touché. Tout tourne sur le PILOTE NATIF (hors fil JS : tient le rythme de
@@ -5050,14 +5147,14 @@ function SpawnedCreatureBubble({ spawned, onClaim }) {
 // Transparent au toucher PAR LE STYLE (règle SDK 57, bug de tap du 27/09).
 const TAP_EFFET_MS = 650;
 const TAP_ETINCELLES = [0, 1, 2, 3, 4, 5].map((i) => ({ angle: (i / 6) * Math.PI * 2 + 0.35, portee: 26 + (i % 3) * 7 }));
-function TapEffect({ x, y, text, crit, tap }) {
+function TapEffect({ x, y, text, crit, tap, teinte }) {
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const a = Animated.timing(t, { toValue: 1, duration: TAP_EFFET_MS, easing: Easing.out(Easing.quad), useNativeDriver: true });
     a.start();
     return () => a.stop();
   }, []);
-  const couleur = crit ? '#FF8A3D' : '#FFD54A';
+  const couleur = crit ? '#FF8A3D' : (teinte || '#FFD54A');
   const anneau = crit ? 74 : 54;
   const loin = crit ? 1.6 : 1;
   return (
@@ -6149,6 +6246,14 @@ const styles = StyleSheet.create({
   tapTexteCrit: { color: '#FF8A3D', fontSize: 24 },
   // 27/09 : plus de rond autour des bulles → icônes un peu plus grandes.
   bulleIcone: { width: 50, height: 50 },
+  // Pouvoirs (27/09) : aura derrière l'œuf, créature qui attaque à sa gauche.
+  powerAura: { position: 'absolute', width: EGG_SIZE * 1.5, height: EGG_SIZE * 1.5, left: '50%', marginLeft: -EGG_SIZE * 0.75, top: TAP_ZONE_H / 2 - EGG_SIZE * 0.75, pointerEvents: 'none' },
+  // Collée au DESSIN de l'œuf (≈ 30 % de sa largeur depuis le centre, pas le
+  // bord de l'image qui a une marge transparente) : son bond le percute.
+  powerAttacker: { position: 'absolute', width: 96, height: 96, left: '50%', marginLeft: -EGG_SIZE * 0.3 - 86, top: TAP_ZONE_H / 2 - 40, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' },
+  powerAttackerEmoji: { fontSize: 56 },
+  powerCastEmoji: { fontSize: 110 },
+  powerCastNom: { marginTop: 4, fontSize: 22, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 2 } },
   popupCrit: { color: '#FF7043', fontSize: 20 },
 
   actionBtn: {

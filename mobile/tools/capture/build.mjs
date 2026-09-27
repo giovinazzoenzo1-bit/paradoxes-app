@@ -37,7 +37,7 @@ const plugin = {
       code = code.replace(/\s+pointerEvents="[a-z-]+"/g, '');
       if (a.path.endsWith('CombatScreen.js')) code += '\nexport { CombatResultScreen };\n';
       // Composants internes du menu, exposés pour les scènes du banc.
-      if (a.path.endsWith('ClickerScreen.js')) code += '\nexport { DeckRow, ChallengeBar, TapEffect, SpawnedCreatureBubble, GoldenTargetBubble, RitualBubble, OfferingBubble, styles as __stylesClicker };\n';
+      if (a.path.endsWith('ClickerScreen.js')) code += '\nexport { DeckRow, ChallengeBar, TapEffect, SpawnedCreatureBubble, GoldenTargetBubble, RitualBubble, OfferingBubble, PowerCastEffect, PowerAura, PowerAttacker, EGG_SIZE, TAP_ZONE_H, styles as __stylesClicker };\n';
       // EMULE_TOUCHER=1 : le navigateur ne donne pas la position du doigt
       // (locationX/Y) au jeu, le téléphone OUI. On l'imite pour la zone de
       // l'œuf (tap sur la zone elle-même : origine = tapTouch, décalé de 13) —

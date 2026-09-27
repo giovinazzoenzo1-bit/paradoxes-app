@@ -935,9 +935,19 @@ INCHANGÉE : tout le panneau reste le bouton. Scène de banc `scenes/defi.jsx`.
   ex-✨), images Gemini de l'auteur (prompts 22-23). Popup du Rituel : 🌿.
 - Scène de banc `scenes/tap.jsx` (effets relancés en boucle, figés à mi-course).
 
-**Étape 2 (à faire)** : activation d'un pouvoir (flash de l'élément, créature
-en grand avec le nom du pouvoir, aura autour de l'œuf) et créature qui
-attaque l'œuf à chaque tap pendant son pouvoir — validé par l'auteur.
+**Étape 2 (faite, 27/09)** : mise en scène des pouvoirs.
+- Activation (`PowerCastEffect`, 1,3 s) : flash de la couleur de l'élément
+  (`COULEUR_ELEMENT`, 8 éléments), la créature surgit en grand (180) avec
+  « ⚡ nom du pouvoir ! ».
+- Pendant le pouvoir : aura douce de l'élément derrière l'œuf (`PowerAura`,
+  glow teinté qui pulse) ; la créature se poste CONTRE le dessin de l'œuf
+  (`PowerAttacker`, ≈ 30 % de sa largeur depuis le centre — pas le bord de
+  l'image, qui a une marge transparente) et BONDIT sur lui à chaque tap
+  (`attaqueAnim`, relancée par handleTap : pilote natif, aucun état par tap) ;
+  l'impact du tap prend la couleur de l'élément (6e paramètre de spawnPopup).
+- Tout est transparent au toucher par le style ; sonde de taps 20 / 20.
+- Scène de banc `scenes/pouvoir.jsx` (format téléphone 390 × 844 : l'œuf se
+  cale sur la hauteur d'écran, une petite fenêtre fausse les proportions).
 
 - **Bulles SANS rond (27/09, demande de l'auteur)** : créature du pouvoir,
   gland doré, pierre runique, diamant d'Offrande — ni fond, ni bordure, ni
