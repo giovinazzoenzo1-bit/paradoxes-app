@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../context/CoinsContext';
 import { useDaily } from '../context/DailyContext';
 import { useSettings } from '../context/SettingsContext';
-import { STORAGE_KEY as CLICKER_STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY, disableClickerSave } from './games/ClickerScreen';
+import { STORAGE_KEY as CLICKER_STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY, DEV_ADD_COINS_KEY, disableClickerSave } from './games/ClickerScreen';
 import { INCUBATOR_STORAGE_KEY } from '../games/clicker/incubatorLogic';
 import { DEV_ADD_GRIFFES_KEY, DEV_REFILL_ENERGY_KEY, DEV_RESET_GRIFFES_KEY } from './games/AdventureScreen';
 import { CREATURES } from '../games/clicker/clickerLogic';
@@ -130,6 +130,19 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
     if (onAfterReset) onAfterReset();
   };
 
+  // Outil de dev « argent » (27/09, demande de l'auteur : « énormément
+  // d'argent, qu'importe l'Ascension, pour tout tester »). 10^30 par appui :
+  // le plus haut palier affichable (« No ») ; MESURÉ : aucune somme ne permet
+  // de « tout acheter » (le Pacte niveau 200 coûterait 6,75e61). MONTANT
+  // CUMULÉ (comme les Griffes), lu au CHARGEMENT du Clicker → remontage.
+  const devAddCoins = async () => {
+    const raw = await AsyncStorage.getItem(DEV_ADD_COINS_KEY);
+    const pending = raw ? Number(raw) || 0 : 0;
+    await AsyncStorage.setItem(DEV_ADD_COINS_KEY, String(pending + 1e30));
+    Alert.alert('Fait', "+10³⁰ pièces ajoutées à l'Élevage (ta progression d'Ascension n'est pas modifiée).");
+    if (onAfterReset) onAfterReset();
+  };
+
   // Restaure la sauvegarde de secours (copiée automatiquement par
   // ClickerScreen quand un chargement échoue, avant qu'elle ne soit
   // écrasée) — filet de sécurité contre une « remise à zéro ».
@@ -201,6 +214,12 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.devWarning}>Outils de test — ne pas montrer aux joueurs finaux.</Text>
 
+            <TouchableOpacity style={styles.devBtn} onPress={devAddCoins}>
+              <Text style={styles.devBtnText}>💰 +10³⁰ pièces (Élevage) — tout tester</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devBtn} onPress={() => addCoins(1000)}>
+              <Text style={styles.devBtnText}>💎 +1 000 Diamants</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.devBtn} onPress={() => addCoins(10)}>
               <Text style={styles.devBtnText}>💎 +10 Diamants</Text>
             </TouchableOpacity>

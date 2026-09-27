@@ -3921,3 +3921,65 @@ function auditPointerEventsStyle() {
   return fautes;
 }
 module.exports.auditPointerEventsStyle = auditPointerEventsStyle;
+
+// ── Arbre de la boutique : AUCUN chevauchement (27/09) ──────────────────
+// Retour de l'auteur (capture) : noms et nœuds qui se chevauchaient —
+// mesuré : 28 collisions au zoom d'ouverture, 41 dézoomé. Reconstruit TOUS
+// les nœuds (pire cas : tout visible, noms RÉELS, niveaux à 2 chiffres) avec
+// le modèle d'étiquette de l'arbre (arbreDisposition.js, source unique) et
+// exige 0 collision au zoom d'ouverture comme dézoomé au maximum (textes
+// compensés), tout nœud dans la toile, une place pour chaque amélioration.
+function auditArbreSansChevauchement() {
+  const D = require('../src/games/clicker/arbreDisposition.js');
+  const L = require('../src/games/clicker/clickerLogic.js');
+  const E = D.ETIQUETTE;
+  const pb = [];
+  const N = [];
+  const aj = (id, p, nom, t = 76, prix = true) => {
+    if (!p) { pb.push(`${id} : pas de place dans l'arbre`); return; }
+    N.push({ id, x: p[0], y: p[1], t, nom, prix });
+  };
+  aj('ascension', [D.CENTRE.x, D.CENTRE.y], 'Ascension · ×5.00', 150, false);
+  aj('griffes', D.POS.griffes, '250 Griffes', 88);
+  aj('offrande', D.POS.offrande, 'Offrande', 88);
+  aj('reliques', D.POS.reliques, 'Reliques', 84, false);
+  aj('pacte', D.POS.pacte, 'Pacte · 12');
+  aj('faveur', D.POS.faveur, 'Faveur des Esprits · nv 12');
+  aj('critDamage', D.POS.critDamage, 'Dégâts critiques · nv 12');
+  aj('sanctuaire', D.POS.sanctuaire, 'Sanctuaire · 12/50');
+  aj('veilleur', D.POS.veilleur, 'Veilleur · 12/50');
+  L.TAP_UPGRADES.forEach((u, i) => aj('tap:' + u.name, (D.CHAINES_TAP[i % 2] || [])[Math.floor(i / 2)], u.name + ' · nv 12'));
+  [...L.AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost)
+    .forEach((u, i) => aj('auto:' + u.name, (D.CHAINES_AUTO[i % 3] || [])[Math.floor(i / 3)], u.name + ' · ×12'));
+  const boites = (n, c) => {
+    const B = [['rond', n.x, n.y, n.t / 2]];
+    const fs = E.police * c; const wt = n.nom.length * 0.57 * fs; const lg = E.largeur * c;
+    const lignes = Math.min(2, Math.max(1, Math.ceil(wt / lg))); const w = Math.min(lg, wt);
+    const haut = n.y + n.t / 2 + E.marge * c; const h = lignes * E.interligne * c;
+    B.push(['rect', n.x - w / 2, haut, n.x + w / 2, haut + h]);
+    if (n.prix) {
+      const pl = Math.max(64, Math.min(118, 9 * 7.5 + 26)) * c;
+      B.push(['rect', n.x - pl / 2, haut + h + 3 * c, n.x + pl / 2, haut + h + 3 * c + E.pastilleH * c]);
+    }
+    return B;
+  };
+  const touche = (a, b, m = 6) => {
+    if (a[0] === 'rond' && b[0] === 'rond') return Math.hypot(a[1] - b[1], a[2] - b[2]) < a[3] + b[3] + m;
+    if (a[0] === 'rect' && b[0] === 'rect') return !(a[3] + m <= b[1] || b[3] + m <= a[1] || a[4] + m <= b[2] || b[4] + m <= a[2]);
+    if (a[0] === 'rond') [a, b] = [b, a];
+    const x = Math.max(a[1], Math.min(b[1], a[3])); const y = Math.max(a[2], Math.min(b[2], a[4]));
+    return Math.hypot(x - b[1], y - b[2]) < b[3] + m;
+  };
+  const cmax = Math.min(D.COMPENSATION_MAX, D.ZOOM_TEXTE_REF / D.ZOOM_MIN);
+  for (const c of [1, cmax]) {
+    for (let i = 0; i < N.length; i++) for (let j = i + 1; j < N.length; j++) {
+      const A = boites(N[i], c); const Bb = boites(N[j], c);
+      if (A.some((a) => Bb.some((b) => touche(a, b)))) pb.push(`${N[i].id} ↔ ${N[j].id} (textes ×${c.toFixed(2)})`);
+    }
+  }
+  N.forEach((n) => {
+    if (n.x < n.t / 2 || n.y < n.t / 2 || n.x > D.TOILE_L - n.t / 2 || n.y > D.TOILE_H - n.t / 2 - 60) pb.push(`${n.id} : hors de la toile`);
+  });
+  return pb;
+}
+module.exports.auditArbreSansChevauchement = auditArbreSansChevauchement;

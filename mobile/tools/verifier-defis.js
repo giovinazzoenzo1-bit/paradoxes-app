@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditArbreSansChevauchement', "arbre de la boutique : aucun nom, prix ni nœud ne se chevauche, au zoom d'ouverture comme dézoomé (retour de l'auteur, 27/09)"],
   ['auditPointerEventsStyle', "pointerEvents toujours dans le style : la propriété est ignorée sur téléphone depuis le SDK 57"],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],

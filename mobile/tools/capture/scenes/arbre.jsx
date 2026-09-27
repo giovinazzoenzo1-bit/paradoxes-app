@@ -12,8 +12,8 @@ createRoot(document.getElementById('root')).render(
   <SettingsProvider>
     <View style={{ flex: 1, backgroundColor: '#000' }}>
       <BoutiqueArbre
-        onRetour={rien} formatNum={f} coins={24500} sharedCoins={3} tapPower={3} critLevel={1} critDamageLevel={0}
-        sanctuaryLevel={0} veilleurLevel={0} autoClickers={{ [tries[0].id]: 2 }} upgradeLevels={{}} tapUpgrades={{}}
+        onRetour={rien} formatNum={f} coins={141800} sharedCoins={78} tapPower={12} critLevel={8} critDamageLevel={5}
+        sanctuaryLevel={4} veilleurLevel={0} autoClickers={Object.fromEntries(tries.slice(0, 7).map((c, i) => [c.id, 7 - i]))} upgradeLevels={{}} tapUpgrades={{}}
         applyDiscount={(c) => c} griffesCoinBuys={0} owned={[{ id: 'glyphon', level: 5 }]}
         ascensionReady={false} defiAscensionEnCours ascensionCount={1} totalEarned={60000} essence={0}
         onBuyTapPower={rien} onBuyCrit={rien} onBuyCritDamage={rien} onBuyTapUpgrade={rien} onBuySanctuary={rien}

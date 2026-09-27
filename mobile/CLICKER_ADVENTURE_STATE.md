@@ -1196,3 +1196,26 @@ validé sur téléphone). Corrigé :
   vérifier ce qui suit. Et une vérification « nom présent ≥ 2 fois » est
   fausse pour un style (`styles.X` + `X:`) ou une prop reçue : vérifier
   usages ⊂ définitions.
+
+**Arbre — chevauchement (retour de l'auteur, 27/09)** : MESURÉ par un
+vérificateur (nœuds + noms réels sur 1-2 lignes + pastilles, pire cas tout
+visible) : 28 collisions au zoom d'ouverture, 41 dézoomé. Recherche
+exhaustive de l'écartement : ×1,4 en largeur et ×2,05 en hauteur (la plus
+petite hauteur sans collision, en gardant l'arbre étroit pour un téléphone
+tenu droit), Griffes / Offrande ramenées à ±200 → **0 collision**. Toile
+1056 × 3287.
+- **Source UNIQUE** : `src/games/clicker/arbreDisposition.js` (toile, zooms,
+  modèle d'étiquette, positions, chaînes), lue par l'arbre ET par le contrôle.
+- **Contrôle `auditArbreSansChevauchement`** (+ sabotage : Faveur collée au
+  Pacte → crie) : 0 collision au zoom de référence et dézoomé au maximum,
+  tout dans la toile, une place pour chaque amélioration.
+- Ouverture à 0,6 (tout le cœur visible) ; **textes calés sur ZOOM_TEXTE_REF
+  0,78**, séparé du zoom d'ouverture (sinon baisser l'ouverture rapetisse les
+  textes).
+
+**Mode développeur (27/09)** : « 💰 +10³⁰ pièces (Élevage) » dans Options →
+clé `DEV_ADD_COINS_KEY` (MONTANT CUMULÉ), lue au chargement du Clicker, ajoutée
+au SOLDE seulement (pas au total gagné : l'Ascension reste honnête), puis
+remontage immédiat comme « Débloquer tous les monstres ». 10³⁰ = plus haut
+palier affichable (« No ») ; mesuré : aucune somme ne permet de « tout
+acheter » (Pacte nv 200 = 6,75e61). Aussi « 💎 +1 000 Diamants ».

@@ -264,6 +264,9 @@ export const BACKUP_KEY = 'clicker:state:v2:backup';
 // état en mémoire, puis l'efface. Options n'écrit plus jamais directement
 // dans la sauvegarde principale — zéro risque de course/corruption.
 export const DEV_UNLOCK_ALL_KEY = 'clicker:dev:unlockAll';
+// Outil de dev « argent » (27/09, demande de l'auteur) : MONTANT CUMULÉ posé
+// par Options, ajouté aux pièces au chargement (voir plus bas).
+export const DEV_ADD_COINS_KEY = 'clicker:dev:addCoins';
 
 // Verrou de sauvegarde, au niveau du MODULE et non dans l'état React.
 //
@@ -1416,6 +1419,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             return [...prev, ...missing];
           });
           await AsyncStorage.removeItem(DEV_UNLOCK_ALL_KEY);
+        }
+        // Drapeau dev « argent » : ajouté au SOLDE seulement — pas au total
+        // gagné, dont dépend l'Ascension (sa progression reste honnête).
+        const devCoinsRaw = await AsyncStorage.getItem(DEV_ADD_COINS_KEY);
+        const devCoins = devCoinsRaw ? Number(devCoinsRaw) : 0;
+        if (Number.isFinite(devCoins) && devCoins > 0) {
+          setCoins((c) => c + devCoins);
+          await AsyncStorage.removeItem(DEV_ADD_COINS_KEY);
         }
 
         // Creatures offertes par le calendrier. DailyContext depose une
