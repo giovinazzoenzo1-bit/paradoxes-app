@@ -969,3 +969,19 @@ INCHANGÉE : tout le panneau reste le bouton. Scène de banc `scenes/defi.jsx`.
   tap (`lancerAttaque`) ; RETOURNÉE du côté droit pour regarder l'œuf.
   ⚠️ Arrêter les animations du tap précédent avant de repartir : à 150 ms,
   l'ancien fondu effaçait la nouvelle apparition.
+
+
+## 27/09 — Fenêtres du thème forêt (victoires, choix d'éclosion)
+
+Images Gemini de l'auteur (prompts 26-30 : panneau, bannière, couronne de
+laurier, cristal, sablier) dans `assets/fenetres/`. Composant PARTAGÉ
+`screens/games/fenetreBois.js` : `FenetreBois` (panneau + bannière à cheval
+sur le bord du haut, titre) et `BoutonBois` (bois doré, émail vert / rouge /
+bleu — rouge et bleu recolorés par le code sur l'émail seulement ; le bouton
+PORTE sa taille, l'image le remplit). Utilisé pour : mini boss vaincu / enfui,
+Gardien vaincu / victorieux, boutons « Affronter le gardien » (rouge),
+« Mettre en incubation » (bleu, sablier), « Faire éclore » (vert), attente du
+nouvel essai (rouge désactivé). Scène de banc `scenes/fenetres.jsx`.
+Reste : le menu de l'incubateur (IncubatorPanel) dans le même style.
+Aussi corrigé : défi terminé = 6 segments dorés (le remplissage se calculait
+sur la cible) ; case des pièces 140.

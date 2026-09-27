@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Easing, View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
+import { FenetreBois, BoutonBois, COURONNE, CRISTAL, SABLIER } from './fenetreBois';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdventureScreen, { DEV_REFILL_ENERGY_KEY } from './AdventureScreen';
@@ -3963,20 +3964,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 guardianRetryRemainingMs(mainEgg, nowTick) > 0 ? (
                   // Après une défaite : l'œuf n'est PAS perdu, seule une
                   // attente sépare le joueur d'un nouvel essai.
-                  <View style={[styles.guardianCta, styles.guardianCtaWaiting]}>
-                    <Text style={styles.guardianCtaWaitingText}>
-                      ⚔️ Gardien vaincu ? Nouvel essai dans {formatRemaining(guardianRetryRemainingMs(mainEgg, nowTick))}
-                    </Text>
-                  </View>
+                  <BoutonBois couleur="rouge" desactive largeur={Math.round(SCREEN_W * 0.8)} hauteur={58} texte="⚔️ Nouvel essai contre le Gardien" sousTexte={`dans ${formatRemaining(guardianRetryRemainingMs(mainEgg, nowTick))}`} />
                 ) : guardianRequired(owned.length) ? (
-                  <TouchableOpacity style={styles.guardianCta} onPress={() => resolveHatch('main')}>
-                    <Text style={styles.guardianCtaText}>⚔️ Affronter le gardien</Text>
-                    <Text style={styles.guardianCtaSub}>{ligneGardien(mainEgg, 'main') || "Bats-le pour faire éclore l'œuf"}</Text>
-                  </TouchableOpacity>
+                  <BoutonBois couleur="rouge" largeur={Math.round(SCREEN_W * 0.8)} hauteur={64} texte="⚔️ Affronter le gardien" sousTexte={ligneGardien(mainEgg, 'main') || "Bats-le pour faire éclore l'œuf"} onPress={() => resolveHatch('main')} />
                 ) : (
-                  <TouchableOpacity style={[styles.guardianCta, styles.hatchCta]} onPress={() => resolveHatch('main')}>
-                    <Text style={styles.hatchCtaText}>🐣 Faire éclore l'œuf</Text>
-                  </TouchableOpacity>
+                  <BoutonBois couleur="vert" largeur={Math.round(SCREEN_W * 0.7)} hauteur={56} texte="🐣 Faire éclore l'œuf" onPress={() => resolveHatch('main')} />
                 )
               )}
 
@@ -3985,11 +3977,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   proposer alors ne mènerait nulle part. On y accède par
                   le bouton animé de la colonne de gauche. */}
               {!incubatingEgg && eggPhase === 'hatching' && (
-                <TouchableOpacity style={styles.incubateCta} onPress={startEggIncubation}>
-                  <Text style={styles.incubateCtaText}>
-                    🥚 Mettre en incubation ({formatRemaining(incubationDurationMs(owned.length))})
-                  </Text>
-                </TouchableOpacity>
+                <BoutonBois couleur="bleu" largeur={Math.round(SCREEN_W * 0.66)} hauteur={50} icone={SABLIER} texte="Mettre en incubation" sousTexte={formatRemaining(incubationDurationMs(owned.length))} onPress={startEggIncubation} />
               )}
               {comboCount > 1 ? (
                 <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
@@ -4097,16 +4085,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
       {bossResult && (
         <View style={styles.detailOverlay}>
-          <View style={styles.rewardPanel}>
-            <Text style={styles.detailEmoji}>{bossResult.failed ? '💨' : '🎉'}</Text>
+          {/* 27/09 : fenêtre du thème forêt (demande de l'auteur). */}
+          <FenetreBois titre={bossResult.failed ? 'Le boss s\'échappe !' : 'Boss vaincu !'}>
+            {bossResult.failed
+              ? <Text style={styles.fenetreEmoji}>💨</Text>
+              : <Image source={COURONNE} style={styles.fenetreCouronne} resizeMode="contain" />}
             {/* Titre de victoire AVANT le gain : le joueur doit d'abord
                 comprendre qu'il a gagné, le montant vient ensuite. */}
-            <Text style={styles.detailName}>
-              {bossResult.failed ? 'Le boss s\'échappe !' : 'Boss vaincu !'}
-            </Text>
             {!bossResult.failed && (
               <View style={styles.bossWinRow}>
-                <Text style={styles.bossWinIcon}>💎</Text>
+                <Image source={CRISTAL} style={styles.fenetreCristal} resizeMode="contain" />
                 <Text style={styles.bossWinAmount} numberOfLines={1}>
                   +{bossResult.given}
                 </Text>
@@ -4120,10 +4108,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             {bossResult.coinBonus > 0 && (
               <Text style={styles.bossCapNote}>+{formatNum(bossResult.coinBonus)} pièces</Text>
             )}
-            <TouchableOpacity style={styles.feedBtn} onPress={() => setBossResult(null)}>
-              <Text style={styles.feedBtnText}>Continuer</Text>
-            </TouchableOpacity>
-          </View>
+            <BoutonBois texte="Continuer" onPress={() => setBossResult(null)} />
+          </FenetreBois>
         </View>
       )}
 
@@ -4191,10 +4177,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           créature » la découvre en dessous. */}
       {resultatGardien && (
         <View style={[styles.detailOverlay, styles.resultatGardienFond]}>
-          <View style={styles.resultatGardienCarte}>
-            <Text style={styles.resultatGardienTitre}>
-              {resultatGardien.issue === 'win' ? '🏆 Gardien vaincu !' : "💀 Le Gardien l'emporte"}
-            </Text>
+          {/* 27/09 : fenêtre du thème forêt (demande de l'auteur). */}
+          <FenetreBois titre={resultatGardien.issue === 'win' ? 'Gardien vaincu !' : "Le Gardien l'emporte"}>
+            {resultatGardien.issue === 'win'
+              ? <Image source={COURONNE} style={styles.fenetreCouronne} resizeMode="contain" />
+              : <Text style={styles.fenetreEmoji}>💀</Text>}
             <Text style={styles.resultatGardienTexte}>
               {resultatGardien.issue === 'win' ? 'Ton œuf éclot.' : 'Ton œuf est en sécurité. Nouvel essai dans 10 min.'}
             </Text>
@@ -4206,10 +4193,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             {resultatGardien.issue !== 'win' ? (
               <Text style={styles.resultatGardienConseil}>Améliore tes créatures dans l'Aventure pour augmenter tes chances.</Text>
             ) : null}
-            <TouchableOpacity style={styles.resultatGardienBouton} onPress={() => setResultatGardien(null)}>
-              <Text style={styles.resultatGardienBoutonTexte}>{resultatGardien.issue === 'win' ? 'Voir ma créature' : 'OK'}</Text>
-            </TouchableOpacity>
-          </View>
+            <BoutonBois texte={resultatGardien.issue === 'win' ? 'Voir ma créature' : 'OK'} onPress={() => setResultatGardien(null)} />
+          </FenetreBois>
         </View>
       )}
 
@@ -5607,7 +5592,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,215,120,0.7)' },
   resultatGardienTitre: { color: '#FFE9A8', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   resultatGardienTexte: { color: '#fff', fontSize: 15, textAlign: 'center', marginBottom: 10 },
-  resultatGardienPuissance: { color: '#FFE9A8', fontSize: 14, fontWeight: '700', textAlign: 'center', marginBottom: 8 },
+  resultatGardienPuissance: { color: '#FFE9A8', fontSize: 13, fontWeight: '700', textAlign: 'center', marginBottom: 8 },
   resultatGardienConseil: { color: '#C9C3E0', fontSize: 13, textAlign: 'center', marginBottom: 12 },
   resultatGardienBouton: { backgroundColor: '#F2B233', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 26, marginTop: 4 },
   resultatGardienBoutonTexte: { color: '#2A1B00', fontSize: 16, fontWeight: '800' },
@@ -6298,6 +6283,10 @@ const styles = StyleSheet.create({
   tapTexteCrit: { color: '#FF8A3D', fontSize: 24 },
   // 27/09 : plus de rond autour des bulles → icônes un peu plus grandes.
   bulleIcone: { width: 50, height: 50 },
+  // Fenêtres du thème forêt (27/09).
+  fenetreCouronne: { width: 118, height: 118, marginBottom: 2 },
+  fenetreCristal: { width: 22, height: 42 },
+  fenetreEmoji: { fontSize: 54, marginBottom: 4 },
   // Pouvoirs (27/09) : aura derrière l'œuf, créature qui attaque à sa gauche.
   powerAura: { position: 'absolute', width: EGG_SIZE * 1.5, height: EGG_SIZE * 1.5, left: '50%', marginLeft: -EGG_SIZE * 0.75, top: TAP_ZONE_H / 2 - EGG_SIZE * 0.75, pointerEvents: 'none' },
   // Ancrée au CENTRE de l'œuf ; lancerAttaque la place autour (translate).
