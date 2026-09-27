@@ -855,3 +855,12 @@ portrait 390 × 844.
   en jeu MESURÉE : 57 / 72 / 84 % selon le stade) → recadrés et remis à la
   norme depuis les originaux 1024 px, progression bébé → adulte gardée.
   Scène de banc `scenes/creatures.jsx` (rendu par le vrai CreatureArt).
+
+- **Œuf +30 % (27/09, demande de l'auteur)** : `EGG_SIZE` / `EGG_BUTTON`
+  (325 / 350 sur les écrans ≥ 844) calculés depuis la zone pour garder la
+  RÈGLE ABSOLUE « zone > bouton > image » sur tout écran (vérifié : 667 → œuf
+  250, 780 → 298). Nid, particules et bouton suivent la même taille.
+- **Nid DANS le conteneur de l'œuf** (tapTouch) : calculé à part, il se
+  retrouvait 2-3 mm à droite sur téléphone (l'œuf y est au centre exact de
+  l'écran, sans les 13 points de décalage du code). Dans le même conteneur,
+  il partage centrage et décalage sur tout appareil.

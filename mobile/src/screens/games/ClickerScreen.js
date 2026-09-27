@@ -206,11 +206,17 @@ const TOP_BLOCK_SHIFT = 0.05;
 // demarre a 0.405, ce qui place son centre — donc l'oeuf — pile sur 0.614.
 // Bas de zone a 0.824 : sous le deck (0.351), au-dessus de la barre (0.878).
 //
-// RÈGLE ABSOLUE respectee : zone > bouton(290) > image(250). La hauteur
+// RÈGLE ABSOLUE respectee : zone > bouton > image (EGG_BUTTON, EGG_SIZE). La hauteur
 // reste FIXE : elle est calculee UNE fois au chargement du module, ce
 // n'est pas un flex qui se recalcule au rendu.
 const TAP_ZONE_TOP = SCREEN_H * 0.429;
 const TAP_ZONE_H = SCREEN_H * 0.419;
+// 27/09 (demande de l'auteur) : œuf 30 % plus gros (250 → 325). La RÈGLE
+// ABSOLUE reste vraie sur TOUS les écrans : le bouton ne dépasse jamais la
+// zone (− 4), l'image reste 25 points sous le bouton — sur un petit écran,
+// l'œuf se réduit tout seul au lieu de déborder de sa zone.
+const EGG_BUTTON = Math.min(325 + 25, TAP_ZONE_H - 4);
+const EGG_SIZE = EGG_BUTTON - 25;
 
 // Les 5 illustrations d'œuf (un fichier par palier de EGG_STAGES,
 // même index). `require` doit recevoir un chemin STATIQUE — Metro
@@ -3773,9 +3779,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             </ImageBackground>
 
             <View style={styles.tapZone}>
-              {/* 27/09 : le nid de la maquette, DERRIÈRE l'œuf (dessiné avant). */}
-              <Image source={require('../../../assets/menu/grand-nid.png')} style={styles.eggNest} resizeMode="contain" pointerEvents="none" />
               <TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapTouch}>
+                  {/* 27/09 : le nid est DANS le conteneur de l'œuf (derrière lui,
+                      dessiné avant) : il partage son centrage et son décalage,
+                      donc reste dessous sur tout appareil (retour de l'auteur :
+                      calculé à part, il était 2-3 mm à droite sur téléphone). */}
+                  <Image source={require('../../../assets/menu/grand-nid.png')} style={styles.eggNest} resizeMode="contain" pointerEvents="none" />
                   <Animated.View
                     style={[
                       styles.tapButton,
@@ -3807,7 +3816,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                     {/* Particules posées SUR l'œuf. Jamais pendant un
                         combat de boss : il a sa propre mise en scène. */}
                     {!boss && (
-                      <EggParticles size={250} burst={eggBurst} stageIndex={eggStageIndex} />
+                      <EggParticles size={EGG_SIZE} burst={eggBurst} stageIndex={eggStageIndex} />
                     )}
                     {boss ? (
                       <Image
@@ -5893,7 +5902,7 @@ const styles = StyleSheet.create({
   // sur l'appareil (hauteur d'origine de l'image retenue ; le navigateur, lui,
   // appliquait la proportion). Hauteur EXPLICITE (250 × 394 / 720) et même
   // décalage horizontal que l'œuf (tapTouch : translateX 13).
-  eggNest: { position: 'absolute', width: 250, height: 137, left: (SCREEN_W - 250) / 2 + 13, top: TAP_ZONE_H / 2 - 8 },
+  eggNest: { position: 'absolute', width: EGG_SIZE, height: Math.round(EGG_SIZE * 394 / 720), left: '50%', marginLeft: -EGG_SIZE / 2, top: TAP_ZONE_H / 2 - Math.round(EGG_SIZE * 0.032) },
   challengeMedaillon: { width: '100%', height: '100%' },
   optionsBtnIcon: { fontSize: 22 },
   // 27/09 : caisse et parchemin réduits (« un peu trop gros ») ; la zone
@@ -6023,11 +6032,11 @@ const styles = StyleSheet.create({
   // Plus de rond : ni fond, ni bordure, ni ombre. Les illustrations
   // d'oeuf portent deja leur propre halo peint.
   tapButton: {
-    width: 290, height: 290,
+    width: EGG_BUTTON, height: EGG_BUTTON,
     alignItems: 'center', justifyContent: 'center',
   },
   tapEmoji: { fontSize: 84 },
-  eggImage: { width: 250, height: 250 },
+  eggImage: { width: EGG_SIZE, height: EGG_SIZE },
   // Couche des particules : superposée à l'œuf, centrée, SANS capture de
   // clics — la zone de tap doit rester entière.
   eggParticleLayer: { position: 'absolute', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
