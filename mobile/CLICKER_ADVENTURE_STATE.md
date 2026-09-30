@@ -1277,3 +1277,24 @@ surprime « avant l'heure » (palier 3) : à l'Ascension 0, Héraut d'Orage
 (2,0e9) passe avant Golem de Cristal (3,1e8), Colosse de Pierre (5,4e9) avant
 Gardien Céleste (5,1e9). Proposé à l'auteur : trier par prix réel à
 l'Ascension courante (stable pendant une Ascension).
+
+**Arbre — 4e version, 8 DÉPARTS (validée par l'auteur, 27/09 : « deux
+échelles = deux cordes, pas un arbre »)** : structure RÉELLE du jeu —
+PUISSANCE DE TAP (Pacte + 10, tronc en zigzag), CRITIQUES (Faveur, depuis
+l'Ascension → Dégâts critiques, reliques de chance / force en rameaux vers
+l'extérieur), FORCE DES CRÉATURES (4 reliques de tap), Griffes / Offrande,
+PASSIF (Sanctuaire → Veilleur, 5 reliques de production en éventail tourné
+vers l'extérieur), 3 RACINES d'auto-clics par palier (`tier` ; triés par prix
+de base = prix réel dans un palier ; chacune révélée 2 par 2), RELIQUES
+D'AUTO-CLICS. **Les 20 reliques sont dans l'arbre** (verrouillées « ??? » +
+« Nécessite <créature> ») ; nœud et panneau Reliques séparés RETIRÉS.
+- Familles lues dans les données par `reliquesParFamille()` /
+  `autoClicsParPalier()` (arbreDisposition.js, source unique arbre + audit ;
+  import de clickerLogic avec EXTENSION .js : exigée par Node, acceptée par
+  Metro).
+- Générateur local `disposition_8.py` + recherche : 0 collision, toile
+  2342 × 3590 (paramètres notés dans le fichier). Compensation des textes
+  plafonnée à 0,6 ; ZOOM_MIN 0,16 (l'arbre remplit la largeur) ; ouverture
+  0,55.
+- Audit réécrit : reliques par famille, 3 paliers, CHAQUE relique et auto-clic
+  doit avoir sa place ; sabotage robuste (étiquettes 420 → 45 collisions).

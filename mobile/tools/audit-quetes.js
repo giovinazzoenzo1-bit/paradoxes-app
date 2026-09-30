@@ -3940,21 +3940,28 @@ function auditArbreSansChevauchement() {
     if (!p) { pb.push(`${id} : pas de place dans l'arbre`); return; }
     N.push({ id, x: p[0], y: p[1], t, nom, prix });
   };
+  // 8 départs (4e version) : pire cas, TOUT visible, noms RÉELS, niveaux à 2 chiffres.
   aj('ascension', [D.CENTRE.x, D.CENTRE.y], 'Ascension · ×5.00', 150, false);
   aj('griffes', D.POS.griffes, '250 Griffes', 88);
   aj('offrande', D.POS.offrande, 'Offrande', 88);
-  aj('reliques', D.POS.reliques, 'Reliques', 84, false);
   aj('pacte', D.POS.pacte, 'Pacte · 12');
   aj('faveur', D.POS.faveur, 'Faveur des Esprits · nv 12');
   aj('critDamage', D.POS.critDamage, 'Dégâts critiques · nv 12');
   aj('sanctuaire', D.POS.sanctuaire, 'Sanctuaire · 12/50');
   aj('veilleur', D.POS.veilleur, 'Veilleur · 12/50');
   L.TAP_UPGRADES.forEach((u, i) => aj('tap:' + u.name, D.CHAINE_TAP[i], u.name + ' · nv 12'));
-  [...L.AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost).forEach((u, i) => aj('auto:' + u.name, D.CHAINE_AUTO[i], u.name + ' · ×12'));
+  const R = D.reliquesParFamille();
+  let nbReliques = 0;
+  D.FAMILLES_RELIQUES.forEach((f) => R[f].forEach((u, i) => { nbReliques++; aj('relique:' + u.name, (D.RELIQUES_POS[f] || [])[i], u.name + ' · nv 12', 70); }));
+  if (nbReliques !== L.UPGRADE_ITEMS.length) pb.push(`reliques : ${nbReliques} placées sur ${L.UPGRADE_ITEMS.length} (une famille d'effet inconnue ?)`);
+  const A = D.autoClicsParPalier();
+  let nbAuto = 0;
+  D.PALIERS_AUTO.forEach((t) => A[t].forEach((u, i) => { nbAuto++; aj('auto:' + u.name, (D.RACINES_AUTO[t] || [])[i], u.name + ' · ×12'); }));
+  if (nbAuto !== L.AUTOCLICKERS.length) pb.push(`auto-clics : ${nbAuto} placés sur ${L.AUTOCLICKERS.length} (un palier inconnu ?)`);
   const boites = (n, c) => {
     const B = [['rond', n.x, n.y, n.t / 2]];
     const fs = E.police * c; const wt = n.nom.length * 0.57 * fs; const lg = E.largeur * c;
-    const lignes = Math.min(2, Math.max(1, Math.ceil(wt / lg))); const w = Math.min(lg, wt);
+    const lignes = Math.min(2, Math.max(1, Math.ceil(wt / lg)));
     const haut = n.y + n.t / 2 + E.marge * c;
     const h = lignes * E.interligne * c + E.gainInterligne * c; // nom + ligne de gain
     B.push(['rect', n.x - lg / 2, haut, n.x + lg / 2, haut + h]);
@@ -3979,12 +3986,12 @@ function auditArbreSansChevauchement() {
   for (const c of [1, cmax]) {
     const T = titres(c);
     for (let i = 0; i < N.length; i++) {
-      const A = boites(N[i], c);
+      const Ai = boites(N[i], c);
       for (let j = i + 1; j < N.length; j++) {
-        const Bb = boites(N[j], c);
-        if (A.some((a) => Bb.some((b) => touche(a, b)))) pb.push(`${N[i].id} ↔ ${N[j].id} (textes ×${c.toFixed(2)})`);
+        const Bj = boites(N[j], c);
+        if (Ai.some((a) => Bj.some((b) => touche(a, b)))) pb.push(`${N[i].id} ↔ ${N[j].id} (textes ×${c.toFixed(2)})`);
       }
-      T.forEach((t) => { if (A.some((a) => touche(a, t))) pb.push(`${N[i].id} ↔ titre « ${t[5]} » (textes ×${c.toFixed(2)})`); });
+      T.forEach((t) => { if (Ai.some((a) => touche(a, t))) pb.push(`${N[i].id} ↔ titre « ${t[5]} » (textes ×${c.toFixed(2)})`); });
     }
     for (let i = 0; i < T.length; i++) for (let j = i + 1; j < T.length; j++) if (touche(T[i], T[j])) pb.push(`titres « ${T[i][5]} » ↔ « ${T[j][5]} »`);
   }

@@ -10,8 +10,11 @@ import {
   TAP_UPGRADE_UNLOCK_LEVEL, TAP_UPGRADE_FIRST_PACTE_LEVEL,
 } from '../../games/clicker/clickerLogic';
 import { useSettings } from '../../context/SettingsContext';
-import { TOILE_L, TOILE_H, ZOOM_MIN, ZOOM_MAX, ZOOM_DEPART, ZOOM_TEXTE_REF, ZOOM_COMPENSATION_MIN, CENTRE, POS, CHAINE_TAP, CHAINE_AUTO, TITRES, ETIQUETTE, COMPENSATION_MAX } from '../../games/clicker/arbreDisposition';
-import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge, FenetreBois, BanniereTitre, largeurInterieureFenetre, CRISTAL, GrandPanneau, largeurInterieure } from './fenetreBois';
+import {
+  TOILE_L, TOILE_H, ZOOM_MIN, ZOOM_MAX, ZOOM_DEPART, ZOOM_TEXTE_REF, ZOOM_COMPENSATION_MIN, CENTRE, POS, CHAINE_TAP, TITRES, ETIQUETTE, COMPENSATION_MAX,
+  RELIQUES_POS, RACINES_AUTO, FAMILLES_RELIQUES, PALIERS_AUTO, reliquesParFamille, autoClicsParPalier,
+} from '../../games/clicker/arbreDisposition';
+import { vibrerSucces, CYAN_CHAMPIGNON, BoutonLarge, FenetreBois, BanniereTitre, largeurInterieureFenetre, CRISTAL } from './fenetreBois';
 import BackButton from '../../components/BackButton';
 
 // ════════════════════════════════════════════════════════════════════
@@ -38,10 +41,6 @@ const CENTRE_ECRAN_Y = 0.57;
 const { width: ECRAN_L, height: ECRAN_H } = Dimensions.get('window');
 // Fiche : un VRAI menu (retour de l'auteur : illisible avec l'arbre derrière).
 const FICHE_L = Math.min(Math.round(ECRAN_L * 0.92), 380);
-// Reliques : grand panneau vertical, comme la Boutique et les Quêtes.
-const RELIQUES_L = Math.min(Math.round(ECRAN_L * 0.94), 400);
-const RELIQUES_H = Math.round(Math.min(ECRAN_H * 0.78, RELIQUES_L / 0.56));
-const RELIQUES_INT = largeurInterieure(RELIQUES_L);
 const FICHE_INT = largeurInterieureFenetre(FICHE_L);
 const IMG_PLAQUE = require('../../../assets/fenetres/plaque-solde.png');
 const IMG = {
@@ -94,8 +93,6 @@ function construireNoeuds(p) {
   ajouter({ id: 'offrande', parent: 'ascension', x: POS.offrande[0], y: POS.offrande[1], taille: 88, emoji: '💎', nom: 'Offrande', devise: 'diamants',
     gain: `≈ +${f(offrandeReward(p.tapPower))} pièces`, prix: OFFRANDE_APPCOINS_COST, etat: etat(false, false, OFFRANDE_APPCOINS_COST, p.sharedCoins),
     onPress: p.onOffrande, allume: true, detail: `Échange ${OFFRANDE_APPCOINS_COST} diamant${OFFRANDE_APPCOINS_COST > 1 ? 's' : ''} contre un bonus de pièces.` });
-  ajouter({ id: 'reliques', parent: 'ascension', x: POS.reliques[0], y: POS.reliques[1], taille: 84, emoji: '📜', nom: 'Reliques', prix: null,
-    gain: 'bonus des créatures', etat: 'achetable', ouvreReliques: true, allume: true, detail: 'Les améliorations liées à tes créatures.' });
 
   // ── PUISSANCE DE TAP : Pacte → les 10 améliorations en UNE chaîne (chacune
   // s'ouvre au niveau 5 de la précédente : la branche montre la dépendance).
@@ -121,7 +118,7 @@ function construireNoeuds(p) {
   // ── CRITIQUES : Faveur des Esprits (chance) → Dégâts critiques (force)
   const prixFaveur = remise(critUpgradeCost(p.critLevel));
   const okFaveur = debloque('faveur');
-  ajouter({ id: 'faveur', parent: 'pacte', x: POS.faveur[0], y: POS.faveur[1], emoji: '✨', nom: 'Faveur des Esprits', niveau: `nv ${p.critLevel}`,
+  ajouter({ id: 'faveur', parent: 'ascension', x: POS.faveur[0], y: POS.faveur[1], emoji: '✨', nom: 'Faveur des Esprits', niveau: `nv ${p.critLevel}`,
     gain: okFaveur ? `+${nb((critChance(p.critLevel + 1) - critChance(p.critLevel)) * 100)} % crit / nv` : exigence('faveur'),
     prix: prixFaveur, etat: etat(!okFaveur, false, prixFaveur, p.coins), onPress: p.onBuyCrit, allume: p.critLevel > 0,
     detail: okFaveur ? `${nb(critChance(p.critLevel) * 100)} % de chance de coup critique.` : exigence('faveur') });
@@ -144,21 +141,49 @@ function construireNoeuds(p) {
     prix: prixV, etat: etat(!okV, maxV, prixV, p.coins), onPress: p.onBuyVeilleur, allume: p.veilleurLevel > 0,
     detail: okV ? 'Augmente tes gains quand tu ne joues pas.' : exigence('veilleur') });
 
-  // ── AUTO-CLICS : les 15 en UNE chaîne, par prix ; révélés 2 par 2 (les
-  // possédés, le suivant, puis un « ??? »).
-  const tries = [...AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost);
-  let dernierPossede = -1;
-  tries.forEach((c, i) => { if (((p.autoClickers && p.autoClickers[c.id]) || 0) > 0) dernierPossede = i; });
-  tries.forEach((c, i) => {
-    const pos = CHAINE_AUTO[i]; if (!pos || i > dernierPossede + 2) return;
-    const possede = (p.autoClickers && p.autoClickers[c.id]) || 0;
-    const mystere = i === dernierPossede + 2;
-    const prix = remise(autoClickerCost(c, possede, p.ascensionCount));
-    ajouter({ id: c.id, parent: i === 0 ? 'ascension' : tries[i - 1].id, x: pos[0], y: pos[1],
-      emoji: c.emoji, nom: c.name, niveau: possede > 0 ? `×${possede}` : '', prix, etat: etat(mystere, false, prix, p.coins),
-      gain: mystere ? `🔒 achète ${tries[i - 1].name}` : `+${nb(c.baseIncome, 1)} /s chacun`,
-      onPress: () => p.onBuyAutoClicker(c.id), allume: possede > 0,
-      detail: mystere ? `🔒 Achète d'abord ${tries[i - 1].name}.` : `Possédé : ${possede} · +${nb(c.baseIncome, 1)}/s chacun.` });
+  // ── AUTO-CLICS : 3 RACINES selon le palier (champ `tier` des données),
+  // chacune révélée 2 par 2 (les possédés, le suivant, puis un « ??? »).
+  const racines = autoClicsParPalier();
+  PALIERS_AUTO.forEach((palier) => {
+    const liste = racines[palier] || [];
+    let dernier = -1;
+    liste.forEach((c, i) => { if (((p.autoClickers && p.autoClickers[c.id]) || 0) > 0) dernier = i; });
+    liste.forEach((c, i) => {
+      const pos = (RACINES_AUTO[palier] || [])[i]; if (!pos || i > dernier + 2) return;
+      const possede = (p.autoClickers && p.autoClickers[c.id]) || 0;
+      const mystere = i === dernier + 2;
+      const prix = remise(autoClickerCost(c, possede, p.ascensionCount));
+      ajouter({ id: c.id, parent: i === 0 ? 'ascension' : liste[i - 1].id, x: pos[0], y: pos[1],
+        emoji: c.emoji, nom: c.name, niveau: possede > 0 ? `×${possede}` : '', prix, etat: etat(mystere, false, prix, p.coins),
+        gain: mystere ? `🔒 achète ${liste[i - 1].name}` : `+${nb(c.baseIncome, 1)} /s chacun`,
+        onPress: () => p.onBuyAutoClicker(c.id), allume: possede > 0,
+        detail: mystere ? `🔒 Achète d'abord ${liste[i - 1].name}.` : `Possédé : ${possede} · +${nb(c.baseIncome, 1)}/s chacun.` });
+    });
+  });
+
+  // ── RELIQUES : DANS l'arbre, rangées par famille d'effet ; verrouillées
+  // (« ??? » + la créature nécessaire) tant qu'on n'a pas la créature.
+  // Parent : Faveur (chance de critique), Dégâts critiques (force), Veilleur
+  // (production, en éventail) ; les autres familles forment leur branche.
+  const parentFamille = { critChancePct: 'faveur', critMultPct: 'critDamage', coinPct: 'veilleur' };
+  const eventail = { coinPct: true };
+  const possedees = new Set((p.owned || []).map((o) => o.id));
+  const familles = reliquesParFamille();
+  FAMILLES_RELIQUES.forEach((f) => {
+    (familles[f] || []).forEach((item, i) => {
+      const pos = (RELIQUES_POS[f] || [])[i]; if (!pos) return;
+      const creature = CREATURES.find((c) => c.id === item.creatureId);
+      const nomCreature = creature ? creature.stages[0].name : '???';
+      const ok = possedees.has(item.creatureId);
+      const niveau = (p.upgradeLevels && p.upgradeLevels[item.id]) || 0;
+      const prix = remise(upgradeItemCost(item, niveau));
+      const parent = eventail[f] || i === 0 ? (parentFamille[f] || 'ascension') : familles[f][i - 1].id;
+      ajouter({ id: 'relique:' + item.id, parent, x: pos[0], y: pos[1], taille: 70,
+        emoji: item.emoji, nom: item.name, niveau: `nv ${niveau}`, prix, etat: etat(!ok, false, prix, p.coins),
+        gain: ok ? `${describeUpgradeEffect(item)} / nv` : `🔒 Nécessite ${nomCreature}`,
+        onPress: () => p.onBuyUpgradeItem(item.id), allume: niveau > 0,
+        detail: ok ? `Relique de ${nomCreature} : ${describeUpgradeEffect(item)} par niveau.` : `🔒 Obtiens ${nomCreature} pour débloquer cette relique.` });
+    });
   });
   return N;
 }
@@ -361,16 +386,6 @@ const Noeud = React.memo(function Noeud({ n, compense, pouls, onAppui, onAppuiLo
 }, (x, y) => x.compense === y.compense && x.n.etat === y.n.etat && x.n.prix === y.n.prix && x.n.niveau === y.n.niveau && x.n.gain === y.n.gain
   && x.n.nom === y.n.nom && x.n.progres === y.n.progres && x.n.x === y.n.x && x.n.y === y.n.y);
 
-// Pastille de prix (dorée si achetable, grise sinon), touchable : achète.
-function PastillePrix({ texte, ok, largeur = 86, hauteur = 30, onPress }) {
-  return (
-    <TouchableOpacity activeOpacity={0.7} disabled={!onPress} onPress={onPress} style={{ width: largeur, height: hauteur, alignItems: 'center', justifyContent: 'center' }}>
-      <Image source={ok ? IMG.prixOr : IMG.prixGris} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: largeur, height: hauteur }} />
-      <Text style={[styles.prix, { fontSize: 12.5 }, !ok && styles.prixCher]} numberOfLines={1}>{texte}</Text>
-    </TouchableOpacity>
-  );
-}
-
 // ── L'arbre ────────────────────────────────────────────────────────────
 function ArbreBoutique(props) {
   const { vibrations } = useSettings();
@@ -379,7 +394,6 @@ function ArbreBoutique(props) {
   // ensemble (vue d'ensemble du dézoom « à fond »).
   const compense = Math.max(1, Math.min(COMPENSATION_MAX, ZOOM_TEXTE_REF / Math.max(echelle, ZOOM_COMPENSATION_MIN)));
   const [ficheId, setFicheId] = useState(null);
-  const [reliques, setReliques] = useState(false);
   const formatNum = props.formatNum || ((n) => String(Math.round(n)));
   const noeuds = useMemo(() => construireNoeuds(props), [props]);
   const parId = useMemo(() => Object.fromEntries(noeuds.map((n) => [n.id, n])), [noeuds]);
@@ -402,7 +416,6 @@ function ArbreBoutique(props) {
   const acheter = useCallback((id) => {
     const n = frais.current[id];
     if (!n) return;
-    if (n.ouvreReliques) { setReliques(true); return; }
     // L'Ascension (irréversible) ouvre TOUJOURS sa fiche, avec son bouton.
     if (id === 'ascension' || n.etat !== 'achetable' || !n.onPress) { setFicheId(id); return; }
     n.onPress();
@@ -487,47 +500,6 @@ function ArbreBoutique(props) {
         </View>
       ) : null}
 
-      {reliques ? (
-        <View style={styles.menuFond}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setReliques(false)} />
-          <GrandPanneau titre="Reliques" largeur={RELIQUES_L} hauteur={RELIQUES_H} onFermer={() => setReliques(false)}>
-            <Text style={[styles.reliquesIntro, { width: RELIQUES_INT }]}>Les améliorations de tes créatures. Chaque relique s'ouvre avec sa créature.</Text>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
-              {[...UPGRADE_ITEMS]
-                .sort((a, b) => {
-                  const pos = new Set((props.owned || []).map((o) => o.id));
-                  return (pos.has(a.creatureId) ? 0 : 1) - (pos.has(b.creatureId) ? 0 : 1);
-                })
-                .map((item) => {
-                  const possedee = (props.owned || []).some((o) => o.id === item.creatureId);
-                  const niveau = (props.upgradeLevels && props.upgradeLevels[item.id]) || 0;
-                  const prix = (props.applyDiscount || ((c) => c))(upgradeItemCost(item, niveau));
-                  const ok = possedee && (props.coins || 0) >= prix;
-                  const acheterRelique = ok ? () => { props.onBuyUpgradeItem(item.id); vibrerSucces(vibrations); } : null;
-                  return (
-                    <View key={item.id} style={[styles.relique, { width: RELIQUES_INT }, !possedee && { opacity: 0.5 }]}>
-                      <Text style={styles.reliqueEmoji}>{possedee ? item.emoji : '🔒'}</Text>
-                      <View style={{ width: RELIQUES_INT - 34 - 10 - 92 - 10 }}>
-                        <Text style={styles.reliqueNom} numberOfLines={1}>{possedee ? `${item.name} · nv ${niveau}` : '???'}</Text>
-                        {/* Texte TIRÉ DE L'EFFET (describeUpgradeEffect, comme l'ancienne
-                            boutique) : 4 reliques n'ont pas de champ desc, « null »
-                            s'affichait. ⚠️ describeUpgradeTotal n'est PAS exportée par
-                            clickerLogic (interne à ClickerScreen) : ne pas l'importer.
-                            Verrouillée : QUELLE créature il faut. */}
-                        <Text style={styles.reliqueDesc} numberOfLines={2}>
-                          {possedee
-                            ? `${describeUpgradeEffect(item)} / nv`
-                            : `🔒 Nécessite ${(CREATURES.find((c) => c.id === item.creatureId) || { stages: [{ name: '???' }] }).stages[0].name}`}
-                        </Text>
-                      </View>
-                      {possedee ? <PastillePrix texte={`💰 ${formatNum(prix)}`} ok={ok} largeur={92} hauteur={32} onPress={acheterRelique} /> : null}
-                    </View>
-                  );
-                })}
-            </ScrollView>
-          </GrandPanneau>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -588,10 +560,5 @@ const styles = StyleSheet.create({
   ficheIntitule: { color: '#d8c7a4', fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2 },
   ficheGain: { color: '#8ff0e0', fontSize: 17, fontWeight: '900', textAlign: 'center' },
   ficheBarre: { height: 12, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.5)', padding: 2, marginBottom: 8, justifyContent: 'center' },
-  reliquesIntro: { color: '#dccbaa', fontSize: 11.5, textAlign: 'center', marginBottom: 8 },
   ficheLigne: { color: '#d8e8e6', fontSize: 13, textAlign: 'center', marginBottom: 4 },
-  relique: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(98,250,235,0.18)', gap: 10 },
-  reliqueEmoji: { fontSize: 26, width: 34, textAlign: 'center' },
-  reliqueNom: { color: '#fff7e0', fontSize: 13, fontWeight: '900' },
-  reliqueDesc: { color: '#b9cccb', fontSize: 11 },
 });
