@@ -1298,3 +1298,20 @@ D'AUTO-CLICS. **Les 20 reliques sont dans l'arbre** (verrouillées « ??? » +
   0,55.
 - Audit réécrit : reliques par famille, 3 paliers, CHAQUE relique et auto-clic
   doit avoir sa place ; sabotage robuste (étiquettes 420 → 45 collisions).
+
+
+## 27/09 — Boutique : l'ARBRE est ABANDONNÉ, cap sur le GRIMOIRE
+
+L'auteur : l'arbre à 8 départs « trop le bordel ». Leçon : 53 éléments
+visibles à la fois avec des lignes = illisible quelle que soit la
+disposition. Choix parmi 3 concepts (Échoppe, Constellations, Grimoire —
+design/a-integrer/02-boutique/PROMPTS-CONCEPTS.md) : **le Grimoire** (livre
+ouvert : chapitre illustré à gauche, 5 éléments à droite avec médaillon,
+nom, gain, sceau de cire = prix ; marque-pages par chapitre ; sceau de
+l'Ascension sous le livre). En attendant, l'ARBRE reste en place
+(fonctionnel) avec l'ancienne liste en filet.
+Plan : 5 chapitres (Force du tap, Critiques, Auto-clics par palier,
+Sanctuaire, Reliques) ; 1re double page = illustration + 5, suivantes = 5 + 5 ;
+pages tournées au glisser (rotateY, pilote natif) ; Griffes / Offrande à côté
+du sceau de l'Ascension. Images : série 1 = 6 pièces (56-61), série 2 = 6
+PLANCHES de 9 icônes (52 éléments) découpées automatiquement par cellules.
