@@ -1315,3 +1315,5 @@ Sanctuaire, Reliques) ; 1re double page = illustration + 5, suivantes = 5 + 5 ;
 pages tournées au glisser (rotateY, pilote natif) ; Griffes / Offrande à côté
 du sceau de l'Ascension. Images : série 1 = 6 pièces (56-61), série 2 = 6
 PLANCHES de 9 icônes (52 éléments) découpées automatiquement par cellules.
+
+**Grimoire en PORTRAIT (retour de l'auteur)** : images Gemini en 9:16 ; livre ouvert À LA VERTICALE (reliure horizontale au milieu, page du haut / page du bas, chacune sur toute la largeur du téléphone) ; pages tournées vers le haut ; marque-pages qui dépassent du bord droit. Prompts 56-61 réécrits.
