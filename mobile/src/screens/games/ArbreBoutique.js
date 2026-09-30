@@ -180,7 +180,9 @@ function construireNoeuds(p) {
       const parent = eventail[f] || i === 0 ? (parentFamille[f] || 'ascension') : familles[f][i - 1].id;
       ajouter({ id: 'relique:' + item.id, parent, x: pos[0], y: pos[1], taille: 70,
         emoji: item.emoji, nom: item.name, niveau: `nv ${niveau}`, prix, etat: etat(!ok, false, prix, p.coins),
-        gain: ok ? `${describeUpgradeEffect(item)} / nv` : `🔒 Nécessite ${nomCreature}`,
+        // Court (« Nécessite Zephyrion » était coupé sur les pages du grimoire) ;
+        // la phrase complète reste dans la fiche.
+        gain: ok ? `${describeUpgradeEffect(item)} / nv` : `🔒 ${nomCreature}`,
         onPress: () => p.onBuyUpgradeItem(item.id), allume: niveau > 0,
         detail: ok ? `Relique de ${nomCreature} : ${describeUpgradeEffect(item)} par niveau.` : `🔒 Obtiens ${nomCreature} pour débloquer cette relique.` });
     });
@@ -386,6 +388,56 @@ const Noeud = React.memo(function Noeud({ n, compense, pouls, onAppui, onAppuiLo
 }, (x, y) => x.compense === y.compense && x.n.etat === y.n.etat && x.n.prix === y.n.prix && x.n.niveau === y.n.niveau && x.n.gain === y.n.gain
   && x.n.nom === y.n.nom && x.n.progres === y.n.progres && x.n.x === y.n.x && x.n.y === y.n.y);
 
+// Fiche d'un élément : un VRAI menu (fond presque opaque, fenêtre en bois,
+// médaillon, niveau, gain, détail, bouton d'achat). Réutilisée par l'arbre
+// ET par le grimoire (27/09).
+export function FicheElement({ fiche, onFermer, onAcheter, onAscend, formatNum }) {
+  if (!fiche) return null;
+  return (
+    <View style={styles.menuFond}>
+      <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => onFermer()} />
+      <FenetreBois titre={fiche.etat === 'verrouille' ? '???' : fiche.nom} largeur={FICHE_L} onFermer={() => onFermer()}>
+        <View style={[styles.ficheMedaillon, { borderColor: COULEUR_ETAT[fiche.etat] }]}>
+          <Text style={styles.ficheEmoji}>{fiche.etat === 'verrouille' ? '🔒' : fiche.emoji}</Text>
+        </View>
+        {fiche.niveau && fiche.etat !== 'verrouille' ? <Text style={styles.ficheNiveau}>Niveau actuel : {fiche.niveau}</Text> : null}
+        {fiche.gain ? (
+          <View style={[styles.ficheBloc, { width: FICHE_INT }]}>
+            <Text style={styles.ficheIntitule}>{fiche.etat === 'verrouille' ? 'Pour le débloquer' : 'Ce que ça rapporte'}</Text>
+            <Text style={[styles.ficheGain, fiche.etat === 'verrouille' && styles.gainVerrou]}>{fiche.gain}</Text>
+          </View>
+        ) : null}
+        {fiche.detail && fiche.detail !== fiche.gain ? <Text style={[styles.ficheLigne, { width: FICHE_INT }]}>{fiche.detail}</Text> : null}
+        {fiche.progres != null ? (
+          <View style={[styles.ficheBarre, { width: FICHE_INT }]}>
+            <View style={{ width: Math.round((FICHE_INT - 4) * fiche.progres), height: 8, borderRadius: 4, backgroundColor: CYAN_CHAMPIGNON }} />
+          </View>
+        ) : null}
+        {fiche.id === 'ascension' ? (
+          <BoutonLarge
+            couleur={fiche.etat === 'achetable' ? 'vert' : 'rouge'}
+            largeur={FICHE_INT}
+            hauteur={56}
+            desactive={fiche.etat !== 'achetable'}
+            texte="🌟 Faire l'Ascension"
+            onPress={() => { onFermer(); if (onAscend) onAscend(); }}
+          />
+        ) : fiche.prix != null && fiche.etat !== 'verrouille' && fiche.etat !== 'max' ? (
+          <BoutonLarge
+            couleur={fiche.etat === 'achetable' ? 'vert' : 'rouge'}
+            largeur={FICHE_INT}
+            hauteur={56}
+            desactive={fiche.etat !== 'achetable'}
+            texte={`Acheter · ${fiche.devise === 'diamants' ? '💎' : '💰'} ${formatNum(fiche.prix)}`}
+            sousTexte={fiche.etat === 'achetable' ? null : 'Pas assez de pièces'}
+            onPress={() => onAcheter(fiche.id)}
+          />
+        ) : fiche.etat === 'max' ? <Text style={styles.ficheNiveau}>⭐ Niveau maximum atteint</Text> : null}
+      </FenetreBois>
+    </View>
+  );
+}
+
 // ── L'arbre ────────────────────────────────────────────────────────────
 function ArbreBoutique(props) {
   const { vibrations } = useSettings();
@@ -456,49 +508,7 @@ function ArbreBoutique(props) {
         <BanniereTitre titre="Améliorations" largeur={220} />
       </View>
 
-      {fiche ? (
-        <View style={styles.menuFond}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setFicheId(null)} />
-          <FenetreBois titre={fiche.etat === 'verrouille' ? '???' : fiche.nom} largeur={FICHE_L} onFermer={() => setFicheId(null)}>
-            <View style={[styles.ficheMedaillon, { borderColor: COULEUR_ETAT[fiche.etat] }]}>
-              <Text style={styles.ficheEmoji}>{fiche.etat === 'verrouille' ? '🔒' : fiche.emoji}</Text>
-            </View>
-            {fiche.niveau && fiche.etat !== 'verrouille' ? <Text style={styles.ficheNiveau}>Niveau actuel : {fiche.niveau}</Text> : null}
-            {fiche.gain ? (
-              <View style={[styles.ficheBloc, { width: FICHE_INT }]}>
-                <Text style={styles.ficheIntitule}>{fiche.etat === 'verrouille' ? 'Pour le débloquer' : 'Ce que ça rapporte'}</Text>
-                <Text style={[styles.ficheGain, fiche.etat === 'verrouille' && styles.gainVerrou]}>{fiche.gain}</Text>
-              </View>
-            ) : null}
-            {fiche.detail && fiche.detail !== fiche.gain ? <Text style={[styles.ficheLigne, { width: FICHE_INT }]}>{fiche.detail}</Text> : null}
-            {fiche.progres != null ? (
-              <View style={[styles.ficheBarre, { width: FICHE_INT }]}>
-                <View style={{ width: Math.round((FICHE_INT - 4) * fiche.progres), height: 8, borderRadius: 4, backgroundColor: CYAN_CHAMPIGNON }} />
-              </View>
-            ) : null}
-            {fiche.id === 'ascension' ? (
-              <BoutonLarge
-                couleur={fiche.etat === 'achetable' ? 'vert' : 'rouge'}
-                largeur={FICHE_INT}
-                hauteur={56}
-                desactive={fiche.etat !== 'achetable'}
-                texte="🌟 Faire l'Ascension"
-                onPress={() => { setFicheId(null); if (props.onAscend) props.onAscend(); }}
-              />
-            ) : fiche.prix != null && fiche.etat !== 'verrouille' && fiche.etat !== 'max' ? (
-              <BoutonLarge
-                couleur={fiche.etat === 'achetable' ? 'vert' : 'rouge'}
-                largeur={FICHE_INT}
-                hauteur={56}
-                desactive={fiche.etat !== 'achetable'}
-                texte={`Acheter · ${fiche.devise === 'diamants' ? '💎' : '💰'} ${formatNum(fiche.prix)}`}
-                sousTexte={fiche.etat === 'achetable' ? null : 'Pas assez de pièces'}
-                onPress={() => acheter(fiche.id)}
-              />
-            ) : fiche.etat === 'max' ? <Text style={styles.ficheNiveau}>⭐ Niveau maximum atteint</Text> : null}
-          </FenetreBois>
-        </View>
-      ) : null}
+      <FicheElement fiche={fiche} onFermer={() => setFicheId(null)} onAcheter={acheter} onAscend={props.onAscend} formatNum={formatNum} />
 
     </View>
   );

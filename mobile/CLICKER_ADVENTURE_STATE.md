@@ -1317,3 +1317,27 @@ du sceau de l'Ascension. Images : série 1 = 6 pièces (56-61), série 2 = 6
 PLANCHES de 9 icônes (52 éléments) découpées automatiquement par cellules.
 
 **Grimoire : IMAGES en portrait, LIVRE ouvert normalement (précision de l'auteur)** : les images Gemini sont en 9:16 (comme l'appli) mais le livre garde sa forme de maquette (pages gauche / droite, plus large que haut) — pas de livre retourné (rendu médiocre). Prompts 56-61 réécrits en conséquence.
+
+**Grimoire construit (27/09)** : `screens/games/GrimoireBoutique.js` remplace
+l'arbre dans la boutique (filet : l'ancienne liste). Pièces 56-61 reçues DANS
+L'ORDRE INVERSE (rangées par contenu) ; sceau de prix ROND (badge) ; planche
+des illustrations découpée par CELLULES 2 × 3 ; halos rosés repeints en OR
+(le fantôme garde son rose) ; 5 marque-pages par rotation de teinte ; sceau
+gris « pas assez ».
+- Zones d'écriture MESURÉES sur l'image du livre (28 % de sa largeur chacune)
+  → livre affiché 1,18 × l'écran (seules les couvertures dépassent),
+  marque-pages sur la tranche HAUTE (icône de chapitre), 4 éléments par page,
+  encre foncée sur parchemin. 1re double page d'un chapitre = intro + 4,
+  suivantes 4 + 4 ; flèches, glisser, numéro « n / N » sur étiquette ; le
+  livre enchaîne les chapitres.
+- Modèle NON dupliqué : `construireNoeuds` (arbre) ; fiche `FicheElement`
+  extraite de l'arbre et partagée.
+- Chapitres : source unique `games/clicker/grimoireChapitres.js` + contrôle
+  **auditGrimoireComplet** (chaque élément achetable une seule fois ;
+  sabotage : Dégâts critiques retirés → crie).
+- ⚠️ **Piège : `pointerEvents: 'box-none'` DANS LE STYLE est ignoré par le
+  banc (navigateur)** : une couche plein écran animée recouvrait les
+  marque-pages (clic sans effet). Remède : UNE couche par page, à la taille
+  de la page — ne jamais poser de couche plein écran « transparente au
+  toucher » par-dessus des boutons.
+- Série 2 (icônes) : 6 planches de 9 (prompts 62-67).
