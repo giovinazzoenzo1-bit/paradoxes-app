@@ -5,6 +5,7 @@ import { useSettings } from '../../context/SettingsContext';
 import { vibrerSucces, CRISTAL, CYAN_CHAMPIGNON } from './fenetreBois';
 import { construireNoeuds, FicheElement } from './ArbreBoutique';
 import BackButton from '../../components/BackButton';
+import { ICONES } from './grimoireIcones';
 
 // ════════════════════════════════════════════════════════════════════
 //  BOUTIQUE EN GRIMOIRE (27/09, choix de l'auteur après l'arbre)
@@ -87,7 +88,9 @@ function Entree({ n, formatNum, onAppui, onAppuiLong }) {
     <TouchableOpacity activeOpacity={0.7} onPress={() => onAppui(n.id)} onLongPress={() => onAppuiLong(n.id)} delayLongPress={320} style={styles.entree}>
       <View style={styles.entreeMedaillon}>
         <Image source={IMG.medaillon} resizeMode="contain" style={styles.entreeMedaillonImg} />
-        <Text style={[styles.entreeEmoji, verrou && { opacity: 0.55 }]}>{verrou ? '🔒' : n.emoji}</Text>
+        {/* Icône peinte (planches Gemini) ; verrouillé : le cadenas garde le mystère. */}
+        {!verrou && ICONES[n.id] ? <Image source={ICONES[n.id]} resizeMode="contain" style={styles.entreeIcone} />
+          : <Text style={[styles.entreeEmoji, verrou && { opacity: 0.55 }]}>{verrou ? '🔒' : n.emoji}</Text>}
       </View>
       <View style={{ width: Z_D.l - 40 }}>
         <Text style={styles.entreeNom} numberOfLines={2}>{verrou ? '???' : n.nom}{!verrou && n.niveau ? ` · ${n.niveau}` : ''}</Text>
@@ -115,7 +118,7 @@ function Special({ n, formatNum, onAppui, onAppuiLong, style }) {
     <TouchableOpacity activeOpacity={0.7} onPress={() => onAppui(n.id)} onLongPress={() => onAppuiLong(n.id)} delayLongPress={320} style={[styles.special, style]}>
       <View style={styles.specialMedaillon}>
         <Image source={IMG.medaillon} resizeMode="contain" style={styles.specialMedaillonImg} />
-        <Text style={styles.specialEmoji}>{n.emoji}</Text>
+        {ICONES[n.id] ? <Image source={ICONES[n.id]} resizeMode="contain" style={styles.specialIcone} /> : <Text style={styles.specialEmoji}>{n.emoji}</Text>}
       </View>
       <Text style={styles.specialNom} numberOfLines={1}>{n.nom}</Text>
       <View style={styles.entreePrixLigne}>
@@ -264,7 +267,8 @@ function Grimoire(props) {
         <View style={{ gap: 6, alignItems: 'flex-end', pointerEvents: 'none' }}>
           <View style={styles.plaque}>
             <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImg} />
-            <Text style={styles.plaqueTexte} numberOfLines={1}>💰 {formatNum(props.coins || 0)}</Text>
+            <Image source={ICONES.piece} resizeMode="contain" style={{ width: 20, height: 20, marginRight: 5 }} />
+            <Text style={styles.plaqueTexte} numberOfLines={1}>{formatNum(props.coins || 0)}</Text>
           </View>
           <View style={styles.plaque}>
             <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImg} />
@@ -274,7 +278,7 @@ function Grimoire(props) {
         </View>
       </View>
 
-      <FicheElement fiche={ficheId ? parId[ficheId] : null} onFermer={() => setFicheId(null)} onAcheter={acheter} onAscend={props.onAscend} formatNum={formatNum} />
+      <FicheElement fiche={ficheId && parId[ficheId] ? { ...parId[ficheId], icone: ICONES[ficheId] } : null} onFermer={() => setFicheId(null)} onAcheter={acheter} onAscend={props.onAscend} formatNum={formatNum} />
     </View>
   );
 }
@@ -307,6 +311,7 @@ const styles = StyleSheet.create({
   entreeMedaillon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   entreeMedaillonImg: { position: 'absolute', left: 0, top: 0, width: 34, height: 34 },
   entreeEmoji: { fontSize: 15 },
+  entreeIcone: { width: 24, height: 24 },
   entreeNom: { color: ENCRE, fontSize: 10, fontWeight: '900', lineHeight: 12, includeFontPadding: false },
   entreeGain: { color: '#2e6b2f', fontSize: 9, fontWeight: '800', marginTop: 1, includeFontPadding: false },
   entreeGainVerrou: { color: '#8b4a1c' },
@@ -325,6 +330,7 @@ const styles = StyleSheet.create({
   specialMedaillon: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
   specialMedaillonImg: { position: 'absolute', left: 0, top: 0, width: 50, height: 50 },
   specialEmoji: { fontSize: 22 },
+  specialIcone: { width: 34, height: 34 },
   specialNom: { color: '#fff7e0', fontSize: 11, fontWeight: '900', marginTop: 2, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
   specialPrix: { color: '#ffe38a', fontSize: 11, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
   ascension: { position: 'absolute', width: 104, height: 104, alignItems: 'center', justifyContent: 'center' },

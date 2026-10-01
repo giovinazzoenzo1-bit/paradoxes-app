@@ -398,7 +398,9 @@ export function FicheElement({ fiche, onFermer, onAcheter, onAscend, formatNum }
       <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => onFermer()} />
       <FenetreBois titre={fiche.etat === 'verrouille' ? '???' : fiche.nom} largeur={FICHE_L} onFermer={() => onFermer()}>
         <View style={[styles.ficheMedaillon, { borderColor: COULEUR_ETAT[fiche.etat] }]}>
-          <Text style={styles.ficheEmoji}>{fiche.etat === 'verrouille' ? '🔒' : fiche.emoji}</Text>
+          {/* Icône peinte si fournie (grimoire), sinon l'émoji. */}
+          {fiche.etat !== 'verrouille' && fiche.icone ? <Image source={fiche.icone} resizeMode="contain" style={{ width: 56, height: 56 }} />
+            : <Text style={styles.ficheEmoji}>{fiche.etat === 'verrouille' ? '🔒' : fiche.emoji}</Text>}
         </View>
         {fiche.niveau && fiche.etat !== 'verrouille' ? <Text style={styles.ficheNiveau}>Niveau actuel : {fiche.niveau}</Text> : null}
         {fiche.gain ? (

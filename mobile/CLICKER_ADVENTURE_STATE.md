@@ -1341,3 +1341,16 @@ gris « pas assez ».
   de la page — ne jamais poser de couche plein écran « transparente au
   toucher » par-dessus des boutons.
 - Série 2 (icônes) : 6 planches de 9 (prompts 62-67).
+
+**Icônes du Grimoire (27/09)** : 6 planches Gemini de 9 (prompts 62-67),
+reçues dans l'ORDRE INVERSE (comme la série 1 — l'envoi groupé de l'auteur
+inverse l'ordre : TOUJOURS identifier par le contenu). Découpées par cellules
+3 × 3 ; chaque icône associée à son élément par NOM EXACT dans les données
+(identifiants internes trompeurs : « griffeBrais » = Griffe de Pyrosile,
+« titanfoudre » = Héraut d'Orage). 54 icônes (52 éléments + pièce +
+diamant) dans `assets/grimoire/icones/`, carte GÉNÉRÉE
+`screens/games/grimoireIcones.js` (clé = identifiant du modèle).
+Affichées dans les médaillons du livre, sous le livre, dans l'en-tête
+(pièce) et dans la fiche (`fiche.icone`, partagée avec l'arbre). Un élément
+verrouillé garde le cadenas (mystère). Verrou de relique raccourci :
+« 🔒 <créature> ».
