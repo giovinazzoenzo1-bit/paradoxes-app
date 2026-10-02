@@ -19,29 +19,41 @@ import {
 export const TAPS_PAR_SECONDE_REF = 1000 / 150;
 const SERIE_SOUTENUE = 1e6; // au rythme de référence, la Transe est au plafond
 
-export function revenuParSeconde(e) {
+// Ce que rapporte UN tap (moyenne, critiques comprises, HORS Transe) : la
+// valeur affichée « 👆 /tap » du Grimoire (27/09). Formules de handleTap.
+export function valeurTap(e) {
   const ub = upgradeBonuses(e.upgradeLevels || {});
   const p = Math.min(1, critChance(e.critLevel || 0) + (ub.critChancePct || 0));
   const critM = critMultiplier(e.critDamageLevel || 0) * (1 + (ub.critMultPct || 0));
   const tapFixe = tapDamage(e.tapPower || 1) + (ub.tapFlat || 0) + tapUpgradeBonus(e.tapUpgrades || {});
-  const parTap = tapFixe * transeMultiplier(SERIE_SOUTENUE) * ((1 - p) + p * critM);
   const gain = sanctuaryMultiplier(e.sanctuaryLevel || 0) * essenceBonusMultiplier(e.essence || 0)
     * ascensionSpeedMultiplier(e.ascensionCount || 0) * (1 + (ub.coinPct || 0));
-  const passif = passiveRate({
+  return tapFixe * ((1 - p) + p * critM) * gain;
+}
+
+// Revenu PASSIF par seconde (auto-clics…) : la valeur affichée « ⚙️ /s ».
+export function revenuPassif(e) {
+  return passiveRate({
     autoClickers: e.autoClickers || {}, upgradeLevels: e.upgradeLevels || {}, sanctuaryLevel: e.sanctuaryLevel || 0,
     essence: e.essence || 0, ascensionCount: e.ascensionCount || 0, powerBoost: 1,
   });
-  return TAPS_PAR_SECONDE_REF * parTap * gain + passif;
+}
+
+// Revenu total au rythme de référence (sert au CONSEIL) : taps × Transe au
+// plafond + passif. Mêmes formules, découpées en deux parts (27/09).
+export function revenuParSeconde(e) {
+  const passif = revenuPassif(e);
+  return TAPS_PAR_SECONDE_REF * valeurTap(e) * transeMultiplier(SERIE_SOUTENUE) + passif;
 }
 
 // État après UN niveau de plus. `delta` : { tapPower: 1 } | { critLevel: 1 } |
 // { critDamageLevel: 1 } | { sanctuaryLevel: 1 } | { tapUpgrades: id } |
 // { autoClickers: id } | { upgradeLevels: id }.
-export function etatApres(e, delta) {
+export function etatApres(e, delta, q = 1) {
   const n = { ...e };
   for (const [cle, v] of Object.entries(delta || {})) {
-    if (typeof v === 'number') n[cle] = (e[cle] || 0) + v;
-    else n[cle] = { ...(e[cle] || {}), [v]: ((e[cle] || {})[v] || 0) + 1 };
+    if (typeof v === 'number') n[cle] = (e[cle] || 0) + v * q;
+    else n[cle] = { ...(e[cle] || {}), [v]: ((e[cle] || {})[v] || 0) + q };
   }
   return n;
 }

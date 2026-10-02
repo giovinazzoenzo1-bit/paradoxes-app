@@ -1498,3 +1498,25 @@ d'un require ne protège RIEN avec Metro.**
 Conséquence : sur l'appli construite actuelle, les sons resteront muets jusqu'à
 une NOUVELLE construction native incluant expo-audio ; dans Expo Go 57 (qui
 l'inclut), ils jouent.
+
+
+## 02/10 — Boutique, étape 1 de la suite : VOIR ce que rapporte chaque achat
+
+- En-tête du Grimoire : « 👆 X /tap » (valeur MOYENNE d'un tap, critiques
+  comprises, HORS Transe) et « ⚙️ Y /s » (revenu passif) — deux mesures
+  séparées : un « revenu par seconde » unique (taps au rythme de référence)
+  aurait trompé un joueur qui ne tape pas.
+- À l'achat, le VRAI gain s'envole dans sa bonne unité (« +2,8/tap »,
+  « +3,5/s », les deux pour le Sanctuaire), calculé AVANT l'achat pour la
+  quantité achetée (×1 / ×10 / MAX).
+- conseilBoutique découpé : `valeurTap` + `revenuPassif` (revenuParSeconde
+  INCHANGÉ, vérifié au millième) ; `etatApres(e, delta, q)`.
+  auditConseilBoutique étendu : chaque achat change la BONNE unité (Pacte →
+  tap seulement, auto-clic → passif seulement), 10 niveaux ≈ 10 × 1 ; sabotage
+  recalé sur la nouvelle ligne.
+- En-tête : sélecteur et cadre des gains placés dans l'espace LIBRE calculé
+  (largeur − 268 : 92 pts sur un Android de 360) — mesuré sans chevauchement à
+  360 / 390 / 412.
+- Banc : un clic INSTANTANÉ (souris enfoncée / relâchée au même instant) ne
+  déclenche pas un Pressable onPressIn dans le navigateur — tester avec un
+  appui de ~150 ms (le téléphone, lui, déclenche au contact).

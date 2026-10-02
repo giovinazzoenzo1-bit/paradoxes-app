@@ -6,7 +6,7 @@ import { vibrerSucces, CRISTAL, CYAN_CHAMPIGNON } from './fenetreBois';
 import { construireNoeuds, FicheElement } from './ArbreBoutique';
 import BackButton from '../../components/BackButton';
 import { ICONES } from './grimoireIcones';
-import { meilleurAchat } from '../../games/clicker/conseilBoutique';
+import { meilleurAchat, valeurTap, revenuPassif, etatApres } from '../../games/clicker/conseilBoutique';
 import { jouerSon } from './sonsBoutique';
 
 // ════════════════════════════════════════════════════════════════════
@@ -44,6 +44,12 @@ const rect = ([x0, y0, x1, y1]) => ({ x: Math.round(LIVRE_X + x0 * LIVRE_L), y: 
 const F = { gauche: rect(FEUILLE.gauche), droite: rect(FEUILLE.droite) };
 const Z = { gauche: rect(ZONE.gauche), droite: rect(ZONE.droite) };
 const PAR_PAGE = 4;
+// Espace LIBRE de l'en-tête, entre RETOUR (108 pts depuis 12) et les soldes
+// (124 pts depuis le bord droit) : le sélecteur et les gains s'y logent, quelle
+// que soit la largeur (un Android de 360 pts n'a que ~92 pts libres).
+const LIBRE_G = 12 + 108 + 6;
+const LIBRE_L = Math.max(80, (ECRAN_L - 12 - 124 - 6) - LIBRE_G);
+const MODE_L = Math.min(34, Math.floor((LIBRE_L - 6) / 3));
 const MEDAILLON = 30;
 const ONGLET_L = 46;
 const ONGLET_H = Math.round((ONGLET_L * 243) / 110);
@@ -152,6 +158,10 @@ function Grimoire(props) {
   const noeuds = useMemo(() => construireNoeuds(props), [props]);
   const parId = useMemo(() => Object.fromEntries(noeuds.map((n) => [n.id, n])), [noeuds]);
   const frais = useRef(parId); frais.current = parId;
+  const etatRef = useRef(null);
+  // Gains lisibles : 1 décimale sous 10 (« 0,6 »), entier sous 1 000, puis K/M…
+  const fmtGain = (x) => (x >= 1000 ? formatNum(x) : x >= 10 ? String(Math.round(x)) : Number(x.toFixed(1)).toString().replace('.', ','));
+  const fmtRef = useRef(fmtGain); fmtRef.current = fmtGain;
   const vib = useRef(vibrations); vib.current = vibrations;
   const [ficheId, setFicheId] = useState(null);
   const [position, setPosition] = useState({ c: 0, p: 0 });
@@ -186,7 +196,10 @@ function Grimoire(props) {
   const etatJeu = { tapPower: props.tapPower, critLevel: props.critLevel, critDamageLevel: props.critDamageLevel, sanctuaryLevel: props.sanctuaryLevel,
     autoClickers: props.autoClickers, upgradeLevels: props.upgradeLevels, tapUpgrades: props.tapUpgrades, ascensionCount: props.ascensionCount, essence: props.essence };
   const candidats = noeuds.filter((n) => n.delta && n.etat === 'achetable' && dansLeLivre.has(n.id)).map((n) => ({ id: n.id, delta: n.delta, prix: n.prix }));
+  etatRef.current = etatJeu;
   const signature = JSON.stringify([etatJeu, candidats.map((c) => c.id)]);
+  // Ce que tu gagnes : par tap (critiques comprises, hors Transe) et en passif.
+  const gains = useMemo(() => ({ tap: valeurTap(etatJeu), passif: revenuPassif(etatJeu) }), [signature]);
   // ~1 à 6 ms : PAS à chaque rafraîchissement des pièces (le bug des taps a
   // montré ce que coûte la charge) — seulement quand la signature change.
   const conseilId = useMemo(() => meilleurAchat(etatJeu, candidats), [signature]);
@@ -202,11 +215,24 @@ function Grimoire(props) {
     if (id === 'ascension' || !n.onPress) { setFicheId(id); return; }
     const o = offreRef.current(n);
     if (!o.ok) { setFicheId(id); return; }
+    // Le VRAI gain de cet achat, dans sa bonne unité (« +20/tap », « +3,5/s »),
+    // calculé AVANT l'achat (l'état changera au rendu suivant) avec les
+    // formules du jeu (conseilBoutique). Sans effet mesurable : « +q ».
+    let texte = `+${o.q}`;
+    const e = etatRef.current;
+    if (n.delta && e) {
+      const e2 = etatApres(e, n.delta, o.q);
+      const dTap = valeurTap(e2) - valeurTap(e); const dPas = revenuPassif(e2) - revenuPassif(e);
+      const parts = [];
+      if (dTap > 1e-6) parts.push(`+${fmtRef.current(dTap)}/tap`);
+      if (dPas > 1e-6) parts.push(`+${fmtRef.current(dPas)}/s`);
+      if (parts.length) texte = parts.join(' · ');
+    }
     n.onPress(o.q);
     vibrerSucces(vib.current);
     jouerSon('achat', sonsRef.current);
     if (x != null) {
-      setEffet({ x, y, cle: Date.now(), texte: `+${o.q}` });
+      setEffet({ x, y, cle: Date.now(), texte });
       effetAnim.setValue(0);
       // Retiré à la fin : un texte invisible resté à l'écran pourrait
       // intercepter le toucher suivant, pile sur le bouton de prix.
@@ -389,6 +415,13 @@ function Grimoire(props) {
       ) : null}
       <Special n={parId.offrande} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} style={{ left: ECRAN_L - 10 - 104, top: SOUS_LIVRE_Y + 4 }} />
 
+      {/* Ce que tu gagnes, sous le sélecteur (retour de l'auteur : « on ne voit pas
+          combien un item fait gagner »). */}
+      <View style={[styles.gains, { pointerEvents: 'none' }]}>
+        {/* Deux lignes : entre RETOUR et les soldes, il n'y a que ~125 points. */}
+        <Text style={styles.gainsTexte} numberOfLines={1}>👆 {fmtGain(gains.tap)} /tap</Text>
+        <Text style={styles.gainsTexte} numberOfLines={1}>⚙️ {fmtGain(gains.passif)} /s</Text>
+      </View>
       {/* En-tête : RETOUR et les soldes, en DEUX éléments séparés — ⚠️ pas de
           bande pleine largeur « transparente au toucher » : elle recouvrait le
           sélecteur ×1 / ×10 / MAX (même piège que les marque-pages). */}
@@ -408,7 +441,7 @@ function Grimoire(props) {
 
       {/* « +1 » qui s'envole à l'achat. */}
       {effet ? (
-        <Animated.View key={effet.cle} style={{ position: 'absolute', left: effet.x - 30, top: effet.y - 34, width: 60, pointerEvents: 'none',
+        <Animated.View key={effet.cle} style={{ position: 'absolute', left: effet.x - 90, top: effet.y - 34, width: 180, pointerEvents: 'none',
           opacity: effetAnim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }),
           transform: [{ translateY: effetAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -34] }) }, { scale: effetAnim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.7, 1.15, 1] }) }] }}>
           <Text style={styles.effet}>{effet.texte || '+1'}</Text>
@@ -489,10 +522,12 @@ const styles = StyleSheet.create({
   pastille: { position: 'absolute', right: 4, top: 4, width: 10, height: 10, borderRadius: 5, backgroundColor: CYAN_CHAMPIGNON, borderWidth: 1, borderColor: '#ffffff' },
   pastilleConseil: { position: 'absolute', right: 1, top: 1, width: 16, height: 16, borderRadius: 8, backgroundColor: '#f2c94c', borderWidth: 1, borderColor: '#7a4a08', alignItems: 'center', justifyContent: 'center' },
   pastilleConseilTexte: { color: '#5a3200', fontSize: 10, fontWeight: '900', includeFontPadding: false, lineHeight: 12 },
-  modes: { position: 'absolute', top: 50, left: Math.round(ECRAN_L / 2 - 56), width: 112, flexDirection: 'row', justifyContent: 'space-between' },
-  modeBtn: { width: 34, height: 24, borderRadius: 12, backgroundColor: 'rgba(30,18,6,0.82)', borderWidth: 1.5, borderColor: '#8a6a3a', alignItems: 'center', justifyContent: 'center' },
+  modes: { position: 'absolute', top: 50, left: LIBRE_G + Math.round((LIBRE_L - (3 * MODE_L + 6)) / 2), width: 3 * MODE_L + 6, flexDirection: 'row', justifyContent: 'space-between' },
+  modeBtn: { width: MODE_L, height: 24, borderRadius: 12, backgroundColor: 'rgba(30,18,6,0.82)', borderWidth: 1.5, borderColor: '#8a6a3a', alignItems: 'center', justifyContent: 'center' },
   modeBtnActif: { backgroundColor: '#e8b84a', borderColor: '#fff0c0' },
   modeTexte: { color: '#f3e6c8', fontSize: 10.5, fontWeight: '900', includeFontPadding: false },
   modeTexteActif: { color: '#3b2208' },
-  effet: { width: 60, textAlign: 'center', color: '#ffd84a', fontSize: 20, fontWeight: '900', textShadowColor: 'rgba(60,30,0,0.9)', textShadowRadius: 4 },
+  gains: { position: 'absolute', top: 79, left: LIBRE_G, width: LIBRE_L, height: 32, borderRadius: 9, backgroundColor: 'rgba(20,12,4,0.72)', borderWidth: 1, borderColor: 'rgba(232,184,74,0.55)', alignItems: 'center', justifyContent: 'center' },
+  gainsTexte: { color: '#fff1cf', fontSize: 10, fontWeight: '800', lineHeight: 13, includeFontPadding: false },
+  effet: { width: 180, textAlign: 'center', color: '#ffd84a', fontSize: 16, fontWeight: '900', textShadowColor: 'rgba(60,30,0,0.9)', textShadowRadius: 4 },
 });

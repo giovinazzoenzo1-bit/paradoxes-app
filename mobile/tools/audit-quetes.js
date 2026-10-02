@@ -4088,6 +4088,16 @@ function auditConseilBoutique() {
       { id: 'sanct', delta: { sanctuaryLevel: 1 }, prix: L.sanctuaryUpgradeCost(e.sanctuaryLevel) },
       ...L.AUTOCLICKERS.slice(0, 4).map((a) => ({ id: a.id, delta: { autoClickers: a.id }, prix: L.autoClickerCost(a, e.autoClickers[a.id] || 0, e.ascensionCount) })),
     ];
+    // Bonne UNITÉ (affichée dans le Grimoire) : le Pacte change le tap, pas le
+    // passif ; un auto-clic change le passif, pas le tap.
+    const tapPacte = C.valeurTap(C.etatApres(e, { tapPower: 1 })) - C.valeurTap(e);
+    const pasPacte = C.revenuPassif(C.etatApres(e, { tapPower: 1 })) - C.revenuPassif(e);
+    const tapAuto = C.valeurTap(C.etatApres(e, { autoClickers: L.AUTOCLICKERS[0].id })) - C.valeurTap(e);
+    const pasAuto = C.revenuPassif(C.etatApres(e, { autoClickers: L.AUTOCLICKERS[0].id })) - C.revenuPassif(e);
+    if (!(tapPacte > 0) || Math.abs(pasPacte) > 1e-9) pb.push(`${nom} : le Pacte doit changer le tap (${tapPacte}) et pas le passif (${pasPacte})`);
+    if (!(pasAuto > 0) || Math.abs(tapAuto) > 1e-9) pb.push(`${nom} : un auto-clic doit changer le passif (${pasAuto}) et pas le tap (${tapAuto})`);
+    const q10 = C.valeurTap(C.etatApres(e, { tapPower: 1 }, 10)) - C.valeurTap(e);
+    if (!(q10 > tapPacte * 5)) pb.push(`${nom} : 10 niveaux de Pacte ne rapportent pas ~10 × 1 niveau (${q10} vs ${tapPacte})`);
     const attendu = cand.map((c) => [c.id, C.rendement(e, c.delta, c.prix)]).sort((a, b) => b[1] - a[1])[0][0];
     const choisi = C.meilleurAchat(e, cand);
     if (choisi !== attendu) pb.push(`${nom} : conseillé ${choisi}, attendu ${attendu} (meilleur rendement)`);
