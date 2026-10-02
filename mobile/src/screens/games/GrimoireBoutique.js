@@ -10,120 +10,101 @@ import { ICONES } from './grimoireIcones';
 // ════════════════════════════════════════════════════════════════════
 //  BOUTIQUE EN GRIMOIRE (27/09, choix de l'auteur après l'arbre)
 // ════════════════════════════════════════════════════════════════════
-// Un livre ouvert : à gauche le chapitre illustré, à droite ses éléments ;
-// marque-pages par chapitre ; pages tournées au glisser. Images Gemini de
-// l'auteur (assets/grimoire/, pièces 56-61).
-//
-// ⚠️ Économie INCHANGÉE et logique NON dupliquée : le modèle des éléments
-// (prix, gains, états, achats, verrous) est celui de l'arbre
-// (construireNoeuds), déjà vérifié ; on ignore seulement ses positions.
-// La fiche détaillée (FicheElement) est partagée avec l'arbre.
-//
-// ⚠️ Tailles et positions en NOMBRES (règle du 27/09). Les zones d'écriture
-// des pages sont MESURÉES sur l'image du livre (parchemin dans les cadres
-// ornementaux) : chacune ne fait que 28 % de la largeur du livre, d'où un
-// livre affiché 1,18 × plus large que l'écran (seules les couvertures
-// dépassent) et les marque-pages sur la tranche HAUTE (à droite, ils
-// sortiraient de l'écran).
+// 2e version (retours de l'auteur) :
+// - zones d'écriture MESURÉES HORS ORNEMENTS (plus grand rectangle sans
+//   aucun pixel de cadre à moins de 6 px) : rien ne chevauche les dessins ;
+// - VRAIE page qui se tourne : une feuille (image de la page découpée du
+//   livre) pivote en 3D autour du dos, recto = page quittée, verso = page
+//   d'arrivée, avec une ombre ; deux faces SŒURS (pas imbriquées : sur
+//   téléphone, une rotation parente ne se propage pas en 3D aux enfants) ;
+// - achat CLAIR : le bouton de prix (cire rouge, pièce dorée) achète, toucher
+//   l'élément ouvre sa fiche ; un « +1 » s'envole à chaque achat ;
+// - livre ×1,35 l'écran : le sceau de l'Ascension monte dans l'en-tête et
+//   Griffes / Offrande deviennent le chapitre « Comptoir ».
+// ⚠️ Économie INCHANGÉE, logique NON dupliquée : modèle des éléments =
+// construireNoeuds (arbre, vérifié) ; fiche partagée (FicheElement).
+// ⚠️ Tailles et positions en NOMBRES (règle du 27/09).
 
-const { width: ECRAN_L, height: ECRAN_H } = Dimensions.get('window');
-const LIVRE_L = Math.round(ECRAN_L * 1.18);
+const { width: ECRAN_L } = Dimensions.get('window');
+const LIVRE_L = Math.round(ECRAN_L * 1.35);
 const LIVRE_H = Math.round((LIVRE_L * 807) / 900);
 const LIVRE_X = Math.round((ECRAN_L - LIVRE_L) / 2);
-const LIVRE_Y = 168;
-// Zones d'écriture mesurées (fractions de l'image du livre : x0, y0, x1, y1).
-const ZONE = { gauche: [0.1097, 0.079, 0.3925, 0.7141], droite: [0.5981, 0.0836, 0.8752, 0.7144] };
-const zone = (cote) => {
-  const [x0, y0, x1, y1] = ZONE[cote];
-  return { x: Math.round(LIVRE_X + x0 * LIVRE_L), y: Math.round(LIVRE_Y + y0 * LIVRE_H), l: Math.round((x1 - x0) * LIVRE_L), h: Math.round((y1 - y0) * LIVRE_H) };
-};
-const Z_G = zone('gauche');
-const Z_D = zone('droite');
+const LIVRE_Y = 172;
+// Mesures sur l'image du livre (fractions x0, y0, x1, y1) : FEUILLE = page
+// entière jusqu'au dos (pour la feuille qui tourne) ; ZONE = rectangle libre
+// de tout ornement (pour le texte).
+const FEUILLE = { gauche: [0.0822, 0.0087, 0.5, 0.9145], droite: [0.5, 0.0062, 0.9067, 0.9133] };
+const ZONE = { gauche: [0.1622, 0.1214, 0.4022, 0.6716], droite: [0.5933, 0.1041, 0.8067, 0.7138] };
+const rect = ([x0, y0, x1, y1]) => ({ x: Math.round(LIVRE_X + x0 * LIVRE_L), y: Math.round(LIVRE_Y + y0 * LIVRE_H), l: Math.round((x1 - x0) * LIVRE_L), h: Math.round((y1 - y0) * LIVRE_H) });
+const F = { gauche: rect(FEUILLE.gauche), droite: rect(FEUILLE.droite) };
+const Z = { gauche: rect(ZONE.gauche), droite: rect(ZONE.droite) };
 const PAR_PAGE = 4;
-const ENTREE_H = Math.floor(Z_D.h / PAR_PAGE);
+const MEDAILLON = 30;
 const ONGLET_L = 46;
 const ONGLET_H = Math.round((ONGLET_L * 243) / 110);
-const SOUS_LIVRE_Y = LIVRE_Y + LIVRE_H + 4;
+const PERSPECTIVE = 1400;
+const DUREE_TOUR = 640;
 
 const IMG = {
   livre: require('../../../assets/grimoire/livre.png'),
+  feuille: { gauche: require('../../../assets/grimoire/page-gauche.png'), droite: require('../../../assets/grimoire/page-droite.png') },
   medaillon: require('../../../assets/grimoire/medaillon.png'),
-  sceau: require('../../../assets/grimoire/sceau-prix.png'),
-  sceauGris: require('../../../assets/grimoire/sceau-prix-gris.png'),
   sceauAscension: require('../../../assets/grimoire/sceau-ascension.png'),
   fond: require('../../../assets/menu/fond.jpg'),
   plaque: require('../../../assets/fenetres/plaque-solde.png'),
 };
-
-// Les 5 chapitres = les 5 marque-pages. `ids(N)` : les éléments du modèle,
-// dans l'ordre du livre (le modèle révèle déjà progressivement : le livre se
-// remplit au fil de la partie).
-// Les 5 chapitres = les 5 marque-pages. Listes COMPLÈTES dans la source
-// unique (grimoireChapitres.js, contrôlée) ; le livre ne montre que ce que le
-// modèle révèle (il se remplit au fil de la partie).
 const VISUELS = {
   tap: { marque: require('../../../assets/grimoire/marque-tap.png'), image: require('../../../assets/grimoire/chapitre-tap.png') },
   critiques: { marque: require('../../../assets/grimoire/marque-critiques.png'), image: require('../../../assets/grimoire/chapitre-critiques.png') },
   auto: { marque: require('../../../assets/grimoire/marque-auto.png'), image: require('../../../assets/grimoire/chapitre-auto.png') },
   sanctuaire: { marque: require('../../../assets/grimoire/marque-sanctuaire.png'), image: require('../../../assets/grimoire/chapitre-sanctuaire.png') },
   reliques: { marque: require('../../../assets/grimoire/marque-reliques.png'), image: require('../../../assets/grimoire/chapitre-reliques.png') },
+  // Comptoir : 6e couleur (argent), tirée du marque-page rouge par le code.
+  comptoir: { marque: require('../../../assets/grimoire/marque-comptoir.png'), image: require('../../../assets/grimoire/chapitre-comptoir.png') },
 };
-const CHAPITRES = CHAPITRES_GRIMOIRE.map((c) => ({ ...c, ...VISUELS[c.cle], ids: (N) => c.ids().filter((id) => N[id]) }));
 
 // Pages d'un chapitre : 0 = intro (illustration), puis 4 éléments par page.
-// Une double page = [page 2k, page 2k+1].
-function planchesDuChapitre(ids) {
-  const pages = [{ intro: true }];
-  for (let i = 0; i < ids.length; i += PAR_PAGE) pages.push({ ids: ids.slice(i, i + PAR_PAGE) });
-  const planches = [];
-  for (let k = 0; k < pages.length; k += 2) planches.push([pages[k], pages[k + 1] || null]);
-  return planches;
+// Une double page = [page 2k, page 2k+1]. Chaque page connaît son chapitre.
+function planches(c, ids) {
+  const pages = [{ intro: true, c }];
+  for (let i = 0; i < ids.length; i += PAR_PAGE) pages.push({ c, ids: ids.slice(i, i + PAR_PAGE) });
+  const r = [];
+  for (let k = 0; k < pages.length; k += 2) r.push([pages[k], pages[k + 1] || null]);
+  return r;
 }
 
-// ── Une entrée du livre : médaillon, nom, gain, sceau de prix ─────────────
-function Entree({ n, formatNum, onAppui, onAppuiLong }) {
+// Niveau court pour le badge du médaillon (« nv 3 » → 3, « ×7 » → 7) ; rien à 0.
+function badge(niveau) {
+  if (!niveau) return null;
+  const t = String(niveau).replace('nv ', '').replace('×', '');
+  return t === '0' || t === '0/50' ? null : t;
+}
+
+// ── Une entrée : toucher = fiche ; le BOUTON DE PRIX achète ───────────────
+function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter }) {
   const verrou = n.etat === 'verrouille';
   const ok = n.etat === 'achetable';
+  const b = verrou ? null : badge(n.niveau);
   return (
-    <TouchableOpacity activeOpacity={0.7} onPress={() => onAppui(n.id)} onLongPress={() => onAppuiLong(n.id)} delayLongPress={320} style={styles.entree}>
-      <View style={styles.entreeMedaillon}>
-        <Image source={IMG.medaillon} resizeMode="contain" style={styles.entreeMedaillonImg} />
-        {/* Icône peinte (planches Gemini) ; verrouillé : le cadenas garde le mystère. */}
-        {!verrou && ICONES[n.id] ? <Image source={ICONES[n.id]} resizeMode="contain" style={styles.entreeIcone} />
-          : <Text style={[styles.entreeEmoji, verrou && { opacity: 0.55 }]}>{verrou ? '🔒' : n.emoji}</Text>}
+    <TouchableOpacity activeOpacity={0.7} onPress={() => onFiche(n.id)} style={[styles.entree, { width: largeur, height: hauteur }]}>
+      <View style={styles.medaillon}>
+        <Image source={IMG.medaillon} resizeMode="contain" style={styles.medaillonImg} />
+        {!verrou && ICONES[n.id] ? <Image source={ICONES[n.id]} resizeMode="contain" style={styles.icone} />
+          : <Text style={[styles.emoji, verrou && { opacity: 0.55 }]}>{verrou ? '🔒' : n.emoji}</Text>}
+        {b ? <View style={styles.badge}><Text style={styles.badgeTexte} numberOfLines={1}>{b}</Text></View> : null}
       </View>
-      <View style={{ width: Z_D.l - 40 }}>
-        <Text style={styles.entreeNom} numberOfLines={2}>{verrou ? '???' : n.nom}{!verrou && n.niveau ? ` · ${n.niveau}` : ''}</Text>
-        {n.gain ? <Text style={[styles.entreeGain, verrou && styles.entreeGainVerrou]} numberOfLines={1}>{n.gain}</Text> : null}
+      <View style={{ width: largeur - MEDAILLON - 5 }}>
+        <Text style={styles.nom} numberOfLines={2}>{verrou ? '???' : n.nom}</Text>
+        {n.gain ? <Text style={[styles.gain, verrou && styles.gainVerrou]} numberOfLines={1}>{n.gain}</Text> : null}
         {!verrou && n.prix != null ? (
-          n.etat === 'max' ? <Text style={styles.entreePrix}>⭐ MAX</Text> : (
-            <View style={styles.entreePrixLigne}>
-              <Image source={ok ? IMG.sceau : IMG.sceauGris} resizeMode="contain" style={styles.entreeSceau} />
-              <Text style={[styles.entreePrix, !ok && styles.entreePrixCher]} numberOfLines={1}>
-                {n.devise === 'diamants' ? '💎 ' : ''}{formatNum(n.prix)}
-              </Text>
-            </View>
+          n.etat === 'max' ? <Text style={styles.max}>⭐ MAX</Text> : (
+            <TouchableOpacity activeOpacity={0.6} onPress={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)}
+              style={[styles.prix, ok ? styles.prixOk : styles.prixCher]} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
+              <Image source={n.devise === 'diamants' ? ICONES.diamant : ICONES.piece} resizeMode="contain" style={styles.prixIcone} />
+              <Text style={[styles.prixTexte, !ok && styles.prixTexteCher]} numberOfLines={1}>{formatNum(n.prix)}</Text>
+            </TouchableOpacity>
           )
         ) : null}
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// ── Petit élément sous le livre (Griffes, Offrande) ───────────────────────
-function Special({ n, formatNum, onAppui, onAppuiLong, style }) {
-  if (!n) return null;
-  const ok = n.etat === 'achetable';
-  return (
-    <TouchableOpacity activeOpacity={0.7} onPress={() => onAppui(n.id)} onLongPress={() => onAppuiLong(n.id)} delayLongPress={320} style={[styles.special, style]}>
-      <View style={styles.specialMedaillon}>
-        <Image source={IMG.medaillon} resizeMode="contain" style={styles.specialMedaillonImg} />
-        {ICONES[n.id] ? <Image source={ICONES[n.id]} resizeMode="contain" style={styles.specialIcone} /> : <Text style={styles.specialEmoji}>{n.emoji}</Text>}
-      </View>
-      <Text style={styles.specialNom} numberOfLines={1}>{n.nom}</Text>
-      <View style={styles.entreePrixLigne}>
-        <Image source={ok ? IMG.sceau : IMG.sceauGris} resizeMode="contain" style={styles.entreeSceau} />
-        <Text style={[styles.specialPrix, !ok && styles.entreePrixCher]} numberOfLines={1}>{n.devise === 'diamants' ? '💎 ' : ''}{formatNum(n.prix)}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -137,43 +118,53 @@ function Grimoire(props) {
   const frais = useRef(parId); frais.current = parId;
   const vib = useRef(vibrations); vib.current = vibrations;
   const [ficheId, setFicheId] = useState(null);
-  const [position, setPosition] = useState({ chapitre: 0, planche: 0 });
+  const [position, setPosition] = useState({ c: 0, p: 0 });
+  const [tour, setTour] = useState(null); // { sens, de, vers } pendant qu'une page tourne
 
-  const chapitres = CHAPITRES.map((c) => ({ ...c, planches: planchesDuChapitre(c.ids(parId)) }));
-  const chap = chapitres[position.chapitre];
-  const planche = chap.planches[Math.min(position.planche, chap.planches.length - 1)];
+  const chapitres = CHAPITRES_GRIMOIRE.map((c, i) => ({ ...c, ...VISUELS[c.cle], planches: planches(i, c.ids().filter((id) => parId[id])) }));
+  const chapRef = useRef(chapitres); chapRef.current = chapitres;
+  const posRef = useRef(position); posRef.current = position;
+  const planche = (pos) => { const C = chapitres[pos.c]; return C.planches[Math.min(pos.p, C.planches.length - 1)]; };
 
-  // Achat : relit l'élément FRAIS (jamais une fermeture périmée). L'Ascension
-  // (irréversible) ouvre toujours sa fiche.
-  const acheter = useCallback((id) => {
+  // ── Achat : relit l'élément FRAIS ; « +1 » qui s'envole là où on a touché
+  const [effet, setEffet] = useState(null);
+  const effetAnim = useRef(new Animated.Value(0)).current;
+  const acheter = useCallback((id, x, y) => {
     const n = frais.current[id];
     if (!n) return;
     if (id === 'ascension' || n.etat !== 'achetable' || !n.onPress) { setFicheId(id); return; }
     n.onPress();
     vibrerSucces(vib.current);
+    if (x != null) {
+      setEffet({ x, y, cle: Date.now() });
+      effetAnim.setValue(0);
+      Animated.timing(effetAnim, { toValue: 1, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+    }
   }, []);
 
-  // ── Tourner les pages : fondu + léger glissement (pilote natif) ─────────
-  const tourne = useRef(new Animated.Value(1)).current;
-  const sens = useRef(1);
-  const aller = (chapitre, plancheIdx, s) => {
-    sens.current = s;
-    Animated.timing(tourne, { toValue: 0, duration: 110, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
-      setPosition({ chapitre, planche: plancheIdx });
-      Animated.timing(tourne, { toValue: 1, duration: 180, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  // ── Tourner une page : une feuille pivote en 3D autour du dos ────────────
+  const angle = useRef(new Animated.Value(0)).current;
+  const enTour = useRef(false);
+  const tourner = (vers, sens) => {
+    if (enTour.current) return;
+    enTour.current = true;
+    setTour({ sens, de: posRef.current, vers });
+    angle.setValue(0);
+    requestAnimationFrame(() => {
+      Animated.timing(angle, { toValue: 1, duration: DUREE_TOUR, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start(() => {
+        setPosition(vers); setTour(null); angle.setValue(0); enTour.current = false;
+      });
     });
   };
-  const posRef = useRef(position); posRef.current = position;
-  const chapRef = useRef(chapitres); chapRef.current = chapitres;
   const suivante = () => {
-    const { chapitre, planche: p } = posRef.current; const C = chapRef.current;
-    if (p + 1 < C[chapitre].planches.length) aller(chapitre, p + 1, 1);
-    else if (chapitre + 1 < C.length) aller(chapitre + 1, 0, 1);
+    const { c, p } = posRef.current; const C = chapRef.current;
+    if (p + 1 < C[c].planches.length) tourner({ c, p: p + 1 }, 1);
+    else if (c + 1 < C.length) tourner({ c: c + 1, p: 0 }, 1);
   };
   const precedente = () => {
-    const { chapitre, planche: p } = posRef.current; const C = chapRef.current;
-    if (p > 0) aller(chapitre, p - 1, -1);
-    else if (chapitre > 0) aller(chapitre - 1, C[chapitre - 1].planches.length - 1, -1);
+    const { c, p } = posRef.current; const C = chapRef.current;
+    if (p > 0) tourner({ c, p: p - 1 }, -1);
+    else if (c > 0) tourner({ c: c - 1, p: C[c - 1].planches.length - 1 }, -1);
   };
   const glisse = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => false,
@@ -182,42 +173,86 @@ function Grimoire(props) {
     onPanResponderRelease: (e, g) => { if (g.dx < -40) suivante(); else if (g.dx > 40) precedente(); },
   })).current;
 
-  const glissement = tourne.interpolate({ inputRange: [0, 1], outputRange: [18, 0] });
-  const animPage = { opacity: tourne, transform: [{ translateX: Animated.multiply(glissement, sens.current) }] };
-  const page = (p, Z, cote) => {
-    if (!p) return null;
-    if (p.intro) {
+  // Contenu d'une page, posé dans sa feuille (zone d'écriture relative).
+  const contenu = (page, cote) => {
+    if (!page) return null;
+    const z = Z[cote]; const f = F[cote];
+    const boite = { position: 'absolute', left: z.x - f.x, top: z.y - f.y, width: z.l, height: z.h };
+    if (page.intro) {
+      const C = chapitres[page.c];
       return (
-        <Animated.View style={[styles.page, { left: Z.x, top: Z.y, width: Z.l, height: Z.h, alignItems: 'center' }, animPage]} {...glisse.panHandlers}>
-          <Text style={styles.chapTitre} numberOfLines={2}>{chap.titre}</Text>
-          <Image source={chap.image} resizeMode="contain" style={{ width: Math.min(Z.l, 120), height: Math.min(Z.h * 0.52, 130), marginVertical: 6 }} />
-          <Text style={styles.chapIntro}>{chap.intro}</Text>
-          {position.chapitre === 0 && position.planche === 0 ? <Text style={styles.chapAide}>Glisse pour tourner la page ›</Text> : null}
-        </Animated.View>
+        <View style={[boite, { alignItems: 'center' }]}>
+          <Text style={styles.chapTitre} numberOfLines={2}>{C.titre}</Text>
+          <Image source={C.image} resizeMode="contain" style={{ width: Math.min(z.l - 6, 116), height: Math.min(Math.round(z.h * 0.5), 124), marginVertical: 6 }} />
+          <Text style={styles.chapIntro}>{C.intro}</Text>
+          {page.c === 0 ? <Text style={styles.chapAide}>Glisse pour tourner la page ›</Text> : null}
+        </View>
       );
     }
+    const h = Math.floor(z.h / PAR_PAGE);
     return (
-      <Animated.View style={[styles.page, { left: Z.x, top: Z.y, width: Z.l, height: Z.h }, animPage]} {...glisse.panHandlers}>
-        {p.ids.map((id) => (parId[id] ? <Entree key={id} n={parId[id]} formatNum={formatNum} onAppui={acheter} onAppuiLong={setFicheId} /> : null))}
+      <View style={boite}>
+        {page.ids.map((id) => (parId[id] ? <Entree key={id} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} /> : null))}
+      </View>
+    );
+  };
+  // Page posée (sans fond : le livre dessine déjà le parchemin).
+  const pagePosee = (page, cote) => (
+    <View key={'posee-' + cote} style={[styles.feuille, { left: F[cote].x, top: F[cote].y, width: F[cote].l, height: F[cote].h }]} {...glisse.panHandlers}>
+      {contenu(page, cote)}
+    </View>
+  );
+  // Face d'une feuille qui tourne : image de la page + contenu + ombre.
+  // Rotation autour du DOS : bord gauche pour une page de droite, bord droit
+  // pour une page de gauche (translateX ± l/2 autour de la rotation).
+  const ombre = angle.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.3, 0] });
+  const face = (page, cote, debut, fin) => {
+    const f = F[cote]; const d = cote === 'droite' ? -f.l / 2 : f.l / 2;
+    const rot = angle.interpolate({ inputRange: [0, 1], outputRange: [debut, fin] });
+    return (
+      <Animated.View key={'face-' + cote} style={[styles.feuille, { left: f.x, top: f.y, width: f.l, height: f.h, backfaceVisibility: 'hidden',
+        transform: [{ perspective: PERSPECTIVE }, { translateX: d }, { rotateY: rot }, { translateX: -d }] }]}>
+        <Image source={IMG.feuille[cote]} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: f.l, height: f.h }} />
+        {contenu(page, cote)}
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#1a0f04', opacity: ombre, pointerEvents: 'none' }]} />
       </Animated.View>
     );
   };
 
+  // Ce qui est posé / ce qui tourne, selon le sens.
+  let gauche; let droite; let feuilles = null;
+  if (!tour) {
+    [gauche, droite] = planche(position);
+  } else if (tour.sens > 0) {
+    // Vers l'avant : la page de DROITE se soulève ; dessous, la droite d'arrivée.
+    const [dg, dd] = planche(tour.de); const [vg, vd] = planche(tour.vers);
+    gauche = dg; droite = vd;
+    feuilles = [face(dd, 'droite', '0deg', '-180deg'), face(vg, 'gauche', '180deg', '0deg')];
+  } else {
+    // Vers l'arrière : la page de GAUCHE se soulève ; dessous, la gauche d'arrivée.
+    const [dg, dd] = planche(tour.de); const [vg, vd] = planche(tour.vers);
+    gauche = vg; droite = dd;
+    feuilles = [face(dg, 'gauche', '0deg', '180deg'), face(vd, 'droite', '-180deg', '0deg')];
+  }
+
+  const chap = chapitres[(tour ? tour.vers : position).c];
   const total = chap.planches.length;
+  const numero = Math.min((tour ? tour.vers : position).p, total - 1) + 1;
   const asc = parId.ascension;
+  const cActif = (tour ? tour.vers : position).c;
   return (
     <View style={styles.racine}>
       <ImageBackground source={IMG.fond} resizeMode="cover" style={StyleSheet.absoluteFill}>
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(3,10,12,0.35)' }]} />
       </ImageBackground>
 
-      {/* Marque-pages sur la tranche HAUTE, derrière le livre ; celui du
+      {/* Marque-pages sur la tranche HAUTE (icône du chapitre) ; celui du
           chapitre ouvert dépasse davantage. */}
       {chapitres.map((c, i) => {
-        const actif = i === position.chapitre;
-        const x = LIVRE_X + Math.round(LIVRE_L * 0.2) + i * Math.round((LIVRE_L * 0.6) / (CHAPITRES.length - 1)) - ONGLET_L / 2;
+        const actif = i === cActif;
+        const x = LIVRE_X + Math.round(LIVRE_L * (0.2 + (i * 0.6) / (chapitres.length - 1))) - ONGLET_L / 2;
         return (
-          <TouchableOpacity key={c.cle} activeOpacity={0.8} onPress={() => (i !== position.chapitre ? aller(i, 0, i > position.chapitre ? 1 : -1) : null)}
+          <TouchableOpacity key={c.cle} activeOpacity={0.8} onPress={() => (i !== cActif ? tourner({ c: i, p: 0 }, i > cActif ? 1 : -1) : null)}
             style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0) }]}>
             <Image source={c.marque} resizeMode="stretch" style={[styles.ongletImg, { transform: [{ scaleY: -1 }] }]} />
             <Image source={c.image} resizeMode="contain" style={[styles.ongletIcone, !actif && { opacity: 0.75 }]} />
@@ -228,40 +263,22 @@ function Grimoire(props) {
       <View style={{ position: 'absolute', left: LIVRE_X, top: LIVRE_Y, width: LIVRE_L, height: LIVRE_H }} {...glisse.panHandlers}>
         <Image source={IMG.livre} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: LIVRE_L, height: LIVRE_H }} />
       </View>
-      {/* ⚠️ Une couche PAR PAGE, à la taille exacte de la page : une couche
-          plein écran en 'box-none' recouvrait les marque-pages (au banc, la
-          valeur est ignorée dans le style) — plus aucune dépendance à ça. */}
-      {page(planche[0], Z_G, 'gauche')}
-      {page(planche[1], Z_D, 'droite')}
+      {pagePosee(gauche, 'gauche')}
+      {pagePosee(droite, 'droite')}
+      {feuilles}
 
-      {/* Flèches et numéro de page, dans le bas du livre. */}
-      <TouchableOpacity onPress={precedente} style={[styles.fleche, { left: Z_G.x - 4, top: Z_G.y + Z_G.h + 6 }]} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+      {/* Flèches aux coins bas des pages et numéro sur le dos du livre. */}
+      <TouchableOpacity onPress={precedente} style={[styles.fleche, { left: Math.max(6, F.gauche.x + 14), top: F.gauche.y + F.gauche.h - 34 }]} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
         <Text style={styles.flecheTexte}>‹</Text>
       </TouchableOpacity>
-      {/* Numéro de page court, sur une étiquette de parchemin (sur l'ornement du
-          bas, « Chapitre · 1 / 1 » se lisait mal). */}
-      <View style={[styles.numero, { left: Math.round(ECRAN_L / 2 - 26), top: Z_G.y + Z_G.h + 10, pointerEvents: 'none' }]}>
-        <Text style={styles.numeroTexte}>{Math.min(position.planche, total - 1) + 1} / {total}</Text>
+      <View style={[styles.numero, { left: Math.round(ECRAN_L / 2 - 26), top: F.gauche.y + F.gauche.h - 30, pointerEvents: 'none' }]}>
+        <Text style={styles.numeroTexte}>{numero} / {total}</Text>
       </View>
-      <TouchableOpacity onPress={suivante} style={[styles.fleche, { left: Z_D.x + Z_D.l - 26, top: Z_D.y + Z_D.h + 6 }]} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+      <TouchableOpacity onPress={suivante} style={[styles.fleche, { left: Math.min(ECRAN_L - 36, F.droite.x + F.droite.l - 44), top: F.droite.y + F.droite.h - 34 }]} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
         <Text style={styles.flecheTexte}>›</Text>
       </TouchableOpacity>
 
-      {/* Sous le livre : le sceau de l'Ascension, Griffes et Offrande. */}
-      <Special n={parId.griffes} formatNum={formatNum} onAppui={acheter} onAppuiLong={setFicheId} style={{ left: 8, top: SOUS_LIVRE_Y + 8 }} />
-      {asc ? (
-        <TouchableOpacity activeOpacity={0.8} onPress={() => setFicheId('ascension')} style={[styles.ascension, { left: ECRAN_L / 2 - 52, top: SOUS_LIVRE_Y }]}>
-          <Image source={IMG.sceauAscension} resizeMode="contain" style={styles.ascensionImg} />
-          <Text style={styles.ascensionTexte}>ASCENSION</Text>
-          {asc.niveau ? <Text style={styles.ascensionNiveau}>{asc.niveau}</Text> : null}
-          <View style={styles.ascensionBarre}>
-            <View style={{ width: Math.round(76 * (asc.progres || 0)), height: 4, borderRadius: 2, backgroundColor: CYAN_CHAMPIGNON }} />
-          </View>
-        </TouchableOpacity>
-      ) : null}
-      <Special n={parId.offrande} formatNum={formatNum} onAppui={acheter} onAppuiLong={setFicheId} style={{ left: ECRAN_L - 8 - 104, top: SOUS_LIVRE_Y + 8 }} />
-
-      {/* En-tête : RETOUR et soldes. */}
+      {/* En-tête : RETOUR, le SCEAU DE L'ASCENSION au centre, les soldes. */}
       <View style={[styles.entete, { pointerEvents: 'box-none' }]}>
         <BackButton onPress={props.onRetour} style={{ position: 'relative', left: 0, top: 0 }} />
         <View style={{ gap: 6, alignItems: 'flex-end', pointerEvents: 'none' }}>
@@ -277,8 +294,27 @@ function Grimoire(props) {
           </View>
         </View>
       </View>
+      {asc ? (
+        <TouchableOpacity activeOpacity={0.8} onPress={() => setFicheId('ascension')} style={[styles.ascension, { left: Math.round(ECRAN_L / 2 - 41), top: 34 }]}>
+          <Image source={IMG.sceauAscension} resizeMode="contain" style={styles.ascensionImg} />
+          <Text style={styles.ascensionTexte}>ASCENSION</Text>
+          {asc.niveau ? <Text style={styles.ascensionNiveau}>{asc.niveau}</Text> : null}
+          <View style={styles.ascensionBarre}>
+            <View style={{ width: Math.round(52 * (asc.progres || 0)), height: 4, borderRadius: 2, backgroundColor: CYAN_CHAMPIGNON }} />
+          </View>
+        </TouchableOpacity>
+      ) : null}
 
-      <FicheElement fiche={ficheId && parId[ficheId] ? { ...parId[ficheId], icone: ICONES[ficheId] } : null} onFermer={() => setFicheId(null)} onAcheter={acheter} onAscend={props.onAscend} formatNum={formatNum} />
+      {/* « +1 » qui s'envole à l'achat. */}
+      {effet ? (
+        <Animated.Text key={effet.cle} style={[styles.effet, { left: effet.x - 30, top: effet.y - 34, pointerEvents: 'none',
+          opacity: effetAnim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }),
+          transform: [{ translateY: effetAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -34] }) }, { scale: effetAnim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.7, 1.15, 1] }) }] }]}>
+          +1
+        </Animated.Text>
+      ) : null}
+
+      <FicheElement fiche={ficheId && parId[ficheId] ? { ...parId[ficheId], icone: ICONES[ficheId] } : null} onFermer={() => setFicheId(null)} onAcheter={(id) => acheter(id)} onAscend={props.onAscend} formatNum={formatNum} />
     </View>
   );
 }
@@ -297,28 +333,33 @@ export default function BoutiqueGrimoire({ Secours, ...props }) {
     </FiletGrimoire>
   );
 }
-export { CHAPITRES, planchesDuChapitre };
 
 const ENCRE = '#3b2a14';
 const styles = StyleSheet.create({
   // Plein écran, sous la barre de navigation (zIndex 5).
   racine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 4, overflow: 'hidden', backgroundColor: '#061018' },
-  page: { position: 'absolute' },
-  chapTitre: { color: ENCRE, fontSize: 17, fontWeight: '900', textAlign: 'center', includeFontPadding: false, letterSpacing: 0.5 },
-  chapIntro: { color: '#5a4322', fontSize: 10.5, fontStyle: 'italic', textAlign: 'center', includeFontPadding: false },
+  feuille: { position: 'absolute' },
+  chapTitre: { color: ENCRE, fontSize: 16, fontWeight: '900', textAlign: 'center', includeFontPadding: false, letterSpacing: 0.4 },
+  chapIntro: { color: '#5a4322', fontSize: 10, fontStyle: 'italic', textAlign: 'center', includeFontPadding: false },
   chapAide: { color: '#2e6b2f', fontSize: 9.5, fontWeight: '800', marginTop: 6, textAlign: 'center' },
-  entree: { height: ENTREE_H, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  entreeMedaillon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
-  entreeMedaillonImg: { position: 'absolute', left: 0, top: 0, width: 34, height: 34 },
-  entreeEmoji: { fontSize: 15 },
-  entreeIcone: { width: 24, height: 24 },
-  entreeNom: { color: ENCRE, fontSize: 10, fontWeight: '900', lineHeight: 12, includeFontPadding: false },
-  entreeGain: { color: '#2e6b2f', fontSize: 9, fontWeight: '800', marginTop: 1, includeFontPadding: false },
-  entreeGainVerrou: { color: '#8b4a1c' },
-  entreePrixLigne: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  entreeSceau: { width: 18, height: 18, marginRight: 4 },
-  entreePrix: { color: '#5b3a10', fontSize: 10.5, fontWeight: '900', includeFontPadding: false },
-  entreePrixCher: { color: '#8a7f70' },
+  entree: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  medaillon: { width: MEDAILLON, height: MEDAILLON, alignItems: 'center', justifyContent: 'center' },
+  medaillonImg: { position: 'absolute', left: 0, top: 0, width: MEDAILLON, height: MEDAILLON },
+  icone: { width: 22, height: 22 },
+  emoji: { fontSize: 14 },
+  badge: { position: 'absolute', right: -5, bottom: -4, minWidth: 16, height: 14, paddingHorizontal: 3, borderRadius: 7, backgroundColor: '#3b2a14', borderWidth: 1, borderColor: '#e2b04a', alignItems: 'center', justifyContent: 'center' },
+  badgeTexte: { color: '#ffe9b0', fontSize: 8, fontWeight: '900', includeFontPadding: false },
+  nom: { color: ENCRE, fontSize: 10, fontWeight: '900', lineHeight: 12, includeFontPadding: false },
+  gain: { color: '#2e6b2f', fontSize: 9, fontWeight: '800', marginTop: 1, includeFontPadding: false },
+  gainVerrou: { color: '#8b4a1c' },
+  max: { color: '#9a6a12', fontSize: 10, fontWeight: '900', marginTop: 2 },
+  // Bouton de prix : cire rouge à bord doré (achetable) / gris (pas assez).
+  prix: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', height: 20, paddingHorizontal: 7, marginTop: 3, borderRadius: 10, borderWidth: 1.5 },
+  prixOk: { backgroundColor: '#8a2a1c', borderColor: '#e8b84a' },
+  prixCher: { backgroundColor: '#9a9182', borderColor: '#c4baa8' },
+  prixIcone: { width: 13, height: 13, marginRight: 4 },
+  prixTexte: { color: '#fff4d6', fontSize: 10.5, fontWeight: '900', includeFontPadding: false },
+  prixTexteCher: { color: '#f1ebe0' },
   onglet: { position: 'absolute', width: ONGLET_L, height: ONGLET_H, alignItems: 'center' },
   ongletImg: { position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: ONGLET_H },
   ongletIcone: { width: 28, height: 28, marginTop: 8 },
@@ -326,20 +367,14 @@ const styles = StyleSheet.create({
   flecheTexte: { color: ENCRE, fontSize: 24, fontWeight: '900', includeFontPadding: false, lineHeight: 26 },
   numero: { position: 'absolute', width: 52, height: 20, borderRadius: 10, backgroundColor: 'rgba(246,234,204,0.95)', borderWidth: 1, borderColor: 'rgba(120,84,30,0.6)', alignItems: 'center', justifyContent: 'center' },
   numeroTexte: { color: '#4a3418', fontSize: 10.5, fontWeight: '900', includeFontPadding: false },
-  special: { position: 'absolute', width: 104, alignItems: 'center' },
-  specialMedaillon: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
-  specialMedaillonImg: { position: 'absolute', left: 0, top: 0, width: 50, height: 50 },
-  specialEmoji: { fontSize: 22 },
-  specialIcone: { width: 34, height: 34 },
-  specialNom: { color: '#fff7e0', fontSize: 11, fontWeight: '900', marginTop: 2, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
-  specialPrix: { color: '#ffe38a', fontSize: 11, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
-  ascension: { position: 'absolute', width: 104, height: 104, alignItems: 'center', justifyContent: 'center' },
-  ascensionImg: { position: 'absolute', left: 0, top: 0, width: 104, height: 104 },
-  ascensionTexte: { color: '#4a2e06', fontSize: 11, fontWeight: '900', letterSpacing: 0.5, includeFontPadding: false },
-  ascensionNiveau: { color: '#4a2e06', fontSize: 10, fontWeight: '800', includeFontPadding: false },
-  ascensionBarre: { width: 80, height: 6, marginTop: 4, borderRadius: 3, backgroundColor: 'rgba(40,24,6,0.55)', padding: 1, justifyContent: 'center' },
+  ascension: { position: 'absolute', width: 82, height: 82, alignItems: 'center', justifyContent: 'center' },
+  ascensionImg: { position: 'absolute', left: 0, top: 0, width: 82, height: 82 },
+  ascensionTexte: { color: '#4a2e06', fontSize: 9, fontWeight: '900', letterSpacing: 0.3, includeFontPadding: false },
+  ascensionNiveau: { color: '#4a2e06', fontSize: 9, fontWeight: '800', includeFontPadding: false },
+  ascensionBarre: { width: 56, height: 6, marginTop: 3, borderRadius: 3, backgroundColor: 'rgba(40,24,6,0.55)', padding: 1, justifyContent: 'center' },
   entete: { position: 'absolute', left: 0, right: 0, top: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 12 },
   plaque: { width: 124, height: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   plaqueImg: { position: 'absolute', left: 0, top: 0, width: 124, height: 38 },
   plaqueTexte: { color: '#ffe38a', fontSize: 14, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  effet: { position: 'absolute', width: 60, textAlign: 'center', color: '#ffd84a', fontSize: 20, fontWeight: '900', textShadowColor: 'rgba(60,30,0,0.9)', textShadowRadius: 4 },
 });

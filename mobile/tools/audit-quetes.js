@@ -4004,14 +4004,14 @@ module.exports.auditArbreSansChevauchement = auditArbreSansChevauchement;
 
 // ── Grimoire de la boutique : AUCUN élément achetable absent (27/09) ────
 // Tout élément achetable (Pacte, Faveur, Dégâts critiques, Sanctuaire,
-// Veilleur, 10 améliorations de tap, 15 auto-clics, 20 reliques) doit
-// figurer dans UN chapitre du livre, une seule fois ; Ascension, Griffes et
-// Offrande sont sous le livre ; aucun identifiant inconnu.
+// Veilleur, 10 améliorations de tap, 15 auto-clics, 20 reliques, Griffes,
+// Offrande) doit figurer dans UN chapitre du livre, une seule fois ;
+// l'Ascension est hors du livre (sceau de l'en-tête) ; aucun identifiant inconnu.
 function auditGrimoireComplet() {
   const G = require('../src/games/clicker/grimoireChapitres.js');
   const L = require('../src/games/clicker/clickerLogic.js');
   const pb = [];
-  const attendus = ['pacte', 'faveur', 'critDamage', 'sanctuaire', 'veilleur',
+  const attendus = ['pacte', 'faveur', 'critDamage', 'sanctuaire', 'veilleur', 'griffes', 'offrande',
     ...L.TAP_UPGRADES.map((u) => u.id), ...L.AUTOCLICKERS.map((c) => c.id), ...L.UPGRADE_ITEMS.map((i) => 'relique:' + i.id)];
   const vus = new Map();
   G.CHAPITRES_GRIMOIRE.forEach((c) => c.ids().forEach((id) => vus.set(id, (vus.get(id) || []).concat(c.cle))));
@@ -4021,7 +4021,7 @@ function auditGrimoireComplet() {
     else if (ch.length > 1) pb.push(`${id} : dans ${ch.length} chapitres (${ch.join(', ')})`);
   });
   vus.forEach((ch, id) => { if (!attendus.includes(id)) pb.push(`${id} : identifiant inconnu (chapitre ${ch.join(', ')})`); });
-  ['ascension', 'griffes', 'offrande'].forEach((id) => { if (!G.SOUS_LE_LIVRE.includes(id)) pb.push(`${id} : plus sous le livre`); });
+  if (!(G.HORS_LIVRE || []).includes('ascension')) pb.push('ascension : plus hors du livre (sceau de l\'en-tête)');
   return pb;
 }
 module.exports.auditGrimoireComplet = auditGrimoireComplet;

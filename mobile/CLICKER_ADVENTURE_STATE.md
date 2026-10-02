@@ -1354,3 +1354,22 @@ Affichées dans les médaillons du livre, sous le livre, dans l'en-tête
 (pièce) et dans la fiche (`fiche.icone`, partagée avec l'arbre). Un élément
 verrouillé garde le cadenas (mystère). Verrou de relique raccourci :
 « 🔒 <créature> ».
+
+**Grimoire — 2e version (retours de l'auteur, 27/09)** :
+- **Chevauchement des cadres dessinés** : zones d'écriture re-mesurées HORS
+  ORNEMENTS (masque : tout ce qui n'est pas parchemin clair ; plus grand
+  rectangle sans ornement à 6 px, méthode de l'histogramme). Livre ×1,35
+  l'écran ; le sceau de l'Ascension monte au centre de l'en-tête ; Griffes /
+  Offrande = 6e chapitre « Comptoir » (coffre, marque-page argent) ; le niveau
+  passe en badge sur le médaillon.
+- **Vraie page qui se tourne** : feuilles `page-gauche.png` / `page-droite.png`
+  découpées du livre (papier jusqu'au DOS) ; deux faces SŒURS (recto = page
+  quittée, verso = page d'arrivée) qui pivotent autour du dos
+  (perspective + translateX ±l/2 + rotateY, backfaceVisibility hidden), ombre
+  au passage, 640 ms ; dessous, la page d'arrivée. ⚠️ Faces sœurs, pas
+  imbriquées : sur téléphone, la 3D d'un parent ne se propage pas aux enfants.
+- **Achats clairs** : le BOUTON DE PRIX (cire rouge à bord doré, pièce dorée ;
+  gris si pas assez) achète ; toucher l'élément ouvre sa fiche ; « +1 » doré
+  qui s'envole à l'achat.
+- Banc : `scenes/grimoire-lent.jsx` = animations ×5 plus lentes (sinon les
+  captures, trop lentes, ratent la page en train de tourner).
