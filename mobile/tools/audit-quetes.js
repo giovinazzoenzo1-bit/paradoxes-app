@@ -4095,3 +4095,31 @@ function auditConseilBoutique() {
   return pb;
 }
 module.exports.auditConseilBoutique = auditConseilBoutique;
+
+// ── Modules NATIFS optionnels : jamais chargés sans vérification (02/10) ──
+// Rapport de l'auteur : plantage FATAL « Cannot find native module
+// 'ExpoAudio' » sur l'appli construite (app.paradox.mobile, Android, bâtie
+// AVANT l'ajout du son). Un import statique planterait au démarrage ; un
+// require à la demande passe par guardedLoadModule de Metro, qui rend l'erreur
+// FATALE (un try/catch ne la voit jamais). Exige, pour chaque module natif
+// optionnel : aucun import statique, et chaque require conditionné par
+// requireOptionalNativeModule('<NomNatif>') dans le même fichier.
+function auditModulesNatifsProteges() {
+  const fs = require('fs'); const path = require('path');
+  const OPTIONNELS = { 'expo-audio': 'ExpoAudio', 'expo-haptics': 'ExpoHaptics' };
+  const pb = [];
+  const fichiers = [];
+  (function parcourir(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) parcourir(p); else if (p.endsWith('.js')) fichiers.push(p); } })(path.join(__dirname, '../src'));
+  for (const f of fichiers) {
+    const s = fs.readFileSync(f, 'utf8'); const court = path.relative(path.join(__dirname, '..'), f);
+    for (const [mod, natif] of Object.entries(OPTIONNELS)) {
+      if (new RegExp(`from ['"]${mod}['"]`).test(s)) pb.push(`${court} : import STATIQUE de ${mod} (plante au démarrage si l'appli installée ne l'embarque pas)`);
+      const requires = s.split('\n').filter((l) => l.includes(`require('${mod}')`) || l.includes(`require("${mod}")`));
+      if (!requires.length) continue;
+      if (!s.includes(`requireOptionalNativeModule('${natif}')`)) pb.push(`${court} : ${mod} chargé sans requireOptionalNativeModule('${natif}')`);
+      requires.forEach((l) => { if (!/\?\s*require\(/.test(l)) pb.push(`${court} : require('${mod}') NON conditionné par la présence du module natif (« natif ? require(…) : null »)`); });
+    }
+  }
+  return pb;
+}
+module.exports.auditModulesNatifsProteges = auditModulesNatifsProteges;

@@ -1473,3 +1473,28 @@ require STATIQUE (Metro l'embarque) mais exécuté à la demande dans un
 try/catch → si le module natif faisait défaut, jeu SANS son, pas de plantage.
 Réglage « Sons » (SettingsContext `sons`, interrupteur dans Paramètres).
 Banc : doublure expo-audio (stubs/natifs.js) + chargement des .wav.
+
+
+## ⚠️ 02/10 — PLANTAGE « Cannot find native module 'ExpoAudio' » : cause et garde
+
+Rapport de l'auteur (Android 36, build ada8fa3) : erreur FATALE dès qu'un son
+de la boutique devait jouer. Cause réelle, en deux temps :
+1. L'Android de l'auteur n'utilise PAS Expo Go mais l'APPLI CONSTRUITE
+   `app.paradox.mobile` (identifiant de app.json), bâtie AVANT l'ajout du son :
+   son binaire n'embarque PAS le module natif ExpoAudio (expo-audio appelle
+   requireNativeModule('ExpoAudio') dès son chargement).
+2. Ma « protection » (require à la demande dans un try/catch) était
+   INOPÉRANTE : un module chargé à la demande passe par `guardedLoadModule` de
+   Metro, qui rattrape l'erreur LUI-MÊME et la déclare FATALE
+   (`ErrorUtils.reportFatalError`) — le try/catch appelant ne la voit jamais
+   (vérifié dans metro-runtime 0.84.5, la version du projet).
+CORRECTIF : `requireOptionalNativeModule('ExpoAudio')` (expo-modules-core
+57.0.15 : renvoie null, ne lève pas) AVANT de charger expo-audio, chargé
+seulement si le module natif existe. Sans lui : pas de son, aucun plantage.
+**GARDE : `auditModulesNatifsProteges`** (+ sabotage) — pour TOUT module natif
+optionnel (expo-audio, expo-haptics) : jamais d'import statique, require
+conditionné par requireOptionalNativeModule. **RÈGLE : un try/catch autour
+d'un require ne protège RIEN avec Metro.**
+Conséquence : sur l'appli construite actuelle, les sons resteront muets jusqu'à
+une NOUVELLE construction native incluant expo-audio ; dans Expo Go 57 (qui
+l'inclut), ils jouent.

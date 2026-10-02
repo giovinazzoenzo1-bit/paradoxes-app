@@ -21,3 +21,6 @@ export default AsyncStorage;
 export const LottieView = () => null;
 // expo-audio (sons de la boutique) : lecteur factice, le banc ne joue pas de son.
 export const createAudioPlayer = () => ({ volume: 1, play() {}, pause() {}, seekTo: async () => {}, remove() {} });
+// expo-modules-core : au banc, aucun module natif (les sons restent muets).
+export const requireOptionalNativeModule = () => null;
+export const requireNativeModule = (nom) => { throw new Error(`Cannot find native module '${nom}'`); };

@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditModulesNatifsProteges', "modules natifs optionnels (expo-audio…) : jamais d'import statique, chargement conditionné par requireOptionalNativeModule — plantage du 02/10 (02/10)"],
   ['auditConseilBoutique', "boutique : l'étoile « Conseillé » désigne vraiment le meilleur rendement, calculé avec les formules du jeu (27/09)"],
   ['auditZoneTapAuContact', "tap AU CONTACT : zone de tap au répondeur et boutons de prix du grimoire en onPressIn — le bug des taps jetés est déjà revenu (27/09)"],
   ['auditGrimoireComplet', "grimoire de la boutique : chaque élément achetable est dans un chapitre, une seule fois (27/09)"],

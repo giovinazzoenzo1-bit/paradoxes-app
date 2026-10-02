@@ -2,11 +2,19 @@
 //  SONS DE LA BOUTIQUE (27/09) — page qui tourne, achat
 // ════════════════════════════════════════════════════════════════════
 // Sons SYNTHÉTISÉS pour le projet (assets/sons/, aucun droit tiers).
-// ⚠️ expo-audio (~57.0.3, version d'Expo Go 57) est chargé À LA DEMANDE, dans
-// un try/catch : si le module natif manquait ou différait, le jeu continue
-// SANS son au lieu de planter (un module natif a déjà causé l'écran blanc :
-// voir index.js). Le require reste STATIQUE (Metro doit l'embarquer).
+// ⚠️⚠️ VÉRIFIER LE MODULE NATIF AVANT DE CHARGER expo-audio (rapport du 02/10 :
+// plantage FATAL « Cannot find native module 'ExpoAudio' » sur l'appli construite
+// app.paradox.mobile, Android, construite AVANT l'ajout du son). expo-audio
+// appelle requireNativeModule('ExpoAudio') dès son chargement ; et un module
+// chargé À LA DEMANDE passe par guardedLoadModule de Metro, qui déclare toute
+// erreur FATALE (reportFatalError) — un try/catch autour du require ne la voit
+// JAMAIS (vérifié dans metro-runtime 0.84.5). Donc : requireOptionalNativeModule
+// (renvoie null, ne lève pas) et expo-audio chargé SEULEMENT si le module natif
+// existe. Contrôle : auditModulesNatifsProteges. Le require reste statique
+// (Metro doit l'embarquer).
 // Réglage « Sons » des Paramètres (SettingsContext : sons).
+import { requireOptionalNativeModule } from 'expo-modules-core';
+
 const SONS = {
   page: require('../../../assets/sons/page.wav'),
   achat: require('../../../assets/sons/achat.wav'),
@@ -16,7 +24,9 @@ const VOLUME = { page: 0.55, achat: 0.7 };
 let audio; // undefined : pas encore essayé ; null : indisponible
 function moduleAudio() {
   if (audio === undefined) {
-    try { audio = require('expo-audio'); } catch (e) { audio = null; }
+    let natif = null;
+    try { natif = requireOptionalNativeModule('ExpoAudio'); } catch (e) { natif = null; }
+    audio = natif ? require('expo-audio') : null;
   }
   return audio;
 }
