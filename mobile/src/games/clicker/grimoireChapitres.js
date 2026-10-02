@@ -7,7 +7,7 @@
 // Les listes sont COMPLÈTES ; le livre ne montre que ce que le modèle révèle
 // (le livre se remplit au fil de la partie).
 import { TAP_UPGRADES } from './clickerLogic.js';
-import { reliquesParFamille, FAMILLES_RELIQUES, autoClicsParPalier, PALIERS_AUTO } from './arbreDisposition.js';
+import { reliquesParFamille, FAMILLES_RELIQUES, autoClicsParPalier, PALIERS_AUTO } from './boutiqueFamilles.js';
 
 export const CHAPITRES_GRIMOIRE = [
   { cle: 'tap', titre: 'Force du tap', intro: 'Chaque tap rapporte plus de pièces.',

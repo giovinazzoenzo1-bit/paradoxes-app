@@ -1520,3 +1520,18 @@ l'inclut), ils jouent.
 - Banc : un clic INSTANTANÉ (souris enfoncée / relâchée au même instant) ne
   déclenche pas un Pressable onPressIn dans le navigateur — tester avec un
   appui de ~150 ms (le téléphone, lui, déclenche au contact).
+
+
+## 02/10 — Ménage : l'arbre abandonné est SUPPRIMÉ
+
+- Modèle des éléments déplacé dans `games/clicker/boutiqueModele.js` (PUR,
+  testable), SANS les positions de l'arbre — PROUVÉ identique (ancien modèle
+  reconstitué vs nouveau, sur 3 parties types : 31 / 39 / 53 éléments,
+  prix, états, gains, prix des niveaux suivants identiques).
+- Fiche détaillée → `screens/games/ficheElement.js` (avec ses 10 styles,
+  relevés automatiquement) ; familles → `games/clicker/boutiqueFamilles.js`.
+- Supprimés : ArbreBoutique.js, arbreDisposition.js, la scène de banc de
+  l'arbre, le contrôle auditArbreSansChevauchement et son sabotage
+  (déclarations comparées avant / après : seules les siennes ont disparu).
+- Banc : textTransform uppercase n'affecte PAS textContent — chercher le
+  texte réel (« Ce que ça rapporte »), pas sa forme affichée.

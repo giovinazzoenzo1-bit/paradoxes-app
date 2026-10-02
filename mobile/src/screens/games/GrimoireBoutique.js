@@ -3,7 +3,8 @@ import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanRes
 import { CHAPITRES_GRIMOIRE } from '../../games/clicker/grimoireChapitres';
 import { useSettings } from '../../context/SettingsContext';
 import { vibrerSucces, CRISTAL, CYAN_CHAMPIGNON } from './fenetreBois';
-import { construireNoeuds, FicheElement } from './ArbreBoutique';
+import { construireNoeuds } from '../../games/clicker/boutiqueModele';
+import { FicheElement } from './ficheElement';
 import BackButton from '../../components/BackButton';
 import { ICONES } from './grimoireIcones';
 import { meilleurAchat, valeurTap, revenuPassif, etatApres } from '../../games/clicker/conseilBoutique';
@@ -24,7 +25,7 @@ import { jouerSon } from './sonsBoutique';
 // - livre ×1,35 l'écran : le sceau de l'Ascension monte dans l'en-tête et
 //   Griffes / Offrande deviennent le chapitre « Comptoir ».
 // ⚠️ Économie INCHANGÉE, logique NON dupliquée : modèle des éléments =
-// construireNoeuds (arbre, vérifié) ; fiche partagée (FicheElement).
+// construireNoeuds (games/clicker/boutiqueModele.js, pur) ; fiche : ficheElement.js.
 // ⚠️ Tailles et positions en NOMBRES (règle du 27/09).
 
 const { width: ECRAN_L } = Dimensions.get('window');

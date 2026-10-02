@@ -68,7 +68,6 @@ const CONTROLES = [
   ['auditConseilBoutique', "boutique : l'étoile « Conseillé » désigne vraiment le meilleur rendement, calculé avec les formules du jeu (27/09)"],
   ['auditZoneTapAuContact', "tap AU CONTACT : zone de tap au répondeur et boutons de prix du grimoire en onPressIn — le bug des taps jetés est déjà revenu (27/09)"],
   ['auditGrimoireComplet', "grimoire de la boutique : chaque élément achetable est dans un chapitre, une seule fois (27/09)"],
-  ['auditArbreSansChevauchement', "arbre de la boutique : aucun nom, prix ni nœud ne se chevauche, au zoom d'ouverture comme dézoomé (retour de l'auteur, 27/09)"],
   ['auditPointerEventsStyle', "pointerEvents toujours dans le style : la propriété est ignorée sur téléphone depuis le SDK 57"],
   ['auditExhaustif', 'les vrais défis passent la vérification exhaustive'],
   ['auditPoigneA0', 'Poigne montable à l A0 sans être cheatée (moitié du Pacte)'],
