@@ -1535,3 +1535,15 @@ l'inclut), ils jouent.
   (déclarations comparées avant / après : seules les siennes ont disparu).
 - Banc : textTransform uppercase n'affecte PAS textContent — chercher le
   texte réel (« Ce que ça rapporte »), pas sa forme affichée.
+
+**02/10 — Boutique, étapes 2 et 3** :
+- **Silhouettes mystères** : un élément verrouillé montre l'icône peinte en
+  SILHOUETTE (tintColor sombre) + petit cadenas en coin, dans le livre et dans
+  la fiche ; le nom reste « ??? » (+ condition / créature nécessaire).
+- **Badge « NOUVEAU »** : éléments débloqués jamais affichés, mémoire
+  AsyncStorage `boutique:vus:v1` ; à la 1re ouverture, tout ce qui est DÉJÀ
+  débloqué compte comme vu ; un élément affiché 1,5 s sur la double page
+  devient « vu ». Marque-pages : « ! » rouge (nouveau) > ⭐ (conseil) > •
+  (achat possible). Badge en haut à gauche du médaillon, étoile en bas à
+  gauche, niveau en bas à droite (mesuré : plus de chevauchement avec le nom).
+  Vérifié au banc : 1 badge + 1 « ! » à 0,6 s, 0 à 2,8 s.

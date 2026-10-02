@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanResponder, Animated, Easing, StyleSheet, Dimensions, Platform } from 'react-native';
 import { CHAPITRES_GRIMOIRE } from '../../games/clicker/grimoireChapitres';
 import { useSettings } from '../../context/SettingsContext';
@@ -45,6 +46,7 @@ const rect = ([x0, y0, x1, y1]) => ({ x: Math.round(LIVRE_X + x0 * LIVRE_L), y: 
 const F = { gauche: rect(FEUILLE.gauche), droite: rect(FEUILLE.droite) };
 const Z = { gauche: rect(ZONE.gauche), droite: rect(ZONE.droite) };
 const PAR_PAGE = 4;
+const CLE_VUS = 'boutique:vus:v1'; // éléments déjà vus (badge « Nouveau ! »)
 // Espace LIBRE de l'en-tête, entre RETOUR (108 pts depuis 12) et les soldes
 // (124 pts depuis le bord droit) : le sélecteur et les gains s'y logent, quelle
 // que soit la largeur (un Android de 360 pts n'a que ~92 pts libres).
@@ -95,7 +97,7 @@ function badge(niveau) {
 }
 
 // ── Une entrée : toucher = fiche ; le BOUTON DE PRIX achète ───────────────
-function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, offre, conseil }) {
+function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, offre, conseil, nouveau }) {
   const verrou = n.etat === 'verrouille';
   const o = offre || { q: 1, total: n.prix, ok: n.etat === 'achetable' };
   const ok = o.ok;
@@ -104,8 +106,12 @@ function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, offre, con
     <TouchableOpacity activeOpacity={0.7} onPress={() => onFiche(n.id)} style={[styles.entree, { width: largeur, height: hauteur }]}>
       <View style={styles.medaillon}>
         <Image source={IMG.medaillon} resizeMode="contain" style={styles.medaillonImg} />
-        {!verrou && ICONES[n.id] ? <Image source={ICONES[n.id]} resizeMode="contain" style={styles.icone} />
+        {/* Verrouillé : la SILHOUETTE de sa future icône (mystère), petit
+            cadenas en coin ; sans icône dessinée : le cadenas seul. */}
+        {ICONES[n.id] ? <Image source={ICONES[n.id]} resizeMode="contain" style={[styles.icone, verrou && styles.silhouette]} />
           : <Text style={[styles.emoji, verrou && { opacity: 0.55 }]}>{verrou ? '🔒' : n.emoji}</Text>}
+        {verrou && ICONES[n.id] ? <View style={styles.cadenas}><Text style={styles.cadenasTexte}>🔒</Text></View> : null}
+        {nouveau ? <View style={styles.nouveau}><Text style={styles.nouveauTexte}>NOUVEAU</Text></View> : null}
         {b ? <View style={styles.badge}><Text style={styles.badgeTexte} numberOfLines={1}>{b}</Text></View> : null}
         {/* ⭐ Conseillé : le meilleur gain de pièces pour son prix (conseilBoutique). */}
         {conseil ? <View style={styles.conseil}><Text style={styles.conseilTexte}>★</Text></View> : null}
@@ -165,6 +171,9 @@ function Grimoire(props) {
   const fmtRef = useRef(fmtGain); fmtRef.current = fmtGain;
   const vib = useRef(vibrations); vib.current = vibrations;
   const [ficheId, setFicheId] = useState(null);
+  // « Nouveau ! » : éléments débloqués jamais encore affichés (mémoire sur le
+  // téléphone). null tant que la mémoire n'est pas lue → aucun badge.
+  const [vus, setVus] = useState(null);
   const [position, setPosition] = useState({ c: 0, p: 0 });
   const [tour, setTour] = useState(null); // { sens, de, vers } pendant qu'une page tourne
   // Quantité d'achat : ×1, ×10 ou MAX (le plus possible avec tes pièces).
@@ -204,6 +213,22 @@ function Grimoire(props) {
   // ~1 à 6 ms : PAS à chaque rafraîchissement des pièces (le bug des taps a
   // montré ce que coûte la charge) — seulement quand la signature change.
   const conseilId = useMemo(() => meilleurAchat(etatJeu, candidats), [signature]);
+  // Débloqués du livre (verrouillés exclus) ; « nouveau » = débloqué et pas vu.
+  const debloques = [...dansLeLivre].filter((id) => parId[id] && parId[id].etat !== 'verrouille');
+  const estNouveau = (id) => !!vus && !vus.has(id) && parId[id] && parId[id].etat !== 'verrouille' && dansLeLivre.has(id);
+  const debloquesRef = useRef(debloques); debloquesRef.current = debloques;
+  useEffect(() => {
+    let fini = false;
+    (async () => {
+      let ensemble = null;
+      try { const brut = await AsyncStorage.getItem(CLE_VUS); if (brut) ensemble = new Set(JSON.parse(brut)); } catch (e) { ensemble = null; }
+      // 1re ouverture : tout ce qui est DÉJÀ débloqué compte comme vu (sinon le
+      // livre serait couvert de badges).
+      if (!ensemble) { ensemble = new Set(debloquesRef.current); try { await AsyncStorage.setItem(CLE_VUS, JSON.stringify([...ensemble])); } catch (e) {} }
+      if (!fini) setVus(ensemble);
+    })();
+    return () => { fini = true; };
+  }, []);
   const posRef = useRef(position); posRef.current = position;
   const planche = (pos) => { const C = chapitres[pos.c]; return C.planches[Math.min(pos.p, C.planches.length - 1)]; };
 
@@ -292,7 +317,7 @@ function Grimoire(props) {
     const h = Math.floor(z.h / PAR_PAGE);
     return (
       <View style={boite}>
-        {page.ids.map((id) => (parId[id] ? <Entree key={id} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} offre={offre(parId[id])} conseil={id === conseilId} /> : null))}
+        {page.ids.map((id) => (parId[id] ? <Entree key={id} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} offre={offre(parId[id])} conseil={id === conseilId} nouveau={estNouveau(id)} /> : null))}
       </View>
     );
   };
@@ -337,6 +362,15 @@ function Grimoire(props) {
 
   const chap = chapitres[(tour ? tour.vers : position).c];
   const total = chap.planches.length;
+  useEffect(() => {
+    if (!vus || tour) return undefined;
+    const p = planche(position); const ids = [...((p[0] && p[0].ids) || []), ...((p[1] && p[1].ids) || [])].filter(estNouveau);
+    if (!ids.length) return undefined;
+    const t = setTimeout(() => {
+      setVus((avant) => { const n = new Set(avant); ids.forEach((id) => n.add(id)); AsyncStorage.setItem(CLE_VUS, JSON.stringify([...n])).catch(() => {}); return n; });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [position, vus, tour]);
   const numero = Math.min((tour ? tour.vers : position).p, total - 1) + 1;
   const asc = parId.ascension;
   const halo = useRef(new Animated.Value(0)).current;
@@ -366,7 +400,8 @@ function Grimoire(props) {
             <Image source={c.marque} resizeMode="stretch" style={[styles.ongletImg, { transform: [{ scaleY: -1 }] }]} />
             <Image source={c.image} resizeMode="contain" style={[styles.ongletIcone, !actif && { opacity: 0.75 }]} />
             {/* Pastille : ⭐ le chapitre contient l'achat conseillé ; • un achat est possible. */}
-            {c.ids().includes(conseilId) ? <View style={styles.pastilleConseil}><Text style={styles.pastilleConseilTexte}>★</Text></View>
+            {c.ids().some(estNouveau) ? <View style={styles.pastilleNouveau}><Text style={styles.pastilleNouveauTexte}>!</Text></View>
+              : c.ids().includes(conseilId) ? <View style={styles.pastilleConseil}><Text style={styles.pastilleConseilTexte}>★</Text></View>
               : c.ids().some((id) => parId[id] && parId[id].etat === 'achetable') ? <View style={styles.pastille} /> : null}
           </TouchableOpacity>
         );
@@ -517,7 +552,8 @@ const styles = StyleSheet.create({
   specialMedaillonImg: { position: 'absolute', left: 0, top: 0, width: 46, height: 46 },
   specialIcone: { width: 32, height: 32 },
   specialNom: { color: '#fff7e0', fontSize: 11, fontWeight: '900', marginTop: 1, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
-  conseil: { position: 'absolute', left: -6, top: -6, width: 16, height: 16, borderRadius: 8, backgroundColor: '#f2c94c', borderWidth: 1, borderColor: '#7a4a08', alignItems: 'center', justifyContent: 'center' },
+  // ⭐ en bas à GAUCHE (le badge de niveau est en bas à droite, « NOUVEAU » en haut).
+  conseil: { position: 'absolute', left: -6, bottom: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: '#f2c94c', borderWidth: 1, borderColor: '#7a4a08', alignItems: 'center', justifyContent: 'center' },
   conseilTexte: { color: '#5a3200', fontSize: 10, fontWeight: '900', includeFontPadding: false, lineHeight: 12 },
   prixConseil: { borderColor: '#ffe27a', borderWidth: 2 },
   pastille: { position: 'absolute', right: 4, top: 4, width: 10, height: 10, borderRadius: 5, backgroundColor: CYAN_CHAMPIGNON, borderWidth: 1, borderColor: '#ffffff' },
@@ -530,5 +566,13 @@ const styles = StyleSheet.create({
   modeTexteActif: { color: '#3b2208' },
   gains: { position: 'absolute', top: 79, left: LIBRE_G, width: LIBRE_L, height: 32, borderRadius: 9, backgroundColor: 'rgba(20,12,4,0.72)', borderWidth: 1, borderColor: 'rgba(232,184,74,0.55)', alignItems: 'center', justifyContent: 'center' },
   gainsTexte: { color: '#fff1cf', fontSize: 10, fontWeight: '800', lineHeight: 13, includeFontPadding: false },
+  silhouette: { tintColor: '#24170c', opacity: 0.9 },
+  cadenas: { position: 'absolute', right: -3, bottom: -3, width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(246,234,204,0.95)', alignItems: 'center', justifyContent: 'center' },
+  cadenasTexte: { fontSize: 8, includeFontPadding: false },
+  // En haut à GAUCHE, au-dessus du médaillon (à droite, il couvrait le nom).
+  nouveau: { position: 'absolute', left: -8, top: -9, paddingHorizontal: 3, height: 12, borderRadius: 6, backgroundColor: '#2f9e44', borderWidth: 1, borderColor: '#e6ffe9', justifyContent: 'center' },
+  nouveauTexte: { color: '#ffffff', fontSize: 6.5, fontWeight: '900', letterSpacing: 0.3, includeFontPadding: false },
+  pastilleNouveau: { position: 'absolute', right: 1, top: 1, width: 16, height: 16, borderRadius: 8, backgroundColor: '#e03131', borderWidth: 1, borderColor: '#ffffff', alignItems: 'center', justifyContent: 'center' },
+  pastilleNouveauTexte: { color: '#ffffff', fontSize: 11, fontWeight: '900', includeFontPadding: false, lineHeight: 13 },
   effet: { width: 180, textAlign: 'center', color: '#ffd84a', fontSize: 16, fontWeight: '900', textShadowColor: 'rgba(60,30,0,0.9)', textShadowRadius: 4 },
 });

@@ -20,7 +20,8 @@ export function FicheElement({ fiche, onFermer, onAcheter, onAscend, formatNum }
       <FenetreBois titre={fiche.etat === 'verrouille' ? '???' : fiche.nom} largeur={FICHE_L} onFermer={() => onFermer()}>
         <View style={[styles.ficheMedaillon, { borderColor: COULEUR_ETAT[fiche.etat] }]}>
           {/* Icône peinte si fournie (grimoire), sinon l'émoji. */}
-          {fiche.etat !== 'verrouille' && fiche.icone ? <Image source={fiche.icone} resizeMode="contain" style={{ width: 56, height: 56 }} />
+          {/* Verrouillé : la SILHOUETTE de l'icône (mystère) ; sinon l'icône peinte. */}
+          {fiche.icone ? <Image source={fiche.icone} resizeMode="contain" style={[{ width: 56, height: 56 }, fiche.etat === 'verrouille' && { tintColor: '#24170c', opacity: 0.9 }]} />
             : <Text style={styles.ficheEmoji}>{fiche.etat === 'verrouille' ? '🔒' : fiche.emoji}</Text>}
         </View>
         {fiche.niveau && fiche.etat !== 'verrouille' ? <Text style={styles.ficheNiveau}>Niveau actuel : {fiche.niveau}</Text> : null}
