@@ -1404,3 +1404,21 @@ retenue sans preuve) :
 pages, et l'achat de Griffes n'était plus mis en avant) — Griffes, le sceau
 de l'Ascension et Offrande reviennent SOUS le livre (HORS_LIVRE) ; livre
 ×1,22 ; boutons de prix au contact là aussi.
+
+**Grimoire — retouches (retours de l'auteur, 27/09)** :
+- **Magenta en haut du livre** : contour mi-transparent teinté par le fond.
+  Méthode MESURÉE : papier / cuir / or = tons chauds (rouge ≥ vert, vert −
+  bleu ≥ 23 ; le rose résiduel est ≤ 12) → dans une bande de 10 px au
+  contour, tout pixel hors de cette palette prend la couleur du pixel chaud
+  propre le plus proche (seuil 18) ; + les taches magenta franc partout
+  (452 px cachés en bas du dos). Livre, feuilles, sceaux, médaillon nettoyés.
+- **Sceau de l'Ascension** : version OR VIF (`sceau-ascension-or.png`), halo
+  doré qui respire (`lueur-or.png`), « ASCENSION » en petites capitales à
+  empattements (police système : Georgia / serif) crème cerclée de brun.
+- **Ordre des auto-clics** : le jeu n'impose AUCUN ordre (pas de règle de
+  déblocage) ; la révélation PAR PALIER héritée de l'arbre montrait le 1er de
+  chaque palier dès le départ (Dragon Miniature acheté avant tout). → UNE
+  file dans l'ordre des PRIX RÉELS de l'Ascension en cours (stable : vérifié
+  Asc 0, 1, 3), révélée 2 par 2 (possédés, suivant, « ??? ») ; un auto-clic
+  déjà possédé hors ordre reste visible. Vérifié au banc : partie neuve →
+  « Esprit Frappeur · ??? » ; Dragon possédé → tout jusqu'au Phénix + « ??? ».

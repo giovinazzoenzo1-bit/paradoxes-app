@@ -141,24 +141,30 @@ function construireNoeuds(p) {
     prix: prixV, etat: etat(!okV, maxV, prixV, p.coins), onPress: p.onBuyVeilleur, allume: p.veilleurLevel > 0,
     detail: okV ? 'Augmente tes gains quand tu ne joues pas.' : exigence('veilleur') });
 
-  // ── AUTO-CLICS : 3 RACINES selon le palier (champ `tier` des données),
-  // chacune révélée 2 par 2 (les possédés, le suivant, puis un « ??? »).
+  // ── AUTO-CLICS : UNE seule file, dans l'ORDRE DES PRIX RÉELS de
+  // l'Ascension en cours (1er achat), révélée 2 par 2 : les possédés, le
+  // suivant (achetable), puis un « ??? ». Retour de l'auteur (27/09) :
+  // révélés par palier en parallèle, le 1er de chaque palier était visible dès
+  // le départ (Dragon Miniature acheté avant tout le reste). Le jeu n'impose
+  // aucun ordre (aucune règle de déblocage) : c'est cette révélation qui le
+  // donne. Positions de l'arbre : inchangées (racine du palier).
   const racines = autoClicsParPalier();
-  PALIERS_AUTO.forEach((palier) => {
-    const liste = racines[palier] || [];
-    let dernier = -1;
-    liste.forEach((c, i) => { if (((p.autoClickers && p.autoClickers[c.id]) || 0) > 0) dernier = i; });
-    liste.forEach((c, i) => {
-      const pos = (RACINES_AUTO[palier] || [])[i]; if (!pos || i > dernier + 2) return;
-      const possede = (p.autoClickers && p.autoClickers[c.id]) || 0;
-      const mystere = i === dernier + 2;
-      const prix = remise(autoClickerCost(c, possede, p.ascensionCount));
-      ajouter({ id: c.id, parent: i === 0 ? 'ascension' : liste[i - 1].id, x: pos[0], y: pos[1],
-        emoji: c.emoji, nom: c.name, niveau: possede > 0 ? `×${possede}` : '', prix, etat: etat(mystere, false, prix, p.coins),
-        gain: mystere ? `🔒 achète ${liste[i - 1].name}` : `+${nb(c.baseIncome, 1)} /s chacun`,
-        onPress: () => p.onBuyAutoClicker(c.id), allume: possede > 0,
-        detail: mystere ? `🔒 Achète d'abord ${liste[i - 1].name}.` : `Possédé : ${possede} · +${nb(c.baseIncome, 1)}/s chacun.` });
-    });
+  const file = [...AUTOCLICKERS].sort((x, y) => autoClickerCost(x, 0, p.ascensionCount) - autoClickerCost(y, 0, p.ascensionCount));
+  let dernier = -1;
+  file.forEach((c, i) => { if (((p.autoClickers && p.autoClickers[c.id]) || 0) > 0) dernier = i; });
+  file.forEach((c, ordre) => {
+    if (ordre > dernier + 2) return;
+    const palier = c.tier; const liste = racines[palier] || []; const i = liste.findIndex((x) => x.id === c.id);
+    const pos = (RACINES_AUTO[palier] || [])[i]; if (!pos) return;
+    const possede = (p.autoClickers && p.autoClickers[c.id]) || 0;
+    const mystere = ordre === dernier + 2 && possede === 0;
+    const precedent = ordre > 0 ? file[ordre - 1] : null;
+    const prix = remise(autoClickerCost(c, possede, p.ascensionCount));
+    ajouter({ id: c.id, ordre, parent: i === 0 ? 'ascension' : liste[i - 1].id, x: pos[0], y: pos[1],
+      emoji: c.emoji, nom: c.name, niveau: possede > 0 ? `×${possede}` : '', prix, etat: etat(mystere, false, prix, p.coins),
+      gain: mystere ? `🔒 achète ${precedent.name}` : `+${nb(c.baseIncome, 1)} /s chacun`,
+      onPress: () => p.onBuyAutoClicker(c.id), allume: possede > 0,
+      detail: mystere ? `🔒 Achète d'abord ${precedent.name}.` : `Possédé : ${possede} · +${nb(c.baseIncome, 1)}/s chacun.` });
   });
 
   // ── RELIQUES : DANS l'arbre, rangées par famille d'effet ; verrouillées

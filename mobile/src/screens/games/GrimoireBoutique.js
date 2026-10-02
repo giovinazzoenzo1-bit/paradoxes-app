@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanResponder, Animated, Easing, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanResponder, Animated, Easing, StyleSheet, Dimensions, Platform } from 'react-native';
 import { CHAPITRES_GRIMOIRE } from '../../games/clicker/grimoireChapitres';
 import { useSettings } from '../../context/SettingsContext';
 import { vibrerSucces, CRISTAL, CYAN_CHAMPIGNON } from './fenetreBois';
@@ -46,13 +46,17 @@ const MEDAILLON = 30;
 const ONGLET_L = 46;
 const ONGLET_H = Math.round((ONGLET_L * 243) / 110);
 const PERSPECTIVE = 1400;
+// Lettres à empattements du système (aucune police à charger).
+const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const DUREE_TOUR = 640;
 
 const IMG = {
   livre: require('../../../assets/grimoire/livre.png'),
   feuille: { gauche: require('../../../assets/grimoire/page-gauche.png'), droite: require('../../../assets/grimoire/page-droite.png') },
   medaillon: require('../../../assets/grimoire/medaillon.png'),
-  sceauAscension: require('../../../assets/grimoire/sceau-ascension.png'),
+  // Or VIF + halo doré (retour de l'auteur : « pas jaune brillant comme la maquette »).
+  sceauAscension: require('../../../assets/grimoire/sceau-ascension-or.png'),
+  lueurOr: require('../../../assets/grimoire/lueur-or.png'),
   fond: require('../../../assets/menu/fond.jpg'),
   plaque: require('../../../assets/fenetres/plaque-solde.png'),
 };
@@ -147,7 +151,9 @@ function Grimoire(props) {
   const [position, setPosition] = useState({ c: 0, p: 0 });
   const [tour, setTour] = useState(null); // { sens, de, vers } pendant qu'une page tourne
 
-  const chapitres = CHAPITRES_GRIMOIRE.map((c, i) => ({ ...c, ...VISUELS[c.cle], planches: planches(i, c.ids().filter((id) => parId[id])) }));
+  // Auto-clics : dans l'ORDRE du modèle (prix réels de l'Ascension en cours).
+  const ordonner = (cle, ids) => (cle === 'auto' ? [...ids].sort((x, y) => (parId[x].ordre ?? 0) - (parId[y].ordre ?? 0)) : ids);
+  const chapitres = CHAPITRES_GRIMOIRE.map((c, i) => ({ ...c, ...VISUELS[c.cle], planches: planches(i, ordonner(c.cle, c.ids().filter((id) => parId[id]))) }));
   const chapRef = useRef(chapitres); chapRef.current = chapitres;
   const posRef = useRef(position); posRef.current = position;
   const planche = (pos) => { const C = chapitres[pos.c]; return C.planches[Math.min(pos.p, C.planches.length - 1)]; };
@@ -267,6 +273,15 @@ function Grimoire(props) {
   const total = chap.planches.length;
   const numero = Math.min((tour ? tour.vers : position).p, total - 1) + 1;
   const asc = parId.ascension;
+  const halo = useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    const b = Animated.loop(Animated.sequence([
+      Animated.timing(halo, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(halo, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    b.start();
+    return () => b.stop();
+  }, []);
   const cActif = (tour ? tour.vers : position).c;
   return (
     <View style={styles.racine}>
@@ -308,6 +323,10 @@ function Grimoire(props) {
 
       {/* SOUS le livre, mis en avant : Griffes, le sceau de l'Ascension, Offrande. */}
       <Special n={parId.griffes} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} style={{ left: 10, top: SOUS_LIVRE_Y + 4 }} />
+      {asc ? (
+        <Animated.Image source={IMG.lueurOr} resizeMode="stretch" style={{ position: 'absolute', left: Math.round(ECRAN_L / 2 - 70), top: SOUS_LIVRE_Y - 29, width: 140, height: 140, pointerEvents: 'none',
+          opacity: halo.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0.95] }), transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.06] }) }] }} />
+      ) : null}
       {asc ? (
         <TouchableOpacity activeOpacity={0.8} onPress={() => setFicheId('ascension')} style={[styles.ascension, { left: Math.round(ECRAN_L / 2 - 41), top: SOUS_LIVRE_Y }]}>
           <Image source={IMG.sceauAscension} resizeMode="contain" style={styles.ascensionImg} />
@@ -401,8 +420,9 @@ const styles = StyleSheet.create({
   numeroTexte: { color: '#4a3418', fontSize: 10.5, fontWeight: '900', includeFontPadding: false },
   ascension: { position: 'absolute', width: 82, height: 82, alignItems: 'center', justifyContent: 'center' },
   ascensionImg: { position: 'absolute', left: 0, top: 0, width: 82, height: 82 },
-  ascensionTexte: { color: '#4a2e06', fontSize: 9, fontWeight: '900', letterSpacing: 0.3, includeFontPadding: false },
-  ascensionNiveau: { color: '#4a2e06', fontSize: 9, fontWeight: '800', includeFontPadding: false },
+  // Comme la maquette : capitales à empattements, crème cerclée de brun, petites.
+  ascensionTexte: { color: '#fff4d0', fontFamily: SERIF, fontSize: 8.5, fontWeight: '700', letterSpacing: 0.7, includeFontPadding: false, textShadowColor: 'rgba(70,35,0,0.95)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
+  ascensionNiveau: { color: '#fff4d0', fontFamily: SERIF, fontSize: 8, fontWeight: '700', includeFontPadding: false, textShadowColor: 'rgba(70,35,0,0.95)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   ascensionBarre: { width: 56, height: 6, marginTop: 3, borderRadius: 3, backgroundColor: 'rgba(40,24,6,0.55)', padding: 1, justifyContent: 'center' },
   entete: { position: 'absolute', left: 0, right: 0, top: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 12 },
   plaque: { width: 124, height: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
