@@ -87,3 +87,18 @@ In the same painted style as the icons inside the medallions of the spell book, 
 In the same painted style as the icons inside the medallions of the spell book, draw 9 separate small icons in ONE image, arranged as a grid of 3 columns and 3 rows, each icon centered in its own cell, all the same size, separated by wide empty space. No frames, no medallions, no text. In reading order (row 1 left to right, then row 2, then row 3): a dark stone seal with a rune; a golden sun shield; a dark blue night veil; a glowing root; a golden glyph tablet; an ember flower petal; a dark abyss eye; a golden coin; a blue diamond. Vertical PORTRAIT image, 9:16. Each icon keeps its own natural proportions and is centered in its cell, fully visible, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow and no light around the icons. Never use pink, purple or magenta on the icons themselves.
 ```
 
+
+
+# Série 3 : la couverture (ouverture animée du livre, 02/10)
+
+Même conversation Gemini. Déposer ici l'image 68.
+
+Lien : https://github.com/giovinazzoenzo1-bit/paradoxes-app/upload/main/design/a-integrer/02-boutique/grimoire
+
+La couverture se superpose à la MOITIÉ DROITE du livre ouvert (même hauteur, moitié de la largeur, dos à gauche), puis pivote autour du dos ; son revers réutilise page-gauche.png.
+
+**68. Couverture du livre fermé**
+
+```
+From the spell book shop screen you just made, draw ONLY the same spell book, but CLOSED and lying flat, seen from straight above: the front leather cover only, with the same aged brown leather, the same golden ornate metal corners, and in its center an embossed golden emblem (a glowing eight-pointed star inside a circle of runes). The spine is on the LEFT edge of the cover. It must look exactly like the right half of the open book once it is closed: same leather, same height as the open book, and about half its width — so the cover is about 1 unit wide for 1.8 units tall. No title, no text, no letters. Vertical PORTRAIT image, 9:16. The book is centered and fully visible, with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow and no light around the book. Never use pink, purple or magenta on the book itself.
+```
