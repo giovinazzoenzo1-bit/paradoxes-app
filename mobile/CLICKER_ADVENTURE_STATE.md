@@ -1373,3 +1373,34 @@ verrouillé garde le cadenas (mystère). Verrou de relique raccourci :
   qui s'envole à l'achat.
 - Banc : `scenes/grimoire-lent.jsx` = animations ×5 plus lentes (sinon les
   captures, trop lentes, ratent la page en train de tourner).
+
+
+## ⚠️ 27/09 — RETOUR DU BUG DES TAPS (clicker + achats) : cause réelle et garde
+
+Symptôme (auteur) : « le problème de tap est revenu, sur le clicker et même
+quand on veut acheter des items ». Enquête (mesures, pas d'hypothèse
+retenue sans preuve) :
+- ÉCARTÉ : calculs lourds avec le mode développeur — prix / dégâts en moins
+  de 7 µs même au niveau 100 000 ; aucune boucle de rattrapage dans la logique.
+- CAUSE : la zone de tap était un **TouchableOpacity onPress={handleTap}**.
+  Le 03/09, le diagnostic avait PROUVÉ qu'il jette les taps rapides (cycle
+  d'appui complet attendu : 142 envoyés/s, 2 à 15 reçus) → correctif 17f73f9
+  (répondeur : tap au CONTACT). Le même jour, la remise à l'identique d'une
+  version confirmée (abd69b9) a EMPORTÉ ce correctif. À 150 ms il tenait
+  tant que le téléphone avait de la marge ; les effets ajoutés depuis (onde de
+  choc, étincelles, créature qui attaque à chaque tap, lueurs) l'ont fait
+  décrocher. Même défaut sur les boutons d'achat (TouchableOpacity / onPress,
+  hérités de l'ancienne boutique) ; et le « +1 » d'achat restait à l'écran,
+  invisible (risque d'intercepter le toucher suivant).
+- CORRECTIF : zone de tap = `View` au répondeur (`onStartShouldSetResponder`
+  + `onResponderGrant={handleTap}`), réappliqué tel quel, commentaire
+  d'histoire dans le code ; boutons de prix du Grimoire en `Pressable
+  onPressIn` ; « +1 » dans une View transparente au toucher, RETIRÉ à la fin.
+- **GARDE PERMANENTE : `auditZoneTapAuContact`** (+ sabotage = remettre le
+  TouchableOpacity d'aujourd'hui → crie). NE JAMAIS remettre onPress sur la
+  zone de tap. Sonde de taps 20 / 20 aux 5 endroits.
+
+**Grimoire (même jour)** : chapitre « Comptoir » RETIRÉ (l'auteur : trop de
+pages, et l'achat de Griffes n'était plus mis en avant) — Griffes, le sceau
+de l'Ascension et Offrande reviennent SOUS le livre (HORS_LIVRE) ; livre
+×1,22 ; boutons de prix au contact là aussi.

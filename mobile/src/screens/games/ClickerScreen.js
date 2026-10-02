@@ -3821,7 +3821,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 panneaux (limité à la zone de l'œuf, ses bords se voyaient). */}
             {powerCast && <PowerFlash key={'flash' + powerCast.id} couleur={couleurElementDe(powerCast.creatureId)} />}
             <View style={styles.tapZone}>
-              <TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapTouch}>
+              {/* ⚠️⚠️ ZONE DE TAP AU CONTACT — ne JAMAIS remettre un TouchableOpacity
+                  ni onPress ici (contrôle auditZoneTapAuContact). Histoire : le
+                  03/09, le diagnostic a prouvé que TouchableOpacity JETTE les taps
+                  rapides (il attend un cycle d'appui COMPLET : 142 taps/s envoyés,
+                  2 à 15 reçus) → correctif 17f73f9 (répondeur, tap au CONTACT).
+                  Le même jour, la remise à l'identique d'une version confirmée
+                  (abd69b9) a emporté ce correctif ; à 150 ms il tenait tant que le
+                  téléphone avait de la marge, puis les effets ajoutés depuis l'ont
+                  fait décrocher (retour de l'auteur le 27/09 : « le problème de tap
+                  est revenu »). Réappliqué tel quel le 27/09. */}
+              <View style={styles.tapTouch} onStartShouldSetResponder={() => true} onResponderGrant={handleTap}>
                   {/* 27/09 : le nid est DANS le conteneur de l'œuf (derrière lui,
                       dessiné avant) : il partage son centrage et son décalage,
                       donc reste dessous sur tout appareil (retour de l'auteur :
@@ -3882,7 +3892,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                       attaque={attaque}
                     />
                   )}
-              </TouchableOpacity>
+              </View>
               {/* ⚠️⚠️ 27/09 — BUG DE TAP (retour de l'auteur, PROUVÉ au banc) : chaque
                   « +X » apparaît AU POINT TOUCHÉ (locationX/Y) et reste 0,7 s ;
                   posé PAR-DESSUS la zone sans être transparent au toucher, il

@@ -4004,14 +4004,14 @@ module.exports.auditArbreSansChevauchement = auditArbreSansChevauchement;
 
 // ── Grimoire de la boutique : AUCUN élément achetable absent (27/09) ────
 // Tout élément achetable (Pacte, Faveur, Dégâts critiques, Sanctuaire,
-// Veilleur, 10 améliorations de tap, 15 auto-clics, 20 reliques, Griffes,
-// Offrande) doit figurer dans UN chapitre du livre, une seule fois ;
-// l'Ascension est hors du livre (sceau de l'en-tête) ; aucun identifiant inconnu.
+// Veilleur, 10 améliorations de tap, 15 auto-clics, 20 reliques) doit
+// figurer dans UN chapitre du livre, une seule fois ; Griffes, l'Ascension et
+// Offrande sont SOUS le livre (mis en avant) ; aucun identifiant inconnu.
 function auditGrimoireComplet() {
   const G = require('../src/games/clicker/grimoireChapitres.js');
   const L = require('../src/games/clicker/clickerLogic.js');
   const pb = [];
-  const attendus = ['pacte', 'faveur', 'critDamage', 'sanctuaire', 'veilleur', 'griffes', 'offrande',
+  const attendus = ['pacte', 'faveur', 'critDamage', 'sanctuaire', 'veilleur',
     ...L.TAP_UPGRADES.map((u) => u.id), ...L.AUTOCLICKERS.map((c) => c.id), ...L.UPGRADE_ITEMS.map((i) => 'relique:' + i.id)];
   const vus = new Map();
   G.CHAPITRES_GRIMOIRE.forEach((c) => c.ids().forEach((id) => vus.set(id, (vus.get(id) || []).concat(c.cle))));
@@ -4021,7 +4021,36 @@ function auditGrimoireComplet() {
     else if (ch.length > 1) pb.push(`${id} : dans ${ch.length} chapitres (${ch.join(', ')})`);
   });
   vus.forEach((ch, id) => { if (!attendus.includes(id)) pb.push(`${id} : identifiant inconnu (chapitre ${ch.join(', ')})`); });
-  if (!(G.HORS_LIVRE || []).includes('ascension')) pb.push('ascension : plus hors du livre (sceau de l\'en-tête)');
+  ['griffes', 'ascension', 'offrande'].forEach((id) => { if (!(G.HORS_LIVRE || []).includes(id)) pb.push(`${id} : plus sous le livre (mis en avant)`); });
   return pb;
 }
 module.exports.auditGrimoireComplet = auditGrimoireComplet;
+
+// ── Tap AU CONTACT (27/09) — ce bug est REVENU, ce contrôle l'empêche ────
+// Le 03/09, le diagnostic a prouvé qu'un TouchableOpacity / onPress JETTE les
+// taps rapides (cycle d'appui complet attendu : 142 envoyés/s, 2 à 15 reçus).
+// Correctif 17f73f9 (répondeur, tap au CONTACT) emporté le jour même par une
+// remise à l'identique (abd69b9) ; revenu au grand jour le 27/09 quand les
+// effets ont chargé chaque tap. Exige : la zone de tap est une View au
+// répondeur (onResponderGrant={handleTap}), jamais onPress={handleTap} ; les
+// boutons de prix du Grimoire achètent au contact (onPressIn).
+function auditZoneTapAuContact() {
+  const fs = require('fs'); const path = require('path');
+  const pb = [];
+  const ecran = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if (/onPress=\{handleTap\}/.test(ecran)) pb.push("ClickerScreen : handleTap branché sur onPress (cycle d'appui complet → taps rapides jetés)");
+  const ligne = ecran.split('\n').find((l) => l.includes('style={styles.tapTouch}'));
+  if (!ligne) pb.push('ClickerScreen : zone de tap (styles.tapTouch) introuvable');
+  else {
+    const balise = (ligne.trim().match(/^<(\w+)/) || [])[1];
+    if (balise !== 'View') pb.push(`ClickerScreen : la zone de tap est un <${balise}> (attendu : une View au répondeur)`);
+    if (!ligne.includes('onResponderGrant={handleTap}')) pb.push('ClickerScreen : la zone de tap ne compte pas au CONTACT (onResponderGrant={handleTap} absent)');
+  }
+  const g = fs.readFileSync(path.join(__dirname, '../src/screens/games/GrimoireBoutique.js'), 'utf8');
+  const auContact = (g.match(/onPressIn=\{\(e\) => onAcheter\(/g) || []).length;
+  const auRelacher = (g.match(/onPress=\{\(e\) => onAcheter\(/g) || []).length;
+  if (auRelacher) pb.push(`Grimoire : ${auRelacher} bouton(s) de prix achètent au relâcher (onPress) — taps rapides jetés`);
+  if (auContact < 2) pb.push(`Grimoire : ${auContact} bouton(s) de prix au contact (attendu : ceux des pages ET ceux sous le livre)`);
+  return pb;
+}
+module.exports.auditZoneTapAuContact = auditZoneTapAuContact;

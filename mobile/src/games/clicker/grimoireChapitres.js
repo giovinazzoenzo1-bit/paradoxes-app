@@ -20,10 +20,8 @@ export const CHAPITRES_GRIMOIRE = [
     ids: () => ['sanctuaire', 'veilleur'] },
   { cle: 'reliques', titre: 'Reliques', intro: 'Les pouvoirs de tes créatures. Chaque relique s\'ouvre avec sa créature.',
     ids: () => { const r = reliquesParFamille(); return FAMILLES_RELIQUES.flatMap((f) => (r[f] || []).map((i) => 'relique:' + i.id)); } },
-  // 27/09 : Griffes et Offrande passent DANS le livre (le livre plus grand
-  // prend la place qu'ils occupaient dessous).
-  { cle: 'comptoir', titre: 'Comptoir', intro: 'Des Griffes pour l\'Aventure, et l\'Offrande aux esprits.',
-    ids: () => ['griffes', 'offrande'] },
 ];
-// Hors du livre : le sceau de l'Ascension, au centre de l'en-tête.
-export const HORS_LIVRE = ['ascension'];
+// Hors du livre, SOUS lui, mis en avant (retour de l'auteur : le chapitre
+// « Comptoir » cachait l'achat de Griffes) : Griffes, le sceau de
+// l'Ascension au centre, Offrande.
+export const HORS_LIVRE = ['griffes', 'ascension', 'offrande'];

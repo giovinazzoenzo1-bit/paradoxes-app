@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, Image, ImageBackground, TouchableOpacity, PanResponder, Animated, Easing, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanResponder, Animated, Easing, StyleSheet, Dimensions } from 'react-native';
 import { CHAPITRES_GRIMOIRE } from '../../games/clicker/grimoireChapitres';
 import { useSettings } from '../../context/SettingsContext';
 import { vibrerSucces, CRISTAL, CYAN_CHAMPIGNON } from './fenetreBois';
@@ -26,10 +26,13 @@ import { ICONES } from './grimoireIcones';
 // ⚠️ Tailles et positions en NOMBRES (règle du 27/09).
 
 const { width: ECRAN_L } = Dimensions.get('window');
-const LIVRE_L = Math.round(ECRAN_L * 1.35);
+// ×1,22 : assez grand pour les zones d'écriture, et la place SOUS le livre
+// pour Griffes, le sceau de l'Ascension et Offrande (retour de l'auteur).
+const LIVRE_L = Math.round(ECRAN_L * 1.22);
 const LIVRE_H = Math.round((LIVRE_L * 807) / 900);
 const LIVRE_X = Math.round((ECRAN_L - LIVRE_L) / 2);
-const LIVRE_Y = 172;
+const LIVRE_Y = 168;
+const SOUS_LIVRE_Y = LIVRE_Y + Math.round((LIVRE_L * 807) / 900) - 6;
 // Mesures sur l'image du livre (fractions x0, y0, x1, y1) : FEUILLE = page
 // entière jusqu'au dos (pour la feuille qui tourne) ; ZONE = rectangle libre
 // de tout ornement (pour le texte).
@@ -59,8 +62,6 @@ const VISUELS = {
   auto: { marque: require('../../../assets/grimoire/marque-auto.png'), image: require('../../../assets/grimoire/chapitre-auto.png') },
   sanctuaire: { marque: require('../../../assets/grimoire/marque-sanctuaire.png'), image: require('../../../assets/grimoire/chapitre-sanctuaire.png') },
   reliques: { marque: require('../../../assets/grimoire/marque-reliques.png'), image: require('../../../assets/grimoire/chapitre-reliques.png') },
-  // Comptoir : 6e couleur (argent), tirée du marque-page rouge par le code.
-  comptoir: { marque: require('../../../assets/grimoire/marque-comptoir.png'), image: require('../../../assets/grimoire/chapitre-comptoir.png') },
 };
 
 // Pages d'un chapitre : 0 = intro (illustration), puis 4 éléments par page.
@@ -98,15 +99,40 @@ function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter }) {
         {n.gain ? <Text style={[styles.gain, verrou && styles.gainVerrou]} numberOfLines={1}>{n.gain}</Text> : null}
         {!verrou && n.prix != null ? (
           n.etat === 'max' ? <Text style={styles.max}>⭐ MAX</Text> : (
-            <TouchableOpacity activeOpacity={0.6} onPress={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)}
-              style={[styles.prix, ok ? styles.prixOk : styles.prixCher]} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
+            // ⚠️ Achat AU CONTACT (onPressIn), comme la zone de tap : un
+            // TouchableOpacity / onPress jette les taps rapides (auditZoneTapAuContact).
+            <Pressable onPressIn={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)}
+              style={({ pressed }) => [styles.prix, ok ? styles.prixOk : styles.prixCher, pressed && { opacity: 0.75 }]} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
               <Image source={n.devise === 'diamants' ? ICONES.diamant : ICONES.piece} resizeMode="contain" style={styles.prixIcone} />
               <Text style={[styles.prixTexte, !ok && styles.prixTexteCher]} numberOfLines={1}>{formatNum(n.prix)}</Text>
-            </TouchableOpacity>
+            </Pressable>
           )
         ) : null}
       </View>
     </TouchableOpacity>
+  );
+}
+
+// ── Sous le livre, mis en avant : Griffes et Offrande ─────────────────────
+function Special({ n, formatNum, onFiche, onAcheter, style }) {
+  if (!n) return null;
+  const ok = n.etat === 'achetable';
+  return (
+    <View style={[styles.special, style]}>
+      <TouchableOpacity activeOpacity={0.7} onPress={() => onFiche(n.id)} style={{ alignItems: 'center' }}>
+        <View style={styles.specialMedaillon}>
+          <Image source={IMG.medaillon} resizeMode="contain" style={styles.specialMedaillonImg} />
+          {ICONES[n.id] ? <Image source={ICONES[n.id]} resizeMode="contain" style={styles.specialIcone} /> : <Text style={{ fontSize: 22 }}>{n.emoji}</Text>}
+        </View>
+        <Text style={styles.specialNom} numberOfLines={1}>{n.nom}</Text>
+      </TouchableOpacity>
+      {/* Achat AU CONTACT (onPressIn), comme les pages. */}
+      <Pressable onPressIn={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)}
+        style={({ pressed }) => [styles.prix, { alignSelf: 'center' }, ok ? styles.prixOk : styles.prixCher, pressed && { opacity: 0.75 }]} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+        <Image source={n.devise === 'diamants' ? ICONES.diamant : ICONES.piece} resizeMode="contain" style={styles.prixIcone} />
+        <Text style={[styles.prixTexte, !ok && styles.prixTexteCher]} numberOfLines={1}>{formatNum(n.prix)}</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -138,7 +164,9 @@ function Grimoire(props) {
     if (x != null) {
       setEffet({ x, y, cle: Date.now() });
       effetAnim.setValue(0);
-      Animated.timing(effetAnim, { toValue: 1, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      // Retiré à la fin : un texte invisible resté à l'écran pourrait
+      // intercepter le toucher suivant, pile sur le bouton de prix.
+      Animated.timing(effetAnim, { toValue: 1, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => setEffet(null));
     }
   }, []);
 
@@ -278,7 +306,21 @@ function Grimoire(props) {
         <Text style={styles.flecheTexte}>›</Text>
       </TouchableOpacity>
 
-      {/* En-tête : RETOUR, le SCEAU DE L'ASCENSION au centre, les soldes. */}
+      {/* SOUS le livre, mis en avant : Griffes, le sceau de l'Ascension, Offrande. */}
+      <Special n={parId.griffes} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} style={{ left: 10, top: SOUS_LIVRE_Y + 4 }} />
+      {asc ? (
+        <TouchableOpacity activeOpacity={0.8} onPress={() => setFicheId('ascension')} style={[styles.ascension, { left: Math.round(ECRAN_L / 2 - 41), top: SOUS_LIVRE_Y }]}>
+          <Image source={IMG.sceauAscension} resizeMode="contain" style={styles.ascensionImg} />
+          <Text style={styles.ascensionTexte}>ASCENSION</Text>
+          {asc.niveau ? <Text style={styles.ascensionNiveau}>{asc.niveau}</Text> : null}
+          <View style={styles.ascensionBarre}>
+            <View style={{ width: Math.round(52 * (asc.progres || 0)), height: 4, borderRadius: 2, backgroundColor: CYAN_CHAMPIGNON }} />
+          </View>
+        </TouchableOpacity>
+      ) : null}
+      <Special n={parId.offrande} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} style={{ left: ECRAN_L - 10 - 104, top: SOUS_LIVRE_Y + 4 }} />
+
+      {/* En-tête : RETOUR et les soldes. */}
       <View style={[styles.entete, { pointerEvents: 'box-none' }]}>
         <BackButton onPress={props.onRetour} style={{ position: 'relative', left: 0, top: 0 }} />
         <View style={{ gap: 6, alignItems: 'flex-end', pointerEvents: 'none' }}>
@@ -294,24 +336,14 @@ function Grimoire(props) {
           </View>
         </View>
       </View>
-      {asc ? (
-        <TouchableOpacity activeOpacity={0.8} onPress={() => setFicheId('ascension')} style={[styles.ascension, { left: Math.round(ECRAN_L / 2 - 41), top: 34 }]}>
-          <Image source={IMG.sceauAscension} resizeMode="contain" style={styles.ascensionImg} />
-          <Text style={styles.ascensionTexte}>ASCENSION</Text>
-          {asc.niveau ? <Text style={styles.ascensionNiveau}>{asc.niveau}</Text> : null}
-          <View style={styles.ascensionBarre}>
-            <View style={{ width: Math.round(52 * (asc.progres || 0)), height: 4, borderRadius: 2, backgroundColor: CYAN_CHAMPIGNON }} />
-          </View>
-        </TouchableOpacity>
-      ) : null}
 
       {/* « +1 » qui s'envole à l'achat. */}
       {effet ? (
-        <Animated.Text key={effet.cle} style={[styles.effet, { left: effet.x - 30, top: effet.y - 34, pointerEvents: 'none',
+        <Animated.View key={effet.cle} style={{ position: 'absolute', left: effet.x - 30, top: effet.y - 34, width: 60, pointerEvents: 'none',
           opacity: effetAnim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }),
-          transform: [{ translateY: effetAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -34] }) }, { scale: effetAnim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.7, 1.15, 1] }) }] }]}>
-          +1
-        </Animated.Text>
+          transform: [{ translateY: effetAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -34] }) }, { scale: effetAnim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.7, 1.15, 1] }) }] }}>
+          <Text style={styles.effet}>+1</Text>
+        </Animated.View>
       ) : null}
 
       <FicheElement fiche={ficheId && parId[ficheId] ? { ...parId[ficheId], icone: ICONES[ficheId] } : null} onFermer={() => setFicheId(null)} onAcheter={(id) => acheter(id)} onAscend={props.onAscend} formatNum={formatNum} />
@@ -376,5 +408,10 @@ const styles = StyleSheet.create({
   plaque: { width: 124, height: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   plaqueImg: { position: 'absolute', left: 0, top: 0, width: 124, height: 38 },
   plaqueTexte: { color: '#ffe38a', fontSize: 14, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
-  effet: { position: 'absolute', width: 60, textAlign: 'center', color: '#ffd84a', fontSize: 20, fontWeight: '900', textShadowColor: 'rgba(60,30,0,0.9)', textShadowRadius: 4 },
+  special: { position: 'absolute', width: 104, alignItems: 'center' },
+  specialMedaillon: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  specialMedaillonImg: { position: 'absolute', left: 0, top: 0, width: 46, height: 46 },
+  specialIcone: { width: 32, height: 32 },
+  specialNom: { color: '#fff7e0', fontSize: 11, fontWeight: '900', marginTop: 1, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
+  effet: { width: 60, textAlign: 'center', color: '#ffd84a', fontSize: 20, fontWeight: '900', textShadowColor: 'rgba(60,30,0,0.9)', textShadowRadius: 4 },
 });

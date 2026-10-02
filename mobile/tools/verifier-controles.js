@@ -231,6 +231,8 @@ const SABOTAGES = [
     remplace("  return hi;\n}\n// « Ton deck » face au Gardien", "  return hi + 1;\n}\n// « Ton deck » face au Gardien")],
   ['auditZoneTapLibre', F.ecran, "le calque des « +X » repasse en PROPRIÉTÉ pointerEvents (ignorée sur téléphone : taps bloqués)",
     remplace("              <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>", "              <View pointerEvents=\"none\" style={StyleSheet.absoluteFill}>")],
+  ['auditZoneTapAuContact', F.ecran, "zone de tap remise en TouchableOpacity / onPress (exactement le retour du bug du 27/09)",
+    remplace('<View style={styles.tapTouch} onStartShouldSetResponder={() => true} onResponderGrant={handleTap}>', '<TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapTouch}>')],
   ['auditGrimoireComplet', F.grimoire, "Dégâts critiques retirés du livre : un élément achetable disparaîtrait de la boutique",
     remplace("    ids: () => ['faveur', 'critDamage'] },", "    ids: () => ['faveur'] },")],
   ['auditArbreSansChevauchement', F.arbre, "étiquettes élargies à 420 points : les noms se chevauchent (le défaut signalé le 27/09) — sabotage indépendant des coordonnées, il ne se périme pas à chaque disposition",
