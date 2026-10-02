@@ -60,9 +60,19 @@ const PERSPECTIVE = 1400;
 // Lettres à empattements du système (aucune police à charger).
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const DUREE_TOUR = 640;
+const DUREE_OUVERTURE = 900;
+// Couverture : même hauteur que le livre, à ses PROPORTIONS NATURELLES (585 × 807,
+// plus large que la moitié du livre : le surplus tombe hors de l'écran, à droite).
+const COUV_L = Math.round((LIVRE_H * 585) / 807);
+const DOS_X = LIVRE_X + Math.round(LIVRE_L / 2);
+const DEMI_L = Math.round(LIVRE_L / 2);
 
 const IMG = {
   livre: require('../../../assets/grimoire/livre.png'),
+  // Ouverture animée (02/10) : couverture (proportions naturelles) + moitiés du livre ouvert.
+  couverture: require('../../../assets/grimoire/couverture.png'),
+  livreGauche: require('../../../assets/grimoire/livre-gauche.png'),
+  livreDroite: require('../../../assets/grimoire/livre-droite.png'),
   feuille: { gauche: require('../../../assets/grimoire/page-gauche.png'), droite: require('../../../assets/grimoire/page-droite.png') },
   medaillon: require('../../../assets/grimoire/medaillon.png'),
   // Or VIF + halo doré (retour de l'auteur : « pas jaune brillant comme la maquette »).
@@ -176,6 +186,13 @@ function Grimoire(props) {
   const [vus, setVus] = useState(null);
   const [position, setPosition] = useState({ c: 0, p: 0 });
   const [tour, setTour] = useState(null); // { sens, de, vers } pendant qu'une page tourne
+  // ── Ouverture du livre en entrant dans le shop (02/10) : la couverture pivote
+  // autour du dos ; son revers (= moitié gauche du livre ouvert) se pose à
+  // gauche ; à la fin, le vrai livre prend le relais (images identiques : aucun
+  // saut), puis textes et marque-pages apparaissent en fondu.
+  const [ouvert, setOuvert] = useState(false);
+  const ouverture = useRef(new Animated.Value(0)).current;
+  const apparition = useRef(new Animated.Value(0)).current;
   // Quantité d'achat : ×1, ×10 ou MAX (le plus possible avec tes pièces).
   const [mode, setMode] = useState(1);
   const pieces = props.coins || 0;
@@ -285,6 +302,18 @@ function Grimoire(props) {
     }, 380);
   }, []);
   useEffect(() => () => arreterRafale(), []);
+  useEffect(() => {
+    let fini = false;
+    const t = setTimeout(() => {
+      jouerSon('page', sonsRef.current);
+      Animated.timing(ouverture, { toValue: 1, duration: DUREE_OUVERTURE, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start(() => {
+        if (fini) return;
+        setOuvert(true);
+        Animated.timing(apparition, { toValue: 1, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      });
+    }, 120);
+    return () => { fini = true; clearTimeout(t); };
+  }, []);
 
   // ── Tourner une page : une feuille pivote en 3D autour du dos ────────────
   const angle = useRef(new Animated.Value(0)).current;
@@ -344,9 +373,9 @@ function Grimoire(props) {
   };
   // Page posée (sans fond : le livre dessine déjà le parchemin).
   const pagePosee = (page, cote) => (
-    <View key={'posee-' + cote} style={[styles.feuille, { left: F[cote].x, top: F[cote].y, width: F[cote].l, height: F[cote].h }]} {...glisse.panHandlers}>
+    <Animated.View key={'posee-' + cote} style={[styles.feuille, { left: F[cote].x, top: F[cote].y, width: F[cote].l, height: F[cote].h, opacity: apparition }]} {...glisse.panHandlers}>
       {contenu(page, cote)}
-    </View>
+    </Animated.View>
   );
   // Face d'une feuille qui tourne : image de la page + contenu + ombre.
   // Rotation autour du DOS : bord gauche pour une page de droite, bord droit
@@ -434,9 +463,11 @@ function Grimoire(props) {
       {chapitres.map((c, i) => {
         const actif = i === cActif;
         const x = LIVRE_X + Math.round(LIVRE_L * (0.2 + (i * 0.6) / (chapitres.length - 1))) - ONGLET_L / 2;
+        if (!ouvert) return null;
         return (
-          <TouchableOpacity key={c.cle} activeOpacity={0.8} onPress={() => (i !== cActif ? tourner({ c: i, p: 0 }, i > cActif ? 1 : -1) : null)}
-            style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0) }]}>
+          <Animated.View key={c.cle} style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0), opacity: apparition }]}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => (i !== cActif ? tourner({ c: i, p: 0 }, i > cActif ? 1 : -1) : null)}
+            style={{ position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: ONGLET_H, alignItems: 'center' }}>
             <Image source={c.marque} resizeMode="stretch" style={[styles.ongletImg, { transform: [{ scaleY: -1 }] }]} />
             <Image source={c.image} resizeMode="contain" style={[styles.ongletIcone, !actif && { opacity: 0.75 }]} />
             {/* Pastille : ⭐ le chapitre contient l'achat conseillé ; • un achat est possible. */}
@@ -444,9 +475,28 @@ function Grimoire(props) {
               : c.ids().includes(conseilId) ? <View style={styles.pastilleConseil}><Text style={styles.pastilleConseilTexte}>★</Text></View>
               : c.ids().some((id) => parId[id] && parId[id].etat === 'achetable') ? <View style={styles.pastille} /> : null}
           </TouchableOpacity>
+          </Animated.View>
         );
       })}
 
+      {!ouvert ? (
+        <>
+          <Image source={IMG.livreDroite} resizeMode="stretch" style={{ position: 'absolute', left: DOS_X, top: LIVRE_Y, width: DEMI_L, height: LIVRE_H }} />
+          {/* Revers de la couverture = moitié gauche du livre ouvert : se pose de 180° à 0°. */}
+          <Animated.View style={{ position: 'absolute', left: LIVRE_X, top: LIVRE_Y, width: DEMI_L, height: LIVRE_H, backfaceVisibility: 'hidden',
+            transform: [{ perspective: PERSPECTIVE }, { translateX: DEMI_L / 2 }, { rotateY: ouverture.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '0deg'] }) }, { translateX: -DEMI_L / 2 }] }}>
+            <Image source={IMG.livreGauche} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: DEMI_L, height: LIVRE_H }} />
+            <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#1a0f04', opacity: ouverture.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.32, 0] }), pointerEvents: 'none' }]} />
+          </Animated.View>
+          {/* Couverture : pivote de 0° à −180° autour de son bord gauche (le dos). */}
+          <Animated.View style={{ position: 'absolute', left: DOS_X, top: LIVRE_Y, width: COUV_L, height: LIVRE_H, backfaceVisibility: 'hidden',
+            transform: [{ perspective: PERSPECTIVE }, { translateX: -COUV_L / 2 }, { rotateY: ouverture.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-180deg'] }) }, { translateX: COUV_L / 2 }] }}>
+            <Image source={IMG.couverture} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: COUV_L, height: LIVRE_H }} />
+            <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#1a0f04', opacity: ouverture.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.32, 0] }), pointerEvents: 'none' }]} />
+          </Animated.View>
+        </>
+      ) : (
+        <>
       <View style={{ position: 'absolute', left: LIVRE_X, top: LIVRE_Y, width: LIVRE_L, height: LIVRE_H }} {...glisse.panHandlers}>
         <Image source={IMG.livre} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: LIVRE_L, height: LIVRE_H }} />
       </View>
@@ -464,6 +514,8 @@ function Grimoire(props) {
       <TouchableOpacity onPress={suivante} style={[styles.fleche, { left: Math.min(ECRAN_L - 36, F.droite.x + F.droite.l - 44), top: F.droite.y + F.droite.h - 34 }]} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
         <Text style={styles.flecheTexte}>›</Text>
       </TouchableOpacity>
+        </>
+      )}
 
       {/* SOUS le livre, mis en avant : Griffes, le sceau de l'Ascension, Offrande. */}
       <Special n={parId.griffes} formatNum={formatNum} onFiche={setFicheId} onAcheter={presser} onRelacher={arreterRafale} style={{ left: 10, top: SOUS_LIVRE_Y + 4 }} />

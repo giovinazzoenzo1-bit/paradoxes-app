@@ -1560,3 +1560,16 @@ l'inclut), ils jouent.
   ce n'est plus abordable (sans ouvrir de fiche) ; vibration et son 1 fois
   sur 4. Pages, Griffes et Offrande. Mesuré au banc : 10 achats en 1,5 s,
   0 après le relâcher. Contrôle **auditRafaleArretee** (+ sabotage).
+
+**02/10 — Boutique, étape 6 : OUVERTURE ANIMÉE du livre** (image 68 :
+`assets/grimoire/couverture.png`, étoile runique, dos à gauche). Couverture
+gardée à ses PROPORTIONS NATURELLES (585 × 807, rapport 0,725 vs 0,558 pour la
+moitié du livre — l'écraser aurait ovalisé l'étoile) : son surplus de largeur
+tombe hors de l'écran à droite. Scène d'ouverture (0,12 s + 0,9 s) : moitié
+droite du livre dessous, couverture 0 → −180° autour du dos, revers =
+`livre-gauche.png` (moitié gauche EXACTE du livre ouvert) qui se pose 180 → 0°
+(les deux faces sont de tranche à mi-course : la différence de largeur ne se
+voit pas) ; puis le vrai livre (images identiques : aucun saut), textes et
+marque-pages en fondu (0,22 s). Aucun calque plein écran : chaque onglet et
+chaque page dans sa propre vue. Vérifié : séquence image par image (scène
+ralentie) ; après ouverture, marque-pages, glisser et achat fonctionnent.
