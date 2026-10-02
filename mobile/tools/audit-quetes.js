@@ -4054,3 +4054,44 @@ function auditZoneTapAuContact() {
   return pb;
 }
 module.exports.auditZoneTapAuContact = auditZoneTapAuContact;
+
+// ── Boutique : l'achat « Conseillé » est honnête (27/09) ─────────────────
+// L'étoile du Grimoire désigne le meilleur rendement (pièces/s gagnées par
+// pièce dépensée), calculé avec les formules du jeu (conseilBoutique.js).
+// Exige, sur deux parties types : chaque achat augmente le revenu (strictement
+// pour Pacte, amélioration de tap, auto-clic, Sanctuaire), et meilleurAchat
+// rend bien le meilleur rapport (recalcul un par un).
+function auditConseilBoutique() {
+  const C = require('../src/games/clicker/conseilBoutique.js');
+  const L = require('../src/games/clicker/clickerLogic.js');
+  const pb = [];
+  const parties = {
+    debut: { tapPower: 3, critLevel: 0, critDamageLevel: 0, sanctuaryLevel: 0, autoClickers: { [L.AUTOCLICKERS[0].id]: 2 }, upgradeLevels: {}, tapUpgrades: {}, ascensionCount: 0, essence: 0 },
+    milieu: { tapPower: 40, critLevel: 8, critDamageLevel: 5, sanctuaryLevel: 4, ascensionCount: 2, essence: 5,
+      autoClickers: Object.fromEntries(L.AUTOCLICKERS.slice(0, 6).map((a, i) => [a.id, 20 - 3 * i])),
+      upgradeLevels: Object.fromEntries(L.UPGRADE_ITEMS.slice(0, 5).map((it) => [it.id, 2])),
+      tapUpgrades: { [L.TAP_UPGRADES[0].id]: 12, [L.TAP_UPGRADES[1].id]: 6 } },
+  };
+  for (const [nom, e] of Object.entries(parties)) {
+    const T = C.revenuParSeconde(e);
+    if (!(T > 0)) { pb.push(`${nom} : revenu nul ou invalide (${T})`); continue; }
+    const strict = [
+      ['Pacte', { tapPower: 1 }], ['amélioration de tap', { tapUpgrades: L.TAP_UPGRADES[0].id }],
+      ['auto-clic', { autoClickers: L.AUTOCLICKERS[0].id }], ['Sanctuaire', { sanctuaryLevel: 1 }],
+    ];
+    strict.forEach(([quoi, d]) => { const g = C.revenuParSeconde(C.etatApres(e, d)) - T; if (!(g > 0)) pb.push(`${nom} : acheter ${quoi} n'augmente pas le revenu (${g})`); });
+    [['Faveur', { critLevel: 1 }], ['Dégâts critiques', { critDamageLevel: 1 }], ['relique', { upgradeLevels: L.UPGRADE_ITEMS[0].id }]]
+      .forEach(([quoi, d]) => { const g = C.revenuParSeconde(C.etatApres(e, d)) - T; if (g < 0) pb.push(`${nom} : acheter ${quoi} DIMINUE le revenu (${g})`); });
+    const cand = [
+      { id: 'pacte', delta: { tapPower: 1 }, prix: L.tapPowerCost(e.tapPower) },
+      { id: 'faveur', delta: { critLevel: 1 }, prix: L.critUpgradeCost(e.critLevel) },
+      { id: 'sanct', delta: { sanctuaryLevel: 1 }, prix: L.sanctuaryUpgradeCost(e.sanctuaryLevel) },
+      ...L.AUTOCLICKERS.slice(0, 4).map((a) => ({ id: a.id, delta: { autoClickers: a.id }, prix: L.autoClickerCost(a, e.autoClickers[a.id] || 0, e.ascensionCount) })),
+    ];
+    const attendu = cand.map((c) => [c.id, C.rendement(e, c.delta, c.prix)]).sort((a, b) => b[1] - a[1])[0][0];
+    const choisi = C.meilleurAchat(e, cand);
+    if (choisi !== attendu) pb.push(`${nom} : conseillé ${choisi}, attendu ${attendu} (meilleur rendement)`);
+  }
+  return pb;
+}
+module.exports.auditConseilBoutique = auditConseilBoutique;

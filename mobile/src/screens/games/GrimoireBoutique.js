@@ -6,6 +6,7 @@ import { vibrerSucces, CRISTAL, CYAN_CHAMPIGNON } from './fenetreBois';
 import { construireNoeuds, FicheElement } from './ArbreBoutique';
 import BackButton from '../../components/BackButton';
 import { ICONES } from './grimoireIcones';
+import { meilleurAchat } from '../../games/clicker/conseilBoutique';
 
 // ════════════════════════════════════════════════════════════════════
 //  BOUTIQUE EN GRIMOIRE (27/09, choix de l'auteur après l'arbre)
@@ -86,9 +87,10 @@ function badge(niveau) {
 }
 
 // ── Une entrée : toucher = fiche ; le BOUTON DE PRIX achète ───────────────
-function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter }) {
+function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, offre, conseil }) {
   const verrou = n.etat === 'verrouille';
-  const ok = n.etat === 'achetable';
+  const o = offre || { q: 1, total: n.prix, ok: n.etat === 'achetable' };
+  const ok = o.ok;
   const b = verrou ? null : badge(n.niveau);
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={() => onFiche(n.id)} style={[styles.entree, { width: largeur, height: hauteur }]}>
@@ -97,6 +99,8 @@ function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter }) {
         {!verrou && ICONES[n.id] ? <Image source={ICONES[n.id]} resizeMode="contain" style={styles.icone} />
           : <Text style={[styles.emoji, verrou && { opacity: 0.55 }]}>{verrou ? '🔒' : n.emoji}</Text>}
         {b ? <View style={styles.badge}><Text style={styles.badgeTexte} numberOfLines={1}>{b}</Text></View> : null}
+        {/* ⭐ Conseillé : le meilleur gain de pièces pour son prix (conseilBoutique). */}
+        {conseil ? <View style={styles.conseil}><Text style={styles.conseilTexte}>★</Text></View> : null}
       </View>
       <View style={{ width: largeur - MEDAILLON - 5 }}>
         <Text style={styles.nom} numberOfLines={2}>{verrou ? '???' : n.nom}</Text>
@@ -106,9 +110,9 @@ function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter }) {
             // ⚠️ Achat AU CONTACT (onPressIn), comme la zone de tap : un
             // TouchableOpacity / onPress jette les taps rapides (auditZoneTapAuContact).
             <Pressable onPressIn={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)}
-              style={({ pressed }) => [styles.prix, ok ? styles.prixOk : styles.prixCher, pressed && { opacity: 0.75 }]} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
+              style={({ pressed }) => [styles.prix, ok ? styles.prixOk : styles.prixCher, conseil && ok && styles.prixConseil, pressed && { opacity: 0.75 }]} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
               <Image source={n.devise === 'diamants' ? ICONES.diamant : ICONES.piece} resizeMode="contain" style={styles.prixIcone} />
-              <Text style={[styles.prixTexte, !ok && styles.prixTexteCher]} numberOfLines={1}>{formatNum(n.prix)}</Text>
+              <Text style={[styles.prixTexte, !ok && styles.prixTexteCher]} numberOfLines={1}>{o.q > 1 ? `×${o.q} ` : ''}{formatNum(o.total)}</Text>
             </Pressable>
           )
         ) : null}
@@ -150,11 +154,40 @@ function Grimoire(props) {
   const [ficheId, setFicheId] = useState(null);
   const [position, setPosition] = useState({ c: 0, p: 0 });
   const [tour, setTour] = useState(null); // { sens, de, vers } pendant qu'une page tourne
+  // Quantité d'achat : ×1, ×10 ou MAX (le plus possible avec tes pièces).
+  const [mode, setMode] = useState(1);
+  const pieces = props.coins || 0;
+  const remise = props.applyDiscount || ((c) => c);
+  // Offre d'un élément selon le mode : quantité, total (prix de CHAQUE niveau,
+  // la remise sur le 1er seulement — comme l'achat groupé de ClickerScreen),
+  // achetable ou non. Sans prix niveau par niveau (Griffes, Offrande) : ×1.
+  const offre = (n) => {
+    if (!n || n.prix == null) return { q: 1, total: n ? n.prix : 0, ok: false };
+    if (!n.cout || mode === 1) return { q: 1, total: n.prix, ok: n.etat === 'achetable' };
+    const limite = mode === 10 ? 10 : 1000;
+    let total = 0; let q = 0;
+    while (q < limite && !(n.estMax && n.estMax(q))) {
+      const c = q === 0 ? remise(n.cout(0)) : n.cout(q);
+      if (!Number.isFinite(c) || (mode === 'max' && total + c > pieces)) break;
+      total += c; q += 1;
+    }
+    if (q === 0) return { q: 1, total: n.prix, ok: false };
+    return { q, total, ok: n.etat !== 'verrouille' && n.etat !== 'max' && total <= pieces };
+  };
+  const offreRef = useRef(offre); offreRef.current = offre;
 
   // Auto-clics : dans l'ORDRE du modèle (prix réels de l'Ascension en cours).
   const ordonner = (cle, ids) => (cle === 'auto' ? [...ids].sort((x, y) => (parId[x].ordre ?? 0) - (parId[y].ordre ?? 0)) : ids);
   const chapitres = CHAPITRES_GRIMOIRE.map((c, i) => ({ ...c, ...VISUELS[c.cle], planches: planches(i, ordonner(c.cle, c.ids().filter((id) => parId[id]))) }));
   const chapRef = useRef(chapitres); chapRef.current = chapitres;
+  const dansLeLivre = new Set(chapitres.flatMap((c) => c.ids()));
+  const etatJeu = { tapPower: props.tapPower, critLevel: props.critLevel, critDamageLevel: props.critDamageLevel, sanctuaryLevel: props.sanctuaryLevel,
+    autoClickers: props.autoClickers, upgradeLevels: props.upgradeLevels, tapUpgrades: props.tapUpgrades, ascensionCount: props.ascensionCount, essence: props.essence };
+  const candidats = noeuds.filter((n) => n.delta && n.etat === 'achetable' && dansLeLivre.has(n.id)).map((n) => ({ id: n.id, delta: n.delta, prix: n.prix }));
+  const signature = JSON.stringify([etatJeu, candidats.map((c) => c.id)]);
+  // ~1 à 6 ms : PAS à chaque rafraîchissement des pièces (le bug des taps a
+  // montré ce que coûte la charge) — seulement quand la signature change.
+  const conseilId = useMemo(() => meilleurAchat(etatJeu, candidats), [signature]);
   const posRef = useRef(position); posRef.current = position;
   const planche = (pos) => { const C = chapitres[pos.c]; return C.planches[Math.min(pos.p, C.planches.length - 1)]; };
 
@@ -164,11 +197,13 @@ function Grimoire(props) {
   const acheter = useCallback((id, x, y) => {
     const n = frais.current[id];
     if (!n) return;
-    if (id === 'ascension' || n.etat !== 'achetable' || !n.onPress) { setFicheId(id); return; }
-    n.onPress();
+    if (id === 'ascension' || !n.onPress) { setFicheId(id); return; }
+    const o = offreRef.current(n);
+    if (!o.ok) { setFicheId(id); return; }
+    n.onPress(o.q);
     vibrerSucces(vib.current);
     if (x != null) {
-      setEffet({ x, y, cle: Date.now() });
+      setEffet({ x, y, cle: Date.now(), texte: `+${o.q}` });
       effetAnim.setValue(0);
       // Retiré à la fin : un texte invisible resté à l'écran pourrait
       // intercepter le toucher suivant, pile sur le bouton de prix.
@@ -226,7 +261,7 @@ function Grimoire(props) {
     const h = Math.floor(z.h / PAR_PAGE);
     return (
       <View style={boite}>
-        {page.ids.map((id) => (parId[id] ? <Entree key={id} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} /> : null))}
+        {page.ids.map((id) => (parId[id] ? <Entree key={id} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} offre={offre(parId[id])} conseil={id === conseilId} /> : null))}
       </View>
     );
   };
@@ -299,6 +334,9 @@ function Grimoire(props) {
             style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0) }]}>
             <Image source={c.marque} resizeMode="stretch" style={[styles.ongletImg, { transform: [{ scaleY: -1 }] }]} />
             <Image source={c.image} resizeMode="contain" style={[styles.ongletIcone, !actif && { opacity: 0.75 }]} />
+            {/* Pastille : ⭐ le chapitre contient l'achat conseillé ; • un achat est possible. */}
+            {c.ids().includes(conseilId) ? <View style={styles.pastilleConseil}><Text style={styles.pastilleConseilTexte}>★</Text></View>
+              : c.ids().some((id) => parId[id] && parId[id].etat === 'achetable') ? <View style={styles.pastille} /> : null}
           </TouchableOpacity>
         );
       })}
@@ -323,6 +361,14 @@ function Grimoire(props) {
 
       {/* SOUS le livre, mis en avant : Griffes, le sceau de l'Ascension, Offrande. */}
       <Special n={parId.griffes} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} style={{ left: 10, top: SOUS_LIVRE_Y + 4 }} />
+      {/* Quantité d'achat : ×1 / ×10 / MAX. */}
+      <View style={styles.modes}>
+        {[[1, '×1'], [10, '×10'], ['max', 'MAX']].map(([m, txt]) => (
+          <TouchableOpacity key={txt} activeOpacity={0.7} onPress={() => setMode(m)} style={[styles.modeBtn, mode === m && styles.modeBtnActif]}>
+            <Text style={[styles.modeTexte, mode === m && styles.modeTexteActif]}>{txt}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       {asc ? (
         <Animated.Image source={IMG.lueurOr} resizeMode="stretch" style={{ position: 'absolute', left: Math.round(ECRAN_L / 2 - 70), top: SOUS_LIVRE_Y - 29, width: 140, height: 140, pointerEvents: 'none',
           opacity: halo.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0.95] }), transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.06] }) }] }} />
@@ -339,20 +385,20 @@ function Grimoire(props) {
       ) : null}
       <Special n={parId.offrande} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} style={{ left: ECRAN_L - 10 - 104, top: SOUS_LIVRE_Y + 4 }} />
 
-      {/* En-tête : RETOUR et les soldes. */}
-      <View style={[styles.entete, { pointerEvents: 'box-none' }]}>
-        <BackButton onPress={props.onRetour} style={{ position: 'relative', left: 0, top: 0 }} />
-        <View style={{ gap: 6, alignItems: 'flex-end', pointerEvents: 'none' }}>
-          <View style={styles.plaque}>
-            <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImg} />
-            <Image source={ICONES.piece} resizeMode="contain" style={{ width: 20, height: 20, marginRight: 5 }} />
-            <Text style={styles.plaqueTexte} numberOfLines={1}>{formatNum(props.coins || 0)}</Text>
-          </View>
-          <View style={styles.plaque}>
-            <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImg} />
-            <Image source={CRISTAL} resizeMode="contain" style={{ width: 12, height: 22, marginRight: 6 }} />
-            <Text style={styles.plaqueTexte} numberOfLines={1}>{props.sharedCoins || 0}</Text>
-          </View>
+      {/* En-tête : RETOUR et les soldes, en DEUX éléments séparés — ⚠️ pas de
+          bande pleine largeur « transparente au toucher » : elle recouvrait le
+          sélecteur ×1 / ×10 / MAX (même piège que les marque-pages). */}
+      <BackButton onPress={props.onRetour} style={{ position: 'absolute', left: 12, top: 40 }} />
+      <View style={[styles.soldes, { pointerEvents: 'none' }]}>
+        <View style={styles.plaque}>
+          <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImg} />
+          <Image source={ICONES.piece} resizeMode="contain" style={{ width: 20, height: 20, marginRight: 5 }} />
+          <Text style={styles.plaqueTexte} numberOfLines={1}>{formatNum(props.coins || 0)}</Text>
+        </View>
+        <View style={styles.plaque}>
+          <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImg} />
+          <Image source={CRISTAL} resizeMode="contain" style={{ width: 12, height: 22, marginRight: 6 }} />
+          <Text style={styles.plaqueTexte} numberOfLines={1}>{props.sharedCoins || 0}</Text>
         </View>
       </View>
 
@@ -361,11 +407,11 @@ function Grimoire(props) {
         <Animated.View key={effet.cle} style={{ position: 'absolute', left: effet.x - 30, top: effet.y - 34, width: 60, pointerEvents: 'none',
           opacity: effetAnim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }),
           transform: [{ translateY: effetAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -34] }) }, { scale: effetAnim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.7, 1.15, 1] }) }] }}>
-          <Text style={styles.effet}>+1</Text>
+          <Text style={styles.effet}>{effet.texte || '+1'}</Text>
         </Animated.View>
       ) : null}
 
-      <FicheElement fiche={ficheId && parId[ficheId] ? { ...parId[ficheId], icone: ICONES[ficheId] } : null} onFermer={() => setFicheId(null)} onAcheter={(id) => acheter(id)} onAscend={props.onAscend} formatNum={formatNum} />
+      <FicheElement fiche={ficheId && parId[ficheId] ? { ...parId[ficheId], icone: ICONES[ficheId], detail: (parId[ficheId].detail || '') + (ficheId === conseilId ? '\n⭐ Conseillé : c\'est l\'achat qui rapporte le plus de pièces pour son prix.' : '') } : null} onFermer={() => setFicheId(null)} onAcheter={(id) => acheter(id)} onAscend={props.onAscend} formatNum={formatNum} />
     </View>
   );
 }
@@ -424,7 +470,7 @@ const styles = StyleSheet.create({
   ascensionTexte: { color: '#fff4d0', fontFamily: SERIF, fontSize: 8.5, fontWeight: '700', letterSpacing: 0.7, includeFontPadding: false, textShadowColor: 'rgba(70,35,0,0.95)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   ascensionNiveau: { color: '#fff4d0', fontFamily: SERIF, fontSize: 8, fontWeight: '700', includeFontPadding: false, textShadowColor: 'rgba(70,35,0,0.95)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   ascensionBarre: { width: 56, height: 6, marginTop: 3, borderRadius: 3, backgroundColor: 'rgba(40,24,6,0.55)', padding: 1, justifyContent: 'center' },
-  entete: { position: 'absolute', left: 0, right: 0, top: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 12 },
+  soldes: { position: 'absolute', right: 12, top: 40, width: 124, gap: 6, alignItems: 'flex-end' },
   plaque: { width: 124, height: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   plaqueImg: { position: 'absolute', left: 0, top: 0, width: 124, height: 38 },
   plaqueTexte: { color: '#ffe38a', fontSize: 14, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
@@ -433,5 +479,16 @@ const styles = StyleSheet.create({
   specialMedaillonImg: { position: 'absolute', left: 0, top: 0, width: 46, height: 46 },
   specialIcone: { width: 32, height: 32 },
   specialNom: { color: '#fff7e0', fontSize: 11, fontWeight: '900', marginTop: 1, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
+  conseil: { position: 'absolute', left: -6, top: -6, width: 16, height: 16, borderRadius: 8, backgroundColor: '#f2c94c', borderWidth: 1, borderColor: '#7a4a08', alignItems: 'center', justifyContent: 'center' },
+  conseilTexte: { color: '#5a3200', fontSize: 10, fontWeight: '900', includeFontPadding: false, lineHeight: 12 },
+  prixConseil: { borderColor: '#ffe27a', borderWidth: 2 },
+  pastille: { position: 'absolute', right: 4, top: 4, width: 10, height: 10, borderRadius: 5, backgroundColor: CYAN_CHAMPIGNON, borderWidth: 1, borderColor: '#ffffff' },
+  pastilleConseil: { position: 'absolute', right: 1, top: 1, width: 16, height: 16, borderRadius: 8, backgroundColor: '#f2c94c', borderWidth: 1, borderColor: '#7a4a08', alignItems: 'center', justifyContent: 'center' },
+  pastilleConseilTexte: { color: '#5a3200', fontSize: 10, fontWeight: '900', includeFontPadding: false, lineHeight: 12 },
+  modes: { position: 'absolute', top: 50, left: Math.round(ECRAN_L / 2 - 56), width: 112, flexDirection: 'row', justifyContent: 'space-between' },
+  modeBtn: { width: 34, height: 24, borderRadius: 12, backgroundColor: 'rgba(30,18,6,0.82)', borderWidth: 1.5, borderColor: '#8a6a3a', alignItems: 'center', justifyContent: 'center' },
+  modeBtnActif: { backgroundColor: '#e8b84a', borderColor: '#fff0c0' },
+  modeTexte: { color: '#f3e6c8', fontSize: 10.5, fontWeight: '900', includeFontPadding: false },
+  modeTexteActif: { color: '#3b2208' },
   effet: { width: 60, textAlign: 'center', color: '#ffd84a', fontSize: 20, fontWeight: '900', textShadowColor: 'rgba(60,30,0,0.9)', textShadowRadius: 4 },
 });

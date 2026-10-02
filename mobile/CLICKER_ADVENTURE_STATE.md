@@ -1422,3 +1422,40 @@ de l'Ascension et Offrande reviennent SOUS le livre (HORS_LIVRE) ; livre
   Asc 0, 1, 3), révélée 2 par 2 (possédés, suivant, « ??? ») ; un auto-clic
   déjà possédé hors ordre reste visible. Vérifié au banc : partie neuve →
   « Esprit Frappeur · ??? » ; Dragon possédé → tout jusqu'au Phénix + « ??? ».
+
+
+## 27/09 — Boutique : 4 améliorations (accord de l'auteur sur les 5)
+
+1. **Pastilles sur les marque-pages** : ⭐ dorée si le chapitre contient
+   l'achat conseillé, point cyan s'il contient un achat possible.
+2. **Étoile « Conseillé »** : `games/clicker/conseilBoutique.js` (pur) —
+   revenu/s avec les FORMULES DU JEU (taps au rythme de référence 6,7/s,
+   Transe au plafond ×3, espérance critique, multiplicateurs de gain,
+   passiveRate) ; meilleur (gain/s ÷ prix) parmi les achats abordables du
+   livre. Mesuré : ~1,3 ms sur ordinateur → MÉMORISÉ (signature : niveaux +
+   achats possibles), pas recalculé à chaque rafraîchissement des pièces.
+   Contrôle **auditConseilBoutique** (+ sabotage : revenu passif oublié).
+3. **×1 / ×10 / MAX** : ACHAT GROUPÉ dans ClickerScreen (`coutGroupe` :
+   prix de CHAQUE niveau additionné, arrêt au 1er niveau trop cher ou au
+   maximum, paiement UNIQUE, remise sur le 1er niveau seulement). ⚠️ Pièges
+   évités : (a) appeler une fonction d'achat n fois aurait payé n fois le prix
+   du 1er niveau (refs / état mis à jour au rendu suivant ; 4 fonctions
+   lisaient même l'état figé) ; (b) l'ancienne liste branche ces fonctions sur
+   onPress, qui passe l'ÉVÉNEMENT → quantité VALIDÉE (`quantiteAchat`).
+   Le modèle porte `cout(j)` / `estMax(j)` ; le livre affiche le vrai total.
+4. **Progression vers le déblocage** : « 🔒 Pacte 3/5 », « 🔒 Poigne
+   Ancienne 3/5 » (CORE_UNLOCKS.requires + règles des améliorations).
+- ⚠️ Piège REVU : l'en-tête en bande pleine largeur « box-none » recouvrait le
+  sélecteur (même cause que les marque-pages) → RETOUR et soldes en deux
+  éléments séparés. RÈGLE : jamais de bande plein écran « transparente au
+  toucher » au-dessus de boutons.
+
+⚠️ **ANOMALIE D'ÉQUILIBRAGE (signalée, NON corrigée — à mesurer)** : le
+Sanctuaire complet (50 niveaux) coûte 85 933 pièces pour +25 % de TOUTE la
+production ; le commentaire du Veilleur annonce « 171 864 pièces pour le
+niveau 10 » alors qu'il en coûte quelques centaines → ces deux prix semblent
+divisés par ~300 (remise à l'échelle de l'économie ?). Le conseil le voit :
+il recommande le Sanctuaire en milieu de partie. À traiter en séance
+d'équilibrage, PAR SIMULATION.
+
+5. Sons : envoi SÉPARÉ (nouvelle dépendance).

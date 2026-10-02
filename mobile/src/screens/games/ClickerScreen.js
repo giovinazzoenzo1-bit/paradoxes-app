@@ -2180,12 +2180,34 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // moment où l'achat aboutit vraiment (voir les 3 fonctions ci-dessous).
   const applyDiscount = (cost) => (pendingDiscount ? Math.max(1, Math.round(cost * (1 - pendingDiscount.percent))) : cost);
 
-  const buyTapPower = () => {
-    const cost = applyDiscount(tapPowerCost(tapPower));
-    if (coins < cost) return;
-    setCoins((c) => c - cost);
-    setTapPower((t) => t + 1);
+  // ── Achat GROUPÉ (×10 / MAX du Grimoire, 27/09) ─────────────────────────
+  // ⚠️ Ne JAMAIS appeler une fonction d'achat n fois d'affilée : pièces et
+  // niveaux sont lus dans des refs / l'état, mis à jour au rendu SUIVANT → n
+  // achats paieraient n fois le prix du 1er niveau. Ici : on additionne le prix
+  // de CHAQUE niveau (il monte), on s'arrête au 1er niveau trop cher ou au
+  // maximum, et on paie UNE fois. La remise ne vaut que pour le 1er niveau.
+  // ⚠️ `n` est VALIDÉ : l'ancienne boutique branche ces fonctions directement
+  // sur onPress, qui leur passe l'ÉVÉNEMENT du toucher → sinon, rien acheté.
+  const quantiteAchat = (n) => (Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1);
+  const coutGroupe = (n, niveau, prixBrut, estMax) => {
+    let total = 0; let k = 0;
+    while (k < n && !(estMax && estMax(niveau + k))) {
+      const brut = prixBrut(niveau + k);
+      const c = k === 0 ? applyDiscount(brut) : brut;
+      if (!Number.isFinite(c) || coinsRef.current < total + c) break;
+      total += c; k += 1;
+    }
+    return { k, total };
+  };
+  const payerGroupe = (total) => {
+    setCoins((c) => c - total);
     if (pendingDiscountRef.current) setPendingDiscount(null);
+  };
+  const buyTapPower = (n) => {
+    const { k, total } = coutGroupe(quantiteAchat(n), tapPowerRef.current, (l) => tapPowerCost(l));
+    if (!k) return;
+    payerGroupe(total);
+    setTapPower((t) => t + k);
   };
 
   // État lu par toutes les conditions de déverrouillage des mécaniques.
@@ -2196,87 +2218,77 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     sanctuaryLevel: sanctuaryLevelRef.current,
   });
 
-  const buyCritUpgrade = () => {
+  const buyCritUpgrade = (n) => {
     // Revérifié à l'achat, pas seulement à l'affichage : un bouton grisé
     // reste sinon parfaitement cliquable.
     if (!coreUpgradeUnlocked('faveur', coreStateRef())) return;
-    const cost = applyDiscount(critUpgradeCost(critLevel));
-    if (coins < cost) return;
-    setCoins((c) => c - cost);
-    setCritLevel((l) => l + 1);
-    if (pendingDiscountRef.current) setPendingDiscount(null);
+    const { k, total } = coutGroupe(quantiteAchat(n), critLevelRef.current, (l) => critUpgradeCost(l));
+    if (!k) return;
+    payerGroupe(total);
+    setCritLevel((l) => l + k);
   };
 
   // Achète UNE unité d'un palier de la boutique d'auto-clics donné.
-  const buyAutoClicker = (clickerId) => {
+  const buyAutoClicker = (clickerId, n) => {
     const clicker = AUTOCLICKERS.find((a) => a.id === clickerId);
+    if (!clicker) return;
     const owned = autoClickersRef.current[clickerId] || 0;
-    const cost = applyDiscount(autoClickerCost(clicker, owned, ascensionCountRef.current));
-    if (coinsRef.current < cost) return;
-    setCoins((c) => c - cost);
-    setAutoClickers((prev) => ({ ...prev, [clickerId]: (prev[clickerId] || 0) + 1 }));
-    if (pendingDiscountRef.current) setPendingDiscount(null);
+    const { k, total } = coutGroupe(quantiteAchat(n), owned, (l) => autoClickerCost(clicker, l, ascensionCountRef.current));
+    if (!k) return;
+    payerGroupe(total);
+    setAutoClickers((prev) => ({ ...prev, [clickerId]: (prev[clickerId] || 0) + k }));
   };
 
   // Achat UNIQUE d'une amélioration à débloquer — refuse si déjà achetée,
   // si le palier est encore verrouillé, ou si les pièces manquent.
   // Achat d'un niveau d'amélioration — même forme que buyVeilleur et
   // consorts : on paie le coût du niveau courant, le niveau monte de 1.
-  const buyCritDamage = () => {
+  const buyCritDamage = (n) => {
     if (!coreUpgradeUnlocked('critDamage', coreStateRef())) return;
-    const cost = applyDiscount(critDamageUpgradeCost(critDamageLevelRef.current));
-    if (coinsRef.current < cost) return;
-    setCoins((c) => c - cost);
-    setCritDamageLevel((l) => l + 1);
-    if (pendingDiscountRef.current) setPendingDiscount(null);
+    const { k, total } = coutGroupe(quantiteAchat(n), critDamageLevelRef.current, (l) => critDamageUpgradeCost(l));
+    if (!k) return;
+    payerGroupe(total);
+    setCritDamageLevel((l) => l + k);
   };
 
   // Palier de tap : achat UNIQUE, et seulement si déverrouillé — la
   // vérification est refaite ici et pas seulement à l'affichage, sinon
   // un bouton grisé resterait cliquable.
-  const buyTapUpgrade = (upgradeId) => {
+  const buyTapUpgrade = (upgradeId, n) => {
     const index = TAP_UPGRADES.findIndex((u) => u.id === upgradeId);
     if (index === -1) return;
-    // Le déverrouillage est revérifié ICI, pas seulement à l'affichage :
-    // un bouton grisé reste sinon cliquable.
     if (!tapUpgradeUnlocked(index, tapPowerRef.current, tapUpgradesRef.current)) return;
     const level = tapUpgradesRef.current[upgradeId] || 0;
-    const cost = applyDiscount(tapUpgradeCost(TAP_UPGRADES[index], level, ascensionCountRef.current));
-    if (coinsRef.current < cost) return;
-    setCoins((c) => c - cost);
-    setTapUpgrades((prev) => ({ ...prev, [upgradeId]: (prev[upgradeId] || 0) + 1 }));
-    if (pendingDiscountRef.current) setPendingDiscount(null);
+    const { k, total } = coutGroupe(quantiteAchat(n), level, (l) => tapUpgradeCost(TAP_UPGRADES[index], l, ascensionCountRef.current));
+    if (!k) return;
+    payerGroupe(total);
+    setTapUpgrades((prev) => ({ ...prev, [upgradeId]: (prev[upgradeId] || 0) + k }));
   };
 
-  const buyUpgradeItem = (upgradeId) => {
+  const buyUpgradeItem = (upgradeId, n) => {
     const item = UPGRADE_ITEMS.find((u) => u.id === upgradeId);
     if (!item) return;
     const level = upgradeLevelsRef.current[upgradeId] || 0;
-    const cost = applyDiscount(upgradeItemCost(item, level));
-    if (coinsRef.current < cost) return;
-    setCoins((c) => c - cost);
-    setUpgradeLevels((prev) => ({ ...prev, [upgradeId]: (prev[upgradeId] || 0) + 1 }));
-    if (pendingDiscountRef.current) setPendingDiscount(null);
+    const { k, total } = coutGroupe(quantiteAchat(n), level, (l) => upgradeItemCost(item, l));
+    if (!k) return;
+    payerGroupe(total);
+    setUpgradeLevels((prev) => ({ ...prev, [upgradeId]: (prev[upgradeId] || 0) + k }));
   };
 
-  const buySanctuary = () => {
+  const buySanctuary = (n) => {
     if (!coreUpgradeUnlocked('sanctuaire', coreStateRef())) return;
-    if (sanctuaryMaxed(sanctuaryLevelRef.current)) return;
-    const cost = applyDiscount(sanctuaryUpgradeCost(sanctuaryLevel));
-    if (coins < cost) return;
-    setCoins((c) => c - cost);
-    setSanctuaryLevel((l) => l + 1);
-    if (pendingDiscountRef.current) setPendingDiscount(null);
+    const { k, total } = coutGroupe(quantiteAchat(n), sanctuaryLevelRef.current, (l) => sanctuaryUpgradeCost(l), (l) => sanctuaryMaxed(l));
+    if (!k) return;
+    payerGroupe(total);
+    setSanctuaryLevel((l) => l + k);
   };
 
-  const buyVeilleur = () => {
+  const buyVeilleur = (n) => {
     if (!coreUpgradeUnlocked('veilleur', coreStateRef())) return;
-    if (veilleurMaxed(veilleurLevelRef.current)) return;
-    const cost = applyDiscount(veilleurUpgradeCost(veilleurLevel));
-    if (coins < cost) return;
-    setCoins((c) => c - cost);
-    setVeilleurLevel((l) => l + 1);
-    if (pendingDiscountRef.current) setPendingDiscount(null);
+    const { k, total } = coutGroupe(quantiteAchat(n), veilleurLevelRef.current, (l) => veilleurUpgradeCost(l), (l) => veilleurMaxed(l));
+    if (!k) return;
+    payerGroupe(total);
+    setVeilleurLevel((l) => l + k);
   };
 
   // Ascension : réinitialise coins/Pacte/Faveur/Familier/Sanctuaire/

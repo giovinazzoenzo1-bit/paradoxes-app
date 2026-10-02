@@ -7,7 +7,7 @@ import {
   autoClickerCost, griffesCoinCost, taillePackGriffes, coreUpgradeUnlocked, ascensionSpeedMultiplier,
   ascensionThreshold, OFFRANDE_APPCOINS_COST, SANCTUARY_MAX_LEVEL, VEILLEUR_MAX_LEVEL,
   coreUpgradeRequirement, critChance, critMultiplier, offrandeReward, SANCTUARY_BONUS_PER_LEVEL, VEILLEUR_BONUS_PER_LEVEL,
-  TAP_UPGRADE_UNLOCK_LEVEL, TAP_UPGRADE_FIRST_PACTE_LEVEL,
+  TAP_UPGRADE_UNLOCK_LEVEL, TAP_UPGRADE_FIRST_PACTE_LEVEL, CORE_UNLOCKS,
 } from '../../games/clicker/clickerLogic';
 import { useSettings } from '../../context/SettingsContext';
 import {
@@ -71,6 +71,14 @@ function construireNoeuds(p) {
   const N = [];
   const ajouter = (n) => N.push({ taille: 76, devise: 'pieces', allume: false, ...n });
   const exigence = (id) => `🔒 ${coreUpgradeRequirement(id)}`;
+  // Progression CHIFFRÉE vers le déblocage (données CORE_UNLOCKS), courte pour
+  // la ligne de gain : « 🔒 Pacte 3/5 ». La phrase complète reste en fiche.
+  const NOM_COURT = { tapPower: 'Pacte', critLevel: 'Faveur', critDamageLevel: 'Dégâts crit.', sanctuaryLevel: 'Sanctuaire' };
+  const progres = (id) => {
+    const u = CORE_UNLOCKS.find((x) => x.id === id); const r = u && u.requires;
+    if (!r) return exigence(id);
+    return `🔒 ${NOM_COURT[r.key] || r.key} ${Math.min(coreState[r.key] || 0, r.level)}/${r.level}`;
+  };
 
   // ── Centre : Ascension, Griffes (gauche), Offrande (droite)
   const seuil = ascensionThreshold(p.ascensionCount);
@@ -98,7 +106,7 @@ function construireNoeuds(p) {
   // s'ouvre au niveau 5 de la précédente : la branche montre la dépendance).
   const prixPacte = remise(tapPowerCost(p.tapPower));
   ajouter({ id: 'pacte', parent: 'ascension', x: POS.pacte[0], y: POS.pacte[1], emoji: '🔗', nom: 'Pacte', niveau: `${p.tapPower}`,
-    gain: `+${nb(TAP_DAMAGE_PER_LEVEL, 1)} / tap / nv`, prix: prixPacte, etat: etat(false, false, prixPacte, p.coins), onPress: p.onBuyTapPower, allume: p.tapPower > 1,
+    gain: `+${nb(TAP_DAMAGE_PER_LEVEL, 1)} / tap / nv`, prix: prixPacte, etat: etat(false, false, prixPacte, p.coins), onPress: p.onBuyTapPower, cout: (j) => tapPowerCost(p.tapPower + j), delta: { tapPower: 1 }, allume: p.tapPower > 1,
     detail: `+${nb(TAP_DAMAGE_PER_LEVEL, 1)} pièce par tap à chaque niveau.` });
   let prochainVerrou = false;
   TAP_UPGRADES.forEach((item, i) => {
@@ -107,11 +115,12 @@ function construireNoeuds(p) {
     const ouvert = tapUpgradeUnlocked(i, p.tapPower, p.tapUpgrades);
     if (!ouvert) { if (prochainVerrou) return; prochainVerrou = true; } // seul le PROCHAIN verrou est montré
     const prix = remise(tapUpgradeCost(item, niveau, p.ascensionCount));
-    const condition = i === 0 ? `🔒 Pacte nv ${TAP_UPGRADE_FIRST_PACTE_LEVEL}` : `🔒 ${TAP_UPGRADES[i - 1].name} nv ${TAP_UPGRADE_UNLOCK_LEVEL}`;
+    const avant = i > 0 ? ((p.tapUpgrades && p.tapUpgrades[TAP_UPGRADES[i - 1].id]) || 0) : 0;
+    const condition = i === 0 ? `🔒 Pacte ${Math.min(p.tapPower, TAP_UPGRADE_FIRST_PACTE_LEVEL)}/${TAP_UPGRADE_FIRST_PACTE_LEVEL}` : `🔒 ${TAP_UPGRADES[i - 1].name} ${Math.min(avant, TAP_UPGRADE_UNLOCK_LEVEL)}/${TAP_UPGRADE_UNLOCK_LEVEL}`;
     ajouter({ id: item.id, parent: i === 0 ? 'pacte' : TAP_UPGRADES[i - 1].id, x: pos[0], y: pos[1],
       emoji: item.emoji, nom: item.name, niveau: `nv ${niveau}`, prix, etat: etat(!ouvert, false, prix, p.coins),
       gain: ouvert ? `+${f(item.bonus)} / tap / nv` : condition,
-      onPress: () => p.onBuyTapUpgrade(item.id), allume: niveau > 0,
+      onPress: (q) => p.onBuyTapUpgrade(item.id, q), cout: (j) => tapUpgradeCost(item, niveau + j, p.ascensionCount), delta: { tapUpgrades: item.id }, allume: niveau > 0,
       detail: ouvert ? `+${f(item.bonus)} par tap et par niveau${niveau > 0 ? ` · actuellement +${f(item.bonus * niveau)}` : ''}.` : condition });
   });
 
@@ -119,26 +128,26 @@ function construireNoeuds(p) {
   const prixFaveur = remise(critUpgradeCost(p.critLevel));
   const okFaveur = debloque('faveur');
   ajouter({ id: 'faveur', parent: 'ascension', x: POS.faveur[0], y: POS.faveur[1], emoji: '✨', nom: 'Faveur des Esprits', niveau: `nv ${p.critLevel}`,
-    gain: okFaveur ? `+${nb((critChance(p.critLevel + 1) - critChance(p.critLevel)) * 100)} % crit / nv` : exigence('faveur'),
-    prix: prixFaveur, etat: etat(!okFaveur, false, prixFaveur, p.coins), onPress: p.onBuyCrit, allume: p.critLevel > 0,
+    gain: okFaveur ? `+${nb((critChance(p.critLevel + 1) - critChance(p.critLevel)) * 100)} % crit / nv` : progres('faveur'),
+    prix: prixFaveur, etat: etat(!okFaveur, false, prixFaveur, p.coins), onPress: p.onBuyCrit, cout: (j) => critUpgradeCost(p.critLevel + j), delta: { critLevel: 1 }, allume: p.critLevel > 0,
     detail: okFaveur ? `${nb(critChance(p.critLevel) * 100)} % de chance de coup critique.` : exigence('faveur') });
   const prixCrit = remise(critDamageUpgradeCost(p.critDamageLevel));
   const okCrit = debloque('critDamage');
   ajouter({ id: 'critDamage', parent: 'faveur', x: POS.critDamage[0], y: POS.critDamage[1], emoji: '💥', nom: 'Dégâts critiques', niveau: `nv ${p.critDamageLevel}`,
-    gain: okCrit ? `+${nb(critMultiplier(p.critDamageLevel + 1) - critMultiplier(p.critDamageLevel), 1)} force crit / nv` : exigence('critDamage'),
-    prix: prixCrit, etat: etat(!okCrit, false, prixCrit, p.coins), onPress: p.onBuyCritDamage, allume: p.critDamageLevel > 0,
+    gain: okCrit ? `+${nb(critMultiplier(p.critDamageLevel + 1) - critMultiplier(p.critDamageLevel), 1)} force crit / nv` : progres('critDamage'),
+    prix: prixCrit, etat: etat(!okCrit, false, prixCrit, p.coins), onPress: p.onBuyCritDamage, cout: (j) => critDamageUpgradeCost(p.critDamageLevel + j), delta: { critDamageLevel: 1 }, allume: p.critDamageLevel > 0,
     detail: okCrit ? `Coup critique ×${nb(critMultiplier(p.critDamageLevel), 1)}.` : exigence('critDamage') });
 
   // ── PASSIF : Sanctuaire → Veilleur
   const maxS = sanctuaryMaxed(p.sanctuaryLevel); const prixS = remise(sanctuaryUpgradeCost(p.sanctuaryLevel)); const okS = debloque('sanctuaire');
   ajouter({ id: 'sanctuaire', parent: 'ascension', x: POS.sanctuaire[0], y: POS.sanctuaire[1], emoji: '🏛️', nom: 'Sanctuaire', niveau: `${p.sanctuaryLevel}/${SANCTUARY_MAX_LEVEL}`,
-    gain: okS ? `+${nb(SANCTUARY_BONUS_PER_LEVEL * 100, 1)} % production / nv` : exigence('sanctuaire'),
-    prix: prixS, etat: etat(!okS, maxS, prixS, p.coins), onPress: p.onBuySanctuary, allume: p.sanctuaryLevel > 0,
+    gain: okS ? `+${nb(SANCTUARY_BONUS_PER_LEVEL * 100, 1)} % production / nv` : progres('sanctuaire'),
+    prix: prixS, etat: etat(!okS, maxS, prixS, p.coins), onPress: p.onBuySanctuary, cout: (j) => sanctuaryUpgradeCost(p.sanctuaryLevel + j), estMax: (j) => sanctuaryMaxed(p.sanctuaryLevel + j), delta: { sanctuaryLevel: 1 }, allume: p.sanctuaryLevel > 0,
     detail: okS ? 'Augmente TOUTE ta production (tap + passif).' : exigence('sanctuaire') });
   const maxV = veilleurMaxed(p.veilleurLevel); const prixV = remise(veilleurUpgradeCost(p.veilleurLevel)); const okV = debloque('veilleur');
   ajouter({ id: 'veilleur', parent: 'sanctuaire', x: POS.veilleur[0], y: POS.veilleur[1], emoji: '🌙', nom: 'Veilleur', niveau: `${p.veilleurLevel}/${VEILLEUR_MAX_LEVEL}`,
-    gain: okV ? `+${nb(VEILLEUR_BONUS_PER_LEVEL * 100, 1)} % hors-ligne / nv` : exigence('veilleur'),
-    prix: prixV, etat: etat(!okV, maxV, prixV, p.coins), onPress: p.onBuyVeilleur, allume: p.veilleurLevel > 0,
+    gain: okV ? `+${nb(VEILLEUR_BONUS_PER_LEVEL * 100, 1)} % hors-ligne / nv` : progres('veilleur'),
+    prix: prixV, etat: etat(!okV, maxV, prixV, p.coins), onPress: p.onBuyVeilleur, cout: (j) => veilleurUpgradeCost(p.veilleurLevel + j), estMax: (j) => veilleurMaxed(p.veilleurLevel + j), allume: p.veilleurLevel > 0,
     detail: okV ? 'Augmente tes gains quand tu ne joues pas.' : exigence('veilleur') });
 
   // ── AUTO-CLICS : UNE seule file, dans l'ORDRE DES PRIX RÉELS de
@@ -163,7 +172,7 @@ function construireNoeuds(p) {
     ajouter({ id: c.id, ordre, parent: i === 0 ? 'ascension' : liste[i - 1].id, x: pos[0], y: pos[1],
       emoji: c.emoji, nom: c.name, niveau: possede > 0 ? `×${possede}` : '', prix, etat: etat(mystere, false, prix, p.coins),
       gain: mystere ? `🔒 achète ${precedent.name}` : `+${nb(c.baseIncome, 1)} /s chacun`,
-      onPress: () => p.onBuyAutoClicker(c.id), allume: possede > 0,
+      onPress: (q) => p.onBuyAutoClicker(c.id, q), cout: (j) => autoClickerCost(c, possede + j, p.ascensionCount), delta: { autoClickers: c.id }, allume: possede > 0,
       detail: mystere ? `🔒 Achète d'abord ${precedent.name}.` : `Possédé : ${possede} · +${nb(c.baseIncome, 1)}/s chacun.` });
   });
 
@@ -189,7 +198,7 @@ function construireNoeuds(p) {
         // Court (« Nécessite Zephyrion » était coupé sur les pages du grimoire) ;
         // la phrase complète reste dans la fiche.
         gain: ok ? `${describeUpgradeEffect(item)} / nv` : `🔒 ${nomCreature}`,
-        onPress: () => p.onBuyUpgradeItem(item.id), allume: niveau > 0,
+        onPress: (q) => p.onBuyUpgradeItem(item.id, q), cout: (j) => upgradeItemCost(item, niveau + j), delta: { upgradeLevels: item.id }, allume: niveau > 0,
         detail: ok ? `Relique de ${nomCreature} : ${describeUpgradeEffect(item)} par niveau.` : `🔒 Obtiens ${nomCreature} pour débloquer cette relique.` });
     });
   });
