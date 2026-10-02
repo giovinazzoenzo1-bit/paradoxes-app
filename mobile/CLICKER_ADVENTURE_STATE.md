@@ -1598,3 +1598,26 @@ vérifié (page en 3D image par image, marque-pages, glisser, achat).
 auditRafaleArretee suit la nouvelle forme (avantTour → arreterRafaleRef).
 Banc : un glisser qui DÉMARRE sur un bouton n'est pas repris par le
 navigateur (artefact de banc, identique avant / après).
+
+**Album de cartes — 1re version en ligne (02/10)** : `screens/games/CollectionAlbum.js`,
+branché à la place de CollectionView (qui reste le filet de sécurité, comme
+ShopView pour le Grimoire). Mise en page calculée pour tenir entre les soldes
+(126) et la barre du bas (ÉCRAN − 152), mise à l'échelle si l'écran est court.
+- Abri du DECK : le VRAI deck (3 emplacements) ; toucher un emplacement →
+  `onOuvrirEmplacement` = setPickerSlot (DeckPicker, zIndex 20, par-dessus).
+- Album : pages construites par `games/clicker/albumPages.js` (PUR) — une
+  page par élément, 4 cartes max, triées par rareté ; doubles pages par 2 ;
+  pages qui tournent avec le moteur COMMUN (feuilles album-feuille-*.png).
+- Cartes : cadre de l'élément (cardFrames, bordure mesurée 13 % / 10 %) +
+  CreatureArt + nom ; niveau en BADGE dans le coin (sous la carte, il passait
+  à la ligne et écrasait le titre de la page) ; gemmes de rareté ; inconnue =
+  dos de carte, ne s'ouvre pas. Toucher une carte → CreatureDetail.
+- Rubans d'éléments (8) : sautent à la page ; ceux des pages affichées
+  ressortent ; police réduite pour LUMIÈRE / TÉNÈBRES.
+- Œuf doré : halo par le code (lueur-or), « Invoquer » + prix (grisé si trop
+  cher) → doSummon.
+- Contrôle **auditAlbumComplet** (+ sabotage : élément « Magie » retiré →
+  ses créatures disparaissent) : chaque créature UNE fois, ≤ 4 cartes par
+  page, un ruban par élément — protège les 17 créatures à venir.
+- Vérifié au banc (scène `collection.jsx`) : rubans, glisser dans les deux
+  sens, fiche, carte inconnue, emplacement du deck, invocation, page en 3D.

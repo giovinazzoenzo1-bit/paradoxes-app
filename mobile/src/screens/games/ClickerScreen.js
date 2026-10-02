@@ -137,6 +137,7 @@ import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
 import DiamondShop, { DIAMOND_OFFERS } from './DiamondShop';
 import BoutiqueGrimoire from './GrimoireBoutique';
+import CollectionAlbum from './CollectionAlbum';
 import {
   TAP_BOSS_STORAGE_KEY, TAP_BOSS_TAPS_REQUIRED, TAP_BOSS_TIME_LIMIT_MS,
   diamondsForDuration, nextSpawnGapMs, grantableDiamonds,
@@ -4071,15 +4072,24 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         />
       )}
 
+      {/* Collection en « Album de cartes » (02/10) ; l'ancienne grille
+          (CollectionView) reste le filet de sécurité si l'album plante. */}
       {view === 'collection' && (
-        <CollectionView
+        <CollectionAlbum
+          Secours={CollectionView}
+          FicheCreature={CreatureDetail}
+          formatNum={formatNum}
+          onRetour={() => setView('tap')}
           owned={owned}
           selectedCreature={selectedCreature}
           setSelectedCreature={setSelectedCreature}
           coins={coins}
+          sharedCoins={sharedCoins}
           pendingDiscount={pendingDiscount}
           nextSummonCost={nextSummonCost}
           onSummon={doSummon}
+          deck={deck}
+          onOuvrirEmplacement={setPickerSlot}
         />
       )}
 

@@ -4074,3 +4074,31 @@ function auditRafaleArretee() {
   return pb;
 }
 module.exports.auditRafaleArretee = auditRafaleArretee;
+
+// ── Collection : l'album montre CHAQUE créature, une fois (02/10) ─────────
+// Album de cartes : une page par élément (4 cartes). Les 17 créatures à venir
+// s'y ajouteront seules — mais un élément mal écrit (« Lumiere ») les ferait
+// disparaître sans bruit. Exige : chaque créature dans UNE page, une seule
+// fois ; ≤ 4 cartes par page ; chaque élément du jeu a son ruban (ordre) ; le
+// composant affiche un ruban par élément de la liste.
+function auditAlbumComplet() {
+  const fs = require('fs'); const path = require('path');
+  const L = require('../src/games/clicker/clickerLogic.js');
+  const A = require('../src/games/clicker/albumPages.js');
+  const pb = [];
+  const { pages } = A.construireAlbum();
+  const vus = {};
+  pages.forEach((pg) => {
+    if (pg.ids.length > A.CARTES_PAR_PAGE) pb.push(`page ${pg.element} : ${pg.ids.length} cartes (max ${A.CARTES_PAR_PAGE})`);
+    pg.ids.forEach((id) => { vus[id] = (vus[id] || 0) + 1; });
+  });
+  L.CREATURES.forEach((c) => {
+    if (!vus[c.id]) pb.push(`${c.id} (${c.element}) : ABSENTE de l'album`);
+    else if (vus[c.id] > 1) pb.push(`${c.id} : ${vus[c.id]} fois dans l'album`);
+    if (!A.ORDRE_ELEMENTS.includes(c.element)) pb.push(`${c.id} : élément « ${c.element} » sans ruban`);
+  });
+  const ecran = fs.readFileSync(path.join(__dirname, '../src/screens/games/CollectionAlbum.js'), 'utf8');
+  A.ORDRE_ELEMENTS.forEach((e) => { if (!ecran.includes(`{ cle: '${e}',`)) pb.push(`ruban de « ${e} » absent de CollectionAlbum`); });
+  return pb;
+}
+module.exports.auditAlbumComplet = auditAlbumComplet;
