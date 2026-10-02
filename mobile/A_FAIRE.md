@@ -94,9 +94,8 @@
 - [x] **Combats : les créatures ENNEMIES regardent vers la gauche** (fait le 27/09) (vers le joueur) — retourner leur image (`transform: [{ scaleX: -1 }]`), comme la créature qui attaque l'œuf du côté droit au menu (`lancerAttaque`).
 - [ ] **Œufs : dernier stade en 2 calques** (l'œuf seul + ses éclats séparés, pour les animer indépendamment ; éclats qui explosent à l'éclosion). Reporté : Gemini comprend mal la consigne. Dossier et prompts prêts : `design/a-integrer/04-oeufs-incubateur/`.
 - [x] **Boutique : icône des Griffes** (reçue et intégrée le 27/09) (prompt 39, `02-boutique/PROMPTS-PIECES.md`) — tuile provisoire 🐾 en attendant ; l'ajouter à `ICONES` dans DiamondShop.js.
-- [ ] **Sons** (demande de l'auteur, 27/09) : achat, récompense, jour du calendrier, et plus tard le reste.
-- [ ] **Vibration courte sur iPhone** : la Vibration de React Native dure ≈ 0,4 s sur iOS (durée fixe). Il faudra `expo-haptics` (vérifier la version compatible SDK 57 ET que la publication passe, les logs du robot n'étant pas visibles).
-- [ ] **Arbre de la boutique, étape 2 (Gemini)** : grand arbre (2 images : ramure / racines), médaillon de nœud, médaillon Ascension, plaque de prix, icônes par lots.
-- [ ] **Arbre de la boutique, étape 3** : illumination des branches à l'achat (animation), lucioles, effets d'achat.
-- [ ] **Vibration courte sur iPhone** : expo-haptics ~57.0.1 est DISPONIBLE dans Expo Go 57 (vérifié le 27/09) — même méthode que expo-audio (version exacte, verrou comparé, chargement protégé).
+- [~] **Sons** (demande de l'auteur, 27/09) : FAIT pour la boutique (page qui tourne, achat — expo-audio, chargement protégé, réglage « Sons », 27/09-02/10). Reste : récompense, jour du calendrier, et plus tard le reste. ⚠️ Muets sur l'APPLI CONSTRUITE Android (app.paradox.mobile) tant qu'elle n'est pas reconstruite avec expo-audio ; jouent dans Expo Go 57.
+- [ ] **Vibration courte sur iPhone** : la Vibration de React Native dure ≈ 0,4 s sur iOS. `expo-haptics` ~57.0.1 est DISPONIBLE dans Expo Go 57 (vérifié le 27/09) — même méthode que expo-audio : version exacte, verrou comparé, `npm ci --dry-run`, ET chargement conditionné par requireOptionalNativeModule('ExpoHaptics') (contrôle auditModulesNatifsProteges).
+- [x] **Arbre de la boutique, étape 2 (Gemini)** : grand arbre (2 images : ramure / racines), médaillon de nœud, médaillon Ascension, plaque de prix, icônes par lots. — ABANDONNÉ (27/09) : l'arbre a été remplacé par le Grimoire.
+- [x] **Arbre de la boutique, étape 3** : illumination des branches à l'achat (animation), lucioles, effets d'achat. — ABANDONNÉ (27/09) : l'arbre a été remplacé par le Grimoire.
 - [ ] **Équilibrage** : Sanctuaire / Veilleur ~300 × trop bon marché (voir CLICKER_ADVENTURE_STATE) — à MESURER par simulation.
