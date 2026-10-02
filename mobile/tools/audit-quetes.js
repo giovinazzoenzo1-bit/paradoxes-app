@@ -4067,7 +4067,9 @@ function auditRafaleArretee() {
   const lignes = g.split('\n').filter((l) => /onPressIn=\{\(e\) => onAcheter\(/.test(l));
   if (!lignes.length) pb.push('aucun bouton de prix au contact trouvé');
   lignes.forEach((l, i) => { if (!l.includes('onPressOut={onRelacher}')) pb.push(`bouton de prix n°${i + 1} : rafale lancée sans arrêt au relâcher (onPressOut={onRelacher} absent)`); });
-  if (!/enTour\.current = true;\s*\n\s*arreterRafale\(\);/.test(g)) pb.push('tourner la page n\'arrête pas la rafale');
+  // Tourner la page passe par le moteur COMMUN (livreTourne.js, 02/10) : son
+  // « avantTour » doit arrêter la rafale, via arreterRafaleRef (définie plus bas).
+  if (!/useLivreTourne\(chapRef, \(\) => \{ arreterRafaleRef\.current\(\);/.test(g) || !/arreterRafaleRef\.current = arreterRafale;/.test(g)) pb.push('tourner la page n\'arrête pas la rafale (avantTour du moteur du livre)');
   if (!/useEffect\(\(\) => \(\) => arreterRafale\(\), \[\]\)/.test(g)) pb.push('la rafale n\'est pas arrêtée au démontage');
   return pb;
 }

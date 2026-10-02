@@ -1573,3 +1573,28 @@ voit pas) ; puis le vrai livre (images identiques : aucun saut), textes et
 marque-pages en fondu (0,22 s). Aucun calque plein écran : chaque onglet et
 chaque page dans sa propre vue. Vérifié : séquence image par image (scène
 ralentie) ; après ouverture, marque-pages, glisser et achat fonctionnent.
+
+
+## 02/10 — Collection : « Album de cartes » (concept retenu par l'auteur)
+
+Maquette : design/a-integrer/03-collection-et-deck/concepts/1790968948748.jpg.
+Pièces Gemini 69-73 (reçues dans l'ordre INVERSE, identifiées par contenu) →
+`assets/collection/` : album.png, abri-deck.png, oeuf-souche.png, dos-carte.png,
+emplacement-vide.png, ruban-{8 éléments}.png (teinte depuis le rouge),
+gemme-{6 raretés}.png ; mesures dans `assets/collection/mesures.json`.
+Réutilisés : cadres de cartes par élément (assets/adventure/frames/).
+Nettoyage des contours, par pièce : tons chauds (album, dos, emplacement) ;
+« magenta-ité » min(R,B)−G > 25 au contour (abri, œuf : mousse verte et
+cailloux bleus — mesuré : ≤ 15 à l'intérieur, ~60 au contour) ; gemmes :
+pourtour RETIRÉ (3 px) avec MARGE transparente (sinon le bord de l'image
+compte comme « dedans » → barres verticales) — la gemme violette ressemble
+au magenta, un tri par couleur l'aurait abîmée.
+Emplacements de l'abri : contraste trop faible pour une détection → lus sur
+une GRILLE graduée (5 %).
+
+**Moteur de livre COMMUN** : `screens/games/livreTourne.js` (useLivreTourne,
+doublePage, FaceTournante) extrait du Grimoire ; Grimoire rebranché et
+vérifié (page en 3D image par image, marque-pages, glisser, achat).
+auditRafaleArretee suit la nouvelle forme (avantTour → arreterRafaleRef).
+Banc : un glisser qui DÉMARRE sur un bouton n'est pas repris par le
+navigateur (artefact de banc, identique avant / après).

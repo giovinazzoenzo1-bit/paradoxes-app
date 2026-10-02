@@ -8,6 +8,7 @@ import { construireNoeuds } from '../../games/clicker/boutiqueModele';
 import { FicheElement } from './ficheElement';
 import BackButton from '../../components/BackButton';
 import { ICONES } from './grimoireIcones';
+import { useLivreTourne, doublePage, FaceTournante, PERSPECTIVE } from './livreTourne';
 import { meilleurAchat, valeurTap, revenuPassif, etatApres } from '../../games/clicker/conseilBoutique';
 import { jouerSon } from './sonsBoutique';
 
@@ -56,10 +57,8 @@ const MODE_L = Math.min(34, Math.floor((LIBRE_L - 6) / 3));
 const MEDAILLON = 30;
 const ONGLET_L = 46;
 const ONGLET_H = Math.round((ONGLET_L * 243) / 110);
-const PERSPECTIVE = 1400;
 // Lettres à empattements du système (aucune police à charger).
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
-const DUREE_TOUR = 640;
 const DUREE_OUVERTURE = 900;
 // Couverture : même hauteur que le livre, à ses PROPORTIONS NATURELLES (585 × 807,
 // plus large que la moitié du livre : le surplus tombe hors de l'écran, à droite).
@@ -184,8 +183,13 @@ function Grimoire(props) {
   // « Nouveau ! » : éléments débloqués jamais encore affichés (mémoire sur le
   // téléphone). null tant que la mémoire n'est pas lue → aucun badge.
   const [vus, setVus] = useState(null);
-  const [position, setPosition] = useState({ c: 0, p: 0 });
-  const [tour, setTour] = useState(null); // { sens, de, vers } pendant qu'une page tourne
+  // Le livre (position, tour, gestes) : moteur COMMUN livreTourne.js. `chapRef`
+  // est créé ici et rempli plus bas (lu seulement au moment d'un geste) ; la
+  // rafale, définie plus bas, est arrêtée via `arreterRafaleRef`.
+  const chapRef = useRef([]);
+  const arreterRafaleRef = useRef(() => {});
+  const livre = useLivreTourne(chapRef, () => { arreterRafaleRef.current(); jouerSon('page', sonsRef.current); });
+  const { position, tour, angle, tourner, suivante, precedente, glisse } = livre;
   // ── Ouverture du livre en entrant dans le shop (02/10) : la couverture pivote
   // autour du dos ; son revers (= moitié gauche du livre ouvert) se pose à
   // gauche ; à la fin, le vrai livre prend le relais (images identiques : aucun
@@ -218,7 +222,7 @@ function Grimoire(props) {
   // Auto-clics : dans l'ORDRE du modèle (prix réels de l'Ascension en cours).
   const ordonner = (cle, ids) => (cle === 'auto' ? [...ids].sort((x, y) => (parId[x].ordre ?? 0) - (parId[y].ordre ?? 0)) : ids);
   const chapitres = CHAPITRES_GRIMOIRE.map((c, i) => ({ ...c, ...VISUELS[c.cle], planches: planches(i, ordonner(c.cle, c.ids().filter((id) => parId[id]))) }));
-  const chapRef = useRef(chapitres); chapRef.current = chapitres;
+  chapRef.current = chapitres;
   const dansLeLivre = new Set(chapitres.flatMap((c) => c.ids()));
   const etatJeu = { tapPower: props.tapPower, critLevel: props.critLevel, critDamageLevel: props.critDamageLevel, sanctuaryLevel: props.sanctuaryLevel,
     autoClickers: props.autoClickers, upgradeLevels: props.upgradeLevels, tapUpgrades: props.tapUpgrades, ascensionCount: props.ascensionCount, essence: props.essence };
@@ -246,7 +250,6 @@ function Grimoire(props) {
     })();
     return () => { fini = true; };
   }, []);
-  const posRef = useRef(position); posRef.current = position;
   const planche = (pos) => { const C = chapitres[pos.c]; return C.planches[Math.min(pos.p, C.planches.length - 1)]; };
 
   // ── Achat : relit l'élément FRAIS ; « +1 » qui s'envole là où on a touché
@@ -301,6 +304,7 @@ function Grimoire(props) {
       r.cadence = setInterval(() => { r.rang += 1; if (!acheterUne(id, x, y, r.rang)) arreterRafale(); }, 110);
     }, 380);
   }, []);
+  arreterRafaleRef.current = arreterRafale;
   useEffect(() => () => arreterRafale(), []);
   useEffect(() => {
     let fini = false;
@@ -315,38 +319,6 @@ function Grimoire(props) {
     return () => { fini = true; clearTimeout(t); };
   }, []);
 
-  // ── Tourner une page : une feuille pivote en 3D autour du dos ────────────
-  const angle = useRef(new Animated.Value(0)).current;
-  const enTour = useRef(false);
-  const tourner = (vers, sens) => {
-    if (enTour.current) return;
-    enTour.current = true;
-    arreterRafale();
-    jouerSon('page', sonsRef.current);
-    setTour({ sens, de: posRef.current, vers });
-    angle.setValue(0);
-    requestAnimationFrame(() => {
-      Animated.timing(angle, { toValue: 1, duration: DUREE_TOUR, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start(() => {
-        setPosition(vers); setTour(null); angle.setValue(0); enTour.current = false;
-      });
-    });
-  };
-  const suivante = () => {
-    const { c, p } = posRef.current; const C = chapRef.current;
-    if (p + 1 < C[c].planches.length) tourner({ c, p: p + 1 }, 1);
-    else if (c + 1 < C.length) tourner({ c: c + 1, p: 0 }, 1);
-  };
-  const precedente = () => {
-    const { c, p } = posRef.current; const C = chapRef.current;
-    if (p > 0) tourner({ c, p: p - 1 }, -1);
-    else if (c > 0) tourner({ c: c - 1, p: C[c - 1].planches.length - 1 }, -1);
-  };
-  const glisse = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => false,
-    onMoveShouldSetPanResponder: (e, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.2,
-    onMoveShouldSetPanResponderCapture: (e, g) => Math.abs(g.dx) > 16 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
-    onPanResponderRelease: (e, g) => { if (g.dx < -40) suivante(); else if (g.dx > 40) precedente(); },
-  })).current;
 
   // Contenu d'une page, posé dans sa feuille (zone d'écriture relative).
   const contenu = (page, cote) => {
@@ -377,38 +349,17 @@ function Grimoire(props) {
       {contenu(page, cote)}
     </Animated.View>
   );
-  // Face d'une feuille qui tourne : image de la page + contenu + ombre.
-  // Rotation autour du DOS : bord gauche pour une page de droite, bord droit
-  // pour une page de gauche (translateX ± l/2 autour de la rotation).
-  const ombre = angle.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.3, 0] });
-  const face = (page, cote, debut, fin) => {
-    const f = F[cote]; const d = cote === 'droite' ? -f.l / 2 : f.l / 2;
-    const rot = angle.interpolate({ inputRange: [0, 1], outputRange: [debut, fin] });
-    return (
-      <Animated.View key={'face-' + cote} style={[styles.feuille, { left: f.x, top: f.y, width: f.l, height: f.h, backfaceVisibility: 'hidden',
-        transform: [{ perspective: PERSPECTIVE }, { translateX: d }, { rotateY: rot }, { translateX: -d }] }]}>
-        <Image source={IMG.feuille[cote]} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: f.l, height: f.h }} />
-        {contenu(page, cote)}
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#1a0f04', opacity: ombre, pointerEvents: 'none' }]} />
-      </Animated.View>
-    );
-  };
+  // Face d'une feuille qui tourne : composant commun FaceTournante (livreTourne.js).
+  const face = (page, cote, debut, fin) => (
+    <FaceTournante key={'face-' + cote} angle={angle} rect={F[cote]} cote={cote} debut={debut} fin={fin} image={IMG.feuille[cote]}>
+      {contenu(page, cote)}
+    </FaceTournante>
+  );
 
-  // Ce qui est posé / ce qui tourne, selon le sens.
-  let gauche; let droite; let feuilles = null;
-  if (!tour) {
-    [gauche, droite] = planche(position);
-  } else if (tour.sens > 0) {
-    // Vers l'avant : la page de DROITE se soulève ; dessous, la droite d'arrivée.
-    const [dg, dd] = planche(tour.de); const [vg, vd] = planche(tour.vers);
-    gauche = dg; droite = vd;
-    feuilles = [face(dd, 'droite', '0deg', '-180deg'), face(vg, 'gauche', '180deg', '0deg')];
-  } else {
-    // Vers l'arrière : la page de GAUCHE se soulève ; dessous, la gauche d'arrivée.
-    const [dg, dd] = planche(tour.de); const [vg, vd] = planche(tour.vers);
-    gauche = vg; droite = dd;
-    feuilles = [face(dg, 'gauche', '0deg', '180deg'), face(vd, 'droite', '-180deg', '0deg')];
-  }
+  // Ce qui est posé / ce qui tourne, selon le sens (moteur commun).
+  const dp = doublePage(tour, position, planche);
+  const gauche = dp.gauche; const droite = dp.droite;
+  const feuilles = dp.faces.length ? dp.faces.map((f) => face(f.page, f.cote, f.debut, f.fin)) : null;
 
   const chap = chapitres[(tour ? tour.vers : position).c];
   const total = chap.planches.length;
