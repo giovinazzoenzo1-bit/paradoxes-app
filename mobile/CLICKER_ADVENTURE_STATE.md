@@ -1547,3 +1547,16 @@ l'inclut), ils jouent.
   (achat possible). Badge en haut à gauche du médaillon, étoile en bas à
   gauche, niveau en bas à droite (mesuré : plus de chevauchement avec le nom).
   Vérifié au banc : 1 badge + 1 « ! » à 0,6 s, 0 à 2,8 s.
+
+**02/10 — Boutique, étapes 4 et 5** :
+- **Sceau de l'Ascension** : « PRÊTE ! » (le sceau pulse ×1,09, halo vif) ;
+  seuil atteint mais défi « Fais ta Nᵉ Ascension » non lancé → « 🔒 DÉFI »
+  (cas qui expliquait des blocages incompris) ; sinon le POURCENTAGE (une
+  décimale sous 10 % : « 0,5 % » plutôt qu'un « 0 % » décourageant). Le
+  multiplicateur actuel reste dans la fiche.
+- **Appui maintenu = rafale** : 1er achat au contact, puis après 0,38 s doigt
+  posé, un achat toutes les 0,11 s (élément et offre relus FRAIS à chaque
+  fois) ; arrêt au relâcher, en tournant la page, au démontage, ou dès que
+  ce n'est plus abordable (sans ouvrir de fiche) ; vibration et son 1 fois
+  sur 4. Pages, Griffes et Offrande. Mesuré au banc : 10 achats en 1,5 s,
+  0 après le relâcher. Contrôle **auditRafaleArretee** (+ sabotage).

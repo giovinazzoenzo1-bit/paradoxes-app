@@ -4054,3 +4054,21 @@ function auditModulesNatifsProteges() {
   return pb;
 }
 module.exports.auditModulesNatifsProteges = auditModulesNatifsProteges;
+
+// ── Boutique : toute rafale d'achats s'ARRÊTE au relâcher (02/10) ─────────
+// Appui maintenu = achats en rafale (Grimoire). Une rafale sans arrêt viderait
+// les pièces du joueur. Exige : chaque bouton de prix qui lance une rafale
+// (onPressIn → onAcheter) a son onPressOut={onRelacher} ; la rafale s'arrête
+// aussi en tournant la page et au démontage.
+function auditRafaleArretee() {
+  const fs = require('fs'); const path = require('path');
+  const g = fs.readFileSync(path.join(__dirname, '../src/screens/games/GrimoireBoutique.js'), 'utf8');
+  const pb = [];
+  const lignes = g.split('\n').filter((l) => /onPressIn=\{\(e\) => onAcheter\(/.test(l));
+  if (!lignes.length) pb.push('aucun bouton de prix au contact trouvé');
+  lignes.forEach((l, i) => { if (!l.includes('onPressOut={onRelacher}')) pb.push(`bouton de prix n°${i + 1} : rafale lancée sans arrêt au relâcher (onPressOut={onRelacher} absent)`); });
+  if (!/enTour\.current = true;\s*\n\s*arreterRafale\(\);/.test(g)) pb.push('tourner la page n\'arrête pas la rafale');
+  if (!/useEffect\(\(\) => \(\) => arreterRafale\(\), \[\]\)/.test(g)) pb.push('la rafale n\'est pas arrêtée au démontage');
+  return pb;
+}
+module.exports.auditRafaleArretee = auditRafaleArretee;

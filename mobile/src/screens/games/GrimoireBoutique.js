@@ -97,7 +97,7 @@ function badge(niveau) {
 }
 
 // ── Une entrée : toucher = fiche ; le BOUTON DE PRIX achète ───────────────
-function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, offre, conseil, nouveau }) {
+function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, onRelacher, offre, conseil, nouveau }) {
   const verrou = n.etat === 'verrouille';
   const o = offre || { q: 1, total: n.prix, ok: n.etat === 'achetable' };
   const ok = o.ok;
@@ -123,7 +123,7 @@ function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, offre, con
           n.etat === 'max' ? <Text style={styles.max}>⭐ MAX</Text> : (
             // ⚠️ Achat AU CONTACT (onPressIn), comme la zone de tap : un
             // TouchableOpacity / onPress jette les taps rapides (auditZoneTapAuContact).
-            <Pressable onPressIn={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)}
+            <Pressable onPressIn={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)} onPressOut={onRelacher}
               style={({ pressed }) => [styles.prix, ok ? styles.prixOk : styles.prixCher, conseil && ok && styles.prixConseil, pressed && { opacity: 0.75 }]} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
               <Image source={n.devise === 'diamants' ? ICONES.diamant : ICONES.piece} resizeMode="contain" style={styles.prixIcone} />
               <Text style={[styles.prixTexte, !ok && styles.prixTexteCher]} numberOfLines={1}>{o.q > 1 ? `×${o.q} ` : ''}{formatNum(o.total)}</Text>
@@ -136,7 +136,7 @@ function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, offre, con
 }
 
 // ── Sous le livre, mis en avant : Griffes et Offrande ─────────────────────
-function Special({ n, formatNum, onFiche, onAcheter, style }) {
+function Special({ n, formatNum, onFiche, onAcheter, onRelacher, style }) {
   if (!n) return null;
   const ok = n.etat === 'achetable';
   return (
@@ -149,7 +149,7 @@ function Special({ n, formatNum, onFiche, onAcheter, style }) {
         <Text style={styles.specialNom} numberOfLines={1}>{n.nom}</Text>
       </TouchableOpacity>
       {/* Achat AU CONTACT (onPressIn), comme les pages. */}
-      <Pressable onPressIn={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)}
+      <Pressable onPressIn={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)} onPressOut={onRelacher}
         style={({ pressed }) => [styles.prix, { alignSelf: 'center' }, ok ? styles.prixOk : styles.prixCher, pressed && { opacity: 0.75 }]} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
         <Image source={n.devise === 'diamants' ? ICONES.diamant : ICONES.piece} resizeMode="contain" style={styles.prixIcone} />
         <Text style={[styles.prixTexte, !ok && styles.prixTexteCher]} numberOfLines={1}>{formatNum(n.prix)}</Text>
@@ -235,12 +235,14 @@ function Grimoire(props) {
   // ── Achat : relit l'élément FRAIS ; « +1 » qui s'envole là où on a touché
   const [effet, setEffet] = useState(null);
   const effetAnim = useRef(new Animated.Value(0)).current;
-  const acheter = useCallback((id, x, y) => {
+  // rang 0 = 1er toucher (pas abordable → fiche) ; rang ≥ 1 = achat de rafale
+  // (pas abordable → la rafale s'arrête, sans ouvrir de fiche). Renvoie true si acheté.
+  const acheterUne = (id, x, y, rang) => {
     const n = frais.current[id];
-    if (!n) return;
-    if (id === 'ascension' || !n.onPress) { setFicheId(id); return; }
+    if (!n) return false;
+    if (id === 'ascension' || !n.onPress) { if (!rang) setFicheId(id); return false; }
     const o = offreRef.current(n);
-    if (!o.ok) { setFicheId(id); return; }
+    if (!o.ok) { if (!rang) setFicheId(id); return false; }
     // Le VRAI gain de cet achat, dans sa bonne unité (« +20/tap », « +3,5/s »),
     // calculé AVANT l'achat (l'état changera au rendu suivant) avec les
     // formules du jeu (conseilBoutique). Sans effet mesurable : « +q ».
@@ -255,8 +257,8 @@ function Grimoire(props) {
       if (parts.length) texte = parts.join(' · ');
     }
     n.onPress(o.q);
-    vibrerSucces(vib.current);
-    jouerSon('achat', sonsRef.current);
+    // En rafale : vibration et son 1 fois sur 4 (sinon insupportable).
+    if (rang % 4 === 0) { vibrerSucces(vib.current); jouerSon('achat', sonsRef.current); }
     if (x != null) {
       setEffet({ x, y, cle: Date.now(), texte });
       effetAnim.setValue(0);
@@ -264,7 +266,25 @@ function Grimoire(props) {
       // intercepter le toucher suivant, pile sur le bouton de prix.
       Animated.timing(effetAnim, { toValue: 1, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => setEffet(null));
     }
+    return true;
+  };
+  const acheter = useCallback((id, x, y) => { acheterUne(id, x, y, 0); }, []);
+  // ── Appui MAINTENU = achats en rafale : 1er achat au contact, puis, après
+  // 0,38 s doigt posé, un achat toutes les 0,11 s jusqu'au relâcher (ou plus
+  // assez). Chaque achat relit l'élément et l'offre FRAIS (refs).
+  const rafale = useRef({ attente: null, cadence: null, rang: 0 });
+  const arreterRafale = useCallback(() => {
+    const r = rafale.current; clearTimeout(r.attente); clearInterval(r.cadence); r.attente = null; r.cadence = null;
   }, []);
+  const presser = useCallback((id, x, y) => {
+    arreterRafale();
+    if (!acheterUne(id, x, y, 0)) return;
+    const r = rafale.current; r.rang = 0;
+    r.attente = setTimeout(() => {
+      r.cadence = setInterval(() => { r.rang += 1; if (!acheterUne(id, x, y, r.rang)) arreterRafale(); }, 110);
+    }, 380);
+  }, []);
+  useEffect(() => () => arreterRafale(), []);
 
   // ── Tourner une page : une feuille pivote en 3D autour du dos ────────────
   const angle = useRef(new Animated.Value(0)).current;
@@ -272,6 +292,7 @@ function Grimoire(props) {
   const tourner = (vers, sens) => {
     if (enTour.current) return;
     enTour.current = true;
+    arreterRafale();
     jouerSon('page', sonsRef.current);
     setTour({ sens, de: posRef.current, vers });
     angle.setValue(0);
@@ -317,7 +338,7 @@ function Grimoire(props) {
     const h = Math.floor(z.h / PAR_PAGE);
     return (
       <View style={boite}>
-        {page.ids.map((id) => (parId[id] ? <Entree key={id} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} offre={offre(parId[id])} conseil={id === conseilId} nouveau={estNouveau(id)} /> : null))}
+        {page.ids.map((id) => (parId[id] ? <Entree key={id} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={presser} onRelacher={arreterRafale} offre={offre(parId[id])} conseil={id === conseilId} nouveau={estNouveau(id)} /> : null))}
       </View>
     );
   };
@@ -373,6 +394,25 @@ function Grimoire(props) {
   }, [position, vus, tour]);
   const numero = Math.min((tour ? tour.vers : position).p, total - 1) + 1;
   const asc = parId.ascension;
+  // Sceau de l'Ascension (02/10) : PRÊTE → il pulse et son halo s'intensifie ;
+  // seuil atteint mais défi « Fais ta Nᵉ Ascension » pas lancé → « 🔒 DÉFI » ;
+  // sinon le pourcentage atteint (halo discret).
+  const ascPrete = !!asc && asc.etat === 'achetable';
+  const ascBloqueeDefi = !!asc && !ascPrete && (asc.progres || 0) >= 1 && !props.defiAscensionEnCours;
+  // Sous 10 % : une décimale (« 0,4 % » plutôt qu'un « 0 % » qui décourage).
+  const ascPct = asc ? (asc.progres || 0) * 100 : 0;
+  const ascPctTexte = ascPct < 10 ? Number(ascPct.toFixed(1)).toString().replace('.', ',') : String(Math.floor(ascPct));
+  const ascStatut = !asc ? '' : ascPrete ? 'PRÊTE !' : ascBloqueeDefi ? '🔒 DÉFI' : `${ascPctTexte} %`;
+  const impulsion = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!ascPrete) { impulsion.setValue(0); return undefined; }
+    const b = Animated.loop(Animated.sequence([
+      Animated.timing(impulsion, { toValue: 1, duration: 520, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(impulsion, { toValue: 0, duration: 520, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+    ]));
+    b.start();
+    return () => b.stop();
+  }, [ascPrete]);
   const halo = useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
     const b = Animated.loop(Animated.sequence([
@@ -426,7 +466,7 @@ function Grimoire(props) {
       </TouchableOpacity>
 
       {/* SOUS le livre, mis en avant : Griffes, le sceau de l'Ascension, Offrande. */}
-      <Special n={parId.griffes} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} style={{ left: 10, top: SOUS_LIVRE_Y + 4 }} />
+      <Special n={parId.griffes} formatNum={formatNum} onFiche={setFicheId} onAcheter={presser} onRelacher={arreterRafale} style={{ left: 10, top: SOUS_LIVRE_Y + 4 }} />
       {/* Quantité d'achat : ×1 / ×10 / MAX. */}
       <View style={styles.modes}>
         {[[1, '×1'], [10, '×10'], ['max', 'MAX']].map(([m, txt]) => (
@@ -437,19 +477,25 @@ function Grimoire(props) {
       </View>
       {asc ? (
         <Animated.Image source={IMG.lueurOr} resizeMode="stretch" style={{ position: 'absolute', left: Math.round(ECRAN_L / 2 - 70), top: SOUS_LIVRE_Y - 29, width: 140, height: 140, pointerEvents: 'none',
-          opacity: halo.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0.95] }), transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.06] }) }] }} />
+          opacity: halo.interpolate({ inputRange: [0, 1], outputRange: ascPrete ? [0.8, 1] : [0.35, 0.65] }), transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: ascPrete ? [0.98, 1.18] : [0.92, 1.02] }) }] }} />
       ) : null}
       {asc ? (
-        <TouchableOpacity activeOpacity={0.8} onPress={() => setFicheId('ascension')} style={[styles.ascension, { left: Math.round(ECRAN_L / 2 - 41), top: SOUS_LIVRE_Y }]}>
-          <Image source={IMG.sceauAscension} resizeMode="contain" style={styles.ascensionImg} />
-          <Text style={styles.ascensionTexte}>ASCENSION</Text>
-          {asc.niveau ? <Text style={styles.ascensionNiveau}>{asc.niveau}</Text> : null}
-          <View style={styles.ascensionBarre}>
-            <View style={{ width: Math.round(52 * (asc.progres || 0)), height: 4, borderRadius: 2, backgroundColor: CYAN_CHAMPIGNON }} />
-          </View>
-        </TouchableOpacity>
+        <Animated.View style={{ position: 'absolute', left: Math.round(ECRAN_L / 2 - 41), top: SOUS_LIVRE_Y, width: 82, height: 82,
+          transform: [{ scale: impulsion.interpolate({ inputRange: [0, 1], outputRange: [1, 1.09] }) }] }}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => setFicheId('ascension')} style={[styles.ascension, { left: 0, top: 0 }]}>
+            <Image source={IMG.sceauAscension} resizeMode="contain" style={styles.ascensionImg} />
+            <Text style={styles.ascensionTexte}>ASCENSION</Text>
+            {/* Le multiplicateur actuel reste dans la fiche ; ici, où tu en es. */}
+            <Text style={[styles.ascensionNiveau, ascPrete && styles.ascensionPrete]}>{ascStatut}</Text>
+            {!ascPrete ? (
+              <View style={styles.ascensionBarre}>
+                <View style={{ width: Math.round(52 * (asc.progres || 0)), height: 4, borderRadius: 2, backgroundColor: CYAN_CHAMPIGNON }} />
+              </View>
+            ) : null}
+          </TouchableOpacity>
+        </Animated.View>
       ) : null}
-      <Special n={parId.offrande} formatNum={formatNum} onFiche={setFicheId} onAcheter={acheter} style={{ left: ECRAN_L - 10 - 104, top: SOUS_LIVRE_Y + 4 }} />
+      <Special n={parId.offrande} formatNum={formatNum} onFiche={setFicheId} onAcheter={presser} onRelacher={arreterRafale} style={{ left: ECRAN_L - 10 - 104, top: SOUS_LIVRE_Y + 4 }} />
 
       {/* Ce que tu gagnes, sous le sélecteur (retour de l'auteur : « on ne voit pas
           combien un item fait gagner »). */}
@@ -541,6 +587,7 @@ const styles = StyleSheet.create({
   ascensionImg: { position: 'absolute', left: 0, top: 0, width: 82, height: 82 },
   // Comme la maquette : capitales à empattements, crème cerclée de brun, petites.
   ascensionTexte: { color: '#fff4d0', fontFamily: SERIF, fontSize: 8.5, fontWeight: '700', letterSpacing: 0.7, includeFontPadding: false, textShadowColor: 'rgba(70,35,0,0.95)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
+  ascensionPrete: { color: '#ffffff', fontSize: 10, fontWeight: '900', textShadowColor: 'rgba(255,190,40,0.95)', textShadowRadius: 6 },
   ascensionNiveau: { color: '#fff4d0', fontFamily: SERIF, fontSize: 8, fontWeight: '700', includeFontPadding: false, textShadowColor: 'rgba(70,35,0,0.95)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   ascensionBarre: { width: 56, height: 6, marginTop: 3, borderRadius: 3, backgroundColor: 'rgba(40,24,6,0.55)', padding: 1, justifyContent: 'center' },
   soldes: { position: 'absolute', right: 12, top: 40, width: 124, gap: 6, alignItems: 'flex-end' },
