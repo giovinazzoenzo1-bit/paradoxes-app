@@ -98,3 +98,5 @@
 - [ ] **Vibration courte sur iPhone** : la Vibration de React Native dure ≈ 0,4 s sur iOS (durée fixe). Il faudra `expo-haptics` (vérifier la version compatible SDK 57 ET que la publication passe, les logs du robot n'étant pas visibles).
 - [ ] **Arbre de la boutique, étape 2 (Gemini)** : grand arbre (2 images : ramure / racines), médaillon de nœud, médaillon Ascension, plaque de prix, icônes par lots.
 - [ ] **Arbre de la boutique, étape 3** : illumination des branches à l'achat (animation), lucioles, effets d'achat.
+- [ ] **Vibration courte sur iPhone** : expo-haptics ~57.0.1 est DISPONIBLE dans Expo Go 57 (vérifié le 27/09) — même méthode que expo-audio (version exacte, verrou comparé, chargement protégé).
+- [ ] **Équilibrage** : Sanctuaire / Veilleur ~300 × trop bon marché (voir CLICKER_ADVENTURE_STATE) — à MESURER par simulation.

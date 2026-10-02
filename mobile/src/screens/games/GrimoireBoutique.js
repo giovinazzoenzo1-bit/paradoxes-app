@@ -7,6 +7,7 @@ import { construireNoeuds, FicheElement } from './ArbreBoutique';
 import BackButton from '../../components/BackButton';
 import { ICONES } from './grimoireIcones';
 import { meilleurAchat } from '../../games/clicker/conseilBoutique';
+import { jouerSon } from './sonsBoutique';
 
 // ════════════════════════════════════════════════════════════════════
 //  BOUTIQUE EN GRIMOIRE (27/09, choix de l'auteur après l'arbre)
@@ -145,7 +146,8 @@ function Special({ n, formatNum, onFiche, onAcheter, style }) {
 }
 
 function Grimoire(props) {
-  const { vibrations } = useSettings();
+  const { vibrations, sons } = useSettings();
+  const sonsRef = useRef(sons); sonsRef.current = sons;
   const formatNum = props.formatNum || ((n) => String(Math.round(n)));
   const noeuds = useMemo(() => construireNoeuds(props), [props]);
   const parId = useMemo(() => Object.fromEntries(noeuds.map((n) => [n.id, n])), [noeuds]);
@@ -202,6 +204,7 @@ function Grimoire(props) {
     if (!o.ok) { setFicheId(id); return; }
     n.onPress(o.q);
     vibrerSucces(vib.current);
+    jouerSon('achat', sonsRef.current);
     if (x != null) {
       setEffet({ x, y, cle: Date.now(), texte: `+${o.q}` });
       effetAnim.setValue(0);
@@ -217,6 +220,7 @@ function Grimoire(props) {
   const tourner = (vers, sens) => {
     if (enTour.current) return;
     enTour.current = true;
+    jouerSon('page', sonsRef.current);
     setTour({ sens, de: posRef.current, vers });
     angle.setValue(0);
     requestAnimationFrame(() => {

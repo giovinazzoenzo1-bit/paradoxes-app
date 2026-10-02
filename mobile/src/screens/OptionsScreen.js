@@ -32,7 +32,7 @@ const INTERIEUR = largeurInterieure(PANNEAU_L);
 export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
   const { addCoins } = useCoins();
   const { resetLifetimeStats, lifetimeStats } = useDaily();
-  const { vibrations, ambientFx, toggleSetting } = useSettings();
+  const { vibrations, ambientFx, sons, toggleSetting } = useSettings();
   const [devOpen, setDevOpen] = useState(false);
   const ascensionsVues = (lifetimeStats && lifetimeStats.ascension) || 0;
 
@@ -264,6 +264,12 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
             hint="Courte vibration sur un coup critique"
             value={vibrations}
             onPress={() => toggleSetting('vibrations')}
+          />
+          <Toggle
+            label="Sons"
+            hint="Page qui tourne et achats dans la boutique"
+            value={sons}
+            onPress={() => toggleSetting('sons')}
           />
           <Toggle
             label="Animations d'ambiance"

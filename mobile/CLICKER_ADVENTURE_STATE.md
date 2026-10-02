@@ -1459,3 +1459,17 @@ il recommande le Sanctuaire en milieu de partie. À traiter en séance
 d'équilibrage, PAR SIMULATION.
 
 5. Sons : envoi SÉPARÉ (nouvelle dépendance).
+
+**5. Sons de la boutique (27/09, envoi SÉPARÉ)** : `expo-audio` ajouté —
+version d'Expo Go 57 lue dans `bundledNativeModules.json` d'expo@57.0.9
+(`~57.0.3`, verrouillé en 57.0.5). ⚠️ Piège évité : npm, pour satisfaire la
+dépendance « pair » `expo-asset` d'expo-audio, REMONTAIT expo-asset
+(57.0.16 → 57.0.18) et expo-constants (57.0.17 → 57.0.20, partie native) →
+les deux FIGÉS à leur version actuelle (exactes, `--save-exact`) ; comparaison
+complète du verrou : seul expo-audio ajouté, AUCUNE version changée ;
+`npm ci --dry-run` (commande du robot) OK. Sons SYNTHÉTISÉS (assets/sons/
+page.wav, achat.wav, aucun droit tiers). `screens/games/sonsBoutique.js` :
+require STATIQUE (Metro l'embarque) mais exécuté à la demande dans un
+try/catch → si le module natif faisait défaut, jeu SANS son, pas de plantage.
+Réglage « Sons » (SettingsContext `sons`, interrupteur dans Paramètres).
+Banc : doublure expo-audio (stubs/natifs.js) + chargement des .wav.

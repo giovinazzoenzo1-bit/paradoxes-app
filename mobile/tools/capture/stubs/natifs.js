@@ -19,3 +19,5 @@ const memoire = {};
 const AsyncStorage = { getItem: async (k) => (k in memoire ? memoire[k] : null), setItem: async (k, v) => { memoire[k] = v; }, removeItem: async (k) => { delete memoire[k]; }, multiGet: async (ks) => ks.map((k) => [k, memoire[k] ?? null]), getAllKeys: async () => Object.keys(memoire) };
 export default AsyncStorage;
 export const LottieView = () => null;
+// expo-audio (sons de la boutique) : lecteur factice, le banc ne joue pas de son.
+export const createAudioPlayer = () => ({ volume: 1, play() {}, pause() {}, seekTo: async () => {}, remove() {} });

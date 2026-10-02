@@ -14,6 +14,7 @@ export const SETTINGS_KEY = 'app:settings:v1';
 const DEFAULTS = {
   vibrations: true,   // vibration courte sur coup critique (Clicker)
   ambientFx: true,    // animations d'ambiance (lueur du cadeau qui respire)
+  sons: true,         // sons de la boutique : page qui tourne, achat (expo-audio, 27/09)
 };
 
 const SettingsContext = createContext(null);

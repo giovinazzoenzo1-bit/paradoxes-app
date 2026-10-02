@@ -7,12 +7,14 @@ import { createRequire } from 'module';
 const exiger = createRequire(import.meta.url);
 const ICI = path.dirname(fileURLToPath(import.meta.url));
 const NATIFS = path.join(ICI, 'stubs/natifs.js');
-const doublures = /^(expo-status-bar|react-native-safe-area-context|expo-screen-orientation|expo-navigation-bar|@expo\/vector-icons.*|@react-native-async-storage\/async-storage|lottie-react-native)$/;
+const doublures = /^(expo-status-bar|react-native-safe-area-context|expo-screen-orientation|expo-navigation-bar|@expo\/vector-icons.*|@react-native-async-storage\/async-storage|lottie-react-native|expo-audio)$/;
 const plugin = {
   name: 'paradox',
   setup(b) {
     b.onResolve({ filter: /^react-native$/ }, () => ({ path: path.join(ICI, 'node_modules/react-native-web/dist/cjs/index.js') }));
     b.onResolve({ filter: doublures }, () => ({ path: NATIFS }));
+    // Sons (boutique) : valeur factice — le lecteur audio du banc est une doublure muette.
+    b.onLoad({ filter: /\.(wav|mp3)$/ }, () => ({ contents: 'module.exports = 0;', loader: 'js' }));
     b.onLoad({ filter: /\.(png|jpe?g)$/ }, (a) => ({
       contents: 'module.exports = { uri: "data:image/' + (a.path.endsWith('png') ? 'png' : 'jpeg') + ';base64,' + fs.readFileSync(a.path).toString('base64') + '" };',
       loader: 'js',
