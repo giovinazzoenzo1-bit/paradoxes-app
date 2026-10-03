@@ -1621,3 +1621,23 @@ ShopView pour le Grimoire). Mise en page calculée pour tenir entre les soldes
   page, un ruban par élément — protège les 17 créatures à venir.
 - Vérifié au banc (scène `collection.jsx`) : rubans, glisser dans les deux
   sens, fiche, carte inconnue, emplacement du deck, invocation, page en 3D.
+
+
+## ⚠️ EN COURS (02/10) — branche `album-fidele`, NON publiée
+
+Retour de l'auteur sur l'Album de cartes : « pas du tout le même menu » que sa
+maquette. 10 différences relevées et traitées sur la branche `album-fidele`
+(main n'a que les prompts) : barre du haut de l'écran principal AUSSI sur la
+Collection (diamants, pièces, revenu, réglages), RETOUR sous les diamants,
+fiche d'une créature posée par ClickerScreen au plan 10 (sinon la barre du haut
+passerait devant), calque de l'album au plan 2 ; 8 cartes par double page,
+éléments MÉLANGÉS, sans titre (albumPages : une seule suite) ; cartes hautes
+(icône d'élément, cadre, image ou SILHOUETTE « ? », bandeau nom / Niv. /
+gemmes) ; onglets pointus dessinés par le code ; orbe au centre, « Invoquer »
+et « … Po » en grand dessous ; album affiché à 1,25 (le dessin seul est plus
+plat que la maquette) ; tout remplit l'écran jusqu'à la barre du bas.
+**RESTE** : intégrer les pièces Gemini 74 (abri du deck LARGE, ~2,6:1, 4
+lanternes dehors) et 75 (grande souche + orbe rond) → mesurer, remplacer
+PIECE_ABRI / PIECE_SOUCHE dans CollectionAlbum.js (prévu pour), comparer à la
+maquette côte à côte, puis fusionner la branche dans main et publier.
+Ne PAS publier l'album avant (promesse faite à l'auteur).
