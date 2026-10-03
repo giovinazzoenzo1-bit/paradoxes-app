@@ -1623,25 +1623,23 @@ ShopView pour le Grimoire). Mise en page calculée pour tenir entre les soldes
   sens, fiche, carte inconnue, emplacement du deck, invocation, page en 3D.
 
 
-## ⚠️ EN COURS (02/10) — branche `album-fidele`, NON publiée
+## 02/10 — Album de cartes FIDÈLE À LA MAQUETTE : publié (branche `album-fidele` fusionnée)
 
-Retour de l'auteur sur l'Album de cartes : « pas du tout le même menu » que sa
-maquette. 10 différences relevées et traitées sur la branche `album-fidele`
-(main n'a que les prompts) : barre du haut de l'écran principal AUSSI sur la
-Collection (diamants, pièces, revenu, réglages), RETOUR sous les diamants,
-fiche d'une créature posée par ClickerScreen au plan 10 (sinon la barre du haut
-passerait devant), calque de l'album au plan 2 ; 8 cartes par double page,
-éléments MÉLANGÉS, sans titre (albumPages : une seule suite) ; cartes hautes
-(icône d'élément, cadre, image ou SILHOUETTE « ? », bandeau nom / Niv. /
-gemmes) ; onglets pointus dessinés par le code ; orbe au centre, « Invoquer »
-et « … Po » en grand dessous ; album affiché à 1,25 (le dessin seul est plus
-plat que la maquette) ; tout remplit l'écran jusqu'à la barre du bas.
-**FAIT** (02/10) : souche 75 intégrée (Gemini a omis l'orbe → œuf doré de la
-pièce 71 découpé par sa couleur, ombre ovale dessous) ; abri 74 revenu presque
-CARRÉ (cadre PORTRAIT imposé par mes prompts — Gemini remplit le cadre) →
-provisoire. Nettoyage : magenta-ité RELATIVE à la luminosité (les résidus
-sombres échappaient au seuil absolu), puis tout pixel encore rose recoloré.
-**RESTE** : l'abri 76 en cadre PAYSAGE 16:9 (2,6:1, 4 lanternes dehors) → mesurer, remplacer
-PIECE_ABRI / PIECE_SOUCHE dans CollectionAlbum.js (prévu pour), comparer à la
-maquette côte à côte, puis fusionner la branche dans main et publier.
-Ne PAS publier l'album avant (promesse faite à l'auteur).
+Retour de l'auteur : « pas du tout le même menu ». 10 différences relevées et
+corrigées : barre du haut de l'écran principal AUSSI sur la Collection
+(diamants, pièces, revenu, réglages ; RETOUR sous les diamants) ; fiche d'une
+créature posée par ClickerScreen au plan 10 (calque de l'album au plan 2,
+sous la barre du haut) ; 8 cartes par double page, éléments MÉLANGÉS, sans
+titre (albumPages : une seule suite) ; cartes hautes (icône d'élément, cadre,
+image ou SILHOUETTE « ? », bandeau nom / Niv. / gemmes) ; onglets pointus
+dessinés par le code ; ABRI LARGE (pièce 76, cadre PAYSAGE ; affiché 2,3:1,
+cartes du deck à la hauteur de son intérieur) ; album (affiché 1,25:1) posé
+sur la GRANDE SOUCHE (pièce 75) ; œuf doré (découpé de la 71, ombre ovale,
+halo) devant elle, « Invoquer » et « … Po » en grand dessous.
+⚠️ Leçons : (1) un prompt en cadre PORTRAIT donne des objets HAUTS — pour un
+objet large, cadre PAYSAGE 16:9 ; (2) résidus magenta SOMBRES : mesurer la
+magenta-ité RELATIVE à la luminosité, puis recolorer tout pixel encore rose
+(pointes de fougères) ; (3) toujours COMPARER CÔTE À CÔTE avec la maquette
+avant de publier (la 1re version ne l'avait pas été).
+Images retirées de l'appli (originaux dans design/) : 1er abri, abri carré,
+œuf au nid, dos de carte, 8 rubans.

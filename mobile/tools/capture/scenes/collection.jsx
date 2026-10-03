@@ -24,6 +24,8 @@ function Scene() {
         selectedCreature={sel} setSelectedCreature={setSel} FicheCreature={Fiche}
         onSummon={() => { window.__invoque = (window.__invoque || 0) + 1; }}
         onOuvrirEmplacement={(i) => { window.__emplacement = i; }} onRetour={() => {}} />
+      {/* La fiche est posée par l'écran principal (au-dessus de tout) : le banc l'imite. */}
+      {sel ? <View style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10 }}><Fiche creature={CREATURES.find((c) => c.id === sel)} onClose={() => setSel(null)} /></View> : null}
     </View>
   );
 }

@@ -3,68 +3,101 @@ import { View, Text, Image, ImageBackground, TouchableOpacity, Animated, Easing,
 import { CREATURES, stageForLevel } from '../../games/clicker/clickerLogic';
 import { construireAlbum, RANG_RARETE as RANG } from '../../games/clicker/albumPages';
 import CreatureArt from '../../components/CreatureArt';
-import BackButton from '../../components/BackButton';
 import { useSettings } from '../../context/SettingsContext';
 import { cardFrameForElement, CARD_FRAME_BORDER_X, CARD_FRAME_BORDER_Y } from './cardFrames';
 import { useLivreTourne, doublePage, FaceTournante } from './livreTourne';
 import { jouerSon } from './sonsBoutique';
-import { CRISTAL } from './fenetreBois';
-import { ICONES } from './grimoireIcones';
 
 // ════════════════════════════════════════════════════════════════════
-//  COLLECTION EN « ALBUM DE CARTES » (02/10, concept retenu par l'auteur)
+//  COLLECTION EN « ALBUM DE CARTES » — 2e version, FIDÈLE À LA MAQUETTE
 // ════════════════════════════════════════════════════════════════════
-// Maquette : design/a-integrer/03-collection-et-deck/concepts/1790968948748.jpg.
-// - En haut, l'ABRI du deck : le VRAI deck (3 emplacements) ; toucher un
-//   emplacement ouvre le sélecteur habituel (DeckPicker de ClickerScreen).
-// - L'ALBUM : une page par élément (4 cartes par page), deux pages par double
-//   page ; les pages tournent en 3D avec le moteur COMMUN (livreTourne.js).
-// - Les RUBANS d'éléments, à droite, sautent à la page de l'élément.
-// - L'ŒUF doré invoque une créature (prix affiché, grisé si trop cher).
-// Toutes les positions viennent des MESURES des images
-// (assets/collection/mesures.json) ; tailles et positions en NOMBRES.
-// Logique NON dupliquée : stade = stageForLevel, image = CreatureArt, cadre =
-// cardFrameForElement, fiche = CreatureDetail (passée par ClickerScreen).
+// Maquette : design/a-integrer/03-collection-et-deck/concepts/1790968948748.jpg
+// (retour de l'auteur, 02/10 : « ce n'est pas du tout le même menu »).
+// - La barre du haut (diamants, pièces, revenu, réglages) et RETOUR sont
+//   ceux de l'ÉCRAN PRINCIPAL, affichés aussi sur la Collection : ce calque
+//   est donc au plan 2 (sous eux), sous la barre du bas (5), le sélecteur de
+//   deck (20) et la fiche d'une créature (10, posée par ClickerScreen).
+// - L'ABRI du deck, LARGE, en haut ; l'ALBUM, grand, posé sur la SOUCHE ;
+//   l'ORBE doré au centre de la souche, « Invoquer » et le prix dessous.
+// - 8 cartes par double page, éléments mélangés (albumPages.js) ; cartes
+//   hautes : icône d'élément, image, bandeau (nom, Niv., gemmes) ; inconnue =
+//   SILHOUETTE dans le cadre de son élément ; onglets pointus à droite.
+// Toutes les positions viennent des MESURES des images ; tailles en NOMBRES.
 
 const { width: ECRAN_L, height: ECRAN_H } = Dimensions.get('window');
-const HAUT = 126; // sous les soldes
-const BAS = ECRAN_H - 152; // haut de la barre du bas (~150 pts, mesuré)
-const R_ABRI = 700 / 753;
-const R_ALBUM = 480 / 699;
-const R_OEUF = 697 / 617;
-const RUBAN_MARGE = 42; // place des rubans à droite de l'album
-const CHEVAUCHE = 10; // l'album recouvre un peu le pied de l'abri
-const RAPPORT_CARTE = 0.76; // largeur / hauteur des cadres de cartes
-// Mise à l'échelle : tout tient entre les soldes et la barre du bas.
-const BESOIN = ECRAN_L * 0.6 * R_ABRI + (ECRAN_L - 12 - RUBAN_MARGE) * R_ALBUM + 96 - CHEVAUCHE;
-const K = Math.min(1, (BAS - HAUT) / BESOIN);
-const ABRI = { l: Math.round(ECRAN_L * 0.6 * K) };
-ABRI.h = Math.round(ABRI.l * R_ABRI); ABRI.x = Math.round((ECRAN_L - ABRI.l) / 2); ABRI.y = HAUT;
-const ALBUM = { l: Math.round((ECRAN_L - 12 - RUBAN_MARGE) * K) };
-ALBUM.h = Math.round(ALBUM.l * R_ALBUM); ALBUM.x = Math.round((ECRAN_L - RUBAN_MARGE - ALBUM.l) / 2) + 4; ALBUM.y = ABRI.y + ABRI.h - CHEVAUCHE;
-const OEUF = { h: Math.round(96 * K) };
-OEUF.l = Math.round(OEUF.h / R_OEUF); OEUF.x = Math.round(ECRAN_L / 2 - OEUF.l + 4); OEUF.y = ALBUM.y + ALBUM.h + 2;
+const HAUT = Math.round(ECRAN_H * 0.135); // sous la barre du haut et RETOUR
+const BAS = ECRAN_H - 150; // haut de la barre du bas (mesuré)
+const ONGLET_L = 50;
 
-// Rectangle mesuré (fractions x0, y0, x1, y1) d'une pièce posée en R.
+// ── Pièces dessinées (rapport largeur / hauteur + mesures en fractions) ──
+// L'abri LARGE et la souche à l'orbe (images 74 et 75) remplacent l'abri carré
+// et l'œuf au nid dès leur arrivée : il suffit de changer ces deux blocs.
+// Abri : image 76 (02/10, cadre PAYSAGE) — large et bas (2,94:1), lanternes
+// dehors, panneau au milieu du toit ; mesuré sur grille graduée (2,5 % / 5 %).
+const PIECE_ABRI = {
+  image: require('../../../assets/collection/abri-paysage.png'), rapport: 1212 / 412,
+  emplacements: [[0.239, 0.44, 0.367, 0.89], [0.436, 0.44, 0.563, 0.89], [0.63, 0.44, 0.759, 0.89]],
+  panneau: [0.40, 0.07, 0.59, 0.27],
+  interieur: [0.33, 0.95], // sous le toit : les cartes du deck y prennent toute la hauteur
+};
+// Souche : image 75 (sans orbe : Gemini l'a omis). Plateau = dessus plat, où
+// repose l'album (mesuré : 20-80 % en largeur, 0-28 % en hauteur).
+const PIECE_SOUCHE = {
+  image: require('../../../assets/collection/souche-large.png'), rapport: 692 / 430,
+  plateauMilieu: 0.12,
+};
+// Orbe : l'œuf doré seul, découpé de la pièce 71 par sa couleur (bas coupé à plat
+// là où le nid le cachait → une ombre ovale dessous le fait paraître posé).
+const PIECE_ORBE = { image: require('../../../assets/collection/orbe-oeuf.png'), rapport: 263 / 278 };
+
+// ── Mise en page (390 × 844 de référence ; tout se recalcule) ──
+const ABRI_BOITE = { x: Math.round(ECRAN_L * 0.03), y: HAUT, l: Math.round(ECRAN_L * 0.94) };
+// Affiché à 2,3:1 (dessiné à 2,94) : le toit de Gemini est épais ; un peu plus
+// haut, l'intérieur reçoit des cartes de deck aussi grandes que sur la maquette.
+ABRI_BOITE.h = Math.round(ABRI_BOITE.l / 2.3);
+// L'album dessiné seul est plus « plat » que sur la maquette (rapport 1,46 contre
+// ~1,15) : affiché à 1,25 pour que les cartes remplissent les pages comme elle.
+const R_ALBUM = 1 / 1.25;
+const ALBUM = { l: Math.round(ECRAN_L - 6 - ONGLET_L + 10) };
+ALBUM.h = Math.round(ALBUM.l * R_ALBUM); ALBUM.x = 6; ALBUM.y = ABRI_BOITE.y + ABRI_BOITE.h - 6;
+// La souche : son plateau sous le bas de l'album ; aussi large que possible sans
+// passer sous la barre du bas.
+const SOUCHE = { y: 0 };
+SOUCHE.l = Math.min(ECRAN_L, Math.round((BAS - (ALBUM.y + ALBUM.h)) / (1 - PIECE_SOUCHE.plateauMilieu) * PIECE_SOUCHE.rapport));
+SOUCHE.h = Math.round(SOUCHE.l / PIECE_SOUCHE.rapport); SOUCHE.x = Math.round((ECRAN_L - SOUCHE.l) / 2);
+SOUCHE.y = ALBUM.y + ALBUM.h - Math.round(SOUCHE.h * PIECE_SOUCHE.plateauMilieu);
+// L'orbe : devant la souche, centré, juste sous l'album.
+const ORBE = { h: Math.round(Math.min(96, SOUCHE.h * 0.42)) };
+ORBE.l = Math.round(ORBE.h * PIECE_ORBE.rapport); ORBE.x = Math.round((ECRAN_L - ORBE.l) / 2); ORBE.y = ALBUM.y + ALBUM.h - 8;
+
+// Image posée « contain » dans une boîte (centrée en largeur, calée en bas si demandé).
+function poser(boite, rapport, enBas) {
+  let l = boite.l; let h = Math.round(l / rapport);
+  if (h > boite.h) { h = boite.h; l = Math.round(h * rapport); }
+  return { x: boite.x + Math.round((boite.l - l) / 2), y: enBas ? boite.y + boite.h - h : boite.y + Math.round((boite.h - h) / 2), l, h };
+}
 const frac = (R, [x0, y0, x1, y1]) => ({ x: Math.round(R.x + x0 * R.l), y: Math.round(R.y + y0 * R.h), l: Math.round((x1 - x0) * R.l), h: Math.round((y1 - y0) * R.h) });
+const ABRI = ABRI_BOITE; // étiré à la boîte (bois et mousse le supportent)
 const FEUILLE = { gauche: frac(ALBUM, [0.1459, 0.0104, 0.5351, 0.9125]), droite: frac(ALBUM, [0.5351, 0.0104, 0.9213, 0.9125]) };
-// Zone des cartes : la page de parchemin mesurée, moins une marge.
-const ZONE = { gauche: frac(ALBUM, [0.175, 0.045, 0.49, 0.885]), droite: frac(ALBUM, [0.58, 0.045, 0.902, 0.885]) };
-const EMPLACEMENTS = [[0.205, 0.475, 0.38, 0.755], [0.405, 0.475, 0.595, 0.755], [0.615, 0.475, 0.80, 0.755]];
-const PANNEAU = [0.37, 0.005, 0.62, 0.09];
-const OEUF_FORME = [0.305, 0.011, 0.69, 0.373]; // l'œuf dans son image (centre du halo)
-const TITRE_H = 16;
-const LEGENDE_H = 22; // nom + niveau / gemmes sous la carte
+const ZONE = { gauche: frac(ALBUM, [0.162, 0.03, 0.5, 0.895]), droite: frac(ALBUM, [0.571, 0.03, 0.914, 0.895]) };
+
+// ── Cartes : cadre de l'élément (rapport 0,76) + bandeau sous le cadre ──
+const RAPPORT_CADRE = 0.76;
+const BANDEAU = 0.6; // hauteur du bandeau / largeur de la carte
+const hauteurCarte = (l) => Math.round(l / RAPPORT_CADRE) + Math.round(l * BANDEAU);
+const ELEMENT = {
+  Feu: { emoji: '🔥', couleur: '#c2410c' }, Eau: { emoji: '💧', couleur: '#2563eb' }, Terre: { emoji: '🌿', couleur: '#4d7c0f' },
+  Air: { emoji: '🌪️', couleur: '#cbd5e1', sombre: true }, Foudre: { emoji: '⚡', couleur: '#3730a3' }, 'Lumière': { emoji: '☀️', couleur: '#ca8a04', sombre: true },
+  'Ténèbres': { emoji: '🌑', couleur: '#3f3f46' }, Magie: { emoji: '🔮', couleur: '#7e22ce' },
+};
+const ONGLETS = [['Feu', 'FEU'], ['Eau', 'EAU'], ['Terre', 'TERRE'], ['Air', 'AIR'], ['Foudre', 'FOUDRE'], ['Lumière', 'LUMIÈRE'], ['Ténèbres', 'TÉNÈBRES'], ['Magie', 'MAGIE']];
 
 const IMG = {
   fond: require('../../../assets/menu/fond.jpg'),
-  plaque: require('../../../assets/fenetres/plaque-solde.png'),
   album: require('../../../assets/collection/album.png'),
   feuille: { gauche: require('../../../assets/collection/album-feuille-gauche.png'), droite: require('../../../assets/collection/album-feuille-droite.png') },
-  abri: require('../../../assets/collection/abri-deck.png'),
-  oeuf: require('../../../assets/collection/oeuf-souche.png'),
-  dos: require('../../../assets/collection/dos-carte.png'),
   vide: require('../../../assets/collection/emplacement-vide.png'),
+  ombre: require('../../../assets/collection/ombre-ovale.png'),
   lueur: require('../../../assets/grimoire/lueur-or.png'),
 };
 const GEMMES = {
@@ -75,19 +108,6 @@ const GEMMES = {
   legendaire: require('../../../assets/collection/gemme-legendaire.png'),
   mythique: require('../../../assets/collection/gemme-mythique.png'),
 };
-// Visuels des rubans, dans l'ORDRE de albumPages.ORDRE_ELEMENTS ; `cle` = élément du jeu.
-const ELEMENTS = [
-  { cle: 'Feu', nom: 'FEU', ruban: require('../../../assets/collection/ruban-feu.png'), couleur: '#b4380c' },
-  { cle: 'Eau', nom: 'EAU', ruban: require('../../../assets/collection/ruban-eau.png'), couleur: '#1c64a8' },
-  { cle: 'Terre', nom: 'TERRE', ruban: require('../../../assets/collection/ruban-terre.png'), couleur: '#4a7310' },
-  { cle: 'Air', nom: 'AIR', ruban: require('../../../assets/collection/ruban-air.png'), couleur: '#5d6b7a', sombre: true },
-  { cle: 'Foudre', nom: 'FOUDRE', ruban: require('../../../assets/collection/ruban-foudre.png'), couleur: '#312e91' },
-  { cle: 'Lumière', nom: 'LUMIÈRE', ruban: require('../../../assets/collection/ruban-lumiere.png'), couleur: '#946005', sombre: true },
-  { cle: 'Ténèbres', nom: 'TÉNÈBRES', ruban: require('../../../assets/collection/ruban-tenebres.png'), couleur: '#3a2a49' },
-  { cle: 'Magie', nom: 'MAGIE', ruban: require('../../../assets/collection/ruban-magie.png'), couleur: '#7323b8' },
-];
-
-// Pages de l'album : games/clicker/albumPages.js (pur, contrôlé par auditAlbumComplet).
 
 function Gemmes({ rarete, taille }) {
   const n = RANG[rarete] || 1;
@@ -100,42 +120,33 @@ function Gemmes({ rarete, taille }) {
   );
 }
 
-// Une carte : cadre de l'élément + image de la créature (découverte), ou dos
-// de carte (inconnue). `sansLegende` : dans l'abri du deck.
-function Carte({ creature, own, largeur, onPress, sansLegende }) {
-  const h = Math.round(largeur / RAPPORT_CARTE);
+// Une carte : cadre de l'élément, icône de l'élément, image (ou SILHOUETTE « ? »
+// si inconnue), et sous le cadre un bandeau : nom, Niv., gemmes.
+function Carte({ creature, own, l, onPress }) {
+  const fh = Math.round(l / RAPPORT_CADRE); const bh = Math.round(l * BANDEAU);
   const decouverte = !!own;
   const stade = decouverte ? stageForLevel(own.level) : 0;
   const d = creature.stages[stade] || creature.stages[0];
   const cadre = cardFrameForElement(creature.element);
-  const bx = Math.round(largeur * CARD_FRAME_BORDER_X);
-  const by = Math.round(h * CARD_FRAME_BORDER_Y);
-  const art = Math.min(largeur - 2 * bx, h - 2 * by);
+  const el = ELEMENT[creature.element] || { emoji: '✨', couleur: '#6b5a3a' };
+  const bx = Math.round(l * CARD_FRAME_BORDER_X); const by = Math.round(fh * CARD_FRAME_BORDER_Y);
+  const art = Math.min(l - 2 * bx, fh - 2 * by);
   return (
-    <TouchableOpacity activeOpacity={0.75} onPress={onPress} disabled={!onPress} style={{ width: largeur, alignItems: 'center' }}>
-      <View style={{ width: largeur, height: h }}>
-        {decouverte ? (
-          <>
-            <View style={[styles.fenetre, { left: bx, top: by, width: largeur - 2 * bx, height: h - 2 * by }]}>
-              <CreatureArt creatureId={creature.id} stageIndex={stade} emoji={d.emoji} size={art} emojiStyle={{ fontSize: Math.round(art * 0.6) }} />
-            </View>
-            {cadre ? <Image source={cadre} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: largeur, height: h }} /> : null}
-          </>
-        ) : (
-          <Image source={IMG.dos} resizeMode="stretch" style={{ width: largeur, height: h }} />
-        )}
-        {/* Niveau en BADGE dans le coin (sous la carte, « Nv 12 » + gemmes ne
-            tenaient pas sur une ligne : la case grandissait et écrasait le titre). */}
-        {decouverte ? <View style={styles.badgeNiveau}><Text style={styles.badgeNiveauTexte}>{own.level}</Text></View> : null}
+    <TouchableOpacity activeOpacity={0.75} onPress={onPress} disabled={!onPress} style={{ width: l }}>
+      <View style={{ width: l, height: fh }}>
+        <View style={[styles.fenetre, { left: bx, top: by, width: l - 2 * bx, height: fh - 2 * by }]}>
+          <CreatureArt creatureId={creature.id} stageIndex={stade} emoji={decouverte ? d.emoji : ''} size={art}
+            style={decouverte ? null : styles.silhouette} emojiStyle={{ fontSize: Math.round(art * 0.6) }} />
+          {decouverte ? null : <Text style={[styles.inconnue, { fontSize: Math.round(art * 0.5) }]}>?</Text>}
+        </View>
+        {cadre ? <Image source={cadre} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: l, height: fh }} /> : null}
+        <View style={[styles.icone, { backgroundColor: el.couleur }]}><Text style={styles.iconeTexte}>{el.emoji}</Text></View>
       </View>
-      {sansLegende ? null : (
-        <>
-          <Text style={styles.nom} numberOfLines={1}>{decouverte ? d.name : '???'}</Text>
-          <View style={styles.legende}>
-            <Gemmes rarete={creature.rarity} taille={6} />
-          </View>
-        </>
-      )}
+      <View style={[styles.bandeau, { height: bh, borderColor: el.couleur }]}>
+        <Text style={styles.nom} numberOfLines={1}>{decouverte ? d.name : '???'}</Text>
+        {decouverte ? <Text style={styles.niv}>Niv. {own.level}</Text> : null}
+        <Gemmes rarete={creature.rarity} taille={5} />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -150,10 +161,8 @@ function Album(props) {
   const { position, tour, angle, tourner, glisse } = useLivreTourne(chapRef, () => jouerSon('page', sonsRef.current));
   const planche = (pos) => { const P = chapitres[0].planches; return P[Math.min(pos.p, P.length - 1)] || [null, null]; };
   const dp = doublePage(tour, position, planche);
-  const affichee = planche(tour ? tour.vers : position);
-  const elementsVisibles = affichee.filter(Boolean).map((pg) => pg.element);
+  const pCourante = (tour ? tour.vers : position).p;
 
-  // Halo de l'œuf qui respire.
   const halo = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const b = Animated.loop(Animated.sequence([
@@ -164,26 +173,18 @@ function Album(props) {
     return () => b.stop();
   }, []);
 
-  // Contenu d'une page (titre de l'élément + jusqu'à 4 cartes), posé dans sa feuille.
+  // 4 cartes (2 × 2) centrées dans la zone de la page, sans titre (maquette).
   const contenu = (page, cote) => {
     if (!page) return null;
     const z = ZONE[cote]; const f = FEUILLE[cote];
-    const el = ELEMENTS.find((e) => e.cle === page.element);
-    const largeur = Math.floor(Math.min((z.l - 6) / 2, ((z.h - TITRE_H - 4) / 2 - LEGENDE_H) * RAPPORT_CARTE));
+    const ecart = 5;
+    const l = Math.floor(Math.min((z.l - 3 * ecart) / 2, (z.h - 3 * ecart) / 2 / (1 / RAPPORT_CADRE + BANDEAU)));
     return (
-      <View style={{ position: 'absolute', left: z.x - f.x, top: z.y - f.y, width: z.l, height: z.h }}>
-        <Text style={[styles.titrePage, { color: el ? el.couleur : '#3b2a14' }]} numberOfLines={1}>{el ? el.nom : page.element}</Text>
-        <View style={styles.grille}>
-          {page.ids.map((id) => {
-            const c = CREATURES.find((x) => x.id === id);
-            const own = ownedMap[id];
-            return (
-              <View key={id} style={{ width: (z.l - 6) / 2, alignItems: 'center', marginBottom: 4 }}>
-                <Carte creature={c} own={own} largeur={largeur} onPress={own ? () => props.setSelectedCreature && props.setSelectedCreature(id) : null} />
-              </View>
-            );
-          })}
-        </View>
+      <View style={[styles.page, { left: z.x - f.x, top: z.y - f.y, width: z.l, height: z.h, rowGap: ecart, columnGap: ecart }]}>
+        {page.ids.map((id) => {
+          const c = CREATURES.find((x) => x.id === id); const own = ownedMap[id];
+          return <Carte key={id} creature={c} own={own} l={l} onPress={own ? () => props.setSelectedCreature && props.setSelectedCreature(id) : null} />;
+        })}
       </View>
     );
   };
@@ -194,31 +195,39 @@ function Album(props) {
   );
 
   const peutInvoquer = coins >= nextSummonCost;
-  const oeuf = frac(OEUF, OEUF_FORME);
-  const haloL = Math.round(oeuf.l * 2.2);
-  const fiche = props.selectedCreature && ownedMap[props.selectedCreature] ? props.selectedCreature : null;
-  const Fiche = props.FicheCreature;
+  const invoquer = () => (peutInvoquer && props.onSummon ? props.onSummon() : null);
+  const haloL = Math.round(Math.max(ORBE.l, ORBE.h) * 2.3);
+  const panneau = frac({ x: 0, y: 0, l: ABRI.l, h: ABRI.h }, PIECE_ABRI.panneau);
   return (
     <View style={styles.racine}>
       <ImageBackground source={IMG.fond} resizeMode="cover" style={StyleSheet.absoluteFill}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(3,10,12,0.3)' }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(3,10,12,0.25)' }]} />
       </ImageBackground>
+
+      {/* ── La souche, DERRIÈRE l'album qui repose sur son plateau. */}
+      <TouchableOpacity activeOpacity={0.9} onPress={invoquer} style={{ position: 'absolute', left: SOUCHE.x, top: SOUCHE.y, width: SOUCHE.l, height: SOUCHE.h }}>
+        <Image source={PIECE_SOUCHE.image} resizeMode="stretch" style={{ width: SOUCHE.l, height: SOUCHE.h }} />
+      </TouchableOpacity>
 
       {/* ── L'abri du deck : le VRAI deck ; toucher un emplacement ouvre le sélecteur. */}
       <View style={{ position: 'absolute', left: ABRI.x, top: ABRI.y, width: ABRI.l, height: ABRI.h }}>
-        <Image source={IMG.abri} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: ABRI.l, height: ABRI.h }} />
-        <View style={[styles.panneau, { left: PANNEAU[0] * ABRI.l, top: PANNEAU[1] * ABRI.h, width: (PANNEAU[2] - PANNEAU[0]) * ABRI.l, height: (PANNEAU[3] - PANNEAU[1]) * ABRI.h }]}>
+        <Image source={PIECE_ABRI.image} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: ABRI.l, height: ABRI.h }} />
+        <View style={[styles.panneau, { left: panneau.x, top: panneau.y, width: panneau.l, height: panneau.h }]}>
           <Text style={styles.panneauTexte}>DECK</Text>
         </View>
-        {EMPLACEMENTS.map((e, i) => {
-          const r = frac({ x: 0, y: 0, l: ABRI.l, h: ABRI.h }, e);
-          const id = deck[i];
-          const c = id ? CREATURES.find((x) => x.id === id) : null;
-          const own = id ? ownedMap[id] : null;
+        {PIECE_ABRI.emplacements.map((e, i) => {
+          // Carte AUSSI GRANDE que l'intérieur de l'abri (maquette), centrée sur l'emplacement mesuré.
+          const [i0, i1] = PIECE_ABRI.interieur;
+          const hc = Math.round((i1 - i0) * ABRI.h * 0.94);
+          const l = Math.floor(hc / (1 / RAPPORT_CADRE + BANDEAU));
+          const cx = ((e[0] + e[2]) / 2) * ABRI.l; const cy = ((i0 + i1) / 2) * ABRI.h;
+          const r = { x: Math.round(cx - l / 2), y: Math.round(cy - hc / 2), l, h: hc };
+          const id = deck[i]; const c = id ? CREATURES.find((x) => x.id === id) : null; const own = id ? ownedMap[id] : null;
           return (
             <TouchableOpacity key={i} activeOpacity={0.75} onPress={() => props.onOuvrirEmplacement && props.onOuvrirEmplacement(i)}
               style={{ position: 'absolute', left: r.x, top: r.y, width: r.l, height: r.h, alignItems: 'center', justifyContent: 'center' }}>
-              {c && own ? <Carte creature={c} own={own} largeur={Math.min(r.l, Math.round(r.h * RAPPORT_CARTE))} sansLegende />
+              {/* pointerEvents dans le STYLE (règle SDK 57 : la propriété est ignorée). */}
+              {c && own ? <View style={{ pointerEvents: 'none' }}><Carte creature={c} own={own} l={l} /></View>
                 : <Image source={IMG.vide} resizeMode="stretch" style={{ width: r.l, height: r.h }} />}
             </TouchableOpacity>
           );
@@ -237,58 +246,35 @@ function Album(props) {
         </FaceTournante>
       ))}
 
-      {/* ── Rubans d'éléments : sautent à la page de l'élément. */}
-      {ELEMENTS.map((el, i) => {
-        const pas = Math.min(26, (ALBUM.h * 0.9) / ELEMENTS.length);
-        const actif = elementsVisibles.includes(el.cle);
-        const x = ALBUM.x + ALBUM.l - 16 + (actif ? 6 : 0);
-        const l = Math.max(30, ECRAN_L - x - 2);
-        const dest = debut[el.cle];
+      {/* ── L'orbe doré, DEVANT la souche : halo (dégradé du code), ombre posée, texte dessous. */}
+      <Animated.Image source={IMG.lueur} resizeMode="stretch" style={{ position: 'absolute', left: ORBE.x + ORBE.l / 2 - haloL / 2, top: ORBE.y + ORBE.h / 2 - haloL / 2, width: haloL, height: haloL, pointerEvents: 'none',
+        opacity: halo.interpolate({ inputRange: [0, 1], outputRange: peutInvoquer ? [0.6, 1] : [0.2, 0.35] }), transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) }] }} />
+      <Image source={IMG.ombre} resizeMode="stretch" style={{ position: 'absolute', left: ORBE.x - ORBE.l * 0.15, top: ORBE.y + ORBE.h - ORBE.h * 0.16, width: ORBE.l * 1.3, height: ORBE.h * 0.3, pointerEvents: 'none' }} />
+      <TouchableOpacity activeOpacity={0.85} onPress={invoquer} style={{ position: 'absolute', left: ORBE.x, top: ORBE.y, width: ORBE.l, height: ORBE.h }}>
+        <Image source={PIECE_ORBE.image} resizeMode="stretch" style={{ width: ORBE.l, height: ORBE.h }} />
+      </TouchableOpacity>
+      <TouchableOpacity activeOpacity={0.85} onPress={invoquer} style={[styles.invoquer, { top: Math.min(BAS - 62, ORBE.y + ORBE.h + 4) }]}>
+        <Text style={styles.invoquerTexte}>Invoquer</Text>
+        <Text style={[styles.prixTexte, !peutInvoquer && styles.prixCher]}>{formatNum(nextSummonCost)} Po</Text>
+      </TouchableOpacity>
+
+      {/* ── Onglets d'éléments, pointus, collés au bord droit de l'album. */}
+      {ONGLETS.map(([cle, nom], i) => {
+        const pas = (ALBUM.h * 0.84) / ONGLETS.length; const h = Math.round(pas - 3);
+        const el = ELEMENT[cle]; const dest = debut[cle];
+        const ici = dest === pCourante;
         return (
-          <TouchableOpacity key={el.cle} activeOpacity={0.8} disabled={dest === undefined}
-            onPress={() => { const p = (tour ? tour.vers : position).p; if (dest !== undefined && dest !== p) tourner({ c: 0, p: dest }, dest > p ? 1 : -1); }}
-            style={[styles.ruban, { left: x, top: ALBUM.y + ALBUM.h * 0.05 + i * pas, width: l, height: pas - 2, opacity: dest === undefined ? 0.45 : actif ? 1 : 0.88 }]}>
-            <Image source={el.ruban} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: l, height: pas - 2 }} />
-            <Text style={[styles.rubanTexte, el.nom.length > 6 && styles.rubanTexteLong, el.sombre && { color: '#2b2416', textShadowColor: 'rgba(255,255,255,0.6)' }]} numberOfLines={1}>{el.nom}</Text>
+          <TouchableOpacity key={cle} activeOpacity={0.8} disabled={dest === undefined}
+            onPress={() => { if (dest !== undefined && dest !== pCourante) tourner({ c: 0, p: dest }, dest > pCourante ? 1 : -1); }}
+            style={[styles.onglet, { left: ALBUM.x + ALBUM.l - 12 + (ici ? 3 : 0), top: Math.round(ALBUM.y + ALBUM.h * 0.07 + i * pas), height: h, opacity: dest === undefined ? 0.45 : 1 }]}>
+            <View style={[styles.ongletCorps, { backgroundColor: el.couleur }]}>
+              <View style={[styles.ongletReflet, { height: Math.round(h * 0.42) }]} />
+              <Text style={[styles.ongletTexte, nom.length > 6 && styles.ongletTexteLong, el.sombre && styles.ongletTexteSombre]} numberOfLines={1}>{nom}</Text>
+            </View>
+            <View style={{ width: 0, height: 0, borderTopWidth: h / 2, borderBottomWidth: h / 2, borderLeftWidth: 7, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: el.couleur }} />
           </TouchableOpacity>
         );
       })}
-
-      {/* ── L'œuf doré : invoquer une créature. Halo fait par le code (dégradé). */}
-      <Animated.Image source={IMG.lueur} resizeMode="stretch" style={{ position: 'absolute', left: oeuf.x + oeuf.l / 2 - haloL / 2, top: oeuf.y + oeuf.h / 2 - haloL / 2, width: haloL, height: haloL, pointerEvents: 'none',
-        opacity: halo.interpolate({ inputRange: [0, 1], outputRange: peutInvoquer ? [0.55, 0.95] : [0.2, 0.35] }), transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.06] }) }] }} />
-      <TouchableOpacity activeOpacity={0.8} onPress={() => (peutInvoquer && props.onSummon ? props.onSummon() : null)}
-        style={{ position: 'absolute', left: OEUF.x, top: OEUF.y, width: OEUF.l, height: OEUF.h }}>
-        <Image source={IMG.oeuf} resizeMode="stretch" style={{ width: OEUF.l, height: OEUF.h }} />
-      </TouchableOpacity>
-      <TouchableOpacity activeOpacity={0.8} onPress={() => (peutInvoquer && props.onSummon ? props.onSummon() : null)}
-        style={[styles.invoquer, { left: OEUF.x + OEUF.l + 6, top: OEUF.y + OEUF.h * 0.32 }]}>
-        <Text style={styles.invoquerTexte}>Invoquer</Text>
-        <View style={[styles.prix, peutInvoquer ? styles.prixOk : styles.prixCher]}>
-          <Image source={ICONES.piece} resizeMode="contain" style={{ width: 14, height: 14, marginRight: 4 }} />
-          <Text style={styles.prixTexte}>{formatNum(nextSummonCost)}</Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* ── En-tête : RETOUR et les soldes, en deux éléments séparés (pas de bande plein écran). */}
-      <BackButton onPress={props.onRetour} style={{ position: 'absolute', left: 12, top: 40 }} />
-      <View style={[styles.soldes, { pointerEvents: 'none' }]}>
-        <View style={styles.plaque}>
-          <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImg} />
-          <Image source={ICONES.piece} resizeMode="contain" style={{ width: 20, height: 20, marginRight: 5 }} />
-          <Text style={styles.plaqueTexte} numberOfLines={1}>{formatNum(coins)}</Text>
-        </View>
-        <View style={styles.plaque}>
-          <Image source={IMG.plaque} resizeMode="stretch" style={styles.plaqueImg} />
-          <Image source={CRISTAL} resizeMode="contain" style={{ width: 12, height: 22, marginRight: 6 }} />
-          <Text style={styles.plaqueTexte} numberOfLines={1}>{props.sharedCoins || 0}</Text>
-        </View>
-      </View>
-
-      {fiche && Fiche ? (
-        <Fiche creature={CREATURES.find((c) => c.id === fiche)} owned={ownedMap[fiche]} coins={coins}
-          onClose={() => props.setSelectedCreature && props.setSelectedCreature(null)} pendingDiscount={props.pendingDiscount} />
-      ) : null}
     </View>
   );
 }
@@ -309,29 +295,28 @@ export default function CollectionAlbum({ Secours, ...props }) {
 }
 
 const styles = StyleSheet.create({
-  // Plein écran, sous la barre de navigation (zIndex 5) et le sélecteur de deck (zIndex 20).
-  racine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 4, overflow: 'hidden', backgroundColor: '#061018' },
+  // Plan 2 : sous la barre du haut de l'écran principal (3-4), la barre du bas (5),
+  // la fiche (10) et le sélecteur de deck (20).
+  racine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 2, overflow: 'hidden', backgroundColor: '#061018' },
+  page: { position: 'absolute', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'center' },
   fenetre: { position: 'absolute', backgroundColor: 'rgba(20,14,8,0.5)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 3 },
-  nom: { color: '#3b2a14', fontSize: 8.5, fontWeight: '900', marginTop: 1, maxWidth: '100%', includeFontPadding: false },
-  legende: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 },
-  badgeNiveau: { position: 'absolute', left: -4, top: -4, minWidth: 16, height: 14, paddingHorizontal: 3, borderRadius: 7, backgroundColor: '#3b2a14', borderWidth: 1, borderColor: '#e2b04a', alignItems: 'center', justifyContent: 'center' },
-  badgeNiveauTexte: { color: '#ffe9b0', fontSize: 8, fontWeight: '900', includeFontPadding: false },
-  // flexShrink 0 : le titre ne peut plus être écrasé si la page déborde.
-  titrePage: { fontSize: 11, fontWeight: '900', letterSpacing: 1, textAlign: 'center', height: TITRE_H, flexShrink: 0, includeFontPadding: false },
-  grille: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 4 },
+  silhouette: { tintColor: '#140c05', opacity: 0.92 },
+  inconnue: { position: 'absolute', color: '#e8c56a', fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3, includeFontPadding: false },
+  icone: { position: 'absolute', left: -3, top: -3, width: 15, height: 15, borderRadius: 8, borderWidth: 1, borderColor: '#f3e2b0', alignItems: 'center', justifyContent: 'center' },
+  iconeTexte: { fontSize: 8, includeFontPadding: false },
+  bandeau: { marginTop: -2, borderWidth: 1.5, borderTopWidth: 0, borderBottomLeftRadius: 5, borderBottomRightRadius: 5, backgroundColor: 'rgba(28,18,8,0.92)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 1 },
+  nom: { color: '#fff6dc', fontSize: 8, fontWeight: '900', includeFontPadding: false, maxWidth: '100%' },
+  niv: { color: '#ffd66b', fontSize: 7, fontWeight: '800', includeFontPadding: false, marginBottom: 1 },
   panneau: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   panneauTexte: { color: '#fff1cf', fontSize: 12, fontWeight: '900', letterSpacing: 1.5, textShadowColor: 'rgba(40,20,0,0.95)', textShadowRadius: 3, includeFontPadding: false },
-  ruban: { position: 'absolute', justifyContent: 'center', paddingLeft: 13 },
-  rubanTexte: { color: '#ffffff', fontSize: 8, fontWeight: '900', letterSpacing: 0.6, textShadowColor: 'rgba(0,0,0,0.75)', textShadowRadius: 2, includeFontPadding: false },
-  rubanTexteLong: { fontSize: 6.5, letterSpacing: 0 },
-  invoquer: { position: 'absolute', alignItems: 'flex-start' },
-  invoquerTexte: { color: '#fff4d6', fontSize: 16, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4, includeFontPadding: false },
-  prix: { flexDirection: 'row', alignItems: 'center', height: 22, paddingHorizontal: 8, marginTop: 4, borderRadius: 11, borderWidth: 1.5 },
-  prixOk: { backgroundColor: '#8a2a1c', borderColor: '#e8b84a' },
-  prixCher: { backgroundColor: '#9a9182', borderColor: '#c4baa8' },
-  prixTexte: { color: '#fff4d6', fontSize: 11, fontWeight: '900', includeFontPadding: false },
-  soldes: { position: 'absolute', right: 12, top: 40, width: 124, gap: 6, alignItems: 'flex-end' },
-  plaque: { width: 124, height: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  plaqueImg: { position: 'absolute', left: 0, top: 0, width: 124, height: 38 },
-  plaqueTexte: { color: '#ffe38a', fontSize: 14, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  onglet: { position: 'absolute', width: ONGLET_L, flexDirection: 'row' },
+  ongletCorps: { flex: 1, justifyContent: 'center', paddingLeft: 9, borderTopLeftRadius: 3, borderBottomLeftRadius: 3, overflow: 'hidden' },
+  ongletReflet: { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: 'rgba(255,255,255,0.18)' },
+  ongletTexte: { color: '#ffffff', fontSize: 8, fontWeight: '900', letterSpacing: 0.4, textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 2, includeFontPadding: false },
+  ongletTexteLong: { fontSize: 6.5, letterSpacing: 0 },
+  ongletTexteSombre: { color: '#2b2416', textShadowColor: 'rgba(255,255,255,0.55)' },
+  invoquer: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  invoquerTexte: { color: '#ffffff', fontSize: 22, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 5, includeFontPadding: false },
+  prixTexte: { color: '#ffd24a', fontSize: 20, fontWeight: '900', marginTop: 2, textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 5, includeFontPadding: false },
+  prixCher: { color: '#b9b0a0' },
 });
