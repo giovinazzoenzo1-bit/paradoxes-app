@@ -1942,3 +1942,10 @@ PARENT (ici l'écran : 80 pts) → titre tronqué « Cha… », nom invisible ; 
 en POINTS calculées sur la plaque. Titre et nom : taille selon leur LONGUEUR
 (« Chapitre 12 · Niveau 10 » tient aussi). Vérifié : 891×411, 731×411,
 tablette ; médaillon d'équipe → fiche ; textes entiers.
+
+**03/10 — Aperçu : titre et nom de l'adversaire « pas centrés »** (retour de
+l'auteur, invisible au banc) : sur Android, un <Text> d'une ligne
+(numberOfLines) prend toute la largeur de son conteneur et s'aligne à GAUCHE
+par défaut ; le navigateur le resserre au centre. → textAlign: 'center' +
+alignSelf: 'stretch' EXPLICITES (apercuTitre, apercuNom). RÈGLE : tout texte
+centré dans un cadre porte textAlign: 'center' (ne pas compter sur alignItems).

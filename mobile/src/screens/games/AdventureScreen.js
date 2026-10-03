@@ -3312,8 +3312,10 @@ const styles = StyleSheet.create({
   // Aperçu « Le médaillon » (03/10)
   apercuRacine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 15, backgroundColor: '#0b1418', overflow: 'hidden' },
   apercuPlaque: { alignItems: 'center', justifyContent: 'center' }, // la plaque (image) est dessous ; marge en points posée au rendu
-  apercuTitre: { color: '#fbe9c4', fontWeight: '900', letterSpacing: 0.5, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, includeFontPadding: false },
-  apercuNom: { color: '#fbe9c4', fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, includeFontPadding: false },
+  // textAlign EXPLICITE (03/10, retour de l'auteur : « pas centré ») : sur Android, un texte
+  // d'une ligne prend toute la largeur et s'aligne à GAUCHE par défaut.
+  apercuTitre: { textAlign: 'center', alignSelf: 'stretch', color: '#fbe9c4', fontWeight: '900', letterSpacing: 0.5, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, includeFontPadding: false },
+  apercuNom: { textAlign: 'center', alignSelf: 'stretch', color: '#fbe9c4', fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, includeFontPadding: false },
   apercuLigne: { textAlign: 'center', fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4, includeFontPadding: false },
   apercuEnergie: { color: '#bfe3ff', fontWeight: '700' },
   apercuCombattre: { textAlign: 'center', color: '#5a360f', fontWeight: '900', letterSpacing: 1.2, includeFontPadding: false },
