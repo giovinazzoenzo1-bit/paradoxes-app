@@ -22,7 +22,7 @@ Chaque dossier = une section de l'appli : sa fiche (`LISEZMOI.md`), ses images a
 | `12-icones-communes` | Icônes partagées : Griffes, pièces, diamants, retour, halos | 5 |
 | `13-themes-elements` | Thème visuel par élément (fond, bouton, cadre, emplacement de rune) | 4 |
 
-## Créatures (9/26 dessinées)
+## Créatures (11/26 dessinées — outil : mobile/tools/integrer-creature.py)
 
 | Créature | Rareté | Élément | Sort | État |
 |---|---|---|---|---|
