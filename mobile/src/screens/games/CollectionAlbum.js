@@ -32,15 +32,22 @@ const ONGLET_L = 50;
 // ── Pièces dessinées (rapport largeur / hauteur + mesures en fractions) ──
 // L'abri LARGE et la souche à l'orbe (images 74 et 75) remplacent l'abri carré
 // et l'œuf au nid dès leur arrivée : il suffit de changer ces deux blocs.
+// Abri : image 74 (02/10) — PROVISOIRE, Gemini l'a rendu presque carré (cadre
+// portrait imposé par le prompt) ; la version large (prompt paysage) le remplacera.
 const PIECE_ABRI = {
-  image: require('../../../assets/collection/abri-deck.png'), rapport: 753 / 700,
-  emplacements: [[0.205, 0.475, 0.38, 0.755], [0.405, 0.475, 0.595, 0.755], [0.615, 0.475, 0.80, 0.755]],
-  panneau: [0.37, 0.005, 0.62, 0.09],
+  image: require('../../../assets/collection/abri-large.png'), rapport: 759 / 740,
+  emplacements: [[0.20, 0.49, 0.385, 0.745], [0.405, 0.49, 0.59, 0.745], [0.615, 0.49, 0.80, 0.745]],
+  panneau: [0.35, 0.01, 0.66, 0.10],
 };
+// Souche : image 75 (sans orbe : Gemini l'a omis). Plateau = dessus plat, où
+// repose l'album (mesuré : 20-80 % en largeur, 0-28 % en hauteur).
 const PIECE_SOUCHE = {
-  image: require('../../../assets/collection/oeuf-souche.png'), rapport: 617 / 697,
-  orbe: [0.305, 0.011, 0.69, 0.373],
+  image: require('../../../assets/collection/souche-large.png'), rapport: 692 / 430,
+  plateauMilieu: 0.12,
 };
+// Orbe : l'œuf doré seul, découpé de la pièce 71 par sa couleur (bas coupé à plat
+// là où le nid le cachait → une ombre ovale dessous le fait paraître posé).
+const PIECE_ORBE = { image: require('../../../assets/collection/orbe-oeuf.png'), rapport: 263 / 278 };
 
 // ── Mise en page (390 × 844 de référence ; tout se recalcule) ──
 const ABRI_BOITE = { x: Math.round(ECRAN_L * 0.03), y: HAUT, l: Math.round(ECRAN_L * 0.94) };
@@ -50,8 +57,15 @@ ABRI_BOITE.h = Math.round(ABRI_BOITE.l / 2.6); // proportions de l'abri de la ma
 const R_ALBUM = 1 / 1.25;
 const ALBUM = { l: Math.round(ECRAN_L - 6 - ONGLET_L + 10) };
 ALBUM.h = Math.round(ALBUM.l * R_ALBUM); ALBUM.x = 6; ALBUM.y = ABRI_BOITE.y + ABRI_BOITE.h - 6;
-const SOUCHE_BOITE = { y: ALBUM.y + ALBUM.h - 40 };
-SOUCHE_BOITE.h = BAS - SOUCHE_BOITE.y; SOUCHE_BOITE.l = Math.round(ECRAN_L * 0.92); SOUCHE_BOITE.x = Math.round((ECRAN_L - SOUCHE_BOITE.l) / 2);
+// La souche : son plateau sous le bas de l'album ; aussi large que possible sans
+// passer sous la barre du bas.
+const SOUCHE = { y: 0 };
+SOUCHE.l = Math.min(ECRAN_L, Math.round((BAS - (ALBUM.y + ALBUM.h)) / (1 - PIECE_SOUCHE.plateauMilieu) * PIECE_SOUCHE.rapport));
+SOUCHE.h = Math.round(SOUCHE.l / PIECE_SOUCHE.rapport); SOUCHE.x = Math.round((ECRAN_L - SOUCHE.l) / 2);
+SOUCHE.y = ALBUM.y + ALBUM.h - Math.round(SOUCHE.h * PIECE_SOUCHE.plateauMilieu);
+// L'orbe : devant la souche, centré, juste sous l'album.
+const ORBE = { h: Math.round(Math.min(96, SOUCHE.h * 0.42)) };
+ORBE.l = Math.round(ORBE.h * PIECE_ORBE.rapport); ORBE.x = Math.round((ECRAN_L - ORBE.l) / 2); ORBE.y = ALBUM.y + ALBUM.h - 8;
 
 // Image posée « contain » dans une boîte (centrée en largeur, calée en bas si demandé).
 function poser(boite, rapport, enBas) {
@@ -61,7 +75,6 @@ function poser(boite, rapport, enBas) {
 }
 const frac = (R, [x0, y0, x1, y1]) => ({ x: Math.round(R.x + x0 * R.l), y: Math.round(R.y + y0 * R.h), l: Math.round((x1 - x0) * R.l), h: Math.round((y1 - y0) * R.h) });
 const ABRI = poser(ABRI_BOITE, PIECE_ABRI.rapport, false);
-const SOUCHE = poser(SOUCHE_BOITE, PIECE_SOUCHE.rapport, true);
 const FEUILLE = { gauche: frac(ALBUM, [0.1459, 0.0104, 0.5351, 0.9125]), droite: frac(ALBUM, [0.5351, 0.0104, 0.9213, 0.9125]) };
 const ZONE = { gauche: frac(ALBUM, [0.162, 0.03, 0.5, 0.895]), droite: frac(ALBUM, [0.571, 0.03, 0.914, 0.895]) };
 
@@ -81,6 +94,7 @@ const IMG = {
   album: require('../../../assets/collection/album.png'),
   feuille: { gauche: require('../../../assets/collection/album-feuille-gauche.png'), droite: require('../../../assets/collection/album-feuille-droite.png') },
   vide: require('../../../assets/collection/emplacement-vide.png'),
+  ombre: require('../../../assets/collection/ombre-ovale.png'),
   lueur: require('../../../assets/grimoire/lueur-or.png'),
 };
 const GEMMES = {
@@ -179,8 +193,7 @@ function Album(props) {
 
   const peutInvoquer = coins >= nextSummonCost;
   const invoquer = () => (peutInvoquer && props.onSummon ? props.onSummon() : null);
-  const orbe = frac(SOUCHE, PIECE_SOUCHE.orbe);
-  const haloL = Math.round(Math.max(orbe.l, orbe.h) * 2.4);
+  const haloL = Math.round(Math.max(ORBE.l, ORBE.h) * 2.3);
   const panneau = frac({ x: 0, y: 0, l: ABRI.l, h: ABRI.h }, PIECE_ABRI.panneau);
   return (
     <View style={styles.racine}>
@@ -188,15 +201,9 @@ function Album(props) {
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(3,10,12,0.25)' }]} />
       </ImageBackground>
 
-      {/* ── La souche (derrière l'album, qui repose dessus) et l'orbe doré. */}
-      <Animated.Image source={IMG.lueur} resizeMode="stretch" style={{ position: 'absolute', left: orbe.x + orbe.l / 2 - haloL / 2, top: orbe.y + orbe.h / 2 - haloL / 2, width: haloL, height: haloL, pointerEvents: 'none',
-        opacity: halo.interpolate({ inputRange: [0, 1], outputRange: peutInvoquer ? [0.6, 1] : [0.2, 0.35] }), transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) }] }} />
-      <TouchableOpacity activeOpacity={0.85} onPress={invoquer} style={{ position: 'absolute', left: SOUCHE.x, top: SOUCHE.y, width: SOUCHE.l, height: SOUCHE.h }}>
+      {/* ── La souche, DERRIÈRE l'album qui repose sur son plateau. */}
+      <TouchableOpacity activeOpacity={0.9} onPress={invoquer} style={{ position: 'absolute', left: SOUCHE.x, top: SOUCHE.y, width: SOUCHE.l, height: SOUCHE.h }}>
         <Image source={PIECE_SOUCHE.image} resizeMode="stretch" style={{ width: SOUCHE.l, height: SOUCHE.h }} />
-      </TouchableOpacity>
-      <TouchableOpacity activeOpacity={0.85} onPress={invoquer} style={[styles.invoquer, { top: BAS - 64 }]}>
-        <Text style={styles.invoquerTexte}>Invoquer</Text>
-        <Text style={[styles.prixTexte, !peutInvoquer && styles.prixCher]}>{formatNum(nextSummonCost)} Po</Text>
       </TouchableOpacity>
 
       {/* ── L'abri du deck : le VRAI deck ; toucher un emplacement ouvre le sélecteur. */}
@@ -231,6 +238,18 @@ function Album(props) {
           {contenu(f.page, f.cote)}
         </FaceTournante>
       ))}
+
+      {/* ── L'orbe doré, DEVANT la souche : halo (dégradé du code), ombre posée, texte dessous. */}
+      <Animated.Image source={IMG.lueur} resizeMode="stretch" style={{ position: 'absolute', left: ORBE.x + ORBE.l / 2 - haloL / 2, top: ORBE.y + ORBE.h / 2 - haloL / 2, width: haloL, height: haloL, pointerEvents: 'none',
+        opacity: halo.interpolate({ inputRange: [0, 1], outputRange: peutInvoquer ? [0.6, 1] : [0.2, 0.35] }), transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) }] }} />
+      <Image source={IMG.ombre} resizeMode="stretch" style={{ position: 'absolute', left: ORBE.x - ORBE.l * 0.15, top: ORBE.y + ORBE.h - ORBE.h * 0.16, width: ORBE.l * 1.3, height: ORBE.h * 0.3, pointerEvents: 'none' }} />
+      <TouchableOpacity activeOpacity={0.85} onPress={invoquer} style={{ position: 'absolute', left: ORBE.x, top: ORBE.y, width: ORBE.l, height: ORBE.h }}>
+        <Image source={PIECE_ORBE.image} resizeMode="stretch" style={{ width: ORBE.l, height: ORBE.h }} />
+      </TouchableOpacity>
+      <TouchableOpacity activeOpacity={0.85} onPress={invoquer} style={[styles.invoquer, { top: Math.min(BAS - 62, ORBE.y + ORBE.h + 4) }]}>
+        <Text style={styles.invoquerTexte}>Invoquer</Text>
+        <Text style={[styles.prixTexte, !peutInvoquer && styles.prixCher]}>{formatNum(nextSummonCost)} Po</Text>
+      </TouchableOpacity>
 
       {/* ── Onglets d'éléments, pointus, collés au bord droit de l'album. */}
       {ONGLETS.map(([cle, nom], i) => {
