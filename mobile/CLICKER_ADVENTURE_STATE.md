@@ -1776,3 +1776,14 @@ Banc : scène `exploration.jsx` (sauvegarde injectée via window.__memoireBanc,
 exposée dans stubs/natifs.js ; « ?vide=1 » = deck vide) ; ouvrir EXPLORATION
 puis passer la fenêtre en 844×390. 6 boutons vérifiés.
 Contrôle **auditHubExploration** (+ sabotage : gemme des Runes débranchée).
+
+**03/10 — Hub de l'Exploration, retouches de l'auteur** : RETOUR « 100 fois trop
+gros » → réduit à [0.015, 0.025, 0.100, 0.075] de la scène (≈ 59 × 20 au banc ;
+la maquette l'avait à 13,5 % de la largeur) ; COMBAT SCINTILLE un peu : composant
+`BoutonCombat` (lueur qui respire + 3 étincelles ✦ tour à tour, boucle de 2,8 s,
+moteur natif ; animations DANS le composant : ni rendu de l'écran, ni hook après
+les retours anticipés d'AdventureScreen).
+⚠️ BANC : `Animated.loop` avec useNativeDriver: true NE TOURNE PAS dans le
+navigateur (le module natif manque : la boucle native ne démarre pas). Pour
+vérifier une boucle, variante de scène qui force useNativeDriver: false
+(Animated.timing enveloppé), comme pour les scènes « lentes ».

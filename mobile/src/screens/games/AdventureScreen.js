@@ -13,6 +13,7 @@ import {
   Image,
   ImageBackground,
   Animated,
+  Easing,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -211,7 +212,8 @@ const HUB_IMG = {
   lueur: require('../../../assets/grimoire/lueur-or.png'),
 };
 const HUB = {
-  retour: [0.020, 0.030, 0.155, 0.100],
+  // RETOUR réduit (retour de l'auteur : « 100 fois trop gros » ; maquette : 13,5 %).
+  retour: [0.015, 0.025, 0.100, 0.075],
   titre: [0.3844, 0.0247, 0.6068, 0.1237],
   puissance: [0.650, 0.035, 0.800, 0.095],
   elixir: [0.700, 0.105, 0.800, 0.160],
@@ -225,6 +227,34 @@ const HUB = {
   changer: { l: 0.109, y0: 0.6523, y1: 0.7201 },
   combat: [0.3772, 0.8542, 0.6206, 0.9661],
 };
+// Bouton COMBAT du hub : il SCINTILLE un peu (demande de l'auteur, 03/10) —
+// lueur dorée qui respire et 3 étincelles qui s'allument tour à tour. Ses
+// animations vivent ICI (composant à part : jamais de rendu de tout l'écran,
+// et pas de hook après les retours anticipés d'AdventureScreen).
+const ETINCELLES_COMBAT = [[0.30, 0.16, 0.05], [0.62, 0.80, 0.40], [0.88, 0.22, 0.72]]; // x, y (fractions du bouton), phase
+function BoutonCombat({ rect, rectLueur, onPress }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const boucle = Animated.loop(Animated.timing(t, { toValue: 1, duration: 2800, easing: Easing.linear, useNativeDriver: true }));
+    boucle.start();
+    return () => boucle.stop();
+  }, []);
+  const lueur = t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.62, 1, 0.62] });
+  const eclat = (ph) => t.interpolate({ inputRange: [0, ph, ph + 0.07, ph + 0.15, 1], outputRange: [0, 0, 1, 0, 0], extrapolate: 'clamp' });
+  const taille = Math.max(9, Math.round(rect.height * 0.34));
+  return (
+    <>
+      <Animated.Image source={HUB_IMG.lueur} resizeMode="stretch" style={[rectLueur, { opacity: lueur, pointerEvents: 'none' }]} />
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={rect}>
+        <Image source={HUB_IMG.combat} resizeMode="stretch" style={{ width: '100%', height: '100%' }} />
+        {ETINCELLES_COMBAT.map(([fx, fy, ph], k) => (
+          <Animated.Text key={k} style={[styles.hubEtincelle, { left: fx * rect.width - taille / 2, top: fy * rect.height - taille / 2, fontSize: taille, opacity: eclat(ph), transform: [{ scale: eclat(ph) }] }]}>✦</Animated.Text>
+        ))}
+      </TouchableOpacity>
+    </>
+  );
+}
+
 // Rectangle de la scène 16:9 posée entière dans l'écran (w × h).
 function sceneExploration(taille) {
   const w = (taille && taille.w) || 0; const h = (taille && taille.h) || 0;
@@ -1119,7 +1149,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           {/* ── En haut : RETOUR, titre, puissance (+ élixir), Griffes, Runes. */}
           <TouchableOpacity onPress={onBack} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[R(HUB.retour), { justifyContent: 'center' }]}>
             <Image source={HUB_IMG.retour} resizeMode="stretch" style={StyleSheet.absoluteFill} />
-            <Text style={[styles.hubRetourTexte, { fontSize: police(0.026), marginLeft: (HUB.retour[2] - HUB.retour[0]) * scene.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
+            <Text style={[styles.hubRetourTexte, { fontSize: police(0.02), marginLeft: (HUB.retour[2] - HUB.retour[0]) * scene.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
           </TouchableOpacity>
           <Image source={HUB_IMG.titre} resizeMode="stretch" style={R(HUB.titre)} />
           <View style={[R(HUB.puissance), styles.hubPilule]}>
@@ -1188,11 +1218,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
             );
           })}
 
-          {/* ── COMBAT : lueur dorée (dégradé du code) + bouton de la maquette. */}
-          <Image source={HUB_IMG.lueur} resizeMode="stretch" style={[R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05]), { opacity: 0.9, pointerEvents: 'none' }]} />
-          <TouchableOpacity onPress={() => setChapterMapOpen(true)} activeOpacity={0.85} style={R(HUB.combat)}>
-            <Image source={HUB_IMG.combat} resizeMode="stretch" style={{ width: '100%', height: '100%' }} />
-          </TouchableOpacity>
+          {/* ── COMBAT : il SCINTILLE un peu (lueur qui respire + étincelles), voir BoutonCombat. */}
+          <BoutonCombat rect={R(HUB.combat)} rectLueur={R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05])} onPress={() => setChapterMapOpen(true)} />
         </>
       )}
 
@@ -3191,6 +3218,7 @@ const styles = StyleSheet.create({
   hubPiluleTexte: { color: '#eafbe8', fontWeight: '900', includeFontPadding: false },
   hubPlus: { backgroundColor: '#e0323a', borderRadius: 6, borderWidth: 1.5, borderColor: '#ffd2d2', alignItems: 'center', justifyContent: 'center' },
   hubPlusTexte: { color: '#ffffff', fontWeight: '900', includeFontPadding: false, marginTop: -1 },
+  hubEtincelle: { position: 'absolute', color: '#fff7d6', textShadowColor: '#ffcf4d', textShadowRadius: 6, includeFontPadding: false, pointerEvents: 'none' },
   hubRetourTexte: { color: '#3a2608', fontWeight: '900', letterSpacing: 0.8, textAlign: 'center', includeFontPadding: false },
   conseilleeText: { fontWeight: '800', fontSize: 14, textAlign: 'center', marginTop: 2 },
   puissancePill: { backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4,
