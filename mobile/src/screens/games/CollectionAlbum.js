@@ -27,7 +27,7 @@ import { jouerSon } from './sonsBoutique';
 const { width: ECRAN_L, height: ECRAN_H } = Dimensions.get('window');
 const HAUT = Math.round(ECRAN_H * 0.135); // sous la barre du haut et RETOUR
 const BAS = ECRAN_H - 150; // haut de la barre du bas (mesuré)
-const ONGLET_L = 50;
+const ONGLET_L = 54;
 
 // ── Pièces dessinées (rapport largeur / hauteur + mesures en fractions) ──
 // L'abri LARGE et la souche à l'orbe (images 74 et 75) remplacent l'abri carré
@@ -84,6 +84,16 @@ const ELEMENT = {
   Air: { emoji: '🌪️', couleur: '#cbd5e1', sombre: true }, Foudre: { emoji: '⚡', couleur: '#3730a3' }, 'Lumière': { emoji: '☀️', couleur: '#ca8a04', sombre: true },
   'Ténèbres': { emoji: '🌑', couleur: '#3f3f46' }, Magie: { emoji: '🔮', couleur: '#7e22ce' },
 };
+// Marque-pages : image 77 (02/10, les 8 en une planche, comme la maquette ;
+// retournés pointe à DROITE ; texte écrit par le code : accents garantis).
+const ONGLET_IMG = {
+  Feu: require('../../../assets/collection/onglet-feu.png'), Eau: require('../../../assets/collection/onglet-eau.png'),
+  Terre: require('../../../assets/collection/onglet-terre.png'), Air: require('../../../assets/collection/onglet-air.png'),
+  Foudre: require('../../../assets/collection/onglet-foudre.png'), 'Lumière': require('../../../assets/collection/onglet-lumiere.png'),
+  'Ténèbres': require('../../../assets/collection/onglet-tenebres.png'), Magie: require('../../../assets/collection/onglet-magie.png'),
+};
+// Taille du nom selon sa longueur : la partie visible de l'onglet ne fait que ~33 pts.
+const taillePoliceOnglet = (nom) => (nom.length >= 8 ? 6 : nom.length >= 7 ? 6.5 : nom.length >= 6 ? 7 : 8);
 const ONGLETS = [['Feu', 'FEU'], ['Eau', 'EAU'], ['Terre', 'TERRE'], ['Air', 'AIR'], ['Foudre', 'FOUDRE'], ['Lumière', 'LUMIÈRE'], ['Ténèbres', 'TÉNÈBRES'], ['Magie', 'MAGIE']];
 
 const IMG = {
@@ -244,11 +254,8 @@ function Album(props) {
           <TouchableOpacity key={cle} activeOpacity={0.8} disabled={dest === undefined}
             onPress={() => { if (dest !== undefined && dest !== pCourante) tourner({ c: 0, p: dest }, dest > pCourante ? 1 : -1); }}
             style={[styles.onglet, { left: ALBUM.x + ALBUM.l - 12 + (ici ? 3 : 0), top: Math.round(ALBUM.y + ALBUM.h * 0.07 + i * pas), height: h, opacity: dest === undefined ? 0.45 : 1 }]}>
-            <View style={[styles.ongletCorps, { backgroundColor: el.couleur }]}>
-              <View style={[styles.ongletReflet, { height: Math.round(h * 0.42) }]} />
-              <Text style={[styles.ongletTexte, nom.length > 6 && styles.ongletTexteLong, el.sombre && styles.ongletTexteSombre]} numberOfLines={1}>{nom}</Text>
-            </View>
-            <View style={{ width: 0, height: 0, borderTopWidth: h / 2, borderBottomWidth: h / 2, borderLeftWidth: 7, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: el.couleur }} />
+            <Image source={ONGLET_IMG[cle]} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: h }} />
+            <Text style={[styles.ongletTexte, { fontSize: taillePoliceOnglet(nom) }, el.sombre && styles.ongletTexteSombre]} numberOfLines={1}>{nom}</Text>
           </TouchableOpacity>
         );
       })}
@@ -286,11 +293,9 @@ const styles = StyleSheet.create({
   niv: { color: '#ffd66b', fontSize: 7, fontWeight: '800', includeFontPadding: false, marginBottom: 1 },
   panneau: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   panneauTexte: { color: '#fff1cf', fontSize: 12, fontWeight: '900', letterSpacing: 1.5, textShadowColor: 'rgba(40,20,0,0.95)', textShadowRadius: 3, includeFontPadding: false },
-  onglet: { position: 'absolute', width: ONGLET_L, flexDirection: 'row' },
-  ongletCorps: { flex: 1, justifyContent: 'center', paddingLeft: 9, borderTopLeftRadius: 3, borderBottomLeftRadius: 3, overflow: 'hidden' },
-  ongletReflet: { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: 'rgba(255,255,255,0.18)' },
-  ongletTexte: { color: '#ffffff', fontSize: 8, fontWeight: '900', letterSpacing: 0.4, textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 2, includeFontPadding: false },
-  ongletTexteLong: { fontSize: 6.5, letterSpacing: 0 },
+  // Texte dans la partie VISIBLE (l'arrière de l'onglet est glissé sous le bord de l'album, la pointe à droite).
+  onglet: { position: 'absolute', width: ONGLET_L, justifyContent: 'center', paddingLeft: 13, paddingRight: 8 },
+  ongletTexte: { color: '#ffffff', fontWeight: '900', letterSpacing: 0, textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 2, includeFontPadding: false },
   ongletTexteSombre: { color: '#2b2416', textShadowColor: 'rgba(255,255,255,0.55)' },
   invoquer: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   invoquerTexte: { color: '#ffffff', fontSize: 22, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 5, includeFontPadding: false },

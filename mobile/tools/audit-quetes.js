@@ -4102,6 +4102,7 @@ function auditAlbumComplet() {
   A.ORDRE_ELEMENTS.forEach((e) => {
     if (!ecran.includes(`['${e}', '`)) pb.push(`onglet de « ${e} » absent de CollectionAlbum`);
     if (!ecran.includes(`${e}: { emoji`) && !ecran.includes(`'${e}': { emoji`)) pb.push(`icône / couleur de « ${e} » absentes de CollectionAlbum`);
+    if (!new RegExp(`(^|[\\s{,])'?${e}'?: require\\('[^']*onglet-[a-z]+\\.png'\\)`).test(ecran)) pb.push(`image de l'onglet « ${e} » absente de CollectionAlbum`);
   });
   return pb;
 }

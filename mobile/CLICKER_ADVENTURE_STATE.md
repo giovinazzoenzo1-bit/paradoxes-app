@@ -1647,5 +1647,10 @@ Images retirées de l'appli (originaux dans design/) : 1er abri, abri carré,
 **02/10 — Collection, retouches de l'auteur** : œuf RETIRÉ (demande de l'auteur ;
 « Invoquer » + prix restent sur l'avant de la souche, toute la souche
 invoque) — images orbe-oeuf / ombre-ovale et animation du halo supprimées.
-Marque-pages (onglets) : à refaire « pareils que sur l'image » → prompt 77
-(les 8 en UNE planche, sans texte ; texte écrit par le code). En attente.
+Marque-pages : image 77 (les 8 en UNE planche, sans texte) — dessinés pointe à
+GAUCHE par Gemini → RETOURNÉS (pointe à droite, comme la maquette) ; contour :
+pourtour retiré (2 px, avec marge) puis tons chauds sur la bande de 6 px (le
+cadre est doré pour les 8 : le violet de la Magie, intérieur, est épargné) ;
+texte du code, taille selon la longueur (8 / 7 / 6,5 / 6 pts : aucun nom
+tronqué à 360, 390, 412). auditAlbumComplet exige l'image de chaque onglet
+(prouvé : image Magie retirée → crie).
