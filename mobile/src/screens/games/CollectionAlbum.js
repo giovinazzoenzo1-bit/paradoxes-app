@@ -2,6 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { View, Text, Image, ImageBackground, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { CREATURES, stageForLevel } from '../../games/clicker/clickerLogic';
 import { construireAlbum, RANG_RARETE as RANG } from '../../games/clicker/albumPages';
+import { CADRAGE_CREATURES, CADRAGE_DEFAUT } from '../../games/clicker/cadrageCreatures';
 import CreatureArt from '../../components/CreatureArt';
 import { useSettings } from '../../context/SettingsContext';
 import { cardFrameForElement, CARD_FRAME_BORDER_X, CARD_FRAME_BORDER_Y } from './cardFrames';
@@ -42,8 +43,13 @@ const PIECE_ABRI = {
 };
 // Souche : image 75 (sans orbe : Gemini l'a omis). Plateau = dessus plat, où
 // repose l'album (mesuré : 20-80 % en largeur, 0-28 % en hauteur).
+// En 3 TRANCHES (fougères | tronc | fougères) : seul le tronc s'élargit, pour que
+// le plateau soit aussi large que l'album (maquette) sans étirer fougères et
+// cailloux (retour de l'auteur : « le tronc n'est pas assez large »).
 const PIECE_SOUCHE = {
-  image: require('../../../assets/collection/souche-large.png'), rapport: 692 / 430,
+  gauche: require('../../../assets/collection/souche-gauche.png'), milieu: require('../../../assets/collection/souche-milieu.png'),
+  droite: require('../../../assets/collection/souche-droite.png'),
+  largeur: 692, hauteur: 430, cote: 152, // px : tranche de côté (22 %)
   plateauMilieu: 0.12,
 };
 
@@ -59,9 +65,10 @@ const ALBUM = { l: Math.round(ECRAN_L - 6 - ONGLET_L + 10) };
 ALBUM.h = Math.round(ALBUM.l * R_ALBUM); ALBUM.x = 6; ALBUM.y = ABRI_BOITE.y + ABRI_BOITE.h - 6;
 // La souche : son plateau sous le bas de l'album ; aussi large que possible sans
 // passer sous la barre du bas.
-const SOUCHE = { y: 0 };
-SOUCHE.l = Math.min(ECRAN_L, Math.round((BAS - (ALBUM.y + ALBUM.h)) / (1 - PIECE_SOUCHE.plateauMilieu) * PIECE_SOUCHE.rapport));
-SOUCHE.h = Math.round(SOUCHE.l / PIECE_SOUCHE.rapport); SOUCHE.x = Math.round((ECRAN_L - SOUCHE.l) / 2);
+const SOUCHE = { h: Math.round((BAS - (ALBUM.y + ALBUM.h)) / (1 - PIECE_SOUCHE.plateauMilieu)) };
+SOUCHE.cote = Math.round((PIECE_SOUCHE.cote * SOUCHE.h) / PIECE_SOUCHE.hauteur); // tranches de côté, proportions gardées
+SOUCHE.l = Math.max(Math.round(ECRAN_L * 1.18), 2 * SOUCHE.cote + ALBUM.l); // tronc ≥ largeur de l'album
+SOUCHE.x = Math.round((ECRAN_L - SOUCHE.l) / 2);
 SOUCHE.y = ALBUM.y + ALBUM.h - Math.round(SOUCHE.h * PIECE_SOUCHE.plateauMilieu);
 
 // Image posée « contain » dans une boîte (centrée en largeur, calée en bas si demandé).
@@ -102,6 +109,13 @@ const IMG = {
   feuille: { gauche: require('../../../assets/collection/album-feuille-gauche.png'), droite: require('../../../assets/collection/album-feuille-droite.png') },
   vide: require('../../../assets/collection/emplacement-vide.png'),
 };
+// Fond de l'intérieur des cartes : dégradé dans la couleur de l'élément (image générée).
+const FOND_CARTE = {
+  Feu: require('../../../assets/collection/fond-carte-feu.png'), Eau: require('../../../assets/collection/fond-carte-eau.png'),
+  Terre: require('../../../assets/collection/fond-carte-terre.png'), Air: require('../../../assets/collection/fond-carte-air.png'),
+  Foudre: require('../../../assets/collection/fond-carte-foudre.png'), 'Lumière': require('../../../assets/collection/fond-carte-lumiere.png'),
+  'Ténèbres': require('../../../assets/collection/fond-carte-tenebres.png'), Magie: require('../../../assets/collection/fond-carte-magie.png'),
+};
 const GEMMES = {
   commun: require('../../../assets/collection/gemme-commun.png'),
   peu_commun: require('../../../assets/collection/gemme-peu_commun.png'),
@@ -132,14 +146,29 @@ function Carte({ creature, own, l, onPress }) {
   const cadre = cardFrameForElement(creature.element);
   const el = ELEMENT[creature.element] || { emoji: '✨', couleur: '#6b5a3a' };
   const bx = Math.round(l * CARD_FRAME_BORDER_X); const by = Math.round(fh * CARD_FRAME_BORDER_Y);
-  const art = Math.min(l - 2 * bx, fh - 2 * by);
+  // Intérieur (retour de l'auteur, 02/10 : « revoir l'intérieur des cadres ») : fond
+  // de l'élément, et créature ZOOMÉE sur sa zone dessinée (cadrageCreatures :
+  // les images ont ~40 % de marges), posée en bas comme un portrait.
+  const fw = l - 2 * bx; const fhw = fh - 2 * by;
+  const cadrage = (CADRAGE_CREATURES[creature.id] || {})[stade];
+  const zc = cadrage || CADRAGE_DEFAUT;
+  const T = Math.min((0.94 * fw) / (zc[2] - zc[0]), (0.9 * fhw) / (zc[3] - zc[1]));
+  const artX = Math.round(fw / 2 - ((zc[0] + zc[2]) / 2) * T);
+  const artY = Math.round(fhw * 0.97 - zc[3] * T);
   return (
     <TouchableOpacity activeOpacity={0.75} onPress={onPress} disabled={!onPress} style={{ width: l }}>
       <View style={{ width: l, height: fh }}>
-        <View style={[styles.fenetre, { left: bx, top: by, width: l - 2 * bx, height: fh - 2 * by }]}>
-          <CreatureArt creatureId={creature.id} stageIndex={stade} emoji={decouverte ? d.emoji : ''} size={art}
-            style={decouverte ? null : styles.silhouette} emojiStyle={{ fontSize: Math.round(art * 0.6) }} />
-          {decouverte ? null : <Text style={[styles.inconnue, { fontSize: Math.round(art * 0.5) }]}>?</Text>}
+        <View style={[styles.fenetre, { left: bx, top: by, width: fw, height: fhw }]}>
+          <Image source={FOND_CARTE[creature.element] || FOND_CARTE.Feu} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: fw, height: fhw }} />
+          {decouverte ? null : <View style={[styles.voile, { width: fw, height: fhw }]} />}
+          {cadrage ? (
+            <View style={{ position: 'absolute', left: artX, top: artY }}>
+              <CreatureArt creatureId={creature.id} stageIndex={stade} emoji={decouverte ? d.emoji : ''} size={Math.round(T)} style={decouverte ? null : styles.silhouette} />
+            </View>
+          ) : (
+            decouverte ? <Text style={{ fontSize: Math.round(Math.min(fw, fhw) * 0.62), includeFontPadding: false }}>{d.emoji}</Text> : null
+          )}
+          {decouverte ? null : <Text style={[styles.inconnue, { fontSize: Math.round(Math.min(fw, fhw) * 0.5) }]}>?</Text>}
         </View>
         {cadre ? <Image source={cadre} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: l, height: fh }} /> : null}
         <View style={[styles.icone, { backgroundColor: el.couleur }]}><Text style={styles.iconeTexte}>{el.emoji}</Text></View>
@@ -198,7 +227,9 @@ function Album(props) {
 
       {/* ── La souche, DERRIÈRE l'album qui repose sur son plateau. */}
       <TouchableOpacity activeOpacity={0.9} onPress={invoquer} style={{ position: 'absolute', left: SOUCHE.x, top: SOUCHE.y, width: SOUCHE.l, height: SOUCHE.h }}>
-        <Image source={PIECE_SOUCHE.image} resizeMode="stretch" style={{ width: SOUCHE.l, height: SOUCHE.h }} />
+        <Image source={PIECE_SOUCHE.gauche} resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: SOUCHE.cote, height: SOUCHE.h }} />
+        <Image source={PIECE_SOUCHE.milieu} resizeMode="stretch" style={{ position: 'absolute', left: SOUCHE.cote, top: 0, width: SOUCHE.l - 2 * SOUCHE.cote, height: SOUCHE.h }} />
+        <Image source={PIECE_SOUCHE.droite} resizeMode="stretch" style={{ position: 'absolute', left: SOUCHE.l - SOUCHE.cote, top: 0, width: SOUCHE.cote, height: SOUCHE.h }} />
       </TouchableOpacity>
 
       {/* ── L'abri du deck : le VRAI deck ; toucher un emplacement ouvre le sélecteur. */}
@@ -283,7 +314,8 @@ const styles = StyleSheet.create({
   // la fiche (10) et le sélecteur de deck (20).
   racine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 2, overflow: 'hidden', backgroundColor: '#061018' },
   page: { position: 'absolute', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'center' },
-  fenetre: { position: 'absolute', backgroundColor: 'rgba(20,14,8,0.5)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 3 },
+  fenetre: { position: 'absolute', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 3 },
+  voile: { position: 'absolute', left: 0, top: 0, backgroundColor: 'rgba(0,0,0,0.38)' },
   silhouette: { tintColor: '#140c05', opacity: 0.92 },
   inconnue: { position: 'absolute', color: '#e8c56a', fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3, includeFontPadding: false },
   icone: { position: 'absolute', left: -3, top: -3, width: 15, height: 15, borderRadius: 8, borderWidth: 1, borderColor: '#f3e2b0', alignItems: 'center', justifyContent: 'center' },

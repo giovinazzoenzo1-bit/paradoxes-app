@@ -1654,3 +1654,15 @@ cadre est doré pour les 8 : le violet de la Magie, intérieur, est épargné) ;
 texte du code, taille selon la longueur (8 / 7 / 6,5 / 6 pts : aucun nom
 tronqué à 360, 390, 412). auditAlbumComplet exige l'image de chaque onglet
 (prouvé : image Magie retirée → crie).
+
+**02/10 — Collection : souche et intérieur des cartes (retour de l'auteur)** :
+- SOUCHE en 3 tranches (fougères 22 % | tronc | fougères 22 %) : seul le tronc
+  s'élargit → plateau ≥ largeur de l'album (comme la maquette), fougères et
+  cailloux non déformés ; largeur ≥ 1,18 × écran (les côtés débordent).
+- CARTES : la créature occupait ~57 % × 71 % de son image 512 (marges) →
+  `games/clicker/cadrageCreatures.js` (GÉNÉRÉ : zone dessinée de chaque image,
+  9 créatures / 27 images ; défaut pour les créatures à venir) ; la carte zoome
+  dessus (94 % de la largeur / 90 % de la hauteur de la fenêtre, posée en bas).
+  Fond : dégradé de l'élément (fond-carte-*.png, généré) ; inconnue = voile
+  sombre + silhouette (si image) + « ? ». ⚠️ Piège : nombres numpy écrits
+  `np.float64(…)` dans le JS généré → convertir en float avant d'écrire.
