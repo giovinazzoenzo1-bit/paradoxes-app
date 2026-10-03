@@ -3565,7 +3565,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   return (
     <ImageBackground source={require('../../../assets/menu/fond.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, view === 'collection' && { top: SCREEN_H * 0.088 }]}>
         {/* Case "Élevage" retirée complètement, sur demande explicite —
             il ne reste que le bouton retour, sans fond. Contextuel :
             depuis Shop/Collection il ramène à l'accueil du Clicker
@@ -3583,13 +3583,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           (STORAGE_KEY, BACKUP_KEY, DEV_UNLOCK_ALL_KEY), donc l'importer
           ici créerait un cycle d'imports. C'est App.js qui affiche la
           surcouche. Même raison pour le bouton Quêtes plus bas. */}
-      {view === 'tap' && onOpenOptions && (
+      {(view === 'tap' || view === 'collection') && onOpenOptions && (
         <TouchableOpacity style={styles.optionsBtn} onPress={onOpenOptions}>
           <Image source={require('../../../assets/menu/bouton-parametres.png')} style={styles.optionsBtnImage} resizeMode="contain" />
         </TouchableOpacity>
       )}
 
-      {view === 'tap' && (
+      {/* Barre du haut : sur l'accueil ET sur la Collection (maquette de
+          l'Album de cartes, 02/10 : même barre que le menu principal). */}
+      {(view === 'tap' || view === 'collection') && (
         <>
           {/* Diamants, à gauche des pièces. Position dérivée de celle
               de la pilule de pièces pour que les deux restent
@@ -3616,6 +3618,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             </View>
           </ImageBackground>
           {passiveIncome > 0 && <Text style={styles.incomeText}>+{passiveIncome.toFixed(1)}/s</Text>}
+        </>
+      )}
+      {view === 'tap' && (
+        <>
 
           {/* ⚠️ Bandeaux EMPILÉS dans une colonne, et non posés chacun à
               la même position absolue — c'est ce qui les faisait se
@@ -4077,7 +4083,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {view === 'collection' && (
         <CollectionAlbum
           Secours={CollectionView}
-          FicheCreature={CreatureDetail}
           formatNum={formatNum}
           onRetour={() => setView('tap')}
           owned={owned}
@@ -4091,6 +4096,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           deck={deck}
           onOuvrirEmplacement={setPickerSlot}
         />
+      )}
+      {/* Fiche d'une créature de l'album : AU-DESSUS de tout (la barre du haut,
+          affichée sur la Collection, passerait sinon devant elle). */}
+      {view === 'collection' && selectedCreature && owned.some((o) => o.id === selectedCreature) && (
+        <View style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10 }}>
+          <CreatureDetail
+            creature={CREATURES.find((c) => c.id === selectedCreature)}
+            owned={owned.find((o) => o.id === selectedCreature)}
+            coins={coins}
+            onClose={() => setSelectedCreature(null)}
+            pendingDiscount={pendingDiscount}
+          />
+        </View>
       )}
 
       {calendarOpen && (
