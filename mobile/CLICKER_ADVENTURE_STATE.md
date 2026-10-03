@@ -1636,8 +1636,12 @@ passerait devant), calque de l'album au plan 2 ; 8 cartes par double page,
 gemmes) ; onglets pointus dessinés par le code ; orbe au centre, « Invoquer »
 et « … Po » en grand dessous ; album affiché à 1,25 (le dessin seul est plus
 plat que la maquette) ; tout remplit l'écran jusqu'à la barre du bas.
-**RESTE** : intégrer les pièces Gemini 74 (abri du deck LARGE, ~2,6:1, 4
-lanternes dehors) et 75 (grande souche + orbe rond) → mesurer, remplacer
+**FAIT** (02/10) : souche 75 intégrée (Gemini a omis l'orbe → œuf doré de la
+pièce 71 découpé par sa couleur, ombre ovale dessous) ; abri 74 revenu presque
+CARRÉ (cadre PORTRAIT imposé par mes prompts — Gemini remplit le cadre) →
+provisoire. Nettoyage : magenta-ité RELATIVE à la luminosité (les résidus
+sombres échappaient au seuil absolu), puis tout pixel encore rose recoloré.
+**RESTE** : l'abri 76 en cadre PAYSAGE 16:9 (2,6:1, 4 lanternes dehors) → mesurer, remplacer
 PIECE_ABRI / PIECE_SOUCHE dans CollectionAlbum.js (prévu pour), comparer à la
 maquette côte à côte, puis fusionner la branche dans main et publier.
 Ne PAS publier l'album avant (promesse faite à l'auteur).

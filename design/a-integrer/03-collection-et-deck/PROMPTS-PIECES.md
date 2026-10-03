@@ -55,3 +55,14 @@ From the COLLECTION screen you just made (the card album), draw ONLY the DECK sh
 From the COLLECTION screen you just made (the card album), draw ONLY the big tree stump on which the album rests, exactly as in the screen: a WIDE old tree stump (about as wide as the album), seen from the front and slightly from above so its flat top is visible, with blue-grey pebbles, moss and ferns around its base, and the ROUND golden orb (cracked like an egg, as in the screen) resting on the front of the stump. WITHOUT the album and WITHOUT any text. The orb is shiny gold, but with NO glow and no light around it. Same style. Vertical PORTRAIT image, 9:16; the object is centered and fully visible, with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo around the object. Never use pink or magenta on the object itself.
 ```
 
+
+
+# Série 3 (02/10) — l'abri en PAYSAGE
+
+L'image 74 est revenue presque carrée : le prompt imposait un cadre PORTRAIT 9:16, que Gemini remplit. Pour un objet large, demander un cadre PAYSAGE 16:9.
+
+**76. L'abri du deck, LARGE et BAS (cadre paysage)**
+
+```
+From the COLLECTION screen you just made (the card album), draw ONLY the DECK shelter exactly as it appears in the screen, as a WIDE and LOW structure: it must be about 2.6 times wider than tall, like a long market stall seen from the front: a long mossy wooden roof with vines across its whole width, a short wooden post at each end, FOUR lanterns hanging outside the posts (two on each side, lit inside their glass, no light halo), and a small BLANK wooden sign in the middle of the roof (no text). Below the roof, a long, low, dark wooden back panel with THREE EMPTY card places side by side, well spaced (no cards, no '+'). No base, no floor, no book under it. Same style. Horizontal LANDSCAPE image, 16:9; the object fills most of the width and is fully visible, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo around the object. Never use pink or magenta on the object itself.
+```
