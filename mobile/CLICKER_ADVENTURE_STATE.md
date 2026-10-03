@@ -1748,3 +1748,8 @@ d'avant ; l'effet de l'optimisation sur téléphone n'est pas encore mesuré.
 DÉCISION : le diagnostic des taps RESTE dans le rapport « Signaler un
 problème » (coût négligeable, chiffres précis au prochain souci). Toujours lire
 le « Build » d'un rapport avant de conclure.
+
+✅ 03/10 — OPTIMISATION CONFIRMÉE SUR LE TÉLÉPHONE (rapport, build a2fbdf0,
+32 s, ~16 touchers/s) : 523 touchers, 522 comptés (0 %) ; 218 lots (2,4 taps /
+lot) ; 376 rendus (11,8 / s) ; FIGEMENTS > 100 ms : 0 sur 1 716 images
+(contre 115-128 avant) ; ~54 images/s. Bug des taps + saccades : CLOS.
