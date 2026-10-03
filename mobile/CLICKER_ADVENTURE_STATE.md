@@ -1870,3 +1870,19 @@ Feuille de route : section « 0. État des illustrations ». Banc : scène
 `nouvelles-creatures.jsx` ; `exploration.jsx?nouvelles=1` (Luxorbe, Pyrosile,
 Fournax sur les pilotis). Ménage : clé `aventure` en double dans
 verifier-controles.js (ajoutée par moi le 03/10) retirée.
+
+
+## 03/10 — Aventure : mesure de contrôle (l'auteur : « il me semble qu'on est bon »)
+
+Vérifié dans le code : Griffes à la 1re victoire SEULEMENT (AdventureScreen
+l. ~861 : gain si le niveau combattu = currentUnlockedLevel) ; packs de
+Griffes contre pièces codés (morceau B du 26/09). ⚠️ J'avais proposé de les
+« coder » en lisant trop vite A_FAIRE (section des décisions, faites dans la
+section suivante) : TOUJOURS vérifier dans le code avant d'annoncer un manque.
+Simulation (300 joueurs, option A : les 10 % les plus malchanceux ≈ 6/10) :
+moyenne 8,0 à 8,9 / 10 ; 10 % malchanceux 6,3 / 5,1 / 4,1 / 4,6 / 6,4 / 6,8 ;
+filet −20 % 6,16 fois par joueur à l'A2 ; 0 bloqué ; dans les limites
+d'auditParcours. Décision : on n'y touche pas ; l'A2 à surveiller (tests réels).
+NB : la colonne « retard » du simulateur compare le NUMÉRO du niveau
+d'Aventure à la moyenne des niveaux des créatures (2 échelles) : ne pas s'en
+servir comme « niveaux de retard ».

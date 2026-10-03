@@ -41,6 +41,9 @@
 - [ ] **Pack de départ** — décision de l'auteur (26/09) : ce sera une offre PAYANTE (argent réel), réglée juste avant la sortie du jeu (build native). Rien à coder avant.
 
 ### Économie des Griffes et Aventure (26/09) — décisions de l'auteur, à reprendre APRÈS les pushs 2-3
+> ✅ 03/10 : tout est CODÉ (vérifié dans le code) — Griffes à la 1re victoire seulement
+> (AdventureScreen : gain si niveau = `currentUnlockedLevel`), packs contre pièces
+> (morceau B, ci-dessous). Mesure du 03/10 sur 300 joueurs : voir la section suivante.
 - Naissance des nouvelles créatures à **80 %** du niveau de la meilleure (il veut garder 80 %).
 - **Aucune Griffe en rejouant un niveau déjà gagné** (seule la 1re victoire paie) — à coder.
 - **3 packs de Griffes contre pièces par Ascension** (4 pour un acharné) — prix à recalculer pour le garantir ; taille des packs selon l'Ascension (+75/A validable).
@@ -52,6 +55,13 @@
 - [ ] Règle de l'auteur : on garde « Gagne 4 combats », et **le défi de combat suivant demande 6 combats** (une barre d'énergie + 1 → vidéo).
 
 ### Aventure calibrée sur le PARCOURS du joueur gratuit (26/09) — morceau A FAIT
+> 📏 Mesure du 03/10 (`simulateur-parcours`, 300 joueurs gratuits, option A) :
+> moyenne 8,9 / 8,5 / 8,0 / 8,6 / 8,5 / 8,3 victoires sur 10 (A0 → A5) ;
+> 10 % les plus malchanceux 6,3 / 5,1 / **4,1** / 4,6 / 6,4 / 6,8 ; filet −20 %
+> 0,96 / 2,53 / **6,16** / 3,59 / 0,90 / 0,76 par joueur ; 0 bloqué. Dans les
+> limites (`auditParcours`). Point faible : l'A2 pour les malchanceux. Décision
+> de l'auteur (03/10) : « on est bon » → on n'y touche pas ; à surveiller lors
+> de ses tests réels de l'A2.
 - [x] Simulateur de parcours complet (`tools/simulateur-parcours.js`) + calibrage sur le parcours (`tools/calibrer-parcours.js`) : le joueur UN PEU MALCHANCEUX (30e centile) gagne 6 fois sur 10 (option 2 de l'auteur). Vérifié : 0 joueur bloqué sur 60, ≈ 6 victoires sur 10 à chaque Ascension ; les 10 % les moins chanceux ≈ 2/10 jusqu'à l'A3 (le filet les fait passer), 5/10 ensuite.
 - [x] Garantie sur les œufs (`GARANTIE_OEUFS`) : 1 Rare au 6e, 2 au 12e, 1 Épique au 16e, 2 au 22e — RIEN n'est forcé si le joueur a déjà la rareté (demande de l'auteur). NB : le 22e est toujours déjà satisfait (19 créatures seulement sous Épique).
 - [x] Filet de sécurité (`FILET_SECURITE`) : 5 / 7 / 10 défaites de suite → −20 / −40 / −60 %, ce niveau seulement, anti-triche 90 % du meilleur deck possible, badge 🛟, compteur sauvegardé.
