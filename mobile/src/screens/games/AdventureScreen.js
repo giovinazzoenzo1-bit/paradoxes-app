@@ -215,8 +215,9 @@ const HUB_IMG = {
   lueur: require('../../../assets/grimoire/lueur-or.png'),
 };
 const HUB = {
-  // RETOUR réduit (retour de l'auteur : « 100 fois trop gros » ; maquette : 13,5 %).
-  retour: [0.015, 0.025, 0.100, 0.075],
+  // RETOUR : réduit (« 100 fois trop gros » ; maquette : 13,5 %), puis « un tout petit
+  // peu plus gros » (03/10) : 10 % × 5,8 %.
+  retour: [0.015, 0.022, 0.115, 0.080],
   titre: [0.3844, 0.0247, 0.6068, 0.1237],
   puissance: [0.650, 0.035, 0.800, 0.095],
   elixir: [0.700, 0.105, 0.800, 0.160],
@@ -1169,7 +1170,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           {/* ── En haut : RETOUR, titre, puissance (+ élixir), Griffes, Runes. */}
           <TouchableOpacity onPress={onBack} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[R(HUB.retour, 'gauche'), { justifyContent: 'center' }]}>
             <Image source={HUB_IMG.retour} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
-            <Text style={[styles.hubRetourTexte, { fontSize: police(0.02), marginLeft: (HUB.retour[2] - HUB.retour[0]) * ui.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
+            <Text style={[styles.hubRetourTexte, { fontSize: police(0.023), marginLeft: (HUB.retour[2] - HUB.retour[0]) * ui.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
           </TouchableOpacity>
           <Image source={HUB_IMG.titre} resizeMethod="scale" resizeMode="stretch" style={R(HUB.titre, 'centre')} />
           <View style={[R(HUB.puissance, 'droite'), styles.hubPilule]}>

@@ -80,3 +80,27 @@ Note : Gemini a peint un « + » sur les 3 pilotis même sous une créature → 
 ```
 From the EXPLORATION screen you just made, draw ONLY these interface pieces, exactly as they look in the screen, well separated from each other: the 'EXPLORATION' title banner (with its text); ONE 'Changer' button; the big 'COMBAT' button with its crossed swords; the big golden '+' sign. Same style. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo around the pieces. Never use pink or magenta on the pieces themselves.
 ```
+
+
+# Série 4 (03/10) — pièces en HAUTE DÉFINITION (boutons flous sur le téléphone)
+
+Mesuré : COMBAT 332 px affiché à 471 px, titre 303 → 430, Changer 148 → 255 sur l'écran de l'auteur (2340 px) : agrandis ×1,4 à ×1,7. Une pièce PAR image, qui remplit presque toute la largeur (~1300 px). Même conversation que la maquette.
+
+**10. Le bouton COMBAT en haute définition**
+
+```
+From the EXPLORATION screen you just made, draw ONLY the big 'COMBAT' button with its crossed swords, EXACTLY as it looks in the screen (same shape, colors and text), but VERY LARGE: it fills almost the whole width of the image. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo. Never use pink or magenta on the piece itself.
+```
+
+**11. Le titre EXPLORATION en haute définition**
+
+```
+From the EXPLORATION screen you just made, draw ONLY the 'EXPLORATION' title banner, with its text, EXACTLY as it looks in the screen (same shape, colors and text), but VERY LARGE: it fills almost the whole width of the image. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo. Never use pink or magenta on the piece itself.
+```
+
+**12. Le bouton Changer en haute définition**
+
+```
+From the EXPLORATION screen you just made, draw ONLY ONE 'Changer' button, EXACTLY as it looks in the screen (same shape, colors and text), but VERY LARGE: it fills almost the whole width of the image. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo. Never use pink or magenta on the piece itself.
+```
+

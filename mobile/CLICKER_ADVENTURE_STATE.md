@@ -1829,3 +1829,13 @@ flouté du hub (qui se posait aussi à sa taille d'origine, calé en haut à gau
    montre pas.
 ⚠️ Repères de sabotage mis à jour (ligne des Runes, ligne de l'image RETOUR) :
 toute ligne visée par un sabotage qui change → repère à jour AVANT les suites.
+
+**03/10 — Boutons du hub FLOUS : résolution trop faible (MESURÉ)** — écran de
+l'auteur 2340 px : COMBAT 332 px affiché à 471 px (×1,4), titre 303 → 430
+(×1,4), Changer 148 → 255 (×1,7) ; « + » et RETOUR nets (réduits). Les pièces
+viennent d'une image Gemini de 1376 px : aucun réglage de code n'y ajoute du
+détail → prompts 10-12 (une pièce PAR image, remplissant la largeur, même
+conversation que la maquette). EN ATTENTE. RETOUR « un tout petit peu plus
+gros » : [0.015, 0.022, 0.115, 0.080] (≈ 74 × 24 au format de l'auteur).
+RÈGLE : avant d'intégrer une pièce, comparer sa largeur en px à sa largeur
+AFFICHÉE en px physiques sur un grand téléphone (≈ 2,6 px par dp).
