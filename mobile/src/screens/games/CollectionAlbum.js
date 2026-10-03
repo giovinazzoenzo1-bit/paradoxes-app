@@ -32,12 +32,13 @@ const ONGLET_L = 50;
 // ── Pièces dessinées (rapport largeur / hauteur + mesures en fractions) ──
 // L'abri LARGE et la souche à l'orbe (images 74 et 75) remplacent l'abri carré
 // et l'œuf au nid dès leur arrivée : il suffit de changer ces deux blocs.
-// Abri : image 74 (02/10) — PROVISOIRE, Gemini l'a rendu presque carré (cadre
-// portrait imposé par le prompt) ; la version large (prompt paysage) le remplacera.
+// Abri : image 76 (02/10, cadre PAYSAGE) — large et bas (2,94:1), lanternes
+// dehors, panneau au milieu du toit ; mesuré sur grille graduée (2,5 % / 5 %).
 const PIECE_ABRI = {
-  image: require('../../../assets/collection/abri-large.png'), rapport: 759 / 740,
-  emplacements: [[0.20, 0.49, 0.385, 0.745], [0.405, 0.49, 0.59, 0.745], [0.615, 0.49, 0.80, 0.745]],
-  panneau: [0.35, 0.01, 0.66, 0.10],
+  image: require('../../../assets/collection/abri-paysage.png'), rapport: 1212 / 412,
+  emplacements: [[0.239, 0.44, 0.367, 0.89], [0.436, 0.44, 0.563, 0.89], [0.63, 0.44, 0.759, 0.89]],
+  panneau: [0.40, 0.07, 0.59, 0.27],
+  interieur: [0.33, 0.95], // sous le toit : les cartes du deck y prennent toute la hauteur
 };
 // Souche : image 75 (sans orbe : Gemini l'a omis). Plateau = dessus plat, où
 // repose l'album (mesuré : 20-80 % en largeur, 0-28 % en hauteur).
@@ -51,7 +52,9 @@ const PIECE_ORBE = { image: require('../../../assets/collection/orbe-oeuf.png'),
 
 // ── Mise en page (390 × 844 de référence ; tout se recalcule) ──
 const ABRI_BOITE = { x: Math.round(ECRAN_L * 0.03), y: HAUT, l: Math.round(ECRAN_L * 0.94) };
-ABRI_BOITE.h = Math.round(ABRI_BOITE.l / 2.6); // proportions de l'abri de la maquette
+// Affiché à 2,3:1 (dessiné à 2,94) : le toit de Gemini est épais ; un peu plus
+// haut, l'intérieur reçoit des cartes de deck aussi grandes que sur la maquette.
+ABRI_BOITE.h = Math.round(ABRI_BOITE.l / 2.3);
 // L'album dessiné seul est plus « plat » que sur la maquette (rapport 1,46 contre
 // ~1,15) : affiché à 1,25 pour que les cartes remplissent les pages comme elle.
 const R_ALBUM = 1 / 1.25;
@@ -74,7 +77,7 @@ function poser(boite, rapport, enBas) {
   return { x: boite.x + Math.round((boite.l - l) / 2), y: enBas ? boite.y + boite.h - h : boite.y + Math.round((boite.h - h) / 2), l, h };
 }
 const frac = (R, [x0, y0, x1, y1]) => ({ x: Math.round(R.x + x0 * R.l), y: Math.round(R.y + y0 * R.h), l: Math.round((x1 - x0) * R.l), h: Math.round((y1 - y0) * R.h) });
-const ABRI = poser(ABRI_BOITE, PIECE_ABRI.rapport, false);
+const ABRI = ABRI_BOITE; // étiré à la boîte (bois et mousse le supportent)
 const FEUILLE = { gauche: frac(ALBUM, [0.1459, 0.0104, 0.5351, 0.9125]), droite: frac(ALBUM, [0.5351, 0.0104, 0.9213, 0.9125]) };
 const ZONE = { gauche: frac(ALBUM, [0.162, 0.03, 0.5, 0.895]), droite: frac(ALBUM, [0.571, 0.03, 0.914, 0.895]) };
 
@@ -213,9 +216,13 @@ function Album(props) {
           <Text style={styles.panneauTexte}>DECK</Text>
         </View>
         {PIECE_ABRI.emplacements.map((e, i) => {
-          const r = frac({ x: 0, y: 0, l: ABRI.l, h: ABRI.h }, e);
+          // Carte AUSSI GRANDE que l'intérieur de l'abri (maquette), centrée sur l'emplacement mesuré.
+          const [i0, i1] = PIECE_ABRI.interieur;
+          const hc = Math.round((i1 - i0) * ABRI.h * 0.94);
+          const l = Math.floor(hc / (1 / RAPPORT_CADRE + BANDEAU));
+          const cx = ((e[0] + e[2]) / 2) * ABRI.l; const cy = ((i0 + i1) / 2) * ABRI.h;
+          const r = { x: Math.round(cx - l / 2), y: Math.round(cy - hc / 2), l, h: hc };
           const id = deck[i]; const c = id ? CREATURES.find((x) => x.id === id) : null; const own = id ? ownedMap[id] : null;
-          const l = Math.floor(Math.min(r.l, r.h / (1 / RAPPORT_CADRE + BANDEAU)));
           return (
             <TouchableOpacity key={i} activeOpacity={0.75} onPress={() => props.onOuvrirEmplacement && props.onOuvrirEmplacement(i)}
               style={{ position: 'absolute', left: r.x, top: r.y, width: r.l, height: r.h, alignItems: 'center', justifyContent: 'center' }}>
