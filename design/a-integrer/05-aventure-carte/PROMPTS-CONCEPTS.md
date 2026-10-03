@@ -68,3 +68,15 @@ I'm sending you 3 images. IMAGE 1 is my mobile game's main menu: it is the STYLE
 ```
 From the EXPLORATION screen you just made, draw ONLY the background scene, EXACTLY the same: the same mossy cliff edge, the same wooden pier, the same floating islands far away, the same light and colors, with the 3 wooden pilings at EXACTLY the same places and size, but EMPTY: nothing on them (no creature, no '+'). And WITHOUT any interface: no text, no buttons, no banner, no counters, no 'Changer', no 'COMBAT'. Horizontal LANDSCAPE image, 16:9; the scene fills the whole image (no magenta background, no border).
 ```
+
+
+# Série 3 (suite, 03/10) — maquette 7 retenue : « exactement les mêmes proportions »
+
+Reçue : 1791027757766.jpg = la MAQUETTE 7 (paysage 1376×768). Manquent : la 8 (décor seul) et la 9 (pièces d'interface sur magenta).
+Note : Gemini a peint un « + » sur les 3 pilotis même sous une créature → le « + » n'est affiché QUE sur un emplacement vide.
+
+**9. Les pièces d'interface (même conversation, cadre PAYSAGE)**
+
+```
+From the EXPLORATION screen you just made, draw ONLY these interface pieces, exactly as they look in the screen, well separated from each other: the 'EXPLORATION' title banner (with its text); ONE 'Changer' button; the big 'COMBAT' button with its crossed swords; the big golden '+' sign. Same style. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo around the pieces. Never use pink or magenta on the pieces themselves.
+```
