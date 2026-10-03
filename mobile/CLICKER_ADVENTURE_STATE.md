@@ -1839,3 +1839,12 @@ conversation que la maquette). EN ATTENTE. RETOUR « un tout petit peu plus
 gros » : [0.015, 0.022, 0.115, 0.080] (≈ 74 × 24 au format de l'auteur).
 RÈGLE : avant d'intégrer une pièce, comparer sa largeur en px à sa largeur
 AFFICHÉE en px physiques sur un grand téléphone (≈ 2,6 px par dp).
+
+**03/10 — Pièces HD du hub installées (prompts 10-12)** : COMBAT 1144 px, titre
+1180, Changer 1059 → affichées 467 / 465 / 304 px : RÉDUITES, nettes. Arrivées
+dans l'ordre INVERSE (identifiées au contenu). Proportions réelles conservées
+(HUB_RAPPORT_PIECE) : COMBAT à la hauteur de la maquette ; titre et Changer à
+la LARGEUR de la maquette (à hauteur gardée, les 3 Changer se touchaient).
+⚠️ Le titre et Changer HD ont CHANGÉ DE COULEURS (bois foncé, lettres dorées ;
+maquette : titre clair à lettres brunes, Changer brun-rouge à lettres crème) →
+prompts 13-14 facultatifs (couleurs exactes) proposés à l'auteur.

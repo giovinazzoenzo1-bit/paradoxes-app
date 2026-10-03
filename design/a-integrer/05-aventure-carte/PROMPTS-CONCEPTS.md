@@ -104,3 +104,21 @@ From the EXPLORATION screen you just made, draw ONLY the 'EXPLORATION' title ban
 From the EXPLORATION screen you just made, draw ONLY ONE 'Changer' button, EXACTLY as it looks in the screen (same shape, colors and text), but VERY LARGE: it fills almost the whole width of the image. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo. Never use pink or magenta on the piece itself.
 ```
 
+
+
+# Série 5 (03/10) — facultatif : couleurs EXACTES de la maquette pour le titre et Changer
+
+Les HD 11 et 12 sont nettes mais ont changé de couleurs (bois foncé, lettres dorées). Installées ; à remplacer si l'auteur préfère les couleurs d'origine.
+
+**13. Titre EXPLORATION aux couleurs EXACTES de la maquette (facultatif)**
+
+```
+From the very first EXPLORATION screen you made (the one with the creatures on the pilings), draw ONLY its 'EXPLORATION' title banner with EXACTLY the same colors: a LIGHT TAN wooden plaque with a copper-brown frame and DARK BROWN engraved letters (NOT dark wood, NOT golden letters), VERY LARGE: it fills almost the whole width of the image. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo. Never use pink or magenta on the piece itself.
+```
+
+**14. Changer aux couleurs EXACTES de la maquette (facultatif)**
+
+```
+From the very first EXPLORATION screen you made (the one with the creatures on the pilings), draw ONLY ONE of its 'Changer' buttons with EXACTLY the same colors: a REDDISH-BROWN wooden plaque with a copper frame and CREAM-WHITE letters (NOT dark wood, NOT golden letters), VERY LARGE: it fills almost the whole width of the image. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo. Never use pink or magenta on the piece itself.
+```
+

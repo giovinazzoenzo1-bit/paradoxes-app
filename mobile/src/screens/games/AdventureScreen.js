@@ -214,6 +214,10 @@ const HUB_IMG = {
   retour: require('../../../assets/icons/back-button.png'),
   lueur: require('../../../assets/grimoire/lueur-or.png'),
 };
+// Proportions RÉELLES des pièces en haute définition (03/10, prompts 10-12 : les
+// boutons étaient flous, agrandis ×1,4 à ×1,7) : affichées à leur rapport, à la
+// hauteur mesurée sur la maquette et au même centre (jamais écrasées).
+const HUB_RAPPORT_PIECE = { titre: 1180 / 271, changer: 1059 / 308, combat: 1144 / 296 };
 const HUB = {
   // RETOUR : réduit (« 100 fois trop gros » ; maquette : 13,5 %), puis « un tout petit
   // peu plus gros » (03/10) : 10 % × 5,8 %.
@@ -1158,6 +1162,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Décor : fractions de l'image (pilotis, créatures…), qui le suivent quand il est rogné.
   const F = (f) => ({ position: 'absolute', left: fond.x + f[0] * fond.l, top: fond.y + f[1] * fond.h, width: (f[2] - f[0]) * fond.l, height: (f[3] - f[1]) * fond.h });
   const police = (k) => Math.max(8, Math.round(ui.h * k));
+  // Même hauteur, même centre, largeur à la proportion réelle de la pièce.
+  const auRapport = (r, rapport) => { const l = r.height * rapport; return { ...r, left: r.left + (r.width - l) / 2, width: l }; };
+  // Même LARGEUR (celle de la maquette : elle règle l'espacement), même centre, hauteur à la proportion.
+  const auRapportL = (r, rapport) => { const hh = r.width / rapport; return { ...r, top: r.top + (r.height - hh) / 2, height: hh }; };
   const couleurPuissance = puissanceMenu ? (puissanceMenu.couleur === 'vert' ? '#3DDC84' : puissanceMenu.couleur === 'orange' ? '#FFB74D' : '#FF6B6B') : '#eafbe8';
   return (
     <View style={styles.hubRacine} onLayout={(e) => setBgSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
@@ -1172,7 +1180,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
             <Image source={HUB_IMG.retour} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
             <Text style={[styles.hubRetourTexte, { fontSize: police(0.023), marginLeft: (HUB.retour[2] - HUB.retour[0]) * ui.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
           </TouchableOpacity>
-          <Image source={HUB_IMG.titre} resizeMethod="scale" resizeMode="stretch" style={R(HUB.titre, 'centre')} />
+          <Image source={HUB_IMG.titre} resizeMethod="scale" resizeMode="stretch" style={auRapportL(R(HUB.titre, 'centre'), HUB_RAPPORT_PIECE.titre)} />
           <View style={[R(HUB.puissance, 'droite'), styles.hubPilule]}>
             <Text style={[styles.hubPiluleTexte, { fontSize: police(0.026), color: couleurPuissance }]} numberOfLines={1}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
           </View>
@@ -1218,7 +1226,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
               art = <Text style={{ position: 'absolute', left: cx - ch * 0.5, top: dessus - ch * 0.95, width: ch, textAlign: 'center', fontSize: Math.round(ch * 0.72), pointerEvents: 'none' }}>{display.emoji}</Text>;
             }
             const pl = HUB.plus.l * fond.l; const ph = HUB.plus.h * fond.h; const py = fond.y + HUB.plus.cy * fond.h;
+            // « Changer » : LARGEUR de la maquette (espacement des 3 boutons), hauteur à la proportion de la pièce HD, même centre.
             const cl = HUB.changer.l * fond.l;
+            const chH = cl / HUB_RAPPORT_PIECE.changer;
+            const chY = fond.y + ((HUB.changer.y0 + HUB.changer.y1) / 2) * fond.h - chH / 2;
             return (
               <React.Fragment key={i}>
                 {art}
@@ -1232,7 +1243,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
                 <TouchableOpacity activeOpacity={0.85} onPress={() => (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i))}
                   style={{ position: 'absolute', left: cx - lp / 2, top: dessus - ch * 1.05, width: lp, height: ch * 1.05 + (HUB.changer.y0 - HUB.dessus) * fond.h }} />
                 <TouchableOpacity activeOpacity={0.8} onPress={() => setDeckPickerSlot(i)}
-                  style={{ position: 'absolute', left: cx - cl / 2, top: fond.y + HUB.changer.y0 * fond.h, width: cl, height: (HUB.changer.y1 - HUB.changer.y0) * fond.h }}>
+                  style={{ position: 'absolute', left: cx - cl / 2, top: chY, width: cl, height: chH }}>
                   <Image source={HUB_IMG.changer} resizeMethod="scale" resizeMode="stretch" style={{ width: '100%', height: '100%' }} />
                 </TouchableOpacity>
               </React.Fragment>
@@ -1240,7 +1251,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           })}
 
           {/* ── COMBAT : il SCINTILLE un peu (lueur qui respire + étincelles), voir BoutonCombat. */}
-          <BoutonCombat rect={R(HUB.combat, 'centre', 'bas')} rectLueur={R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05], 'centre', 'bas')} onPress={() => setChapterMapOpen(true)} />
+          <BoutonCombat rect={auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat)} rectLueur={R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05], 'centre', 'bas')} onPress={() => setChapterMapOpen(true)} />
         </>
       )}
 
