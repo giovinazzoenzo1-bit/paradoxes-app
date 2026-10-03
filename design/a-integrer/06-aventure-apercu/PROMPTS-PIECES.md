@@ -22,3 +22,14 @@ From the LEVEL PREVIEW screen you just made, draw ONLY the big round wooden meda
 ```
 From the LEVEL PREVIEW screen you just made, draw ONLY the big 'COMBATTRE' button with its crossed swords, EXACTLY as it looks in the screen (same shape, colors and text). VERY LARGE: it fills almost the whole width of the image. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo. Never use pink or magenta on the piece itself.
 ```
+
+
+# Série 2 (03/10) — la plaque, refaite (forme exacte)
+
+Reçues : COMBATTRE en bois FONCÉ (maquette : doré), anneau doré SANS disque, plaque en grand CARTOUCHE haut (maquette : planche longue et fine). Reconstitués par le code : médaillon = anneau + disque de bois taillé dans le cartouche ; COMBATTRE = bouton doré du hub, texte effacé. Effacer le texte de la planche EXPLORATION a ÉCHOUÉ (bordure intérieure détruite) → nouvelle plaque demandée.
+
+**4. La plaque, forme exacte**
+
+```
+From the LEVEL PREVIEW screen you made (the one with the medallions), draw ONLY its wooden title plaque (the one with 'Chapitre 1 · Niveau 1') with EXACTLY the same shape: a LONG and THIN wooden plank, about 6 times wider than tall, with POINTED ends on the left and on the right, and a golden-brown frame, but WITHOUT ANY TEXT. NOT a tall sign, NOT a rounded cartouche. VERY LARGE: it fills almost the whole width of the image. Horizontal LANDSCAPE image, 16:9, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo. Never use pink or magenta on the piece itself.
+```

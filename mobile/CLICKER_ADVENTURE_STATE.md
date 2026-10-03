@@ -1921,3 +1921,19 @@ dessin, logique INCHANGÉE (onClose, onStart, « Deck vide », énergie à 0 :
 📺 +1 et 💎, fiche au toucher d'une créature) ; 2-3 adversaires = 2-3
 médaillons côte à côte ; fond : l'île du CHAPITRE floutée et assombrie (la
 maquette montre le ponton du hub, car Gemini avait l'Exploration en image 3).
+
+
+## ⚠️ EN COURS (03/10) — branche `apercu-medaillon`, NON publiée
+
+Aperçu de niveau « Le médaillon » ÉCRIT sur la branche (FighterSelectOverlay :
+fond = île du chapitre floutée, PanneauRetour, composant `Medaillon` (anneau
+doré de Gemini + disque de bois taillé dans son cartouche, créature zoomée et
+découpée en rond, œuf si vide), titre et plaque de l'adversaire (taille du nom
+selon sa longueur), puissance colorée, 3 médaillons d'équipe (fiche au
+toucher), COMBATTRE doré (bouton du hub, texte effacé, réécrit par le code ;
+DECK VIDE / PLUS D'ÉNERGIE ; 📺 +1 et 💎 à sa droite à énergie nulle), énergie ;
+bloc centré verticalement sur les écrans hauts). Les pièces reçues ne collaient
+pas à la maquette (cartouche haut, anneau sans disque, COMBATTRE foncé) ;
+effacer « EXPLORATION » de la planche a échoué (bordure intérieure détruite).
+**RESTE** : la plaque du titre (prompt 4, forme exacte) → la poser à la place
+du style PROVISOIRE `apercuPlaque`, comparer à la maquette, fusionner, publier.
