@@ -1806,3 +1806,26 @@ GARDE : **auditImagesTailleExplicite** (tout src/, commentaires retirés : Image
 Animated.Image en absoluteFill, aux 4 bords écrits à la main, ou par un style
 nommé qui remplit — sans `width`) + 2 sabotages. Corrigés : RETOUR et le fond
 flouté du hub (qui se posait aussi à sa taille d'origine, calé en haut à gauche).
+
+
+## 03/10 — Hub de l'Exploration : plein écran + créatures nettes (retour de l'auteur)
+
+1. « Bordures sur les côtés » = les bandes floutées (décor 16:9 posé entier sur
+   un écran 2,17:1). → Le décor COUVRE l'écran (`cadresExploration` : fond
+   « cover », rogné en haut/bas ou sur les côtés) ; pilotis, créatures, « + »,
+   « Changer » ATTACHÉS au décor (F) ; l'interface (R) garde les tailles de la
+   maquette ramenées à la HAUTEUR de l'écran (ou à sa largeur si < 16:9) et
+   s'ACCROCHE aux bords : RETOUR gauche, compteurs + Runes droite, titre haut
+   centre, COMBAT bas centre. Vérifié : 891×411 (téléphone de l'auteur),
+   731×411 (16:9), 1024×768 (tablette) — pas de bande, pas de chevauchement.
+   Le bandeau du titre INCRUSTÉ dans le décor dépassait une fois rogné → effacé
+   (ciel : reconstitution OpenCV Telea ; feuillage : copie MIROIR du feuillage
+   voisin, fondu 90 px ; raccord bas 8 px).
+2. « Créatures pixelisées » : sur Android, une image (fichier local, ex. mise à
+   jour EAS) est décodée à la taille de son 1er CADRE ; l'Exploration se dessine
+   d'abord en PORTRAIT puis tourne → décodée en petit, puis agrandie. →
+   `resizeMethod="scale"` (pleine résolution) dans CreatureArt (toutes les
+   créatures du jeu) et sur les 10 images du hub. Le banc (navigateur) ne le
+   montre pas.
+⚠️ Repères de sabotage mis à jour (ligne des Runes, ligne de l'image RETOUR) :
+toute ligne visée par un sabotage qui change → repère à jour AVANT les suites.

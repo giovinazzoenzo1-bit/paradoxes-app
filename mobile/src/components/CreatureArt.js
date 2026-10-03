@@ -96,5 +96,9 @@ export default function CreatureArt({ creatureId, stageIndex = 0, emoji, size = 
   if (!src) {
     return <Text style={emojiStyle} numberOfLines={1}>{emoji}</Text>;
   }
-  return <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" />;
+  // resizeMethod « scale » (03/10, retour de l'auteur : créatures PIXELISÉES) : sur
+  // Android, une image est sinon décodée à la taille de son PREMIER cadre ; l'écran
+  // d'Exploration tourne (portrait → paysage) après ce premier cadre, la créature
+  // était décodée en petit puis agrandie. « scale » décode en pleine résolution.
+  return <Image source={src} style={[{ width: size, height: size }, style]} resizeMode="contain" resizeMethod="scale" />;
 }

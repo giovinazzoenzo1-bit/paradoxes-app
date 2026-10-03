@@ -203,6 +203,9 @@ const GLOW_CYAN = require('../../../assets/icons/glow-cyan.png');
 // que sur la maquette (vérifié).
 const HUB_DECOR = require('../../../assets/exploration/ponton.jpg');
 const HUB_RAPPORT = 1376 / 768;
+// ⚠️ Toutes les images du hub : resizeMethod="scale" (03/10, créatures pixelisées) —
+// sur Android, une image est sinon décodée à la taille de son 1er cadre, calculé
+// AVANT la rotation portrait → paysage, puis agrandie.
 const HUB_IMG = {
   titre: require('../../../assets/exploration/titre-exploration.png'),
   plus: require('../../../assets/exploration/plus-dore.png'),
@@ -244,9 +247,9 @@ function BoutonCombat({ rect, rectLueur, onPress }) {
   const taille = Math.max(9, Math.round(rect.height * 0.34));
   return (
     <>
-      <Animated.Image source={HUB_IMG.lueur} resizeMode="stretch" style={[rectLueur, { opacity: lueur, pointerEvents: 'none' }]} />
+      <Animated.Image source={HUB_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={[rectLueur, { opacity: lueur, pointerEvents: 'none' }]} />
       <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={rect}>
-        <Image source={HUB_IMG.combat} resizeMode="stretch" style={{ width: '100%', height: '100%' }} />
+        <Image source={HUB_IMG.combat} resizeMethod="scale" resizeMode="stretch" style={{ width: '100%', height: '100%' }} />
         {ETINCELLES_COMBAT.map(([fx, fy, ph], k) => (
           <Animated.Text key={k} style={[styles.hubEtincelle, { left: fx * rect.width - taille / 2, top: fy * rect.height - taille / 2, fontSize: taille, opacity: eclat(ph), transform: [{ scale: eclat(ph) }] }]}>✦</Animated.Text>
         ))}
@@ -255,12 +258,19 @@ function BoutonCombat({ rect, rectLueur, onPress }) {
   );
 }
 
-// Rectangle de la scène 16:9 posée entière dans l'écran (w × h).
-function sceneExploration(taille) {
+// Cadres du hub (03/10, retour de l'auteur : « pas de bordures sur les côtés ») :
+// - fond : le décor COUVRE tout l'écran (rogné en haut/bas ou sur les côtés) ;
+//   pilotis, créatures, « + » et « Changer » y sont ATTACHÉS ;
+// - ui : l'interface garde les tailles de la maquette, ramenées à la HAUTEUR de
+//   l'écran (ou à sa largeur si l'écran est moins large que 16:9), et s'ACCROCHE
+//   aux bords : RETOUR à gauche, compteurs à droite, titre et COMBAT au centre.
+function cadresExploration(taille) {
   const w = (taille && taille.w) || 0; const h = (taille && taille.h) || 0;
-  if (!w || !h) return { x: 0, y: 0, l: 0, h: 0 };
-  if (w / h > HUB_RAPPORT) { const l = h * HUB_RAPPORT; return { x: (w - l) / 2, y: 0, l, h }; }
-  const hh = w / HUB_RAPPORT; return { x: 0, y: (h - hh) / 2, l: w, h: hh };
+  if (!w || !h) return null;
+  const k = Math.max(w / 1376, h / 768);
+  const fond = { l: 1376 * k, h: 768 * k }; fond.x = (w - fond.l) / 2; fond.y = (h - fond.h) / 2;
+  const uiL = Math.min(h * HUB_RAPPORT, w);
+  return { w, h, fond, ui: { l: uiL, h: uiL / HUB_RAPPORT } };
 }
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1133,45 +1143,53 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   }
 
   // ── Rendu du hub : voir HUB (fractions de la scène mesurées sur la maquette) ──
-  const scene = sceneExploration(bgSize);
-  const R = (f) => ({ position: 'absolute', left: scene.x + f[0] * scene.l, top: scene.y + f[1] * scene.h, width: (f[2] - f[0]) * scene.l, height: (f[3] - f[1]) * scene.h });
-  const police = (k) => Math.max(8, Math.round(scene.h * k));
+  const cadres = cadresExploration(bgSize);
+  const fond = cadres ? cadres.fond : { x: 0, y: 0, l: 0, h: 0 };
+  const ui = cadres ? cadres.ui : { l: 0, h: 0 };
+  const ecran = cadres || { w: 0, h: 0 };
+  // Interface : fractions de la maquette, accrochées à un bord (x : gauche/centre/droite ; y : haut/bas).
+  const R = (f, ax = 'centre', ay = 'haut') => {
+    const l = (f[2] - f[0]) * ui.l; const hh = (f[3] - f[1]) * ui.h;
+    const left = ax === 'gauche' ? f[0] * ui.l : ax === 'droite' ? ecran.w - (1 - f[0]) * ui.l : ecran.w / 2 + (f[0] - 0.5) * ui.l;
+    const top = ay === 'bas' ? ecran.h - (1 - f[1]) * ui.h : f[1] * ui.h;
+    return { position: 'absolute', left, top, width: l, height: hh };
+  };
+  // Décor : fractions de l'image (pilotis, créatures…), qui le suivent quand il est rogné.
+  const F = (f) => ({ position: 'absolute', left: fond.x + f[0] * fond.l, top: fond.y + f[1] * fond.h, width: (f[2] - f[0]) * fond.l, height: (f[3] - f[1]) * fond.h });
+  const police = (k) => Math.max(8, Math.round(ui.h * k));
   const couleurPuissance = puissanceMenu ? (puissanceMenu.couleur === 'vert' ? '#3DDC84' : puissanceMenu.couleur === 'orange' ? '#FFB74D' : '#FF6B6B') : '#eafbe8';
   return (
     <View style={styles.hubRacine} onLayout={(e) => setBgSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-      {/* Le même décor, flouté, remplit l'écran autour de la scène 16:9. */}
-      {/* Largeur/hauteur EXPLICITES : une <Image> en absoluteFill seul se dessine à sa
-          taille D'ORIGINE sur téléphone (bug du 13/09 revenu le 03/10). */}
-      <Image source={HUB_DECOR} blurRadius={14} resizeMode="cover" style={styles.hubPleineImage} />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(5,12,18,0.35)' }]} />
-      {scene.l > 0 && (
+      {fond.l > 0 && (
         <>
-          <Image source={HUB_DECOR} resizeMode="stretch" style={R([0, 0, 1, 1])} />
+          {/* Le décor COUVRE l'écran (plus de bandes sur les côtés, demande de l'auteur) ;
+              largeur/hauteur explicites (auditImagesTailleExplicite). */}
+          <Image source={HUB_DECOR} resizeMethod="scale" resizeMode="stretch" style={F([0, 0, 1, 1])} />
 
           {/* ── En haut : RETOUR, titre, puissance (+ élixir), Griffes, Runes. */}
-          <TouchableOpacity onPress={onBack} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[R(HUB.retour), { justifyContent: 'center' }]}>
-            <Image source={HUB_IMG.retour} resizeMode="stretch" style={styles.hubPleineImage} />
-            <Text style={[styles.hubRetourTexte, { fontSize: police(0.02), marginLeft: (HUB.retour[2] - HUB.retour[0]) * scene.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
+          <TouchableOpacity onPress={onBack} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[R(HUB.retour, 'gauche'), { justifyContent: 'center' }]}>
+            <Image source={HUB_IMG.retour} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
+            <Text style={[styles.hubRetourTexte, { fontSize: police(0.02), marginLeft: (HUB.retour[2] - HUB.retour[0]) * ui.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
           </TouchableOpacity>
-          <Image source={HUB_IMG.titre} resizeMode="stretch" style={R(HUB.titre)} />
-          <View style={[R(HUB.puissance), styles.hubPilule]}>
+          <Image source={HUB_IMG.titre} resizeMethod="scale" resizeMode="stretch" style={R(HUB.titre, 'centre')} />
+          <View style={[R(HUB.puissance, 'droite'), styles.hubPilule]}>
             <Text style={[styles.hubPiluleTexte, { fontSize: police(0.026), color: couleurPuissance }]} numberOfLines={1}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
           </View>
           {elixirCombats > 0 && (
-            <View style={[R(HUB.elixir), styles.hubPilule]}>
+            <View style={[R(HUB.elixir, 'droite'), styles.hubPilule]}>
               <Text style={[styles.hubPiluleTexte, { fontSize: police(0.028) }]} numberOfLines={1}>🧪 {elixirCombats}</Text>
             </View>
           )}
-          <View style={[R(HUB.griffes), styles.hubPilule, { justifyContent: 'space-between', paddingLeft: 4, paddingRight: 3 }]}>
-            <CurrencyIcon kind="griffes" size={Math.round(scene.h * 0.045)} haloed={false} />
+          <View style={[R(HUB.griffes, 'droite'), styles.hubPilule, { justifyContent: 'space-between', paddingLeft: 4, paddingRight: 3 }]}>
+            <CurrencyIcon kind="griffes" size={Math.round(ui.h * 0.045)} haloed={false} />
             <Text style={[styles.hubPiluleTexte, { fontSize: police(0.034), color: '#ffffff' }]} numberOfLines={1}>{griffes}</Text>
-            <TouchableOpacity onPress={buyGriffesWithDiamonds} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[styles.hubPlus, { width: scene.h * 0.045, height: scene.h * 0.045 }]}>
+            <TouchableOpacity onPress={buyGriffesWithDiamonds} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[styles.hubPlus, { width: ui.h * 0.045, height: ui.h * 0.045 }]}>
               <Text style={[styles.hubPlusTexte, { fontSize: police(0.034) }]}>+</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => setRunesOpen(true)} activeOpacity={0.8} style={[R(HUB.runes), { alignItems: 'center', justifyContent: 'center' }]}>
-            <Image source={GLOW_CYAN} resizeMode="contain" style={{ position: 'absolute', width: '190%', height: '190%' }} />
-            <Image source={RUNES_GEM} resizeMode="contain" style={{ width: '100%', height: '100%' }} />
+          <TouchableOpacity onPress={() => setRunesOpen(true)} activeOpacity={0.8} style={[R(HUB.runes, 'droite'), { alignItems: 'center', justifyContent: 'center' }]}>
+            <Image source={GLOW_CYAN} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', width: '190%', height: '190%' }} />
+            <Image source={RUNES_GEM} resizeMethod="scale" resizeMode="contain" style={{ width: '100%', height: '100%' }} />
           </TouchableOpacity>
 
           {/* ── Les 3 pilotis : la créature du deck DEBOUT sur le dessus (pieds au
@@ -1181,10 +1199,10 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
             const own = id ? ownedMap[id] : null;
             const stade = own ? stageForLevel(own.level) : 0;
             const display = creature && own ? creature.stages[stade] : null;
-            const cx = scene.x + HUB.pilotis[i] * scene.l;
-            const dessus = scene.y + HUB.dessus * scene.h;
-            const lp = HUB.pilotisL * scene.l;
-            const ch = HUB.creatureH * scene.h;
+            const cx = fond.x + HUB.pilotis[i] * fond.l;
+            const dessus = fond.y + HUB.dessus * fond.h;
+            const lp = HUB.pilotisL * fond.l;
+            const ch = HUB.creatureH * fond.h;
             const cad = display ? (CADRAGE_CREATURES[id] || {})[stade] : null;
             let art = null;
             if (display && cad) {
@@ -1198,30 +1216,30 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
             } else if (display) {
               art = <Text style={{ position: 'absolute', left: cx - ch * 0.5, top: dessus - ch * 0.95, width: ch, textAlign: 'center', fontSize: Math.round(ch * 0.72), pointerEvents: 'none' }}>{display.emoji}</Text>;
             }
-            const pl = HUB.plus.l * scene.l; const ph = HUB.plus.h * scene.h; const py = scene.y + HUB.plus.cy * scene.h;
-            const cl = HUB.changer.l * scene.l;
+            const pl = HUB.plus.l * fond.l; const ph = HUB.plus.h * fond.h; const py = fond.y + HUB.plus.cy * fond.h;
+            const cl = HUB.changer.l * fond.l;
             return (
               <React.Fragment key={i}>
                 {art}
                 {!display && (
                   <>
-                    <Image source={HUB_IMG.lueur} resizeMode="stretch" style={{ position: 'absolute', left: cx - pl * 1.5, top: py - ph, width: pl * 3, height: ph * 2, opacity: 0.75, pointerEvents: 'none' }} />
-                    <Image source={HUB_IMG.plus} resizeMode="stretch" style={{ position: 'absolute', left: cx - pl / 2, top: py - ph / 2, width: pl, height: ph, pointerEvents: 'none' }} />
+                    <Image source={HUB_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: cx - pl * 1.5, top: py - ph, width: pl * 3, height: ph * 2, opacity: 0.75, pointerEvents: 'none' }} />
+                    <Image source={HUB_IMG.plus} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: cx - pl / 2, top: py - ph / 2, width: pl, height: ph, pointerEvents: 'none' }} />
                   </>
                 )}
                 {/* Zone tactile : la créature et son pilotis (fiche, ou sélecteur si vide). */}
                 <TouchableOpacity activeOpacity={0.85} onPress={() => (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i))}
-                  style={{ position: 'absolute', left: cx - lp / 2, top: dessus - ch * 1.05, width: lp, height: ch * 1.05 + (HUB.changer.y0 - HUB.dessus) * scene.h }} />
+                  style={{ position: 'absolute', left: cx - lp / 2, top: dessus - ch * 1.05, width: lp, height: ch * 1.05 + (HUB.changer.y0 - HUB.dessus) * fond.h }} />
                 <TouchableOpacity activeOpacity={0.8} onPress={() => setDeckPickerSlot(i)}
-                  style={{ position: 'absolute', left: cx - cl / 2, top: scene.y + HUB.changer.y0 * scene.h, width: cl, height: (HUB.changer.y1 - HUB.changer.y0) * scene.h }}>
-                  <Image source={HUB_IMG.changer} resizeMode="stretch" style={{ width: '100%', height: '100%' }} />
+                  style={{ position: 'absolute', left: cx - cl / 2, top: fond.y + HUB.changer.y0 * fond.h, width: cl, height: (HUB.changer.y1 - HUB.changer.y0) * fond.h }}>
+                  <Image source={HUB_IMG.changer} resizeMethod="scale" resizeMode="stretch" style={{ width: '100%', height: '100%' }} />
                 </TouchableOpacity>
               </React.Fragment>
             );
           })}
 
           {/* ── COMBAT : il SCINTILLE un peu (lueur qui respire + étincelles), voir BoutonCombat. */}
-          <BoutonCombat rect={R(HUB.combat)} rectLueur={R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05])} onPress={() => setChapterMapOpen(true)} />
+          <BoutonCombat rect={R(HUB.combat, 'centre', 'bas')} rectLueur={R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05], 'centre', 'bas')} onPress={() => setChapterMapOpen(true)} />
         </>
       )}
 
