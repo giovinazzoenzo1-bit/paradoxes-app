@@ -1140,7 +1140,9 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   return (
     <View style={styles.hubRacine} onLayout={(e) => setBgSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
       {/* Le même décor, flouté, remplit l'écran autour de la scène 16:9. */}
-      <Image source={HUB_DECOR} blurRadius={14} resizeMode="cover" style={StyleSheet.absoluteFill} />
+      {/* Largeur/hauteur EXPLICITES : une <Image> en absoluteFill seul se dessine à sa
+          taille D'ORIGINE sur téléphone (bug du 13/09 revenu le 03/10). */}
+      <Image source={HUB_DECOR} blurRadius={14} resizeMode="cover" style={styles.hubPleineImage} />
       <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(5,12,18,0.35)' }]} />
       {scene.l > 0 && (
         <>
@@ -1148,7 +1150,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
 
           {/* ── En haut : RETOUR, titre, puissance (+ élixir), Griffes, Runes. */}
           <TouchableOpacity onPress={onBack} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[R(HUB.retour), { justifyContent: 'center' }]}>
-            <Image source={HUB_IMG.retour} resizeMode="stretch" style={StyleSheet.absoluteFill} />
+            <Image source={HUB_IMG.retour} resizeMode="stretch" style={styles.hubPleineImage} />
             <Text style={[styles.hubRetourTexte, { fontSize: police(0.02), marginLeft: (HUB.retour[2] - HUB.retour[0]) * scene.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
           </TouchableOpacity>
           <Image source={HUB_IMG.titre} resizeMode="stretch" style={R(HUB.titre)} />
@@ -3218,6 +3220,8 @@ const styles = StyleSheet.create({
   hubPiluleTexte: { color: '#eafbe8', fontWeight: '900', includeFontPadding: false },
   hubPlus: { backgroundColor: '#e0323a', borderRadius: 6, borderWidth: 1.5, borderColor: '#ffd2d2', alignItems: 'center', justifyContent: 'center' },
   hubPlusTexte: { color: '#ffffff', fontWeight: '900', includeFontPadding: false, marginTop: -1 },
+  // Image qui remplit son parent : largeur ET hauteur explicites (auditImagesTailleExplicite).
+  hubPleineImage: { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' },
   hubEtincelle: { position: 'absolute', color: '#fff7d6', textShadowColor: '#ffcf4d', textShadowRadius: 6, includeFontPadding: false, pointerEvents: 'none' },
   hubRetourTexte: { color: '#3a2608', fontWeight: '900', letterSpacing: 0.8, textAlign: 'center', includeFontPadding: false },
   conseilleeText: { fontWeight: '800', fontSize: 14, textAlign: 'center', marginTop: 2 },

@@ -1787,3 +1787,22 @@ les retours anticipés d'AdventureScreen).
 navigateur (le module natif manque : la boucle native ne démarre pas). Pour
 vérifier une boucle, variante de scène qui force useNativeDriver: false
 (Animated.timing enveloppé), comme pour les scènes « lentes ».
+
+
+## ⚠️ 03/10 — BUG RÉCIDIVÉ : <Image> à la taille D'ORIGINE sur téléphone
+
+Capture de l'auteur : le panneau RETOUR du hub de l'Exploration s'étalait sur la
+moitié de l'écran (texte coincé dans son coin). CAUSE : <Image style=
+{StyleSheet.absoluteFill}> — sur TÉLÉPHONE, React Native donne d'office à une
+Image la taille D'ORIGINE de son fichier ; les 4 bords à 0 ne l'écrasent pas.
+Le NAVIGATEUR du banc ne le montre pas (l'image y remplit son parent) → banc
+« juste », téléphone faux. C'est EXACTEMENT le bug du 13/09 (f12767b, bouton
+d'inventaire géant) — la leçon n'était qu'un COMMENTAIRE, sans contrôle, et
+l'historique n'a pas été consulté avant d'écrire le hub.
+RÈGLE : une <Image> qui remplit son parent a une LARGEUR ET une HAUTEUR
+explicites (ex. styles.hubPleineImage : width/height '100%'), ou passe par
+ImageBackground (il retransmet largeur/hauteur à son image interne : sûr).
+GARDE : **auditImagesTailleExplicite** (tout src/, commentaires retirés : Image /
+Animated.Image en absoluteFill, aux 4 bords écrits à la main, ou par un style
+nommé qui remplit — sans `width`) + 2 sabotages. Corrigés : RETOUR et le fond
+flouté du hub (qui se posait aussi à sa taille d'origine, calé en haut à gauche).

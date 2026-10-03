@@ -4155,3 +4155,41 @@ function auditHubExploration() {
   return pb;
 }
 module.exports.auditHubExploration = auditHubExploration;
+
+// ── Images : largeur ET hauteur EXPLICITES (bug récidivé : 13/09 → 03/10) ──
+// Sur TÉLÉPHONE, React Native donne d'office à une <Image> la taille D'ORIGINE
+// de son fichier ; `StyleSheet.absoluteFill` (4 bords à 0) ne l'écrase pas →
+// plaque géante, texte coincé dans son coin (bouton d'inventaire, f12767b ;
+// RETOUR du hub de l'Exploration, 03/10). Le NAVIGATEUR du banc ne le montre
+// pas (l'image y remplit son parent). ImageBackground est sûr (il retransmet
+// largeur/hauteur à son image interne). Exige : aucune <Image> / <Animated.Image>
+// dont le style contient absoluteFill sans `width`.
+function auditImagesTailleExplicite() {
+  const fs = require('fs'); const path = require('path');
+  const pb = [];
+  const fichiers = [];
+  (function parcourir(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) parcourir(p); else if (p.endsWith('.js')) fichiers.push(p); } })(path.join(__dirname, '../src'));
+  for (const f of fichiers) {
+    let s = fs.readFileSync(f, 'utf8');
+    s = s.replace(/\{\/\*[\s\S]*?\*\/\}/g, (m) => m.replace(/[^\n]/g, ' ')).replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).replace(/\/\/[^\n]*/g, (m) => ' '.repeat(m.length));
+    // Styles NOMMÉS de la feuille qui « remplissent » leur parent sans largeur.
+    const remplis = new Set();
+    const reStyle = /\n {2}([A-Za-z0-9_]+): \{([^{}]*)\}/g; let ms;
+    while ((ms = reStyle.exec(s))) {
+      const c = ms[2];
+      if ((/absoluteFillObject/.test(c) || (/\bright: 0\b/.test(c) && /\bbottom: 0\b/.test(c))) && !/\bwidth\b/.test(c)) remplis.add(ms[1]);
+    }
+    const re = /<(Animated\.Image|Image)\b([\s\S]*?)\/?>/g; let m;
+    while ((m = re.exec(s))) {
+      const attrs = m[2]; const st = attrs.match(/style=\{([\s\S]*?)\}\s*(\/|$|[a-zA-Z])/);
+      const style = st ? st[1] : '';
+      const ou = `${path.relative(path.join(__dirname, '..'), f)}:${s.slice(0, m.index).split('\n').length}`;
+      if (/\bwidth\b/.test(style)) continue;
+      if (/absoluteFill/.test(style)) pb.push(`${ou} — <${m[1]}> en absoluteFill sans largeur/hauteur : taille D'ORIGINE sur téléphone`);
+      else if (/\bright: 0\b/.test(style) && /\bbottom: 0\b/.test(style)) pb.push(`${ou} — <${m[1]}> aux 4 bords sans largeur/hauteur : taille D'ORIGINE sur téléphone`);
+      (style.match(/styles\.([A-Za-z0-9_]+)/g) || []).forEach((x) => { const n = x.slice(7); if (remplis.has(n)) pb.push(`${ou} — <${m[1]}> style « ${n} » qui remplit sans largeur/hauteur : taille D'ORIGINE sur téléphone`); });
+    }
+  }
+  return pb;
+}
+module.exports.auditImagesTailleExplicite = auditImagesTailleExplicite;
