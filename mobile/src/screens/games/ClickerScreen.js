@@ -4,7 +4,7 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { noterToucher, noterTap, noterImage } from '../../games/clicker/diagnosticTaps';
+import { noterToucher, noterTap, noterImage, noterRendu } from '../../games/clicker/diagnosticTaps';
 import { Easing, View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
@@ -682,7 +682,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Shop quittait l'appli au lieu de revenir en arrière.
   const panHandlers = useBackGesture(view !== 'tap' ? () => setView('tap') : onBack);
   const [selectedCreature, setSelectedCreature] = useState(null);
-  const [popups, setPopups] = useState([]);
+  // « +X » des taps : calque AUTONOME (03/10) — voir CoucheEffetsTap.
+  const coucheEffetsRef = useRef(null);
   const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, leftPct, topPct}
   const [deck, setDeck] = useState([null, null, null]);
   // ---- Le Gardien calé sur le deck (24/09) ----
@@ -1756,12 +1757,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const spawnPopup = (text, x, y, isCrit, tap = false, teinte = null) => {
     const id = popupIdRef.current++;
-    setPopups((p) => [...p, { id, text, x, y, isCrit, tap, teinte }]);
-    setTimeout(() => setPopups((p) => p.filter((pp) => pp.id !== id)), 700);
+    if (coucheEffetsRef.current) coucheEffetsRef.current.ajouter({ id, text, x, y, isCrit, tap, teinte });
   };
 
   // ── Diagnostic des taps (02/10) : zone de l'œuf mesurée, capteur neutre,
   // horloge d'images. Voir games/clicker/diagnosticTaps.js.
+  noterRendu(); // diagnostic : chaque rendu de l'écran de jeu
   const zoneTapRef = useRef(null);
   const zoneTapRect = useRef(null);
   const mesurerZoneTap = () => {
@@ -1781,13 +1782,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const handleTap = (evt) => {
-    const debutTap = Date.now();
+  // Traitement d'UN tap (logique du jeu, inchangée) ; `instant` = heure EXACTE du
+  // toucher (Transe et combos calculés comme si le tap était traité sur-le-champ).
+  const traiterTap = (evt, instant) => {
     // Volontairement AVANT tout le reste et sans `return` : le tap
     // compte pour le boss puis continue son chemin normal (pièces,
     // critiques, minuteur d'œuf).
     handleBossTap();
-    const now = Date.now();
+    const now = instant || Date.now();
 
     // Transe : la fenêtre entre deux taps décide si le combo continue ou repart de 1.
     const stillActive = transeStillActive(lastTapTimeRef.current, now);
@@ -1906,8 +1908,47 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     trackEvent('taps', 1);
 
     if (eggPhaseRef.current !== 'collecting') handleEggTap();
-    noterTap(Date.now() - debutTap);
   };
+
+  // ── Taps REGROUPÉS par fenêtre de 100 ms (03/10) ──────────────────────────
+  // Diagnostic de l'auteur : ~24 taps/s → 128 figements (> 100 ms) en 44 s ;
+  // au banc : 2,4 rendus COMPLETS de l'écran par tap. Chaque tap est REÇU tout
+  // de suite (heure exacte + position copiées), puis les taps d'une même
+  // fenêtre sont TRAITÉS ensemble : React n'en fait qu'UN rendu. Le 1er tap
+  // après un calme est traité IMMÉDIATEMENT (aucun retard sur un tap isolé).
+  // ⚠️ `handleTap` reste le point d'entrée de la zone (auditZoneTapAuContact).
+  const FENETRE_TAPS = 100; // mesuré au banc : 70 → ~1,2 tap / lot ; 100 → davantage regroupés
+  const fileTaps = useRef([]);
+  const dernierLotTaps = useRef(0);
+  const minuteurTaps = useRef(null);
+  const viderTaps = () => {
+    minuteurTaps.current = null; dernierLotTaps.current = Date.now();
+    const lot = fileTaps.current; fileTaps.current = [];
+    if (!lot.length) return;
+    const t0 = Date.now();
+    lot.forEach(([e, t]) => traiterTap(e, t));
+    // Pièces gagnées par le lot versées DANS LE MÊME RENDU (mesuré au banc :
+    // le minuteur de 100 ms les versait dans un 2e rendu, après chaque lot) ;
+    // le minuteur ne verse plus que ce qui s'accumule entre deux lots.
+    const gainDuLot = pendingGainRef.current;
+    if (gainDuLot > 0) {
+      pendingGainRef.current = 0;
+      setCoins((c) => c + gainDuLot);
+      setTotalEarned((tt) => tt + gainDuLot);
+      trackEvent('coinsEarned', gainDuLot);
+    }
+    noterTap(Date.now() - t0, lot.length);
+  };
+  const viderTapsRef = useRef(viderTaps); viderTapsRef.current = viderTaps;
+  const handleTap = (evt) => {
+    const ne = (evt && evt.nativeEvent) || {};
+    fileTaps.current.push([{ nativeEvent: { locationX: ne.locationX, locationY: ne.locationY, pageX: ne.pageX, pageY: ne.pageY } }, Date.now()]);
+    if (minuteurTaps.current) return;
+    const attente = FENETRE_TAPS - (Date.now() - dernierLotTaps.current);
+    if (attente <= 0) viderTaps();
+    else minuteurTaps.current = setTimeout(() => viderTapsRef.current(), attente);
+  };
+  useEffect(() => () => clearTimeout(minuteurTaps.current), []);
 
   // Le joueur a tapé la créature apparue à temps : son pouvoir s'active,
   // différent selon la créature (pas juste sa rareté).
@@ -3960,9 +4001,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   bloqué TOUS les taps (MESURÉ au banc fidèle : 0 à 1 sur 20).
                   Contrôles auditZoneTapLibre et auditPointerEventsStyle. */}
               <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
-                {popups.map((p) => (
-                  <TapEffect key={p.id} x={p.x} y={p.y} text={p.text} crit={p.isCrit} tap={p.tap} teinte={p.teinte} />
-                ))}
+                <CoucheEffetsTap ref={coucheEffetsRef} />
               </View>
               {powerCast && <PowerCastEffect key={powerCast.id} cast={powerCast} />}
               {/* Bulles de pouvoir : toutes FRÈRES du bouton tapable, pas
@@ -5333,6 +5372,23 @@ function PowerAttacker({ creatureId, stage, attaque }) {
 // Transparent au toucher PAR LE STYLE (règle SDK 57, bug de tap du 27/09).
 const TAP_EFFET_MS = 650;
 const TAP_ETINCELLES = [0, 1, 2, 3, 4, 5].map((i) => ({ angle: (i / 6) * Math.PI * 2 + 0.35, portee: 26 + (i % 3) * 7 }));
+// ── Calque des « +X » de tap : état LOCAL (03/10) ─────────────────────────
+// Mesuré au banc : chaque tap redessinait TOUT l'écran deux fois (ajout du
+// « +X », puis son retrait 700 ms plus tard). Ici, l'ajout et le retrait ne
+// redessinent QUE ce calque. L'écran appelle ref.ajouter({ id, text, … }).
+const CoucheEffetsTap = React.forwardRef(function CoucheEffetsTap(_props, ref) {
+  const [effets, setEffets] = useState([]);
+  const minuteurs = useRef([]);
+  React.useImperativeHandle(ref, () => ({
+    ajouter: (e) => {
+      setEffets((l) => [...l, e]);
+      minuteurs.current.push(setTimeout(() => setEffets((l) => l.filter((x) => x.id !== e.id)), 700));
+    },
+  }), []);
+  useEffect(() => () => minuteurs.current.forEach(clearTimeout), []);
+  return effets.map((p) => <TapEffect key={p.id} x={p.x} y={p.y} text={p.text} crit={p.isCrit} tap={p.tap} teinte={p.teinte} />);
+});
+
 function TapEffect({ x, y, text, crit, tap, teinte }) {
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {

@@ -13,7 +13,7 @@
 // - figements : images de plus de 100 ms (le fil JS sature).
 export const mesuresTaps = {
   touchers: 0, horsZone: 0, comptes: 0, dureeTotale: 0, dureePire: 0,
-  images: 0, figements: 0, pireFigement: 0, debut: 0,
+  images: 0, figements: 0, pireFigement: 0, debut: 0, rendus: 0, lots: 0,
 };
 if (typeof window !== 'undefined') window.__mesuresTaps = mesuresTaps; // banc
 
@@ -21,10 +21,13 @@ export function noterToucher(dansZone) {
   if (!mesuresTaps.debut) mesuresTaps.debut = Date.now();
   if (dansZone) mesuresTaps.touchers += 1; else mesuresTaps.horsZone += 1;
 }
-export function noterTap(dureeMs) {
-  mesuresTaps.comptes += 1; mesuresTaps.dureeTotale += dureeMs;
+// `n` taps traités ensemble (taps regroupés par fenêtre, 03/10) ; durée du lot.
+export function noterTap(dureeMs, n = 1) {
+  mesuresTaps.comptes += n; mesuresTaps.lots += 1; mesuresTaps.dureeTotale += dureeMs;
   if (dureeMs > mesuresTaps.dureePire) mesuresTaps.dureePire = dureeMs;
 }
+// Un rendu de l'écran de jeu (chaque rendu redessine tout l'écran).
+export function noterRendu() { mesuresTaps.rendus += 1; }
 export function noterImage(ecartMs) {
   mesuresTaps.images += 1;
   if (ecartMs > 100) { mesuresTaps.figements += 1; if (ecartMs > mesuresTaps.pireFigement) mesuresTaps.pireFigement = ecartMs; }
@@ -38,7 +41,8 @@ export function lignesDiagnosticTaps(m = mesuresTaps) {
     `Diagnostic des taps (depuis ${duree} s) :`,
     `- Touchers sur l'œuf : ${m.touchers} · taps comptés : ${m.comptes} · perdus : ${perdus} (${pct} %)`,
     `- Touchers ailleurs : ${m.horsZone}`,
-    `- Traitement d'un tap : moyenne ${m.comptes ? (m.dureeTotale / m.comptes).toFixed(1) : 0} ms · pire ${m.dureePire} ms`,
+    `- Traitement : ${m.lots} lots (${m.lots ? (m.comptes / m.lots).toFixed(1) : 0} taps / lot) · moyenne ${m.lots ? (m.dureeTotale / m.lots).toFixed(1) : 0} ms · pire ${m.dureePire} ms`,
+    `- Rendus de l'écran : ${m.rendus} (${duree ? (m.rendus / duree).toFixed(1) : 0} / s)`,
     `- Figements (> 100 ms) : ${m.figements} sur ${m.images} images · pire ${m.pireFigement} ms`,
   ];
 }

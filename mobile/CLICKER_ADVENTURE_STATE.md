@@ -1720,3 +1720,25 @@ Le diagnostic reste en place (à retirer quand l'auteur confirme).
 
 À suivre : le pire figement (4 441 ms) a pu venir de l'activation du POUVOIR
 (plutôt que du lancement) — à vérifier avec l'auteur au prochain rapport.
+
+
+## 03/10 — Bug des taps CONFIRMÉ CORRIGÉ + saccades réduites (rendus −49 %)
+
+Rapport de l'auteur après le correctif onResponderStart : 1 058 touchers, 1 055
+comptés (0 % perdus) ; mais 128 figements (> 100 ms) en 44 s à ~24 taps/s.
+Mesuré au banc (`/tmp/mesure-rendus` : 50 touchers chevauchés en 2 s, compteur
+de rendus `noterRendu`) : 237 rendus COMPLETS de l'écran (≈ 2,4 par tap) ;
+au repos 3,5 / s. Trois sources, corrigées une à une, MESURÉES :
+1. un rendu par tap → taps REGROUPÉS par fenêtre de 100 ms (`handleTap` reçoit
+   l'heure exacte + la position, `traiterTap` = ancienne logique avec
+   `instant` ; 1er tap après un calme traité IMMÉDIATEMENT) : 237 → 221 ;
+2. les « +X » ajoutés PUIS retirés (700 ms) redessinaient tout l'écran →
+   calque AUTONOME `CoucheEffetsTap` (état local, ref.ajouter) : → 175 ;
+   (fenêtre 70 → 100 ms : → 167) ;
+3. les pièces versées par le minuteur de 100 ms dans un 2e rendu → versées à
+   la FIN DE CHAQUE LOT (même rendu ; trackEvent une fois par lot) : → 120.
+Vérifié : sonde 20 / 20, chevauchés 42 / 42, pièces 0 → 38 après 25 taps.
+Fausses pistes ÉCARTÉES par vérification : mode strict (banc en production),
+effet sur `trackEvent` (useCallback([]) : stable), sauvegarde (différée).
+auditZoneTapLibre suit le nouveau calque (`<CoucheEffetsTap ref=… />`).
+Diagnostic gardé jusqu'au prochain rapport de l'auteur (comparer les figements).

@@ -3890,7 +3890,9 @@ function auditZoneTapLibre() {
   const fs = require('fs'), path = require('path');
   const C = fs.readFileSync(path.join(__dirname, '..', 'src/screens/games/ClickerScreen.js'), 'utf8');
   const fautes = [];
-  const i = C.indexOf('{popups.map((p) => (');
+  // 03/10 : les « +X » vivent dans un calque autonome (CoucheEffetsTap), posé
+  // dans le même calque transparent au toucher par le style.
+  const i = C.indexOf('<CoucheEffetsTap ref={coucheEffetsRef} />');
   const avant = i > 0 ? C.slice(Math.max(0, i - 200), i) : '';
   // FORME STYLE exigée : la propriété pointerEvents est ignorée depuis le SDK 57.
   if (!/<View style=\{\[StyleSheet\.absoluteFill, \{ pointerEvents: 'none' \}\]\}>\s*$/.test(avant)) fautes.push({ probleme: 'les « +X » de tap ne sont plus dans un calque transparent au toucher PAR LE STYLE (ils avalent les taps suivants)' });
