@@ -1903,3 +1903,21 @@ adventure:state:v2 injectée).
 Proposé ensuite : l'écran de COMBAT (attaques peu lisibles, mana invisible,
 créature qui flotte, badge d'élément, abandon sans confirmation), puis
 l'aperçu de niveau (panneau bleu uni hors style).
+
+
+## 03/10 — Aperçu de niveau : maquette « Le médaillon » RETENUE (pièces attendues)
+
+Maquette : design/a-integrer/06-aventure-apercu/concepts/1791046913494.jpg
+(paysage). MESURES (fractions de la maquette, grille 2,5 %) : RETOUR 1,5-14 ×
+1-8 (→ PanneauRetour commun) ; titre 35-65 × 8,5-17 ; grand médaillon
+42,5-57 × 20,5-47,5 (rond) ; plaque adversaire 39,5-60,5 × 47-53,5 ; puissance
+(texte vert/orange/rouge) ~55-59 ; 3 petits médaillons d'équipe 36-44,5 /
+45,5-54,5 / 55-63,5 × 61-77 ; COMBATTRE 37,5-62 × 81-92 ; énergie 93-97 ;
+en haut à droite : Éléments 69,5-80,5, Griffes 82-91,5, énergie 92,5-98 (× 3-9)
+= l'en-tête de la CARTE, déjà là. Pièces demandées (prompts PROMPTS-PIECES.md) :
+plaque SANS texte (aussi pour l'adversaire), médaillon VIDE (aussi pour
+l'équipe), COMBATTRE. À FAIRE à l'arrivée : FighterSelectOverlay au nouveau
+dessin, logique INCHANGÉE (onClose, onStart, « Deck vide », énergie à 0 :
+📺 +1 et 💎, fiche au toucher d'une créature) ; 2-3 adversaires = 2-3
+médaillons côte à côte ; fond : l'île du CHAPITRE floutée et assombrie (la
+maquette montre le ponton du hub, car Gemini avait l'Exploration en image 3).
