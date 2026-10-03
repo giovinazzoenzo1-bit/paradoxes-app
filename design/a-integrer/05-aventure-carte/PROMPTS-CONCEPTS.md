@@ -1,0 +1,25 @@
+# Exploration : 3 concepts « pas un menu classique » (03/10)
+
+Joindre 3 images : IMAGE 1 = capture du MENU PRINCIPAL ; IMAGE 2 = capture de ton écran EXPLORATION actuel ; IMAGE 3 = `iles-reference.jpg` (les 12 îles du jeu, dans ce dossier). Un prompt par concept, chacun dans une NOUVELLE conversation.
+
+Réutilisable : les 12 îles de chapitre (actuel/chapter-*.jpg).
+
+Lien : https://github.com/giovinazzoenzo1-bit/paradoxes-app/upload/main/design/a-integrer/05-aventure-carte/concepts
+
+**1. L'Archipel céleste (recommandé)**
+
+```
+I'm sending you 3 images. IMAGE 1 is my mobile game's main menu: it is the STYLE REFERENCE (hand-painted cozy magical forest, weathered wood, moss, vines, blue-grey pebbles, golden accents, glowing cyan mushrooms). IMAGE 2 is the current, old EXPLORATION screen: the adventure hub with the player's DECK of 3 creatures, their total power, the Griffes currency (used to level up creatures) and a COMBAT button to fight the next level. IMAGE 3 shows the 12 floating-island chapter maps that already exist in the game: each island has a winding path with round stone level spots. Redesign the EXPLORATION screen in the exact style of IMAGE 1, NOT a classic menu: a vertical journey through the floating islands of IMAGE 3, seen from above in slight perspective. The current island fills the middle of the screen with its path and round level spots: completed spots glow gold with 1 to 3 small stars, the next spot pulses with a bright marker and the player's 3 creatures stand on it as tiny figures, locked spots are greyed. The previous island is partly visible at the bottom and the next one, misty, at the top. A small wooden sign shows the chapter number and name. At the bottom, a mossy wooden bar holds the 3 DECK card slots (an empty slot shows a '+'), the total power with a shield icon, the Griffes amount with a paw icon, and a big glowing 'COMBAT' button. Keep the same top bar as IMAGE 1 (RETOUR wooden sign, diamonds and coins counters) and the same bottom navigation bar (SHOP / COLLECTION / EXPLORATION). Vertical phone screen 9:16. Everything readable, lots of breathing space, nothing overlapping. Texts in French.
+```
+
+**2. La Table de l'explorateur**
+
+```
+I'm sending you 3 images. IMAGE 1 is my mobile game's main menu: it is the STYLE REFERENCE (hand-painted cozy magical forest, weathered wood, moss, vines, blue-grey pebbles, golden accents, glowing cyan mushrooms). IMAGE 2 is the current, old EXPLORATION screen: the adventure hub with the player's DECK of 3 creatures, their total power, the Griffes currency (used to level up creatures) and a COMBAT button to fight the next level. IMAGE 3 shows the 12 floating-island chapter maps that already exist in the game: each island has a winding path with round stone level spots. Redesign the EXPLORATION screen in the exact style of IMAGE 1, NOT a classic menu: an explorer's wooden table seen from above at night, lit by a lantern: a large unrolled parchment map shows the floating islands of IMAGE 3 linked by dotted routes; the current island is circled in red ink with a small flag on the next level. A brass compass, a quill and a magnifying glass lie on the table. The player's 3 creatures are 3 small cards pinned on the table (DECK, an empty slot shows a '+'), next to a small leather pouch showing the Griffes amount and a wax seal showing the total power. A big wooden 'COMBAT' button at the bottom. Keep the same top bar as IMAGE 1 (RETOUR wooden sign, diamonds and coins counters) and the same bottom navigation bar (SHOP / COLLECTION / EXPLORATION). Vertical phone screen 9:16. Everything readable, lots of breathing space, nothing overlapping. Texts in French.
+```
+
+**3. Le Dirigeable**
+
+```
+I'm sending you 3 images. IMAGE 1 is my mobile game's main menu: it is the STYLE REFERENCE (hand-painted cozy magical forest, weathered wood, moss, vines, blue-grey pebbles, golden accents, glowing cyan mushrooms). IMAGE 2 is the current, old EXPLORATION screen: the adventure hub with the player's DECK of 3 creatures, their total power, the Griffes currency (used to level up creatures) and a COMBAT button to fight the next level. IMAGE 3 shows the 12 floating-island chapter maps that already exist in the game: each island has a winding path with round stone level spots. Redesign the EXPLORATION screen in the exact style of IMAGE 1, NOT a classic menu: the view from inside a small wooden airship flying above the clouds: through the large round window at the front, the next floating island of IMAGE 3 is visible with its path and level spots, the next spot marked by a glowing beacon. Inside the cabin, the player's 3 creatures sit on 3 cushioned seats (DECK slots, an empty seat shows a '+'), a brass gauge shows the total power, a small chest shows the Griffes amount, and a big brass lever labeled 'COMBAT' launches the fight. Keep the same top bar as IMAGE 1 (RETOUR wooden sign, diamonds and coins counters) and the same bottom navigation bar (SHOP / COLLECTION / EXPLORATION). Vertical phone screen 9:16. Everything readable, lots of breathing space, nothing overlapping. Texts in French.
+```
