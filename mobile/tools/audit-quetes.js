@@ -4079,8 +4079,8 @@ module.exports.auditRafaleArretee = auditRafaleArretee;
 // Album de cartes : une page par élément (4 cartes). Les 17 créatures à venir
 // s'y ajouteront seules — mais un élément mal écrit (« Lumiere ») les ferait
 // disparaître sans bruit. Exige : chaque créature dans UNE page, une seule
-// fois ; ≤ 4 cartes par page ; chaque élément du jeu a son ruban (ordre) ; le
-// composant affiche un ruban par élément de la liste.
+// fois ; ≤ 4 cartes par page ; chaque élément du jeu a son onglet (ordre) ; le
+// composant affiche un onglet et une icône par élément de la liste.
 function auditAlbumComplet() {
   const fs = require('fs'); const path = require('path');
   const L = require('../src/games/clicker/clickerLogic.js');
@@ -4098,7 +4098,11 @@ function auditAlbumComplet() {
     if (!A.ORDRE_ELEMENTS.includes(c.element)) pb.push(`${c.id} : élément « ${c.element} » sans ruban`);
   });
   const ecran = fs.readFileSync(path.join(__dirname, '../src/screens/games/CollectionAlbum.js'), 'utf8');
-  A.ORDRE_ELEMENTS.forEach((e) => { if (!ecran.includes(`{ cle: '${e}',`)) pb.push(`ruban de « ${e} » absent de CollectionAlbum`); });
+  // 2e version (02/10) : onglets pointus [cle, NOM] + visuel (icône, couleur) par élément.
+  A.ORDRE_ELEMENTS.forEach((e) => {
+    if (!ecran.includes(`['${e}', '`)) pb.push(`onglet de « ${e} » absent de CollectionAlbum`);
+    if (!ecran.includes(`${e}: { emoji`) && !ecran.includes(`'${e}': { emoji`)) pb.push(`icône / couleur de « ${e} » absentes de CollectionAlbum`);
+  });
   return pb;
 }
 module.exports.auditAlbumComplet = auditAlbumComplet;
