@@ -255,6 +255,7 @@ const APERCU = {
 const APERCU_IMG = {
   medaillon: require('../../../assets/exploration/medaillon.png'),
   combattre: require('../../../assets/exploration/bouton-combattre-vierge.png'),
+  plaque: require('../../../assets/exploration/plaque-titre.png'), // planche fine à bouts pointus (prompt 4), étirée aux proportions de la maquette
 };
 const MEDAILLON_INTERIEUR = 0.76; // rayon du disque / rayon extérieur (mesuré 0,779)
 
@@ -3227,14 +3228,24 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
       <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(6,12,16,0.5)' }]} />
       <PanneauRetour onPress={onClose} style={{ position: 'absolute', left: HUB.retour[0] * ui.l, top: HUB.retour[1] * ui.h }} />
 
-      <View style={[boite(APERCU.titre), styles.apercuPlaque]}>
-        <Text style={[styles.apercuTitre, { fontSize: Math.max(10, Math.round(ui.h * 0.048)) }]} numberOfLines={1}>
-          Chapitre {chapterForLevel(levelNumber)} · Niveau {levelIndexInChapter(levelNumber)}
-        </Text>
+      {/* Marge en POINTS (9 % de la plaque) : une marge en % se rapporte au PARENT (l'écran : 80 pts), le titre était tronqué. */}
+      <View style={[boite(APERCU.titre), styles.apercuPlaque, { paddingHorizontal: (APERCU.titre[2] - APERCU.titre[0]) * ui.l * 0.06 }]}>
+        <Image source={APERCU_IMG.plaque} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
+        {(() => {
+          // Taille selon la LONGUEUR du titre (« Chapitre 12 · Niveau 10 » doit tenir aussi).
+          const titre = `Chapitre ${chapterForLevel(levelNumber)} · Niveau ${levelIndexInChapter(levelNumber)}`;
+          const dispo = (APERCU.titre[2] - APERCU.titre[0]) * ui.l * 0.86;
+          return (
+            <Text style={[styles.apercuTitre, { fontSize: Math.max(9, Math.min(Math.round(ui.h * 0.046), Math.floor(dispo / (titre.length * 0.58)))) }]} numberOfLines={1}>
+              {titre}
+            </Text>
+          );
+        })()}
       </View>
 
       <Medaillon style={carre(APERCU.adversaire.cx, APERCU.adversaire.y0, APERCU.adversaire.y1)} creatureId={opponent.id} stade={0} emoji={display.emoji} />
-      <View style={[boite(APERCU.nom), styles.apercuPlaque]}>
+      <View style={[boite(APERCU.nom), styles.apercuPlaque, { paddingHorizontal: (APERCU.nom[2] - APERCU.nom[0]) * ui.l * 0.09 }]}>
+        <Image source={APERCU_IMG.plaque} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
         {/* Taille selon la LONGUEUR du nom : « Adversaire : Ombrillon » doit tenir dans la plaque. */}
         <Text style={[styles.apercuNom, { fontSize: Math.max(8, Math.min(Math.round(ui.h * 0.032), Math.floor(((APERCU.nom[2] - APERCU.nom[0]) * ui.l * 0.86) / ((13 + display.name.length) * 0.56)))) }]} numberOfLines={1}>
           Adversaire : <Text style={{ color: RARITY_COLOR[opponent.rarity] }}>{display.name}</Text>
@@ -3300,7 +3311,7 @@ const styles = StyleSheet.create({
   hubPleineImage: { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' },
   // Aperçu « Le médaillon » (03/10)
   apercuRacine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 15, backgroundColor: '#0b1418', overflow: 'hidden' },
-  apercuPlaque: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#6a4426', borderRadius: 8, borderWidth: 2, borderColor: '#c99a45' }, // PROVISOIRE : en attendant la plaque de Gemini
+  apercuPlaque: { alignItems: 'center', justifyContent: 'center' }, // la plaque (image) est dessous ; marge en points posée au rendu
   apercuTitre: { color: '#fbe9c4', fontWeight: '900', letterSpacing: 0.5, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, includeFontPadding: false },
   apercuNom: { color: '#fbe9c4', fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, includeFontPadding: false },
   apercuLigne: { textAlign: 'center', fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4, includeFontPadding: false },
