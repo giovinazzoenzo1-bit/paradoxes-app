@@ -1698,10 +1698,14 @@ l'envoi se CONDITIONNE au vert des deux suites (&&), jamais « ; ».
 
 ## ✅ 03/10 — Bug des taps : 3e CAUSE trouvée PAR LA MESURE et corrigée
 
-Rapport de l'auteur (diagnostic, 74 s) : 1 648 touchers sur l'œuf (~22/s, son
-autoclicker va bien plus vite que 150 ms), 1 021 comptés → 627 PERDUS (38 %) ;
+Rapport de l'auteur (diagnostic, 74 s) : 1 648 touchers sur l'œuf (~22/s : PAS
+l'autoclicker seul — précision de l'auteur : autoclicker + ses doigts pendant
+15 s, puis un pouvoir de créature et 6 DOIGTS à la fois pendant ~15 s ; ma
+remarque « autoclicker bien plus rapide que 150 ms » était FAUSSE,
+l'équilibrage à 150 ms reste la référence), 1 021 comptés → 627 PERDUS (38 %) ;
 traitement d'un tap 0,1 ms, 54 images/s en moyenne → PAS une saturation.
-CAUSE : touchers CHEVAUCHÉS — l'autoclicker re-touche avant d'avoir relâché ;
+CAUSE : touchers CHEVAUCHÉS — plusieurs doigts (et l'autoclicker) touchent
+avant que les autres aient relâché ;
 la zone comptait sur onResponderGrant (début du GESTE seulement) ; les
 touchers suivants arrivent en onResponderStart, que personne n'écoutait.
 REPRODUIT au banc (`tools/capture/chevauchement.mjs` : vrais événements
@@ -1713,3 +1717,6 @@ la sonde des taps simples reste à 20 / 20 (aucun double compte).
 auditZoneTapAuContact : exige onResponderStart, INTERDIT onResponderGrant
 pour compter ; 2 sabotages (TouchableOpacity ; retour au début du geste).
 Le diagnostic reste en place (à retirer quand l'auteur confirme).
+
+À suivre : le pire figement (4 441 ms) a pu venir de l'activation du POUVOIR
+(plutôt que du lancement) — à vérifier avec l'auteur au prochain rapport.
