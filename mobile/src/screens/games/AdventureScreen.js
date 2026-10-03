@@ -235,6 +235,59 @@ const HUB = {
   changer: { l: 0.109, y0: 0.6523, y1: 0.7201 },
   combat: [0.3772, 0.8542, 0.6206, 0.9661],
 };
+// ════════════════════════════════════════════════════════════════════
+//  APERÇU DE NIVEAU « LE MÉDAILLON » (03/10, maquette de l'auteur, paysage)
+// ════════════════════════════════════════════════════════════════════
+// Maquette : design/a-integrer/06-aventure-apercu/concepts/1791046913494.jpg.
+// Fractions MESURÉES (grille 2,5 %) ; tailles ramenées à la HAUTEUR de l'écran
+// comme le hub ; tout est centré. Médaillon = anneau doré de Gemini + disque
+// de bois taillé dans son cartouche (reconstitué) ; COMBATTRE = le bouton doré
+// du hub, texte effacé, réécrit par le code.
+const APERCU = {
+  titre: [0.35, 0.085, 0.65, 0.17],
+  adversaire: { cx: 0.4975, y0: 0.205, y1: 0.475 }, // grand médaillon (carré)
+  nom: [0.395, 0.47, 0.605, 0.535],
+  puissance: [0.28, 0.548, 0.72, 0.598],
+  equipe: { cx: [0.4025, 0.5, 0.5925], y0: 0.61, y1: 0.77 },
+  combattre: [0.375, 0.81, 0.62, 0.92],
+  energie: [0.28, 0.928, 0.72, 0.975],
+};
+const APERCU_IMG = {
+  medaillon: require('../../../assets/exploration/medaillon.png'),
+  combattre: require('../../../assets/exploration/bouton-combattre-vierge.png'),
+  plaque: require('../../../assets/exploration/plaque-titre.png'), // planche fine à bouts pointus (prompt 4), étirée aux proportions de la maquette
+};
+const MEDAILLON_INTERIEUR = 0.76; // rayon du disque / rayon extérieur (mesuré 0,779)
+
+// Un médaillon : disque de bois et anneau doré, la créature au centre (zoomée sur
+// sa zone dessinée, découpée en rond), un œuf si l'emplacement est vide.
+function Medaillon({ style, creatureId = null, stade = 0, emoji = '', onPress = null }) {
+  const t = style.width; const ri = t * MEDAILLON_INTERIEUR;
+  const cad = creatureId ? (CADRAGE_CREATURES[creatureId] || {})[stade] : null;
+  let art = null;
+  if (cad) {
+    const cote = ri * 0.82;
+    const T = Math.min(cote / (cad[2] - cad[0]), cote / (cad[3] - cad[1]));
+    art = (
+      <View style={{ position: 'absolute', left: ri / 2 - ((cad[0] + cad[2]) / 2) * T, top: ri / 2 - ((cad[1] + cad[3]) / 2) * T }}>
+        <CreatureArt creatureId={creatureId} stageIndex={stade} emoji={emoji} size={Math.round(T)} />
+      </View>
+    );
+  } else if (creatureId) {
+    art = <Text style={{ fontSize: Math.round(ri * 0.55), includeFontPadding: false }}>{emoji}</Text>;
+  } else {
+    art = <Text style={{ fontSize: Math.round(ri * 0.42), opacity: 0.35, includeFontPadding: false }}>🥚</Text>;
+  }
+  return (
+    <TouchableOpacity style={style} onPress={onPress} disabled={!onPress} activeOpacity={0.8}>
+      <Image source={APERCU_IMG.medaillon} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
+      <View style={{ position: 'absolute', left: (t - ri) / 2, top: (t - ri) / 2, width: ri, height: ri, borderRadius: ri / 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+        {art}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 // RETOUR de l'Exploration (hub ET carte des niveaux) : le MÊME panneau, à la même
 // taille (03/10 : « 100 fois trop gros », puis « un tout petit peu plus gros » ;
 // la carte l'a demandé pareil). Taille ramenée à la HAUTEUR de l'écran, comme
@@ -3157,122 +3210,92 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
     return () => { annule = true; clearTimeout(t); };
   }, [cleMesure]);
 
+  // ── Rendu « Le médaillon » : voir APERCU (fractions mesurées sur la maquette) ──
+  const { width: wFen, height: hFen } = useWindowDimensions();
+  const uiL = Math.min(hFen * HUB_RAPPORT, wFen); const ui = { l: uiL, h: uiL / HUB_RAPPORT };
+  const cxEcran = wFen / 2;
+  const oy = Math.max(0, (hFen - ui.h) / 2); // écran plus haut que 16:9 (tablette) : bloc centré verticalement
+  const boite = (f) => ({ position: 'absolute', left: cxEcran + (f[0] - 0.5) * ui.l, top: oy + f[1] * ui.h, width: (f[2] - f[0]) * ui.l, height: (f[3] - f[1]) * ui.h });
+  const carre = (cx, y0, y1) => { const c = (y1 - y0) * ui.h; return { position: 'absolute', left: cxEcran + (cx - 0.5) * ui.l - c / 2, top: oy + y0 * ui.h, width: c, height: c }; };
+  const couleurPuissance = !mesure ? COLORS.muted : mesure.couleur === 'vert' ? '#3DDC84' : mesure.couleur === 'orange' ? '#FFB74D' : '#FF6B6B';
+  const scene = CHAPTER_SCENES[chapterForLevel(levelNumber)];
+  const deckVide = teamCount === 0; const sansEnergie = energy <= 0;
+  const rectCombattre = boite(APERCU.combattre);
   return (
-    <View style={styles.overlay}>
-      <View style={styles.overlayPanel}>
-        <BackButton onPress={onClose} style={styles.overlayClose} />
-        <Text style={styles.overlayTitle}>
-          Chapitre {chapterForLevel(levelNumber)} · Niveau {levelIndexInChapter(levelNumber)}
-        </Text>
+    <View style={styles.apercuRacine}>
+      {/* Fond : l'île du chapitre, floutée et assombrie (le ponton du hub au-delà des îles dessinées). */}
+      <Image source={scene ? scene.bg : HUB_DECOR} blurRadius={10} resizeMethod="scale" resizeMode="cover" style={styles.hubPleineImage} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(6,12,16,0.5)' }]} />
+      <PanneauRetour onPress={onClose} style={{ position: 'absolute', left: HUB.retour[0] * ui.l, top: HUB.retour[1] * ui.h }} />
+
+      {/* Marge en POINTS (9 % de la plaque) : une marge en % se rapporte au PARENT (l'écran : 80 pts), le titre était tronqué. */}
+      <View style={[boite(APERCU.titre), styles.apercuPlaque, { paddingHorizontal: (APERCU.titre[2] - APERCU.titre[0]) * ui.l * 0.06 }]}>
+        <Image source={APERCU_IMG.plaque} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
         {(() => {
-          // Puissance conseillée (demande de l'auteur, 26/09). ⚠️ Couleurs sur
-          // la VRAIE chance à ce niveau (même simulation) : vert ≥ 6 sur 10
-          // (⇔ ta puissance ≥ conseillée), orange 3 à 6, rouge < 3. L'ancien
-          // orange (« à moins de 10 % ») annonçait « presque » pour 0 %.
-          const cons = puissanceConseillee(levelNumber);
-          const coul = !mesure ? COLORS.muted : mesure.couleur === 'vert' ? '#3DDC84' : mesure.couleur === 'orange' ? '#FFB74D' : '#FF6B6B';
+          // Taille selon la LONGUEUR du titre (« Chapitre 12 · Niveau 10 » doit tenir aussi).
+          const titre = `Chapitre ${chapterForLevel(levelNumber)} · Niveau ${levelIndexInChapter(levelNumber)}`;
+          const dispo = (APERCU.titre[2] - APERCU.titre[0]) * ui.l * 0.86;
           return (
-            <Text style={[styles.conseilleeText, { color: coul }]}>
-              🛡️ Ta puissance {mesure ? mesure.puissance : '…'} · conseillée {cons}
+            <Text style={[styles.apercuTitre, { fontSize: Math.max(9, Math.min(Math.round(ui.h * 0.046), Math.floor(dispo / (titre.length * 0.58)))) }]} numberOfLines={1}>
+              {titre}
             </Text>
           );
         })()}
-        <CreatureArt
-          creatureId={opponent.id}
-          stageIndex={0}
-          emoji={display.emoji}
-          size={72}
-          emojiStyle={{ fontSize: 50, marginVertical: 6 }}
-          style={{ marginVertical: 6 }}
-        />
-        <Text style={[styles.overlaySubtitle, { color: RARITY_COLOR[opponent.rarity] }]}>
-          Adversaire : {display.name}
+      </View>
+
+      <Medaillon style={carre(APERCU.adversaire.cx, APERCU.adversaire.y0, APERCU.adversaire.y1)} creatureId={opponent.id} stade={0} emoji={display.emoji} />
+      <View style={[boite(APERCU.nom), styles.apercuPlaque, { paddingHorizontal: (APERCU.nom[2] - APERCU.nom[0]) * ui.l * 0.09 }]}>
+        <Image source={APERCU_IMG.plaque} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
+        {/* Taille selon la LONGUEUR du nom : « Adversaire : Ombrillon » doit tenir dans la plaque. */}
+        <Text style={[styles.apercuNom, { fontSize: Math.max(8, Math.min(Math.round(ui.h * 0.032), Math.floor(((APERCU.nom[2] - APERCU.nom[0]) * ui.l * 0.86) / ((13 + display.name.length) * 0.56)))) }]} numberOfLines={1}>
+          Adversaire : <Text style={{ color: RARITY_COLOR[opponent.rarity] }}>{display.name}</Text>
         </Text>
+      </View>
+      <Text style={[boite(APERCU.puissance), styles.apercuLigne, { color: couleurPuissance, fontSize: Math.max(9, Math.round(ui.h * 0.036)) }]} numberOfLines={1}>
+        Ta puissance {mesure ? mesure.puissance : '…'} · conseillée {puissanceConseillee(levelNumber)}
+      </Text>
 
-        <Text style={[styles.overlaySubtitle, { marginTop: 14, marginBottom: 8 }]}>Ton équipe (à tour de rôle) :</Text>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          {deck.map((id, i) => {
-            const creature = id ? CREATURES.find((c) => c.id === id) : null;
-            const own = id ? ownedMap[id] : null;
-            const fighterDisplay = creature && own ? creature.stages[stageForLevel(own.level)] : null;
-            return (
-              // ⚠️ Tapable : c'est ICI que le joueur voit son équipe et
-              // se rend compte qu'elle est trop faible. Devoir ressortir
-              // jusqu'à l'accueil pour améliorer une créature cassait le
-              // geste naturel.
-              <TouchableOpacity
-                key={i}
-                style={[styles.fighterPick, creature && { borderColor: RARITY_COLOR[creature.rarity] }]}
-                onPress={() => (creature && onOpenCreature ? onOpenCreature(id) : null)}
-                disabled={!creature || !onOpenCreature}
-                activeOpacity={0.75}
-              >
-                {fighterDisplay ? (
-                  <CreatureArt
-                    creatureId={id}
-                    stageIndex={stageForLevel(own.level)}
-                    emoji={fighterDisplay.emoji}
-                    size={42}
-                    emojiStyle={{ fontSize: 30 }}
-                  />
-                ) : (
-                  <Text style={{ fontSize: 24, opacity: 0.3 }}>🥚</Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+      {deck.map((id, i) => {
+        const creature = id ? CREATURES.find((c) => c.id === id) : null;
+        const own = id ? ownedMap[id] : null;
+        const stade = own ? stageForLevel(own.level) : 0;
+        const d = creature && own ? creature.stages[stade] : null;
+        return (
+          <Medaillon key={i} style={carre(APERCU.equipe.cx[i], APERCU.equipe.y0, APERCU.equipe.y1)}
+            creatureId={d ? id : null} stade={stade} emoji={d ? d.emoji : ''}
+            onPress={creature && onOpenCreature ? () => onOpenCreature(id) : null} />
+        );
+      })}
+
+      <Image source={HUB_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={[boite([APERCU.combattre[0] - 0.04, APERCU.combattre[1] - 0.06, APERCU.combattre[2] + 0.04, APERCU.combattre[3] + 0.05]), { opacity: deckVide || sansEnergie ? 0.25 : 0.85, pointerEvents: 'none' }]} />
+      <TouchableOpacity style={[rectCombattre, (deckVide || sansEnergie) && { opacity: 0.6 }]} onPress={onStart} disabled={deckVide || sansEnergie} activeOpacity={0.85}>
+        <Image source={APERCU_IMG.combattre} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
+        {/* Centrage par une vue (textAlignVertical ne vaut que sur Android). */}
+        <View style={{ position: 'absolute', left: rectCombattre.width * 0.3, right: rectCombattre.width * 0.08, top: 0, bottom: 0, justifyContent: 'center', pointerEvents: 'none' }}>
+          <Text style={[styles.apercuCombattre, { fontSize: Math.max(10, Math.round(rectCombattre.height * (deckVide || sansEnergie ? 0.26 : 0.34))) }]} numberOfLines={1}>
+            {deckVide ? 'DECK VIDE' : sansEnergie ? "PLUS D'ÉNERGIE" : 'COMBATTRE'}
+          </Text>
         </View>
-
-        <Text style={styles.energyCostText}>⚡ Coûte 1 énergie ({energy}/{ENERGY_MAX} disponible{energy > 1 ? 's' : ''})</Text>
-
-        <View style={styles.startRow}>
-          <TouchableOpacity
-            style={[styles.startBattleBtn, styles.startBattleBtnFlex, (teamCount === 0 || energy <= 0) && styles.actionBtnDisabledAdv]}
-            onPress={onStart}
-            disabled={teamCount === 0 || energy <= 0}
-          >
-            <Text style={styles.startBattleBtnText}>
-              {teamCount === 0 ? 'Deck vide' : energy <= 0 ? '⚡ Plus d\'énergie' : '⚔️ Combattre'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Petit carré à DROITE plutôt qu'une barre en dessous : la
-              recharge est une action secondaire, elle ne doit pas peser
-              autant que « Combattre ». */}
-          {/* Pub AVANT les Diamants : c'est l'option gratuite, elle doit
-              être la première proposée quand le joueur est à sec. */}
-          {energy <= 0 && onWatchAdForEnergy && adsLeft > 0 && (
-            <TouchableOpacity
-              style={[styles.buyEnergyBtn, styles.adEnergyBtn, adLoading && styles.actionBtnDisabledAdv]}
-              onPress={onWatchAdForEnergy}
-              disabled={adLoading}
-            >
-              {adLoading
-                ? <ActivityIndicator size="small" color="#241a00" />
-                : (<>
-                    <Text style={styles.buyEnergyIcon}>📺</Text>
-                    <Text style={styles.adEnergyCost}>+1</Text>
-                  </>)}
+      </TouchableOpacity>
+      {/* Énergie à 0 : la vidéo d'abord (gratuite), puis les diamants — à droite de COMBATTRE. */}
+      {sansEnergie && (
+        <View style={[styles.apercuRecharges, { left: rectCombattre.left + rectCombattre.width + 10, top: rectCombattre.top, height: rectCombattre.height }]}>
+          {onWatchAdForEnergy && adsLeft > 0 && (
+            <TouchableOpacity style={[styles.buyEnergyBtn, styles.adEnergyBtn, adLoading && styles.actionBtnDisabledAdv]} onPress={onWatchAdForEnergy} disabled={adLoading}>
+              {adLoading ? <ActivityIndicator size="small" color="#241a00" /> : (<><Text style={styles.buyEnergyIcon}>📺</Text><Text style={styles.adEnergyCost}>+1</Text></>)}
             </TouchableOpacity>
           )}
-
-          {energy <= 0 && onBuyEnergy && (
-            <TouchableOpacity
-              style={[styles.buyEnergyBtn, diamonds < ENERGY_DIAMOND_COST && styles.actionBtnDisabledAdv]}
-              onPress={onBuyEnergy}
-              disabled={diamonds < ENERGY_DIAMOND_COST}
-            >
+          {onBuyEnergy && (
+            <TouchableOpacity style={[styles.buyEnergyBtn, diamonds < ENERGY_DIAMOND_COST && styles.actionBtnDisabledAdv]} onPress={onBuyEnergy} disabled={diamonds < ENERGY_DIAMOND_COST}>
               <Text style={styles.buyEnergyIcon}>💎</Text>
               <Text style={styles.buyEnergyCost}>{ENERGY_DIAMOND_COST}</Text>
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Recharge en Diamants quand la jauge est vide : sans ça, le
-            joueur n'a plus qu'à fermer l'appli et attendre. */}
-
-
-      </View>
+      )}
+      <Text style={[boite(APERCU.energie), styles.apercuLigne, styles.apercuEnergie, { fontSize: Math.max(9, Math.round(ui.h * 0.03)) }]} numberOfLines={1}>
+        ⚡ Coûte 1 énergie ({energy}/{ENERGY_MAX} disponible{energy > 1 ? 's' : ''})
+      </Text>
     </View>
   );
 }
@@ -3286,6 +3309,15 @@ const styles = StyleSheet.create({
   hubPlusTexte: { color: '#ffffff', fontWeight: '900', includeFontPadding: false, marginTop: -1 },
   // Image qui remplit son parent : largeur ET hauteur explicites (auditImagesTailleExplicite).
   hubPleineImage: { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' },
+  // Aperçu « Le médaillon » (03/10)
+  apercuRacine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 15, backgroundColor: '#0b1418', overflow: 'hidden' },
+  apercuPlaque: { alignItems: 'center', justifyContent: 'center' }, // la plaque (image) est dessous ; marge en points posée au rendu
+  apercuTitre: { color: '#fbe9c4', fontWeight: '900', letterSpacing: 0.5, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, includeFontPadding: false },
+  apercuNom: { color: '#fbe9c4', fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, includeFontPadding: false },
+  apercuLigne: { textAlign: 'center', fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4, includeFontPadding: false },
+  apercuEnergie: { color: '#bfe3ff', fontWeight: '700' },
+  apercuCombattre: { textAlign: 'center', color: '#5a360f', fontWeight: '900', letterSpacing: 1.2, includeFontPadding: false },
+  apercuRecharges: { position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 8 },
   hubEtincelle: { position: 'absolute', color: '#fff7d6', textShadowColor: '#ffcf4d', textShadowRadius: 6, includeFontPadding: false, pointerEvents: 'none' },
   hubRetourTexte: { color: '#3a2608', fontWeight: '900', letterSpacing: 0.8, textAlign: 'center', includeFontPadding: false },
   conseilleeText: { fontWeight: '800', fontSize: 14, textAlign: 'center', marginTop: 2 },

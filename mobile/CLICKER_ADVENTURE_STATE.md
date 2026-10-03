@@ -1923,7 +1923,7 @@ médaillons côte à côte ; fond : l'île du CHAPITRE floutée et assombrie (la
 maquette montre le ponton du hub, car Gemini avait l'Exploration en image 3).
 
 
-## ⚠️ EN COURS (03/10) — branche `apercu-medaillon`, NON publiée
+## 03/10 — Aperçu « Le médaillon » : PUBLIÉ (branche `apercu-medaillon` fusionnée)
 
 Aperçu de niveau « Le médaillon » ÉCRIT sur la branche (FighterSelectOverlay :
 fond = île du chapitre floutée, PanneauRetour, composant `Medaillon` (anneau
@@ -1935,5 +1935,10 @@ DECK VIDE / PLUS D'ÉNERGIE ; 📺 +1 et 💎 à sa droite à énergie nulle), �
 bloc centré verticalement sur les écrans hauts). Les pièces reçues ne collaient
 pas à la maquette (cartouche haut, anneau sans disque, COMBATTRE foncé) ;
 effacer « EXPLORATION » de la planche a échoué (bordure intérieure détruite).
-**RESTE** : la plaque du titre (prompt 4, forme exacte) → la poser à la place
-du style PROVISOIRE `apercuPlaque`, comparer à la maquette, fusionner, publier.
+FAIT : plaque du titre (prompt 4 : planche fine à bouts pointus, 1300 px, étirée
+aux proportions de la maquette) sous le titre ET le nom de l'adversaire.
+⚠️ PIÈGE : une marge en POURCENTAGE (`paddingHorizontal: '9%'`) se rapporte au
+PARENT (ici l'écran : 80 pts) → titre tronqué « Cha… », nom invisible ; marges
+en POINTS calculées sur la plaque. Titre et nom : taille selon leur LONGUEUR
+(« Chapitre 12 · Niveau 10 » tient aussi). Vérifié : 891×411, 731×411,
+tablette ; médaillon d'équipe → fiche ; textes entiers.
