@@ -1,3 +1,4 @@
+import { lignesDiagnosticTaps } from './diagnosticTaps';
 // ════════════════════════════════════════════════════════════════════
 //  DIAGNOSTIC — détecter un joueur bloqué, et rédiger son rapport
 // ════════════════════════════════════════════════════════════════════
@@ -130,8 +131,6 @@ export function detecterBlocages(etat) {
 // position dans le jeu, défis et leur avancement, problèmes détectés,
 // dernière erreur.
 const nombre = (v) => (fini(v) ? String(Math.round(v)) : String(v));
-
-import { lignesDiagnosticTaps } from './diagnosticTaps.js';
 
 export function construireRapport({ instantane, derniereErreur, appareil, build } = {}) {
   const i = instantane || {};

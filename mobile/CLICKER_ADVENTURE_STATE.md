@@ -1685,3 +1685,12 @@ une View qui l'ENTOURE.
 LECTURE : perdus > 0 avec peu de figements → élément qui intercepte / touchers
 qui se chevauchent ; beaucoup de figements → le téléphone sature (alléger
 les effets par tap). Retirer l'horloge d'images une fois le bug compris.
+
+⚠️ 02/10 — ERREUR DE PROCÉDURE corrigée : le diagnostic a été poussé alors que
+les suites étaient ROUGES (étapes séparées par « ; » au lieu de « && »).
+Causes : (1) import `./diagnosticTaps.js` dans diagnostic.js → auditSignalement
+ajoute lui-même « .js » → importer SANS extension ; (2) le sabotage de
+auditZoneTapAuContact visait la ligne EXACTE de la zone de tap, que la mesure
+de la zone a modifiée → repère PÉRIMÉ (contrôle aveugle). RÈGLE : toute
+modification d'une ligne visée par un sabotage → mettre le repère à jour ;
+l'envoi se CONDITIONNE au vert des deux suites (&&), jamais « ; ».
