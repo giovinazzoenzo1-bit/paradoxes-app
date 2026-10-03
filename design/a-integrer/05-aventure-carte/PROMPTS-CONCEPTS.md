@@ -49,3 +49,22 @@ I'm sending you 3 images. IMAGE 1 is my mobile game's main menu: it is the STYLE
 I'm sending you 3 images. IMAGE 1 is my mobile game's main menu: it is the STYLE REFERENCE (hand-painted cozy magical forest, weathered wood, moss, vines, golden accents, glowing cyan mushrooms). IMAGE 2 is the current, old EXPLORATION screen, shown in LANDSCAPE in the game. IMAGE 3 shows the 12 floating-island chapter maps of the game. Redesign this EXPLORATION screen in the style of IMAGE 1, as a CLEAN, MINIMAL, UNCLUTTERED screen with lots of empty space. Keep EXACTLY these elements and nothing more: top-left, a 'RETOUR' wooden sign; top-center, the title 'EXPLORATION' on a small wooden banner; top-right, in one neat row: the deck power (shield icon and a number), the Griffes amount (paw icon and a number) with a small '+' button, and a round Runes button (a glowing cyan gem); in the center, the 3 DECK cards, large, side by side, each with a small 'Changer' button under it (an empty slot shows a big '+'); at the bottom center, one big glowing 'COMBAT' button. No other button, no other text, no extra decoration in front of the elements. Background: the edge of a mossy cliff with a small wooden pier, overlooking the floating islands of IMAGE 3 far away in the sky, softly blurred and slightly darkened so that the elements stand out. Horizontal LANDSCAPE phone screen, 16:9 (the game shows this screen in landscape). No bottom navigation bar. Everything readable, nothing overlapping. Texts in French.
 ```
 
+
+
+# Série 3 (03/10) — Ponton céleste, créatures sur 3 PILOTIS (choix de l'auteur)
+
+L'auteur garde le Ponton céleste (6) et veut placer ses créatures sur 3 pilotis, décor toujours épuré. Deux images dans la MÊME conversation : 7 = la maquette (validation + référence de comparaison) ; 8 = le décor seul, pilotis vides, sans interface (va dans le jeu ; le code pose les créatures et les boutons).
+
+Joindre à la 7 : IMAGE 1 = menu principal ; IMAGE 2 = ton écran Exploration actuel (en paysage) ; IMAGE 3 = iles-reference.jpg.
+
+**7. La maquette (créatures sur les pilotis)**
+
+```
+I'm sending you 3 images. IMAGE 1 is my mobile game's main menu: it is the STYLE REFERENCE (hand-painted cozy magical forest, weathered wood, moss, vines, golden accents, glowing cyan mushrooms). IMAGE 2 is the current, old EXPLORATION screen, shown in LANDSCAPE in the game. IMAGE 3 shows the 12 floating-island chapter maps of the game. Redesign this EXPLORATION screen in the style of IMAGE 1, as a CLEAN, MINIMAL, UNCLUTTERED screen with lots of empty space. Scene: the edge of a mossy cliff with a small wooden pier, overlooking the floating islands of IMAGE 3 far away in the sky, softly blurred and slightly darkened so that the elements stand out. On the pier, in the center, 3 sturdy round wooden pilings of the same height, side by side and well spaced, with FLAT, WIDE tops like small round stages: the player's 3 creatures stand on top of them, one creature per piling, each with a small 'Changer' button below its piling (an empty piling shows a big glowing '+' instead of a creature). Keep EXACTLY these interface elements and nothing more: top-left, a 'RETOUR' wooden sign; top-center, the title 'EXPLORATION' on a small wooden banner; top-right, in one neat row: the deck power (shield icon and a number), the Griffes amount (paw icon and a number) with a small '+' button, and a round Runes button (a glowing cyan gem); at the bottom center, one big glowing 'COMBAT' button. No other button, no other text. Horizontal LANDSCAPE phone screen, 16:9 (the game shows this screen in landscape). No bottom navigation bar. Everything readable, nothing overlapping. Texts in French.
+```
+
+**8. Le décor seul (même conversation, juste après)**
+
+```
+From the EXPLORATION screen you just made, draw ONLY the background scene, EXACTLY the same: the same mossy cliff edge, the same wooden pier, the same floating islands far away, the same light and colors, with the 3 wooden pilings at EXACTLY the same places and size, but EMPTY: nothing on them (no creature, no '+'). And WITHOUT any interface: no text, no buttons, no banner, no counters, no 'Changer', no 'COMBAT'. Horizontal LANDSCAPE image, 16:9; the scene fills the whole image (no magenta background, no border).
+```
