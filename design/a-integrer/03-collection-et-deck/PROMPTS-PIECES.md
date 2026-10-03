@@ -37,3 +37,21 @@ From the COLLECTION screen you just made (the card album), draw ONLY two items s
 ```
 From the COLLECTION screen you just made (the card album), draw ONLY two things, well separated. TOP: ONE blank element tab ribbon like the ones on the right edge of the album, in RED, with its pointed left end, no text. BOTTOM: a row of 6 small faceted gems in the same style as the rarity gems on the cards, each a different color, from left to right: gold (#e8b923), bronze (#a67c3d), red (#d0342c), green (#4caf50), purple (#9b4fd6), orange (#ff8c00), with space between them. Same style. Vertical PORTRAIT image, 9:16; the object is centered and fully visible, with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo around the object. Never use pink or magenta on the object itself.
 ```
+
+
+# Série 2 (02/10) — retour de l'auteur : « pas du tout le même menu » ; pièces au plus près de la maquette
+
+Même conversation Gemini, même dossier de dépôt (pieces/).
+
+**74. L'abri du deck, LARGE (comme la maquette)**
+
+```
+From the COLLECTION screen you just made (the card album), draw ONLY the DECK shelter exactly as it appears in the screen: a WIDE wooden structure, about 2.6 times wider than tall, with a mossy wooden roof and vines along its whole width, a wooden post on each side, FOUR lanterns hanging OUTSIDE the posts (two on each side, lit inside their glass, but no light halo), and a small BLANK wooden sign at the top center (no text). Inside, a dark wooden back panel holds THREE EMPTY card places side by side, well spaced, each the size of a card (no cards, no '+'). Same style. Vertical PORTRAIT image, 9:16; the object is centered and fully visible, with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo around the object. Never use pink or magenta on the object itself.
+```
+
+**75. La grande souche et l'orbe doré**
+
+```
+From the COLLECTION screen you just made (the card album), draw ONLY the big tree stump on which the album rests, exactly as in the screen: a WIDE old tree stump (about as wide as the album), seen from the front and slightly from above so its flat top is visible, with blue-grey pebbles, moss and ferns around its base, and the ROUND golden orb (cracked like an egg, as in the screen) resting on the front of the stump. WITHOUT the album and WITHOUT any text. The orb is shiny gold, but with NO glow and no light around it. Same style. Vertical PORTRAIT image, 9:16; the object is centered and fully visible, with empty space around it, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow, no light rays and no halo around the object. Never use pink or magenta on the object itself.
+```
+
