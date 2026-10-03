@@ -1741,4 +1741,10 @@ Vérifié : sonde 20 / 20, chevauchés 42 / 42, pièces 0 → 38 après 25 taps.
 Fausses pistes ÉCARTÉES par vérification : mode strict (banc en production),
 effet sur `trackEvent` (useCallback([]) : stable), sauvegarde (différée).
 auditZoneTapLibre suit le nouveau calque (`<CoucheEffetsTap ref=… />`).
-Diagnostic gardé jusqu'au prochain rapport de l'auteur (comparer les figements).
+Rapport suivant de l'auteur (46 s) : 916 touchers, 900 comptés (2 %, doigts sur
+d'autres éléments) → l'auteur : « je pense qu'on est bon ». ⚠️ Ce rapport venait
+du build fade2dd (AVANT l'optimisation a2fbdf0) : ses 115 figements sont ceux
+d'avant ; l'effet de l'optimisation sur téléphone n'est pas encore mesuré.
+DÉCISION : le diagnostic des taps RESTE dans le rapport « Signaler un
+problème » (coût négligeable, chiffres précis au prochain souci). Toujours lire
+le « Build » d'un rapport avant de conclure.
