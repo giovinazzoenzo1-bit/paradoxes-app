@@ -1753,3 +1753,26 @@ le « Build » d'un rapport avant de conclure.
 32 s, ~16 touchers/s) : 523 touchers, 522 comptés (0 %) ; 218 lots (2,4 taps /
 lot) ; 376 rendus (11,8 / s) ; FIGEMENTS > 100 ms : 0 sur 1 716 images
 (contre 115-128 avant) ; ~54 images/s. Bug des taps + saccades : CLOS.
+
+
+## 03/10 — EXPLORATION : hub « Ponton céleste » (maquette de l'auteur, « exactement les mêmes proportions »)
+
+⚠️ L'écran Exploration est en PAYSAGE (AdventureScreen verrouille l'orientation)
+et n'a PAS de barre du bas : les premiers prompts (portrait + barre du bas)
+étaient faux. Menu ÉPURÉ demandé, créatures sur 3 PILOTIS.
+Images (design/a-integrer/05-aventure-carte/concepts/) : 1791027757766 =
+MAQUETTE ; 1791027955149 = décor seul (pilotis vides ; Gemini y a laissé le
+bandeau du titre, au même endroit que la pièce → recouvert) ; 1791027962317 =
+pièces sur magenta (titre, « + », Changer, COMBAT), AUX PLACES de la maquette.
+Implémentation (AdventureScreen, rendu du hub) : décor 16:9 posé ENTIER au
+centre = SCÈNE ; autour, le même décor FLOUTÉ (blurRadius) ; chaque élément en
+FRACTIONS de la scène (constante HUB, mesurée sur grille 2,5 % + boîtes exactes
+des pièces). Créatures DEBOUT sur les pilotis : pieds au dessus mesuré (50,5 %),
+hauteur 13 %, cadrage (cadrageCreatures) ; « + » doré seulement sur un pilotis
+VIDE (Gemini en avait peint sous les créatures aussi) ; lueurs = lueur-or.
+Logique INCHANGÉE : fiche, sélecteur (pilotis vide / Changer), COMBAT → carte
+des niveaux, Runes, achat de Griffes, élixir, puissance colorée, RETOUR.
+Banc : scène `exploration.jsx` (sauvegarde injectée via window.__memoireBanc,
+exposée dans stubs/natifs.js ; « ?vide=1 » = deck vide) ; ouvrir EXPLORATION
+puis passer la fenêtre en 844×390. 6 boutons vérifiés.
+Contrôle **auditHubExploration** (+ sabotage : gemme des Runes débranchée).

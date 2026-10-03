@@ -1,0 +1,21 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { CoinsProvider } from '../../../src/context/CoinsContext';
+import { DailyProvider } from '../../../src/context/DailyContext';
+import { SettingsProvider } from '../../../src/context/SettingsContext';
+import ClickerScreen from '../../../src/screens/games/ClickerScreen';
+// Banc de l'Exploration (03/10) : une partie avec un deck de 2 créatures + 1
+// emplacement vide, glissée dans la mémoire de sauvegarde AVANT le rendu.
+const vide = window.location.search.includes('vide=1');
+window.__memoireBanc['clicker:state:v2'] = JSON.stringify({
+  coins: 5000, totalEarned: 5000,
+  owned: [{ id: 'pyrosile', level: 6 }, { id: 'caraploof', level: 9 }, { id: 'ventis', level: 4 }],
+  deck: vide ? [null, null, null] : ['pyrosile', null, 'caraploof'],
+});
+const rien = () => {};
+createRoot(document.getElementById('root')).render(
+  <SafeAreaProvider><CoinsProvider><DailyProvider><SettingsProvider>
+    <ClickerScreen onOpenOptions={rien} onOpenQuests={rien} />
+  </SettingsProvider></DailyProvider></CoinsProvider></SafeAreaProvider>,
+);

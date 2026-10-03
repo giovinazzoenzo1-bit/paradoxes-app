@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditHubExploration', "exploration : le hub « Ponton céleste » garde toutes ses actions et ses pièces (03/10)"],
   ['auditAlbumComplet', "collection : l'album montre chaque créature une fois, 4 cartes max par page, un ruban par élément (02/10)"],
   ['auditRafaleArretee', "boutique : toute rafale d'achats (appui maintenu) s'arrête au relâcher, en tournant la page et au démontage (02/10)"],
   ['auditModulesNatifsProteges', "modules natifs optionnels (expo-audio…) : jamais d'import statique, chargement conditionné par requireOptionalNativeModule — plantage du 02/10 (02/10)"],

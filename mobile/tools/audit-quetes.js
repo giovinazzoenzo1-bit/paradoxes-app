@@ -4132,3 +4132,26 @@ function auditCapteurTapsNeutre() {
   return pb;
 }
 module.exports.auditCapteurTapsNeutre = auditCapteurTapsNeutre;
+
+// ── Hub de l'Exploration « Ponton céleste » : toutes ses actions (03/10) ───
+// Refonte de l'apparence (maquette de l'auteur) : la LOGIQUE du hub doit rester
+// entière. Exige, dans le rendu du hub : fiche d'une créature, sélecteur du
+// deck (pilotis vide / « Changer ») et sa fenêtre, COMBAT (carte des niveaux),
+// Runes, achat de Griffes, RETOUR ; et les 4 pièces de la maquette présentes.
+function auditHubExploration() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  const i = s.indexOf('// ── Rendu du hub : voir HUB');
+  if (i < 0) return ['rendu du hub introuvable (repère « Rendu du hub »)'];
+  const hub = s.slice(i, s.indexOf('\n}\n', i));
+  const pb = [];
+  [['setDetailCreatureId(id)', 'fiche d\'une créature'], ['setDeckPickerSlot(i)', 'sélecteur du deck (pilotis vide / Changer)'], ['<DeckPicker', 'fenêtre du sélecteur'],
+   ['setChapterMapOpen(true)', 'COMBAT (carte des niveaux)'], ['setRunesOpen(true)', 'Runes'], ['buyGriffesWithDiamonds', 'achat de Griffes'], ['onPress={onBack}', 'RETOUR']]
+    .forEach(([k, quoi]) => { if (!hub.includes(k)) pb.push(`hub : ${quoi} débranché (${k} absent)`); });
+  ['titre-exploration', 'plus-dore', 'bouton-changer', 'bouton-combat'].forEach((n) => {
+    if (!s.includes(`assets/exploration/${n}.png`)) pb.push(`pièce ${n} absente`);
+    else if (!fs.existsSync(path.join(__dirname, `../assets/exploration/${n}.png`))) pb.push(`fichier assets/exploration/${n}.png introuvable`);
+  });
+  return pb;
+}
+module.exports.auditHubExploration = auditHubExploration;

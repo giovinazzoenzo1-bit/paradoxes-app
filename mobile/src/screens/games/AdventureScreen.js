@@ -24,6 +24,7 @@ import { CHAPTER_ROUTES } from './chapterRoutes';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { cardFrameForElement, CARD_FRAME_BORDER_X, CARD_FRAME_BORDER_Y } from './cardFrames';
+import { CADRAGE_CREATURES, CADRAGE_DEFAUT } from '../../games/clicker/cadrageCreatures';
 
 // Décor d'Exploration (12/09) : mur de pierre gravé + carte au
 // parchemin. Remplace l'ancien fond de pierre uni. Le filigrane Gemini
@@ -188,6 +189,49 @@ const RUNE_OFFER_KEY = 'adventure:runeOffer:v1';
 // lieu d'une lueur, aucune vraie primitive de flou n'existe en RN pur.
 const GLOW_GOLD = require('../../../assets/icons/glow-gold.png');
 const GLOW_CYAN = require('../../../assets/icons/glow-cyan.png');
+
+// ════════════════════════════════════════════════════════════════════
+//  HUB DE L'EXPLORATION : « PONTON CÉLESTE » (03/10, maquette de l'auteur)
+// ════════════════════════════════════════════════════════════════════
+// Maquette : design/a-integrer/05-aventure-carte/concepts/1791027757766.jpg
+// (« exactement les mêmes proportions »). Le décor 16:9 (même conversation
+// Gemini, pilotis vides) est posé ENTIER au centre = la SCÈNE ; autour, le
+// même décor flouté remplit l'écran. Chaque élément est placé en FRACTIONS
+// de la scène, MESURÉES sur la maquette (grille de 2,5 %) et sur la planche
+// des pièces (boîtes exactes). Les pilotis du décor sont aux mêmes places
+// que sur la maquette (vérifié).
+const HUB_DECOR = require('../../../assets/exploration/ponton.jpg');
+const HUB_RAPPORT = 1376 / 768;
+const HUB_IMG = {
+  titre: require('../../../assets/exploration/titre-exploration.png'),
+  plus: require('../../../assets/exploration/plus-dore.png'),
+  changer: require('../../../assets/exploration/bouton-changer.png'),
+  combat: require('../../../assets/exploration/bouton-combat.png'),
+  retour: require('../../../assets/icons/back-button.png'),
+  lueur: require('../../../assets/grimoire/lueur-or.png'),
+};
+const HUB = {
+  retour: [0.020, 0.030, 0.155, 0.100],
+  titre: [0.3844, 0.0247, 0.6068, 0.1237],
+  puissance: [0.650, 0.035, 0.800, 0.095],
+  elixir: [0.700, 0.105, 0.800, 0.160],
+  griffes: [0.820, 0.035, 0.915, 0.095],
+  runes: [0.935, 0.025, 0.970, 0.110],
+  pilotis: [0.3575, 0.4975, 0.6425], // centres x des 3 pilotis
+  pilotisL: 0.085, // largeur d'un pilotis
+  dessus: 0.505, // y du dessus des pilotis : les PIEDS des créatures
+  creatureH: 0.13, // hauteur d'une créature dessinée (maquette : ~13 %)
+  plus: { l: 0.035, h: 0.07, cy: 0.595 }, // « + » sur la face d'un pilotis VIDE
+  changer: { l: 0.109, y0: 0.6523, y1: 0.7201 },
+  combat: [0.3772, 0.8542, 0.6206, 0.9661],
+};
+// Rectangle de la scène 16:9 posée entière dans l'écran (w × h).
+function sceneExploration(taille) {
+  const w = (taille && taille.w) || 0; const h = (taille && taille.h) || 0;
+  if (!w || !h) return { x: 0, y: 0, l: 0, h: 0 };
+  if (w / h > HUB_RAPPORT) { const l = h * HUB_RAPPORT; return { x: (w - l) / 2, y: 0, l, h }; }
+  const hh = w / HUB_RAPPORT; return { x: 0, y: (h - hh) / 2, l: w, h: hh };
+}
 import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
@@ -1058,109 +1102,99 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
     );
   }
 
+  // ── Rendu du hub : voir HUB (fractions de la scène mesurées sur la maquette) ──
+  const scene = sceneExploration(bgSize);
+  const R = (f) => ({ position: 'absolute', left: scene.x + f[0] * scene.l, top: scene.y + f[1] * scene.h, width: (f[2] - f[0]) * scene.l, height: (f[3] - f[1]) * scene.h });
+  const police = (k) => Math.max(8, Math.round(scene.h * k));
+  const couleurPuissance = puissanceMenu ? (puissanceMenu.couleur === 'vert' ? '#3DDC84' : puissanceMenu.couleur === 'orange' ? '#FFB74D' : '#FF6B6B') : '#eafbe8';
   return (
-    <ImageBackground
-      source={EXPLORATION_BG}
-      style={styles.screen}
-      resizeMode="cover"
-      onLayout={(e) => setBgSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
-    >
-      {/* En-tête paysage : retour à gauche, Griffes au centre, accès aux
-          Runes en HAUT À DROITE (même icône qu'avant, seulement
-          déplacée). L'ancienne barre du bas disparaît : en paysage la
-          hauteur est la ressource rare, on ne la gaspille pas en barre
-          de navigation. */}
-      <View style={styles.headerLand}>
-        <BackButton onPress={onBack} />
-        <ImageBackground source={TITLE_BANNER} style={styles.titleBanner} resizeMode="contain">
-          <Text style={styles.titleBannerText}>EXPLORATION</Text>
-        </ImageBackground>
-        <View style={styles.headerRight}>
-          <View style={styles.puissancePill}>
-            <Text style={[styles.puissancePillText, puissanceMenu && { color: puissanceMenu.couleur === 'vert' ? '#3DDC84' : puissanceMenu.couleur === 'orange' ? '#FFB74D' : '#FF6B6B' }]}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
+    <View style={styles.hubRacine} onLayout={(e) => setBgSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      {/* Le même décor, flouté, remplit l'écran autour de la scène 16:9. */}
+      <Image source={HUB_DECOR} blurRadius={14} resizeMode="cover" style={StyleSheet.absoluteFill} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(5,12,18,0.35)' }]} />
+      {scene.l > 0 && (
+        <>
+          <Image source={HUB_DECOR} resizeMode="stretch" style={R([0, 0, 1, 1])} />
+
+          {/* ── En haut : RETOUR, titre, puissance (+ élixir), Griffes, Runes. */}
+          <TouchableOpacity onPress={onBack} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[R(HUB.retour), { justifyContent: 'center' }]}>
+            <Image source={HUB_IMG.retour} resizeMode="stretch" style={StyleSheet.absoluteFill} />
+            <Text style={[styles.hubRetourTexte, { fontSize: police(0.026), marginLeft: (HUB.retour[2] - HUB.retour[0]) * scene.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
+          </TouchableOpacity>
+          <Image source={HUB_IMG.titre} resizeMode="stretch" style={R(HUB.titre)} />
+          <View style={[R(HUB.puissance), styles.hubPilule]}>
+            <Text style={[styles.hubPiluleTexte, { fontSize: police(0.026), color: couleurPuissance }]} numberOfLines={1}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
           </View>
           {elixirCombats > 0 && (
-            <View style={styles.puissancePill}>
-              <Text style={styles.puissancePillText}>🧪 {elixirCombats}</Text>
+            <View style={[R(HUB.elixir), styles.hubPilule]}>
+              <Text style={[styles.hubPiluleTexte, { fontSize: police(0.028) }]} numberOfLines={1}>🧪 {elixirCombats}</Text>
             </View>
           )}
-          <CurrencyCounter currency="griffes" amount={griffes} onPlus={buyGriffesWithDiamonds} />
-          <TouchableOpacity style={styles.runesTopBtn} onPress={() => setRunesOpen(true)}>
-            {/* Gemme des Runes + halo cyan généré en code (même principe
-                que le compteur de Griffes). Remplace rune-button.png. */}
-            <Image source={GLOW_CYAN} style={styles.runesTopBtnGlow} resizeMode="contain" />
-            <Image source={RUNES_GEM} style={styles.runesTopBtnImage} resizeMode="contain" />
+          <View style={[R(HUB.griffes), styles.hubPilule, { justifyContent: 'space-between', paddingLeft: 4, paddingRight: 3 }]}>
+            <CurrencyIcon kind="griffes" size={Math.round(scene.h * 0.045)} haloed={false} />
+            <Text style={[styles.hubPiluleTexte, { fontSize: police(0.034), color: '#ffffff' }]} numberOfLines={1}>{griffes}</Text>
+            <TouchableOpacity onPress={buyGriffesWithDiamonds} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[styles.hubPlus, { width: scene.h * 0.045, height: scene.h * 0.045 }]}>
+              <Text style={[styles.hubPlusTexte, { fontSize: police(0.034) }]}>+</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={() => setRunesOpen(true)} activeOpacity={0.8} style={[R(HUB.runes), { alignItems: 'center', justifyContent: 'center' }]}>
+            <Image source={GLOW_CYAN} resizeMode="contain" style={{ position: 'absolute', width: '190%', height: '190%' }} />
+            <Image source={RUNES_GEM} resizeMode="contain" style={{ width: '100%', height: '100%' }} />
           </TouchableOpacity>
-        </View>
-      </View>
 
-      {/* Les 3 créatures du deck, côte à côte et occupant toute la
-          largeur. C'est le MÊME deck que celui du clicker — une seule
-          source de vérité, pas de sélection séparée. */}
-      <View
-        style={[styles.creatureRowLand, { paddingLeft: parchInsetL, paddingRight: parchInsetR }]}
-        onLayout={(e) => setDeckRowH(e.nativeEvent.layout.height)}
-      >
-        {deck.map((id, i) => {
-          const creature = id ? CREATURES.find((c) => c.id === id) : null;
-          const own = id ? ownedMap[id] : null;
-          const display = creature && own ? creature.stages[stageForLevel(own.level)] : null;
-          const cardFrame = creature ? cardFrameForElement(creature.element) : null;
-          return (
-            <View key={i} style={styles.creatureCellLand}>
-              <TouchableOpacity
-                style={[
-                  styles.creatureSlotLand,
-                  // Taille FIXE en portrait (aucun pourcentage, aucun
-                  // aspectRatio : voir le bug Yoga en tête de fichier).
-                  CARD_H > 0 && { width: CARD_W, height: CARD_H },
-                  // Le cadre illustré remplace la bordure colorée : les
-                  // deux ensemble feraient double encadrement.
-                  creature && !cardFrame && { borderColor: RARITY_COLOR[creature.rarity] },
-                  cardFrame && styles.creatureSlotFramed,
-                  // Marges calées sur la bordure MESURÉE du cadre
-                  // (13% en largeur, 10% en hauteur), en pixels — une
-                  // marge en % se résoudrait sur la largeur même en
-                  // vertical (règle 13).
-                  cardFrame && CARD_H > 0 && {
-                    paddingHorizontal: Math.round(CARD_W * 0.13),
-                    paddingVertical: Math.round(CARD_H * 0.10),
-                  },
-                ]}
-                onPress={() => (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i))}
-                activeOpacity={0.8}
-              >
-                {/* Cadre posé PAR-DESSUS le contenu, en absolu : il
-                    décore sans jamais intercepter le tap de la carte. */}
-                {cardFrame && (
-                  <Image source={cardFrame} style={styles.creatureFrameImg} resizeMode="stretch" />
-                )}
-                {display ? (
+          {/* ── Les 3 pilotis : la créature du deck DEBOUT sur le dessus (pieds au
+              dessus mesuré), « + » doré sur la face d'un pilotis VIDE, « Changer ». */}
+          {deck.map((id, i) => {
+            const creature = id ? CREATURES.find((c) => c.id === id) : null;
+            const own = id ? ownedMap[id] : null;
+            const stade = own ? stageForLevel(own.level) : 0;
+            const display = creature && own ? creature.stages[stade] : null;
+            const cx = scene.x + HUB.pilotis[i] * scene.l;
+            const dessus = scene.y + HUB.dessus * scene.h;
+            const lp = HUB.pilotisL * scene.l;
+            const ch = HUB.creatureH * scene.h;
+            const cad = display ? (CADRAGE_CREATURES[id] || {})[stade] : null;
+            let art = null;
+            if (display && cad) {
+              let T = ch / (cad[3] - cad[1]);
+              T = Math.min(T, (lp * 1.15) / (cad[2] - cad[0])); // jamais plus large que son pilotis
+              art = (
+                <View style={{ position: 'absolute', left: cx - ((cad[0] + cad[2]) / 2) * T, top: dessus - cad[3] * T, pointerEvents: 'none' }}>
+                  <CreatureArt creatureId={id} stageIndex={stade} emoji={display.emoji} size={Math.round(T)} />
+                </View>
+              );
+            } else if (display) {
+              art = <Text style={{ position: 'absolute', left: cx - ch * 0.5, top: dessus - ch * 0.95, width: ch, textAlign: 'center', fontSize: Math.round(ch * 0.72), pointerEvents: 'none' }}>{display.emoji}</Text>;
+            }
+            const pl = HUB.plus.l * scene.l; const ph = HUB.plus.h * scene.h; const py = scene.y + HUB.plus.cy * scene.h;
+            const cl = HUB.changer.l * scene.l;
+            return (
+              <React.Fragment key={i}>
+                {art}
+                {!display && (
                   <>
-                    {/* Taille de l'illustration dérivée de la carte, pour
-                        qu'elle la remplisse quelle que soit la place. */}
-                    <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={CARD_ART || 84} emojiStyle={styles.creatureEmojiLand} />
-                    <Text style={styles.creatureNameLand} numberOfLines={1}>{display.name}</Text>
-                    {/* Rareté et niveau retirés : le cadre porte déjà
-                        l'élément, et la fiche détaillée donne le reste. */}
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.emptySlotEmojiLand}>🥚</Text>
-                    <Text style={styles.creatureNameLand}>Emplacement vide</Text>
+                    <Image source={HUB_IMG.lueur} resizeMode="stretch" style={{ position: 'absolute', left: cx - pl * 1.5, top: py - ph, width: pl * 3, height: ph * 2, opacity: 0.75, pointerEvents: 'none' }} />
+                    <Image source={HUB_IMG.plus} resizeMode="stretch" style={{ position: 'absolute', left: cx - pl / 2, top: py - ph / 2, width: pl, height: ph, pointerEvents: 'none' }} />
                   </>
                 )}
-              </TouchableOpacity>
-              {creature && (
-                <TouchableOpacity style={styles.editSlotBtn} onPress={() => setDeckPickerSlot(i)}>
-                  <Ionicons name="pencil" size={12} color={COLORS.action} />
-                  <Text style={styles.editSlotBtnText}>Changer</Text>
+                {/* Zone tactile : la créature et son pilotis (fiche, ou sélecteur si vide). */}
+                <TouchableOpacity activeOpacity={0.85} onPress={() => (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i))}
+                  style={{ position: 'absolute', left: cx - lp / 2, top: dessus - ch * 1.05, width: lp, height: ch * 1.05 + (HUB.changer.y0 - HUB.dessus) * scene.h }} />
+                <TouchableOpacity activeOpacity={0.8} onPress={() => setDeckPickerSlot(i)}
+                  style={{ position: 'absolute', left: cx - cl / 2, top: scene.y + HUB.changer.y0 * scene.h, width: cl, height: (HUB.changer.y1 - HUB.changer.y0) * scene.h }}>
+                  <Image source={HUB_IMG.changer} resizeMode="stretch" style={{ width: '100%', height: '100%' }} />
                 </TouchableOpacity>
-              )}
-            </View>
-          );
-        })}
-      </View>
+              </React.Fragment>
+            );
+          })}
+
+          {/* ── COMBAT : lueur dorée (dégradé du code) + bouton de la maquette. */}
+          <Image source={HUB_IMG.lueur} resizeMode="stretch" style={[R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05]), { opacity: 0.9, pointerEvents: 'none' }]} />
+          <TouchableOpacity onPress={() => setChapterMapOpen(true)} activeOpacity={0.85} style={R(HUB.combat)}>
+            <Image source={HUB_IMG.combat} resizeMode="stretch" style={{ width: '100%', height: '100%' }} />
+          </TouchableOpacity>
+        </>
+      )}
 
       {deckPickerSlot !== null && (
         <DeckPicker
@@ -1178,15 +1212,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           onClose={() => setDeckPickerSlot(null)}
         />
       )}
-
-      <View style={styles.bottomLand}>
-        <TouchableOpacity style={styles.combatBtnLand} onPress={() => setChapterMapOpen(true)}>
-          <ImageBackground source={COMBAT_BTN} style={styles.combatBtnImg} resizeMode="contain">
-            <Text style={styles.combatBtnText}>COMBAT</Text>
-          </ImageBackground>
-        </TouchableOpacity>
-      </View>
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -3159,6 +3185,13 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
 }
 
 const styles = StyleSheet.create({
+  // Hub « Ponton céleste » (03/10)
+  hubRacine: { flex: 1, backgroundColor: '#0b1418', overflow: 'hidden' },
+  hubPilule: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(14,22,24,0.88)', borderRadius: 999, borderWidth: 1.5, borderColor: '#b98b4a', paddingHorizontal: 6 },
+  hubPiluleTexte: { color: '#eafbe8', fontWeight: '900', includeFontPadding: false },
+  hubPlus: { backgroundColor: '#e0323a', borderRadius: 6, borderWidth: 1.5, borderColor: '#ffd2d2', alignItems: 'center', justifyContent: 'center' },
+  hubPlusTexte: { color: '#ffffff', fontWeight: '900', includeFontPadding: false, marginTop: -1 },
+  hubRetourTexte: { color: '#3a2608', fontWeight: '900', letterSpacing: 0.8, textAlign: 'center', includeFontPadding: false },
   conseilleeText: { fontWeight: '800', fontSize: 14, textAlign: 'center', marginTop: 2 },
   puissancePill: { backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4,
     marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,215,120,0.6)', justifyContent: 'center' },

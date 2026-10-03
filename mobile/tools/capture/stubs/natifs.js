@@ -16,6 +16,8 @@ export const Ionicons = Icone;
 export const MaterialCommunityIcons = Icone;
 export const FontAwesome5 = Icone;
 const memoire = {};
+// Banc (03/10) : une scène peut y glisser une sauvegarde AVANT le rendu (window.__memoireBanc).
+if (typeof window !== 'undefined') window.__memoireBanc = memoire;
 const AsyncStorage = { getItem: async (k) => (k in memoire ? memoire[k] : null), setItem: async (k, v) => { memoire[k] = v; }, removeItem: async (k) => { delete memoire[k]; }, multiGet: async (ks) => ks.map((k) => [k, memoire[k] ?? null]), getAllKeys: async () => Object.keys(memoire) };
 export default AsyncStorage;
 export const LottieView = () => null;
