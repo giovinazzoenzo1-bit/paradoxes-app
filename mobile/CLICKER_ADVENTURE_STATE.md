@@ -1848,3 +1848,25 @@ la LARGEUR de la maquette (à hauteur gardée, les 3 Changer se touchaient).
 ⚠️ Le titre et Changer HD ont CHANGÉ DE COULEURS (bois foncé, lettres dorées ;
 maquette : titre clair à lettres brunes, Changer brun-rouge à lettres crème) →
 prompts 13-14 facultatifs (couleurs exactes) proposés à l'auteur.
+
+
+## 03/10 — Illustrations : Luxorbe et Fournax (11 / 26) + OUTIL d'intégration
+
+Déposées par l'auteur dans design/a-integrer/creatures/{luxorbe,fournax}/
+(p1-p3, 1024 × 1024 transparents, dessin 3-13 % du cadre). Luxorbe = renard
+blanc à queues dorées (Lumière, commun) ; Fournax = golem-fournaise (Feu, peu
+commun). Ordre des stades confirmé par la SURFACE (2,6/5,0/10,8 ; 3,1/6,7/12,5).
+OUTIL `mobile/tools/integrer-creature.py <id>` (procédé du 19/09, MESURÉ sur
+les 9 créatures en place) : ordre par surface ; recadrage puis cadre 512
+CENTRÉ, plus grand côté 56 / 73 / 84 % (stades 0/1/2) ; compression palette
+libimagequant (pip install imagequant) acceptée si écart VISIBLE (couleur ×
+opacité) ≤ 3,0, cœur opaque intact (≤ 0,1 %), aucun pixel qui apparaît/
+disparaît (α 0 ↔ ≥ 16) — le critère du 19/09 n'était PAS documenté, celui-ci
+l'est (6 / 6 acceptées : 380 Ko au lieu de 1,2 Mo ; octree refusé : 4,0-4,7) ;
+branchement dans CreatureArt ; `tools/generer-cadrage.py` (cadrageCreatures.js
+régénéré : 11 créatures, 33 images). Contrôle **auditCadrageCreatures** (3
+stades présents + cadrage pour chaque créature illustrée) + sabotage.
+Feuille de route : section « 0. État des illustrations ». Banc : scène
+`nouvelles-creatures.jsx` ; `exploration.jsx?nouvelles=1` (Luxorbe, Pyrosile,
+Fournax sur les pilotis). Ménage : clé `aventure` en double dans
+verifier-controles.js (ajoutée par moi le 03/10) retirée.

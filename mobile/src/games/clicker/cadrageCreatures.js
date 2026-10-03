@@ -1,15 +1,16 @@
 // ════════════════════════════════════════════════════════════════════
-//  CADRAGE DES CRÉATURES (GÉNÉRÉ le 02/10 — ne pas modifier à la main)
+//  CADRAGE DES CRÉATURES (GÉNÉRÉ par tools/generer-cadrage.py — ne pas modifier à la main)
 // ════════════════════════════════════════════════════════════════════
 // Zone réellement dessinée de chaque image (fractions x0, y0, x1, y1), mesurée
-// sur l'alpha. Les images 512 × 512 ont de grandes marges (la créature occupe
-// en moyenne 57 % × 71 %) : l'Album zoome dessus pour remplir le cadre.
-// Créature absente de la table (à venir) : zoom par défaut, rien ne casse.
+// sur l'alpha. Les images 512 × 512 ont de grandes marges : l'Album et le hub
+// de l'Exploration zooment dessus. Créature absente (à venir) : zoom par défaut.
 export const CADRAGE_CREATURES = {
   aegisolar: { 0: [0.262, 0.23, 0.734, 0.768], 1: [0.199, 0.133, 0.799, 0.867], 2: [0.145, 0.07, 0.857, 0.928] },
   bouldog: { 0: [0.311, 0.174, 0.688, 0.826], 1: [0.197, 0.094, 0.805, 0.902], 2: [0.084, 0.062, 0.916, 0.938] },
   caraploof: { 0: [0.193, 0.271, 0.807, 0.734], 1: [0.162, 0.193, 0.838, 0.809], 2: [0.125, 0.084, 0.877, 0.922] },
+  fournax: { 0: [0.293, 0.219, 0.705, 0.779], 1: [0.135, 0.15, 0.865, 0.85], 2: [0.08, 0.105, 0.92, 0.895] },
   glyphon: { 0: [0.357, 0.215, 0.641, 0.785], 1: [0.285, 0.139, 0.715, 0.859], 2: [0.201, 0.08, 0.797, 0.92] },
+  luxorbe: { 0: [0.23, 0.219, 0.77, 0.779], 1: [0.18, 0.135, 0.82, 0.865], 2: [0.119, 0.08, 0.879, 0.92] },
   malefix: { 0: [0.342, 0.215, 0.658, 0.785], 1: [0.268, 0.139, 0.73, 0.859], 2: [0.193, 0.08, 0.807, 0.92] },
   ombrillon: { 0: [0.215, 0.236, 0.785, 0.762], 1: [0.189, 0.139, 0.809, 0.859], 2: [0.143, 0.08, 0.857, 0.92] },
   pyrosile: { 0: [0.277, 0.211, 0.725, 0.795], 1: [0.213, 0.119, 0.799, 0.885], 2: [0.146, 0.092, 0.855, 0.92] },

@@ -10,8 +10,8 @@ import ClickerScreen from '../../../src/screens/games/ClickerScreen';
 const vide = window.location.search.includes('vide=1');
 window.__memoireBanc['clicker:state:v2'] = JSON.stringify({
   coins: 5000, totalEarned: 5000,
-  owned: [{ id: 'pyrosile', level: 6 }, { id: 'caraploof', level: 9 }, { id: 'ventis', level: 4 }],
-  deck: vide ? [null, null, null] : ['pyrosile', null, 'caraploof'],
+  owned: [{ id: 'pyrosile', level: 6 }, { id: 'caraploof', level: 9 }, { id: 'ventis', level: 4 }, { id: 'luxorbe', level: 3 }, { id: 'fournax', level: 12 }],
+  deck: vide ? [null, null, null] : window.location.search.includes('nouvelles=1') ? ['luxorbe', 'pyrosile', 'fournax'] : ['pyrosile', null, 'caraploof'],
 });
 const rien = () => {};
 createRoot(document.getElementById('root')).render(

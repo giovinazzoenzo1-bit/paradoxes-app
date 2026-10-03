@@ -3,7 +3,7 @@
 - Rareté : commun
 - Élément : Lumière
 - Sort : soin
-- État : 🟥 à créer (3 stades)
+- État : ✅ intégrée le 03/10 (3 stades, `mobile/assets/creatures/luxorbe/`)
 
 **Déposer ici** : https://github.com/giovinazzoenzo1-bit/paradoxes-app/upload/main/design/a-integrer/creatures/luxorbe
 

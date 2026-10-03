@@ -27,6 +27,16 @@ const CREATURE_ART = {
     require('../../assets/creatures/caraploof/stage-1.png'),
     require('../../assets/creatures/caraploof/stage-2.png'),
   ],
+  luxorbe: [
+    require('../../assets/creatures/luxorbe/stage-0.png'),
+    require('../../assets/creatures/luxorbe/stage-1.png'),
+    require('../../assets/creatures/luxorbe/stage-2.png'),
+  ],
+  fournax: [
+    require('../../assets/creatures/fournax/stage-0.png'),
+    require('../../assets/creatures/fournax/stage-1.png'),
+    require('../../assets/creatures/fournax/stage-2.png'),
+  ],
   // Le Gardien : une seule apparence. `creatureArtSource` ramène tout
   // palier demandé au dernier disponible, donc une entrée suffit.
   gardien: [

@@ -7,6 +7,14 @@ nom du fichier plutôt que d'attendre une réponse — Enzo pourra ajuster aprè
 
 ---
 
+## 0. État des illustrations (mis à jour le 03/10)
+
+**11 / 26 créatures illustrées** : `aegisolar`, `bouldog`, `caraploof`, `fournax`, `glyphon`, `luxorbe`, `malefix`, `ombrillon`, `pyrosile`, `ventis`, `voltix`.
+
+Intégrer une créature (depuis la racine du dépôt) : déposer ses 3 PNG transparents dans `design/a-integrer/creatures/<id>/`, puis `python3 mobile/tools/integrer-creature.py <id>` (ordre des stades par surface, format 512 × 512 centré à 56 / 73 / 84 %, compression contrôlée, branchement dans CreatureArt, cadrage régénéré ; contrôle auditCadrageCreatures).
+
+---
+
 ## 1. Ce qu'il y a à faire
 
 **26 créatures × 3 stades d'évolution = 78 illustrations statiques.**

@@ -3,7 +3,7 @@
 - Rareté : peu commun
 - Élément : Feu
 - Sort : poison
-- État : 🟥 à créer (3 stades)
+- État : ✅ intégrée le 03/10 (3 stades, `mobile/assets/creatures/fournax/`)
 
 **Déposer ici** : https://github.com/giovinazzoenzo1-bit/paradoxes-app/upload/main/design/a-integrer/creatures/fournax
 

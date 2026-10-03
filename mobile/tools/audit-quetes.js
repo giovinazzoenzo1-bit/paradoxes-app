@@ -4193,3 +4193,31 @@ function auditImagesTailleExplicite() {
   return pb;
 }
 module.exports.auditImagesTailleExplicite = auditImagesTailleExplicite;
+
+// ── Illustrations de créatures : fichiers ET cadrage (03/10) ──────────────
+// Chaque créature branchée dans CreatureArt doit avoir ses 3 stades (fichiers
+// présents) et son CADRAGE (cadrageCreatures.js, généré) : sans lui, l'Album et
+// le hub de l'Exploration la montrent avec un cadrage par défaut. Outil :
+// tools/integrer-creature.py <id> (fait tout) ; tools/generer-cadrage.py.
+function auditCadrageCreatures() {
+  const fs = require('fs'); const path = require('path');
+  const art = fs.readFileSync(path.join(__dirname, '../src/components/CreatureArt.js'), 'utf8');
+  const C = require('../src/games/clicker/cadrageCreatures.js');
+  const L = require('../src/games/clicker/clickerLogic.js');
+  const pb = []; const stades = {};
+  for (const m of art.matchAll(/require\('([^']+\/creatures\/([a-z0-9_]+)\/stage-(\d)\.png)'\)/g)) {
+    const [, chemin, id, st] = m;
+    (stades[id] = stades[id] || []).push(Number(st));
+    if (!fs.existsSync(path.join(__dirname, '../src/components', chemin))) pb.push(`${id} stade ${st} : fichier introuvable`);
+  }
+  for (const [id, liste] of Object.entries(stades)) {
+    if (id === 'gardien') continue;
+    if (!L.CREATURES.some((c) => c.id === id)) pb.push(`${id} : illustrée mais inconnue du jeu`);
+    if (liste.length !== 3) pb.push(`${id} : ${liste.length} stade(s) au lieu de 3`);
+    const cad = C.CADRAGE_CREATURES[id];
+    if (!cad) pb.push(`${id} : pas de cadrage (relancer tools/generer-cadrage.py)`);
+    else liste.forEach((s) => { if (!cad[s]) pb.push(`${id} stade ${s} : pas de cadrage`); });
+  }
+  return pb;
+}
+module.exports.auditCadrageCreatures = auditCadrageCreatures;
