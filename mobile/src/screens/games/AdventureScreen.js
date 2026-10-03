@@ -235,6 +235,41 @@ const HUB = {
   changer: { l: 0.109, y0: 0.6523, y1: 0.7201 },
   combat: [0.3772, 0.8542, 0.6206, 0.9661],
 };
+// RETOUR de l'Exploration (hub ET carte des niveaux) : le MÊME panneau, à la même
+// taille (03/10 : « 100 fois trop gros », puis « un tout petit peu plus gros » ;
+// la carte l'a demandé pareil). Taille ramenée à la HAUTEUR de l'écran, comme
+// l'interface du hub ; image à largeur/hauteur explicites (auditImagesTailleExplicite).
+function PanneauRetour({ onPress, style }) {
+  const { width: w, height: h } = useWindowDimensions();
+  const uiL = Math.min(h * HUB_RAPPORT, w); const uiH = uiL / HUB_RAPPORT;
+  const l = (HUB.retour[2] - HUB.retour[0]) * uiL; const hh = (HUB.retour[3] - HUB.retour[1]) * uiH;
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[{ width: l, height: hh, justifyContent: 'center' }, style]}>
+      <Image source={HUB_IMG.retour} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
+      <Text style={[styles.hubRetourTexte, { fontSize: Math.max(8, Math.round(uiH * 0.023)), marginLeft: l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
+    </TouchableOpacity>
+  );
+}
+
+// Le niveau EN COURS de la carte brille (03/10, demande de l'auteur) : halo doré
+// qui respire, derrière la pastille. (L'ombre `shadow…` de levelNodeCurrent ne
+// s'affiche que sur iPhone : sur Android, il ne restait qu'une bordure dorée.)
+function HaloNiveauCourant({ x, y, taille }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const b = Animated.loop(Animated.sequence([
+      Animated.timing(t, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(t, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    b.start();
+    return () => b.stop();
+  }, []);
+  return (
+    <Animated.Image source={HUB_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: x - taille / 2, top: y - taille / 2, width: taille, height: taille, pointerEvents: 'none',
+      opacity: t.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }), transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.1] }) }] }} />
+  );
+}
+
 // Bouton COMBAT du hub : il SCINTILLE un peu (demande de l'auteur, 03/10) —
 // lueur dorée qui respire et 3 étincelles qui s'allument tour à tour. Ses
 // animations vivent ICI (composant à part : jamais de rendu de tout l'écran,
@@ -1176,10 +1211,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
           <Image source={HUB_DECOR} resizeMethod="scale" resizeMode="stretch" style={F([0, 0, 1, 1])} />
 
           {/* ── En haut : RETOUR, titre, puissance (+ élixir), Griffes, Runes. */}
-          <TouchableOpacity onPress={onBack} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[R(HUB.retour, 'gauche'), { justifyContent: 'center' }]}>
-            <Image source={HUB_IMG.retour} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
-            <Text style={[styles.hubRetourTexte, { fontSize: police(0.023), marginLeft: (HUB.retour[2] - HUB.retour[0]) * ui.l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
-          </TouchableOpacity>
+          <PanneauRetour onPress={onBack} style={{ position: 'absolute', left: HUB.retour[0] * ui.l, top: HUB.retour[1] * ui.h }} />
           <Image source={HUB_IMG.titre} resizeMethod="scale" resizeMode="stretch" style={auRapportL(R(HUB.titre, 'centre'), HUB_RAPPORT_PIECE.titre)} />
           <View style={[R(HUB.puissance, 'droite'), styles.hubPilule]}>
             <Text style={[styles.hubPiluleTexte, { fontSize: police(0.026), color: couleurPuissance }]} numberOfLines={1}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
@@ -2291,7 +2323,7 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
         {/* ⚠️ Masqué pendant l'aperçu de niveau : cette fenêtre a DÉJÀ
             son propre retour, et comme elle se superpose à la carte sans
             la démonter, le joueur voyait DEUX boutons retour. */}
-        {!levelPreview && <BackButton onPress={onBack} />}
+        {!levelPreview && <PanneauRetour onPress={onBack} />}
         <View style={styles.headerSpacer} />
         {/* Aide sur les éléments, juste à GAUCHE des Griffes : elle se
             consulte avant un combat, sa place est dans l'en-tête et non
@@ -2401,8 +2433,9 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
                   const state = levelNum > niveauMaxAscension && levelNum <= currentUnlockedLevel ? 'ascension'
                     : levelNum < currentUnlockedLevel ? 'done' : levelNum === currentUnlockedLevel ? 'current' : 'locked';
                   return (
+                    <React.Fragment key={levelNum}>
+                    {state === 'current' && <HaloNiveauCourant x={pos.x} y={pos.y} taille={LEVEL_NODE_SIZE * 2.6} />}
                     <TouchableOpacity
-                      key={levelNum}
                       style={[
                         styles.levelNode,
                         scene && styles.levelNodeOnScene,
@@ -2438,6 +2471,7 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
                         />
                       )}
                     </TouchableOpacity>
+                    </React.Fragment>
                   );
                 })}
               </View>

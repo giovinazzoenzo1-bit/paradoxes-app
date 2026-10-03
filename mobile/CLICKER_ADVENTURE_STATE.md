@@ -1886,3 +1886,20 @@ d'auditParcours. Décision : on n'y touche pas ; l'A2 à surveiller (tests réel
 NB : la colonne « retard » du simulateur compare le NUMÉRO du niveau
 d'Aventure à la moyenne des niveaux des créatures (2 échelles) : ne pas s'en
 servir comme « niveaux de retard ».
+
+
+## 03/10 — Carte des niveaux : RETOUR commun + halo du niveau en cours
+
+Retour de l'auteur sur ma liste : étoiles et cadenas EXISTENT déjà (mon banc
+les cachait : ⚠️ le stub Ionicons du banc dessine « ● » pour TOUTE icône —
+coche, cadenas… : ne jamais conclure à l'absence d'une icône sur le banc).
+Fait : `PanneauRetour` (composant commun hub + carte : même panneau, taille
+ramenée à la hauteur de l'écran, 74 × 24 au format de l'auteur ; dans la rangée
+de l'en-tête de la carte, l'espaceur garde les compteurs à droite) ;
+`HaloNiveauCourant` (lueur dorée qui respire derrière la pastille du niveau en
+cours ; l'ombre `shadow…` de levelNodeCurrent ne s'affiche que sur iPhone).
+Banc : `exploration.jsx?progression=1` (niveaux 1-3 gagnés, 4 en cours ; clé
+adventure:state:v2 injectée).
+Proposé ensuite : l'écran de COMBAT (attaques peu lisibles, mana invisible,
+créature qui flotte, badge d'élément, abandon sans confirmation), puis
+l'aperçu de niveau (panneau bleu uni hors style).

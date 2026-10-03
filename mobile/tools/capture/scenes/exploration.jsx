@@ -13,6 +13,10 @@ window.__memoireBanc['clicker:state:v2'] = JSON.stringify({
   owned: [{ id: 'pyrosile', level: 6 }, { id: 'caraploof', level: 9 }, { id: 'ventis', level: 4 }, { id: 'luxorbe', level: 3 }, { id: 'fournax', level: 12 }],
   deck: vide ? [null, null, null] : window.location.search.includes('nouvelles=1') ? ['luxorbe', 'pyrosile', 'fournax'] : ['pyrosile', null, 'caraploof'],
 });
+// « ?progression=1 » : niveaux 1-3 gagnés (3, 2, 1 étoiles), le 4 en cours.
+if (window.location.search.includes('progression=1')) {
+  window.__memoireBanc['adventure:state:v2'] = JSON.stringify({ currentUnlockedLevel: 4, griffes: 120, ownedRunes: [], energy: 5, energyUpdatedAt: Date.now(), levelStars: { 1: 3, 2: 2, 3: 1 }, defaitesDeSuite: {} });
+}
 const rien = () => {};
 createRoot(document.getElementById('root')).render(
   <SafeAreaProvider><CoinsProvider><DailyProvider><SettingsProvider>
