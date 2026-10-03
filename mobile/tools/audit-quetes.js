@@ -4107,3 +4107,22 @@ function auditAlbumComplet() {
   return pb;
 }
 module.exports.auditAlbumComplet = auditAlbumComplet;
+
+// ── Capteur du diagnostic des taps : NEUTRE, toujours (02/10) ──────────────
+// Un capteur à la racine compte chaque toucher en phase de CAPTURE
+// (onStartShouldSetResponderCapture). S'il renvoyait true, il prendrait TOUS
+// les touchers : plus aucun tap ne serait compté. Exige : capterToucher
+// renvoie false et jamais true ; il est branché en CAPTURE à la racine.
+function auditCapteurTapsNeutre() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  const pb = [];
+  const i = s.indexOf('const capterToucher = (e) => {');
+  if (i < 0) return ['capterToucher introuvable dans ClickerScreen'];
+  const corps = s.slice(i, s.indexOf('\n  };\n', i));
+  if (!/return false;/.test(corps)) pb.push('capterToucher ne renvoie pas false');
+  if (/return true/.test(corps)) pb.push('capterToucher renvoie true : il prendrait TOUS les touchers (plus aucun tap compté)');
+  if (!s.includes('onStartShouldSetResponderCapture={capterToucher}')) pb.push('capteur non branché en phase de capture à la racine');
+  return pb;
+}
+module.exports.auditCapteurTapsNeutre = auditCapteurTapsNeutre;

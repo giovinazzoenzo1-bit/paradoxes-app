@@ -131,6 +131,8 @@ export function detecterBlocages(etat) {
 // dernière erreur.
 const nombre = (v) => (fini(v) ? String(Math.round(v)) : String(v));
 
+import { lignesDiagnosticTaps } from './diagnosticTaps.js';
+
 export function construireRapport({ instantane, derniereErreur, appareil, build } = {}) {
   const i = instantane || {};
   const b = build || {};
@@ -147,6 +149,8 @@ export function construireRapport({ instantane, derniereErreur, appareil, build 
   lignes.push('');
   lignes.push('Problèmes détectés : ' + (pb.length ? '' : 'aucun'));
   pb.forEach((p) => lignes.push('- ' + p.texte));
+  lignes.push('');
+  lignesDiagnosticTaps().forEach((l) => lignes.push(l));
   const defis = Array.isArray(i.defis) ? i.defis : [];
   lignes.push('');
   lignes.push('Défis en cours :');

@@ -68,6 +68,7 @@ const CONTROLES = [
   ['auditRafaleArretee', "boutique : toute rafale d'achats (appui maintenu) s'arrête au relâcher, en tournant la page et au démontage (02/10)"],
   ['auditModulesNatifsProteges', "modules natifs optionnels (expo-audio…) : jamais d'import statique, chargement conditionné par requireOptionalNativeModule — plantage du 02/10 (02/10)"],
   ['auditConseilBoutique', "boutique : l'étoile « Conseillé » désigne vraiment le meilleur rendement, calculé avec les formules du jeu (27/09)"],
+  ['auditCapteurTapsNeutre', "diagnostic des taps : le capteur de la racine ne prend JAMAIS le toucher (sinon plus aucun tap) (02/10)"],
   ['auditZoneTapAuContact', "tap AU CONTACT : zone de tap au répondeur et boutons de prix du grimoire en onPressIn — le bug des taps jetés est déjà revenu (27/09)"],
   ['auditGrimoireComplet', "grimoire de la boutique : chaque élément achetable est dans un chapitre, une seule fois (27/09)"],
   ['auditPointerEventsStyle', "pointerEvents toujours dans le style : la propriété est ignorée sur téléphone depuis le SDK 57"],

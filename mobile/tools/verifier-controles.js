@@ -242,6 +242,8 @@ const SABOTAGES = [
     remplace("    audio = natif ? require('expo-audio') : null;", "    audio = require('expo-audio');")],
   ['auditConseilBoutique', F.conseil, "revenu passif oublié dans la formule du conseil : les auto-clics ne vaudraient plus rien",
     remplace('  return TAPS_PAR_SECONDE_REF * valeurTap(e) * transeMultiplier(SERIE_SOUTENUE) + passif;', '  return TAPS_PAR_SECONDE_REF * valeurTap(e) * transeMultiplier(SERIE_SOUTENUE);')],
+  ['auditCapteurTapsNeutre', F.ecran, "capteur qui PREND les touchers (return true) : plus aucun tap ne serait compté",
+    remplace('    return false; // capteur NEUTRE : ne prend jamais le toucher', '    return true; // capteur NEUTRE : ne prend jamais le toucher')],
   ['auditZoneTapAuContact', F.ecran, "zone de tap remise en TouchableOpacity / onPress (exactement le retour du bug du 27/09)",
     remplace('<View style={styles.tapTouch} onStartShouldSetResponder={() => true} onResponderGrant={handleTap}>', '<TouchableOpacity activeOpacity={1} onPress={handleTap} style={styles.tapTouch}>')],
   ['auditGrimoireComplet', F.grimoire, "Dégâts critiques retirés du livre : un élément achetable disparaîtrait de la boutique",

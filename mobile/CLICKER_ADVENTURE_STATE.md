@@ -1666,3 +1666,22 @@ tronqué à 360, 390, 412). auditAlbumComplet exige l'image de chaque onglet
   Fond : dégradé de l'élément (fond-carte-*.png, généré) ; inconnue = voile
   sombre + silhouette (si image) + « ? ». ⚠️ Piège : nombres numpy écrits
   `np.float64(…)` dans le JS généré → convertir en float avant d'écrire.
+
+
+## 02/10 — Bug des taps signalé ENCORE : DIAGNOSTIC sur téléphone (pas de 3e supposition)
+
+Historique : 2 causes déjà corrigées (« +X » qui avalaient les taps, f88479b ;
+TouchableOpacity, 9657e54 — contrôle toujours vert) ; rien de nouveau posé
+au-dessus de l'œuf depuis le 02/10 → bug probablement JAMAIS entièrement
+résolu (l'auteur n'avait pas confirmé). Le banc (navigateur rapide) ne le
+reproduit pas (30 taps / 150 ms → 30 comptés).
+→ `games/clicker/diagnosticTaps.js` + section du rapport « Signaler un
+problème » : touchers sur l'œuf (capteur en phase de CAPTURE à la racine,
+`onStartShouldSetResponderCapture`, renvoie TOUJOURS false — contrôle
+**auditCapteurTapsNeutre** + sabotage), taps comptés (handleTap), durée du
+traitement, figements d'images > 100 ms (horloge requestAnimationFrame).
+⚠️ ImageBackground passe ses props à l'IMAGE, pas à sa vue : le capteur est
+une View qui l'ENTOURE.
+LECTURE : perdus > 0 avec peu de figements → élément qui intercepte / touchers
+qui se chevauchent ; beaucoup de figements → le téléphone sature (alléger
+les effets par tap). Retirer l'horloge d'images une fois le bug compris.

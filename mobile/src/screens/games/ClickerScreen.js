@@ -4,6 +4,7 @@
 // Persisté via AsyncStorage, indépendant du système de pièces global de
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { noterToucher, noterTap, noterImage } from '../../games/clicker/diagnosticTaps';
 import { Easing, View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
@@ -1759,7 +1760,29 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setTimeout(() => setPopups((p) => p.filter((pp) => pp.id !== id)), 700);
   };
 
+  // ── Diagnostic des taps (02/10) : zone de l'œuf mesurée, capteur neutre,
+  // horloge d'images. Voir games/clicker/diagnosticTaps.js.
+  const zoneTapRef = useRef(null);
+  const zoneTapRect = useRef(null);
+  const mesurerZoneTap = () => {
+    if (zoneTapRef.current && zoneTapRef.current.measure) zoneTapRef.current.measure((x, y, w, h, px, py) => { zoneTapRect.current = { x: px, y: py, w, h }; });
+  };
+  const capterToucher = (e) => {
+    if (view === 'tap') {
+      const r = zoneTapRect.current; const { pageX, pageY } = e.nativeEvent;
+      noterToucher(!!r && pageX >= r.x && pageX <= r.x + r.w && pageY >= r.y && pageY <= r.y + r.h);
+    }
+    return false; // capteur NEUTRE : ne prend jamais le toucher
+  };
+  useEffect(() => {
+    let id; let dernier = Date.now();
+    const boucle = () => { const t = Date.now(); const ecart = t - dernier; dernier = t; if (ecart < 5000) noterImage(ecart); id = requestAnimationFrame(boucle); };
+    id = requestAnimationFrame(boucle);
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   const handleTap = (evt) => {
+    const debutTap = Date.now();
     // Volontairement AVANT tout le reste et sans `return` : le tap
     // compte pour le boss puis continue son chemin normal (pièces,
     // critiques, minuteur d'œuf).
@@ -1883,6 +1906,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     trackEvent('taps', 1);
 
     if (eggPhaseRef.current !== 'collecting') handleEggTap();
+    noterTap(Date.now() - debutTap);
   };
 
   // Le joueur a tapé la créature apparue à temps : son pouvoir s'active,
@@ -3564,6 +3588,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }
 
   return (
+    <View style={styles.racineDiag} onStartShouldSetResponderCapture={capterToucher}>
+    {/* Capteur du diagnostic des taps (02/10) : voit CHAQUE toucher en phase de
+        capture et ne le prend JAMAIS (renvoie false) — contrôle auditCapteurTapsNeutre. */}
     <ImageBackground source={require('../../../assets/menu/fond.jpg')} style={styles.screen} resizeMode="cover" {...panHandlers}>
       <View style={[styles.headerRow, view === 'collection' && { top: SCREEN_H * 0.088 }]}>
         {/* Case "Élevage" retirée complètement, sur demande explicite —
@@ -3850,7 +3877,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   téléphone avait de la marge, puis les effets ajoutés depuis l'ont
                   fait décrocher (retour de l'auteur le 27/09 : « le problème de tap
                   est revenu »). Réappliqué tel quel le 27/09. */}
-              <View style={styles.tapTouch} onStartShouldSetResponder={() => true} onResponderGrant={handleTap}>
+              <View style={styles.tapTouch} onStartShouldSetResponder={() => true} onResponderGrant={handleTap} ref={zoneTapRef} onLayout={mesurerZoneTap}>
                   {/* 27/09 : le nid est DANS le conteneur de l'œuf (derrière lui,
                       dessiné avant) : il partage son centrage et son décalage,
                       donc reste dessous sur tout appareil (retour de l'auteur :
@@ -4383,6 +4410,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           </View>
         )}
     </ImageBackground>
+    </View>
   );
 }
 
@@ -5714,6 +5742,7 @@ const styles = StyleSheet.create({
   resultatGardienBouton: { backgroundColor: '#F2B233', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 26, marginTop: 4 },
   resultatGardienBoutonTexte: { color: '#2A1B00', fontSize: 16, fontWeight: '800' },
   screen: { flex: 1, backgroundColor: COLORS.bg, padding: 14 },
+  racineDiag: { flex: 1 },
   loadingText: { color: COLORS.muted, textAlign: 'center', marginTop: 40 },
   // Positionnement ABSOLU en % du plein écran (04/09) — sur demande
   // explicite de l'utilisateur, qui a utilisé un outil de glisser-
