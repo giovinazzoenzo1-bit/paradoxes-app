@@ -1643,3 +1643,9 @@ magenta-ité RELATIVE à la luminosité, puis recolorer tout pixel encore rose
 avant de publier (la 1re version ne l'avait pas été).
 Images retirées de l'appli (originaux dans design/) : 1er abri, abri carré,
 œuf au nid, dos de carte, 8 rubans.
+
+**02/10 — Collection, retouches de l'auteur** : œuf RETIRÉ (demande de l'auteur ;
+« Invoquer » + prix restent sur l'avant de la souche, toute la souche
+invoque) — images orbe-oeuf / ombre-ovale et animation du halo supprimées.
+Marque-pages (onglets) : à refaire « pareils que sur l'image » → prompt 77
+(les 8 en UNE planche, sans texte ; texte écrit par le code). En attente.

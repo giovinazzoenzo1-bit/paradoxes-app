@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { View, Text, Image, ImageBackground, TouchableOpacity, Animated, Easing, StyleSheet, Dimensions } from 'react-native';
+import React, { useMemo, useRef } from 'react';
+import { View, Text, Image, ImageBackground, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { CREATURES, stageForLevel } from '../../games/clicker/clickerLogic';
 import { construireAlbum, RANG_RARETE as RANG } from '../../games/clicker/albumPages';
 import CreatureArt from '../../components/CreatureArt';
@@ -18,7 +18,7 @@ import { jouerSon } from './sonsBoutique';
 //   est donc au plan 2 (sous eux), sous la barre du bas (5), le sélecteur de
 //   deck (20) et la fiche d'une créature (10, posée par ClickerScreen).
 // - L'ABRI du deck, LARGE, en haut ; l'ALBUM, grand, posé sur la SOUCHE ;
-//   l'ORBE doré au centre de la souche, « Invoquer » et le prix dessous.
+//   « Invoquer » et le prix sur la souche (œuf retiré, demande de l'auteur).
 // - 8 cartes par double page, éléments mélangés (albumPages.js) ; cartes
 //   hautes : icône d'élément, image, bandeau (nom, Niv., gemmes) ; inconnue =
 //   SILHOUETTE dans le cadre de son élément ; onglets pointus à droite.
@@ -46,9 +46,6 @@ const PIECE_SOUCHE = {
   image: require('../../../assets/collection/souche-large.png'), rapport: 692 / 430,
   plateauMilieu: 0.12,
 };
-// Orbe : l'œuf doré seul, découpé de la pièce 71 par sa couleur (bas coupé à plat
-// là où le nid le cachait → une ombre ovale dessous le fait paraître posé).
-const PIECE_ORBE = { image: require('../../../assets/collection/orbe-oeuf.png'), rapport: 263 / 278 };
 
 // ── Mise en page (390 × 844 de référence ; tout se recalcule) ──
 const ABRI_BOITE = { x: Math.round(ECRAN_L * 0.03), y: HAUT, l: Math.round(ECRAN_L * 0.94) };
@@ -66,9 +63,6 @@ const SOUCHE = { y: 0 };
 SOUCHE.l = Math.min(ECRAN_L, Math.round((BAS - (ALBUM.y + ALBUM.h)) / (1 - PIECE_SOUCHE.plateauMilieu) * PIECE_SOUCHE.rapport));
 SOUCHE.h = Math.round(SOUCHE.l / PIECE_SOUCHE.rapport); SOUCHE.x = Math.round((ECRAN_L - SOUCHE.l) / 2);
 SOUCHE.y = ALBUM.y + ALBUM.h - Math.round(SOUCHE.h * PIECE_SOUCHE.plateauMilieu);
-// L'orbe : devant la souche, centré, juste sous l'album.
-const ORBE = { h: Math.round(Math.min(96, SOUCHE.h * 0.42)) };
-ORBE.l = Math.round(ORBE.h * PIECE_ORBE.rapport); ORBE.x = Math.round((ECRAN_L - ORBE.l) / 2); ORBE.y = ALBUM.y + ALBUM.h - 8;
 
 // Image posée « contain » dans une boîte (centrée en largeur, calée en bas si demandé).
 function poser(boite, rapport, enBas) {
@@ -97,8 +91,6 @@ const IMG = {
   album: require('../../../assets/collection/album.png'),
   feuille: { gauche: require('../../../assets/collection/album-feuille-gauche.png'), droite: require('../../../assets/collection/album-feuille-droite.png') },
   vide: require('../../../assets/collection/emplacement-vide.png'),
-  ombre: require('../../../assets/collection/ombre-ovale.png'),
-  lueur: require('../../../assets/grimoire/lueur-or.png'),
 };
 const GEMMES = {
   commun: require('../../../assets/collection/gemme-commun.png'),
@@ -163,15 +155,6 @@ function Album(props) {
   const dp = doublePage(tour, position, planche);
   const pCourante = (tour ? tour.vers : position).p;
 
-  const halo = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const b = Animated.loop(Animated.sequence([
-      Animated.timing(halo, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(halo, { toValue: 0, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-    ]));
-    b.start();
-    return () => b.stop();
-  }, []);
 
   // 4 cartes (2 × 2) centrées dans la zone de la page, sans titre (maquette).
   const contenu = (page, cote) => {
@@ -196,7 +179,6 @@ function Album(props) {
 
   const peutInvoquer = coins >= nextSummonCost;
   const invoquer = () => (peutInvoquer && props.onSummon ? props.onSummon() : null);
-  const haloL = Math.round(Math.max(ORBE.l, ORBE.h) * 2.3);
   const panneau = frac({ x: 0, y: 0, l: ABRI.l, h: ABRI.h }, PIECE_ABRI.panneau);
   return (
     <View style={styles.racine}>
@@ -246,14 +228,9 @@ function Album(props) {
         </FaceTournante>
       ))}
 
-      {/* ── L'orbe doré, DEVANT la souche : halo (dégradé du code), ombre posée, texte dessous. */}
-      <Animated.Image source={IMG.lueur} resizeMode="stretch" style={{ position: 'absolute', left: ORBE.x + ORBE.l / 2 - haloL / 2, top: ORBE.y + ORBE.h / 2 - haloL / 2, width: haloL, height: haloL, pointerEvents: 'none',
-        opacity: halo.interpolate({ inputRange: [0, 1], outputRange: peutInvoquer ? [0.6, 1] : [0.2, 0.35] }), transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) }] }} />
-      <Image source={IMG.ombre} resizeMode="stretch" style={{ position: 'absolute', left: ORBE.x - ORBE.l * 0.15, top: ORBE.y + ORBE.h - ORBE.h * 0.16, width: ORBE.l * 1.3, height: ORBE.h * 0.3, pointerEvents: 'none' }} />
-      <TouchableOpacity activeOpacity={0.85} onPress={invoquer} style={{ position: 'absolute', left: ORBE.x, top: ORBE.y, width: ORBE.l, height: ORBE.h }}>
-        <Image source={PIECE_ORBE.image} resizeMode="stretch" style={{ width: ORBE.l, height: ORBE.h }} />
-      </TouchableOpacity>
-      <TouchableOpacity activeOpacity={0.85} onPress={invoquer} style={[styles.invoquer, { top: Math.min(BAS - 62, ORBE.y + ORBE.h + 4) }]}>
+      {/* ── « Invoquer » et le prix, sur l'avant de la souche (l'œuf a été retiré à la
+          demande de l'auteur, 02/10) ; toute la souche invoque aussi. */}
+      <TouchableOpacity activeOpacity={0.85} onPress={invoquer} style={[styles.invoquer, { top: Math.min(BAS - 62, Math.round(SOUCHE.y + SOUCHE.h * 0.4)) }]}>
         <Text style={styles.invoquerTexte}>Invoquer</Text>
         <Text style={[styles.prixTexte, !peutInvoquer && styles.prixCher]}>{formatNum(nextSummonCost)} Po</Text>
       </TouchableOpacity>
