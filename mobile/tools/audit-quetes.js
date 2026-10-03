@@ -3954,7 +3954,9 @@ module.exports.auditGrimoireComplet = auditGrimoireComplet;
 // remise à l'identique (abd69b9) ; revenu au grand jour le 27/09 quand les
 // effets ont chargé chaque tap. Exige : la zone de tap est une View au
 // répondeur (onResponderGrant={handleTap}), jamais onPress={handleTap} ; les
-// boutons de prix du Grimoire achètent au contact (onPressIn).
+// boutons de prix du Grimoire achètent au contact (onPressIn). 03/10 : la zone
+// compte CHAQUE toucher (onResponderStart), pas seulement le début du geste —
+// les touchers chevauchés d'un autoclicker rapide étaient perdus (38 %).
 function auditZoneTapAuContact() {
   const fs = require('fs'); const path = require('path');
   const pb = [];
@@ -3965,7 +3967,9 @@ function auditZoneTapAuContact() {
   else {
     const balise = (ligne.trim().match(/^<(\w+)/) || [])[1];
     if (balise !== 'View') pb.push(`ClickerScreen : la zone de tap est un <${balise}> (attendu : une View au répondeur)`);
-    if (!ligne.includes('onResponderGrant={handleTap}')) pb.push('ClickerScreen : la zone de tap ne compte pas au CONTACT (onResponderGrant={handleTap} absent)');
+    if (!ligne.includes('onResponderStart={handleTap}')) pb.push('ClickerScreen : la zone de tap ne compte pas CHAQUE toucher (onResponderStart={handleTap} absent)');
+    if (ligne.includes('onResponderGrant={handleTap}')) pb.push('ClickerScreen : tap compté au DÉBUT du geste seulement (onResponderGrant) — les touchers chevauchés sont perdus (38 % mesurés le 03/10)');
+    if (!ligne.includes('onResponderTerminationRequest={() => false}')) pb.push('ClickerScreen : la zone de tap peut se faire voler le geste en cours (onResponderTerminationRequest)');
   }
   const g = fs.readFileSync(path.join(__dirname, '../src/screens/games/GrimoireBoutique.js'), 'utf8');
   const auContact = (g.match(/onPressIn=\{\(e\) => onAcheter\(/g) || []).length;

@@ -3877,7 +3877,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   téléphone avait de la marge, puis les effets ajoutés depuis l'ont
                   fait décrocher (retour de l'auteur le 27/09 : « le problème de tap
                   est revenu »). Réappliqué tel quel le 27/09. */}
-              <View style={styles.tapTouch} onStartShouldSetResponder={() => true} onResponderGrant={handleTap} ref={zoneTapRef} onLayout={mesurerZoneTap}>
+              {/* ⚠️ 3e CAUSE du bug des taps (03/10, MESURÉE sur le téléphone de
+                  l'auteur : 1 648 touchers sur l'œuf, 1 021 comptés, 38 % perdus ;
+                  reproduite au banc : 40 touchers chevauchés → 18 perdus) : à
+                  ~22 touchers/s, l'autoclicker re-touche AVANT d'avoir relâché ;
+                  onResponderGrant ne voit que le DÉBUT du geste, les touchers
+                  suivants arrivent en onResponderStart. → compter sur
+                  onResponderStart (chaque toucher, le 1er compris) et garder la
+                  main (onResponderTerminationRequest → false). */}
+              <View style={styles.tapTouch} onStartShouldSetResponder={() => true} onResponderStart={handleTap} onResponderTerminationRequest={() => false} ref={zoneTapRef} onLayout={mesurerZoneTap}>
                   {/* 27/09 : le nid est DANS le conteneur de l'œuf (derrière lui,
                       dessiné avant) : il partage son centrage et son décalage,
                       donc reste dessous sur tout appareil (retour de l'auteur :

@@ -1694,3 +1694,22 @@ auditZoneTapAuContact visait la ligne EXACTE de la zone de tap, que la mesure
 de la zone a modifiée → repère PÉRIMÉ (contrôle aveugle). RÈGLE : toute
 modification d'une ligne visée par un sabotage → mettre le repère à jour ;
 l'envoi se CONDITIONNE au vert des deux suites (&&), jamais « ; ».
+
+
+## ✅ 03/10 — Bug des taps : 3e CAUSE trouvée PAR LA MESURE et corrigée
+
+Rapport de l'auteur (diagnostic, 74 s) : 1 648 touchers sur l'œuf (~22/s, son
+autoclicker va bien plus vite que 150 ms), 1 021 comptés → 627 PERDUS (38 %) ;
+traitement d'un tap 0,1 ms, 54 images/s en moyenne → PAS une saturation.
+CAUSE : touchers CHEVAUCHÉS — l'autoclicker re-touche avant d'avoir relâché ;
+la zone comptait sur onResponderGrant (début du GESTE seulement) ; les
+touchers suivants arrivent en onResponderStart, que personne n'écoutait.
+REPRODUIT au banc (`tools/capture/chevauchement.mjs` : vrais événements
+tactiles multiples via le protocole du navigateur, identifiants de doigts
+recyclés — limite de 16) : 40 chevauchés → 24 comptés (18 perdus, ~43 %).
+CORRECTIF : onResponderStart={handleTap} (chaque toucher, le 1er compris) +
+onResponderTerminationRequest={() => false} (garder le geste) → 42 / 42, et
+la sonde des taps simples reste à 20 / 20 (aucun double compte).
+auditZoneTapAuContact : exige onResponderStart, INTERDIT onResponderGrant
+pour compter ; 2 sabotages (TouchableOpacity ; retour au début du geste).
+Le diagnostic reste en place (à retirer quand l'auteur confirme).
