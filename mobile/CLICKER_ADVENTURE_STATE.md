@@ -2196,3 +2196,10 @@ calibrage inchangé. Contrôle auditRuneArcane + sabotage. Banc :
 exploration.jsx?runes=1 (sauvegarde avec une ancienne Dextérité).
 ⚠️ LEÇON : un heredoc Python avec une ERREUR DE SYNTAXE n'exécute RIEN (même les
 écritures du début) — toujours vérifier la sortie du script avant de passer à la suite.
+
+**03/10 — Icône dédiée de la Rune d'Arcane installée** (Gemini : pierre violette, cristal
+de mana doré). Déposée dans 11-runes-et-forge/actuel/ (l'auteur était dans le
+sous-dossier). Détourage PRUDENT : la pierre est VIOLETTE (proche du magenta) →
+nettoyage limité au liseré extérieur (4 px) et au VRAI magenta (R, B > 165, G < 125),
+jamais le critère « min(R,B) − G » qui aurait rongé le violet. 189 × 256 (comme
+les autres). RÈGLE : pièce violette ou rose → nettoyage restreint au vrai magenta.
