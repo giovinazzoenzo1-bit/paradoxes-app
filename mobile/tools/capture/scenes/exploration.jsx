@@ -21,6 +21,12 @@ if (window.location.search.includes('progression=3')) {
 if (window.location.search.includes('progression=1')) {
   window.__memoireBanc['adventure:state:v2'] = JSON.stringify({ currentUnlockedLevel: 4, griffes: 120, ownedRunes: [], energy: 5, energyUpdatedAt: Date.now(), levelStars: { 1: 3, 2: 2, 3: 1 }, defaitesDeSuite: {} });
 }
+// « &runes=1 » : une ANCIENNE Rune de Dextérité (niveau 3) en sauvegarde — doit s'afficher en Arcane.
+if (window.location.search.includes('runes=1') && window.__memoireBanc['adventure:state:v2']) {
+  const st = JSON.parse(window.__memoireBanc['adventure:state:v2']);
+  st.ownedRunes = [{ id: 'rune-test-1', type: 'dexterite', level: 3 }, { id: 'rune-test-2', type: 'force', level: 2 }];
+  window.__memoireBanc['adventure:state:v2'] = JSON.stringify(st);
+}
 const rien = () => {};
 createRoot(document.getElementById('root')).render(
   <SafeAreaProvider><CoinsProvider><DailyProvider><SettingsProvider>

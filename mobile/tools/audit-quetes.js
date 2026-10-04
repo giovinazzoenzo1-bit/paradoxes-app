@@ -4358,3 +4358,28 @@ function auditRiposteTourDeRole() {
   return pb;
 }
 module.exports.auditRiposteTourDeRole = auditRiposteTourDeRole;
+
+// ── Rune d'Arcane (03/10, remplace la Dextérité) ───────────────────────────
+// Mana en plus au DÉPART du combat (+1 +1 +2 +2 +3), plafonné à MANA_MAX, par
+// la MÊME règle dans l'écran et dans la simulation (manaDeDepart) ; les
+// Dextérités (et Endurances) en sauvegarde deviennent des Arcanes du même niveau.
+function auditRuneArcane() {
+  const fs = require('fs'); const path = require('path');
+  const K = load('combatLogic');
+  const pb = [];
+  const t = K.RUNE_BONUS_TABLE.arcane;
+  if (!t || t.length !== 5) pb.push("RUNE_BONUS_TABLE.arcane absente ou incomplète");
+  else for (let i = 1; i < 5; i++) if (t[i] < t[i - 1]) pb.push(`Arcane : le niveau ${i + 1} donne moins que le niveau ${i}`);
+  if (K.RUNE_BONUS_TABLE.dexterite) pb.push('la Dextérité existe encore dans le moteur');
+  const m5 = K.manaDeDepart({ manaDepart: K.runeBonuses([{ type: 'arcane', level: 5 }, { type: 'arcane', level: 5 }]).manaDepart });
+  if (m5 > K.MANA_MAX) pb.push(`mana de départ au-dessus du maximum (${m5})`);
+  if (K.manaDeDepart({}) !== K.MANA_DEPART) pb.push('sans rune, le mana de départ a changé');
+  const e = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  if (!/stats, hp: stats\.hp, mana: manaDeDepart\(stats\), etats: \{\} \};/.test(e)) pb.push("écran : le mana de départ n'applique plus la Rune d'Arcane (manaDeDepart)");
+  const m = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
+  if (!/mana: manaDeDepart\(c\.stats\), resilienceUsed: false/.test(m)) pb.push("simulation : le mana de départ n'applique plus la Rune d'Arcane");
+  const a = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  if (!/r && !RUNE_TYPES\[r\.type\] \? \{ \.\.\.r, type: 'arcane' \} : r/.test(a)) pb.push("sauvegardes : les anciennes Dextérités ne deviennent plus des Arcanes");
+  return pb;
+}
+module.exports.auditRuneArcane = auditRuneArcane;

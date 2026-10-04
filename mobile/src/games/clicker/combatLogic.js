@@ -291,7 +291,7 @@ export const GUARDIAN_CORRECTION_MAX = 4;
 // dorée. Parfait = ×2,5 (le maximum de l'ancien défi), bien = ×2,0, raté = ×1,
 // pas de tap à temps = ×0,5 (l'ancien « pas fini »). Zone dorée plus LARGE pour
 // les créatures plus rares (l'ancien défi demandait 25 taps à une commune, 11 à
-// une légendaire) ; Rune de Dextérité et sort Vitesse l'élargissent (même %
+// une légendaire) ; le sort Vitesse l'élargit (+35 % ; la Rune de Dextérité, qui l'élargissait aussi, est devenue l'Arcane le 03/10) (même %
 // que leur ancienne réduction de taps). MESURÉ (simulateur-parcours, 300
 // joueurs) : joueur de référence (erreur typique 60 ms) → Aventure quasi
 // inchangée ; joueur moyen (90 ms) → environ −0,5 victoire sur 10.
@@ -311,6 +311,12 @@ export const JAUGE_ZONE_CENTRE_MIN = 0.25;     // la zone dorée est placée au 
 export const JAUGE_ZONE_CENTRE_MAX = 0.75;
 
 // Largeur de la zone « parfait » (fraction de la jauge) d'un combattant.
+// Mana au DÉPART d'un combat (03/10) : MANA_DEPART + Rune d'Arcane, plafonné à MANA_MAX.
+// Règle PARTAGÉE : écran de combat ET simulations.
+export function manaDeDepart(stats) {
+  return Math.min(MANA_MAX, MANA_DEPART + Math.max(0, (stats && stats.manaDepart) || 0));
+}
+
 export function largeurZoneParfait(c) {
   const base = JAUGE_LARGEUR_PARFAIT[c.creature && c.creature.rarity] || JAUGE_LARGEUR_PARFAIT.commun;
   const bonus = Math.max(0, Math.min(0.8, ((c.stats && c.stats.tapReductionPct) || 0) + (etatsDe(c).vitesse || 0)));
@@ -1052,7 +1058,7 @@ export function choixSansSorts(joueurs, actif) {
 export function simulerCombat(joueurs, adversaires, {
   gStats = null, tapsParSec = PUISSANCE_TAPS_PAR_SEC, erreurMs = JAUGE_ERREUR_REFERENCE_MS, alea = Math.random, politique = choixJoueur,
 } = {}) {
-  let J = joueurs.map((c) => ({ ...c, hp: c.stats.hp, mana: MANA_DEPART, resilienceUsed: false, etats: {} }));
+  let J = joueurs.map((c) => ({ ...c, hp: c.stats.hp, mana: manaDeDepart(c.stats), resilienceUsed: false, etats: {} }));
   let A = adversaires.map((c) => ({ ...c, hp: c.stats.hp, mana: MANA_DEPART, etats: {} }));
   const estBoss = !!gStats;
   let bouclier = estBoss ? Math.round(gStats.hp * GUARDIAN_SHIELD_RATIO) : 0;
@@ -1827,7 +1833,10 @@ export const RUNE_BONUS_TABLE = {
   // L'Endurance a été REMPLACÉE par le mana le 11/09 : la rune qui la
   // boostait ne servait plus à rien. Remplacée par la Dextérité, qui
   // retire un % des taps exigés par le défi de combat.
-  dexterite: [0.12, 0.24, 0.36, 0.48, 0.60], // % de zone dorée EN PLUS à la jauge (avant : % de taps en moins)
+  // 03/10 : la Dextérité (zone dorée de la jauge) est REMPLACÉE par l'ARCANE (demande de
+  // l'auteur) : points de MANA en plus au DÉPART du combat (plafond MANA_MAX) — les sorts et
+  // le spécial arrivent plus tôt. Les Dextérités en sauvegarde deviennent des Arcanes (même niveau).
+  arcane: [1, 1, 2, 2, 3], // points de mana au départ (entiers)
   celerite: [0.10, 0.20, 0.35, 0.50, 0.70], // bonus ADDITIF sur le multiplicateur de dégâts (x2,5 de base)
   // --- 12/09 : 3 runes ajoutées pour sortir du "tout offensif" ---
   // Affinité : s'ajoute au multiplicateur d'AVANTAGE élémentaire (1,30
@@ -1857,7 +1866,7 @@ export const RESILIENCE_MAX_PCT = 0.5;    // renaissance à 50% des PV au maximu
 // runes, seulement au sein de la progression de palier d'UNE rune).
 export function runeBonuses(equippedRunes) {
   const totals = {
-    atkPct: 0, hpPct: 0, tapReductionPct: 0, dmgMultBonus: 0,
+    atkPct: 0, hpPct: 0, tapReductionPct: 0, dmgMultBonus: 0, manaDepart: 0,
     affinityBonus: 0, butinPct: 0, resiliencePct: 0,
   };
   (equippedRunes || []).forEach((r) => {
@@ -1867,18 +1876,7 @@ export function runeBonuses(equippedRunes) {
     const val = table[Math.max(0, Math.min(4, r.level - 1))];
     if (r.type === 'force') totals.atkPct += val;
     else if (r.type === 'vitalite') totals.hpPct += val;
-    else if (r.type === 'dexterite') {
-      totals.tapReductionPct += val;
-      // Part du bonus qui passe en dégâts. Nécessaire, pas décoratif :
-      // au-dessus de 6,25 taps/s le défi est DÉJÀ complété sous le seuil
-      // rapide, donc le multiplicateur est à son plafond x2,5 et retirer
-      // des taps ne rapporte plus rien (mesuré). `dmgMultBonus` est
-      // ajouté APRÈS le plafond dans CombatScreen, c'est donc le seul
-      // canal qui reste utile à haute cadence. Coefficient 0,4 : la
-      // Célérité (+0,70 au niveau 5) reste la rune de référence sur cet
-      // axe, la Dextérité n'y est que secondaire.
-      totals.dmgMultBonus += val * 0.4;
-    }
+    else if (r.type === 'arcane') totals.manaDepart += val; // mana au départ du combat (03/10)
     else if (r.type === 'celerite') totals.dmgMultBonus += val;
     else if (r.type === 'affinite') totals.affinityBonus += val;
     else if (r.type === 'butin') totals.butinPct += val;
@@ -1912,10 +1910,11 @@ export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0, 
     // de vitesse de tap (Rune de Célérité) — pas une vraie "stat" au
     // sens PV/ATQ/Endurance, juste transporté avec le reste.
     dmgMultBonus: bonus.dmgMultBonus,
-    // Réduction du nombre de taps exigés (Rune de Dextérité). Transporté
-    // comme dmgMultBonus : ce n'est pas une stat, CombatScreen l'utilise
-    // pour calculer le défi de tap.
+    // Zone dorée de la jauge élargie (plus aucune rune depuis le 03/10 : le sort Vitesse
+    // passe par les états). Conservé à 0 pour les anciens calculs.
     tapReductionPct: bonus.tapReductionPct,
+    // Rune d'Arcane (03/10) : mana au départ du combat — lu par manaDeDepart.
+    manaDepart: bonus.manaDepart,
     // Runes du 12/09 — transportées avec les stats, comme dmgMultBonus.
     affinityBonus: bonus.affinityBonus,
     resiliencePct: Math.min(RESILIENCE_MAX_PCT, bonus.resiliencePct),

@@ -122,8 +122,13 @@
 - [ ] Étape 3 : spéciaux « signature » par élément (charge, tracé, points
       lumineux, rythme…), un élément à la fois, si 1 et 2 plaisent.
 
-- [ ] **Remplacer la Rune de Dextérité** (demande de l'auteur, 03/10, « tout à
-      l'heure ») : elle réduisait les taps ; avec la jauge, elle élargit la zone
-      dorée — l'auteur veut un AUTRE effet. À proposer : (mesurer avant).
+- [x] **Rune de Dextérité remplacée par la Rune d'ARCANE** (03/10) : +1/+1/+2/+2/+3 mana
+      au départ du combat (plafond 5) ; Dextérités en sauvegarde converties (même niveau).
+- [ ] **Runes FUTURES (choix de l'auteur, à garder pour les prochaines mises à jour)** :
+      🩸 **Vampirisme** (chaque coup soigne de 4 à 18 % des dégâts infligés ; visuel :
+      le soin vert) ; 🌵 **Épines** (renvoie une part des dégâts reçus à l'attaquant ;
+      à rendre lisible). Effets GARANTIS (pas de hasard), comme la Résilience.
+- [ ] Icône dédiée de la Rune d'Arcane (cristal de mana) — facultatif : prompt Gemini dans
+      design/a-integrer/11-runes-et-forge/PROMPT-RUNE-ARCANE.md.
 - [x] Effets de combat, étape 2 : les 8 effets d'élément (03/10).
 - [x] Effets de combat, étape 3 : sorts, spécial, K.-O. (03/10).

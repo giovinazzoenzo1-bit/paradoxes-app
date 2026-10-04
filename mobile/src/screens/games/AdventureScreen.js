@@ -133,7 +133,7 @@ function runeEffectText(type, level) {
     case 'force': return { simple: 'Tes coups font plus mal.', value: `+${pct} d'attaque` };
     case 'vitalite': return { simple: 'Tu as plus de vie.', value: `+${pct} de vie` };
     case 'celerite': return { simple: 'Tes attaques frappent plus fort.', value: `+${v.toFixed(2)} de dégâts` };
-    case 'dexterite': return { simple: 'Moins de tapes pour attaquer.', value: `−${pct} de tapes` };
+    case 'arcane': return { simple: 'Tes sorts arrivent plus tôt.', value: `+${v} mana au départ` };
     case 'affinite': return { simple: 'Très fort contre le bon élément.', value: `+${v.toFixed(2)} si avantage` };
     case 'butin': return { simple: 'Tu gagnes plus de griffes.', value: `+${pct} de griffes` };
     case 'resilience': return { simple: 'Tu survis à un coup mortel.', value: `1× par combat, à ${pct} de vie` };
@@ -488,7 +488,9 @@ const RUNE_TYPES = {
   // taps au défi de combat. Les runes d'Endurance DÉJÀ EN SAUVEGARDE
   // sont converties au chargement — sans ça, RUNE_TYPES[type] serait
   // undefined et l'écran des runes planterait sur def.icon.
-  dexterite: { name: 'Rune de Dextérité', icon: '🎯', color: COLORS.action, art: require('../../../assets/icons/runes/dexterite.png') },
+  // 03/10 : la Dextérité devient l'ARCANE (mana au départ du combat). Icône : la pierre violette
+  // aux cercles dorés (un cercle magique), en attendant une icône dédiée.
+  arcane: { name: "Rune d'Arcane", icon: '🔮', color: '#b98cff', art: require('../../../assets/icons/runes/arcane.png') },
   celerite: { name: 'Rune de Célérité', icon: '⚡', color: COLORS.neonCyan, art: require('../../../assets/icons/runes/celerite.png') },
   // 3 runes ajoutées le 12/09 pour sortir du « tout offensif » : les 4
   // premières poussaient toutes les dégâts ou les PV.
@@ -499,12 +501,12 @@ const RUNE_TYPES = {
 const RUNE_TYPE_KEYS = Object.keys(RUNE_TYPES);
 
 // Convertit les runes d'une sauvegarde ancienne. Toute rune dont le type
-// n'existe plus (aujourd'hui « endurance ») devient une Dextérité de
-// même niveau : le joueur ne perd rien, et surtout l'affichage ne tombe
-// pas sur un type inconnu.
+// n'existe plus (« endurance » le 11/09, « dexterite » le 03/10) devient une
+// ARCANE de même niveau : le joueur ne perd rien, et surtout l'affichage ne
+// tombe pas sur un type inconnu.
 function migrateRunes(list) {
   return (list || []).map((r) =>
-    r && !RUNE_TYPES[r.type] ? { ...r, type: 'dexterite' } : r
+    r && !RUNE_TYPES[r.type] ? { ...r, type: 'arcane' } : r
   );
 }
 const RUNE_COST = 100;

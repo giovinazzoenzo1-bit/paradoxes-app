@@ -2178,3 +2178,21 @@ EffetSort EXPORTÉ pour la scène de banc tools/capture/scenes/effets-sorts.jsx
 (les 12 visuels en pleine animation). Banc : K.O. final (flammes de Fournax,
 « -17 », « K.O. »). auditEffetsCombat étendu (sorts, assombrissement, éclair
 transparents au toucher). Empreinte du Gardien 67e439ef. 83 contrôles, 105 sabotages.
+
+
+## 03/10 — Rune de Dextérité → RUNE D'ARCANE (publié)
+
+Choix de l'auteur parmi 3 (Arcane, Vampirisme, Épines — les 2 autres GARDÉES
+pour les prochaines mises à jour, A_FAIRE). RUNE_BONUS_TABLE.arcane =
+[1, 1, 2, 2, 3] points de mana au DÉPART (runeBonuses → stats.manaDepart) ;
+manaDeDepart(stats) = min(MANA_MAX, MANA_DEPART + manaDepart), PARTAGÉ :
+CombatScreen (créatures du joueur) ET simulerCombat. Plus aucune trace du type
+« dexterite » ; migrateRunes : tout type disparu (endurance 11/09, dexterite
+03/10) devient une ARCANE du même niveau (testé au banc : une Dextérité niv. 3
+s'affiche « Rune d'Arcane · Niveau 3 / 5 · +2 mana au départ »). Icône : la
+pierre violette aux cercles dorés (copiée en arcane.png), couleur #b98cff.
+Simulateur de parcours : les runes y sont achetées mais SANS effet en combat →
+calibrage inchangé. Contrôle auditRuneArcane + sabotage. Banc :
+exploration.jsx?runes=1 (sauvegarde avec une ancienne Dextérité).
+⚠️ LEÇON : un heredoc Python avec une ERREUR DE SYNTAXE n'exécute RIEN (même les
+écritures du début) — toujours vérifier la sortie du script avant de passer à la suite.

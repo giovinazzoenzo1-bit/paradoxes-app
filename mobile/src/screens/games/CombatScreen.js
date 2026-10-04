@@ -328,6 +328,7 @@ import {
   tapsAvecEtats,
   iconesEtats,
   MANA_DEPART,
+  manaDeDepart,
   competencesAvecSort,
   lancerSort,
   modifierCoup,
@@ -446,7 +447,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const [fighters, setFighters] = useState(() =>
     team.map((member) => {
       const stats = combatStatsForCreatureTyped(member.creature, member.ownedLevel, member.evolutionTier || 0, member.equippedRunes || []);
-      return { creature: member.creature, ownedLevel: member.ownedLevel, stats, hp: stats.hp, mana: MANA_DEPART, etats: {} };
+      // Mana de départ : règle PARTAGÉE (Rune d'Arcane comprise, 03/10).
+    return { creature: member.creature, ownedLevel: member.ownedLevel, stats, hp: stats.hp, mana: manaDeDepart(stats), etats: {} };
     })
   );
   const [activeIndex, setActiveIndex] = useState(0);
@@ -910,7 +912,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     challengeStartRef.current = Date.now();
     setTapCount(0);
     setTimeLeft(JAUGE_DELAI_MAX_SEC);
-    // Jauge : zone dorée au hasard, largeur selon la rareté (+ Dextérité, sort Vitesse).
+    // Jauge : zone dorée au hasard, largeur selon la rareté (+ sort Vitesse).
     const j = { debut: challengeStartRef.current, centre: centreZoneAleatoire(), largeur: largeurZoneParfait(fightersRef.current[activeIndexRef.current]) };
     jaugeRef.current = j; setJauge(j); verdictRef.current = null;
     setPhase('tapping');
