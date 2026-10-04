@@ -3833,8 +3833,12 @@ function auditPuissanceExacte() {
   // Le cas de l'auteur : niveau 19 → 0 % réel (l'ancienne formule disait 57/58).
   const r19 = K.puissanceAventure([m('bouldog', 34, 1), m('ventis', 13)], 19);
   doit(r19.puissance < K.puissanceConseillee(19) && r19.couleur === 'rouge', 'cas de l\'auteur (niveau 19, 0 % réel) : pas affiché sous la conseillée en rouge');
-  const r16 = K.puissanceAventure([m('bouldog', 34, 1), m('ventis', 13)], 16);
-  doit(r16.puissance >= K.puissanceConseillee(16) && r16.couleur === 'vert', 'cas de l\'auteur (niveau 16, 100 % réel) : pas affiché au-dessus en vert');
+  // ⏸️ EN ATTENTE (03/10) — cas de l'auteur au niveau 16 (« 100 % réel ») : mesuré
+  // avec l'ANCIEN défi de taps, à l'autoclicker (×2,5 à chaque coup). La jauge de
+  // frappe change la règle : son vrai résultat dépend maintenant de SA précision
+  // (simulé : 57 % parfait à chaque coup, 31 % à 60 ms). À RE-MESURER par l'auteur
+  // avec la jauge, puis réinscrire ici avec la nouvelle mesure réelle. Le cas du
+  // niveau 19 (0 % réel → rouge) et le recomptage indépendant restent vérifiés.
   // L'arrondi ne trahit jamais le seuil.
   doit(K._chiffreExact(87, 0.999) === 86 && K._chiffreExact(87, 1) === 87 && K._chiffreExact(87, 1.004) === 87, "l'arrondi affiche « égal » sous le seuil");
   // Échantillon : verdict affiché contre recomptage indépendant. En tête, des
