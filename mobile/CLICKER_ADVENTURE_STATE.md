@@ -2160,3 +2160,21 @@ retirés AVANT l'animation ; seul l'adversaire visé ripostait.
   (150 × 10) : A0 9,2/7,1 · A1 9,1/6,9 · A2 9,1/7,2 · A3 8,8/5,6 · A4 8,7/6,6 ·
   A5 8,6/7,1 ; 0 bloqué. Empreinte du Gardien f477fc07 (calibrage vert).
   Contrôle auditRiposteTourDeRole + sabotage. 83 contrôles, 105 sabotages.
+
+
+## 03/10 — EFFETS DE COMBAT, étape 3 : sorts, spécial, K.O. (publié)
+
+EffetSort (SORT_VISUEL, 12 types) joué sur la bonne créature : bouclier (bulle
+bleue + « +X »), soin (étincelles vertes + « +X »), boost / vitesse /
+provocation (anneaux), pacte (gouttes), poison (bulles), marque (viseur),
+exécution (taillade), zone (onde + effet d'élément sur CHAQUE ennemi touché),
+spécial (AssombrirEcran + onde dorée + secousse 14 + vibration forte), K.O.
+(« K.O. » + poussière, sur toute créature tombée sous un coup, une riposte ou
+le 1er coup adverse). Sources : evenements de lancerSort (bouclier, soin,
+boost : cible + valeur) ; les autres par l'id du sort. Soutien joué au
+LANCEMENT (~200 ms), offensifs à l'IMPACT. CORRECTIF : un sort SANS coup
+(part 0 : soin, bouclier…) ne fait plus bondir la créature vers l'ennemi.
+EffetSort EXPORTÉ pour la scène de banc tools/capture/scenes/effets-sorts.jsx
+(les 12 visuels en pleine animation). Banc : K.O. final (flammes de Fournax,
+« -17 », « K.O. »). auditEffetsCombat étendu (sorts, assombrissement, éclair
+transparents au toucher). Empreinte du Gardien 67e439ef. 83 contrôles, 105 sabotages.

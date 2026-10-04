@@ -129,6 +129,87 @@ function Impact({ x, y, couleur, etincelles, effet = null, taille = 90, grand = 
     </View>
   );
 }
+// ════ EFFETS DE COMBAT — ÉTAPE 3 : SORTS, SPÉCIAL, K.O. (03/10) ════
+// Un visuel par sort (forme, couleur, icône, texte), joué sur la bonne créature : au
+// LANCEMENT pour les sorts de soutien, à l'IMPACT pour les offensifs ; le spécial assombrit
+// l'écran ; une créature qui tombe affiche « K.O. ». Transparents au toucher.
+const SORT_VISUEL = {
+  bouclier: { couleur: '#8fd3ff', icone: '🛡️', duree: 1100, forme: 'bulle', texte: (v) => (v ? `+${v}` : null) },
+  soin: { couleur: '#5ee08a', icone: '💚', duree: 1100, forme: 'montee', texte: (v) => (v ? `+${v}` : null) },
+  boost: { couleur: '#ff8a3d', icone: '🔥', duree: 900, forme: 'anneaux' },
+  vitesse: { couleur: '#ffd24a', icone: '⚡', duree: 800, forme: 'anneaux' },
+  provocation: { couleur: '#ff4d4d', icone: '🔱', duree: 900, forme: 'anneaux' },
+  pacte: { couleur: '#d81e3a', icone: '🩸', duree: 900, forme: 'gouttes' },
+  poison: { couleur: '#7be04a', icone: '☠️', duree: 1000, forme: 'bulles' },
+  marque: { couleur: '#ff3b3b', icone: '🎯', duree: 900, forme: 'viseur' },
+  execution: { couleur: '#ffffff', icone: '🗡️', duree: 650, forme: 'taillade' },
+  zone: { couleur: '#b98cff', icone: '🌀', duree: 850, forme: 'onde' },
+  special: { couleur: '#ffd24a', icone: '🌟', duree: 950, forme: 'onde' },
+  ko: { couleur: '#ff5252', icone: null, duree: 950, forme: 'ko', texte: () => 'K.O.' },
+};
+// Exporté pour la scène de banc des effets (tools/capture/scenes/effets-sorts.jsx).
+export function EffetSort({ type, x, y, taille = 90, valeur = null, onFini }) {
+  const v = SORT_VISUEL[type] || SORT_VISUEL.boost;
+  const t = useRef(new Animated.Value(0)).current;
+  const parts = useRef(Array.from({ length: 8 }, () => ({ dx: (Math.random() - 0.5) * taille * 0.9 }))).current;
+  useEffect(() => {
+    Animated.timing(t, { toValue: 1, duration: v.duree, easing: Easing.out(Easing.quad), useNativeDriver: ND }).start(() => onFini && onFini());
+  }, []);
+  const R = taille * 0.75;
+  const fond = (c, a) => c + a;
+  const txt = v.texte ? v.texte(valeur) : null;
+  return (
+    <View style={{ position: 'absolute', left: x, top: y, width: 0, height: 0, pointerEvents: 'none' }}>
+      {v.forme === 'bulle' && (
+        <Animated.View style={[styles.sortCercle, { left: -R, top: -R, width: 2 * R, height: 2 * R, borderRadius: R, borderColor: v.couleur, backgroundColor: fond(v.couleur, '30'),
+          opacity: t.interpolate({ inputRange: [0, 0.15, 0.75, 1], outputRange: [0, 1, 0.9, 0] }), transform: [{ scale: t.interpolate({ inputRange: [0, 0.2, 0.35, 1], outputRange: [0.5, 1.1, 1, 1] }) }] }]} />
+      )}
+      {(v.forme === 'anneaux' || v.forme === 'onde' || v.forme === 'ko') && [0, 1].map((k) => (
+        <Animated.View key={k} style={[styles.sortCercle, { left: -R, top: -R, width: 2 * R, height: 2 * R, borderRadius: R, borderColor: v.forme === 'ko' ? '#9aa0a6' : v.couleur,
+          opacity: t.interpolate({ inputRange: [0, 0.1 + k * 0.2, 1], outputRange: [0, 0.9, 0] }),
+          transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.3 + k * 0.2, v.forme === 'onde' ? 3.2 : 1.6 + k * 0.3] }) }] }]} />
+      ))}
+      {(v.forme === 'montee' || v.forme === 'bulles' || v.forme === 'gouttes') && parts.map((pt, k) => (
+        <Animated.View key={k} style={[styles.sortParticule, v.forme === 'gouttes' && styles.sortGoutte, { backgroundColor: v.couleur, left: pt.dx - 4,
+          opacity: t.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 1, 0.8, 0] }),
+          transform: [{ translateY: t.interpolate({ inputRange: [0, 1], outputRange: v.forme === 'gouttes' ? [-R * 0.6, R * 0.5] : [R * 0.3, -R * 1.3 - k * 3] }) }, { scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.25] }) }] }]} />
+      ))}
+      {v.forme === 'viseur' && (
+        <Animated.View style={[styles.sortViseur, { left: -R * 0.8, top: -R * 0.8, width: 1.6 * R, height: 1.6 * R, borderRadius: 0.8 * R, borderColor: v.couleur,
+          opacity: t.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 1, 1, 0] }),
+          transform: [{ scale: t.interpolate({ inputRange: [0, 0.3, 1], outputRange: [1.8, 1, 1] }) }, { rotate: t.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] }) }] }]} />
+      )}
+      {v.forme === 'taillade' && (
+        <Animated.View style={[styles.sortTaillade, { left: -R * 1.2, width: 2.4 * R, backgroundColor: v.couleur,
+          opacity: t.interpolate({ inputRange: [0, 0.15, 0.6, 1], outputRange: [0, 1, 0.8, 0] }),
+          transform: [{ rotate: '-35deg' }, { scaleX: t.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0.1, 1, 1.1] }) }] }]} />
+      )}
+      {v.icone && (
+        <Animated.Text style={[styles.sortIcone, { fontSize: Math.round(taille * 0.42), left: -taille * 0.3, top: -taille * 1.05, width: taille * 0.6,
+          opacity: t.interpolate({ inputRange: [0, 0.15, 0.75, 1], outputRange: [0, 1, 1, 0] }),
+          transform: [{ scale: t.interpolate({ inputRange: [0, 0.18, 0.3, 1], outputRange: [0.3, 1.4, 1, 1] }) }, { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [10, -12] }) }] }]}>{v.icone}</Animated.Text>
+      )}
+      {txt && (
+        <Animated.Text style={[styles.sortTexte, { color: v.couleur, left: -taille * 0.6, width: taille * 1.2, top: -taille * 0.25,
+          opacity: t.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 1, 1, 0] }),
+          transform: [{ translateY: t.interpolate({ inputRange: [0, 1], outputRange: [0, -taille * 0.6] }) }] }]}>{txt}</Animated.Text>
+      )}
+    </View>
+  );
+}
+// Spécial : l'écran S'ASSOMBRIT un instant (transparent au toucher).
+function AssombrirEcran() {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(t, { toValue: 0.5, duration: 140, useNativeDriver: ND }),
+      Animated.delay(260),
+      Animated.timing(t, { toValue: 0, duration: 320, useNativeDriver: ND }),
+    ]).start();
+  }, []);
+  return <Animated.View style={[styles.assombrirEcran, { opacity: t }]} />;
+}
+
 // Éclair BLANC sur tout l'écran (PARFAIT) — bref, transparent au toucher.
 function EclairEcran() {
   const t = useRef(new Animated.Value(0)).current;
@@ -620,6 +701,13 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   // Riposte À TOUR DE RÔLE (03/10) : rang du prochain adversaire qui frappe.
   const riposteRangRef = useRef(0);
   const [eclairKey, setEclairKey] = useState(0);
+  const [assombriKey, setAssombriKey] = useState(0);
+  // Visuel d'un sort / du spécial / d'un K.O. sur une créature (03/10, étape 3).
+  const effetSort = (type, cote, index, valeur = null) => {
+    const c = centreSprite(cote, index);
+    if (!c) return;
+    setImpacts((l) => [...l, { id: `${Date.now()}-${Math.random()}`, sort: type, x: c.x, y: c.y, taille: c.taille, valeur }]);
+  };
   const effetsImpact = (cote, index, cle, element = null) => {
     const st = STYLE_COUP[cle] || STYLE_COUP.bien;
     const c = centreSprite(cote, index);
@@ -708,6 +796,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       setPlayerDamageFloat(oppDamage > 0 ? { amount: oppDamage, index: curIdx } : null);
       degeler('p');
       if (oppDamage > 0) effetsImpact('joueur', curIdx, 'riposte', opp.creature.element);
+      newFighters.forEach((f, k) => { if (f && f.hp <= 0 && pvAvant0[k] > 0) effetSort('ko', 'joueur', k); });
     }, IMPACT_MS);
     setBattleStats((s) => ({
       ...s,
@@ -877,7 +966,6 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       }
     }
     const opp = opponentsRef.current[targetIdx];
-    playLunge('player', curIdx, centreSprite('adversaire', targetIdx));
 
     // Rune de Célérité : bonus ADDITIF sur le multiplicateur, sur TOUTES
     // les attaques (12/09). L'ancienne exception « sauf attaque de base »
@@ -903,9 +991,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // coups passent par `frapper` / `modifierCoup` : sans état en cours,
     // exactement les dégâts d'avant.
     let coupSort = { part: 1 };
+    let evenementsSort = [];
     if (skill.sort) {
       const r = lancerSort(skill.sort, fightersRef.current, curIdx, opponentsRef.current, targetIdx);
       coupSort = r.coup;
+      evenementsSort = r.evenements || [];
       fightersRef.current = r.allies;
       setFighters(r.allies);
       opponentsRef.current = r.ennemis;
@@ -917,6 +1007,19 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // Ce que frappe un sort offensif : l'attaque normale la plus forte.
     const frappe = skill.sort ? meilleureAttaque(attaquant.creature) : skill;
     const part = coupSort ? (coupSort.zone || coupSort.part || 1) : 0;
+    // Élan VERS la cible seulement s'il y a un COUP (03/10) : un soin, un bouclier… se
+    // lancent sur place (avant : la créature bondissait vers l'ennemi pour se soigner).
+    if (part > 0) playLunge('player', curIdx, centreSprite('adversaire', targetIdx));
+    // Étape 3 : visuels des sorts de SOUTIEN au lancement (~200 ms) ; le spécial assombrit.
+    const sortId = skill.sort || null; const estSpecial = !!skill.special;
+    if (estSpecial) { setAssombriKey((k) => k + 1); vibrer('heavy'); }
+    if (sortId) {
+      const evts = evenementsSort;
+      setTimeout(() => {
+        evts.forEach((ev) => { if (ev.type === 'bouclier' || ev.type === 'soin' || ev.type === 'boost') effetSort(ev.type, 'joueur', ev.cible, ev.valeur || null); });
+        if (sortId === 'provocation' || sortId === 'vitesse' || sortId === 'pacte') effetSort(sortId, 'joueur', curIdx);
+      }, 200);
+    }
     // Règle PARTAGÉE avec la simulation qui calibre le Gardien.
     const coupSur = (cible) => (part > 0 && frappe
       ? Math.max(1, Math.round(degatsDuJoueur(frappe, attaquant, cible.creature, multJauge) * part))
@@ -1064,6 +1167,16 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       degeler('o'); if (!avecRiposte) degeler('p');
       if (playerDamage > 0) effetsImpact('adversaire', cibleCoup, cleCoup, elemAttaquant);
       if (!avecRiposte && opponentDamage > 0) effetsImpact('joueur', blesse, 'riposte', elemRiposteur);
+      // Étape 3 : sorts offensifs, onde de la zone (et l'élément sur CHAQUE ennemi touché),
+      // spécial, et K.O. des adversaires tombés sous ce coup.
+      if (sortId === 'poison' || sortId === 'marque' || sortId === 'execution') effetSort(sortId, 'adversaire', cibleCoup);
+      if (sortId === 'zone') {
+        newOpponents.forEach((o, i) => { if (i !== cibleCoup && o && pvAvantO[i] > 0 && o.hp < pvAvantO[i]) effetsImpact('adversaire', i, cleCoup, elemAttaquant); });
+        effetSort('zone', 'adversaire', cibleCoup);
+      }
+      if (estSpecial) { effetSort('special', 'adversaire', cibleCoup); secouer(14); }
+      newOpponents.forEach((o, i) => { if (o && o.hp <= 0 && pvAvantO[i] > 0) effetSort('ko', 'adversaire', i); });
+      if (!avecRiposte) newFighters.forEach((f, i) => { if (f && f.hp <= 0 && pvAvantP[i] > 0) effetSort('ko', 'joueur', i); });
     }, IMPACT_MS);
     if (avecRiposte) {
       setTimeout(() => {
@@ -1075,6 +1188,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           setPlayerDamageFloat({ amount: opponentDamage, index: blesse });
           degeler('p');
           effetsImpact('joueur', blesse, 'riposte', elemRiposteur);
+          newFighters.forEach((f, i) => { if (f && f.hp <= 0 && pvAvantP[i] > 0) effetSort('ko', 'joueur', i); });
         }, IMPACT_MS);
       }, RIPOSTE_MS);
     }
@@ -1434,11 +1548,14 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       {/* Étincelles d'impact (03/10) : au-dessus des créatures, TRANSPARENTES au toucher. */}
       <View style={styles.coucheImpacts}>
         {impacts.map((im) => (
-          <Impact key={im.id} x={im.x} y={im.y} couleur={im.couleur} etincelles={im.etincelles} effet={im.effet} taille={im.taille} grand={im.grand} onFini={() => setImpacts((l) => l.filter((x) => x.id !== im.id))} />
+          im.sort
+            ? <EffetSort key={im.id} type={im.sort} x={im.x} y={im.y} taille={im.taille} valeur={im.valeur} onFini={() => setImpacts((l) => l.filter((x) => x.id !== im.id))} />
+            : <Impact key={im.id} x={im.x} y={im.y} couleur={im.couleur} etincelles={im.etincelles} effet={im.effet} taille={im.taille} grand={im.grand} onFini={() => setImpacts((l) => l.filter((x) => x.id !== im.id))} />
         ))}
       </View>
 
       {eclairKey > 0 && <EclairEcran key={`eclair-${eclairKey}`} />}
+      {assombriKey > 0 && <AssombrirEcran key={`sombre-${assombriKey}`} />}
 
       {/* ── Bandeau de combat (03/10) : tes créatures à gauche, le tour au centre, les adversaires
           à droite. Toucher un panneau adversaire le vise (comme le toucher sur le terrain). */}
@@ -1878,6 +1995,15 @@ const styles = StyleSheet.create({
     position: 'absolute', zIndex: 30, width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
   },
   // Effets d'impact (03/10)
+  // Étape 3 : sorts, spécial, K.O. (03/10)
+  sortCercle: { position: 'absolute', borderWidth: 3 },
+  sortParticule: { position: 'absolute', top: 0, width: 9, height: 9, borderRadius: 5 },
+  sortGoutte: { width: 7, height: 13, borderTopLeftRadius: 3.5, borderTopRightRadius: 3.5, borderBottomLeftRadius: 6, borderBottomRightRadius: 6 },
+  sortViseur: { position: 'absolute', borderWidth: 3, borderStyle: 'dashed' },
+  sortTaillade: { position: 'absolute', top: -3, height: 6, borderRadius: 3 },
+  sortIcone: { position: 'absolute', textAlign: 'center', includeFontPadding: false },
+  sortTexte: { position: 'absolute', textAlign: 'center', fontSize: 24, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
+  assombrirEcran: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 21, backgroundColor: '#000000', pointerEvents: 'none' },
   eclairEcran: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 24, backgroundColor: '#ffffff', pointerEvents: 'none' },
   coucheImpacts: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 22, pointerEvents: 'none' },
   impactAnneau: { position: 'absolute', left: -28, top: -28, width: 56, height: 56, borderRadius: 28, borderWidth: 4 },

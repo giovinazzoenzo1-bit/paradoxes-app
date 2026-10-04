@@ -126,4 +126,4 @@
       l'heure ») : elle réduisait les taps ; avec la jauge, elle élargit la zone
       dorée — l'auteur veut un AUTRE effet. À proposer : (mesurer avant).
 - [x] Effets de combat, étape 2 : les 8 effets d'élément (03/10).
-- [ ] Effets de combat, étape 3 : sorts (bouclier, soin, boost, venin, zone…), spécial, K.-O.
+- [x] Effets de combat, étape 3 : sorts, spécial, K.-O. (03/10).

@@ -3221,7 +3221,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = 'f477fc07'; // 03/10 : riposte À TOUR DE RÔLE (règle partagée avec simulerCombat) + PV affichés gelés jusqu'à l'impact ; auditGardienCalibre vert
+const EMPREINTE_COMBAT = '67e439ef'; // 03/10 : effets étape 3 (visuels des sorts, spécial, K.O. ; élan seulement s'il y a un coup) — calculs inchangés ; auditGardienCalibre vert
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -4303,6 +4303,11 @@ function auditEffetsCombat() {
   if (!/style=\{\{ position: 'absolute', left: x, top: y, width: 0, height: 0, pointerEvents: 'none' \}\}/.test(imp)) pb.push("un impact capte le toucher");
   const ecl = s.slice(s.indexOf('function EclatSilhouette('), s.indexOf('\n}\n', s.indexOf('function EclatSilhouette(')));
   if (!/pointerEvents: 'none'/.test(ecl)) pb.push("l'éclat blanc capte le toucher");
+  // Étape 3 (03/10) : visuels des sorts, du spécial et des K.O., assombrissement.
+  const sor = s.slice(s.indexOf('function EffetSort('), s.indexOf('\n}\n', s.indexOf('function EffetSort(')));
+  if (!/<View style=\{\{ position: 'absolute', left: x, top: y, width: 0, height: 0, pointerEvents: 'none' \}\}>/.test(sor)) pb.push("un visuel de sort capte le toucher");
+  if (!/assombrirEcran: \{[^}]*pointerEvents: 'none'/.test(s)) pb.push("l'assombrissement du spécial capte le toucher");
+  if (!/eclairEcran: \{[^}]*pointerEvents: 'none'/.test(s)) pb.push("l'éclair du PARFAIT capte le toucher");
   const vib = s.slice(s.indexOf('function vibrer('), s.indexOf('\n}\n', s.indexOf('function vibrer(')));
   if (!/try \{/.test(vib) || !/catch \(e\)/.test(vib) || !/\.catch\(\(\) => \{\}\)/.test(vib)) pb.push('la vibration peut planter (try/catch ou .catch de la promesse absents)');
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
