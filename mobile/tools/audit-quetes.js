@@ -4221,3 +4221,21 @@ function auditCadrageCreatures() {
   return pb;
 }
 module.exports.auditCadrageCreatures = auditCadrageCreatures;
+
+// ── Défi de taps du combat : rien au-dessus de la zone qui compte (03/10) ──
+// L'anneau du compteur (plan 10) était au-dessus de la zone de taps
+// (tapEverywhere, plan 8) et avalait les taps posés au centre — là où l'on
+// tape. Même famille que les « +X » du 27/09. Exige : le bloc du défi est
+// transparent au toucher (pointerEvents 'none' dans le style), et le bandeau
+// laisse passer le toucher pendant le défi.
+function auditDefiTapsLibre() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  const pb = [];
+  const i = s.indexOf("{phase === 'tapping' && (\n          <View style={{ alignItems: 'center', pointerEvents: 'none' }}>");
+  if (i < 0) pb.push("défi de taps : l'anneau du compteur n'est plus transparent au toucher (il avale les taps du centre)");
+  if (!/styles\.bandeau, \{[^}]*pointerEvents: phase === 'tapping' \? 'none'/.test(s)) pb.push('défi de taps : le bandeau capte le toucher pendant le défi');
+  if (!/tapEverywhere: \{[^}]*zIndex: 8/.test(s)) pb.push('défi de taps : la zone qui compte (tapEverywhere) a changé de plan — revérifier ce qui passe au-dessus');
+  return pb;
+}
+module.exports.auditDefiTapsLibre = auditDefiTapsLibre;

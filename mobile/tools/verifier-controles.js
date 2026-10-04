@@ -235,6 +235,8 @@ const SABOTAGES = [
     remplace("  return hi;\n}\n// « Ton deck » face au Gardien", "  return hi + 1;\n}\n// « Ton deck » face au Gardien")],
   ['auditZoneTapLibre', F.ecran, "le calque des « +X » repasse en PROPRIÉTÉ pointerEvents (ignorée sur téléphone : taps bloqués)",
     remplace("              <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>", "              <View pointerEvents=\"none\" style={StyleSheet.absoluteFill}>")],
+  ['auditDefiTapsLibre', F.combatEcran, "anneau du défi redevenu capteur de toucher : les taps du centre seraient de nouveau avalés",
+    remplace("{phase === 'tapping' && (\n          <View style={{ alignItems: 'center', pointerEvents: 'none' }}>", "{phase === 'tapping' && (\n          <View style={{ alignItems: 'center' }}>")],
   ['auditCadrageCreatures', F.cadrage, "cadrage de Luxorbe absent (table non régénérée) : elle serait mal cadrée dans l'Album et l'Exploration",
     remplace('  luxorbe: {', '  luxorbe_retire: {')],
   ['auditImagesTailleExplicite', F.aventure, "panneau RETOUR remis en <Image style={StyleSheet.absoluteFill}> : exactement la plaque géante du 03/10",

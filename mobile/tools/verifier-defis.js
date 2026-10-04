@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditDefiTapsLibre', "combat : rien au-dessus de la zone du défi de taps ne capte le toucher (03/10)"],
   ['auditCadrageCreatures', "créatures illustrées : 3 stades présents et cadrage généré pour chacune (03/10)"],
   ['auditImagesTailleExplicite', "images : jamais une <Image> en absoluteFill sans largeur/hauteur — taille d'origine sur téléphone (13/09, 03/10)"],
   ['auditHubExploration', "exploration : le hub « Ponton céleste » garde toutes ses actions et ses pièces (03/10)"],
