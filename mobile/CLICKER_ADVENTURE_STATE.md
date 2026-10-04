@@ -1949,3 +1949,12 @@ l'auteur, invisible au banc) : sur Android, un <Text> d'une ligne
 par défaut ; le navigateur le resserre au centre. → textAlign: 'center' +
 alignSelf: 'stretch' EXPLICITES (apercuTitre, apercuNom). RÈGLE : tout texte
 centré dans un cadre porte textAlign: 'center' (ne pas compter sur alignItems).
+
+⚠️ **03/10 — Textes des planches décalés à DROITE sur Android** (capture de
+l'auteur, invisible au banc) : le cadre avait une marge intérieure ; l'image
+absolue en width '100%' posée dedans prend, sur Android, la largeur SANS la
+marge tout en restant calée à gauche → image décalée d'une marge vers la
+gauche, texte centré dans le cadre → texte « à droite » (12 et 18 pts mesurés
+= les marges). RÈGLE : JAMAIS de marge intérieure sur un conteneur qui porte une
+image absolue « pleine » ; mettre la marge sur le TEXTE (marginHorizontal).
+COMBATTRE : texte centré à 55 % du bouton et plus petit (mesuré sur la maquette).
