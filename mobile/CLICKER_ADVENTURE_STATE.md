@@ -2135,3 +2135,28 @@ Testé au banc : victoire en 3 tours, fin 1,65 s après le dernier tap ; défait
 (chapitre 3) en 10 tours, fin 2,56 s après ; aucun blocage ; capture : l'ennemi
 bondit jusqu'à ta créature. Empreinte du Gardien 72f5fa26 (déroulé seul ;
 calibrage vert). 82 contrôles, 104 sabotages.
+
+
+## 03/10 — Combat : riposte À TOUR DE RÔLE, PV retirés À L'IMPACT, effets d'ÉLÉMENT (publié)
+
+Retours de l'auteur : plus d'effets ; élan encore un peu plus long ; dégâts
+retirés AVANT l'animation ; seul l'adversaire visé ripostait.
+- Élan : 75 % du chemin (avant 62 %).
+- Effets d'ÉLÉMENT (étape 2) : 8 images Gemini sur fond NOIR (fichiers A/B
+  arrivés INVERSÉS → renommés), lumière → transparence (alpha = max(R,G,B),
+  couleur restituée), 360 px, libimagequant : 356 Ko au total
+  (assets/combat/effets/{feu,eau,terre,air,foudre,lumiere,tenebres,magie}.png).
+  À l'impact, l'effet de l'élément de l'ATTAQUANT grossit, tourne et s'efface
+  (×2,1 en PARFAIT) ; ÉCLAIR blanc plein écran en PARFAIT (EclairEcran).
+- PV AFFICHÉS GELÉS jusqu'à l'impact (pvGeles / pvAffiche) : ⚠️ les réfs
+  (fightersRef, opponentsRef…) sont recopiées de l'état à CHAQUE rendu — retarder
+  l'ÉTAT les aurait faussées. Logique et état immédiats ; seul l'affichage garde
+  l'ancienne valeur ('o2', 'p0'…) ; dégel à l'impact ; la suite dégèle tout.
+  Mesuré au banc : 28/28 à 91 ms, 18/28 après l'impact.
+- RIPOSTE À TOUR DE RÔLE : choisirRiposteur(adversaires, cible, rang) (0,1,2,0…,
+  saute les K.O. ; sans rang = ancienne règle) — écran (riposteRangRef, aussi
+  au 1er coup adverse) ET simulerCombat (rangRiposte). MESURÉ : l'Aventure
+  devenait plus dure (A5 8,5 → 7,2 de moyenne ; malchanceux sous 6) → RECALCULÉE
+  (150 × 10) : A0 9,2/7,1 · A1 9,1/6,9 · A2 9,1/7,2 · A3 8,8/5,6 · A4 8,7/6,6 ·
+  A5 8,6/7,1 ; 0 bloqué. Empreinte du Gardien f477fc07 (calibrage vert).
+  Contrôle auditRiposteTourDeRole + sabotage. 83 contrôles, 105 sabotages.

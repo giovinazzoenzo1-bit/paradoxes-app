@@ -3221,7 +3221,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '72f5fa26'; // 03/10 : déroulé d'un échange (riposte À VUE, suite APRÈS les animations) — calculs inchangés ; auditGardienCalibre vert
+const EMPREINTE_COMBAT = 'f477fc07'; // 03/10 : riposte À TOUR DE RÔLE (règle partagée avec simulerCombat) + PV affichés gelés jusqu'à l'impact ; auditGardienCalibre vert
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -4331,3 +4331,25 @@ function auditTransitionCombat() {
   return pb;
 }
 module.exports.auditTransitionCombat = auditTransitionCombat;
+
+// ── Riposte à tour de rôle + PV retirés À L'IMPACT (03/10, demandes de l'auteur) ──
+// Les adversaires frappent chacun leur tour (0, 1, 2, 0…, en sautant les K.O.),
+// comme ton équipe, dans le JEU et dans la SIMULATION (même règle, sinon le
+// calibrage ment) ; le bandeau affiche les PV GELÉS jusqu'au coup.
+function auditRiposteTourDeRole() {
+  const fs = require('fs'); const path = require('path');
+  const K = load('combatLogic');
+  const pb = [];
+  const v = (hps) => hps.map((h) => ({ hp: h }));
+  const ordre = (hps) => { let r = 0; const o = []; for (let k = 0; k < 6; k++) { const i = K.choisirRiposteur(v(hps), 0, r); o.push(i); r = i + 1; } return o.join(''); };
+  if (ordre([5, 5, 5]) !== '012012') pb.push(`3 adversaires vivants : ordre ${ordre([5, 5, 5])} (attendu 012012)`);
+  if (ordre([5, 0, 5]) !== '020202') pb.push(`le n°2 K.O. : ordre ${ordre([5, 0, 5])} (attendu 020202)`);
+  const e = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  if (!/choisirRiposteur\(newOpponents, targetIdx, riposteRangRef\.current\)/.test(e)) pb.push("écran : la riposte n'est plus à tour de rôle (rang absent)");
+  if (!/hp: pvAffiche\('o', i, o\.hp\), hpMax: o\.stats\.hp, mana: null/.test(e)) pb.push("bandeau : les PV adverses ne sont plus gelés jusqu'à l'impact");
+  const m = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
+  const sim = m.slice(m.indexOf('export function simulerCombat('), m.indexOf('\n}\n', m.indexOf('export function simulerCombat(')));
+  if (!/choisirRiposteur\(A, cible, rangRiposte\)/.test(sim)) pb.push('simulation : la riposte n\'est plus à tour de rôle (le calibrage ne joue plus la même règle que le jeu)');
+  return pb;
+}
+module.exports.auditRiposteTourDeRole = auditRiposteTourDeRole;

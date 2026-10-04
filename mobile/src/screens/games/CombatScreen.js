@@ -59,6 +59,18 @@ const ND = Platform.OS !== 'web'; // moteur natif sur téléphone ; JS au banc (
 // FINAL reste visible avant l'écran de victoire / défaite.
 const LUNGE_DETENTE_MS = 150;
 const IMPACT_MS = 160 + LUNGE_DETENTE_MS;
+// Effets d'ÉLÉMENT à l'impact (03/10, étape 2) : peints par Gemini sur fond NOIR, la
+// lumière convertie en transparence (assets/combat/effets/).
+const EFFET_ELEMENT = {
+  Feu: require('../../../assets/combat/effets/feu.png'),
+  Eau: require('../../../assets/combat/effets/eau.png'),
+  Terre: require('../../../assets/combat/effets/terre.png'),
+  Air: require('../../../assets/combat/effets/air.png'),
+  Foudre: require('../../../assets/combat/effets/foudre.png'),
+  'Lumière': require('../../../assets/combat/effets/lumiere.png'),
+  'Ténèbres': require('../../../assets/combat/effets/tenebres.png'),
+  Magie: require('../../../assets/combat/effets/magie.png'),
+};
 const RIPOSTE_MS = 950; // ton élan (recul, détente, arrêt, ressort) est REVENU : les 2 mouvements ne se chevauchent pas
 const FIN_EN_PLUS_MS = 700;
 const STYLE_COUP = {
@@ -93,15 +105,22 @@ function vibrer(force) {
   } catch (e) { /* pas de vibration, pas de plantage */ }
 }
 // Un impact : un anneau qui s'ouvre et des étincelles qui jaillissent, puis s'effacent.
-function Impact({ x, y, couleur, etincelles, onFini }) {
+function Impact({ x, y, couleur, etincelles, effet = null, taille = 90, grand = false, onFini }) {
   const t = useRef(new Animated.Value(0)).current;
   const angles = useRef(Array.from({ length: etincelles }, (_, i) => (i / etincelles) * Math.PI * 2 + Math.random() * 0.5)).current;
   const dist = useRef(angles.map(() => 34 + Math.random() * 30)).current;
+  const rot = useRef(Math.round(Math.random() * 24 - 12)).current;
+  const T = taille * (grand ? 2.1 : 1.65);
   useEffect(() => {
-    Animated.timing(t, { toValue: 1, duration: 520, easing: Easing.out(Easing.quad), useNativeDriver: ND }).start(() => onFini && onFini());
+    Animated.timing(t, { toValue: 1, duration: effet ? 600 : 520, easing: Easing.out(Easing.quad), useNativeDriver: ND }).start(() => onFini && onFini());
   }, []);
   return (
     <View style={{ position: 'absolute', left: x, top: y, width: 0, height: 0, pointerEvents: 'none' }}>
+      {effet && (
+        <Animated.Image source={effet} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', left: -T / 2, top: -T / 2, width: T, height: T,
+          opacity: t.interpolate({ inputRange: [0, 0.12, 0.6, 1], outputRange: [0, 1, 0.85, 0] }),
+          transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1.35] }) }, { rotate: `${rot}deg` }] }} />
+      )}
       <Animated.View style={[styles.impactAnneau, { borderColor: couleur, opacity: t.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.9, 0.5, 0] }), transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.9] }) }] }]} />
       {angles.map((a, i) => (
         <Animated.View key={i} style={[styles.impactEtincelle, { backgroundColor: couleur, opacity: t.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 0.9, 0] }),
@@ -109,6 +128,17 @@ function Impact({ x, y, couleur, etincelles, onFini }) {
       ))}
     </View>
   );
+}
+// Éclair BLANC sur tout l'écran (PARFAIT) — bref, transparent au toucher.
+function EclairEcran() {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(t, { toValue: 0.3, duration: 50, useNativeDriver: ND }),
+      Animated.timing(t, { toValue: 0, duration: 170, useNativeDriver: ND }),
+    ]).start();
+  }, []);
+  return <Animated.View style={[styles.eclairEcran, { opacity: t }]} />;
 }
 // Éclat BLANC de la silhouette touchée : la même illustration, teintée en blanc.
 function EclatSilhouette({ creatureId, stageIndex, emoji, size, style }) {
@@ -501,8 +531,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const playLunge = (side, index, cible = null) => {
     const id = ++lungeIdRef.current;
     const depart = centreSprite(side === 'player' ? 'joueur' : 'adversaire', index);
-    const dx = depart && cible ? (cible.x - depart.x) * 0.62 : (side === 'player' ? 1 : -1) * 90;
-    const dy = depart && cible ? (cible.y - depart.y) * 0.62 : 0;
+    // 75 % du chemin (03/10 : « encore un petit peu plus », avant 62 %).
+    const dx = depart && cible ? (cible.x - depart.x) * 0.75 : (side === 'player' ? 1 : -1) * 110;
+    const dy = depart && cible ? (cible.y - depart.y) * 0.75 : 0;
     setLunge({ id, side, index, dx, dy });
   };
   useEffect(() => {
@@ -541,12 +572,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const centreSprite = (cote, index) => {
     if (cote === 'adversaire') {
       const slot = isBoss ? { x: 0.72, y: 0.53, size: 1.7 } : OPPONENT_SLOTS[index];
-      return slot ? { x: slot.x * W, y: slot.y * H } : null;
+      return slot ? { x: slot.x * W, y: slot.y * H, taille: SPRITE_BASE * slot.size } : null;
     }
     const actif = activeIndexRef.current;
     const ordre = [actif, ...fightersRef.current.map((_, i) => i).filter((i) => i !== actif)];
     const slot = PLAYER_SLOTS[ordre.indexOf(index)];
-    return slot ? { x: slot.x * W, y: slot.y * H } : null;
+    return slot ? { x: slot.x * W, y: slot.y * H, taille: SPRITE_BASE * slot.size } : null;
   };
   // ── Suite du combat après les animations (03/10) — voir finishChallenge ──
   const [resolutionId, setResolutionId] = useState(0);
@@ -565,6 +596,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     const t = transitionRef.current;
     if (!t) return;
     transitionRef.current = null;
+    setPvGeles({}); // la suite dégèle tout (filet)
     if (t.type === 'win') { setOutcome('win'); setPhase('done'); return; }
     if (t.type === 'lose') { setOutcome('lose'); setPhase('done'); return; }
     activeIndexRef.current = t.nextIdx;
@@ -578,10 +610,22 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   };
 
   // Éclats + étincelles + secousse + vibration, selon le verdict du coup (ou « riposte »).
-  const effetsImpact = (cote, index, cle) => {
+  // PV AFFICHÉS gelés jusqu'à l'impact (03/10, l'auteur : « les dégâts sont enlevés avant
+  // l'animation »). La LOGIQUE et l'état se mettent à jour tout de suite (les réfs sont
+  // recopiées de l'état à CHAQUE rendu : retarder l'état les aurait faussées) ; seul
+  // l'AFFICHAGE garde l'ancienne valeur ('o2', 'p0'…) jusqu'au coup. La suite dégèle tout.
+  const [pvGeles, setPvGeles] = useState({});
+  const pvAffiche = (cote, i, hp) => (pvGeles[`${cote}${i}`] != null ? pvGeles[`${cote}${i}`] : hp);
+  const degeler = (prefixe) => setPvGeles((g) => { const n = {}; Object.keys(g).forEach((k) => { if (!k.startsWith(prefixe)) n[k] = g[k]; }); return n; });
+  // Riposte À TOUR DE RÔLE (03/10) : rang du prochain adversaire qui frappe.
+  const riposteRangRef = useRef(0);
+  const [eclairKey, setEclairKey] = useState(0);
+  const effetsImpact = (cote, index, cle, element = null) => {
     const st = STYLE_COUP[cle] || STYLE_COUP.bien;
     const c = centreSprite(cote, index);
-    if (c) setImpacts((l) => [...l, { id: `${Date.now()}-${Math.random()}`, x: c.x, y: c.y, couleur: st.couleur, etincelles: st.etincelles }]);
+    if (c) setImpacts((l) => [...l, { id: `${Date.now()}-${Math.random()}`, x: c.x, y: c.y, couleur: st.couleur, etincelles: st.etincelles,
+      effet: element ? EFFET_ELEMENT[element] || null : null, taille: c.taille, grand: cle === 'parfait' }]);
+    if (cle === 'parfait') setEclairKey((k) => k + 1);
     secouer(st.secousse);
     vibrer(st.vibration);
   };
@@ -614,7 +658,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // pendant que la créature bougeait encore et on ne voyait pas qui
     // avait frappé (retour du 12/09).
     const curIdx = activeIndexRef.current;
+    const pvAvant0 = fightersRef.current.map((f) => f.hp);
     playLunge('opponent', targetIndexRef.current, centreSprite('joueur', curIdx));
+    riposteRangRef.current = targetIndexRef.current + 1; // il a frappé : au suivant (tour de rôle)
     const curFighter = fightersRef.current[curIdx];
     // Gardien : riposte PARTAGÉE avec la simulation qui le calibre
     // (combatLogic.riposteGardien), attaque de zone comprise. Les autres
@@ -651,6 +697,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     fightersRef.current = newFighters;
     setFighters(newFighters);
 
+    { const gel0 = {}; newFighters.forEach((f, k) => { if (f && f.hp !== pvAvant0[k]) gel0[`p${k}`] = pvAvant0[k]; }); setPvGeles(gel0); }
     // Impact (03/10) à l'instant où l'élan adverse touche. CORRECTIF : une 2e ligne
     // remettait un NOMBRE au lieu de { amount, index } — le chiffre sur ta créature
     // ne s'affichait jamais quand l'adversaire frappait le premier.
@@ -659,7 +706,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       setRoundKey((k) => k + 1);
       setOpponentDamageFloat(null);
       setPlayerDamageFloat(oppDamage > 0 ? { amount: oppDamage, index: curIdx } : null);
-      if (oppDamage > 0) effetsImpact('joueur', curIdx, 'riposte');
+      degeler('p');
+      if (oppDamage > 0) effetsImpact('joueur', curIdx, 'riposte', opp.creature.element);
     }, IMPACT_MS);
     setBattleStats((s) => ({
       ...s,
@@ -813,6 +861,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const finishChallenge = (completed) => {
     if (challengeDoneRef.current) return;
     challengeDoneRef.current = true;
+    const pvAvantO = opponentsRef.current.map((o) => o.hp);
+    const pvAvantP = fightersRef.current.map((f) => f.hp);
     const skill = selectedSkillRef.current;
     const curIdx = activeIndexRef.current;
     const curFighter = fightersRef.current[curIdx];
@@ -931,7 +981,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       newOpponentHp = newOpponents[targetIdx].hp;
     }
     let opponentDamage = 0;
-    const retaliatorIdx = choisirRiposteur(newOpponents, targetIdx);
+    const retaliatorIdx = choisirRiposteur(newOpponents, targetIdx, riposteRangRef.current);
+    if (retaliatorIdx >= 0) riposteRangRef.current = retaliatorIdx + 1;
     // ⚠️ MOTEUR DES SORTS (24/09) : la riposte frappe `cibleDeRiposte`
     // (provocation d'abord, évitement du venimeux — TOUJOURS une cible tant
     // qu'une créature vit), chaque coup passe par `frapper` (bouclier,
@@ -1003,13 +1054,16 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // L'ADVERSAIRE RIPOSTE À VUE (03/10, demande de l'auteur : « qu'on voie l'attaque des
     // ennemis ») : son élan part quand le tien est revenu, ses dégâts tombent à SON impact.
     const avecRiposte = opponentDamage > 0 && retaliatorIdx >= 0;
+    const elemAttaquant = curFighter.creature.element;
+    const elemRiposteur = retaliatorIdx >= 0 && newOpponents[retaliatorIdx] ? newOpponents[retaliatorIdx].creature.element : null;
     setTimeout(() => {
       setVerdictDernierCoup(cleCoup);
       setRoundKey((k) => k + 1);
       setOpponentDamageFloat(playerDamage > 0 ? playerDamage : null);
       setPlayerDamageFloat(!avecRiposte && opponentDamage > 0 ? { amount: opponentDamage, index: blesse } : null);
-      if (playerDamage > 0) effetsImpact('adversaire', cibleCoup, cleCoup);
-      if (!avecRiposte && opponentDamage > 0) effetsImpact('joueur', blesse, 'riposte');
+      degeler('o'); if (!avecRiposte) degeler('p');
+      if (playerDamage > 0) effetsImpact('adversaire', cibleCoup, cleCoup, elemAttaquant);
+      if (!avecRiposte && opponentDamage > 0) effetsImpact('joueur', blesse, 'riposte', elemRiposteur);
     }, IMPACT_MS);
     if (avecRiposte) {
       setTimeout(() => {
@@ -1019,7 +1073,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           setOpponentDamageFloat(null);
           setRoundKey((k) => k + 1);
           setPlayerDamageFloat({ amount: opponentDamage, index: blesse });
-          effetsImpact('joueur', blesse, 'riposte');
+          degeler('p');
+          effetsImpact('joueur', blesse, 'riposte', elemRiposteur);
         }, IMPACT_MS);
       }, RIPOSTE_MS);
     }
@@ -1054,6 +1109,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       transition = { type: 'suite', nextIdx, ko: false, message: `Au tour de ${newFighters[nextIdx].creature.stages[0].name} !` };
     }
     const duree = (avecRiposte ? RIPOSTE_MS + IMPACT_MS + 520 : IMPACT_MS + 640) + (transition.type === 'suite' ? 0 : FIN_EN_PLUS_MS);
+    // Gel de l'affichage : chaque PV qui change garde sa valeur d'AVANT jusqu'à son impact.
+    const gel = {};
+    newOpponents.forEach((o, i) => { if (o && o.hp !== pvAvantO[i]) gel[`o${i}`] = pvAvantO[i]; });
+    newFighters.forEach((f, i) => { if (f && f.hp !== pvAvantP[i]) gel[`p${i}`] = pvAvantP[i]; });
+    setPvGeles(gel);
     lancerResolution(transition, duree);
   };
 
@@ -1268,13 +1328,13 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           key: `p${fi}`, slot: PLAYER_SLOTS[slotIdx], sansJauges: true,
           creatureId: f.creature.id, stageIndex: stageForLevel(f.ownedLevel),
           emoji: d.emoji, name: d.name,
-          hp: f.hp, hpMax: f.stats.hp,
+          hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp,
           // Jauge visible pour TOUS : le joueur doit voir laquelle de
           // ses créatures approche de son ultime, pas seulement celle
           // qui joue.
           mana: f.mana, manaMax: MANA_MAX,
           etats: iconesEtats(f), etatsCote: 'droite',
-          fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
+          fainted: pvAffiche('p', fi, f.hp) <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
           lunging: !!lunge && lunge.side === 'player' && fi === lunge.index, lungeDir: 1,
           lungeDx: lunge && lunge.side === 'player' && fi === lunge.index ? lunge.dx : 0, lungeDy: lunge && lunge.side === 'player' && fi === lunge.index ? lunge.dy : 0,
           floatDamage: playerDamageFloat && playerDamageFloat.index === fi ? playerDamageFloat.amount : null,
@@ -1292,7 +1352,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
             <Text style={styles.bossBarPhase}>Manche {bossPhase}/2</Text>
           </View>
           <View style={styles.bossHpTrack}>
-            <View style={[styles.bossHpFill, { width: `${Math.max(0, (opponents[0].hp / opponents[0].stats.hp) * 100)}%` }]} />
+            <View style={[styles.bossHpFill, { width: `${Math.max(0, (pvAffiche('o', 0, opponents[0].hp) / opponents[0].stats.hp) * 100)}%` }]} />
             {/* Repère de mi-parcours : montre où s'arrête la manche 1. */}
             {bossPhase === 1 && <View style={styles.bossHpHalfMark} />}
           </View>
@@ -1347,7 +1407,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         // `stages[0]` : le Gardien n'a qu'une apparence, les créatures en
         // ont trois — l'index 0 est valide dans les deux cas.
         const d = o.creature.stages[0];
-        const fainted = o.hp <= 0;
+        const fainted = pvAffiche('o', i, o.hp) <= 0;
         return renderSprite({
           key: `o${i}`, sansJauges: true,
           // Le boss est plus imposant : emplacement recentré et agrandi
@@ -1356,7 +1416,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           slot: isBoss ? { x: 0.72, y: 0.53, size: 1.7 } : OPPONENT_SLOTS[i],
           creatureId: o.creature.id, stageIndex: 0,
           emoji: d.emoji, name: d.name,
-          hp: o.hp, hpMax: o.stats.hp, fainted,
+          hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, fainted,
           etats: iconesEtats(o), etatsCote: 'gauche',
           ring: i === targetIndex && !fainted ? 'target' : null,
           // Vert = ton élément domine le sien, orange = neutre, rouge =
@@ -1374,9 +1434,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       {/* Étincelles d'impact (03/10) : au-dessus des créatures, TRANSPARENTES au toucher. */}
       <View style={styles.coucheImpacts}>
         {impacts.map((im) => (
-          <Impact key={im.id} x={im.x} y={im.y} couleur={im.couleur} etincelles={im.etincelles} onFini={() => setImpacts((l) => l.filter((x) => x.id !== im.id))} />
+          <Impact key={im.id} x={im.x} y={im.y} couleur={im.couleur} etincelles={im.etincelles} effet={im.effet} taille={im.taille} grand={im.grand} onFini={() => setImpacts((l) => l.filter((x) => x.id !== im.id))} />
         ))}
       </View>
+
+      {eclairKey > 0 && <EclairEcran key={`eclair-${eclairKey}`} />}
 
       {/* ── Bandeau de combat (03/10) : tes créatures à gauche, le tour au centre, les adversaires
           à droite. Toucher un panneau adversaire le vise (comme le toucher sur le terrain). */}
@@ -1385,7 +1447,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         <Image source={COMBAT_IMG.bandeau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
         {fighters.map((f, fi) => {
           const d = f.creature.stages[stageForLevel(f.ownedLevel)];
-          return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, hp: f.hp, hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex, ko: f.hp <= 0 });
+          return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex, ko: pvAffiche('p', fi, f.hp) <= 0 });
         })}
         <View style={[styles.bandeauMessage, { left: largeurBandeau * 0.395, width: largeurBandeau * 0.21, height: bandeauH }]}>
           <Text style={[styles.bandeauMessageTexte, { fontSize: Math.max(10, Math.round(bandeauH * 0.22)) }]} numberOfLines={2}>
@@ -1393,9 +1455,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           </Text>
         </View>
         {!isBoss && opponents.map((o, i) => {
-          const d = o.creature.stages[0]; const ko = o.hp <= 0;
+          const d = o.creature.stages[0]; const ko = pvAffiche('o', i, o.hp) <= 0;
           return panneauCombattant({
-            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, hp: o.hp, hpMax: o.stats.hp, mana: null, cible: i === targetIndex, ko,
+            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, cible: i === targetIndex, ko,
             badge: { emoji: ELEMENT_EMOJI[o.creature.element] || '✨', couleur: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)] || '#ffb340' },
             onPress: !ko && phase === 'choosing' ? () => chooseTarget(i) : null,
           });
@@ -1816,6 +1878,7 @@ const styles = StyleSheet.create({
     position: 'absolute', zIndex: 30, width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
   },
   // Effets d'impact (03/10)
+  eclairEcran: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 24, backgroundColor: '#ffffff', pointerEvents: 'none' },
   coucheImpacts: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 22, pointerEvents: 'none' },
   impactAnneau: { position: 'absolute', left: -28, top: -28, width: 56, height: 56, borderRadius: 28, borderWidth: 4 },
   impactEtincelle: { position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: 2 },

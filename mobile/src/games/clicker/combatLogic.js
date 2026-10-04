@@ -416,8 +416,18 @@ export function premierVivant(liste) {
   return liste.findIndex((x) => x.hp > 0);
 }
 // Qui riposte : la cible si elle vit encore, sinon la première vivante.
-export function choisirRiposteur(adversaires, cible) {
-  return adversaires[cible] && adversaires[cible].hp > 0 ? cible : premierVivant(adversaires);
+// Qui riposte ? À TOUR DE RÔLE (03/10, demande de l'auteur : « comme dans notre équipe ») :
+// les adversaires vivants frappent chacun leur tour (rang 0, 1, 2, 0…), et non plus
+// toujours celui qu'on vise. Règle PARTAGÉE : écran et simulations (calibrage).
+// Sans `rang` : l'ancienne règle (la cible si elle vit, sinon le premier vivant).
+export function choisirRiposteur(adversaires, cible, rang = null) {
+  if (rang == null) return adversaires[cible] && adversaires[cible].hp > 0 ? cible : premierVivant(adversaires);
+  const n = adversaires.length;
+  for (let k = 0; k < n; k++) {
+    const i = (((rang + k) % n) + n) % n;
+    if (adversaires[i] && adversaires[i].hp > 0) return i;
+  }
+  return -1;
 }
 // Riposte d'un adversaire ordinaire (le Gardien a la sienne) : +MANA_PER_TURN,
 // compétence au hasard parmi les payables (la spéciale demande la mana
@@ -1050,8 +1060,10 @@ export function simulerCombat(joueurs, adversaires, {
   let act = 0;
   let cible = 0;
   let tour = 0;
+  let rangRiposte = 0; // riposte À TOUR DE RÔLE (03/10)
   // Premier coup (50 %) : la cible frappe la créature active, sans sort.
   if (alea() < 0.5) {
+    rangRiposte = cible + 1;
     let deg;
     if (estBoss) deg = riposteGardien(A[0].stats, J, act, alea).degats;
     else { const r = riposteAdversaire(A[cible], J[act], alea); A[cible] = { ...A[cible], mana: r.mana }; deg = J.map((_, i) => (i === act ? r.degats : 0)); }
@@ -1100,7 +1112,8 @@ export function simulerCombat(joueurs, adversaires, {
     if (premierVivant(A) < 0) return { gagne: true, tours: tour + 1 };
     tour += 1;
     const fureur = multiplicateurFureur(tour);
-    const rip = choisirRiposteur(A, cible);
+    const rip = choisirRiposteur(A, cible, rangRiposte);
+    if (rip >= 0) rangRiposte = rip + 1;
     const tRip = cibleDeRiposte(J, act);
     if (rip >= 0 && tRip >= 0) {
       let deg;
@@ -1487,7 +1500,9 @@ export function opponentStatsForLevel(levelNumber) {
 // la place du défi de taps (joueur de référence : erreur typique 60 ms ; réglage
 // « références » : bien ±280 ms ×2,0, « parfait » divisé par 2 ; 150 joueurs ×
 // 10 essais : à 80, l'estimation des 10 % malchanceux reposait sur 8 joueurs et
-// creusait l'A3 à 3,8 / 10) ; la puissance conseillée suit (jamais en baisse : maximum courant).
+// creusait l'A3 à 3,8 / 10)
+// ⚠️ 03/10 (suite) : RECALCULÉE avec la riposte À TOUR DE RÔLE (choisirRiposteur avec
+// rang) — sans recalibrage, l'A5 perdait 1,3 victoire de moyenne. ; la puissance conseillée suit (jamais en baisse : maximum courant).
 // ⚠️ 26/09 : la table est CALCULÉE par `tools/calibrer-parcours.js` — une
 // population de joueurs gratuits simulés (vrais œufs avec la GARANTIE,
 // naissance à 80 %, Griffes réglage A à la 1re victoire seulement, runes,
@@ -1522,49 +1537,49 @@ export function opponentStatsForLevel(levelNumber) {
 // 3, joué par `choixJoueur`). Ne jamais le retoucher à la main : relancer
 // l'outil. `auditAventureCalibree` le vérifie à chaque push.
 export const AVENTURE_MULTIPLICATEURS = [
-  0.37, 0.56, 0.62, 0.56, 1.16, 1.16, 0.83, 1, 0.6, 0.74, 1.58, 1.78,
-  1.75, 1.44, 1.61, 2.02, 1.87, 1.96, 1.64, 1.36, 1.49, 1.74, 1.5, 1.25,
-  2, 1.8, 2.19, 1.84, 2.12, 2.09, 2.21, 2.16, 2.4, 2.49, 2.5, 2.39,
-  2.59, 2.95, 3.18, 3.18, 3.22, 3.23, 2.85, 3.22, 3.18, 3.1, 3.46, 4.1,
-  3.77, 3.67, 3.99, 3.63, 4.33, 3.87, 4.85, 4.89, 4.95, 4.77, 5.56, 4.33,
-  4.77, 4.77, 5.18, 5.7, 6.18, 6.03, 6.07, 6.2, 5.43, 6.33, 6.15, 5.87,
-  6.5, 7.98, 7.32, 6.91, 7.01, 5.91, 6.7, 6.13, 7.61, 7.37, 7.29, 7.19,
-  8.92, 7.72, 7.02, 6.51, 6.88, 7.53, 8.5, 6.89, 8.31, 9.88, 7.88, 10.34,
-  11.88, 10.55, 11.17, 13, 11.35, 10.95, 14.04, 9.25, 12.27, 11.6, 12.27, 12.65,
-  13, 12.72, 14.58, 11.92, 11.25, 11.71, 12.93, 13.92, 14.58, 13.62, 13.82, 16.9,
-  11.77, 14.3, 15.15, 14.25, 14.8, 18.8, 17.37, 15.53, 20.02, 15.28, 15.73, 15.93,
-  16.78, 17.06, 19.52, 19.35, 21.36, 19.18, 14.12, 14.58, 17.4, 19.18, 21.4, 12.81,
-  14.12, 19.04, 11.9, 18.36, 20.83, 20.1, 23.29, 29.44, 27.59, 24.85, 30.57, 23.42,
-  23.85, 24.72, 26, 27.89, 25.86, 26, 30.41, 25.81, 28.55, 25.95, 23.76, 27.49,
-  29.39, 27.25, 23.46, 29.6, 17.52, 27.79, 28.55, 26.09, 28.97, 32.21, 29.44, 26.14,
-  34.37, 24.99, 26.14, 26.42, 28.35, 30.52, 27.74, 28.14, 33.7, 27.34, 30.57, 27.99,
-  25.35, 28.91, 30.96, 27.59, 24.77, 30.14, 17.94, 29.55, 29.87, 26.9, 29.12, 34.75,
-  30.3, 26.81, 34.75, 26.42, 27.69, 27.39, 28.66, 31.64, 28.91, 28.66, 34, 27.59,
-  31.41, 28.14, 25.49, 29.55, 31.87, 28.86, 25.44, 31.53, 18.36, 29.98, 30.36,
+  0.37, 0.56, 0.62, 0.56, 1.16, 1.16, 0.83, 1, 0.6, 0.74, 1.25, 1.83,
+  1.75, 1.25, 1.29, 1.83, 1.32, 1.75, 1.36, 1.36, 1.75, 1.8, 1.88, 1.55,
+  2.25, 2.08, 2.11, 1.83, 2.36, 2.5, 1.95, 1.82, 2.5, 2.03, 2.5, 2.28,
+  2.38, 2.64, 3.26, 2.99, 2.74, 3.11, 2.54, 2.85, 3.15, 3.5, 3.62, 4.21,
+  4.4, 4.09, 4.51, 3.93, 4.2, 3.55, 5.17, 5.45, 4.32, 3.97, 5.63, 3.68,
+  5.03, 4.43, 4.57, 4.79, 6.24, 5.62, 5.03, 5.83, 4.58, 5.29, 5.69, 6.14,
+  6.52, 7.98, 8.21, 6.81, 8.14, 6.4, 6.76, 5.89, 8.45, 9.05, 6.5, 6.29,
+  9.4, 6.15, 7.64, 6.36, 6.71, 6.79, 8.89, 6.97, 7.19, 9.36, 7.28, 9.71,
+  11.6, 11.25, 10.85, 13.38, 14.09, 12.47, 15.73, 11.25, 11.46, 11.33, 13.82, 15.79,
+  11.81, 11.48, 15.87, 10.91, 12.86, 11.62, 11.73, 12.45, 16.51, 13, 13.28, 17.56,
+  11.01, 14.22, 16.1, 16.25, 18.13, 21.75, 22.23, 18.8, 21.83, 16.37, 17.75, 16.87,
+  20.5, 23.17, 17.18, 16.72, 24.32, 15.62, 16.39, 15.37, 16.16, 17.65, 23.17, 13.99,
+  13.84, 18.9, 11.96, 15.59, 20.65, 20.68, 25.81, 30.63, 31.58, 27.34, 32.92, 24.15,
+  26.42, 23.34, 27.39, 29.81, 24.54, 22.63, 31.36, 21.95, 28.5, 23.55, 23.98, 25.63,
+  30.96, 27.44, 25.03, 30.8, 18.8, 24.41, 28.04, 27.1, 31.87, 34.37, 34.31, 29.18,
+  37.07, 25.67, 29.12, 24.77, 30.03, 32.04, 25.95, 23.98, 34.62, 23.17, 30.41, 25.03,
+  25.17, 26.9, 32.27, 28.19, 26.52, 31.3, 19.74, 25.44, 29.33, 28.3, 31.87, 35.76,
+  35.63, 30.08, 37.14, 27.1, 30.25, 25.67, 30.63, 32.74, 26.76, 24.45, 34.25, 23.46,
+  31.3, 25.72, 25.91, 27.54, 33.7, 29.18, 26.81, 32.74, 19.38, 25.49, 29.81,
 ];
 // Puissance du joueur VISÉ (30e centile des joueurs gratuits simulés) à
 // chaque niveau : la « puissance conseillée » affichée. Même calcul que la
 // table ci-dessus (tools/calibrer-parcours.js), jamais en baisse.
 export const PUISSANCE_CONSEILLEE = [
   14, 16, 20, 20, 21, 25, 26, 26, 30, 35, 38, 40,
-  42, 43, 45, 50, 52, 53, 55, 55, 57, 57, 57, 57,
-  80, 89, 95, 98, 99, 100, 104, 108, 115, 125, 132, 140,
-  149, 160, 169, 175, 183, 183, 189, 200, 208, 218, 218, 232,
-  241, 250, 268, 274, 290, 304, 320, 325, 331, 337, 339, 339,
-  339, 356, 371, 384, 393, 414, 426, 431, 437, 442, 448, 448,
-  460, 469, 480, 480, 485, 517, 525, 527, 529, 531, 538, 539,
-  542, 547, 547, 559, 578, 580, 585, 585, 634, 697, 777, 787,
-  791, 816, 834, 843, 843, 865, 902, 913, 918, 924, 945, 949,
-  951, 956, 963, 963, 988, 1005, 1040, 1046, 1064, 1064, 1146, 1172,
-  1186, 1232, 1232, 1362, 1432, 1483, 1537, 1572, 1572, 1572, 1602, 1621,
-  1687, 1706, 1714, 1730, 1741, 1749, 1749, 1749, 1749, 1749, 1773, 1773,
-  1773, 1773, 1773, 1853, 1941, 2034, 2177, 2450, 2501, 2522, 2544, 2565,
-  2580, 2601, 2614, 2633, 2648, 2661, 2678, 2695, 2709, 2723, 2737, 2752,
-  2766, 2782, 2796, 2807, 2822, 2836, 2851, 2865, 2932, 2946, 2957, 2969,
-  2982, 2992, 3006, 3018, 3029, 3041, 3054, 3065, 3077, 3087, 3098, 3107,
-  3120, 3132, 3144, 3153, 3165, 3174, 3186, 3202, 3252, 3267, 3276, 3287,
-  3295, 3306, 3316, 3324, 3336, 3348, 3357, 3369, 3377, 3388, 3398, 3408,
-  3418, 3428, 3436, 3446, 3456, 3465, 3477, 3485, 3495, 3504, 3552,
+  42, 43, 45, 50, 53, 53, 56, 56, 57, 57, 57, 59,
+  79, 90, 95, 101, 101, 101, 104, 108, 111, 127, 131, 142,
+  149, 160, 167, 173, 177, 181, 195, 201, 210, 217, 223, 229,
+  241, 250, 262, 274, 289, 299, 305, 305, 322, 334, 337, 337,
+  337, 342, 358, 374, 374, 396, 412, 414, 420, 424, 430, 430,
+  446, 453, 470, 470, 508, 518, 532, 541, 550, 557, 561, 564,
+  568, 575, 575, 577, 592, 600, 602, 602, 656, 730, 783, 793,
+  793, 822, 843, 857, 857, 897, 907, 951, 955, 960, 962, 968,
+  994, 999, 1001, 1001, 1036, 1093, 1152, 1158, 1164, 1164, 1277, 1318,
+  1356, 1406, 1406, 1469, 1518, 1609, 1639, 1659, 1659, 1659, 1684, 1716,
+  1751, 1763, 1773, 1803, 1808, 1834, 1834, 1834, 1834, 1834, 1834, 1834,
+  1834, 1834, 1834, 1854, 1956, 2043, 2247, 2491, 2511, 2530, 2548, 2566,
+  2583, 2601, 2614, 2630, 2647, 2661, 2680, 2695, 2709, 2725, 2737, 2816,
+  2828, 2842, 2856, 2871, 2880, 2897, 2908, 2920, 2936, 2946, 2960, 2972,
+  2985, 2992, 3006, 3018, 3031, 3041, 3054, 3062, 3080, 3087, 3146, 3153,
+  3165, 3180, 3189, 3202, 3211, 3220, 3230, 3246, 3255, 3270, 3277, 3287,
+  3295, 3306, 3316, 3324, 3339, 3348, 3357, 3368, 3375, 3386, 3393, 3408,
+  3417, 3462, 3473, 3483, 3495, 3504, 3515, 3524, 3532, 3543, 3554,
 ];
 export function multiplicateurAventure(levelNumber) {
   const t = AVENTURE_MULTIPLICATEURS;

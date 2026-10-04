@@ -237,6 +237,8 @@ const SABOTAGES = [
     remplace("  return hi;\n}\n// « Ton deck » face au Gardien", "  return hi + 1;\n}\n// « Ton deck » face au Gardien")],
   ['auditZoneTapLibre', F.ecran, "le calque des « +X » repasse en PROPRIÉTÉ pointerEvents (ignorée sur téléphone : taps bloqués)",
     remplace("              <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>", "              <View pointerEvents=\"none\" style={StyleSheet.absoluteFill}>")],
+  ['auditRiposteTourDeRole', F.combatEcran, "l'écran revient à l'ancienne règle : seul l'adversaire visé riposte",
+    remplace('choisirRiposteur(newOpponents, targetIdx, riposteRangRef.current)', 'choisirRiposteur(newOpponents, targetIdx)')],
   ['auditTransitionCombat', F.combatEcran, "toucher de déblocage retiré : un minuteur raté figerait le combat comme le 01/09",
     remplace("{phase === 'resolving' && (\n        <View\n          style={styles.tapEverywhere}", "{false && (\n        <View\n          style={styles.tapEverywhere}")],
   ['auditEffetsCombat', F.combatEcran, "couche des étincelles redevenue capteuse de toucher : elle avalerait les taps de la jauge",
