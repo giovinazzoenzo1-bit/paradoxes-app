@@ -2052,3 +2052,20 @@ sur l'échantillon (prouvé : sous sabotage, niveau 112 « 1071 / 994 » orange)
 Banc : parfait −10, bien −9, trop tard −3. 80 contrôles verts, 102 sabotages.
 LEÇON : mettre un cas en attente peut rendre un contrôle AVEUGLE — toujours
 relancer verifier-controles et remplacer le piège perdu.
+
+**03/10 — Jauge : « parfait » DIVISÉ PAR 2** (test de l'auteur : « la vitesse est
+bonne mais trop facile, je l'ai à tous les coups »). JAUGE_LARGEUR_PARFAIT
+commun 0.06 (±33 ms, le « Perfect » des jeux de rythme exigeants) → mythique
+0.13 ; « bien » inchangé (±280 ms, ×2,0). Très précis (30 ms) : 73 % de parfaits
+en commune, 86 % en rare, 96-98 % en légendaire/mythique (avantage voulu de la
+rareté) ; référence (60 ms) ×2,21 en commune ; moyen (90 ms) ≥ ×2,14.
+auditJaugeFrappe : plancher « commune jouable » ×2,2 → ×2,1 (mon seuil).
+Aventure RECALCULÉE à 150 joueurs × 10 essais : à 80, l'estimation des 10 %
+malchanceux reposait sur 8 joueurs et creusait l'A3 à 3,8/10 (simulateur
+DÉTERMINISTE : creux réel de la table, pas du bruit de mesure). Résultat
+300 joueurs : A0 9,1/6,9 · A1 8,9/5,9 · A2 9,0/6,6 · A3 9,1/6,5 · A4 8,7/7,1 ·
+A5 8,5/7,2 ; 0 bloqué. RÈGLE : calibrer-parcours avec ≥ 150 joueurs.
+Sabotage d'auditApprentissage PÉRIMÉ (repère exact « 0.39, 0.61, 0.62 » =
+valeurs de la table, changées par le calibrage) → réécrit par MOTIF (3e valeur
+×5, quelle qu'elle soit). RÈGLE : un sabotage qui vise une TABLE CALCULÉE se
+fait par motif, jamais par valeur exacte. 80 contrôles verts, 102 sabotages.

@@ -214,7 +214,9 @@ const SABOTAGES = [
   ['auditQuetesNiveau', F.contexte, "une quête hebdomadaire verse de nouveau sa valeur écrite (603 Griffes en quelques minutes)",
     remplace("    setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));\n    // 26/09 : la récompense suit le niveau d'Aventure (combatLogic).\n    const griffes = recompenseQuete(def.reward, (lifetimeStatsRef.current || {}).advLevelReached);", "    setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));\n    const griffes = def.reward;")],
   ['auditApprentissage', F.combat, "le niveau 3 redevient 5 fois plus dur (Caraploof perd dès le début)",
-    remplace("export const AVENTURE_MULTIPLICATEURS = [\n  0.39, 0.61, 0.62,", "export const AVENTURE_MULTIPLICATEURS = [\n  0.39, 0.61, 3.1,")],
+    // Par MOTIF (03/10) : le repère exact « 0.39, 0.61, 0.62 » disparaissait à chaque
+    // recalibrage (calibrer-parcours) — la 3e valeur, QUELLE QU'ELLE SOIT, ×5.
+    (src) => src.replace(/(export const AVENTURE_MULTIPLICATEURS = \[\n\s*[\d.]+, [\d.]+, )([\d.]+),/, (m, debut, v) => debut + (Number(v) * 5).toFixed(2) + ',')],
   ['auditFilet', F.combat, "le filet redevient lent (aide après 5 défaites au lieu de 3)",
     remplace("  { defaites: 3, baisse: 0.20 },", "  { defaites: 5, baisse: 0.20 },")],
   ['auditVerrouAventure', F.aventure, "le lancement du combat ne vérifie plus le verrou (on joue le niveau 26 en Ascension 0)",
@@ -238,7 +240,7 @@ const SABOTAGES = [
   ['auditJaugeFrappe', F.combatEcran, "tap de la jauge jugé au RELÂCHEMENT : le joueur serait jugé 50 à 100 ms trop tard",
     remplace('onResponderGrant={handleTap}', 'onResponderRelease={handleTap}')],
   ['auditJaugeFrappe', F.combat, "zone dorée de la mythique ramenée à celle d'une légendaire : la rareté ne compterait plus",
-    remplace('legendaire: 0.22, mythique: 0.26 }', 'legendaire: 0.22, mythique: 0.22 }')],
+    remplace('legendaire: 0.11, mythique: 0.13 }', 'legendaire: 0.11, mythique: 0.11 }')],
   ['auditDefiTapsLibre', F.combatEcran, "anneau du défi redevenu capteur de toucher : les taps du centre seraient de nouveau avalés",
     remplace("{phase === 'tapping' && (\n          <View style={{ alignItems: 'center', pointerEvents: 'none' }}>", "{phase === 'tapping' && (\n          <View style={{ alignItems: 'center' }}>")],
   ['auditCadrageCreatures', F.cadrage, "cadrage de Luxorbe absent (table non régénérée) : elle serait mal cadrée dans l'Album et l'Exploration",

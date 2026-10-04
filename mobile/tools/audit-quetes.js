@@ -4257,7 +4257,7 @@ module.exports.auditDefiTapsLibre = auditDefiTapsLibre;
 // DESSINÉE et le verdict calculés par la MÊME formule (positionAiguille) ; le
 // tap jugé au DÉBUT du toucher (onResponderGrant) — au relâchement, on juge
 // le joueur 50 à 100 ms trop tard ; les communes restent jouables (coup moyen
-// du joueur de référence ≥ ×2,2).
+// du joueur de référence ≥ ×2,1).
 function auditJaugeFrappe() {
   const fs = require('fs'); const path = require('path');
   const K = load('combatLogic');
@@ -4273,7 +4273,8 @@ function auditJaugeFrappe() {
   if (K.positionAiguille(0) !== 0 || Math.abs(K.positionAiguille(K.JAUGE_PERIODE_SEC) - 1) > 1e-9 || Math.abs(K.positionAiguille(K.JAUGE_PERIODE_SEC * 1.5) - 0.5) > 1e-9) pb.push('aiguille : aller-retour 0 → 1 → 0 cassé');
   const commune = { creature: { rarity: 'commun' }, stats: {} };
   const mythique = { creature: { rarity: 'mythique' }, stats: {} };
-  if (K.multJaugeMoyen(commune) < 2.2) pb.push(`commune trop dure : coup moyen ×${K.multJaugeMoyen(commune).toFixed(2)} (< ×2,2)`);
+  // Plancher ×2,1 (84 % du maximum) depuis la zone « parfait » divisée par 2 (03/10 : ×2,21 mesuré).
+  if (K.multJaugeMoyen(commune) < 2.1) pb.push(`commune trop dure : coup moyen ×${K.multJaugeMoyen(commune).toFixed(2)} (< ×2,1)`);
   if (K.multJaugeMoyen(mythique) > K.JAUGE_MULT.parfait + 1e-9) pb.push('mythique au-delà du maximum');
   const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const jaugeFn = s.slice(s.indexOf('function JaugeFrappe('), s.indexOf('\n}\n', s.indexOf('function JaugeFrappe(')));
