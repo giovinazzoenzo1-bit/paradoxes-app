@@ -283,14 +283,79 @@ export const GUARDIAN_CORRECTION_MAX = 4;
 
 // Dégâts moyens d'un tour : meilleure compétence, et la spéciale une
 // fois tous les MANA_MAX / MANA_PER_TURN tours, au tap de référence.
+
+// ════════════════════════════════════════════════════════════════════
+//  JAUGE DE FRAPPE (03/10, décision de l'auteur : remplace le défi de taps)
+// ════════════════════════════════════════════════════════════════════
+// Une aiguille va et vient sur une jauge ; UN tap quand elle passe dans la zone
+// dorée. Parfait = ×2,5 (le maximum de l'ancien défi), bien = ×1,8, raté = ×1,
+// pas de tap à temps = ×0,5 (l'ancien « pas fini »). Zone dorée plus LARGE pour
+// les créatures plus rares (l'ancien défi demandait 25 taps à une commune, 11 à
+// une légendaire) ; Rune de Dextérité et sort Vitesse l'élargissent (même %
+// que leur ancienne réduction de taps). MESURÉ (simulateur-parcours, 300
+// joueurs) : joueur de référence (erreur typique 60 ms) → Aventure quasi
+// inchangée ; joueur moyen (90 ms) → environ −0,5 victoire sur 10.
+export const JAUGE_PERIODE_SEC = 1.1;          // l'aiguille traverse la jauge en 1,1 s, puis revient
+export const JAUGE_MARGE_BIEN = 0.08;          // « bien » : 8 % de part et d'autre du « parfait »
+export const JAUGE_LARGEUR_PARFAIT = { commun: 0.12, peu_commun: 0.14, rare: 0.16, epique: 0.19, legendaire: 0.22, mythique: 0.26 };
+export const JAUGE_MULT = { parfait: 2.5, bien: 1.8, rate: 1.0, absent: 0.5 };
+export const JAUGE_DELAI_MAX_SEC = 6;          // sans tap : « absent » (×0,5)
+export const JAUGE_ERREUR_REFERENCE_MS = 60;   // précision du joueur de référence des simulations
+export const JAUGE_ZONE_CENTRE_MIN = 0.25;     // la zone dorée est placée au hasard entre 25 et 75 %
+export const JAUGE_ZONE_CENTRE_MAX = 0.75;
+
+// Largeur de la zone « parfait » (fraction de la jauge) d'un combattant.
+export function largeurZoneParfait(c) {
+  const base = JAUGE_LARGEUR_PARFAIT[c.creature && c.creature.rarity] || JAUGE_LARGEUR_PARFAIT.commun;
+  const bonus = Math.max(0, Math.min(0.8, ((c.stats && c.stats.tapReductionPct) || 0) + (etatsDe(c).vitesse || 0)));
+  return Math.min(0.5, base * (1 + bonus));
+}
+// Position de l'aiguille (0 → 1 → 0…) après `tempsSec` : la MÊME formule pour
+// l'écran (dessin) et pour le verdict du tap.
+export function positionAiguille(tempsSec) {
+  const t = (Math.max(0, tempsSec) / JAUGE_PERIODE_SEC) % 2;
+  return t <= 1 ? t : 2 - t;
+}
+export function centreZoneAleatoire(alea = Math.random) {
+  return JAUGE_ZONE_CENTRE_MIN + alea() * (JAUGE_ZONE_CENTRE_MAX - JAUGE_ZONE_CENTRE_MIN);
+}
+// Verdict d'un tap : écart (fraction de jauge) entre l'aiguille et le centre de la zone.
+export function resultatJauge(ecart, largeur) {
+  const e = Math.abs(ecart);
+  if (e <= largeur / 2) return 'parfait';
+  if (e <= largeur / 2 + JAUGE_MARGE_BIEN) return 'bien';
+  return 'rate';
+}
+export function multiplicateurJauge(resultat) {
+  return JAUGE_MULT[resultat] != null ? JAUGE_MULT[resultat] : JAUGE_MULT.absent;
+}
+// Simulations : erreur de timing du joueur ~ loi normale (écart type en ms).
+function erfJauge(x) {
+  const t = 1 / (1 + 0.3275911 * Math.abs(x));
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return x >= 0 ? y : -y;
+}
+export function multJaugeMoyen(c, erreurMs = JAUGE_ERREUR_REFERENCE_MS) {
+  const s = (erreurMs / 1000) / JAUGE_PERIODE_SEC; const w = largeurZoneParfait(c);
+  const pp = erfJauge((w / 2) / (s * Math.SQRT2));
+  const pb = erfJauge((w / 2 + JAUGE_MARGE_BIEN) / (s * Math.SQRT2)) - pp;
+  return pp * JAUGE_MULT.parfait + pb * JAUGE_MULT.bien + (1 - pp - pb) * JAUGE_MULT.rate;
+}
+export function multJaugeTire(c, alea = Math.random, erreurMs = JAUGE_ERREUR_REFERENCE_MS) {
+  const s = (erreurMs / 1000) / JAUGE_PERIODE_SEC;
+  let u = alea(); if (u <= 0) u = 1e-9;
+  const ecart = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * alea()) * s;
+  return multiplicateurJauge(resultatJauge(ecart, largeurZoneParfait(c)));
+}
+
 function degatsMoyensDuTour(creature, stats) {
   const skills = creature.skills || [];
   const meilleur = skills.filter((k) => !k.special).reduce((m, k) => Math.max(m, k.damage), 0);
   const spe = skills.find((k) => k.special);
   const cycle = MANA_MAX / MANA_PER_TURN;
   const brut = spe ? ((cycle - 1) * meilleur + spe.damage) / cycle : meilleur;
-  const taps = effectiveTapCount(stats.clickSpeed, stats.tapReductionPct || 0);
-  const mult = damageMultiplierForTime(taps / PUISSANCE_TAPS_PAR_SEC, true) + (stats.dmgMultBonus || 0);
+  // Coup MOYEN du joueur de référence à la jauge (03/10 ; avant : ×2,5 constant, autoclicker).
+  const mult = multJaugeMoyen({ creature, stats }) + (stats.dmgMultBonus || 0);
   return brut * attackRatio(creature, stats.attack) * GLOBAL_DAMAGE_BOOST * mult;
 }
 
@@ -415,9 +480,10 @@ export function encaisser(c, degats) {
   return { hp, resilienceUsed };
 }
 
-// Dégâts du coup du joueur (compétence, temps du défi de taps, élément).
-export function degatsDuJoueur(competence, combattant, cibleCreature, secondes, complet) {
-  const mult = damageMultiplierForTime(secondes, complet) + (combattant.stats.dmgMultBonus || 0);
+// Dégâts du coup du joueur (compétence, multiplicateur de la JAUGE, élément).
+// `multJauge` = multiplicateurJauge(verdict du tap) — écran — ou multJaugeTire — simulations.
+export function degatsDuJoueur(competence, combattant, cibleCreature, multJauge) {
+  const mult = multJauge + (combattant.stats.dmgMultBonus || 0);
   const brut = competence.isBasic ? competence.damage
     : scaledSkillDamage(competence, combattant.creature, combattant.stats.attack);
   const elem = elementMultiplier(combattant.creature.element, cibleCreature.element,
@@ -444,7 +510,7 @@ export const SORTS = {
   provocation: { nom: 'Provocation',   icone: '🔱', cout: 2, type: 'tank', desc: 'attire les coups 2 tours' },
   soin:        { nom: 'Soin',          icone: '💚', cout: 3, type: 'soutien', desc: '30 % des PV perdus' },
   boost:       { nom: 'Boost',         icone: '🔥', cout: 2, type: 'soutien', desc: '+35 % × 3 attaques' },
-  vitesse:     { nom: 'Vitesse',       icone: '⚡', cout: 3, type: 'soutien', desc: '−35 % de taps · gratuit', gratuit: true },
+  vitesse:     { nom: 'Vitesse',       icone: '⚡', cout: 3, type: 'soutien', desc: '+35 % de zone dorée · gratuit', gratuit: true },
   marque:      { nom: 'Marque',        icone: '🎯', cout: 2, type: 'soutien', desc: '+35 % sur 2 coups' },
   zone:        { nom: 'Zone',          icone: '🌀', cout: 3, type: 'attaquant', desc: '40 % à tous' },
   execution:   { nom: 'Exécution',     icone: '🗡️', cout: 2, type: 'attaquant', desc: '×2 sous 30 % de PV' },
@@ -968,7 +1034,7 @@ export function choixSansSorts(joueurs, actif) {
 // états sont remis à neuf). `gStats` : un combat de Gardien (adversaires =
 // [Gardien]). Renvoie { gagne, tours }.
 export function simulerCombat(joueurs, adversaires, {
-  gStats = null, tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random, politique = choixJoueur,
+  gStats = null, tapsParSec = PUISSANCE_TAPS_PAR_SEC, erreurMs = JAUGE_ERREUR_REFERENCE_MS, alea = Math.random, politique = choixJoueur,
 } = {}) {
   let J = joueurs.map((c) => ({ ...c, hp: c.stats.hp, mana: MANA_DEPART, resilienceUsed: false, etats: {} }));
   let A = adversaires.map((c) => ({ ...c, hp: c.stats.hp, mana: MANA_DEPART, etats: {} }));
@@ -1001,8 +1067,10 @@ export function simulerCombat(joueurs, adversaires, {
     }
     const x = J[act];
     const part = coup ? (coup.zone || coup.part || 1) : 0;
+    // UN tap à la jauge par attaque (tiré selon la précision du joueur simulé).
+    const multJ = multJaugeTire(x, alea, erreurMs);
     const coupSur = (c) => (part > 0 && comp
-      ? Math.max(1, Math.round(degatsDuJoueur(comp, x, c.creature, tapsAvecEtats(x) / tapsParSec, true) * part)) : 0);
+      ? Math.max(1, Math.round(degatsDuJoueur(comp, x, c.creature, multJ) * part)) : 0);
     if (estBoss) {
       let degats = 0;
       const brut = coupSur(A[0]);
@@ -1056,7 +1124,7 @@ export function simulerCombat(joueurs, adversaires, {
 // Un combat de Gardien : la boucle unique, le Gardien en face.
 const gardienEnFace = (gStats) => [{ creature: GUARDIAN_CREATURE, stats: gStats }];
 export function simulerCombatGardien(membres, gStats,
-  { tapsParSec = PUISSANCE_TAPS_PAR_SEC, alea = Math.random, marge = 1, politique = choixJoueur } = {}) {
+  { tapsParSec = PUISSANCE_TAPS_PAR_SEC, erreurMs = JAUGE_ERREUR_REFERENCE_MS, alea = Math.random, marge = 1, politique = choixJoueur } = {}) {
   return simulerCombat(preparerCombattants(membres, marge), gardienEnFace(gStats),
     { gStats, tapsParSec, alea, politique }).gagne;
 }
@@ -1409,6 +1477,9 @@ export function opponentStatsForLevel(levelNumber) {
 // type pour les créatures Gemini (déjà pris en compte par Gemini lui-même).
 // ---- Le calibrage de l'AVENTURE — sur le PARCOURS du joueur gratuit ----
 //
+// ⚠️ 03/10 : RECALCULÉE (même outil, mêmes cibles) avec la JAUGE DE FRAPPE à
+// la place du défi de taps (joueur de référence : erreur typique 60 ms) ; la
+// puissance conseillée suit (jamais en baisse : maximum courant).
 // ⚠️ 26/09 : la table est CALCULÉE par `tools/calibrer-parcours.js` — une
 // population de joueurs gratuits simulés (vrais œufs avec la GARANTIE,
 // naissance à 80 %, Griffes réglage A à la 1re victoire seulement, runes,
@@ -1443,13 +1514,49 @@ export function opponentStatsForLevel(levelNumber) {
 // 3, joué par `choixJoueur`). Ne jamais le retoucher à la main : relancer
 // l'outil. `auditAventureCalibree` le vérifie à chaque push.
 export const AVENTURE_MULTIPLICATEURS = [
-  0.39, 0.61, 0.62, 0.69, 1.16, 1.16, 0.83, 1.09, 0.74, 0.79, 1.62, 1.86, 1.75, 1.57, 1.75, 2.15, 2, 2.21, 1.79, 1.44, 1.67, 1.86, 1.68, 1.47, 2.34, 1.97, 2.46, 2.13, 2.24, 2.29, 2.37, 2.36, 2.57, 2.83, 2.72, 2.83, 2.89, 3.17, 3.62, 3.51, 3.59, 3.77, 3.22, 3.55, 3.68, 3.52, 3.85, 4.58, 4.14, 4.35, 4.81, 4.05, 4.81, 4.41, 5.64, 5.56, 5.54, 5.31, 6.33, 4.91, 5.59, 5.23, 5.62, 6.63, 7.3, 6.94, 7.17, 7.11, 5.97, 7.22, 7.41, 6.7, 8.08, 9.74, 8.93, 8.85, 9, 6.7, 8.01, 7.5, 9.26, 10.19, 8.62, 8.84, 10.66, 9.23, 8.7, 7.92, 8.68, 9.2, 10.43, 9.13, 10.39, 15.04, 8.73, 11.85, 13.82, 11.71, 12.67, 14.58, 12.81, 13.02, 16.39, 12.33, 14.12, 12.65, 13.94, 14.82, 15.12, 15.04, 17.06, 14.66, 13.28, 13.3, 15.04, 16.19, 18.36, 15.79, 15.9, 20.1, 12.69, 16.16, 16.39, 15.39, 17.91, 22.19, 19.35, 17.49, 22.59, 16.37, 17.84, 17.18, 19.49, 20.06, 22.55, 22.07, 23.63, 19.81, 15.04, 15.31, 17.06, 20.39, 23.93, 12.6, 13.87, 19.77, 12.01, 20.5, 22.35, 21.17, 25.81, 31.3, 30.14, 27.54, 32.86, 25.12, 24.5, 27.15, 27.74, 29.6, 27.39, 27.15, 32.21, 24.9, 29.87, 28.4, 24.54, 28.5, 30.36, 27.94, 24.94, 30.74, 18.73, 30.96, 29.44, 27.05, 30.03, 34.81, 32.27, 28.45, 36.22, 26.57, 27.1, 28.5, 29.98, 31.7, 28.86, 28.55, 35.83, 26.95, 31.41, 29.92, 25.67, 29.98, 31.93, 29.6, 26.09, 31.13, 19.52, 32.45, 30.96, 28.04, 30.08, 36.74, 33.88, 28.66, 36.61, 27.84, 28.91, 29.44, 30.36, 32.21, 29.92, 29.49, 36.74, 27.74, 32.62, 29.12, 26.28, 31.07, 32.86, 30.25, 26.9, 32.45, 20.02, 33.28, 31.64,
+  0.39, 0.61, 0.62, 0.56, 1.16, 1.16, 0.83, 1.06, 0.63, 0.74, 1.62, 1.88,
+  1.75, 1.69, 1.72, 2.16, 2.15, 2.08, 1.69, 1.49, 1.82, 2.14, 1.92, 1.62,
+  2.28, 1.96, 2.34, 2.03, 2.15, 2.34, 2.37, 2.18, 2.41, 2.64, 2.64, 2.83,
+  2.83, 3.12, 3.49, 3.22, 3.32, 3.5, 3.07, 3.53, 3.41, 3.15, 3.45, 4.22,
+  3.88, 3.76, 4.39, 3.99, 4.55, 4.08, 4.83, 4.96, 4.95, 4.94, 5.62, 4.91,
+  5.32, 5.36, 5.9, 6.32, 7.53, 6.88, 7.22, 6.89, 5.84, 7.58, 8.09, 6.86,
+  7.5, 9.48, 8.27, 7.52, 7.79, 6.36, 6.94, 6.77, 8.51, 8.45, 7.9, 8.02,
+  9.88, 8.51, 8.03, 7.48, 7.64, 8.37, 9.4, 7.82, 10.08, 11.07, 8.18, 11.58,
+  13.14, 11.58, 11.83, 14.37, 12.67, 12.65, 15.06, 9.94, 13.4, 11.81, 12.97, 13.47,
+  14.3, 13.62, 15.26, 12.63, 11.6, 11.9, 13.52, 14.53, 15.48, 14.19, 13.3, 17.12,
+  11.21, 14.27, 14.96, 14.04, 15.84, 20.17, 17.97, 16.75, 21.71, 16.37, 16.34, 16.57,
+  17.34, 16.97, 21.56, 20.02, 21.21, 20.61, 15.09, 15.15, 16.19, 20.1, 22.67, 13.23,
+  15.2, 19.92, 12.18, 19.67, 22.23, 20.53, 23.93, 30.96, 30.25, 26.33, 32.8, 25.31,
+  24.85, 26.66, 27.64, 29.28, 27, 26.86, 31.53, 25.08, 30.25, 28.35, 24.5, 28.55,
+  30.19, 27.84, 25.08, 30.52, 18.73, 30.96, 29.6, 27.3, 30.52, 34.68, 31.13, 28.76,
+  36.15, 26.05, 27.1, 28.3, 29.76, 31.81, 28.66, 28.6, 35.12, 26.71, 31.3, 30.14,
+  25.77, 29.98, 31.64, 28.91, 26.19, 30.96, 19.49, 32.45, 30.96, 27.39, 29.12, 36.74,
+  31.75, 30.03, 36.15, 27.3, 28.66, 29.39, 31.13, 32.33, 29.65, 29.12, 36.74, 27.54,
+  32.74, 30.91, 26.14, 30.8, 32.8, 30.14, 26.62, 32.21, 19.92, 32.98, 31.64,
 ];
 // Puissance du joueur VISÉ (30e centile des joueurs gratuits simulés) à
 // chaque niveau : la « puissance conseillée » affichée. Même calcul que la
 // table ci-dessus (tools/calibrer-parcours.js), jamais en baisse.
 export const PUISSANCE_CONSEILLEE = [
-  15, 17, 21, 22, 23, 26, 27, 28, 32, 37, 40, 43, 44, 45, 48, 52, 54, 56, 58, 58, 62, 62, 62, 71, 87, 103, 105, 107, 107, 107, 110, 119, 122, 141, 148, 155, 163, 171, 178, 184, 201, 201, 207, 215, 228, 235, 239, 244, 256, 275, 289, 305, 316, 334, 343, 343, 349, 371, 373, 373, 380, 394, 428, 440, 455, 480, 485, 493, 496, 506, 511, 511, 552, 564, 567, 609, 647, 654, 657, 664, 676, 679, 681, 686, 688, 696, 696, 700, 710, 712, 733, 733, 808, 833, 871, 876, 876, 923, 928, 939, 939, 990, 1042, 1053, 1088, 1090, 1114, 1118, 1125, 1136, 1138, 1138, 1189, 1243, 1279, 1282, 1288, 1288, 1305, 1334, 1338, 1348, 1348, 1412, 1608, 1718, 1743, 1760, 1760, 1760, 1760, 1807, 1851, 1858, 1865, 1874, 1914, 1925, 1925, 1925, 1925, 1925, 1925, 1925, 1925, 1925, 1925, 1925, 1925, 2012, 2311, 2519, 2574, 2601, 2620, 2638, 2653, 2675, 2688, 2707, 2723, 2736, 2754, 2771, 2785, 2800, 2814, 2829, 2844, 2861, 2874, 2949, 2961, 2977, 2990, 3003, 3017, 3029, 3044, 3056, 3066, 3076, 3091, 3103, 3115, 3127, 3140, 3149, 3164, 3174, 3185, 3195, 3208, 3223, 3272, 3286, 3298, 3308, 3321, 3336, 3347, 3359, 3367, 3377, 3388, 3399, 3409, 3418, 3430, 3439, 3448, 3463, 3470, 3481, 3489, 3501, 3511, 3525, 3568, 3581, 3594, 3603, 3615, 3624, 3632, 3643, 3654,
+  15, 17, 20, 21, 22, 25, 26, 27, 30, 36, 39, 41,
+  43, 44, 46, 51, 53, 54, 57, 57, 67, 71, 71, 71,
+  84, 95, 100, 101, 104, 104, 111, 111, 115, 135, 135, 147,
+  152, 166, 171, 176, 185, 188, 194, 203, 208, 214, 219, 237,
+  248, 257, 279, 282, 285, 307, 307, 307, 323, 333, 334, 334,
+  374, 410, 441, 445, 447, 466, 479, 499, 507, 512, 515, 515,
+  516, 536, 539, 539, 544, 565, 573, 576, 578, 586, 593, 595,
+  601, 603, 603, 612, 614, 616, 622, 622, 746, 801, 823, 828,
+  832, 851, 863, 871, 871, 907, 956, 962, 963, 969, 972, 976,
+  978, 984, 991, 991, 1023, 1029, 1070, 1084, 1095, 1095, 1100, 1128,
+  1214, 1221, 1221, 1380, 1421, 1569, 1682, 1703, 1703, 1703, 1703, 1703,
+  1714, 1762, 1778, 1786, 1799, 1811, 1811, 1811, 1811, 1811, 1811, 1811,
+  1811, 1811, 1811, 1811, 1907, 1995, 2137, 2542, 2563, 2582, 2603, 2625,
+  2642, 2660, 2676, 2696, 2711, 2725, 2740, 2758, 2773, 2788, 2803, 2820,
+  2833, 2909, 2924, 2939, 2949, 2965, 2978, 2990, 3005, 3016, 3027, 3040,
+  3053, 3063, 3076, 3088, 3101, 3114, 3127, 3136, 3151, 3160, 3175, 3185,
+  3197, 3207, 3221, 3276, 3288, 3297, 3307, 3322, 3330, 3343, 3355, 3363,
+  3371, 3385, 3395, 3404, 3416, 3428, 3438, 3448, 3455, 3467, 3474, 3486,
+  3496, 3512, 3521, 3531, 3540, 3586, 3599, 3608, 3617, 3628, 3639,
 ];
 export function multiplicateurAventure(levelNumber) {
   const t = AVENTURE_MULTIPLICATEURS;
@@ -1697,7 +1804,7 @@ export const RUNE_BONUS_TABLE = {
   // L'Endurance a été REMPLACÉE par le mana le 11/09 : la rune qui la
   // boostait ne servait plus à rien. Remplacée par la Dextérité, qui
   // retire un % des taps exigés par le défi de combat.
-  dexterite: [0.12, 0.24, 0.36, 0.48, 0.60], // % de taps en MOINS sur le défi
+  dexterite: [0.12, 0.24, 0.36, 0.48, 0.60], // % de zone dorée EN PLUS à la jauge (avant : % de taps en moins)
   celerite: [0.10, 0.20, 0.35, 0.50, 0.70], // bonus ADDITIF sur le multiplicateur de dégâts (x2,5 de base)
   // --- 12/09 : 3 runes ajoutées pour sortir du "tout offensif" ---
   // Affinité : s'ajoute au multiplicateur d'AVANTAGE élémentaire (1,30

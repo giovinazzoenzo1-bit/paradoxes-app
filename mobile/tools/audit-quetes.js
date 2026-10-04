@@ -3221,7 +3221,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = 'f2f10ffe';
+const EMPREINTE_COMBAT = '6d37904e'; // 03/10 : JAUGE DE FRAPPE (le Gardien la suit : simulerCombat partagé ; auditGardienCalibre vert)
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -3358,7 +3358,7 @@ function auditSortsMoteur() {
   r = K.lancerSort('pacte', [fx(10, 100)], 0, [fx(50, 50)], 0);
   verif(r.allies[0].hp === 1 && r.coup.part === 2, 'pacte : ×2, coûte 15 % des PV sans jamais tuer le lanceur');
   const lent = fx(100, 100);
-  verif(K.tapsAvecEtats({ ...lent, etats: { vitesse: E.vitesseReduction } }) < K.tapsAvecEtats(lent), 'vitesse : moins de taps');
+  verif(K.largeurZoneParfait({ ...lent, etats: { vitesse: E.vitesseReduction } }) > K.largeurZoneParfait(lent), 'vitesse : zone dorée de la jauge plus large (03/10 ; avant : moins de taps)');
   verif(!K.sortDisponible(fx(100, 100, {}, 1), 'bouclier'), 'sans assez de mana, le sort est indisponible (grisé)');
   // (2) des milliers de combats aléatoires
   let a = 20240924;
@@ -4239,3 +4239,40 @@ function auditDefiTapsLibre() {
   return pb;
 }
 module.exports.auditDefiTapsLibre = auditDefiTapsLibre;
+
+// ── Jauge de frappe du combat (03/10, remplace le défi de taps) ─────────────
+// Exige : zone dorée PLUS LARGE à chaque rareté (une commune reste plus dure
+// qu'une légendaire, comme l'ancien défi) ; verdicts justes ; l'aiguille
+// DESSINÉE et le verdict calculés par la MÊME formule (positionAiguille) ; le
+// tap jugé au DÉBUT du toucher (onResponderGrant) — au relâchement, on juge
+// le joueur 50 à 100 ms trop tard ; les communes restent jouables (coup moyen
+// du joueur de référence ≥ ×2,2).
+function auditJaugeFrappe() {
+  const fs = require('fs'); const path = require('path');
+  const K = load('combatLogic');
+  const pb = [];
+  const ordre = ['commun', 'peu_commun', 'rare', 'epique', 'legendaire', 'mythique'];
+  for (let i = 1; i < ordre.length; i++) {
+    if (!(K.JAUGE_LARGEUR_PARFAIT[ordre[i]] > K.JAUGE_LARGEUR_PARFAIT[ordre[i - 1]])) pb.push(`zone dorée : ${ordre[i]} pas plus large que ${ordre[i - 1]}`);
+  }
+  const w = 0.12;
+  if (K.resultatJauge(0, w) !== 'parfait') pb.push('verdict : un tap au centre de la zone n\'est pas « parfait »');
+  if (K.resultatJauge(w / 2 + K.JAUGE_MARGE_BIEN / 2, w) !== 'bien') pb.push('verdict : un tap juste à côté n\'est pas « bien »');
+  if (K.resultatJauge(w / 2 + K.JAUGE_MARGE_BIEN + 0.02, w) !== 'rate') pb.push('verdict : un tap loin de la zone n\'est pas « raté »');
+  if (K.positionAiguille(0) !== 0 || Math.abs(K.positionAiguille(K.JAUGE_PERIODE_SEC) - 1) > 1e-9 || Math.abs(K.positionAiguille(K.JAUGE_PERIODE_SEC * 1.5) - 0.5) > 1e-9) pb.push('aiguille : aller-retour 0 → 1 → 0 cassé');
+  const commune = { creature: { rarity: 'commun' }, stats: {} };
+  const mythique = { creature: { rarity: 'mythique' }, stats: {} };
+  if (K.multJaugeMoyen(commune) < 2.2) pb.push(`commune trop dure : coup moyen ×${K.multJaugeMoyen(commune).toFixed(2)} (< ×2,2)`);
+  if (K.multJaugeMoyen(mythique) > K.JAUGE_MULT.parfait + 1e-9) pb.push('mythique au-delà du maximum');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  const jaugeFn = s.slice(s.indexOf('function JaugeFrappe('), s.indexOf('\n}\n', s.indexOf('function JaugeFrappe(')));
+  if (!/positionAiguille\(/.test(jaugeFn)) pb.push("écran : l'aiguille n'est plus dessinée par positionAiguille (dessin et verdict divergeraient)");
+  const tapFn = s.slice(s.indexOf('const handleTap = () => {'), s.indexOf('\n  };\n', s.indexOf('const handleTap = () => {')));
+  if (!/positionAiguille\(/.test(tapFn) || !/resultatJauge\(/.test(tapFn)) pb.push("écran : le verdict du tap n'utilise plus positionAiguille / resultatJauge");
+  const zone = s.slice(s.lastIndexOf('<', s.indexOf('style={styles.tapEverywhere}')), s.indexOf('/>', s.indexOf('style={styles.tapEverywhere}')));
+  if (!/onResponderGrant=\{handleTap\}/.test(zone)) pb.push('écran : le tap n\'est plus jugé au DÉBUT du toucher (onResponderGrant)');
+  if (/onPress=\{handleTap\}|onResponderRelease=\{handleTap\}/.test(zone)) pb.push('écran : le tap est jugé au RELÂCHEMENT (50 à 100 ms trop tard)');
+  if (!/degatsDuJoueur\(frappe, attaquant, cible\.creature, multJauge\)/.test(s)) pb.push("écran : les dégâts n'utilisent plus le multiplicateur de la jauge");
+  return pb;
+}
+module.exports.auditJaugeFrappe = auditJaugeFrappe;
