@@ -44,6 +44,30 @@ const COMBAT_IMG = {
   lueur: require('../../../assets/grimoire/lueur-or.png'),
 };
 const COMBAT_RAPPORT = 1376 / 768;
+
+// Jauge de frappe (03/10). L'aiguille est dessinée par positionAiguille — la MÊME
+// formule que le verdict du tap — image par image, dans ce SEUL composant (l'écran
+// de combat ne se redessine pas à 60 images/s).
+function JaugeFrappe({ jauge, largeur }) {
+  const [pos, setPos] = useState(0);
+  useEffect(() => {
+    if (!jauge) return undefined;
+    let id;
+    const boucle = () => { setPos(positionAiguille((Date.now() - jauge.debut) / 1000)); id = requestAnimationFrame(boucle); };
+    id = requestAnimationFrame(boucle);
+    return () => cancelAnimationFrame(id);
+  }, [jauge]);
+  if (!jauge) return null;
+  const w = largeur;
+  const zoneP = jauge.largeur * w; const zoneB = (jauge.largeur + 2 * JAUGE_MARGE_BIEN) * w; const cx = jauge.centre * w;
+  return (
+    <View style={[styles.jauge, { width: w }]}>
+      <View style={[styles.jaugeBien, { left: cx - zoneB / 2, width: zoneB }]} />
+      <View style={[styles.jaugeParfait, { left: cx - zoneP / 2, width: zoneP }]} />
+      <View style={[styles.jaugeAiguille, { left: pos * w - 3 }]} />
+    </View>
+  );
+}
 const ELEMENT_EMOJI = { Feu: '🔥', Eau: '💧', Terre: '🌿', Air: '🌪️', Foudre: '⚡', 'Lumière': '☀️', 'Ténèbres': '🌙', Magie: '🔮' };
 // Décor de VICTOIRE : la même prairie au soleil couchant. Réutilisé
 // aussi en défaite, mais assombri par un voile (voir `resultDim`) —
@@ -71,6 +95,13 @@ import {
   effectiveTapCount,
   scaledSkillDamage,
   TAP_CHALLENGE_TIME_LIMIT_SEC,
+  largeurZoneParfait,
+  positionAiguille,
+  centreZoneAleatoire,
+  resultatJauge,
+  multiplicateurJauge,
+  JAUGE_DELAI_MAX_SEC,
+  JAUGE_MARGE_BIEN,
   elementMultiplier,
   elementRelation,
   starsForBattle,
@@ -295,6 +326,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const armedSkillRef = useRef(null);
   armedSkillRef.current = armedSkill;
   const [tapCount, setTapCount] = useState(0);
+  // Jauge de frappe (03/10) : { debut, centre, largeur } ; verdict affiché après le tap.
+  const [jauge, setJauge] = useState(null);
+  const jaugeRef = useRef(null);
+  const verdictRef = useRef(null);
+  const [verdict, setVerdict] = useState(null);
+  const montrerVerdict = (v) => { setVerdict(v); setTimeout(() => setVerdict((x) => (x === v ? null : x)), 900); };
   const [timeLeft, setTimeLeft] = useState(TAP_CHALLENGE_TIME_LIMIT_SEC);
   const [switchMessage, setSwitchMessage] = useState(null);
   const [outcome, setOutcome] = useState(null); // null | 'win' | 'lose'
@@ -494,7 +531,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     if (phase !== 'tapping') return;
     const interval = setInterval(() => {
       const elapsedSec = (Date.now() - challengeStartRef.current) / 1000;
-      const remaining = Math.max(0, TAP_CHALLENGE_TIME_LIMIT_SEC - elapsedSec);
+      const remaining = Math.max(0, JAUGE_DELAI_MAX_SEC - elapsedSec);
       setTimeLeft(remaining);
       if (remaining <= 0 && !challengeDoneRef.current) {
         finishChallenge(false);
@@ -554,7 +591,10 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     challengeDoneRef.current = false;
     challengeStartRef.current = Date.now();
     setTapCount(0);
-    setTimeLeft(TAP_CHALLENGE_TIME_LIMIT_SEC);
+    setTimeLeft(JAUGE_DELAI_MAX_SEC);
+    // Jauge : zone dorée au hasard, largeur selon la rareté (+ Dextérité, sort Vitesse).
+    const j = { debut: challengeStartRef.current, centre: centreZoneAleatoire(), largeur: largeurZoneParfait(fightersRef.current[activeIndexRef.current]) };
+    jaugeRef.current = j; setJauge(j); verdictRef.current = null;
     setPhase('tapping');
   };
 
@@ -572,18 +612,19 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     );
   };
 
+  // UN tap (03/10) : verdict selon l'aiguille à l'INSTANT du toucher (début du geste :
+  // onResponderGrant, jamais au relâchement), par la MÊME formule que son dessin.
   const handleTap = () => {
-    if (phase !== 'tapping' || challengeDoneRef.current) return;
+    if (phase !== 'tapping' || challengeDoneRef.current || !jaugeRef.current) return;
+    const j = jaugeRef.current;
+    const v = resultatJauge(positionAiguille((Date.now() - j.debut) / 1000) - j.centre, j.largeur);
+    verdictRef.current = v;
     tapCountRef.current += 1;
     setTapCount(tapCountRef.current);
-    Animated.sequence([
-      Animated.timing(punchScale, { toValue: 0.9, duration: 40, useNativeDriver: true }),
-      Animated.spring(punchScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
-    ]).start();
-    if (tapCountRef.current >= requiredTaps) {
-      finishChallenge(true);
-    }
+    montrerVerdict(v);
+    finishChallenge(true);
   };
+
 
   // Le tirage de compétence adverse vit dans le moteur partagé
   // (combatLogic.riposteAdversaire), utilisé aussi par les simulations.
@@ -592,7 +633,6 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     if (challengeDoneRef.current) return;
     challengeDoneRef.current = true;
     playLunge('player', activeIndexRef.current);
-    const elapsedSec = (Date.now() - challengeStartRef.current) / 1000;
     const skill = selectedSkillRef.current;
     const curIdx = activeIndexRef.current;
     const curFighter = fightersRef.current[curIdx];
@@ -614,7 +654,10 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // 0 mana (SKILL_MANA_COSTS = [0,0,0]), seul l'ultime consomme la
     // jauge, et côté joueur `chooseSkill(skill, false)` est le seul appel
     // — la branche `isBasic` ne pouvait donc jamais se produire.
-    const multiplier = damageMultiplierForTime(elapsedSec, completed) + (curFighter.stats.dmgMultBonus || 0);
+    // Multiplicateur de la JAUGE (03/10) : « absent » si aucun tap à temps.
+    const verdictCoup = completed ? (verdictRef.current || 'rate') : 'absent';
+    if (!completed) montrerVerdict('absent');
+    const multJauge = multiplicateurJauge(verdictCoup);
     const skillDamage = skill.isBasic ? skill.damage : scaledSkillDamage(skill, curFighter.creature, curFighter.stats.attack);
     // Affinité élémentaire : +30% si l'attaquant domine l'élément de sa
     // cible, -25% s'il y est vulnérable.
@@ -645,7 +688,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     const part = coupSort ? (coupSort.zone || coupSort.part || 1) : 0;
     // Règle PARTAGÉE avec la simulation qui calibre le Gardien.
     const coupSur = (cible) => (part > 0 && frappe
-      ? Math.max(1, Math.round(degatsDuJoueur(frappe, attaquant, cible.creature, elapsedSec, completed) * part))
+      ? Math.max(1, Math.round(degatsDuJoueur(frappe, attaquant, cible.creature, multJauge) * part))
       : 0);
     let playerDamage = 0;
     let degatsTotaux = 0;
@@ -1176,15 +1219,15 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         {phase === 'tapping' && (
           <View style={{ alignItems: 'center', pointerEvents: 'none' }}>
             <Text style={styles.chosenSkillLabel}>{selectedSkill?.name}</Text>
-            <Animated.View style={{ transform: [{ scale: punchScale }] }}>
-              <View style={styles.tapRing}>
-                <Text style={styles.tapCountBig}>{tapCount}</Text>
-                <Text style={styles.tapCountOf}>/ {requiredTaps}</Text>
-              </View>
-            </Animated.View>
-            <View style={styles.timeTrack}>
-              <View style={[styles.timeFill, { width: `${(timeLeft / TAP_CHALLENGE_TIME_LIMIT_SEC) * 100}%` }]} />
-            </View>
+            <JaugeFrappe jauge={jauge} largeur={Math.round(Math.min(W * 0.55, 440))} />
+            <Text style={styles.jaugeConsigne}>Touche quand l'aiguille est dans l'or !</Text>
+          </View>
+        )}
+        {verdict && (
+          <View style={{ pointerEvents: 'none' }}>
+            <Text style={[styles.verdict, styles[`verdict_${verdict}`]]}>
+              {verdict === 'parfait' ? 'PARFAIT !' : verdict === 'bien' ? 'BIEN' : verdict === 'rate' ? 'RATÉ' : 'TROP TARD'}
+            </Text>
           </View>
         )}
       </View>
@@ -1215,10 +1258,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           était inutilement pénible. Posée en absolu au-dessus du
           terrain, sous la barre du bas qui garde le chrono lisible. */}
       {phase === 'tapping' && (
-        <TouchableOpacity
+        <View
+          // Début du toucher (onResponderGrant), pas le relâchement : le verdict de la
+          // jauge se joue à quelques centièmes (leçon des taps de l'œuf, 03/10).
           style={styles.tapEverywhere}
-          activeOpacity={1}
-          onPress={handleTap}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={handleTap}
         />
       )}
 
@@ -1565,6 +1610,17 @@ const styles = StyleSheet.create({
   closeBtn: {
     position: 'absolute', zIndex: 30, width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
   },
+  // Jauge de frappe (03/10)
+  jauge: { height: 34, marginTop: 8, borderRadius: 10, borderWidth: 3, borderColor: '#c99a45', backgroundColor: 'rgba(40,24,10,0.92)', overflow: 'hidden' },
+  jaugeBien: { position: 'absolute', top: 0, bottom: 0, backgroundColor: 'rgba(255,214,90,0.32)' },
+  jaugeParfait: { position: 'absolute', top: 0, bottom: 0, backgroundColor: '#ffcf3a' },
+  jaugeAiguille: { position: 'absolute', top: 0, bottom: 0, width: 6, borderRadius: 3, backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgba(0,0,0,0.5)' },
+  jaugeConsigne: { marginTop: 6, color: '#fbe9c4', fontSize: 12, fontWeight: '800', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
+  verdict: { fontSize: 30, fontWeight: '900', textAlign: 'center', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4 },
+  verdict_parfait: { color: '#ffd24a' },
+  verdict_bien: { color: '#e8f0ff' },
+  verdict_rate: { color: '#c9ccd2' },
+  verdict_absent: { color: '#ff7a6a' },
   closeBtnText: { color: '#fbe9c4', fontSize: 17, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 2 },
 
   sprite: { position: 'absolute', alignItems: 'center', zIndex: 5 },
