@@ -2069,3 +2069,11 @@ Sabotage d'auditApprentissage PÉRIMÉ (repère exact « 0.39, 0.61, 0.62 » =
 valeurs de la table, changées par le calibrage) → réécrit par MOTIF (3e valeur
 ×5, quelle qu'elle soit). RÈGLE : un sabotage qui vise une TABLE CALCULÉE se
 fait par motif, jamais par valeur exacte. 80 contrôles verts, 102 sabotages.
+
+**03/10 — Jauge HABILLÉE** (l'auteur : « on est bien là », veut un meilleur design
+Gemini ou réutiliser l'existant) : RÉUTILISÉ la planche de l'aperçu
+(exploration/plaque-titre.png) comme CADRE (étirée 6,7:1) ; aiguille et zones
+dans le SILLON intérieur (inset 8,5 % × 27 %) qui vaut 0 → 1 (même fraction que
+le verdict : seule la largeur de référence change) ; « bien » ambre,
+« parfait » or + reflet, lueur dorée DERRIÈRE le sillon (déborde sur le cadre),
+aiguille dorée à tête en losange. Aucune nouvelle pièce Gemini nécessaire.

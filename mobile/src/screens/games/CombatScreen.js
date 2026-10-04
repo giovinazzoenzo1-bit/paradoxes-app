@@ -58,13 +58,27 @@ function JaugeFrappe({ jauge, largeur }) {
     return () => cancelAnimationFrame(id);
   }, [jauge]);
   if (!jauge) return null;
-  const w = largeur;
+  // Habillage (03/10) : la PLANCHE de l'aperçu (pièce Gemini) en cadre ; l'aiguille et
+  // les zones courent dans le SILLON intérieur — c'est lui qui vaut 0 → 1 (même
+  // fraction que le verdict : seule la largeur de référence change).
+  const W = largeur; const H = Math.round(W * 0.15);
+  const insX = W * 0.085; const insY = H * 0.27;
+  const w = W - 2 * insX; const h = H - 2 * insY; const haut = 9;
   const zoneP = jauge.largeur * w; const zoneB = (jauge.largeur + 2 * JAUGE_MARGE_BIEN) * w; const cx = jauge.centre * w;
   return (
-    <View style={[styles.jauge, { width: w }]}>
-      <View style={[styles.jaugeBien, { left: cx - zoneB / 2, width: zoneB }]} />
-      <View style={[styles.jaugeParfait, { left: cx - zoneP / 2, width: zoneP }]} />
-      <View style={[styles.jaugeAiguille, { left: pos * w - 3 }]} />
+    <View style={{ width: W, height: H + 2 * haut, marginTop: 4 }}>
+      <Image source={COMBAT_IMG.planche} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: haut, width: W, height: H }} />
+      {/* Lueur derrière le sillon : l'or du « parfait » déborde sur le cadre. */}
+      <Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: insX + cx - zoneP * 1.8, top: haut + insY - h * 0.9, width: zoneP * 3.6, height: h * 2.8, opacity: 0.85, pointerEvents: 'none' }} />
+      <View style={[styles.jaugeSillon, { left: insX, top: haut + insY, width: w, height: h, borderRadius: h / 2 }]}>
+        <View style={[styles.jaugeBien, { left: cx - zoneB / 2, width: zoneB }]} />
+        <View style={[styles.jaugeParfait, { left: cx - zoneP / 2, width: zoneP }]}>
+          <View style={styles.jaugeParfaitReflet} />
+        </View>
+      </View>
+      <View style={[styles.jaugeAiguille, { left: insX + pos * w - 4, top: haut + insY - 6, height: h + 12 }]}>
+        <View style={styles.jaugeAiguilleTete} />
+      </View>
     </View>
   );
 }
@@ -1611,10 +1625,12 @@ const styles = StyleSheet.create({
     position: 'absolute', zIndex: 30, width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
   },
   // Jauge de frappe (03/10)
-  jauge: { height: 34, marginTop: 8, borderRadius: 10, borderWidth: 3, borderColor: '#c99a45', backgroundColor: 'rgba(40,24,10,0.92)', overflow: 'hidden' },
-  jaugeBien: { position: 'absolute', top: 0, bottom: 0, backgroundColor: 'rgba(255,214,90,0.32)' },
-  jaugeParfait: { position: 'absolute', top: 0, bottom: 0, backgroundColor: '#ffcf3a' },
-  jaugeAiguille: { position: 'absolute', top: 0, bottom: 0, width: 6, borderRadius: 3, backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgba(0,0,0,0.5)' },
+  jaugeSillon: { position: 'absolute', backgroundColor: 'rgba(26,13,4,0.92)', borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.6)', overflow: 'hidden' },
+  jaugeBien: { position: 'absolute', top: 0, bottom: 0, backgroundColor: 'rgba(255,184,62,0.36)' },
+  jaugeParfait: { position: 'absolute', top: 0, bottom: 0, backgroundColor: '#ffcf3a', borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#fff3b0' },
+  jaugeParfaitReflet: { position: 'absolute', left: 0, right: 0, top: 0, height: '45%', backgroundColor: 'rgba(255,255,255,0.38)' },
+  jaugeAiguille: { position: 'absolute', width: 8, borderRadius: 4, backgroundColor: '#fff8e1', borderWidth: 1.5, borderColor: '#9a6516', alignItems: 'center' },
+  jaugeAiguilleTete: { position: 'absolute', top: -8, width: 12, height: 12, backgroundColor: '#ffd54a', borderWidth: 1.5, borderColor: '#8a5a12', transform: [{ rotate: '45deg' }] },
   jaugeConsigne: { marginTop: 6, color: '#fbe9c4', fontSize: 12, fontWeight: '800', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
   verdict: { fontSize: 30, fontWeight: '900', textAlign: 'center', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 4 },
   verdict_parfait: { color: '#ffd24a' },
