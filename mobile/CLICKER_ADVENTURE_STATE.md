@@ -2004,3 +2004,29 @@ action jamais capteurs. Contrôle **auditDefiTapsLibre** + sabotage. Vérifié :
 en none (le navigateur garde la barre de vie captrice) ; sur téléphone, 'none'
 s'applique à tout le sous-arbre. NB verifier-controles : F.combat = la LOGIQUE
 (combatLogic.js) ; l'ÉCRAN = F.combatEcran.
+
+
+## ⚠️ EN COURS (03/10) — branche `jauge-frappe`, NON publiée : JAUGE DE FRAPPE
+
+Décision de l'auteur : remplacer le défi de taps du combat (25 taps commune →
+9 mythique en 12 s, ×2,5 sous 4 s ; équilibrage calé sur son autoclicker =
+toujours ×2,5) par une JAUGE : aiguille aller-retour 1,1 s, UN tap, zone
+« parfait » ×2,5 (largeur par rareté : 12/14/16/19/22/26 %, + Dextérité / sort
+Vitesse), « bien » ×1,8 (±8 %), raté ×1, pas de tap en 6 s ×0,5. Étapes
+validées par l'auteur : 1) jauge pour tous ; 2) personnalité par élément
+(réglages de la même jauge) ; 3) spéciaux « signature » par élément.
+FAIT sur la branche : moteur (largeurZoneParfait, positionAiguille,
+resultatJauge, multiplicateurJauge, multJaugeMoyen / multJaugeTire —
+simulations : erreur de timing ~ normale, référence 60 ms ; degatsDuJoueur
+prend le multiplicateur), écran (JaugeFrappe dessinée par la même formule,
+tap au DÉBUT du toucher : onResponderGrant ; verdict PARFAIT/BIEN/RATÉ/TROP
+TARD), textes (sort Vitesse, Rune de Dextérité), auditJaugeFrappe + 2
+sabotages, empreinte du Gardien (6d37904e, auditGardienCalibre vert),
+Aventure RECALCULÉE par calibrer-parcours (ennemis −1,9 %, conseillée −3,2 %).
+Testé au banc : parfait −17, raté −4, trop tard −2 (×2,5 / ×1 / ×0,5).
+BLOQUANT : auditPuissanceExacte, cas réel de l'auteur (niveau 16, Bouldog 34
++ Ventis 13 = 2 COMMUNES, gagné à 100 % à l'autoclicker) : simulé 64 %
+(parfait à chaque coup), 58 % (40 ms), 43 % (60 ms), 18 % (90 ms) → la
+jauge pénalise fortement un joueur moyen avec des communes. DÉCISION
+attendue de l'auteur : sévérité (zones plus larges / « bien » plus payant)
+avant de fusionner.
