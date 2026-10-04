@@ -1974,3 +1974,33 @@ SPÉCIAL 51-75,5 × 79-96,5 (onglet 57-69) ; Recharge 77-85,5 × 82-96.
 oublié), style médaillon ; noms réels. Pièces demandées : bandeau vide,
 panneau vide (×6), carte bois vide (NORMAL et SPÉCIAL dispo), carte pierre
 grise vide + cadenas (SPÉCIAL sans mana), bouton Recharge. Décor : le pré actuel.
+
+
+## 03/10 — Combat « Le bandeau de combat » PUBLIÉ (+ bug du défi de taps)
+
+Pièces reçues (ordre INVERSE ; Gemini a ajouté des éléments non demandés dans
+3 images : bandeau rempli, petit Recharge) → découpées par ÉLÉMENT ; panneau =
+grand cadre à onglet (pas le petit panneau) ; carte pierre = contour seul.
+Assemblage : élargies aux proportions de la maquette en 9 MORCEAUX (coins
+gardés, onglet recollé à sa taille) ; intérieur de la pierre = bois de la carte
+passé en gris ; intérieur du panneau = bois. assets/combat/{bandeau, panneau,
+carte-bois, carte-pierre, recharge}.png. Étiquettes NORMAL / SORT / SPÉCIAL sur
+la planche de l'aperçu (les onglets Gemini sont trop fins pour du texte).
+CombatScreen : renderSprite({ sansJauges }) → noms, vie, mana et pastille
+d'affinité passent dans le BANDEAU (panneaux : nom, vie CHIFFRÉE, mana ;
+actif/cible en lueur ; badge d'élément cerclé de la couleur d'affinité,
+emoji clair (🌙 pour les Ténèbres : 🌑 invisible) ; toucher un panneau
+adversaire = chooseTarget). Message de tour au centre du bandeau. Places du
+terrain (PLAYER/OPPONENT_SLOTS) reprises de la maquette, sous le bandeau. « ✕ »
+en médaillon (confirmQuit existait déjà), badges et barre du Gardien sous le
+bandeau. Cartes : bois si jouable, pierre grise sinon ; NORMAL d'abord.
+⚠️ BUG ANCIEN CORRIGÉ : pendant le défi de taps, l'anneau du compteur (plan 10)
+était AU-DESSUS de la zone qui compte (tapEverywhere, plan 8) et AVALAIT les
+taps posés au centre (0 compté sur 30 au banc). → anneau + titre + chrono en
+pointerEvents 'none' (style) ; bandeau 'none' pendant le défi ; panneaux sans
+action jamais capteurs. Contrôle **auditDefiTapsLibre** + sabotage. Vérifié :
+20 taps sur l'anneau = 20 comptés ; 30 taps → Ombrillon 35 → 25.
+⚠️ BANC : en CSS, un enfant en pointer-events:auto capte même sous un parent
+en none (le navigateur garde la barre de vie captrice) ; sur téléphone, 'none'
+s'applique à tout le sous-arbre. NB verifier-controles : F.combat = la LOGIQUE
+(combatLogic.js) ; l'ÉCRAN = F.combatEcran.

@@ -24,6 +24,27 @@ import { StatusBar } from 'expo-status-bar';
 // est dessiné en légère plongée, avec une zone centrale dégagée, donc
 // les créatures se posent dessus au lieu de flotter sur une image plate.
 const BG_IMG = require('../../../assets/combat/battlefield.jpg');
+// ════════════════════════════════════════════════════════════════════
+//  COMBAT « LE BANDEAU DE COMBAT » (03/10, maquette de l'auteur, paysage)
+// ════════════════════════════════════════════════════════════════════
+// Maquette : design/a-integrer/07-combat/concepts/1791102918928.jpg. Bandeau
+// en haut : tes créatures à gauche (nom, vie CHIFFRÉE, mana), le tour au centre,
+// les adversaires à droite (badge d'élément cerclé de la couleur d'affinité).
+// Attaques sur des cartes (bois ; pierre grise si le mana manque), étiquette sur
+// la planche de l'aperçu. Pièces de Gemini élargies en 9 morceaux (coins gardés).
+// L'AFFICHAGE seul change : la logique du combat est intacte.
+const COMBAT_IMG = {
+  bandeau: require('../../../assets/combat/bandeau.png'),
+  panneau: require('../../../assets/combat/panneau.png'),
+  carteBois: require('../../../assets/combat/carte-bois.png'),
+  cartePierre: require('../../../assets/combat/carte-pierre.png'),
+  recharge: require('../../../assets/combat/recharge.png'),
+  planche: require('../../../assets/exploration/plaque-titre.png'),
+  medaillon: require('../../../assets/exploration/medaillon.png'),
+  lueur: require('../../../assets/grimoire/lueur-or.png'),
+};
+const COMBAT_RAPPORT = 1376 / 768;
+const ELEMENT_EMOJI = { Feu: '🔥', Eau: '💧', Terre: '🌿', Air: '🌪️', Foudre: '⚡', 'Lumière': '☀️', 'Ténèbres': '🌙', Magie: '🔮' };
 // Décor de VICTOIRE : la même prairie au soleil couchant. Réutilisé
 // aussi en défaite, mais assombri par un voile (voir `resultDim`) —
 // une image de défaite séparée n'existe pas encore.
@@ -127,19 +148,21 @@ function FloatingDamage({ amount, color }) {
 // loin), 3e en bas à droite.
 // Remontés pour la même raison : la barre de vie du combattant de
 // devant arrivait au ras des boutons.
+// Places sur le terrain (03/10) : celles de la maquette « Le bandeau de combat » —
+// tout entre le bandeau (en haut) et les cartes (en bas) ; l'actif devant.
 const PLAYER_SLOTS = [
-  { x: 0.20, y: 0.46, size: 1.0 },
-  { x: 0.36, y: 0.38, size: 0.78 },
-  { x: 0.23, y: 0.20, size: 0.62 },
+  { x: 0.20, y: 0.60, size: 1.0 },
+  { x: 0.31, y: 0.50, size: 0.78 },
+  { x: 0.40, y: 0.47, size: 0.68 },
 ];
 // Adversaires décalés vers la droite (11/09) : ils empiétaient sur le
 // centre du terrain, où passe le sentier du décor.
 // Remontés le 12/09 : avec les boutons d'attaque en carrés de 86dp en
 // bas de l'écran, les emplacements bas (y 0,60) passaient derrière eux.
 const OPPONENT_SLOTS = [
-  { x: 0.70, y: 0.40, size: 1.0 },
-  { x: 0.88, y: 0.20, size: 0.66 },
-  { x: 0.89, y: 0.50, size: 0.82 },
+  { x: 0.70, y: 0.57, size: 1.0 },
+  { x: 0.82, y: 0.46, size: 0.78 },
+  { x: 0.89, y: 0.62, size: 0.85 },
 ];
 // Agrandi de 74 à 104 (12/09) : les illustrations de créatures
 // paraissaient minuscules sur le décor, qui occupe tout l'écran. Les
@@ -853,7 +876,42 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       : scaledSkillDamage(skill, activeFighter.creature, activeFighter.stats.attack)
   ));
 
-  const renderSprite = ({ adversaire = false, key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir, elemColor , etats = null, etatsCote = 'droite' }) => {
+  // ── Bandeau de combat : mesures (maquette : bandeau en haut, panneaux ~10,5 % de large) ──
+  const uiL = Math.min(H * COMBAT_RAPPORT, W); const uiH = uiL / COMBAT_RAPPORT;
+  const largeurBandeau = W - insets.left - insets.right - 8;
+  const bandeauH = Math.round(Math.min(uiH * 0.18, largeurBandeau / 11.53));
+  const sousBandeau = bandeauH + 6;
+  const PW = largeurBandeau * 0.108; const PH = bandeauH * 0.8; const PT = bandeauH * 0.1;
+  const panneauCombattant = ({ key, gauche, nom, hp, hpMax, mana, actif, cible, ko, badge, onPress }) => (
+    <TouchableOpacity key={key} activeOpacity={onPress ? 0.8 : 1} disabled={!onPress} onPress={onPress}
+      // Sans action (tes panneaux ; ceux des adversaires hors choix) : AUCUNE capture du toucher
+      // (le défi de taps compte partout, bandeau compris).
+      style={{ position: 'absolute', left: gauche, top: PT, width: PW, height: PH, opacity: ko ? 0.4 : 1, pointerEvents: onPress ? 'auto' : 'none' }}>
+      {(actif || cible) && !ko && (
+        <Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: -PW * 0.18, top: -PH * 0.3, width: PW * 1.36, height: PH * 1.6, opacity: actif ? 0.9 : 0.55, pointerEvents: 'none' }} />
+      )}
+      <Image source={COMBAT_IMG.panneau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
+      <Text style={[styles.panneauNom, { fontSize: Math.max(8, Math.round(PH * 0.2)), marginTop: PH * 0.12, marginHorizontal: PW * 0.08 }]} numberOfLines={1}>{nom}</Text>
+      <View style={[styles.panneauVie, { height: Math.max(10, Math.round(PH * 0.24)), marginHorizontal: PW * 0.1 }]}>
+        <View style={[styles.panneauVieFond, { width: `${Math.max(0, Math.min(1, hp / hpMax)) * 100}%` }]} />
+        <Text style={[styles.panneauVieTexte, { fontSize: Math.max(8, Math.round(PH * 0.18)) }]} numberOfLines={1}>{Math.max(0, Math.ceil(hp))} / {hpMax}</Text>
+      </View>
+      {mana != null && (
+        <View style={[styles.panneauMana, { height: Math.max(4, Math.round(PH * 0.08)), marginHorizontal: PW * 0.1 }]}>
+          <View style={[styles.panneauManaFond, mana >= MANA_MAX && styles.panneauManaPlein, { width: `${Math.max(0, Math.min(1, mana / MANA_MAX)) * 100}%` }]} />
+        </View>
+      )}
+      {badge && (
+        <View style={[styles.panneauBadge, { width: PH * 0.44, height: PH * 0.44, borderRadius: PH * 0.22, left: -PH * 0.18, top: -PH * 0.14, borderColor: badge.couleur }]}>
+          <Text style={{ fontSize: Math.round(PH * 0.22), includeFontPadding: false }}>{badge.emoji}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+  // Cartes d'attaque (maquette : ~25,5 % de large) ; étiquette sur la planche de l'aperçu.
+  const CW = Math.round(uiL * 0.25); const CH = Math.round(CW / 2.61);
+
+  const renderSprite = ({ sansJauges = false, adversaire = false, key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir, elemColor , etats = null, etatsCote = 'droite' }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -882,7 +940,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
             et n'apparaissait que sur la cible, alors que le joueur doit
             pouvoir COMPARER avant de frapper. La cible reste identifiée
             par sa pastille agrandie. */}
-        {elemColor && !fainted && (
+        {elemColor && !fainted && !sansJauges && (
           <View style={[styles.elemDot, ring === 'target' && styles.elemDotTarget, { backgroundColor: elemColor }]} />
         )}
         <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }]}>
@@ -915,11 +973,16 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
             />
           </Animated.View>
         </View>
-        <Text style={[styles.spriteName, { fontSize: Math.max(9, Math.round(12 * slot.size)) }]} numberOfLines={1}>{name}</Text>
+        {!sansJauges && <Text style={[styles.spriteName, { fontSize: Math.max(9, Math.round(12 * slot.size)) }]} numberOfLines={1}>{name}</Text>}
         {/* Barre de PV + ligne d'états (bonus / malus) à DROITE pour nos
             créatures, à GAUCHE pour les adversaires — demande de l'auteur
             (24/09) ; emojis en attendant ses logos. En absolu : ne décale
             rien dans la mise en page. */}
+        {sansJauges ? (
+          etats && etats.length > 0 && (
+            <Text style={[styles.spriteEtats, styles.spriteEtatsSeul]} numberOfLines={1}>{etats.map((e) => e.icone + e.texte).join(' ')}</Text>
+          )
+        ) : (
         <View style={{ width: Math.round(90 * slot.size) }}>
           <View style={[styles.spriteHpTrack, { width: Math.round(90 * slot.size) }]}>
             <View style={[styles.spriteHpFill, { width: `${Math.max(0, hp / hpMax) * 100}%`, backgroundColor: hpColor }]} />
@@ -930,7 +993,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
             </Text>
           )}
         </View>
-        {mana != null && (
+        )}
+        {mana != null && !sansJauges && (
           <View style={[styles.spriteEndTrack, { width: Math.round(90 * slot.size) }]}>
             <View style={[styles.spriteEndFill, mana >= manaMax && styles.spriteEndFull, { width: `${Math.max(0, Math.min(1, mana / manaMax)) * 100}%` }]} />
           </View>
@@ -944,12 +1008,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     <View style={[styles.screen, { marginTop: -insets.top }]}>
       <StatusBar hidden />
       {elixirActif && (
-        <View style={[styles.elixirBadge, { top: insets.top + 6, pointerEvents: 'none' }]}>
+        <View style={[styles.elixirBadge, { top: sousBandeau + 6, left: 10 + insets.left + 52, pointerEvents: 'none' }]}>
           <Text style={styles.elixirBadgeText}>🧪 Élixir : ennemis −10 %</Text>
         </View>
       )}
       {filetBaisse > 0 && (
-        <View style={[styles.elixirBadge, styles.filetBadge, { top: insets.top + (elixirActif ? 34 : 6), pointerEvents: 'none' }]}>
+        <View style={[styles.elixirBadge, styles.filetBadge, { top: sousBandeau + 6 + (elixirActif ? 28 : 0), left: 10 + insets.left + 52, pointerEvents: 'none' }]}>
           <Text style={styles.elixirBadgeText}>🛟 Coup de pouce : ennemis −{Math.round(filetBaisse * 100)} %</Text>
         </View>
       )}
@@ -961,7 +1025,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         <View style={styles.bgDim} />
       </ImageBackground>
 
-      <TouchableOpacity style={[styles.closeBtn, { top: 10 + insets.top, left: 10 + insets.left }]} onPress={confirmQuit}>
+      {/* « ✕ » au style des médaillons (confirmation déjà en place : confirmQuit), sous le bandeau. */}
+      <TouchableOpacity style={[styles.closeBtn, { top: sousBandeau, left: 10 + insets.left }]} onPress={confirmQuit}>
+        <Image source={COMBAT_IMG.medaillon} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
         <Text style={styles.closeBtnText}>✕</Text>
       </TouchableOpacity>
 
@@ -970,7 +1036,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         const f = fighters[fi];
         const d = f.creature.stages[stageForLevel(f.ownedLevel)];
         return renderSprite({
-          key: `p${fi}`, slot: PLAYER_SLOTS[slotIdx],
+          key: `p${fi}`, slot: PLAYER_SLOTS[slotIdx], sansJauges: true,
           creatureId: f.creature.id, stageIndex: stageForLevel(f.ownedLevel),
           emoji: d.emoji, name: d.name,
           hp: f.hp, hpMax: f.stats.hp,
@@ -990,7 +1056,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           vraiment toute la largeur, indépendamment de la mise en page
           du combat. */}
       {isBoss && opponents[0] && (
-        <View style={[styles.bossBarWrap, { paddingLeft: insets.left + 10, paddingRight: insets.right + 10 }]}>
+        <View style={[styles.bossBarWrap, { top: bandeauH + 2, paddingLeft: insets.left + 10, paddingRight: insets.right + 10 }]}>
           <View style={styles.bossBarHeader}>
             <Text style={styles.bossBarName}>🐯 GARDIEN</Text>
             <Text style={styles.bossBarPhase}>Manche {bossPhase}/2</Text>
@@ -1053,11 +1119,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         const d = o.creature.stages[0];
         const fainted = o.hp <= 0;
         return renderSprite({
-          key: `o${i}`,
+          key: `o${i}`, sansJauges: true,
           // Le boss est plus imposant : emplacement recentré et agrandi
           // de 70 %, pour qu'il pèse à l'écran au lieu de ressembler à
           // une créature ordinaire.
-          slot: isBoss ? { x: 0.72, y: 0.46, size: 1.7 } : OPPONENT_SLOTS[i],
+          slot: isBoss ? { x: 0.72, y: 0.53, size: 1.7 } : OPPONENT_SLOTS[i],
           creatureId: o.creature.id, stageIndex: 0,
           emoji: d.emoji, name: d.name,
           hp: o.hp, hpMax: o.stats.hp, fainted,
@@ -1074,17 +1140,41 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         });
       })}
 
+      {/* ── Bandeau de combat (03/10) : tes créatures à gauche, le tour au centre, les adversaires
+          à droite. Toucher un panneau adversaire le vise (comme le toucher sur le terrain). */}
+      {/* Pendant le défi de taps, le bandeau laisse passer le toucher (tout l'écran compte). */}
+      <View style={[styles.bandeau, { left: insets.left + 4, top: 2, width: largeurBandeau, height: bandeauH, pointerEvents: phase === 'tapping' ? 'none' : 'box-none' }]}>
+        <Image source={COMBAT_IMG.bandeau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
+        {fighters.map((f, fi) => {
+          const d = f.creature.stages[stageForLevel(f.ownedLevel)];
+          return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, hp: f.hp, hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex, ko: f.hp <= 0 });
+        })}
+        <View style={[styles.bandeauMessage, { left: largeurBandeau * 0.395, width: largeurBandeau * 0.21, height: bandeauH }]}>
+          <Text style={[styles.bandeauMessageTexte, { fontSize: Math.max(10, Math.round(bandeauH * 0.22)) }]} numberOfLines={2}>
+            {switchMessage || `Au tour de ${activeFighter.creature.stages[stageForLevel(activeFighter.ownedLevel)].name} !`}
+          </Text>
+        </View>
+        {!isBoss && opponents.map((o, i) => {
+          const d = o.creature.stages[0]; const ko = o.hp <= 0;
+          return panneauCombattant({
+            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, hp: o.hp, hpMax: o.stats.hp, mana: null, cible: i === targetIndex, ko,
+            badge: { emoji: ELEMENT_EMOJI[o.creature.element] || '✨', couleur: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)] || '#ffb340' },
+            onPress: !ko && phase === 'choosing' ? () => chooseTarget(i) : null,
+          });
+        })}
+      </View>
+
       {/* Couche centrale : défi de tap / bannière de tour uniquement —
           plus de bouton "Continuer" après une attaque du joueur (demande
           explicite), la transition est immédiate. */}
       <View style={styles.centerLayer}>
-        {switchMessage && (
-          <View style={styles.switchBanner}>
-            <Text style={styles.switchBannerText}>{switchMessage}</Text>
-          </View>
-        )}
+        {/* Message de tour : désormais au centre du BANDEAU (03/10). */}
+        {/* ⚠️ Défi de taps (03/10) : l'anneau, son titre et son chrono sont TRANSPARENTS au toucher.
+            Au plan 10, au-dessus de la zone qui compte (tapEverywhere, plan 8), ils AVALAIENT
+            les taps posés au centre de l'écran, là où l'on tape (même famille que les « +X »
+            du 27/09). Contrôle auditDefiTapsLibre. */}
         {phase === 'tapping' && (
-          <>
+          <View style={{ alignItems: 'center', pointerEvents: 'none' }}>
             <Text style={styles.chosenSkillLabel}>{selectedSkill?.name}</Text>
             <Animated.View style={{ transform: [{ scale: punchScale }] }}>
               <View style={styles.tapRing}>
@@ -1095,7 +1185,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
             <View style={styles.timeTrack}>
               <View style={[styles.timeFill, { width: `${(timeLeft / TAP_CHALLENGE_TIME_LIMIT_SEC) * 100}%` }]} />
             </View>
-          </>
+          </View>
         )}
       </View>
 
@@ -1157,6 +1247,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               // pleine : afficher un bouton grisé qu'on ne peut pas
               // utiliser encombre l'écran sans rien apprendre.
               .filter((sk) => !sk.special || activeFighter.mana >= MANA_MAX)
+              // Ordre de la maquette : NORMAL d'abord, puis SORT, puis SPÉCIAL.
+              .sort((a, b) => (a.special ? 2 : a.sort ? 1 : 0) - (b.special ? 2 : b.sort ? 1 : 0))
               .map((skill, idx, arr) => {
               const cost = skill.manaCost || 0;
               // Le spécial exige la jauge PLEINE, pas seulement son coût.
@@ -1164,40 +1256,41 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
                 ? activeFighter.mana >= MANA_MAX
                 : activeFighter.mana >= cost;
               return (
+                // Carte d'attaque (03/10) : bois si jouable, pierre grise si le mana manque.
                 <TouchableOpacity
                   key={skill.id}
-                  style={[styles.skillBtn, !canAfford && styles.skillBtnOff, skill.special && styles.skillBtnSpecial, armedSkill && armedSkill.id === skill.id && styles.skillBtnArmed, !canAfford && styles.skillBtnDisabled]}
-                  // Un appui simple SÉLECTIONNE l'attaque ; un appui long
-                  // affiche seulement son détail. Sans cette séparation,
-                  // consulter une attaque reviendrait à la lancer.
-                  // Appui simple : sélectionne ET affiche le détail. Il
-                  // était auparavant sur appui LONG, que personne ne
-                  // découvre — l'information n'était donc jamais vue.
+                  style={[styles.carteAttaque, { width: CW, height: CH, marginTop: CH * 0.2 }]}
+                  activeOpacity={0.85}
                   onPress={() => { setSkillInfo({ ...skill, fromRight: arr.length - 1 - idx }); chooseSkill(skill, false); }}
                   disabled={!canAfford}
                 >
-                  <Text style={styles.skillBtnName} numberOfLines={2}>{skill.sort ? `${skill.icone} ${skill.name}` : skill.name}</Text>
-                  {/* ⚠️ Dégâts MIS À L'ÉCHELLE du niveau, pas la valeur de
-                      base. Le bouton affichait `skill.damage` brut : une
-                      créature niveau 20 annonçait donc les mêmes chiffres
-                      qu'au niveau 1, alors qu'elle frappe bien plus fort.
-                      On réutilise `scaledSkillDamage`, la FONCTION MÊME
-                      qui sert au calcul du coup — impossible que
-                      l'affichage et les dégâts divergent. */}
-                  <Text style={styles.skillBtnDamage}>
-                    {skill.sort ? SORTS[skill.sort].desc : `${degatsAffiches(skill)} dégâts`}
-                  </Text>
-                  {/* Rien à afficher pour une attaque normale : elles
-                      sont toutes gratuites, le préciser est du bruit.
-                      Seul l'ultime annonce qu'il est spécial. */}
-                  {skill.special && <Text style={styles.skillBtnCost}>SPÉCIAL</Text>}
-                  {skill.sort && <Text style={styles.skillBtnCost}>{skill.manaCost} mana</Text>}
+                  {armedSkill && armedSkill.id === skill.id && (
+                    <Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: -CW * 0.08, top: -CH * 0.25, width: CW * 1.16, height: CH * 1.5, pointerEvents: 'none' }} />
+                  )}
+                  <Image source={canAfford ? COMBAT_IMG.carteBois : COMBAT_IMG.cartePierre} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
+                  {/* Étiquette sur la petite planche de l'aperçu, à cheval sur le haut de la carte. */}
+                  <View style={[styles.carteEtiquette, { left: CW * 0.29, width: CW * 0.42, top: -CH * 0.2, height: CH * 0.3 }]}>
+                    <Image source={COMBAT_IMG.planche} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
+                    <Text style={[styles.carteEtiquetteTexte, { fontSize: Math.max(8, Math.round(CH * 0.13)) }, !canAfford && styles.carteTexteEteint]} numberOfLines={1}>
+                      {skill.special ? 'SPÉCIAL' : skill.sort ? 'SORT' : 'NORMAL'}
+                    </Text>
+                  </View>
+                  <View style={[styles.carteContenu, { paddingHorizontal: CW * 0.07, paddingTop: CH * 0.1 }]}>
+                    <Text style={[styles.carteIcone, { fontSize: Math.round(CH * 0.36) }, !canAfford && { opacity: 0.45 }]}>{skill.sort ? skill.icone : skill.special ? '🌟' : '⚔️'}</Text>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={[styles.carteNom, { fontSize: Math.max(9, Math.round(CH * 0.2)) }, !canAfford && styles.carteTexteEteint]} numberOfLines={1}>{skill.name}</Text>
+                      {/* Dégâts calculés par la FONCTION du coup (degatsAffiches) : affichage et dégâts ne divergent pas. */}
+                      <Text style={[styles.carteDetail, { fontSize: Math.max(8, Math.round(CH * 0.16)) }, !canAfford && styles.carteTexteEteint]} numberOfLines={1}>
+                        {skill.sort ? SORTS[skill.sort].desc : `${degatsAffiches(skill)} dégâts`}
+                      </Text>
+                      {skill.sort && <Text style={[styles.carteCout, { fontSize: Math.max(8, Math.round(CH * 0.14)) }, !canAfford && styles.carteTexteEteint]} numberOfLines={1}>{skill.manaCost} mana</Text>}
+                    </View>
+                  </View>
                 </TouchableOpacity>
               );
             })}
-            <TouchableOpacity style={styles.rechargeBtn} onPress={rechargeEndurance}>
-              <Text style={styles.rechargeBtnText}>📺</Text>
-              <Text style={styles.rechargeBtnLabel}>Recharge</Text>
+            <TouchableOpacity style={{ width: Math.round(CH * 0.95 * 1.06), height: Math.round(CH * 0.95) }} onPress={rechargeEndurance} activeOpacity={0.85}>
+              <Image source={COMBAT_IMG.recharge} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1445,12 +1538,34 @@ const styles = StyleSheet.create({
   // le texte blanc des barres reste lisible.
   bgDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,10,20,0.12)' },
 
+  // ── Combat « Le bandeau de combat » (03/10) ──
+  pleineImage: { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' },
+  bandeau: { position: 'absolute', zIndex: 25 },
+  panneauNom: { textAlign: 'center', alignSelf: 'stretch', color: '#fbe9c4', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 2 },
+  panneauVie: { marginTop: 3, borderRadius: 6, backgroundColor: 'rgba(20,10,4,0.75)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.6)', overflow: 'hidden', justifyContent: 'center' },
+  panneauVieFond: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#3ddc5a' },
+  panneauVieTexte: { textAlign: 'center', alignSelf: 'stretch', color: '#ffffff', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 2 },
+  panneauMana: { marginTop: 3, borderRadius: 3, backgroundColor: 'rgba(10,16,30,0.75)', overflow: 'hidden' },
+  panneauManaFond: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#3b9dff' },
+  panneauManaPlein: { backgroundColor: '#7cc8ff' },
+  panneauBadge: { position: 'absolute', backgroundColor: '#f3e2b0', borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },
+  bandeauMessage: { position: 'absolute', top: 0, alignItems: 'center', justifyContent: 'center' },
+  bandeauMessageTexte: { textAlign: 'center', alignSelf: 'stretch', color: '#fbe9c4', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
+  carteAttaque: { justifyContent: 'center' },
+  carteEtiquette: { position: 'absolute', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  carteEtiquetteTexte: { textAlign: 'center', alignSelf: 'stretch', color: '#fbe9c4', fontWeight: '900', letterSpacing: 1, includeFontPadding: false },
+  carteContenu: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  carteIcone: { includeFontPadding: false, marginRight: 4 },
+  carteNom: { textAlign: 'center', alignSelf: 'stretch', color: '#fbe9c4', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 2 },
+  carteDetail: { textAlign: 'center', alignSelf: 'stretch', color: '#ffd24a', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 2 },
+  carteCout: { textAlign: 'center', alignSelf: 'stretch', color: '#9fd0ff', fontWeight: '800', includeFontPadding: false },
+  carteTexteEteint: { color: '#c9ccd2' },
+  spriteEtatsSeul: { position: 'relative', top: 0, alignSelf: 'center' },
+  // « ✕ » au style des médaillons (03/10) : le médaillon fait le fond.
   closeBtn: {
-    position: 'absolute', zIndex: 30, width: 34, height: 34, borderRadius: 17,
-    backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
+    position: 'absolute', zIndex: 30, width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
   },
-  closeBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  closeBtnText: { color: '#fbe9c4', fontSize: 17, fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 2 },
 
   sprite: { position: 'absolute', alignItems: 'center', zIndex: 5 },
   // Simple conteneur de centrage : plus aucune bordure. Les anneaux
@@ -1519,7 +1634,7 @@ const styles = StyleSheet.create({
   // épuré, le décor visible. Les boutons ne sont plus étirés sur toute
   // la largeur mais groupés en petits carrés.
   bottomBar: {
-    flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-end',
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end',
     paddingHorizontal: 10, paddingBottom: 8, paddingTop: 6, gap: 8,
     backgroundColor: 'transparent',
   },
