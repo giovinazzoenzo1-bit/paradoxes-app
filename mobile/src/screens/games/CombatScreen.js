@@ -11,9 +11,10 @@
 // emojis actuels comme "skins". Croix pour quitter en haut à gauche.
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, Image, ScrollView } from 'react-native';
+  View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, Image, ScrollView, Easing, Platform } from 'react-native';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import CreatureArt from '../../components/CreatureArt';
+import CreatureArt, { hasCreatureArt } from '../../components/CreatureArt';
 import { StatusBar } from 'expo-status-bar';
 
 // Décor de combat fourni par l'utilisateur (30/08) — remplace le fond
@@ -44,6 +45,80 @@ const COMBAT_IMG = {
   lueur: require('../../../assets/grimoire/lueur-or.png'),
 };
 const COMBAT_RAPPORT = 1376 / 768;
+
+// ════════════════════════════════════════════════════════════════════
+//  EFFETS DE COMBAT — ÉTAPE 1 : L'IMPACT (03/10, demande de l'auteur)
+// ════════════════════════════════════════════════════════════════════
+// À l'instant où l'élan TOUCHE (~270 ms : 160 de recul + 110 de détente) :
+// éclat blanc de la silhouette, anneau + étincelles, secousse de l'écran,
+// vibration, chiffres selon le verdict (PARFAIT gros et doré). Tout est
+// DÉCORATIF (rien n'attend ces effets) et TRANSPARENT au toucher (style).
+const ND = Platform.OS !== 'web'; // moteur natif sur téléphone ; JS au banc (le natif n'y tourne pas)
+const IMPACT_MS = 270;
+const STYLE_COUP = {
+  parfait: { couleur: '#ffd24a', taille: 32, etincelles: 12, secousse: 9, vibration: 'heavy' },
+  bien: { couleur: '#ffffff', taille: 26, etincelles: 8, secousse: 5, vibration: 'medium' },
+  rate: { couleur: '#c9ccd2', taille: 22, etincelles: 4, secousse: 2, vibration: 'light' },
+  absent: { couleur: '#ff9a8a', taille: 20, etincelles: 3, secousse: 1, vibration: 'light' },
+  riposte: { couleur: '#ff6a4a', taille: 24, etincelles: 6, secousse: 4, vibration: 'light' },
+};
+// Vibration : JAMAIS de plantage. ⚠️ Même motif que sonsBoutique.js (02/10) :
+// expo-haptics appelle le module natif dès son chargement, et un try/catch autour
+// d'un require ne voit pas l'erreur FATALE de Metro → on DEMANDE d'abord si le
+// module natif existe (requireOptionalNativeModule ne lève pas), et on ne charge
+// expo-haptics que s'il existe (l'appli construite peut ne pas l'embarquer).
+// Contrôle : auditModulesNatifsProteges.
+let haptique; // undefined : pas encore essayé ; null : indisponible
+function moduleHaptique() {
+  if (haptique === undefined) {
+    let natif = null;
+    try { natif = requireOptionalNativeModule('ExpoHaptics'); } catch (e) { natif = null; }
+    haptique = natif ? require('expo-haptics') : null;
+  }
+  return haptique;
+}
+function vibrer(force) {
+  try {
+    const H = moduleHaptique();
+    if (!H) return;
+    const s = force === 'heavy' ? H.ImpactFeedbackStyle.Heavy : force === 'medium' ? H.ImpactFeedbackStyle.Medium : H.ImpactFeedbackStyle.Light;
+    const r = H.impactAsync(s);
+    if (r && r.catch) r.catch(() => {});
+  } catch (e) { /* pas de vibration, pas de plantage */ }
+}
+// Un impact : un anneau qui s'ouvre et des étincelles qui jaillissent, puis s'effacent.
+function Impact({ x, y, couleur, etincelles, onFini }) {
+  const t = useRef(new Animated.Value(0)).current;
+  const angles = useRef(Array.from({ length: etincelles }, (_, i) => (i / etincelles) * Math.PI * 2 + Math.random() * 0.5)).current;
+  const dist = useRef(angles.map(() => 34 + Math.random() * 30)).current;
+  useEffect(() => {
+    Animated.timing(t, { toValue: 1, duration: 520, easing: Easing.out(Easing.quad), useNativeDriver: ND }).start(() => onFini && onFini());
+  }, []);
+  return (
+    <View style={{ position: 'absolute', left: x, top: y, width: 0, height: 0, pointerEvents: 'none' }}>
+      <Animated.View style={[styles.impactAnneau, { borderColor: couleur, opacity: t.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.9, 0.5, 0] }), transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.9] }) }] }]} />
+      {angles.map((a, i) => (
+        <Animated.View key={i} style={[styles.impactEtincelle, { backgroundColor: couleur, opacity: t.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 0.9, 0] }),
+          transform: [{ translateX: t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(a) * dist[i]] }) }, { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(a) * dist[i]] }) }, { rotate: `${Math.round(a * 57)}deg` }, { scale: t.interpolate({ inputRange: [0, 1], outputRange: [1.2, 0.4] }) }] }]} />
+      ))}
+    </View>
+  );
+}
+// Éclat BLANC de la silhouette touchée : la même illustration, teintée en blanc.
+function EclatSilhouette({ creatureId, stageIndex, emoji, size, style }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(t, { toValue: 1, duration: 60, useNativeDriver: ND }),
+      Animated.timing(t, { toValue: 0, duration: 220, useNativeDriver: ND }),
+    ]).start();
+  }, []);
+  return (
+    <Animated.View style={{ position: 'absolute', left: 0, top: 0, opacity: t, pointerEvents: 'none' }}>
+      <CreatureArt creatureId={creatureId} stageIndex={stageIndex} emoji={emoji} size={size} style={[style, { tintColor: '#ffffff' }]} />
+    </Animated.View>
+  );
+}
 
 // Jauge de frappe (03/10). L'aiguille est dessinée par positionAiguille — la MÊME
 // formule que le verdict du tap — image par image, dans ce SEUL composant (l'écran
@@ -168,16 +243,18 @@ const RECHARGE_PERCENT = 0.5; // "Recharge" (pub simulée) rend 50% de l'enduran
 // combat (contrairement à l'ancien bouton "Continuer"), le `key` unique
 // à chaque tour (passé par le parent) le fait juste se remonter et
 // rejouer son animation depuis le début.
-function FloatingDamage({ amount, color }) {
+function FloatingDamage({ amount, color, taille = null, pop = false }) {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     anim.setValue(0);
-    Animated.timing(anim, { toValue: 1, duration: 900, useNativeDriver: true }).start();
+    Animated.timing(anim, { toValue: 1, duration: 900, useNativeDriver: ND }).start();
   }, [anim]);
+  // PARFAIT : le chiffre JAILLIT (×1,5 puis se pose).
+  const scale = pop ? anim.interpolate({ inputRange: [0, 0.12, 0.3, 1], outputRange: [0.6, 1.5, 1, 1] }) : 1;
   const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -44] });
   const opacity = anim.interpolate({ inputRange: [0, 0.75, 1], outputRange: [1, 1, 0] });
   return (
-    <Animated.Text style={[styles.floatingDamage, { color, opacity, transform: [{ translateY }] }]}>
+    <Animated.Text style={[styles.floatingDamage, taille ? { fontSize: taille } : null, { color, opacity, transform: [{ translateY }, { scale }] }]}>
       -{amount}
     </Animated.Text>
   );
@@ -424,6 +501,32 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   // FloatingDamage plus haut), `roundKey` change à chaque tour pour les
   // faire rejouer leur animation depuis le début.
   const [roundKey, setRoundKey] = useState(0);
+  // ── Effets d'impact (03/10) ──
+  const [impacts, setImpacts] = useState([]);
+  const [verdictDernierCoup, setVerdictDernierCoup] = useState(null);
+  const secousse = useRef(new Animated.Value(0)).current;
+  const secouer = (force) => {
+    if (!force) return;
+    Animated.sequence([force, -force, force * 0.6, -force * 0.6, force * 0.3, 0].map((v) => Animated.timing(secousse, { toValue: v, duration: 40, useNativeDriver: ND }))).start();
+  };
+  const centreSprite = (cote, index) => {
+    if (cote === 'adversaire') {
+      const slot = isBoss ? { x: 0.72, y: 0.53, size: 1.7 } : OPPONENT_SLOTS[index];
+      return slot ? { x: slot.x * W, y: slot.y * H } : null;
+    }
+    const actif = activeIndexRef.current;
+    const ordre = [actif, ...fightersRef.current.map((_, i) => i).filter((i) => i !== actif)];
+    const slot = PLAYER_SLOTS[ordre.indexOf(index)];
+    return slot ? { x: slot.x * W, y: slot.y * H } : null;
+  };
+  // Éclats + étincelles + secousse + vibration, selon le verdict du coup (ou « riposte »).
+  const effetsImpact = (cote, index, cle) => {
+    const st = STYLE_COUP[cle] || STYLE_COUP.bien;
+    const c = centreSprite(cote, index);
+    if (c) setImpacts((l) => [...l, { id: `${Date.now()}-${Math.random()}`, x: c.x, y: c.y, couleur: st.couleur, etincelles: st.etincelles }]);
+    secouer(st.secousse);
+    vibrer(st.vibration);
+  };
   const [opponentDamageFloat, setOpponentDamageFloat] = useState(null);
   // { amount, index } — l'INDICE est figé au moment du coup. Relu via
   // `activeIndex` à l'affichage, il désignait le combattant SUIVANT
@@ -490,10 +593,16 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     fightersRef.current = newFighters;
     setFighters(newFighters);
 
-    setRoundKey((k) => k + 1);
-    setOpponentDamageFloat(null);
-    setPlayerDamageFloat(oppDamage > 0 ? { amount: oppDamage, index: curIdx } : null);
-    setPlayerDamageFloat(oppDamage);
+    // Impact (03/10) à l'instant où l'élan adverse touche. CORRECTIF : une 2e ligne
+    // remettait un NOMBRE au lieu de { amount, index } — le chiffre sur ta créature
+    // ne s'affichait jamais quand l'adversaire frappait le premier.
+    setTimeout(() => {
+      setVerdictDernierCoup(null);
+      setRoundKey((k) => k + 1);
+      setOpponentDamageFloat(null);
+      setPlayerDamageFloat(oppDamage > 0 ? { amount: oppDamage, index: curIdx } : null);
+      if (oppDamage > 0) effetsImpact('joueur', curIdx, 'riposte');
+    }, IMPACT_MS);
     setBattleStats((s) => ({
       ...s,
       totalDamageTaken: s.totalDamageTaken + oppDamage,
@@ -830,9 +939,17 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // Dégâts flottants au-dessus de CHAQUE créature touchée (demande
     // explicite) — purement décoratif, la suite du combat ne les attend
     // jamais.
-    setRoundKey((k) => k + 1);
-    setOpponentDamageFloat(playerDamage > 0 ? playerDamage : null);
-    setPlayerDamageFloat(opponentDamage > 0 ? { amount: opponentDamage, index: tRip >= 0 ? tRip : curIdx } : null);
+    // Impact (03/10) : chiffres, éclats, étincelles, secousse, vibration À L'INSTANT où
+    // l'élan touche (~270 ms), et plus au départ de l'élan ; la riposte 180 ms après.
+    const cleCoup = verdictCoup; const cibleCoup = targetIdx; const blesse = tRip >= 0 ? tRip : curIdx;
+    setTimeout(() => {
+      setVerdictDernierCoup(cleCoup);
+      setRoundKey((k) => k + 1);
+      setOpponentDamageFloat(playerDamage > 0 ? playerDamage : null);
+      setPlayerDamageFloat(opponentDamage > 0 ? { amount: opponentDamage, index: blesse } : null);
+      if (playerDamage > 0) effetsImpact('adversaire', cibleCoup, cleCoup);
+      if (opponentDamage > 0) setTimeout(() => effetsImpact('joueur', blesse, 'riposte'), 180);
+    }, IMPACT_MS);
     setBattleStats((s) => ({
       totalDamageDealt: s.totalDamageDealt + degatsTotaux,
       totalDamageTaken: s.totalDamageTaken + opponentDamage,
@@ -968,7 +1085,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   // Cartes d'attaque (maquette : ~25,5 % de large) ; étiquette sur la planche de l'aperçu.
   const CW = Math.round(uiL * 0.25); const CH = Math.round(CW / 2.61);
 
-  const renderSprite = ({ sansJauges = false, adversaire = false, key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, lunging, lungeDir, elemColor , etats = null, etatsCote = 'droite' }) => {
+  const renderSprite = ({ sansJauges = false, adversaire = false, key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, floatVerdict = null, lunging, lungeDir, elemColor , etats = null, etatsCote = 'droite' }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -986,7 +1103,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       >
         {floatDamage != null && (
           <View style={styles.floatingDamageWrap}>
-            <FloatingDamage key={`${key}-${roundKey}`} amount={floatDamage} color="#FF5252" />
+            <FloatingDamage key={`${key}-${roundKey}`} amount={floatDamage} color={floatVerdict && STYLE_COUP[floatVerdict] ? STYLE_COUP[floatVerdict].couleur : '#FF5252'} taille={floatVerdict && STYLE_COUP[floatVerdict] ? STYLE_COUP[floatVerdict].taille : null} pop={floatVerdict === 'parfait'} />
           </View>
         )}
         {/* Flèche de visée : n'apparaît QUE lorsqu'une attaque est
@@ -1028,6 +1145,10 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               style={adversaire ? MIROIR : null}
               emojiStyle={[{ fontSize: fs, lineHeight: fs + 12 }, adversaire ? MIROIR : null]}
             />
+            {/* Éclat blanc de la silhouette, au coup (03/10) — seulement si illustrée (un emoji ne se teinte pas). */}
+            {floatDamage != null && hasCreatureArt(creatureId) && (
+              <EclatSilhouette key={`${key}-eclat-${roundKey}`} creatureId={creatureId} stageIndex={stageIndex} emoji={emoji} size={fs} style={adversaire ? MIROIR : null} />
+            )}
           </Animated.View>
         </View>
         {!sansJauges && <Text style={[styles.spriteName, { fontSize: Math.max(9, Math.round(12 * slot.size)) }]} numberOfLines={1}>{name}</Text>}
@@ -1062,7 +1183,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   };
 
   return (
-    <View style={[styles.screen, { marginTop: -insets.top }]}>
+    <Animated.View style={[styles.screen, { marginTop: -insets.top, transform: [{ translateX: secousse }] }]}>
       <StatusBar hidden />
       {elixirActif && (
         <View style={[styles.elixirBadge, { top: sousBandeau + 6, left: 10 + insets.left + 52, pointerEvents: 'none' }]}>
@@ -1193,9 +1314,16 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           // qui riposte. Il s'élance vers la GAUCHE (-1).
           lunging: !!lunge && lunge.side === 'opponent' && i === lunge.index, lungeDir: -1, adversaire: true,
           onPress: () => chooseTarget(i), disabled: fainted || phase !== 'choosing', hpColor: '#FF5252',
-          floatDamage: i === targetIndex ? opponentDamageFloat : null,
+          floatDamage: i === targetIndex ? opponentDamageFloat : null, floatVerdict: verdictDernierCoup,
         });
       })}
+
+      {/* Étincelles d'impact (03/10) : au-dessus des créatures, TRANSPARENTES au toucher. */}
+      <View style={styles.coucheImpacts}>
+        {impacts.map((im) => (
+          <Impact key={im.id} x={im.x} y={im.y} couleur={im.couleur} etincelles={im.etincelles} onFini={() => setImpacts((l) => l.filter((x) => x.id !== im.id))} />
+        ))}
+      </View>
 
       {/* ── Bandeau de combat (03/10) : tes créatures à gauche, le tour au centre, les adversaires
           à droite. Toucher un panneau adversaire le vise (comme le toucher sur le terrain). */}
@@ -1354,7 +1482,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           </View>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -1624,6 +1752,10 @@ const styles = StyleSheet.create({
   closeBtn: {
     position: 'absolute', zIndex: 30, width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
   },
+  // Effets d'impact (03/10)
+  coucheImpacts: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 22, pointerEvents: 'none' },
+  impactAnneau: { position: 'absolute', left: -28, top: -28, width: 56, height: 56, borderRadius: 28, borderWidth: 4 },
+  impactEtincelle: { position: 'absolute', left: -4, top: -4, width: 8, height: 8, borderRadius: 2 },
   // Jauge de frappe (03/10)
   jaugeSillon: { position: 'absolute', backgroundColor: 'rgba(26,13,4,0.92)', borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.6)', overflow: 'hidden' },
   jaugeBien: { position: 'absolute', top: 0, bottom: 0, backgroundColor: 'rgba(255,184,62,0.36)' },

@@ -237,6 +237,8 @@ const SABOTAGES = [
     remplace("  return hi;\n}\n// « Ton deck » face au Gardien", "  return hi + 1;\n}\n// « Ton deck » face au Gardien")],
   ['auditZoneTapLibre', F.ecran, "le calque des « +X » repasse en PROPRIÉTÉ pointerEvents (ignorée sur téléphone : taps bloqués)",
     remplace("              <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>", "              <View pointerEvents=\"none\" style={StyleSheet.absoluteFill}>")],
+  ['auditEffetsCombat', F.combatEcran, "couche des étincelles redevenue capteuse de toucher : elle avalerait les taps de la jauge",
+    remplace("coucheImpacts: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 22, pointerEvents: 'none' },", "coucheImpacts: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 22 },")],
   ['auditJaugeFrappe', F.combatEcran, "tap de la jauge jugé au RELÂCHEMENT : le joueur serait jugé 50 à 100 ms trop tard",
     remplace('onResponderGrant={handleTap}', 'onResponderRelease={handleTap}')],
   ['auditJaugeFrappe', F.combat, "zone dorée de la mythique ramenée à celle d'une légendaire : la rareté ne compterait plus",

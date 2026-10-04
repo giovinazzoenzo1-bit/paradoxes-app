@@ -2077,3 +2077,32 @@ dans le SILLON intérieur (inset 8,5 % × 27 %) qui vaut 0 → 1 (même fraction
 le verdict : seule la largeur de référence change) ; « bien » ambre,
 « parfait » or + reflet, lueur dorée DERRIÈRE le sillon (déborde sur le cadre),
 aiguille dorée à tête en losange. Aucune nouvelle pièce Gemini nécessaire.
+
+
+## 03/10 — EFFETS DE COMBAT, étape 1 : l'IMPACT (publié)
+
+Inventaire avant : élan d'attaque (avec temps d'arrêt de 160 ms, 12/09) et
+chiffres flottants rouges ; RIEN d'autre (lottie-react-native installé le 03/09
+mais JAMAIS utilisé, compatibilité Expo Go 57 jamais vérifiée, style plat ≠
+peint → écarté). Ajouté (CombatScreen) : à l'instant où l'élan TOUCHE
+(IMPACT_MS 270 = 160 de recul + 110 de détente ; avant, chiffres affichés au
+DÉPART de l'élan) : éclat BLANC de la silhouette (CreatureArt teintée,
+seulement si illustrée), anneau + étincelles (Impact, couche coucheImpacts),
+secousse de tout l'écran (racine en Animated.View), vibration, chiffres selon
+le verdict (STYLE_COUP : PARFAIT doré 32 qui jaillit, BIEN blanc, RATÉ gris,
+riposte rouge-orange 180 ms après). Moteur NATIF sur téléphone, JS au banc (ND).
+CORRECTIF : quand l'adversaire frappait le premier, une 2e ligne remettait un
+NOMBRE au lieu de { amount, index } → le chiffre sur ta créature ne
+s'affichait jamais. expo-haptics ~57.0.1 ajouté (version LUE dans
+expo@57.0.9/bundledNativeModules.json ; lock : seul expo-haptics 57.0.3 ajouté,
+rien d'autre ne bouge → npm ci) ; API vérifiée (impactAsync, ImpactFeedbackStyle).
+⚠️ Chargé PROTÉGÉ (auditModulesNatifsProteges l'a exigé) : même motif que
+sonsBoutique (requireOptionalNativeModule('ExpoHaptics') puis
+« natif ? require('expo-haptics') : null ») — l'appli construite peut ne pas
+l'embarquer. Banc : doublure expo-haptics qui NOTE les vibrations
+(window.__vibrations) ; requireOptionalNativeModule y répond « présent » pour
+ExpoHaptics seulement. Empreinte du Gardien : cec6444e (affichage seul).
+Contrôle auditEffetsCombat + sabotage. Testé : PARFAIT → « heavy » puis riposte
+« light » ; éclat, anneau, étincelles, « -10 » doré. 81 contrôles, 103 sabotages.
+ÉTAPE 2 (images reçues : design/a-integrer/07-combat/effets/A et B, fond NOIR) :
+effets par élément — lumière → transparence (alpha = luminosité), animés par le code.

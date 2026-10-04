@@ -7,7 +7,7 @@ import { createRequire } from 'module';
 const exiger = createRequire(import.meta.url);
 const ICI = path.dirname(fileURLToPath(import.meta.url));
 const NATIFS = path.join(ICI, 'stubs/natifs.js');
-const doublures = /^(expo-status-bar|react-native-safe-area-context|expo-screen-orientation|expo-navigation-bar|@expo\/vector-icons.*|@react-native-async-storage\/async-storage|lottie-react-native|expo-audio|expo-modules-core)$/;
+const doublures = /^(expo-status-bar|react-native-safe-area-context|expo-screen-orientation|expo-navigation-bar|@expo\/vector-icons.*|@react-native-async-storage\/async-storage|lottie-react-native|expo-audio|expo-haptics|expo-modules-core)$/;
 const plugin = {
   name: 'paradox',
   setup(b) {

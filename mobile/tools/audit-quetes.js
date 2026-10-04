@@ -3221,7 +3221,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '6d37904e'; // 03/10 : JAUGE DE FRAPPE (le Gardien la suit : simulerCombat partagé ; auditGardienCalibre vert)
+const EMPREINTE_COMBAT = 'cec6444e'; // 03/10 : effets d'impact (AFFICHAGE seul : chiffres et effets décalés à l'impact, correctif du chiffre écrasé) ; auditGardienCalibre vert
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -4288,3 +4288,25 @@ function auditJaugeFrappe() {
   return pb;
 }
 module.exports.auditJaugeFrappe = auditJaugeFrappe;
+
+// ── Effets de combat, étape 1 : l'impact (03/10) ───────────────────────────
+// Les effets sont DÉCORATIFS et ne doivent JAMAIS capter le toucher (les « +X »
+// du 27/09 et l'anneau du défi du 03/10 avalaient les taps) ; la vibration ne
+// doit JAMAIS pouvoir planter l'appli ; expo-haptics reste à la version
+// prévue par Expo 57 (sinon Expo Go refuse de démarrer).
+function auditEffetsCombat() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  const pb = [];
+  if (!/coucheImpacts: \{[^}]*pointerEvents: 'none'/.test(s)) pb.push("la couche des étincelles capte le toucher (pointerEvents 'none' absent de son style)");
+  const imp = s.slice(s.indexOf('function Impact('), s.indexOf('\n}\n', s.indexOf('function Impact(')));
+  if (!/style=\{\{ position: 'absolute', left: x, top: y, width: 0, height: 0, pointerEvents: 'none' \}\}/.test(imp)) pb.push("un impact capte le toucher");
+  const ecl = s.slice(s.indexOf('function EclatSilhouette('), s.indexOf('\n}\n', s.indexOf('function EclatSilhouette(')));
+  if (!/pointerEvents: 'none'/.test(ecl)) pb.push("l'éclat blanc capte le toucher");
+  const vib = s.slice(s.indexOf('function vibrer('), s.indexOf('\n}\n', s.indexOf('function vibrer(')));
+  if (!/try \{/.test(vib) || !/catch \(e\)/.test(vib) || !/\.catch\(\(\) => \{\}\)/.test(vib)) pb.push('la vibration peut planter (try/catch ou .catch de la promesse absents)');
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+  if (!/^~?57\./.test((pkg.dependencies || {})['expo-haptics'] || '')) pb.push("expo-haptics absent ou pas à la version d'Expo 57");
+  return pb;
+}
+module.exports.auditEffetsCombat = auditEffetsCombat;

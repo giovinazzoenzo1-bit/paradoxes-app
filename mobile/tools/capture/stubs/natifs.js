@@ -24,5 +24,13 @@ export const LottieView = () => null;
 // expo-audio (sons de la boutique) : lecteur factice, le banc ne joue pas de son.
 export const createAudioPlayer = () => ({ volume: 1, play() {}, pause() {}, seekTo: async () => {}, remove() {} });
 // expo-modules-core : au banc, aucun module natif (les sons restent muets).
-export const requireOptionalNativeModule = () => null;
+// Banc : seul ExpoHaptics est « présent » (sa doublure, sans danger, NOTE les vibrations).
+export const requireOptionalNativeModule = (nom) => (nom === 'ExpoHaptics' ? {} : null);
 export const requireNativeModule = (nom) => { throw new Error(`Cannot find native module '${nom}'`); };
+// expo-haptics (03/10) : chaque vibration demandée est NOTÉE (window.__vibrations) pour les tests du banc.
+export const ImpactFeedbackStyle = { Light: 'light', Medium: 'medium', Heavy: 'heavy', Rigid: 'rigid', Soft: 'soft' };
+export const NotificationFeedbackType = { Success: 'success', Warning: 'warning', Error: 'error' };
+const noterVibration = (v) => { if (typeof window !== 'undefined') (window.__vibrations = window.__vibrations || []).push(v); };
+export const impactAsync = async (style) => noterVibration(style);
+export const notificationAsync = async (type) => noterVibration('notif:' + type);
+export const selectionAsync = async () => noterVibration('selection');
