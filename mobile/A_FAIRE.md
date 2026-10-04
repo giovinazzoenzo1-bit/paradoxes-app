@@ -121,3 +121,8 @@
       chaque élément réglé au MÊME coup moyen (mesuré).
 - [ ] Étape 3 : spéciaux « signature » par élément (charge, tracé, points
       lumineux, rythme…), un élément à la fois, si 1 et 2 plaisent.
+
+- [ ] **Remplacer la Rune de Dextérité** (demande de l'auteur, 03/10, « tout à
+      l'heure ») : elle réduisait les taps ; avec la jauge, elle élargit la zone
+      dorée — l'auteur veut un AUTRE effet. À proposer : (mesurer avant).
+- [ ] Effets de combat, étape 2 : les 8 effets d'élément (images A et B reçues).

@@ -3221,7 +3221,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = 'cec6444e'; // 03/10 : effets d'impact (AFFICHAGE seul : chiffres et effets décalés à l'impact, correctif du chiffre écrasé) ; auditGardienCalibre vert
+const EMPREINTE_COMBAT = '72f5fa26'; // 03/10 : déroulé d'un échange (riposte À VUE, suite APRÈS les animations) — calculs inchangés ; auditGardienCalibre vert
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -4310,3 +4310,24 @@ function auditEffetsCombat() {
   return pb;
 }
 module.exports.auditEffetsCombat = auditEffetsCombat;
+
+// ── Suite du combat après les animations : jamais figée (03/10) ────────────
+// Leçon du 01/09 (7e43465) : un minuteur SEUL pilotait la suite ; s'il ne partait
+// pas, le combat restait figé pour toujours. Exige : finishChallenge ne change
+// JAMAIS la phase lui-même (il met la suite de côté) ; appliquerTransition ne
+// s'applique qu'UNE fois ; le minuteur est posé ET nettoyé (useEffect) ; un
+// toucher DÉBLOQUE la suite pendant la résolution (après la durée prévue).
+function auditTransitionCombat() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  const pb = [];
+  const fin = s.slice(s.indexOf('const finishChallenge = (completed) => {'), s.indexOf('\n  };\n', s.indexOf('const finishChallenge = (completed) => {')));
+  if (/setPhase\('(choosing|done)'\)/.test(fin)) pb.push("finishChallenge change la phase lui-même (la suite doit passer par lancerResolution)");
+  if (!/lancerResolution\(transition, duree\)/.test(fin)) pb.push("finishChallenge ne met plus la suite de côté (lancerResolution)");
+  const app = s.slice(s.indexOf('const appliquerTransition = () => {'), s.indexOf('\n  };\n', s.indexOf('const appliquerTransition = () => {')));
+  if (!/const t = transitionRef\.current;\s*if \(!t\) return;\s*transitionRef\.current = null;/.test(app)) pb.push("appliquerTransition peut s'appliquer DEUX fois (idempotence perdue)");
+  if (!/if \(phase !== 'resolving'\) return undefined;\s*const t = setTimeout\(\(\) => appliquerTransition\(\), resolutionDureeRef\.current\);\s*return \(\) => clearTimeout\(t\);/.test(s)) pb.push('le minuteur de la suite n\'est plus posé ET nettoyé par un useEffect');
+  if (!/\{phase === 'resolving' && \(\s*<View\s*style=\{styles\.tapEverywhere\}\s*onStartShouldSetResponder=\{\(\) => true\}\s*onResponderGrant=\{\(\) => \{ if \(Date\.now\(\) - debutResolutionRef\.current >= resolutionDureeRef\.current\) appliquerTransition\(\); \}\}/.test(s)) pb.push('plus de toucher de déblocage pendant la résolution : un minuteur raté figerait le combat (01/09)');
+  return pb;
+}
+module.exports.auditTransitionCombat = auditTransitionCombat;

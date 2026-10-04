@@ -54,7 +54,13 @@ const COMBAT_RAPPORT = 1376 / 768;
 // vibration, chiffres selon le verdict (PARFAIT gros et doré). Tout est
 // DÉCORATIF (rien n'attend ces effets) et TRANSPARENT au toucher (style).
 const ND = Platform.OS !== 'web'; // moteur natif sur téléphone ; JS au banc (le natif n'y tourne pas)
-const IMPACT_MS = 270;
+// Tempo d'un échange (03/10) : élan PLUS LONG vers la cible (détente 150 ms au lieu de
+// 110), impact à 310 ms ; l'adversaire riposte quand ton élan est revenu ; le coup
+// FINAL reste visible avant l'écran de victoire / défaite.
+const LUNGE_DETENTE_MS = 150;
+const IMPACT_MS = 160 + LUNGE_DETENTE_MS;
+const RIPOSTE_MS = 950; // ton élan (recul, détente, arrêt, ressort) est REVENU : les 2 mouvements ne se chevauchent pas
+const FIN_EN_PLUS_MS = 700;
 const STYLE_COUP = {
   parfait: { couleur: '#ffd24a', taille: 32, etincelles: 12, secousse: 9, vibration: 'heavy' },
   bien: { couleur: '#ffffff', taille: 26, etincelles: 8, secousse: 5, vibration: 'medium' },
@@ -482,20 +488,43 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   // rendu il désignait déjà le combattant SUIVANT, et c'était lui qui
   // s'animait (bug du 12/09).
   const [lunge, setLunge] = useState(null);
-  const playLunge = (side, index) => {
-    setLunge({ side, index });
-    lungeAnim.setValue(0);
-    // Rythme d'un coup porté : recul (anticipation), détente rapide,
-    // TEMPS D'ARRÊT à l'impact, puis retour souple. Le temps d'arrêt est
-    // ce qui rend le coup percutant — sans lui, l'aller-retour se lit
-    // comme un simple glissement (retour du 12/09 : « trop rapide »).
-    Animated.sequence([
-      Animated.timing(lungeAnim, { toValue: -0.35, duration: 160, useNativeDriver: true }),
-      Animated.timing(lungeAnim, { toValue: 1, duration: 110, useNativeDriver: true }),
-      Animated.delay(160),
-      Animated.spring(lungeAnim, { toValue: 0, useNativeDriver: true, friction: 6, tension: 60 }),
-    ]).start(() => setLunge(null));
+  // Élan VERS LA CIBLE (03/10, demande de l'auteur : « un plus long mouvement vers celui
+  // qu'il attaque ») : 62 % du chemin jusqu'à elle (avant : 1,1 × sa taille, à l'horizontale).
+  // Rythme : recul, détente, TEMPS D'ARRÊT à l'impact (12/09), retour souple.
+  // ⚠️ L'ANIMATION D'UN ÉLAN DÉMARRE APRÈS LA MISE À JOUR DE L'ÉCRAN (useEffect ci-dessous),
+  // jamais dans playLunge (03/10, mesuré : la riposte s'arrêtait 41 ms après son départ).
+  // Les élans partagent `lungeAnim` : quand la créature précédente cesse d'être « en élan »,
+  // sa transformation se DÉTACHE ; sans autre attache à cet instant, Animated ARRÊTE
+  // l'animation en cours — celle de l'élan suivant, lancée juste avant. Chaque élan a
+  // aussi son NUMÉRO : une animation interrompue n'efface que SON élan.
+  const lungeIdRef = useRef(0);
+  const playLunge = (side, index, cible = null) => {
+    const id = ++lungeIdRef.current;
+    const depart = centreSprite(side === 'player' ? 'joueur' : 'adversaire', index);
+    const dx = depart && cible ? (cible.x - depart.x) * 0.62 : (side === 'player' ? 1 : -1) * 90;
+    const dy = depart && cible ? (cible.y - depart.y) * 0.62 : 0;
+    setLunge({ id, side, index, dx, dy });
   };
+  useEffect(() => {
+    if (!lunge) return;
+    const id = lunge.id;
+    lungeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(lungeAnim, { toValue: -0.35, duration: 160, useNativeDriver: ND }),
+      Animated.timing(lungeAnim, { toValue: 1, duration: LUNGE_DETENTE_MS, easing: Easing.in(Easing.quad), useNativeDriver: ND }),
+      Animated.delay(160),
+      Animated.spring(lungeAnim, { toValue: 0, useNativeDriver: ND, friction: 6, tension: 60 }),
+    ]).start(() => { if (lungeIdRef.current === id) setLunge(null); });
+  }, [lunge && lunge.id]);
+
+
+
+  // Minuteur de la suite : posé à chaque résolution, nettoyé si la phase change (03/10).
+  useEffect(() => {
+    if (phase !== 'resolving') return undefined;
+    const t = setTimeout(() => appliquerTransition(), resolutionDureeRef.current);
+    return () => clearTimeout(t);
+  }, [phase, resolutionId]);
 
   // Chiffres de dégâts flottants — purement décoratifs (voir
   // FloatingDamage plus haut), `roundKey` change à chaque tour pour les
@@ -519,6 +548,35 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     const slot = PLAYER_SLOTS[ordre.indexOf(index)];
     return slot ? { x: slot.x * W, y: slot.y * H } : null;
   };
+  // ── Suite du combat après les animations (03/10) — voir finishChallenge ──
+  const [resolutionId, setResolutionId] = useState(0);
+  const transitionRef = useRef(null);
+  const resolutionDureeRef = useRef(0);
+  const debutResolutionRef = useRef(0);
+  const lancerResolution = (transition, duree) => {
+    transitionRef.current = transition;
+    resolutionDureeRef.current = duree;
+    debutResolutionRef.current = Date.now();
+    setResolutionId((x) => x + 1);
+    setPhase('resolving');
+  };
+  // Appliquée UNE seule fois (minuteur, toucher de déblocage : le premier gagne).
+  const appliquerTransition = () => {
+    const t = transitionRef.current;
+    if (!t) return;
+    transitionRef.current = null;
+    if (t.type === 'win') { setOutcome('win'); setPhase('done'); return; }
+    if (t.type === 'lose') { setOutcome('lose'); setPhase('done'); return; }
+    activeIndexRef.current = t.nextIdx;
+    setActiveIndex(t.nextIdx);
+    // Le mana du combattant qui prend la main monte d'un cran. Sans ce gain, la jauge
+    // ne se remplirait jamais et le coup spécial resterait inaccessible toute la partie.
+    setFighters((prev) => prev.map((f, i) => (i === t.nextIdx ? { ...f, mana: Math.min(MANA_MAX, f.mana + MANA_PER_TURN) } : f)));
+    setSwitchMessage(t.message);
+    setTimeout(() => setSwitchMessage(null), t.ko ? 2200 : 1400);
+    setPhase('choosing');
+  };
+
   // Éclats + étincelles + secousse + vibration, selon le verdict du coup (ou « riposte »).
   const effetsImpact = (cote, index, cle) => {
     const st = STYLE_COUP[cle] || STYLE_COUP.bien;
@@ -555,8 +613,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // s'affichent : sans ce décalage, le chiffre rouge apparaissait
     // pendant que la créature bougeait encore et on ne voyait pas qui
     // avait frappé (retour du 12/09).
-    playLunge('opponent', 0);
     const curIdx = activeIndexRef.current;
+    playLunge('opponent', targetIndexRef.current, centreSprite('joueur', curIdx));
     const curFighter = fightersRef.current[curIdx];
     // Gardien : riposte PARTAGÉE avec la simulation qui le calibre
     // (combatLogic.riposteGardien), attaque de zone comprise. Les autres
@@ -755,7 +813,6 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const finishChallenge = (completed) => {
     if (challengeDoneRef.current) return;
     challengeDoneRef.current = true;
-    playLunge('player', activeIndexRef.current);
     const skill = selectedSkillRef.current;
     const curIdx = activeIndexRef.current;
     const curFighter = fightersRef.current[curIdx];
@@ -770,6 +827,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       }
     }
     const opp = opponentsRef.current[targetIdx];
+    playLunge('player', curIdx, centreSprite('adversaire', targetIdx));
 
     // Rune de Célérité : bonus ADDITIF sur le multiplicateur, sur TOUTES
     // les attaques (12/09). L'ancienne exception « sauf attaque de base »
@@ -942,14 +1000,29 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // Impact (03/10) : chiffres, éclats, étincelles, secousse, vibration À L'INSTANT où
     // l'élan touche (~270 ms), et plus au départ de l'élan ; la riposte 180 ms après.
     const cleCoup = verdictCoup; const cibleCoup = targetIdx; const blesse = tRip >= 0 ? tRip : curIdx;
+    // L'ADVERSAIRE RIPOSTE À VUE (03/10, demande de l'auteur : « qu'on voie l'attaque des
+    // ennemis ») : son élan part quand le tien est revenu, ses dégâts tombent à SON impact.
+    const avecRiposte = opponentDamage > 0 && retaliatorIdx >= 0;
     setTimeout(() => {
       setVerdictDernierCoup(cleCoup);
       setRoundKey((k) => k + 1);
       setOpponentDamageFloat(playerDamage > 0 ? playerDamage : null);
-      setPlayerDamageFloat(opponentDamage > 0 ? { amount: opponentDamage, index: blesse } : null);
+      setPlayerDamageFloat(!avecRiposte && opponentDamage > 0 ? { amount: opponentDamage, index: blesse } : null);
       if (playerDamage > 0) effetsImpact('adversaire', cibleCoup, cleCoup);
-      if (opponentDamage > 0) setTimeout(() => effetsImpact('joueur', blesse, 'riposte'), 180);
+      if (!avecRiposte && opponentDamage > 0) effetsImpact('joueur', blesse, 'riposte');
     }, IMPACT_MS);
+    if (avecRiposte) {
+      setTimeout(() => {
+        playLunge('opponent', retaliatorIdx, centreSprite('joueur', blesse));
+        setTimeout(() => {
+          setVerdictDernierCoup(null);
+          setOpponentDamageFloat(null);
+          setRoundKey((k) => k + 1);
+          setPlayerDamageFloat({ amount: opponentDamage, index: blesse });
+          effetsImpact('joueur', blesse, 'riposte');
+        }, IMPACT_MS);
+      }, RIPOSTE_MS);
+    }
     setBattleStats((s) => ({
       totalDamageDealt: s.totalDamageDealt + degatsTotaux,
       totalDamageTaken: s.totalDamageTaken + opponentDamage,
@@ -962,50 +1035,26 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       },
     }));
 
-    // Victoire : plus AUCUN adversaire vivant.
+    // ── Suite du combat (03/10) : CALCULÉE ici, APPLIQUÉE après les animations (le coup
+    // final et la riposte se VOIENT avant l'écran de fin, demande de l'auteur).
+    // ⚠️ Leçon du 01/09 (7e43465) : un minuteur SEUL figeait le combat s'il ne partait pas.
+    // Ici : suite mise de côté (transitionRef), appliquée UNE seule fois
+    // (appliquerTransition), minuteur posé et nettoyé par un useEffect, ET un toucher
+    // la débloque après la durée prévue — jamais figé. Contrôle : auditTransitionCombat.
     const anyOpponentAlive = newOpponents.some((o) => o.hp > 0);
-    if (!anyOpponentAlive) {
-      setOutcome('win');
-      setPhase('done');
-      return;
-    }
-
-    // Le joueur est-il K.O. ?
-    if (newPlayerHp <= 0) {
+    let transition;
+    if (!anyOpponentAlive) transition = { type: 'win' };
+    else if (newPlayerHp <= 0) {
       const nextIdx = nextLivingIndex(newFighters, curIdx);
-      if (nextIdx === -1) {
-        setOutcome('lose');
-        setPhase('done');
-        return;
-      }
-      activeIndexRef.current = nextIdx;
-      setActiveIndex(nextIdx);
-      // Le mana du combattant qui prend la main monte d'un cran. Sans
-      // ce gain, la jauge ne se remplirait jamais et le coup spécial
-      // resterait inaccessible toute la partie.
-      setFighters((prev) => prev.map((f, i) => (i === nextIdx ? { ...f, mana: Math.min(MANA_MAX, f.mana + MANA_PER_TURN) } : f)));
-      setSwitchMessage(`${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !`);
-      setTimeout(() => setSwitchMessage(null), 2200);
+      transition = nextIdx === -1 ? { type: 'lose' } : { type: 'suite', nextIdx, ko: true,
+        message: `${newFighters[curIdx].creature.stages[0].name} est K.O. ! ${newFighters[nextIdx].creature.stages[0].name} entre en combat !` };
     } else {
       // Rotation systématique côté joueur, comme avant, à chaque tour.
       const nextIdx = nextLivingIndex(newFighters, curIdx);
-      activeIndexRef.current = nextIdx;
-      setActiveIndex(nextIdx);
-      // Le mana du combattant qui prend la main monte d'un cran. Sans
-      // ce gain, la jauge ne se remplirait jamais et le coup spécial
-      // resterait inaccessible toute la partie.
-      setFighters((prev) => prev.map((f, i) => (i === nextIdx ? { ...f, mana: Math.min(MANA_MAX, f.mana + MANA_PER_TURN) } : f)));
-      setSwitchMessage(`Au tour de ${newFighters[nextIdx].creature.stages[0].name} !`);
-      setTimeout(() => setSwitchMessage(null), 1400);
+      transition = { type: 'suite', nextIdx, ko: false, message: `Au tour de ${newFighters[nextIdx].creature.stages[0].name} !` };
     }
-
-    // Transition IMMÉDIATE vers le prochain choix — plus de bouton
-    // "Continuer" à taper après une attaque du joueur (demande
-    // explicite). Sans minuteur non plus (contrairement à l'ancienne
-    // version qui avait causé un vrai bug de blocage) : ici il n'y a
-    // simplement plus rien à attendre, le passage à 'choosing' est
-    // synchrone avec le calcul du tour.
-    setPhase('choosing');
+    const duree = (avecRiposte ? RIPOSTE_MS + IMPACT_MS + 520 : IMPACT_MS + 640) + (transition.type === 'suite' ? 0 : FIN_EN_PLUS_MS);
+    lancerResolution(transition, duree);
   };
 
   // ⚔️ RÈGLES DU COMBAT — FIN
@@ -1085,7 +1134,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   // Cartes d'attaque (maquette : ~25,5 % de large) ; étiquette sur la planche de l'aperçu.
   const CW = Math.round(uiL * 0.25); const CH = Math.round(CW / 2.61);
 
-  const renderSprite = ({ sansJauges = false, adversaire = false, key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, floatVerdict = null, lunging, lungeDir, elemColor , etats = null, etatsCote = 'droite' }) => {
+  const renderSprite = ({ sansJauges = false, adversaire = false, key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, floatVerdict = null, lunging, lungeDir, lungeDx = 0, lungeDy = 0, elemColor , etats = null, etatsCote = 'droite' }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -1127,7 +1176,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
                 // Amplitude portée à 1,1x la taille du sprite : le
                 // combattant va vraiment AU CONTACT au lieu d'esquisser
                 // un pas.
-                { translateX: lungeAnim.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [lungeDir * -Math.round(fs * 0.22), 0, lungeDir * Math.round(fs * 1.1)] }) },
+                // Vers la CIBLE (03/10) : dx / dy calculés au départ de l'élan (playLunge).
+                { translateX: lungeAnim.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [-lungeDx * 0.15, 0, lungeDx] }) },
+                { translateY: lungeAnim.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [-lungeDy * 0.15, 0, lungeDy] }) },
                 { scale: lungeAnim.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [0.94, 1, 1.22] }) },
                 // Légère bascule vers l'avant, comme un coup d'épaule.
                 { rotate: lungeAnim.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [`${-lungeDir * 6}deg`, '0deg', `${lungeDir * 14}deg`] }) },
@@ -1225,6 +1276,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           etats: iconesEtats(f), etatsCote: 'droite',
           fainted: f.hp <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
           lunging: !!lunge && lunge.side === 'player' && fi === lunge.index, lungeDir: 1,
+          lungeDx: lunge && lunge.side === 'player' && fi === lunge.index ? lunge.dx : 0, lungeDy: lunge && lunge.side === 'player' && fi === lunge.index ? lunge.dy : 0,
           floatDamage: playerDamageFloat && playerDamageFloat.index === fi ? playerDamageFloat.amount : null,
         });
       })}
@@ -1313,6 +1365,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           // L'adversaire actif est celui du slot de devant : c'est lui
           // qui riposte. Il s'élance vers la GAUCHE (-1).
           lunging: !!lunge && lunge.side === 'opponent' && i === lunge.index, lungeDir: -1, adversaire: true,
+          lungeDx: lunge && lunge.side === 'opponent' && i === lunge.index ? lunge.dx : 0, lungeDy: lunge && lunge.side === 'opponent' && i === lunge.index ? lunge.dy : 0,
           onPress: () => chooseTarget(i), disabled: fainted || phase !== 'choosing', hpColor: '#FF5252',
           floatDamage: i === targetIndex ? opponentDamageFloat : null, floatVerdict: verdictDernierCoup,
         });
@@ -1406,6 +1459,16 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           style={styles.tapEverywhere}
           onStartShouldSetResponder={() => true}
           onResponderGrant={handleTap}
+        />
+      )}
+      {/* Résolution (03/10) : un toucher DÉBLOQUE la suite après la durée prévue — filet si
+          le minuteur ne partait pas (leçon du 01/09) ; ignoré pendant l'animation (on ne
+          saute pas l'attaque par accident). */}
+      {phase === 'resolving' && (
+        <View
+          style={styles.tapEverywhere}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={() => { if (Date.now() - debutResolutionRef.current >= resolutionDureeRef.current) appliquerTransition(); }}
         />
       )}
 

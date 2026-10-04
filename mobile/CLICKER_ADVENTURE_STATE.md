@@ -2106,3 +2106,32 @@ Contrôle auditEffetsCombat + sabotage. Testé : PARFAIT → « heavy » puis ri
 « light » ; éclat, anneau, étincelles, « -10 » doré. 81 contrôles, 103 sabotages.
 ÉTAPE 2 (images reçues : design/a-integrer/07-combat/effets/A et B, fond NOIR) :
 effets par élément — lumière → transparence (alpha = luminosité), animés par le code.
+
+
+## 03/10 — Combat : la riposte À VUE, le coup final visible, élan plus long (publié)
+
+Retours de l'auteur : on ne voyait pas l'attaque des ennemis ; la dernière
+attaque n'apparaissait pas (écran de fin immédiat) ; élan trop court.
+Cause : finishChallenge calculait ton coup ET la riposte au même instant, puis
+passait AUSSITÔT à 'choosing' ou 'done' (choix du 02/09 : pas de minuteur,
+après le blocage du 01/09, 7e43465). Fait :
+- élan VERS la cible (62 % du chemin, dx/dy dans l'état `lunge`, détente 150 ms,
+  IMPACT_MS 310) ; ta créature puis l'ADVERSAIRE (riposte à RIPOSTE_MS 950,
+  quand ton élan est revenu ; ses dégâts et effets à SON impact) ;
+- SUITE calculée puis appliquée APRÈS les animations : phase 'resolving',
+  transitionRef + appliquerTransition (UNE seule fois), minuteur posé/nettoyé
+  par un useEffect, ET toucher de DÉBLOCAGE après la durée prévue (ignoré
+  pendant l'animation) — ce qui manquait le 01/09. Coup final : +700 ms.
+  Contrôle auditTransitionCombat + sabotage (toucher retiré).
+- ⚠️ BUG TROUVÉ AU MOUCHARD : la riposte s'arrêtait 41 ms après son départ.
+  Les élans partagent `lungeAnim` ; quand la créature précédente cesse d'être
+  « en élan », sa transformation se DÉTACHE ; sans autre attache, Animated
+  ARRÊTE l'animation en cours (celle de l'élan suivant, lancée juste avant) ;
+  sa fin effaçait l'élan. → l'animation démarre dans un useEffect APRÈS la mise
+  à jour de l'écran ; chaque élan a son NUMÉRO (une fin n'efface que le sien).
+  RÈGLE : ne jamais démarrer une animation sur une valeur partagée AVANT le
+  rendu qui change ses attaches.
+Testé au banc : victoire en 3 tours, fin 1,65 s après le dernier tap ; défaite
+(chapitre 3) en 10 tours, fin 2,56 s après ; aucun blocage ; capture : l'ennemi
+bondit jusqu'à ta créature. Empreinte du Gardien 72f5fa26 (déroulé seul ;
+calibrage vert). 82 contrôles, 104 sabotages.
