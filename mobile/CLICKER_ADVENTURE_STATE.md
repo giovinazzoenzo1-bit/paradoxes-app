@@ -2006,7 +2006,7 @@ s'applique à tout le sous-arbre. NB verifier-controles : F.combat = la LOGIQUE
 (combatLogic.js) ; l'ÉCRAN = F.combatEcran.
 
 
-## ⚠️ EN COURS (03/10) — branche `jauge-frappe`, NON publiée : JAUGE DE FRAPPE
+## 03/10 — JAUGE DE FRAPPE : PUBLIÉE (branche `jauge-frappe` fusionnée)
 
 Décision de l'auteur : remplacer le défi de taps du combat (25 taps commune →
 9 mythique en 12 s, ×2,5 sous 4 s ; équilibrage calé sur son autoclicker =
@@ -2030,3 +2030,25 @@ BLOQUANT : auditPuissanceExacte, cas réel de l'auteur (niveau 16, Bouldog 34
 jauge pénalise fortement un joueur moyen avec des communes. DÉCISION
 attendue de l'auteur : sévérité (zones plus larges / « bien » plus payant)
 avant de fusionner.
+
+**03/10 — Jauge PUBLIÉE, réglage « références »** (question de l'auteur : « il
+existe un code open source ? ») : la barre d'adresse existe en open source
+(qb-skillbar, ox_lib — mods GTA RP, JavaScript ; rien pour React Native) ; le
+code fait ~50 lignes ; le vrai travail = les CHIFFRES, ancrés sur des
+références : « Perfect » ±55-65 ms, « Good » ±280-330 ms volontairement
+indulgent (jeux de rythme). → « parfait » inchangé (commune ±66 ms), « bien »
+±280 ms (JAUGE_MARGE_BIEN 0.255) payé ×2,0. Commune, joueur moyen (90 ms) :
+91 % du coup max, quasi aucun raté (avant : 84 %, 9 % de ratés).
+Aventure RECALCULÉE (calibrer-parcours, 80 joueurs × 10 essais). 300 joueurs :
+A0 9,1/7,1 · A1 8,5/5,6 · A2 9,0/6,4 · A3 9,0/6,1 · A4 8,7/6,4 · A5 8,6/6,9 ;
+0 bloqué ; filet moins sollicité. DÉCISION de l'auteur (« publie ») : garder les
+malchanceux à 6/10 → moyenne ~9 → alarme « trop facile » d'auditParcours 9,2 →
+9,5, et 60 joueurs (30 échouait AU HASARD près des bornes).
+⏸️ auditPuissanceExacte : cas du niveau 16 (« 100 % réel », mesuré à
+l'autoclicker sous l'ancien défi) EN ATTENTE — À RE-MESURER par l'auteur avec la
+jauge. Il était le SEUL piège de l'ancienne formule brute → contrôle devenu
+AVEUGLE → remplacé par un piège indépendant : « chiffre ≥ conseillée ⇔ vert »
+sur l'échantillon (prouvé : sous sabotage, niveau 112 « 1071 / 994 » orange).
+Banc : parfait −10, bien −9, trop tard −3. 80 contrôles verts, 102 sabotages.
+LEÇON : mettre un cas en attente peut rendre un contrôle AVEUGLE — toujours
+relancer verifier-controles et remplacer le piège perdu.

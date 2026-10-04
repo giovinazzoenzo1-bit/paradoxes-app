@@ -3489,11 +3489,14 @@ function auditParcours() {
   const P = require('./simulateur-parcours.js');
   const L2 = load('clickerLogic');
   const fautes = [];
-  P.synthese(30).forEach((x) => {
+  // 03/10 : 60 joueurs (30 faisait échouer le contrôle AU HASARD près des bornes).
+  P.synthese(60).forEach((x) => {
     if (x.bloques) fautes.push({ ascension: x.a, probleme: x.bloques + ' joueur(s) gratuit(s) BLOQUÉ(S)' });
     // Option A (26/09) : calée sur les 10 % les plus malchanceux à 6/10 →
     // la moyenne monte vers 8/10 (MESURÉ 7,9 à 8,6) ; les malchanceux ≥ 3.
-    if (!(x.victoiresSur10 >= 6.5 && x.victoiresSur10 <= 9.2)) fautes.push({ ascension: x.a, victoiresSur10: +x.victoiresSur10.toFixed(1), attendu: '6,5 à 9,2' });
+    // 03/10, décision de l'auteur : la JAUGE réduit la malchance — les malchanceux tenus
+    // à 6/10 font monter la moyenne vers 9 ; alarme « trop facile » à 9,5 (avant : 9,2).
+    if (!(x.victoiresSur10 >= 6.5 && x.victoiresSur10 <= 9.5)) fautes.push({ ascension: x.a, victoiresSur10: +x.victoiresSur10.toFixed(1), attendu: '6,5 à 9,5' });
     if (x.victoires10eCentile < 3) fautes.push({ ascension: x.a, probleme: 'les 10 % les plus malchanceux gagnent moins de 3 combats sur 10', victoires: +x.victoires10eCentile.toFixed(1) });
     if (x.filet10 > 0.5) fautes.push({ ascension: x.a, probleme: 'le cran −60 % du filet se déclenche trop souvent', parJoueur: +x.filet10.toFixed(2) });
   });
@@ -3863,6 +3866,10 @@ function auditPuissanceExacte() {
   for (let t = 0; t < equipes.length; t++) {
     const [lv, eq] = equipes[t];
     const r = K.puissanceAventure(eq, lv);
+    // 03/10 : PIÈGE INDÉPENDANT d'un cas particulier (le cas du niveau 16, mesuré sous l'ancien
+    // défi, est en attente) — « chiffre ≥ conseillée » ⇔ « vert ». L'ancienne formule brute
+    // (puissanceDeck) le viole sur certaines équipes.
+    doit((r.puissance >= K.puissanceConseillee(lv)) === (r.couleur === 'vert'), `niveau ${lv} : chiffre ${r.puissance} / conseillée ${K.puissanceConseillee(lv)} en désaccord avec la couleur « ${r.couleur} »`);
     let reel = 0;
     for (const politique of [K.choixJoueur, K.choixSansSorts]) {
       let z = lv * 31 + t; const alea = () => { z = (z * 1664525 + 1013904223) >>> 0; return z / 4294967296; };

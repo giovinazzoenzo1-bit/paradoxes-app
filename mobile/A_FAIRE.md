@@ -109,3 +109,15 @@
 - [x] **Arbre de la boutique, étape 2 (Gemini)** : grand arbre (2 images : ramure / racines), médaillon de nœud, médaillon Ascension, plaque de prix, icônes par lots. — ABANDONNÉ (27/09) : l'arbre a été remplacé par le Grimoire.
 - [x] **Arbre de la boutique, étape 3** : illumination des branches à l'achat (animation), lucioles, effets d'achat. — ABANDONNÉ (27/09) : l'arbre a été remplacé par le Grimoire.
 - [ ] **Équilibrage — À LA FIN (décision de l'auteur, 02/10 : « le jeu est équilibré je pense, on verra à la fin »)** : Sanctuaire / Veilleur ~300 × moins chers que prévu par les commentaires du code (voir CLICKER_ADVENTURE_STATE) — à MESURER par simulation le moment venu, ne rien changer d'ici là.
+
+
+### Jauge de frappe (03/10) — publiée ; suite décidée par l'auteur
+- [ ] **Test réel de l'auteur** : la sensation de la jauge ; RE-MESURER son cas du
+      niveau 16 (Bouldog 34 + Ventis 13) avec la jauge → réinscrire le cas dans
+      auditPuissanceExacte avec la nouvelle mesure.
+- [ ] Étape 2 : personnalité par ÉLÉMENT (mêmes règles, réglages : Feu accélère,
+      Eau zone qui ondule, Air rafales, Foudre rapide / zone large, Terre lente /
+      zone étroite, Lumière zone qui brille, Ténèbres zone voilée, Magie 2 zones),
+      chaque élément réglé au MÊME coup moyen (mesuré).
+- [ ] Étape 3 : spéciaux « signature » par élément (charge, tracé, points
+      lumineux, rythme…), un élément à la fois, si 1 et 2 plaisent.
