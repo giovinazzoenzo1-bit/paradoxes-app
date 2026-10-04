@@ -1958,3 +1958,19 @@ gauche, texte centré dans le cadre → texte « à droite » (12 et 18 pts mesu
 = les marges). RÈGLE : JAMAIS de marge intérieure sur un conteneur qui porte une
 image absolue « pleine » ; mettre la marge sur le TEXTE (marginHorizontal).
 COMBATTRE : texte centré à 55 % du bouton et plus petit (mesuré sur la maquette).
+
+
+## 03/10 — Combat : maquette « Le bandeau de combat » RETENUE (pièces attendues)
+
+Maquette : design/a-integrer/07-combat/concepts/1791102918928.jpg (paysage).
+MESURES (fractions, grille 2,5 %) : bandeau 2-98,5 × 0-15 ; panneaux joueur
+4-14,5 / 15,5-26 / 27-37,5 × 3-14 ; message de tour 40-60 × 4-9 ; panneaux
+adversaires 63-74 / 74,5-85 / 86-97 × 3-14 (badge d'élément rond à leur gauche,
+63-66 × 2-7) ; créatures du joueur au sol à gauche (devant : 13-26 × 50-71,
+derrière : 27-33 et 36-42 × 44-60), adversaire 67-73 × 52-64 ; dégâts « -4 »
+67-72 × 39-46 ; carte NORMAL 24-49,5 × 79-96,5 (onglet 31-43 × 77-82) ; carte
+SPÉCIAL 51-75,5 × 79-96,5 (onglet 57-69) ; Recharge 77-85,5 × 82-96.
+Écarts voulus : HEALTH / ELEMENT (anglais) retirés ; « ✕ » ajouté (Gemini l'a
+oublié), style médaillon ; noms réels. Pièces demandées : bandeau vide,
+panneau vide (×6), carte bois vide (NORMAL et SPÉCIAL dispo), carte pierre
+grise vide + cadenas (SPÉCIAL sans mana), bouton Recharge. Décor : le pré actuel.
