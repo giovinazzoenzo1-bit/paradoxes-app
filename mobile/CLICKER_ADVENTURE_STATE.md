@@ -2251,3 +2251,9 @@ RETOUR. CORRECTIF : apercuRacine zIndex 30. Seule fenêtre concernée
 sabotage. RÈGLE : toute fenêtre posée sur la carte → zIndex > mapHeader ; et
 TOUCHER chaque bouton d'un écran neuf au banc (elementFromPoint), pas seulement
 le regarder. 86 contrôles, 109 sabotages.
+
+**05/10 — Nouveau FOND de la VICTOIRE** (l'auteur : « plus joyeux, qui donne envie de
+gagner » ; l'ancien = la carte en automne) : vallée de printemps en fête (Gemini :
+arc-en-ciel, fanions, fleurs, château, centre dégagé) → assets/combat/fin/fond-victoire.jpg
+(1376 × 768, 153 Ko), FIN_IMG.fondVictoire, ImageBackground en VICTOIRE seulement
+(resizeMethod « scale ») ; la défaite garde VICTORY_BG + voile froid (validée).

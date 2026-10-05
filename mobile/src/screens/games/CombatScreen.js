@@ -1767,6 +1767,9 @@ const FIN_IMG = {
   // 05/10 (l'auteur : « plus coloré ») : la face dorée ravivée, pour la VICTOIRE ; le bois de
   // l'emblème garde son brun. La défaite garde le bouton maison.
   boutonDoreVif: require('../../../assets/combat/fin/bouton-dore-vif.png'),
+  // 05/10 (l'auteur : « plus joyeux, qui donne envie de gagner » ; l'ancien = la carte en
+  // automne) : vallée de printemps en fête (Gemini). La défaite garde son crépuscule.
+  fondVictoire: require('../../../assets/combat/fin/fond-victoire.jpg'),
 };
 const FIN_RAPPORT = { etoile: 314 / 300, lauriers: 708 / 640, boutonDore: 1144 / 296 };
 const FIN_V = {
@@ -1995,7 +1998,7 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
       : { texte: 'RETOUR À LA CARTE', onPress: onContinue };
   const r = (o) => ({ x: cx - (o.w * u) / 2, y: o.y * u, w: o.w * u, h: o.h * u });
   return (
-    <ImageBackground source={VICTORY_BG} style={styles.screen} resizeMode="cover">
+    <ImageBackground source={isWin ? FIN_IMG.fondVictoire : VICTORY_BG} style={styles.screen} resizeMode="cover" resizeMethod="scale">
       {/* Voile : AUCUN en victoire (05/10, « plus coloré »), sombre et froid en défaite. */}
       {!isWin && <View style={[styles.resultDim, styles.resultDimLose]} />}
       <PieceTexte source={COMBAT_IMG.planche} {...r(L.titre)} texte={isWin ? 'VICTOIRE !' : 'DÉFAITE'} police={L.titre.police * u} couleur={isWin ? '#ffe14d' : '#dfe8f5'} />
