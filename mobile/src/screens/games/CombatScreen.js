@@ -1764,6 +1764,9 @@ const FIN_IMG = {
   lauriers: require('../../../assets/combat/fin/lauriers.png'),
   boutonBois: require('../../../assets/combat/fin/bouton-bois.png'),
   boutonDore: require('../../../assets/exploration/bouton-combattre-vierge.png'),
+  // 05/10 (l'auteur : « plus coloré ») : la face dorée ravivée, pour la VICTOIRE ; le bois de
+  // l'emblème garde son brun. La défaite garde le bouton maison.
+  boutonDoreVif: require('../../../assets/combat/fin/bouton-dore-vif.png'),
 };
 const FIN_RAPPORT = { etoile: 314 / 300, lauriers: 708 / 640, boutonDore: 1144 / 296 };
 const FIN_V = {
@@ -1835,22 +1838,87 @@ function RecapPlaque({ x, y, w, h, valeur, legende, couleur, chiffre, police }) 
 // Une étoile : gagnée, elle JAILLIT (l'une après l'autre) ; sinon, éteinte (grise).
 function EtoileFin({ cx, cy, t, gagnee, delai }) {
   const a = useRef(new Animated.Value(gagnee ? 0 : 1)).current;
+  const lueur = useRef(new Animated.Value(0)).current;
+  const scint = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!gagnee) return;
+    if (!gagnee) return undefined;
     Animated.sequence([Animated.delay(delai), Animated.spring(a, { toValue: 1, friction: 4, tension: 120, useNativeDriver: ND })]).start();
+    // 05/10 (l'auteur : « plus jaunes et qui brillent ») : une lueur qui PULSE derrière, et un
+    // SCINTILLEMENT ✦ qui passe d'une étoile à l'autre (décalé par `delai`).
+    const pulse = Animated.loop(Animated.sequence([
+      Animated.timing(lueur, { toValue: 1, duration: 850, useNativeDriver: ND }),
+      Animated.timing(lueur, { toValue: 0.45, duration: 850, useNativeDriver: ND }),
+    ]));
+    const eclat = Animated.loop(Animated.sequence([
+      Animated.delay(900 + delai),
+      Animated.timing(scint, { toValue: 1, duration: 200, useNativeDriver: ND }),
+      Animated.timing(scint, { toValue: 0, duration: 280, useNativeDriver: ND }),
+      Animated.delay(1400),
+    ]));
+    const id = setTimeout(() => { pulse.start(); eclat.start(); }, delai + 250);
+    return () => { clearTimeout(id); pulse.stop(); eclat.stop(); };
   }, []);
   const w = t * FIN_RAPPORT.etoile;
   return (
-    <Animated.Image source={FIN_IMG.etoile} resizeMethod="scale" resizeMode="stretch"
-      style={[{ position: 'absolute', left: cx - w / 2, top: cy - t / 2, width: w, height: t, pointerEvents: 'none', transform: [{ scale: a }] },
-        !gagnee && { tintColor: '#2b3038', opacity: 0.92 }]} />
+    <View style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, pointerEvents: 'none' }}>
+      {gagnee && (
+        <Animated.Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch"
+          style={{ position: 'absolute', left: cx - t * 1.35, top: cy - t * 1.35, width: t * 2.7, height: t * 2.7, opacity: lueur }} />
+      )}
+      <Animated.Image source={FIN_IMG.etoile} resizeMethod="scale" resizeMode="stretch"
+        style={[{ position: 'absolute', left: cx - w / 2, top: cy - t / 2, width: w, height: t, transform: [{ scale: a }] },
+          !gagnee && { tintColor: '#2b3038', opacity: 0.92 }]} />
+      {gagnee && (
+        <Animated.Text style={[styles.finScintille, { left: cx + w * 0.12, top: cy - t * 0.72, fontSize: Math.round(t * 0.45), opacity: scint,
+          transform: [{ scale: scint.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.2] }) }, { rotate: '15deg' }] }]}>✦</Animated.Text>
+      )}
+    </View>
   );
 }
 // Le médaillon du héros : couronne de lauriers, anneau doré, la créature zoomée sur sa zone
 // dessinée et découpée en rond (MÊME géométrie que l'aperçu de niveau : 76 %, cadrage) ;
 // lueur dorée en victoire, médaillon TERNI en défaite.
+// Confettis de la VICTOIRE (05/10, « plus coloré, les joueurs aiment ça ») : une pluie
+// multicolore, une seule fois, TRANSPARENTE au toucher (couche et chaque pièce).
+const CONFETTI_COULEURS = ['#ff4d6d', '#ffd23f', '#3ec1d3', '#7bd389', '#b388ff', '#ff9f1c', '#ffffff'];
+function Confettis({ W, H, nombre = 46 }) {
+  const pieces = useRef(Array.from({ length: nombre }, (_, i) => ({
+    x: Math.random() * W, couleur: CONFETTI_COULEURS[i % CONFETTI_COULEURS.length],
+    duree: 3200 + Math.random() * 1800, delai: Math.random() * 900,
+    tour: (Math.random() < 0.5 ? -1 : 1) * (360 + Math.random() * 540), derive: (Math.random() - 0.5) * 80,
+    w: 6 + Math.random() * 5, h: 10 + Math.random() * 6, anim: new Animated.Value(0),
+  }))).current;
+  useEffect(() => {
+    const a = Animated.parallel(pieces.map((p) => Animated.sequence([
+      Animated.delay(p.delai),
+      Animated.timing(p.anim, { toValue: 1, duration: p.duree, easing: Easing.linear, useNativeDriver: ND }),
+    ])));
+    a.start();
+    return () => a.stop();
+  }, []);
+  return (
+    <View style={styles.coucheConfettis}>
+      {pieces.map((p, i) => (
+        <Animated.View key={i} style={{ position: 'absolute', left: p.x, top: -20, width: p.w, height: p.h, borderRadius: 2, backgroundColor: p.couleur, pointerEvents: 'none',
+          opacity: p.anim.interpolate({ inputRange: [0, 0.85, 1], outputRange: [1, 1, 0] }),
+          transform: [{ translateY: p.anim.interpolate({ inputRange: [0, 1], outputRange: [0, H + 40] }) },
+            { translateX: p.anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, p.derive, p.derive * 0.4] }) },
+            { rotate: p.anim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${p.tour}deg`] }) }] }} />
+      ))}
+    </View>
+  );
+}
+
 function MedaillonHeros({ cx, cy, t, heros, terne, lauriersH }) {
   const ri = t * 0.76;
+  // 05/10 (« plus coloré ») : soleil de RAYONS dorés qui tourne lentement derrière (victoire).
+  const rot = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (terne) return undefined;
+    const l = Animated.loop(Animated.timing(rot, { toValue: 1, duration: 22000, easing: Easing.linear, useNativeDriver: ND }));
+    l.start();
+    return () => l.stop();
+  }, [terne]);
   const cad = heros && heros.creatureId ? (CADRAGE_CREATURES[heros.creatureId] || {})[heros.stade] : null;
   let art = null;
   if (cad) {
@@ -1867,6 +1935,11 @@ function MedaillonHeros({ cx, cy, t, heros, terne, lauriersH }) {
   const lw = lauriersH * FIN_RAPPORT.lauriers;
   return (
     <View style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, pointerEvents: 'none' }}>
+      {!terne && (
+        <Animated.Image source={EFFET_ELEMENT['Lumière']} resizeMethod="scale" resizeMode="contain"
+          style={{ position: 'absolute', left: cx - t * 1.75, top: cy - t * 1.75, width: t * 3.5, height: t * 3.5, opacity: 0.85,
+            transform: [{ rotate: rot.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }} />
+      )}
       {!terne && <Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: cx - t * 1.15, top: cy - t * 1.15, width: t * 2.3, height: t * 2.3, opacity: 0.7 }} />}
       <Image source={FIN_IMG.lauriers} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: cx - lw / 2, top: cy - lauriersH * 0.47, width: lw, height: lauriersH, opacity: terne ? 0.55 : 1 }} />
       <Image source={COMBAT_IMG.medaillon} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: cx - t / 2, top: cy - t / 2, width: t, height: t }} />
@@ -1923,16 +1996,16 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
   const r = (o) => ({ x: cx - (o.w * u) / 2, y: o.y * u, w: o.w * u, h: o.h * u });
   return (
     <ImageBackground source={VICTORY_BG} style={styles.screen} resizeMode="cover">
-      {/* Voile : léger en victoire, nettement plus sombre et froid en défaite. */}
-      <View style={[styles.resultDim, !isWin && styles.resultDimLose]} />
-      <PieceTexte source={COMBAT_IMG.planche} {...r(L.titre)} texte={isWin ? 'VICTOIRE !' : 'DÉFAITE'} police={L.titre.police * u} couleur={isWin ? '#ffe9a8' : '#dfe8f5'} />
+      {/* Voile : AUCUN en victoire (05/10, « plus coloré »), sombre et froid en défaite. */}
+      {!isWin && <View style={[styles.resultDim, styles.resultDimLose]} />}
+      <PieceTexte source={COMBAT_IMG.planche} {...r(L.titre)} texte={isWin ? 'VICTOIRE !' : 'DÉFAITE'} police={L.titre.police * u} couleur={isWin ? '#ffe14d' : '#dfe8f5'} />
       <MedaillonHeros cx={cx} cy={L.medaillon.y * u} t={L.medaillon.t * u} heros={heros} terne={!isWin} lauriersH={L.lauriers.h * u} />
       {L.etoiles.map((e, i) => (
         <EtoileFin key={i} cx={cx + e.dx * u} cy={e.y * u} t={e.t * u} gagnee={i < stars} delai={300 + i * 220} />
       ))}
       <PieceTexte source={COMBAT_IMG.planche} {...r(L.etiquette)} texte={isWin ? 'Héros du combat' : 'Meilleure créature'} police={L.etiquette.police * u} />
-      <PieceTexte source={COMBAT_IMG.planche} {...r(L.centre)} texte={centre} police={L.centre.police * u} lignes={L.centre.lignes} marge={0.09} />
-      {[['Infligés', battleStats.totalDamageDealt, '#ffe9a8'], ['Reçus', battleStats.totalDamageTaken, '#ff8a7a'], ['Tours', battleStats.rounds, '#ffe9a8']].map(([leg, val, coul], i) => (
+      <PieceTexte source={COMBAT_IMG.planche} {...r(L.centre)} texte={centre} police={L.centre.police * u} lignes={L.centre.lignes} marge={0.09} couleur={isWin ? '#ffe680' : '#fbe9c4'} />
+      {[['Infligés', battleStats.totalDamageDealt, isWin ? '#ffd23f' : '#ffe9a8'], ['Reçus', battleStats.totalDamageTaken, isWin ? '#ff6b8b' : '#ff8a7a'], ['Tours', battleStats.rounds, isWin ? '#6fd3ff' : '#ffe9a8']].map(([leg, val, coul], i) => (
         <RecapPlaque key={leg} x={cx + (i - 1) * L.recap.ecart * u - (L.recap.w * u) / 2} y={L.recap.y * u} w={L.recap.w * u} h={L.recap.h * u}
           valeur={val} legende={leg} couleur={coul} chiffre={L.recap.chiffre * u} police={L.recap.legende * u} />
       ))}
@@ -1940,12 +2013,13 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
         <BoutonFin key={a.cle} source={FIN_IMG.boutonBois} x={cx + (i - (aides.length - 1) / 2) * L.aides.ecart * u - (L.aides.w * u) / 2} y={L.aides.y * u}
           w={L.aides.w * u} h={L.aides.h * u} texte={a.texte} police={L.aides.police * u} lignes={2} onPress={a.onPress} disabled={!btnsArmed} />
       ))}
-      <BoutonFin source={FIN_IMG.boutonDore} x={cx - (L.bouton.w * u) / 2} y={L.bouton.y * u} w={L.bouton.w * u} h={(L.bouton.w * u) / FIN_RAPPORT.boutonDore}
+      <BoutonFin source={isWin ? FIN_IMG.boutonDoreVif : FIN_IMG.boutonDore} x={cx - (L.bouton.w * u) / 2} y={L.bouton.y * u} w={L.bouton.w * u} h={(L.bouton.w * u) / FIN_RAPPORT.boutonDore}
         texte={principal.texte} police={L.bouton.police * u} lignes={L.bouton.lignes} couleur="#5a360f" dore onPress={principal.onPress} disabled={!btnsArmed} />
       {(isWin || avecAides) && (
         <BoutonFin source={FIN_IMG.boutonBois} x={W - insets.right - (FIN_RETOUR.marge + FIN_RETOUR.w) * u} y={FIN_RETOUR.y * u} w={FIN_RETOUR.w * u} h={FIN_RETOUR.h * u}
           texte="Retour à la carte" police={FIN_RETOUR.police * u} onPress={onContinue} disabled={!btnsArmed} />
       )}
+      {isWin && <Confettis W={W} H={H} />}
     </ImageBackground>
   );
 }
@@ -2000,6 +2074,8 @@ const styles = StyleSheet.create({
   },
   // Effets d'impact (03/10)
   // Étape 3 : sorts, spécial, K.O. (03/10)
+  finScintille: { position: 'absolute', color: '#ffffff', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(255,230,120,0.95)', textShadowRadius: 8 },
+  coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'none' },
   sortCercle: { position: 'absolute', borderWidth: 3 },
   sortParticule: { position: 'absolute', top: 0, width: 9, height: 9, borderRadius: 5 },
   sortGoutte: { width: 7, height: 13, borderTopLeftRadius: 3.5, borderTopRightRadius: 3.5, borderBottomLeftRadius: 6, borderBottomRightRadius: 6 },

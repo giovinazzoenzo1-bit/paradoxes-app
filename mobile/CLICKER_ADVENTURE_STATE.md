@@ -2223,3 +2223,16 @@ l'or jaune de la maquette n'est qu'une interprétation de Gemini), FIN_V / FIN_D
 MedaillonHeros (terne en défaite). Contrôle auditEcranFin (aucune action perdue,
 props passées) + sabotage ; motifs : un texte avec ${…} → [\s\S]{0,140}?, pas [^}]*.
 85 contrôles verts, 107 sabotages.
+
+**05/10 — Victoire PLUS COLORÉE** (l'auteur : « étoiles plus jaunes et qui brillent ;
+plus coloré, les joueurs aiment ça » ; la défaite est BIEN, inchangée).
+Étoile ravivée (teinte, saturation, luminosité des pixels dorés ; ombrage gardé)
+→ jaune franc ; bouton-dore-vif.png (face dorée claire SEULE ravivée, pondérée par la
+luminosité : le bois de l'emblème garde son brun — un 1er essai sans pondération
+l'avait rendu vert olive). EtoileFin : lueur qui PULSE (×2,7) + scintillement ✦
+décalé par étoile (boucles arrêtées au démontage). MedaillonHeros : soleil de rayons
+(effet « Lumière ») qui tourne en 22 s derrière (victoire). Confettis multicolores
+(46, chute régulière 3,2-5 s) : couche ET pièces transparentes au toucher
+(testé : « Retour à la carte » touché en pleine chute → écran quitté). Plus de
+voile en victoire ; titre jaune vif ; récapitulatif or / rose-rouge / bleu clair.
+auditEcranFin étendu (confettis) + sabotage. 85 contrôles, 108 sabotages.

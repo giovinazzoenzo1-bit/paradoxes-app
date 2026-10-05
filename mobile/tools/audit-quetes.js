@@ -4403,6 +4403,10 @@ function auditEcranFin() {
     [/texte="Retour à la carte"[\s\S]{0,200}onPress=\{onContinue\}|onPress=\{onContinue\}[\s\S]{0,200}texte="Retour à la carte"/, '« Retour à la carte » ne ramène plus à la carte'],
   ];
   for (const [re, msg] of exige) if (!re.test(ecran)) pb.push(msg);
+  // 05/10 : les CONFETTIS couvrent tout l'écran (boutons compris) ~4 s → transparents au toucher.
+  if (!/coucheConfettis: \{[^}]*pointerEvents: 'none'/.test(s)) pb.push('la couche des confettis capte le toucher : les boutons de fin seraient bloqués');
+  const conf = s.slice(s.indexOf('function Confettis('), s.indexOf('\n}\n', s.indexOf('function Confettis(')));
+  if (!/borderRadius: 2, backgroundColor: p\.couleur, pointerEvents: 'none'/.test(conf)) pb.push('un confetti capte le toucher');
   const decl = (ecran.match(/function CombatResultScreen\(\{([^}]*)\}/) || [, ''])[1].split(',').map((x) => x.split('=')[0].trim()).filter(Boolean);
   const appel = s.slice(s.indexOf('<CombatResultScreen'), s.indexOf('/>', s.indexOf('<CombatResultScreen')));
   for (const p of decl) if (!new RegExp('\\b' + p + '=').test(appel)) pb.push(`prop « ${p} » déclarée mais jamais passée par l'appel`);
