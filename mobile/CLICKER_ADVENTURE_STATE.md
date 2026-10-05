@@ -2236,3 +2236,18 @@ décalé par étoile (boucles arrêtées au démontage). MedaillonHeros : soleil
 (testé : « Retour à la carte » touché en pleine chute → écran quitté). Plus de
 voile en victoire ; titre jaune vif ; récapitulatif or / rose-rouge / bleu clair.
 auditEcranFin étendu (confettis) + sabotage. 85 contrôles, 108 sabotages.
+
+
+## 05/10 — BUG : RETOUR de l'aperçu de niveau ne marchait pas (corrigé, publié)
+
+Vu par l'auteur. Reproduit au banc (document.elementFromPoint au centre de
+RETOUR → la barre de la CARTE, 891 × 38, zIndex 20). CAUSE : mapHeader est en
+zIndex 20 depuis le 13/09 (271ca21, barre flottante) ; l'aperçu « Le médaillon »
+(03/10, d978d66) a mis RETOUR en haut à gauche, mais sa racine apercuRacine
+était en zIndex 15 → la barre, invisible derrière le fond opaque de l'aperçu,
+AVALAIT les touchers du haut de l'écran. Mon test du 03/10 n'avait pas touché
+RETOUR. CORRECTIF : apercuRacine zIndex 30. Seule fenêtre concernée
+(elemHelpBackdrop déjà à 40). Contrôle auditApercuAuDessus (aperçu > barre) +
+sabotage. RÈGLE : toute fenêtre posée sur la carte → zIndex > mapHeader ; et
+TOUCHER chaque bouton d'un écran neuf au banc (elementFromPoint), pas seulement
+le regarder. 86 contrôles, 109 sabotages.

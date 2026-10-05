@@ -4413,3 +4413,17 @@ function auditEcranFin() {
   return pb;
 }
 module.exports.auditEcranFin = auditEcranFin;
+
+// ── L'aperçu de niveau passe AU-DESSUS de la barre de la carte (05/10) ─────
+// Bug vu par l'auteur : RETOUR de l'aperçu ne marchait pas — la barre de la carte
+// (mapHeader, zIndex 20), invisible derrière le fond de l'aperçu (zIndex 15),
+// avalait les touchers du haut de l'écran. L'aperçu doit rester PLUS HAUT.
+function auditApercuAuDessus() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  const z = (nom) => { const m = s.match(new RegExp('\\n  ' + nom + ': \\{[^}]*zIndex: (\\d+)')); return m ? Number(m[1]) : null; };
+  const za = z('apercuRacine'); const zh = z('mapHeader');
+  if (za == null || zh == null) return ['styles apercuRacine / mapHeader introuvables'];
+  return za > zh ? [] : [`l'aperçu (zIndex ${za}) est SOUS la barre de la carte (zIndex ${zh}) : RETOUR ne marche plus`];
+}
+module.exports.auditApercuAuDessus = auditApercuAuDessus;

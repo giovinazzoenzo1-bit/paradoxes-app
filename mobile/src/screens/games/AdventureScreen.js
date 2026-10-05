@@ -3316,7 +3316,9 @@ const styles = StyleSheet.create({
   // Image qui remplit son parent : largeur ET hauteur explicites (auditImagesTailleExplicite).
   hubPleineImage: { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' },
   // Aperçu « Le médaillon » (03/10)
-  apercuRacine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 15, backgroundColor: '#0b1418', overflow: 'hidden' },
+  // ⚠️ zIndex 30 > mapHeader (20) — 05/10 : à 15, la barre de la carte (invisible derrière le fond
+  // de l'aperçu) AVALAIT le toucher de RETOUR (placé en haut à gauche le 03/10). auditApercuAuDessus.
+  apercuRacine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, backgroundColor: '#0b1418', overflow: 'hidden' },
   apercuPlaque: { alignItems: 'center', justifyContent: 'center' }, // la plaque (image) est dessous ; marge en points posée au rendu
   // textAlign EXPLICITE (03/10, retour de l'auteur : « pas centré ») : sur Android, un texte
   // d'une ligne prend toute la largeur et s'aligne à GAUCHE par défaut.
