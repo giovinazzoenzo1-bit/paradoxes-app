@@ -4383,3 +4383,29 @@ function auditRuneArcane() {
   return pb;
 }
 module.exports.auditRuneArcane = auditRuneArcane;
+
+// ── Écran de fin de combat « Le médaillon du héros » (05/10) ────────────────
+// La refonte ne doit perdre AUCUNE action de l'ancien écran : niveau suivant,
+// monter mes créatures, pack de Griffes, élixir, énergie (vidéo), retour à la
+// carte ; et toutes les props déclarées doivent être passées par l'appel.
+// (Les textes contiennent ${…} : motif [\s\S]{0,140}? et non [^}]* — 05/10.)
+function auditEcranFin() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  const pb = [];
+  const ecran = s.slice(s.indexOf('function CombatResultScreen('), s.indexOf('\n}\n', s.indexOf('function CombatResultScreen(')));
+  const exige = [
+    [/texte: 'NIVEAU SUIVANT', onPress: onNextLevel/, 'victoire : « NIVEAU SUIVANT » ne mène plus au niveau suivant'],
+    [/onPress: \(\) => \{ onContinue\(\); if \(aide\.onMonter\) aide\.onMonter\(\); \}/, 'défaite : « MONTER MES CRÉATURES » ne mène plus aux créatures'],
+    [/aide\.onPackGriffes && \{ cle: 'pack',[\s\S]{0,140}?onPress: aide\.onPackGriffes \}/, 'défaite : le pack de Griffes est débranché'],
+    [/aide\.onElixir && \{ cle: 'elixir',[\s\S]{0,140}?onPress: aide\.onElixir \}/, "défaite : l'élixir est débranché"],
+    [/aide\.onVideoEnergie && aide\.adsLeft > 0 && \{ cle: 'video',[\s\S]{0,140}?onPress: aide\.onVideoEnergie \}/, "défaite : l'énergie par vidéo est débranchée"],
+    [/texte="Retour à la carte"[\s\S]{0,200}onPress=\{onContinue\}|onPress=\{onContinue\}[\s\S]{0,200}texte="Retour à la carte"/, '« Retour à la carte » ne ramène plus à la carte'],
+  ];
+  for (const [re, msg] of exige) if (!re.test(ecran)) pb.push(msg);
+  const decl = (ecran.match(/function CombatResultScreen\(\{([^}]*)\}/) || [, ''])[1].split(',').map((x) => x.split('=')[0].trim()).filter(Boolean);
+  const appel = s.slice(s.indexOf('<CombatResultScreen'), s.indexOf('/>', s.indexOf('<CombatResultScreen')));
+  for (const p of decl) if (!new RegExp('\\b' + p + '=').test(appel)) pb.push(`prop « ${p} » déclarée mais jamais passée par l'appel`);
+  return pb;
+}
+module.exports.auditEcranFin = auditEcranFin;

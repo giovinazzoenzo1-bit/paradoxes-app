@@ -2203,3 +2203,23 @@ sous-dossier). Détourage PRUDENT : la pierre est VIOLETTE (proche du magenta) �
 nettoyage limité au liseré extérieur (4 px) et au VRAI magenta (R, B > 165, G < 125),
 jamais le critère « min(R,B) − G » qui aurait rongé le violet. 189 × 256 (comme
 les autres). RÈGLE : pièce violette ou rose → nettoyage restreint au vrai magenta.
+
+
+## 05/10 — Écran de FIN DE COMBAT « Le médaillon du héros » (publié)
+
+Concept A choisi (victoire concepts/1791176466040.jpg, défaite 1791177173743.jpg).
+⚠️ Le travail avait été écrit par une tentative PRÉCÉDENTE de cette conversation,
+qui a PLANTÉ avant d'enregistrer (verrou « R-fin-de-combat#6b45 » laissé pris,
+CombatScreen modifié, assets/combat/fin/ non suivis). Repris tel quel (verrou
+repris avec SA PROPRE étiquette), vérifié : noms non définis (analyse Babel),
+styles, images → aucun manque ; banc victoire + défaite sans erreur.
+RÈGLE : à la reprise, `git status` + verrou AVANT tout — un travail non
+enregistré peut être le sien (tentative plantée), ne jamais l'écraser.
+Contenu : herosFin (créature au plus de dégâts : perFighterDamage), FIN_IMG
+(étoile, lauriers — pièces Gemini, ordre INVERSÉ à l'arrivée —, bouton-bois,
+bouton doré = bouton-combattre-vierge AVEC son emblème d'épées, or bronzé maison :
+l'or jaune de la maquette n'est qu'une interprétation de Gemini), FIN_V / FIN_D
+(mesures), PieceTexte, BoutonFin, RecapPlaque, EtoileFin (grises si non gagnées),
+MedaillonHeros (terne en défaite). Contrôle auditEcranFin (aucune action perdue,
+props passées) + sabotage ; motifs : un texte avec ${…} → [\s\S]{0,140}?, pas [^}]*.
+85 contrôles verts, 107 sabotages.

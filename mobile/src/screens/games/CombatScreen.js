@@ -15,6 +15,7 @@ import {
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CreatureArt, { hasCreatureArt } from '../../components/CreatureArt';
+import { CADRAGE_CREATURES } from '../../games/clicker/cadrageCreatures';
 import { StatusBar } from 'expo-status-bar';
 
 // Décor de combat fourni par l'utilisateur (30/08) — remplace le fond
@@ -1245,8 +1246,18 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // L'effet ci-dessus a déjà rendu la main : on n'affiche rien plutôt
     // qu'un récapitulatif qui clignoterait une frame.
     if (skipResultScreen) return null;
+    // Le HÉROS du combat (03/10) : la créature qui a infligé le plus de dégâts.
+    const dmg = (battleStats && battleStats.perFighterDamage) || {};
+    let meilleur = null;
+    fighters.forEach((f) => { const v = dmg[f.creature.id] || 0; if (!meilleur || v > meilleur.v) meilleur = { v, f }; });
+    const herosFin = meilleur ? (() => {
+      const stade = stageForLevel(meilleur.f.ownedLevel);
+      const d = meilleur.f.creature.stages[stade] || meilleur.f.creature.stages[0];
+      return { creatureId: meilleur.f.creature.id, stade, emoji: d.emoji, nom: d.name };
+    })() : null;
     return (
       <CombatResultScreen
+        heros={herosFin}
         outcome={outcome}
         levelNumber={levelNumber}
         battleStats={battleStats}
@@ -1741,7 +1752,133 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 // (6,7/s), tout en restant imperceptible pour qui veut vraiment appuyer.
 const RESULT_BTN_GUARD_MS = 700;
 
-function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false, premiereVictoire = true, nbCreatures = 3 }) {
+// ════════════════════════════════════════════════════════════════════
+//  FIN DE COMBAT « Le médaillon du héros » (03/10, concept A choisi par l'auteur)
+// ════════════════════════════════════════════════════════════════════
+// Maquettes : design/a-integrer/08-fin-de-combat/concepts (victoire, défaite).
+// Mesures en fractions de la HAUTEUR (u), colonne CENTRÉE : l'écran (≈ 2,17:1) est
+// plus large que la maquette (16:9) — les côtés ne montrent que la prairie.
+// Logique INCHANGÉE : actions, conditions des aides, verrou anti-toucher accidentel.
+const FIN_IMG = {
+  etoile: require('../../../assets/combat/fin/etoile.png'),
+  lauriers: require('../../../assets/combat/fin/lauriers.png'),
+  boutonBois: require('../../../assets/combat/fin/bouton-bois.png'),
+  boutonDore: require('../../../assets/exploration/bouton-combattre-vierge.png'),
+};
+const FIN_RAPPORT = { etoile: 314 / 300, lauriers: 708 / 640, boutonDore: 1144 / 296 };
+const FIN_V = {
+  titre: { w: 0.62, h: 0.13, y: 0.035, police: 0.066 },
+  etoiles: [{ dx: -0.118, y: 0.262, t: 0.105 }, { dx: 0, y: 0.212, t: 0.12 }, { dx: 0.118, y: 0.262, t: 0.105 }],
+  medaillon: { y: 0.415, t: 0.235 },
+  lauriers: { h: 0.32 },
+  etiquette: { w: 0.36, h: 0.062, y: 0.523, police: 0.027 },
+  centre: { w: 0.36, h: 0.072, y: 0.598, police: 0.032, lignes: 1 },
+  recap: { w: 0.19, h: 0.115, y: 0.684, ecart: 0.205, chiffre: 0.05, legende: 0.025 },
+  aides: null,
+  bouton: { w: 0.56, y: 0.828, police: 0.034, lignes: 1 },
+};
+const FIN_D = {
+  titre: { w: 0.56, h: 0.118, y: 0.022, police: 0.06 },
+  etoiles: [{ dx: -0.104, y: 0.212, t: 0.088 }, { dx: 0, y: 0.178, t: 0.1 }, { dx: 0.104, y: 0.212, t: 0.088 }],
+  medaillon: { y: 0.352, t: 0.19 },
+  lauriers: { h: 0.262 },
+  etiquette: { w: 0.36, h: 0.055, y: 0.436, police: 0.025 },
+  centre: { w: 0.68, h: 0.1, y: 0.5, police: 0.028, lignes: 3 },
+  recap: { w: 0.2, h: 0.088, y: 0.608, ecart: 0.215, chiffre: 0.04, legende: 0.021 },
+  aides: { w: 0.3, h: 0.09, y: 0.706, ecart: 0.32, police: 0.021 },
+  bouton: { w: 0.58, y: 0.818, police: 0.032, lignes: 2 },
+};
+const FIN_RETOUR = { w: 0.31, h: 0.085, y: 0.878, marge: 0.045, police: 0.03 };
+const FIN_OMBRE = { textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } };
+
+// Une pièce (image étirée) avec un texte centré DEDANS. Règles du projet : textAlign ET
+// alignSelf explicites ; la marge sur le TEXTE, jamais sur le cadre d'une image absolue.
+function PieceTexte({ source, x, y, w, h, texte, police, couleur = '#fbe9c4', lignes = 1, marge = 0.12 }) {
+  return (
+    <View style={{ position: 'absolute', left: x, top: y, width: w, height: h, justifyContent: 'center', pointerEvents: 'none' }}>
+      <Image source={source} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: w, height: h }} />
+      <Text numberOfLines={lignes} adjustsFontSizeToFit minimumFontScale={0.55}
+        style={[{ textAlign: 'center', alignSelf: 'stretch', marginHorizontal: w * marge, color: couleur, fontSize: police, fontWeight: '900', includeFontPadding: false }, FIN_OMBRE]}>
+        {texte}
+      </Text>
+    </View>
+  );
+}
+// Un bouton de la fin de combat : la pièce, le texte, le verrou anti-toucher accidentel.
+function BoutonFin({ source, x, y, w, h, texte, police, couleur = '#fbe9c4', dore = false, lignes = 1, onPress, disabled }) {
+  return (
+    <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={disabled}
+      style={{ position: 'absolute', left: x, top: y, width: w, height: h, justifyContent: 'center', opacity: disabled ? 0.55 : 1 }}>
+      <Image source={source} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: w, height: h }} />
+      {/* Bouton DORÉ : l'emblème des épées occupe le quart gauche — le texte vit entre 25 et
+          85 % de la largeur, comme « COMBATTRE » dans l'aperçu de niveau. */}
+      <View style={{ position: 'absolute', left: dore ? w * 0.25 : w * 0.08, right: dore ? w * 0.15 : w * 0.08, top: 0, bottom: 0, justifyContent: 'center', pointerEvents: 'none' }}>
+        <Text numberOfLines={lignes} adjustsFontSizeToFit minimumFontScale={0.7}
+          style={[{ textAlign: 'center', alignSelf: 'stretch', color: couleur, fontSize: police, fontWeight: '900', includeFontPadding: false },
+            dore ? { letterSpacing: 1 } : FIN_OMBRE]}>
+          {texte}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+// Une plaque du récapitulatif : le chiffre, puis sa légende.
+function RecapPlaque({ x, y, w, h, valeur, legende, couleur, chiffre, police }) {
+  return (
+    <View style={{ position: 'absolute', left: x, top: y, width: w, height: h, justifyContent: 'center', pointerEvents: 'none' }}>
+      <Image source={FIN_IMG.boutonBois} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: w, height: h }} />
+      <Text numberOfLines={1} adjustsFontSizeToFit style={[{ textAlign: 'center', alignSelf: 'stretch', color: couleur, fontSize: chiffre, fontWeight: '900', includeFontPadding: false }, FIN_OMBRE]}>{valeur}</Text>
+      <Text numberOfLines={1} style={[{ textAlign: 'center', alignSelf: 'stretch', color: '#fbe9c4', fontSize: police, fontWeight: '800', includeFontPadding: false }, FIN_OMBRE]}>{legende}</Text>
+    </View>
+  );
+}
+// Une étoile : gagnée, elle JAILLIT (l'une après l'autre) ; sinon, éteinte (grise).
+function EtoileFin({ cx, cy, t, gagnee, delai }) {
+  const a = useRef(new Animated.Value(gagnee ? 0 : 1)).current;
+  useEffect(() => {
+    if (!gagnee) return;
+    Animated.sequence([Animated.delay(delai), Animated.spring(a, { toValue: 1, friction: 4, tension: 120, useNativeDriver: ND })]).start();
+  }, []);
+  const w = t * FIN_RAPPORT.etoile;
+  return (
+    <Animated.Image source={FIN_IMG.etoile} resizeMethod="scale" resizeMode="stretch"
+      style={[{ position: 'absolute', left: cx - w / 2, top: cy - t / 2, width: w, height: t, pointerEvents: 'none', transform: [{ scale: a }] },
+        !gagnee && { tintColor: '#2b3038', opacity: 0.92 }]} />
+  );
+}
+// Le médaillon du héros : couronne de lauriers, anneau doré, la créature zoomée sur sa zone
+// dessinée et découpée en rond (MÊME géométrie que l'aperçu de niveau : 76 %, cadrage) ;
+// lueur dorée en victoire, médaillon TERNI en défaite.
+function MedaillonHeros({ cx, cy, t, heros, terne, lauriersH }) {
+  const ri = t * 0.76;
+  const cad = heros && heros.creatureId ? (CADRAGE_CREATURES[heros.creatureId] || {})[heros.stade] : null;
+  let art = null;
+  if (cad) {
+    const cote = ri * 0.82;
+    const T = Math.min(cote / (cad[2] - cad[0]), cote / (cad[3] - cad[1]));
+    art = (
+      <View style={{ position: 'absolute', left: ri / 2 - ((cad[0] + cad[2]) / 2) * T, top: ri / 2 - ((cad[1] + cad[3]) / 2) * T }}>
+        <CreatureArt creatureId={heros.creatureId} stageIndex={heros.stade} emoji={heros.emoji} size={Math.round(T)} />
+      </View>
+    );
+  } else if (heros) {
+    art = <Text style={{ fontSize: Math.round(ri * 0.55), includeFontPadding: false }}>{heros.emoji}</Text>;
+  }
+  const lw = lauriersH * FIN_RAPPORT.lauriers;
+  return (
+    <View style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, pointerEvents: 'none' }}>
+      {!terne && <Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: cx - t * 1.15, top: cy - t * 1.15, width: t * 2.3, height: t * 2.3, opacity: 0.7 }} />}
+      <Image source={FIN_IMG.lauriers} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: cx - lw / 2, top: cy - lauriersH * 0.47, width: lw, height: lauriersH, opacity: terne ? 0.55 : 1 }} />
+      <Image source={COMBAT_IMG.medaillon} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: cx - t / 2, top: cy - t / 2, width: t, height: t }} />
+      <View style={{ position: 'absolute', left: cx - ri / 2, top: cy - ri / 2, width: ri, height: ri, borderRadius: ri / 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+        {art}
+      </View>
+      {terne && <View style={{ position: 'absolute', left: cx - t / 2, top: cy - t / 2, width: t, height: t, borderRadius: t / 2, backgroundColor: 'rgba(12,18,32,0.42)' }} />}
+    </View>
+  );
+}
+
+function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false, premiereVictoire = true, nbCreatures = 3, heros = null }) {
   const isWin = outcome === 'win';
   const [btnsArmed, setBtnsArmed] = useState(false);
   useEffect(() => {
@@ -1750,200 +1887,65 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
   }, []);
   const stars = isWin ? starsForBattle(battleStats, opponentCount) : 0;
   const reward = isWin ? griffesReward(levelNumber) : 0;
-  // Défaite avec aides (Aventure) : mise en page compacte, tout visible sans défiler.
-  const compact = !isWin && !!aide;
-
+  const { width: W, height: H } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const u = H; const cx = W / 2;
+  const L = isWin ? FIN_V : FIN_D;
+  const avecAides = !isWin && !!aide;
+  // Au centre : la récompense (victoire) ou le diagnostic (défaite).
+  let centre;
+  if (isWin) centre = premiereVictoire ? `+${reward} 🐾 Griffes` : 'Niveau déjà gagné : pas de Griffes';
+  else if (!aide) centre = "Rien n'est perdu.";
+  else {
+    const lignes = [];
+    if (presque) lignes.push('🔥 Tu y étais presque !');
+    lignes.push(manque == null
+      ? 'Analyse de ton combat…'
+      : manque > 0
+        ? `Il te manquait environ ${manque} niveau${manque > 1 ? 'x' : ''}.`
+        : 'Ta puissance était suffisante : pas de chance cette fois, retente !');
+    // 26/09 (test de l'auteur) : une créature seule face à 2 ou 3 ennemis perd presque
+    // toujours (MESURÉ : 0 % au niveau 11) — le calibrage suppose les œufs éclos. On le DIT.
+    if (nbCreatures > 0 && nbCreatures < opponentCount) lignes.push(`🥚 ${nbCreatures} créature${nbCreatures > 1 ? 's' : ''} contre ${opponentCount} adversaires : fais éclore ton prochain œuf.`);
+    centre = lignes.join('\n');
+  }
+  // Les aides de la défaite (Aventure), chacune À SA CONDITION, comme avant.
+  const aides = !avecAides ? [] : [
+    aide.onPackGriffes && { cle: 'pack', texte: `Pack de Griffes\n💎 ${aide.coutPack}`, onPress: aide.onPackGriffes },
+    aide.onElixir && { cle: 'elixir', texte: `Élixir de faiblesse\n💎 ${aide.coutElixir}`, onPress: aide.onElixir },
+    aide.onVideoEnergie && aide.adsLeft > 0 && { cle: 'video', texte: '+1 énergie\n📺 vidéo', onPress: aide.onVideoEnergie },
+  ].filter(Boolean);
+  const principal = isWin
+    ? { texte: 'NIVEAU SUIVANT', onPress: onNextLevel }
+    : avecAides
+      ? { texte: 'MONTER\nMES CRÉATURES', onPress: () => { onContinue(); if (aide.onMonter) aide.onMonter(); } }
+      : { texte: 'RETOUR À LA CARTE', onPress: onContinue };
+  const r = (o) => ({ x: cx - (o.w * u) / 2, y: o.y * u, w: o.w * u, h: o.h * u });
   return (
     <ImageBackground source={VICTORY_BG} style={styles.screen} resizeMode="cover">
-      {/* Voile : léger en victoire (le décor doit rester lumineux),
-          nettement plus sombre et froid en défaite — ça évite d'avoir à
-          générer une seconde image juste pour l'ambiance. */}
+      {/* Voile : léger en victoire, nettement plus sombre et froid en défaite. */}
       <View style={[styles.resultDim, !isWin && styles.resultDimLose]} />
-      <ScrollView style={styles.resultScrollView} contentContainerStyle={styles.resultScroll}>
-      {/* Le titre est écrit DANS le bandeau : la zone centrale a été
-          demandée lisse à la génération, précisément pour ça. */}
-      <ImageBackground
-        source={isWin ? VICTORY_BANNER : DEFEAT_BANNER}
-        style={[styles.resultBanner, compact && styles.resultBannerCompact]}
-        imageStyle={styles.resultBannerImg}
-        resizeMode="contain"
-      >
-        <Text style={styles.resultBannerText}>{isWin ? 'VICTOIRE !' : 'DÉFAITE'}</Text>
-      </ImageBackground>
-      {/* Deux colonnes : le récapitulatif à gauche, les boutons à droite.
-          ⚠️ 26/09 (demande de l'auteur) : en DÉFAITE avec aides, tout doit
-          se voir SANS DÉFILER. MESURÉ : ≈ 520 points de haut pour ≈ 390 en
-          paysage (diagnostic sur 4-5 lignes dans une colonne de 168, 5
-          boutons empilés). Désormais : diagnostic SOUS le récapitulatif
-          (colonne large), aides en grille 2 × 2 compacte, bandeau réduit —
-          ≈ 260 points. La victoire ne change pas (elle tenait déjà). */}
-      <View style={styles.resultBody}>
-      {compact ? (
-        <View style={styles.resultLeft}>
-        <ImageBackground source={RECAP_FRAME} style={[styles.recapCard, compact && styles.recapCardCompact]} imageStyle={styles.recapCardImg} resizeMode="stretch">
-          {/* Le gain est DANS le cadre : posé sur le décor il se perdait
-              dans les tons dorés du couchant (signalé le 12/09). */}
-          {isWin && (
-            <View style={styles.starsRow}>
-              {[1, 2, 3].map((n) => (
-                <Image
-                  key={n}
-                  source={STAR_ICON}
-                  style={[styles.star, n > stars && styles.starOff]}
-                  resizeMode="contain"
-                />
-              ))}
-            </View>
-          )}
-          {isWin && (
-            <View style={styles.rewardBadge}>
-              <Text style={styles.rewardBadgeText}>
-                {premiereVictoire ? `+${reward} 🐾 Griffes` : 'Niveau déjà gagné : pas de Griffes'}
-              </Text>
-            </View>
-          )}
-          <Text style={styles.recapTitle}>📊 Récapitulatif</Text>
-          {/* Les 5 chiffres sur UNE rangée : en deux rangées, les boutons
-              passaient sous le bord de l'écran (signalé le 12/09). */}
-          <View style={styles.recapRow}>
-            <View style={styles.recapStat}>
-              <Text style={styles.recapStatValue}>{battleStats.totalDamageDealt}</Text>
-              <Text style={styles.recapStatLabel}>Infligés</Text>
-            </View>
-            <View style={styles.recapStat}>
-              <Text style={[styles.recapStatValue, { color: '#FF5252' }]}>{battleStats.totalDamageTaken}</Text>
-              <Text style={styles.recapStatLabel}>Reçus</Text>
-            </View>
-            <View style={styles.recapStat}>
-              <Text style={styles.recapStatValue}>{battleStats.rounds}</Text>
-              <Text style={styles.recapStatLabel}>Tours</Text>
-            </View>
-          </View>
-
-        </ImageBackground>
-          <View style={styles.aideDiagBloc}>
-            {presque && <Text style={styles.aidePresque}>🔥 Tu y étais presque !</Text>}
-            <Text style={styles.aideDiag}>
-              {manque == null
-                ? 'Analyse de ton combat…'
-                : manque > 0
-                  ? `Il te manquait environ ${manque} niveau${manque > 1 ? 'x' : ''}.`
-                  : 'Ta puissance était suffisante : pas de chance cette fois, retente !'}
-            </Text>
-            {/* 26/09 (test de l'auteur) : une créature seule face à 2 ou 3
-                ennemis perd presque toujours (MESURÉ : 0 % au niveau 11) —
-                le calibrage suppose les œufs éclos. On le DIT. */}
-            {nbCreatures > 0 && nbCreatures < opponentCount && (
-              <Text style={styles.aideDiag}>
-                {`🥚 ${nbCreatures} créature${nbCreatures > 1 ? 's' : ''} contre ${opponentCount} adversaires : fais éclore ton prochain œuf.`}
-              </Text>
-            )}
-          </View>
-        </View>
-      ) : (
-      <ImageBackground source={RECAP_FRAME} style={[styles.recapCard, compact && styles.recapCardCompact]} imageStyle={styles.recapCardImg} resizeMode="stretch">
-        {/* Le gain est DANS le cadre : posé sur le décor il se perdait
-            dans les tons dorés du couchant (signalé le 12/09). */}
-        {isWin && (
-          <View style={styles.starsRow}>
-            {[1, 2, 3].map((n) => (
-              <Image
-                key={n}
-                source={STAR_ICON}
-                style={[styles.star, n > stars && styles.starOff]}
-                resizeMode="contain"
-              />
-            ))}
-          </View>
-        )}
-        {isWin && (
-          <View style={styles.rewardBadge}>
-            <Text style={styles.rewardBadgeText}>
-              {premiereVictoire ? `+${reward} 🐾 Griffes` : 'Niveau déjà gagné : pas de Griffes'}
-            </Text>
-          </View>
-        )}
-        <Text style={styles.recapTitle}>📊 Récapitulatif</Text>
-        {/* Les 5 chiffres sur UNE rangée : en deux rangées, les boutons
-            passaient sous le bord de l'écran (signalé le 12/09). */}
-        <View style={styles.recapRow}>
-          <View style={styles.recapStat}>
-            <Text style={styles.recapStatValue}>{battleStats.totalDamageDealt}</Text>
-            <Text style={styles.recapStatLabel}>Infligés</Text>
-          </View>
-          <View style={styles.recapStat}>
-            <Text style={[styles.recapStatValue, { color: '#FF5252' }]}>{battleStats.totalDamageTaken}</Text>
-            <Text style={styles.recapStatLabel}>Reçus</Text>
-          </View>
-          <View style={styles.recapStat}>
-            <Text style={styles.recapStatValue}>{battleStats.rounds}</Text>
-            <Text style={styles.recapStatLabel}>Tours</Text>
-          </View>
-        </View>
-
-      </ImageBackground>
+      <PieceTexte source={COMBAT_IMG.planche} {...r(L.titre)} texte={isWin ? 'VICTOIRE !' : 'DÉFAITE'} police={L.titre.police * u} couleur={isWin ? '#ffe9a8' : '#dfe8f5'} />
+      <MedaillonHeros cx={cx} cy={L.medaillon.y * u} t={L.medaillon.t * u} heros={heros} terne={!isWin} lauriersH={L.lauriers.h * u} />
+      {L.etoiles.map((e, i) => (
+        <EtoileFin key={i} cx={cx + e.dx * u} cy={e.y * u} t={e.t * u} gagnee={i < stars} delai={300 + i * 220} />
+      ))}
+      <PieceTexte source={COMBAT_IMG.planche} {...r(L.etiquette)} texte={isWin ? 'Héros du combat' : 'Meilleure créature'} police={L.etiquette.police * u} />
+      <PieceTexte source={COMBAT_IMG.planche} {...r(L.centre)} texte={centre} police={L.centre.police * u} lignes={L.centre.lignes} marge={0.09} />
+      {[['Infligés', battleStats.totalDamageDealt, '#ffe9a8'], ['Reçus', battleStats.totalDamageTaken, '#ff8a7a'], ['Tours', battleStats.rounds, '#ffe9a8']].map(([leg, val, coul], i) => (
+        <RecapPlaque key={leg} x={cx + (i - 1) * L.recap.ecart * u - (L.recap.w * u) / 2} y={L.recap.y * u} w={L.recap.w * u} h={L.recap.h * u}
+          valeur={val} legende={leg} couleur={coul} chiffre={L.recap.chiffre * u} police={L.recap.legende * u} />
+      ))}
+      {L.aides && aides.map((a, i) => (
+        <BoutonFin key={a.cle} source={FIN_IMG.boutonBois} x={cx + (i - (aides.length - 1) / 2) * L.aides.ecart * u - (L.aides.w * u) / 2} y={L.aides.y * u}
+          w={L.aides.w * u} h={L.aides.h * u} texte={a.texte} police={L.aides.police * u} lignes={2} onPress={a.onPress} disabled={!btnsArmed} />
+      ))}
+      <BoutonFin source={FIN_IMG.boutonDore} x={cx - (L.bouton.w * u) / 2} y={L.bouton.y * u} w={L.bouton.w * u} h={(L.bouton.w * u) / FIN_RAPPORT.boutonDore}
+        texte={principal.texte} police={L.bouton.police * u} lignes={L.bouton.lignes} couleur="#5a360f" dore onPress={principal.onPress} disabled={!btnsArmed} />
+      {(isWin || avecAides) && (
+        <BoutonFin source={FIN_IMG.boutonBois} x={W - insets.right - (FIN_RETOUR.marge + FIN_RETOUR.w) * u} y={FIN_RETOUR.y * u} w={FIN_RETOUR.w * u} h={FIN_RETOUR.h * u}
+          texte="Retour à la carte" police={FIN_RETOUR.police * u} onPress={onContinue} disabled={!btnsArmed} />
       )}
-
-        {compact ? (
-          <View style={[styles.resultBtnCol, styles.resultBtnColCompact]}>
-            {/* ÉCRAN DE DÉFAITE (demande de l'auteur, 26/09) : comprendre
-                pourquoi, et voir la solution tout de suite. Grille 2 × 2 :
-                l'aide gratuite (monter) en vert, les aides payantes à côté. */}
-            <View style={styles.resultGrid}>
-              <TouchableOpacity
-                style={[styles.resultBtn, styles.resultBtnDemi, styles.resultBtnNext, !btnsArmed && styles.resultBtnLocked]}
-                disabled={!btnsArmed}
-                onPress={() => { onContinue(); if (aide.onMonter) aide.onMonter(); }}
-              >
-                <Text style={[styles.resultBtnText, styles.resultBtnTextDemi]}>{'⬆️ Monter\nmes créatures'}</Text>
-              </TouchableOpacity>
-              {aide.onPackGriffes && (
-                <TouchableOpacity style={[styles.resultBtn, styles.resultBtnDemi, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onPackGriffes}>
-                  <Text style={[styles.resultBtnText, styles.resultBtnTextDemi]}>{`🐾 Pack de Griffes\n💎 ${aide.coutPack}`}</Text>
-                </TouchableOpacity>
-              )}
-              {aide.onElixir && (
-                <TouchableOpacity style={[styles.resultBtn, styles.resultBtnDemi, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onElixir}>
-                  <Text style={[styles.resultBtnText, styles.resultBtnTextDemi]}>{`🧪 Élixir de faiblesse\n💎 ${aide.coutElixir}`}</Text>
-                </TouchableOpacity>
-              )}
-              {aide.onVideoEnergie && aide.adsLeft > 0 && (
-                <TouchableOpacity style={[styles.resultBtn, styles.resultBtnDemi, !btnsArmed && styles.resultBtnLocked]} disabled={!btnsArmed} onPress={aide.onVideoEnergie}>
-                  <Text style={[styles.resultBtnText, styles.resultBtnTextDemi]}>{'📺 +1 énergie\n(vidéo)'}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <TouchableOpacity
-              style={[styles.resultBtn, styles.resultBtnRetour, !btnsArmed && styles.resultBtnLocked]}
-              onPress={onContinue}
-              disabled={!btnsArmed}
-            >
-              <Text style={styles.resultBtnText}>Retour à la carte</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.resultBtnCol}>
-            {isWin && (
-              <TouchableOpacity
-                style={[styles.resultBtn, styles.resultBtnNext, !btnsArmed && styles.resultBtnLocked]}
-                onPress={onNextLevel}
-                disabled={!btnsArmed}
-              >
-                <Text style={styles.resultBtnText}>⚔️ Niveau suivant</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[styles.resultBtn, !btnsArmed && styles.resultBtnLocked]}
-              onPress={onContinue}
-              disabled={!btnsArmed}
-            >
-              <Text style={styles.resultBtnText}>Retour à la carte</Text>
-            </TouchableOpacity>
-            {!isWin && <Text style={styles.resultSubtitle}>Rien n'est perdu.</Text>}
-          </View>
-        )}
-      </View>
-      </ScrollView>
     </ImageBackground>
   );
 }
