@@ -242,6 +242,8 @@ const SABOTAGES = [
     remplace("coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'none' },", "coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30 },")],
   ['auditEcranFin', F.combatEcran, "le pack de Griffes de la défaite débranché par la refonte",
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
+  ['auditDialoguesJeu', path.join(RACINE, 'App.js'), "hôte des dialogues retiré : toutes les fenêtres maison retomberaient sur la boîte du système",
+    remplace('      <HoteDialogue />\n', '')],
   ['auditMenusCreatures', F.aventure, "page des Griffes retirée de l'écran des Runes : son « + » n'ouvrirait plus rien",
     remplace('    return avecBoutique(\n      <RunesScreen\n', '    return (\n      <RunesScreen\n')],
   ['auditFicheCreature', F.aventure, "retirer une rune débranché : toucher une rune équipée ne la retire plus",

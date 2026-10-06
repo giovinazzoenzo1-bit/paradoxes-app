@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { CoinsProvider } from '../../../src/context/CoinsContext';
 import { DailyProvider } from '../../../src/context/DailyContext';
 import { SettingsProvider } from '../../../src/context/SettingsContext';
+import { HoteDialogue } from '../../../src/components/DialogueJeu';
 import ClickerScreen from '../../../src/screens/games/ClickerScreen';
 // Banc de l'Exploration (03/10) : une partie avec un deck de 2 créatures + 1
 // emplacement vide, glissée dans la mémoire de sauvegarde AVANT le rendu.
@@ -29,7 +30,11 @@ if (window.location.search.includes('runes=1') && window.__memoireBanc['adventur
 }
 const rien = () => {};
 createRoot(document.getElementById('root')).render(
+  <>
+
   <SafeAreaProvider><CoinsProvider><DailyProvider><SettingsProvider>
     <ClickerScreen onOpenOptions={rien} onOpenQuests={rien} />
-  </SettingsProvider></DailyProvider></CoinsProvider></SafeAreaProvider>,
+  </SettingsProvider></DailyProvider></CoinsProvider></SafeAreaProvider>
+    <HoteDialogue />
+  </>,
 );

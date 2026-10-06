@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image, Dim
 import { COLORS } from './clickerTheme';
 import { GrandPanneau, largeurInterieure, CRISTAL, EffetRecompense, vibrerSucces } from './fenetreBois';
 import { useSettings } from '../../context/SettingsContext';
+import { afficherDialogue } from '../../components/DialogueJeu';
 
 // 27/09 : Boutique du thème forêt (pièces Gemini 37-44 de l'auteur, kit
 // partagé fenetreBois). Tailles en NOMBRES (règle du 27/09).
@@ -86,7 +87,7 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg }) 
     // L'éclosion immédiate est la seule offre qui puisse ne servir à
     // rien : sans œuf en incubation, le joueur paierait pour rien.
     if (offer.id === 'hatch' && !incubatingEgg) {
-      Alert.alert('Aucun œuf en incubation', "Mets d'abord un œuf dans l'incubateur.");
+      afficherDialogue('Aucun œuf en incubation', "Mets d'abord un œuf dans l'incubateur.");
       return;
     }
     setBusy(offer.id);

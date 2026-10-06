@@ -15,6 +15,7 @@ import {
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CreatureArt, { hasCreatureArt } from '../../components/CreatureArt';
+import { afficherDialogue } from '../../components/DialogueJeu';
 import { CADRAGE_CREATURES } from '../../games/clicker/cadrageCreatures';
 import { StatusBar } from 'expo-status-bar';
 
@@ -1236,9 +1237,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
 
   // ⚔️ RÈGLES DU COMBAT — FIN
   const confirmQuit = () => {
-    Alert.alert('Quitter le combat ?', 'Tu ne gagneras aucune récompense et reviendras à la carte.', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Quitter', style: 'destructive', onPress: () => onFinish('quit') },
+    afficherDialogue('Quitter le combat ?', 'Tu ne gagneras aucune récompense et reviendras à la carte.', [
+      { texte: 'Annuler', style: 'annuler' },
+      { texte: 'Quitter', style: 'danger', onPress: () => onFinish('quit') },
     ]);
   };
 
@@ -1673,16 +1674,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           // sans ça taper sur le compteur ne compterait pas.
           phase === 'tapping' && styles.bottomWrapPassThrough,
         ]}>
-          {/* DIAGNOSTIC (12/09) : affiche le dernier échange chiffré.
-              Le calcul donne ~35% de la barre par coup, l'utilisateur
-              en voit « 2 mm » — impossible de trancher en lisant le
-              code, donc on mesure à l'écran. À retirer une fois la
-              cause trouvée. */}
-          <Text style={styles.hintText}>
-            {lastExchange
-              ? `Tu as infligé ${lastExchange.dealt} · reçu ${lastExchange.taken} (PV ${lastExchange.hpAfter}/${lastExchange.hpMax})`
-              : ''}
-          </Text>
+          {/* (06/10) La ligne de DIAGNOSTIC du 12/09 (« Tu as infligé X · reçu Y ») est retirée :
+              un reste de développement, « à retirer une fois la cause trouvée ». */}
           <View style={styles.bottomBar}>
             {competencesAvecSort(activeFighter.creature)
               // Le spécial reste INVISIBLE tant que la jauge n'est pas

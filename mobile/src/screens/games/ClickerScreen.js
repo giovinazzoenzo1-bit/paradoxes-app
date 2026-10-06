@@ -243,6 +243,7 @@ const EGG_IMAGES = [
   require('../../../assets/egg/egg-4-pret.png'),
 ];
 import { DeckPicker } from './DeckPicker';
+import { afficherDialogue } from '../../components/DialogueJeu';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
 //
@@ -2133,11 +2134,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const acheterElixir = () => {
     const offre = DIAMOND_OFFERS.find((o) => o.id === 'elixir');
     if (!offre) return;
-    Alert.alert('🧪 Élixir de faiblesse', `${offre.desc}\n\nAcheter pour 💎 ${offre.cost} ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      { text: `💎 ${offre.cost}`, onPress: async () => {
+    afficherDialogue('🧪 Élixir de faiblesse', `${offre.desc}\n\nAcheter pour 💎 ${offre.cost} ?`, [
+      { texte: 'Annuler', style: 'annuler' },
+      { texte: `💎 ${offre.cost}`, style: 'principal', onPress: async () => {
         const msg = await buyWithDiamonds(offre);
-        Alert.alert(msg ? '🧪 Élixir actif' : 'Diamants insuffisants', msg || `Il t'en faut ${offre.cost}.`);
+        afficherDialogue(msg ? '🧪 Élixir actif' : 'Diamants insuffisants', msg || `Il t'en faut ${offre.cost}.`);
       } },
     ]);
   };

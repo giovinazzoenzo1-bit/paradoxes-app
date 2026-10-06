@@ -18,6 +18,7 @@ import { DailyProvider } from './src/context/DailyContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import ClickerScreen from './src/screens/games/ClickerScreen';
 import ProgresScreen from './src/screens/ProgresScreen';
+import { HoteDialogue } from './src/components/DialogueJeu';
 import OptionsScreen from './src/screens/OptionsScreen';
 
 // Zone sûre gérée ICI, une seule fois, plutôt que dans chaque écran : évite
@@ -109,6 +110,8 @@ function AppContent({ onFullReset }) {
           <ProgresScreen onBack={() => setOverlay(null)} />
         </View>
       )}
+      {/* Boîtes de dialogue MAISON (06/10) : au-dessus de tout (DialogueJeu.js). */}
+      <HoteDialogue />
     </View>
   );
 }

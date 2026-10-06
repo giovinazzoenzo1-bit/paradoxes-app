@@ -132,3 +132,8 @@
       design/a-integrer/11-runes-et-forge/PROMPT-RUNE-ARCANE.md.
 - [x] Effets de combat, étape 2 : les 8 effets d'élément (03/10).
 - [x] Effets de combat, étape 3 : sorts, spécial, K.-O. (03/10).
+
+- [x] Design, priorité 1 (06/10) : fenêtres maison (7 boîtes du système), aide des éléments,
+      choix d'une rune, diagnostic du combat retiré.
+- [ ] Design, priorité 2 : la CARTE DES CHAPITRES — médaillons de pierre pour les niveaux,
+      pastilles du haut (Éléments, Griffes, énergie) — prompt Gemini.

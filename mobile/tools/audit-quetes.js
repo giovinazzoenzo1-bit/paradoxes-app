@@ -4483,3 +4483,31 @@ function auditMenusCreatures() {
   return pb;
 }
 module.exports.auditMenusCreatures = auditMenusCreatures;
+
+// ── Fenêtres MAISON à la place des boîtes de dialogue du système (06/10) ──
+// L'hôte est posé à la racine (App.js), afficherDialogue retombe sur Alert sans lui ; les 7
+// boîtes vues en plein jeu ne reviennent pas ; les 2 alertes de SÉCURITÉ restent natives
+// (elles doivent marcher même interface cassée) ; aide des éléments et choix d'une rune
+// passent par la fenêtre maison.
+function auditDialoguesJeu() {
+  const fs = require('fs'); const path = require('path');
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const pb = [];
+  if (!/<HoteDialogue \/>/.test(lire('App.js'))) pb.push("l'hôte des dialogues n'est plus posé à la racine (App.js)");
+  const d = lire('src/components/DialogueJeu.js');
+  if (!/if \(afficheur\) \{[\s\S]{0,140}\}\s*Alert\.alert\(titre, message,/.test(d)) pb.push('afficherDialogue ne retombe plus sur la boîte du système sans hôte');
+  const tout = ['src/screens/games/AdventureScreen.js', 'src/screens/games/ClickerScreen.js', 'src/screens/games/CombatScreen.js', 'src/screens/games/DiamondShop.js'].map(lire).join('\n');
+  const titres = ['Quitter le combat ?', 'Diamants insuffisants', 'Énergie pleine', '🌟 Ascension requise', '🧪 Élixir de faiblesse', 'Aucun œuf en incubation', '🐾 +'];
+  for (const t of titres) {
+    const re = new RegExp("Alert\\.alert\\(\\s*[`'\"]" + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    if (re.test(tout)) pb.push(`la boîte du système « ${t} » est revenue`);
+  }
+  const c = lire('src/screens/games/ClickerScreen.js');
+  if (!/Alert\.alert\(\s*'⚠️ Tu sembles bloqué'/.test(c)) pb.push("l'alerte de sécurité « Tu sembles bloqué » n'est plus native");
+  if (!/Alert\.alert\(\s*'💥 Le jeu a rencontré une erreur'/.test(c)) pb.push("l'alerte de sécurité « erreur » n'est plus native");
+  const a = lire('src/screens/games/AdventureScreen.js');
+  if (!/<FenetreJeu titre="Affinités élémentaires"/.test(a)) pb.push("l'aide des éléments n'utilise plus la fenêtre maison");
+  if (!/<FenetreJeu titre="Choisir une rune"/.test(a)) pb.push("le choix d'une rune n'utilise plus la fenêtre maison");
+  return pb;
+}
+module.exports.auditDialoguesJeu = auditDialoguesJeu;

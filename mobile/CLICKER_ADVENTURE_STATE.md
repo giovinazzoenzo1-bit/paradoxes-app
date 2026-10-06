@@ -2344,3 +2344,29 @@ ferme), Collection → fiche Pyrosile → croix → Collection, page des Griffes
 messages « Pas assez… », croix). Sabotage « point 5 » d'auditDefaite PÉRIMÉ (il visait
 l'ancienne boîte de dialogue, indentée de 12 espaces) → recalé sur le nouvel achat.
 Contrôle auditMenusCreatures + sabotage. 88 contrôles, 111 sabotages.
+
+
+## 06/10 — Inventaire du design + PRIORITÉ 1 : fenêtres maison (publié)
+
+INVENTAIRE (demande de l'auteur, design à 100 % hors illustrations des créatures) :
+déjà au nouveau style = menu, boutique, calendrier, Collection, paramètres, quêtes
+(ProgresScreen), incubateur, grimoire, défis ; hub, aperçu, combat, fins de combat,
+fiche, Changer, page des Griffes, Runes (boutique, forge, inventaire). RESTE (priorité
+2) : la CARTE DES CHAPITRES — ronds noirs des niveaux (médaillons de pierre) et
+pastilles du haut (Éléments, Griffes, énergie) → 1 ou 2 pièces Gemini.
+FAIT (priorité 1, pièces existantes) : src/components/FenetreJeu.js (corps = carte de
+bois au liseré d'or ou panneau du bandeau de combat, image dimensionnée par onLayout —
+jamais absoluteFill —, planche de titre à cheval, taille du titre selon sa LONGUEUR,
+croix dorée, BoutonBois = onglet en 3 tranches) ; src/components/DialogueJeu.js
+(afficherDialogue(titre, message, boutons) = même usage qu'Alert.alert, HÔTE unique
+<HoteDialogue /> à la racine d'App.js, REPLI sur Alert sans hôte). Remplacés : « Quitter
+le combat ? », « Diamants insuffisants » et « Énergie pleine » (énergie), « 🌟 Ascension
+requise », « 🧪 Élixir de faiblesse » (+ son résultat), « Aucun œuf en incubation » ;
+« 🐾 +X Griffes » → son texte (« de quoi monter X de N niveaux ») s'affiche DANS la page
+des Griffes (messageGriffesRef ; les lignes « annoncerGriffes(GRIFFES_PACK); return true; »
+gardées pour le sabotage du point 5). Aide des éléments (cycle en pastilles) et choix d'une
+rune (avec l'EFFET de chaque rune) dans la fenêtre maison. Ligne de DIAGNOSTIC du combat
+(12/09) retirée. RESTENT natives : réglages rares des Options, et les 2 alertes de SÉCURITÉ
+(« Tu sembles bloqué », « erreur ») — doivent marcher interface cassée. Banc : l'hôte est
+ajouté aux scènes exploration, menu, boutique (elles n'ont pas App.js). Contrôle
+auditDialoguesJeu + sabotage (hôte retiré). 89 contrôles, 112 sabotages.

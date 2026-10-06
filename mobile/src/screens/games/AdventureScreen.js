@@ -370,6 +370,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from './clickerTheme';
 import CombatScreen from './CombatScreen';
 import { DeckPicker } from './DeckPicker';
+import { afficherDialogue } from '../../components/DialogueJeu';
+import { FenetreJeu, BoutonBois } from '../../components/FenetreJeu';
 import {
   CREATURES,
   RARITY_LABEL,
@@ -823,8 +825,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       {boutiqueGriffes && (
         <BoutiqueGriffes griffes={griffes} diamants={diamonds} onFermer={() => setBoutiqueGriffes(false)}
           offres={[
-            { cle: 'pieces', icone: '💰', quantite: taillePackGriffes(ascensionCount), prix: `${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces`, manque: `Pas assez de pièces : il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`, onAcheter: buyGriffesWithCoins },
-            { cle: 'diamants', icone: '💎', quantite: GRIFFES_PACK, prix: `${GRIFFES_DIAMOND_COST} Diamants`, manque: `Pas assez de Diamants : il t'en faut ${GRIFFES_DIAMOND_COST}.`, onAcheter: buyGriffesDiamonds },
+            { cle: 'pieces', icone: '💰', message: () => messageGriffesRef.current, quantite: taillePackGriffes(ascensionCount), prix: `${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces`, manque: `Pas assez de pièces : il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`, onAcheter: buyGriffesWithCoins },
+            { cle: 'diamants', icone: '💎', message: () => messageGriffesRef.current, quantite: GRIFFES_PACK, prix: `${GRIFFES_DIAMOND_COST} Diamants`, manque: `Pas assez de Diamants : il t'en faut ${GRIFFES_DIAMOND_COST}.`, onAcheter: buyGriffesDiamonds },
           ]} />
       )}
     </View>
@@ -861,6 +863,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       setDefaitesDeSuite((d) => ({ ...d, [levelNumber]: (d[levelNumber] || 0) + 1 }));
     }
   };
+  const messageGriffesRef = useRef(null);
   const annoncerGriffes = (gain) => {
     try {
       const total = griffes + gain;
@@ -869,9 +872,10 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
         .filter((x) => x.own && x.creature).sort((a, b) => a.own.level - b.own.level)[0];
       let n = 0;
       if (cible) { let reste = total; let lv = cible.own.level; while (n < 99) { const c = levelUpCost(cible.creature, lv); if (c > reste) break; reste -= c; lv++; n++; } }
-      Alert.alert(`🐾 +${gain} Griffes`, cible
-        ? `Tu as ${total} Griffes : de quoi monter ${cible.creature.stages[0].name} de ${n} niveau${n > 1 ? 'x' : ''}.`
-        : `Tu as ${total} Griffes.`);
+      // 06/10 : plus de boîte du système — le texte s'affiche dans la page « Obtenir des Griffes ».
+      messageGriffesRef.current = cible
+        ? `+${gain} Griffes : de quoi monter ${cible.creature.stages[0].name} de ${n} niveau${n > 1 ? 'x' : ''} !`
+        : `+${gain} Griffes !`;
     } catch (e) { /* message optionnel : jamais bloquant */ }
   };
 
@@ -880,7 +884,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     if (!onSpendDiamonds) return;
     const ok = await onSpendDiamonds(ENERGY_DIAMOND_COST);
     if (!ok) {
-      Alert.alert('Diamants insuffisants', `Il te faut ${ENERGY_DIAMOND_COST} 💎 pour recharger l'énergie.`);
+      afficherDialogue('Diamants insuffisants', `Il te faut ${ENERGY_DIAMOND_COST} 💎 pour recharger l'énergie.`);
       return;
     }
     setEnergy(ENERGY_MAX);
@@ -907,7 +911,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     if (energyAdLoading || energyAdsToday >= ENERGY_AD_DAILY_MAX) return;
     const recalced = computeEnergyRegen(energy, energyUpdatedAt, Date.now());
     if (recalced.energy >= ENERGY_MAX) {
-      Alert.alert('Énergie pleine', "Tu n'as pas besoin de recharger pour l'instant.");
+      afficherDialogue('Énergie pleine', "Tu n'as pas besoin de recharger pour l'instant.");
       return;
     }
     setEnergyAdLoading(true);
@@ -1700,7 +1704,7 @@ function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
     setEnCours(true);
     const ok = await o.onAcheter();
     setEnCours(false);
-    setMessage(ok ? { texte: `+${o.quantite} Griffes !`, ok: true } : { texte: o.manque, ok: false });
+    setMessage(ok ? { texte: (o.message && o.message()) || `+${o.quantite} Griffes !`, ok: true } : { texte: o.manque, ok: false });
   };
   return (
     <View style={styles.boutiqueRacine}>
@@ -2181,36 +2185,36 @@ function EnergyBadge({ energy, energyUpdatedAt }) {
 // Mémorise que l'aide sur les éléments a déjà été montrée.
 const ELEM_HELP_SEEN_KEY = 'adventure:elemHelpSeen:v1';
 
+// Aide des éléments (06/10) : la FENÊTRE MAISON (avant : un panneau bleu nuit) ; le cycle en pastilles.
+const CYCLE_ELEMENTS = [['🔥', 'Feu'], ['💨', 'Air'], ['🌍', 'Terre'], ['⚡', 'Foudre'], ['💧', 'Eau'], ['🔥', 'Feu']];
 function ElementHelpOverlay({ onClose }) {
   return (
-    <View style={styles.elemHelpBackdrop}>
-      <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
-      <View style={styles.elemHelpCard}>
-        {/* Retour en HAUT À DROITE (demande explicite) : à la première
-            ouverture, le joueur découvre l'écran et doit voir tout de
-            suite comment en sortir. */}
-        <TouchableOpacity style={styles.elemHelpBack} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Text style={styles.elemHelpBackText}>✕</Text>
-        </TouchableOpacity>
-        <Text style={styles.elemHelpTitle}>Affinités élémentaires</Text>
-        <Text style={styles.elemHelpLine}>
-          Attaquer un élément que le tien domine inflige <Text style={styles.elemHelpStrong}>+30 %</Text> de dégâts.
-          L'inverse en inflige <Text style={styles.elemHelpWeak}>−25 %</Text>.
-        </Text>
-        <Text style={styles.elemHelpChain}>🔥 Feu ▸ 💨 Air ▸ 🌍 Terre ▸ ⚡ Foudre ▸ 💧 Eau ▸ 🔥</Text>
-        <Text style={styles.elemHelpLine}>
-          ✨ Lumière et 🌑 Ténèbres se frappent <Text style={styles.elemHelpStrong}>fort mutuellement</Text>.
-          {'\n'}🔮 Magie n'a ni avantage ni faiblesse.
-        </Text>
-        <Text style={styles.elemHelpFoot}>
-          En combat, une pastille colorée au-dessus de chaque adversaire indique
-          ta position : vert favorable, orange neutre, rouge défavorable.
-        </Text>
-        <TouchableOpacity style={styles.elemHelpClose} onPress={onClose}>
-          <Text style={styles.elemHelpCloseText}>Compris</Text>
-        </TouchableOpacity>
+    <FenetreJeu titre="Affinités élémentaires" onFermer={onClose} toucherFondFerme piece="panneau" zIndex={60}>
+      <Text style={styles.elemHelpLine}>
+        Attaquer un élément que le tien domine inflige <Text style={styles.elemHelpStrong}>+30 %</Text> de dégâts.
+        L'inverse en inflige <Text style={styles.elemHelpWeak}>−25 %</Text>.
+      </Text>
+      <View style={styles.elemCycle}>
+        {CYCLE_ELEMENTS.map(([ic, nom], n) => (
+          <React.Fragment key={n}>
+            {n > 0 && <Text style={styles.elemFleche}>▸</Text>}
+            <View style={styles.elemPuce}>
+              <Text style={styles.elemPuceIcone}>{ic}</Text>
+              <Text style={styles.elemPuceNom}>{nom}</Text>
+            </View>
+          </React.Fragment>
+        ))}
       </View>
-    </View>
+      <Text style={styles.elemHelpLine}>
+        ✨ Lumière et 🌑 Ténèbres se frappent <Text style={styles.elemHelpStrong}>fort mutuellement</Text>.
+        {'\n'}🔮 Magie n'a ni avantage ni faiblesse.
+      </Text>
+      <Text style={styles.elemHelpFoot}>
+        En combat, une pastille colorée au-dessus de chaque adversaire indique
+        ta position : vert favorable, orange neutre, rouge défavorable.
+      </Text>
+      <BoutonBois texte="Compris" style="principal" onPress={onClose} largeur={200} hauteur={44} />
+    </FenetreJeu>
   );
 }
 
@@ -2325,7 +2329,7 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
   // entrées : la carte, « Niveau suivant », le lancement du combat.
   const montrerVerrouAscension = () => {
     const n = prochaineAscension;
-    Alert.alert('🌟 Ascension requise', `Bravo, tu as terminé l'Aventure de cette Ascension !\n\nFais ta ${n}${n === 1 ? 're' : 'e'} Ascension pour débloquer la suite.`);
+    afficherDialogue('🌟 Ascension requise', `Bravo, tu as terminé l'Aventure de cette Ascension !\n\nFais ta ${n}${n === 1 ? 're' : 'e'} Ascension pour débloquer la suite.`);
   };
   const [elemHelpOpen, setElemHelpOpen] = useState(false);
   // Ouvert AUTOMATIQUEMENT à la toute première visite de la carte : les
@@ -3299,39 +3303,30 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
 // bouton "Fusionner" unique et clair par groupe (au lieu de deviner
 // quelle rune correspond à quelle autre). Grisé/désactivé si moins de 2
 // exemplaires, ou si déjà au palier maximum.
+// Choix d'une rune (06/10) : la FENÊTRE MAISON (avant : un panneau bleu nuit), avec l'EFFET de
+// chaque rune pour choisir en connaissance de cause.
 function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
-  const available = ownedRunes.filter((r) => !r.equippedCreatureId);
+  const available = ownedRunes.filter((r) => !r.equippedCreatureId).slice().sort((a, b) => b.level - a.level);
   return (
-    <View style={styles.overlay}>
-      <View style={styles.overlayPanel}>
-        <BackButton onPress={onClose} style={styles.overlayClose} />
-        <Text style={styles.overlayTitle}>Choisir une rune</Text>
-        {available.length === 0 ? (
-          <Text style={[styles.overlaySubtitle, { marginTop: 10 }]}>
-            Aucune rune disponible — achètes-en une ou libères-en une déjà équipée ailleurs.
-          </Text>
-        ) : (
-          <View style={[styles.runeGrid, { marginTop: 14 }]}>
-            {available
-              .slice()
-              .sort((a, b) => b.level - a.level)
-              .map((rune) => {
-                const def = RUNE_TYPES[rune.type];
-                return (
-                  <TouchableOpacity
-                    key={rune.id}
-                    style={[styles.runeCell, { borderColor: def.color }]}
-                    onPress={() => onPick(rune.id)}
-                  >
-                    <Image source={def.art} style={styles.runeArt} resizeMode="contain" />
-                    <Text style={styles.runeLevel}>Niv. {rune.level}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-          </View>
-        )}
-      </View>
-    </View>
+    <FenetreJeu titre="Choisir une rune" onFermer={onClose} toucherFondFerme piece="panneau" zIndex={60}>
+      {available.length === 0 ? (
+        <Text style={styles.runeChoixVide}>Aucune rune disponible — achètes-en une ou libères-en une déjà équipée ailleurs.</Text>
+      ) : (
+        <View style={styles.runeChoixGrille}>
+          {available.map((rune) => {
+            const def = RUNE_TYPES[rune.type];
+            const eff = runeEffectText(rune.type, rune.level);
+            return (
+              <TouchableOpacity key={rune.id} style={[styles.runeChoixCarte, { borderColor: def.color }]} onPress={() => onPick(rune.id)} activeOpacity={0.85}>
+                <Image source={def.art} resizeMethod="scale" resizeMode="contain" style={{ width: 46, height: 46 }} />
+                <Text style={styles.runeChoixNom} numberOfLines={1}>{def.name} · niv. {rune.level}</Text>
+                <Text style={styles.runeChoixEffet} numberOfLines={2}>{eff.value}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+    </FenetreJeu>
   );
 }
 
@@ -3457,6 +3452,17 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
 }
 
 const styles = StyleSheet.create({
+  // Aide des éléments et choix d'une rune (06/10, fenêtre maison)
+  elemCycle: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  elemFleche: { color: '#ffd96a', fontSize: 16, fontWeight: '900', marginHorizontal: 2 },
+  elemPuce: { alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: '#d6a64d', backgroundColor: 'rgba(40,24,10,0.6)' },
+  elemPuceIcone: { fontSize: 18, textAlign: 'center', includeFontPadding: false },
+  elemPuceNom: { color: '#fbe9c4', fontSize: 9, fontWeight: '900', textAlign: 'center', includeFontPadding: false },
+  runeChoixGrille: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
+  runeChoixCarte: { width: 150, margin: 5, padding: 8, borderRadius: 12, borderWidth: 2, backgroundColor: 'rgba(40,24,10,0.55)', alignItems: 'center' },
+  runeChoixNom: { color: '#fff3d6', fontSize: 12, fontWeight: '900', textAlign: 'center', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  runeChoixEffet: { color: '#f1e2c4', fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 2 },
+  runeChoixVide: { color: '#fbe9c4', fontSize: 14, fontWeight: '700', textAlign: 'center', marginVertical: 10, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   // Fiche créature (06/10)
   boutiqueRacine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 100, backgroundColor: 'rgba(4,8,12,0.8)' },
   boutiqueQuantite: { color: '#ffd96a', fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false, textShadowColor: 'rgba(60,30,0,0.95)', textShadowRadius: 5 },
@@ -3712,14 +3718,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bg, borderWidth: 2, borderColor: COLORS.action,
   },
   elemHelpTitle: { color: COLORS.action, fontSize: 16, fontWeight: '900', textAlign: 'center', marginBottom: 10 },
-  elemHelpLine: { color: COLORS.text, fontSize: 12, fontWeight: '600', lineHeight: 18, marginBottom: 8 },
+  elemHelpLine: { color: '#fbe9c4', fontSize: 14, fontWeight: '700', textAlign: 'center', lineHeight: 20, marginBottom: 10, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   elemHelpChain: {
     color: COLORS.text, fontSize: 13, fontWeight: '900', textAlign: 'center',
     marginBottom: 10, letterSpacing: 0.3,
   },
-  elemHelpStrong: { color: '#3ddc84', fontWeight: '900' },
-  elemHelpWeak: { color: '#ff5a4a', fontWeight: '900' },
-  elemHelpFoot: { color: COLORS.muted, fontSize: 11, fontWeight: '600', lineHeight: 16, marginBottom: 12 },
+  elemHelpStrong: { color: '#8df08d', fontWeight: '900' },
+  elemHelpWeak: { color: '#ff8a7a', fontWeight: '900' },
+  elemHelpFoot: { color: '#e7cfa3', fontSize: 12, fontStyle: 'italic', textAlign: 'center', lineHeight: 17, marginBottom: 12, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   elemHelpBack: {
     position: 'absolute', top: 8, right: 10, zIndex: 5,
     width: 30, height: 30, borderRadius: 15,
