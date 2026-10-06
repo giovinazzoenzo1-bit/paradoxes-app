@@ -225,7 +225,7 @@ const HUB = {
   titre: [0.3844, 0.0247, 0.6068, 0.1237],
   puissance: [0.650, 0.035, 0.800, 0.095],
   elixir: [0.700, 0.105, 0.800, 0.160],
-  griffes: [0.820, 0.035, 0.915, 0.095],
+  griffes: [0.808, 0.035, 0.915, 0.095] /* élargie à gauche (06/10) : la capsule de bois et le « + » doré */,
   runes: [0.935, 0.025, 0.970, 0.110],
   pilotis: [0.3575, 0.4975, 0.6425], // centres x des 3 pilotis
   pilotisL: 0.085, // largeur d'un pilotis
@@ -1274,21 +1274,22 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
           {/* ── En haut : RETOUR, titre, puissance (+ élixir), Griffes, Runes. */}
           <PanneauRetour onPress={onBack} style={{ position: 'absolute', left: HUB.retour[0] * ui.l, top: HUB.retour[1] * ui.h }} />
           <Image source={HUB_IMG.titre} resizeMethod="scale" resizeMode="stretch" style={auRapportL(R(HUB.titre, 'centre'), HUB_RAPPORT_PIECE.titre)} />
-          <View style={[R(HUB.puissance, 'droite'), styles.hubPilule]}>
+          {/* Pastilles du hub sur la CAPSULE DE BOIS (06/10), comme la carte des chapitres. */}
+          <CapsuleBois style={[R(HUB.puissance, 'droite'), styles.hubCapsule]}>
             <Text style={[styles.hubPiluleTexte, { fontSize: police(0.026), color: couleurPuissance }]} numberOfLines={1}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
-          </View>
+          </CapsuleBois>
           {elixirCombats > 0 && (
-            <View style={[R(HUB.elixir, 'droite'), styles.hubPilule]}>
+            <CapsuleBois style={[R(HUB.elixir, 'droite'), styles.hubCapsule]}>
               <Text style={[styles.hubPiluleTexte, { fontSize: police(0.028) }]} numberOfLines={1}>🧪 {elixirCombats}</Text>
-            </View>
+            </CapsuleBois>
           )}
-          <View style={[R(HUB.griffes, 'droite'), styles.hubPilule, { justifyContent: 'space-between', paddingLeft: 4, paddingRight: 3 }]}>
+          <CapsuleBois style={[R(HUB.griffes, 'droite'), styles.hubCapsule, { justifyContent: 'space-between', paddingLeft: 4, paddingRight: 3, gap: 2 }]}>
             <CurrencyIcon kind="griffes" size={Math.round(ui.h * 0.045)} haloed={false} />
-            <Text style={[styles.hubPiluleTexte, { fontSize: police(0.034), color: '#ffffff' }]} numberOfLines={1}>{griffes}</Text>
-            <TouchableOpacity onPress={buyGriffesWithDiamonds} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[styles.hubPlus, { width: ui.h * 0.045, height: ui.h * 0.045 }]}>
-              <Text style={[styles.hubPlusTexte, { fontSize: police(0.034) }]}>+</Text>
+            <Text style={[styles.hubPiluleTexte, { fontSize: police(0.034), color: '#fff6dc', flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{griffes}</Text>
+            <TouchableOpacity onPress={buyGriffesWithDiamonds} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ width: ui.h * 0.05, height: ui.h * 0.05 }}>
+              <Image source={HUB_IMG.plus} resizeMethod="scale" resizeMode="contain" style={{ width: ui.h * 0.05, height: ui.h * 0.05 }} />
             </TouchableOpacity>
-          </View>
+          </CapsuleBois>
           <TouchableOpacity onPress={() => setRunesOpen(true)} activeOpacity={0.8} style={[R(HUB.runes, 'droite'), { alignItems: 'center', justifyContent: 'center' }]}>
             <Image source={GLOW_CYAN} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', width: '190%', height: '190%' }} />
             <Image source={RUNES_GEM} resizeMethod="scale" resizeMode="contain" style={{ width: '100%', height: '100%' }} />
@@ -1934,7 +1935,16 @@ function MlStat({ icon, label, value, bonus, color }) {
 // en paysage : un nettoyage de styles morts par expression régulière en
 // mode DOTALL a mangé leur bloc en même temps qu'un style voisin, et
 // l'écran Combat plantait sur « Property 'ROW_HEIGHT' doesn't exist ».
-const LEVEL_NODE_SIZE = 38;   // réduit : 10 niveaux doivent tenir sur une page
+const LEVEL_NODE_SIZE = 38;
+// Médaillons de niveau (06/10, pièce Gemini de l'auteur) : verrouillé (cadenas gravé), en cours
+// (rebord doré, centre libre pour le numéro), gagné (coche dorée gravée). Remplacent les disques
+// vert fluo / bleu nuit. Dessinés DANS le bouton : le toucher reste au bouton sur le téléphone.
+const CARTE_IMG = {
+  verrou: require('../../../assets/carte/medaillon-verrou.png'),
+  courant: require('../../../assets/carte/medaillon-courant.png'),
+  gagne: require('../../../assets/carte/medaillon-gagne.png'),
+};
+const MEDAILLON_MARGE = 4; // le médaillon déborde un peu du bouton (38 → 46 points)   // réduit : 10 niveaux doivent tenir sur une page
 // Plus de hauteur fixe par niveau (13/09) : un chapitre doit tenir
 // ENTIÈREMENT dans une page, donc l'espacement se déduit de la hauteur
 // disponible. `ROW_HEIGHT` est conservé, d'autres écrans l'importaient.
@@ -2176,12 +2186,12 @@ function EnergyBadge({ energy, energyUpdatedAt }) {
   const mm = Math.floor(remaining / 60000);
   const ss = Math.floor((remaining % 60000) / 1000);
   return (
-    <View style={styles.energyBadge}>
+    <CapsuleBois colonne style={styles.energyBadge}>
       <Text style={styles.energyBadgeText}>⚡ {energy}/{ENERGY_MAX}</Text>
       {energy < ENERGY_MAX && (
         <Text style={styles.energyBadgeCountdown}>+1 dans {mm}:{String(ss).padStart(2, '0')}</Text>
       )}
-    </View>
+    </CapsuleBois>
   );
 }
 
@@ -2264,17 +2274,36 @@ function CurrencyIcon({ kind, size = 22, haloed = true, style }) {
 // Le « + » n'est pas décoratif : il propose l'échange Diamants → Griffes
 // (250 pour 25 💎), seule façon d'en obtenir sur-le-champ. Sans
 // `onPlus`, le bouton n'est simplement pas rendu.
+// Capsule de BOIS (06/10) : remplace les pastilles sombres de la barre du haut. L'onglet au liseré
+// d'or en 3 tranches, MESURÉ par onLayout (jamais « remplir le parent »), dessiné SOUS le contenu
+// dans un conteneur transparent au toucher (une <Image> par-dessus un bouton l'avalerait).
+function CapsuleBois({ style, colonne = false, children }) {
+  const [t, setT] = useState(null);
+  return (
+    <View style={[styles.capsule, colonne && styles.capsuleColonne, style]} onLayout={(e) => setT({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      {t && (
+        <View style={{ position: 'absolute', left: 0, top: 0, width: t.w, height: t.h, flexDirection: 'row', pointerEvents: 'none' }}>
+          <Image source={FICHE_IMG.onglet.g} resizeMethod="scale" resizeMode="stretch" style={{ width: (FICHE_IMG.onglet.capG * Math.min(t.h, 44)) / FICHE_IMG.onglet.h, height: t.h }} />
+          <Image source={FICHE_IMG.onglet.m} resizeMethod="scale" resizeMode="stretch" style={{ flex: 1, height: t.h }} />
+          <Image source={FICHE_IMG.onglet.d} resizeMethod="scale" resizeMode="stretch" style={{ width: (FICHE_IMG.onglet.capD * Math.min(t.h, 44)) / FICHE_IMG.onglet.h, height: t.h }} />
+        </View>
+      )}
+      {children}
+    </View>
+  );
+}
+
 function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
   return (
-    <View style={[styles.counterRow, style]}>
+    <CapsuleBois style={style}>
       <CurrencyIcon kind={currency} size={22} />
       <Text style={styles.counterValue} numberOfLines={1}>{amount}</Text>
       {onPlus && (
         <TouchableOpacity style={styles.counterPlus} onPress={onPlus} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.counterPlusText}>+</Text>
+          <Image source={HUB_IMG.plus} resizeMethod="scale" resizeMode="contain" style={{ width: 24, height: 24 }} />
         </TouchableOpacity>
       )}
-    </View>
+    </CapsuleBois>
   );
 }
 
@@ -2543,7 +2572,7 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
             consulte avant un combat, sa place est dans l'en-tête et non
             perdue dans un coin bas de l'écran. */}
         <TouchableOpacity style={styles.elemHelpBtn} onPress={() => setElemHelpOpen(true)}>
-          <Text style={styles.elemHelpBtnText}>🔥 Éléments</Text>
+          <CapsuleBois><Text style={styles.elemHelpBtnText}>🔥 Éléments</Text></CapsuleBois>
         </TouchableOpacity>
         <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
@@ -2652,23 +2681,17 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
                     <TouchableOpacity
                       style={[
                         styles.levelNode,
-                        scene && styles.levelNodeOnScene,
+                        styles.levelNodeMedaillon,
                         { left: pos.x - LEVEL_NODE_SIZE / 2, top: pos.y - LEVEL_NODE_SIZE / 2 },
-                        state === 'current' && styles.levelNodeCurrent,
-                        state === 'done' && styles.levelNodeDone,
                       ]}
                       onPress={() => (state === 'ascension' ? montrerVerrouAscension() : state !== 'locked' && setLevelPreview(levelNum))}
                       disabled={state === 'locked'}
                     >
-                      {state === 'ascension' ? (
-                        <Text style={styles.levelNodeText}>🌟</Text>
-                      ) : state === 'locked' ? (
-                        <Ionicons name="lock-closed" size={16} color={COLORS.muted} />
-                      ) : state === 'done' ? (
-                        <Ionicons name="checkmark" size={20} color="#0a3d24" />
-                      ) : (
-                        <Text style={styles.levelNodeText}>{levelIndexInChapter(levelNum)}</Text>
-                      )}
+                      <Image source={state === 'done' ? CARTE_IMG.gagne : state === 'current' ? CARTE_IMG.courant : CARTE_IMG.verrou}
+                        resizeMethod="scale" resizeMode="contain"
+                        style={{ position: 'absolute', left: -MEDAILLON_MARGE, top: -MEDAILLON_MARGE, width: LEVEL_NODE_SIZE + 2 * MEDAILLON_MARGE, height: LEVEL_NODE_SIZE + 2 * MEDAILLON_MARGE }} />
+                      {state === 'current' && <Text style={styles.levelNodeNumero}>{levelIndexInChapter(levelNum)}</Text>}
+                      {state === 'ascension' && <Text style={styles.levelNodeAscension}>🌟</Text>}
                       {/* Étoiles sous le nœud : le joueur voit d'un
                           coup d'œil les niveaux à refaire pour en
                           gagner davantage. Affichées seulement sur les
@@ -3468,6 +3491,12 @@ const styles = StyleSheet.create({
   runeChoixNom: { color: '#fff3d6', fontSize: 12, fontWeight: '900', textAlign: 'center', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   runeChoixEffet: { color: '#f1e2c4', fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 2 },
   runeChoixVide: { color: '#fbe9c4', fontSize: 14, fontWeight: '700', textAlign: 'center', marginVertical: 10, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  // Carte des chapitres (06/10) : médaillons de niveau, capsules de bois
+  levelNodeMedaillon: { backgroundColor: 'transparent', borderWidth: 0 },
+  levelNodeNumero: { color: '#5a3a14', fontSize: 16, fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false, textShadowColor: 'rgba(255,240,200,0.8)', textShadowRadius: 2 },
+  levelNodeAscension: { position: 'absolute', right: -6, top: -6, fontSize: 14 },
+  capsule: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 12, paddingRight: 8, paddingVertical: 5, minHeight: 34 },
+  capsuleColonne: { flexDirection: 'column', gap: 0, paddingHorizontal: 12, paddingVertical: 3 },
   // Fiche créature (06/10)
   boutiqueRacine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 100, backgroundColor: 'rgba(4,8,12,0.8)' },
   boutiqueQuantite: { color: '#ffd96a', fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false, textShadowColor: 'rgba(60,30,0,0.95)', textShadowRadius: 5 },
@@ -3498,7 +3527,8 @@ const styles = StyleSheet.create({
   // Hub « Ponton céleste » (03/10)
   hubRacine: { flex: 1, backgroundColor: '#0b1418', overflow: 'hidden' },
   hubPilule: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(14,22,24,0.88)', borderRadius: 999, borderWidth: 1.5, borderColor: '#b98b4a', paddingHorizontal: 6 },
-  hubPiluleTexte: { color: '#eafbe8', fontWeight: '900', includeFontPadding: false },
+  hubPiluleTexte: { color: '#eafbe8', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  hubCapsule: { justifyContent: 'center', minHeight: 0, paddingLeft: 8, paddingRight: 8, paddingVertical: 0 },
   hubPlus: { backgroundColor: '#e0323a', borderRadius: 6, borderWidth: 1.5, borderColor: '#ffd2d2', alignItems: 'center', justifyContent: 'center' },
   hubPlusTexte: { color: '#ffffff', fontWeight: '900', includeFontPadding: false, marginTop: -1 },
   // Image qui remplit son parent : largeur ET hauteur explicites (auditImagesTailleExplicite).
@@ -3690,12 +3720,8 @@ const styles = StyleSheet.create({
 
   // Pastille sombre plutôt qu'un voile derrière l'en-tête : elle épouse
   // le texte au lieu de dessiner un rectangle gris sur le décor.
-  energyBadge: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(8,14,24,0.72)',
-    borderRadius: 14, paddingHorizontal: 9, paddingVertical: 3,
-  },
-  energyBadgeText: { color: COLORS.neonCyan, fontSize: 13, fontWeight: '800' },
+  energyBadge: { marginLeft: 6 },
+  energyBadgeText: { color: '#ffe680', fontSize: 13, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   energyBadgeCountdown: { color: '#9fb2c9', fontSize: 9, fontWeight: '700', marginTop: 1 },
   // Position verticale posée à l'appel (au-dessus, ou en dessous quand
   // il n'y a pas la place).
@@ -3706,14 +3732,8 @@ const styles = StyleSheet.create({
   // une opacité seule laissait lire une étoile dorée pâlie.
   starRowEmpty: { tintColor: '#4a3a1c', opacity: 0.85 },
 
-  elemHelpBtn: {
-    // Dans le flux de l'en-tête (13/09) : plus de position absolue.
-    paddingVertical: 5, paddingHorizontal: 10, borderRadius: 14,
-    marginRight: 8,
-    backgroundColor: 'rgba(10,20,32,0.9)',
-    borderWidth: 1.5, borderColor: COLORS.action,
-  },
-  elemHelpBtnText: { color: COLORS.action, fontSize: 12, fontWeight: '900' },
+  elemHelpBtn: { marginRight: 8 },
+  elemHelpBtnText: { color: '#ffd96a', fontSize: 12, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   elemHelpBackdrop: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 40,
     backgroundColor: 'rgba(0,0,0,0.66)', alignItems: 'center', justifyContent: 'center', padding: 20,
@@ -3809,21 +3829,13 @@ const styles = StyleSheet.create({
   // bug Yoga ailleurs dans le projet, voir CLICKER_ADVENTURE_STATE.md).
   // Compteur épuré (12/09) : plus de cadre ouvragé. Fond sombre
   // translucide pour rester lisible sur n'importe quel décor.
-  counterRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingLeft: 8, paddingRight: 4, paddingVertical: 4, borderRadius: 16,
-    backgroundColor: 'rgba(8,14,24,0.72)',
-  },
+  counterRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 8, paddingRight: 4, paddingVertical: 4, borderRadius: 16, backgroundColor: 'rgba(8,14,24,0.72)' },
   // Icônes 🐾/💎 remplacées par des images (12/09) — tailles calées sur
   // le fontSize du texte qui les entoure, en `Image` inline dans un `Text`.
   inlineCurrencyIcon: { width: 14, height: 14 },
   inlineCurrencyIconTitle: { width: 18, height: 18 },
-  counterValue: { color: '#fff', fontSize: 14, fontWeight: '900' },
-  counterPlus: {
-    width: 22, height: 22, borderRadius: 7,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#e03a3a', borderWidth: 1.5, borderColor: '#ff7a6b',
-  },
+  counterValue: { color: '#fff6dc', fontSize: 14, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  counterPlus: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   counterPlusText: { color: '#fff', fontSize: 15, fontWeight: '900', lineHeight: 17 },
   // Fond/bordure retirés (image réelle intégrée, cadre déjà peint dedans).
   // Rappel d'achat de Griffes : sur le bois, sous les offres, en jaune

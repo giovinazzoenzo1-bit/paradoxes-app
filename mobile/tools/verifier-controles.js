@@ -242,6 +242,8 @@ const SABOTAGES = [
     remplace("coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'none' },", "coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30 },")],
   ['auditEcranFin', F.combatEcran, "le pack de Griffes de la défaite débranché par la refonte",
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
+  ['auditCarteChapitres', F.aventure, "fond des capsules redevenu capteur de toucher : le « + » des Griffes et « Éléments » ne répondraient plus sur le téléphone",
+    remplace("        <View style={{ position: 'absolute', left: 0, top: 0, width: t.w, height: t.h, flexDirection: 'row', pointerEvents: 'none' }}>", "        <View style={{ position: 'absolute', left: 0, top: 0, width: t.w, height: t.h, flexDirection: 'row' }}>")],
   ['auditGriffesBoutons', F.aventure, "conteneur du cadre redevenu capteur de toucher : les achats ne marcheraient plus sur le téléphone (bug du 06/10)",
     remplace("<View style={{ position: 'absolute', left: 0, top: 0, width: c.width, height: c.height, pointerEvents: 'none' }}>\n              <Image source={FICHE_IMG.cadre}", "<View style={{ position: 'absolute', left: 0, top: 0, width: c.width, height: c.height }}>\n              <Image source={FICHE_IMG.cadre}")],
   ['auditDialoguesJeu', path.join(RACINE, 'App.js'), "hôte des dialogues retiré : toutes les fenêtres maison retomberaient sur la boîte du système",

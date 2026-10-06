@@ -2385,3 +2385,20 @@ un bouton, ou sur des zones sans bouton (aucun autre bouton mort signalé). RÈG
 <Image> ne doit JAMAIS être dessinée par-dessus un bouton ; si un décor doit passer devant,
 l'envelopper dans une <View> au style pointerEvents 'none'. Contrôle auditGriffesBoutons
 + sabotage. 90 contrôles, 113 sabotages.
+
+
+## 06/10 — Design, PRIORITÉ 2 : la carte des chapitres (publié) → DESIGN À 100 %
+
+Médaillons de niveau (pièce Gemini de l'auteur, 1 image, 3 états) → assets/carte/
+medaillon-{verrou,courant,gagne}.png (256 px) : CARTE_IMG, dessinés DANS le bouton du
+niveau (38 pts, le médaillon déborde de 4 pts) — gagné (coche dorée gravée), en cours
+(rebord doré + numéro gravé en brun, sur le halo existant), verrouillé (cadenas gravé),
+Ascension requise (cadenas + 🌟 en coin). Les disques vert fluo / bleu nuit ont disparu.
+CapsuleBois (onglet au liseré d'or en 3 tranches, mesuré par onLayout, fond SOUS le contenu
+dans une View transparente au toucher) : compteur de Griffes partagé (carte, runes, fiche,
+page des Griffes) avec le « + » DORÉ (plus-dore.png), bouton « 🔥 Éléments », énergie
+(⚡ n/5 + compte à rebours) ; pastilles du hub (Puissance, élixir, Griffes — HUB.griffes
+élargie à gauche : 0.808, sinon le montant était coupé). Testés : niveaux en cours et gagné
+→ aperçu, Éléments → aide, « + » doré (hub, carte) → page des Griffes. Contrôle
+auditCarteChapitres + sabotage. 91 contrôles, 114 sabotages.
+DESIGN À 100 % (hors illustrations des créatures, la partie du frère). Prochain : les SONS.

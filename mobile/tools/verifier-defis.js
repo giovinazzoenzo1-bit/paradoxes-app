@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditCarteChapitres', "carte des chapitres : médaillons dans leurs boutons, capsules de bois transparentes au toucher, « + » doré (06/10)"],
   ['auditGriffesBoutons', "page des Griffes : les tuiles de prix reçoivent le toucher sur le téléphone (cadre dessous, enveloppé) (06/10)"],
   ['auditDialoguesJeu', "fenêtres maison : hôte à la racine, repli sur le système, 7 boîtes remplacées, sécurité native (06/10)"],
   ['auditMenusCreatures', "« Changer » (2 orientations), Collection → nouvelle fiche, page des Griffes sur les 4 écrans de l'Exploration (06/10)"],

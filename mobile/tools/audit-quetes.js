@@ -4530,3 +4530,27 @@ function auditGriffesBoutons() {
   return pb;
 }
 module.exports.auditGriffesBoutons = auditGriffesBoutons;
+
+// ── Carte des chapitres : médaillons de niveau et capsules de bois (06/10) ──
+// Les 3 médaillons existent ; chacun est dessiné DANS le bouton du niveau (une Image posée
+// par-dessus un bouton avale le toucher sur le téléphone — bug des Griffes du 06/10) ; le fond
+// des capsules (Griffes, Éléments, énergie, pastilles du hub) est dessiné SOUS leur contenu,
+// dans une View transparente au toucher ; le « + » doré des Griffes est branché.
+function auditCarteChapitres() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  const pb = [];
+  for (const n of ['verrou', 'courant', 'gagne']) {
+    if (!new RegExp(n + ": require\\('\\.\\./\\.\\./\\.\\./assets/carte/medaillon-" + n + "\\.png'\\)").test(s)) pb.push(`médaillon « ${n} » absent`);
+  }
+  const i = s.indexOf("styles.levelNodeMedaillon,"); const ouv = s.lastIndexOf('<TouchableOpacity', i); const fer = s.indexOf('</TouchableOpacity>', i);
+  const img = s.indexOf("<Image source={state === 'done' ? CARTE_IMG.gagne", ouv);
+  if (i < 0 || ouv < 0 || img < 0 || img > fer) pb.push("le médaillon n'est plus dessiné DANS le bouton du niveau");
+  const k = s.indexOf('function CapsuleBois('); const c = s.slice(k, s.indexOf('\n}\n', k));
+  if (!/\{t && \(\s*<View style=\{\{[^}]*pointerEvents: 'none' \}\}>/.test(c)) pb.push("le fond des capsules n'est plus transparent au toucher");
+  if (c.indexOf('{children}') < c.indexOf('FICHE_IMG.onglet.g')) pb.push('le fond des capsules est dessiné PAR-DESSUS leur contenu');
+  const cc = s.slice(s.indexOf('function CurrencyCounter('), s.indexOf('\n}\n', s.indexOf('function CurrencyCounter(')));
+  if (!/<CapsuleBois/.test(cc) || !/onPress=\{onPlus\}[\s\S]{0,140}HUB_IMG\.plus/.test(cc)) pb.push('le compteur de Griffes a perdu sa capsule ou son « + » doré');
+  return pb;
+}
+module.exports.auditCarteChapitres = auditCarteChapitres;
