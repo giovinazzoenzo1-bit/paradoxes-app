@@ -4511,3 +4511,22 @@ function auditDialoguesJeu() {
   return pb;
 }
 module.exports.auditDialoguesJeu = auditDialoguesJeu;
+
+// ── Page des Griffes : les tuiles de prix reçoivent le toucher sur le TÉLÉPHONE (06/10) ──
+// Bug vu par l'auteur : « les achats ne marchent pas ». Le cadre doré était dessiné APRÈS (donc
+// par-dessus) la tuile de prix avec un style pointerEvents 'none' sur l'<Image> — respecté au
+// banc (navigateur), PAS sur le téléphone : le cadre avalait le toucher. Exige : cadre AVANT la
+// tuile, enveloppé dans une <View> transparente au toucher.
+function auditGriffesBoutons() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  const i = s.indexOf('function BoutiqueGriffes('); const f = s.slice(i, s.indexOf('\n}\n', i));
+  const pb = [];
+  const iCadre = f.indexOf('<Image source={FICHE_IMG.cadre}'); const iTuile = f.indexOf('<TuileFiche');
+  if (iCadre < 0 || iTuile < 0) return ['page des Griffes : cadre ou tuile de prix introuvable'];
+  if (iCadre > iTuile) pb.push('le cadre doré est dessiné PAR-DESSUS la tuile de prix : il avale le toucher sur le téléphone');
+  if (!/<View style=\{\{[^}]*pointerEvents: 'none' \}\}>\s*<Image source=\{FICHE_IMG\.cadre\}/.test(f)) pb.push("le cadre n'est plus enveloppé dans une View transparente au toucher");
+  if (/<Image source=\{FICHE_IMG\.cadre\}[^>]*pointerEvents/.test(f)) pb.push("le cadre compte de nouveau sur le style pointerEvents d'une Image (peu fiable sur le téléphone)");
+  return pb;
+}
+module.exports.auditGriffesBoutons = auditGriffesBoutons;

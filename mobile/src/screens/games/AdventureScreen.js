@@ -1724,12 +1724,17 @@ function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
             <View style={[styles.ficheInterieur, { position: 'absolute', left: c.width * 0.025, top: c.width * 0.025, width: c.width * 0.95, height: c.height - c.width * 0.05 }]}>
               <Image source={HUB_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: c.width * 0.95, height: c.height * 0.7, opacity: 0.95 }} />
             </View>
+            {/* ⚠️ Cadre dessiné AVANT la tuile de prix, dans un conteneur transparent au toucher (06/10) :
+                dessiné PAR-DESSUS, il avalait le toucher sur le TÉLÉPHONE (le style pointerEvents
+                d'une <Image> n'y est pas fiable ; au banc, le navigateur le respecte). */}
+            <View style={{ position: 'absolute', left: 0, top: 0, width: c.width, height: c.height, pointerEvents: 'none' }}>
+              <Image source={FICHE_IMG.cadre} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: c.width, height: c.height }} />
+            </View>
             <Image source={GRIFFES_ICON} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', left: c.width / 2 - ic / 2, top: c.height * 0.1, width: ic, height: ic }} />
             <Text style={[styles.boutiqueQuantite, { position: 'absolute', left: 0, top: c.height * 0.48, width: c.width, fontSize: police(0.075) }]} numberOfLines={1}>+{o.quantite}</Text>
             <Text style={[styles.boutiqueUnite, { position: 'absolute', left: 0, top: c.height * 0.6, width: c.width, fontSize: police(0.034) }]} numberOfLines={1}>Griffes</Text>
             <TuileFiche style={{ position: 'absolute', left: c.width * 0.07, top: c.height * 0.73, width: c.width * 0.86, height: c.height * 0.2 }}
               icone={o.icone} titre={o.prix} valeur={enCours ? '…' : 'Acheter'} police={police(0.036)} onPress={() => acheter(o)} />
-            <Image source={FICHE_IMG.cadre} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: c.width, height: c.height, pointerEvents: 'none' }} />
           </View>
         );
       })}

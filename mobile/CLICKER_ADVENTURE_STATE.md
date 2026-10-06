@@ -2370,3 +2370,18 @@ rune (avec l'EFFET de chaque rune) dans la fenêtre maison. Ligne de DIAGNOSTIC 
 (« Tu sembles bloqué », « erreur ») — doivent marcher interface cassée. Banc : l'hôte est
 ajouté aux scènes exploration, menu, boutique (elles n'ont pas App.js). Contrôle
 auditDialoguesJeu + sabotage (hôte retiré). 89 contrôles, 112 sabotages.
+
+
+## 06/10 — BUG : les achats de la page des Griffes ne marchaient pas (corrigé, publié)
+
+Vu par l'auteur (« bouton ne marche pas »). Au banc, les tuiles de prix réagissaient (le
+navigateur respecte pointer-events:none sur une <img>). CAUSE : dans chaque carte, le cadre
+doré était dessiné APRÈS (donc par-dessus) la tuile de prix, avec un style pointerEvents
+'none' sur l'<Image> → sur le TÉLÉPHONE, ce style n'est pas fiable sur une Image : le cadre
+recevait le toucher et le remontait à la carte (ses parents), jamais à la tuile (sa sœur).
+CORRECTIF : cadre dessiné AVANT la tuile, enveloppé dans une <View> au style pointerEvents
+'none'. Les 19 autres Images à pointerEvents 'none' vérifiées : dessous les boutons, dans
+un bouton, ou sur des zones sans bouton (aucun autre bouton mort signalé). RÈGLE : une
+<Image> ne doit JAMAIS être dessinée par-dessus un bouton ; si un décor doit passer devant,
+l'envelopper dans une <View> au style pointerEvents 'none'. Contrôle auditGriffesBoutons
++ sabotage. 90 contrôles, 113 sabotages.
