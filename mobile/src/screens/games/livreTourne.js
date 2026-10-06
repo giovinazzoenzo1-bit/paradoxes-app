@@ -31,7 +31,13 @@ export function useLivreTourne(chapRef, avantTour) {
     angle.setValue(0);
     requestAnimationFrame(() => {
       Animated.timing(angle, { toValue: 1, duration: DUREE_TOUR, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start(() => {
-        setPosition(vers); setTour(null); angle.setValue(0); enTour.current = false;
+        // ⚠️ PAS de remise à zéro de l'angle ICI (06/10, « petit bug juste après que la page a
+        // tourné », Collection ET boutique) : setPosition / setTour ne s'appliquent qu'à l'image
+        // SUIVANTE, alors que angle.setValue(0) (pilote natif) est INSTANTANÉ → pendant 1-2 images,
+        // les feuilles encore là revenaient à leur position de DÉPART et l'ancienne page
+        // réapparaissait. L'angle reste à 1 (feuilles à l'arrivée = la nouvelle page posée
+        // dessous) ; c'est `tourner` qui le remet à 0, au départ du tour suivant.
+        setPosition(vers); setTour(null); enTour.current = false;
       });
     });
   };

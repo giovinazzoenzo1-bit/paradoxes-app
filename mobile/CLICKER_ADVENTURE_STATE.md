@@ -2419,3 +2419,17 @@ Pas de remesure : le simulateur ne modélise aucun 5e achat (le prix le rendait 
 de portée). ⚠️ Le chargeur des gardes (load) ne sait pas charger boutiqueModele.js (imports
 avec « .js ») → règle vérifiée dans le texte. Contrôle auditLimiteGriffesPieces + sabotage.
 92 contrôles, 115 sabotages.
+
+
+## 06/10 — BUG : « petit bug juste après que la page a tourné » (Collection ET boutique)
+
+Moteur COMMUN livreTourne.js (d'où les 2 écrans). CAUSE : fin de l'animation =
+setPosition(vers) + setTour(null) (appliqués à l'image SUIVANTE par React) +
+angle.setValue(0) (pilote natif : INSTANTANÉ) → pendant 1-2 images, les feuilles encore
+montées revenaient à leur position de DÉPART : l'ancienne page de droite réapparaissait.
+CORRECTIF : plus de remise à zéro à la fin (l'angle reste à 1 = feuilles à l'arrivée,
+identiques à la nouvelle page posée dessous) ; `tourner` remet déjà à 0 au départ du tour
+suivant (anciennes feuilles démontées). RÈGLE : ne jamais remettre à zéro une valeur
+animée par le pilote natif dans le même instant qu'un changement d'état React qui démonte
+ce qu'elle anime. Contrôle auditTourneSansSaut (commentaires ignorés) + sabotage.
+93 contrôles, 116 sabotages.

@@ -4577,3 +4577,23 @@ function auditLimiteGriffesPieces() {
   return pb;
 }
 module.exports.auditLimiteGriffesPieces = auditLimiteGriffesPieces;
+
+// ── Livre qui tourne : aucun saut à la fin du tour (06/10) ─────────────────
+// Bug vu par l'auteur dans la Collection ET la boutique (moteur commun livreTourne.js) :
+// angle.setValue(0) dans la fin d'animation, instantané, alors que le changement de page
+// s'applique une image plus tard → l'ancienne page réapparaissait un instant. Exige : pas
+// de remise à zéro dans la fin d'animation, et la remise à zéro au DÉPART du tour.
+function auditTourneSansSaut() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/livreTourne.js'), 'utf8');
+  const pb = [];
+  const i = s.indexOf('.start(() => {');
+  const sansCommentaires = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+  const fin = sansCommentaires(s.slice(i, s.indexOf('});', i)));
+  if (i < 0) return ["livreTourne : fin d'animation introuvable"];
+  if (/angle\.setValue\(0\)/.test(fin)) pb.push("l'angle est remis à zéro à la FIN du tour : l'ancienne page réapparaît un instant");
+  const t = s.slice(s.indexOf('const tourner = '), i);
+  if (!/angle\.setValue\(0\);/.test(t)) pb.push("l'angle n'est plus remis à zéro au DÉPART du tour (la feuille partirait de sa position d'arrivée)");
+  return pb;
+}
+module.exports.auditTourneSansSaut = auditTourneSansSaut;

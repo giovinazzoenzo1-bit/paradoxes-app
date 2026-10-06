@@ -242,6 +242,8 @@ const SABOTAGES = [
     remplace("coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'none' },", "coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30 },")],
   ['auditEcranFin', F.combatEcran, "le pack de Griffes de la défaite débranché par la refonte",
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
+  ['auditTourneSansSaut', path.join(RACINE, 'src/screens/games/livreTourne.js'), "angle remis à zéro à la fin du tour : l'ancienne page réapparaît (bug du 06/10)",
+    remplace('        setPosition(vers); setTour(null); enTour.current = false;', '        setPosition(vers); setTour(null); angle.setValue(0); enTour.current = false;')],
   ['auditLimiteGriffesPieces', F.clicker, "plafond relevé à 99 : les packs en pièces redeviennent illimités",
     remplace('export const GRIFFES_PIECES_MAX_PAR_ASCENSION = 4;', 'export const GRIFFES_PIECES_MAX_PAR_ASCENSION = 99;')],
   ['auditCarteChapitres', F.aventure, "fond des capsules redevenu capteur de toucher : le « + » des Griffes et « Éléments » ne répondraient plus sur le téléphone",
