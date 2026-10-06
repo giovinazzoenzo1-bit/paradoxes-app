@@ -402,6 +402,7 @@ import {
   puissanceDeck,
   puissanceConseillee,
   baisseFilet,
+  elementMultiplier, competencesAvecSort, SORTS,
 } from '../../games/clicker/combatLogic';
 
 // NOTIFICATIONS RETIREES (03/09).
@@ -1546,12 +1547,135 @@ function ThemedProfileBackground({ theme, children }) {
   );
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  FICHE CRÉATURE « à la Clash of Clans » (06/10, maquette A de l'auteur)
+// ════════════════════════════════════════════════════════════════════
+// Le même cadre pour les 3 onglets (titre, créature sur le SOCLE de son élément,
+// médaillon de niveau) ; seule la partie droite change : Stats, Attaques, Runes.
+// Mesures : fractions de la maquette (design/a-integrer/12-fiche-creature).
+const FICHE_IMG = {
+  cadre: require('../../../assets/fiche/cadre.png'),
+  tuile: { g: require('../../../assets/fiche/tuile-g.png'), m: require('../../../assets/fiche/tuile-m.png'), d: require('../../../assets/fiche/tuile-d.png'), capG: 250, capD: 40, h: 261 },
+  onglet: { g: require('../../../assets/fiche/onglet-g.png'), m: require('../../../assets/fiche/onglet-m.png'), d: require('../../../assets/fiche/onglet-d.png'), capG: 48, capD: 48, h: 236 },
+  medaillon: require('../../../assets/exploration/medaillon.png'),
+  lauriers: require('../../../assets/combat/fin/lauriers.png'),
+  bouton: require('../../../assets/combat/fin/bouton-dore-vif.png'),
+  socles: {
+    Feu: require('../../../assets/fiche/socles/feu.png'),
+    Eau: require('../../../assets/fiche/socles/eau.png'),
+    Terre: require('../../../assets/fiche/socles/terre.png'),
+    Air: require('../../../assets/fiche/socles/air.png'),
+    Foudre: require('../../../assets/fiche/socles/foudre.png'),
+    'Lumière': require('../../../assets/fiche/socles/lumiere.png'),
+    'Ténèbres': require('../../../assets/fiche/socles/tenebres.png'),
+    Magie: require('../../../assets/fiche/socles/magie.png'),
+  },
+};
+const FICHE = {
+  titre: [0.26, 0.015, 0.74, 0.135], badge: [0.294, 0.035, 0.336, 0.11], nom: [0.36, 0.022, 0.64, 0.085], niveau: [0.36, 0.078, 0.64, 0.125],
+  etoiles: [0.6, 0.035, 0.71, 0.1], barre: [0.3, 0.145, 0.7, 0.178], fermer: [0.934, 0.02, 0.988, 0.116], griffes: [0.012, 0.025, 0.17, 0.105],
+  // Socle : les pièces Gemini sont plus ÉPAISSES (1,39 : 1) que celui de la maquette (2,1 : 1) → largeur de la
+  // maquette, aplati à 1,75 : 1 ; les pattes se posent sur son PLATEAU (30 % de sa hauteur depuis le haut).
+  cadre: [0.052, 0.203, 0.439, 0.949], socle: { cx: 0.2455, larg: 0.25, bas: 0.885, rapport: 1.75 }, plateau: 0.3, creatureH: 0.33,
+  cols: [[0.478, 0.707], [0.715, 0.947]], rangs: [[0.195, 0.33], [0.345, 0.48], [0.495, 0.63]],
+  onglets: [[0.48, 0.635], [0.638, 0.79], [0.793, 0.947]], ongletsY: [0.655, 0.74],
+  medaillon: [0.64, 0.755, 0.795, 0.98], evoluer: [0.8, 0.8, 0.955, 0.895], histoire: [0.48, 0.765, 0.632, 0.975],
+};
+const ICONE_ELEMENT = { Feu: '🔥', Eau: '💧', Terre: '⛰️', Air: '🌪️', Foudre: '⚡', 'Lumière': '☀️', 'Ténèbres': '🌙', Magie: '🔮' };
+const ICONE_ROLE = { soutien: '✨', tank: '🛡️', attaquant: '🗡️' };
+const majuscule = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : '');
+
+// Pièce en 3 TRANCHES : les bouts gardent leurs proportions (mise à l'échelle par la
+// hauteur), seul le milieu s'étire — la maquette est plus trapue que la pièce Gemini.
+function Tranches3({ piece, largeur, hauteur, opacite = 1, children }) {
+  const k = hauteur / piece.h;
+  return (
+    <View style={{ position: 'absolute', left: 0, top: 0, width: largeur, height: hauteur, flexDirection: 'row', opacity: opacite }}>
+      <Image source={piece.g} resizeMethod="scale" resizeMode="stretch" style={{ width: piece.capG * k, height: hauteur }} />
+      <Image source={piece.m} resizeMethod="scale" resizeMode="stretch" style={{ flex: 1, height: hauteur }} />
+      <Image source={piece.d} resizeMethod="scale" resizeMode="stretch" style={{ width: piece.capD * k, height: hauteur }} />
+      {children}
+    </View>
+  );
+}
+// Tuile : l'icône dans le carré sombre, puis le titre et une valeur ou une barre.
+function TuileFiche({ style, icone, titre, valeur = null, barre = null, couleurBarre = '#6bd36b', bonus = 0, police, onPress = null }) {
+  const h = style.height; const capW = (FICHE_IMG.tuile.capG * h) / FICHE_IMG.tuile.h;
+  const Contenant = onPress ? TouchableOpacity : View;
+  return (
+    <Contenant style={style} activeOpacity={0.85} onPress={onPress || undefined}>
+      <Tranches3 piece={FICHE_IMG.tuile} largeur={style.width} hauteur={h}>
+        <View style={{ position: 'absolute', left: capW * 0.14, top: h * 0.12, width: capW * 0.72, height: h * 0.76, alignItems: 'center', justifyContent: 'center' }}>
+          {typeof icone === 'string'
+            ? <Text style={{ fontSize: Math.round(h * 0.4), textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false }}>{icone}</Text>
+            : icone}
+        </View>
+        <View style={{ position: 'absolute', left: capW + h * 0.06, right: h * 0.16, top: h * 0.1, bottom: h * 0.1, justifyContent: 'center' }}>
+          <Text style={[styles.ficheTuileTitre, { fontSize: police }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+            {titre}{bonus > 0 ? <Text style={styles.ficheBonus}>{`  +${bonus}`}</Text> : null}
+          </Text>
+          {barre != null ? (
+            <View style={[styles.ficheBarre, { height: Math.max(6, Math.round(h * 0.17)), marginTop: h * 0.07 }]}>
+              <View style={[styles.ficheBarreRemplie, { width: `${Math.round(Math.max(0.04, Math.min(1, barre)) * 100)}%`, backgroundColor: couleurBarre }]} />
+            </View>
+          ) : valeur != null ? (
+            <Text style={[styles.ficheTuileValeur, { fontSize: police * 0.92 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{valeur}</Text>
+          ) : null}
+        </View>
+      </Tranches3>
+    </Contenant>
+  );
+}
+function OngletFiche({ style, texte, actif, onPress, police }) {
+  return (
+    <TouchableOpacity style={style} activeOpacity={0.85} onPress={onPress}>
+      <Tranches3 piece={FICHE_IMG.onglet} largeur={style.width} hauteur={style.height} opacite={actif ? 1 : 0.6}>
+        <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={[styles.ficheOnglet, { fontSize: police }, actif && styles.ficheOngletActif]} numberOfLines={1}>{texte}</Text>
+        </View>
+      </Tranches3>
+    </TouchableOpacity>
+  );
+}
+// Médaillon de niveau : le médaillon doré couronné de lauriers ; il PULSE (sur son
+// propre centre) quand la montée est possible.
+function MedaillonNiveau({ style, haut, cout, actif, onPress, police }) {
+  const t = Math.min(style.width, style.height);
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!actif) { pulse.setValue(0); return undefined; }
+    const l = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 780, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 780, useNativeDriver: true }),
+    ]));
+    l.start();
+    return () => l.stop();
+  }, [actif]);
+  const L = t * 1.12;
+  return (
+    <Animated.View style={[style, { transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }] }]}>
+      <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, width: style.width, height: style.height }} activeOpacity={0.85} onPress={onPress} disabled={!actif}>
+        <Image source={FICHE_IMG.lauriers} resizeMethod="scale" resizeMode="contain"
+          style={{ position: 'absolute', left: style.width / 2 - L / 2, top: style.height / 2 - (L * 640 / 708) / 2 + t * 0.03, width: L, height: L * 640 / 708, opacity: actif ? 1 : 0.55 }} />
+        <Image source={FICHE_IMG.medaillon} resizeMethod="scale" resizeMode="contain"
+          style={{ position: 'absolute', left: style.width / 2 - t * 0.4, top: style.height / 2 - t * 0.4, width: t * 0.8, height: t * 0.8, opacity: actif ? 1 : 0.55 }} />
+        <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={[styles.ficheMedTexte, { fontSize: police }]} numberOfLines={1}>{haut}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: t * 0.02 }}>
+            <Image source={GRIFFES_ICON} resizeMode="contain" style={{ width: police * 1.15, height: police * 1.15, marginRight: 4 }} />
+            <Text style={[styles.ficheMedTexte, { fontSize: police * 1.2 }]}>{cout}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack }) {
   const [runePickerSlot, setRunePickerSlot] = useState(null);
-  // Thème visuel lié à l'ÉLÉMENT de la créature (Feu, Eau...). `null`
-  // pour les éléments pas encore illustrés : l'écran garde alors son
-  // apparence actuelle, rien ne casse.
-  const theme = elementTheme(creature.element);
+  const [onglet, setOnglet] = useState('stats');
+  const { width: lw, height: lh } = useWindowDimensions();
+  const cadres = cadresExploration({ w: lw, h: lh });
 
   const stage = stageForLevel(owned.level);
   const display = creature.stages[stage];
@@ -1568,175 +1692,136 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
   const evoEligible = !evoMaxed && canEvolve(evolutionTier, owned.level);
   const evoCost = evoMaxed ? null : evolutionCost(evolutionTier);
   const nextEvoLevel = evoMaxed ? null : (evolutionTier === 0 ? 25 : 50);
-  // Barre de niveau : progression vers le palier d'évolution suivant,
-  // c'est le seul jalon qui donne du sens au niveau actuel.
+  // Barre de niveau : progression vers le palier d'évolution suivant.
   const levelSpanFrom = evolutionTier === 0 ? 1 : 25;
   const levelSpanTo = nextEvoLevel || owned.level;
   const levelRatio = evoMaxed
     ? 1
     : Math.max(0, Math.min(1, (owned.level - levelSpanFrom) / Math.max(1, levelSpanTo - levelSpanFrom)));
 
+  if (!cadres) return <View style={styles.ficheRacine} />;
+  const ui = cadres.ui; const ecran = cadres;
+  const R = (f, ax = 'centre', ay = 'haut') => {
+    const l = (f[2] - f[0]) * ui.l; const hh = (f[3] - f[1]) * ui.h;
+    const left = ax === 'gauche' ? f[0] * ui.l : ax === 'droite' ? ecran.w - (1 - f[0]) * ui.l : ecran.w / 2 + (f[0] - 0.5) * ui.l;
+    const top = ay === 'bas' ? ecran.h - (1 - f[1]) * ui.h : f[1] * ui.h;
+    return { position: 'absolute', left, top, width: l, height: hh };
+  };
+  const police = (k) => Math.max(8, Math.round(ui.h * k));
+  // Barres : les stats ACTUELLES face à celles du palier suivant.
+  const statsRef = combatStatsForCreatureTyped(creature, levelSpanTo, evolutionTier, equippedRunes);
+  const ELEMENTS = Object.keys(ICONE_ELEMENT);
+  const forts = ELEMENTS.filter((e) => elementMultiplier(creature.element, e) > 1);
+  const faibles = ELEMENTS.filter((e) => elementMultiplier(e, creature.element) > 1);
+  const tuile = (col, rang, larges = false) => {
+    const c0 = FICHE.cols[larges ? 0 : col]; const c1 = FICHE.cols[larges ? 1 : col];
+    return R([c0[0], FICHE.rangs[rang][0], c1[1], FICHE.rangs[rang][1]], 'droite');
+  };
+  const pTuile = police(0.037); // « Faible contre : » doit tenir même sans réduction automatique
+
+  // Attaques : dans l'ordre des cartes du combat (normales, sort, spécial).
+  const comps = competencesAvecSort(creature);
+  const ordonnees = [...comps.filter((k) => !k.sort && !k.special), ...comps.filter((k) => k.sort), ...comps.filter((k) => k.special)].slice(0, 3);
+
+  const cadre = R(FICHE.cadre, 'gauche');
+  const socleL = FICHE.socle.larg * ui.l; const socleH = socleL / FICHE.socle.rapport;
+  const socle = { position: 'absolute', left: FICHE.socle.cx * ui.l - socleL / 2, top: FICHE.socle.bas * ui.h - socleH, width: socleL, height: socleH };
+  const cadrage = (CADRAGE_CREATURES[creature.id] && CADRAGE_CREATURES[creature.id][stage]) || CADRAGE_DEFAUT;
+  const visH = cadrage[3] - cadrage[1]; const visW = cadrage[2] - cadrage[0];
+  const S = Math.min((FICHE.creatureH * ui.h) / visH, (cadre.width * 0.8) / visW);
+  const piedsTop = socle.top + socle.height * FICHE.plateau;
+  const creaLeft = socle.left + socle.width / 2 - ((cadrage[0] + cadrage[2]) / 2) * S;
+
+  const note = evoEligible ? '🌟 Prête à évoluer !' : evoMaxed ? 'Palier maximum atteint' : `Palier suivant : niveau ${nextEvoLevel}`;
+
   return (
     <>
-    <ThemedProfileBackground theme={theme}>
-      <View style={styles.profileTopBar}>
-        <BackButton onPress={onBack} />
-        <CurrencyCounter currency="griffes" amount={griffes} />
+    <View style={styles.ficheRacine}>
+      <Image source={HUB_DECOR} blurRadius={8} resizeMethod="scale" resizeMode="cover" style={styles.hubPleineImage} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(6,12,16,0.38)' }]} />
+
+      {/* ── En-tête : Griffes, titre (rareté, nom, niveau, étoiles), barre, fermer ── */}
+      <CurrencyCounter currency="griffes" amount={griffes} style={R(FICHE.griffes, 'gauche')} />
+      <Image source={APERCU_IMG.plaque} resizeMethod="scale" resizeMode="stretch" style={R(FICHE.titre)} />
+      <View style={[R(FICHE.badge), styles.ficheBadge, { borderColor: RARITY_COLOR[creature.rarity] }]}>
+        <Text style={[styles.ficheBadgeTexte, { color: RARITY_COLOR[creature.rarity], fontSize: police(0.036) }]}>{RARITY_BADGE_LETTER[creature.rarity]}</Text>
       </View>
-
-      <View style={styles.profileBody}>
-        {/* ---------- GAUCHE ---------- */}
-        <View style={styles.mlLeft}>
-          {/* Ordre inversé avec un thème : nom, barre et boutons EN HAUT,
-              créature EN BAS — elle se pose ainsi sur le piédestal de
-              pierre peint dans le décor, au lieu de flotter par-dessus. */}
-          <Text style={styles.mlName} numberOfLines={1}>{display.name}</Text>
-
-          <View style={styles.mlStars}>
-            <StarRow filled={evolutionTier + 1} size={14} />
-            <Text style={styles.mlLevelText}>
-              Niveau {owned.level}{!evoMaxed && `/${levelSpanTo}`}
-            </Text>
-          </View>
-
-          {/* ⚠️ Marge basse quand le bouton est THÉMÉ : celui-ci porte un
-              `marginTop: -30` pour coller son illustration, ce qui le
-              faisait recouvrir entièrement cette barre (9 dp de haut).
-              On rend la place que le bouton reprend. */}
-          <View style={[styles.mlLevelBarTrack, theme && styles.mlLevelBarTrackThemed]}>
-            <View style={[styles.mlLevelBarFill, { width: `${Math.round(levelRatio * 100)}%` }]} />
-          </View>
-
-          {/* Bouton de montée de niveau. Avec un thème, l'illustration
-              remplace le fond uni — elle était livrée mais n'avait
-              jamais été branchée. Marges calées sur ses ornements
-              latéraux (~13% de chaque côté) pour que le texte tombe
-              dans la zone lisse du centre. */}
-          <PulsingButton active={griffes >= levelCost}>
-          <TouchableOpacity
-            style={[styles.mlMainBtn, theme && styles.mlMainBtnThemed, griffes < levelCost && styles.actionBtnDisabledAdv]}
-            onPress={onLevelUp}
-            disabled={griffes < levelCost}
-            // Pas de transparence à l'appui sur un bouton thémé : il
-            // chevauche la barre d'XP (marge négative pour le remonter)
-            // et l'illustration a des zones ajourées. En devenant
-            // translucide, il laissait voir la barre bleue à travers —
-            // « l'ancienne barre en fond » signalée le 11/09. Le retour
-            // visuel est assuré par la pulsation et par le niveau qui
-            // change aussitôt.
-            activeOpacity={theme ? 1 : 0.7}
-          >
-            {theme && (
-              <Image source={theme.button} style={styles.mlMainBtnImg} resizeMode="stretch" />
-            )}
-            <Text style={[styles.mlMainBtnText, theme && styles.mlMainBtnTextThemed]}>NIVEAU {owned.level + 1} · {levelCost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /></Text>
-          </TouchableOpacity>
-          </PulsingButton>
-
-          <View style={[styles.mlPortraitZone, theme && styles.mlPortraitZoneThemed]}>
-            <CreatureArt creatureId={creature.id} stageIndex={stage} emoji={display.emoji} size={170} emojiStyle={styles.mlPortraitEmoji} />
-          </View>
-
-          {evoMaxed ? (
-            <Text style={styles.mlSubNote}>Palier maximum atteint</Text>
-          ) : evoEligible ? (
-            <TouchableOpacity
-              style={[styles.mlEvoBtn, griffes < evoCost && styles.actionBtnDisabledAdv]}
-              onPress={onEvolve}
-              disabled={griffes < evoCost}
-            >
-              <Text style={styles.mlEvoBtnText}>🌟 ÉVOLUER · {evoCost} <Image source={GRIFFES_ICON} style={styles.inlineCurrencyIcon} resizeMode="contain" /></Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.mlSubNote}>Niveau {nextEvoLevel} pour le palier suivant</Text>
-          )}
-        </View>
-
-        {/* ---------- DROITE ---------- */}
-        <View style={styles.mlRight}>
-          <View style={styles.mlRow}>
-            <ThemedBlock theme={theme} style={styles.mlStatsBox}>
-              <MlStat icon="⚔️" label="ATTAQUE" value={stats.attack} bonus={atkBonus} color={COLORS.bad} />
-              <MlStat icon="❤️" label="VIE" value={stats.hp} bonus={hpBonus} color={COLORS.good} />
-              {/* ENDURANCE retirée (11/09) : la stat ne pilote plus rien
-                  depuis que le mana l'a remplacée en combat, et elle
-                  n'est volontairement PAS remplacée par le mana — celui-ci
-                  est identique pour toutes les créatures (0 à 5), donc
-                  l'afficher dans une fiche n'apprendrait rien. */}
-              {/* VITESSE retirée (12/09) : elle occupait une ligne pour
-                  une information qui ne pilote plus rien de visible
-                  depuis la refonte du combat. */}
-            </ThemedBlock>
-
-            <ThemedBlock theme={theme} style={styles.mlRunesBox}>
-              <Text style={styles.mlBoxTitle}>RUNES</Text>
-              <View style={styles.mlRuneRow}>
-                {[0, 1, 2].map((i) => {
-                  const rune = equippedRunes[i];
-                  const def = rune ? RUNE_TYPES[rune.type] : null;
-                  return (
-                    <TouchableOpacity
-                      key={i}
-                      style={[styles.mlRuneSlot, !theme && def && { borderColor: def.color }, theme && styles.mlRuneSlotThemed]}
-                      onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(i))}
-                    >
-                      {/* Avec un thème, le socle illustré remplace le
-                          cercle uni. Posé en fond, le contenu (icône de
-                          rune, niveau) reste au-dessus. */}
-                      {theme && (
-                        <Image source={theme.runeSlot} style={styles.mlRuneSlotImg} resizeMode="contain" />
-                      )}
-                      {def ? (
-                        <Image source={def.art} style={styles.mlRuneArt} resizeMode="contain" />
-                      ) : (
-                        <Text style={styles.mlRuneEmoji}>＋</Text>
-                      )}
-                      {rune && <Text style={styles.mlRuneLevel}>{rune.level}</Text>}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </ThemedBlock>
-          </View>
-
-          <View style={styles.mlRow}>
-            <ThemedBlock theme={theme} style={styles.mlAttrBox}>
-              <Text style={styles.mlBoxTitle}>ATTRIBUT</Text>
-              <View style={styles.mlAttrRow}>
-                <View style={[styles.mlAttrChip, { borderColor: RARITY_COLOR[creature.rarity] }]}>
-                  <Text style={[styles.mlAttrChipText, { color: RARITY_COLOR[creature.rarity] }]}>
-                    {RARITY_BADGE_LETTER[creature.rarity]}
-                  </Text>
-                </View>
-                <View style={styles.mlAttrChip}>
-                  <Text style={styles.mlAttrChipText}>{creature.element}</Text>
-                </View>
-                <View style={styles.mlAttrChip}>
-                  <Text style={styles.mlAttrChipText}>{creature.combatType}</Text>
-                </View>
-              </View>
-            </ThemedBlock>
-
-            <ThemedBlock theme={theme} style={styles.mlSkillsBox}>
-              <Text style={styles.mlBoxTitle}>ATTAQUES</Text>
-              {creature.skills.slice(0, 2).map((skill) => (
-                <Text key={skill.id} style={styles.mlSkillLine} numberOfLines={1}>
-                  {skill.name} · {skill.damage} dgt
-                </Text>
-              ))}
-            </ThemedBlock>
-          </View>
-
-          {/* Description bornée : elle se tronque au lieu de pousser le
-              reste de la fiche hors de l'écran. */}
-          {/* Même composant que les 4 panneaux : le cadre étant hors
-              du flux, il n'y a plus de cas particulier à traiter ici. */}
-          <ThemedBlock theme={theme} style={styles.mlLoreBox}>
-            <Text style={styles.mlLoreText} numberOfLines={4}>{creature.lore}</Text>
-          </ThemedBlock>
-        </View>
+      <Text style={[R(FICHE.nom), styles.ficheNom, { fontSize: police(0.05) }]} numberOfLines={1}>{display.name}</Text>
+      <Text style={[R(FICHE.niveau), styles.ficheNiveau, { fontSize: police(0.034) }]} numberOfLines={1}>Niveau {owned.level}</Text>
+      <View style={[R(FICHE.etoiles), { alignItems: 'center', justifyContent: 'center' }]}>
+        <StarRow filled={evolutionTier + 1} size={police(0.045)} />
       </View>
-    </ThemedProfileBackground>
+      <View style={[R(FICHE.barre), styles.ficheBarreTitre]}>
+        <View style={[styles.ficheBarreTitreRemplie, { width: `${Math.round(Math.max(0.03, levelRatio) * 100)}%` }]} />
+        <Text style={[styles.ficheBarreTitreTexte, { fontSize: police(0.026) }]} numberOfLines={1}>
+          {evoMaxed ? `Niveau ${owned.level} · palier maximum` : `Niveau ${owned.level} / ${levelSpanTo}`}
+        </Text>
+      </View>
+      <TouchableOpacity style={[R(FICHE.fermer, 'droite'), styles.ficheFermer]} onPress={onBack} activeOpacity={0.8}>
+        <Text style={[styles.ficheFermerTexte, { fontSize: police(0.045) }]}>✕</Text>
+      </TouchableOpacity>
+
+      {/* ── Gauche : la créature sur le SOCLE de son élément, dans le cadre doré ── */}
+      {/* Fond RENTRÉ de 2,5 pour cent : sinon le bleu pâle dépassait à l'extérieur de la baguette dorée. */}
+      <View style={[styles.ficheInterieur, { position: 'absolute', left: cadre.left + cadre.width * 0.025, top: cadre.top + cadre.width * 0.025, width: cadre.width * 0.95, height: cadre.height - cadre.width * 0.05 }]}>
+        <Image source={HUB_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: cadre.width * 0.02, top: cadre.height * 0.02, width: cadre.width * 0.9, height: cadre.height * 0.78, opacity: 0.9 }} />
+      </View>
+      <Image source={FICHE_IMG.socles[creature.element] || FICHE_IMG.socles['Lumière']} resizeMethod="scale" resizeMode="stretch" style={socle} />
+      <View style={{ position: 'absolute', left: creaLeft, top: piedsTop - cadrage[3] * S, width: S, height: S, pointerEvents: 'none' }}>
+        <CreatureArt creatureId={creature.id} stageIndex={stage} emoji={display.emoji} size={S} emojiStyle={{ fontSize: S * 0.5, textAlign: 'center' }} />
+      </View>
+      <Image source={FICHE_IMG.cadre} resizeMethod="scale" resizeMode="stretch" style={[cadre, { pointerEvents: 'none' }]} />
+
+      {/* ── Droite : l'onglet choisi ── */}
+      {onglet === 'stats' && (
+        <>
+          <TuileFiche style={tuile(0, 0)} icone="❤️" titre={`Vie ${stats.hp}`} bonus={hpBonus} barre={stats.hp / Math.max(1, statsRef.hp)} couleurBarre="#6bd36b" police={pTuile} />
+          <TuileFiche style={tuile(1, 0)} icone={ICONE_ROLE[creature.combatType] || '🛡️'} titre="Rôle :" valeur={majuscule(creature.combatType)} police={pTuile} />
+          <TuileFiche style={tuile(0, 1)} icone="⚔️" titre={`Attaque ${stats.attack}`} bonus={atkBonus} barre={stats.attack / Math.max(1, statsRef.attack)} couleurBarre="#f39a3c" police={pTuile} />
+          <TuileFiche style={tuile(1, 1)} icone={forts.length ? ICONE_ELEMENT[forts[0]] : '—'} titre="Fort contre :" valeur={forts.length ? forts.join(', ') : 'Aucun'} police={pTuile} />
+          <TuileFiche style={tuile(0, 2)} icone={ICONE_ELEMENT[creature.element] || '✨'} titre="Élément :" valeur={creature.element} police={pTuile} />
+          <TuileFiche style={tuile(1, 2)} icone={faibles.length ? ICONE_ELEMENT[faibles[0]] : '—'} titre="Faible contre :" valeur={faibles.length ? faibles.join(', ') : 'Aucun'} police={pTuile} />
+        </>
+      )}
+      {onglet === 'attaques' && ordonnees.map((k, n) => (
+        <TuileFiche key={k.id || n} style={tuile(0, n, true)} police={pTuile}
+          icone={k.sort ? (k.icone || '✨') : k.special ? '🌟' : '⚔️'}
+          titre={`${k.sort ? 'SORT' : k.special ? 'SPÉCIAL' : 'NORMAL'} · ${k.name}`}
+          valeur={k.sort ? `${(SORTS[k.sort] && SORTS[k.sort].desc) || ''} · ${k.manaCost} mana` : k.special ? `${k.damage} dégâts · mana plein` : `${k.damage} dégâts`} />
+      ))}
+      {onglet === 'runes' && [0, 1, 2].map((n) => {
+        const rune = equippedRunes[n]; const def = rune ? RUNE_TYPES[rune.type] : null;
+        const eff = rune && def ? runeEffectText(rune.type, rune.level) : null;
+        return (
+          <TuileFiche key={n} style={tuile(0, n, true)} police={pTuile}
+            icone={def ? <Image source={def.art} resizeMethod="scale" resizeMode="contain" style={{ width: pTuile * 2.2, height: pTuile * 2.2 }} /> : '＋'}
+            titre={def ? `${def.name} · niveau ${rune.level}` : 'Emplacement libre'}
+            valeur={def ? `${eff.value} · touche pour retirer` : 'Touche pour équiper une rune'}
+            onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(n))} />
+        );
+      })}
+
+      {[['stats', 'Stats'], ['attaques', 'Attaques'], ['runes', 'Runes']].map(([cle, texte], n) => (
+        <OngletFiche key={cle} style={R([FICHE.onglets[n][0], FICHE.ongletsY[0], FICHE.onglets[n][1], FICHE.ongletsY[1]], 'droite')}
+          texte={texte} actif={onglet === cle} onPress={() => setOnglet(cle)} police={police(0.038)} />
+      ))}
+
+      {/* ── Bas : histoire, médaillon de niveau, évolution ── */}
+      <View style={[R(FICHE.histoire, 'droite'), { justifyContent: 'center' }]}>
+        <Text style={[styles.ficheNote, { fontSize: police(0.029) }]} numberOfLines={2}>{note}</Text>
+        <Text style={[styles.ficheHistoire, { fontSize: police(0.025) }]} numberOfLines={3}>{creature.lore}</Text>
+      </View>
+      <MedaillonNiveau style={R(FICHE.medaillon, 'droite')} haut={`NIVEAU ${owned.level + 1}`} cout={levelCost}
+        actif={griffes >= levelCost} onPress={onLevelUp} police={police(0.034)} />
+      {evoEligible && (
+        <TouchableOpacity style={R(FICHE.evoluer, 'droite')} onPress={onEvolve} disabled={griffes < evoCost} activeOpacity={0.85}>
+          <Image source={FICHE_IMG.bouton} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: R(FICHE.evoluer, 'droite').width, height: R(FICHE.evoluer, 'droite').height, opacity: griffes < evoCost ? 0.55 : 1 }} />
+          <View style={{ position: 'absolute', left: '25%', right: '12%', top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={[styles.ficheEvoTexte, { fontSize: police(0.028) }]} numberOfLines={1}>ÉVOLUER · {evoCost}</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+    </View>
 
     {runePickerSlot !== null && (
       <RunePickerOverlay
@@ -3307,6 +3392,29 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
 }
 
 const styles = StyleSheet.create({
+  // Fiche créature (06/10)
+  ficheRacine: { flex: 1, backgroundColor: '#0b1418', overflow: 'hidden' },
+  ficheBadge: { borderRadius: 999, borderWidth: 2.5, backgroundColor: 'rgba(40,26,14,0.9)', alignItems: 'center', justifyContent: 'center' },
+  ficheBadgeTexte: { fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false },
+  ficheNom: { color: '#fff3d6', fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  ficheNiveau: { color: '#f3dcae', fontWeight: '800', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  ficheBarreTitre: { borderRadius: 999, backgroundColor: 'rgba(24,14,6,0.88)', borderWidth: 1.5, borderColor: '#8a6430', overflow: 'hidden', justifyContent: 'center' },
+  ficheBarreTitreRemplie: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#f2c54b' },
+  ficheBarreTitreTexte: { color: '#ffffff', fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
+  ficheFermer: { borderRadius: 999, borderWidth: 3, borderColor: '#d6a64d', backgroundColor: '#6b4521', alignItems: 'center', justifyContent: 'center' },
+  ficheFermerTexte: { color: '#ffe9a8', fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false },
+  ficheInterieur: { backgroundColor: '#cfe7ee', overflow: 'hidden', borderRadius: 10 },
+  ficheTuileTitre: { color: '#fbe9c4', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  ficheTuileValeur: { color: '#fff3d6', fontWeight: '800', includeFontPadding: false, marginTop: 2, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  ficheBonus: { color: '#7cf07c', fontWeight: '900' },
+  ficheBarre: { borderRadius: 999, backgroundColor: 'rgba(24,14,6,0.9)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.6)', overflow: 'hidden' },
+  ficheBarreRemplie: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999 },
+  ficheOnglet: { color: '#e7cfa3', fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  ficheOngletActif: { color: '#fff3c4', textShadowColor: 'rgba(255,200,80,0.9)', textShadowRadius: 6 },
+  ficheMedTexte: { color: '#fff6dc', fontWeight: '900', textAlign: 'center', includeFontPadding: false, textShadowColor: 'rgba(60,30,0,0.95)', textShadowRadius: 4 },
+  ficheNote: { color: '#ffd96a', fontWeight: '900', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
+  ficheHistoire: { color: '#f1e2c4', fontStyle: 'italic', fontWeight: '600', marginTop: 4, includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
+  ficheEvoTexte: { color: '#4a2a08', fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false },
   // Hub « Ponton céleste » (03/10)
   hubRacine: { flex: 1, backgroundColor: '#0b1418', overflow: 'hidden' },
   hubPilule: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(14,22,24,0.88)', borderRadius: 999, borderWidth: 1.5, borderColor: '#b98b4a', paddingHorizontal: 6 },

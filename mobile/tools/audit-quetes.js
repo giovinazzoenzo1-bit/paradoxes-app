@@ -4427,3 +4427,31 @@ function auditApercuAuDessus() {
   return za > zh ? [] : [`l'aperçu (zIndex ${za}) est SOUS la barre de la carte (zIndex ${zh}) : RETOUR ne marche plus`];
 }
 module.exports.auditApercuAuDessus = auditApercuAuDessus;
+
+// ── Fiche créature « à la Clash of Clans » (06/10) ──────────────────────────
+// La refonte ne doit perdre AUCUNE action : monter de niveau (médaillon), évoluer,
+// équiper (emplacement vide → choix), retirer (rune équipée), fermer ; props
+// déclarées toutes passées ; un socle pour CHACUN des 8 éléments ; 3 onglets.
+function auditFicheCreature() {
+  const fs = require('fs'); const path = require('path');
+  const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  const pb = [];
+  const i = s.indexOf('function CreatureDetailScreen('); const f = s.slice(i, s.indexOf('\n}\n', i));
+  const exige = [
+    [/<MedaillonNiveau[\s\S]{0,260}?onPress=\{onLevelUp\}/, 'le médaillon ne monte plus de niveau (onLevelUp)'],
+    [/onPress=\{onEvolve\}/, "l'évolution n'est plus branchée (onEvolve)"],
+    [/onPress=\{\(\) => \(rune \? onUnequipRune\(rune\.id\) : setRunePickerSlot\(n\)\)\}/, 'retirer / équiper une rune débranché'],
+    [/onPick=\{\(runeId\) => \{\s*onEquipRune\(runeId\);/, "le choix d'une rune ne l'équipe plus (onEquipRune)"],
+    [/onPress=\{onBack\}/, 'la croix ne ferme plus la fiche (onBack)'],
+  ];
+  for (const [re, msg] of exige) if (!re.test(f)) pb.push(msg);
+  for (const e of ['Feu', 'Eau', 'Terre', 'Air', 'Foudre', 'Lumière', 'Ténèbres', 'Magie']) {
+    if (!new RegExp("    '?" + e + "'?: require\\('\\.\\./\\.\\./\\.\\./assets/fiche/socles/").test(s)) pb.push(`pas de socle pour l'élément ${e}`);
+  }
+  for (const o of ["'stats', 'Stats'", "'attaques', 'Attaques'", "'runes', 'Runes'"]) if (!f.includes(o)) pb.push(`onglet manquant : ${o}`);
+  const decl = (f.match(/function CreatureDetailScreen\(\{([^}]*)\}/) || [, ''])[1].split(',').map((x) => x.split('=')[0].trim()).filter(Boolean);
+  const appel = s.slice(s.indexOf('<CreatureDetailScreen'), s.indexOf('/>', s.indexOf('<CreatureDetailScreen')));
+  for (const p of decl) if (!new RegExp('\\b' + p + '=').test(appel)) pb.push(`prop « ${p} » déclarée mais jamais passée`);
+  return pb;
+}
+module.exports.auditFicheCreature = auditFicheCreature;

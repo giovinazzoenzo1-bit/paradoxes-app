@@ -2292,3 +2292,26 @@ la maquette si son entourage n'a pas sa couleur ; (2) bords rosés OPAQUES → l
 reprendre aussi (bande 2,5 px) ; (3) lueurs semi-transparentes LÉGITIMES (socles
 Magie, Ténèbres) → seul le VRAI magenta du bord ; (4) volutes semi-transparentes
 peintes SUR le magenta (socle Air) → retirer la composante magenta (G = (R+B)/2).
+
+
+## 06/10 — FICHE CRÉATURE « à la Clash of Clans » (publié)
+
+CreatureDetailScreen RÉÉCRIT (AdventureScreen) d'après la maquette A (élément
+discret) : FICHE (mesures en fractions, placement R() accroché aux bords comme le
+hub), FICHE_IMG (cadre de la maquette, tuile et onglet en 3 TRANCHES — bouts mis à
+l'échelle par la hauteur, milieu étiré : la maquette est plus trapue que les pièces
+Gemini —, médaillon + lauriers, bouton or vif, 8 socles). En-tête : Griffes, titre
+(badge de rareté, nom du stade, « Niveau N », étoiles d'évolution), barre « N /
+palier », croix. Gauche : fond bleu pâle RENTRÉ de 2,5 % (sinon il dépassait de la
+baguette), lueur douce (HUB_IMG.lueur), SOCLE de l'élément (largeur de la maquette,
+aplati à 1,75 : 1 car les socles Gemini sont plus épais), créature dont le BAS du
+cadrage (CADRAGE_CREATURES) se pose sur le plateau (30 % du socle). Onglets : Stats
+(Vie et Attaque avec bonus des runes et barre vers le palier, Rôle, Élément, Fort /
+Faible contre via elementMultiplier), Attaques (competencesAvecSort, ordre du combat
+: normal, sort avec coût en mana, spécial), Runes (3 emplacements : toucher = retirer
+ou ouvrir RunePickerOverlay). Bas : note du palier, histoire, MedaillonNiveau (sa
+PROPRE pulsation : PulsingButton grossit depuis son coin), bouton ÉVOLUER si éligible.
+Aucune action perdue (testé au banc : onglets, équiper / retirer une rune, niveau 3 → 4
+avec 2 Griffes, croix → hub). Polices : adjustsFontSizeToFit ne marche PAS au banc
+(web) → tailles réduites pour tenir partout. Contrôle auditFicheCreature + sabotage.
+87 contrôles, 110 sabotages. Reste : l'écran « Changer » (choix d'équipe) à restyler.

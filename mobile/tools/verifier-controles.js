@@ -241,6 +241,8 @@ const SABOTAGES = [
     remplace("coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'none' },", "coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30 },")],
   ['auditEcranFin', F.combatEcran, "le pack de Griffes de la défaite débranché par la refonte",
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
+  ['auditFicheCreature', F.aventure, "retirer une rune débranché : toucher une rune équipée ne la retire plus",
+    remplace('onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(n))}', 'onPress={() => (rune ? null : setRunePickerSlot(n))}')],
   ['auditApercuAuDessus', F.aventure, "l'aperçu redescend sous la barre de la carte : RETOUR avalé (bug du 05/10)",
     remplace("right: 0, bottom: 0, zIndex: 30, backgroundColor: '#0b1418', overflow: 'hidden' },", "right: 0, bottom: 0, zIndex: 15, backgroundColor: '#0b1418', overflow: 'hidden' },")],
   ['auditRuneArcane', F.combatEcran, "l'écran oublie la Rune d'Arcane : mana de départ fixe",
