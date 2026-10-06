@@ -2315,3 +2315,32 @@ Aucune action perdue (testé au banc : onglets, équiper / retirer une rune, niv
 avec 2 Griffes, croix → hub). Polices : adjustsFontSizeToFit ne marche PAS au banc
 (web) → tailles réduites pour tenir partout. Contrôle auditFicheCreature + sabotage.
 87 contrôles, 110 sabotages. Reste : l'écran « Changer » (choix d'équipe) à restyler.
+
+
+## 06/10 — Menus des créatures et page des Griffes (publié)
+
+Demandes de l'auteur. (1) « CHANGER » = DeckPicker.js, UN composant utilisé en
+PORTRAIT (DECK de la Collection, ClickerScreen) et en PAYSAGE (hub de l'Exploration) :
+refait avec les pièces de la fiche (planche de titre, croix dorée, cartes = créature
+sur le SOCLE de son élément dans le cadre doré, la créature ACTUELLE entourée d'or,
+celles « déjà en jeu » estompées, onglet « Vider cet emplacement ») ; 3 colonnes en
+portrait, 6 en paysage (useWindowDimensions) ; zIndex 50. (2) COLLECTION → NOUVELLE
+FICHE : un seul aiguillage dans ClickerScreen (effet : view 'collection' + créature
+choisie → ficheAventure + view 'adventure') ; AdventureScreen reçoit ficheInitiale
+(detailCreatureId de départ) et onFermerFicheInitiale (la croix ramène à la
+Collection) ; l'Exploration bascule seule en paysage puis en portrait. Sert aussi
+après une INVOCATION. L'ancienne fiche verticale (CreatureDetail : attaques + histoire,
+aucune action) n'est plus affichée. Piège évité : dépendances de l'effet SANS
+`owned` (déclaré plus bas → lu avant déclaration) → réf ownedPourFicheRef.
+(3) PAGE « OBTENIR DES GRIFFES » (BoutiqueGriffes) à la place de la boîte de dialogue
+du système : 2 cartes (pack en pièces, taille selon l'Ascension ; pack en Diamants),
+achats qui renvoient vrai / faux (message dans la page). Posée sur les 4 branches
+de l'Exploration (fiche, carte des chapitres — dont combat et défaite —, runes, hub)
+par une enveloppe PERMANENTE avecBoutique (si elle n'apparaissait qu'à l'ouverture,
+l'écran dessous serait RECRÉÉ : combat perdu). « + » ajouté sur la fiche. Pas de
+<Modal> (aucune dans le projet ; sur iPhone elle repasse en portrait sans réglage).
+Banc : menu.jsx?toutes=1 (clé de dev unlockAll). Testés : Changer (2 sens, choisir
+ferme), Collection → fiche Pyrosile → croix → Collection, page des Griffes (2 achats :
+messages « Pas assez… », croix). Sabotage « point 5 » d'auditDefaite PÉRIMÉ (il visait
+l'ancienne boîte de dialogue, indentée de 12 espaces) → recalé sur le nouvel achat.
+Contrôle auditMenusCreatures + sabotage. 88 contrôles, 111 sabotages.

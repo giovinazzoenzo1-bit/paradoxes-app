@@ -196,7 +196,8 @@ const SABOTAGES = [
   ['auditDefaite', F.aventure, "l'Élixir de l'écran de défaite débranché du sous-composant (plantage)",
     remplace('onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir, defaitesDeSuite = {}, onDefaite }) {', 'onOpenCreature, elixirCombats = 0, onElixirUsed, defaitesDeSuite = {}, onDefaite }) {')],
   ['auditDefaite', F.aventure, "l'achat de Griffes aux diamants ne se ressent plus (point 5)",
-    remplace('            annoncerGriffes(GRIFFES_PACK);\n', '')],
+    // 06/10 : recalé sur le NOUVEL achat (la boîte de dialogue des Griffes a été remplacée par une page).
+    remplace('    annoncerGriffes(GRIFFES_PACK);\n    return true;', '    return true;')],
   ['auditPacks', F.ecran, "le compteur de packs n'est plus remis à zéro à l'Ascension (packs hors de prix pour toujours)",
     remplace('            setGriffesCoinBuys(0);\n', '')],
   ['auditPacks', F.clicker, 'la taille du pack ne grandit plus avec l\'Ascension',
@@ -241,6 +242,8 @@ const SABOTAGES = [
     remplace("coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'none' },", "coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30 },")],
   ['auditEcranFin', F.combatEcran, "le pack de Griffes de la défaite débranché par la refonte",
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
+  ['auditMenusCreatures', F.aventure, "page des Griffes retirée de l'écran des Runes : son « + » n'ouvrirait plus rien",
+    remplace('    return avecBoutique(\n      <RunesScreen\n', '    return (\n      <RunesScreen\n')],
   ['auditFicheCreature', F.aventure, "retirer une rune débranché : toucher une rune équipée ne la retire plus",
     remplace('onPress={() => (rune ? onUnequipRune(rune.id) : setRunePickerSlot(n))}', 'onPress={() => (rune ? null : setRunePickerSlot(n))}')],
   ['auditApercuAuDessus', F.aventure, "l'aperçu redescend sous la barre de la carte : RETOUR avalé (bug du 05/10)",

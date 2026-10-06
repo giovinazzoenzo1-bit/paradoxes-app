@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditMenusCreatures', "« Changer » (2 orientations), Collection → nouvelle fiche, page des Griffes sur les 4 écrans de l'Exploration (06/10)"],
   ['auditFicheCreature', "fiche créature : aucune action perdue (niveau, évolution, runes, fermer), props passées, 8 socles, 3 onglets (06/10)"],
   ['auditApercuAuDessus', "aperçu de niveau au-dessus de la barre de la carte (sinon RETOUR ne marche pas, 05/10)"],
   ['auditEcranFin', "écran de fin de combat : aucune action perdue (niveau suivant, monter, pack, élixir, vidéo, carte), props passées (05/10)"],

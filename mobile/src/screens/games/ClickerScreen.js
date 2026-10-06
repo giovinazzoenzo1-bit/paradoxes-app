@@ -682,6 +682,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Shop quittait l'appli au lieu de revenir en arrière.
   const panHandlers = useBackGesture(view !== 'tap' ? () => setView('tap') : onBack);
   const [selectedCreature, setSelectedCreature] = useState(null);
+  // 06/10 (l'auteur) : la fiche d'une créature, c'est la NOUVELLE fiche (Exploration, en paysage).
+  // Toucher une créature de la Collection — ou en invoquer une — y mène ; sa croix ramène à la
+  // Collection. (Dépendances SANS `owned` : déclaré plus bas, il serait lu avant sa déclaration.)
+  const [ficheAventure, setFicheAventure] = useState(null);
+  const ownedPourFicheRef = useRef([]);
+  useEffect(() => {
+    if (view === 'collection' && selectedCreature && ownedPourFicheRef.current.some((o) => o.id === selectedCreature)) {
+      setFicheAventure(selectedCreature);
+      setSelectedCreature(null);
+      setView('adventure');
+    }
+  }, [view, selectedCreature]);
   // « +X » des taps : calque AUTONOME (03/10) — voir CoucheEffetsTap.
   const coucheEffetsRef = useRef(null);
   const [spawnedCreature, setSpawnedCreature] = useState(null); // {creature, expiresAt, leftPct, topPct}
@@ -3583,9 +3595,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     );
   }
 
+  ownedPourFicheRef.current = owned;
   if (view === 'adventure') {
     return (
       <AdventureScreen
+        ficheInitiale={ficheAventure}
+        onFermerFicheInitiale={() => { setFicheAventure(null); setView('collection'); }}
         onSpendDiamonds={(cost) => spendSharedCoins(cost)}
         onAddDiamonds={(n) => addSharedCoins(n)}
         // Dépense des PIÈCES du Clicker pour acheter des Griffes : c'est
@@ -4171,19 +4186,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           onOuvrirEmplacement={setPickerSlot}
         />
       )}
-      {/* Fiche d'une créature de l'album : AU-DESSUS de tout (la barre du haut,
-          affichée sur la Collection, passerait sinon devant elle). */}
-      {view === 'collection' && selectedCreature && owned.some((o) => o.id === selectedCreature) && (
-        <View style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10 }}>
-          <CreatureDetail
-            creature={CREATURES.find((c) => c.id === selectedCreature)}
-            owned={owned.find((o) => o.id === selectedCreature)}
-            coins={coins}
-            onClose={() => setSelectedCreature(null)}
-            pendingDiscount={pendingDiscount}
-          />
-        </View>
-      )}
+      {/* (06/10) L'ancienne fiche verticale n'est plus ouverte : une créature choisie ici
+          ouvre la NOUVELLE fiche de l'Exploration (voir ficheAventure). */}
 
       {calendarOpen && (
         <DailyCalendarModal

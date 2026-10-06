@@ -551,7 +551,7 @@ function puissanceDuDeckAventure(deck, owned) {
   }
 }
 
-export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, freeRuneAvailable = false, onFreeRuneUsed, diamonds = 0, elixirCombats = 0, onElixirUsed, onBuyElixir }) {
+export default function AdventureScreen({ ficheInitiale = null, onFermerFicheInitiale = null, owned, deck, onBack, onEvolveCreature, onLevelUpCreature, onAssignDeck, onClearDeckSlot, onSpendDiamonds, onAddDiamonds, onSpendCoins, griffesCoinBuys = 0, ascensionCount = 0, onGriffesCoinBought, freeRuneAvailable = false, onFreeRuneUsed, diamonds = 0, elixirCombats = 0, onElixirUsed, onBuyElixir }) {
   // Largeur réelle de la fenêtre (écran en paysage) — nécessaire pour
   // dimensionner parchmentBg en PIXELS plutôt qu'en %. Un % de largeur
   // combiné à aspectRatio sur un élément position:'absolute' se rend
@@ -617,7 +617,8 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   }, []);
 
   const { trackEvent, trackMax } = useDaily();
-  const [detailCreatureId, setDetailCreatureId] = useState(null);
+  const [detailCreatureId, setDetailCreatureId] = useState(ficheInitiale);
+  const [boutiqueGriffes, setBoutiqueGriffes] = useState(false);
   const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
   const [runesOpen, setRunesOpen] = useState(false);
@@ -791,19 +792,43 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // le même effort à tous les stades.
   const coutGriffesEnPieces = griffesCoinCost(griffesCoinBuys, ascensionCount);
 
+  // Renvoie vrai / faux : la page « Obtenir des Griffes » affiche elle-même le message (06/10).
   const buyGriffesWithCoins = async () => {
-    if (!onSpendCoins) return;
+    if (!onSpendCoins) return false;
     const ok = await onSpendCoins(coutGriffesEnPieces);
-    if (!ok) {
-      Alert.alert('Pièces insuffisantes', `Il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`);
-      return;
-    }
+    if (!ok) return false;
     // Taille du pack selon l'Ascension (26/09) : 100 + 75 par Ascension.
     const taille = taillePackGriffes(ascensionCount);
     setGriffes((g) => g + taille);
     annoncerGriffes(taille);
     if (onGriffesCoinBought) onGriffesCoinBought();
+    return true;
   };
+  const buyGriffesDiamonds = async () => {
+    if (!onSpendDiamonds) return false;
+    const ok = await onSpendDiamonds(GRIFFES_DIAMOND_COST);
+    if (!ok) return false;
+    setGriffes((g) => g + GRIFFES_PACK);
+    annoncerGriffes(GRIFFES_PACK);
+    return true;
+  };
+  // Le « + » des Griffes (hub, carte, runes, fiche, défaite) ouvre la PAGE (06/10 ; avant : une
+  // boîte de dialogue du système).
+  const buyGriffesWithDiamonds = () => setBoutiqueGriffes(true);
+  // La page est posée par-dessus CHAQUE branche ; l'enveloppe est PERMANENTE : si elle
+  // n'apparaissait qu'à l'ouverture, l'écran dessous serait RECRÉÉ (un combat en cours perdu).
+  const avecBoutique = (contenu) => (
+    <View style={{ flex: 1 }}>
+      {contenu}
+      {boutiqueGriffes && (
+        <BoutiqueGriffes griffes={griffes} diamants={diamonds} onFermer={() => setBoutiqueGriffes(false)}
+          offres={[
+            { cle: 'pieces', icone: '💰', quantite: taillePackGriffes(ascensionCount), prix: `${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces`, manque: `Pas assez de pièces : il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`, onAcheter: buyGriffesWithCoins },
+            { cle: 'diamants', icone: '💎', quantite: GRIFFES_PACK, prix: `${GRIFFES_DIAMOND_COST} Diamants`, manque: `Pas assez de Diamants : il t'en faut ${GRIFFES_DIAMOND_COST}.`, onAcheter: buyGriffesDiamonds },
+          ]} />
+      )}
+    </View>
+  );
 
   // Point 5 (26/09) : un achat doit se RESSENTIR tout de suite — on dit ce
   // que les Griffes permettent, sur la créature du deck la plus basse.
@@ -849,32 +874,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         : `Tu as ${total} Griffes.`);
     } catch (e) { /* message optionnel : jamais bloquant */ }
   };
-  const buyGriffesWithDiamonds = () => {
-    if (!onSpendDiamonds) return;
-    Alert.alert(
-      'Obtenir des Griffes',
-      `💎 ${GRIFFES_DIAMOND_COST} Diamants → ${GRIFFES_PACK} 🐾\n`
-      + `💰 ${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces → ${taillePackGriffes(ascensionCount)} 🐾`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: `💰 ${taillePackGriffes(ascensionCount)} Griffes`, onPress: buyGriffesWithCoins },
-        {
-          text: `💎 ${GRIFFES_PACK} Griffes`,
-          onPress: async () => {
-            const ok = await onSpendDiamonds(GRIFFES_DIAMOND_COST);
-            if (!ok) {
-              Alert.alert('Diamants insuffisants', `Il t'en faut ${GRIFFES_DIAMOND_COST}.`);
-              return;
-            }
-            // Crédit DIRECT : on est déjà dans l'écran qui détient les
-            // Griffes, pas besoin de passer par la clé en attente.
-            setGriffes((g) => g + GRIFFES_PACK);
-            annoncerGriffes(GRIFFES_PACK);
-          },
-        },
-      ]
-    );
-  };
+
 
   const buyEnergyWithDiamonds = async () => {
     if (!onSpendDiamonds) return;
@@ -1148,7 +1148,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // comme à l'étape 2) — retour anticipé, même schéma que celui utilisé
   // dans ClickerScreen pour la navigation entre écrans complets.
   if (detailCreatureId) {
-    return (
+    return avecBoutique(
       <CreatureDetailScreen
         creature={CREATURES.find((c) => c.id === detailCreatureId)}
         owned={ownedMap[detailCreatureId]}
@@ -1158,14 +1158,15 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
         ownedRunes={ownedRunes}
         onEquipRune={(runeId) => equipRune(runeId, detailCreatureId)}
         onUnequipRune={unequipRune}
-        onBack={() => setDetailCreatureId(null)}
+        onBack={() => { if (ficheInitiale && onFermerFicheInitiale) { onFermerFicheInitiale(); return; } setDetailCreatureId(null); }}
+        onPlusGriffes={() => setBoutiqueGriffes(true)}
       />
     );
   }
 
   // Carte des chapitres — même schéma de retour anticipé.
   if (chapterMapOpen) {
-    return (
+    return avecBoutique(
       <ChapterMapScreen
         defaitesDeSuite={defaitesDeSuite}
         onDefaite={noterDefaite}
@@ -1221,7 +1222,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
 
   // Runes — même schéma de retour anticipé.
   if (runesOpen) {
-    return (
+    return avecBoutique(
       <RunesScreen
         griffes={griffes}
         ownedRunes={ownedRunes}
@@ -1258,7 +1259,7 @@ export default function AdventureScreen({ owned, deck, onBack, onEvolveCreature,
   // Même LARGEUR (celle de la maquette : elle règle l'espacement), même centre, hauteur à la proportion.
   const auRapportL = (r, rapport) => { const hh = r.width / rapport; return { ...r, top: r.top + (r.height - hh) / 2, height: hh }; };
   const couleurPuissance = puissanceMenu ? (puissanceMenu.couleur === 'vert' ? '#3DDC84' : puissanceMenu.couleur === 'orange' ? '#FFB74D' : '#FF6B6B') : '#eafbe8';
-  return (
+  return avecBoutique(
     <View style={styles.hubRacine} onLayout={(e) => setBgSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
       {fond.l > 0 && (
         <>
@@ -1671,7 +1672,71 @@ function MedaillonNiveau({ style, haut, cout, actif, onPress, police }) {
   );
 }
 
-function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack }) {
+// ════════════════════════════════════════════════════════════════════
+//  PAGE « OBTENIR DES GRIFFES » (06/10, demande de l'auteur)
+// ════════════════════════════════════════════════════════════════════
+// Remplace la boîte de dialogue du système. Mêmes calculs qu'avant (pack en pièces :
+// taille selon l'Ascension, prix qui monte à chaque achat ; pack en Diamants), avec les
+// pièces de la fiche créature (cadre doré, tuiles, planche de titre, croix dorée).
+const BOUTIQUE = {
+  titre: [0.3, 0.035, 0.7, 0.165], texteTitre: [0.34, 0.06, 0.66, 0.14], fermer: [0.934, 0.02, 0.988, 0.116], griffes: [0.012, 0.025, 0.17, 0.105],
+  cartes: [[0.16, 0.2, 0.48, 0.905], [0.52, 0.2, 0.84, 0.905]], message: [0.16, 0.915, 0.84, 0.985],
+};
+function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
+  const { width: lw, height: lh } = useWindowDimensions();
+  const cadres = cadresExploration({ w: lw, h: lh });
+  const [message, setMessage] = useState(null);
+  const [enCours, setEnCours] = useState(false);
+  if (!cadres) return null;
+  const ui = cadres.ui; const ecran = cadres;
+  const R = (f, ax = 'centre') => {
+    const l = (f[2] - f[0]) * ui.l; const hh = (f[3] - f[1]) * ui.h;
+    const left = ax === 'gauche' ? f[0] * ui.l : ax === 'droite' ? ecran.w - (1 - f[0]) * ui.l : ecran.w / 2 + (f[0] - 0.5) * ui.l;
+    return { position: 'absolute', left, top: f[1] * ui.h, width: l, height: hh };
+  };
+  const police = (k) => Math.max(8, Math.round(ui.h * k));
+  const acheter = async (o) => {
+    if (enCours) return;
+    setEnCours(true);
+    const ok = await o.onAcheter();
+    setEnCours(false);
+    setMessage(ok ? { texte: `+${o.quantite} Griffes !`, ok: true } : { texte: o.manque, ok: false });
+  };
+  return (
+    <View style={styles.boutiqueRacine}>
+      {/* Toucher le fond ferme la page. */}
+      <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, width: ecran.w, height: ecran.h }} activeOpacity={1} onPress={onFermer} />
+      <CurrencyCounter currency="griffes" amount={griffes} style={R(BOUTIQUE.griffes, 'gauche')} />
+      <Image source={APERCU_IMG.plaque} resizeMethod="scale" resizeMode="stretch" style={R(BOUTIQUE.titre)} />
+      <Text style={[R(BOUTIQUE.texteTitre), styles.ficheNom, { fontSize: police(0.048) }]} numberOfLines={1}>Obtenir des Griffes</Text>
+      <TouchableOpacity style={[R(BOUTIQUE.fermer, 'droite'), styles.ficheFermer]} onPress={onFermer} activeOpacity={0.8}>
+        <Text style={[styles.ficheFermerTexte, { fontSize: police(0.045) }]}>✕</Text>
+      </TouchableOpacity>
+      {offres.map((o, n) => {
+        const c = R(BOUTIQUE.cartes[n]);
+        const ic = c.height * 0.36;
+        return (
+          <View key={o.cle} style={c}>
+            <View style={[styles.ficheInterieur, { position: 'absolute', left: c.width * 0.025, top: c.width * 0.025, width: c.width * 0.95, height: c.height - c.width * 0.05 }]}>
+              <Image source={HUB_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: c.width * 0.95, height: c.height * 0.7, opacity: 0.95 }} />
+            </View>
+            <Image source={GRIFFES_ICON} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', left: c.width / 2 - ic / 2, top: c.height * 0.1, width: ic, height: ic }} />
+            <Text style={[styles.boutiqueQuantite, { position: 'absolute', left: 0, top: c.height * 0.48, width: c.width, fontSize: police(0.075) }]} numberOfLines={1}>+{o.quantite}</Text>
+            <Text style={[styles.boutiqueUnite, { position: 'absolute', left: 0, top: c.height * 0.6, width: c.width, fontSize: police(0.034) }]} numberOfLines={1}>Griffes</Text>
+            <TuileFiche style={{ position: 'absolute', left: c.width * 0.07, top: c.height * 0.73, width: c.width * 0.86, height: c.height * 0.2 }}
+              icone={o.icone} titre={o.prix} valeur={enCours ? '…' : 'Acheter'} police={police(0.036)} onPress={() => acheter(o)} />
+            <Image source={FICHE_IMG.cadre} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: c.width, height: c.height, pointerEvents: 'none' }} />
+          </View>
+        );
+      })}
+      {message && (
+        <Text style={[R(BOUTIQUE.message), styles.boutiqueMessage, { fontSize: police(0.034), color: message.ok ? '#8df08d' : '#ff8a7a' }]} numberOfLines={1}>{message.texte}</Text>
+      )}
+    </View>
+  );
+}
+
+function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack, onPlusGriffes }) {
   const [runePickerSlot, setRunePickerSlot] = useState(null);
   const [onglet, setOnglet] = useState('stats');
   const { width: lw, height: lh } = useWindowDimensions();
@@ -1741,7 +1806,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
       <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(6,12,16,0.38)' }]} />
 
       {/* ── En-tête : Griffes, titre (rareté, nom, niveau, étoiles), barre, fermer ── */}
-      <CurrencyCounter currency="griffes" amount={griffes} style={R(FICHE.griffes, 'gauche')} />
+      <CurrencyCounter currency="griffes" amount={griffes} onPlus={onPlusGriffes} style={R(FICHE.griffes, 'gauche')} />
       <Image source={APERCU_IMG.plaque} resizeMethod="scale" resizeMode="stretch" style={R(FICHE.titre)} />
       <View style={[R(FICHE.badge), styles.ficheBadge, { borderColor: RARITY_COLOR[creature.rarity] }]}>
         <Text style={[styles.ficheBadgeTexte, { color: RARITY_COLOR[creature.rarity], fontSize: police(0.036) }]}>{RARITY_BADGE_LETTER[creature.rarity]}</Text>
@@ -3393,6 +3458,10 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
 
 const styles = StyleSheet.create({
   // Fiche créature (06/10)
+  boutiqueRacine: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 100, backgroundColor: 'rgba(4,8,12,0.8)' },
+  boutiqueQuantite: { color: '#ffd96a', fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false, textShadowColor: 'rgba(60,30,0,0.95)', textShadowRadius: 5 },
+  boutiqueUnite: { color: '#5a3a14', fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false },
+  boutiqueMessage: { fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false, textShadowColor: 'rgba(0,0,0,0.9)', textShadowRadius: 3 },
   ficheRacine: { flex: 1, backgroundColor: '#0b1418', overflow: 'hidden' },
   ficheBadge: { borderRadius: 999, borderWidth: 2.5, backgroundColor: 'rgba(40,26,14,0.9)', alignItems: 'center', justifyContent: 'center' },
   ficheBadgeTexte: { fontWeight: '900', textAlign: 'center', alignSelf: 'stretch', includeFontPadding: false },

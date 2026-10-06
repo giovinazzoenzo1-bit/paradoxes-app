@@ -4455,3 +4455,31 @@ function auditFicheCreature() {
   return pb;
 }
 module.exports.auditFicheCreature = auditFicheCreature;
+
+// ── Menus des créatures et page des Griffes (06/10, demandes de l'auteur) ──
+// « Changer » (DeckPicker, portrait ET paysage) garde ses 3 actions et passe AU-DESSUS
+// de toute barre ; la Collection mène à la NOUVELLE fiche (Exploration) et ne réaffiche
+// plus l'ancienne ; la page « Obtenir des Griffes » est posée sur les 4 branches de
+// l'Exploration (sinon le « + » d'un écran n'ouvrirait rien) avec ses 2 achats.
+function auditMenusCreatures() {
+  const fs = require('fs'); const path = require('path');
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '../src/screens/games/' + f), 'utf8');
+  const d = lire('DeckPicker.js'); const c = lire('ClickerScreen.js'); const a = lire('AdventureScreen.js');
+  const pb = [];
+  if (!/onPress=\{\(\) => onPick\(o\.id\)\}/.test(d)) pb.push('Changer : choisir une créature débranché');
+  if (!/onPress=\{onClear\}/.test(d)) pb.push('Changer : vider l\'emplacement débranché');
+  if (!/onPress=\{onClose\}/.test(d)) pb.push('Changer : la croix ne ferme plus');
+  const z = (d.match(/overlay: \{[^}]*zIndex: (\d+)/) || [, '0'])[1];
+  if (Number(z) < 50) pb.push(`Changer : zIndex ${z} < 50 (une barre pourrait avaler ses touchers)`);
+  if (/view === 'collection' && selectedCreature && owned\.some[\s\S]{0,200}<CreatureDetail/.test(c)) pb.push("Collection : l'ANCIENNE fiche verticale est de nouveau affichée");
+  if (!/setFicheAventure\(selectedCreature\);\s*setSelectedCreature\(null\);\s*setView\('adventure'\);/.test(c)) pb.push('Collection : une créature choisie ne mène plus à la nouvelle fiche');
+  if (!/ficheInitiale=\{ficheAventure\}/.test(c) || !/onFermerFicheInitiale=\{\(\) => \{ setFicheAventure\(null\); setView\('collection'\); \}\}/.test(c)) pb.push('Collection : la fiche ne revient plus à la Collection');
+  for (const ecran of ['CreatureDetailScreen', 'ChapterMapScreen', 'RunesScreen']) {
+    if (!new RegExp('return avecBoutique\\(\\s*<' + ecran).test(a)) pb.push(`page des Griffes absente au-dessus de ${ecran}`);
+  }
+  if (!/return avecBoutique\(\s*<View style=\{styles\.hubRacine\}/.test(a)) pb.push('page des Griffes absente au-dessus du hub');
+  if (!/const buyGriffesWithDiamonds = \(\) => setBoutiqueGriffes\(true\);/.test(a)) pb.push('le « + » des Griffes n\'ouvre plus la page');
+  if (!/onAcheter: buyGriffesWithCoins/.test(a) || !/onAcheter: buyGriffesDiamonds/.test(a)) pb.push('un achat de la page des Griffes est débranché');
+  return pb;
+}
+module.exports.auditMenusCreatures = auditMenusCreatures;
