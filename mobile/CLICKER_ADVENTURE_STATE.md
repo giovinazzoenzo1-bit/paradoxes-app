@@ -2272,3 +2272,23 @@ Avertissement relevé dans les annotations : « ubuntu-latest » → Ubuntu 26 l
 (leur système actuel ; même règle qu'eas-cli figé le 18/09).
 RÈGLE : un mail d'échec → lister les exécutions par l'API AVANT tout diagnostic
 (quel robot ? quel commit ? quelle étape ? annotations).
+
+
+## 06/10 — Fiche créature : pièces découpées (non branchées encore)
+
+Concept A (élément discret, concepts/1791226761508.jpg). Pièces (ordre INVERSÉ à
+l'arrivée) → mobile/assets/fiche/ : socles/{feu,eau,terre,air,foudre,lumiere,
+tenebres,magie}.png (grille 4 × 2 : plus grande composante par case, noms anglais
+retirés), tuile.png, onglet.png, cadre.png.
+⚠️ CADRE : Gemini « embellissait » le cadre ; prompt de RETOUCHE (« garde ce cadre,
+efface le reste ») → forme juste MAIS or tirant au rose (G −17) et mise en page
+légèrement déplacée (12 % de recouvrement : pas superposable). Le détourage magenta
+d'un cadre FIN rosit tout (presque tous ses pixels sont des bords). SOLUTION : cadre
+découpé dans la MAQUETTE D'ORIGINE (fond = forêt sombre dehors, bleu pâle dedans,
+aucun magenta) : côtés = colonnes/lignes portant un trait doré CONTINU (≥ 60 % du
+plus long ; les bords des tuiles, courts, ne comptent pas), bande de 26 px,
+transparence = score « doré » (R+G)/2 − B. RÈGLES : (1) pièce fine → découper dans
+la maquette si son entourage n'a pas sa couleur ; (2) bords rosés OPAQUES → les
+reprendre aussi (bande 2,5 px) ; (3) lueurs semi-transparentes LÉGITIMES (socles
+Magie, Ténèbres) → seul le VRAI magenta du bord ; (4) volutes semi-transparentes
+peintes SUR le magenta (socle Air) → retirer la composante magenta (G = (R+B)/2).
