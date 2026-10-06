@@ -2257,3 +2257,18 @@ gagner » ; l'ancien = la carte en automne) : vallée de printemps en fête (Gem
 arc-en-ciel, fanions, fleurs, château, centre dégagé) → assets/combat/fin/fond-victoire.jpg
 (1376 × 768, 153 Ko), FIN_IMG.fondVictoire, ImageBackground en VICTOIRE seulement
 (resizeMethod « scale ») ; la défaite garde VICTORY_BG + voile froid (validée).
+
+
+## 06/10 — Mail « run failed » : le site GitHub PAGES, pas la publication de l'appli
+
+Vérifié par l'API GitHub (api.github.com/…/actions/runs, /jobs, /check-runs/…/annotations,
+ACCESSIBLES depuis le bac à sable avec le jeton, contrairement aux journaux complets) :
+toutes les exécutions de « Publier l'appli mobile (EAS Update) » ont RÉUSSI ; l'échec
+du 05/10 à 19:51 est « pages build and deployment » sur un envoi de fichiers : « The
+job was not acquired by Runner of type hosted even after multiple attempts » = panne
+passagère de GitHub (aucune machine) ; l'exécution suivante a réussi. Rien à corriger.
+Avertissement relevé dans les annotations : « ubuntu-latest » → Ubuntu 26 le
+19/10/2026 → les 2 robots (mobile-publish, build-apk) FIGÉS sur ubuntu-24.04
+(leur système actuel ; même règle qu'eas-cli figé le 18/09).
+RÈGLE : un mail d'échec → lister les exécutions par l'API AVANT tout diagnostic
+(quel robot ? quel commit ? quelle étape ? annotations).
