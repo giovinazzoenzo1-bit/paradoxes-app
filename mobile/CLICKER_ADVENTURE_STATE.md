@@ -2402,3 +2402,20 @@ page des Griffes) avec le « + » DORÉ (plus-dore.png), bouton « 🔥 Élémen
 → aperçu, Éléments → aide, « + » doré (hub, carte) → page des Griffes. Contrôle
 auditCarteChapitres + sabotage. 91 contrôles, 114 sabotages.
 DESIGN À 100 % (hors illustrations des créatures, la partie du frère). Prochain : les SONS.
+
+
+## 06/10 — Plafond FERME : 4 packs de Griffes en PIÈCES par Ascension (publié)
+
+Rappel de l'auteur (« on avait dit 4 par Ascension avec les pièces, pas de limite avec les
+Diamants »). Avant : limite DOUCE par le prix seulement (GRIFFES_PACK_FRACTIONS 10 %, 15 %,
+20 %, 60 % du seuil d'Ascension, puis 300 % au 5e) — aucun blocage. Maintenant :
+GRIFFES_PIECES_MAX_PAR_ASCENSION = 4 + achatsGriffesPiecesRestants(n) dans clickerLogic,
+appliqués aux 4 points d'achat : Grimoire (boutiqueModele : « n/4 », état « max », bouton
+inactif), boutique de secours ShopView (même gestionnaire, bouton inactif + « encore n/4 »),
+gestionnaire commun buyGriffesWithCoinsFromShop (filet), page « Obtenir des Griffes » de
+l'Exploration (« Acheter · encore n/4 », puis « Limite atteinte » + message). Le compteur
+griffesCoinBuys repart à zéro à chaque Ascension (déjà en place). Diamants SANS limite.
+Pas de remesure : le simulateur ne modélise aucun 5e achat (le prix le rendait déjà hors
+de portée). ⚠️ Le chargeur des gardes (load) ne sait pas charger boutiqueModele.js (imports
+avec « .js ») → règle vérifiée dans le texte. Contrôle auditLimiteGriffesPieces + sabotage.
+92 contrôles, 115 sabotages.

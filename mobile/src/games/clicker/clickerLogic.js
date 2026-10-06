@@ -1109,6 +1109,13 @@ export const GRIFFES_COIN_STEP = 10000 * COIN_SCALE;
 // chaque pack ; `purchases` = packs achetés DANS CETTE Ascension (remis à
 // zéro à chaque Ascension, ClickerScreen). Taille : 100 + 75 par Ascension.
 export const GRIFFES_PACK_FRACTIONS = [0.10, 0.15, 0.20, 0.60, 3.0]; // 1er, 2e, 3e, 4e (acharné), 5e et plus
+// Plafond FERME (06/10, décision de l'auteur) : 4 packs de Griffes en PIÈCES par Ascension
+// (le compteur repart à zéro à chaque Ascension) ; les DIAMANTS n'ont pas de limite. Le prix
+// montait déjà par paliers (le 5e coûtait 3 seuils d'Ascension) : le plafond l'officialise.
+export const GRIFFES_PIECES_MAX_PAR_ASCENSION = 4;
+export function achatsGriffesPiecesRestants(purchases) {
+  return Math.max(0, GRIFFES_PIECES_MAX_PAR_ASCENSION - Math.max(0, Math.floor(Number(purchases) || 0)));
+}
 export function taillePackGriffes(ascensionCount) {
   return GRIFFES_COIN_PACK + 75 * Math.max(0, Math.floor(Number(ascensionCount) || 0));
 }

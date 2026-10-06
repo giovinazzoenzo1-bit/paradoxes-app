@@ -10,6 +10,7 @@ import {
   tapPowerCost, critUpgradeCost, critDamageUpgradeCost, sanctuaryUpgradeCost, sanctuaryMaxed,
   veilleurUpgradeCost, veilleurMaxed, tapUpgradeCost, tapUpgradeUnlocked, upgradeItemCost,
   autoClickerCost, griffesCoinCost, taillePackGriffes, coreUpgradeUnlocked, ascensionSpeedMultiplier,
+  achatsGriffesPiecesRestants, GRIFFES_PIECES_MAX_PAR_ASCENSION,
   ascensionThreshold, OFFRANDE_APPCOINS_COST, SANCTUARY_MAX_LEVEL, VEILLEUR_MAX_LEVEL,
   coreUpgradeRequirement, critChance, critMultiplier, offrandeReward, SANCTUARY_BONUS_PER_LEVEL, VEILLEUR_BONUS_PER_LEVEL,
   TAP_UPGRADE_UNLOCK_LEVEL, TAP_UPGRADE_FIRST_PACTE_LEVEL, CORE_UNLOCKS,
@@ -56,9 +57,13 @@ function construireNoeuds(p) {
         : `Gagne encore ${f(Math.max(0, seuil - (p.totalEarned || 0)))} pièces au total pour débloquer.`,
   });
   const prixGriffes = griffesCoinCost(p.griffesCoinBuys, p.ascensionCount);
+  const resteGriffes = achatsGriffesPiecesRestants(p.griffesCoinBuys); // 4 par Ascension (06/10)
   ajouter({ id: 'griffes', taille: 88, emoji: '🐾', nom: `${taillePackGriffes(p.ascensionCount)} Griffes`,
-    gain: 'pour l\'Aventure', prix: prixGriffes, etat: etat(false, false, prixGriffes, p.coins), onPress: p.onBuyGriffesWithCoins, allume: true,
-    detail: 'Des Griffes pour faire progresser tes créatures en Aventure. Le pack suivant coûtera plus cher.' });
+    niveau: `${GRIFFES_PIECES_MAX_PAR_ASCENSION - resteGriffes}/${GRIFFES_PIECES_MAX_PAR_ASCENSION}`,
+    gain: 'pour l\'Aventure', prix: prixGriffes, etat: etat(false, resteGriffes === 0, prixGriffes, p.coins), onPress: resteGriffes > 0 ? p.onBuyGriffesWithCoins : null, allume: true,
+    detail: resteGriffes > 0
+      ? `Des Griffes pour faire progresser tes créatures en Aventure. ${GRIFFES_PIECES_MAX_PAR_ASCENSION} packs en pièces par Ascension (encore ${resteGriffes}) ; le suivant coûtera plus cher. Les Diamants n'ont pas de limite.`
+      : `Limite atteinte : ${GRIFFES_PIECES_MAX_PAR_ASCENSION} packs en pièces par Ascension. Reviens après ta prochaine Ascension, ou passe par les Diamants (sans limite).` });
   ajouter({ id: 'offrande', taille: 88, emoji: '💎', nom: 'Offrande', devise: 'diamants',
     gain: `≈ +${f(offrandeReward(p.tapPower))} pièces`, prix: OFFRANDE_APPCOINS_COST, etat: etat(false, false, OFFRANDE_APPCOINS_COST, p.sharedCoins),
     onPress: p.onOffrande, allume: true, detail: `Échange ${OFFRANDE_APPCOINS_COST} diamant${OFFRANDE_APPCOINS_COST > 1 ? 's' : ''} contre un bonus de pièces.` });

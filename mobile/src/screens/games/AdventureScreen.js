@@ -382,6 +382,7 @@ import {
   griffesCoinCost,
   GRIFFES_COIN_PACK,
   taillePackGriffes,
+  achatsGriffesPiecesRestants, GRIFFES_PIECES_MAX_PAR_ASCENSION,
 } from '../../games/clicker/clickerLogic';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import { niveauMaxAventure } from '../../games/clicker/questLogic';
@@ -797,6 +798,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // Renvoie vrai / faux : la page « Obtenir des Griffes » affiche elle-même le message (06/10).
   const buyGriffesWithCoins = async () => {
     if (!onSpendCoins) return false;
+    if (achatsGriffesPiecesRestants(griffesCoinBuys) <= 0) return false; // 4 par Ascension (06/10)
     const ok = await onSpendCoins(coutGriffesEnPieces);
     if (!ok) return false;
     // Taille du pack selon l'Ascension (26/09) : 100 + 75 par Ascension.
@@ -825,7 +827,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       {boutiqueGriffes && (
         <BoutiqueGriffes griffes={griffes} diamants={diamonds} onFermer={() => setBoutiqueGriffes(false)}
           offres={[
-            { cle: 'pieces', icone: '💰', message: () => messageGriffesRef.current, quantite: taillePackGriffes(ascensionCount), prix: `${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces`, manque: `Pas assez de pièces : il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`, onAcheter: buyGriffesWithCoins },
+            { cle: 'pieces', icone: '💰', restants: achatsGriffesPiecesRestants(griffesCoinBuys), max: GRIFFES_PIECES_MAX_PAR_ASCENSION, limite: `Limite atteinte : ${GRIFFES_PIECES_MAX_PAR_ASCENSION} packs en pièces par Ascension. Reviens après ta prochaine Ascension, ou passe par les Diamants (sans limite).`, message: () => messageGriffesRef.current, quantite: taillePackGriffes(ascensionCount), prix: `${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces`, manque: `Pas assez de pièces : il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`, onAcheter: buyGriffesWithCoins },
             { cle: 'diamants', icone: '💎', message: () => messageGriffesRef.current, quantite: GRIFFES_PACK, prix: `${GRIFFES_DIAMOND_COST} Diamants`, manque: `Pas assez de Diamants : il t'en faut ${GRIFFES_DIAMOND_COST}.`, onAcheter: buyGriffesDiamonds },
           ]} />
       )}
@@ -1702,6 +1704,7 @@ function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
   const police = (k) => Math.max(8, Math.round(ui.h * k));
   const acheter = async (o) => {
     if (enCours) return;
+    if (o.restants === 0) { setMessage({ texte: o.limite, ok: false }); return; }
     setEnCours(true);
     const ok = await o.onAcheter();
     setEnCours(false);
@@ -1735,7 +1738,8 @@ function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
             <Text style={[styles.boutiqueQuantite, { position: 'absolute', left: 0, top: c.height * 0.48, width: c.width, fontSize: police(0.075) }]} numberOfLines={1}>+{o.quantite}</Text>
             <Text style={[styles.boutiqueUnite, { position: 'absolute', left: 0, top: c.height * 0.6, width: c.width, fontSize: police(0.034) }]} numberOfLines={1}>Griffes</Text>
             <TuileFiche style={{ position: 'absolute', left: c.width * 0.07, top: c.height * 0.73, width: c.width * 0.86, height: c.height * 0.2 }}
-              icone={o.icone} titre={o.prix} valeur={enCours ? '…' : 'Acheter'} police={police(0.036)} onPress={() => acheter(o)} />
+              icone={o.icone} titre={o.prix} police={police(0.036)} onPress={() => acheter(o)}
+              valeur={enCours ? '…' : o.restants === 0 ? 'Limite atteinte' : o.restants != null ? `Acheter · encore ${o.restants}/${o.max}` : 'Acheter'} />
           </View>
         );
       })}

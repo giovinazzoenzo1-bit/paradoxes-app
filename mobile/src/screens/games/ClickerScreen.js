@@ -92,6 +92,8 @@ import {
   OFFLINE_CAP_SECONDS,
   passiveRate,
   griffesCoinCost,
+  achatsGriffesPiecesRestants,
+  GRIFFES_PIECES_MAX_PAR_ASCENSION,
   GRIFFES_COIN_PACK,
   taillePackGriffes,
 } from '../../games/clicker/clickerLogic';
@@ -538,6 +540,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // déjà utilisé par l'Ascension et les défis. Jamais d'écriture croisée
   // dans la sauvegarde de l'autre écran.
   const buyGriffesWithCoinsFromShop = async () => {
+    // Plafond : 4 packs en pièces par Ascension (06/10) — filet commun au Grimoire et au secours.
+    if (achatsGriffesPiecesRestants(griffesCoinBuysRef.current) <= 0) return;
     const cout = griffesCoinCost(griffesCoinBuysRef.current, ascensionCountRef.current);
     if (coinsRef.current < cout) return;
     setCoins((c) => c - cout);
@@ -4778,14 +4782,16 @@ function ShopView({
                 progression convenue (20 000, 30 000, 40 000…) et le
                 rythme des Ascensions. */}
             <TouchableOpacity
-              style={[styles.actionBtn, coins < griffesCoinCost(griffesCoinBuys, ascensionCount) && styles.actionBtnDisabled]}
+              style={[styles.actionBtn, (coins < griffesCoinCost(griffesCoinBuys, ascensionCount) || achatsGriffesPiecesRestants(griffesCoinBuys) <= 0) && styles.actionBtnDisabled]}
               onPress={onBuyGriffesWithCoins}
-              disabled={coins < griffesCoinCost(griffesCoinBuys, ascensionCount)}
+              disabled={coins < griffesCoinCost(griffesCoinBuys, ascensionCount) || achatsGriffesPiecesRestants(griffesCoinBuys) <= 0}
             >
               <View style={styles.actionBtnLeft}>
                 <Text style={styles.actionBtnText}>🐾 {taillePackGriffes(ascensionCount)} Griffes</Text>
                 <Text style={styles.actionBtnSubtext}>
-                  Pour l'Aventure · le prochain pack coûtera plus cher
+                  {achatsGriffesPiecesRestants(griffesCoinBuys) > 0
+                    ? `Pour l'Aventure · encore ${achatsGriffesPiecesRestants(griffesCoinBuys)}/${GRIFFES_PIECES_MAX_PAR_ASCENSION} cette Ascension`
+                    : `Limite atteinte : ${GRIFFES_PIECES_MAX_PAR_ASCENSION} par Ascension`}
                 </Text>
               </View>
               <Text style={styles.actionBtnCost} numberOfLines={1}>

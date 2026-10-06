@@ -4554,3 +4554,26 @@ function auditCarteChapitres() {
   return pb;
 }
 module.exports.auditCarteChapitres = auditCarteChapitres;
+
+// ── Plafond de 4 packs de Griffes en PIÈCES par Ascension (06/10, décision de l'auteur) ──
+// Les Diamants n'ont pas de limite. Moteur (vrais appels) + les 4 points d'achat : Grimoire,
+// boutique de secours (même gestionnaire), gestionnaire commun, page de l'Exploration.
+function auditLimiteGriffesPieces() {
+  const fs = require('fs'); const path = require('path');
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const pb = [];
+  const L = load('clickerLogic');
+  if (L.GRIFFES_PIECES_MAX_PAR_ASCENSION !== 4) pb.push(`plafond = ${L.GRIFFES_PIECES_MAX_PAR_ASCENSION} au lieu de 4 packs en pièces par Ascension`);
+  if (L.achatsGriffesPiecesRestants(0) !== 4 || L.achatsGriffesPiecesRestants(3) !== 1 || L.achatsGriffesPiecesRestants(4) !== 0 || L.achatsGriffesPiecesRestants(9) !== 0) pb.push('achatsGriffesPiecesRestants donne des restes faux');
+  const bm = lire('src/games/clicker/boutiqueModele.js');
+  if (!/etat: etat\(false, resteGriffes === 0, prixGriffes, p\.coins\), onPress: resteGriffes > 0 \? p\.onBuyGriffesWithCoins : null/.test(bm)) pb.push('Grimoire : le pack de Griffes reste achetable au-delà de 4');
+  const c = lire('src/screens/games/ClickerScreen.js');
+  if (!/if \(achatsGriffesPiecesRestants\(griffesCoinBuysRef\.current\) <= 0\) return;/.test(c)) pb.push("écran principal : le gestionnaire d'achat ne bloque plus au-delà de 4");
+  const a = lire('src/screens/games/AdventureScreen.js');
+  if (!/if \(achatsGriffesPiecesRestants\(griffesCoinBuys\) <= 0\) return false;/.test(a)) pb.push("Exploration : l'achat en pièces ne bloque plus au-delà de 4");
+  if (!/if \(o\.restants === 0\) \{ setMessage\(\{ texte: o\.limite, ok: false \}\); return; \}/.test(a)) pb.push('page des Griffes : plus de message à la limite');
+  const i = a.indexOf('const buyGriffesDiamonds'); const d = a.slice(i, a.indexOf('\n  };', i));
+  if (i < 0 || /achatsGriffesPiecesRestants|griffesCoinBuys/.test(d)) pb.push("l'achat en Diamants est limité (il ne doit pas l'être) ou introuvable");
+  return pb;
+}
+module.exports.auditLimiteGriffesPieces = auditLimiteGriffesPieces;

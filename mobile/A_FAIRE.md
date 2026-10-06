@@ -46,7 +46,7 @@
 > (morceau B, ci-dessous). Mesure du 03/10 sur 300 joueurs : voir la section suivante.
 - Naissance des nouvelles créatures à **80 %** du niveau de la meilleure (il veut garder 80 %).
 - **Aucune Griffe en rejouant un niveau déjà gagné** (seule la 1re victoire paie) — à coder.
-- **3 packs de Griffes contre pièces par Ascension** (4 pour un acharné) — prix à recalculer pour le garantir ; taille des packs selon l'Ascension (+75/A validable).
+- **3 packs de Griffes contre pièces par Ascension** (4 pour un acharné ; PLAFOND FERME à 4 depuis le 06/10, Diamants sans limite) — prix à recalculer pour le garantir ; taille des packs selon l'Ascension (+75/A validable).
 - Joueur gratuit : **6 victoires sur 10** ; ~2 niveaux de retard par Ascension ; petit payeur ~7,5/10.
 - Mesuré : succès réels ≈ 3 840 Griffes sur la partie (pas 13 065) ; les coûts ont des « événements » (A3 : meilleures créatures) — une formule fixe ne donne pas un manque parfaitement régulier.
 
