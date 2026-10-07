@@ -119,6 +119,7 @@ Générés pendant le mois payant (plan Starter) : licence commerciale à vie. P
 | `rune-equipee.mp3` | 0,6 s | A magic rune snaps into a socket in a fantasy mobile game: a crisp stone click with a short magical glow. No voice, no music. |
 | `offrande.mp3` | 0,8 s | A small offering is collected in a fantasy mobile game: a light jingle of a few coins with a soft sparkle. No voice, no music. |
 | `boss-coup.mp3` | 0,4 s | A quick punchy hit on a big cartoon monster in a fantasy mobile game: a short heavy thump, dry and satisfying. No voice, no music. |
+| `retour.mp3` | 0,5 s | Going back in a fantasy mobile game menu: a short muted wooden click with a light descending swish. Dry, no reverb. No voice, no music. |
 
 # Musiques (Pixabay, PAS ElevenLabs : sa licence musicale exclut les jeux vidéo commerciaux)
 
