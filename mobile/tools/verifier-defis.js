@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditPuissanceAffichee', "puissance affichée : la formule du jeu sans arrondi (exacte), monte à chaque niveau, partout la même, Gardien figé sur sa photo (08/10)"],
   ['auditStadeEvolution', "le stade (image, nom) suit l'évolution, plus le niveau ; les combattants portent leur palier (08/10)"],
   ['auditReliquesPossedees', "Grimoire : seulement les Reliques possédées (08/10)"],
   ['auditMusique', "musiques : 4 pistes, volumes bas, en boucle, pile sur les 4 écrans, réglage, pause en arrière-plan (07/10)"],

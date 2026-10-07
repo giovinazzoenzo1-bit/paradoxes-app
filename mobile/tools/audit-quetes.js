@@ -4727,3 +4727,42 @@ function auditReliquesPossedees() {
   return pb;
 }
 module.exports.auditReliquesPossedees = auditReliquesPossedees;
+
+// ── Puissance AFFICHÉE : une seule, qui monte à chaque niveau (08/10, décision de l'auteur) ──
+// (1) statsContinues = la formule du jeu SANS arrondi : refaire le double arrondi du jeu doit
+// redonner EXACTEMENT ses stats (toutes créatures, paliers 0-2, runes, niveaux 1-60) ;
+// (2) la puissance monte STRICTEMENT à chaque niveau, et avec l'évolution et une rune ;
+// (3) hub, aperçu, menu et résultat du Gardien l'affichent ; le chiffre du Gardien vient de sa
+// seule PHOTO (prise au démarrage du chrono) → figé ; la chance exacte est affichée.
+function auditPuissanceAffichee() {
+  const fs = require('fs'); const path = require('path'); const R = path.join(__dirname, '..');
+  const K = load('combatLogic'); const pb = [];
+  const runesTest = [[], [{ type: 'force', level: 3 }], [{ type: 'resilience', level: 2 }, { type: 'force', level: 5 }]];
+  let diff = 0;
+  for (const cr of C.CREATURES) for (const tier of [0, 1, 2]) for (const runes of runesTest) for (let L = 1; L <= 60; L++) {
+    const st = K.combatStatsForCreatureTyped(cr, L, tier, runes); const c = K.statsContinues(cr, L, tier, runes); const f = c._facteurs;
+    if (Math.round(Math.round(c._base.hp) * f.hpMult * f.evo * (1 + f.hpPct)) !== st.hp) diff++;
+    if (Math.round(Math.round(c._base.attack) * f.attackMult * f.evo * (1 + f.atkPct)) !== st.attack) diff++;
+  }
+  if (diff) pb.push(`statsContinues s'écarte de la formule du jeu (${diff} valeurs)`);
+  const m = (cr, L, tier = 0, runes = []) => [{ creature: cr, ownedLevel: L, evolutionTier: tier, equippedRunes: runes }];
+  for (const cr of C.CREATURES) {
+    for (let L = 1; L < 60; L++) if (!(K.puissanceAffichee(m(cr, L + 1)) > K.puissanceAffichee(m(cr, L)))) { pb.push(`${cr.id} : la puissance ne monte pas du niveau ${L} au ${L + 1}`); break; }
+    if (!(K.puissanceAffichee(m(cr, 25, 1)) > K.puissanceAffichee(m(cr, 25, 0)))) pb.push(`${cr.id} : l'évolution ne fait pas monter la puissance`);
+    if (!(K.puissanceAffichee(m(cr, 20, 0, [{ type: 'force', level: 3 }])) > K.puissanceAffichee(m(cr, 20)))) pb.push(`${cr.id} : une rune de Force ne fait pas monter la puissance`);
+  }
+  const a = fs.readFileSync(path.join(R, 'src/screens/games/AdventureScreen.js'), 'utf8');
+  const c = fs.readFileSync(path.join(R, 'src/screens/games/ClickerScreen.js'), 'utf8');
+  const exige = [
+    [a, /const puissanceHub = puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\);/, 'hub : la puissance affichée n\'est plus calculée'],
+    [a, /🛡️ Puissance \{puissanceHub\}/, 'hub : la pastille n\'affiche plus la puissance affichée'],
+    [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`/, 'aperçu : puissance ou chance de victoire absente'],
+    [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
+    [c, /return Math\.round\(puissanceAffichee\(membresDeLaPhoto\(photo\)\) \* margeGardien\(photo\.puissance\)\);/, 'Gardien : son chiffre ne vient plus de sa seule photo (il pourrait bouger)'],
+    [c, /🛡️ Ton deck \$\{puissanceDuDeck\} · \$\{chance\} % de victoire/, 'menu du Gardien : puissance ou chance absente'],
+    [c, /setResultatGardien\(\{ issue: outcome, gardien: fight\.puissanceGardien, deck: puissanceDuDeck \}\);/, 'résultat du Gardien : pas la puissance affichée'],
+  ];
+  for (const [src, re, msg] of exige) if (!re.test(src)) pb.push(msg);
+  return pb;
+}
+module.exports.auditPuissanceAffichee = auditPuissanceAffichee;

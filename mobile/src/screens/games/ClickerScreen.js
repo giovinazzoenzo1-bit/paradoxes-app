@@ -136,6 +136,8 @@ import {
   puissanceFaceAuGardien,
   guardianStatsCalibrees,
   ELIXIR,
+  puissanceAffichee,
+  mesureFaceAuGardien,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -714,7 +716,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [deck, setDeck] = useState([null, null, null]);
   // ---- Le Gardien calé sur le deck (24/09) ----
   // Puissance du deck affichée avant le combat (et dans l'Aventure).
-  const puissanceDuDeck = useMemo(() => puissanceDeck(membresDuDeck(deck, owned)), [deck, owned]);
+  // Puissance AFFICHÉE (08/10) : la même formule partout, sans les runes (elles ne jouent pas contre le Gardien).
+  const puissanceDuDeck = useMemo(() => puissanceAffichee(membresDuDeck(deck, owned)), [deck, owned]);
   // Œufs commencés avant la mise à jour : la photo manquante est prise dès
   // que la collection est chargée (le Gardien se calera sur ce deck-là).
   // ⚠️ Photos de la 1re version (3 meilleures de la COLLECTION, sans `v`)
@@ -756,7 +759,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         const base = guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber);
         const cal = calibrageMemo(egg, owned, eggNumber, deck);
         const g0 = cal ? guardianStatsCalibrees(base, cal) : base;
-        return puissanceFaceAuGardien(membresDuDeck(deck, owned), g0, g);
+        return mesureFaceAuGardien(membresDuDeck(deck, owned), g0, g); // { puissance, victoires } : la CHANCE sert à l'affichage
       };
       try {
         const r = { main: mesurer(mainEgg), incub: mesurer(incubatingEgg) };
@@ -767,10 +770,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, [cleFaceGardien]);
   const ligneGardien = (egg, cle) => {
     if (owned.length + 1 < 3 || !egg || !egg.gardienPhoto) return null;
-    const g = Math.round(egg.gardienPhoto.puissance * margeGardien(egg.gardienPhoto.puissance));
-    const moi = deckFaceGardien[cle];
-    if (moi == null) return `⚔️ Gardien ${g} · 🛡️ Ton deck …`;
-    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${moi}${moi < g ? ' — améliore tes créatures' : ''}`;
+    // (08/10) Gardien : tiré de la PHOTO (prise au démarrage du chrono) → FIGÉ ; ton deck : la puissance
+    // affichée, qui monte à chaque niveau ; la CHANCE exacte (simulée) dit si tu peux gagner.
+    const g = gardienAffiche(egg);
+    const m = deckFaceGardien[cle];
+    const chance = m && typeof m === 'object' ? Math.round(m.victoires * 100) : null;
+    if (chance == null) return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck} · chance…`;
+    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck} · ${chance} % de victoire${chance < 50 ? ' — améliore tes créatures' : ''}`;
   }; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -2069,8 +2075,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const oeufEnJeu = source === 'main' ? mainEggRef.current : incubatingEgg;
     setGuardianFight({ source, level: guardianLevelForEgg(eggNumber), eggNumber,
       calibrage: calibrageMemo(oeufEnJeu, ownedRef.current, eggNumber, deckRef.current),
-      puissanceGardien: oeufEnJeu && oeufEnJeu.gardienPhoto && eggNumber >= 3
-        ? Math.round(oeufEnJeu.gardienPhoto.puissance * margeGardien(oeufEnJeu.gardienPhoto.puissance)) : null });
+      puissanceGardien: oeufEnJeu && oeufEnJeu.gardienPhoto && eggNumber >= 3 ? gardienAffiche(oeufEnJeu) : null });
   };
 
   // Fin du combat. Victoire : l'œuf éclot. Défaite : l'œuf n'est JAMAIS
@@ -2082,8 +2087,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const fight = guardianFight;
     setGuardianFight(null);
     if (!fight) return;
-    const exact = deckFaceGardien[fight.source === 'main' ? 'main' : 'incub'];
-    setResultatGardien({ issue: outcome, gardien: fight.puissanceGardien, deck: exact != null ? exact : puissanceDuDeck });
+    setResultatGardien({ issue: outcome, gardien: fight.puissanceGardien, deck: puissanceDuDeck });
     if (outcome === 'win') {
       if (fight.source === 'main') {
         mainEggRef.current = null;
@@ -5749,6 +5753,14 @@ function photoGardien(ownedList, deckIds) {
 function avecPhotoGardien(egg, ownedList, deckIds) {
   if (!egg) return egg;
   try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds) }; } catch (e) { return egg; }
+}
+// Chiffre AFFICHÉ du Gardien (08/10) : la puissance affichée de la PHOTO (prise au démarrage du
+// chrono, jamais retouchée ensuite) × la marge habituelle (calculée sur l'ancienne échelle de la
+// photo) → FIGÉ pour tout l'œuf, comme l'a exigé l'auteur.
+function gardienAffiche(egg) {
+  const photo = egg && egg.gardienPhoto;
+  if (!photo) return null;
+  return Math.round(puissanceAffichee(membresDeLaPhoto(photo)) * margeGardien(photo.puissance));
 }
 function membresDeLaPhoto(photo) {
   return ((photo && photo.membres) || []).map((x) => {

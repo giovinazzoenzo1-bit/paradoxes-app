@@ -411,6 +411,7 @@ import {
   puissanceConseillee,
   baisseFilet,
   elementMultiplier, competencesAvecSort, SORTS,
+  puissanceAffichee,
 } from '../../games/clicker/combatLogic';
 
 // NOTIFICATIONS RETIREES (03/09).
@@ -1277,6 +1278,9 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const auRapport = (r, rapport) => { const l = r.height * rapport; return { ...r, left: r.left + (r.width - l) / 2, width: l }; };
   // Même LARGEUR (celle de la maquette : elle règle l'espacement), même centre, hauteur à la proportion.
   const auRapportL = (r, rapport) => { const hh = r.width / rapport; return { ...r, top: r.top + (r.height - hh) / 2, height: hh }; };
+  // Puissance AFFICHÉE (08/10) : la même partout, elle monte à chaque niveau ; la COULEUR reste
+  // la chance mesurée au niveau réel.
+  const puissanceHub = puissanceAffichee(membresPourCombat(deck, owned, ownedRunes));
   const couleurPuissance = puissanceMenu ? (puissanceMenu.couleur === 'vert' ? '#3DDC84' : puissanceMenu.couleur === 'orange' ? '#FFB74D' : '#FF6B6B') : '#eafbe8';
   return avecBoutique(
     <View style={styles.hubRacine} onLayout={(e) => setBgSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
@@ -1291,7 +1295,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
           <Image source={HUB_IMG.titre} resizeMethod="scale" resizeMode="stretch" style={auRapportL(R(HUB.titre, 'centre'), HUB_RAPPORT_PIECE.titre)} />
           {/* Pastilles du hub sur la CAPSULE DE BOIS (06/10), comme la carte des chapitres. */}
           <CapsuleBois style={[R(HUB.puissance, 'droite'), styles.hubCapsule]}>
-            <Text style={[styles.hubPiluleTexte, { fontSize: police(0.026), color: couleurPuissance, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
+            <Text style={[styles.hubPiluleTexte, { fontSize: police(0.026), color: couleurPuissance, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>🛡️ Puissance {puissanceHub}</Text>
           </CapsuleBois>
           {elixirCombats > 0 && (
             <CapsuleBois style={[R(HUB.elixir, 'droite'), styles.hubCapsule]}>
@@ -3453,7 +3457,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
         </Text>
       </View>
       <Text style={[boite(APERCU.puissance), styles.apercuLigne, { color: couleurPuissance, fontSize: Math.max(9, Math.round(ui.h * 0.036)) }]} numberOfLines={1}>
-        Ta puissance {mesure ? mesure.puissance : '…'} · conseillée {puissanceConseillee(levelNumber)}
+        Ta puissance {puissanceAffichee(membresPourCombat(deck, owned, ownedRunes))} · {mesure ? `${Math.round(mesure.victoires * 100)} % de victoire` : 'chance…'}
       </Text>
 
       {deck.map((id, i) => {

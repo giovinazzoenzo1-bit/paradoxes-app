@@ -2535,3 +2535,27 @@ chapitre sans relique garde sa page d'introduction. Contrôle auditReliquesPosse
 3. HUB : pastille « Puissance » élargie à gauche jusqu'au titre (HUB.puissance x 0,615) + texte
 qui rétrécit (adjustsFontSizeToFit) — la puissance était coupée au-delà d'un certain nombre.
 97 contrôles, 120 sabotages.
+
+
+## 08/10 — PUISSANCE AFFICHÉE : une seule, qui monte à chaque niveau (publié)
+
+Signalé par l'auteur : « j'augmente le niveau et ça ne bouge pas », « 3 chiffres différents »,
+« au Gardien, plus je monte, plus ça baisse ». MESURÉ (vrai moteur) : (1) PV / attaque ARRONDIS
+(attaque de 2 à 6) → paliers ; mesure du hub par simulation → léger hasard (34 → 33) ;
+(2) hub et Gardien MESURÉS contre des adversaires différents, runes comptées en Exploration
+seulement ; (3) le Gardien se RECALE sur le deck à chaque œuf (photo au démarrage du chrono) et
+durcit d'œuf en œuf → écart -1, -4, -6 aux niveaux 10, 20, 30. DÉCISION de l'auteur : garder la
+règle du Gardien (« c'est grâce à ça qu'un joueur peut payer pour avancer plus facilement ») ;
+faire l'AFFICHAGE (option A) ; le chiffre du Gardien se calcule au DÉMARRAGE DU CHRONO et ne
+bouge plus (déjà le cas : startIncubation + avecPhotoGardien ; désormais garanti).
+FAIT : combatLogic — statsContinues (formule de combatStatsForCreatureTyped SANS arrondi ;
+expose _base et _facteurs : refaire le double arrondi redonne EXACTEMENT les stats du jeu,
+28 080 valeurs, 0 écart) ; puissanceAffichee = ×10 √(ΣPV × dégâts moyens) sur ces stats :
+monte STRICTEMENT à chaque niveau (26 créatures, 1 → 60), évolution, rune (équipe test :
+323, 338, 354… ; Pyrosile seul +5 par niveau) ; mesureFaceAuGardien renvoie AUSSI la chance
+(r.victoires, déjà calculée et jetée) — puissanceFaceAuGardien lui délègue. Écrans : hub
+(« Puissance N », couleur = chance mesurée), aperçu (« Ta puissance N · X % de victoire » au
+lieu de « conseillée »), menu du Gardien (« Gardien G · Ton deck N · X % de victoire », G =
+gardienAffiche(photo) → figé), résultat du Gardien. puissanceDeck reste INTERNE (photo,
+calibrage, anti-triche). Côté Gardien, pas de runes (elles ne jouent pas contre lui).
+Contrôle auditPuissanceAffichee + sabotage (stats arrondies → 16 cris). 98 contrôles, 121 sabotages.

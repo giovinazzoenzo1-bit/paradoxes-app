@@ -389,6 +389,47 @@ export function puissanceDeck(membres) {
   return Math.round(Math.sqrt(pv * dmg));
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  PUISSANCE AFFICHÉE (08/10, décision de l'auteur) — UNE seule, partout
+// ════════════════════════════════════════════════════════════════════
+// Constat de l'auteur : « j'augmente le niveau et ça ne bouge pas », « 3 chiffres différents »,
+// « au Gardien, plus je monte, plus ça baisse ». MESURÉ : PV et attaque ARRONDIS (une attaque
+// de 2 à 6 ne bouge pas à chaque niveau → paliers) ; puissances MESURÉES par simulation contre
+// des adversaires différents (hub ≠ Gardien) ; le Gardien recalé sur le deck à chaque œuf (gardé :
+// décision de l'auteur). La puissance AFFICHÉE = la formule de puissanceDeck, √(PV × dégâts
+// moyens d'un tour), sur les stats AVANT arrondi, ×10 : elle monte à CHAQUE niveau, évolution,
+// rune. La difficulté se lit sur la CHANCE de victoire (exacte, simulée). puissanceDeck reste
+// pour les usages INTERNES (photo et calibrage du Gardien, anti-triche).
+export const ECHELLE_PUISSANCE = 10;
+// La formule de combatStatsForCreatureTyped SANS ses arrondis (auditPuissanceAffichee vérifie
+// qu'arrondies, elles redonnent les stats du jeu).
+export function statsContinues(creature, level, evolutionTier = 0, equippedRunes = []) {
+  const base = creature.baseHp != null ? { hp: creature.baseHp, attack: creature.baseAttack } : RARITY_BASE_STATS[creature.rarity];
+  const levelMult = levelMultiplier(level);
+  const typeMod = creature.baseHp != null ? { hpMult: 1, attackMult: 1 } : (MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant);
+  const evoMult = EVOLUTION_STAT_MULTIPLIER[evolutionTier] || 1;
+  const bonus = runeBonuses(equippedRunes);
+  return {
+    hp: base.hp * levelMult * typeMod.hpMult * evoMult * (1 + bonus.hpPct),
+    attack: base.attack * levelMult * typeMod.attackMult * evoMult * (1 + bonus.atkPct),
+    // Les éléments du calcul, pour que la garde refasse le DOUBLE ARRONDI du jeu à l'identique.
+    _base: { hp: base.hp * levelMult, attack: base.attack * levelMult },
+    _facteurs: { hpMult: typeMod.hpMult, attackMult: typeMod.attackMult, evo: evoMult, hpPct: bonus.hpPct, atkPct: bonus.atkPct },
+  };
+}
+export function puissanceAffichee(membres) {
+  const f = (membres || []).filter((m) => m && m.creature).map((m) => {
+    const lvl = m.ownedLevel || m.level || 1; const tier = m.evolutionTier || 0; const runes = m.equippedRunes || [];
+    const st = combatStatsForCreatureTyped(m.creature, lvl, tier, runes);
+    const c = statsContinues(m.creature, lvl, tier, runes);
+    return { pv: c.hp, dmg: degatsMoyensDuTour(m.creature, { ...st, attack: c.attack }) };
+  });
+  if (!f.length) return 0;
+  const pv = f.reduce((t, x) => t + x.pv, 0);
+  const dmg = f.reduce((t, x) => t + x.dmg, 0) / f.length;
+  return Math.round(ECHELLE_PUISSANCE * Math.sqrt(pv * dmg));
+}
+
 // Puissance du Gardien sur la même échelle : il doit abattre ΣPV, on
 // doit lui retirer 2,3 fois ses PV (boucliers et deux manches).
 const GARDIEN_PV_EFFECTIFS = GUARDIAN_SHIELD_RATIO + GUARDIAN_PHASE1_HP_LOSS + 1 + GUARDIAN_SHIELD_RATIO;
@@ -2079,15 +2120,19 @@ export function niveauxManquantsExact(membres, niveau, { filetBaisse = 0 } = {})
 // « Ton deck » face au Gardien : même Gardien que le combat (`gStats` :
 // calibré, Élixir compris), même équipe (sans runes), 2 victoires sur 3.
 const echelleGardien = (g, x) => ({ ...g, hp: Math.max(1, Math.round(g.hp * x)), attack: Math.max(1, g.attack * x) });
-export function puissanceFaceAuGardien(membres, gStats, reference) {
+// (08/10) Même mesure, qui renvoie AUSSI la chance au Gardien réel (r.victoires : 100 combats, meilleure des 2 façons de jouer).
+export function mesureFaceAuGardien(membres, gStats, reference) {
   const m = (membres || []).filter((x) => x && x.creature);
-  if (!m.length || !gStats) return 0;
+  if (!m.length || !gStats) return { puissance: 0, victoires: 0 };
   const prepares = preparerCombattants(m);
   const r = mesurerEquipe((x, alea, politique) => {
     const st = echelleGardien(gStats, x);
     return simulerCombat(prepares, gardienEnFace(st), { gStats: st, alea, politique }).gagne;
   }, { cible: PUISSANCE_CIBLE_GARDIEN, combats: PUISSANCE_COMBATS, graine: graineDuDeck(m) });
-  return chiffreExact(reference, r.facteur);
+  return { puissance: chiffreExact(reference, r.facteur), victoires: r.victoires };
+}
+export function puissanceFaceAuGardien(membres, gStats, reference) {
+  return mesureFaceAuGardien(membres, gStats, reference).puissance;
 }
 
 // Pour les contrôles (auditPuissanceExacte).

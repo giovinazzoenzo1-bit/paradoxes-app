@@ -242,6 +242,8 @@ const SABOTAGES = [
     remplace("coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'none' },", "coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30 },")],
   ['auditEcranFin', F.combatEcran, "le pack de Griffes de la défaite débranché par la refonte",
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
+  ['auditPuissanceAffichee', F.combat, "puissance affichée sur les stats ARRONDIES : les paliers reviennent (« ça ne bouge pas »)",
+    remplace('    return { pv: c.hp, dmg: degatsMoyensDuTour(m.creature, { ...st, attack: c.attack }) };', '    return { pv: st.hp, dmg: degatsMoyensDuTour(m.creature, st) };')],
   ['auditStadeEvolution', F.clicker, "stade figé à 0 : les évolutions ne changeraient plus l'image",
     remplace('  return Math.max(0, Math.min(2, Math.floor(Number(evolutionTier) || 0)));', '  return 0;')],
   ['auditReliquesPossedees', path.join(RACINE, 'src/screens/games/GrimoireBoutique.js'), "filtre des reliques retiré : les pages verrouillées reviennent",
