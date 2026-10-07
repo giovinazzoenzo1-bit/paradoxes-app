@@ -246,6 +246,7 @@ const EGG_IMAGES = [
 ];
 import { DeckPicker } from './DeckPicker';
 import { afficherDialogue } from '../../components/DialogueJeu';
+import { jouerSon } from './sonsBoutique';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
 //
@@ -340,7 +341,7 @@ function formatNum(n) {
 export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
-  const { vibrations, ambientFx } = useSettings();
+  const { vibrations, ambientFx, sons } = useSettings();
   // Marges de securite de l'appareil (encoche en haut, barre d'accueil
   // en bas). App.js applique deja `paddingTop: insets.top` au conteneur,
   // mais RIEN en bas — d'ou la barre de navigation qui passait sous la
@@ -2033,6 +2034,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // gardien n'est requis (tout premier œuf : le joueur n'a pas encore de
   // créature, il ne pourrait pas combattre).
   const resolveHatch = (source) => {
+    jouerSon('eclosion', sons !== false); // l'œuf éclôt (07/10)
     const eggNumber = ownedRef.current.length + 1;
     if (!guardianRequired(ownedRef.current.length)) {
       if (source === 'main') {
@@ -4556,12 +4558,14 @@ function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim
   // ⚠️ Hook AVANT l'arrêt anticipé (ordre des hooks constant d'un rendu à
   // l'autre, sinon React plante).
   const [effet, setEffet] = useState(null);
+  const { sons } = useSettings(); // AVANT l'arrêt anticipé, comme les autres hooks
   if (!Array.isArray(calendar) || calendar.length === 0) return null;
   // 27/09 (demande de l'auteur) : vibration + effet doré à la place des
   // fenêtres blanches.
   const reclamer = () => {
     const d = calendar.find((x) => x.day === currentDay);
     vibrerSucces(vibrations);
+    jouerSon('recompense', sons !== false);
     if (d) {
       const special = d.type === 'creature' || d.type === 'skin';
       const sous = d.type === 'creature' ? "Elle t'attend dans ta Collection" : d.type === 'skin' ? 'Les skins arrivent bientôt' : null;

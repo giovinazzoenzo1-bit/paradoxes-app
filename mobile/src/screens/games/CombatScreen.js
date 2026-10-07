@@ -16,6 +16,8 @@ import { requireOptionalNativeModule } from 'expo-modules-core';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CreatureArt, { hasCreatureArt } from '../../components/CreatureArt';
 import { afficherDialogue } from '../../components/DialogueJeu';
+import { jouerSon, SON_ELEMENT } from './sonsBoutique';
+import { useSettings } from '../../context/SettingsContext';
 import { CADRAGE_CREATURES } from '../../games/clicker/cadrageCreatures';
 import { StatusBar } from 'expo-status-bar';
 
@@ -543,7 +545,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const jaugeRef = useRef(null);
   const verdictRef = useRef(null);
   const [verdict, setVerdict] = useState(null);
-  const montrerVerdict = (v) => { setVerdict(v); setTimeout(() => setVerdict((x) => (x === v ? null : x)), 900); };
+  // Sons du combat (07/10, ElevenLabs) : réglage « Sons » des Paramètres.
+  const { sons: sonsReglage } = useSettings();
+  const sonsRef = useRef(true);
+  sonsRef.current = sonsReglage !== false;
+  const son = (nom) => jouerSon(nom, sonsRef.current);
+  const montrerVerdict = (v) => { if (v === 'parfait') son('jauge-parfait'); setVerdict(v); setTimeout(() => setVerdict((x) => (x === v ? null : x)), 900); };
   const [timeLeft, setTimeLeft] = useState(TAP_CHALLENGE_TIME_LIMIT_SEC);
   const [switchMessage, setSwitchMessage] = useState(null);
   const [outcome, setOutcome] = useState(null); // null | 'win' | 'lose'
@@ -707,7 +714,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const [eclairKey, setEclairKey] = useState(0);
   const [assombriKey, setAssombriKey] = useState(0);
   // Visuel d'un sort / du spécial / d'un K.O. sur une créature (03/10, étape 3).
+  // Son de chaque visuel (07/10) ; le SPÉCIAL sonne à son LANCEMENT (assombriKey, plus bas).
+  const SON_SORT = { soin: 'sort-soin', bouclier: 'sort-bouclier', boost: 'sort-bouclier', vitesse: 'sort-bouclier', provocation: 'sort-bouclier', pacte: 'sort-bouclier',
+    poison: 'sort-attaque', marque: 'sort-attaque', execution: 'sort-attaque', zone: 'sort-attaque', ko: 'ko' };
+  useEffect(() => { if (assombriKey > 0) son('special'); }, [assombriKey]);
   const effetSort = (type, cote, index, valeur = null) => {
+    if (SON_SORT[type]) son(SON_SORT[type]);
     const c = centreSprite(cote, index);
     if (!c) return;
     setImpacts((l) => [...l, { id: `${Date.now()}-${Math.random()}`, sort: type, x: c.x, y: c.y, taille: c.taille, valeur }]);
@@ -720,6 +732,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     if (cle === 'parfait') setEclairKey((k) => k + 1);
     secouer(st.secousse);
     vibrer(st.vibration);
+    // Sons (07/10) : le choc selon le verdict, puis l'élément de l'attaquant (pas sur un coup raté).
+    son(cle === 'parfait' ? 'impact-parfait' : cle === 'rate' ? 'rate' : 'impact-normal');
+    if (element && cle !== 'rate' && SON_ELEMENT[element]) son(SON_ELEMENT[element]);
   };
   const [opponentDamageFloat, setOpponentDamageFloat] = useState(null);
   // { amount, index } — l'INDICE est figé au moment du coup. Relu via
@@ -1832,7 +1847,7 @@ function RecapPlaque({ x, y, w, h, valeur, legende, couleur, chiffre, police }) 
   );
 }
 // Une étoile : gagnée, elle JAILLIT (l'une après l'autre) ; sinon, éteinte (grise).
-function EtoileFin({ cx, cy, t, gagnee, delai }) {
+function EtoileFin({ cx, cy, t, gagnee, delai, onPop = null }) {
   const a = useRef(new Animated.Value(gagnee ? 0 : 1)).current;
   const lueur = useRef(new Animated.Value(0)).current;
   const scint = useRef(new Animated.Value(0)).current;
@@ -1852,7 +1867,8 @@ function EtoileFin({ cx, cy, t, gagnee, delai }) {
       Animated.delay(1400),
     ]));
     const id = setTimeout(() => { pulse.start(); eclat.start(); }, delai + 250);
-    return () => { clearTimeout(id); pulse.stop(); eclat.stop(); };
+    const idSon = setTimeout(() => { if (onPop) onPop(); }, delai + 60);
+    return () => { clearTimeout(id); clearTimeout(idSon); pulse.stop(); eclat.stop(); };
   }, []);
   const w = t * FIN_RAPPORT.etoile;
   return (
@@ -1949,6 +1965,9 @@ function MedaillonHeros({ cx, cy, t, heros, terne, lauriersH }) {
 
 function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false, premiereVictoire = true, nbCreatures = 3, heros = null }) {
   const isWin = outcome === 'win';
+  const { sons: sonsFin } = useSettings();
+  // Victoire ou défaite (07/10) : le jingle à l'arrivée de l'écran ; chaque étoile tinte en apparaissant.
+  useEffect(() => { jouerSon(isWin ? 'victoire' : 'defaite', sonsFin !== false); }, []);
   const [btnsArmed, setBtnsArmed] = useState(false);
   useEffect(() => {
     const id = setTimeout(() => setBtnsArmed(true), RESULT_BTN_GUARD_MS);
@@ -1997,7 +2016,7 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
       <PieceTexte source={COMBAT_IMG.planche} {...r(L.titre)} texte={isWin ? 'VICTOIRE !' : 'DÉFAITE'} police={L.titre.police * u} couleur={isWin ? '#ffe14d' : '#dfe8f5'} />
       <MedaillonHeros cx={cx} cy={L.medaillon.y * u} t={L.medaillon.t * u} heros={heros} terne={!isWin} lauriersH={L.lauriers.h * u} />
       {L.etoiles.map((e, i) => (
-        <EtoileFin key={i} cx={cx + e.dx * u} cy={e.y * u} t={e.t * u} gagnee={i < stars} delai={300 + i * 220} />
+        <EtoileFin key={i} cx={cx + e.dx * u} cy={e.y * u} t={e.t * u} gagnee={i < stars} delai={300 + i * 220} onPop={() => jouerSon('etoile', sonsFin !== false)} />
       ))}
       <PieceTexte source={COMBAT_IMG.planche} {...r(L.etiquette)} texte={isWin ? 'Héros du combat' : 'Meilleure créature'} police={L.etiquette.police * u} />
       <PieceTexte source={COMBAT_IMG.planche} {...r(L.centre)} texte={centre} police={L.centre.police * u} lignes={L.centre.lignes} marge={0.09} couleur={isWin ? '#ffe680' : '#fbe9c4'} />

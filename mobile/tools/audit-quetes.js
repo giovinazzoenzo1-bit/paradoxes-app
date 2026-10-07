@@ -4571,7 +4571,8 @@ function auditLimiteGriffesPieces() {
   if (!/if \(achatsGriffesPiecesRestants\(griffesCoinBuysRef\.current\) <= 0\) return;/.test(c)) pb.push("écran principal : le gestionnaire d'achat ne bloque plus au-delà de 4");
   const a = lire('src/screens/games/AdventureScreen.js');
   if (!/if \(achatsGriffesPiecesRestants\(griffesCoinBuys\) <= 0\) return false;/.test(a)) pb.push("Exploration : l'achat en pièces ne bloque plus au-delà de 4");
-  if (!/if \(o\.restants === 0\) \{ setMessage\(\{ texte: o\.limite, ok: false \}\); return; \}/.test(a)) pb.push('page des Griffes : plus de message à la limite');
+  // (07/10 : le son de refus est accepté devant le message — auditSonsJeu.)
+  if (!/if \(o\.restants === 0\) \{ (?:jouerSon\('refus', sons !== false\); )?setMessage\(\{ texte: o\.limite, ok: false \}\); return; \}/.test(a)) pb.push('page des Griffes : plus de message à la limite');
   const i = a.indexOf('const buyGriffesDiamonds'); const d = a.slice(i, a.indexOf('\n  };', i));
   if (i < 0 || /achatsGriffesPiecesRestants|griffesCoinBuys/.test(d)) pb.push("l'achat en Diamants est limité (il ne doit pas l'être) ou introuvable");
   return pb;
@@ -4597,3 +4598,45 @@ function auditTourneSansSaut() {
   return pb;
 }
 module.exports.auditTourneSansSaut = auditTourneSansSaut;
+
+// ── Les sons du jeu (07/10, ElevenLabs) ─────────────────────────────────────
+// 29 sons déclarés et présents ; chaque moment branché ; le réglage « Sons » transmis à CHAQUE
+// appel ; aucun nom de son inconnu. (Le chargement protégé d'expo-audio : auditModulesNatifsProteges.)
+function auditSonsJeu() {
+  const fs = require('fs'); const path = require('path');
+  const R = path.join(__dirname, '..');
+  const lire = (f) => fs.readFileSync(path.join(R, f), 'utf8');
+  const pb = [];
+  const lect = lire('src/screens/games/sonsBoutique.js');
+  const noms = [...lect.matchAll(/  '([a-z-]+)': require\('\.\.\/\.\.\/\.\.\/assets\/sons\/([a-z-]+)\.mp3'\)/g)].map((m) => m[1]);
+  if (noms.length !== 29) pb.push(`${noms.length} sons déclarés au lieu de 29`);
+  for (const n of noms) if (!fs.existsSync(path.join(R, 'assets/sons', n + '.mp3'))) pb.push(`fichier manquant : ${n}.mp3`);
+  const fichiers = ['src/screens/games/CombatScreen.js', 'src/components/FenetreJeu.js', 'src/screens/games/AdventureScreen.js', 'src/screens/games/ClickerScreen.js', 'src/screens/ProgresScreen.js'];
+  const T = Object.fromEntries(fichiers.map((f) => [f, lire(f)]));
+  const tout = Object.values(T).join('\n');
+  for (const m of tout.matchAll(/jouerSon\('([a-z-]+)'(\))?/g)) {
+    if (!noms.includes(m[1])) pb.push(`son inconnu : « ${m[1]} »`);
+    if (m[2]) pb.push(`jouerSon('${m[1]}') sans le réglage « Sons »`);
+  }
+  const c = T['src/screens/games/CombatScreen.js'];
+  const exige = [
+    [c, /son\(cle === 'parfait' \? 'impact-parfait' : cle === 'rate' \? 'rate' : 'impact-normal'\);/, 'combat : plus de son à l\'impact'],
+    [c, /if \(element && cle !== 'rate' && SON_ELEMENT\[element\]\) son\(SON_ELEMENT\[element\]\);/, 'combat : plus de son d\'élément'],
+    [c, /if \(SON_SORT\[type\]\) son\(SON_SORT\[type\]\);/, 'combat : plus de son de sort ni de K.O.'],
+    [c, /useEffect\(\(\) => \{ if \(assombriKey > 0\) son\('special'\); \}, \[assombriKey\]\);/, 'combat : plus de son au lancement du spécial'],
+    [c, /if \(v === 'parfait'\) son\('jauge-parfait'\);/, 'combat : plus de carillon « PARFAIT »'],
+    [c, /jouerSon\(isWin \? 'victoire' : 'defaite', sonsFin !== false\)/, 'fin de combat : plus de jingle'],
+    [c, /onPop=\{\(\) => jouerSon\('etoile', sonsFin !== false\)\}/, 'fin de combat : les étoiles ne tintent plus'],
+    [T['src/components/FenetreJeu.js'], /jouerSon\('fenetre', sons !== false\)/, 'fenêtre maison : plus de son à l\'ouverture'],
+    [T['src/components/FenetreJeu.js'], /jouerSon\('bouton', sons !== false\)/, 'bouton maison : plus de son'],
+    [T['src/screens/games/AdventureScreen.js'], /onLevelUpCreature\(creatureId\);\s*jouerSon\('niveau'/, 'montée de niveau : plus de son'],
+    [T['src/screens/games/AdventureScreen.js'], /onEvolveCreature\(creatureId, currentTier \+ 1\);\s*jouerSon\('evolution'/, 'évolution : plus de son'],
+    [T['src/screens/games/AdventureScreen.js'], /jouerSon\(ok \? 'achat' : 'refus', sons !== false\)/, 'page des Griffes : plus de son d\'achat / de refus'],
+    [T['src/screens/games/ClickerScreen.js'], /const resolveHatch = \(source\) => \{\n    jouerSon\('eclosion'/, 'éclosion : plus de son'],
+    [T['src/screens/games/ClickerScreen.js'], /vibrerSucces\(vibrations\);\n    jouerSon\('recompense'/, 'calendrier : plus de son de récompense'],
+    [T['src/screens/ProgresScreen.js'], /jouerSon\('recompense', sons !== false\)/, 'quêtes : plus de son de récompense'],
+  ];
+  for (const [src, re, msg] of exige) if (!re.test(src)) pb.push(msg);
+  return pb;
+}
+module.exports.auditSonsJeu = auditSonsJeu;

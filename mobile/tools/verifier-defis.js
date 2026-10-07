@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditSonsJeu', "les 29 sons : déclarés, présents, branchés à chaque moment, réglage « Sons » respecté (07/10)"],
   ['auditTourneSansSaut', "livre qui tourne (Collection, boutique) : aucun saut à la fin du tour (06/10)"],
   ['auditLimiteGriffesPieces', "4 packs de Griffes en pièces par Ascension (Diamants sans limite) : moteur et 4 points d'achat (06/10)"],
   ['auditCarteChapitres', "carte des chapitres : médaillons dans leurs boutons, capsules de bois transparentes au toucher, « + » doré (06/10)"],

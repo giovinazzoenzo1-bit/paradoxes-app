@@ -2433,3 +2433,34 @@ suivant (anciennes feuilles démontées). RÈGLE : ne jamais remettre à zéro u
 animée par le pilote natif dans le même instant qu'un changement d'état React qui démonte
 ce qu'elle anime. Contrôle auditTourneSansSaut (commentaires ignorés) + sabotage.
 93 contrôles, 116 sabotages.
+
+
+## 07/10 — LES SONS DU JEU : 29 sons ElevenLabs intégrés (publié)
+
+Source : ElevenLabs « Sound Effects », plan Starter (licence commerciale À VIE sur ce qui est
+généré pendant l'abonnement ; le gratuit exige une mention). ⚠️ La MUSIQUE d'ElevenLabs est
+INTERDITE pour les jeux vidéo commerciaux sur Starter/Creator/Pro/Scale (Eleven Music terms)
+→ musiques via PIXABAY Music (licence : commercial, sans mention, jeu autorisé).
+Dépôt : design/a-integrer/17-sons (noms laissés par ElevenLabs = début du prompt, tronqué à
+20 caractères ; identification par préfixe de mots — ATTENTION lot 4 : « light » vs
+« lightning » à départager par le début du dernier mot partiel).
+Traitement (ffmpeg + numpy) : mono 44,1 kHz, silences coupés (-50 dB du pic, 15 ms avant,
+60 ms après), volume perçu harmonisé (RMS actif -18 dBFS, interface -22, pic ≤ -1 dBFS),
+fondus 4 / 25 ms, MP3 96 kb/s → mobile/assets/sons/<nom>.mp3 (350 Ko les 29). page.wav et
+achat.wav (synthétisés le 27/09) remplacés.
+Lecteur : sonsBoutique.js (chargement PROTÉGÉ inchangé) : SONS (29), VOLUME par son (défaut
+0,8), SON_ELEMENT, jouerSonLimite (pour le coup critique). Branchements (tous avec le réglage
+« Sons ») : COMBAT (hors zone sous empreinte) — montrerVerdict → jauge-parfait ;
+effetsImpact → impact-parfait / impact-normal / rate + son de l'ÉLÉMENT de l'attaquant (pas
+sur un raté) ; effetSort → sort-soin / sort-bouclier (bouclier, boost, vitesse, provocation,
+pacte) / sort-attaque (poison, marque, exécution, zone) / ko ; le SPÉCIAL au lancement via
+useEffect(assombriKey) ; fin de combat → victoire / defaite, chaque étoile → etoile (onPop).
+FenetreJeu → fenetre ; BoutonBois → bouton ; niveau, évolution (Exploration) ; page des
+Griffes → achat / refus ; resolveHatch → eclosion ; calendrier et quêtes → recompense ;
+Grimoire et Album → page / achat (fichiers remplacés). Banc : le combat automatisé ne résout
+pas les coups (jauge absente au banc) — comportement IDENTIQUE avant / après les sons
+(comparé), aucune erreur. Contrôle auditSonsJeu + sabotage ; auditLimiteGriffesPieces
+accepte le son de refus. 94 contrôles, 117 sabotages.
+RESTE : lot 4 (17 prompts dans 17-sons/LISEZMOI : boss/Gardien, cris des créatures, Ascension,
+runes, spécial prêt, élixir, énergie, coup critique bridé) ; musiques Pixabay (menu, combat,
+boss, option aventure).

@@ -371,6 +371,8 @@ import { COLORS } from './clickerTheme';
 import CombatScreen from './CombatScreen';
 import { DeckPicker } from './DeckPicker';
 import { afficherDialogue } from '../../components/DialogueJeu';
+import { useSettings } from '../../context/SettingsContext';
+import { jouerSon } from './sonsBoutique';
 import { FenetreJeu, BoutonBois } from '../../components/FenetreJeu';
 import {
   CREATURES,
@@ -622,6 +624,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const { trackEvent, trackMax } = useDaily();
   const [detailCreatureId, setDetailCreatureId] = useState(ficheInitiale);
   const [boutiqueGriffes, setBoutiqueGriffes] = useState(false);
+  const { sons: sonsAventure } = useSettings(); // sons (07/10)
   const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
   const [runesOpen, setRunesOpen] = useState(false);
@@ -980,6 +983,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     if (griffes < cost) return;
     setGriffes((g) => g - cost);
     onEvolveCreature(creatureId, currentTier + 1);
+    jouerSon('evolution', sonsAventure !== false);
   };
 
   // Monte une créature d'un niveau, payé EN GRIFFES. Même schéma que
@@ -999,6 +1003,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     if (griffes < cost) return;
     setGriffes((g) => g - cost);
     onLevelUpCreature(creatureId);
+    jouerSon('niveau', sonsAventure !== false);
   };
 
   // Achète une rune ALÉATOIRE contre 100 Griffes (toujours niveau 1, pas
@@ -1694,6 +1699,7 @@ function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
   const cadres = cadresExploration({ w: lw, h: lh });
   const [message, setMessage] = useState(null);
   const [enCours, setEnCours] = useState(false);
+  const { sons } = useSettings();
   if (!cadres) return null;
   const ui = cadres.ui; const ecran = cadres;
   const R = (f, ax = 'centre') => {
@@ -1704,10 +1710,11 @@ function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
   const police = (k) => Math.max(8, Math.round(ui.h * k));
   const acheter = async (o) => {
     if (enCours) return;
-    if (o.restants === 0) { setMessage({ texte: o.limite, ok: false }); return; }
+    if (o.restants === 0) { jouerSon('refus', sons !== false); setMessage({ texte: o.limite, ok: false }); return; }
     setEnCours(true);
     const ok = await o.onAcheter();
     setEnCours(false);
+    jouerSon(ok ? 'achat' : 'refus', sons !== false);
     setMessage(ok ? { texte: (o.message && o.message()) || `+${o.quantite} Griffes !`, ok: true } : { texte: o.manque, ok: false });
   };
   return (

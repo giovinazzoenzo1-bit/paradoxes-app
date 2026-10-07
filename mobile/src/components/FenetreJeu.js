@@ -4,8 +4,10 @@
 // bois pour les boutons, croix dorée. S'adapte au portrait ET au paysage.
 // ⚠️ L'image du corps est dimensionnée par MESURE (onLayout), jamais en « remplir le parent » :
 // sur Android, une <Image> en absoluteFill s'affiche à la taille d'ORIGINE du fichier.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, useWindowDimensions } from 'react-native';
+import { useSettings } from '../context/SettingsContext';
+import { jouerSon } from '../screens/games/sonsBoutique';
 
 const PIECES = {
   carte: require('../../assets/combat/carte-bois.png'),
@@ -18,8 +20,9 @@ const COULEUR_BOUTON = { principal: '#ffd96a', annuler: '#f1e2c4', danger: '#ff8
 // Bouton : un onglet de bois en 3 tranches (les bouts gardent leurs proportions).
 export function BoutonBois({ texte, style = 'principal', onPress, largeur = 180, hauteur = 46, desactive = false }) {
   const k = hauteur / PIECES.onglet.h;
+  const { sons } = useSettings();
   return (
-    <TouchableOpacity onPress={onPress} disabled={desactive} activeOpacity={0.85} style={{ width: largeur, height: hauteur, opacity: desactive ? 0.55 : 1 }}>
+    <TouchableOpacity onPress={() => { jouerSon('bouton', sons !== false); if (onPress) onPress(); }} disabled={desactive} activeOpacity={0.85} style={{ width: largeur, height: hauteur, opacity: desactive ? 0.55 : 1 }}>
       <View style={{ position: 'absolute', left: 0, top: 0, width: largeur, height: hauteur, flexDirection: 'row' }}>
         <Image source={PIECES.onglet.g} resizeMethod="scale" resizeMode="stretch" style={{ width: PIECES.onglet.capG * k, height: hauteur }} />
         <Image source={PIECES.onglet.m} resizeMethod="scale" resizeMode="stretch" style={{ flex: 1, height: hauteur }} />
@@ -39,6 +42,8 @@ export function FenetreJeu({ titre, onFermer = null, toucherFondFerme = false, p
   const paysage = W > H;
   const L = largeur || Math.min(W * (paysage ? 0.56 : 0.9), 620);
   const [taille, setTaille] = useState(null);
+  const { sons } = useSettings();
+  useEffect(() => { jouerSon('fenetre', sons !== false); }, []); // la fenêtre s'ouvre (07/10)
   const plaqueL = Math.min(L * 0.8, 460); const plaqueH = plaqueL / (1300 / 313);
   // Taille du titre selon sa LONGUEUR (≈ 0,55 em par lettre) : un titre long tenait mal (06/10).
   const policeTitre = Math.round(Math.min(plaqueH * 0.36, (plaqueL * 0.78) / Math.max(1, (titre || '').length * 0.55)));
