@@ -47,3 +47,51 @@ Générés pendant le mois payant (plan Starter) : licence commerciale à vie. P
 | `evolution.mp3` | 2,5 s | A creature evolves in a fantasy mobile game: a building magical shimmer rising into a bright triumphant burst. No voice. |
 | `eclosion.mp3` | 1,5 s | A magical egg cracking and hatching in a fantasy mobile game: eggshell cracks followed by a bright sparkling reveal. No voice, no music. |
 | `refus.mp3` | 0,5 s | A soft negative error blip in a fantasy mobile game menu, gentle and not harsh, for an action that is not possible. No voice, no music. |
+
+# Lot 4 (07/10) — 17 sons de plus
+
+## Boss et Gardien
+
+| Nom du fichier | Durée | Prompt |
+| --- | --- | --- |
+| `boss-apparition.mp3` | 2,5 s | A huge monster boss appears in a fantasy mobile game: a deep menacing roar followed by a heavy resonant gong hit. No human voice, no music. |
+| `boss-vaincu.mp3` | 3 s | A boss is defeated in a fantasy mobile game: a big triumphant orchestral fanfare with timpani and a bright cymbal swell, about 3 seconds, ending cleanly. No voice. |
+
+## Créatures touchées (un cri par élément)
+
+| Nom du fichier | Durée | Prompt |
+| --- | --- | --- |
+| `creature-feu.mp3` | 0,8 s | A small cute fire creature reacts when touched in a fantasy mobile game: a playful little growl with a crackle of embers. No human voice, no music. |
+| `creature-eau.mp3` | 0,8 s | A small cute water creature reacts when touched in a fantasy mobile game: a happy bubbly gurgle with a little splash. No human voice, no music. |
+| `creature-terre.mp3` | 0,8 s | A small cute earth creature reacts when touched in a fantasy mobile game: a low happy grumble with a soft rumble of pebbles. No human voice, no music. |
+| `creature-air.mp3` | 0,8 s | A small cute air creature reacts when touched in a fantasy mobile game: a light airy chirp with a gentle swish of wind. No human voice, no music. |
+| `creature-foudre.mp3` | 0,8 s | A small cute lightning creature reacts when touched in a fantasy mobile game: an excited squeak with a tiny electric crackle. No human voice, no music. |
+| `creature-lumiere.mp3` | 0,8 s | A small cute light creature reacts when touched in a fantasy mobile game: a soft happy coo with a twinkling chime. No human voice, no music. |
+| `creature-tenebres.mp3` | 0,8 s | A small cute shadow creature reacts when touched in a fantasy mobile game: a mischievous low purr with a soft dark whoosh. No human voice, no music. |
+| `creature-magie.mp3` | 0,8 s | A small cute magical creature reacts when touched in a fantasy mobile game: a curious trill with a sparkling magical shimmer. No human voice, no music. |
+
+## Grands et petits moments
+
+| Nom du fichier | Durée | Prompt |
+| --- | --- | --- |
+| `ascension.mp3` | 3 s | An epic ascension moment in a fantasy mobile game: a powerful rising swell of magical energy and bells bursting into a radiant shimmering climax, about 3 seconds. No voice, no music. |
+| `rune-tirage.mp3` | 1,5 s | A magic rune is revealed in a fantasy mobile game: a mysterious rising shimmer ending in a bright crystalline reveal chime. No voice, no music. |
+| `rune-fusion.mp3` | 1,5 s | Two magic runes are fused at a forge in a fantasy mobile game: a heavy anvil hammer strike followed by a bright magical burst of sparkles. No voice, no music. |
+| `special-pret.mp3` | 0,8 s | A special attack becomes ready in a fantasy mobile game: a short rising magical charge ending in a bright ping, energizing. No voice, no music. |
+| `elixir.mp3` | 1 s | A magic potion bottle is uncorked with a pop, followed by a bubbling glittering magical shimmer, fantasy mobile game. No voice, no music. |
+| `energie.mp3` | 0,8 s | Energy refilled in a fantasy mobile game: a quick rising electric whoosh ending in a bright full-charge ding. No voice, no music. |
+
+## Coup critique de l'œuf (joué très doucement, au plus une fois par seconde et demie)
+
+| Nom du fichier | Durée | Prompt |
+| --- | --- | --- |
+| `crit.mp3` | 0,5 s | A tiny critical tap on a magic egg in a fantasy mobile game: a short, light, crisp sparkle ping, very subtle and soft. No voice, no music. |
+
+# Musiques (Pixabay, PAS ElevenLabs : sa licence musicale exclut les jeux vidéo commerciaux)
+
+| Nom du fichier | Moment | Mots-clés sur pixabay.com/music |
+| --- | --- | --- |
+| `musique-menu.mp3` | Le jeu de l'œuf | magical forest, fantasy calm loop |
+| `musique-combat.mp3` | Les combats | fantasy battle loop, adventure action |
+| `musique-boss.mp3` | Boss et Gardien | boss battle, epic orchestral battle |
+| `musique-aventure.mp3` (option) | Hub et carte | fantasy adventure |
