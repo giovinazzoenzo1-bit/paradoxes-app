@@ -242,6 +242,8 @@ const SABOTAGES = [
     remplace("coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'none' },", "coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30 },")],
   ['auditEcranFin', F.combatEcran, "le pack de Griffes de la défaite débranché par la refonte",
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
+  ['auditMusique', path.join(RACINE, 'src/screens/games/musique.js'), "musique du menu poussée à 0,9 : elle couvrirait les bruitages",
+    remplace('export const VOLUME_MUSIQUE = { menu: 0.25,', 'export const VOLUME_MUSIQUE = { menu: 0.9,')],
   ['auditSonsJeu', F.combatEcran, "son des impacts débranché : les coups redeviennent muets",
     remplace("    son(cle === 'parfait' ? 'impact-parfait' : cle === 'rate' ? 'rate' : 'impact-normal');\n", '')],
   ['auditTourneSansSaut', path.join(RACINE, 'src/screens/games/livreTourne.js'), "angle remis à zéro à la fin du tour : l'ancienne page réapparaît (bug du 06/10)",

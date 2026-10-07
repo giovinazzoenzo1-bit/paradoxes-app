@@ -294,10 +294,11 @@ function Medaillon({ style, creatureId = null, stade = 0, emoji = '', onPress = 
 // l'interface du hub ; image à largeur/hauteur explicites (auditImagesTailleExplicite).
 function PanneauRetour({ onPress, style }) {
   const { width: w, height: h } = useWindowDimensions();
+  const { sons } = useSettings();
   const uiL = Math.min(h * HUB_RAPPORT, w); const uiH = uiL / HUB_RAPPORT;
   const l = (HUB.retour[2] - HUB.retour[0]) * uiL; const hh = (HUB.retour[3] - HUB.retour[1]) * uiH;
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[{ width: l, height: hh, justifyContent: 'center' }, style]}>
+    <TouchableOpacity onPress={() => { jouerSon('retour', sons !== false); if (onPress) onPress(); }} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={[{ width: l, height: hh, justifyContent: 'center' }, style]}>
       <Image source={HUB_IMG.retour} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
       <Text style={[styles.hubRetourTexte, { fontSize: Math.max(8, Math.round(uiH * 0.023)), marginLeft: l * 0.2 }]} numberOfLines={1}>RETOUR</Text>
     </TouchableOpacity>
@@ -373,6 +374,7 @@ import { DeckPicker } from './DeckPicker';
 import { afficherDialogue } from '../../components/DialogueJeu';
 import { useSettings } from '../../context/SettingsContext';
 import { jouerSon, SON_CREATURE } from './sonsBoutique';
+import { useMusique } from './musique';
 import { FenetreJeu, BoutonBois } from '../../components/FenetreJeu';
 import {
   CREATURES,
@@ -624,7 +626,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const { trackEvent, trackMax } = useDaily();
   const [detailCreatureId, setDetailCreatureId] = useState(ficheInitiale);
   const [boutiqueGriffes, setBoutiqueGriffes] = useState(false);
-  const { sons: sonsAventure } = useSettings(); // sons (07/10)
+  const { sons: sonsAventure, musique: musiqueAventure } = useSettings(); // sons (07/10)
+  useMusique('aventure', musiqueAventure); // musique de l'Exploration (07/10)
   // Enveloppe une action : son joué si elle a RÉUSSI (tirage de rune, fusion…).
   const avecSon = (fn, nom, reussi = (r) => !!r) => (...args) => { const r = fn(...args); if (reussi(r)) jouerSon(nom, sonsAventure !== false); return r; };
   const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
@@ -1921,6 +1924,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
         ownedRunes={ownedRunes}
         onPick={(runeId) => {
           onEquipRune(runeId);
+          jouerSon('rune-equipee', sonsFiche !== false);
           setRunePickerSlot(null);
         }}
         onClose={() => setRunePickerSlot(null)}

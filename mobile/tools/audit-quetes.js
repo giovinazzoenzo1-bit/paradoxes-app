@@ -4610,9 +4610,9 @@ function auditSonsJeu() {
   const lect = lire('src/screens/games/sonsBoutique.js');
   const noms = [...lect.matchAll(/  '([a-z-]+)': require\('\.\.\/\.\.\/\.\.\/assets\/sons\/([a-z-]+)\.mp3'\)/g)].map((m) => m[1]);
   // (les cris des créatures sont appelés par SON_CREATURE, le choc des éléments par SON_ELEMENT)
-  if (noms.length !== 46) pb.push(`${noms.length} sons déclarés au lieu de 46`);
+  if (noms.length !== 57) pb.push(`${noms.length} sons déclarés au lieu de 57`);
   for (const n of noms) if (!fs.existsSync(path.join(R, 'assets/sons', n + '.mp3'))) pb.push(`fichier manquant : ${n}.mp3`);
-  const fichiers = ['src/screens/games/CombatScreen.js', 'src/components/FenetreJeu.js', 'src/screens/games/AdventureScreen.js', 'src/screens/games/ClickerScreen.js', 'src/screens/ProgresScreen.js'];
+  const fichiers = ['src/screens/games/CombatScreen.js', 'src/components/FenetreJeu.js', 'src/screens/games/AdventureScreen.js', 'src/screens/games/ClickerScreen.js', 'src/screens/ProgresScreen.js', 'src/components/BackButton.js'];
   const T = Object.fromEntries(fichiers.map((f) => [f, lire(f)]));
   const tout = Object.values(T).join('\n');
   for (const m of tout.matchAll(/jouerSon(?:Limite)?\('([a-z-]+)'(\))?/g)) {
@@ -4637,21 +4637,64 @@ function auditSonsJeu() {
     // Un son ne doit JAMAIS précéder la vérification qui peut refuser l'action (07/10) :
     [T['src/screens/games/ClickerScreen.js'], /if \(coins < nextSummonCost\) return;\n    jouerSon\('eclosion'/, "invocation : le son précède la vérification des pièces"],
     [T['src/screens/games/ClickerScreen.js'], /trackEvent\('powerActivated', 1\);\n    jouerSon\('special-pret'/, 'pouvoir : le son précède ses vérifications'],
-    [T['src/screens/games/ClickerScreen.js'], /if \(!goldenTargetRef\.current\) return;\n    jouerSon\('recompense'/, "étoile dorée : le son précède la vérification"],
+    // (étoile dorée : vérifiée par la ligne du lot 5, avec son son dédié)
     [T['src/screens/games/ClickerScreen.js'], /vibrerSucces\(vibrations\);\n    jouerSon\('recompense'/, 'calendrier : plus de son de récompense'],
     [T['src/screens/ProgresScreen.js'], /jouerSon\('recompense', sons !== false\)/, 'quêtes : plus de son de récompense'],
     // Lot 4 (07/10)
     [c, /if \(guardianEggNumber > 0\) son\('boss-apparition'\)/, "Gardien : plus de son d'entrée"],
     [c, /if \(manaActif >= MANA_MAX && manaPrecRef\.current < MANA_MAX\) son\('special-pret'\)/, 'combat : plus de son « spécial prêt »'],
     [T['src/screens/games/ClickerScreen.js'], /jouerSonLimite\('crit', sonsJeuRef\.current, 1500\)/, 'coup critique : son absent ou plus bridé'],
-    [T['src/screens/games/ClickerScreen.js'], /jouerSon\('etoile', sonsJeuRef\.current\); \/\/ l'étoile dorée apparaît/, "étoile dorée : plus de son à l'apparition"],
+    // (apparition de l'étoile dorée : vérifiée par la ligne du lot 5, avec son son dédié)
     [T['src/screens/games/ClickerScreen.js'], /jouerSon\('ascension', sonsJeuRef\.current\)/, 'Ascension : plus de son'],
     [T['src/screens/games/ClickerScreen.js'], /jouerSon\(earned === 0 \? 'defaite' : 'boss-vaincu', sonsJeuRef\.current\)/, 'Boss : plus de son de fin'],
     [T['src/screens/games/ClickerScreen.js'], /jouerSon\(SON_CREATURE\[creature\.element\] \|\| 'creature-magie', sonsJeuRef\.current\)/, 'deck : la créature ne crie plus en apparaissant'],
     [T['src/screens/games/AdventureScreen.js'], /onFuseAll=\{avecSon\(fuseAllRunes, 'rune-fusion', \(n\) => n > 0\)\}/, 'fusion de runes : plus de son'],
     [T['src/screens/games/AdventureScreen.js'], /onBuyPack=\{avecSon\(buyRunePack, 'rune-tirage'\)\}/, 'tirage de runes : plus de son'],
+    // Lot 5 (07/10)
+    [T['src/screens/games/ClickerScreen.js'], /jouerSon\('etoile-doree-apparition', sonsJeuRef\.current\)/, "étoile dorée : plus de son à l'apparition"],
+    [T['src/screens/games/ClickerScreen.js'], /if \(!goldenTargetRef\.current\) return;\n    jouerSon\('etoile-doree-recolte'/, 'étoile dorée : plus de son à la récolte (ou avant la vérification)'],
+    [T['src/screens/games/ClickerScreen.js'], /if \(!ritualTargetRef\.current\) return;\n    jouerSon\('bulle-eclatee'/, 'bulle : plus de son (ou avant la vérification)'],
+    [T['src/screens/games/ClickerScreen.js'], /if \(!id \|\| !isQuestDone\(id\)\) return;\n    jouerSon\('defi-valide'/, 'défi validé : plus de son (ou avant la vérification)'],
+    [T['src/screens/games/ClickerScreen.js'], /jouerSonLimite\('boss-coup', sonsJeuRef\.current, 220\)/, 'coups sur le Boss : son absent ou plus bridé'],
+    [T['src/screens/games/ClickerScreen.js'], /if \(!incubatingEgg \|\| !incubatorCanWatchVideo\(incubatingEgg\)\) return;/, 'vidéo de l\'incubateur : le son précède la vérification'],
+    [T['src/components/BackButton.js'], /jouerSon\('retour', sons !== false\)/, 'bouton retour : plus de son'],
+    [T['src/screens/games/AdventureScreen.js'], /onEquipRune\(runeId\);\n\s*jouerSon\('rune-equipee'/, 'rune équipée : plus de son'],
   ];
   for (const [src, re, msg] of exige) if (!re.test(src)) pb.push(msg);
   return pb;
 }
 module.exports.auditSonsJeu = auditSonsJeu;
+
+// ── Les musiques (07/10, Pixabay) ──────────────────────────────────────────
+// 4 musiques présentes ; volumes BAS (≤ 0,35 : « pas trop fortes », sous les bruitages) ; en
+// boucle ; la pile posée par les 4 écrans (menu, Exploration, combat — boss pour le Gardien —,
+// Boss du jeu de l'œuf) ; réglage « Musique » ; pause en arrière-plan ; accès protégé partagé.
+function auditMusique() {
+  const fs = require('fs'); const path = require('path');
+  const R = path.join(__dirname, '..');
+  const lire = (f) => fs.readFileSync(path.join(R, f), 'utf8');
+  const pb = [];
+  const m = lire('src/screens/games/musique.js');
+  for (const n of ['menu', 'aventure', 'combat', 'boss']) {
+    if (!new RegExp(n + ": require\\('\\.\\./\\.\\./\\.\\./assets/sons/musique-" + n + "\\.mp3'\\)").test(m)) pb.push(`musique « ${n} » absente`);
+    else if (!fs.existsSync(path.join(R, 'assets/sons/musique-' + n + '.mp3'))) pb.push(`fichier musique-${n}.mp3 manquant`);
+  }
+  const vol = (m.match(/VOLUME_MUSIQUE = \{([^}]*)\}/) || [, ''])[1];
+  const vs = [...vol.matchAll(/:\s*([0-9.]+)/g)].map((x) => Number(x[1]));
+  if (vs.length !== 4 || vs.some((v) => v > 0.35)) pb.push(`volumes de musique trop forts ou incomplets : ${vs.join(', ')}`);
+  if (!/p\.loop = true;/.test(m)) pb.push('les musiques ne bouclent plus');
+  if (!/AppState\.addEventListener\('change'/.test(m)) pb.push("la musique ne s'arrête plus en arrière-plan");
+  if (!/import \{ audioDisponible \} from '\.\/sonsBoutique';/.test(m)) pb.push("la musique n'utilise plus l'accès protégé à expo-audio");
+  if (!/reglage && !arrierePlan && pile\.length/.test(m)) pb.push('la musique ignore le réglage, l\'arrière-plan ou la pile');
+  const exige = [
+    ['src/screens/games/ClickerScreen.js', /useMusique\('menu', musique\)/, 'menu : plus de musique'],
+    ['src/screens/games/ClickerScreen.js', /\{boss && <MusiqueActive nom="boss" actif=\{musique\} \/>\}/, 'Boss du jeu de l\'œuf : plus de musique'],
+    ['src/screens/games/AdventureScreen.js', /useMusique\('aventure', musiqueAventure\)/, 'Exploration : plus de musique'],
+    ['src/screens/games/CombatScreen.js', /useMusique\(guardianEggNumber > 0 \? 'boss' : 'combat', musiqueReglage\)/, 'combat : plus de musique (boss pour le Gardien)'],
+    ['src/context/SettingsContext.js', /musique: true,/, 'réglage « Musique » absent des valeurs par défaut'],
+    ['src/screens/OptionsScreen.js', /onPress=\{\(\) => toggleSetting\('musique'\)\}/, 'réglage « Musique » absent des Paramètres'],
+  ];
+  for (const [f, re, msg] of exige) if (!re.test(lire(f))) pb.push(msg);
+  return pb;
+}
+module.exports.auditMusique = auditMusique;

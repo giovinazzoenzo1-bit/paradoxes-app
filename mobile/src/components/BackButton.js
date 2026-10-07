@@ -1,5 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, ImageBackground, Text, StyleSheet } from 'react-native';
+import { useSettings } from '../context/SettingsContext';
+import { jouerSon } from '../screens/games/sonsBoutique';
 
 // Bouton retour partagé par TOUS les écrans du jeu.
 //
@@ -12,9 +14,10 @@ import { TouchableOpacity, ImageBackground, Text, StyleSheet } from 'react-nativ
 // La plaque dorée porte une flèche gravée à gauche : le libellé est donc
 // décalé vers la droite pour ne pas se poser dessus.
 export default function BackButton({ onPress, style, label = 'RETOUR' }) {
+  const { sons } = useSettings();
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={() => { jouerSon('retour', sons !== false); if (onPress) onPress(); }}
       style={[styles.btn, style]}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >

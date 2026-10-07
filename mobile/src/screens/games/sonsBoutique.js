@@ -66,6 +66,18 @@ const SONS = {
   'rune-fusion': require('../../../assets/sons/rune-fusion.mp3'),
   'rune-tirage': require('../../../assets/sons/rune-tirage.mp3'),
   'special-pret': require('../../../assets/sons/special-pret.mp3'),
+  // Lot 5 (07/10) : étoile dorée, bulle au gland doré, défi validé, hors ligne, vidéo, rune équipée, offrande, coup sur le Boss, retour.
+  'etoile-doree-apparition': require('../../../assets/sons/etoile-doree-apparition.mp3'),
+  'etoile-doree-recolte': require('../../../assets/sons/etoile-doree-recolte.mp3'),
+  'bulle-apparition': require('../../../assets/sons/bulle-apparition.mp3'),
+  'bulle-eclatee': require('../../../assets/sons/bulle-eclatee.mp3'),
+  'defi-valide': require('../../../assets/sons/defi-valide.mp3'),
+  'hors-ligne': require('../../../assets/sons/hors-ligne.mp3'),
+  'video-acceleration': require('../../../assets/sons/video-acceleration.mp3'),
+  'rune-equipee': require('../../../assets/sons/rune-equipee.mp3'),
+  'offrande': require('../../../assets/sons/offrande.mp3'),
+  'boss-coup': require('../../../assets/sons/boss-coup.mp3'),
+  'retour': require('../../../assets/sons/retour.mp3'),
 };
 const VOLUME_DEFAUT = 0.8;
 const VOLUME = {
@@ -74,6 +86,7 @@ const VOLUME = {
   crit: 0.35, // discret : il peut revenir souvent (bridé par jouerSonLimite)
   'creature-feu': 0.7, 'creature-eau': 0.7, 'creature-terre': 0.7, 'creature-air': 0.7, 'creature-foudre': 0.7, 'creature-lumiere': 0.7, 'creature-tenebres': 0.7, 'creature-magie': 0.7,
   ascension: 0.9, 'boss-apparition': 0.85,
+  'boss-coup': 0.45, retour: 0.5, // fréquents ou d'interface : plus discrets
 };
 // Le cri d'une créature selon son élément (toucher sur le deck, ouverture de sa fiche).
 export const SON_CREATURE = { Feu: 'creature-feu', Eau: 'creature-eau', Terre: 'creature-terre', Air: 'creature-air', Foudre: 'creature-foudre', 'Lumière': 'creature-lumiere', 'Ténèbres': 'creature-tenebres', Magie: 'creature-magie' };
@@ -89,6 +102,9 @@ function moduleAudio() {
   }
   return audio;
 }
+
+// Le même accès PROTÉGÉ, pour la musique (musique.js) — 07/10.
+export function audioDisponible() { return moduleAudio(); }
 
 const lecteurs = {};
 export function jouerSon(nom, actif = true) {

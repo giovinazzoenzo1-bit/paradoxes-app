@@ -247,6 +247,7 @@ const EGG_IMAGES = [
 import { DeckPicker } from './DeckPicker';
 import { afficherDialogue } from '../../components/DialogueJeu';
 import { jouerSon, jouerSonLimite, SON_CREATURE } from './sonsBoutique';
+import { useMusique, MusiqueActive } from './musique';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
 //
@@ -341,7 +342,8 @@ function formatNum(n) {
 export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
-  const { vibrations, ambientFx, sons } = useSettings();
+  const { vibrations, ambientFx, sons, musique } = useSettings();
+  useMusique('menu', musique); // la musique de fond du jeu (07/10) — l'Exploration et les combats posent la leur par-dessus
   // Lue par les minuteries (l'étoile dorée…) : la coupure du réglage s'applique tout de suite (07/10).
   const sonsJeuRef = useRef(true);
   sonsJeuRef.current = sons !== false;
@@ -1759,7 +1761,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       } else if (!goldenTargetRef.current && viewRef.current === 'tap' && now >= nextGoldenAtRef.current) {
         const pos = randomRingPosition();
         setGoldenTarget({ expiresAt: now + GOLDEN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
-        jouerSon('etoile', sonsJeuRef.current); // l'étoile dorée apparaît (07/10)
+        jouerSon('etoile-doree-apparition', sonsJeuRef.current); // l'étoile dorée apparaît (07/10)
       }
 
       // Bulle Rituel ("pub" de boost) : apparaît dès que le cooldown est
@@ -1772,6 +1774,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       } else if (!ritualTargetRef.current && viewRef.current === 'tap' && ritualReady(lastRitualAtRef.current, now)) {
         const pos = randomRingPosition();
         setRitualTarget({ expiresAt: now + RITUAL_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
+        jouerSon('bulle-apparition', sonsJeuRef.current); // la bulle au gland doré apparaît (07/10)
       }
 
       setLiveTick((t) => t + 1);
@@ -1997,6 +2000,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setTimeout(() => {
       setOfflineAdLoading(false);
       setOfflineDoubled(true);
+      jouerSon('hors-ligne', sonsJeuRef.current); // gains hors ligne doublés (07/10)
       const bonus = offlineReport.amount;
       setCoins((c) => c + bonus);
       setTotalEarned((t) => t + bonus);
@@ -2005,6 +2009,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
 
   const closeOfflineReport = () => {
+    if (offlineReport) jouerSon('hors-ligne', sonsJeuRef.current); // gains hors ligne récupérés (07/10)
     setOfflineReport(null);
     setOfflineDoubled(false);
   };
@@ -2020,6 +2025,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         trackEvent('hatchVideo', 1);
         return incubatorApplyVideo(prev);
       });
+      jouerSon('video-acceleration', sonsJeuRef.current); // l'éclosion accélère (07/10)
     }, 1000);
   };
 
@@ -2173,11 +2179,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
 
   const incubatorVideo = () => {
+    if (!incubatingEgg || !incubatorCanWatchVideo(incubatingEgg)) return; // le son ne doit suivre qu'une vidéo ACCEPTÉE
     setIncubatingEgg((prev) => {
       if (!prev || !incubatorCanWatchVideo(prev)) return prev;
       trackEvent('hatchVideo', 1);
       return incubatorApplyVideo(prev);
     });
+    jouerSon('video-acceleration', sonsJeuRef.current); // l'éclosion accélère (07/10)
   };
 
   // Éclosion : même chemin d'attribution que la capture classique
@@ -2556,7 +2564,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const claimRitual = () => {
     if (!ritualTargetRef.current) return;
-    jouerSon('recompense', sonsJeuRef.current);
+    jouerSon('bulle-eclatee', sonsJeuRef.current); // la bulle éclate (07/10)
     // ⚠️ Même défaut : `ritualReward` prend `passiveIncome` en entrée,
     // qui contient déjà le bonus d'Ascension.
     const reward = Math.round(ritualReward(tapPowerRef.current, passiveIncome));
@@ -2650,7 +2658,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const claimOffering = (id) => {
     const item = pendingOfferingsRef.current.find((o) => o.id === id);
     if (!item) return;
-    jouerSon('recompense', sonsJeuRef.current);
+    jouerSon('offrande', sonsJeuRef.current);
     const next = pendingOfferingsRef.current.filter((o) => o.id !== id);
     setPendingOfferings(next);
     savePendingOfferings(next);
@@ -2951,6 +2959,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const validerDefi = () => {
     const id = currentChallengeId;
     if (!id || !isQuestDone(id)) return;
+    jouerSon('defi-valide', sonsJeuRef.current); // défi validé (07/10)
     setValidatedQuestIds((prev) => {
       if (prev.includes(id)) return prev;
       const suivant = [...prev, id];
@@ -3459,6 +3468,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const next = { taps: cur.taps + 1, startedAt };
     bossRef.current = next;
     setBoss(next);
+    jouerSonLimite('boss-coup', sonsJeuRef.current, 220); // chaque coup sur le Boss, bridé (07/10)
     const elapsed = now - startedAt;
     if (next.taps >= TAP_BOSS_TAPS_REQUIRED) {
       bossRef.current = null;
@@ -3523,7 +3533,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const claimGolden = () => {
     if (!goldenTargetRef.current) return;
-    jouerSon('recompense', sonsJeuRef.current); // l'étoile dorée récoltée (07/10)
+    jouerSon('etoile-doree-recolte', sonsJeuRef.current); // l'étoile dorée récoltée (07/10)
     const bonus = Math.round(gainCoins(goldenBonus(tapPowerRef.current)));
     spawnPopup(`+${bonus} ✨`, 110, 60, true);
     setGoldenTarget(null);
@@ -4231,6 +4241,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           s'il captait les taps, il empêcherait de combattre. */}
       {/* ⚠️ Annonce du boss. `pointerEvents: 'none'` comme le bandeau :
           elle ne doit jamais empêcher de taper. */}
+      {/* Le Boss du jeu de l'œuf : SA musique tant qu'il est là (07/10). */}
+      {boss && <MusiqueActive nom="boss" actif={musique} />}
       {bossAnnonce !== null && view === 'tap' && (
         <View style={[styles.bossAnnonce, { pointerEvents: 'none' }]}>
           <Text style={styles.bossAnnonceTitre}>⚠️ Attention, boss en approche</Text>

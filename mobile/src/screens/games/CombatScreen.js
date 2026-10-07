@@ -18,6 +18,7 @@ import CreatureArt, { hasCreatureArt } from '../../components/CreatureArt';
 import { afficherDialogue } from '../../components/DialogueJeu';
 import { jouerSon, SON_ELEMENT } from './sonsBoutique';
 import { useSettings } from '../../context/SettingsContext';
+import { useMusique } from './musique';
 import { CADRAGE_CREATURES } from '../../games/clicker/cadrageCreatures';
 import { StatusBar } from 'expo-status-bar';
 
@@ -546,7 +547,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const verdictRef = useRef(null);
   const [verdict, setVerdict] = useState(null);
   // Sons du combat (07/10, ElevenLabs) : réglage « Sons » des Paramètres.
-  const { sons: sonsReglage } = useSettings();
+  const { sons: sonsReglage, musique: musiqueReglage } = useSettings();
+  useMusique(guardianEggNumber > 0 ? 'boss' : 'combat', musiqueReglage); // musique du combat (07/10)
   const sonsRef = useRef(true);
   sonsRef.current = sonsReglage !== false;
   const son = (nom) => jouerSon(nom, sonsRef.current);

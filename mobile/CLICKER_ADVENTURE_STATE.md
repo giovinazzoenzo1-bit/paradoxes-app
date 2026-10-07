@@ -2489,3 +2489,30 @@ grantHatchedCreature (resolveHatch lance d'abord le combat du Gardien s'il en fa
 RÈGLE : un son se pose sur le CHEMIN DE LA RÉUSSITE, jamais avant un « if (…) return ».
 auditSonsJeu : 46 sons + l'ordre vérification → son. 94 contrôles, 117 sabotages.
 RESTE : musiques Pixabay (menu, combat, boss, option aventure).
+
+
+## 07/10 — MUSIQUES + sons du LOT 5 (publié) : 57 bruitages + 4 musiques
+
+MUSIQUES (Pixabay, noms d'origine non renommés → attribuées par leur titre) : menu = « epic and
+magic mood » (60 s), aventure = « fantasy adventure quest » (209 s), combat = « samurai loop »
+(72 s), boss = « final battle II epic cinematic » (121 s). Traitées : silences coupés, volume
+harmonisé (RMS -21 dBFS), fondus 0,6 s / 1,2 s (boucle sans à-coup), mono 80 kb/s (≈ 4,5 Mo
+les 4). Module src/screens/games/musique.js : PILE (useMusique(nom, réglage) en haut d'écran ;
+MusiqueActive pour un état — le Boss du jeu de l'œuf) ; seule la musique du haut joue, la
+précédente REPREND au retour ; VOLUME_MUSIQUE ≤ 0,3 (« pas trop fortes »), loop ; pause en
+arrière-plan (AppState) ; réglage « Musique » séparé (SettingsContext, Paramètres) ; accès
+protégé partagé (sonsBoutique.audioDisponible). Chaque bruitage a son propre lecteur : rien
+ne coupe la musique. Pile : menu (ClickerScreen) → aventure (AdventureScreen) → combat
+(CombatScreen ; boss pour le Gardien) ; boss (Boss du jeu de l'œuf).
+LOT 5 (11) : etoile-doree-apparition / -recolte (remplacent etoile / recompense), bulle-apparition
+/ bulle-eclatee (la bulle au gland doré = le « rituel » ; ⚠️ 2 prompts au même début → noms
+identiques une fois tronqués : départagés par l'ordre de génération ET la répartition de
+l'énergie — le « pop » met 91 % de son énergie dans ses 120 premières ms ; l'attaque seule
+TROMPAIT), defi-valide, hors-ligne (récupération + doublement), video-acceleration (œuf du nid
+et incubateur, APRÈS vérification), rune-equipee, offrande, boss-coup (bridé 220 ms), retour
+(BackButton et PanneauRetour). La « bougie » n'existe plus (remplacée par l'étoile dorée).
+Gardes : auditSonsJeu (57, lot 5 ; 2 anciennes vérifications de l'étoile dorée retirées) ;
+auditMusique + sabotage. 95 contrôles, 118 sabotages.
+APK du 06/10 : build RÉUSSI (run 37506374270) — lien dans le résumé du robot et sur expo.dev.
+Avertissement GitHub : actions/checkout@v4 et setup-node@v4 forcés de Node 20 vers Node 24
+(à mettre à jour un jour, sans urgence).

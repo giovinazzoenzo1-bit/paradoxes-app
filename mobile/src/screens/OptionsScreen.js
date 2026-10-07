@@ -32,7 +32,7 @@ const INTERIEUR = largeurInterieure(PANNEAU_L);
 export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
   const { addCoins } = useCoins();
   const { resetLifetimeStats, lifetimeStats } = useDaily();
-  const { vibrations, ambientFx, sons, toggleSetting } = useSettings();
+  const { vibrations, ambientFx, sons, musique, toggleSetting } = useSettings();
   const [devOpen, setDevOpen] = useState(false);
   const ascensionsVues = (lifetimeStats && lifetimeStats.ascension) || 0;
 
@@ -267,9 +267,15 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
           />
           <Toggle
             label="Sons"
-            hint="Page qui tourne et achats dans la boutique"
+            hint="Bruitages du jeu : combats, boutons, récompenses"
             value={sons}
             onPress={() => toggleSetting('sons')}
+          />
+          <Toggle
+            label="Musique"
+            hint="Musiques de fond, douces, sous les bruitages"
+            value={musique}
+            onPress={() => toggleSetting('musique')}
           />
           <Toggle
             label="Animations d'ambiance"
