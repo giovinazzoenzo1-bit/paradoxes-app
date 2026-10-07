@@ -2516,3 +2516,22 @@ auditMusique + sabotage. 95 contrôles, 118 sabotages.
 APK du 06/10 : build RÉUSSI (run 37506374270) — lien dans le résumé du robot et sur expo.dev.
 Avertissement GitHub : actions/checkout@v4 et setup-node@v4 forcés de Node 20 vers Node 24
 (à mettre à jour un jour, sans urgence).
+
+
+## 08/10 — Stade = évolution · Reliques possédées seulement · Puissance du hub (publié)
+
+1. STADE (image + nom) = PALIER D'ÉVOLUTION (décision de l'auteur : « le nouveau skin doit se
+mériter ») : stadeVisuel(evolutionTier) dans clickerLogic (0 de base, 1 après l'évolution du
+niveau 25, 2 après celle du 50 ; bornée). Remplace stageForLevel(level) (5 et 15) PARTOUT à
+l'affichage : Exploration (hub, fiche, aperçu), écran principal (deck, pouvoir, anciennes vues),
+Album, combat (le combattant porte désormais evolutionTier — hors zone sous empreinte), Changer.
+stageForLevel ne reste que pour incomeForCreature (ancien calcul de revenu). AUCUN effet de jeu :
+la force en combat dépend déjà du palier, séparément. ⚠️ Visible pour les parties en cours : une
+créature de niveau ≥ 5 non évoluée reprend sa forme de base. Contrôle auditStadeEvolution
+(+ sabotage : stade figé à 0).
+2. GRIMOIRE, RELIQUES : seulement celles qu'on POSSÈDE (créature obtenue) — filtre d'AFFICHAGE
+(visible(cle, id)) ; le catalogue CHAPITRES_GRIMOIRE reste complet (auditGrimoireComplet). Un
+chapitre sans relique garde sa page d'introduction. Contrôle auditReliquesPossedees + sabotage.
+3. HUB : pastille « Puissance » élargie à gauche jusqu'au titre (HUB.puissance x 0,615) + texte
+qui rétrécit (adjustsFontSizeToFit) — la puissance était coupée au-delà d'un certain nombre.
+97 contrôles, 120 sabotages.

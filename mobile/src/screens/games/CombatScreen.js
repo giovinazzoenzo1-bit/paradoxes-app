@@ -294,7 +294,7 @@ const RECAP_FRAME = require('../../../assets/combat/recap-frame.png');
 // Étoile de note, commune à toute l'appli (14/09).
 const STAR_ICON = require('../../../assets/icons/star.png');
 import { COLORS } from './clickerTheme';
-import { stageForLevel, MANA_MAX, MANA_PER_TURN } from '../../games/clicker/clickerLogic';
+import { stadeVisuel, MANA_MAX, MANA_PER_TURN } from '../../games/clicker/clickerLogic';
 import {
   combatStatsForCreatureTyped,
   opponentTeamForLevel,
@@ -453,7 +453,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     team.map((member) => {
       const stats = combatStatsForCreatureTyped(member.creature, member.ownedLevel, member.evolutionTier || 0, member.equippedRunes || []);
       // Mana de départ : règle PARTAGÉE (Rune d'Arcane comprise, 03/10).
-    return { creature: member.creature, ownedLevel: member.ownedLevel, stats, hp: stats.hp, mana: manaDeDepart(stats), etats: {} };
+    return { creature: member.creature, ownedLevel: member.ownedLevel, evolutionTier: member.evolutionTier || 0, stats, hp: stats.hp, mana: manaDeDepart(stats), etats: {} };
     })
   );
   const [activeIndex, setActiveIndex] = useState(0);
@@ -1278,7 +1278,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     let meilleur = null;
     fighters.forEach((f) => { const v = dmg[f.creature.id] || 0; if (!meilleur || v > meilleur.v) meilleur = { v, f }; });
     const herosFin = meilleur ? (() => {
-      const stade = stageForLevel(meilleur.f.ownedLevel);
+      const stade = stadeVisuel(meilleur.f.evolutionTier);
       const d = meilleur.f.creature.stages[stade] || meilleur.f.creature.stages[0];
       return { creatureId: meilleur.f.creature.id, stade, emoji: d.emoji, nom: d.name };
     })() : null;
@@ -1477,10 +1477,10 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       {/* Équipe du joueur — 3 sprites sur le terrain, l'actif devant. */}
       {playerOrder.map((fi, slotIdx) => {
         const f = fighters[fi];
-        const d = f.creature.stages[stageForLevel(f.ownedLevel)];
+        const d = f.creature.stages[stadeVisuel(f.evolutionTier)];
         return renderSprite({
           key: `p${fi}`, slot: PLAYER_SLOTS[slotIdx], sansJauges: true,
-          creatureId: f.creature.id, stageIndex: stageForLevel(f.ownedLevel),
+          creatureId: f.creature.id, stageIndex: stadeVisuel(f.evolutionTier),
           emoji: d.emoji, name: d.name,
           hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp,
           // Jauge visible pour TOUS : le joueur doit voir laquelle de
@@ -1603,12 +1603,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       <View style={[styles.bandeau, { left: insets.left + 4, top: 2, width: largeurBandeau, height: bandeauH, pointerEvents: phase === 'tapping' ? 'none' : 'box-none' }]}>
         <Image source={COMBAT_IMG.bandeau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
         {fighters.map((f, fi) => {
-          const d = f.creature.stages[stageForLevel(f.ownedLevel)];
+          const d = f.creature.stages[stadeVisuel(f.evolutionTier)];
           return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex, ko: pvAffiche('p', fi, f.hp) <= 0 });
         })}
         <View style={[styles.bandeauMessage, { left: largeurBandeau * 0.395, width: largeurBandeau * 0.21, height: bandeauH }]}>
           <Text style={[styles.bandeauMessageTexte, { fontSize: Math.max(10, Math.round(bandeauH * 0.22)) }]} numberOfLines={2}>
-            {switchMessage || `Au tour de ${activeFighter.creature.stages[stageForLevel(activeFighter.ownedLevel)].name} !`}
+            {switchMessage || `Au tour de ${activeFighter.creature.stages[stadeVisuel(activeFighter.evolutionTier)].name} !`}
           </Text>
         </View>
         {!isBoss && opponents.map((o, i) => {

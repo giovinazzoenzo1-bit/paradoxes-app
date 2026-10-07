@@ -1,6 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import { View, Text, Image, ImageBackground, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { CREATURES, stageForLevel } from '../../games/clicker/clickerLogic';
+import { CREATURES, stadeVisuel } from '../../games/clicker/clickerLogic';
 import { construireAlbum, RANG_RARETE as RANG } from '../../games/clicker/albumPages';
 import { CADRAGE_CREATURES, CADRAGE_DEFAUT } from '../../games/clicker/cadrageCreatures';
 import CreatureArt from '../../components/CreatureArt';
@@ -141,7 +141,7 @@ function Gemmes({ rarete, taille }) {
 function Carte({ creature, own, l, onPress }) {
   const fh = Math.round(l / RAPPORT_CADRE); const bh = Math.round(l * BANDEAU);
   const decouverte = !!own;
-  const stade = decouverte ? stageForLevel(own.level) : 0;
+  const stade = decouverte ? stadeVisuel(own.evolutionTier) : 0;
   const d = creature.stages[stade] || creature.stages[0];
   const cadre = cardFrameForElement(creature.element);
   const el = ELEMENT[creature.element] || { emoji: '✨', couleur: '#6b5a3a' };

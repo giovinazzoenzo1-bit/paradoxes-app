@@ -8,7 +8,7 @@
 // dorée, onglet de bois. S'adapte à l'orientation (3 colonnes en portrait, 6 en paysage).
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, useWindowDimensions } from 'react-native';
-import { CREATURES, RARITY_COLOR, stageForLevel } from '../../games/clicker/clickerLogic';
+import { CREATURES, RARITY_COLOR, stadeVisuel } from '../../games/clicker/clickerLogic';
 import { CADRAGE_CREATURES, CADRAGE_DEFAUT } from '../../games/clicker/cadrageCreatures';
 import CreatureArt from '../../components/CreatureArt';
 
@@ -31,8 +31,8 @@ const PIECES = {
 const RAPPORT_PLAQUE = 1300 / 313;
 
 // Une carte : la créature posée sur le PLATEAU de son socle (bas du cadrage), dans le cadre doré.
-function CarteCreature({ largeur, creature, niveau, actuelle, ailleurs, onPress }) {
-  const stage = stageForLevel(niveau);
+function CarteCreature({ largeur, creature, tier, actuelle, ailleurs, onPress }) {
+  const stage = stadeVisuel(tier);
   const display = creature.stages[stage];
   const L = largeur; const Hc = L * 1.02;
   const socleL = L * 0.74; const socleH = socleL / 1.75;
@@ -94,7 +94,7 @@ export function DeckPicker({ slotIndex, deck, owned, onPick, onClear, onClose })
               {valides.map((o) => {
                 const creature = CREATURES.find((c) => c.id === o.id);
                 return (
-                  <CarteCreature key={o.id} largeur={carteL} creature={creature} niveau={o.level}
+                  <CarteCreature key={o.id} largeur={carteL} creature={creature} tier={o.evolutionTier}
                     actuelle={deck[slotIndex] === o.id} ailleurs={deck.includes(o.id) && deck[slotIndex] !== o.id}
                     onPress={() => onPick(o.id)} />
                 );

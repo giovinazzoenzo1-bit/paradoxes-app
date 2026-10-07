@@ -221,7 +221,10 @@ function Grimoire(props) {
 
   // Auto-clics : dans l'ORDRE du modèle (prix réels de l'Ascension en cours).
   const ordonner = (cle, ids) => (cle === 'auto' ? [...ids].sort((x, y) => (parId[x].ordre ?? 0) - (parId[y].ordre ?? 0)) : ids);
-  const chapitres = CHAPITRES_GRIMOIRE.map((c, i) => ({ ...c, ...VISUELS[c.cle], planches: planches(i, ordonner(c.cle, c.ids().filter((id) => parId[id]))) }));
+  // Reliques (08/10, l'auteur : « trop de pages inutiles ») : SEULEMENT celles qu'on possède
+  // (créature obtenue) — filtre d'AFFICHAGE ; le catalogue (CHAPITRES_GRIMOIRE) reste complet.
+  const visible = (cle, id) => parId[id] && (cle !== 'reliques' || parId[id].etat !== 'verrouille');
+  const chapitres = CHAPITRES_GRIMOIRE.map((c, i) => ({ ...c, ...VISUELS[c.cle], planches: planches(i, ordonner(c.cle, c.ids().filter((id) => visible(c.cle, id)))) }));
   chapRef.current = chapitres;
   const dansLeLivre = new Set(chapitres.flatMap((c) => c.ids()));
   const etatJeu = { tapPower: props.tapPower, critLevel: props.critLevel, critDamageLevel: props.critDamageLevel, sanctuaryLevel: props.sanctuaryLevel,

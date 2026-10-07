@@ -21,6 +21,7 @@ import {
   RARITY_LABEL,
   RARITY_COLOR,
   stageForLevel,
+  stadeVisuel,
   levelUpCost,
   summonCost,
   tapPowerCost,
@@ -4032,7 +4033,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   {activePower && activePower.creatureId && (
                     <PowerAttacker
                       creatureId={activePower.creatureId}
-                      stage={stageForLevel(((owned || []).find((o) => o.id === activePower.creatureId) || { level: 1 }).level)}
+                      stage={stadeVisuel(((owned || []).find((o) => o.id === activePower.creatureId) || {}).evolutionTier)}
                       attaque={attaque}
                     />
                   )}
@@ -4700,7 +4701,7 @@ function DeckRow({ deck, owned, onSlotPress, onSlotLongPress, recharges }) {
       {deck.map((id, i) => {
         const creature = id ? CREATURES.find((c) => c.id === id) : null;
         const own = id ? ownedMap[id] : null;
-        const display = creature && own ? creature.stages[stageForLevel(own.level)] : null;
+        const display = creature && own ? creature.stages[stadeVisuel(own.evolutionTier)] : null;
         return (
           <TouchableOpacity
             key={i}
@@ -4717,7 +4718,7 @@ function DeckRow({ deck, owned, onSlotPress, onSlotLongPress, recharges }) {
                 champignons qui scintille DERRIÈRE la créature. */}
             {creature && recharges && pouvoirPret(recharges, id, maintenant) ? <LueurPouvoir taille={78} style={{ left: -16, top: -16 }} /> : null}
             {display ? (
-              <CreatureArt creatureId={id} stageIndex={stageForLevel(own.level)} emoji={display.emoji} size={46} emojiStyle={styles.deckSlotEmoji} />
+              <CreatureArt creatureId={id} stageIndex={stadeVisuel(own.evolutionTier)} emoji={display.emoji} size={46} emojiStyle={styles.deckSlotEmoji} />
             ) : (
               <Text style={styles.deckSlotEmpty}>🥚</Text>
             )}
@@ -5093,7 +5094,7 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, p
         renderItem={({ item }) => {
           const own = ownedMap[item.id];
           const discovered = !!own;
-          const stage = discovered ? stageForLevel(own.level) : 0;
+          const stage = discovered ? stadeVisuel(own.evolutionTier) : 0;
           const display = discovered ? item.stages[stage] : null;
           return (
             <TouchableOpacity
@@ -5128,7 +5129,7 @@ function CollectionView({ owned, selectedCreature, setSelectedCreature, coins, p
 }
 
 function CreatureDetail({ creature, owned, coins, onClose, pendingDiscount }) {
-  const stage = stageForLevel(owned.level);
+  const stage = stadeVisuel(owned.evolutionTier);
   const display = creature.stages[stage];
   const baseName = creature.stages[0].name;
   const power = CREATURE_POWERS[creature.id];

@@ -377,6 +377,15 @@ export const RARITY_BADGE_LETTER = {
 
 export const EVOLUTION_LEVELS = [1, 5, 15]; // niveau à partir duquel chaque stade s'active
 
+// STADE AFFICHÉ (image et nom) = le PALIER D'ÉVOLUTION (08/10, décision de l'auteur : « le
+// nouveau skin doit se mériter ») : 0 de base, 1 après la 1re évolution (niveau 25), 2 après
+// la 2e (niveau 50). Avant : il changeait tout seul aux niveaux 5 et 15 (stageForLevel, gardé
+// uniquement pour l'ancien calcul de revenu ci-dessous). Purement visuel : la force en combat
+// dépend déjà du palier, séparément.
+export function stadeVisuel(evolutionTier) {
+  return Math.max(0, Math.min(2, Math.floor(Number(evolutionTier) || 0)));
+}
+
 export function stageForLevel(level) {
   if (level >= EVOLUTION_LEVELS[2]) return 2;
   if (level >= EVOLUTION_LEVELS[1]) return 1;

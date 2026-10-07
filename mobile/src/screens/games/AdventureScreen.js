@@ -223,7 +223,7 @@ const HUB = {
   // peu plus gros » (03/10) : 10 % × 5,8 %.
   retour: [0.015, 0.022, 0.115, 0.080],
   titre: [0.3844, 0.0247, 0.6068, 0.1237],
-  puissance: [0.650, 0.035, 0.800, 0.095],
+  puissance: [0.615, 0.035, 0.800, 0.095] /* élargie à gauche jusqu'au titre (08/10) : la puissance était coupée */,
   elixir: [0.700, 0.105, 0.800, 0.160],
   griffes: [0.808, 0.035, 0.915, 0.095] /* élargie à gauche (06/10) : la capsule de bois et le « + » doré */,
   runes: [0.935, 0.025, 0.970, 0.110],
@@ -382,6 +382,7 @@ import {
   RARITY_COLOR,
   RARITY_BADGE_LETTER,
   stageForLevel,
+  stadeVisuel,
   levelUpCost,
   griffesCoinCost,
   GRIFFES_COIN_PACK,
@@ -1290,7 +1291,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
           <Image source={HUB_IMG.titre} resizeMethod="scale" resizeMode="stretch" style={auRapportL(R(HUB.titre, 'centre'), HUB_RAPPORT_PIECE.titre)} />
           {/* Pastilles du hub sur la CAPSULE DE BOIS (06/10), comme la carte des chapitres. */}
           <CapsuleBois style={[R(HUB.puissance, 'droite'), styles.hubCapsule]}>
-            <Text style={[styles.hubPiluleTexte, { fontSize: police(0.026), color: couleurPuissance }]} numberOfLines={1}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
+            <Text style={[styles.hubPiluleTexte, { fontSize: police(0.026), color: couleurPuissance, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>🛡️ Puissance {puissanceMenu ? puissanceMenu.puissance : '…'}</Text>
           </CapsuleBois>
           {elixirCombats > 0 && (
             <CapsuleBois style={[R(HUB.elixir, 'droite'), styles.hubCapsule]}>
@@ -1314,7 +1315,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
           {deck.map((id, i) => {
             const creature = id ? CREATURES.find((c) => c.id === id) : null;
             const own = id ? ownedMap[id] : null;
-            const stade = own ? stageForLevel(own.level) : 0;
+            const stade = own ? stadeVisuel(own.evolutionTier) : 0;
             const display = creature && own ? creature.stages[stade] : null;
             const cx = fond.x + HUB.pilotis[i] * fond.l;
             const dessus = fond.y + HUB.dessus * fond.h;
@@ -1773,7 +1774,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
   const { width: lw, height: lh } = useWindowDimensions();
   const cadres = cadresExploration({ w: lw, h: lh });
 
-  const stage = stageForLevel(owned.level);
+  const stage = stadeVisuel(owned.evolutionTier);
   const display = creature.stages[stage];
   const evolutionTier = owned.evolutionTier || 0;
 
@@ -3458,7 +3459,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
       {deck.map((id, i) => {
         const creature = id ? CREATURES.find((c) => c.id === id) : null;
         const own = id ? ownedMap[id] : null;
-        const stade = own ? stageForLevel(own.level) : 0;
+        const stade = own ? stadeVisuel(own.evolutionTier) : 0;
         const d = creature && own ? creature.stages[stade] : null;
         return (
           <Medaillon key={i} style={carre(APERCU.equipe.cx[i], APERCU.equipe.y0, APERCU.equipe.y1)}

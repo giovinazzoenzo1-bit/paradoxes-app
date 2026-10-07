@@ -4698,3 +4698,32 @@ function auditMusique() {
   return pb;
 }
 module.exports.auditMusique = auditMusique;
+
+// ── Le stade (image et nom) suit l'ÉVOLUTION, plus le niveau (08/10, décision de l'auteur) ──
+function auditStadeEvolution() {
+  const fs = require('fs'); const path = require('path'); const R = path.join(__dirname, '..');
+  const pb = [];
+  const L = load('clickerLogic');
+  const cas = [[undefined, 0], [0, 0], [1, 1], [2, 2], [5, 2], [-1, 0], ['1', 1]];
+  for (const [t, attendu] of cas) if (L.stadeVisuel(t) !== attendu) pb.push(`stadeVisuel(${JSON.stringify(t)}) = ${L.stadeVisuel(t)} au lieu de ${attendu}`);
+  const parcourir = (d) => fs.readdirSync(d).flatMap((f) => { const p = path.join(d, f); return fs.statSync(p).isDirectory() ? parcourir(p) : p.endsWith('.js') ? [p] : []; });
+  for (const f of parcourir(path.join(R, 'src'))) {
+    if (f.endsWith('clickerLogic.js')) continue;
+    if (/stageForLevel\(/.test(fs.readFileSync(f, 'utf8'))) pb.push(`${path.basename(f)} affiche encore le stade selon le NIVEAU (stageForLevel)`);
+  }
+  const c = fs.readFileSync(path.join(R, 'src/screens/games/CombatScreen.js'), 'utf8');
+  if (!/evolutionTier: member\.evolutionTier \|\| 0,/.test(c)) pb.push('les combattants ne portent plus leur palier : leur stade serait toujours 0');
+  return pb;
+}
+module.exports.auditStadeEvolution = auditStadeEvolution;
+
+// ── Grimoire : seulement les Reliques POSSÉDÉES (08/10, demande de l'auteur) ──
+function auditReliquesPossedees() {
+  const fs = require('fs'); const path = require('path');
+  const g = fs.readFileSync(path.join(__dirname, '../src/screens/games/GrimoireBoutique.js'), 'utf8');
+  const pb = [];
+  if (!/const visible = \(cle, id\) => parId\[id\] && \(cle !== 'reliques' \|\| parId\[id\]\.etat !== 'verrouille'\);/.test(g)) pb.push('les reliques verrouillées réapparaissent dans le Grimoire');
+  if (!/c\.ids\(\)\.filter\(\(id\) => visible\(c\.cle, id\)\)/.test(g)) pb.push("les pages du Grimoire n'utilisent plus le filtre des reliques");
+  return pb;
+}
+module.exports.auditReliquesPossedees = auditReliquesPossedees;
