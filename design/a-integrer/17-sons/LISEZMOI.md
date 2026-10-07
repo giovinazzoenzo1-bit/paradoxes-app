@@ -87,6 +87,39 @@ Générés pendant le mois payant (plan Starter) : licence commerciale à vie. P
 | --- | --- | --- |
 | `crit.mp3` | 0,5 s | A tiny critical tap on a magic egg in a fantasy mobile game: a short, light, crisp sparkle ping, very subtle and soft. No voice, no music. |
 
+
+# Lot 5 (07/10) — 10 sons dédiés (la « bougie » n'existe plus : l'étoile dorée l'a remplacée)
+
+## Étoile dorée (remplace les 2 sons réutilisés)
+
+| Nom du fichier | Durée | Prompt |
+| --- | --- | --- |
+| `etoile-doree-apparition.mp3` | 1 s | A magical golden star appears and floats in a fantasy mobile game: a bright inviting twinkle with a soft shimmering glow. No voice, no music. |
+| `etoile-doree-recolte.mp3` | 1,2 s | A golden star is collected in a fantasy mobile game: a bright sparkling burst followed by a cascade of shiny coins, rewarding. No voice, no music. |
+
+## Bulle au gland doré (le rituel)
+
+| Nom du fichier | Durée | Prompt |
+| --- | --- | --- |
+| `bulle-apparition.mp3` | 0,8 s | A magical golden bubble floats into view in a fantasy mobile game: a soft bubbly shimmer with a gentle rising chime. No voice, no music. |
+| `bulle-eclatee.mp3` | 0,8 s | A magical golden bubble pops in a fantasy mobile game: a crisp bubble pop followed by a sparkling magical chime. No voice, no music. |
+
+## Moments encore muets
+
+| Nom du fichier | Durée | Prompt |
+| --- | --- | --- |
+| `defi-valide.mp3` | 1,5 s | A challenge is completed in a fantasy mobile game: a short bright triumphant chime with a rising sparkle, satisfying and rewarding. No voice, no music. |
+| `hors-ligne.mp3` | 1,5 s | Offline earnings collected in a fantasy mobile game: a generous pile of coins pouring into a treasure chest with a warm sparkle. No voice, no music. |
+| `video-acceleration.mp3` | 1,2 s | Time speeds up in a fantasy mobile game: a fast ticking clock that accelerates into a magical whoosh. No voice, no music. |
+
+## Petits plus
+
+| Nom du fichier | Durée | Prompt |
+| --- | --- | --- |
+| `rune-equipee.mp3` | 0,6 s | A magic rune snaps into a socket in a fantasy mobile game: a crisp stone click with a short magical glow. No voice, no music. |
+| `offrande.mp3` | 0,8 s | A small offering is collected in a fantasy mobile game: a light jingle of a few coins with a soft sparkle. No voice, no music. |
+| `boss-coup.mp3` | 0,4 s | A quick punchy hit on a big cartoon monster in a fantasy mobile game: a short heavy thump, dry and satisfying. No voice, no music. |
+
 # Musiques (Pixabay, PAS ElevenLabs : sa licence musicale exclut les jeux vidéo commerciaux)
 
 | Nom du fichier | Moment | Mots-clés sur pixabay.com/music |
