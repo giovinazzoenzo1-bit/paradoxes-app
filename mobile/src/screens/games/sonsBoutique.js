@@ -48,12 +48,35 @@ const SONS = {
   'evolution': require('../../../assets/sons/evolution.mp3'),
   'eclosion': require('../../../assets/sons/eclosion.mp3'),
   'refus': require('../../../assets/sons/refus.mp3'),
+  // Lot 4 (07/10) : boss et Gardien, cris des créatures, Ascension, runes, spécial prêt, élixir, énergie, coup critique.
+  'ascension': require('../../../assets/sons/ascension.mp3'),
+  'boss-apparition': require('../../../assets/sons/boss-apparition.mp3'),
+  'boss-vaincu': require('../../../assets/sons/boss-vaincu.mp3'),
+  'creature-feu': require('../../../assets/sons/creature-feu.mp3'),
+  'creature-eau': require('../../../assets/sons/creature-eau.mp3'),
+  'creature-terre': require('../../../assets/sons/creature-terre.mp3'),
+  'creature-air': require('../../../assets/sons/creature-air.mp3'),
+  'creature-foudre': require('../../../assets/sons/creature-foudre.mp3'),
+  'creature-lumiere': require('../../../assets/sons/creature-lumiere.mp3'),
+  'creature-tenebres': require('../../../assets/sons/creature-tenebres.mp3'),
+  'creature-magie': require('../../../assets/sons/creature-magie.mp3'),
+  'crit': require('../../../assets/sons/crit.mp3'),
+  'elixir': require('../../../assets/sons/elixir.mp3'),
+  'energie': require('../../../assets/sons/energie.mp3'),
+  'rune-fusion': require('../../../assets/sons/rune-fusion.mp3'),
+  'rune-tirage': require('../../../assets/sons/rune-tirage.mp3'),
+  'special-pret': require('../../../assets/sons/special-pret.mp3'),
 };
 const VOLUME_DEFAUT = 0.8;
 const VOLUME = {
   page: 0.6, achat: 0.75, bouton: 0.5, fenetre: 0.55, refus: 0.6, rate: 0.6, 'jauge-parfait': 0.75, etoile: 0.7,
   feu: 0.6, eau: 0.6, terre: 0.6, air: 0.6, foudre: 0.6, lumiere: 0.6, tenebres: 0.6, magie: 0.6, // sous le choc
+  crit: 0.35, // discret : il peut revenir souvent (bridé par jouerSonLimite)
+  'creature-feu': 0.7, 'creature-eau': 0.7, 'creature-terre': 0.7, 'creature-air': 0.7, 'creature-foudre': 0.7, 'creature-lumiere': 0.7, 'creature-tenebres': 0.7, 'creature-magie': 0.7,
+  ascension: 0.9, 'boss-apparition': 0.85,
 };
+// Le cri d'une créature selon son élément (toucher sur le deck, ouverture de sa fiche).
+export const SON_CREATURE = { Feu: 'creature-feu', Eau: 'creature-eau', Terre: 'creature-terre', Air: 'creature-air', Foudre: 'creature-foudre', 'Lumière': 'creature-lumiere', 'Ténèbres': 'creature-tenebres', Magie: 'creature-magie' };
 // Le son de l'élément d'un attaquant (joué à l'impact, PAR-DESSUS le choc).
 export const SON_ELEMENT = { Feu: 'feu', Eau: 'eau', Terre: 'terre', Air: 'air', Foudre: 'foudre', 'Lumière': 'lumiere', 'Ténèbres': 'tenebres', Magie: 'magie' };
 

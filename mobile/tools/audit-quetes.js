@@ -4609,12 +4609,13 @@ function auditSonsJeu() {
   const pb = [];
   const lect = lire('src/screens/games/sonsBoutique.js');
   const noms = [...lect.matchAll(/  '([a-z-]+)': require\('\.\.\/\.\.\/\.\.\/assets\/sons\/([a-z-]+)\.mp3'\)/g)].map((m) => m[1]);
-  if (noms.length !== 29) pb.push(`${noms.length} sons déclarés au lieu de 29`);
+  // (les cris des créatures sont appelés par SON_CREATURE, le choc des éléments par SON_ELEMENT)
+  if (noms.length !== 46) pb.push(`${noms.length} sons déclarés au lieu de 46`);
   for (const n of noms) if (!fs.existsSync(path.join(R, 'assets/sons', n + '.mp3'))) pb.push(`fichier manquant : ${n}.mp3`);
   const fichiers = ['src/screens/games/CombatScreen.js', 'src/components/FenetreJeu.js', 'src/screens/games/AdventureScreen.js', 'src/screens/games/ClickerScreen.js', 'src/screens/ProgresScreen.js'];
   const T = Object.fromEntries(fichiers.map((f) => [f, lire(f)]));
   const tout = Object.values(T).join('\n');
-  for (const m of tout.matchAll(/jouerSon\('([a-z-]+)'(\))?/g)) {
+  for (const m of tout.matchAll(/jouerSon(?:Limite)?\('([a-z-]+)'(\))?/g)) {
     if (!noms.includes(m[1])) pb.push(`son inconnu : « ${m[1]} »`);
     if (m[2]) pb.push(`jouerSon('${m[1]}') sans le réglage « Sons »`);
   }
@@ -4632,9 +4633,23 @@ function auditSonsJeu() {
     [T['src/screens/games/AdventureScreen.js'], /onLevelUpCreature\(creatureId\);\s*jouerSon\('niveau'/, 'montée de niveau : plus de son'],
     [T['src/screens/games/AdventureScreen.js'], /onEvolveCreature\(creatureId, currentTier \+ 1\);\s*jouerSon\('evolution'/, 'évolution : plus de son'],
     [T['src/screens/games/AdventureScreen.js'], /jouerSon\(ok \? 'achat' : 'refus', sons !== false\)/, 'page des Griffes : plus de son d\'achat / de refus'],
-    [T['src/screens/games/ClickerScreen.js'], /const resolveHatch = \(source\) => \{\n    jouerSon\('eclosion'/, 'éclosion : plus de son'],
+    [T['src/screens/games/ClickerScreen.js'], /const grantHatchedCreature = \(\) => \{\n[^\n]*\n    jouerSon\('eclosion', sonsJeuRef\.current\);/, 'éclosion : plus de son (au moment où la créature est donnée)'],
+    // Un son ne doit JAMAIS précéder la vérification qui peut refuser l'action (07/10) :
+    [T['src/screens/games/ClickerScreen.js'], /if \(coins < nextSummonCost\) return;\n    jouerSon\('eclosion'/, "invocation : le son précède la vérification des pièces"],
+    [T['src/screens/games/ClickerScreen.js'], /trackEvent\('powerActivated', 1\);\n    jouerSon\('special-pret'/, 'pouvoir : le son précède ses vérifications'],
+    [T['src/screens/games/ClickerScreen.js'], /if \(!goldenTargetRef\.current\) return;\n    jouerSon\('recompense'/, "étoile dorée : le son précède la vérification"],
     [T['src/screens/games/ClickerScreen.js'], /vibrerSucces\(vibrations\);\n    jouerSon\('recompense'/, 'calendrier : plus de son de récompense'],
     [T['src/screens/ProgresScreen.js'], /jouerSon\('recompense', sons !== false\)/, 'quêtes : plus de son de récompense'],
+    // Lot 4 (07/10)
+    [c, /if \(guardianEggNumber > 0\) son\('boss-apparition'\)/, "Gardien : plus de son d'entrée"],
+    [c, /if \(manaActif >= MANA_MAX && manaPrecRef\.current < MANA_MAX\) son\('special-pret'\)/, 'combat : plus de son « spécial prêt »'],
+    [T['src/screens/games/ClickerScreen.js'], /jouerSonLimite\('crit', sonsJeuRef\.current, 1500\)/, 'coup critique : son absent ou plus bridé'],
+    [T['src/screens/games/ClickerScreen.js'], /jouerSon\('etoile', sonsJeuRef\.current\); \/\/ l'étoile dorée apparaît/, "étoile dorée : plus de son à l'apparition"],
+    [T['src/screens/games/ClickerScreen.js'], /jouerSon\('ascension', sonsJeuRef\.current\)/, 'Ascension : plus de son'],
+    [T['src/screens/games/ClickerScreen.js'], /jouerSon\(earned === 0 \? 'defaite' : 'boss-vaincu', sonsJeuRef\.current\)/, 'Boss : plus de son de fin'],
+    [T['src/screens/games/ClickerScreen.js'], /jouerSon\(SON_CREATURE\[creature\.element\] \|\| 'creature-magie', sonsJeuRef\.current\)/, 'deck : la créature ne crie plus en apparaissant'],
+    [T['src/screens/games/AdventureScreen.js'], /onFuseAll=\{avecSon\(fuseAllRunes, 'rune-fusion', \(n\) => n > 0\)\}/, 'fusion de runes : plus de son'],
+    [T['src/screens/games/AdventureScreen.js'], /onBuyPack=\{avecSon\(buyRunePack, 'rune-tirage'\)\}/, 'tirage de runes : plus de son'],
   ];
   for (const [src, re, msg] of exige) if (!re.test(src)) pb.push(msg);
   return pb;

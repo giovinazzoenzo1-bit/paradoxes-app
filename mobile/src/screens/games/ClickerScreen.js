@@ -246,7 +246,7 @@ const EGG_IMAGES = [
 ];
 import { DeckPicker } from './DeckPicker';
 import { afficherDialogue } from '../../components/DialogueJeu';
-import { jouerSon } from './sonsBoutique';
+import { jouerSon, jouerSonLimite, SON_CREATURE } from './sonsBoutique';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
 //
@@ -342,6 +342,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const { coins: sharedCoins, spendCoins: spendSharedCoins, addCoins: addSharedCoins } = useCoins();
   const { vibrations, ambientFx, sons } = useSettings();
+  // Lue par les minuteries (l'étoile dorée…) : la coupure du réglage s'applique tout de suite (07/10).
+  const sonsJeuRef = useRef(true);
+  sonsJeuRef.current = sons !== false;
   // Marges de securite de l'appareil (encoche en haut, barre d'accueil
   // en bas). App.js applique deja `paddingTop: insets.top` au conteneur,
   // mais RIEN en bas — d'ou la barre de navigation qui passait sous la
@@ -578,6 +581,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     annulerAnnonceBoss();
     bossAnnonceRef.current = 3;
     setBossAnnonce(3);
+    jouerSon('boss-apparition', sonsJeuRef.current); // le Boss arrive (07/10)
     bossAnnonceTimersRef.current = [
       setTimeout(() => { bossAnnonceRef.current = 2; setBossAnnonce(2); }, 1000),
       setTimeout(() => { bossAnnonceRef.current = 1; setBossAnnonce(1); }, 2000),
@@ -648,6 +652,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (coinBonus > 0) pendingGainRef.current += coinBonus;
     setBoss(null);
     setBossResult({ earned, given, coinBonus, failed: earned === 0 });
+    jouerSon(earned === 0 ? 'defaite' : 'boss-vaincu', sonsJeuRef.current);
   };
 
   const vibrationsRef = useRef(vibrations);
@@ -1754,6 +1759,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       } else if (!goldenTargetRef.current && viewRef.current === 'tap' && now >= nextGoldenAtRef.current) {
         const pos = randomRingPosition();
         setGoldenTarget({ expiresAt: now + GOLDEN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
+        jouerSon('etoile', sonsJeuRef.current); // l'étoile dorée apparaît (07/10)
       }
 
       // Bulle Rituel ("pub" de boost) : apparaît dès que le cooldown est
@@ -1861,6 +1867,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const effectiveCritChance = Math.min(1, critChance(critLevelRef.current) + upgradeBonus.critChancePct);
     const isCrit = Math.random() < effectiveCritChance;
     if (isCrit) {
+      jouerSonLimite('crit', sonsJeuRef.current, 1500); // au plus 1 fois / 1,5 s (autoclicker)
       totalCritsRef.current += 1;
       setTotalCrits(totalCritsRef.current);
       trackEvent('crit', 1);
@@ -2020,6 +2027,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // œufs et pour la victoire contre un gardien — dupliquer aurait
   // garanti que les variantes divergent.
   const grantHatchedCreature = () => {
+    // L'œuf éclôt VRAIMENT ici (07/10) : pas dans resolveHatch, qui lance d'abord le combat du Gardien s'il en faut un.
+    jouerSon('eclosion', sonsJeuRef.current);
     // ⚠️ Plafond de rareté des 3 premiers œufs — voir `rareteMaxPourOeuf`.
     // Garantie sur les œufs (26/09) : une rareté minimale SEULEMENT si le
     // joueur n'a pas encore ce qu'il faut (clickerLogic.GARANTIE_OEUFS).
@@ -2034,7 +2043,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // gardien n'est requis (tout premier œuf : le joueur n'a pas encore de
   // créature, il ne pourrait pas combattre).
   const resolveHatch = (source) => {
-    jouerSon('eclosion', sons !== false); // l'œuf éclôt (07/10)
     const eggNumber = ownedRef.current.length + 1;
     if (!guardianRequired(ownedRef.current.length)) {
       if (source === 'main') {
@@ -2144,6 +2152,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       { texte: 'Annuler', style: 'annuler' },
       { texte: `💎 ${offre.cost}`, style: 'principal', onPress: async () => {
         const msg = await buyWithDiamonds(offre);
+        if (msg) jouerSon('elixir', sonsJeuRef.current);
         afficherDialogue(msg ? '🧪 Élixir actif' : 'Diamants insuffisants', msg || `Il t'en faut ${offre.cost}.`);
       } },
     ]);
@@ -2205,6 +2214,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const invoquee = { creature, expiresAt: Infinity, leftPct: pos.leftPct, topPct: pos.topPct, fromDeck: true };
     spawnedCreatureRef.current = invoquee;
     setSpawnedCreature(invoquee);
+    jouerSon(SON_CREATURE[creature.element] || 'creature-magie', sonsJeuRef.current); // son cri en apparaissant (07/10)
   };
   // Compte à rebours SUR l'œuf : « ⚡ Pouvoir prêt » dès qu'une créature du
   // deck peut être invoquée, sinon le temps avant la prochaine.
@@ -2227,6 +2237,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       return;
     }
     trackEvent('powerActivated', 1);
+    jouerSon('special-pret', sonsJeuRef.current); // le pouvoir s'active VRAIMENT (après les 2 vérifications) (07/10)
     if (spawned.fromDeck) {
       // Références mises à jour TOUT DE SUITE : un double appui rapide ne
       // doit pas activer deux fois le même pouvoir avant le rendu.
@@ -2410,6 +2421,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const confirmAscension = () => {
     setAscensionPrompt(null);
+    // L'Ascension a VRAIMENT lieu ici (doAscension n'ouvre que la confirmation) : son (07/10).
+    jouerSon('ascension', sonsJeuRef.current);
     (async () => {
           {
             trackEvent('ascension', 1);
@@ -2543,6 +2556,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const claimRitual = () => {
     if (!ritualTargetRef.current) return;
+    jouerSon('recompense', sonsJeuRef.current);
     // ⚠️ Même défaut : `ritualReward` prend `passiveIncome` en entrée,
     // qui contient déjà le bonus d'Ascension.
     const reward = Math.round(ritualReward(tapPowerRef.current, passiveIncome));
@@ -2636,6 +2650,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const claimOffering = (id) => {
     const item = pendingOfferingsRef.current.find((o) => o.id === id);
     if (!item) return;
+    jouerSon('recompense', sonsJeuRef.current);
     const next = pendingOfferingsRef.current.filter((o) => o.id !== id);
     setPendingOfferings(next);
     savePendingOfferings(next);
@@ -3508,6 +3523,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const claimGolden = () => {
     if (!goldenTargetRef.current) return;
+    jouerSon('recompense', sonsJeuRef.current); // l'étoile dorée récoltée (07/10)
     const bonus = Math.round(gainCoins(goldenBonus(tapPowerRef.current)));
     spawnPopup(`+${bonus} ✨`, 110, 60, true);
     setGoldenTarget(null);
@@ -3520,6 +3536,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   const doSummon = () => {
     if (coins < nextSummonCost) return;
+    jouerSon('eclosion', sonsJeuRef.current); // une créature est invoquée (07/10)
     setCoins((c) => c - nextSummonCost);
     if (pendingDiscountRef.current) setPendingDiscount(null);
     const creature = rollCreature();

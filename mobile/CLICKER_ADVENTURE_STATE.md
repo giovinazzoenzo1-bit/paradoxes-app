@@ -2464,3 +2464,28 @@ accepte le son de refus. 94 contrôles, 117 sabotages.
 RESTE : lot 4 (17 prompts dans 17-sons/LISEZMOI : boss/Gardien, cris des créatures, Ascension,
 runes, spécial prêt, élixir, énergie, coup critique bridé) ; musiques Pixabay (menu, combat,
 boss, option aventure).
+
+
+## 07/10 — Sons, LOT 4 + l'étoile dorée (publié) : 46 sons en tout
+
+17 sons de plus (241 Ko ; « light » / « lightning » départagés par le préfixe du dernier mot
+tronqué) : ascension, boss-apparition, boss-vaincu, creature-<élément> (8), crit (cible -24,
+volume 0,35, jouerSonLimite 1,5 s), elixir, energie, rune-fusion, rune-tirage, special-pret.
+SON_CREATURE (élément → cri). Branchements : combat — entrée du GARDIEN de l'œuf
+(guardianEggNumber > 0 ; pas d'écran de fin : sa défaite enchaîne sur l'éclosion), « spécial
+prêt » (mana du combattant actif qui ATTEINT MANA_MAX, via manaPrecRef) ; Exploration —
+tirages de runes (gratuit, simple, pack, offre) et fusion via avecSon(fn, nom, réussi) (son
+SEULEMENT si l'action réussit), énergie (Diamants, vidéo), cri de la créature à l'ouverture de
+sa fiche ; jeu de l'œuf (sonsJeuRef, lue par les minuteries) — Boss (annonce 3-2-1 →
+boss-apparition ; résultat → boss-vaincu ou defaite), ÉTOILE DORÉE (apparition → etoile ;
+récolte → recompense), coup critique (bridé), Ascension, pouvoir du deck (special-pret), cri
+de la créature qui apparaît autour de l'œuf, rituel et offrande (recompense), invocation et
+éclosion (eclosion), élixir.
+⚠️ PIÈGE ÉVITÉ (2 fois) : un son posé en TÊTE de fonction sonne même quand la fonction REFUSE
+l'action. Pris par auditBoutonAscension (doAscension n'ouvre que la confirmation → son dans
+confirmAscension), puis vérifié partout : étoile dorée, pouvoir (2 vérifications), rituel,
+offrande, invocation (pièces) → sons APRÈS les vérifications ; l'éclosion dans
+grantHatchedCreature (resolveHatch lance d'abord le combat du Gardien s'il en faut un).
+RÈGLE : un son se pose sur le CHEMIN DE LA RÉUSSITE, jamais avant un « if (…) return ».
+auditSonsJeu : 46 sons + l'ordre vérification → son. 94 contrôles, 117 sabotages.
+RESTE : musiques Pixabay (menu, combat, boss, option aventure).

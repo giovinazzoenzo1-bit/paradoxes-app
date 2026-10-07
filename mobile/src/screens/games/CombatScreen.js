@@ -550,6 +550,15 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const sonsRef = useRef(true);
   sonsRef.current = sonsReglage !== false;
   const son = (nom) => jouerSon(nom, sonsRef.current);
+  // Le Gardien de l'œuf entre en scène (07/10).
+  useEffect(() => { if (guardianEggNumber > 0) son('boss-apparition'); }, []);
+  // Spécial prêt (07/10) : le mana du combattant actif atteint le maximum.
+  const manaActif = fighters[activeIndex] ? fighters[activeIndex].mana : 0;
+  const manaPrecRef = useRef(manaActif);
+  useEffect(() => {
+    if (manaActif >= MANA_MAX && manaPrecRef.current < MANA_MAX) son('special-pret');
+    manaPrecRef.current = manaActif;
+  }, [manaActif]);
   const montrerVerdict = (v) => { if (v === 'parfait') son('jauge-parfait'); setVerdict(v); setTimeout(() => setVerdict((x) => (x === v ? null : x)), 900); };
   const [timeLeft, setTimeLeft] = useState(TAP_CHALLENGE_TIME_LIMIT_SEC);
   const [switchMessage, setSwitchMessage] = useState(null);

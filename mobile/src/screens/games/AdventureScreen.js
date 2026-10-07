@@ -372,7 +372,7 @@ import CombatScreen from './CombatScreen';
 import { DeckPicker } from './DeckPicker';
 import { afficherDialogue } from '../../components/DialogueJeu';
 import { useSettings } from '../../context/SettingsContext';
-import { jouerSon } from './sonsBoutique';
+import { jouerSon, SON_CREATURE } from './sonsBoutique';
 import { FenetreJeu, BoutonBois } from '../../components/FenetreJeu';
 import {
   CREATURES,
@@ -625,6 +625,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const [detailCreatureId, setDetailCreatureId] = useState(ficheInitiale);
   const [boutiqueGriffes, setBoutiqueGriffes] = useState(false);
   const { sons: sonsAventure } = useSettings(); // sons (07/10)
+  // Enveloppe une action : son joué si elle a RÉUSSI (tirage de rune, fusion…).
+  const avecSon = (fn, nom, reussi = (r) => !!r) => (...args) => { const r = fn(...args); if (reussi(r)) jouerSon(nom, sonsAventure !== false); return r; };
   const [deckPickerSlot, setDeckPickerSlot] = useState(null); // index de l'emplacement en cours de modification, ou null
   const [chapterMapOpen, setChapterMapOpen] = useState(false);
   const [runesOpen, setRunesOpen] = useState(false);
@@ -894,6 +896,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     }
     setEnergy(ENERGY_MAX);
     setEnergyUpdatedAt(Date.now());
+    jouerSon('energie', sonsAventure !== false);
   };
 
   // Pubs d'énergie déjà regardées AUJOURD'HUI. Stocké avec la date : au
@@ -926,6 +929,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       // +1 seulement, jamais au-delà du maximum.
       setEnergy(Math.min(ENERGY_MAX, maj.energy + 1));
       setEnergyUpdatedAt(maj.lastUpdateAt);
+      jouerSon('energie', sonsAventure !== false);
       const n = energyAdsToday + 1;
       setEnergyAdsToday(n);
       AsyncStorage.setItem(ENERGY_AD_KEY, JSON.stringify({ date: new Date().toDateString(), n })).catch(() => {});
@@ -1237,13 +1241,13 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       <RunesScreen
         griffes={griffes}
         ownedRunes={ownedRunes}
-        onBuyRune={buyRandomRune}
-        onBuyPack={buyRunePack}
-        onBuySpecial={buySpecialOffer}
+        onBuyRune={avecSon(buyRandomRune, 'rune-tirage')}
+        onBuyPack={avecSon(buyRunePack, 'rune-tirage')}
+        onBuySpecial={avecSon(buySpecialOffer, 'rune-tirage')}
         freeRuneDraw={freeRuneAvailable}
-        onUseFreeDraw={useFreeRuneDraw}
+        onUseFreeDraw={avecSon(useFreeRuneDraw, 'rune-tirage')}
         specialOffer={specialOffer}
-        onFuseAll={fuseAllRunes}
+        onFuseAll={avecSon(fuseAllRunes, 'rune-fusion', (n) => n > 0)}
         onBuyGriffes={buyGriffesWithDiamonds}
         onBack={() => setRunesOpen(false)}
       />
@@ -1760,6 +1764,9 @@ function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
 function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack, onPlusGriffes }) {
   const [runePickerSlot, setRunePickerSlot] = useState(null);
   const [onglet, setOnglet] = useState('stats');
+  // La créature pousse son cri à l'ouverture de sa fiche (07/10).
+  const { sons: sonsFiche } = useSettings();
+  useEffect(() => { jouerSon(SON_CREATURE[creature.element] || 'creature-magie', sonsFiche !== false); }, []);
   const { width: lw, height: lh } = useWindowDimensions();
   const cadres = cadresExploration({ w: lw, h: lh });
 
