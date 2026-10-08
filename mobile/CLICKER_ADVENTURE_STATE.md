@@ -2600,3 +2600,20 @@ https://<CLÉ>@github.com prend la clé pour un identifiant et échoue sans term
 Si un push échoue en « Bad credentials » : clé expirée → demander à l'auteur de la régénérer
 (https://github.com/settings/personal-access-tokens ; droits Contents RW, Workflows RW,
 Actions R ; dépôt paradoxes-app seulement).
+
+
+## 08/10 — Gardien : réflexion « en Griffes » (EN ATTENTE du test de l'auteur — rien de codé)
+
+Constat de l'auteur : +2 % à 9421 = 210 de puissance ≈ 500 Griffes, « énorme ». MESURÉ (simulateur
+de parcours, joueur gratuit, toutes sources) — Griffes gagnées PAR ŒUF : A0 193 · A1 1 083 ·
+A2 5 005 · A3 7 651 · A4 8 816 · A5 10 707. La marge actuelle (+2 à +5 %) coûte : A0 25 % · A1
+16 % · A2 28 % · A3 74 % · A4 111 % · A5 134 % des Griffes gagnées pendant un œuf → un MUR
+qui grandit en fin de jeu. Coût d'1 niveau au niv. 60 : commune 36 G … légendaire 152 G …
+mythique 242 G (3 niveaux mythiques : 738 G). L'auteur : « 2 à 6 niveaux au niveau 60, c'est
+super compliqué ».
+Options proposées : A. « 1 niveau » sur la créature la MOINS CHÈRE à monter du deck (recommandée :
+simple, toujours faisable, « ≈ 1 niveau à gagner ») ; B. 5 % des Griffes gagnées pendant un œuf
+(≈ 1 à 2 niveaux ; dépend d'un revenu simulé). DÉCISION : l'auteur TESTE d'abord ; on garde la
+règle actuelle (marge 2-5 %, 80 % en atteignant le chiffre) en attendant.
+Piste de l'auteur : une AUTRE SOURCE DE GRIFFES pour un joueur vraiment bloqué (niveau d'Aventure
+infaisable…). Voir A_FAIRE.

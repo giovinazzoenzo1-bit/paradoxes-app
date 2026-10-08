@@ -137,3 +137,10 @@
       choix d'une rune, diagnostic du combat retiré.
 - [x] Design, priorité 2 (06/10) : carte des chapitres — médaillons de niveau, capsules de bois
       (Griffes, Éléments, énergie, pastilles du hub). DESIGN À 100 % hors skins des créatures.
+
+- [ ] GARDIEN (08/10, après le test de l'auteur) : choisir la règle de l'effort — A. « 1 niveau » sur la
+      créature la moins chère à monter du deck (recommandée) ou B. 5 % des Griffes gagnées pendant un œuf.
+      Tableaux mesurés dans CLICKER_ADVENTURE_STATE.md (08/10). Aujourd'hui : marge 2-5 %, 80 % au chiffre.
+- [ ] GRIFFES POUR UN JOUEUR BLOQUÉ (idée de l'auteur, 08/10) : une autre façon d'en gagner quand un niveau
+      d'Aventure est infaisable. Pistes : rejouer un niveau déjà gagné rapporte une part de sa prime
+      (aujourd'hui : 0), limitée par l'énergie ; une consolation après plusieurs défaites ; un mode dédié.
