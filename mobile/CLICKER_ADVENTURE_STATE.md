@@ -2770,3 +2770,15 @@ Aegisolar 13 / Terracroc 34 / Racinea 27, 110 G dépensés, Gardien 1 613 (+7,6 
 Calibrage, photo, anciennes photos et affichage de secours : tous sur la répartition équitable.
 auditGardienGriffes (cas exact de l'auteur, budget jamais dépassé, chaque créature servie, pas de file)
 + sabotage recalé. 101 contrôles, 128 sabotages. L'auteur remet l'appli à zéro et reteste.
+
+
+## 08/10 — VALIDATION de la simulation sur les VRAIS combats de l'auteur (2 envois, 10 Gardiens)
+
+Méthode : chaque combat de Gardien REJOUÉ en simulation avec l'équipe exacte et les PV / attaque RÉELS du
+Gardien (notés par le journal), 600 combats par style. Résultat : les % annoncés = ceux des rejeux (±5 points) ;
+victoires ATTENDUES 5,4 / 10, RÉELLES 7 / 10 (écart ≈ 1,5 écart-type : chance un peu favorable) ; score de
+Brier 0,09 (0,25 = pile ou face). Sa précision réelle (42 ms au lieu de 60) et son style (quasi sans sorts)
+ne déplacent les % que de ≤ 5 points → la méthode actuelle (60 ms, style le moins efficace) reste juste pour lui.
+Règle finale (« 3 prochains combats, répartis ») : œufs 3, 4, 5 battus en quelques combats d'Exploration.
+Note : 2 Gardiens « œuf 3 » à 563 et 579 = ses 2 œufs (nid et incubateur), chacun avec SA photo — eggNumber
+vient du nombre de créatures possédées, commun aux 2 œufs. Pas un bug.
