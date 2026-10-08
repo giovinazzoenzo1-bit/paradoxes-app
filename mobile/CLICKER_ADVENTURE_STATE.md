@@ -2698,3 +2698,17 @@ Gardien contre le pire style (plancher 5 % : 8 % mesuré contre 3 communes niv. 
 « recalibré sur le meilleur style ». 100 contrôles, 126 sabotages.
 ⚠️ La chance du HUB / de l'aperçu (puissanceAventure → mesurerEquipe) prend encore le MAX des styles :
 à aligner si l'auteur le souhaite.
+
+
+## 08/10 — Chiffre du Gardien FIGÉ PAR ÉCRIT (capture : 9 915 au menu, 9 901 au résultat) — publié
+
+CAUSE : le chiffre n'était pas stocké mais RECALCULÉ à chaque affichage depuis la photo ; la formule
+a changé 3 fois dans la journée (marge → 25 % → A + B) et la file d'attente s'ajoute quelques ms
+après le démarrage → un même œuf pouvait montrer 2 chiffres. (mainEggRef est resynchronisé à chaque
+rendu : pas la cause.) CORRECTIF : photoGardien ÉCRIT `gardien` (= deckApresEffort(membres, budget)
+.puissance) avec le budget ; ajouterFileAuBudget réécrit budget + gardien ensemble (drapeau file) ;
+les photos sans chiffre le reçoivent UNE fois (sansChiffre → figer : budget via budgetDeLaPhoto,
+puis gardien) ; gardienAffiche RELIT photo.gardien en priorité. Le calibrage utilise le même budget
+écrit. RÈGLE : une valeur promise au joueur (« figée ») doit être STOCKÉE, jamais recalculée — sinon
+toute évolution de formule la fait bouger. auditGardienGriffes (+ sabotage : relecture supprimée).
+100 contrôles, 127 sabotages.

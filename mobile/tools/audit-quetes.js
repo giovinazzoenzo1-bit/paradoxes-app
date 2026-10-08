@@ -4853,9 +4853,14 @@ function auditGardienGriffes() {
   if (!/const cible = deckApresEffort\(membres, budgetDeLaPhoto\(photo, ascension\)\)\.membres;/.test(c) || !/\{ marge: 1 \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort en Griffes");
   // (08/10) Règle A + B : budget = récupérable (A) + primes des 3 prochains niveaux (B), figé à la photo.
   if (!/budgetGardienRef\.current = \(griffesARecuperer \|\| 0\) \+ primesProchainsNiveaux\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0, 3\);/.test(c)) pb.push('le budget du Gardien ne vaut plus A + B');
-  if (!/\.\.\.\(budget != null \? \{ budget: Math\.max\(0, Math\.round\(budget\)\) \} : \{\}\)/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
+  if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
   if ((c.match(/budgetGardienRef\.current\)\);\n\s*ajouterFileAuBudget\(set(IncubatingEgg|MainEgg)\);/g) || []).length !== 2) pb.push("les 2 démarrages de chrono ne transmettent plus le budget et la file d'attente");
   if (!/function budgetDeLaPhoto\(photo, ascensionCourante = 0\) \{\n  if \(photo && photo\.budget != null\) return photo\.budget;/.test(c)) pb.push("le Gardien n'utilise plus le budget de SA photo");
+  // (08/10) Chiffre FIGÉ : écrit une fois dans la photo, toujours relu (l'auteur a vu 9 915 au menu, 9 901 au résultat).
+  if (!/gardien: deckApresEffort\(membres, b\)\.puissance/.test(c)) pb.push("la photo n'écrit plus le chiffre du Gardien au démarrage du chrono");
+  if (!/if \(photo\.gardien != null\) return photo\.gardien;/.test(c)) pb.push('le chiffre du Gardien est RECALCULÉ à chaque affichage (il peut bouger)');
+  if (!/budget, gardien: deckApresEffort\(membresDeLaPhoto\(p\.gardienPhoto\), budget\)\.puissance, file: true/.test(c)) pb.push("la file d'attente ne réécrit plus le chiffre avec le budget");
+  if (!/const sansChiffre = \(e\) => e && e\.gardienPhoto && e\.gardienPhoto\.v === 2 && e\.gardienPhoto\.asc != null && e\.gardienPhoto\.gardien == null;/.test(c)) pb.push("les anciennes photos ne reçoivent plus leur chiffre figé");
   const dc = fs.readFileSync(path.join(__dirname, '../src/context/DailyContext.js'), 'utf8');
   if (!/const griffesARecuperer = useMemo\(\(\) => griffesRecuperables\(/.test(dc) || !/claimStreak, griffesARecuperer,/.test(dc)) pb.push('le contexte ne fournit plus les Griffes récupérables (A)');
   // A, calculé EXACTEMENT comme les réclamations le verseraient (cas construit à la main)

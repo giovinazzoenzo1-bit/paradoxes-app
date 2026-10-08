@@ -244,6 +244,8 @@ const SABOTAGES = [
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
   ['auditGardienCalibre', F.combat, "Gardien recalibré sur la MEILLEURE façon de jouer : le joueur moins efficace retombe à ~60 %",
     remplace('    return a.facteurAttaque <= b.facteurAttaque ? a : b;', '    return a.facteurAttaque >= b.facteurAttaque ? a : b;')],
+  ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "chiffre du Gardien recalculé à chaque affichage : il bouge entre le menu et le résultat",
+    remplace('  if (photo.gardien != null) return photo.gardien;\n', '')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "budget du Gardien mis à zéro : il ne demanderait plus rien",
     remplace('budgetGardienRef.current = (griffesARecuperer || 0) + primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * (griffesARecuperer || 0) + primesProchainsNiveaux(')],
   ['auditGardienGriffes', F.combat, "effort du Gardien passé à 3 combats de Griffes : un mur",

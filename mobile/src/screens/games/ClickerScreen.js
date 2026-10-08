@@ -683,8 +683,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const ajouterFileAuBudget = (setter) => {
     AsyncStorage.getItem(PENDING_GRIFFES_KEY).then((raw) => {
       const file = raw ? parseInt(raw, 10) || 0 : 0;
-      setter((p) => (p && p.gardienPhoto && p.gardienPhoto.budget != null && !p.gardienPhoto.file
-        ? { ...p, gardienPhoto: { ...p.gardienPhoto, budget: p.gardienPhoto.budget + file, file: true } } : p));
+      setter((p) => {
+        if (!(p && p.gardienPhoto && p.gardienPhoto.budget != null && !p.gardienPhoto.file)) return p;
+        const budget = p.gardienPhoto.budget + file;
+        return { ...p, gardienPhoto: { ...p.gardienPhoto, budget, gardien: deckApresEffort(membresDeLaPhoto(p.gardienPhoto), budget).puissance, file: true } };
+      });
     }).catch(() => {});
   };
   // Pastille du bouton Quêtes : au moins une quête TERMINÉE et pas encore
@@ -752,6 +755,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const sansAsc = (e) => e && e.gardienPhoto && e.gardienPhoto.v === 2 && e.gardienPhoto.asc == null;
     if (sansAsc(mainEgg)) setMainEgg((p) => (sansAsc(p) ? { ...p, gardienPhoto: { ...p.gardienPhoto, asc: ascensionCount } } : p));
     if (sansAsc(incubatingEgg)) setIncubatingEgg((p) => (sansAsc(p) ? { ...p, gardienPhoto: { ...p.gardienPhoto, asc: ascensionCount } } : p));
+    // (08/10) Chiffre du Gardien FIGÉ : les photos sans chiffre écrit le reçoivent UNE fois (avec leur budget),
+    // pour qu'aucune évolution future de la formule ne puisse plus le faire bouger.
+    const sansChiffre = (e) => e && e.gardienPhoto && e.gardienPhoto.v === 2 && e.gardienPhoto.asc != null && e.gardienPhoto.gardien == null;
+    const figer = (p) => { const budget = budgetDeLaPhoto(p.gardienPhoto, ascensionCount);
+      return { ...p, gardienPhoto: { ...p.gardienPhoto, budget, gardien: deckApresEffort(membresDeLaPhoto(p.gardienPhoto), budget).puissance, file: true } }; };
+    if (sansChiffre(mainEgg)) setMainEgg((p) => (sansChiffre(p) ? figer(p) : p));
+    if (sansChiffre(incubatingEgg)) setIncubatingEgg((p) => (sansChiffre(p) ? figer(p) : p));
   }, [mainEgg, incubatingEgg, owned]);
   // Petit menu de fin de combat de Gardien (demande de l'auteur).
   const [resultatGardien, setResultatGardien] = useState(null);
@@ -5791,7 +5801,10 @@ function photoGardien(ownedList, deckIds, ascension = 0, budget = null) {
   const membres = [...duDeck, ...reste].slice(0, 3);
   // asc (08/10) : l'Ascension AU DÉMARRAGE DU CHRONO — l'effort en Griffes du Gardien en dépend.
   // budget (08/10) : Griffes d'effort du Gardien (A + B), figées au démarrage du chrono.
-  return { v: 2, asc: Math.max(0, Math.floor(Number(ascension) || 0)), ...(budget != null ? { budget: Math.max(0, Math.round(budget)) } : {}), membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
+  // gardien (08/10) : son chiffre, CALCULÉ UNE FOIS ici et toujours RELU ensuite (menu, combat, résultat) —
+  // l'auteur a vu « 9 915 » au menu puis « 9 901 » au résultat : le chiffre était recalculé à chaque affichage.
+  const b = budget != null ? Math.max(0, Math.round(budget)) : null;
+  return { v: 2, asc: Math.max(0, Math.floor(Number(ascension) || 0)), ...(b != null ? { budget: b, gardien: deckApresEffort(membres, b).puissance } : {}), membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
     puissance: puissanceDeck(membres) };
 }
 function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0, budget = null) {
@@ -5804,8 +5817,9 @@ function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0, budget = null)
 function gardienAffiche(egg, ascensionCourante = 0) {
   const photo = egg && egg.gardienPhoto;
   if (!photo) return null;
-  // (08/10) La photo + son BUDGET en Griffes (A + B, figé au démarrage du chrono) ; les photos d'avant
-  // gardent l'ancienne règle (25 % des Griffes moyennes d'un combat de leur Ascension).
+  // (08/10) Le chiffre ÉCRIT dans la photo (calculé une seule fois) ; à défaut (instant de la migration),
+  // la photo + son budget.
+  if (photo.gardien != null) return photo.gardien;
   return deckApresEffort(membresDeLaPhoto(photo), budgetDeLaPhoto(photo, ascensionCourante)).puissance;
 }
 // Le budget d'effort d'une photo : le sien (A + B) ou, pour une photo d'avant, l'ancienne règle.
