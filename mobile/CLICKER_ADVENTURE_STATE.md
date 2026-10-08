@@ -2678,3 +2678,23 @@ victoire). Retente ta chance ! » (resultatGardien.chance = chance mesurée face
 5 %). Contrôle dans auditGardien80 + sabotage ; auditPuissanceAffichee accepte le champ chance.
 EN ATTENTE (décision de l'auteur) : cible 80 % → 90 % ? MESURÉ : à 90 %, au chiffre 87-90 %, SANS
 rien faire 85-90 % (le Gardien ne bloque presque plus) ; à 80 % : au chiffre 75-85 %, sans rien 72-84 %.
+
+
+## 08/10 — BUG DE FOND du Gardien : chance « meilleur cas » → MINIMUM garanti (publié)
+
+3e défaite de l'auteur au-dessus du chiffre (« ton pourcentage est complètement faux »). 3 défaites
+de suite à ~80 % ≈ 1 % de probabilité → recherche d'un écart RÉEL, pas de défense du calcul.
+Vérifié et ÉCARTÉ : Gardien du vrai combat = même niveau / même calibrage que la simulation ;
+2 manches du boss (bouclier, relève à PV pleins) bien simulées ; précision au tap (60-120 ms)
+quasi sans effet. TROUVÉ : la chance dépend fortement de la FAÇON DE JOUER — MESURÉ au chiffre du
+Gardien : niv. 45 : sorts 59 % / sans sorts 79 % ; niv. 100 : sorts 82 % / sans 69 %. Or
+calibrerGardien gardait le Gardien calibré contre le MEILLEUR style (facteur d'attaque le plus
+fort) et chanceFaceAuGardien affichait le MAX des deux : un « meilleur cas » présenté comme une
+promesse. CORRECTIF : calibrage sur le style le MOINS efficace (le Gardien le plus faible des deux)
+et chance affichée = MIN des deux. MESURÉ après : au chiffre, affiché 78-85 % ; CHAQUE style
+≥ 74 % (sorts 74-92 %, sans sorts 80-98 %). RÈGLE : une chance affichée au joueur est un MINIMUM
+(le pire style raisonnable), jamais un meilleur cas. auditGardienCalibre mesure désormais le
+Gardien contre le pire style (plancher 5 % : 8 % mesuré contre 3 communes niv. 1, paliers) + sabotage
+« recalibré sur le meilleur style ». 100 contrôles, 126 sabotages.
+⚠️ La chance du HUB / de l'aperçu (puissanceAventure → mesurerEquipe) prend encore le MAX des styles :
+à aligner si l'auteur le souhaite.

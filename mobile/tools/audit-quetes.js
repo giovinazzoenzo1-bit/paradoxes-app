@@ -3195,7 +3195,9 @@ function auditGardienCalibre() {
     // Contre le deck + MARGE (la puissance affichée) : ~1 fois sur 3.
     // Contre le MEILLEUR des deux styles (sorts du joueur sensé, ou aucun
     // sort) — celui sur lequel le Gardien se cale.
-    const taux = (marge) => Math.min(...[K.choixJoueur, K.choixSansSorts].map((politique) => { let n = 0;
+    // 08/10 : le Gardien est calibré sur la façon de jouer la MOINS efficace → on mesure SES victoires
+    // contre ce style-là (le max des deux), plus contre le meilleur.
+    const taux = (marge) => Math.max(...[K.choixJoueur, K.choixSansSorts].map((politique) => { let n = 0;
       for (let i = 0; i < 800; i++) if (!K.simulerCombatGardien(membres, st, { alea, marge, politique })) n++; return n / 800; }));
     const g = 800 * taux(K.margeGardien(K.puissanceDeck(membres)));
     // Contre le deck du début de l'œuf, sans effort : jamais un mur.
@@ -3207,7 +3209,9 @@ function auditGardienCalibre() {
     // 08/10 (décision de l'auteur) : cible 1/5 → fenêtre AUTOUR de la cible (±12 points ; mesuré : 11 %
     // contre 3 communes niveau 1, où les combats avancent par paliers).
     const T = K.GUARDIAN_WIN_TARGET;
-    if (g / 800 < Math.max(0.05, T - 0.12) || g / 800 > T + 0.12) fautes.push({ deck, gardienGagne: Math.round(100 * g / 800) + ' %' });
+    // Plancher 5 % (08/10) : calibré sur le style le MOINS efficace, le Gardien ne gagne que ~8 % contre 3 communes
+    // niveau 1 (coups de 2-3 PV : paliers, le calibrage prend le côté facile). Au-dessus de T + 12 points : un mur.
+    if (g / 800 < 0.05 || g / 800 > T + 0.12) fautes.push({ deck, gardienGagne: Math.round(100 * g / 800) + ' %' });
     const g0 = 800 * taux(1);
     if (g0 / 800 > 0.70) fautes.push({ deck, sansEffort: Math.round(100 * g0 / 800) + ' %' });
   });

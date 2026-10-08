@@ -1221,7 +1221,11 @@ export function calibrerGardien(membres, baseStats, options = {}) {
   if (!options.politique) {
     const a = calibrerGardien(membres, baseStats, { ...options, politique: choixJoueur });
     const b = calibrerGardien(membres, baseStats, { ...options, politique: choixSansSorts });
-    return a.facteurAttaque >= b.facteurAttaque ? a : b;
+    // ⚠️ 08/10 (3 défaites de suite de l'auteur au-dessus du chiffre) : calibré sur la façon de jouer la
+    // MOINS efficace (le Gardien le plus FAIBLE des deux), plus sur la meilleure. MESURÉ : selon le style
+    // (sorts / sans sorts), la chance au chiffre variait de 59 à 82 % ; calibrer sur le meilleur style
+    // promettait 80 % à un joueur qui n'en avait que ~60. Désormais : ≥ cible QUEL QUE SOIT le style.
+    return a.facteurAttaque <= b.facteurAttaque ? a : b;
   }
   // 300 combats × 10 étapes par style : MESURÉ 360 ms à 400 × 12 pour les
   // deux styles (1 à 2 s de gel sur téléphone au lancement du combat).
@@ -2143,14 +2147,16 @@ export function chanceFaceAuGardien(membres, gStats) {
   if (!m.length || !gStats) return 0;
   const prepares = preparerCombattants(m);
   const st = echelleGardien(gStats, 1);
-  let meilleur = 0;
+  // ⚠️ 08/10 : la chance AFFICHÉE est celle de la façon de jouer la MOINS efficace (un MINIMUM garanti),
+  // plus la meilleure des deux (un « meilleur cas » trompeur : 3 défaites de suite de l'auteur à « 80 % »).
+  let pire = 1;
   for (const politique of [choixJoueur, choixSansSorts]) {
     const alea = aleaGraine(graineGardien(gStats));
     let g = 0;
     for (let i = 0; i < CHANCE_GARDIEN_COMBATS; i++) if (simulerCombat(prepares, gardienEnFace(st), { gStats: st, alea, politique }).gagne) g++;
-    meilleur = Math.max(meilleur, g / CHANCE_GARDIEN_COMBATS);
+    pire = Math.min(pire, g / CHANCE_GARDIEN_COMBATS);
   }
-  return meilleur;
+  return pire;
 }
 
 // L'EFFORT en niveaux (08/10) : combien de niveaux gagner (chaque fois sur la créature qui
