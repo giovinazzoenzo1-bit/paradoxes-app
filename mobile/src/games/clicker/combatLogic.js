@@ -2242,6 +2242,30 @@ export function deckApresEffort(membres, griffes) {
   }
   return { membres: m, puissance: puissanceAffichee(m) };
 }
+// (08/10, décision FINALE de l'auteur après test : « 10 combats au lieu de 3 ») Le deck après avoir dépensé
+// `griffes` RÉPARTIES ÉQUITABLEMENT sur ses créatures — un joueur RÉALISTE, plus le joueur parfait de
+// deckApresEffort (qui mettait tout sur la créature la plus rentable : +20 % au lieu de +8 % sur le cas de
+// l'auteur). Chaque créature reçoit sa part (le reste d'une part passe à la suivante) ; le reliquat final va
+// aux niveaux les moins chers tant qu'il paie un niveau entier.
+export function deckApresEffortEquitable(membres, griffes) {
+  const m = (membres || []).filter((x) => x && x.creature).map((x) => ({ ...x, ownedLevel: x.ownedLevel || x.level || 1 }));
+  if (!m.length) return { membres: m, puissance: 0 };
+  const part = Math.max(0, Number(griffes) || 0) / m.length;
+  let report = 0;
+  m.forEach((x) => {
+    let reste = part + report;
+    for (let n = 0; n < 500; n++) { const c = levelUpCost(x.creature, x.ownedLevel); if (!(c > 0) || c > reste) break; x.ownedLevel += 1; reste -= c; }
+    report = reste;
+  });
+  for (let n = 0; n < 500; n++) {
+    let i = -1, c = Infinity;
+    m.forEach((x, j) => { const cj = levelUpCost(x.creature, x.ownedLevel); if (cj > 0 && cj < c) { c = cj; i = j; } });
+    if (i < 0 || c > report) break;
+    m[i].ownedLevel += 1; report -= c;
+  }
+  return { membres: m, puissance: puissanceAffichee(m) };
+}
+
 // Le « B » du budget du Gardien (08/10, règle de l'auteur) : les primes des `n` prochains niveaux
 // d'Aventure (1res victoires) au taux de BASE — un futur bonus payant de Griffes n'est jamais compté.
 export function primesProchainsNiveaux(niveauAtteint, n = 3) {

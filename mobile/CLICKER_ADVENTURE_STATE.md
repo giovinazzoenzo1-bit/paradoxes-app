@@ -2750,3 +2750,23 @@ Gardiens + journal des combats) et « 🗑️ Vider les journaux de combat ». �
 estimer la précision réelle (σ) depuis les verdicts, le taux d'usage des sorts / spéciaux, comparer
 chance annoncée / résultats, puis recaler la simulation (erreurMs, politique) sur l'auteur.
 Contrôle auditJournalDev (+ sabotage) ; auditSonsJeu accepte noterSpecial. 101 contrôles, 128 sabotages.
+
+
+## 08/10 — GARDIEN, RÈGLE FINALE : « les Griffes de tes 3 prochains combats, réparties » (publié)
+
+DONNÉES de l'auteur (menu dev, 26 combats) : annonces de chance JUSTES (Gardiens 0 % perdu, 5 % perdu,
+80 / 95 / 95 / 100 % gagnés ; Brier 0,008) ; précision au tap MESURÉE 42 ms (IC 95 % : 36-49) contre
+60 ms pour le joueur simulé → les % affichés sont un MINIMUM pour lui ; style : quasi sans sorts (8 sorts,
+7 spéciaux / 126 attaques). PROBLÈME RÉEL : œuf 6 → 1 478, œuf 7 → 1 802 pour le même deck (1 499) :
+« 10 combats au lieu de 3 ». CAUSE MESURÉE : budget A + B ≈ 255 G (≈ 114 G de primes + ≈ 140 G de
+récompenses en attente) dépensé « AU MIEUX » (tout sur Aegisolar niv. 9, 8 G le niveau → +16 niveaux,
++20 %). Même faute que le « meilleur style » : supposer le joueur PARFAIT.
+RÈGLE FINALE (décision de l'auteur) : budget = primesProchainsNiveaux(niveau d'Aventure, 3) — les Griffes
+des 3 PROCHAINES 1res victoires, taux de base — réparties ÉQUITABLEMENT (deckApresEffortEquitable : part
+égale par créature, le reste passe à la suivante, reliquat aux niveaux les moins chers) ; plus de A (les
+récompenses en attente ne comptent plus ; ajouterFileAuBudget supprimé). Cas de l'auteur : 114 G →
+Aegisolar 13 / Terracroc 34 / Racinea 27, 110 G dépensés, Gardien 1 613 (+7,6 %) au lieu de 1 802.
+⚠️ « +2 niveaux par créature » REJETÉ : vrai sur ce deck (Aegisolar bon marché), faux en général.
+Calibrage, photo, anciennes photos et affichage de secours : tous sur la répartition équitable.
+auditGardienGriffes (cas exact de l'auteur, budget jamais dépassé, chaque créature servie, pas de file)
++ sabotage recalé. 101 contrôles, 128 sabotages. L'auteur remet l'appli à zéro et reteste.

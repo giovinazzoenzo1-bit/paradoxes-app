@@ -4767,7 +4767,7 @@ function auditPuissanceAffichee() {
     [a, /🛡️ Puissance \{puissanceHub\}/, 'hub : la pastille n\'affiche plus la puissance affichée'],
     [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`/, 'aperçu : puissance ou chance de victoire absente'],
     [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
-    [c, /return deckApresEffort\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget figé (il pourrait bouger)'],
+    [c, /return deckApresEffortEquitable\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget figé (il pourrait bouger)'],
     [c, /return `⚔️ \$\{texteChance\} de victoire\$\{effort\}`;/, 'menu du Gardien : la chance de victoire n\'est plus affichée'],
     [c, /setResultatGardien\(\{ issue: outcome, gardien: fight\.puissanceGardien, deck: puissanceDuDeck(, chance: chanceGardien)? \}\);/, 'résultat du Gardien : pas la puissance affichée'],
   ];
@@ -4867,16 +4867,27 @@ function auditGardienGriffes() {
   }
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if (!/asc: Math\.max\(0, Math\.floor\(Number\(ascension\) \|\| 0\)\),/.test(c)) pb.push("la photo ne retient plus l'Ascension du démarrage du chrono");
-  if (!/const cible = deckApresEffort\(membres, budgetDeLaPhoto\(photo, ascension\)\)\.membres;/.test(c) || !/\{ marge: 1 \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort en Griffes");
+  if (!/const cible = deckApresEffortEquitable\(membres, budgetDeLaPhoto\(photo, ascension\)\)\.membres;/.test(c) || !/\{ marge: 1 \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort RÉPARTI");
   // (08/10) Règle A + B : budget = récupérable (A) + primes des 3 prochains niveaux (B), figé à la photo.
-  if (!/budgetGardienRef\.current = \(griffesARecuperer \|\| 0\) \+ primesProchainsNiveaux\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0, 3\);/.test(c)) pb.push('le budget du Gardien ne vaut plus A + B');
+  // (08/10, règle FINALE) budget = les Griffes des 3 PROCHAINS combats, réparties équitablement (plus de A).
+  if (!/budgetGardienRef\.current = primesProchainsNiveaux\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0, 3\);/.test(c)) pb.push('le budget du Gardien ne vaut plus « 3 prochains combats »');
+  if (/ajouterFileAuBudget/.test(c)) pb.push("la file d'attente des récompenses compte de nouveau dans le Gardien");
+  {
+    const cre3 = (id) => C.CREATURES.find((x) => x.id === id);
+    const deckAuteur = [{ creature: cre3('aegisolar'), ownedLevel: 9, evolutionTier: 0, equippedRunes: [] }, { creature: cre3('terracroc'), ownedLevel: 33, evolutionTier: 1, equippedRunes: [] }, { creature: cre3('racinea'), ownedLevel: 25, evolutionTier: 0, equippedRunes: [] }];
+    const r = K.deckApresEffortEquitable(deckAuteur, 114);
+    let cout = 0; r.membres.forEach((m, i) => { for (let n = deckAuteur[i].ownedLevel; n < m.ownedLevel; n++) cout += C.levelUpCost(m.creature, n); });
+    if (cout > 114) pb.push(`répartition équitable : ${cout} Griffes dépensées pour un budget de 114`);
+    if (r.membres.some((m, i) => m.ownedLevel <= deckAuteur[i].ownedLevel)) pb.push('répartition équitable : une créature ne reçoit aucun niveau');
+    if (Math.abs(r.puissance - 1613) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 613 (« 3 combats »)`);
+  }
   if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
-  if ((c.match(/budgetGardienRef\.current\)\);\n\s*ajouterFileAuBudget\(set(IncubatingEgg|MainEgg)\);/g) || []).length !== 2) pb.push("les 2 démarrages de chrono ne transmettent plus le budget et la file d'attente");
+  if ((c.match(/, budgetGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget du Gardien');
   if (!/function budgetDeLaPhoto\(photo, ascensionCourante = 0\) \{\n  if \(photo && photo\.budget != null\) return photo\.budget;/.test(c)) pb.push("le Gardien n'utilise plus le budget de SA photo");
   // (08/10) Chiffre FIGÉ : écrit une fois dans la photo, toujours relu (l'auteur a vu 9 915 au menu, 9 901 au résultat).
-  if (!/gardien: deckApresEffort\(membres, b\)\.puissance/.test(c)) pb.push("la photo n'écrit plus le chiffre du Gardien au démarrage du chrono");
+  if (!/gardien: deckApresEffortEquitable\(membres, b\)\.puissance/.test(c)) pb.push("la photo n'écrit plus le chiffre du Gardien au démarrage du chrono");
   if (!/if \(photo\.gardien != null\) return photo\.gardien;/.test(c)) pb.push('le chiffre du Gardien est RECALCULÉ à chaque affichage (il peut bouger)');
-  if (!/budget, gardien: deckApresEffort\(membresDeLaPhoto\(p\.gardienPhoto\), budget\)\.puissance, file: true/.test(c)) pb.push("la file d'attente ne réécrit plus le chiffre avec le budget");
+  if (!/budget, gardien: deckApresEffortEquitable\(membresDeLaPhoto\(p\.gardienPhoto\), budget\)\.puissance, file: true/.test(c)) pb.push("les anciennes photos ne reçoivent plus leur chiffre (réparti)");
   if (!/const sansChiffre = \(e\) => e && e\.gardienPhoto && e\.gardienPhoto\.v === 2 && e\.gardienPhoto\.asc != null && e\.gardienPhoto\.gardien == null;/.test(c)) pb.push("les anciennes photos ne reçoivent plus leur chiffre figé");
   const dc = fs.readFileSync(path.join(__dirname, '../src/context/DailyContext.js'), 'utf8');
   if (!/const griffesARecuperer = useMemo\(\(\) => griffesRecuperables\(/.test(dc) || !/claimStreak, griffesARecuperer,/.test(dc)) pb.push('le contexte ne fournit plus les Griffes récupérables (A)');
