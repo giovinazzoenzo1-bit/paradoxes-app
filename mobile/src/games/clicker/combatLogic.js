@@ -241,7 +241,10 @@ export function applyGuardianDamage({ hp, shield }, damage) {
 // Tap de référence : le rythme de l'auteur (autoclicker 150 ms), sur
 // lequel tout l'équilibrage est calé.
 export const PUISSANCE_TAPS_PAR_SEC = 6.7;
-export const GUARDIAN_WIN_TARGET = 1 / 3;
+// 08/10 (décision de l'auteur) : 1/3 → 1/5. Un deck qui ATTEINT le chiffre du Gardien (photo du
+// début de l'œuf × marge) le bat 8 fois sur 10 (avant : 2 sur 3 — l'auteur a perdu à 9615 contre
+// 9610). Le Gardien suit toujours le deck à chaque œuf (gardé : c'est ce qui pousse à payer).
+export const GUARDIAN_WIN_TARGET = 1 / 5;
 // MARGE du Gardien : il est calé pour qu'un deck de puissance
 // (deck du début de l'œuf × marge) le batte 2 fois sur 3, et sa puissance
 // AFFICHÉE vaut deck × marge — un petit effort visible, jamais un mur.
@@ -2121,6 +2124,55 @@ export function niveauxManquantsExact(membres, niveau, { filetBaisse = 0 } = {})
 // calibré, Élixir compris), même équipe (sans runes), 2 victoires sur 3.
 const echelleGardien = (g, x) => ({ ...g, hp: Math.max(1, Math.round(g.hp * x)), attack: Math.max(1, g.attack * x) });
 // (08/10) Même mesure, qui renvoie AUSSI la chance au Gardien réel (r.victoires : 100 combats, meilleure des 2 façons de jouer).
+// ════════════════════════════════════════════════════════════════════
+//  CHANCE DE BATTRE LE GARDIEN — stable (08/10)
+// ════════════════════════════════════════════════════════════════════
+// Constat de l'auteur : le pourcentage « ne change pas » comme il devrait. MESURÉ : 100 combats
+// avec un hasard tiré du deck (niveaux compris) → monter d'un niveau changeait TOUS les combats
+// joués et pouvait faire BAISSER le pourcentage (56 → 55, 59 → 54). Ici : 300 combats et un hasard
+// FIXÉ par le Gardien — d'un niveau à l'autre, ce sont les MÊMES combats qui sont rejoués.
+export const CHANCE_GARDIEN_COMBATS = 300;
+function graineGardien(gStats) {
+  let h = 2166136261;
+  const s = `${Math.round((gStats.hp || 0) * 1000)}:${Math.round((gStats.attack || 0) * 1000)}`;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+export function chanceFaceAuGardien(membres, gStats) {
+  const m = (membres || []).filter((x) => x && x.creature);
+  if (!m.length || !gStats) return 0;
+  const prepares = preparerCombattants(m);
+  const st = echelleGardien(gStats, 1);
+  let meilleur = 0;
+  for (const politique of [choixJoueur, choixSansSorts]) {
+    const alea = aleaGraine(graineGardien(gStats));
+    let g = 0;
+    for (let i = 0; i < CHANCE_GARDIEN_COMBATS; i++) if (simulerCombat(prepares, gardienEnFace(st), { gStats: st, alea, politique }).gagne) g++;
+    meilleur = Math.max(meilleur, g / CHANCE_GARDIEN_COMBATS);
+  }
+  return meilleur;
+}
+
+// L'EFFORT en niveaux (08/10) : combien de niveaux gagner (chaque fois sur la créature qui
+// rapporte le plus de puissance) pour ATTEINDRE `cible` (le chiffre du Gardien). null au-delà de 300.
+export function niveauxPourAtteindre(membres, cible) {
+  const m = (membres || []).filter((x) => x && x.creature).map((x) => ({ ...x, ownedLevel: x.ownedLevel || x.level || 1 }));
+  if (!m.length || !(cible > 0)) return null;
+  let n = 0;
+  while (puissanceAffichee(m) < cible) {
+    if (n >= 300) return null;
+    let mieux = -1, gain = -Infinity;
+    for (let i = 0; i < m.length; i++) {
+      const essai = m.map((x, j) => (j === i ? { ...x, ownedLevel: x.ownedLevel + 1 } : x));
+      const g = puissanceAffichee(essai);
+      if (g > gain) { gain = g; mieux = i; }
+    }
+    m[mieux] = { ...m[mieux], ownedLevel: m[mieux].ownedLevel + 1 };
+    n++;
+  }
+  return n;
+}
+
 export function mesureFaceAuGardien(membres, gStats, reference) {
   const m = (membres || []).filter((x) => x && x.creature);
   if (!m.length || !gStats) return { puissance: 0, victoires: 0 };

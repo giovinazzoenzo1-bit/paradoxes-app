@@ -3180,6 +3180,8 @@ function auditGardienCalibre() {
   const alea = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const fautes = [];
+  // La cible DÉCIDÉE (08/10) : sans ce point, une fenêtre qui suit la constante suivrait aussi une fraude.
+  if (Math.abs(K.GUARDIAN_WIN_TARGET - 1 / 5) > 1e-9) fautes.push({ probleme: `cible du Gardien ${K.GUARDIAN_WIN_TARGET} au lieu de 1/5 (décision de l'auteur, 08/10)` });
   [['commun', 3, 1], ['rare', 1, 5], ['rare', 3, 10], ['epique', 2, 20], ['legendaire', 3, 35]].forEach(([rar, n, niv]) => {
     const membres = C.CREATURES.filter((c) => c.rarity === rar).slice(0, n).map((c) => ({ creature: c, ownedLevel: niv }));
     const oeuf = Math.max(3, niv + 1);
@@ -3202,7 +3204,10 @@ function auditGardienCalibre() {
     // decks les plus faibles du début. (À 5 % partout, 77 % à haut niveau :
     // c'est ce que ce contrôle a trouvé.) Au-delà, un mur ou un calibrage
     // cassé.
-    if (g / 800 < 0.15 || g / 800 > 0.45) fautes.push({ deck, gardienGagne: Math.round(100 * g / 800) + ' %' });
+    // 08/10 (décision de l'auteur) : cible 1/5 → fenêtre AUTOUR de la cible (±12 points ; mesuré : 11 %
+    // contre 3 communes niveau 1, où les combats avancent par paliers).
+    const T = K.GUARDIAN_WIN_TARGET;
+    if (g / 800 < Math.max(0.05, T - 0.12) || g / 800 > T + 0.12) fautes.push({ deck, gardienGagne: Math.round(100 * g / 800) + ' %' });
     const g0 = 800 * taux(1);
     if (g0 / 800 > 0.70) fautes.push({ deck, sansEffort: Math.round(100 * g0 / 800) + ' %' });
   });
@@ -4766,3 +4771,40 @@ function auditPuissanceAffichee() {
   return pb;
 }
 module.exports.auditPuissanceAffichee = auditPuissanceAffichee;
+
+// ── Gardien : 80 % pour qui atteint son chiffre, chance STABLE, effort en niveaux (08/10) ──
+// Décision de l'auteur (après une défaite à 9615 contre 9610) : atteindre le chiffre du Gardien
+// = ~80 % de victoire ; le pourcentage affiché (arrondi à 5 %) ne redescend jamais quand on
+// progresse (hasard FIXÉ par le Gardien) ; l'effort est dit en NIVEAUX.
+function auditGardien80() {
+  const fs = require('fs'); const path = require('path');
+  const K = load('combatLogic'); const I = load('incubatorLogic'); const pb = [];
+  const cre = (id) => C.CREATURES.find((c) => c.id === id);
+  const cas = [[['pyrosile', 'caraploof', 'luxorbe'], 8, 0, 5], [['pyrosile', 'caraploof', 'luxorbe'], 20, 0, 9], [['aegisolar', 'bouldog', 'caraploof'], 35, 1, 14]];
+  for (const [ids, L, tier, oeuf] of cas) {
+    const eq = (b = 0) => ids.map((id, i) => ({ creature: cre(id), ownedLevel: L + (i === 0 ? b : 0), evolutionTier: tier, equippedRunes: [] }));
+    const photo = eq(); const base = K.guardianStats(I.guardianLevelForEgg(oeuf), I.GUARDIAN_BASE_LEVEL, oeuf);
+    const g0 = K.guardianStatsCalibrees(base, K.calibrageGardienSur(photo, base));
+    const G = Math.round(K.puissanceAffichee(photo) * K.margeGardien(K.puissanceDeck(photo)));
+    const n = K.niveauxPourAtteindre(photo, G);
+    if (n == null) { pb.push(`niv. ${L} : l'effort en niveaux est introuvable`); continue; }
+    const m = photo.map((x) => ({ ...x }));
+    for (let k = 0; k < n; k++) { let best = 0, gain = -1; m.forEach((x, i) => { const e = m.map((y, j) => (j === i ? { ...y, ownedLevel: y.ownedLevel + 1 } : y)); const p = K.puissanceAffichee(e); if (p > gain) { gain = p; best = i; } }); m[best] = { ...m[best], ownedLevel: m[best].ownedLevel + 1 }; }
+    const ch = K.chanceFaceAuGardien(m, g0);
+    if (ch < 0.72 || ch > 0.92) pb.push(`niv. ${L} : atteindre le Gardien (${G}) donne ${Math.round(ch * 100)} % au lieu d'environ 80 %`);
+    let prec = -1;
+    for (let b = 0; b <= 10; b++) {
+      const aff = Math.round(K.chanceFaceAuGardien(eq(b), g0) * 20) * 5;
+      if (aff < prec) { pb.push(`niv. ${L} : le pourcentage affiché redescend (${prec} → ${aff} %) en montant de niveau`); break; }
+      prec = aff;
+    }
+  }
+  const k = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
+  const fc = k.slice(k.indexOf('export function chanceFaceAuGardien('), k.indexOf('\n}\n', k.indexOf('export function chanceFaceAuGardien(')));
+  if (!/aleaGraine\(graineGardien\(gStats\)\)/.test(fc)) pb.push('la chance au Gardien ne joue plus avec un hasard FIXÉ par le Gardien');
+  const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if (!/niveauxPourAtteindre\(membresDuDeck\(deck, owned\), g\)/.test(c) || !/niveau\$\{niveaux > 1 \? 'x' : ''\} à gagner/.test(c)) pb.push("le menu du Gardien n'affiche plus l'effort en niveaux");
+  if (!/Math\.round\(m\.victoires \* 20\) \* 5/.test(c)) pb.push("la chance du Gardien n'est plus arrondie à 5 % (les micro-baisses réapparaissent)");
+  return pb;
+}
+module.exports.auditGardien80 = auditGardien80;

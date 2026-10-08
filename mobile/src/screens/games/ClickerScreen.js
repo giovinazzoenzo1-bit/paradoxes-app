@@ -138,6 +138,8 @@ import {
   ELIXIR,
   puissanceAffichee,
   mesureFaceAuGardien,
+  chanceFaceAuGardien,
+  niveauxPourAtteindre,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -759,7 +761,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         const base = guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber);
         const cal = calibrageMemo(egg, owned, eggNumber, deck);
         const g0 = cal ? guardianStatsCalibrees(base, cal) : base;
-        return mesureFaceAuGardien(membresDuDeck(deck, owned), g0, g); // { puissance, victoires } : la CHANCE sert à l'affichage
+        return { victoires: chanceFaceAuGardien(membresDuDeck(deck, owned), g0) }; // chance STABLE (08/10)
       };
       try {
         const r = { main: mesurer(mainEgg), incub: mesurer(incubatingEgg) };
@@ -774,9 +776,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // affichée, qui monte à chaque niveau ; la CHANCE exacte (simulée) dit si tu peux gagner.
     const g = gardienAffiche(egg);
     const m = deckFaceGardien[cle];
-    const chance = m && typeof m === 'object' ? Math.round(m.victoires * 100) : null;
+    // Arrondie à 5 % (08/10) : les micro-variations de 1 point (hasard résiduel) deviennent invisibles.
+    const chance = m && typeof m === 'object' ? Math.round(m.victoires * 20) * 5 : null;
     if (chance == null) return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck} · chance…`;
-    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck} · ${chance} % de victoire${chance < 50 ? ' — améliore tes créatures' : ''}`;
+    // (08/10) L'effort en NIVEAUX, plus parlant qu'un écart de points.
+    const niveaux = puissanceDuDeck < g ? niveauxPourAtteindre(membresDuDeck(deck, owned), g) : 0;
+    const effort = niveaux ? ` · ≈ ${niveaux} niveau${niveaux > 1 ? 'x' : ''} à gagner` : niveaux === null ? ' · améliore tes créatures' : '';
+    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck} · ${chance} % de victoire${effort}`;
   }; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [calendarOpen, setCalendarOpen] = useState(false);

@@ -2559,3 +2559,30 @@ lieu de « conseillée »), menu du Gardien (« Gardien G · Ton deck N · X % d
 gardienAffiche(photo) → figé), résultat du Gardien. puissanceDeck reste INTERNE (photo,
 calibrage, anti-triche). Côté Gardien, pas de runes (elles ne jouent pas contre lui).
 Contrôle auditPuissanceAffichee + sabotage (stats arrondies → 16 cris). 98 contrôles, 121 sabotages.
+
+
+## 08/10 — GARDIEN : 80 % pour qui atteint son chiffre · chance stable · effort en niveaux (publié)
+
+Signalé par l'auteur : défaite à 9615 contre un Gardien à 9610 ; « le prochain demande 9807 » ;
+« le pourcentage doit changer ». ANALYSE : (a) un Gardien est FIGÉ par œuf, même après défaite
+(applyGuardianDefeat ne fait qu'ajouter retryAt) ; 9807 = 9615 × 1,02 = l'AUTRE œuf (nid ou
+incubateur), photographié plus tard ; (b) atteindre le chiffre = 67 % (cible 1/3) ; (c) chance
+mesurée sur 100 combats avec un hasard tiré du deck (niveaux compris) → monter d'un niveau
+rejouait d'AUTRES combats → baisses (56 → 55, 59 → 54).
+CALCUL (à redire simplement) : chiffre du Gardien = puissance du deck au démarrage du chrono
+(3 créatures, sans runes) × marge (+5 % → +2 % selon la puissance) ; sa force est réglée pour
+qu'un deck qui ATTEINT ce chiffre gagne 8 fois sur 10.
+DÉCISION de l'auteur : 80 % → GUARDIAN_WIN_TARGET 1/3 → 1/5. MESURÉ (vrai moteur, 4 photos,
+niv. 8 à 60) : deck qui atteint le chiffre → 78 / 85 / 85 / 87 % ; photo seule → 62 à 79 % ;
+effort +3 à +15 niveaux. chanceFaceAuGardien : 300 combats, meilleure des 2 façons de jouer,
+hasard FIXÉ par le Gardien (graineGardien) → mêmes combats d'un niveau à l'autre ; ~12 ms.
+Affichée arrondie à 5 % (les baisses résiduelles de 1 point deviennent invisibles).
+niveauxPourAtteindre(membres, cible) : niveaux à gagner (créature la plus rentable d'abord).
+Menu : « Gardien G · Ton deck N · X % de victoire · ≈ K niveaux à gagner ». Les œufs en cours
+gardent leur photo, mais leur Gardien est recalibré à 1/5 au combat (calibrage fait au combat).
+Gardes : auditGardienCalibre recalé (fenêtre ±12 points AUTOUR de la cible + la cible doit
+valoir EXACTEMENT 1/5 — sinon une fenêtre qui suit la constante suivrait aussi une fraude) ;
+auditGardien80 (+ sabotage). 99 contrôles, 122 sabotages.
+⚠️ Bac à sable réinitialisé en cours de session : dépôt recloné, outils réinstallés
+(/home/claude/babel-env : @babel/core, preset-env, preset-react, traverse, parser ;
+/tmp/cap : npm install du package.json de tools/capture).
