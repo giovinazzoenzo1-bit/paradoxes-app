@@ -4763,8 +4763,8 @@ function auditPuissanceAffichee() {
     [a, /🛡️ Puissance \{puissanceHub\}/, 'hub : la pastille n\'affiche plus la puissance affichée'],
     [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`/, 'aperçu : puissance ou chance de victoire absente'],
     [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
-    [c, /return Math\.round\(puissanceAffichee\(membresDeLaPhoto\(photo\)\) \* margeGardien\(photo\.puissance\)\);/, 'Gardien : son chiffre ne vient plus de sa seule photo (il pourrait bouger)'],
-    [c, /🛡️ Ton deck \$\{puissanceDuDeck\} · \$\{chance\} % de victoire/, 'menu du Gardien : puissance ou chance absente'],
+    [c, /return gardienDeLaPhoto\(membresDeLaPhoto\(photo\), photo\.asc != null \? photo\.asc : ascensionCourante\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + l\'effort de son Ascension (il pourrait bouger)'],
+    [c, /🛡️ Ton deck \$\{puissanceDuDeck\} · \$\{texteChance\} de victoire/, 'menu du Gardien : puissance ou chance absente'],
     [c, /setResultatGardien\(\{ issue: outcome, gardien: fight\.puissanceGardien, deck: puissanceDuDeck \}\);/, 'résultat du Gardien : pas la puissance affichée'],
   ];
   for (const [src, re, msg] of exige) if (!re.test(src)) pb.push(msg);
@@ -4780,21 +4780,25 @@ function auditGardien80() {
   const fs = require('fs'); const path = require('path');
   const K = load('combatLogic'); const I = load('incubatorLogic'); const pb = [];
   const cre = (id) => C.CREATURES.find((c) => c.id === id);
-  const cas = [[['pyrosile', 'caraploof', 'luxorbe'], 8, 0, 5], [['pyrosile', 'caraploof', 'luxorbe'], 20, 0, 9], [['aegisolar', 'bouldog', 'caraploof'], 35, 1, 14]];
-  for (const [ids, L, tier, oeuf] of cas) {
+  // (08/10) Règle en Griffes : Gardien = photo + l'effort de son Ascension, calibré (marge 1) sur ce deck.
+  const cas = [[['pyrosile', 'caraploof', 'luxorbe'], 8, 0, 5, 0], [['pyrosile', 'caraploof', 'luxorbe'], 20, 0, 9, 0], [['aegisolar', 'bouldog', 'caraploof'], 35, 1, 14, 1]];
+  for (const [ids, L, tier, oeuf, asc] of cas) {
     const eq = (b = 0) => ids.map((id, i) => ({ creature: cre(id), ownedLevel: L + (i === 0 ? b : 0), evolutionTier: tier, equippedRunes: [] }));
     const photo = eq(); const base = K.guardianStats(I.guardianLevelForEgg(oeuf), I.GUARDIAN_BASE_LEVEL, oeuf);
-    const g0 = K.guardianStatsCalibrees(base, K.calibrageGardienSur(photo, base));
-    const G = Math.round(K.puissanceAffichee(photo) * K.margeGardien(K.puissanceDeck(photo)));
+    const gp = K.gardienDeLaPhoto(photo, asc);
+    const g0 = K.guardianStatsCalibrees(base, K.calibrageGardienSur(gp.membres, base, { marge: 1 }));
+    const G = gp.puissance;
     const n = K.niveauxPourAtteindre(photo, G);
     if (n == null) { pb.push(`niv. ${L} : l'effort en niveaux est introuvable`); continue; }
     const m = photo.map((x) => ({ ...x }));
     for (let k = 0; k < n; k++) { let best = 0, gain = -1; m.forEach((x, i) => { const e = m.map((y, j) => (j === i ? { ...y, ownedLevel: y.ownedLevel + 1 } : y)); const p = K.puissanceAffichee(e); if (p > gain) { gain = p; best = i; } }); m[best] = { ...m[best], ownedLevel: m[best].ownedLevel + 1 }; }
     const ch = K.chanceFaceAuGardien(m, g0);
-    if (ch < 0.72 || ch > 0.92) pb.push(`niv. ${L} : atteindre le Gardien (${G}) donne ${Math.round(ch * 100)} % au lieu d'environ 80 %`);
+    // 0,72 à 0,97 : à bas niveau, les combats avancent par paliers et le calibrage prend VOLONTAIREMENT le
+    // côté facile (MESURÉ 08/10 : 95 % au niveau 12).
+    if (ch < 0.72 || ch > 0.97) pb.push(`niv. ${L} : atteindre le Gardien (${G}) donne ${Math.round(ch * 100)} % au lieu d'environ 80 %`);
     let prec = -1;
     for (let b = 0; b <= 10; b++) {
-      const aff = Math.round(K.chanceFaceAuGardien(eq(b), g0) * 20) * 5;
+      const aff = Math.min(95, Math.round(K.chanceFaceAuGardien(eq(b), g0) * 20) * 5); // affiché « ≥ 95 % » au-delà
       if (aff < prec) { pb.push(`niv. ${L} : le pourcentage affiché redescend (${prec} → ${aff} %) en montant de niveau`); break; }
       prec = aff;
     }
@@ -4805,6 +4809,43 @@ function auditGardien80() {
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if (!/niveauxPourAtteindre\(membresDuDeck\(deck, owned\), g\)/.test(c) || !/niveau\$\{niveaux > 1 \? 'x' : ''\} à gagner/.test(c)) pb.push("le menu du Gardien n'affiche plus l'effort en niveaux");
   if (!/Math\.round\(m\.victoires \* 20\) \* 5/.test(c)) pb.push("la chance du Gardien n'est plus arrondie à 5 % (les micro-baisses réapparaissent)");
+  if (!/const texteChance = chance >= 95 \? '≥ 95 %' : `\$\{chance\} %`;/.test(c)) pb.push('au-delà de 95 %, la chance ne s\'affiche plus « ≥ 95 % » (elle oscillerait 95 / 100)');
   return pb;
 }
 module.exports.auditGardien80 = auditGardien80;
+
+// ── Gardien : l'effort demandé EN GRIFFES (08/10, règle de l'auteur) ─────────
+// Gardien = photo (démarrage du chrono, avec l'Ascension du moment) + EFFORT_GARDIEN × Griffes
+// moyennes gagnées par combat à cette Ascension, dépensées au mieux en niveaux.
+function auditGardienGriffes() {
+  const fs = require('fs'); const path = require('path');
+  const K = load('combatLogic'); const pb = [];
+  if (K.EFFORT_GARDIEN !== 0.25) pb.push(`EFFORT_GARDIEN = ${K.EFFORT_GARDIEN} au lieu de 0,25 (réglage décidé le 08/10 — à changer AVEC ce contrôle)`);
+  // la table reste fidèle au simulateur de parcours (±35 %)
+  try {
+    const S = require('./simulateur-parcours.js'); const R = S.REGLAGES; const syn = S.synthese(10);
+    for (let a = 0; a < 6; a++) {
+      const debut = a ? R.finsAventure[a - 1] : 0, fin = R.finsAventure[a];
+      let v = 0; for (let l = debut + 1; l <= fin; l++) v += R.prime(l);
+      const s = syn[a]; if (!s || !s.combats) continue;
+      const total = v + R.succesParAsc[a] + R.packsParAsc * R.taillePack(a) + s.jours * R.quetesDuJour(Math.round((debut + fin) / 2)) + (a < 5 ? C.ascensionGriffesReward(a + 1) : 0);
+      const mesure = total / s.combats, table = K.GRIFFES_PAR_COMBAT[a];
+      if (Math.abs(mesure / table - 1) > 0.35) pb.push(`A${a} : la table dit ${table} Griffes par combat, le simulateur en mesure ${Math.round(mesure)} (économie changée ? recalculer)`);
+    }
+  } catch (e) { pb.push('simulateur de parcours injoignable : ' + e.message); }
+  // le deck « après effort » ne dépense jamais plus que le budget
+  const cre = (id) => C.CREATURES.find((c) => c.id === id);
+  for (const [L, asc] of [[5, 0], [30, 1], [70, 2]]) {
+    const photo = ['pyrosile', 'caraploof', 'luxorbe'].map((id) => ({ creature: cre(id), ownedLevel: L, evolutionTier: 0, equippedRunes: [] }));
+    const budget = K.griffesEffortGardien(asc); const d = K.deckApresEffort(photo, budget);
+    let cout = 0; d.membres.forEach((m, i) => { for (let n = photo[i].ownedLevel; n < m.ownedLevel; n++) cout += C.levelUpCost(m.creature, n); });
+    if (cout > budget) pb.push(`niv. ${L} : l'effort dépense ${cout} Griffes pour un budget de ${budget}`);
+    if (!(d.puissance >= K.puissanceAffichee(photo))) pb.push(`niv. ${L} : le Gardien est sous la photo`);
+  }
+  const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if (!/asc: Math\.max\(0, Math\.floor\(Number\(ascension\) \|\| 0\)\),/.test(c)) pb.push("la photo ne retient plus l'Ascension du démarrage du chrono");
+  if (!/const cible = gardienDeLaPhoto\(membres, photo\.asc != null \? photo\.asc : ascension\)\.membres;/.test(c) || !/\{ marge: 1 \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort en Griffes");
+  if (!/const sansAsc = \(e\) => e && e\.gardienPhoto && e\.gardienPhoto\.v === 2 && e\.gardienPhoto\.asc == null;/.test(c)) pb.push("les anciennes photos ne reçoivent plus leur Ascension (sans être reprises)");
+  return pb;
+}
+module.exports.auditGardienGriffes = auditGardienGriffes;

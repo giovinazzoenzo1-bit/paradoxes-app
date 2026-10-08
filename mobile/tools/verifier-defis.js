@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditGardienGriffes', "Gardien : effort en Griffes (25 % des Griffes moyennes d'un combat par Ascension), table fidèle au simulateur, photo avec l'Ascension (08/10)"],
   ['auditGardien80', "Gardien : ~80 % pour qui atteint son chiffre, chance stable (arrondie à 5 %, jamais en baisse), effort en niveaux (08/10)"],
   ['auditPuissanceAffichee', "puissance affichée : la formule du jeu sans arrondi (exacte), monte à chaque niveau, partout la même, Gardien figé sur sa photo (08/10)"],
   ['auditStadeEvolution', "le stade (image, nom) suit l'évolution, plus le niveau ; les combattants portent leur palier (08/10)"],

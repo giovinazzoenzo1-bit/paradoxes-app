@@ -140,6 +140,7 @@ import {
   mesureFaceAuGardien,
   chanceFaceAuGardien,
   niveauxPourAtteindre,
+  gardienDeLaPhoto,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -727,8 +728,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const sansPhotoV2 = (e) => e && (!e.gardienPhoto || e.gardienPhoto.v !== 2);
   useEffect(() => {
     if (!owned.length) return;
-    if (sansPhotoV2(mainEgg)) setMainEgg((p) => (sansPhotoV2(p) ? avecPhotoGardien(p, owned, deck) : p));
-    if (sansPhotoV2(incubatingEgg)) setIncubatingEgg((p) => (sansPhotoV2(p) ? avecPhotoGardien(p, owned, deck) : p));
+    if (sansPhotoV2(mainEgg)) setMainEgg((p) => (sansPhotoV2(p) ? avecPhotoGardien(p, owned, deck, ascensionCount) : p));
+    if (sansPhotoV2(incubatingEgg)) setIncubatingEgg((p) => (sansPhotoV2(p) ? avecPhotoGardien(p, owned, deck, ascensionCount) : p));
+    // (08/10) Les photos d'avant la règle en Griffes n'ont pas d'Ascension : on la leur AJOUTE une fois,
+    // SANS reprendre la photo (le deck photographié ne change pas).
+    const sansAsc = (e) => e && e.gardienPhoto && e.gardienPhoto.v === 2 && e.gardienPhoto.asc == null;
+    if (sansAsc(mainEgg)) setMainEgg((p) => (sansAsc(p) ? { ...p, gardienPhoto: { ...p.gardienPhoto, asc: ascensionCount } } : p));
+    if (sansAsc(incubatingEgg)) setIncubatingEgg((p) => (sansAsc(p) ? { ...p, gardienPhoto: { ...p.gardienPhoto, asc: ascensionCount } } : p));
   }, [mainEgg, incubatingEgg, owned]);
   // Petit menu de fin de combat de Gardien (demande de l'auteur).
   const [resultatGardien, setResultatGardien] = useState(null);
@@ -742,9 +748,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const calibrageCacheRef = useRef(new Map());
   const calibrageMemo = (egg, ownedList, eggNumber, deckIds) => {
     const photo = egg && egg.gardienPhoto;
-    const cle = eggNumber + '|' + (photo ? JSON.stringify(photo.membres)
+    const cle = eggNumber + '|' + (photo ? JSON.stringify(photo.membres) + '|' + (photo.asc != null ? photo.asc : ascensionCountRef.current)
       : 'direct:' + JSON.stringify([deckIds, (ownedList || []).map((o) => [o.id, o.level, o.evolutionTier || 0])]));
-    if (!calibrageCacheRef.current.has(cle)) calibrageCacheRef.current.set(cle, calibrageDuCombat(egg, ownedList, eggNumber, deckIds));
+    if (!calibrageCacheRef.current.has(cle)) calibrageCacheRef.current.set(cle, calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascensionCountRef.current));
     return calibrageCacheRef.current.get(cle);
   };
   const [deckFaceGardien, setDeckFaceGardien] = useState({});
@@ -774,7 +780,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (owned.length + 1 < 3 || !egg || !egg.gardienPhoto) return null;
     // (08/10) Gardien : tiré de la PHOTO (prise au démarrage du chrono) → FIGÉ ; ton deck : la puissance
     // affichée, qui monte à chaque niveau ; la CHANCE exacte (simulée) dit si tu peux gagner.
-    const g = gardienAffiche(egg);
+    const g = gardienAffiche(egg, ascensionCount);
     const m = deckFaceGardien[cle];
     // Arrondie à 5 % (08/10) : les micro-variations de 1 point (hasard résiduel) deviennent invisibles.
     const chance = m && typeof m === 'object' ? Math.round(m.victoires * 20) * 5 : null;
@@ -782,7 +788,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // (08/10) L'effort en NIVEAUX, plus parlant qu'un écart de points.
     const niveaux = puissanceDuDeck < g ? niveauxPourAtteindre(membresDuDeck(deck, owned), g) : 0;
     const effort = niveaux ? ` · ≈ ${niveaux} niveau${niveaux > 1 ? 'x' : ''} à gagner` : niveaux === null ? ' · améliore tes créatures' : '';
-    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck} · ${chance} % de victoire${effort}`;
+    // ≥ 95 % (08/10) : tout en haut, le hasard résiduel ferait osciller 95 / 100 ; la victoire y est quasi assurée.
+    const texteChance = chance >= 95 ? '≥ 95 %' : `${chance} %`;
+    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck} · ${texteChance} de victoire${effort}`;
   }; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -2081,7 +2089,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const oeufEnJeu = source === 'main' ? mainEggRef.current : incubatingEgg;
     setGuardianFight({ source, level: guardianLevelForEgg(eggNumber), eggNumber,
       calibrage: calibrageMemo(oeufEnJeu, ownedRef.current, eggNumber, deckRef.current),
-      puissanceGardien: oeufEnJeu && oeufEnJeu.gardienPhoto && eggNumber >= 3 ? gardienAffiche(oeufEnJeu) : null });
+      puissanceGardien: oeufEnJeu && oeufEnJeu.gardienPhoto && eggNumber >= 3 ? gardienAffiche(oeufEnJeu, ascensionCountRef.current) : null });
   };
 
   // Fin du combat. Victoire : l'œuf éclot. Défaite : l'œuf n'est JAMAIS
@@ -2176,7 +2184,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
   const startEggIncubation = () => {
     if (incubatingEgg) return;
-    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck));
+    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck, ascensionCount));
     startNewEggCycle();
     setIncubatorOpen(true);
   };
@@ -3319,7 +3327,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // Le minuteur naît en même temps que la phase, et UNIQUEMENT
         // ici : le créer dans un effet séparé le ferait repartir de zéro
         // à chaque rendu tant que la phase reste 'hatching'.
-        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current));
+        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current, ascensionCountRef.current));
         return 'hatching';
       });
     }
@@ -5747,26 +5755,28 @@ function membresDuDeck(ids, ownedList) {
 // ⚠️ v2 (24/09, retour de l'auteur) : la v1 prenait les 3 meilleures de
 // la COLLECTION — plus fortes que le deck joué, d'où un écart affiché de
 // 6-7 points, « compliqué à rattraper à haut niveau ».
-function photoGardien(ownedList, deckIds) {
+function photoGardien(ownedList, deckIds, ascension = 0) {
   const duDeck = membresDuDeck(deckIds, ownedList);
   const pris = new Set(duDeck.map((m) => m.creature.id));
   const reste = membresDuDeck((ownedList || []).map((o) => o.id).filter((id) => !pris.has(id)), ownedList)
     .map((m) => ({ m, p: puissanceDeck([m]) })).sort((a, b) => b.p - a.p).map((x) => x.m);
   const membres = [...duDeck, ...reste].slice(0, 3);
-  return { v: 2, membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
+  // asc (08/10) : l'Ascension AU DÉMARRAGE DU CHRONO — l'effort en Griffes du Gardien en dépend.
+  return { v: 2, asc: Math.max(0, Math.floor(Number(ascension) || 0)), membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
     puissance: puissanceDeck(membres) };
 }
-function avecPhotoGardien(egg, ownedList, deckIds) {
+function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0) {
   if (!egg) return egg;
-  try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds) }; } catch (e) { return egg; }
+  try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds, ascension) }; } catch (e) { return egg; }
 }
 // Chiffre AFFICHÉ du Gardien (08/10) : la puissance affichée de la PHOTO (prise au démarrage du
 // chrono, jamais retouchée ensuite) × la marge habituelle (calculée sur l'ancienne échelle de la
 // photo) → FIGÉ pour tout l'œuf, comme l'a exigé l'auteur.
-function gardienAffiche(egg) {
+function gardienAffiche(egg, ascensionCourante = 0) {
   const photo = egg && egg.gardienPhoto;
   if (!photo) return null;
-  return Math.round(puissanceAffichee(membresDeLaPhoto(photo)) * margeGardien(photo.puissance));
+  // (08/10) Règle en Griffes : la photo + l'effort de son Ascension (gardienDeLaPhoto). FIGÉ.
+  return gardienDeLaPhoto(membresDeLaPhoto(photo), photo.asc != null ? photo.asc : ascensionCourante).puissance;
 }
 function membresDeLaPhoto(photo) {
   return ((photo && photo.membres) || []).map((x) => {
@@ -5777,12 +5787,15 @@ function membresDeLaPhoto(photo) {
 // Calibrage au lancement du combat : même photo et même œuf = même
 // Gardien à chaque essai (tirages à graine). Œuf 2 : l'ancien Gardien,
 // « parfait » pour l'auteur. Jamais d'exception : null = ancien Gardien.
-function calibrageDuCombat(egg, ownedList, eggNumber, deckIds) {
+function calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascension = 0) {
   if (eggNumber < 3) return null;
   try {
-    const membres = membresDeLaPhoto((egg && egg.gardienPhoto) || photoGardien(ownedList, deckIds));
+    const photo = (egg && egg.gardienPhoto) || photoGardien(ownedList, deckIds, ascension);
+    const membres = membresDeLaPhoto(photo);
     if (!membres.length) return null;
-    return calibrageGardienSur(membres, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber));
+    // (08/10) Calibré sur le deck APRÈS l'effort en Griffes, marge 1 : qui ATTEINT le chiffre gagne 8 fois sur 10.
+    const cible = gardienDeLaPhoto(membres, photo.asc != null ? photo.asc : ascension).membres;
+    return calibrageGardienSur(cible, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber), { marge: 1 });
   } catch (e) {
     return null;
   }

@@ -138,7 +138,7 @@
 - [x] Design, priorité 2 (06/10) : carte des chapitres — médaillons de niveau, capsules de bois
       (Griffes, Éléments, énergie, pastilles du hub). DESIGN À 100 % hors skins des créatures.
 
-- [ ] GARDIEN (08/10, après le test de l'auteur) : choisir la règle de l'effort — A. « 1 niveau » sur la
+- [x] GARDIEN (08/10) : règle en GRIFFES codée (EFFORT_GARDIEN = 25 % des Griffes moyennes d'un combat) — à AJUSTER selon les tests de l'auteur. (Ancienne note : choisir la règle de l'effort — A. « 1 niveau » sur la
       créature la moins chère à monter du deck (recommandée) ou B. 5 % des Griffes gagnées pendant un œuf.
       Tableaux mesurés dans CLICKER_ADVENTURE_STATE.md (08/10). Aujourd'hui : marge 2-5 %, 80 % au chiffre.
 - [ ] GRIFFES POUR UN JOUEUR BLOQUÉ (idée de l'auteur, 08/10) : une autre façon d'en gagner quand un niveau

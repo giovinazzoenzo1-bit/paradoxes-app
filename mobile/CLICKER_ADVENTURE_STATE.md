@@ -2617,3 +2617,26 @@ simple, toujours faisable, « ≈ 1 niveau à gagner ») ; B. 5 % des Griffes ga
 règle actuelle (marge 2-5 %, 80 % en atteignant le chiffre) en attendant.
 Piste de l'auteur : une AUTRE SOURCE DE GRIFFES pour un joueur vraiment bloqué (niveau d'Aventure
 infaisable…). Voir A_FAIRE.
+
+
+## 08/10 — GARDIEN : l'effort en GRIFFES (règle de l'auteur, publié)
+
+L'auteur : « une fois que le Gardien a calculé le niveau de mon deck, je veux qu'il se calibre à
+(Griffes moyennes gagnées par combat × X %), pareil pour chaque Ascension ; on ajustera ».
+RÈGLE (combatLogic) : GRIFFES_PAR_COMBAT = [36, 171, 748, 1035, 1330, 1527] (A0…A5, au-delà A5 ;
+MESURÉ : simulateur de parcours, 40 joueurs, Griffes gagnées ÷ combats) ; EFFORT_GARDIEN = 0,25
+(LE réglage) ; griffesEffortGardien(asc) ; deckApresEffort(membres, griffes) = Griffes dépensées
+AU MIEUX en niveaux (puissance par Griffe), avec la fraction du niveau suivant ;
+gardienDeLaPhoto(membres, asc) → { puissance (= chiffre affiché), membres (= deck de calibrage) }.
+Calibrage : calibrageGardienSur(deck après effort, base, { marge: 1 }) → qui ATTEINT le chiffre gagne
+~8 fois sur 10. La marge (+2 à +5 %) ne sert plus au Gardien.
+PHOTO : retient l'Ascension du démarrage du chrono (asc) ; les anciennes photos la reçoivent UNE
+fois sans être reprises (sansAsc) ; cache de calibrage indexé aussi par asc.
+MESURÉ (4 stades A0→A3) : 9 / 43 / 187 / 259 Griffes, 1 à 2 niveaux ; chance SANS rien faire
+76-86 % ; au chiffre 75-95 %. Selon X : 50 % → 59-84 % sans rien ; 100 % → 49-81 % ; 200 % →
+48-77 % (à haut niveau, quelques niveaux changent peu l'issue). Chance affichée « ≥ 95 % » au-delà
+de 95 (le hasard résiduel faisait osciller 95 / 100 : 97,7 → 95,7 mesuré).
+POUR AJUSTER : changer EFFORT_GARDIEN ET la valeur attendue dans auditGardienGriffes (sinon il crie,
+c'est voulu). Si l'économie change, recalculer GRIFFES_PAR_COMBAT (le contrôle compare au simulateur,
+±35 %). Gardes : auditGardienGriffes (+ sabotage EFFORT 3), auditGardien80 et
+auditPuissanceAffichee adaptés. 100 contrôles, 123 sabotages.

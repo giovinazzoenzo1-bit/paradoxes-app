@@ -1,7 +1,7 @@
 // Logique pure du mode Aventure / Combat — voir mobile/ADVENTURE_MODE.md
 // pour le design complet. Aucun écran ne dépend encore de ce fichier :
 // c'est l'étape 1 du plan de construction (fonctions testables d'abord).
-import { CREATURES, MANA_MAX, MANA_PER_TURN, SORT_DE_CREATURE } from './clickerLogic';
+import { CREATURES, MANA_MAX, MANA_PER_TURN, SORT_DE_CREATURE, levelUpCost } from './clickerLogic';
 
 // ---- Stats de combat par rareté ----
 // Recalibré (29/08) à partir d'un exemple réel produit par le
@@ -1260,10 +1260,10 @@ export function guardianStatsCalibrees(baseStats, { facteurPv, facteurAttaque })
 
 // Pour le JEU : jamais d'exception. En cas d'échec, facteur 1 = l'ancien
 // Gardien (stats de niveau).
-export function calibrageGardienSur(membres, baseStats) {
+export function calibrageGardienSur(membres, baseStats, options = {}) {
   const ancien = { facteurPv: 1, facteurAttaque: 1 };
   try {
-    const r = calibrerGardien(membres, baseStats);
+    const r = calibrerGardien(membres, baseStats, options);
     const ok = [r.facteurPv, r.facteurAttaque].every((x) => Number.isFinite(x) && x > 0);
     return ok ? { facteurPv: r.facteurPv, facteurAttaque: r.facteurAttaque } : ancien;
   } catch (e) {
@@ -2171,6 +2171,53 @@ export function niveauxPourAtteindre(membres, cible) {
     n++;
   }
   return n;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  L'EFFORT DEMANDÉ PAR LE GARDIEN — EN GRIFFES (08/10, règle de l'auteur)
+// ════════════════════════════════════════════════════════════════════
+// L'auteur : « une fois que le Gardien a calculé le niveau de mon deck, je veux qu'il se calibre à
+// (Griffes moyennes gagnées par combat × X %), pareil pour chaque Ascension ; on ajustera au fur et
+// à mesure ». Remplace la MARGE (+2 à +5 % de puissance) : MESURÉ, elle coûtait 25 % des Griffes
+// d'un œuf en A0… et 134 % en A5 — un mur qui grandit.
+// Le chiffre du Gardien = la puissance du deck de la PHOTO (prise au démarrage du chrono, avec
+// l'Ascension du moment) APRÈS avoir dépensé, au mieux, EFFORT_GARDIEN × GRIFFES_PAR_COMBAT[A]
+// Griffes en niveaux. Le Gardien est calibré (marge 1) pour qu'un deck qui ATTEINT ce chiffre
+// gagne 8 fois sur 10 (GUARDIAN_WIN_TARGET).
+// GRIFFES_PAR_COMBAT : MESURÉ le 08/10 (simulateur de parcours, 40 joueurs gratuits : toutes les
+// Griffes gagnées ÷ combats joués, par Ascension) ; auditGardienGriffes le recompare au simulateur.
+export const GRIFFES_PAR_COMBAT = [36, 171, 748, 1035, 1330, 1527]; // A0 … A5 (au-delà : A5)
+// LE RÉGLAGE : 25 % des Griffes moyennes d'un combat ≈ 1 niveau à TOUS les stades (MESURÉ :
+// 0,6 à 1,2 niveau ; 50 % ≈ 1,5 à 2,5 ; 100 % ≈ 2,3 à 4,9).
+export const EFFORT_GARDIEN = 0.25;
+export function griffesEffortGardien(ascension) {
+  const a = Math.max(0, Math.min(GRIFFES_PAR_COMBAT.length - 1, Math.floor(Number(ascension) || 0)));
+  return Math.round(GRIFFES_PAR_COMBAT[a] * EFFORT_GARDIEN);
+}
+// Le deck après avoir dépensé `griffes` en niveaux, AU MIEUX (chaque achat : le niveau qui rapporte le
+// plus de puissance par Griffe). `puissance` compte aussi la FRACTION du niveau suivant que le reste
+// paierait : le chiffre bouge en douceur, même quand le budget n'achète pas un niveau entier.
+export function deckApresEffort(membres, griffes) {
+  const m = (membres || []).filter((x) => x && x.creature).map((x) => ({ ...x, ownedLevel: x.ownedLevel || x.level || 1 }));
+  let reste = Math.max(0, Number(griffes) || 0);
+  for (let n = 0; n < 500 && m.length; n++) {
+    const p0 = puissanceAffichee(m);
+    let mieux = -1, ratio = -1, cout = 0, gain = 0;
+    m.forEach((x, i) => {
+      const c = levelUpCost(x.creature, x.ownedLevel);
+      const g = puissanceAffichee(m.map((y, j) => (j === i ? { ...y, ownedLevel: y.ownedLevel + 1 } : y))) - p0;
+      if (c > 0 && g / c > ratio) { ratio = g / c; mieux = i; cout = c; gain = g; }
+    });
+    if (mieux < 0) break;
+    if (cout > reste) return { membres: m, puissance: Math.round(p0 + gain * (reste / cout)) };
+    m[mieux] = { ...m[mieux], ownedLevel: m[mieux].ownedLevel + 1 };
+    reste -= cout;
+  }
+  return { membres: m, puissance: puissanceAffichee(m) };
+}
+// Le Gardien d'une PHOTO : `puissance` = son chiffre affiché ; `membres` = le deck sur lequel le calibrer.
+export function gardienDeLaPhoto(membres, ascension) {
+  return deckApresEffort(membres, griffesEffortGardien(ascension));
 }
 
 export function mesureFaceAuGardien(membres, gStats, reference) {

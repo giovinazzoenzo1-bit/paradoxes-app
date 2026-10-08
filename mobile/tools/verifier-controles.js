@@ -242,6 +242,8 @@ const SABOTAGES = [
     remplace("coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'none' },", "coucheConfettis: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 30 },")],
   ['auditEcranFin', F.combatEcran, "le pack de Griffes de la défaite débranché par la refonte",
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
+  ['auditGardienGriffes', F.combat, "effort du Gardien passé à 3 combats de Griffes : un mur",
+    remplace('export const EFFORT_GARDIEN = 0.25;', 'export const EFFORT_GARDIEN = 3;')],
   ['auditGardien80', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "menu du Gardien sans l'effort en niveaux",
     remplace("    const niveaux = puissanceDuDeck < g ? niveauxPourAtteindre(membresDuDeck(deck, owned), g) : 0;", "    const niveaux = 0;")],
   ['auditPuissanceAffichee', F.combat, "puissance affichée sur les stats ARRONDIES : les paliers reviennent (« ça ne bouge pas »)",
