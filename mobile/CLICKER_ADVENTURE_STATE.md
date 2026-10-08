@@ -2732,3 +2732,21 @@ figés ET exacts : un combat dépend aussi des sorts, éléments, rôles, des 2 
 Le Gardien reste figé (budget A + B, chiffre écrit dans la photo) ; la « Puissance » reste au hub
 (progression). Gardes : auditGardien80 (niveaux mesurés + frontière, journal, malchance dès 80 %),
 auditPuissanceAffichee (ligne du menu) ; sabotages recalés. 100 contrôles, 127 sabotages.
+
+
+## 08/10 — JOURNAL DES COMBATS pour Claude (menu dev) — publié
+
+L'auteur (journal : 6 Gardiens, 74 % annoncés, 4 gagnés) : « mon cerveau surchauffe, rien n'est
+précis ; je vais recommencer le jeu ; crée un bouton pour te donner l'historique et les infos qui te
+permettront de bien calculer » (menu dev des Paramètres).
+src/screens/games/journalCombat.js : debutCombat (mode, niveau, œuf, élixir, équipe {id, rareté, niv,
+palier, runes}, stats du Gardien), noterVerdict (parfait / bien / rate / absent → la VRAIE précision au
+tap se déduit des verdicts et des largeurs de zone par rareté), noterAttaque (coups / ripostes),
+noterSort (type@côté), noterSpecial, finCombat (issue, durée ; Gardien : chance annoncée, chiffre,
+puissance du deck, Ascension ; Exploration : étoiles) → AsyncStorage dev:journalCombats (40 derniers).
+Crochets HORS de la zone des règles (montrerVerdict, effetsImpact, effetSort, assombriKey, montage).
+Menu dev : « 📤 Envoyer mes données de combat à Claude » (Share.share d'un JSON : résumé + journal des
+Gardiens + journal des combats) et « 🗑️ Vider les journaux de combat ». À L'ARRIVÉE DES DONNÉES :
+estimer la précision réelle (σ) depuis les verdicts, le taux d'usage des sorts / spéciaux, comparer
+chance annoncée / résultats, puis recaler la simulation (erreurMs, politique) sur l'auteur.
+Contrôle auditJournalDev (+ sabotage) ; auditSonsJeu accepte noterSpecial. 101 contrôles, 128 sabotages.

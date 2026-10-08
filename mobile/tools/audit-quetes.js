@@ -4633,7 +4633,7 @@ function auditSonsJeu() {
     [c, /son\(cle === 'parfait' \? 'impact-parfait' : cle === 'rate' \? 'rate' : 'impact-normal'\);/, 'combat : plus de son à l\'impact'],
     [c, /if \(element && cle !== 'rate' && SON_ELEMENT\[element\]\) son\(SON_ELEMENT\[element\]\);/, 'combat : plus de son d\'élément'],
     [c, /if \(SON_SORT\[type\]\) son\(SON_SORT\[type\]\);/, 'combat : plus de son de sort ni de K.O.'],
-    [c, /useEffect\(\(\) => \{ if \(assombriKey > 0\) son\('special'\); \}, \[assombriKey\]\);/, 'combat : plus de son au lancement du spécial'],
+    [c, /useEffect\(\(\) => \{ if \(assombriKey > 0\) (son\('special'\);|\{ son\('special'\); noterSpecial\(\); \}) \}, \[assombriKey\]\);/, 'combat : plus de son au lancement du spécial'],
     [c, /if \(v === 'parfait'\) son\('jauge-parfait'\);/, 'combat : plus de carillon « PARFAIT »'],
     [c, /jouerSon\(isWin \? 'victoire' : 'defaite', sonsFin !== false\)/, 'fin de combat : plus de jingle'],
     [c, /onPop=\{\(\) => jouerSon\('etoile', sonsFin !== false\)\}/, 'fin de combat : les étoiles ne tintent plus'],
@@ -4896,3 +4896,31 @@ function auditGardienGriffes() {
   return pb;
 }
 module.exports.auditGardienGriffes = auditGardienGriffes;
+
+// ── Journal des combats pour Claude (08/10, menu dev) ───────────────────────
+// Demande de l'auteur : un bouton pour donner l'historique et les infos qui permettent de bien calculer.
+function auditJournalDev() {
+  const fs = require('fs'); const path = require('path'); const R = path.join(__dirname, '..');
+  const lire = (f) => fs.readFileSync(path.join(R, f), 'utf8'); const pb = [];
+  const j = lire('src/screens/games/journalCombat.js');
+  for (const f of ['debutCombat', 'noterVerdict', 'noterAttaque', 'noterSort', 'noterSpecial', 'finCombat', 'lireJournalCombats']) if (!new RegExp('export (async )?function ' + f + '\\(').test(j)) pb.push(`journalCombat : ${f} absent`);
+  const c = lire('src/screens/games/CombatScreen.js');
+  const exige = [
+    [/const montrerVerdict = \(v\) => \{ noterVerdict\(v\);/, 'combat : les verdicts de jauge ne sont plus notés'],
+    [/noterAttaque\(cle\); \/\/ journal des combats/, 'combat : les coups ne sont plus notés'],
+    [/noterSort\(type, cote\); \/\/ journal des combats/, 'combat : les sorts ne sont plus notés'],
+    [/son\('special'\); noterSpecial\(\);/, 'combat : les spéciaux ne sont plus notés'],
+    [/debutCombat\(\{ mode: guardianEggNumber > 0 \? 'gardien' : 'aventure'/, 'combat : le début (équipe, mode, Gardien) n\'est plus noté'],
+  ];
+  for (const [re, msg] of exige) if (!re.test(c)) pb.push(msg);
+  // les crochets restent HORS de la zone des règles (sous empreinte)
+  const debut = c.indexOf('RÈGLES DU COMBAT — DÉBUT'), fin = c.indexOf('RÈGLES DU COMBAT — FIN');
+  const zone = debut >= 0 && fin > debut ? c.slice(debut, fin) : '';
+  if (/noterVerdict|noterAttaque|noterSort|noterSpecial|debutCombat/.test(zone)) pb.push('un crochet du journal est DANS la zone des règles du combat');
+  if (!/finCombat\(outcome, \{ chanceAnnoncee: chanceGardien/.test(lire('src/screens/games/ClickerScreen.js'))) pb.push('fin du combat de Gardien : le journal n\'est plus clos');
+  if (!/finCombat\(outcome, \{ etoiles: stars \|\| 0 \}\);/.test(lire('src/screens/games/AdventureScreen.js'))) pb.push('fin du combat d\'Exploration : le journal n\'est plus clos');
+  const o = lire('src/screens/OptionsScreen.js');
+  if (!/onPress=\{devEnvoyerCombats\}/.test(o) || !/await Share\.share\(\{ message: JSON\.stringify\(rapport\) \}\);/.test(o)) pb.push('menu dev : le bouton d\'envoi des données de combat a disparu');
+  return pb;
+}
+module.exports.auditJournalDev = auditJournalDev;

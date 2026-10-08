@@ -64,6 +64,7 @@ const CONTROLES = [
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],
   ['auditPuissanceExacte', "puissance exacte : « ta puissance ≥ conseillée » ⇔ tu gagnes 6 fois sur 10 (recomptage indépendant) ; Élixir exclu"],
   ['auditZoneTapLibre', "la zone de l'œuf reste libre au toucher : « +X » et nid transparents PAR LE STYLE (bug de tap du 27/09)"],
+  ['auditJournalDev', "journal des combats pour Claude : verdicts, coups, sorts, spéciaux, équipe, résultat ; bouton d'envoi dans le menu dev (08/10)"],
   ['auditGardienGriffes', "Gardien : budget A + B (récupérable + primes des 3 prochains niveaux) figé à la photo ; A exact ; anciennes photos sur l'ancienne règle (08/10)"],
   ['auditGardien80', "Gardien : ~80 % pour qui atteint son chiffre, chance stable (arrondie à 5 %, jamais en baisse), effort en niveaux (08/10)"],
   ['auditPuissanceAffichee', "puissance affichée : la formule du jeu sans arrondi (exacte), monte à chaque niveau, partout la même, Gardien figé sur sa photo (08/10)"],

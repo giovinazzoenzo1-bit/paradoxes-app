@@ -19,6 +19,7 @@ import { afficherDialogue } from '../../components/DialogueJeu';
 import { jouerSon, SON_ELEMENT } from './sonsBoutique';
 import { useSettings } from '../../context/SettingsContext';
 import { useMusique } from './musique';
+import { debutCombat, noterVerdict, noterAttaque, noterSort, noterSpecial } from './journalCombat';
 import { CADRAGE_CREATURES } from '../../games/clicker/cadrageCreatures';
 import { StatusBar } from 'expo-status-bar';
 
@@ -552,6 +553,13 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const sonsRef = useRef(true);
   sonsRef.current = sonsReglage !== false;
   const son = (nom) => jouerSon(nom, sonsRef.current);
+  // (08/10) Journal des combats : l'équipe, le mode, le Gardien — au début du combat.
+  useEffect(() => {
+    const g = guardianEggNumber > 0 && opponents && opponents[0] && opponents[0].stats ? opponents[0].stats : null;
+    debutCombat({ mode: guardianEggNumber > 0 ? 'gardien' : 'aventure', niveau: levelNumber, oeuf: guardianEggNumber || 0, elixir: !!elixirActif,
+      equipe: (team || []).map((m) => ({ id: m.creature && m.creature.id, rarete: m.creature && m.creature.rarity, niv: m.ownedLevel, palier: m.evolutionTier || 0, runes: (m.equippedRunes || []).length })),
+      gardien: g ? { pv: g.hp, attaque: Math.round((g.attack || 0) * 100) / 100 } : null });
+  }, []);
   // Le Gardien de l'œuf entre en scène (07/10).
   useEffect(() => { if (guardianEggNumber > 0) son('boss-apparition'); }, []);
   // Spécial prêt (07/10) : le mana du combattant actif atteint le maximum.
@@ -561,7 +569,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     if (manaActif >= MANA_MAX && manaPrecRef.current < MANA_MAX) son('special-pret');
     manaPrecRef.current = manaActif;
   }, [manaActif]);
-  const montrerVerdict = (v) => { if (v === 'parfait') son('jauge-parfait'); setVerdict(v); setTimeout(() => setVerdict((x) => (x === v ? null : x)), 900); };
+  const montrerVerdict = (v) => { noterVerdict(v); if (v === 'parfait') son('jauge-parfait'); setVerdict(v); setTimeout(() => setVerdict((x) => (x === v ? null : x)), 900); };
   const [timeLeft, setTimeLeft] = useState(TAP_CHALLENGE_TIME_LIMIT_SEC);
   const [switchMessage, setSwitchMessage] = useState(null);
   const [outcome, setOutcome] = useState(null); // null | 'win' | 'lose'
@@ -728,9 +736,10 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   // Son de chaque visuel (07/10) ; le SPÉCIAL sonne à son LANCEMENT (assombriKey, plus bas).
   const SON_SORT = { soin: 'sort-soin', bouclier: 'sort-bouclier', boost: 'sort-bouclier', vitesse: 'sort-bouclier', provocation: 'sort-bouclier', pacte: 'sort-bouclier',
     poison: 'sort-attaque', marque: 'sort-attaque', execution: 'sort-attaque', zone: 'sort-attaque', ko: 'ko' };
-  useEffect(() => { if (assombriKey > 0) son('special'); }, [assombriKey]);
+  useEffect(() => { if (assombriKey > 0) { son('special'); noterSpecial(); } }, [assombriKey]);
   const effetSort = (type, cote, index, valeur = null) => {
     if (SON_SORT[type]) son(SON_SORT[type]);
+    noterSort(type, cote); // journal des combats (08/10)
     const c = centreSprite(cote, index);
     if (!c) return;
     setImpacts((l) => [...l, { id: `${Date.now()}-${Math.random()}`, sort: type, x: c.x, y: c.y, taille: c.taille, valeur }]);
@@ -745,6 +754,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     vibrer(st.vibration);
     // Sons (07/10) : le choc selon le verdict, puis l'élément de l'attaquant (pas sur un coup raté).
     son(cle === 'parfait' ? 'impact-parfait' : cle === 'rate' ? 'rate' : 'impact-normal');
+    noterAttaque(cle); // journal des combats (08/10)
     if (element && cle !== 'rate' && SON_ELEMENT[element]) son(SON_ELEMENT[element]);
   };
   const [opponentDamageFloat, setOpponentDamageFloat] = useState(null);

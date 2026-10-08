@@ -375,6 +375,7 @@ import { afficherDialogue } from '../../components/DialogueJeu';
 import { useSettings } from '../../context/SettingsContext';
 import { jouerSon, SON_CREATURE } from './sonsBoutique';
 import { useMusique } from './musique';
+import { finCombat } from './journalCombat';
 import { FenetreJeu, BoutonBois } from '../../components/FenetreJeu';
 import {
   CREATURES,
@@ -2515,6 +2516,7 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
           adsLeft,
         }}
         onFinish={(outcome, goNext, stars) => {
+          finCombat(outcome, { etoiles: stars || 0 }); // journal des combats (08/10)
           // Une charge d'Élixir par combat mené, gagné ou perdu.
           if (elixirCombats > 0 && onElixirUsed) onElixirUsed();
           if (outcome === 'lose' && onDefaite) onDefaite(activeBattle.levelNumber);

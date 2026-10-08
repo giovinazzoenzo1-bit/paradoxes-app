@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Dimensions, Share } from 'react-native';
+import { lireJournalCombats, JOURNAL_COMBATS_KEY } from './games/journalCombat';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../context/CoinsContext';
 import { useDaily } from '../context/DailyContext';
@@ -188,6 +189,29 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
     Alert.alert('Fait', "Les Griffes seront remises à 0 à l'ouverture du mode Exploration.");
   };
 
+  // (08/10) Données de combat pour Claude : journal des Gardiens (chance annoncée / résultat) + journal des
+  // combats (équipe, verdicts de jauge, sorts, spéciaux, durée, résultat), partagés en un texte à coller.
+  const devEnvoyerCombats = async () => {
+    try {
+      const combats = await lireJournalCombats();
+      const rawG = await AsyncStorage.getItem('gardien:journal');
+      let gardiens = []; try { gardiens = rawG ? JSON.parse(rawG) : []; } catch (e) { gardiens = []; }
+      const total = { parfait: 0, bien: 0, rate: 0, absent: 0 };
+      combats.forEach((c) => Object.keys(total).forEach((k) => { total[k] += (c.verdicts && c.verdicts[k]) || 0; }));
+      const g = (gardiens || []).filter((x) => x && x.chance != null);
+      const rapport = { quoi: 'Données de combat Paradox (à coller à Claude)', date: new Date().toISOString(),
+        resume: { combats: combats.length, gardiens: g.length, annonceMoyenne: g.length ? Math.round(g.reduce((t, x) => t + x.chance, 0) / g.length) : null,
+          gardiensGagnes: g.filter((x) => x.gagne).length, verdicts: total },
+        gardiens, combats };
+      await Share.share({ message: JSON.stringify(rapport) });
+    } catch (e) {
+      Alert.alert('Envoi impossible', String((e && e.message) || e));
+    }
+  };
+  const devViderCombats = async () => {
+    await AsyncStorage.multiRemove([JOURNAL_COMBATS_KEY, 'gardien:journal']);
+    Alert.alert('Journaux vidés', 'Les prochains combats repartent de zéro.');
+  };
   const devRefillEnergy = async () => {
     await AsyncStorage.setItem(DEV_REFILL_ENERGY_KEY, '1');
     Alert.alert('Fait', "L'énergie sera remise au max à l'ouverture du mode Exploration.");
@@ -237,6 +261,12 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
             </TouchableOpacity>
             <TouchableOpacity style={styles.devBtn} onPress={devRefillEnergy}>
               <Text style={styles.devBtnText}>⚡ Énergie au max (Exploration)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devBtn} onPress={devEnvoyerCombats}>
+              <Text style={styles.devBtnText}>📤 Envoyer mes données de combat à Claude</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devBtn} onPress={devViderCombats}>
+              <Text style={styles.devBtnText}>🗑️ Vider les journaux de combat</Text>
             </TouchableOpacity>
           </ScrollView>
 

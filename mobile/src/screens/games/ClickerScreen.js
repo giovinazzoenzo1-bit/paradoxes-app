@@ -258,6 +258,7 @@ import { DeckPicker } from './DeckPicker';
 import { afficherDialogue } from '../../components/DialogueJeu';
 import { jouerSon, jouerSonLimite, SON_CREATURE } from './sonsBoutique';
 import { useMusique, MusiqueActive } from './musique';
+import { finCombat } from './journalCombat';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
 //
@@ -2142,6 +2143,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const mesureGardien = deckFaceGardien[fight.source === 'main' ? 'main' : 'incub'];
     const chanceGardien = mesureGardien && typeof mesureGardien === 'object' ? Math.round(mesureGardien.victoires * 20) * 5 : null;
     setResultatGardien({ issue: outcome, gardien: fight.puissanceGardien, deck: puissanceDuDeck, chance: chanceGardien });
+    finCombat(outcome, { chanceAnnoncee: chanceGardien, gardienChiffre: fight.puissanceGardien, deckPuissance: puissanceDuDeck, ascension: ascensionCountRef.current }); // journal (08/10)
     if (chanceGardien != null) {
       setJournalGardien((l) => {
         const n = [...(l || []), { t: Date.now(), chance: chanceGardien, gagne: outcome === 'win' }].slice(-50);
