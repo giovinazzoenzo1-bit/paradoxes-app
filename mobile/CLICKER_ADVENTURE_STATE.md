@@ -2666,3 +2666,15 @@ advLevelReached — un cas de test qui lui donne sa cible ÉCRASE le niveau d'Av
 valent alors plus) ; la garde utilise un succès d'une autre statistique.
 Gardes : auditGardienGriffes (A exact sur cas construits, B, budget dans la photo, file aux 2
 démarrages, contexte) + sabotage « budget à zéro ». 100 contrôles, 124 sabotages.
+
+
+## 08/10 — Défaite AU-DESSUS du Gardien (capture : 9 698 contre 9 617) — message honnête (publié)
+
+MESURÉ : la précision au tap ne change presque rien à la chance (60 / 90 / 120 ms → 79 à 88 % au
+chiffre du Gardien : la marge du « bien » est large) → le calibrage est juste ; cette défaite à ~82 %
+= malchance (1 sur 5-6). Défaut corrigé : le message disait « Améliore tes créatures » alors que le
+deck dépassait le Gardien → désormais « Pas de chance cette fois : ton deck dépasse le Gardien (X % de
+victoire). Retente ta chance ! » (resultatGardien.chance = chance mesurée face à CE Gardien, arrondie à
+5 %). Contrôle dans auditGardien80 + sabotage ; auditPuissanceAffichee accepte le champ chance.
+EN ATTENTE (décision de l'auteur) : cible 80 % → 90 % ? MESURÉ : à 90 %, au chiffre 87-90 %, SANS
+rien faire 85-90 % (le Gardien ne bloque presque plus) ; à 80 % : au chiffre 75-85 %, sans rien 72-84 %.

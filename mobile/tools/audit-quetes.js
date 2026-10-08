@@ -4765,7 +4765,7 @@ function auditPuissanceAffichee() {
     [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
     [c, /return deckApresEffort\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget figé (il pourrait bouger)'],
     [c, /🛡️ Ton deck \$\{puissanceDuDeck\} · \$\{texteChance\} de victoire/, 'menu du Gardien : puissance ou chance absente'],
-    [c, /setResultatGardien\(\{ issue: outcome, gardien: fight\.puissanceGardien, deck: puissanceDuDeck \}\);/, 'résultat du Gardien : pas la puissance affichée'],
+    [c, /setResultatGardien\(\{ issue: outcome, gardien: fight\.puissanceGardien, deck: puissanceDuDeck(, chance: chanceGardien)? \}\);/, 'résultat du Gardien : pas la puissance affichée'],
   ];
   for (const [src, re, msg] of exige) if (!re.test(src)) pb.push(msg);
   return pb;
@@ -4809,6 +4809,8 @@ function auditGardien80() {
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if (!/niveauxPourAtteindre\(membresDuDeck\(deck, owned\), g\)/.test(c) || !/niveau\$\{niveaux > 1 \? 'x' : ''\} à gagner/.test(c)) pb.push("le menu du Gardien n'affiche plus l'effort en niveaux");
   if (!/Math\.round\(m\.victoires \* 20\) \* 5/.test(c)) pb.push("la chance du Gardien n'est plus arrondie à 5 % (les micro-baisses réapparaissent)");
+  // (08/10) Défaite avec un deck AU NIVEAU du Gardien : message de malchance + vraie chance (pas « améliore tes créatures »).
+  if (!/resultatGardien\.deck >= resultatGardien\.gardien\n\s*\? `Pas de chance cette fois : ton deck dépasse le Gardien/.test(c)) pb.push('défaite au niveau du Gardien : le message « Pas de chance » a disparu');
   if (!/const texteChance = chance >= 95 \? '≥ 95 %' : `\$\{chance\} %`;/.test(c)) pb.push('au-delà de 95 %, la chance ne s\'affiche plus « ≥ 95 % » (elle oscillerait 95 / 100)');
   return pb;
 }

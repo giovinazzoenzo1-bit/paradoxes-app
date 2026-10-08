@@ -246,6 +246,8 @@ const SABOTAGES = [
     remplace('budgetGardienRef.current = (griffesARecuperer || 0) + primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * (griffesARecuperer || 0) + primesProchainsNiveaux(')],
   ['auditGardienGriffes', F.combat, "effort du Gardien passé à 3 combats de Griffes : un mur",
     remplace('export const EFFORT_GARDIEN = 0.25;', 'export const EFFORT_GARDIEN = 3;')],
+  ['auditGardien80', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "défaite au niveau du Gardien : retour du « Améliore tes créatures » trompeur",
+    remplace('resultatGardien.deck >= resultatGardien.gardien', 'resultatGardien.deck > Infinity')],
   ['auditGardien80', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "menu du Gardien sans l'effort en niveaux",
     remplace("    const niveaux = puissanceDuDeck < g ? niveauxPourAtteindre(membresDuDeck(deck, owned), g) : 0;", "    const niveaux = 0;")],
   ['auditPuissanceAffichee', F.combat, "puissance affichée sur les stats ARRONDIES : les paliers reviennent (« ça ne bouge pas »)",

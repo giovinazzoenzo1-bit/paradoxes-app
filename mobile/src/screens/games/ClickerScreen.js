@@ -2118,7 +2118,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const fight = guardianFight;
     setGuardianFight(null);
     if (!fight) return;
-    setResultatGardien({ issue: outcome, gardien: fight.puissanceGardien, deck: puissanceDuDeck });
+    // (08/10) La chance mesurée face à CE Gardien accompagne le résultat (message honnête après une défaite).
+    const mesureGardien = deckFaceGardien[fight.source === 'main' ? 'main' : 'incub'];
+    const chanceGardien = mesureGardien && typeof mesureGardien === 'object' ? Math.round(mesureGardien.victoires * 20) * 5 : null;
+    setResultatGardien({ issue: outcome, gardien: fight.puissanceGardien, deck: puissanceDuDeck, chance: chanceGardien });
     if (outcome === 'win') {
       if (fight.source === 'main') {
         mainEggRef.current = null;
@@ -4411,7 +4414,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               </Text>
             ) : null}
             {resultatGardien.issue !== 'win' ? (
-              <Text style={styles.resultatGardienConseil}>Améliore tes créatures dans l'Aventure pour augmenter tes chances.</Text>
+              // (08/10, capture de l'auteur : défaite à 9 698 contre 9 617 et « Améliore tes créatures ») :
+              // deck au niveau du Gardien → c'est la malchance, on le dit, avec la vraie chance.
+              <Text style={styles.resultatGardienConseil}>
+                {resultatGardien.gardien != null && resultatGardien.deck >= resultatGardien.gardien
+                  ? `Pas de chance cette fois : ton deck dépasse le Gardien${resultatGardien.chance != null ? ` (${resultatGardien.chance >= 95 ? '≥ 95' : resultatGardien.chance} % de victoire)` : ''}. Retente ta chance !`
+                  : "Améliore tes créatures dans l'Aventure pour augmenter tes chances."}
+              </Text>
             ) : null}
             <BoutonBois texte={resultatGardien.issue === 'win' ? 'Voir ma créature' : 'OK'} onPress={() => setResultatGardien(null)} />
           </FenetreBois>
