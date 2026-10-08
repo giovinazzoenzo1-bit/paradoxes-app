@@ -2164,9 +2164,17 @@ export function chanceFaceAuGardien(membres, gStats) {
 // créature qui rapporte le plus de puissance ; recherche dichotomique sur cette suite (≈ 7 mesures). null au-delà
 // de `max` niveaux.
 export function niveauxPourChance(membres, gStats, cible = 0.8, max = 40) {
+  const p = planPourChance(membres, gStats, cible, max);
+  return p ? p.niveaux : null;
+}
+// (08/10, test de l'auteur : « le Gardien demande 8 niveaux, j'ai dû en faire plus de 12 ») Le MÊME calcul,
+// qui dit aussi OÙ mettre les niveaux : { niveaux, plus: [{ id, plus }] } (créatures servies, la plus servie
+// d'abord). Le chemin le plus rentable concentre souvent tout sur UNE créature : sans le dire, un joueur qui
+// répartit ses niveaux en faisait 2 à 3 fois plus. null au-delà de `max`.
+export function planPourChance(membres, gStats, cible = 0.8, max = 40) {
   const m0 = (membres || []).filter((x) => x && x.creature).map((x) => ({ ...x, ownedLevel: x.ownedLevel || x.level || 1 }));
   if (!m0.length || !gStats) return null;
-  if (chanceFaceAuGardien(m0, gStats) >= cible) return 0;
+  if (chanceFaceAuGardien(m0, gStats) >= cible) return { niveaux: 0, plus: [] };
   const suite = [m0];
   for (let k = 1; k <= max; k++) {
     const prec = suite[k - 1]; const p0 = puissanceAffichee(prec);
@@ -2177,7 +2185,8 @@ export function niveauxPourChance(membres, gStats, cible = 0.8, max = 40) {
   if (chanceFaceAuGardien(suite[max], gStats) < cible) return null;
   let lo = 0, hi = max; // chance(lo) < cible ≤ chance(hi)
   while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (chanceFaceAuGardien(suite[mid], gStats) >= cible) hi = mid; else lo = mid; }
-  return hi;
+  const plus = suite[hi].map((x, i) => ({ id: x.creature.id, plus: x.ownedLevel - m0[i].ownedLevel })).filter((x) => x.plus > 0).sort((a, b) => b.plus - a.plus);
+  return { niveaux: hi, plus };
 }
 
 // L'EFFORT en niveaux (08/10) : combien de niveaux gagner (chaque fois sur la créature qui

@@ -255,7 +255,7 @@ const SABOTAGES = [
   ['auditGardien80', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "défaite au niveau du Gardien : retour du « Améliore tes créatures » trompeur",
     remplace('resultatGardien.chance != null && resultatGardien.chance >= 80', 'resultatGardien.chance != null && resultatGardien.chance > 999')],
   ['auditGardien80', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "menu du Gardien sans l'effort en niveaux",
-    remplace('niveaux80: victoires >= 0.8 ? 0 : niveauxPourChance(membresActuels, g0, 0.8, 40)', 'niveaux80: 0')],
+    remplace('return { victoires, niveaux80: plan ? plan.niveaux : null, plan80: plan ? plan.plus : [] };', 'return { victoires, niveaux80: 0, plan80: [] };')],
   ['auditPuissanceAffichee', F.combat, "puissance affichée sur les stats ARRONDIES : les paliers reviennent (« ça ne bouge pas »)",
     remplace('    return { pv: c.hp, dmg: degatsMoyensDuTour(m.creature, { ...st, attack: c.attack }) };', '    return { pv: st.hp, dmg: degatsMoyensDuTour(m.creature, st) };')],
   ['auditStadeEvolution', F.clicker, "stade figé à 0 : les évolutions ne changeraient plus l'image",

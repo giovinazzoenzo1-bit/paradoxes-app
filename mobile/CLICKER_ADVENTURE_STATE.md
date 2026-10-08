@@ -2782,3 +2782,16 @@ ne déplacent les % que de ≤ 5 points → la méthode actuelle (60 ms, style l
 Règle finale (« 3 prochains combats, répartis ») : œufs 3, 4, 5 battus en quelques combats d'Exploration.
 Note : 2 Gardiens « œuf 3 » à 563 et 579 = ses 2 œufs (nid et incubateur), chacun avec SA photo — eggNumber
 vient du nombre de créatures possédées, commun aux 2 œufs. Pas un bug.
+
+
+## 08/10 — « ≈ N niveaux pour 80 % » dit OÙ les mettre (publié)
+
+Test de l'auteur : « le Gardien demande 8 niveaux, j'ai dû en faire plus de 12 ». CAUSE MESURÉE (ses vrais
+Gardiens) : niveauxPourChance met chaque niveau sur la créature au plus fort gain de puissance (souvent TOUJOURS
+la même : Aegisolar) ; répartis, il en faut 2 à 3 fois plus (œuf 5 : 4 « au mieux » contre 7 répartis ; œuf 3 :
+2 contre 7). CORRECTIF (le plus simple et le plus utile) : planPourChance (combatLogic) renvoie { niveaux,
+plus: [{ id, plus }] } ; le menu affiche « ≈ 4 niveaux pour 80 % (Aegisolar +4) » (2 créatures au plus, nom
+du STADE : c.stages[stade].name — ⚠️ stages[i] est un OBJET { name, emoji }, d'où un « [object Object] »
+attrapé au test). Suivre le plan : œuf 5 → 90 %. niveauxPourChance délègue à planPourChance. Gardes :
+auditGardien80 (plan transmis, nom du stade, plan = total annoncé) ; sabotage « plan non transmis ».
+101 contrôles, 128 sabotages.

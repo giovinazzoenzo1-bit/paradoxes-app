@@ -146,6 +146,7 @@ import {
   griffesEffortGardien,
   niveauxPourChance,
   deckApresEffortEquitable,
+  planPourChance,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -796,7 +797,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         const membresActuels = membresDuDeck(deck, owned);
         const victoires = chanceFaceAuGardien(membresActuels, g0); // chance STABLE, style le moins efficace (08/10)
         // (08/10) Niveaux pour atteindre 80 %, MESURÉS par simulation (≈ 7 mesures, < 0,1 s).
-        return { victoires, niveaux80: victoires >= 0.8 ? 0 : niveauxPourChance(membresActuels, g0, 0.8, 40) };
+        // (08/10) Le PLAN pour 80 % : combien de niveaux ET sur quelles créatures (« Aegisolar +4 »).
+        const plan = victoires >= 0.8 ? { niveaux: 0, plus: [] } : planPourChance(membresActuels, g0, 0.8, 40);
+        return { victoires, niveaux80: plan ? plan.niveaux : null, plan80: plan ? plan.plus : [] };
       };
       try {
         const r = { main: mesurer(mainEgg), incub: mesurer(incubatingEgg) };
@@ -805,6 +808,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     }, 120);
     return () => { annule = true; clearTimeout(t); };
   }, [cleFaceGardien]);
+  // Le nom AFFICHÉ d'une créature du deck (celui de son stade, comme partout ailleurs).
+  const nomCreatureDeck = (id) => {
+    const c = CREATURES.find((x) => x.id === id); const o = (owned || []).find((x) => x.id === id);
+    const stade = c && c.stages && c.stages[stadeVisuel(o && o.evolutionTier)]; // { name, emoji }
+    return (stade && stade.name) || id;
+  };
   const ligneGardien = (egg, cle) => {
     if (owned.length + 1 < 3 || !egg || !egg.gardienPhoto) return null;
     // (08/10, décision de l'auteur) UN seul repère face au Gardien : la CHANCE de victoire, mesurée par simulation
@@ -816,7 +825,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (chance == null) return '⚔️ Calcul de ta chance…';
     const texteChance = chance >= 95 ? '≥ 95 %' : `${chance} %`; // tout en haut, le hasard résiduel ferait osciller
     const n = m.niveaux80;
-    const effort = chance >= 80 ? '' : n ? ` · ≈ ${n} niveau${n > 1 ? 'x' : ''} pour 80 %` : n === null ? ' · améliore tes créatures' : '';
+    // (08/10) OÙ mettre les niveaux : « ≈ 4 niveaux pour 80 % (Aegisolar +4) » — sans ça, un joueur qui
+    // répartit ses niveaux en faisait 2 à 3 fois plus (test de l'auteur : 8 annoncés, plus de 12 faits).
+    const ou = (m.plan80 || []).slice(0, 2).map((x) => `${nomCreatureDeck(x.id)} +${x.plus}`).join(', ');
+    const effort = chance >= 80 ? '' : n ? ` · ≈ ${n} niveau${n > 1 ? 'x' : ''} pour 80 %${ou ? ` (${ou})` : ''}` : n === null ? ' · améliore tes créatures' : '';
     return `⚔️ ${texteChance} de victoire${effort}`;
   };; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null

@@ -4812,7 +4812,7 @@ function auditGardien80() {
   if (!/aleaGraine\(graineGardien\(gStats\)\)/.test(fc)) pb.push('la chance au Gardien ne joue plus avec un hasard FIXÉ par le Gardien');
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   // (08/10) L'effort = niveaux MESURÉS par simulation pour atteindre 80 % (niveauxPourChance), plus la formule.
-  if (!/niveaux80: victoires >= 0\.8 \? 0 : niveauxPourChance\(membresActuels, g0, 0\.8, 40\)/.test(c) || !/niveau\$\{n > 1 \? 'x' : ''\} pour 80 %/.test(c)) pb.push("le menu du Gardien n'affiche plus les niveaux pour 80 %");
+  if (!/const plan = victoires >= 0\.8 \? \{ niveaux: 0, plus: \[\] \} : planPourChance\(membresActuels, g0, 0\.8, 40\);/.test(c) || !/niveau\$\{n > 1 \? 'x' : ''\} pour 80 %\$\{ou \? ` \(\$\{ou\}\)` : ''\}/.test(c)) pb.push("le menu du Gardien n'affiche plus les niveaux pour 80 % ET où les mettre");
   if (!/const JOURNAL_GARDIEN_KEY = 'gardien:journal';/.test(c) || !/AsyncStorage\.setItem\(JOURNAL_GARDIEN_KEY, JSON\.stringify\(n\)\)/.test(c) || !/\{resumeJournalGardien\(journalGardien\)\}/.test(c)) pb.push("le journal des Gardiens (chance annoncée / résultat réel) n'est plus tenu ou plus montré");
   // niveauxPourChance : à la frontière exacte des 80 % (rejoue la même suite)
   {
@@ -4823,6 +4823,10 @@ function auditGardien80() {
     const faible = photo.map((x) => ({ ...x, ownedLevel: 41 }));
     const n = K.niveauxPourChance(faible, st, 0.8, 40);
     if (n == null || n < 1) pb.push(`niveauxPourChance : ${n} niveau(x) pour un deck en retard (attendu ≥ 1)`);
+    const plan = K.planPourChance(faible, st, 0.8, 40);
+    if (!/return \{ victoires, niveaux80: plan \? plan\.niveaux : null, plan80: plan \? plan\.plus : \[\] \};/.test(c)) pb.push("le plan pour 80 % n'est plus transmis au menu");
+    if (!/return \(stade && stade\.name\) \|\| id;/.test(c)) pb.push('le nom des créatures du plan ne vient plus de leur stade (« [object Object] »)');
+    if (!plan || plan.niveaux !== n || plan.plus.reduce((t, x) => t + x.plus, 0) !== n) pb.push('planPourChance : le plan ne correspond plus au nombre de niveaux annoncé');
     else {
       const suite = [faible];
       for (let k = 1; k <= n; k++) { const prec = suite[k - 1]; const p0 = K.puissanceAffichee(prec); let b = 0, g = -Infinity; prec.forEach((x, i) => { const v = K.puissanceAffichee(prec.map((y, j) => (j === i ? { ...y, ownedLevel: y.ownedLevel + 1 } : y))) - p0; if (v > g) { g = v; b = i; } }); suite.push(prec.map((y, j) => (j === b ? { ...y, ownedLevel: y.ownedLevel + 1 } : y))); }
