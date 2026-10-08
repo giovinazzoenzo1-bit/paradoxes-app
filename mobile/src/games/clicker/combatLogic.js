@@ -2159,6 +2159,27 @@ export function chanceFaceAuGardien(membres, gStats) {
   return pire;
 }
 
+// (08/10, décision de l'auteur) Les NIVEAUX à gagner pour atteindre `cible` de CHANCE face à CE Gardien —
+// MESURÉS par simulation (chanceFaceAuGardien), plus estimés par la formule de puissance. Chaque niveau va à la
+// créature qui rapporte le plus de puissance ; recherche dichotomique sur cette suite (≈ 7 mesures). null au-delà
+// de `max` niveaux.
+export function niveauxPourChance(membres, gStats, cible = 0.8, max = 40) {
+  const m0 = (membres || []).filter((x) => x && x.creature).map((x) => ({ ...x, ownedLevel: x.ownedLevel || x.level || 1 }));
+  if (!m0.length || !gStats) return null;
+  if (chanceFaceAuGardien(m0, gStats) >= cible) return 0;
+  const suite = [m0];
+  for (let k = 1; k <= max; k++) {
+    const prec = suite[k - 1]; const p0 = puissanceAffichee(prec);
+    let mieux = 0, gain = -Infinity;
+    prec.forEach((x, i) => { const g = puissanceAffichee(prec.map((y, j) => (j === i ? { ...y, ownedLevel: y.ownedLevel + 1 } : y))) - p0; if (g > gain) { gain = g; mieux = i; } });
+    suite.push(prec.map((y, j) => (j === mieux ? { ...y, ownedLevel: y.ownedLevel + 1 } : y)));
+  }
+  if (chanceFaceAuGardien(suite[max], gStats) < cible) return null;
+  let lo = 0, hi = max; // chance(lo) < cible ≤ chance(hi)
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (chanceFaceAuGardien(suite[mid], gStats) >= cible) hi = mid; else lo = mid; }
+  return hi;
+}
+
 // L'EFFORT en niveaux (08/10) : combien de niveaux gagner (chaque fois sur la créature qui
 // rapporte le plus de puissance) pour ATTEINDRE `cible` (le chiffre du Gardien). null au-delà de 300.
 export function niveauxPourAtteindre(membres, cible) {

@@ -2712,3 +2712,23 @@ puis gardien) ; gardienAffiche RELIT photo.gardien en priorité. Le calibrage ut
 écrit. RÈGLE : une valeur promise au joueur (« figée ») doit être STOCKÉE, jamais recalculée — sinon
 toute évolution de formule la fait bouger. auditGardienGriffes (+ sabotage : relecture supprimée).
 100 contrôles, 127 sabotages.
+
+
+## 08/10 — Gardien : la CHANCE comme seul repère + JOURNAL de preuve (publié)
+
+L'auteur (captures : défaite à 9 698 contre 9 617 ; victoire à 9 781 contre 9 915) : « ça ne va pas,
+il faut trouver une solution » ; puis, sceptique : « c'est déjà ce qu'on avait essayé et c'est un fail ».
+ANALYSE : 2 chiffres de FORMULE (Gardien figé sur la photo, deck actuel) ne peuvent pas être à la fois
+figés ET exacts : un combat dépend aussi des sorts, éléments, rôles, des 2 manches, et de la composition
+(qui peut changer après la photo). DÉCISION : face au Gardien, UN seul repère, MESURÉ :
+- menu : « ⚔️ X % de victoire · ≈ N niveaux pour 80 % » (plus de « Gardien X · Ton deck Y ») ;
+- niveauxPourChance(membres, gStats, 0,8, 40) (combatLogic) : niveaux MESURÉS par simulation (suite de
+  niveaux à la créature la plus rentable + dichotomie, ≈ 7 mesures, 60-130 ms) — vérifié à la frontière :
+  75 % à 6 / 80 % à 7 ; 78 % à 2 / 81 % à 3 ; 78 % à 19 / 83 % à 20 ;
+- résultat : « 🎯 Tu avais X % de chances », message de malchance dès 80 % ;
+- JOURNAL (AsyncStorage gardien:journal, 50 derniers : chance annoncée + résultat réel), résumé à l'écran
+  de fin : « Tes N derniers Gardiens : X % annoncés en moyenne · Y gagnés » → la PREUVE (ou l'écart
+  à corriger : recaler alors la simulation sur la vraie façon de jouer de l'auteur — précision, sorts).
+Le Gardien reste figé (budget A + B, chiffre écrit dans la photo) ; la « Puissance » reste au hub
+(progression). Gardes : auditGardien80 (niveaux mesurés + frontière, journal, malchance dès 80 %),
+auditPuissanceAffichee (ligne du menu) ; sabotages recalés. 100 contrôles, 127 sabotages.

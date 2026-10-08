@@ -144,6 +144,7 @@ import {
   primesProchainsNiveaux,
   deckApresEffort,
   griffesEffortGardien,
+  niveauxPourChance,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -781,6 +782,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     return calibrageCacheRef.current.get(cle);
   };
   const [deckFaceGardien, setDeckFaceGardien] = useState({});
+  // (08/10) JOURNAL DES GARDIENS : la chance ANNONCÉE et le résultat RÉEL de chaque combat — la preuve que
+  // l'annonce tient (ou l'écart à corriger, chiffres à l'appui). 50 derniers combats.
+  const [journalGardien, setJournalGardien] = useState([]);
+  useEffect(() => {
+    AsyncStorage.getItem(JOURNAL_GARDIEN_KEY).then((raw) => {
+      try { const l = raw ? JSON.parse(raw) : []; if (Array.isArray(l)) setJournalGardien(l); } catch (e) { /* journal illisible : on repart de zéro */ }
+    }).catch(() => {});
+  }, []);
   const cleFaceGardien = JSON.stringify([owned.length, (mainEgg && mainEgg.gardienPhoto) ? mainEgg.gardienPhoto.membres : null,
     (incubatingEgg && incubatingEgg.gardienPhoto) ? incubatingEgg.gardienPhoto.membres : null,
     deck, owned.map((o) => [o.id, o.level || 1, o.evolutionTier || 0])]);
@@ -794,7 +803,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         const base = guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber);
         const cal = calibrageMemo(egg, owned, eggNumber, deck);
         const g0 = cal ? guardianStatsCalibrees(base, cal) : base;
-        return { victoires: chanceFaceAuGardien(membresDuDeck(deck, owned), g0) }; // chance STABLE (08/10)
+        const membresActuels = membresDuDeck(deck, owned);
+        const victoires = chanceFaceAuGardien(membresActuels, g0); // chance STABLE, style le moins efficace (08/10)
+        // (08/10) Niveaux pour atteindre 80 %, MESURÉS par simulation (≈ 7 mesures, < 0,1 s).
+        return { victoires, niveaux80: victoires >= 0.8 ? 0 : niveauxPourChance(membresActuels, g0, 0.8, 40) };
       };
       try {
         const r = { main: mesurer(mainEgg), incub: mesurer(incubatingEgg) };
@@ -805,20 +817,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, [cleFaceGardien]);
   const ligneGardien = (egg, cle) => {
     if (owned.length + 1 < 3 || !egg || !egg.gardienPhoto) return null;
-    // (08/10) Gardien : tiré de la PHOTO (prise au démarrage du chrono) → FIGÉ ; ton deck : la puissance
-    // affichée, qui monte à chaque niveau ; la CHANCE exacte (simulée) dit si tu peux gagner.
-    const g = gardienAffiche(egg, ascensionCount);
+    // (08/10, décision de l'auteur) UN seul repère face au Gardien : la CHANCE de victoire, mesurée par simulation
+    // (ton deck ACTUEL contre CE Gardien, façon de jouer la moins efficace), et les NIVEAUX pour atteindre 80 %.
+    // Plus de « Gardien X · Ton deck Y » : deux chiffres de formule ne peuvent pas être à la fois figés et exacts
+    // (captures : défaite à 9 698 contre 9 617, victoire à 9 781 contre 9 915).
     const m = deckFaceGardien[cle];
-    // Arrondie à 5 % (08/10) : les micro-variations de 1 point (hasard résiduel) deviennent invisibles.
-    const chance = m && typeof m === 'object' ? Math.round(m.victoires * 20) * 5 : null;
-    if (chance == null) return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck} · chance…`;
-    // (08/10) L'effort en NIVEAUX, plus parlant qu'un écart de points.
-    const niveaux = puissanceDuDeck < g ? niveauxPourAtteindre(membresDuDeck(deck, owned), g) : 0;
-    const effort = niveaux ? ` · ≈ ${niveaux} niveau${niveaux > 1 ? 'x' : ''} à gagner` : niveaux === null ? ' · améliore tes créatures' : '';
-    // ≥ 95 % (08/10) : tout en haut, le hasard résiduel ferait osciller 95 / 100 ; la victoire y est quasi assurée.
-    const texteChance = chance >= 95 ? '≥ 95 %' : `${chance} %`;
-    return `⚔️ Gardien ${g} · 🛡️ Ton deck ${puissanceDuDeck} · ${texteChance} de victoire${effort}`;
-  }; // 3 emplacements, id de créature ou null
+    const chance = m && typeof m === 'object' ? Math.round(m.victoires * 20) * 5 : null; // arrondie à 5 %
+    if (chance == null) return '⚔️ Calcul de ta chance…';
+    const texteChance = chance >= 95 ? '≥ 95 %' : `${chance} %`; // tout en haut, le hasard résiduel ferait osciller
+    const n = m.niveaux80;
+    const effort = chance >= 80 ? '' : n ? ` · ≈ ${n} niveau${n > 1 ? 'x' : ''} pour 80 %` : n === null ? ' · améliore tes créatures' : '';
+    return `⚔️ ${texteChance} de victoire${effort}`;
+  };; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activePower, setActivePower] = useState(null); // {name, rarity, tapMultiplier, expiresAt, effectType}
@@ -2132,6 +2142,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const mesureGardien = deckFaceGardien[fight.source === 'main' ? 'main' : 'incub'];
     const chanceGardien = mesureGardien && typeof mesureGardien === 'object' ? Math.round(mesureGardien.victoires * 20) * 5 : null;
     setResultatGardien({ issue: outcome, gardien: fight.puissanceGardien, deck: puissanceDuDeck, chance: chanceGardien });
+    if (chanceGardien != null) {
+      setJournalGardien((l) => {
+        const n = [...(l || []), { t: Date.now(), chance: chanceGardien, gagne: outcome === 'win' }].slice(-50);
+        AsyncStorage.setItem(JOURNAL_GARDIEN_KEY, JSON.stringify(n)).catch(() => {});
+        return n;
+      });
+    }
     if (outcome === 'win') {
       if (fight.source === 'main') {
         mainEggRef.current = null;
@@ -4418,17 +4435,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             <Text style={styles.resultatGardienTexte}>
               {resultatGardien.issue === 'win' ? 'Ton œuf éclot.' : 'Ton œuf est en sécurité. Nouvel essai dans 10 min.'}
             </Text>
-            {resultatGardien.gardien ? (
+            {resultatGardien.chance != null ? (
+              // (08/10) La chance annoncée, plus les 2 chiffres de puissance (contradictoires) ; puis le journal.
               <Text style={styles.resultatGardienPuissance}>
-                ⚔️ Gardien {resultatGardien.gardien} · 🛡️ Ton deck {resultatGardien.deck}
+                🎯 Tu avais {resultatGardien.chance >= 95 ? '≥ 95' : resultatGardien.chance} % de chances
               </Text>
+            ) : null}
+            {resumeJournalGardien(journalGardien) ? (
+              <Text style={styles.resultatGardienConseil}>{resumeJournalGardien(journalGardien)}</Text>
             ) : null}
             {resultatGardien.issue !== 'win' ? (
               // (08/10, capture de l'auteur : défaite à 9 698 contre 9 617 et « Améliore tes créatures ») :
               // deck au niveau du Gardien → c'est la malchance, on le dit, avec la vraie chance.
               <Text style={styles.resultatGardienConseil}>
-                {resultatGardien.gardien != null && resultatGardien.deck >= resultatGardien.gardien
-                  ? `Pas de chance cette fois : ton deck dépasse le Gardien${resultatGardien.chance != null ? ` (${resultatGardien.chance >= 95 ? '≥ 95' : resultatGardien.chance} % de victoire)` : ''}. Retente ta chance !`
+                {resultatGardien.chance != null && resultatGardien.chance >= 80
+                  ? 'Pas de chance cette fois. Retente ta chance !'
                   : "Améliore tes créatures dans l'Aventure pour augmenter tes chances."}
               </Text>
             ) : null}
@@ -5826,6 +5847,15 @@ function gardienAffiche(egg, ascensionCourante = 0) {
 function budgetDeLaPhoto(photo, ascensionCourante = 0) {
   if (photo && photo.budget != null) return photo.budget;
   return griffesEffortGardien(photo && photo.asc != null ? photo.asc : ascensionCourante);
+}
+// (08/10) Le journal des Gardiens et son résumé : « Tes 10 derniers Gardiens : 78 % annoncés en moyenne · 8 gagnés ».
+const JOURNAL_GARDIEN_KEY = 'gardien:journal';
+function resumeJournalGardien(journal, n = 10) {
+  const l = (journal || []).filter((x) => x && x.chance != null).slice(-n);
+  if (l.length < 2) return null;
+  const moy = Math.round(l.reduce((t, x) => t + x.chance, 0) / l.length);
+  const gagnes = l.filter((x) => x.gagne).length;
+  return `Tes ${l.length} derniers Gardiens : ${moy} % annoncés en moyenne · ${gagnes} gagnés`;
 }
 function membresDeLaPhoto(photo) {
   return ((photo && photo.membres) || []).map((x) => {

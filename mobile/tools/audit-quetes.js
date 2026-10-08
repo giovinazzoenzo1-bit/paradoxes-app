@@ -4768,7 +4768,7 @@ function auditPuissanceAffichee() {
     [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`/, 'aperçu : puissance ou chance de victoire absente'],
     [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
     [c, /return deckApresEffort\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget figé (il pourrait bouger)'],
-    [c, /🛡️ Ton deck \$\{puissanceDuDeck\} · \$\{texteChance\} de victoire/, 'menu du Gardien : puissance ou chance absente'],
+    [c, /return `⚔️ \$\{texteChance\} de victoire\$\{effort\}`;/, 'menu du Gardien : la chance de victoire n\'est plus affichée'],
     [c, /setResultatGardien\(\{ issue: outcome, gardien: fight\.puissanceGardien, deck: puissanceDuDeck(, chance: chanceGardien)? \}\);/, 'résultat du Gardien : pas la puissance affichée'],
   ];
   for (const [src, re, msg] of exige) if (!re.test(src)) pb.push(msg);
@@ -4811,10 +4811,27 @@ function auditGardien80() {
   const fc = k.slice(k.indexOf('export function chanceFaceAuGardien('), k.indexOf('\n}\n', k.indexOf('export function chanceFaceAuGardien(')));
   if (!/aleaGraine\(graineGardien\(gStats\)\)/.test(fc)) pb.push('la chance au Gardien ne joue plus avec un hasard FIXÉ par le Gardien');
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
-  if (!/niveauxPourAtteindre\(membresDuDeck\(deck, owned\), g\)/.test(c) || !/niveau\$\{niveaux > 1 \? 'x' : ''\} à gagner/.test(c)) pb.push("le menu du Gardien n'affiche plus l'effort en niveaux");
+  // (08/10) L'effort = niveaux MESURÉS par simulation pour atteindre 80 % (niveauxPourChance), plus la formule.
+  if (!/niveaux80: victoires >= 0\.8 \? 0 : niveauxPourChance\(membresActuels, g0, 0\.8, 40\)/.test(c) || !/niveau\$\{n > 1 \? 'x' : ''\} pour 80 %/.test(c)) pb.push("le menu du Gardien n'affiche plus les niveaux pour 80 %");
+  if (!/const JOURNAL_GARDIEN_KEY = 'gardien:journal';/.test(c) || !/AsyncStorage\.setItem\(JOURNAL_GARDIEN_KEY, JSON\.stringify\(n\)\)/.test(c) || !/\{resumeJournalGardien\(journalGardien\)\}/.test(c)) pb.push("le journal des Gardiens (chance annoncée / résultat réel) n'est plus tenu ou plus montré");
+  // niveauxPourChance : à la frontière exacte des 80 % (rejoue la même suite)
+  {
+    const cre2 = (r, k = 0) => C.CREATURES.filter((x) => x.rarity === r)[k];
+    const photo = [cre2('rare'), cre2('peu_commun'), cre2('peu_commun', 1)].map((cr) => ({ creature: cr, ownedLevel: 45, evolutionTier: 1, equippedRunes: [] }));
+    const gp = K.deckApresEffort(photo, K.griffesEffortGardien(1)); const base = K.guardianStats(I.guardianLevelForEgg(9), I.GUARDIAN_BASE_LEVEL, 9);
+    const st = K.guardianStatsCalibrees(base, K.calibrageGardienSur(gp.membres, base, { marge: 1 }));
+    const faible = photo.map((x) => ({ ...x, ownedLevel: 41 }));
+    const n = K.niveauxPourChance(faible, st, 0.8, 40);
+    if (n == null || n < 1) pb.push(`niveauxPourChance : ${n} niveau(x) pour un deck en retard (attendu ≥ 1)`);
+    else {
+      const suite = [faible];
+      for (let k = 1; k <= n; k++) { const prec = suite[k - 1]; const p0 = K.puissanceAffichee(prec); let b = 0, g = -Infinity; prec.forEach((x, i) => { const v = K.puissanceAffichee(prec.map((y, j) => (j === i ? { ...y, ownedLevel: y.ownedLevel + 1 } : y))) - p0; if (v > g) { g = v; b = i; } }); suite.push(prec.map((y, j) => (j === b ? { ...y, ownedLevel: y.ownedLevel + 1 } : y))); }
+      if (K.chanceFaceAuGardien(suite[n], st) < 0.8 || K.chanceFaceAuGardien(suite[n - 1], st) >= 0.8) pb.push(`niveauxPourChance : ${n} niveaux ne sont pas la frontière des 80 %`);
+    }
+  }
   if (!/Math\.round\(m\.victoires \* 20\) \* 5/.test(c)) pb.push("la chance du Gardien n'est plus arrondie à 5 % (les micro-baisses réapparaissent)");
   // (08/10) Défaite avec un deck AU NIVEAU du Gardien : message de malchance + vraie chance (pas « améliore tes créatures »).
-  if (!/resultatGardien\.deck >= resultatGardien\.gardien\n\s*\? `Pas de chance cette fois : ton deck dépasse le Gardien/.test(c)) pb.push('défaite au niveau du Gardien : le message « Pas de chance » a disparu');
+  if (!/resultatGardien\.chance != null && resultatGardien\.chance >= 80\n\s*\? 'Pas de chance cette fois\. Retente ta chance !'/.test(c)) pb.push('défaite à 80 % ou plus : le message « Pas de chance » a disparu');
   if (!/const texteChance = chance >= 95 \? '≥ 95 %' : `\$\{chance\} %`;/.test(c)) pb.push('au-delà de 95 %, la chance ne s\'affiche plus « ≥ 95 % » (elle oscillerait 95 / 100)');
   return pb;
 }
