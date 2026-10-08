@@ -369,3 +369,42 @@ export function nextStreak(prevStreak, lastLoginKey, todayDateKey) {
   if (gap === 1) return prevStreak + 1;
   return 1;
 }
+
+// ════════════════════════════════════════════════════════════════════
+//  GRIFFES RÉCUPÉRABLES (08/10) — le « A » du budget du Gardien
+// ════════════════════════════════════════════════════════════════════
+// Règle de l'auteur : le Gardien compte ce que le joueur PEUT réclamer, sinon un joueur malin
+// laisserait ses récompenses en attente au moment de la photo. Calculé EXACTEMENT comme les
+// réclamations du DailyContext le verseraient : quêtes du jour et de la semaine terminées et non
+// réclamées (recompenseQuete au niveau d'Aventure), paliers de succès atteints et non réclamés
+// (plusieurs possibles), calendrier du jour s'il est en Griffes et pas encore pris. La FILE
+// d'attente (Griffes réclamées, pas encore versées) est lue à part, dans le stockage.
+// `recompense` = recompenseQuete (combatLogic), passée en paramètre : pas d'import circulaire.
+export function griffesRecuperables(e, recompense) {
+  const etat = e || {};
+  const stats = etat.lifetimeStats || {};
+  const niv = stats.advLevelReached;
+  let total = 0;
+  (etat.questIds || []).forEach((id) => {
+    const d = questDef(id);
+    if (d && !(etat.questClaimed || {})[id] && ((etat.questProgress || {})[id] || 0) >= d.target) total += Number(recompense(d.reward, niv)) || 0;
+  });
+  (etat.weeklyIds || []).forEach((id) => {
+    const d = weeklyQuestDef(id);
+    if (d && !(etat.weeklyClaimed || {})[id] && ((etat.weeklyProgress || {})[id] || 0) >= d.target) total += Number(recompense(d.reward, niv)) || 0;
+  });
+  ACHIEVEMENTS.forEach((d) => {
+    let palier = Number((etat.achievementsClaimed || {})[d.id]) || 0;
+    while (palier < ACHIEVEMENT_MAX_TIER) {
+      const cible = achievementTarget(d, palier);
+      if (cible == null || (stats[d.stat] || 0) < cible) break;
+      total += Number(achievementReward(palier)) || 0;
+      palier++;
+    }
+  });
+  if (etat.streakClaimedDate !== etat.date) {
+    const c = calendarRewardForStreak(etat.streak);
+    if (c && c.type === 'griffes') total += Number(c.amount) || 0;
+  }
+  return Math.max(0, Math.round(total));
+}

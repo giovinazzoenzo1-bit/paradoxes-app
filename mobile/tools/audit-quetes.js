@@ -4763,7 +4763,7 @@ function auditPuissanceAffichee() {
     [a, /🛡️ Puissance \{puissanceHub\}/, 'hub : la pastille n\'affiche plus la puissance affichée'],
     [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`/, 'aperçu : puissance ou chance de victoire absente'],
     [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
-    [c, /return gardienDeLaPhoto\(membresDeLaPhoto\(photo\), photo\.asc != null \? photo\.asc : ascensionCourante\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + l\'effort de son Ascension (il pourrait bouger)'],
+    [c, /return deckApresEffort\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget figé (il pourrait bouger)'],
     [c, /🛡️ Ton deck \$\{puissanceDuDeck\} · \$\{texteChance\} de victoire/, 'menu du Gardien : puissance ou chance absente'],
     [c, /setResultatGardien\(\{ issue: outcome, gardien: fight\.puissanceGardien, deck: puissanceDuDeck \}\);/, 'résultat du Gardien : pas la puissance affichée'],
   ];
@@ -4844,7 +4844,26 @@ function auditGardienGriffes() {
   }
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if (!/asc: Math\.max\(0, Math\.floor\(Number\(ascension\) \|\| 0\)\),/.test(c)) pb.push("la photo ne retient plus l'Ascension du démarrage du chrono");
-  if (!/const cible = gardienDeLaPhoto\(membres, photo\.asc != null \? photo\.asc : ascension\)\.membres;/.test(c) || !/\{ marge: 1 \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort en Griffes");
+  if (!/const cible = deckApresEffort\(membres, budgetDeLaPhoto\(photo, ascension\)\)\.membres;/.test(c) || !/\{ marge: 1 \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort en Griffes");
+  // (08/10) Règle A + B : budget = récupérable (A) + primes des 3 prochains niveaux (B), figé à la photo.
+  if (!/budgetGardienRef\.current = \(griffesARecuperer \|\| 0\) \+ primesProchainsNiveaux\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0, 3\);/.test(c)) pb.push('le budget du Gardien ne vaut plus A + B');
+  if (!/\.\.\.\(budget != null \? \{ budget: Math\.max\(0, Math\.round\(budget\)\) \} : \{\}\)/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
+  if ((c.match(/budgetGardienRef\.current\)\);\n\s*ajouterFileAuBudget\(set(IncubatingEgg|MainEgg)\);/g) || []).length !== 2) pb.push("les 2 démarrages de chrono ne transmettent plus le budget et la file d'attente");
+  if (!/function budgetDeLaPhoto\(photo, ascensionCourante = 0\) \{\n  if \(photo && photo\.budget != null\) return photo\.budget;/.test(c)) pb.push("le Gardien n'utilise plus le budget de SA photo");
+  const dc = fs.readFileSync(path.join(__dirname, '../src/context/DailyContext.js'), 'utf8');
+  if (!/const griffesARecuperer = useMemo\(\(\) => griffesRecuperables\(/.test(dc) || !/claimStreak, griffesARecuperer,/.test(dc)) pb.push('le contexte ne fournit plus les Griffes récupérables (A)');
+  // A, calculé EXACTEMENT comme les réclamations le verseraient (cas construit à la main)
+  const D = load('dailyLogic'); const rec = K.recompenseQuete;
+  const [q0, q1, q2] = D.pickDailyQuests('2026-10-08'); const d0 = D.questDef(q0), d2 = D.questDef(q2);
+  const ach = D.ACHIEVEMENTS.find((x) => x.stat !== 'advLevelReached'); const t1 = D.achievementTarget(ach, 1);
+  const jour = [1, 2, 3, 4, 5, 6, 7].find((j) => { const x = D.calendarRewardForStreak(j); return x && x.type === 'griffes'; }); const cal = D.calendarRewardForStreak(jour).amount;
+  const etat = { date: 'J', questIds: [q0, q1, q2], questProgress: { [q0]: d0.target, [q1]: 0, [q2]: d2.target }, questClaimed: { [q2]: true },
+    weeklyIds: [], weeklyProgress: {}, weeklyClaimed: {}, achievementsClaimed: {}, lifetimeStats: { advLevelReached: 3, [ach.stat]: t1 }, streak: jour, streakClaimedDate: 'J-1' };
+  const attendu = rec(d0.reward, 3) + D.achievementReward(0) + D.achievementReward(1) + cal;
+  if (D.griffesRecuperables(etat, rec) !== attendu) pb.push(`A faux : ${D.griffesRecuperables(etat, rec)} au lieu de ${attendu}`);
+  if (D.griffesRecuperables({ ...etat, streakClaimedDate: 'J' }, rec) !== attendu - cal) pb.push('A compte un calendrier déjà pris');
+  if (D.griffesRecuperables({ ...etat, questClaimed: { [q0]: true, [q2]: true }, achievementsClaimed: { [ach.id]: 2 }, streakClaimedDate: 'J' }, rec) !== 0) pb.push('A compte des récompenses déjà réclamées');
+  if (K.primesProchainsNiveaux(10, 3) !== K.griffesReward(11) + K.griffesReward(12) + K.griffesReward(13)) pb.push('B faux : ce ne sont plus les primes des 3 niveaux suivants');
   if (!/const sansAsc = \(e\) => e && e\.gardienPhoto && e\.gardienPhoto\.v === 2 && e\.gardienPhoto\.asc == null;/.test(c)) pb.push("les anciennes photos ne reçoivent plus leur Ascension (sans être reprises)");
   return pb;
 }

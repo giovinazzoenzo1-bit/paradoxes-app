@@ -2640,3 +2640,29 @@ POUR AJUSTER : changer EFFORT_GARDIEN ET la valeur attendue dans auditGardienGri
 c'est voulu). Si l'économie change, recalculer GRIFFES_PAR_COMBAT (le contrôle compare au simulateur,
 ±35 %). Gardes : auditGardienGriffes (+ sabotage EFFORT 3), auditGardien80 et
 auditPuissanceAffichee adaptés. 100 contrôles, 123 sabotages.
+
+
+## 08/10 — GARDIEN : budget A + B (règle de l'auteur, publié)
+
+Raisonnement de l'auteur : compter ce que le joueur PEUT récupérer (sinon un joueur malin laisse ses
+récompenses en attente au moment de la photo), plus ce qu'il gagnera en avançant ; ne PAS compter le
+solde (C) : un futur achat « plus de Griffes par combat » rendrait la séparation acheté / gagné
+ingérable, et un jeu qui pousse à dépenser rend le solde négligeable (« si le joueur garde quelques
+Griffes, pas grave ; s'il n'en a pas assez, il paiera ou farmera »).
+BUDGET (figé dans la photo au démarrage du chrono) = A + B :
+- A = griffesRecuperables (dailyLogic, fonction PURE, recompenseQuete passée en paramètre) : quêtes
+  du jour / de la semaine terminées non réclamées, paliers de succès atteints non réclamés (plusieurs
+  possibles), calendrier du jour en Griffes non pris ; fourni par DailyContext (griffesARecuperer) ;
+  + la FILE d'attente (PENDING_GRIFFES_KEY, Griffes réclamées pas encore versées), lue UNE fois juste
+  après le démarrage du chrono (ajouterFileAuBudget, drapeau `file`).
+- B = primesProchainsNiveaux(advLevelReached, 3) (combatLogic) : primes des 3 prochaines 1res
+  victoires d'Aventure au taux de BASE (un bonus payant n'est jamais compté).
+Gardien = deckApresEffort(photo, budget) ; calibré (marge 1) sur ce deck → ~80 % pour qui l'atteint.
+Photos sans budget (œufs en cours au moment de la mise à jour) : ancienne règle, 25 % des Griffes
+moyennes d'un combat de leur Ascension (budgetDeLaPhoto). Le payeur garde son avantage sur le Gardien
+EN COURS (chiffre figé) et en Exploration ; aucun joueur ne garde d'avance sur les Gardiens SUIVANTS
+(ils suivent le deck — règle voulue). ⚠️ Piège de test rencontré : le succès « a_level » se base sur
+advLevelReached — un cas de test qui lui donne sa cible ÉCRASE le niveau d'Aventure (les quêtes
+valent alors plus) ; la garde utilise un succès d'une autre statistique.
+Gardes : auditGardienGriffes (A exact sur cas construits, B, budget dans la photo, file aux 2
+démarrages, contexte) + sabotage « budget à zéro ». 100 contrôles, 124 sabotages.

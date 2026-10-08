@@ -2215,6 +2215,13 @@ export function deckApresEffort(membres, griffes) {
   }
   return { membres: m, puissance: puissanceAffichee(m) };
 }
+// Le « B » du budget du Gardien (08/10, règle de l'auteur) : les primes des `n` prochains niveaux
+// d'Aventure (1res victoires) au taux de BASE — un futur bonus payant de Griffes n'est jamais compté.
+export function primesProchainsNiveaux(niveauAtteint, n = 3) {
+  let t = 0;
+  for (let k = 1; k <= n; k++) t += Number(griffesReward(Math.max(1, (Math.floor(Number(niveauAtteint) || 0)) + k))) || 0;
+  return Math.round(t);
+}
 // Le Gardien d'une PHOTO : `puissance` = son chiffre affiché ; `membres` = le deck sur lequel le calibrer.
 export function gardienDeLaPhoto(membres, ascension) {
   return deckApresEffort(membres, griffesEffortGardien(ascension));

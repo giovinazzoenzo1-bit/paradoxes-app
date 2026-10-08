@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { recompenseQuete } from '../games/clicker/combatLogic';
 import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR,
   weekKey, pickWeeklyQuests, weeklyQuestDef,
   ACHIEVEMENTS, achievementDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER,
-  achievementDiamonds } from '../games/clicker/dailyLogic';
+  achievementDiamonds , griffesRecuperables } from '../games/clicker/dailyLogic';
 
 // Clé lue par AdventureScreen.js à son prochain chargement pour créditer
 // les récompenses de quêtes/streak — MÊME schéma de sécurité que
@@ -356,10 +356,14 @@ export function DailyProvider({ children }) {
     return entry;
   }, [date]);
 
+  // (08/10) Le « A » du budget du Gardien : tout ce qui est réclamable maintenant.
+
+  const griffesARecuperer = useMemo(() => griffesRecuperables({ questIds, questProgress, questClaimed, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, lifetimeStats, streak, streakClaimedDate, date }, recompenseQuete), [questIds, questProgress, questClaimed, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, lifetimeStats, streak, streakClaimedDate, date]);
+
   const value = {
     loaded, date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats,
     week, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, achievements: ACHIEVEMENTS,
-    trackEvent, trackMax, resetLifetimeStats, claimQuest, claimStreak,
+    trackEvent, trackMax, resetLifetimeStats, claimQuest, claimStreak, griffesARecuperer,
     claimWeekly, achievementProgress, claimAchievement,
     calendarDay: calendarDayForStreak(streak), calendar: DAILY_CALENDAR,
   };

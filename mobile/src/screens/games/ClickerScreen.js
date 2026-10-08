@@ -141,6 +141,9 @@ import {
   chanceFaceAuGardien,
   niveauxPourAtteindre,
   gardienDeLaPhoto,
+  primesProchainsNiveaux,
+  deckApresEffort,
+  griffesEffortGardien,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -668,8 +671,22 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const {
     trackEvent, lifetimeStats, loaded: dailyLoaded,
     calendar, calendarDay, streakClaimedDate, date: today, claimStreak,
-    questIds, questProgress, questClaimed,
+    questIds, questProgress, questClaimed, griffesARecuperer,
   } = useDaily();
+  // (08/10) BUDGET DU GARDIEN — règle A + B de l'auteur : A = tout ce qui est récupérable (quêtes, succès,
+  // calendrier ; la FILE d'attente est ajoutée juste après le démarrage du chrono) ; B = les primes des 3
+  // prochains niveaux d'Exploration au taux de BASE. Le solde de Griffes n'est PAS compté (décision).
+  const budgetGardienRef = useRef(0);
+  budgetGardienRef.current = (griffesARecuperer || 0) + primesProchainsNiveaux((lifetimeStats || {}).advLevelReached || 0, 3);
+  // La file d'attente (Griffes déjà réclamées, pas encore versées) : lue UNE fois, juste après le démarrage
+  // du chrono, puis le budget est FIGÉ (drapeau `file`).
+  const ajouterFileAuBudget = (setter) => {
+    AsyncStorage.getItem(PENDING_GRIFFES_KEY).then((raw) => {
+      const file = raw ? parseInt(raw, 10) || 0 : 0;
+      setter((p) => (p && p.gardienPhoto && p.gardienPhoto.budget != null && !p.gardienPhoto.file
+        ? { ...p, gardienPhoto: { ...p.gardienPhoto, budget: p.gardienPhoto.budget + file, file: true } } : p));
+    }).catch(() => {});
+  };
   // Pastille du bouton Quêtes : au moins une quête TERMINÉE et pas encore
   // réclamée. Même rôle que le point rouge du cadeau — signaler qu'il y a
   // quelque chose à récupérer sans avoir à ouvrir le menu pour vérifier.
@@ -748,7 +765,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const calibrageCacheRef = useRef(new Map());
   const calibrageMemo = (egg, ownedList, eggNumber, deckIds) => {
     const photo = egg && egg.gardienPhoto;
-    const cle = eggNumber + '|' + (photo ? JSON.stringify(photo.membres) + '|' + (photo.asc != null ? photo.asc : ascensionCountRef.current)
+    const cle = eggNumber + '|' + (photo ? JSON.stringify(photo.membres) + '|' + budgetDeLaPhoto(photo, ascensionCountRef.current)
       : 'direct:' + JSON.stringify([deckIds, (ownedList || []).map((o) => [o.id, o.level, o.evolutionTier || 0])]));
     if (!calibrageCacheRef.current.has(cle)) calibrageCacheRef.current.set(cle, calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascensionCountRef.current));
     return calibrageCacheRef.current.get(cle);
@@ -2184,7 +2201,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
   const startEggIncubation = () => {
     if (incubatingEgg) return;
-    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck, ascensionCount));
+    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck, ascensionCount, budgetGardienRef.current));
+    ajouterFileAuBudget(setIncubatingEgg);
     startNewEggCycle();
     setIncubatorOpen(true);
   };
@@ -3327,7 +3345,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // Le minuteur naît en même temps que la phase, et UNIQUEMENT
         // ici : le créer dans un effet séparé le ferait repartir de zéro
         // à chaque rendu tant que la phase reste 'hatching'.
-        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current, ascensionCountRef.current));
+        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current, ascensionCountRef.current, budgetGardienRef.current));
+        ajouterFileAuBudget(setMainEgg);
         return 'hatching';
       });
     }
@@ -5755,19 +5774,20 @@ function membresDuDeck(ids, ownedList) {
 // ⚠️ v2 (24/09, retour de l'auteur) : la v1 prenait les 3 meilleures de
 // la COLLECTION — plus fortes que le deck joué, d'où un écart affiché de
 // 6-7 points, « compliqué à rattraper à haut niveau ».
-function photoGardien(ownedList, deckIds, ascension = 0) {
+function photoGardien(ownedList, deckIds, ascension = 0, budget = null) {
   const duDeck = membresDuDeck(deckIds, ownedList);
   const pris = new Set(duDeck.map((m) => m.creature.id));
   const reste = membresDuDeck((ownedList || []).map((o) => o.id).filter((id) => !pris.has(id)), ownedList)
     .map((m) => ({ m, p: puissanceDeck([m]) })).sort((a, b) => b.p - a.p).map((x) => x.m);
   const membres = [...duDeck, ...reste].slice(0, 3);
   // asc (08/10) : l'Ascension AU DÉMARRAGE DU CHRONO — l'effort en Griffes du Gardien en dépend.
-  return { v: 2, asc: Math.max(0, Math.floor(Number(ascension) || 0)), membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
+  // budget (08/10) : Griffes d'effort du Gardien (A + B), figées au démarrage du chrono.
+  return { v: 2, asc: Math.max(0, Math.floor(Number(ascension) || 0)), ...(budget != null ? { budget: Math.max(0, Math.round(budget)) } : {}), membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
     puissance: puissanceDeck(membres) };
 }
-function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0) {
+function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0, budget = null) {
   if (!egg) return egg;
-  try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds, ascension) }; } catch (e) { return egg; }
+  try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds, ascension, budget) }; } catch (e) { return egg; }
 }
 // Chiffre AFFICHÉ du Gardien (08/10) : la puissance affichée de la PHOTO (prise au démarrage du
 // chrono, jamais retouchée ensuite) × la marge habituelle (calculée sur l'ancienne échelle de la
@@ -5775,8 +5795,14 @@ function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0) {
 function gardienAffiche(egg, ascensionCourante = 0) {
   const photo = egg && egg.gardienPhoto;
   if (!photo) return null;
-  // (08/10) Règle en Griffes : la photo + l'effort de son Ascension (gardienDeLaPhoto). FIGÉ.
-  return gardienDeLaPhoto(membresDeLaPhoto(photo), photo.asc != null ? photo.asc : ascensionCourante).puissance;
+  // (08/10) La photo + son BUDGET en Griffes (A + B, figé au démarrage du chrono) ; les photos d'avant
+  // gardent l'ancienne règle (25 % des Griffes moyennes d'un combat de leur Ascension).
+  return deckApresEffort(membresDeLaPhoto(photo), budgetDeLaPhoto(photo, ascensionCourante)).puissance;
+}
+// Le budget d'effort d'une photo : le sien (A + B) ou, pour une photo d'avant, l'ancienne règle.
+function budgetDeLaPhoto(photo, ascensionCourante = 0) {
+  if (photo && photo.budget != null) return photo.budget;
+  return griffesEffortGardien(photo && photo.asc != null ? photo.asc : ascensionCourante);
 }
 function membresDeLaPhoto(photo) {
   return ((photo && photo.membres) || []).map((x) => {
@@ -5794,7 +5820,7 @@ function calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascension = 0) {
     const membres = membresDeLaPhoto(photo);
     if (!membres.length) return null;
     // (08/10) Calibré sur le deck APRÈS l'effort en Griffes, marge 1 : qui ATTEINT le chiffre gagne 8 fois sur 10.
-    const cible = gardienDeLaPhoto(membres, photo.asc != null ? photo.asc : ascension).membres;
+    const cible = deckApresEffort(membres, budgetDeLaPhoto(photo, ascension)).membres;
     return calibrageGardienSur(cible, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber), { marge: 1 });
   } catch (e) {
     return null;
