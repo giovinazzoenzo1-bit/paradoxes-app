@@ -261,6 +261,7 @@ import { afficherDialogue } from '../../components/DialogueJeu';
 import { jouerSon, jouerSonLimite, SON_CREATURE } from './sonsBoutique';
 import { useMusique, MusiqueActive } from './musique';
 import { finCombat } from './journalCombat';
+import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
 //
@@ -757,6 +758,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, [mainEgg, incubatingEgg, owned]);
   // Petit menu de fin de combat de Gardien (demande de l'auteur).
   const [resultatGardien, setResultatGardien] = useState(null);
+  // (08/10, demande de l'auteur) Menu « Gardien de l'œuf » avant le combat : chance, plan pour 80 %, croix, « Combattre ».
+  const [confirmGardien, setConfirmGardien] = useState(null); // 'main' | 'incub' | null
   // « Gardien X · Ton deck Y » : ce que le joueur lit avant de combattre
   // (demande de l'auteur : voir s'il doit améliorer ses créatures).
   // ⚠️ PUISSANCE EXACTE (26/09, « pixel perfect ») : « Ton deck » se MESURE
@@ -824,12 +827,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const chance = m && typeof m === 'object' ? Math.round(m.victoires * 20) * 5 : null; // arrondie à 5 %
     if (chance == null) return '⚔️ Calcul de ta chance…';
     const texteChance = chance >= 95 ? '≥ 95 %' : `${chance} %`; // tout en haut, le hasard résiduel ferait osciller
-    const n = m.niveaux80;
-    // (08/10) OÙ mettre les niveaux : « ≈ 4 niveaux pour 80 % (Aegisolar +4) » — sans ça, un joueur qui
-    // répartit ses niveaux en faisait 2 à 3 fois plus (test de l'auteur : 8 annoncés, plus de 12 faits).
-    const ou = (m.plan80 || []).slice(0, 2).map((x) => `${nomCreatureDeck(x.id)} +${x.plus}`).join(', ');
-    const effort = chance >= 80 ? '' : n ? ` · ≈ ${n} niveau${n > 1 ? 'x' : ''} pour 80 %${ou ? ` (${ou})` : ''}` : n === null ? ' · améliore tes créatures' : '';
-    return `⚔️ ${texteChance} de victoire${effort}`;
+    // (08/10) Le bouton reste COURT : le plan (« Aegisolar +4 ») s'affiche dans le menu « Gardien de l'œuf ».
+    const suite = chance >= 80 ? '' : ' · touche pour voir le plan';
+    return `⚔️ ${texteChance} de victoire${suite}`;
   };; // 3 emplacements, id de créature ou null
   const [pickerSlot, setPickerSlot] = useState(null); // index de l'emplacement en cours de choix, ou null
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -4200,7 +4200,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   // attente sépare le joueur d'un nouvel essai.
                   <BoutonBois couleur="rouge" desactive largeur={Math.round(SCREEN_W * 0.8)} hauteur={58} texte="⚔️ Nouvel essai" sousTexte={`dans ${formatRemaining(guardianRetryRemainingMs(mainEgg, nowTick))}`} />
                 ) : guardianRequired(owned.length) ? (
-                  <BoutonBois couleur="rouge" largeur={Math.round(SCREEN_W * 0.8)} hauteur={80} texte="⚔️ Affronter le gardien" sousTexte={ligneGardien(mainEgg, 'main') || "Bats-le pour faire éclore l'œuf"} onPress={() => resolveHatch('main')} />
+                  <BoutonBois couleur="rouge" largeur={Math.round(SCREEN_W * 0.8)} hauteur={80} texte="⚔️ Affronter le gardien" sousTexte={ligneGardien(mainEgg, 'main') || "Bats-le pour faire éclore l'œuf"} onPress={() => setConfirmGardien('main')} />
                 ) : (
                   <BoutonBois couleur="vert" largeur={Math.round(SCREEN_W * 0.7)} hauteur={56} texte="🐣 Faire éclore l'œuf" onPress={() => resolveHatch('main')} />
                 )
@@ -4383,6 +4383,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           onTap={incubatorTap}
           onWatchVideo={incubatorVideo}
           onHatch={hatchIncubatedEgg}
+          onAffronterGardien={() => setConfirmGardien('incub')}
           onBack={() => setIncubatorOpen(false)}
         />
       )}
@@ -4427,6 +4428,32 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {/* Petit menu de fin de combat de Gardien (demande de l'auteur,
           24/09). Au-dessus de la révélation de la créature : « Voir ma
           créature » la découvre en dessous. */}
+      {confirmGardien ? (() => {
+        const mg = deckFaceGardien[confirmGardien === 'main' ? 'main' : 'incub'];
+        const ch = mg && typeof mg === 'object' ? Math.round(mg.victoires * 20) * 5 : null;
+        const combattre = () => { const c = confirmGardien; setConfirmGardien(null); if (c === 'main') resolveHatch('main'); else hatchIncubatedEgg(); };
+        return (
+          <FenetreJeu titre="⚔️ Gardien de l'œuf" onFermer={() => setConfirmGardien(null)} zIndex={3000}>
+            <Text style={styles.menuGardienChance}>{ch == null ? 'Calcul de ta chance…' : `🎯 ${ch >= 95 ? '≥ 95' : ch} % de victoire`}</Text>
+            {ch != null && ch < 80 && mg.niveaux80 ? (
+              <View style={styles.menuGardienPlan}>
+                <Text style={styles.menuGardienTexte}>Pour atteindre 80 % :</Text>
+                {(mg.plan80 || []).map((x) => (
+                  <Text key={x.id} style={styles.menuGardienLigne}>⬆️ {nomCreatureDeck(x.id)} +{x.plus} niveau{x.plus > 1 ? 'x' : ''}</Text>
+                ))}
+                <Text style={styles.menuGardienNote}>Monte-les dans l'Exploration.</Text>
+              </View>
+            ) : ch != null && ch < 80 ? (
+              <Text style={styles.menuGardienTexte}>Améliore tes créatures dans l'Exploration.</Text>
+            ) : ch != null ? (
+              <Text style={styles.menuGardienTexte}>✅ Tu es prêt !</Text>
+            ) : null}
+            <View style={{ alignItems: 'center', marginTop: 14 }}>
+              <BoutonBoisJeu texte="⚔️ Combattre" style="principal" largeur={200} hauteur={50} onPress={combattre} />
+            </View>
+          </FenetreJeu>
+        );
+      })() : null}
       {resultatGardien && (
         <View style={[styles.detailOverlay, styles.resultatGardienFond]}>
           {/* 27/09 : fenêtre du thème forêt (demande de l'auteur). */}
@@ -5947,6 +5974,12 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 }
 
 const styles = StyleSheet.create({
+  // Menu « Gardien de l'œuf » (08/10)
+  menuGardienChance: { color: '#FFE08A', fontSize: 22, fontWeight: '900', textAlign: 'center', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
+  menuGardienPlan: { alignItems: 'center' },
+  menuGardienTexte: { color: '#fbe9c4', fontSize: 15, fontWeight: '700', textAlign: 'center', marginBottom: 4 },
+  menuGardienLigne: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', textAlign: 'center', marginVertical: 2 },
+  menuGardienNote: { color: '#e8d2a6', fontSize: 13, fontStyle: 'italic', textAlign: 'center', marginTop: 6 },
   deckSlotRecharge: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 999,
     backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   deckSlotRechargeText: { color: '#fff', fontSize: 10, fontWeight: '800' },

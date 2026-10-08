@@ -16,7 +16,7 @@ const EGG_IMG = require('../../../assets/egg/egg-2-fissure.png');
 // Le gardien d'œuf (combat à la fin du minuteur) n'est PAS dans cette
 // version : ici l'éclosion donne directement la créature. Il viendra
 // s'intercaler entre « minuteur à zéro » et « éclosion ».
-export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBack, guardianRequired, guardianInfo = null }) {
+export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBack, guardianRequired, guardianInfo = null, onAffronterGardien = null }) {
   // Ré-affichage chaque seconde. Le minuteur lui-même ne dépend PAS de
   // ce timer : tout est calculé depuis l'horodatage de fin, donc fermer
   // l'appli ne fait rien perdre. Ce tick ne sert qu'à rafraîchir
@@ -138,7 +138,7 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                     hauteur={70}
                     texte={guardianRequired ? '⚔️ Affronter le gardien' : '🐣 Faire éclore'}
                     sousTexte={guardianRequired && guardianInfo ? guardianInfo : null}
-                    onPress={onHatch}
+                    onPress={guardianRequired && onAffronterGardien ? onAffronterGardien : onHatch} // (08/10) menu « Gardien de l'œuf » d'abord
                   />
                 )
               ) : (

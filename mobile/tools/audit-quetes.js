@@ -4768,7 +4768,7 @@ function auditPuissanceAffichee() {
     [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`/, 'aperçu : puissance ou chance de victoire absente'],
     [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
     [c, /return deckApresEffortEquitable\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget figé (il pourrait bouger)'],
-    [c, /return `⚔️ \$\{texteChance\} de victoire\$\{effort\}`;/, 'menu du Gardien : la chance de victoire n\'est plus affichée'],
+    [c, /return `⚔️ \$\{texteChance\} de victoire\$\{suite\}`;/, 'bouton du Gardien : la chance de victoire n\'est plus affichée'],
     [c, /setResultatGardien\(\{ issue: outcome, gardien: fight\.puissanceGardien, deck: puissanceDuDeck(, chance: chanceGardien)? \}\);/, 'résultat du Gardien : pas la puissance affichée'],
   ];
   for (const [src, re, msg] of exige) if (!re.test(src)) pb.push(msg);
@@ -4812,7 +4812,11 @@ function auditGardien80() {
   if (!/aleaGraine\(graineGardien\(gStats\)\)/.test(fc)) pb.push('la chance au Gardien ne joue plus avec un hasard FIXÉ par le Gardien');
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   // (08/10) L'effort = niveaux MESURÉS par simulation pour atteindre 80 % (niveauxPourChance), plus la formule.
-  if (!/const plan = victoires >= 0\.8 \? \{ niveaux: 0, plus: \[\] \} : planPourChance\(membresActuels, g0, 0\.8, 40\);/.test(c) || !/niveau\$\{n > 1 \? 'x' : ''\} pour 80 %\$\{ou \? ` \(\$\{ou\}\)` : ''\}/.test(c)) pb.push("le menu du Gardien n'affiche plus les niveaux pour 80 % ET où les mettre");
+  if (!/const plan = victoires >= 0\.8 \? \{ niveaux: 0, plus: \[\] \} : planPourChance\(membresActuels, g0, 0\.8, 40\);/.test(c) || !/⬆️ \{nomCreatureDeck\(x\.id\)\} \+\{x\.plus\} niveau\{x\.plus > 1 \? 'x' : ''\}/.test(c)) pb.push("le menu « Gardien de l'œuf » n'affiche plus le plan pour 80 % (créatures et niveaux)");
+  // (08/10) Le combat passe par le menu : croix pour annuler, « Combattre » pour confirmer (nid ET incubateur).
+  if (!/onPress=\{\(\) => setConfirmGardien\('main'\)\}/.test(c) || !/onAffronterGardien=\{\(\) => setConfirmGardien\('incub'\)\}/.test(c)) pb.push('un bouton de Gardien lance le combat sans passer par le menu');
+  if (!/<FenetreJeu titre="⚔️ Gardien de l'œuf" onFermer=\{\(\) => setConfirmGardien\(null\)\}/.test(c) || !/texte="⚔️ Combattre"/.test(c)) pb.push("le menu « Gardien de l'œuf » (croix, Combattre) a disparu");
+  if (!/onPress=\{guardianRequired && onAffronterGardien \? onAffronterGardien : onHatch\}/.test(fs.readFileSync(path.join(__dirname, '../src/screens/games/IncubatorPanel.js'), 'utf8'))) pb.push("l'incubateur lance le combat sans passer par le menu");
   if (!/const JOURNAL_GARDIEN_KEY = 'gardien:journal';/.test(c) || !/AsyncStorage\.setItem\(JOURNAL_GARDIEN_KEY, JSON\.stringify\(n\)\)/.test(c) || !/\{resumeJournalGardien\(journalGardien\)\}/.test(c)) pb.push("le journal des Gardiens (chance annoncée / résultat réel) n'est plus tenu ou plus montré");
   // niveauxPourChance : à la frontière exacte des 80 % (rejoue la même suite)
   {

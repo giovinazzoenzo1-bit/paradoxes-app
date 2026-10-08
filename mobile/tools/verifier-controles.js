@@ -244,6 +244,8 @@ const SABOTAGES = [
     remplace('onPress: aide.onPackGriffes }', 'onPress: () => {} }')],
   ['auditGardienCalibre', F.combat, "Gardien recalibré sur la MEILLEURE façon de jouer : le joueur moins efficace retombe à ~60 %",
     remplace('    return a.facteurAttaque <= b.facteurAttaque ? a : b;', '    return a.facteurAttaque >= b.facteurAttaque ? a : b;')],
+  ['auditGardien80', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le bouton du nid relance le combat SANS le menu « Gardien de l'œuf »",
+    remplace("onPress={() => setConfirmGardien('main')}", "onPress={() => resolveHatch('main')}")],
   ['auditJournalDev', F.combatEcran, "verdicts de jauge plus notés : impossible de mesurer la vraie précision",
     remplace('  const montrerVerdict = (v) => { noterVerdict(v);', '  const montrerVerdict = (v) => {')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "chiffre du Gardien recalculé à chaque affichage : il bouge entre le menu et le résultat",

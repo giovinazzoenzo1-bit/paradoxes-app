@@ -2795,3 +2795,18 @@ du STADE : c.stages[stade].name — ⚠️ stages[i] est un OBJET { name, emoji 
 attrapé au test). Suivre le plan : œuf 5 → 90 %. niveauxPourChance délègue à planPourChance. Gardes :
 auditGardien80 (plan transmis, nom du stade, plan = total annoncé) ; sabotage « plan non transmis ».
 101 contrôles, 128 sabotages.
+
+
+## 08/10 — Menu « Gardien de l'œuf » avant le combat (publié)
+
+Demande de l'auteur : les informations du Gardien dans un menu qui s'ouvre au toucher de « Affronter le
+gardien », croix pour annuler, bouton en bas pour confirmer. FenetreJeu (planche de titre, croix dorée,
+zIndex 3000 : au-dessus de l'incubateur) + BoutonBois des fenêtres maison, importé sous le nom BoutonBoisJeu
+(⚠️ ClickerScreen a déjà un BoutonBois : celui de fenetreBois). Contenu : « 🎯 X % de victoire » ; si < 80 % :
+« Pour atteindre 80 % : » + une ligne par créature du plan (« ⬆️ Aegisolar +4 niveaux ») + « Monte-les dans
+l'Exploration » ; plan introuvable : « Améliore tes créatures… » ; ≥ 80 % : « ✅ Tu es prêt ! » ; « ⚔️ Combattre »
+→ resolveHatch('main') ou hatchIncubatedEgg(). Nid : onPress → setConfirmGardien('main') ; incubateur :
+prop onAffronterGardien (IncubatorPanel l'appelle quand un Gardien est requis). Le sous-texte du bouton
+devient court : « ⚔️ X % de victoire · touche pour voir le plan ». Vu au banc (scène temporaire, non
+gardée). Gardes : auditGardien80 (menu, 2 boutons, incubateur), auditPuissanceAffichee ; sabotage « le nid
+relance le combat sans le menu ». 101 contrôles, 129 sabotages.
