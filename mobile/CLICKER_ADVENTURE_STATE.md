@@ -2591,7 +2591,7 @@ auditGardien80 (+ sabotage). 99 contrôles, 122 sabotages.
 ## 08/10 — CLÉ GITHUB : renouvelée (l'ancienne avait EXPIRÉ)
 
 Symptôme : push refusé (« Invalid username or token »), API /user → 401 « Bad credentials ».
-Vérifié : AUCUNE clé dans le dépôt ni son historique (git log -S « github_pat_ ») → simple
+Vérifié : AUCUNE clé dans le dépôt ni son historique (recherche du préfixe des clés dans tout l'historique) → simple
 EXPIRATION (les clés « fine-grained » ont une date de fin). Nouvelle clé fournie par l'auteur
 le 08/10 : elle vit dans les INSTRUCTIONS DU PROJET CLAUDE (texte de démarrage de session),
 JAMAIS dans le dépôt (GitHub révoque automatiquement toute clé qui y apparaît).
