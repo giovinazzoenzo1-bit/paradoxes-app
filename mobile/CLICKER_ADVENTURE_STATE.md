@@ -2586,3 +2586,17 @@ auditGardien80 (+ sabotage). 99 contrôles, 122 sabotages.
 ⚠️ Bac à sable réinitialisé en cours de session : dépôt recloné, outils réinstallés
 (/home/claude/babel-env : @babel/core, preset-env, preset-react, traverse, parser ;
 /tmp/cap : npm install du package.json de tools/capture).
+
+
+## 08/10 — CLÉ GITHUB : renouvelée (l'ancienne avait EXPIRÉ)
+
+Symptôme : push refusé (« Invalid username or token »), API /user → 401 « Bad credentials ».
+Vérifié : AUCUNE clé dans le dépôt ni son historique (git log -S « github_pat_ ») → simple
+EXPIRATION (les clés « fine-grained » ont une date de fin). Nouvelle clé fournie par l'auteur
+le 08/10 : elle vit dans les INSTRUCTIONS DU PROJET CLAUDE (texte de démarrage de session),
+JAMAIS dans le dépôt (GitHub révoque automatiquement toute clé qui y apparaît).
+Remote à configurer après un reclonage : https://x-access-token:<CLÉ>@github.com/... (la forme
+https://<CLÉ>@github.com prend la clé pour un identifiant et échoue sans terminal).
+Si un push échoue en « Bad credentials » : clé expirée → demander à l'auteur de la régénérer
+(https://github.com/settings/personal-access-tokens ; droits Contents RW, Workflows RW,
+Actions R ; dépôt paradoxes-app seulement).
