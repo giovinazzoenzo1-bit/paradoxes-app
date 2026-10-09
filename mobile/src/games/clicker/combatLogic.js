@@ -728,6 +728,28 @@ export function modifierCoup(attaquant, defenseur, degats, consommer = true) {
 }
 // L'attaque normale la plus forte d'une créature : ce que frappent les
 // sorts offensifs (zone, exécution, pacte, venin, vitesse).
+// ════════════════════════════════════════════════════════════════════
+//  ATTAQUES DE SOUTIEN (09/10, décision de l'auteur) — toute l'équipe participe
+// ════════════════════════════════════════════════════════════════════
+// Test de l'auteur : UNE créature très montée (Brontobloc niv. 36) a fini SEULE tout le chapitre 1.
+// CAUSE : à chaque tour, une SEULE créature frappait (chacune son tour) → 3 créatures ne frappaient pas plus
+// fort qu'une, et tout concentrer sur une seule restait TOUJOURS le meilleur choix, même avec une équipe.
+// Désormais, après le coup de la créature active, CHAQUE autre créature VIVANTE frappe la même cible avec
+// SOUTIEN_FRACTION de son attaque normale (multiplicateur « bien » de la jauge, sans jauge, sans sort, sans
+// consommer ses bonus) : une équipe de 3 frappe ≈ 2 fois plus fort qu'une créature seule.
+// Règle PARTAGÉE : le vrai combat (CombatScreen) ET la simulation l'appellent.
+export const SOUTIEN_FRACTION = 0.5;
+export function coupsDeSoutien(J, act, cibleCreature) {
+  const r = [];
+  (J || []).forEach((f, i) => {
+    if (i === act || !(f && f.hp > 0) || !cibleCreature) return;
+    const comp = meilleureAttaque(f.creature);
+    if (!comp) return;
+    r.push({ i, degats: Math.max(1, Math.round(degatsDuJoueur(comp, f, cibleCreature, JAUGE_MULT.bien) * SOUTIEN_FRACTION)) });
+  });
+  return r;
+}
+
 export function meilleureAttaque(creature) {
   return (creature.skills || []).filter((k) => !k.special).sort((a, b) => b.damage - a.damage)[0] || null;
 }
@@ -1147,6 +1169,17 @@ export function simulerCombat(joueurs, adversaires, {
       A[0] = { ...A[0], hp: r.hp };
       bouclier = r.shield;
       if (r.releve) { phase = 2; continue; } // comme l'écran : pas de riposte, la même créature rejoue
+      // SOUTIEN (09/10) : les autres créatures vivantes frappent aussi le Gardien (bouclier, manches).
+      let releveSoutien = false;
+      for (const s of coupsDeSoutien(J, act, A[0].creature)) {
+        const m2 = modifierCoup(J[s.i], A[0], s.degats, false);
+        J[s.i] = m2.attaquant; A[0] = m2.defenseur;
+        const r2 = coupSurGardien({ hp: A[0].hp, shield: bouclier, phase, maxHp: A[0].stats.hp }, m2.degats);
+        A[0] = { ...A[0], hp: r2.hp };
+        bouclier = r2.shield;
+        if (r2.releve) { phase = 2; releveSoutien = true; break; }
+      }
+      if (releveSoutien) continue; // comme l'écran : pas de riposte, la même créature rejoue
     } else if (part > 0) {
       const cibles = coup.zone ? A.map((_, i) => i).filter((i) => A[i].hp > 0) : [cible];
       const base = J[act];
@@ -1158,6 +1191,17 @@ export function simulerCombat(joueurs, adversaires, {
         A[i] = y.defenseur;
       });
       J[act] = apres;
+    }
+    if (!estBoss) {
+      // SOUTIEN (09/10) : les autres créatures vivantes frappent la cible (ou le 1er ennemi vivant).
+      const cS = A[cible] && A[cible].hp > 0 ? cible : premierVivant(A);
+      if (cS >= 0) {
+        for (const s of coupsDeSoutien(J, act, A[cS].creature)) {
+          if (!(A[cS].hp > 0)) break;
+          const y = frapper(J[s.i], A[cS], s.degats, false);
+          J[s.i] = y.attaquant; A[cS] = y.defenseur;
+        }
+      }
     }
     if (premierVivant(A) < 0) return { gagne: true, tours: tour + 1 };
     tour += 1;
@@ -1550,6 +1594,9 @@ export function opponentStatsForLevel(levelNumber) {
 // type pour les créatures Gemini (déjà pris en compte par Gemini lui-même).
 // ---- Le calibrage de l'AVENTURE — sur le PARCOURS du joueur gratuit ----
 //
+// ⚠️ 09/10 : RECALCULÉE (même outil, mêmes cibles, 40 joueurs × 8 essais, 0 bloqué) après les ATTAQUES DE
+// SOUTIEN (toute l'équipe participe) : niveaux 1-10 INCHANGÉS (apprentissage, une créature seule) ; ensuite
+// ennemis ≈ ×1,25 à ×1,34 (médianes par Ascension) — une équipe frappe plus fort, la créature solo ne suffit plus.
 // ⚠️ 03/10 : RECALCULÉE (même outil, mêmes cibles) avec la JAUGE DE FRAPPE à
 // la place du défi de taps (joueur de référence : erreur typique 60 ms ; réglage
 // « références » : bien ±280 ms ×2,0, « parfait » divisé par 2 ; 150 joueurs ×
@@ -1591,49 +1638,38 @@ export function opponentStatsForLevel(levelNumber) {
 // 3, joué par `choixJoueur`). Ne jamais le retoucher à la main : relancer
 // l'outil. `auditAventureCalibree` le vérifie à chaque push.
 export const AVENTURE_MULTIPLICATEURS = [
-  0.37, 0.56, 0.62, 0.56, 1.16, 1.16, 0.83, 1, 0.6, 0.74, 1.25, 1.83,
-  1.75, 1.25, 1.29, 1.83, 1.32, 1.75, 1.36, 1.36, 1.75, 1.8, 1.88, 1.55,
-  2.25, 2.08, 2.11, 1.83, 2.36, 2.5, 1.95, 1.82, 2.5, 2.03, 2.5, 2.28,
-  2.38, 2.64, 3.26, 2.99, 2.74, 3.11, 2.54, 2.85, 3.15, 3.5, 3.62, 4.21,
-  4.4, 4.09, 4.51, 3.93, 4.2, 3.55, 5.17, 5.45, 4.32, 3.97, 5.63, 3.68,
-  5.03, 4.43, 4.57, 4.79, 6.24, 5.62, 5.03, 5.83, 4.58, 5.29, 5.69, 6.14,
-  6.52, 7.98, 8.21, 6.81, 8.14, 6.4, 6.76, 5.89, 8.45, 9.05, 6.5, 6.29,
-  9.4, 6.15, 7.64, 6.36, 6.71, 6.79, 8.89, 6.97, 7.19, 9.36, 7.28, 9.71,
-  11.6, 11.25, 10.85, 13.38, 14.09, 12.47, 15.73, 11.25, 11.46, 11.33, 13.82, 15.79,
-  11.81, 11.48, 15.87, 10.91, 12.86, 11.62, 11.73, 12.45, 16.51, 13, 13.28, 17.56,
-  11.01, 14.22, 16.1, 16.25, 18.13, 21.75, 22.23, 18.8, 21.83, 16.37, 17.75, 16.87,
-  20.5, 23.17, 17.18, 16.72, 24.32, 15.62, 16.39, 15.37, 16.16, 17.65, 23.17, 13.99,
-  13.84, 18.9, 11.96, 15.59, 20.65, 20.68, 25.81, 30.63, 31.58, 27.34, 32.92, 24.15,
-  26.42, 23.34, 27.39, 29.81, 24.54, 22.63, 31.36, 21.95, 28.5, 23.55, 23.98, 25.63,
-  30.96, 27.44, 25.03, 30.8, 18.8, 24.41, 28.04, 27.1, 31.87, 34.37, 34.31, 29.18,
-  37.07, 25.67, 29.12, 24.77, 30.03, 32.04, 25.95, 23.98, 34.62, 23.17, 30.41, 25.03,
-  25.17, 26.9, 32.27, 28.19, 26.52, 31.3, 19.74, 25.44, 29.33, 28.3, 31.87, 35.76,
-  35.63, 30.08, 37.14, 27.1, 30.25, 25.67, 30.63, 32.74, 26.76, 24.45, 34.25, 23.46,
-  31.3, 25.72, 25.91, 27.54, 33.7, 29.18, 26.81, 32.74, 19.38, 25.49, 29.81,
+  0.37, 0.56, 0.62, 0.56, 1.16, 1.16, 0.83, 1, 0.6, 0.74, 1.56, 2.25, 1.99, 1.56, 1.59, 2.37, 1.54, 2.41,
+  1.79, 1.85, 2.42, 2.5, 2.86, 2.31, 3.25, 2.51, 2.75, 2.44, 2.91, 2.84, 2.8, 2.5, 3.31, 2.56, 3.37, 2.98,
+  3.26, 3.45, 4.35, 4.25, 3.63, 4.39, 3.19, 3.45, 4.48, 4.55, 4.84, 5.6, 6.18, 5.85, 6.25, 5.12, 5.59, 5.39,
+  7.69, 7.3, 5.96, 5.58, 7.72, 4.95, 7.3, 6.36, 6.75, 6.79, 7.96, 8.17, 7.42, 8.36, 5.72, 7.11, 8.56, 8.67,
+  8.9, 10.62, 11.92, 10.34, 11.9, 8.31, 8.76, 8.12, 10.99, 11.05, 8.39, 8.06, 11.92, 7.41, 9.46, 8.43, 8.42,
+  8.93, 10.91, 8.98, 10.95, 13.47, 9.16, 12.33, 15.96, 15.28, 15.79, 17.09, 18.4, 16.51, 20.61, 13.79, 15.45,
+  14.64, 18.77, 18.04, 15.04, 14.32, 20.1, 12.63, 15.34, 14.02, 14.85, 15.59, 17.84, 14.8, 15.7, 21.83,
+  13.38, 15.56, 19.56, 19.92, 23.63, 30.25, 31.75, 28.5, 30.8, 22.51, 21.64, 24.19, 29.44, 30.96, 25.44,
+  23.5, 33.04, 20.35, 21.14, 20.31, 21.1, 23.34, 29.6, 16.87, 15.84, 26.28, 15.87, 19.42, 26.76, 26.38,
+  32.68, 39.06, 39.77, 35.7, 41.16, 29.6, 29.02, 30.19, 39.2, 37.07, 31.81, 30.03, 40.71, 29.39, 35.63,
+  28.86, 27.49, 31.87, 39.49, 34.31, 30.36, 38.64, 23.55, 28.91, 35, 33.16, 40.06, 42.28, 43.36, 36.54,
+  45.52, 30.91, 31.36, 31.3, 41.01, 39.63, 32.8, 30.85, 44.07, 30.85, 38.36, 30.46, 29.07, 32.21, 41.45,
+  35.19, 31.24, 37.88, 23.8, 30.74, 35.51, 34.56, 39.27, 45.94, 44.95, 37.61, 46.02, 32.8, 32.51, 32.92,
+  42.13, 40.64, 33.94, 32.27, 44.95, 31.41, 39.06, 30.91, 29.55, 33.34, 41.45, 36.68, 31.81, 41.01, 23.67,
+  30.36, 35.06
 ];
 // Puissance du joueur VISÉ (30e centile des joueurs gratuits simulés) à
 // chaque niveau : la « puissance conseillée » affichée. Même calcul que la
 // table ci-dessus (tools/calibrer-parcours.js), jamais en baisse.
 export const PUISSANCE_CONSEILLEE = [
-  14, 16, 20, 20, 21, 25, 26, 26, 30, 35, 38, 40,
-  42, 43, 45, 50, 53, 53, 56, 56, 57, 57, 57, 59,
-  79, 90, 95, 101, 101, 101, 104, 108, 111, 127, 131, 142,
-  149, 160, 167, 173, 177, 181, 195, 201, 210, 217, 223, 229,
-  241, 250, 262, 274, 289, 299, 305, 305, 322, 334, 337, 337,
-  337, 342, 358, 374, 374, 396, 412, 414, 420, 424, 430, 430,
-  446, 453, 470, 470, 508, 518, 532, 541, 550, 557, 561, 564,
-  568, 575, 575, 577, 592, 600, 602, 602, 656, 730, 783, 793,
-  793, 822, 843, 857, 857, 897, 907, 951, 955, 960, 962, 968,
-  994, 999, 1001, 1001, 1036, 1093, 1152, 1158, 1164, 1164, 1277, 1318,
-  1356, 1406, 1406, 1469, 1518, 1609, 1639, 1659, 1659, 1659, 1684, 1716,
-  1751, 1763, 1773, 1803, 1808, 1834, 1834, 1834, 1834, 1834, 1834, 1834,
-  1834, 1834, 1834, 1854, 1956, 2043, 2247, 2491, 2511, 2530, 2548, 2566,
-  2583, 2601, 2614, 2630, 2647, 2661, 2680, 2695, 2709, 2725, 2737, 2816,
-  2828, 2842, 2856, 2871, 2880, 2897, 2908, 2920, 2936, 2946, 2960, 2972,
-  2985, 2992, 3006, 3018, 3031, 3041, 3054, 3062, 3080, 3087, 3146, 3153,
-  3165, 3180, 3189, 3202, 3211, 3220, 3230, 3246, 3255, 3270, 3277, 3287,
-  3295, 3306, 3316, 3324, 3339, 3348, 3357, 3368, 3375, 3386, 3393, 3408,
-  3417, 3462, 3473, 3483, 3495, 3504, 3515, 3524, 3532, 3543, 3554,
+  14, 16, 20, 20, 21, 25, 26, 26, 30, 36, 38, 41, 42, 43, 45, 49, 51, 53, 55, 55, 65, 66, 66, 66, 85, 94, 94,
+  94, 94, 99, 116, 117, 117, 131, 135, 145, 151, 159, 173, 184, 191, 198, 203, 211, 214, 222, 222, 238, 244,
+  259, 272, 291, 313, 329, 336, 336, 338, 347, 361, 361, 369, 376, 390, 403, 403, 426, 437, 442, 445, 453,
+  456, 456, 464, 479, 504, 506, 515, 517, 522, 526, 528, 530, 531, 538, 540, 542, 565, 567, 569, 580, 582,
+  582, 729, 794, 843, 868, 873, 879, 893, 895, 895, 931, 933, 938, 950, 958, 960, 967, 970, 973, 978, 978,
+  989, 999, 1002, 1005, 1012, 1012, 1177, 1279, 1287, 1324, 1324, 1418, 1606, 1768, 1800, 1930, 1930, 1930,
+  1930, 1930, 1930, 1978, 1993, 2007, 2019, 2031, 2031, 2031, 2031, 2031, 2031, 2031, 2031, 2031, 2031, 2031,
+  2031, 2080, 2255, 2561, 2586, 2602, 2621, 2635, 2653, 2670, 2684, 2700, 2719, 2733, 2746, 2760, 2775, 2792,
+  2801, 2814, 2828, 2848, 2862, 2874, 2887, 2897, 2915, 2927, 2936, 2985, 3011, 3026, 3037, 3047, 3059, 3069,
+  3080, 3091, 3101, 3111, 3123, 3133, 3141, 3153, 3165, 3174, 3193, 3202, 3215, 3225, 3236, 3248, 3282, 3289,
+  3299, 3310, 3339, 3348, 3357, 3368, 3375, 3386, 3393, 3405, 3415, 3424, 3433, 3443, 3453, 3462, 3470, 3480,
+  3489, 3513, 3519, 3548, 3554, 3561, 3571
 ];
 export function multiplicateurAventure(levelNumber) {
   const t = AVENTURE_MULTIPLICATEURS;
@@ -2135,12 +2171,22 @@ const echelleGardien = (g, x) => ({ ...g, hp: Math.max(1, Math.round(g.hp * x)),
 // avec un hasard tiré du deck (niveaux compris) → monter d'un niveau changeait TOUS les combats
 // joués et pouvait faire BAISSER le pourcentage (56 → 55, 59 → 54). Ici : 300 combats et un hasard
 // FIXÉ par le Gardien — d'un niveau à l'autre, ce sont les MÊMES combats qui sont rejoués.
-export const CHANCE_GARDIEN_COMBATS = 300;
+// 09/10 : 300 → 600 (avec le soutien, un creux de bruit de 1,7 point franchissait l'arrondi à 5 % : 90 → 85 %).
+export const CHANCE_GARDIEN_COMBATS = 600;
 function graineGardien(gStats) {
   let h = 2166136261;
   const s = `${Math.round((gStats.hp || 0) * 1000)}:${Math.round((gStats.attack || 0) * 1000)}`;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
   return h >>> 0;
+}
+// (09/10) Affichage « jamais en baisse » quand le deck PROGRESSE. La mesure (600 combats) garde ~1-2 points de
+// bruit ; arrondie à 5 %, un creux franchissait parfois une limite (95 → 90 % en montant de niveau). Si le deck
+// est au moins aussi fort qu'à l'affichage précédent et que la nouvelle mesure n'est plus basse que de 5 points
+// au plus (le bruit), on GARDE l'affichage précédent. Une vraie baisse (deck affaibli) reste affichée.
+export function chanceStabilisee(chance, puissance, precedent) {
+  if (!precedent || chance == null || precedent.chance == null) return chance;
+  if (puissance >= precedent.puissance && chance < precedent.chance && precedent.chance - chance <= 5) return precedent.chance;
+  return chance;
 }
 export function chanceFaceAuGardien(membres, gStats) {
   const m = (membres || []).filter((x) => x && x.creature);

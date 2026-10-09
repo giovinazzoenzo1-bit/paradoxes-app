@@ -147,6 +147,7 @@ import {
   niveauxPourChance,
   deckApresEffortEquitable,
   planPourChance,
+  chanceStabilisee,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -817,6 +818,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const stade = c && c.stages && c.stages[stadeVisuel(o && o.evolutionTier)]; // { name, emoji }
     return (stade && stade.name) || id;
   };
+  // (09/10) La chance AFFICHÉE ne redescend pas par simple bruit quand le deck progresse (chanceStabilisee),
+  // mémorisée par œuf (son démarrage) : le bouton et le menu montrent la même valeur.
+  const derniereChanceRef = useRef({});
+  const chanceAffichee = (cle, egg, brute) => {
+    if (brute == null || !egg) return brute;
+    const k = `${cle}|${egg.startedAt || ''}`;
+    const prec = derniereChanceRef.current[k];
+    const c = chanceStabilisee(brute, puissanceDuDeck, prec);
+    derniereChanceRef.current[k] = { chance: c, puissance: puissanceDuDeck };
+    return c;
+  };
   const ligneGardien = (egg, cle) => {
     if (owned.length + 1 < 3 || !egg || !egg.gardienPhoto) return null;
     // (08/10, décision de l'auteur) UN seul repère face au Gardien : la CHANCE de victoire, mesurée par simulation
@@ -824,7 +836,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // Plus de « Gardien X · Ton deck Y » : deux chiffres de formule ne peuvent pas être à la fois figés et exacts
     // (captures : défaite à 9 698 contre 9 617, victoire à 9 781 contre 9 915).
     const m = deckFaceGardien[cle];
-    const chance = m && typeof m === 'object' ? Math.round(m.victoires * 20) * 5 : null; // arrondie à 5 %
+    const chance = m && typeof m === 'object' ? chanceAffichee(cle, egg, Math.round(m.victoires * 20) * 5) : null; // arrondie à 5 %, stabilisée
     if (chance == null) return '⚔️ Calcul de ta chance…';
     const texteChance = chance >= 95 ? '≥ 95 %' : `${chance} %`; // tout en haut, le hasard résiduel ferait osciller
     // (08/10) Le bouton reste COURT : le plan (« Aegisolar +4 ») s'affiche dans le menu « Gardien de l'œuf ».
@@ -4430,7 +4442,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           créature » la découvre en dessous. */}
       {confirmGardien ? (() => {
         const mg = deckFaceGardien[confirmGardien === 'main' ? 'main' : 'incub'];
-        const ch = mg && typeof mg === 'object' ? Math.round(mg.victoires * 20) * 5 : null;
+        const oeufMenu = confirmGardien === 'main' ? mainEgg : incubatingEgg;
+        const ch = mg && typeof mg === 'object' ? chanceAffichee(confirmGardien === 'main' ? 'main' : 'incub', oeufMenu, Math.round(mg.victoires * 20) * 5) : null;
         const combattre = () => { const c = confirmGardien; setConfirmGardien(null); if (c === 'main') resolveHatch('main'); else hatchIncubatedEgg(); };
         return (
           <FenetreJeu titre="⚔️ Gardien de l'œuf" onFermer={() => setConfirmGardien(null)} zIndex={3000}>

@@ -3230,7 +3230,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '67e439ef'; // 03/10 : effets étape 3 (visuels des sorts, spécial, K.O. ; élan seulement s'il y a un coup) — calculs inchangés ; auditGardienCalibre vert
+const EMPREINTE_COMBAT = '94f9492c'; // 09/10 : ATTAQUES DE SOUTIEN (règle PARTAGÉE coupsDeSoutien, appelée par le combat ET la simulation) ; auditGardienCalibre vert ; table de l'Aventure recalculée. Avant : // 03/10 : effets étape 3 (visuels des sorts, spécial, K.O. ; élan seulement s'il y a un coup) — calculs inchangés ; auditGardienCalibre vert
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -4631,7 +4631,7 @@ function auditSonsJeu() {
   const c = T['src/screens/games/CombatScreen.js'];
   const exige = [
     [c, /son\(cle === 'parfait' \? 'impact-parfait' : cle === 'rate' \? 'rate' : 'impact-normal'\);/, 'combat : plus de son à l\'impact'],
-    [c, /if \(element && cle !== 'rate' && SON_ELEMENT\[element\]\) son\(SON_ELEMENT\[element\]\);/, 'combat : plus de son d\'élément'],
+    [c, /if \(element && cle !== 'rate' && (cle !== 'soutien' && )?SON_ELEMENT\[element\]\) son\(SON_ELEMENT\[element\]\);/, 'combat : plus de son d\'élément'],
     [c, /if \(SON_SORT\[type\]\) son\(SON_SORT\[type\]\);/, 'combat : plus de son de sort ni de K.O.'],
     [c, /useEffect\(\(\) => \{ if \(assombriKey > 0\) (son\('special'\);|\{ son\('special'\); noterSpecial\(\); \}) \}, \[assombriKey\]\);/, 'combat : plus de son au lancement du spécial'],
     [c, /if \(v === 'parfait'\) son\('jauge-parfait'\);/, 'combat : plus de carillon « PARFAIT »'],
@@ -4800,11 +4800,14 @@ function auditGardien80() {
     // 0,72 à 0,97 : à bas niveau, les combats avancent par paliers et le calibrage prend VOLONTAIREMENT le
     // côté facile (MESURÉ 08/10 : 95 % au niveau 12).
     if (ch < 0.72 || ch > 0.97) pb.push(`niv. ${L} : atteindre le Gardien (${G}) donne ${Math.round(ch * 100)} % au lieu d'environ 80 %`);
-    let prec = -1;
+    // (09/10) Ce que le JOUEUR voit : arrondi à 5 %, plafonné « ≥ 95 % », stabilisé (chanceStabilisee) — ne doit
+    // jamais redescendre quand une créature monte de niveau.
+    let precAff = null;
     for (let b = 0; b <= 10; b++) {
-      const aff = Math.min(95, Math.round(K.chanceFaceAuGardien(eq(b), g0) * 20) * 5); // affiché « ≥ 95 % » au-delà
-      if (aff < prec) { pb.push(`niv. ${L} : le pourcentage affiché redescend (${prec} → ${aff} %) en montant de niveau`); break; }
-      prec = aff;
+      const brute = Math.min(95, Math.round(K.chanceFaceAuGardien(eq(b), g0) * 20) * 5);
+      const aff = K.chanceStabilisee(brute, K.puissanceAffichee(eq(b)), precAff);
+      if (precAff && aff < precAff.chance) { pb.push(`niv. ${L} : le pourcentage affiché redescend (${precAff.chance} → ${aff} %) en montant de niveau`); break; }
+      precAff = { chance: aff, puissance: K.puissanceAffichee(eq(b)) };
     }
   }
   const k = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
@@ -4838,6 +4841,7 @@ function auditGardien80() {
     }
   }
   if (!/Math\.round\(m\.victoires \* 20\) \* 5/.test(c)) pb.push("la chance du Gardien n'est plus arrondie à 5 % (les micro-baisses réapparaissent)");
+  if (!/chanceAffichee\(cle, egg, Math\.round\(m\.victoires \* 20\) \* 5\)/.test(c) || !/chanceAffichee\(confirmGardien === 'main' \? 'main' : 'incub', oeufMenu,/.test(c)) pb.push("la chance affichée n'est plus stabilisée (bouton ou menu) : elle peut redescendre par simple bruit");
   // (08/10) Défaite avec un deck AU NIVEAU du Gardien : message de malchance + vraie chance (pas « améliore tes créatures »).
   if (!/resultatGardien\.chance != null && resultatGardien\.chance >= 80\n\s*\? 'Pas de chance cette fois\. Retente ta chance !'/.test(c)) pb.push('défaite à 80 % ou plus : le message « Pas de chance » a disparu');
   if (!/const texteChance = chance >= 95 \? '≥ 95 %' : `\$\{chance\} %`;/.test(c)) pb.push('au-delà de 95 %, la chance ne s\'affiche plus « ≥ 95 % » (elle oscillerait 95 / 100)');
@@ -4943,3 +4947,36 @@ function auditJournalDev() {
   return pb;
 }
 module.exports.auditJournalDev = auditJournalDev;
+
+// ── ATTAQUES DE SOUTIEN : toute l'équipe participe (09/10, décision de l'auteur) ──
+// Test de l'auteur : une créature très montée finissait seule le chapitre 1 (à chaque tour, UNE créature
+// frappait : tout concentrer sur une seule restait toujours le meilleur choix). Après le coup de la créature
+// active, chaque autre créature VIVANTE frappe la cible avec la moitié de son attaque normale. Règle PARTAGÉE :
+// la simulation ET le vrai combat l'appellent (contre le Gardien comme contre les ennemis).
+function auditSoutienEquipe() {
+  const fs = require('fs'); const path = require('path');
+  const K = load('combatLogic'); const pb = [];
+  if (K.SOUTIEN_FRACTION !== 0.5) pb.push(`SOUTIEN_FRACTION = ${K.SOUTIEN_FRACTION} au lieu de 0,5 (décision du 09/10)`);
+  const cre = (id) => C.CREATURES.find((x) => x.id === id);
+  const combattant = (id, L, hp) => { const st = K.combatStatsForCreatureTyped(cre(id), L, 0, []); return { creature: cre(id), ownedLevel: L, stats: st, hp: hp == null ? st.hp : hp, mana: 0, etats: {} }; };
+  const ennemi = cre('ombrillon');
+  const trio = [combattant('brontobloc', 20), combattant('pyrosile', 20), combattant('caraploof', 20)];
+  const s = K.coupsDeSoutien(trio, 0, ennemi);
+  if (s.length !== 2) pb.push(`équipe de 3 : ${s.length} coup(s) de soutien au lieu de 2`);
+  s.forEach((x) => {
+    const f = trio[x.i]; const attendu = K.degatsDuJoueur(K.meilleureAttaque(f.creature), f, ennemi, K.JAUGE_MULT.bien) * 0.5;
+    if (Math.abs(x.degats - attendu) > 1) pb.push(`soutien de ${f.creature.id} : ${x.degats} au lieu d'environ ${Math.round(attendu)} (la moitié d'une attaque normale)`);
+  });
+  if (K.coupsDeSoutien([combattant('brontobloc', 36)], 0, ennemi).length !== 0) pb.push('une créature SEULE reçoit un soutien');
+  const avecKO = [combattant('brontobloc', 20), combattant('pyrosile', 20, 0), combattant('caraploof', 20)];
+  if (K.coupsDeSoutien(avecKO, 0, ennemi).some((x) => x.i === 1)) pb.push('un coéquipier K.O. frappe encore en soutien');
+  const k = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
+  const sim = k.slice(k.indexOf('export function simulerCombat('), k.indexOf('\n}\n', k.indexOf('export function simulerCombat(')));
+  if (!/coupsDeSoutien\(J, act, A\[0\]\.creature\)/.test(sim) || !/coupsDeSoutien\(J, act, A\[cS\]\.creature\)/.test(sim)) pb.push('la SIMULATION n\'applique plus le soutien (Gardien ou ennemis) : le calibrage divergerait du vrai combat');
+  if (!/frapper\(J\[s\.i\], A\[cS\], s\.degats, false\)/.test(sim) || !/modifierCoup\(J\[s\.i\], A\[0\], s\.degats, false\)/.test(sim)) pb.push('simulation : le soutien consomme les bonus du coéquipier');
+  const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  const zone = c.slice(c.indexOf('RÈGLES DU COMBAT — DÉBUT'), c.indexOf('RÈGLES DU COMBAT — FIN'));
+  if (!/coupsDeSoutien\(fightersRef\.current, curIdx, cibleActuelle\.creature\)/.test(zone) || !/coupsDeSoutien\(fightersRef\.current, curIdx, newOpponents\[cS\]\.creature\)/.test(zone)) pb.push('le VRAI combat n\'applique plus le soutien (Gardien ou ennemis)');
+  return pb;
+}
+module.exports.auditSoutienEquipe = auditSoutienEquipe;

@@ -13,10 +13,10 @@ const MAX = 40;
 let enCours = null;
 
 export function debutCombat(info) {
-  enCours = { debut: Date.now(), ...(info || {}), verdicts: { parfait: 0, bien: 0, rate: 0, absent: 0 }, attaques: 0, ripostes: 0, sorts: {}, speciaux: 0 };
+  enCours = { debut: Date.now(), ...(info || {}), verdicts: { parfait: 0, bien: 0, rate: 0, absent: 0 }, attaques: 0, ripostes: 0, soutiens: 0, sorts: {}, speciaux: 0 };
 }
 export function noterVerdict(v) { if (enCours && enCours.verdicts[v] != null) enCours.verdicts[v] += 1; }
-export function noterAttaque(cle) { if (!enCours) return; if (cle === 'riposte') enCours.ripostes += 1; else enCours.attaques += 1; }
+export function noterAttaque(cle) { if (!enCours) return; if (cle === 'riposte') enCours.ripostes += 1; else if (cle === 'soutien') enCours.soutiens += 1; else enCours.attaques += 1; }
 export function noterSort(type, cote) { if (!enCours || !type) return; const k = `${type}@${cote || '?'}`; enCours.sorts[k] = (enCours.sorts[k] || 0) + 1; }
 export function noterSpecial() { if (enCours) enCours.speciaux += 1; }
 

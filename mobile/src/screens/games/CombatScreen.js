@@ -80,6 +80,7 @@ const EFFET_ELEMENT = {
 const RIPOSTE_MS = 950; // ton élan (recul, détente, arrêt, ressort) est REVENU : les 2 mouvements ne se chevauchent pas
 const FIN_EN_PLUS_MS = 700;
 const STYLE_COUP = {
+  soutien: { couleur: '#cfe9ff', etincelles: 3, secousse: 0, vibration: null }, // coup de soutien (09/10) : discret
   parfait: { couleur: '#ffd24a', taille: 32, etincelles: 12, secousse: 9, vibration: 'heavy' },
   bien: { couleur: '#ffffff', taille: 26, etincelles: 8, secousse: 5, vibration: 'medium' },
   rate: { couleur: '#c9ccd2', taille: 22, etincelles: 4, secousse: 2, vibration: 'light' },
@@ -349,6 +350,7 @@ import {
   GUARDIAN_PHASE1_HP_LOSS,
   applyGuardianDamage,
   guardianStats,
+  coupsDeSoutien,
 } from '../../games/clicker/combatLogic';
 import { GUARDIAN_BASE_LEVEL } from '../../games/clicker/incubatorLogic';
 
@@ -755,7 +757,14 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     // Sons (07/10) : le choc selon le verdict, puis l'élément de l'attaquant (pas sur un coup raté).
     son(cle === 'parfait' ? 'impact-parfait' : cle === 'rate' ? 'rate' : 'impact-normal');
     noterAttaque(cle); // journal des combats (08/10)
-    if (element && cle !== 'rate' && SON_ELEMENT[element]) son(SON_ELEMENT[element]);
+    if (element && cle !== 'rate' && cle !== 'soutien' && SON_ELEMENT[element]) son(SON_ELEMENT[element]);
+  };
+  // (09/10) Les coups de SOUTIEN se voient : un petit impact par coéquipier, juste après le coup principal.
+  const planifierSoutiens = (soutiens, cibleIdx) => {
+    soutiens.forEach((s, k) => {
+      const f = fightersRef.current[s.i];
+      setTimeout(() => effetsImpact('adversaire', cibleIdx, 'soutien', f && f.creature ? f.creature.element : null), 430 + k * 150);
+    });
   };
   const [opponentDamageFloat, setOpponentDamageFloat] = useState(null);
   // { amount, index } — l'INDICE est figé au moment du coup. Relu via
@@ -1092,9 +1101,30 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         startBossPhase2(maxHp);
         return;
       }
-      newOpponentHp = coup.hp;
-      setBossShield(coup.shield);
-      newOpponents = opponentsRef.current.map((o, i) => (i === targetIdx ? { ...bossApres, hp: newOpponentHp } : o));
+      // SOUTIEN (09/10) — règle PARTAGÉE avec la simulation : les autres créatures vivantes frappent le Gardien.
+      let bossS = { ...bossApres, hp: coup.hp };
+      let bouclierS = coup.shield;
+      let releveS = false;
+      const soutiensBoss = coupsDeSoutien(fightersRef.current, curIdx, cibleActuelle.creature);
+      for (const s of soutiensBoss) {
+        const m2 = modifierCoup(fightersRef.current[s.i], bossS, s.degats, false);
+        fightersRef.current = fightersRef.current.map((x, i) => (i === s.i ? m2.attaquant : x));
+        bossS = m2.defenseur;
+        const c2 = coupSurGardien({ hp: bossS.hp, shield: bouclierS, phase: bossPhaseRef.current, maxHp }, m2.degats);
+        bossS = { ...bossS, hp: c2.hp };
+        bouclierS = c2.shield;
+        degatsTotaux += m2.degats;
+        if (c2.releve) { releveS = true; break; }
+      }
+      if (soutiensBoss.length) { setFighters(fightersRef.current); planifierSoutiens(soutiensBoss, targetIdx); }
+      if (releveS) {
+        setBossShield(0);
+        startBossPhase2(maxHp);
+        return;
+      }
+      newOpponentHp = bossS.hp;
+      setBossShield(bouclierS);
+      newOpponents = opponentsRef.current.map((o, i) => (i === targetIdx ? bossS : o));
     } else {
       newOpponents = opponentsRef.current.slice();
       if (part > 0) {
@@ -1120,6 +1150,20 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         attaquant = apres;
       }
       fightersRef.current = fightersRef.current.map((x, i) => (i === curIdx ? attaquant : x));
+      // SOUTIEN (09/10) — règle PARTAGÉE avec la simulation : les autres créatures vivantes frappent la cible
+      // (ou le 1er ennemi vivant), qu'il y ait eu un coup ou un sort.
+      const cS = newOpponents[targetIdx] && newOpponents[targetIdx].hp > 0 ? targetIdx : newOpponents.findIndex((o) => o.hp > 0);
+      if (cS >= 0) {
+        const soutiens = coupsDeSoutien(fightersRef.current, curIdx, newOpponents[cS].creature);
+        for (const s of soutiens) {
+          if (!(newOpponents[cS].hp > 0)) break;
+          const x = frapper(fightersRef.current[s.i], newOpponents[cS], s.degats, false);
+          fightersRef.current = fightersRef.current.map((f, i) => (i === s.i ? x.attaquant : f));
+          newOpponents[cS] = x.defenseur;
+          degatsTotaux += x.degats;
+        }
+        if (soutiens.length) planifierSoutiens(soutiens, cS);
+      }
       setFighters(fightersRef.current);
       newOpponentHp = newOpponents[targetIdx].hp;
     }

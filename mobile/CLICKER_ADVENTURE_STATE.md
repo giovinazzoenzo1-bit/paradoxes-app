@@ -2810,3 +2810,29 @@ prop onAffronterGardien (IncubatorPanel l'appelle quand un Gardien est requis). 
 devient court : « ⚔️ X % de victoire · touche pour voir le plan ». Vu au banc (scène temporaire, non
 gardée). Gardes : auditGardien80 (menu, 2 boutons, incubateur), auditPuissanceAffichee ; sabotage « le nid
 relance le combat sans le menu ». 101 contrôles, 129 sabotages.
+
+
+## 09/10 — ATTAQUES DE SOUTIEN : toute l'équipe participe (règle de combat, publié)
+
+TEST de l'auteur (journal, 27 combats) : Brontobloc SEUL, monté au niveau 36 (467 G : succès + quêtes ≈ 150 G/jour
+dès le niveau 10 + primes), a fini tout le chapitre 1 (niveaux 1-25). Plafond de niveau proposé puis REJETÉ par
+l'auteur (« on décale juste le problème : même avec 3 créatures, il suffira de monter une seule »). CAUSE RÉELLE :
+à chaque tour, UNE seule créature frappait (rotation) → 3 créatures ne frappaient pas plus fort qu'une ;
+concentrer restait toujours optimal.
+RÈGLE (décision de l'auteur) : après le coup de la créature active, CHAQUE autre créature VIVANTE frappe la même
+cible (ou le 1er ennemi vivant) avec SOUTIEN_FRACTION = 0,5 de son attaque normale (meilleureAttaque, ×JAUGE_MULT.bien,
+sans jauge, sans sort, SANS consommer ses bonus : frapper / modifierCoup avec consommer = false). Contre le Gardien :
+modifierCoup + coupSurGardien (bouclier, manches) ; une relève déclenchée par un soutien = comme celle du coup actif
+(pas de riposte, la même créature rejoue). Règle PARTAGÉE coupsDeSoutien (combatLogic), appelée par simulerCombat
+ET par CombatScreen (zone des règles) → EMPREINTE_COMBAT 94f9492c. Visuel : un petit impact « soutien » par
+coéquipier (430 ms + 150 ms × rang), sans vibration ni son d'élément. Journal : soutiens comptés à part.
+RECALIBRAGE (même outil, mêmes cibles) : calibrer-parcours 40 × 8, 0 bloqué, 31 s → AVENTURE_MULTIPLICATEURS :
+niveaux 1-10 INCHANGÉS (apprentissage), ensuite ×1,25 à ×1,34 (médianes par Ascension) ; PUISSANCE_CONSEILLEE
+régénérée (maximum courant). MESURÉ après : Brontobloc seul niv. 36 → 99 % au niveau 15, 81 % au 20, 0 % au 25 (avant :
+100 / 100 / 51) ; trio niv. 21 (385 G, moins cher) → 100 / 100 / 0 au 25 (le 25 demande des évolutions) ; avant
+recalibrage, à prix égal : trio 92 % contre solo 51 % au niveau 25. Parcours gratuit (40 joueurs) : 0 bloqué de A0 à
+A5, ~15 % de jours en plus par Ascension.
+Chance au Gardien : CHANCE_GARDIEN_COMBATS 300 → 600 ; chanceStabilisee (affichage qui ne redescend pas par
+simple bruit, ≤ 5 points, quand le deck progresse ; mémorisé par œuf), appliquée au bouton ET au menu.
+Gardes : auditSoutienEquipe (+ sabotage « soutien à zéro »), auditGardien80 (série VISIBLE stabilisée),
+auditSonsJeu (exception soutien). 102 contrôles, 130 sabotages.

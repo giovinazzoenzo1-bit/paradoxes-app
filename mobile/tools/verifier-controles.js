@@ -246,6 +246,8 @@ const SABOTAGES = [
     remplace('    return a.facteurAttaque <= b.facteurAttaque ? a : b;', '    return a.facteurAttaque >= b.facteurAttaque ? a : b;')],
   ['auditGardien80', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le bouton du nid relance le combat SANS le menu « Gardien de l'œuf »",
     remplace("onPress={() => setConfirmGardien('main')}", "onPress={() => resolveHatch('main')}")],
+  ['auditSoutienEquipe', F.combat, "soutien à zéro : une créature seule redevient la meilleure stratégie",
+    remplace('export const SOUTIEN_FRACTION = 0.5;', 'export const SOUTIEN_FRACTION = 0;')],
   ['auditJournalDev', F.combatEcran, "verdicts de jauge plus notés : impossible de mesurer la vraie précision",
     remplace('  const montrerVerdict = (v) => { noterVerdict(v);', '  const montrerVerdict = (v) => {')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "chiffre du Gardien recalculé à chaque affichage : il bouge entre le menu et le résultat",
