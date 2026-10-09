@@ -108,9 +108,10 @@ function nouveauJoueur(graine, R = REGLAGES) {
     const niv = possedees.length ? Math.max(1, Math.round(R.naissance * meilleur)) : 1;
     possedees.push({ c, niv, evo: evoPour(niv) });
   };
-  const monter = () => {
+  // (09/10) Le jeu a désormais un NIVEAU MAXIMUM (niveau d'Exploration gagné + 5) : le joueur simulé le respecte.
+  const monter = (plafond = Infinity) => {
     for (let n = 0; n < 500; n++) {
-      const t = j.trio().sort((x, y) => x.niv - y.niv)[0];
+      const t = j.trio().filter((x) => x.niv < plafond).sort((x, y) => x.niv - y.niv)[0];
       // ⚠️ 26/09 : AUCUN plafond (le jeu n'en a pas) — le vrai joueur dépense
       // tout (test de l'auteur : Terracroc niveau 59 au niveau 26). L'ancien
       // plafond « niveau d'Aventure + 1 » cachait 19 000 Griffes non dépensées.
@@ -140,7 +141,7 @@ function nouveauJoueur(graine, R = REGLAGES) {
     j.griffes += (R.succesParAsc[a] + R.packsParAsc * R.taillePack(a)) / (fin - debut);
     if (l === debut + 1) j.runes = 0;
     if (j.runes < R.runesParAsc && j.griffes >= R.prixRune) { j.griffes -= R.prixRune; j.runes++; }
-    monter();
+    monter(L.niveauMaxCreature(j.niveau)); // (09/10) niveau maximum du jeu
   };
   // Jouer le niveau l jusqu'à la victoire (énergie, filet de sécurité), ou le blocage.
   j.jouer = (l, k, s) => {
@@ -151,7 +152,7 @@ function nouveauJoueur(graine, R = REGLAGES) {
       const baisse = K.baisseFilet(d); // le filet DU JEU (combatLogic)
       if (baisse >= 0.6) s.filet10++; else if (baisse >= 0.4) s.filet7++; else if (baisse > 0) s.filet5++;
       const r = K.simulerCombat(j.joueurs(), j.adversaires(l, k, baisse), { alea, politique: K.choixJoueur });
-      if (r.gagne) { s.victoires += 1; j.niveau = l; j.serie[l] = 0; j.griffes += R.prime(l); monter(); return true; }
+      if (r.gagne) { s.victoires += 1; j.niveau = l; j.serie[l] = 0; j.griffes += R.prime(l); monter(L.niveauMaxCreature(j.niveau)); return true; }
       j.serie[l] = d + 1;
       if (j.serie[l] >= R.blocage) { s.bloque = l; j.bloque = l; return false; }
     }

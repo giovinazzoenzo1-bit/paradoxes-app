@@ -8,6 +8,7 @@
 // clickerLogic, donc pas de cycle d'imports.
 // Moteur des défis : cibles, progression, validation, tirage.
 // Les DÉFINITIONS vivent dans `questDefs.js`.
+import { niveauMaxCreature } from './clickerLogic';
 import { DEFIS_ECRITS, OEUFS_PAR_GROUPE } from './defisEcrits';
 import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION, echelleGroupe, PAS_AVENTURE_PAR_GROUPE } from './questDefs';
 import { fmtQ, qtyQ, roundQuestTarget, describeAdventureLevel } from './questFormat';
@@ -683,7 +684,7 @@ export function plafondAchatsGroupe(metric, stats) {
   return total;
 }
 
-export function resolveQuestTarget(quest, stats) {
+function resolveQuestTargetBrut(quest, stats) {
   if (!quest) return 1;
   if (quest.target) {
     // ⚠️⚠️ UNE CIBLE FIXE MONTE PAR GROUPE, PAS PAR JOUEUR.
@@ -1766,4 +1767,13 @@ export function niveauMaxAventure(ascensionCount) {
 export function plusRienAEtoiler(stats) {
   const s = stats || {};
   return (s.troisEtoilesJusquA || 0) >= niveauMaxAventure(s.ascension || 0);
+}
+
+// (09/10) Défis « monte une créature au niveau N » (maxCreatureLevel) : la cible ne dépasse JAMAIS le niveau
+// maximum d'une créature (niveau d'Exploration gagné + 5) — sinon le défi bloquerait l'œuf (demande de l'auteur :
+// « qu'on ne soit jamais bloqué par les défis »).
+export function resolveQuestTarget(quest, stats) {
+  const t = resolveQuestTargetBrut(quest, stats);
+  if (quest && quest.metric === 'maxCreatureLevel') return Math.min(t, niveauMaxCreature((stats || {}).advLevelReached));
+  return t;
 }

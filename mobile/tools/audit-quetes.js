@@ -4980,3 +4980,29 @@ function auditSoutienEquipe() {
   return pb;
 }
 module.exports.auditSoutienEquipe = auditSoutienEquipe;
+
+// ── NIVEAU MAXIMUM d'une créature (09/10, décision de l'auteur) ──
+// « niveau d'Exploration le plus haut gagné + 5 » ; les défis « monte une créature au niveau N » ne doivent
+// JAMAIS bloquer un œuf (demande de l'auteur) ; le joueur simulé du calibrage respecte le même plafond.
+function auditNiveauMax() {
+  const fs = require('fs'); const path = require('path'); const pb = [];
+  const L = load('clickerLogic');
+  if (L.niveauMaxCreature(0) !== 5 || L.niveauMaxCreature(20) !== 25 || L.NIVEAU_MAX_MARGE !== 5) pb.push('niveauMaxCreature ne vaut plus « niveau d\'Exploration gagné + 5 »');
+  const a = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  if (!/if \(ownedEntry\.level >= niveauMaxCreature\(currentUnlockedLevelRef\.current - 1\)\) \{ jouerSon\('refus'/.test(a)) pb.push('Exploration : on peut monter une créature AU-DESSUS du niveau maximum');
+  if (!/niveauMax=\{niveauMaxCreature\(currentUnlockedLevel - 1\)\}/.test(a) || !/haut=\{auPlafond \? 'NIVEAU MAX'/.test(a)) pb.push('fiche : le niveau maximum n\'est plus annoncé');
+  const Q = load('questLogic');
+  const t = Q.resolveQuestTarget({ metric: 'maxCreatureLevel', step: 15, mode: 'absolute' }, { maxCreatureLevel: 10, advLevelReached: 8 });
+  if (t > L.niveauMaxCreature(8)) pb.push(`défi « monte une créature au niveau N » : cible ${t} au-dessus du niveau maximum ${L.niveauMaxCreature(8)} (œuf bloqué)`);
+  const D = load('questDefs'); const tous = [].concat(...Object.values(D).filter(Array.isArray).map((x) => [].concat(...x.map((y) => (Array.isArray(y) ? y : [y])))));
+  const auPlafond = { ownedCount: 3, creaturesAVenir: 3, maxCreatureLevel: 13, advLevelReached: 8 };
+  for (const id of ['g4_creature', 'feed5', 'feed15']) {
+    const q = tous.find((x) => x && x.id === id);
+    if (!q) { pb.push(`défi ${id} introuvable`); continue; }
+    if (q.available && q.available(auPlafond)) pb.push(`défi ${id} tiré alors que la meilleure créature est AU niveau maximum (œuf bloqué)`);
+  }
+  const s = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
+  if ((s.match(/monter\(L\.niveauMaxCreature\(j\.niveau\)\)/g) || []).length !== 2) pb.push('le joueur simulé du calibrage ne respecte plus le niveau maximum');
+  return pb;
+}
+module.exports.auditNiveauMax = auditNiveauMax;

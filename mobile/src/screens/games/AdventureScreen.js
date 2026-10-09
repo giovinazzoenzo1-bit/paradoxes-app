@@ -388,7 +388,7 @@ import {
   griffesCoinCost,
   GRIFFES_COIN_PACK,
   taillePackGriffes,
-  achatsGriffesPiecesRestants, GRIFFES_PIECES_MAX_PAR_ASCENSION,
+  achatsGriffesPiecesRestants, GRIFFES_PIECES_MAX_PAR_ASCENSION, niveauMaxCreature,
 } from '../../games/clicker/clickerLogic';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import { niveauMaxAventure } from '../../games/clicker/questLogic';
@@ -1009,6 +1009,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     const creature = CREATURES.find((c) => c.id === creatureId);
     const ownedEntry = ownedMap[creatureId];
     if (!creature || !ownedEntry) return;
+    // (09/10) Niveau maximum : niveau d'Exploration le plus haut gagné + 5.
+    if (ownedEntry.level >= niveauMaxCreature(currentUnlockedLevelRef.current - 1)) { jouerSon('refus', sonsAventure !== false); return; }
     const cost = levelUpCost(creature, ownedEntry.level);
     if (griffes < cost) return;
     setGriffes((g) => g - cost);
@@ -1176,6 +1178,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
         griffes={griffes}
         onEvolve={() => handleEvolve(detailCreatureId, ownedMap[detailCreatureId].evolutionTier || 0, ownedMap[detailCreatureId].level)}
         onLevelUp={() => handleLevelUp(detailCreatureId)}
+        niveauMax={niveauMaxCreature(currentUnlockedLevel - 1)}
         ownedRunes={ownedRunes}
         onEquipRune={(runeId) => equipRune(runeId, detailCreatureId)}
         onUnequipRune={unequipRune}
@@ -1770,7 +1773,9 @@ function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
   );
 }
 
-function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack, onPlusGriffes }) {
+function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack, onPlusGriffes, niveauMax = null }) {
+  // (09/10) Niveau maximum atteint : le médaillon l'annonce, la note dit comment aller plus loin.
+  const auPlafond = niveauMax != null && owned && owned.level >= niveauMax;
   const [runePickerSlot, setRunePickerSlot] = useState(null);
   const [onglet, setOnglet] = useState('stats');
   // La créature pousse son cri à l'ouverture de sa fiche (07/10).
@@ -1910,11 +1915,11 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
 
       {/* ── Bas : histoire, médaillon de niveau, évolution ── */}
       <View style={[R(FICHE.histoire, 'droite'), { justifyContent: 'center' }]}>
-        <Text style={[styles.ficheNote, { fontSize: police(0.029) }]} numberOfLines={2}>{note}</Text>
+        <Text style={[styles.ficheNote, { fontSize: police(0.029) }]} numberOfLines={2}>{auPlafond ? `🔒 Niveau max ${niveauMax} : gagne des niveaux d'Exploration pour aller plus loin.` : note}</Text>
         <Text style={[styles.ficheHistoire, { fontSize: police(0.025) }]} numberOfLines={3}>{creature.lore}</Text>
       </View>
-      <MedaillonNiveau style={R(FICHE.medaillon, 'droite')} haut={`NIVEAU ${owned.level + 1}`} cout={levelCost}
-        actif={griffes >= levelCost} onPress={onLevelUp} police={police(0.034)} />
+      <MedaillonNiveau style={R(FICHE.medaillon, 'droite')} haut={auPlafond ? 'NIVEAU MAX' : `NIVEAU ${owned.level + 1}`} cout={levelCost}
+        actif={!auPlafond && griffes >= levelCost} onPress={onLevelUp} police={police(0.034)} />
       {evoEligible && (
         <TouchableOpacity style={R(FICHE.evoluer, 'droite')} onPress={onEvolve} disabled={griffes < evoCost} activeOpacity={0.85}>
           <Image source={FICHE_IMG.bouton} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: 0, width: R(FICHE.evoluer, 'droite').width, height: R(FICHE.evoluer, 'droite').height, opacity: griffes < evoCost ? 0.55 : 1 }} />

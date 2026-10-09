@@ -2836,3 +2836,28 @@ Chance au Gardien : CHANCE_GARDIEN_COMBATS 300 → 600 ; chanceStabilisee (affic
 simple bruit, ≤ 5 points, quand le deck progresse ; mémorisé par œuf), appliquée au bouton ET au menu.
 Gardes : auditSoutienEquipe (+ sabotage « soutien à zéro »), auditGardien80 (série VISIBLE stabilisée),
 auditSonsJeu (exception soutien). 102 contrôles, 130 sabotages.
+
+
+## 09/10 — NIVEAU MAXIMUM d'une créature + diagnostic de la facilité du chapitre 1 (publié)
+
+TEST de l'auteur après le soutien : Terracroc SEUL a buté aux niveaux 22 (niv. 36) et 25 (niv. 46), puis l'a
+remonté à 50 + évolution et a tout fini (923 G sur une créature ; une équipe de 3 au niveau 31 avec les mêmes
+Griffes gagnait 100 %). DÉCISION : niveauMaxCreature(niveau d'Exploration le plus haut GAGNÉ) = gagné + 5
+(clickerLogic, NIVEAU_MAX_MARGE). Exploration : handleLevelUp refuse au-delà (son « refus ») ; fiche : médaillon
+« NIVEAU MAX » + « 🔒 Niveau max N : gagne des niveaux d'Exploration… ». Rien n'est retiré aux créatures déjà
+au-dessus. DÉFIS (demande de l'auteur : jamais bloqué) : g4_creature, feed5, feed15 (maxCreatureLevel, step)
+ne sont tirés que s'il reste de la marge (aDeLaMargeDeNiveau) et resolveQuestTarget ramène leur cible au plafond.
+« Monte X de N niveaux » = paliers de TAP (pas les créatures) : non concerné. Joueur simulé : monter(plafond)
+avec L.niveauMaxCreature(j.niveau) → table recalculée (40 × 8, 0 bloqué) : 11-25 ×0,86, A1 ×0,93, A2 ×0,97,
+A3 ×1,11, A4-A5 ×1,03 ; parcours : 0 bloqué de A0 à A5.
+⚠️ PIÈGE DE MESURE (rencontré) : le chargeur des gardes (audit-quetes load) GARDE chaque module compilé en
+mémoire pour tout le processus ; écrire une nouvelle table PUIS mesurer dans le même processus mesure
+l'ANCIENNE table. Toujours mesurer dans un processus séparé.
+DIAGNOSTIC (mesuré proprement, copies séparées) : niveau 25 = vrai mur (créature seule au plafond ≈ 0-2 %) ;
+niveaux 11-20 faciles pour TOUS (créature seule au plafond 87-92 %, avec soutien 0,5 / 0,75 / 1) — cause :
+l'objectif de calibrage du 26/09 (« les 10 % les plus malchanceux gagnent 6 fois sur 10 ») rend le jeu facile
+pour un joueur normal. Joueur simulé : 2 créatures aux niveaux 11-15, 3 dès le 20, meilleure créature ≈ plafond.
+DÉCISIONS EN ATTENTE de l'auteur : (1) verrou « 3 créatures pour dépasser le niveau 10 » (sa proposition ; sans
+blocage avec les défis : œuf 2 = niveau 5 + 4 victoires, œuf 3 = niveau 10 ; rejouer compte) ; (2) objectif de
+calibrage (joueur MÉDIAN au lieu des 10 % malchanceux).
+auditNiveauMax (+ sabotage « garde de handleLevelUp supprimée »). 103 contrôles, 131 sabotages.

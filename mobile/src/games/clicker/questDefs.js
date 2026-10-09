@@ -23,6 +23,7 @@
 //            de la cible, sinon le texte ment dès qu'un réglage bouge
 //
 import {
+  niveauMaxCreature,
   AUTOCLICKERS,
   SANCTUARY_MAX_LEVEL,
   UPGRADE_ITEMS,
@@ -33,6 +34,9 @@ import {
   critUpgradeCost,
   summonCost,
 } from './clickerLogic';
+// (09/10) Un défi « monte une créature au niveau N » n'est tiré que si la meilleure créature a encore de la marge
+// sous le niveau maximum (niveau d'Exploration gagné + 5) ; sa cible y est ramenée (resolveQuestTarget).
+const aDeLaMargeDeNiveau = (s) => (s.maxCreatureLevel || 0) < niveauMaxCreature(s.advLevelReached);
 import { fmtQ, qtyQ, describeAdventureLevel } from './questFormat';
 import { questBudget } from './questBudget';
 
@@ -536,7 +540,8 @@ export const QUEST_SEQUENCE = [
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
       // de l'œuf précédent est encore EN INCUBATION. Voir le commentaire
       // dans `questStats`.
-      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0,
+      // (09/10) Jamais tiré sans marge sous le niveau maximum (sinon : œuf bloqué).
+      available: (s) => (s.creaturesAVenir || s.ownedCount || 0) > 0 && aDeLaMargeDeNiveau(s),
       label: (t) => `Monte une créature au niveau ${t}` },
     { id: 'g4_etoiles', icon: '🌟', metric: 'threeStarLevel', target: 1, echelle: 'aventure', mode: 'delta',
       // ⚠️ `creaturesAVenir` et non `ownedCount` : au tirage, la créature
@@ -791,10 +796,10 @@ export const QUEST_POOL = [
   // `summon*` couvre déjà l'invocation, proprement et en mode delta.
   // Nourrir suppose d'avoir au moins une créature à nourrir.
   { id: 'feed5', family: 'collection', icon: '🍖', metric: 'maxCreatureLevel', mode: 'absolute', step: 5, minStep: 5,
-    available: (s) => (s.ownedCount || 0) >= 1,
+    available: (s) => (s.ownedCount || 0) >= 1 && aDeLaMargeDeNiveau(s), // (09/10) marge sous le niveau maximum
     label: (t) => `Nourris une créature jusqu'au niveau ${t}` },
   { id: 'feed15', family: 'collection', icon: '🍖', metric: 'maxCreatureLevel', mode: 'absolute', step: 15, minStep: 15,
-    available: (s) => (s.ownedCount || 0) >= 1 && (s.maxCreatureLevel || 0) >= 5,
+    available: (s) => (s.ownedCount || 0) >= 1 && (s.maxCreatureLevel || 0) >= 5 && aDeLaMargeDeNiveau(s), // (09/10)
     label: (t) => `Nourris une créature jusqu'au niveau ${t}` },
 
   // ---------- Défis Aventure ----------

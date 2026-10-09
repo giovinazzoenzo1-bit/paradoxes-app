@@ -427,6 +427,19 @@ export const RARITY_COST_FACTOR = { commun: 1, peu_commun: 1.3, rare: 1.6, epiqu
 // 270 Griffes. L'ancien barème en pièces (8 × level^1,35) aurait donné
 // ~820 Griffes pour le même parcours, soit le double du revenu de
 // combat disponible à ce stade.
+// ════════════════════════════════════════════════════════════════════
+//  NIVEAU MAXIMUM D'UNE CRÉATURE (09/10, décision de l'auteur)
+// ════════════════════════════════════════════════════════════════════
+// Avec les attaques de soutien, l'équipe est la meilleure stratégie ; mais rien n'empêchait de TOUT mettre sur
+// une seule créature (test de l'auteur : Terracroc niveau 50 évolué, seul, sur tout le chapitre 1, qui rapporte
+// ~1 000 Griffes). Une créature ne dépasse pas « niveau d'Exploration le plus haut GAGNÉ + NIVEAU_MAX_MARGE ».
+// MESURÉ : au niveau 25, une créature seule au plafond perd (0 %), une équipe au plafond gagne (100 %).
+// Une créature déjà au-dessus le reste (rien n'est retiré) : elle attend que la progression la rattrape.
+export const NIVEAU_MAX_MARGE = 5;
+export function niveauMaxCreature(niveauGagne) {
+  return Math.max(0, Math.floor(Number(niveauGagne) || 0)) + NIVEAU_MAX_MARGE;
+}
+
 export function levelUpCost(creature, level) {
   const rarityFactor = RARITY_COST_FACTOR[creature.rarity] || 1;
   // ⚠️ Abaissé le 15/09 : 0,5 × L^1,20 → 0,35 × L^1,05.
