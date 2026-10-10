@@ -3109,3 +3109,15 @@ auditApprentissage RÉÉCRIT sur SON exemple (hasard fixé) : niveau 1 bat l'ét
 créature typique au niveau d'un débutant ≥ 70 % à chaque étape du chapitre 1. (Avant, 26/09 : CHAQUE 1re créature ≥ 80 %.)
 Sabotage « chapitre 1 de nouveau adouci (×0,65) » → 141 prouvés ; verifier-defis 103/103 ; taps 20/20.
 SUITE DEMANDÉE PAR L'AUTEUR : le calcul « Griffes de victoire seulement ».
+
+
+## 10/10 — GRIFFES DU COMBAT PAR SOURCE : outil `tools/griffes-par-source.js` (demande de l'auteur : « ajuster au fur et à mesure »)
+
+Calcul par blocs d'étapes, uniquement avec les fonctions du jeu (primes, défis du jour / de la semaine liés au combat,
+succès liés au combat, coût d'un niveau) ; 3 hypothèses réglables en tête du fichier (étapes par jour 5, étoiles par
+étape 2,5, part à 3 étoiles 60 %). Résultat (niveaux payés par créature et par étape — primes seules entre parenthèses) :
+1-10 : 2,20 (1,18) · 11-20 : 1,74 (1,17) · 21-25 : 2,04 (1,23) · 26-60 : 1,87 (1,40) · 61-101 : 1,25 (1,00) ·
+102-144 : 1,28 (1,05) · 145-185 : 1,94 (1,61) · 186-227 : 2,41 (2,00).
+CONSTATS : les succès combat sont fixes (15 → 600) : +65 % des primes au chapitre 1, presque rien après l'étape 75 ;
+les défis combat suivent la prime (facteurQuetes) : ≈ +20 % partout ; « Gagne 80 combats » (semaine) n'est pas faisable
+à 5 étapes par jour.
