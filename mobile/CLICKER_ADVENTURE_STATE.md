@@ -2887,6 +2887,20 @@ MESURÉ avant de décider (copies séparées, /tmp) :
 ECHELLE_PUISSANCE 10 → 1 pour garder l'échelle de la puissance affichée).
 ⚠️ Sur la branche, l'équilibrage est FAUX tant que l'étape 2 n'est pas faite (ennemis encore sur
 l'ancien budget + AVENTURE_MULTIPLICATEURS). NE PAS FUSIONNER avant la fin.
+DÉCISION (10/10) : calibrage sur le joueur MÉDIAN à 7 victoires sur 10 (avant : les 10 % les plus
+malchanceux à 6/10 → un joueur normal gagnait 9 fois sur 10).
+ÉTAPE 2a FAITE (branche) : equipeEnnemie(n) → [{ creature, niveau, evolutionTier }] ; niveau =
+niveauEnnemi(n) = étape (+ BONUS_NIVEAU_BOSS = 3 si estEtapeBoss : 10e étape d'un chapitre) ;
+évolution = evoPourNiveau(niveau) ; statsForOpponentCreatureTyped(creature, n, k = 1) =
+combatStatsForCreatureTyped de ce membre (k optionnel : mesures et outils). SUPPRIMÉS (déclarations
+comparées avant/après : 8 disparues, 4 apparues, rien d'autre) : AVENTURE_MULTIPLICATEURS,
+multiplicateurAventure, statsForOpponentCreature, opponentPowerBudget(+PerMember), OPPONENT_ATTACK_MULT,
+opponentStatsForLevel(+Typed). Compositions = ANCIEN cycle CREATURES_BY_POWER (provisoire).
+⚠️ À FAIRE ENCORE : verifier-controles (sabotages lignes ~181 et ~220 visent l'ancienne table),
+calibrer-aventure.js (ancien outil, écrit l'ancienne table), calibrer-parcours.js (à réécrire :
+choisir les COMPOSITIONS), PUISSANCE_CONSEILLEE (échelle d'avant), Gardien (guardianStats passe par
+statsForOpponentCreatureTyped : k = 1 désormais, vérifier calibrerGardien), garde.sh compare
+désormais à la MÊME branche sur GitHub quand on n'est pas sur main.
 RESTE : (2) ennemis = vraies créatures (niveau = étape, composition par étape, boss) + outil de
 calibrage qui choisit les compositions ; (3) affichage du niveau des ennemis ; (4) Griffes/coûts,
 plafond, Gardien (vérifier que le plan « +N niveaux » respecte le plafond), défis, contrôles ;

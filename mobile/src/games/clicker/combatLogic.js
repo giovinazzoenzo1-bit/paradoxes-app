@@ -112,16 +112,9 @@ function powerScore(creature) {
 // arbitraire de définition dans CREATURES.
 const CREATURES_BY_POWER = [...CREATURES].sort((a, b) => powerScore(a) - powerScore(b));
 
-// Choix de l'adversaire pour un niveau donné — déterministe (pas
-// aléatoire), pour que le même niveau donne toujours le même adversaire
-// d'une tentative à l'autre. Cycle sur le roster TRIÉ PAR PUISSANCE
-// (voir CREATURES_BY_POWER) : le niveau 1 tombe sur la créature la plus
-// faible, le niveau 26 sur la plus forte, puis ça reboucle (mais les
-// stats continuent de grossir avec le niveau via opponentStatsForLevel,
-// donc même une créature "faible" qui revient plus tard reste un vrai défi).
+// Le 1er membre de l'équipe adverse de l'étape (aperçu d'un niveau).
 export function opponentForLevel(levelNumber) {
-  const idx = (levelNumber - 1) % CREATURES_BY_POWER.length;
-  return CREATURES_BY_POWER[idx];
+  return opponentTeamForLevel(levelNumber)[0];
 }
 
 // Taille de l'équipe adverse selon le CHAPITRE (pas le niveau brut) — 1
@@ -1390,83 +1383,8 @@ export function opponentGoesFirst() {
   return Math.random() < 0.5;
 }
 
-// Stats de l'adversaire pour un niveau donné — grossissent avec le
-// numéro de niveau (pas avec un "niveau nourri" comme le joueur, ça n'a
-// pas de sens pour une IA). Croissance volontairement un peu plus
-// marquée que celle du joueur pour garder un vrai défi à mesure qu'on
-// monte les chapitres.
-// Stats d'une créature adverse ARBITRAIRE à un niveau donné — extrait de
-// opponentStatsForLevel pour pouvoir calculer les stats de PLUSIEURS
-// adversaires différents au même niveau (équipe adverse à partir du
-// chapitre 2), pas seulement l'unique adversaire renvoyé par
-// opponentForLevel. opponentStatsForLevel devient un simple cas
-// particulier de cette fonction plus générale.
-// Budget de puissance (PV+ATQ combinés) PUR par niveau — indépendant de
-// la créature précisément piochée à ce niveau. Sans ça (ancienne
-// version : dégâts dérivés directement des stats de base de la
-// créature), la difficulté pouvait RECULER : le cycle des 26 créatures
-// repart du début après le niveau 26, et si une créature "faible" (PV+ATQ
-// de base ~13) réapparaît à un niveau élevé, sa croissance par niveau ne
-// suffit pas toujours à dépasser une créature "forte" (~220) apparue à un
-// niveau plus bas — repéré par un vrai test (niveau 70 plus faible que
-// niveau 60). Calibré pour retomber presque exactement sur les stats
-// réelles de Solarion/Solstral aux niveaux où ils apparaissaient déjà,
-// donc aucun changement perceptible en tout début de partie.
-// Base DOUBLÉE le 07/09 (13 -> 26), sur retour de test « mode Aventure
-// trop facile au début » — et confirmé par mesure : avant ce changement,
-// l'équipe du joueur était 2 à 4 fois plus puissante que l'adversaire à
-// TOUS les niveaux jusqu'au 30 (ratio adverse/joueur mesuré entre 0,22 et
-// 0,51). Le facteur 2 ramène ce ratio autour de 0,45-1,0, donc des
-// combats réellement disputés sans jamais devenir infaisables.
-//
-// La croissance (1,062/niveau) est inchangée : le déséquilibre était sur
-// le NIVEAU de départ, pas sur la pente.
-// Rééquilibrage PvE du 14/09 — voir CLICKER_ADVENTURE_STATE.md.
-//
-// La courbe suit désormais EXACTEMENT celle du joueur (`levelMultiplier`),
-// décalée de 3 niveaux : l'économie permet de financer une créature au
-// niveau de l'étape +3 à +5 (mesuré). Le rapport de puissance reste donc
-// constant par construction, et le ralentissement après le niveau 50 est
-// hérité sans avoir à l'écrire deux fois.
-//
-// L'ancienne courbe (26 × 1,062^n) était EXPONENTIELLE alors que le
-// joueur progresse LINÉAIREMENT : au niveau 40 l'adversaire avait pris
-// un facteur 2,4 d'avance.
-//
-// Base 44 choisie par simulation : au-delà (50, 56, 62) une équipe
-// faible qui ne monte pas ses créatures descend à 46-93% de victoires.
-function opponentPowerBudget(levelNumber) {
-  return 44 * levelMultiplier(levelNumber + 3);
-}
 
-// Budget PAR MEMBRE de l'équipe adverse — le budget ci-dessus reste la
-// courbe totale voulue pour l'équipe adverse à ce niveau (celle calibrée
-// à l'origine pour un seul adversaire, chapitre 1). Sans division, passer
-// à 2 puis 3 adversaires (chapitres 2 et 3) MULTIPLIAIT la puissance
-// totale par la taille d'équipe en plus de la courbe déjà croissante —
-// ratio puissance adverse/joueur mesuré : 1,0 aux niveaux 1-10, un saut à
-// 2,3 au niveau 15 rien qu'à l'arrivée du 2e adversaire, 4,9 au niveau 25
-// et 8,6 au niveau 40 avec le 3e. Diviser par la taille d'équipe courante
-// restaure la courbe totale d'origine : plus d'adversaires = plus de
-// cibles et de tours à jouer (vraie difficulté tactique), mais sans
-// spike de puissance brute à l'entrée de chaque chapitre.
-// ⚠️ Division par la RACINE de la taille d'équipe, pas par la taille.
-// Diviser par la taille entière faisait du CHAPITRE 1 le pic de
-// difficulté du jeu : le niveau 11 (2 adversaires) était DEUX FOIS plus
-// facile que le niveau 10 (mesuré : 45 de budget par adversaire au
-// niveau 10, 24 au niveau 11). L'exposant 0,3 ramène ce recul à 15%,
-// tout en évitant que la puissance TOTALE double d'un coup à l'entrée
-// d'un chapitre.
-function opponentPowerBudgetPerMember(levelNumber) {
-  return opponentPowerBudget(levelNumber) / Math.pow(opponentTeamSize(levelNumber), 0.3);
-}
 
-// Multiplicateur d'attaque des adversaires. Ne touche QUE l'attaque :
-// les PV restent pilotés par le budget de puissance.
-// Relevé à 5,0 (12/09, second passage — était 1,5 puis 2,5) : à 1,5 les adversaires ne faisaient
-// toujours quasi aucun dégât. La cause principale était ailleurs (ils ne
-// ripostaient que s'ils survivaient, voir CombatScreen), mais même
-// corrigée, leurs coups restaient trop faibles face aux PV du joueur.
 // ---- Affinités élémentaires (12/09) ----
 //
 // Les 26 créatures avaient déjà un `element` (Feu, Eau, Air, Terre,
@@ -1549,127 +1467,9 @@ export function starsForBattle(stats, opponentCount) {
   return stars;
 }
 
-// ⚠️ RAMENÉ DE 5,0 À 0,3 le 14/09. C'était la cause du blocage signalé
-// (« les créatures adverses tuent mes monstres en un coup »).
-//
-// Les dégâts adverses ne sortent PAS directement de cette stat : ils
-// valent `dégâts de la compétence × (ATQ actuelle / ATQ de base)`. Avec
-// le multiplicateur à 5, ce rapport atteignait 8 à 12, et les
-// compétences frappaient à 49/65/98/147 contre 38 PV au niveau 9 —
-// chaque coup tuait. Conséquence : 2 étoiles (gagner SANS perdre de
-// créature) devenait mécaniquement impossible, donc pas de progression.
-//
-// Le 5,0 avait été posé pour corriger « les adversaires ne font aucun
-// dégât », mais la vraie cause était un bug de riposte (corrigé depuis,
-// voir CombatScreen) ; le multiplicateur, lui, était resté.
-//
-// Mesuré après changement : 2,1 à 7,8 coups encaissés selon le niveau,
-// plus aucun one-shot, et l'autoclicker ne fait plus gagner que ~0,4
-// tour — l'équilibrage ne repose plus sur lui.
-export const OPPONENT_ATTACK_MULT = 0.3;
 
-export function statsForOpponentCreature(creature, levelNumber) {
-  const base = creature.baseHp != null
-    ? { hp: creature.baseHp, attack: creature.baseAttack, clickSpeed: creature.baseClickSpeed, endurance: creature.baseEndurance }
-    : RARITY_BASE_STATS[creature.rarity];
-  const growth = 1 + (levelNumber - 1) * 0.15;
 
-  // PV/ATQ viennent du budget de puissance PUR (garantit une croissance
-  // strictement monotone), réparti selon le PROFIL propre de la
-  // créature (une créature à dominante PV dans son propre roster reste
-  // relativement plus "tanky" qu'ATQ une fois remise à l'échelle) —
-  // garde la saveur de chaque créature sans dépendre de sa magnitude
-  // absolue, qui variait trop d'une créature à l'autre pour rester
-  // cohérente une fois le cycle des 26 créatures repris depuis le début.
-  const budget = opponentPowerBudgetPerMember(levelNumber);
-  const hpRatio = base.hp / Math.max(1, base.hp + base.attack);
 
-  return {
-    hp: Math.max(1, Math.round(budget * hpRatio)),
-    // ATQ relevée de 50% (12/09, demande de l'utilisateur). Appliquée
-    // ICI et non sur le budget : relever le budget aurait aussi gonflé
-    // les PV, allongeant les combats au lieu de les rendre plus mordants.
-    attack: Math.max(1, Math.round(budget * (1 - hpRatio) * OPPONENT_ATTACK_MULT)),
-    // Voir combatStatsForCreature : toujours dérivée de la rareté, jamais
-    // de la valeur Gemini (systématiquement 1, donc plate/inutile).
-    clickSpeed: RARITY_BASE_STATS[creature.rarity].clickSpeed,
-    endurance: Math.round(base.endurance * growth),
-  };
-}
-
-// Cas particulier : stats de l'UNIQUE adversaire renvoyé par
-// opponentForLevel (gardé pour compatibilité, les niveaux à équipe
-// adverse multiple utilisent statsForOpponentCreature directement).
-export function opponentStatsForLevel(levelNumber) {
-  return statsForOpponentCreature(opponentForLevel(levelNumber), levelNumber);
-}
-
-// Version typée (avec modificateur de rôle) pour une créature adverse
-// arbitraire — même règle que côté joueur : pas de multiplicateur de
-// type pour les créatures Gemini (déjà pris en compte par Gemini lui-même).
-// ---- Le calibrage de l'AVENTURE — sur le PARCOURS du joueur gratuit ----
-//
-// ⚠️ 09/10 (bis) : RECALCULÉE avec le NIVEAU MAXIMUM (niveau d'Exploration gagné + 5) respecté par le joueur simulé.
-// ⚠️ 09/10 : RECALCULÉE (même outil, mêmes cibles, 40 joueurs × 8 essais, 0 bloqué) après les ATTAQUES DE
-// SOUTIEN (toute l'équipe participe) : niveaux 1-10 INCHANGÉS (apprentissage, une créature seule) ; ensuite
-// ennemis ≈ ×1,25 à ×1,34 (médianes par Ascension) — une équipe frappe plus fort, la créature solo ne suffit plus.
-// ⚠️ 03/10 : RECALCULÉE (même outil, mêmes cibles) avec la JAUGE DE FRAPPE à
-// la place du défi de taps (joueur de référence : erreur typique 60 ms ; réglage
-// « références » : bien ±280 ms ×2,0, « parfait » divisé par 2 ; 150 joueurs ×
-// 10 essais : à 80, l'estimation des 10 % malchanceux reposait sur 8 joueurs et
-// creusait l'A3 à 3,8 / 10)
-// ⚠️ 03/10 (suite) : RECALCULÉE avec la riposte À TOUR DE RÔLE (choisirRiposteur avec
-// rang) — sans recalibrage, l'A5 perdait 1,3 victoire de moyenne. ; la puissance conseillée suit (jamais en baisse : maximum courant).
-// ⚠️ 26/09 : la table est CALCULÉE par `tools/calibrer-parcours.js` — une
-// population de joueurs gratuits simulés (vrais œufs avec la GARANTIE,
-// naissance à 80 %, Griffes réglage A à la 1re victoire seulement, runes,
-// énergie, filet de sécurité) avance niveau par niveau ; à chaque niveau,
-// le joueur un peu MALCHANCEUX (30e centile) gagne 6 fois sur 10 (décision
-// de l'auteur, option 2). Vérifié sur 60 autres joueurs : aucun bloqué sur
-// toute la partie, ≈ 6 victoires sur 10 par Ascension. ⚠️ Recalculée le
-// 26/09 sur le VRAI rythme lu dans les défis (227 niveaux : les victoires
-// demandées font avancer) — la 1re table supposait 140 niveaux. ⚠️ Puis
-// recalculée le 26/09 sur le VRAI comportement du jeu : créatures nées au
-// niveau 1 (la « naissance à 80 % » n'avait jamais été codée), quêtes qui
-// suivent le niveau d'Aventure, et un joueur qui DÉPENSE toutes ses Griffes
-// sans plafond (test réel de l'auteur). ⚠️ Puis (26/09, 2e test : Caraploof
-// perdait le niveau 1) : option A (les 10 % les plus malchanceux gagnent 6
-// fois sur 10) et CHAPITRE 1 = APPRENTISSAGE (niveaux 1 à 10 gagnables par
-// chaque 1re créature possible avec les Griffes d'un débutant), bouclier à
-// 20 % minimum. ⚠️ Puis (26/09, 3e test : bloqué au chapitre 2 niveau 3 avec
-// 2 créatures) : joueur de référence RÉALISTE — un œuf de retard (défis du
-// clicker), aucun pack contre pièces, 3 runes achetées par Ascension. L'ancienne table
-// (calée sur « 2 rares + 1 épique ») BLOQUAIT les joueurs gratuits aux
-// niveaux 2 et 7. Ne jamais la retoucher à la main : relancer l'outil.
-//
-// ---- Historique : le calibrage du 24/09 (étape 5b des sorts) ----------
-//
-// Décision de l'auteur : « au niveau N de l'Aventure, des créatures
-// d'environ niveau N pour gagner 2 combats sur 3 ». MESURÉ avant : un deck
-// de NIVEAU 2 gagnait 2 fois sur 3 au niveau 40 — les correctifs du 14/09
-// (budget par équipe, fin du one-shot) avaient trop corrigé.
-// Un multiplicateur par niveau sur les PV et l'attaque des adversaires,
-// CALCULÉ par `tools/calibrer-aventure.js` (simulation : pour chaque niveau,
-// le multiplicateur où le deck de référence de niveau N gagne 2 fois sur
-// 3, joué par `choixJoueur`). Ne jamais le retoucher à la main : relancer
-// l'outil. `auditAventureCalibree` le vérifie à chaque push.
-export const AVENTURE_MULTIPLICATEURS = [
-  0.37, 0.56, 0.62, 0.56, 1.13, 1.05, 0.83, 1, 0.6, 0.74, 1.25, 1.75, 1.75, 1.36, 1.23, 2.13, 1.38, 2.08,
-  1.64, 1.7, 2.05, 2.16, 2.27, 1.88, 2.66, 2.54, 2.68, 2.46, 3.09, 2.85, 2.52, 2.29, 3.17, 2.54, 3.14, 2.81,
-  2.91, 3.39, 3.75, 4.02, 3.6, 4.15, 2.96, 3.43, 4.13, 4.5, 4.82, 5.08, 5.79, 5.17, 5.63, 4.55, 4.97, 4.7,
-  6.86, 6.57, 5.64, 5.18, 6.89, 4.48, 6.14, 5.66, 6.08, 6.14, 7.69, 7.68, 6.76, 7.92, 5.59, 6.46, 7.48, 8.24,
-  7.9, 8.93, 10.08, 9.97, 11.58, 8.59, 8.59, 7.75, 10.55, 11.11, 8.09, 7.63, 10.85, 7.25, 10.53, 8.57, 8.43,
-  9.48, 10.78, 14.61, 13.35, 16.78, 9.81, 12.65, 16.25, 16.22, 15.99, 18.2, 22.84, 19.11, 22.47, 15.45,
-  15.93, 16.19, 21.91, 20.17, 17.65, 16.37, 22.84, 14.61, 18.8, 16.39, 17.43, 18.23, 20.35, 22.8, 20.91,
-  27.74, 14.58, 17.84, 24.85, 23.13, 24.54, 30.14, 29.12, 24.5, 30.8, 20.46, 20.83, 23.38, 27.69, 28.45,
-  23.5, 21.21, 30.96, 18.13, 25.77, 22.59, 22.55, 24.28, 29.92, 25.26, 23.67, 32.16, 21.64, 25.03, 32.68,
-  32.86, 36.94, 41.16, 42.21, 37.21, 43.99, 30.41, 31.07, 32.27, 40.42, 37.75, 32.27, 31.19, 42.59, 31.13,
-  37.95, 29.87, 29.55, 32.27, 41.38, 35.96, 31.75, 40.28, 24.5, 30.96, 34.87, 34.81, 40.71, 44.95, 45.04,
-  36.87, 47.54, 32.74, 32.39, 32.45, 42.06, 41.23, 33.88, 31.7, 45.94, 31.47, 39.2, 31.24, 29.49, 33.82,
-  42.74, 36.94, 31.98, 40.35, 25.26, 31.81, 35.83, 35.31, 40.64, 46.94, 46.27, 39.2, 46.86, 32.16, 33.7,
-  33.7, 42.36, 40.86, 34.75, 31.64, 45.61, 32.39, 40.35, 30.69, 30.25, 33.82, 43.36, 35.63, 32.21, 42.36,
-  24.41, 30.57, 35.89
-];
 // Puissance du joueur VISÉ (30e centile des joueurs gratuits simulés) à
 // chaque niveau : la « puissance conseillée » affichée. Même calcul que la
 // table ci-dessus (tools/calibrer-parcours.js), jamais en baisse.
@@ -1687,23 +1487,36 @@ export const PUISSANCE_CONSEILLEE = [
   3388, 3410, 3420, 3430, 3439, 3446, 3462, 3470, 3477, 3485, 3495, 3504, 3515, 3524, 3530, 3540, 3551, 3561,
   3565, 3580, 3586, 3596, 3627, 3636, 3656, 3667, 3675, 3682
 ];
-export function multiplicateurAventure(levelNumber) {
-  const t = AVENTURE_MULTIPLICATEURS;
-  if (!t || !t.length) return 1;
-  const i = Math.max(1, Math.floor(levelNumber || 1));
-  return t[Math.min(i, t.length) - 1];
-}
 
-// `k` : le multiplicateur (par défaut celui du niveau) ; l'outil de
-// calibrage passe le sien pendant sa recherche.
-export function statsForOpponentCreatureTyped(creature, levelNumber, k = multiplicateurAventure(levelNumber)) {
-  const base = statsForOpponentCreature(creature, levelNumber);
-  const typeMod = creature.baseHp != null ? { hpMult: 1, attackMult: 1 } : (MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant);
+// ---- NIVEAUX RÉELS (10/10, décision de l'auteur) : les ennemis sont de VRAIES créatures ----
+// Chaque membre adverse = { creature, niveau, evolutionTier } ; ses stats sont EXACTEMENT celles
+// d'une créature du joueur de même espèce, niveau et évolution (combatStatsForCreatureTyped).
+// Niveau = numéro de l'étape ; boss (dernière étape d'un chapitre) : BONUS_NIVEAU_BOSS de plus.
+// Plus AUCUN multiplicateur caché (l'ancienne table AVENTURE_MULTIPLICATEURS de 227 valeurs, calculée
+// par simulation sur un « budget de force » sans rareté, est supprimée) : la difficulté vient de ce
+// que l'ennemi MONTRE (nombre, rareté, évolution), choisi étape par étape par l'outil de calibrage.
+// `k` reste un facteur OPTIONNEL (1 par défaut) : mesures (puissance exacte) et outils seulement.
+export const BONUS_NIVEAU_BOSS = 3;
+export function estEtapeBoss(levelNumber) {
+  return levelIndexInChapter(Math.max(1, Math.floor(levelNumber || 1))) === LEVELS_PER_CHAPTER;
+}
+export function niveauEnnemi(levelNumber) {
+  const n = Math.max(1, Math.floor(levelNumber || 1));
+  return n + (estEtapeBoss(n) ? BONUS_NIVEAU_BOSS : 0);
+}
+export function equipeEnnemie(levelNumber) {
+  const niveau = niveauEnnemi(levelNumber);
+  return opponentTeamForLevel(levelNumber).map((creature) => ({ creature, niveau, evolutionTier: evoPourNiveau(niveau) }));
+}
+export function statsForOpponentCreatureTyped(creature, levelNumber, k = 1) {
+  const m = equipeEnnemie(levelNumber).find((x) => x.creature && creature && x.creature.id === creature.id);
+  const niveau = m ? m.niveau : Math.max(1, Math.floor(levelNumber || 1));
+  const s = combatStatsForCreatureTyped(creature, niveau, m ? m.evolutionTier : 0, []);
   return {
-    hp: Math.max(1, Math.round(base.hp * typeMod.hpMult * k)),
-    attack: Math.max(1, Math.round(base.attack * typeMod.attackMult * k)),
-    clickSpeed: base.clickSpeed,
-    endurance: base.endurance,
+    hp: Math.max(1, Math.round(s.hp * k)),
+    attack: Math.max(1, Math.round(s.attack * k)),
+    clickSpeed: s.clickSpeed,
+    endurance: s.endurance,
   };
 }
 
@@ -2028,11 +1841,6 @@ export function butinBonus(allEquippedRunes) {
   return Math.min(BUTIN_MAX_BONUS, b);
 }
 
-// Même chose pour l'adversaire IA (stats déjà mises à l'échelle par
-// niveau via opponentStatsForLevel, puis modifiées par le type).
-export function opponentStatsForLevelTyped(levelNumber) {
-  return statsForOpponentCreatureTyped(opponentForLevel(levelNumber), levelNumber);
-}
 
 // ════════════════════════════════════════════════════════════════════
 //  PUISSANCE EXACTE (26/09, demande de l'auteur : « pixel perfect »)
@@ -2126,7 +1934,7 @@ export function adversairesAventure(niveau, { k = null, filetBaisse = 0, elixirA
 export function puissanceAventure(membres, niveau, { filetBaisse = 0, elixirActif = false } = {}) {
   const joueurs = (membres || []).filter((m) => m && m.creature).map((m) => ({ creature: m.creature, stats: statsDuMembre(m) }));
   if (!joueurs.length) return { puissance: 0, victoires: 0, couleur: 'rouge' };
-  const kNiveau = multiplicateurAventure(niveau);
+  const kNiveau = 1; // niveaux réels (10/10) : plus de multiplicateur caché
   const r = mesurerEquipe((x, alea, politique) => simulerCombat(joueurs,
     adversairesAventure(niveau, { k: kNiveau * x, filetBaisse, elixirActif }), { alea, politique }).gagne,
   { cible: PUISSANCE_CIBLE_AVENTURE, combats: PUISSANCE_COMBATS, graine: niveau * 7919 + 17 });
@@ -2144,7 +1952,7 @@ export function puissanceAventure(membres, niveau, { filetBaisse = 0, elixirActi
 export function victoiresAuNiveau(membres, niveau, filetBaisse = 0) {
   const joueurs = (membres || []).filter((m) => m && m.creature).map((m) => ({ creature: m.creature, stats: statsDuMembre(m) }));
   if (!joueurs.length) return 0;
-  const kNiveau = multiplicateurAventure(niveau);
+  const kNiveau = 1; // niveaux réels (10/10) : plus de multiplicateur caché
   let meilleur = 0;
   for (const politique of [choixJoueur, choixSansSorts]) {
     const alea = aleaGraine(niveau * 7919 + 17);

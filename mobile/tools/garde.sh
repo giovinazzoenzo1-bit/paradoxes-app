@@ -39,6 +39,11 @@ case "$1" in
       *'#'*) ;;
       *) if [ "$proprio" != "$2" ]; then set -- "$1" "$2#$(od -An -N2 -tx1 /dev/urandom | tr -d ' \n')"; fi ;;
     esac
+    # 10/10 : travail sur une BRANCHE (refonte « niveaux réels ») : « GitHub a avancé » se juge
+    # sur la MÊME branche chez GitHub, sinon le garde refusait toujours (HEAD ≠ main par nature).
+    ref=origin/main
+    b=$(git branch --show-current 2>/dev/null)
+    if [ -n "$b" ] && [ "$b" != main ] && git rev-parse -q --verify "origin/$b" >/dev/null; then ref="origin/$b"; fi
     if [ "$1" = prendre ] && [ -n "$proprio" ] && [ "$proprio" != "$2" ]; then
       age=$(( $(date +%s) - $(stat -c %Y "$V") ))
       if [ "$age" -lt 600 ]; then
@@ -46,12 +51,12 @@ case "$1" in
       fi
     fi
     if [ "$1" = forcer ]; then
-      echo "FORCÉ : $(git status --short | wc -l) fichier(s) modifié(s) · local $(git log -1 --format=%h) · GitHub $(git log -1 --format=%h origin/main)"
+      echo "FORCÉ : $(git status --short | wc -l) fichier(s) modifié(s) · local $(git log -1 --format=%h) · GitHub $(git log -1 --format=%h $ref)"
     elif [ "$proprio" != "$2" ]; then
       n=$(git status --short | wc -l)
       if [ "$n" -gt 0 ]; then echo "STOP : $n fichier(s) modifié(s) par une copie coupée — les relire avant tout"; exit 1; fi
-      if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
-        echo "STOP : local $(git log -1 --format=%h) ≠ GitHub $(git log -1 --format=%h origin/main) — lire le commit, puis git pull --ff-only"; exit 1
+      if [ "$(git rev-parse HEAD)" != "$(git rev-parse $ref)" ]; then
+        echo "STOP : local $(git log -1 --format=%h) ≠ GitHub $(git log -1 --format=%h $ref) — lire le commit, puis git pull --ff-only"; exit 1
       fi
     fi
     echo "$2" > "$V"; echo "OK : verrou « $2 » — réutilise EXACTEMENT cette étiquette" ;;

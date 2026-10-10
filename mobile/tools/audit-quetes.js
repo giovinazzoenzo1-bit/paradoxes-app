@@ -3741,7 +3741,7 @@ function auditApprentissage() {
   const fautes = [];
   for (let l = 1; l <= CP.APPRENTISSAGE.niveaux; l++) {
     const cible = (l === 1 ? CP.APPRENTISSAGE.cibleNiveau1 : CP.APPRENTISSAGE.cible) - 0.1;
-    const r = CP.tauxDebutant(l, K.AVENTURE_MULTIPLICATEURS[l - 1], 100);
+    const r = CP.tauxDebutant(l, 1, 100) /* niveaux réels (10/10) : plus de multiplicateur caché */;
     if (r.pire < cible) fautes.push({ niveau: l, creature: r.qui, victoires: Math.round(r.pire * 100) + ' %', attendu: 'au moins ' + Math.round(cible * 100) + ' %' });
   }
   return fautes;

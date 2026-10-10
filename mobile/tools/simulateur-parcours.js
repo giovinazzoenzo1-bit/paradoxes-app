@@ -170,7 +170,7 @@ function nouveauJoueur(graine, R = REGLAGES) {
 }
 
 // Le parcours complet d'un joueur, avec la table d'ennemis du jeu (ou `kDe`).
-function parcoursJoueur(graine, R = REGLAGES, kDe = (l) => K.multiplicateurAventure(l)) {
+function parcoursJoueur(graine, R = REGLAGES, kDe = () => 1 /* niveaux réels (10/10) : plus de multiplicateur caché */) {
   const j = nouveauJoueur(graine, R);
   for (let a = 0; a < 6 && !j.bloque; a++) {
     const s = j.nouvelleAsc(a);
