@@ -4955,6 +4955,17 @@ function auditGardienGriffes() {
     if (!plan || !plan.bloqueParMax || (plan.plus || []).some((x) => x.plus > 1)) pb.push('plan du Gardien : il propose des niveaux au-delà du niveau max, ou ne dit pas qu\'il est bloqué');
     void fort;
   }
+  // ── (10/10) Le Gardien de l'ŒUF 2 est calé lui aussi : son « ancien Gardien » non calé était devenu imbattable
+  // avec les niveaux réels (694 PV / 158 d'attaque contre Ombrillon niv. 15 : 0 % MESURÉ sur le téléphone de l'auteur).
+  if (!/  if \(eggNumber < 2\) return null;/.test(c) || !/if \(eggNumber < 2 \|\| !egg \|\| !egg\.gardienPhoto\) return null;/.test(c)) pb.push("le Gardien de l'œuf 2 n'est plus calé sur le deck (il redevient imbattable)");
+  {
+    const I2 = load('incubatorLogic'); const L2 = load('clickerLogic');
+    const om = [{ creature: C.CREATURES.find((x) => x.id === 'ombrillon'), ownedLevel: 15, evolutionTier: 0, equippedRunes: [] }];
+    const apres = K.deckApresEffortEquitable(om, K.primesProchainsNiveaux(10, 3), L2.niveauMaxCreature(13)).membres;
+    const base2 = K.guardianStats(I2.guardianLevelForEgg(2), I2.GUARDIAN_BASE_LEVEL, 2);
+    const ch = K.chanceFaceAuGardien(apres, K.guardianStatsCalibrees(base2, K.calibrerGardien(apres, base2, { marge: 1 })));
+    if (ch < 0.6) pb.push(`Gardien de l'œuf 2 calé : seulement ${Math.round(100 * ch)} % après l'effort prévu (cas de l'auteur, Ombrillon niv. 15)`);
+  }
   if (!/plafondGardienRef\.current = niveauMaxCreature\(\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0\) \+ 3\);/.test(c)) pb.push("la photo ne fige plus le niveau max APRÈS les 3 prochaines étapes");
   if (!/planPourChance\(membresActuels, g0, 0\.8, 40, niveauMaxCreature\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0\)\)/.test(c)) pb.push('le plan du Gardien ne respecte plus le niveau max actuel');
   if (!/🔒 Niveau max atteint : gagne des étapes d'Exploration pour débloquer des niveaux\./.test(c)) pb.push("le menu du Gardien ne dit plus qu'il faut gagner des étapes quand le niveau max bloque");

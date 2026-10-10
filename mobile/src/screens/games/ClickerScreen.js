@@ -798,7 +798,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const t = setTimeout(() => {
       const eggNumber = owned.length + 1;
       const mesurer = (egg) => {
-        if (eggNumber < 3 || !egg || !egg.gardienPhoto) return null;
+        // 10/10 : l'œuf 2 aussi (son Gardien n'était pas calé : 0 % mesuré après la refonte « niveaux réels »).
+        if (eggNumber < 2 || !egg || !egg.gardienPhoto) return null;
         const g = Math.round(egg.gardienPhoto.puissance * margeGardien(egg.gardienPhoto.puissance));
         const base = guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber);
         const cal = calibrageMemo(egg, owned, eggNumber, deck);
@@ -2146,7 +2147,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const oeufEnJeu = source === 'main' ? mainEggRef.current : incubatingEgg;
     setGuardianFight({ source, level: guardianLevelForEgg(eggNumber), eggNumber,
       calibrage: calibrageMemo(oeufEnJeu, ownedRef.current, eggNumber, deckRef.current),
-      puissanceGardien: oeufEnJeu && oeufEnJeu.gardienPhoto && eggNumber >= 3 ? gardienAffiche(oeufEnJeu, ascensionCountRef.current) : null });
+      puissanceGardien: oeufEnJeu && oeufEnJeu.gardienPhoto && eggNumber >= 2 ? gardienAffiche(oeufEnJeu, ascensionCountRef.current) : null });
   };
 
   // Fin du combat. Victoire : l'œuf éclot. Défaite : l'œuf n'est JAMAIS
@@ -5929,7 +5930,11 @@ function membresDeLaPhoto(photo) {
 // Gardien à chaque essai (tirages à graine). Œuf 2 : l'ancien Gardien,
 // « parfait » pour l'auteur. Jamais d'exception : null = ancien Gardien.
 function calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascension = 0) {
-  if (eggNumber < 3) return null;
+  // ⚠️ 10/10 : l'œuf 2 est calé lui aussi. Son « ancien Gardien » (non calé, « parfait » au 24/09) tirait ses stats
+  // de la formule des ennemis, adoucie alors par AVENTURE_MULTIPLICATEURS (×0,62 à l'étape 3) ; depuis les niveaux
+  // réels (créature épique, stats ×10, sans multiplicateur) : 694 PV / 158 d'attaque contre Ombrillon niv. 15
+  // (198 / 59) → 0 % MESURÉ, œuf bloqué. Calé : 58 % au chiffre de la photo, 76 % après l'effort prévu.
+  if (eggNumber < 2) return null;
   try {
     const photo = (egg && egg.gardienPhoto) || photoGardien(ownedList, deckIds, ascension);
     const membres = membresDeLaPhoto(photo);

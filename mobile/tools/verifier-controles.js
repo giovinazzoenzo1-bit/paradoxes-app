@@ -258,6 +258,8 @@ const SABOTAGES = [
     remplace('  if (photo.gardien != null) return photo.gardien;\n', '')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "budget du Gardien mis à zéro : il ne demanderait plus rien",
     remplace('budgetGardienRef.current = primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * primesProchainsNiveaux(')],
+  ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "Gardien de l'œuf 2 de nouveau NON calé (0 % mesuré chez l'auteur)",
+    remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
   // 10/10 : la règle de l'auteur sur la jauge (fin des coups critiques) — retour du ×2,5, ou sort qui ignore le tap.
   ['auditJaugeFrappe', F.combat, "retour des coups critiques : parfait ×2,5 (même raté frappe à 100 %)",
     remplace('export const JAUGE_MULT = { parfait: 1.0, bien: 0.5, rate: 0.25, absent: 0.25 };', 'export const JAUGE_MULT = { parfait: 2.5, bien: 2.0, rate: 1.0, absent: 0.5 };')],

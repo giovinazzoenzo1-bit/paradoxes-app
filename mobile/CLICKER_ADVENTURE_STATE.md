@@ -3019,3 +3019,22 @@ CONTRÔLE FINAL (3 populations de 40) — joueur médian sur 10 : A0 5,8-7,6 · 
 A4 6,4-8,0 · A5 7,0-8,4 (≈ 6,7 en moyenne), 10e rang 2,1-5,2, 0 bloqué. verifier-defis 103/103, verifier-controles
 136 prouvés (+2 : retour du ×2,5 ; effet de sort qui ignore le tap), taps 20/20, 67 fichiers compilent.
 SUITE DEMANDÉE PAR L'AUTEUR : reprendre le calcul « Griffes de victoire seulement », l'optimiser et l'appliquer.
+
+
+## 10/10 — BUG BLOQUANT : Gardien de l'ŒUF 2 imbattable (corrigé, publié)
+
+TEST de l'auteur (16 combats envoyés) : 2 défaites contre le Gardien de l'œuf 2 avec Ombrillon niv. 15. CAUSE : seul
+l'œuf 2 gardait « l'ancien Gardien » NON calé (calibrageDuCombat : eggNumber < 3 → null) ; ses stats venaient de la
+formule des ennemis, adoucie jusqu'ici par AVENTURE_MULTIPLICATEURS (×0,62 à l'étape 3). Avec les niveaux réels
+(créature épique, stats ×10, plus de multiplicateur) : 694 PV / 158 d'attaque contre 198 / 59 → 0 % MESURÉ, et le
+niveau max empêchait de monter assez → œuf BLOQUÉ. CORRIGÉ : l'œuf 2 est calé comme les suivants (3 endroits :
+calibrage, chance du menu, chiffre du résultat). MESURÉ : 58 % au niveau de la photo, 76 % après l'effort prévu.
+Contrôle (auditGardienGriffes : câblage + cas de l'auteur ≥ 60 %) + sabotage → 137 prouvés.
+⚠️ LEÇON : une valeur « parfaite » non calibrée (ici l'ancien Gardien) dépend en silence de toutes les formules
+qu'elle utilise. Quand une formule change (stats, multiplicateurs), chercher TOUS ses utilisateurs non calibrés.
+RETOURS DE L'AUTEUR EN ATTENTE DE DÉCISION (même envoi) : (1) chapitre 1 = presque que Glyphon (et Luxorbe) : la
+règle d'apprentissage ne laisse passer que 2 espèces depuis la fin des coups critiques ; (2) « l'ultime est abusé » :
+MESURÉ ultime = ×2,0 à ×3,7 l'attaque normale (médiane ×2,2 ; Ombrillon ×3,7), arrive au 4e tour, Ombrillon niv. 1
+à l'étape 2 = 96 % des PV ennemis d'un coup ; (3) il n'aime pas être bloqué par le niveau max. MESURÉ sans niveau
+max avec l'économie actuelle : équipe +14 niveaux au-dessus de l'étape à l'A1, +87 à +208 aux A2-A5, 10/10 → le
+niveau max ne peut partir qu'avec une économie où le coût des niveaux suit la croissance des Griffes.
