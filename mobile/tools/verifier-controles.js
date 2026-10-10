@@ -220,6 +220,8 @@ const SABOTAGES = [
     // Par MOTIF : la 3e entrée de la table des ennemis, QUELLE QU'ELLE SOIT (10/10 : la table remplace
     // l'ancien multiplicateur, ce sabotage-là visait sa 3e valeur ×5).
     (src) => src.replace(/(export const ENNEMIS_ETAPES = \[\n\s*'[^']*', '[^']*', )'[^']*',/, (m, debut) => debut + "'arcanis',")],
+  ['auditApprentissage', F.combat, "chapitre 1 de nouveau adouci (×0,65) : la créature niveau 1 ne galère plus à l'étape 2",
+    remplace('export const FORCE_ENNEMI = { 1: 0.9, 2: 1.2, 3: 1.15 };', 'export const FORCE_ENNEMI = { 1: 0.65, 2: 1.2, 3: 1.15 };')],
   ['auditFilet', F.combat, "le filet redevient lent (aide après 5 défaites au lieu de 3)",
     remplace("  { defaites: 3, baisse: 0.20 },", "  { defaites: 5, baisse: 0.20 },")],
   ['auditVerrouAventure', F.aventure, "le lancement du combat ne vérifie plus le verrou (on joue le niveau 26 en Ascension 0)",

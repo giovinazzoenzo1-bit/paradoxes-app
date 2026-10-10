@@ -1642,9 +1642,12 @@ export function equipeEnnemie(levelNumber) {
 // MESURÉ (40 parcours) : ×0,8 seul → ta créature niveau N gagne l'étape N ≈ 8 fois sur 10 ; à 2 et 3 contre 2 et 3, tes
 // coups de soutien te donnaient 100 % → ×1,2 et ×1,15. Résultat (1er essai du joueur médian) : 82 % (étapes 11-20),
 // 76 à 95 % ensuite, équipe à ±3 niveaux de l'étape, 0 bloqué.
-// Chapitre 1 (1 ennemi) : ×0,65 — apprentissage, CHAQUE 1re créature possible doit gagner (décision du 26/09). MESURÉ :
-// à ×0,8, Pyrosile débutant tombait à 43 % contre Caraploof (eau contre feu) ; à ×0,65, le pire débutant ≥ 89 % partout.
-export const FORCE_ENNEMI = { 1: 0.65, 2: 1.2, 3: 1.15 };
+// Chapitre 1 (1 ennemi) : ×0,9 — DÉCISION DE L'AUTEUR (10/10) : « plus dur, galère dès l'étape 2 ». MESURÉ (créature
+// commune typique) : niveau 1 → étape 1 85 %, étape 2 36 % ; avec les 40 Griffes du jour 1 dépensées : étape 2 97 %,
+// étape 5 73 %, étape 10 99 %. ×1,0 : trop dur même avec les 40 Griffes (étape 5 : 59 %). (×0,65, version « sûre » du
+// 10/10, refusée : niveau 1 → étape 2 encore 99 %.) Prix assumé : une créature de départ contre l'élément qui la contre
+// galère beaucoup (Pyrosile 18 % à l'étape 2 avec ses 40 Griffes) et passe par le filet.
+export const FORCE_ENNEMI = { 1: 0.9, 2: 1.2, 3: 1.15 };
 const FORCES_MOYENNES = new Map();
 function forceMoyenne(rarete, niveau, evo) {
   const cle = rarete + '|' + niveau + '|' + evo;

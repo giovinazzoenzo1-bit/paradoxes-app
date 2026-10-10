@@ -58,7 +58,7 @@ const CONTROLES = [
   ['auditDefisAventure', "défis d'Aventure : +5 par défi, +6 juste après « Gagne 4 combats » ; aucune cible doublée"],
   ['auditValidation', "un défi réussi se VALIDE d'un appui (panneau vert) ; sauvegardé, remis à zéro par œuf, anciennes parties gardées"],
   ['auditQuetesNiveau', "les quêtes du jour et de la semaine suivent le niveau d'Aventure (versement et affichage)"],
-  ['auditApprentissage', "chapitre 1 = apprentissage : chaque 1re créature possible gagne les niveaux 1 à 10 avec les Griffes d'un débutant"],
+  ['auditApprentissage', "chapitre 1 (décision de l'auteur du 10/10) : la créature niveau 1 bat l'étape 1 mais galère à l'étape 2 ; avec ses 40 Griffes, la créature typique gagne chaque étape ≥ 7 fois sur 10"],
   ['auditFilet', 'filet de sécurité rapide : aide après 3, 5 et 7 défaites de suite (−20, −40, −60 %)'],
   ['auditVerrouAventure', "l'Aventure s'arrête à la fin de l'Ascension, sans jamais bloquer un défi (niveaux, 3 étoiles) ; posé aux 3 entrées"],
   ['auditBoutonAscension', "l'Ascension ne s'achète que quand son défi est en cours et pas encore réussi"],

@@ -3746,14 +3746,31 @@ module.exports.auditQuetesNiveau = auditQuetesNiveau;
 // niveau qu'un débutant atteint avec ses seules Griffes de victoires, doit
 // gagner les niveaux 1 à 10 (9/10 au niveau 1, 8/10 ensuite ; marge de 10
 // points pour le hasard), avec la table DU JEU.
+// ⚠️ 10/10 — DÉCISION DE L'AUTEUR : chapitre 1 « plus dur, galère dès l'étape 2 ». Avant (26/09) : CHAQUE 1re créature
+// possible gagnait 8 fois sur 10 au niveau d'un débutant. Désormais on vérifie SON EXEMPLE sur la créature typique
+// (médiane des communes, hasard fixé) : niveau 1 → bat l'étape 1 (≥ 70 %) mais galère à l'étape 2 (≤ 60 %) ; avec les
+// 40 Griffes du jour 1 et ses primes, elle gagne chaque étape du chapitre 1 au moins 7 fois sur 10. Les malchanceux
+// (élément qui les contre : MESURÉ Pyrosile 18 % à l'étape 2) passent par le filet ; « personne bloqué » : auditParcours.
 function auditApprentissage() {
   const CP = require('./calibrer-parcours.js'); // chargé ici : évite la boucle de require
   const K = load('combatLogic');
   const fautes = [];
+  const communes = C.CREATURES.filter((c) => c.rarity === 'commun');
+  const med = (v) => v.slice().sort((a, b) => a - b)[Math.floor(v.length / 2)];
+  const taux = (niveauDe, l) => med(communes.map((moi, ci) => {
+    let s = (l * 7919 + ci * 104729) >>> 0;
+    const alea = () => { s = (s * 1103515245 + 12345) >>> 0; return s / 4294967296; };
+    const E = K.equipeEnnemie(l).map((m) => ({ creature: m.creature, stats: K.statsForOpponentCreatureTyped(m.creature, l) }));
+    const J = [{ creature: moi, stats: K.combatStatsForCreatureTyped(moi, niveauDe(moi), 0, []) }];
+    let g = 0; for (let e = 0; e < 100; e++) if (K.simulerCombat(J, E, { alea, politique: K.choixJoueur }).gagne) g++;
+    return g / 100;
+  }));
+  const e1 = taux(() => 1, 1), e2 = taux(() => 1, 2);
+  if (e1 < 0.7) fautes.push({ probleme: `créature typique niveau 1 : ${Math.round(100 * e1)} % à l'étape 1 (elle doit la battre)` });
+  if (e2 > 0.6) fautes.push({ probleme: `créature typique niveau 1 : ${Math.round(100 * e2)} % à l'étape 2 (elle doit galérer, décision de l'auteur)` });
   for (let l = 1; l <= CP.APPRENTISSAGE.niveaux; l++) {
-    const cible = (l === 1 ? CP.APPRENTISSAGE.cibleNiveau1 : CP.APPRENTISSAGE.cible) - 0.1;
-    const r = CP.tauxDebutant(l, 1, 100) /* niveaux réels (10/10) : plus de multiplicateur caché */;
-    if (r.pire < cible) fautes.push({ niveau: l, creature: r.qui, victoires: Math.round(r.pire * 100) + ' %', attendu: 'au moins ' + Math.round(cible * 100) + ' %' });
+    const v = taux((moi) => CP.niveauDebutant(l, moi), l);
+    if (v < 0.7) fautes.push({ niveau: l, victoires: Math.round(v * 100) + ' %', attendu: 'au moins 70 % (créature typique, 40 Griffes du jour 1 et primes dépensées)' });
   }
   return fautes;
 }

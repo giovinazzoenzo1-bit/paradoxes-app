@@ -3097,3 +3097,15 @@ verifier-defis 103/103, verifier-controles 140 prouvés, taps 20/20, 3 populatio
 0 bloqué). Exemple de l'auteur avec ×0,65 au chapitre 1 : commune niv. 1 → étape 1 100 %, étape 2 99 %, étape 5 65 %
 (avec ×0,8 : 96 / 82 / 21 %, mais Pyrosile débutant 43 % à l'étape 2). QUESTION POSÉE à l'auteur : garder ×0,65
 (personne coincé au début) ou revenir à ×0,8 (plus proche de son exemple « galère au 2e combat »).
+
+
+## 10/10 — CHAPITRE 1 « PLUS DUR, GALÈRE DÈS L'ÉTAPE 2 » (décision de l'auteur, publié)
+
+L'auteur a refusé la version « sûre » (×0,65) et choisi « galère dès l'étape 2 ». FORCE_ENNEMI[1] = 0,9 (MESURÉ, créature
+commune typique : niveau 1 → étape 1 85 %, étape 2 36 % ; 40 Griffes dépensées : étape 2 97 %, étape 5 73 %, étape 10
+99 % ; ×1,0 trop dur même avec les 40 Griffes). Prix assumé : créature de départ contre l'élément qui la contre → Pyrosile
+18 % à l'étape 2, Caraploof 31 % à l'étape 5 (au niveau d'un débutant) — ils passent par le filet.
+auditApprentissage RÉÉCRIT sur SON exemple (hasard fixé) : niveau 1 bat l'étape 1 (≥ 70 %) et galère à l'étape 2 (≤ 60 %) ;
+créature typique au niveau d'un débutant ≥ 70 % à chaque étape du chapitre 1. (Avant, 26/09 : CHAQUE 1re créature ≥ 80 %.)
+Sabotage « chapitre 1 de nouveau adouci (×0,65) » → 141 prouvés ; verifier-defis 103/103 ; taps 20/20.
+SUITE DEMANDÉE PAR L'AUTEUR : le calcul « Griffes de victoire seulement ».
