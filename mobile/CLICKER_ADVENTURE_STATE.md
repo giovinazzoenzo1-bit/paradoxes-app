@@ -3038,3 +3038,23 @@ MESURÉ ultime = ×2,0 à ×3,7 l'attaque normale (médiane ×2,2 ; Ombrillon ×
 à l'étape 2 = 96 % des PV ennemis d'un coup ; (3) il n'aime pas être bloqué par le niveau max. MESURÉ sans niveau
 max avec l'économie actuelle : équipe +14 niveaux au-dessus de l'étape à l'A1, +87 à +208 aux A2-A5, 10/10 → le
 niveau max ne peut partir qu'avec une économie où le coût des niveaux suit la croissance des Griffes.
+
+
+## 10/10 — PLUS DE NIVEAU MAX, LES GRIFFES FREINENT + ULTIME ×2 (décisions de l'auteur, branche `griffes-libres`, EN COURS)
+
+DÉCISIONS : ultime plafonné à ×2 la meilleure attaque normale, pour les deux camps (ULTIME_MAX, scaledSkillDamage) ;
+plus AUCUN niveau max (niveauMaxCreature → Infinity, NIVEAU_MAX_MARGE = Infinity : tous les appelants deviennent sans
+effet) ; « seules les Griffes freinent ».
+MESURÉ avant de choisir : sources de Griffes (40 parcours) — primes de 1re victoire 65 à 82 % selon l'Ascension,
+quêtes 11-27 %, succès et Ascension ≈ 0 après l'A0 ; total A0 971 · A1 6 937 · A2 40 729 · A3 60 470 · A4 64 432 ·
+A5 76 626. Sans niveau max et avec l'ANCIEN coût : équipe +87 à +208 niveaux au-dessus de l'étape (A2-A5), 10/10.
+FAIT (branche) : primeDeVictoire (clickerLogic ; combatLogic.griffesReward l'appelle) ; levelUpCost = rareté ×
+max(ancienne courbe, COUT_NIVEAU_PART (0,15) × prime de l'étape « niveau − 5 ») ; ultime ×2 (Ombrillon 121 → 66) ;
+joueur simulé : une créature du banc PLUS RARE que la moins rare de l'équipe reçoit un niveau sur deux (sans niveau max,
+elle n'était jamais montée). Coûts (commune / rare / mythique) : niv. 10 : 6/10/40 · niv. 70 : 161/257/1 075 ·
+niv. 230 : 803/1 285/5 380 (avec ½ prime, avant le choix de 15 %). 40 Griffes du départ : Ventis 1 → 11.
+⚠️ Essai écarté : naissance à 90 % du niveau de la meilleure créature → équipe 8 à 45 niveaux SOUS l'étape (une
+créature plus rare coûte ×1,3 à ×6,7 par niveau). Le « niveau » seul ne mesure plus la force quand la rareté change.
+RESTE : packs de Griffes proportionnels à la prime d'étape ; chapitre 1 varié (plus que Glyphon / Luxorbe) ;
+recalibrage complet ; contrôles (auditNiveauMax → « aucun niveau max », auditPacks, Gardien…) ; publication ; puis
+le calcul « Griffes de victoire seulement » demandé par l'auteur.

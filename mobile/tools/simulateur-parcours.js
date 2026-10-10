@@ -126,7 +126,16 @@ function nouveauJoueur(graine, R = REGLAGES) {
       // banc : elle finira par dépasser un membre de l'équipe et y entrer (10/10).
       const trio = j.trio();
       const banc = possedees.filter((p) => !trio.includes(p)).sort((x, y) => RANG.indexOf(y.c.rarity) - RANG.indexOf(x.c.rarity) || y.niv - x.niv);
-      const t = trio.filter((x) => x.niv < plafond).sort((x, y) => x.niv - y.niv)[0] || banc.filter((x) => x.niv < plafond)[0];
+      // ⚠️ 10/10 (plus de niveau max) : sans plafond, toutes les Griffes allaient à l'équipe en place et une nouvelle
+      // créature PLUS RARE, née niveau 1, n'était jamais montée (un vrai joueur monte sa nouvelle mythique). Règle :
+      // tant qu'une créature du banc est plus rare que la moins rare de l'équipe, elle reçoit UN NIVEAU SUR DEUX ;
+      // elle entre dans l'équipe dès qu'elle devient plus forte (j.trio trie par force).
+      const rangDe = (p) => RANG.indexOf(p.c.rarity);
+      const moinsRare = Math.min(...trio.map(rangDe));
+      const rattrape = banc.find((p) => rangDe(p) > moinsRare && p.niv < plafond);
+      const membre = trio.filter((x) => x.niv < plafond).sort((x, y) => x.niv - y.niv)[0];
+      j.alterne = !j.alterne;
+      const t = rattrape && (j.alterne || !membre) ? rattrape : (membre || banc.filter((x) => x.niv < plafond)[0]);
       // ⚠️ 26/09 : AUCUN plafond (le jeu n'en a pas) — le vrai joueur dépense
       // tout (test de l'auteur : Terracroc niveau 59 au niveau 26). L'ancien
       // plafond « niveau d'Aventure + 1 » cachait 19 000 Griffes non dépensées.

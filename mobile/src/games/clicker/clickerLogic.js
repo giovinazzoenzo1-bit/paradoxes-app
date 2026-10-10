@@ -435,10 +435,36 @@ export const RARITY_COST_FACTOR = { commun: 1, peu_commun: 1.3, rare: 1.6, epiqu
 // ~1 000 Griffes). Une créature ne dépasse pas « niveau d'Exploration le plus haut GAGNÉ + NIVEAU_MAX_MARGE ».
 // MESURÉ : au niveau 25, une créature seule au plafond perd (0 %), une équipe au plafond gagne (100 %).
 // Une créature déjà au-dessus le reste (rien n'est retiré) : elle attend que la progression la rattrape.
-export const NIVEAU_MAX_MARGE = 5;
+// ⚠️ 10/10 — PLUS DE NIVEAU MAX (décision de l'auteur : « je n'aime pas être bloqué en niveau » ; « seules les
+// Griffes freinent »). La fonction reste (Infinity) pour que tous ses appelants — montée de niveau, fiche, défis,
+// Gardien, simulateurs — deviennent sans effet sans rien casser. Le frein, c'est désormais le COÛT d'un niveau
+// (levelUpCost, ci-dessous), qui suit la prime de victoire de l'étape. MESURÉ sans niveau max avec l'ancien coût :
+// équipe 87 à 208 niveaux au-dessus de l'étape aux Ascensions 2 à 5, 10 victoires sur 10.
+export const NIVEAU_MAX_MARGE = Infinity;
 export function niveauMaxCreature(niveauGagne) {
-  return Math.max(0, Math.floor(Number(niveauGagne) || 0)) + NIVEAU_MAX_MARGE;
+  return Infinity;
 }
+
+// ---- Prime de 1re victoire d'une étape (déplacée ici le 10/10 depuis combatLogic.griffesReward, qui l'appelle) ----
+// Réglage A (validé par l'auteur le 26/09) : jamais en baisse, un palier en entrant dans l'A3 (niveau 66, les
+// meilleures créatures arrivent). Ici pour que le coût d'un niveau la lise sans import circulaire.
+export function primeDeVictoire(levelNumber) {
+  const l = Math.max(1, Math.floor(levelNumber || 1));
+  if (l <= 20) return 5 + Math.floor(1.5 * l);
+  if (l <= 65) return 5 + Math.floor(1.5 * l * (l / 20));
+  return Math.max(5 + Math.floor(1.5 * 65 * (65 / 20)), Math.round(640 * Math.pow(l / 66, 0.75)));
+}
+// ---- Coût d'un niveau (10/10) : il SUIT la prime de victoire ----
+// Plus de niveau max : un niveau L coûte une part (COUT_NIVEAU_PART) de la prime de 1re victoire de l'étape
+// L − COUT_NIVEAU_DECALAGE, × la rareté. Les primes font 65 à 82 % des Griffes d'un joueur (MESURÉ) : dépenser ses
+// Griffes à chaque victoire garde l'équipe un peu au-dessus de l'étape, à TOUTES les Ascensions. L'ancienne courbe
+// (0,49 × L^1,05) reste un minimum. MESURÉ (40 parcours, règles réelles, le joueur monte aussi ses nouvelles
+// créatures rares) — équipe par rapport à l'étape aux A0-A5 : ½ prime −3/−10/−14/−28/−33 (30 bloqués face aux anciens
+// ennemis) ; ¼ : −3/−5/−3/−16/−26/−20 ; 15 % : −1/−6/+11/+5/−4/−26 ; 10 % : −1/−6/+26/+24/+22/+10. RETENU 15 %.
+// Les écarts négatifs de fin de partie viennent des mythiques / légendaires (niveau ×4,2 à ×6,7 plus cher, mais +51 à
+// +63 niveaux de force par la rareté) : elles restent bien plus fortes que leur niveau.
+export const COUT_NIVEAU_PART = 0.15;
+export const COUT_NIVEAU_DECALAGE = 5;
 
 export function levelUpCost(creature, level) {
   const rarityFactor = RARITY_COST_FACTOR[creature.rarity] || 1;
@@ -448,7 +474,9 @@ export function levelUpCost(creature, level) {
   // **41 combats** — plus de 8 heures au rythme de l'énergie (5 par
   // heure). Un défi demandant ce niveau devenait inatteignable.
   // Désormais 360 Griffes, soit 18 combats.
-  return Math.max(1, Math.round(0.35 * UPGRADE_COST_MULT * Math.pow(level, 1.05) * rarityFactor));
+  const ancien = 0.35 * UPGRADE_COST_MULT * Math.pow(level, 1.05);
+  const surLaPrime = COUT_NIVEAU_PART * primeDeVictoire(Math.max(1, level - COUT_NIVEAU_DECALAGE));
+  return Math.max(1, Math.round(Math.max(ancien, surLaPrime) * rarityFactor));
 }
 
 // Coût d'une invocation (gacha), croissant avec le nombre de créatures

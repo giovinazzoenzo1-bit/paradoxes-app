@@ -1,7 +1,7 @@
 // Logique pure du mode Aventure / Combat — voir mobile/ADVENTURE_MODE.md
 // pour le design complet. Aucun écran ne dépend encore de ce fichier :
 // c'est l'étape 1 du plan de construction (fonctions testables d'abord).
-import { CREATURES, MANA_MAX, MANA_PER_TURN, SORT_DE_CREATURE, levelUpCost } from './clickerLogic';
+import { CREATURES, MANA_MAX, MANA_PER_TURN, SORT_DE_CREATURE, levelUpCost, primeDeVictoire } from './clickerLogic';
 
 // ---- Stats de combat par rareté ----
 // Recalibré (29/08) à partir d'un exemple réel produit par le
@@ -1724,8 +1724,14 @@ export function attackRatio(creature, currentAttack) {
 // tours, étoiles) reste donc valable.
 export const GLOBAL_DAMAGE_BOOST = 1.10;
 
+// 10/10 (décision de l'auteur) : l'ULTIME est plafonné à ULTIME_MAX × la meilleure attaque normale, pour les deux
+// camps (ils passent tous ici). MESURÉ avant : ×2,0 à ×3,7 (médiane ×2,2 ; Ombrillon ×3,7) — Ombrillon niv. 1 à
+// l'étape 2 retirait 96 % des PV ennemis d'un coup (« l'ultime est abusé »).
+export const ULTIME_MAX = 2;
 export function scaledSkillDamage(skill, creature, currentAttack) {
-  return skill.damage * attackRatio(creature, currentAttack) * GLOBAL_DAMAGE_BOOST;
+  const normale = skill && skill.special ? meilleureAttaque(creature) : null;
+  const base = normale ? Math.min(skill.damage, ULTIME_MAX * normale.damage) : skill.damage;
+  return base * attackRatio(creature, currentAttack) * GLOBAL_DAMAGE_BOOST;
 }
 
 // ---- Résolution d'un tour ----
@@ -1757,10 +1763,7 @@ export function resolveRound(playerHp, opponentHp, opponentAttack, playerDamage)
 // entrant dans l'A3 (niveau 66, les meilleures créatures arrivent). Versée à
 // la PREMIÈRE victoire d'un niveau seulement (AdventureScreen).
 export function griffesReward(levelNumber) {
-  const l = Math.max(1, Math.floor(levelNumber || 1));
-  if (l <= 20) return 5 + Math.floor(1.5 * l);
-  if (l <= 65) return 5 + Math.floor(1.5 * l * (l / 20));
-  return Math.max(5 + Math.floor(1.5 * 65 * (65 / 20)), Math.round(640 * Math.pow(l / 66, 0.75)));
+  return primeDeVictoire(levelNumber); // la formule vit dans clickerLogic depuis le 10/10 (le coût d'un niveau la lit)
 }
 
 // ---- Les QUÊTES suivent le niveau d'Aventure (26/09, décision de l'auteur) ----
