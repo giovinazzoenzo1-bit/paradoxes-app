@@ -474,7 +474,13 @@ export function primeDeVictoire(levelNumber) {
 // 15 % de la prime × rareté.) La part COUT_PRIME varie un peu selon la tranche de niveaux, MESURÉE pour que l'équipe du
 // joueur médian reste au niveau de l'étape (±3) : les quêtes et les paliers de primes ne grandissent pas au même rythme
 // partout. MESURÉ avec une part unique : ×1 → équipe −18 en fin de partie ; ×0,6 → +28 ; ×0,8 → de −5 à +8.
-export const COUT_PRIME = [[25, 0.8], [60, 0.75], [101, 0.95], [144, 0.95], [185, 0.62], [Infinity, 0.5]];
+// ⚠️ 10/10 (soir) — RÉGLÉ DE NOUVEAU après les règles de l'auteur (naissance à 80 %, runes en ✨ Poudre, +25 % de primes
+// dès l'étape 30) et la correction du joueur simulé (évolution non imposée au niveau 25) : avec l'ancienne table, le
+// joueur normal gagnait 97 à 100 % au 1er essai, équipe +4 à +9 niveaux (+39 à la fin). MESURÉ avec celle-ci (1er essai,
+// équipe) : 93 % (+1) · 74 % (+1) · 95 % (0) · 88 % (−1) · 79 % (0) · 77 % (−3) · 91 % (−1) · 80 % (−2), 0 bloqué. La tranche
+// 145-185 (A4) est basse : le joueur y reçoit ses légendaires et mythiques, nées à 60 et 45 %, qu'il doit remonter.
+// Chapitre 1 à 0,8 (comme avant) : à 1,2, le débutant ne montait plus assez avec ses 40 Griffes (57-68 % aux étapes 3, 5, 10).
+export const COUT_PRIME = [[10, 0.8], [20, 0.9], [60, 1.2], [101, 1.3], [144, 1.1], [185, 0.55], [Infinity, 1.1]];
 export function partCoutPrime(level) {
   const n = Math.max(1, Math.floor(level || 1));
   return (COUT_PRIME.find(([max]) => n <= max) || COUT_PRIME[COUT_PRIME.length - 1])[1];

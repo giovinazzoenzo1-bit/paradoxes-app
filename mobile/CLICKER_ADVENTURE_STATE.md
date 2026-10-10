@@ -3146,3 +3146,24 @@ gagne le plus de force par Griffe (un niveau, ou une évolution possible) et éc
 REMESURER avec ce joueur avant de fusionner.
 Niveaux (joueur médian, TOUTES les sources de Griffes, créatures 1 / 2 / 3) : étape 1 : 8 · 5 : 19 · 9 : 30 ·
 10 : 31 / 4 · 15 : 31 / 24 · 16 : 31 / 26 / 5 · 20 : 31 / 26 / 23 · 25 : 32 / 33 / 33 · 31 : 36 / 35 / 35.
+
+
+## 10/10 (soir) — RÈGLES DE L'AUTEUR + REMESURE (branche `regles-octobre`, EN COURS)
+
+FAIT : niveau affiché des ennemis = leurs VRAIES stats (niveauReelEnnemi : la force voulue — moyenne de la rareté ×
+FORCE_ENNEMI — traduite en niveau de l'espèce, arrondi ; statsForOpponentCreatureTyped sans multiplicateur) ; naissance
+à 80 % (niveauDeNaissance : 2e et 3e de la meilleure, puis de la 3e meilleure ; légendaire 60 %, mythique 45 % ;
+éclosions seulement, pas les invocations) ; +25 % sur les primes d'Aventure dès l'étape 30 (BONUS_PRIMES ; défis et
+coûts lisent la prime de base) ; ✨ Poudre runique (POUDRE_PAR_VICTOIRE 1, POUDRE_PRIX 3 / 8 / 9 ; les runes ne coûtent
+plus de Griffes ; compteur ✨ en attendant l'image de l'auteur) ; « tirage offert » enfin relié à la boutique (props
+jamais transmises) ; joueur simulé : évolution non imposée au niveau 25.
+MESURÉ : avec ces règles et l'ancienne table de coûts → 97-100 % au 1er essai, équipe +4 à +39 → COUT_PRIME réglé de
+nouveau [10 : 0,8 · 20 : 0,9 · 60 : 1,2 · 101 : 1,3 · 144 : 1,1 · 185 : 0,55 · au-delà : 1,1] ; 3 populations : médian
+5,0-9,5, 10e rang 3,1-4,8, 0 bloqué ; blocage (outil) : toutes sources → étape 61 (avant 30), primes seules → étape 11.
+⚠️ Niveaux honnêtes au tout début : la force voulue aux étapes 1-3 est sous le niveau 1 de la plupart des espèces →
+l'outil choisit les espèces les plus FAIBLES (repli : la plus faible). Chapitre 1 : Glyphon 1 · Luxorbe 2 · Bouldog 1 ·
+Pyrosile 1 · Caraploof 2 · Ventis 3 ; créature niveau 1 → étape 1 82 %, 2 69 %, 3 30 % ; débutant (40 Griffes) 94-100 %
+sauf étapes 6-7 (70 / 60 %). « Galère dès l'étape 2 » ne tient plus (+5 % seulement entre les étapes 1 et 2 ; avant, un
+hasard d'espèce) : la galère arrive à l'étape 3 (l'auteur a galéré à l'étape 4 et jugé « bien équilibré »).
+RESTE : contrôles (auditApprentissage → galère dès l'étape 3 ; auditNiveauMax → niveaux honnêtes, prime ≈ niveau
+jusqu'à ×1,3 ; auditGardienGriffes → table et chiffre recalculés), sabotages, taps, publication.

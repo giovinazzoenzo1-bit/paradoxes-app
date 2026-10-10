@@ -128,6 +128,15 @@ function calibrer(nJoueurs = 60, essais = 10, R = P.REGLAGES) {
         // Espèces de cette rareté (au besoin, la plus proche), la moins vue dans le chapitre puis la moins récente.
         let pool = [];
         for (let d = 0; !pool.length && d < RANG.length; d++) pool = A.C.CREATURES.filter((c) => !ids.includes(c.id) && Math.abs(RANG.indexOf(c.rarity) - r) === d);
+        // 10/10 : jamais une espèce trop forte pour l'étape (son niveau réel tomberait sous 0,5 : le niveau 1 serait déjà
+        // trop fort) quand une autre convient — les toutes premières étapes prennent ainsi les espèces les plus faibles.
+        const nivEtape = K.niveauEnnemi(l) - K.bonusElite(l), evoSlot = (() => { const ev = actifs.map((j) => j.trio()[i]).filter(Boolean).map((p) => p.evo).sort((x, y) => x - y); return ev.length ? rang(ev, 0.5) : 0; })();
+        const convient = (c) => K.niveauReelEnnemi(c, nivEtape, evoSlot, taille) >= 0.5;
+        if (pool.some(convient)) pool = pool.filter(convient);
+        else { // aucune ne convient (étape 1) : la plus FAIBLE disponible, au plus près de la force voulue
+          const best = Math.max(...pool.map((c) => K.niveauReelEnnemi(c, nivEtape, evoSlot, taille)));
+          pool = pool.filter((c) => K.niveauReelEnnemi(c, nivEtape, evoSlot, taille) >= best - 1e-9);
+        }
         pool.sort((x, y) => ((vusCh[x.id] || 0) - (vusCh[y.id] || 0)) || ((vuA[x.id] || -1e9) - (vuA[y.id] || -1e9)));
         const c = pool[0]; ids.push(c.id); vusCh[c.id] = (vusCh[c.id] || 0) + 1; vuA[c.id] = l;
         // Son évolution : celle de la i-e créature d'un joueur typique (médiane).
