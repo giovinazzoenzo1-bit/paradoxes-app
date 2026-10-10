@@ -2932,6 +2932,22 @@ d'attaque en format court (nombreCourt, combatLogic : mêmes suffixes que les pi
 bas, tel quel sous 10 000). Aperçu d'étape (FighterSelectOverlay) : « 👑 ⭐ Adversaires : Abyssorax +2 ·
 niv. 120 », médaillon sous la forme évoluée. VU sur le banc de capture (nouvelle scène
 tools/capture/scenes/combat-niveaux.jsx, ?scene=n110 / n11 / n200) : tout tient dans les panneaux.
+⚠️⚠️ PIÈGE MESURÉ (10/10) — le « retard de 44 niveaux » venait du JOUEUR SIMULÉ, pas du jeu : son équipe
+= les 3 plus RARES (mythique niv. 56 en équipe, épiques niv. 134 sur le banc, 17 fois plus fortes avec
++5 %/niveau). Le jeu ne remplace jamais une créature du deck (addCreatureToOwned : place libre seulement).
+CORRIGÉ (simulateur-parcours) : équipe = 3 plus FORTES (formule du jeu, mémorisée) ; Griffes en trop →
+créature la plus RARE du banc. MESURÉ : retard A3-A5 22-38 → 0 niveau ; les ennemis calibrés sur l'ancien
+joueur auraient laissé le médian réel à 8,6-10 sur 10 → RECALIBRÉ sur 120 joueurs (85 s ; 60 joueurs
+s'accordaient trop à la chance de leur population : A1 de 4,7 à 7,4 selon la population).
+CONTRÔLE (3 populations de 40) — joueur médian sur 10 : A0 7,4-8,3 · A1 5,4-6,9 · A2 6,8-7,6 · A3 5,7-6,2 ·
+A4 6,9-7,5 · A5 6,6-7,4 ; 10e rang 2,1-4,9 ; 0 bloqué. ⚠️ Dans ce bac à sable, un processus lancé en
+arrière-plan ne survit pas à la fin de la commande (redémarrage observé) : lancer les longs calculs DANS
+une seule commande (timeout < 300 s).
+QUESTION DE L'AUTEUR (10/10) — joueur « Griffes de 1re victoire seulement » (+ 40 au jour 1, tout dépensé,
+mêmes œufs, ni quêtes ni succès ni packs ni Ascension), 40 joueurs : chapitre 1 9,9/10 sans aide ;
+1re étape où le joueur médian a besoin du coup de pouce (3 défaites ou plus) = ÉTAPE 12 ; chapitre 2
+5,8/10 (aide sur 16 % des étapes) ; chapitres 3-6 2,8-4,6/10 (aide 27-53 %, meilleure créature 5-10
+niveaux sous le max) ; dès le chapitre 7 au niveau max mais ~3/10 (aide ~40-60 %) ; 0 bloqué.
 ⚠️ À FAIRE ENCORE : verifier-controles (sabotages lignes ~181 et ~220 visent l'ancienne table),
 calibrer-aventure.js (ancien outil, écrit l'ancienne table), calibrer-parcours.js (à réécrire :
 choisir les COMPOSITIONS), PUISSANCE_CONSEILLEE (échelle d'avant), Gardien (guardianStats passe par

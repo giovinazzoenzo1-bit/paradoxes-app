@@ -88,6 +88,11 @@ const REGLAGES = {
 const aleaGraine = (g) => { let a = g >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
 const RANG = L.ORDRE_RARETES;
+// Force d'une créature (formule du JEU), mémorisée : l'équipe se trie des milliers de fois.
+const FORCES = new Map();
+const forceDe = (p) => { const cle = p.c.id + ':' + p.niv + ':' + p.evo; let f = FORCES.get(cle);
+  if (f == null) { const st = K.combatStatsForCreatureTyped(p.c, p.niv, p.evo, []); f = Math.sqrt(st.hp * st.attack); FORCES.set(cle, f); }
+  return f; };
 const evoPour = (niv) => (niv >= 50 ? 2 : niv >= 25 ? 1 : 0);
 const coutEvo = (de, a) => (a >= 1 && de < 1 ? K.EVOLUTION_GRIFFES_COST[1] : 0) + (a >= 2 && de < 2 ? K.EVOLUTION_GRIFFES_COST[2] : 0);
 
@@ -99,7 +104,13 @@ function nouveauJoueur(graine, R = REGLAGES) {
   const possedees = [];
   const j = { alea, griffes: 0, niveau: 0, heures: 0, energie: R.energieMax, dernierJour: 0, serie: {}, oeufsFaits: 0, runes: 0, parAsc: [], bloque: null };
   const avecGraine = (fn) => { const sauve = Math.random; Math.random = alea; try { return fn(); } finally { Math.random = sauve; } };
-  j.trio = () => possedees.slice().sort((x, y) => RANG.indexOf(y.c.rarity) - RANG.indexOf(x.c.rarity) || y.niv - x.niv).slice(0, 3);
+  // ⚠️ 10/10 (niveaux réels) : l'équipe = les 3 créatures les plus FORTES (formule du jeu), plus les
+  // 3 plus RARES. MESURÉ : avec +5 %/niveau, le joueur « rareté d'abord » alignait une mythique niv. 56
+  // et laissait sur le banc ses épiques niv. 134 (17 fois plus fortes) → « retard » de 22 à 38 niveaux
+  // aux A3-A5 et des ennemis calibrés trop faibles (le joueur médian réel aurait gagné 8,6 à 10 sur 10).
+  // Le JEU ne remplace jamais une créature du deck (addCreatureToOwned : place libre seulement) : c'est
+  // le joueur qui choisit, et il garde la plus forte.
+  j.trio = () => possedees.slice().sort((x, y) => forceDe(y) - forceDe(x)).slice(0, 3);
   const eclore = () => {
     if (possedees.length >= C.CREATURES.length) return;
     const meilleur = possedees.length ? Math.max(...possedees.map((p) => p.niv)) : 1;
@@ -111,7 +122,11 @@ function nouveauJoueur(graine, R = REGLAGES) {
   // (09/10) Le jeu a désormais un NIVEAU MAXIMUM (niveau d'Exploration gagné + 5) : le joueur simulé le respecte.
   const monter = (plafond = Infinity) => {
     for (let n = 0; n < 500; n++) {
-      const t = j.trio().filter((x) => x.niv < plafond).sort((x, y) => x.niv - y.niv)[0];
+      // L'équipe d'abord (la moins montée) ; puis, avec les Griffes en trop, la créature la plus RARE du
+      // banc : elle finira par dépasser un membre de l'équipe et y entrer (10/10).
+      const trio = j.trio();
+      const banc = possedees.filter((p) => !trio.includes(p)).sort((x, y) => RANG.indexOf(y.c.rarity) - RANG.indexOf(x.c.rarity) || y.niv - x.niv);
+      const t = trio.filter((x) => x.niv < plafond).sort((x, y) => x.niv - y.niv)[0] || banc.filter((x) => x.niv < plafond)[0];
       // ⚠️ 26/09 : AUCUN plafond (le jeu n'en a pas) — le vrai joueur dépense
       // tout (test de l'auteur : Terracroc niveau 59 au niveau 26). L'ancien
       // plafond « niveau d'Aventure + 1 » cachait 19 000 Griffes non dépensées.
