@@ -2863,7 +2863,7 @@ calibrage (joueur MÉDIAN au lieu des 10 % malchanceux).
 auditNiveauMax (+ sabotage « garde de handleLevelUp supprimée »). 103 contrôles, 131 sabotages.
 
 
-## 10/10 — REFONTE « NIVEAUX RÉELS » (branche `niveaux-reels`, PAS ENCORE PUBLIÉE)
+## 10/10 — REFONTE « NIVEAUX RÉELS » (branche `niveaux-reels`, PUBLIÉE le 10/10 : fusionnée dans main)
 
 DÉCISIONS de l'auteur (10/10) :
 - Les ennemis deviennent de VRAIES créatures avec un NIVEAU AFFICHÉ, calculées avec la MÊME formule
@@ -2885,8 +2885,8 @@ MESURÉ avant de décider (copies séparées, /tmp) :
   rares → 100 % ; épiques → 31 %. Le niveau seul ne crée pas la difficulté.
 ÉTAT : étape 1 FAITE sur la branche (levelMultiplier = STATS_ECHELLE x 1,05^(niveau-1) ;
 ECHELLE_PUISSANCE 10 → 1 pour garder l'échelle de la puissance affichée).
-⚠️ Sur la branche, l'équilibrage est FAUX tant que l'étape 2 n'est pas faite (ennemis encore sur
-l'ancien budget + AVENTURE_MULTIPLICATEURS). NE PAS FUSIONNER avant la fin.
+(Historique : pendant le chantier, la branche avait un équilibrage faux entre l'étape 1 et la 2b — fusionnée
+seulement une fois tout mesuré et contrôlé.)
 DÉCISION (10/10) : calibrage sur le joueur MÉDIAN à 7 victoires sur 10 (avant : les 10 % les plus
 malchanceux à 6/10 → un joueur normal gagnait 9 fois sur 10).
 ÉTAPE 2a FAITE (branche) : equipeEnnemie(n) → [{ creature, niveau, evolutionTier }] ; niveau =
@@ -2963,12 +2963,24 @@ déjà au niveau max, et le Gardien suppose +7 à +10 niveaux AU-DESSUS (même a
 → le « 80 % après 3 combats » serait faux. À CORRIGER avant publication : plafonner l'effort à
 niveauMaxCreature(étape gagnée + 3) (photo : retenir l'étape), et le plan au niveau max actuel (sinon :
 « gagne des étapes pour débloquer des niveaux »).
-⚠️ À FAIRE ENCORE : verifier-controles (sabotages lignes ~181 et ~220 visent l'ancienne table),
+ÉTAPE 4 FAITE — GARDIEN ET NIVEAU MAX (bug de fond corrigé) : deckApresEffortEquitable(membres, griffes,
+plafond) et planPourChance(…, plafond) ne dépassent JAMAIS le niveau max ; la photo fige
+plafond = niveauMaxCreature(étape gagnée + 3) (plafondGardienRef, passé aux 2 démarrages de chrono ;
+plafondDeLaPhoto : une photo d'avant n'en a pas = comportement d'avant) ; le plan du menu utilise le niveau
+max ACTUEL, et s'il bloque avant 80 % : « Possible tout de suite : … » + « 🔒 Niveau max atteint : gagne
+des étapes d'Exploration pour débloquer des niveaux. » MESURÉ (20 joueurs simulés) : niveaux supposés
+au-dessus du max actuel +7 à +10 → +3 au plus (ceux que débloquent les 3 prochaines étapes).
+CONTRÔLES : verifier-defis 103/103 verts ; verifier-controles 134 sabotages prouvés (131 + 3 : effort sans
+plafond, plan sans plafond, menu sans niveau max) ; sabotages PÉRIMÉS réécrits sur ENNEMIS_ETAPES (tous les
+ennemis → Pyrosile ; 3e étape → Arcanis) ; contrôles AVEUGLES réparés : auditPuissanceAffichee compare au
+point près à un recalcul indépendant (degatsMoyensDuTour exporté — avec les stats x10 l'arrondi ne fait plus
+de paliers) ; auditGardienCalibre vérifie DIRECTEMENT le style le moins efficace (l'écart entre styles s'est
+réduit). Sonde des taps 20/20 ; 67 fichiers compilent.
+SUITE DEMANDÉE PAR L'AUTEUR (après publication) : reprendre le calcul « Griffes de victoire seulement »,
+l'optimiser et l'appliquer (déplacer des Griffes des quêtes vers les primes de victoire, à total égal ?).
+(Notes de chantier, désormais FAITES :) verifier-controles (sabotages lignes ~181 et ~220 visent l'ancienne table),
 calibrer-aventure.js (ancien outil, écrit l'ancienne table), calibrer-parcours.js (à réécrire :
 choisir les COMPOSITIONS), PUISSANCE_CONSEILLEE (échelle d'avant), Gardien (guardianStats passe par
 statsForOpponentCreatureTyped : k = 1 désormais, vérifier calibrerGardien), garde.sh compare
 désormais à la MÊME branche sur GitHub quand on n'est pas sur main.
-RESTE : (2) ennemis = vraies créatures (niveau = étape, composition par étape, boss) + outil de
-calibrage qui choisit les compositions ; (3) affichage du niveau des ennemis ; (4) Griffes/coûts,
-plafond, Gardien (vérifier que le plan « +N niveaux » respecte le plafond), défis, contrôles ;
-(5) mesures complètes puis publication.
+(Plan du chantier : étapes 2, 3 et 4 ci-dessous, toutes FAITES avant la publication.)

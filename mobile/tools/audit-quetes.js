@@ -3188,6 +3188,11 @@ function auditGardienCalibre() {
     const base = K.guardianStats(I.guardianLevelForEgg(oeuf), I.GUARDIAN_BASE_LEVEL, oeuf);
     const r = K.calibrerGardien(membres, base);
     const deck = n + ' ' + rar + ' niv ' + niv;
+    // (10/10) Vérification DIRECTE : le Gardien est calé sur le style le MOINS efficace (le plus faible des deux
+    // calibrages). Avec les stats du 10/10 l'écart entre styles s'est réduit : la seule fenêtre de victoires ne
+    // voyait plus un Gardien recalé sur le MEILLEUR style (sabotage devenu aveugle).
+    const ra = K.calibrerGardien(membres, base, { politique: K.choixJoueur }), rb = K.calibrerGardien(membres, base, { politique: K.choixSansSorts });
+    if (Math.abs(r.facteurAttaque - Math.min(ra.facteurAttaque, rb.facteurAttaque)) > 1e-9) fautes.push({ deck, probleme: 'le Gardien n\'est pas calé sur le style le MOINS efficace' });
     if (r.correction <= K.GUARDIAN_CORRECTION_MIN * 1.01 || r.correction >= K.GUARDIAN_CORRECTION_MAX * 0.99) {
       fautes.push({ deck, probleme: 'correctif collé à une borne (' + r.correction.toFixed(2) + ') : simulation cassée ?' });
     }
@@ -4766,6 +4771,17 @@ function auditPuissanceAffichee() {
     if (Math.round(Math.round(c._base.attack) * f.attackMult * f.evo * (1 + f.atkPct)) !== st.attack) diff++;
   }
   if (diff) pb.push(`statsContinues s'écarte de la formule du jeu (${diff} valeurs)`);
+  // (10/10) Recalcul EXACT indépendant : avec les stats x10, l'arrondi ne crée plus de paliers visibles —
+  // seul un recalcul au point près voit une puissance retombée sur les stats ARRONDIES.
+  let ecarts = 0;
+  for (const cr of C.CREATURES) for (const tier of [0, 1, 2]) for (let L = 1; L <= 60; L += 3) {
+    const mem = [{ creature: cr, ownedLevel: L, evolutionTier: tier, equippedRunes: [] }, { creature: C.CREATURES[(C.CREATURES.indexOf(cr) + 7) % C.CREATURES.length], ownedLevel: L + 2, evolutionTier: tier, equippedRunes: [{ type: 'force', level: 2 }] }];
+    const f = mem.map((x) => { const st = K.combatStatsForCreatureTyped(x.creature, x.ownedLevel, x.evolutionTier, x.equippedRunes); const co = K.statsContinues(x.creature, x.ownedLevel, x.evolutionTier, x.equippedRunes);
+      return { pv: co.hp, dmg: K.degatsMoyensDuTour(x.creature, { ...st, attack: co.attack }) }; });
+    const attendu = Math.round(K.ECHELLE_PUISSANCE * Math.sqrt(f.reduce((t, x) => t + x.pv, 0) * (f.reduce((t, x) => t + x.dmg, 0) / f.length)));
+    if (K.puissanceAffichee(mem) !== attendu) ecarts++;
+  }
+  if (ecarts) pb.push(`puissance affichée ≠ recalcul exact sur les stats SANS arrondi (${ecarts} équipes)`);
   const m = (cr, L, tier = 0, runes = []) => [{ creature: cr, ownedLevel: L, evolutionTier: tier, equippedRunes: runes }];
   for (const cr of C.CREATURES) {
     for (let L = 1; L < 60; L++) if (!(K.puissanceAffichee(m(cr, L + 1)) > K.puissanceAffichee(m(cr, L)))) { pb.push(`${cr.id} : la puissance ne monte pas du niveau ${L} au ${L + 1}`); break; }
@@ -4779,7 +4795,7 @@ function auditPuissanceAffichee() {
     [a, /🛡️ Puissance \{puissanceHub\}/, 'hub : la pastille n\'affiche plus la puissance affichée'],
     [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`/, 'aperçu : puissance ou chance de victoire absente'],
     [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
-    [c, /return deckApresEffortEquitable\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget figé (il pourrait bouger)'],
+    [c, /return deckApresEffortEquitable\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\), plafondDeLaPhoto\(photo\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget et son niveau max figés (il pourrait bouger)'],
     [c, /return `⚔️ \$\{texteChance\} de victoire\$\{suite\}`;/, 'bouton du Gardien : la chance de victoire n\'est plus affichée'],
     [c, /setResultatGardien\(\{ issue: outcome, gardien: fight\.puissanceGardien, deck: puissanceDuDeck(, chance: chanceGardien)? \}\);/, 'résultat du Gardien : pas la puissance affichée'],
   ];
@@ -4827,7 +4843,7 @@ function auditGardien80() {
   if (!/aleaGraine\(graineGardien\(gStats\)\)/.test(fc)) pb.push('la chance au Gardien ne joue plus avec un hasard FIXÉ par le Gardien');
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   // (08/10) L'effort = niveaux MESURÉS par simulation pour atteindre 80 % (niveauxPourChance), plus la formule.
-  if (!/const plan = victoires >= 0\.8 \? \{ niveaux: 0, plus: \[\] \} : planPourChance\(membresActuels, g0, 0\.8, 40\);/.test(c) || !/⬆️ \{nomCreatureDeck\(x\.id\)\} \+\{x\.plus\} niveau\{x\.plus > 1 \? 'x' : ''\}/.test(c)) pb.push("le menu « Gardien de l'œuf » n'affiche plus le plan pour 80 % (créatures et niveaux)");
+  if (!/const plan = victoires >= 0\.8 \? \{ niveaux: 0, plus: \[\] \} : planPourChance\(membresActuels, g0, 0\.8, 40, niveauMaxCreature\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0\)\);/.test(c) || !/⬆️ \{nomCreatureDeck\(x\.id\)\} \+\{x\.plus\} niveau\{x\.plus > 1 \? 'x' : ''\}/.test(c)) pb.push("le menu « Gardien de l'œuf » n'affiche plus le plan pour 80 % (créatures et niveaux)");
   // (08/10) Le combat passe par le menu : croix pour annuler, « Combattre » pour confirmer (nid ET incubateur).
   if (!/onPress=\{\(\) => setConfirmGardien\('main'\)\}/.test(c) || !/onAffronterGardien=\{\(\) => setConfirmGardien\('incub'\)\}/.test(c)) pb.push('un bouton de Gardien lance le combat sans passer par le menu');
   if (!/<FenetreJeu titre="⚔️ Gardien de l'œuf" onFermer=\{\(\) => setConfirmGardien\(null\)\}/.test(c) || !/texte="⚔️ Combattre"/.test(c)) pb.push("le menu « Gardien de l'œuf » (croix, Combattre) a disparu");
@@ -4843,7 +4859,7 @@ function auditGardien80() {
     const n = K.niveauxPourChance(faible, st, 0.8, 40);
     if (n == null || n < 1) pb.push(`niveauxPourChance : ${n} niveau(x) pour un deck en retard (attendu ≥ 1)`);
     const plan = K.planPourChance(faible, st, 0.8, 40);
-    if (!/return \{ victoires, niveaux80: plan \? plan\.niveaux : null, plan80: plan \? plan\.plus : \[\] \};/.test(c)) pb.push("le plan pour 80 % n'est plus transmis au menu");
+    if (!/return \{ victoires, niveaux80: plan \? plan\.niveaux : null, plan80: plan \? plan\.plus : \[\], bloqueParMax: !!\(plan && plan\.bloqueParMax\) \};/.test(c)) pb.push("le plan pour 80 % n'est plus transmis au menu");
     if (!/return \(stade && stade\.name\) \|\| id;/.test(c)) pb.push('le nom des créatures du plan ne vient plus de leur stade (« [object Object] »)');
     if (!plan || plan.niveaux !== n || plan.plus.reduce((t, x) => t + x.plus, 0) !== n) pb.push('planPourChance : le plan ne correspond plus au nombre de niveaux annoncé');
     else {
@@ -4891,7 +4907,7 @@ function auditGardienGriffes() {
   }
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if (!/asc: Math\.max\(0, Math\.floor\(Number\(ascension\) \|\| 0\)\),/.test(c)) pb.push("la photo ne retient plus l'Ascension du démarrage du chrono");
-  if (!/const cible = deckApresEffortEquitable\(membres, budgetDeLaPhoto\(photo, ascension\)\)\.membres;/.test(c) || !/\{ marge: 1 \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort RÉPARTI");
+  if (!/const cible = deckApresEffortEquitable\(membres, budgetDeLaPhoto\(photo, ascension\), plafondDeLaPhoto\(photo\)\)\.membres;/.test(c) || !/\{ marge: 1 \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort RÉPARTI (et plafonné)");
   // (08/10) Règle A + B : budget = récupérable (A) + primes des 3 prochains niveaux (B), figé à la photo.
   // (08/10, règle FINALE) budget = les Griffes des 3 PROCHAINS combats, réparties équitablement (plus de A).
   if (!/budgetGardienRef\.current = primesProchainsNiveaux\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0, 3\);/.test(c)) pb.push('le budget du Gardien ne vaut plus « 3 prochains combats »');
@@ -4907,10 +4923,28 @@ function auditGardienGriffes() {
     if (Math.abs(r.puissance - 1898) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 898 (« 3 combats »)`);
   }
   if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
-  if ((c.match(/, budgetGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget du Gardien');
+  if ((c.match(/, budgetGardienRef\.current, plafondGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget ET le niveau max du Gardien');
   if (!/function budgetDeLaPhoto\(photo, ascensionCourante = 0\) \{\n  if \(photo && photo\.budget != null\) return photo\.budget;/.test(c)) pb.push("le Gardien n'utilise plus le budget de SA photo");
   // (08/10) Chiffre FIGÉ : écrit une fois dans la photo, toujours relu (l'auteur a vu 9 915 au menu, 9 901 au résultat).
-  if (!/gardien: deckApresEffortEquitable\(membres, b\)\.puissance/.test(c)) pb.push("la photo n'écrit plus le chiffre du Gardien au démarrage du chrono");
+  if (!/gardien: deckApresEffortEquitable\(membres, b, pl\)\.puissance/.test(c)) pb.push("la photo n'écrit plus le chiffre du Gardien (plafonné) au démarrage du chrono");
+  // ── (10/10, niveaux réels) Le Gardien ne suppose JAMAIS un niveau au-delà du niveau max ──
+  // MESURÉ avant : dès l'étape 60, 10 à 18 joueurs simulés sur 20 au niveau max, et le Gardien supposait
+  // +7 à +10 niveaux au-dessus (« 80 % après 3 combats » faux). Effort plafonné au max APRÈS 3 étapes.
+  {
+    const cre4 = (id) => C.CREATURES.find((x) => x.id === id);
+    const d50 = ['pyrosile', 'aegisolar', 'solarion'].map((id) => ({ creature: cre4(id), ownedLevel: 50, evolutionTier: 2, equippedRunes: [] }));
+    const e = K.deckApresEffortEquitable(d50, 1e7, 53).membres;
+    if (e.some((x) => x.ownedLevel > 53)) pb.push('effort du Gardien : un niveau dépasse le plafond donné');
+    if (!e.some((x) => x.ownedLevel === 53)) pb.push("effort du Gardien : avec un budget énorme, aucune créature n'atteint le plafond");
+    const fort = { hp: 1e9, attack: 1e9 };
+    // Gardien niveau 120 (MESURÉ : 0 % pour ce deck niv. 52) — le niveau 80 était déjà battu à 87 %.
+    const plan = K.planPourChance(d50.map((x) => ({ ...x, ownedLevel: 52 })), K.guardianStats(120, 1, 9), 0.8, 40, 53);
+    if (!plan || !plan.bloqueParMax || (plan.plus || []).some((x) => x.plus > 1)) pb.push('plan du Gardien : il propose des niveaux au-delà du niveau max, ou ne dit pas qu\'il est bloqué');
+    void fort;
+  }
+  if (!/plafondGardienRef\.current = niveauMaxCreature\(\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0\) \+ 3\);/.test(c)) pb.push("la photo ne fige plus le niveau max APRÈS les 3 prochaines étapes");
+  if (!/planPourChance\(membresActuels, g0, 0\.8, 40, niveauMaxCreature\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0\)\)/.test(c)) pb.push('le plan du Gardien ne respecte plus le niveau max actuel');
+  if (!/🔒 Niveau max atteint : gagne des étapes d'Exploration pour débloquer des niveaux\./.test(c)) pb.push("le menu du Gardien ne dit plus qu'il faut gagner des étapes quand le niveau max bloque");
   if (!/if \(photo\.gardien != null\) return photo\.gardien;/.test(c)) pb.push('le chiffre du Gardien est RECALCULÉ à chaque affichage (il peut bouger)');
   if (!/budget, gardien: deckApresEffortEquitable\(membresDeLaPhoto\(p\.gardienPhoto\), budget\)\.puissance, file: true/.test(c)) pb.push("les anciennes photos ne reçoivent plus leur chiffre (réparti)");
   if (!/const sansChiffre = \(e\) => e && e\.gardienPhoto && e\.gardienPhoto\.v === 2 && e\.gardienPhoto\.asc != null && e\.gardienPhoto\.gardien == null;/.test(c)) pb.push("les anciennes photos ne reçoivent plus leur chiffre figé");

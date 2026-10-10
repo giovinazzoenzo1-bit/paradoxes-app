@@ -177,8 +177,10 @@ const SABOTAGES = [
     remplace("pyrosile: 'zone',", "pyrosile: 'soin',")],
   ['auditSortsAdverses', F.combat, "un ennemi se soigne même à PV pleins (décision gâchée)",
     remplace("      return blesse >= 0 && pc(adversaires[blesse]) < 0.5 ? id : null;", "      return id;")],
-  ['auditParcours', F.combat, "la table de l'Aventure effacée (l'ancienne Aventure trop facile revient)",
-    (s) => s.replace(/export const AVENTURE_MULTIPLICATEURS = \[[^\]]*\];/, 'export const AVENTURE_MULTIPLICATEURS = null;')],
+  // 10/10 (niveaux réels) : l'ancienne table AVENTURE_MULTIPLICATEURS n'existe plus — même sabotage sur la
+  // table qui la remplace : tous les ennemis deviennent un Pyrosile (l'Aventure trop facile revient).
+  ['auditParcours', F.combat, "tous les ennemis de l'Exploration remplacés par un Pyrosile (l'Aventure trop facile revient)",
+    (s) => s.replace(/export const ENNEMIS_ETAPES = \[[^\]]*\];/, (m) => m.replace(/'[^']*'/g, "'pyrosile'"))],
   ['auditParcours', F.combat, 'le filet de sécurité débranché (des joueurs gratuits restent bloqués)',
     remplace('  return f ? f.baisse : 0;\n}\n\nexport function multiplicateurFureur', '  return 0;\n}\n\nexport function multiplicateurFureur')],
   ['auditParcours', F.clicker, "la garantie force une Rare même quand le joueur en a déjà une",
@@ -214,10 +216,10 @@ const SABOTAGES = [
     remplace('<TouchableOpacity style={[styles.challengeCard, styles.challengeCardCliquable]} activeOpacity={0.85}', '<TouchableOpacity activeOpacity={0.85}')],
   ['auditQuetesNiveau', F.contexte, "une quête hebdomadaire verse de nouveau sa valeur écrite (603 Griffes en quelques minutes)",
     remplace("    setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));\n    // 26/09 : la récompense suit le niveau d'Aventure (combatLogic).\n    const griffes = recompenseQuete(def.reward, (lifetimeStatsRef.current || {}).advLevelReached);", "    setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));\n    const griffes = def.reward;")],
-  ['auditApprentissage', F.combat, "le niveau 3 redevient 5 fois plus dur (Caraploof perd dès le début)",
-    // Par MOTIF (03/10) : le repère exact « 0.39, 0.61, 0.62 » disparaissait à chaque
-    // recalibrage (calibrer-parcours) — la 3e valeur, QUELLE QU'ELLE SOIT, ×5.
-    (src) => src.replace(/(export const AVENTURE_MULTIPLICATEURS = \[\n\s*[\d.]+, [\d.]+, )([\d.]+),/, (m, debut, v) => debut + (Number(v) * 5).toFixed(2) + ',')],
+  ['auditApprentissage', F.combat, "l'étape 3 confiée à une mythique (Arcanis) : les débutants perdent dès le début",
+    // Par MOTIF : la 3e entrée de la table des ennemis, QUELLE QU'ELLE SOIT (10/10 : la table remplace
+    // l'ancien multiplicateur, ce sabotage-là visait sa 3e valeur ×5).
+    (src) => src.replace(/(export const ENNEMIS_ETAPES = \[\n\s*'[^']*', '[^']*', )'[^']*',/, (m, debut) => debut + "'arcanis',")],
   ['auditFilet', F.combat, "le filet redevient lent (aide après 5 défaites au lieu de 3)",
     remplace("  { defaites: 3, baisse: 0.20 },", "  { defaites: 5, baisse: 0.20 },")],
   ['auditVerrouAventure', F.aventure, "le lancement du combat ne vérifie plus le verrou (on joue le niveau 26 en Ascension 0)",
@@ -256,12 +258,19 @@ const SABOTAGES = [
     remplace('  if (photo.gardien != null) return photo.gardien;\n', '')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "budget du Gardien mis à zéro : il ne demanderait plus rien",
     remplace('budgetGardienRef.current = primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * primesProchainsNiveaux(')],
+  // 10/10 : le Gardien et le niveau max (effort plafonné, plan plafonné, menu qui le dit).
+  ['auditGardienGriffes', F.combat, "effort du Gardien sans niveau max : il suppose des niveaux inatteignables",
+    remplace('for (let n = 0; n < 500; n++) { if (x.ownedLevel >= plafond) break; const c = levelUpCost', 'for (let n = 0; n < 500; n++) { const c = levelUpCost')],
+  ['auditGardienGriffes', F.combat, "plan du Gardien au-delà du niveau max (« Aegisolar +4 » impossible)",
+    remplace('prec.forEach((x, i) => { if (x.ownedLevel >= plafond) return; const g = puissanceAffichee', 'prec.forEach((x, i) => { const g = puissanceAffichee')],
+  ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le menu calcule le plan sans le niveau max actuel",
+    remplace(', 0.8, 40, niveauMaxCreature((lifetimeStats || {}).advLevelReached || 0));', ', 0.8, 40);')],
   ['auditGardienGriffes', F.combat, "effort du Gardien passé à 3 combats de Griffes : un mur",
     remplace('export const EFFORT_GARDIEN = 0.25;', 'export const EFFORT_GARDIEN = 3;')],
   ['auditGardien80', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "défaite au niveau du Gardien : retour du « Améliore tes créatures » trompeur",
     remplace('resultatGardien.chance != null && resultatGardien.chance >= 80', 'resultatGardien.chance != null && resultatGardien.chance > 999')],
   ['auditGardien80', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "menu du Gardien sans l'effort en niveaux",
-    remplace('return { victoires, niveaux80: plan ? plan.niveaux : null, plan80: plan ? plan.plus : [] };', 'return { victoires, niveaux80: 0, plan80: [] };')],
+    remplace('return { victoires, niveaux80: plan ? plan.niveaux : null, plan80: plan ? plan.plus : [], bloqueParMax: !!(plan && plan.bloqueParMax) };', 'return { victoires, niveaux80: 0, plan80: [], bloqueParMax: false };')],
   ['auditPuissanceAffichee', F.combat, "puissance affichée sur les stats ARRONDIES : les paliers reviennent (« ça ne bouge pas »)",
     remplace('    return { pv: c.hp, dmg: degatsMoyensDuTour(m.creature, { ...st, attack: c.attack }) };', '    return { pv: st.hp, dmg: degatsMoyensDuTour(m.creature, st) };')],
   ['auditStadeEvolution', F.clicker, "stade figé à 0 : les évolutions ne changeraient plus l'image",

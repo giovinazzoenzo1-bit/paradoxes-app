@@ -371,7 +371,7 @@ export function multJaugeTire(c, alea = Math.random, erreurMs = JAUGE_ERREUR_REF
   return multiplicateurJauge(resultatJauge(ecart, largeurZoneParfait(c)));
 }
 
-function degatsMoyensDuTour(creature, stats) {
+export function degatsMoyensDuTour(creature, stats) {
   const skills = creature.skills || [];
   const meilleur = skills.filter((k) => !k.special).reduce((m, k) => Math.max(m, k.damage), 0);
   const spe = skills.find((k) => k.special);
@@ -2129,19 +2129,27 @@ export function niveauxPourChance(membres, gStats, cible = 0.8, max = 40) {
 // qui dit aussi OÙ mettre les niveaux : { niveaux, plus: [{ id, plus }] } (créatures servies, la plus servie
 // d'abord). Le chemin le plus rentable concentre souvent tout sur UNE créature : sans le dire, un joueur qui
 // répartit ses niveaux en faisait 2 à 3 fois plus. null au-delà de `max`.
-export function planPourChance(membres, gStats, cible = 0.8, max = 40) {
+// (10/10, niveaux réels) `plafond` = niveau max actuel des créatures (niveauMaxCreature) : le plan ne propose
+// JAMAIS un niveau au-delà. S'il bloque avant la cible : { niveaux: null, plus: ce qui reste possible,
+// bloqueParMax: true } — le menu dit « gagne des étapes pour débloquer des niveaux ».
+export function planPourChance(membres, gStats, cible = 0.8, max = 40, plafond = Infinity) {
   const m0 = (membres || []).filter((x) => x && x.creature).map((x) => ({ ...x, ownedLevel: x.ownedLevel || x.level || 1 }));
   if (!m0.length || !gStats) return null;
   if (chanceFaceAuGardien(m0, gStats) >= cible) return { niveaux: 0, plus: [] };
   const suite = [m0];
   for (let k = 1; k <= max; k++) {
     const prec = suite[k - 1]; const p0 = puissanceAffichee(prec);
-    let mieux = 0, gain = -Infinity;
-    prec.forEach((x, i) => { const g = puissanceAffichee(prec.map((y, j) => (j === i ? { ...y, ownedLevel: y.ownedLevel + 1 } : y))) - p0; if (g > gain) { gain = g; mieux = i; } });
+    let mieux = -1, gain = -Infinity;
+    prec.forEach((x, i) => { if (x.ownedLevel >= plafond) return; const g = puissanceAffichee(prec.map((y, j) => (j === i ? { ...y, ownedLevel: y.ownedLevel + 1 } : y))) - p0; if (g > gain) { gain = g; mieux = i; } });
+    if (mieux < 0) break; // toutes au niveau max
     suite.push(prec.map((y, j) => (j === mieux ? { ...y, ownedLevel: y.ownedLevel + 1 } : y)));
   }
-  if (chanceFaceAuGardien(suite[max], gStats) < cible) return null;
-  let lo = 0, hi = max; // chance(lo) < cible ≤ chance(hi)
+  const fin = suite.length - 1;
+  if (chanceFaceAuGardien(suite[fin], gStats) < cible) {
+    if (fin >= max) return null;
+    return { niveaux: null, bloqueParMax: true, plus: suite[fin].map((x, i) => ({ id: x.creature.id, plus: x.ownedLevel - m0[i].ownedLevel })).filter((x) => x.plus > 0).sort((a, b) => b.plus - a.plus) };
+  }
+  let lo = 0, hi = fin; // chance(lo) < cible ≤ chance(hi)
   while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (chanceFaceAuGardien(suite[mid], gStats) >= cible) hi = mid; else lo = mid; }
   const plus = suite[hi].map((x, i) => ({ id: x.creature.id, plus: x.ownedLevel - m0[i].ownedLevel })).filter((x) => x.plus > 0).sort((a, b) => b.plus - a.plus);
   return { niveaux: hi, plus };
@@ -2216,19 +2224,22 @@ export function deckApresEffort(membres, griffes) {
 // deckApresEffort (qui mettait tout sur la créature la plus rentable : +20 % au lieu de +8 % sur le cas de
 // l'auteur). Chaque créature reçoit sa part (le reste d'une part passe à la suivante) ; le reliquat final va
 // aux niveaux les moins chers tant qu'il paie un niveau entier.
-export function deckApresEffortEquitable(membres, griffes) {
+// (10/10, niveaux réels) `plafond` : niveau max que l'effort peut atteindre (photo du Gardien : le niveau max
+// APRÈS les 3 prochaines étapes). MESURÉ sans lui : dès l'étape 60, 10 à 18 joueurs simulés sur 20 étaient
+// déjà au niveau max et le Gardien supposait +7 à +10 niveaux au-dessus — le « 80 % » était inatteignable.
+export function deckApresEffortEquitable(membres, griffes, plafond = Infinity) {
   const m = (membres || []).filter((x) => x && x.creature).map((x) => ({ ...x, ownedLevel: x.ownedLevel || x.level || 1 }));
   if (!m.length) return { membres: m, puissance: 0 };
   const part = Math.max(0, Number(griffes) || 0) / m.length;
   let report = 0;
   m.forEach((x) => {
     let reste = part + report;
-    for (let n = 0; n < 500; n++) { const c = levelUpCost(x.creature, x.ownedLevel); if (!(c > 0) || c > reste) break; x.ownedLevel += 1; reste -= c; }
+    for (let n = 0; n < 500; n++) { if (x.ownedLevel >= plafond) break; const c = levelUpCost(x.creature, x.ownedLevel); if (!(c > 0) || c > reste) break; x.ownedLevel += 1; reste -= c; }
     report = reste;
   });
   for (let n = 0; n < 500; n++) {
     let i = -1, c = Infinity;
-    m.forEach((x, j) => { const cj = levelUpCost(x.creature, x.ownedLevel); if (cj > 0 && cj < c) { c = cj; i = j; } });
+    m.forEach((x, j) => { if (x.ownedLevel >= plafond) return; const cj = levelUpCost(x.creature, x.ownedLevel); if (cj > 0 && cj < c) { c = cj; i = j; } });
     if (i < 0 || c > report) break;
     m[i].ownedLevel += 1; report -= c;
   }

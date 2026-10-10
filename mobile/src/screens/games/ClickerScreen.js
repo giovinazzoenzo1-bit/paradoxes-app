@@ -97,6 +97,7 @@ import {
   GRIFFES_PIECES_MAX_PAR_ASCENSION,
   GRIFFES_COIN_PACK,
   taillePackGriffes,
+  niveauMaxCreature,
 } from '../../games/clicker/clickerLogic';
 import {
   nextQuestSet,
@@ -684,6 +685,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // sur tes créatures (deckApresEffortEquitable). Les récompenses en attente ne comptent plus.
   const budgetGardienRef = useRef(0);
   budgetGardienRef.current = primesProchainsNiveaux((lifetimeStats || {}).advLevelReached || 0, 3);
+  // (10/10, niveaux réels) Le niveau max APRÈS les 3 prochaines étapes, figé dans la photo : l'effort du
+  // Gardien ne le dépasse jamais (MESURÉ : dès l'étape 60 il supposait +7 à +10 niveaux au-dessus du max).
+  const plafondGardienRef = useRef(null);
+  plafondGardienRef.current = niveauMaxCreature(((lifetimeStats || {}).advLevelReached || 0) + 3);
   // Pastille du bouton Quêtes : au moins une quête TERMINÉE et pas encore
   // réclamée. Même rôle que le point rouge du cadeau — signaler qu'il y a
   // quelque chose à récupérer sans avoir à ouvrir le menu pour vérifier.
@@ -787,7 +792,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, []);
   const cleFaceGardien = JSON.stringify([owned.length, (mainEgg && mainEgg.gardienPhoto) ? mainEgg.gardienPhoto.membres : null,
     (incubatingEgg && incubatingEgg.gardienPhoto) ? incubatingEgg.gardienPhoto.membres : null,
-    deck, owned.map((o) => [o.id, o.level || 1, o.evolutionTier || 0])]);
+    deck, owned.map((o) => [o.id, o.level || 1, o.evolutionTier || 0]), (lifetimeStats || {}).advLevelReached || 0]);
   useEffect(() => {
     let annule = false;
     const t = setTimeout(() => {
@@ -802,8 +807,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         const victoires = chanceFaceAuGardien(membresActuels, g0); // chance STABLE, style le moins efficace (08/10)
         // (08/10) Niveaux pour atteindre 80 %, MESURÉS par simulation (≈ 7 mesures, < 0,1 s).
         // (08/10) Le PLAN pour 80 % : combien de niveaux ET sur quelles créatures (« Aegisolar +4 »).
-        const plan = victoires >= 0.8 ? { niveaux: 0, plus: [] } : planPourChance(membresActuels, g0, 0.8, 40);
-        return { victoires, niveaux80: plan ? plan.niveaux : null, plan80: plan ? plan.plus : [] };
+        // (10/10) Jamais au-delà du niveau max actuel : sinon le plan le DIT (bloqueParMax).
+        const plan = victoires >= 0.8 ? { niveaux: 0, plus: [] } : planPourChance(membresActuels, g0, 0.8, 40, niveauMaxCreature((lifetimeStats || {}).advLevelReached || 0));
+        return { victoires, niveaux80: plan ? plan.niveaux : null, plan80: plan ? plan.plus : [], bloqueParMax: !!(plan && plan.bloqueParMax) };
       };
       try {
         const r = { main: mesurer(mainEgg), incub: mesurer(incubatingEgg) };
@@ -2246,7 +2252,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
   const startEggIncubation = () => {
     if (incubatingEgg) return;
-    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck, ascensionCount, budgetGardienRef.current));
+    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck, ascensionCount, budgetGardienRef.current, plafondGardienRef.current));
     startNewEggCycle();
     setIncubatorOpen(true);
   };
@@ -3389,7 +3395,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // Le minuteur naît en même temps que la phase, et UNIQUEMENT
         // ici : le créer dans un effet séparé le ferait repartir de zéro
         // à chaque rendu tant que la phase reste 'hatching'.
-        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current, ascensionCountRef.current, budgetGardienRef.current));
+        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current, ascensionCountRef.current, budgetGardienRef.current, plafondGardienRef.current));
         
         return 'hatching';
       });
@@ -4448,7 +4454,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         return (
           <FenetreJeu titre="⚔️ Gardien de l'œuf" onFermer={() => setConfirmGardien(null)} zIndex={3000}>
             <Text style={styles.menuGardienChance}>{ch == null ? 'Calcul de ta chance…' : `🎯 ${ch >= 95 ? '≥ 95' : ch} % de victoire`}</Text>
-            {ch != null && ch < 80 && mg.niveaux80 ? (
+            {ch != null && ch < 80 && mg.bloqueParMax ? (
+              <View style={styles.menuGardienPlan}>
+                {(mg.plan80 || []).length ? <Text style={styles.menuGardienTexte}>Possible tout de suite :</Text> : null}
+                {(mg.plan80 || []).map((x) => (
+                  <Text key={x.id} style={styles.menuGardienLigne}>⬆️ {nomCreatureDeck(x.id)} +{x.plus} niveau{x.plus > 1 ? 'x' : ''}</Text>
+                ))}
+                <Text style={styles.menuGardienNote}>🔒 Niveau max atteint : gagne des étapes d'Exploration pour débloquer des niveaux.</Text>
+              </View>
+            ) : ch != null && ch < 80 && mg.niveaux80 ? (
               <View style={styles.menuGardienPlan}>
                 <Text style={styles.menuGardienTexte}>Pour atteindre 80 % :</Text>
                 {(mg.plan80 || []).map((x) => (
@@ -5856,7 +5870,7 @@ function membresDuDeck(ids, ownedList) {
 // ⚠️ v2 (24/09, retour de l'auteur) : la v1 prenait les 3 meilleures de
 // la COLLECTION — plus fortes que le deck joué, d'où un écart affiché de
 // 6-7 points, « compliqué à rattraper à haut niveau ».
-function photoGardien(ownedList, deckIds, ascension = 0, budget = null) {
+function photoGardien(ownedList, deckIds, ascension = 0, budget = null, plafond = null) {
   const duDeck = membresDuDeck(deckIds, ownedList);
   const pris = new Set(duDeck.map((m) => m.creature.id));
   const reste = membresDuDeck((ownedList || []).map((o) => o.id).filter((id) => !pris.has(id)), ownedList)
@@ -5867,12 +5881,14 @@ function photoGardien(ownedList, deckIds, ascension = 0, budget = null) {
   // gardien (08/10) : son chiffre, CALCULÉ UNE FOIS ici et toujours RELU ensuite (menu, combat, résultat) —
   // l'auteur a vu « 9 915 » au menu puis « 9 901 » au résultat : le chiffre était recalculé à chaque affichage.
   const b = budget != null ? Math.max(0, Math.round(budget)) : null;
-  return { v: 2, asc: Math.max(0, Math.floor(Number(ascension) || 0)), ...(b != null ? { budget: b, gardien: deckApresEffortEquitable(membres, b).puissance } : {}), membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
+  // plafond (10/10) : niveau max après les 3 prochaines étapes, figé avec le reste de la photo.
+  const pl = plafond != null ? plafond : Infinity;
+  return { v: 2, asc: Math.max(0, Math.floor(Number(ascension) || 0)), ...(b != null ? { budget: b, gardien: deckApresEffortEquitable(membres, b, pl).puissance } : {}), ...(pl < Infinity ? { plafond: pl } : {}), membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
     puissance: puissanceDeck(membres) };
 }
-function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0, budget = null) {
+function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0, budget = null, plafond = null) {
   if (!egg) return egg;
-  try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds, ascension, budget) }; } catch (e) { return egg; }
+  try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds, ascension, budget, plafond) }; } catch (e) { return egg; }
 }
 // Chiffre AFFICHÉ du Gardien (08/10) : la puissance affichée de la PHOTO (prise au démarrage du
 // chrono, jamais retouchée ensuite) × la marge habituelle (calculée sur l'ancienne échelle de la
@@ -5883,9 +5899,13 @@ function gardienAffiche(egg, ascensionCourante = 0) {
   // (08/10) Le chiffre ÉCRIT dans la photo (calculé une seule fois) ; à défaut (instant de la migration),
   // la photo + son budget.
   if (photo.gardien != null) return photo.gardien;
-  return deckApresEffortEquitable(membresDeLaPhoto(photo), budgetDeLaPhoto(photo, ascensionCourante)).puissance;
+  return deckApresEffortEquitable(membresDeLaPhoto(photo), budgetDeLaPhoto(photo, ascensionCourante), plafondDeLaPhoto(photo)).puissance;
 }
 // Le budget d'effort d'une photo : le sien (A + B) ou, pour une photo d'avant, l'ancienne règle.
+// Le niveau max d'effort d'une photo (10/10) ; une photo d'avant n'en a pas (aucun plafond, comme avant).
+function plafondDeLaPhoto(photo) {
+  return photo && photo.plafond != null ? photo.plafond : Infinity;
+}
 function budgetDeLaPhoto(photo, ascensionCourante = 0) {
   if (photo && photo.budget != null) return photo.budget;
   return griffesEffortGardien(photo && photo.asc != null ? photo.asc : ascensionCourante);
@@ -5915,7 +5935,7 @@ function calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascension = 0) {
     const membres = membresDeLaPhoto(photo);
     if (!membres.length) return null;
     // (08/10) Calibré sur le deck APRÈS l'effort en Griffes, marge 1 : qui ATTEINT le chiffre gagne 8 fois sur 10.
-    const cible = deckApresEffortEquitable(membres, budgetDeLaPhoto(photo, ascension)).membres;
+    const cible = deckApresEffortEquitable(membres, budgetDeLaPhoto(photo, ascension), plafondDeLaPhoto(photo)).membres;
     return calibrageGardienSur(cible, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber), { marge: 1 });
   } catch (e) {
     return null;
