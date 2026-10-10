@@ -1366,7 +1366,24 @@ export const GUARDIAN_CREATURE = {
   stages: [{ name: 'Gardien', emoji: '🐯' }],
 };
 
+// ---- QUI affronte-t-on à chaque étape (niveaux réels, 10/10) ----
+// Une entrée par étape : les identifiants des ennemis séparés par « + ». CALCULÉE par
+// tools/calibrer-parcours.js (joueur MÉDIAN gagnant 7 fois sur 10 ; boss plus durs ; chapitre 1 =
+// apprentissage) — ne jamais la retoucher à la main : relancer l'outil (--ecrire). Au-delà de la
+// table : ses 40 dernières étapes en boucle (le NIVEAU, lui, continue de suivre l'étape). Table
+// vide ou identifiant inconnu : l'ancien cycle ci-dessous (repli, jamais d'équipe vide).
+// ⚠️ L'outil REMPLIT ce tableau pendant le calibrage (mêmes ennemis pour le joueur simulé que
+// pour le jeu) : le garder en `const` tableau, jamais réaffecté.
+export const ENNEMIS_ETAPES = [];
 export function opponentTeamForLevel(levelNumber) {
+  const n = Math.max(1, Math.floor(levelNumber || 1));
+  const t = ENNEMIS_ETAPES;
+  if (t.length) {
+    const boucle = Math.min(40, t.length);
+    const i = n <= t.length ? n - 1 : t.length - boucle + ((n - t.length - 1) % boucle);
+    const equipe = String(t[i] || '').split('+').map((id) => CREATURES.find((c) => c.id === id)).filter(Boolean);
+    if (equipe.length) return equipe;
+  }
   const size = opponentTeamSize(levelNumber);
   const team = [];
   for (let i = 0; i < size; i++) {

@@ -2896,6 +2896,19 @@ combatStatsForCreatureTyped de ce membre (k optionnel : mesures et outils). SUPP
 comparées avant/après : 8 disparues, 4 apparues, rien d'autre) : AVENTURE_MULTIPLICATEURS,
 multiplicateurAventure, statsForOpponentCreature, opponentPowerBudget(+PerMember), OPPONENT_ATTACK_MULT,
 opponentStatsForLevel(+Typed). Compositions = ANCIEN cycle CREATURES_BY_POWER (provisoire).
+ÉTAPE 2b EN COURS (branche) : ENNEMIS_ETAPES (combatLogic, une entrée « id+id » par étape, VIDE pour
+l'instant → ancien cycle) + calibrer-parcours.js RÉÉCRIT (classe toutes les équipes par force brute
+√(ΣPV×ΣATQ) au niveau de l'étape, dichotomie côté facile sur le joueur médian, choix parmi les voisines à
+±8 % de force, variété, hasard FIXÉ par équipe mesurée, garde « jamais bloqué » sur le 10e rang avec le
+filet à −40 %, CIBLE 0,7 / CIBLE_BOSS 0,55, apprentissage + 40 Griffes du jour 1). ~25 s.
+⚠️ MESURÉ (2 essais) — deux limites de « niveau = étape », décisions de l'auteur ATTENDUES :
+1. PLAFOND : étapes 102-144, même les 3 créatures les plus fortes du jeu au niveau de l'étape sont
+   battues par le joueur médian (39 étapes sur 43 au-dessus de 80 %) — ses créatures ont 5 niveaux
+   d'avance (plafond), rareté, évolution, runes, jauge. Proposé : ennemis « élites » (niveaux en plus,
+   AFFICHÉS) choisis par l'outil quand les compositions ne suffisent plus.
+2. ÉCART DE CHANCE : rareté x1 à x21 → à la même étape, médian 100 %, 10e rang 0 %. 1er essai (hasard
+   non fixé, sans garde) : 10 bloqués sur 40 ; 2e : 4 bloqués (étapes 145-153 : les 4 plus faibles,
+   sous le 10e rang protégé). Proposé : un dernier palier de filet (ex. −80 % après 10 défaites).
 ⚠️ À FAIRE ENCORE : verifier-controles (sabotages lignes ~181 et ~220 visent l'ancienne table),
 calibrer-aventure.js (ancien outil, écrit l'ancienne table), calibrer-parcours.js (à réécrire :
 choisir les COMPOSITIONS), PUISSANCE_CONSEILLEE (échelle d'avant), Gardien (guardianStats passe par
