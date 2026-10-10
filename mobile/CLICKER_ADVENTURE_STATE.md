@@ -3060,7 +3060,7 @@ recalibrage complet ; contrôles (auditNiveauMax → « aucun niveau max », aud
 le calcul « Griffes de victoire seulement » demandé par l'auteur.
 
 
-## 10/10 — RÈGLE SIMPLE DE L'AUTEUR (branche `griffes-libres`, EN COURS — remplace le réglage par cible de victoires)
+## 10/10 — RÈGLE SIMPLE DE L'AUTEUR (branche `griffes-libres`, PUBLIÉE le 10/10 — remplace le réglage par cible de victoires)
 
 RÈGLE VALIDÉE PAR L'AUTEUR : étape N = un ennemi aussi fort qu'une créature niveau N, un peu moins ; l'ennemi prend 1
 niveau par étape (il a REFUSÉ qu'un niveau compte plus que +5 %, et refusé « 3 niveaux par étape ») ; la prime de
@@ -3082,3 +3082,18 @@ médian A0 6,0-6,9 · A1 4,8-5,5 · A2 6,8-8,0 · A3 6,7-7,5 · A4 7,3-7,7 · A5
 Exemple de l'auteur : commune niv. 1 → étape 1 96 %, étape 2 82 %, étape 5 21 % ; niv. 5 → étape 5 67 %.
 RESTE : contrôles et sabotages (auditParcours, auditApprentissage, auditNiveauMax → aucun niveau max, Gardien…),
 publication, puis le calcul « Griffes de victoire seulement ».
+
+PUBLICATION (règle simple) — ajustements faits pendant les contrôles : chapitre 1 = ennemis COMMUNS (rareté de la 1re
+créature la plus faible ; MESURÉ avec la rareté médiane : Pyrosile débutant 43 % à l'étape 2) ; FORCE_ENNEMI[1] = 0,65
+(MESURÉ à 0,8 : Pyrosile 43 % contre Caraploof, eau contre feu ; à 0,65 le pire débutant ≥ 89 % sur les étapes 1-10) ;
+PUISSANCE_CONSEILLEE en maximum courant. Contrôles : auditNiveauMax réécrit (aucun niveau max, la prime paie ~1 niveau
+par créature sans rareté, ennemis à la force moyenne de leur rareté, ultime ≤ ×2, cibles de défis non ramenées) ; Gardien
+1 096 → 1 114. Sabotages : l'ancien (garde de handleLevelUp) remplacé par 4 (niveau max qui revient, coût par rareté,
+ultime ×4, ennemis à la force de leur espèce) → 140 prouvés ; verifier-defis 103/103 ; taps 20/20.
+SUITE DEMANDÉE PAR L'AUTEUR : le calcul « Griffes de victoire seulement » (l'optimiser et l'appliquer).
+⚠️ REPRISE (10/10) : ce bloc a été écrit par une copie de Claude COUPÉE avant de commiter (verrou « controles-regle#da75 »,
+6 fichiers modifiés, rien poussé). Travail relu en entier puis REVÉRIFIÉ par la copie suivante avant publication :
+verifier-defis 103/103, verifier-controles 140 prouvés, taps 20/20, 3 populations (médian 5,0-8,7 selon l'Ascension,
+0 bloqué). Exemple de l'auteur avec ×0,65 au chapitre 1 : commune niv. 1 → étape 1 100 %, étape 2 99 %, étape 5 65 %
+(avec ×0,8 : 96 / 82 / 21 %, mais Pyrosile débutant 43 % à l'étape 2). QUESTION POSÉE à l'auteur : garder ×0,65
+(personne coincé au début) ou revenir à ×0,8 (plus proche de son exemple « galère au 2e combat »).

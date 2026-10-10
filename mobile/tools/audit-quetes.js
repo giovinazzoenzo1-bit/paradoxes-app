@@ -4933,7 +4933,8 @@ function auditGardienGriffes() {
     if (r.membres.some((m, i) => m.ownedLevel <= deckAuteur[i].ownedLevel)) pb.push('répartition équitable : une créature ne reçoit aucun niveau');
     // 10/10 (niveaux réels : +5 %/niveau, stats x10, puissance affichée à l'échelle 1) : 1 613 → 1 898.
     // 10/10 (fin des coups critiques : coup moyen ×2,21 → ×0,71 dans la puissance affichée) : 1 898 → 1 096.
-    if (Math.abs(r.puissance - 1096) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 096 (« 3 combats »)`);
+    // 10/10 (le coût d'un niveau suit la prime de victoire) : 1 096 → 1 114.
+    if (Math.abs(r.puissance - 1114) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 114 (« 3 combats »)`);
   }
   if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
   if ((c.match(/, budgetGardienRef\.current, plafondGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget ET le niveau max du Gardien');
@@ -5056,25 +5057,36 @@ module.exports.auditSoutienEquipe = auditSoutienEquipe;
 // ── NIVEAU MAXIMUM d'une créature (09/10, décision de l'auteur) ──
 // « niveau d'Exploration le plus haut gagné + 5 » ; les défis « monte une créature au niveau N » ne doivent
 // JAMAIS bloquer un œuf (demande de l'auteur) ; le joueur simulé du calibrage respecte le même plafond.
+// 10/10 — DÉCISION DE L'AUTEUR : PLUS DE NIVEAU MAX (« je n'aime pas être bloqué en niveau » ; « seules les Griffes
+// freinent »). Ce contrôle vérifie qu'aucun plafond ne revient, que la prime de victoire paie « à peu près » un niveau
+// pour chaque créature, et que ce coût ne dépend plus de la rareté. (Avant : niveau max = étape gagnée + 5, 09/10.)
 function auditNiveauMax() {
-  const fs = require('fs'); const path = require('path'); const pb = [];
-  const L = load('clickerLogic');
-  if (L.niveauMaxCreature(0) !== 5 || L.niveauMaxCreature(20) !== 25 || L.NIVEAU_MAX_MARGE !== 5) pb.push('niveauMaxCreature ne vaut plus « niveau d\'Exploration gagné + 5 »');
-  const a = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
-  if (!/if \(ownedEntry\.level >= niveauMaxCreature\(currentUnlockedLevelRef\.current - 1\)\) \{ jouerSon\('refus'/.test(a)) pb.push('Exploration : on peut monter une créature AU-DESSUS du niveau maximum');
-  if (!/niveauMax=\{niveauMaxCreature\(currentUnlockedLevel - 1\)\}/.test(a) || !/haut=\{auPlafond \? 'NIVEAU MAX'/.test(a)) pb.push('fiche : le niveau maximum n\'est plus annoncé');
-  const Q = load('questLogic');
-  const t = Q.resolveQuestTarget({ metric: 'maxCreatureLevel', step: 15, mode: 'absolute' }, { maxCreatureLevel: 10, advLevelReached: 8 });
-  if (t > L.niveauMaxCreature(8)) pb.push(`défi « monte une créature au niveau N » : cible ${t} au-dessus du niveau maximum ${L.niveauMaxCreature(8)} (œuf bloqué)`);
-  const D = load('questDefs'); const tous = [].concat(...Object.values(D).filter(Array.isArray).map((x) => [].concat(...x.map((y) => (Array.isArray(y) ? y : [y])))));
-  const auPlafond = { ownedCount: 3, creaturesAVenir: 3, maxCreatureLevel: 13, advLevelReached: 8 };
-  for (const id of ['g4_creature', 'feed5', 'feed15']) {
-    const q = tous.find((x) => x && x.id === id);
-    if (!q) { pb.push(`défi ${id} introuvable`); continue; }
-    if (q.available && q.available(auPlafond)) pb.push(`défi ${id} tiré alors que la meilleure créature est AU niveau maximum (œuf bloqué)`);
+  const pb = [];
+  const L = load('clickerLogic'); const K = load('combatLogic'); const Q = load('questLogic');
+  if (L.niveauMaxCreature(0) !== Infinity || L.niveauMaxCreature(200) !== Infinity) pb.push("un niveau maximum est revenu (décision de l'auteur du 10/10 : aucun)");
+  for (const n of [5, 15, 40, 90, 130, 170, 210]) {
+    const taille = Math.min(3, Math.max(1, Math.ceil(n / 10))); const cout = L.levelUpCost(C.CREATURES[0], n); const prime = K.griffesReward(n);
+    const r = (cout * taille) / prime;
+    if (!(r >= 0.4 && r <= 1.1)) pb.push(`niveau ${n} : un niveau coûte ${cout} Griffes pour une prime de ${prime} (${taille} créature(s)) — la prime ne paie plus « à peu près ce niveau »`);
   }
-  const s = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
-  if ((s.match(/monter\(L\.niveauMaxCreature\(j\.niveau\)\)/g) || []).length !== 2) pb.push('le joueur simulé du calibrage ne respecte plus le niveau maximum');
+  const parRarete = ['commun', 'rare', 'mythique'].map((r) => C.CREATURES.find((c) => c.rarity === r)).filter(Boolean);
+  if (new Set(parRarete.map((c) => L.levelUpCost(c, 50))).size !== 1) pb.push("le coût d'un niveau dépend de nouveau de la rareté (règle de l'auteur : la prime paie le niveau de CHAQUE créature)");
+  // Ultime plafonné à ×2 la meilleure attaque normale (décision de l'auteur du 10/10, pour les deux camps).
+  for (const cr of C.CREATURES) { const sp = (cr.skills || []).find((k) => k.special), n = K.meilleureAttaque(cr);
+    if (sp && n && K.scaledSkillDamage(sp, cr, 100) > 2 * K.scaledSkillDamage(n, cr, 100) + 1e-6) { pb.push(`ultime de ${cr.id} au-dessus de ×2 l'attaque normale`); break; } }
+  // Règle de l'auteur (10/10) : chaque ennemi de l'Exploration a la force MOYENNE de sa rareté au niveau, × FORCE_ENNEMI.
+  for (const n of [3, 15, 40, 120, 200]) {
+    const eq = K.equipeEnnemie(n);
+    for (const m of eq) {
+      const st = K.statsForOpponentCreatureTyped(m.creature, n);
+      const autres = C.CREATURES.filter((c) => c.rarity === m.creature.rarity).map((c) => { const s2 = K.combatStatsForCreatureTyped(c, m.niveau, m.evolutionTier, []); return Math.sqrt(s2.hp * s2.attack); });
+      const attendu = (autres.reduce((t, x) => t + x, 0) / autres.length) * K.FORCE_ENNEMI[eq.length];
+      if (Math.abs(Math.sqrt(st.hp * st.attack) / attendu - 1) > 0.03) { pb.push(`étape ${n} : ${m.creature.id} n'a plus la force moyenne de sa rareté (règle de l'auteur)`); break; }
+    }
+  }
+  const t8 = Q.resolveQuestTarget({ metric: 'maxCreatureLevel', step: 15, mode: 'absolute' }, { maxCreatureLevel: 10, advLevelReached: 8 });
+  const t200 = Q.resolveQuestTarget({ metric: 'maxCreatureLevel', step: 15, mode: 'absolute' }, { maxCreatureLevel: 10, advLevelReached: 200 });
+  if (t8 !== t200) pb.push(`défi « monte une créature au niveau N » : cible encore ramenée selon l'étape (${t8} contre ${t200})`);
   return pb;
 }
 module.exports.auditNiveauMax = auditNiveauMax;

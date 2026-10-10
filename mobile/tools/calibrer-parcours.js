@@ -122,7 +122,9 @@ function calibrer(nJoueurs = 60, essais = 10, R = P.REGLAGES) {
       const ids = [], evos = [];
       for (let i = 0; i < taille; i++) {
         const v = actifs.map((j) => j.trio()[i]).filter(Boolean).map((p) => RANG.indexOf(p.c.rarity)).sort((x, y) => x - y);
-        const r = v.length ? rang(v, 0.5) : 0;
+        // Chapitre 1 = apprentissage : la rareté de la 1re créature la PLUS FAIBLE possible (commune). MESURÉ avec la
+        // rareté médiane : Pyrosile débutant à 43 % à l'étape 2 et 0 % au boss de l'étape 10.
+        const r = l <= APPRENTISSAGE.niveaux ? Math.min(...premieresCreatures().map((c) => RANG.indexOf(c.rarity))) : (v.length ? rang(v, 0.5) : 0);
         // Espèces de cette rareté (au besoin, la plus proche), la moins vue dans le chapitre puis la moins récente.
         let pool = [];
         for (let d = 0; !pool.length && d < RANG.length; d++) pool = A.C.CREATURES.filter((c) => !ids.includes(c.id) && Math.abs(RANG.indexOf(c.rarity) - r) === d);
@@ -144,7 +146,8 @@ function calibrer(nJoueurs = 60, essais = 10, R = P.REGLAGES) {
       lignes.push({ l, boss: K.estEtapeBoss(l), niveau: K.niveauEnnemi(l), ids, raretes: ids.map((id) => PAR_ID[id].rarity),
         med: rang(v, 0.5), p10: rang(v, 0.1), nivJoueur: rang(niv, 0.5) });
       const pw = actifs.map((j) => K.puissanceDeck(j.trio().map((p) => ({ creature: p.c, ownedLevel: p.niv, evolutionTier: p.evo, equippedRunes: [] })))).sort((x, y) => x - y);
-      puissances.push(pw[Math.floor(pw.length * CENTILE)]);
+      // Maximum COURANT (comme l'ancien outil) : la puissance conseillée ne baisse jamais (auditPuissanceConseillee).
+      puissances.push(Math.max(puissances.length ? puissances[puissances.length - 1] : 0, pw[Math.floor(pw.length * CENTILE)]));
       actifs.forEach((j) => { j.jouer(l, 1, stats[joueurs.indexOf(j)]); if (j.bloque) bloques.push(l); });
     }
     joueurs.forEach((j, i) => { if (!j.parAsc[a]) j.finAscension(a, stats[i]); });
