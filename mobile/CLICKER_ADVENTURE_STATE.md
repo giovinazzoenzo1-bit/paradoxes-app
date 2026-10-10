@@ -3121,3 +3121,16 @@ succès liés au combat, coût d'un niveau) ; 3 hypothèses réglables en tête 
 CONSTATS : les succès combat sont fixes (15 → 600) : +65 % des primes au chapitre 1, presque rien après l'étape 75 ;
 les défis combat suivent la prime (facteurQuetes) : ≈ +20 % partout ; « Gagne 80 combats » (semaine) n'est pas faisable
 à 5 étapes par jour.
+
+
+## 10/10 — QUAND UN JOUEUR BLOQUE-T-IL ? Outil `tools/blocage-griffes.js [aventure|tout]` (demande de l'auteur)
+
+« Bloqué » = le joueur MÉDIAN a besoin du coup de pouce (3 défaites de suite ou plus) pour passer l'étape ; « vraiment
+bloqué » = 30 défaites de suite malgré le filet. 40 joueurs simulés (ceux du calibrage, qui dépensent tout).
+- « aventure » (primes de victoire SEULES, ni 40 du jour 1, ni défis, succès, packs, Ascension, runes) : bloqué dès
+  l'ÉTAPE 11 ; par Ascension A0-A5 : 3,7 / 2,7 / 3,3 / 2,3 / 1,3 / 0,9 victoires sur 10 ; aide nécessaire sur 40 / 63 /
+  51 / 74 / 100 / 100 % des étapes ; équipe −10 / −7 / −3 / −17 / −34 / −32 niveaux ; VRAIMENT bloqués : 9 et 7 sur 40
+  aux A4-A5. Cause : les primes paient ~1 niveau par créature, mais les créatures des œufs naissent niveau 1.
+- « tout » (+ défis du jour / semaine, succès, calendrier 270 Griffes par semaine dont 40 au jour 1, 4 packs par
+  Ascension, récompenses d'Ascension, 3 runes) : 1er blocage à l'ÉTAPE 30 ; 8,9 / 6,9 / 8,5 / 7,4 / 8,4 / 6,5 victoires sur
+  10 ; aide sur 0 / 9 / 2 / 0 / 2 / 2 % des étapes ; 0 vraiment bloqué. (Le calibrage, lui, ne compte AUCUN pack.)
