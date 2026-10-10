@@ -2909,6 +2909,21 @@ filet à −40 %, CIBLE 0,7 / CIBLE_BOSS 0,55, apprentissage + 40 Griffes du jou
 2. ÉCART DE CHANCE : rareté x1 à x21 → à la même étape, médian 100 %, 10e rang 0 %. 1er essai (hasard
    non fixé, sans garde) : 10 bloqués sur 40 ; 2e : 4 bloqués (étapes 145-153 : les 4 plus faibles,
    sous le 10e rang protégé). Proposé : un dernier palier de filet (ex. −80 % après 10 défaites).
+DÉCISIONS (10/10) : ÉLITES oui (bonus de niveaux AFFICHÉS, « id+id+id@b » dans ENNEMIS_ETAPES,
+bonusElite / niveauEnnemi) ; FILET : dernier palier −80 % après 10 défaites (FILET_SECURITE).
+ÉTAPE 2b FAITE (branche) — outil calibrer-parcours.js, 60 joueurs, ~45 s, `--ecrire` (ou CP.ecrire(json)) :
+- OBJECTIF = victoires / combats du joueur MÉDIAN sur une PARTIE ≈ 0,7, rejouer compris. Cible par étape
+  sur la victoire MOYENNE de la population (pas le médian de l'étape), AUTO-CORRIGÉE sur le ratio courant
+  de l'Ascension (GAIN 1,5, bornes 0,4-0,97, chapitre 1 exclu) ; boss −0,15 ; élites quand même l'équipe
+  la plus forte est trop facile (plus grand bonus côté facile) ; garde « jamais bloqué » (10e rang ≥ 50 %
+  avec le filet à −40 %) ; hasard FIXÉ par équipe mesurée ; voisinage élargi si < 3 équipes.
+- 4 ESSAIS MESURÉS avant d'y arriver (consignés dans le code) : cible 0,7 au médian de l'étape → 3,8-5,6
+  sur 10 ; 0,85 → 5,5-8,1 ; auto-correction sur le médian → A1-A2 à 4,9-5,3 (chacun perd souvent : les
+  œufs rebattent l'ordre des équipes d'une étape à l'autre) ; victoire MOYENNE + auto-correction → OK.
+- CONTRÔLE (3 populations de 40, processus séparés, /tmp/niv/median.js) — joueur médian sur 10 :
+  A0 7,6-8,1 · A1 5,8-6,6 · A2 6,7-7,5 · A3 5,8-6,9 · A4 6,2-9,5 · A5 5,5-7,1 ; 10e rang 2,7-5,0 ;
+  0 bloqué. JEU PUBLIÉ (même simulateur) : médian 8,1-10, 10e rang 4,0-7,4. ⚠️ Écart d'une population à
+  l'autre ≈ ±1 point (chance aux œufs) : toujours contrôler sur PLUSIEURS populations.
 ⚠️ À FAIRE ENCORE : verifier-controles (sabotages lignes ~181 et ~220 visent l'ancienne table),
 calibrer-aventure.js (ancien outil, écrit l'ancienne table), calibrer-parcours.js (à réécrire :
 choisir les COMPOSITIONS), PUISSANCE_CONSEILLEE (échelle d'avant), Gardien (guardianStats passe par

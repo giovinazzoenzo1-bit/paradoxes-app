@@ -921,7 +921,11 @@ export function presqueGagne(adversaires) {
 // ⚠️ 26/09 (3e test de l'auteur) : filet RAPIDE (avant : 5 / 7 / 10). Les
 // combats ont peu de hasard : une équipe un peu faible perd presque
 // toujours ; MESURÉ : ≈ 2 combats de moins par « mur » (8 → 6, 6,9 → 4,9).
+// 10/10 (niveaux réels, décision de l'auteur) : DERNIER palier −80 % après 10 défaites. MESURÉ : en
+// visant le joueur MÉDIAN, la chance aux œufs (rareté x1 à x21) laissait 4 joueurs simulés sur 40
+// bloqués (étapes 145-153) malgré le −60 %.
 export const FILET_SECURITE = [
+  { defaites: 10, baisse: 0.80 },
   { defaites: 7, baisse: 0.60 },
   { defaites: 5, baisse: 0.40 },
   { defaites: 3, baisse: 0.20 },
@@ -1374,14 +1378,60 @@ export const GUARDIAN_CREATURE = {
 // vide ou identifiant inconnu : l'ancien cycle ci-dessous (repli, jamais d'équipe vide).
 // ⚠️ L'outil REMPLIT ce tableau pendant le calibrage (mêmes ennemis pour le joueur simulé que
 // pour le jeu) : le garder en `const` tableau, jamais réaffecté.
-export const ENNEMIS_ETAPES = [];
-export function opponentTeamForLevel(levelNumber) {
-  const n = Math.max(1, Math.floor(levelNumber || 1));
+export const ENNEMIS_ETAPES = [
+  'aquamira', 'voltix', 'ventis', 'aquamira', 'pyrosile', 'caraploof',
+  'voltix', 'ventis', 'ombrillon', 'bouldog', 'fournax+racinea', 'aegisolar+malefix',
+  'zephyrion+braiserose', 'terracroc+brontobloc', 'aegisolar+luxorbe', 'racinea+runicor', 'nocturis+runicor', 'aegisolar+malefix',
+  'aegisolar+terracroc', 'racinea+runicor', 'aegisolar+fournax+runicor', 'aegisolar+malefix+racinea', 'pyrosile+glyphon+voltarel', 'aegisolar+brontobloc+runicor',
+  'glyphon+terracroc+runicor', 'racinea+runicor+braiserose', 'caraploof+ventis+abyssorax', 'aegisolar+nocturis+braiserose', 'nocturis+runicor+braiserose', 'aegisolar+malefix+nocturis',
+  'aquamira+racinea+runicor', 'voltix+aegisolar+runicor', 'aegisolar+terracroc+nocturis', 'aegisolar+malefix+nocturis', 'aegisolar+malefix+racinea', 'pyrosile+ombrillon+cumulox',
+  'caraploof+bouldog+voltarel', 'ventis+luxorbe+abyssorax', 'aegisolar+malefix+nocturis', 'aegisolar+malefix+racinea', 'voltix+glyphon+cumulox', 'aegisolar+fournax+runicor',
+  'luxorbe+zephyrion+cumulox', 'aegisolar+terracroc+braiserose', 'glyphon+brontobloc+cumulox', 'bouldog+runicor+cumulox', 'aquamira+malefix+abyssorax', 'brontobloc+abyssorax+voltarel',
+  'pyrosile+nocturis+solstral', 'caraploof+ombrillon+voltarel', 'ventis+voltix+abyssorax', 'aegisolar+fournax+racinea', 'bouldog+luxorbe+cumulox', 'terracroc+runicor+braiserose',
+  'glyphon+zephyrion+cumulox', 'aquamira+brontobloc+abyssorax', 'ventis+malefix+voltarel', 'luxorbe+abyssorax+voltarel', 'brontobloc+abyssorax+voltarel', 'ombrillon+nocturis+cumulox',
+  'pyrosile+solarion+racinea', 'caraploof+voltix+voltarel', 'aegisolar+terracroc+runicor', 'aegisolar+fournax+braiserose', 'bouldog+glyphon+abyssorax', 'brontobloc+abyssorax+voltarel',
+  'aquamira+abyssorax+cumulox', 'solarion+malefix+racinea', 'aegisolar+solarion+racinea', 'solarion+zephyrion+abyssorax', 'solarion+malefix+racinea', 'zephyrion+racinea+solstral',
+  'solarion+zephyrion+abyssorax', 'luxorbe+voltarel+tartaroth', 'ventis+solarion+cumulox', 'runicor+braiserose+solstral', 'pyrosile+abyssorax+tartaroth', 'ombrillon+solarion+cumulox',
+  'aegisolar+voltarel+solstral', 'runicor+solstral+tartaroth', 'caraploof+fournax+arcanis', 'nocturis+abyssorax+solstral', 'voltix+solarion+cumulox', 'aegisolar+voltarel+solstral',
+  'glyphon+brontobloc+arcanis', 'terracroc+abyssorax+tartaroth', 'aegisolar+voltarel+solstral', 'bouldog+aquamira+arcanis', 'luxorbe+zephyrion+arcanis', 'cumulox+solstral+tartaroth',
+  'ventis+racinea+arcanis', 'malefix+tartaroth+arcanis', 'cumulox+voltarel+arcanis', 'solarion+runicor+arcanis', 'pyrosile+tartaroth+arcanis', 'cumulox+voltarel+arcanis',
+  'solarion+solstral+arcanis', 'cumulox+tartaroth+arcanis', 'solstral+tartaroth+arcanis', 'solarion+cumulox+arcanis@1', 'abyssorax+tartaroth+arcanis', 'solstral+tartaroth+arcanis@1',
+  'solarion+solstral+arcanis@6', 'cumulox+solstral+arcanis@6', 'voltarel+solstral+arcanis@2', 'solarion+solstral+arcanis@3', 'cumulox+solstral+arcanis@5', 'solarion+cumulox+arcanis@6',
+  'solarion+solstral+arcanis@7', 'abyssorax+solstral+arcanis@7', 'cumulox+solstral+arcanis@7', 'solarion+solstral+arcanis@7', 'cumulox+tartaroth+arcanis@7', 'voltarel+tartaroth+arcanis@6',
+  'solarion+solstral+arcanis@5', 'solstral+tartaroth+arcanis@6', 'cumulox+tartaroth+arcanis@5', 'solarion+solstral+arcanis@6', 'solstral+tartaroth+arcanis@6', 'cumulox+tartaroth+arcanis@4',
+  'solarion+tartaroth+arcanis@4', 'solstral+tartaroth+arcanis@5', 'voltarel+tartaroth+arcanis@6', 'solarion+solstral+arcanis@6', 'solstral+tartaroth+arcanis@6', 'voltarel+tartaroth+arcanis@4',
+  'cumulox+tartaroth+arcanis@5', 'solstral+tartaroth+arcanis@5', 'voltarel+tartaroth+arcanis@4', 'solarion+tartaroth+arcanis@3', 'solstral+tartaroth+arcanis@3', 'cumulox+tartaroth+arcanis@2',
+  'voltarel+tartaroth+arcanis@3', 'solstral+tartaroth+arcanis@3', 'abyssorax+tartaroth+arcanis@3', 'cumulox+tartaroth+arcanis@3', 'solstral+tartaroth+arcanis@3', 'solarion+tartaroth+arcanis@2',
+  'cumulox+tartaroth+arcanis@2', 'solstral+tartaroth+arcanis@3', 'voltarel+tartaroth+arcanis@1', 'abyssorax+tartaroth+arcanis@1', 'solstral+tartaroth+arcanis@1', 'aegisolar+voltarel+solstral',
+  'malefix+nocturis+arcanis', 'caraploof+solstral+arcanis', 'brontobloc+solstral+arcanis', 'brontobloc+abyssorax+arcanis', 'aquamira+voltarel+arcanis', 'zephyrion+racinea+arcanis',
+  'ventis+braiserose+arcanis', 'caraploof+braiserose+arcanis', 'fournax+terracroc+arcanis', 'pyrosile+solarion+cumulox', 'aegisolar+runicor+solstral', 'glyphon+abyssorax+tartaroth',
+  'ombrillon+solarion+voltarel', 'abyssorax+cumulox+voltarel', 'bouldog+abyssorax+solstral', 'solarion+zephyrion+abyssorax', 'voltix+abyssorax+tartaroth', 'luxorbe+voltarel+solstral',
+  'bouldog+runicor+solstral', 'aegisolar+malefix+solstral', 'racinea+braiserose+solstral', 'solarion+zephyrion+abyssorax', 'brontobloc+nocturis+solstral', 'aegisolar+racinea+solstral',
+  'solarion+zephyrion+abyssorax', 'nocturis+racinea+solstral', 'nocturis+braiserose+solstral', 'aegisolar+racinea+solstral', 'solarion+malefix+racinea', 'aegisolar+brontobloc+solstral',
+  'nocturis+racinea+solstral', 'aegisolar+racinea+solstral', 'ombrillon+abyssorax+solstral', 'voltix+abyssorax+solstral', 'aegisolar+braiserose+solstral', 'solarion+runicor+braiserose',
+  'aegisolar+racinea+solstral', 'ombrillon+abyssorax+solstral', 'voltix+abyssorax+solstral', 'aegisolar+racinea+solstral', 'ombrillon+abyssorax+solstral', 'solarion+zephyrion+abyssorax',
+  'solarion+terracroc+voltarel', 'zephyrion+abyssorax+solstral', 'aquamira+abyssorax+solstral', 'solarion+zephyrion+abyssorax', 'solarion+terracroc+voltarel', 'zephyrion+abyssorax+solstral',
+  'solarion+zephyrion+abyssorax', 'solarion+aquamira+abyssorax', 'bouldog+abyssorax+tartaroth', 'solarion+zephyrion+abyssorax', 'caraploof+cumulox+solstral', 'nocturis+runicor+solstral',
+  'solarion+zephyrion+abyssorax', 'ventis+voltarel+tartaroth', 'aegisolar+racinea+solstral', 'bouldog+abyssorax+solstral', 'solarion+zephyrion+abyssorax', 'brontobloc+cumulox+tartaroth',
+  'malefix+runicor+solstral', 'aegisolar+racinea+solstral', 'bouldog+abyssorax+solstral', 'fournax+voltarel+tartaroth', 'nocturis+braiserose+solstral', 'aegisolar+racinea+solstral',
+  'bouldog+abyssorax+solstral', 'glyphon+solarion+cumulox', 'luxorbe+abyssorax+tartaroth', 'pyrosile+voltarel+solstral', 'solarion+terracroc+voltarel', 'bouldog+abyssorax+solstral',
+  'voltix+cumulox+solstral', 'solarion+terracroc+voltarel', 'ombrillon+abyssorax+solstral', 'solarion+zephyrion+abyssorax', 'solarion+terracroc+voltarel', 'aquamira+cumulox+solstral',
+  'ventis+abyssorax+tartaroth', 'solarion+terracroc+voltarel', 'nocturis+runicor+solstral', 'aegisolar+braiserose+solstral', 'solarion+terracroc+voltarel',
+];
+// L'entrée de la table pour l'étape n : { ids, elite } (null si la table est vide).
+function entreeEtape(levelNumber) {
   const t = ENNEMIS_ETAPES;
-  if (t.length) {
-    const boucle = Math.min(40, t.length);
-    const i = n <= t.length ? n - 1 : t.length - boucle + ((n - t.length - 1) % boucle);
-    const equipe = String(t[i] || '').split('+').map((id) => CREATURES.find((c) => c.id === id)).filter(Boolean);
+  if (!t.length) return null;
+  const n = Math.max(1, Math.floor(levelNumber || 1));
+  const boucle = Math.min(40, t.length);
+  const i = n <= t.length ? n - 1 : t.length - boucle + ((n - t.length - 1) % boucle);
+  const [equipe, elite] = String(t[i] || '').split('@');
+  return { ids: String(equipe || '').split('+').filter(Boolean), elite: Math.max(0, Math.floor(Number(elite) || 0)) };
+}
+export function opponentTeamForLevel(levelNumber) {
+  const e = entreeEtape(levelNumber);
+  if (e) {
+    const equipe = e.ids.map((id) => CREATURES.find((c) => c.id === id)).filter(Boolean);
     if (equipe.length) return equipe;
   }
   const size = opponentTeamSize(levelNumber);
@@ -1491,18 +1541,19 @@ export function starsForBattle(stats, opponentCount) {
 // chaque niveau : la « puissance conseillée » affichée. Même calcul que la
 // table ci-dessus (tools/calibrer-parcours.js), jamais en baisse.
 export const PUISSANCE_CONSEILLEE = [
-  14, 15, 15, 16, 16, 17, 20, 20, 20, 29, 31, 32, 36, 37, 37, 44, 46, 48, 49, 52, 55, 56, 56, 56, 73, 92, 95,
-  97, 101, 101, 101, 107, 112, 129, 129, 139, 139, 156, 163, 174, 180, 186, 195, 202, 209, 220, 220, 222,
-  233, 241, 254, 262, 274, 293, 313, 313, 313, 324, 325, 325, 325, 330, 350, 376, 388, 394, 416, 418, 422,
-  423, 427, 427, 431, 432, 433, 497, 497, 498, 500, 500, 501, 510, 511, 511, 515, 515, 594, 595, 596, 597,
-  598, 821, 826, 830, 836, 837, 871, 873, 877, 878, 1100, 1102, 1107, 1111, 1115, 1116, 1123, 1127, 1131,
-  1134, 1138, 1141, 1149, 1152, 1155, 1157, 1160, 1476, 1481, 1486, 1489, 1493, 1724, 1729, 1734, 1736, 1743,
-  1749, 1754, 1759, 1765, 1768, 1777, 1782, 1786, 1790, 1795, 1804, 1842, 1846, 1851, 1856, 1863, 1863, 1863,
-  2031, 2370, 2447, 2558, 2604, 2665, 2685, 2709, 2766, 2784, 2801, 2817, 2839, 2854, 2866, 2884, 2900, 2913,
-  2927, 2941, 2980, 2990, 3002, 3011, 3025, 3037, 3045, 3056, 3065, 3116, 3128, 3138, 3146, 3158, 3167, 3177,
-  3186, 3192, 3209, 3218, 3227, 3238, 3251, 3265, 3274, 3282, 3289, 3299, 3336, 3345, 3353, 3363, 3371, 3379,
-  3388, 3410, 3420, 3430, 3439, 3446, 3462, 3470, 3477, 3485, 3495, 3504, 3515, 3524, 3530, 3540, 3551, 3561,
-  3565, 3580, 3586, 3596, 3627, 3636, 3656, 3667, 3675, 3682
+  139, 146, 153, 161, 169, 178, 187, 195, 206, 361, 411, 445, 482, 516, 540, 568, 607, 635,
+  675, 709, 756, 801, 861, 886, 1094, 1242, 1298, 1398, 1424, 1440, 1648, 1756, 1890, 2094, 2221, 2429,
+  2697, 2911, 3197, 3415, 3648, 3979, 4325, 4723, 5007, 5400, 5790, 6180, 6613, 7179, 7725, 8093, 8637, 9370,
+  10259, 11035, 11937, 12585, 13699, 13902, 14667, 15682, 16931, 18687, 20733, 22498, 26225, 28839, 31144, 34749, 38727, 45252,
+  47513, 49890, 53454, 59926, 63615, 69985, 74870, 78613, 83785, 89322, 93791, 98481, 104593, 109827, 129396, 147134, 154537, 164184,
+  172393, 207843, 222392, 234843, 246585, 263096, 283578, 297758, 315153, 334189, 372815, 387833, 407227, 427587, 448966, 471416, 499603, 528985,
+  575999, 610996, 655244, 741953, 779052, 818002, 858902, 901852, 946943, 1038783, 1090726, 1145257, 1202521, 1277556, 1410929, 1481475, 1555547, 1633326,
+  1714992, 1800743, 1700572, 1865506, 1958776, 2067242, 2170602, 2279136, 2409028, 2529475, 2704165, 2839372, 2894007, 3038708, 3206974, 3367321, 3535684, 2073003,
+  2076949, 2081868, 2089740, 2139179, 2147635, 2158287, 2188279, 2203726, 2227555, 2311485, 2424288, 2452699, 2521118, 2554581, 2622758, 2743450, 2871588, 3021803,
+  3102865, 3207301, 3312954, 3443324, 3808747, 3979119, 4176949, 4369085, 4659797, 4834577, 5160050, 5444641, 5716873, 5875401, 6169172, 6617994, 7141587, 7661155,
+  8044213, 8446423, 8868745, 9312184, 9777792, 10266681, 10551377, 11078946, 12214538, 12825264, 13466526, 14139853, 14673987, 15589189, 16368647, 18657933, 19359360, 20327329,
+  21343692, 22410879, 23812775, 25943392, 26662805, 27995943, 30032721, 32031474, 34029245, 35314700, 36941429, 38788501, 41362760, 44372006, 47147665, 50276692, 52175898, 54784692,
+  57308283, 60173698, 62435868, 65557661, 68835543, 74281572, 77087564, 81895433, 84670434, 87853533, 92246212,
 ];
 
 // ---- NIVEAUX RÉELS (10/10, décision de l'auteur) : les ennemis sont de VRAIES créatures ----
@@ -1517,9 +1568,16 @@ export const BONUS_NIVEAU_BOSS = 3;
 export function estEtapeBoss(levelNumber) {
   return levelIndexInChapter(Math.max(1, Math.floor(levelNumber || 1))) === LEVELS_PER_CHAPTER;
 }
+// ÉLITES (10/10, décision de l'auteur) : quand même les créatures les plus fortes du jeu, au niveau de
+// l'étape, ne suffisent plus face au joueur médian (MESURÉ : étapes 102-144, 39 sur 43), l'outil ajoute
+// des niveaux, AFFICHÉS comme les autres : « id+id+id@12 » dans ENNEMIS_ETAPES = 12 niveaux de plus.
+export function bonusElite(levelNumber) {
+  const e = entreeEtape(levelNumber);
+  return e ? e.elite : 0;
+}
 export function niveauEnnemi(levelNumber) {
   const n = Math.max(1, Math.floor(levelNumber || 1));
-  return n + (estEtapeBoss(n) ? BONUS_NIVEAU_BOSS : 0);
+  return n + (estEtapeBoss(n) ? BONUS_NIVEAU_BOSS : 0) + bonusElite(n);
 }
 export function equipeEnnemie(levelNumber) {
   const niveau = niveauEnnemi(levelNumber);

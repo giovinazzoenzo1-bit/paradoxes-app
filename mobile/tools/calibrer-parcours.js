@@ -26,8 +26,22 @@ const A = require('./audit-quetes.js');
 const K = A.load('combatLogic');
 const L = A.load('clickerLogic');
 
-const CIBLE = 0.7;
-const CIBLE_BOSS = 0.55;
+// ⚠️ « 7 victoires sur 10 » (décision de l'auteur) se lit sur une PARTIE ENTIÈRE (victoires / combats,
+// rejouer compris), pas étape par étape. MESURÉ (40 parties complètes) : viser 0,7 par étape donnait
+// 3,8 à 5,6 sur 10 au joueur médian dès l'A1 (chaque défaite ajoute des combats rejoués). Jeu publié
+// avant la refonte : 8,1 à 10 sur 10 (le « trop facile » de l'auteur).
+// Cible PAR ÉTAPE auto-corrigée : OBJECTIF = victoires / combats du joueur médian sur l'Ascension en
+// cours (chapitre 1 exclu : apprentissage, facile exprès). En dessous, les étapes suivantes visent plus
+// facile ; au-dessus, plus dur (GAIN). MESURÉ avec une cible FIXE de 0,85 : 5,5 à 8,1 sur 10 selon
+// l'Ascension — une cible fixe ne peut pas les égaliser.
+// ⚠️ La cible par étape porte sur la victoire MOYENNE de la population, pas sur le joueur médian de
+// l'étape. MESURÉ : en visant le médian de chaque étape (jusqu'à 0,97), le joueur médian d'une PARTIE
+// restait à 4,9-5,3 sur 10 aux A1-A2 — à chaque étape la moitié gagne presque sûrement, mais ce ne sont
+// pas les mêmes d'une étape à l'autre (les œufs rebattent l'ordre des équipes) : chacun perd souvent.
+const OBJECTIF = 0.7;
+const CIBLE = 0.7, GAIN = 1.5, CIBLE_MIN = 0.4, CIBLE_MAX = 0.97;
+const ECART_BOSS = 0.15; // le boss vise 15 points de moins (plus dur)
+const CIBLE_BOSS = CIBLE - ECART_BOSS;
 const CENTILE = 0.5; // le joueur MÉDIAN
 const VOISINAGE = 0.08; // équipes dont la force brute est à ±8 % de la frontière
 const MESUREES = 5;     // combien d'entre elles on mesure vraiment (+ la frontière elle-même)
@@ -90,71 +104,101 @@ function calibrer(nJoueurs = 40, essais = 10, R = P.REGLAGES) {
   const equipes = { 1: equipesPossibles(1), 2: equipesPossibles(2), 3: equipesPossibles(3) };
   const vuA = {}; // dernière étape où chaque espèce a été choisie (variété)
   const lignes = [], puissances = [], bloques = [];
+  const rang = (v, q) => v[Math.floor(v.length * q)];
   for (let a = 0; a < 6; a++) {
     const stats = joueurs.map((j) => j.nouvelleAsc(a));
+    const compte = joueurs.map(() => ({ v: 0, c: 0 })); // victoires / combats de l'Ascension, chapitre 1 exclu
     for (let l = (a ? R.finsAventure[a - 1] : 0) + 1; l <= R.finsAventure[a]; l++) {
       const actifs = joueurs.filter((j) => !j.bloque);
       actifs.forEach((j) => j.preparer(l, a));
       const decks = actifs.map((j) => j.joueurs());
       const boss = K.estEtapeBoss(l);
-      const cible = boss ? CIBLE_BOSS : CIBLE;
-      const niv = K.niveauEnnemi(l), evo = K.evoPourNiveau(niv);
-      const st = {}; // stats de chaque espèce À CE NIVEAU (formule du jeu)
-      A.C.CREATURES.forEach((c) => { st[c.id] = K.combatStatsForCreatureTyped(c, niv, evo, []); });
-      const force = (ids) => Math.sqrt(ids.reduce((t, id) => t + st[id].hp, 0) * ids.reduce((t, id) => t + st[id].attack, 0));
-      const tri = equipes[K.opponentTeamSize(l)].map((ids) => ({ ids, f: force(ids) })).sort((x, y) => x.f - y.f);
+      const ratios = actifs.map((j) => compte[joueurs.indexOf(j)]).filter((x) => x.c > 0).map((x) => x.v / x.c);
+      const courant = ratios.length ? rang(ratios.slice().sort((x, y) => x - y), CENTILE) : OBJECTIF;
+      const base = Math.min(CIBLE_MAX, Math.max(CIBLE_MIN, CIBLE + GAIN * (OBJECTIF - courant)));
+      const cible = boss ? base - ECART_BOSS : base;
+      const nivBase = l + (boss ? K.BONUS_NIVEAU_BOSS : 0);
+      const taille = K.opponentTeamSize(l);
+      // Toutes les équipes de la taille du chapitre, classées par force brute √(ΣPV × ΣATQ) au niveau
+      // de l'étape + b niveaux d'élite (formule du jeu).
+      const classement = (b) => {
+        const niv = nivBase + b, evo = K.evoPourNiveau(niv), st = {};
+        A.C.CREATURES.forEach((c) => { st[c.id] = K.combatStatsForCreatureTyped(c, niv, evo, []); });
+        const force = (ids) => Math.sqrt(ids.reduce((t, id) => t + st[id].hp, 0) * ids.reduce((t, id) => t + st[id].attack, 0));
+        return equipes[taille].map((ids) => ({ ids, f: force(ids) })).sort((x, y) => x.f - y.f);
+      };
+      const entree = (ids, b) => ids.join('+') + (b ? '@' + b : '');
       // Taux de la population contre une équipe : posée dans la table DU JEU, lue par le jeu.
       // ⚠️ Hasard FIXÉ par (étape, joueur, équipe) : MESURÉ au 1er essai, un hasard qui avance à chaque
       // mesure donnait 80 % puis 0 % pour la même équipe (joueur médian au ras du seuil) → choix
       // incohérents (étape 15 : 0 % pour le joueur médian).
-      const graine = (ids, i, baisse) => { let h = (l * 2654435761 + i * 40503 + Math.round(baisse * 100)) >>> 0;
-        for (const ch of ids.join('+')) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+      const graine = (cle, i, baisse) => { let h = (l * 2654435761 + i * 40503 + Math.round(baisse * 100)) >>> 0;
+        for (const ch of cle) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
         return () => { h = (h + 0x6D2B79F5) >>> 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1);
           t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
-      const taux = (ids, baisse = 0) => {
-        T[l - 1] = ids.join('+');
-        return actifs.map((j, i) => { const adv = j.adversaires(l, 1, baisse); const alea = graine(ids, i, baisse); let g = 0;
+      const taux = (ids, b, baisse = 0) => {
+        const cle = entree(ids, b);
+        T[l - 1] = cle;
+        return actifs.map((j, i) => { const adv = j.adversaires(l, 1, baisse); const alea = graine(cle, i, baisse); let g = 0;
           for (let e = 0; e < essais; e++) if (K.simulerCombat(decks[i], adv, { alea, politique: K.choixJoueur }).gagne) g++;
           return g / essais; }).sort((x, y) => x - y);
       };
-      const rang = (v, q) => v[Math.floor(v.length * q)];
-      const mesure = (ids) => { const v = taux(ids); return { med: rang(v, CENTILE), p10: rang(v, 0.1) }; };
-      const secours = (ids) => rang(taux(ids, SECOURS.baisse), 0.1) >= SECOURS.taux;
-      // Apprentissage (chapitre 1) : on ne garde que les équipes que CHAQUE débutant bat.
-      let candidats = tri;
+      const mesure = (ids, b) => { const v = taux(ids, b); return { moy: v.reduce((t, x) => t + x, 0) / v.length, med: rang(v, CENTILE), p10: rang(v, 0.1) }; };
+      const secours = (ids, b) => rang(taux(ids, b, SECOURS.baisse), 0.1) >= SECOURS.taux;
+      let b = 0;
+      let candidats = classement(0);
       if (l <= APPRENTISSAGE.niveaux) {
+        // Apprentissage (chapitre 1) : on ne garde que les équipes que CHAQUE débutant bat.
         const cibleApp = l === 1 ? APPRENTISSAGE.cibleNiveau1 : APPRENTISSAGE.cible;
-        candidats = tri.filter((e) => { T[l - 1] = e.ids.join('+'); return tauxDebutant(l).pire >= cibleApp; });
-        if (!candidats.length) candidats = tri.slice(0, 1); // le plus faible possible (signalé plus bas)
+        const ok = candidats.filter((e) => { T[l - 1] = entree(e.ids, 0); return tauxDebutant(l).pire >= cibleApp; });
+        candidats = ok.length ? ok : candidats.slice(0, 1); // le plus faible possible (signalé par « débutant »)
+      } else if (mesure(candidats[candidats.length - 1].ids, 0).moy >= cible) {
+        // PLAFOND : même l'équipe la plus forte est battue par le joueur médian → ÉLITES. Le plus grand
+        // bonus (côté FACILE) où le joueur médian gagne encore la cible contre l'équipe la plus forte.
+        const plusForte = (bb) => { const t = classement(bb); return t[t.length - 1].ids; };
+        let lo = 0, hi = 1;
+        while (hi < 256 && mesure(plusForte(hi), hi).moy >= cible) { lo = hi; hi *= 2; }
+        while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (mesure(plusForte(mid), mid).moy >= cible) lo = mid; else hi = mid; }
+        b = lo;
+        candidats = classement(b);
       }
       // Dichotomie (côté FACILE) : plus grand rang dont la médiane atteint encore la cible.
       let lo = 0, hi = candidats.length - 1;
-      if (mesure(candidats[0].ids).med < cible) hi = 0;
-      else if (mesure(candidats[hi].ids).med >= cible) lo = hi;
-      else { while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (mesure(candidats[mid].ids).med >= cible) lo = mid; else hi = mid - 1; } }
+      if (mesure(candidats[0].ids, b).moy < cible) hi = 0;
+      else if (mesure(candidats[hi].ids, b).moy >= cible) lo = hi;
+      else { while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (mesure(candidats[mid].ids, b).moy >= cible) lo = mid; else hi = mid - 1; } }
       const i0 = lo;
-      // Variété : parmi les voisines de la frontière, celles dont les espèces sont vues le moins récemment.
-      const precedentes = [T[l - 2], T[l - 3]].filter(Boolean);
+      // Variété : parmi les voisines de la frontière (force à ±8 %), celles dont les espèces sont vues le
+      // moins récemment ; jamais la même équipe que les 2 étapes précédentes.
+      const precedentes = [T[l - 2], T[l - 3]].filter(Boolean).map((x) => x.split('@')[0]);
       const recence = (ids) => ids.reduce((t, id) => t + Math.min(30, l - (vuA[id] || -100)), 0) / ids.length;
       const f0 = candidats[i0].f;
-      const voisines = candidats.filter((e) => Math.abs(Math.log(e.f / f0)) <= VOISINAGE && !precedentes.includes(e.ids.join('+')))
-        .sort((x, y) => recence(y.ids) - recence(x.ids) || Math.abs(x.f - candidats[i0].f) - Math.abs(y.f - candidats[i0].f))
-        .slice(0, MESUREES);
-      if (!voisines.some((e) => e === candidats[i0]) && !precedentes.includes(candidats[i0].ids.join('+'))) voisines.push(candidats[i0]);
+      // Voisinage élargi tant qu'il reste moins de 3 équipes (MESURÉ : chapitre 1, l'apprentissage ne
+      // laissait qu'Aquamira à ±8 % → 6 étapes sur 10 contre elle).
+      let voisines = [];
+      for (let v = VOISINAGE; voisines.length < 3 && v <= 8 * VOISINAGE; v *= 2) {
+        voisines = candidats.filter((e) => Math.abs(Math.log(e.f / f0)) <= v && !precedentes.includes(e.ids.join('+')));
+      }
+      voisines = voisines.sort((x, y) => recence(y.ids) - recence(x.ids) || Math.abs(x.f - f0) - Math.abs(y.f - f0)).slice(0, MESUREES);
+      if (!voisines.includes(candidats[i0]) && !precedentes.includes(candidats[i0].ids.join('+'))) voisines.push(candidats[i0]);
       let choix = null;
-      voisines.forEach((e) => { const m = mesure(e.ids);
-        const ecart = Math.abs(m.med - cible) + (m.med < cible ? 0.05 : 0); // à écart égal, le côté facile
-        if ((!choix || ecart < choix.ecart - 1e-9) && secours(e.ids)) choix = { ...e, ...m, ecart }; });
+      voisines.forEach((e) => { const m = mesure(e.ids, b);
+        const ecart = Math.abs(m.moy - cible) + (m.moy < cible ? 0.05 : 0); // à écart égal, le côté facile
+        if ((!choix || ecart < choix.ecart - 1e-9) && secours(e.ids, b)) choix = { ...e, ...m, ecart }; });
       // Aucune voisine ne passe la garde « jamais bloqué » : on descend vers plus facile jusqu'à une qui passe.
-      for (let i = i0; !choix && i >= 0; i--) if (secours(candidats[i].ids)) choix = { ...candidats[i], ...mesure(candidats[i].ids), ecart: 1 };
-      if (!choix) choix = { ...candidats[0], ...mesure(candidats[0].ids), ecart: 1 };
-      T[l - 1] = choix.ids.join('+');
+      for (let i = i0; !choix && i >= 0; i--) if (!precedentes.includes(candidats[i].ids.join('+')) && secours(candidats[i].ids, b)) choix = { ...candidats[i], ...mesure(candidats[i].ids, b), ecart: 1 };
+      for (let i = i0; !choix && i >= 0; i--) if (secours(candidats[i].ids, b)) choix = { ...candidats[i], ...mesure(candidats[i].ids, b), ecart: 1 };
+      if (!choix) choix = { ...candidats[0], ...mesure(candidats[0].ids, b), ecart: 1 };
+      T[l - 1] = entree(choix.ids, b);
       choix.ids.forEach((id) => { vuA[id] = l; });
       const app = l <= APPRENTISSAGE.niveaux ? tauxDebutant(l).pire : null;
-      lignes.push({ l, boss, niveau: niv, evo, ids: choix.ids, raretes: choix.ids.map((id) => PAR_ID[id].rarity), med: choix.med, p10: choix.p10, app });
+      lignes.push({ l, boss, cible, elite: b, niveau: nivBase + b, evo: K.evoPourNiveau(nivBase + b), ids: choix.ids,
+        raretes: choix.ids.map((id) => PAR_ID[id].rarity), moy: choix.moy, med: choix.med, p10: choix.p10, app });
       const pw = actifs.map((j) => K.puissanceDeck(j.trio().map((p) => ({ creature: p.c, ownedLevel: p.niv, evolutionTier: p.evo, equippedRunes: [] })))).sort((x, y) => x - y);
       puissances.push(pw[Math.floor(pw.length * CENTILE)]); // la « puissance conseillée » = celle du joueur visé
-      actifs.forEach((j) => { j.jouer(l, 1, stats[joueurs.indexOf(j)]); if (j.bloque) bloques.push(l); });
+      actifs.forEach((j) => { const s0 = stats[joueurs.indexOf(j)], c0 = s0.combats, v0 = s0.victoires;
+        j.jouer(l, 1, s0); if (j.bloque) bloques.push(l);
+        if (l > APPRENTISSAGE.niveaux) { const k = compte[joueurs.indexOf(j)]; k.c += s0.combats - c0; k.v += s0.victoires - v0; } });
     }
     joueurs.forEach((j, i) => { if (!j.parAsc[a]) j.finAscension(a, stats[i]); });
   }
@@ -176,7 +220,7 @@ function ecrire(r) {
 module.exports = { calibrer, ecrire, tauxDebutant, niveauDebutant, premieresCreatures, APPRENTISSAGE, CIBLE, CIBLE_BOSS };
 
 if (require.main === module) {
-  const n = Number(process.argv[2]) || 40, e = Number(process.argv[3]) || 10;
+  const n = Number(process.argv[2]) || 60, e = Number(process.argv[3]) || 10;
   const t0 = Date.now();
   const r = calibrer(n, e);
   require('fs').writeFileSync(process.env.SORTIE_CALIBRAGE || '/tmp/calibrage-ennemis.json', JSON.stringify(r));
