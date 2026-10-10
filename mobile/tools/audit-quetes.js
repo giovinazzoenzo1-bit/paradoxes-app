@@ -3505,9 +3505,15 @@ function auditParcours() {
     // la moyenne monte vers 8/10 (MESURÉ 7,9 à 8,6) ; les malchanceux ≥ 3.
     // 03/10, décision de l'auteur : la JAUGE réduit la malchance — les malchanceux tenus
     // à 6/10 font monter la moyenne vers 9 ; alarme « trop facile » à 9,5 (avant : 9,2).
-    if (!(x.victoiresSur10 >= 6.5 && x.victoiresSur10 <= 9.5)) fautes.push({ ascension: x.a, victoiresSur10: +x.victoiresSur10.toFixed(1), attendu: '6,5 à 9,5' });
-    if (x.victoires10eCentile < 3) fautes.push({ ascension: x.a, probleme: 'les 10 % les plus malchanceux gagnent moins de 3 combats sur 10', victoires: +x.victoires10eCentile.toFixed(1) });
-    if (x.filet10 > 0.5) fautes.push({ ascension: x.a, probleme: 'le cran −60 % du filet se déclenche trop souvent', parJoueur: +x.filet10.toFixed(2) });
+    // 10/10 (niveaux réels), décision de l'auteur : le joueur MÉDIAN gagne ≈ 7 combats sur 10 (rejouer
+    // compris). MESURÉ sur 3 populations : 5,4 à 8,3 selon l'Ascension et la chance aux œufs (±1 point).
+    // Alarmes : « trop facile » au-dessus de 9 (le jeu publié était à 8,1-10), « trop dur » sous 5.
+    // Les malchanceux tombent à 2,1-4,9 (ils avancent grâce au filet, jusqu'à −80 %) : plancher 2.
+    if (!(x.victoiresMediane >= 5 && x.victoiresMediane <= 9)) fautes.push({ ascension: x.a, victoiresMediane: +x.victoiresMediane.toFixed(1), attendu: '5 à 9 (cible 7)' });
+    if (x.victoires10eCentile < 2) fautes.push({ ascension: x.a, probleme: 'les 10 % les plus malchanceux gagnent moins de 2 combats sur 10', victoires: +x.victoires10eCentile.toFixed(1) });
+    // 10/10 : avec la cible du joueur MÉDIAN, les malchanceux s'appuient plus sur le filet. MESURÉ : cran
+    // −60 % ou plus 0,77 fois par joueur et par Ascension à l'A2, 1,23 à l'A3 (≈ 100 combats) — alarme 0,5 → 2.
+    if (x.filet10 > 2) fautes.push({ ascension: x.a, probleme: 'le cran −60 % du filet se déclenche trop souvent', parJoueur: +x.filet10.toFixed(2) });
   });
   const ids = (r, n) => C.CREATURES.filter((c) => c.rarity === r).slice(0, n).map((c) => c.id);
   const com = ids('commun', 8), peu = ids('peu_commun', 6);
@@ -3756,7 +3762,8 @@ module.exports.auditApprentissage = auditApprentissage;
 function auditFilet() {
   const K = load('combatLogic');
   const fautes = [];
-  const voulu = [[0, 0], [2, 0], [3, 0.2], [4, 0.2], [5, 0.4], [6, 0.4], [7, 0.6], [30, 0.6]];
+  // 10/10 (décision de l'auteur) : dernier palier −80 % après 10 défaites de suite.
+  const voulu = [[0, 0], [2, 0], [3, 0.2], [4, 0.2], [5, 0.4], [6, 0.4], [7, 0.6], [9, 0.6], [10, 0.8], [30, 0.8]];
   for (const [d, b] of voulu) if (K.baisseFilet(d) !== b) fautes.push({ defaites: d, baisse: K.baisseFilet(d), attendu: b });
   return fautes;
 }
@@ -3842,8 +3849,13 @@ function auditPuissanceExacte() {
   const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
   const g = (id) => C.CREATURES.find((c) => c.id === id);
   const m = (id, n, e) => ({ creature: g(id), ownedLevel: n, evolutionTier: e || 0, equippedRunes: [] });
-  // Le cas de l'auteur : niveau 19 → 0 % réel (l'ancienne formule disait 57/58).
-  const r19 = K.puissanceAventure([m('bouldog', 34, 1), m('ventis', 13)], 19);
+  // Le cas de l'auteur (26/09) : une équipe à 0 % réel au niveau 19 doit être affichée SOUS la conseillée,
+  // en rouge. 10/10 (niveaux réels) : son équipe d'alors (Bouldog 34 évolué, AU-DESSUS du niveau max
+  // d'aujourd'hui) gagne désormais ; même contrôle avec Bouldog 20 + Ventis 13 (MESURÉ : 0 % réel).
+  // Si un recalibrage la fait gagner, en choisir une plus faible — jamais retirer le contrôle.
+  const eq19 = [m('bouldog', 20), m('ventis', 13)];
+  doit(K.victoiresAuNiveau(eq19, 19) === 0, 'cas de contrôle du niveau 19 : l\'équipe ne perd plus à coup sûr — en choisir une plus faible');
+  const r19 = K.puissanceAventure(eq19, 19);
   doit(r19.puissance < K.puissanceConseillee(19) && r19.couleur === 'rouge', 'cas de l\'auteur (niveau 19, 0 % réel) : pas affiché sous la conseillée en rouge');
   // ⏸️ EN ATTENTE (03/10) — cas de l'auteur au niveau 16 (« 100 % réel ») : mesuré
   // avec l'ANCIEN défi de taps, à l'autoclicker (×2,5 à chaque coup). La jauge de
@@ -4891,7 +4903,8 @@ function auditGardienGriffes() {
     let cout = 0; r.membres.forEach((m, i) => { for (let n = deckAuteur[i].ownedLevel; n < m.ownedLevel; n++) cout += C.levelUpCost(m.creature, n); });
     if (cout > 114) pb.push(`répartition équitable : ${cout} Griffes dépensées pour un budget de 114`);
     if (r.membres.some((m, i) => m.ownedLevel <= deckAuteur[i].ownedLevel)) pb.push('répartition équitable : une créature ne reçoit aucun niveau');
-    if (Math.abs(r.puissance - 1613) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 613 (« 3 combats »)`);
+    // 10/10 (niveaux réels : +5 %/niveau, stats x10, puissance affichée à l'échelle 1) : 1 613 → 1 898.
+    if (Math.abs(r.puissance - 1898) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 898 (« 3 combats »)`);
   }
   if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
   if ((c.match(/, budgetGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget du Gardien');

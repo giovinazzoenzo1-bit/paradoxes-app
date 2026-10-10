@@ -2180,7 +2180,9 @@ export function niveauxPourAtteindre(membres, cible) {
 // gagne 8 fois sur 10 (GUARDIAN_WIN_TARGET).
 // GRIFFES_PAR_COMBAT : MESURÉ le 08/10 (simulateur de parcours, 40 joueurs gratuits : toutes les
 // Griffes gagnées ÷ combats joués, par Ascension) ; auditGardienGriffes le recompare au simulateur.
-export const GRIFFES_PAR_COMBAT = [36, 171, 748, 1035, 1330, 1527]; // A0 … A5 (au-delà : A5)
+// 10/10 (niveaux réels) : recalculé sur 60 parcours (même formule que auditGardienGriffes) — les joueurs
+// livrent plus de combats par Ascension (cible 7/10), chaque combat rapporte moins. Avant : [36, 171, 748, 1035, 1330, 1527].
+export const GRIFFES_PAR_COMBAT = [27, 103, 472, 585, 910, 1190]; // A0 … A5 (au-delà : A5)
 // LE RÉGLAGE : 25 % des Griffes moyennes d'un combat ≈ 1 niveau à TOUS les stades (MESURÉ :
 // 0,6 à 1,2 niveau ; 50 % ≈ 1,5 à 2,5 ; 100 % ≈ 2,3 à 4,9).
 export const EFFORT_GARDIEN = 0.25;

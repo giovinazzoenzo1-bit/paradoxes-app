@@ -205,7 +205,9 @@ function synthese(joueurs = 60, R = REGLAGES, kDe) {
     lignes.push({ a, joueurs: v.length, bloques: v.filter((s) => s.bloque).length,
       victoiresSur10: 10 * moy((s) => s.victoires / Math.max(1, s.combats)), retard: moy((s) => s.retard),
       combats: moy((s) => s.combats), jours: moy((s) => s.jours), filet5: moy((s) => s.filet5), filet7: moy((s) => s.filet7), filet10: moy((s) => s.filet10), griffes: moy((s) => s.griffes),
-      victoires10eCentile: (() => { const q = v.map((s) => 10 * s.victoires / Math.max(1, s.combats)).sort((x, y) => x - y); return q[Math.floor(q.length * 0.1)] || 0; })() });
+      victoires10eCentile: (() => { const q = v.map((s) => 10 * s.victoires / Math.max(1, s.combats)).sort((x, y) => x - y); return q[Math.floor(q.length * 0.1)] || 0; })(),
+      // 10/10 : le joueur MÉDIAN (décision de l'auteur : 7 victoires sur 10 pour lui).
+      victoiresMediane: (() => { const q = v.map((s) => 10 * s.victoires / Math.max(1, s.combats)).sort((x, y) => x - y); return q[Math.floor(q.length * 0.5)] || 0; })() });
   }
   return lignes;
 }
