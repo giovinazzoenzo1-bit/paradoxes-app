@@ -70,7 +70,7 @@ const REGLAGES = {
   retardOeufs: 1,
   taillePack: (a) => 100 + 75 * a,
   runesParAsc: 3, // 1 pour le défi + 2 volontaires
-  prixRune: 100,
+  prixRune: 0, // 10/10 : les runes s'achètent en ✨ Poudre runique (combatLogic.POUDRE_PRIX), plus en Griffes
   succesParAsc: [175, 260, 760, 1545, 500, 600], // modèle mesuré le 26/09
   // Quêtes : le calendrier (≈ 39/jour) est fixe ; les quêtes du jour et de
   // la semaine (≈ 276/jour au niveau 25) suivent le niveau d'Aventure — la
@@ -116,7 +116,9 @@ function nouveauJoueur(graine, R = REGLAGES) {
     const meilleur = possedees.length ? Math.max(...possedees.map((p) => p.niv)) : 1;
     const ids = possedees.map((p) => p.c.id);
     const c = avecGraine(() => L.rollCreature(ids, L.rareteMaxPourOeuf(ids.length), R.garantie ? L.rareteGarantiePourOeuf(ids) : null));
-    const niv = possedees.length ? Math.max(1, Math.round(R.naissance * meilleur)) : 1;
+    // 10/10 : la règle DU JEU (niveauDeNaissance : 80 % de la 3e meilleure, 60 % légendaire, 45 % mythique).
+    void meilleur;
+    const niv = L.niveauDeNaissance(possedees.map((p) => p.niv), c.rarity);
     possedees.push({ c, niv, evo: evoPour(niv) });
   };
   // (09/10) Le jeu a désormais un NIVEAU MAXIMUM (niveau d'Exploration gagné + 5) : le joueur simulé le respecte.

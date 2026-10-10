@@ -394,6 +394,8 @@ import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import { niveauMaxAventure } from '../../games/clicker/questLogic';
 import {
   puissanceAventure,
+  POUDRE_PAR_VICTOIRE,
+  POUDRE_PRIX,
   combatStatsForCreatureTyped,
   chapterForLevel,
   levelIndexInChapter,
@@ -643,6 +645,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // Filet de sécurité (26/09) : défaites DE SUITE par niveau, sauvegardées.
   const [defaitesDeSuite, setDefaitesDeSuite] = useState({});
   const [griffes, setGriffes] = useState(0);
+  // ✨ Poudre runique (10/10) : la monnaie des runes (gagnée à chaque 1re victoire d'étape).
+  const [poudre, setPoudre] = useState(0);
   // Runes possédées : [{ id, type, level }] — id unique généré à l'achat/
   // la fusion, type = l'une des 4 clés de RUNE_TYPES, level 1 à 5.
   const [ownedRunes, setOwnedRunes] = useState([]);
@@ -695,6 +699,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
           setDefaitesDeSuite(saved.defaitesDeSuite || {});
           setLevelStars(saved.levelStars || {});
           setGriffes(saved.griffes || 0);
+          setPoudre(saved.poudre || 0);
           setOwnedRunes(migrateRunes(saved.ownedRunes));
           // Recalcule l'énergie à partir du temps RÉELLEMENT écoulé
           // depuis la dernière sauvegarde (même principe que les gains
@@ -753,7 +758,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // Sauvegarde à chaque changement.
   useEffect(() => {
     if (!progressLoaded) return;
-    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite }));
+    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, poudre, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite }));
   }, [currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite, progressLoaded]);
 
   // 26/09 : publie jusqu'où TOUS les niveaux sont à 3 étoiles (garde-fou du
@@ -972,6 +977,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     // Décision de l'auteur (26/09) : les Griffes seulement à la PREMIÈRE
     // victoire d'un niveau — rejouer un niveau déjà gagné n'en donne pas.
     if (levelNumber === currentUnlockedLevelRef.current) setGriffes((g) => g + reward);
+    // ✨ Poudre runique (10/10) : elle aussi à la PREMIÈRE victoire d'une étape seulement.
+    if (levelNumber === currentUnlockedLevelRef.current) setPoudre((p) => p + POUDRE_PAR_VICTOIRE);
     setDefaitesDeSuite((d) => (d[levelNumber] ? { ...d, [levelNumber]: 0 } : d));
     trackEvent('battleWon', 1);
     // Publie le niveau atteint pour que les défis de l'œuf (clicker)
@@ -1049,8 +1056,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   };
 
   const buyRandomRune = () => {
-    if (griffes < RUNE_COST) return null;
-    setGriffes((g) => g - RUNE_COST);
+    if (poudre < POUDRE_PRIX.unite) return null; // ✨ Poudre runique (10/10), plus les Griffes
+    setPoudre((p) => p - POUDRE_PRIX.unite);
     const type = RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)];
     const rune = { id: makeRuneId(), type, level: 1, equippedCreatureId: null };
     setOwnedRunes((prev) => [...prev, rune]);
@@ -1060,8 +1067,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
 
   // Pack : N runes aléatoires d'un coup, moins cher qu'à l'unité.
   const buyRunePack = () => {
-    if (griffes < RUNE_PACK_COST) return null;
-    setGriffes((g) => g - RUNE_PACK_COST);
+    if (poudre < POUDRE_PRIX.pack) return null;
+    setPoudre((p) => p - POUDRE_PRIX.pack);
     const drawn = Array.from({ length: RUNE_PACK_SIZE }, () => ({
       id: makeRuneId(),
       type: RUNE_TYPE_KEYS[Math.floor(Math.random() * RUNE_TYPE_KEYS.length)],
@@ -1078,8 +1085,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // complètement le tirage à l'unité, qu'elle bat largement.
   const buySpecialOffer = () => {
     if (!specialOffer || specialOffer.purchased) return null;
-    if (griffes < RUNE_SPECIAL_COST) return null;
-    setGriffes((g) => g - RUNE_SPECIAL_COST);
+    if (poudre < POUDRE_PRIX.speciale) return null;
+    setPoudre((p) => p - POUDRE_PRIX.speciale);
     const rune = { id: makeRuneId(), type: specialOffer.type, level: 2, equippedCreatureId: null };
     setOwnedRunes((prev) => [...prev, rune]);
     const next = { ...specialOffer, purchased: true };
@@ -1251,7 +1258,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   if (runesOpen) {
     return avecBoutique(
       <RunesScreen
-        griffes={griffes}
+        poudre={poudre}
         ownedRunes={ownedRunes}
         onBuyRune={avecSon(buyRandomRune, 'rune-tirage')}
         onBuyPack={avecSon(buyRunePack, 'rune-tirage')}
@@ -2279,6 +2286,8 @@ function ElementHelpOverlay({ onClose }) {
 // pour le diamant, or pour la griffe.
 const CURRENCY_ICONS = {
   griffes: { source: GRIFFES_ICON, glow: GLOW_GOLD },
+  // ✨ Poudre runique (10/10) : pas encore d'image — l'emoji en attendant celle de l'auteur.
+  poudre: { emoji: '✨', glow: GLOW_GOLD },
 };
 
 function CurrencyIcon({ kind, size = 22, haloed = true, style }) {
@@ -2300,7 +2309,9 @@ function CurrencyIcon({ kind, size = 22, haloed = true, style }) {
           resizeMode="contain"
         />
       )}
-      <Image source={def.source} style={{ width: size, height: size }} resizeMode="contain" />
+      {def.emoji
+        ? <Text style={{ fontSize: Math.round(size * 0.85), lineHeight: Math.round(size * 1.05), textAlign: 'center' }}>{def.emoji}</Text>
+        : <Image source={def.source} style={{ width: size, height: size }} resizeMode="contain" />}
     </View>
   );
 }
@@ -3106,7 +3117,7 @@ function ForgePanel({ width, onAutoFuse }) {
   );
 }
 
-function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, onBuySpecial, freeRuneDraw = false, onUseFreeDraw }) {
+function RuneShopPanel({ width, poudre, specialOffer, onBuyRandom, onBuyPack, onBuySpecial, freeRuneDraw = false, onUseFreeDraw }) {
   const H = width / SHOP_PANEL_RATIO;
   const slotTop = SHOP_SLOT_Y.top * H;
   const slotH = (SHOP_SLOT_Y.bottom - SHOP_SLOT_Y.top) * H;
@@ -3130,9 +3141,9 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
       // voir quelle rune il achète avant de payer, pas une étoile.
       arts: offerDef ? [offerDef.art] : [],
       emoji: offerDef ? null : '✨',
-      cost: RUNE_SPECIAL_COST,
+      cost: POUDRE_PRIX.speciale,
       desc: soldOut ? 'Revient demain' : `${offerDef ? offerDef.name.replace('Rune de ', '').replace("Rune d'", '') : ''} niv.2\n1 par jour`,
-      disabled: soldOut || griffes < RUNE_SPECIAL_COST,
+      disabled: soldOut || poudre < POUDRE_PRIX.speciale,
       onPress: onBuySpecial,
     },
     {
@@ -3140,9 +3151,9 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
       // 3 pierres côte à côte : le contenu du pack doit se LIRE. Ce sont
       // des exemples, le tirage reste aléatoire sur les 7 types.
       arts: [RUNE_TYPES.force.art, RUNE_TYPES.vitalite.art, RUNE_TYPES.celerite.art],
-      cost: RUNE_PACK_COST,
+      cost: POUDRE_PRIX.pack,
       desc: '3 runes niv.1\nmoins cher',
-      disabled: griffes < RUNE_PACK_COST,
+      disabled: poudre < POUDRE_PRIX.pack,
       onPress: onBuyPack,
     },
     {
@@ -3154,9 +3165,9 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
       // Tant qu'un tirage offert est en attente, c'est CETTE case qui
       // sert : coût nul, libellé explicite. Une case de plus aurait
       // débordé du panneau (3 emplacements mesurés dans l'asset).
-      cost: freeRuneDraw ? 0 : RUNE_COST,
+      cost: freeRuneDraw ? 0 : POUDRE_PRIX.unite,
       desc: freeRuneDraw ? 'TIRAGE OFFERT\n1 rune niv.1' : '1 rune niv.1\nau hasard',
-      disabled: freeRuneDraw ? false : griffes < RUNE_COST,
+      disabled: freeRuneDraw ? false : poudre < POUDRE_PRIX.unite,
       onPress: freeRuneDraw ? onUseFreeDraw : onBuyRandom,
     },
   ];
@@ -3218,11 +3229,7 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
                   {o.cost > 0 ? o.cost : 'GRATUIT'}
                 </Text>
                 {o.cost > 0 && (
-                <Image
-                  source={GRIFFES_ICON}
-                  style={{ width: fsPrice, height: fsPrice }}
-                  resizeMode="contain"
-                />
+                <CurrencyIcon kind="poudre" size={fsPrice} haloed={false} />
                 )}
               </View>
             </TouchableOpacity>
@@ -3250,11 +3257,12 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
         Beaucoup ignorent qu'on peut convertir ses pièces du Clicker en
         Griffes : sans ce rappel au moment précis où ils n'ont plus de
         quoi acheter, ils croient devoir attendre. */}
-    {griffes < RUNE_COST && !freeRuneDraw && (
+    {/* 10/10 : les runes s'achètent en ✨ Poudre runique (gagnée à chaque 1re victoire d'étape), plus en Griffes. */}
+    {poudre < POUDRE_PRIX.unite && !freeRuneDraw && (
       <View style={[styles.shopHintWrap, { pointerEvents: 'none' }]}>
         <Text style={styles.shopHintText} numberOfLines={2}>
-          Pas assez de Griffes ? Touche le « + » à côté de tes Griffes
-          pour les acheter avec tes pièces du Clicker.
+          Pas assez de ✨ Poudre runique ? Tu en gagnes 1 à chaque
+          nouvelle étape d'Exploration gagnée.
         </Text>
       </View>
     )}
@@ -3262,7 +3270,9 @@ function RuneShopPanel({ width, griffes, specialOffer, onBuyRandom, onBuyPack, o
   );
 }
 
-function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, specialOffer, onFuseAll, onBuyGriffes, onBack }) {
+// 10/10 : freeRuneDraw / onUseFreeDraw étaient PASSÉS par le parent mais jamais déclarés ici, donc jamais transmis à la
+// boutique : le « tirage offert » ne pouvait pas s'afficher (trouvé en croisant les props, règle du projet).
+function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, freeRuneDraw = false, onUseFreeDraw, specialOffer, onFuseAll, onBuyGriffes, onBack }) {
   // Écran de fusion dédié (30/08) — remplace l'ancien mode "tape une
   // rune puis retape une pareille", pas très intuitif (fallait deviner
   // quelle rune correspondait à quelle autre). Regroupe automatiquement
@@ -3296,7 +3306,7 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
         <BackButton onPress={onBack} />
         <Text style={styles.title}><Image source={RUNES_GEM} style={styles.inlineCurrencyIconTitle} resizeMode="contain" /> Runes</Text>
         <View style={styles.headerSpacer} />
-        <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
+        <CurrencyCounter currency="poudre" amount={poudre} />
       </View>
 
       {/* Paysage : la boutique occupe la colonne de DROITE, la
@@ -3308,11 +3318,13 @@ function RunesScreen({ griffes, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, 
           {shopW > 0 && (
             <RuneShopPanel
               width={shopW}
-              griffes={griffes}
+              poudre={poudre}
               specialOffer={specialOffer}
               onBuyRandom={withReveal(onBuyRune)}
               onBuyPack={withReveal(onBuyPack)}
               onBuySpecial={withReveal(onBuySpecial)}
+              freeRuneDraw={freeRuneDraw}
+              onUseFreeDraw={onUseFreeDraw ? withReveal(onUseFreeDraw) : undefined}
             />
           )}
 

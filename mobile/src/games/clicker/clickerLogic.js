@@ -445,6 +445,20 @@ export function niveauMaxCreature(niveauGagne) {
   return Infinity;
 }
 
+// ---- Niveau de NAISSANCE d'une créature qui ÉCLÔT (10/10, décision de l'auteur) ----
+// 80 % du niveau de la 3e meilleure créature du joueur (en niveau) ; tant qu'il en a moins de 3, de sa meilleure (« ma 2e
+// naîtra avec le même % mais de la première, pareil pour la 3e »). Légendaire 60 %, mythique 45 % (« pour ne pas que ce
+// soit trop cheaté »). Avant : niveau 1 — chaque nouvelle créature devait être remontée de zéro (joueur « tout communes »
+// bloqué vers l'étape 27-37 selon l'auteur). Les invocations de l'Élevage ne sont PAS concernées (pas une éclosion).
+export const NAISSANCE_PART = { legendaire: 0.6, mythique: 0.45, autre: 0.8 };
+export function niveauDeNaissance(niveauxPossedes, rarete) {
+  const n = (niveauxPossedes || []).map(Number).filter((x) => x > 0).sort((a, b) => b - a);
+  if (!n.length) return 1;
+  const reference = n.length >= 3 ? n[2] : n[0];
+  const part = NAISSANCE_PART[rarete] != null ? NAISSANCE_PART[rarete] : NAISSANCE_PART.autre;
+  return Math.max(1, Math.floor(part * reference));
+}
+
 // ---- Prime de 1re victoire d'une étape (déplacée ici le 10/10 depuis combatLogic.griffesReward, qui l'appelle) ----
 // Réglage A (validé par l'auteur le 26/09) : jamais en baisse, un palier en entrant dans l'A3 (niveau 66, les
 // meilleures créatures arrivent). Ici pour que le coût d'un niveau la lise sans import circulaire.

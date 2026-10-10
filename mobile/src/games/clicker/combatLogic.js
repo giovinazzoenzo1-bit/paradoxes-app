@@ -1626,12 +1626,19 @@ export function nombreCourt(n) {
 export function equipeEnnemie(levelNumber) {
   const niveau = niveauEnnemi(levelNumber);
   const e = entreeEtape(levelNumber);
+  const membres = opponentTeamForLevel(levelNumber);
   // 10/10 (règle de l'auteur) : l'évolution suit celle d'un joueur typique quand la table la donne. MESURÉ avant : évolués
   // d'office à 25 et 50, les ennemis l'étaient AVANT le joueur (qui paie son évolution) → A1 bien plus dure que la suite.
-  return opponentTeamForLevel(levelNumber).map((creature) => {
+  // 10/10 (demande de l'auteur : « pourquoi tu n'affiches pas les vraies stats ? ») : le NIVEAU d'un ennemi est celui
+  // dont ses stats sont EXACTEMENT celles de son espèce. La force voulue (moyenne de sa rareté × FORCE_ENNEMI) se
+  // traduit en niveaux (+5 % par niveau, arrondi au plus proche) au lieu d'un multiplicateur caché.
+  return membres.map((creature) => {
     const i = e ? e.ids.indexOf(creature.id) : -1;
     const evo = i >= 0 && e.evos[i] != null ? e.evos[i] : evoPourNiveau(niveau);
-    return { creature, niveau, evolutionTier: evo };
+    const s = combatStatsForCreatureTyped(creature, niveau, evo, []);
+    const propre = Math.sqrt(s.hp * s.attack), moyenne = forceMoyenne(creature.rarity, niveau, evo);
+    const f = propre > 0 && moyenne > 0 ? (moyenne / propre) * (FORCE_ENNEMI[membres.length] || FORCE_ENNEMI[3]) : 1;
+    return { creature, niveau: Math.max(1, Math.round(niveau + Math.log(f) / Math.log(CROISSANCE_NIVEAU))), evolutionTier: evo };
   });
 }
 // ---- RÈGLE DE L'AUTEUR (10/10) : étape N = un ennemi aussi fort qu'une créature niveau N, un peu moins ----
@@ -1665,14 +1672,10 @@ export function statsForOpponentCreatureTyped(creature, levelNumber, k = 1) {
   const niveau = m ? m.niveau : Math.max(1, Math.floor(levelNumber || 1));
   const evo = m ? m.evolutionTier : 0;
   const s = combatStatsForCreatureTyped(creature, niveau, evo, []);
-  let f = 1;
-  if (m) {
-    const propre = Math.sqrt(s.hp * s.attack), moyenne = forceMoyenne(creature.rarity, niveau, evo);
-    f = propre > 0 && moyenne > 0 ? (moyenne / propre) * (FORCE_ENNEMI[equipe.length] || FORCE_ENNEMI[3]) : 1;
-  }
+  // 10/10 : plus de multiplicateur ici — la force voulue est DANS le niveau du membre (equipeEnnemie) : stats exactes.
   return {
-    hp: Math.max(1, Math.round(s.hp * f * k)),
-    attack: Math.max(1, Math.round(s.attack * f * k)),
+    hp: Math.max(1, Math.round(s.hp * k)),
+    attack: Math.max(1, Math.round(s.attack * k)),
     clickSpeed: s.clickSpeed,
     endurance: s.endurance,
   };
@@ -1804,8 +1807,18 @@ export function resolveRound(playerHp, opponentHp, opponentAttack, playerDamage)
 // Réglage A (validé par l'auteur le 26/09) : jamais en baisse, un palier en
 // entrant dans l'A3 (niveau 66, les meilleures créatures arrivent). Versée à
 // la PREMIÈRE victoire d'un niveau seulement (AdventureScreen).
+// 10/10 (décision de l'auteur) : +25 % sur les primes des étapes d'Aventure à partir de l'étape 30, « pour que le joueur
+// puisse encore avancer ». Les défis (facteurQuetes) et le coût d'un niveau lisent la prime de BASE (primeDeVictoire) :
+// ils ne bougent pas.
+export const BONUS_PRIMES = { aPartirDe: 30, bonus: 0.25 };
+// ✨ POUDRE RUNIQUE (10/10, décision de l'auteur : « pour désengorger les Griffes ») : monnaie qui sert UNIQUEMENT à
+// acheter des runes, gagnée à chaque 1re victoire d'une étape d'Aventure. Visée : ~3 runes par chapitre (10 étapes) →
+// 1 par victoire, une rune à 3. Pack et offre spéciale : MÊMES proportions qu'en Griffes (100 / 250 / 300).
+export const POUDRE_PAR_VICTOIRE = 1;
+export const POUDRE_PRIX = { unite: 3, pack: 8, speciale: 9 };
 export function griffesReward(levelNumber) {
-  return primeDeVictoire(levelNumber); // la formule vit dans clickerLogic depuis le 10/10 (le coût d'un niveau la lit)
+  const l = Math.max(1, Math.floor(levelNumber || 1));
+  return Math.round(primeDeVictoire(l) * (l >= BONUS_PRIMES.aPartirDe ? 1 + BONUS_PRIMES.bonus : 1));
 }
 
 // ---- Les QUÊTES suivent le niveau d'Aventure (26/09, décision de l'auteur) ----
@@ -1818,7 +1831,7 @@ export function griffesReward(levelNumber) {
 // inchangés.
 export const NIVEAU_REFERENCE_QUETES = 25;
 export function facteurQuetes(niveauAventure) {
-  return griffesReward(Math.max(1, Math.floor(niveauAventure || 1))) / griffesReward(NIVEAU_REFERENCE_QUETES);
+  return primeDeVictoire(Math.max(1, Math.floor(niveauAventure || 1))) / primeDeVictoire(NIVEAU_REFERENCE_QUETES); // prime de BASE (10/10)
 }
 export function recompenseQuete(base, niveauAventure) {
   return Math.max(1, Math.round((base || 0) * facteurQuetes(niveauAventure)));

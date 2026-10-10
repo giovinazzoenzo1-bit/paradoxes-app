@@ -98,6 +98,7 @@ import {
   GRIFFES_COIN_PACK,
   taillePackGriffes,
   niveauMaxCreature,
+  niveauDeNaissance,
 } from '../../games/clicker/clickerLogic';
 import {
   nextQuestSet,
@@ -2119,7 +2120,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // joueur n'a pas encore ce qu'il faut (clickerLogic.GARANTIE_OEUFS).
     const idsPossedes = ownedRef.current.map((o) => o.id);
     const creature = rollCreature(idsPossedes, rareteMaxPourOeuf(idsPossedes.length), rareteGarantiePourOeuf(idsPossedes));
-    addCreatureToOwned(creature);
+    // 10/10 (décision de l'auteur) : elle naît à 80 % du niveau de ta 3e meilleure (de ta meilleure tant que tu en as
+    // moins de 3) ; 60 % si légendaire, 45 % si mythique.
+    addCreatureToOwned(creature, niveauDeNaissance(ownedRef.current.map((o) => o.level), creature.rarity));
     trackEvent('eggHatched', 1);
     setRewardCreature(creature);
   };
@@ -2665,7 +2668,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Ajoute une créature à la collection (nouvelle entrée, ou niveau +1 si
   // déjà possédée) — factorisé car utilisé à la fois par l'invocation
   // gacha ET la récompense de capture d'œuf.
-  const addCreatureToOwned = (creature) => {
+  // `niveau` (10/10) : niveau de naissance d'une créature qui ÉCLÔT (niveauDeNaissance) ; 1 par défaut (invocations).
+  const addCreatureToOwned = (creature, niveau = 1) => {
     // Place automatiquement la créature dans le premier emplacement de
     // deck libre. Sans ça, un joueur qui vient de capturer sa première
     // créature a bien une collection mais un deck vide — et l'Aventure
@@ -2687,7 +2691,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       if (existing) {
         return prev.map((o) => (o.id === creature.id ? { ...o, level: o.level + 1 } : o));
       }
-      return [...prev, { id: creature.id, level: 1, evolutionTier: 0 }];
+      return [...prev, { id: creature.id, level: Math.max(1, Math.floor(niveau) || 1), evolutionTier: 0 }];
     });
   };
 
