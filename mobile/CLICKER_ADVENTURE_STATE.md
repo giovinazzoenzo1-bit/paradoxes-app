@@ -2948,6 +2948,21 @@ mêmes œufs, ni quêtes ni succès ni packs ni Ascension), 40 joueurs : chapitr
 1re étape où le joueur médian a besoin du coup de pouce (3 défaites ou plus) = ÉTAPE 12 ; chapitre 2
 5,8/10 (aide sur 16 % des étapes) ; chapitres 3-6 2,8-4,6/10 (aide 27-53 %, meilleure créature 5-10
 niveaux sous le max) ; dès le chapitre 7 au niveau max mais ~3/10 (aide ~40-60 %) ; 0 bloqué.
+ÉTAPE 4 EN COURS (branche, commit fc67227) : verifier-defis 103/103 VERTS après mise à jour (décisions du
+10/10) — auditParcours sur le joueur MÉDIAN (5 à 9 sur 10, malchanceux ≥ 2, cran −60 % ou plus ≤ 2 par
+joueur et par Ascension : MESURÉ 0,77 à l'A2, 1,23 à l'A3), auditFilet (palier −80 % après 10), cas perdant
+de l'étape 19 = Bouldog 20 + Ventis 13 (0 % réel, vérifié DANS le contrôle), GRIFFES_PAR_COMBAT recalculé
+[27, 103, 472, 585, 910, 1190], cas de l'auteur au Gardien 1 613 → 1 898 (nouvelles stats).
+RESTE (verifier-controles, 4 problèmes) : sabotages PÉRIMÉS d'auditParcours et auditApprentissage (ils
+visaient AVENTURE_MULTIPLICATEURS → les réécrire sur ENNEMIS_ETAPES) ; AVEUGLES : auditPuissanceAffichee
+(stats x10 : l'arrondi ne fait plus de paliers → comparer à un recalcul EXACT) et auditGardienCalibre
+(à remesurer avec les nouvelles stats).
+⚠️ BUG DE FOND TROUVÉ (existe depuis le niveau max du 09/10, aggravé par +5 %/niveau) : deckApresEffortEquitable
+et planPourChance IGNORENT le niveau max. MESURÉ (20 joueurs simulés) : dès l'étape 60, 10 à 18 sur 20 sont
+déjà au niveau max, et le Gardien suppose +7 à +10 niveaux AU-DESSUS (même après 3 étapes gagnées : +4/+5)
+→ le « 80 % après 3 combats » serait faux. À CORRIGER avant publication : plafonner l'effort à
+niveauMaxCreature(étape gagnée + 3) (photo : retenir l'étape), et le plan au niveau max actuel (sinon :
+« gagne des étapes pour débloquer des niveaux »).
 ⚠️ À FAIRE ENCORE : verifier-controles (sabotages lignes ~181 et ~220 visent l'ancienne table),
 calibrer-aventure.js (ancien outil, écrit l'ancienne table), calibrer-parcours.js (à réécrire :
 choisir les COMPOSITIONS), PUISSANCE_CONSEILLEE (échelle d'avant), Gardien (guardianStats passe par
