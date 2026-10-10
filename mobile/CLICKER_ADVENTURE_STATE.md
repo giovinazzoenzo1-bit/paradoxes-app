@@ -3134,3 +3134,15 @@ bloqué » = 30 défaites de suite malgré le filet. 40 joueurs simulés (ceux d
 - « tout » (+ défis du jour / semaine, succès, calendrier 270 Griffes par semaine dont 40 au jour 1, 4 packs par
   Ascension, récompenses d'Ascension, 3 runes) : 1er blocage à l'ÉTAPE 30 ; 8,9 / 6,9 / 8,5 / 7,4 / 8,4 / 6,5 victoires sur
   10 ; aide sur 0 / 9 / 2 / 0 / 2 / 2 % des étapes ; 0 vraiment bloqué. (Le calibrage, lui, ne compte AUCUN pack.)
+
+
+## 10/10 — PIÈGE DU SIMULATEUR : évolution IMPOSÉE au niveau 25 (branche `simu-evolution`, à revérifier)
+
+Question de l'auteur (niveau de ses créatures étape par étape) → créatures figées au niveau 24 de l'étape 7 à 30. CAUSE :
+le joueur simulé ajoutait le coût de l'évolution (150 Griffes) au passage 24 → 25 ; le JEU ne l'impose pas
+(handleLevelUp : coût et Griffes seulement ; évoluer est une action à part). CORRIGÉ : le joueur simulé dépense là où il
+gagne le plus de force par Griffe (un niveau, ou une évolution possible) et économise si le meilleur choix est trop cher.
+⚠️ TOUT ce qui a été mesuré avec l'ancien joueur (calibrage, FORCE_ENNEMI, tranches de coût, outils de blocage) est À
+REMESURER avec ce joueur avant de fusionner.
+Niveaux (joueur médian, TOUTES les sources de Griffes, créatures 1 / 2 / 3) : étape 1 : 8 · 5 : 19 · 9 : 30 ·
+10 : 31 / 4 · 15 : 31 / 24 · 16 : 31 / 26 / 5 · 20 : 31 / 26 / 23 · 25 : 32 / 33 / 33 · 31 : 36 / 35 / 35.

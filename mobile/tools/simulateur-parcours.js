@@ -140,9 +140,19 @@ function nouveauJoueur(graine, R = REGLAGES) {
       // tout (test de l'auteur : Terracroc niveau 59 au niveau 26). L'ancien
       // plafond « niveau d'Aventure + 1 » cachait 19 000 Griffes non dépensées.
       if (!t) return;
-      const cout = L.levelUpCost(t.c, t.niv) + coutEvo(t.evo, evoPour(t.niv + 1));
-      if (cout > j.griffes) return;
-      j.griffes -= cout; t.niv += 1; t.evo = Math.max(t.evo, evoPour(t.niv));
+      // ⚠️ 10/10 : le JEU n'impose PAS l'évolution pour dépasser le niveau 25 (handleLevelUp : coût et Griffes
+      // seulement ; évoluer est une action à part, canEvolve). Le joueur simulé l'imposait (coût de l'évolution ajouté
+      // au passage 24 → 25) : MESURÉ, créatures figées au niveau 24 de l'étape 7 à l'étape 30. Désormais il dépense là
+      // où il gagne le plus de force par Griffe : un niveau (×CROISSANCE_NIVEAU) ou une évolution possible
+      // (EVOLUTION_STAT_MULTIPLIER) ; si le meilleur choix est trop cher, il économise.
+      const coutNiv = L.levelUpCost(t.c, t.niv);
+      const gainNiv = Math.log(K.CROISSANCE_NIVEAU) / coutNiv;
+      const evol = trio.filter((p) => K.canEvolve(p.evo, p.niv)).map((p) => ({ p, cout: K.EVOLUTION_GRIFFES_COST[p.evo + 1],
+        gain: Math.log(K.EVOLUTION_STAT_MULTIPLIER[p.evo + 1] / K.EVOLUTION_STAT_MULTIPLIER[p.evo]) / K.EVOLUTION_GRIFFES_COST[p.evo + 1] }))
+        .sort((x, y) => y.gain - x.gain)[0];
+      if (evol && evol.gain > gainNiv) { if (evol.cout > j.griffes) return; j.griffes -= evol.cout; evol.p.evo += 1; continue; }
+      if (coutNiv > j.griffes) return;
+      j.griffes -= coutNiv; t.niv += 1;
     }
   };
   const avancerTemps = (h) => {
