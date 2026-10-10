@@ -2924,6 +2924,14 @@ bonusElite / niveauEnnemi) ; FILET : dernier palier −80 % après 10 défaites 
   A0 7,6-8,1 · A1 5,8-6,6 · A2 6,7-7,5 · A3 5,8-6,9 · A4 6,2-9,5 · A5 5,5-7,1 ; 10e rang 2,7-5,0 ;
   0 bloqué. JEU PUBLIÉ (même simulateur) : médian 8,1-10, 10e rang 4,0-7,4. ⚠️ Écart d'une population à
   l'autre ≈ ±1 point (chance aux œufs) : toujours contrôler sur PLUSIEURS populations.
+ÉTAPE 3 FAITE (branche) — AFFICHAGE : CombatScreen : étiquette « Niv. N » sur CHAQUE panneau du bandeau
+(tes créatures : ownedLevel ; ennemis : niveau de equipeEnnemie, « ⭐ » si bonusElite) ; ennemis évolués
+dessinés et nommés sous leur forme (stadeVisuel(evolutionTier)) ; badge « 👑 Boss · ⭐ Élites : ennemis
++N niveaux » sous le bandeau (empilé avec Élixir et Coup de pouce) ; PV, dégâts flottants et cartes
+d'attaque en format court (nombreCourt, combatLogic : mêmes suffixes que les pièces, arrondi vers le
+bas, tel quel sous 10 000). Aperçu d'étape (FighterSelectOverlay) : « 👑 ⭐ Adversaires : Abyssorax +2 ·
+niv. 120 », médaillon sous la forme évoluée. VU sur le banc de capture (nouvelle scène
+tools/capture/scenes/combat-niveaux.jsx, ?scene=n110 / n11 / n200) : tout tient dans les panneaux.
 ⚠️ À FAIRE ENCORE : verifier-controles (sabotages lignes ~181 et ~220 visent l'ancienne table),
 calibrer-aventure.js (ancien outil, écrit l'ancienne table), calibrer-parcours.js (à réécrire :
 choisir les COMPOSITIONS), PUISSANCE_CONSEILLEE (échelle d'avant), Gardien (guardianStats passe par

@@ -399,6 +399,9 @@ import {
   levelIndexInChapter,
   LEVELS_PER_CHAPTER,
   opponentForLevel,
+  equipeEnnemie,
+  estEtapeBoss,
+  bonusElite,
   griffesReward,
   butinBonus,
   RUNE_BONUS_TABLE,
@@ -3393,8 +3396,15 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
 }
 
 function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filetBaisse = 0, energy, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
-  const opponent = opponentForLevel(levelNumber);
-  const display = opponent.stages[0];
+  // Niveaux réels (10/10) : le 1er ennemi de l'étape sous sa VRAIE forme (évolution), avec son NIVEAU,
+  // le nombre d'adversaires, 👑 (boss de chapitre) et ⭐ (élites).
+  const equipeAdverse = equipeEnnemie(levelNumber);
+  const premierAdverse = equipeAdverse[0];
+  const opponent = premierAdverse.creature;
+  const stadeAdverse = stadeVisuel(premierAdverse.evolutionTier || 0);
+  const display = opponent.stages[stadeAdverse] || opponent.stages[0];
+  const marqueEtape = (estEtapeBoss(levelNumber) ? '👑 ' : '') + (bonusElite(levelNumber) > 0 ? '⭐ ' : '');
+  const suiteAdverse = (equipeAdverse.length > 1 ? ' +' + (equipeAdverse.length - 1) : '') + ' · niv. ' + premierAdverse.niveau;
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
   const teamCount = deck.filter((id) => id).length;
@@ -3455,12 +3465,12 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
         })()}
       </View>
 
-      <Medaillon style={carre(APERCU.adversaire.cx, APERCU.adversaire.y0, APERCU.adversaire.y1)} creatureId={opponent.id} stade={0} emoji={display.emoji} />
+      <Medaillon style={carre(APERCU.adversaire.cx, APERCU.adversaire.y0, APERCU.adversaire.y1)} creatureId={opponent.id} stade={stadeAdverse} emoji={display.emoji} />
       <View style={[boite(APERCU.nom), styles.apercuPlaque]}>
         <Image source={APERCU_IMG.plaque} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
         {/* Taille selon la LONGUEUR du nom : « Adversaire : Ombrillon » doit tenir dans la plaque. */}
-        <Text style={[styles.apercuNom, { marginHorizontal: (APERCU.nom[2] - APERCU.nom[0]) * ui.l * 0.09, fontSize: Math.max(8, Math.min(Math.round(ui.h * 0.032), Math.floor(((APERCU.nom[2] - APERCU.nom[0]) * ui.l * 0.86) / ((13 + display.name.length) * 0.56)))) }]} numberOfLines={1}>
-          Adversaire : <Text style={{ color: RARITY_COLOR[opponent.rarity] }}>{display.name}</Text>
+        <Text style={[styles.apercuNom, { marginHorizontal: (APERCU.nom[2] - APERCU.nom[0]) * ui.l * 0.09, fontSize: Math.max(8, Math.min(Math.round(ui.h * 0.032), Math.floor(((APERCU.nom[2] - APERCU.nom[0]) * ui.l * 0.86) / ((13 + marqueEtape.length + display.name.length + suiteAdverse.length) * 0.56)))) }]} numberOfLines={1}>
+          {marqueEtape}{equipeAdverse.length > 1 ? 'Adversaires' : 'Adversaire'} : <Text style={{ color: RARITY_COLOR[opponent.rarity] }}>{display.name}</Text>{suiteAdverse}
         </Text>
       </View>
       <Text style={[boite(APERCU.puissance), styles.apercuLigne, { color: couleurPuissance, fontSize: Math.max(9, Math.round(ui.h * 0.036)) }]} numberOfLines={1}>

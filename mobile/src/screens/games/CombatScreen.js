@@ -301,6 +301,11 @@ import {
   combatStatsForCreatureTyped,
   opponentTeamForLevel,
   statsForOpponentCreatureTyped,
+  equipeEnnemie,
+  estEtapeBoss,
+  bonusElite,
+  BONUS_NIVEAU_BOSS,
+  nombreCourt,
   opponentGoesFirst,
   damageMultiplierForTime,
   computePlayerDamage,
@@ -381,7 +386,7 @@ function FloatingDamage({ amount, color, taille = null, pop = false }) {
   const opacity = anim.interpolate({ inputRange: [0, 0.75, 1], outputRange: [1, 1, 0] });
   return (
     <Animated.Text style={[styles.floatingDamage, taille ? { fontSize: taille } : null, { color, opacity, transform: [{ translateY }, { scale }] }]}>
-      -{amount}
+      -{nombreCourt(amount)}
     </Animated.Text>
   );
 }
@@ -516,7 +521,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       // niveau, ennemis −20 / −40 / −60 % (AdventureScreen compte les défaites).
       const stats0 = filetBaisse > 0 ? appliquerBaisse(statsBase, filetBaisse) : statsBase;
       const stats = elixirActif ? appliquerElixir(stats0) : stats0;
-      return { creature, stats, hp: stats.hp, mana: MANA_DEPART, etats: {} };
+      // Niveaux réels (10/10) : niveau et évolution AFFICHÉS de l'ennemi (le Gardien n'en a pas).
+      const membre = creature.boss ? null : equipeEnnemie(levelNumber).find((m) => m.creature.id === creature.id);
+      return { creature, stats, hp: stats.hp, mana: MANA_DEPART, etats: {}, niveau: membre ? membre.niveau : null, evolutionTier: membre ? membre.evolutionTier : 0 };
     })
   );
   // Tours de riposte, pour la Fureur (moteur des sorts, 24/09).
@@ -1373,7 +1380,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const bandeauH = Math.round(Math.min(uiH * 0.18, largeurBandeau / 11.53));
   const sousBandeau = bandeauH + 6;
   const PW = largeurBandeau * 0.108; const PH = bandeauH * 0.8; const PT = bandeauH * 0.1;
-  const panneauCombattant = ({ key, gauche, nom, hp, hpMax, mana, actif, cible, ko, badge, onPress }) => (
+  const panneauCombattant = ({ key, gauche, nom, niveau = null, elite = false, hp, hpMax, mana, actif, cible, ko, badge, onPress }) => (
     <TouchableOpacity key={key} activeOpacity={onPress ? 0.8 : 1} disabled={!onPress} onPress={onPress}
       // Sans action (tes panneaux ; ceux des adversaires hors choix) : AUCUNE capture du toucher
       // (le défi de taps compte partout, bandeau compris).
@@ -1385,11 +1392,17 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       <Text style={[styles.panneauNom, { fontSize: Math.max(8, Math.round(PH * 0.2)), marginTop: PH * 0.12, marginHorizontal: PW * 0.08 }]} numberOfLines={1}>{nom}</Text>
       <View style={[styles.panneauVie, { height: Math.max(10, Math.round(PH * 0.24)), marginHorizontal: PW * 0.1 }]}>
         <View style={[styles.panneauVieFond, { width: `${Math.max(0, Math.min(1, hp / hpMax)) * 100}%` }]} />
-        <Text style={[styles.panneauVieTexte, { fontSize: Math.max(8, Math.round(PH * 0.18)) }]} numberOfLines={1}>{Math.max(0, Math.ceil(hp))} / {hpMax}</Text>
+        <Text style={[styles.panneauVieTexte, { fontSize: Math.max(8, Math.round(PH * 0.18)) }]} numberOfLines={1}>{nombreCourt(hp)} / {nombreCourt(hpMax)}</Text>
       </View>
       {mana != null && (
         <View style={[styles.panneauMana, { height: Math.max(4, Math.round(PH * 0.08)), marginHorizontal: PW * 0.1 }]}>
           <View style={[styles.panneauManaFond, mana >= MANA_MAX && styles.panneauManaPlein, { width: `${Math.max(0, Math.min(1, mana / MANA_MAX)) * 100}%` }]} />
+        </View>
+      )}
+      {/* Niveaux réels (10/10) : le NIVEAU de chaque créature, les tiennes comme les ennemies (⭐ = élite). */}
+      {niveau != null && (
+        <View style={[styles.panneauNiveau, elite && styles.panneauNiveauElite, { right: -PH * 0.1, top: -PH * 0.16, paddingHorizontal: Math.round(PH * 0.08), borderRadius: Math.round(PH * 0.14) }]}>
+          <Text style={[styles.panneauNiveauTexte, { fontSize: Math.max(8, Math.round(PH * 0.17)) }]} numberOfLines={1}>{elite ? '⭐' : ''}Niv. {niveau}</Text>
         </View>
       )}
       {badge && (
@@ -1515,6 +1528,16 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         </View>
       )}
 
+      {/* Niveaux réels (10/10) : étape de boss (+3 niveaux) et/ou élites (niveaux en plus), DITS au joueur. */}
+      {!isBoss && (estEtapeBoss(levelNumber) || bonusElite(levelNumber) > 0) && (
+        <View style={[styles.elixirBadge, styles.niveauxBadge, { top: sousBandeau + 6 + (elixirActif ? 28 : 0) + (filetBaisse > 0 ? 28 : 0), left: 10 + insets.left + 52, pointerEvents: 'none' }]}>
+          <Text style={styles.elixirBadgeText}>
+            {(estEtapeBoss(levelNumber) ? '👑 Boss' : '') + (estEtapeBoss(levelNumber) && bonusElite(levelNumber) > 0 ? ' · ' : '') + (bonusElite(levelNumber) > 0 ? '⭐ Élites' : '')
+              + ' : ennemis +' + ((estEtapeBoss(levelNumber) ? BONUS_NIVEAU_BOSS : 0) + bonusElite(levelNumber)) + ' niveaux'}
+          </Text>
+        </View>
+      )}
+
       {/* Décor de combat. Voile sombre par-dessus : le décor est très
           détaillé/lumineux, sans ça les sprites et les barres de vie s'y
           perdent visuellement. */}
@@ -1614,7 +1637,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       {opponents.map((o, i) => {
         // `stages[0]` : le Gardien n'a qu'une apparence, les créatures en
         // ont trois — l'index 0 est valide dans les deux cas.
-        const d = o.creature.stages[0];
+        const d = o.creature.stages[stadeVisuel(o.evolutionTier || 0)] || o.creature.stages[0]; // ennemi évolué : sa forme évoluée (10/10)
         const fainted = pvAffiche('o', i, o.hp) <= 0;
         return renderSprite({
           key: `o${i}`, sansJauges: true,
@@ -1622,7 +1645,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           // de 70 %, pour qu'il pèse à l'écran au lieu de ressembler à
           // une créature ordinaire.
           slot: isBoss ? { x: 0.72, y: 0.53, size: 1.7 } : OPPONENT_SLOTS[i],
-          creatureId: o.creature.id, stageIndex: 0,
+          creatureId: o.creature.id, stageIndex: stadeVisuel(o.evolutionTier || 0),
           emoji: d.emoji, name: d.name,
           hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, fainted,
           etats: iconesEtats(o), etatsCote: 'gauche',
@@ -1658,7 +1681,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         <Image source={COMBAT_IMG.bandeau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
         {fighters.map((f, fi) => {
           const d = f.creature.stages[stadeVisuel(f.evolutionTier)];
-          return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex, ko: pvAffiche('p', fi, f.hp) <= 0 });
+          return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, niveau: f.ownedLevel, hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex, ko: pvAffiche('p', fi, f.hp) <= 0 });
         })}
         <View style={[styles.bandeauMessage, { left: largeurBandeau * 0.395, width: largeurBandeau * 0.21, height: bandeauH }]}>
           <Text style={[styles.bandeauMessageTexte, { fontSize: Math.max(10, Math.round(bandeauH * 0.22)) }]} numberOfLines={2}>
@@ -1666,9 +1689,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           </Text>
         </View>
         {!isBoss && opponents.map((o, i) => {
-          const d = o.creature.stages[0]; const ko = pvAffiche('o', i, o.hp) <= 0;
+          const d = o.creature.stages[stadeVisuel(o.evolutionTier || 0)] || o.creature.stages[0]; const ko = pvAffiche('o', i, o.hp) <= 0;
           return panneauCombattant({
-            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, cible: i === targetIndex, ko,
+            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, niveau: o.niveau, elite: bonusElite(levelNumber) > 0, hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, cible: i === targetIndex, ko,
             badge: { emoji: ELEMENT_EMOJI[o.creature.element] || '✨', couleur: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)] || '#ffb340' },
             onPress: !ko && phase === 'choosing' ? () => chooseTarget(i) : null,
           });
@@ -1714,7 +1737,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
               le répéter ici. */}
           <Text style={styles.skillInfoLine}>
             {activeFighter.creature.stages[0].name} utilise {skillInfo.name} et inflige{' '}
-            {skillInfo.sort ? `${SORTS[skillInfo.sort].desc} · ${skillInfo.manaCost} mana` : `${degatsAffiches(skillInfo)} dégâts`}.
+            {skillInfo.sort ? `${SORTS[skillInfo.sort].desc} · ${skillInfo.manaCost} mana` : `${nombreCourt(degatsAffiches(skillInfo))} dégâts`}.
           </Text>
           {/* L'affinité est lue sur les PASTILLES colorées des
               adversaires, pas répétée ici. */}
@@ -1796,7 +1819,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
                       <Text style={[styles.carteNom, { fontSize: Math.max(9, Math.round(CH * 0.2)) }, !canAfford && styles.carteTexteEteint]} numberOfLines={1}>{skill.name}</Text>
                       {/* Dégâts calculés par la FONCTION du coup (degatsAffiches) : affichage et dégâts ne divergent pas. */}
                       <Text style={[styles.carteDetail, { fontSize: Math.max(8, Math.round(CH * 0.16)) }, !canAfford && styles.carteTexteEteint]} numberOfLines={1}>
-                        {skill.sort ? SORTS[skill.sort].desc : `${degatsAffiches(skill)} dégâts`}
+                        {skill.sort ? SORTS[skill.sort].desc : `${nombreCourt(degatsAffiches(skill))} dégâts`}
                       </Text>
                       {skill.sort && <Text style={[styles.carteCout, { fontSize: Math.max(8, Math.round(CH * 0.14)) }, !canAfford && styles.carteTexteEteint]} numberOfLines={1}>{skill.manaCost} mana</Text>}
                     </View>
@@ -2109,6 +2132,10 @@ const MIROIR = { transform: [{ scaleX: -1 }] };
 
 const styles = StyleSheet.create({
   filetBadge: { backgroundColor: 'rgba(13,110,70,0.9)' },
+  niveauxBadge: { backgroundColor: 'rgba(146,64,14,0.92)' },
+  panneauNiveau: { position: 'absolute', backgroundColor: 'rgba(20,14,6,0.88)', borderWidth: 1.5, borderColor: '#c9a35b', paddingVertical: 1 },
+  panneauNiveauElite: { borderColor: '#ffd54a', backgroundColor: 'rgba(92,52,0,0.92)' },
+  panneauNiveauTexte: { color: '#fbe9c4', fontWeight: '900', includeFontPadding: false },
   aideBloc: { gap: 8, marginTop: 4 },
   aidePresque: { color: '#FFB74D', fontWeight: '900', fontSize: 14, textAlign: 'center' },
   aideDiag: { color: '#fff', fontWeight: '700', fontSize: 13, textAlign: 'center' },

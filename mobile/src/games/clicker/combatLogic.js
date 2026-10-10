@@ -1579,6 +1579,19 @@ export function niveauEnnemi(levelNumber) {
   const n = Math.max(1, Math.floor(levelNumber || 1));
   return n + (estEtapeBoss(n) ? BONUS_NIVEAU_BOSS : 0) + bonusElite(n);
 }
+// Grands nombres du combat (PV, dégâts) en format court, MÊMES suffixes que les pièces (ClickerScreen) :
+// sous 10 000 tel quel ; ensuite 12.4K, 3.21M, 1.5Md… Arrondi VERS LE BAS : jamais plus de PV affichés
+// que la vérité. Nécessaire depuis la croissance +5 %/niveau (un boss niveau 53 : 20 461 PV).
+const SUFFIXES_COURTS = [['K', 1e3], ['M', 1e6], ['Md', 1e9], ['T', 1e12]];
+export function nombreCourt(n) {
+  const v = Math.max(0, Math.ceil(Number(n) || 0));
+  if (v < 10000) return String(v);
+  let i = SUFFIXES_COURTS.length - 1;
+  while (i > 0 && v < SUFFIXES_COURTS[i][1]) i--;
+  const x = v / SUFFIXES_COURTS[i][1];
+  const r = x >= 100 ? Math.floor(x) : x >= 10 ? Math.floor(x * 10) / 10 : Math.floor(x * 100) / 100;
+  return r + SUFFIXES_COURTS[i][0];
+}
 export function equipeEnnemie(levelNumber) {
   const niveau = niveauEnnemi(levelNumber);
   return opponentTeamForLevel(levelNumber).map((creature) => ({ creature, niveau, evolutionTier: evoPourNiveau(niveau) }));
