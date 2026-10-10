@@ -2861,3 +2861,33 @@ DÉCISIONS EN ATTENTE de l'auteur : (1) verrou « 3 créatures pour dépasser le
 blocage avec les défis : œuf 2 = niveau 5 + 4 victoires, œuf 3 = niveau 10 ; rejouer compte) ; (2) objectif de
 calibrage (joueur MÉDIAN au lieu des 10 % malchanceux).
 auditNiveauMax (+ sabotage « garde de handleLevelUp supprimée »). 103 contrôles, 131 sabotages.
+
+
+## 10/10 — REFONTE « NIVEAUX RÉELS » (branche `niveaux-reels`, PAS ENCORE PUBLIÉE)
+
+DÉCISIONS de l'auteur (10/10) :
+- Les ennemis deviennent de VRAIES créatures avec un NIVEAU AFFICHÉ, calculées avec la MÊME formule
+  que les créatures du joueur. Étape N de l'Exploration = ennemis niveau N. Boss de fin de chapitre :
+  quelques niveaux au-dessus, affichés. La difficulté vient de ce que l'ennemi MONTRE : nombre,
+  rareté, évolution. Réglage fin : Griffes et coûts.
+- Croissance : +5 % de force à CHAQUE niveau (CROISSANCE_NIVEAU), stats x10 (STATS_ECHELLE). Le
+  pourcentage reste caché, le joueur ne voit que des niveaux.
+- Début de partie : le joueur reçoit 40 Griffes au jour 1 (calendrier, dailyLogic) et peut monter sa
+  1re créature tout de suite → les ennemis du début sont UN PEU EN DESSOUS de lui, pas à égalité
+  (plafond actuel : étape gagnée + 5 → créature niveau 5 dès l'étape 1, ennemi niveau 1).
+MESURÉ avant de décider (copies séparées, /tmp) :
+- Même équipe contre la même, 14 niveaux au-dessus : +5 % constant → 77/76/72/74 % aux niveaux
+  5/25/60/150 ; paliers fixes (x3 au 25, x6 au 50, x15 au 100) → 92/100/100/100 %.
+- Arrondi : stats actuelles (attaque 3) → 91 % au niveau 3 au lieu de ~75 % ; corrigé par x10.
+- À niveau ET rareté égaux, la jauge et les sorts donnent ~14 niveaux d'avance au joueur ; près du
+  seuil, 1 niveau = jusqu'à 36 points de chance (74 % → 38 %).
+- Étape 15 (2 ennemis niveau 15) contre l'équipe de l'auteur niveau 20 : communs, peu communs,
+  rares → 100 % ; épiques → 31 %. Le niveau seul ne crée pas la difficulté.
+ÉTAT : étape 1 FAITE sur la branche (levelMultiplier = STATS_ECHELLE x 1,05^(niveau-1) ;
+ECHELLE_PUISSANCE 10 → 1 pour garder l'échelle de la puissance affichée).
+⚠️ Sur la branche, l'équilibrage est FAUX tant que l'étape 2 n'est pas faite (ennemis encore sur
+l'ancien budget + AVENTURE_MULTIPLICATEURS). NE PAS FUSIONNER avant la fin.
+RESTE : (2) ennemis = vraies créatures (niveau = étape, composition par étape, boss) + outil de
+calibrage qui choisit les compositions ; (3) affichage du niveau des ennemis ; (4) Griffes/coûts,
+plafond, Gardien (vérifier que le plan « +N niveaux » respecte le plafond), défis, contrôles ;
+(5) mesures complètes puis publication.

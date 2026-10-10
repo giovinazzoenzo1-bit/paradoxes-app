@@ -24,18 +24,33 @@ export const RARITY_BASE_STATS = {
 // Stats de combat d'une créature possédée par le joueur, selon sa
 // rareté et son niveau ACTUEL (celui qu'on monte déjà en la nourrissant
 // dans le clicker classique — ça lui donne enfin une 2e utilité).
-// Croissance des PV/Attaque par niveau — linéaire (+8%/niveau) jusqu'au
-// niveau 50, puis ralentie (+2%/niveau) au-delà. Sans ce ralentissement,
-// une seule créature beaucoup nourrie grandirait sans limite (×8,9 à
-// niveau 100, ×16,9 à niveau 200...), largement plus vite que la
-// progression des adversaires en Aventure (liée au niveau de CHAPITRE,
-// pas au niveau de la créature) — un grind extrême pouvait tout
-// déséquilibrer. Le seuil de 50 reprend un repère déjà existant dans le
-// jeu (2e palier d'évolution).
+//
+// ---- Croissance par niveau : +5 % de force à CHAQUE niveau (10/10) ----
+// Refonte « niveaux réels » (décision de l'auteur) : les ennemis deviennent de
+// vraies créatures avec un niveau affiché, calculées avec CETTE formule.
+// Pourquoi un pourcentage CONSTANT : c'est la seule règle où « N niveaux
+// d'écart » veut dire la même chose au niveau 10 et au niveau 150. MESURÉ
+// (même équipe contre la même, 14 niveaux au-dessus) : 77 / 76 / 72 / 74 %
+// aux niveaux 5 / 25 / 60 / 150 ; avec des paliers fixes (x3 au 25, x6 au 50,
+// x15 au 100) : 92 / 100 / 100 / 100 % — l'écart ne valait plus rien.
+// Ancienne règle (+8 % du niveau 1 par niveau jusqu'à 50, puis +2 %) : un
+// niveau ne valait presque plus rien (niveau 105 contre 100 = +1,7 % de force).
+// 5 % garde la sensation du début (niveau 25 = x3,2 ; x2,9 avant).
+// Rareté et évolution restent des MULTIPLICATEURS (RARITY_BASE_STATS,
+// EVOLUTION_STAT_MULTIPLIER) : avec +5 %, ils valent un nombre FIXE de
+// niveaux (peu commune +13, rare +22, épique +43, légendaire +51,
+// mythique +63 ; évolution +6 puis +11 au total).
+//
+// STATS_ECHELLE (x10) : avec 3 d'attaque, +5 % ne se voyait pas
+// (3 → 3 → 3 → 3 → 4) et l'ARRONDI déformait les combats du début (MESURÉ :
+// 91 % au niveau 3 au lieu de ~75 % pour le même écart). Tout le combat est
+// proportionnel (sorts, soins, poison, bouclier, riposte : en %), donc x10
+// ne change rien d'autre. Inclus ICI pour s'appliquer partout d'un coup
+// (créatures, puissance affichée, ennemis).
+export const CROISSANCE_NIVEAU = 1.05;
+export const STATS_ECHELLE = 10;
 export function levelMultiplier(level) {
-  if (level <= 50) return 1 + (level - 1) * 0.08;
-  const atFifty = 1 + 49 * 0.08; // = 4,92 — valeur exacte au niveau 50
-  return atFifty + (level - 50) * 0.02;
+  return STATS_ECHELLE * Math.pow(CROISSANCE_NIVEAU, Math.max(1, level) - 1);
 }
 
 // Si la créature a ses propres stats de base (fournies par Gemini —
@@ -403,7 +418,7 @@ export function puissanceDeck(membres) {
 // moyens d'un tour), sur les stats AVANT arrondi, ×10 : elle monte à CHAQUE niveau, évolution,
 // rune. La difficulté se lit sur la CHANCE de victoire (exacte, simulée). puissanceDeck reste
 // pour les usages INTERNES (photo et calibrage du Gardien, anti-triche).
-export const ECHELLE_PUISSANCE = 10;
+export const ECHELLE_PUISSANCE = 1; // était 10 : les stats sont désormais x10 (STATS_ECHELLE)
 // La formule de combatStatsForCreatureTyped SANS ses arrondis (auditPuissanceAffichee vérifie
 // qu'arrondies, elles redonnent les stats du jeu).
 export function statsContinues(creature, level, evolutionTier = 0, equippedRunes = []) {
