@@ -3058,3 +3058,27 @@ créature plus rare coûte ×1,3 à ×6,7 par niveau). Le « niveau » seul ne m
 RESTE : packs de Griffes proportionnels à la prime d'étape ; chapitre 1 varié (plus que Glyphon / Luxorbe) ;
 recalibrage complet ; contrôles (auditNiveauMax → « aucun niveau max », auditPacks, Gardien…) ; publication ; puis
 le calcul « Griffes de victoire seulement » demandé par l'auteur.
+
+
+## 10/10 — RÈGLE SIMPLE DE L'AUTEUR (branche `griffes-libres`, EN COURS — remplace le réglage par cible de victoires)
+
+RÈGLE VALIDÉE PAR L'AUTEUR : étape N = un ennemi aussi fort qu'une créature niveau N, un peu moins ; l'ennemi prend 1
+niveau par étape (il a REFUSÉ qu'un niveau compte plus que +5 %, et refusé « 3 niveaux par étape ») ; la prime de
+victoire paie à peu près 1 niveau pour chacune de ses créatures ; 1, 2 puis 3 ennemis ; leur rareté (et leur évolution)
+suit celle des créatures d'un joueur typique. Packs de Griffes : NE PAS TOUCHER (décision de l'auteur).
+⚠️ L'auteur demande des explications SIMPLES et rien qui ne soit pas demandé (« arrête de partir… »).
+MESURÉ pour décider : à niveau égal, commune contre commune = 40 % ; +1 niveau ne change presque rien (≈ +5 points) :
++5 %/niveau est petit face au hasard de la jauge — il faut ~6 niveaux d'écart pour « galérer » (40 %).
+FAIT (branche) : statsForOpponentCreatureTyped → force MOYENNE (√(PV×ATQ)) d'une créature de sa rareté au niveau,
+× FORCE_ENNEMI {1: 0,8, 2: 1,2, 3: 1,15} (le Gardien, hors table, garde sa formule) ; levelUpCost = partCoutPrime(L)
+× prime de l'étape L ÷ taille de l'équipe à ce chapitre, SANS rareté ; COUT_PRIME par tranche [25 : 0,8 · 60 : 0,75 ·
+101 : 0,95 · 144 : 0,95 · 185 : 0,62 · au-delà : 0,5] (MESURÉ pour garder l'équipe à ±3 niveaux de l'étape) ; table
+« id:évolution » (equipeEnnemie lit l'évolution typique ; MESURÉ : évolués d'office à 25/50, les ennemis l'étaient
+AVANT le joueur → A1 à 31 %) ; calibrer-parcours.js = générateur simple (rareté et évolution médianes de la i-e créature
+la plus forte des joueurs simulés, espèce la moins vue, 2 fois au plus par chapitre). Chapitre 1 varié (Pyrosile,
+Caraploof, Ventis, Bouldog, Voltix, Glyphon, Ombrillon, Luxorbe…).
+CONTRÔLE (3 populations) : 1er essai du joueur médian 76-95 % (étapes 11-227), équipe ±3 niveaux ; parties complètes :
+médian A0 6,0-6,9 · A1 4,8-5,5 · A2 6,8-8,0 · A3 6,7-7,5 · A4 7,3-7,7 · A5 5,7-7,1 ; 10e rang 3,1-5,8 ; 0 bloqué.
+Exemple de l'auteur : commune niv. 1 → étape 1 96 %, étape 2 82 %, étape 5 21 % ; niv. 5 → étape 5 67 %.
+RESTE : contrôles et sabotages (auditParcours, auditApprentissage, auditNiveauMax → aucun niveau max, Gardien…),
+publication, puis le calcul « Griffes de victoire seulement ».

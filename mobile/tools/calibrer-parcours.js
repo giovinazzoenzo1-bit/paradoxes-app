@@ -99,108 +99,53 @@ function equipesPossibles(taille) {
 }
 const PAR_ID = Object.fromEntries(A.C.CREATURES.map((c) => [c.id, c]));
 
-function calibrer(nJoueurs = 40, essais = 10, R = P.REGLAGES) {
+// ═══ RÈGLE SIMPLE DE L'AUTEUR (10/10) — remplace le réglage par cible de victoires ═══
+// Pour chaque étape : autant d'ennemis que le chapitre en compte (1, 2, puis 3) ; la RARETÉ de chacun = celle des
+// créatures d'un joueur typique à cette étape (rareté médiane de sa 1re, 2e, 3e créature la plus forte) ; l'ESPÈCE =
+// la moins vue (2 fois au plus par chapitre) ; niveau = l'étape (niveauEnnemi). La FORCE vient de la règle du jeu
+// (statsForOpponentCreatureTyped : force moyenne de la rareté × FORCE_ENNEMI). Aucun réglage par cible ici.
+function calibrer(nJoueurs = 60, essais = 10, R = P.REGLAGES) {
   const T = K.ENNEMIS_ETAPES;
-  T.length = 0; // on repart de zéro (la table écrite dans le jeu est recalculée en entier)
+  T.length = 0;
+  const RANG = L.ORDRE_RARETES;
   const joueurs = Array.from({ length: nJoueurs }, (_, i) => P.nouveauJoueur(5000 + i * 104729, R));
-  const equipes = { 1: equipesPossibles(1), 2: equipesPossibles(2), 3: equipesPossibles(3) };
-  const vuA = {}; // dernière étape où chaque espèce a été choisie (variété)
+  const vuA = {}, parChapitre = {};
   const lignes = [], puissances = [], bloques = [];
   const rang = (v, q) => v[Math.floor(v.length * q)];
   for (let a = 0; a < 6; a++) {
     const stats = joueurs.map((j) => j.nouvelleAsc(a));
-    const compte = joueurs.map(() => ({ v: 0, c: 0 })); // victoires / combats de l'Ascension, chapitre 1 exclu
     for (let l = (a ? R.finsAventure[a - 1] : 0) + 1; l <= R.finsAventure[a]; l++) {
       const actifs = joueurs.filter((j) => !j.bloque);
       actifs.forEach((j) => j.preparer(l, a));
-      const decks = actifs.map((j) => j.joueurs());
-      const boss = K.estEtapeBoss(l);
-      const ratios = actifs.map((j) => compte[joueurs.indexOf(j)]).filter((x) => x.c > 0).map((x) => x.v / x.c);
-      const courant = ratios.length ? rang(ratios.slice().sort((x, y) => x - y), CENTILE) : OBJECTIF;
-      const base = Math.min(CIBLE_MAX, Math.max(CIBLE_MIN, CIBLE + GAIN * (OBJECTIF - courant)));
-      const cible = boss ? base - ECART_BOSS : base;
-      const nivBase = l + K.bonusBoss(l); // la règle DU JEU (0 au chapitre 1)
       const taille = K.opponentTeamSize(l);
-      // Toutes les équipes de la taille du chapitre, classées par force brute √(ΣPV × ΣATQ) au niveau
-      // de l'étape + b niveaux d'élite (formule du jeu).
-      const classement = (b) => {
-        const niv = nivBase + b, evo = K.evoPourNiveau(niv), st = {};
-        A.C.CREATURES.forEach((c) => { st[c.id] = K.combatStatsForCreatureTyped(c, niv, evo, []); });
-        const force = (ids) => Math.sqrt(ids.reduce((t, id) => t + st[id].hp, 0) * ids.reduce((t, id) => t + st[id].attack, 0));
-        return equipes[taille].map((ids) => ({ ids, f: force(ids) })).sort((x, y) => x.f - y.f);
-      };
-      const entree = (ids, b) => ids.join('+') + (b ? '@' + b : '');
-      // Taux de la population contre une équipe : posée dans la table DU JEU, lue par le jeu.
-      // ⚠️ Hasard FIXÉ par (étape, joueur, équipe) : MESURÉ au 1er essai, un hasard qui avance à chaque
-      // mesure donnait 80 % puis 0 % pour la même équipe (joueur médian au ras du seuil) → choix
-      // incohérents (étape 15 : 0 % pour le joueur médian).
-      const graine = (cle, i, baisse) => { let h = (l * 2654435761 + i * 40503 + Math.round(baisse * 100)) >>> 0;
-        for (const ch of cle) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
-        return () => { h = (h + 0x6D2B79F5) >>> 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1);
-          t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
-      const taux = (ids, b, baisse = 0) => {
-        const cle = entree(ids, b);
-        T[l - 1] = cle;
-        return actifs.map((j, i) => { const adv = j.adversaires(l, 1, baisse); const alea = graine(cle, i, baisse); let g = 0;
-          for (let e = 0; e < essais; e++) if (K.simulerCombat(decks[i], adv, { alea, politique: K.choixJoueur }).gagne) g++;
-          return g / essais; }).sort((x, y) => x - y);
-      };
-      const mesure = (ids, b) => { const v = taux(ids, b); return { moy: v.reduce((t, x) => t + x, 0) / v.length, med: rang(v, CENTILE), p10: rang(v, 0.1) }; };
-      const secours = (ids, b) => rang(taux(ids, b, SECOURS.baisse), 0.1) >= SECOURS.taux;
-      let b = 0;
-      let candidats = classement(0);
-      if (l <= APPRENTISSAGE.niveaux) {
-        // Apprentissage (chapitre 1) : on ne garde que les équipes que CHAQUE débutant bat.
-        const cibleApp = l === 1 ? APPRENTISSAGE.cibleNiveau1 : APPRENTISSAGE.cible;
-        const ok = candidats.filter((e) => { T[l - 1] = entree(e.ids, 0); return tauxDebutant(l).pire >= cibleApp; });
-        candidats = ok.length ? ok : candidats.slice(0, 1); // le plus faible possible (signalé par « débutant »)
-      } else if (mesure(candidats[candidats.length - 1].ids, 0).moy >= cible) {
-        // PLAFOND : même l'équipe la plus forte est battue par le joueur médian → ÉLITES. Le plus grand
-        // bonus (côté FACILE) où le joueur médian gagne encore la cible contre l'équipe la plus forte.
-        const plusForte = (bb) => { const t = classement(bb); return t[t.length - 1].ids; };
-        let lo = 0, hi = 1;
-        while (hi < 256 && mesure(plusForte(hi), hi).moy >= cible) { lo = hi; hi *= 2; }
-        while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (mesure(plusForte(mid), mid).moy >= cible) lo = mid; else hi = mid; }
-        b = lo;
-        candidats = classement(b);
+      const ch = Math.ceil(l / 10), vusCh = (parChapitre[ch] = parChapitre[ch] || {});
+      const ids = [], evos = [];
+      for (let i = 0; i < taille; i++) {
+        const v = actifs.map((j) => j.trio()[i]).filter(Boolean).map((p) => RANG.indexOf(p.c.rarity)).sort((x, y) => x - y);
+        const r = v.length ? rang(v, 0.5) : 0;
+        // Espèces de cette rareté (au besoin, la plus proche), la moins vue dans le chapitre puis la moins récente.
+        let pool = [];
+        for (let d = 0; !pool.length && d < RANG.length; d++) pool = A.C.CREATURES.filter((c) => !ids.includes(c.id) && Math.abs(RANG.indexOf(c.rarity) - r) === d);
+        pool.sort((x, y) => ((vusCh[x.id] || 0) - (vusCh[y.id] || 0)) || ((vuA[x.id] || -1e9) - (vuA[y.id] || -1e9)));
+        const c = pool[0]; ids.push(c.id); vusCh[c.id] = (vusCh[c.id] || 0) + 1; vuA[c.id] = l;
+        // Son évolution : celle de la i-e créature d'un joueur typique (médiane).
+        const ev = actifs.map((j) => j.trio()[i]).filter(Boolean).map((p) => p.evo).sort((x, y) => x - y);
+        evos.push(ev.length ? rang(ev, 0.5) : 0);
       }
-      // Dichotomie (côté FACILE) : plus grand rang dont la médiane atteint encore la cible.
-      let lo = 0, hi = candidats.length - 1;
-      if (mesure(candidats[0].ids, b).moy < cible) hi = 0;
-      else if (mesure(candidats[hi].ids, b).moy >= cible) lo = hi;
-      else { while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (mesure(candidats[mid].ids, b).moy >= cible) lo = mid; else hi = mid - 1; } }
-      const i0 = lo;
-      // Variété : parmi les voisines de la frontière (force à ±8 %), celles dont les espèces sont vues le
-      // moins récemment ; jamais la même équipe que les 2 étapes précédentes.
-      const precedentes = [T[l - 2], T[l - 3]].filter(Boolean).map((x) => x.split('@')[0]);
-      const recence = (ids) => ids.reduce((t, id) => t + Math.min(30, l - (vuA[id] || -100)), 0) / ids.length;
-      const f0 = candidats[i0].f;
-      // Voisinage élargi tant qu'il reste moins de 3 équipes (MESURÉ : chapitre 1, l'apprentissage ne
-      // laissait qu'Aquamira à ±8 % → 6 étapes sur 10 contre elle).
-      let voisines = [];
-      for (let v = VOISINAGE; voisines.length < 3 && v <= 8 * VOISINAGE; v *= 2) {
-        voisines = candidats.filter((e) => Math.abs(Math.log(e.f / f0)) <= v && !precedentes.includes(e.ids.join('+')));
-      }
-      voisines = voisines.sort((x, y) => recence(y.ids) - recence(x.ids) || Math.abs(x.f - f0) - Math.abs(y.f - f0)).slice(0, MESUREES);
-      if (!voisines.includes(candidats[i0]) && !precedentes.includes(candidats[i0].ids.join('+'))) voisines.push(candidats[i0]);
-      let choix = null;
-      voisines.forEach((e) => { const m = mesure(e.ids, b);
-        const ecart = Math.abs(m.moy - cible) + (m.moy < cible ? 0.05 : 0); // à écart égal, le côté facile
-        if ((!choix || ecart < choix.ecart - 1e-9) && secours(e.ids, b)) choix = { ...e, ...m, ecart }; });
-      // Aucune voisine ne passe la garde « jamais bloqué » : on descend vers plus facile jusqu'à une qui passe.
-      for (let i = i0; !choix && i >= 0; i--) if (!precedentes.includes(candidats[i].ids.join('+')) && secours(candidats[i].ids, b)) choix = { ...candidats[i], ...mesure(candidats[i].ids, b), ecart: 1 };
-      for (let i = i0; !choix && i >= 0; i--) if (secours(candidats[i].ids, b)) choix = { ...candidats[i], ...mesure(candidats[i].ids, b), ecart: 1 };
-      if (!choix) choix = { ...candidats[0], ...mesure(candidats[0].ids, b), ecart: 1 };
-      T[l - 1] = entree(choix.ids, b);
-      choix.ids.forEach((id) => { vuA[id] = l; });
-      const app = l <= APPRENTISSAGE.niveaux ? tauxDebutant(l).pire : null;
-      lignes.push({ l, boss, cible, elite: b, niveau: nivBase + b, evo: K.evoPourNiveau(nivBase + b), ids: choix.ids,
-        raretes: choix.ids.map((id) => PAR_ID[id].rarity), moy: choix.moy, med: choix.med, p10: choix.p10, app });
+      T[l - 1] = ids.map((id, i) => id + ':' + evos[i]).join('+');
+      // Mesure (pour le rapport) : 1er essai de chaque joueur, hasard fixé par (étape, joueur).
+      const decks = actifs.map((j) => j.joueurs());
+      const v = actifs.map((j, i) => { let h = (l * 2654435761 + i * 40503) >>> 0;
+        const alea = () => { h = (h + 0x6D2B79F5) >>> 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+        const adv = j.adversaires(l, 1); let g = 0;
+        for (let e = 0; e < essais; e++) if (K.simulerCombat(decks[i], adv, { alea, politique: K.choixJoueur }).gagne) g++;
+        return g / Math.max(1, essais); }).sort((x, y) => x - y);
+      const niv = actifs.map((j) => { const t = j.trio(); return t.reduce((x, p) => x + p.niv, 0) / Math.max(1, t.length); }).sort((x, y) => x - y);
+      lignes.push({ l, boss: K.estEtapeBoss(l), niveau: K.niveauEnnemi(l), ids, raretes: ids.map((id) => PAR_ID[id].rarity),
+        med: rang(v, 0.5), p10: rang(v, 0.1), nivJoueur: rang(niv, 0.5) });
       const pw = actifs.map((j) => K.puissanceDeck(j.trio().map((p) => ({ creature: p.c, ownedLevel: p.niv, evolutionTier: p.evo, equippedRunes: [] })))).sort((x, y) => x - y);
-      puissances.push(pw[Math.floor(pw.length * CENTILE)]); // la « puissance conseillée » = celle du joueur visé
-      actifs.forEach((j) => { const s0 = stats[joueurs.indexOf(j)], c0 = s0.combats, v0 = s0.victoires;
-        j.jouer(l, 1, s0); if (j.bloque) bloques.push(l);
-        if (l > APPRENTISSAGE.niveaux) { const k = compte[joueurs.indexOf(j)]; k.c += s0.combats - c0; k.v += s0.victoires - v0; } });
+      puissances.push(pw[Math.floor(pw.length * CENTILE)]);
+      actifs.forEach((j) => { j.jouer(l, 1, stats[joueurs.indexOf(j)]); if (j.bloque) bloques.push(l); });
     }
     joueurs.forEach((j, i) => { if (!j.parAsc[a]) j.finAscension(a, stats[i]); });
   }
