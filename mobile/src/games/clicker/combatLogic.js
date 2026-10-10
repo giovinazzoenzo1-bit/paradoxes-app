@@ -1404,41 +1404,41 @@ export const ENNEMIS_ETAPES = [
   'glyphon', 'glyphon', 'luxorbe', 'glyphon', 'luxorbe', 'luxorbe',
   'glyphon', 'luxorbe', 'luxorbe', 'glyphon', 'zephyrion+brontobloc', 'aquamira+nocturis',
   'zephyrion+braiserose', 'ombrillon+brontobloc', 'zephyrion+brontobloc', 'terracroc+malefix', 'zephyrion+braiserose', 'fournax+racinea',
-  'bouldog+aegisolar', 'zephyrion+braiserose', 'ventis+voltix+nocturis', 'caraploof+brontobloc+braiserose', 'pyrosile+bouldog+runicor', 'glyphon+luxorbe+nocturis',
-  'ombrillon+aquamira+zephyrion', 'voltix+ombrillon+nocturis', 'ventis+malefix+racinea', 'ombrillon+fournax+brontobloc', 'bouldog+terracroc+zephyrion', 'caraploof+brontobloc+braiserose',
-  'pyrosile+luxorbe+malefix', 'ventis+bouldog+braiserose', 'caraploof+brontobloc+braiserose', 'voltix+glyphon+racinea', 'aegisolar+ombrillon+luxorbe', 'fournax+aquamira+nocturis',
-  'ombrillon+brontobloc+braiserose', 'pyrosile+bouldog+runicor', 'terracroc+zephyrion+malefix', 'ventis+aegisolar+glyphon', 'voltix+fournax+racinea', 'caraploof+luxorbe+runicor',
-  'ombrillon+aquamira+braiserose', 'zephyrion+brontobloc+malefix', 'bouldog+terracroc+nocturis', 'pyrosile+ventis+aegisolar', 'voltix+glyphon+runicor', 'fournax+zephyrion+racinea',
-  'brontobloc+malefix+braiserose', 'caraploof+aegisolar+aquamira', 'luxorbe+terracroc+racinea', 'pyrosile+ombrillon+runicor', 'zephyrion+brontobloc+malefix', 'voltix+fournax+nocturis',
-  'ventis+bouldog+aegisolar', 'glyphon+aquamira+runicor', 'caraploof+terracroc+braiserose', 'zephyrion+brontobloc+malefix', 'luxorbe+racinea+runicor', 'aegisolar+luxorbe+terracroc',
-  'aegisolar+malefix+nocturis', 'voltix+ombrillon+cumulox', 'pyrosile+fournax+braiserose', 'ventis+aquamira+racinea', 'zephyrion+brontobloc+runicor', 'caraploof+bouldog+voltarel',
-  'glyphon+ombrillon+abyssorax', 'voltix+luxorbe+cumulox', 'terracroc+malefix+cumulox', 'luxorbe+abyssorax+voltarel', 'pyrosile+aegisolar+cumulox', 'brontobloc+abyssorax+voltarel',
-  'ventis+solarion+nocturis', 'fournax+aquamira+solstral', 'aquamira+abyssorax+cumulox', 'brontobloc+abyssorax+voltarel', 'fournax+abyssorax+voltarel', 'solarion+malefix+racinea',
-  'solarion+terracroc+racinea', 'solarion+runicor+braiserose', 'solarion+malefix+racinea', 'solarion+zephyrion+abyssorax', 'solarion+terracroc+racinea', 'solarion+malefix+racinea',
-  'aegisolar+solarion+racinea', 'solarion+zephyrion+abyssorax', 'racinea+braiserose+solstral', 'solarion+aquamira+abyssorax', 'solarion+zephyrion+abyssorax', 'bouldog+solarion+voltarel',
-  'caraploof+aegisolar+solstral', 'solarion+zephyrion+abyssorax', 'solarion+aquamira+abyssorax', 'bouldog+abyssorax+tartaroth', 'glyphon+solarion+cumulox', 'voltix+voltarel+solstral',
-  'ombrillon+solarion+abyssorax', 'solarion+nocturis+abyssorax', 'aegisolar+voltarel+solstral', 'luxorbe+brontobloc+arcanis', 'solarion+runicor+cumulox', 'aegisolar+voltarel+solstral',
-  'cumulox+solstral+tartaroth', 'abyssorax+solstral+tartaroth', 'voltarel+solstral+tartaroth', 'aegisolar+fournax+arcanis', 'racinea+braiserose+arcanis', 'cumulox+solstral+tartaroth',
-  'glyphon+solstral+arcanis', 'terracroc+abyssorax+arcanis', 'ventis+malefix+arcanis', 'pyrosile+zephyrion+arcanis', 'caraploof+aquamira+arcanis', 'bouldog+solarion+solstral',
-  'ombrillon+brontobloc+arcanis', 'voltix+nocturis+arcanis', 'cumulox+voltarel+tartaroth', 'luxorbe+fournax+arcanis', 'ombrillon+zephyrion+arcanis', 'aegisolar+racinea+arcanis',
-  'runicor+voltarel+solstral', 'glyphon+terracroc+arcanis', 'caraploof+braiserose+arcanis', 'pyrosile+solarion+tartaroth', 'ventis+aquamira+arcanis', 'brontobloc+malefix+arcanis',
-  'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'runicor+abyssorax+tartaroth', 'aegisolar+runicor+arcanis', 'nocturis+racinea+arcanis', 'aquamira+voltarel+arcanis',
-  'solarion+cumulox+solstral', 'bouldog+voltarel+arcanis', 'voltix+voltarel+arcanis', 'luxorbe+terracroc+arcanis', 'pyrosile+fournax+arcanis', 'ombrillon+zephyrion+arcanis',
-  'glyphon+solarion+tartaroth', 'aegisolar+runicor+arcanis', 'caraploof+malefix+arcanis', 'ventis+brontobloc+arcanis', 'braiserose+cumulox+solstral', 'aegisolar+voltarel+solstral',
-  'bouldog+aquamira+arcanis', 'cumulox+voltarel+arcanis', 'aegisolar+voltarel+solstral', 'solarion+nocturis+arcanis', 'abyssorax+cumulox+arcanis', 'pyrosile+racinea+arcanis',
-  'voltix+fournax+arcanis', 'ventis+aquamira+arcanis', 'ombrillon+zephyrion+arcanis', 'luxorbe+terracroc+arcanis', 'bouldog+solarion+tartaroth', 'glyphon+malefix+arcanis',
-  'brontobloc+cumulox+solstral', 'ombrillon+zephyrion+arcanis', 'caraploof+braiserose+arcanis', 'aquamira+voltarel+arcanis', 'solarion+runicor+arcanis', 'glyphon+terracroc+arcanis',
-  'pyrosile+terracroc+arcanis', 'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'voltix+nocturis+arcanis', 'ombrillon+zephyrion+arcanis', 'solarion+nocturis+arcanis',
-  'ventis+racinea+arcanis', 'aquamira+voltarel+arcanis', 'ombrillon+zephyrion+arcanis', 'abyssorax+cumulox+tartaroth', 'glyphon+terracroc+arcanis', 'luxorbe+malefix+arcanis',
-  'bouldog+fournax+arcanis', 'ombrillon+zephyrion+arcanis', 'caraploof+brontobloc+arcanis', 'luxorbe+zephyrion+arcanis', 'solarion+braiserose+arcanis', 'brontobloc+solstral+arcanis',
-  'solarion+runicor+arcanis', 'solarion+nocturis+arcanis', 'pyrosile+voltix+arcanis', 'cumulox+voltarel+tartaroth', 'ventis+aquamira+arcanis', 'aegisolar+voltarel+solstral',
-  'cumulox+voltarel+arcanis', 'racinea+tartaroth+arcanis', 'aegisolar+voltarel+solstral', 'solarion+runicor+abyssorax', 'glyphon+fournax+arcanis', 'aegisolar+voltarel+solstral',
-  'ombrillon+malefix+arcanis', 'bouldog+terracroc+arcanis', 'luxorbe+zephyrion+arcanis', 'caraploof+brontobloc+arcanis', 'voltix+aquamira+arcanis', 'ombrillon+zephyrion+arcanis',
-  'pyrosile+braiserose+arcanis', 'aquamira+voltarel+arcanis', 'nocturis+cumulox+solstral', 'ombrillon+zephyrion+arcanis', 'glyphon+solarion+tartaroth', 'ventis+malefix+arcanis',
-  'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'bouldog+fournax+arcanis', 'solarion+runicor+arcanis', 'abyssorax+voltarel+arcanis', 'racinea+solstral+arcanis',
-  'voltix+terracroc+arcanis', 'ombrillon+zephyrion+arcanis', 'pyrosile+luxorbe+arcanis', 'caraploof+aquamira+arcanis', 'ombrillon+zephyrion+arcanis', 'braiserose+cumulox+solstral',
-  'glyphon+solarion+tartaroth', 'brontobloc+malefix+arcanis', 'ventis+bouldog+arcanis', 'nocturis+abyssorax+tartaroth', 'runicor+voltarel+solstral', 'luxorbe+fournax+arcanis',
-  'voltix+terracroc+arcanis', 'ombrillon+zephyrion+arcanis', 'aegisolar+cumulox+solstral', 'pyrosile+aquamira+arcanis', 'aegisolar+voltarel+solstral',
+  'bouldog+aegisolar', 'zephyrion+braiserose', 'voltix+ombrillon+nocturis', 'caraploof+brontobloc+braiserose', 'ventis+luxorbe+runicor', 'ventis+bouldog+braiserose',
+  'pyrosile+aquamira+zephyrion', 'glyphon+terracroc+brontobloc', 'caraploof+malefix+racinea', 'voltix+aegisolar+ombrillon', 'pyrosile+ventis+fournax', 'bouldog+luxorbe+nocturis',
+  'glyphon+zephyrion+braiserose', 'bouldog+brontobloc+braiserose', 'ombrillon+brontobloc+braiserose', 'ventis+fournax+racinea', 'aquamira+terracroc+malefix', 'ombrillon+brontobloc+racinea',
+  'ombrillon+brontobloc+braiserose', 'pyrosile+brontobloc+braiserose', 'caraploof+glyphon+runicor', 'voltix+aegisolar+luxorbe', 'bouldog+terracroc+nocturis', 'fournax+zephyrion+malefix',
+  'ventis+brontobloc+racinea', 'zephyrion+brontobloc+malefix', 'pyrosile+aquamira+runicor', 'ombrillon+terracroc+braiserose', 'caraploof+voltix+aegisolar', 'caraploof+aegisolar+malefix',
+  'aegisolar+malefix+nocturis', 'zephyrion+brontobloc+malefix', 'bouldog+fournax+racinea', 'ventis+luxorbe+runicor', 'zephyrion+brontobloc+malefix', 'glyphon+terracroc+braiserose',
+  'pyrosile+aegisolar+aquamira', 'caraploof+voltix+runicor', 'ombrillon+nocturis+runicor', 'aegisolar+malefix+nocturis', 'bouldog+luxorbe+voltarel', 'pyrosile+ventis+abyssorax',
+  'aegisolar+malefix+nocturis', 'glyphon+zephyrion+cumulox', 'fournax+aquamira+racinea', 'voltix+brontobloc+braiserose', 'luxorbe+terracroc+runicor', 'bouldog+ombrillon+voltarel',
+  'caraploof+ventis+abyssorax', 'pyrosile+glyphon+cumulox', 'zephyrion+malefix+abyssorax', 'aquamira+abyssorax+cumulox', 'voltix+aegisolar+voltarel', 'brontobloc+abyssorax+voltarel',
+  'aquamira+abyssorax+cumulox', 'luxorbe+solarion+nocturis', 'fournax+terracroc+solstral', 'aquamira+abyssorax+cumulox', 'brontobloc+abyssorax+voltarel', 'solarion+malefix+racinea',
+  'solarion+terracroc+racinea', 'solarion+racinea+runicor', 'solarion+zephyrion+abyssorax', 'solarion+aquamira+abyssorax', 'solarion+malefix+racinea', 'solarion+terracroc+racinea',
+  'solarion+brontobloc+racinea', 'solarion+malefix+racinea', 'aegisolar+solarion+racinea', 'solarion+zephyrion+abyssorax', 'solarion+aquamira+abyssorax', 'solarion+racinea+voltarel',
+  'solarion+zephyrion+abyssorax', 'solarion+aquamira+abyssorax', 'caraploof+solarion+cumulox', 'solarion+zephyrion+abyssorax', 'runicor+braiserose+solstral', 'pyrosile+voltarel+tartaroth',
+  'bouldog+solarion+cumulox', 'ventis+abyssorax+tartaroth', 'aegisolar+voltarel+solstral', 'glyphon+brontobloc+arcanis', 'ombrillon+fournax+arcanis', 'aegisolar+voltarel+solstral',
+  'cumulox+solstral+tartaroth', 'abyssorax+solstral+tartaroth', 'runicor+abyssorax+arcanis', 'cumulox+solstral+tartaroth', 'aquamira+solstral+arcanis', 'solarion+terracroc+arcanis',
+  'voltix+malefix+arcanis', 'luxorbe+racinea+arcanis', 'nocturis+cumulox+solstral', 'zephyrion+braiserose+arcanis', 'aegisolar+voltarel+solstral', 'ombrillon+zephyrion+arcanis',
+  'runicor+abyssorax+solstral', 'aegisolar+runicor+arcanis', 'caraploof+voltarel+arcanis', 'aquamira+voltarel+arcanis', 'aegisolar+runicor+arcanis', 'solarion+cumulox+tartaroth',
+  'ombrillon+zephyrion+arcanis', 'pyrosile+brontobloc+arcanis', 'bouldog+fournax+arcanis', 'ventis+malefix+arcanis', 'ombrillon+zephyrion+arcanis', 'glyphon+terracroc+arcanis',
+  'voltix+solarion+solstral', 'aegisolar+voltarel+solstral', 'glyphon+terracroc+arcanis', 'aegisolar+runicor+arcanis', 'aegisolar+voltarel+solstral', 'ombrillon+zephyrion+arcanis',
+  'braiserose+abyssorax+tartaroth', 'solarion+nocturis+arcanis', 'brontobloc+solstral+arcanis', 'aquamira+voltarel+arcanis', 'racinea+solstral+arcanis', 'solarion+nocturis+arcanis',
+  'luxorbe+fournax+arcanis', 'aquamira+voltarel+arcanis', 'caraploof+malefix+arcanis', 'ventis+bouldog+arcanis', 'runicor+cumulox+solstral', 'pyrosile+terracroc+arcanis',
+  'ombrillon+zephyrion+arcanis', 'cumulox+voltarel+arcanis', 'glyphon+solarion+tartaroth', 'voltix+solarion+arcanis', 'aegisolar+cumulox+arcanis', 'abyssorax+voltarel+arcanis',
+  'ombrillon+zephyrion+arcanis', 'glyphon+terracroc+arcanis', 'luxorbe+braiserose+arcanis', 'racinea+solstral+arcanis', 'caraploof+fournax+arcanis', 'bouldog+brontobloc+arcanis',
+  'ventis+aquamira+arcanis', 'ombrillon+zephyrion+arcanis', 'solarion+malefix+arcanis', 'nocturis+solstral+arcanis', 'cumulox+voltarel+tartaroth', 'solarion+runicor+arcanis',
+  'pyrosile+solarion+arcanis', 'voltix+terracroc+arcanis', 'luxorbe+zephyrion+arcanis', 'abyssorax+voltarel+arcanis', 'aegisolar+solstral+arcanis', 'glyphon+terracroc+arcanis',
+  'bouldog+fournax+arcanis', 'solarion+racinea+arcanis', 'ombrillon+zephyrion+arcanis', 'caraploof+aquamira+arcanis', 'ventis+brontobloc+arcanis', 'aegisolar+voltarel+solstral',
+  'ombrillon+zephyrion+arcanis', 'solarion+braiserose+arcanis', 'cumulox+voltarel+tartaroth', 'luxorbe+malefix+arcanis', 'pyrosile+voltix+arcanis', 'solarion+runicor+arcanis',
+  'ombrillon+zephyrion+arcanis', 'nocturis+voltarel+solstral', 'glyphon+terracroc+arcanis', 'aegisolar+voltarel+solstral', 'bouldog+fournax+arcanis', 'runicor+abyssorax+tartaroth',
+  'cumulox+voltarel+arcanis', 'solarion+aquamira+arcanis', 'caraploof+tartaroth+arcanis', 'luxorbe+brontobloc+arcanis', 'ventis+malefix+arcanis', 'aegisolar+voltarel+solstral',
+  'racinea+abyssorax+tartaroth', 'ombrillon+zephyrion+arcanis', 'braiserose+cumulox+solstral', 'voltix+terracroc+arcanis', 'pyrosile+fournax+arcanis', 'glyphon+solarion+tartaroth',
+  'bouldog+aquamira+arcanis', 'runicor+voltarel+solstral', 'ombrillon+zephyrion+arcanis', 'caraploof+nocturis+arcanis', 'luxorbe+malefix+arcanis', 'ventis+brontobloc+arcanis',
+  'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'racinea+abyssorax+tartaroth', 'voltix+terracroc+arcanis', 'aegisolar+voltarel+solstral', 'fournax+solarion+arcanis',
+  'ombrillon+zephyrion+arcanis', 'glyphon+braiserose+arcanis', 'aegisolar+voltarel+solstral', 'pyrosile+aquamira+arcanis', 'ombrillon+zephyrion+arcanis', 'runicor+cumulox+arcanis',
+  'bouldog+malefix+arcanis', 'ombrillon+zephyrion+arcanis', 'caraploof+luxorbe+arcanis', 'nocturis+abyssorax+tartaroth', 'ventis+terracroc+arcanis', 'ombrillon+zephyrion+arcanis',
+  'voltix+solarion+solstral', 'fournax+brontobloc+arcanis', 'ombrillon+zephyrion+arcanis', 'ombrillon+aquamira+arcanis', 'aegisolar+voltarel+solstral',
 ];
 // L'entrée de la table pour l'étape n : { ids, elite } (null si la table est vide).
 function entreeEtape(levelNumber) {
@@ -1563,19 +1563,19 @@ export function starsForBattle(stats, opponentCount) {
 // chaque niveau : la « puissance conseillée » affichée. Même calcul que la
 // table ci-dessus (tools/calibrer-parcours.js), jamais en baisse.
 export const PUISSANCE_CONSEILLEE = [
-  79, 83, 87, 91, 96, 101, 106, 111, 117, 213, 241, 259, 281, 302, 316, 334, 350, 366,
-  387, 410, 451, 480, 511, 519, 637, 708, 750, 776, 776, 793, 903, 947, 991, 1074, 1217, 1337,
-  1463, 1599, 1772, 1941, 2072, 2263, 2464, 2631, 2842, 3025, 3232, 3532, 3707, 3895, 4350, 4514, 4945, 5590,
-  5996, 6574, 6894, 7416, 8079, 8821, 9608, 10115, 10909, 11751, 12556, 13501, 15171, 17732, 19982, 22517, 25082, 27653,
-  30435, 32308, 34806, 37043, 39347, 44190, 47784, 50887, 54979, 58182, 63551, 69705, 75097, 80098, 88018, 92421, 97147, 102004,
-  107104, 112457, 118345, 124263, 130478, 138514, 151905, 162359, 170477, 184636, 193869, 205341, 216044, 233835, 245524, 262576, 276448, 291869,
-  317347, 338224, 355136, 377408, 396277, 416090, 438052, 464144, 488836, 526411, 545537, 580367, 609385, 652462, 685087, 749257, 790332, 829848,
-  871342, 921669, 972013, 1020612, 1097280, 1160876, 1230807, 1292349, 1359530, 1427505, 1498880, 1573826, 1652515, 1751488, 1839064, 1931017, 2057682, 2168121,
-  2276527, 2390353, 2509870, 2635365, 2767133, 2908226, 3079388, 3251346, 3413912, 3584610, 3763839, 3952032, 4149632, 4376725, 4595559, 4825338, 5066603, 5319936,
-  5585933, 5865227, 6158491, 6466414, 6789736, 7129222, 7485683, 7859969, 8252966, 8665613, 9098893, 9553840, 10031531, 10533108, 11059761, 11612750, 12197523, 12807400,
-  13447771, 14120160, 14826166, 15567474, 16345849, 17163141, 18021298, 18922362, 19868482, 20861905, 21905001, 23000252, 24150263, 25357777, 26625665, 27956948, 29354796, 30822535,
-  32363662, 33981846, 35680940, 37464985, 39338236, 41305146, 43370403, 45538924, 47815871, 50206664, 52716996, 55352847, 58120489, 61026514, 64077839, 67281731, 70645818, 74178108,
-  77887013, 81781364, 85870432, 90163953, 94672150, 99405760, 104376049, 111290501, 118091620, 123996202, 130196012,
+  79, 83, 87, 91, 96, 101, 106, 111, 117, 213, 241, 259, 281, 302, 316, 333, 351, 368,
+  391, 413, 451, 474, 499, 519, 690, 746, 784, 822, 849, 882, 948, 987, 1054, 1156, 1312, 1485,
+  1548, 1702, 1833, 1983, 2112, 2282, 2441, 2642, 2827, 3104, 3287, 3559, 3881, 4041, 4391, 4835, 5358, 5744,
+  6191, 6559, 7230, 7656, 8153, 8933, 9608, 10244, 11033, 11790, 12616, 13749, 15906, 17435, 19751, 22003, 25511, 28928,
+  30904, 32974, 36318, 38389, 41354, 46073, 50326, 54752, 57991, 60890, 64586, 70983, 75518, 80280, 84294, 89383, 95682, 100468,
+  106068, 111371, 117953, 123852, 130044, 136696, 147021, 154815, 166161, 176749, 187953, 203563, 213741, 224427, 235647, 249591, 263806, 277534,
+  297433, 324858, 349874, 371422, 390527, 411112, 437939, 461849, 488836, 513280, 552732, 580367, 612757, 648179, 681726, 715813, 756932, 794781,
+  866043, 909343, 954811, 1012078, 1094264, 1148978, 1206426, 1270212, 1333723, 1411050, 1481604, 1555682, 1668084, 1751488, 1839064, 1966551, 2064878, 2188465,
+  2297887, 2412782, 2558980, 2686930, 2822231, 2963343, 3111510, 3267086, 3430441, 3601963, 3782060, 3971165, 4169723, 4378207, 4597118, 4826975, 5068324, 5321739,
+  5587826, 5867217, 6160579, 6468606, 6792038, 7131640, 7488222, 7862633, 8255765, 8668554, 9101980, 9557080, 10034933, 10536681, 11063515, 11616691, 12197523, 12832287,
+  13800345, 14490361, 15214879, 15975623, 16774405, 17613126, 18493781, 19418472, 20389394, 21408864, 22479308, 23603273, 24783435, 26022607, 27535833, 28935935, 30382732, 32132207,
+  33738818, 35425759, 37197047, 39405836, 41376129, 43444935, 45617181, 47898041, 50292943, 52807591, 55447969, 58220368, 61131387, 64187955, 67397354, 70767220, 74305584, 78020861,
+  81921903, 86017999, 90318900, 94834843, 99576585, 104555417, 109783188, 115272348, 123206224, 129366535, 135834863,
 ];
 
 // ---- NIVEAUX RÉELS (10/10, décision de l'auteur) : les ennemis sont de VRAIES créatures ----
@@ -1597,9 +1597,15 @@ export function bonusElite(levelNumber) {
   const e = entreeEtape(levelNumber);
   return e ? e.elite : 0;
 }
+// Niveaux en plus d'un boss : 0 au chapitre 1 (apprentissage). MESURÉ (10/10, fin des coups critiques) : avec
+// +3 niveaux, même l'ennemi le plus faible du jeu battait Luxorbe débutant 1 fois sur 3 au boss de l'étape 10.
+export function bonusBoss(levelNumber) {
+  const n = Math.max(1, Math.floor(levelNumber || 1));
+  return estEtapeBoss(n) && chapterForLevel(n) > 1 ? BONUS_NIVEAU_BOSS : 0;
+}
 export function niveauEnnemi(levelNumber) {
   const n = Math.max(1, Math.floor(levelNumber || 1));
-  return n + (estEtapeBoss(n) ? BONUS_NIVEAU_BOSS : 0) + bonusElite(n);
+  return n + bonusBoss(n) + bonusElite(n);
 }
 // Grands nombres du combat (PV, dégâts) en format court, MÊMES suffixes que les pièces (ClickerScreen) :
 // sous 10 000 tel quel ; ensuite 12.4K, 3.21M, 1.5Md… Arrondi VERS LE BAS : jamais plus de PV affichés
@@ -2213,7 +2219,8 @@ export function niveauxPourAtteindre(membres, cible) {
 // Griffes gagnées ÷ combats joués, par Ascension) ; auditGardienGriffes le recompare au simulateur.
 // 10/10 (niveaux réels) : recalculé sur 60 parcours (même formule que auditGardienGriffes) — les joueurs
 // livrent plus de combats par Ascension (cible 7/10), chaque combat rapporte moins. Avant : [36, 171, 748, 1035, 1330, 1527].
-export const GRIFFES_PAR_COMBAT = [27, 103, 472, 585, 910, 1190]; // A0 … A5 (au-delà : A5)
+// 10/10 (fin des coups critiques, ennemis recalibrés) : recalculé de nouveau. Avant : [27, 103, 472, 585, 910, 1190].
+export const GRIFFES_PAR_COMBAT = [24, 113, 434, 676, 1073, 1331]; // A0 … A5 (au-delà : A5) — recalculé après le boss sans bonus au chapitre 1
 // LE RÉGLAGE : 25 % des Griffes moyennes d'un combat ≈ 1 niveau à TOUS les stades (MESURÉ :
 // 0,6 à 1,2 niveau ; 50 % ≈ 1,5 à 2,5 ; 100 % ≈ 2,3 à 4,9).
 export const EFFORT_GARDIEN = 0.25;

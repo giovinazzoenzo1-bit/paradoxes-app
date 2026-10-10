@@ -304,7 +304,7 @@ import {
   equipeEnnemie,
   estEtapeBoss,
   bonusElite,
-  BONUS_NIVEAU_BOSS,
+  bonusBoss,
   nombreCourt,
   opponentGoesFirst,
   damageMultiplierForTime,
@@ -318,6 +318,7 @@ import {
   centreZoneAleatoire,
   resultatJauge,
   multiplicateurJauge,
+  multiplicateurSort,
   JAUGE_DELAI_MAX_SEC,
   JAUGE_MARGE_BIEN,
   elementMultiplier,
@@ -1049,7 +1050,9 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     let coupSort = { part: 1 };
     let evenementsSort = [];
     if (skill.sort) {
-      const r = lancerSort(skill.sort, fightersRef.current, curIdx, opponentsRef.current, targetIdx);
+      // 10/10 (règle de l'auteur) : l'EFFET du sort suit ce même tap (jaune 100 %, orange 50 %, zone sombre ou
+      // pas de tap 10 %) ; ses dégâts éventuels suivent `multJauge` (100 / 50 / 25 %).
+      const r = lancerSort(skill.sort, fightersRef.current, curIdx, opponentsRef.current, targetIdx, multiplicateurSort(verdictCoup));
       coupSort = r.coup;
       evenementsSort = r.evenements || [];
       fightersRef.current = r.allies;
@@ -1533,7 +1536,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         <View style={[styles.elixirBadge, styles.niveauxBadge, { top: sousBandeau + 6 + (elixirActif ? 28 : 0) + (filetBaisse > 0 ? 28 : 0), left: 10 + insets.left + 52, pointerEvents: 'none' }]}>
           <Text style={styles.elixirBadgeText}>
             {(estEtapeBoss(levelNumber) ? '👑 Boss' : '') + (estEtapeBoss(levelNumber) && bonusElite(levelNumber) > 0 ? ' · ' : '') + (bonusElite(levelNumber) > 0 ? '⭐ Élites' : '')
-              + ' : ennemis +' + ((estEtapeBoss(levelNumber) ? BONUS_NIVEAU_BOSS : 0) + bonusElite(levelNumber)) + ' niveaux'}
+              + (bonusBoss(levelNumber) + bonusElite(levelNumber) > 0 ? ' : ennemis +' + (bonusBoss(levelNumber) + bonusElite(levelNumber)) + ' niveaux' : ' de chapitre')}
           </Text>
         </View>
       )}
@@ -1718,6 +1721,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
           <View style={{ pointerEvents: 'none' }}>
             <Text style={[styles.verdict, styles[`verdict_${verdict}`]]}>
               {verdict === 'parfait' ? 'PARFAIT !' : verdict === 'bien' ? 'BIEN' : verdict === 'rate' ? 'RATÉ' : 'TROP TARD'}
+              {/* 10/10 (règle de l'auteur) : la part du coup — ou de l'effet du sort — obtenue par ce tap. */}
+              {` · ${Math.round(100 * (selectedSkill && selectedSkill.sort ? multiplicateurSort(verdict) : multiplicateurJauge(verdict)))} %`}
             </Text>
           </View>
         )}

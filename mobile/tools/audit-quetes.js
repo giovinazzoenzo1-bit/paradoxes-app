@@ -3235,7 +3235,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '94f9492c'; // 09/10 : ATTAQUES DE SOUTIEN (règle PARTAGÉE coupsDeSoutien, appelée par le combat ET la simulation) ; auditGardienCalibre vert ; table de l'Aventure recalculée. Avant : // 03/10 : effets étape 3 (visuels des sorts, spécial, K.O. ; élan seulement s'il y a un coup) — calculs inchangés ; auditGardienCalibre vert
+const EMPREINTE_COMBAT = '47aa69e7'; // 10/10 : FIN DES COUPS CRITIQUES — l'effet d'un sort suit le tap (multiplicateurSort), simulerCombat tire UN verdict par action avant le sort, comme l'écran (vérifié). Avant : '94f9492c' (09/10, attaques de soutien).
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -4299,12 +4299,23 @@ function auditJaugeFrappe() {
   if (K.positionAiguille(0) !== 0 || Math.abs(K.positionAiguille(K.JAUGE_PERIODE_SEC) - 1) > 1e-9 || Math.abs(K.positionAiguille(K.JAUGE_PERIODE_SEC * 1.5) - 0.5) > 1e-9) pb.push('aiguille : aller-retour 0 → 1 → 0 cassé');
   const commune = { creature: { rarity: 'commun' }, stats: {} };
   const mythique = { creature: { rarity: 'mythique' }, stats: {} };
-  // Plancher ×2,1 (84 % du maximum) depuis la zone « parfait » divisée par 2 (03/10 : ×2,21 mesuré).
-  if (K.multJaugeMoyen(commune) < 2.1) pb.push(`commune trop dure : coup moyen ×${K.multJaugeMoyen(commune).toFixed(2)} (< ×2,1)`);
+  // 10/10 — RÈGLE DE L'AUTEUR (fin des coups critiques) : jaune 100 %, orange 50 %, zone sombre et pas de tap
+  // 25 % ; sorts 100 / 50 / 10 / 10 (bouclier 45 % → ~5 %). Avant : 2,5 / 2,0 / 1,0 / 0,5 (même raté = 100 %).
+  const voulu = { parfait: 1, bien: 0.5, rate: 0.25, absent: 0.25 }, vouluSort = { parfait: 1, bien: 0.5, rate: 0.1, absent: 0.1 };
+  for (const v of Object.keys(voulu)) {
+    if (K.JAUGE_MULT[v] !== voulu[v]) pb.push(`jauge : ${v} ×${K.JAUGE_MULT[v]} au lieu de ×${voulu[v]} (règle de l'auteur du 10/10)`);
+    if (K.JAUGE_MULT_SORT[v] !== vouluSort[v]) pb.push(`jauge des sorts : ${v} ×${K.JAUGE_MULT_SORT[v]} au lieu de ×${vouluSort[v]} (règle de l'auteur du 10/10)`);
+  }
+  // Plancher ×0,65 : MESURÉ ×0,71 pour le joueur de référence (60 ms) en commune. En dessous, la zone dorée ou la
+  // bande orange aurait rétréci sans décision.
+  if (K.multJaugeMoyen(commune) < 0.65) pb.push(`commune trop dure : coup moyen ×${K.multJaugeMoyen(commune).toFixed(2)} (< ×0,65)`);
   if (K.multJaugeMoyen(mythique) > K.JAUGE_MULT.parfait + 1e-9) pb.push('mythique au-delà du maximum');
   const s = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const jaugeFn = s.slice(s.indexOf('function JaugeFrappe('), s.indexOf('\n}\n', s.indexOf('function JaugeFrappe(')));
   if (!/positionAiguille\(/.test(jaugeFn)) pb.push("écran : l'aiguille n'est plus dessinée par positionAiguille (dessin et verdict divergeraient)");
+  // 10/10 : l'EFFET d'un sort suit le même tap que ses dégâts, et le verdict affiche la part obtenue.
+  if (!/lancerSort\(skill\.sort, fightersRef\.current, curIdx, opponentsRef\.current, targetIdx, multiplicateurSort\(verdictCoup\)\)/.test(s)) pb.push("écran : l'effet d'un sort ne suit plus le tap à la jauge");
+  if (!/selectedSkill && selectedSkill\.sort \? multiplicateurSort\(verdict\) : multiplicateurJauge\(verdict\)/.test(s)) pb.push("écran : le verdict n'affiche plus la part du coup (ou du sort) obtenue");
   const tapFn = s.slice(s.indexOf('const handleTap = () => {'), s.indexOf('\n  };\n', s.indexOf('const handleTap = () => {')));
   if (!/positionAiguille\(/.test(tapFn) || !/resultatJauge\(/.test(tapFn)) pb.push("écran : le verdict du tap n'utilise plus positionAiguille / resultatJauge");
   const zone = s.slice(s.lastIndexOf('<', s.indexOf('style={styles.tapEverywhere}')), s.indexOf('/>', s.indexOf('style={styles.tapEverywhere}')));
@@ -4886,7 +4897,8 @@ function auditGardienGriffes() {
   if (K.EFFORT_GARDIEN !== 0.25) pb.push(`EFFORT_GARDIEN = ${K.EFFORT_GARDIEN} au lieu de 0,25 (réglage décidé le 08/10 — à changer AVEC ce contrôle)`);
   // la table reste fidèle au simulateur de parcours (±35 %)
   try {
-    const S = require('./simulateur-parcours.js'); const R = S.REGLAGES; const syn = S.synthese(10);
+    // 10/10 : 60 joueurs (comme le calcul de la table) — sur 10, le hasard des œufs faisait 720 contre 465 à l'A2.
+    const S = require('./simulateur-parcours.js'); const R = S.REGLAGES; const syn = S.synthese(60);
     for (let a = 0; a < 6; a++) {
       const debut = a ? R.finsAventure[a - 1] : 0, fin = R.finsAventure[a];
       let v = 0; for (let l = debut + 1; l <= fin; l++) v += R.prime(l);
@@ -4920,7 +4932,8 @@ function auditGardienGriffes() {
     if (cout > 114) pb.push(`répartition équitable : ${cout} Griffes dépensées pour un budget de 114`);
     if (r.membres.some((m, i) => m.ownedLevel <= deckAuteur[i].ownedLevel)) pb.push('répartition équitable : une créature ne reçoit aucun niveau');
     // 10/10 (niveaux réels : +5 %/niveau, stats x10, puissance affichée à l'échelle 1) : 1 613 → 1 898.
-    if (Math.abs(r.puissance - 1898) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 898 (« 3 combats »)`);
+    // 10/10 (fin des coups critiques : coup moyen ×2,21 → ×0,71 dans la puissance affichée) : 1 898 → 1 096.
+    if (Math.abs(r.puissance - 1096) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 096 (« 3 combats »)`);
   }
   if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
   if ((c.match(/, budgetGardienRef\.current, plafondGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget ET le niveau max du Gardien');
@@ -5011,8 +5024,9 @@ function auditSoutienEquipe() {
   const s = K.coupsDeSoutien(trio, 0, ennemi);
   if (s.length !== 2) pb.push(`équipe de 3 : ${s.length} coup(s) de soutien au lieu de 2`);
   s.forEach((x) => {
-    const f = trio[x.i]; const attendu = K.degatsDuJoueur(K.meilleureAttaque(f.creature), f, ennemi, K.JAUGE_MULT.bien) * 0.5;
-    if (Math.abs(x.degats - attendu) > 1) pb.push(`soutien de ${f.creature.id} : ${x.degats} au lieu d'environ ${Math.round(attendu)} (la moitié d'une attaque normale)`);
+    // 10/10 : la moitié d'un coup PARFAIT (100 %, comme un ennemi) — avant : la moitié d'un « bien » (×2,0).
+    const f = trio[x.i]; const attendu = K.degatsDuJoueur(K.meilleureAttaque(f.creature), f, ennemi, K.JAUGE_MULT.parfait) * 0.5;
+    if (Math.abs(x.degats - attendu) > 1) pb.push(`soutien de ${f.creature.id} : ${x.degats} au lieu d'environ ${Math.round(attendu)} (la moitié d'un coup parfait)`);
   });
   if (K.coupsDeSoutien([combattant('brontobloc', 36)], 0, ennemi).length !== 0) pb.push('une créature SEULE reçoit un soutien');
   const avecKO = [combattant('brontobloc', 20), combattant('pyrosile', 20, 0), combattant('caraploof', 20)];

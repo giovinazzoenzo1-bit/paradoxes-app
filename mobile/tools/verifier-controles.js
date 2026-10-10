@@ -258,6 +258,11 @@ const SABOTAGES = [
     remplace('  if (photo.gardien != null) return photo.gardien;\n', '')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "budget du Gardien mis à zéro : il ne demanderait plus rien",
     remplace('budgetGardienRef.current = primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * primesProchainsNiveaux(')],
+  // 10/10 : la règle de l'auteur sur la jauge (fin des coups critiques) — retour du ×2,5, ou sort qui ignore le tap.
+  ['auditJaugeFrappe', F.combat, "retour des coups critiques : parfait ×2,5 (même raté frappe à 100 %)",
+    remplace('export const JAUGE_MULT = { parfait: 1.0, bien: 0.5, rate: 0.25, absent: 0.25 };', 'export const JAUGE_MULT = { parfait: 2.5, bien: 2.0, rate: 1.0, absent: 0.5 };')],
+  ['auditJaugeFrappe', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "l'effet d'un sort ignore le tap (bouclier plein même en zone sombre)",
+    remplace(', targetIdx, multiplicateurSort(verdictCoup));', ', targetIdx);')],
   // 10/10 : le Gardien et le niveau max (effort plafonné, plan plafonné, menu qui le dit).
   ['auditGardienGriffes', F.combat, "effort du Gardien sans niveau max : il suppose des niveaux inatteignables",
     remplace('for (let n = 0; n < 500; n++) { if (x.ownedLevel >= plafond) break; const c = levelUpCost', 'for (let n = 0; n < 500; n++) { const c = levelUpCost')],

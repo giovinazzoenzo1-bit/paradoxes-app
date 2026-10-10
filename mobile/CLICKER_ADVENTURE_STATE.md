@@ -2986,7 +2986,7 @@ désormais à la MÊME branche sur GitHub quand on n'est pas sur main.
 (Plan du chantier : étapes 2, 3 et 4 ci-dessous, toutes FAITES avant la publication.)
 
 
-## 10/10 — JAUGE : FIN DES « COUPS CRITIQUES » (règle de l'auteur, branche `jauge-100`, EN COURS)
+## 10/10 — JAUGE : FIN DES « COUPS CRITIQUES » (règle de l'auteur, branche `jauge-100`, PUBLIÉE le 10/10)
 
 DIAGNOSTIC de l'auteur (10 combats envoyés : Ventis commune niv. 1 finit le chapitre 1 en 1 à 4 coups, 16 parfaits /
 6 bien) : la jauge donnait parfait ×2,5, bien ×2,0, raté ×1,0, pas de tap ×0,5 → même raté = 100 %, alors que les
@@ -3003,6 +3003,19 @@ sort dans simulerCombat). Ennemis : 100 % (mult = 1). Soutien : moitié d'un PAR
 ÉTAPE 1 FAITE (branche) : règles + simulation + RECALIBRAGE 120 joueurs (163 s) → joueur médian A0 6,1-7,8 ·
 A1 6,3-7,0 · A2 5,5-7,5 · A3 6,7-8,0 · A4 6,8-7,7 · A5 6,8-7,2 (3 populations), 10e rang 2,3-5,2, 0 bloqué.
 Sans recalibrage, les anciens ennemis donnaient 2,0-5,0 sur 10.
-RESTE : (2) ÉCRAN : les sorts passent par la jauge (un tap, effet × multiplicateurSort, dégâts × JAUGE_MULT du
-même verdict) + % affiché avec le verdict ; EMPREINTE_COMBAT à remettre APRÈS revérification ; (3) contrôles et
-sabotages (auditSortsMoteur, soutien, jauge, Célérité…), Gardien ; (4) publication.
+ÉTAPE 2 FAITE — ÉCRAN : les sorts passaient DÉJÀ par la jauge (launchArmedSkill → phase « tapping » pour toute
+compétence) ; seul l'effet ignorait le verdict → lancerSort(…, multiplicateurSort(verdictCoup)) ; le verdict affiche
+la part obtenue (« BIEN · 50 % », sorts : multiplicateurSort). EMPREINTE_COMBAT 94f9492c → 47aa69e7 (simulerCombat
+tire UN verdict par action avant le sort, comme l'écran — vérifié).
+ÉTAPE 3 FAITE — BOSS DU CHAPITRE 1 SANS NIVEAUX EN PLUS (bonusBoss : 0 au chapitre 1, BONUS_NIVEAU_BOSS ensuite ;
+niveauEnnemi, badge « 👑 Boss de chapitre », outil de calibrage : la MÊME fonction). MESURÉ : avec +3, même
+l'ennemi le plus faible du jeu battait Luxorbe débutant 1 fois sur 3 au boss de l'étape 10 (apprentissage
+infaisable sans les coups critiques). Apprentissage mesuré sur 100 combats dans l'outil ET le contrôle (sur 60,
+un choix limite passait l'outil et échouait au contrôle). Recalibrage 120 joueurs (155 s) ; GRIFFES_PAR_COMBAT
+[24, 113, 434, 676, 1073, 1331] ; auditGardienGriffes mesure sur 60 joueurs (sur 10 : 720 contre 465 au hasard).
+Contrôles alignés : auditJaugeFrappe (valeurs EXACTES de la règle, plancher ×0,65, câblage écran), auditSoutienEquipe
+(moitié d'un PARFAIT), cas de l'auteur au Gardien 1 898 → 1 096 (puissance affichée : coup moyen ×0,71).
+CONTRÔLE FINAL (3 populations de 40) — joueur médian sur 10 : A0 5,8-7,6 · A1 4,9-7,6 · A2 5,3-7,6 · A3 5,9-6,5 ·
+A4 6,4-8,0 · A5 7,0-8,4 (≈ 6,7 en moyenne), 10e rang 2,1-5,2, 0 bloqué. verifier-defis 103/103, verifier-controles
+136 prouvés (+2 : retour du ×2,5 ; effet de sort qui ignore le tap), taps 20/20, 67 fichiers compilent.
+SUITE DEMANDÉE PAR L'AUTEUR : reprendre le calcul « Griffes de victoire seulement », l'optimiser et l'appliquer.

@@ -57,7 +57,9 @@ const SECOURS = { baisse: 0.4, taux: 0.5 };
 // 1er œuf, LUES dans le jeu), au niveau qu'un débutant atteint avec ses 40 Griffes du jour 1 et les
 // primes de ses 1res victoires (ni packs, ni quêtes), plafond de niveau du jeu compris :
 // 9 fois sur 10 à l'étape 1, 8 fois sur 10 ensuite.
-const APPRENTISSAGE = { niveaux: 10, cibleNiveau1: 0.9, cible: 0.8, combats: 60 };
+// 10/10 : 100 combats (comme auditApprentissage) — sur 60, un choix limite passait l'outil et échouait au contrôle
+// (Luxorbe 67 % au boss de l'étape 10, plancher 70 %).
+const APPRENTISSAGE = { niveaux: 10, cibleNiveau1: 0.9, cible: 0.8, combats: 100 };
 const GRIFFES_JOUR_1 = 40; // dailyLogic : calendrier, jour 1
 function premieresCreatures() {
   const max = L.ORDRE_RARETES.indexOf(L.rareteMaxPourOeuf(0));
@@ -117,7 +119,7 @@ function calibrer(nJoueurs = 40, essais = 10, R = P.REGLAGES) {
       const courant = ratios.length ? rang(ratios.slice().sort((x, y) => x - y), CENTILE) : OBJECTIF;
       const base = Math.min(CIBLE_MAX, Math.max(CIBLE_MIN, CIBLE + GAIN * (OBJECTIF - courant)));
       const cible = boss ? base - ECART_BOSS : base;
-      const nivBase = l + (boss ? K.BONUS_NIVEAU_BOSS : 0);
+      const nivBase = l + K.bonusBoss(l); // la règle DU JEU (0 au chapitre 1)
       const taille = K.opponentTeamSize(l);
       // Toutes les équipes de la taille du chapitre, classées par force brute √(ΣPV × ΣATQ) au niveau
       // de l'étape + b niveaux d'élite (formule du jeu).
