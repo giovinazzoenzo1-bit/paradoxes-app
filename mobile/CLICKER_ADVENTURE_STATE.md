@@ -2984,3 +2984,25 @@ choisir les COMPOSITIONS), PUISSANCE_CONSEILLEE (échelle d'avant), Gardien (gua
 statsForOpponentCreatureTyped : k = 1 désormais, vérifier calibrerGardien), garde.sh compare
 désormais à la MÊME branche sur GitHub quand on n'est pas sur main.
 (Plan du chantier : étapes 2, 3 et 4 ci-dessous, toutes FAITES avant la publication.)
+
+
+## 10/10 — JAUGE : FIN DES « COUPS CRITIQUES » (règle de l'auteur, branche `jauge-100`, EN COURS)
+
+DIAGNOSTIC de l'auteur (10 combats envoyés : Ventis commune niv. 1 finit le chapitre 1 en 1 à 4 coups, 16 parfaits /
+6 bien) : la jauge donnait parfait ×2,5, bien ×2,0, raté ×1,0, pas de tap ×0,5 → même raté = 100 %, alors que les
+ennemis frappent toujours à 100 %. MESURÉ (vraies zones) : coup moyen ×2,21 (référence 60 ms, commune) à ×2,43
+(l'auteur, 42 ms, légendaire) = l'avance de « ~14 niveaux » ; raté ≈ 0 % des taps (bande « bien » ±280 ms).
+⚠️ Le simulateur COMPTAIT ces coups (ce n'était pas une erreur de calcul) ; c'est le chapitre 1, réglé pour la
+1re créature la plus faible, qui restait trivial.
+RÈGLE (10/10) : attaques jaune 100 % · orange 50 % · zone sombre 25 % · pas de tap 25 % (JAUGE_MULT) ; SORTS par
+la jauge aussi (JAUGE_MULT_SORT : 100 / 50 / 10 / 10 — bouclier d'Aegisolar 45 % → ~5 %, exemple de l'auteur) :
+lancerSort(…, mult) réduit bouclier, soin, venin (veninForce), provocation (provocationForce), boost, vitesse,
+marque ; les DÉGÂTS d'un sort passent par la jauge de l'attaque (MÊME tap : verdictJaugeTire tiré AVANT le
+sort dans simulerCombat). Ennemis : 100 % (mult = 1). Soutien : moitié d'un PARFAIT (×1) au lieu d'un « bien »
+(×2). Rune de Célérité ÷2,5 (même bonus relatif). MESURÉ après : coup moyen ×0,71 (référence) à ×0,93.
+ÉTAPE 1 FAITE (branche) : règles + simulation + RECALIBRAGE 120 joueurs (163 s) → joueur médian A0 6,1-7,8 ·
+A1 6,3-7,0 · A2 5,5-7,5 · A3 6,7-8,0 · A4 6,8-7,7 · A5 6,8-7,2 (3 populations), 10e rang 2,3-5,2, 0 bloqué.
+Sans recalibrage, les anciens ennemis donnaient 2,0-5,0 sur 10.
+RESTE : (2) ÉCRAN : les sorts passent par la jauge (un tap, effet × multiplicateurSort, dégâts × JAUGE_MULT du
+même verdict) + % affiché avec le verdict ; EMPREINTE_COMBAT à remettre APRÈS revérification ; (3) contrôles et
+sabotages (auditSortsMoteur, soutien, jauge, Célérité…), Gardien ; (4) publication.

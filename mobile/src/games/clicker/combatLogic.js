@@ -315,8 +315,20 @@ export const JAUGE_MARGE_BIEN = 0.255;
 // commune ±33 ms (le « Perfect » des jeux de rythme exigeants). Le « bien » ne bouge pas : le
 // joueur moyen garde ≥ ×2,14 ; un joueur très précis (30 ms) : 73 % de parfaits en commune.
 export const JAUGE_LARGEUR_PARFAIT = { commun: 0.06, peu_commun: 0.07, rare: 0.08, epique: 0.095, legendaire: 0.11, mythique: 0.13 };
-export const JAUGE_MULT = { parfait: 2.5, bien: 2.0, rate: 1.0, absent: 0.5 };
-export const JAUGE_DELAI_MAX_SEC = 6;          // sans tap : « absent » (×0,5)
+// ⚠️ 10/10 — NOUVELLE RÈGLE DE L'AUTEUR (fin des « coups critiques ») : avant, parfait ×2,5, bien ×2,0,
+// raté ×1,0, pas de tap ×0,5 — même un tap raté frappait à 100 % alors que les ennemis frappent toujours à
+// 100 %. MESURÉ : coup moyen ×2,21 (joueur de référence, 60 ms) à ×2,43 (l'auteur, 42 ms, légendaire) ; c'est
+// l'avance de « ~14 niveaux » qui rendait les niveaux affichés trompeurs (Ventis niv. 1 : chapitre 1 entier
+// en 1 à 4 coups). Désormais : jaune 100 %, orange 50 %, zone sombre 25 %, pas de tap 25 %.
+// MESURÉ après : coup moyen ×0,71 (référence, commune) à ×0,93 (l'auteur, légendaire).
+export const JAUGE_MULT = { parfait: 1.0, bien: 0.5, rate: 0.25, absent: 0.25 };
+// Les SORTS passent aussi par la jauge (règle de l'auteur, 10/10) : même tap, effet réduit — zone sombre ou
+// pas de tap ≈ rien (exemple de l'auteur : bouclier d'Aegisolar 45 % des PV perdus → ~5 %).
+export const JAUGE_MULT_SORT = { parfait: 1.0, bien: 0.5, rate: 0.1, absent: 0.1 };
+export function multiplicateurSort(resultat) {
+  return JAUGE_MULT_SORT[resultat] != null ? JAUGE_MULT_SORT[resultat] : JAUGE_MULT_SORT.absent;
+}
+export const JAUGE_DELAI_MAX_SEC = 6;          // sans tap : « absent » (×0,25 depuis le 10/10)
 export const JAUGE_ERREUR_REFERENCE_MS = 60;   // précision du joueur de référence des simulations
 export const JAUGE_ZONE_CENTRE_MIN = 0.25;     // la zone dorée est placée au hasard entre 25 et 75 %
 export const JAUGE_ZONE_CENTRE_MAX = 0.75;
@@ -364,11 +376,15 @@ export function multJaugeMoyen(c, erreurMs = JAUGE_ERREUR_REFERENCE_MS) {
   const pb = erfJauge((w / 2 + JAUGE_MARGE_BIEN) / (s * Math.SQRT2)) - pp;
   return pp * JAUGE_MULT.parfait + pb * JAUGE_MULT.bien + (1 - pp - pb) * JAUGE_MULT.rate;
 }
-export function multJaugeTire(c, alea = Math.random, erreurMs = JAUGE_ERREUR_REFERENCE_MS) {
+// Le VERDICT d'un tap simulé (10/10 : un même tap règle l'effet d'un sort ET ses dégâts).
+export function verdictJaugeTire(c, alea = Math.random, erreurMs = JAUGE_ERREUR_REFERENCE_MS) {
   const s = (erreurMs / 1000) / JAUGE_PERIODE_SEC;
   let u = alea(); if (u <= 0) u = 1e-9;
   const ecart = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * alea()) * s;
-  return multiplicateurJauge(resultatJauge(ecart, largeurZoneParfait(c)));
+  return resultatJauge(ecart, largeurZoneParfait(c));
+}
+export function multJaugeTire(c, alea = Math.random, erreurMs = JAUGE_ERREUR_REFERENCE_MS) {
+  return multiplicateurJauge(verdictJaugeTire(c, alea, erreurMs));
 }
 
 export function degatsMoyensDuTour(creature, stats) {
@@ -651,7 +667,10 @@ export function plusFort(equipe, lanceur) {
 // `coup` dit ce que le lanceur frappe ENSUITE : null (le sort remplace
 // l'attaque), { part } (fraction d'un coup normal sur la cible) ou
 // { zone } (fraction d'un coup sur CHAQUE ennemi vivant).
-export function lancerSort(sortId, allies, lanceur, ennemis, cible) {
+// `mult` (10/10, règle de l'auteur) : l'effet du sort selon le tap à la jauge (multiplicateurSort) — bouclier,
+// soin, venin, provocation, boost, vitesse, marque. Les DÉGÂTS d'un sort (zone, exécution, pacte, poison)
+// passent déjà par la jauge de l'attaque (même verdict). Ennemis : 1 (ils ne tapent pas).
+export function lancerSort(sortId, allies, lanceur, ennemis, cible, mult = 1) {
   const E = EFFETS;
   const A = allies.slice();
   const N = ennemis.slice();
@@ -661,35 +680,35 @@ export function lancerSort(sortId, allies, lanceur, ennemis, cible) {
   switch (sortId) {
     case 'bouclier': {
       const t = plusBlesse(A);
-      const v = Math.round(Math.max(E.bouclierMinimum * pvMax(A[t]), E.bouclierPartPerdue * (pvMax(A[t]) - A[t].hp)));
+      const v = Math.round(mult * Math.max(E.bouclierMinimum * pvMax(A[t]), E.bouclierPartPerdue * (pvMax(A[t]) - A[t].hp)));
       A[t] = avecEtats(A[t], { bouclier: Math.max(etatsDe(A[t]).bouclier || 0, v) });
       ev.push({ type: 'bouclier', cible: t, valeur: v });
       return fin(null);
     }
     case 'soin': {
       const t = plusBlesse(A);
-      const v = Math.round(E.soinPartPerdue * (pvMax(A[t]) - A[t].hp));
+      const v = Math.round(mult * E.soinPartPerdue * (pvMax(A[t]) - A[t].hp));
       A[t] = { ...A[t], hp: Math.min(pvMax(A[t]), A[t].hp + v) };
       ev.push({ type: 'soin', cible: t, valeur: v });
       return fin(null);
     }
     case 'poison':
-      A[lanceur] = avecEtats(A[lanceur], { venin: E.veninTours });
+      A[lanceur] = avecEtats(A[lanceur], { venin: E.veninTours, veninForce: mult });
       return fin({ part: E.poisonFrappe });
     case 'provocation':
-      A[lanceur] = avecEtats(A[lanceur], { provocation: E.provocationTours });
+      A[lanceur] = avecEtats(A[lanceur], { provocation: E.provocationTours, provocationForce: mult });
       return fin(null);
     case 'boost': {
       const t = plusFort(A, lanceur);
-      A[t] = avecEtats(A[t], { boost: { attaques: E.boostAttaques, bonus: E.boostBonus } });
+      A[t] = avecEtats(A[t], { boost: { attaques: E.boostAttaques, bonus: E.boostBonus * mult } });
       ev.push({ type: 'boost', cible: t });
       return fin(null);
     }
     case 'vitesse':
-      for (let i = 0; i < A.length; i++) A[i] = avecEtats(A[i], { vitesse: E.vitesseReduction });
+      for (let i = 0; i < A.length; i++) A[i] = avecEtats(A[i], { vitesse: E.vitesseReduction * mult });
       return fin({ part: 1 }); // ne coûte pas le tour : attaque normale ensuite
     case 'marque':
-      if (vivant(N[cible])) N[cible] = avecEtats(N[cible], { marque: { coups: E.marqueCoups, bonus: E.marqueBonus } });
+      if (vivant(N[cible])) N[cible] = avecEtats(N[cible], { marque: { coups: E.marqueCoups, bonus: E.marqueBonus * mult } });
       return fin(null);
     case 'zone':
       return fin({ zone: E.zonePart });
@@ -731,7 +750,7 @@ export function modifierCoup(attaquant, defenseur, degats, consommer = true) {
     d *= 1 + ed.marque.bonus;
     D = avecEtats(D, { marque: ed.marque.coups > 1 ? { ...ed.marque, coups: ed.marque.coups - 1 } : null });
   }
-  if (ed.provocation > 0) d *= 1 - E.provocationReduction;
+  if (ed.provocation > 0) d *= 1 - E.provocationReduction * (ed.provocationForce != null ? ed.provocationForce : 1);
   return { attaquant: A, defenseur: D, degats: Math.max(1, Math.round(d)) };
 }
 // L'attaque normale la plus forte d'une créature : ce que frappent les
@@ -753,7 +772,8 @@ export function coupsDeSoutien(J, act, cibleCreature) {
     if (i === act || !(f && f.hp > 0) || !cibleCreature) return;
     const comp = meilleureAttaque(f.creature);
     if (!comp) return;
-    r.push({ i, degats: Math.max(1, Math.round(degatsDuJoueur(comp, f, cibleCreature, JAUGE_MULT.bien) * SOUTIEN_FRACTION)) });
+    // 10/10 : moitié d'un coup PARFAIT (100 % depuis la règle de l'auteur) — avant : moitié d'un « bien » (×2,0).
+    r.push({ i, degats: Math.max(1, Math.round(degatsDuJoueur(comp, f, cibleCreature, JAUGE_MULT.parfait) * SOUTIEN_FRACTION)) });
   });
   return r;
 }
@@ -776,7 +796,7 @@ export function frapper(attaquant, defenseur, degats, consommer = true) {
     D = avecEtats(D, { bouclier: bouclier - abs || null });
   }
   if (reste > 0) D = { ...D, ...encaisser(D, reste) };
-  if (ed.venin > 0) A = avecEtats(A, { poison: { tours: E.poisonTours, malus: E.poisonMalus, parTour: E.poisonParTour } });
+  if (ed.venin > 0) { const f = ed.veninForce != null ? ed.veninForce : 1; A = avecEtats(A, { poison: { tours: E.poisonTours, malus: E.poisonMalus * f, parTour: E.poisonParTour * f } }); }
   return { attaquant: A, defenseur: D, degats: d };
 }
 
@@ -1160,8 +1180,11 @@ export function simulerCombat(joueurs, adversaires, {
     const choix = politique(J, act, A, cible, estBoss);
     let coup = { part: 1 };
     let comp = choix.competence;
+    // UN tap à la jauge par action (10/10) : le même verdict règle l'effet du sort et les dégâts. Tiré AVANT
+    // le sort, comme à l'écran (le tap a lieu avant que l'effet ne s'applique).
+    const verdictTap = verdictJaugeTire(J[act], alea, erreurMs);
     if (choix.sort) {
-      const r = lancerSort(choix.sort, J, act, A, cible);
+      const r = lancerSort(choix.sort, J, act, A, cible, multiplicateurSort(verdictTap));
       J = r.allies; A = r.ennemis; coup = r.coup;
       comp = meilleureAttaque(J[act].creature);
     } else if (comp && comp.special) {
@@ -1169,8 +1192,7 @@ export function simulerCombat(joueurs, adversaires, {
     }
     const x = J[act];
     const part = coup ? (coup.zone || coup.part || 1) : 0;
-    // UN tap à la jauge par attaque (tiré selon la précision du joueur simulé).
-    const multJ = multJaugeTire(x, alea, erreurMs);
+    const multJ = multiplicateurJauge(verdictTap);
     const coupSur = (c) => (part > 0 && comp
       ? Math.max(1, Math.round(degatsDuJoueur(comp, x, c.creature, multJ) * part)) : 0);
     if (estBoss) {
@@ -1379,44 +1401,44 @@ export const GUARDIAN_CREATURE = {
 // ⚠️ L'outil REMPLIT ce tableau pendant le calibrage (mêmes ennemis pour le joueur simulé que
 // pour le jeu) : le garder en `const` tableau, jamais réaffecté.
 export const ENNEMIS_ETAPES = [
-  'aquamira', 'voltix', 'ventis', 'aquamira', 'pyrosile', 'caraploof',
-  'voltix', 'ventis', 'ombrillon', 'bouldog', 'fournax+racinea', 'aegisolar+malefix',
-  'aegisolar+luxorbe', 'zephyrion+braiserose', 'terracroc+brontobloc', 'racinea+runicor', 'aegisolar+terracroc', 'aegisolar+malefix',
-  'racinea+runicor', 'aegisolar+terracroc', 'aegisolar+fournax+runicor', 'racinea+runicor+braiserose', 'pyrosile+glyphon+abyssorax', 'aegisolar+brontobloc+runicor',
-  'aquamira+terracroc+nocturis', 'voltix+zephyrion+runicor', 'aegisolar+malefix+nocturis', 'aegisolar+nocturis+braiserose', 'aegisolar+fournax+runicor', 'nocturis+runicor+braiserose',
-  'caraploof+malefix+racinea', 'aegisolar+ombrillon+terracroc', 'aegisolar+brontobloc+racinea', 'aegisolar+malefix+nocturis', 'aegisolar+malefix+racinea', 'ventis+luxorbe+voltarel',
-  'aegisolar+malefix+nocturis', 'aegisolar+malefix+racinea', 'bouldog+voltix+cumulox', 'caraploof+glyphon+abyssorax', 'pyrosile+ombrillon+voltarel', 'aegisolar+fournax+runicor',
-  'ventis+aquamira+cumulox', 'zephyrion+braiserose+cumulox', 'brontobloc+abyssorax+voltarel', 'luxorbe+terracroc+solstral', 'solarion+malefix+nocturis', 'brontobloc+abyssorax+voltarel',
-  'fournax+abyssorax+voltarel', 'caraploof+voltix+cumulox', 'pyrosile+aegisolar+runicor', 'bouldog+glyphon+abyssorax', 'aegisolar+malefix+nocturis', 'ventis+ombrillon+cumulox',
-  'aegisolar+terracroc+racinea', 'luxorbe+aquamira+abyssorax', 'zephyrion+braiserose+cumulox', 'brontobloc+abyssorax+voltarel', 'fournax+abyssorax+voltarel', 'solarion+zephyrion+brontobloc',
-  'aquamira+abyssorax+cumulox', 'aegisolar+racinea+solstral', 'caraploof+runicor+tartaroth', 'pyrosile+nocturis+voltarel', 'voltix+malefix+cumulox', 'brontobloc+abyssorax+voltarel',
-  'bouldog+terracroc+solstral', 'aquamira+abyssorax+cumulox', 'ombrillon+solarion+braiserose', 'aegisolar+solarion+racinea', 'solarion+zephyrion+abyssorax', 'glyphon+voltarel+solstral',
-  'luxorbe+abyssorax+tartaroth', 'fournax+solarion+cumulox', 'ventis+voltarel+solstral', 'runicor+braiserose+solstral', 'aegisolar+voltarel+solstral', 'caraploof+abyssorax+tartaroth',
-  'pyrosile+brontobloc+arcanis', 'caraploof+abyssorax+arcanis', 'aegisolar+voltarel+solstral', 'solarion+nocturis+cumulox', 'ombrillon+aquamira+arcanis', 'voltix+zephyrion+arcanis',
-  'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'runicor+abyssorax+solstral', 'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'abyssorax+solstral+tartaroth',
-  'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'ombrillon+aquamira+arcanis', 'runicor+abyssorax+solstral', 'runicor+abyssorax+arcanis', 'solarion+nocturis+arcanis',
-  'terracroc+solstral+arcanis', 'cumulox+voltarel+arcanis', 'racinea+tartaroth+arcanis', 'solarion+cumulox+arcanis', 'malefix+tartaroth+arcanis', 'cumulox+voltarel+arcanis',
-  'solarion+solstral+arcanis@5', 'cumulox+solstral+arcanis@5', 'solstral+tartaroth+arcanis@1', 'solarion+tartaroth+arcanis@2', 'cumulox+tartaroth+arcanis', 'solstral+tartaroth+arcanis@1',
-  'abyssorax+tartaroth+arcanis@2', 'solarion+solstral+arcanis@2', 'solstral+tartaroth+arcanis@4', 'cumulox+tartaroth+arcanis@5', 'solarion+tartaroth+arcanis@3', 'solstral+tartaroth+arcanis@3',
-  'abyssorax+tartaroth+arcanis@3', 'solarion+solstral+arcanis@4', 'solstral+tartaroth+arcanis@3', 'solarion+cumulox+arcanis@2', 'solarion+tartaroth+arcanis@3', 'solstral+tartaroth+arcanis@2',
-  'abyssorax+tartaroth+arcanis@3', 'solarion+solstral+arcanis@4', 'solstral+tartaroth+arcanis@4', 'solarion+cumulox+arcanis@3', 'solarion+solstral+arcanis@3', 'solstral+tartaroth+arcanis@4',
-  'abyssorax+tartaroth+arcanis@4', 'solarion+solstral+arcanis@3', 'solstral+tartaroth+arcanis@3', 'cumulox+tartaroth+arcanis@3', 'solarion+solstral+arcanis@4', 'solstral+tartaroth+arcanis@4',
-  'abyssorax+tartaroth+arcanis@4', 'solarion+solstral+arcanis@5', 'solstral+tartaroth+arcanis@5', 'cumulox+tartaroth+arcanis@6', 'solarion+tartaroth+arcanis@6', 'solstral+tartaroth+arcanis@5',
-  'cumulox+tartaroth+arcanis@6', 'solarion+tartaroth+arcanis@4', 'solstral+tartaroth+arcanis@6', 'cumulox+tartaroth+arcanis@6', 'solarion+solstral+arcanis@6', 'solstral+tartaroth+arcanis@6',
-  'solarion+cumulox+arcanis@5', 'solarion+tartaroth+arcanis@10', 'aegisolar+voltarel+solstral', 'solstral+tartaroth+arcanis@3', 'solarion+tartaroth+arcanis@5', 'cumulox+tartaroth+arcanis@5',
-  'solstral+tartaroth+arcanis@5', 'solarion+tartaroth+arcanis@6', 'abyssorax+tartaroth+arcanis@7', 'solstral+tartaroth+arcanis@8', 'cumulox+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@8',
-  'solstral+tartaroth+arcanis@7', 'cumulox+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@8', 'solstral+tartaroth+arcanis@6', 'abyssorax+tartaroth+arcanis@7', 'solarion+solstral+arcanis@7',
-  'solstral+tartaroth+arcanis@8', 'cumulox+tartaroth+arcanis@7', 'solarion+tartaroth+arcanis@7', 'solstral+tartaroth+arcanis@7', 'cumulox+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@7',
-  'solstral+tartaroth+arcanis@7', 'cumulox+tartaroth+arcanis@6', 'solarion+tartaroth+arcanis@7', 'solstral+tartaroth+arcanis@7', 'cumulox+tartaroth+arcanis@7', 'solarion+solstral+arcanis@8',
-  'solstral+tartaroth+arcanis@8', 'abyssorax+tartaroth+arcanis@7', 'solarion+solstral+arcanis@8', 'solstral+tartaroth+arcanis@7', 'voltarel+tartaroth+arcanis@7', 'cumulox+tartaroth+arcanis@6',
-  'solstral+tartaroth+arcanis@7', 'solarion+tartaroth+arcanis@7', 'cumulox+tartaroth+arcanis@7', 'solstral+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@8', 'abyssorax+tartaroth+arcanis@7',
-  'solstral+tartaroth+arcanis@11', 'solarion+cumulox+arcanis@6', 'solarion+tartaroth+arcanis@8', 'solstral+tartaroth+arcanis@5', 'abyssorax+tartaroth+arcanis@7', 'solarion+solstral+arcanis@8',
-  'solstral+tartaroth+arcanis@7', 'cumulox+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@8', 'solstral+tartaroth+arcanis@8', 'cumulox+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@8',
-  'solstral+tartaroth+arcanis@8', 'cumulox+tartaroth+arcanis@7', 'solarion+tartaroth+arcanis@7', 'solstral+tartaroth+arcanis@7', 'cumulox+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@8',
-  'solstral+tartaroth+arcanis@8', 'cumulox+tartaroth+arcanis@8', 'solarion+solstral+arcanis@8', 'solstral+tartaroth+arcanis@8', 'cumulox+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@7',
-  'solstral+tartaroth+arcanis@8', 'cumulox+tartaroth+arcanis@9', 'solarion+solstral+arcanis@8', 'solstral+tartaroth+arcanis@8', 'solarion+cumulox+arcanis@8', 'solarion+solstral+arcanis@9',
-  'solstral+tartaroth+arcanis@8', 'cumulox+tartaroth+arcanis@8', 'solarion+solstral+arcanis@8', 'solstral+tartaroth+arcanis@7', 'cumulox+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@8',
-  'solstral+tartaroth+arcanis@8', 'cumulox+tartaroth+arcanis@8', 'solarion+tartaroth+arcanis@8', 'solstral+tartaroth+arcanis@9', 'cumulox+tartaroth+arcanis@9',
+  'glyphon', 'glyphon', 'luxorbe', 'glyphon', 'luxorbe', 'luxorbe',
+  'glyphon', 'luxorbe', 'luxorbe', 'glyphon', 'zephyrion+brontobloc', 'aquamira+nocturis',
+  'zephyrion+braiserose', 'ombrillon+brontobloc', 'zephyrion+brontobloc', 'terracroc+malefix', 'zephyrion+braiserose', 'fournax+racinea',
+  'bouldog+aegisolar', 'zephyrion+braiserose', 'ventis+voltix+nocturis', 'caraploof+brontobloc+braiserose', 'pyrosile+bouldog+runicor', 'glyphon+luxorbe+nocturis',
+  'ombrillon+aquamira+zephyrion', 'voltix+ombrillon+nocturis', 'ventis+malefix+racinea', 'ombrillon+fournax+brontobloc', 'bouldog+terracroc+zephyrion', 'caraploof+brontobloc+braiserose',
+  'pyrosile+luxorbe+malefix', 'ventis+bouldog+braiserose', 'caraploof+brontobloc+braiserose', 'voltix+glyphon+racinea', 'aegisolar+ombrillon+luxorbe', 'fournax+aquamira+nocturis',
+  'ombrillon+brontobloc+braiserose', 'pyrosile+bouldog+runicor', 'terracroc+zephyrion+malefix', 'ventis+aegisolar+glyphon', 'voltix+fournax+racinea', 'caraploof+luxorbe+runicor',
+  'ombrillon+aquamira+braiserose', 'zephyrion+brontobloc+malefix', 'bouldog+terracroc+nocturis', 'pyrosile+ventis+aegisolar', 'voltix+glyphon+runicor', 'fournax+zephyrion+racinea',
+  'brontobloc+malefix+braiserose', 'caraploof+aegisolar+aquamira', 'luxorbe+terracroc+racinea', 'pyrosile+ombrillon+runicor', 'zephyrion+brontobloc+malefix', 'voltix+fournax+nocturis',
+  'ventis+bouldog+aegisolar', 'glyphon+aquamira+runicor', 'caraploof+terracroc+braiserose', 'zephyrion+brontobloc+malefix', 'luxorbe+racinea+runicor', 'aegisolar+luxorbe+terracroc',
+  'aegisolar+malefix+nocturis', 'voltix+ombrillon+cumulox', 'pyrosile+fournax+braiserose', 'ventis+aquamira+racinea', 'zephyrion+brontobloc+runicor', 'caraploof+bouldog+voltarel',
+  'glyphon+ombrillon+abyssorax', 'voltix+luxorbe+cumulox', 'terracroc+malefix+cumulox', 'luxorbe+abyssorax+voltarel', 'pyrosile+aegisolar+cumulox', 'brontobloc+abyssorax+voltarel',
+  'ventis+solarion+nocturis', 'fournax+aquamira+solstral', 'aquamira+abyssorax+cumulox', 'brontobloc+abyssorax+voltarel', 'fournax+abyssorax+voltarel', 'solarion+malefix+racinea',
+  'solarion+terracroc+racinea', 'solarion+runicor+braiserose', 'solarion+malefix+racinea', 'solarion+zephyrion+abyssorax', 'solarion+terracroc+racinea', 'solarion+malefix+racinea',
+  'aegisolar+solarion+racinea', 'solarion+zephyrion+abyssorax', 'racinea+braiserose+solstral', 'solarion+aquamira+abyssorax', 'solarion+zephyrion+abyssorax', 'bouldog+solarion+voltarel',
+  'caraploof+aegisolar+solstral', 'solarion+zephyrion+abyssorax', 'solarion+aquamira+abyssorax', 'bouldog+abyssorax+tartaroth', 'glyphon+solarion+cumulox', 'voltix+voltarel+solstral',
+  'ombrillon+solarion+abyssorax', 'solarion+nocturis+abyssorax', 'aegisolar+voltarel+solstral', 'luxorbe+brontobloc+arcanis', 'solarion+runicor+cumulox', 'aegisolar+voltarel+solstral',
+  'cumulox+solstral+tartaroth', 'abyssorax+solstral+tartaroth', 'voltarel+solstral+tartaroth', 'aegisolar+fournax+arcanis', 'racinea+braiserose+arcanis', 'cumulox+solstral+tartaroth',
+  'glyphon+solstral+arcanis', 'terracroc+abyssorax+arcanis', 'ventis+malefix+arcanis', 'pyrosile+zephyrion+arcanis', 'caraploof+aquamira+arcanis', 'bouldog+solarion+solstral',
+  'ombrillon+brontobloc+arcanis', 'voltix+nocturis+arcanis', 'cumulox+voltarel+tartaroth', 'luxorbe+fournax+arcanis', 'ombrillon+zephyrion+arcanis', 'aegisolar+racinea+arcanis',
+  'runicor+voltarel+solstral', 'glyphon+terracroc+arcanis', 'caraploof+braiserose+arcanis', 'pyrosile+solarion+tartaroth', 'ventis+aquamira+arcanis', 'brontobloc+malefix+arcanis',
+  'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'runicor+abyssorax+tartaroth', 'aegisolar+runicor+arcanis', 'nocturis+racinea+arcanis', 'aquamira+voltarel+arcanis',
+  'solarion+cumulox+solstral', 'bouldog+voltarel+arcanis', 'voltix+voltarel+arcanis', 'luxorbe+terracroc+arcanis', 'pyrosile+fournax+arcanis', 'ombrillon+zephyrion+arcanis',
+  'glyphon+solarion+tartaroth', 'aegisolar+runicor+arcanis', 'caraploof+malefix+arcanis', 'ventis+brontobloc+arcanis', 'braiserose+cumulox+solstral', 'aegisolar+voltarel+solstral',
+  'bouldog+aquamira+arcanis', 'cumulox+voltarel+arcanis', 'aegisolar+voltarel+solstral', 'solarion+nocturis+arcanis', 'abyssorax+cumulox+arcanis', 'pyrosile+racinea+arcanis',
+  'voltix+fournax+arcanis', 'ventis+aquamira+arcanis', 'ombrillon+zephyrion+arcanis', 'luxorbe+terracroc+arcanis', 'bouldog+solarion+tartaroth', 'glyphon+malefix+arcanis',
+  'brontobloc+cumulox+solstral', 'ombrillon+zephyrion+arcanis', 'caraploof+braiserose+arcanis', 'aquamira+voltarel+arcanis', 'solarion+runicor+arcanis', 'glyphon+terracroc+arcanis',
+  'pyrosile+terracroc+arcanis', 'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'voltix+nocturis+arcanis', 'ombrillon+zephyrion+arcanis', 'solarion+nocturis+arcanis',
+  'ventis+racinea+arcanis', 'aquamira+voltarel+arcanis', 'ombrillon+zephyrion+arcanis', 'abyssorax+cumulox+tartaroth', 'glyphon+terracroc+arcanis', 'luxorbe+malefix+arcanis',
+  'bouldog+fournax+arcanis', 'ombrillon+zephyrion+arcanis', 'caraploof+brontobloc+arcanis', 'luxorbe+zephyrion+arcanis', 'solarion+braiserose+arcanis', 'brontobloc+solstral+arcanis',
+  'solarion+runicor+arcanis', 'solarion+nocturis+arcanis', 'pyrosile+voltix+arcanis', 'cumulox+voltarel+tartaroth', 'ventis+aquamira+arcanis', 'aegisolar+voltarel+solstral',
+  'cumulox+voltarel+arcanis', 'racinea+tartaroth+arcanis', 'aegisolar+voltarel+solstral', 'solarion+runicor+abyssorax', 'glyphon+fournax+arcanis', 'aegisolar+voltarel+solstral',
+  'ombrillon+malefix+arcanis', 'bouldog+terracroc+arcanis', 'luxorbe+zephyrion+arcanis', 'caraploof+brontobloc+arcanis', 'voltix+aquamira+arcanis', 'ombrillon+zephyrion+arcanis',
+  'pyrosile+braiserose+arcanis', 'aquamira+voltarel+arcanis', 'nocturis+cumulox+solstral', 'ombrillon+zephyrion+arcanis', 'glyphon+solarion+tartaroth', 'ventis+malefix+arcanis',
+  'ombrillon+zephyrion+arcanis', 'aegisolar+voltarel+solstral', 'bouldog+fournax+arcanis', 'solarion+runicor+arcanis', 'abyssorax+voltarel+arcanis', 'racinea+solstral+arcanis',
+  'voltix+terracroc+arcanis', 'ombrillon+zephyrion+arcanis', 'pyrosile+luxorbe+arcanis', 'caraploof+aquamira+arcanis', 'ombrillon+zephyrion+arcanis', 'braiserose+cumulox+solstral',
+  'glyphon+solarion+tartaroth', 'brontobloc+malefix+arcanis', 'ventis+bouldog+arcanis', 'nocturis+abyssorax+tartaroth', 'runicor+voltarel+solstral', 'luxorbe+fournax+arcanis',
+  'voltix+terracroc+arcanis', 'ombrillon+zephyrion+arcanis', 'aegisolar+cumulox+solstral', 'pyrosile+aquamira+arcanis', 'aegisolar+voltarel+solstral',
 ];
 // L'entrée de la table pour l'étape n : { ids, elite } (null si la table est vide).
 function entreeEtape(levelNumber) {
@@ -1541,19 +1563,19 @@ export function starsForBattle(stats, opponentCount) {
 // chaque niveau : la « puissance conseillée » affichée. Même calcul que la
 // table ci-dessus (tools/calibrer-parcours.js), jamais en baisse.
 export const PUISSANCE_CONSEILLEE = [
-  139, 146, 153, 161, 169, 178, 187, 195, 206, 342, 372, 402, 434, 466, 488, 593, 638, 672,
-  708, 745, 814, 855, 896, 922, 1069, 1169, 1274, 1311, 1327, 1372, 1514, 1572, 1685, 1806, 1961, 2191,
-  2616, 2859, 3151, 3431, 3698, 3988, 4341, 4690, 5062, 5370, 5773, 6259, 6837, 6954, 7815, 8113, 8876, 9822,
-  10337, 10974, 11587, 12753, 13944, 15159, 16276, 17577, 19418, 21069, 22881, 25053, 27464, 30572, 35143, 38873, 43399, 47201,
-  51892, 55885, 60656, 64219, 69370, 73486, 79546, 83522, 89605, 94158, 101883, 107911, 113298, 118967, 126731, 142447, 149572, 157971,
-  167431, 175800, 184590, 194791, 204533, 218067, 240942, 258151, 278623, 292553, 323472, 345009, 362259, 382531, 401656, 421742, 444107, 478314,
-  513222, 538885, 568998, 611018, 660950, 696495, 733077, 777186, 813800, 856849, 899692, 946548, 1027654, 1090247, 1161400, 1219470, 1280439, 1344464,
-  1415426, 1516956, 1592801, 1684347, 1791210, 1904011, 2041079, 2143670, 2250854, 2363392, 2499568, 2638148, 2801443, 2941516, 3091197, 3327915, 3494310, 3669024,
-  3852475, 4045099, 4247353, 4459723, 4682709, 4916843, 5162686, 5420817, 5691860, 5976455, 6287687, 6637630, 6983408, 7332574, 7699205, 8084169, 8509046, 8934503,
-  9381228, 9850285, 10342804, 10859941, 11402940, 11973087, 12571740, 13254723, 13917458, 14613333, 15343999, 16151910, 16959505, 17807483, 18697856, 19888433, 20661837, 21694930,
-  22779676, 23918659, 25114592, 26370321, 27688838, 29073281, 30526944, 32778218, 34417130, 36137987, 37944887, 40031981, 42033578, 44135255, 46342018, 48659121, 50684960, 53219208,
-  55880171, 58674180, 62102739, 65207875, 68468265, 71891683, 76713709, 80549394, 84576864, 88805708, 93259766, 98325177, 103314896, 108480638, 113904673, 119599904, 125579903, 131858895,
-  138451838, 145374431, 152643154, 160275309, 168289074, 176703532, 187411243, 196781805, 206620895, 217105722, 227961013,
+  79, 83, 87, 91, 96, 101, 106, 111, 117, 213, 241, 259, 281, 302, 316, 334, 350, 366,
+  387, 410, 451, 480, 511, 519, 637, 708, 750, 776, 776, 793, 903, 947, 991, 1074, 1217, 1337,
+  1463, 1599, 1772, 1941, 2072, 2263, 2464, 2631, 2842, 3025, 3232, 3532, 3707, 3895, 4350, 4514, 4945, 5590,
+  5996, 6574, 6894, 7416, 8079, 8821, 9608, 10115, 10909, 11751, 12556, 13501, 15171, 17732, 19982, 22517, 25082, 27653,
+  30435, 32308, 34806, 37043, 39347, 44190, 47784, 50887, 54979, 58182, 63551, 69705, 75097, 80098, 88018, 92421, 97147, 102004,
+  107104, 112457, 118345, 124263, 130478, 138514, 151905, 162359, 170477, 184636, 193869, 205341, 216044, 233835, 245524, 262576, 276448, 291869,
+  317347, 338224, 355136, 377408, 396277, 416090, 438052, 464144, 488836, 526411, 545537, 580367, 609385, 652462, 685087, 749257, 790332, 829848,
+  871342, 921669, 972013, 1020612, 1097280, 1160876, 1230807, 1292349, 1359530, 1427505, 1498880, 1573826, 1652515, 1751488, 1839064, 1931017, 2057682, 2168121,
+  2276527, 2390353, 2509870, 2635365, 2767133, 2908226, 3079388, 3251346, 3413912, 3584610, 3763839, 3952032, 4149632, 4376725, 4595559, 4825338, 5066603, 5319936,
+  5585933, 5865227, 6158491, 6466414, 6789736, 7129222, 7485683, 7859969, 8252966, 8665613, 9098893, 9553840, 10031531, 10533108, 11059761, 11612750, 12197523, 12807400,
+  13447771, 14120160, 14826166, 15567474, 16345849, 17163141, 18021298, 18922362, 19868482, 20861905, 21905001, 23000252, 24150263, 25357777, 26625665, 27956948, 29354796, 30822535,
+  32363662, 33981846, 35680940, 37464985, 39338236, 41305146, 43370403, 45538924, 47815871, 50206664, 52716996, 55352847, 58120489, 61026514, 64077839, 67281731, 70645818, 74178108,
+  77887013, 81781364, 85870432, 90163953, 94672150, 99405760, 104376049, 111290501, 118091620, 123996202, 130196012,
 ];
 
 // ---- NIVEAUX RÉELS (10/10, décision de l'auteur) : les ennemis sont de VRAIES créatures ----
@@ -1838,7 +1860,8 @@ export const RUNE_BONUS_TABLE = {
   // l'auteur) : points de MANA en plus au DÉPART du combat (plafond MANA_MAX) — les sorts et
   // le spécial arrivent plus tôt. Les Dextérités en sauvegarde deviennent des Arcanes (même niveau).
   arcane: [1, 1, 2, 2, 3], // points de mana au départ (entiers)
-  celerite: [0.10, 0.20, 0.35, 0.50, 0.70], // bonus ADDITIF sur le multiplicateur de dégâts (x2,5 de base)
+  // 10/10 : le parfait passe de x2,5 à x1 → valeurs ÷2,5 (même bonus RELATIF : +4 % à +28 % d'un parfait).
+  celerite: [0.04, 0.08, 0.14, 0.20, 0.28], // bonus ADDITIF sur le multiplicateur de dégâts (x1 de base)
   // --- 12/09 : 3 runes ajoutées pour sortir du "tout offensif" ---
   // Affinité : s'ajoute au multiplicateur d'AVANTAGE élémentaire (1,30
   // de base). Ne touche PAS la pénalité de faiblesse — c'est une rune
