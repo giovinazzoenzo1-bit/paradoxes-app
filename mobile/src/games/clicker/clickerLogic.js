@@ -1221,7 +1221,7 @@ export function veilleurUpgradeCost(level) {
 // la production par 1,3 : sans ce facteur, le prix serait divisé par 13
 // en valeur réelle au bout de 10 Ascensions et l'achat deviendrait
 // gratuit. Le prix suit donc exactement la même courbe que les gains.
-export const GRIFFES_COIN_PACK = 100;
+export const GRIFFES_COIN_PACK = 50; // 11/10 : ×0,5 (calculateur de Griffes, décision de l'auteur) ; avant 100
 export const GRIFFES_COIN_BASE = 20000 * COIN_SCALE;
 export const GRIFFES_COIN_STEP = 10000 * COIN_SCALE;
 
@@ -1241,7 +1241,7 @@ export function achatsGriffesPiecesRestants(purchases) {
   return Math.max(0, GRIFFES_PIECES_MAX_PAR_ASCENSION - Math.max(0, Math.floor(Number(purchases) || 0)));
 }
 export function taillePackGriffes(ascensionCount) {
-  return GRIFFES_COIN_PACK + 75 * Math.max(0, Math.floor(Number(ascensionCount) || 0));
+  return GRIFFES_COIN_PACK + 38 * Math.max(0, Math.floor(Number(ascensionCount) || 0)); // 11/10 : 75 → 38 (×0,5)
 }
 export function griffesCoinCost(purchases, ascensionCount) {
   const n = Math.max(0, Math.floor(Number(purchases) || 0));

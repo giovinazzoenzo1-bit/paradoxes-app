@@ -256,7 +256,9 @@ export function weeklyQuestDef(questId) {
 // sont calées sur le revenu du COMBAT (commune au niveau 25 ≈ 270
 // Griffes). Désormais ≈ 715 Griffes sur l'A0 (≈ 7 runes, ≈ 36 combats).
 // Les diamants des succès ne changent pas.
-export const ACHIEVEMENT_TIER_REWARDS = [15, 40, 100, 250, 600];
+// 11/10 (décision de l'auteur, calculateur de Griffes) : ×0,25 — les 1ers paliers tombent en quelques minutes (MESURÉ :
+// ~190 Griffes de succès dès l'étape 10, plus que les primes) ; avant [15, 40, 100, 250, 600].
+export const ACHIEVEMENT_TIER_REWARDS = [4, 10, 25, 60, 150];
 // Diamants par palier de succès, versés UNE SEULE FOIS chacun.
 export const ACHIEVEMENT_TIER_DIAMONDS = [2, 5, 10, 20, 40];
 export function achievementDiamonds(tierIndex) {
@@ -328,12 +330,12 @@ export const ACHIEVEMENT_MAX_TIER = 5;
 //                acquise le jour ou les skins existeront. Rien n'est
 //                perdu entre-temps.
 export const DAILY_CALENDAR = [
-  { day: 1, type: 'griffes',  amount: 40,  icon: '🐾', label: '40 Griffes' },
+  { day: 1, type: 'griffes',  amount: 20,  icon: '🐾', label: '20 Griffes' }, // 11/10 : ×0,5 (calculateur de Griffes)
   { day: 2, type: 'appCoins', amount: 25,  icon: '💎', label: '25 Diamants' },
   { day: 3, type: 'creature', rarity: 'rare', icon: '🥚', label: 'Créature Rare' },
-  { day: 4, type: 'griffes',  amount: 80,  icon: '🐾', label: '80 Griffes' },
+  { day: 4, type: 'griffes',  amount: 40,  icon: '🐾', label: '40 Griffes' },
   { day: 5, type: 'appCoins', amount: 50,  icon: '💎', label: '50 Diamants' },
-  { day: 6, type: 'griffes',  amount: 150, icon: '🐾', label: '150 Griffes' },
+  { day: 6, type: 'griffes',  amount: 75,  icon: '🐾', label: '75 Griffes' },
   { day: 7, type: 'skin',     amount: 1,   icon: '🎨', label: 'Skin aléatoire' },
 ];
 

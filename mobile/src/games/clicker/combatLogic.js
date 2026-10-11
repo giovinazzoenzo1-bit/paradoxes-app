@@ -1538,8 +1538,10 @@ const ELEMENT_BEATS = {
   Magie: [],
 };
 
-export const ELEMENT_ADVANTAGE_MULT = 1.3;   // +30%, calé sur la référence
-export const ELEMENT_WEAKNESS_MULT = 0.75;   // -25%
+// 11/10 (décision de l'auteur) : ±15 % — à +30 / −25 %, son équipe passait de 100 % (étape 34) à 1 % (étape 35) sans
+// changer de niveau.
+export const ELEMENT_ADVANTAGE_MULT = 1.15;
+export const ELEMENT_WEAKNESS_MULT = 0.85;
 
 // Multiplicateur de dégâts de `attackerElement` contre `defenderElement`.
 // Renvoie 1 si l'un des deux manque ou est neutre — jamais d'erreur sur
@@ -1644,11 +1646,21 @@ export function bonusElite(levelNumber) {
 // +3 niveaux, même l'ennemi le plus faible du jeu battait Luxorbe débutant 1 fois sur 3 au boss de l'étape 10.
 export function bonusBoss(levelNumber) {
   const n = Math.max(1, Math.floor(levelNumber || 1));
-  return estEtapeBoss(n) && chapterForLevel(n) > 1 ? BONUS_NIVEAU_BOSS : 0;
+  return estEtapeBoss(n) ? BONUS_NIVEAU_BOSS : 0; // 11/10 : chapitre 1 compris (courbe de l'auteur : étape 10 → 13)
 }
+// ⚠️ 11/10 — COURBE DE L'AUTEUR (validée sur le calculateur de Griffes) : +1 niveau par étape, +1 par chapitre, boss +3,
+// et JAMAIS de baisse après un boss (« les autres ennemis doivent être au même niveau voire plus »). Tous les ennemis d'une
+// étape sont à CE niveau (plus d'élite, plus d'écart par espèce). Étapes 5 → 5 · 10 → 13 · 11 → 13 · 15 → 16 · 20 → 24 ·
+// 21 → 24 · 25 → 27 · 30 → 35 · 35 → 38 · 40 → 46 ; même formule au-delà en attendant sa validation des étapes 1-40.
+// MESURÉ avant (son équipe réelle, étapes 30-36) : 82 · 100 · 67 · 52 · 100 · 1 · 0 % — niveaux irréguliers + éléments ±30 %.
+export const NIVEAUX_EN_EQUIPE = 3;
 export function niveauEnnemi(levelNumber) {
   const n = Math.max(1, Math.floor(levelNumber || 1));
-  return n + bonusBoss(n) + bonusElite(n);
+  // +3 dès l'étape 11 (2 ou 3 ennemis) — MESURÉ : à niveau égal, un joueur normal gagne 92 à 99 % à 3 contre 3 (ses
+  // coups de soutien) ; l'ancien bonus CACHÉ (FORCE_ENNEMI ×1,15-1,2 ≈ +3 niveaux) est désormais AFFICHÉ.
+  const base = (k) => k + Math.floor((k - 1) / 10) + (k >= 11 ? NIVEAUX_EN_EQUIPE : 0) + (k % 10 === 0 ? BONUS_NIVEAU_BOSS : 0);
+  const dernierBoss = Math.floor(n / 10) * 10;
+  return Math.max(base(n), dernierBoss >= 10 ? base(dernierBoss) : 0);
 }
 // Grands nombres du combat (PV, dégâts) en format court, MÊMES suffixes que les pièces (ClickerScreen) :
 // sous 10 000 tel quel ; ensuite 12.4K, 3.21M, 1.5Md… Arrondi VERS LE BAS : jamais plus de PV affichés
@@ -1675,7 +1687,8 @@ export function equipeEnnemie(levelNumber) {
   return membres.map((creature) => {
     const i = e ? e.ids.indexOf(creature.id) : -1;
     const evo = i >= 0 && e.evos[i] != null ? e.evos[i] : evoPourNiveau(niveau);
-    return { creature, niveau: Math.max(1, Math.round(niveauReelEnnemi(creature, niveau, evo, membres.length))), evolutionTier: evo };
+    // 11/10 : tous au niveau de la courbe, stats EXACTES de leur espèce (niveauReelEnnemi n'est plus utilisé ici).
+    return { creature, niveau, evolutionTier: evo };
   });
 }
 // Le niveau (NON arrondi) où les stats de CETTE espèce donnent la force voulue : moyenne de sa rareté au niveau de
@@ -1864,9 +1877,11 @@ export const BONUS_PRIMES = { aPartirDe: 30, bonus: 0.25 };
 // 1 par victoire, une rune à 3. Pack et offre spéciale : MÊMES proportions qu'en Griffes (100 / 250 / 300).
 export const POUDRE_PAR_VICTOIRE = 1;
 export const POUDRE_PRIX = { unite: 3, pack: 8, speciale: 9 };
+// 11/10 (décision de l'auteur) : primes ×0,9 — le COÛT d'un niveau lit la prime de BASE (primeDeVictoire), il ne baisse pas.
+export const FACTEUR_PRIMES = 0.9;
 export function griffesReward(levelNumber) {
   const l = Math.max(1, Math.floor(levelNumber || 1));
-  return Math.round(primeDeVictoire(l) * (l >= BONUS_PRIMES.aPartirDe ? 1 + BONUS_PRIMES.bonus : 1));
+  return Math.round(primeDeVictoire(l) * (l >= BONUS_PRIMES.aPartirDe ? 1 + BONUS_PRIMES.bonus : 1) * FACTEUR_PRIMES);
 }
 
 // ---- Les QUÊTES suivent le niveau d'Aventure (26/09, décision de l'auteur) ----
@@ -1881,8 +1896,10 @@ export const NIVEAU_REFERENCE_QUETES = 25;
 export function facteurQuetes(niveauAventure) {
   return primeDeVictoire(Math.max(1, Math.floor(niveauAventure || 1))) / primeDeVictoire(NIVEAU_REFERENCE_QUETES); // prime de BASE (10/10)
 }
+// 11/10 (décision de l'auteur, calculateur de Griffes) : défis ×0,7.
+export const FACTEUR_DEFIS_GRIFFES = 0.7;
 export function recompenseQuete(base, niveauAventure) {
-  return Math.max(1, Math.round((base || 0) * facteurQuetes(niveauAventure)));
+  return Math.max(1, Math.round((base || 0) * facteurQuetes(niveauAventure) * FACTEUR_DEFIS_GRIFFES));
 }
 
 // ---- Énergie (30/08) — 1 vie toutes les 20 min, plafond à 5 ----

@@ -6,6 +6,7 @@
 //   node mobile/tools/calculateur-griffes.js [étape max = 40] [profil = actif|normal]
 //
 // HYPOTHÈSES (à corriger avec les vraies données de l'auteur) — toutes ICI, rien de caché plus bas :
+// ⚠️ Les MONTANTS viennent du jeu (primes, défis, succès, calendrier, packs) : changer le jeu met le calculateur à jour.
 const HYP = {
   combatsParEtape: 1.3,            // défaites comprises (rapports de l'auteur : 1,1 à 1,3)
   combatsParJour: 41,              // énergie : 5 + 3 par heure × 12 h de jeu
@@ -53,10 +54,12 @@ function calculer(etapeMax = 40, profil = 'actif', opts = {}) {
     // 2) Jours écoulés → défis quotidiens (3) et hebdo (6/7 par jour) + calendrier
     const jour = Math.floor((n * HYP.combatsParEtape) / HYP.combatsParJour) + 1;
     for (let j = jourPrecedent + 1; j <= jour; j++) {
-      const f = K.facteurQuetes(n);
-      const q = (3 * Math.round(35 * f) + (6 / 7) * Math.round(201 * f)) * F.defis;
+      // Défis : récompense DU JEU (recompenseQuete) — 3 quotidiens (35 en moyenne), 6 hebdo (201 en moyenne) par semaine.
+      const q = (3 * K.recompenseQuete(35, n) + (6 / 7) * K.recompenseQuete(201, n)) * F.defis;
       cumul.defis += q; griffes += q;
-      const cal = ({ 1: 40, 4: 80, 6: 150 }[((j - 1) % 7) + 1] || 0) * F.calendrier;
+      // Calendrier : la table DU JEU (DAILY_CALENDAR), Griffes seulement.
+      const c = D.DAILY_CALENDAR[(j - 1) % D.DAILY_CALENDAR.length];
+      const cal = (c && c.type === 'griffes' ? c.amount : 0) * F.calendrier;
       cumul.calendrier += cal; griffes += cal;
     }
     jourPrecedent = jour;
