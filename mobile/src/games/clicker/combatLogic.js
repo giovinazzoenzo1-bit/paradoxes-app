@@ -1676,9 +1676,86 @@ function courbeEtapes(k) {
 }
 export function niveauEnnemi(levelNumber) {
   const n = Math.max(1, Math.floor(levelNumber || 1));
+  // 11/10 — les FENÊTRES du joueur (photos) passent d'abord ; la table ne sert que sans photo (simulations, vieille sauvegarde).
+  if (niveauxJoueur && niveauxJoueur[n] != null) return niveauxJoueur[n];
   if (n <= NIVEAUX_ETAPES.length) return NIVEAUX_ETAPES[n - 1];
   const fin = NIVEAUX_ETAPES.length;
   return NIVEAUX_ETAPES[fin - 1] + courbeEtapes(n) - courbeEtapes(fin);
+}
+
+// ═══ DIFFICULTÉ PAR FENÊTRES DE 5 ÉTAPES (11/10, système de l'auteur) ═══════════════════════════════════════════════════
+// « Le calculateur calcule le deck, puis règle les étapes suivantes de 1 (très facile) à 5 (très dur) » — plus jamais de
+// recalage à la main : chaque nouvelle source de Griffes (pubs, défis…) est absorbée à la photo suivante.
+// • Fenêtres : 1-5, 6-10, 11-15… ; dans chaque fenêtre, difficulté 1 → 5 (les boss 10, 20, 30… tombent sur un 5).
+// • PHOTO au début de la fenêtre : les premières créatures du deck (combat à égalité) + les Griffes EN POCHE dépensées
+//   virtuellement (sinon on garderait ses Griffes avant la photo), puis, pour chaque étape, + les primes des étapes
+//   précédentes de la fenêtre (comme le Gardien : ce que le joueur aura en dépensant au fil de l'eau).
+// • Niveau des ennemis = celui où « puissance du deck / puissance des ennemis » vaut le rapport de la difficulté.
+//   Rapports MESURÉS (11/10, régression logistique, joueur normal 60 ms, decks et compositions variés) — un calcul
+//   INSTANTANÉ sur le téléphone (aucune simulation).
+// • Avantage payant (−1 ou −2 crans pendant 20 étapes) : géré par l'écran (avantage), appliqué ici via `avantage`.
+export const TAILLE_FENETRE = 5;
+export const CIBLES_DIFFICULTE = { 1: 0.95, 2: 0.85, 3: 0.7, 4: 0.5, 5: 0.3 };
+export const RATIOS_DIFFICULTE = {
+  '1v1': { 1: 1.359, 2: 1.191, 3: 1.081, 4: 0.985, 5: 0.898 },
+  '2v1': { 1: 1.059, 2: 0.964, 3: 0.9, 4: 0.843, 5: 0.789 },
+  '2v2': { 1: 1.002, 2: 0.893, 3: 0.821, 4: 0.757, 5: 0.699 },
+  '3v3': { 1: 0.861, 2: 0.806, 3: 0.768, 4: 0.734, 5: 0.701 },
+};
+let niveauxJoueur = null; // { [étape]: niveau } — les photos du joueur, posées par l'écran (ou le joueur simulé)
+export function definirNiveauxJoueur(map) { niveauxJoueur = map && typeof map === 'object' ? map : null; }
+export function fenetreDe(levelNumber) { return Math.floor((Math.max(1, Math.floor(levelNumber || 1)) - 1) / TAILLE_FENETRE); }
+export function debutFenetre(k) { return Math.max(0, Math.floor(k || 0)) * TAILLE_FENETRE + 1; }
+export function difficulteEtape(levelNumber, avantage = 0) {
+  const p = ((Math.max(1, Math.floor(levelNumber || 1)) - 1) % TAILLE_FENETRE) + 1;
+  return Math.max(1, p - Math.max(0, Math.floor(avantage || 0)));
+}
+// Correction par cran, MESURÉE en validation (vrais combats simulés, 10 fenêtres × 6 équipes, compositions du jeu) :
+// avant correction 89 / 85 / 61 / 38 / 40 % pour 95 / 85 / 70 / 50 / 30 visés → rapport × (pente logistique ≈ 12).
+// (avec les facteurs d'espèce) avant correction 92 / 89 / 75 / 49 / 49 % → correction par cran (pente logistique ≈ 12).
+// (avec FACTEUR_ETAPE) MESURÉ sur les fenêtres 1-45 : 96 / 88 / 63 / 45 / 31 % → petite correction ; fenêtres 46-60 (jamais
+// utilisées) 85 / 79 / 62 / 36 / 36 % : ~10 points trop dures — À AFFINER quand l'auteur validera au-delà de 40.
+export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1 };
+// FACTEUR D'ESPÈCE (MESURÉ 11/10) : force réelle en combat ÷ force prédite par la puissance affichée (duels niveau 30 contre les
+// communes et peu communes, joueur normal) — la puissance ne voit pas les sorts (boucliers, soins…) : sans ce facteur, un
+// même cran de difficulté variait de 20 points selon les espèces tombées sur l'étape.
+// { [étape]: facteur } — MESURÉ par mobile/tools/mesurer-etapes.js (11/10, étapes 1-60 ; au-delà : facteurs d'espèce).
+export const FACTEUR_ETAPE = {"1": 0.881, "2": 0.948, "3": 0.894, "4": 1.057, "5": 0.99, "6": 1.009, "7": 0.936, "8": 0.881, "9": 1.043, "10": 0.996, "11": 1.092, "12": 1.115, "13": 1.262, "14": 1.055, "15": 1.105, "16": 1.391, "17": 1.152, "18": 1.105, "19": 1.216, "20": 1.074, "21": 1.15, "22": 0.913, "23": 0.94, "24": 1.016, "25": 0.977, "26": 0.992, "27": 0.833, "28": 0.937, "29": 0.828, "30": 0.926, "31": 0.89, "32": 0.953, "33": 1.116, "34": 1.146, "35": 1.027, "36": 0.93, "37": 0.828, "38": 0.979, "39": 0.833, "40": 0.828, "41": 1.099, "42": 1.136, "43": 0.863, "44": 1.116, "45": 1.107, "46": 0.905, "47": 1.163, "48": 1.101, "49": 0.932, "50": 1.06, "51": 1.112, "52": 0.887, "53": 1.074, "54": 1.13, "55": 0.856, "56": 1.08, "57": 1.154, "58": 0.856, "59": 1.127, "60": 0.973};
+export const FACTEUR_ESPECE = {"pyrosile": [1.11, 1.09, 1.09], "caraploof": [1.04, 1.04, 1.05], "ventis": [1.17, 1.15, 1.15], "bouldog": [1.04, 1.05, 1.04], "voltix": [1.13, 1.14, 1.12], "aegisolar": [1.01, 0.98, 0.96], "glyphon": [0.93, 0.93, 0.93], "ombrillon": [1.19, 1.18, 1.17], "luxorbe": [0.96, 0.95, 0.95], "fournax": [1.01, 1.01, 1.02], "solarion": [0.74, 0.71, 0.71], "aquamira": [1, 1, 1], "terracroc": [1.11, 1.13, 1.12], "zephyrion": [1.04, 1.04, 1.04], "brontobloc": [0.96, 0.97, 0.98], "malefix": [1.12, 1.13, 1.12], "nocturis": [0.97, 0.96, 0.96], "racinea": [1.05, 1.06, 1.06], "runicor": [1.03, 1.05, 0.98], "braiserose": [1.05, 1.05, 1.05], "abyssorax": [1.04, 1.03, 1.05], "cumulox": [1.02, 1.02, 1], "voltarel": [0.98, 0.97, 0.96], "solstral": [0.91, 0.91, 0.93], "tartaroth": [1.1, 1.1, 1.1], "arcanis": [0.85, 0.89, 0.89]}; // [sans évolution, évolution 1, évolution 2]
+function rapportDifficulte(nbJ, nbE, d) {
+  const cle = `${nbJ}v${nbE}`;
+  const t = RATIOS_DIFFICULTE[cle] || RATIOS_DIFFICULTE[`${Math.min(3, nbE)}v${Math.min(3, nbE)}`] || RATIOS_DIFFICULTE['3v3'];
+  return (t[d] || t[3]) * (CORRECTION_DIFFICULTE[d] || 1);
+}
+// Niveau des ennemis de l'étape n pour qu'un deck de puissance `puissanceDeck` soit à la difficulté d.
+export function niveauPourDifficulte(levelNumber, puissanceDeck, d, nbJoueurs, options = {}) {
+  const compo = equipeEnnemie(levelNumber).map((m) => ({ creature: m.creature, evolutionTier: m.evolutionTier, equippedRunes: [] }));
+  if (!compo.length || !(puissanceDeck > 0)) return 1;
+  const cible = puissanceDeck / rapportDifficulte(Math.max(1, nbJoueurs || compo.length), compo.length, d);
+  const facteurDe = (m) => { const t = FACTEUR_ESPECE[m.creature.id]; return (t && t[Math.max(0, Math.min(2, m.evolutionTier || 0))]) || 1; };
+  // Facteur de l'ÉTAPE (mesuré en vrais combats d'équipe, mesurer-etapes.js) ; à défaut, moyenne des facteurs d'espèce.
+  const parEtape = FACTEUR_ETAPE[Math.max(1, Math.floor(levelNumber || 1))];
+  const facteur = options.sansFacteur ? 1 : (parEtape || Math.exp(compo.reduce((t, m) => t + Math.log(facteurDe(m)), 0) / compo.length));
+  const P = (L) => facteur * puissanceAffichee(compo.map((m) => ({ ...m, ownedLevel: L })));
+  const p1 = P(1);
+  let L = Math.max(1, Math.round(1 + Math.log(Math.max(1e-9, cible / Math.max(1, p1))) / Math.log(CROISSANCE_NIVEAU)));
+  let meilleur = L, ecart = Infinity;
+  for (let x = Math.max(1, L - 4); x <= L + 4; x++) { const e = Math.abs(Math.log(P(x) / cible)); if (e < ecart) { ecart = e; meilleur = x; } }
+  return meilleur;
+}
+// PHOTO d'une fenêtre : { [étape]: niveau } pour ses 5 étapes. membresDeck : le deck dans l'ordre (creature, ownedLevel,
+// evolutionTier, equippedRunes) ; griffesEnPoche : comptées comme dépensées (équitablement, palier de dizaine compris).
+export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 0) {
+  const niveaux = {};
+  let budget = Math.max(0, Number(griffesEnPoche) || 0);
+  for (let n = debut; n < debut + TAILLE_FENETRE; n++) {
+    const nbJ = Math.max(1, Math.min((membresDeck || []).length, combattantsPourEtape(n)));
+    const membres = (membresDeck || []).slice(0, nbJ);
+    const apres = deckApresEffortEquitable(membres, budget);
+    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres), difficulteEtape(n, avantage), nbJ);
+    budget += griffesReward(n); // la prime de cette étape sert pour la suivante
+  }
+  return niveaux;
 }
 // Grands nombres du combat (PV, dégâts) en format court, MÊMES suffixes que les pièces (ClickerScreen) :
 // sous 10 000 tel quel ; ensuite 12.4K, 3.21M, 1.5Md… Arrondi VERS LE BAS : jamais plus de PV affichés
