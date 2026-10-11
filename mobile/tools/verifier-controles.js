@@ -275,8 +275,8 @@ const SABOTAGES = [
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "Gardien de l'œuf 2 de nouveau NON calé (0 % mesuré chez l'auteur)",
     remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
   // 11/10 (fin) : fenêtres de difficulté (système de l'auteur).
-  ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la photo oublie les Griffes en poche (on garderait ses Griffes avant la photo)",
-    remplace('const niveaux = photoFenetre(d0, membres, griffes, av);', 'const niveaux = photoFenetre(d0, membres, 0, av);')],
+  ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la photo oublie les Griffes récupérables (défis, succès, calendrier) et la file d'attente",
+    remplace('const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;', 'const budget = Math.max(0, griffes);')],
   ['auditFenetres', F.combat, "le cran 5 n'est plus très dur (réglage cassé)",
     remplace('export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1 };', 'export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1.45 };')],
   ['auditFenetres', F.combat, "le jeu ignore la photo du joueur (les ennemis reviennent à la table)",

@@ -109,6 +109,52 @@ aucune autre façon d'afficher de la couleur.
 
 ---
 
+### 🧮 LE CALCULATEUR DE DIFFICULTÉ DE L'EXPLORATION (11/10, système de l'auteur)
+
+> Objectif de l'auteur : **ne plus jamais recaler la difficulté à la main**, quoi qu'on ajoute au jeu (pubs, défis, achats).
+
+**Quand il se déclenche** : au 1er passage des étapes **1, 6, 11, 16…** (fenêtres de 5 étapes). À l'étape 6, il **repart de
+zéro** sur le deck du moment.
+
+**Ce qu'il prend en photo** :
+- le **deck** du joueur, dans son ordre (combat à égalité : autant de créatures que d'ennemis) ;
+- un **budget de Griffes** = Griffes **en poche** + Griffes **récupérables** (défis du jour et de la semaine terminés, paliers
+  de succès atteints, calendrier du jour non pris) + Griffes **réclamées pas encore versées** ;
+- pour chaque étape, **la prime des étapes précédentes de la fenêtre** (ex. : les 20 Griffes de l'étape 1 comptent pour
+  l'étape 2, etc.).
+Le budget est dépensé **virtuellement**, équitablement, avec la règle du palier de dizaine (comme le ferait le joueur).
+
+**La difficulté par étape** (1er essai, joueur normal) — défaites moyennes avant de gagner = (1 − p) / p :
+
+| Position dans la fenêtre | Cran | Chance | Défaites en moyenne |
+|---|---|---|---|
+| 1re étape (1, 6, 11…) | 1 | 95 % | 0 |
+| 2e | 2 | 85 % | 0,2 |
+| 3e | 3 | 70 % | 0,4 |
+| 4e | 4 | 50 % | **1** |
+| 5e (boss 10, 20, 30… toujours ici) | 5 | 33 % | **2** |
+
+**Payeurs** : petit achat → −1 cran, gros achat → −2 crans, pendant **20 étapes** (minimum : cran 1), affiché au joueur.
+Mécanisme prêt (état `avantage` sauvegardé) ; **à brancher sur les vrais achats avec RevenueCat**.
+
+**Comment le niveau des ennemis est calculé (instantané, ~7 ms par fenêtre)** : le niveau où « puissance du deck ÷
+(puissance des ennemis × facteur de l'étape) » vaut le rapport du cran (`RATIOS_DIFFICULTE`, mesurés par régression sur des
+milliers de combats, pour 1 contre 1, 2 contre 1, 2 contre 2, 3 contre 3). Le **facteur de l'étape** (`FACTEUR_ETAPE`) corrige ce
+que la puissance ne voit pas (sorts, soins, boucliers, effets d'équipe) : il est **mesuré en vrais combats**.
+
+**Ajouter des étapes ou changer des ennemis** : relancer `NODE_PATH=… node mobile/tools/mesurer-etapes.js <de> <à>` (par morceaux
+de 30 étapes, quelques minutes) et recopier le résultat dans `FACTEUR_ETAPE`. Puis lancer les contrôles.
+
+**Contrôle** : `auditFenetres` vérifie à chaque passage, en vrais combats, que chaque cran donne sa chance (± 15 points), que la
+photo compte bien toutes les Griffes, et que l'écran et le joueur simulé sont branchés ; ses sabotages le prouvent.
+
+**Mesuré (11/10)** : crans 96 / 83 / 68 / 50 / 35 % (cibles 95 / 85 / 70 / 50 / 33) sur les étapes 1-45 ; joueurs simulés
+4,6 à 6,8 victoires sur 10 au 1er essai sur **toutes** les Ascensions. ⚠️ Au-delà de l'étape 45 : ~10 points trop dur, à affiner.
+
+**Où dans le code** : `combatLogic.js` (`photoFenetre`, `niveauPourDifficulte`, `difficulteEtape`, `definirNiveauxJoueur`,
+`niveauEnnemi` lit la photo d'abord) · `AdventureScreen.js` (effet « photo », sauvegarde `fenetres` + `avantage`, aperçu
+« ⚔️ 3/5 ») · `simulateur-parcours.js` (le joueur simulé vit le même système).
+
 ### 🎲 Comment les défis sont tirés
 
 **La liste est écrite à l'avance.** `QUEST_SEQUENCE` contient les 7 œufs

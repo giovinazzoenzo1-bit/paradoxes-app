@@ -5161,7 +5161,9 @@ function auditFenetres() {
   if (!(mes[1] > mes[3] && mes[3] > mes[5])) pb.push('les crans ne vont plus du plus facile au plus dur');
   const fs = require('fs'), path = require('path');
   const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
-  if (!Av.includes('const niveaux = photoFenetre(d0, membres, griffes, av);')) pb.push('la photo ne compte plus les Griffes en poche (un joueur garderait ses Griffes avant la photo)');
+  // 11/10 (spec de l'auteur) : poche + récupérables (défis, succès, calendrier) + file d'attente.
+  if (!Av.includes('const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(d0, membres, budget, av);'))
+    pb.push('la photo ne compte plus toutes les Griffes du joueur (poche, récupérables, file d\'attente)');
   if (!Av.includes('definirNiveauxJoueur(niv, dif);')) pb.push("l'écran ne pose plus les niveaux du joueur (les ennemis reviennent à la table)");
   if (!/JSON\.stringify\(\{[^)]*fenetres, avantage \}\)/.test(Av)) pb.push("les photos et l'avantage ne sont plus sauvegardés");
   if (!Av.includes('⚔️ {difficulteAffichee(levelNumber)}/5')) pb.push("l'aperçu n'affiche plus la difficulté");

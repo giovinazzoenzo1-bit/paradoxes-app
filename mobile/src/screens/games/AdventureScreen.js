@@ -641,7 +641,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     };
   }, []);
 
-  const { trackEvent, trackMax } = useDaily();
+  const { trackEvent, trackMax, griffesARecuperer } = useDaily();
   const [detailCreatureId, setDetailCreatureId] = useState(ficheInitiale);
   const [boutiqueGriffes, setBoutiqueGriffes] = useState(false);
   const { sons: sonsAventure, musique: musiqueAventure } = useSettings(); // sons (07/10)
@@ -780,18 +780,28 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
 
   // 11/10 — PHOTO de la fenêtre en cours (au 1er passage) : le deck dans son ordre + les Griffes EN POCHE (comptées comme
   // dépensées). Elle fixe le niveau des ennemis de ses 5 étapes (difficulté 1 → 5, moins l'avantage payant s'il est actif).
+  // 11/10 (spec de l'auteur) : la photo compte les Griffes EN POCHE + RÉCUPÉRABLES (défis du jour et de la semaine terminés,
+  // paliers de succès atteints, calendrier du jour non pris) + la FILE d'attente (réclamées, pas encore versées).
   useEffect(() => {
     if (!progressLoaded) return;
     const k = fenetreDe(currentUnlockedLevel);
     if (fenetres[k]) return;
-    const membres = membresPourCombat(deck, owned, ownedRunes);
-    if (!membres.length) return;
-    const av = avantage && avantage.restant > 0 ? avantage.niveau : 0;
-    const d0 = debutFenetre(k);
-    const niveaux = photoFenetre(d0, membres, griffes, av);
-    const difficultes = {};
-    for (let n = d0; n < d0 + TAILLE_FENETRE; n++) difficultes[n] = difficulteEtape(n, av);
-    setFenetres((prev) => (prev[k] ? prev : { ...prev, [k]: { niveaux, difficultes, t: Date.now() } }));
+    let annule = false;
+    (async () => {
+      let enAttente = 0;
+      try { enAttente = Math.max(0, Number(await AsyncStorage.getItem(PENDING_GRIFFES_KEY)) || 0); } catch (e) { /* rien en attente */ }
+      if (annule) return;
+      const membres = membresPourCombat(deck, owned, ownedRunes);
+      if (!membres.length) return;
+      const av = avantage && avantage.restant > 0 ? avantage.niveau : 0;
+      const d0 = debutFenetre(k);
+      const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;
+      const niveaux = photoFenetre(d0, membres, budget, av);
+      const difficultes = {};
+      for (let n = d0; n < d0 + TAILLE_FENETRE; n++) difficultes[n] = difficulteEtape(n, av);
+      setFenetres((prev) => (prev[k] ? prev : { ...prev, [k]: { niveaux, difficultes, budget, t: Date.now() } }));
+    })();
+    return () => { annule = true; };
   }, [progressLoaded, currentUnlockedLevel, fenetres]);
 
   // 26/09 : publie jusqu'où TOUS les niveaux sont à 3 étoiles (garde-fou du

@@ -1695,12 +1695,14 @@ export function niveauEnnemi(levelNumber) {
 //   INSTANTANÉ sur le téléphone (aucune simulation).
 // • Avantage payant (−1 ou −2 crans pendant 20 étapes) : géré par l'écran (avantage), appliqué ici via `avantage`.
 export const TAILLE_FENETRE = 5;
-export const CIBLES_DIFFICULTE = { 1: 0.95, 2: 0.85, 3: 0.7, 4: 0.5, 5: 0.3 };
+// 11/10 (spec de l'auteur : « le joueur perd 1 fois à l'étape 4 et 2 fois à l'étape 5 ») : défaites MOYENNES avant de gagner
+// = (1 − p) / p → 50 % = 1 défaite ; 33 % = 2 défaites (30 % en donnait 2,3). Crans 1-3 : 0,05 / 0,18 / 0,43 défaite.
+export const CIBLES_DIFFICULTE = { 1: 0.95, 2: 0.85, 3: 0.7, 4: 0.5, 5: 1 / 3 };
 export const RATIOS_DIFFICULTE = {
-  '1v1': { 1: 1.359, 2: 1.191, 3: 1.081, 4: 0.985, 5: 0.898 },
-  '2v1': { 1: 1.059, 2: 0.964, 3: 0.9, 4: 0.843, 5: 0.789 },
-  '2v2': { 1: 1.002, 2: 0.893, 3: 0.821, 4: 0.757, 5: 0.699 },
-  '3v3': { 1: 0.861, 2: 0.806, 3: 0.768, 4: 0.734, 5: 0.701 },
+  '1v1': { 1: 1.359, 2: 1.191, 3: 1.081, 4: 0.985, 5: 0.914 }, // cran 5 : 33 % (11/10)
+  '2v1': { 1: 1.059, 2: 0.964, 3: 0.9, 4: 0.843, 5: 0.799 },
+  '2v2': { 1: 1.002, 2: 0.893, 3: 0.821, 4: 0.757, 5: 0.709 },
+  '3v3': { 1: 0.861, 2: 0.806, 3: 0.768, 4: 0.734, 5: 0.706 },
 };
 let niveauxJoueur = null; // { [étape]: niveau } — les photos du joueur, posées par l'écran (ou le joueur simulé)
 let difficultesJoueur = null; // { [étape]: 1..5 } — la difficulté réellement appliquée (avantage payant compris)
