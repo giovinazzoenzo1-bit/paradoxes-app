@@ -3299,3 +3299,18 @@ CONTRÔLES : auditNiveauMax (mêmes niveaux et vraies stats, jamais de baisse, �
 ⚠️ PIÈGE (11/10) : la 2e moitié des sabotages dépasse maintenant 280 s (auditParcours sur 120 joueurs) → coupée, elle a laissé un
 sabotage dans mobile/index.js (ligne AsyncStorage ajoutée). TOUJOURS en TROIS morceaux : `0 52`, `52 104`, `104 153`, et après
 toute coupure : `ps aux | grep verifier` puis `git diff` sur chaque fichier modifié, restaurer ce qu'on n'a pas touché.
+
+
+## 11/10 (soir, fin) — MALENTENDU CORRIGÉ : défis, succès et calendrier remis (publié)
+
+L'auteur : « je ne t'avais pas demandé de nerf les défis, succès et calendrier ». CAUSE : « baisser les gains de Griffes » =
+pour lui les gains des ÉTAPES ; ma proposition listait toutes les sources et il a validé « tout » trop vite. ⚠️ LEÇON : quand
+l'auteur dit « gains de Griffes », c'est les PRIMES D'ÉTAPES (déjà le cas pour le +25 % : « gains en plus gagnés des étapes »).
+REMIS : ACHIEVEMENT_TIER_REWARDS [15, 40, 100, 250, 600] · calendrier 40/80/150 · FACTEUR_DEFIS_GRIFFES 1. GARDÉS : primes ×0,9,
+packs du shop ×0,5, éléments ±15 %, combat à égalité. NOUVEAU (demande) : au chapitre 1, 2 créatures combattent dès qu'on en a 2
+(combattantsPourEtape : exception ≤ étape 10). Étapes 11-40 RECALÉES sur le calculateur (deck plus haut de 4 à 6 niveaux) :
+NIVEAUX_ETAPES 11 → 21 · 20 → 32 · 25 → 39 · 30 → 45 · 40 → 57 (boss 40 = Runicor + Aquamira + Brontobloc évolués, 50 %).
+MESURÉ (1er essai) : l'auteur (actif, précis) 79-92 %, boss 63-78 % ; 🟥 joueur normal 3-54 % (3 % aux étapes 25 et 30) — l'écart
+actif/normal s'est creusé (succès et calendrier profitent surtout aux actifs). À AJUSTER après le test de l'auteur (piste :
+caler sur un profil entre actif et normal). GRIFFES_PAR_COMBAT [14, 65, 264, 490, 495, 572]. 103 contrôles verts, 153 sabotages
+prouvés (TROIS morceaux : 0-52 114 s, 52-104 160 s, 104-153 69 s), taps 20/20.

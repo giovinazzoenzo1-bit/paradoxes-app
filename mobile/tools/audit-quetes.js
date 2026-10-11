@@ -5198,14 +5198,16 @@ function auditNiveauMax() {
     }
   }
   for (let n = 1; n < 230; n++) if (K.niveauEnnemi(n + 1) < K.niveauEnnemi(n)) { pb.push(`étape ${n + 1} : ennemis niveau ${K.niveauEnnemi(n + 1)} < ${K.niveauEnnemi(n)} à l'étape ${n} (jamais de baisse)`); break; }
-  for (const n of [5, 15, 25]) if (K.combattantsPourEtape(n) !== K.equipeEnnemie(n).length) pb.push(`étape ${n} : combat pas à égalité`);
+  for (const n of [15, 25]) if (K.combattantsPourEtape(n) !== K.equipeEnnemie(n).length) pb.push(`étape ${n} : combat pas à égalité`);
+  if (K.combattantsPourEtape(5) !== 2) pb.push("chapitre 1 : 2 créatures doivent pouvoir combattre (demande de l'auteur du 11/10)");
   // Baisses de Griffes et éléments (décisions de l'auteur du 11/10, calculateur de Griffes).
   {
     const Dl = load('dailyLogic');
-    if (JSON.stringify(Dl.ACHIEVEMENT_TIER_REWARDS) !== JSON.stringify([4, 10, 25, 60, 150])) pb.push('succès : les paliers ne valent plus 4 / 10 / 25 / 60 / 150 Griffes (×0,25, décision du 11/10)');
+    // 11/10 (soir) : succès, calendrier et défis REMIS comme avant (l'auteur parlait des gains des étapes) ; primes ×0,9 gardées.
+    if (JSON.stringify(Dl.ACHIEVEMENT_TIER_REWARDS) !== JSON.stringify([15, 40, 100, 250, 600])) pb.push('succès : les paliers ne valent plus 15 / 40 / 100 / 250 / 600 Griffes (remis le 11/10 au soir)');
     const cal = Dl.DAILY_CALENDAR.filter((c) => c.type === 'griffes').map((c) => c.amount).join('/');
-    if (cal !== '20/40/75') pb.push(`calendrier : ${cal} Griffes au lieu de 20/40/75 (×0,5, décision du 11/10)`);
-    if (K.FACTEUR_DEFIS_GRIFFES !== 0.7 || K.FACTEUR_PRIMES !== 0.9) pb.push('défis ×0,7 et primes ×0,9 (décision du 11/10)');
+    if (cal !== '40/80/150') pb.push(`calendrier : ${cal} Griffes au lieu de 40/80/150 (remis le 11/10 au soir)`);
+    if (K.FACTEUR_DEFIS_GRIFFES !== 1 || K.FACTEUR_PRIMES !== 0.9) pb.push('défis ×1 (remis) et primes ×0,9 (décision du 11/10)');
     if (K.ELEMENT_ADVANTAGE_MULT !== 1.15 || K.ELEMENT_WEAKNESS_MULT !== 0.85) pb.push('éléments : ±15 % (décision du 11/10)');
   }
   {
