@@ -70,7 +70,8 @@ function niveauDebutant(l, creature) {
   for (let i = 1; i < l; i++) griffes += K.griffesReward(i);
   const plafond = L.niveauMaxCreature(l - 1); // aucune étape gagnée avant la 1re
   let niv = 1;
-  while (niv < plafond && L.levelUpCost(creature, niv) <= griffes) { griffes -= L.levelUpCost(creature, niv); niv++; }
+  // (11/10) une seule créature au chapitre 1 : niveau 10 au plus (règle du jeu, niveauMaxEquipe).
+  while (niv < Math.min(plafond, L.niveauMaxEquipe([niv])) && L.levelUpCost(creature, niv) <= griffes) { griffes -= L.levelUpCost(creature, niv); niv++; }
   return niv;
 }
 // Le PIRE taux de victoire parmi les 1res créatures possibles contre l'équipe que le JEU donne à

@@ -8,7 +8,7 @@
 // clickerLogic, donc pas de cycle d'imports.
 // Moteur des défis : cibles, progression, validation, tirage.
 // Les DÉFINITIONS vivent dans `questDefs.js`.
-import { niveauMaxCreature } from './clickerLogic';
+import { niveauMaxCreature, niveauMaxPourDefi } from './clickerLogic';
 import { DEFIS_ECRITS, OEUFS_PAR_GROUPE } from './defisEcrits';
 import { EGG_STAGES, QUEST_SEQUENCE, QUEST_POOL, QUEST_DEFS_VERSION, echelleGroupe, PAS_AVENTURE_PAR_GROUPE } from './questDefs';
 import { fmtQ, qtyQ, roundQuestTarget, describeAdventureLevel } from './questFormat';
@@ -1774,6 +1774,7 @@ export function plusRienAEtoiler(stats) {
 // « qu'on ne soit jamais bloqué par les défis »).
 export function resolveQuestTarget(quest, stats) {
   const t = resolveQuestTargetBrut(quest, stats);
-  if (quest && quest.metric === 'maxCreatureLevel') return Math.min(t, niveauMaxCreature((stats || {}).advLevelReached));
+  // (11/10) + niveau max selon le nombre de créatures (1 → 10, 2 → 20) : la 2e et la 3e viennent des œufs.
+  if (quest && quest.metric === 'maxCreatureLevel') return Math.min(t, niveauMaxCreature((stats || {}).advLevelReached), niveauMaxPourDefi((stats || {}).ownedCount));
   return t;
 }

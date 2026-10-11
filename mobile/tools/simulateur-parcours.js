@@ -134,10 +134,12 @@ function nouveauJoueur(graine, R = REGLAGES) {
       // elle entre dans l'équipe dès qu'elle devient plus forte (j.trio trie par force).
       const rangDe = (p) => RANG.indexOf(p.c.rarity);
       const moinsRare = Math.min(...trio.map(rangDe));
-      const rattrape = banc.find((p) => rangDe(p) > moinsRare && p.niv < plafond);
-      const membre = trio.filter((x) => x.niv < plafond).sort((x, y) => x.niv - y.niv)[0];
+      // (11/10) la règle DU JEU : niveau max selon l'équipe (1 créature → 10, 2 → 20, 3 → 30, puis toutes au palier).
+      const max = Math.min(plafond, L.niveauMaxEquipe(trio.map((p) => p.niv)));
+      const rattrape = banc.find((p) => rangDe(p) > moinsRare && p.niv < max);
+      const membre = trio.filter((x) => x.niv < max).sort((x, y) => x.niv - y.niv)[0];
       j.alterne = !j.alterne;
-      const t = rattrape && (j.alterne || !membre) ? rattrape : (membre || banc.filter((x) => x.niv < plafond)[0]);
+      const t = rattrape && (j.alterne || !membre) ? rattrape : (membre || banc.filter((x) => x.niv < max)[0]);
       // ⚠️ 26/09 : AUCUN plafond (le jeu n'en a pas) — le vrai joueur dépense
       // tout (test de l'auteur : Terracroc niveau 59 au niveau 26). L'ancien
       // plafond « niveau d'Aventure + 1 » cachait 19 000 Griffes non dépensées.
@@ -181,6 +183,9 @@ function nouveauJoueur(graine, R = REGLAGES) {
   };
   // Jouer le niveau l jusqu'à la victoire (énergie, filet de sécurité), ou le blocage.
   j.jouer = (l, k, s) => {
+    // (11/10) la règle DU JEU : étape 11 → 2 créatures, étape 21 → 3. Le calendrier des œufs du joueur simulé les donne à
+    // temps (2e vers l'étape 10, 3e vers 16) ; sinon c'est compté (s.attenteCreatures) pour que la mesure le montre.
+    if (possedees.length < L.creaturesRequisesPour(l)) { s.attenteCreatures = (s.attenteCreatures || 0) + 1; }
     for (;;) {
       if (j.energie <= 0) { avancerTemps(1 / R.energieParHeure); j.energie += 1; }
       j.energie -= 1; s.combats += 1;

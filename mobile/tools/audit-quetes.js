@@ -3504,7 +3504,9 @@ function auditParcours() {
   const L2 = load('clickerLogic');
   const fautes = [];
   // 03/10 : 60 joueurs (30 faisait échouer le contrôle AU HASARD près des bornes).
-  P.synthese(60).forEach((x) => {
+  // 11/10 : 120 joueurs (au lieu de 60) — MESURÉ, d'une population de 40 à l'autre le médian d'une Ascension varie de 4 points
+  // (A2 : 4,9 à 9,1, chance aux œufs) ; sur 60, un échantillon chanceux sortait de la fourchette sans que le jeu ait changé.
+  P.synthese(120).forEach((x) => {
     if (x.bloques) fautes.push({ ascension: x.a, probleme: x.bloques + ' joueur(s) gratuit(s) BLOQUÉ(S)' });
     // Option A (26/09) : calée sur les 10 % les plus malchanceux à 6/10 →
     // la moyenne monte vers 8/10 (MESURÉ 7,9 à 8,6) ; les malchanceux ≥ 3.
@@ -3612,15 +3614,21 @@ function auditDefaite() {
   // (0 ⇔ ta puissance ≥ conseillée) et MINIMAL (X niveaux suffisent, X − 1 non).
   const Cr = (id) => require('./audit-quetes.js').C.CREATURES.find((c) => c.id === id);
   const eqm = (liste) => liste.map(([id, niv, evo]) => ({ creature: Cr(id), ownedLevel: niv, evolutionTier: evo, equippedRunes: [] }));
-  for (const [lv, eq] of [[19, eqm([['bouldog', 34, 1], ['ventis', 13, 0]])], [46, eqm([['nocturis', 57, 2]])], [77, eqm([['brontobloc', 99, 2], ['bouldog', 89, 2], ['voltarel', 56, 2]])]]) {
+  // 11/10 : + des équipes FAIBLES — avec la difficulté du 10-11/10 les 3 cas d'origine gagnent (0 niveau manquant) et la
+  // minimalité n'était plus testée (sabotage « un niveau de trop » AVEUGLE). Alarme si plus aucun cas ne la teste.
+  let minimaliteTestee = false;
+  for (const [lv, eq] of [[19, eqm([['bouldog', 34, 1], ['ventis', 13, 0]])], [46, eqm([['nocturis', 57, 2]])], [77, eqm([['brontobloc', 99, 2], ['bouldog', 89, 2], ['voltarel', 56, 2]])],
+    [20, bas], [46, eqm([['nocturis', 30, 1], ['bouldog', 30, 1], ['ventis', 30, 1]])], [12, eqm([['bouldog', 6, 0], ['ventis', 6, 0]])]]) {
     const pa = K.puissanceAventure(eq, lv), cons = K.puissanceConseillee(lv), d = K.niveauxManquantsExact(eq, lv);
     doit(K.victoiresAuNiveau(eq, lv) === pa.victoires, 'niveau ' + lv + ' : la défaite ne mesure pas comme l\'aperçu');
     doit((d === 0) === (pa.puissance >= cons), 'niveau ' + lv + ' : « ' + d + ' niveaux manquants » contredit la puissance affichée (' + pa.puissance + ' / ' + cons + ')');
     if (d > 0 && d < K.MANQUE_MAX) {
       doit(K.puissanceAventure(K.monterEquipe(eq, d), lv).puissance >= cons, 'niveau ' + lv + ' : ' + d + ' niveaux de plus ne suffisent pas');
       doit(K.puissanceAventure(K.monterEquipe(eq, d - 1), lv).puissance < cons, 'niveau ' + lv + ' : ' + d + " n'est pas le minimum (" + (d - 1) + ' suffisent)');
+      minimaliteTestee = true;
     }
   }
+  doit(minimaliteTestee, "aucun cas ne teste la minimalité du diagnostic (choisir une équipe plus faible)");
   const S = lire('CombatScreen.js'), A = lire('AdventureScreen.js'), Cl = lire('ClickerScreen.js');
   doit(S.includes("manque={outcome === 'lose' ? manqueExact : 0}") && S.includes('const d = niveauxManquantsExact(team, levelNumber, { filetBaisse });'), "l'écran de fin ne calcule plus le retard sur la mesure exacte");
   doit(S.includes("presque={outcome === 'lose' && presqueGagne(opponents)}"), "l'écran de fin ne calcule plus le « presque »");
@@ -3841,7 +3849,16 @@ function auditVerrouAventure() {
   doit(Av.includes('niveauMaxAscension={niveauMaxAventure(ascensionCount)}'), "le plafond n'est pas calculé sur le compteur d'Ascensions réel");
   doit(Av.includes("const state = levelNum > niveauMaxAscension && levelNum <= currentUnlockedLevel ? 'ascension'"), 'la carte ne montre pas le verrou d\'Ascension');
   doit(Av.includes('if (outcome === \'win\' && goNext && nextLevel > niveauMaxAscension) {'), '« Niveau suivant » passe le verrou');
-  doit(Av.includes('if (levelPreview > niveauMaxAscension) { setLevelPreview(null); montrerVerrouAscension(); return; }\n            if (!onStartBattle()) return;'), 'le lancement du combat passe le verrou (ou coûte de l\'énergie avant de refuser)');
+  // 11/10 : entre le verrou d'Ascension et la dépense d'énergie se trouve maintenant le verrou des créatures requises
+  // (étape 11 → 2, étape 21 → 3, règle de l'auteur). On vérifie l'ORDRE : les deux verrous AVANT l'énergie, même bloc.
+  {
+    const iA = Av.indexOf('if (levelPreview > niveauMaxAscension) { setLevelPreview(null); montrerVerrouAscension(); return; }');
+    const iC = Av.indexOf('const requis = creaturesRequisesPour(levelPreview);', iA);
+    const iE = Av.indexOf('if (!onStartBattle()) return;', iA);
+    doit(iA >= 0 && iE > iA && iE - iA < 900, 'le lancement du combat passe le verrou (ou coûte de l\'énergie avant de refuser)');
+    doit(iC > iA && iC < iE, "le lancement du combat ne vérifie plus les créatures requises (étape 11 : 2, étape 21 : 3) avant l'énergie");
+    doit(Av.includes('            if ((owned || []).length < requis) {'), "le lancement du combat ne refuse plus une étape faute de créatures");
+  }
   // (5) mesure publiée (chargement + étoiles) et lue dans les DEUX photos de stats
   doit((Av.match(/trackMax\('troisEtoilesJusquA'/g) || []).length === 2, "la mesure « 3 étoiles jusqu'au niveau N » n'est pas publiée au chargement ET aux étoiles");
   doit((lire('src/screens/games/ClickerScreen.js').match(/troisEtoilesJusquA: lifetimeStats\.troisEtoilesJusquA \|\| 0,/g) || []).length === 2, "la mesure n'est pas dans les DEUX photos de statistiques des défis");
@@ -4960,7 +4977,10 @@ function auditGardienGriffes() {
     const r = K.deckApresEffortEquitable(deckAuteur, 114);
     let cout = 0; r.membres.forEach((m, i) => { for (let n = deckAuteur[i].ownedLevel; n < m.ownedLevel; n++) cout += C.levelUpCost(m.creature, n); });
     if (cout > 114) pb.push(`répartition équitable : ${cout} Griffes dépensées pour un budget de 114`);
-    if (r.membres.some((m, i) => m.ownedLevel <= deckAuteur[i].ownedLevel)) pb.push('répartition équitable : une créature ne reçoit aucun niveau');
+    // 11/10 : une créature déjà au niveau max de l'équipe (niveauMaxEquipe) ne reçoit rien, c'est la règle de l'auteur.
+    const maxAuteur = C.niveauMaxEquipe(deckAuteur.map((x) => x.ownedLevel));
+    if (r.membres.some((m, i) => deckAuteur[i].ownedLevel < maxAuteur && m.ownedLevel <= deckAuteur[i].ownedLevel)) pb.push('répartition équitable : une créature ne reçoit aucun niveau');
+    if (r.membres.some((m, i) => m.ownedLevel > Math.max(maxAuteur, deckAuteur[i].ownedLevel))) pb.push("répartition équitable : une créature dépasse le niveau max de l'équipe");
     // 10/10 (niveaux réels : +5 %/niveau, stats x10, puissance affichée à l'échelle 1) : 1 613 → 1 898.
     // 10/10 (fin des coups critiques : coup moyen ×2,21 → ×0,71 dans la puissance affichée) : 1 898 → 1 096.
     // 10/10 (le coût d'un niveau suit la prime de victoire) : 1 096 → 1 114.
@@ -5099,6 +5119,21 @@ function auditNiveauMax() {
   const pb = [];
   const L = load('clickerLogic'); const K = load('combatLogic'); const Q = load('questLogic');
   if (L.niveauMaxCreature(0) !== Infinity || L.niveauMaxCreature(200) !== Infinity) pb.push("un niveau maximum est revenu (décision de l'auteur du 10/10 : aucun)");
+  // ── 11/10 — RÈGLE DE L'AUTEUR : niveau max selon le DECK (1 créature → 10, 2 → 20, 3 → 30, puis toutes au palier) ──
+  const voulu = [[[5], 10], [[12, 3], 20], [[25, 12, 8], 30], [[35, 29, 31], 30], [[35, 30, 30], 40], [[47, 40, 41], 50]];
+  for (const [deck, max] of voulu) if (L.niveauMaxEquipe(deck) !== max) pb.push(`niveau max du deck [${deck}] : ${L.niveauMaxEquipe(deck)} au lieu de ${max} (règle de l'auteur)`);
+  if (L.creaturesRequisesPour(10) !== 1 || L.creaturesRequisesPour(11) !== 2 || L.creaturesRequisesPour(21) !== 3 || L.creaturesRequisesPour(80) !== 3) pb.push("créatures requises : étape 11 → 2, étape 21 → 3 (règle de l'auteur)");
+  // Un défi « monte une créature au niveau N » ne dépasse jamais ce que le joueur PEUT atteindre (1 créature → 10).
+  const tUne = Q.resolveQuestTarget({ metric: 'maxCreatureLevel', step: 15, mode: 'absolute' }, { maxCreatureLevel: 8, advLevelReached: 8, ownedCount: 1 });
+  if (!(tUne <= 10)) pb.push(`défi « monte une créature au niveau N » avec 1 créature : cible ${tUne} au-delà du niveau max 10 (l'œuf serait bloqué)`);
+  {
+    const fs = require('fs'), path = require('path');
+    const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+    if (!Av.includes('if (ownedEntry.level >= niveauMaxEquipe(niveauxDuDeck)) {')) pb.push("la montée de niveau n'applique plus le niveau max selon le deck");
+    if (!Av.includes('noteMax={raisonNiveauMax(niveauxDuDeck)}')) pb.push('la fiche ne dit plus pourquoi le niveau est bloqué');
+    const Sim = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
+    if (!Sim.includes('L.niveauMaxEquipe(trio.map((p) => p.niv))')) pb.push('le joueur simulé ignore le niveau max selon le deck (mesures fausses)');
+  }
   for (const n of [5, 15, 40, 90, 130, 170, 210]) {
     const taille = Math.min(3, Math.max(1, Math.ceil(n / 10))); const cout = L.levelUpCost(C.CREATURES[0], n); const prime = K.griffesReward(n);
     const r = (cout * taille) / prime;

@@ -271,6 +271,13 @@ const SABOTAGES = [
     remplace('budgetGardienRef.current = primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * primesProchainsNiveaux(')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "Gardien de l'œuf 2 de nouveau NON calé (0 % mesuré chez l'auteur)",
     remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
+  // 11/10 : niveau max selon le deck et créatures requises (règle de l'auteur).
+  ['auditNiveauMax', F.clicker, "le niveau max selon le deck disparaît (une seule créature porte de nouveau tout)",
+    remplace('  if (n.length < 3) return 10 * Math.max(1, n.length);\n  return Math.max(30, 10 * (Math.floor(Math.min(...n) / 10) + 1));', '  return Infinity;')],
+  ['auditNiveauMax', F.clicker, "un défi d'œuf peut demander un niveau impossible avec 1 créature (blocage pour toujours)",
+    remplace('  return n < 3 ? 10 * n : Infinity;', '  return Infinity;')],
+  ['auditVerrouAventure', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "l'étape 11 se lance avec une seule créature",
+    remplace('            if ((owned || []).length < requis) {', '            if (false) {')],
   // 11/10 : l'action de l'ennemi (sort, ultime) se voit — sinon « il passe son tour » (retour de l'auteur).
   ['auditJournalDev', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "l'ultime de l'ennemi n'est plus annoncé (on croit qu'il passe son tour)",
     remplace("setSwitchMessage(`💥 ${ae.nom} lance son ULTIME : ${ae.competence.name} !`);", 'void 0;')],
@@ -281,9 +288,9 @@ const SABOTAGES = [
     remplace(', targetIdx, multiplicateurSort(verdictCoup));', ', targetIdx);')],
   // 10/10 : le Gardien et le niveau max (effort plafonné, plan plafonné, menu qui le dit).
   ['auditGardienGriffes', F.combat, "effort du Gardien sans niveau max : il suppose des niveaux inatteignables",
-    remplace('for (let n = 0; n < 500; n++) { if (x.ownedLevel >= plafond) break; const c = levelUpCost', 'for (let n = 0; n < 500; n++) { const c = levelUpCost')],
+    remplace('for (let n = 0; n < 500; n++) { if (x.ownedLevel >= Math.min(plafond, niveauMaxEquipe(m.map((y) => y.ownedLevel)))) break; const c = levelUpCost', 'for (let n = 0; n < 500; n++) { const c = levelUpCost')],
   ['auditGardienGriffes', F.combat, "plan du Gardien au-delà du niveau max (« Aegisolar +4 » impossible)",
-    remplace('prec.forEach((x, i) => { if (x.ownedLevel >= plafond) return; const g = puissanceAffichee', 'prec.forEach((x, i) => { const g = puissanceAffichee')],
+    remplace('prec.forEach((x, i) => { if (x.ownedLevel >= maxEquipe) return; const g = puissanceAffichee', 'prec.forEach((x, i) => { const g = puissanceAffichee')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le menu calcule le plan sans le niveau max actuel",
     remplace(', 0.8, 40, niveauMaxCreature((lifetimeStats || {}).advLevelReached || 0));', ', 0.8, 40);')],
   ['auditGardienGriffes', F.combat, "effort du Gardien passé à 3 combats de Griffes : un mur",

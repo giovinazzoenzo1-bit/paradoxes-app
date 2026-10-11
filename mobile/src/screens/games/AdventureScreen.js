@@ -388,7 +388,7 @@ import {
   griffesCoinCost,
   GRIFFES_COIN_PACK,
   taillePackGriffes,
-  achatsGriffesPiecesRestants, GRIFFES_PIECES_MAX_PAR_ASCENSION, niveauMaxCreature,
+  achatsGriffesPiecesRestants, GRIFFES_PIECES_MAX_PAR_ASCENSION, niveauMaxCreature, niveauMaxEquipe, raisonNiveauMax, creaturesRequisesPour,
 } from '../../games/clicker/clickerLogic';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import { niveauMaxAventure } from '../../games/clicker/questLogic';
@@ -1019,8 +1019,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     const creature = CREATURES.find((c) => c.id === creatureId);
     const ownedEntry = ownedMap[creatureId];
     if (!creature || !ownedEntry) return;
-    // (09/10) Niveau maximum : niveau d'Exploration le plus haut gagné + 5.
-    if (ownedEntry.level >= niveauMaxCreature(currentUnlockedLevelRef.current - 1)) { jouerSon('refus', sonsAventure !== false); return; }
+    // (11/10) Niveau maximum selon le DECK (règle de l'auteur) : 1 créature → 10, 2 → 20, 3 → 30, puis toutes au palier.
+    if (ownedEntry.level >= niveauMaxEquipe(niveauxDuDeck)) { jouerSon('refus', sonsAventure !== false); return; }
     const cost = levelUpCost(creature, ownedEntry.level);
     if (griffes < cost) return;
     setGriffes((g) => g - cost);
@@ -1174,6 +1174,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
 
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
+  // (11/10) Niveaux des créatures du DECK : le niveau max de TOUTES les créatures en dépend (niveauMaxEquipe).
+  const niveauxDuDeck = deck.filter(Boolean).map((id) => (ownedMap[id] ? ownedMap[id].level || 1 : 0)).filter((x) => x > 0);
 
   const hasEmptySlot = deck.some((id) => !id);
 
@@ -1188,7 +1190,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
         griffes={griffes}
         onEvolve={() => handleEvolve(detailCreatureId, ownedMap[detailCreatureId].evolutionTier || 0, ownedMap[detailCreatureId].level)}
         onLevelUp={() => handleLevelUp(detailCreatureId)}
-        niveauMax={niveauMaxCreature(currentUnlockedLevel - 1)}
+        niveauMax={niveauMaxEquipe(niveauxDuDeck)}
+        noteMax={raisonNiveauMax(niveauxDuDeck)}
         ownedRunes={ownedRunes}
         onEquipRune={(runeId) => equipRune(runeId, detailCreatureId)}
         onUnequipRune={unequipRune}
@@ -1783,7 +1786,7 @@ function BoutiqueGriffes({ griffes, diamants = 0, offres, onFermer }) {
   );
 }
 
-function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack, onPlusGriffes, niveauMax = null }) {
+function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, ownedRunes, onEquipRune, onUnequipRune, onBack, onPlusGriffes, niveauMax = null, noteMax = null }) {
   // (09/10) Niveau maximum atteint : le médaillon l'annonce, la note dit comment aller plus loin.
   const auPlafond = niveauMax != null && owned && owned.level >= niveauMax;
   const [runePickerSlot, setRunePickerSlot] = useState(null);
@@ -1925,7 +1928,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
 
       {/* ── Bas : histoire, médaillon de niveau, évolution ── */}
       <View style={[R(FICHE.histoire, 'droite'), { justifyContent: 'center' }]}>
-        <Text style={[styles.ficheNote, { fontSize: police(0.029) }]} numberOfLines={2}>{auPlafond ? `🔒 Niveau max ${niveauMax} : gagne des niveaux d'Exploration pour aller plus loin.` : note}</Text>
+        <Text style={[styles.ficheNote, { fontSize: police(0.029) }]} numberOfLines={2}>{auPlafond ? (noteMax || `🔒 Niveau max ${niveauMax}.`) : note}</Text>
         <Text style={[styles.ficheHistoire, { fontSize: police(0.025) }]} numberOfLines={3}>{creature.lore}</Text>
       </View>
       <MedaillonNiveau style={R(FICHE.medaillon, 'droite')} haut={auPlafond ? 'NIVEAU MAX' : `NIVEAU ${owned.level + 1}`} cout={levelCost}
@@ -2801,6 +2804,13 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
             // c'est bien "1 vie", pas "1 vie par victoire") — bloque le
             // lancement si le joueur n'en a plus.
             if (levelPreview > niveauMaxAscension) { setLevelPreview(null); montrerVerrouAscension(); return; }
+            // (11/10, règle de l'auteur) étape 11 : 2 créatures ; étape 21 : 3 — pour ne pas foncer au début.
+            const requis = creaturesRequisesPour(levelPreview);
+            if ((owned || []).length < requis) {
+              setLevelPreview(null);
+              afficherDialogue(`🔒 ${requis} créatures requises`, `Il te faut ${requis} créatures pour l'étape ${levelPreview}.\n\nFais éclore ton prochain œuf pour continuer !`);
+              return;
+            }
             if (!onStartBattle()) return;
             setActiveBattle({ levelNumber: levelPreview });
           }}

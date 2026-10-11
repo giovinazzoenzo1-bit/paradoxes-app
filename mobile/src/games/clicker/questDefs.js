@@ -24,6 +24,7 @@
 //
 import {
   niveauMaxCreature,
+  niveauMaxPourDefi,
   AUTOCLICKERS,
   SANCTUARY_MAX_LEVEL,
   UPGRADE_ITEMS,
@@ -36,7 +37,8 @@ import {
 } from './clickerLogic';
 // (09/10) Un défi « monte une créature au niveau N » n'est tiré que si la meilleure créature a encore de la marge
 // sous le niveau maximum (niveau d'Exploration gagné + 5) ; sa cible y est ramenée (resolveQuestTarget).
-const aDeLaMargeDeNiveau = (s) => (s.maxCreatureLevel || 0) < niveauMaxCreature(s.advLevelReached);
+// (11/10) + niveau max selon le nombre de créatures (1 → 10, 2 → 20, règle de l'auteur).
+const aDeLaMargeDeNiveau = (s) => (s.maxCreatureLevel || 0) < Math.min(niveauMaxCreature(s.advLevelReached), niveauMaxPourDefi(s.ownedCount));
 import { fmtQ, qtyQ, describeAdventureLevel } from './questFormat';
 import { questBudget } from './questBudget';
 

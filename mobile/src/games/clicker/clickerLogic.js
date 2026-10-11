@@ -445,6 +445,39 @@ export function niveauMaxCreature(niveauGagne) {
   return Infinity;
 }
 
+// ---- NIVEAU MAX SELON LE DECK (11/10, règle de l'auteur : « obliger à monter toutes les créatures du deck ») ----
+// 1 créature dans le deck → niveau 10 max ; 2 → 20 ; 3 → 30 ; ensuite il faut que TOUTES atteignent 30 pour aller
+// jusqu'à 40, toutes 40 pour 50, etc. S'applique à TOUTES les créatures (banc compris : sinon on contournerait en
+// montant hors du deck). Retirer une créature du deck BAISSE le max (pas de triche). Rien n'est retiré à une créature
+// déjà au-dessus. (Remplace, pour la montée de niveau, l'ancien niveauMaxCreature lié aux étapes, resté à Infinity.)
+export function niveauMaxEquipe(niveauxDuDeck) {
+  const n = (niveauxDuDeck || []).map(Number).filter((x) => x > 0);
+  if (n.length < 3) return 10 * Math.max(1, n.length);
+  return Math.max(30, 10 * (Math.floor(Math.min(...n) / 10) + 1));
+}
+// Ce que dit la fiche quand une créature est au niveau max (11/10).
+export function raisonNiveauMax(niveauxDuDeck) {
+  const n = (niveauxDuDeck || []).map(Number).filter((x) => x > 0), max = niveauMaxEquipe(n);
+  return n.length < 3
+    ? `🔒 Niveau max ${max} : ajoute une ${n.length + 1}e créature à ton deck pour aller plus loin.`
+    : `🔒 Niveau max ${max} : monte toutes les créatures de ton deck au niveau ${max} pour aller plus loin.`;
+}
+// Défis « monte une créature au niveau N » : jamais au-delà de ce que le joueur PEUT atteindre (sinon un défi d'œuf
+// bloquerait pour toujours : 1 créature = niveau 10 max, et la 2e vient de l'œuf). Avec 3 créatures, le max dépend de la
+// plus faible, qu'on peut toujours monter : pas de plafond ici.
+export function niveauMaxPourDefi(nbCreatures) {
+  const n = Math.max(1, Math.floor(Number(nbCreatures) || 1));
+  return n < 3 ? 10 * n : Infinity;
+}
+// ---- CRÉATURES REQUISES pour une étape (11/10, règle de l'auteur : « que les joueurs ne grindent pas trop vite les
+// étapes au début ») : étape 11 → 2 créatures, étape 21 → 3. Rien de plus ensuite.
+export const CREATURES_REQUISES = [[21, 3], [11, 2]];
+export function creaturesRequisesPour(etape) {
+  const e = Math.max(1, Math.floor(Number(etape) || 1));
+  const r = CREATURES_REQUISES.find(([depuis]) => e >= depuis);
+  return r ? r[1] : 1;
+}
+
 // ---- Niveau de NAISSANCE d'une créature qui ÉCLÔT (10/10, décision de l'auteur) ----
 // 80 % du niveau de la 3e meilleure créature du joueur (en niveau) ; tant qu'il en a moins de 3, de sa meilleure (« ma 2e
 // naîtra avec le même % mais de la première, pareil pour la 3e »). Légendaire 60 %, mythique 45 % (« pour ne pas que ce
@@ -480,7 +513,10 @@ export function primeDeVictoire(levelNumber) {
 // équipe) : 93 % (+1) · 74 % (+1) · 95 % (0) · 88 % (−1) · 79 % (0) · 77 % (−3) · 91 % (−1) · 80 % (−2), 0 bloqué. La tranche
 // 145-185 (A4) est basse : le joueur y reçoit ses légendaires et mythiques, nées à 60 et 45 %, qu'il doit remonter.
 // Chapitre 1 à 0,8 (comme avant) : à 1,2, le débutant ne montait plus assez avec ses 40 Griffes (57-68 % aux étapes 3, 5, 10).
-export const COUT_PRIME = [[10, 0.8], [20, 0.9], [60, 1.2], [101, 1.3], [144, 1.1], [185, 0.55], [Infinity, 1.1]];
+// 11/10 (niveau max selon le deck) : MESURÉ sur 120 joueurs avec [.. 101 : 1,3 · 144 : 1,1 · .. · au-delà : 1,3] → médian
+// A2 5,6 · A3 5,7 · A5 5,8 (un peu dur ; le « 10 sur 10 » de l'A5 venait d'UNE population chanceuse de 40) → adouci.
+// Puis (cascade d'une tranche sur la suivante) A3 8,4 · A4 9,8 · A5 8,9 → A3 1,05 · A4 0,75 · A5 1,2 → A5 4,9 → A5 0,95.
+export const COUT_PRIME = [[10, 0.8], [20, 0.9], [60, 1.2], [101, 1.15], [144, 1.05], [185, 0.75], [Infinity, 0.95]];
 export function partCoutPrime(level) {
   const n = Math.max(1, Math.floor(level || 1));
   return (COUT_PRIME.find(([max]) => n <= max) || COUT_PRIME[COUT_PRIME.length - 1])[1];

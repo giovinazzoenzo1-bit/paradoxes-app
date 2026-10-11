@@ -3190,3 +3190,28 @@ taps 20/20 ; 69 fichiers.
 2. Butin de victoire : « +N 🐾 Griffes · +1 ✨ Poudre » (plaque élargie 0,36 → 0,62, VU sur le banc de capture).
 Contrôles : auditJournalDev (annonce de l'ultime ennemi, effets de ses sorts) + sabotage → 142 prouvés ; verifier-defis
 103/103 ; taps 20/20.
+
+
+## 11/10 — NIVEAU MAX SELON LE DECK + CRÉATURES REQUISES (règles de l'auteur, publiées)
+
+DÉCISIONS : « obliger à monter toutes les créatures du deck » → niveauMaxEquipe(niveaux du deck) : 1 créature → 10, 2 → 20,
+3 → 30, puis toutes au palier (toutes à 30 → 40, à 40 → 50…), pour TOUTES les créatures (banc compris ; retirer une créature
+du deck BAISSE le max) ; « que les joueurs ne grindent pas trop vite au début » → creaturesRequisesPour : étape 11 → 2
+créatures, étape 21 → 3, rien ensuite (l'auteur a refusé un verrou à chaque dizaine). niveauMaxCreature (lié aux étapes)
+reste à Infinity.
+CÂBLAGE : handleLevelUp (refus si niveau ≥ niveauMaxEquipe(niveauxDuDeck)) ; fiche : noteMax = raisonNiveauMax (« ajoute
+une 3e créature à ton deck… » / « monte toutes les créatures de ton deck au niveau 30… ») ; lancement d'une étape : verrou
+des créatures APRÈS celui d'Ascension et AVANT l'énergie (« 🔒 2 créatures requises… Fais éclore ton prochain œuf ») ;
+Gardien : deckApresEffortEquitable et planPourChance appliquent niveauMaxEquipe à chaque pas ; défis « monte une créature
+au niveau N » : niveauMaxPourDefi(ownedCount) (1 → 10, 2 → 20 ; jamais un défi d'œuf impossible) ; joueur simulé et
+débutant de l'outil : même règle. MESURÉ : 0 combat lancé sans assez de créatures (40 parties ; 2e créature vers l'étape 10,
+3e vers 16).
+ÉQUILIBRE (coûts réglés de nouveau, table des ennemis estimée sur 120 joueurs) : COUT_PRIME [10 : 0,8 · 20 : 0,9 · 60 : 1,2 ·
+101 : 1,15 · 144 : 1,05 · 185 : 0,75 · au-delà : 0,95] → 120 joueurs : médian A0 7,8 · A1 6,3 · A2 6,4 · A3 8,1 · A4 6,3 ·
+A5 6,6 ; 10e rang 3,5-4,6 ; 0 bloqué. ⚠️ Une tranche de coût se répercute sur les suivantes (A4 0,55 → 0,75 a fait passer
+l'A5 de 8,9 à 4,9) : régler de la PREMIÈRE à la dernière. ⚠️ Sur 40 joueurs, le médian d'une Ascension varie de 4 points
+d'une population à l'autre (chance aux œufs) → auditParcours mesure désormais sur 120 joueurs.
+CONTRÔLES : auditNiveauMax (valeurs de la règle, créatures requises, défi jamais impossible, câblage écran et simulateur),
+auditVerrouAventure (ordre des verrous + condition de refus), auditDefaite (équipes faibles ajoutées + alarme si plus aucun
+cas ne teste la minimalité — sabotage « un niveau de trop » était AVEUGLE) ; sabotages du Gardien remis sur les nouvelles
+lignes ; 3 nouveaux sabotages → 145 prouvés (253 s : la suite approche la limite de 300 s d'une commande) ; taps 20/20.
