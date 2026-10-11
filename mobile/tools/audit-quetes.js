@@ -5162,13 +5162,47 @@ function auditFenetres() {
   const fs = require('fs'), path = require('path');
   const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
   // 11/10 (spec de l'auteur) : poche + récupérables (défis, succès, calendrier) + file d'attente.
-  if (!Av.includes('const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(d0, membres, budget, av);'))
+  if (!Av.includes('const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { coup });'))
     pb.push('la photo ne compte plus toutes les Griffes du joueur (poche, récupérables, file d\'attente)');
   if (!Av.includes('definirNiveauxJoueur(niv, dif);')) pb.push("l'écran ne pose plus les niveaux du joueur (les ennemis reviennent à la table)");
   if (!/JSON\.stringify\(\{[^)]*fenetres, avantage \}\)/.test(Av)) pb.push("les photos et l'avantage ne sont plus sauvegardés");
   if (!Av.includes('⚔️ {difficulteAffichee(levelNumber)}/5')) pb.push("l'aperçu n'affiche plus la difficulté");
+  // 11/10 (spec de l'auteur) : précision mesurée sur la fenêtre précédente, recalcul quand une créature arrive.
+  if (!Av.includes('(await lireJournalCombats()).filter((c) => c && c.mode === \'aventure\' && c.niveau >= debutFenetre(k - 1) && c.niveau < debutFenetre(k))'))
+    pb.push("la photo ne mesure plus la précision du joueur sur les 5 étapes précédentes");
+  if (!Av.includes('const recalcul = !!photo && membres.length > nbPhoto;')) pb.push("plus de recalcul quand une créature rejoint le deck en cours de fenêtre");
+  // Précision : référence = 1, plafond = l'auteur, plancher ; effet MESURÉ en vrais combats pour un joueur précis.
+  if (Math.abs(K.facteurPrecision(null) - 1) > 1e-9 || Math.abs(K.facteurPrecision(K.COUP_REFERENCE) - 1) > 1e-9) pb.push('précision : le joueur de référence doit valoir 1');
+  if (!(K.facteurPrecision(0.873) > 1.03) || K.facteurPrecision(5) !== K.facteurPrecision(0.875) || K.facteurPrecision(0.1) !== K.facteurPrecision(0.5))
+    pb.push("précision : effet, plafond (niveau de l'auteur, 75 % de parfaits) ou plancher cassés");
+  {
+    const parP = { 4: [0, 0], 5: [0, 0] };
+    // 6 équipes (MESURÉ : avec 3, la variance d'équipe donnait 66 % au cran 4 ; avec 6 : 56 / 48 % selon les fenêtres).
+    const PANEL6 = [...PANEL, ['pyrosile', 'caraploof', 'ventis'], ['glyphon', 'luxorbe', 'bouldog'], ['terracroc', 'brontobloc', 'malefix']];
+    for (const d0 of [16, 26, 36]) {
+      const niv = decks[d0 - 2].deck; const evo = (K.equipeEnnemie(d0)[0] || {}).evolutionTier || 0;
+      for (const ids of PANEL6) {
+        const membres = niv.map((l, i) => ({ creature: g(ids[i]), ownedLevel: l, evolutionTier: evo, equippedRunes: [] }));
+        K.definirNiveauxJoueur(K.photoFenetre(d0, membres, 0, 0, { coup: 0.873 }));
+        let budget = 0;
+        for (let n = d0; n < d0 + 5; n++) {
+          const apres = K.deckApresEffortEquitable(membres.slice(0, Math.min(membres.length, K.combattantsPourEtape(n))), budget).membres;
+          const d = K.difficulteEtape(n);
+          if (d >= 4) {
+            const eq = apres.map((m) => ({ creature: m.creature, stats: K.combatStatsForCreatureTyped(m.creature, m.ownedLevel, m.evolutionTier, []) }));
+            const EE = K.equipeEnnemie(n).map((m) => ({ creature: m.creature, stats: K.statsForOpponentCreatureTyped(m.creature, n) }));
+            let sd = (n * 104729 + ids.join('').length) >>> 0; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
+            for (let i = 0; i < 20; i++) { parP[d][1]++; if (K.simulerCombat(eq, EE, { alea, politique: K.choixJoueur, erreurMs: 30 }).gagne) parP[d][0]++; }
+          }
+          budget += K.griffesReward(n);
+        }
+        K.definirNiveauxJoueur(null);
+      }
+    }
+    for (const d of [4, 5]) { const m = parP[d][0] / parP[d][1]; if (Math.abs(m - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`joueur précis (75 % de parfaits) : cran ${d} à ${Math.round(100 * m)} % pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % — la précision n'est plus compensée`); }
+  }
   const Sim = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
-  if (!Sim.includes('Object.assign(j.niveauxF, K.photoFenetre(K.debutFenetre(kf), membres, j.griffes));') || !Sim.includes('finally { K.definirNiveauxJoueur(null); }')) pb.push('le joueur simulé ne vit plus les fenêtres (mesures fausses) ou les fait fuir vers les autres mesures');
+  if (!Sim.includes('Object.assign(j.niveauxF, K.photoFenetre(depart, membres, j.griffes, 0, { coup: coupSimule(R.erreurMs || K.JAUGE_ERREUR_REFERENCE_MS) }));') || !Sim.includes('finally { K.definirNiveauxJoueur(null); }')) pb.push('le joueur simulé ne vit plus les fenêtres (mesures fausses) ou les fait fuir vers les autres mesures');
   return pb;
 }
 module.exports.auditFenetres = auditFenetres;

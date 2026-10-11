@@ -32,6 +32,14 @@
 const A = require('./audit-quetes.js');
 const K = A.load('combatLogic');
 const L = A.load('clickerLogic');
+// Coup moyen à la jauge d'un joueur simulé de précision `erreurMs` (mesuré une fois, mis en cache) — pour la photo des fenêtres.
+const COUPS = new Map();
+function coupSimule(erreurMs) {
+  if (COUPS.has(erreurMs)) return COUPS.get(erreurMs);
+  const cr = A.C.CREATURES.find((c) => c.id === 'bouldog'); let s = 7; const alea = () => { s = (s * 1103515245 + 12345) >>> 0; return s / 4294967296; };
+  const v = { parfait: 0, bien: 0, rate: 0, absent: 0 }; for (let i = 0; i < 4000; i++) v[K.verdictJaugeTire(cr, alea, erreurMs)]++;
+  const c = K.coupMoyenDesVerdicts(v); COUPS.set(erreurMs, c); return c;
+}
 const C = A.C;
 
 // Le rythme de l'Aventure LU DANS LES DÉFIS (26/09) — une seule source :
@@ -184,12 +192,14 @@ function nouveauJoueur(graine, R = REGLAGES) {
   // Jouer le niveau l jusqu'à la victoire (énergie, filet de sécurité), ou le blocage.
   j.jouer = (l, k, s) => {
     // 11/10 — FENÊTRES (règle du jeu) : photo au 1er combat d'une fenêtre (trio + Griffes en poche), comme l'écran.
-    j.photos = j.photos || {}; j.niveauxF = j.niveauxF || {};
+    j.photos = j.photos || {}; j.niveauxF = j.niveauxF || {}; j.photoNb = j.photoNb || {};
     const kf = K.fenetreDe(l);
-    if (!j.photos[kf]) {
-      const membres = j.trio().map((p) => ({ creature: p.c, ownedLevel: p.niv, evolutionTier: p.evo || 0, equippedRunes: [] }));
-      Object.assign(j.niveauxF, K.photoFenetre(K.debutFenetre(kf), membres, j.griffes));
-      j.photos[kf] = true;
+    const membres = j.trio().map((p) => ({ creature: p.c, ownedLevel: p.niv, evolutionTier: p.evo || 0, equippedRunes: [] }));
+    // 11/10 : comme l'écran — précision du joueur (sa jauge) et recalcul des étapes restantes si une créature arrive.
+    if (!j.photos[kf] || membres.length > j.photoNb[kf]) {
+      const depart = j.photos[kf] ? l : K.debutFenetre(kf);
+      Object.assign(j.niveauxF, K.photoFenetre(depart, membres, j.griffes, 0, { coup: coupSimule(R.erreurMs || K.JAUGE_ERREUR_REFERENCE_MS) }));
+      j.photos[kf] = true; j.photoNb[kf] = membres.length;
     }
     K.definirNiveauxJoueur(j.niveauxF);
     try { return jouerEtape(l, k, s); } finally { K.definirNiveauxJoueur(null); } // jamais de fuite vers les autres mesures

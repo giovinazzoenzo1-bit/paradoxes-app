@@ -375,7 +375,7 @@ import { afficherDialogue } from '../../components/DialogueJeu';
 import { useSettings } from '../../context/SettingsContext';
 import { jouerSon, SON_CREATURE } from './sonsBoutique';
 import { useMusique } from './musique';
-import { finCombat } from './journalCombat';
+import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import { FenetreJeu, BoutonBois } from '../../components/FenetreJeu';
 import {
@@ -404,6 +404,7 @@ import {
   difficulteEtape,
   difficulteAffichee,
   TAILLE_FENETRE,
+  coupMoyenDesVerdicts,
   POUDRE_PAR_VICTOIRE,
   POUDRE_PRIX,
   combatStatsForCreatureTyped,
@@ -782,27 +783,47 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // dépensées). Elle fixe le niveau des ennemis de ses 5 étapes (difficulté 1 → 5, moins l'avantage payant s'il est actif).
   // 11/10 (spec de l'auteur) : la photo compte les Griffes EN POCHE + RÉCUPÉRABLES (défis du jour et de la semaine terminés,
   // paliers de succès atteints, calendrier du jour non pris) + la FILE d'attente (réclamées, pas encore versées).
+  // + la PRÉCISION du joueur (coup moyen à la jauge sur les combats des 5 étapes précédentes ; à la 1re fenêtre : joueur moyen) ;
+  // + RECALCUL des étapes restantes quand une créature rejoint le deck en cours de fenêtre (ex. à l'étape 3 : étapes 3, 4, 5).
   useEffect(() => {
     if (!progressLoaded) return;
     const k = fenetreDe(currentUnlockedLevel);
-    if (fenetres[k]) return;
+    const photo = fenetres[k];
+    const membres = membresPourCombat(deck, owned, ownedRunes);
+    if (!membres.length) return;
+    const nbPhoto = photo && photo.nbDeck != null ? photo.nbDeck : membres.length; // vieille photo : pas de recalcul
+    const recalcul = !!photo && membres.length > nbPhoto;
+    if (photo && !recalcul) return;
     let annule = false;
     (async () => {
       let enAttente = 0;
       try { enAttente = Math.max(0, Number(await AsyncStorage.getItem(PENDING_GRIFFES_KEY)) || 0); } catch (e) { /* rien en attente */ }
+      let coup = photo ? photo.coup : null;
+      if (!photo && k > 0) {
+        try {
+          const v = { parfait: 0, bien: 0, rate: 0, absent: 0 };
+          (await lireJournalCombats()).filter((c) => c && c.mode === 'aventure' && c.niveau >= debutFenetre(k - 1) && c.niveau < debutFenetre(k))
+            .forEach((c) => { const x = c.verdicts || {}; v.parfait += x.parfait || 0; v.bien += x.bien || 0; v.rate += x.rate || 0; v.absent += x.absent || 0; });
+          coup = coupMoyenDesVerdicts(v);
+        } catch (e) { coup = null; }
+      }
       if (annule) return;
-      const membres = membresPourCombat(deck, owned, ownedRunes);
-      if (!membres.length) return;
       const av = avantage && avantage.restant > 0 ? avantage.niveau : 0;
       const d0 = debutFenetre(k);
+      const depart = recalcul ? Math.max(d0, currentUnlockedLevel) : d0;
       const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;
-      const niveaux = photoFenetre(d0, membres, budget, av);
+      const niveaux = photoFenetre(depart, membres, budget, av, { coup });
       const difficultes = {};
       for (let n = d0; n < d0 + TAILLE_FENETRE; n++) difficultes[n] = difficulteEtape(n, av);
-      setFenetres((prev) => (prev[k] ? prev : { ...prev, [k]: { niveaux, difficultes, budget, t: Date.now() } }));
+      setFenetres((prev) => {
+        const ancien = prev[k];
+        if (ancien && !recalcul) return prev;
+        return { ...prev, [k]: { niveaux: { ...((ancien && ancien.niveaux) || {}), ...niveaux }, difficultes: (ancien && ancien.difficultes) || difficultes,
+          budget, coup, nbDeck: membres.length, t: Date.now(), recalculeDepuis: recalcul ? depart : null } };
+      });
     })();
     return () => { annule = true; };
-  }, [progressLoaded, currentUnlockedLevel, fenetres]);
+  }, [progressLoaded, currentUnlockedLevel, fenetres, deck, owned]);
 
   // 26/09 : publie jusqu'où TOUS les niveaux sont à 3 étoiles (garde-fou du
   // verrou d'Aventure) — aussi au chargement, pour les parties existantes.

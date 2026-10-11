@@ -277,6 +277,12 @@ const SABOTAGES = [
   // 11/10 (fin) : fenêtres de difficulté (système de l'auteur).
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la photo oublie les Griffes récupérables (défis, succès, calendrier) et la file d'attente",
     remplace('const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;', 'const budget = Math.max(0, griffes);')],
+  ['auditFenetres', F.combat, "la précision du joueur n'est plus prise en compte (le joueur précis ne perd plus au 4e et 5e combat)",
+    remplace('export const EXPOSANT_PRECISION = 0.35;', 'export const EXPOSANT_PRECISION = 0;')],
+  ['auditFenetres', F.combat, "plus de plafond de précision (un joueur exceptionnel serait bloqué)",
+    remplace('export const COUP_MAX = 0.875;', 'export const COUP_MAX = 1.5;')],
+  ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "plus de recalcul quand une créature rejoint le deck en cours de fenêtre",
+    remplace('const recalcul = !!photo && membres.length > nbPhoto;', 'const recalcul = false;')],
   ['auditFenetres', F.combat, "le cran 5 n'est plus très dur (réglage cassé)",
     remplace('export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1 };', 'export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1.45 };')],
   ['auditFenetres', F.combat, "le jeu ignore la photo du joueur (les ennemis reviennent à la table)",

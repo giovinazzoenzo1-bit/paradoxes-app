@@ -125,6 +125,18 @@ zéro** sur le deck du moment.
   l'étape 2, etc.).
 Le budget est dépensé **virtuellement**, équitablement, avec la règle du palier de dizaine (comme le ferait le joueur).
 
+**La précision du joueur** (11/10) : le calculateur lit le **coup moyen à la jauge** sur les combats des **5 étapes
+précédentes** (fenêtre d'avant). 1re fenêtre (aucun historique) : **joueur moyen** (47 % de parfaits). **Plafond = l'auteur**
+(75 % de parfaits) ; plancher pour un joueur très imprécis. MESURÉ en vrais combats : joueur précis 95 / 84 / 69 / 50 / 37 %,
+joueur faible 95 / 84 / 71 / 51 / 35 % — chacun perd en moyenne **1 fois au 4e combat et 2 fois au 5e**. Sans elle, un joueur
+précis gagnait le cran 4 à 70 % et le cran 5 à 56 %.
+
+**Nouvelle créature en cours de fenêtre** : les étapes **pas encore jouées** sont recalculées (ex. arrivée à l'étape 3 →
+étapes 3, 4, 5 recalculées avec le nouveau deck).
+
+**Non retenu** : simuler l'équipe EXACTE du joueur à chaque fenêtre (≈ 0,6 s sur ordinateur, 2,5 à 5 s sur téléphone :
+ralentirait le jeu, refusé par l'auteur).
+
 **La difficulté par étape** (1er essai, joueur normal) — défaites moyennes avant de gagner = (1 − p) / p :
 
 | Position dans la fenêtre | Cran | Chance | Défaites en moyenne |

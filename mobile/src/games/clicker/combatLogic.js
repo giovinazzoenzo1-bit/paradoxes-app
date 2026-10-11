@@ -1760,16 +1760,41 @@ export function niveauPourDifficulte(levelNumber, puissanceDeck, d, nbJoueurs, o
   for (let x = Math.max(1, L - 4); x <= L + 4; x++) { const e = Math.abs(Math.log(P(x) / cible)); if (e < ecart) { ecart = e; meilleur = x; } }
   return meilleur;
 }
-// PHOTO d'une fenêtre : { [étape]: niveau } pour ses 5 étapes. membresDeck : le deck dans l'ordre (creature, ownedLevel,
-// evolutionTier, equippedRunes) ; griffesEnPoche : comptées comme dépensées (équitablement, palier de dizaine compris).
-export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 0) {
+// ═══ PRÉCISION DU JOUEUR (11/10, spec de l'auteur) ═══ — « ma précision explique beaucoup de choses » (75 % de parfaits :
+// +19 % de dégâts, le cran 4 valait ~75 % pour lui au lieu de 50). Coup moyen à la jauge mesuré sur les combats des 5 étapes
+// précédentes (la fenêtre d'avant) ; à l'étape 1 (aucun historique) : joueur MOYEN (référence). PLAFOND = l'auteur (« je suis la
+// référence du joueur exceptionnel, comme ça pas de blocage ») ; plancher pour un joueur très imprécis. La puissance suit
+// √(dégâts) : facteur = √(coup / coup de référence) (les rapports RATIOS_DIFFICULTE sont calés sur le joueur de référence).
+export const COUP_REFERENCE = 0.735; // 47 % de parfaits, 53 % de « bien » (joueur de référence des simulations, 60 ms)
+export const COUP_MAX = 0.875;       // l'auteur : 75 % de parfaits, 25 % de « bien », 0 raté (rapports du 11/10)
+export const COUP_MIN = 0.5;
+export function coupMoyenDesVerdicts(v) {
+  const p = (v && v.parfait) || 0, b = (v && v.bien) || 0, r = (v && v.rate) || 0, a = (v && v.absent) || 0;
+  const n = p + b + r + a;
+  return n > 0 ? (p * JAUGE_MULT.parfait + b * JAUGE_MULT.bien + r * JAUGE_MULT.rate + a * JAUGE_MULT.absent) / n : null;
+}
+export function facteurPrecision(coup) {
+  const c = coup == null || !(coup > 0) ? COUP_REFERENCE : Math.max(COUP_MIN, Math.min(COUP_MAX, coup));
+  return Math.pow(c / COUP_REFERENCE, EXPOSANT_PRECISION);
+}
+// Force de l'effet : √ (0,5) en théorie (puissance ∝ √dégâts) ; MESURÉ en vrais combats (11/10) : 0,5 rendait le joueur précis
+// trop en difficulté (cran 4 à 42 %) — soutiens et sorts ne suivent pas entièrement la jauge. Avec 0,35 : joueur précis
+// (coup 0,873) 95 / 84 / 69 / 50 / 37 % ; joueur faible (0,642) 95 / 84 / 71 / 51 / 35 % ; cibles 95 / 85 / 70 / 50 / 33.
+export const EXPOSANT_PRECISION = 0.35;
+// PHOTO d'une fenêtre : { [étape]: niveau } pour ses étapes (de `debut` à options.fin, par défaut la fin de la fenêtre —
+// un RECALCUL en cours de fenêtre part de l'étape en cours). membresDeck : le deck dans l'ordre (creature, ownedLevel,
+// evolutionTier, equippedRunes) ; griffesEnPoche : comptées comme dépensées (équitablement, palier de dizaine compris) ;
+// options.coup : le coup moyen du joueur (précision), null = joueur de référence.
+export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 0, options = {}) {
   const niveaux = {};
   let budget = Math.max(0, Number(griffesEnPoche) || 0);
-  for (let n = debut; n < debut + TAILLE_FENETRE; n++) {
+  const fin = options.fin || (debutFenetre(fenetreDe(debut)) + TAILLE_FENETRE - 1);
+  const fPrecision = facteurPrecision(options.coup);
+  for (let n = debut; n <= fin; n++) {
     const nbJ = Math.max(1, Math.min((membresDeck || []).length, combattantsPourEtape(n)));
     const membres = (membresDeck || []).slice(0, nbJ);
     const apres = deckApresEffortEquitable(membres, budget);
-    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres), difficulteEtape(n, avantage), nbJ);
+    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fPrecision, difficulteEtape(n, avantage), nbJ);
     budget += griffesReward(n); // la prime de cette étape sert pour la suivante
   }
   return niveaux;
