@@ -1036,7 +1036,8 @@ export function actionAdversaire(adversaires, idx, joueurs, cible, alea = Math.r
       degats = r.ennemis.map((j, i) => (vivant(j) && (r.coup.zone || i === cible)
         ? Math.max(1, Math.round(coup * elementMultiplier(lanceur.creature.element, j.creature.element) * part)) : 0));
     }
-    return { adversaires: r.allies, joueurs: r.ennemis, degats, sort, zone: !!(r.coup && r.coup.zone) };
+    // evenements (11/10) : pour que l'ÉCRAN montre l'effet du sort ennemi sur la bonne créature (avant : une phrase).
+    return { adversaires: r.allies, joueurs: r.ennemis, degats, sort, zone: !!(r.coup && r.coup.zone), evenements: r.evenements || [], competence: null };
   }
   const r = riposteAdversaire(adversaires[idx], joueurs[cible], alea);
   return {
@@ -1045,6 +1046,8 @@ export function actionAdversaire(adversaires, idx, joueurs, cible, alea = Math.r
     degats: joueurs.map((_, i) => (i === cible ? r.degats : 0)),
     sort: null,
     zone: false,
+    evenements: [],
+    competence: r.competence, // 11/10 : l'écran annonce l'ULTIME de l'ennemi (competence.special)
   };
 }
 

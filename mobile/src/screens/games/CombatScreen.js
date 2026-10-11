@@ -310,6 +310,7 @@ import {
   damageMultiplierForTime,
   computePlayerDamage,
   griffesReward,
+  POUDRE_PAR_VICTOIRE,
   effectiveTapCount,
   scaledSkillDamage,
   TAP_CHALLENGE_TIME_LIMIT_SEC,
@@ -747,9 +748,10 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   const SON_SORT = { soin: 'sort-soin', bouclier: 'sort-bouclier', boost: 'sort-bouclier', vitesse: 'sort-bouclier', provocation: 'sort-bouclier', pacte: 'sort-bouclier',
     poison: 'sort-attaque', marque: 'sort-attaque', execution: 'sort-attaque', zone: 'sort-attaque', ko: 'ko' };
   useEffect(() => { if (assombriKey > 0) { son('special'); noterSpecial(); } }, [assombriKey]);
-  const effetSort = (type, cote, index, valeur = null) => {
+  // parEnnemi (11/10) : un effet lancé PAR un ennemi — noté « ennemi-… » dans le journal (avant, on ne les voyait pas).
+  const effetSort = (type, cote, index, valeur = null, parEnnemi = false) => {
     if (SON_SORT[type]) son(SON_SORT[type]);
-    noterSort(type, cote); // journal des combats (08/10)
+    noterSort(parEnnemi ? 'ennemi-' + type : type, cote); // journal des combats (08/10)
     const c = centreSprite(cote, index);
     if (!c) return;
     setImpacts((l) => [...l, { id: `${Date.now()}-${Math.random()}`, sort: type, x: c.x, y: c.y, taille: c.taille, valeur }]);
@@ -1193,6 +1195,7 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
     let baseJ = avant; // nos créatures, après un éventuel sort ennemi (marque)
     let riposte = null;
     let degatsRiposte = [];
+    let actionEnnemie = null; // 11/10 : ce que fait l'ennemi à son tour (sort ou ultime), pour le MONTRER
     if (isBoss && retaliatorIdx >= 0 && tRip >= 0) {
       riposte = riposteGardien(newOpponents[retaliatorIdx].stats, avant, tRip);
       degatsRiposte = riposte.degats;
@@ -1203,10 +1206,12 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       newOpponents = a.adversaires;
       baseJ = a.joueurs;
       degatsRiposte = a.degats;
-      if (a.sort) {
-        setSwitchMessage(`😈 ${newOpponents[retaliatorIdx].creature.stages[0].name} lance ${SORTS[a.sort].icone} ${SORTS[a.sort].nom} !`);
-        setTimeout(() => setSwitchMessage(null), 1800);
-      }
+      // ⚠️ 11/10 (retour de l'auteur : « parfois l'ennemi passe son tour ») : un sort SANS dégâts (bouclier, soin, boost,
+      // marque, provocation) ne déclenchait ni élan ni effet — une phrase seulement, posée TROP TÔT (pendant ton coup)
+      // et effacée vite ; l'ULTIME ennemi ne se distinguait pas. Désormais, AU MOMENT où l'ennemi agit : bandeau clair +
+      // l'effet visuel du sort sur la bonne créature (comme les tiens), et ton tour attend la fin de son action.
+      actionEnnemie = { sort: a.sort, evenements: a.evenements || [], competence: a.competence, lanceur: retaliatorIdx, cible: tRip,
+        nom: (() => { const o = newOpponents[retaliatorIdx]; return (o.creature.stages[stadeVisuel(o.evolutionTier || 0)] || o.creature.stages[0]).name; })() };
     }
     let riposteur = retaliatorIdx >= 0 ? newOpponents[retaliatorIdx] : null;
     opponentDamage = 0;
@@ -1272,6 +1277,22 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       newOpponents.forEach((o, i) => { if (o && o.hp <= 0 && pvAvantO[i] > 0) effetSort('ko', 'adversaire', i); });
       if (!avecRiposte) newFighters.forEach((f, i) => { if (f && f.hp <= 0 && pvAvantP[i] > 0) effetSort('ko', 'joueur', i); });
     }, IMPACT_MS);
+    // 11/10 : l'action de l'ennemi se VOIT au moment où il agit (RIPOSTE_MS) — bandeau + effet sur la bonne créature.
+    if (actionEnnemie && (actionEnnemie.sort || (actionEnnemie.competence && actionEnnemie.competence.special))) {
+      const ae = actionEnnemie;
+      setTimeout(() => {
+        if (ae.sort) {
+          setSwitchMessage(`😈 ${ae.nom} lance ${SORTS[ae.sort].icone} ${SORTS[ae.sort].nom} !`);
+          ae.evenements.forEach((ev) => { if (ev.type === 'bouclier' || ev.type === 'soin' || ev.type === 'boost') effetSort(ev.type, 'adversaire', ev.cible, ev.valeur || null, true); });
+          if (ae.sort === 'provocation' || ae.sort === 'vitesse' || ae.sort === 'pacte') effetSort(ae.sort, 'adversaire', ae.lanceur, null, true);
+          if (ae.sort === 'poison' || ae.sort === 'marque' || ae.sort === 'execution' || ae.sort === 'zone') setTimeout(() => effetSort(ae.sort, 'joueur', ae.cible, null, true), IMPACT_MS);
+        } else {
+          setSwitchMessage(`💥 ${ae.nom} lance son ULTIME : ${ae.competence.name} !`);
+          setTimeout(() => { effetSort('special', 'joueur', ae.cible, null, true); secouer(14); vibrer('heavy'); }, IMPACT_MS);
+        }
+        setTimeout(() => setSwitchMessage(null), 2200);
+      }, RIPOSTE_MS);
+    }
     if (avecRiposte) {
       setTimeout(() => {
         playLunge('opponent', retaliatorIdx, centreSprite('joueur', blesse));
@@ -1316,7 +1337,8 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
       const nextIdx = nextLivingIndex(newFighters, curIdx);
       transition = { type: 'suite', nextIdx, ko: false, message: `Au tour de ${newFighters[nextIdx].creature.stages[0].name} !` };
     }
-    const duree = (avecRiposte ? RIPOSTE_MS + IMPACT_MS + 520 : IMPACT_MS + 640) + (transition.type === 'suite' ? 0 : FIN_EN_PLUS_MS);
+    // 11/10 : un sort ennemi SANS dégâts dure aussi longtemps qu'une riposte (sinon ton tour revenait avant qu'on le voie).
+    const duree = (avecRiposte || (actionEnnemie && actionEnnemie.sort) ? RIPOSTE_MS + IMPACT_MS + 520 : IMPACT_MS + 640) + (transition.type === 'suite' ? 0 : FIN_EN_PLUS_MS);
     // Gel de l'affichage : chaque PV qui change garde sa valeur d'AVANT jusqu'à son impact.
     const gel = {};
     newOpponents.forEach((o, i) => { if (o && o.hp !== pvAvantO[i]) gel[`o${i}`] = pvAvantO[i]; });
@@ -1879,7 +1901,7 @@ const FIN_V = {
   medaillon: { y: 0.415, t: 0.235 },
   lauriers: { h: 0.32 },
   etiquette: { w: 0.36, h: 0.062, y: 0.523, police: 0.027 },
-  centre: { w: 0.36, h: 0.072, y: 0.598, police: 0.032, lignes: 1 },
+  centre: { w: 0.62, h: 0.072, y: 0.598, police: 0.032, lignes: 1 }, // 11/10 : élargie (Griffes + ✨ Poudre)
   recap: { w: 0.19, h: 0.115, y: 0.684, ecart: 0.205, chiffre: 0.05, legende: 0.025 },
   aides: null,
   bouton: { w: 0.56, y: 0.828, police: 0.034, lignes: 1 },
@@ -2075,7 +2097,8 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
   const avecAides = !isWin && !!aide;
   // Au centre : la récompense (victoire) ou le diagnostic (défaite).
   let centre;
-  if (isWin) centre = premiereVictoire ? `+${reward} 🐾 Griffes` : 'Niveau déjà gagné : pas de Griffes';
+  // 11/10 (demande de l'auteur) : la ✨ Poudre runique apparaît dans le butin (gagnée avec la 1re victoire, comme les Griffes).
+  if (isWin) centre = premiereVictoire ? `+${reward} 🐾 Griffes · +${POUDRE_PAR_VICTOIRE} ✨ Poudre` : 'Niveau déjà gagné : pas de Griffes';
   else if (!aide) centre = "Rien n'est perdu.";
   else {
     const lignes = [];

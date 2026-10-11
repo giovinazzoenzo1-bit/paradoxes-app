@@ -3176,3 +3176,17 @@ ennemis avec les stats EXACTES de leur niveau affiché, ±3 % de la force voulue
 [29, 152, 655, 824, 1047, 1443] ; cas de l'auteur au Gardien 1 064. Sabotage remplacé : « un multiplicateur caché
 revient » (l'ancien visait le multiplicateur de force moyenne, devenu un niveau). verifier-defis 103/103 ; 141 prouvés ;
 taps 20/20 ; 69 fichiers.
+
+
+## 11/10 — L'ACTION DE L'ENNEMI SE VOIT + ✨ POUDRE DANS LE BUTIN (retours de l'auteur avant le grand test, publiés)
+
+1. « Parfois l'ennemi passe son tour, ma créature attaque 3 fois d'affilée. » CAUSE : un sort ennemi SANS dégâts (bouclier,
+   soin, boost, marque, provocation) ne déclenchait ni élan ni effet — une phrase au centre, posée PENDANT ton coup et effacée
+   à 1,8 s ; l'ULTIME ennemi ne se distinguait pas (riposteAdversaire fait toujours des dégâts, ≥ 1). CORRIGÉ (affichage
+   seulement) : actionAdversaire rend aussi `evenements` et `competence` ; à RIPOSTE_MS l'écran montre « 😈 X lance 🛡️ Bouclier ! »
+   ou « 💥 X lance son ULTIME : … ! » (nom de la forme évoluée), et l'effet visuel sur la BONNE créature (bouclier/soin/boost sur
+   l'ennemi, marque/poison/exécution/zone/ultime sur la tienne) ; un sort sans dégâts dure aussi longtemps qu'une riposte (ton tour
+   attend). Journal : sorts ennemis notés « ennemi-… ». EMPREINTE_COMBAT 47aa69e7 → 52f045e3 (simulation inchangée).
+2. Butin de victoire : « +N 🐾 Griffes · +1 ✨ Poudre » (plaque élargie 0,36 → 0,62, VU sur le banc de capture).
+Contrôles : auditJournalDev (annonce de l'ultime ennemi, effets de ses sorts) + sabotage → 142 prouvés ; verifier-defis
+103/103 ; taps 20/20.

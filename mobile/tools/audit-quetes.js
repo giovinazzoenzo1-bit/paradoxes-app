@@ -3235,7 +3235,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '47aa69e7'; // 10/10 : FIN DES COUPS CRITIQUES — l'effet d'un sort suit le tap (multiplicateurSort), simulerCombat tire UN verdict par action avant le sort, comme l'écran (vérifié). Avant : '94f9492c' (09/10, attaques de soutien).
+const EMPREINTE_COMBAT = '52f045e3'; // 11/10 : l'action de l'ennemi (sort, ultime) se VOIT — affichage seulement, simulerCombatGardien inchangée (auditGardienCalibre vert). Avant : '47aa69e7' (10/10, fin des coups critiques).
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -5034,7 +5034,11 @@ function auditJournalDev() {
   const exige = [
     [/const montrerVerdict = \(v\) => \{ noterVerdict\(v\);/, 'combat : les verdicts de jauge ne sont plus notés'],
     [/noterAttaque\(cle\); \/\/ journal des combats/, 'combat : les coups ne sont plus notés'],
-    [/noterSort\(type, cote\); \/\/ journal des combats/, 'combat : les sorts ne sont plus notés'],
+    // 11/10 : les sorts lancés PAR un ennemi sont notés aussi (« ennemi-… »).
+    [/noterSort\(parEnnemi \? 'ennemi-' \+ type : type, cote\); \/\/ journal des combats/, 'combat : les sorts (les tiens ET ceux des ennemis) ne sont plus notés'],
+    // 11/10 (retour de l'auteur : « parfois l'ennemi passe son tour ») : ses sorts et son ULTIME se VOIENT.
+    [/setSwitchMessage\(`💥 \$\{ae\.nom\} lance son ULTIME/, "combat : l'ULTIME de l'ennemi n'est plus annoncé"],
+    [/effetSort\(ev\.type, 'adversaire', ev\.cible, ev\.valeur \|\| null, true\)/, "combat : les sorts de l'ennemi n'ont plus d'effet visuel"],
     [/son\('special'\); noterSpecial\(\);/, 'combat : les spéciaux ne sont plus notés'],
     [/debutCombat\(\{ mode: guardianEggNumber > 0 \? 'gardien' : 'aventure'/, 'combat : le début (équipe, mode, Gardien) n\'est plus noté'],
   ];
