@@ -1,0 +1,54 @@
+// VÉRIFICATEUR DE PORTÉE (11/10) — liste chaque nom UTILISÉ sans être DÉCLARÉ dans le code du jeu.
+// Né du plantage « Property 'poudre' doesn't exist » : la fin de combat (dans ChapterMapScreen) lisait `poudre`, qui
+// n'existait que dans le composant parent. La compilation ne voit PAS ce genre d'erreur (le code est valide) ; seul le
+// téléphone plantait, à la fin de CHAQUE combat. Ici : analyse des portées par Babel, comme le moteur JavaScript.
+//
+//   NODE_PATH=… node mobile/tools/verifier-portee.js      → liste, code 1 s'il y a un nom inconnu
+const fs = require('fs'), path = require('path');
+const babel = require('@babel/core');
+const traverse = require('@babel/traverse').default;
+
+const GLOBAUX = new Set(('console Math Date JSON Promise Object Array Number String Boolean Symbol Set Map WeakMap WeakSet Error ' +
+  'TypeError RangeError SyntaxError ReferenceError parseInt parseFloat isNaN isFinite setTimeout clearTimeout setInterval ' +
+  'clearInterval requestAnimationFrame cancelAnimationFrame global globalThis window undefined NaN Infinity require module ' +
+  'exports __DEV__ process fetch Intl encodeURIComponent decodeURIComponent encodeURI decodeURI performance queueMicrotask ' +
+  'Reflect Proxy arguments alert navigator ErrorUtils HermesInternal Buffer atob btoa URL URLSearchParams AbortController ' +
+  'TextEncoder TextDecoder structuredClone Uint8Array Uint16Array Uint32Array Int8Array Int16Array Int32Array Float32Array ' +
+  'Float64Array ArrayBuffer DataView BigInt eval __filename __dirname setImmediate clearImmediate FormData Headers Request ' +
+  'Response Blob FileReader XMLHttpRequest WebSocket Event EventTarget crypto document location history localStorage ' +
+  'sessionStorage Image Audio AggregateError FinalizationRegistry WeakRef Atomics SharedArrayBuffer escape unescape').split(' '));
+
+function fichiers(racine) {
+  const l = [];
+  (function w(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) w(p); else if (p.endsWith('.js')) l.push(p); } })(path.join(racine, 'src'));
+  ['App.js', 'index.js'].forEach((f) => { const p = path.join(racine, f); if (fs.existsSync(p)) l.push(p); });
+  return l;
+}
+
+function inconnus(fichier) {
+  const code = fs.readFileSync(fichier, 'utf8');
+  const ast = babel.parseSync(code, { filename: fichier, presets: ['@babel/preset-react'], babelrc: false, configFile: false });
+  const trouves = [];
+  traverse(ast, {
+    ReferencedIdentifier(p) {
+      const n = p.node.name;
+      if (p.isJSXIdentifier() && /^[a-z]/.test(n)) return; // balise HTML (aucune ici, par prudence)
+      if (p.scope.hasBinding(n, true) || GLOBAUX.has(n)) return;
+      trouves.push({ nom: n, ligne: p.node.loc ? p.node.loc.start.line : '?' });
+    },
+  });
+  return trouves;
+}
+
+function verifier(racine = path.join(__dirname, '..')) {
+  const pb = [];
+  for (const f of fichiers(racine)) for (const x of inconnus(f)) pb.push(`${path.relative(racine, f)}:${x.ligne} — « ${x.nom} » utilisé sans être déclaré`);
+  return pb;
+}
+
+if (require.main === module) {
+  const pb = verifier();
+  console.log(pb.length ? pb.join('\n') : 'portée : aucun nom inconnu');
+  if (pb.length) process.exit(1);
+}
+module.exports = { verifier, inconnus };

@@ -3331,3 +3331,18 @@ Supabase + petit site). Ajouts :
   journal efface aussi celui des Griffes.
 Contrôles : auditJournalDev (nouveaux champs, fin de combat, 12 sources de Griffes branchées, export) + 2 sabotages → 155 prouvés.
 ⚠️ Les morceaux de sabotages : timeout ≥ 285 s chacun (52-104 dure ~170 s ; avec 140 s il a été coupé juste après son bilan).
+
+
+## 11/10 (soir) — PLANTAGE « Property 'poudre' doesn't exist » (CORRIGÉ, publié)
+
+SYMPTÔME : rapport de problème, build f4c4ecb — erreur FATALE à la fin de CHAQUE combat d'Exploration (onFinish).
+CAUSE RÉELLE : le journal enrichi (finCombat) lisait poudre, ascensionCount, puissanceMenu et niveauMenu dans
+ChapterMapScreen, où ces valeurs n'existent pas (elles vivent dans le composant parent AdventureScreen) ; `griffes`, elle,
+y est transmise — d'où l'erreur précisément sur `poudre`. La compilation Babel passe (code valide) : rien ne l'a vu avant
+le téléphone. CORRECTIF : ChapterMapScreen reçoit poudre et ascensionCount en props ; puissance et chance annoncée viennent
+de `derniereMesureApercu` (variable de module remplie par l'aperçu).
+GARDE-FOU : `mobile/tools/verifier-portee.js` (analyse des portées par Babel sur tout mobile/src + App.js + index.js) →
+auditPortee dans verifier-defis + sabotage. Prouvé : sur la version fautive il liste exactement les 4 noms ; sur le code
+corrigé, AUCUN nom inconnu dans tout le jeu.
+⚠️ LEÇON : après avoir ajouté une valeur dans un gestionnaire (onFinish, onPress…), vérifier qu'elle est déclarée DANS CE
+composant — c'est maintenant automatique (auditPortee). 156 sabotages prouvés (3 × 52), taps 20/20.

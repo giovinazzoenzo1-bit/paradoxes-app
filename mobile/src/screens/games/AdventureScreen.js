@@ -1221,6 +1221,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   if (chapterMapOpen) {
     return avecBoutique(
       <ChapterMapScreen
+        poudre={poudre}
+        ascensionCount={ascensionCount}
         defaitesDeSuite={defaitesDeSuite}
         onDefaite={noterDefaite}
         onBuyElixir={onBuyElixir}
@@ -2397,7 +2399,11 @@ function prefixeTroisEtoiles(etoiles) {
   return n;
 }
 
-function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity, prochaineAscension = 1, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir, defaitesDeSuite = {}, onDefaite }) {
+// poudre / ascensionCount (11/10) : pour le journal des combats — la fin de combat est ICI, pas dans le parent (plantage
+// « Property 'poudre' doesn't exist » : ces valeurs étaient lues sans être transmises).
+// Dernière mesure de l'aperçu (puissance, chance) — lue par le journal des combats à la fin du combat (11/10).
+let derniereMesureApercu = null;
+function ChapterMapScreen({ poudre = 0, ascensionCount = 0, currentUnlockedLevel, niveauMaxAscension = Infinity, prochaineAscension = 1, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir, defaitesDeSuite = {}, onDefaite }) {
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -2560,8 +2566,8 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
           const lvJ = activeBattle.levelNumber;
           finCombat(outcome, { etoiles: stars || 0, griffes, poudre, essai: (defaitesDeSuite[lvJ] || 0) + 1, premiereVictoire: lvJ === currentUnlockedLevel,
             niveauEnnemis: niveauEnnemi(lvJ), ascension: ascensionCount,
-            puissance: puissanceMenu && niveauMenu === lvJ ? puissanceMenu.puissance : null,
-            chanceAnnoncee: puissanceMenu && niveauMenu === lvJ && puissanceMenu.victoires != null ? Math.round(100 * puissanceMenu.victoires) : null }); // journal des combats (08/10)
+            puissance: derniereMesureApercu && derniereMesureApercu.niveau === lvJ ? derniereMesureApercu.puissance : null,
+            chanceAnnoncee: derniereMesureApercu && derniereMesureApercu.niveau === lvJ && derniereMesureApercu.victoires != null ? Math.round(100 * derniereMesureApercu.victoires) : null }); // journal des combats (08/10)
           // Une charge d'Élixir par combat mené, gagné ou perdu.
           if (elixirCombats > 0 && onElixirUsed) onElixirUsed();
           if (outcome === 'lose' && onDefaite) onDefaite(activeBattle.levelNumber);
@@ -3467,6 +3473,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
       try {
         const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes, levelNumber), levelNumber, { filetBaisse });
         if (!annule) setMesure(r);
+        derniereMesureApercu = { niveau: levelNumber, puissance: r.puissance, victoires: r.victoires }; // journal (11/10)
       } catch (e) {
         if (!annule) setMesure(null);
       }

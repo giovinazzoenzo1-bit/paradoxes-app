@@ -5107,6 +5107,15 @@ function auditJournalDev() {
 }
 module.exports.auditJournalDev = auditJournalDev;
 
+// ---- PORTÉE (11/10) : aucun nom utilisé sans être déclaré ----
+// Plantage réel à la fin de CHAQUE combat d'Exploration : le journal lisait `poudre` dans ChapterMapScreen, où elle n'était
+// pas transmise. La compilation passait (code valide) ; seul le moteur JavaScript du téléphone échouait. Analyse des portées
+// par Babel sur tout mobile/src + App.js + index.js (outil : verifier-portee.js).
+function auditPortee() {
+  return require('./verifier-portee.js').verifier();
+}
+module.exports.auditPortee = auditPortee;
+
 // ── ATTAQUES DE SOUTIEN : toute l'équipe participe (09/10, décision de l'auteur) ──
 // Test de l'auteur : une créature très montée finissait seule le chapitre 1 (à chaque tour, UNE créature
 // frappait : tout concentrer sur une seule restait toujours le meilleur choix). Après le coup de la créature

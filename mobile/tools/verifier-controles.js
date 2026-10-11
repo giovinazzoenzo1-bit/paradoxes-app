@@ -273,6 +273,9 @@ const SABOTAGES = [
     remplace('budgetGardienRef.current = primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * primesProchainsNiveaux(')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "Gardien de l'œuf 2 de nouveau NON calé (0 % mesuré chez l'auteur)",
     remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
+  // 11/10 : le plantage « Property 'poudre' doesn't exist » revient (valeur lue hors de sa portée).
+  ['auditPortee', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la carte lit de nouveau une valeur que le parent ne lui transmet pas",
+    remplace('function ChapterMapScreen({ poudre = 0, ascensionCount = 0, currentUnlockedLevel,', 'function ChapterMapScreen({ currentUnlockedLevel,')],
   // 11/10 : journal des Griffes et rapport enrichi (tableau Excel de l'auteur).
   ['auditJournalDev', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la prime d'étape n'est plus notée dans le journal des Griffes",
     remplace("noterGriffes('prime', reward, { etape: levelNumber });", "void 0;")],
