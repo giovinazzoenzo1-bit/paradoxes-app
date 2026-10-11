@@ -3215,3 +3215,19 @@ CONTRÔLES : auditNiveauMax (valeurs de la règle, créatures requises, défi ja
 auditVerrouAventure (ordre des verrous + condition de refus), auditDefaite (équipes faibles ajoutées + alarme si plus aucun
 cas ne teste la minimalité — sabotage « un niveau de trop » était AVEUGLE) ; sabotages du Gardien remis sur les nouvelles
 lignes ; 3 nouveaux sabotages → 145 prouvés (253 s : la suite approche la limite de 300 s d'une commande) ; taps 20/20.
+
+
+## 11/10 (soir) — DIZAINE STRICTE (règle de l'auteur, publiée)
+
+« Bloquer les créatures aux niveaux max de la dizaine pour que les joueurs max tout leur deck en même temps » : le palier =
+la dizaine au-dessus de la créature la PLUS FAIBLE du deck, dès le début (avant : libre jusqu'à 30 avec 3 créatures). Le
+nombre de créatures plafonne toujours (1 → 10, 2 → 20). Ex. : 25 / 12 / 8 → 10 ; 47 / 21 / 25 (son équipe) → 30.
+Étapes : 11 → 2 créatures, 21 → 3, RIEN d'autre (l'auteur : « je me suis trompé tout à l'heure »).
+MESURÉ : équilibre IDENTIQUE (120 joueurs : A0 7,8 · A1 6,3 · A2 6,4 · A3 8,1 · A4 6,3 · A5 6,6, 0 bloqué) — le joueur
+simulé montait déjà la plus faible d'abord ; la règle ne pénalise que le « tout sur une créature ».
+Gardien (auditGardienGriffes) : le max MONTE pendant l'effort (la plus faible atteint 10 → palier 20) → contrôle jugé sur
+le max FINAL ; cas de l'auteur 1 064 → 1 105 (les Griffes vont d'abord à la plus faible).
+⚠️ PIÈGE (11/10) : verifier-controles.js dépasse maintenant 300 s → la commande est COUPÉE en plein sabotage et laisse le
+fichier SABOTÉ (vécu : TAP_DAMAGE_PER_LEVEL = 3 resté dans clickerLogic). TOUJOURS le lancer en deux moitiés :
+`verifier-controles.js 0 72` puis `verifier-controles.js 72 145` (≈ 150 s chacune), et après une coupure : `git diff` sur
+CHAQUE fichier modifié avant de continuer.

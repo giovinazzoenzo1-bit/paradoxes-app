@@ -4980,12 +4980,15 @@ function auditGardienGriffes() {
     // 11/10 : une créature déjà au niveau max de l'équipe (niveauMaxEquipe) ne reçoit rien, c'est la règle de l'auteur.
     const maxAuteur = C.niveauMaxEquipe(deckAuteur.map((x) => x.ownedLevel));
     if (r.membres.some((m, i) => deckAuteur[i].ownedLevel < maxAuteur && m.ownedLevel <= deckAuteur[i].ownedLevel)) pb.push('répartition équitable : une créature ne reçoit aucun niveau');
-    if (r.membres.some((m, i) => m.ownedLevel > Math.max(maxAuteur, deckAuteur[i].ownedLevel))) pb.push("répartition équitable : une créature dépasse le niveau max de l'équipe");
+    // Le max MONTE pendant l'effort (la plus faible atteint 10 → palier 20…) : on juge sur le max FINAL de l'équipe.
+    const maxFinal = C.niveauMaxEquipe(r.membres.map((x) => x.ownedLevel));
+    if (r.membres.some((m, i) => m.ownedLevel > Math.max(maxFinal, deckAuteur[i].ownedLevel))) pb.push("répartition équitable : une créature dépasse le niveau max de l'équipe");
     // 10/10 (niveaux réels : +5 %/niveau, stats x10, puissance affichée à l'échelle 1) : 1 613 → 1 898.
     // 10/10 (fin des coups critiques : coup moyen ×2,21 → ×0,71 dans la puissance affichée) : 1 898 → 1 096.
     // 10/10 (le coût d'un niveau suit la prime de victoire) : 1 096 → 1 114.
     // 10/10 (soir, coûts réglés de nouveau : 114 G achètent moins de niveaux) : 1 114 → 1 064.
-    if (Math.abs(r.puissance - 1064) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 064 (« 3 combats »)`);
+    // 11/10 (soir, dizaine stricte : les Griffes vont d'abord à Aegisolar 9, la plus faible) : 1 064 → 1 105.
+    if (Math.abs(r.puissance - 1105) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 105 (« 3 combats »)`);
   }
   if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
   if ((c.match(/, budgetGardienRef\.current, plafondGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget ET le niveau max du Gardien');
@@ -5120,7 +5123,8 @@ function auditNiveauMax() {
   const L = load('clickerLogic'); const K = load('combatLogic'); const Q = load('questLogic');
   if (L.niveauMaxCreature(0) !== Infinity || L.niveauMaxCreature(200) !== Infinity) pb.push("un niveau maximum est revenu (décision de l'auteur du 10/10 : aucun)");
   // ── 11/10 — RÈGLE DE L'AUTEUR : niveau max selon le DECK (1 créature → 10, 2 → 20, 3 → 30, puis toutes au palier) ──
-  const voulu = [[[5], 10], [[12, 3], 20], [[25, 12, 8], 30], [[35, 29, 31], 30], [[35, 30, 30], 40], [[47, 40, 41], 50]];
+  // 11/10 (soir) : DIZAINE STRICTE — palier au-dessus de la plus faible du deck dès le début.
+  const voulu = [[[5], 10], [[12, 3], 10], [[12, 10], 20], [[25, 12, 8], 10], [[35, 29, 31], 30], [[35, 30, 30], 40], [[47, 40, 41], 50], [[20, 20], 20]];
   for (const [deck, max] of voulu) if (L.niveauMaxEquipe(deck) !== max) pb.push(`niveau max du deck [${deck}] : ${L.niveauMaxEquipe(deck)} au lieu de ${max} (règle de l'auteur)`);
   if (L.creaturesRequisesPour(10) !== 1 || L.creaturesRequisesPour(11) !== 2 || L.creaturesRequisesPour(21) !== 3 || L.creaturesRequisesPour(80) !== 3) pb.push("créatures requises : étape 11 → 2, étape 21 → 3 (règle de l'auteur)");
   // Un défi « monte une créature au niveau N » ne dépasse jamais ce que le joueur PEUT atteindre (1 créature → 10).

@@ -273,7 +273,7 @@ const SABOTAGES = [
     remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
   // 11/10 : niveau max selon le deck et créatures requises (règle de l'auteur).
   ['auditNiveauMax', F.clicker, "le niveau max selon le deck disparaît (une seule créature porte de nouveau tout)",
-    remplace('  if (n.length < 3) return 10 * Math.max(1, n.length);\n  return Math.max(30, 10 * (Math.floor(Math.min(...n) / 10) + 1));', '  return Infinity;')],
+    remplace('  return n.length < 3 ? Math.min(10 * Math.max(1, n.length), palier) : palier;', '  return Infinity;')],
   ['auditNiveauMax', F.clicker, "un défi d'œuf peut demander un niveau impossible avec 1 créature (blocage pour toujours)",
     remplace('  return n < 3 ? 10 * n : Infinity;', '  return Infinity;')],
   ['auditVerrouAventure', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "l'étape 11 se lance avec une seule créature",

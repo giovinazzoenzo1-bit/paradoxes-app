@@ -450,15 +450,20 @@ export function niveauMaxCreature(niveauGagne) {
 // jusqu'à 40, toutes 40 pour 50, etc. S'applique à TOUTES les créatures (banc compris : sinon on contournerait en
 // montant hors du deck). Retirer une créature du deck BAISSE le max (pas de triche). Rien n'est retiré à une créature
 // déjà au-dessus. (Remplace, pour la montée de niveau, l'ancien niveauMaxCreature lié aux étapes, resté à Infinity.)
+// ⚠️ 11/10 (soir, règle de l'auteur) : DIZAINE STRICTE — « bloquer les créatures aux niveaux max de la dizaine pour que
+// les joueurs max tout leur deck en même temps » (son rapport : Nocturis 47, Luxorbe 21, Glyphon 25). Le palier = la dizaine
+// au-dessus de la créature la PLUS FAIBLE du deck, dès le début (avant : libre jusqu'à 30 avec 3 créatures). Le nombre de
+// créatures plafonne toujours : 1 → 10, 2 → 20. Ex. : deck 25 / 12 / 8 → 10 ; 35 / 30 / 30 → 40.
 export function niveauMaxEquipe(niveauxDuDeck) {
   const n = (niveauxDuDeck || []).map(Number).filter((x) => x > 0);
-  if (n.length < 3) return 10 * Math.max(1, n.length);
-  return Math.max(30, 10 * (Math.floor(Math.min(...n) / 10) + 1));
+  const palier = 10 * (Math.floor(Math.min(...(n.length ? n : [1])) / 10) + 1);
+  return n.length < 3 ? Math.min(10 * Math.max(1, n.length), palier) : palier;
 }
 // Ce que dit la fiche quand une créature est au niveau max (11/10).
 export function raisonNiveauMax(niveauxDuDeck) {
   const n = (niveauxDuDeck || []).map(Number).filter((x) => x > 0), max = niveauMaxEquipe(n);
-  return n.length < 3
+  // Ce qui bloque : le nombre de créatures (1 → 10, 2 → 20) ou la plus faible du deck (dizaine).
+  return n.length < 3 && max === 10 * Math.max(1, n.length) && Math.min(...(n.length ? n : [1])) >= max
     ? `🔒 Niveau max ${max} : ajoute une ${n.length + 1}e créature à ton deck pour aller plus loin.`
     : `🔒 Niveau max ${max} : monte toutes les créatures de ton deck au niveau ${max} pour aller plus loin.`;
 }
