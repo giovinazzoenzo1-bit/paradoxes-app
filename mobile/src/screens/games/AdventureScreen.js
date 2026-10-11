@@ -394,6 +394,7 @@ import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import { niveauMaxAventure } from '../../games/clicker/questLogic';
 import {
   puissanceAventure,
+  combattantsPourEtape,
   POUDRE_PAR_VICTOIRE,
   POUDRE_PRIX,
   combatStatsForCreatureTyped,
@@ -869,7 +870,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     let annule = false;
     const t = setTimeout(() => {
       try {
-        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes), niveauMenu,
+        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes, niveauMenu), niveauMenu,
           { filetBaisse: baisseFilet(defaitesDeSuite[niveauMenu] || 0) });
         if (!annule) setPuissanceMenu(r);
       } catch (e) {}
@@ -2367,9 +2368,11 @@ function CurrencyCounter({ currency = 'griffes', amount, onPlus, style }) {
 // L'équipe envoyée au combat d'Aventure — UNE construction, pour le combat
 // ET pour la puissance de l'aperçu (26/09) : runes équipées sur CETTE
 // créature précise (ce qui les rend actives en combat, voir CombatScreen).
-function membresPourCombat(deck, owned, ownedRunes) {
+// levelNumber (11/10, combat à égalité) : seulement les N premières créatures du deck, N = nombre d'ennemis de l'étape.
+function membresPourCombat(deck, owned, ownedRunes, levelNumber = null) {
   return (deck || [])
     .filter((id) => id)
+    .slice(0, levelNumber ? combattantsPourEtape(levelNumber) : 3)
     .map((id) => ({
       creature: CREATURES.find((c) => c.id === id),
       ownedLevel: owned.find((o) => o.id === id).level,
@@ -2521,7 +2524,7 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
 
   if (activeBattle) {
     // ⚠️ La MÊME construction que la puissance de l'aperçu (26/09).
-    const team = membresPourCombat(deck, owned, ownedRunes);
+    const team = membresPourCombat(deck, owned, ownedRunes, activeBattle.levelNumber);
     return (
       <CombatScreen
         team={team}
@@ -3449,7 +3452,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
     setMesure(null);
     const t = setTimeout(() => {
       try {
-        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes), levelNumber, { filetBaisse });
+        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes, levelNumber), levelNumber, { filetBaisse });
         if (!annule) setMesure(r);
       } catch (e) {
         if (!annule) setMesure(null);

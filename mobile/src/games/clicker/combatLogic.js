@@ -1442,12 +1442,12 @@ export const GUARDIAN_CREATURE = {
 // pour le jeu) : le garder en `const` tableau, jamais réaffecté.
 export const ENNEMIS_ETAPES = [
   'glyphon:0', 'luxorbe:0', 'bouldog:0', 'pyrosile:0', 'caraploof:0', 'ventis:0',
-  'voltix:0', 'ombrillon:0', 'glyphon:0', 'luxorbe:0', 'fournax:0+bouldog:0', 'aquamira:0+pyrosile:0',
-  'terracroc:0+caraploof:0', 'zephyrion:0+ventis:0', 'brontobloc:0+voltix:0', 'malefix:0+ombrillon:0', 'fournax:0+glyphon:0', 'aquamira:0+luxorbe:0',
-  'terracroc:0+bouldog:0', 'zephyrion:0+pyrosile:0', 'brontobloc:0+caraploof:0+ventis:0', 'malefix:0+voltix:0+ombrillon:0', 'fournax:0+glyphon:0+luxorbe:0', 'aquamira:0+bouldog:0+pyrosile:0',
-  'aegisolar:0+terracroc:0+caraploof:0', 'nocturis:0+zephyrion:0+ventis:0', 'racinea:0+brontobloc:0+malefix:0', 'runicor:0+fournax:0+aquamira:0', 'braiserose:0+terracroc:0+zephyrion:0', 'aegisolar:0+brontobloc:0+malefix:0',
-  'nocturis:0+fournax:0+aquamira:0', 'racinea:0+terracroc:0+zephyrion:0', 'runicor:1+brontobloc:0+malefix:0', 'braiserose:1+fournax:0+aquamira:0', 'aegisolar:1+terracroc:1+zephyrion:0', 'nocturis:1+brontobloc:1+malefix:1',
-  'racinea:1+fournax:1+aquamira:1', 'runicor:1+terracroc:1+zephyrion:1', 'braiserose:1+brontobloc:1+malefix:1', 'aegisolar:1+fournax:1+aquamira:1', 'nocturis:1+terracroc:1+zephyrion:1', 'racinea:1+brontobloc:1+malefix:1',
+  'voltix:0', 'ombrillon:0', 'glyphon:0', 'luxorbe:0', 'malefix:0+luxorbe:0', 'terracroc:0+pyrosile:0',
+  'zephyrion:0+ventis:0', 'malefix:0+glyphon:0', 'fournax:0+pyrosile:0', 'aquamira:0+ventis:0', 'brontobloc:0+ombrillon:0', 'terracroc:0+luxorbe:0',
+  'zephyrion:0+ventis:0', 'malefix:0+glyphon:0', 'fournax:0+voltix:0+pyrosile:0', 'terracroc:0+caraploof:0+luxorbe:0', 'brontobloc:0+ventis:0+glyphon:0', 'aquamira:0+voltix:0+caraploof:0',
+  'racinea:0+fournax:0+pyrosile:0', 'braiserose:0+brontobloc:0+ombrillon:0', 'racinea:0+zephyrion:0+fournax:0', 'aegisolar:0+brontobloc:0+aquamira:0', 'racinea:0+zephyrion:0+fournax:0', 'runicor:0+aquamira:0+brontobloc:0',
+  'braiserose:0+fournax:0+aquamira:0', 'nocturis:0+brontobloc:0+fournax:0', 'braiserose:1+terracroc:0+aquamira:0', 'nocturis:1+malefix:0+zephyrion:0', 'aegisolar:1+fournax:1+brontobloc:0', 'nocturis:1+malefix:1+aquamira:1',
+  'aegisolar:1+zephyrion:1+fournax:1', 'racinea:1+terracroc:1+aquamira:1', 'runicor:1+zephyrion:1+brontobloc:1', 'braiserose:1+malefix:1+zephyrion:1', 'nocturis:1+terracroc:1+zephyrion:1', 'racinea:1+brontobloc:1+malefix:1',
   'runicor:1+fournax:1+aquamira:1', 'braiserose:1+terracroc:1+zephyrion:1', 'aegisolar:1+brontobloc:1+malefix:1', 'nocturis:1+fournax:1+aquamira:1', 'racinea:1+terracroc:1+zephyrion:1', 'runicor:1+brontobloc:1+malefix:1',
   'braiserose:1+fournax:1+aquamira:1', 'aegisolar:1+terracroc:1+zephyrion:1', 'nocturis:1+brontobloc:1+malefix:1', 'racinea:1+fournax:1+aquamira:1', 'runicor:2+terracroc:1+zephyrion:1', 'braiserose:2+brontobloc:1+malefix:1',
   'aegisolar:2+fournax:2+aquamira:1', 'nocturis:2+terracroc:2+zephyrion:2', 'racinea:2+brontobloc:2+malefix:2', 'runicor:2+fournax:2+aquamira:2', 'braiserose:2+terracroc:2+zephyrion:2', 'solarion:2+aegisolar:2+brontobloc:2',
@@ -1654,13 +1654,28 @@ export function bonusBoss(levelNumber) {
 // 21 → 24 · 25 → 27 · 30 → 35 · 35 → 38 · 40 → 46 ; même formule au-delà en attendant sa validation des étapes 1-40.
 // MESURÉ avant (son équipe réelle, étapes 30-36) : 82 · 100 · 67 · 52 · 100 · 1 · 0 % — niveaux irréguliers + éléments ±30 %.
 export const NIVEAUX_EN_EQUIPE = 3;
+// ⚠️ 11/10 (décision de l'auteur : « combat à égalité ») : on combat avec AUTANT de créatures que d'ennemis — les premières du
+// deck, dans son ordre (1 contre 1 au chapitre 1, 2 contre 2 au chapitre 2, 3 contre 3 ensuite). MESURÉ avant : 3 créatures
+// contre 2 ennemis (étapes 15-20) → il fallait des ennemis 8 à 12 niveaux au-dessus, puis mur à l'étape 21 (0 à 36 %).
+export function combattantsPourEtape(levelNumber) {
+  return Math.max(1, opponentTeamForLevel(levelNumber).length);
+}
+// ⚠️ 11/10 (soir) — NIVEAUX DES ÉTAPES 1-40, CALIBRÉS sur le deck du CALCULATEUR DE GRIFFES (profil actif, tout dépensé)
+// en combat à égalité : chaque étape = le niveau qui suit la courbe (+1, boss +3, jamais de baisse) où ce deck gagne ~70 %
+// au 1er essai (boss ~50 %), joueur normal ; composition choisie EN MÊME TEMPS (20 à 45 testées en vrai par étape).
+// Chapitre 1 (tutoriel) : la courbe validée par l'auteur. Au-delà de 40 : la même forme de courbe, prolongée (à calibrer
+// après sa validation des étapes 1-40).
+export const NIVEAUX_ETAPES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 17, 20, 21, 21, 21, 21, 21, 22, 23, 25, 25, 28, 29, 29, 32, 33, 34, 35, 36, 39, 40, 42, 43, 44, 45, 45, 46, 46, 48, 50];
+function courbeEtapes(k) {
+  const base = (x) => x + Math.floor((x - 1) / 10) + (x % 10 === 0 ? BONUS_NIVEAU_BOSS : 0);
+  const d = Math.floor(k / 10) * 10;
+  return Math.max(base(k), d >= 10 ? base(d) : 0);
+}
 export function niveauEnnemi(levelNumber) {
   const n = Math.max(1, Math.floor(levelNumber || 1));
-  // +3 dès l'étape 11 (2 ou 3 ennemis) — MESURÉ : à niveau égal, un joueur normal gagne 92 à 99 % à 3 contre 3 (ses
-  // coups de soutien) ; l'ancien bonus CACHÉ (FORCE_ENNEMI ×1,15-1,2 ≈ +3 niveaux) est désormais AFFICHÉ.
-  const base = (k) => k + Math.floor((k - 1) / 10) + (k >= 11 ? NIVEAUX_EN_EQUIPE : 0) + (k % 10 === 0 ? BONUS_NIVEAU_BOSS : 0);
-  const dernierBoss = Math.floor(n / 10) * 10;
-  return Math.max(base(n), dernierBoss >= 10 ? base(dernierBoss) : 0);
+  if (n <= NIVEAUX_ETAPES.length) return NIVEAUX_ETAPES[n - 1];
+  const fin = NIVEAUX_ETAPES.length;
+  return NIVEAUX_ETAPES[fin - 1] + courbeEtapes(n) - courbeEtapes(fin);
 }
 // Grands nombres du combat (PV, dégâts) en format court, MÊMES suffixes que les pièces (ClickerScreen) :
 // sous 10 000 tel quel ; ensuite 12.4K, 3.21M, 1.5Md… Arrondi VERS LE BAS : jamais plus de PV affichés
