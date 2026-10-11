@@ -253,8 +253,10 @@ const SABOTAGES = [
   // 10/10 : plus de niveau max (décision de l'auteur) — le sabotage fait REVENIR le plafond, ou le coût par rareté.
   ['auditNiveauMax', F.combat, "l'ultime redevient abusé (×4 l'attaque normale)",
     remplace('export const ULTIME_MAX = 2;', 'export const ULTIME_MAX = 4;')],
-  ['auditNiveauMax', F.combat, "les ennemis reprennent la force de leur espèce (plus la force moyenne de leur rareté)",
-    remplace('    f = propre > 0 && moyenne > 0 ? (moyenne / propre) * (FORCE_ENNEMI[equipe.length] || FORCE_ENNEMI[3]) : 1;', '    f = 1;')],
+  // 10/10 (soir) : niveau affiché = VRAIES stats — un multiplicateur caché qui revient doit être vu (l'ancien sabotage
+  // visait le multiplicateur de force moyenne, désormais traduit en niveau).
+  ['auditNiveauMax', F.combat, "un multiplicateur caché revient sur les ennemis (leur niveau affiché ment de nouveau)",
+    remplace('    hp: Math.max(1, Math.round(s.hp * k)),\n    attack: Math.max(1, Math.round(s.attack * k)),', '    hp: Math.max(1, Math.round(s.hp * k * 1.2)),\n    attack: Math.max(1, Math.round(s.attack * k * 1.2)),')],
   ['auditNiveauMax', F.clicker, "le niveau maximum revient (le joueur est de nouveau bloqué en niveau)",
     remplace('export function niveauMaxCreature(niveauGagne) {\n  return Infinity;\n}', 'export function niveauMaxCreature(niveauGagne) {\n  return Math.max(0, Math.floor(Number(niveauGagne) || 0)) + 5;\n}')],
   ['auditNiveauMax', F.clicker, "le coût d'un niveau dépend de nouveau de la rareté (la prime ne paie plus le niveau d'une rare)",

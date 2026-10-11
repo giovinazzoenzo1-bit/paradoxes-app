@@ -3148,7 +3148,7 @@ Niveaux (joueur médian, TOUTES les sources de Griffes, créatures 1 / 2 / 3) : 
 10 : 31 / 4 · 15 : 31 / 24 · 16 : 31 / 26 / 5 · 20 : 31 / 26 / 23 · 25 : 32 / 33 / 33 · 31 : 36 / 35 / 35.
 
 
-## 10/10 (soir) — RÈGLES DE L'AUTEUR + REMESURE (branche `regles-octobre`, EN COURS)
+## 10/10 (soir) — RÈGLES DE L'AUTEUR + REMESURE (branche `regles-octobre`, PUBLIÉE le 10/10)
 
 FAIT : niveau affiché des ennemis = leurs VRAIES stats (niveauReelEnnemi : la force voulue — moyenne de la rareté ×
 FORCE_ENNEMI — traduite en niveau de l'espèce, arrondi ; statsForOpponentCreatureTyped sans multiplicateur) ; naissance
@@ -3167,3 +3167,12 @@ sauf étapes 6-7 (70 / 60 %). « Galère dès l'étape 2 » ne tient plus (+5 % 
 hasard d'espèce) : la galère arrive à l'étape 3 (l'auteur a galéré à l'étape 4 et jugé « bien équilibré »).
 RESTE : contrôles (auditApprentissage → galère dès l'étape 3 ; auditNiveauMax → niveaux honnêtes, prime ≈ niveau
 jusqu'à ×1,3 ; auditGardienGriffes → table et chiffre recalculés), sabotages, taps, publication.
+
+FIN (publiée) : l'auteur accepte « galère dès l'étape 3 » (niveaux honnêtes). Contrôles alignés : auditApprentissage
+(niveau 1 bat l'étape 1 ≥ 70 % ; galère à l'étape 3 ≤ 60 % ; étape 5 ≤ 40 % ; repère DIRECT : ennemi de l'étape 10 au
+moins niveau 7 — sans lui, le sabotage « chapitre adouci ×0,65 » était AVEUGLE : les étapes 1-3 plafonnent au niveau 1 et
+l'étape 5 dépend des éléments ; débutant ≥ 55 %, MESURÉ 60-100 %) ; auditNiveauMax (prime ≈ niveau jusqu'à ×1,4 ;
+ennemis avec les stats EXACTES de leur niveau affiché, ±3 % de la force voulue sauf niveau 1) ; GRIFFES_PAR_COMBAT
+[29, 152, 655, 824, 1047, 1443] ; cas de l'auteur au Gardien 1 064. Sabotage remplacé : « un multiplicateur caché
+revient » (l'ancien visait le multiplicateur de force moyenne, devenu un niveau). verifier-defis 103/103 ; 141 prouvés ;
+taps 20/20 ; 69 fichiers.

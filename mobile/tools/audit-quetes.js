@@ -3767,10 +3767,23 @@ function auditApprentissage() {
   }));
   const e1 = taux(() => 1, 1), e2 = taux(() => 1, 2);
   if (e1 < 0.7) fautes.push({ probleme: `créature typique niveau 1 : ${Math.round(100 * e1)} % à l'étape 1 (elle doit la battre)` });
-  if (e2 > 0.6) fautes.push({ probleme: `créature typique niveau 1 : ${Math.round(100 * e2)} % à l'étape 2 (elle doit galérer, décision de l'auteur)` });
+  // 10/10 (soir) — décision de l'auteur : avec les niveaux HONNÊTES, la galère arrive à l'étape 3 (MESURÉ : 82 / 69 / 30 %
+  // aux étapes 1 / 2 / 3), « ça me va ». (Avant : étape 2, tenue par un hasard d'espèce.)
+  const e3 = taux(() => 1, 3);
+  if (e3 > 0.6) fautes.push({ probleme: `créature typique niveau 1 : ${Math.round(100 * e3)} % à l'étape 3 (elle doit galérer, décision de l'auteur)` });
+  void e2;
+  // Et sans monter du tout, l'étape 5 se perd presque toujours (MESURÉ 12 %) : c'est ce qui rend le chapitre 1 « plus
+  // dur » visible même quand les toutes premières étapes plafonnent au niveau 1 (un adoucissement ne s'y voit pas).
+  const e5 = taux(() => 1, 5);
+  if (e5 > 0.4) fautes.push({ probleme: `créature typique niveau 1 : ${Math.round(100 * e5)} % à l'étape 5 (chapitre 1 trop doux, décision de l'auteur)` });
+  // Repère DIRECT (10/10 soir) : en fin de chapitre 1, l'ennemi a son vrai niveau d'étape (MESURÉ ×0,9 : niv. 10 à l'étape
+  // 10). Un chapitre adouci (×0,65) tomberait au niveau 3 — les combats seuls ne le voyaient pas (éléments, niveau 1 plancher).
+  const n10 = Math.min(...K.equipeEnnemie(10).map((m) => m.niveau));
+  if (n10 < 7) fautes.push({ probleme: `étape 10 : ennemi niveau ${n10} (chapitre 1 trop doux, décision de l'auteur)` });
   for (let l = 1; l <= CP.APPRENTISSAGE.niveaux; l++) {
     const v = taux((moi) => CP.niveauDebutant(l, moi), l);
-    if (v < 0.7) fautes.push({ niveau: l, victoires: Math.round(v * 100) + ' %', attendu: 'au moins 70 % (créature typique, 40 Griffes du jour 1 et primes dépensées)' });
+    // 10/10 (soir) : plancher 55 % — MESURÉ 60 à 100 % avec les niveaux honnêtes (étapes 6-7 : 70 et 60 %), accepté par l'auteur.
+    if (v < 0.55) fautes.push({ niveau: l, victoires: Math.round(v * 100) + ' %', attendu: 'au moins 55 % (créature typique, 40 Griffes du jour 1 et primes dépensées)' });
   }
   return fautes;
 }
@@ -4951,7 +4964,8 @@ function auditGardienGriffes() {
     // 10/10 (niveaux réels : +5 %/niveau, stats x10, puissance affichée à l'échelle 1) : 1 613 → 1 898.
     // 10/10 (fin des coups critiques : coup moyen ×2,21 → ×0,71 dans la puissance affichée) : 1 898 → 1 096.
     // 10/10 (le coût d'un niveau suit la prime de victoire) : 1 096 → 1 114.
-    if (Math.abs(r.puissance - 1114) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 114 (« 3 combats »)`);
+    // 10/10 (soir, coûts réglés de nouveau : 114 G achètent moins de niveaux) : 1 114 → 1 064.
+    if (Math.abs(r.puissance - 1064) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 064 (« 3 combats »)`);
   }
   if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
   if ((c.match(/, budgetGardienRef\.current, plafondGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget ET le niveau max du Gardien');
@@ -5084,19 +5098,25 @@ function auditNiveauMax() {
   for (const n of [5, 15, 40, 90, 130, 170, 210]) {
     const taille = Math.min(3, Math.max(1, Math.ceil(n / 10))); const cout = L.levelUpCost(C.CREATURES[0], n); const prime = K.griffesReward(n);
     const r = (cout * taille) / prime;
-    if (!(r >= 0.4 && r <= 1.1)) pb.push(`niveau ${n} : un niveau coûte ${cout} Griffes pour une prime de ${prime} (${taille} créature(s)) — la prime ne paie plus « à peu près ce niveau »`);
+    // 10/10 (soir) : jusqu'à ×1,4 — naissance à 80 % et runes en ✨ Poudre libèrent des Griffes, le niveau coûte un peu
+    // plus (COUT_PRIME jusqu'à 1,3) ; la prime paie toujours « à peu près » le niveau (0,8 à 1,3 MESURÉ).
+    if (!(r >= 0.4 && r <= 1.4)) pb.push(`niveau ${n} : un niveau coûte ${cout} Griffes pour une prime de ${prime} (${taille} créature(s)) — la prime ne paie plus « à peu près ce niveau »`);
   }
   const parRarete = ['commun', 'rare', 'mythique'].map((r) => C.CREATURES.find((c) => c.rarity === r)).filter(Boolean);
   if (new Set(parRarete.map((c) => L.levelUpCost(c, 50))).size !== 1) pb.push("le coût d'un niveau dépend de nouveau de la rareté (règle de l'auteur : la prime paie le niveau de CHAQUE créature)");
   // Ultime plafonné à ×2 la meilleure attaque normale (décision de l'auteur du 10/10, pour les deux camps).
   for (const cr of C.CREATURES) { const sp = (cr.skills || []).find((k) => k.special), n = K.meilleureAttaque(cr);
     if (sp && n && K.scaledSkillDamage(sp, cr, 100) > 2 * K.scaledSkillDamage(n, cr, 100) + 1e-6) { pb.push(`ultime de ${cr.id} au-dessus de ×2 l'attaque normale`); break; } }
-  // Règle de l'auteur (10/10) : chaque ennemi de l'Exploration a la force MOYENNE de sa rareté au niveau, × FORCE_ENNEMI.
+  // Règle de l'auteur (10/10) : chaque ennemi a la force MOYENNE de sa rareté au niveau de l'étape, × FORCE_ENNEMI ;
+  // (10/10 soir, demande de l'auteur) cette force est DANS son niveau affiché : il a EXACTEMENT les stats de son espèce
+  // à ce niveau (aucun multiplicateur caché), à ±3 % de la force voulue (arrondi au niveau), sauf au niveau 1.
   for (const n of [3, 15, 40, 120, 200]) {
-    const eq = K.equipeEnnemie(n);
+    const eq = K.equipeEnnemie(n), base = K.niveauEnnemi(n);
     for (const m of eq) {
-      const st = K.statsForOpponentCreatureTyped(m.creature, n);
-      const autres = C.CREATURES.filter((c) => c.rarity === m.creature.rarity).map((c) => { const s2 = K.combatStatsForCreatureTyped(c, m.niveau, m.evolutionTier, []); return Math.sqrt(s2.hp * s2.attack); });
+      const st = K.statsForOpponentCreatureTyped(m.creature, n), vrai = K.combatStatsForCreatureTyped(m.creature, m.niveau, m.evolutionTier, []);
+      if (st.hp !== vrai.hp || st.attack !== vrai.attack) { pb.push(`étape ${n} : ${m.creature.id} n'a pas les VRAIES stats de son niveau affiché (${m.niveau})`); break; }
+      if (m.niveau === 1) continue;
+      const autres = C.CREATURES.filter((c) => c.rarity === m.creature.rarity).map((c) => { const s2 = K.combatStatsForCreatureTyped(c, base, m.evolutionTier, []); return Math.sqrt(s2.hp * s2.attack); });
       const attendu = (autres.reduce((t, x) => t + x, 0) / autres.length) * K.FORCE_ENNEMI[eq.length];
       if (Math.abs(Math.sqrt(st.hp * st.attack) / attendu - 1) > 0.03) { pb.push(`étape ${n} : ${m.creature.id} n'a plus la force moyenne de sa rareté (règle de l'auteur)`); break; }
     }

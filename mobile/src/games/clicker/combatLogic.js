@@ -2285,7 +2285,7 @@ export function niveauxPourAtteindre(membres, cible) {
 // 10/10 (niveaux réels) : recalculé sur 60 parcours (même formule que auditGardienGriffes) — les joueurs
 // livrent plus de combats par Ascension (cible 7/10), chaque combat rapporte moins. Avant : [36, 171, 748, 1035, 1330, 1527].
 // 10/10 (fin des coups critiques, ennemis recalibrés) : recalculé de nouveau. Avant : [27, 103, 472, 585, 910, 1190].
-export const GRIFFES_PAR_COMBAT = [24, 113, 434, 676, 1073, 1331]; // A0 … A5 (au-delà : A5) — recalculé après le boss sans bonus au chapitre 1
+export const GRIFFES_PAR_COMBAT = [29, 152, 655, 824, 1047, 1443]; // A0 … A5 (au-delà : A5) — recalculé le 10/10 au soir (naissance à 80 %, ✨ Poudre, +25 % dès 30, coûts réglés)
 // LE RÉGLAGE : 25 % des Griffes moyennes d'un combat ≈ 1 niveau à TOUS les stades (MESURÉ :
 // 0,6 à 1,2 niveau ; 50 % ≈ 1,5 à 2,5 ; 100 % ≈ 2,3 à 4,9).
 export const EFFORT_GARDIEN = 0.25;
