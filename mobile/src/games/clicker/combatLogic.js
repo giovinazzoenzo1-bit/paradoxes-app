@@ -1445,9 +1445,9 @@ export const ENNEMIS_ETAPES = [
   'luxorbe:0', 'pyrosile:0', 'ombrillon:0', 'bouldog:0', 'malefix:0+luxorbe:0', 'terracroc:0+pyrosile:0',
   'zephyrion:0+ventis:0', 'malefix:0+glyphon:0', 'fournax:0+pyrosile:0', 'aquamira:0+ventis:0', 'brontobloc:0+ombrillon:0', 'terracroc:0+luxorbe:0',
   'zephyrion:0+ventis:0', 'malefix:0+glyphon:0', 'fournax:0+voltix:0+pyrosile:0', 'terracroc:0+caraploof:0+luxorbe:0', 'brontobloc:0+ventis:0+glyphon:0', 'aquamira:0+voltix:0+caraploof:0',
-  'racinea:0+fournax:0+pyrosile:0', 'braiserose:0+brontobloc:0+ombrillon:0', 'racinea:0+zephyrion:0+fournax:0', 'aegisolar:0+brontobloc:0+aquamira:0', 'racinea:0+zephyrion:0+fournax:0', 'runicor:0+aquamira:0+brontobloc:0',
-  'braiserose:0+fournax:0+aquamira:0', 'nocturis:0+brontobloc:0+fournax:0', 'braiserose:1+terracroc:0+aquamira:0', 'nocturis:1+malefix:0+zephyrion:0', 'aegisolar:1+fournax:1+brontobloc:0', 'nocturis:1+malefix:1+aquamira:1',
-  'aegisolar:1+zephyrion:1+fournax:1', 'racinea:1+terracroc:1+aquamira:1', 'runicor:1+zephyrion:1+brontobloc:1', 'braiserose:1+malefix:1+zephyrion:1', 'nocturis:1+terracroc:1+zephyrion:1', 'racinea:1+brontobloc:1+malefix:1',
+  'racinea:0+fournax:0+pyrosile:0', 'racinea:0+fournax:0+pyrosile:0', 'aegisolar:0+brontobloc:0+aquamira:0', 'braiserose:0+fournax:0+zephyrion:0', 'runicor:0+aquamira:0+brontobloc:0', 'racinea:0+fournax:0+zephyrion:0',
+  'braiserose:0+brontobloc:0+aquamira:0', 'racinea:0+zephyrion:0+fournax:0', 'nocturis:1+terracroc:0+zephyrion:0', 'braiserose:1+malefix:0+aquamira:0', 'nocturis:1+brontobloc:1+terracroc:0', 'aegisolar:1+zephyrion:1+fournax:1',
+  'runicor:1+aquamira:1+brontobloc:1', 'braiserose:1+zephyrion:1+fournax:1', 'aegisolar:1+brontobloc:1+aquamira:1', 'runicor:1+aquamira:1+brontobloc:1', 'nocturis:1+terracroc:1+zephyrion:1', 'racinea:1+brontobloc:1+malefix:1',
   'runicor:1+fournax:1+aquamira:1', 'braiserose:1+terracroc:1+zephyrion:1', 'aegisolar:1+brontobloc:1+malefix:1', 'nocturis:1+fournax:1+aquamira:1', 'racinea:1+terracroc:1+zephyrion:1', 'runicor:1+brontobloc:1+malefix:1',
   'braiserose:1+fournax:1+aquamira:1', 'aegisolar:1+terracroc:1+zephyrion:1', 'nocturis:1+brontobloc:1+malefix:1', 'racinea:1+fournax:1+aquamira:1', 'runicor:2+terracroc:1+zephyrion:1', 'braiserose:2+brontobloc:1+malefix:1',
   'aegisolar:2+fournax:2+aquamira:1', 'nocturis:2+terracroc:2+zephyrion:2', 'racinea:2+brontobloc:2+malefix:2', 'runicor:2+fournax:2+aquamira:2', 'braiserose:2+terracroc:2+zephyrion:2', 'solarion:2+aegisolar:2+brontobloc:2',
@@ -1657,15 +1657,18 @@ export const NIVEAUX_EN_EQUIPE = 3;
 // ⚠️ 11/10 (décision de l'auteur : « combat à égalité ») : on combat avec AUTANT de créatures que d'ennemis — les premières du
 // deck, dans son ordre (1 contre 1 au chapitre 1, 2 contre 2 au chapitre 2, 3 contre 3 ensuite). MESURÉ avant : 3 créatures
 // contre 2 ennemis (étapes 15-20) → il fallait des ennemis 8 à 12 niveaux au-dessus, puis mur à l'étape 21 (0 à 36 %).
+// 11/10 (soir, demande de l'auteur) : au CHAPITRE 1, 2 créatures combattent dès qu'on en a 2 (« ça pourrait bloquer un nouveau
+// joueur ») — exception au combat à égalité, limitée au tutoriel.
 export function combattantsPourEtape(levelNumber) {
-  return Math.max(1, opponentTeamForLevel(levelNumber).length);
+  const n = Math.max(1, Math.floor(levelNumber || 1));
+  return Math.max(1, opponentTeamForLevel(n).length, n <= 10 ? 2 : 0);
 }
-// ⚠️ 11/10 (soir) — NIVEAUX DES ÉTAPES 1-40, CALIBRÉS sur le deck du CALCULATEUR DE GRIFFES (profil actif, tout dépensé)
+// ⚠️ 11/10 (soir) — NIVEAUX DES ÉTAPES 1-40, CALIBRÉS (de nouveau après le retour des défis, succès et calendrier) sur le deck du CALCULATEUR DE GRIFFES (profil actif, tout dépensé)
 // en combat à égalité : chaque étape = le niveau qui suit la courbe (+1, boss +3, jamais de baisse) où ce deck gagne ~70 %
 // au 1er essai (boss ~50 %), joueur normal ; composition choisie EN MÊME TEMPS (20 à 45 testées en vrai par étape).
 // Chapitre 1 (tutoriel) : la courbe validée par l'auteur. Au-delà de 40 : la même forme de courbe, prolongée (à calibrer
 // après sa validation des étapes 1-40).
-export const NIVEAUX_ETAPES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 17, 20, 21, 21, 21, 21, 21, 22, 23, 25, 25, 28, 29, 29, 32, 33, 34, 35, 36, 39, 40, 42, 43, 44, 45, 45, 46, 46, 48, 50];
+export const NIVEAUX_ETAPES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 21, 22, 23, 23, 24, 25, 25, 26, 28, 32, 32, 34, 35, 36, 39, 40, 41, 42, 42, 45, 47, 48, 49, 49, 50, 51, 53, 54, 55, 57];
 function courbeEtapes(k) {
   const base = (x) => x + Math.floor((x - 1) / 10) + (x % 10 === 0 ? BONUS_NIVEAU_BOSS : 0);
   const d = Math.floor(k / 10) * 10;
@@ -1911,8 +1914,8 @@ export const NIVEAU_REFERENCE_QUETES = 25;
 export function facteurQuetes(niveauAventure) {
   return primeDeVictoire(Math.max(1, Math.floor(niveauAventure || 1))) / primeDeVictoire(NIVEAU_REFERENCE_QUETES); // prime de BASE (10/10)
 }
-// 11/10 (décision de l'auteur, calculateur de Griffes) : défis ×0,7.
-export const FACTEUR_DEFIS_GRIFFES = 0.7;
+// 11/10 (soir) : REMIS à 1 — l'auteur parlait des gains des ÉTAPES, pas des défis (malentendu du ×0,7).
+export const FACTEUR_DEFIS_GRIFFES = 1;
 export function recompenseQuete(base, niveauAventure) {
   return Math.max(1, Math.round((base || 0) * facteurQuetes(niveauAventure) * FACTEUR_DEFIS_GRIFFES));
 }

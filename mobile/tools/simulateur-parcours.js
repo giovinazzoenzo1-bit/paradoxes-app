@@ -71,7 +71,7 @@ const REGLAGES = {
   taillePack: (a) => L.taillePackGriffes(a), // 11/10 : la taille DU JEU (×0,5)
   runesParAsc: 3, // 1 pour le défi + 2 volontaires
   prixRune: 0, // 10/10 : les runes s'achètent en ✨ Poudre runique (combatLogic.POUDRE_PRIX), plus en Griffes
-  succesParAsc: [175, 260, 760, 1545, 500, 600].map((x) => Math.round(x * 0.25)), // 11/10 : succès ×0,25 (calculateur de Griffes)
+  succesParAsc: [175, 260, 760, 1545, 500, 600], // 11/10 (soir) : succès remis comme avant (malentendu du ×0,25)
   // Quêtes : le calendrier (≈ 39/jour) est fixe ; les quêtes du jour et de
   // la semaine (≈ 276/jour au niveau 25) suivent le niveau d'Aventure — la
   // règle DU JEU (combatLogic.facteurQuetes).
