@@ -5,14 +5,15 @@
 //   node mobile/tools/mesurer-etapes.js 1 30   (par morceaux : < 300 s par commande) → /tmp/facteurs-etapes.json (cumulé)
 const fs = require('fs');
 const A = require('./audit-quetes.js'); const K = A.load('combatLogic'); const C = A.C;
-const PENTE = { '1v1': 9.157, '2v1': 12.888, '2v2': 10.542, '3v3': 18.379 }; // régressions logistiques du 11/10
+const PENTE = { '1v1': 9.157, '2v1': 12.888, '2v2': 10.542, '3v2': 14.222, '3v3': 18.379 }; // régressions logistiques du 11/10
 const PANEL = [['bouldog', 'voltix', 'ombrillon'], ['pyrosile', 'caraploof', 'ventis'], ['glyphon', 'luxorbe', 'bouldog'],
   ['fournax', 'aquamira', 'zephyrion'], ['terracroc', 'brontobloc', 'malefix'], ['ventis', 'pyrosile', 'luxorbe']];
 const g = (id) => C.CREATURES.find((c) => c.id === id);
 const DECKS = require('./calculateur-griffes.js').calculer(120, 'actif').map((x) => x.deck);
 function mesurer(n, combatsParEquipe = 40) {
   const compo = K.equipeEnnemie(n).map((m) => ({ creature: m.creature, evolutionTier: m.evolutionTier }));
-  const nbE = compo.length, nbJ = Math.max(nbE, n <= 10 ? Math.min(2, 3) : nbE), cle = `${nbJ}v${nbE}`;
+  // NBJ (11/10, fin) : forcer le nombre de créatures du joueur (ex. 3 contre 2 au chapitre 2 → FACTEUR_ETAPE_3V2).
+  const nbE = compo.length, nbJ = process.env.NBJ ? Number(process.env.NBJ) : Math.max(nbE, n <= 10 ? Math.min(2, 3) : nbE), cle = `${nbJ}v${nbE}`;
   // Niveau du deck = celui du CALCULATEUR DE GRIFFES à cette étape (profil actif) — mesurer à « 10 + 2 × étape » (niveau 90 à
   // l'étape 40) faussait les étapes avancées : les sorts en % des PV ne pèsent pas pareil (MESURÉ : 10 points d'écart).
   const deckCalc = DECKS[Math.max(0, n - 2)] || DECKS[DECKS.length - 1];
@@ -31,7 +32,7 @@ function mesurer(n, combatsParEquipe = 40) {
   return +Math.exp((0 - Math.log(w / (1 - w))) / (PENTE[cle] || PENTE['3v3'])).toFixed(3); // logit(50 %) = 0
 }
 if (require.main === module) {
-  const F = '/tmp/facteurs-etapes.json';
+  const F = process.env.NBJ ? `/tmp/facteurs-etapes-${process.env.NBJ}j.json` : '/tmp/facteurs-etapes.json';
   const res = fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : {};
   for (let n = Number(process.argv[2]); n <= Number(process.argv[3]); n++) res[n] = mesurer(n);
   fs.writeFileSync(F, JSON.stringify(res));

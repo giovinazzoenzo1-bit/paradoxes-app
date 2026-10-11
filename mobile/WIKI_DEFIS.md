@@ -117,7 +117,8 @@ aucune autre façon d'afficher de la couleur.
 zéro** sur le deck du moment.
 
 **Ce qu'il prend en photo** :
-- le **deck** du joueur, dans son ordre (combat à égalité : autant de créatures que d'ennemis) ;
+- le **deck** du joueur, dans son ordre (chapitre 1 : 2 créatures au plus ; ensuite : jusqu'à 3, même contre 2 ennemis —
+  le calculateur connaît chaque cas : 1 contre 1, 2 contre 1, 2 contre 2, 3 contre 2, 3 contre 3) ;
 - un **budget de Griffes** = Griffes **en poche** + Griffes **récupérables** (défis du jour et de la semaine terminés, paliers
   de succès atteints, calendrier du jour non pris) + Griffes **réclamées pas encore versées** ;
 - pour chaque étape, **la prime des étapes précédentes de la fenêtre** (ex. : les 20 Griffes de l'étape 1 comptent pour

@@ -5276,7 +5276,8 @@ function auditNiveauMax() {
     }
   }
   for (let n = 1; n < 230; n++) if (K.niveauEnnemi(n + 1) < K.niveauEnnemi(n)) { pb.push(`étape ${n + 1} : ennemis niveau ${K.niveauEnnemi(n + 1)} < ${K.niveauEnnemi(n)} à l'étape ${n} (jamais de baisse)`); break; }
-  for (const n of [15, 25]) if (K.combattantsPourEtape(n) !== K.equipeEnnemie(n).length) pb.push(`étape ${n} : combat pas à égalité`);
+  // 11/10 (fin, demande de l'auteur) : dès le chapitre 2, jusqu'à 3 créatures combattent (même contre 2 ennemis).
+  if (K.combattantsPourEtape(15) !== 3 || K.combattantsPourEtape(25) !== 3) pb.push("chapitre 2 et suivants : jusqu'à 3 créatures combattent (décision du 11/10)");
   if (K.combattantsPourEtape(5) !== 2) pb.push("chapitre 1 : 2 créatures doivent pouvoir combattre (demande de l'auteur du 11/10)");
   // Baisses de Griffes et éléments (décisions de l'auteur du 11/10, calculateur de Griffes).
   {
