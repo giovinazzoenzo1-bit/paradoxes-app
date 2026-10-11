@@ -1703,7 +1703,16 @@ export const RATIOS_DIFFICULTE = {
   '3v3': { 1: 0.861, 2: 0.806, 3: 0.768, 4: 0.734, 5: 0.701 },
 };
 let niveauxJoueur = null; // { [étape]: niveau } — les photos du joueur, posées par l'écran (ou le joueur simulé)
-export function definirNiveauxJoueur(map) { niveauxJoueur = map && typeof map === 'object' ? map : null; }
+let difficultesJoueur = null; // { [étape]: 1..5 } — la difficulté réellement appliquée (avantage payant compris)
+export function definirNiveauxJoueur(map, difficultes = null) {
+  niveauxJoueur = map && typeof map === 'object' && Object.keys(map).length ? map : null;
+  difficultesJoueur = difficultes && typeof difficultes === 'object' ? difficultes : null;
+}
+// Difficulté AFFICHÉE dans l'aperçu : celle de la photo si elle existe, sinon celle de la position dans la fenêtre.
+export function difficulteAffichee(levelNumber) {
+  const n = Math.max(1, Math.floor(levelNumber || 1));
+  return (difficultesJoueur && difficultesJoueur[n]) || difficulteEtape(n);
+}
 export function fenetreDe(levelNumber) { return Math.floor((Math.max(1, Math.floor(levelNumber || 1)) - 1) / TAILLE_FENETRE); }
 export function debutFenetre(k) { return Math.max(0, Math.floor(k || 0)) * TAILLE_FENETRE + 1; }
 export function difficulteEtape(levelNumber, avantage = 0) {
@@ -2442,7 +2451,7 @@ export function niveauxPourAtteindre(membres, cible) {
 // 10/10 (niveaux réels) : recalculé sur 60 parcours (même formule que auditGardienGriffes) — les joueurs
 // livrent plus de combats par Ascension (cible 7/10), chaque combat rapporte moins. Avant : [36, 171, 748, 1035, 1330, 1527].
 // 10/10 (fin des coups critiques, ennemis recalibrés) : recalculé de nouveau. Avant : [27, 103, 472, 585, 910, 1190].
-export const GRIFFES_PAR_COMBAT = [14, 65, 264, 490, 495, 572]; // A0 … A5 — recalculé le 11/10 au soir (défis, succès, calendrier remis ; primes ×0,9 ; packs ×0,5)
+export const GRIFFES_PAR_COMBAT = [24, 119, 576, 697, 1035, 1383]; // A0 … A5 — recalculé le 11/10 (fenêtres de difficulté : moins de combats par étape)
 // LE RÉGLAGE : 25 % des Griffes moyennes d'un combat ≈ 1 niveau à TOUS les stades (MESURÉ :
 // 0,6 à 1,2 niveau ; 50 % ≈ 1,5 à 2,5 ; 100 % ≈ 2,3 à 4,9).
 export const EFFORT_GARDIEN = 0.25;

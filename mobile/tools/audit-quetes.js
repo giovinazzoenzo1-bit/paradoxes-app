@@ -3522,10 +3522,12 @@ function auditParcours() {
     // ⏸️ Étapes 41+ (Ascensions 2 à 5) : EN ATTENTE de calibration — l'auteur valide d'abord 1-40, puis le même calcul sera
     // appliqué au reste. MESURÉ (11/10 soir, gratuit sans achats) : A2-A3 filet −60 % 4,7 et 12,3 fois par joueur, A4 1,8 sur 10.
     // Seuils vérifiés sur les Ascensions 0-1 ; « personne bloqué » vérifié PARTOUT (plus haut).
-    const calibree = x.a <= 1;
-    // Haut de fourchette à 6 (MESURÉ 2,6 à 3,3) : sinon « tous les ennemis = Pyrosile » (trop facile) passait inaperçu.
-    if (calibree && !(x.victoiresMediane >= 2 && x.victoiresMediane <= 6)) fautes.push({ ascension: x.a, victoiresMediane: +x.victoiresMediane.toFixed(1), attendu: '2 à 6 (gratuit sans achats ; décision du 11/10)' });
-    if (calibree && x.victoires10eCentile < 1) fautes.push({ ascension: x.a, probleme: 'les 10 % les plus malchanceux ne gagnent presque plus (moins de 1 sur 10)', victoires: +x.victoires10eCentile.toFixed(1) });
+    // ⚠️ 11/10 (fin) — FENÊTRES DE DIFFICULTÉ (système de l'auteur) : les ennemis se calent sur le deck de CHAQUE joueur
+    // (échelle 95/85/70/50/30 %, moyenne 6,6 sur 10) → toutes les Ascensions sont vérifiées de nouveau. MESURÉ (60 joueurs) :
+    // médian 4,6 à 6,8 ; 10e rang 4,0 à 6,1 (avant : 1 à 3, les malchanceux décrochaient).
+    const calibree = true;
+    if (calibree && !(x.victoiresMediane >= 4 && x.victoiresMediane <= 8.5)) fautes.push({ ascension: x.a, victoiresMediane: +x.victoiresMediane.toFixed(1), attendu: '4 à 8,5 (fenêtres de difficulté, échelle 95/85/70/50/30 %)' });
+    if (calibree && x.victoires10eCentile < 2.5) fautes.push({ ascension: x.a, probleme: 'les 10 % les plus malchanceux ne gagnent presque plus (moins de 1 sur 10)', victoires: +x.victoires10eCentile.toFixed(1) });
     // 10/10 : avec la cible du joueur MÉDIAN, les malchanceux s'appuient plus sur le filet. MESURÉ : cran
     // −60 % ou plus 0,77 fois par joueur et par Ascension à l'A2, 1,23 à l'A3 (≈ 100 combats) — alarme 0,5 → 2.
     if (calibree && x.filet10 > 2) fautes.push({ ascension: x.a, probleme: 'le cran −60 % du filet se déclenche trop souvent', parJoueur: +x.filet10.toFixed(2) });
@@ -5115,6 +5117,59 @@ function auditPortee() {
   return require('./verifier-portee.js').verifier();
 }
 module.exports.auditPortee = auditPortee;
+
+// ---- FENÊTRES DE DIFFICULTÉ (11/10, système de l'auteur) ----
+// Chaque cran (1 → 5) doit donner sa chance annoncée (95 / 85 / 70 / 50 / 30 %) en VRAIS combats simulés : photo d'une
+// fenêtre avec un deck du calculateur de Griffes, deck dépensé au fil des primes, 3 équipes types, joueur normal (60 ms).
+// + câblage : la photo compte les Griffes en poche, l'écran pose les niveaux du joueur, le joueur simulé aussi.
+function auditFenetres() {
+  const K = load('combatLogic'); const Cl = load('clickerLogic');
+  const pb = [];
+  const g = (id) => Cl.CREATURES.find((c) => c.id === id);
+  K.definirNiveauxJoueur({ 12: 999 });
+  if (K.niveauEnnemi(12) !== 999) pb.push("niveauEnnemi n'utilise plus la photo du joueur");
+  K.definirNiveauxJoueur(null);
+  if ([11, 12, 13, 14, 15, 20].map((n) => K.difficulteEtape(n)).join('') !== '123455') pb.push('difficulté par fenêtre : 1 → 5 (boss sur un 5)');
+  if (K.difficulteEtape(15, 2) !== 3 || K.difficulteEtape(11, 2) !== 1) pb.push('avantage payant : −1 / −2 crans (minimum 1)');
+  const decks = require('./calculateur-griffes.js').calculer(45, 'actif');
+  const PANEL = [['bouldog', 'voltix', 'ombrillon'], ['fournax', 'aquamira', 'zephyrion'], ['ventis', 'pyrosile', 'luxorbe']];
+  const parD = { 1: [0, 0], 2: [0, 0], 3: [0, 0], 4: [0, 0], 5: [0, 0] };
+  for (const d0 of [6, 16, 26, 36]) {
+    const niv = decks[d0 - 2].deck; const evo = (K.equipeEnnemie(d0)[0] || {}).evolutionTier || 0;
+    for (const ids of PANEL) {
+      const membres = niv.map((l, i) => ({ creature: g(ids[i]), ownedLevel: l, evolutionTier: evo, equippedRunes: [] }));
+      K.definirNiveauxJoueur(K.photoFenetre(d0, membres, 0));
+      let budget = 0;
+      for (let n = d0; n < d0 + 5; n++) {
+        const nbJ = Math.min(membres.length, K.combattantsPourEtape(n));
+        const apres = K.deckApresEffortEquitable(membres.slice(0, nbJ), budget).membres;
+        const eq = apres.map((m) => ({ creature: m.creature, stats: K.combatStatsForCreatureTyped(m.creature, m.ownedLevel, m.evolutionTier, []) }));
+        const EE = K.equipeEnnemie(n).map((m) => ({ creature: m.creature, stats: K.statsForOpponentCreatureTyped(m.creature, n) }));
+        let sd = (n * 7919 + ids.join('').length) >>> 0; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
+        const d = K.difficulteEtape(n);
+        for (let i = 0; i < 16; i++) { parD[d][1]++; if (K.simulerCombat(eq, EE, { alea, politique: K.choixJoueur, erreurMs: 60 }).gagne) parD[d][0]++; }
+        budget += K.griffesReward(n);
+      }
+      K.definirNiveauxJoueur(null);
+    }
+  }
+  const mes = {};
+  for (const d of [1, 2, 3, 4, 5]) {
+    mes[d] = parD[d][0] / parD[d][1];
+    if (Math.abs(mes[d] - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`cran ${d} : ${Math.round(100 * mes[d])} % mesurés pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % annoncés`);
+  }
+  if (!(mes[1] > mes[3] && mes[3] > mes[5])) pb.push('les crans ne vont plus du plus facile au plus dur');
+  const fs = require('fs'), path = require('path');
+  const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  if (!Av.includes('const niveaux = photoFenetre(d0, membres, griffes, av);')) pb.push('la photo ne compte plus les Griffes en poche (un joueur garderait ses Griffes avant la photo)');
+  if (!Av.includes('definirNiveauxJoueur(niv, dif);')) pb.push("l'écran ne pose plus les niveaux du joueur (les ennemis reviennent à la table)");
+  if (!/JSON\.stringify\(\{[^)]*fenetres, avantage \}\)/.test(Av)) pb.push("les photos et l'avantage ne sont plus sauvegardés");
+  if (!Av.includes('⚔️ {difficulteAffichee(levelNumber)}/5')) pb.push("l'aperçu n'affiche plus la difficulté");
+  const Sim = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
+  if (!Sim.includes('Object.assign(j.niveauxF, K.photoFenetre(K.debutFenetre(kf), membres, j.griffes));') || !Sim.includes('finally { K.definirNiveauxJoueur(null); }')) pb.push('le joueur simulé ne vit plus les fenêtres (mesures fausses) ou les fait fuir vers les autres mesures');
+  return pb;
+}
+module.exports.auditFenetres = auditFenetres;
 
 // ── ATTAQUES DE SOUTIEN : toute l'équipe participe (09/10, décision de l'auteur) ──
 // Test de l'auteur : une créature très montée finissait seule le chapitre 1 (à chaque tour, UNE créature

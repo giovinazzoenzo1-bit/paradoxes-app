@@ -273,6 +273,15 @@ const SABOTAGES = [
     remplace('budgetGardienRef.current = primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * primesProchainsNiveaux(')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "Gardien de l'œuf 2 de nouveau NON calé (0 % mesuré chez l'auteur)",
     remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
+  // 11/10 (fin) : fenêtres de difficulté (système de l'auteur).
+  ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la photo oublie les Griffes en poche (on garderait ses Griffes avant la photo)",
+    remplace('const niveaux = photoFenetre(d0, membres, griffes, av);', 'const niveaux = photoFenetre(d0, membres, 0, av);')],
+  ['auditFenetres', F.combat, "le cran 5 n'est plus très dur (réglage cassé)",
+    remplace('export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1 };', 'export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1.45 };')],
+  ['auditFenetres', F.combat, "le jeu ignore la photo du joueur (les ennemis reviennent à la table)",
+    remplace('  if (niveauxJoueur && niveauxJoueur[n] != null) return niveauxJoueur[n];', '')],
+  ['auditFenetres', path.join(RACINE, 'tools/simulateur-parcours.js'), "les photos du joueur simulé fuient vers les autres mesures",
+    remplace('    try { return jouerEtape(l, k, s); } finally { K.definirNiveauxJoueur(null); } // jamais de fuite vers les autres mesures', '    return jouerEtape(l, k, s);')],
   // 11/10 : le plantage « Property 'poudre' doesn't exist » revient (valeur lue hors de sa portée).
   ['auditPortee', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la carte lit de nouveau une valeur que le parent ne lui transmet pas",
     remplace('function ChapterMapScreen({ poudre = 0, ascensionCount = 0, currentUnlockedLevel,', 'function ChapterMapScreen({ currentUnlockedLevel,')],

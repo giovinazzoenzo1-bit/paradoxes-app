@@ -397,6 +397,13 @@ import {
   puissanceAventure,
   combattantsPourEtape,
   niveauEnnemi,
+  definirNiveauxJoueur,
+  photoFenetre,
+  fenetreDe,
+  debutFenetre,
+  difficulteEtape,
+  difficulteAffichee,
+  TAILLE_FENETRE,
   POUDRE_PAR_VICTOIRE,
   POUDRE_PRIX,
   combatStatsForCreatureTyped,
@@ -650,6 +657,10 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const [griffes, setGriffes] = useState(0);
   // ✨ Poudre runique (10/10) : la monnaie des runes (gagnée à chaque 1re victoire d'étape).
   const [poudre, setPoudre] = useState(0);
+  // 11/10 — DIFFICULTÉ PAR FENÊTRES (système de l'auteur) : une photo par fenêtre de 5 étapes { [k]: { niveaux, difficultes, t } },
+  // et l'avantage payant { niveau: 0 | 1 | 2, restant: étapes } (−1 ou −2 crans, 20 étapes).
+  const [fenetres, setFenetres] = useState({});
+  const [avantage, setAvantage] = useState({ niveau: 0, restant: 0 });
   // Runes possédées : [{ id, type, level }] — id unique généré à l'achat/
   // la fusion, type = l'une des 4 clés de RUNE_TYPES, level 1 à 5.
   const [ownedRunes, setOwnedRunes] = useState([]);
@@ -703,6 +714,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
           setLevelStars(saved.levelStars || {});
           setGriffes(saved.griffes || 0);
           setPoudre(saved.poudre || 0);
+          setFenetres(saved.fenetres || {});
+          setAvantage(saved.avantage || { niveau: 0, restant: 0 });
           setOwnedRunes(migrateRunes(saved.ownedRunes));
           // Recalcule l'énergie à partir du temps RÉELLEMENT écoulé
           // depuis la dernière sauvegarde (même principe que les gains
@@ -762,8 +775,24 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // Sauvegarde à chaque changement.
   useEffect(() => {
     if (!progressLoaded) return;
-    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, poudre, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite }));
-  }, [currentUnlockedLevel, griffes, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite, progressLoaded]);
+    AsyncStorage.setItem(ADVENTURE_STORAGE_KEY, JSON.stringify({ currentUnlockedLevel, griffes, poudre, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite, fenetres, avantage }));
+  }, [currentUnlockedLevel, griffes, poudre, ownedRunes, energy, energyUpdatedAt, levelStars, defaitesDeSuite, fenetres, avantage, progressLoaded]);
+
+  // 11/10 — PHOTO de la fenêtre en cours (au 1er passage) : le deck dans son ordre + les Griffes EN POCHE (comptées comme
+  // dépensées). Elle fixe le niveau des ennemis de ses 5 étapes (difficulté 1 → 5, moins l'avantage payant s'il est actif).
+  useEffect(() => {
+    if (!progressLoaded) return;
+    const k = fenetreDe(currentUnlockedLevel);
+    if (fenetres[k]) return;
+    const membres = membresPourCombat(deck, owned, ownedRunes);
+    if (!membres.length) return;
+    const av = avantage && avantage.restant > 0 ? avantage.niveau : 0;
+    const d0 = debutFenetre(k);
+    const niveaux = photoFenetre(d0, membres, griffes, av);
+    const difficultes = {};
+    for (let n = d0; n < d0 + TAILLE_FENETRE; n++) difficultes[n] = difficulteEtape(n, av);
+    setFenetres((prev) => (prev[k] ? prev : { ...prev, [k]: { niveaux, difficultes, t: Date.now() } }));
+  }, [progressLoaded, currentUnlockedLevel, fenetres]);
 
   // 26/09 : publie jusqu'où TOUS les niveaux sont à 3 étoiles (garde-fou du
   // verrou d'Aventure) — aussi au chargement, pour les parties existantes.
@@ -983,6 +1012,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     // Décision de l'auteur (26/09) : les Griffes seulement à la PREMIÈRE
     // victoire d'un niveau — rejouer un niveau déjà gagné n'en donne pas.
     if (levelNumber === currentUnlockedLevelRef.current) setGriffes((g) => g + reward);
+    // 11/10 : l'avantage payant compte les étapes NOUVELLEMENT gagnées.
+    if (levelNumber === currentUnlockedLevelRef.current) setAvantage((a) => (a && a.restant > 0 ? { ...a, restant: a.restant - 1 } : a));
     if (levelNumber === currentUnlockedLevelRef.current) noterGriffes('prime', reward, { etape: levelNumber }); // journal des Griffes (11/10)
     // ✨ Poudre runique (10/10) : elle aussi à la PREMIÈRE victoire d'une étape seulement.
     if (levelNumber === currentUnlockedLevelRef.current) setPoudre((p) => p + POUDRE_PAR_VICTOIRE);
@@ -1190,6 +1221,13 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
 
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
+  // 11/10 — les photos du joueur fixent le niveau des ennemis (combatLogic.niveauEnnemi) : posées à CHAQUE rendu, avant les
+  // enfants (carte, aperçu, combat), pour qu'ils lisent tous les mêmes niveaux.
+  {
+    const niv = {}, dif = {};
+    Object.values(fenetres || {}).forEach((f) => { Object.assign(niv, (f && f.niveaux) || {}); Object.assign(dif, (f && f.difficultes) || {}); });
+    definirNiveauxJoueur(niv, dif);
+  }
   // (11/10) Niveaux des créatures du DECK : le niveau max de TOUTES les créatures en dépend (niveauMaxEquipe).
   const niveauxDuDeck = deck.filter(Boolean).map((id) => (ownedMap[id] ? ownedMap[id].level || 1 : 0)).filter((x) => x > 0);
 
@@ -3526,7 +3564,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
         </Text>
       </View>
       <Text style={[boite(APERCU.puissance), styles.apercuLigne, { color: couleurPuissance, fontSize: Math.max(9, Math.round(ui.h * 0.036)) }]} numberOfLines={1}>
-        Ta puissance {puissanceAffichee(membresPourCombat(deck, owned, ownedRunes))} · {mesure ? `${Math.round(mesure.victoires * 100)} % de victoire` : 'chance…'}
+        Ta puissance {puissanceAffichee(membresPourCombat(deck, owned, ownedRunes))} · {mesure ? `${Math.round(mesure.victoires * 100)} % de victoire` : 'chance…'} · ⚔️ {difficulteAffichee(levelNumber)}/5
       </Text>
 
       {deck.map((id, i) => {

@@ -68,6 +68,7 @@ const CONTROLES = [
   ['auditSoutienEquipe', "combat : toute l'équipe participe (soutien = moitié d'une attaque normale), dans le vrai combat ET la simulation (09/10)"],
   ['auditJournalDev', "journal des combats pour Claude : verdicts, coups, sorts, spéciaux, équipe, résultat ; bouton d'envoi dans le menu dev (08/10)"],
   ['auditPortee', "aucun nom utilisé sans être déclaré dans le code du jeu (plantage « Property 'poudre' doesn't exist », 11/10)"],
+  ['auditFenetres', "fenêtres de difficulté : chaque cran donne sa chance (95/85/70/50/30 %), la photo compte les Griffes en poche, écran et simulateur branchés (11/10)"],
   ['auditGardienGriffes', "Gardien : Griffes des 3 prochains combats, réparties équitablement, chiffre figé à la photo (règle finale du 08/10)"],
   ['auditGardien80', "Gardien : ~80 % pour qui atteint son chiffre, chance stable (arrondie à 5 %, jamais en baisse), effort en niveaux (08/10)"],
   ['auditPuissanceAffichee', "puissance affichée : la formule du jeu sans arrondi (exacte), monte à chaque niveau, partout la même, Gardien figé sur sa photo (08/10)"],

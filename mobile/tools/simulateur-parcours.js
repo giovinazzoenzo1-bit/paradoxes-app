@@ -183,6 +183,18 @@ function nouveauJoueur(graine, R = REGLAGES) {
   };
   // Jouer le niveau l jusqu'à la victoire (énergie, filet de sécurité), ou le blocage.
   j.jouer = (l, k, s) => {
+    // 11/10 — FENÊTRES (règle du jeu) : photo au 1er combat d'une fenêtre (trio + Griffes en poche), comme l'écran.
+    j.photos = j.photos || {}; j.niveauxF = j.niveauxF || {};
+    const kf = K.fenetreDe(l);
+    if (!j.photos[kf]) {
+      const membres = j.trio().map((p) => ({ creature: p.c, ownedLevel: p.niv, evolutionTier: p.evo || 0, equippedRunes: [] }));
+      Object.assign(j.niveauxF, K.photoFenetre(K.debutFenetre(kf), membres, j.griffes));
+      j.photos[kf] = true;
+    }
+    K.definirNiveauxJoueur(j.niveauxF);
+    try { return jouerEtape(l, k, s); } finally { K.definirNiveauxJoueur(null); } // jamais de fuite vers les autres mesures
+  };
+  const jouerEtape = (l, k, s) => {
     // (11/10) la règle DU JEU : étape 11 → 2 créatures, étape 21 → 3. Le calendrier des œufs du joueur simulé les donne à
     // temps (2e vers l'étape 10, 3e vers 16) ; sinon c'est compté (s.attenteCreatures) pour que la mesure le montre.
     if (possedees.length < L.creaturesRequisesPour(l)) { s.attenteCreatures = (s.attenteCreatures || 0) + 1; }
