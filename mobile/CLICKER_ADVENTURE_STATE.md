@@ -3346,3 +3346,30 @@ auditPortee dans verifier-defis + sabotage. Prouvé : sur la version fautive il 
 corrigé, AUCUN nom inconnu dans tout le jeu.
 ⚠️ LEÇON : après avoir ajouté une valeur dans un gestionnaire (onFinish, onPress…), vérifier qu'elle est déclarée DANS CE
 composant — c'est maintenant automatique (auditPortee). 156 sabotages prouvés (3 × 52), taps 20/20.
+
+
+## 11/10 (fin) — DIFFICULTÉ PAR FENÊTRES DE 5 ÉTAPES (système de l'auteur, publié)
+
+IDÉE DE L'AUTEUR : « le calculateur évalue le deck, puis règle les étapes suivantes de 1 (très facile) à 5 (très dur) »,
+pour ne plus jamais recaler à la main (pubs, défis, achats ajoutés plus tard : absorbés automatiquement).
+RÈGLES : fenêtres 1-5, 6-10, 11-15… ; difficulté = position dans la fenêtre (1 → 5 ; boss 10, 20, 30… sur un 5) ; échelle
+validée par l'auteur : 1 = 95 %, 2 = 85 %, 3 = 70 %, 4 = 50 %, 5 = 30 % (1er essai, joueur normal). PHOTO au 1er passage de la
+fenêtre : le deck dans son ordre + les Griffes EN POCHE dépensées virtuellement (anti-triche) + les primes des étapes
+précédentes de la fenêtre (comme le Gardien). Avantage payant prévu : −1 ou −2 crans pendant 20 étapes (état `avantage`
+sauvegardé, décompte sur les nouvelles victoires ; À BRANCHER sur les vrais achats avec RevenueCat).
+CALCUL (instantané, ~7 ms par fenêtre) : niveau des ennemis = celui où « puissance du deck / puissance des ennemis × facteur »
+vaut le rapport du cran. RATIOS_DIFFICULTE (régressions logistiques 1v1, 2v1, 2v2, 3v3) ; FACTEUR_ETAPE (étapes 1-60, mesuré
+en vrais combats d'équipe par `mobile/tools/mesurer-etapes.js` au niveau du deck du calculateur — à relancer pour toute
+nouvelle étape/composition, quelques minutes) ; FACTEUR_ESPECE (par évolution) au-delà ; CORRECTION_DIFFICULTE (petite, mesurée).
+PIÈGES RENCONTRÉS : (1) la puissance affichée ne voit ni les sorts ni les effets d'équipe → sans facteur, un cran variait de
+20 points selon les espèces ; les facteurs d'espèce en 1 contre 1 ne suffisent pas (synergies à 3) → facteur PAR ÉTAPE ;
+(2) mesurer les étapes à « 10 + 2 × étape » (niveau 90 à l'étape 40) faussait les étapes avancées → niveau du calculateur.
+MESURÉ : fenêtres 1-45 : 96 / 83 / 68 / 50 / 31 % (cibles 95 / 85 / 70 / 50 / 30) ; fenêtres 46-60 jamais utilisées au réglage :
+~10 points trop dures (à affiner). Joueur simulé (60, gratuit, précision normale) : 4,6 à 6,8 victoires sur 10 sur TOUTES les
+Ascensions ; 10e rang 4,0 à 6,1 (avant : 1 à 3).
+CÂBLAGE : combatLogic (definirNiveauxJoueur / niveauEnnemi lit la photo d'abord, la table NIVEAUX_ETAPES reste le repli) ;
+AdventureScreen (fenetres + avantage sauvegardés, photo par effet au 1er passage, niveaux posés à chaque rendu, aperçu
+« ⚔️ d/5 ») ; simulateur (photo au 1er combat d'une fenêtre, remise à zéro en `finally`).
+CONTRÔLES : auditFenetres (crans à ±15 points en vrais combats, photo, avantage, câblage) ; auditParcours de nouveau sur
+toutes les Ascensions (médian 4 à 8,5, 10e rang ≥ 2,5) ; GRIFFES_PAR_COMBAT [24, 119, 576, 697, 1035, 1383] ; sabotage
+« ennemis −8 » déplacé dans la photo (il visait la table, devenue AVEUGLE) → 160 sabotages prouvés ; 105 contrôles ; taps 20/20.

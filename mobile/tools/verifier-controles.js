@@ -181,8 +181,9 @@ const SABOTAGES = [
   // table qui la remplace : tous les ennemis deviennent un Pyrosile (l'Aventure trop facile revient).
   // 11/10 (soir) : avec le combat à égalité, « tous les ennemis = Pyrosile » faisait des 1 contre 1 face à des niveaux calibrés,
   // toujours durs (AVEUGLE) → le vrai « trop facile » : tous les ennemis 8 niveaux plus bas.
-  ['auditParcours', F.combat, "tous les ennemis de l'Exploration 8 niveaux plus bas (l'Aventure trop facile revient)",
-    remplace('  if (n <= NIVEAUX_ETAPES.length) return NIVEAUX_ETAPES[n - 1];', '  if (n <= NIVEAUX_ETAPES.length) return Math.max(1, NIVEAUX_ETAPES[n - 1] - 8);')],
+  // 11/10 (fin) : avec les fenêtres, le jeu lit la PHOTO (plus la table) → le « trop facile » se fait dans la photo.
+  ['auditParcours', F.combat, "les photos mettent les ennemis 8 niveaux plus bas (l'Aventure trop facile revient)",
+    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres), difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = Math.max(1, niveauPourDifficulte(n, puissanceAffichee(apres.membres), difficulteEtape(n, avantage), nbJ) - 8);')],
   ['auditParcours', F.combat, 'le filet de sécurité débranché (des joueurs gratuits restent bloqués)',
     remplace('  return f ? f.baisse : 0;\n}\n\nexport function multiplicateurFureur', '  return 0;\n}\n\nexport function multiplicateurFureur')],
   ['auditParcours', F.clicker, "la garantie force une Rare même quand le joueur en a déjà une",
