@@ -3373,3 +3373,17 @@ AdventureScreen (fenetres + avantage sauvegardés, photo par effet au 1er passag
 CONTRÔLES : auditFenetres (crans à ±15 points en vrais combats, photo, avantage, câblage) ; auditParcours de nouveau sur
 toutes les Ascensions (médian 4 à 8,5, 10e rang ≥ 2,5) ; GRIFFES_PAR_COMBAT [24, 119, 576, 697, 1035, 1383] ; sabotage
 « ennemis −8 » déplacé dans la photo (il visait la table, devenue AVEUGLE) → 160 sabotages prouvés ; 105 contrôles ; taps 20/20.
+
+
+## 11/10 (fin) — CALCULATEUR : SPEC DE L'AUTEUR APPLIQUÉE + PAGE DU WIKI (publié)
+
+Spec rappelée par l'auteur : déclenché aux étapes 1, 6, 11… (repart de zéro à chaque fenêtre) ; crans 1-5 (95/85/70/50 %, et
+« perd 1 fois à l'étape 4, 2 fois à l'étape 5 ») ; la photo compte les Griffes en poche ET récupérables (calendrier, défis,
+succès) ; la prime de chaque étape compte pour la suivante ; payeurs avantagés.
+ÉCART TROUVÉ ET CORRIGÉ : la photo ne comptait que les Griffes en poche → budget = poche + griffesARecuperer (DailyContext :
+défis du jour/semaine terminés, paliers de succès atteints, calendrier du jour) + file PENDING_GRIFFES_KEY.
+CRAN 5 : 30 % → 33 % (défaites moyennes = (1 − p) / p : 30 % donnait 2,3 défaites, 33 % donne 2 ; 50 % donne 1) ; ratios du cran 5
+recalculés depuis les régressions (1v1 0,914 · 2v1 0,799 · 2v2 0,709 · 3v3 0,706). MESURÉ : 96 / 83 / 68 / 50 / 35 %.
+WIKI : section « 🧮 LE CALCULATEUR DE DIFFICULTÉ DE L'EXPLORATION » dans WIKI_DEFIS.md (règles, budget, tableau des crans et
+défaites moyennes, payeurs, calcul, ajout d'étapes avec mesurer-etapes.js, contrôle, mesures, emplacements dans le code).
+Contrôles : auditFenetres (budget complet) + sabotage mis à jour ; 105 contrôles verts, 160 sabotages prouvés, taps 20/20.
