@@ -3231,3 +3231,38 @@ le max FINAL ; cas de l'auteur 1 064 → 1 105 (les Griffes vont d'abord à la p
 fichier SABOTÉ (vécu : TAP_DAMAGE_PER_LEVEL = 3 resté dans clickerLogic). TOUJOURS le lancer en deux moitiés :
 `verifier-controles.js 0 72` puis `verifier-controles.js 72 145` (≈ 150 s chacune), et après une coupure : `git diff` sur
 CHAQUE fichier modifié avant de continuer.
+
+
+## 11/10 (soir) — RARETÉS, BUTIN, SOUTIENS, ŒUFS (rapport de l'auteur : « légendaires trop cheatées, étapes trop faciles »)
+
+ANALYSE de son rapport (40 combats + 4 Gardiens) : 84 % des étapes au 1er essai (cible ~70 %), 4/4 Gardiens annoncés 75-80 %.
+- Précision : 74 % de parfaits, 0 raté vs joueur simulé 47 % → +19 % de dégâts (~4 niveaux). Profil « joueur précis » =
+  erreurMs 30 ms (75 % de parfaits) ; joueur de référence 60 ms (simulateur : REGLAGES.erreurMs, passé à simulerCombat).
+- CAUSE N°1, la rareté : à niveau égal vs commune, stats ×1,8 / 2,8 / 7,7 / 11,5 / 20,4 et ATTAQUES (chiffres des
+  compétences) commune 3,3 · épique 29 · légendaire 42 · mythique 95. Son Solstral niv. 30 = une commune niv. 80.
+- Rune Butin : +8 à +45 % par rune, CUMULABLES jusqu'à +100 % de Griffes.
+- « Les dégâts débordent sur un autre ennemi » : c'étaient les SOUTIENS (repli sur le 1er ennemi vivant si la cible meurt).
+- Combats longs dès l'étape 21 (moyenne ~55 s, jusqu'à 122 s : boucliers et soins ennemis) — 🟨 À SURVEILLER.
+
+DÉCISIONS ET CODE :
+1. Raretés : +2 NIVEAUX PAR CRAN (décision de l'auteur, il a refusé +1). ⚠️ Un seul facteur sur PV × attaque NE SUFFIT PAS :
+   les dégâts = chiffre de l'attaque × (attaque actuelle / attaque de base) — la stat d'attaque s'annule. DEUX facteurs
+   calculés sur les données (facteurRarete : .pv sur les PV moyens, .degats sur l'attaque moyenne d'un tour, ultime
+   plafonné), .pv dans combatStatsForCreature ET statsContinues (la puissance affichée l'ignorait), .degats dans
+   attackRatio (tous les dégâts y passent). degatsMoyensDuTour plafonne l'ultime comme scaledSkillDamage. MESURÉ
+   (puissance réelle, rareté niv. 30 / commune niv. 30 + 2 × cran) : 1,01 · 1,05 · 1,06 · 1,06 · 1,13 ; Solstral = commune 38.
+2. Naissance : 80 % pour TOUTES (60 / 45 % compensaient des raretés ×11 / ×20).
+3. Œufs : RARITY_WEIGHTS { 100, 40, 14, 5,5, 2, 0,7 } (~ −30 % au-dessus de peu commune). 1re rare œuf ~6,2 · épique 13,3 ·
+   légendaire 18,4 · mythique 23,8 ; légendaire ou mythique dans les 5 premiers œufs : 3 % (4 % avant).
+4. Butin : ÷2 [4 · 8 · 12,5 · 17,5 · 22,5 %], UNE SEULE compte (la meilleure), l'écran refuse d'en équiper une 2e dans le deck.
+5. Soutiens : sur la cible SEULEMENT (si elle meurt, perdus) — écran ET simulerCombat. EMPREINTE_COMBAT → e97f41c5.
+6. « Baisser les Griffes » : le coût d'un niveau SUIT la prime → baisser les primes ne change rien ; même effet en montant
+   COUT_PRIME → [10 : 0,8 · 25 : 1,3 · 60 : 0,95 · 101 : 1,45 · 144 : 0,9 · 185 : 1,05 · au-delà : 1,4], table des ennemis
+   régénérée sur 120 joueurs. MESURÉ (1er essai sur 10, 120 parties) : joueur normal A0 6,9 · A1 7,0 · A2 6,6 · A3 6,3 ·
+   A4 6,7 · A5 5,9 ; joueur précis 8,3 · 7,4 · 7,2 · 6,1 · 8,4 · 9,1. ⚠️ Régénérer la table APRÈS chaque réglage des coûts
+   (la rareté des ennemis suit le joueur typique : A5 est passée de 7,9 à 3,6 sans toucher à sa tranche).
+Contrôles : auditPuissanceExacte (équipe test étape 19 → Bouldog 11 + Ventis 7, 0 % réel), cas Gardien de l'auteur 1 105 →
+491, auditNiveauMax (raretés, naissance, Butin, soutiens) + 4 sabotages → 149 prouvés ; verifier-defis 103/103 ; taps 20/20.
+⚠️ PIÈGE (11/10) : une réponse COUPÉE peut laisser un `verifier-controles` tourner en arrière-plan — il sabote et
+restaure les fichiers pendant qu'on reprend (garde.sh voit des fichiers « modifiés » qui ne le sont plus une seconde
+après). Avant tout : `ps aux | grep verifier` et attendre qu'il finisse.

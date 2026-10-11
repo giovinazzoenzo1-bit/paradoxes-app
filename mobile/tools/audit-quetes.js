@@ -3235,7 +3235,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '52f045e3'; // 11/10 : l'action de l'ennemi (sort, ultime) se VOIT — affichage seulement, simulerCombatGardien inchangée (auditGardienCalibre vert). Avant : '47aa69e7' (10/10, fin des coups critiques).
+const EMPREINTE_COMBAT = 'e97f41c5'; // 11/10 (soir) : soutiens sur la cible SEULEMENT (règle partagée avec simulerCombat ; le Gardien est seul, rien ne change pour lui — auditGardienCalibre vert). Avant : '52f045e3'.
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -3905,7 +3905,9 @@ function auditPuissanceExacte() {
   // en rouge. 10/10 (niveaux réels) : son équipe d'alors (Bouldog 34 évolué, AU-DESSUS du niveau max
   // d'aujourd'hui) gagne désormais ; même contrôle avec Bouldog 20 + Ventis 13 (MESURÉ : 0 % réel).
   // Si un recalibrage la fait gagner, en choisir une plus faible — jamais retirer le contrôle.
-  const eq19 = [m('bouldog', 20), m('ventis', 13)];
+  // 11/10 (raretés à +2 niveaux par cran, ennemis régénérés) : Bouldog 20 + Ventis 13 gagne 71 % → Bouldog 11 + Ventis 7
+  // (MESURÉ : 0 % réel, puissance 169 sous la conseillée 240, rouge).
+  const eq19 = [m('bouldog', 11), m('ventis', 7)];
   doit(K.victoiresAuNiveau(eq19, 19) === 0, 'cas de contrôle du niveau 19 : l\'équipe ne perd plus à coup sûr — en choisir une plus faible');
   const r19 = K.puissanceAventure(eq19, 19);
   doit(r19.puissance < K.puissanceConseillee(19) && r19.couleur === 'rouge', 'cas de l\'auteur (niveau 19, 0 % réel) : pas affiché sous la conseillée en rouge');
@@ -4988,7 +4990,8 @@ function auditGardienGriffes() {
     // 10/10 (le coût d'un niveau suit la prime de victoire) : 1 096 → 1 114.
     // 10/10 (soir, coûts réglés de nouveau : 114 G achètent moins de niveaux) : 1 114 → 1 064.
     // 11/10 (soir, dizaine stricte : les Griffes vont d'abord à Aegisolar 9, la plus faible) : 1 064 → 1 105.
-    if (Math.abs(r.puissance - 1105) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 1 105 (« 3 combats »)`);
+    // 11/10 (soir, raretés à +2 niveaux par cran : son deck d'alors — Aegisolar, Terracroc, Racinea — perd sa rareté) : 1 105 → 491.
+    if (Math.abs(r.puissance - 491) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 491 (« 3 combats »)`);
   }
   if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
   if ((c.match(/, budgetGardienRef\.current, plafondGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget ET le niveau max du Gardien');
@@ -5122,6 +5125,25 @@ function auditNiveauMax() {
   const pb = [];
   const L = load('clickerLogic'); const K = load('combatLogic'); const Q = load('questLogic');
   if (L.niveauMaxCreature(0) !== Infinity || L.niveauMaxCreature(200) !== Infinity) pb.push("un niveau maximum est revenu (décision de l'auteur du 10/10 : aucun)");
+  // ── 11/10 (soir) — RÈGLES DE L'AUTEUR : raretés, naissance, Butin, soutiens ──
+  {
+    // Raretés : +2 niveaux par cran en PUISSANCE RÉELLE (MESURÉ 1,01 à 1,13 ; avant ×1,7 à ×12,3).
+    const RAR = ['commun', 'peu_commun', 'rare', 'epique', 'legendaire', 'mythique'];
+    const pa = (c, n) => K.puissanceAffichee([{ creature: c, ownedLevel: n, evolutionTier: 0, equippedRunes: [] }]);
+    const moy = (r, n) => { const cs = C.CREATURES.filter((c) => c.rarity === r); return cs.reduce((t, c) => t + pa(c, n), 0) / cs.length; };
+    RAR.forEach((r, i) => { const x = moy(r, 30) / moy('commun', 30 + 2 * i); if (!(x > 0.85 && x < 1.2)) pb.push(`rareté ${r} : ×${x.toFixed(2)} une commune ${2 * i} niveaux plus haut (règle de l'auteur : +2 niveaux par cran)`); });
+    if (L.niveauDeNaissance([50, 50, 50], 'legendaire') !== 40 || L.niveauDeNaissance([50, 50, 50], 'mythique') !== 40) pb.push('naissance : 80 % pour toutes les raretés (règle du 11/10)');
+    const bu = (niv) => ({ type: 'butin', level: niv });
+    if (Math.abs(K.butinBonus([bu(5)]) - 0.225) > 1e-9) pb.push(`rune de Butin niveau 5 : +${Math.round(100 * K.butinBonus([bu(5)]))} % au lieu de +22,5 % (÷2, décision de l'auteur)`);
+    if (Math.abs(K.butinBonus([bu(5), bu(5), bu(3)]) - 0.225) > 1e-9) pb.push("plusieurs runes de Butin s'additionnent encore (une seule compte, décision de l'auteur)");
+    const fs = require('fs'), path = require('path');
+    const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+    if (!Av.includes("afficherDialogue('💰 Une seule rune de Butin'")) pb.push("l'écran laisse équiper une 2e rune de Butin dans le deck");
+    const Cb = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+    const Kc = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
+    if (!Cb.includes('const cS = newOpponents[targetIdx] && newOpponents[targetIdx].hp > 0 ? targetIdx : -1;')) pb.push("combat : les soutiens frappent encore un autre ennemi quand la cible meurt");
+    if (!Kc.includes('const cS = A[cible] && A[cible].hp > 0 ? cible : -1;')) pb.push("simulation : les soutiens frappent encore un autre ennemi quand la cible meurt (mesures fausses)");
+  }
   // ── 11/10 — RÈGLE DE L'AUTEUR : niveau max selon le DECK (1 créature → 10, 2 → 20, 3 → 30, puis toutes au palier) ──
   // 11/10 (soir) : DIZAINE STRICTE — palier au-dessus de la plus faible du deck dès le début.
   const voulu = [[[5], 10], [[12, 3], 10], [[12, 10], 20], [[25, 12, 8], 10], [[35, 29, 31], 30], [[35, 30, 30], 40], [[47, 40, 41], 50], [[20, 20], 20]];

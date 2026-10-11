@@ -271,6 +271,15 @@ const SABOTAGES = [
     remplace('budgetGardienRef.current = primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * primesProchainsNiveaux(')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "Gardien de l'œuf 2 de nouveau NON calé (0 % mesuré chez l'auteur)",
     remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
+  // 11/10 (soir) : raretés, naissance, Butin, soutiens (règles de l'auteur).
+  ['auditNiveauMax', F.combat, "les raretés redeviennent écrasantes (mythique ×12)",
+    remplace("  return facteursRarete[rarete] || { pv: 1, degats: 1 };", "  return { pv: 1, degats: 1 };")],
+  ['auditNiveauMax', F.combat, "les runes de Butin s'additionnent de nouveau",
+    remplace("  const b = butins.reduce((m, r) => Math.max(m, runeBonuses([r]).butinPct), 0);", "  const b = runeBonuses(butins).butinPct;")],
+  ['auditNiveauMax', F.combat, "la simulation fait de nouveau déborder les soutiens sur un autre ennemi",
+    remplace("      const cS = A[cible] && A[cible].hp > 0 ? cible : -1;", "      const cS = A[cible] && A[cible].hp > 0 ? cible : premierVivant(A);")],
+  ['auditNiveauMax', F.clicker, "les légendaires naissent de nouveau à 60 %",
+    remplace("export const NAISSANCE_PART = { legendaire: 0.8, mythique: 0.8, autre: 0.8 };", "export const NAISSANCE_PART = { legendaire: 0.6, mythique: 0.45, autre: 0.8 };")],
   // 11/10 : niveau max selon le deck et créatures requises (règle de l'auteur).
   ['auditNiveauMax', F.clicker, "le niveau max selon le deck disparaît (une seule créature porte de nouveau tout)",
     remplace('  return n.length < 3 ? Math.min(10 * Math.max(1, n.length), palier) : palier;', '  return Infinity;')],
