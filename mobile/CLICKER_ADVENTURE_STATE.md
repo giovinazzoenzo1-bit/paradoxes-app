@@ -3266,3 +3266,36 @@ Contrôles : auditPuissanceExacte (équipe test étape 19 → Bouldog 11 + Venti
 ⚠️ PIÈGE (11/10) : une réponse COUPÉE peut laisser un `verifier-controles` tourner en arrière-plan — il sabote et
 restaure les fichiers pendant qu'on reprend (garde.sh voit des fichiers « modifiés » qui ne le sont plus une seconde
 après). Avant tout : `ps aux | grep verifier` et attendre qu'il finisse.
+
+
+## 11/10 (soir, suite) — CALCULATEUR DE GRIFFES + ÉTAPES 1-40 RECALIBRÉES (publié)
+
+DEMANDE DE L'AUTEUR (rapport : stages 3-36 en 33 min, 550 Griffes non dépensées, 46 % → 100 % sans changer de deck) :
+« un vrai calcul qui dit à quel niveau les créatures sont censées être », baisser les Griffes, monter un peu les ennemis,
+jamais de baisse après un boss, valider 1-40 avant le reste.
+OUTIL : `mobile/tools/calculateur-griffes.js [étape] [actif|normal]` — Griffes CUMULÉES par source (primes, défis, succès,
+calendrier, shop) lues DANS LE JEU, puis deck en dépensant tout (coût, naissance 80 %, dizaine). Hypothèses en tête de fichier.
+MESURÉ avant : étape 10 = 493 Griffes (130 de primes) → deck 19-20 contre ennemis 10-13 ; avant l'étape 25, primes = 38 %.
+DÉCISIONS (validées) : succès ×0,25 [4·10·25·60·150] · packs du shop en pièces ×0,5 (50 + 38/Ascension) · calendrier ×0,5
+(20/40/75) · défis ×0,7 (FACTEUR_DEFIS_GRIFFES) · primes ×0,9 (FACTEUR_PRIMES ; le coût lit la prime de BASE) · éléments ±15 %
+(1,15 / 0,85 ; avant +30/−25 : son équipe 100 % à l'étape 34, 1 % à la 35) · COMBAT À ÉGALITÉ (combattantsPourEtape : autant de
+créatures que d'ennemis, les premières du deck ; écran, aperçu, menu ET simulateur) · réglage calé sur le joueur ACTIF (« garder »).
+CAUSES MESURÉES des sauts : (1) espèces très inégales à niveau égal (duels : Runicor 98 %, Aegisolar 97 %, Malefix 90 %,
+Terracroc 89 % … Aquamira 29 %, Luxorbe 25 %, Glyphon 22 %) et la table les regroupait (étape 30 = 3 fortes, 31 = 3 faibles) ;
+(2) 3 créatures contre 2 ennemis (15-20) puis 3e ennemi d'un coup à 21 ; (3) à niveau égal, 3 contre 3 = 92-99 % pour le joueur
+(ses soutiens ; l'ancien bonus caché FORCE_ENNEMI ×1,15-1,2 ne sert plus).
+MÉTHODE (niveaux et compositions) : NIVEAUX_ETAPES (1-40, jamais en baisse) = 1-9 → 1-9, boss 10 → 13 (Bouldog), puis pour
+chaque étape le niveau qui SUIT la courbe (+1, boss +3) et la composition (20 à 45 testées EN VRAI, même rareté/évolution par
+place) où le deck du calculateur (profil actif, précision normale 60 ms) gagne ~70 % (boss ~50 %). Chapitre 1 réordonné du plus
+faible au plus fort (Ventis et Voltix y faisaient 63 / 36 % pour un deck niveau 10). Au-delà de 40 : la même forme de courbe,
+prolongée — ⏸️ EN ATTENTE de calibration (auditParcours ne vérifie les seuils que sur A0-A1).
+RÉSULTAT (1er essai) : l'auteur (deck actif, précis) 79-90 % ; actif à précision normale 53-76 % ; joueur normal 14-57 % (souvent
+25-40 : c'est là que tombent les offres payantes). Étapes 36-40 encore irrégulières (41 à 82 %) : peu de compositions à 3 évoluées.
+CONTRÔLES : auditNiveauMax (mêmes niveaux et vraies stats, jamais de baisse, égalité, valeurs des baisses de Griffes et des
+éléments) ; auditApprentissage (débutant = deck du calculateur, profil normal, boss exclu) ; auditParcours (gratuit sans achats :
+2 à 6 sur A0-A1, mesuré 2,6-3,3) ; auditPacks (50 + 38) ; auditPuissanceExacte (même équipe menu/aperçu/combat) ; GRIFFES_PAR_COMBAT
+[12, 65, 251, 353, 409, 459]. Sabotages : 5 ajoutés, 3 périmés remis à jour, « ×0,65 » (FORCE_ENNEMI) retiré, « tous Pyrosile »
+(devenu AVEUGLE avec l'égalité) remplacé par « ennemis 8 niveaux plus bas » → 153 prouvés. verifier-defis 103/103, taps 20/20.
+⚠️ PIÈGE (11/10) : la 2e moitié des sabotages dépasse maintenant 280 s (auditParcours sur 120 joueurs) → coupée, elle a laissé un
+sabotage dans mobile/index.js (ligne AsyncStorage ajoutée). TOUJOURS en TROIS morceaux : `0 52`, `52 104`, `104 153`, et après
+toute coupure : `ps aux | grep verifier` puis `git diff` sur chaque fichier modifié, restaurer ce qu'on n'a pas touché.

@@ -3516,11 +3516,19 @@ function auditParcours() {
     // compris). MESURÉ sur 3 populations : 5,4 à 8,3 selon l'Ascension et la chance aux œufs (±1 point).
     // Alarmes : « trop facile » au-dessus de 9 (le jeu publié était à 8,1-10), « trop dur » sous 5.
     // Les malchanceux tombent à 2,1-4,9 (ils avancent grâce au filet, jusqu'à −80 %) : plancher 2.
-    if (!(x.victoiresMediane >= 5 && x.victoiresMediane <= 9)) fautes.push({ ascension: x.a, victoiresMediane: +x.victoiresMediane.toFixed(1), attendu: '5 à 9 (cible 7)' });
-    if (x.victoires10eCentile < 2) fautes.push({ ascension: x.a, probleme: 'les 10 % les plus malchanceux gagnent moins de 2 combats sur 10', victoires: +x.victoires10eCentile.toFixed(1) });
+    // ⚠️ 11/10 (soir, DÉCISION DE L'AUTEUR « garder ce réglage ») : l'équilibre est calé sur un joueur ACTIF qui dépense tout
+    // (~85 % pour l'auteur) ; ce joueur simulé est un gratuit SANS achats au shop → MESURÉ 2,1 à 3,3 sur 10 (Ascensions 0-2) :
+    // il doit rejouer, faire du clicker ou acheter (offres payantes). Alarme : sous 2 (injouable) ou au-dessus de 9.
+    // ⏸️ Étapes 41+ (Ascensions 2 à 5) : EN ATTENTE de calibration — l'auteur valide d'abord 1-40, puis le même calcul sera
+    // appliqué au reste. MESURÉ (11/10 soir, gratuit sans achats) : A2-A3 filet −60 % 4,7 et 12,3 fois par joueur, A4 1,8 sur 10.
+    // Seuils vérifiés sur les Ascensions 0-1 ; « personne bloqué » vérifié PARTOUT (plus haut).
+    const calibree = x.a <= 1;
+    // Haut de fourchette à 6 (MESURÉ 2,6 à 3,3) : sinon « tous les ennemis = Pyrosile » (trop facile) passait inaperçu.
+    if (calibree && !(x.victoiresMediane >= 2 && x.victoiresMediane <= 6)) fautes.push({ ascension: x.a, victoiresMediane: +x.victoiresMediane.toFixed(1), attendu: '2 à 6 (gratuit sans achats ; décision du 11/10)' });
+    if (calibree && x.victoires10eCentile < 1) fautes.push({ ascension: x.a, probleme: 'les 10 % les plus malchanceux ne gagnent presque plus (moins de 1 sur 10)', victoires: +x.victoires10eCentile.toFixed(1) });
     // 10/10 : avec la cible du joueur MÉDIAN, les malchanceux s'appuient plus sur le filet. MESURÉ : cran
     // −60 % ou plus 0,77 fois par joueur et par Ascension à l'A2, 1,23 à l'A3 (≈ 100 combats) — alarme 0,5 → 2.
-    if (x.filet10 > 2) fautes.push({ ascension: x.a, probleme: 'le cran −60 % du filet se déclenche trop souvent', parJoueur: +x.filet10.toFixed(2) });
+    if (calibree && x.filet10 > 2) fautes.push({ ascension: x.a, probleme: 'le cran −60 % du filet se déclenche trop souvent', parJoueur: +x.filet10.toFixed(2) });
   });
   const ids = (r, n) => C.CREATURES.filter((c) => c.rarity === r).slice(0, n).map((c) => c.id);
   const com = ids('commun', 8), peu = ids('peu_commun', 6);
@@ -3659,7 +3667,8 @@ function auditPacks() {
   const lire = (f) => fs.readFileSync(require('path').join(__dirname, '../src/screens/games', f), 'utf8');
   const fautes = [];
   for (let a = 0; a <= 5; a++) {
-    if (L2.taillePackGriffes(a) !== 100 + 75 * a) fautes.push({ ascension: a, probleme: 'taille du pack', attendu: 100 + 75 * a, trouve: L2.taillePackGriffes(a) });
+    // 11/10 : ×0,5 (calculateur de Griffes, décision de l'auteur) : 50 + 38 par Ascension (avant 100 + 75).
+    if (L2.taillePackGriffes(a) !== 50 + 38 * a) fautes.push({ ascension: a, probleme: 'taille du pack', attendu: 50 + 38 * a, trouve: L2.taillePackGriffes(a) });
     const seuil = L2.ascensionThreshold(a), p = [0, 1, 2, 3, 4].map((n) => L2.griffesCoinCost(n, a));
     if (p[0] + p[1] + p[2] > 0.5 * seuil) fautes.push({ ascension: a, probleme: 'les 3 packs normaux coûtent plus de la moitié du seuil' });
     if (p[0] + p[1] + p[2] < 0.2 * seuil) fautes.push({ ascension: a, probleme: 'les 3 packs normaux coûtent moins de 20 % du seuil (on en achèterait des dizaines)' });
@@ -3788,10 +3797,13 @@ function auditApprentissage() {
   // 10). Un chapitre adouci (×0,65) tomberait au niveau 3 — les combats seuls ne le voyaient pas (éléments, niveau 1 plancher).
   const n10 = Math.min(...K.equipeEnnemie(10).map((m) => m.niveau));
   if (n10 < 7) fautes.push({ probleme: `étape 10 : ennemi niveau ${n10} (chapitre 1 trop doux, décision de l'auteur)` });
+  // 11/10 (soir) : le débutant = le deck du CALCULATEUR DE GRIFFES (profil normal, tout dépensé : primes, défis du jour,
+  // calendrier, succès) — l'ancien modèle « 40 Griffes + primes » ignorait ces sources. Le boss (étape 10) est un mur voulu.
+  const CGc = require('./calculateur-griffes.js').calculer(CP.APPRENTISSAGE.niveaux, 'normal');
   for (let l = 1; l <= CP.APPRENTISSAGE.niveaux; l++) {
-    const v = taux((moi) => CP.niveauDebutant(l, moi), l);
-    // 10/10 (soir) : plancher 55 % — MESURÉ 60 à 100 % avec les niveaux honnêtes (étapes 6-7 : 70 et 60 %), accepté par l'auteur.
-    if (v < 0.55) fautes.push({ niveau: l, victoires: Math.round(v * 100) + ' %', attendu: 'au moins 55 % (créature typique, 40 Griffes du jour 1 et primes dépensées)' });
+    if (l % 10 === 0) continue;
+    const v = taux(() => CGc[l - 1].deck[0], l);
+    if (v < 0.55) fautes.push({ niveau: l, victoires: Math.round(v * 100) + ' %', attendu: 'au moins 55 % (deck du calculateur, profil normal)' });
   }
   return fautes;
 }
@@ -3960,7 +3972,9 @@ function auditPuissanceExacte() {
   const Av = lire('src/screens/games/AdventureScreen.js'), Cl = lire('src/screens/games/ClickerScreen.js');
   doit(!/puissanceAventure\([^;]*elixir/i.test(Av), "l'Élixir compte dans la puissance d'Aventure (menu ou aperçu)");
   doit(!/puissanceFaceAuGardien\([^;]*[Ee]lixir/.test(Cl), "l'Élixir compte dans « Ton deck » face au Gardien");
-  doit((Av.match(/puissanceAventure\(membresPourCombat\(deck, owned, ownedRunes\)/g) || []).length === 2, "le menu ET l'aperçu ne mesurent pas la MÊME équipe que le combat");
+  // 11/10 (combat à égalité) : le menu, l'aperçu ET le combat prennent les N premières du deck pour CETTE étape.
+  doit((Av.match(/puissanceAventure\(membresPourCombat\(deck, owned, ownedRunes, (niveauMenu|levelNumber)\)/g) || []).length === 2
+    && Av.includes('const team = membresPourCombat(deck, owned, ownedRunes, activeBattle.levelNumber);'), "le menu ET l'aperçu ne mesurent pas la MÊME équipe que le combat");
   return fautes;
 }
 module.exports.auditPuissanceExacte = auditPuissanceExacte;
@@ -5165,26 +5179,41 @@ function auditNiveauMax() {
     const r = (cout * taille) / prime;
     // 10/10 (soir) : jusqu'à ×1,4 — naissance à 80 % et runes en ✨ Poudre libèrent des Griffes, le niveau coûte un peu
     // plus (COUT_PRIME jusqu'à 1,3) ; la prime paie toujours « à peu près » le niveau (0,8 à 1,3 MESURÉ).
-    if (!(r >= 0.4 && r <= 1.4)) pb.push(`niveau ${n} : un niveau coûte ${cout} Griffes pour une prime de ${prime} (${taille} créature(s)) — la prime ne paie plus « à peu près ce niveau »`);
+    // 11/10 (soir) : jusqu'à ×1,6 — les primes sont ×0,9 (calculateur de Griffes) mais le coût lit la prime de BASE.
+    if (!(r >= 0.4 && r <= 1.6)) pb.push(`niveau ${n} : un niveau coûte ${cout} Griffes pour une prime de ${prime} (${taille} créature(s)) — la prime ne paie plus « à peu près ce niveau »`);
   }
   const parRarete = ['commun', 'rare', 'mythique'].map((r) => C.CREATURES.find((c) => c.rarity === r)).filter(Boolean);
   if (new Set(parRarete.map((c) => L.levelUpCost(c, 50))).size !== 1) pb.push("le coût d'un niveau dépend de nouveau de la rareté (règle de l'auteur : la prime paie le niveau de CHAQUE créature)");
   // Ultime plafonné à ×2 la meilleure attaque normale (décision de l'auteur du 10/10, pour les deux camps).
   for (const cr of C.CREATURES) { const sp = (cr.skills || []).find((k) => k.special), n = K.meilleureAttaque(cr);
     if (sp && n && K.scaledSkillDamage(sp, cr, 100) > 2 * K.scaledSkillDamage(n, cr, 100) + 1e-6) { pb.push(`ultime de ${cr.id} au-dessus de ×2 l'attaque normale`); break; } }
-  // Règle de l'auteur (10/10) : chaque ennemi a la force MOYENNE de sa rareté au niveau de l'étape, × FORCE_ENNEMI ;
-  // (10/10 soir, demande de l'auteur) cette force est DANS son niveau affiché : il a EXACTEMENT les stats de son espèce
-  // à ce niveau (aucun multiplicateur caché), à ±3 % de la force voulue (arrondi au niveau), sauf au niveau 1.
+  // ⚠️ 11/10 (soir, décisions de l'auteur) : tous les ennemis d'une étape au MÊME niveau (NIVEAUX_ETAPES, calibrés sur le
+  // calculateur de Griffes), avec les VRAIES stats de leur espèce ; niveaux qui ne BAISSENT JAMAIS (« après un boss, au même
+  // niveau voire plus ») ; combat à ÉGALITÉ (autant de créatures que d'ennemis).
   for (const n of [3, 15, 40, 120, 200]) {
-    const eq = K.equipeEnnemie(n), base = K.niveauEnnemi(n);
-    for (const m of eq) {
+    for (const m of K.equipeEnnemie(n)) {
       const st = K.statsForOpponentCreatureTyped(m.creature, n), vrai = K.combatStatsForCreatureTyped(m.creature, m.niveau, m.evolutionTier, []);
       if (st.hp !== vrai.hp || st.attack !== vrai.attack) { pb.push(`étape ${n} : ${m.creature.id} n'a pas les VRAIES stats de son niveau affiché (${m.niveau})`); break; }
-      if (m.niveau === 1) continue;
-      const autres = C.CREATURES.filter((c) => c.rarity === m.creature.rarity).map((c) => { const s2 = K.combatStatsForCreatureTyped(c, base, m.evolutionTier, []); return Math.sqrt(s2.hp * s2.attack); });
-      const attendu = (autres.reduce((t, x) => t + x, 0) / autres.length) * K.FORCE_ENNEMI[eq.length];
-      if (Math.abs(Math.sqrt(st.hp * st.attack) / attendu - 1) > 0.03) { pb.push(`étape ${n} : ${m.creature.id} n'a plus la force moyenne de sa rareté (règle de l'auteur)`); break; }
+      if (m.niveau !== K.niveauEnnemi(n)) { pb.push(`étape ${n} : ${m.creature.id} niveau ${m.niveau} au lieu de ${K.niveauEnnemi(n)} (tous au même niveau)`); break; }
     }
+  }
+  for (let n = 1; n < 230; n++) if (K.niveauEnnemi(n + 1) < K.niveauEnnemi(n)) { pb.push(`étape ${n + 1} : ennemis niveau ${K.niveauEnnemi(n + 1)} < ${K.niveauEnnemi(n)} à l'étape ${n} (jamais de baisse)`); break; }
+  for (const n of [5, 15, 25]) if (K.combattantsPourEtape(n) !== K.equipeEnnemie(n).length) pb.push(`étape ${n} : combat pas à égalité`);
+  // Baisses de Griffes et éléments (décisions de l'auteur du 11/10, calculateur de Griffes).
+  {
+    const Dl = load('dailyLogic');
+    if (JSON.stringify(Dl.ACHIEVEMENT_TIER_REWARDS) !== JSON.stringify([4, 10, 25, 60, 150])) pb.push('succès : les paliers ne valent plus 4 / 10 / 25 / 60 / 150 Griffes (×0,25, décision du 11/10)');
+    const cal = Dl.DAILY_CALENDAR.filter((c) => c.type === 'griffes').map((c) => c.amount).join('/');
+    if (cal !== '20/40/75') pb.push(`calendrier : ${cal} Griffes au lieu de 20/40/75 (×0,5, décision du 11/10)`);
+    if (K.FACTEUR_DEFIS_GRIFFES !== 0.7 || K.FACTEUR_PRIMES !== 0.9) pb.push('défis ×0,7 et primes ×0,9 (décision du 11/10)');
+    if (K.ELEMENT_ADVANTAGE_MULT !== 1.15 || K.ELEMENT_WEAKNESS_MULT !== 0.85) pb.push('éléments : ±15 % (décision du 11/10)');
+  }
+  {
+    const fs = require('fs'), path = require('path');
+    const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+    if (!Av.includes('.slice(0, levelNumber ? combattantsPourEtape(levelNumber) : 3)')) pb.push("le combat n'est plus à égalité (toutes les créatures du deck combattent)");
+    const Sim = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
+    if (!Sim.includes('j.joueurs().slice(0, K.combattantsPourEtape(l))')) pb.push("le joueur simulé ne combat plus à égalité (mesures fausses)");
   }
   const t8 = Q.resolveQuestTarget({ metric: 'maxCreatureLevel', step: 15, mode: 'absolute' }, { maxCreatureLevel: 10, advLevelReached: 8 });
   const t200 = Q.resolveQuestTarget({ metric: 'maxCreatureLevel', step: 15, mode: 'absolute' }, { maxCreatureLevel: 10, advLevelReached: 200 });

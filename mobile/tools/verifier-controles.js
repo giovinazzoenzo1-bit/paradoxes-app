@@ -166,7 +166,7 @@ const SABOTAGES = [
   ['auditRechargeDeck', F.ecran, "la règle existe mais l'écran ne l'applique plus au deck",
     remplace('const r = rechargesApresChangementDeck(rechargesRef.current, avant, deck, Date.now());', 'const r = rechargesRef.current;')],
   ['auditGriffesBonus', F.daily, "les succès remis à 150 / 400 / 1 000… (les 8 000 Griffes de l'A0 signalées par l'auteur)",
-    remplace('export const ACHIEVEMENT_TIER_REWARDS = [15, 40, 100, 250, 600];', 'export const ACHIEVEMENT_TIER_REWARDS = [150, 400, 1000, 2500, 6000];')],
+    remplace('export const ACHIEVEMENT_TIER_REWARDS = [4, 10, 25, 60, 150];', 'export const ACHIEVEMENT_TIER_REWARDS = [150, 400, 1000, 2500, 6000];')],
   ['auditManaAdverse', F.combat, "la mana adverse n'est plus gardée (le bug trouvé le 24/09)",
     remplace('return { competence, degats, mana: Math.max(0, mana - (competence.manaCost || 0)) };', 'return { competence, degats, mana: Math.max(0, (adv.mana || 0) - (competence.manaCost || 0)) };')],
   ['auditSortsMoteur', F.combat, "toutes les créatures venimeuses : l'ennemi ne frappe plus personne (le bug redouté par l'auteur)",
@@ -179,8 +179,10 @@ const SABOTAGES = [
     remplace("      return blesse >= 0 && pc(adversaires[blesse]) < 0.5 ? id : null;", "      return id;")],
   // 10/10 (niveaux réels) : l'ancienne table AVENTURE_MULTIPLICATEURS n'existe plus — même sabotage sur la
   // table qui la remplace : tous les ennemis deviennent un Pyrosile (l'Aventure trop facile revient).
-  ['auditParcours', F.combat, "tous les ennemis de l'Exploration remplacés par un Pyrosile (l'Aventure trop facile revient)",
-    (s) => s.replace(/export const ENNEMIS_ETAPES = \[[^\]]*\];/, (m) => m.replace(/'[^']*'/g, "'pyrosile'"))],
+  // 11/10 (soir) : avec le combat à égalité, « tous les ennemis = Pyrosile » faisait des 1 contre 1 face à des niveaux calibrés,
+  // toujours durs (AVEUGLE) → le vrai « trop facile » : tous les ennemis 8 niveaux plus bas.
+  ['auditParcours', F.combat, "tous les ennemis de l'Exploration 8 niveaux plus bas (l'Aventure trop facile revient)",
+    remplace('  if (n <= NIVEAUX_ETAPES.length) return NIVEAUX_ETAPES[n - 1];', '  if (n <= NIVEAUX_ETAPES.length) return Math.max(1, NIVEAUX_ETAPES[n - 1] - 8);')],
   ['auditParcours', F.combat, 'le filet de sécurité débranché (des joueurs gratuits restent bloqués)',
     remplace('  return f ? f.baisse : 0;\n}\n\nexport function multiplicateurFureur', '  return 0;\n}\n\nexport function multiplicateurFureur')],
   ['auditParcours', F.clicker, "la garantie force une Rare même quand le joueur en a déjà une",
@@ -203,7 +205,7 @@ const SABOTAGES = [
   ['auditPacks', F.ecran, "le compteur de packs n'est plus remis à zéro à l'Ascension (packs hors de prix pour toujours)",
     remplace('            setGriffesCoinBuys(0);\n', '')],
   ['auditPacks', F.clicker, 'la taille du pack ne grandit plus avec l\'Ascension',
-    remplace('  return GRIFFES_COIN_PACK + 75 * Math.max(0, Math.floor(Number(ascensionCount) || 0));', '  return GRIFFES_COIN_PACK;')],
+    remplace('  return GRIFFES_COIN_PACK + 38 * Math.max(0, Math.floor(Number(ascensionCount) || 0)); // 11/10 : 75 → 38 (×0,5)', '  return GRIFFES_COIN_PACK;')],
   ['auditPacks', F.clicker, 'les packs redeviennent quasi gratuits (le « 90 packs à l\'A3 » revient)',
     remplace('export const GRIFFES_PACK_FRACTIONS = [0.10, 0.15, 0.20, 0.60, 3.0];', 'export const GRIFFES_PACK_FRACTIONS = [0.001, 0.001, 0.001, 0.001, 0.001];')],
   ['auditDefisAventure', F.defis, "la cible doublée de l'A1 œuf 5 revient (chapitre 12 au lieu de 6)",
@@ -220,8 +222,8 @@ const SABOTAGES = [
     // Par MOTIF : la 3e entrée de la table des ennemis, QUELLE QU'ELLE SOIT (10/10 : la table remplace
     // l'ancien multiplicateur, ce sabotage-là visait sa 3e valeur ×5).
     (src) => src.replace(/(export const ENNEMIS_ETAPES = \[\n\s*'[^']*', '[^']*', )'[^']*',/, (m, debut) => debut + "'arcanis',")],
-  ['auditApprentissage', F.combat, "chapitre 1 de nouveau adouci (×0,65) : la créature niveau 1 ne galère plus à l'étape 2",
-    remplace('export const FORCE_ENNEMI = { 1: 0.9, 2: 1.2, 3: 1.15 };', 'export const FORCE_ENNEMI = { 1: 0.65, 2: 1.2, 3: 1.15 };')],
+  // (11/10 soir) l'ancien sabotage « ×0,65 » visait FORCE_ENNEMI, qui ne sert plus (niveaux calibrés NIVEAUX_ETAPES) :
+  // remplacé par « chapitre 1 de nouveau adouci (ennemis bloqués au niveau 1) » plus bas.
   ['auditFilet', F.combat, "le filet redevient lent (aide après 5 défaites au lieu de 3)",
     remplace("  { defaites: 3, baisse: 0.20 },", "  { defaites: 5, baisse: 0.20 },")],
   ['auditVerrouAventure', F.aventure, "le lancement du combat ne vérifie plus le verrou (on joue le niveau 26 en Ascension 0)",
@@ -235,7 +237,7 @@ const SABOTAGES = [
   ['auditPuissanceExacte', F.combat, "l'ancienne formule revient (« 57 contre 58 » pour 0 % de victoires)",
     remplace("  const puissance = chiffreExact(puissanceConseillee(niveau), r.facteur);", "  const puissance = puissanceDeck(membres);")],
   ['auditPuissanceExacte', F.aventure, "l'Élixir recompté dans la puissance de l'aperçu",
-    remplace("        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes), levelNumber, { filetBaisse });", "        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes), levelNumber, { filetBaisse, elixirActif: true });")],
+    remplace("        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes, levelNumber), levelNumber, { filetBaisse });", "        const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes, levelNumber), levelNumber, { filetBaisse, elixirActif: true });")],
   ['auditDefaite', F.combatEcran, "l'écran de défaite dit « retente ta chance » à chaque défaite (diagnostic débranché)",
     remplace("        manque={outcome === 'lose' ? manqueExact : 0}\n", "        manque={outcome === 'lose' ? 0 : 0}\n")],
   ['auditDefaite', F.combat, "le diagnostic n'est plus minimal (un niveau de trop annoncé)",
@@ -271,6 +273,17 @@ const SABOTAGES = [
     remplace('budgetGardienRef.current = primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * primesProchainsNiveaux(')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "Gardien de l'œuf 2 de nouveau NON calé (0 % mesuré chez l'auteur)",
     remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
+  // 11/10 (soir) : combat à égalité, niveaux 1-40 calibrés, Griffes en baisse (décisions de l'auteur).
+  ['auditNiveauMax', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "toutes les créatures du deck combattent de nouveau (combat plus à égalité)",
+    remplace('    .slice(0, levelNumber ? combattantsPourEtape(levelNumber) : 3)', '    .slice(0, 3)')],
+  ['auditNiveauMax', path.join(RACINE, 'tools/simulateur-parcours.js'), "le joueur simulé ne combat plus à égalité",
+    remplace('j.joueurs().slice(0, K.combattantsPourEtape(l))', 'j.joueurs()')],
+  ['auditNiveauMax', F.combat, "les ennemis baissent de niveau après un boss",
+    remplace('export const NIVEAUX_ETAPES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 17,', 'export const NIVEAUX_ETAPES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 12,')],
+  ['auditNiveauMax', path.join(RACINE, 'src/games/clicker/dailyLogic.js'), "les succès rapportent de nouveau 15 / 40 / 100 / 250 / 600 Griffes",
+    remplace('export const ACHIEVEMENT_TIER_REWARDS = [4, 10, 25, 60, 150];', 'export const ACHIEVEMENT_TIER_REWARDS = [15, 40, 100, 250, 600];')],
+  ['auditApprentissage', F.combat, "chapitre 1 de nouveau adouci (ennemis bloqués au niveau 1)",
+    remplace('export const NIVEAUX_ETAPES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 13,', 'export const NIVEAUX_ETAPES = [1, 1, 1, 1, 1, 1, 1, 1, 1, 3,')],
   // 11/10 (soir) : raretés, naissance, Butin, soutiens (règles de l'auteur).
   ['auditNiveauMax', F.combat, "les raretés redeviennent écrasantes (mythique ×12)",
     remplace("  return facteursRarete[rarete] || { pv: 1, degats: 1 };", "  return { pv: 1, degats: 1 };")],

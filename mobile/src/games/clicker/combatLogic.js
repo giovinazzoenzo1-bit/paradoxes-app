@@ -1441,8 +1441,8 @@ export const GUARDIAN_CREATURE = {
 // ⚠️ L'outil REMPLIT ce tableau pendant le calibrage (mêmes ennemis pour le joueur simulé que
 // pour le jeu) : le garder en `const` tableau, jamais réaffecté.
 export const ENNEMIS_ETAPES = [
-  'glyphon:0', 'luxorbe:0', 'bouldog:0', 'pyrosile:0', 'caraploof:0', 'ventis:0',
-  'voltix:0', 'ombrillon:0', 'glyphon:0', 'luxorbe:0', 'malefix:0+luxorbe:0', 'terracroc:0+pyrosile:0',
+  'glyphon:0', 'luxorbe:0', 'pyrosile:0', 'ombrillon:0', 'bouldog:0', 'caraploof:0',
+  'luxorbe:0', 'pyrosile:0', 'ombrillon:0', 'bouldog:0', 'malefix:0+luxorbe:0', 'terracroc:0+pyrosile:0',
   'zephyrion:0+ventis:0', 'malefix:0+glyphon:0', 'fournax:0+pyrosile:0', 'aquamira:0+ventis:0', 'brontobloc:0+ombrillon:0', 'terracroc:0+luxorbe:0',
   'zephyrion:0+ventis:0', 'malefix:0+glyphon:0', 'fournax:0+voltix:0+pyrosile:0', 'terracroc:0+caraploof:0+luxorbe:0', 'brontobloc:0+ventis:0+glyphon:0', 'aquamira:0+voltix:0+caraploof:0',
   'racinea:0+fournax:0+pyrosile:0', 'braiserose:0+brontobloc:0+ombrillon:0', 'racinea:0+zephyrion:0+fournax:0', 'aegisolar:0+brontobloc:0+aquamira:0', 'racinea:0+zephyrion:0+fournax:0', 'runicor:0+aquamira:0+brontobloc:0',
@@ -2362,7 +2362,7 @@ export function niveauxPourAtteindre(membres, cible) {
 // 10/10 (niveaux réels) : recalculé sur 60 parcours (même formule que auditGardienGriffes) — les joueurs
 // livrent plus de combats par Ascension (cible 7/10), chaque combat rapporte moins. Avant : [36, 171, 748, 1035, 1330, 1527].
 // 10/10 (fin des coups critiques, ennemis recalibrés) : recalculé de nouveau. Avant : [27, 103, 472, 585, 910, 1190].
-export const GRIFFES_PAR_COMBAT = [29, 152, 655, 824, 1047, 1443]; // A0 … A5 (au-delà : A5) — recalculé le 10/10 au soir (naissance à 80 %, ✨ Poudre, +25 % dès 30, coûts réglés)
+export const GRIFFES_PAR_COMBAT = [12, 65, 251, 353, 409, 459]; // A0 … A5 — recalculé le 11/10 au soir (Griffes en baisse : succès, packs, calendrier, défis, primes)
 // LE RÉGLAGE : 25 % des Griffes moyennes d'un combat ≈ 1 niveau à TOUS les stades (MESURÉ :
 // 0,6 à 1,2 niveau ; 50 % ≈ 1,5 à 2,5 ; 100 % ≈ 2,3 à 4,9).
 export const EFFORT_GARDIEN = 0.25;
