@@ -3387,3 +3387,14 @@ recalculés depuis les régressions (1v1 0,914 · 2v1 0,799 · 2v2 0,709 · 3v3 
 WIKI : section « 🧮 LE CALCULATEUR DE DIFFICULTÉ DE L'EXPLORATION » dans WIKI_DEFIS.md (règles, budget, tableau des crans et
 défaites moyennes, payeurs, calcul, ajout d'étapes avec mesurer-etapes.js, contrôle, mesures, emplacements dans le code).
 Contrôles : auditFenetres (budget complet) + sabotage mis à jour ; 105 contrôles verts, 160 sabotages prouvés, taps 20/20.
+
+
+## 11/10 (fin) — CHAPITRE 2 : JUSQU'À 3 CRÉATURES (demande de l'auteur, publié)
+
+« Enlève le fait d'être bloqué à 2 créatures pour le chap 2, c'était pour les anciens paramètres. » combattantsPourEtape :
+chapitre 1 → 2 au plus ; dès le chapitre 2 → jusqu'à 3, même contre 2 ennemis. Le calculateur connaît ce cas : '3v2' mesuré
+(régression : 0,926 · 0,85 · 0,799 · 0,753 · 0,717) et FACTEUR_ETAPE_3V2 (étapes 11-20, NBJ=3 mesurer-etapes.js) — ⚠️ MESURÉ :
+avec les facteurs 2 contre 2 (jusqu'à ×1,39), la fenêtre 16-20 en 3 contre 2 donnait 95-100 % à TOUS les crans ; avec les
+facteurs 3 contre 2 : 100 / 77 / 63 / 60 / 24 % (petit échantillon). Toutes fenêtres 1-45 : 96 / 81 / 65 / 48 / 34 %.
+⚠️ LEÇON : un facteur d'étape dépend du NOMBRE DE COMBATTANTS — toute nouvelle configuration (ex. 3 contre 1) = le mesurer à part.
+Contrôles : auditNiveauMax (chapitre 2 → 3 combattants) ; 105 verts, 160 sabotages prouvés, taps 20/20.
