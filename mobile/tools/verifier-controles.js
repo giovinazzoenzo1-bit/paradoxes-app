@@ -183,7 +183,7 @@ const SABOTAGES = [
   // toujours durs (AVEUGLE) → le vrai « trop facile » : tous les ennemis 8 niveaux plus bas.
   // 11/10 (fin) : avec les fenêtres, le jeu lit la PHOTO (plus la table) → le « trop facile » se fait dans la photo.
   ['auditParcours', F.combat, "les photos mettent les ennemis 8 niveaux plus bas (l'Aventure trop facile revient)",
-    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres), difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = Math.max(1, niveauPourDifficulte(n, puissanceAffichee(apres.membres), difficulteEtape(n, avantage), nbJ) - 8);')],
+    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fPrecision, difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = Math.max(1, niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fPrecision, difficulteEtape(n, avantage), nbJ) - 8);')],
   ['auditParcours', F.combat, 'le filet de sécurité débranché (des joueurs gratuits restent bloqués)',
     remplace('  return f ? f.baisse : 0;\n}\n\nexport function multiplicateurFureur', '  return 0;\n}\n\nexport function multiplicateurFureur')],
   ['auditParcours', F.clicker, "la garantie force une Rare même quand le joueur en a déjà une",

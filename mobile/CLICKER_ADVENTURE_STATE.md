@@ -3398,3 +3398,22 @@ avec les facteurs 2 contre 2 (jusqu'à ×1,39), la fenêtre 16-20 en 3 contre 2 
 facteurs 3 contre 2 : 100 / 77 / 63 / 60 / 24 % (petit échantillon). Toutes fenêtres 1-45 : 96 / 81 / 65 / 48 / 34 %.
 ⚠️ LEÇON : un facteur d'étape dépend du NOMBRE DE COMBATTANTS — toute nouvelle configuration (ex. 3 contre 1) = le mesurer à part.
 Contrôles : auditNiveauMax (chapitre 2 → 3 combattants) ; 105 verts, 160 sabotages prouvés, taps 20/20.
+
+
+## 11/10 (fin) — PRÉCISION DU JOUEUR DANS LE CALCULATEUR + RECALCUL EN COURS DE FENÊTRE (publié)
+
+Rapport de l'auteur : « un peu trop facile, je ne perds presque jamais le 4e et le 5e combat ». CAUSE MESURÉE : sa précision
+(75 % de parfaits, coup moyen 0,873 contre 0,735 pour le joueur de référence) → simulé sans compensation : 99 / 93 / 83 / 70 / 56 %.
+Aussi : créatures arrivées en cours de fenêtre (étapes 8-10 et 20 à 100 %) ; équipe exacte (écart possible).
+SPEC DE L'AUTEUR : précision mesurée sur les 5 étapes précédentes ; 1re fenêtre = joueur moyen ; PLAFOND = l'auteur (« pas de
+blocage ») ; nouvelle créature à l'étape 3 → étapes 3, 4, 5 recalculées ; équipe exacte seulement si ça ne ralentit pas.
+CODE : combatLogic — COUP_REFERENCE 0,735, COUP_MAX 0,875 (auteur), COUP_MIN 0,5, coupMoyenDesVerdicts, facteurPrecision =
+(coup / référence)^EXPOSANT_PRECISION, appliqué à la puissance du deck dans photoFenetre (options.coup ; options.fin pour un
+recalcul) ; EXPOSANT 0,35 MESURÉ (0,5 = théorie √dégâts, trop dur : cran 4 à 42 %) → précis 95 / 84 / 69 / 50 / 37 %, faible
+(0,642) 95 / 84 / 71 / 51 / 35 %. AdventureScreen — coup lu dans journalCombat (combats d'Aventure des 5 étapes précédentes),
+photo { coup, nbDeck } ; recalcul des étapes restantes si le deck a plus de créatures que la photo (vieilles photos : non).
+Simulateur — coupSimule(erreurMs) et même recalcul.
+NON FAIT (mesuré) : simuler l'équipe exacte = ~0,6 s par fenêtre sur ordinateur, 2,5 à 5 s sur téléphone → ralentirait.
+Contrôles : auditFenetres (lecture du journal, recalcul, facteur de précision, mesure joueur précis sur 6 équipes — 3 équipes
+donnaient 66 % au cran 4 par simple variance) + 3 sabotages ; sabotage « ennemis −8 » remis sur la nouvelle ligne → 163 prouvés,
+105 contrôles, taps 20/20.
