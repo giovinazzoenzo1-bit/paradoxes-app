@@ -1162,9 +1162,10 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
         attaquant = apres;
       }
       fightersRef.current = fightersRef.current.map((x, i) => (i === curIdx ? attaquant : x));
-      // SOUTIEN (09/10) — règle PARTAGÉE avec la simulation : les autres créatures vivantes frappent la cible
-      // (ou le 1er ennemi vivant), qu'il y ait eu un coup ou un sort.
-      const cS = newOpponents[targetIdx] && newOpponents[targetIdx].hp > 0 ? targetIdx : newOpponents.findIndex((o) => o.hp > 0);
+      // SOUTIEN (09/10) — règle PARTAGÉE avec la simulation : les autres créatures vivantes frappent la cible, qu'il y ait
+      // eu un coup ou un sort. ⚠️ 11/10 (l'auteur : « le reste des dégâts tape un autre ennemi, pas normal ») : si la cible
+      // est morte, les soutiens sont PERDUS (plus de repli sur le 1er ennemi vivant).
+      const cS = newOpponents[targetIdx] && newOpponents[targetIdx].hp > 0 ? targetIdx : -1;
       if (cS >= 0) {
         const soutiens = coupsDeSoutien(fightersRef.current, curIdx, newOpponents[cS].creature);
         for (const s of soutiens) {

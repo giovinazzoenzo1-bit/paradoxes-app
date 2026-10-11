@@ -360,7 +360,8 @@ CREATURES.forEach((c) => { c.skills = buildCreatureSkills(c); });
 // L'écart n'est pas figé pour autant : 1 joueur sur 10 décroche un
 // légendaire ou un mythique dans ses 5 premiers œufs. Assez rare pour
 // rester une histoire à raconter, assez fréquent pour exister.
-export const RARITY_WEIGHTS = { commun: 100, peu_commun: 45, rare: 20, epique: 8, legendaire: 3, mythique: 1 };
+// 11/10 (décision de l'auteur : « réduire encore un peu les chances d'obtention des raretés ») : ~ −30 % au-dessus de peu commune.
+export const RARITY_WEIGHTS = { commun: 100, peu_commun: 40, rare: 14, epique: 5.5, legendaire: 2, mythique: 0.7 };
 export const RARITY_LABEL = {
   commun: 'Commun', peu_commun: 'Peu commun', rare: 'Rare',
   epique: 'Épique', legendaire: 'Légendaire', mythique: 'Mythique',
@@ -488,7 +489,9 @@ export function creaturesRequisesPour(etape) {
 // naîtra avec le même % mais de la première, pareil pour la 3e »). Légendaire 60 %, mythique 45 % (« pour ne pas que ce
 // soit trop cheaté »). Avant : niveau 1 — chaque nouvelle créature devait être remontée de zéro (joueur « tout communes »
 // bloqué vers l'étape 27-37 selon l'auteur). Les invocations de l'Élevage ne sont PAS concernées (pas une éclosion).
-export const NAISSANCE_PART = { legendaire: 0.6, mythique: 0.45, autre: 0.8 };
+// 11/10 : 80 % pour TOUTES — avec les raretés à +2 niveaux par cran, une légendaire née à 60 % (ou une mythique à 45 %)
+// serait plus faible que l'équipe et inutile (les 60 / 45 % compensaient des raretés ×11 / ×20).
+export const NAISSANCE_PART = { legendaire: 0.8, mythique: 0.8, autre: 0.8 };
 export function niveauDeNaissance(niveauxPossedes, rarete) {
   const n = (niveauxPossedes || []).map(Number).filter((x) => x > 0).sort((a, b) => b - a);
   if (!n.length) return 1;
@@ -521,7 +524,14 @@ export function primeDeVictoire(levelNumber) {
 // 11/10 (niveau max selon le deck) : MESURÉ sur 120 joueurs avec [.. 101 : 1,3 · 144 : 1,1 · .. · au-delà : 1,3] → médian
 // A2 5,6 · A3 5,7 · A5 5,8 (un peu dur ; le « 10 sur 10 » de l'A5 venait d'UNE population chanceuse de 40) → adouci.
 // Puis (cascade d'une tranche sur la suivante) A3 8,4 · A4 9,8 · A5 8,9 → A3 1,05 · A4 0,75 · A5 1,2 → A5 4,9 → A5 0,95.
-export const COUT_PRIME = [[10, 0.8], [20, 0.9], [60, 1.2], [101, 1.15], [144, 1.05], [185, 0.75], [Infinity, 0.95]];
+// 11/10 (soir) — RÉGLÉ DE NOUVEAU après les raretés à +2 niveaux par cran, la rune Butin ÷2 (une seule) et les soutiens
+// sur la cible seulement : tout était trop facile (joueur normal A5 10 sur 10). Cible de l'auteur : PLUS DUR (« les étapes
+// sont beaucoup trop faciles ») → joueur normal ≈ 6,5 sur 10 au 1er essai. Tranches alignées sur les Ascensions (A0 : 1-25 ;
+// A1 : 26-60 ; A2 : 61-101 ; A3 : 102-144 ; A4 : 145-185 ; A5 : au-delà). ⚠️ L'A5 dépend surtout de l'état du joueur en
+// sortant de l'A4 (A4 0,85 → A5 10 sur 10 même à 1,45).
+// Puis, table des ennemis régénérée (leur rareté suit le joueur typique) : A4 5,2 · A5 3,6 → A4 1,05 · A5 1,25.
+// Puis A5 8,1 (joueur précis 9,8) → A5 1,4.
+export const COUT_PRIME = [[10, 0.8], [25, 1.3], [60, 0.95], [101, 1.45], [144, 0.9], [185, 1.05], [Infinity, 1.4]];
 export function partCoutPrime(level) {
   const n = Math.max(1, Math.floor(level || 1));
   return (COUT_PRIME.find(([max]) => n <= max) || COUT_PRIME[COUT_PRIME.length - 1])[1];

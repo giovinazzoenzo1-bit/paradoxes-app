@@ -192,7 +192,9 @@ function nouveauJoueur(graine, R = REGLAGES) {
       const d = j.serie[l] || 0;
       const baisse = K.baisseFilet(d); // le filet DU JEU (combatLogic)
       if (baisse >= 0.6) s.filet10++; else if (baisse >= 0.4) s.filet7++; else if (baisse > 0) s.filet5++;
-      const r = K.simulerCombat(j.joueurs(), j.adversaires(l, k, baisse), { alea, politique: K.choixJoueur });
+      // erreurMs (11/10) : précision à la jauge — 60 ms = joueur de référence (47 % de parfaits), 30 ms = joueur précis
+      // comme l'auteur (75 % de parfaits, MESURÉ sur son rapport : 74 %).
+      const r = K.simulerCombat(j.joueurs(), j.adversaires(l, k, baisse), { alea, politique: K.choixJoueur, erreurMs: R.erreurMs || K.JAUGE_ERREUR_REFERENCE_MS });
       if (r.gagne) { s.victoires += 1; j.niveau = l; j.serie[l] = 0; j.griffes += R.prime(l); monter(L.niveauMaxCreature(j.niveau)); return true; }
       j.serie[l] = d + 1;
       if (j.serie[l] >= R.blocage) { s.bloque = l; j.bloque = l; return false; }

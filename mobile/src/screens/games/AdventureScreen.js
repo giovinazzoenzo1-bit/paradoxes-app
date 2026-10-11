@@ -1151,6 +1151,13 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const equipRune = (runeId, creatureId) => {
     const alreadyEquipped = ownedRunes.filter((r) => r.equippedCreatureId === creatureId).length;
     if (alreadyEquipped >= 3) return;
+    // 11/10 (décision de l'auteur) : UNE SEULE rune de Butin dans le deck (le bonus ne compte de toute façon que la meilleure).
+    const runeVisee = ownedRunes.find((r) => r.id === runeId);
+    if (runeVisee && runeVisee.type === 'butin' && deck.includes(creatureId)
+      && ownedRunes.some((r) => r.id !== runeId && r.type === 'butin' && deck.includes(r.equippedCreatureId))) {
+      afficherDialogue('💰 Une seule rune de Butin', 'Tu ne peux équiper qu\'une seule rune de Butin dans ton deck.\n\nRetire l\'autre d\'abord.');
+      return;
+    }
     setOwnedRunes((prev) => {
       const suivant = prev.map((r) => (r.id === runeId ? { ...r, equippedCreatureId: creatureId } : r));
       // ⚠️ On publie le NOMBRE de runes équipées, pas un compteur

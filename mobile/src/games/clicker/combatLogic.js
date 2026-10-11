@@ -60,13 +60,45 @@ export function levelMultiplier(level) {
 // d'appliquer un multiplicateur de type par-dessus (risque de double
 // application). Repli sur la formule uniquement pour les créatures qui
 // n'ont pas encore été régénérées par Gemini.
+// ⚠️ 11/10 (décision de l'auteur : « les légendaires sont beaucoup trop cheatées, mythiques j'imagine même pas ») :
+// chaque cran de rareté vaut +2 NIVEAUX (×1,05²) en moyenne. MESURÉ avant, à niveau égal vs commune : peu commune ×1,8 ·
+// rare ×2,8 · épique ×7,7 · légendaire ×11,5 · mythique ×20,4 (son Solstral niv. 30 = une commune niv. 80). Facteur par
+// rareté CALCULÉ sur les données des créatures (moyenne de la rareté → moyenne commune × 1,05^(2 × cran)) : les écarts
+// entre espèces d'une même rareté sont gardés.
+// ⚠️ DEUX facteurs (MESURÉ : un seul, calculé sur PV × attaque, laissait la PUISSANCE réelle ×1,7 à ×12,3) : les dégâts
+// = chiffre de l'attaque × (attaque actuelle / attaque de base) — la stat d'attaque S'ANNULE, ce sont les chiffres des
+// attaques qui portent la rareté (attaque normale moyenne : commune 3,3 · mythique 95). Donc : PV × facteurPV (sur les
+// PV moyens) et dégâts × facteurDegats (sur l'attaque moyenne d'un tour, ultime plafonné compris), dans attackRatio.
+export const NIVEAUX_PAR_CRAN_RARETE = 2;
+const CRAN_RARETE = { commun: 0, peu_commun: 1, rare: 2, epique: 3, legendaire: 4, mythique: 5 };
+let facteursRarete = null; // calculés au 1er besoin (pas à l'import : ordre des constantes)
+function calculerFacteursRarete() {
+  const pv = (c) => (c.baseHp != null ? c.baseHp : (RARITY_BASE_STATS[c.rarity] || {}).hp) || 0;
+  const tour = (c) => {
+    const ks = c.skills || [], m = ks.filter((k) => !k.special).reduce((x, k) => Math.max(x, k.damage), 0), sp = ks.find((k) => k.special);
+    const cycle = MANA_MAX / MANA_PER_TURN;
+    return sp ? ((cycle - 1) * m + Math.min(sp.damage, ULTIME_MAX * m)) / cycle : m;
+  };
+  const moy = (r, f) => { const cs = CREATURES.filter((c) => c.rarity === r); return cs.length ? cs.reduce((t, c) => t + f(c), 0) / cs.length : 0; };
+  const out = {};
+  for (const r of Object.keys(CRAN_RARETE)) {
+    const cible = Math.pow(CROISSANCE_NIVEAU, NIVEAUX_PAR_CRAN_RARETE * CRAN_RARETE[r]);
+    const pr = moy(r, pv), pc = moy('commun', pv), dr = moy(r, tour), dc = moy('commun', tour);
+    out[r] = { pv: pr > 0 && pc > 0 ? cible * pc / pr : 1, degats: dr > 0 && dc > 0 ? cible * dc / dr : 1 };
+  }
+  return out;
+}
+export function facteurRarete(rarete) {
+  if (!facteursRarete) facteursRarete = calculerFacteursRarete();
+  return facteursRarete[rarete] || { pv: 1, degats: 1 };
+}
 export function combatStatsForCreature(creature, level) {
   const base = creature.baseHp != null
     ? { hp: creature.baseHp, attack: creature.baseAttack, clickSpeed: creature.baseClickSpeed, endurance: creature.baseEndurance }
     : RARITY_BASE_STATS[creature.rarity];
   const levelMult = levelMultiplier(level);
   return {
-    hp: Math.round(base.hp * levelMult),
+    hp: Math.round(base.hp * levelMult * facteurRarete(creature.rarity).pv), // 11/10 : rareté = +2 niveaux par cran (PV)
     attack: Math.round(base.attack * levelMult),
     // La vitesse de clic ne monte PAS avec le niveau (sinon le défi de
     // tap deviendrait trivial en fin de partie) — seule l'endurance suit
@@ -392,7 +424,9 @@ export function degatsMoyensDuTour(creature, stats) {
   const meilleur = skills.filter((k) => !k.special).reduce((m, k) => Math.max(m, k.damage), 0);
   const spe = skills.find((k) => k.special);
   const cycle = MANA_MAX / MANA_PER_TURN;
-  const brut = spe ? ((cycle - 1) * meilleur + spe.damage) / cycle : meilleur;
+  // 11/10 : l'ultime PLAFONNÉ comme en combat (scaledSkillDamage, ULTIME_MAX × l'attaque normale, décision du 10/10) —
+  // sinon la puissance affichée gonflait les créatures à gros ultime (mythique : 225 compté au lieu de 190).
+  const brut = spe ? ((cycle - 1) * meilleur + Math.min(spe.damage, ULTIME_MAX * meilleur)) / cycle : meilleur;
   // Coup MOYEN du joueur de référence à la jauge (03/10 ; avant : ×2,5 constant, autoclicker).
   const mult = multJaugeMoyen({ creature, stats }) + (stats.dmgMultBonus || 0);
   return brut * attackRatio(creature, stats.attack) * GLOBAL_DAMAGE_BOOST * mult;
@@ -436,11 +470,12 @@ export function statsContinues(creature, level, evolutionTier = 0, equippedRunes
   const typeMod = creature.baseHp != null ? { hpMult: 1, attackMult: 1 } : (MONSTER_TYPES[creature.combatType] || MONSTER_TYPES.attaquant);
   const evoMult = EVOLUTION_STAT_MULTIPLIER[evolutionTier] || 1;
   const bonus = runeBonuses(equippedRunes);
+  const fPv = facteurRarete(creature.rarity).pv; // 11/10 : comme combatStatsForCreature (sinon la puissance affichée l'ignorait)
   return {
-    hp: base.hp * levelMult * typeMod.hpMult * evoMult * (1 + bonus.hpPct),
+    hp: base.hp * levelMult * fPv * typeMod.hpMult * evoMult * (1 + bonus.hpPct),
     attack: base.attack * levelMult * typeMod.attackMult * evoMult * (1 + bonus.atkPct),
     // Les éléments du calcul, pour que la garde refasse le DOUBLE ARRONDI du jeu à l'identique.
-    _base: { hp: base.hp * levelMult, attack: base.attack * levelMult },
+    _base: { hp: base.hp * levelMult * fPv, attack: base.attack * levelMult },
     _facteurs: { hpMult: typeMod.hpMult, attackMult: typeMod.attackMult, evo: evoMult, hpPct: bonus.hpPct, atkPct: bonus.atkPct },
   };
 }
@@ -1230,8 +1265,10 @@ export function simulerCombat(joueurs, adversaires, {
       J[act] = apres;
     }
     if (!estBoss) {
-      // SOUTIEN (09/10) : les autres créatures vivantes frappent la cible (ou le 1er ennemi vivant).
-      const cS = A[cible] && A[cible].hp > 0 ? cible : premierVivant(A);
+      // SOUTIEN (09/10) : les autres créatures vivantes frappent la cible. ⚠️ 11/10 (retour de l'auteur : « quand on tue un
+      // ennemi, le reste des dégâts tape un autre ennemi, pas normal ») : plus de repli sur le 1er ennemi vivant — si la
+      // cible est morte, les soutiens sont perdus. Règle PARTAGÉE avec CombatScreen.
+      const cS = A[cible] && A[cible].hp > 0 ? cible : -1;
       if (cS >= 0) {
         for (const s of coupsDeSoutien(J, act, A[cS].creature)) {
           if (!(A[cS].hp > 0)) break;
@@ -1407,37 +1444,37 @@ export const ENNEMIS_ETAPES = [
   'glyphon:0', 'luxorbe:0', 'bouldog:0', 'pyrosile:0', 'caraploof:0', 'ventis:0',
   'voltix:0', 'ombrillon:0', 'glyphon:0', 'luxorbe:0', 'fournax:0+bouldog:0', 'aquamira:0+pyrosile:0',
   'terracroc:0+caraploof:0', 'zephyrion:0+ventis:0', 'brontobloc:0+voltix:0', 'malefix:0+ombrillon:0', 'fournax:0+glyphon:0', 'aquamira:0+luxorbe:0',
-  'terracroc:0+bouldog:0', 'zephyrion:0+pyrosile:0', 'brontobloc:0+malefix:0+caraploof:0', 'fournax:0+aquamira:0+ventis:0', 'terracroc:0+zephyrion:0+voltix:0', 'brontobloc:0+malefix:0+ombrillon:0',
-  'aegisolar:0+fournax:0+aquamira:0', 'nocturis:0+terracroc:0+zephyrion:0', 'racinea:0+brontobloc:0+malefix:0', 'runicor:0+fournax:0+aquamira:0', 'braiserose:0+terracroc:0+zephyrion:0', 'aegisolar:0+brontobloc:0+malefix:0',
-  'nocturis:0+fournax:0+aquamira:0', 'racinea:1+terracroc:1+zephyrion:0', 'runicor:1+brontobloc:1+malefix:1', 'braiserose:1+fournax:1+aquamira:1', 'aegisolar:1+terracroc:1+zephyrion:1', 'nocturis:1+brontobloc:1+malefix:1',
+  'terracroc:0+bouldog:0', 'zephyrion:0+pyrosile:0', 'brontobloc:0+caraploof:0+ventis:0', 'malefix:0+voltix:0+ombrillon:0', 'fournax:0+glyphon:0+luxorbe:0', 'aquamira:0+bouldog:0+pyrosile:0',
+  'aegisolar:0+terracroc:0+caraploof:0', 'nocturis:0+zephyrion:0+ventis:0', 'racinea:0+brontobloc:0+malefix:0', 'runicor:0+fournax:0+aquamira:0', 'braiserose:0+terracroc:0+zephyrion:0', 'aegisolar:0+brontobloc:0+malefix:0',
+  'nocturis:0+fournax:0+aquamira:0', 'racinea:0+terracroc:0+zephyrion:0', 'runicor:1+brontobloc:0+malefix:0', 'braiserose:1+fournax:0+aquamira:0', 'aegisolar:1+terracroc:1+zephyrion:0', 'nocturis:1+brontobloc:1+malefix:1',
   'racinea:1+fournax:1+aquamira:1', 'runicor:1+terracroc:1+zephyrion:1', 'braiserose:1+brontobloc:1+malefix:1', 'aegisolar:1+fournax:1+aquamira:1', 'nocturis:1+terracroc:1+zephyrion:1', 'racinea:1+brontobloc:1+malefix:1',
-  'runicor:1+fournax:1+aquamira:1', 'braiserose:1+terracroc:1+zephyrion:1', 'aegisolar:1+brontobloc:1+malefix:1', 'nocturis:1+fournax:1+aquamira:1', 'racinea:1+runicor:1+terracroc:1', 'braiserose:1+aegisolar:1+zephyrion:1',
-  'nocturis:1+racinea:1+brontobloc:1', 'runicor:1+aegisolar:1+malefix:1', 'braiserose:2+nocturis:1+fournax:1', 'racinea:2+aegisolar:2+aquamira:1', 'runicor:2+nocturis:2+terracroc:1', 'braiserose:2+aegisolar:2+zephyrion:2',
-  'racinea:2+runicor:2+brontobloc:2', 'nocturis:2+aegisolar:2+malefix:2', 'braiserose:2+racinea:2+fournax:2', 'runicor:2+aegisolar:2+aquamira:2', 'nocturis:2+racinea:2+terracroc:2', 'solarion:2+braiserose:2+zephyrion:2',
-  'abyssorax:2+aegisolar:2+brontobloc:2', 'cumulox:2+runicor:2+malefix:2', 'voltarel:2+nocturis:2+fournax:2', 'solarion:2+racinea:2+aquamira:2', 'abyssorax:2+braiserose:2+terracroc:2', 'cumulox:2+aegisolar:2+zephyrion:2',
-  'voltarel:2+runicor:2+brontobloc:2', 'solarion:2+nocturis:2+malefix:2', 'abyssorax:2+racinea:2+fournax:2', 'cumulox:2+braiserose:2+aquamira:2', 'voltarel:2+aegisolar:2+terracroc:2', 'solarion:2+runicor:2+nocturis:2',
-  'abyssorax:2+racinea:2+braiserose:2', 'cumulox:2+aegisolar:2+nocturis:2', 'voltarel:2+runicor:2+racinea:2', 'solarion:2+braiserose:2+aegisolar:2', 'abyssorax:2+nocturis:2+racinea:2', 'cumulox:2+runicor:2+braiserose:2',
-  'voltarel:2+aegisolar:2+nocturis:2', 'solarion:2+racinea:2+runicor:2', 'abyssorax:2+braiserose:2+aegisolar:2', 'cumulox:2+nocturis:2+racinea:2', 'voltarel:2+runicor:2+aegisolar:2', 'solarion:2+braiserose:2+nocturis:2',
+  'runicor:1+fournax:1+aquamira:1', 'braiserose:1+terracroc:1+zephyrion:1', 'aegisolar:1+brontobloc:1+malefix:1', 'nocturis:1+fournax:1+aquamira:1', 'racinea:1+terracroc:1+zephyrion:1', 'runicor:1+brontobloc:1+malefix:1',
+  'braiserose:1+fournax:1+aquamira:1', 'aegisolar:1+terracroc:1+zephyrion:1', 'nocturis:1+brontobloc:1+malefix:1', 'racinea:1+fournax:1+aquamira:1', 'runicor:2+terracroc:1+zephyrion:1', 'braiserose:2+brontobloc:1+malefix:1',
+  'aegisolar:2+fournax:2+aquamira:1', 'nocturis:2+terracroc:2+zephyrion:2', 'racinea:2+brontobloc:2+malefix:2', 'runicor:2+fournax:2+aquamira:2', 'braiserose:2+terracroc:2+zephyrion:2', 'solarion:2+aegisolar:2+brontobloc:2',
+  'abyssorax:2+nocturis:2+malefix:2', 'cumulox:2+racinea:2+fournax:2', 'voltarel:2+runicor:2+aquamira:2', 'solarion:2+braiserose:2+terracroc:2', 'abyssorax:2+aegisolar:2+zephyrion:2', 'cumulox:2+nocturis:2+brontobloc:2',
+  'voltarel:2+racinea:2+malefix:2', 'solarion:2+runicor:2+fournax:2', 'abyssorax:2+braiserose:2+aquamira:2', 'cumulox:2+aegisolar:2+terracroc:2', 'voltarel:2+nocturis:2+zephyrion:2', 'solarion:2+racinea:2+runicor:2',
+  'abyssorax:2+braiserose:2+aegisolar:2', 'cumulox:2+nocturis:2+racinea:2', 'voltarel:2+runicor:2+aegisolar:2', 'solarion:2+braiserose:2+nocturis:2', 'abyssorax:2+racinea:2+aegisolar:2', 'cumulox:2+runicor:2+braiserose:2',
+  'voltarel:2+nocturis:2+aegisolar:2', 'solarion:2+racinea:2+runicor:2', 'abyssorax:2+braiserose:2+aegisolar:2', 'cumulox:2+nocturis:2+racinea:2', 'voltarel:2+runicor:2+aegisolar:2', 'solarion:2+braiserose:2+nocturis:2',
   'abyssorax:2+racinea:2+runicor:2', 'cumulox:2+aegisolar:2+nocturis:2', 'voltarel:2+braiserose:2+racinea:2', 'solarion:2+runicor:2+aegisolar:2', 'abyssorax:2+nocturis:2+racinea:2', 'cumulox:2+braiserose:2+runicor:2',
   'voltarel:2+aegisolar:2+nocturis:2', 'solarion:2+racinea:2+runicor:2', 'abyssorax:2+braiserose:2+aegisolar:2', 'cumulox:2+nocturis:2+racinea:2', 'voltarel:2+runicor:2+braiserose:2', 'solarion:2+aegisolar:2+nocturis:2',
   'abyssorax:2+racinea:2+runicor:2', 'cumulox:2+braiserose:2+aegisolar:2', 'voltarel:2+nocturis:2+racinea:2', 'solarion:2+runicor:2+braiserose:2', 'abyssorax:2+cumulox:2+aegisolar:2', 'voltarel:2+solarion:2+nocturis:2',
   'abyssorax:2+cumulox:2+racinea:2', 'solarion:2+voltarel:2+runicor:2', 'abyssorax:2+cumulox:2+braiserose:2', 'solarion:2+voltarel:2+aegisolar:2', 'abyssorax:2+cumulox:2+nocturis:2', 'solarion:2+voltarel:2+racinea:2',
   'abyssorax:2+cumulox:2+runicor:2', 'solarion:2+voltarel:2+braiserose:2', 'abyssorax:2+cumulox:2+aegisolar:2', 'solarion:2+voltarel:2+nocturis:2', 'abyssorax:2+cumulox:2+racinea:2', 'solarion:2+voltarel:2+runicor:2',
   'abyssorax:2+cumulox:2+braiserose:2', 'solarion:2+voltarel:2+aegisolar:2', 'abyssorax:2+cumulox:2+nocturis:2', 'solarion:2+voltarel:2+racinea:2', 'abyssorax:2+cumulox:2+runicor:2', 'solarion:2+voltarel:2+braiserose:2',
-  'abyssorax:2+cumulox:2+aegisolar:2', 'solarion:2+voltarel:2+nocturis:2', 'abyssorax:2+cumulox:2+solarion:2', 'voltarel:2+solarion:2+abyssorax:2', 'cumulox:2+voltarel:2+solarion:2', 'abyssorax:2+cumulox:2+voltarel:2',
-  'solarion:2+abyssorax:2+cumulox:2', 'voltarel:2+solarion:2+abyssorax:2', 'cumulox:2+voltarel:2+solarion:2', 'abyssorax:2+cumulox:2+voltarel:2', 'solarion:2+abyssorax:2+cumulox:2', 'voltarel:2+solarion:2+abyssorax:2',
-  'cumulox:2+voltarel:2+solarion:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+voltarel:2+solarion:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+voltarel:2+solarion:2', 'solstral:2+abyssorax:2+cumulox:2',
-  'tartaroth:2+voltarel:2+solarion:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2',
-  'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2',
-  'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2',
-  'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2',
-  'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2',
-  'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+abyssorax:2+cumulox:2', 'tartaroth:2+solarion:2+voltarel:2', 'solstral:2+tartaroth:2+abyssorax:2', 'solstral:2+tartaroth:2+cumulox:2', 'arcanis:2+solstral:2+solarion:2',
-  'arcanis:2+tartaroth:2+voltarel:2', 'arcanis:2+solstral:2+abyssorax:2', 'arcanis:2+tartaroth:2+cumulox:2', 'arcanis:2+solstral:2+solarion:2', 'arcanis:2+tartaroth:2+voltarel:2', 'arcanis:2+solstral:2+abyssorax:2',
-  'arcanis:2+tartaroth:2+cumulox:2', 'arcanis:2+solstral:2+solarion:2', 'arcanis:2+tartaroth:2+voltarel:2', 'arcanis:2+solstral:2+abyssorax:2', 'arcanis:2+tartaroth:2+cumulox:2', 'arcanis:2+solstral:2+solarion:2',
-  'arcanis:2+tartaroth:2+voltarel:2', 'arcanis:2+solstral:2+abyssorax:2', 'arcanis:2+tartaroth:2+cumulox:2', 'arcanis:2+solstral:2+solarion:2', 'arcanis:2+tartaroth:2+voltarel:2', 'arcanis:2+solstral:2+abyssorax:2',
-  'arcanis:2+tartaroth:2+cumulox:2', 'arcanis:2+solstral:2+solarion:2', 'arcanis:2+tartaroth:2+voltarel:2', 'arcanis:2+solstral:2+abyssorax:2', 'arcanis:2+tartaroth:2+cumulox:2', 'arcanis:2+solstral:2+solarion:2',
+  'abyssorax:2+cumulox:2+aegisolar:2', 'solarion:2+voltarel:2+nocturis:2', 'abyssorax:2+cumulox:2+racinea:2', 'solarion:2+voltarel:2+runicor:2', 'abyssorax:2+cumulox:2+solarion:2', 'solstral:2+voltarel:2+solarion:2',
+  'tartaroth:2+abyssorax:2+cumulox:2', 'solstral:2+voltarel:2+solarion:2', 'tartaroth:2+abyssorax:2+cumulox:2', 'solstral:2+voltarel:2+solarion:2', 'tartaroth:2+abyssorax:2+cumulox:2', 'solstral:2+solarion:2+voltarel:2',
+  'tartaroth:2+abyssorax:2+cumulox:2', 'solstral:2+solarion:2+voltarel:2', 'tartaroth:2+abyssorax:2+cumulox:2', 'solstral:2+tartaroth:2+solarion:2', 'solstral:2+tartaroth:2+voltarel:2', 'solstral:2+tartaroth:2+abyssorax:2',
+  'solstral:2+tartaroth:2+cumulox:2', 'solstral:2+tartaroth:2+solarion:2', 'solstral:2+tartaroth:2+voltarel:2', 'solstral:2+tartaroth:2+abyssorax:2', 'solstral:2+tartaroth:2+cumulox:2', 'solstral:2+tartaroth:2+solarion:2',
+  'solstral:2+tartaroth:2+voltarel:2', 'solstral:2+tartaroth:2+abyssorax:2', 'solstral:2+tartaroth:2+cumulox:2', 'solstral:2+tartaroth:2+solarion:2', 'solstral:2+tartaroth:2+voltarel:2', 'arcanis:2+solstral:2+abyssorax:2',
   'arcanis:2+tartaroth:2+solstral:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
+  'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
+  'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
+  'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
+  'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
+  'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
+  'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
+  'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
+  'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
   'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
   'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
   'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2', 'arcanis:2+solstral:2+tartaroth:2',
@@ -1569,19 +1606,19 @@ export function starsForBattle(stats, opponentCount) {
 // chaque niveau : la « puissance conseillée » affichée. Même calcul que la
 // table ci-dessus (tools/calibrer-parcours.js), jamais en baisse.
 export const PUISSANCE_CONSEILLEE = [
-  69, 75, 79, 87, 91, 101, 101, 101, 101, 204, 215, 229, 241, 261, 274, 352, 363, 373,
-  392, 406, 490, 524, 546, 598, 847, 946, 995, 1034, 1074, 1129, 1220, 1332, 1442, 1640, 1744, 1886,
-  2069, 2192, 2386, 2512, 2648, 2998, 3152, 3328, 3521, 3723, 4147, 4251, 4846, 5042, 5329, 5941, 6189, 6493,
-  7042, 7477, 8061, 8615, 9046, 9975, 11585, 12139, 13370, 14364, 16140, 17194, 18744, 19681, 20829, 21869, 22982, 25116,
-  26631, 27963, 30652, 32561, 34191, 36334, 38826, 40768, 43569, 46479, 49115, 53615, 56739, 59598, 64678, 68530, 71962, 75557,
-  81010, 97500, 103927, 111371, 116939, 124351, 136292, 143885, 153254, 165534, 175092, 188352, 201620, 211700, 225984, 240389, 252412, 269077,
-  287038, 302839, 325434, 346707, 368102, 391571, 422289, 441309, 469803, 497377, 519687, 556427, 573455, 604569, 641898, 694792, 735655, 772541,
-  785068, 832153, 872836, 940757, 992923, 1048493, 1113983, 1174809, 1230395, 1326400, 1397142, 1504886, 1599491, 1645861, 1730143, 1841686, 1935663, 2053555,
-  2180880, 2282458, 2378482, 2509065, 2593972, 2738220, 2875130, 3029618, 3135758, 3267086, 3401012, 3571061, 3735624, 3892385, 4037128, 4202215, 4434924, 4719843,
-  4955835, 5198098, 5448688, 5736998, 6009232, 6340286, 6661125, 6954059, 7323013, 7537112, 8070785, 8546621, 8834517, 9253171, 9850182, 10553318, 11376309, 12202414,
-  13119752, 13880550, 14762850, 15355324, 16068472, 17066221, 17866695, 18643517, 20012769, 20894847, 21623007, 22990476, 24582952, 26262814, 27575954, 29587428, 31434912, 33518745,
-  35665775, 37537782, 39000754, 41632482, 44063488, 45938407, 50285941, 52038345, 55791508, 58143787, 63204593, 67814925, 78504255, 83406178, 88935210, 95422410, 101380732, 108101303,
-  117360869, 127875157, 135859877, 144866085, 155433054, 165138529, 176085632, 184889913, 198376339, 210763260, 235971587,
+  65, 71, 74, 82, 86, 95, 95, 95, 95, 147, 156, 160, 168, 176, 184, 222, 229, 236,
+  240, 248, 258, 270, 281, 289, 312, 361, 390, 430, 471, 510, 558, 591, 629, 683, 736, 796,
+  867, 923, 988, 1076, 1159, 1241, 1325, 1410, 1506, 1604, 1708, 1831, 1959, 2064, 2239, 2337, 2521, 2744,
+  2928, 3159, 3378, 3608, 3850, 4020, 4233, 4432, 4667, 4844, 5120, 5302, 5568, 5878, 6179, 6470, 6885, 7226,
+  7596, 8003, 8320, 8680, 9057, 9413, 9917, 10368, 10928, 11407, 11909, 12462, 13188, 13747, 14551, 15108, 15728, 16462,
+  17512, 18048, 18546, 19655, 20613, 21076, 21972, 22849, 23896, 25026, 25981, 27232, 28594, 29761, 30942, 32538, 34462, 36300,
+  38639, 43537, 47138, 50447, 53165, 55579, 59548, 65677, 69709, 77546, 79878, 88885, 92292, 97523, 102913, 108113, 114406, 119351,
+  124179, 131553, 136194, 145973, 157661, 163932, 171209, 183012, 197105, 211378, 224874, 239619, 261754, 277290, 299464, 315311, 337048, 359343,
+  373728, 387300, 401311, 415511, 427953, 433412, 434496, 456546, 471872, 487150, 512987, 534770, 556825, 584666, 613899, 644965, 678779, 716857,
+  758834, 811145, 853949, 896647, 952360, 1008691, 1066462, 1103109, 1177200, 1258352, 1324755, 1368105, 1477423, 1598897, 1686311, 1775299, 1850923, 1925061,
+  2049722, 2142674, 2291968, 2480414, 2616023, 2746823, 2925196, 3071456, 3227567, 3443616, 3514970, 3733374, 3920042, 4058310, 4321847, 4454466, 4614775, 4845513,
+  5179546, 5438523, 5710449, 5889752, 6184239, 6493451, 6941086, 7159030, 7516981, 7892830, 8436934, 8701845, 9136938, 9593785, 9905752, 10401039, 10921092, 11467146,
+  12040503, 12465194, 13088454, 13742877, 14430020, 15151521, 16135427, 16942198, 17789307, 18678772, 19612711,
 ];
 
 // ---- NIVEAUX RÉELS (10/10, décision de l'auteur) : les ennemis sont de VRAIES créatures ----
@@ -1760,7 +1797,8 @@ export function baseAttackFor(creature) {
 
 export function attackRatio(creature, currentAttack) {
   const base = baseAttackFor(creature);
-  return base > 0 ? currentAttack / base : 1;
+  // 11/10 : × facteur de rareté des DÉGÂTS (+2 niveaux par cran) — tous les dégâts passent ici.
+  return (base > 0 ? currentAttack / base : 1) * facteurRarete(creature && creature.rarity).degats;
 }
 
 // Dégâts d'une compétence, mis à l'échelle par le ratio ATQ actuel/ATQ de
@@ -1945,7 +1983,7 @@ export const RUNE_BONUS_TABLE = {
   affinite: [0.08, 0.16, 0.25, 0.35, 0.45],
   // Butin : % de Griffes en plus à la victoire. Aucune incidence sur le
   // combat lui-même, donc elle peut être généreuse sans déséquilibrer.
-  butin: [0.08, 0.16, 0.25, 0.35, 0.45],
+  butin: [0.04, 0.08, 0.125, 0.175, 0.225], // 11/10 : ÷2 (décision de l'auteur ; avant 8 à 45 %, cumulables jusqu'à +100 %)
   // Résilience : survit UNE fois par combat à un coup fatal, et repart
   // avec ce % de ses PV max. Déterministe exprès — une chance de
   // déclenchement aléatoire se vit comme une injustice quand elle rate.
@@ -2021,8 +2059,11 @@ export function combatStatsForCreatureTyped(creature, level, evolutionTier = 0, 
 
 // Bonus de Griffes apporté par TOUTES les runes de Butin du deck.
 // Prend la liste à plat des runes équipées sur les 3 créatures.
+// ⚠️ 11/10 (décision de l'auteur) : UNE SEULE rune de Butin compte dans le deck — la meilleure (avant : toutes
+// s'additionnaient, jusqu'à +100 %). L'écran refuse aussi d'en équiper une 2e dans le deck.
 export function butinBonus(allEquippedRunes) {
-  const b = runeBonuses(allEquippedRunes).butinPct;
+  const butins = (allEquippedRunes || []).filter((r) => r && r.type === 'butin');
+  const b = butins.reduce((m, r) => Math.max(m, runeBonuses([r]).butinPct), 0);
   return Math.min(BUTIN_MAX_BONUS, b);
 }
 
