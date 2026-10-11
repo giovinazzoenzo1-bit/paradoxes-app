@@ -5080,17 +5080,29 @@ function auditJournalDev() {
     [/setSwitchMessage\(`💥 \$\{ae\.nom\} lance son ULTIME/, "combat : l'ULTIME de l'ennemi n'est plus annoncé"],
     [/effetSort\(ev\.type, 'adversaire', ev\.cible, ev\.valeur \|\| null, true\)/, "combat : les sorts de l'ennemi n'ont plus d'effet visuel"],
     [/son\('special'\); noterSpecial\(\);/, 'combat : les spéciaux ne sont plus notés'],
-    [/debutCombat\(\{ mode: guardianEggNumber > 0 \? 'gardien' : 'aventure'/, 'combat : le début (équipe, mode, Gardien) n\'est plus noté'],
+    // 11/10 : le début porte aussi la date, le chapitre, le boss, les ennemis et le nombre de combattants.
+    [/debutCombat\(\{ date: new Date\(\)\.toISOString\(\), chapitre:[\s\S]{0,300}ennemis: ennemisJ[\s\S]{0,200}mode: guardianEggNumber > 0 \? 'gardien' : 'aventure'/, 'combat : le début (date, chapitre, ennemis, équipe, mode, Gardien) n\'est plus noté'],
   ];
   for (const [re, msg] of exige) if (!re.test(c)) pb.push(msg);
   // les crochets restent HORS de la zone des règles (sous empreinte)
   const debut = c.indexOf('RÈGLES DU COMBAT — DÉBUT'), fin = c.indexOf('RÈGLES DU COMBAT — FIN');
   const zone = debut >= 0 && fin > debut ? c.slice(debut, fin) : '';
-  if (/noterVerdict|noterAttaque|noterSort|noterSpecial|debutCombat/.test(zone)) pb.push('un crochet du journal est DANS la zone des règles du combat');
+  if (/noterVerdict|noterAttaque|noterSort|noterSpecial|debutCombat|completerCombat|noterGriffes/.test(zone)) pb.push('un crochet du journal est DANS la zone des règles du combat');
+  // 11/10 : la fin du combat complète le journal (dégâts, tours, PV restants) via la fonction du parent enveloppée.
+  if (!/const onFinish = \(\.\.\.args\) => \{[\s\S]{0,400}completerCombat\(\{ degatsInfliges:/.test(c)) pb.push('combat : dégâts, tours et PV restants ne sont plus notés');
   if (!/finCombat\(outcome, \{ chanceAnnoncee: chanceGardien/.test(lire('src/screens/games/ClickerScreen.js'))) pb.push('fin du combat de Gardien : le journal n\'est plus clos');
-  if (!/finCombat\(outcome, \{ etoiles: stars \|\| 0 \}\);/.test(lire('src/screens/games/AdventureScreen.js'))) pb.push('fin du combat d\'Exploration : le journal n\'est plus clos');
+  if (!/finCombat\(outcome, \{ etoiles: stars \|\| 0, griffes, poudre, essai:/.test(lire('src/screens/games/AdventureScreen.js'))) pb.push('fin du combat d\'Exploration : le journal n\'est plus clos (ou sans Griffes / Poudre / essai)');
+  // 11/10 — JOURNAL DES GRIFFES : chaque source branchée, et l'export le contient.
+  {
+    const Dc = lire('src/context/DailyContext.js'), Av = lire('src/screens/games/AdventureScreen.js'), Ck = lire('src/screens/games/ClickerScreen.js');
+    for (const [txt, src, ou] of [[Dc, 'defi-jour', 'défis du jour'], [Dc, 'defi-semaine', 'défis de la semaine'], [Dc, 'succes', 'succès'], [Dc, 'calendrier', 'calendrier'],
+      [Av, 'prime', 'prime d\'étape'], [Av, 'niveau', 'montée de niveau'], [Av, 'evolution', 'évolution'], [Av, 'shop-pieces', 'pack en pièces (Aventure)'],
+      [Av, 'shop-diamants', 'pack en diamants (Aventure)'], [Ck, 'shop-pieces', 'pack en pièces (Élevage)'], [Ck, 'shop-diamants', 'offre diamants'], [Ck, 'ascension', 'Ascension']])
+      if (!txt.includes(`noterGriffes('${src}'`)) pb.push(`journal des Griffes : la source « ${ou} » n'est plus notée`);
+  }
   const o = lire('src/screens/OptionsScreen.js');
   if (!/onPress=\{devEnvoyerCombats\}/.test(o) || !/await Share\.share\(\{ message: JSON\.stringify\(rapport\) \}\);/.test(o)) pb.push('menu dev : le bouton d\'envoi des données de combat a disparu');
+  if (!/gardiens, combats, economie \};/.test(o)) pb.push("l'export ne contient plus le journal des Griffes");
   return pb;
 }
 module.exports.auditJournalDev = auditJournalDev;

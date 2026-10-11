@@ -273,6 +273,11 @@ const SABOTAGES = [
     remplace('budgetGardienRef.current = primesProchainsNiveaux(', 'budgetGardienRef.current = 0 * primesProchainsNiveaux(')],
   ['auditGardienGriffes', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "Gardien de l'œuf 2 de nouveau NON calé (0 % mesuré chez l'auteur)",
     remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
+  // 11/10 : journal des Griffes et rapport enrichi (tableau Excel de l'auteur).
+  ['auditJournalDev', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la prime d'étape n'est plus notée dans le journal des Griffes",
+    remplace("noterGriffes('prime', reward, { etape: levelNumber });", "void 0;")],
+  ['auditJournalDev', path.join(RACINE, 'src/screens/OptionsScreen.js'), "l'export oublie le journal des Griffes",
+    remplace("gardiens, combats, economie };", "gardiens, combats };")],
   // 11/10 (soir) : combat à égalité, niveaux 1-40 calibrés, Griffes en baisse (décisions de l'auteur).
   ['auditNiveauMax', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "toutes les créatures du deck combattent de nouveau (combat plus à égalité)",
     remplace('    .slice(0, levelNumber ? combattantsPourEtape(levelNumber) : 3)', '    .slice(0, 3)')],

@@ -9,7 +9,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const JOURNAL_COMBATS_KEY = 'dev:journalCombats';
-const MAX = 40;
+const MAX = 150; // 11/10 : 40 → 150 (tableau Excel de l'auteur)
 let enCours = null;
 
 export function debutCombat(info) {
@@ -19,6 +19,8 @@ export function noterVerdict(v) { if (enCours && enCours.verdicts[v] != null) en
 export function noterAttaque(cle) { if (!enCours) return; if (cle === 'riposte') enCours.ripostes += 1; else if (cle === 'soutien') enCours.soutiens += 1; else enCours.attaques += 1; }
 export function noterSort(type, cote) { if (!enCours || !type) return; const k = `${type}@${cote || '?'}`; enCours.sorts[k] = (enCours.sorts[k] || 0) + 1; }
 export function noterSpecial() { if (enCours) enCours.speciaux += 1; }
+// 11/10 : compléter le combat en cours (dégâts, tours, PV restants…) sans le fermer.
+export function completerCombat(extra) { if (enCours && extra) Object.assign(enCours, extra); }
 
 export async function finCombat(issue, extra = {}) {
   if (!enCours) return;

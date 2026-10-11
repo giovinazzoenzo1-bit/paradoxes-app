@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Dimensions, Share } from 'react-native';
 import { lireJournalCombats, JOURNAL_COMBATS_KEY } from './games/journalCombat';
+import { lireJournalGriffes, JOURNAL_GRIFFES_KEY } from './games/journalGriffes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCoins } from '../context/CoinsContext';
 import { useDaily } from '../context/DailyContext';
@@ -199,17 +200,21 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
       const total = { parfait: 0, bien: 0, rate: 0, absent: 0 };
       combats.forEach((c) => Object.keys(total).forEach((k) => { total[k] += (c.verdicts && c.verdicts[k]) || 0; }));
       const g = (gardiens || []).filter((x) => x && x.chance != null);
-      const rapport = { quoi: 'Données de combat Paradox (à coller à Claude)', date: new Date().toISOString(),
+      // 11/10 (tableau Excel de l'auteur) : + le journal des Griffes (chaque gain / dépense avec sa source) et son total.
+      const economie = await lireJournalGriffes();
+      const parSource = {};
+      economie.forEach((x) => { parSource[x.source] = (parSource[x.source] || 0) + (x.montant || 0); });
+      const rapport = { quoi: 'Données de combat Paradox (à coller à Claude)', version: 2, date: new Date().toISOString(),
         resume: { combats: combats.length, gardiens: g.length, annonceMoyenne: g.length ? Math.round(g.reduce((t, x) => t + x.chance, 0) / g.length) : null,
-          gardiensGagnes: g.filter((x) => x.gagne).length, verdicts: total },
-        gardiens, combats };
+          gardiensGagnes: g.filter((x) => x.gagne).length, verdicts: total, griffesParSource: parSource },
+        gardiens, combats, economie };
       await Share.share({ message: JSON.stringify(rapport) });
     } catch (e) {
       Alert.alert('Envoi impossible', String((e && e.message) || e));
     }
   };
   const devViderCombats = async () => {
-    await AsyncStorage.multiRemove([JOURNAL_COMBATS_KEY, 'gardien:journal']);
+    await AsyncStorage.multiRemove([JOURNAL_COMBATS_KEY, 'gardien:journal', JOURNAL_GRIFFES_KEY]); // 11/10 : + journal des Griffes
     Alert.alert('Journaux vidés', 'Les prochains combats repartent de zéro.');
   };
   const devRefillEnergy = async () => {

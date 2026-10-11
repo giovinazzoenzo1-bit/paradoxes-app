@@ -264,6 +264,7 @@ import { afficherDialogue } from '../../components/DialogueJeu';
 import { jouerSon, jouerSonLimite, SON_CREATURE } from './sonsBoutique';
 import { useMusique, MusiqueActive } from './musique';
 import { finCombat } from './journalCombat';
+import { noterGriffes } from './journalGriffes';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
@@ -573,6 +574,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
       const pending = raw ? parseInt(raw, 10) || 0 : 0;
       await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + taillePackGriffes(ascensionCountRef.current)));
+      noterGriffes('shop-pieces', taillePackGriffes(ascensionCountRef.current)); // journal des Griffes (11/10)
     } catch (e) { /* écriture impossible : on ne bloque pas l'écran */ }
     spawnPopup(`+${taillePackGriffes(ascensionCountRef.current)} 🐾`, 110, 60, true);
   };
@@ -2223,6 +2225,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
       const pending = raw ? parseInt(raw, 10) || 0 : 0;
       await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + 250));
+      noterGriffes('shop-diamants', 250); // journal des Griffes (11/10)
       return '+250 Griffes — ouvre le mode Exploration pour les recevoir.';
     }
     if (offer.id === 'energy') {
@@ -2616,6 +2619,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               const pending = raw ? parseInt(raw, 10) || 0 : 0;
               const du = ascensionGriffesReward((lifetimeStats.ascension || 0) + 1);
               await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + du));
+              noterGriffes('ascension', du); // journal des Griffes (11/10)
             } catch (_) {}
 
             // Les défis d'œuf CONTINUENT à la suite : ni le cycle en

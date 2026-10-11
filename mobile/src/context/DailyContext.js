@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { noterGriffes } from '../screens/games/journalGriffes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { recompenseQuete } from '../games/clicker/combatLogic';
 import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR,
@@ -271,6 +272,7 @@ export function DailyProvider({ children }) {
     // 26/09 : la récompense suit le niveau d'Aventure (combatLogic).
     const griffes = recompenseQuete(def.reward, (lifetimeStatsRef.current || {}).advLevelReached);
     await addPending(PENDING_GRIFFES_KEY, griffes);
+    noterGriffes('defi-jour', griffes, { id: questId }); // journal des Griffes (11/10)
     await addPending(PENDING_DIAMONDS_KEY, def.diamonds);
     return griffes;
   }, []);
@@ -288,6 +290,7 @@ export function DailyProvider({ children }) {
     // 26/09 : la récompense suit le niveau d'Aventure (combatLogic).
     const griffes = recompenseQuete(def.reward, (lifetimeStatsRef.current || {}).advLevelReached);
     await addPending(PENDING_GRIFFES_KEY, griffes);
+    noterGriffes('defi-semaine', griffes, { id: questId }); // journal des Griffes (11/10)
     await addPending(PENDING_DIAMONDS_KEY, def.diamonds);
     return griffes;
   }, []);
@@ -317,6 +320,7 @@ export function DailyProvider({ children }) {
     const reward = achievementReward(claimed);
     setAchievementsClaimed((prev) => ({ ...prev, [id]: (Number(prev[id]) || 0) + 1 }));
     await addPending(PENDING_GRIFFES_KEY, reward);
+    noterGriffes('succes', reward, { id }); // journal des Griffes (11/10)
     // Le palier RÉCLAMÉ est `claimed` (0 pour le premier), pas le suivant.
     await addPending(PENDING_DIAMONDS_KEY, achievementDiamonds(claimed));
     return reward;
@@ -339,6 +343,7 @@ export function DailyProvider({ children }) {
       const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
       const pending = raw ? parseInt(raw, 10) || 0 : 0;
       await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + entry.amount));
+      noterGriffes('calendrier', entry.amount); // journal des Griffes (11/10)
     } else if (entry.type === 'appCoins') {
       if (typeof addAppCoins === 'function') await addAppCoins(entry.amount);
     } else if (entry.type === 'creature') {

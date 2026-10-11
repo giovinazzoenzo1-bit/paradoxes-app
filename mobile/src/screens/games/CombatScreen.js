@@ -19,7 +19,7 @@ import { afficherDialogue } from '../../components/DialogueJeu';
 import { jouerSon, SON_ELEMENT } from './sonsBoutique';
 import { useSettings } from '../../context/SettingsContext';
 import { useMusique } from './musique';
-import { debutCombat, noterVerdict, noterAttaque, noterSort, noterSpecial } from './journalCombat';
+import { debutCombat, noterVerdict, noterAttaque, noterSort, noterSpecial, completerCombat } from './journalCombat';
 import { CADRAGE_CREATURES } from '../../games/clicker/cadrageCreatures';
 import { StatusBar } from 'expo-status-bar';
 
@@ -440,7 +440,17 @@ function messageDeSort(sortId, evenements, allies) {
   return `${s.icone} ${s.nom} !`;
 }
 
-export default function CombatScreen({ team, levelNumber, onFinish, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null, elixirActif = false, aideDefaite = null, filetBaisse = 0, premiereVictoire = true }) {
+export default function CombatScreen({ team, levelNumber, onFinish: onFinishParent, opponentOverride = null, skipResultScreen = false, guardianEggNumber = 0, guardianCalibrage = null, elixirActif = false, aideDefaite = null, filetBaisse = 0, premiereVictoire = true }) {
+  // 11/10 (tableau Excel de l'auteur) : à la fin du combat, le journal reçoit dégâts, tours et PV restants — HORS de la zone
+  // des règles (les appels « onFinish » y restent identiques ; c'est la fonction du parent qui est enveloppée ici).
+  const onFinish = (...args) => {
+    try {
+      const pv = (fighters || []).reduce((t, f) => t + Math.max(0, f.hp || 0), 0), pvMax = (fighters || []).reduce((t, f) => t + ((f.stats && f.stats.hp) || 0), 0);
+      completerCombat({ degatsInfliges: Math.round(battleStats.totalDamageDealt || 0), degatsRecus: Math.round(battleStats.totalDamageTaken || 0),
+        tours: battleStats.rounds || 0, pvRestantsPct: pvMax > 0 ? Math.round((100 * pv) / pvMax) : null });
+    } catch (e) { /* jamais bloquant */ }
+    onFinishParent(...args);
+  };
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const opponentTeamCreatures = useRef(opponentOverride || opponentTeamForLevel(levelNumber)).current;
@@ -567,7 +577,11 @@ export default function CombatScreen({ team, levelNumber, onFinish, opponentOver
   // (08/10) Journal des combats : l'équipe, le mode, le Gardien — au début du combat.
   useEffect(() => {
     const g = guardianEggNumber > 0 && opponents && opponents[0] && opponents[0].stats ? opponents[0].stats : null;
-    debutCombat({ mode: guardianEggNumber > 0 ? 'gardien' : 'aventure', niveau: levelNumber, oeuf: guardianEggNumber || 0, elixir: !!elixirActif,
+    // 11/10 (tableau Excel de l'auteur) : date lisible, chapitre, boss, ennemis (espèce, rareté, niveau, évolution), combattants.
+    const ennemisJ = guardianEggNumber > 0 ? null : equipeEnnemie(levelNumber).map((m) => ({ id: m.creature.id, rarete: m.creature.rarity, niv: m.niveau, palier: m.evolutionTier || 0 }));
+    debutCombat({ date: new Date().toISOString(), chapitre: Math.floor((Math.max(1, levelNumber || 1) - 1) / 10) + 1,
+      boss: guardianEggNumber > 0 ? false : estEtapeBoss(levelNumber), ennemis: ennemisJ, combattants: (team || []).length,
+      mode: guardianEggNumber > 0 ? 'gardien' : 'aventure', niveau: levelNumber, oeuf: guardianEggNumber || 0, elixir: !!elixirActif,
       equipe: (team || []).map((m) => ({ id: m.creature && m.creature.id, rarete: m.creature && m.creature.rarity, niv: m.ownedLevel, palier: m.evolutionTier || 0, runes: (m.equippedRunes || []).length })),
       gardien: g ? { pv: g.hp, attaque: Math.round((g.attack || 0) * 100) / 100 } : null });
   }, []);

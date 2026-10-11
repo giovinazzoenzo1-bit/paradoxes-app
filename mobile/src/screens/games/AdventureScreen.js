@@ -376,6 +376,7 @@ import { useSettings } from '../../context/SettingsContext';
 import { jouerSon, SON_CREATURE } from './sonsBoutique';
 import { useMusique } from './musique';
 import { finCombat } from './journalCombat';
+import { noterGriffes } from './journalGriffes';
 import { FenetreJeu, BoutonBois } from '../../components/FenetreJeu';
 import {
   CREATURES,
@@ -395,6 +396,7 @@ import { niveauMaxAventure } from '../../games/clicker/questLogic';
 import {
   puissanceAventure,
   combattantsPourEtape,
+  niveauEnnemi,
   POUDRE_PAR_VICTOIRE,
   POUDRE_PRIX,
   combatStatsForCreatureTyped,
@@ -734,6 +736,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       if (griffesFlag) {
         const amount = parseInt(griffesFlag, 10) || 0;
         setGriffes((g) => g + (amount > 1 ? amount : DEV_GRIFFES_AMOUNT));
+        noterGriffes('dev', amount > 1 ? amount : DEV_GRIFFES_AMOUNT); // journal des Griffes (11/10)
         await AsyncStorage.removeItem(DEV_ADD_GRIFFES_KEY);
       }
       const energyFlag = await AsyncStorage.getItem(DEV_REFILL_ENERGY_KEY);
@@ -824,6 +827,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     // Taille du pack selon l'Ascension (26/09) : 100 + 75 par Ascension.
     const taille = taillePackGriffes(ascensionCount);
     setGriffes((g) => g + taille);
+    noterGriffes('shop-pieces', taille); // journal des Griffes (11/10)
     annoncerGriffes(taille);
     if (onGriffesCoinBought) onGriffesCoinBought();
     return true;
@@ -833,6 +837,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     const ok = await onSpendDiamonds(GRIFFES_DIAMOND_COST);
     if (!ok) return false;
     setGriffes((g) => g + GRIFFES_PACK);
+    noterGriffes('shop-diamants', GRIFFES_PACK); // journal des Griffes (11/10)
     annoncerGriffes(GRIFFES_PACK);
     return true;
   };
@@ -978,6 +983,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     // Décision de l'auteur (26/09) : les Griffes seulement à la PREMIÈRE
     // victoire d'un niveau — rejouer un niveau déjà gagné n'en donne pas.
     if (levelNumber === currentUnlockedLevelRef.current) setGriffes((g) => g + reward);
+    if (levelNumber === currentUnlockedLevelRef.current) noterGriffes('prime', reward, { etape: levelNumber }); // journal des Griffes (11/10)
     // ✨ Poudre runique (10/10) : elle aussi à la PREMIÈRE victoire d'une étape seulement.
     if (levelNumber === currentUnlockedLevelRef.current) setPoudre((p) => p + POUDRE_PAR_VICTOIRE);
     setDefaitesDeSuite((d) => (d[levelNumber] ? { ...d, [levelNumber]: 0 } : d));
@@ -1003,6 +1009,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     const cost = evolutionCost(currentTier);
     if (griffes < cost) return;
     setGriffes((g) => g - cost);
+    noterGriffes('evolution', -cost, { palier: currentTier + 1 }); // journal des Griffes (11/10)
     onEvolveCreature(creatureId, currentTier + 1);
     jouerSon('evolution', sonsAventure !== false);
   };
@@ -1025,6 +1032,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     const cost = levelUpCost(creature, ownedEntry.level);
     if (griffes < cost) return;
     setGriffes((g) => g - cost);
+    noterGriffes('niveau', -cost, { creature: creatureId, niveau: ownedEntry.level + 1 }); // journal des Griffes (11/10)
     onLevelUpCreature(creatureId);
     jouerSon('niveau', sonsAventure !== false);
   };
@@ -2548,7 +2556,12 @@ function ChapterMapScreen({ currentUnlockedLevel, niveauMaxAscension = Infinity,
           adsLeft,
         }}
         onFinish={(outcome, goNext, stars) => {
-          finCombat(outcome, { etoiles: stars || 0 }); // journal des combats (08/10)
+          // 11/10 (tableau Excel de l'auteur) : Griffes et Poudre en poche, n° d'essai, 1re victoire, puissance et chance annoncée.
+          const lvJ = activeBattle.levelNumber;
+          finCombat(outcome, { etoiles: stars || 0, griffes, poudre, essai: (defaitesDeSuite[lvJ] || 0) + 1, premiereVictoire: lvJ === currentUnlockedLevel,
+            niveauEnnemis: niveauEnnemi(lvJ), ascension: ascensionCount,
+            puissance: puissanceMenu && niveauMenu === lvJ ? puissanceMenu.puissance : null,
+            chanceAnnoncee: puissanceMenu && niveauMenu === lvJ && puissanceMenu.victoires != null ? Math.round(100 * puissanceMenu.victoires) : null }); // journal des combats (08/10)
           // Une charge d'Élixir par combat mené, gagné ou perdu.
           if (elixirCombats > 0 && onElixirUsed) onElixirUsed();
           if (outcome === 'lose' && onDefaite) onDefaite(activeBattle.levelNumber);

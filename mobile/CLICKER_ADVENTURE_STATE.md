@@ -3314,3 +3314,20 @@ MESURÉ (1er essai) : l'auteur (actif, précis) 79-92 %, boss 63-78 % ; 🟥 jou
 actif/normal s'est creusé (succès et calendrier profitent surtout aux actifs). À AJUSTER après le test de l'auteur (piste :
 caler sur un profil entre actif et normal). GRIFFES_PAR_COMBAT [14, 65, 264, 490, 495, 572]. 103 contrôles verts, 153 sabotages
 prouvés (TROIS morceaux : 0-52 114 s, 52-104 160 s, 104-153 69 s), taps 20/20.
+
+
+## 11/10 (soir) — RAPPORT DE COMBAT ENRICHI + JOURNAL DES GRIFFES (publié)
+
+Demande de l'auteur : « ajoute toute information utile », Claude en fait un TABLEAU EXCEL à chaque rapport (plus tard :
+Supabase + petit site). Ajouts :
+- journalCombat (150 combats au lieu de 40) — au début (CombatScreen, hors zone des règles) : date ISO, chapitre, boss, ennemis
+  [{id, rarete, niv, palier}], combattants ; à la fin : degatsInfliges, degatsRecus, tours, pvRestantsPct (completerCombat, via
+  la fonction onFinish du PARENT enveloppée en tête de composant — les appels onFinish de la zone des règles sont inchangés,
+  empreinte intacte) ; côté Aventure (finCombat) : griffes et poudre en poche, essai (défaites de suite + 1), premiereVictoire,
+  niveauEnnemis, ascension, puissance et chanceAnnoncee (mesure du menu si même étape).
+- journalGriffes (nouveau, 600 lignes, écritures en file) : {t, source, montant, …} — sources : prime, defi-jour,
+  defi-semaine, succes, calendrier, shop-pieces, shop-diamants, ascension, niveau (−), evolution (−), dev.
+- Export (Options → menu dev) : version 2, + economie (journal des Griffes) et resume.griffesParSource ; l'effacement du
+  journal efface aussi celui des Griffes.
+Contrôles : auditJournalDev (nouveaux champs, fin de combat, 12 sources de Griffes branchées, export) + 2 sabotages → 155 prouvés.
+⚠️ Les morceaux de sabotages : timeout ≥ 285 s chacun (52-104 dure ~170 s ; avec 140 s il a été coupé juste après son bilan).
