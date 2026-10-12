@@ -3448,3 +3448,23 @@ minuteur de résolution ne se réarmait pas entre deux résolutions de suite : r
 CONTRÔLES : auditFenetres réécrit (indice, plafond, plancher, prudence, 15 derniers, conversion, Gardien indulgent, recalcul,
 aperçu, mesure du joueur précis) ; auditGardienGriffes et auditPuissanceAffichee : repères mis à jour ; 6 sabotages nouveaux
 (dont la zone morte) → 167 prouvés ; 105 contrôles verts ; taps 20/20.
+
+
+## 12/10 (soir) — FACTEUR D'ÉLÉMENTS + 1RE FENÊTRE SANS DÉPENSE VIRTUELLE (publié)
+
+Rapport de l'auteur (12/10, 21 étapes, indice 0,28 → 0,58 → 0,45 → 0,38) : « j'ai bien galéré ». MESURÉ (vraies chances avec
+son indice, 1er essai) : cran 4 59 %, cran 5 41 % (cibles 50 / 33) → moyennes justes ; mais écart étape par étape trop grand
+(cran 5 : 17 à 77 %). Choix de l'auteur : correctifs 1 et 3 (pas le 2 : recalcul « réaliste »).
+3 — FACTEUR D'ÉLÉMENTS : combatLogic.facteurElements (rapport des multiplicateurs sur toutes les paires joueur/ennemis,
+RELATIF à PANEL_MESURE_ELEMENTS = les 6 équipes de mesurer-etapes.js, sinon compté deux fois), appliqué dans photoFenetre
+(× fElements). EXPOSANT_ELEMENTS 0,5 MESURÉ (5 équipes typées « 2 du même élément + Glyphon », 7 fenêtres) : écart étape par
+étape 23 pts sans, 21 avec 0,5, 23 avec 1, 27 avec 1,5. Gain MODESTE : le reste vient des sorts/compositions propres à chaque
+équipe (seule la simulation de l'équipe exacte le corrigerait — refusée pour la lenteur).
+1 — 1RE FENÊTRE SANS DÉPENSE VIRTUELLE : AdventureScreen budget = k === 0 ? 0 : … ; simulateur idem.
+⚠️ DIAGNOSTIC FAUX (le mien) : « l'étape 1 est perdue parce que la photo compte les 40 Griffes » — l'ennemi de l'étape 1 est
+au niveau MINIMUM (1) dans les deux cas. Vraie cause : combat niveau 1 contre niveau 1, selon la créature de départ (MESURÉ :
+Bouldog 89, Ventis 86, Voltix 86, Caraploof 79, Glyphon 66, Ombrillon 59, Pyrosile 58, Luxorbe 41 %). Même limite à l'étape 6
+(Caraploof niv. 1 contre Pyrosile). Le correctif 1 garde un effet : étapes 2-5 plus douces pour un débutant qui ne dépense pas.
+À PROPOSER : « ennemi d'entraînement » quand le calcul voudrait un niveau < 1 (étape 1, étape 6…), affiché comme tel.
+Contrôles : auditFenetres (facteur d'éléments, neutralité de Magie, exposant, photo, budget 1re fenêtre) ; 3 sabotages
+nouveaux + 3 recalés → 170 prouvés ; 105 contrôles verts ; taps 20/20.

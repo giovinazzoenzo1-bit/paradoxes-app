@@ -139,6 +139,16 @@ du 12/10 : étape 9, ennemi du niveau 9 au niveau 28, 5 % de chance).
 **Aperçu** (12/10) : quand le joueur a des Griffes en poche ou à récupérer qui l'aideraient, la ligne de puissance affiche
 « 79 % → 92 % avec tes Griffes » — calcul instantané (aucune 2e simulation).
 
+**1re fenêtre sans dépense virtuelle** (12/10) : aux étapes 1-5, seules les primes gagnées comptent (pas les Griffes en
+poche ni à récupérer) — un débutant ne sait pas encore les dépenser. ⚠️ À l'étape 1, l'ennemi est de toute façon au niveau
+MINIMUM (1) : le résultat dépend de la créature de départ (niveau 1 contre niveau 1, MESURÉ : Bouldog 89 %, Ventis 86 %,
+Voltix 86 %, Caraploof 79 %, Glyphon 66 %, Ombrillon 59 %, Pyrosile 58 %, Luxorbe 41 %).
+
+**Facteur d'éléments** (12/10) : la photo tient compte des éléments de l'équipe du joueur face à ceux de l'étape (rapport
+des multiplicateurs ×1,15 / ×0,85 sur toutes les paires), RELATIF aux 6 équipes de mesure (déjà comptées dans le facteur de
+l'étape). Exposant 0,5 MESURÉ (5 équipes typées) : écart étape par étape 23 → 21 points — gain modeste, les éléments ne sont
+qu'une petite part de l'irrégularité. ⚠️ Une étape dont l'ennemi est déjà au niveau 1 ne peut pas être adoucie (ex. étape 6).
+
 **Gardien** (12/10) : le même indice de maîtrise, **indulgent** (moitié de l'effet pour un bon joueur : c'est le moment de
 l'éclosion ; effet entier pour un joueur faible), figé dans la photo de l'œuf ; son chiffre affiché suit.
 
