@@ -3417,3 +3417,34 @@ NON FAIT (mesuré) : simuler l'équipe exacte = ~0,6 s par fenêtre sur ordinate
 Contrôles : auditFenetres (lecture du journal, recalcul, facteur de précision, mesure joueur précis sur 6 équipes — 3 équipes
 donnaient 66 % au cran 4 par simple variance) + 3 sabotages ; sabotage « ennemis −8 » remis sur la nouvelle ligne → 163 prouvés,
 105 contrôles, taps 20/20.
+
+
+## 12/10 — INDICE DE MAÎTRISE, RECALCUL SANS ÉCRASEMENT, APERÇU « AVEC TES GRIFFES », GARDIEN (publié)
+
+RAPPORT DE L'AUTEUR (12/10, 39 combats d'Aventure + 2 Gardiens) : « trop facile ? ». MESURÉ : 79 % de victoires au 1er essai
+(moyenne visée 67 %) ; cran 4 perdu 4 fois sur 6 (bien), cran 5 gagné 4 fois sur 5 (trop facile). DÉCOUVERTE : en 1 contre 1 il
+gagne MOINS que l'annonce (1 sur 8 combats annoncés sous 50 %, ~3 attendus), en ÉQUIPE beaucoup plus (5 sur 8, ~2 attendus) →
+le joueur simulé choisit cibles et soutiens moins bien qu'un humain ; la précision seule (61 % de parfaits) n'expliquait pas tout.
+Choix de l'auteur : indice de maîtrise + recalcul sans écrasement + aperçu + Gardien (équipe exacte toujours refusée : lenteur).
+CODE (combatLogic) : maitriseDesCombats (15 derniers combats, Newton sur vraisemblance + a priori normal), MAITRISE_A_PRIORI 0,7,
+MAITRISE_MAX 0,75 (auteur 0,73 sur 77 combats), MAITRISE_MIN −1,5, PENTES_DIFFICULTE / penteDifficulte, facteurMaitrise =
+exp(m / (pente × EFFICACITE_MAITRISE 0,67)), facteurGardienMaitrise (moitié pour m > 0), MONTEE_MAX_RECALCUL 3 ; photoFenetre
+options.maitrise (remplace options.coup ; facteurPrecision, COUP_*, EXPOSANT_PRECISION SUPPRIMÉS).
+MESURES : efficacité 1 → joueur précis 98 / 83 / 75 / 60 / 38 % (la pente des régressions surestime la sensibilité réelle) ;
+0,67 → précis 97 / 78 / 68 / 52 / 31, moyen 97 / 82 / 70 / 49 / 28, faible 97 / 83 / 72 / 52 / 33. A priori 1 : 3 victoires à 50 %
+= plafond (12,5 % de chances pour un joueur moyen) → 0,7 : 0,54 ; bruit d'un joueur moyen sur 15 combats ±0,5 (≈ ±1 niveau).
+Indice équivalent d'un joueur simulé précis (30 ms) : 0,79 ; faible (95 ms) : −0,41.
+ÉCRANS : AdventureScreen — photo { maitrise } lue dans journalCombat (chanceAnnoncee + issue), recalcul : étape en cours
+≤ ancien + 3 ; aperçu (FighterSelectOverlay) : chanceApresGriffes par la courbe (logit + pente × ln(P après / P avant)), prop
+griffesDispo, texte qui rétrécit (adjustsFontSizeToFit) ; ChapterMapScreen lit griffesARecuperer via useDaily (⚠️ le
+vérificateur de portée a bloqué un « Property doesn't exist » : la carte ne recevait que les Griffes en poche).
+ClickerScreen — maitriseRef (journal), photo de l'œuf { maitrise }, chiffre × facteurGardienMaitrise, calage marge = facteur.
+CORRECTION DE MA PART : « la photo ignore le plafond » était FAUX — deckApresEffortEquitable applique niveauMaxEquipe.
+⚠️ NOUVEAU PIÈGE — ZONE MORTE (valeur lue avant sa déclaration, ex. dans la liste de dépendances d'un useEffect) : compile,
+mais sur Hermes la valeur est VIDE (bug silencieux ; ailleurs : plantage). verifier-portee.js la détecte désormais. Il a trouvé
+2 bugs ANCIENS, corrigés en remontant la déclaration : ClickerScreen `[view]` (le minuteur du boss du Clicker tournait sur tous
+les écrans → il ne compte plus que sur l'accueil : le boss apparaît moins souvent) ; CombatScreen `[phase, resolutionId]` (le
+minuteur de résolution ne se réarmait pas entre deux résolutions de suite : risque de combat figé).
+CONTRÔLES : auditFenetres réécrit (indice, plafond, plancher, prudence, 15 derniers, conversion, Gardien indulgent, recalcul,
+aperçu, mesure du joueur précis) ; auditGardienGriffes et auditPuissanceAffichee : repères mis à jour ; 6 sabotages nouveaux
+(dont la zone morte) → 167 prouvés ; 105 contrôles verts ; taps 20/20.

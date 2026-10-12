@@ -283,7 +283,7 @@ const SABOTAGES = [
   ['auditFenetres', F.combat, "plus de plafond de maîtrise (un joueur exceptionnel serait bloqué)",
     remplace('export const MAITRISE_MAX = 0.75;', 'export const MAITRISE_MAX = 5;')],
   ['auditFenetres', F.combat, "plus de prudence statistique (3 victoires chanceuses = joueur exceptionnel)",
-    remplace('export const MAITRISE_A_PRIORI = 1;', 'export const MAITRISE_A_PRIORI = 100;')],
+    remplace('export const MAITRISE_A_PRIORI = 0.7;', 'export const MAITRISE_A_PRIORI = 100;')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "recalcul avec écrasement (niveau 9 → 28 à l'arrivée d'une créature)",
     remplace('if (recalcul && ancien && ancien.niveaux && ancien.niveaux[depart] != null) nv[depart] = Math.min(nv[depart], ancien.niveaux[depart] + MONTEE_MAX_RECALCUL);', '')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le Gardien ignore l'indice de maîtrise",
