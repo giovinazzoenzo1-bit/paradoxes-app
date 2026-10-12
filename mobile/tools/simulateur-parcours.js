@@ -32,14 +32,6 @@
 const A = require('./audit-quetes.js');
 const K = A.load('combatLogic');
 const L = A.load('clickerLogic');
-// Coup moyen à la jauge d'un joueur simulé de précision `erreurMs` (mesuré une fois, mis en cache) — pour la photo des fenêtres.
-const COUPS = new Map();
-function coupSimule(erreurMs) {
-  if (COUPS.has(erreurMs)) return COUPS.get(erreurMs);
-  const cr = A.C.CREATURES.find((c) => c.id === 'bouldog'); let s = 7; const alea = () => { s = (s * 1103515245 + 12345) >>> 0; return s / 4294967296; };
-  const v = { parfait: 0, bien: 0, rate: 0, absent: 0 }; for (let i = 0; i < 4000; i++) v[K.verdictJaugeTire(cr, alea, erreurMs)]++;
-  const c = K.coupMoyenDesVerdicts(v); COUPS.set(erreurMs, c); return c;
-}
 const C = A.C;
 
 // Le rythme de l'Aventure LU DANS LES DÉFIS (26/09) — une seule source :
@@ -195,10 +187,14 @@ function nouveauJoueur(graine, R = REGLAGES) {
     j.photos = j.photos || {}; j.niveauxF = j.niveauxF || {}; j.photoNb = j.photoNb || {};
     const kf = K.fenetreDe(l);
     const membres = j.trio().map((p) => ({ creature: p.c, ownedLevel: p.niv, evolutionTier: p.evo || 0, equippedRunes: [] }));
-    // 11/10 : comme l'écran — précision du joueur (sa jauge) et recalcul des étapes restantes si une créature arrive.
+    // Comme l'écran : recalcul des étapes restantes si une créature arrive (l'étape en cours : +MONTEE_MAX_RECALCUL au plus).
+    // Maîtrise 0 : le joueur simulé EST le joueur de référence des chances annoncées (12/10).
     if (!j.photos[kf] || membres.length > j.photoNb[kf]) {
       const depart = j.photos[kf] ? l : K.debutFenetre(kf);
-      Object.assign(j.niveauxF, K.photoFenetre(depart, membres, j.griffes, 0, { coup: coupSimule(R.erreurMs || K.JAUGE_ERREUR_REFERENCE_MS) }));
+      const avant = j.niveauxF[depart];
+      const nv = K.photoFenetre(depart, membres, j.griffes, 0, { maitrise: 0 });
+      if (j.photos[kf] && avant != null) nv[depart] = Math.min(nv[depart], avant + K.MONTEE_MAX_RECALCUL);
+      Object.assign(j.niveauxF, nv);
       j.photos[kf] = true; j.photoNb[kf] = membres.length;
     }
     K.definirNiveauxJoueur(j.niveauxF);

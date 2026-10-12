@@ -1760,41 +1760,76 @@ export function niveauPourDifficulte(levelNumber, puissanceDeck, d, nbJoueurs, o
   for (let x = Math.max(1, L - 4); x <= L + 4; x++) { const e = Math.abs(Math.log(P(x) / cible)); if (e < ecart) { ecart = e; meilleur = x; } }
   return meilleur;
 }
-// ═══ PRÉCISION DU JOUEUR (11/10, spec de l'auteur) ═══ — « ma précision explique beaucoup de choses » (75 % de parfaits :
-// +19 % de dégâts, le cran 4 valait ~75 % pour lui au lieu de 50). Coup moyen à la jauge mesuré sur les combats des 5 étapes
-// précédentes (la fenêtre d'avant) ; à l'étape 1 (aucun historique) : joueur MOYEN (référence). PLAFOND = l'auteur (« je suis la
-// référence du joueur exceptionnel, comme ça pas de blocage ») ; plancher pour un joueur très imprécis. La puissance suit
-// √(dégâts) : facteur = √(coup / coup de référence) (les rapports RATIOS_DIFFICULTE sont calés sur le joueur de référence).
-export const COUP_REFERENCE = 0.735; // 47 % de parfaits, 53 % de « bien » (joueur de référence des simulations, 60 ms)
-export const COUP_MAX = 0.875;       // l'auteur : 75 % de parfaits, 25 % de « bien », 0 raté (rapports du 11/10)
-export const COUP_MIN = 0.5;
-export function coupMoyenDesVerdicts(v) {
-  const p = (v && v.parfait) || 0, b = (v && v.bien) || 0, r = (v && v.rate) || 0, a = (v && v.absent) || 0;
-  const n = p + b + r + a;
-  return n > 0 ? (p * JAUGE_MULT.parfait + b * JAUGE_MULT.bien + r * JAUGE_MULT.rate + a * JAUGE_MULT.absent) / n : null;
+// ═══ INDICE DE MAÎTRISE (12/10, choix de l'auteur) ═══ — remplace le facteur de PRÉCISION du 11/10, qu'il englobe.
+// Le jeu compare les VRAIS résultats du joueur aux chances ANNONCÉES (aperçu, joueur de référence) sur ses 15 derniers
+// combats : un seul chiffre capte précision, tactique (choix de cible, soutiens), son équipe et les erreurs du modèle.
+// MESURÉ sur les rapports de l'auteur (77 combats) : en équipe il gagnait 5 combats sur 8 annoncés sous 50 % (≈ 2 attendus) ;
+// la précision seule (61 % de parfaits dans le dernier rapport) n'expliquait pas l'écart.
+// • Unité : écart en logit (0 = joue comme annoncé ; 0,73 = l'auteur : à 33 % annoncés il gagne ~51 %).
+// • Prudence statistique (a priori normal d'écart-type 1) : 15 victoires d'affilée ne font pas un joueur « infini »
+//   (MESURÉ sur 15 combats de l'auteur : 0,57 à 1,11 avec, jusqu'à 25 sans).
+// • PLAFOND = l'auteur (« je suis la référence du joueur exceptionnel, comme ça pas de blocage ») ; plancher (joueur faible).
+// • Converti en facteur de puissance avec la PENTE de chaque configuration (mêmes régressions que RATIOS_DIFFICULTE).
+export const MAITRISE_COMBATS = 15;
+// A priori 0,7 (MESURÉ 12/10) : à 1, 3 victoires chanceuses à 50 % atteignaient le PLAFOND (12,5 % de chances pour un joueur
+// moyen) ; à 0,7 : 0,54. Bruit d'un joueur moyen sur 15 combats (10e-90e rang) : −0,48 à +0,50 ; l'auteur : 0,41 à 0,73.
+export const MAITRISE_A_PRIORI = 0.7;
+export const MAITRISE_MAX = 0.75; // l'auteur : 0,73 sur 77 combats (rapports du 11/10 et du 12/10)
+export const MAITRISE_MIN = -1.5;
+export const PENTES_DIFFICULTE = { '1v1': 9.157, '2v1': 12.888, '2v2': 10.542, '3v2': 14.222, '3v3': 18.379 };
+export function penteDifficulte(nbJ, nbE) {
+  return PENTES_DIFFICULTE[`${nbJ}v${nbE}`] || (nbE === 1 ? PENTES_DIFFICULTE['2v1'] : PENTES_DIFFICULTE['3v3']);
 }
-export function facteurPrecision(coup) {
-  const c = coup == null || !(coup > 0) ? COUP_REFERENCE : Math.max(COUP_MIN, Math.min(COUP_MAX, coup));
-  return Math.pow(c / COUP_REFERENCE, EXPOSANT_PRECISION);
+// combats : [{ chance (0-1 ou en %), gagne }] du plus ancien au plus récent ; seuls les MAITRISE_COMBATS derniers comptent.
+export function maitriseDesCombats(combats) {
+  const l = (combats || []).filter((c) => c && c.chance != null && isFinite(Number(c.chance))).slice(-MAITRISE_COMBATS).map((c) => {
+    const p = Math.min(0.97, Math.max(0.03, Number(c.chance) > 1 ? Number(c.chance) / 100 : Number(c.chance)));
+    return { z: Math.log(p / (1 - p)), y: c.gagne ? 1 : 0 };
+  });
+  if (!l.length) return 0;
+  const v = MAITRISE_A_PRIORI * MAITRISE_A_PRIORI;
+  let d = 0;
+  for (let it = 0; it < 30; it++) { // Newton sur la vraisemblance + l'a priori (concave : converge toujours)
+    let g = -d / v, h = -1 / v;
+    for (const x of l) { const p = 1 / (1 + Math.exp(-(x.z + d))); g += x.y - p; h -= p * (1 - p); }
+    const pas = g / h; d -= pas;
+    if (Math.abs(pas) < 1e-7) break;
+  }
+  return Math.max(MAITRISE_MIN, Math.min(MAITRISE_MAX, d));
 }
-// Force de l'effet : √ (0,5) en théorie (puissance ∝ √dégâts) ; MESURÉ en vrais combats (11/10) : 0,5 rendait le joueur précis
-// trop en difficulté (cran 4 à 42 %) — soutiens et sorts ne suivent pas entièrement la jauge. Avec 0,35 : joueur précis
-// (coup 0,873) 95 / 84 / 69 / 50 / 37 % ; joueur faible (0,642) 95 / 84 / 71 / 51 / 35 % ; cibles 95 / 85 / 70 / 50 / 33.
-export const EXPOSANT_PRECISION = 0.35;
+// Facteur appliqué à la puissance du deck dans la photo (fenêtres) : un joueur qui gagne plus qu'annoncé affronte des
+// ennemis d'autant plus forts que sa marge — sa chance RÉELLE retombe sur le cran visé.
+// EFFICACITÉ 0,67 (MESURÉE 12/10, vrais combats, 7 fenêtres × 6 équipes) : la pente des régressions surestime la sensibilité
+// des combats réels (à 1, joueur précis 98 / 83 / 75 / 60 / 38 %). À 0,67 : précis (0,75 ; 30 ms) 97 / 78 / 68 / 52 / 31 % ;
+// moyen (0 ; 60 ms) 97 / 82 / 70 / 49 / 28 % ; faible (−0,41 ; 95 ms) 97 / 83 / 72 / 52 / 33 % — cibles 95 / 85 / 70 / 50 / 33.
+export const EFFICACITE_MAITRISE = 0.67;
+export function facteurMaitrise(maitrise, nbJ, nbE) {
+  const m = Math.max(MAITRISE_MIN, Math.min(MAITRISE_MAX, Number(maitrise) || 0));
+  return Math.exp(m / (penteDifficulte(nbJ, nbE) * EFFICACITE_MAITRISE));
+}
+// GARDIEN (12/10) : même indice, INDULGENT — moitié de l'effet pour un bon joueur (c'est le moment de l'éclosion : sa
+// chance réelle reste au-dessus de 80 %), effet entier pour un joueur faible (Gardien plus doux).
+export function facteurGardienMaitrise(maitrise, nbCombattants) {
+  const m = Math.max(MAITRISE_MIN, Math.min(MAITRISE_MAX, Number(maitrise) || 0));
+  return Math.exp((m > 0 ? m / 2 : m) / penteDifficulte(Math.max(1, Math.min(2, nbCombattants || 1)), 1));
+}
+// RECALCUL en cours de fenêtre (nouvelle créature) : l'étape EN COURS monte de 3 niveaux au plus (rapport du 12/10 :
+// étape 9, ennemi du niveau 9 au niveau 28 à l'arrivée de la 2e créature, 5 % de chance — écrasement). Les suivantes : normal.
+export const MONTEE_MAX_RECALCUL = 3;
 // PHOTO d'une fenêtre : { [étape]: niveau } pour ses étapes (de `debut` à options.fin, par défaut la fin de la fenêtre —
 // un RECALCUL en cours de fenêtre part de l'étape en cours). membresDeck : le deck dans l'ordre (creature, ownedLevel,
 // evolutionTier, equippedRunes) ; griffesEnPoche : comptées comme dépensées (équitablement, palier de dizaine compris) ;
-// options.coup : le coup moyen du joueur (précision), null = joueur de référence.
+// options.maitrise : l'indice de maîtrise du joueur (0 = joueur de référence).
 export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 0, options = {}) {
   const niveaux = {};
   let budget = Math.max(0, Number(griffesEnPoche) || 0);
   const fin = options.fin || (debutFenetre(fenetreDe(debut)) + TAILLE_FENETRE - 1);
-  const fPrecision = facteurPrecision(options.coup);
   for (let n = debut; n <= fin; n++) {
     const nbJ = Math.max(1, Math.min((membresDeck || []).length, combattantsPourEtape(n)));
     const membres = (membresDeck || []).slice(0, nbJ);
     const apres = deckApresEffortEquitable(membres, budget);
-    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fPrecision, difficulteEtape(n, avantage), nbJ);
+    const fMaitrise = facteurMaitrise(options.maitrise, nbJ, opponentTeamForLevel(n).length);
+    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise, difficulteEtape(n, avantage), nbJ);
     budget += griffesReward(n); // la prime de cette étape sert pour la suivante
   }
   return niveaux;

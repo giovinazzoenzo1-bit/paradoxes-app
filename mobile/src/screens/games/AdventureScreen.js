@@ -2,7 +2,7 @@
 // le design complet et l'ordre de construction — ceci ajoute l'étape 4
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -404,7 +404,10 @@ import {
   difficulteEtape,
   difficulteAffichee,
   TAILLE_FENETRE,
-  coupMoyenDesVerdicts,
+  deckApresEffortEquitable,
+  maitriseDesCombats,
+  MONTEE_MAX_RECALCUL,
+  penteDifficulte,
   POUDRE_PAR_VICTOIRE,
   POUDRE_PRIX,
   combatStatsForCreatureTyped,
@@ -783,8 +786,9 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // dépensées). Elle fixe le niveau des ennemis de ses 5 étapes (difficulté 1 → 5, moins l'avantage payant s'il est actif).
   // 11/10 (spec de l'auteur) : la photo compte les Griffes EN POCHE + RÉCUPÉRABLES (défis du jour et de la semaine terminés,
   // paliers de succès atteints, calendrier du jour non pris) + la FILE d'attente (réclamées, pas encore versées).
-  // + la PRÉCISION du joueur (coup moyen à la jauge sur les combats des 5 étapes précédentes ; à la 1re fenêtre : joueur moyen) ;
-  // + RECALCUL des étapes restantes quand une créature rejoint le deck en cours de fenêtre (ex. à l'étape 3 : étapes 3, 4, 5).
+  // + l'INDICE DE MAÎTRISE (12/10 : vrais résultats contre chances annoncées, 15 derniers combats ; aucun combat : joueur moyen) ;
+  // + RECALCUL des étapes restantes quand une créature rejoint le deck en cours de fenêtre (ex. à l'étape 3 : étapes 3, 4, 5),
+  //   SANS ÉCRASEMENT : l'étape en cours monte de MONTEE_MAX_RECALCUL niveaux au plus (rapport du 12/10 : 9 → 28, 5 %).
   useEffect(() => {
     if (!progressLoaded) return;
     const k = fenetreDe(currentUnlockedLevel);
@@ -798,28 +802,28 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     (async () => {
       let enAttente = 0;
       try { enAttente = Math.max(0, Number(await AsyncStorage.getItem(PENDING_GRIFFES_KEY)) || 0); } catch (e) { /* rien en attente */ }
-      let coup = photo ? photo.coup : null;
-      if (!photo && k > 0) {
+      let maitrise = photo && photo.maitrise != null ? photo.maitrise : 0; // un recalcul garde la maîtrise de sa photo
+      if (!photo) {
         try {
-          const v = { parfait: 0, bien: 0, rate: 0, absent: 0 };
-          (await lireJournalCombats()).filter((c) => c && c.mode === 'aventure' && c.niveau >= debutFenetre(k - 1) && c.niveau < debutFenetre(k))
-            .forEach((c) => { const x = c.verdicts || {}; v.parfait += x.parfait || 0; v.bien += x.bien || 0; v.rate += x.rate || 0; v.absent += x.absent || 0; });
-          coup = coupMoyenDesVerdicts(v);
-        } catch (e) { coup = null; }
+          maitrise = maitriseDesCombats((await lireJournalCombats()).filter((c) => c && c.chanceAnnoncee != null && (c.issue === 'win' || c.issue === 'lose'))
+            .map((c) => ({ chance: c.chanceAnnoncee, gagne: c.issue === 'win' })));
+        } catch (e) { maitrise = 0; }
       }
       if (annule) return;
       const av = avantage && avantage.restant > 0 ? avantage.niveau : 0;
       const d0 = debutFenetre(k);
       const depart = recalcul ? Math.max(d0, currentUnlockedLevel) : d0;
       const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;
-      const niveaux = photoFenetre(depart, membres, budget, av, { coup });
+      const niveaux = photoFenetre(depart, membres, budget, av, { maitrise });
       const difficultes = {};
       for (let n = d0; n < d0 + TAILLE_FENETRE; n++) difficultes[n] = difficulteEtape(n, av);
       setFenetres((prev) => {
         const ancien = prev[k];
         if (ancien && !recalcul) return prev;
-        return { ...prev, [k]: { niveaux: { ...((ancien && ancien.niveaux) || {}), ...niveaux }, difficultes: (ancien && ancien.difficultes) || difficultes,
-          budget, coup, nbDeck: membres.length, t: Date.now(), recalculeDepuis: recalcul ? depart : null } };
+        const nv = { ...niveaux };
+        if (recalcul && ancien && ancien.niveaux && ancien.niveaux[depart] != null) nv[depart] = Math.min(nv[depart], ancien.niveaux[depart] + MONTEE_MAX_RECALCUL);
+        return { ...prev, [k]: { niveaux: { ...((ancien && ancien.niveaux) || {}), ...nv }, difficultes: (ancien && ancien.difficultes) || difficultes,
+          budget, maitrise, nbDeck: membres.length, t: Date.now(), recalculeDepuis: recalcul ? depart : null } };
       });
     })();
     return () => { annule = true; };
@@ -2473,6 +2477,9 @@ function prefixeTroisEtoiles(etoiles) {
 // Dernière mesure de l'aperçu (puissance, chance) — lue par le journal des combats à la fin du combat (11/10).
 let derniereMesureApercu = null;
 function ChapterMapScreen({ poudre = 0, ascensionCount = 0, currentUnlockedLevel, niveauMaxAscension = Infinity, prochaineAscension = 1, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir, defaitesDeSuite = {}, onDefaite }) {
+  // 12/10 : les Griffes RÉCUPÉRABLES (défis, succès, calendrier) pour « chance si tu dépenses tes Griffes » de l'aperçu —
+  // lues ICI via le contexte (cet écran ne reçoit que les Griffes en poche ; le vérificateur de portée l'a signalé).
+  const { griffesARecuperer } = useDaily();
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -2896,6 +2903,7 @@ function ChapterMapScreen({ poudre = 0, ascensionCount = 0, currentUnlockedLevel
           ownedRunes={ownedRunes}
           filetBaisse={baisseFilet(defaitesDeSuite[levelPreview] || 0)}
           energy={energy}
+          griffesDispo={Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0)}
           onClose={() => setLevelPreview(null)}
           onStart={() => {
             // 1 énergie par TENTATIVE (pas remboursée en cas de défaite,
@@ -3515,7 +3523,7 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   );
 }
 
-function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filetBaisse = 0, energy, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
+function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filetBaisse = 0, energy, griffesDispo = 0, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
   // Niveaux réels (10/10) : le 1er ennemi de l'étape sous sa VRAIE forme (évolution), avec son NIVEAU,
   // le nombre d'adversaires, 👑 (boss de chapitre) et ⭐ (élites).
   const equipeAdverse = equipeEnnemie(levelNumber);
@@ -3549,6 +3557,21 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
     }, 30);
     return () => { annule = true; clearTimeout(t); };
   }, [cleMesure]);
+  // 12/10 (point 4, choix de l'auteur) : « chance si tu dépenses tes Griffes » (poche + récupérables) — calcul INSTANTANÉ,
+  // aucune 2e simulation (elle doublerait l'attente sur téléphone) : la même courbe que le calculateur (écart de puissance →
+  // écart de chance, pente de la configuration). Affiché seulement si ça ajoute au moins 3 points.
+  const chanceApresGriffes = useMemo(() => {
+    if (!mesure || !(griffesDispo > 0)) return null;
+    const membres = membresPourCombat(deck, owned, ownedRunes, levelNumber);
+    if (!membres.length) return null;
+    const p0 = puissanceAffichee(membres);
+    const p1 = puissanceAffichee(deckApresEffortEquitable(membres, griffesDispo).membres);
+    if (!(p0 > 0) || !(p1 > p0 * 1.01)) return null;
+    const p = Math.min(0.97, Math.max(0.03, mesure.victoires));
+    const z = Math.log(p / (1 - p)) + penteDifficulte(membres.length, equipeAdverse.length) * Math.log(p1 / p0);
+    const c = Math.round(100 / (1 + Math.exp(-z)));
+    return c >= Math.round(mesure.victoires * 100) + 3 ? c : null;
+  }, [mesure, griffesDispo, cleMesure]);
 
   // ── Rendu « Le médaillon » : voir APERCU (fractions mesurées sur la maquette) ──
   const { width: wFen, height: hFen } = useWindowDimensions();
@@ -3594,8 +3617,8 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
           {marqueEtape}{equipeAdverse.length > 1 ? 'Adversaires' : 'Adversaire'} : <Text style={{ color: RARITY_COLOR[opponent.rarity] }}>{display.name}</Text>{suiteAdverse}
         </Text>
       </View>
-      <Text style={[boite(APERCU.puissance), styles.apercuLigne, { color: couleurPuissance, fontSize: Math.max(9, Math.round(ui.h * 0.036)) }]} numberOfLines={1}>
-        Ta puissance {puissanceAffichee(membresPourCombat(deck, owned, ownedRunes))} · {mesure ? `${Math.round(mesure.victoires * 100)} % de victoire` : 'chance…'} · ⚔️ {difficulteAffichee(levelNumber)}/5
+      <Text style={[boite(APERCU.puissance), styles.apercuLigne, { color: couleurPuissance, fontSize: Math.max(9, Math.round(ui.h * 0.036)) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+        Ta puissance {puissanceAffichee(membresPourCombat(deck, owned, ownedRunes))} · {mesure ? (chanceApresGriffes != null ? `${Math.round(mesure.victoires * 100)} % → ${chanceApresGriffes} % avec tes Griffes` : `${Math.round(mesure.victoires * 100)} % de victoire`) : 'chance…'} · ⚔️ {difficulteAffichee(levelNumber)}/5
       </Text>
 
       {deck.map((id, i) => {

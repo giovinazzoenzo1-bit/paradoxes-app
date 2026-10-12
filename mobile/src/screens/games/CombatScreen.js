@@ -686,6 +686,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
 
 
 
+  const [resolutionId, setResolutionId] = useState(0); // 12/10 : remontée AU-DESSUS de l'effet qui la lit (zone morte : valeur vide sur Hermes)
   // Minuteur de la suite : posé à chaque résolution, nettoyé si la phase change (03/10).
   useEffect(() => {
     if (phase !== 'resolving') return undefined;
@@ -716,7 +717,6 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     return slot ? { x: slot.x * W, y: slot.y * H, taille: SPRITE_BASE * slot.size } : null;
   };
   // ── Suite du combat après les animations (03/10) — voir finishChallenge ──
-  const [resolutionId, setResolutionId] = useState(0);
   const transitionRef = useRef(null);
   const resolutionDureeRef = useRef(0);
   const debutResolutionRef = useRef(0);

@@ -33,6 +33,16 @@ function inconnus(fichier) {
     ReferencedIdentifier(p) {
       const n = p.node.name;
       if (p.isJSXIdentifier() && /^[a-z]/.test(n)) return; // balise HTML (aucune ici, par prudence)
+      // 12/10 — ZONE MORTE : une constante (const / let) lue AVANT sa déclaration, dans la MÊME fonction (exécutée au même
+      // moment, ex. la liste de dépendances d'un useEffect au rendu) → « Cannot access … before initialization » : écran blanc,
+      // alors que tout compile. Vécu évité de justesse : `owned.length` dans les dépendances d'un effet, `owned` déclaré
+      // 40 lignes plus bas (ClickerScreen, indice de maîtrise du Gardien).
+      const b = p.scope.getBinding(n);
+      if (b && (b.kind === 'const' || b.kind === 'let') && b.path.node && p.node.start < b.path.node.start
+        && p.getFunctionParent() === b.path.getFunctionParent() && !p.findParent((x) => x === b.path)) {
+        trouves.push({ nom: n, ligne: p.node.loc ? p.node.loc.start.line : '?', zoneMorte: true });
+        return;
+      }
       if (p.scope.hasBinding(n, true) || GLOBAUX.has(n)) return;
       trouves.push({ nom: n, ligne: p.node.loc ? p.node.loc.start.line : '?' });
     },
@@ -42,7 +52,7 @@ function inconnus(fichier) {
 
 function verifier(racine = path.join(__dirname, '..')) {
   const pb = [];
-  for (const f of fichiers(racine)) for (const x of inconnus(f)) pb.push(`${path.relative(racine, f)}:${x.ligne} — « ${x.nom} » utilisé sans être déclaré`);
+  for (const f of fichiers(racine)) for (const x of inconnus(f)) pb.push(`${path.relative(racine, f)}:${x.ligne} — « ${x.nom} » ${x.zoneMorte ? 'utilisé AVANT sa déclaration (zone morte : écran blanc au rendu)' : 'utilisé sans être déclaré'}`);
   return pb;
 }
 

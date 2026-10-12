@@ -148,6 +148,8 @@ import {
   griffesEffortGardien,
   niveauxPourChance,
   deckApresEffortEquitable,
+  maitriseDesCombats,
+  facteurGardienMaitrise,
   planPourChance,
   chanceStabilisee,
 } from '../../games/clicker/combatLogic';
@@ -263,7 +265,7 @@ import { DeckPicker } from './DeckPicker';
 import { afficherDialogue } from '../../components/DialogueJeu';
 import { jouerSon, jouerSonLimite, SON_CREATURE } from './sonsBoutique';
 import { useMusique, MusiqueActive } from './musique';
-import { finCombat } from './journalCombat';
+import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
 
@@ -625,6 +627,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     ).catch(() => {});
   };
 
+  const [view, setView] = useState('tap'); // 'tap' | 'shop' | 'collection' | 'adventure' // 12/10 : remontée AU-DESSUS de l'effet qui la lit (zone morte : valeur vide sur Hermes)
   // Apparition du boss : uniquement sur l'accueil du Clicker, et
   // seulement si aucun combat n'est déjà en cours.
   useEffect(() => {
@@ -686,6 +689,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // (08/10) BUDGET DU GARDIEN — règle FINALE de l'auteur (après test : « 10 combats au lieu de 3 ») : les
   // Griffes de tes 3 PROCHAINS combats d'Exploration (1res victoires, taux de BASE), réparties ÉQUITABLEMENT
   // sur tes créatures (deckApresEffortEquitable). Les récompenses en attente ne comptent plus.
+  // 12/10 — INDICE DE MAÎTRISE pour le Gardien (choix de l'auteur) : vrais résultats contre chances annoncées, 15 derniers
+  // combats (Aventure et Gardiens). Relu au montage et à chaque progrès d'Aventure ; figé dans la photo de l'œuf.
+  const maitriseRef = useRef(0);
+  useEffect(() => {
+    let annule = false;
+    lireJournalCombats().then((l) => {
+      if (annule) return;
+      maitriseRef.current = maitriseDesCombats((l || []).filter((c) => c && c.chanceAnnoncee != null && (c.issue === 'win' || c.issue === 'lose'))
+        .map((c) => ({ chance: c.chanceAnnoncee, gagne: c.issue === 'win' })));
+    }).catch(() => {});
+    return () => { annule = true; };
+  }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici : déclaré plus bas (zone morte → écran blanc)
   const budgetGardienRef = useRef(0);
   budgetGardienRef.current = primesProchainsNiveaux((lifetimeStats || {}).advLevelReached || 0, 3);
   // (10/10, niveaux réels) Le niveau max APRÈS les 3 prochaines étapes, figé dans la photo : l'effort du
@@ -712,7 +727,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [totalEarned, setTotalEarned] = useState(0); // cumul jamais décroissant, pour l'Ascension
   const [tapPower, setTapPower] = useState(1);
   const [owned, setOwned] = useState([]); // [{id, level}]
-  const [view, setView] = useState('tap'); // 'tap' | 'shop' | 'collection' | 'adventure'
 
 
   // Geste/bouton retour d'Android. Depuis Shop/Collection il ramène au
@@ -779,7 +793,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const calibrageCacheRef = useRef(new Map());
   const calibrageMemo = (egg, ownedList, eggNumber, deckIds) => {
     const photo = egg && egg.gardienPhoto;
-    const cle = eggNumber + '|' + (photo ? JSON.stringify(photo.membres) + '|' + budgetDeLaPhoto(photo, ascensionCountRef.current)
+    const cle = eggNumber + '|' + (photo ? JSON.stringify(photo.membres) + '|' + budgetDeLaPhoto(photo, ascensionCountRef.current) + '|' + (photo.maitrise || 0)
       : 'direct:' + JSON.stringify([deckIds, (ownedList || []).map((o) => [o.id, o.level, o.evolutionTier || 0])]));
     if (!calibrageCacheRef.current.has(cle)) calibrageCacheRef.current.set(cle, calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascensionCountRef.current));
     return calibrageCacheRef.current.get(cle);
@@ -2259,7 +2273,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
   const startEggIncubation = () => {
     if (incubatingEgg) return;
-    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck, ascensionCount, budgetGardienRef.current, plafondGardienRef.current));
+    setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck, ascensionCount, budgetGardienRef.current, plafondGardienRef.current, maitriseRef.current));
     startNewEggCycle();
     setIncubatorOpen(true);
   };
@@ -3404,7 +3418,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // Le minuteur naît en même temps que la phase, et UNIQUEMENT
         // ici : le créer dans un effet séparé le ferait repartir de zéro
         // à chaque rendu tant que la phase reste 'hatching'.
-        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current, ascensionCountRef.current, budgetGardienRef.current, plafondGardienRef.current));
+        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current, ascensionCountRef.current, budgetGardienRef.current, plafondGardienRef.current, maitriseRef.current));
         
         return 'hatching';
       });
@@ -5879,7 +5893,7 @@ function membresDuDeck(ids, ownedList) {
 // ⚠️ v2 (24/09, retour de l'auteur) : la v1 prenait les 3 meilleures de
 // la COLLECTION — plus fortes que le deck joué, d'où un écart affiché de
 // 6-7 points, « compliqué à rattraper à haut niveau ».
-function photoGardien(ownedList, deckIds, ascension = 0, budget = null, plafond = null) {
+function photoGardien(ownedList, deckIds, ascension = 0, budget = null, plafond = null, maitrise = 0) {
   const duDeck = membresDuDeck(deckIds, ownedList);
   const pris = new Set(duDeck.map((m) => m.creature.id));
   const reste = membresDuDeck((ownedList || []).map((o) => o.id).filter((id) => !pris.has(id)), ownedList)
@@ -5892,12 +5906,14 @@ function photoGardien(ownedList, deckIds, ascension = 0, budget = null, plafond 
   const b = budget != null ? Math.max(0, Math.round(budget)) : null;
   // plafond (10/10) : niveau max après les 3 prochaines étapes, figé avec le reste de la photo.
   const pl = plafond != null ? plafond : Infinity;
-  return { v: 2, asc: Math.max(0, Math.floor(Number(ascension) || 0)), ...(b != null ? { budget: b, gardien: deckApresEffortEquitable(membres, b, pl).puissance } : {}), ...(pl < Infinity ? { plafond: pl } : {}), membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
+  // maitrise (12/10) : l'indice de maîtrise du joueur, FIGÉ avec la photo ; son chiffre suit le Gardien renforcé (ou adouci).
+  const mt = Number(maitrise) || 0;
+  return { v: 2, asc: Math.max(0, Math.floor(Number(ascension) || 0)), maitrise: mt, ...(b != null ? { budget: b, gardien: Math.round(deckApresEffortEquitable(membres, b, pl).puissance * facteurGardienMaitrise(mt, membres.length)) } : {}), ...(pl < Infinity ? { plafond: pl } : {}), membres: membres.map((m) => ({ id: m.creature.id, level: m.ownedLevel, evo: m.evolutionTier })),
     puissance: puissanceDeck(membres) };
 }
-function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0, budget = null, plafond = null) {
+function avecPhotoGardien(egg, ownedList, deckIds, ascension = 0, budget = null, plafond = null, maitrise = 0) {
   if (!egg) return egg;
-  try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds, ascension, budget, plafond) }; } catch (e) { return egg; }
+  try { return { ...egg, gardienPhoto: photoGardien(ownedList, deckIds, ascension, budget, plafond, maitrise) }; } catch (e) { return egg; }
 }
 // Chiffre AFFICHÉ du Gardien (08/10) : la puissance affichée de la PHOTO (prise au démarrage du
 // chrono, jamais retouchée ensuite) × la marge habituelle (calculée sur l'ancienne échelle de la
@@ -5949,7 +5965,8 @@ function calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascension = 0) {
     if (!membres.length) return null;
     // (08/10) Calibré sur le deck APRÈS l'effort en Griffes, marge 1 : qui ATTEINT le chiffre gagne 8 fois sur 10.
     const cible = deckApresEffortEquitable(membres, budgetDeLaPhoto(photo, ascension), plafondDeLaPhoto(photo)).membres;
-    return calibrageGardienSur(cible, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber), { marge: 1 });
+    // 12/10 : marge = facteur de MAÎTRISE figé dans la photo (indulgent : moitié de l'effet pour un bon joueur) ; 1 sans maîtrise.
+    return calibrageGardienSur(cible, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber), { marge: facteurGardienMaitrise(photo.maitrise || 0, membres.length) });
   } catch (e) {
     return null;
   }

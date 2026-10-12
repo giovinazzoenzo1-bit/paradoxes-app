@@ -4869,7 +4869,8 @@ function auditPuissanceAffichee() {
   const exige = [
     [a, /const puissanceHub = puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\);/, 'hub : la puissance affichée n\'est plus calculée'],
     [a, /🛡️ Puissance \{puissanceHub\}/, 'hub : la pastille n\'affiche plus la puissance affichée'],
-    [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`/, 'aperçu : puissance ou chance de victoire absente'],
+    // 12/10 : la chance peut être suivie de « → X % avec tes Griffes » (point 4 de l'auteur) ; « % de victoire » sinon.
+    [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? \(chanceApresGriffes != null \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % → \$\{chanceApresGriffes\} % avec tes Griffes` : `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`\)/, 'aperçu : puissance ou chance de victoire absente'],
     [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
     [c, /return deckApresEffortEquitable\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\), plafondDeLaPhoto\(photo\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget et son niveau max figés (il pourrait bouger)'],
     [c, /return `⚔️ \$\{texteChance\} de victoire\$\{suite\}`;/, 'bouton du Gardien : la chance de victoire n\'est plus affichée'],
@@ -4984,7 +4985,7 @@ function auditGardienGriffes() {
   }
   const c = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if (!/asc: Math\.max\(0, Math\.floor\(Number\(ascension\) \|\| 0\)\),/.test(c)) pb.push("la photo ne retient plus l'Ascension du démarrage du chrono");
-  if (!/const cible = deckApresEffortEquitable\(membres, budgetDeLaPhoto\(photo, ascension\), plafondDeLaPhoto\(photo\)\)\.membres;/.test(c) || !/\{ marge: 1 \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort RÉPARTI (et plafonné)");
+  if (!/const cible = deckApresEffortEquitable\(membres, budgetDeLaPhoto\(photo, ascension\), plafondDeLaPhoto\(photo\)\)\.membres;/.test(c) || !/\{ marge: facteurGardienMaitrise\(photo\.maitrise \|\| 0, membres\.length\) \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort RÉPARTI (et plafonné)");
   // (08/10) Règle A + B : budget = récupérable (A) + primes des 3 prochains niveaux (B), figé à la photo.
   // (08/10, règle FINALE) budget = les Griffes des 3 PROCHAINS combats, réparties équitablement (plus de A).
   if (!/budgetGardienRef\.current = primesProchainsNiveaux\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0, 3\);/.test(c)) pb.push('le budget du Gardien ne vaut plus « 3 prochains combats »');
@@ -5010,10 +5011,10 @@ function auditGardienGriffes() {
     if (Math.abs(r.puissance - 491) > 15) pb.push(`cas de l'auteur (Aegisolar 9, Terracroc 33, Racinea 25 ; 114 G) : Gardien ${r.puissance} au lieu d'environ 491 (« 3 combats »)`);
   }
   if (!/const b = budget != null \? Math\.max\(0, Math\.round\(budget\)\) : null;/.test(c) || !/\.\.\.\(b != null \? \{ budget: b, gardien:/.test(c)) pb.push("la photo n'enregistre plus le budget du Gardien");
-  if ((c.match(/, budgetGardienRef\.current, plafondGardienRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget ET le niveau max du Gardien');
+  if ((c.match(/, budgetGardienRef\.current, plafondGardienRef\.current, maitriseRef\.current\)\);/g) || []).length !== 2) pb.push('les 2 démarrages de chrono ne transmettent plus le budget ET le niveau max du Gardien');
   if (!/function budgetDeLaPhoto\(photo, ascensionCourante = 0\) \{\n  if \(photo && photo\.budget != null\) return photo\.budget;/.test(c)) pb.push("le Gardien n'utilise plus le budget de SA photo");
   // (08/10) Chiffre FIGÉ : écrit une fois dans la photo, toujours relu (l'auteur a vu 9 915 au menu, 9 901 au résultat).
-  if (!/gardien: deckApresEffortEquitable\(membres, b, pl\)\.puissance/.test(c)) pb.push("la photo n'écrit plus le chiffre du Gardien (plafonné) au démarrage du chrono");
+  if (!/gardien: Math\.round\(deckApresEffortEquitable\(membres, b, pl\)\.puissance \* facteurGardienMaitrise\(mt, membres\.length\)\)/.test(c)) pb.push("la photo n'écrit plus le chiffre du Gardien (plafonné, maîtrise comprise — 12/10) au démarrage du chrono");
   // ── (10/10, niveaux réels) Le Gardien ne suppose JAMAIS un niveau au-delà du niveau max ──
   // MESURÉ avant : dès l'étape 60, 10 à 18 joueurs simulés sur 20 au niveau max, et le Gardien supposait
   // +7 à +10 niveaux au-dessus (« 80 % après 3 combats » faux). Effort plafonné au max APRÈS 3 étapes.
@@ -5162,28 +5163,39 @@ function auditFenetres() {
   const fs = require('fs'), path = require('path');
   const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
   // 11/10 (spec de l'auteur) : poche + récupérables (défis, succès, calendrier) + file d'attente.
-  if (!Av.includes('const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { coup });'))
+  if (!Av.includes('const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise });'))
     pb.push('la photo ne compte plus toutes les Griffes du joueur (poche, récupérables, file d\'attente)');
   if (!Av.includes('definirNiveauxJoueur(niv, dif);')) pb.push("l'écran ne pose plus les niveaux du joueur (les ennemis reviennent à la table)");
   if (!/JSON\.stringify\(\{[^)]*fenetres, avantage \}\)/.test(Av)) pb.push("les photos et l'avantage ne sont plus sauvegardés");
   if (!Av.includes('⚔️ {difficulteAffichee(levelNumber)}/5')) pb.push("l'aperçu n'affiche plus la difficulté");
-  // 11/10 (spec de l'auteur) : précision mesurée sur la fenêtre précédente, recalcul quand une créature arrive.
-  if (!Av.includes('(await lireJournalCombats()).filter((c) => c && c.mode === \'aventure\' && c.niveau >= debutFenetre(k - 1) && c.niveau < debutFenetre(k))'))
-    pb.push("la photo ne mesure plus la précision du joueur sur les 5 étapes précédentes");
+  // 12/10 (choix de l'auteur) : INDICE DE MAÎTRISE (remplace la précision), recalcul SANS ÉCRASEMENT, aperçu, Gardien.
+  if (!Av.includes("maitrise = maitriseDesCombats((await lireJournalCombats()).filter((c) => c && c.chanceAnnoncee != null && (c.issue === 'win' || c.issue === 'lose'))"))
+    pb.push("la photo ne lit plus l'indice de maîtrise (15 derniers combats : vrais résultats contre chances annoncées)");
+  if (!Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise });')) pb.push("la photo n'applique plus l'indice de maîtrise");
   if (!Av.includes('const recalcul = !!photo && membres.length > nbPhoto;')) pb.push("plus de recalcul quand une créature rejoint le deck en cours de fenêtre");
-  // Précision : référence = 1, plafond = l'auteur, plancher ; effet MESURÉ en vrais combats pour un joueur précis.
-  if (Math.abs(K.facteurPrecision(null) - 1) > 1e-9 || Math.abs(K.facteurPrecision(K.COUP_REFERENCE) - 1) > 1e-9) pb.push('précision : le joueur de référence doit valoir 1');
-  if (!(K.facteurPrecision(0.873) > 1.03) || K.facteurPrecision(5) !== K.facteurPrecision(0.875) || K.facteurPrecision(0.1) !== K.facteurPrecision(0.5))
-    pb.push("précision : effet, plafond (niveau de l'auteur, 75 % de parfaits) ou plancher cassés");
+  if (!Av.includes('nv[depart] = Math.min(nv[depart], ancien.niveaux[depart] + MONTEE_MAX_RECALCUL);')) pb.push("recalcul avec ÉCRASEMENT : l'étape en cours peut de nouveau bondir (rapport du 12/10 : niveau 9 → 28, 5 %)");
+  if (K.MONTEE_MAX_RECALCUL !== 3) pb.push('montée max au recalcul : 3 niveaux (décision du 12/10)');
+  if (!Av.includes('const chanceApresGriffes = useMemo(') || !Av.includes('% avec tes Griffes`') || !Av.includes('griffesDispo={Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0)}'))
+    pb.push("l'aperçu n'affiche plus « chance si tu dépenses tes Griffes »");
+  // Indice : neutre sans combat, plafonné à l'auteur, prudent, plancher, 15 derniers ; conversion par la pente.
+  const vic = (n, c, y) => Array(n).fill({ chance: c, gagne: y });
+  if (K.maitriseDesCombats([]) !== 0) pb.push('maîtrise : aucun combat = joueur moyen (0)');
+  if (K.maitriseDesCombats(vic(40, 50, true)) !== K.MAITRISE_MAX || K.MAITRISE_MAX > 0.8) pb.push("maîtrise : plafond = l'auteur (0,73 mesuré ; « pas de blocage »)");
+  if (K.maitriseDesCombats(vic(40, 90, false)) !== K.MAITRISE_MIN || !(K.maitriseDesCombats(vic(15, 50, false)) < -0.8)) pb.push('maîtrise : plancher (défaites à 90 % annoncés) ou sensibilité aux défaites');
+  if (!(K.maitriseDesCombats(vic(3, 50, true)) < 0.75)) pb.push('maîtrise : plus de prudence statistique (3 victoires suffisent à atteindre le plafond)');
+  if (K.maitriseDesCombats(vic(50, 50, true).concat(vic(15, 50, false))) !== K.maitriseDesCombats(vic(15, 50, false))) pb.push('maîtrise : seuls les 15 derniers combats comptent');
+  if (Math.abs(K.facteurMaitrise(0, 3, 3) - 1) > 1e-9 || Math.abs(K.facteurMaitrise(K.MAITRISE_MAX, 3, 3) - Math.exp(K.MAITRISE_MAX / (18.379 * K.EFFICACITE_MAITRISE))) > 1e-6 || K.EFFICACITE_MAITRISE !== 0.67) pb.push('maîtrise : conversion en puissance (pente 3 contre 3)');
+  if (Math.abs(K.facteurGardienMaitrise(0.6, 3) - Math.exp(0.3 / K.penteDifficulte(2, 1))) > 1e-6 || Math.abs(K.facteurGardienMaitrise(-0.6, 1) - Math.exp(-0.6 / K.penteDifficulte(1, 1))) > 1e-6)
+    pb.push("Gardien : la maîtrise doit être INDULGENTE (moitié de l'effet pour un bon joueur, effet entier pour un joueur faible)");
+  // Mesure en vrais combats : joueur PRÉCIS (30 ms, maîtrise mesurée 0,79 → plafond 0,75) aux crans 4 et 5 (6 équipes).
   {
     const parP = { 4: [0, 0], 5: [0, 0] };
-    // 6 équipes (MESURÉ : avec 3, la variance d'équipe donnait 66 % au cran 4 ; avec 6 : 56 / 48 % selon les fenêtres).
     const PANEL6 = [...PANEL, ['pyrosile', 'caraploof', 'ventis'], ['glyphon', 'luxorbe', 'bouldog'], ['terracroc', 'brontobloc', 'malefix']];
     for (const d0 of [16, 26, 36]) {
       const niv = decks[d0 - 2].deck; const evo = (K.equipeEnnemie(d0)[0] || {}).evolutionTier || 0;
       for (const ids of PANEL6) {
         const membres = niv.map((l, i) => ({ creature: g(ids[i]), ownedLevel: l, evolutionTier: evo, equippedRunes: [] }));
-        K.definirNiveauxJoueur(K.photoFenetre(d0, membres, 0, 0, { coup: 0.873 }));
+        K.definirNiveauxJoueur(K.photoFenetre(d0, membres, 0, 0, { maitrise: K.MAITRISE_MAX }));
         let budget = 0;
         for (let n = d0; n < d0 + 5; n++) {
           const apres = K.deckApresEffortEquitable(membres.slice(0, Math.min(membres.length, K.combattantsPourEtape(n))), budget).membres;
@@ -5199,10 +5211,16 @@ function auditFenetres() {
         K.definirNiveauxJoueur(null);
       }
     }
-    for (const d of [4, 5]) { const m = parP[d][0] / parP[d][1]; if (Math.abs(m - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`joueur précis (75 % de parfaits) : cran ${d} à ${Math.round(100 * m)} % pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % — la précision n'est plus compensée`); }
+    for (const d of [4, 5]) { const m = parP[d][0] / parP[d][1]; if (Math.abs(m - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`joueur précis (maîtrise ${K.MAITRISE_MAX}) : cran ${d} à ${Math.round(100 * m)} % pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % — la maîtrise n'est plus compensée`); }
   }
+  // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
+  const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if ((ClS.match(/plafondGardienRef\.current, maitriseRef\.current\)\)/g) || []).length !== 2) pb.push("Gardien : la photo de l'œuf ne reçoit plus l'indice de maîtrise (2 endroits)");
+  if (!ClS.includes('{ marge: facteurGardienMaitrise(photo.maitrise || 0, membres.length) }')) pb.push("Gardien : le calage n'utilise plus l'indice de maîtrise");
+  if (!ClS.includes('gardien: Math.round(deckApresEffortEquitable(membres, b, pl).puissance * facteurGardienMaitrise(mt, membres.length))')) pb.push('Gardien : son chiffre affiché ne suit plus le Gardien réel');
   const Sim = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
-  if (!Sim.includes('Object.assign(j.niveauxF, K.photoFenetre(depart, membres, j.griffes, 0, { coup: coupSimule(R.erreurMs || K.JAUGE_ERREUR_REFERENCE_MS) }));') || !Sim.includes('finally { K.definirNiveauxJoueur(null); }')) pb.push('le joueur simulé ne vit plus les fenêtres (mesures fausses) ou les fait fuir vers les autres mesures');
+  if (!Sim.includes('const nv = K.photoFenetre(depart, membres, j.griffes, 0, { maitrise: 0 });') || !Sim.includes('nv[depart] = Math.min(nv[depart], avant + K.MONTEE_MAX_RECALCUL);') || !Sim.includes('finally { K.definirNiveauxJoueur(null); }'))
+    pb.push("le joueur simulé ne vit plus les fenêtres comme l'écran (mesures fausses) ou les fait fuir vers les autres mesures");
   return pb;
 }
 module.exports.auditFenetres = auditFenetres;
