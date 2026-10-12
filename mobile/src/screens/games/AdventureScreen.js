@@ -813,7 +813,10 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       const av = avantage && avantage.restant > 0 ? avantage.niveau : 0;
       const d0 = debutFenetre(k);
       const depart = recalcul ? Math.max(d0, currentUnlockedLevel) : d0;
-      const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;
+      // 12/10 (choix de l'auteur) : 1re FENÊTRE (étapes 1-5) SANS DÉPENSE VIRTUELLE — un débutant ne sait pas encore dépenser
+      // les 40 Griffes du calendrier : il perdait son tout PREMIER combat (rapport du 12/10 : étape 1 à 58 %). Les primes des
+      // étapes gagnées restent comptées (photoFenetre).
+      const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;
       const niveaux = photoFenetre(depart, membres, budget, av, { maitrise });
       const difficultes = {};
       for (let n = d0; n < d0 + TAILLE_FENETRE; n++) difficultes[n] = difficulteEtape(n, av);

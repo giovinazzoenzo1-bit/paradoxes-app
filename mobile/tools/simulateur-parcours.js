@@ -192,7 +192,7 @@ function nouveauJoueur(graine, R = REGLAGES) {
     if (!j.photos[kf] || membres.length > j.photoNb[kf]) {
       const depart = j.photos[kf] ? l : K.debutFenetre(kf);
       const avant = j.niveauxF[depart];
-      const nv = K.photoFenetre(depart, membres, j.griffes, 0, { maitrise: 0 });
+      const nv = K.photoFenetre(depart, membres, kf === 0 ? 0 : j.griffes, 0, { maitrise: 0 }); // 1re fenêtre : sans dépense virtuelle (12/10)
       if (j.photos[kf] && avant != null) nv[depart] = Math.min(nv[depart], avant + K.MONTEE_MAX_RECALCUL);
       Object.assign(j.niveauxF, nv);
       j.photos[kf] = true; j.photoNb[kf] = membres.length;

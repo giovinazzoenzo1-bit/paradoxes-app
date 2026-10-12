@@ -5163,7 +5163,7 @@ function auditFenetres() {
   const fs = require('fs'), path = require('path');
   const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
   // 11/10 (spec de l'auteur) : poche + récupérables (défis, succès, calendrier) + file d'attente.
-  if (!Av.includes('const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise });'))
+  if (!Av.includes('const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise });'))
     pb.push('la photo ne compte plus toutes les Griffes du joueur (poche, récupérables, file d\'attente)');
   if (!Av.includes('definirNiveauxJoueur(niv, dif);')) pb.push("l'écran ne pose plus les niveaux du joueur (les ennemis reviennent à la table)");
   if (!/JSON\.stringify\(\{[^)]*fenetres, avantage \}\)/.test(Av)) pb.push("les photos et l'avantage ne sont plus sauvegardés");
@@ -5213,13 +5213,21 @@ function auditFenetres() {
     }
     for (const d of [4, 5]) { const m = parP[d][0] / parP[d][1]; if (Math.abs(m - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`joueur précis (maîtrise ${K.MAITRISE_MAX}) : cran ${d} à ${Math.round(100 * m)} % pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % — la maîtrise n'est plus compensée`); }
   }
+  // 12/10 (choix de l'auteur, points 1 et 3) : 1re fenêtre sans dépense virtuelle ; facteur d'éléments (relatif aux équipes de
+  // mesure, exposant 0,5 MESURÉ) appliqué dans la photo.
+  const g1 = (id) => Cl.CREATURES.find((c) => c.id === id); const m1 = (id) => ({ creature: g1(id) });
+  if (!(K.facteurElements([m1('pyrosile')], [m1('caraploof')], 1) < 0.95) || !(K.facteurElements([m1('caraploof')], [m1('pyrosile')], 1) > 1.05))
+    pb.push("facteur d'éléments : le désavantage (Feu contre Eau) ou l'avantage n'est plus compté");
+  if (Math.abs(K.facteurElements([m1('glyphon')], [m1('glyphon')], 1) - 1) > 1e-9 || K.EXPOSANT_ELEMENTS !== 0.5) pb.push("facteur d'éléments : Magie doit rester neutre ; exposant 0,5 (mesuré)");
+  const srcCombat = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
+  if (!srcCombat.includes('puissanceAffichee(apres.membres) * fMaitrise * fElements')) pb.push("la photo n'applique plus le facteur d'éléments");
   // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
   const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if ((ClS.match(/plafondGardienRef\.current, maitriseRef\.current\)\)/g) || []).length !== 2) pb.push("Gardien : la photo de l'œuf ne reçoit plus l'indice de maîtrise (2 endroits)");
   if (!ClS.includes('{ marge: facteurGardienMaitrise(photo.maitrise || 0, membres.length) }')) pb.push("Gardien : le calage n'utilise plus l'indice de maîtrise");
   if (!ClS.includes('gardien: Math.round(deckApresEffortEquitable(membres, b, pl).puissance * facteurGardienMaitrise(mt, membres.length))')) pb.push('Gardien : son chiffre affiché ne suit plus le Gardien réel');
   const Sim = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
-  if (!Sim.includes('const nv = K.photoFenetre(depart, membres, j.griffes, 0, { maitrise: 0 });') || !Sim.includes('nv[depart] = Math.min(nv[depart], avant + K.MONTEE_MAX_RECALCUL);') || !Sim.includes('finally { K.definirNiveauxJoueur(null); }'))
+  if (!Sim.includes('const nv = K.photoFenetre(depart, membres, kf === 0 ? 0 : j.griffes, 0, { maitrise: 0 });') || !Sim.includes('nv[depart] = Math.min(nv[depart], avant + K.MONTEE_MAX_RECALCUL);') || !Sim.includes('finally { K.definirNiveauxJoueur(null); }'))
     pb.push("le joueur simulé ne vit plus les fenêtres comme l'écran (mesures fausses) ou les fait fuir vers les autres mesures");
   return pb;
 }

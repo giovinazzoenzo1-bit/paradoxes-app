@@ -1813,6 +1813,39 @@ export function facteurGardienMaitrise(maitrise, nbCombattants) {
   const m = Math.max(MAITRISE_MIN, Math.min(MAITRISE_MAX, Number(maitrise) || 0));
   return Math.exp((m > 0 ? m / 2 : m) / penteDifficulte(Math.max(1, Math.min(2, nbCombattants || 1)), 1));
 }
+// ═══ FACTEUR D'ÉLÉMENTS (12/10, choix de l'auteur) ═══ — rapport du 12/10 : étape 6, Caraploof (Eau) contre son Pyrosile (Feu)
+// → 67 % au cran 1 (visé 95) alors que l'ennemi était déjà au niveau MINIMUM. Le calculateur ignorait les éléments de l'équipe
+// du joueur. Instantané (aucune simulation) : rapport « mes multiplicateurs sur eux ÷ les leurs sur moi » (moyenne de toutes
+// les paires), RELATIF aux 6 équipes de mesure (FACTEUR_ETAPE a été mesuré avec elles : leur effet moyen d'éléments y est déjà
+// compté — sans ce rapport relatif, on le compterait deux fois).
+export const PANEL_MESURE_ELEMENTS = [ // éléments des 6 équipes de mobile/tools/mesurer-etapes.js (PANEL), dans l'ordre
+  ['Terre', 'Foudre', 'Ténèbres'], ['Feu', 'Eau', 'Air'], ['Magie', 'Lumière', 'Terre'],
+  ['Feu', 'Eau', 'Air'], ['Terre', 'Foudre', 'Magie'], ['Air', 'Feu', 'Lumière'],
+];
+// EXPOSANT 0,5 (théorie : puissance ∝ √dégâts) — MESURÉ (12/10, 5 équipes typées « 2 du même élément + Glyphon », 7 fenêtres) :
+// écart étape par étape 23 pts sans facteur, 21 avec 0,5, 23 avec 1, 27 avec 1,5. Gain MODESTE : les éléments ne sont qu'une
+// petite part de l'irrégularité (le reste : sorts et compositions propres à chaque équipe).
+// ⚠️ Limite : une étape dont l'ennemi est déjà au niveau MINIMUM (1) ne peut pas être adoucie (ex. étape 6, Caraploof).
+export const EXPOSANT_ELEMENTS = 0.5;
+function rapportElements(elsJ, elsE) {
+  let mj = 0, me = 0, n = 0;
+  for (const a of elsJ) for (const b of elsE) { mj += elementMultiplier(a, b); me += elementMultiplier(b, a); n++; }
+  return n ? mj / me : 1;
+}
+const CACHE_ELEMENTS_PANEL = new Map();
+export function facteurElements(membres, ennemis, nbJ) {
+  const elsJ = (membres || []).map((m) => m && m.creature && m.creature.element).filter(Boolean);
+  const elsE = (ennemis || []).map((m) => m && m.creature && m.creature.element).filter(Boolean);
+  if (!elsJ.length || !elsE.length) return 1;
+  const k = Math.max(1, Math.min(3, nbJ || elsJ.length));
+  const cle = elsE.join('|') + '#' + k;
+  let ref = CACHE_ELEMENTS_PANEL.get(cle);
+  if (ref == null) {
+    ref = Math.exp(PANEL_MESURE_ELEMENTS.reduce((t, els) => t + Math.log(rapportElements(els.slice(0, k), elsE)), 0) / PANEL_MESURE_ELEMENTS.length);
+    CACHE_ELEMENTS_PANEL.set(cle, ref);
+  }
+  return Math.pow(rapportElements(elsJ, elsE) / ref, EXPOSANT_ELEMENTS);
+}
 // RECALCUL en cours de fenêtre (nouvelle créature) : l'étape EN COURS monte de 3 niveaux au plus (rapport du 12/10 :
 // étape 9, ennemi du niveau 9 au niveau 28 à l'arrivée de la 2e créature, 5 % de chance — écrasement). Les suivantes : normal.
 export const MONTEE_MAX_RECALCUL = 3;
@@ -1829,7 +1862,8 @@ export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 
     const membres = (membresDeck || []).slice(0, nbJ);
     const apres = deckApresEffortEquitable(membres, budget);
     const fMaitrise = facteurMaitrise(options.maitrise, nbJ, opponentTeamForLevel(n).length);
-    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise, difficulteEtape(n, avantage), nbJ);
+    const fElements = facteurElements(apres.membres, equipeEnnemie(n), nbJ); // 12/10
+    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ);
     budget += griffesReward(n); // la prime de cette étape sert pour la suivante
   }
   return niveaux;

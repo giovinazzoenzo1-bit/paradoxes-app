@@ -183,7 +183,7 @@ const SABOTAGES = [
   // toujours durs (AVEUGLE) → le vrai « trop facile » : tous les ennemis 8 niveaux plus bas.
   // 11/10 (fin) : avec les fenêtres, le jeu lit la PHOTO (plus la table) → le « trop facile » se fait dans la photo.
   ['auditParcours', F.combat, "les photos mettent les ennemis 8 niveaux plus bas (l'Aventure trop facile revient)",
-    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise, difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = Math.max(1, niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise, difficulteEtape(n, avantage), nbJ) - 8);')],
+    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = Math.max(1, niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ) - 8);')],
   ['auditParcours', F.combat, 'le filet de sécurité débranché (des joueurs gratuits restent bloqués)',
     remplace('  return f ? f.baisse : 0;\n}\n\nexport function multiplicateurFureur', '  return 0;\n}\n\nexport function multiplicateurFureur')],
   ['auditParcours', F.clicker, "la garantie force une Rare même quand le joueur en a déjà une",
@@ -276,10 +276,10 @@ const SABOTAGES = [
     remplace('  if (eggNumber < 2) return null;', '  if (eggNumber < 3) return null;')],
   // 11/10 (fin) : fenêtres de difficulté (système de l'auteur).
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la photo oublie les Griffes récupérables (défis, succès, calendrier) et la file d'attente",
-    remplace('const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;', 'const budget = Math.max(0, griffes);')],
+    remplace('const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;', 'const budget = k === 0 ? 0 : Math.max(0, griffes);')],
   // 12/10 : indice de maîtrise (remplace la précision), recalcul sans écrasement, Gardien, zone morte.
   ['auditFenetres', F.combat, "la photo ignore l'indice de maîtrise (le bon joueur ne perd plus au 4e et 5e combat)",
-    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise, difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres), difficulteEtape(n, avantage), nbJ);')],
+    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fElements, difficulteEtape(n, avantage), nbJ);')],
   ['auditFenetres', F.combat, "plus de plafond de maîtrise (un joueur exceptionnel serait bloqué)",
     remplace('export const MAITRISE_MAX = 0.75;', 'export const MAITRISE_MAX = 5;')],
   ['auditFenetres', F.combat, "plus de prudence statistique (3 victoires chanceuses = joueur exceptionnel)",
@@ -288,6 +288,13 @@ const SABOTAGES = [
     remplace('if (recalcul && ancien && ancien.niveaux && ancien.niveaux[depart] != null) nv[depart] = Math.min(nv[depart], ancien.niveaux[depart] + MONTEE_MAX_RECALCUL);', '')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le Gardien ignore l'indice de maîtrise",
     remplace('{ marge: facteurGardienMaitrise(photo.maitrise || 0, membres.length) }', '{ marge: 1 }')],
+  // 12/10 : points 1 et 3 de l'auteur.
+  ['auditFenetres', F.combat, "la photo ignore les éléments de l'équipe du joueur",
+    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise, difficulteEtape(n, avantage), nbJ);')],
+  ['auditFenetres', F.combat, "le facteur d'éléments est coupé (exposant 0)",
+    remplace('export const EXPOSANT_ELEMENTS = 0.5;', 'export const EXPOSANT_ELEMENTS = 0;')],
+  ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la 1re fenêtre compte de nouveau une dépense virtuelle (le débutant ne sait pas encore dépenser)",
+    remplace('const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;', 'const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;')],
   ['auditPortee', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "une valeur lue AVANT sa déclaration (zone morte : écran blanc ou valeur vide)",
     remplace('  }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici', '  }, [(lifetimeStats || {}).advLevelReached || 0, owned.length]); // ⚠️ jamais `owned` ici')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "plus de recalcul quand une créature rejoint le deck en cours de fenêtre",
