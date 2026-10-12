@@ -259,7 +259,7 @@ const SABOTAGES = [
   // 10/10 (soir) : niveau affiché = VRAIES stats — un multiplicateur caché qui revient doit être vu (l'ancien sabotage
   // visait le multiplicateur de force moyenne, désormais traduit en niveau).
   ['auditNiveauMax', F.combat, "un multiplicateur caché revient sur les ennemis (leur niveau affiché ment de nouveau)",
-    remplace('    hp: Math.max(1, Math.round(s.hp * k)),\n    attack: Math.max(1, Math.round(s.attack * k)),', '    hp: Math.max(1, Math.round(s.hp * k * 1.2)),\n    attack: Math.max(1, Math.round(s.attack * k * 1.2)),')],
+    remplace('    hp: Math.max(1, Math.round(s.hp * k * f)),\n    attack: Math.max(1, Math.round(s.attack * k * f)),', '    hp: Math.max(1, Math.round(s.hp * k * f * 1.2)),\n    attack: Math.max(1, Math.round(s.attack * k * f * 1.2)),')],
   ['auditNiveauMax', F.clicker, "le niveau maximum revient (le joueur est de nouveau bloqué en niveau)",
     remplace('export function niveauMaxCreature(niveauGagne) {\n  return Infinity;\n}', 'export function niveauMaxCreature(niveauGagne) {\n  return Math.max(0, Math.floor(Number(niveauGagne) || 0)) + 5;\n}')],
   ['auditNiveauMax', F.clicker, "le coût d'un niveau dépend de nouveau de la rareté (la prime ne paie plus le niveau d'une rare)",

@@ -144,6 +144,12 @@ poche ni à récupérer) — un débutant ne sait pas encore les dépenser. ⚠�
 MINIMUM (1) : le résultat dépend de la créature de départ (niveau 1 contre niveau 1, MESURÉ : Bouldog 89 %, Ventis 86 %,
 Voltix 86 %, Caraploof 79 %, Glyphon 66 %, Ombrillon 59 %, Pyrosile 58 %, Luxorbe 41 %).
 
+**Ennemi d'entraînement** (12/10) : quand le calcul voudrait un ennemi SOUS le niveau 1 (étape 1, étape 6…), l'ennemi reste
+au niveau 1 mais ses PV et son attaque sont multipliés par le facteur manquant (jamais sous 30 %) ; l'aperçu affiche
+« · entraînement » (le niveau affiché reste honnête). Le Gardien n'est JAMAIS adouci. Étape 1 : la puissance du deck est
+divisée par 1,25 (1er combat garanti). MESURÉ : étape 1, créature de départ niv. 1 — avant 41 à 89 %, maintenant 99 à 100 %
+pour les 8 créatures de départ (joueur moyen ou faible) ; étape 6, Pyrosile contre Caraploof : 61-67 % → 98 %.
+
 **Facteur d'éléments** (12/10) : la photo tient compte des éléments de l'équipe du joueur face à ceux de l'étape (rapport
 des multiplicateurs ×1,15 / ×0,85 sur toutes les paires), RELATIF aux 6 équipes de mesure (déjà comptées dans le facteur de
 l'étape). Exposant 0,5 MESURÉ (5 équipes typées) : écart étape par étape 23 → 21 points — gain modeste, les éléments ne sont

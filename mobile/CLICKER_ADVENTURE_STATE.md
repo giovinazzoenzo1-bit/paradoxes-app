@@ -3468,3 +3468,21 @@ Bouldog 89, Ventis 86, Voltix 86, Caraploof 79, Glyphon 66, Ombrillon 59, Pyrosi
 À PROPOSER : « ennemi d'entraînement » quand le calcul voudrait un niveau < 1 (étape 1, étape 6…), affiché comme tel.
 Contrôles : auditFenetres (facteur d'éléments, neutralité de Magie, exposant, photo, budget 1re fenêtre) ; 3 sabotages
 nouveaux + 3 recalés → 170 prouvés ; 105 contrôles verts ; taps 20/20.
+
+
+## 12/10 (soir, suite) — ENNEMI D'ENTRAÎNEMENT (choix de l'auteur, publié)
+
+Problème : les étapes 1 et 6 avaient déjà l'ennemi au niveau MINIMUM (1) ; le calcul en voulait un plus faible (étape 1 :
+niveau 1 contre niveau 1, 41 à 89 % selon la créature de départ ; étape 6 : Caraploof contre Pyrosile, 61-67 %).
+CODE (combatLogic) : affaiblissementsJoueur (3e argument de definirNiveauxJoueur), affaiblissementEtape / estEntrainement,
+AFFAIBLISSEMENT_MIN 0,3 ; statsForOpponentCreatureTyped multiplie PV et attaque par f SEULEMENT pour un membre de l'équipe
+de l'étape (`m` trouvé) → le Gardien (« gardien », hors équipe) n'est jamais adouci (vérifié) ; niveauEtAffaiblissement
+(niveauPourDifficulte la réutilise) ; photoFenetre remplit options.affaiblissements ; MARGE_PREMIER_COMBAT 1,25 : à l'étape 1,
+puissance du deck DIVISÉE par 1,25. ⚠️ ERREUR COMMISE ET ATTRAPÉE PAR LA MESURE : la 1re version MULTIPLIAIT (l'ennemi suit la
+puissance du deck → plus fort : Luxorbe 34 %, Caraploof 52 %) — sabotage dédié ajouté.
+ÉCRAN : photo { affaiblissements } (fusion au recalcul : étapes jouées gardées, recalculées remplacées), transmis à chaque
+rendu (definirNiveauxJoueur(niv, dif, aff)), aperçu « · niv. 1 · entraînement ». Simulateur : j.affF, même chose.
+MESURÉ : étape 1, créature de départ niv. 1 → 99 à 100 % pour les 8 (joueur moyen et faible) ; étape 6, Pyrosile niv. 9 contre
+Caraploof → entraînement ×0,79 → 98 %.
+Contrôles : auditFenetres (1er combat ≥ 90 % pour chaque créature de départ, Gardien intact, constantes, étiquette,
+branchement) ; 5 sabotages nouveaux (dont la marge inversée) + 4 recalés → 175 prouvés ; 105 contrôles verts ; taps 20/20.
