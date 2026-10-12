@@ -183,7 +183,7 @@ const SABOTAGES = [
   // toujours durs (AVEUGLE) → le vrai « trop facile » : tous les ennemis 8 niveaux plus bas.
   // 11/10 (fin) : avec les fenêtres, le jeu lit la PHOTO (plus la table) → le « trop facile » se fait dans la photo.
   ['auditParcours', F.combat, "les photos mettent les ennemis 8 niveaux plus bas (l'Aventure trop facile revient)",
-    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = Math.max(1, niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ) - 8);')],
+    remplace('    niveaux[n] = r.niveau;', '    niveaux[n] = Math.max(1, r.niveau - 8);')],
   ['auditParcours', F.combat, 'le filet de sécurité débranché (des joueurs gratuits restent bloqués)',
     remplace('  return f ? f.baisse : 0;\n}\n\nexport function multiplicateurFureur', '  return 0;\n}\n\nexport function multiplicateurFureur')],
   ['auditParcours', F.clicker, "la garantie force une Rare même quand le joueur en a déjà une",
@@ -279,7 +279,7 @@ const SABOTAGES = [
     remplace('const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;', 'const budget = k === 0 ? 0 : Math.max(0, griffes);')],
   // 12/10 : indice de maîtrise (remplace la précision), recalcul sans écrasement, Gardien, zone morte.
   ['auditFenetres', F.combat, "la photo ignore l'indice de maîtrise (le bon joueur ne perd plus au 4e et 5e combat)",
-    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fElements, difficulteEtape(n, avantage), nbJ);')],
+    remplace('* fMaitrise * fElements / (n === 1 ? MARGE_PREMIER_COMBAT : 1)', '* fElements / (n === 1 ? MARGE_PREMIER_COMBAT : 1)')],
   ['auditFenetres', F.combat, "plus de plafond de maîtrise (un joueur exceptionnel serait bloqué)",
     remplace('export const MAITRISE_MAX = 0.75;', 'export const MAITRISE_MAX = 5;')],
   ['auditFenetres', F.combat, "plus de prudence statistique (3 victoires chanceuses = joueur exceptionnel)",
@@ -290,11 +290,22 @@ const SABOTAGES = [
     remplace('{ marge: facteurGardienMaitrise(photo.maitrise || 0, membres.length) }', '{ marge: 1 }')],
   // 12/10 : points 1 et 3 de l'auteur.
   ['auditFenetres', F.combat, "la photo ignore les éléments de l'équipe du joueur",
-    remplace('    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ);', '    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise, difficulteEtape(n, avantage), nbJ);')],
+    remplace('* fMaitrise * fElements / (n === 1 ? MARGE_PREMIER_COMBAT : 1)', '* fMaitrise / (n === 1 ? MARGE_PREMIER_COMBAT : 1)')],
   ['auditFenetres', F.combat, "le facteur d'éléments est coupé (exposant 0)",
     remplace('export const EXPOSANT_ELEMENTS = 0.5;', 'export const EXPOSANT_ELEMENTS = 0;')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la 1re fenêtre compte de nouveau une dépense virtuelle (le débutant ne sait pas encore dépenser)",
     remplace('const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;', 'const budget = Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;')],
+  // 12/10 : ennemi d'entraînement (choix de l'auteur).
+  ['auditFenetres', F.combat, "l'affaiblissement de l'entraînement n'est plus appliqué aux stats (1er combat perdu selon la créature de départ)",
+    remplace('  const f = m ? affaiblissementEtape(levelNumber) : 1;', '  const f = 1;')],
+  ['auditFenetres', F.combat, "le Gardien est adouci par un ennemi d'entraînement",
+    remplace('  const f = m ? affaiblissementEtape(levelNumber) : 1;', '  const f = affaiblissementEtape(levelNumber);')],
+  ['auditFenetres', F.combat, "marge du 1er combat dans le MAUVAIS sens (erreur réellement commise le 12/10 : Luxorbe 34 %)",
+    remplace('/ (n === 1 ? MARGE_PREMIER_COMBAT : 1)', '* (n === 1 ? MARGE_PREMIER_COMBAT : 1)')],
+  ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "l'aperçu n'affiche plus « entraînement »",
+    remplace("(estEntrainement(levelNumber) ? ' · entraînement' : '')", "''")],
+  ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "l'écran ne transmet plus les ennemis d'entraînement",
+    remplace('definirNiveauxJoueur(niv, dif, aff);', 'definirNiveauxJoueur(niv, dif);')],
   ['auditPortee', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "une valeur lue AVANT sa déclaration (zone morte : écran blanc ou valeur vide)",
     remplace('  }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici', '  }, [(lifetimeStats || {}).advLevelReached || 0, owned.length]); // ⚠️ jamais `owned` ici')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "plus de recalcul quand une créature rejoint le deck en cours de fenêtre",

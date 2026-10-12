@@ -184,7 +184,7 @@ function nouveauJoueur(graine, R = REGLAGES) {
   // Jouer le niveau l jusqu'à la victoire (énergie, filet de sécurité), ou le blocage.
   j.jouer = (l, k, s) => {
     // 11/10 — FENÊTRES (règle du jeu) : photo au 1er combat d'une fenêtre (trio + Griffes en poche), comme l'écran.
-    j.photos = j.photos || {}; j.niveauxF = j.niveauxF || {}; j.photoNb = j.photoNb || {};
+    j.photos = j.photos || {}; j.niveauxF = j.niveauxF || {}; j.photoNb = j.photoNb || {}; j.affF = j.affF || {};
     const kf = K.fenetreDe(l);
     const membres = j.trio().map((p) => ({ creature: p.c, ownedLevel: p.niv, evolutionTier: p.evo || 0, equippedRunes: [] }));
     // Comme l'écran : recalcul des étapes restantes si une créature arrive (l'étape en cours : +MONTEE_MAX_RECALCUL au plus).
@@ -192,12 +192,13 @@ function nouveauJoueur(graine, R = REGLAGES) {
     if (!j.photos[kf] || membres.length > j.photoNb[kf]) {
       const depart = j.photos[kf] ? l : K.debutFenetre(kf);
       const avant = j.niveauxF[depart];
-      const nv = K.photoFenetre(depart, membres, kf === 0 ? 0 : j.griffes, 0, { maitrise: 0 }); // 1re fenêtre : sans dépense virtuelle (12/10)
+      const nv = K.photoFenetre(depart, membres, kf === 0 ? 0 : j.griffes, 0, { maitrise: 0, affaiblissements: j.affF }); // 1re fenêtre : sans dépense virtuelle (12/10)
       if (j.photos[kf] && avant != null) nv[depart] = Math.min(nv[depart], avant + K.MONTEE_MAX_RECALCUL);
+      if (nv[depart] > 1) delete j.affF[depart]; // plafonné au-dessus du niveau 1 : plus d'entraînement
       Object.assign(j.niveauxF, nv);
       j.photos[kf] = true; j.photoNb[kf] = membres.length;
     }
-    K.definirNiveauxJoueur(j.niveauxF);
+    K.definirNiveauxJoueur(j.niveauxF, null, j.affF);
     try { return jouerEtape(l, k, s); } finally { K.definirNiveauxJoueur(null); } // jamais de fuite vers les autres mesures
   };
   const jouerEtape = (l, k, s) => {

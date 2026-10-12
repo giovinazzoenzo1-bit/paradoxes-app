@@ -407,6 +407,7 @@ import {
   deckApresEffortEquitable,
   maitriseDesCombats,
   MONTEE_MAX_RECALCUL,
+  estEntrainement,
   penteDifficulte,
   POUDRE_PAR_VICTOIRE,
   POUDRE_PRIX,
@@ -817,7 +818,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       // les 40 Griffes du calendrier : il perdait son tout PREMIER combat (rapport du 12/10 : étape 1 à 58 %). Les primes des
       // étapes gagnées restent comptées (photoFenetre).
       const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;
-      const niveaux = photoFenetre(depart, membres, budget, av, { maitrise });
+      const aff = {}; // 12/10 : ennemis d'entraînement de la photo (étape → facteur)
+      const niveaux = photoFenetre(depart, membres, budget, av, { maitrise, affaiblissements: aff });
       const difficultes = {};
       for (let n = d0; n < d0 + TAILLE_FENETRE; n++) difficultes[n] = difficulteEtape(n, av);
       setFenetres((prev) => {
@@ -825,8 +827,12 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
         if (ancien && !recalcul) return prev;
         const nv = { ...niveaux };
         if (recalcul && ancien && ancien.niveaux && ancien.niveaux[depart] != null) nv[depart] = Math.min(nv[depart], ancien.niveaux[depart] + MONTEE_MAX_RECALCUL);
+        // Entraînements : ceux de la photo d'avant pour les étapes déjà jouées, les nouveaux pour les étapes recalculées.
+        const af = {};
+        Object.entries((ancien && ancien.affaiblissements) || {}).forEach(([e, f]) => { if (Number(e) < depart) af[e] = f; });
+        Object.entries(aff).forEach(([e, f]) => { if (nv[e] === 1) af[e] = f; });
         return { ...prev, [k]: { niveaux: { ...((ancien && ancien.niveaux) || {}), ...nv }, difficultes: (ancien && ancien.difficultes) || difficultes,
-          budget, maitrise, nbDeck: membres.length, t: Date.now(), recalculeDepuis: recalcul ? depart : null } };
+          budget, maitrise, affaiblissements: af, nbDeck: membres.length, t: Date.now(), recalculeDepuis: recalcul ? depart : null } };
       });
     })();
     return () => { annule = true; };
@@ -1262,9 +1268,9 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // 11/10 — les photos du joueur fixent le niveau des ennemis (combatLogic.niveauEnnemi) : posées à CHAQUE rendu, avant les
   // enfants (carte, aperçu, combat), pour qu'ils lisent tous les mêmes niveaux.
   {
-    const niv = {}, dif = {};
-    Object.values(fenetres || {}).forEach((f) => { Object.assign(niv, (f && f.niveaux) || {}); Object.assign(dif, (f && f.difficultes) || {}); });
-    definirNiveauxJoueur(niv, dif);
+    const niv = {}, dif = {}, aff = {};
+    Object.values(fenetres || {}).forEach((f) => { Object.assign(niv, (f && f.niveaux) || {}); Object.assign(dif, (f && f.difficultes) || {}); Object.assign(aff, (f && f.affaiblissements) || {}); });
+    definirNiveauxJoueur(niv, dif, aff);
   }
   // (11/10) Niveaux des créatures du DECK : le niveau max de TOUTES les créatures en dépend (niveauMaxEquipe).
   const niveauxDuDeck = deck.filter(Boolean).map((id) => (ownedMap[id] ? ownedMap[id].level || 1 : 0)).filter((x) => x > 0);
@@ -3535,7 +3541,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
   const stadeAdverse = stadeVisuel(premierAdverse.evolutionTier || 0);
   const display = opponent.stages[stadeAdverse] || opponent.stages[0];
   const marqueEtape = (estEtapeBoss(levelNumber) ? '👑 ' : '') + (bonusElite(levelNumber) > 0 ? '⭐ ' : '');
-  const suiteAdverse = (equipeAdverse.length > 1 ? ' +' + (equipeAdverse.length - 1) : '') + ' · niv. ' + premierAdverse.niveau;
+  const suiteAdverse = (equipeAdverse.length > 1 ? ' +' + (equipeAdverse.length - 1) : '') + ' · niv. ' + premierAdverse.niveau + (estEntrainement(levelNumber) ? ' · entraînement' : ''); // 12/10
   const ownedMap = {};
   owned.forEach((o) => (ownedMap[o.id] = o));
   const teamCount = deck.filter((id) => id).length;

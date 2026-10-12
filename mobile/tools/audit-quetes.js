@@ -5163,15 +5163,15 @@ function auditFenetres() {
   const fs = require('fs'), path = require('path');
   const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
   // 11/10 (spec de l'auteur) : poche + récupérables (défis, succès, calendrier) + file d'attente.
-  if (!Av.includes('const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise });'))
+  if (!Av.includes('const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise, affaiblissements: aff });'))
     pb.push('la photo ne compte plus toutes les Griffes du joueur (poche, récupérables, file d\'attente)');
-  if (!Av.includes('definirNiveauxJoueur(niv, dif);')) pb.push("l'écran ne pose plus les niveaux du joueur (les ennemis reviennent à la table)");
+  if (!Av.includes('definirNiveauxJoueur(niv, dif, aff);')) pb.push("l'écran ne pose plus les niveaux du joueur (les ennemis reviennent à la table)");
   if (!/JSON\.stringify\(\{[^)]*fenetres, avantage \}\)/.test(Av)) pb.push("les photos et l'avantage ne sont plus sauvegardés");
   if (!Av.includes('⚔️ {difficulteAffichee(levelNumber)}/5')) pb.push("l'aperçu n'affiche plus la difficulté");
   // 12/10 (choix de l'auteur) : INDICE DE MAÎTRISE (remplace la précision), recalcul SANS ÉCRASEMENT, aperçu, Gardien.
   if (!Av.includes("maitrise = maitriseDesCombats((await lireJournalCombats()).filter((c) => c && c.chanceAnnoncee != null && (c.issue === 'win' || c.issue === 'lose'))"))
     pb.push("la photo ne lit plus l'indice de maîtrise (15 derniers combats : vrais résultats contre chances annoncées)");
-  if (!Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise });')) pb.push("la photo n'applique plus l'indice de maîtrise");
+  if (!Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise, affaiblissements: aff });')) pb.push("la photo n'applique plus l'indice de maîtrise");
   if (!Av.includes('const recalcul = !!photo && membres.length > nbPhoto;')) pb.push("plus de recalcul quand une créature rejoint le deck en cours de fenêtre");
   if (!Av.includes('nv[depart] = Math.min(nv[depart], ancien.niveaux[depart] + MONTEE_MAX_RECALCUL);')) pb.push("recalcul avec ÉCRASEMENT : l'étape en cours peut de nouveau bondir (rapport du 12/10 : niveau 9 → 28, 5 %)");
   if (K.MONTEE_MAX_RECALCUL !== 3) pb.push('montée max au recalcul : 3 niveaux (décision du 12/10)');
@@ -5221,13 +5221,32 @@ function auditFenetres() {
   if (Math.abs(K.facteurElements([m1('glyphon')], [m1('glyphon')], 1) - 1) > 1e-9 || K.EXPOSANT_ELEMENTS !== 0.5) pb.push("facteur d'éléments : Magie doit rester neutre ; exposant 0,5 (mesuré)");
   const srcCombat = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
   if (!srcCombat.includes('puissanceAffichee(apres.membres) * fMaitrise * fElements')) pb.push("la photo n'applique plus le facteur d'éléments");
+  // 12/10 (choix de l'auteur) : ENNEMI D'ENTRAÎNEMENT — 1er combat garanti avec n'importe quelle créature de départ (avant :
+  // 41 à 89 %), Gardien jamais adouci, affiché « entraînement », transmis par l'écran et le joueur simulé.
+  {
+    const faibles = [];
+    for (const c of Cl.CREATURES.filter((x) => x.rarity === 'commun')) {
+      const aff = {}; K.definirNiveauxJoueur(K.photoFenetre(1, [{ creature: c, ownedLevel: 1, evolutionTier: 0, equippedRunes: [] }], 0, 0, { maitrise: 0, affaiblissements: aff }), null, aff);
+      const EE = K.equipeEnnemie(1).map((x) => ({ creature: x.creature, stats: K.statsForOpponentCreatureTyped(x.creature, 1) }));
+      let sd = 7; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
+      let v = 0; for (let i = 0; i < 200; i++) if (K.simulerCombat([{ creature: c, stats: K.combatStatsForCreatureTyped(c, 1, 0, []) }], EE, { alea, politique: K.choixJoueur, erreurMs: 60 }).gagne) v++;
+      K.definirNiveauxJoueur(null);
+      if (v / 200 < 0.9) faibles.push(`${c.id} ${Math.round(v / 2)} %`);
+    }
+    if (faibles.length) pb.push(`1er combat plus garanti (créature de départ niv. 1, joueur moyen ≥ 90 %) : ${faibles.join(', ')}`);
+    const g0 = K.guardianStats(3, K.GUARDIAN_BASE_LEVEL, 2); K.definirNiveauxJoueur({ 3: 1 }, null, { 3: 0.5 }); const g1s = K.guardianStats(3, K.GUARDIAN_BASE_LEVEL, 2); K.definirNiveauxJoueur(null);
+    if (g0.hp !== g1s.hp || g0.attack !== g1s.attack) pb.push("le Gardien est adouci par un ennemi d'entraînement (il ne doit jamais l'être)");
+    if (K.affaiblissementEtape(12) !== 1 || K.AFFAIBLISSEMENT_MIN !== 0.3 || K.MARGE_PREMIER_COMBAT !== 1.25) pb.push("ennemi d'entraînement : neutre sans photo, plancher 30 %, marge du 1er combat 1,25");
+    if (!Av.includes("(estEntrainement(levelNumber) ? ' · entraînement' : '')")) pb.push("l'aperçu n'affiche plus « entraînement » (le niveau affiché ne serait plus honnête)");
+    if (!Av.includes('definirNiveauxJoueur(niv, dif, aff);')) pb.push("l'écran ne transmet plus les ennemis d'entraînement (le combat ne serait plus celui calculé)");
+  }
   // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
   const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if ((ClS.match(/plafondGardienRef\.current, maitriseRef\.current\)\)/g) || []).length !== 2) pb.push("Gardien : la photo de l'œuf ne reçoit plus l'indice de maîtrise (2 endroits)");
   if (!ClS.includes('{ marge: facteurGardienMaitrise(photo.maitrise || 0, membres.length) }')) pb.push("Gardien : le calage n'utilise plus l'indice de maîtrise");
   if (!ClS.includes('gardien: Math.round(deckApresEffortEquitable(membres, b, pl).puissance * facteurGardienMaitrise(mt, membres.length))')) pb.push('Gardien : son chiffre affiché ne suit plus le Gardien réel');
   const Sim = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
-  if (!Sim.includes('const nv = K.photoFenetre(depart, membres, kf === 0 ? 0 : j.griffes, 0, { maitrise: 0 });') || !Sim.includes('nv[depart] = Math.min(nv[depart], avant + K.MONTEE_MAX_RECALCUL);') || !Sim.includes('finally { K.definirNiveauxJoueur(null); }'))
+  if (!Sim.includes('const nv = K.photoFenetre(depart, membres, kf === 0 ? 0 : j.griffes, 0, { maitrise: 0, affaiblissements: j.affF });') || !Sim.includes('K.definirNiveauxJoueur(j.niveauxF, null, j.affF);') || !Sim.includes('nv[depart] = Math.min(nv[depart], avant + K.MONTEE_MAX_RECALCUL);') || !Sim.includes('finally { K.definirNiveauxJoueur(null); }'))
     pb.push("le joueur simulé ne vit plus les fenêtres comme l'écran (mesures fausses) ou les fait fuir vers les autres mesures");
   return pb;
 }

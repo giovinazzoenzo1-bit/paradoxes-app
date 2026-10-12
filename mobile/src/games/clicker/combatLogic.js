@@ -1708,10 +1708,25 @@ export const RATIOS_DIFFICULTE = {
 };
 let niveauxJoueur = null; // { [étape]: niveau } — les photos du joueur, posées par l'écran (ou le joueur simulé)
 let difficultesJoueur = null; // { [étape]: 1..5 } — la difficulté réellement appliquée (avantage payant compris)
-export function definirNiveauxJoueur(map, difficultes = null) {
+let affaiblissementsJoueur = null; // { [étape]: 0,3..1 } — ENNEMI D'ENTRAÎNEMENT (12/10), voir niveauEtAffaiblissement
+export function definirNiveauxJoueur(map, difficultes = null, affaiblissements = null) {
   niveauxJoueur = map && typeof map === 'object' && Object.keys(map).length ? map : null;
   difficultesJoueur = difficultes && typeof difficultes === 'object' ? difficultes : null;
+  affaiblissementsJoueur = affaiblissements && typeof affaiblissements === 'object' && Object.keys(affaiblissements).length ? affaiblissements : null;
 }
+// ENNEMI D'ENTRAÎNEMENT (12/10, choix de l'auteur) : quand le calcul voudrait un ennemi SOUS le niveau 1 (étape 1 : niveau 1
+// contre niveau 1, MESURÉ 41 à 89 % selon la créature de départ ; étape 6 : Caraploof contre un Pyrosile), l'ennemi reste au
+// niveau 1 mais ses PV et son attaque sont multipliés par ce facteur — affiché « entraînement » (le niveau reste honnête).
+export function affaiblissementEtape(levelNumber) {
+  const f = affaiblissementsJoueur && affaiblissementsJoueur[Math.max(1, Math.floor(levelNumber || 1))];
+  return f > 0 && f < 1 ? f : 1;
+}
+export function estEntrainement(levelNumber) { return affaiblissementEtape(levelNumber) < 1; }
+export const AFFAIBLISSEMENT_MIN = 0.3; // jamais moins de 30 % des stats du niveau 1
+// PREMIER COMBAT GARANTI (12/10) : à l'étape 1, la puissance du deck est DIVISÉE par cette marge (l'ennemi suit la puissance
+// du deck : divisée → ennemi plus doux). MESURÉ sans marge : Luxorbe de départ à 82 % (les 7 autres 95 à 99 %).
+// ⚠️ Multiplier (1re version) rendait l'ennemi PLUS FORT : Luxorbe 34 %, Caraploof 52 % — attrapé par la mesure.
+export const MARGE_PREMIER_COMBAT = 1.25;
 // Difficulté AFFICHÉE dans l'aperçu : celle de la photo si elle existe, sinon celle de la position dans la fenêtre.
 export function difficulteAffichee(levelNumber) {
   const n = Math.max(1, Math.floor(levelNumber || 1));
@@ -1745,8 +1760,12 @@ function rapportDifficulte(nbJ, nbE, d) {
 }
 // Niveau des ennemis de l'étape n pour qu'un deck de puissance `puissanceDeck` soit à la difficulté d.
 export function niveauPourDifficulte(levelNumber, puissanceDeck, d, nbJoueurs, options = {}) {
+  return niveauEtAffaiblissement(levelNumber, puissanceDeck, d, nbJoueurs, options).niveau;
+}
+// Idem + l'AFFAIBLISSEMENT (12/10) : si même le niveau 1 est trop fort pour la difficulté voulue, niveau 1 et stats × f.
+export function niveauEtAffaiblissement(levelNumber, puissanceDeck, d, nbJoueurs, options = {}) {
   const compo = equipeEnnemie(levelNumber).map((m) => ({ creature: m.creature, evolutionTier: m.evolutionTier, equippedRunes: [] }));
-  if (!compo.length || !(puissanceDeck > 0)) return 1;
+  if (!compo.length || !(puissanceDeck > 0)) return { niveau: 1, affaiblissement: 1 };
   const cible = puissanceDeck / rapportDifficulte(Math.max(1, nbJoueurs || compo.length), compo.length, d);
   const facteurDe = (m) => { const t = FACTEUR_ESPECE[m.creature.id]; return (t && t[Math.max(0, Math.min(2, m.evolutionTier || 0))]) || 1; };
   // Facteur de l'ÉTAPE (mesuré en vrais combats d'équipe, mesurer-etapes.js) ; à défaut, moyenne des facteurs d'espèce.
@@ -1758,7 +1777,9 @@ export function niveauPourDifficulte(levelNumber, puissanceDeck, d, nbJoueurs, o
   let L = Math.max(1, Math.round(1 + Math.log(Math.max(1e-9, cible / Math.max(1, p1))) / Math.log(CROISSANCE_NIVEAU)));
   let meilleur = L, ecart = Infinity;
   for (let x = Math.max(1, L - 4); x <= L + 4; x++) { const e = Math.abs(Math.log(P(x) / cible)); if (e < ecart) { ecart = e; meilleur = x; } }
-  return meilleur;
+  // 12/10 : même le niveau 1 est trop fort → ennemi d'entraînement (niveau 1, stats × f ; la puissance suit f).
+  if (meilleur === 1 && cible < P(1)) return { niveau: 1, affaiblissement: Math.max(AFFAIBLISSEMENT_MIN, +(cible / P(1)).toFixed(3)) };
+  return { niveau: meilleur, affaiblissement: 1 };
 }
 // ═══ INDICE DE MAÎTRISE (12/10, choix de l'auteur) ═══ — remplace le facteur de PRÉCISION du 11/10, qu'il englobe.
 // Le jeu compare les VRAIS résultats du joueur aux chances ANNONCÉES (aperçu, joueur de référence) sur ses 15 derniers
@@ -1863,7 +1884,10 @@ export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 
     const apres = deckApresEffortEquitable(membres, budget);
     const fMaitrise = facteurMaitrise(options.maitrise, nbJ, opponentTeamForLevel(n).length);
     const fElements = facteurElements(apres.membres, equipeEnnemie(n), nbJ); // 12/10
-    niveaux[n] = niveauPourDifficulte(n, puissanceAffichee(apres.membres) * fMaitrise * fElements, difficulteEtape(n, avantage), nbJ);
+    const r = niveauEtAffaiblissement(n, puissanceAffichee(apres.membres) * fMaitrise * fElements / (n === 1 ? MARGE_PREMIER_COMBAT : 1), difficulteEtape(n, avantage), nbJ);
+    niveaux[n] = r.niveau;
+    // 12/10 : l'ennemi d'entraînement, rendu dans options.affaiblissements (effacé si l'étape n'en a plus besoin).
+    if (options.affaiblissements) { if (r.affaiblissement < 1) options.affaiblissements[n] = r.affaiblissement; else delete options.affaiblissements[n]; }
     budget += griffesReward(n); // la prime de cette étape sert pour la suivante
   }
   return niveaux;
@@ -1939,9 +1963,12 @@ export function statsForOpponentCreatureTyped(creature, levelNumber, k = 1) {
   const evo = m ? m.evolutionTier : 0;
   const s = combatStatsForCreatureTyped(creature, niveau, evo, []);
   // 10/10 : plus de multiplicateur ici — la force voulue est DANS le niveau du membre (equipeEnnemie) : stats exactes.
+  // 12/10 : SAUF l'ennemi d'entraînement (niveau 1 affaibli, affiché comme tel) — seulement un MEMBRE de l'équipe de l'étape
+  // (`m` trouvé) : le Gardien (créature « gardien », hors équipe) n'est jamais adouci par erreur.
+  const f = m ? affaiblissementEtape(levelNumber) : 1;
   return {
-    hp: Math.max(1, Math.round(s.hp * k)),
-    attack: Math.max(1, Math.round(s.attack * k)),
+    hp: Math.max(1, Math.round(s.hp * k * f)),
+    attack: Math.max(1, Math.round(s.attack * k * f)),
     clickSpeed: s.clickSpeed,
     endurance: s.endurance,
   };
