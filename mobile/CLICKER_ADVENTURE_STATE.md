@@ -3486,3 +3486,22 @@ MESURÉ : étape 1, créature de départ niv. 1 → 99 à 100 % pour les 8 (joue
 Caraploof → entraînement ×0,79 → 98 %.
 Contrôles : auditFenetres (1er combat ≥ 90 % pour chaque créature de départ, Gardien intact, constantes, étiquette,
 branchement) ; 5 sabotages nouveaux (dont la marge inversée) + 4 recalés → 175 prouvés ; 105 contrôles verts ; taps 20/20.
+
+
+## 13/10 — GARDIEN À 90 % QUAND BLOQUÉ AU NIVEAU MAX + FACTEURS « 1 CONTRE 1 » (publié)
+
+Rapport de l'auteur (13/10, 20 combats, départ Ventis) : bloqué 2 fois à l'étape 9 (3 % puis 17 % avec Ventis SEUL au niveau
+MAX 10), Gardien affiché à 60 % avec « Niveau max atteint : gagne des étapes d'Exploration » (conseil circulaire). Règle de
+l'auteur : 1 créature niv. 10 ou 2 créatures niv. 20 → Gardien à 90 % directement.
+CAUSE 1 (Gardien) : la photo de l'œuf supposait des Griffes à dépenser et la maîtrise ; le joueur était plafonné.
+CORRECTIF : ClickerScreen.bloqueAuMaxDuNombre (1 à 2 créatures, toutes ≥ 10 × nombre) → calibrageDuCombat cale le Gardien sur
+le deck RÉEL (membresDuDeck) avec cible 0,1 (CIBLE_GARDIEN_BLOQUE : part de victoires du Gardien), marge 1 ; l'état entre dans
+la clé de calibrageMemo (sinon l'ancienne chance restait en cache). MESURÉ : 90 à 94 %.
+CAUSE 2 (étape 9) : FACTEUR_ETAPE des étapes 1-10 était mesuré en 2 contre 1 ; seul, Ombrillon (exécution) pèse bien plus.
+CORRECTIF : FACTEUR_ETAPE_1V1 (NBJ=1 mesurer-etapes.js ; mobile/tools/facteurs-etapes-1j.json), utilisé quand 1 créature
+affronte 1 ennemi. MESURÉ (8 communes seules niv. 10) : étape 8 35 → 63 %, étape 9 29 → 35 % (Ventis 50 %, Luxorbe 7 % :
+duel propre à l'espèce, non corrigé — le Gardien à 90 % sert de sortie).
+⚠️ PIÈGE (outil) : mon contrôle utilisait `ClS` avant sa déclaration (zone morte) → Node a planté franchement ; verifier-portee
+ne scanne que mobile/src (pas les outils) : à garder en tête.
+Contrôles : auditFenetres (règle du Gardien complète + 90 % mesurés sur 2 decks bloqués ; étape 8 d'une créature seule ≥ 50 %) ;
+4 sabotages nouveaux → 179 prouvés ; 105 contrôles verts ; taps 20/20.

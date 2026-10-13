@@ -155,6 +155,16 @@ des multiplicateurs ×1,15 / ×0,85 sur toutes les paires), RELATIF aux 6 équip
 l'étape). Exposant 0,5 MESURÉ (5 équipes typées) : écart étape par étape 23 → 21 points — gain modeste, les éléments ne sont
 qu'une petite part de l'irrégularité. ⚠️ Une étape dont l'ennemi est déjà au niveau 1 ne peut pas être adoucie (ex. étape 6).
 
+**Gardien bloqué au niveau max** (13/10, règle de l'auteur) : avec 1 créature au niveau 10, ou 2 créatures au niveau 20
+(plafond par nombre de créatures), le joueur ne peut plus rien améliorer → le Gardien est calé à **90 %** sur son deck RÉEL
+(sans budget, sans maîtrise). MESURÉ : Ventis seul niv. 10 : 94 % ; Pyrosile / Luxorbe seuls : 90 % ; Ventis + Brontobloc niv. 20 : 91 %
+(rapport du 13/10 : 60 % affichés, Exploration bloquée).
+
+**Une seule créature au chapitre 1** (13/10) : facteurs d'étape « 1 contre 1 » (FACTEUR_ETAPE_1V1, étapes 1-10) — en 2 contre 1,
+les étapes 8 et 9 étaient sous-estimées (×0,88 / ×1,04 au lieu de ×1,03 / ×1,11). MESURÉ (8 créatures communes seules au
+niveau 10) : étape 8 de 35 à 63 % (cran 3), étape 9 de 29 à 35 % (cran 4 ; Ventis 50 %, mais Luxorbe 7 % : mauvais duel contre
+l'exécution d'Ombrillon — le Gardien à 90 % sert de sortie).
+
 **Gardien** (12/10) : le même indice de maîtrise, **indulgent** (moitié de l'effet pour un bon joueur : c'est le moment de
 l'éclosion ; effet entier pour un joueur faible), figé dans la photo de l'œuf ; son chiffre affiché suit.
 
