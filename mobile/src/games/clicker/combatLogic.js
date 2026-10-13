@@ -1751,6 +1751,10 @@ export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1 
 export const FACTEUR_ETAPE = {"1": 0.881, "2": 0.948, "3": 0.894, "4": 1.057, "5": 0.99, "6": 1.009, "7": 0.936, "8": 0.881, "9": 1.043, "10": 0.996, "11": 1.092, "12": 1.115, "13": 1.262, "14": 1.055, "15": 1.105, "16": 1.391, "17": 1.152, "18": 1.105, "19": 1.216, "20": 1.074, "21": 1.15, "22": 0.913, "23": 0.94, "24": 1.016, "25": 0.977, "26": 0.992, "27": 0.833, "28": 0.937, "29": 0.828, "30": 0.926, "31": 0.89, "32": 0.953, "33": 1.116, "34": 1.146, "35": 1.027, "36": 0.93, "37": 0.828, "38": 0.979, "39": 0.833, "40": 0.828, "41": 1.099, "42": 1.136, "43": 0.863, "44": 1.116, "45": 1.107, "46": 0.905, "47": 1.163, "48": 1.101, "49": 0.932, "50": 1.06, "51": 1.112, "52": 0.887, "53": 1.074, "54": 1.13, "55": 0.856, "56": 1.08, "57": 1.154, "58": 0.856, "59": 1.127, "60": 0.973};
 // 11/10 (fin) : chapitre 2 avec 3 créatures contre 2 ennemis — mesuré à part (NBJ=3 mesurer-etapes.js) : en 2 contre 2, ces
 // étapes valaient jusqu'à ×1,39 ; avec une 3e créature, ×0,84 à ×1,11 (MESURÉ : sans ce tableau, 95-100 % à tous les crans).
+// 13/10 : chapitre 1 avec UNE SEULE créature (avant l'œuf 2) — mesuré à part (NBJ=1 mesurer-etapes.js). En 2 contre 1, les
+// étapes 8 et 9 valaient ×0,88 / ×1,04 ; seul, ×1,03 / ×1,11 (exécution d'Ombrillon, etc.) → rapport du 13/10 : Ventis seul au
+// niveau MAX (10), étape 8 à 11 %, étape 9 à 3-17 % (bloqué).
+export const FACTEUR_ETAPE_1V1 = {"1": 0.897, "2": 0.925, "3": 1.032, "4": 1.076, "5": 0.986, "6": 1.047, "7": 0.889, "8": 1.03, "9": 1.114, "10": 0.978};
 export const FACTEUR_ETAPE_3V2 = {"11": 0.921, "12": 0.924, "13": 1.061, "14": 0.874, "15": 0.97, "16": 1.111, "17": 0.929, "18": 0.879, "19": 1.056, "20": 0.838};
 export const FACTEUR_ESPECE = {"pyrosile": [1.11, 1.09, 1.09], "caraploof": [1.04, 1.04, 1.05], "ventis": [1.17, 1.15, 1.15], "bouldog": [1.04, 1.05, 1.04], "voltix": [1.13, 1.14, 1.12], "aegisolar": [1.01, 0.98, 0.96], "glyphon": [0.93, 0.93, 0.93], "ombrillon": [1.19, 1.18, 1.17], "luxorbe": [0.96, 0.95, 0.95], "fournax": [1.01, 1.01, 1.02], "solarion": [0.74, 0.71, 0.71], "aquamira": [1, 1, 1], "terracroc": [1.11, 1.13, 1.12], "zephyrion": [1.04, 1.04, 1.04], "brontobloc": [0.96, 0.97, 0.98], "malefix": [1.12, 1.13, 1.12], "nocturis": [0.97, 0.96, 0.96], "racinea": [1.05, 1.06, 1.06], "runicor": [1.03, 1.05, 0.98], "braiserose": [1.05, 1.05, 1.05], "abyssorax": [1.04, 1.03, 1.05], "cumulox": [1.02, 1.02, 1], "voltarel": [0.98, 0.97, 0.96], "solstral": [0.91, 0.91, 0.93], "tartaroth": [1.1, 1.1, 1.1], "arcanis": [0.85, 0.89, 0.89]}; // [sans évolution, évolution 1, évolution 2]
 function rapportDifficulte(nbJ, nbE, d) {
@@ -1770,7 +1774,8 @@ export function niveauEtAffaiblissement(levelNumber, puissanceDeck, d, nbJoueurs
   const facteurDe = (m) => { const t = FACTEUR_ESPECE[m.creature.id]; return (t && t[Math.max(0, Math.min(2, m.evolutionTier || 0))]) || 1; };
   // Facteur de l'ÉTAPE (mesuré en vrais combats d'équipe, mesurer-etapes.js) ; à défaut, moyenne des facteurs d'espèce.
   const nEt = Math.max(1, Math.floor(levelNumber || 1));
-  const parEtape = (Math.max(1, nbJoueurs || compo.length) === 3 && compo.length === 2 && FACTEUR_ETAPE_3V2[nEt]) || FACTEUR_ETAPE[nEt];
+  const nbJc = Math.max(1, nbJoueurs || compo.length);
+  const parEtape = (nbJc === 1 && compo.length === 1 && FACTEUR_ETAPE_1V1[nEt]) || (nbJc === 3 && compo.length === 2 && FACTEUR_ETAPE_3V2[nEt]) || FACTEUR_ETAPE[nEt];
   const facteur = options.sansFacteur ? 1 : (parEtape || Math.exp(compo.reduce((t, m) => t + Math.log(facteurDe(m)), 0) / compo.length));
   const P = (L) => facteur * puissanceAffichee(compo.map((m) => ({ ...m, ownedLevel: L })));
   const p1 = P(1);

@@ -793,7 +793,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const calibrageCacheRef = useRef(new Map());
   const calibrageMemo = (egg, ownedList, eggNumber, deckIds) => {
     const photo = egg && egg.gardienPhoto;
-    const cle = eggNumber + '|' + (photo ? JSON.stringify(photo.membres) + '|' + budgetDeLaPhoto(photo, ascensionCountRef.current) + '|' + (photo.maitrise || 0)
+    const cle = eggNumber + '|' + (bloqueAuMaxDuNombre(membresDuDeck(deckIds, ownedList)) ? 'bloque-max:' + JSON.stringify(membresDuDeck(deckIds, ownedList).map((m) => [m.creature && m.creature.id, m.ownedLevel || m.level])) + '|' : '') + (photo ? JSON.stringify(photo.membres) + '|' + budgetDeLaPhoto(photo, ascensionCountRef.current) + '|' + (photo.maitrise || 0)
       : 'direct:' + JSON.stringify([deckIds, (ownedList || []).map((o) => [o.id, o.level, o.evolutionTier || 0])]));
     if (!calibrageCacheRef.current.has(cle)) calibrageCacheRef.current.set(cle, calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascensionCountRef.current));
     return calibrageCacheRef.current.get(cle);
@@ -5953,6 +5953,14 @@ function membresDeLaPhoto(photo) {
 // Calibrage au lancement du combat : même photo et même œuf = même
 // Gardien à chaque essai (tirages à graine). Œuf 2 : l'ancien Gardien,
 // « parfait » pour l'auteur. Jamais d'exception : null = ancien Gardien.
+// 13/10 (RÈGLE DE L'AUTEUR) : BLOQUÉ AU NIVEAU MAX PAR LE NOMBRE DE CRÉATURES — 1 créature au niveau 10, ou 2 au niveau 20
+// (niveauMaxEquipe) : le joueur ne peut plus rien améliorer → Gardien calé à 90 % sur son deck RÉEL (sans budget, sans
+// maîtrise). Rapport du 13/10 : Ventis seul au niveau 10, Gardien annoncé à 60 %, Exploration bloquée (étape 9 à 3-17 %).
+const CIBLE_GARDIEN_BLOQUE = 0.1; // part de victoires du GARDIEN → 90 % pour le joueur
+function bloqueAuMaxDuNombre(membres) {
+  const n = (membres || []).length;
+  return n >= 1 && n <= 2 && membres.every((m) => (m.ownedLevel || m.level || 1) >= 10 * n);
+}
 function calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascension = 0) {
   // ⚠️ 10/10 : l'œuf 2 est calé lui aussi. Son « ancien Gardien » (non calé, « parfait » au 24/09) tirait ses stats
   // de la formule des ennemis, adoucie alors par AVENTURE_MULTIPLICATEURS (×0,62 à l'étape 3) ; depuis les niveaux
@@ -5964,6 +5972,8 @@ function calibrageDuCombat(egg, ownedList, eggNumber, deckIds, ascension = 0) {
     const membres = membresDeLaPhoto(photo);
     if (!membres.length) return null;
     // (08/10) Calibré sur le deck APRÈS l'effort en Griffes, marge 1 : qui ATTEINT le chiffre gagne 8 fois sur 10.
+    const actuels = membresDuDeck(deckIds, ownedList);
+    if (bloqueAuMaxDuNombre(actuels)) return calibrageGardienSur(actuels, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber), { marge: 1, cible: CIBLE_GARDIEN_BLOQUE });
     const cible = deckApresEffortEquitable(membres, budgetDeLaPhoto(photo, ascension), plafondDeLaPhoto(photo)).membres;
     // 12/10 : marge = facteur de MAÎTRISE figé dans la photo (indulgent : moitié de l'effet pour un bon joueur) ; 1 sans maîtrise.
     return calibrageGardienSur(cible, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber), { marge: facteurGardienMaitrise(photo.maitrise || 0, membres.length) });

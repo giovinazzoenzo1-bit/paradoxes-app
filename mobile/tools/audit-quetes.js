@@ -5240,6 +5240,35 @@ function auditFenetres() {
     if (!Av.includes("(estEntrainement(levelNumber) ? ' · entraînement' : '')")) pb.push("l'aperçu n'affiche plus « entraînement » (le niveau affiché ne serait plus honnête)");
     if (!Av.includes('definirNiveauxJoueur(niv, dif, aff);')) pb.push("l'écran ne transmet plus les ennemis d'entraînement (le combat ne serait plus celui calculé)");
   }
+  // 13/10 (règle de l'auteur) : GARDIEN À 90 % quand le joueur est bloqué au niveau max par le nombre de créatures (1 au
+  // niveau 10, 2 au niveau 20) — calé sur le deck RÉEL, sans budget ni maîtrise ; l'état entre dans la clé du cache.
+  const ClGM = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8'); // (ClS est déclaré plus bas : zone morte)
+  if (!ClGM.includes('if (bloqueAuMaxDuNombre(actuels)) return calibrageGardienSur(actuels, guardianStats(guardianLevelForEgg(eggNumber), GUARDIAN_BASE_LEVEL, eggNumber), { marge: 1, cible: CIBLE_GARDIEN_BLOQUE });') || !ClGM.includes('const CIBLE_GARDIEN_BLOQUE = 0.1;')
+    || !ClGM.includes('return n >= 1 && n <= 2 && membres.every((m) => (m.ownedLevel || m.level || 1) >= 10 * n);') || !ClGM.includes("(bloqueAuMaxDuNombre(membresDuDeck(deckIds, ownedList)) ? 'bloque-max:'"))
+    pb.push("Gardien : la règle « bloqué au niveau max → 90 % » n'est plus complète (règle, objectif, condition ou clé du cache)");
+  {
+    const I = load('incubatorLogic'); const g2 = (id) => Cl.CREATURES.find((c) => c.id === id);
+    for (const deck of [[['ventis', 10]], [['ventis', 20], ['brontobloc', 20]]]) {
+      const mb = deck.map(([id, l]) => ({ creature: g2(id), ownedLevel: l, evolutionTier: 0, equippedRunes: [] })); const oeuf = deck.length + 1;
+      const base = K.guardianStats(I.guardianLevelForEgg(oeuf), I.GUARDIAN_BASE_LEVEL != null ? I.GUARDIAN_BASE_LEVEL : K.GUARDIAN_BASE_LEVEL, oeuf);
+      const ch = K.chanceFaceAuGardien(mb, K.guardianStatsCalibrees(base, K.calibrageGardienSur(mb, base, { marge: 1, cible: 0.1 })));
+      if (ch < 0.88) pb.push(`Gardien bloqué au max (${deck.map((x) => x.join(' ')).join(' + ')}) : ${Math.round(100 * ch)} % au lieu de 90 %`);
+    }
+  }
+  // 13/10 : chapitre 1 avec UNE créature — facteurs d'étape « 1 contre 1 ». MESURÉ (8 créatures communes seules au niveau 10) :
+  // étape 8 à 35 % avec les facteurs « 2 contre 1 », 63 % avec les bons (cible 70).
+  {
+    let tot = 0, nb = 0;
+    for (const c of Cl.CREATURES.filter((x) => x.rarity === 'commun')) {
+      const mb = [{ creature: c, ownedLevel: 10, evolutionTier: 0, equippedRunes: [] }]; const aff = {};
+      K.definirNiveauxJoueur(K.photoFenetre(6, mb, 0, 0, { maitrise: 0, affaiblissements: aff }), null, aff);
+      const EE = K.equipeEnnemie(8).map((x) => ({ creature: x.creature, stats: K.statsForOpponentCreatureTyped(x.creature, 8) }));
+      let sd = (8 * 31 + c.id.length) >>> 0; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
+      for (let i = 0; i < 60; i++) { nb++; if (K.simulerCombat([{ creature: c, stats: K.combatStatsForCreatureTyped(c, 10, 0, []) }], EE, { alea, politique: K.choixJoueur, erreurMs: 60 }).gagne) tot++; }
+      K.definirNiveauxJoueur(null);
+    }
+    if (tot / nb < 0.5) pb.push(`créature seule au niveau max : étape 8 à ${Math.round(100 * tot / nb)} % (cran 3, visé 70) — facteurs « 1 contre 1 » ignorés ?`);
+  }
   // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
   const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if ((ClS.match(/plafondGardienRef\.current, maitriseRef\.current\)\)/g) || []).length !== 2) pb.push("Gardien : la photo de l'œuf ne reçoit plus l'indice de maîtrise (2 endroits)");
