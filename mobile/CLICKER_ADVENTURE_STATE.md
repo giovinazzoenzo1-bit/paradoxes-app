@@ -3596,3 +3596,16 @@ pastille d'élément, cachée par sansJauges). C'est maintenant une vraie lueur.
 mis dans le style. EMPREINTE_COMBAT → 9fcfd71b (auditGardienCalibre OK).
 Contrôles : libellés calés sur les crans, aperçu en mots (plus de « % de victoire »), lueur dessinée, adversaire en action
 éclairé ; 4 sabotages → 196 prouvés ; 105 verts ; taps 20/20.
+
+
+## 15/10 — LUEURS : CADRE SUR TA CASE, PLUS AUCUNE LUEUR ENNEMIE (publié)
+
+Retour de l'auteur : « il n'y a pas la lueur autour de la case de la créature » ; « je ne veux pas de lueur sur les ennemis ».
+CAUSE : la lueur de la case (image lueur-or) était dessinée DERRIÈRE l'image en bois de la case, qui la cachait presque
+entièrement. CORRECTIF : panneauCombattant dessine un CADRE lumineux PAR-DESSUS (deux contours : halo large semi-transparent
++ contour vif avec ombre colorée sur iOS — Android ignore les ombres colorées), doré sur la créature qui joue, vert sur
+l'allié choisi ; ennemis : ring null (arène), actif/cible false (cases). acteurAdverse reste : il éteint ta lueur pendant
+le tour adverse. Contrôles : règle « aucune lueur ennemie », cadre présent, lueur éteinte au tour adverse ; 2 sabotages →
+198 prouvés ; 105 verts ; taps 20/20.
+À RÉFLÉCHIR (demande de l'auteur) : un système pour RÉCUPÉRER FACILEMENT les récompenses des défis (le calculateur suppose
+qu'elles sont réclamées ET dépensées : rapport du 14/10, étape 22 à 1 % tant que 467 Griffes attendaient).
