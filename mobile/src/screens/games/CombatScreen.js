@@ -142,7 +142,8 @@ function Impact({ x, y, couleur, etincelles, effet = null, taille = 90, grand = 
 // l'écran ; une créature qui tombe affiche « K.O. ». Transparents au toucher.
 const SORT_VISUEL = {
   bouclier: { couleur: '#8fd3ff', icone: '🛡️', duree: 1100, forme: 'bulle', texte: (v) => (v ? `+${v}` : null) },
-  soin: { couleur: '#5ee08a', icone: '💚', duree: 1100, forme: 'montee', texte: (v) => (v ? `+${v}` : null) },
+  // 13/10 : « +X PV » ; « PV pleins » quand il n'y avait rien à soigner (avant : rien du tout — retour de l'auteur).
+  soin: { couleur: '#5ee08a', icone: '💚', duree: 1300, forme: 'montee', texte: (v) => (v ? `+${v} PV` : 'PV pleins') },
   boost: { couleur: '#ff8a3d', icone: '🔥', duree: 900, forme: 'anneaux' },
   vitesse: { couleur: '#ffd24a', icone: '⚡', duree: 800, forme: 'anneaux' },
   provocation: { couleur: '#ff4d4d', icone: '🔱', duree: 900, forme: 'anneaux' },
@@ -435,7 +436,7 @@ function messageDeSort(sortId, evenements, allies) {
   const nom = (i) => (allies[i] ? allies[i].creature.stages[0].name : '');
   const e = (evenements || []).find((x) => x.type === 'bouclier' || x.type === 'soin' || x.type === 'boost');
   if (sortId === 'bouclier' && e) return `${s.icone} Bouclier +${e.valeur} sur ${nom(e.cible)}`;
-  if (sortId === 'soin' && e) return `${s.icone} Soin +${e.valeur} sur ${nom(e.cible)}`;
+  if (sortId === 'soin' && e) return e.valeur > 0 ? `${s.icone} Soin +${e.valeur} PV sur ${nom(e.cible)}` : `${s.icone} Soin : ${nom(e.cible)} a déjà tous ses PV`;
   if (sortId === 'boost' && e) return `${s.icone} Boost +35 % sur ${nom(e.cible)}`;
   return `${s.icone} ${s.nom} !`;
 }

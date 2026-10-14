@@ -633,7 +633,7 @@ export const SORTS = {
   bouclier:    { nom: 'Bouclier',      icone: '🛡️', cout: 3, type: 'tank', desc: '45 % des PV perdus' },
   poison:      { nom: 'Venin',         icone: '☠️', cout: 3, type: 'tank', desc: '70 % + venin 2 tours' },
   provocation: { nom: 'Provocation',   icone: '🔱', cout: 2, type: 'tank', desc: 'attire les coups 2 tours' },
-  soin:        { nom: 'Soin',          icone: '💚', cout: 3, type: 'soutien', desc: '30 % des PV perdus' },
+  soin:        { nom: 'Soin',          icone: '💚', cout: 3, type: 'soutien', desc: '30 % des PV perdus (min. 15 % des PV max)' },
   boost:       { nom: 'Boost',         icone: '🔥', cout: 2, type: 'soutien', desc: '+35 % × 3 attaques' },
   vitesse:     { nom: 'Vitesse',       icone: '⚡', cout: 3, type: 'soutien', desc: '+35 % de zone dorée · gratuit', gratuit: true },
   marque:      { nom: 'Marque',        icone: '🎯', cout: 2, type: 'soutien', desc: '+35 % sur 2 coups' },
@@ -649,6 +649,9 @@ export const EFFETS = {
   // marche pas ». Minimum : 20 % des PV max.
   bouclierMinimum: 0.20,
   soinPartPerdue: 0.30,      // UNE créature (la plus blessée), 30 % des PV perdus
+  // ⚠️ 13/10 (retour de l'auteur : « les créatures avec le soin, on ne voit pas l'ajout d'HP ») : SANS minimum, un soin sur
+  // une équipe peu blessée valait +3, et 0 à PV pleins (rien d'affiché) — le même défaut que le bouclier du 26/09.
+  soinMinimum: 0.15,         // au moins 15 % des PV max de la cible (sans dépasser ce qui lui manque)
   poisonFrappe: 0.70,        // le Venin frappe quand même, à 70 %
   veninTours: 2,             // le lanceur est venimeux 2 tours
   poisonTours: 2,            // qui le frappe est empoisonné 2 tours :
@@ -722,7 +725,8 @@ export function lancerSort(sortId, allies, lanceur, ennemis, cible, mult = 1) {
     }
     case 'soin': {
       const t = plusBlesse(A);
-      const v = Math.round(mult * E.soinPartPerdue * (pvMax(A[t]) - A[t].hp));
+      const perdus = Math.max(0, pvMax(A[t]) - A[t].hp);
+      const v = Math.min(perdus, Math.round(mult * Math.max(E.soinMinimum * pvMax(A[t]), E.soinPartPerdue * perdus)));
       A[t] = { ...A[t], hp: Math.min(pvMax(A[t]), A[t].hp + v) };
       ev.push({ type: 'soin', cible: t, valeur: v });
       return fin(null);

@@ -5269,6 +5269,25 @@ function auditFenetres() {
     }
     if (tot / nb < 0.5) pb.push(`créature seule au niveau max : étape 8 à ${Math.round(100 * tot / nb)} % (cran 3, visé 70) — facteurs « 1 contre 1 » ignorés ?`);
   }
+  // 13/10 (retour de l'auteur) : SOIN visible — minimum de 15 % des PV max (sans dépasser ce qui manque), « PV pleins »
+  // affiché à PV pleins ; GUIDE à onglets (Éléments | Spécialités) dont les chiffres sont LUS dans les règles.
+  {
+    const gs = (id) => Cl.CREATURES.find((c) => c.id === id);
+    const mk = (id, part) => { const st = K.combatStatsForCreatureTyped(gs(id), 20, 0, []); return { creature: gs(id), stats: st, hp: Math.round(st.hp * part), mana: 5 }; };
+    const soin = (part) => { const r = K.lancerSort('soin', [mk('racinea', part), mk('ventis', 1)], 0, [mk('ventis', 1)], 0, 1); return (r.evenements.find((x) => x.type === 'soin') || {}).valeur; };
+    const pv = K.combatStatsForCreatureTyped(gs('racinea'), 20, 0, []).hp;
+    if (soin(1) !== 0) pb.push('soin à PV pleins : doit valoir 0 (et afficher « PV pleins »)');
+    if (!(soin(0.9) >= Math.min(Math.round(0.1 * pv), Math.round(0.15 * pv)) - 1)) pb.push(`soin sur une cible peu blessée trop faible (+${soin(0.9)} PV) : le minimum de 15 % des PV max a disparu`);
+    if (K.EFFETS.soinMinimum !== 0.15) pb.push('soin : minimum 15 % des PV max (13/10)');
+    const Cb = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+    if (!Cb.includes("texte: (v) => (v ? `+${v} PV` : 'PV pleins')") || !Cb.includes('a déjà tous ses PV')) pb.push("combat : le soin n'affiche plus « +X PV » / « PV pleins »");
+    const Ag = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+    if (!Ag.includes('+{pctGuide(ELEMENT_ADVANTAGE_MULT - 1)}') || !Ag.includes('−{pctGuide(1 - ELEMENT_WEAKNESS_MULT)}') || Ag.includes('>+30 %</Text>'))
+      pb.push("guide : les pourcentages des éléments doivent être LUS dans les règles (l'ancien texte annonçait +30 % / −25 % pour ±15 %)");
+    const manquants = Object.keys(K.SORTS).filter((id) => !Ag.includes(`['${id}', \``));
+    if (manquants.length) pb.push(`guide des spécialités : sorts absents (${manquants.join(', ')})`);
+    if (!Ag.includes("{[['elements', '🔥 Éléments'], ['specialites', '✨ Spécialités']].map(") || !Ag.includes('📖 Guide</Text>')) pb.push('guide : plus d\'onglet « Spécialités » à côté des éléments');
+  }
   // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
   const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if ((ClS.match(/plafondGardienRef\.current, maitriseRef\.current\)\)/g) || []).length !== 2) pb.push("Gardien : la photo de l'œuf ne reçoit plus l'indice de maîtrise (2 endroits)");

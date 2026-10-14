@@ -390,6 +390,8 @@ import {
   GRIFFES_COIN_PACK,
   taillePackGriffes,
   achatsGriffesPiecesRestants, GRIFFES_PIECES_MAX_PAR_ASCENSION, niveauMaxCreature, niveauMaxEquipe, raisonNiveauMax, creaturesRequisesPour,
+  MANA_MAX,
+  MANA_PER_TURN,
 } from '../../games/clicker/clickerLogic';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import { niveauMaxAventure } from '../../games/clicker/questLogic';
@@ -433,6 +435,10 @@ import {
   baisseFilet,
   elementMultiplier, competencesAvecSort, SORTS,
   puissanceAffichee,
+  EFFETS,
+  ELEMENT_ADVANTAGE_MULT,
+  ELEMENT_WEAKNESS_MULT,
+  MANA_DEPART,
 } from '../../games/clicker/combatLogic';
 
 // NOTIFICATIONS RETIREES (03/09).
@@ -2348,32 +2354,96 @@ const ELEM_HELP_SEEN_KEY = 'adventure:elemHelpSeen:v1';
 
 // Aide des éléments (06/10) : la FENÊTRE MAISON (avant : un panneau bleu nuit) ; le cycle en pastilles.
 const CYCLE_ELEMENTS = [['🔥', 'Feu'], ['💨', 'Air'], ['🌍', 'Terre'], ['⚡', 'Foudre'], ['💧', 'Eau'], ['🔥', 'Feu']];
-function ElementHelpOverlay({ onClose }) {
+// Guide (13/10, demande de l'auteur) : à côté des éléments, les SPÉCIALITÉS (rôle, mana, coup spécial, les 10 sorts). Deux
+// ONGLETS dans la même fenêtre : l'en-tête de la carte est déjà plein (un 2e bouton déborderait sur un petit téléphone).
+// ⚠️ Tous les chiffres sont LUS dans les règles (EFFETS, SORTS, multiplicateurs d'éléments, mana) : l'ancien texte annonçait
+// « +30 % / −25 % » pour des éléments à ±15 % — un texte recopié finit toujours par mentir.
+const pctGuide = (x) => `${Math.round(Math.abs(x) * 100)} %`;
+const SPECIALITES_GUIDE = () => {
+  const E = EFFETS;
+  return [
+    { role: '🛡️ Tank', aide: 'encaisse et protège', sorts: [
+      ['bouclier', `protège ton allié le plus blessé : ${pctGuide(E.bouclierPartPerdue)} de ses PV perdus, au moins ${pctGuide(E.bouclierMinimum)} de ses PV max.`],
+      ['poison', `frappe à ${pctGuide(E.poisonFrappe)}. Pendant ${E.veninTours} tours, qui te frappe est empoisonné : −${pctGuide(E.poisonMalus)} d'attaque et −${pctGuide(E.poisonParTour)} de ses PV max par tour.`],
+      ['provocation', `pendant ${E.provocationTours} tours, les ennemis doivent te frapper, et tu encaisses ${pctGuide(E.provocationReduction)} de moins.`],
+    ] },
+    { role: '💚 Soutien', aide: "aide toute l'équipe", sorts: [
+      ['soin', `soigne ton allié le plus blessé : ${pctGuide(E.soinPartPerdue)} de ses PV perdus, au moins ${pctGuide(E.soinMinimum)} de ses PV max. Sans blessé, aucun effet.`],
+      ['boost', `ton allié qui frappe le plus fort gagne +${pctGuide(E.boostBonus)} sur ses ${E.boostAttaques} prochaines attaques.`],
+      ['vitesse', `toute l'équipe, jusqu'à la fin du combat : zone dorée de la jauge +${pctGuide(E.vitesseReduction)}. Tu attaques juste après.`],
+      ['marque', `la cible prend +${pctGuide(E.marqueBonus)} sur les ${E.marqueCoups} prochains coups.`],
+    ] },
+    { role: '⚔️ Attaquant', aide: 'fait mal', sorts: [
+      ['zone', `frappe tous les ennemis, à ${pctGuide(E.zonePart)} chacun.`],
+      ['execution', `×${E.executionFort} sur une cible sous ${pctGuide(E.executionSeuil)} de PV, ×${String(E.executionFaible).replace('.', ',')} sinon.`],
+      ['pacte', `frappe ×${E.pacteMult}, mais te coûte ${pctGuide(E.pacteCoutPv)} de tes PV max.`],
+    ] },
+  ];
+};
+function SpecialitesContenu() {
+  const { height } = useWindowDimensions();
   return (
-    <FenetreJeu titre="Affinités élémentaires" onFermer={onClose} toucherFondFerme piece="panneau" zIndex={60}>
+    <ScrollView style={{ maxHeight: Math.round(height * 0.52) }} contentContainerStyle={{ paddingBottom: 4 }}>
       <Text style={styles.elemHelpLine}>
-        Attaquer un élément que le tien domine inflige <Text style={styles.elemHelpStrong}>+30 %</Text> de dégâts.
-        L'inverse en inflige <Text style={styles.elemHelpWeak}>−25 %</Text>.
+        Chaque créature a une <Text style={styles.elemHelpStrong}>spécialité</Text> qui lui donne un <Text style={styles.elemHelpStrong}>sort</Text>.
       </Text>
-      <View style={styles.elemCycle}>
-        {CYCLE_ELEMENTS.map(([ic, nom], n) => (
-          <React.Fragment key={n}>
-            {n > 0 && <Text style={styles.elemFleche}>▸</Text>}
-            <View style={styles.elemPuce}>
-              <Text style={styles.elemPuceIcone}>{ic}</Text>
-              <Text style={styles.elemPuceNom}>{nom}</Text>
-            </View>
-          </React.Fragment>
+      <Text style={styles.specLigne}>🔷 Mana : {MANA_DEPART} au départ, +{MANA_PER_TURN} par tour, {MANA_MAX} au maximum. Un sort coûte 2 ou 3.</Text>
+      <Text style={styles.specLigne}>💥 À {MANA_MAX} de mana, ton coup spécial est prêt : lancer un sort le retarde.</Text>
+      <Text style={styles.specLigne}>🎯 Une jauge parfaite renforce aussi tes sorts.</Text>
+      {SPECIALITES_GUIDE().map((g) => (
+        <View key={g.role} style={styles.specGroupe}>
+          <Text style={styles.specRole}>{g.role} <Text style={styles.specRoleAide}>— {g.aide}</Text></Text>
+          {g.sorts.map(([id, txt]) => (
+            <Text key={id} style={styles.specLigne}>
+              <Text style={styles.specNom}>{SORTS[id].icone} {SORTS[id].nom} ({SORTS[id].cout} 🔷)</Text> : {txt}
+            </Text>
+          ))}
+        </View>
+      ))}
+      <Text style={styles.elemHelpFoot}>
+        Garde tes sorts pour le bon moment : un Soin sans blessé ou une Exécution sur une cible en pleine forme sont presque perdus.
+      </Text>
+    </ScrollView>
+  );
+}
+function ElementHelpOverlay({ onClose }) {
+  const [onglet, setOnglet] = useState('elements');
+  return (
+    <FenetreJeu titre={onglet === 'elements' ? 'Affinités élémentaires' : 'Spécialités'} onFermer={onClose} toucherFondFerme piece="panneau" zIndex={60}>
+      <View style={styles.guideOnglets}>
+        {[['elements', '🔥 Éléments'], ['specialites', '✨ Spécialités']].map(([id, t]) => (
+          <TouchableOpacity key={id} onPress={() => setOnglet(id)} style={[styles.guideOnglet, onglet === id && styles.guideOngletActif]}>
+            <Text style={[styles.guideOngletTexte, onglet === id && styles.guideOngletTexteActif]}>{t}</Text>
+          </TouchableOpacity>
         ))}
       </View>
-      <Text style={styles.elemHelpLine}>
-        ✨ Lumière et 🌑 Ténèbres se frappent <Text style={styles.elemHelpStrong}>fort mutuellement</Text>.
-        {'\n'}🔮 Magie n'a ni avantage ni faiblesse.
-      </Text>
-      <Text style={styles.elemHelpFoot}>
-        En combat, une pastille colorée au-dessus de chaque adversaire indique
-        ta position : vert favorable, orange neutre, rouge défavorable.
-      </Text>
+      {onglet === 'elements' ? (
+        <>
+          <Text style={styles.elemHelpLine}>
+            Attaquer un élément que le tien domine inflige <Text style={styles.elemHelpStrong}>+{pctGuide(ELEMENT_ADVANTAGE_MULT - 1)}</Text> de dégâts.
+            L'inverse en inflige <Text style={styles.elemHelpWeak}>−{pctGuide(1 - ELEMENT_WEAKNESS_MULT)}</Text>.
+          </Text>
+          <View style={styles.elemCycle}>
+            {CYCLE_ELEMENTS.map(([ic, nom], n) => (
+              <React.Fragment key={n}>
+                {n > 0 && <Text style={styles.elemFleche}>▸</Text>}
+                <View style={styles.elemPuce}>
+                  <Text style={styles.elemPuceIcone}>{ic}</Text>
+                  <Text style={styles.elemPuceNom}>{nom}</Text>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
+          <Text style={styles.elemHelpLine}>
+            ✨ Lumière et 🌑 Ténèbres se frappent <Text style={styles.elemHelpStrong}>fort mutuellement</Text>.
+            {'\n'}🔮 Magie n'a ni avantage ni faiblesse.
+          </Text>
+          <Text style={styles.elemHelpFoot}>
+            En combat, une pastille colorée au-dessus de chaque adversaire indique
+            ta position : vert favorable, orange neutre, rouge défavorable.
+          </Text>
+        </>
+      ) : <SpecialitesContenu />}
       <BoutonBois texte="Compris" style="principal" onPress={onClose} largeur={200} hauteur={44} />
     </FenetreJeu>
   );
@@ -2737,7 +2807,7 @@ function ChapterMapScreen({ poudre = 0, ascensionCount = 0, currentUnlockedLevel
             consulte avant un combat, sa place est dans l'en-tête et non
             perdue dans un coin bas de l'écran. */}
         <TouchableOpacity style={styles.elemHelpBtn} onPress={() => setElemHelpOpen(true)}>
-          <CapsuleBois><Text style={styles.elemHelpBtnText}>🔥 Éléments</Text></CapsuleBois>
+          <CapsuleBois><Text style={styles.elemHelpBtnText}>📖 Guide</Text></CapsuleBois>
         </TouchableOpacity>
         <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
@@ -3948,6 +4018,17 @@ const styles = StyleSheet.create({
   elemHelpStrong: { color: '#8df08d', fontWeight: '900' },
   elemHelpWeak: { color: '#ff8a7a', fontWeight: '900' },
   elemHelpFoot: { color: '#e7cfa3', fontSize: 12, fontStyle: 'italic', textAlign: 'center', lineHeight: 17, marginBottom: 12, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  // Guide à onglets (13/10)
+  guideOnglets: { flexDirection: 'row', justifyContent: 'center', marginBottom: 10 },
+  guideOnglet: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, marginHorizontal: 4, backgroundColor: 'rgba(0,0,0,0.28)', borderWidth: 1, borderColor: 'rgba(255,217,106,0.35)' },
+  guideOngletActif: { backgroundColor: 'rgba(255,217,106,0.22)', borderColor: '#ffd96a' },
+  guideOngletTexte: { color: '#e7cfa3', fontSize: 13, fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  guideOngletTexteActif: { color: '#ffd96a' },
+  specGroupe: { marginTop: 4, marginBottom: 2 },
+  specRole: { color: '#ffd96a', fontSize: 15, fontWeight: '900', marginBottom: 4, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  specRoleAide: { color: '#e7cfa3', fontSize: 12, fontWeight: '700', fontStyle: 'italic' },
+  specLigne: { color: '#fbe9c4', fontSize: 13, fontWeight: '600', lineHeight: 18, marginBottom: 6, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
+  specNom: { color: '#8df08d', fontWeight: '900' },
   elemHelpBack: {
     position: 'absolute', top: 8, right: 10, zIndex: 5,
     width: 30, height: 30, borderRadius: 15,
