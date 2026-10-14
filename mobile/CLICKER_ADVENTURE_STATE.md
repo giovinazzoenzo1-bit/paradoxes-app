@@ -3809,6 +3809,28 @@ Contrôles : auditSortsAffiches (nouveau → 112) ; 6 sabotages → 235 prouvés
 taps 20/20. ⚠️ La dernière passe dépasse maintenant 285 s d'un bloc : la couper en deux (142-190 · 190-fin).
 
 
+## 17/10 (soir) — PLANTAGE « Object is not a function » EN TOUCHANT EXPLORATION (APK de l'auteur, corrigé, publié)
+
+SYMPTÔME : écran « 💥 Erreur au démarrage » (titre GÉNÉRIQUE de l'ErrorBoundary : il s'affiche pour TOUTE erreur de rendu ou
+d'effet, pas seulement au démarrage) dès que l'auteur touche EXPLORATION. Pile : anonymous ← commitHookEffectListMount = un effet
+au MONTAGE. Chemin app.paradox.mobile/.expo-internal = l'APK (mises à jour EAS), pas Expo Go.
+CAUSE RÉELLE (introduite par 537c74a/cb28d2e, « défis en niveaux », conversation précédente — PAS les correctifs du jour) : dans
+AdventureScreen, `const niveauxDuDeck = deck.filter(…)` (un TABLEAU, ligne ~1302) portait le nom de la FONCTION importée de
+clickerLogic → il la masquait dans TOUT l'écran. L'effet `noterNiveauxDeck(niveauxDuDeck(owned, deck))` (montage) appelait le
+tableau → plantage ; l'achat de Griffes en pièces (e7f927b, buyGriffesWithCoins) aussi — et il débitait les pièces AVANT de planter.
+Légal en JavaScript : compilation, portée et contrôles par texte passaient ; aucun contrôle n'ouvrait l'Exploration.
+DIAGNOSTIC : reconstruction du paquet du robot (npm ci + expo export Hermes + carte des sources) : les adresses Hermes ne se
+recalent pas d'un paquet à l'autre (version.js et ordre des fonctions) → non concluant ; le message de l'auteur (« en touchant
+EXPLORATION ») a désigné les effets de montage de l'écran ; REPRODUIT dans le banc (« niveauxDuDeck2 is not a function »).
+CORRECTIF : tableau renommé `niveauxEquipe` (3 usages) ; les 2 appels retrouvent la fonction importée. Repères d'auditNiveauMax
+recalés (simple renommage, règle inchangée).
+GARDE-FOUS : (1) auditImportsMasques (nouveau → 113) : lit tout le jeu comme le compilateur ; un nom IMPORTÉ appelé là où une
+déclaration LOCALE du même nom le masque = problème (0 aujourd'hui, crie sur le fichier bogué) ; (2) SONDE DE L'EXPLORATION
+mobile/tools/capture/ouvrir-exploration.mjs : rend la vraie appli, touche EXPLORATION, échoue à la moindre erreur de page
+(ÉCHEC sur le code bogué, OK après) — À AJOUTER AU RITUEL après la sonde des taps.
+Contrôles : 113 verts ; 1 sabotage → 236 prouvés (5 passes) ; taps 20/20 ; sonde de l'Exploration OK.
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
@@ -3860,7 +3882,8 @@ Le sandbox repart à zéro à chaque conversation : rien de /home/claude ni de /
    AVANT chaque passe : `pgrep -a -x node | grep -c verifier` = 0 et `git status --short` vide. UNE passe à la fois.
 6. Sonde des taps : mkdir -p /tmp/cap && cp mobile/tools/capture/package.json /tmp/cap/ && (cd /tmp/cap && npm i) ; puis
    cd mobile/tools/capture && ln -sfn /tmp/cap/node_modules node_modules && EMULE_TOUCHER=1 node build.mjs scenes/menu.jsx
-   && node taps.mjs (→ 20 / 20 partout) && rm -f node_modules — ne JAMAIS committer node_modules.
+   && node taps.mjs (→ 20 / 20 partout) && node build.mjs scenes/exploration.jsx && node ouvrir-exploration.mjs (→ « Exploration : OK »,
+   17/10) && rm -f node_modules — ne JAMAIS committer node_modules.
 7. Remesure des facteurs d'étape : outil mobile/tools/mesurer-etapes.js (fonction mesurer(n, combatsParEquipe) ; NBJ=1 pour
    le 1 contre 1 du chapitre 1, NBJ=3 pour le 3 contre 2 du chapitre 2) ; 160 combats par équipe = quelques secondes pour
    80 étapes ; injecter dans les constantes FACTEUR_ETAPE / _1V1 / _3V2 (une ligne chacune, sans regex DOTALL) et copier
