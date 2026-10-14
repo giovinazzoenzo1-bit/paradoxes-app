@@ -3758,18 +3758,31 @@ module.exports.auditValidation = auditValidation;
 // règle (`recompenseQuete`) vaut ×1 au niveau 25, moins avant, plus après ;
 // le versement (DailyContext) ET l'affichage (Progrès) doivent l'appliquer.
 function auditQuetesNiveau() {
-  const K = load('combatLogic');
+  // 16/10 (choix de l'auteur, option 1) : les défis paient en NIVEAUX de la MEILLEURE créature du deck — jour médian = 1 niveau,
+  // semaine médiane = 3, au prorata de la récompense écrite. Remplace la règle du 26/09 (selon le niveau d'Aventure : ×13,7 à
+  // l'étape 74, « Fais 10 Offrandes » à 3 553 Griffes quand une victoire en payait 337). Le début de partie reste doux.
+  const D = load('dailyLogic'); const Cl = load('clickerLogic');
   const fs = require('fs');
   const lire = (f) => fs.readFileSync(require('path').join(__dirname, '..', f), 'utf8');
   const fautes = [];
   const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
-  doit(Math.abs(K.facteurQuetes(25) - 1) < 1e-9, 'au niveau 25, une quête ne vaut plus sa valeur écrite');
-  doit(K.recompenseQuete(245, 5) <= 70, 'au niveau 5, « 20 étoiles » paie trop (le début redevient trop généreux)');
-  let prec = 0; for (let n = 1; n <= 227; n++) { const v = K.recompenseQuete(245, n); if (v < prec) { fautes.push({ niveau: n, probleme: 'la récompense baisse avec le niveau' }); break; } prec = v; }
+  const cout = (n) => Cl.levelUpCost({ rarity: 'commun' }, n);
+  const deck = [69, 70, 74];
+  doit(D.recompenseDefi(D.BASE_MEDIANE_JOUR, 'jour', deck) === Math.round(cout(74)), 'un défi du jour médian ne vaut plus 1 niveau de la meilleure créature');
+  doit(D.recompenseDefi(D.BASE_MEDIANE_SEMAINE, 'semaine', deck) === Math.round(3 * cout(74)), 'un défi de la semaine médian ne vaut plus 3 niveaux de la meilleure créature');
+  doit(D.recompenseDefi(260, 'semaine', deck) === Math.round((260 / D.BASE_MEDIANE_SEMAINE) * 3 * cout(74)), '« Fais 10 Offrandes » ne suit plus sa récompense écrite (prorata)');
+  doit(D.recompenseDefi(260, 'semaine', deck) < 1500, '« Fais 10 Offrandes » repaie trop (3 553 le 16/10 : « largement trop abusé »)');
+  doit(D.recompenseDefi(D.BASE_MEDIANE_JOUR, 'jour', [7]) <= 20, 'en début de partie, un défi du jour paie trop');
+  // L'invariant : à TOUT niveau, la récompense vaut exactement son nombre de niveaux (à 1 Griffe près). Elle peut BAISSER en
+  // Griffes au niveau 11 et 21 : le coût d'un niveau est divisé par la taille de l'équipe (2, puis 3 créatures — règle du 10/10).
+  for (let n = 1; n <= 150; n++) { const v = D.recompenseDefi(245, 'semaine', [n]), att = (245 / D.BASE_MEDIANE_SEMAINE) * 3 * cout(n); if (Math.abs(v - att) > 1) { fautes.push({ niveau: n, probleme: 'la récompense ne vaut plus son nombre de niveaux' }); break; } }
   const Dc = lire('src/context/DailyContext.js'), Pr = lire('src/screens/ProgresScreen.js');
-  doit((Dc.match(/const griffes = recompenseQuete\(def\.reward, \(lifetimeStatsRef\.current \|\| \{\}\)\.advLevelReached\);/g) || []).length === 2, 'une quête (du jour ou de la semaine) verse encore sa valeur écrite');
-  doit(!/addPending\(PENDING_GRIFFES_KEY, def\.reward\)/.test(Dc), 'une quête crédite encore def.reward sans le niveau');
-  doit((Pr.match(/recompenseQuete\(def\.reward, niveauAventure\)/g) || []).length === 2, "l'écran Progrès n'affiche pas la vraie récompense");
+  const Av = lire('src/screens/games/AdventureScreen.js'), Ck = lire('src/screens/games/ClickerScreen.js');
+  doit(Dc.includes("const griffes = recompenseDefi(def.reward, 'jour', niveauxDeckRef.current);") && Dc.includes("const griffes = recompenseDefi(def.reward, 'semaine', niveauxDeckRef.current);"), 'une réclamation ne paie plus en niveaux de la meilleure créature');
+  doit(Dc.includes('(base, _niv, type) => recompenseDefi(base, type, niveauxDeckRef.current)') && Dc.includes('(base, _niv, type) => recompenseDefi(base, type, niveauxDeck)'), '« Tout récupérer » ou le total du calculateur ne suit plus la règle en niveaux');
+  doit(!/addPending\(PENDING_GRIFFES_KEY, def\.reward\)/.test(Dc), 'une quête crédite encore def.reward brute');
+  doit(Pr.includes("recompenseDefi(def.reward, 'jour', niveauxDeck)") && Pr.includes("recompenseDefi(def.reward, 'semaine', niveauxDeck)"), "l'écran Progrès n'affiche pas la vraie récompense");
+  doit(Av.includes('noterNiveauxDeck(niveauxDuDeck(owned, deck));') && Ck.includes('noterNiveauxDeck(niveauxDuDeck(owned, deck));'), "l'Aventure ou le Clicker n'envoie plus le deck au contexte des défis");
   return fautes;
 }
 module.exports.auditQuetesNiveau = auditQuetesNiveau;
@@ -4989,7 +5002,7 @@ function auditGardienGriffes() {
       const s = syn[a]; if (!s || !s.combats) continue;
       // 16/10 : primes et packs RÉELLEMENT versés au joueur simulé (ils dépendent de ses niveaux : prime = prochain niveau de
       // sa meilleure créature, pack = 2 niveaux de sa créature moyenne) — plus recalculés ici sans le deck.
-      const total = s.primes + R.succesParAsc[a] + s.packs + s.jours * R.quetesDuJour(Math.round((debut + fin) / 2)) + (a < 5 ? C.ascensionGriffesReward(a + 1) : 0);
+      const total = s.primes + R.succesParAsc[a] + s.packs + s.quetes + (a < 5 ? C.ascensionGriffesReward(a + 1) : 0); // 16/10 : défis réellement versés
       const mesure = total / s.combats, table = K.GRIFFES_PAR_COMBAT[a];
       if (Math.abs(mesure / table - 1) > 0.35) pb.push(`A${a} : la table dit ${table} Griffes par combat, le simulateur en mesure ${Math.round(mesure)} (économie changée ? recalculer)`);
     }

@@ -690,6 +690,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     trackEvent, lifetimeStats, loaded: dailyLoaded,
     calendar, calendarDay, streakClaimedDate, date: today, claimStreak,
     questIds, questProgress, questClaimed, griffesARecuperer,
+    noterNiveauxDeck,
   } = useDaily();
   // (08/10) BUDGET DU GARDIEN — règle FINALE de l'auteur (après test : « 10 combats au lieu de 3 ») : les
   // Griffes de tes 3 PROCHAINS combats d'Exploration (1res victoires, taux de BASE), réparties ÉQUITABLEMENT
@@ -1106,6 +1107,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   deckRef.current = deck;
   // 16/10 (règle de l'auteur) : Griffes des 3 prochains combats = prochain niveau de la MEILLEURE créature du deck (×2 au boss).
   budgetGardienRef.current = primesProchainsNiveaux((lifetimeStats || {}).advLevelReached || 0, 3, niveauxDuDeck(owned, deck));
+  // 16/10 : les défis paient en niveaux de ta MEILLEURE créature — le contexte des défis reçoit les niveaux du deck.
+  useEffect(() => { noterNiveauxDeck(niveauxDuDeck(owned, deck)); }, [owned, deck, noterNiveauxDeck]);
   const activePowerRef = useRef(null);
   activePowerRef.current = activePower;
   const pendingDiscountRef = useRef(null);

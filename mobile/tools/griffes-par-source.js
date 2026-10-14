@@ -33,10 +33,10 @@ function bloc(de, a) {
     for (const s of succes) s.tiers.forEach((t, i) => { if (valeurStat(s.stat, l - 1) < t && valeurStat(s.stat, l) >= t) r.succes += D.ACHIEVEMENT_TIER_REWARDS[i]; });
     // Défis (récompense × facteur de l'étape) : par étape = 1 / étapes par jour d'un jour de défis.
     const parJour = 1 / HYPOTHESES.etapesParJour;
-    jour.forEach((q) => { const faisable = q.event === 'battleWon' ? HYPOTHESES.etapesParJour >= q.target : true; if (faisable) r.defisJour += parJour * pJour * K.recompenseQuete(q.reward, l); });
+    jour.forEach((q) => { const faisable = q.event === 'battleWon' ? HYPOTHESES.etapesParJour >= q.target : true; if (faisable) r.defisJour += parJour * pJour * D.recompenseDefi(q.reward, 'jour', (DECKS_MODELE()[l - 1] || {}).deck || []); });
     semaine.forEach((q) => { const parSemaine = HYPOTHESES.etapesParJour * 7;
       const faisable = q.event === 'battleWon' ? parSemaine >= q.target : q.event === 'starsEarned' ? parSemaine * HYPOTHESES.etoilesParEtape >= q.target : parSemaine * HYPOTHESES.partTroisEtoiles >= q.target;
-      if (faisable) r.defisSemaine += (parJour / 7) * pSemaine * K.recompenseQuete(q.reward, l); });
+      if (faisable) r.defisSemaine += (parJour / 7) * pSemaine * D.recompenseDefi(q.reward, 'semaine', (DECKS_MODELE()[l - 1] || {}).deck || []); });
   }
   const milieu = Math.round((de + a) / 2), taille = K.opponentTeamSize(milieu);
   const coutEquipe = taille * L.levelUpCost(A.C.CREATURES[0], milieu); // 1 niveau pour CHAQUE créature de l'équipe

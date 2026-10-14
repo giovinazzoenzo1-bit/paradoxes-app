@@ -31,7 +31,7 @@ const tailleOnglet = (t) => Math.max(8, Math.min(13, Math.floor((ONGLET_L * 0.82
 import { useDaily } from '../context/DailyContext';
 import { questDef, weeklyQuestDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER } from '../games/clicker/dailyLogic';
 import { COLORS } from './games/clickerTheme';
-import { recompenseQuete } from '../games/clicker/combatLogic';
+import { recompenseDefi } from '../games/clicker/dailyLogic'; // 16/10 : défis en niveaux de ta meilleure créature
 
 // Menu Quêtes — panneau MODAL (ne couvre plus tout l'écran, on voit le
 // menu du Clicker autour), refondu le 07/09 d'après la maquette fournie :
@@ -57,7 +57,7 @@ export default function ProgresScreen({ onBack }) {
     loaded, questIds, questProgress, questClaimed, claimQuest,
     weeklyIds, weeklyProgress, weeklyClaimed, claimWeekly,
     achievements, achievementsClaimed, achievementProgress, claimAchievement, lifetimeStats,
-    griffesARecuperer, claimAll,
+    griffesARecuperer, claimAll, niveauxDeck,
   } = useDaily();
   // 26/09 : les quêtes du jour et de la semaine affichent la récompense
   // RÉELLE à ton niveau d'Aventure (la même règle que le versement).
@@ -157,7 +157,7 @@ export default function ProgresScreen({ onBack }) {
       {questIds.map((qid) => {
         const def = questDef(qid);
         if (!def) return null;
-        return renderRow(qid, def, questProgress[qid], !!questClaimed[qid], () => handleClaim(qid, claimQuest), recompenseQuete(def.reward, niveauAventure));
+        return renderRow(qid, def, questProgress[qid], !!questClaimed[qid], () => handleClaim(qid, claimQuest), recompenseDefi(def.reward, 'jour', niveauxDeck));
       })}
       <Text style={styles.footnote}>
         Nouvelles quêtes chaque jour à minuit. Récompenses créditées à ta prochaine ouverture du mode Exploration.
@@ -170,7 +170,7 @@ export default function ProgresScreen({ onBack }) {
       {(weeklyIds || []).map((qid) => {
         const def = weeklyQuestDef(qid);
         if (!def) return null;
-        return renderRow(qid, def, weeklyProgress?.[qid], !!weeklyClaimed?.[qid], () => handleClaim(qid, claimWeekly), recompenseQuete(def.reward, niveauAventure));
+        return renderRow(qid, def, weeklyProgress?.[qid], !!weeklyClaimed?.[qid], () => handleClaim(qid, claimWeekly), recompenseDefi(def.reward, 'semaine', niveauxDeck));
       })}
       <Text style={styles.footnote}>
         Objectifs ~6× plus gros que les quotidiens, à faire en 7 jours. Remise à zéro chaque lundi.

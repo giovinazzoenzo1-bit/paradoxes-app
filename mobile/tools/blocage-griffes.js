@@ -15,7 +15,7 @@ const scenario = process.argv[2] || 'aventure', N = Number(process.argv[3]) || 4
 const calendrierParSemaine = [1, 2, 3, 4, 5, 6, 7].reduce((t, j) => { const r = D.calendarRewardForStreak(j); return t + (r && r.type === 'griffes' ? r.amount : 0); }, 0);
 const R = scenario === 'aventure'
   ? { ...P.REGLAGES, quetesDuJour: () => 0, succesParAsc: [0, 0, 0, 0, 0, 0], packsParAsc: 0, runesParAsc: 0 }
-  : { ...P.REGLAGES, quetesDuJour: (niv) => P.REGLAGES.quetesDuJour(niv) + calendrierParSemaine / 7, packsParAsc: L.GRIFFES_PIECES_MAX_PAR_ASCENSION, taillePack: (a) => L.taillePackGriffes(a) };
+  : { ...P.REGLAGES, quetesDuJour: (niveaux) => P.REGLAGES.quetesDuJour(niveaux) + calendrierParSemaine / 7, packsParAsc: L.GRIFFES_PIECES_MAX_PAR_ASCENSION, taillePack: (a) => L.taillePackGriffes(a) };
 const parEtape = {}; const parAsc = [0, 1, 2, 3, 4, 5].map(() => []);
 for (let i = 0; i < N; i++) {
   const j = P.nouveauJoueur(1000 + i * 7919, R);

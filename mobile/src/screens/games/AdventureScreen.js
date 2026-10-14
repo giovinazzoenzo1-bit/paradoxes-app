@@ -657,7 +657,9 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     };
   }, []);
 
-  const { trackEvent, trackMax, griffesARecuperer } = useDaily();
+  const { trackEvent, trackMax, griffesARecuperer, noterNiveauxDeck } = useDaily();
+  // 16/10 : les défis paient en niveaux de ta MEILLEURE créature — le contexte des défis reçoit les niveaux du deck.
+  useEffect(() => { noterNiveauxDeck(niveauxDuDeck(owned, deck)); }, [owned, deck, noterNiveauxDeck]);
   const [detailCreatureId, setDetailCreatureId] = useState(ficheInitiale);
   const [boutiqueGriffes, setBoutiqueGriffes] = useState(false);
   const { sons: sonsAventure, musique: musiqueAventure } = useSettings(); // sons (07/10)

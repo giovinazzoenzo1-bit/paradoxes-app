@@ -32,6 +32,7 @@
 const A = require('./audit-quetes.js');
 const K = A.load('combatLogic');
 const L = A.load('clickerLogic');
+const DQ = A.load('dailyLogic'); // 16/10 : règles des défis (« D » désigne déjà les défis d'Aventure plus bas)
 const C = A.C;
 
 // Le rythme de l'Aventure LU DANS LES DÉFIS (26/09) — une seule source :
@@ -77,7 +78,8 @@ const REGLAGES = {
   // Quêtes : le calendrier (≈ 39/jour) est fixe ; les quêtes du jour et de
   // la semaine (≈ 276/jour au niveau 25) suivent le niveau d'Aventure — la
   // règle DU JEU (combatLogic.facteurQuetes).
-  quetesDuJour: (niv) => (39 + 276 * K.facteurQuetes(niv)) * K.FACTEUR_DEFIS_GRIFFES, // 11/10 : défis ×0,7
+  // 16/10 (choix de l'auteur) : défis en NIVEAUX de la meilleure créature (3 du jour à ~35 écrits, 6/7 d'hebdo à ~201 écrits).
+  quetesDuJour: (niveaux) => 39 + 3 * DQ.recompenseDefi(35, 'jour', niveaux) + (6 / 7) * DQ.recompenseDefi(201, 'semaine', niveaux),
   heuresJeuParJour: 12,
   energieMax: 5,
   energieParHeure: 3,
@@ -165,7 +167,8 @@ function nouveauJoueur(graine, R = REGLAGES) {
   const avancerTemps = (h) => {
     j.heures += h;
     const jour = Math.floor(j.heures / R.heuresJeuParJour);
-    while (j.dernierJour < jour) { j.griffes += R.quetesDuJour(j.niveau); j.dernierJour += 1; }
+    // 16/10 : défis payés selon les VRAIS niveaux du trio, et comptés (s.quetes, à la fin de l'Ascension).
+    while (j.dernierJour < jour) { const q = R.quetesDuJour(j.trio().map((p) => p.niv)); j.griffes += q; j.quetesCumul = (j.quetesCumul || 0) + q; j.dernierJour += 1; }
   };
   j.joueurs = () => j.trio().map((p) => ({ creature: p.c, stats: K.combatStatsForCreatureTyped(p.c, p.niv, p.evo, []) }));
   j.adversaires = (l, k, baisse = 0) => K.opponentTeamForLevel(l).map((c) => { const st = K.statsForOpponentCreatureTyped(c, l, k);
@@ -237,9 +240,10 @@ function nouveauJoueur(graine, R = REGLAGES) {
     s.retard = t.length ? j.niveau - t.reduce((x, p) => x + p.niv, 0) / t.length : 0;
     s.griffes = Math.round(j.griffes);
     s.jours = (j.heures - s.heures0) / R.heuresJeuParJour;
+    s.quetes = (j.quetesCumul || 0) - (s.quetes0 || 0); // 16/10
     j.parAsc.push(s);
   };
-  j.nouvelleAsc = (a) => ({ a, combats: 0, victoires: 0, filet5: 0, filet7: 0, filet10: 0, bloque: null, heures0: j.heures, primes: 0, packs: 0 });
+  j.nouvelleAsc = (a) => ({ a, combats: 0, victoires: 0, filet5: 0, filet7: 0, filet10: 0, bloque: null, heures0: j.heures, primes: 0, packs: 0, quetes0: j.quetesCumul || 0 });
   return j;
 }
 
@@ -263,7 +267,7 @@ function synthese(joueurs = 60, R = REGLAGES, kDe) {
     const moy = (f) => v.reduce((x, s) => x + f(s), 0) / Math.max(1, v.length);
     lignes.push({ a, joueurs: v.length, bloques: v.filter((s) => s.bloque).length,
       victoiresSur10: 10 * moy((s) => s.victoires / Math.max(1, s.combats)), retard: moy((s) => s.retard),
-      combats: moy((s) => s.combats), jours: moy((s) => s.jours), primes: moy((s) => s.primes || 0), packs: moy((s) => s.packs || 0), // 16/10 filet5: moy((s) => s.filet5), filet7: moy((s) => s.filet7), filet10: moy((s) => s.filet10), griffes: moy((s) => s.griffes),
+      combats: moy((s) => s.combats), jours: moy((s) => s.jours), primes: moy((s) => s.primes || 0), packs: moy((s) => s.packs || 0), quetes: moy((s) => s.quetes || 0), // 16/10 filet5: moy((s) => s.filet5), filet7: moy((s) => s.filet7), filet10: moy((s) => s.filet10), griffes: moy((s) => s.griffes),
       victoires10eCentile: (() => { const q = v.map((s) => 10 * s.victoires / Math.max(1, s.combats)).sort((x, y) => x - y); return q[Math.floor(q.length * 0.1)] || 0; })(),
       // 10/10 : le joueur MÉDIAN (décision de l'auteur : 7 victoires sur 10 pour lui).
       victoiresMediane: (() => { const q = v.map((s) => 10 * s.victoires / Math.max(1, s.combats)).sort((x, y) => x - y); return q[Math.floor(q.length * 0.5)] || 0; })() });

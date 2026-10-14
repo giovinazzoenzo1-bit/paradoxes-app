@@ -217,8 +217,15 @@ const SABOTAGES = [
     remplace('    setValidatedQuestIds([]);\n    AsyncStorage.removeItem(VALIDATED_QUESTS_KEY)', '    AsyncStorage.removeItem(VALIDATED_QUESTS_KEY)')],
   ['auditValidation', F.ecran, "le bouton Valider redevient de taille zéro (le bug du 26/09 : panneau vert qui ne réagit pas)",
     remplace('<TouchableOpacity style={[styles.challengeCard, styles.challengeCardCliquable]} activeOpacity={0.85}', '<TouchableOpacity activeOpacity={0.85}')],
-  ['auditQuetesNiveau', F.contexte, "une quête hebdomadaire verse de nouveau sa valeur écrite (603 Griffes en quelques minutes)",
-    remplace("    setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));\n    // 26/09 : la récompense suit le niveau d'Aventure (combatLogic).\n    const griffes = recompenseQuete(def.reward, (lifetimeStatsRef.current || {}).advLevelReached);", "    setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));\n    const griffes = def.reward;")],
+  ['auditQuetesNiveau', F.contexte, "une quête hebdomadaire verse de nouveau sa valeur écrite brute",
+    remplace("const griffes = recompenseDefi(def.reward, 'semaine', niveauxDeckRef.current);", 'const griffes = def.reward;')],
+  // 16/10 : défis en niveaux de la meilleure créature (choix de l'auteur).
+  ['auditQuetesNiveau', path.join(RACINE, 'src/games/clicker/dailyLogic.js'), "un défi de la semaine médian repaie 9 niveaux (« 10 Offrandes » à ~3 800)",
+    remplace('export const NIVEAUX_DEFI_SEMAINE = 3;', 'export const NIVEAUX_DEFI_SEMAINE = 9;')],
+  ['auditQuetesNiveau', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le Clicker n'envoie plus le deck au contexte des défis",
+    remplace('  useEffect(() => { noterNiveauxDeck(niveauxDuDeck(owned, deck)); }, [owned, deck, noterNiveauxDeck]);', '')],
+  ['auditQuetesNiveau', path.join(RACINE, 'src/screens/ProgresScreen.js'), "l'écran Progrès affiche une récompense hors règle",
+    remplace("recompenseDefi(def.reward, 'semaine', niveauxDeck)", "recompenseDefi(def.reward, 'semaine', [])")],
   ['auditApprentissage', F.combat, "l'étape 3 confiée à une mythique (Arcanis) : les débutants perdent dès le début",
     // Par MOTIF : la 3e entrée de la table des ennemis, QUELLE QU'ELLE SOIT (10/10 : la table remplace
     // l'ancien multiplicateur, ce sabotage-là visait sa 3e valeur ×5).

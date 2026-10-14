@@ -55,7 +55,9 @@ function calculer(etapeMax = 40, profil = 'actif', opts = {}) {
     const jour = Math.floor((n * HYP.combatsParEtape) / HYP.combatsParJour) + 1;
     for (let j = jourPrecedent + 1; j <= jour; j++) {
       // Défis : récompense DU JEU (recompenseQuete) — 3 quotidiens (35 en moyenne), 6 hebdo (201 en moyenne) par semaine.
-      const q = (3 * K.recompenseQuete(35, n) + (6 / 7) * K.recompenseQuete(201, n)) * F.defis;
+      // 16/10 (choix de l'auteur) : défis en niveaux de la MEILLEURE créature (3 du jour, 6/7 d'hebdo).
+      const deckQ = creatures.map((c) => c.niv).sort((a, b) => b - a).slice(0, 3);
+      const q = (3 * D.recompenseDefi(35, 'jour', deckQ) + (6 / 7) * D.recompenseDefi(201, 'semaine', deckQ)) * F.defis;
       cumul.defis += q; griffes += q;
       // Calendrier : la table DU JEU (DAILY_CALENDAR), Griffes seulement.
       const c = D.DAILY_CALENDAR[(j - 1) % D.DAILY_CALENDAR.length];

@@ -1766,7 +1766,8 @@ export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1 
 // 16/10 : les 3 tables REMESURÉES avec l'ultime du joueur à ×1,5 (outil mesurer-etapes, 160 combats par équipe = 960 par étape).
 // 16/10 (suite) : remesurées de nouveau avec le pack en pièces à 2 niveaux de la créature moyenne (deck du modèle, max 1,4 %).
 // 16/10 (soir) : et avec la prime de victoire de l'auteur (prochain niveau de la meilleure créature) — deck du modèle plus bas (max 3,6 %).
-export const FACTEUR_ETAPE = {"1": 0.877, "2": 0.951, "3": 0.905, "4": 1.046, "5": 0.967, "6": 1.04, "7": 0.949, "8": 0.892, "9": 1.047, "10": 0.995, "11": 1.04, "12": 1.095, "13": 1.252, "14": 1.032, "15": 1.125, "16": 1.36, "17": 1.201, "18": 1.069, "19": 1.251, "20": 1.021, "21": 1.099, "22": 0.909, "23": 0.935, "24": 0.998, "25": 0.957, "26": 0.955, "27": 0.828, "28": 0.921, "29": 0.828, "30": 0.933, "31": 0.876, "32": 0.97, "33": 1.077, "34": 1.171, "35": 1.048, "36": 0.897, "37": 0.828, "38": 0.965, "39": 0.828, "40": 0.828, "41": 1.091, "42": 1.168, "43": 0.871, "44": 1.124, "45": 1.088, "46": 0.873, "47": 1.113, "48": 1.094, "49": 0.892, "50": 1.079, "51": 1.113, "52": 0.896, "53": 1.053, "54": 1.167, "55": 0.86, "56": 1.093, "57": 1.141, "58": 0.858, "59": 1.114, "60": 0.939};
+// 16/10 (nuit) : et avec les défis en niveaux de la meilleure créature (max 0,8 %).
+export const FACTEUR_ETAPE = {"1": 0.877, "2": 0.951, "3": 0.905, "4": 1.046, "5": 0.967, "6": 1.04, "7": 0.949, "8": 0.892, "9": 1.047, "10": 0.995, "11": 1.04, "12": 1.095, "13": 1.252, "14": 1.032, "15": 1.125, "16": 1.36, "17": 1.201, "18": 1.069, "19": 1.251, "20": 1.021, "21": 1.099, "22": 0.909, "23": 0.935, "24": 0.998, "25": 0.957, "26": 0.955, "27": 0.828, "28": 0.921, "29": 0.828, "30": 0.933, "31": 0.876, "32": 0.97, "33": 1.076, "34": 1.168, "35": 1.044, "36": 0.891, "37": 0.828, "38": 0.97, "39": 0.828, "40": 0.828, "41": 1.091, "42": 1.167, "43": 0.878, "44": 1.124, "45": 1.088, "46": 0.875, "47": 1.113, "48": 1.096, "49": 0.893, "50": 1.081, "51": 1.118, "52": 0.9, "53": 1.053, "54": 1.167, "55": 0.86, "56": 1.089, "57": 1.141, "58": 0.857, "59": 1.114, "60": 0.939};
 // 11/10 (fin) : chapitre 2 avec 3 créatures contre 2 ennemis — mesuré à part (NBJ=3 mesurer-etapes.js) : en 2 contre 2, ces
 // étapes valaient jusqu'à ×1,39 ; avec une 3e créature, ×0,84 à ×1,11 (MESURÉ : sans ce tableau, 95-100 % à tous les crans).
 // 13/10 : chapitre 1 avec UNE SEULE créature (avant l'œuf 2) — mesuré à part (NBJ=1 mesurer-etapes.js). En 2 contre 1, les
@@ -2669,7 +2670,8 @@ export function niveauxPourAtteindre(membres, cible) {
 // 10/10 (fin des coups critiques, ennemis recalibrés) : recalculé de nouveau. Avant : [27, 103, 472, 585, 910, 1190].
 // 16/10 : RECALCULÉ avec la prime de l'auteur (prochain niveau de la meilleure créature) — simulateur, 60 joueurs, primes et
 // packs RÉELLEMENT versés (avant : [24, 119, 576, 697, 1035, 1383]).
-export const GRIFFES_PAR_COMBAT = [22,  48,  252,  360,  470,  478]; // A0 … A5
+// 16/10 (suite) : recalculé de nouveau avec les DÉFIS en niveaux de la meilleure créature (avant : [22, 48, 252, 360, 470, 478]).
+export const GRIFFES_PAR_COMBAT = [20,  26,  60,  119,  307,  359]; // A0 … A5
 // LE RÉGLAGE : 25 % des Griffes moyennes d'un combat ≈ 1 niveau à TOUS les stades (MESURÉ :
 // 0,6 à 1,2 niveau ; 50 % ≈ 1,5 à 2,5 ; 100 % ≈ 2,3 à 4,9).
 export const EFFORT_GARDIEN = 0.25;

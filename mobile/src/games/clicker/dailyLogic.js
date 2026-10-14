@@ -12,7 +12,7 @@
 // Date au format 'YYYY-MM-DD', dans le fuseau LOCAL de l'appareil — pas
 // UTC, sinon la "journée" du joueur changerait à une heure absurde selon
 // son fuseau plutôt qu'à minuit chez lui.
-import { COIN_SCALE } from './clickerLogic';
+import { COIN_SCALE, levelUpCost } from './clickerLogic';
 
 // ⚠️ Les cibles en pièces des quotidiens et des succès suivent le
 // changement d'unité, sinon les quotidiens deviennent gratuits et les
@@ -381,6 +381,24 @@ export function nextStreak(prevStreak, lastLoginKey, todayDateKey) {
 // (plusieurs possibles), calendrier du jour s'il est en Griffes et pas encore pris. La FILE
 // d'attente (Griffes réclamées, pas encore versées) est lue à part, dans le stockage.
 // `recompense` = recompenseQuete (combatLogic), passée en paramètre : pas d'import circulaire.
+// ═══ DÉFIS EN NIVEAUX DE LA MEILLEURE CRÉATURE (16/10, choix de l'auteur — option 1) ═══
+// Comme la victoire (combatLogic.primeVictoire) : un défi du jour MÉDIAN paie 1 niveau de ta MEILLEURE créature du deck, un
+// défi de la semaine MÉDIAN 3 niveaux ; chaque défi au prorata de sa récompense écrite (« Fais 10 Offrandes », 260 → 3,8
+// niveaux). Avant : récompense écrite × la courbe de la prime d'étape (×13,7 à l'étape 74, palier ×2 à l'étape 66) —
+// 3 553 Griffes pour 10 offrandes quand une victoire en payait 337 (« largement trop abusé »). Succès et calendrier : fixes.
+export const NIVEAUX_DEFI_JOUR = 1;
+export const NIVEAUX_DEFI_SEMAINE = 3;
+const medianeDe = (t) => { const s = [...t].sort((a, b) => a - b); return s[Math.floor(s.length / 2)] || 1; };
+export const BASE_MEDIANE_JOUR = medianeDe(DAILY_QUEST_POOL.map((q) => q.reward));
+export const BASE_MEDIANE_SEMAINE = medianeDe(WEEKLY_QUEST_POOL.map((q) => q.reward));
+export function recompenseDefi(base, type, niveauxDeck) {
+  const l = (Array.isArray(niveauxDeck) ? niveauxDeck : []).map(Number).filter((x) => x > 0);
+  const meilleur = l.length ? Math.max(...l) : 1;
+  const niveaux = type === 'semaine' ? ((Number(base) || 0) / BASE_MEDIANE_SEMAINE) * NIVEAUX_DEFI_SEMAINE
+    : ((Number(base) || 0) / BASE_MEDIANE_JOUR) * NIVEAUX_DEFI_JOUR;
+  return Math.max(1, Math.round(niveaux * levelUpCost({ rarity: 'commun' }, meilleur)));
+}
+
 // 15/10 (choix de l'auteur : « 🎁 Tout récupérer ») — LA liste de ce qui est récupérable maintenant : défis du jour et de la
 // semaine terminés, TOUS les paliers de succès atteints (plusieurs par famille), calendrier du jour. Une seule source :
 // griffesRecuperables (le calculateur des fenêtres compte ces Griffes comme dépensées) et claimAll (le bouton) l'utilisent.
@@ -392,13 +410,13 @@ export function recompensesARecuperer(e, recompense) {
   (etat.questIds || []).forEach((id) => {
     const d = questDef(id);
     if (!d || (etat.questClaimed || {})[id] || ((etat.questProgress || {})[id] || 0) < d.target) return;
-    const g = Number(recompense(d.reward, niv)) || 0;
+    const g = Number(recompense(d.reward, niv, 'jour')) || 0; // 16/10 : le type (jour / semaine) pour la règle en niveaux
     r.quetes.push(id); r.griffes += g; r.diamants += Number(d.diamonds) || 0; r.journal.push(['defi-jour', g, id]);
   });
   (etat.weeklyIds || []).forEach((id) => {
     const d = weeklyQuestDef(id);
     if (!d || (etat.weeklyClaimed || {})[id] || ((etat.weeklyProgress || {})[id] || 0) < d.target) return;
-    const g = Number(recompense(d.reward, niv)) || 0;
+    const g = Number(recompense(d.reward, niv, 'semaine')) || 0;
     r.hebdos.push(id); r.griffes += g; r.diamants += Number(d.diamonds) || 0; r.journal.push(['defi-semaine', g, id]);
   });
   ACHIEVEMENTS.forEach((d) => {
