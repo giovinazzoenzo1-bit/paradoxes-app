@@ -1778,7 +1778,10 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         {!isBoss && opponents.map((o, i) => {
           const d = o.creature.stages[stadeVisuel(o.evolutionTier || 0)] || o.creature.stages[0]; const ko = pvAffiche('o', i, o.hp) <= 0;
           return panneauCombattant({
-            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, niveau: o.niveau, actif: false, // 15/10 : pas de lueur sur les ennemis elite: bonusElite(levelNumber) > 0, hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, cible: false, // 15/10 : pas de lueur sur les ennemis (avant : lueur sur l'adversaire visé) ko,
+            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, niveau: o.niveau, elite: bonusElite(levelNumber) > 0, hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, ko,
+            // 15/10 : pas de lueur sur les ennemis (demande de l'auteur). ⚠️ 16/10 : ce commentaire était collé AU MILIEU de la
+            // ligne du dessus et en avalait la fin (PV, PV max, K.O., élite) : les PV des ennemis ne s'affichaient plus.
+            actif: false, cible: false,
             badge: { emoji: ELEMENT_EMOJI[o.creature.element] || '✨', couleur: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)] || '#ffb340' },
             onPress: !ko && phase === 'choosing' ? () => chooseTarget(i) : null,
           });

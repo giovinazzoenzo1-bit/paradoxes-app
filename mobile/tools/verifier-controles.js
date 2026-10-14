@@ -366,6 +366,13 @@ const SABOTAGES = [
     remplace('      if (onEncaisserGriffes) await onEncaisserGriffes();', '')],
   ['auditToutRecuperer', path.join(RACINE, 'src/screens/ProgresScreen.js'), "le bouton « Tout récupérer » de l'écran Progrès est débranché",
     remplace('onPress={toutRecuperer}', 'onPress={() => {}}')],
+  // 16/10 : « on ne voit plus les HP des ennemis » — le commentaire avaleur.
+  ['auditPortee', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "un commentaire « // » au milieu d'une ligne avale la suite (le bug du 16/10)",
+    remplace("nom: d.name, niveau: o.niveau, elite: bonusElite(levelNumber) > 0,", "nom: d.name, niveau: o.niveau, // lueur elite: bonusElite(levelNumber) > 0,")],
+  ['auditPanneauxCombat', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "la case des ennemis perd ses PV (le bug du 16/10)",
+    remplace("nom: d.name, niveau: o.niveau, elite: bonusElite(levelNumber) > 0,", "nom: d.name, niveau: o.niveau, // lueur elite: bonusElite(levelNumber) > 0,")],
+  ['auditPanneauxCombat', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "la case des ennemis n'a plus ses PV max",
+    remplace("hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, ko,", "hp: pvAffiche('o', i, o.hp), mana: null, ko,")],
   ['auditPortee', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "une valeur lue AVANT sa déclaration (zone morte : écran blanc ou valeur vide)",
     remplace('  }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici', '  }, [(lifetimeStats || {}).advLevelReached || 0, owned.length]); // ⚠️ jamais `owned` ici')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "plus de recalcul quand une créature rejoint le deck en cours de fenêtre",

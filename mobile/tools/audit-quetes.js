@@ -5416,6 +5416,28 @@ function auditToutRecuperer() {
 }
 module.exports.auditToutRecuperer = auditToutRecuperer;
 
+// ---- CASES DU BANDEAU DE COMBAT (16/10) ----
+// Lu comme le COMPILATEUR (arbre syntaxique, pas du texte) : chaque appel de panneauCombattant — tes créatures ET les ennemis —
+// doit recevoir nom, hp, hpMax et ko. Vécu le 16/10 : un commentaire collé au milieu de la ligne des ennemis avait avalé leurs
+// PV → « on ne voit plus les HP des ennemis », alors que les contrôles par texte passaient.
+function auditPanneauxCombat() {
+  const fs = require('fs'), path = require('path');
+  const parser = require('@babel/parser'); const traverse = require('@babel/traverse').default;
+  const pb = [];
+  const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  const ast = parser.parse(src, { sourceType: 'module', plugins: ['jsx'] });
+  const appels = [];
+  traverse(ast, { CallExpression(p) {
+    const n = p.node;
+    if (n.callee && n.callee.name === 'panneauCombattant' && n.arguments[0] && n.arguments[0].type === 'ObjectExpression')
+      appels.push({ ligne: n.loc.start.line, cles: n.arguments[0].properties.map((pr) => pr.key && (pr.key.name || pr.key.value)).filter(Boolean) });
+  } });
+  if (appels.length < 2) pb.push(`cases du bandeau : ${appels.length} appel(s) trouvé(s) au lieu de 2 (tes créatures, les ennemis)`);
+  for (const a of appels) for (const k of ['nom', 'hp', 'hpMax', 'ko']) if (!a.cles.includes(k)) pb.push(`case du bandeau (ligne ${a.ligne}) sans « ${k} » : PV ou état invisibles`);
+  return pb;
+}
+module.exports.auditPanneauxCombat = auditPanneauxCombat;
+
 // ── ATTAQUES DE SOUTIEN : toute l'équipe participe (09/10, décision de l'auteur) ──
 // Test de l'auteur : une créature très montée finissait seule le chapitre 1 (à chaque tour, UNE créature
 // frappait : tout concentrer sur une seule restait toujours le meilleur choix). Après le coup de la créature

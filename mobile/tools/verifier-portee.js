@@ -50,8 +50,24 @@ function inconnus(fichier) {
   return trouves;
 }
 
+// 16/10 — COMMENTAIRE AVALEUR : « // » posé AU MILIEU d'une ligne de code en transforme TOUTE LA FIN en commentaire.
+// Vécu : la case d'un ennemi (« actif: false, // … ») avait perdu ses PV, PV max, K.O. et élite → PV des ennemis invisibles ;
+// tout compilait. Repère : le code avant « // » se termine par une virgule (la liste continue) et le commentaire contient
+// des « clé: valeur » qui ressemblent à du code.
+function commentairesAvaleurs(fichier) {
+  const trouves = [];
+  fs.readFileSync(fichier, 'utf8').split('\n').forEach((l, n) => {
+    const k = l.indexOf(' // '); if (k < 0) return;
+    const avant = l.slice(0, k), apres = l.slice(k + 4);
+    if ((avant.match(/'/g) || []).length % 2 || (avant.match(/`/g) || []).length % 2 || (avant.match(/"/g) || []).length % 2) return; // dans une chaîne
+    if (!/,\s*$/.test(avant)) return;
+    if (/\b[a-zA-Z_]+:\s*[a-zA-Z_('`\[{0-9][^,]*,\s*[a-zA-Z_]+[:,]/.test(apres) || /\b(hp|hpMax|ko|onPress|style|key|nom|niveau)\s*:/.test(apres)) trouves.push(n + 1);
+  });
+  return trouves;
+}
 function verifier(racine = path.join(__dirname, '..')) {
   const pb = [];
+  for (const f of fichiers(racine)) for (const n of commentairesAvaleurs(f)) pb.push(`${path.relative(racine, f)}:${n} — un commentaire « // » au milieu de la ligne AVALE la suite du code`);
   for (const f of fichiers(racine)) for (const x of inconnus(f)) pb.push(`${path.relative(racine, f)}:${x.ligne} — « ${x.nom} » ${x.zoneMorte ? 'utilisé AVANT sa déclaration (zone morte : écran blanc au rendu)' : 'utilisé sans être déclaré'}`);
   return pb;
 }
