@@ -147,7 +147,7 @@ const estSurAllie = (k) => !!(k && k.sort && SORTS_SUR_ALLIE[k.sort]);
 // 16/10 : image de la Rune de Résilience (la même que dans l'inventaire des runes) — elle se brise en combat.
 const RUNE_RESILIENCE = require('../../../assets/icons/runes/resilience.png');
 const SORT_VISUEL = {
-  bouclier: { couleur: '#8fd3ff', icone: '🛡️', duree: 1100, forme: 'bulle', texte: (v) => (v ? `+${v}` : null) },
+  bouclier: { couleur: '#8fd3ff', icone: '🛡️', duree: 1100, forme: 'bulle', texte: (v) => (v ? `+${v}` : 'Déjà protégé') }, // 17/10 : gain RÉEL
   // 13/10 : « +X PV » ; « PV pleins » quand il n'y avait rien à soigner (avant : rien du tout — retour de l'auteur).
   soin: { couleur: '#5ee08a', icone: '💚', duree: 1300, forme: 'montee', texte: (v) => (v ? `+${v} PV` : 'PV pleins') },
   boost: { couleur: '#ff8a3d', icone: '🔥', duree: 900, forme: 'anneaux' },
@@ -458,7 +458,7 @@ function messageDeSort(sortId, evenements, allies) {
   const s = SORTS[sortId];
   const nom = (i) => (allies[i] ? allies[i].creature.stages[0].name : '');
   const e = (evenements || []).find((x) => x.type === 'bouclier' || x.type === 'soin' || x.type === 'boost');
-  if (sortId === 'bouclier' && e) return `${s.icone} Bouclier +${e.valeur} sur ${nom(e.cible)}`;
+  if (sortId === 'bouclier' && e) return e.valeur > 0 ? `${s.icone} Bouclier +${e.valeur} sur ${nom(e.cible)}` : `${s.icone} Bouclier : ${nom(e.cible)} a déjà un bouclier plus fort`;
   if (sortId === 'soin' && e) return e.valeur > 0 ? `${s.icone} Soin +${e.valeur} PV sur ${nom(e.cible)}` : `${s.icone} Soin : ${nom(e.cible)} a déjà tous ses PV`;
   if (sortId === 'boost' && e) return `${s.icone} Boost +35 % sur ${nom(e.cible)}`;
   return `${s.icone} ${s.nom} !`;
@@ -1068,6 +1068,9 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     challengeDoneRef.current = true;
     const pvAvantO = opponentsRef.current.map((o) => o.hp);
     const pvAvantP = fightersRef.current.map((f) => f.hp);
+    // 17/10 (bug 2 : « le +X du Soin ne correspond pas aux PV ») : PV juste APRÈS ton sort — ton soin s'affiche avec son « +X PV »
+    // (avant : la barre restait gelée sur les PV d'avant le soin jusqu'au coup ennemi, qui montrait « soin − dégâts » d'un bloc).
+    let pvApresSortP = null;
     const resAvantP = fightersRef.current.map((f) => !!(f && f.resilienceUsed)); // 16/10 : pour voir la Rune de Résilience se briser
     const skill = selectedSkillRef.current;
     const curIdx = activeIndexRef.current;
@@ -1116,6 +1119,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
       coupSort = r.coup;
       evenementsSort = r.evenements || [];
       fightersRef.current = r.allies;
+      pvApresSortP = r.allies.map((f) => f.hp);
       setFighters(r.allies);
       opponentsRef.current = r.ennemis;
       setOpponents(r.ennemis);
@@ -1255,12 +1259,15 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     let riposte = null;
     let degatsRiposte = [];
     let actionEnnemie = null; // 11/10 : ce que fait l'ennemi à son tour (sort ou ultime), pour le MONTRER
+    let pvAvantActionO = null;
     if (isBoss && retaliatorIdx >= 0 && tRip >= 0) {
       riposte = riposteGardien(newOpponents[retaliatorIdx].stats, avant, tRip);
       degatsRiposte = riposte.degats;
     } else if (retaliatorIdx >= 0 && tRip >= 0) {
       // Le tour ennemi du MOTEUR (étape 4) : son sort s'il le décide, sinon
       // son attaque. Une marque a pu être posée sur une de nos créatures.
+      // 17/10 (bug 2) : PV des ennemis APRÈS ton coup, AVANT leur action — leur soin se montre avec leur « +X PV ».
+      pvAvantActionO = newOpponents.map((o) => (o ? o.hp : 0));
       const a = actionAdversaire(newOpponents, retaliatorIdx, avant, tRip);
       newOpponents = a.adversaires;
       baseJ = a.joueurs;
@@ -1323,6 +1330,13 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
       setOpponentDamageFloat(playerDamage > 0 ? playerDamage : null);
       setPlayerDamageFloat(!avecRiposte && opponentDamage > 0 ? { amount: opponentDamage, index: blesse } : null);
       degeler('o'); if (!avecRiposte) degeler('p');
+      // 17/10 (bug 2) : un ennemi qui se SOIGNE à son tour garde ses PV d'après ton coup jusqu'à son « +X PV » (avant : ton coup
+      // affichait « −X » mais la barre baissait de « X − soin », le soin déjà fondu dedans).
+      if (pvAvantActionO && actionEnnemie && actionEnnemie.sort === 'soin') {
+        const g2 = {};
+        newOpponents.forEach((o, i) => { if (o && pvAvantActionO[i] != null && o.hp !== pvAvantActionO[i]) g2[`o${i}`] = pvAvantActionO[i]; });
+        if (Object.keys(g2).length) setPvGeles((g) => ({ ...g, ...g2 }));
+      }
       if (playerDamage > 0) effetsImpact('adversaire', cibleCoup, cleCoup, elemAttaquant);
       if (!avecRiposte && opponentDamage > 0) effetsImpact('joueur', blesse, 'riposte', elemRiposteur);
       // Étape 3 : sorts offensifs, onde de la zone (et l'élément sur CHAQUE ennemi touché),
@@ -1345,6 +1359,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         if (ae.sort) {
           setSwitchMessage(`😈 ${ae.nom} lance ${SORTS[ae.sort].icone} ${SORTS[ae.sort].nom} !`);
           ae.evenements.forEach((ev) => { if (ev.type === 'bouclier' || ev.type === 'soin' || ev.type === 'boost') effetSort(ev.type, 'adversaire', ev.cible, ev.valeur || null, true); });
+          if (ae.sort === 'soin') degeler('o'); // 17/10 : la barre de l'ennemi monte AVEC son « +X PV »
           if (ae.sort === 'provocation' || ae.sort === 'vitesse' || ae.sort === 'pacte') effetSort(ae.sort, 'adversaire', ae.lanceur, null, true);
           if (ae.sort === 'poison' || ae.sort === 'marque' || ae.sort === 'execution' || ae.sort === 'zone') setTimeout(() => effetSort(ae.sort, 'joueur', ae.cible, null, true), IMPACT_MS);
         } else {
@@ -1405,7 +1420,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     // Gel de l'affichage : chaque PV qui change garde sa valeur d'AVANT jusqu'à son impact.
     const gel = {};
     newOpponents.forEach((o, i) => { if (o && o.hp !== pvAvantO[i]) gel[`o${i}`] = pvAvantO[i]; });
-    newFighters.forEach((f, i) => { if (f && f.hp !== pvAvantP[i]) gel[`p${i}`] = pvAvantP[i]; });
+    newFighters.forEach((f, i) => { const av = pvApresSortP ? pvApresSortP[i] : pvAvantP[i]; if (f && f.hp !== av) gel[`p${i}`] = av; });
     setPvGeles(gel);
     lancerResolution(transition, duree);
   };

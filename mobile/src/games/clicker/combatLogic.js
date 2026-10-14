@@ -730,8 +730,12 @@ export function lancerSort(sortId, allies, lanceur, ennemis, cible, mult = 1, ci
     case 'bouclier': {
       const t = choisi != null ? choisi : plusBlesse(A);
       const v = Math.round(mult * Math.max(E.bouclierMinimum * pvMax(A[t]), E.bouclierPartPerdue * (pvMax(A[t]) - A[t].hp)));
-      A[t] = avecEtats(A[t], { bouclier: Math.max(etatsDe(A[t]).bouclier || 0, v) });
-      ev.push({ type: 'bouclier', cible: t, valeur: v });
+      const dejaB = etatsDe(A[t]).bouclier || 0;
+      A[t] = avecEtats(A[t], { bouclier: Math.max(dejaB, v) });
+      // 17/10 (bug 2 de l'auteur : « le +X du Bouclier n'est pas le bon ») : les boucliers ne s'ADDITIONNENT pas (le plus fort
+      // reste) ; le « +X » montrait la valeur LANCÉE même quand la créature gardait un bouclier plus fort. Désormais : ce qu'elle
+      // GAGNE vraiment (0 = « Déjà protégé »).
+      ev.push({ type: 'bouclier', cible: t, valeur: Math.max(0, Math.max(dejaB, v) - dejaB) });
       return fin(null);
     }
     case 'soin': {

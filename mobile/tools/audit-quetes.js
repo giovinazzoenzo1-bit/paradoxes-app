@@ -3235,7 +3235,7 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = 'ae8d6c14'; // 16/10 : MAITRISE_MAX 0,75 → 1,4 (nouvelle mesure de l'auteur) ; Gardien : moitié de l'effet, inchangé — auditGardienCalibre relancé : OK.
+const EMPREINTE_COMBAT = '88f61372'; // 17/10 : bug 2 — AFFICHAGE seulement (PV gelés après ton sort et avant le soin ennemi, « Déjà protégé ») ; règles inchangées — auditGardienCalibre relancé : OK.
 // (avant :) '9fcfd71b' // 14/10 (suite) : libelleChance (affichage, aucun effet sur le combat) — auditGardienCalibre relancé : OK.
 // (avant :) '1a11b089' // 14/10 : lancerSort accepte l'allié CHOISI (cibleAllie) ; sans lui (Gardien, ennemis, simulation) : choix automatique inchangé — auditGardienCalibre relancé : OK.
 // (ancienne :) 'e97f41c5' // 11/10 (soir) : soutiens sur la cible SEULEMENT (règle partagée avec simulerCombat ; le Gardien est seul, rien ne change pour lui — auditGardienCalibre vert). Avant : '52f045e3'.
@@ -5738,3 +5738,33 @@ function auditEtapesAvancees() {
   return pb;
 }
 module.exports.auditEtapesAvancees = auditEtapesAvancees;
+
+// 17/10 — BUG 2 de l'auteur : « le +X du Soin et du Bouclier en combat n'affiche pas les bonnes stats ». CAUSES : (1) Bouclier —
+// les boucliers ne s'additionnent pas (le plus fort reste), le « +X » montrait la valeur LANCÉE même sans rien gagner ;
+// (2) Soin — la barre de PV restait gelée sur les PV d'AVANT le soin jusqu'au coup ennemi (« +X PV » affiché, barre qui
+// baisse) ; côté ennemi, son soin fondait dans ton coup (« −X » affiché, barre qui baisse moins).
+function auditSortsAffiches() {
+  const fs = require('fs'), path = require('path'); const K = load('combatLogic'); const C = load('clickerLogic');
+  const pb = [];
+  const base = C.CREATURES[0];
+  const fx = (hp, max, etats = {}) => ({ creature: base, stats: { ...K.combatStatsForCreatureTyped(base, 10, 0, []), hp: max }, hp, mana: 5, resilienceUsed: false, etats });
+  const gain = (r) => (r.evenements.find((e) => e.type === 'bouclier') || {}).valeur;
+  let r = K.lancerSort('bouclier', [fx(100, 100)], 0, [fx(50, 50)], 0);
+  if (gain(r) !== r.allies[0].etats.bouclier) pb.push(`Bouclier sans bouclier en place : « +${gain(r)} » affiché pour ${r.allies[0].etats.bouclier} posé`);
+  r = K.lancerSort('bouclier', [fx(100, 100, { bouclier: 50 })], 0, [fx(50, 50)], 0);
+  if (gain(r) !== 0 || r.allies[0].etats.bouclier !== 50) pb.push(`Bouclier sur un bouclier plus fort : « +${gain(r)} » affiché, ${r.allies[0].etats.bouclier} en place (rien gagné → 0 / « Déjà protégé »)`);
+  r = K.lancerSort('bouclier', [fx(10, 100, { bouclier: 10 })], 0, [fx(50, 50)], 0);
+  if (gain(r) !== r.allies[0].etats.bouclier - 10) pb.push(`Bouclier sur un bouclier plus faible : « +${gain(r)} » affiché pour un gain réel de ${r.allies[0].etats.bouclier - 10}`);
+  r = K.lancerSort('soin', [fx(50, 100)], 0, [fx(50, 50)], 0);
+  const soin = (r.evenements.find((e) => e.type === 'soin') || {}).valeur;
+  if (soin !== r.allies[0].hp - 50) pb.push(`Soin : « +${soin} PV » affiché pour ${r.allies[0].hp - 50} PV rendus`);
+  const Cb = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  if (!Cb.includes("texte: (v) => (v ? `+${v}` : 'Déjà protégé')") || !Cb.includes('a déjà un bouclier plus fort`')) pb.push('Bouclier : plus de « Déjà protégé » quand le bouclier en place était plus fort');
+  if (!Cb.includes('pvApresSortP = r.allies.map((f) => f.hp);') || !Cb.includes('const av = pvApresSortP ? pvApresSortP[i] : pvAvantP[i]; if (f && f.hp !== av) gel[`p${i}`] = av;'))
+    pb.push("Soin : la barre de PV reste gelée sur les PV d'avant le soin (« +X PV » affiché, barre qui baisse au coup ennemi)");
+  if (!Cb.includes('pvAvantActionO = newOpponents.map((o) => (o ? o.hp : 0));') || !Cb.includes("if (pvAvantActionO && actionEnnemie && actionEnnemie.sort === 'soin') {"))
+    pb.push("soin ENNEMI : il fond de nouveau dans ton coup (ton « −X » ne correspond plus à la barre)");
+  if (!Cb.includes("if (ae.sort === 'soin') degeler('o');")) pb.push("soin ENNEMI : sa barre ne se dégèle plus avec son « +X PV » (barre figée)");
+  return pb;
+}
+module.exports.auditSortsAffiches = auditSortsAffiches;

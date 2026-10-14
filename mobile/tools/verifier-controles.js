@@ -623,6 +623,19 @@ const SABOTAGES = [
     remplace('if (fenetreDe(levelPreview) === fenetreDe(currentUnlockedLevel) && !etapePhotographiee(levelPreview)) return;', '')],
   ['auditEtapesAvancees', F.aventure, "le journal garde une chance mesurée sur un autre niveau",
     remplace('derniereMesureApercu.niveauEnnemis === nivCombat;', 'true;')],
+  // 17/10 : bug 2 — « +X » du Soin et du Bouclier.
+  ['auditSortsAffiches', F.combat, "le « +X » du Bouclier montre la valeur lancée, pas le gain",
+    remplace('valeur: Math.max(0, Math.max(dejaB, v) - dejaB) });', 'valeur: v });')],
+  ['auditSortsAffiches', F.combatEcran, "plus de « Déjà protégé »",
+    remplace("texte: (v) => (v ? `+${v}` : 'Déjà protégé')", 'texte: (v) => (v ? `+${v}` : null)')],
+  ['auditSortsAffiches', F.combatEcran, "la barre ne voit plus le soin avant le coup ennemi",
+    remplace('      pvApresSortP = r.allies.map((f) => f.hp);', '')],
+  ['auditSortsAffiches', F.combatEcran, "le gel reprend les PV d'avant le sort",
+    remplace('const av = pvApresSortP ? pvApresSortP[i] : pvAvantP[i];', 'const av = pvAvantP[i];')],
+  ['auditSortsAffiches', F.combatEcran, "le soin ennemi refond dans ton coup",
+    remplace('      pvAvantActionO = newOpponents.map((o) => (o ? o.hp : 0));', '')],
+  ['auditSortsAffiches', F.combatEcran, "la barre de l'ennemi soigné reste figée",
+    remplace("if (ae.sort === 'soin') degeler('o');", '')],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

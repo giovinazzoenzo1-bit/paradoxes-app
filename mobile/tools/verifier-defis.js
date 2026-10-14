@@ -74,6 +74,7 @@ const CONTROLES = [
   ['auditPanneauxCombat', "cases du bandeau de combat : nom, PV, PV max et K.O. pour tes créatures ET les ennemis (lu comme le compilateur, 16/10)"],
   ['auditToutRecuperer', "« 🎁 Tout récupérer » : une seule règle pour le calculateur et le bouton, tous les paliers de succès, crédit immédiat (15/10)"],
   ['auditFenetres', "fenêtres de difficulté : chaque cran donne sa chance (95/85/70/50/30 %), la photo compte les Griffes en poche, écran et simulateur branchés (11/10)"],
+  ['auditSortsAffiches', "combat : le « +X » du Bouclier = gain réel, la barre de PV monte AVEC le « +X PV » du Soin (toi et ennemis) — bug 2 du 17/10"],
   ['auditEtapesAvancees', "étapes 61 à 300 : facteurs mesurés, crans tenus en vrais combats ; l'aperçu et le combat attendent la photo de la fenêtre (bug de l'étape 86, 17/10)"],
   ['auditGardienGriffes', "Gardien : Griffes des 3 prochains combats, réparties équitablement, chiffre figé à la photo (règle finale du 08/10)"],
   ['auditGardien80', "Gardien : ~80 % pour qui atteint son chiffre, chance stable (arrondie à 5 %, jamais en baisse), effort en niveaux (08/10)"],
