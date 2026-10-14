@@ -441,6 +441,7 @@ import {
   MANA_DEPART,
   texteSort,
   descriptionAttaque,
+  libelleChance,
 } from '../../games/clicker/combatLogic';
 
 // NOTIFICATIONS RETIREES (03/09).
@@ -3645,7 +3646,10 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
   const oy = Math.max(0, (hFen - ui.h) / 2); // écran plus haut que 16:9 (tablette) : bloc centré verticalement
   const boite = (f) => ({ position: 'absolute', left: cxEcran + (f[0] - 0.5) * ui.l, top: oy + f[1] * ui.h, width: (f[2] - f[0]) * ui.l, height: (f[3] - f[1]) * ui.h });
   const carre = (cx, y0, y1) => { const c = (y1 - y0) * ui.h; return { position: 'absolute', left: cxEcran + (cx - 0.5) * ui.l - c / 2, top: oy + y0 * ui.h, width: c, height: c }; };
-  const couleurPuissance = !mesure ? COLORS.muted : mesure.couleur === 'vert' ? '#3DDC84' : mesure.couleur === 'orange' ? '#FFB74D' : '#FF6B6B';
+  // 14/10 (demande de l'auteur) : la chance en MOTS (Facile / Moyen / Compliqué / Extrême), sa couleur suit le mot.
+  const libelle = mesure ? libelleChance(mesure.victoires) : null;
+  const libelleApres = mesure && chanceApresGriffes != null ? libelleChance(chanceApresGriffes / 100) : null;
+  const couleurPuissance = !libelle ? COLORS.muted : libelle.couleur;
   const scene = CHAPTER_SCENES[chapterForLevel(levelNumber)];
   const deckVide = teamCount === 0; const sansEnergie = energy <= 0;
   const rectCombattre = boite(APERCU.combattre);
@@ -3683,7 +3687,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
         </Text>
       </View>
       <Text style={[boite(APERCU.puissance), styles.apercuLigne, { color: couleurPuissance, fontSize: Math.max(9, Math.round(ui.h * 0.036)) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-        Ta puissance {puissanceAffichee(membresPourCombat(deck, owned, ownedRunes))} · {mesure ? (chanceApresGriffes != null ? `${Math.round(mesure.victoires * 100)} % → ${chanceApresGriffes} % avec tes Griffes` : `${Math.round(mesure.victoires * 100)} % de victoire`) : 'chance…'} · ⚔️ {difficulteAffichee(levelNumber)}/5
+        Ta puissance {puissanceAffichee(membresPourCombat(deck, owned, ownedRunes))} · {libelle ? (libelleApres && libelleApres.texte !== libelle.texte ? `${libelle.texte} → ${libelleApres.texte} avec tes Griffes` : libelle.texte) : 'calcul…'}
       </Text>
 
       {deck.map((id, i) => {

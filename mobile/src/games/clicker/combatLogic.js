@@ -2079,6 +2079,16 @@ export const GLOBAL_DAMAGE_BOOST = 1.10;
 // camps (ils passent tous ici). MESURÉ avant : ×2,0 à ×3,7 (médiane ×2,2 ; Ombrillon ×3,7) — Ombrillon niv. 1 à
 // l'étape 2 retirait 96 % des PV ennemis d'un coup (« l'ultime est abusé »).
 export const ULTIME_MAX = 2;
+// ═══ LA CHANCE EN MOTS (14/10, demande de l'auteur) ═══ — en Aventure, plus de « 68 % de victoire » : Facile / Moyen /
+// Compliqué / Extrême, calés sur les 5 crans du calculateur (95 et 85 % → Facile, 70 % → Moyen, 50 % → Compliqué,
+// 33 % → Extrême).
+export const PALIERS_CHANCE_TEXTE = [[0.8, 'Facile', '#3DDC84'], [0.6, 'Moyen', '#FFD54F'], [0.4, 'Compliqué', '#FFB74D'], [0, 'Extrême', '#FF6B6B']];
+export function libelleChance(p) {
+  const v = Number(p) || 0;
+  const t = PALIERS_CHANCE_TEXTE.find(([seuil]) => v >= seuil) || PALIERS_CHANCE_TEXTE[PALIERS_CHANCE_TEXTE.length - 1];
+  return { texte: t[1], couleur: t[2] };
+}
+
 // ═══ DESCRIPTIONS DES ATTAQUES ET DES SORTS (14/10, demande de l'auteur : « elles ne veulent rien dire ») ═══
 // Avant : « 3 dégâts » (le chiffre BRUT de la définition, pas les vrais dégâts : le combat le multiplie par l'attaque),
 // « 7 dégâts · mana plein », « 45 % des PV perdus », et au Clicker « 3 dégâts · 5 END » (l'endurance n'existe plus depuis

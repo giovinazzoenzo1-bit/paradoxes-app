@@ -563,6 +563,8 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
   // 14/10 : l'allié CHOISI pour Bouclier / Soin / Boost (on le touche) — une lueur l'entoure pendant la jauge.
   const [allyTarget, setAllyTarget] = useState(null);
   const allyTargetRef = useRef(null);
+  // 14/10 (demande de l'auteur) : l'ADVERSAIRE qui joue son tour (riposte ou sort) — lueur sur lui et sur sa case.
+  const [acteurAdverse, setActeurAdverse] = useState(null);
   // Détail d'une attaque, affiché sur appui long.
   const [skillInfo, setSkillInfo] = useState(null);
   // Attaque choisie mais PAS encore lancée : elle attend que le joueur
@@ -746,6 +748,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     if (t.type === 'lose') { setOutcome('lose'); setPhase('done'); return; }
     activeIndexRef.current = t.nextIdx;
     setActiveIndex(t.nextIdx);
+    setActeurAdverse(null); // 14/10 : ton tour revient — la lueur repasse sur ta créature
     // Le mana du combattant qui prend la main monte d'un cran. Sans ce gain, la jauge
     // ne se remplirait jamais et le coup spécial resterait inaccessible toute la partie.
     setFighters((prev) => prev.map((f, i) => (i === t.nextIdx ? { ...f, mana: Math.min(MANA_MAX, f.mana + MANA_PER_TURN) } : f)));
@@ -1316,6 +1319,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     if (actionEnnemie && (actionEnnemie.sort || (actionEnnemie.competence && actionEnnemie.competence.special))) {
       const ae = actionEnnemie;
       setTimeout(() => {
+        setActeurAdverse(ae.lanceur); // 14/10 : c'est SON tour — lueur sur lui et sur sa case
         if (ae.sort) {
           setSwitchMessage(`😈 ${ae.nom} lance ${SORTS[ae.sort].icone} ${SORTS[ae.sort].nom} !`);
           ae.evenements.forEach((ev) => { if (ev.type === 'bouclier' || ev.type === 'soin' || ev.type === 'boost') effetSort(ev.type, 'adversaire', ev.cible, ev.valeur || null, true); });
@@ -1330,6 +1334,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     }
     if (avecRiposte) {
       setTimeout(() => {
+        setActeurAdverse(retaliatorIdx); // 14/10 : c'est SON tour — lueur sur lui et sur sa case
         playLunge('opponent', retaliatorIdx, centreSprite('joueur', blesse));
         setTimeout(() => {
           setVerdictDernierCoup(null);
@@ -1507,6 +1512,13 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         {elemColor && !fainted && !sansJauges && (
           <View style={[styles.elemDot, ring === 'target' && styles.elemDotTarget, { backgroundColor: elemColor }]} />
         )}
+        {/* 14/10 : une VRAIE lueur derrière la créature — dorée sur celle qui JOUE son tour, rouge sur l'adversaire visé, verte
+            sur l'allié choisi. (Avant : `ring` ne changeait que la pastille d'élément, cachée dans l'arène : rien n'était visible.) */}
+        {ring && !fainted && (
+          <Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch" pointerEvents="none"
+            style={{ position: 'absolute', left: (boxW - fs * 1.9) / 2, top: (fs + 22) / 2 - fs * 0.95, width: fs * 1.9, height: fs * 1.9, // centrée sur le cercle
+              opacity: ring === 'active' ? 0.95 : 0.85, tintColor: ring === 'active' ? undefined : adversaire ? '#ff5a5a' : '#7cff8a' }} />
+        )}
         <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }]}>
           {/* `size={fs}` : l'illustration reprend exactement la taille
               calculee pour l'emoji, donc la mise en page du terrain
@@ -1626,7 +1638,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           mana: f.mana, manaMax: MANA_MAX,
           etats: iconesEtats(f), etatsCote: 'droite',
           // 14/10 : touchable quand un sort d'allié est armé ; anneau de CIBLE sur l'allié choisi pendant la jauge.
-          fainted: pvAffiche('p', fi, f.hp) <= 0, ring: allyTarget === fi && (phase === 'tapping' || phase === 'resolving') ? 'target' : fi === activeIndex ? 'active' : null,
+          fainted: pvAffiche('p', fi, f.hp) <= 0, ring: allyTarget === fi && (phase === 'tapping' || phase === 'resolving') ? 'target' : fi === activeIndex && acteurAdverse == null ? 'active' : null,
           onPress: () => chooseAlly(fi), disabled: !(estSurAllie(armedSkill) && phase === 'choosing') || pvAffiche('p', fi, f.hp) <= 0, hpColor: COLORS.good,
           lunging: !!lunge && lunge.side === 'player' && fi === lunge.index, lungeDir: 1,
           lungeDx: lunge && lunge.side === 'player' && fi === lunge.index ? lunge.dx : 0, lungeDy: lunge && lunge.side === 'player' && fi === lunge.index ? lunge.dy : 0,
@@ -1711,7 +1723,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           emoji: d.emoji, name: d.name,
           hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, fainted,
           etats: iconesEtats(o), etatsCote: 'gauche',
-          ring: i === targetIndex && !fainted && !(allyTarget != null && (phase === 'tapping' || phase === 'resolving')) ? 'target' : null,
+          ring: acteurAdverse === i && !fainted ? 'active' : i === targetIndex && !fainted && !(allyTarget != null && (phase === 'tapping' || phase === 'resolving')) ? 'target' : null,
           // Vert = ton élément domine le sien, orange = neutre, rouge =
           // tu es en position défavorable.
           elemColor: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)],
@@ -1743,7 +1755,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         <Image source={COMBAT_IMG.bandeau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
         {fighters.map((f, fi) => {
           const d = f.creature.stages[stadeVisuel(f.evolutionTier)];
-          return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, niveau: f.ownedLevel, hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex, ko: pvAffiche('p', fi, f.hp) <= 0,
+          return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, niveau: f.ownedLevel, hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex && acteurAdverse == null, ko: pvAffiche('p', fi, f.hp) <= 0,
             cible: allyTarget === fi && (phase === 'tapping' || phase === 'resolving'), // 14/10 : lueur sur l'allié choisi
             onPress: estSurAllie(armedSkill) && phase === 'choosing' && pvAffiche('p', fi, f.hp) > 0 ? () => chooseAlly(fi) : null });
         })}
@@ -1755,7 +1767,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         {!isBoss && opponents.map((o, i) => {
           const d = o.creature.stages[stadeVisuel(o.evolutionTier || 0)] || o.creature.stages[0]; const ko = pvAffiche('o', i, o.hp) <= 0;
           return panneauCombattant({
-            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, niveau: o.niveau, elite: bonusElite(levelNumber) > 0, hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, cible: i === targetIndex, ko,
+            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, niveau: o.niveau, actif: acteurAdverse === i, elite: bonusElite(levelNumber) > 0, hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, cible: i === targetIndex, ko,
             badge: { emoji: ELEMENT_EMOJI[o.creature.element] || '✨', couleur: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)] || '#ffb340' },
             onPress: !ko && phase === 'choosing' ? () => chooseTarget(i) : null,
           });

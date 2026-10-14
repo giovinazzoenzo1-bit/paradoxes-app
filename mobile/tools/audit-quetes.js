@@ -4873,7 +4873,8 @@ function auditPuissanceAffichee() {
     [a, /const puissanceHub = puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\);/, 'hub : la puissance affichée n\'est plus calculée'],
     [a, /🛡️ Puissance \{puissanceHub\}/, 'hub : la pastille n\'affiche plus la puissance affichée'],
     // 12/10 : la chance peut être suivie de « → X % avec tes Griffes » (point 4 de l'auteur) ; « % de victoire » sinon.
-    [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{mesure \? \(chanceApresGriffes != null \? `\$\{Math\.round\(mesure\.victoires \* 100\)\} % → \$\{chanceApresGriffes\} % avec tes Griffes` : `\$\{Math\.round\(mesure\.victoires \* 100\)\} % de victoire`\)/, 'aperçu : puissance ou chance de victoire absente'],
+    // 14/10 : la chance en MOTS (Facile / Moyen / Compliqué / Extrême), plus de %.
+    [a, /Ta puissance \{puissanceAffichee\(membresPourCombat\(deck, owned, ownedRunes\)\)\} · \{libelle \? /, 'aperçu : puissance ou difficulté (en mots) absente'],
     [c, /const puissanceDuDeck = useMemo\(\(\) => puissanceAffichee\(membresDuDeck\(deck, owned\)\), \[deck, owned\]\);/, 'jeu de l\'œuf : le deck n\'utilise plus la puissance affichée'],
     [c, /return deckApresEffortEquitable\(membresDeLaPhoto\(photo\), budgetDeLaPhoto\(photo, ascensionCourante\), plafondDeLaPhoto\(photo\)\)\.puissance;/, 'Gardien : son chiffre ne vient plus de sa seule photo + son budget et son niveau max figés (il pourrait bouger)'],
     [c, /return `⚔️ \$\{texteChance\} de victoire\$\{suite\}`;/, 'bouton du Gardien : la chance de victoire n\'est plus affichée'],
@@ -5170,7 +5171,8 @@ function auditFenetres() {
     pb.push('la photo ne compte plus toutes les Griffes du joueur (poche, récupérables, file d\'attente)');
   if (!Av.includes('definirNiveauxJoueur(niv, dif, aff);')) pb.push("l'écran ne pose plus les niveaux du joueur (les ennemis reviennent à la table)");
   if (!/JSON\.stringify\(\{[^)]*fenetres, avantage \}\)/.test(Av)) pb.push("les photos et l'avantage ne sont plus sauvegardés");
-  if (!Av.includes('⚔️ {difficulteAffichee(levelNumber)}/5')) pb.push("l'aperçu n'affiche plus la difficulté");
+  // 14/10 (auteur) : la difficulté s'affiche en MOTS (libelleChance), plus en % ni en « ⚔️ 3/5 ».
+  if (!Av.includes('const libelle = mesure ? libelleChance(mesure.victoires) : null;') || /% de victoire`/.test(Av)) pb.push("l'aperçu n'affiche plus la difficulté en mots (Facile / Moyen / Compliqué / Extrême)");
   // 12/10 (choix de l'auteur) : INDICE DE MAÎTRISE (remplace la précision), recalcul SANS ÉCRASEMENT, aperçu, Gardien.
   if (!Av.includes("maitrise = maitriseDesCombats((await lireJournalCombats()).filter((c) => c && c.chanceAnnoncee != null && (c.issue === 'win' || c.issue === 'lose'))"))
     pb.push("la photo ne lit plus l'indice de maîtrise (15 derniers combats : vrais résultats contre chances annoncées)");
@@ -5178,7 +5180,7 @@ function auditFenetres() {
   if (!Av.includes('const recalcul = !!photo && membres.length > nbPhoto;')) pb.push("plus de recalcul quand une créature rejoint le deck en cours de fenêtre");
   if (!Av.includes('nv[depart] = Math.min(nv[depart], ancien.niveaux[depart] + MONTEE_MAX_RECALCUL);')) pb.push("recalcul avec ÉCRASEMENT : l'étape en cours peut de nouveau bondir (rapport du 12/10 : niveau 9 → 28, 5 %)");
   if (K.MONTEE_MAX_RECALCUL !== 3) pb.push('montée max au recalcul : 3 niveaux (décision du 12/10)');
-  if (!Av.includes('const chanceApresGriffes = useMemo(') || !Av.includes('% avec tes Griffes`') || !Av.includes('griffesDispo={Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0)}'))
+  if (!Av.includes('const chanceApresGriffes = useMemo(') || !Av.includes('→ ${libelleApres.texte} avec tes Griffes`') || !Av.includes('griffesDispo={Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0)}'))
     pb.push("l'aperçu n'affiche plus « chance si tu dépenses tes Griffes »");
   // Indice : neutre sans combat, plafonné à l'auteur, prudent, plancher, 15 derniers ; conversion par la pente.
   const vic = (n, c, y) => Array(n).fill({ chance: c, gagne: y });
@@ -5353,6 +5355,18 @@ function auditFenetres() {
       || !Ccb.includes("ring: allyTarget === fi && (phase === 'tapping' || phase === 'resolving') ? 'target'"))
       pb.push("combat : le choix de l'allié (toucher, transmission au moteur, lueur) n'est plus complet");
     if (!Afd.includes('👆 Choisis le sort, puis touche qui le reçoit')) pb.push("guide : il n'explique plus comment lancer un sort (toucher l'allié ou l'adversaire)");
+  }
+  // 14/10 (demande de l'auteur) : la chance en MOTS calée sur les crans (95/85 Facile, 70 Moyen, 50 Compliqué, 33 Extrême) ;
+  // une VRAIE lueur derrière la créature qui joue son tour (adversaire compris, et sa case en haut à droite) et la cible.
+  {
+    const lt = (p) => K.libelleChance(p).texte;
+    if (lt(0.95) !== 'Facile' || lt(0.85) !== 'Facile' || lt(0.7) !== 'Moyen' || lt(0.5) !== 'Compliqué' || lt(0.33) !== 'Extrême' || lt(0) !== 'Extrême')
+      pb.push('libellés de difficulté : plus calés sur les crans du calculateur');
+    const Cg = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+    if (!Cg.includes('{ring && !fainted && (') || !Cg.includes("tintColor: ring === 'active' ? undefined : adversaire ? '#ff5a5a' : '#7cff8a'"))
+      pb.push("combat : plus de lueur derrière la créature qui joue / la cible (arène)");
+    if (!Cg.includes('setActeurAdverse(ae.lanceur);') || !Cg.includes('setActeurAdverse(retaliatorIdx);') || !Cg.includes('setActeurAdverse(null);') || !Cg.includes('actif: acteurAdverse === i,'))
+      pb.push("combat : l'adversaire qui joue son tour n'est plus éclairé (arène + case en haut à droite)");
   }
   // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
   const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
