@@ -2076,6 +2076,36 @@ export const GLOBAL_DAMAGE_BOOST = 1.10;
 // camps (ils passent tous ici). MESURÉ avant : ×2,0 à ×3,7 (médiane ×2,2 ; Ombrillon ×3,7) — Ombrillon niv. 1 à
 // l'étape 2 retirait 96 % des PV ennemis d'un coup (« l'ultime est abusé »).
 export const ULTIME_MAX = 2;
+// ═══ DESCRIPTIONS DES ATTAQUES ET DES SORTS (14/10, demande de l'auteur : « elles ne veulent rien dire ») ═══
+// Avant : « 3 dégâts » (le chiffre BRUT de la définition, pas les vrais dégâts : le combat le multiplie par l'attaque),
+// « 7 dégâts · mana plein », « 45 % des PV perdus », et au Clicker « 3 dégâts · 5 END » (l'endurance n'existe plus depuis
+// le 11/09). Désormais UNE source : les dégâts par scaledSkillDamage (la fonction du combat), les sorts par texteSort — les
+// chiffres sont LUS dans EFFETS / SORTS / la mana, jamais recopiés (le guide des spécialités utilise les mêmes phrases).
+const pctTexte = (x) => `${Math.round(Math.abs(x) * 100)} %`;
+export function texteSort(id, court = false) {
+  const E = EFFETS;
+  const T = {
+    bouclier: [`Protège l'allié le plus blessé`, `protège ton allié le plus blessé : ${pctTexte(E.bouclierPartPerdue)} de ses PV perdus, au moins ${pctTexte(E.bouclierMinimum)} de ses PV max.`],
+    poison: [`Frappe à ${pctTexte(E.poisonFrappe)} et rend venimeux`, `frappe à ${pctTexte(E.poisonFrappe)}. Pendant ${E.veninTours} tours, qui te frappe est empoisonné : −${pctTexte(E.poisonMalus)} d'attaque et −${pctTexte(E.poisonParTour)} de ses PV max par tour.`],
+    provocation: [`Attire les coups ${E.provocationTours} tours (−${pctTexte(E.provocationReduction)})`, `pendant ${E.provocationTours} tours, les ennemis doivent te frapper, et tu encaisses ${pctTexte(E.provocationReduction)} de moins.`],
+    soin: [`Soigne l'allié le plus blessé`, `soigne ton allié le plus blessé : ${pctTexte(E.soinPartPerdue)} de ses PV perdus, au moins ${pctTexte(E.soinMinimum)} de ses PV max. Sans blessé, aucun effet.`],
+    boost: [`+${pctTexte(E.boostBonus)} sur ${E.boostAttaques} attaques d'un allié`, `ton allié qui frappe le plus fort gagne +${pctTexte(E.boostBonus)} sur ses ${E.boostAttaques} prochaines attaques.`],
+    vitesse: [`Zone dorée +${pctTexte(E.vitesseReduction)} pour l'équipe`, `toute l'équipe, jusqu'à la fin du combat : zone dorée de la jauge +${pctTexte(E.vitesseReduction)}. Tu attaques juste après.`],
+    marque: [`La cible prend +${pctTexte(E.marqueBonus)} sur ${E.marqueCoups} coups`, `la cible prend +${pctTexte(E.marqueBonus)} sur les ${E.marqueCoups} prochains coups.`],
+    zone: [`Frappe tous les ennemis à ${pctTexte(E.zonePart)}`, `frappe tous les ennemis, à ${pctTexte(E.zonePart)} chacun.`],
+    execution: [`×${E.executionFort} sous ${pctTexte(E.executionSeuil)} de PV, ×${String(E.executionFaible).replace('.', ',')} sinon`, `×${E.executionFort} sur une cible sous ${pctTexte(E.executionSeuil)} de PV, ×${String(E.executionFaible).replace('.', ',')} sinon.`],
+    pacte: [`×${E.pacteMult} dégâts, coûte ${pctTexte(E.pacteCoutPv)} de tes PV`, `frappe ×${E.pacteMult}, mais te coûte ${pctTexte(E.pacteCoutPv)} de tes PV max.`],
+  };
+  return (T[id] || ['', ''])[court ? 0 : 1];
+}
+// La description d'une compétence (attaque normale, coup spécial ou sort) pour CETTE créature à CETTE attaque.
+// Les dégâts annoncés sont ceux d'un coup PARFAIT (×1 ; « bien » en fait la moitié), avant les éléments.
+export function descriptionAttaque(k, creature, attaque) {
+  if (!k) return '';
+  if (k.sort) return `${texteSort(k.sort, true)} · ${k.manaCost != null ? k.manaCost : (SORTS[k.sort] || {}).cout} mana`;
+  const d = Math.max(1, Math.round(scaledSkillDamage(k, creature, attaque)));
+  return k.special ? `≈ ${d} dégâts (coup parfait) · mana pleine (${MANA_MAX})` : `≈ ${d} dégâts (coup parfait) · gratuite`;
+}
 export function scaledSkillDamage(skill, creature, currentAttack) {
   const normale = skill && skill.special ? meilleureAttaque(creature) : null;
   const base = normale ? Math.min(skill.damage, ULTIME_MAX * normale.damage) : skill.damage;

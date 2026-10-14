@@ -5285,7 +5285,8 @@ function auditFenetres() {
     const Ag = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
     if (!Ag.includes('+{pctGuide(ELEMENT_ADVANTAGE_MULT - 1)}') || !Ag.includes('−{pctGuide(1 - ELEMENT_WEAKNESS_MULT)}') || Ag.includes('>+30 %</Text>'))
       pb.push("guide : les pourcentages des éléments doivent être LUS dans les règles (l'ancien texte annonçait +30 % / −25 % pour ±15 %)");
-    const manquants = Object.keys(K.SORTS).filter((id) => !Ag.includes(`['${id}', \``));
+    const blocGuide = Ag.slice(Ag.indexOf('const SPECIALITES_GUIDE = () => ['), Ag.indexOf('function SpecialitesContenu()'));
+    const manquants = Object.keys(K.SORTS).filter((id) => !blocGuide.includes(`'${id}'`));
     if (manquants.length) pb.push(`guide des spécialités : sorts absents (${manquants.join(', ')})`);
     if (!Ag.includes("{[['elements', '🔥 Éléments'], ['specialites', '✨ Spécialités']].map(") || !Ag.includes('📖 Guide</Text>')) pb.push('guide : plus d\'onglet « Spécialités » à côté des éléments');
   }
@@ -5309,6 +5310,30 @@ function auditFenetres() {
     if (!srcC.includes('const apres = deckApresEffortEquitable(membres, budget, Infinity, { evolutions: true });')) pb.push('la photo du calculateur ne compte plus les évolutions');
     const Ae = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
     if (!Ae.includes('deckApresEffortEquitable(membres, griffesDispo, Infinity, { evolutions: true })')) pb.push("l'aperçu « avec tes Griffes » ne compte plus les évolutions");
+  }
+  // 14/10 (demande de l'auteur : « les descriptions des attaques ne veulent rien dire ») : UNE source — descriptionAttaque
+  // (vrais dégâts par scaledSkillDamage, la fonction du combat) et texteSort (chiffres LUS dans EFFETS) ; fiche créature,
+  // guide des spécialités et Clicker l'utilisent ; plus d'« END » (endurance supprimée le 11/09).
+  {
+    const fautes = [];
+    for (const c of Cl.CREATURES) {
+      const st = K.combatStatsForCreatureTyped(c, 20, 0, []);
+      for (const k of K.competencesAvecSort(c)) {
+        const t = K.descriptionAttaque(k, c, st.attack);
+        if (!t || /END/.test(t)) { fautes.push(`${c.id}/${k.name} : « ${t} »`); continue; }
+        if (k.sort) { if (!t.includes(`${K.SORTS[k.sort].cout} mana`) || !K.texteSort(k.sort, true)) fautes.push(`${c.id}/${k.name} (sort) : « ${t} »`); }
+        else if (!t.includes(`≈ ${Math.max(1, Math.round(K.scaledSkillDamage(k, c, st.attack)))} dégâts`)) fautes.push(`${c.id}/${k.name} : « ${t} » ≠ dégâts réels`);
+      }
+    }
+    if (fautes.length) pb.push(`descriptions d'attaques fausses ou vides : ${fautes.slice(0, 3).join(' · ')}${fautes.length > 3 ? ` (+${fautes.length - 3})` : ''}`);
+    const E = K.EFFETS, pc = (x) => `${Math.round(x * 100)} %`;
+    if (!K.texteSort('boost', true).includes(pc(E.boostBonus)) || !K.texteSort('soin').includes(pc(E.soinMinimum)) || !K.texteSort('zone', true).includes(pc(E.zonePart)))
+      pb.push('texteSort : un chiffre ne vient plus des règles (EFFETS)');
+    if (Object.keys(K.SORTS).some((id) => !K.texteSort(id) || !K.texteSort(id, true))) pb.push('texteSort : un sort sans texte');
+    const Afd = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+    const Cfd = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+    if (!Afd.includes('valeur={descriptionAttaque(k, creature, stats.attack)}') || !Afd.includes('{texteSort(id)}')) pb.push('fiche créature ou guide : les descriptions ne viennent plus de la source unique');
+    if (!Cfd.includes('{descriptionAttaque(skill, creature, combatStats.attack)}') || Cfd.includes('{skill.enduranceCost} END')) pb.push('Clicker : les attaques affichent de nouveau des chiffres bruts / « END »');
   }
   // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
   const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');

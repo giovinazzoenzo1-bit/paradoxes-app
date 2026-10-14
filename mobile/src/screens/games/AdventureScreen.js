@@ -439,6 +439,8 @@ import {
   ELEMENT_ADVANTAGE_MULT,
   ELEMENT_WEAKNESS_MULT,
   MANA_DEPART,
+  texteSort,
+  descriptionAttaque,
 } from '../../games/clicker/combatLogic';
 
 // NOTIFICATIONS RETIREES (03/09).
@@ -2013,7 +2015,7 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
         <TuileFiche key={k.id || n} style={tuile(0, n, true)} police={pTuile}
           icone={k.sort ? (k.icone || '✨') : k.special ? '🌟' : '⚔️'}
           titre={`${k.sort ? 'SORT' : k.special ? 'SPÉCIAL' : 'NORMAL'} · ${k.name}`}
-          valeur={k.sort ? `${(SORTS[k.sort] && SORTS[k.sort].desc) || ''} · ${k.manaCost} mana` : k.special ? `${k.damage} dégâts · mana plein` : `${k.damage} dégâts`} />
+          valeur={descriptionAttaque(k, creature, stats.attack)} />
       ))}
       {onglet === 'runes' && [0, 1, 2].map((n) => {
         const rune = equippedRunes[n]; const def = rune ? RUNE_TYPES[rune.type] : null;
@@ -2359,27 +2361,11 @@ const CYCLE_ELEMENTS = [['🔥', 'Feu'], ['💨', 'Air'], ['🌍', 'Terre'], ['�
 // ⚠️ Tous les chiffres sont LUS dans les règles (EFFETS, SORTS, multiplicateurs d'éléments, mana) : l'ancien texte annonçait
 // « +30 % / −25 % » pour des éléments à ±15 % — un texte recopié finit toujours par mentir.
 const pctGuide = (x) => `${Math.round(Math.abs(x) * 100)} %`;
-const SPECIALITES_GUIDE = () => {
-  const E = EFFETS;
-  return [
-    { role: '🛡️ Tank', aide: 'encaisse et protège', sorts: [
-      ['bouclier', `protège ton allié le plus blessé : ${pctGuide(E.bouclierPartPerdue)} de ses PV perdus, au moins ${pctGuide(E.bouclierMinimum)} de ses PV max.`],
-      ['poison', `frappe à ${pctGuide(E.poisonFrappe)}. Pendant ${E.veninTours} tours, qui te frappe est empoisonné : −${pctGuide(E.poisonMalus)} d'attaque et −${pctGuide(E.poisonParTour)} de ses PV max par tour.`],
-      ['provocation', `pendant ${E.provocationTours} tours, les ennemis doivent te frapper, et tu encaisses ${pctGuide(E.provocationReduction)} de moins.`],
-    ] },
-    { role: '💚 Soutien', aide: "aide toute l'équipe", sorts: [
-      ['soin', `soigne ton allié le plus blessé : ${pctGuide(E.soinPartPerdue)} de ses PV perdus, au moins ${pctGuide(E.soinMinimum)} de ses PV max. Sans blessé, aucun effet.`],
-      ['boost', `ton allié qui frappe le plus fort gagne +${pctGuide(E.boostBonus)} sur ses ${E.boostAttaques} prochaines attaques.`],
-      ['vitesse', `toute l'équipe, jusqu'à la fin du combat : zone dorée de la jauge +${pctGuide(E.vitesseReduction)}. Tu attaques juste après.`],
-      ['marque', `la cible prend +${pctGuide(E.marqueBonus)} sur les ${E.marqueCoups} prochains coups.`],
-    ] },
-    { role: '⚔️ Attaquant', aide: 'fait mal', sorts: [
-      ['zone', `frappe tous les ennemis, à ${pctGuide(E.zonePart)} chacun.`],
-      ['execution', `×${E.executionFort} sur une cible sous ${pctGuide(E.executionSeuil)} de PV, ×${String(E.executionFaible).replace('.', ',')} sinon.`],
-      ['pacte', `frappe ×${E.pacteMult}, mais te coûte ${pctGuide(E.pacteCoutPv)} de tes PV max.`],
-    ] },
-  ];
-};
+const SPECIALITES_GUIDE = () => [ // 14/10 : les phrases viennent de combatLogic.texteSort (même source que la fiche créature)
+  { role: '🛡️ Tank', aide: 'encaisse et protège', sorts: ['bouclier', 'poison', 'provocation'] },
+  { role: '💚 Soutien', aide: "aide toute l'équipe", sorts: ['soin', 'boost', 'vitesse', 'marque'] },
+  { role: '⚔️ Attaquant', aide: 'fait mal', sorts: ['zone', 'execution', 'pacte'] },
+];
 function SpecialitesContenu() {
   const { height } = useWindowDimensions();
   return (
@@ -2393,9 +2379,9 @@ function SpecialitesContenu() {
       {SPECIALITES_GUIDE().map((g) => (
         <View key={g.role} style={styles.specGroupe}>
           <Text style={styles.specRole}>{g.role} <Text style={styles.specRoleAide}>— {g.aide}</Text></Text>
-          {g.sorts.map(([id, txt]) => (
+          {g.sorts.map((id) => (
             <Text key={id} style={styles.specLigne}>
-              <Text style={styles.specNom}>{SORTS[id].icone} {SORTS[id].nom} ({SORTS[id].cout} 🔷)</Text> : {txt}
+              <Text style={styles.specNom}>{SORTS[id].icone} {SORTS[id].nom} ({SORTS[id].cout} 🔷)</Text> : {texteSort(id)}
             </Text>
           ))}
         </View>

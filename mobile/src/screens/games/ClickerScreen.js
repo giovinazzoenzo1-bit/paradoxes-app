@@ -152,6 +152,8 @@ import {
   facteurGardienMaitrise,
   planPourChance,
   chanceStabilisee,
+  competencesAvecSort,
+  descriptionAttaque,
 } from '../../games/clicker/combatLogic';
 import { questDef, todayKey } from '../../games/clicker/dailyLogic';
 import IncubatorPanel from './IncubatorPanel';
@@ -5336,10 +5338,12 @@ function CreatureDetail({ creature, owned, coins, onClose, pendingDiscount }) {
 
         <View style={styles.skillsBox}>
           <Text style={styles.sectionTitleSmall}>⚔️ Attaques</Text>
-          {creature.skills.map((skill) => (
+          {/* 14/10 : les VRAIES compétences de combat (sort compris) et leurs vrais effets — avant : « 3 dégâts · 5 END »
+              (chiffre brut, endurance supprimée le 11/09). */}
+          {competencesAvecSort(creature).map((skill) => (
             <View key={skill.id} style={styles.skillRowSmall}>
-              <Text style={styles.skillNameSmall}>{skill.name}</Text>
-              <Text style={styles.skillStatsSmall}>{skill.damage} dégâts · {skill.enduranceCost} END</Text>
+              <Text style={styles.skillNameSmall}>{skill.sort ? `${skill.icone || '✨'} ` : skill.special ? '🌟 ' : ''}{skill.name}</Text>
+              <Text style={styles.skillStatsSmall}>{descriptionAttaque(skill, creature, combatStats.attack)}</Text>
             </View>
           ))}
         </View>
