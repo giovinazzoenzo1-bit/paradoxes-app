@@ -5331,7 +5331,6 @@ function CreatureDetail({ creature, owned, coins, onClose, pendingDiscount }) {
           <Text style={styles.combatStatItem}>❤️ {combatStats.hp} PV</Text>
           <Text style={styles.combatStatItem}>⚔️ {combatStats.attack} ATQ</Text>
           <Text style={styles.combatStatItem}>👆 {combatStats.clickSpeed} vitesse</Text>
-          <Text style={styles.combatStatItem}>🔋 {combatStats.endurance} END</Text>
         </View>
 
         <Text style={styles.detailPowerHint}>✨ Pouvoir dédié (bulle) : {power.name}</Text>

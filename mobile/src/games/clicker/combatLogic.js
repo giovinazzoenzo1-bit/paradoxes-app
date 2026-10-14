@@ -708,23 +708,26 @@ export function plusFort(equipe, lanceur) {
 // `mult` (10/10, règle de l'auteur) : l'effet du sort selon le tap à la jauge (multiplicateurSort) — bouclier,
 // soin, venin, provocation, boost, vitesse, marque. Les DÉGÂTS d'un sort (zone, exécution, pacte, poison)
 // passent déjà par la jauge de l'attaque (même verdict). Ennemis : 1 (ils ne tapent pas).
-export function lancerSort(sortId, allies, lanceur, ennemis, cible, mult = 1) {
+// 14/10 (demande de l'auteur) : `cibleAllie` = l'allié CHOISI par le joueur (il le touche) pour Bouclier, Soin et Boost.
+// Absent (ennemis, joueur simulé) : choix automatique comme avant (le plus blessé / celui qui frappe le plus fort).
+export function lancerSort(sortId, allies, lanceur, ennemis, cible, mult = 1, cibleAllie = null) {
   const E = EFFETS;
   const A = allies.slice();
   const N = ennemis.slice();
   const ev = [{ type: 'sort', sort: sortId, lanceur }];
   A[lanceur] = { ...A[lanceur], mana: (A[lanceur].mana || 0) - SORTS[sortId].cout };
   const fin = (coup) => ({ allies: A, ennemis: N, coup, evenements: ev });
+  const choisi = Number.isInteger(cibleAllie) && A[cibleAllie] && vivant(A[cibleAllie]) ? cibleAllie : null;
   switch (sortId) {
     case 'bouclier': {
-      const t = plusBlesse(A);
+      const t = choisi != null ? choisi : plusBlesse(A);
       const v = Math.round(mult * Math.max(E.bouclierMinimum * pvMax(A[t]), E.bouclierPartPerdue * (pvMax(A[t]) - A[t].hp)));
       A[t] = avecEtats(A[t], { bouclier: Math.max(etatsDe(A[t]).bouclier || 0, v) });
       ev.push({ type: 'bouclier', cible: t, valeur: v });
       return fin(null);
     }
     case 'soin': {
-      const t = plusBlesse(A);
+      const t = choisi != null ? choisi : plusBlesse(A);
       const perdus = Math.max(0, pvMax(A[t]) - A[t].hp);
       const v = Math.min(perdus, Math.round(mult * Math.max(E.soinMinimum * pvMax(A[t]), E.soinPartPerdue * perdus)));
       A[t] = { ...A[t], hp: Math.min(pvMax(A[t]), A[t].hp + v) };
@@ -738,7 +741,7 @@ export function lancerSort(sortId, allies, lanceur, ennemis, cible, mult = 1) {
       A[lanceur] = avecEtats(A[lanceur], { provocation: E.provocationTours, provocationForce: mult });
       return fin(null);
     case 'boost': {
-      const t = plusFort(A, lanceur);
+      const t = choisi != null ? choisi : plusFort(A, lanceur);
       A[t] = avecEtats(A[t], { boost: { attaques: E.boostAttaques, bonus: E.boostBonus * mult } });
       ev.push({ type: 'boost', cible: t });
       return fin(null);
@@ -2084,27 +2087,27 @@ export const ULTIME_MAX = 2;
 const pctTexte = (x) => `${Math.round(Math.abs(x) * 100)} %`;
 export function texteSort(id, court = false) {
   const E = EFFETS;
-  const T = {
-    bouclier: [`Protège l'allié le plus blessé`, `protège ton allié le plus blessé : ${pctTexte(E.bouclierPartPerdue)} de ses PV perdus, au moins ${pctTexte(E.bouclierMinimum)} de ses PV max.`],
-    poison: [`Frappe à ${pctTexte(E.poisonFrappe)} et rend venimeux`, `frappe à ${pctTexte(E.poisonFrappe)}. Pendant ${E.veninTours} tours, qui te frappe est empoisonné : −${pctTexte(E.poisonMalus)} d'attaque et −${pctTexte(E.poisonParTour)} de ses PV max par tour.`],
-    provocation: [`Attire les coups ${E.provocationTours} tours (−${pctTexte(E.provocationReduction)})`, `pendant ${E.provocationTours} tours, les ennemis doivent te frapper, et tu encaisses ${pctTexte(E.provocationReduction)} de moins.`],
-    soin: [`Soigne l'allié le plus blessé`, `soigne ton allié le plus blessé : ${pctTexte(E.soinPartPerdue)} de ses PV perdus, au moins ${pctTexte(E.soinMinimum)} de ses PV max. Sans blessé, aucun effet.`],
-    boost: [`+${pctTexte(E.boostBonus)} sur ${E.boostAttaques} attaques d'un allié`, `ton allié qui frappe le plus fort gagne +${pctTexte(E.boostBonus)} sur ses ${E.boostAttaques} prochaines attaques.`],
-    vitesse: [`Zone dorée +${pctTexte(E.vitesseReduction)} pour l'équipe`, `toute l'équipe, jusqu'à la fin du combat : zone dorée de la jauge +${pctTexte(E.vitesseReduction)}. Tu attaques juste après.`],
-    marque: [`La cible prend +${pctTexte(E.marqueBonus)} sur ${E.marqueCoups} coups`, `la cible prend +${pctTexte(E.marqueBonus)} sur les ${E.marqueCoups} prochains coups.`],
-    zone: [`Frappe tous les ennemis à ${pctTexte(E.zonePart)}`, `frappe tous les ennemis, à ${pctTexte(E.zonePart)} chacun.`],
-    execution: [`×${E.executionFort} sous ${pctTexte(E.executionSeuil)} de PV, ×${String(E.executionFaible).replace('.', ',')} sinon`, `×${E.executionFort} sur une cible sous ${pctTexte(E.executionSeuil)} de PV, ×${String(E.executionFaible).replace('.', ',')} sinon.`],
-    pacte: [`×${E.pacteMult} dégâts, coûte ${pctTexte(E.pacteCoutPv)} de tes PV`, `frappe ×${E.pacteMult}, mais te coûte ${pctTexte(E.pacteCoutPv)} de tes PV max.`],
+  const T = { // [phrase SIMPLE (descriptions grisées, guide) , détail EN CHIFFRES (guide)]
+    bouclier: [`Protège un allié de ton choix`, `Bouclier de ${pctTexte(E.bouclierPartPerdue)} de ses PV perdus, au moins ${pctTexte(E.bouclierMinimum)} de ses PV max.`],
+    poison: [`Frappe et empoisonne qui te frappe`, `Frappe à ${pctTexte(E.poisonFrappe)}. Pendant ${E.veninTours} tours, qui te frappe perd ${pctTexte(E.poisonMalus)} d'attaque et ${pctTexte(E.poisonParTour)} de ses PV max par tour.`],
+    provocation: [`Attire les coups ennemis sur toi`, `Pendant ${E.provocationTours} tours, les ennemis doivent te frapper, et tu encaisses ${pctTexte(E.provocationReduction)} de moins.`],
+    soin: [`Soigne un allié de ton choix`, `${pctTexte(E.soinPartPerdue)} de ses PV perdus, au moins ${pctTexte(E.soinMinimum)} de ses PV max.`],
+    boost: [`Un allié de ton choix frappe plus fort`, `+${pctTexte(E.boostBonus)} sur ses ${E.boostAttaques} prochaines attaques.`],
+    vitesse: [`Jauge plus facile pour toute l'équipe`, `Zone dorée +${pctTexte(E.vitesseReduction)} jusqu'à la fin du combat. Tu attaques juste après.`],
+    marque: [`La cible subit plus de dégâts`, `+${pctTexte(E.marqueBonus)} sur les ${E.marqueCoups} prochains coups.`],
+    zone: [`Frappe tous les ennemis`, `${pctTexte(E.zonePart)} d'un coup sur chacun.`],
+    execution: [`Achève un ennemi presque K.O.`, `×${E.executionFort} sous ${pctTexte(E.executionSeuil)} de PV, ×${String(E.executionFaible).replace('.', ',')} sinon.`],
+    pacte: [`Frappe ×${E.pacteMult}, mais coûte des PV`, `Te coûte ${pctTexte(E.pacteCoutPv)} de tes PV max.`],
   };
   return (T[id] || ['', ''])[court ? 0 : 1];
 }
 // La description d'une compétence (attaque normale, coup spécial ou sort) pour CETTE créature à CETTE attaque.
-// Les dégâts annoncés sont ceux d'un coup PARFAIT (×1 ; « bien » en fait la moitié), avant les éléments.
 export function descriptionAttaque(k, creature, attaque) {
   if (!k) return '';
-  if (k.sort) return `${texteSort(k.sort, true)} · ${k.manaCost != null ? k.manaCost : (SORTS[k.sort] || {}).cout} mana`;
+  // 14/10 (auteur) : SANS coût en mana, des mots simples. Dégâts = coup parfait (« bien » en fait la moitié).
+  if (k.sort) return texteSort(k.sort, true);
   const d = Math.max(1, Math.round(scaledSkillDamage(k, creature, attaque)));
-  return k.special ? `≈ ${d} dégâts (coup parfait) · mana pleine (${MANA_MAX})` : `≈ ${d} dégâts (coup parfait) · gratuite`;
+  return k.special ? `Attaque spéciale : jusqu'à ${d} dégâts` : `Jusqu'à ${d} dégâts`;
 }
 export function scaledSkillDamage(skill, creature, currentAttack) {
   const normale = skill && skill.special ? meilleureAttaque(creature) : null;

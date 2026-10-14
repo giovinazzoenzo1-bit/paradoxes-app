@@ -5320,20 +5320,37 @@ function auditFenetres() {
       const st = K.combatStatsForCreatureTyped(c, 20, 0, []);
       for (const k of K.competencesAvecSort(c)) {
         const t = K.descriptionAttaque(k, c, st.attack);
-        if (!t || /END/.test(t)) { fautes.push(`${c.id}/${k.name} : « ${t} »`); continue; }
-        if (k.sort) { if (!t.includes(`${K.SORTS[k.sort].cout} mana`) || !K.texteSort(k.sort, true)) fautes.push(`${c.id}/${k.name} (sort) : « ${t} »`); }
-        else if (!t.includes(`≈ ${Math.max(1, Math.round(K.scaledSkillDamage(k, c, st.attack)))} dégâts`)) fautes.push(`${c.id}/${k.name} : « ${t} » ≠ dégâts réels`);
+        // 14/10 (auteur) : SANS coût en mana, des mots simples.
+        if (!t || /END|mana/.test(t)) { fautes.push(`${c.id}/${k.name} : « ${t} »`); continue; }
+        if (k.sort) { if (t !== K.texteSort(k.sort, true)) fautes.push(`${c.id}/${k.name} (sort) : « ${t} »`); }
+        else if (!t.toLowerCase().includes(`jusqu'à ${Math.max(1, Math.round(K.scaledSkillDamage(k, c, st.attack)))} dégâts`)) fautes.push(`${c.id}/${k.name} : « ${t} » ≠ dégâts réels`);
       }
     }
     if (fautes.length) pb.push(`descriptions d'attaques fausses ou vides : ${fautes.slice(0, 3).join(' · ')}${fautes.length > 3 ? ` (+${fautes.length - 3})` : ''}`);
     const E = K.EFFETS, pc = (x) => `${Math.round(x * 100)} %`;
-    if (!K.texteSort('boost', true).includes(pc(E.boostBonus)) || !K.texteSort('soin').includes(pc(E.soinMinimum)) || !K.texteSort('zone', true).includes(pc(E.zonePart)))
+    if (!K.texteSort('boost').includes(pc(E.boostBonus)) || !K.texteSort('soin').includes(pc(E.soinMinimum)) || !K.texteSort('zone').includes(pc(E.zonePart)))
       pb.push('texteSort : un chiffre ne vient plus des règles (EFFETS)');
     if (Object.keys(K.SORTS).some((id) => !K.texteSort(id) || !K.texteSort(id, true))) pb.push('texteSort : un sort sans texte');
     const Afd = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
     const Cfd = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
     if (!Afd.includes('valeur={descriptionAttaque(k, creature, stats.attack)}') || !Afd.includes('{texteSort(id)}')) pb.push('fiche créature ou guide : les descriptions ne viennent plus de la source unique');
-    if (!Cfd.includes('{descriptionAttaque(skill, creature, combatStats.attack)}') || Cfd.includes('{skill.enduranceCost} END')) pb.push('Clicker : les attaques affichent de nouveau des chiffres bruts / « END »');
+    if (!Cfd.includes('{descriptionAttaque(skill, creature, combatStats.attack)}') || Cfd.includes('{skill.enduranceCost} END') || Cfd.includes('{combatStats.endurance} END'))
+      pb.push('Clicker : les attaques affichent de nouveau des chiffres bruts / « END » (endurance supprimée le 11/09)');
+    // 14/10 (demande de l'auteur) : on CHOISIT l'allié qui reçoit Bouclier / Soin / Boost (on le touche), lueur sur la cible.
+    const gs = (id) => Cl.CREATURES.find((x) => x.id === id);
+    const mkA = (id, part) => { const st2 = K.combatStatsForCreatureTyped(gs(id), 20, 0, []); return { creature: gs(id), stats: st2, hp: Math.round(st2.hp * part), mana: 5 }; };
+    const eqA = () => [mkA('luxorbe', 0.5), mkA('racinea', 0.9), mkA('aegisolar', 0.8)];
+    const cibleSort = (sort, c) => (K.lancerSort(sort, eqA(), 0, [mkA('ventis', 1)], 0, 1, c).evenements.find((x) => x.type === sort) || {}).cible;
+    if (cibleSort('soin', 1) !== 1 || cibleSort('bouclier', 2) !== 2 || cibleSort('boost', 0) !== 0 || cibleSort('soin', null) !== 0)
+      pb.push("sorts d'allié : l'allié CHOISI n'est plus respecté (ou le choix automatique a changé)");
+    const Ccb = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+    if (!Ccb.includes("const SORTS_SUR_ALLIE = { bouclier: 'protéger', soin: 'soigner', boost: 'renforcer' };")
+      || !Ccb.includes('multiplicateurSort(verdictCoup), estSurAllie(skill) ? allyTargetRef.current : null)')
+      || !Ccb.includes("onPress: estSurAllie(armedSkill) && phase === 'choosing' && pvAffiche('p', fi, f.hp) > 0 ? () => chooseAlly(fi) : null")
+      || !Ccb.includes('if (estSurAllie(armedSkillRef.current)) return;')
+      || !Ccb.includes("ring: allyTarget === fi && (phase === 'tapping' || phase === 'resolving') ? 'target'"))
+      pb.push("combat : le choix de l'allié (toucher, transmission au moteur, lueur) n'est plus complet");
+    if (!Afd.includes('👆 Choisis le sort, puis touche qui le reçoit')) pb.push("guide : il n'explique plus comment lancer un sort (toucher l'allié ou l'adversaire)");
   }
   // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
   const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');

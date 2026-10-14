@@ -140,6 +140,10 @@ function Impact({ x, y, couleur, etincelles, effet = null, taille = 90, grand = 
 // Un visuel par sort (forme, couleur, icône, texte), joué sur la bonne créature : au
 // LANCEMENT pour les sorts de soutien, à l'IMPACT pour les offensifs ; le spécial assombrit
 // l'écran ; une créature qui tombe affiche « K.O. ». Transparents au toucher.
+// 14/10 (demande de l'auteur) : les sorts qui AIDENT un allié se lancent sur l'allié CHOISI (on le touche, comme on choisit
+// l'adversaire visé) ; une lueur entoure la créature choisie pendant la jauge. Valeur = le verbe de la consigne.
+const SORTS_SUR_ALLIE = { bouclier: 'protéger', soin: 'soigner', boost: 'renforcer' };
+const estSurAllie = (k) => !!(k && k.sort && SORTS_SUR_ALLIE[k.sort]);
 const SORT_VISUEL = {
   bouclier: { couleur: '#8fd3ff', icone: '🛡️', duree: 1100, forme: 'bulle', texte: (v) => (v ? `+${v}` : null) },
   // 13/10 : « +X PV » ; « PV pleins » quand il n'y avait rien à soigner (avant : rien du tout — retour de l'auteur).
@@ -359,6 +363,7 @@ import {
   applyGuardianDamage,
   guardianStats,
   coupsDeSoutien,
+  texteSort,
 } from '../../games/clicker/combatLogic';
 import { GUARDIAN_BASE_LEVEL } from '../../games/clicker/incubatorLogic';
 
@@ -555,6 +560,9 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
 
   const [phase, setPhase] = useState('choosing'); // 'choosing' | 'tapping' | 'done'
   const [selectedSkill, setSelectedSkill] = useState(null);
+  // 14/10 : l'allié CHOISI pour Bouclier / Soin / Boost (on le touche) — une lueur l'entoure pendant la jauge.
+  const [allyTarget, setAllyTarget] = useState(null);
+  const allyTargetRef = useRef(null);
   // Détail d'une attaque, affiché sur appui long.
   const [skillInfo, setSkillInfo] = useState(null);
   // Attaque choisie mais PAS encore lancée : elle attend que le joueur
@@ -940,6 +948,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
   // seulement pendant le choix de compétence, pas en plein défi de tap.
   const chooseTarget = (idx) => {
     if (phase !== 'choosing') return;
+    if (estSurAllie(armedSkillRef.current)) return; // 14/10 : ce sort vise un ALLIÉ — toucher un adversaire ne le lance pas
     if (opponents[idx].hp <= 0) return;
     setTargetIndex(idx);
     // Une attaque armée part sur la cible qu'on vient de désigner.
@@ -950,6 +959,15 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
       targetIndexRef.current = idx;
       launchArmedSkill();
     }
+  };
+
+  // 14/10 (demande de l'auteur) : un sort qui aide un allié se lance sur l'allié TOUCHÉ.
+  const chooseAlly = (idx) => {
+    if (phase !== 'choosing' || !estSurAllie(armedSkillRef.current)) return;
+    if (!fightersRef.current[idx] || fightersRef.current[idx].hp <= 0) return;
+    allyTargetRef.current = idx;
+    setAllyTarget(idx);
+    launchArmedSkill();
   };
 
   // Choisir une attaque l'ARME seulement : elle ne part plus tout de
@@ -963,6 +981,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     // c'est ce qui en fait un moment attendu plutôt qu'une attaque de plus.
     if (skill.special && activeFighter.mana < MANA_MAX) return;
     if (activeFighter.mana < cost) return;
+    allyTargetRef.current = null; setAllyTarget(null); // 14/10 : nouvelle action → plus d'allié choisi
     setArmedSkill({ ...skill, isBasic });
   };
 
@@ -1069,7 +1088,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     if (skill.sort) {
       // 10/10 (règle de l'auteur) : l'EFFET du sort suit ce même tap (jaune 100 %, orange 50 %, zone sombre ou
       // pas de tap 10 %) ; ses dégâts éventuels suivent `multJauge` (100 / 50 / 25 %).
-      const r = lancerSort(skill.sort, fightersRef.current, curIdx, opponentsRef.current, targetIdx, multiplicateurSort(verdictCoup));
+      const r = lancerSort(skill.sort, fightersRef.current, curIdx, opponentsRef.current, targetIdx, multiplicateurSort(verdictCoup), estSurAllie(skill) ? allyTargetRef.current : null);
       coupSort = r.coup;
       evenementsSort = r.evenements || [];
       fightersRef.current = r.allies;
@@ -1606,7 +1625,9 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           // qui joue.
           mana: f.mana, manaMax: MANA_MAX,
           etats: iconesEtats(f), etatsCote: 'droite',
-          fainted: pvAffiche('p', fi, f.hp) <= 0, ring: fi === activeIndex ? 'active' : null, disabled: true, hpColor: COLORS.good,
+          // 14/10 : touchable quand un sort d'allié est armé ; anneau de CIBLE sur l'allié choisi pendant la jauge.
+          fainted: pvAffiche('p', fi, f.hp) <= 0, ring: allyTarget === fi && (phase === 'tapping' || phase === 'resolving') ? 'target' : fi === activeIndex ? 'active' : null,
+          onPress: () => chooseAlly(fi), disabled: !(estSurAllie(armedSkill) && phase === 'choosing') || pvAffiche('p', fi, f.hp) <= 0, hpColor: COLORS.good,
           lunging: !!lunge && lunge.side === 'player' && fi === lunge.index, lungeDir: 1,
           lungeDx: lunge && lunge.side === 'player' && fi === lunge.index ? lunge.dx : 0, lungeDy: lunge && lunge.side === 'player' && fi === lunge.index ? lunge.dy : 0,
           floatDamage: playerDamageFloat && playerDamageFloat.index === fi ? playerDamageFloat.amount : null,
@@ -1690,7 +1711,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           emoji: d.emoji, name: d.name,
           hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, fainted,
           etats: iconesEtats(o), etatsCote: 'gauche',
-          ring: i === targetIndex && !fainted ? 'target' : null,
+          ring: i === targetIndex && !fainted && !(allyTarget != null && (phase === 'tapping' || phase === 'resolving')) ? 'target' : null,
           // Vert = ton élément domine le sien, orange = neutre, rouge =
           // tu es en position défavorable.
           elemColor: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)],
@@ -1722,7 +1743,9 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         <Image source={COMBAT_IMG.bandeau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
         {fighters.map((f, fi) => {
           const d = f.creature.stages[stadeVisuel(f.evolutionTier)];
-          return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, niveau: f.ownedLevel, hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex, ko: pvAffiche('p', fi, f.hp) <= 0 });
+          return panneauCombattant({ key: `bp${fi}`, gauche: largeurBandeau * (0.035 + fi * 0.118), nom: d.name, niveau: f.ownedLevel, hp: pvAffiche('p', fi, f.hp), hpMax: f.stats.hp, mana: f.mana, actif: fi === activeIndex, ko: pvAffiche('p', fi, f.hp) <= 0,
+            cible: allyTarget === fi && (phase === 'tapping' || phase === 'resolving'), // 14/10 : lueur sur l'allié choisi
+            onPress: estSurAllie(armedSkill) && phase === 'choosing' && pvAffiche('p', fi, f.hp) > 0 ? () => chooseAlly(fi) : null });
         })}
         <View style={[styles.bandeauMessage, { left: largeurBandeau * 0.395, width: largeurBandeau * 0.21, height: bandeauH }]}>
           <Text style={[styles.bandeauMessageTexte, { fontSize: Math.max(10, Math.round(bandeauH * 0.22)) }]} numberOfLines={2}>
@@ -1779,8 +1802,11 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
               entier. Le coût est déjà lisible sur le bouton, inutile de
               le répéter ici. */}
           <Text style={styles.skillInfoLine}>
-            {activeFighter.creature.stages[0].name} utilise {skillInfo.name} et inflige{' '}
-            {skillInfo.sort ? `${SORTS[skillInfo.sort].desc} · ${skillInfo.manaCost} mana` : `${nombreCourt(degatsAffiches(skillInfo))} dégâts`}.
+            {/* 14/10 : des mots simples, et CE QU'IL FAUT TOUCHER (avant : « Aegisolar utilise Bouclier et inflige 45 % des PV
+                perdus · 3 mana » — un bouclier n'inflige rien). */}
+            {skillInfo.sort
+              ? `${SORTS[skillInfo.sort].icone} ${SORTS[skillInfo.sort].nom} : ${texteSort(skillInfo.sort, true)}. ${SORTS_SUR_ALLIE[skillInfo.sort] ? `Touche l'allié à ${SORTS_SUR_ALLIE[skillInfo.sort]}.` : 'Touche un adversaire.'}`
+              : `${skillInfo.name} : jusqu'à ${nombreCourt(degatsAffiches(skillInfo))} dégâts. Touche un adversaire.`}
           </Text>
           {/* L'affinité est lue sur les PASTILLES colorées des
               adversaires, pas répétée ici. */}

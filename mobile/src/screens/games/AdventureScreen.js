@@ -2367,28 +2367,29 @@ const SPECIALITES_GUIDE = () => [ // 14/10 : les phrases viennent de combatLogic
   { role: '⚔️ Attaquant', aide: 'fait mal', sorts: ['zone', 'execution', 'pacte'] },
 ];
 function SpecialitesContenu() {
+  // 14/10 (auteur : « que le tuto soit clair et facile ») : une phrase SIMPLE par sort (la même que la description grisée),
+  // le détail en chiffres en petit dessous ; comment LANCER un sort (toucher l'allié ou l'adversaire visé).
   const { height } = useWindowDimensions();
   return (
     <ScrollView style={{ maxHeight: Math.round(height * 0.52) }} contentContainerStyle={{ paddingBottom: 4 }}>
       <Text style={styles.elemHelpLine}>
-        Chaque créature a une <Text style={styles.elemHelpStrong}>spécialité</Text> qui lui donne un <Text style={styles.elemHelpStrong}>sort</Text>.
+        Chaque créature a un <Text style={styles.elemHelpStrong}>rôle</Text> et un <Text style={styles.elemHelpStrong}>sort</Text>.
       </Text>
-      <Text style={styles.specLigne}>🔷 Mana : {MANA_DEPART} au départ, +{MANA_PER_TURN} par tour, {MANA_MAX} au maximum. Un sort coûte 2 ou 3.</Text>
-      <Text style={styles.specLigne}>💥 À {MANA_MAX} de mana, ton coup spécial est prêt : lancer un sort le retarde.</Text>
-      <Text style={styles.specLigne}>🎯 Une jauge parfaite renforce aussi tes sorts.</Text>
+      <Text style={styles.specLigne}>🔷 La mana monte de {MANA_PER_TURN} à chaque tour. Un sort en coûte 2 ou 3.</Text>
+      <Text style={styles.specLigne}>💥 Mana pleine ({MANA_MAX}) : ton attaque spéciale est prête.</Text>
+      <Text style={styles.specLigne}>👆 Choisis le sort, puis touche qui le reçoit : un <Text style={styles.specNom}>allié</Text> pour Bouclier, Soin et Boost, un <Text style={styles.specNom}>adversaire</Text> sinon.</Text>
       {SPECIALITES_GUIDE().map((g) => (
         <View key={g.role} style={styles.specGroupe}>
           <Text style={styles.specRole}>{g.role} <Text style={styles.specRoleAide}>— {g.aide}</Text></Text>
           {g.sorts.map((id) => (
-            <Text key={id} style={styles.specLigne}>
-              <Text style={styles.specNom}>{SORTS[id].icone} {SORTS[id].nom} ({SORTS[id].cout} 🔷)</Text> : {texteSort(id)}
-            </Text>
+            <View key={id}>
+              <Text style={styles.specLigne}><Text style={styles.specNom}>{SORTS[id].icone} {SORTS[id].nom}</Text> : {texteSort(id, true)}.</Text>
+              <Text style={styles.specDetail}>{texteSort(id)}</Text>
+            </View>
           ))}
         </View>
       ))}
-      <Text style={styles.elemHelpFoot}>
-        Garde tes sorts pour le bon moment : un Soin sans blessé ou une Exécution sur une cible en pleine forme sont presque perdus.
-      </Text>
+      <Text style={styles.elemHelpFoot}>🎯 Une jauge parfaite renforce tes attaques ET tes sorts.</Text>
     </ScrollView>
   );
 }
@@ -2405,9 +2406,9 @@ function ElementHelpOverlay({ onClose }) {
       </View>
       {onglet === 'elements' ? (
         <>
+          {/* 14/10 (auteur : « clair et facile ») : 3 phrases courtes. */}
           <Text style={styles.elemHelpLine}>
-            Attaquer un élément que le tien domine inflige <Text style={styles.elemHelpStrong}>+{pctGuide(ELEMENT_ADVANTAGE_MULT - 1)}</Text> de dégâts.
-            L'inverse en inflige <Text style={styles.elemHelpWeak}>−{pctGuide(1 - ELEMENT_WEAKNESS_MULT)}</Text>.
+            Chaque élément en bat un autre.{'\n'}Ton élément bat le sien : <Text style={styles.elemHelpStrong}>+{pctGuide(ELEMENT_ADVANTAGE_MULT - 1)}</Text> de dégâts.{'\n'}Le sien bat le tien : <Text style={styles.elemHelpWeak}>−{pctGuide(1 - ELEMENT_WEAKNESS_MULT)}</Text>.
           </Text>
           <View style={styles.elemCycle}>
             {CYCLE_ELEMENTS.map(([ic, nom], n) => (
@@ -2421,12 +2422,11 @@ function ElementHelpOverlay({ onClose }) {
             ))}
           </View>
           <Text style={styles.elemHelpLine}>
-            ✨ Lumière et 🌑 Ténèbres se frappent <Text style={styles.elemHelpStrong}>fort mutuellement</Text>.
-            {'\n'}🔮 Magie n'a ni avantage ni faiblesse.
+            ✨ Lumière et 🌑 Ténèbres se battent l'une l'autre : <Text style={styles.elemHelpStrong}>+{pctGuide(ELEMENT_ADVANTAGE_MULT - 1)}</Text> chacune.
+            {'\n'}🔮 Magie : ni avantage, ni faiblesse.
           </Text>
           <Text style={styles.elemHelpFoot}>
-            En combat, une pastille colorée au-dessus de chaque adversaire indique
-            ta position : vert favorable, orange neutre, rouge défavorable.
+            En combat, la pastille sur chaque adversaire : vert = avantage, orange = neutre, rouge = désavantage.
           </Text>
         </>
       ) : <SpecialitesContenu />}
@@ -4015,6 +4015,7 @@ const styles = StyleSheet.create({
   specRoleAide: { color: '#e7cfa3', fontSize: 12, fontWeight: '700', fontStyle: 'italic' },
   specLigne: { color: '#fbe9c4', fontSize: 13, fontWeight: '600', lineHeight: 18, marginBottom: 6, textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   specNom: { color: '#8df08d', fontWeight: '900' },
+  specDetail: { color: '#cdb98f', fontSize: 11, fontStyle: 'italic', lineHeight: 15, marginTop: -4, marginBottom: 7, marginLeft: 10 },
   elemHelpBack: {
     position: 'absolute', top: 8, right: 10, zIndex: 5,
     width: 30, height: 30, borderRadius: 15,
