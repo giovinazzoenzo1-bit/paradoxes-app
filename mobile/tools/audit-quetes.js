@@ -3373,7 +3373,7 @@ function auditSortsMoteur() {
   verif(K.lancerSort('execution', [fx(50, 50)], 0, [fx(20, 100)], 0).coup.part === 2
     && K.lancerSort('execution', [fx(50, 50)], 0, [fx(50, 100)], 0).coup.part === 0.6, 'exécution : ×2 sous 30 %, ×0,6 sinon');
   r = K.lancerSort('pacte', [fx(10, 100)], 0, [fx(50, 50)], 0);
-  verif(r.allies[0].hp === 1 && r.coup.part === 2, 'pacte : ×2, coûte 15 % des PV sans jamais tuer le lanceur');
+  verif(r.allies[0].hp === 1 && r.coup.part === 1.5, 'pacte : ×1,5, coûte 30 % des PV sans jamais tuer le lanceur (choix de l\'auteur, 17/10)');
   const lent = fx(100, 100);
   verif(K.largeurZoneParfait({ ...lent, etats: { vitesse: E.vitesseReduction } }) > K.largeurZoneParfait(lent), 'vitesse : zone dorée de la jauge plus large (03/10 ; avant : moins de taps)');
   verif(!K.sortDisponible(fx(100, 100, {}, 1), 'bouclier'), 'sans assez de mana, le sort est indisponible (grisé)');
@@ -5798,3 +5798,25 @@ function auditImportsMasques() {
   return pb;
 }
 module.exports.auditImportsMasques = auditImportsMasques;
+
+// 17/10 (soir) — CHOIX DE L'AUTEUR (après mesure) : Pacte ×1,5 pour 30 % de ses PV max (avant ×2 pour 15 % : plus fort que l'ultime
+// du joueur pour 2 de mana ; Malefix gagnait 76-82 % des duels à niveau égal, les autres peu communes 50 % → 58-59 %) ; énergie
+// max 7 (avant 5 : une fenêtre demande ~8,7 tentatives). Textes du Pacte LUS dans les règles (carte de combat, guide).
+function auditPacteEnergie() {
+  const K = load('combatLogic'); const C = load('clickerLogic');
+  const pb = [];
+  if (K.EFFETS.pacteMult !== 1.5 || K.EFFETS.pacteCoutPv !== 0.3) pb.push(`Pacte : ×${K.EFFETS.pacteMult} pour ${Math.round(100 * K.EFFETS.pacteCoutPv)} % de PV (choix de l'auteur : ×1,5 pour 30 %)`);
+  const base = C.CREATURES[0];
+  const fx = (hp, max) => ({ creature: base, stats: { ...K.combatStatsForCreatureTyped(base, 10, 0, []), hp: max }, hp, mana: 5, resilienceUsed: false, etats: {} });
+  const r = K.lancerSort('pacte', [fx(100, 100)], 0, [fx(50, 50)], 0);
+  if (r.allies[0].hp !== 70 || !r.coup || r.coup.part !== 1.5) pb.push(`Pacte en combat : PV ${r.allies[0].hp} (70 attendus), coup ×${r.coup && r.coup.part} (×1,5 attendu)`);
+  if (K.lancerSort('pacte', [fx(20, 100)], 0, [fx(50, 50)], 0).allies[0].hp !== 1) pb.push('Pacte : il ne doit jamais tuer son lanceur (1 PV minimum)');
+  if (K.SORTS.pacte.desc !== '×1,5 · coûte 30 % de PV') pb.push(`carte du Pacte en combat : « ${K.SORTS.pacte.desc} » (doit lire les règles : ×1,5 · coûte 30 % de PV)`);
+  const guide = JSON.stringify([K.texteSort('pacte', true), K.texteSort('pacte', false)]);
+  if (!guide.includes('×1,5') || !guide.includes('30 %')) pb.push('guide du Pacte : chiffres absents ou faux (' + guide.slice(0, 80) + ')');
+  if (K.ENERGY_MAX !== 7) pb.push(`énergie max ${K.ENERGY_MAX} (choix de l'auteur : 7)`);
+  const t0 = 1e12, plein = K.computeEnergyRegen(0, t0, t0 + 10 * K.ENERGY_REGEN_MS);
+  if (plein.energy !== 7) pb.push(`recharge : ${plein.energy} énergies après 10 recharges (plafond 7 attendu)`);
+  return pb;
+}
+module.exports.auditPacteEnergie = auditPacteEnergie;

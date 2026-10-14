@@ -639,6 +639,12 @@ const SABOTAGES = [
   // 17/10 : plantage de l'Exploration (import masqué par un tableau local).
   ['auditImportsMasques', F.aventure, "le tableau local reprend le nom de la fonction importée (plantage en touchant EXPLORATION)",
     remplace('  const niveauxEquipe = deck.filter(Boolean)', '  const niveauxDuDeck = deck.filter(Boolean)')],
+  // 17/10 (soir) : Pacte ×1,5 / 30 % et énergie 7 (choix de l'auteur).
+  ['auditPacteEnergie', F.combat, "le Pacte repasse à ×2", remplace('  pacteMult: 1.5,', '  pacteMult: 2,')],
+  ['auditPacteEnergie', F.combat, "le Pacte ne coûte plus que 15 % de PV", remplace('  pacteCoutPv: 0.30,', '  pacteCoutPv: 0.15,')],
+  ['auditPacteEnergie', F.combat, "l'énergie max retombe à 5", remplace('export const ENERGY_MAX = 7;', 'export const ENERGY_MAX = 5;')],
+  ['auditPacteEnergie', F.combat, "la carte du Pacte réécrit ses chiffres en dur",
+    remplace("SORTS.pacte.desc = `×${String(EFFETS.pacteMult).replace('.', ',')} · coûte ${Math.round(EFFETS.pacteCoutPv * 100)} % de PV`;", "SORTS.pacte.desc = '×2 · coûte 15 % de PV';")],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

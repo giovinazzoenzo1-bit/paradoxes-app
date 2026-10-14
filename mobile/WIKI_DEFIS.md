@@ -1206,6 +1206,8 @@ côte — « 🔥 Éléments » et « ✨ Spécialités » (demande de l'auteur 
   (lancer un sort le retarde) ; une jauge parfaite renforce les sorts.
 - ⚠️ RÈGLE : tous les chiffres du guide sont LUS dans les règles (EFFETS, SORTS, ELEMENT_ADVANTAGE_MULT /
   ELEMENT_WEAKNESS_MULT, MANA_*). L'ancien texte des éléments annonçait « +30 % / −25 % » pour ±15 % réels.
+  17/10 (choix de l'auteur, mesuré) : **Pacte de sang ×1,5 pour 30 % des PV max** du lanceur (avant ×2 pour 15 % — plus fort que
+  l'ultime) ; **énergie max 7** en Exploration (avant 5 ; 1 énergie par tentative, +1 toutes les 20 min).
 
 **Soin** (13/10) : 30 % des PV perdus de l'allié le plus blessé, AU MOINS 15 % de ses PV max (sans dépasser ce qui manque) ;
 à PV pleins, l'écran affiche « PV pleins » (avant : rien — « on ne voit pas l'ajout d'HP »).

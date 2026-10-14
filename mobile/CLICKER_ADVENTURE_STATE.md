@@ -3831,6 +3831,25 @@ mobile/tools/capture/ouvrir-exploration.mjs : rend la vraie appli, touche EXPLOR
 Contrôles : 113 verts ; 1 sabotage → 236 prouvés (5 passes) ; taps 20/20 ; sonde de l'Exploration OK.
 
 
+## 17/10 (nuit) — PACTE ×1,5 / 30 % + ÉNERGIE 7 : BRANCHE `pacte-energie`, NON PUBLIÉE (conflit de calibration mesuré)
+
+CHOIX DE L'AUTEUR (après mesure en duels, Malefix 76-82 % contre 50 % pour les peu communes ; ×1,5 + 30 % → 58-59 %) : Pacte ×1,5
+pour 30 % des PV max ; énergie max 7. FAIT SUR LA BRANCHE : EFFETS, carte du Pacte et guide LUS dans les règles (« ×1,5 » avec virgule),
+ENERGY_MAX 7, simulateur de parcours aligné (energieMax: K.ENERGY_MAX — il avait 5 écrit en dur), auditSortsMoteur recalé (il encodait
+×2 / 15 %), auditPacteEnergie + 4 sabotages, 3 tables de facteurs REMESURÉES en mesure AFFINÉE (la simple, bloquée à 0,828, faisait
+échouer auditFenetres : cran 4 à 72 %). Étapes à Malefix ennemi : −11,8 % en moyenne.
+POURQUOI NON PUBLIÉ — deux contrôles se contredisent aux Ascensions 4-5 (étapes 145-227), MESURÉ :
+  tables remesurées → crans du panel OK, mais auditParcours : joueur gratuit MÉDIAN 3,8 / 3,9 victoires sur 10 à l'A4/A5 (alarme < 4) ;
+  mesure de midi gardée pour 145-300 → parcours OK, mais auditEtapesAvancees : cran 3 à 86 %, cran 5 à 49 % (trop facile) ;
+  milieu des deux → parcours A4 3,9 (toujours rouge).
+CAUSE : les facteurs sont mesurés contre un panel de COMMUNES/PEU COMMUNES ; les decks de fin de partie (épiques, légendaires) ne
+réagissent pas pareil (les ennemis 152+ utilisant le Pacte affaiblis pèsent beaucoup contre le panel, peu contre un deck fort).
+GRIFFES_PAR_COMBAT mesuré sur la branche : [19, 27, 53, 114, 196, 206] (table [20, 26, 60, 119, 307, 359]) — à recopier au moment de publier.
+À DÉCIDER AVEC L'AUTEUR : (1) facteur d'espèce du DECK du joueur dans la photo (relatif au panel, comme facteurElements) ; ou
+(2) Pacte réduit pour le JOUEUR seulement (précédent : ultime ×1,5 joueur / ×2 ennemis) → les ennemis ne changent pas, tables valides ;
+ou (3) publier l'énergie 7 seule. La branche contient la version (pacte partout + tables remesurées).
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
