@@ -60,8 +60,13 @@ function commentairesAvaleurs(fichier) {
     const k = l.indexOf(' // '); if (k < 0) return;
     const avant = l.slice(0, k), apres = l.slice(k + 4);
     if ((avant.match(/'/g) || []).length % 2 || (avant.match(/`/g) || []).length % 2 || (avant.match(/"/g) || []).length % 2) return; // dans une chaîne
-    if (!/,\s*$/.test(avant)) return;
-    if (/\b[a-zA-Z_]+:\s*[a-zA-Z_('`\[{0-9][^,]*,\s*[a-zA-Z_]+[:,]/.test(apres) || /\b(hp|hpMax|ko|onPress|style|key|nom|niveau)\s*:/.test(apres)) trouves.push(n + 1);
+    // 16/10 (renforcée) : derrière une VIRGULE, des propriétés avalées ; derrière « ; { ( », des INSTRUCTIONS avalées (le
+    // commentaire finit comme du code, « ; » ou « } », avec une affectation). Les deux vrais bugs du 16/10 crient, 0 fausse alerte.
+    const virgule = /,\s*$/.test(avant), instruction = /[;{(]\s*$/.test(avant);
+    if (!virgule && !instruction) return;
+    const a = apres.trim();
+    if (virgule && (/\b[a-zA-Z_]+:\s*[a-zA-Z_('`\[{0-9][^,]*,\s*[a-zA-Z_]+[:,]/.test(a) || /\b(hp|hpMax|ko|onPress|style|key|nom|niveau)\s*:/.test(a))) { trouves.push(n + 1); return; }
+    if (/[;}]\s*$/.test(a) && /[a-zA-Z_\]\)]\s*(\+=|-=|\*=|=(?![=>]))/.test(a)) trouves.push(n + 1);
   });
   return trouves;
 }
