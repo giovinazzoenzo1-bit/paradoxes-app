@@ -3848,6 +3848,24 @@ Contrôles : auditSortsMoteur recalé (il encodait ×2 / 15 %) ; auditPacteEnerg
 sonde de l'Exploration OK.
 
 
+## 17/10 (nuit, suite) — COMBATS 4 ET 5 ADOUCIS DÈS L'ÉTAPE 11 : 60 % / 45 % (choix de l'auteur, publié)
+
+RAPPORT (nouvelle partie, étapes 1-23) : « de l'étape 1 à 10 c'était ok, après trop compliqué ». MESURÉ : 7 premiers essais sur 10
+gagnés aux étapes 11-20 (cible), mais 4 tentatives à l'étape 14, 3 aux 19 et 20 ; étape 21-25 : le jeu supposait 150 Griffes dépensées
+(96 en poche + ~54 à récupérer) → deck réel 55 / 11 / 0 % aux étapes 21-23. Rejeu : compter ou non l'évolution de Zephyrion donne
+les MÊMES ennemis (27 / 34 / 34) — l'évolution n'était pas la cause, la dépense supposée oui.
+CHOIX DE L'AUTEUR (option 2) : combats 4 et 5 à 60 % et 45 % (avant 50 / 33). Appliqué DÈS L'ÉTAPE 11 (chapitre 1 « ok » pour l'auteur).
+CODE : CIBLES_ADOUCIES, ETAPE_ADOUCISSEMENT 11, cibleDifficulte(n, d) ; rapportDifficulte(…, levelNumber) suit la courbe de la
+configuration depuis le point 50 % calé (t[4] × correction × exp(logit(p) / pente)) ; options.cibleBrute garde les OUTILS de mesure au
+point 50 % (mesurer-etapes) — sinon les prochains facteurs d'étape seraient faussés. Facteurs d'étape inchangés (le point 50 % ne bouge pas).
+MESURÉ (vrais combats, 6 équipes) : 16-60 87 / 66 / 66 / 54 / 43 % ; 61-100 89 / 70 / 63 / 54 / 38 ; 121-280 92 / 73 / 69 / 53 / 43
+(avant : crans 4 / 5 à ~41-52 / 26-31 %). Défaites par fenêtre (joueur de référence) ~5,2 → ~3,4.
+CONTRÔLES : auditFenetres et auditEtapesAvancees comparent à la cible de CHAQUE étape ; auditCransAdoucis (nouveau → 116) ;
+3 sabotages → 244 prouvés.
+⚠️ COPIE COUPÉE : une branche locale `crans-doux` (60 / 43 % dès l'étape 24, jamais poussée) existait déjà — renommée
+`crans-doux-copie-coupee`, NON utilisée (pas le choix écrit de l'auteur).
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

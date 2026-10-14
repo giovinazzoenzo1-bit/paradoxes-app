@@ -201,6 +201,9 @@ que la puissance ne voit pas (sorts, soins, boucliers, effets d'équipe) : il es
 **L'aperçu attend la photo** (17/10) : en arrivant sur une nouvelle fenêtre, la photo se calcule en une fraction de seconde.
 Pendant ce temps, l'aperçu affiche « calcul… » et COMBATTRE est grisé : on ne mesure ni ne joue jamais sur un niveau provisoire.
 
+**Combats 4 et 5 adoucis dès l'étape 11** (17/10, choix de l'auteur) : 60 % et 45 % de chances visées (avant 50 % et 33 %) ;
+le chapitre 1 (étapes 1-10) garde 95 / 85 / 70 / 50 / 33 %. Défaites moyennes par fenêtre : 3,7 → 2,5.
+
 **Ajouter des étapes ou changer des ennemis** : relancer `NODE_PATH=… node mobile/tools/mesurer-etapes.js <de> <à>` (par morceaux
 de 30 étapes, quelques minutes) et recopier le résultat dans `FACTEUR_ETAPE`. Puis lancer les contrôles. Depuis le 17/10,
 préférer la **mesure affinée** (`AFFINE=1`, fonction `mesurerAffine`) : elle replace les ennemis jusqu'à ~50 % de victoires,

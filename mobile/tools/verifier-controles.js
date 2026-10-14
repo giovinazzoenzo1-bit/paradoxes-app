@@ -646,6 +646,10 @@ const SABOTAGES = [
   ['auditPacteEnergie', F.combat, "l'énergie max retombe à 5", remplace('export const ENERGY_MAX = 7;', 'export const ENERGY_MAX = 5;')],
   ['auditPacteEnergie', F.combat, "la carte du Pacte réécrit ses chiffres en dur",
     remplace("SORTS.pacte.desc = `×${String(EFFETS.pacteMultJoueur).replace('.', ',')} · coûte ${Math.round(EFFETS.pacteCoutPvJoueur * 100)} % de PV`;", "SORTS.pacte.desc = '×2 · coûte 15 % de PV';")],
+  // 17/10 (nuit) : combats 4 et 5 adoucis dès l'étape 11 (choix de l'auteur).
+  ['auditCransAdoucis', F.combat, "les cibles adoucies reviennent à 50 / 33 %", remplace('export const CIBLES_ADOUCIES = { 4: 0.6, 5: 0.45 };', 'export const CIBLES_ADOUCIES = { 4: 0.5, 5: 1 / 3 };')],
+  ['auditCransAdoucis', F.combat, "le calcul des ennemis ignore l'adoucissement", remplace('  if (!douce) return (t[d] || t[3]) * (CORRECTION_DIFFICULTE[d] || 1);', '  if (true) return (t[d] || t[3]) * (CORRECTION_DIFFICULTE[d] || 1);')],
+  ['auditCransAdoucis', path.join(RACINE, 'tools/mesurer-etapes.js'), "l'outil de mesure se place sur la cible adoucie", remplace('{ sansFacteur: true, cibleBrute: true }', '{ sansFacteur: true }')],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

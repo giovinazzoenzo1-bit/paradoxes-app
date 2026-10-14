@@ -24,7 +24,7 @@ function mesurer(n, combatsParEquipe = 40) {
   for (const ids of PANEL) {
     const membres = ids.slice(0, nbJ).map((id) => ({ creature: g(id), ownedLevel: niv, evolutionTier: evo, equippedRunes: [] }));
     const P = K.puissanceAffichee(membres);
-    const L = K.niveauPourDifficulte(n, P, 4, nbJ, { sansFacteur: true }); // là où la formule seule prédit 50 %
+    const L = K.niveauPourDifficulte(n, P, 4, nbJ, { sansFacteur: true, cibleBrute: true }); // là où la formule seule prédit 50 %
     const eq = membres.map((m) => ({ creature: m.creature, stats: K.combatStatsForCreatureTyped(m.creature, niv, evo, []) }));
     const EE = compo.map((m) => ({ creature: m.creature, stats: K.combatStatsForCreatureTyped(m.creature, L, m.evolutionTier, []) }));
     let s = (n * 7919 + ids.join('').length) >>> 0; const alea = () => { s = (s * 1103515245 + 12345) >>> 0; return s / 4294967296; };

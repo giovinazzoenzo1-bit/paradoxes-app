@@ -67,6 +67,7 @@ const CONTROLES = [
   ['auditNiveauMax', "règle de l'auteur (10/10) : aucun niveau max ; la prime paie ~1 niveau par créature, sans rareté ; ennemis à la force moyenne de leur rareté ; ultime ≤ ×2"],
   ['auditSoutienEquipe', "combat : toute l'équipe participe (soutien = moitié d'une attaque normale), dans le vrai combat ET la simulation (09/10)"],
   ['auditJournalDev', "journal des combats pour Claude : verdicts, coups, sorts, spéciaux, équipe, résultat ; bouton d'envoi dans le menu dev (08/10)"],
+  ['auditCransAdoucis', "choix de l'auteur (17/10) : dès l'étape 11, combats 4 et 5 de chaque fenêtre à 60 % et 45 % ; chapitre 1 inchangé ; outils de mesure au point 50 %"],
   ['auditPacteEnergie', "choix de l'auteur (17/10) : Pacte du joueur ×1,5 pour 30 % de PV (ennemis ×2 / 15 %), textes lus dans les règles ; énergie max 7"],
   ['auditImportsMasques', "aucune fonction importée n'est masquée par une variable locale du même nom puis appelée (plantage de l'Exploration, 17/10)"],
   ['auditPortee', "aucun nom utilisé sans être déclaré dans le code du jeu (plantage « Property 'poudre' doesn't exist », 11/10)"],

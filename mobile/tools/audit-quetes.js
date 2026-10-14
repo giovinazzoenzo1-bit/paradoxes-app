@@ -5183,6 +5183,7 @@ function auditFenetres() {
         const EE = K.equipeEnnemie(n).map((m) => ({ creature: m.creature, stats: K.statsForOpponentCreatureTyped(m.creature, n) }));
         let sd = (n * 7919 + ids.join('').length) >>> 0; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
         const d = K.difficulteEtape(n);
+        parD[d][2] = (parD[d][2] || 0) + 16 * K.cibleDifficulte(n, d); // 17/10 : la cible de CHAQUE étape (adoucie dès l'étape 11)
         for (let i = 0; i < 16; i++) { parD[d][1]++; if (K.simulerCombat(eq, EE, { alea, politique: K.choixJoueur, erreurMs: 60 }).gagne) parD[d][0]++; }
         budget += K.primeVictoire(n, apres.map((m) => m.ownedLevel)); // 16/10 : comme la vraie photo
       }
@@ -5192,7 +5193,8 @@ function auditFenetres() {
   const mes = {};
   for (const d of [1, 2, 3, 4, 5]) {
     mes[d] = parD[d][0] / parD[d][1];
-    if (Math.abs(mes[d] - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`cran ${d} : ${Math.round(100 * mes[d])} % mesurés pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % annoncés`);
+    const vise = parD[d][2] / parD[d][1];
+    if (Math.abs(mes[d] - vise) > 0.15) pb.push(`cran ${d} : ${Math.round(100 * mes[d])} % mesurés pour ${Math.round(100 * vise)} % annoncés`);
   }
   if (!(mes[1] > mes[3] && mes[3] > mes[5])) pb.push('les crans ne vont plus du plus facile au plus dur');
   const fs = require('fs'), path = require('path');
@@ -5247,6 +5249,7 @@ function auditFenetres() {
             const eq = apres.map((m) => ({ creature: m.creature, stats: K.combatStatsForCreatureTyped(m.creature, m.ownedLevel, m.evolutionTier, []) }));
             const EE = K.equipeEnnemie(n).map((m) => ({ creature: m.creature, stats: K.statsForOpponentCreatureTyped(m.creature, n) }));
             let sd = (n * 104729 + ids.join('').length) >>> 0; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
+            parP[d][2] = (parP[d][2] || 0) + 20 * K.cibleDifficulte(n, d); // 17/10 : cible de chaque étape
             for (let i = 0; i < 20; i++) { parP[d][1]++; if (K.simulerCombat(eq, EE, { alea, politique: K.choixJoueur, erreurMs: 30 }).gagne) parP[d][0]++; }
           }
           budget += K.primeVictoire(n, apres.map((m) => m.ownedLevel)); // 16/10 : comme la vraie photo
@@ -5254,7 +5257,7 @@ function auditFenetres() {
         K.definirNiveauxJoueur(null);
       }
     }
-    for (const d of [4, 5]) { const m = parP[d][0] / parP[d][1]; if (Math.abs(m - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`joueur précis (maîtrise 0,75, profil 30 ms) : cran ${d} à ${Math.round(100 * m)} % pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % — la maîtrise n'est plus compensée`); }
+    for (const d of [4, 5]) { const m = parP[d][0] / parP[d][1]; if (Math.abs(m - parP[d][2] / parP[d][1]) > 0.15) pb.push(`joueur précis (maîtrise 0,75, profil 30 ms) : cran ${d} à ${Math.round(100 * m)} % pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % — la maîtrise n'est plus compensée`); }
   }
   // 12/10 (choix de l'auteur, points 1 et 3) : 1re fenêtre sans dépense virtuelle ; facteur d'éléments (relatif aux équipes de
   // mesure, exposant 0,5 MESURÉ) appliqué dans la photo.
@@ -5705,6 +5708,7 @@ function auditEtapesAvancees() {
         const EE = K.equipeEnnemie(n).map((m) => ({ creature: m.creature, stats: K.statsForOpponentCreatureTyped(m.creature, n) }));
         let sd = (n * 7919 + ids.join('').length) >>> 0; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
         const d = K.difficulteEtape(n);
+        parD[d][2] = (parD[d][2] || 0) + 16 * K.cibleDifficulte(n, d); // 17/10 : la cible de CHAQUE étape (adoucie dès l'étape 11)
         for (let i = 0; i < 16; i++) { parD[d][1]++; if (K.simulerCombat(eq, EE, { alea, politique: K.choixJoueur, erreurMs: 60 }).gagne) parD[d][0]++; }
         budget += K.primeVictoire(n, apres.map((m) => m.ownedLevel));
       }
@@ -5714,7 +5718,8 @@ function auditEtapesAvancees() {
   const mes = {};
   for (const d of [1, 2, 3, 4, 5]) {
     mes[d] = parD[d][0] / parD[d][1];
-    if (Math.abs(mes[d] - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`étapes 61+ : cran ${d} à ${Math.round(100 * mes[d])} % en vrais combats pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % visés`);
+    const vise = parD[d][2] / parD[d][1];
+    if (Math.abs(mes[d] - vise) > 0.15) pb.push(`étapes 61+ : cran ${d} à ${Math.round(100 * mes[d])} % en vrais combats pour ${Math.round(100 * vise)} % visés`);
   }
   if (!(mes[1] > mes[3] && mes[3] > mes[5])) pb.push('étapes 61+ : les crans ne vont plus du plus facile au plus dur');
   // L'écran sait si l'étape a sa photo.
@@ -5824,3 +5829,25 @@ function auditPacteEnergie() {
   return pb;
 }
 module.exports.auditPacteEnergie = auditPacteEnergie;
+
+// 17/10 (nuit) — CHOIX DE L'AUTEUR (« de l'étape 1 à 10 c'était ok, après trop compliqué ») : dès l'étape 11, combats 4 et 5 de chaque
+// fenêtre à 60 % et 45 % (avant 50 / 33). MESURÉ en vrais combats (6 équipes) : crans 4 / 5 de ~41-52 / 26-31 % à ~54 / 38-43 %.
+// Les crans en vrais combats sont contrôlés contre la cible de CHAQUE étape par auditFenetres et auditEtapesAvancees.
+function auditCransAdoucis() {
+  const fs = require('fs'), path = require('path'); const K = load('combatLogic'); const C = load('clickerLogic');
+  const pb = [];
+  const cib = [[10, 4, 0.5], [10, 5, 1 / 3], [11, 3, 0.7], [11, 4, 0.6], [11, 5, 0.45], [80, 4, 0.6], [80, 5, 0.45], [80, 1, 0.95]];
+  for (const [n, d, v] of cib) if (Math.abs(K.cibleDifficulte(n, d) - v) > 1e-9) pb.push(`cible de l'étape ${n}, combat ${d} : ${K.cibleDifficulte(n, d)} au lieu de ${v}`);
+  const g = (id) => C.CREATURES.find((c) => c.id === id);
+  const deck = ['bouldog', 'voltix', 'ombrillon'].map((id) => ({ creature: g(id), ownedLevel: 60, evolutionTier: 2, equippedRunes: [] }));
+  const P = K.puissanceAffichee(deck);
+  for (const d of [4, 5]) {
+    const doux = K.niveauPourDifficulte(80, P, d, 3), brut = K.niveauPourDifficulte(80, P, d, 3, { cibleBrute: true });
+    if (!(doux < brut)) pb.push(`étape 80, combat ${d} : ennemis niveau ${doux} (adouci) contre ${brut} (avant) — l'adoucissement ne s'applique plus`);
+  }
+  if (K.niveauPourDifficulte(8, P, 4, 2) !== K.niveauPourDifficulte(8, P, 4, 2, { cibleBrute: true })) pb.push("chapitre 1 : l'adoucissement ne doit pas s'y appliquer");
+  const Me = fs.readFileSync(path.join(__dirname, 'mesurer-etapes.js'), 'utf8');
+  if (!Me.includes('K.niveauPourDifficulte(n, P, 4, nbJ, { sansFacteur: true, cibleBrute: true });')) pb.push("l'outil de mesure ne se place plus au point 50 % d'origine (facteurs d'étape faussés à la prochaine mesure)");
+  return pb;
+}
+module.exports.auditCransAdoucis = auditCransAdoucis;

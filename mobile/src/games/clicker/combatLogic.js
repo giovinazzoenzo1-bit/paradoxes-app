@@ -1727,6 +1727,15 @@ export const TAILLE_FENETRE = 5;
 // 11/10 (spec de l'auteur : « le joueur perd 1 fois à l'étape 4 et 2 fois à l'étape 5 ») : défaites MOYENNES avant de gagner
 // = (1 − p) / p → 50 % = 1 défaite ; 33 % = 2 défaites (30 % en donnait 2,3). Crans 1-3 : 0,05 / 0,18 / 0,43 défaite.
 export const CIBLES_DIFFICULTE = { 1: 0.95, 2: 0.85, 3: 0.7, 4: 0.5, 5: 1 / 3 };
+// 17/10 (choix de l'auteur : « de l'étape 1 à 10 c'était ok, après c'est devenu trop compliqué ») : À PARTIR DE L'ÉTAPE 11, les
+// combats 4 et 5 de chaque fenêtre visent 60 % et 45 % (avant 50 % et 33 %). Rapport tiré de la MÊME courbe que les régressions
+// (pente de la configuration), en partant du point 50 % calé (cran 4 et sa correction). Défaites moyennes par fenêtre : 3,66 → 2,55.
+// Le chapitre 1 (étapes 1-10) ne change pas (« ok » pour l'auteur, et sa règle du 10/10 : un tutoriel qui fait déjà travailler).
+export const ETAPE_ADOUCISSEMENT = 11;
+export const CIBLES_ADOUCIES = { 4: 0.6, 5: 0.45 };
+export function cibleDifficulte(levelNumber, d) {
+  return (Math.max(1, Math.floor(levelNumber || 1)) >= ETAPE_ADOUCISSEMENT && CIBLES_ADOUCIES[d]) || CIBLES_DIFFICULTE[d];
+}
 export const RATIOS_DIFFICULTE = {
   '1v1': { 1: 1.359, 2: 1.191, 3: 1.081, 4: 0.985, 5: 0.914 }, // cran 5 : 33 % (11/10)
   '2v1': { 1: 1.059, 2: 0.964, 3: 0.9, 4: 0.843, 5: 0.799 },
@@ -1799,10 +1808,13 @@ export const FACTEUR_ETAPE = {"1": 0.877, "2": 0.951, "3": 0.905, "4": 1.046, "5
 export const FACTEUR_ETAPE_1V1 = {"1": 0.922, "2": 0.958, "3": 1.045, "4": 1.122, "5": 1.009, "6": 1.1, "7": 0.936, "8": 1.04, "9": 1.125, "10": 1.019};
 export const FACTEUR_ETAPE_3V2 = {"11": 0.913, "12": 0.928, "13": 1.068, "14": 0.877, "15": 0.986, "16": 1.139, "17": 0.945, "18": 0.92, "19": 1.077, "20": 0.872};
 export const FACTEUR_ESPECE = {"pyrosile": [1.11, 1.09, 1.09], "caraploof": [1.04, 1.04, 1.05], "ventis": [1.17, 1.15, 1.15], "bouldog": [1.04, 1.05, 1.04], "voltix": [1.13, 1.14, 1.12], "aegisolar": [1.01, 0.98, 0.96], "glyphon": [0.93, 0.93, 0.93], "ombrillon": [1.19, 1.18, 1.17], "luxorbe": [0.96, 0.95, 0.95], "fournax": [1.01, 1.01, 1.02], "solarion": [0.74, 0.71, 0.71], "aquamira": [1, 1, 1], "terracroc": [1.11, 1.13, 1.12], "zephyrion": [1.04, 1.04, 1.04], "brontobloc": [0.96, 0.97, 0.98], "malefix": [1.12, 1.13, 1.12], "nocturis": [0.97, 0.96, 0.96], "racinea": [1.05, 1.06, 1.06], "runicor": [1.03, 1.05, 0.98], "braiserose": [1.05, 1.05, 1.05], "abyssorax": [1.04, 1.03, 1.05], "cumulox": [1.02, 1.02, 1], "voltarel": [0.98, 0.97, 0.96], "solstral": [0.91, 0.91, 0.93], "tartaroth": [1.1, 1.1, 1.1], "arcanis": [0.85, 0.89, 0.89]}; // [sans évolution, évolution 1, évolution 2]
-function rapportDifficulte(nbJ, nbE, d) {
+function rapportDifficulte(nbJ, nbE, d, levelNumber = 0) {
   const cle = `${nbJ}v${nbE}`;
   const t = RATIOS_DIFFICULTE[cle] || RATIOS_DIFFICULTE[`${Math.min(3, nbE)}v${Math.min(3, nbE)}`] || RATIOS_DIFFICULTE['3v3'];
-  return (t[d] || t[3]) * (CORRECTION_DIFFICULTE[d] || 1);
+  const douce = levelNumber >= ETAPE_ADOUCISSEMENT ? CIBLES_ADOUCIES[d] : null;
+  if (!douce) return (t[d] || t[3]) * (CORRECTION_DIFFICULTE[d] || 1);
+  // 17/10 : cible adoucie — depuis le point 50 % calé (cran 4), en suivant la courbe de la configuration.
+  return t[4] * (CORRECTION_DIFFICULTE[4] || 1) * Math.exp(Math.log(douce / (1 - douce)) / penteDifficulte(nbJ, nbE));
 }
 // Niveau des ennemis de l'étape n pour qu'un deck de puissance `puissanceDeck` soit à la difficulté d.
 export function niveauPourDifficulte(levelNumber, puissanceDeck, d, nbJoueurs, options = {}) {
@@ -1812,7 +1824,8 @@ export function niveauPourDifficulte(levelNumber, puissanceDeck, d, nbJoueurs, o
 export function niveauEtAffaiblissement(levelNumber, puissanceDeck, d, nbJoueurs, options = {}) {
   const compo = equipeEnnemie(levelNumber).map((m) => ({ creature: m.creature, evolutionTier: m.evolutionTier, equippedRunes: [] }));
   if (!compo.length || !(puissanceDeck > 0)) return { niveau: 1, affaiblissement: 1 };
-  const cible = puissanceDeck / rapportDifficulte(Math.max(1, nbJoueurs || compo.length), compo.length, d);
+  // options.cibleBrute (17/10) : les OUTILS de mesure se placent au point 50 % d'origine, sans l'adoucissement.
+  const cible = puissanceDeck / rapportDifficulte(Math.max(1, nbJoueurs || compo.length), compo.length, d, options.cibleBrute ? 0 : Math.max(1, Math.floor(levelNumber || 1)));
   const facteurDe = (m) => { const t = FACTEUR_ESPECE[m.creature.id]; return (t && t[Math.max(0, Math.min(2, m.evolutionTier || 0))]) || 1; };
   // Facteur de l'ÉTAPE (mesuré en vrais combats d'équipe, mesurer-etapes.js) ; à défaut, moyenne des facteurs d'espèce.
   const nEt = Math.max(1, Math.floor(levelNumber || 1));
