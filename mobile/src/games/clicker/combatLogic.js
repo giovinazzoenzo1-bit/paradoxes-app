@@ -1890,7 +1890,7 @@ export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 
   for (let n = debut; n <= fin; n++) {
     const nbJ = Math.max(1, Math.min((membresDeck || []).length, combattantsPourEtape(n)));
     const membres = (membresDeck || []).slice(0, nbJ);
-    const apres = deckApresEffortEquitable(membres, budget);
+    const apres = deckApresEffortEquitable(membres, budget, Infinity, { evolutions: true }); // 14/10 : évolutions comprises
     const fMaitrise = facteurMaitrise(options.maitrise, nbJ, opponentTeamForLevel(n).length);
     const fElements = facteurElements(apres.membres, equipeEnnemie(n), nbJ); // 12/10
     const r = niveauEtAffaiblissement(n, puissanceAffichee(apres.membres) * fMaitrise * fElements / (n === 1 ? MARGE_PREMIER_COMBAT : 1), difficulteEtape(n, avantage), nbJ);
@@ -2626,9 +2626,63 @@ export function deckApresEffort(membres, griffes) {
 // (10/10, niveaux réels) `plafond` : niveau max que l'effort peut atteindre (photo du Gardien : le niveau max
 // APRÈS les 3 prochaines étapes). MESURÉ sans lui : dès l'étape 60, 10 à 18 joueurs simulés sur 20 étaient
 // déjà au niveau max et le Gardien supposait +7 à +10 niveaux au-dessus — le « 80 % » était inatteignable.
-export function deckApresEffortEquitable(membres, griffes, plafond = Infinity) {
+// 14/10 (demande de l'auteur) — ÉVOLUTIONS RÉALISTES : options.evolutions. Le joueur ne fait pas que monter des niveaux :
+// dès qu'une créature a le niveau requis (25 / 50) ET qu'il reste de quoi payer (150 / 400 Griffes), il la fait évoluer
+// (PV et attaque ×1,3 / ×1,7) ; sinon il continue de monter (26, 27…) et évolue plus tard, quand les Griffes arrivent
+// (« des fois on évolue au niveau 26 ou 27 et pas 25, par manque de Griffes »). Sans ça, au plafond de dizaine, le budget
+// était « jeté » alors que le vrai joueur le dépensait en évolutions → rapport du 14/10 : étapes 22-25 à 96-99 %.
+// Réservé au calculateur d'Exploration et à l'aperçu ; le Gardien garde la dépense par niveaux (ses contrôles la figent).
+function depenseAvecEvolutions(m, budget, plafond) {
+  let reste = budget;
+  for (let n = 0; n < 3000; n++) {
+    let ev = -1, cev = 0; // 1) une évolution possible ET payable : on la fait (la créature la plus haute d'abord)
+    m.forEach((x, j) => {
+      const t = x.evolutionTier || 0;
+      if (!canEvolve(t, x.ownedLevel)) return;
+      const c = evolutionCost(t);
+      if (c != null && c <= reste && (ev < 0 || x.ownedLevel > m[ev].ownedLevel)) { ev = j; cev = c; }
+    });
+    if (ev >= 0) { m[ev] = { ...m[ev], evolutionTier: (m[ev].evolutionTier || 0) + 1 }; reste -= cev; continue; }
+    // 2) sinon un niveau. MESURÉ (rapport du 14/10) : le joueur POUSSE SA MEILLEURE créature vers son évolution (Racinea
+    //    21 → 25 puis évoluée, puis Aegisolar, Luxorbe laissée au niveau 20) — monter tout le monde d'abord ne laissait,
+    //    avec le même budget, qu'UNE évolution au lieu de deux. Donc : la créature la plus haute qui n'a pas encore le niveau
+    //    de sa prochaine évolution ; à défaut (toutes au seuil, ou évolutions finies), la plus basse. Le niveau max du deck
+    //    (dizaine au-dessus de la plus faible) empêche de tout concentrer sur une seule.
+    const maxEquipe = Math.min(plafond, niveauMaxEquipe(m.map((y) => y.ownedLevel)));
+    const seuil = (x) => { const t = (x.evolutionTier || 0) + 1; return t <= 2 ? EVOLUTION_LEVEL_REQUIREMENT[t] : Infinity; };
+    let i = -1, c = 0;
+    // Priorité : la MOINS évoluée d'abord (une créature déjà évoluée vise 50 : inatteignable sous la dizaine — sinon le modèle
+    // la poussait jusqu'au plafond au lieu de faire évoluer la suivante, MESURÉ), seuil ATTEIGNABLE sous le niveau max,
+    // puis la plus haute, puis la meilleure rareté (l'auteur a poussé Racinea, rare, avant Luxorbe, commune).
+    const RANG_RARETE = { commun: 0, peu_commun: 1, rare: 2, epique: 3, legendaire: 4, mythique: 5 };
+    const avant = (x, y) => {
+      const tx = x.evolutionTier || 0, ty = y.evolutionTier || 0;
+      if (tx !== ty) return tx < ty;
+      if (x.ownedLevel !== y.ownedLevel) return x.ownedLevel > y.ownedLevel;
+      return (RANG_RARETE[x.creature.rarity] || 0) > (RANG_RARETE[y.creature.rarity] || 0);
+    };
+    m.forEach((x, j) => { // pousser vers la prochaine évolution
+      if (x.ownedLevel >= maxEquipe || x.ownedLevel >= seuil(x) || seuil(x) > maxEquipe) return;
+      const cj = levelUpCost(x.creature, x.ownedLevel);
+      if (!(cj > 0) || cj > reste) return;
+      if (i < 0 || avant(x, m[i])) { i = j; c = cj; }
+    });
+    if (i < 0) m.forEach((x, j) => { // sinon la plus basse (répartition équitable)
+      if (x.ownedLevel >= maxEquipe) return;
+      const cj = levelUpCost(x.creature, x.ownedLevel);
+      if (!(cj > 0)) return;
+      if (i < 0 || x.ownedLevel < m[i].ownedLevel || (x.ownedLevel === m[i].ownedLevel && cj < c)) { i = j; c = cj; }
+    });
+    if (i < 0 || c > reste) break;
+    m[i] = { ...m[i], ownedLevel: m[i].ownedLevel + 1 };
+    reste -= c;
+  }
+  return reste;
+}
+export function deckApresEffortEquitable(membres, griffes, plafond = Infinity, options = {}) {
   const m = (membres || []).filter((x) => x && x.creature).map((x) => ({ ...x, ownedLevel: x.ownedLevel || x.level || 1 }));
   if (!m.length) return { membres: m, puissance: 0 };
+  if (options.evolutions) { depenseAvecEvolutions(m, Math.max(0, Number(griffes) || 0), plafond); return { membres: m, puissance: puissanceAffichee(m) }; }
   const part = Math.max(0, Number(griffes) || 0) / m.length;
   let report = 0;
   m.forEach((x) => {

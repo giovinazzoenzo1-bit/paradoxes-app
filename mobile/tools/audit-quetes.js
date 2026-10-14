@@ -5289,6 +5289,23 @@ function auditFenetres() {
     if (manquants.length) pb.push(`guide des spécialités : sorts absents (${manquants.join(', ')})`);
     if (!Ag.includes("{[['elements', '🔥 Éléments'], ['specialites', '✨ Spécialités']].map(") || !Ag.includes('📖 Guide</Text>')) pb.push('guide : plus d\'onglet « Spécialités » à côté des éléments');
   }
+  // 14/10 (demande de l'auteur) : ÉVOLUTIONS dans la dépense virtuelle du calculateur — on évolue dès que le niveau ET les
+  // Griffes le permettent, en poussant la meilleure créature pas encore évoluée. MESURÉ (rapport du 14/10, deck 19/20/19,
+  // 633 Griffes) : Racinea ET Aegisolar évoluées (comme l'auteur) ; l'ancienne priorité poussait Luxorbe déjà évoluée → 1 seule.
+  {
+    const ge = (id) => Cl.CREATURES.find((c) => c.id === id);
+    const d0 = [['luxorbe', 19], ['racinea', 20], ['aegisolar', 19]].map(([id, l]) => ({ creature: ge(id), ownedLevel: l, evolutionTier: 0, equippedRunes: [] }));
+    const avec = K.deckApresEffortEquitable(d0, 633, Infinity, { evolutions: true }).membres;
+    const evoluees = avec.filter((x) => (x.evolutionTier || 0) >= 1);
+    if (evoluees.length !== 2 || !evoluees.some((x) => x.creature.id === 'racinea') || evoluees.some((x) => x.ownedLevel < 25))
+      pb.push(`dépense virtuelle : ${evoluees.length} évolution(s) au lieu de 2 (Racinea et Aegisolar) avec 633 Griffes — ${avec.map((x) => x.creature.id + ' ' + x.ownedLevel + (x.evolutionTier ? '★' : '')).join(', ')}`);
+    if (K.deckApresEffortEquitable(d0, 633).membres.some((x) => (x.evolutionTier || 0) > 0)) pb.push('dépense du Gardien (sans option) : elle ne doit pas évoluer (comportement figé)');
+    if (K.deckApresEffortEquitable(d0, 100, Infinity, { evolutions: true }).membres.some((x) => (x.evolutionTier || 0) > 0)) pb.push('évolution payée sans les Griffes nécessaires');
+    const srcC = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
+    if (!srcC.includes('const apres = deckApresEffortEquitable(membres, budget, Infinity, { evolutions: true });')) pb.push('la photo du calculateur ne compte plus les évolutions');
+    const Ae = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+    if (!Ae.includes('deckApresEffortEquitable(membres, griffesDispo, Infinity, { evolutions: true })')) pb.push("l'aperçu « avec tes Griffes » ne compte plus les évolutions");
+  }
   // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
   const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if ((ClS.match(/plafondGardienRef\.current, maitriseRef\.current\)\)/g) || []).length !== 2) pb.push("Gardien : la photo de l'œuf ne reçoit plus l'indice de maîtrise (2 endroits)");

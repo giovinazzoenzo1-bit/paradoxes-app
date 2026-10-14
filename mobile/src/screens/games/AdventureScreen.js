@@ -3644,7 +3644,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
     const membres = membresPourCombat(deck, owned, ownedRunes, levelNumber);
     if (!membres.length) return null;
     const p0 = puissanceAffichee(membres);
-    const p1 = puissanceAffichee(deckApresEffortEquitable(membres, griffesDispo).membres);
+    const p1 = puissanceAffichee(deckApresEffortEquitable(membres, griffesDispo, Infinity, { evolutions: true }).membres); // 14/10 : une évolution aussi
     if (!(p0 > 0) || !(p1 > p0 * 1.01)) return null;
     const p = Math.min(0.97, Math.max(0.03, mesure.victoires));
     const z = Math.log(p / (1 - p)) + penteDifficulte(membres.length, equipeAdverse.length) * Math.log(p1 / p0);

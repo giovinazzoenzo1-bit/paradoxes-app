@@ -324,6 +324,13 @@ const SABOTAGES = [
     remplace('+{pctGuide(ELEMENT_ADVANTAGE_MULT - 1)}', '+30 %')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "un sort manque dans le guide des spécialités",
     remplace("      ['marque', `", "      ['marqueX', `")],
+  // 14/10 : évolutions dans la dépense virtuelle (demande de l'auteur).
+  ['auditFenetres', F.combat, "la photo du calculateur ignore les évolutions",
+    remplace('const apres = deckApresEffortEquitable(membres, budget, Infinity, { evolutions: true });', 'const apres = deckApresEffortEquitable(membres, budget);')],
+  ['auditFenetres', F.combat, "la dépense virtuelle ne fait jamais évoluer",
+    remplace('    if (ev >= 0) { m[ev] = { ...m[ev], evolutionTier:', '    if (false) { m[ev] = { ...m[ev], evolutionTier:')],
+  ['auditFenetres', F.combat, "la dépense virtuelle pousse une créature déjà évoluée (une seule évolution au lieu de deux)",
+    remplace(' || x.ownedLevel >= seuil(x) || seuil(x) > maxEquipe) return;', ' || x.ownedLevel >= seuil(x)) return;')],
   ['auditPortee', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "une valeur lue AVANT sa déclaration (zone morte : écran blanc ou valeur vide)",
     remplace('  }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici', '  }, [(lifetimeStats || {}).advLevelReached || 0, owned.length]); // ⚠️ jamais `owned` ici')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "plus de recalcul quand une créature rejoint le deck en cours de fenêtre",
