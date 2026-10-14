@@ -1807,7 +1807,14 @@ export const MAITRISE_COMBATS = 15;
 // A priori 0,7 (MESURÉ 12/10) : à 1, 3 victoires chanceuses à 50 % atteignaient le PLAFOND (12,5 % de chances pour un joueur
 // moyen) ; à 0,7 : 0,54. Bruit d'un joueur moyen sur 15 combats (10e-90e rang) : −0,48 à +0,50 ; l'auteur : 0,41 à 0,73.
 export const MAITRISE_A_PRIORI = 0.7;
-export const MAITRISE_MAX = 0.75; // l'auteur : 0,73 sur 77 combats (rapports du 11/10 et du 12/10)
+// 16/10 (retour de l'auteur : « trop facile à ce niveau, je ne suis pas obligé d'améliorer mes créatures ») : PLAFOND relevé
+// à SA NOUVELLE MESURE, même règle (« je suis la référence du joueur exceptionnel »). MESURÉ sur le rapport du 14/10 (69
+// combats, sans plafond) : 1,37 ; ses 15 derniers : 1,24 (le jeu n'appliquait que 0,75). Par chapitre : 0,27 · 0,51 · 0,70 ·
+// 0,52 · 0,54 · 1,23 — au chapitre 6, 10 victoires pour 5,1 attendues (gagnées à 2, 11, 16, 23 % annoncés). MESURÉ AUSSI : ce
+// n'est NI la précision (joueur parfait à la jauge, simulateur : 0 % aux étapes 52 et 54 qu'il a gagnées) NI les ultimes
+// (×0,5 : 0 à 3 points) — c'est la TACTIQUE (choix de cible, de sort, d'allié), que seul cet indice capte. Un joueur dont
+// l'indice reste sous 0,75 ne voit AUCUN changement. (Avant : 0,75 = l'auteur, 0,73 sur 77 combats, rapports des 11-12/10.)
+export const MAITRISE_MAX = 1.4;
 export const MAITRISE_MIN = -1.5;
 export const PENTES_DIFFICULTE = { '1v1': 9.157, '2v1': 12.888, '2v2': 10.542, '3v2': 14.222, '3v3': 18.379 };
 export function penteDifficulte(nbJ, nbE) {

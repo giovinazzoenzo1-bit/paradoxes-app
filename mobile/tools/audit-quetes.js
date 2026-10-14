@@ -3235,7 +3235,8 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '9fcfd71b'; // 14/10 (suite) : libelleChance (affichage, aucun effet sur le combat) — auditGardienCalibre relancé : OK.
+const EMPREINTE_COMBAT = 'ae8d6c14'; // 16/10 : MAITRISE_MAX 0,75 → 1,4 (nouvelle mesure de l'auteur) ; Gardien : moitié de l'effet, inchangé — auditGardienCalibre relancé : OK.
+// (avant :) '9fcfd71b' // 14/10 (suite) : libelleChance (affichage, aucun effet sur le combat) — auditGardienCalibre relancé : OK.
 // (avant :) '1a11b089' // 14/10 : lancerSort accepte l'allié CHOISI (cibleAllie) ; sans lui (Gardien, ennemis, simulation) : choix automatique inchangé — auditGardienCalibre relancé : OK.
 // (ancienne :) 'e97f41c5' // 11/10 (soir) : soutiens sur la cible SEULEMENT (règle partagée avec simulerCombat ; le Gardien est seul, rien ne change pour lui — auditGardienCalibre vert). Avant : '52f045e3'.
 function empreinteCombat() {
@@ -5186,7 +5187,13 @@ function auditFenetres() {
   // Indice : neutre sans combat, plafonné à l'auteur, prudent, plancher, 15 derniers ; conversion par la pente.
   const vic = (n, c, y) => Array(n).fill({ chance: c, gagne: y });
   if (K.maitriseDesCombats([]) !== 0) pb.push('maîtrise : aucun combat = joueur moyen (0)');
-  if (K.maitriseDesCombats(vic(40, 50, true)) !== K.MAITRISE_MAX || K.MAITRISE_MAX > 0.8) pb.push("maîtrise : plafond = l'auteur (0,73 mesuré ; « pas de blocage »)");
+  // 16/10 : plafond = la NOUVELLE mesure de l'auteur (1,37 sur 69 combats ; ses 15 derniers 1,24) — même règle.
+  if (K.maitriseDesCombats(vic(40, 50, true)) !== K.MAITRISE_MAX || K.MAITRISE_MAX < 1.3 || K.MAITRISE_MAX > 1.5) pb.push("maîtrise : plafond = l'auteur (1,37 mesuré le 16/10 ; « pas de blocage »)");
+  { // ses 15 derniers combats (rapport du 14/10) : le jeu doit appliquer sa VRAIE marge, plus la tronquer à 0,75
+    const derniers = [[92, 1], [95, 1], [87, 1], [11, 1], [51, 1], [2, 0], [2, 1], [0, 0], [58, 1], [94, 1], [58, 1], [16, 1], [48, 0], [64, 1], [23, 1]];
+    const m = K.maitriseDesCombats(derniers.map(([c, y]) => ({ chance: c, gagne: !!y })));
+    if (!(m > 1.15 && m < 1.35)) pb.push(`maîtrise de l'auteur (chapitre 6) : ${m.toFixed(2)} appliqué au lieu de ~1,24 mesuré (plafond trop bas ?)`);
+  }
   if (K.maitriseDesCombats(vic(40, 90, false)) !== K.MAITRISE_MIN || !(K.maitriseDesCombats(vic(15, 50, false)) < -0.8)) pb.push('maîtrise : plancher (défaites à 90 % annoncés) ou sensibilité aux défaites');
   if (!(K.maitriseDesCombats(vic(3, 50, true)) < 0.75)) pb.push('maîtrise : plus de prudence statistique (3 victoires suffisent à atteindre le plafond)');
   if (K.maitriseDesCombats(vic(50, 50, true).concat(vic(15, 50, false))) !== K.maitriseDesCombats(vic(15, 50, false))) pb.push('maîtrise : seuls les 15 derniers combats comptent');
@@ -5201,7 +5208,8 @@ function auditFenetres() {
       const niv = decks[d0 - 2].deck; const evo = (K.equipeEnnemie(d0)[0] || {}).evolutionTier || 0;
       for (const ids of PANEL6) {
         const membres = niv.map((l, i) => ({ creature: g(ids[i]), ownedLevel: l, evolutionTier: evo, equippedRunes: [] }));
-        K.definirNiveauxJoueur(K.photoFenetre(d0, membres, 0, 0, { maitrise: K.MAITRISE_MAX }));
+        // 16/10 : la maîtrise MESURÉE de ce profil (30 ms) = 0,75 — plus le plafond (relevé à 1,4 pour l'auteur).
+        K.definirNiveauxJoueur(K.photoFenetre(d0, membres, 0, 0, { maitrise: 0.75 }));
         let budget = 0;
         for (let n = d0; n < d0 + 5; n++) {
           const apres = K.deckApresEffortEquitable(membres.slice(0, Math.min(membres.length, K.combattantsPourEtape(n))), budget).membres;
@@ -5217,7 +5225,7 @@ function auditFenetres() {
         K.definirNiveauxJoueur(null);
       }
     }
-    for (const d of [4, 5]) { const m = parP[d][0] / parP[d][1]; if (Math.abs(m - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`joueur précis (maîtrise ${K.MAITRISE_MAX}) : cran ${d} à ${Math.round(100 * m)} % pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % — la maîtrise n'est plus compensée`); }
+    for (const d of [4, 5]) { const m = parP[d][0] / parP[d][1]; if (Math.abs(m - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`joueur précis (maîtrise 0,75, profil 30 ms) : cran ${d} à ${Math.round(100 * m)} % pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % — la maîtrise n'est plus compensée`); }
   }
   // 12/10 (choix de l'auteur, points 1 et 3) : 1re fenêtre sans dépense virtuelle ; facteur d'éléments (relatif aux équipes de
   // mesure, exposant 0,5 MESURÉ) appliqué dans la photo.
@@ -5438,6 +5446,25 @@ function auditPanneauxCombat() {
   return pb;
 }
 module.exports.auditPanneauxCombat = auditPanneauxCombat;
+
+// ---- LA RUNE DE RÉSILIENCE SE VOIT (16/10, demande de l'auteur) ----
+// Quand elle sauve une créature d'un coup mortel, la rune se BRISE à l'écran — sur les 3 chemins où un coup peut tomber
+// (riposte, action ennemie sans riposte, attaque d'ouverture). La règle elle-même (encaisser) reste celle du moteur.
+function auditRuneResilienceVisible() {
+  const fs = require('fs'), path = require('path'); const K = load('combatLogic'); const C2 = require('./audit-quetes.js').C;
+  const pb = [];
+  const cr = C2.CREATURES.find((x) => x.id === 'luxorbe');
+  const st = { ...K.combatStatsForCreatureTyped(cr, 20, 0, []), resiliencePct: 0.2 };
+  const r = K.encaisser({ creature: cr, stats: st, hp: 10, resilienceUsed: false }, 999);
+  if (!(r.hp > 0 && r.resilienceUsed)) pb.push('moteur : la Rune de Résilience ne sauve plus d\'un coup mortel');
+  const S = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  if (!S.includes("resilience: { couleur: '#7fdcff', icone: null, duree: 1500, forme: 'rune', texte: () => 'Rune brisée !' },") || !S.includes("{v.forme === 'rune' && [0, 1].map((k) => (")
+    || !S.includes("const RUNE_RESILIENCE = require('../../../assets/icons/runes/resilience.png');")) pb.push("écran : l'effet « Rune brisée ! » n'existe plus");
+  const declencheurs = (S.match(/effetSort\('resilience', 'joueur', [ik]\)/g) || []).length;
+  if (declencheurs < 3) pb.push(`écran : la rune ne se brise que sur ${declencheurs} chemin(s) sur 3 (riposte, action sans riposte, ouverture)`);
+  return pb;
+}
+module.exports.auditRuneResilienceVisible = auditRuneResilienceVisible;
 
 // ── ATTAQUES DE SOUTIEN : toute l'équipe participe (09/10, décision de l'auteur) ──
 // Test de l'auteur : une créature très montée finissait seule le chapitre 1 (à chaque tour, UNE créature

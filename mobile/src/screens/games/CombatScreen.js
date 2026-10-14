@@ -144,6 +144,8 @@ function Impact({ x, y, couleur, etincelles, effet = null, taille = 90, grand = 
 // l'adversaire visé) ; une lueur entoure la créature choisie pendant la jauge. Valeur = le verbe de la consigne.
 const SORTS_SUR_ALLIE = { bouclier: 'protéger', soin: 'soigner', boost: 'renforcer' };
 const estSurAllie = (k) => !!(k && k.sort && SORTS_SUR_ALLIE[k.sort]);
+// 16/10 : image de la Rune de Résilience (la même que dans l'inventaire des runes) — elle se brise en combat.
+const RUNE_RESILIENCE = require('../../../assets/icons/runes/resilience.png');
 const SORT_VISUEL = {
   bouclier: { couleur: '#8fd3ff', icone: '🛡️', duree: 1100, forme: 'bulle', texte: (v) => (v ? `+${v}` : null) },
   // 13/10 : « +X PV » ; « PV pleins » quand il n'y avait rien à soigner (avant : rien du tout — retour de l'auteur).
@@ -158,6 +160,8 @@ const SORT_VISUEL = {
   zone: { couleur: '#b98cff', icone: '🌀', duree: 850, forme: 'onde' },
   special: { couleur: '#ffd24a', icone: '🌟', duree: 950, forme: 'onde' },
   ko: { couleur: '#ff5252', icone: null, duree: 950, forme: 'ko', texte: () => 'K.O.' },
+  // 16/10 (demande de l'auteur) : la Rune de Résilience SE BRISE quand elle sauve la créature d'un coup mortel.
+  resilience: { couleur: '#7fdcff', icone: null, duree: 1500, forme: 'rune', texte: () => 'Rune brisée !' },
 };
 // Exporté pour la scène de banc des effets (tools/capture/scenes/effets-sorts.jsx).
 export function EffetSort({ type, x, y, taille = 90, valeur = null, onFini }) {
@@ -176,7 +180,19 @@ export function EffetSort({ type, x, y, taille = 90, valeur = null, onFini }) {
         <Animated.View style={[styles.sortCercle, { left: -R, top: -R, width: 2 * R, height: 2 * R, borderRadius: R, borderColor: v.couleur, backgroundColor: fond(v.couleur, '30'),
           opacity: t.interpolate({ inputRange: [0, 0.15, 0.75, 1], outputRange: [0, 1, 0.9, 0] }), transform: [{ scale: t.interpolate({ inputRange: [0, 0.2, 0.35, 1], outputRange: [0.5, 1.1, 1, 1] }) }] }]} />
       )}
-      {(v.forme === 'anneaux' || v.forme === 'onde' || v.forme === 'ko') && [0, 1].map((k) => (
+      {v.forme === 'rune' && [0, 1].map((k) => (
+        // 16/10 : la rune apparaît, TREMBLE, puis se FEND en deux moitiés qui s'écartent en tournant et s'effacent.
+        <Animated.View key={`rune${k}`} style={{ pointerEvents: 'none', position: 'absolute', left: k === 0 ? -R * 0.6 : 0, top: -R * 0.6, width: R * 0.6, height: R * 1.2, overflow: 'hidden',
+          opacity: t.interpolate({ inputRange: [0, 0.1, 0.6, 1], outputRange: [0, 1, 1, 0] }),
+          transform: [
+            { translateX: t.interpolate({ inputRange: [0, 0.12, 0.2, 0.28, 0.36, 0.42], outputRange: [0, -4, 4, -3, 3, 0], extrapolate: 'clamp' }) },
+            { translateX: t.interpolate({ inputRange: [0, 0.42, 1], outputRange: [0, 0, (k === 0 ? -1 : 1) * R * 0.8] }) },
+            { rotate: t.interpolate({ inputRange: [0, 0.42, 1], outputRange: ['0deg', '0deg', k === 0 ? '-28deg' : '28deg'] }) },
+          ] }}>
+          <Image source={RUNE_RESILIENCE} resizeMode="contain" style={{ position: 'absolute', left: k === 0 ? 0 : -R * 0.6, top: 0, width: R * 1.2, height: R * 1.2 }} />
+        </Animated.View>
+      ))}
+      {(v.forme === 'anneaux' || v.forme === 'onde' || v.forme === 'ko' || v.forme === 'rune') && [0, 1].map((k) => (
         <Animated.View key={k} style={[styles.sortCercle, { left: -R, top: -R, width: 2 * R, height: 2 * R, borderRadius: R, borderColor: v.forme === 'ko' ? '#9aa0a6' : v.couleur,
           opacity: t.interpolate({ inputRange: [0, 0.1 + k * 0.2, 1], outputRange: [0, 0.9, 0] }),
           transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.3 + k * 0.2, v.forme === 'onde' ? 3.2 : 1.6 + k * 0.3] }) }] }]} />
@@ -832,6 +848,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     // avait frappé (retour du 12/09).
     const curIdx = activeIndexRef.current;
     const pvAvant0 = fightersRef.current.map((f) => f.hp);
+    const resAvant0 = fightersRef.current.map((f) => !!(f && f.resilienceUsed)); // 16/10 : Rune de Résilience
     playLunge('opponent', targetIndexRef.current, centreSprite('joueur', curIdx));
     riposteRangRef.current = targetIndexRef.current + 1; // il a frappé : au suivant (tour de rôle)
     const curFighter = fightersRef.current[curIdx];
@@ -880,6 +897,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
       setOpponentDamageFloat(null);
       setPlayerDamageFloat(oppDamage > 0 ? { amount: oppDamage, index: curIdx } : null);
       degeler('p');
+      newFighters.forEach((f, k) => { if (f && f.resilienceUsed && !resAvant0[k]) effetSort('resilience', 'joueur', k); }); // 16/10 : la rune se brise
       if (oppDamage > 0) effetsImpact('joueur', curIdx, 'riposte', opp.creature.element);
       newFighters.forEach((f, k) => { if (f && f.hp <= 0 && pvAvant0[k] > 0) effetSort('ko', 'joueur', k); });
     }, IMPACT_MS);
@@ -1048,6 +1066,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     challengeDoneRef.current = true;
     const pvAvantO = opponentsRef.current.map((o) => o.hp);
     const pvAvantP = fightersRef.current.map((f) => f.hp);
+    const resAvantP = fightersRef.current.map((f) => !!(f && f.resilienceUsed)); // 16/10 : pour voir la Rune de Résilience se briser
     const skill = selectedSkillRef.current;
     const curIdx = activeIndexRef.current;
     const curFighter = fightersRef.current[curIdx];
@@ -1314,6 +1333,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
       if (estSpecial) { effetSort('special', 'adversaire', cibleCoup); secouer(14); }
       newOpponents.forEach((o, i) => { if (o && o.hp <= 0 && pvAvantO[i] > 0) effetSort('ko', 'adversaire', i); });
       if (!avecRiposte) newFighters.forEach((f, i) => { if (f && f.hp <= 0 && pvAvantP[i] > 0) effetSort('ko', 'joueur', i); });
+      if (!avecRiposte) newFighters.forEach((f, i) => { if (f && f.resilienceUsed && !resAvantP[i]) effetSort('resilience', 'joueur', i); }); // 16/10
     }, IMPACT_MS);
     // 11/10 : l'action de l'ennemi se VOIT au moment où il agit (RIPOSTE_MS) — bandeau + effet sur la bonne créature.
     if (actionEnnemie && (actionEnnemie.sort || (actionEnnemie.competence && actionEnnemie.competence.special))) {
@@ -1344,6 +1364,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           degeler('p');
           effetsImpact('joueur', blesse, 'riposte', elemRiposteur);
           newFighters.forEach((f, i) => { if (f && f.hp <= 0 && pvAvantP[i] > 0) effetSort('ko', 'joueur', i); });
+          newFighters.forEach((f, i) => { if (f && f.resilienceUsed && !resAvantP[i]) effetSort('resilience', 'joueur', i); }); // 16/10 : la rune se brise
         }, IMPACT_MS);
       }, RIPOSTE_MS);
     }

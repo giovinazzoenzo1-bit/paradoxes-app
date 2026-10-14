@@ -373,6 +373,13 @@ const SABOTAGES = [
     remplace("nom: d.name, niveau: o.niveau, elite: bonusElite(levelNumber) > 0,", "nom: d.name, niveau: o.niveau, // lueur elite: bonusElite(levelNumber) > 0,")],
   ['auditPanneauxCombat', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "la case des ennemis n'a plus ses PV max",
     remplace("hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, ko,", "hp: pvAffiche('o', i, o.hp), mana: null, ko,")],
+  // 16/10 : rune visible ; plafond de maîtrise à la nouvelle mesure de l'auteur.
+  ['auditRuneResilienceVisible', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "la rune ne se brise plus à la riposte",
+    remplace("          newFighters.forEach((f, i) => { if (f && f.resilienceUsed && !resAvantP[i]) effetSort('resilience', 'joueur', i); }); // 16/10 : la rune se brise\n", '')],
+  ['auditRuneResilienceVisible', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "l'effet « Rune brisée ! » disparaît",
+    remplace("{v.forme === 'rune' && [0, 1].map((k) => (", "{false && [0, 1].map((k) => (")],
+  ['auditFenetres', F.combat, "le plafond de maîtrise retombe à 0,75 (l'auteur redevient « trop facile »)",
+    remplace('export const MAITRISE_MAX = 1.4;', 'export const MAITRISE_MAX = 0.75;')],
   ['auditPortee', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "une valeur lue AVANT sa déclaration (zone morte : écran blanc ou valeur vide)",
     remplace('  }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici', '  }, [(lifetimeStats || {}).advLevelReached || 0, owned.length]); // ⚠️ jamais `owned` ici')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "plus de recalcul quand une créature rejoint le deck en cours de fenêtre",
