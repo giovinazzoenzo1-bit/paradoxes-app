@@ -3681,3 +3681,29 @@ Contrôles : auditUltimeJoueur (nouveau → 109) ; description vérifiée sur de
 taps 20/20.
 ⚠️ COMPTER LES PASSES EN COURS : `pgrep -a -x node | grep -c verifier` (seuls les vrais processus node) — `pgrep -f` reconnaît
 le texte de SA PROPRE commande dès qu'elle contient « verifier-controles.js » (faux « 2 en cours »).
+
+
+## 16/10 (soir) — PACK EN PIÈCES = 2 NIVEAUX DE LA CRÉATURE MOYENNE (règle de l'auteur, publié) + PRIME DE COMBAT (question posée)
+
+DEMANDE : « +700 Griffes en un seul combat, c'est trop ; un niveau ≈ 300 » ; « l'achat avec les pièces ne sert à rien —
+remplacer les 100 Griffes par 2 levels de créature moyenne ».
+PACK : clickerLogic.taillePackGriffes(niveauxDeck) = levelUpCost(moy) + levelUpCost(moy + 1), moy = moyenne (arrondie bas)
+des niveaux du deck ; niveauxDuDeck(owned, deck) commun aux deux écrans (owned = [{id, level}], deck = [id × 3]). Avant :
+50 + 38 par Ascension (126 à l'A2). Exemples : deck 69/70/74 → 657 ; 50/52/54 → 134 ; 10/12/14 → 31 (plus PETIT qu'avant en
+début de partie, mais toujours exactement 2 niveaux). Prix en pièces et 4 packs par Ascension : inchangés. Branché : achat
+Clicker (ownedRef/deckRef EXISTANTS — un doublon déclaré par erreur a été attrapé par la compilation), affichage ShopView
+(prop packGriffes), modèle de boutique (p.packGriffes), achat + offre en Aventure, modèle d'économie (3 meilleures).
+Facteurs d'étape remesurés (deck du modèle : max 1,4 %, 14 étapes). auditPacks réécrit (nouvelle règle, 5 appels).
+PRIME DE COMBAT — MESURÉ (projection, revenus des défis/succès du modèle officiel inchangés) :
+  actuelle : deck 49 / 66 / 73 / 82 aux étapes 40 / 60 / 70 / 80 ; victoire normale ét. 69 = 745 (2,3 niveaux).
+  1,5 niveau/victoire : 47 / 60 / 70 / 76 (474) · 1 niveau : 42 / 52 / 64 / 68 (146) · 1 niveau DÈS L'ÉT. 61 : 49 / 66 / 71 / 76
+  (323 = 1 niveau ; rien ne change avant 60). Défis+succès ÷ primes à « 1 niveau » : ≤ 1,7× (règle « ne doublent pas » tenue).
+  CONFLIT : la règle du 10/10 (équipe au niveau de l'étape ±3) — « 1 niveau partout » la casse (−13 à l'étape 60).
+  Levier propre : la prime PAYÉE (griffesReward) est séparée de la prime de RÉFÉRENCE (primeDeVictoire, lue par levelUpCost).
+⚠️ ENCORE un commentaire avaleur (le mien, dans le modèle d'économie : « // … cumul.shop += p; griffes += p; } » avalé) — attrapé
+par la compilation (accolade orpheline), PAS par le détecteur : il ne voyait que les propriétés derrière une virgule.
+Détecteur RENFORCÉ (verifier-portee) : aussi les OUTILS, et les INSTRUCTIONS derrière « ; { ( » (le commentaire finit par
+« ; » ou « } » avec une affectation) ; les 2 vrais bugs du 16/10 crient, 0 fausse alerte sur src + outils.
+⚠️ 2e COUPURE de réponse : une passe de sabotages (71-106) tournait encore — attendue jusqu'à la fin (pas tuée), fichiers
+vérifiés intacts. Le tiers 71-142 dépassait 285 s → coupé en deux moitiés.
+Contrôles : 109 verts ; 3 sabotages + 1 recalé → 213 prouvés ; taps 20/20.

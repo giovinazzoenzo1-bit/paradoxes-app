@@ -1255,3 +1255,10 @@ dorée · gratuit · 3 mana » (contradictoire), et au Clicker « 3 dégâts · 
 - L'ultime d'une créature du joueur frappe à ×1,5 sa meilleure attaque normale (avant ×2) ; ceux des ennemis ne changent pas.
 - Une seule fonction (degatsBrutsJoueur) pour les dégâts réels, l'aperçu « jusqu'à X dégâts » et les descriptions.
 - Les facteurs d'étape du calculateur ont été remesurés avec ce réglage : les crans visés (95/85/70/50/33 %) restent justes.
+
+
+### 💰 PACK DE GRIFFES EN PIÈCES = 2 NIVEAUX (16/10, règle de l'auteur)
+
+- Le pack acheté avec des pièces donne de quoi monter **2 niveaux à ta créature moyenne du deck** (au vrai coût des niveaux).
+- Exemple : deck 69/70/74 → 657 Griffes (avant : 126 à la 2e Ascension).
+- Le prix en pièces et la limite de 4 packs par Ascension ne changent pas.
