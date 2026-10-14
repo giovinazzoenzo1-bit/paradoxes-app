@@ -281,7 +281,7 @@ const SABOTAGES = [
   ['auditFenetres', F.combat, "la photo ignore l'indice de maîtrise (le bon joueur ne perd plus au 4e et 5e combat)",
     remplace('* fMaitrise * fElements / (n === 1 ? MARGE_PREMIER_COMBAT : 1)', '* fElements / (n === 1 ? MARGE_PREMIER_COMBAT : 1)')],
   ['auditFenetres', F.combat, "plus de plafond de maîtrise (un joueur exceptionnel serait bloqué)",
-    remplace('export const MAITRISE_MAX = 0.75;', 'export const MAITRISE_MAX = 5;')],
+    remplace('export const MAITRISE_MAX = 1.4;', 'export const MAITRISE_MAX = 5;')],
   ['auditFenetres', F.combat, "plus de prudence statistique (3 victoires chanceuses = joueur exceptionnel)",
     remplace('export const MAITRISE_A_PRIORI = 0.7;', 'export const MAITRISE_A_PRIORI = 100;')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "recalcul avec écrasement (niveau 9 → 28 à l'arrivée d'une créature)",
