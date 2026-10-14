@@ -5620,8 +5620,8 @@ function auditNiveauMax() {
   {
     const fs = require('fs'), path = require('path');
     const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
-    if (!Av.includes('if (ownedEntry.level >= niveauMaxEquipe(niveauxDuDeck)) {')) pb.push("la montée de niveau n'applique plus le niveau max selon le deck");
-    if (!Av.includes('noteMax={raisonNiveauMax(niveauxDuDeck)}')) pb.push('la fiche ne dit plus pourquoi le niveau est bloqué');
+    if (!Av.includes('if (ownedEntry.level >= niveauMaxEquipe(niveauxEquipe)) {')) pb.push("la montée de niveau n'applique plus le niveau max selon le deck");
+    if (!Av.includes('noteMax={raisonNiveauMax(niveauxEquipe)}')) pb.push('la fiche ne dit plus pourquoi le niveau est bloqué');
     const Sim = fs.readFileSync(path.join(__dirname, 'simulateur-parcours.js'), 'utf8');
     if (!Sim.includes('L.niveauMaxEquipe(trio.map((p) => p.niv))')) pb.push('le joueur simulé ignore le niveau max selon le deck (mesures fausses)');
   }
@@ -5768,3 +5768,33 @@ function auditSortsAffiches() {
   return pb;
 }
 module.exports.auditSortsAffiches = auditSortsAffiches;
+
+// 17/10 — PLANTAGE « Object is not a function » en touchant EXPLORATION (APK de l'auteur) : dans AdventureScreen, un TABLEAU local
+// `const niveauxDuDeck = deck.filter(…)` masquait la FONCTION importée du même nom → l'effet noterNiveauxDeck(niveauxDuDeck(owned,
+// deck)) (au montage de l'écran) et l'achat de Griffes en pièces appelaient un tableau. Légal en JavaScript : la compilation, la
+// portée et les contrôles par texte passaient tous. Ce contrôle lit chaque fichier du jeu comme le compilateur : un nom IMPORTÉ
+// appelé là où une déclaration LOCALE du même nom le masque = plantage à l'exécution.
+function auditImportsMasques() {
+  const fs = require('fs'), path = require('path');
+  const parser = require('@babel/parser'); const traverse = require('@babel/traverse').default;
+  const pb = [];
+  const fichiers = [path.join(__dirname, '../App.js'), path.join(__dirname, '../index.js')];
+  (function lister(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) lister(p); else if (/\.jsx?$/.test(f)) fichiers.push(p); } })(path.join(__dirname, '../src'));
+  for (const f of fichiers) {
+    let ast;
+    try { ast = parser.parse(fs.readFileSync(f, 'utf8'), { sourceType: 'module', plugins: ['jsx'] }); } catch (e) { pb.push(`${path.basename(f)} : illisible (${e.message.slice(0, 60)})`); continue; }
+    const importes = new Set();
+    for (const n of ast.program.body) if (n.type === 'ImportDeclaration') n.specifiers.forEach((s) => importes.add(s.local.name));
+    if (!importes.size) continue;
+    traverse(ast, {
+      CallExpression(p) {
+        const c = p.node.callee;
+        if (c.type !== 'Identifier' || !importes.has(c.name)) return;
+        const b = p.scope.getBinding(c.name);
+        if (b && b.kind !== 'module') pb.push(`${path.relative(path.join(__dirname, '..'), f)}:${p.node.loc.start.line} — « ${c.name}(…) » appelle la variable LOCALE de la ligne ${b.path.node.loc.start.line}, qui masque la fonction importée`);
+      },
+    });
+  }
+  return pb;
+}
+module.exports.auditImportsMasques = auditImportsMasques;

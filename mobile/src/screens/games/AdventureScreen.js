@@ -1129,7 +1129,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     const ownedEntry = ownedMap[creatureId];
     if (!creature || !ownedEntry) return;
     // (11/10) Niveau maximum selon le DECK (règle de l'auteur) : 1 créature → 10, 2 → 20, 3 → 30, puis toutes au palier.
-    if (ownedEntry.level >= niveauMaxEquipe(niveauxDuDeck)) { jouerSon('refus', sonsAventure !== false); return; }
+    if (ownedEntry.level >= niveauMaxEquipe(niveauxEquipe)) { jouerSon('refus', sonsAventure !== false); return; }
     const cost = levelUpCost(creature, ownedEntry.level);
     if (griffes < cost) return;
     setGriffes((g) => g - cost);
@@ -1299,7 +1299,10 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     definirNiveauxJoueur(niv, dif, aff);
   }
   // (11/10) Niveaux des créatures du DECK : le niveau max de TOUTES les créatures en dépend (niveauMaxEquipe).
-  const niveauxDuDeck = deck.filter(Boolean).map((id) => (ownedMap[id] ? ownedMap[id].level || 1 : 0)).filter((x) => x > 0);
+  // ⚠️ 17/10 — PLANTAGE « Object is not a function » en touchant EXPLORATION : ce tableau s'appelait `niveauxDuDeck`, comme la
+  // FONCTION importée de clickerLogic — il la MASQUAIT dans tout l'écran : l'effet noterNiveauxDeck(niveauxDuDeck(owned, deck))
+  // (au montage) et l'achat de Griffes en pièces appelaient un tableau. Jamais le même nom qu'un import (auditImportsMasques).
+  const niveauxEquipe = deck.filter(Boolean).map((id) => (ownedMap[id] ? ownedMap[id].level || 1 : 0)).filter((x) => x > 0);
 
   const hasEmptySlot = deck.some((id) => !id);
 
@@ -1314,8 +1317,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
         griffes={griffes}
         onEvolve={() => handleEvolve(detailCreatureId, ownedMap[detailCreatureId].evolutionTier || 0, ownedMap[detailCreatureId].level)}
         onLevelUp={() => handleLevelUp(detailCreatureId)}
-        niveauMax={niveauMaxEquipe(niveauxDuDeck)}
-        noteMax={raisonNiveauMax(niveauxDuDeck)}
+        niveauMax={niveauMaxEquipe(niveauxEquipe)}
+        noteMax={raisonNiveauMax(niveauxEquipe)}
         ownedRunes={ownedRunes}
         onEquipRune={(runeId) => equipRune(runeId, detailCreatureId)}
         onUnequipRune={unequipRune}

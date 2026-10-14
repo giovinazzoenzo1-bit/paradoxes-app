@@ -636,6 +636,9 @@ const SABOTAGES = [
     remplace('      pvAvantActionO = newOpponents.map((o) => (o ? o.hp : 0));', '')],
   ['auditSortsAffiches', F.combatEcran, "la barre de l'ennemi soigné reste figée",
     remplace("if (ae.sort === 'soin') degeler('o');", '')],
+  // 17/10 : plantage de l'Exploration (import masqué par un tableau local).
+  ['auditImportsMasques', F.aventure, "le tableau local reprend le nom de la fonction importée (plantage en touchant EXPLORATION)",
+    remplace('  const niveauxEquipe = deck.filter(Boolean)', '  const niveauxDuDeck = deck.filter(Boolean)')],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------
