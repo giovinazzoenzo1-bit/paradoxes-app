@@ -3235,7 +3235,8 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = 'e97f41c5'; // 11/10 (soir) : soutiens sur la cible SEULEMENT (règle partagée avec simulerCombat ; le Gardien est seul, rien ne change pour lui — auditGardienCalibre vert). Avant : '52f045e3'.
+const EMPREINTE_COMBAT = '1a11b089'; // 14/10 : lancerSort accepte l'allié CHOISI (cibleAllie) ; sans lui (Gardien, ennemis, simulation) : choix automatique inchangé — auditGardienCalibre relancé : OK.
+// (ancienne :) 'e97f41c5' // 11/10 (soir) : soutiens sur la cible SEULEMENT (règle partagée avec simulerCombat ; le Gardien est seul, rien ne change pour lui — auditGardienCalibre vert). Avant : '52f045e3'.
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
   const a = src.indexOf('// ⚔️ RÈGLES DU COMBAT — DÉBUT');
@@ -4379,7 +4380,8 @@ function auditJaugeFrappe() {
   const jaugeFn = s.slice(s.indexOf('function JaugeFrappe('), s.indexOf('\n}\n', s.indexOf('function JaugeFrappe(')));
   if (!/positionAiguille\(/.test(jaugeFn)) pb.push("écran : l'aiguille n'est plus dessinée par positionAiguille (dessin et verdict divergeraient)");
   // 10/10 : l'EFFET d'un sort suit le même tap que ses dégâts, et le verdict affiche la part obtenue.
-  if (!/lancerSort\(skill\.sort, fightersRef\.current, curIdx, opponentsRef\.current, targetIdx, multiplicateurSort\(verdictCoup\)\)/.test(s)) pb.push("écran : l'effet d'un sort ne suit plus le tap à la jauge");
+  // 14/10 : + l'allié choisi (Bouclier / Soin / Boost) en 7e argument.
+  if (!/lancerSort\(skill\.sort, fightersRef\.current, curIdx, opponentsRef\.current, targetIdx, multiplicateurSort\(verdictCoup\), estSurAllie\(skill\) \? allyTargetRef\.current : null\)/.test(s)) pb.push("écran : l'effet d'un sort ne suit plus le tap à la jauge");
   if (!/selectedSkill && selectedSkill\.sort \? multiplicateurSort\(verdict\) : multiplicateurJauge\(verdict\)/.test(s)) pb.push("écran : le verdict n'affiche plus la part du coup (ou du sort) obtenue");
   const tapFn = s.slice(s.indexOf('const handleTap = () => {'), s.indexOf('\n  };\n', s.indexOf('const handleTap = () => {')));
   if (!/positionAiguille\(/.test(tapFn) || !/resultatJauge\(/.test(tapFn)) pb.push("écran : le verdict du tap n'utilise plus positionAiguille / resultatJauge");
