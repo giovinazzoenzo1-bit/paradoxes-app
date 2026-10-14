@@ -378,7 +378,7 @@ const SABOTAGES = [
     remplace('    try { return jouerEtape(l, k, s); } finally { K.definirNiveauxJoueur(null); } // jamais de fuite vers les autres mesures', '    return jouerEtape(l, k, s);')],
   // 11/10 : le plantage « Property 'poudre' doesn't exist » revient (valeur lue hors de sa portée).
   ['auditPortee', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la carte lit de nouveau une valeur que le parent ne lui transmet pas",
-    remplace('function ChapterMapScreen({ poudre = 0, ascensionCount = 0, currentUnlockedLevel,', 'function ChapterMapScreen({ currentUnlockedLevel,')],
+    remplace('function ChapterMapScreen({ onEncaisserGriffes = null, poudre = 0, ascensionCount = 0, currentUnlockedLevel,', 'function ChapterMapScreen({ currentUnlockedLevel,')],
   // 11/10 : journal des Griffes et rapport enrichi (tableau Excel de l'auteur).
   ['auditJournalDev', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la prime d'étape n'est plus notée dans le journal des Griffes",
     remplace("noterGriffes('prime', reward, { etape: levelNumber });", "void 0;")],

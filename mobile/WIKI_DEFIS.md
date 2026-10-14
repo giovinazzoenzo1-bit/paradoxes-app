@@ -1235,3 +1235,16 @@ dorée · gratuit · 3 mana » (contradictoire), et au Clicker « 3 dégâts · 
 - **Combat** : une LUEUR (image lueur-or) derrière la créature qui JOUE son tour — ta créature pendant ton tour, l'ADVERSAIRE
   pendant sa riposte ou son sort (et sa case en haut à droite) ; rouge derrière l'adversaire visé, verte derrière l'allié choisi.
   ⚠️ Avant ce jour, le paramètre `ring` des créatures de l'arène ne dessinait RIEN (il ne changeait qu'une pastille cachée).
+
+
+### 🎁 « TOUT RÉCUPÉRER » (15/10, choix de l'auteur)
+
+- **Pourquoi** : le calculateur des fenêtres compte les récompenses réclamables comme DÉJÀ dépensées ; chaque tap oublié
+  rendait l'étape plus dure qu'annoncé (rapport du 14/10 : 467 Griffes en attente, étape 22 à 1 %).
+- **Une seule règle** : dailyLogic.recompensesARecuperer (défis du jour et de la semaine terminés, TOUS les paliers de succès
+  atteints, calendrier du jour) — griffesRecuperables (le total du calculateur) et claimAll (le bouton) l'utilisent : ils ne
+  peuvent pas diverger.
+- **Écran Progrès** : bouton « 🎁 Tout récupérer · X Griffes » sous les onglets (si quelque chose est à prendre).
+- **Carte d'Aventure** : pastille « 🎁 X Griffes à récupérer » sous l'en-tête ; elle réclame tout et CRÉDITE tout de suite
+  (« ✅ +X Griffes »).
+- Calendrier en PIÈCES : laissé à prendre dans le Clicker (seul écran qui sait créditer les pièces).

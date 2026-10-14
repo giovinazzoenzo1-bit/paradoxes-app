@@ -3609,3 +3609,17 @@ le tour adverse. Contrôles : règle « aucune lueur ennemie », cadre présent,
 198 prouvés ; 105 verts ; taps 20/20.
 À RÉFLÉCHIR (demande de l'auteur) : un système pour RÉCUPÉRER FACILEMENT les récompenses des défis (le calculateur suppose
 qu'elles sont réclamées ET dépensées : rapport du 14/10, étape 22 à 1 % tant que 467 Griffes attendaient).
+
+
+## 15/10 (suite) — « 🎁 TOUT RÉCUPÉRER » (choix de l'auteur, publié)
+
+Option 1 choisie (pas d'amélioration automatique, pas de récupération sans tap). CODE : dailyLogic.recompensesARecuperer
+(liste + total + journal) — griffesRecuperables l'utilise ; DailyContext.claimAll(addAppCoins) : tout d'un bloc (succès :
+setAchievementsClaimed({...prev, ...r.succes}) — ⚠️ appeler claimAchievement en boucle relirait l'ancien palier, état figé au
+rendu : double paiement), Griffes et diamants en file d'attente, journal des Griffes, calendrier via claimStreak sauf pièces
+sans porte-monnaie. ProgresScreen : bouton (busyId 'tout', effet doré). AdventureScreen : encaisserGriffesEnAttente (crédit
+immédiat — avant : seulement à l'ouverture), prop onEncaisserGriffes → ChapterMapScreen (pastille sous l'en-tête, masquée
+pendant l'aperçu, « ✅ +X Griffes »). MESURÉ (état type) : défi terminé seul pris, 2 paliers de succès d'un coup, total
+réclamé = total du calculateur (202 Griffes).
+Contrôles : auditToutRecuperer (nouveau → 106 contrôles) ; 3 sabotages + 1 recalé (signature de ChapterMapScreen) → 201
+prouvés ; taps 20/20.
