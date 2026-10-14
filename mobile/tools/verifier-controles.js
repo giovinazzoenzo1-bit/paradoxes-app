@@ -639,6 +639,13 @@ const SABOTAGES = [
   // 17/10 : plantage de l'Exploration (import masqué par un tableau local).
   ['auditImportsMasques', F.aventure, "le tableau local reprend le nom de la fonction importée (plantage en touchant EXPLORATION)",
     remplace('  const niveauxEquipe = deck.filter(Boolean)', '  const niveauxDuDeck = deck.filter(Boolean)')],
+  // 17/10 (soir) : Pacte du joueur ×1,5 / 30 %, ennemis intacts, énergie 7 (choix de l'auteur).
+  ['auditPacteEnergie', F.combat, "le Pacte du joueur repasse à ×2", remplace('  pacteMultJoueur: 1.5,', '  pacteMultJoueur: 2,')],
+  ['auditPacteEnergie', F.combat, "le Pacte du joueur ne coûte plus que 15 %", remplace('  pacteCoutPvJoueur: 0.30,', '  pacteCoutPvJoueur: 0.15,')],
+  ['auditPacteEnergie', F.combat, "les ennemis prennent le Pacte réduit du joueur", remplace('const r = lancerSort(sort, avecMana, idx, joueurs, cible, 1, null, true);', 'const r = lancerSort(sort, avecMana, idx, joueurs, cible);')],
+  ['auditPacteEnergie', F.combat, "l'énergie max retombe à 5", remplace('export const ENERGY_MAX = 7;', 'export const ENERGY_MAX = 5;')],
+  ['auditPacteEnergie', F.combat, "la carte du Pacte réécrit ses chiffres en dur",
+    remplace("SORTS.pacte.desc = `×${String(EFFETS.pacteMultJoueur).replace('.', ',')} · coûte ${Math.round(EFFETS.pacteCoutPvJoueur * 100)} % de PV`;", "SORTS.pacte.desc = '×2 · coûte 15 % de PV';")],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

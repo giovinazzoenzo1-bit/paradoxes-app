@@ -676,11 +676,18 @@ export const EFFETS = {
   executionFaible: 0.6,
   pacteMult: 2,              // ×2, pour 15 % de ses propres PV max
   pacteCoutPv: 0.15,
+  // 17/10 (choix de l'auteur, MESURÉ) : le Pacte du JOUEUR passe à ×1,5 pour 30 % de ses PV max — les ENNEMIS gardent ×2 / 15 %
+  // (même règle que l'ultime : joueur ×1,5, ennemis ×2 ; ennemis intacts = facteurs d'étape toujours valables). MESURÉ en duels à
+  // niveau égal : Malefix gagnait 76-82 % (autres peu communes 50 %) → 58-59 %.
+  pacteMultJoueur: 1.5,
+  pacteCoutPvJoueur: 0.30,
   provocationTours: 2,       // les ennemis doivent frapper le Tank 2 tours,
   provocationReduction: 0.20, //   qui encaisse 20 % de moins
   fureurTour: 30,            // après 30 tours : ennemis +50 % (aucun combat sans fin)
   fureurMult: 1.5,
 };
+// 17/10 : la carte du Pacte en combat (la TIENNE) LIT ses chiffres dans les règles (avant : « ×2 · coûte 15 % » écrit en dur).
+SORTS.pacte.desc = `×${String(EFFETS.pacteMultJoueur).replace('.', ',')} · coûte ${Math.round(EFFETS.pacteCoutPvJoueur * 100)} % de PV`;
 
 const etatsDe = (c) => (c && c.etats) || {};
 const avecEtats = (c, maj) => ({ ...c, etats: { ...etatsDe(c), ...maj } });
@@ -718,7 +725,7 @@ export function plusFort(equipe, lanceur) {
 // passent déjà par la jauge de l'attaque (même verdict). Ennemis : 1 (ils ne tapent pas).
 // 14/10 (demande de l'auteur) : `cibleAllie` = l'allié CHOISI par le joueur (il le touche) pour Bouclier, Soin et Boost.
 // Absent (ennemis, joueur simulé) : choix automatique comme avant (le plus blessé / celui qui frappe le plus fort).
-export function lancerSort(sortId, allies, lanceur, ennemis, cible, mult = 1, cibleAllie = null) {
+export function lancerSort(sortId, allies, lanceur, ennemis, cible, mult = 1, cibleAllie = null, parEnnemi = false) {
   const E = EFFETS;
   const A = allies.slice();
   const N = ennemis.slice();
@@ -772,8 +779,10 @@ export function lancerSort(sortId, allies, lanceur, ennemis, cible, mult = 1, ci
     }
     case 'pacte': {
       const c = A[lanceur];
-      A[lanceur] = { ...c, hp: Math.max(1, c.hp - Math.round(E.pacteCoutPv * pvMax(c))) };
-      return fin({ part: E.pacteMult });
+      // 17/10 : ×1,5 / 30 % pour le joueur, ×2 / 15 % pour les ennemis (parEnnemi, posé par actionAdversaire).
+      const coutPacte = parEnnemi ? E.pacteCoutPv : E.pacteCoutPvJoueur, foisPacte = parEnnemi ? E.pacteMult : E.pacteMultJoueur;
+      A[lanceur] = { ...c, hp: Math.max(1, c.hp - Math.round(coutPacte * pvMax(c))) };
+      return fin({ part: foisPacte });
     }
     default:
       return fin({ part: 1 });
@@ -1080,7 +1089,7 @@ export function actionAdversaire(adversaires, idx, joueurs, cible, alea = Math.r
   const sort = decisionSortAdversaire(adversaires, idx, joueurs, cible);
   if (sort) {
     const avecMana = adversaires.map((a, i) => (i === idx ? { ...a, mana: Math.min(MANA_MAX, (a.mana || 0) + MANA_PER_TURN) } : a));
-    const r = lancerSort(sort, avecMana, idx, joueurs, cible);
+    const r = lancerSort(sort, avecMana, idx, joueurs, cible, 1, null, true); // 17/10 : sort d'ENNEMI (Pacte ×2 / 15 %)
     let degats = joueurs.map(() => 0);
     if (r.coup) {
       const lanceur = r.allies[idx];
@@ -2141,7 +2150,7 @@ export function texteSort(id, court = false) {
     marque: [`La cible subit plus de dégâts`, `+${pctTexte(E.marqueBonus)} sur les ${E.marqueCoups} prochains coups.`],
     zone: [`Frappe tous les ennemis`, `${pctTexte(E.zonePart)} d'un coup sur chacun.`],
     execution: [`Achève un ennemi presque K.O.`, `×${E.executionFort} sous ${pctTexte(E.executionSeuil)} de PV, ×${String(E.executionFaible).replace('.', ',')} sinon.`],
-    pacte: [`Frappe ×${E.pacteMult}, mais coûte des PV`, `Te coûte ${pctTexte(E.pacteCoutPv)} de tes PV max.`],
+    pacte: [`Frappe ×${String(E.pacteMultJoueur).replace('.', ',')}, mais coûte des PV`, `Te coûte ${pctTexte(E.pacteCoutPvJoueur)} de tes PV max.`],
   };
   return (T[id] || ['', ''])[court ? 0 : 1];
 }
@@ -2240,7 +2249,8 @@ export function recompenseQuete(base, niveauAventure) {
 // ---- Énergie (30/08) — 1 vie toutes les 20 min, plafond à 5 ----
 // Coûte 1 énergie pour LANCER un combat (pas remboursé en cas de
 // défaite — c'est bien "1 vie par tentative", pas "1 vie par victoire").
-export const ENERGY_MAX = 5;
+// 17/10 (choix de l'auteur) : 7 énergies (avant 5) — une fenêtre de 5 étapes demande ~8,7 tentatives en moyenne (3,7 défaites).
+export const ENERGY_MAX = 7;
 export const ENERGY_REGEN_MS = 20 * 60 * 1000; // 20 minutes
 
 // Recalcule l'énergie actuelle à partir du dernier timestamp connu — le

@@ -3831,6 +3831,23 @@ mobile/tools/capture/ouvrir-exploration.mjs : rend la vraie appli, touche EXPLOR
 Contrôles : 113 verts ; 1 sabotage → 236 prouvés (5 passes) ; taps 20/20 ; sonde de l'Exploration OK.
 
 
+## 17/10 (nuit) — PACTE DU JOUEUR ×1,5 / 30 % (ENNEMIS ×2 / 15 %) + ÉNERGIE 7 (choix de l'auteur, publié)
+
+MESURÉ AVANT (duels à niveau égal contre 12 communes/peu communes, joueur 60 ms) : Malefix 76-82 % (autres peu communes 50 %) ;
+×2 / 30 % → 70-74 ; ×1,5 / 15 % → 67-70 ; ×1,5 / 30 % → 58-59 %. Le Pacte (×2 pour 2 de mana) battait l'ultime du joueur (×1,5).
+1er ESSAI (branche `pacte-energie`, NON publiée) : Pacte réduit POUR TOUS + tables remesurées → conflit MESURÉ aux A4/A5 : parcours
+3,8 / 3,9 victoires sur 10 (alarme < 4) avec les tables remesurées, crans du panel trop faciles (86 % / 49 %) sans — panel de
+communes non représentatif des decks de fin de partie. DÉCISION DE L'AUTEUR : Pacte réduit pour le JOUEUR seulement (même règle que
+l'ultime : joueur ×1,5, ennemis ×2).
+CODE : EFFETS.pacteMultJoueur 1,5 / pacteCoutPvJoueur 0,30 (pacteMult 2 / pacteCoutPv 0,15 = ennemis) ; lancerSort(…, parEnnemi)
+— seul actionAdversaire passe `true` (CombatScreen et le joueur simulé = joueur) ; carte du Pacte (SORTS.pacte.desc) et guide LUS
+dans les règles du joueur, « ×1,5 » avec virgule ; ENERGY_MAX 7 ; simulateur de parcours : energieMax = K.ENERGY_MAX (5 écrit en dur avant).
+FACTEURS D'ÉTAPE : NON remesurés — MESURÉ sur 60 étapes : +1,1 % en moyenne (max 5,2 %, bruit de mesure compris) ; crans 1-45 et
+61-300, parcours et Gardien : tous verts sans remesure.
+Contrôles : auditSortsMoteur recalé (il encodait ×2 / 15 %) ; auditPacteEnergie (nouveau → 115) ; 5 sabotages → 241 prouvés ; taps 20/20 ;
+sonde de l'Exploration OK.
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

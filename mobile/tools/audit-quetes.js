@@ -3373,7 +3373,7 @@ function auditSortsMoteur() {
   verif(K.lancerSort('execution', [fx(50, 50)], 0, [fx(20, 100)], 0).coup.part === 2
     && K.lancerSort('execution', [fx(50, 50)], 0, [fx(50, 100)], 0).coup.part === 0.6, 'exécution : ×2 sous 30 %, ×0,6 sinon');
   r = K.lancerSort('pacte', [fx(10, 100)], 0, [fx(50, 50)], 0);
-  verif(r.allies[0].hp === 1 && r.coup.part === 2, 'pacte : ×2, coûte 15 % des PV sans jamais tuer le lanceur');
+  verif(r.allies[0].hp === 1 && r.coup.part === 1.5 && K.lancerSort('pacte', [fx(10, 100)], 0, [fx(50, 50)], 0, 1, null, true).coup.part === 2, 'pacte : ×1,5 pour le joueur, ×2 pour les ennemis (choix de l\'auteur, 17/10), sans jamais tuer le lanceur');
   const lent = fx(100, 100);
   verif(K.largeurZoneParfait({ ...lent, etats: { vitesse: E.vitesseReduction } }) > K.largeurZoneParfait(lent), 'vitesse : zone dorée de la jauge plus large (03/10 ; avant : moins de taps)');
   verif(!K.sortDisponible(fx(100, 100, {}, 1), 'bouclier'), 'sans assez de mana, le sort est indisponible (grisé)');
@@ -5798,3 +5798,29 @@ function auditImportsMasques() {
   return pb;
 }
 module.exports.auditImportsMasques = auditImportsMasques;
+
+// 17/10 (soir) — CHOIX DE L'AUTEUR (après mesure) : Pacte du JOUEUR ×1,5 pour 30 % de ses PV max (avant ×2 pour 15 % et 2 de mana,
+// plus fort que son ultime ; Malefix gagnait 76-82 % des duels à niveau égal, les autres peu communes 50 % → 58-59 %) ; les ENNEMIS
+// gardent ×2 / 15 % (comme l'ultime : joueur ×1,5, ennemis ×2 — pacte pour tous = conflit de calibrage mesuré aux A4/A5) ; énergie 7.
+function auditPacteEnergie() {
+  const fs = require('fs'), path = require('path'); const K = load('combatLogic'); const C = load('clickerLogic');
+  const pb = [];
+  if (K.EFFETS.pacteMultJoueur !== 1.5 || K.EFFETS.pacteCoutPvJoueur !== 0.3) pb.push(`Pacte du joueur : ×${K.EFFETS.pacteMultJoueur} pour ${Math.round(100 * K.EFFETS.pacteCoutPvJoueur)} % (choix de l'auteur : ×1,5 pour 30 %)`);
+  if (K.EFFETS.pacteMult !== 2 || K.EFFETS.pacteCoutPv !== 0.15) pb.push('Pacte des ennemis : il doit rester ×2 pour 15 % (facteurs d\'étape mesurés ainsi)');
+  const base = C.CREATURES[0];
+  const fx = (hp, max) => ({ creature: base, stats: { ...K.combatStatsForCreatureTyped(base, 10, 0, []), hp: max }, hp, mana: 5, resilienceUsed: false, etats: {} });
+  const j = K.lancerSort('pacte', [fx(100, 100)], 0, [fx(50, 50)], 0);
+  const e = K.lancerSort('pacte', [fx(100, 100)], 0, [fx(50, 50)], 0, 1, null, true);
+  if (j.allies[0].hp !== 70 || j.coup.part !== 1.5) pb.push(`Pacte du joueur en combat : PV ${j.allies[0].hp} (70), coup ×${j.coup.part} (×1,5)`);
+  if (e.allies[0].hp !== 85 || e.coup.part !== 2) pb.push(`Pacte d'un ennemi : PV ${e.allies[0].hp} (85), coup ×${e.coup.part} (×2)`);
+  const Kl = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
+  if (!Kl.includes('const r = lancerSort(sort, avecMana, idx, joueurs, cible, 1, null, true);')) pb.push("les sorts des ENNEMIS ne passent plus « parEnnemi » : ils prendraient le Pacte réduit du joueur");
+  if (K.SORTS.pacte.desc !== '×1,5 · coûte 30 % de PV') pb.push(`carte du Pacte en combat : « ${K.SORTS.pacte.desc} » (doit lire les règles du joueur)`);
+  const guide = JSON.stringify([K.texteSort('pacte', true), K.texteSort('pacte', false)]);
+  if (!guide.includes('×1,5') || !guide.includes('30 %')) pb.push('guide du Pacte : chiffres absents ou faux (' + guide.slice(0, 80) + ')');
+  if (K.ENERGY_MAX !== 7) pb.push(`énergie max ${K.ENERGY_MAX} (choix de l'auteur : 7)`);
+  const t0 = 1e12;
+  if (K.computeEnergyRegen(0, t0, t0 + 10 * K.ENERGY_REGEN_MS).energy !== 7) pb.push('recharge : le plafond de 7 énergies n\'est pas tenu');
+  return pb;
+}
+module.exports.auditPacteEnergie = auditPacteEnergie;

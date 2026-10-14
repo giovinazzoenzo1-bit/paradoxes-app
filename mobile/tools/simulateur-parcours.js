@@ -81,7 +81,7 @@ const REGLAGES = {
   // 16/10 (choix de l'auteur) : défis en NIVEAUX de la meilleure créature (3 du jour à ~35 écrits, 6/7 d'hebdo à ~201 écrits).
   quetesDuJour: (niveaux) => 39 + 3 * DQ.recompenseDefi(35, 'jour', niveaux) + (6 / 7) * DQ.recompenseDefi(201, 'semaine', niveaux),
   heuresJeuParJour: 12,
-  energieMax: 5,
+  energieMax: K.ENERGY_MAX, // 17/10 : lu dans les règles du jeu (7, choix de l'auteur ; avant 5 écrit en dur)
   energieParHeure: 3,
   garantie: true, // GARANTIE_OEUFS (clickerLogic)
   blocage: 30, // défaites de suite sur un même niveau = joueur BLOQUÉ
