@@ -3786,6 +3786,27 @@ Contrôles : auditEtapesAvancees (nouveau → 111) ; 9 sabotages → 229 prouvé
 ⚠️ RESTE OUVERT : BUG 2 (Soin / Bouclier, chiffres affichés) — l'auteur doit dire OÙ et QUEL chiffre.
 
 
+## 17/10 (suite) — BUG 2 : LE « +X » DU SOIN ET DU BOUCLIER EN COMBAT (corrigé, publié)
+
+PRÉCISION DE L'AUTEUR : c'est le chiffre flottant « +X » en combat (pas la fiche ni le guide). Il n'a pas donné de chiffres :
+causes trouvées dans le code, puis prouvées par contrôle.
+CAUSE 1 — BOUCLIER : les boucliers ne s'ADDITIONNENT pas (le plus fort reste : avecEtats(…, max(ancien, v))) mais l'événement
+portait la valeur LANCÉE → « +200 » affiché alors que la créature gardait son bouclier de 400 (gain 0), ou « +400 » sur un
+bouclier de 300 (gain réel 100). Aucune barre ne montre le bouclier : le « +X » était le seul repère, et il mentait.
+CORRECTIF : lancerSort renvoie le GAIN réel (règle du max INCHANGÉE) ; 0 → « Déjà protégé » + message « a déjà un bouclier plus fort ».
+CAUSE 2 — SOIN : le gel d'affichage des PV (« chaque PV garde sa valeur d'AVANT jusqu'à son impact ») prenait les PV d'AVANT
+TON SORT (pvAvantP) → la barre du soigné restait figée jusqu'au coup ennemi, puis montrait « soin − dégâts » d'un bloc : « +1 500
+PV » affiché, barre qui BAISSE si l'ennemi frappe plus fort. Côté ennemi : son soin, calculé dans le même tour, fondait dans TON
+coup au dégel (« −3 000 » affiché, barre qui baisse de 1 500), son « +X PV » arrivait ensuite sans rien faire monter.
+CORRECTIF (CombatScreen, affichage seul) : pvApresSortP (PV juste après ton sort) sert de base au gel ; pvAvantActionO (PV des
+ennemis après ton coup, avant leur action) regelé au dégel de ton coup si l'ennemi se soigne, dégelé avec son « +X PV »
+(IMPACT_MS 310 ms < RIPOSTE_MS 950 ms : ordre vérifié). EMPREINTE_COMBAT → 88f61372 (affichage seul ; auditGardienCalibre OK).
+⚠️ COUPURE de réponse (2e de la conversation) pendant la passe 142-190 : attendue jusqu'au bout (clickerLogic saboté à ce
+moment), fichiers vérifiés intacts, aucune relance en parallèle.
+Contrôles : auditSortsAffiches (nouveau → 112) ; 6 sabotages → 235 prouvés (5 passes : 0-71, 71-106, 106-142, 142-190, 190-235) ;
+taps 20/20. ⚠️ La dernière passe dépasse maintenant 285 s d'un bloc : la couper en deux (142-190 · 190-fin).
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
@@ -3806,7 +3827,7 @@ L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieur
        (12 218 à l'étape 85) et chance annoncée 0 % — gagnée avec 48 % de vie → l'APERÇU a mal calculé la puissance
        (créature manquante dans membresPourCombat ? runes ?) → chance faussée vers « Extrême ».
    (c) Maîtrise de l'auteur (15 derniers) = 1,06, SOUS le plafond (1,4) : le plafond n'est PAS en cause cette fois.
-2. « Les coups spéciaux comme HP en plus (Soin) ou Bouclier n'affichent pas les bonnes stats. »
+2. ✅ CORRIGÉ le 17/10 (section « BUG 2 : LE +X DU SOIN ET DU BOUCLIER »). « Les coups spéciaux comme HP en plus (Soin) ou Bouclier n'affichent pas les bonnes stats. »
    À PRÉCISER avec l'auteur : où (fiche créature, consigne de combat, chiffre flottant « +X », guide) et quel chiffre.
    Pistes : texteSort (détail chiffré) vs EFFETS réels ; valeur passée à effetSort depuis le ciblage d'allié (14/10).
    Aucun ultime n'est un soin/bouclier dans les données (vérifié) : il s'agit des SORTS.
@@ -3833,7 +3854,7 @@ Le sandbox repart à zéro à chaque conversation : rien de /home/claude ni de /
 3. Portée : node mobile/tools/verifier-portee.js → « aucun nom inconnu » (noms inconnus, lecture avant déclaration = écran
    blanc sur Hermes, commentaire « // » qui avale la fin d'une ligne — jeu ET outils).
 4. Suite : timeout 295 node mobile/tools/verifier-defis.js → « RIEN DE CASSÉ » (110 contrôles au 16/10).
-5. Sabotages : timeout 285 node mobile/tools/verifier-controles.js A B en 4 passes : 0 71 · 71 106 · 106 142 · 142 <total>.
+5. Sabotages : timeout 285 node mobile/tools/verifier-controles.js A B en 5 passes : 0 71 · 71 106 · 106 142 · 142 190 · 190 <total> (235 au 17/10).
    AVANT chaque passe : `pgrep -a -x node | grep -c verifier` = 0 et `git status --short` vide. UNE passe à la fois.
 6. Sonde des taps : mkdir -p /tmp/cap && cp mobile/tools/capture/package.json /tmp/cap/ && (cd /tmp/cap && npm i) ; puis
    cd mobile/tools/capture && ln -sfn /tmp/cap/node_modules node_modules && EMULE_TOUCHER=1 node build.mjs scenes/menu.jsx
