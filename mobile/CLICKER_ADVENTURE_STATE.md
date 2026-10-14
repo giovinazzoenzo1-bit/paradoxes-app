@@ -3557,3 +3557,24 @@ CORRECTIF : combatLogic.descriptionAttaque(k, créature, attaque) + texteSort(id
 Attaques), le guide des spécialités (SPECIALITES_GUIDE ne garde que les identifiants) et le Clicker (competencesAvecSort :
 sort compris). Contrôles : chaque compétence de CHAQUE créature (dégâts = scaledSkillDamage, sorts avec leur coût, pas
 d'« END »), chiffres lus dans EFFETS, écrans branchés ; sabotage du guide recalé + 3 nouveaux → 189 prouvés ; 105 verts ; taps 20/20.
+
+
+## 14/10 (suite) — CHOIX DE L'ALLIÉ POUR BOUCLIER / SOIN / BOOST, DESCRIPTIONS SIMPLES, GUIDE CLARIFIÉ, END RETIRÉ (publié)
+
+Demandes de l'auteur : choisir l'allié qui reçoit un avantage (« comme le bouclier d'Aegisolar »), une lueur de sélection
+avant que l'action parte ; retirer le coût de mana des descriptions grisées et les rendre faciles à comprendre ; un guide
+clair et facile ; retirer l'endurance du Clicker. ENSUITE (annoncé) : remplacer les % de victoire de l'Aventure par
+Facile / Moyen / Compliqué / Extrême.
+CODE : combatLogic.lancerSort(…, mult, cibleAllie) — `choisi` (allié vivant) remplace plusBlesse / plusFort pour bouclier,
+soin, boost ; absent = choix automatique (ennemis, joueur simulé, Gardien inchangés). CombatScreen : SORTS_SUR_ALLIE (verbe
+de la consigne), estSurAllie, état allyTarget(+Ref) déclaré juste après selectedSkill (zone morte évitée), chooseAlly
+(panneau du bandeau + sprite de l'arène touchables quand un sort d'allié est armé), chooseTarget ignore les adversaires
+pour ces sorts, lueur `cible` + anneau 'target' sur l'allié pendant la jauge (l'anneau de l'adversaire s'efface alors),
+consigne « Touche l'allié à soigner » (avant : « … utilise Bouclier et inflige 45 % des PV perdus · 3 mana »).
+TEXTES : texteSort court = phrase simple (descriptions, guide), long = détail chiffré (guide, en petit) ; descriptionAttaque
+sans mana (« Jusqu'à X dégâts », « Attaque spéciale : jusqu'à X dégâts »). Guide : 3 phrases pour les éléments, « 👆 Choisis
+le sort, puis touche qui le reçoit », une ligne simple + un détail par sort.
+CONTRÔLES : allié choisi respecté (soin/bouclier/boost) et automatique inchangé ; combat (toucher, transmission, lueur) ;
+descriptions sans mana ; EMPREINTE_COMBAT mise à jour (1a11b089) après auditGardienCalibre OK ; repère de la jauge (7e
+argument) ; 2 sabotages recalés (repère du guide devenu DOUBLE → visé sur la phrase principale ; appel du sort prolongé) ;
+3 nouveaux → 192 prouvés ; 105 verts ; taps 20/20.

@@ -1213,3 +1213,15 @@ mana pleine (5) » — X = scaledSkillDamage, la fonction du combat, à l'attaqu
 fait la moitié ; avant les éléments). Sort : phrase courte + coût en mana. Tous les chiffres sont LUS dans les règles.
 Avant : « 3 dégâts » (chiffre brut de la définition), « 11 dégâts · mana plein », « 45 % des PV perdus », « +35 % de zone
 dorée · gratuit · 3 mana » (contradictoire), et au Clicker « 3 dégâts · 5 END » (endurance supprimée le 11/09).
+
+
+### 👆 CHOISIR L'ALLIÉ D'UN SORT + DESCRIPTIONS SIMPLES (14/10)
+
+- **Bouclier, Soin, Boost** : après avoir choisi le sort, le joueur TOUCHE l'allié qui le reçoit (son panneau en haut ou sa
+  créature dans l'arène) ; les autres actions se lancent en touchant un adversaire, comme avant. Une LUEUR (panneau) et un
+  ANNEAU DE CIBLE (arène) entourent la créature choisie pendant la jauge. Allié K.O. touché ou sort lancé par un ennemi /
+  le joueur simulé : choix automatique (le plus blessé ; celui qui frappe le plus fort pour Boost).
+- La consigne de combat dit quoi toucher : « 💚 Soin : Soigne un allié de ton choix. Touche l'allié à soigner. »
+- **Descriptions grisées** (fiche, Clicker) : SANS coût en mana, des mots simples — « Jusqu'à 84 dégâts », « Attaque spéciale :
+  jusqu'à 167 dégâts », « Soigne un allié de ton choix ». Le guide reprend la même phrase et met les chiffres en petit dessous.
+- Clicker : la stat « 🔋 END » (endurance supprimée le 11/09) a disparu.
