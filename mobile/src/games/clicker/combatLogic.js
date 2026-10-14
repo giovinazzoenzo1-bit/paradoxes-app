@@ -1765,14 +1765,15 @@ export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1 
 // { [étape]: facteur } — MESURÉ par mobile/tools/mesurer-etapes.js (11/10, étapes 1-60 ; au-delà : facteurs d'espèce).
 // 16/10 : les 3 tables REMESURÉES avec l'ultime du joueur à ×1,5 (outil mesurer-etapes, 160 combats par équipe = 960 par étape).
 // 16/10 (suite) : remesurées de nouveau avec le pack en pièces à 2 niveaux de la créature moyenne (deck du modèle, max 1,4 %).
-export const FACTEUR_ETAPE = {"1": 0.877, "2": 0.951, "3": 0.905, "4": 1.046, "5": 0.967, "6": 1.04, "7": 0.949, "8": 0.892, "9": 1.047, "10": 0.983, "11": 1.043, "12": 1.106, "13": 1.252, "14": 1.032, "15": 1.125, "16": 1.312, "17": 1.215, "18": 1.069, "19": 1.233, "20": 1.015, "21": 1.105, "22": 0.902, "23": 0.935, "24": 1.001, "25": 0.956, "26": 0.953, "27": 0.828, "28": 0.923, "29": 0.828, "30": 0.932, "31": 0.875, "32": 0.97, "33": 1.077, "34": 1.171, "35": 1.047, "36": 0.89, "37": 0.828, "38": 0.969, "39": 0.828, "40": 0.828, "41": 1.088, "42": 1.172, "43": 0.88, "44": 1.124, "45": 1.089, "46": 0.874, "47": 1.112, "48": 1.097, "49": 0.899, "50": 1.079, "51": 1.111, "52": 0.898, "53": 1.054, "54": 1.163, "55": 0.86, "56": 1.089, "57": 1.141, "58": 0.857, "59": 1.114, "60": 0.938};
+// 16/10 (soir) : et avec la prime de victoire de l'auteur (prochain niveau de la meilleure créature) — deck du modèle plus bas (max 3,6 %).
+export const FACTEUR_ETAPE = {"1": 0.877, "2": 0.951, "3": 0.905, "4": 1.046, "5": 0.967, "6": 1.04, "7": 0.949, "8": 0.892, "9": 1.047, "10": 0.995, "11": 1.04, "12": 1.095, "13": 1.252, "14": 1.032, "15": 1.125, "16": 1.36, "17": 1.201, "18": 1.069, "19": 1.251, "20": 1.021, "21": 1.099, "22": 0.909, "23": 0.935, "24": 0.998, "25": 0.957, "26": 0.955, "27": 0.828, "28": 0.921, "29": 0.828, "30": 0.933, "31": 0.876, "32": 0.97, "33": 1.077, "34": 1.171, "35": 1.048, "36": 0.897, "37": 0.828, "38": 0.965, "39": 0.828, "40": 0.828, "41": 1.091, "42": 1.168, "43": 0.871, "44": 1.124, "45": 1.088, "46": 0.873, "47": 1.113, "48": 1.094, "49": 0.892, "50": 1.079, "51": 1.113, "52": 0.896, "53": 1.053, "54": 1.167, "55": 0.86, "56": 1.093, "57": 1.141, "58": 0.858, "59": 1.114, "60": 0.939};
 // 11/10 (fin) : chapitre 2 avec 3 créatures contre 2 ennemis — mesuré à part (NBJ=3 mesurer-etapes.js) : en 2 contre 2, ces
 // étapes valaient jusqu'à ×1,39 ; avec une 3e créature, ×0,84 à ×1,11 (MESURÉ : sans ce tableau, 95-100 % à tous les crans).
 // 13/10 : chapitre 1 avec UNE SEULE créature (avant l'œuf 2) — mesuré à part (NBJ=1 mesurer-etapes.js). En 2 contre 1, les
 // étapes 8 et 9 valaient ×0,88 / ×1,04 ; seul, ×1,03 / ×1,11 (exécution d'Ombrillon, etc.) → rapport du 13/10 : Ventis seul au
 // niveau MAX (10), étape 8 à 11 %, étape 9 à 3-17 % (bloqué).
-export const FACTEUR_ETAPE_1V1 = {"1": 0.922, "2": 0.958, "3": 1.045, "4": 1.122, "5": 1.009, "6": 1.1, "7": 0.936, "8": 1.04, "9": 1.125, "10": 1.021};
-export const FACTEUR_ETAPE_3V2 = {"11": 0.906, "12": 0.927, "13": 1.068, "14": 0.877, "15": 0.986, "16": 1.139, "17": 0.942, "18": 0.92, "19": 1.077, "20": 0.874};
+export const FACTEUR_ETAPE_1V1 = {"1": 0.922, "2": 0.958, "3": 1.045, "4": 1.122, "5": 1.009, "6": 1.1, "7": 0.936, "8": 1.04, "9": 1.125, "10": 1.019};
+export const FACTEUR_ETAPE_3V2 = {"11": 0.913, "12": 0.928, "13": 1.068, "14": 0.877, "15": 0.986, "16": 1.139, "17": 0.945, "18": 0.92, "19": 1.077, "20": 0.872};
 export const FACTEUR_ESPECE = {"pyrosile": [1.11, 1.09, 1.09], "caraploof": [1.04, 1.04, 1.05], "ventis": [1.17, 1.15, 1.15], "bouldog": [1.04, 1.05, 1.04], "voltix": [1.13, 1.14, 1.12], "aegisolar": [1.01, 0.98, 0.96], "glyphon": [0.93, 0.93, 0.93], "ombrillon": [1.19, 1.18, 1.17], "luxorbe": [0.96, 0.95, 0.95], "fournax": [1.01, 1.01, 1.02], "solarion": [0.74, 0.71, 0.71], "aquamira": [1, 1, 1], "terracroc": [1.11, 1.13, 1.12], "zephyrion": [1.04, 1.04, 1.04], "brontobloc": [0.96, 0.97, 0.98], "malefix": [1.12, 1.13, 1.12], "nocturis": [0.97, 0.96, 0.96], "racinea": [1.05, 1.06, 1.06], "runicor": [1.03, 1.05, 0.98], "braiserose": [1.05, 1.05, 1.05], "abyssorax": [1.04, 1.03, 1.05], "cumulox": [1.02, 1.02, 1], "voltarel": [0.98, 0.97, 0.96], "solstral": [0.91, 0.91, 0.93], "tartaroth": [1.1, 1.1, 1.1], "arcanis": [0.85, 0.89, 0.89]}; // [sans évolution, évolution 1, évolution 2]
 function rapportDifficulte(nbJ, nbE, d) {
   const cle = `${nbJ}v${nbE}`;
@@ -1917,7 +1918,8 @@ export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 
     niveaux[n] = r.niveau;
     // 12/10 : l'ennemi d'entraînement, rendu dans options.affaiblissements (effacé si l'étape n'en a plus besoin).
     if (options.affaiblissements) { if (r.affaiblissement < 1) options.affaiblissements[n] = r.affaiblissement; else delete options.affaiblissements[n]; }
-    budget += griffesReward(n); // la prime de cette étape sert pour la suivante
+    // la prime de cette étape sert pour la suivante — 16/10 : celle du deck après dépense (sa meilleure créature)
+    budget += primeVictoire(n, apres.membres.map((m) => m.ownedLevel));
   }
   return niveaux;
 }
@@ -2181,6 +2183,22 @@ export const POUDRE_PAR_VICTOIRE = 1;
 export const POUDRE_PRIX = { unite: 3, pack: 8, speciale: 9 };
 // 11/10 (décision de l'auteur) : primes ×0,9 — le COÛT d'un niveau lit la prime de BASE (primeDeVictoire), il ne baisse pas.
 export const FACTEUR_PRIMES = 0.9;
+// ---- PRIME DE VICTOIRE (16/10, RÈGLE DE L'AUTEUR) ----
+// « un calculateur qui donne approximativement le nombre de griffes que le joueur reçoit via les victoires … de façon à
+// pouvoir améliorer 1 fois sa meilleure créature » : une 1re victoire en Aventure rapporte le coût du PROCHAIN NIVEAU de ta
+// MEILLEURE créature du deck ; un BOSS (étapes 10, 20, …) : de quoi la monter 2 fois. MESURÉ avant (rapport du 14/10) :
+// 745 Griffes à l'étape 69 pour un niveau à 330 (2,3 niveaux par victoire, « trop »). griffesReward (ci-dessous) reste la
+// prime de RÉFÉRENCE : levelUpCost la lit pour fixer le coût des niveaux — elle n'est plus versée.
+export const PRIME_NIVEAUX_VICTOIRE = 1;
+export const PRIME_NIVEAUX_BOSS = 2;
+export function primeVictoire(levelNumber, niveauxDeck) {
+  const l = (Array.isArray(niveauxDeck) ? niveauxDeck : []).map(Number).filter((x) => x > 0);
+  const meilleur = l.length ? Math.max(...l) : 1;
+  const fois = estEtapeBoss(levelNumber) ? PRIME_NIVEAUX_BOSS : PRIME_NIVEAUX_VICTOIRE;
+  let t = 0;
+  for (let k = 0; k < fois; k++) t += levelUpCost({ rarity: 'commun' }, meilleur + k);
+  return Math.max(1, Math.round(t));
+}
 export function griffesReward(levelNumber) {
   const l = Math.max(1, Math.floor(levelNumber || 1));
   return Math.round(primeDeVictoire(l) * (l >= BONUS_PRIMES.aPartirDe ? 1 + BONUS_PRIMES.bonus : 1) * FACTEUR_PRIMES);
@@ -2649,7 +2667,9 @@ export function niveauxPourAtteindre(membres, cible) {
 // 10/10 (niveaux réels) : recalculé sur 60 parcours (même formule que auditGardienGriffes) — les joueurs
 // livrent plus de combats par Ascension (cible 7/10), chaque combat rapporte moins. Avant : [36, 171, 748, 1035, 1330, 1527].
 // 10/10 (fin des coups critiques, ennemis recalibrés) : recalculé de nouveau. Avant : [27, 103, 472, 585, 910, 1190].
-export const GRIFFES_PAR_COMBAT = [24, 119, 576, 697, 1035, 1383]; // A0 … A5 — recalculé le 11/10 (fenêtres de difficulté : moins de combats par étape)
+// 16/10 : RECALCULÉ avec la prime de l'auteur (prochain niveau de la meilleure créature) — simulateur, 60 joueurs, primes et
+// packs RÉELLEMENT versés (avant : [24, 119, 576, 697, 1035, 1383]).
+export const GRIFFES_PAR_COMBAT = [22,  48,  252,  360,  470,  478]; // A0 … A5
 // LE RÉGLAGE : 25 % des Griffes moyennes d'un combat ≈ 1 niveau à TOUS les stades (MESURÉ :
 // 0,6 à 1,2 niveau ; 50 % ≈ 1,5 à 2,5 ; 100 % ≈ 2,3 à 4,9).
 export const EFFORT_GARDIEN = 0.25;
@@ -2762,9 +2782,10 @@ export function deckApresEffortEquitable(membres, griffes, plafond = Infinity, o
 
 // Le « B » du budget du Gardien (08/10, règle de l'auteur) : les primes des `n` prochains niveaux
 // d'Aventure (1res victoires) au taux de BASE — un futur bonus payant de Griffes n'est jamais compté.
-export function primesProchainsNiveaux(niveauAtteint, n = 3) {
+// 16/10 : avec la règle de prime de l'auteur (prochain niveau de la meilleure créature du deck, ×2 au boss).
+export function primesProchainsNiveaux(niveauAtteint, n = 3, niveauxDeck = []) {
   let t = 0;
-  for (let k = 1; k <= n; k++) t += Number(griffesReward(Math.max(1, (Math.floor(Number(niveauAtteint) || 0)) + k))) || 0;
+  for (let k = 1; k <= n; k++) t += Number(primeVictoire(Math.max(1, (Math.floor(Number(niveauAtteint) || 0)) + k), niveauxDeck)) || 0;
   return Math.round(t);
 }
 // Le Gardien d'une PHOTO : `puissance` = son chiffre affiché ; `membres` = le deck sur lequel le calibrer.

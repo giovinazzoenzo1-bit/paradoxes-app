@@ -707,7 +707,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     return () => { annule = true; };
   }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici : déclaré plus bas (zone morte → écran blanc)
   const budgetGardienRef = useRef(0);
-  budgetGardienRef.current = primesProchainsNiveaux((lifetimeStats || {}).advLevelReached || 0, 3);
+  // 16/10 : son calcul est DESCENDU sous la déclaration du deck (il lit les niveaux du deck — zone morte sinon).
   // (10/10, niveaux réels) Le niveau max APRÈS les 3 prochaines étapes, figé dans la photo : l'effort du
   // Gardien ne le dépasse jamais (MESURÉ : dès l'étape 60 il supposait +7 à +10 niveaux au-dessus du max).
   const plafondGardienRef = useRef(null);
@@ -1104,6 +1104,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   spawnedCreatureRef.current = spawnedCreature;
   const deckRef = useRef([null, null, null]);
   deckRef.current = deck;
+  // 16/10 (règle de l'auteur) : Griffes des 3 prochains combats = prochain niveau de la MEILLEURE créature du deck (×2 au boss).
+  budgetGardienRef.current = primesProchainsNiveaux((lifetimeStats || {}).advLevelReached || 0, 3, niveauxDuDeck(owned, deck));
   const activePowerRef = useRef(null);
   activePowerRef.current = activePower;
   const pendingDiscountRef = useRef(null);

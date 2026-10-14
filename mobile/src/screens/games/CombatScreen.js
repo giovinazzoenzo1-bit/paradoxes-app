@@ -381,6 +381,7 @@ import {
   coupsDeSoutien,
   texteSort,
   degatsBrutsJoueur,
+  primeVictoire,
 } from '../../games/clicker/combatLogic';
 import { GUARDIAN_BASE_LEVEL } from '../../games/clicker/incubatorLogic';
 
@@ -1432,6 +1433,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     })() : null;
     return (
       <CombatResultScreen
+        prime={primeVictoire(levelNumber, fighters.map((f) => f.ownedLevel))}
         heros={herosFin}
         outcome={outcome}
         levelNumber={levelNumber}
@@ -2167,7 +2169,7 @@ function MedaillonHeros({ cx, cy, t, heros, terne, lauriersH }) {
   );
 }
 
-function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false, premiereVictoire = true, nbCreatures = 3, heros = null }) {
+function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, onContinue, onNextLevel, aide = null, manque = 0, presque = false, premiereVictoire = true, nbCreatures = 3, heros = null, prime = 0 }) {
   const isWin = outcome === 'win';
   const { sons: sonsFin } = useSettings();
   // Victoire ou défaite (07/10) : le jingle à l'arrivée de l'écran ; chaque étoile tinte en apparaissant.
@@ -2178,7 +2180,7 @@ function CombatResultScreen({ outcome, levelNumber, battleStats, opponentCount, 
     return () => clearTimeout(id);
   }, []);
   const stars = isWin ? starsForBattle(battleStats, opponentCount) : 0;
-  const reward = isWin ? griffesReward(levelNumber) : 0;
+  const reward = isWin ? prime : 0; // 16/10 : calculée par l'écran (meilleure créature du deck), comme le paiement
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const u = H; const cx = W / 2;

@@ -68,7 +68,9 @@ const REGLAGES = {
   // achetées : les Griffes doivent suffire aux runes ET aux niveaux.
   packsParAsc: 0,
   retardOeufs: 1,
-  taillePack: (a) => L.taillePackGriffes(a), // 11/10 : la taille DU JEU (×0,5)
+  // 16/10 : la taille DU JEU — 2 niveaux de la créature moyenne du deck (règle de l'auteur). ⚠️ Recevait encore le numéro
+  // d'Ascension après le changement de règle (pack minuscule pour le joueur simulé) : attrapé par auditGardienGriffes.
+  taillePack: (niveaux) => L.taillePackGriffes(niveaux),
   runesParAsc: 3, // 1 pour le défi + 2 volontaires
   prixRune: 0, // 10/10 : les runes s'achètent en ✨ Poudre runique (combatLogic.POUDRE_PRIX), plus en Griffes
   succesParAsc: [175, 260, 760, 1545, 500, 600], // 11/10 (soir) : succès remis comme avant (malentendu du ×0,25)
@@ -82,7 +84,8 @@ const REGLAGES = {
   garantie: true, // GARANTIE_OEUFS (clickerLogic)
   blocage: 30, // défaites de suite sur un même niveau = joueur BLOQUÉ
   // La prime de 1re victoire DU JEU (combatLogic.griffesReward, réglage A).
-  prime: (l) => K.griffesReward(l),
+  // 16/10 (règle de l'auteur) : prochain niveau de la MEILLEURE créature du deck (×2 au boss).
+  prime: (l, niveaux) => K.primeVictoire(l, niveaux),
 };
 
 const aleaGraine = (g) => { let a = g >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -168,7 +171,7 @@ function nouveauJoueur(graine, R = REGLAGES) {
   j.adversaires = (l, k, baisse = 0) => K.opponentTeamForLevel(l).map((c) => { const st = K.statsForOpponentCreatureTyped(c, l, k);
     return { creature: c, stats: { ...st, hp: Math.max(1, Math.round(st.hp * (1 - baisse))), attack: Math.max(1, st.attack * (1 - baisse)) } }; });
   // Avant le niveau l de l'Ascension a : œufs, revenus répartis, runes, montées.
-  j.preparer = (l, a) => {
+  j.preparer = (l, a, s = null) => {
     const debut = a ? R.finsAventure[a - 1] : 0, fin = R.finsAventure[a];
     // L'œuf k éclôt dès que le niveau exigé par SES défis est franchi.
     // Un œuf de retard (R.retardOeufs) ; en fin d'Ascension, tous ses œufs
@@ -176,7 +179,10 @@ function nouveauJoueur(graine, R = REGLAGES) {
     const vise = l >= fin ? R.niveauxOeufs.filter((n) => n <= fin).length
       : Math.max(1, R.niveauxOeufs.filter((n) => n < l).length - (R.retardOeufs || 0));
     while (j.oeufsFaits < vise) { eclore(); j.oeufsFaits++; }
-    j.griffes += (R.succesParAsc[a] + R.packsParAsc * R.taillePack(a)) / (fin - debut);
+    // 16/10 : pack calculé sur les VRAIS niveaux du trio ; primes et packs réellement versés comptés par Ascension.
+    const pack = (R.packsParAsc * R.taillePack(j.trio().map((p) => p.niv))) / (fin - debut);
+    j.griffes += R.succesParAsc[a] / (fin - debut) + pack;
+    if (s) s.packs = (s.packs || 0) + pack;
     if (l === debut + 1) j.runes = 0;
     if (j.runes < R.runesParAsc && j.griffes >= R.prixRune) { j.griffes -= R.prixRune; j.runes++; }
     monter(L.niveauMaxCreature(j.niveau)); // (09/10) niveau maximum du jeu
@@ -215,7 +221,12 @@ function nouveauJoueur(graine, R = REGLAGES) {
       // comme l'auteur (75 % de parfaits, MESURÉ sur son rapport : 74 %).
       // 11/10 (combat à égalité) : autant de créatures que d'ennemis (les plus fortes du trio d'abord).
       const r = K.simulerCombat(j.joueurs().slice(0, K.combattantsPourEtape(l)), j.adversaires(l, k, baisse), { alea, politique: K.choixJoueur, erreurMs: R.erreurMs || K.JAUGE_ERREUR_REFERENCE_MS });
-      if (r.gagne) { s.victoires += 1; j.niveau = l; j.serie[l] = 0; j.griffes += R.prime(l); monter(L.niveauMaxCreature(j.niveau)); return true; }
+      if (r.gagne) {
+        s.victoires += 1; j.niveau = l; j.serie[l] = 0;
+        const pv = R.prime(l, j.trio().map((p) => p.niv)); // 16/10 : prochain niveau de la meilleure créature
+        j.griffes += pv; s.primes = (s.primes || 0) + pv;
+        monter(L.niveauMaxCreature(j.niveau)); return true;
+      }
       j.serie[l] = d + 1;
       if (j.serie[l] >= R.blocage) { s.bloque = l; j.bloque = l; return false; }
     }
@@ -228,7 +239,7 @@ function nouveauJoueur(graine, R = REGLAGES) {
     s.jours = (j.heures - s.heures0) / R.heuresJeuParJour;
     j.parAsc.push(s);
   };
-  j.nouvelleAsc = (a) => ({ a, combats: 0, victoires: 0, filet5: 0, filet7: 0, filet10: 0, bloque: null, heures0: j.heures });
+  j.nouvelleAsc = (a) => ({ a, combats: 0, victoires: 0, filet5: 0, filet7: 0, filet10: 0, bloque: null, heures0: j.heures, primes: 0, packs: 0 });
   return j;
 }
 
@@ -237,7 +248,7 @@ function parcoursJoueur(graine, R = REGLAGES, kDe = () => 1 /* niveaux réels (1
   const j = nouveauJoueur(graine, R);
   for (let a = 0; a < 6 && !j.bloque; a++) {
     const s = j.nouvelleAsc(a);
-    for (let l = (a ? R.finsAventure[a - 1] : 0) + 1; l <= R.finsAventure[a] && !j.bloque; l++) { j.preparer(l, a); j.jouer(l, kDe(l), s); }
+    for (let l = (a ? R.finsAventure[a - 1] : 0) + 1; l <= R.finsAventure[a] && !j.bloque; l++) { j.preparer(l, a, s); j.jouer(l, kDe(l), s); }
     j.finAscension(a, s);
   }
   return j.parAsc;
@@ -252,7 +263,7 @@ function synthese(joueurs = 60, R = REGLAGES, kDe) {
     const moy = (f) => v.reduce((x, s) => x + f(s), 0) / Math.max(1, v.length);
     lignes.push({ a, joueurs: v.length, bloques: v.filter((s) => s.bloque).length,
       victoiresSur10: 10 * moy((s) => s.victoires / Math.max(1, s.combats)), retard: moy((s) => s.retard),
-      combats: moy((s) => s.combats), jours: moy((s) => s.jours), filet5: moy((s) => s.filet5), filet7: moy((s) => s.filet7), filet10: moy((s) => s.filet10), griffes: moy((s) => s.griffes),
+      combats: moy((s) => s.combats), jours: moy((s) => s.jours), primes: moy((s) => s.primes || 0), packs: moy((s) => s.packs || 0), // 16/10 filet5: moy((s) => s.filet5), filet7: moy((s) => s.filet7), filet10: moy((s) => s.filet10), griffes: moy((s) => s.griffes),
       victoires10eCentile: (() => { const q = v.map((s) => 10 * s.victoires / Math.max(1, s.combats)).sort((x, y) => x - y); return q[Math.floor(q.length * 0.1)] || 0; })(),
       // 10/10 : le joueur MÉDIAN (décision de l'auteur : 7 victoires sur 10 pour lui).
       victoiresMediane: (() => { const q = v.map((s) => 10 * s.victoires / Math.max(1, s.combats)).sort((x, y) => x - y); return q[Math.floor(q.length * 0.5)] || 0; })() });

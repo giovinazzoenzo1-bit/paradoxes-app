@@ -68,6 +68,7 @@ const CONTROLES = [
   ['auditSoutienEquipe', "combat : toute l'équipe participe (soutien = moitié d'une attaque normale), dans le vrai combat ET la simulation (09/10)"],
   ['auditJournalDev', "journal des combats pour Claude : verdicts, coups, sorts, spéciaux, équipe, résultat ; bouton d'envoi dans le menu dev (08/10)"],
   ['auditPortee', "aucun nom utilisé sans être déclaré dans le code du jeu (plantage « Property 'poudre' doesn't exist », 11/10)"],
+  ['auditPrimeVictoire', "prime de victoire = prochain niveau de la meilleure créature (2 au boss), partout la même (16/10)"],
   ['auditUltimeJoueur', "ultime du joueur à ×1,5 (combat, aperçu, descriptions) ; ennemis intacts ; facteurs d'étape remesurés (16/10)"],
   ['auditRuneResilienceVisible', "la Rune de Résilience se brise à l'écran quand elle sauve une créature (16/10)"],
   ['auditPanneauxCombat', "cases du bandeau de combat : nom, PV, PV max et K.O. pour tes créatures ET les ennemis (lu comme le compilateur, 16/10)"],

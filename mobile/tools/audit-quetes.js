@@ -4986,9 +4986,10 @@ function auditGardienGriffes() {
     const S = require('./simulateur-parcours.js'); const R = S.REGLAGES; const syn = S.synthese(60);
     for (let a = 0; a < 6; a++) {
       const debut = a ? R.finsAventure[a - 1] : 0, fin = R.finsAventure[a];
-      let v = 0; for (let l = debut + 1; l <= fin; l++) v += R.prime(l);
       const s = syn[a]; if (!s || !s.combats) continue;
-      const total = v + R.succesParAsc[a] + R.packsParAsc * R.taillePack(a) + s.jours * R.quetesDuJour(Math.round((debut + fin) / 2)) + (a < 5 ? C.ascensionGriffesReward(a + 1) : 0);
+      // 16/10 : primes et packs RÉELLEMENT versés au joueur simulé (ils dépendent de ses niveaux : prime = prochain niveau de
+      // sa meilleure créature, pack = 2 niveaux de sa créature moyenne) — plus recalculés ici sans le deck.
+      const total = s.primes + R.succesParAsc[a] + s.packs + s.jours * R.quetesDuJour(Math.round((debut + fin) / 2)) + (a < 5 ? C.ascensionGriffesReward(a + 1) : 0);
       const mesure = total / s.combats, table = K.GRIFFES_PAR_COMBAT[a];
       if (Math.abs(mesure / table - 1) > 0.35) pb.push(`A${a} : la table dit ${table} Griffes par combat, le simulateur en mesure ${Math.round(mesure)} (économie changée ? recalculer)`);
     }
@@ -5007,7 +5008,8 @@ function auditGardienGriffes() {
   if (!/const cible = deckApresEffortEquitable\(membres, budgetDeLaPhoto\(photo, ascension\), plafondDeLaPhoto\(photo\)\)\.membres;/.test(c) || !/\{ marge: facteurGardienMaitrise\(photo\.maitrise \|\| 0, membres\.length\) \}\);/.test(c)) pb.push("le Gardien n'est plus calibré sur le deck après l'effort RÉPARTI (et plafonné)");
   // (08/10) Règle A + B : budget = récupérable (A) + primes des 3 prochains niveaux (B), figé à la photo.
   // (08/10, règle FINALE) budget = les Griffes des 3 PROCHAINS combats, réparties équitablement (plus de A).
-  if (!/budgetGardienRef\.current = primesProchainsNiveaux\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0, 3\);/.test(c)) pb.push('le budget du Gardien ne vaut plus « 3 prochains combats »');
+  // 16/10 : + les niveaux du deck (la prime = prochain niveau de la MEILLEURE créature, règle de l'auteur).
+  if (!/budgetGardienRef\.current = primesProchainsNiveaux\(\(lifetimeStats \|\| \{\}\)\.advLevelReached \|\| 0, 3, niveauxDuDeck\(owned, deck\)\);/.test(c)) pb.push('le budget du Gardien ne vaut plus « 3 prochains combats »');
   if (/ajouterFileAuBudget/.test(c)) pb.push("la file d'attente des récompenses compte de nouveau dans le Gardien");
   {
     const cre3 = (id) => C.CREATURES.find((x) => x.id === id);
@@ -5079,7 +5081,8 @@ function auditGardienGriffes() {
   if (D.griffesRecuperables(etat, rec) !== attendu) pb.push(`A faux : ${D.griffesRecuperables(etat, rec)} au lieu de ${attendu}`);
   if (D.griffesRecuperables({ ...etat, streakClaimedDate: 'J' }, rec) !== attendu - cal) pb.push('A compte un calendrier déjà pris');
   if (D.griffesRecuperables({ ...etat, questClaimed: { [q0]: true, [q2]: true }, achievementsClaimed: { [ach.id]: 2 }, streakClaimedDate: 'J' }, rec) !== 0) pb.push('A compte des récompenses déjà réclamées');
-  if (K.primesProchainsNiveaux(10, 3) !== K.griffesReward(11) + K.griffesReward(12) + K.griffesReward(13)) pb.push('B faux : ce ne sont plus les primes des 3 niveaux suivants');
+  // 16/10 (règle de l'auteur) : B = les primes des 3 prochains combats, chacune = prochain niveau de la MEILLEURE créature.
+  if (K.primesProchainsNiveaux(10, 3, [12, 14]) !== K.primeVictoire(11, [12, 14]) + K.primeVictoire(12, [12, 14]) + K.primeVictoire(13, [12, 14])) pb.push('B faux : ce ne sont plus les primes des 3 niveaux suivants');
   if (!/const sansAsc = \(e\) => e && e\.gardienPhoto && e\.gardienPhoto\.v === 2 && e\.gardienPhoto\.asc == null;/.test(c)) pb.push("les anciennes photos ne reçoivent plus leur Ascension (sans être reprises)");
   return pb;
 }
@@ -5168,7 +5171,7 @@ function auditFenetres() {
         let sd = (n * 7919 + ids.join('').length) >>> 0; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
         const d = K.difficulteEtape(n);
         for (let i = 0; i < 16; i++) { parD[d][1]++; if (K.simulerCombat(eq, EE, { alea, politique: K.choixJoueur, erreurMs: 60 }).gagne) parD[d][0]++; }
-        budget += K.griffesReward(n);
+        budget += K.primeVictoire(n, apres.map((m) => m.ownedLevel)); // 16/10 : comme la vraie photo
       }
       K.definirNiveauxJoueur(null);
     }
@@ -5233,7 +5236,7 @@ function auditFenetres() {
             let sd = (n * 104729 + ids.join('').length) >>> 0; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
             for (let i = 0; i < 20; i++) { parP[d][1]++; if (K.simulerCombat(eq, EE, { alea, politique: K.choixJoueur, erreurMs: 30 }).gagne) parP[d][0]++; }
           }
-          budget += K.griffesReward(n);
+          budget += K.primeVictoire(n, apres.map((m) => m.ownedLevel)); // 16/10 : comme la vraie photo
         }
         K.definirNiveauxJoueur(null);
       }
@@ -5505,6 +5508,30 @@ function auditUltimeJoueur() {
   return pb;
 }
 module.exports.auditUltimeJoueur = auditUltimeJoueur;
+
+// ---- PRIME DE VICTOIRE = PROCHAIN NIVEAU DE LA MEILLEURE CRÉATURE (16/10, règle de l'auteur) ----
+// Une 1re victoire en Aventure paie le coût du prochain niveau de la MEILLEURE créature du deck (2 niveaux au boss) ; le même
+// calcul partout : paiement, écran de résultat, photo des fenêtres, budget du Gardien, simulateur, modèle d'économie.
+function auditPrimeVictoire() {
+  const fs = require('fs'), path = require('path'); const K = load('combatLogic'); const L2 = load('clickerLogic');
+  const pb = [];
+  const cout = (n) => L2.levelUpCost({ rarity: 'commun' }, n);
+  if (K.primeVictoire(69, [69, 70, 74]) !== Math.round(cout(74))) pb.push(`victoire normale : ${K.primeVictoire(69, [69, 70, 74])} au lieu du prochain niveau de la meilleure (${Math.round(cout(74))})`);
+  if (K.primeVictoire(70, [69, 70, 74]) !== Math.round(cout(74) + cout(75))) pb.push('boss : la prime ne vaut plus 2 niveaux de la meilleure créature');
+  if (K.primeVictoire(5, []) !== Math.round(cout(1))) pb.push('deck vide : la prime doit valoir le niveau 1 → 2');
+  const lire = (f) => fs.readFileSync(path.join(__dirname, f), 'utf8');
+  const Av = lire('../src/screens/games/AdventureScreen.js'), Cb = lire('../src/screens/games/CombatScreen.js'), Kl = lire('../src/games/clicker/combatLogic.js');
+  const Sim = lire('simulateur-parcours.js'), Mod = lire('calculateur-griffes.js');
+  if (!Av.includes('const rawReward = primeVictoire(activeBattle.levelNumber, niveauxDuDeck(owned, deck));')) pb.push("paiement : la victoire ne suit plus la meilleure créature");
+  if (!Cb.includes('prime={primeVictoire(levelNumber, fighters.map((f) => f.ownedLevel))}') || !Cb.includes('const reward = isWin ? prime : 0;')) pb.push("écran de résultat : la prime affichée n'est plus celle versée");
+  if (!Kl.includes('budget += primeVictoire(n, apres.membres.map((m) => m.ownedLevel));')) pb.push("photo des fenêtres : le budget n'ajoute plus la vraie prime");
+  if (!Sim.includes('prime: (l, niveaux) => K.primeVictoire(l, niveaux),') || !Sim.includes('taillePack: (niveaux) => L.taillePackGriffes(niveaux),') || !Mod.includes('K.primeVictoire(n, creatures.map((c) => c.niv)'))
+    pb.push("simulateur ou modèle d'économie : prime / pack hors des règles du jeu (mesures fausses)");
+  const versees = ['../src/screens/games/AdventureScreen.js', '../src/screens/games/CombatScreen.js', '../src/screens/games/ClickerScreen.js'].filter((f) => /griffesReward\(/.test(lire(f)));
+  if (versees.length) pb.push("l'ancienne prime est de nouveau versée/affichée : " + versees.join(', '));
+  return pb;
+}
+module.exports.auditPrimeVictoire = auditPrimeVictoire;
 
 // ── ATTAQUES DE SOUTIEN : toute l'équipe participe (09/10, décision de l'auteur) ──
 // Test de l'auteur : une créature très montée finissait seule le chapitre 1 (à chaque tour, UNE créature

@@ -443,6 +443,7 @@ import {
   texteSort,
   descriptionAttaque,
   libelleChance,
+  primeVictoire,
 } from '../../games/clicker/combatLogic';
 
 // NOTIFICATIONS RETIREES (03/09).
@@ -2752,7 +2753,8 @@ function ChapterMapScreen({ onEncaisserGriffes = null, poudre = 0, ascensionCoun
             // butinBonus), pas sur la seule créature qui a porté le
             // coup final — c'est l'équipe qui gagne le combat.
             const deckRunes = ownedRunes.filter((r) => deck.includes(r.equippedCreatureId));
-            const rawReward = griffesReward(activeBattle.levelNumber);
+            // 16/10 (règle de l'auteur) : de quoi monter 1 fois ta MEILLEURE créature du deck (2 fois au boss).
+            const rawReward = primeVictoire(activeBattle.levelNumber, niveauxDuDeck(owned, deck));
             const reward = Math.round(rawReward * (1 + butinBonus(deckRunes)));
             onLevelWon(activeBattle.levelNumber, reward);
           }

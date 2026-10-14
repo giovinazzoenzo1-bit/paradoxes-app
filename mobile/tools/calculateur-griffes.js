@@ -49,8 +49,8 @@ function calculer(etapeMax = 40, profil = 'actif', opts = {}) {
   const creatures = [{ niv: 1 }]; // la 1re créature
   let jourPrecedent = 0;
   for (let n = 1; n <= etapeMax; n++) {
-    // 1) Prime de 1re victoire (+25 % dès l'étape 30)
-    const prime = K.griffesReward(n) * F.primes; cumul.primes += prime; griffes += prime;
+    // 1) Prime de 1re victoire — 16/10 (règle de l'auteur) : prochain niveau de la MEILLEURE créature (×2 au boss).
+    const prime = K.primeVictoire(n, creatures.map((c) => c.niv).sort((a, b) => b - a).slice(0, 3)) * F.primes; cumul.primes += prime; griffes += prime;
     // 2) Jours écoulés → défis quotidiens (3) et hebdo (6/7 par jour) + calendrier
     const jour = Math.floor((n * HYP.combatsParEtape) / HYP.combatsParJour) + 1;
     for (let j = jourPrecedent + 1; j <= jour; j++) {

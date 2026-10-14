@@ -67,11 +67,13 @@ function premieresCreatures() {
 }
 function niveauDebutant(l, creature) {
   let griffes = GRIFFES_JOUR_1;
-  for (let i = 1; i < l; i++) griffes += K.griffesReward(i);
-  const plafond = L.niveauMaxCreature(l - 1); // aucune étape gagnée avant la 1re
   let niv = 1;
   // (11/10) une seule créature au chapitre 1 : niveau 10 au plus (règle du jeu, niveauMaxEquipe).
-  while (niv < Math.min(plafond, L.niveauMaxEquipe([niv])) && L.levelUpCost(creature, niv) <= griffes) { griffes -= L.levelUpCost(creature, niv); niv++; }
+  const monter = (plafond) => { while (niv < Math.min(plafond, L.niveauMaxEquipe([niv])) && L.levelUpCost(creature, niv) <= griffes) { griffes -= L.levelUpCost(creature, niv); niv++; } };
+  // 16/10 (règle de l'auteur) : la prime = le prochain niveau de la meilleure créature → elle dépend du niveau ATTEINT :
+  // le débutant monte étape par étape (avant : toutes les primes additionnées d'avance, puis une seule montée).
+  for (let i = 1; i < l; i++) { griffes += K.primeVictoire(i, [niv]); monter(L.niveauMaxCreature(i)); }
+  monter(L.niveauMaxCreature(l - 1)); // aucune étape gagnée avant la 1re
   return niv;
 }
 // Le PIRE taux de victoire parmi les 1res créatures possibles contre l'équipe que le JEU donne à
