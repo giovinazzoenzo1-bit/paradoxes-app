@@ -1248,3 +1248,10 @@ dorée · gratuit · 3 mana » (contradictoire), et au Clicker « 3 dégâts · 
 - **Carte d'Aventure** : pastille « 🎁 X Griffes à récupérer » sous l'en-tête ; elle réclame tout et CRÉDITE tout de suite
   (« ✅ +X Griffes »).
 - Calendrier en PIÈCES : laissé à prendre dans le Clicker (seul écran qui sait créditer les pièces).
+
+
+### ⚔️ ULTIME DU JOUEUR À ×1,5 (16/10, choix de l'auteur)
+
+- L'ultime d'une créature du joueur frappe à ×1,5 sa meilleure attaque normale (avant ×2) ; ceux des ennemis ne changent pas.
+- Une seule fonction (degatsBrutsJoueur) pour les dégâts réels, l'aperçu « jusqu'à X dégâts » et les descriptions.
+- Les facteurs d'étape du calculateur ont été remesurés avec ce réglage : les crans visés (95/85/70/50/33 %) restent justes.

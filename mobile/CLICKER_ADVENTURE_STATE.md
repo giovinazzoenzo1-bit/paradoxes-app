@@ -3665,3 +3665,19 @@ processus avec `pgrep -f '[n]ode .*verifier'` (le motif entre crochets ne se rec
 verifier-controles.js` TUE SA PROPRE COMMANDE) et `git status` AVANT toute relance.
 Contrôles : auditRuneResilienceVisible (nouveau → 108) ; maîtrise : plafond = nouvelle mesure, l'indice réel de l'auteur
 appliqué (~1,24), profil « précis » 30 ms fixé à sa mesure 0,75 ; 3 sabotages + 1 recalé → 207 prouvés ; taps 20/20.
+
+
+## 16/10 (fin) — ULTIME DU JOUEUR À ×1,5 + FACTEURS D'ÉTAPE REMESURÉS (choix de l'auteur, publié)
+
+Réponse de l'auteur : réduire SES ultimes (pas ceux des ennemis). AVANT : toutes les créatures, ultime = ×2,00 leur meilleure
+attaque normale. APRÈS : ×1,5 (MULT_ULTIME_JOUEUR = 0,75). CODE : degatsBrutsJoueur = SOURCE UNIQUE (degatsDuJoueur → combat,
+simulateur, Gardien ; descriptionAttaque ; degatsAffiches de CombatScreen) ; les ennemis passent par actionAdversaire (intacts) ;
+les soutiens utilisent l'attaque normale (intacts). calculerFacteursRarete (relatif entre raretés, toutes à ×2) : inchangé.
+MESURÉ (outil mesurer-etapes, même graine) : sans recalcul, le joueur perdait 4 à 7 points sur un combat calé à 50 % (étape
+18 : −18). → les 3 tables REMESURÉES (FACTEUR_ETAPE 1-60, _1V1 1-10, _3V2 11-20) à 160 combats par équipe (960 par étape,
+avant 240) ; écarts : 1 contre 1 +3,0 % en moyenne, 3 contre 2 +1,6 %, table 1-60 −0,6 % (max 5,8 % — corrige aussi les petites
+dérives accumulées). Copies dans mobile/tools/facteurs-etapes*.json. auditFenetres (crans en vrais combats) : OK ; Gardien OK.
+Contrôles : auditUltimeJoueur (nouveau → 109) ; description vérifiée sur degatsBrutsJoueur ; 3 sabotages → 210 prouvés ;
+taps 20/20.
+⚠️ COMPTER LES PASSES EN COURS : `pgrep -a -x node | grep -c verifier` (seuls les vrais processus node) — `pgrep -f` reconnaît
+le texte de SA PROPRE commande dès qu'elle contient « verifier-controles.js » (faux « 2 en cours »).
