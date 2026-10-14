@@ -1225,3 +1225,13 @@ dorée · gratuit · 3 mana » (contradictoire), et au Clicker « 3 dégâts · 
 - **Descriptions grisées** (fiche, Clicker) : SANS coût en mana, des mots simples — « Jusqu'à 84 dégâts », « Attaque spéciale :
   jusqu'à 167 dégâts », « Soigne un allié de ton choix ». Le guide reprend la même phrase et met les chiffres en petit dessous.
 - Clicker : la stat « 🔋 END » (endurance supprimée le 11/09) a disparu.
+
+
+### 🗣️ LA CHANCE EN MOTS + LES LUEURS DU COMBAT (14/10)
+
+- **Aventure** : l'aperçu n'affiche plus « 68 % de victoire · ⚔️ 3/5 » mais un MOT, de sa couleur : Facile (≥ 80 %), Moyen
+  (60-79 %), Compliqué (40-59 %), Extrême (< 40 %) — calés sur les crans du calculateur (95/85 → Facile, 70 → Moyen, 50 →
+  Compliqué, 33 → Extrême). Avec des Griffes utiles : « Compliqué → Moyen avec tes Griffes ». Le Gardien garde son % (hors Aventure).
+- **Combat** : une LUEUR (image lueur-or) derrière la créature qui JOUE son tour — ta créature pendant ton tour, l'ADVERSAIRE
+  pendant sa riposte ou son sort (et sa case en haut à droite) ; rouge derrière l'adversaire visé, verte derrière l'allié choisi.
+  ⚠️ Avant ce jour, le paramètre `ring` des créatures de l'arène ne dessinait RIEN (il ne changeait qu'une pastille cachée).

@@ -3578,3 +3578,21 @@ CONTRÔLES : allié choisi respecté (soin/bouclier/boost) et automatique inchan
 descriptions sans mana ; EMPREINTE_COMBAT mise à jour (1a11b089) après auditGardienCalibre OK ; repère de la jauge (7e
 argument) ; 2 sabotages recalés (repère du guide devenu DOUBLE → visé sur la phrase principale ; appel du sort prolongé) ;
 3 nouveaux → 192 prouvés ; 105 verts ; taps 20/20.
+
+
+## 14/10 (fin) — CHANCE EN MOTS EN AVENTURE + VRAIES LUEURS EN COMBAT (publié)
+
+Demandes de l'auteur : remplacer les % de victoire de l'Aventure par Facile / Moyen / Compliqué / Extrême ; une lueur sur
+la créature qui joue son tour (sur elle et autour de sa case, « en haut à droite » = les adversaires).
+CODE : combatLogic.libelleChance + PALIERS_CHANCE_TEXTE (≥ 0,8 Facile, ≥ 0,6 Moyen, ≥ 0,4 Compliqué, sinon Extrême, avec
+couleurs) ; aperçu (FighterSelectOverlay) : « Ta puissance X · Moyen », « Compliqué → Moyen avec tes Griffes » (si le mot
+change), plus de « ⚔️ d/5 ». CombatScreen : état acteurAdverse (posé au début de la riposte et du sort ennemi, remis à null
+quand le tour revient) ; renderSprite dessine COMBAT_IMG.lueur derrière la créature quand `ring` est posé (dorée 'active',
+rouge adversaire visé, verte allié choisi), centrée sur le cercle ; case ennemie `actif` quand il agit ; la lueur de ta
+créature s'éteint pendant l'action ennemie.
+⚠️ CORRECTION DE MA PART : le 14/10 j'avais annoncé un « anneau de cible » dans l'arène — `ring` ne dessinait rien (seule la
+pastille d'élément, cachée par sansJauges). C'est maintenant une vraie lueur.
+⚠️ PIÈGE ÉVITÉ PAR LES CONTRÔLES : `pointerEvents="none"` en PROPRIÉTÉ sur la lueur → ignoré sur téléphone (SDK 57) ;
+mis dans le style. EMPREINTE_COMBAT → 9fcfd71b (auditGardienCalibre OK).
+Contrôles : libellés calés sur les crans, aperçu en mots (plus de « % de victoire »), lueur dessinée, adversaire en action
+éclairé ; 4 sabotages → 196 prouvés ; 105 verts ; taps 20/20.
