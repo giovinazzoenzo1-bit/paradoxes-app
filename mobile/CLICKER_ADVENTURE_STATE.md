@@ -3866,6 +3866,15 @@ CONTRÔLES : auditFenetres et auditEtapesAvancees comparent à la cible de CHAQU
 `crans-doux-copie-coupee`, NON utilisée (pas le choix écrit de l'auteur).
 
 
+## 17/10 (fin de soirée) — DIFFICULTÉ VALIDÉE PAR L'AUTEUR (« je pense qu'on est bien là ✅ »)
+
+RAPPORT 14/10 19:20 (nouvelle partie Bouldog, étapes 1-41, Pacte joueur ×1,5 / 30 %, énergie 7, combats 4-5 adoucis dès l'étape 11) :
+1ers essais gagnés 34 / 41 (83 %) — étapes 1-10 : 8 / 10 · 11-20 : 9 / 10 · 21-30 : 10 / 10 · 31-41 : 7 / 11 ; 49 tentatives pour 41 étapes
+(≈ 1 défaite par fenêtre) ; l'auteur DÉPENSE et FAIT ÉVOLUER (3 évolutions à 150) ; aucune erreur. ÉTAT DE RÉFÉRENCE À NE PAS DÉRÉGLER.
+EN ATTENTE (proposés, non choisis) : alerte « Griffes non dépensées » dans l'aperçu ; photo sur les seules Griffes en poche ;
+vérifications allégées pour les petits changements.
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
