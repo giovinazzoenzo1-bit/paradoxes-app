@@ -3794,6 +3794,8 @@ CAUSE 1 — BOUCLIER : les boucliers ne s'ADDITIONNENT pas (le plus fort reste :
 portait la valeur LANCÉE → « +200 » affiché alors que la créature gardait son bouclier de 400 (gain 0), ou « +400 » sur un
 bouclier de 300 (gain réel 100). Aucune barre ne montre le bouclier : le « +X » était le seul repère, et il mentait.
 CORRECTIF : lancerSort renvoie le GAIN réel (règle du max INCHANGÉE) ; 0 → « Déjà protégé » + message « a déjà un bouclier plus fort ».
+DÉCISION DE L'AUTEUR (17/10) : boucliers et soins NON cumulables — le bouclier le plus fort reste, le soin ne dépasse jamais
+les PV max. Ne plus proposer de boucliers cumulables.
 CAUSE 2 — SOIN : le gel d'affichage des PV (« chaque PV garde sa valeur d'AVANT jusqu'à son impact ») prenait les PV d'AVANT
 TON SORT (pvAvantP) → la barre du soigné restait figée jusqu'au coup ennemi, puis montrait « soin − dégâts » d'un bloc : « +1 500
 PV » affiché, barre qui BAISSE si l'ennemi frappe plus fort. Côté ennemi : son soin, calculé dans le même tour, fondait dans TON
