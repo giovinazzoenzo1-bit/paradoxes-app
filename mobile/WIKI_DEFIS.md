@@ -1270,3 +1270,11 @@ dorée · gratuit · 3 mana » (contradictoire), et au Clicker « 3 dégâts · 
   niveau) ; un **boss** (étapes 10, 20, …) : de quoi la monter **2 fois**. Le bonus de butin des runes s'ajoute toujours.
 - Exemple : deck 69/70/74 → environ 330 Griffes par victoire (avant : plus de 760 à l'étape 72).
 - Les combats restent calés : le calculateur règle les ennemis sur ton équipe réelle.
+
+
+### 📅 DÉFIS EN NIVEAUX DE TA MEILLEURE CRÉATURE (16/10, choix de l'auteur)
+
+- Un défi du jour moyen paie **1 niveau** de ta meilleure créature du deck ; un défi de la semaine moyen **3 niveaux** ; chaque
+  défi au prorata de sa récompense écrite (« Fais 10 Offrandes » ≈ 3,8 niveaux).
+- Exemple, deck 69/70/74 : défi du jour ≈ 337, semaine ≈ 1 011, « 10 Offrandes » 1 282 (avant : 3 553).
+- Succès et calendrier : inchangés (paliers fixes).

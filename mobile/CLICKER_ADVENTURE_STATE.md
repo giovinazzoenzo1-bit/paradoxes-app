@@ -3729,3 +3729,24 @@ Le simulateur COMPTE maintenant les primes et packs réellement versés (s.prime
 (avant : il les recalculait sans le deck → 14 au lieu de 22).
 Contrôles : auditPrimeVictoire (nouveau → 110) ; repère du budget du Gardien aligné ; 4 sabotages → 217 prouvés (4 passes) ;
 taps 20/20.
+
+
+## 16/10 (nuit, suite) — DÉFIS EN NIVEAUX DE LA MEILLEURE CRÉATURE (choix de l'auteur, option 1, publié)
+
+ORIGINE : l'auteur voit « Fais 10 Offrandes » à 3 553 Griffes (« tu m'as menti ») — PREUVE git : formule des défis inchangée
+depuis le 11/10 (essai ×0,7 annulé le jour même) ; le chiffre a DOUBLÉ en franchissant l'étape 66 (facteurQuetes suit la prime
+de référence, palier ×2 de l'A3) : 1 636 à l'étape 65 → 3 411 à 70 → 3 553 à 74. Ma faute : ne pas l'avoir signalé en baissant
+la prime (le défi valait alors 10 victoires).
+RÈGLE : dailyLogic.recompenseDefi(base, 'jour'|'semaine', niveauxDeck) = base ÷ médiane du pool × (1 niveau | 3 niveaux) ×
+levelUpCost(meilleure créature). Médianes écrites : jour 30, semaine 205. Deck 69/70/74 : jour médian 337, semaine médiane
+1 011, « 10 Offrandes » 1 282. Début de partie (meilleure niv 7) : jour 12, semaine 36 (comme avant). Succès et calendrier
+fixes. La règle du 26/09 (défis selon le niveau d'Aventure) est REMPLACÉE ; recompenseQuete / facteurQuetes restent (outils).
+CÂBLAGE : DailyContext reçoit les niveaux du deck (noterNiveauxDeck, mémorisés sous daily:niveauxDeck:v1) — envoyés par
+l'Aventure (owned/deck en props) et le Clicker (effet placé APRÈS la déclaration du deck) ; claimQuest/claimWeekly/claimAll et
+griffesARecuperer (photo des fenêtres) en niveaux ; recompensesARecuperer passe le type ('jour'/'semaine') ; écran Progrès.
+⚠️ La récompense BAISSE en Griffes aux niveaux 11 et 21 (la 2e puis la 3e créature arrivent : le coût d'un niveau est ÷ par
+la taille de l'équipe, règle du 10/10) — elle vaut toujours exactement son nombre de niveaux (invariant contrôlé).
+OUTILS : simulateur (règles des défis chargées sous DQ — « D » y désigne les défis d'Aventure ; défis réellement versés
+comptés : s.quetes), modèle, 2 outils d'analyse. MESURÉ (modèle) : équipe 27 / 43 / 54 / 61 / 66 aux étapes 20 / 40 / 60 / 70 /
+80. GRIFFES_PAR_COMBAT → [20, 26, 60, 119, 307, 359]. Facteurs d'étape : max 0,8 %. Parcours complet (60 joueurs) : OK.
+Contrôles : auditQuetesNiveau RÉÉCRIT (nouvelle règle + câblage) ; 1 sabotage remplacé + 3 → 220 prouvés (4 passes) ; taps 20/20.
