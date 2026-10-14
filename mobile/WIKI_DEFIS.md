@@ -150,6 +150,14 @@ au niveau 1 mais ses PV et son attaque sont multipliés par le facteur manquant 
 divisée par 1,25 (1er combat garanti). MESURÉ : étape 1, créature de départ niv. 1 — avant 41 à 89 %, maintenant 99 à 100 %
 pour les 8 créatures de départ (joueur moyen ou faible) ; étape 6, Pyrosile contre Caraploof : 61-67 % → 98 %.
 
+**Évolutions comptées** (14/10, demande de l'auteur) : la dépense virtuelle du calculateur (et de l'aperçu « avec tes
+Griffes ») fait évoluer une créature dès qu'elle a le niveau requis (25 / 50) ET qu'il reste de quoi payer (150 / 400 Griffes) ;
+sinon elle continue de monter (26, 27…) et évolue plus tard. Elle pousse d'abord la meilleure créature PAS ENCORE évoluée
+dont le seuil est atteignable sous le niveau max du deck (comme l'auteur : Racinea puis Aegisolar). Le Gardien garde la
+dépense par niveaux. MESURÉ (rapport du 14/10, deck 19/20/19, 633 Griffes) : 2 évolutions (avant : aucune).
+⚠️ Reste : avec le même budget, l'auteur avait 8 à 12 % de puissance en plus que le deck imaginé (il a poussé sa créature rare
+au niveau 30 et laissé la commune au 20) → étapes 24-25 à 71-79 % au lieu de 29-27 % pour le deck du calcul.
+
 **Facteur d'éléments** (12/10) : la photo tient compte des éléments de l'équipe du joueur face à ceux de l'étape (rapport
 des multiplicateurs ×1,15 / ×0,85 sur toutes les paires), RELATIF aux 6 équipes de mesure (déjà comptées dans le facteur de
 l'étape). Exposant 0,5 MESURÉ (5 équipes typées) : écart étape par étape 23 → 21 points — gain modeste, les éléments ne sont

@@ -5301,6 +5301,10 @@ function auditFenetres() {
       pb.push(`dépense virtuelle : ${evoluees.length} évolution(s) au lieu de 2 (Racinea et Aegisolar) avec 633 Griffes — ${avec.map((x) => x.creature.id + ' ' + x.ownedLevel + (x.evolutionTier ? '★' : '')).join(', ')}`);
     if (K.deckApresEffortEquitable(d0, 633).membres.some((x) => (x.evolutionTier || 0) > 0)) pb.push('dépense du Gardien (sans option) : elle ne doit pas évoluer (comportement figé)');
     if (K.deckApresEffortEquitable(d0, 100, Infinity, { evolutions: true }).membres.some((x) => (x.evolutionTier || 0) > 0)) pb.push('évolution payée sans les Griffes nécessaires');
+    // Toutes déjà évoluées, plafond 30 : le palier suivant (50) est HORS D'ATTEINTE → dépense équitable (pas de poussée vers 50).
+    const d1 = [['luxorbe', 25], ['racinea', 27], ['aegisolar', 26]].map(([id, l]) => ({ creature: ge(id), ownedLevel: l, evolutionTier: 1, equippedRunes: [] }));
+    const eq1 = K.deckApresEffortEquitable(d1, 120, Infinity, { evolutions: true }).membres.map((x) => x.ownedLevel);
+    if (Math.max(...eq1) - Math.min(...eq1) > 1) pb.push(`dépense virtuelle : pousse vers une évolution hors d'atteinte (niveaux ${eq1.join('/')} au lieu d'équitables)`);
     const srcC = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
     if (!srcC.includes('const apres = deckApresEffortEquitable(membres, budget, Infinity, { evolutions: true });')) pb.push('la photo du calculateur ne compte plus les évolutions');
     const Ae = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');

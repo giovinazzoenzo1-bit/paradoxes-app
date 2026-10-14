@@ -3523,3 +3523,22 @@ n'importe pas Dimensions), SPECIALITES_GUIDE() : textes construits avec EFFETS/S
 Contrôles : auditFenetres (soin 0 / minimum / textes ; guide : chiffres lus, 10 sorts, onglets, bouton) ; auditDialoguesJeu
 (titre dynamique) ; 4 sabotages nouveaux → 183 prouvés ; 105 contrôles verts ; taps 20/20.
 À FAIRE (annoncé par l'auteur) : réécrire les descriptions des attaques (« elles ne veulent rien dire »).
+
+
+## 14/10 — ÉVOLUTIONS DANS LA DÉPENSE VIRTUELLE DU CALCULATEUR (publié)
+
+Demande de l'auteur : « il faut compter l'évolution à sa juste valeur, quand on évolue vraiment (parfois au niveau 26 ou 27
+par manque de Griffes) ». Règles : palier 1 au niveau 25 (150 Griffes, PV/ATQ ×1,3), palier 2 au niveau 50 (400, ×1,7).
+CODE : combatLogic.depenseAvecEvolutions (option { evolutions: true } de deckApresEffortEquitable) : 1) évolution possible ET
+payable → elle est faite ; 2) sinon un niveau à la créature la MOINS évoluée dont le seuil est ATTEIGNABLE sous le niveau max
+du deck (puis la plus haute, puis la meilleure rareté) ; 3) sinon la plus basse (équitable). Utilisée par photoFenetre et
+l'aperçu (chanceApresGriffes) ; le Gardien garde l'ancienne dépense (contrôles figés).
+⚠️ 2 VERSIONS FAUSSES ATTRAPÉES PAR LA MESURE (replay de la fenêtre 21-25, 633 Griffes) : « monter tout le monde d'abord »
+→ 1 seule évolution ; « pousser la plus haute » → poussait Luxorbe DÉJÀ évoluée jusqu'au plafond (seuil 50 inatteignable) →
+1 seule. Version finale : Racinea ET Aegisolar évoluées, comme l'auteur.
+TEST DÉCISIF : deck virtuel 465-483 de puissance → 39 / 29 / 27 % (étapes 23-25) ; deck RÉEL de l'auteur (Luxorbe 20,
+Racinea 30★, Aegisolar 26★) 520 → 80 / 71 / 79 %. L'écart restant vient de la RÉPARTITION (créature rare poussée à 30,
+commune laissée à 20 : plus de puissance par Griffe), pas de l'évolution → décision à prendre avec l'auteur.
+Contrôles : 2 évolutions attendues, Gardien inchangé, pas d'évolution impayée, cas « toutes évoluées, plafond 30 » équitable
+(⚠️ ce cas a été ajouté parce que le sabotage « seuil atteignable » était AVEUGLE avec le seul premier test) ; 3 sabotages
+→ 186 prouvés ; 105 contrôles verts ; taps 20/20.
