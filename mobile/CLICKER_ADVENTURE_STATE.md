@@ -3750,3 +3750,40 @@ OUTILS : simulateur (règles des défis chargées sous DQ — « D » y désigne
 comptés : s.quetes), modèle, 2 outils d'analyse. MESURÉ (modèle) : équipe 27 / 43 / 54 / 61 / 66 aux étapes 20 / 40 / 60 / 70 /
 80. GRIFFES_PAR_COMBAT → [20, 26, 60, 119, 307, 359]. Facteurs d'étape : max 0,8 %. Parcours complet (60 joueurs) : OK.
 Contrôles : auditQuetesNiveau RÉÉCRIT (nouvelle règle + câblage) ; 1 sabotage remplacé + 3 → 220 prouvés (4 passes) ; taps 20/20.
+
+
+## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
+
+L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
+ÉTAT PUBLIÉ : commit cb28d2e — tout vert (110 contrôles, 220 sabotages prouvés, taps 20/20).
+ÉCONOMIE ACTUELLE (toutes décidées par l'auteur le 16/10) : prime de victoire = prochain niveau de la MEILLEURE créature
+(boss ×2) ; défis du jour médian = 1 niveau, semaine médiane = 3 (au prorata de la récompense écrite) ; pack en pièces =
+2 niveaux de la créature MOYENNE ; ultime du joueur ×1,5 (ennemis ×2) ; MAITRISE_MAX 1,4 ; chance affichée en mots
+(Facile / Moyen / Compliqué / Extrême) ; « 🎁 Tout récupérer » ; rune de résilience visible ; cadre lumineux sur ta case.
+
+### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
+1. « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
+   PISTES (diagnostic en lecture seule, non corrigé) :
+   (a) FACTEUR_ETAPE n'est MESURÉ que pour les étapes 1-60 (combatLogic, lecture `FACTEUR_ETAPE[nEt]` ligne ~1797) :
+       au-delà, pas de facteur mesuré → MESURER 61-100 avec mobile/tools/mesurer-etapes.js (script /tmp de remesure :
+       160 combats/équipe, 4 s pour 80 étapes) puis vérifier les crans en vrais combats (auditFenetres ne couvre pas 61+).
+       Les ennemis ÉPIQUES (abyssorax, cumulox, voltarel, solarion) arrivent au chapitre 7 : FACTEUR_ESPECE à vérifier.
+   (b) ANOMALIE étape 86 : même équipe qu'à l'étape 85 (luxorbe 70, racinea 74, aegisolar 80) mais « puissance » 4 938
+       (12 218 à l'étape 85) et chance annoncée 0 % — gagnée avec 48 % de vie → l'APERÇU a mal calculé la puissance
+       (créature manquante dans membresPourCombat ? runes ?) → chance faussée vers « Extrême ».
+   (c) Maîtrise de l'auteur (15 derniers) = 1,06, SOUS le plafond (1,4) : le plafond n'est PAS en cause cette fois.
+2. « Les coups spéciaux comme HP en plus (Soin) ou Bouclier n'affichent pas les bonnes stats. »
+   À PRÉCISER avec l'auteur : où (fiche créature, consigne de combat, chiffre flottant « +X », guide) et quel chiffre.
+   Pistes : texteSort (détail chiffré) vs EFFETS réels ; valeur passée à effetSort depuis le ciblage d'allié (14/10).
+   Aucun ultime n'est un soin/bouclier dans les données (vérifié) : il s'agit des SORTS.
+
+### ⚠️ RÈGLES DE TRAVAIL APPRISES (à respecter)
+- JAMAIS de commentaire « // » inséré au milieu d'une ligne de code (deux bugs le 16/10) — le détecteur de verifier-portee
+  le surveille (src + outils), mais ne t'y fie pas seul.
+- Avant toute passe de sabotages : `pgrep -a -x node | grep -c verifier` doit valoir 0 (et `git status` propre) ; après une
+  coupure de réponse, ATTENDRE la fin d'une passe en cours (ne pas la tuer : elle laisserait un sabotage en place).
+- Sabotages en 4 passes (timeout 285 s) : 0-71, 71-106, 106-142, 142-fin.
+- Repères de remplacement : toujours UNIQUES (vérifier le compte) ; une fonction qui change de signature → chercher TOUS
+  les appels (ex. taillePackGriffes(a) oublié dans le simulateur).
+- Le simulateur et le modèle d'économie doivent jouer EXACTEMENT les règles du jeu (prime, défis, pack) : ils comptent ce
+  qu'ils versent réellement (s.primes, s.packs, s.quetes).
