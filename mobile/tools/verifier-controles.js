@@ -650,6 +650,11 @@ const SABOTAGES = [
   ['auditCransAdoucis', F.combat, "les cibles adoucies reviennent à 50 / 33 %", remplace('export const CIBLES_ADOUCIES = { 4: 0.6, 5: 0.45 };', 'export const CIBLES_ADOUCIES = { 4: 0.5, 5: 1 / 3 };')],
   ['auditCransAdoucis', F.combat, "le calcul des ennemis ignore l'adoucissement", remplace('  if (!douce) return (t[d] || t[3]) * (CORRECTION_DIFFICULTE[d] || 1);', '  if (true) return (t[d] || t[3]) * (CORRECTION_DIFFICULTE[d] || 1);')],
   ['auditCransAdoucis', path.join(RACINE, 'tools/mesurer-etapes.js'), "l'outil de mesure se place sur la cible adoucie", remplace('{ sansFacteur: true, cibleBrute: true }', '{ sansFacteur: true }')],
+  // 17/10 : cible dorée −1 sur toute la chaîne, livre de tap plus rapide (demandes de l'auteur).
+  ['auditDoreeEtLivre', path.join(RACINE, 'src/games/clicker/defisEcrits.js'), "le défi 5 redemande 3 cibles dorées (sans répercussion)",
+    remplace("    { id: 'a0e1_golden', icon: '⭐', metric: 'goldenClaimed',\n      target: 2,", "    { id: 'a0e1_golden', icon: '⭐', metric: 'goldenClaimed',\n      target: 3,")],
+  ['auditDoreeEtLivre', path.join(RACINE, 'src/screens/games/GrimoireBoutique.js'), "le livre de tap s'ouvre de nouveau en 900 ms",
+    remplace('const DUREE_OUVERTURE = 450;', 'const DUREE_OUVERTURE = 900;')],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

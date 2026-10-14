@@ -3875,6 +3875,18 @@ EN ATTENTE (proposés, non choisis) : alerte « Griffes non dépensées » dans 
 vérifications allégées pour les petits changements.
 
 
+## 17/10 (fin de soirée) — DÉFIS : RÈGLE « RÉPERCUSSION » + CIBLE DORÉE −1 + LIVRE DE TAP PLUS RAPIDE (publié)
+
+NOUVELLE RÈGLE DE L'AUTEUR (au wiki, en tête du tableau) : quand il change un défi, la même correction s'applique aux défis
+SIMILAIRES qui suivent (même métrique, « les mêmes mais en plus dur »), en gardant les écarts de la chaîne. 1er cas, son exemple :
+défi 5 « Touche 3 fois la cible dorée » → 2, défi 20 : 5 → 4 ; appliqué aux 22 maillons (defisEcrits.js, metric goldenClaimed) :
+3,5,6,8,9,10,13,15,17,19,21,24,27,30,33,37,41,45,50,55,60,65 → 2,4,5,7,8,9,12,14,16,18,20,23,26,29,32,36,40,44,49,54,59,64.
+⚠️ Dans defisEcrits.js la cible est sur la LIGNE SUIVANT `metric:` (un remplacement sur une seule ligne ne trouve rien).
+DEFIS_PARADOX.md régénéré (python3 mobile/tools/generer-doc.py) ; auditDocConforme, auditDureeCible verts.
+LIVRE DE TAP (GrimoireBoutique) : ouverture ~1,24 s (attente 120 + pivot 900 + apparition 220) → ~0,63 s (30 + 450 + 150).
+Contrôles : auditDoreeEtLivre (nouveau → 117) + 2 sabotages → 246.
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

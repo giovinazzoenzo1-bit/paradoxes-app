@@ -59,7 +59,7 @@ const ONGLET_L = 46;
 const ONGLET_H = Math.round((ONGLET_L * 243) / 110);
 // Lettres à empattements du système (aucune police à charger).
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
-const DUREE_OUVERTURE = 900;
+const DUREE_OUVERTURE = 450; // 17/10 (auteur : « fais ouvrir le livre de tap plus vite ») : avant 900
 // Couverture : même hauteur que le livre, à ses PROPORTIONS NATURELLES (585 × 807,
 // plus large que la moitié du livre : le surplus tombe hors de l'écran, à droite).
 const COUV_L = Math.round((LIVRE_H * 585) / 807);
@@ -316,9 +316,9 @@ function Grimoire(props) {
       Animated.timing(ouverture, { toValue: 1, duration: DUREE_OUVERTURE, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start(() => {
         if (fini) return;
         setOuvert(true);
-        Animated.timing(apparition, { toValue: 1, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+        Animated.timing(apparition, { toValue: 1, duration: 150, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
       });
-    }, 120);
+    }, 30); // 17/10 : ouverture en ~0,63 s (attente 30 + pivot 450 + apparition 150), avant ~1,24 s (120 + 900 + 220)
     return () => { fini = true; clearTimeout(t); };
   }, []);
 

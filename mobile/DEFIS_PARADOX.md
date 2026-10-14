@@ -30,7 +30,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 - 2. 🔗 Achète 6 niveaux de Pacte
   3. 🔥 Reste en Transe x2,5 pendant 30 secondes
 - 4. ✊ Achète 7 niveaux de Faveur des Esprits
-  5. ⭐ Touche 3 fois la cible dorée
+  5. ⭐ Touche 2 fois la cible dorée
 - 6. 🪄 Achète 4 niveaux de Dégâts critiques
   7. 💥 Obtiens 20 coups critiques
   8. 💰 Mets 12 000 pièces de côté
@@ -53,7 +53,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 - 17. ⚙️ Achète 3 Mains Spectrales
   18. 🔥 Tiens la Transe pendant 35 secondes
 - 19. 👻 Achète 4 Esprits Frappeurs
-  20. ⭐ Touche 5 fois la cible dorée
+  20. ⭐ Touche 4 fois la cible dorée
 + 21. 🗡️ Gagne 4 combats en Aventure
 + 22. 🔮 Achète une rune
   23. 🔥 Enchaîne 140 taps sans pause
@@ -89,7 +89,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 + 41. ✨ Active 11 fois un pouvoir
 - 42. ⚙️ Achète 5 Esprits Frappeurs
 + 43. 🗡️ Gagne 5 combats en Aventure
-  44. ⭐ Touche 6 fois la cible dorée
+  44. ⭐ Touche 5 fois la cible dorée
   45. 💰 Mets 51 000 pièces de côté
   46. 🕯️ Fais une Offrande
 - 47. ✊ Achète 11 niveaux de Dégâts critiques
@@ -106,7 +106,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 - 50. 👻 Achète 4 Esprits Frappeurs
 + 51. ⚔️ Termine le chapitre 4, niveau 1
 + 52. ✨ Active 13 fois un pouvoir
-  53. ⭐ Touche 8 fois la cible dorée
+  53. ⭐ Touche 7 fois la cible dorée
 - 54. ⚙️ Achète 3 Mains Spectrales
   55. 💰 Mets 45 000 pièces de côté
 + 56. 🐣 Monte une créature au niveau 6
@@ -141,7 +141,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 ```diff
 + 74. ⚔️ Termine le chapitre 5, niveau 6
 - 75. 🍀 Achète 12 niveaux de Faveur des Esprits
-  76. ⭐ Touche 9 fois la cible dorée
+  76. ⭐ Touche 8 fois la cible dorée
   77. ⚙️ Atteins 28 pièces par seconde
 - 78. 🪄 Achète 4 niveaux de Gantelet d’Obsidienne
   79. 🔥 Tiens la Transe pendant 44 secondes
@@ -164,7 +164,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 ### ŒUF 12  →  Aquamira
 ```diff
   90. ⚙️ Atteins 32 pièces par seconde
-  91. ⭐ Touche 10 fois la cible dorée
+  91. ⭐ Touche 9 fois la cible dorée
 - 92. 💢 Achète 15 niveaux de Dégâts critiques
 + 93. 🗡️ Gagne 5 combats en Aventure
   94. 🕯️ Fais une Offrande
@@ -194,7 +194,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 ```diff
   107. ⚙️ Atteins 47 pièces par seconde
   108. 💥 Obtiens 500 coups critiques
-  109. ⭐ Touche 13 fois la cible dorée
+  109. ⭐ Touche 12 fois la cible dorée
 - 110. 🔗 Achète 9 niveaux de Pacte
 + 111. ✨ Active 17 fois un pouvoir
 + 112. ⚔️ Termine le chapitre 8, niveau 1
@@ -235,12 +235,12 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 + 135. ⚔️ Termine le chapitre 10, niveau 1
   136. 🔥 Tiens la Transe pendant 65 secondes
 - 137. 🔗 Achète 6 niveaux de Pacte
-  138. ⭐ Touche 15 fois la cible dorée
+  138. ⭐ Touche 14 fois la cible dorée
 ```
 
 ### ŒUF 18  →  Racinea
 ```diff
-  139. ⭐ Touche 17 fois la cible dorée
+  139. ⭐ Touche 16 fois la cible dorée
 + 140. 🌟 Décroche toutes les étoiles sur un niveau d'Aventure
 - 141. ⚙️ Achète 5 Colonies de Familiers
 + 142. ⚔️ Termine le chapitre 10, niveau 6
@@ -252,7 +252,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 
 ### ŒUF 19  →  Runicor
 ```diff
-  147. ⭐ Touche 19 fois la cible dorée
+  147. ⭐ Touche 18 fois la cible dorée
 - 148. 🪄 Achète 4 niveaux de Sceau de Puissance
 + 149. 🗡️ Gagne 5 combats en Aventure
   150. 🔥 Enchaîne 400 taps sans pause
@@ -298,7 +298,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
   174. 🕯️ Fais une Offrande
 + 175. ⚔️ Termine le chapitre 12, niveau 7
 - 176. 💢 Achète 24 niveaux de Dégâts critiques
-  177. ⭐ Touche 21 fois la cible dorée
+  177. ⭐ Touche 20 fois la cible dorée
 + 178. 🔮 Achète une rune
 ```
 
@@ -310,7 +310,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 + 182. 🗡️ Gagne 5 combats en Aventure
 - 183. ✊ Achète 6 niveaux de Éclat Primordial
   184. 🔥 Tiens la Transe pendant 89 secondes
-  185. ⭐ Touche 24 fois la cible dorée
+  185. ⭐ Touche 23 fois la cible dorée
 - 186. 👻 Achète 8 Colonies de Familiers
 ```
 
@@ -332,7 +332,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 + 196. ✨ Active 21 fois un pouvoir
 - 197. ⚙️ Achète 8 Titans Mécaniques
   198. 🔥 Enchaîne 400 taps sans pause
-  199. ⭐ Touche 27 fois la cible dorée
+  199. ⭐ Touche 26 fois la cible dorée
 - 200. ✊ Achète 3 niveaux de Coeur de Supernova
 + 201. 🗡️ Gagne 5 combats en Aventure
   202. ⚙️ Atteins 92 000 pièces par seconde
@@ -343,7 +343,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
   203. 🔥 Enchaîne 400 taps sans pause
 - 204. ⚙️ Achète 9 Golems de Cristal
 + 205. ⚔️ Termine le chapitre 15, niveau 4
-  206. ⭐ Touche 30 fois la cible dorée
+  206. ⭐ Touche 29 fois la cible dorée
 - 207. 🪄 Achète 4 niveaux de Éclat Primordial
   208. ⚙️ Atteins 160 000 pièces par seconde
   209. 💰 Mets 130 millions de pièces de côté
@@ -386,13 +386,13 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 + 230. ✨ Active 22 fois un pouvoir
   231. 👆 Atteins 6 000 taps au total
 - 232. 🪄 Achète 6 niveaux de Serment Éternel
-  233. ⭐ Touche 33 fois la cible dorée
+  233. ⭐ Touche 32 fois la cible dorée
 + 234. ⚔️ Termine le chapitre 17, niveau 5
 ```
 
 ### ŒUF 30  →  Arcanis
 ```diff
-  235. ⭐ Touche 37 fois la cible dorée
+  235. ⭐ Touche 36 fois la cible dorée
 - 236. 🔗 Achète 12 niveaux de Pacte
   237. 💰 Mets 350 millions de pièces de côté
   238. 💥 Obtiens 1600 coups critiques
@@ -417,7 +417,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 ### ŒUF 32  →  Arcanis
 ```diff
 + 251. ⚔️ Termine le chapitre 18, niveau 10
-  252. ⭐ Touche 41 fois la cible dorée
+  252. ⭐ Touche 40 fois la cible dorée
 - 253. ⚙️ Achète 8 Dragons Miniatures
   254. 🔥 Tiens la Transe pendant 131 secondes
   255. 💰 Mets 480 millions de pièces de côté
@@ -428,7 +428,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 
 ### ŒUF 33  →  Arcanis
 ```diff
-  259. ⭐ Touche 45 fois la cible dorée
+  259. ⭐ Touche 44 fois la cible dorée
 - 260. ✊ Achète 4 niveaux de Serment Éternel
   261. 🔥 Enchaîne 400 taps sans pause
 + 262. ✨ Active 24 fois un pouvoir
@@ -461,7 +461,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 + 277. 🔮 Achète une rune
 - 278. 🍀 Achète 20 niveaux de Faveur des Esprits
 + 279. 🌟 Décroche toutes les étoiles sur un niveau d'Aventure
-  280. ⭐ Touche 50 fois la cible dorée
+  280. ⭐ Touche 49 fois la cible dorée
 - 281. 💢 Achète 24 niveaux de Dégâts critiques
 + 282. 🗡️ Gagne 5 combats en Aventure
 ```
@@ -496,7 +496,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
   300. 🔥 Enchaîne 400 taps sans pause
   301. ⚙️ Atteins 940 000 pièces par seconde
 - 302. ⚙️ Achète 5 Gardiens Célestes
-  303. ⭐ Touche 55 fois la cible dorée
+  303. ⭐ Touche 54 fois la cible dorée
 + 304. ⚔️ Termine le chapitre 22, niveau 6
 - 305. 👻 Achète 8 Phénix Renaissants
 + 306. 🗡️ Gagne 5 combats en Aventure
@@ -504,7 +504,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 
 ### ŒUF 39  →  Arcanis
 ```diff
-  307. ⭐ Touche 60 fois la cible dorée
+  307. ⭐ Touche 59 fois la cible dorée
   308. 🔥 Tiens la Transe pendant 166 secondes
 - 309. 🪄 Achète 4 niveaux de Fracture du Réel
 + 310. ✨ Active 27 fois un pouvoir
@@ -521,7 +521,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
   317. 🔥 Tiens la Transe pendant 180 secondes
   318. 💰 Mets 2,5 milliards de pièces de côté
 - 319. ⚙️ Achète 8 Léviathans des Abysses
-  320. ⭐ Touche 65 fois la cible dorée
+  320. ⭐ Touche 64 fois la cible dorée
   321. 🔥 Enchaîne 400 taps sans pause
   322. 🌟 Fais ta 6e Ascension
 ```

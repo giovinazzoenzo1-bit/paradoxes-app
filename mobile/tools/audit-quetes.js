@@ -5851,3 +5851,22 @@ function auditCransAdoucis() {
   return pb;
 }
 module.exports.auditCransAdoucis = auditCransAdoucis;
+
+// 17/10 — RÈGLE DE L'AUTEUR : un changement de défi se RÉPERCUTE sur les défis SIMILAIRES qui suivent (même métrique, « les mêmes
+// mais en plus dur »). 1er cas : « Touche N fois la cible dorée » −1 sur toute la chaîne (défi 5 : 3 → 2, défi 20 : 5 → 4…), écarts
+// gardés. Et le livre de tap (Grimoire) s'ouvre en ~0,63 s au lieu de ~1,24 s.
+function auditDoreeEtLivre() {
+  const fs = require('fs'), path = require('path'); const D = load('defisEcrits');
+  const pb = [];
+  const chaine = [];
+  D.DEFIS_ECRITS.forEach((oeuf) => oeuf.forEach((q) => { if (q.metric === 'goldenClaimed') chaine.push(q.target); }));
+  const voulu = [2, 4, 5, 7, 8, 9, 12, 14, 16, 18, 20, 23, 26, 29, 32, 36, 40, 44, 49, 54, 59, 64];
+  if (JSON.stringify(chaine) !== JSON.stringify(voulu)) pb.push(`chaîne « cible dorée » : ${chaine.join(', ')} (voulu par l'auteur : ${voulu.join(', ')})`);
+  for (let i = 1; i < chaine.length; i++) if (!(chaine[i] > chaine[i - 1])) { pb.push(`chaîne « cible dorée » : elle doit monter à chaque maillon (${chaine[i - 1]} puis ${chaine[i]})`); break; }
+  const G = fs.readFileSync(path.join(__dirname, '../src/screens/games/GrimoireBoutique.js'), 'utf8');
+  const m = G.match(/const DUREE_OUVERTURE = (\d+);/);
+  if (!m || Number(m[1]) > 450) pb.push(`livre de tap : ouverture de ${m ? m[1] : '?'} ms (450 au plus, demande de l'auteur)`);
+  if (!G.includes('}, 30); // 17/10 : ouverture en ~0,63 s')) pb.push("livre de tap : l'attente avant l'ouverture n'est plus de 30 ms");
+  return pb;
+}
+module.exports.auditDoreeEtLivre = auditDoreeEtLivre;
