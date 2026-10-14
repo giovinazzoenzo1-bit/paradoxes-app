@@ -5370,7 +5370,8 @@ function auditFenetres() {
     // la case était cachée par son bois) ; ta lueur s'éteint pendant le tour de l'adversaire.
     if (!Cg.includes('setActeurAdverse(ae.lanceur);') || !Cg.includes('setActeurAdverse(retaliatorIdx);') || !Cg.includes('setActeurAdverse(null);') || !Cg.includes('actif: fi === activeIndex && acteurAdverse == null'))
       pb.push("combat : ta créature reste éclairée pendant le tour de l'adversaire");
-    if (!Cg.includes('ring: null, // 15/10 : pas de lueur sur les ennemis') || !Cg.includes('actif: false, // 15/10 : pas de lueur sur les ennemis') || !Cg.includes('cible: false, // 15/10 : pas de lueur sur les ennemis'))
+    // ⚠️ 16/10 : ce contrôle exigeait la forme BOGUÉE (« actif: false, // … » au milieu de la ligne, qui avalait les PV).
+    if (!Cg.includes('ring: null, // 15/10 : pas de lueur sur les ennemis') || !Cg.includes('            actif: false, cible: false,'))
       pb.push("combat : une lueur est revenue sur un ennemi (l'auteur n'en veut pas)");
     if (!Cg.includes("borderColor: actif ? '#ffd96a' : '#7cff8a'")) pb.push('combat : plus de cadre lumineux autour de la case de ta créature');
   }
