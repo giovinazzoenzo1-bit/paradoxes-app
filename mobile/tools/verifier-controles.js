@@ -604,6 +604,25 @@ const SABOTAGES = [
   // aveugle.
   ['auditTropFacile', F.defis, 'des dizaines de défis réduits à rien',
     surDefis((b) => b.metric.startsWith('auto:') || ['tapPower', 'critLevel', 'critDamageLevel'].includes(b.metric), cible(1))],
+  // 17/10 : étapes 61+ mesurées et aperçu calé sur la photo (bug « je gagne tout à partir de l'étape 80 »).
+  ['auditEtapesAvancees', F.combat, "les étapes 61+ retombent sur le repli par espèces (crans trop faciles)",
+    remplace('|| FACTEUR_ETAPE[nEt];', '|| (nEt <= 60 ? FACTEUR_ETAPE[nEt] : 0);')],
+  ['auditEtapesAvancees', F.combat, "une étape perd son facteur mesuré",
+    remplace(', "150": 0.952', '')],
+  ['auditEtapesAvancees', F.combat, "l'écran ne sait plus si l'étape a sa photo",
+    remplace('return !!(niveauxJoueur && niveauxJoueur[Math.max(1, Math.floor(levelNumber || 1))] != null);', 'return true;')],
+  ['auditEtapesAvancees', F.aventure, "l'aperçu n'est plus remesuré quand la photo arrive (le bug de l'étape 86)",
+    remplace('equipeAdverse.map((m) => [m.creature.id, m.niveau, m.evolutionTier || 0]), affaiblissementEtape(levelNumber), attentePhoto]);', 'attentePhoto]);')],
+  ['auditEtapesAvancees', F.aventure, "l'aperçu se mesure sans attendre la photo",
+    remplace('if (attentePhoto) return undefined;', 'if (false) return undefined;')],
+  ['auditEtapesAvancees', F.aventure, "COMBATTRE actif sans la photo",
+    remplace('disabled={deckVide || sansEnergie || attentePhoto}', 'disabled={deckVide || sansEnergie}')],
+  ['auditEtapesAvancees', F.aventure, "l'attente de la photo n'est plus transmise à l'aperçu",
+    remplace('attentePhoto={fenetreDe(levelPreview) === fenetreDe(currentUnlockedLevel) && deck.some(Boolean) && !etapePhotographiee(levelPreview)}', 'attentePhoto={false}')],
+  ['auditEtapesAvancees', F.aventure, "un combat part sans la photo de la fenêtre",
+    remplace('if (fenetreDe(levelPreview) === fenetreDe(currentUnlockedLevel) && !etapePhotographiee(levelPreview)) return;', '')],
+  ['auditEtapesAvancees', F.aventure, "le journal garde une chance mesurée sur un autre niveau",
+    remplace('derniereMesureApercu.niveauEnnemis === nivCombat;', 'true;')],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

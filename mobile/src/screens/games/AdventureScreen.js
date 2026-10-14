@@ -400,6 +400,8 @@ import {
   puissanceAventure,
   combattantsPourEtape,
   niveauEnnemi,
+  etapePhotographiee,
+  affaiblissementEtape,
   definirNiveauxJoueur,
   photoFenetre,
   fenetreDe,
@@ -2737,10 +2739,14 @@ function ChapterMapScreen({ onEncaisserGriffes = null, poudre = 0, ascensionCoun
         onFinish={(outcome, goNext, stars) => {
           // 11/10 (tableau Excel de l'auteur) : Griffes et Poudre en poche, n° d'essai, 1re victoire, puissance et chance annoncée.
           const lvJ = activeBattle.levelNumber;
+          // 17/10 (bug de l'étape 86) : niveau RÉEL du combat (noté au lancement) ; la chance annoncée n'entre au journal — donc dans
+          // l'indice de maîtrise — que si l'aperçu a mesuré CE niveau (un 0 % mesuré sur le repli gonflait la maîtrise).
+          const nivCombat = activeBattle.niveauEnnemis != null ? activeBattle.niveauEnnemis : niveauEnnemi(lvJ);
+          const apercuValide = !!derniereMesureApercu && derniereMesureApercu.niveau === lvJ && derniereMesureApercu.niveauEnnemis === nivCombat;
           finCombat(outcome, { etoiles: stars || 0, griffes, poudre, essai: (defaitesDeSuite[lvJ] || 0) + 1, premiereVictoire: lvJ === currentUnlockedLevel,
-            niveauEnnemis: niveauEnnemi(lvJ), ascension: ascensionCount,
-            puissance: derniereMesureApercu && derniereMesureApercu.niveau === lvJ ? derniereMesureApercu.puissance : null,
-            chanceAnnoncee: derniereMesureApercu && derniereMesureApercu.niveau === lvJ && derniereMesureApercu.victoires != null ? Math.round(100 * derniereMesureApercu.victoires) : null }); // journal des combats (08/10)
+            niveauEnnemis: nivCombat, ascension: ascensionCount,
+            puissance: apercuValide ? derniereMesureApercu.puissance : null,
+            chanceAnnoncee: apercuValide && derniereMesureApercu.victoires != null ? Math.round(100 * derniereMesureApercu.victoires) : null }); // journal des combats (08/10)
           // Une charge d'Élixir par combat mené, gagné ou perdu.
           if (elixirCombats > 0 && onElixirUsed) onElixirUsed();
           if (outcome === 'lose' && onDefaite) onDefaite(activeBattle.levelNumber);
@@ -3004,6 +3010,7 @@ function ChapterMapScreen({ onEncaisserGriffes = null, poudre = 0, ascensionCoun
       {levelPreview && (
         <FighterSelectOverlay
           levelNumber={levelPreview}
+          attentePhoto={fenetreDe(levelPreview) === fenetreDe(currentUnlockedLevel) && deck.some(Boolean) && !etapePhotographiee(levelPreview)}
           owned={owned}
           deck={deck}
           // Puissance exacte (26/09) : les MÊMES runes et filet que le combat.
@@ -3025,8 +3032,10 @@ function ChapterMapScreen({ onEncaisserGriffes = null, poudre = 0, ascensionCoun
               afficherDialogue(`🔒 ${requis} créatures requises`, `Il te faut ${requis} créatures pour l'étape ${levelPreview}.\n\nFais éclore ton prochain œuf pour continuer !`);
               return;
             }
+            // 17/10 : jamais de combat sur le niveau de REPLI (la photo de la fenêtre en cours arrive en différé).
+            if (fenetreDe(levelPreview) === fenetreDe(currentUnlockedLevel) && !etapePhotographiee(levelPreview)) return;
             if (!onStartBattle()) return;
-            setActiveBattle({ levelNumber: levelPreview });
+            setActiveBattle({ levelNumber: levelPreview, niveauEnnemis: niveauEnnemi(levelPreview) });
           }}
           onBuyEnergy={onBuyEnergy}
           diamonds={diamonds}
@@ -3631,7 +3640,7 @@ function RunePickerOverlay({ ownedRunes, onPick, onClose }) {
   );
 }
 
-function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filetBaisse = 0, energy, griffesDispo = 0, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
+function FighterSelectOverlay({ levelNumber, attentePhoto = false, owned, deck, ownedRunes = [], filetBaisse = 0, energy, griffesDispo = 0, onClose, onStart, onBuyEnergy, diamonds = 0, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature }) {
   // Niveaux réels (10/10) : le 1er ennemi de l'étape sous sa VRAIE forme (évolution), avec son NIVEAU,
   // le nombre d'adversaires, 👑 (boss de chapitre) et ⭐ (élites).
   const equipeAdverse = equipeEnnemie(levelNumber);
@@ -3650,15 +3659,19 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
   // redessine chaque seconde (minuteur d'énergie), sans rien changer.
   const [mesure, setMesure] = useState(null);
   const cleMesure = JSON.stringify([levelNumber, deck, (owned || []).map((o) => [o.id, o.level, o.evolutionTier || 0]),
-    (ownedRunes || []).filter((r) => r.equippedCreatureId), filetBaisse]);
+    (ownedRunes || []).filter((r) => r.equippedCreatureId), filetBaisse,
+    // 17/10 (bug de l'étape 86) : les NIVEAUX RÉELS des ennemis entrent dans la clé — la photo de la fenêtre arrive en différé ;
+    // sans eux, la mesure faite sur le niveau de repli (105 au lieu de 83) n'était jamais refaite.
+    equipeAdverse.map((m) => [m.creature.id, m.niveau, m.evolutionTier || 0]), affaiblissementEtape(levelNumber), attentePhoto]);
   useEffect(() => {
     let annule = false;
     setMesure(null);
+    if (attentePhoto) return undefined; // 17/10 : photo de la fenêtre pas encore là → « calcul… », aucune mesure fausse
     const t = setTimeout(() => {
       try {
         const r = puissanceAventure(membresPourCombat(deck, owned, ownedRunes, levelNumber), levelNumber, { filetBaisse });
         if (!annule) setMesure(r);
-        derniereMesureApercu = { niveau: levelNumber, puissance: r.puissance, victoires: r.victoires }; // journal (11/10)
+        derniereMesureApercu = { niveau: levelNumber, niveauEnnemis: niveauEnnemi(levelNumber), puissance: r.puissance, victoires: r.victoires }; // journal (11/10 ; niveau mesuré : 17/10)
       } catch (e) {
         if (!annule) setMesure(null);
       }
@@ -3745,7 +3758,7 @@ function FighterSelectOverlay({ levelNumber, owned, deck, ownedRunes = [], filet
       })}
 
       <Image source={HUB_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={[boite([APERCU.combattre[0] - 0.04, APERCU.combattre[1] - 0.06, APERCU.combattre[2] + 0.04, APERCU.combattre[3] + 0.05]), { opacity: deckVide || sansEnergie ? 0.25 : 0.85, pointerEvents: 'none' }]} />
-      <TouchableOpacity style={[rectCombattre, (deckVide || sansEnergie) && { opacity: 0.6 }]} onPress={onStart} disabled={deckVide || sansEnergie} activeOpacity={0.85}>
+      <TouchableOpacity style={[rectCombattre, (deckVide || sansEnergie || attentePhoto) && { opacity: 0.6 }]} onPress={onStart} disabled={deckVide || sansEnergie || attentePhoto} activeOpacity={0.85}>
         <Image source={APERCU_IMG.combattre} resizeMethod="scale" resizeMode="stretch" style={styles.hubPleineImage} />
         {/* Centrage par une vue (textAlignVertical ne vaut que sur Android). */}
         {/* Centre du texte à 55 % de la largeur du bouton, comme sur la maquette (était 61 %). */}

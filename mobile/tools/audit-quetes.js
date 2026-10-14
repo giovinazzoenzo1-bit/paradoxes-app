@@ -5675,3 +5675,66 @@ function auditNiveauMax() {
   return pb;
 }
 module.exports.auditNiveauMax = auditNiveauMax;
+
+// 17/10 — BUG « je gagne tous mes combats à partir de l'étape 80, même en Extrême » (rapport du 14/10) — DEUX CAUSES MESURÉES :
+// (1) FACTEUR_ETAPE n'existait que pour 1-60 : au-delà, le repli par espèces SURESTIMAIT les ennemis → crans 3/4/5 MESURÉS en
+//     vrais combats à 80/64/46 % (61-100) et jusqu'à 95/84/52 % (231-300) pour 70/50/33 visés. Table mesurée jusqu'à 300.
+// (2) l'aperçu se mesurait AVANT la photo de la nouvelle fenêtre (« Étape suivante » : étape débloquée et aperçu au même
+//     instant, photo en différé) → niveau de REPLI de la table (105 au lieu de 83 à l'étape 86) : « 4 938 · 0 % » sur une
+//     étape réglée au cran 1, chance fausse écrite au journal (indice de maîtrise faussé), et combat possible sur le repli.
+function auditEtapesAvancees() {
+  const fs = require('fs'), path = require('path'); const K = load('combatLogic'); const Cl = load('clickerLogic');
+  const pb = [];
+  const g = (id) => Cl.CREATURES.find((c) => c.id === id);
+  const trous = [];
+  for (let n = 1; n <= 300; n++) { const f = K.FACTEUR_ETAPE[n]; if (!(f > 0.5 && f < 2)) trous.push(n); }
+  if (trous.length) pb.push(`facteur d'étape manquant ou aberrant aux étapes ${trous.slice(0, 8).join(', ')}${trous.length > 8 ? '…' : ''} (repli par espèces : trop facile)`);
+  // Crans en VRAIS combats sur des fenêtres 61 à 295 (méthode d'auditFenetres : photo, deck du modèle, primes dépensées).
+  const decks = require('./calculateur-griffes.js').calculer(300, 'actif');
+  const PANEL = [['bouldog', 'voltix', 'ombrillon'], ['fournax', 'aquamira', 'zephyrion'], ['ventis', 'pyrosile', 'luxorbe']];
+  const parD = { 1: [0, 0], 2: [0, 0], 3: [0, 0], 4: [0, 0], 5: [0, 0] };
+  for (const d0 of [61, 81, 96, 121, 146, 176, 206, 236, 266, 291]) {
+    const niv = decks[d0 - 2].deck; const evo = (K.equipeEnnemie(d0)[0] || {}).evolutionTier || 0;
+    for (const ids of PANEL) {
+      const membres = niv.map((l, i) => ({ creature: g(ids[i]), ownedLevel: l, evolutionTier: evo, equippedRunes: [] }));
+      K.definirNiveauxJoueur(K.photoFenetre(d0, membres, 0));
+      let budget = 0;
+      for (let n = d0; n < d0 + 5; n++) {
+        const apres = K.deckApresEffortEquitable(membres.slice(0, Math.min(membres.length, K.combattantsPourEtape(n))), budget).membres;
+        const eq = apres.map((m) => ({ creature: m.creature, stats: K.combatStatsForCreatureTyped(m.creature, m.ownedLevel, m.evolutionTier, []) }));
+        const EE = K.equipeEnnemie(n).map((m) => ({ creature: m.creature, stats: K.statsForOpponentCreatureTyped(m.creature, n) }));
+        let sd = (n * 7919 + ids.join('').length) >>> 0; const alea = () => { sd = (sd * 1103515245 + 12345) >>> 0; return sd / 4294967296; };
+        const d = K.difficulteEtape(n);
+        for (let i = 0; i < 16; i++) { parD[d][1]++; if (K.simulerCombat(eq, EE, { alea, politique: K.choixJoueur, erreurMs: 60 }).gagne) parD[d][0]++; }
+        budget += K.primeVictoire(n, apres.map((m) => m.ownedLevel));
+      }
+      K.definirNiveauxJoueur(null);
+    }
+  }
+  const mes = {};
+  for (const d of [1, 2, 3, 4, 5]) {
+    mes[d] = parD[d][0] / parD[d][1];
+    if (Math.abs(mes[d] - K.CIBLES_DIFFICULTE[d]) > 0.15) pb.push(`étapes 61+ : cran ${d} à ${Math.round(100 * mes[d])} % en vrais combats pour ${Math.round(100 * K.CIBLES_DIFFICULTE[d])} % visés`);
+  }
+  if (!(mes[1] > mes[3] && mes[3] > mes[5])) pb.push('étapes 61+ : les crans ne vont plus du plus facile au plus dur');
+  // L'écran sait si l'étape a sa photo.
+  K.definirNiveauxJoueur({ 86: 83 });
+  const avec = K.etapePhotographiee(86), voisine = K.etapePhotographiee(87);
+  K.definirNiveauxJoueur(null);
+  if (!avec || voisine || K.etapePhotographiee(86)) pb.push("etapePhotographiee ne dit plus si l'étape a sa photo (l'aperçu mesurerait le niveau de repli)");
+  const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  if (!Av.includes('equipeAdverse.map((m) => [m.creature.id, m.niveau, m.evolutionTier || 0]), affaiblissementEtape(levelNumber), attentePhoto]);'))
+    pb.push("aperçu : les niveaux réels des ennemis ne sont plus dans la clé de la mesure (jamais remesuré à l'arrivée de la photo)");
+  if (!Av.includes('if (attentePhoto) return undefined;')) pb.push('aperçu : il se mesure de nouveau sans attendre la photo de la fenêtre');
+  if (!Av.includes('disabled={deckVide || sansEnergie || attentePhoto}')) pb.push('aperçu : COMBATTRE reste actif sans la photo (combat sur le niveau de repli)');
+  if (!Av.includes('attentePhoto={fenetreDe(levelPreview) === fenetreDe(currentUnlockedLevel) && deck.some(Boolean) && !etapePhotographiee(levelPreview)}'))
+    pb.push("aperçu : l'attente de la photo n'est plus transmise (ou bloque aussi les vieilles fenêtres sans photo)");
+  if (!Av.includes('if (fenetreDe(levelPreview) === fenetreDe(currentUnlockedLevel) && !etapePhotographiee(levelPreview)) return;')
+    || !Av.includes('setActiveBattle({ levelNumber: levelPreview, niveauEnnemis: niveauEnnemi(levelPreview) });'))
+    pb.push('lancement : un combat peut partir sans la photo, ou son niveau réel n\'est plus noté');
+  if (!Av.includes('derniereMesureApercu = { niveau: levelNumber, niveauEnnemis: niveauEnnemi(levelNumber),')
+    || !Av.includes('derniereMesureApercu.niveauEnnemis === nivCombat;') || !Av.includes('chanceAnnoncee: apercuValide && derniereMesureApercu.victoires != null'))
+    pb.push("journal : une chance mesurée sur un AUTRE niveau que le combat entre de nouveau dans l'indice de maîtrise");
+  return pb;
+}
+module.exports.auditEtapesAvancees = auditEtapesAvancees;
