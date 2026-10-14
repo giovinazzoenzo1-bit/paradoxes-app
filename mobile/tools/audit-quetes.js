@@ -3235,7 +3235,8 @@ module.exports.auditGardienCalibre = auditGardienCalibre;
 // empreinte : ce contrôle refuse le push tant que la simulation n'a pas
 // été revérifiée et EMPREINTE_COMBAT mise à jour. L'auteur n'a rien à
 // tester à la main (sa demande du 24/09).
-const EMPREINTE_COMBAT = '1a11b089'; // 14/10 : lancerSort accepte l'allié CHOISI (cibleAllie) ; sans lui (Gardien, ennemis, simulation) : choix automatique inchangé — auditGardienCalibre relancé : OK.
+const EMPREINTE_COMBAT = '9fcfd71b'; // 14/10 (suite) : libelleChance (affichage, aucun effet sur le combat) — auditGardienCalibre relancé : OK.
+// (avant :) '1a11b089' // 14/10 : lancerSort accepte l'allié CHOISI (cibleAllie) ; sans lui (Gardien, ennemis, simulation) : choix automatique inchangé — auditGardienCalibre relancé : OK.
 // (ancienne :) 'e97f41c5' // 11/10 (soir) : soutiens sur la cible SEULEMENT (règle partagée avec simulerCombat ; le Gardien est seul, rien ne change pour lui — auditGardienCalibre vert). Avant : '52f045e3'.
 function empreinteCombat() {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');

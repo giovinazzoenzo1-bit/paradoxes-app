@@ -1515,8 +1515,8 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         {/* 14/10 : une VRAIE lueur derrière la créature — dorée sur celle qui JOUE son tour, rouge sur l'adversaire visé, verte
             sur l'allié choisi. (Avant : `ring` ne changeait que la pastille d'élément, cachée dans l'arène : rien n'était visible.) */}
         {ring && !fainted && (
-          <Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch" pointerEvents="none"
-            style={{ position: 'absolute', left: (boxW - fs * 1.9) / 2, top: (fs + 22) / 2 - fs * 0.95, width: fs * 1.9, height: fs * 1.9, // centrée sur le cercle
+          <Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch"
+            style={{ pointerEvents: 'none', position: 'absolute', left: (boxW - fs * 1.9) / 2, top: (fs + 22) / 2 - fs * 0.95, width: fs * 1.9, height: fs * 1.9, // centrée sur le cercle
               opacity: ring === 'active' ? 0.95 : 0.85, tintColor: ring === 'active' ? undefined : adversaire ? '#ff5a5a' : '#7cff8a' }} />
         )}
         <View style={[styles.spriteRing, { width: fs + 22, height: fs + 22, borderRadius: (fs + 22) / 2 }]}>
