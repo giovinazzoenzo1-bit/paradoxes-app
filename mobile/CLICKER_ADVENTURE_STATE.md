@@ -3623,3 +3623,18 @@ pendant l'aperçu, « ✅ +X Griffes »). MESURÉ (état type) : défi terminé 
 réclamé = total du calculateur (202 Griffes).
 Contrôles : auditToutRecuperer (nouveau → 106 contrôles) ; 3 sabotages + 1 recalé (signature de ChapterMapScreen) → 201
 prouvés ; taps 20/20.
+
+
+## 16/10 — BUG « ON NE VOIT PLUS LES HP DES ENNEMIS » (corrigé, publié)
+
+CAUSE (ma faute, commit du 15/10 « aucune lueur ennemie ») : remplacement automatique qui a inséré « actif: false, // 15/10 : … »
+AU MILIEU de la ligne qui construit la case d'un ennemi (panneauCombattant) → « // » a transformé TOUTE LA FIN DE LA LIGNE en
+commentaire : elite, hp, hpMax, mana, cible, ko avalés → PV des ennemis invisibles, état K.O. perdu. Tout compilait ; les
+contrôles par TEXTE passaient — l'un d'eux exigeait même la forme boguée.
+CORRECTIF : propriétés rétablies, commentaire sur sa propre ligne.
+⚠️ PIÈGE (règle de travail) : JAMAIS de commentaire « // » inséré au milieu d'une ligne de code par un remplacement automatique ;
+un commentaire va sur SA ligne (ou en toute fin d'une ligne dont il ne reste rien après).
+GARDE-FOUS : (1) verifier-portee : commentairesAvaleurs (code avant « // » finissant par une virgule + « clé: valeur » dans le
+commentaire) — aucune fausse alerte sur tout le code ; (2) auditPanneauxCombat (nouveau → 107 contrôles) : lit CombatScreen
+comme le COMPILATEUR (arbre syntaxique) et exige nom, hp, hpMax, ko dans chaque case du bandeau. Les deux crient sur le fichier
+bogué. Contrôle de la lueur ennemie réaligné. 3 sabotages → 204 prouvés ; taps 20/20.
