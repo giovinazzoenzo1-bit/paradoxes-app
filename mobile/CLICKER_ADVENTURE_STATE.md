@@ -3752,6 +3752,40 @@ comptés : s.quetes), modèle, 2 outils d'analyse. MESURÉ (modèle) : équipe 2
 Contrôles : auditQuetesNiveau RÉÉCRIT (nouvelle règle + câblage) ; 1 sabotage remplacé + 3 → 220 prouvés (4 passes) ; taps 20/20.
 
 
+## 17/10 — « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80, MÊME EN EXTRÊME » : 2 CAUSES MESURÉES, CORRIGÉES (publié)
+
+RAPPORT de l'auteur (14/10 13:40, 103 combats, étapes 1-86 ; il est à l'étape 97 avec 3 200 Griffes non dépensées).
+CAUSE 1 — APERÇU MESURÉ AVANT LA PHOTO (étape 86 : « puissance » 4 938, 0 %, gagnée avec 48 % de vie). « Étape suivante »
+débloque l'étape ET ouvre l'aperçu au même instant ; la photo de la nouvelle fenêtre se calcule en différé (stockage + journal
+lus en asynchrone) ; l'aperçu se mesurait 30 ms après → aucune photo → niveau de REPLI de la table (105 au lieu de 83) ; sa
+clé de mesure ignorait le niveau des ennemis → jamais remesuré. REJEU (équipe exacte, sans runes) : sans photo 4 304 · 0 %,
+avec la photo 12 736 · 27 %. EFFETS : « Extrême » affiché sur une étape réglée au cran 1 ; le 0 % écrit au journal gonflait
+l'indice de maîtrise ; un combat lancé dans la fraction de seconde partait sur le repli (CombatScreen fige les ennemis au
+montage) et le journal aurait quand même écrit le bon niveau (lu à la fin).
+CORRECTIF (AdventureScreen) : clé de la mesure + niveaux réels des ennemis et entraînement ; prop attentePhoto (fenêtre EN
+COURS seulement : une vieille fenêtre sans photo ne bloque jamais) → « calcul… » et COMBATTRE grisé ; lancement refusé sans
+photo ; activeBattle.niveauEnnemis noté au lancement ; chance annoncée au journal seulement si l'aperçu a mesuré CE niveau
+(apercuValide). combatLogic.etapePhotographiee(n).
+CAUSE 2 — ÉTAPES 61+ SANS FACTEUR MESURÉ : repli par espèces (duels 1 contre 1) qui SURESTIMAIT les ennemis. MESURÉ en vrais
+combats (méthode d'auditFenetres, 6 équipes, 16 combats par étape), crans 1-5 visés 95 / 85 / 70 / 50 / 33 :
+  61-100  : avant 94 / 74 / 80 / 64 / 46 → après 90 / 74 / 69 / 52 / 26
+  101-145 : avant 78 / 84 / 83 / 58 / 53 → après 91 / 75 / 69 / 52 / 31
+  146-230 : avant 99 / 95 / 85 / 85 / 49 → après 97 / 82 / 80 / 49 / 25
+  231-300 : avant 99 / 96 / 95 / 84 / 52 → après 98 / 83 / 77 / 51 / 25   (témoin 26-60, déjà mesuré : 86 / 74 / 70 / 41 / 26)
+Sur 61-85, l'auteur a gagné 22 combats sur 25 au 1er essai pour ~17 attendus.
+CORRECTIF : FACTEUR_ETAPE étendu à 1-300 (1-60 INCHANGÉES, vérifié octet par octet ; copie mobile/tools/facteurs-etapes.json).
+MESURE AFFINÉE (mesurer-etapes.js, mesurerAffine, AFFINE=1) : la mesure simple se BLOQUAIT à 0,828 / 1,208 en 3 contre 3 quand
+le panel gagnait ≥ 97 % ou ≤ 3 % (étapes 67, 69, 100) → ennemis replacés avec le facteur trouvé (≤ 4 fois, jusqu'à |logit| < 0,4)
+et arrondi du niveau retiré. Témoin 41-50 : mêmes valeurs que la table à 0-5 % près. Deck du modèle allongé à 310 étapes (120
+premières lignes identiques). Au-delà de 152, facteur ~0,91 presque constant (Arcanis + Solstral dominent toutes les compositions).
+⚠️ TROUVÉ, NON CORRIGÉ (décision de l'auteur) : dans la table 1-60, les étapes 27, 29, 37, 39, 40 valent 0,828 = mesure bloquée →
+probablement plus faciles que prévu (boss 40 compris).
+⚠️ COUPURE de réponse pendant la passe 106-142 : passe ATTENDUE jusqu'au bout (CombatScreen était saboté à ce moment), fichiers
+vérifiés intacts, aucune relance en parallèle.
+Contrôles : auditEtapesAvancees (nouveau → 111) ; 9 sabotages → 229 prouvés (4 passes) ; taps 20/20.
+⚠️ RESTE OUVERT : BUG 2 (Soin / Bouclier, chiffres affichés) — l'auteur doit dire OÙ et QUEL chiffre.
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
@@ -3762,7 +3796,7 @@ L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieur
 (Facile / Moyen / Compliqué / Extrême) ; « 🎁 Tout récupérer » ; rune de résilience visible ; cadre lumineux sur ta case.
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
-1. « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
+1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
    (a) FACTEUR_ETAPE n'est MESURÉ que pour les étapes 1-60 (combatLogic, lecture `FACTEUR_ETAPE[nEt]` ligne ~1797) :
        au-delà, pas de facteur mesuré → MESURER 61-100 avec mobile/tools/mesurer-etapes.js (script /tmp de remesure :

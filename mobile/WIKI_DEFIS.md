@@ -195,10 +195,16 @@ Mécanisme prêt (état `avantage` sauvegardé) ; **à brancher sur les vrais ac
 **Comment le niveau des ennemis est calculé (instantané, ~7 ms par fenêtre)** : le niveau où « puissance du deck ÷
 (puissance des ennemis × facteur de l'étape) » vaut le rapport du cran (`RATIOS_DIFFICULTE`, mesurés par régression sur des
 milliers de combats, pour 1 contre 1, 2 contre 1, 2 contre 2, 3 contre 3). Le **facteur de l'étape** (`FACTEUR_ETAPE`) corrige ce
-que la puissance ne voit pas (sorts, soins, boucliers, effets d'équipe) : il est **mesuré en vrais combats**.
+que la puissance ne voit pas (sorts, soins, boucliers, effets d'équipe) : il est **mesuré en vrais combats**, pour les
+**étapes 1 à 300** (17/10 : 61-300 ajoutées ; au-delà de 300, une estimation par espèce, moins juste).
+
+**L'aperçu attend la photo** (17/10) : en arrivant sur une nouvelle fenêtre, la photo se calcule en une fraction de seconde.
+Pendant ce temps, l'aperçu affiche « calcul… » et COMBATTRE est grisé : on ne mesure ni ne joue jamais sur un niveau provisoire.
 
 **Ajouter des étapes ou changer des ennemis** : relancer `NODE_PATH=… node mobile/tools/mesurer-etapes.js <de> <à>` (par morceaux
-de 30 étapes, quelques minutes) et recopier le résultat dans `FACTEUR_ETAPE`. Puis lancer les contrôles.
+de 30 étapes, quelques minutes) et recopier le résultat dans `FACTEUR_ETAPE`. Puis lancer les contrôles. Depuis le 17/10,
+préférer la **mesure affinée** (`AFFINE=1`, fonction `mesurerAffine`) : elle replace les ennemis jusqu'à ~50 % de victoires,
+là où la mesure simple se bloquait à 0,828 / 1,208 quand l'équipe test gagnait ou perdait presque tout.
 
 **Contrôle** : `auditFenetres` vérifie à chaque passage, en vrais combats, que chaque cran donne sa chance (± 15 points), que la
 photo compte bien toutes les Griffes, et que l'écran et le joueur simulé sont branchés ; ses sabotages le prouvent.
