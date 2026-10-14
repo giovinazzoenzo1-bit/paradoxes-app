@@ -1203,3 +1203,13 @@ côte — « 🔥 Éléments » et « ✨ Spécialités » (demande de l'auteur 
 
 **Soin** (13/10) : 30 % des PV perdus de l'allié le plus blessé, AU MOINS 15 % de ses PV max (sans dépasser ce qui manque) ;
 à PV pleins, l'écran affiche « PV pleins » (avant : rien — « on ne voit pas l'ajout d'HP »).
+
+
+### ⚔️ DESCRIPTIONS DES ATTAQUES ET DES SORTS (14/10)
+
+UNE source : combatLogic.descriptionAttaque (fiche créature, Clicker) et texteSort (mêmes phrases dans le guide des
+spécialités). Attaque normale : « ≈ X dégâts (coup parfait) · gratuite » ; coup spécial : « ≈ X dégâts (coup parfait) ·
+mana pleine (5) » — X = scaledSkillDamage, la fonction du combat, à l'attaque ACTUELLE de la créature (un coup « bien » en
+fait la moitié ; avant les éléments). Sort : phrase courte + coût en mana. Tous les chiffres sont LUS dans les règles.
+Avant : « 3 dégâts » (chiffre brut de la définition), « 11 dégâts · mana plein », « 45 % des PV perdus », « +35 % de zone
+dorée · gratuit · 3 mana » (contradictoire), et au Clicker « 3 dégâts · 5 END » (endurance supprimée le 11/09).

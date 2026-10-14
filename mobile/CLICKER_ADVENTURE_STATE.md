@@ -3542,3 +3542,18 @@ commune laissée à 20 : plus de puissance par Griffe), pas de l'évolution → 
 Contrôles : 2 évolutions attendues, Gardien inchangé, pas d'évolution impayée, cas « toutes évoluées, plafond 30 » équitable
 (⚠️ ce cas a été ajouté parce que le sabotage « seuil atteignable » était AVEUGLE avec le seul premier test) ; 3 sabotages
 → 186 prouvés ; 105 contrôles verts ; taps 20/20.
+
+
+## 14/10 — DÉCISION « MODÈLE DE DÉPENSE » + DESCRIPTIONS DES ATTAQUES (publié)
+
+DÉCISION DE L'AUTEUR (ne pas « corriger ») : le calculateur garde le modèle de dépense ACTUEL (évolutions comptées, puis
+répartition équitable) — PAS le « joueur malin » (chaque Griffe là où elle rapporte le plus). Raisons : bien dépenser reste
+récompensé jusqu'à la photo suivante, qui se recale sur le vrai deck ; le « joueur malin » rendrait le jeu trop dur aux
+joueurs qui répartissent au hasard, sans que l'indice de maîtrise les rattrape (leur aperçu montre déjà leur deck faible).
+DESCRIPTIONS (« elles ne veulent rien dire ») : CAUSES — fiche créature : « 3 dégâts » = chiffre BRUT de mkSkills (le combat
+le multiplie par l'attaque : Pyrosile niv. 20 frappe ≈ 84), « 11 dégâts · mana plein », sorts « 45 % des PV perdus » ; Vitesse
+« gratuit · 3 mana » (contradictoire) ; Clicker « 3 dégâts · 5 END » (endurance supprimée le 11/09).
+CORRECTIF : combatLogic.descriptionAttaque(k, créature, attaque) + texteSort(id, court) ; utilisés par la fiche (onglet
+Attaques), le guide des spécialités (SPECIALITES_GUIDE ne garde que les identifiants) et le Clicker (competencesAvecSort :
+sort compris). Contrôles : chaque compétence de CHAQUE créature (dégâts = scaledSkillDamage, sorts avec leur coût, pas
+d'« END »), chiffres lus dans EFFETS, écrans branchés ; sabotage du guide recalé + 3 nouveaux → 189 prouvés ; 105 verts ; taps 20/20.
