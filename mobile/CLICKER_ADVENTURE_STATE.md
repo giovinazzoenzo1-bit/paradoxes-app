@@ -3787,3 +3787,24 @@ L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieur
   les appels (ex. taillePackGriffes(a) oublié dans le simulateur).
 - Le simulateur et le modèle d'économie doivent jouer EXACTEMENT les règles du jeu (prime, défis, pack) : ils comptent ce
   qu'ils versent réellement (s.primes, s.packs, s.quetes).
+
+
+## 🧰 MISE EN PLACE DE L'ENVIRONNEMENT (au début de CHAQUE conversation, avant le moindre contrôle)
+
+Le sandbox repart à zéro à chaque conversation : rien de /home/claude ni de /tmp ne survit.
+1. Babel pour les contrôles et la compilation :
+   mkdir -p /home/claude/babel-env && cd /home/claude/babel-env && npm init -y >/dev/null && npm i @babel/core @babel/preset-env @babel/preset-react @babel/parser @babel/traverse
+   → préfixer TOUS les outils de mobile/tools par NODE_PATH=/home/claude/babel-env/node_modules
+2. Compilation de tout le code (depuis la racine du dépôt) : node mobile/tools/compiler-tout.js → « 73 fichiers, 0 en erreur ».
+3. Portée : node mobile/tools/verifier-portee.js → « aucun nom inconnu » (noms inconnus, lecture avant déclaration = écran
+   blanc sur Hermes, commentaire « // » qui avale la fin d'une ligne — jeu ET outils).
+4. Suite : timeout 295 node mobile/tools/verifier-defis.js → « RIEN DE CASSÉ » (110 contrôles au 16/10).
+5. Sabotages : timeout 285 node mobile/tools/verifier-controles.js A B en 4 passes : 0 71 · 71 106 · 106 142 · 142 <total>.
+   AVANT chaque passe : `pgrep -a -x node | grep -c verifier` = 0 et `git status --short` vide. UNE passe à la fois.
+6. Sonde des taps : mkdir -p /tmp/cap && cp mobile/tools/capture/package.json /tmp/cap/ && (cd /tmp/cap && npm i) ; puis
+   cd mobile/tools/capture && ln -sfn /tmp/cap/node_modules node_modules && EMULE_TOUCHER=1 node build.mjs scenes/menu.jsx
+   && node taps.mjs (→ 20 / 20 partout) && rm -f node_modules — ne JAMAIS committer node_modules.
+7. Remesure des facteurs d'étape : outil mobile/tools/mesurer-etapes.js (fonction mesurer(n, combatsParEquipe) ; NBJ=1 pour
+   le 1 contre 1 du chapitre 1, NBJ=3 pour le 3 contre 2 du chapitre 2) ; 160 combats par équipe = quelques secondes pour
+   80 étapes ; injecter dans les constantes FACTEUR_ETAPE / _1V1 / _3V2 (une ligne chacune, sans regex DOTALL) et copier
+   dans mobile/tools/facteurs-etapes*.json.
