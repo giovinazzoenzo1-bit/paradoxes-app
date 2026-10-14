@@ -1181,3 +1181,17 @@ La collection compte **26 créatures**. Le joueur les a toutes pendant sa **5e A
 3. Je mesure **avant** et **après**, et je te montre l'écart
 
 ⚠️ Un nombre de pièces ne veut rien dire hors de son Ascension : 10 millions valent 1,7 % du seuil à A5, et 2 300 % à A1.
+
+
+### 📖 GUIDE DU JOUEUR : ÉLÉMENTS ET SPÉCIALITÉS (13/10)
+
+Bouton « 📖 Guide » dans l'en-tête de la carte d'Exploration (ancien « 🔥 Éléments ») : une fenêtre à DEUX ONGLETS côte à
+côte — « 🔥 Éléments » et « ✨ Spécialités » (demande de l'auteur ; un 2e bouton aurait débordé de l'en-tête).
+- Spécialités : 🛡️ Tank (Bouclier, Venin, Provocation), 💚 Soutien (Soin, Boost, Vitesse, Marque), ⚔️ Attaquant (Zone,
+  Exécution, Pacte de sang) ; la mana (2 au départ, +1 par tour, 5 max ; un sort coûte 2 ou 3) ; le coup spécial à 5 de mana
+  (lancer un sort le retarde) ; une jauge parfaite renforce les sorts.
+- ⚠️ RÈGLE : tous les chiffres du guide sont LUS dans les règles (EFFETS, SORTS, ELEMENT_ADVANTAGE_MULT /
+  ELEMENT_WEAKNESS_MULT, MANA_*). L'ancien texte des éléments annonçait « +30 % / −25 % » pour ±15 % réels.
+
+**Soin** (13/10) : 30 % des PV perdus de l'allié le plus blessé, AU MOINS 15 % de ses PV max (sans dépasser ce qui manque) ;
+à PV pleins, l'écran affiche « PV pleins » (avant : rien — « on ne voit pas l'ajout d'HP »).

@@ -3505,3 +3505,21 @@ duel propre à l'espèce, non corrigé — le Gardien à 90 % sert de sortie).
 ne scanne que mobile/src (pas les outils) : à garder en tête.
 Contrôles : auditFenetres (règle du Gardien complète + 90 % mesurés sur 2 decks bloqués ; étape 8 d'une créature seule ≥ 50 %) ;
 4 sabotages nouveaux → 179 prouvés ; 105 contrôles verts ; taps 20/20.
+
+
+## 13/10 (suite) — SOIN VISIBLE + GUIDE À ONGLETS « ÉLÉMENTS | SPÉCIALITÉS » (publié)
+
+Rapport de l'auteur (14/10, départ Luxorbe — le pire au 1er combat avant l'entraînement) : étape 1 à 100 %, Gardien
+« bloqué au max » à 90 % gagné, 84 % de victoires au 1er essai (il est précis : 75 % de parfaits) ; étape 22 à 1 % tant que
+347 Griffes de défis et 120 de succès n'étaient pas réclamées (la photo les compte comme dépensées), 99 % après dépense
+(dont une ÉVOLUTION, que la dépense virtuelle ne compte pas) — pistes possibles, pas codées.
+BUG « on ne voit pas l'ajout d'HP » : CAUSE = le soin rendait 30 % des PV PERDUS sans minimum → 0 à PV pleins (rien
+d'affiché, mana perdue), +3 sur une petite blessure (même défaut que le bouclier du 26/09). CORRECTIF : EFFETS.soinMinimum 0,15
+(min(PV perdus, mult × max(15 % PV max, 30 % PV perdus))) ; combat : « +X PV » plus longtemps, « PV pleins » à 0, message
+« Soin : X a déjà tous ses PV ». MESURÉ (Racinea niv. 20, parfait) : PV pleins +0 ; 90 % de PV +34 (avant ~10) ; 50 % +51 (inchangé).
+GUIDE : ElementHelpOverlay → onglets (useState), SpecialitesContenu (ScrollView, hauteur via useWindowDimensions — l'écran
+n'importe pas Dimensions), SPECIALITES_GUIDE() : textes construits avec EFFETS/SORTS ; bouton « 📖 Guide ».
+⚠️ ERREUR ATTRAPÉE : le tuto des éléments affichait « +30 % / −25 % » (règles : ±15 %) → chiffres désormais lus dans les règles.
+Contrôles : auditFenetres (soin 0 / minimum / textes ; guide : chiffres lus, 10 sorts, onglets, bouton) ; auditDialoguesJeu
+(titre dynamique) ; 4 sabotages nouveaux → 183 prouvés ; 105 contrôles verts ; taps 20/20.
+À FAIRE (annoncé par l'auteur) : réécrire les descriptions des attaques (« elles ne veulent rien dire »).
