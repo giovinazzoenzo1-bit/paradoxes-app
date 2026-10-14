@@ -68,6 +68,10 @@ function commentairesAvaleurs(fichier) {
 function verifier(racine = path.join(__dirname, '..')) {
   const pb = [];
   for (const f of fichiers(racine)) for (const n of commentairesAvaleurs(f)) pb.push(`${path.relative(racine, f)}:${n} — un commentaire « // » au milieu de la ligne AVALE la suite du code`);
+  // 16/10 : AUSSI dans les OUTILS (vécu le jour même : le modèle d'économie avait perdu « cumul.shop += p; griffes += p; } »).
+  const outils = [];
+  (function w(d) { if (!fs.existsSync(d)) return; for (const f of fs.readdirSync(d)) { if (f === 'node_modules' || f === 'out') continue; const p = path.join(d, f); if (fs.statSync(p).isDirectory()) w(p); else if (p.endsWith('.js')) outils.push(p); } })(path.join(racine, 'tools'));
+  for (const f of outils) for (const n of commentairesAvaleurs(f)) pb.push(`${path.relative(racine, f)}:${n} — un commentaire « // » au milieu de la ligne AVALE la suite du code`);
   for (const f of fichiers(racine)) for (const x of inconnus(f)) pb.push(`${path.relative(racine, f)}:${x.ligne} — « ${x.nom} » ${x.zoneMorte ? 'utilisé AVANT sa déclaration (zone morte : écran blanc au rendu)' : 'utilisé sans être déclaré'}`);
   return pb;
 }

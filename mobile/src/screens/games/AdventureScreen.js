@@ -392,6 +392,7 @@ import {
   achatsGriffesPiecesRestants, GRIFFES_PIECES_MAX_PAR_ASCENSION, niveauMaxCreature, niveauMaxEquipe, raisonNiveauMax, creaturesRequisesPour,
   MANA_MAX,
   MANA_PER_TURN,
+  niveauxDuDeck,
 } from '../../games/clicker/clickerLogic';
 import { useDaily, PENDING_GRIFFES_KEY } from '../../context/DailyContext';
 import { niveauMaxAventure } from '../../games/clicker/questLogic';
@@ -917,8 +918,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     if (achatsGriffesPiecesRestants(griffesCoinBuys) <= 0) return false; // 4 par Ascension (06/10)
     const ok = await onSpendCoins(coutGriffesEnPieces);
     if (!ok) return false;
-    // Taille du pack selon l'Ascension (26/09) : 100 + 75 par Ascension.
-    const taille = taillePackGriffes(ascensionCount);
+    // 16/10 (règle de l'auteur) : 2 niveaux de ta créature MOYENNE du deck (avant : selon l'Ascension).
+    const taille = taillePackGriffes(niveauxDuDeck(owned, deck));
     setGriffes((g) => g + taille);
     noterGriffes('shop-pieces', taille); // journal des Griffes (11/10)
     annoncerGriffes(taille);
@@ -945,7 +946,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       {boutiqueGriffes && (
         <BoutiqueGriffes griffes={griffes} diamants={diamonds} onFermer={() => setBoutiqueGriffes(false)}
           offres={[
-            { cle: 'pieces', icone: '💰', restants: achatsGriffesPiecesRestants(griffesCoinBuys), max: GRIFFES_PIECES_MAX_PAR_ASCENSION, limite: `Limite atteinte : ${GRIFFES_PIECES_MAX_PAR_ASCENSION} packs en pièces par Ascension. Reviens après ta prochaine Ascension, ou passe par les Diamants (sans limite).`, message: () => messageGriffesRef.current, quantite: taillePackGriffes(ascensionCount), prix: `${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces`, manque: `Pas assez de pièces : il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`, onAcheter: buyGriffesWithCoins },
+            { cle: 'pieces', icone: '💰', restants: achatsGriffesPiecesRestants(griffesCoinBuys), max: GRIFFES_PIECES_MAX_PAR_ASCENSION, limite: `Limite atteinte : ${GRIFFES_PIECES_MAX_PAR_ASCENSION} packs en pièces par Ascension. Reviens après ta prochaine Ascension, ou passe par les Diamants (sans limite).`, message: () => messageGriffesRef.current, quantite: taillePackGriffes(niveauxDuDeck(owned, deck)), prix: `${coutGriffesEnPieces.toLocaleString('fr-FR')} pièces`, manque: `Pas assez de pièces : il t'en faut ${coutGriffesEnPieces.toLocaleString('fr-FR')}.`, onAcheter: buyGriffesWithCoins },
             { cle: 'diamants', icone: '💎', message: () => messageGriffesRef.current, quantite: GRIFFES_PACK, prix: `${GRIFFES_DIAMOND_COST} Diamants`, manque: `Pas assez de Diamants : il t'en faut ${GRIFFES_DIAMOND_COST}.`, onAcheter: buyGriffesDiamonds },
           ]} />
       )}

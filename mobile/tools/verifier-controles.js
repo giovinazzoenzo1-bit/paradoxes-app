@@ -206,7 +206,7 @@ const SABOTAGES = [
   ['auditPacks', F.ecran, "le compteur de packs n'est plus remis à zéro à l'Ascension (packs hors de prix pour toujours)",
     remplace('            setGriffesCoinBuys(0);\n', '')],
   ['auditPacks', F.clicker, 'la taille du pack ne grandit plus avec l\'Ascension',
-    remplace('  return GRIFFES_COIN_PACK + 38 * Math.max(0, Math.floor(Number(ascensionCount) || 0)); // 11/10 : 75 → 38 (×0,5)', '  return GRIFFES_COIN_PACK;')],
+    remplace("  for (let k = 0; k < PACK_PIECES_NIVEAUX; k++) t += levelUpCost({ rarity: 'commun' }, moy + k);", '  t = 126;')], // 16/10 : pack = 2 niveaux
   ['auditPacks', F.clicker, 'les packs redeviennent quasi gratuits (le « 90 packs à l\'A3 » revient)',
     remplace('export const GRIFFES_PACK_FRACTIONS = [0.10, 0.15, 0.20, 0.60, 3.0];', 'export const GRIFFES_PACK_FRACTIONS = [0.001, 0.001, 0.001, 0.001, 0.001];')],
   ['auditDefisAventure', F.defis, "la cible doublée de l'A1 œuf 5 revient (chapitre 12 au lieu de 6)",
@@ -387,6 +387,13 @@ const SABOTAGES = [
     remplace("const d = Math.max(1, Math.round(degatsBrutsJoueur(k, creature, attaque))); // 16/10 : ultime à ×1,5 compris", 'const d = Math.max(1, Math.round(scaledSkillDamage(k, creature, attaque)));')],
   ['auditUltimeJoueur', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "l'aperçu « jusqu'à X dégâts » du combat repasse sur l'ancienne formule",
     remplace('degatsBrutsJoueur(skill, activeFighter.creature, activeFighter.stats.attack)', 'scaledSkillDamage(skill, activeFighter.creature, activeFighter.stats.attack)')],
+  // 16/10 : pack en pièces = 2 niveaux de la créature moyenne ; commentaire avaleur dans les outils.
+  ['auditPacks', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "l'achat au Clicker ne lit plus le deck",
+    remplace('const taille = taillePackGriffes(niveauxDuDeck(ownedRef.current, deckRef.current));', 'const taille = taillePackGriffes([]);')],
+  ['auditPacks', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "l'achat en Aventure ne lit plus le deck",
+    remplace('const taille = taillePackGriffes(niveauxDuDeck(owned, deck));', 'const taille = taillePackGriffes([]);')],
+  ['auditPortee', path.join(RACINE, 'tools/calculateur-griffes.js'), "un commentaire avale la fin d'une ligne dans un OUTIL (le bug du 16/10)",
+    remplace('* F.shop; cumul.shop += p; griffes += p; }', '* F.shop; // pack cumul.shop += p; griffes += p; }')],
   ['auditPortee', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "une valeur lue AVANT sa déclaration (zone morte : écran blanc ou valeur vide)",
     remplace('  }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici', '  }, [(lifetimeStats || {}).advLevelReached || 0, owned.length]); // ⚠️ jamais `owned` ici')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "plus de recalcul quand une créature rejoint le deck en cours de fenêtre",

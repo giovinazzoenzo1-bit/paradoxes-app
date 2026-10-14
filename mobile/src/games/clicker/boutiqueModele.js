@@ -58,7 +58,7 @@ function construireNoeuds(p) {
   });
   const prixGriffes = griffesCoinCost(p.griffesCoinBuys, p.ascensionCount);
   const resteGriffes = achatsGriffesPiecesRestants(p.griffesCoinBuys); // 4 par Ascension (06/10)
-  ajouter({ id: 'griffes', taille: 88, emoji: '🐾', nom: `${taillePackGriffes(p.ascensionCount)} Griffes`,
+  ajouter({ id: 'griffes', taille: 88, emoji: '🐾', nom: `${p.packGriffes != null ? p.packGriffes : taillePackGriffes([])} Griffes`, // 16/10 : 2 niveaux de la créature moyenne
     niveau: `${GRIFFES_PIECES_MAX_PAR_ASCENSION - resteGriffes}/${GRIFFES_PIECES_MAX_PAR_ASCENSION}`,
     gain: 'pour l\'Aventure', prix: prixGriffes, etat: etat(false, resteGriffes === 0, prixGriffes, p.coins), onPress: resteGriffes > 0 ? p.onBuyGriffesWithCoins : null, allume: true,
     detail: resteGriffes > 0

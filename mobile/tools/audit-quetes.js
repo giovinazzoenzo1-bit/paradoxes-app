@@ -3671,9 +3671,16 @@ function auditPacks() {
   const fs = require('fs');
   const lire = (f) => fs.readFileSync(require('path').join(__dirname, '../src/screens/games', f), 'utf8');
   const fautes = [];
+  // 16/10 (règle de l'auteur) : le pack en pièces = 2 NIVEAUX de la créature MOYENNE du deck, au vrai coût des niveaux
+  // (avant : 50 + 38 par Ascension → 126 à l'A2, quand un niveau coûtait ~310).
+  const cout = (n) => L2.levelUpCost({ rarity: 'commun' }, n);
+  for (const [deck, moy] of [[[], 1], [[10, 12, 14], 12], [[69, 70, 74], 71], [[80, 82, 85], 82]]) {
+    const t = L2.taillePackGriffes(deck), attendu = Math.round(cout(moy) + cout(moy + 1));
+    if (t !== attendu) fautes.push({ deck: deck.join('/'), probleme: 'taille du pack ≠ 2 niveaux de la créature moyenne', attendu, trouve: t });
+  }
+  if (!(L2.taillePackGriffes([69, 70, 74]) > L2.taillePackGriffes([50, 52, 54]))) fautes.push({ probleme: 'le pack ne suit plus le niveau du deck' });
+  if (JSON.stringify(L2.niveauxDuDeck([{ id: 'a', level: 62 }, { id: 'b', level: 60 }, { id: 'c', level: 66 }], ['a', null, 'c'])) !== '[62,66]') fautes.push({ probleme: 'niveauxDuDeck lit mal le deck' });
   for (let a = 0; a <= 5; a++) {
-    // 11/10 : ×0,5 (calculateur de Griffes, décision de l'auteur) : 50 + 38 par Ascension (avant 100 + 75).
-    if (L2.taillePackGriffes(a) !== 50 + 38 * a) fautes.push({ ascension: a, probleme: 'taille du pack', attendu: 50 + 38 * a, trouve: L2.taillePackGriffes(a) });
     const seuil = L2.ascensionThreshold(a), p = [0, 1, 2, 3, 4].map((n) => L2.griffesCoinCost(n, a));
     if (p[0] + p[1] + p[2] > 0.5 * seuil) fautes.push({ ascension: a, probleme: 'les 3 packs normaux coûtent plus de la moitié du seuil' });
     if (p[0] + p[1] + p[2] < 0.2 * seuil) fautes.push({ ascension: a, probleme: 'les 3 packs normaux coûtent moins de 20 % du seuil (on en achèterait des dizaines)' });
@@ -3684,6 +3691,12 @@ function auditPacks() {
   if (!/setCoins\(0\);\n[^\n]*\n[^\n]*\n\s*setGriffesCoinBuys\(0\);/.test(Cl)) fautes.push({ probleme: "le compteur de packs n'est plus remis à zéro à l'Ascension" });
   if (!Cl.includes('packsParAscension: true,') || !Cl.includes('setGriffesCoinBuys(saved.packsParAscension ?')) fautes.push({ probleme: 'la remise à zéro unique des anciennes sauvegardes a disparu' });
   [Cl, Av].forEach((src, i) => { if (/[+{]\s*GRIFFES_COIN_PACK\b|\$\{GRIFFES_COIN_PACK\}/.test(src)) fautes.push({ probleme: (i ? 'AdventureScreen' : 'ClickerScreen') + ' crédite ou affiche encore un pack de taille fixe' }); });
+  // 16/10 : partout la même lecture du deck (achat Clicker, affichage, modèle de boutique ; achat et offre en Aventure).
+  const Bm = fs.readFileSync(require('path').join(__dirname, '../src/games/clicker/boutiqueModele.js'), 'utf8');
+  if (!Cl.includes('const taille = taillePackGriffes(niveauxDuDeck(ownedRef.current, deckRef.current));') || !Cl.includes('packGriffes={taillePackGriffes(niveauxDuDeck(owned, deck))}')
+    || !Cl.includes('packGriffes: taillePackGriffes(niveauxDuDeck(ownedRef.current, deckRef.current)),') || !Bm.includes('p.packGriffes != null ? p.packGriffes')
+    || (Av.match(/taillePackGriffes\(niveauxDuDeck\(owned, deck\)\)/g) || []).length < 2 || /taillePackGriffes\(ascension/.test(Cl + Av + Bm))
+    fautes.push({ probleme: "un achat ou un affichage du pack ne lit plus le deck (2 niveaux de la créature moyenne)" });
   return fautes;
 }
 module.exports.auditPacks = auditPacks;

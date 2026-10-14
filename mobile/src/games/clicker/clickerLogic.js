@@ -1240,8 +1240,23 @@ export const GRIFFES_PIECES_MAX_PAR_ASCENSION = 4;
 export function achatsGriffesPiecesRestants(purchases) {
   return Math.max(0, GRIFFES_PIECES_MAX_PAR_ASCENSION - Math.max(0, Math.floor(Number(purchases) || 0)));
 }
-export function taillePackGriffes(ascensionCount) {
-  return GRIFFES_COIN_PACK + 38 * Math.max(0, Math.floor(Number(ascensionCount) || 0)); // 11/10 : 75 → 38 (×0,5)
+// 16/10 (proposition de l'auteur : « remplacer les 100 griffes par 2 levels de créature moyenne ») : le pack en PIÈCES donne
+// de quoi monter 2 NIVEAUX à ta créature MOYENNE du deck, au vrai coût des niveaux (levelUpCost). Avant : 50 + 38 par Ascension
+// → 126 à l'A2, quand un niveau coûtait ~310 (« l'achat ne sert à rien »). Le PRIX en pièces ne change pas (part du seuil
+// d'Ascension, 4 packs par Ascension). GRIFFES_COIN_PACK (ci-dessus) n'est plus qu'un souvenir de l'ancienne taille.
+export const PACK_PIECES_NIVEAUX = 2;
+// Niveaux des créatures du deck (owned = [{ id, level }], deck = [id | null × 3]) — même lecture en Aventure et au Clicker.
+export function niveauxDuDeck(owned, deck) {
+  const parId = {};
+  (owned || []).forEach((o) => { if (o && o.id != null) parId[o.id] = Math.max(1, Number(o.level) || 1); });
+  return (deck || []).filter((id) => id != null && parId[id] != null).map((id) => parId[id]);
+}
+export function taillePackGriffes(niveauxDeck) {
+  const l = (Array.isArray(niveauxDeck) ? niveauxDeck : []).map(Number).filter((x) => x > 0);
+  const moy = l.length ? Math.max(1, Math.floor(l.reduce((a, b) => a + b, 0) / l.length)) : 1;
+  let t = 0;
+  for (let k = 0; k < PACK_PIECES_NIVEAUX; k++) t += levelUpCost({ rarity: 'commun' }, moy + k);
+  return Math.max(1, Math.round(t));
 }
 export function griffesCoinCost(purchases, ascensionCount) {
   const n = Math.max(0, Math.floor(Number(purchases) || 0));

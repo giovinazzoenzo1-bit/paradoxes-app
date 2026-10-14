@@ -78,7 +78,8 @@ function calculer(etapeMax = 40, profil = 'actif', opts = {}) {
       }
     }
     // 4) Shop (pièces) et récompense d'Ascension
-    if ((HYP.packsPieces[profil] || []).includes(n)) { const p = L.taillePackGriffes(n > 25 ? 1 : 0) * F.shop; cumul.shop += p; griffes += p; }
+    // 16/10 : le pack en pièces = 2 niveaux de la créature MOYENNE du deck (les 3 meilleures du joueur simulé).
+    if ((HYP.packsPieces[profil] || []).includes(n)) { const p = L.taillePackGriffes(creatures.map((c) => c.niv).sort((a, b) => b - a).slice(0, 3)) * F.shop; cumul.shop += p; griffes += p; }
     if (n === 26) { const r = (A.C.ascensionGriffesReward ? A.C.ascensionGriffesReward(1) : 0) || 0; cumul.ascension += r; griffes += r; }
     // 5) Éclosions : naissance à 80 % (règle du jeu)
     eclosions.forEach((e) => { if (e === n && creatures.length < 6) creatures.push({ niv: L.niveauDeNaissance(creatures.map((c) => c.niv), 'commun') }); });

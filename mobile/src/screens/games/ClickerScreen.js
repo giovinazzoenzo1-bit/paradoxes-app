@@ -99,6 +99,7 @@ import {
   taillePackGriffes,
   niveauMaxCreature,
   niveauDeNaissance,
+  niveauxDuDeck,
 } from '../../games/clicker/clickerLogic';
 import {
   nextQuestSet,
@@ -574,13 +575,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (coinsRef.current < cout) return;
     setCoins((c) => c - cout);
     setGriffesCoinBuys((n) => n + 1);
+    // 16/10 (règle de l'auteur) : 2 niveaux de ta créature MOYENNE du deck (avant : selon l'Ascension).
+    const taille = taillePackGriffes(niveauxDuDeck(ownedRef.current, deckRef.current));
     try {
       const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
       const pending = raw ? parseInt(raw, 10) || 0 : 0;
-      await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + taillePackGriffes(ascensionCountRef.current)));
-      noterGriffes('shop-pieces', taillePackGriffes(ascensionCountRef.current)); // journal des Griffes (11/10)
+      await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + taille));
+      noterGriffes('shop-pieces', taille); // journal des Griffes (11/10)
     } catch (e) { /* écriture impossible : on ne bloque pas l'écran */ }
-    spawnPopup(`+${taillePackGriffes(ascensionCountRef.current)} 🐾`, 110, 60, true);
+    spawnPopup(`+${taille} 🐾`, 110, 60, true);
   };
 
   const spawnBoss = () => {
@@ -1716,6 +1719,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // pendant que l'appli tourne.
     clockMax: Math.max(clockMaxRef.current || 0, Date.now() / 1000),
     griffesCoinBuys: griffesCoinBuysRef.current,
+    packGriffes: taillePackGriffes(niveauxDuDeck(ownedRef.current, deckRef.current)), // 16/10 : 2 niveaux de la créature moyenne
     packsParAscension: true,
     elixirCombats: elixirCombatsRef.current,
   });
@@ -4311,6 +4315,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           ascensionCount={ascensionCount}
           totalEarned={totalEarned}
           onAscend={doAscension}
+          packGriffes={taillePackGriffes(niveauxDuDeck(owned, deck))}
         />
       )}
 
@@ -4924,7 +4929,7 @@ function ShopView({
   applyDiscount, onBuyTapPower, onBuyCrit, onBuyCritDamage, onBuySanctuary, onBuyVeilleur, onBuyAutoClicker, onBuyUpgradeItem, onBuyTapUpgrade,
   griffesCoinBuys = 0, onBuyGriffesWithCoins, owned = [],
   critDamageLevel = 0, tapUpgrades = [], onOffrande,
-  essence, ascensionReady = false, defiAscensionEnCours = false, totalEarned, ascensionCount, onAscend,
+  essence, ascensionReady = false, defiAscensionEnCours = false, totalEarned, ascensionCount, onAscend, packGriffes = 0,
 }) {
   // Créatures possédées, en Set : la liste des améliorations est
   // parcourue à chaque rendu, un `find` par ligne serait inutilement
@@ -4979,7 +4984,7 @@ function ShopView({
               disabled={coins < griffesCoinCost(griffesCoinBuys, ascensionCount) || achatsGriffesPiecesRestants(griffesCoinBuys) <= 0}
             >
               <View style={styles.actionBtnLeft}>
-                <Text style={styles.actionBtnText}>🐾 {taillePackGriffes(ascensionCount)} Griffes</Text>
+                <Text style={styles.actionBtnText}>🐾 {packGriffes} Griffes</Text>
                 <Text style={styles.actionBtnSubtext}>
                   {achatsGriffesPiecesRestants(griffesCoinBuys) > 0
                     ? `Pour l'Aventure · encore ${achatsGriffesPiecesRestants(griffesCoinBuys)}/${GRIFFES_PIECES_MAX_PAR_ASCENSION} cette Ascension`
