@@ -5,7 +5,7 @@ import { recompenseQuete } from '../games/clicker/combatLogic';
 import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR,
   weekKey, pickWeeklyQuests, weeklyQuestDef,
   ACHIEVEMENTS, achievementDef, achievementTarget, achievementReward, ACHIEVEMENT_MAX_TIER,
-  achievementDiamonds , griffesRecuperables } from '../games/clicker/dailyLogic';
+  achievementDiamonds , griffesRecuperables , recompensesARecuperer } from '../games/clicker/dailyLogic';
 
 // Clé lue par AdventureScreen.js à son prochain chargement pour créditer
 // les récompenses de quêtes/streak — MÊME schéma de sécurité que
@@ -361,6 +361,30 @@ export function DailyProvider({ children }) {
     return entry;
   }, [date]);
 
+  // 15/10 (choix de l'auteur) : « 🎁 Tout récupérer » — tout ce qui est réclamable EN UNE FOIS (défis du jour, de la
+  // semaine, tous les paliers de succès atteints, calendrier du jour). Le calculateur des fenêtres compte ces Griffes comme
+  // déjà dépensées : chaque tap oublié rendait l'étape plus dure qu'annoncé (rapport du 14/10 : 467 Griffes en attente,
+  // étape 22 à 1 %). Calculé D'UN BLOC (recompensesARecuperer) : appeler claimAchievement en boucle relirait l'ancien palier
+  // (état figé au rendu) et paierait deux fois le même. Calendrier en PIÈCES sans `addAppCoins` : laissé à prendre (sinon perdu).
+  const claimAll = useCallback(async (addAppCoins = null) => {
+    const r = recompensesARecuperer({
+      questIds: questIdsRef.current, questProgress: questProgressRef.current, questClaimed: questClaimedRef.current,
+      weeklyIds: weeklyIdsRef.current, weeklyProgress: weeklyProgressRef.current, weeklyClaimed: weeklyClaimedRef.current,
+      achievementsClaimed, lifetimeStats: lifetimeStatsRef.current, streak: streakRef.current, streakClaimedDate: streakClaimedDateRef.current, date,
+    }, recompenseQuete);
+    if (r.quetes.length) setQuestClaimed((prev) => { const n = { ...prev }; r.quetes.forEach((id) => { n[id] = true; }); return n; });
+    if (r.hebdos.length) setWeeklyClaimed((prev) => { const n = { ...prev }; r.hebdos.forEach((id) => { n[id] = true; }); return n; });
+    if (Object.keys(r.succes).length) setAchievementsClaimed((prev) => ({ ...prev, ...r.succes }));
+    if (r.griffes > 0) await addPending(PENDING_GRIFFES_KEY, r.griffes);
+    if (r.diamants > 0) await addPending(PENDING_DIAMONDS_KEY, r.diamants);
+    r.journal.forEach(([source, g, id]) => noterGriffes(source, g, { id })); // journal des Griffes (11/10)
+    let calendrier = null;
+    if (r.calendrier && (r.calendrier.type !== 'appCoins' || typeof addAppCoins === 'function')) calendrier = await claimStreak(addAppCoins);
+    const griffesCalendrier = calendrier && calendrier.type === 'griffes' ? Number(calendrier.amount) || 0 : 0;
+    return { griffes: r.griffes + griffesCalendrier, diamants: r.diamants, calendrier,
+      nb: r.quetes.length + r.hebdos.length + Object.keys(r.succes).length + (calendrier ? 1 : 0) };
+  }, [achievementsClaimed, date, claimStreak]);
+
   // (08/10) Le « A » du budget du Gardien : tout ce qui est réclamable maintenant.
 
   const griffesARecuperer = useMemo(() => griffesRecuperables({ questIds, questProgress, questClaimed, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, lifetimeStats, streak, streakClaimedDate, date }, recompenseQuete), [questIds, questProgress, questClaimed, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, lifetimeStats, streak, streakClaimedDate, date]);
@@ -368,7 +392,7 @@ export function DailyProvider({ children }) {
   const value = {
     loaded, date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats,
     week, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, achievements: ACHIEVEMENTS,
-    trackEvent, trackMax, resetLifetimeStats, claimQuest, claimStreak, griffesARecuperer,
+    trackEvent, trackMax, resetLifetimeStats, claimQuest, claimStreak, griffesARecuperer, claimAll,
     claimWeekly, achievementProgress, claimAchievement,
     calendarDay: calendarDayForStreak(streak), calendar: DAILY_CALENDAR,
   };

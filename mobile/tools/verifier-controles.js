@@ -359,6 +359,13 @@ const SABOTAGES = [
     remplace('ring: null, // 15/10 : pas de lueur sur les ennemis', "ring: 'target', // lueur ennemie")],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "le cadre lumineux de la case disparaît",
     remplace("borderColor: actif ? '#ffd96a' : '#7cff8a'", "borderColor: 'transparent'")],
+  // 15/10 : « 🎁 Tout récupérer » (choix de l'auteur).
+  ['auditToutRecuperer', path.join(RACINE, 'src/games/clicker/dailyLogic.js'), "un seul palier de succès payé au lieu de tous",
+    remplace('    while (palier < ACHIEVEMENT_MAX_TIER) {\n      const cible = achievementTarget(d, palier);\n      if (cible == null || (stats[d.stat] || 0) < cible) break;\n      const g = Number(achievementReward(palier))', '    while (palier < Math.min(ACHIEVEMENT_MAX_TIER, depart + 1)) {\n      const cible = achievementTarget(d, palier);\n      if (cible == null || (stats[d.stat] || 0) < cible) break;\n      const g = Number(achievementReward(palier))')],
+  ['auditToutRecuperer', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "la carte ne crédite plus tout de suite les Griffes récupérées",
+    remplace('      if (onEncaisserGriffes) await onEncaisserGriffes();', '')],
+  ['auditToutRecuperer', path.join(RACINE, 'src/screens/ProgresScreen.js'), "le bouton « Tout récupérer » de l'écran Progrès est débranché",
+    remplace('onPress={toutRecuperer}', 'onPress={() => {}}')],
   ['auditPortee', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "une valeur lue AVANT sa déclaration (zone morte : écran blanc ou valeur vide)",
     remplace('  }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici', '  }, [(lifetimeStats || {}).advLevelReached || 0, owned.length]); // ⚠️ jamais `owned` ici')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "plus de recalcul quand une créature rejoint le deck en cours de fenêtre",

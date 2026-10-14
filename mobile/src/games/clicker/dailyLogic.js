@@ -381,31 +381,46 @@ export function nextStreak(prevStreak, lastLoginKey, todayDateKey) {
 // (plusieurs possibles), calendrier du jour s'il est en Griffes et pas encore pris. La FILE
 // d'attente (Griffes réclamées, pas encore versées) est lue à part, dans le stockage.
 // `recompense` = recompenseQuete (combatLogic), passée en paramètre : pas d'import circulaire.
-export function griffesRecuperables(e, recompense) {
+// 15/10 (choix de l'auteur : « 🎁 Tout récupérer ») — LA liste de ce qui est récupérable maintenant : défis du jour et de la
+// semaine terminés, TOUS les paliers de succès atteints (plusieurs par famille), calendrier du jour. Une seule source :
+// griffesRecuperables (le calculateur des fenêtres compte ces Griffes comme dépensées) et claimAll (le bouton) l'utilisent.
+export function recompensesARecuperer(e, recompense) {
   const etat = e || {};
   const stats = etat.lifetimeStats || {};
   const niv = stats.advLevelReached;
-  let total = 0;
+  const r = { quetes: [], hebdos: [], succes: {}, griffes: 0, diamants: 0, calendrier: null, journal: [] };
   (etat.questIds || []).forEach((id) => {
     const d = questDef(id);
-    if (d && !(etat.questClaimed || {})[id] && ((etat.questProgress || {})[id] || 0) >= d.target) total += Number(recompense(d.reward, niv)) || 0;
+    if (!d || (etat.questClaimed || {})[id] || ((etat.questProgress || {})[id] || 0) < d.target) return;
+    const g = Number(recompense(d.reward, niv)) || 0;
+    r.quetes.push(id); r.griffes += g; r.diamants += Number(d.diamonds) || 0; r.journal.push(['defi-jour', g, id]);
   });
   (etat.weeklyIds || []).forEach((id) => {
     const d = weeklyQuestDef(id);
-    if (d && !(etat.weeklyClaimed || {})[id] && ((etat.weeklyProgress || {})[id] || 0) >= d.target) total += Number(recompense(d.reward, niv)) || 0;
+    if (!d || (etat.weeklyClaimed || {})[id] || ((etat.weeklyProgress || {})[id] || 0) < d.target) return;
+    const g = Number(recompense(d.reward, niv)) || 0;
+    r.hebdos.push(id); r.griffes += g; r.diamants += Number(d.diamonds) || 0; r.journal.push(['defi-semaine', g, id]);
   });
   ACHIEVEMENTS.forEach((d) => {
-    let palier = Number((etat.achievementsClaimed || {})[d.id]) || 0;
+    const depart = Number((etat.achievementsClaimed || {})[d.id]) || 0;
+    let palier = depart;
     while (palier < ACHIEVEMENT_MAX_TIER) {
       const cible = achievementTarget(d, palier);
       if (cible == null || (stats[d.stat] || 0) < cible) break;
-      total += Number(achievementReward(palier)) || 0;
+      const g = Number(achievementReward(palier)) || 0;
+      r.griffes += g; r.diamants += Number(achievementDiamonds(palier)) || 0; r.journal.push(['succes', g, d.id]);
       palier++;
     }
+    if (palier > depart) r.succes[d.id] = palier;
   });
   if (etat.streakClaimedDate !== etat.date) {
     const c = calendarRewardForStreak(etat.streak);
-    if (c && c.type === 'griffes') total += Number(c.amount) || 0;
+    if (c) r.calendrier = c;
   }
-  return Math.max(0, Math.round(total));
+  return r;
+}
+export function griffesRecuperables(e, recompense) {
+  const r = recompensesARecuperer(e, recompense);
+  const cal = r.calendrier && r.calendrier.type === 'griffes' ? Number(r.calendrier.amount) || 0 : 0;
+  return Math.max(0, Math.round(r.griffes + cal));
 }

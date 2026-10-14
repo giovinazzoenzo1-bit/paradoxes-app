@@ -5386,6 +5386,36 @@ function auditFenetres() {
 }
 module.exports.auditFenetres = auditFenetres;
 
+// ---- « 🎁 TOUT RÉCUPÉRER » (15/10, choix de l'auteur) ----
+// Une seule règle (dailyLogic.recompensesARecuperer) pour ce qui est récupérable : le total que le calculateur compte comme
+// dépensé (griffesRecuperables) et ce que le bouton réclame (claimAll) — TOUS les paliers de succès atteints d'un coup, sans
+// double paiement ; la carte d'Aventure crédite tout de suite ; l'écran Progrès a le bouton.
+function auditToutRecuperer() {
+  const L = load('dailyLogic'); const K = load('combatLogic'); const fs = require('fs'), path = require('path');
+  const pb = [];
+  const q1 = L.DAILY_QUEST_POOL[0].id, q2 = L.DAILY_QUEST_POOL[1].id, w1 = L.WEEKLY_QUEST_POOL[0].id; const fam = L.ACHIEVEMENTS[0];
+  const stats = { advLevelReached: 22 }; stats[fam.stat] = L.achievementTarget(fam, 1); // paliers 0 ET 1 atteints
+  const etat = { questIds: [q1, q2], questProgress: { [q1]: L.questDef(q1).target, [q2]: 0 }, questClaimed: {}, weeklyIds: [w1],
+    weeklyProgress: { [w1]: L.weeklyQuestDef(w1).target }, weeklyClaimed: {}, achievementsClaimed: {}, lifetimeStats: stats, streak: 3, streakClaimedDate: 'hier', date: 'auj' };
+  const r = L.recompensesARecuperer(etat, K.recompenseQuete);
+  if (r.quetes.join() !== q1 || r.hebdos.join() !== w1) pb.push('défis récupérables mal listés (terminés seulement)');
+  if (r.succes[fam.id] !== 2) pb.push(`succès : ${r.succes[fam.id] || 0} palier(s) au lieu de 2 — tous les paliers atteints doivent partir d'un coup`);
+  const cal = r.calendrier && r.calendrier.type === 'griffes' ? r.calendrier.amount : 0;
+  if (L.griffesRecuperables(etat, K.recompenseQuete) !== Math.round(r.griffes + cal)) pb.push('le total du calculateur ne suit plus ce que le bouton réclame');
+  const dejaPris = L.recompensesARecuperer({ ...etat, questClaimed: { [q1]: true }, weeklyClaimed: { [w1]: true }, achievementsClaimed: { [fam.id]: 2 }, streakClaimedDate: 'auj' }, K.recompenseQuete);
+  if (dejaPris.griffes !== 0 || dejaPris.calendrier) pb.push('des récompenses déjà prises seraient payées une 2e fois');
+  const D = fs.readFileSync(path.join(__dirname, '../src/context/DailyContext.js'), 'utf8');
+  if (!D.includes('const claimAll = useCallback(async (addAppCoins = null) => {') || !D.includes('setAchievementsClaimed((prev) => ({ ...prev, ...r.succes }));')
+    || !D.includes("if (r.calendrier && (r.calendrier.type !== 'appCoins' || typeof addAppCoins === 'function'))")) pb.push('claimAll : incomplet (succès d\'un bloc, calendrier en pièces protégé)');
+  const P = fs.readFileSync(path.join(__dirname, '../src/screens/ProgresScreen.js'), 'utf8');
+  if (!P.includes('onPress={toutRecuperer}') || !P.includes('const r = await claimAll(null);')) pb.push("écran Progrès : plus de bouton « Tout récupérer »");
+  const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
+  if (!Av.includes('if (onEncaisserGriffes) await onEncaisserGriffes();') || !Av.includes('onEncaisserGriffes={encaisserGriffesEnAttente}') || !Av.includes('onPress={recupererTout}'))
+    pb.push("carte d'Aventure : la pastille « Griffes à récupérer » ne réclame plus ou ne crédite plus tout de suite");
+  return pb;
+}
+module.exports.auditToutRecuperer = auditToutRecuperer;
+
 // ── ATTAQUES DE SOUTIEN : toute l'équipe participe (09/10, décision de l'auteur) ──
 // Test de l'auteur : une créature très montée finissait seule le chapitre 1 (à chaque tour, UNE créature
 // frappait : tout concentrer sur une seule restait toujours le meilleur choix). Après le coup de la créature

@@ -57,6 +57,7 @@ export default function ProgresScreen({ onBack }) {
     loaded, questIds, questProgress, questClaimed, claimQuest,
     weeklyIds, weeklyProgress, weeklyClaimed, claimWeekly,
     achievements, achievementsClaimed, achievementProgress, claimAchievement, lifetimeStats,
+    griffesARecuperer, claimAll,
   } = useDaily();
   // 26/09 : les quêtes du jour et de la semaine affichent la récompense
   // RÉELLE à ton niveau d'Aventure (la même règle que le versement).
@@ -69,6 +70,21 @@ export default function ProgresScreen({ onBack }) {
   // Un seul gestionnaire pour les 3 types : seule la fonction de
   // réclamation change, le reste (verrou anti-double-tap, message) est
   // identique.
+  // 15/10 (choix de l'auteur) : « 🎁 Tout récupérer » — défis, succès (tous les paliers) et calendrier en un tap.
+  const toutRecuperer = async () => {
+    if (busyId) return;
+    setBusyId('tout');
+    const r = await claimAll(null);
+    setBusyId(null);
+    if (r && (r.griffes > 0 || r.diamants > 0 || r.nb > 0)) {
+      vibrerSucces(vibrations);
+      jouerSon('recompense', sons !== false);
+      const idEffet = Date.now();
+      setEffet({ id: idEffet, texte: `+${r.griffes} Griffes`, sousTexte: 'À récupérer en Exploration' });
+      setTimeout(() => setEffet((e) => (e && e.id === idEffet ? null : e)), 1600);
+    }
+  };
+
   const handleClaim = async (id, claimFn) => {
     setBusyId(id);
     const reward = await claimFn(id);
@@ -237,6 +253,12 @@ export default function ProgresScreen({ onBack }) {
           ))}
         </View>
 
+        {griffesARecuperer > 0 && (
+          <TouchableOpacity style={styles.toutRecuperer} onPress={toutRecuperer} disabled={!!busyId} activeOpacity={0.85}>
+            <Text style={styles.toutRecupererTexte} numberOfLines={1} adjustsFontSizeToFit>🎁 Tout récupérer · {griffesARecuperer} Griffes</Text>
+          </TouchableOpacity>
+        )}
+
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
           {!loaded
             ? renderEmpty('Chargement…')
@@ -253,6 +275,9 @@ export default function ProgresScreen({ onBack }) {
 }
 
 const styles = StyleSheet.create({
+  // 15/10 : bouton « 🎁 Tout récupérer »
+  toutRecuperer: { alignSelf: 'center', marginTop: 4, marginBottom: 6, paddingHorizontal: 18, paddingVertical: 8, borderRadius: 18, backgroundColor: '#3f7f2a', borderWidth: 2, borderColor: '#ffd96a', maxWidth: '92%' },
+  toutRecupererTexte: { color: '#fff7d6', fontWeight: '900', fontSize: 14, textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 2 },
   // 27/09 : Quêtes du thème forêt.
   onglets: { width: INTERIEUR, height: 40, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   onglet: { width: ONGLET_L, height: 40, alignItems: 'center', justifyContent: 'center' },

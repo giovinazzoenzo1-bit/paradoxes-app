@@ -786,6 +786,17 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     })();
   }, []);
 
+  // 15/10 : encaisser TOUT DE SUITE les Griffes réclamées (bouton « 🎁 Tout récupérer » de la carte) — sinon elles
+  // n'arrivaient qu'à la prochaine ouverture de l'Exploration (même logique que le chargement, plus haut).
+  const encaisserGriffesEnAttente = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+      const p = raw ? parseInt(raw, 10) || 0 : 0;
+      if (p > 0) setGriffes((g) => g + p);
+      await AsyncStorage.removeItem(PENDING_GRIFFES_KEY);
+    } catch (e) { /* rien en attente */ }
+  };
+
   // Sauvegarde à chaque changement.
   useEffect(() => {
     if (!progressLoaded) return;
@@ -1312,6 +1323,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   if (chapterMapOpen) {
     return avecBoutique(
       <ChapterMapScreen
+        onEncaisserGriffes={encaisserGriffesEnAttente}
         poudre={poudre}
         ascensionCount={ascensionCount}
         defaitesDeSuite={defaitesDeSuite}
@@ -2542,10 +2554,25 @@ function prefixeTroisEtoiles(etoiles) {
 // « Property 'poudre' doesn't exist » : ces valeurs étaient lues sans être transmises).
 // Dernière mesure de l'aperçu (puissance, chance) — lue par le journal des combats à la fin du combat (11/10).
 let derniereMesureApercu = null;
-function ChapterMapScreen({ poudre = 0, ascensionCount = 0, currentUnlockedLevel, niveauMaxAscension = Infinity, prochaineAscension = 1, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir, defaitesDeSuite = {}, onDefaite }) {
+function ChapterMapScreen({ onEncaisserGriffes = null, poudre = 0, ascensionCount = 0, currentUnlockedLevel, niveauMaxAscension = Infinity, prochaineAscension = 1, owned, deck, griffes, ownedRunes, energy, energyUpdatedAt, onStartBattle, onLevelWon, onBack, onBuyEnergy, onBuyGriffes, diamonds = 0, levelStars = {}, onRecordStars, onWatchAdForEnergy, adsLeft = 0, adLoading = false, onOpenCreature, elixirCombats = 0, onElixirUsed, onBuyElixir, defaitesDeSuite = {}, onDefaite }) {
   // 12/10 : les Griffes RÉCUPÉRABLES (défis, succès, calendrier) pour « chance si tu dépenses tes Griffes » de l'aperçu —
   // lues ICI via le contexte (cet écran ne reçoit que les Griffes en poche ; le vérificateur de portée l'a signalé).
-  const { griffesARecuperer } = useDaily();
+  const { griffesARecuperer, claimAll } = useDaily();
+  // 15/10 (choix de l'auteur) : « 🎁 Tout récupérer » depuis la carte — réclame tout puis CRÉDITE tout de suite (avant : les
+  // Griffes réclamées n'arrivaient qu'à la prochaine ouverture de l'Exploration).
+  const [recuperation, setRecuperation] = useState(null); // null | 'en cours' | message de confirmation
+  const recupererTout = async () => {
+    if (recuperation === 'en cours') return;
+    setRecuperation('en cours');
+    let message = null;
+    try {
+      const r = await claimAll(null); // un calendrier en PIÈCES reste à prendre dans le Clicker (pas de porte-monnaie ici)
+      if (onEncaisserGriffes) await onEncaisserGriffes();
+      message = r && r.griffes > 0 ? `✅ +${r.griffes} Griffes` : null;
+    } catch (e) { message = null; }
+    setRecuperation(message);
+    if (message) setTimeout(() => setRecuperation((x) => (x === message ? null : x)), 1800);
+  };
   // Défilement automatique jusqu'au niveau courant : la carte s'ouvrait
   // en haut, obligeant à faire défiler à chaque visite pour retrouver où
   // on en est (signalé le 12/09).
@@ -2799,6 +2826,16 @@ function ChapterMapScreen({ poudre = 0, ascensionCount = 0, currentUnlockedLevel
         <CurrencyCounter currency="griffes" amount={griffes} onPlus={onBuyGriffes} />
         <EnergyBadge energy={energy} energyUpdatedAt={energyUpdatedAt} />
       </View>
+      {/* 15/10 : « 🎁 X Griffes à récupérer » — seulement quand il y a quelque chose à prendre (masqué pendant l'aperçu). */}
+      {!levelPreview && (griffesARecuperer > 0 || (recuperation && recuperation !== 'en cours')) && (
+        <TouchableOpacity style={styles.recupererPilule} onPress={recupererTout} disabled={!!recuperation} activeOpacity={0.85}>
+          <CapsuleBois>
+            <Text style={styles.recupererTexte} numberOfLines={1}>
+              {recuperation && recuperation !== 'en cours' ? recuperation : `🎁 ${griffesARecuperer} Griffes à récupérer`}
+            </Text>
+          </CapsuleBois>
+        </TouchableOpacity>
+      )}
 
       {/* Un chapitre = une page, on change de chapitre en glissant,
           comme un fil de vidéos. `pagingEnabled` cale le pas sur la
@@ -3990,6 +4027,8 @@ const styles = StyleSheet.create({
   starRowEmpty: { tintColor: '#4a3a1c', opacity: 0.85 },
 
   elemHelpBtn: { marginRight: 8 },
+  recupererPilule: { position: 'absolute', top: 58, alignSelf: 'center', zIndex: 30 }, // 15/10 : sous l'en-tête de la carte
+  recupererTexte: { color: '#8df08d', fontSize: 13, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   elemHelpBtnText: { color: '#ffd96a', fontSize: 12, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   elemHelpBackdrop: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 40,
