@@ -5366,8 +5366,13 @@ function auditFenetres() {
     const Cg = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
     if (!Cg.includes('{ring && !fainted && (') || !Cg.includes("tintColor: ring === 'active' ? undefined : adversaire ? '#ff5a5a' : '#7cff8a'"))
       pb.push("combat : plus de lueur derrière la créature qui joue / la cible (arène)");
-    if (!Cg.includes('setActeurAdverse(ae.lanceur);') || !Cg.includes('setActeurAdverse(retaliatorIdx);') || !Cg.includes('setActeurAdverse(null);') || !Cg.includes('actif: acteurAdverse === i,'))
-      pb.push("combat : l'adversaire qui joue son tour n'est plus éclairé (arène + case en haut à droite)");
+    // 15/10 (auteur) : PAS de lueur sur les ennemis ; un CADRE lumineux par-dessus la case de ta créature (la lueur derrière
+    // la case était cachée par son bois) ; ta lueur s'éteint pendant le tour de l'adversaire.
+    if (!Cg.includes('setActeurAdverse(ae.lanceur);') || !Cg.includes('setActeurAdverse(retaliatorIdx);') || !Cg.includes('setActeurAdverse(null);') || !Cg.includes('actif: fi === activeIndex && acteurAdverse == null'))
+      pb.push("combat : ta créature reste éclairée pendant le tour de l'adversaire");
+    if (!Cg.includes('ring: null, // 15/10 : pas de lueur sur les ennemis') || !Cg.includes('actif: false, // 15/10 : pas de lueur sur les ennemis') || !Cg.includes('cible: false, // 15/10 : pas de lueur sur les ennemis'))
+      pb.push("combat : une lueur est revenue sur un ennemi (l'auteur n'en veut pas)");
+    if (!Cg.includes("borderColor: actif ? '#ffd96a' : '#7cff8a'")) pb.push('combat : plus de cadre lumineux autour de la case de ta créature');
   }
   // Gardien : maîtrise lue, figée dans la photo de l'œuf, utilisée comme marge du calage, chiffre affiché qui suit.
   const ClS = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');

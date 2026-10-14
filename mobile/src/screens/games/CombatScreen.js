@@ -1454,6 +1454,17 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         <Image source={COMBAT_IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: -PW * 0.18, top: -PH * 0.3, width: PW * 1.36, height: PH * 1.6, opacity: actif ? 0.9 : 0.55, pointerEvents: 'none' }} />
       )}
       <Image source={COMBAT_IMG.panneau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
+      {/* 15/10 (auteur : « il n'y a pas la lueur autour de la case ») : la lueur DERRIÈRE la case était cachée par son bois.
+          Un CADRE lumineux PAR-DESSUS (deux contours = halo, Android ignorant les ombres colorées) : doré sur la créature qui
+          joue, vert sur l'allié choisi pour un sort. Jamais sur un ennemi (demande de l'auteur). */}
+      {(actif || cible) && !ko && (
+        <>
+          <View style={{ pointerEvents: 'none', position: 'absolute', left: -5, top: -5, right: -5, bottom: -5, borderRadius: Math.round(PH * 0.22), borderWidth: 3,
+            borderColor: actif ? 'rgba(255,217,106,0.45)' : 'rgba(124,255,138,0.45)' }} />
+          <View style={{ pointerEvents: 'none', position: 'absolute', left: -2, top: -2, right: -2, bottom: -2, borderRadius: Math.round(PH * 0.18), borderWidth: 2,
+            borderColor: actif ? '#ffd96a' : '#7cff8a', shadowColor: actif ? '#ffd96a' : '#7cff8a', shadowOpacity: 0.95, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }} />
+        </>
+      )}
       <Text style={[styles.panneauNom, { fontSize: Math.max(8, Math.round(PH * 0.2)), marginTop: PH * 0.12, marginHorizontal: PW * 0.08 }]} numberOfLines={1}>{nom}</Text>
       <View style={[styles.panneauVie, { height: Math.max(10, Math.round(PH * 0.24)), marginHorizontal: PW * 0.1 }]}>
         <View style={[styles.panneauVieFond, { width: `${Math.max(0, Math.min(1, hp / hpMax)) * 100}%` }]} />
@@ -1723,7 +1734,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           emoji: d.emoji, name: d.name,
           hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, fainted,
           etats: iconesEtats(o), etatsCote: 'gauche',
-          ring: acteurAdverse === i && !fainted ? 'active' : i === targetIndex && !fainted && !(allyTarget != null && (phase === 'tapping' || phase === 'resolving')) ? 'target' : null,
+          ring: null, // 15/10 : pas de lueur sur les ennemis (demande de l'auteur)
           // Vert = ton élément domine le sien, orange = neutre, rouge =
           // tu es en position défavorable.
           elemColor: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)],
@@ -1767,7 +1778,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         {!isBoss && opponents.map((o, i) => {
           const d = o.creature.stages[stadeVisuel(o.evolutionTier || 0)] || o.creature.stages[0]; const ko = pvAffiche('o', i, o.hp) <= 0;
           return panneauCombattant({
-            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, niveau: o.niveau, actif: acteurAdverse === i, elite: bonusElite(levelNumber) > 0, hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, cible: i === targetIndex, ko,
+            key: `bo${i}`, gauche: largeurBandeau * (0.635 + i * 0.118), nom: d.name, niveau: o.niveau, actif: false, // 15/10 : pas de lueur sur les ennemis elite: bonusElite(levelNumber) > 0, hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, mana: null, cible: false, // 15/10 : pas de lueur sur les ennemis (avant : lueur sur l'adversaire visé) ko,
             badge: { emoji: ELEMENT_EMOJI[o.creature.element] || '✨', couleur: ELEM_COLORS[elementRelation(activeFighter.creature.element, o.creature.element)] || '#ffb340' },
             onPress: !ko && phase === 'choosing' ? () => chooseTarget(i) : null,
           });
