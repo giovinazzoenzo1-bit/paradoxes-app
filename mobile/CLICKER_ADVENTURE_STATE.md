@@ -3707,3 +3707,25 @@ Détecteur RENFORCÉ (verifier-portee) : aussi les OUTILS, et les INSTRUCTIONS d
 ⚠️ 2e COUPURE de réponse : une passe de sabotages (71-106) tournait encore — attendue jusqu'à la fin (pas tuée), fichiers
 vérifiés intacts. Le tiers 71-142 dépassait 285 s → coupé en deux moitiés.
 Contrôles : 109 verts ; 3 sabotages + 1 recalé → 213 prouvés ; taps 20/20.
+
+
+## 16/10 (nuit) — PRIME DE VICTOIRE = PROCHAIN NIVEAU DE LA MEILLEURE CRÉATURE (règle de l'auteur, publié)
+
+DEMANDE : « un calculateur qui donne approximativement le nombre de griffes que le joueur reçoit via les victoires … de façon
+à pouvoir améliorer 1 fois sa meilleure créature » (à la place des options proposées — règle appliquée PARTOUT).
+CODE : combatLogic.primeVictoire(étape, niveauxDeck) = levelUpCost(meilleur) (+ levelUpCost(meilleur + 1) au BOSS) ;
+PRIME_NIVEAUX_VICTOIRE = 1, PRIME_NIVEAUX_BOSS = 2. griffesReward = prime de RÉFÉRENCE (levelUpCost la lit), plus versée.
+Branché : paiement (AdventureScreen, × butin des runes inchangé), écran de résultat (prop prime calculée par CombatScreen),
+photo des fenêtres (budget += prime du deck après dépense), budget du Gardien (primesProchainsNiveaux(…, niveauxDeck) —
+calcul DESCENDU sous la déclaration du deck dans ClickerScreen : zone morte sinon), simulateur, modèle, outils d'analyse.
+MESURÉ (modèle officiel) : équipe 45 / 56 / 66 / 70 aux étapes 40 / 60 / 70 / 80 (avant 49 / 66 / 74 / 82) ; défis+succès ÷
+primes ≤ 1,7× (règle « ne doublent pas » tenue) ; facteurs d'étape remesurés (max 3,6 %). Deck de l'auteur 69/70/74 : ~330
+par victoire (avant 760+ à l'étape 72). La règle du 10/10 (équipe au niveau de l'étape ±3) est remplacée par celle-ci ; le
+calculateur adapte les ennemis à l'équipe réelle.
+GRIFFES_PAR_COMBAT (effort du Gardien) RECALCULÉ : [22, 48, 252, 360, 470, 478] (avant [24, 119, 576, 697, 1035, 1383]).
+⚠️ BUG ATTRAPÉ (le mien, commit précédent) : le simulateur appelait encore taillePackGriffes(a) avec le numéro d'Ascension
+→ pack minuscule pour le joueur simulé ; ma recherche « taillePackGriffes(ascension » ne le trouvait pas (variable `a`).
+Le simulateur COMPTE maintenant les primes et packs réellement versés (s.primes, s.packs) ; auditGardienGriffes les lit
+(avant : il les recalculait sans le deck → 14 au lieu de 22).
+Contrôles : auditPrimeVictoire (nouveau → 110) ; repère du budget du Gardien aligné ; 4 sabotages → 217 prouvés (4 passes) ;
+taps 20/20.

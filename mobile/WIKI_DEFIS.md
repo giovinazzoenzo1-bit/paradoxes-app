@@ -1262,3 +1262,11 @@ dorée · gratuit · 3 mana » (contradictoire), et au Clicker « 3 dégâts · 
 - Le pack acheté avec des pièces donne de quoi monter **2 niveaux à ta créature moyenne du deck** (au vrai coût des niveaux).
 - Exemple : deck 69/70/74 → 657 Griffes (avant : 126 à la 2e Ascension).
 - Le prix en pièces et la limite de 4 packs par Ascension ne changent pas.
+
+
+### ⚔️ PRIME DE VICTOIRE (16/10, règle de l'auteur)
+
+- Une 1re victoire en Aventure rapporte **de quoi monter une fois ta meilleure créature du deck** (le coût de son prochain
+  niveau) ; un **boss** (étapes 10, 20, …) : de quoi la monter **2 fois**. Le bonus de butin des runes s'ajoute toujours.
+- Exemple : deck 69/70/74 → environ 330 Griffes par victoire (avant : plus de 760 à l'étape 72).
+- Les combats restent calés : le calculateur règle les ennemis sur ton équipe réelle.
