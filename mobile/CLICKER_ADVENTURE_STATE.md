@@ -3638,3 +3638,30 @@ GARDE-FOUS : (1) verifier-portee : commentairesAvaleurs (code avant « // » fin
 commentaire) — aucune fausse alerte sur tout le code ; (2) auditPanneauxCombat (nouveau → 107 contrôles) : lit CombatScreen
 comme le COMPILATEUR (arbre syntaxique) et exige nom, hp, hpMax, ko dans chaque case du bandeau. Les deux crient sur le fichier
 bogué. Contrôle de la lueur ennemie réaligné. 3 sabotages → 204 prouvés ; taps 20/20.
+
+
+## 16/10 (suite) — RUNE DE RÉSILIENCE VISIBLE + « TROP FACILE » : DIAGNOSTIC MESURÉ ET PLAFOND DE MAÎTRISE (publié)
+
+DEMANDES : (1) voir la Rune de Résilience se briser ; (2) « trop facile à ce niveau, je ne suis pas obligé d'améliorer mes
+créatures » ; (3) « ultimes trop puissants » ; (4) « ne pas changer les règles du calculateur, revoir les calculs à un
+certain niveau ».
+DIAGNOSTIC (rapport du 14/10, 69 combats, indice SANS plafond) : par chapitre 0,27 · 0,51 · 0,70 · 0,52 · 0,54 · 1,23 ;
+chapitre 6 : 10 victoires pour 5,1 attendues (gagnées à 2, 11, 16, 23 % annoncés) ; 15 derniers : 1,24 — le jeu
+n'appliquait que 0,75 (plafond). Simulateur (vraies équipes et vrais ennemis du chapitre 6, sans runes) : étapes 52 et 54 à
+0 % MÊME pour un joueur parfait à la jauge (0 ms) ; ultimes ×0,7 ou ×0,5 : 0 à 3 points d'écart → ni la précision ni les
+ultimes n'expliquent l'écart. Le simulateur suit les mêmes règles que l'écran (fonctions partagées) mais garde sa cible
+jusqu'à la mort et lance ses sorts selon une politique fixe : l'écart = la TACTIQUE de l'auteur (cible, sort, allié), que
+seul l'indice de maîtrise capte, et qui pèse plus en 3 contre 3 à haut niveau.
+CORRECTIF : MAITRISE_MAX 0,75 → 1,4 (même règle : « l'auteur = la référence du joueur exceptionnel », nouvelle mesure
+1,37). Sous 0,75 : rien ne change. Gardien : moitié de l'effet (sa vraie chance ~88 %, > 80 %). EMPREINTE_COMBAT → ae8d6c14.
+RUNE : SORT_VISUEL.resilience (forme 'rune' : l'image de la rune tremble puis se fend en deux moitiés qui s'écartent,
+anneaux cyan, « Rune brisée ! ») ; déclenchée sur les 3 chemins (riposte, action sans riposte, ouverture) via
+resAvantP / resAvant0 ; noterSort la note dans le journal des combats.
+ULTIMES : NON changés (mesure : ce n'est pas la cause) — question posée à l'auteur (lesquels, et pour le ressenti ?).
+⚠️ INCIDENT : une réponse coupée avait laissé tourner des passes de sabotages ; ma relance a tourné EN MÊME TEMPS → faux
+« aveugle / périmé » et un SABOTAGE RESTÉ EN PLACE dans AdventureScreen (signature de ChapterMapScreen amputée — publié tel
+quel, la carte aurait planté). Restauré depuis le commit sain, tout relancé seul. RÈGLE : après une coupure, compter les
+processus avec `pgrep -f '[n]ode .*verifier'` (le motif entre crochets ne se reconnaît pas lui-même ; `pkill -f
+verifier-controles.js` TUE SA PROPRE COMMANDE) et `git status` AVANT toute relance.
+Contrôles : auditRuneResilienceVisible (nouveau → 108) ; maîtrise : plafond = nouvelle mesure, l'indice réel de l'auteur
+appliqué (~1,24), profil « précis » 30 ms fixé à sa mesure 0,75 ; 3 sabotages + 1 recalé → 207 prouvés ; taps 20/20.
