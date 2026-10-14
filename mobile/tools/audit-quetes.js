@@ -4608,7 +4608,8 @@ function auditDialoguesJeu() {
   if (!/Alert\.alert\(\s*'⚠️ Tu sembles bloqué'/.test(c)) pb.push("l'alerte de sécurité « Tu sembles bloqué » n'est plus native");
   if (!/Alert\.alert\(\s*'💥 Le jeu a rencontré une erreur'/.test(c)) pb.push("l'alerte de sécurité « erreur » n'est plus native");
   const a = lire('src/screens/games/AdventureScreen.js');
-  if (!/<FenetreJeu titre="Affinités élémentaires"/.test(a)) pb.push("l'aide des éléments n'utilise plus la fenêtre maison");
+  // 13/10 : guide à onglets — titre « Affinités élémentaires » ou « Spécialités » selon l'onglet.
+  if (!a.includes("<FenetreJeu titre={onglet === 'elements' ? 'Affinités élémentaires' : 'Spécialités'}")) pb.push("l'aide des éléments n'utilise plus la fenêtre maison");
   if (!/<FenetreJeu titre="Choisir une rune"/.test(a)) pb.push("le choix d'une rune n'utilise plus la fenêtre maison");
   return pb;
 }
