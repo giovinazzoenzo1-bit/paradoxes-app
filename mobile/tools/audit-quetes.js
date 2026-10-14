@@ -5336,7 +5336,8 @@ function auditFenetres() {
         // 14/10 (auteur) : SANS coût en mana, des mots simples.
         if (!t || /END|mana/.test(t)) { fautes.push(`${c.id}/${k.name} : « ${t} »`); continue; }
         if (k.sort) { if (t !== K.texteSort(k.sort, true)) fautes.push(`${c.id}/${k.name} (sort) : « ${t} »`); }
-        else if (!t.toLowerCase().includes(`jusqu'à ${Math.max(1, Math.round(K.scaledSkillDamage(k, c, st.attack)))} dégâts`)) fautes.push(`${c.id}/${k.name} : « ${t} » ≠ dégâts réels`);
+        // 16/10 : la source unique des dégâts du joueur (ultime à ×1,5 compris)
+        else if (!t.toLowerCase().includes(`jusqu'à ${Math.max(1, Math.round(K.degatsBrutsJoueur(k, c, st.attack)))} dégâts`)) fautes.push(`${c.id}/${k.name} : « ${t} » ≠ dégâts réels`);
       }
     }
     if (fautes.length) pb.push(`descriptions d'attaques fausses ou vides : ${fautes.slice(0, 3).join(' · ')}${fautes.length > 3 ? ` (+${fautes.length - 3})` : ''}`);
@@ -5465,6 +5466,32 @@ function auditRuneResilienceVisible() {
   return pb;
 }
 module.exports.auditRuneResilienceVisible = auditRuneResilienceVisible;
+
+// ---- ULTIME DU JOUEUR À ×1,5 (16/10, choix de l'auteur : « mes ultimes ») ----
+// Toutes les créatures : ultime = ×1,5 leur meilleure attaque normale (avant ×2,00) ; une seule fonction (degatsBrutsJoueur)
+// pour le combat, le simulateur, l'aperçu « jusqu'à X dégâts » et les descriptions ; les ENNEMIS n'y passent jamais.
+// Les 3 tables de facteurs d'étape ont été REMESURÉES avec ce réglage (auditFenetres vérifie les crans en vrais combats).
+function auditUltimeJoueur() {
+  const fs = require('fs'), path = require('path'); const K = load('combatLogic'); const C2 = require('./audit-quetes.js').C;
+  const pb = [];
+  if (K.MULT_ULTIME_JOUEUR !== 0.75) pb.push(`ultime du joueur : ×${K.MULT_ULTIME_JOUEUR} au lieu de 0,75 (×1,5 l'attaque normale)`);
+  const hors = [];
+  for (const c of C2.CREATURES) {
+    const sp = (c.skills || []).find((k) => k.special); const nm = (c.skills || []).filter((k) => !k.special && !k.sort).sort((a, b) => b.damage - a.damage)[0];
+    if (!sp || !nm) continue;
+    const st = K.combatStatsForCreatureTyped(c, 50, 1, []);
+    const r = K.degatsBrutsJoueur(sp, c, st.attack) / K.degatsBrutsJoueur(nm, c, st.attack);
+    if (Math.abs(r - 1.5) > 0.01) hors.push(`${c.id} ×${r.toFixed(2)}`);
+  }
+  if (hors.length) pb.push('ultimes hors ×1,5 : ' + hors.slice(0, 4).join(' · '));
+  const src = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
+  const i = src.indexOf('export function actionAdversaire'); const corps = i >= 0 ? src.slice(i, src.indexOf('\nexport function', i + 10)) : '';
+  if (!corps || /degatsBrutsJoueur|degatsDuJoueur/.test(corps)) pb.push("les ENNEMIS passeraient par les dégâts du joueur (leurs ultimes doivent rester intacts)");
+  const S = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  if (!S.includes('degatsBrutsJoueur(skill, activeFighter.creature, activeFighter.stats.attack)')) pb.push("écran : « jusqu'à X dégâts » ne suit plus les vrais dégâts (ultime à ×1,5)");
+  return pb;
+}
+module.exports.auditUltimeJoueur = auditUltimeJoueur;
 
 // ── ATTAQUES DE SOUTIEN : toute l'équipe participe (09/10, décision de l'auteur) ──
 // Test de l'auteur : une créature très montée finissait seule le chapitre 1 (à chaque tour, UNE créature

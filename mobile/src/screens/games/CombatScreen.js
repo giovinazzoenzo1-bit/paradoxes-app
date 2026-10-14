@@ -380,6 +380,7 @@ import {
   guardianStats,
   coupsDeSoutien,
   texteSort,
+  degatsBrutsJoueur,
 } from '../../games/clicker/combatLogic';
 import { GUARDIAN_BASE_LEVEL } from '../../games/clicker/incubatorLogic';
 
@@ -1455,9 +1456,8 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
   // Utilisée par le bouton ET par le panneau de détail : deux calculs
   // séparés finiraient tôt ou tard par se contredire.
   const degatsAffiches = (skill) => Math.max(1, Math.round(
-    skill.isBasic
-      ? skill.damage
-      : scaledSkillDamage(skill, activeFighter.creature, activeFighter.stats.attack)
+    // 16/10 : même fonction que les vrais dégâts (ultime du joueur à ×1,5 compris)
+    degatsBrutsJoueur(skill, activeFighter.creature, activeFighter.stats.attack)
   ));
 
   // ── Bandeau de combat : mesures (maquette : bandeau en haut, panneaux ~10,5 % de large) ──

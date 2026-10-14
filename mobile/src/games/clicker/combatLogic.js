@@ -607,10 +607,18 @@ export function encaisser(c, degats) {
 
 // Dégâts du coup du joueur (compétence, multiplicateur de la JAUGE, élément).
 // `multJauge` = multiplicateurJauge(verdict du tap) — écran — ou multJaugeTire — simulations.
+// 16/10 (choix de l'auteur : « mes ultimes sont trop puissants » → les SIENS, pas ceux des ennemis) : l'ultime du JOUEUR frappe
+// à ×1,5 son attaque normale au lieu de ×2 (toutes les créatures étaient à ×2,00). UNE seule fonction pour les dégâts du joueur
+// (combat, simulateur, Gardien), l'aperçu « jusqu'à X dégâts » et les descriptions : ils ne peuvent pas diverger.
+// Les ennemis passent par actionAdversaire : leurs ultimes ne changent pas.
+export const MULT_ULTIME_JOUEUR = 0.75;
+export function degatsBrutsJoueur(competence, creature, attaque) {
+  if (competence.isBasic) return competence.damage;
+  return scaledSkillDamage(competence, creature, attaque) * (competence.special ? MULT_ULTIME_JOUEUR : 1);
+}
 export function degatsDuJoueur(competence, combattant, cibleCreature, multJauge) {
   const mult = multJauge + (combattant.stats.dmgMultBonus || 0);
-  const brut = competence.isBasic ? competence.damage
-    : scaledSkillDamage(competence, combattant.creature, combattant.stats.attack);
+  const brut = degatsBrutsJoueur(competence, combattant.creature, combattant.stats.attack);
   const elem = elementMultiplier(combattant.creature.element, cibleCreature.element,
     combattant.stats.affinityBonus || 0);
   return Math.max(1, Math.round(computePlayerDamage(brut, mult) * elem));
@@ -1755,14 +1763,15 @@ export const CORRECTION_DIFFICULTE = { 1: 1, 2: 0.982, 3: 1.022, 4: 1.014, 5: 1 
 // communes et peu communes, joueur normal) — la puissance ne voit pas les sorts (boucliers, soins…) : sans ce facteur, un
 // même cran de difficulté variait de 20 points selon les espèces tombées sur l'étape.
 // { [étape]: facteur } — MESURÉ par mobile/tools/mesurer-etapes.js (11/10, étapes 1-60 ; au-delà : facteurs d'espèce).
-export const FACTEUR_ETAPE = {"1": 0.881, "2": 0.948, "3": 0.894, "4": 1.057, "5": 0.99, "6": 1.009, "7": 0.936, "8": 0.881, "9": 1.043, "10": 0.996, "11": 1.092, "12": 1.115, "13": 1.262, "14": 1.055, "15": 1.105, "16": 1.391, "17": 1.152, "18": 1.105, "19": 1.216, "20": 1.074, "21": 1.15, "22": 0.913, "23": 0.94, "24": 1.016, "25": 0.977, "26": 0.992, "27": 0.833, "28": 0.937, "29": 0.828, "30": 0.926, "31": 0.89, "32": 0.953, "33": 1.116, "34": 1.146, "35": 1.027, "36": 0.93, "37": 0.828, "38": 0.979, "39": 0.833, "40": 0.828, "41": 1.099, "42": 1.136, "43": 0.863, "44": 1.116, "45": 1.107, "46": 0.905, "47": 1.163, "48": 1.101, "49": 0.932, "50": 1.06, "51": 1.112, "52": 0.887, "53": 1.074, "54": 1.13, "55": 0.856, "56": 1.08, "57": 1.154, "58": 0.856, "59": 1.127, "60": 0.973};
+// 16/10 : les 3 tables REMESURÉES avec l'ultime du joueur à ×1,5 (outil mesurer-etapes, 160 combats par équipe = 960 par étape).
+export const FACTEUR_ETAPE = {"1": 0.877, "2": 0.951, "3": 0.905, "4": 1.046, "5": 0.967, "6": 1.04, "7": 0.949, "8": 0.892, "9": 1.047, "10": 0.995, "11": 1.043, "12": 1.106, "13": 1.252, "14": 1.032, "15": 1.125, "16": 1.312, "17": 1.201, "18": 1.069, "19": 1.251, "20": 1.021, "21": 1.105, "22": 0.909, "23": 0.939, "24": 1.001, "25": 0.954, "26": 0.953, "27": 0.828, "28": 0.923, "29": 0.828, "30": 0.931, "31": 0.873, "32": 0.962, "33": 1.077, "34": 1.171, "35": 1.047, "36": 0.897, "37": 0.828, "38": 0.969, "39": 0.828, "40": 0.828, "41": 1.091, "42": 1.172, "43": 0.88, "44": 1.124, "45": 1.088, "46": 0.874, "47": 1.112, "48": 1.097, "49": 0.899, "50": 1.081, "51": 1.111, "52": 0.898, "53": 1.054, "54": 1.163, "55": 0.86, "56": 1.089, "57": 1.141, "58": 0.857, "59": 1.114, "60": 0.938};
 // 11/10 (fin) : chapitre 2 avec 3 créatures contre 2 ennemis — mesuré à part (NBJ=3 mesurer-etapes.js) : en 2 contre 2, ces
 // étapes valaient jusqu'à ×1,39 ; avec une 3e créature, ×0,84 à ×1,11 (MESURÉ : sans ce tableau, 95-100 % à tous les crans).
 // 13/10 : chapitre 1 avec UNE SEULE créature (avant l'œuf 2) — mesuré à part (NBJ=1 mesurer-etapes.js). En 2 contre 1, les
 // étapes 8 et 9 valaient ×0,88 / ×1,04 ; seul, ×1,03 / ×1,11 (exécution d'Ombrillon, etc.) → rapport du 13/10 : Ventis seul au
 // niveau MAX (10), étape 8 à 11 %, étape 9 à 3-17 % (bloqué).
-export const FACTEUR_ETAPE_1V1 = {"1": 0.897, "2": 0.925, "3": 1.032, "4": 1.076, "5": 0.986, "6": 1.047, "7": 0.889, "8": 1.03, "9": 1.114, "10": 0.978};
-export const FACTEUR_ETAPE_3V2 = {"11": 0.921, "12": 0.924, "13": 1.061, "14": 0.874, "15": 0.97, "16": 1.111, "17": 0.929, "18": 0.879, "19": 1.056, "20": 0.838};
+export const FACTEUR_ETAPE_1V1 = {"1": 0.922, "2": 0.958, "3": 1.045, "4": 1.122, "5": 1.009, "6": 1.1, "7": 0.936, "8": 1.04, "9": 1.125, "10": 1.019};
+export const FACTEUR_ETAPE_3V2 = {"11": 0.906, "12": 0.927, "13": 1.068, "14": 0.877, "15": 0.986, "16": 1.139, "17": 0.945, "18": 0.92, "19": 1.077, "20": 0.872};
 export const FACTEUR_ESPECE = {"pyrosile": [1.11, 1.09, 1.09], "caraploof": [1.04, 1.04, 1.05], "ventis": [1.17, 1.15, 1.15], "bouldog": [1.04, 1.05, 1.04], "voltix": [1.13, 1.14, 1.12], "aegisolar": [1.01, 0.98, 0.96], "glyphon": [0.93, 0.93, 0.93], "ombrillon": [1.19, 1.18, 1.17], "luxorbe": [0.96, 0.95, 0.95], "fournax": [1.01, 1.01, 1.02], "solarion": [0.74, 0.71, 0.71], "aquamira": [1, 1, 1], "terracroc": [1.11, 1.13, 1.12], "zephyrion": [1.04, 1.04, 1.04], "brontobloc": [0.96, 0.97, 0.98], "malefix": [1.12, 1.13, 1.12], "nocturis": [0.97, 0.96, 0.96], "racinea": [1.05, 1.06, 1.06], "runicor": [1.03, 1.05, 0.98], "braiserose": [1.05, 1.05, 1.05], "abyssorax": [1.04, 1.03, 1.05], "cumulox": [1.02, 1.02, 1], "voltarel": [0.98, 0.97, 0.96], "solstral": [0.91, 0.91, 0.93], "tartaroth": [1.1, 1.1, 1.1], "arcanis": [0.85, 0.89, 0.89]}; // [sans évolution, évolution 1, évolution 2]
 function rapportDifficulte(nbJ, nbE, d) {
   const cle = `${nbJ}v${nbE}`;
@@ -2123,7 +2132,7 @@ export function descriptionAttaque(k, creature, attaque) {
   if (!k) return '';
   // 14/10 (auteur) : SANS coût en mana, des mots simples. Dégâts = coup parfait (« bien » en fait la moitié).
   if (k.sort) return texteSort(k.sort, true);
-  const d = Math.max(1, Math.round(scaledSkillDamage(k, creature, attaque)));
+  const d = Math.max(1, Math.round(degatsBrutsJoueur(k, creature, attaque))); // 16/10 : ultime à ×1,5 compris
   return k.special ? `Attaque spéciale : jusqu'à ${d} dégâts` : `Jusqu'à ${d} dégâts`;
 }
 export function scaledSkillDamage(skill, creature, currentAttack) {

@@ -380,6 +380,13 @@ const SABOTAGES = [
     remplace("{v.forme === 'rune' && [0, 1].map((k) => (", "{false && [0, 1].map((k) => (")],
   ['auditFenetres', F.combat, "le plafond de maîtrise retombe à 0,75 (l'auteur redevient « trop facile »)",
     remplace('export const MAITRISE_MAX = 1.4;', 'export const MAITRISE_MAX = 0.75;')],
+  // 16/10 : ultime du joueur à ×1,5 (choix de l'auteur).
+  ['auditUltimeJoueur', F.combat, "l'ultime du joueur revient à ×2",
+    remplace('export const MULT_ULTIME_JOUEUR = 0.75;', 'export const MULT_ULTIME_JOUEUR = 1;')],
+  ['auditFenetres', F.combat, "les descriptions repassent sur l'ancienne formule (ultime ×2)",
+    remplace("const d = Math.max(1, Math.round(degatsBrutsJoueur(k, creature, attaque))); // 16/10 : ultime à ×1,5 compris", 'const d = Math.max(1, Math.round(scaledSkillDamage(k, creature, attaque)));')],
+  ['auditUltimeJoueur', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "l'aperçu « jusqu'à X dégâts » du combat repasse sur l'ancienne formule",
+    remplace('degatsBrutsJoueur(skill, activeFighter.creature, activeFighter.stats.attack)', 'scaledSkillDamage(skill, activeFighter.creature, activeFighter.stats.attack)')],
   ['auditPortee', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "une valeur lue AVANT sa déclaration (zone morte : écran blanc ou valeur vide)",
     remplace('  }, [(lifetimeStats || {}).advLevelReached || 0]); // ⚠️ jamais `owned` ici', '  }, [(lifetimeStats || {}).advLevelReached || 0, owned.length]); // ⚠️ jamais `owned` ici')],
   ['auditFenetres', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "plus de recalcul quand une créature rejoint le deck en cours de fenêtre",
