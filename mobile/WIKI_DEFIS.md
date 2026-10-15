@@ -37,6 +37,7 @@ payée.
 
 | Règle | Depuis |
 |---|---|
+| **Poigne Ancienne +1,5 tap par niveau**, au même prix PAR POINT de tap qu'avant (×1,5) ; les défis du jour et de la semaine n'écrivent plus « (Élevage) » ; gardé par `auditPoigneElevage` | 17/10 |
 | **L'Esprit Frappeur s'achète AVANT la Main Spectrale** (défis 9 ↔ 11) ; la répercussion sur 17 ↔ 19 est refusée par la règle du coût croissant (MESURÉ : 11 189 après 29 815). Les défis d'achat en cours sont ÉCLAIRÉS dans le Grimoire (marque-page, flèche, article) ; gardé par `auditDefisLueur` | 17/10 |
 | **Un défi changé se répercute sur ses défis SIMILAIRES qui suivent** (même métrique, « les mêmes mais en plus dur ») : même correction, écarts de la chaîne gardés. 1er cas : cible dorée −1 partout (défi 5 : 3 → 2, défi 20 : 5 → 4… 65 → 64) ; gardé par `auditDoreeEtLivre` | 17/10 |
 | **Poigne Ancienne, exception au ×2,5** : montable à l'A0 sans être cheatée — son 1er niveau à l'A0 vaut la **moitié du Pacte 10→11** (21,5 k), puis ×1,45. 8 niveaux à l'A0 ; gardé par `auditPoigneA0` | 24/09 |

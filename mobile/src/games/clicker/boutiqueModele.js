@@ -84,9 +84,10 @@ function construireNoeuds(p) {
     const condition = i === 0 ? `🔒 Pacte ${Math.min(p.tapPower, TAP_UPGRADE_FIRST_PACTE_LEVEL)}/${TAP_UPGRADE_FIRST_PACTE_LEVEL}` : `🔒 ${TAP_UPGRADES[i - 1].name} ${Math.min(avant, TAP_UPGRADE_UNLOCK_LEVEL)}/${TAP_UPGRADE_UNLOCK_LEVEL}`;
     ajouter({ id: item.id,
       emoji: item.emoji, nom: item.name, niveau: `nv ${niveau}`, prix, etat: etat(!ouvert, false, prix, p.coins),
-      gain: ouvert ? `+${f(item.bonus)} / tap / nv` : condition,
+      // 17/10 : bonus à virgule (Poigne +1,5) — formatNum arrondissait à « +1 » ; sous 1 000, `nb` écrit « 1,5 ».
+      gain: ouvert ? `+${(item.bonus < 1000 ? nb(item.bonus, 1) : f(item.bonus))} / tap / nv` : condition,
       onPress: (q) => p.onBuyTapUpgrade(item.id, q), cout: (j) => tapUpgradeCost(item, niveau + j, p.ascensionCount), delta: { tapUpgrades: item.id }, allume: niveau > 0,
-      detail: ouvert ? `+${f(item.bonus)} par tap et par niveau${niveau > 0 ? ` · actuellement +${f(item.bonus * niveau)}` : ''}.` : condition });
+      detail: ouvert ? `+${(item.bonus < 1000 ? nb(item.bonus, 1) : f(item.bonus))} par tap et par niveau${niveau > 0 ? ` · actuellement +${(item.bonus * niveau < 1000 ? nb(item.bonus * niveau, 1) : f(item.bonus * niveau))}` : ''}.` : condition });
   });
 
   // ── CRITIQUES : Faveur des Esprits (chance) → Dégâts critiques (force)

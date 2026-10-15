@@ -1443,7 +1443,8 @@ export function coreUpgradeRequirement(id) {
 // contre 101), A1 3,8 h, budget A1 23 %. `cost` = 21 504 / (1,4 × surprime
 // A0) : la surprime lit le seuil de l'A1 — `auditPoigneA0` garde le ratio.
 export const TAP_UPGRADES = [
-  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1, cost: 7973, growth: 1.45 },
+  // 17/10 (auteur) : Poigne Ancienne +1,5 tap par niveau (avant +1) ; prix ×1,5 = MÊME prix par point de tap qu'avant (cohérent).
+  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1.5, cost: 11960, growth: 1.45 },
   { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2, cost: 2237, growth: 2.5 },
   { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 4, cost: 17330, growth: 2.5 },
   { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 8, cost: 27729, growth: 2.5 },

@@ -669,6 +669,9 @@ const SABOTAGES = [
   ['auditDefisLueur', path.join(RACINE, 'src/screens/games/GrimoireBoutique.js'), "la lueur redevient un cadre jaune carré",
     remplace("  lueurDefi: { position: 'absolute' },", "  lueurDefi: { position: 'absolute', borderWidth: 3, borderColor: '#ffd54a', borderRadius: 12 },")],
   ['auditTranseEchec', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "les barres ratées ne passent plus au rouge", remplace("tintColor: '#ff2020'", "tintColor: '#ffd54a'")],
+  // 17/10 : Poigne +1,5, affichage à virgule, « (Élevage) » retiré (demandes de l'auteur).
+  ['auditPoigneElevage', path.join(RACINE, 'src/games/clicker/clickerLogic.js'), "la Poigne repasse à +1", remplace("emoji: '✊', bonus: 1.5, cost: 11960,", "emoji: '✊', bonus: 1, cost: 11960,")],
+  ['auditPoigneElevage', path.join(RACINE, 'src/games/clicker/dailyLogic.js'), "« (Élevage) » revient dans un défi", remplace("desc: 'Tape 3 000 fois',", "desc: 'Tape 3 000 fois (Élevage)',")],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

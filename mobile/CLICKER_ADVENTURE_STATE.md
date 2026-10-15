@@ -3929,6 +3929,20 @@ RETOUR DE L'AUTEUR : la croix « ✕ » n'était pas centrée → chaque barre r
 tintColor #ff2020, posée exactement sur la barre). VU au banc : 3 barres rouges à 21/32. 1 sabotage → 255.
 
 
+## 17/10 (fin) — POIGNE +1,5 · « (ÉLEVAGE) » RETIRÉ · VARIANTE « BARRES ROUGES » D'UNE COPIE (publié)
+
+⚠️ COPIE PARALLÈLE (« Réessayer ») : elle a remplacé les croix rouges de la Transe par des BARRES ENTIÈREMENT ROUGES (« croix mal
+centrée ») et l'a PUBLIÉE (e6b5414) sans demande de l'auteur. Saine (suite verte). Question posée à l'auteur : 1 croix / 2 barres
+rouges — réponse attendue. Conseil donné : écrire « continue » au lieu de « Réessayer » (qui lance une 2e copie).
+POIGNE ANCIENNE : +1,5 tap par niveau (avant +1), prix 7 973 → 11 960 (×1,5 = même prix par POINT de tap) ; auditPoigneA0
+(règle « 1er niveau = moitié du Pacte ») se lit désormais par point de tap. Affichage : formatNum arrondissait « 1,5 » à « 1 » →
+boutiqueModele écrit les bonus < 1 000 avec `nb` (virgule).
+« (Élevage) » retiré des 6 libellés de défis du jour / de la semaine (dailyLogic.js), règle de répercussion.
+Contrôles : auditPoigneElevage (nouveau → 121) + 2 sabotages → 256.
+QUESTION DE L'AUTEUR EN ATTENTE : un nouvel article de tap / auto-clic coûte MOINS au niveau 1 que le précédent au niveau 5
+(croissance ×2,5 par niveau) — comparaison faite avec les autres jeux, proposition à trancher.
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

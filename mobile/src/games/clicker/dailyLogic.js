@@ -53,16 +53,16 @@ export const DAILY_QUEST_POOL = [
   { id: 'equip1rune', desc: 'Équipe 1 rune sur une créature', event: 'runeEquipped', target: 1, reward: 30 },
   { id: 'buyRune1', desc: 'Achète 1 rune', event: 'runeBought', target: 1, reward: 25 },
   { id: 'fuseRune1', desc: 'Fusionne 2 runes en 1', event: 'runeFused', target: 1, reward: 35 },
-  { id: 'summon3', desc: 'Invoque 3 créatures (Élevage)', event: 'summon', target: 3, reward: 30 , diamonds: 1 },
-  { id: 'crit10', desc: 'Obtiens 10 coups critiques (Élevage)', event: 'crit', target: 10, reward: 30 , diamonds: 1 },
+  { id: 'summon3', desc: 'Invoque 3 créatures', event: 'summon', target: 3, reward: 30 , diamonds: 1 },
+  { id: 'crit10', desc: 'Obtiens 10 coups critiques', event: 'crit', target: 10, reward: 30 , diamonds: 1 },
   // ⚠️ Compteur de TAPS — le seul défi qui ne dépend d'AUCUNE ressource :
   // ni énergie, ni Griffes, ni pièces, ni pitié du hasard. Toujours
   // faisable, quel que soit l'état du joueur. Calibré sur la cadence de
   // référence (~4 taps/s à la main) : 1 000 taps = ~4 min, 3 000 = ~12.
-  { id: 'tap1000', desc: 'Tape 1 000 fois (Élevage)', event: 'taps', target: 1000, reward: 30 },
-  { id: 'tap3000', desc: 'Tape 3 000 fois (Élevage)', event: 'taps', target: 3000, reward: 60, diamonds: 1 },
-  { id: 'earn2000', desc: `Gagne ${fmtPieces(2000 * COIN_SCALE)} pièces (Élevage)`, event: 'coinsEarned', target: 2000 * COIN_SCALE, reward: 30 },
-  { id: 'feedCreature1', desc: 'Nourris une créature (Élevage)', event: 'creatureFed', target: 1, reward: 25 },
+  { id: 'tap1000', desc: 'Tape 1 000 fois', event: 'taps', target: 1000, reward: 30 },
+  { id: 'tap3000', desc: 'Tape 3 000 fois', event: 'taps', target: 3000, reward: 60, diamonds: 1 },
+  { id: 'earn2000', desc: `Gagne ${fmtPieces(2000 * COIN_SCALE)} pièces`, event: 'coinsEarned', target: 2000 * COIN_SCALE, reward: 30 },
+  { id: 'feedCreature1', desc: 'Nourris une créature', event: 'creatureFed', target: 1, reward: 25 },
   // ---- Incubation (07/09) ----
   // Cibles calées sur le rythme de FIN de partie, pas de début : un œuf
   // prend 10 min à la 1re créature mais 14 h à la 26e (144 œufs/jour

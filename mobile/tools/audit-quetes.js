@@ -3158,7 +3158,8 @@ module.exports.auditStructureOeufs = auditStructureOeufs;
 function auditPoigneA0(min = 0.425, max = 0.575) {
   const P = C.TAP_UPGRADES.find((t) => t.id === 'tap1');
   if (!P) return [{ probleme: 'Poigne Ancienne introuvable' }];
-  const r = C.tapUpgradeCost(P, 0, 0) / C.tapPowerCost(C.TAP_UPGRADE_FIRST_PACTE_LEVEL);
+  // 17/10 (auteur : Poigne +1,5 tap) : la règle « moitié du Pacte » se lit PAR POINT de tap (prix ÷ bonus).
+  const r = (C.tapUpgradeCost(P, 0, 0) / C.tapPowerCost(C.TAP_UPGRADE_FIRST_PACTE_LEVEL)) / (P.bonus || 1);
   return r >= min && r <= max ? [] : [{ ratio: +r.toFixed(2), attendu: 'la moitié du Pacte' }];
 }
 module.exports.auditPoigneA0 = auditPoigneA0;
@@ -5926,3 +5927,19 @@ function auditTranseEchec() {
   return pb;
 }
 module.exports.auditTranseEchec = auditTranseEchec;
+
+// 17/10 — DEMANDES DE L'AUTEUR : Poigne Ancienne +1,5 tap par niveau, prix ×1,5 = même prix PAR POINT de tap (auditPoigneA0 lit
+// désormais la règle « moitié du Pacte » par point) ; « +1,5 » affiché (formatNum arrondissait à +1) ; « (Élevage) » retiré des
+// libellés de défis du jour et de la semaine (6, par la règle de répercussion).
+function auditPoigneElevage() {
+  const fs = require('fs'), path = require('path'); const C = load('clickerLogic'); const B = load('boutiqueModele');
+  const pb = [];
+  const P = C.TAP_UPGRADES.find((u) => u.id === 'tap1');
+  if (!P || P.bonus !== 1.5) pb.push(`Poigne Ancienne : +${P && P.bonus} par niveau (choix de l'auteur : +1,5)`);
+  const Bm = fs.readFileSync(path.join(__dirname, '../src/games/clicker/boutiqueModele.js'), 'utf8');
+  if (!Bm.includes('gain: ouvert ? `+${(item.bonus < 1000 ? nb(item.bonus, 1) : f(item.bonus))} / tap / nv`')) pb.push('boutique : un bonus à virgule (+1,5) s\'afficherait arrondi');
+  const D = fs.readFileSync(path.join(__dirname, '../src/games/clicker/dailyLogic.js'), 'utf8');
+  if (D.includes('(Élevage)')) pb.push('un libellé de défi du jour / de la semaine contient encore « (Élevage) »');
+  return pb;
+}
+module.exports.auditPoigneElevage = auditPoigneElevage;
