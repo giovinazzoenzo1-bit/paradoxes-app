@@ -668,6 +668,7 @@ const SABOTAGES = [
   ['auditTranseEchec', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "plus de croix rouges", remplace('{echec ? CHALLENGE_GEM_X_PCT.map(', '{false ? CHALLENGE_GEM_X_PCT.map(')],
   ['auditDefisLueur', path.join(RACINE, 'src/screens/games/GrimoireBoutique.js'), "la lueur redevient un cadre jaune carré",
     remplace("  lueurDefi: { position: 'absolute' },", "  lueurDefi: { position: 'absolute', borderWidth: 3, borderColor: '#ffd54a', borderRadius: 12 },")],
+  ['auditTranseEchec', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "les barres ratées ne passent plus au rouge", remplace("tintColor: '#ff2020'", "tintColor: '#ffd54a'")],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

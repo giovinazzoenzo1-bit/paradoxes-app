@@ -5922,6 +5922,7 @@ function auditTranseEchec() {
   if (!Cl.includes('      maxTranseHoldSecRef.current = 0;\n      setMaxTranseHoldSec(0);\n      setEchecTranse(false);')) pb.push("après l'échec, le compteur ne repart plus à zéro");
   if (!Cl.includes('if (vibrationsRef.current) Vibration.vibrate(45);')) pb.push("plus de petite vibration à l'échec (réglage des vibrations respecté)");
   if (!Cl.includes('echec={echecTranse}') || !Cl.includes('{echec ? CHALLENGE_GEM_X_PCT.map((pct, i) => (i < filled ? (')) pb.push('plus de croix rouges sur les barres remplies');
+  if (!Cl.includes("style={[styles.challengeGemFilled, { left: `${pct}%`, tintColor: '#ff2020', pointerEvents: 'none' }]}")) pb.push("à l'échec, les barres remplies ne passent plus au rouge EN ENTIER (même image teintée, posée sur la barre)");
   return pb;
 }
 module.exports.auditTranseEchec = auditTranseEchec;

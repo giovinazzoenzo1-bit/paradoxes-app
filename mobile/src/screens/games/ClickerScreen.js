@@ -5874,11 +5874,11 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
           resizeMode="contain"
         />
       ))}
-      {/* 17/10 (auteur) : défi de Transe raté en cours de route → croix rouges sur les barres remplies, juste avant qu'elles s'éteignent. */}
+      {/* 17/10 (auteur) : défi de Transe raté en cours de route → chaque barre remplie passe au ROUGE en entier (la MÊME image teintée,
+          posée exactement sur la barre), juste avant qu'elles s'éteignent. 1re version : une croix « ✕ » — pas centrée (retour de l'auteur). */}
       {echec ? CHALLENGE_GEM_X_PCT.map((pct, i) => (i < filled ? (
-        <View key={'x' + pct} style={[styles.challengeGemFilled, { left: `${pct}%`, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }]}>
-          <Text style={styles.challengeCroix}>✕</Text>
-        </View>
+        <Image key={'x' + pct} source={require('../../../assets/menu/segment-plein.png')}
+          style={[styles.challengeGemFilled, { left: `${pct}%`, tintColor: '#ff2020', pointerEvents: 'none' }]} resizeMode="contain" />
       ) : null)) : null}
 
       {/* adjustsFontSizeToFit : la place entre la 6e gemme et le bord du
@@ -6272,7 +6272,6 @@ const styles = StyleSheet.create({
   // (même mesure que la gemme peinte elle-même), hauteur dérivée du
   // ratio propre de l'asset (240/77) plutôt que forcée, pour ne pas le
   // déformer.
-  challengeCroix: { color: '#ff2d2d', fontWeight: '900', fontSize: Math.round(((SCREEN_W * 0.88 * 0.106) / (120 / 45)) * 1.5), textShadowColor: '#000', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
   challengeGemFilled: {
     position: 'absolute', top: '56%',
     width: SCREEN_W * 0.88 * 0.106, height: (SCREEN_W * 0.88 * 0.106) / (120 / 45),

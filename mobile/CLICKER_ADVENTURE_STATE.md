@@ -3925,6 +3925,8 @@ ne pas ajouter `export` devant la fonction (« already exported », vécu).
 DEMANDE 2 : la lueur du Grimoire = l'IMAGE de lueur du combat (assets/grimoire/lueur-or.png), au lieu du cadre jaune carré ;
 `fort` = deux couches (sur la forêt sombre et la page beige, une couche se voyait à peine — VU au banc). Recentrée sur l'article.
 Contrôles : auditTranseEchec (nouveau → 120), auditDefisLueur renforcé ; 3 sabotages → 254.
+RETOUR DE L'AUTEUR : la croix « ✕ » n'était pas centrée → chaque barre remplie passe au ROUGE EN ENTIER (même image segment-plein,
+tintColor #ff2020, posée exactement sur la barre). VU au banc : 3 barres rouges à 21/32. 1 sabotage → 255.
 
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
