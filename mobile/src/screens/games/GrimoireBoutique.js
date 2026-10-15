@@ -106,13 +106,29 @@ function badge(niveau) {
 }
 
 // ── Une entrée : toucher = fiche ; le BOUTON DE PRIX achète ───────────────
-function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, onRelacher, offre, conseil, nouveau }) {
+// 17/10 (demande de l'auteur) : LUEUR qui guide un défi d'achat — sur le marque-page du bon chapitre, la flèche vers la bonne
+// double page, puis l'article lui-même. Ne capte aucun toucher (pointerEvents dans le STYLE, règle SDK 57).
+function LueurDefi({ style }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const b = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(v, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    b.start();
+    return () => b.stop();
+  }, []);
+  return <Animated.View style={[styles.lueurDefi, style, { pointerEvents: 'none', opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }), transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1.05] }) }] }]} />;
+}
+
+function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, onRelacher, offre, conseil, nouveau, defi = false }) {
   const verrou = n.etat === 'verrouille';
   const o = offre || { q: 1, total: n.prix, ok: n.etat === 'achetable' };
   const ok = o.ok;
   const b = verrou ? null : badge(n.niveau);
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={() => onFiche(n.id)} style={[styles.entree, { width: largeur, height: hauteur }]}>
+      {defi ? <LueurDefi style={{ left: 0, top: 1, right: 0, bottom: 1 }} /> : null}
       <View style={styles.medaillon}>
         <Image source={IMG.medaillon} resizeMode="contain" style={styles.medaillonImg} />
         {/* Verrouillé : la SILHOUETTE de sa future icône (mystère), petit
@@ -342,7 +358,7 @@ function Grimoire(props) {
     const h = Math.floor(z.h / PAR_PAGE);
     return (
       <View style={boite}>
-        {page.ids.map((id) => (parId[id] ? <Entree key={id} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={presser} onRelacher={arreterRafale} offre={offre(parId[id])} conseil={id === conseilId} nouveau={estNouveau(id)} /> : null))}
+        {page.ids.map((id) => (parId[id] ? <Entree key={id} defi={!!props.cibleDefi && id === props.cibleDefi} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={presser} onRelacher={arreterRafale} offre={offre(parId[id])} conseil={id === conseilId} nouveau={estNouveau(id)} /> : null))}
       </View>
     );
   };
@@ -406,6 +422,17 @@ function Grimoire(props) {
     return () => b.stop();
   }, []);
   const cActif = (tour ? tour.vers : position).c;
+  // 17/10 : où se trouve l'article du défi d'achat en cours (chapitre, double page) — pour les lueurs de navigation.
+  const guide = (() => {
+    if (!props.cibleDefi) return null;
+    for (let ci = 0; ci < chapitres.length; ci++) {
+      const p = chapitres[ci].planches.findIndex((pl) => pl.some((pg) => pg && pg.ids && pg.ids.includes(props.cibleDefi)));
+      if (p >= 0) return { c: ci, p };
+    }
+    return null;
+  })();
+  const posVue = tour ? tour.vers : position;
+  const guideFleche = guide && !tour && guide.c === posVue.c && guide.p !== posVue.p ? (guide.p > posVue.p ? 'suivante' : 'precedente') : null;
   return (
     <View style={styles.racine}>
       <ImageBackground source={IMG.fond} resizeMode="cover" style={StyleSheet.absoluteFill}>
@@ -420,6 +447,7 @@ function Grimoire(props) {
         if (!ouvert) return null;
         return (
           <Animated.View key={c.cle} style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0), opacity: apparition }]}>
+          {guide && guide.c === i && guide.c !== posVue.c ? <LueurDefi style={{ left: -5, top: -5, width: ONGLET_L + 10, height: ONGLET_H + 10 }} /> : null}
           <TouchableOpacity activeOpacity={0.8} onPress={() => (i !== cActif ? tourner({ c: i, p: 0 }, i > cActif ? 1 : -1) : null)}
             style={{ position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: ONGLET_H, alignItems: 'center' }}>
             <Image source={c.marque} resizeMode="stretch" style={[styles.ongletImg, { transform: [{ scaleY: -1 }] }]} />
@@ -459,6 +487,8 @@ function Grimoire(props) {
       {feuilles}
 
       {/* Flèches aux coins bas des pages et numéro sur le dos du livre. */}
+      {guideFleche === 'precedente' ? <LueurDefi style={{ left: Math.max(6, F.gauche.x + 14) - 6, top: F.gauche.y + F.gauche.h - 40, width: 42, height: 42, borderRadius: 21 }} /> : null}
+      {guideFleche === 'suivante' ? <LueurDefi style={{ left: Math.min(ECRAN_L - 36, F.droite.x + F.droite.l - 44) - 6, top: F.droite.y + F.droite.h - 40, width: 42, height: 42, borderRadius: 21 }} /> : null}
       <TouchableOpacity onPress={precedente} style={[styles.fleche, { left: Math.max(6, F.gauche.x + 14), top: F.gauche.y + F.gauche.h - 34 }]} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
         <Text style={styles.flecheTexte}>‹</Text>
       </TouchableOpacity>
@@ -583,6 +613,7 @@ const styles = StyleSheet.create({
   prixTexte: { color: '#fff4d6', fontSize: 10.5, fontWeight: '900', includeFontPadding: false },
   prixTexteCher: { color: '#f1ebe0' },
   onglet: { position: 'absolute', width: ONGLET_L, height: ONGLET_H, alignItems: 'center' },
+  lueurDefi: { position: 'absolute', borderWidth: 3, borderColor: '#ffd54a', borderRadius: 12, backgroundColor: 'rgba(255, 213, 74, 0.16)', shadowColor: '#ffd54a', shadowOpacity: 0.9, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } },
   ongletImg: { position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: ONGLET_H },
   ongletIcone: { width: 28, height: 28, marginTop: 8 },
   fleche: { position: 'absolute', width: 30, height: 26, alignItems: 'center', justifyContent: 'center' },

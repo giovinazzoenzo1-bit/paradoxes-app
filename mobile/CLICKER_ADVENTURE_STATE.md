@@ -3887,6 +3887,21 @@ LIVRE DE TAP (GrimoireBoutique) : ouverture ~1,24 s (attente 120 + pivot 900 + a
 Contrôles : auditDoreeEtLivre (nouveau → 117) + 2 sabotages → 246.
 
 
+## 17/10 (nuit) — DÉFIS 9 ↔ 11 + LUEURS DU DÉFI D'ACHAT DANS LE GRIMOIRE (publié)
+
+DEMANDE 1 : « pas logique d'acheter la Main Spectrale avant l'Esprit Frappeur » → défis 9 (Achète 3 Esprits) et 11 (Achète 2 Mains)
+inversés (blocs a0e2_gen / a0e2_gen2 échangés, cibles inchangées). RÉPERCUSSION (règle de l'auteur) ESSAYÉE sur 17 ↔ 19 (même
+motif Main puis Esprit, œuf 3) puis REFUSÉE : MESURÉ, l'Esprit à 11 189 y suivrait la Faveur à 29 815 → auditCoutCroissant rouge
+(règle du 20/09 « le coût d'un défi d'achat ne redescend jamais ») ; dans l'œuf 3, Main puis Esprit suit les coûts.
+DEMANDE 2 : lueurs d'aide aux défis d'ACHAT dans le Grimoire. ClickerScreen : cibleDefiAchat = article du 1er défi d'achat en cours
+(ordre de l'œuf, même critère « terminé » que la pastille, métrique par metriqueDuDefi) → prop cibleDefi. grimoireChapitres :
+articleDuDefiAchat(metric) (auto:/tapUpgrade:/tapPower→pacte/critLevel→faveur/critDamageLevel→critDamage/sanctuaire/veilleur).
+GrimoireBoutique : LueurDefi (or pulsé, pointerEvents dans le STYLE) sur le marque-page du bon chapitre (si un autre est ouvert),
+sur la flèche vers la bonne double page (bon chapitre, mauvaise page), et sur l'article. VU dans le banc (Pacte, Main Spectrale).
+OUTILS : load() des contrôles retirait mal l'extension (`./clickerLogic.js` → « clickerLogic.js.js ») — corrigé (même cache).
+Contrôles : auditDefisLueur (nouveau → 118 ; chaque défi d'achat de chaque Ascension a un article éclairable) + 4 sabotages → 250.
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

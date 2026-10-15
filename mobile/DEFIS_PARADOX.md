@@ -38,9 +38,9 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 
 ### ŒUF 2  →  Caraploof
 ```diff
-- 9. ⚙️ Achète 2 Mains Spectrales
+- 9. ⚙️ Achète 3 Esprits Frappeurs
   10. 💰 Mets 18 000 pièces de côté
-- 11. ⚙️ Achète 3 Esprits Frappeurs
+- 11. ⚙️ Achète 2 Mains Spectrales
   12. 🔥 Tiens la Transe pendant 32 secondes
 - 13. 🏛️ Monte le Sanctuaire au niveau 42
 + 14. 🐣 Monte une créature au niveau 6

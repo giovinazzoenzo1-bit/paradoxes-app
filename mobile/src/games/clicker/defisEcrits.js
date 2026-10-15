@@ -87,15 +87,18 @@ export const DEFIS_ECRITS = [
   ],
   // ── Ascension 0 · œuf 2 ──
   [
-    { id: 'a0e2_gen', icon: '⚙️', metric: 'auto:main',
-      target: 2, mode: 'delta', fige: true,
-      label: t => `Achète ${t} ${t > 1 ? 'Mains Spectrales' : 'Main Spectrale'}` },
-    { id: 'a0e2_reserve', icon: '💰', metric: 'coins',
-      target: 18000, mode: 'absolute', fige: true,
-      label: t => `Mets ${qtyQ(t, 'pièces')} de côté` },
+    // 17/10 (auteur : « pas logique d'acheter la Main Spectrale avant l'Esprit Frappeur ») : défis 9 ↔ 11 — l'Esprit passe AVANT.
+    // Répercussion sur 17 ↔ 19 ESSAYÉE puis refusée : MESURÉ, l'Esprit (11 189) y suivrait la Faveur (29 815) — règle « le coût
+    // d'un défi d'achat ne redescend jamais » (auditCoutCroissant) ; dans l'œuf 3 l'ordre Main puis Esprit suit les coûts.
     { id: 'a0e2_gen2', icon: '⚙️', metric: 'auto:esprit',
       target: 3, mode: 'delta', fige: true,
       label: t => `Achète ${t} ${t > 1 ? 'Esprits Frappeurs' : 'Esprit Frappeur'}` },
+    { id: 'a0e2_reserve', icon: '💰', metric: 'coins',
+      target: 18000, mode: 'absolute', fige: true,
+      label: t => `Mets ${qtyQ(t, 'pièces')} de côté` },
+    { id: 'a0e2_gen', icon: '⚙️', metric: 'auto:main',
+      target: 2, mode: 'delta', fige: true,
+      label: t => `Achète ${t} ${t > 1 ? 'Mains Spectrales' : 'Main Spectrale'}` },
     { id: 'a0e2_plusB', icon: '🔥', metric: 'maxTranseHoldSec',
       target: 32, mode: 'absolute', fige: true,
       label: t => `Tiens la Transe pendant ${t} secondes` },

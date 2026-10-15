@@ -33,7 +33,8 @@ function load(name) {
   }).code;
   const mod = { exports: {} };
   cache[name] = mod;
-  new Function('require', 'module', 'exports', code)((p) => load(path.basename(p)), mod, mod.exports);
+  // 17/10 : `import … from './x.js'` (grimoireChapitres) chargeait « x.js.js » — l'extension est retirée (même cache, même module).
+  new Function('require', 'module', 'exports', code)((p) => load(path.basename(p).replace(/\.js$/, '')), mod, mod.exports);
   return mod.exports;
 }
 const Q = load('questLogic');
@@ -5870,3 +5871,30 @@ function auditDoreeEtLivre() {
   return pb;
 }
 module.exports.auditDoreeEtLivre = auditDoreeEtLivre;
+
+// 17/10 — DEMANDES DE L'AUTEUR : (1) défis 9 ↔ 11 (« pas logique d'acheter la Main Spectrale avant l'Esprit Frappeur ») — la
+// répercussion sur 17 ↔ 19 a été REFUSÉE par auditCoutCroissant (MESURÉ : l'Esprit à 11 189 y suivrait la Faveur à 29 815) ;
+// (2) LUEURS d'aide aux défis d'achat dans le Grimoire : marque-page du bon chapitre, flèche vers la bonne page, puis l'article.
+function auditDefisLueur() {
+  const fs = require('fs'), path = require('path'); const D = load('defisEcrits'); const Q = load('questLogic'); const G = load('grimoireChapitres');
+  const pb = [];
+  const tous = D.DEFIS_ECRITS.flat();
+  if (!tous[8] || tous[8].metric !== 'auto:esprit' || !tous[10] || tous[10].metric !== 'auto:main') pb.push(`défis 9 et 11 : ${tous[8] && tous[8].metric} puis ${tous[10] && tous[10].metric} (l'auteur veut l'Esprit AVANT la Main)`);
+  const ids = new Set(G.CHAPITRES_GRIMOIRE.flatMap((c) => c.ids()));
+  const manquants = new Set();
+  for (const q of tous) for (let a = 0; a <= 5; a++) {
+    if (!Q.estDefiAchat(q, { ascension: a })) continue;
+    const art = G.articleDuDefiAchat(Q.metriqueDuDefi(q, { ascension: a }));
+    if (!art || !ids.has(art)) manquants.add(q.id + ' → ' + art);
+  }
+  if (manquants.size) pb.push(`défis d'achat sans article éclairable dans le Grimoire : ${[...manquants].slice(0, 5).join(', ')}`);
+  const Cl = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  const Gr = fs.readFileSync(path.join(__dirname, '../src/screens/games/GrimoireBoutique.js'), 'utf8');
+  if (!Cl.includes('cibleDefi={cibleDefiAchat}')) pb.push("le Clicker ne transmet plus au Grimoire l'article du défi d'achat en cours");
+  if (!Gr.includes('defi={!!props.cibleDefi && id === props.cibleDefi}')) pb.push("Grimoire : l'article du défi n'est plus éclairé");
+  if (!Gr.includes('guide.c === i && guide.c !== posVue.c ? <LueurDefi')) pb.push('Grimoire : le marque-page du bon chapitre n\'est plus éclairé');
+  if (!Gr.includes("guideFleche === 'suivante' ? <LueurDefi") || !Gr.includes("guideFleche === 'precedente' ? <LueurDefi")) pb.push('Grimoire : la flèche vers la bonne page n\'est plus éclairée');
+  if (!/lueurDefi:.*position: 'absolute'/.test(Gr) || !Gr.includes("{ pointerEvents: 'none', opacity: v.interpolate")) pb.push('Grimoire : la lueur doit être posée par-dessus sans capter les touchers (pointerEvents dans le style)');
+  return pb;
+}
+module.exports.auditDefisLueur = auditDefisLueur;

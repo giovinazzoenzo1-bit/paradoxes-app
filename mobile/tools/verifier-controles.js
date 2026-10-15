@@ -655,6 +655,12 @@ const SABOTAGES = [
     remplace("    { id: 'a0e1_golden', icon: '⭐', metric: 'goldenClaimed',\n      target: 2,", "    { id: 'a0e1_golden', icon: '⭐', metric: 'goldenClaimed',\n      target: 3,")],
   ['auditDoreeEtLivre', path.join(RACINE, 'src/screens/games/GrimoireBoutique.js'), "le livre de tap s'ouvre de nouveau en 900 ms",
     remplace('const DUREE_OUVERTURE = 450;', 'const DUREE_OUVERTURE = 900;')],
+  // 17/10 : défis 9 ↔ 11 et lueurs du défi d'achat (demandes de l'auteur).
+  ['auditDefisLueur', path.join(RACINE, 'src/games/clicker/defisEcrits.js'), "le défi 9 redevient la Main Spectrale",
+    remplace("{ id: 'a0e2_gen2', icon: '⚙️', metric: 'auto:esprit',", "{ id: 'a0e2_gen2', icon: '⚙️', metric: 'auto:main',")],
+  ['auditDefisLueur', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le Grimoire ne reçoit plus le défi en cours", remplace('cibleDefi={cibleDefiAchat}', 'cibleDefi={null}')],
+  ['auditDefisLueur', path.join(RACINE, 'src/screens/games/GrimoireBoutique.js'), "l'article du défi n'est plus éclairé", remplace('defi={!!props.cibleDefi && id === props.cibleDefi}', 'defi={false}')],
+  ['auditDefisLueur', path.join(RACINE, 'src/games/clicker/grimoireChapitres.js'), "la Faveur ne retrouve plus son article", remplace("critLevel: 'faveur'", "critLevel: 'crit'")],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

@@ -25,3 +25,12 @@ export const CHAPITRES_GRIMOIRE = [
 // « Comptoir » cachait l'achat de Griffes) : Griffes, le sceau de
 // l'Ascension au centre, Offrande.
 export const HORS_LIVRE = ['griffes', 'ascension', 'offrande'];
+
+// 17/10 (demande de l'auteur) : l'ARTICLE du Grimoire qu'un défi d'ACHAT fait acheter — lu sur la MÉTRIQUE, jamais sur le
+// texte — pour la LUEUR qui guide le joueur (marque-page ou flèche vers la bonne page, puis l'article). null = pas un achat.
+export function articleDuDefiAchat(metric) {
+  const m = metric || '';
+  if (m.startsWith('auto:')) return m.slice(5);
+  if (m.startsWith('tapUpgrade:')) return m.slice(11);
+  return { tapPower: 'pacte', critLevel: 'faveur', critDamageLevel: 'critDamage', sanctuaryLevel: 'sanctuaire', veilleurLevel: 'veilleur' }[m] || null;
+}

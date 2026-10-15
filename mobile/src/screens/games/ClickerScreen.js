@@ -125,7 +125,9 @@ import {
   estAchatAdaptable,
   cibleEtatAdaptee,
   estEtatAdapte,
+  metriqueDuDefi,
 } from '../../games/clicker/questLogic';
+import { articleDuDefiAchat } from '../../games/clicker/grimoireChapitres';
 // Signalement des blocages — voir `games/clicker/diagnostic.js`.
 import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY } from '../../games/clicker/diagnostic';
 import { envoyerRapport } from '../../signalement';
@@ -727,6 +729,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const ascensionCount = lifetimeStats.ascension || 0;
   const ascensionCountRef = useRef(0);
   ascensionCountRef.current = ascensionCount;
+  // 17/10 (demande de l'auteur) : l'article du 1er défi d'ACHAT en cours, dans l'ordre de l'œuf — le Grimoire l'éclaire
+  // (marque-page du bon chapitre ou flèche vers la bonne page, puis l'article). Même critère « terminé » que la pastille.
+  const cibleDefiAchat = (() => {
+    for (const qid of questIds || []) {
+      const def = questDef(qid);
+      if (!def || questClaimed?.[qid] || Math.floor(questProgress?.[qid] || 0) >= def.target) continue;
+      const art = articleDuDefiAchat(metriqueDuDefi(def, { ascension: ascensionCount }));
+      if (art) return art;
+    }
+    return null;
+  })();
 
   const [loaded, setLoaded] = useState(false);
   const [coins, setCoins] = useState(0);
@@ -4291,6 +4304,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           Secours={ShopView}
           formatNum={formatNum}
           onRetour={() => setView('tap')}
+          cibleDefi={cibleDefiAchat}
           coins={coins}
           sharedCoins={sharedCoins}
           tapPower={tapPower}
