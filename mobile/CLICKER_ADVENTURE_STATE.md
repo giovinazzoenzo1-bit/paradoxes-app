@@ -3902,6 +3902,18 @@ OUTILS : load() des contrôles retirait mal l'extension (`./clickerLogic.js` →
 Contrôles : auditDefisLueur (nouveau → 118 ; chaque défi d'achat de chaque Ascension a un article éclairable) + 4 sabotages → 250.
 
 
+## 17/10 (nuit) — BUG : AUCUNE LUEUR CHEZ L'AUTEUR → CAUSE RÉELLE, CORRIGÉ (publié)
+
+CAUSE : la 1re version calculait l'article à éclairer depuis `questIds` de DailyContext — ce sont les DÉFIS DU JOUR
+(pickDailyQuests), jamais des achats → cibleDefiAchat toujours null. Les défis de l'ŒUF sont `activeQuestIds` (ClickerScreen),
+le défi affiché est `currentChallengeId`. CORRECTIF : cibleDefiAchat = articleDuDefiAchat(metriqueDuDefi(findQuest(currentChallengeId)))
+— calculé JUSTE APRÈS currentChallengeId (zone morte sinon). auditDefisLueur renforcé (ordre des déclarations, chemin des données
+prouvé sur l'œuf 2 : Esprit Frappeur) + 1 sabotage (« relit les défis du jour ») → 251.
+LEÇON : un contrôle « par texte » (prop transmise) ne prouve pas que la DONNÉE est la bonne — vérifier la source réelle.
+RAPPEL pour l'auteur : un œuf déjà tiré GARDE ses défis et ses cibles figées ; les changements de défis (cible dorée −1, 9 ↔ 11)
+valent à partir des œufs tirés après la mise à jour.
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

@@ -729,17 +729,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const ascensionCount = lifetimeStats.ascension || 0;
   const ascensionCountRef = useRef(0);
   ascensionCountRef.current = ascensionCount;
-  // 17/10 (demande de l'auteur) : l'article du 1er défi d'ACHAT en cours, dans l'ordre de l'œuf — le Grimoire l'éclaire
-  // (marque-page du bon chapitre ou flèche vers la bonne page, puis l'article). Même critère « terminé » que la pastille.
-  const cibleDefiAchat = (() => {
-    for (const qid of questIds || []) {
-      const def = questDef(qid);
-      if (!def || questClaimed?.[qid] || Math.floor(questProgress?.[qid] || 0) >= def.target) continue;
-      const art = articleDuDefiAchat(metriqueDuDefi(def, { ascension: ascensionCount }));
-      if (art) return art;
-    }
-    return null;
-  })();
 
   const [loaded, setLoaded] = useState(false);
   const [coins, setCoins] = useState(0);
@@ -3079,6 +3068,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // vient justement de supprimer. Vaut `null` quand les 4 sont finies
   // (l'affichage bascule alors sur la barre d'éclosion).
   const currentChallengeId = activeQuestIds.find((id) => !isQuestValidated(id)) || null;
+  // 17/10 (demande de l'auteur) : LUEUR du Grimoire = l'article du DÉFI DE L'ŒUF EN COURS quand c'est un achat (marque-page du bon
+  // chapitre ou flèche vers la bonne page, puis l'article). ⚠️ 1re version (même jour) : elle lisait `questIds` = les DÉFIS DU JOUR
+  // (DailyContext, pickDailyQuests) — jamais un achat → aucune lueur chez l'auteur. Ici : currentChallengeId (défis de l'œuf).
+  const cibleDefiAchat = currentChallengeId
+    ? articleDuDefiAchat(metriqueDuDefi(findQuest(currentChallengeId), { ascension: ascensionCount }))
+    : null;
   // Réussi mais pas encore validé : le panneau devient un bouton vert.
   const currentChallengeReussi = !!currentChallengeId && isQuestDone(currentChallengeId);
   // ⚠️⚠️ 26/09 (décision de l'auteur) : l'Ascension ne s'achète QUE quand le

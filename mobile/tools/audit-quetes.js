@@ -5891,6 +5891,13 @@ function auditDefisLueur() {
   const Cl = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   const Gr = fs.readFileSync(path.join(__dirname, '../src/screens/games/GrimoireBoutique.js'), 'utf8');
   if (!Cl.includes('cibleDefi={cibleDefiAchat}')) pb.push("le Clicker ne transmet plus au Grimoire l'article du défi d'achat en cours");
+  // 17/10 (2e version) : la lueur suit le DÉFI DE L'ŒUF EN COURS (currentChallengeId), pas les défis du jour (questIds) — la 1re
+  // version lisait questIds : aucune lueur chez l'auteur. Chemin des données prouvé sur l'œuf 2 (1er défi : Esprit Frappeur).
+  const iCur = Cl.indexOf('const currentChallengeId = activeQuestIds.find('), iCible = Cl.indexOf('const cibleDefiAchat = currentChallengeId');
+  if (iCur < 0 || iCible < iCur || !Cl.includes('articleDuDefiAchat(metriqueDuDefi(findQuest(currentChallengeId), { ascension: ascensionCount }))'))
+    pb.push("la lueur ne suit plus le défi de l'œuf en cours (currentChallengeId) — elle lirait par exemple les défis du jour");
+  const art2 = G.articleDuDefiAchat(Q.metriqueDuDefi(D.DEFIS_ECRITS[1][0], { ascension: 0 }));
+  if (art2 !== 'esprit') pb.push(`œuf 2, 1er défi : article éclairé « ${art2} » (Esprit Frappeur attendu)`);
   if (!Gr.includes('defi={!!props.cibleDefi && id === props.cibleDefi}')) pb.push("Grimoire : l'article du défi n'est plus éclairé");
   if (!Gr.includes('guide.c === i && guide.c !== posVue.c ? <LueurDefi')) pb.push('Grimoire : le marque-page du bon chapitre n\'est plus éclairé');
   if (!Gr.includes("guideFleche === 'suivante' ? <LueurDefi") || !Gr.includes("guideFleche === 'precedente' ? <LueurDefi")) pb.push('Grimoire : la flèche vers la bonne page n\'est plus éclairée');

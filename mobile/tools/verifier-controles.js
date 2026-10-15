@@ -661,6 +661,8 @@ const SABOTAGES = [
   ['auditDefisLueur', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le Grimoire ne reçoit plus le défi en cours", remplace('cibleDefi={cibleDefiAchat}', 'cibleDefi={null}')],
   ['auditDefisLueur', path.join(RACINE, 'src/screens/games/GrimoireBoutique.js'), "l'article du défi n'est plus éclairé", remplace('defi={!!props.cibleDefi && id === props.cibleDefi}', 'defi={false}')],
   ['auditDefisLueur', path.join(RACINE, 'src/games/clicker/grimoireChapitres.js'), "la Faveur ne retrouve plus son article", remplace("critLevel: 'faveur'", "critLevel: 'crit'")],
+  ['auditDefisLueur', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "la lueur relit les défis du jour au lieu du défi de l'œuf",
+    remplace('articleDuDefiAchat(metriqueDuDefi(findQuest(currentChallengeId), { ascension: ascensionCount }))', 'articleDuDefiAchat(metriqueDuDefi(findQuest((questIds || [])[0]), { ascension: ascensionCount }))')],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------
