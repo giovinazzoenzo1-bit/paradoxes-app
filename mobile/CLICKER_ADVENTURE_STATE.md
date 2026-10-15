@@ -3933,7 +3933,7 @@ tintColor #ff2020, posée exactement sur la barre). VU au banc : 3 barres rouges
 
 ⚠️ COPIE PARALLÈLE (« Réessayer ») : elle a remplacé les croix rouges de la Transe par des BARRES ENTIÈREMENT ROUGES (« croix mal
 centrée ») et l'a PUBLIÉE (e6b5414) sans demande de l'auteur. Saine (suite verte). Question posée à l'auteur : 1 croix / 2 barres
-rouges — réponse attendue. Conseil donné : écrire « continue » au lieu de « Réessayer » (qui lance une 2e copie).
+rouges — DÉCISION DE L'AUTEUR (17/10) : on GARDE les barres rouges ✅. Conseil donné : écrire « continue » au lieu de « Réessayer » (qui lance une 2e copie).
 POIGNE ANCIENNE : +1,5 tap par niveau (avant +1), prix 7 973 → 11 960 (×1,5 = même prix par POINT de tap) ; auditPoigneA0
 (règle « 1er niveau = moitié du Pacte ») se lit désormais par point de tap. Affichage : formatNum arrondissait « 1,5 » à « 1 » →
 boutiqueModele écrit les bonus < 1 000 avec `nb` (virgule).
@@ -3941,6 +3941,8 @@ boutiqueModele écrit les bonus < 1 000 avec `nb` (virgule).
 Contrôles : auditPoigneElevage (nouveau → 121) + 2 sabotages → 256.
 QUESTION DE L'AUTEUR EN ATTENTE : un nouvel article de tap / auto-clic coûte MOINS au niveau 1 que le précédent au niveau 5
 (croissance ×2,5 par niveau) — comparaison faite avec les autres jeux, proposition à trancher.
+CLICKER EN RÉFLEXION (auteur) : rien à changer pour l'instant. GRANDS NOMBRES (question de l'auteur) : seuils A0 3,1e6 · A5 3,7e11 ·
+A10 5,0e15 (×4,6 par Ascension après l'A5) ; suffixes jusqu'à « Dc » (1e33, ~A37) puis notation exponentielle ; limite JS 1,8e308 (~A450).
 
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
