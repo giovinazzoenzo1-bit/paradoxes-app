@@ -5902,6 +5902,26 @@ function auditDefisLueur() {
   if (!Gr.includes('guide.c === i && guide.c !== posVue.c ? <LueurDefi')) pb.push('Grimoire : le marque-page du bon chapitre n\'est plus éclairé');
   if (!Gr.includes("guideFleche === 'suivante' ? <LueurDefi") || !Gr.includes("guideFleche === 'precedente' ? <LueurDefi")) pb.push('Grimoire : la flèche vers la bonne page n\'est plus éclairée');
   if (!/lueurDefi:.*position: 'absolute'/.test(Gr) || !Gr.includes("{ pointerEvents: 'none', opacity: v.interpolate")) pb.push('Grimoire : la lueur doit être posée par-dessus sans capter les touchers (pointerEvents dans le style)');
+  // 17/10 (2e retour de l'auteur) : la lueur = l'IMAGE de lueur du combat (lueur-or.png), pas un cadre jaune carré.
+  if (!Gr.includes("const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');") || !Gr.includes('<Animated.Image source={LUEUR_OR}')
+    || !Gr.includes("  lueurDefi: { position: 'absolute' },")) pb.push("Grimoire : la lueur n'est plus celle des créatures en Aventure (image lueur-or), cadre carré revenu ?");
   return pb;
 }
 module.exports.auditDefisLueur = auditDefisLueur;
+
+// 17/10 — DEMANDE DE L'AUTEUR : défi de Transe raté en cours de route → le compteur (les barres jaunes) repart à ZÉRO, avec une
+// petite vibration et des croix rouges sur chaque barre remplie juste avant qu'elles disparaissent (VU au banc : 3 croix à 21/32).
+function auditTranseEchec() {
+  const fs = require('fs'), path = require('path');
+  const pb = [];
+  const Cl = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  const iRef = Cl.indexOf('const defiTranseRef = useRef(null);'), iInt = Cl.indexOf('if (d && maxTranseHoldSecRef.current >= 1 && maxTranseHoldSecRef.current < d.cible) echouerTranseRef.current();');
+  if (iRef < 0 || iInt < 0 || iInt < iRef) pb.push("la rupture de la Transe ne déclenche plus l'échec du défi (ou la référence est déclarée après l'effet)");
+  if (!Cl.includes("defiTranseRef.current = currentChallenge && !currentChallengeReussi && (findQuest(currentChallengeId) || {}).metric === 'maxTranseHoldSec'"))
+    pb.push("l'échec ne vise plus le seul défi de Transe en cours et non réussi");
+  if (!Cl.includes('      maxTranseHoldSecRef.current = 0;\n      setMaxTranseHoldSec(0);\n      setEchecTranse(false);')) pb.push("après l'échec, le compteur ne repart plus à zéro");
+  if (!Cl.includes('if (vibrationsRef.current) Vibration.vibrate(45);')) pb.push("plus de petite vibration à l'échec (réglage des vibrations respecté)");
+  if (!Cl.includes('echec={echecTranse}') || !Cl.includes('{echec ? CHALLENGE_GEM_X_PCT.map((pct, i) => (i < filled ? (')) pb.push('plus de croix rouges sur les barres remplies');
+  return pb;
+}
+module.exports.auditTranseEchec = auditTranseEchec;

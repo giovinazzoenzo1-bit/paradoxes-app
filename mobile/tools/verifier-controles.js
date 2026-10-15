@@ -663,6 +663,11 @@ const SABOTAGES = [
   ['auditDefisLueur', path.join(RACINE, 'src/games/clicker/grimoireChapitres.js'), "la Faveur ne retrouve plus son article", remplace("critLevel: 'faveur'", "critLevel: 'crit'")],
   ['auditDefisLueur', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "la lueur relit les défis du jour au lieu du défi de l'œuf",
     remplace('articleDuDefiAchat(metriqueDuDefi(findQuest(currentChallengeId), { ascension: ascensionCount }))', 'articleDuDefiAchat(metriqueDuDefi(findQuest((questIds || [])[0]), { ascension: ascensionCount }))')],
+  // 17/10 : Transe ratée (croix, zéro, vibration) et lueur en image (demandes de l'auteur).
+  ['auditTranseEchec', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "la Transe ratée ne remet plus le compteur à zéro", remplace('echouerTranseRef.current();', 'void 0;')],
+  ['auditTranseEchec', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "plus de croix rouges", remplace('{echec ? CHALLENGE_GEM_X_PCT.map(', '{false ? CHALLENGE_GEM_X_PCT.map(')],
+  ['auditDefisLueur', path.join(RACINE, 'src/screens/games/GrimoireBoutique.js'), "la lueur redevient un cadre jaune carré",
+    remplace("  lueurDefi: { position: 'absolute' },", "  lueurDefi: { position: 'absolute', borderWidth: 3, borderColor: '#ffd54a', borderRadius: 12 },")],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

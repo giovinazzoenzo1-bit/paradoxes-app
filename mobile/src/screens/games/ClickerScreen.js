@@ -3458,12 +3458,36 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // On conserve le MEILLEUR temps tenu, pas la série en cours : sinon la
   // barre retomberait à zéro à chaque pause et n'atteindrait la cible
   // que sur une seule série parfaite, sans jamais montrer de progrès.
+  // 17/10 (auteur) : DÉFI DE TRANSE raté en cours de route → le compteur repart à ZÉRO (avant : on gardait le meilleur temps,
+  // ci-dessus), avec une petite vibration et des croix rouges sur les barres remplies juste avant qu'elles s'éteignent.
+  // Réussir demande toujours UNE tenue continue de N secondes : seul l'affichage change.
+  const [echecTranse, setEchecTranse] = useState(false);
+  const defiTranseRef = useRef(null);
+  defiTranseRef.current = currentChallenge && !currentChallengeReussi && (findQuest(currentChallengeId) || {}).metric === 'maxTranseHoldSec'
+    ? { cible: currentChallenge.target } : null;
+  const echecTranseEnCoursRef = useRef(false);
+  const echouerTranse = () => {
+    if (echecTranseEnCoursRef.current) return;
+    echecTranseEnCoursRef.current = true;
+    setEchecTranse(true);
+    if (vibrationsRef.current) Vibration.vibrate(45);
+    setTimeout(() => {
+      maxTranseHoldSecRef.current = 0;
+      setMaxTranseHoldSec(0);
+      setEchecTranse(false);
+      echecTranseEnCoursRef.current = false;
+    }, 650);
+  };
+  const echouerTranseRef = useRef(echouerTranse);
+  echouerTranseRef.current = echouerTranse;
   useEffect(() => {
     const id = setInterval(() => {
       if (transeStartRef.current === null) return;
       const now = Date.now();
       if (!transeStillActive(lastTapTimeRef.current, now)) {
         transeStartRef.current = null;
+        const d = defiTranseRef.current;
+        if (d && maxTranseHoldSecRef.current >= 1 && maxTranseHoldSecRef.current < d.cible) echouerTranseRef.current();
         return;
       }
       const heldSec = (now - transeStartRef.current) / 1000;
@@ -3918,6 +3942,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 cycleTotal={activeQuestIds.length}
                 reussi={currentChallengeReussi}
                 onValider={validerDefi}
+                echec={echecTranse}
               />
             )
           ) : (
@@ -5786,7 +5811,7 @@ const CHALLENGE_CARD_ASPECT_RATIO = 1050 / 371; // assets/menu/panneau-defi.png 
 // hauteur), entre le médaillon et le compteur.
 const CHALLENGE_GEM_X_PCT = [21.5, 32.6, 43.7, 54.8, 65.9, 77.0];
 
-function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel, reussi = false, onValider = null }) {
+function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, countLabel, reussi = false, onValider = null, echec = false }) {
   const segments = Math.max(1, Math.min(CHALLENGE_MAX_SEGMENTS, target));
   const ratio = target > 0 ? Math.min(1, current / target) : 0;
   // ⚠️ 27/09 (retour de l'auteur) : remplir sur les 6 segments AFFICHÉS — calculé
@@ -5849,6 +5874,12 @@ function ChallengeBar({ icon, label, current, target, cycleIndex, cycleTotal, co
           resizeMode="contain"
         />
       ))}
+      {/* 17/10 (auteur) : défi de Transe raté en cours de route → croix rouges sur les barres remplies, juste avant qu'elles s'éteignent. */}
+      {echec ? CHALLENGE_GEM_X_PCT.map((pct, i) => (i < filled ? (
+        <View key={'x' + pct} style={[styles.challengeGemFilled, { left: `${pct}%`, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }]}>
+          <Text style={styles.challengeCroix}>✕</Text>
+        </View>
+      ) : null)) : null}
 
       {/* adjustsFontSizeToFit : la place entre la 6e gemme et le bord du
           cadre est mesurée mais reste étroite — un gros nombre (ex.
@@ -6241,6 +6272,7 @@ const styles = StyleSheet.create({
   // (même mesure que la gemme peinte elle-même), hauteur dérivée du
   // ratio propre de l'asset (240/77) plutôt que forcée, pour ne pas le
   // déformer.
+  challengeCroix: { color: '#ff2d2d', fontWeight: '900', fontSize: Math.round(((SCREEN_W * 0.88 * 0.106) / (120 / 45)) * 1.5), textShadowColor: '#000', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
   challengeGemFilled: {
     position: 'absolute', top: '56%',
     width: SCREEN_W * 0.88 * 0.106, height: (SCREEN_W * 0.88 * 0.106) / (120 / 45),

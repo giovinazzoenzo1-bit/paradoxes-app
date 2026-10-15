@@ -108,7 +108,10 @@ function badge(niveau) {
 // ── Une entrée : toucher = fiche ; le BOUTON DE PRIX achète ───────────────
 // 17/10 (demande de l'auteur) : LUEUR qui guide un défi d'achat — sur le marque-page du bon chapitre, la flèche vers la bonne
 // double page, puis l'article lui-même. Ne capte aucun toucher (pointerEvents dans le STYLE, règle SDK 57).
-function LueurDefi({ style }) {
+// 17/10 (auteur : « une lueur comme à l'arrière des créatures en Aventure ») : la MÊME image que le combat (lueur-or.png),
+// au lieu du cadre jaune carré de la 1re version.
+const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
+function LueurDefi({ style, fort = false }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const b = Animated.loop(Animated.sequence([
@@ -118,7 +121,12 @@ function LueurDefi({ style }) {
     b.start();
     return () => b.stop();
   }, []);
-  return <Animated.View style={[styles.lueurDefi, style, { pointerEvents: 'none', opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }), transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1.05] }) }] }]} />;
+  const st = [styles.lueurDefi, style, { pointerEvents: 'none', opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }), transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.08] }) }] }];
+  // `fort` (marque-page, flèche) : deux couches — sur le fond sombre de la forêt, une seule couche se voyait à peine (VU au banc).
+  return fort ? <>
+    <Animated.Image source={LUEUR_OR} resizeMethod="scale" resizeMode="stretch" style={st} />
+    <Animated.Image source={LUEUR_OR} resizeMethod="scale" resizeMode="stretch" style={st} />
+  </> : <Animated.Image source={LUEUR_OR} resizeMethod="scale" resizeMode="stretch" style={st} />;
 }
 
 function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, onRelacher, offre, conseil, nouveau, defi = false }) {
@@ -128,7 +136,7 @@ function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, onRelacher
   const b = verrou ? null : badge(n.niveau);
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={() => onFiche(n.id)} style={[styles.entree, { width: largeur, height: hauteur }]}>
-      {defi ? <LueurDefi style={{ left: 0, top: 1, right: 0, bottom: 1 }} /> : null}
+      {defi ? <LueurDefi fort style={{ left: -largeur * 0.15, top: -hauteur * 0.25, width: largeur * 0.8, height: hauteur * 1.5 }} /> : null}
       <View style={styles.medaillon}>
         <Image source={IMG.medaillon} resizeMode="contain" style={styles.medaillonImg} />
         {/* Verrouillé : la SILHOUETTE de sa future icône (mystère), petit
@@ -447,7 +455,7 @@ function Grimoire(props) {
         if (!ouvert) return null;
         return (
           <Animated.View key={c.cle} style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0), opacity: apparition }]}>
-          {guide && guide.c === i && guide.c !== posVue.c ? <LueurDefi style={{ left: -5, top: -5, width: ONGLET_L + 10, height: ONGLET_H + 10 }} /> : null}
+          {guide && guide.c === i && guide.c !== posVue.c ? <LueurDefi fort style={{ left: -ONGLET_L * 0.7, top: -ONGLET_H * 0.5, width: ONGLET_L * 2.4, height: ONGLET_H * 2 }} /> : null}
           <TouchableOpacity activeOpacity={0.8} onPress={() => (i !== cActif ? tourner({ c: i, p: 0 }, i > cActif ? 1 : -1) : null)}
             style={{ position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: ONGLET_H, alignItems: 'center' }}>
             <Image source={c.marque} resizeMode="stretch" style={[styles.ongletImg, { transform: [{ scaleY: -1 }] }]} />
@@ -487,8 +495,8 @@ function Grimoire(props) {
       {feuilles}
 
       {/* Flèches aux coins bas des pages et numéro sur le dos du livre. */}
-      {guideFleche === 'precedente' ? <LueurDefi style={{ left: Math.max(6, F.gauche.x + 14) - 6, top: F.gauche.y + F.gauche.h - 40, width: 42, height: 42, borderRadius: 21 }} /> : null}
-      {guideFleche === 'suivante' ? <LueurDefi style={{ left: Math.min(ECRAN_L - 36, F.droite.x + F.droite.l - 44) - 6, top: F.droite.y + F.droite.h - 40, width: 42, height: 42, borderRadius: 21 }} /> : null}
+      {guideFleche === 'precedente' ? <LueurDefi fort style={{ left: Math.max(6, F.gauche.x + 14) - 30, top: F.gauche.y + F.gauche.h - 64, width: 90, height: 90 }} /> : null}
+      {guideFleche === 'suivante' ? <LueurDefi fort style={{ left: Math.min(ECRAN_L - 36, F.droite.x + F.droite.l - 44) - 30, top: F.droite.y + F.droite.h - 64, width: 90, height: 90 }} /> : null}
       <TouchableOpacity onPress={precedente} style={[styles.fleche, { left: Math.max(6, F.gauche.x + 14), top: F.gauche.y + F.gauche.h - 34 }]} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
         <Text style={styles.flecheTexte}>‹</Text>
       </TouchableOpacity>
@@ -613,7 +621,7 @@ const styles = StyleSheet.create({
   prixTexte: { color: '#fff4d6', fontSize: 10.5, fontWeight: '900', includeFontPadding: false },
   prixTexteCher: { color: '#f1ebe0' },
   onglet: { position: 'absolute', width: ONGLET_L, height: ONGLET_H, alignItems: 'center' },
-  lueurDefi: { position: 'absolute', borderWidth: 3, borderColor: '#ffd54a', borderRadius: 12, backgroundColor: 'rgba(255, 213, 74, 0.16)', shadowColor: '#ffd54a', shadowOpacity: 0.9, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } },
+  lueurDefi: { position: 'absolute' },
   ongletImg: { position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: ONGLET_H },
   ongletIcone: { width: 28, height: 28, marginTop: 8 },
   fleche: { position: 'absolute', width: 30, height: 26, alignItems: 'center', justifyContent: 'center' },

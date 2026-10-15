@@ -3914,6 +3914,19 @@ RAPPEL pour l'auteur : un œuf déjà tiré GARDE ses défis et ses cibles figé
 valent à partir des œufs tirés après la mise à jour.
 
 
+## 17/10 (nuit) — TRANSE RATÉE : BARRES À ZÉRO + CROIX + VIBRATION ; LUEUR DU GRIMOIRE EN IMAGE (publié)
+
+DEMANDE 1 : défi « Tiens la Transe » raté en cours de route → les barres jaunes (ChallengeBar) repartent à ZÉRO, avec une petite
+vibration (Vibration.vibrate(45), réglage respecté) et une croix rouge sur chaque barre remplie pendant 650 ms. CHANGE la règle du
+26/09 (« on garde le MEILLEUR temps tenu ») — à la demande de l'auteur ; réussir demande toujours UNE tenue continue de N s.
+Seuil : au moins 1 s tenue, défi de Transe en cours et non réussi (defiTranseRef, déclaré AVANT l'effet de l'intervalle).
+VU au banc : 3 croix sur les 3 barres remplies à 21/32. ⚠️ ChallengeBar est déjà exporté en BAS de ClickerScreen (pour le banc) :
+ne pas ajouter `export` devant la fonction (« already exported », vécu).
+DEMANDE 2 : la lueur du Grimoire = l'IMAGE de lueur du combat (assets/grimoire/lueur-or.png), au lieu du cadre jaune carré ;
+`fort` = deux couches (sur la forêt sombre et la page beige, une couche se voyait à peine — VU au banc). Recentrée sur l'article.
+Contrôles : auditTranseEchec (nouveau → 120), auditDefisLueur renforcé ; 3 sabotages → 254.
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
