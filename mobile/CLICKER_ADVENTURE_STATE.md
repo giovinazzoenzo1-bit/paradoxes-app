@@ -4000,6 +4000,30 @@ reproduit les 32 h) — défi i+1 commence quand i est rempli — puis chercher 
 compter 12 taps/s au maximum. Défaut du rapport à corriger : « Défi en cours : ? » (nom manquant, chrono reparti trop tôt).
 
 
+## 18/10 — CALCULATEUR DE DÉFIS v2.3 : FAIT (branche `calculateur-defis-v23`, HORS DU JEU, rien d'appliqué)
+
+OÙ : sur la branche seulement — `mobile/tools/calculateur-defis-v23.js` (joueur + recherche des cibles, ~6 s),
+`calculateur-defis-v23.json` (résultats), `doc-defis-v23.js` (HTML du Google Doc), et un crochet optionnel
+`options.defis` dans `simulerGroupe` (audit-quetes.js). Mode par défaut IDENTIQUE À L'OCTET (empreinte SHA-256 des
+sorties A0-A6 × 4 cadences × avec / sans pauses, avant / après). verifier-defis : 120 contrôles verts (18/10).
+MODÈLE : le joueur des 32 h fait les défis dans l'ordre, à 7 taps/s ; Transe 60 % des taps = ×2,47 (≈ l'ancien
+facteurJoueurReel 2,48 !) ; critiques aux vrais niveaux ; pouvoirs du deck par Monte-Carlo des œufs (×1,19 avec 1
+créature → ×3,54 deck mythique) ; 8 s par défi (lire, valider, menu) CALÉ sur l'œuf 1 (5,8 min ; 6,3 mesurés) ;
+Aventure à l'énergie (attente HORS LIGNE comptée à part). VALIDATION : A0, 6 œufs = 79 min actives (chronos de
+l'auteur du 24/09, énergie de dev : 78 min).
+RÉSULTATS : aujourd'hui 28,1 h actives (+88,8 h d'attente d'énergie) ; 132 défis sur 322 INSTANTANÉS (≤ 15 s) ;
+25 ABUSÉS (> 3 × le temps visé) : cible dorée 40 à 64 (45 min à 1,2 h), « Achète 1 niveau » d'un palier déjà
+monté par l'économie (1,1 à 1,8 h : règle du total « jamais moins de 1 », au prix d'un niveau élevé).
+Cibles v2.3 (temps visé = durée actuelle de l'Ascension ÷ œufs ÷ 8) : 25,0 h actives au lieu de 32 h (les défis
+inchangés sont courts) ; pièces ×10 à ×60 000 aux A2-A5 : la production croît EXPONENTIELLEMENT quand un groupe dure
+plus longtemps que son seuil → appliquer v2.3 = recalculer seuils et prix (AJUSTEMENT_ASCENSION). DÉCISION ATTENDUE.
+⚠️ PIÈGES : (1) un joueur qui achète à volonté Faveur / Dégâts critiques (PRIX FIXES) fait exploser l'économie
+(A5 : 6e11 pièces par défi) — le joueur des 32 h ne les achète que pendant un défi de critiques, s'il le raccourcit ;
+(2) défi de critiques à 0 % de chance (Faveur remise à 0 par l'Ascension) = bloqué → Faveur forcée ;
+(3) œuf 1 de l'A0 = tutoriel de l'auteur, jamais recalé ; (4) le connecteur Google DRIVE ne modifie PAS le contenu
+d'un Doc existant (titre seulement) : garder le même lien exige le connecteur Google DOCS.
+NON MODÉLISÉ : éclosion / Gardien / incubation, Griffes des défis du jour, bonus de pièces des pouvoirs (< 3 %).
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
