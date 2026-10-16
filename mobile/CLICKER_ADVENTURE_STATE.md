@@ -3991,7 +3991,12 @@ SIMULATEUR DU JEU : il ignore la Transe, les critiques et les POUVOIRS des créa
 revenu du tap (×2,8 à ×4,4) NE CHANGE PRESQUE PAS les durées → elles sont tenues par les défis À ATTENTE : Aventure (énergie 7,
 1 toutes les 20 min), cible dorée (45-90 s), records de Transe. ⇒ Recaler seulement pièces et achats ne rendra PAS les 32 h.
 v2.2 À FAIRE : instrumenter simulerGroupe pour noter le TEMPS de CHAQUE défi (7 taps/s, Transe, critiques, pouvoirs par rareté),
-traiter à part les défis à attente, puis chercher chaque cible ; Google Doc v2.2 seulement ensuite. Option C proposée (non décidée) :
+traiter à part les défis à attente, puis chercher chaque cible ; Google Doc v2.2 seulement ensuite.
+⚠️ 1er ESSAI v2.2 (18/10, script hors du jeu /home/claude/calculateur-v2/v22.js, perdu au redémarrage) : boucle défi par défi façon
+auditTropFacile + minutesPour → INUTILISABLE : ce joueur n'achète QUE ce que demandent les défis, sa production ne suit pas → temps
+« visés » absurdes (A0 18,7 h, A3 1 672 h contre 2,9 h et 6,3 h au simulateur). Seul l'œuf 1 tenait (défi 1 : 750 → 3 700 pièces
+pour 3,1 min à 7 taps/s). BONNE VOIE (v2.3) : horodater chaque défi DANS la boucle d'achats de simulerGroupe (le joueur qui
+reproduit les 32 h) — défi i+1 commence quand i est rempli — puis chercher les cibles ; Transe/critiques/pouvoirs via le revenu du tap. Option C proposée (non décidée) :
 compter 12 taps/s au maximum. Défaut du rapport à corriger : « Défi en cours : ? » (nom manquant, chrono reparti trop tôt).
 
 
