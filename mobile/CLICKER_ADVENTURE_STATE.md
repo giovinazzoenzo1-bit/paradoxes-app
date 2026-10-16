@@ -4072,6 +4072,15 @@ bas de 19 % (œuf 7), 28 % (14), 43 % (21), 60 % (34) — les raretés hautes on
 A0 7 / 8 / 10 / 11 · A1 13 · A2 15 · A3 20 · A4-A5 25 taps/s. ⚠️ Ce bonus vaut pour le REVENU seulement : les défis qui
 COMPTENT des taps (total, d'affilée) ou des critiques gardent 7 taps/s réels, sinon cibles gonflées jusqu'à ×3,5.
 À DÉCIDER : table étendue (recommandée) ou +1 par créature plafonné à 10.
+SUITE (crainte de l'auteur : « 3 légendaires à l'A3 bousillent le calcul ») → un % PAR CRÉATURE, lu sur le deck
+(mesuré avec les vraies règles : activé 5 s après être prêt, un seul pouvoir à la fois) : commune +22 % · peu commune
++24 % · rare +23 % · épique +48 % · légendaire +81 % · mythique +93 % · « remise » (Ventis, Glyphon) +0 % du revenu du
+tap ; on ADDITIONNE les 3 créatures : exact à 4,2 % près (pire cas : 3 basses raretés, pouvoirs qui se chevauchent).
+Roster : 2 légendaires seulement (Solstral, Tartaroth) → « 3 légendaires » impossible ; deck maximal = 2 légendaires +
+Arcanis = ×3,55 (≈ 25 taps/s équivalents). Les créatures « passif » (Caraploof, Luxorbe, Aquamira, Zephyrion, 4 rares,
+Voltarel) multiplient aussi le passif pendant leur pouvoir : 2e petit % à part. ANTI-TRICHE : prendre les 3 MEILLEURES
+créatures POSSÉDÉES, pas le deck du moment (sinon : 3 communes au moment de la photo, puis retour des légendaires).
+Seuil d'Ascension à caler sur un deck MALCHANCEUX (sinon fin de groupe longue à farmer pour lui).
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
