@@ -4157,7 +4157,15 @@ lui). Garde-fous anti-lassitude à mesurer : aucun défi > 2 × son temps visé 
    Ascension ; + passif (× petit % des créatures « passif »).
 5. CIBLE = items dont le coût CUMULÉ (prix réel, prérequis compris, plafonds respectés) = budget ; au moins 1 ;
    arrondi VERS LE HAUT, jamais une cible déjà atteinte.
-6. TEMPS VISÉ = marches de 3 œufs : 3 min + 0,75 min par marche (œuf 40 : 12,75 min).
+6. TEMPS VISÉ (CORRIGÉ par l'auteur, 18/10 — « je n'ai jamais dit que 3 min c'était OK, c'est trop peu ») : au moins
+   5 min par défi à l'œuf 1, 7 min à l'œuf 2, 10 min dès l'œuf 3, puis +0,75 min tous les 3 œufs (6, 9, 12…) → 19 min à
+   l'œuf 40. L'œuf 1 est recalé lui aussi. RAISON : les défis de combat ou de Transe durent 30 s à 4 min, les défis
+   recalés compensent. MESURÉ (calculateur v2.3, 7 taps/s, 3 murs remplacés par leur temps visé) : œufs 1-2 ≈ 36 min,
+   3-12 ≈ 62, 13-26 ≈ 73, 27-40 ≈ 95 ; Ascensions 5,0 / 6,5 / 7,9 / 9,2 / 10,4 / 11,8 h = ~51 h actives (28 h
+   aujourd'hui) ; attente d'énergie 90 → 63 h (plus de jeu = plus de recharge pendant le jeu). MURS vus : « Atteins 32
+   pièces par seconde » (œuf 12) = 49 h à cause du « +20 % de passif » à l'apparition (à remplacer par le calculateur),
+   revenu/s de l'œuf 26 (39 min), « Achète 1 niveau de Volonté du Paradoxe » (72 min, 1 item trop cher).
+   ⚠️ L'ancienne ligne « 3 min + 0,75 » était une PROPOSITION de Claude, jamais validée : ne pas la reprendre.
 7. SEUIL D'ASCENSION = pièces gagnées à la fin de la chaîne ÷ 0,9, calé sur un deck MALCHANCEUX ; plus cher accepté.
 8. CONTRÔLES : chaque défi ≈ temps visé ±20 % au simulateur ; jamais impossible ni né accompli ; 2 h hors ligne < 100 %
    d'un défi ; « 1 item > 2 × budget » listé (on change l'item à la main, validé par l'auteur) ; ~6 contrôles de
