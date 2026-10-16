@@ -399,6 +399,9 @@ const CONTINUS = ['totalEarned', 'coins', 'passiveIncome', 'totalTaps', 'totalCr
 const PREMIER_OEUF = new Set(D.DEFIS_ECRITS[0].map((q) => q.id)); // tutoriel fixé par l'auteur (wiki, 20-21/09)
 const recale = (q) => (q.target || 0) > 1 && !PREMIER_OEUF.has(q.id) && (ACHATS(q.metric) || RECALES.includes(q.metric));
 const joli = (x) => (x >= 1000 ? Number(x.toPrecision(2)) : Math.max(1, Math.round(x)));
+// Taps « au total » : un compteur À VIE (des centaines de milliers) — 2 chiffres significatifs effaceraient l'écart
+// voulu (vécu : 100 500 arrondi à 100 000 = déjà atteint). Arrondi à la centaine.
+const arrondi = (m, x) => (m === 'totalTaps' ? Math.max(100, Math.round(x / 100) * 100) : joli(x));
 function tempsVise(a) {
   return A.simulerGroupe(a, 4).tActif / (D.OEUFS_PAR_GROUPE[a] * 8);
 }
@@ -419,11 +422,12 @@ function chercher(a, photo, i, tau) {
   const cache = {};
   const f = (x) => (cache[x] !== undefined ? cache[x] : (cache[x] = jouerUn(a, photo, i, x).r.actif));
   if (CONTINUS.includes(q.metric)) {
+    const J2 = (x) => arrondi(q.metric, x);
     let lo = 1, hi = Math.max(2, q.target);
-    if (f(joli(lo)) >= tau) return { x: q.target, note: 'plancher du jeu' };
-    for (let k = 0; k < 40 && f(joli(hi)) < tau; k++) { lo = hi; hi *= 4; }
-    for (let k = 0; k < 24; k++) { const mid = Math.sqrt(lo * hi); if (f(joli(mid)) >= tau) hi = mid; else lo = mid; }
-    const a1 = joli(lo), b1 = joli(hi);
+    if (f(J2(lo)) >= tau) return { x: q.target, note: 'plancher du jeu' };
+    for (let k = 0; k < 40 && f(J2(hi)) < tau; k++) { lo = hi; hi *= 4; }
+    for (let k = 0; k < 24; k++) { const mid = Math.sqrt(lo * hi); if (f(J2(mid)) >= tau) hi = mid; else lo = mid; }
+    const a1 = J2(lo), b1 = J2(hi);
     return { x: Math.abs(f(a1) - tau) <= Math.abs(f(b1) - tau) ? a1 : b1 };
   }
   if (f(1) >= tau) return { x: 1 };
