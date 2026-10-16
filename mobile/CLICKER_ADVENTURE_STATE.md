@@ -4081,6 +4081,12 @@ Arcanis = ×3,55 (≈ 25 taps/s équivalents). Les créatures « passif » (Cara
 Voltarel) multiplient aussi le passif pendant leur pouvoir : 2e petit % à part. ANTI-TRICHE : prendre les 3 MEILLEURES
 créatures POSSÉDÉES, pas le deck du moment (sinon : 3 communes au moment de la photo, puis retour des légendaires).
 Seuil d'Ascension à caler sur un deck MALCHANCEUX (sinon fin de groupe longue à farmer pour lui).
+HORS LIGNE (crainte de l'auteur : « le défi demande 50 000 pièces, je me déconnecte et je les ai sans jouer ») — MESURÉ
+au joueur de référence : hors ligne = 25 % du passif pendant 2 h max, et le passif ne pèse que 0 à 9 % de la production
+(le tap, avec Transe / critiques / pouvoirs, fait le reste) → 2 h hors ligne couvrent en médiane 23 % d'un défi à l'A0,
+1 à 5 % ensuite ; pire cas 56 % (A2) ; 0 défi sur 322 rempli. Remplir un défi hors ligne demanderait 4 à 10 absences de
+2 h. DÉCISION PROPOSÉE : pas de règle spéciale dans le jeu ; un CONTRÔLE « 2 h hors ligne < 100 % d'un défi » (crie si un
+jour le passif ou le Veilleur est renforcé).
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
