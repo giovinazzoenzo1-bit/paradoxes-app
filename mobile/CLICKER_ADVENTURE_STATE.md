@@ -3945,6 +3945,22 @@ CLICKER EN RÉFLEXION (auteur) : rien à changer pour l'instant. GRANDS NOMBRES 
 A10 5,0e15 (×4,6 par Ascension après l'A5) ; suffixes jusqu'à « Dc » (1e33, ~A37) puis notation exponentielle ; limite JS 1,8e308 (~A450).
 
 
+## 18/10 — CALCULATEUR DE DÉFIS : v1 REJETÉ, CAHIER DES CHARGES DU v2 (rien dans le jeu)
+
+v1 (branche `calculateur-defis-v1`, JAMAIS fusionnée ; Google Doc « Paradox — Défis des œufs : actuels vs calculateur v1 ») : 48 min
+par œuf, cibles × (temps visé ÷ temps actuel). REJETÉ PAR L'AUTEUR, À JUSTE TITRE : il multipliait le NOMBRE de niveaux alors que
+les prix montent (Pacte ×2 par niveau). MESURÉ, défi 2 : 6 niveaux = 5 292 pièces, 1 165 taps (≈ 5 min à 4 taps/s) ; « 10 » du v1 =
+85 932 pièces, 9 968 taps (≈ 41 min) — ×8 au lieu de ×1,66 ; le bon nombre pour ×1,66 était 7. Tous les achats du v1 sont faux.
+CAHIER DES CHARGES DU v2 (demande de l'auteur) — le calcul se fait À CHAQUE DÉFI, dans l'ordre, sur l'économie RÉELLE du joueur
+à ce moment (rejouée par le simulateur unique simulerGroupe) : pièces par tap (Pacte, Poigne +1,5, paliers), pièces par seconde
+(auto-clics), rythme de tap (4 / s à la main), achats faits dès qu'ils sont payables. Pour chaque défi : chercher la cible qui donne
+le TEMPS visé (temps par œuf ÷ 8, choisi par l'auteur : fixe ou en montée 35 → 55 min) — pièces : N = temps × (prod/s + rythme × pièces/tap) ;
+taps : temps × rythme ; achats : simulation d'achat jusqu'au temps visé (jamais « × un nombre ») ; production : achats nécessaires ;
+cible dorée : temps ÷ intervalle d'apparition. Inchangés : Aventure, records d'adresse, Ascensions, Sanctuaire / Veilleur, cibles de 1.
+Sortie : le MÊME Google Doc (même lien), colonnes « actuel / v2 » + « temps du défi aujourd'hui / avec v2 » (repère les défis abusés).
+Toutes les règles de l'auteur du wiki restent vraies (coût d'achat qui ne redescend pas, achats 80-100 % du seuil, ordre, etc.).
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
