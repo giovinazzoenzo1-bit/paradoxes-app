@@ -24,12 +24,12 @@ const K = A.load('combatLogic');
 
 // ---- HYPOTHÈSES (toutes ici, réglables) ------------------------------
 const HYP = {
-  tapsParSec: 7,          // décision A de l'auteur (18/10)
-  partTranse: 0.6,        // part des taps en Transe ≥ ×2,5 — rapport de l'auteur (~60 % à 8,1 taps/s)
+  tapsParSec: Number(process.env.TAPS || 7), // décision A de l'auteur (18/10) ; TAPS=16.5 pour rejouer un rapport
+  partTranse: Number(process.env.PART_TRANSE || 0.6), // part des taps en Transe ≥ ×2,5 — rapport de l'auteur (~60 % à 8,1 taps/s)
   delaiPouvoirSec: 5,     // un pouvoir prêt est activé ~5 s plus tard (2 appuis sur le deck)
   secParCombat: 55,       // durée d'un combat d'Aventure (moyenne relevée le 11/10 : ~55 s) — sans tap
   secAction: 5,           // acheter une rune, faire une Offrande, ouvrir un menu
-  secParDefi: 8,          // lire le défi, appuyer sur « Valider », ouvrir le bon menu — sans taper. CALÉ sur
+  secParDefi: Number(process.env.SEC_DEFI || 8), // lire le défi, appuyer sur « Valider », ouvrir le bon menu — sans taper. CALÉ sur
                           // l'œuf 1 : 6,0 min prévus par le v2.1 validé (6,3 min mesurés chez l'auteur)
   part3Etoiles: 0.6,      // victoire à 3 étoiles (hypothèse de griffes-par-source.js)
   diamantsParBoss: 3,     // boss de tap : 200 taps en 28,6 s à 7 taps/s → palier « ≤ 30 s »
