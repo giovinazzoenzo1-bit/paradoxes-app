@@ -3961,6 +3961,21 @@ Sortie : le MÊME Google Doc (même lien), colonnes « actuel / v2 » + « temps
 Toutes les règles de l'auteur du wiki restent vraies (coût d'achat qui ne redescend pas, achats 80-100 % du seuil, ordre, etc.).
 
 
+## 18/10 — À FAIRE EN PRIORITÉ (nouvelle conversation) : MESURES DANS « SIGNALER UN PROBLÈME »
+
+BUT (auteur) : un test MANUEL pour vérifier les prédictions du calculateur v2 (test œuf 1, Google Doc « Paradox — Calculateur de
+défis v2 (test œuf 1) », script sur la branche calculateur-defis-v1). Ajouter au rapport du bouton « Signaler un problème » :
+DEMANDÉ PAR L'AUTEUR : (1) temps de jeu total et par session (nombre de sessions, durée moyenne) ; (2) taps par seconde en moyenne
+(sur le temps où il tape vraiment) ; (3) taps par seconde pendant la Transe.
+PROPOSÉ (utile au calibrage) : (4) position : Ascension, œuf, défi en cours (n°, texte, cible, progression, temps déjà passé dessus) ;
+(5) HISTORIQUE DES DERNIERS DÉFIS avec le TEMPS RÉEL mis pour chacun (apparition → validation) — la mesure clé à comparer au v2 ;
+(6) économie au moment du rapport : pièces, pièces par tap, pièces par seconde, niveaux (Pacte, Poigne, Faveur, Dégâts critiques,
+Sanctuaire, Veilleur), auto-clics possédés ; (7) hors ligne : retours, gains récupérés ; (8) Transe : nombre, durée moyenne, record ;
+(9) cible dorée : apparues / touchées. Garder le rapport lisible (texte court, sections), rien d'envoyé sans le geste du joueur.
+MÉTHODE : compteurs dans ClickerScreen (refs, sauvegardés avec la partie), lus par signalement.js ; zone morte (déclarations avant
+usage) ; un contrôle + sabotage par mesure ; RITUEL COMPLET (c'est du code de jeu).
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
