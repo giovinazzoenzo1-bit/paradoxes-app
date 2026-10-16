@@ -4023,6 +4023,13 @@ plus longtemps que son seuil → appliquer v2.3 = recalculer seuils et prix (AJU
 (3) œuf 1 de l'A0 = tutoriel de l'auteur, jamais recalé ; (4) le connecteur Google DRIVE ne modifie PAS le contenu
 d'un Doc existant (titre seulement) : garder le même lien exige le connecteur Google DOCS.
 NON MODÉLISÉ : éclosion / Gardien / incubation, Griffes des défis du jour, bonus de pièces des pouvoirs (< 3 %).
+GOOGLE DOC (nouveau, choix de l'auteur) : « Paradox — Défis des œufs : temps réels et cibles v2.3 »
+(id 1D3arEJqo_PQ8xueCcHJNV2A0gK3SV70laJ0eeeewgao), généré par `doc-defis-v23.js`, créé par Drive en HTML (balises de fin
+de cellule omises : converties correctement, vérifié). Résultats finaux : 28 h actives aujourd'hui, 119 défis
+instantanés, 25 abusés, v2.3 30 h ; « plancher du jeu » sur 10 défis de revenu/s (+20 % à l'apparition). ⚠️ Corrigé
+en route : la cible relevée À L'APPARITION (cibleEtatAdaptee, appliquée par l'écran, PAS par resolveQuestTarget) et
+l'arrondi des taps « au total » (compteur à vie). Le document « œuf par œuf » de l'auteur (🔴 achat · 🟢 Aventure ·
+⚪ Clicker, une créature par œuf) a été VÉRIFIÉ conforme au jeu (322 / 322) et sa légende reprise dans le Doc.
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
