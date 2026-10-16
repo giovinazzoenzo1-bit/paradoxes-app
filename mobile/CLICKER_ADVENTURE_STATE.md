@@ -3981,6 +3981,20 @@ MÉTHODE : compteurs dans ClickerScreen (refs, sauvegardés avec la partie), lus
 usage) ; un contrôle + sabotage par mesure ; RITUEL COMPLET (c'est du code de jeu).
 
 
+## 18/10 — DÉCISION A (auteur) : CLICKER RECALÉ SUR UN JOUEUR À 7 TAPS/S, DURÉES GARDÉES (32 h) — À FAIRE, RIEN CODÉ
+
+TESTS MANUELS DE L'AUTEUR (rapports « Signaler un problème », œuf 1) : normal 8,1 taps/s (≈ 60 % du temps en Transe, 24 pièces/tap,
+œuf 1 en 6,3 min) ; maximum 20 taps/s à plusieurs doigts (œuf 1 en ≈ 3,5 min). v2.1 (7-8 taps/s, Transe 60 %, Pacte acheté dès que
+possible, achats = ce qui manque) VALIDÉ : œuf 1 prévu 6,0 min contre 6,3 réel (défis à 10-20 % près, sauf le 1er : démarrage plus lent).
+SIMULATEUR DU JEU : il ignore la Transe, les critiques et les POUVOIRS des créatures (×2,4 commun … ×12 légendaire, ×18 mythique,
+10-15 s toutes les 60-270 s → en moyenne ×1,24 à ×1,94). MESURÉ : à 7 taps/s le jeu dure 18,6 h (32,1 h à 4 taps/s) ; MULTIPLIER le
+revenu du tap (×2,8 à ×4,4) NE CHANGE PRESQUE PAS les durées → elles sont tenues par les défis À ATTENTE : Aventure (énergie 7,
+1 toutes les 20 min), cible dorée (45-90 s), records de Transe. ⇒ Recaler seulement pièces et achats ne rendra PAS les 32 h.
+v2.2 À FAIRE : instrumenter simulerGroupe pour noter le TEMPS de CHAQUE défi (7 taps/s, Transe, critiques, pouvoirs par rareté),
+traiter à part les défis à attente, puis chercher chaque cible ; Google Doc v2.2 seulement ensuite. Option C proposée (non décidée) :
+compter 12 taps/s au maximum. Défaut du rapport à corriger : « Défi en cours : ? » (nom manquant, chrono reparti trop tôt).
+
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
