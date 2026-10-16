@@ -31,6 +31,8 @@ export const EMAIL_SIGNALEMENT = 'giovinazzoenzo1@gmail.com';
 // de jeu : si ce dernier plante, les Options peuvent encore en faire un
 // rapport, vieux d'une minute au plus.
 export const DIAGNOSTIC_INSTANTANE_KEY = 'diagnostic:instantane';
+// 17/10 (auteur) : mesures de jeu pour le rapport (temps, rythme de tap, Transe, défis chronométrés…), écrites par l'écran de jeu.
+export const MESURES_JEU_KEY = 'diagnostic:mesures:v1';
 export const DIAGNOSTIC_ERREUR_KEY = 'diagnostic:derniereErreur';
 
 // Un défi sans AUCUN progrès pendant trois heures de jeu ACTIF (appli
@@ -132,7 +134,7 @@ export function detecterBlocages(etat) {
 // dernière erreur.
 const nombre = (v) => (fini(v) ? String(Math.round(v)) : String(v));
 
-export function construireRapport({ instantane, derniereErreur, appareil, build } = {}) {
+export function construireRapport({ instantane, derniereErreur, appareil, build, mesures = null } = {}) {
   const i = instantane || {};
   const b = build || {};
   const lignes = [];
@@ -158,6 +160,22 @@ export function construireRapport({ instantane, derniereErreur, appareil, build 
     lignes.push('- ' + (d.done ? '[fait] ' : '') + (d.label || d.id) + ' — ' + pct
       + ' (' + nombre(d.current) + '/' + nombre(d.target) + ')');
   });
+  // 17/10 (auteur) : MESURES DE JEU — pour vérifier le calculateur de défis par un test manuel (temps réel de chaque défi).
+  const m = mesures;
+  if (m && typeof m === 'object') {
+    const duree = (s) => Math.floor((s || 0) / 60) + ' min ' + Math.round((s || 0) % 60) + ' s';
+    lignes.push('');
+    lignes.push('Mesures de jeu :');
+    lignes.push('- Temps de jeu actif : ' + duree(m.tempsJeuSec) + ' · ouvertures : ' + (m.sessions || 0) + ' · par ouverture : ' + duree((m.tempsJeuSec || 0) / Math.max(1, m.sessions || 1)));
+    lignes.push('- Taps : ' + (m.taps || 0) + ' · rythme moyen : ' + (m.tapsActifsSec > 0 ? (m.taps / m.tapsActifsSec).toFixed(1).replace('.', ',') : '?') + ' taps/s · en Transe : ' + (m.transeSec > 0 ? (m.tapsTranse / m.transeSec).toFixed(1).replace('.', ',') : '?') + ' taps/s');
+    lignes.push('- Transe : ' + (m.transes || 0) + ' fois · durée moyenne : ' + (m.transes ? Math.round(m.transeSec / m.transes) : 0) + ' s · record : ' + Math.round(m.transeMax || 0) + ' s');
+    lignes.push('- Pièces par tap (moyenne) : ' + (m.taps ? Math.round(m.piecesTaps / m.taps) : 0) + ' · revenu passif : ' + nombre(m.revenuPassif || 0) + ' /s');
+    lignes.push('- Cible dorée : ' + (m.doreesApparues || 0) + ' apparues · ' + (m.doreesTouchees || 0) + ' touchées');
+    lignes.push('- Hors ligne : ' + (m.horsLigneRetours || 0) + ' retours · ' + nombre(m.horsLignePieces || 0) + ' pièces');
+    lignes.push('- Défi en cours : ' + (m.defiLabel || m.defiId || '?') + ' depuis ' + duree((m.tempsJeuSec || 0) - (m.defiDebut || 0)));
+    lignes.push('- Temps réel des derniers défis :');
+    (Array.isArray(m.historique) ? m.historique : []).forEach((h) => lignes.push('  · ' + (h.label || h.id) + ' : ' + duree(h.sec)));
+  }
   if (derniereErreur && derniereErreur.message) {
     lignes.push('');
     lignes.push('Dernière erreur' + (derniereErreur.fatal ? ' (fatale)' : '') + ' : '

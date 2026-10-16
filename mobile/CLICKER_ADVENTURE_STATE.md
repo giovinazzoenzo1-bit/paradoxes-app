@@ -3961,7 +3961,12 @@ Sortie : le MÊME Google Doc (même lien), colonnes « actuel / v2 » + « temps
 Toutes les règles de l'auteur du wiki restent vraies (coût d'achat qui ne redescend pas, achats 80-100 % du seuil, ordre, etc.).
 
 
-## 18/10 — À FAIRE EN PRIORITÉ (nouvelle conversation) : MESURES DANS « SIGNALER UN PROBLÈME »
+## 18/10 — ✅ FAIT (même conversation, l'auteur a préféré continuer) : MESURES DANS « SIGNALER UN PROBLÈME »
+CODE : compteurs `mesuresRef` (ClickerScreen, déclarés tôt), clé diagnostic:mesures:v1 (sauvée toutes les 15 s, cumul rechargé au démarrage),
+1 s de jeu ACTIF par tic (minuteurs arrêtés en arrière-plan) ; défis chronométrés = apparition → défi suivant (25 derniers) ;
+rythme = taps ÷ écarts < 1,5 s ; Transe comptée à son début ; signalement.js lit la clé, construireRapport (diagnostic.js) écrit
+la section « Mesures de jeu ». Contrôle auditMesuresRapport + 4 sabotages.
+(Cahier des charges d'origine ci-dessous.)
 
 BUT (auteur) : un test MANUEL pour vérifier les prédictions du calculateur v2 (test œuf 1, Google Doc « Paradox — Calculateur de
 défis v2 (test œuf 1) », script sur la branche calculateur-defis-v1). Ajouter au rapport du bouton « Signaler un problème » :

@@ -672,6 +672,11 @@ const SABOTAGES = [
   // 17/10 : Poigne +1,5, affichage à virgule, « (Élevage) » retiré (demandes de l'auteur).
   ['auditPoigneElevage', path.join(RACINE, 'src/games/clicker/clickerLogic.js'), "la Poigne repasse à +1", remplace("emoji: '✊', bonus: 1.5, cost: 11960,", "emoji: '✊', bonus: 1, cost: 11960,")],
   ['auditPoigneElevage', path.join(RACINE, 'src/games/clicker/dailyLogic.js'), "« (Élevage) » revient dans un défi", remplace("desc: 'Tape 3 000 fois',", "desc: 'Tape 3 000 fois (Élevage)',")],
+  // 17/10 : mesures de jeu du rapport (demande de l'auteur).
+  ['auditMesuresRapport', path.join(RACINE, 'src/games/clicker/diagnostic.js'), "le rapport n'écrit plus les mesures", remplace("  if (m && typeof m === 'object') {\n    const duree", "  if (false) {\n    const duree")],
+  ['auditMesuresRapport', path.join(RACINE, 'src/signalement.js'), "les mesures ne sont plus transmises au rapport", remplace('build, mesures });', 'build, mesures: null });')],
+  ['auditMesuresRapport', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le temps réel des défis n'est plus noté", remplace('if (m.defiId) m.historique = [...m.historique,', 'if (false) m.historique = [...m.historique,')],
+  ['auditMesuresRapport', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le rythme de tap n'est plus mesuré", remplace('m.tapsActifsSec += ecart / 1000;', 'void 0;')],
 ];
 
 // ---- Tolérances : lues dans la suite, JAMAIS recopiées ---------------

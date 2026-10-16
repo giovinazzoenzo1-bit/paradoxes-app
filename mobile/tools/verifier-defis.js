@@ -67,6 +67,7 @@ const CONTROLES = [
   ['auditNiveauMax', "règle de l'auteur (10/10) : aucun niveau max ; la prime paie ~1 niveau par créature, sans rareté ; ennemis à la force moyenne de leur rareté ; ultime ≤ ×2"],
   ['auditSoutienEquipe', "combat : toute l'équipe participe (soutien = moitié d'une attaque normale), dans le vrai combat ET la simulation (09/10)"],
   ['auditJournalDev', "journal des combats pour Claude : verdicts, coups, sorts, spéciaux, équipe, résultat ; bouton d'envoi dans le menu dev (08/10)"],
+  ['auditMesuresRapport', "demande de l'auteur (17/10) : « Signaler un problème » donne le temps de jeu, les taps/s (moyen, en Transe) et le temps réel de chaque défi"],
   ['auditPoigneElevage', "choix de l'auteur (17/10) : Poigne Ancienne +1,5 au même prix par point de tap, affiché « +1,5 » ; plus de « (Élevage) » dans les défis"],
   ['auditTranseEchec', "demande de l'auteur (17/10) : défi de Transe raté → barres à zéro, croix rouges et petite vibration"],
   ['auditDefisLueur', "demandes de l'auteur (17/10) : Esprit avant Main (défis 9 ↔ 11) ; lueurs du défi d'achat dans le Grimoire (chapitre, page, article)"],

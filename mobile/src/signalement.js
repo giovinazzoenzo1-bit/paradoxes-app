@@ -12,7 +12,8 @@
 // bloqué le démarrage de l'app trois fois — on n'en ajoute pas un de
 // plus pour envoyer un mail.
 import { Linking, Share, Platform } from 'react-native';
-import { lienMailto, construireRapport, sujetRapport } from './games/clicker/diagnostic';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { lienMailto, construireRapport, sujetRapport, MESURES_JEU_KEY } from './games/clicker/diagnostic';
 import { BUILD_SHA, BUILD_TIME } from './version';
 
 export function descriptionAppareil() {
@@ -38,7 +39,10 @@ export function descriptionAppareil() {
 // signalement qui plante l'écran serait le comble.
 export async function envoyerRapport({ instantane, derniereErreur } = {}) {
   const build = { sha: BUILD_SHA, time: BUILD_TIME };
-  const corps = construireRapport({ instantane, derniereErreur, appareil: descriptionAppareil(), build });
+  // 17/10 : mesures de jeu (écrites par l'écran de jeu toutes les 15 s) — jamais bloquant si elles manquent.
+  let mesures = null;
+  try { mesures = JSON.parse((await AsyncStorage.getItem(MESURES_JEU_KEY)) || 'null'); } catch (e) { mesures = null; }
+  const corps = construireRapport({ instantane, derniereErreur, appareil: descriptionAppareil(), build, mesures });
   const sujet = sujetRapport(instantane && instantane.problemes, build);
   try {
     await Linking.openURL(lienMailto(sujet, corps));

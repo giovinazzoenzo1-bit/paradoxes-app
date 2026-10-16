@@ -5943,3 +5943,25 @@ function auditPoigneElevage() {
   return pb;
 }
 module.exports.auditPoigneElevage = auditPoigneElevage;
+
+// 17/10 — DEMANDE DE L'AUTEUR : mesures de jeu dans « Signaler un problème » (test manuel du calculateur de défis) : temps de jeu
+// et ouvertures, taps/s moyen et en Transe, Transe (nombre, durée, record), pièces par tap, revenu passif, cible dorée (apparues /
+// touchées), hors ligne, et TEMPS RÉEL de chaque défi (apparition → défi suivant).
+function auditMesuresRapport() {
+  const fs = require('fs'), path = require('path'); const D = load('diagnostic');
+  const pb = [];
+  const t = D.construireRapport({ instantane: { problemes: [], defis: [] }, mesures: { tempsJeuSec: 600, sessions: 2, taps: 2000, tapsActifsSec: 500, tapsTranse: 900, transeSec: 180, transes: 6, transeMax: 70, piecesTaps: 9000, doreesApparues: 8, doreesTouchees: 5, horsLigneRetours: 1, horsLignePieces: 300, revenuPassif: 4, defiId: 'x', defiLabel: 'Défi test', defiDebut: 500, historique: [{ id: 'a', label: 'Obtiens 750 pièces', sec: 188 }] } });
+  for (const attendu of ['Mesures de jeu :', 'rythme moyen : 4,0 taps/s', 'en Transe : 5,0 taps/s', 'Transe : 6 fois', 'Cible dorée : 8 apparues · 5 touchées', 'Temps réel des derniers défis :', 'Obtiens 750 pièces : 3 min 8 s'])
+    if (!t.includes(attendu)) pb.push(`rapport : « ${attendu} » absent`);
+  const Sg = fs.readFileSync(path.join(__dirname, '../src/signalement.js'), 'utf8');
+  if (!Sg.includes('AsyncStorage.getItem(MESURES_JEU_KEY)') || !Sg.includes('build, mesures });')) pb.push("le rapport ne lit plus les mesures de jeu");
+  const Cl = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  const iDecl = Cl.indexOf('const mesuresRef = useRef('), iUse = Cl.indexOf('mesuresRef.current');
+  if (iDecl < 0 || iUse < iDecl) pb.push('mesuresRef doit être déclaré avant tout usage');
+  for (const [txt, quoi] of [['m.tapsActifsSec += ecart / 1000;', 'rythme de tap'], ['mesuresRef.current.transes += 1;', 'nombre de Transes'], ['mesuresRef.current.doreesApparues += 1;', 'cibles dorées apparues'],
+    ['mesuresRef.current.doreesTouchees += 1;', 'cibles dorées touchées'], ['mesuresRef.current.horsLigneRetours += 1;', 'retours hors ligne'],
+    ['if (m.defiId) m.historique = [...m.historique, { id: m.defiId', 'temps réel des défis'], ['AsyncStorage.setItem(MESURES_JEU_KEY, JSON.stringify(m))', 'sauvegarde des mesures']])
+    if (!Cl.includes(txt)) pb.push(`mesure perdue : ${quoi}`);
+  return pb;
+}
+module.exports.auditMesuresRapport = auditMesuresRapport;

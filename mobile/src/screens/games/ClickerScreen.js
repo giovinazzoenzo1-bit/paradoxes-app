@@ -129,7 +129,7 @@ import {
 } from '../../games/clicker/questLogic';
 import { articleDuDefiAchat } from '../../games/clicker/grimoireChapitres';
 // Signalement des blocages — voir `games/clicker/diagnostic.js`.
-import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY } from '../../games/clicker/diagnostic';
+import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY, MESURES_JEU_KEY } from '../../games/clicker/diagnostic';
 import { envoyerRapport } from '../../signalement';
 import {
   combatStatsForCreatureTyped,
@@ -418,6 +418,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   elixirCombatsRef.current = elixirCombats;
   // Défi tout juste validé, à annoncer au joueur. `null` = rien à montrer.
   const [offlineReport, setOfflineReport] = useState(null);
+  // 17/10 (auteur : mesures du rapport « Signaler un problème », test manuel du calculateur de défis) — compteurs de jeu.
+  const mesuresRef = useRef({ tempsJeuSec: 0, sessions: 0, taps: 0, tapsActifsSec: 0, tapsTranse: 0, transeSec: 0, transes: 0, transeMax: 0, transeDebut: 0, dernierTap: 0, piecesTaps: 0, doreesApparues: 0, doreesTouchees: 0, horsLigneRetours: 0, horsLignePieces: 0, revenuPassif: 0, defiId: null, defiLabel: null, defiDebut: 0, historique: [] });
+  const mesuresChargeesRef = useRef(false);
+  const defiCourantRef = useRef({ id: null, label: null });
   const [offlineAdLoading, setOfflineAdLoading] = useState(false);
   const [offlineDoubled, setOfflineDoubled] = useState(false);
   const [boss, setBoss] = useState(null);
@@ -1279,6 +1283,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           // plafonnée à 2 h — le calcul standard des idle games. Le tap
           // n'y entre pas.
           const offline = offlineEarnings(offlineIncome, elapsed);
+          if (offline > 0) { mesuresRef.current.horsLigneRetours += 1; mesuresRef.current.horsLignePieces += offline; }
           // ⚠️⚠️ La somme est bornée à un nombre FINI. `totalEarned` décide
           // de l'Ascension : s'il devenait NaN ou infini, il serait
           // sauvegardé ainsi, et le joueur ne pourrait plus jamais
@@ -1869,6 +1874,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         nextGoldenAtRef.current = now + nextGoldenDelaySec() * 1000;
       } else if (!goldenTargetRef.current && viewRef.current === 'tap' && now >= nextGoldenAtRef.current) {
         const pos = randomRingPosition();
+        mesuresRef.current.doreesApparues += 1;
         setGoldenTarget({ expiresAt: now + GOLDEN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
         jouerSon('etoile-doree-apparition', sonsJeuRef.current); // l'étoile dorée apparaît (07/10)
       }
@@ -1965,7 +1971,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // que par à-coups et restait figé dès que le joueur s'arrêtait, ce
     // qui rendait le défi « tiens 30 secondes » illisible.
     if (newTranseMult >= 2.5) {
-      if (transeStartRef.current === null) transeStartRef.current = now;
+      if (transeStartRef.current === null) { transeStartRef.current = now; mesuresRef.current.transes += 1; mesuresRef.current.transeDebut = now; }
     } else {
       transeStartRef.current = null;
     }
@@ -2000,6 +2006,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const effectiveTapPower =
       tapDamage(tapPowerRef.current) + upgradeBonus.tapFlat + tapUpgradeBonus(tapUpgradesRef.current);
     const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult));
+    // 17/10 : mesures — taps, rythme réel (écarts < 1,5 s), taps en Transe, pièces par tap, plus longue Transe.
+    {
+      const m = mesuresRef.current;
+      const ecart = now - (m.dernierTap || 0);
+      m.taps += 1;
+      m.piecesTaps += gain;
+      if (ecart > 0 && ecart < 1500) {
+        m.tapsActifsSec += ecart / 1000;
+        if (newTranseMult >= 2.5) { m.tapsTranse += 1; m.transeSec += ecart / 1000; }
+      }
+      if (newTranseMult >= 2.5 && m.transeDebut) m.transeMax = Math.max(m.transeMax, (now - m.transeDebut) / 1000);
+      m.dernierTap = now;
+    }
     const finalGain = Math.round(gainCoins(gain));
     Animated.sequence([
       Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
@@ -3465,6 +3484,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const defiTranseRef = useRef(null);
   defiTranseRef.current = currentChallenge && !currentChallengeReussi && (findQuest(currentChallengeId) || {}).metric === 'maxTranseHoldSec'
     ? { cible: currentChallenge.target } : null;
+  defiCourantRef.current = { id: currentChallengeId, label: currentChallenge ? currentChallenge.label : null };
   const echecTranseEnCoursRef = useRef(false);
   const echouerTranse = () => {
     if (echecTranseEnCoursRef.current) return;
@@ -3480,6 +3500,38 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
   const echouerTranseRef = useRef(echouerTranse);
   echouerTranseRef.current = echouerTranse;
+  // 17/10 : MESURES DE JEU — cumul chargé au démarrage, 1 s de jeu ACTIF par tic (minuteurs arrêtés en arrière-plan), temps réel de
+  // chaque défi (apparition → défi suivant), sauvegarde toutes les 15 s. Lues par « Signaler un problème » (signalement.js).
+  useEffect(() => {
+    let vivant = true;
+    AsyncStorage.getItem(MESURES_JEU_KEY).then((t) => {
+      if (!vivant) return;
+      let ancien = null;
+      try { ancien = JSON.parse(t || 'null'); } catch (e) { ancien = null; }
+      const m = mesuresRef.current;
+      if (ancien && typeof ancien === 'object') {
+        ['tempsJeuSec', 'sessions', 'taps', 'tapsActifsSec', 'tapsTranse', 'transeSec', 'transes', 'piecesTaps', 'doreesApparues', 'doreesTouchees', 'horsLigneRetours', 'horsLignePieces']
+          .forEach((k) => { m[k] = (Number(ancien[k]) || 0) + (m[k] || 0); });
+        m.transeMax = Math.max(m.transeMax, Number(ancien.transeMax) || 0);
+        m.historique = [...(Array.isArray(ancien.historique) ? ancien.historique : []), ...m.historique].slice(-25);
+        if (ancien.defiId && ancien.defiId === defiCourantRef.current.id) { m.defiId = ancien.defiId; m.defiLabel = ancien.defiLabel; m.defiDebut = Number(ancien.defiDebut) || 0; }
+      }
+      m.sessions += 1;
+      mesuresChargeesRef.current = true;
+    }).catch(() => { mesuresChargeesRef.current = true; });
+    const id = setInterval(() => {
+      const m = mesuresRef.current;
+      m.tempsJeuSec += 1;
+      m.revenuPassif = passiveIncomeRef.current || 0;
+      const d = defiCourantRef.current;
+      if (mesuresChargeesRef.current && d.id !== m.defiId) {
+        if (m.defiId) m.historique = [...m.historique, { id: m.defiId, label: m.defiLabel, sec: Math.round(m.tempsJeuSec - m.defiDebut) }].slice(-25);
+        m.defiId = d.id; m.defiLabel = d.label; m.defiDebut = m.tempsJeuSec;
+      }
+      if (mesuresChargeesRef.current && m.tempsJeuSec % 15 === 0) AsyncStorage.setItem(MESURES_JEU_KEY, JSON.stringify(m)).catch(() => {});
+    }, 1000);
+    return () => { vivant = false; clearInterval(id); };
+  }, []);
   useEffect(() => {
     const id = setInterval(() => {
       if (transeStartRef.current === null) return;
@@ -3693,6 +3745,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setGoldenTarget(null);
     nextGoldenAtRef.current = Date.now() + nextGoldenDelaySec() * 1000;
     goldenClaimedRef.current += 1;
+    mesuresRef.current.doreesTouchees += 1;
     setGoldenClaimed(goldenClaimedRef.current);
   };
 
