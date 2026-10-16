@@ -4171,6 +4171,26 @@ lui). Garde-fous anti-lassitude à mesurer : aucun défi > 2 × son temps visé 
    d'un défi ; « 1 item > 2 × budget » listé (on change l'item à la main, validé par l'auteur) ; ~6 contrôles de
    l'ancienne règle « cible fixe » à réécrire. Construire sur une BRANCHE et mesurer avant d'appliquer.
 
+## 18/10 — CALCULATEUR DE DÉFIS EN JEU : CODÉ ET PUBLIÉ (étape 1 du cahier des charges)
+
+FAIT : `src/games/clicker/calculDefis.js` (fonctions PURES, partagées jeu / outils) : `tempsViseOeuf` (5 / 7 / 10 min
++ 0,75 tous les 3 œufs), `bonusCreature` / `bonusPouvoirs` ((multiplicateur − 1) × durée ÷ (recharge + 5 s) = 22 / 24 /
+23 / 48 / 81 / 93 %, remise 0 ; 3 MEILLEURES possédées), `productionReference` (7 taps/s × valeurTap de conseilBoutique
+× Transe 2,47 × (1 + pouvoirs) + passif × (1 + pouvoirs « passif »)), `cibleCalculee` (achats : niveaux payables au
+prix réel, prérequis des paliers d'abord, Faveur plafonnée à son utilité ; « Obtiens » : production × temps ; « de
+côté » : poche + production × temps ; revenu/s : générateurs achetés au meilleur rapport ; cible dorée ; pouvoirs ;
+taps à vie ; critiques à 7 taps/s réels ; arrondi VERS LE HAUT ; absolue toujours au-dessus de l'acquis).
+BRANCHÉ dans ClickerScreen, effet d'apparition du défi, EN DERNIER (remplace +20 % / +5 min / règle du total pour ces
+défis ; les autres gardent leurs règles). PIÈCES PROTÉGÉES : piecesProtegeesRef (clé clicker:piecesProtegees:v1),
++ gains d'Offrande (claimOffering), bornées à la poche à chaque photo. Les cibles ÉCRITES restent dans defisEcrits
+(valeur de secours) : DEFIS_PARADOX.md montre donc les anciennes cibles, le jeu les nouvelles.
+CONTRÔLE auditCalculateurDefis (+ 4 sabotages : temps à 3 min, pouvoirs ignorés, Offrande non protégée, calculateur
+débranché). Suite verte (121), 265 sabotages prouvés, taps 20/20, Exploration OK.
+RESTE (étape 2, avec les 3 défis bloquants) : (a) seuils d'Ascension déduits de la chaîne (deck malchanceux, ÷ 0,9) ;
+(b) l'étoile « Conseillé » sur productionReference ; (c) le simulateur (simulerGroupe + joueur v2.3) qui APPELLE
+cibleCalculee → contrôle « chaque défi ≈ temps visé ±20 % » ; (d) « 1 item > 2 × budget » listé ; (e) 2 h hors ligne
+< 100 % d'un défi ; (f) les 3 murs (revenu/s de l'œuf 12 et de l'œuf 26, Volonté du Paradoxe).
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

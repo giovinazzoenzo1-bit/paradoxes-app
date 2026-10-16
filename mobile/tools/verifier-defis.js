@@ -68,6 +68,7 @@ const CONTROLES = [
   ['auditSoutienEquipe', "combat : toute l'équipe participe (soutien = moitié d'une attaque normale), dans le vrai combat ET la simulation (09/10)"],
   ['auditJournalDev', "journal des combats pour Claude : verdicts, coups, sorts, spéciaux, équipe, résultat ; bouton d'envoi dans le menu dev (08/10)"],
   ['auditMesuresRapport', "demande de l'auteur (17/10) : « Signaler un problème » donne le temps de jeu, les taps/s (moyen, en Transe) et le temps réel de chaque défi"],
+  ['auditCalculateurDefis', "demande de l'auteur (18/10) : calculateur de défis en jeu — temps visés 5 / 7 / 10 min (+0,75 tous les 3 œufs), pouvoirs par rareté, pièces protégées (Offrande), cibles jamais nées accomplies"],
   ['auditPoigneElevage', "choix de l'auteur (17/10) : Poigne Ancienne +1,5 au même prix par point de tap, affiché « +1,5 » ; plus de « (Élevage) » dans les défis"],
   ['auditTranseEchec', "demande de l'auteur (17/10) : défi de Transe raté → barres à zéro, croix rouges et petite vibration"],
   ['auditDefisLueur', "demandes de l'auteur (17/10) : Esprit avant Main (défis 9 ↔ 11) ; lueurs du défi d'achat dans le Grimoire (chapitre, page, article)"],

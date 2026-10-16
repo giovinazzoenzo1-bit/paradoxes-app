@@ -5965,3 +5965,56 @@ function auditMesuresRapport() {
   return pb;
 }
 module.exports.auditMesuresRapport = auditMesuresRapport;
+
+// 18/10 — CALCULATEUR DE DÉFIS EN JEU (cahier des charges de l'auteur, calculDefis.js) : temps visés 5 / 7 / 10 min puis
+// +0,75 tous les 3 œufs ; % des pouvoirs par rareté ; les pouvoirs comptent dans la production ; pièces protégées hors
+// budget ; toutes les cibles entières ≥ 1, absolues au-dessus de l'acquis ; branché EN DERNIER à l'apparition du défi ;
+// l'Offrande protège ses pièces.
+function auditCalculateurDefis() {
+  const K = load('calculDefis'); const D = load('defisEcrits'); const C = load('clickerLogic');
+  const fs = require('fs'), path = require('path');
+  const pb = [];
+  const attendu = { 1: 300, 2: 420, 3: 600, 5: 600, 6: 645, 9: 690, 40: 1140 };
+  Object.keys(attendu).forEach((o) => { const t = K.tempsViseOeuf(Number(o)); if (t !== attendu[o]) pb.push(`œuf ${o} : temps visé ${t} s ≠ ${attendu[o]} s (règle de l'auteur)`); });
+  const vise = { commun: 22, peu_commun: 24, rare: 23, epique: 48, legendaire: 81, mythique: 93 };
+  const vu = {};
+  C.CREATURES.forEach((c) => { const b = K.bonusCreature(c.id).tap * 100; if (b > 0) vu[c.rarity] = Math.max(vu[c.rarity] || 0, b); });
+  Object.keys(vise).forEach((r) => { if (!(Math.abs((vu[r] || 0) - vise[r]) <= 1.5)) pb.push(`pouvoir ${r} : +${(vu[r] || 0).toFixed(0)} % ≠ +${vise[r]} %`); });
+  const legendes = C.CREATURES.filter((c) => c.rarity === 'legendaire' || c.rarity === 'mythique').map((c) => c.id);
+  const photoTap = { tapPower: 20, critLevel: 10, critDamageLevel: 5, coins: 0, ascension: 1 };
+  if (!(K.productionReference(photoTap, legendes) > 1.5 * K.productionReference(photoTap, []))) pb.push('les pouvoirs du deck ne comptent plus dans la production de référence');
+  const photos = [];
+  for (let a = 0; a < 6; a++) {
+    const fin = simulerGroupe(a, 4).etat;
+    photos.push({ st: { tapPower: 1, coins: 0, totalEarned: 0, totalTaps: 1000 * a, ascension: a }, cr: a ? C.CREATURES.slice(0, 3).map((c) => c.id) : [] });
+    photos.push({ st: { ...fin, totalTaps: 50000 + 1000 * a, ascension: a }, cr: legendes });
+  }
+  let n = 0;
+  [].concat(...D.DEFIS_ECRITS).forEach((q) => {
+    if (!K.estCalcule(q)) return;
+    photos.forEach(({ st, cr }) => {
+      const c = K.cibleCalculee(q, st, { oeuf: K.oeufDuDefi(q.id), creatures: cr, protegees: 0 });
+      n += 1;
+      if (c === null) { if (!(q.metric === 'powerActivated' && !cr.length) && q.metric !== 'totalCrits') pb.push(`${q.id} : aucune cible calculée`); return; }
+      if (!Number.isInteger(c) || c < 1) pb.push(`${q.id} : cible ${c} (entier ≥ 1 attendu)`);
+      if (q.mode === 'absolute') {
+        const acquis = q.metric === 'coins' ? (st.coins || 0) : q.metric === 'totalTaps' ? (st.totalTaps || 0) : 0;
+        if (c <= acquis) pb.push(`${q.id} : née accomplie (${c} ≤ ${acquis})`);
+      }
+    });
+  });
+  if (n < 100) pb.push(`seulement ${n} cibles calculées : le calculateur ne voit plus les défis`);
+  const achat = [].concat(...D.DEFIS_ECRITS).find((q) => q.metric === 'auto:esprit');
+  const riche = { tapPower: 5, coins: 5e6, ascension: 0 };
+  if (achat && !(K.cibleCalculee(achat, riche, { oeuf: 3, creatures: [], protegees: 5e6 }) < K.cibleCalculee(achat, riche, { oeuf: 3, creatures: [], protegees: 0 })))
+    pb.push('les pièces protégées (Offrande) comptent encore dans le budget : le payeur perd son avance');
+  const Cl = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  const iAchat = Cl.indexOf('const cible = cibleAchatCumulee(q, instantane, q.target);');
+  const iCalc = Cl.indexOf('if (Number.isInteger(cibleCalc) && cibleCalc >= 1) setQuestTargets((prev) => ({ ...prev, [currentChallengeId]: cibleCalc }));');
+  if (iCalc < 0) pb.push("le calculateur n'est plus branché à l'apparition du défi");
+  else if (iAchat >= 0 && iCalc < iAchat) pb.push("le calculateur passe AVANT les règles d'avant : elles écraseraient sa cible");
+  if (!Cl.includes('piecesProtegeesRef.current += Math.max(0, gained || 0);')) pb.push("l'Offrande ne protège plus ses pièces");
+  if (!Cl.includes('const protegees = Math.min(piecesProtegeesRef.current || 0, coinsRef.current || 0);')) pb.push('les pièces protégées ne sont plus bornées à la poche');
+  return pb;
+}
+module.exports.auditCalculateurDefis = auditCalculateurDefis;

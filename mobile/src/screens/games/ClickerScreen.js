@@ -127,6 +127,7 @@ import {
   estEtatAdapte,
   metriqueDuDefi,
 } from '../../games/clicker/questLogic';
+import { cibleCalculee, estCalcule, oeufDuDefi } from '../../games/clicker/calculDefis';
 import { articleDuDefiAchat } from '../../games/clicker/grimoireChapitres';
 // Signalement des blocages — voir `games/clicker/diagnostic.js`.
 import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY, MESURES_JEU_KEY, MESURES_ERREUR_KEY } from '../../games/clicker/diagnostic';
@@ -954,6 +955,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // (1 Diamant dépensé) — la perdre serait un vol.
   const [pendingOfferings, setPendingOfferings] = useState([]);
   const pendingOfferingsRef = useRef([]);
+  // 18/10 — PIÈCES PROTÉGÉES (calculateur de défis : avantage du payeur). Les pièces d'Offrande ne comptent pas dans
+  // la poche de la photo des défis ; bornées à la poche à chaque photo (les dépenser les consomme).
+  const PIECES_PROTEGEES_KEY = 'clicker:piecesProtegees:v1';
+  const piecesProtegeesRef = useRef(0);
+  useEffect(() => {
+    AsyncStorage.getItem(PIECES_PROTEGEES_KEY).then((v) => { piecesProtegeesRef.current = Math.max(0, Number(v) || 0); }).catch(() => {});
+  }, []);
   pendingOfferingsRef.current = pendingOfferings;
   const [ritualTarget, setRitualTarget] = useState(null); // {expiresAt, leftPct, topPct} ou null — bulle "pub" (Rituel)
   const [autoClickers, setAutoClickers] = useState({}); // { esprit: 3, main: 1, ... }
@@ -2805,6 +2813,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setPendingOfferings(next);
     savePendingOfferings(next);
     const gained = Math.round(gainCoins(item.reward));
+    piecesProtegeesRef.current += Math.max(0, gained || 0);
+    AsyncStorage.setItem(PIECES_PROTEGEES_KEY, String(piecesProtegeesRef.current)).catch(() => {});
     spawnPopup(`+${gained}`, item.leftPct, item.topPct, true);
   };
 
@@ -3425,6 +3435,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           return cible < avant ? { ...prev, [currentChallengeId]: cible } : prev;
         });
       }
+    }
+    // ⚠️ 18/10 — CALCULATEUR DE DÉFIS (cahier des charges de l'auteur, calculDefis.js) : achats, pièces, revenu/s,
+    // cible dorée, pouvoirs, taps, critiques → cible calculée sur la photo (poche hors pièces protégées + production
+    // de référence × temps visé), FIGÉE ici. Passe en DERNIER : elle remplace les règles d'avant pour ces défis.
+    if (q && estCalcule(q)) {
+      const protegees = Math.min(piecesProtegeesRef.current || 0, coinsRef.current || 0);
+      piecesProtegeesRef.current = protegees;
+      AsyncStorage.setItem(PIECES_PROTEGEES_KEY, String(protegees)).catch(() => {});
+      const cibleCalc = cibleCalculee(q, instantane, { oeuf: oeufDuDefi(q.id), creatures: (ownedRef.current || []).map((o) => o.id), protegees });
+      if (Number.isInteger(cibleCalc) && cibleCalc >= 1) setQuestTargets((prev) => ({ ...prev, [currentChallengeId]: cibleCalc }));
     }
   }, [currentChallengeId, loaded]);
 
