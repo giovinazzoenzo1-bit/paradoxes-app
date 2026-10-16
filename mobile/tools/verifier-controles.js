@@ -646,7 +646,7 @@ const SABOTAGES = [
   ['auditPacteEnergie', F.combat, "le Pacte du joueur repasse à ×2", remplace('  pacteMultJoueur: 1.5,', '  pacteMultJoueur: 2,')],
   ['auditPacteEnergie', F.combat, "le Pacte du joueur ne coûte plus que 15 %", remplace('  pacteCoutPvJoueur: 0.30,', '  pacteCoutPvJoueur: 0.15,')],
   ['auditPacteEnergie', F.combat, "les ennemis prennent le Pacte réduit du joueur", remplace('const r = lancerSort(sort, avecMana, idx, joueurs, cible, 1, null, true);', 'const r = lancerSort(sort, avecMana, idx, joueurs, cible);')],
-  ['auditCalculateurDefis', F.calcul, "le temps visé dès l'œuf 3 retombe à 3 min", remplace('  return 600 + 45 * Math.floor((n - 3) / 3);', '  return 180 + 45 * Math.floor((n - 3) / 3);')],
+  ['auditCalculateurDefis', F.calcul, "le temps visé dès l'œuf 3 retombe à 3 min", remplace('  return 300 + 45 * Math.floor((n - 3) / 3);', '  return 180 + 45 * Math.floor((n - 3) / 3);')],
   ['auditCalculateurDefis', F.calcul, "les pouvoirs du deck ne comptent plus dans la production", remplace('  return TAPS_REF * valeurTap(e) * TRANSE_MOYENNE * (1 + b.tap) + revenuPassif(e) * (1 + b.passif);', '  return TAPS_REF * valeurTap(e) * TRANSE_MOYENNE + revenuPassif(e);')],
   ['auditCalculateurDefis', F.ecran, "l'Offrande ne protège plus ses pièces (le payeur perd son avance)", remplace('    piecesProtegeesRef.current += Math.max(0, gained || 0);\n', '')],
   ['auditCalculateurDefis', F.ecran, "le calculateur n'est plus branché à l'apparition du défi", remplace('      if (Number.isInteger(cibleCalc) && cibleCalc >= 1) setQuestTargets((prev) => ({ ...prev, [currentChallengeId]: cibleCalc }));\n', '')],

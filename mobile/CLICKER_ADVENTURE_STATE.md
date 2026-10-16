@@ -4166,6 +4166,11 @@ lui). Garde-fous anti-lassitude à mesurer : aucun défi > 2 × son temps visé 
    pièces par seconde » (œuf 12) = 49 h à cause du « +20 % de passif » à l'apparition (à remplacer par le calculateur),
    revenu/s de l'œuf 26 (39 min), « Achète 1 niveau de Volonté du Paradoxe » (72 min, 1 item trop cher).
    ⚠️ L'ancienne ligne « 3 min + 0,75 » était une PROPOSITION de Claude, jamais validée : ne pas la reprendre.
+   ⚠️ 2e RÉGLAGE DE L'AUTEUR (18/10, après test : « l'œuf 1 fait trop long ») — EN VIGUEUR : l'œuf 3 prend le temps
+   qu'avait l'œuf 1 (5 min par défi) ; œufs 1 et 2 nettement plus bas : 2 min (œuf 1), 3,5 min (œuf 2), 5 min dès l'œuf
+   3, puis +0,75 tous les 3 œufs → 14 min à l'œuf 40. MESURÉ : œufs 1 / 2 / 3 = 15 / 23 / 24 min ; Ascensions 2,9 / 4,2 /
+   5,4 / 6,8 / 7,1 / 9,1 h = ~36 h actives (51 h avec le 1er réglage). Le calculateur v2.3 de la branche garde l'ANCIEN
+   réglage dans son tempsViseOeuf : à réaligner sur calculDefis.tempsViseOeuf (qu'il devrait APPELER).
 7. SEUIL D'ASCENSION = pièces gagnées à la fin de la chaîne ÷ 0,9, calé sur un deck MALCHANCEUX ; plus cher accepté.
 8. CONTRÔLES : chaque défi ≈ temps visé ±20 % au simulateur ; jamais impossible ni né accompli ; 2 h hors ligne < 100 %
    d'un défi ; « 1 item > 2 × budget » listé (on change l'item à la main, validé par l'auteur) ; ~6 contrôles de

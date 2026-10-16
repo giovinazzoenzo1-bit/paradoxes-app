@@ -20,13 +20,14 @@ export const TAPS_REF = 7;            // rythme FIXE (le joueur rapide va plus v
 export const TRANSE_MOYENNE = 2.47;   // 60 % des taps en Transe (rapport de l'auteur) → multiplicateur moyen
 export const DELAI_POUVOIR_SEC = 5;   // un pouvoir prêt est activé ~5 s plus tard
 
-// Temps visé par défi, en secondes de jeu actif : 5 min à l'œuf 1, 7 min à l'œuf 2, 10 min dès l'œuf 3, puis
-// +0,75 min tous les 3 œufs (6, 9, 12…). Les défis courts (combat, Transe) sont compensés par ceux-ci.
+// Temps visé par défi, en secondes de jeu actif (auteur, 18/10, 2e réglage : « l'œuf 1 était trop long ; l'œuf 3 doit
+// avoir le temps qu'avait l'œuf 1, et les œufs 1 et 2 nettement moins ») : 2 min à l'œuf 1, 3,5 min à l'œuf 2, 5 min
+// dès l'œuf 3, puis +0,75 min tous les 3 œufs (6, 9, 12…) → 14 min à l'œuf 40.
 export function tempsViseOeuf(oeuf) {
   const n = Math.max(1, Math.floor(Number(oeuf) || 1));
-  if (n === 1) return 300;
-  if (n === 2) return 420;
-  return 600 + 45 * Math.floor((n - 3) / 3);
+  if (n === 1) return 120;
+  if (n === 2) return 210;
+  return 300 + 45 * Math.floor((n - 3) / 3);
 }
 
 // Œuf (1…40) de chaque défi écrit.

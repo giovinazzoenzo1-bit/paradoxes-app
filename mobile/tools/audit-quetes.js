@@ -5974,7 +5974,7 @@ function auditCalculateurDefis() {
   const K = load('calculDefis'); const D = load('defisEcrits'); const C = load('clickerLogic');
   const fs = require('fs'), path = require('path');
   const pb = [];
-  const attendu = { 1: 300, 2: 420, 3: 600, 5: 600, 6: 645, 9: 690, 40: 1140 };
+  const attendu = { 1: 120, 2: 210, 3: 300, 5: 300, 6: 345, 9: 390, 40: 840 }; // 2e réglage de l'auteur (18/10)
   Object.keys(attendu).forEach((o) => { const t = K.tempsViseOeuf(Number(o)); if (t !== attendu[o]) pb.push(`œuf ${o} : temps visé ${t} s ≠ ${attendu[o]} s (règle de l'auteur)`); });
   const vise = { commun: 22, peu_commun: 24, rare: 23, epique: 48, legendaire: 81, mythique: 93 };
   const vu = {};
