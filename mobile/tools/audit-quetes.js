@@ -2272,10 +2272,17 @@ module.exports.auditDocConforme = auditDocConforme;
 function simulerGroupe(ascension, tapsParSec, options) {
   const a = ascension;
   const taps = tapsParSec || H.tapsParSec;
+  // ⚠️ v2.3 (18/10, calculateur de défis — HORS DU JEU) : `options.defis` = un JOUEUR QUI FAIT LES
+  // DÉFIS, défi après défi, DANS CETTE BOUCLE (même économie, mêmes achats au meilleur rapport).
+  // Sans cette option, RIEN ne change : chaque ligne du mode par défaut est restée telle quelle
+  // (empreinte des sorties comparée avant / après, A0-A6, 4 cadences, avec et sans pause).
+  // Le joueur est décrit dans `mobile/tools/calculateur-defis-v23.js` ; ici seulement les crochets.
+  const J = options && options.defis;
   // Intervalle entre deux pauses : la durée SANS pause divisée en N+1.
   // Une seule passe préalable, sans pause, sert d'estimation.
   const sansPause = options && options.sansPause;
-  const nbPauses = sansPause ? 0 : (H.pausesParGroupe || 0);
+  // v2.3 : pas de pauses forfaitaires — les attentes d'ÉNERGIE sont celles des vrais défis d'Aventure.
+  const nbPauses = (sansPause || J) ? 0 : (H.pausesParGroupe || 0);
   const intervallePause = nbPauses > 0
     ? simulerGroupe(a, taps, { sansPause: true }).tActif / (nbPauses + 1) : 0;
   const s = etatInitial();
@@ -2283,6 +2290,8 @@ function simulerGroupe(ascension, tapsParSec, options) {
   s.tapPower = 1;
   s.coins = 0;
   s.totalEarned = 0;
+  // v2.3 : reprise d'un état photographié à l'apparition d'un défi (recherche de sa cible).
+  if (J && options.depart) Object.assign(s, JSON.parse(JSON.stringify(options.depart.s)));
   const rev = () => {
     const passif = C.passiveRate({
       autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
@@ -2310,11 +2319,14 @@ function simulerGroupe(ascension, tapsParSec, options) {
     //     défi 17 atteint en 20 min · défi 32 en 50 min · A0 en 1 h 05
     // Il vaut ce qu'il vaut : la mesure, pas l'intuition. À revoir dès
     // qu'un chrono le contredit.
+    // v2.3 : Transe, critiques et pouvoirs EXPLICITES du joueur (à la place du coefficient calé).
+    if (J) return passif * J.facteurPassif(s) + (C.tapDamage(s.tapPower) + C.tapUpgradeBonus(s.tapUpgrades || {}))
+      * taps * mult * J.facteurTap(s);
     return passif + (C.tapDamage(s.tapPower) + C.tapUpgradeBonus(s.tapUpgrades || {}))
       * taps * mult * H.facteurJoueurReel;
   };
   const seuil = C.ascensionThreshold(a);
-  let t = 0, garde = 0, passifFinal = 0;
+  let t = (J && options.depart) ? options.depart.t : 0, garde = 0, passifFinal = 0;
   // Jalon de DÉPART : sans lui, un défi de l'œuf 1 n'aurait aucun état
   // de référence et le contrôle de faisabilité le laisserait passer.
   // ⚠️ Chaque jalon note aussi la PRODUCTION (tap + passif) du moment.
@@ -2323,7 +2335,7 @@ function simulerGroupe(ascension, tapsParSec, options) {
   const jalons = [{ t: 0, passif: 0, production: rev() }];
   let prochainePause = intervallePause;
   let pausesFaites = 0;
-  while (s.totalEarned < seuil && garde++ < 20000) {
+  while ((J ? !J.fini : s.totalEarned < seuil) && garde++ < (J ? 400000 : 20000)) {
     // Pause d'énergie : gains hors ligne crédités, temps actif inchangé.
     if (nbPauses > 0 && pausesFaites < nbPauses && t >= prochainePause) {
       prochainePause += intervallePause;
@@ -2357,8 +2369,52 @@ function simulerGroupe(ascension, tapsParSec, options) {
       s.autoClickers = sauve.ac; s.tapUpgrades = sauve.tu; s.tapPower = sauve.tp;
       o.score = o.gain > 0 ? Math.max(0, (o.cout - s.coins) / r) + o.cout / o.gain : Infinity;
     });
+    // v2.3 : le joueur des défis voit AUSSI les achats dont il modélise l'effet (Faveur, Dégâts critiques,
+    // Sanctuaire — l'étoile « Conseillé » du Grimoire les propose) ; même score que les autres.
+    if (J && J.optionsEco) J.optionsEco(s).forEach((o) => {
+      const avant = s[o.champ];
+      s[o.champ] = (avant || 0) + 1;
+      o.gain = rev() - r;
+      s[o.champ] = avant;
+      o.score = o.gain > 0 ? Math.max(0, (o.cout - s.coins) / r) + o.cout / o.gain : Infinity;
+      options.push(o);
+    });
     options.sort((x, y) => x.score - y.score);
     const v = options[0];
+    // ⚠️ v2.3 — le joueur des défis décide de CE pas : l'achat au meilleur rapport (v), un achat
+    // FORCÉ par le défi en cours, ou rien (épargne) ; jusqu'où avancer (horizon : le défi peut finir
+    // avant) ; un combat d'Aventure (pas de revenu de tap) ou une attente d'énergie HORS LIGNE (gains
+    // par LA fonction du jeu, temps actif inchangé — comme les anciennes pauses).
+    if (J) {
+      const d = J.decider(t, s, r, v && isFinite(v.score) ? v : null, seuil);
+      if (J.fini) break;
+      if (d.pause > 0) {
+        const pf = C.passiveRate({ autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
+          sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a });
+        const gain = C.offlineEarnings(pf, d.pause);
+        s.coins += gain; s.totalEarned += gain; pausesFaites += 1;
+        J.avancer(0, s, d);
+        continue;
+      }
+      const rr = d.combat ? J.revenuCombat(s) : r;
+      const achat = d.achat;
+      const attente = !achat ? Infinity : (s.coins >= achat.cout ? 0 : (rr > 0 ? (achat.cout - s.coins) / rr : Infinity));
+      const pas = Math.min(attente, d.horizon);
+      if (!isFinite(pas)) { J.bloque(t, s); break; }
+      t += pas;
+      s.coins += rr * pas;
+      s.totalEarned += rr * pas;
+      J.avancer(pas, s, d);
+      if (achat && attente <= d.horizon) {
+        jalons.push({ t, quoi: achat.quoi, cout: achat.cout, production: rr, passif: C.passiveRate({
+          autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
+          sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a }) });
+        s.coins -= achat.cout;
+        achat.appliquer(s);
+        J.achete(achat, s, t);
+      }
+      continue;
+    }
     if (!v || !isFinite(v.score)) { t += (seuil - s.totalEarned) / r; break; }
     const attente = Math.max(0, (v.cout - s.coins) / r);
     const restant = (seuil - s.totalEarned) / r;
