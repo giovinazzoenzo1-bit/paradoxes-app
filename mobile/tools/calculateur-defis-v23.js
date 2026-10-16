@@ -284,7 +284,12 @@ function creerJoueur(a, V, depart, opts = {}) {
     if (opts.photos) J.photos[J.i] = { s: copie(s), t, V: copie(V) };
     const st = statsJeu(a, s, V);
     const m = Q.metriqueDuDefi(q, st);
-    const cible = Q.resolveQuestTarget(q, st);
+    // Comme l'écran à l'apparition du défi (ClickerScreen, effet sur currentChallengeId) : cible résolue, puis
+    // défi d'ÉTAT relevé (cibleEtatAdaptee : +20 % de passif, +5 min de production, +5 niveaux, +2) et achat
+    // ramené à ce qui manque (cibleAchatCumulee). ⚠️ Oublié dans le 1er essai : « de côté » et revenu/s trop courts.
+    let cible = Q.resolveQuestTarget(q, st);
+    if (q.mode === 'absolute' && Q.estEtatAdapte(m)) { const c2 = Q.cibleEtatAdaptee(q, st, q.target); if (Number.isInteger(c2) && c2 >= 1 && c2 > cible) cible = c2; }
+    if (q.mode === 'delta' && Q.estAchatAdaptable(m)) { const c3 = Q.cibleAchatCumulee(q, st, q.target); if (Number.isInteger(c3) && c3 >= 1 && c3 < cible) cible = c3; }
     const c = { id: q.id, m, mode: q.mode, ecrite: q.target, cible, oeuf, oeufDuGroupe, debutT: t, debutMur: V.mur,
       base: q.mode === 'delta' ? valeur(m, s) : 0, crits: 0, ecoule: 0, duree: 0, label: q.label(cible),
       prelude: HYP.secParDefi };

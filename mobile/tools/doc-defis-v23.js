@@ -9,11 +9,33 @@ const tous = D.DEFIS_ECRITS.flat();
 const nb = (x) => Number(x).toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ');
 const duree = (x) => (!isFinite(x) ? 'bloqué' : x < 60 ? Math.round(x) + ' s' : x < 3600 ? (x / 60).toFixed(1).replace('.', ',') + ' min' : (x / 3600).toFixed(1).replace('.', ',') + ' h');
 const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+// Légende du document « Défis Paradox — œuf par œuf » de l'auteur : 🔴 achat · 🟢 Aventure / créatures · ⚪ Clicker.
+const VERT = ['advLevelReached', 'battleWon', 'threeStarLevel', 'maxCreatureLevel', 'runeBought', 'powerActivated'];
+const typeDe = (m) => (VERT.includes(m) ? '🟢' : (m === 'tapPower' || m === 'critLevel' || m === 'critDamageLevel'
+  || m === 'sanctuaryLevel' || m === 'veilleurLevel' || m.startsWith('auto:') || m.startsWith('tapUpgrade:')) ? '🔴' : '⚪');
+// Créature de chaque œuf : lue dans DEFIS_PARADOX.md (« ### ŒUF 1  →  Pyrosile »), généré par generer-doc.py.
+const CREATURE = {};
+require('fs').readFileSync(path.join(__dirname, '../DEFIS_PARADOX.md'), 'utf8').split('\n').forEach((l) => {
+  const m = l.match(/^### ŒUF (\d+)\s+→\s+(.+)$/); if (m) CREATURE[Number(m[1])] = m[2].trim();
+});
 const td = (t, gras) => `<td>${gras ? '<b>' + esc(t) + '</b>' : esc(t)}</td>`;
 let h = '<html><head><meta charset="utf-8"></head><body>';
 h += '<h1>Défis des œufs : temps réels et cibles v2.3</h1>';
+{
+  const auj = R.aujourdhui.flat(), tous23 = R.v23.map((v) => v.lignes).flat();
+  const inst = auj.filter((x) => x.actif <= 15).length;
+  const abus = R.aujourdhui.reduce((t, L, a) => t + L.filter((x) => x.actif > 3 * R.v23[a].tau).length, 0);
+  const rap = []; for (let a = 2; a < 6; a++) R.v23[a].lignes.forEach((x, i) => { const y = R.aujourdhui[a][i]; if (['coins', 'totalEarned'].includes(x.m) && !x.note) rap.push(x.ecriteV23 / y.ecrite); });
+  rap.sort((u, w) => u - w);
+  const R2 = { min: '×' + nb(Math.round(rap[0])), max: '×' + nb(Number(rap[rap.length - 1].toPrecision(1))) };
+  const hA = (L) => (L.reduce((t, x) => t + x.actif, 0) / 3600).toFixed(0);
+  h += `<h2>Conclusion</h2><p>Pour un joueur à 7 taps/s, les défis de pièces et d'achats ne freinent presque plus rien : <b>${inst} défis sur ${auj.length} durent 15 s ou moins</b>. À l'inverse, <b>${abus} défis prennent plus de 3 fois le temps visé</b>, surtout la cible dorée (40 à 64 touches, jusqu'à 1,2 h) et quelques « Achète 1 niveau » d'un palier déjà monté. La durée du jeu (${hA(auj)} h actives aujourd'hui) est tenue par la cible dorée, les pouvoirs et l'énergie de l'Aventure.</p>`;
+  h += `<p><b>Recommandation :</b> recaler d'abord la cible dorée et les pouvoirs (gros écarts, sans effet sur l'économie), remesurer, puis recalculer seuils et prix avant de toucher aux pièces et aux achats des Ascensions 2 à 5, où les cibles v2.3 en pièces sont ${R2.min} à ${R2.max} : l'économie croît de façon exponentielle quand un groupe dure plus longtemps que son seuil. « Plancher du jeu » : la règle d'apparition (+20 % de revenu/s, +5 min de production) dépasse déjà le temps visé ; avec plus de générateurs, le +20 % devient un mur (A2 : jusqu'à 2,3 h). Rien n'est appliqué au jeu.</p>`;
+  h += '<h2>Méthode</h2>';
+}
 h += `<p>Calculateur v2.3, hors du jeu (rien n'est modifié). Chaque défi est chronométré dans la boucle de <b>simulerGroupe</b> : le joueur de référence (celui des 32 h, achats au meilleur rapport) fait les défis dans l'ordre, à <b>7 taps/s</b>, avec la <b>Transe</b> (60 % des taps, ×${R.TRANSE.moyen.toFixed(2).replace('.', ',')} en moyenne), ses <b>critiques</b> réels et les <b>pouvoirs</b> de son deck (tirage des œufs du jeu). Cibles résolues par la fonction du jeu (règle du total, +20 % de passif, +5 min de production…). Temps = jeu ACTIF ; l'attente d'énergie de l'Aventure (hors ligne) est comptée à part.</p>`;
 h += `<p>Temps visé par défi (décision A, durées gardées : 32 h) = durée actuelle de l'Ascension ÷ œufs ÷ 8. Recalés : pièces, de côté, revenu/s, taps, critiques, cible dorée, pouvoirs, achats. Inchangés (=) : Aventure, records (Transe, taps d'affilée), Ascension, Sanctuaire, Veilleur, Offrande, cibles de 1, œuf 1 (tutoriel). En gras : la nouvelle cible.</p>`;
+h += '<p>Légende (document « œuf par œuf ») : 🔴 achat · 🟢 Aventure et créatures · ⚪ Clicker.</p>';
 h += '<table border="1"><tr><th>Ascension</th><th>Visé par défi</th><th>Aujourd\'hui (actif)</th><th>v2.3 (actif)</th><th>Défis instantanés</th><th>Attente d\'énergie</th></tr>';
 for (let a = 0; a < 6; a++) {
   const auj = R.aujourdhui[a], v = R.v23[a];
@@ -30,12 +52,12 @@ for (let a = 0; a < 6; a++) {
     n += 1;
     const q = tous[n - 1];
     const y = R.v23[a].lignes[i] || {};
-    if (x.oeuf !== oeuf) { oeuf = x.oeuf; h += `<tr><td colspan="5"><b>Œuf ${oeuf}</b></td></tr>`; }
+    if (x.oeuf !== oeuf) { oeuf = x.oeuf; h += `<tr><td colspan="5"><b>Œuf ${oeuf}${CREATURE[oeuf] ? ' → ' + CREATURE[oeuf] : ''}</b></td></tr>`; }
     const change = y.ecriteV23 !== undefined && y.ecriteV23 !== q.target;
     const attente = x.attente > 1 ? ` (+${duree(x.attente)} d'énergie)` : '';
     const attV = y.attente > 1 ? ` (+${duree(y.attente)})` : '';
-    h += '<tr>' + td(n) + td(q.label(q.target)) + td(duree(x.actif) + attente)
-      + td(change ? nb(y.ecriteV23) : '=', change) + td(y.actif !== undefined ? duree(y.actif) + attV : '—') + '</tr>';
+    h += '<tr>' + td(n) + td(typeDe(q.metric) + ' ' + q.label(q.target)) + td(duree(x.actif) + attente)
+      + td(change ? nb(y.ecriteV23) : y.note ? '= (plancher du jeu)' : '=', change) + td(y.actif !== undefined ? duree(y.actif) + attV : '—') + '</tr>';
   });
   h += '</table>';
 }
