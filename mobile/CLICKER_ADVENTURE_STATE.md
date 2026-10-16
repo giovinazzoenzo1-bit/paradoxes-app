@@ -4036,6 +4036,11 @@ SEC_DEFI=4) : 7 premiers défis 3,4 min prévus contre 3,2 min mesurés (+6 %) ;
 (démarrage, 12 s contre 18 s) et cible dorée (hasard 45-90 s : 108 s contre 91 s). 8 min de jeu actif pour ~2 h d'appli
 ouverte (7 079 s) : attente d'énergie probable au chapitre 1 (le calculateur prévoit +54 min). ⚠️ Rapport COUPÉ après le
 7e défi (« … » en plein mot) : temps de l'œuf 2 manquants.
+PRÉCISION DE L'AUTEUR : le rapport ne chronomètre QUE l'œuf 1 (pas une coupure du message) ; œuf 2 terminé en ~2 min.
+Calculateur à son rythme : 1,6 min pour les 7 défis clicker de l'œuf 2 (cohérent) ; son Aventure du chapitre 1 est
+bien plus rapide que le modèle (55 s par combat, joueur moyen : 8,7 combats). ⚠️ BUG DU RAPPORT (déjà vu : « Défi en
+cours : ? ») : les défis après l'œuf 1 ne sont pas enregistrés. Cause NON trouvée à la lecture (defiCourantRef suit
+currentChallengeId) → section 5 : afficher la valeur dans le jeu avant tout correctif. En attente du go de l'auteur.
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
