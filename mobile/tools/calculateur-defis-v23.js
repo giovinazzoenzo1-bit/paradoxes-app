@@ -34,6 +34,9 @@ const HYP = {
   part3Etoiles: 0.6,      // victoire à 3 étoiles (hypothèse de griffes-par-source.js)
   diamantsParBoss: 3,     // boss de tap : 200 taps en 28,6 s à 7 taps/s → palier « ≤ 30 s »
   victoireRejeu: 0.95,    // combat REJOUÉ (Aventure au verrou de fin d'Ascension)
+  plafondVerrou: process.env.PLAFOND_VERROU !== '0', // correctif proposé du « +5 niveaux » (voir demarrer)
+  combatDesQuePlein: process.env.COMBAT_PLEIN !== '0', // l'auteur (18/10) : un joueur ne laisse pas sa barre pleine — il
+                          // combat dès qu'elle l'est, même hors défi d'Aventure (sinon la recharge est perdue)
   joueursMC: 600,         // Monte-Carlo des œufs (créatures → pouvoirs du deck)
   graine: 20261018,
 };
@@ -252,7 +255,7 @@ function creerJoueur(a, V, depart, opts = {}) {
     return 1;
   };
   const combat = () => {
-    V.energie -= 1;
+    V.energie -= 1; V.av.combats = (V.av.combats || 0) + 1;
     if (V.av.n >= cap) { V.av.victoires += HYP.victoireRejeu; V.av.trois += HYP.victoireRejeu * HYP.part3Etoiles; return; }
     const p = pVictoire(V.av.n + 1);
     V.av.prog += p; V.av.victoires += p; V.av.trois += p * HYP.part3Etoiles;
@@ -290,6 +293,10 @@ function creerJoueur(a, V, depart, opts = {}) {
     let cible = Q.resolveQuestTarget(q, st);
     if (q.mode === 'absolute' && Q.estEtatAdapte(m)) { const c2 = Q.cibleEtatAdaptee(q, st, q.target); if (Number.isInteger(c2) && c2 >= 1 && c2 > cible) cible = c2; }
     if (q.mode === 'delta' && Q.estAchatAdaptable(m)) { const c3 = Q.cibleAchatCumulee(q, st, q.target); if (Number.isInteger(c3) && c3 >= 1 && c3 < cible) cible = c3; }
+    // ⚠️ 18/10 — TROU DU JEU trouvé ici : le « +5 niveaux » d'Aventure n'est PAS plafonné au verrou de fin d'Ascension
+    // (cibleEtatAdaptee ; le Sanctuaire et le Veilleur le sont). Un joueur à 4 étapes du verrou reçoit une cible
+    // inatteignable → œuf bloqué. Simulé ici AVEC le correctif proposé (plafond au verrou), sinon la partie ne finit pas.
+    if (m === 'advLevelReached' && HYP.plafondVerrou) cible = Math.min(cible, cap);
     const c = { id: q.id, m, mode: q.mode, ecrite: q.target, cible, oeuf, oeufDuGroupe, debutT: t, debutMur: V.mur,
       base: q.mode === 'delta' ? valeur(m, s) : 0, crits: 0, ecoule: 0, duree: 0, label: q.label(cible),
       prelude: HYP.secParDefi };
@@ -322,6 +329,8 @@ function creerJoueur(a, V, depart, opts = {}) {
     }
     const c = J.courant; const m = c.m;
     if (t - c.debutT > 400 * 3600) { J.bloque(t); return {}; }
+    if (HYP.combatDesQuePlein && !AVENTURE.includes(m) && !DUREE_FIXE.includes(m) && m !== 'totalCrits' && m !== 'totalTaps'
+      && V.energie >= K.ENERGY_MAX - 1e-9 && V.av.n < cap) return { achat: null, horizon: HYP.secParCombat, combat: true };
     if (ACHATS(m) || m === 'sanctuaryLevel' || m === 'veilleurLevel') return { achat: achatDe(m, s), horizon: Infinity };
     if (m === 'passiveIncome') return { achat: achatPassif(s), horizon: Infinity };
     if (m === 'coins') return { achat: null, horizon: r > 0 ? Math.max(1e-6, (c.cible - s.coins) / r) : Infinity };
