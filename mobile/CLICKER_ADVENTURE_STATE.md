@@ -4196,6 +4196,18 @@ RESTE (étape 2, avec les 3 défis bloquants) : (a) seuils d'Ascension déduits 
 cibleCalculee → contrôle « chaque défi ≈ temps visé ±20 % » ; (d) « 1 item > 2 × budget » listé ; (e) 2 h hors ligne
 < 100 % d'un défi ; (f) les 3 murs (revenu/s de l'œuf 12 et de l'œuf 26, Volonté du Paradoxe).
 
+## 18/10 — FAUSSES PUBS (demande de l'auteur) — PUBLIÉ
+
+FAIT (commencé par une 2e copie lancée par « Réessayer » sur un autre fil de la conversation, coupée avant de publier ;
+repris et vérifié par la copie principale, avec l'accord de l'auteur) : `src/components/FaussePub.js` = écran plein de
+15 s, impossible à fermer (onRequestClose vide), récompense SEULEMENT au bouton « Récupérer » (pas de vraie régie pub) ;
+menu des Runes : « 📺 Pub : +1 ✨ poudre » ; écran principal : « 📺 Tap ×2 · 2 min » (PUB_BOOST_TAP_MULT 2,
+PUB_BOOST_TAP_SEC 120, multiplie le gain du tap, bouton caché pendant le bonus : pas de cumul) — la photo des défis
+(calculDefis) IGNORE ce bonus : c'est la récompense de la pub. « Achète une rune » : retiré de CYCLE_SCOPED_METRICS →
+compte depuis l'APPARITION du défi (le défi 22 était validé d'office par une rune achetée plus tôt dans le cycle).
+⚠️ La note « aucun boost temporaire de pièces » du calculateur n'est plus vraie : le Tap ×2 en est un, exclu exprès.
+CONTRÔLE auditFaussePub + 3 sabotages (pub à 5 s, Tap ×2 non appliqué, rune de nouveau validable d'office).
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

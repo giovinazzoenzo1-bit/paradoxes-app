@@ -18,6 +18,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { DIAMOND_OFFERS } from './DiamondShop';
+import FaussePub from '../../components/FaussePub';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
@@ -677,6 +678,9 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const [griffes, setGriffes] = useState(0);
   // ✨ Poudre runique (10/10) : la monnaie des runes (gagnée à chaque 1re victoire d'étape).
   const [poudre, setPoudre] = useState(0);
+  // 18/10 (auteur) : fausse pub de 15 s dans le menu des Runes → +1 poudre runique.
+  const [pubPoudre, setPubPoudre] = useState(false);
+  const finPubPoudre = () => { setPubPoudre(false); setPoudre((p) => p + 1); };
   // 11/10 — DIFFICULTÉ PAR FENÊTRES (système de l'auteur) : une photo par fenêtre de 5 étapes { [k]: { niveaux, difficultes, t } },
   // et l'avantage payant { niveau: 0 | 1 | 2, restant: étapes } (−1 ou −2 crans, 20 étapes).
   const [fenetres, setFenetres] = useState({});
@@ -1391,6 +1395,9 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   if (runesOpen) {
     return avecBoutique(
       <RunesScreen
+        onPubPoudre={() => setPubPoudre(true)}
+        pubPoudre={pubPoudre}
+        onFinPubPoudre={finPubPoudre}
         poudre={poudre}
         ownedRunes={ownedRunes}
         onBuyRune={avecSon(buyRandomRune, 'rune-tirage')}
@@ -3508,7 +3515,7 @@ function RuneShopPanel({ width, poudre, specialOffer, onBuyRandom, onBuyPack, on
 
 // 10/10 : freeRuneDraw / onUseFreeDraw étaient PASSÉS par le parent mais jamais déclarés ici, donc jamais transmis à la
 // boutique : le « tirage offert » ne pouvait pas s'afficher (trouvé en croisant les props, règle du projet).
-function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, freeRuneDraw = false, onUseFreeDraw, specialOffer, onFuseAll, onBuyGriffes, onBack }) {
+function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, freeRuneDraw = false, onUseFreeDraw, specialOffer, onFuseAll, onBuyGriffes, onBack, onPubPoudre = null, pubPoudre = false, onFinPubPoudre = null }) {
   // Écran de fusion dédié (30/08) — remplace l'ancien mode "tape une
   // rune puis retape une pareille", pas très intuitif (fallait deviner
   // quelle rune correspondait à quelle autre). Regroupe automatiquement
@@ -3548,6 +3555,7 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
       {/* Paysage : la boutique occupe la colonne de DROITE, la
           collection celle de gauche. La hauteur est la ressource rare en
           paysage, on ne l'empile pas verticalement. */}
+      <FaussePub visible={pubPoudre} recompense="+1 poudre runique ✨" onFin={onFinPubPoudre} />
       <View style={styles.runesBody}>
         {/* GAUCHE : la boutique, sur toute la colonne. */}
         <View style={styles.runesShopCol} onLayout={(e) => setShopW(e.nativeEvent.layout.width)}>
@@ -3562,6 +3570,11 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
               freeRuneDraw={freeRuneDraw}
               onUseFreeDraw={onUseFreeDraw ? withReveal(onUseFreeDraw) : undefined}
             />
+          )}
+          {onPubPoudre && (
+            <TouchableOpacity onPress={onPubPoudre} style={styles.pubPoudre} accessibilityLabel="Regarder une pub pour une poudre runique">
+              <Text style={styles.pubPoudreTexte}>📺 Pub : +1 ✨ poudre</Text>
+            </TouchableOpacity>
           )}
 
           {/* Bouton INVENTAIRE : la plaque en bois EST le bouton. Sa
@@ -3795,6 +3808,8 @@ function FighterSelectOverlay({ levelNumber, attentePhoto = false, owned, deck, 
 }
 
 const styles = StyleSheet.create({
+  pubPoudre: { alignSelf: 'center', marginTop: 8, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16, backgroundColor: '#2b2342', borderWidth: 1, borderColor: '#f2c94c' },
+  pubPoudreTexte: { color: '#f2c94c', fontSize: 14, fontWeight: '700' },
   // Aide des éléments et choix d'une rune (06/10, fenêtre maison)
   elemCycle: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   elemFleche: { color: '#ffd96a', fontSize: 16, fontWeight: '900', marginHorizontal: 2 },

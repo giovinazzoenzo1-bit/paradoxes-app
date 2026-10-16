@@ -128,6 +128,8 @@ import {
   metriqueDuDefi,
 } from '../../games/clicker/questLogic';
 import { cibleCalculee, estCalcule, oeufDuDefi } from '../../games/clicker/calculDefis';
+import FaussePub from '../../components/FaussePub';
+import { PUB_BOOST_TAP_MULT, PUB_BOOST_TAP_SEC } from '../../games/clicker/clickerLogic';
 import { articleDuDefiAchat } from '../../games/clicker/grimoireChapitres';
 // Signalement des blocages — voir `games/clicker/diagnostic.js`.
 import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY, MESURES_JEU_KEY, MESURES_ERREUR_KEY } from '../../games/clicker/diagnostic';
@@ -955,6 +957,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // (1 Diamant dépensé) — la perdre serait un vol.
   const [pendingOfferings, setPendingOfferings] = useState([]);
   const pendingOfferingsRef = useRef([]);
+  // 18/10 (auteur) : fausse pub de 15 s sur l'écran principal → taps ×2 pendant 2 min (pas de cumul : bouton caché
+  // pendant le bonus). La photo des défis ne lit pas ce bonus : c'est la récompense de la pub.
+  const [pubTap, setPubTap] = useState(false);
+  const [boostTapJusqua, setBoostTapJusqua] = useState(0);
+  const boostTapJusquaRef = useRef(0);
+  const finPubTap = () => {
+    setPubTap(false);
+    const fin = Date.now() + PUB_BOOST_TAP_SEC * 1000;
+    boostTapJusquaRef.current = fin;
+    setBoostTapJusqua(fin);
+  };
   // 18/10 — PIÈCES PROTÉGÉES (calculateur de défis : avantage du payeur). Les pièces d'Offrande ne comptent pas dans
   // la poche de la photo des défis ; bornées à la poche à chaque photo (les dépenser les consomme).
   const PIECES_PROTEGEES_KEY = 'clicker:piecesProtegees:v1';
@@ -2013,7 +2026,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // deux fois trop puissant.
     const effectiveTapPower =
       tapDamage(tapPowerRef.current) + upgradeBonus.tapFlat + tapUpgradeBonus(tapUpgradesRef.current);
-    const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult));
+    const boostPub = now < boostTapJusquaRef.current ? PUB_BOOST_TAP_MULT : 1; // pub « Tap ×2 » (18/10)
+    const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult * boostPub));
     // 17/10 : mesures — taps, rythme réel (écarts < 1,5 s), taps en Transe, pièces par tap, plus longue Transe.
     {
       const m = mesuresRef.current;
@@ -4303,6 +4317,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 <OfferingBubble key={o.id} target={o} onClaim={() => claimOffering(o.id)} />
               ))}
               {ritualTarget && <RitualBubble target={ritualTarget} onClaim={claimRitual} />}
+              {Date.now() < boostTapJusqua ? (
+                <View style={[styles.pubTap, { pointerEvents: 'none' }]}>
+                  <Text style={styles.pubTapTexte}>⚡ Tap ×2 · {Math.max(0, Math.ceil((boostTapJusqua - Date.now()) / 1000))} s</Text>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => setPubTap(true)} style={styles.pubTap} accessibilityLabel="Regarder une pub pour doubler les taps">
+                  <Text style={styles.pubTapTexte}>📺 Tap ×2 · 2 min</Text>
+                </TouchableOpacity>
+              )}
+              <FaussePub visible={pubTap} recompense="Tap ×2 pendant 2 min" onFin={finPubTap} />
 
               {/* Bouton vidéo à DROITE de l'œuf, seulement pendant
                   l'éclosion. Frère du bouton tapable et non enfant :
@@ -6179,6 +6203,8 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 }
 
 const styles = StyleSheet.create({
+  pubTap: { position: 'absolute', top: 8, right: 8, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14, backgroundColor: 'rgba(43,35,66,0.9)', borderWidth: 1, borderColor: '#f2c94c', zIndex: 5 },
+  pubTapTexte: { color: '#f2c94c', fontSize: 13, fontWeight: '700' },
   // Menu « Gardien de l'œuf » (08/10)
   menuGardienChance: { color: '#FFE08A', fontSize: 22, fontWeight: '900', textAlign: 'center', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   menuGardienPlan: { alignItems: 'center' },

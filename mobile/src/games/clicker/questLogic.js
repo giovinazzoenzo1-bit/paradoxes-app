@@ -1019,8 +1019,11 @@ function resolveQuestTargetBrut(quest, stats) {
 // métriques d'ACCUMULATION (pièces gagnées, critiques, cibles dorées)
 // gardent leur référence par défi, sinon elles se valideraient toutes
 // seules — le joueur en accumule en permanence.
+// ⚠️ 18/10 — DÉCISION DE L'AUTEUR : « Achète une rune » compte à partir de l'APPARITION du défi (défi 22 validé
+// d'office : une rune achetée plus tôt dans le cycle suffisait). Il faut en acheter une EN PLUS — la poudre
+// manquante s'obtient par une fausse pub (+1 poudre, menu des Runes).
 export const CYCLE_SCOPED_METRICS = [
-  'runeBought', 'runeEquipped', 'runeFused', 'ascension', 'offering',
+  'runeEquipped', 'runeFused', 'ascension', 'offering',
 ];
 
 export function metricScopedToCycle(metric) {

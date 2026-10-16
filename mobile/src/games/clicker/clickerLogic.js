@@ -1902,6 +1902,11 @@ export function ascensionGriffesReward(ascensionNumber) {
   return Math.round(ASCENSION_GRIFFES_BASE * Math.sqrt(n));
 }
 
+// ---- Pub « Tap ×2 » (18/10, demande de l'auteur) : fausse pub de 15 s → taps doublés pendant 2 min. Exclu du
+// calculateur de défis par construction (la photo ne lit pas ce bonus) : c'est la récompense de la pub.
+export const PUB_BOOST_TAP_MULT = 2;
+export const PUB_BOOST_TAP_SEC = 120;
+
 // ---- Rituel (bouton "fausse pub" — pas de vrai SDK pour l'instant) ----
 export const RITUAL_COOLDOWN_SEC = 180; // 3 minutes entre 2 utilisations
 export function ritualReward(tapPower, passiveIncome) {

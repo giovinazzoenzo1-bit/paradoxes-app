@@ -6018,3 +6018,51 @@ function auditCalculateurDefis() {
   return pb;
 }
 module.exports.auditCalculateurDefis = auditCalculateurDefis;
+
+// 18/10 — FAUSSES PUBS (demande de l'auteur) : écran de 15 s impossible à fermer, récompense seulement au bouton
+// « Récupérer » ; +1 poudre (menu des Runes) ; Tap ×2 pendant 2 min, sans cumul, ignoré par la photo des défis ;
+// « Achète une rune » compte à partir de l'apparition du défi (plus de validation d'office).
+function auditFaussePub() {
+  const fs = require('fs'), path = require('path');
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const pb = [];
+  const Pub = lire('src/components/FaussePub.js');
+  if (!Pub.includes('export const DUREE_FAUSSE_PUB_SEC = 15;')) pb.push('la fausse pub ne dure plus 15 s');
+  if (!Pub.includes('disabled={!fini}')) pb.push('la récompense peut être prise avant la fin de la pub');
+  if (!Pub.includes('onRequestClose={() => {}}')) pb.push('la pub peut être fermée avant la fin (bouton retour)');
+  const L = load('clickerLogic');
+  if (L.PUB_BOOST_TAP_MULT !== 2 || L.PUB_BOOST_TAP_SEC !== 120) pb.push(`Tap ×${L.PUB_BOOST_TAP_MULT} pendant ${L.PUB_BOOST_TAP_SEC} s (choix de l'auteur : ×2 pendant 120 s)`);
+  const Cl = lire('src/screens/games/ClickerScreen.js');
+  if (!Cl.includes('const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult * boostPub));')) pb.push("le Tap ×2 de la pub n'est plus appliqué au tap");
+  if (!Cl.includes('<FaussePub visible={pubTap}')) pb.push("la pub « Tap ×2 » n'est plus proposée sur l'écran principal");
+  if (lire('src/games/clicker/calculDefis.js').includes('boostTap')) pb.push('la photo des défis lit le bonus de la pub (il doit rester une récompense)');
+  const Av = lire('src/screens/games/AdventureScreen.js');
+  if (!Av.includes('const finPubPoudre = () => { setPubPoudre(false); setPoudre((p) => p + 1); };')) pb.push('la pub du menu des Runes ne donne plus +1 poudre');
+  const Q = load('questLogic');
+  if (Q.CYCLE_SCOPED_METRICS.includes('runeBought')) pb.push('« Achète une rune » compte de nouveau depuis le début du cycle (validé d\'office si une rune a déjà été achetée)');
+  return pb;
+}
+module.exports.auditFaussePub = auditFaussePub;
+
+// 18/10 — DEMANDES DE L'AUTEUR : « Achète une rune » compte depuis l'APPARITION du défi (le défi 22 se validait
+// d'office) ; fausse pub de 15 s (impossible à fermer avant) → +1 poudre runique (menu des Runes) et Tap ×2 pendant
+// 2 min (écran principal, appliqué au gain du tap, sans cumul).
+function auditPubsAuteur() {
+  const fs = require('fs'), path = require('path');
+  const L = load('questLogic'); const C = load('clickerLogic');
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '../src', f), 'utf8');
+  const pb = [];
+  if (L.metricScopedToCycle('runeBought')) pb.push("« Achète une rune » recompte les runes achetées avant le défi (validé d'office)");
+  const Pub = lire('components/FaussePub.js');
+  if (!/export const DUREE_FAUSSE_PUB_SEC = 15;/.test(Pub)) pb.push('la fausse pub ne dure plus 15 s');
+  if (!Pub.includes('disabled={!fini}')) pb.push('la fausse pub peut se fermer avant la fin');
+  if (C.PUB_BOOST_TAP_MULT !== 2 || C.PUB_BOOST_TAP_SEC !== 120) pb.push(`pub Tap : ×${C.PUB_BOOST_TAP_MULT} pendant ${C.PUB_BOOST_TAP_SEC} s (auteur : ×2 pendant 120 s)`);
+  const Cl = lire('screens/games/ClickerScreen.js');
+  if (!Cl.includes('const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult * boostPub));')) pb.push("le bonus de la pub n'est plus appliqué au gain du tap");
+  if (!Cl.includes('<FaussePub visible={pubTap} recompense="Tap ×2 pendant 2 min" onFin={finPubTap} />')) pb.push("l'écran de pub « Tap ×2 » a disparu");
+  const Av = lire('screens/games/AdventureScreen.js');
+  if (!Av.includes('const finPubPoudre = () => { setPubPoudre(false); setPoudre((p) => p + 1); };')) pb.push("la pub des Runes ne donne plus sa poudre");
+  if (!Av.includes('onPubPoudre={() => setPubPoudre(true)}') || !Av.includes('onBack, onPubPoudre = null, pubPoudre = false, onFinPubPoudre = null })') || !Av.includes('<FaussePub visible={pubPoudre} recompense="+1 poudre runique ✨" onFin={onFinPubPoudre} />')) pb.push("le bouton de pub n'est plus branché au menu des Runes");
+  return pb;
+}
+module.exports.auditPubsAuteur = auditPubsAuteur;
