@@ -4030,6 +4030,12 @@ instantanés, 25 abusés, v2.3 30 h ; « plancher du jeu » sur 10 défis de rev
 en route : la cible relevée À L'APPARITION (cibleEtatAdaptee, appliquée par l'écran, PAS par resolveQuestTarget) et
 l'arrondi des taps « au total » (compteur à vie). Le document « œuf par œuf » de l'auteur (🔴 achat · 🟢 Aventure ·
 ⚪ Clicker, une créature par œuf) a été VÉRIFIÉ conforme au jeu (322 / 322) et sa légende reprise dans le Doc.
+VALIDATION (rapport de l'auteur, 16/10, build f7ce531, A0 œuf 2) : il joue « normalement / bien » à 16,5 taps/s (2,4 × la
+référence de 7 de la décision A), Transe 64 % des taps, ~4 s par défi. Rejoué à SON rythme (TAPS=16.5 PART_TRANSE=0.64
+SEC_DEFI=4) : 7 premiers défis 3,4 min prévus contre 3,2 min mesurés (+6 %) ; 5 sur 7 à 1-4 s près ; écarts : 1er défi
+(démarrage, 12 s contre 18 s) et cible dorée (hasard 45-90 s : 108 s contre 91 s). 8 min de jeu actif pour ~2 h d'appli
+ouverte (7 079 s) : attente d'énergie probable au chapitre 1 (le calculateur prévoit +54 min). ⚠️ Rapport COUPÉ après le
+7e défi (« … » en plein mot) : temps de l'œuf 2 manquants.
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
