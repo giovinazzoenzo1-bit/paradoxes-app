@@ -5,6 +5,7 @@
 > Une ligne par demande, avec la date. On raye quand c'est fait.
 
 ## Équilibrage
+- [ ] 18/10 — **Calculateur de défis EN JEU** (« comme l'Aventure », décisions dans CLICKER_ADVENTURE_STATE du 18/10) : cible des achats / pièces / revenu calculée à l'apparition sur pièces en poche + production de référence ; seuil d'Ascension déduit de la chaîne (plus cher si besoin). Mesurer au simulateur AVANT d'appliquer ; contrôles de l'ancienne règle à réécrire.
 - [ ] 24/09 — **Coûts de base des paliers 7 à 10** : prix effectifs croissants (3 k → 8,4 M), mais la dépense par +1 tap n'est pas monotone (42 k à l'A3, 16-21 k aux A4-A5). Poids 0,1-0,5 % du seuil au niveau 5 : faible. Règle « prix ∝ bonus », à faire seulement si tu le veux.
 
 ## Tests de l'auteur (« une autre fois »)

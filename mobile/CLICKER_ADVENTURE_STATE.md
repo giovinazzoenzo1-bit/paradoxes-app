@@ -4057,6 +4057,22 @@ LECTURE PRÉVUE : « il y a » grand + erreur → l'erreur est la cause ; « il 
 (démontage, minuteurs) ; « il y a » < 15 s mais aucun passage vers l'œuf 2 → le défi courant reste ∅ (choix du défi).
 Laisser l'affichage en place jusqu'à confirmation. Contrôles : 120 verts, 261 sabotages prouvés, taps 20/20, Exploration OK.
 
+## 18/10 — CALCULATEUR DE DÉFIS EN JEU (« comme l'Aventure ») : DÉCISIONS DE L'AUTEUR — rien codé
+
+ACCORDÉ (18/10) : (1) la règle « une cible ne dépend jamais du joueur » est LEVÉE pour les défis d'achat, de pièces et de
+revenu/s — comme l'Aventure ; (2) rythme de référence FIXE (pas le rythme mesuré du joueur : le joueur rapide va plus
+vite) ; (3) seuil d'Ascension DÉDUIT de la chaîne de défis — « ne pas hésiter à les rendre plus chères ».
+PRINCIPE : à l'apparition de chaque défi (= fin du précédent), cible figée = items dont le coût CUMULÉ (prix réel, niveau
+par niveau) vaut le budget = pièces en poche (hors ligne compris : ses gains sont déjà en poche) + production de référence
+× temps visé. Une seule fonction pour l'écran ET le simulateur ; contrôle « chaque défi ≈ temps visé ±20 %, jamais
+impossible, jamais né accompli ». Payeur : avantage explicite à définir (comme l'Aventure).
+POUVOIRS DU DECK (proposition de l'auteur) : un chiffre de référence plutôt qu'un calcul, +1 tap/s par créature
+(0 → 7, 1 → 8, 2 → 9, 3 → 10). MESURÉ (Monte-Carlo des œufs, pouvoirs du jeu) : juste à 7 % près aux œufs 1-4, puis trop
+bas de 19 % (œuf 7), 28 % (14), 43 % (21), 60 % (34) — les raretés hautes ont des pouvoirs ×6 à ×18. Équivalent mesuré :
+A0 7 / 8 / 10 / 11 · A1 13 · A2 15 · A3 20 · A4-A5 25 taps/s. ⚠️ Ce bonus vaut pour le REVENU seulement : les défis qui
+COMPTENT des taps (total, d'affilée) ou des critiques gardent 7 taps/s réels, sinon cibles gonflées jusqu'à ×3,5.
+À DÉCIDER : table étendue (recommandée) ou +1 par créature plafonné à 10.
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
