@@ -4101,6 +4101,19 @@ l'item du défi en cours.
 s'ils bloquent l'œuf suivant ; (7) temps RÉEL : 28 h actives mais ~89 h d'attente d'énergie (Aventure) ; (8) arrondi :
 jamais vers une cible déjà atteinte (vécu : 100 500 → 100 000) ; (9) avantage du payeur à définir.
 Vérifié : AUCUN boost temporaire de pièces dans le jeu (rien à exclure de la production de référence).
+RÉPONSES DE L'AUTEUR (18/10) : (3) plafonds OK ; (5) pouvoirs pour « Active N pouvoirs » OK ; (6) l'éclosion BLOQUE
+l'œuf suivant = bug à corriger plus tard (À FAIRE) ; (1)+(9) le payeur DOIT être avantagé (« sinon ils demanderont un
+remboursement ») → proposé : PIÈCES PROTÉGÉES — les pièces d'Offrande (payées en Diamants) ne comptent pas dans la
+poche de la photo (compteur consommé quand il dépense) ; la poche reste comptée pour le reste (sinon épargner rendrait
+les défis d'achat instantanés : avec des cibles calculées sur SA production, ne pas investir ne coûte rien).
+(7) « pourquoi autant d'énergie ? » → MESURÉ : 227 étapes (dernier défi : chapitre 23, niveau 7 = verrou A5) à ~1,5
+combat par étape (crans 95/85/70/60/45 %) = 350 combats = 117 h de recharge (3 par heure ; barre de 7 = 140 min),
+pour ~28 h de clicker → ~91 h d'attente quoi qu'il fasse (combattre dès que la barre est pleine ne change RIEN :
+351 combats, 91 h). Seul levier fort : la vitesse de recharge (20 → 5 min par énergie ≈ aligne l'Aventure sur le clicker).
+⚠️ TROU DU JEU (trouvé en simulant un joueur qui combat dès que la barre est pleine) : cibleEtatAdaptee donne
+« actuel + 5 » aux défis « Termine le chapitre… » SANS plafond au verrou de fin d'Ascension (le Sanctuaire et le
+Veilleur sont plafonnés) → un joueur à 4 étapes ou moins du verrou reçoit une cible inatteignable → œuf bloqué, plus
+d'Ascension (simulé : A5, cible 229 > verrou 227). Correctif proposé : plafonner au verrou (1 ligne) + un contrôle.
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
