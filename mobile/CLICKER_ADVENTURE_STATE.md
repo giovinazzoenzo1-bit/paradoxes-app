@@ -4140,6 +4140,28 @@ bonus d'Ascension ne rend plus un défi facile (cible recalculée sur la product
 temps visé. MESURÉ (tous les défis à ce temps) : départ 3 min, +0,5 min par marche → œuf 40 à 9,5 min ; par Ascension
 2,8 / 3,6 / 5,1 / 6,2 / 7,3 / 8,4 h = 33,5 h (actuel 32,1 h) ; +0,75 min → œuf 40 à 12,75 min, 42,2 h (« Ascensions
 plus chères »). À CHOISIR par l'auteur.
+CHOIX DE L'AUTEUR (18/10) : +0,75 min par marche (« le jeu le plus long possible, mais pas lassant ») → 3 min par
+défi aux œufs 1-2, puis +0,75 aux œufs 3, 6, 9, 12… → 12,75 min à l'œuf 40 ; ≈ 42 h à 7 taps/s (≈ 2 × moins vite chez
+lui). Garde-fous anti-lassitude à mesurer : aucun défi > 2 × son temps visé ; rythme court / long dans l'œuf (option).
+
+### 📋 CAHIER DES CHARGES COMPLET — calculateur de défis EN JEU (tout décidé le 18/10, RIEN codé)
+1. QUAND : à l'apparition de chaque défi (= fin du précédent) ; cible FIGÉE ensuite.
+2. QUELS DÉFIS : achats, pièces (« Obtiens », « Mets de côté »), revenu/s → calculés. Cible dorée et « Active N
+   pouvoirs » → temps visé ÷ rythme d'apparition (pouvoirs : recharges des créatures). Taps au total et critiques →
+   7 taps/s RÉELS. Inchangés : records (Transe, taps d'affilée), Aventure (son calculateur), Ascension.
+3. BUDGET = poche (hors ligne compris) SAUF les pièces protégées (Offrande payée en Diamants : avantage du payeur)
+   + production de référence × temps visé.
+4. PRODUCTION DE RÉFÉRENCE (une seule fonction, partagée avec l'étoile « Conseillé » du Grimoire) : 7 taps/s fixes ×
+   valeur du tap (Pacte, paliers, reliques) × Transe ×2,47 × critiques réels × (1 + % des 3 MEILLEURES créatures
+   possédées : commune 22, peu commune 24, rare 23, épique 48, légendaire 81, mythique 93, remise 0) × Sanctuaire /
+   Ascension ; + passif (× petit % des créatures « passif »).
+5. CIBLE = items dont le coût CUMULÉ (prix réel, prérequis compris, plafonds respectés) = budget ; au moins 1 ;
+   arrondi VERS LE HAUT, jamais une cible déjà atteinte.
+6. TEMPS VISÉ = marches de 3 œufs : 3 min + 0,75 min par marche (œuf 40 : 12,75 min).
+7. SEUIL D'ASCENSION = pièces gagnées à la fin de la chaîne ÷ 0,9, calé sur un deck MALCHANCEUX ; plus cher accepté.
+8. CONTRÔLES : chaque défi ≈ temps visé ±20 % au simulateur ; jamais impossible ni né accompli ; 2 h hors ligne < 100 %
+   d'un défi ; « 1 item > 2 × budget » listé (on change l'item à la main, validé par l'auteur) ; ~6 contrôles de
+   l'ancienne règle « cible fixe » à réécrire. Construire sur une BRANCHE et mesurer avant d'appliquer.
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
