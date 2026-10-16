@@ -2263,7 +2263,7 @@ export function recompenseQuete(base, niveauAventure) {
 // Coûte 1 énergie pour LANCER un combat (pas remboursé en cas de
 // défaite — c'est bien "1 vie par tentative", pas "1 vie par victoire").
 // 17/10 (choix de l'auteur) : 7 énergies (avant 5) — une fenêtre de 5 étapes demande ~8,7 tentatives en moyenne (3,7 défaites).
-export const ENERGY_MAX = 7;
+export const ENERGY_MAX = 8; // 18/10 : choix de l'auteur (était 7)
 export const ENERGY_REGEN_MS = 20 * 60 * 1000; // 20 minutes
 
 // Recalcule l'énergie actuelle à partir du dernier timestamp connu — le

@@ -4115,6 +4115,22 @@ pour ~28 h de clicker → ~91 h d'attente quoi qu'il fasse (combattre dès que l
 Veilleur sont plafonnés) → un joueur à 4 étapes ou moins du verrou reçoit une cible inatteignable → œuf bloqué, plus
 d'Ascension (simulé : A5, cible 229 > verrou 227). Correctif proposé : plafonner au verrou (1 ligne) + un contrôle.
 
+## 18/10 — VERROU D'AVENTURE RETIRÉ + ÉNERGIE MAX 8 (décisions de l'auteur) — PUBLIÉ
+
+CAUSE : le verrou de fin d'Ascension (26/09 : 25/60/101/144/185/227) et le « +5 niveaux » des défis « Termine le
+chapitre… » (cibleEtatAdaptee) se contredisaient : un joueur à 4 étapes ou moins du verrou recevait une cible
+INATTEIGNABLE → œuf et Ascension bloqués (trouvé au calculateur de défis, joueur qui combat dès que sa barre est pleine).
+DÉCISION DE L'AUTEUR : retirer le verrou — sa raison du 26/09 (2 créatures écrasées au niveau 26) n'existe plus depuis
+le calculateur de l'Aventure (11/10 : chaque fenêtre réglée sur la photo du deck). `niveauMaxAventure` rend Infinity
+(fonction gardée : 3 entrées de la carte et garde-fou « 3 étoiles », désormais sans effet). ⚠️ Ne PAS remettre de verrou
+sans plafonner aussi le « +5 ». À revérifier si la branche « niveaux réels » (ennemis niveau = étape) est fusionnée.
+ÉNERGIE MAX 7 → 8 (recharge inchangée, 20 min : l'attente pousse vers les Diamants, choix assumé de l'auteur).
+CONTRÔLES : auditVerrouAventure vérifie maintenant « aucun verrou, à aucune Ascension » et que le garde-fou « 3 étoiles »
+ne valide jamais d'office ; sabotage « garde-fou retiré » RETIRÉ (sans objet), remplacé par « un verrou revient » ;
+auditPacteEnergie lit 8. Suite verte, 261 sabotages prouvés, taps 20/20, Exploration OK.
+NOTE : l'auteur pensait le dernier défi d'Aventure au niveau 205 ; le jeu dit 227 (défi 314, œuf 39, « chapitre 23,
+niveau 7 »).
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

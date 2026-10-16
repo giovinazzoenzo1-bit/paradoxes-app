@@ -73,7 +73,7 @@ const CONTROLES = [
   ['auditDefisLueur', "demandes de l'auteur (17/10) : Esprit avant Main (défis 9 ↔ 11) ; lueurs du défi d'achat dans le Grimoire (chapitre, page, article)"],
   ['auditDoreeEtLivre', "règle de l'auteur (17/10) : un défi changé se répercute sur ses défis similaires — cible dorée −1 sur toute la chaîne ; livre de tap ouvert en ~0,63 s"],
   ['auditCransAdoucis', "choix de l'auteur (17/10) : dès l'étape 11, combats 4 et 5 de chaque fenêtre à 60 % et 45 % ; chapitre 1 inchangé ; outils de mesure au point 50 %"],
-  ['auditPacteEnergie', "choix de l'auteur (17/10) : Pacte du joueur ×1,5 pour 30 % de PV (ennemis ×2 / 15 %), textes lus dans les règles ; énergie max 7"],
+  ['auditPacteEnergie', "choix de l'auteur (17/10) : Pacte du joueur ×1,5 pour 30 % de PV (ennemis ×2 / 15 %), textes lus dans les règles ; énergie max 8 (18/10)"],
   ['auditImportsMasques', "aucune fonction importée n'est masquée par une variable locale du même nom puis appelée (plantage de l'Exploration, 17/10)"],
   ['auditPortee', "aucun nom utilisé sans être déclaré dans le code du jeu (plantage « Property 'poudre' doesn't exist », 11/10)"],
   ['auditPrimeVictoire', "prime de victoire = prochain niveau de la meilleure créature (2 au boss), partout la même (16/10)"],
