@@ -4131,6 +4131,16 @@ auditPacteEnergie lit 8. Suite verte, 261 sabotages prouvés, taps 20/20, Explor
 NOTE : l'auteur pensait le dernier défi d'Aventure au niveau 205 ; le jeu dit 227 (défi 314, œuf 39, « chapitre 23,
 niveau 7 »).
 
+## 18/10 — CALCULATEUR DE DÉFIS EN JEU : TEMPS VISÉ EN MARCHES TOUS LES 3 ŒUFS (décision de l'auteur) — rien codé
+
+« À partir de l'œuf 3 la difficulté monte d'un cran, pareil à 6, 9… de 3 en 3 » (il a écrit « 11 », lu 12). PAS par
+Ascension : par Ascension, les premiers œufs de chaque groupe seraient « faciles » à ses yeux, et la règle actuelle
+(durée du groupe ÷ œufs ÷ 8) REDESCEND même de l'A1 à l'A2 (4,6 → 4,5 min par défi). Rappel : avec le calculateur, le
+bonus d'Ascension ne rend plus un défi facile (cible recalculée sur la production réelle) — la difficulté, c'est le
+temps visé. MESURÉ (tous les défis à ce temps) : départ 3 min, +0,5 min par marche → œuf 40 à 9,5 min ; par Ascension
+2,8 / 3,6 / 5,1 / 6,2 / 7,3 / 8,4 h = 33,5 h (actuel 32,1 h) ; +0,75 min → œuf 40 à 12,75 min, 42,2 h (« Ascensions
+plus chères »). À CHOISIR par l'auteur.
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
