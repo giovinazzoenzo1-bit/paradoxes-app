@@ -406,7 +406,8 @@ function jouer(a, V, photo, opts = {}) {
 const RECALES = ['totalEarned', 'coins', 'passiveIncome', 'totalTaps', 'totalCrits', 'goldenClaimed', 'powerActivated'];
 const CONTINUS = ['totalEarned', 'coins', 'passiveIncome', 'totalTaps', 'totalCrits'];
 const PREMIER_OEUF = new Set(D.DEFIS_ECRITS[0].map((q) => q.id)); // tutoriel fixé par l'auteur (wiki, 20-21/09)
-const recale = (q) => (q.target || 0) > 1 && !PREMIER_OEUF.has(q.id) && (ACHATS(q.metric) || RECALES.includes(q.metric));
+// 18/10 : l'œuf 1 est recalé lui aussi (l'auteur veut au moins 5 min par défi dès l'œuf 1).
+const recale = (q) => (q.target || 0) > 1 && (ACHATS(q.metric) || RECALES.includes(q.metric));
 const joli = (x) => (x >= 1000 ? Number(x.toPrecision(2)) : Math.max(1, Math.round(x)));
 // Taps « au total » : un compteur À VIE (des centaines de milliers) — 2 chiffres significatifs effaceraient l'écart
 // voulu (vécu : 100 500 arrondi à 100 000 = déjà atteint). Arrondi à la centaine.
@@ -414,6 +415,11 @@ const arrondi = (m, x) => (m === 'totalTaps' ? Math.max(100, Math.round(x / 100)
 function tempsVise(a) {
   return A.simulerGroupe(a, 4).tActif / (D.OEUFS_PAR_GROUPE[a] * 8);
 }
+// ⚠️ 18/10 — TEMPS VISÉ CHOISI PAR L'AUTEUR (remplace la règle « durée du groupe ÷ œufs ÷ 8 » ET le départ à 3 min,
+// qu'il n'avait jamais validé) : au moins 5 min par défi à l'œuf 1, 7 min à l'œuf 2, 10 min dès l'œuf 3, puis
+// +0,75 min tous les 3 œufs (6, 9, 12…). Raison : les défis de combat ou de Transe durent 30 s à 4 min — les défis
+// recalés doivent compenser. En secondes de jeu actif, joueur de référence (7 taps/s).
+const tempsViseOeuf = (oeuf) => (oeuf <= 1 ? 300 : oeuf === 2 ? 420 : 600 + 45 * Math.floor((oeuf - 3) / 3));
 // Joue UN défi depuis la photo de son apparition, avec la cible écrite x ; rend { r, photoFin }.
 function jouerUn(a, photo, i, x) {
   const q = defisDuGroupe(a)[i].q;
@@ -447,23 +453,24 @@ function chercher(a, photo, i, tau) {
 }
 // Chaîne v2.3 d'un groupe : défi par défi, la cible choisie reste écrite pour la suite (règle du total).
 function chaineV23(a, vie) {
-  const tau = tempsVise(a);
+  const tauG = tempsViseOeuf(D.OEUFS_PAR_GROUPE.slice(0, a).reduce((x, y) => x + y, 0) + 1);
   const liste = defisDuGroupe(a);
   let photo = jouer(a, vie, null, { arreterApres: -1 }).J.photoFin;
   const lignes = [];
   for (let i = 0; i < liste.length; i++) {
     const q = liste[i].q;
     let note = '';
+    const tau = tempsViseOeuf(liste[i].oeuf);
     if (recale(q)) {
       const c = chercher(a, photo, i, tau);
       q.target = c.x; note = c.note || '';
     }
     const u = jouerUn(a, photo, i);
-    lignes.push({ ...u.r, ecriteV23: q.target, note, bloque: !!u.bloque });
+    lignes.push({ ...u.r, ecriteV23: q.target, note, bloque: !!u.bloque, tau });
     if (u.bloque) break;
     photo = u.photoFin;
   }
-  return { lignes, tau, vie: photo.V };
+  return { lignes, tau: tauG, vie: photo.V };
 }
 // Toute la partie : chaîne « aujourd'hui » (cibles écrites), puis chaîne v2.3. Les cibles d'origine sont
 // RESTAURÉES à la fin (rien n'est écrit : seul l'objet chargé en mémoire est modifié pendant le calcul).
@@ -480,7 +487,7 @@ function calculer() {
   }
 }
 
-module.exports = { HYP, TRANSE, POUVOIRS, facteurCrit, chanceCrit, statsDeck, defisDuGroupe, etatVieInitial, jouer, creerJoueur, tempsVise, calculer };
+module.exports = { HYP, TRANSE, POUVOIRS, facteurCrit, chanceCrit, statsDeck, defisDuGroupe, etatVieInitial, jouer, creerJoueur, tempsVise, tempsViseOeuf, calculer };
 
 if (require.main === module) {
   const t0 = Date.now();
