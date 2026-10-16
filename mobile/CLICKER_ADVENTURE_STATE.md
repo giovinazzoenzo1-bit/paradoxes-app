@@ -4087,6 +4087,20 @@ au joueur de référence : hors ligne = 25 % du passif pendant 2 h max, et le pa
 1 à 5 % ensuite ; pire cas 56 % (A2) ; 0 défi sur 322 rempli. Remplir un défi hors ligne demanderait 4 à 10 absences de
 2 h. DÉCISION PROPOSÉE : pas de règle spéciale dans le jeu ; un CONTRÔLE « 2 h hors ligne < 100 % d'un défi » (crie si un
 jour le passif ou le Veilleur est renforcé).
+POINTS OUVERTS (revue « qu'a-t-on oublié », 18/10) — à trancher AVANT de coder :
+🟥 (1) les récompenses en pièces (Offrande : 1 Diamant = un tiers de la prochaine amélioration ; cible dorée ; hors
+ligne) tombent dans la poche → le défi suivant les ABSORBE (le payeur perd son Diamant) → reco : poche comptée mais
+PLAFONNÉE (ex. 2 min de production) ; (2) budget < prix d'UN item (vécu v2.3 : « Achète 1 niveau de Volonté du
+Paradoxe » = 1,8 h) → reco : 1 minimum + contrôle qui le signale ; (3) prérequis (palier verrouillé, surprime avant
+l'heure) et plafonds (Sanctuaire / Veilleur 50, Faveur inutile au-delà de 30 %) dans le calcul, sinon défi impossible ;
+(4) DEUX joueurs de référence dans le jeu : l'étoile « Conseillé » (conseilBoutique : 6,7 taps/s, Transe au plafond ×3)
+≠ calculateur (7 taps/s, Transe ×2,47, critiques, pouvoirs) → une seule définition partagée, et l'étoile pointe sur
+l'item du défi en cours.
+🟨 (5) « Active N pouvoirs » : rythme selon les créatures (recharge 60 à 270 s) → même table par créature ; (6) éclosion
+(10 min × 1,194 par créature, jusqu'à 16 h, 1 tap = 1 s) et Gardien (10 min si défaite) hors du temps de l'œuf : vérifier
+s'ils bloquent l'œuf suivant ; (7) temps RÉEL : 28 h actives mais ~89 h d'attente d'énergie (Aventure) ; (8) arrondi :
+jamais vers une cible déjà atteinte (vécu : 100 500 → 100 000) ; (9) avantage du payeur à définir.
+Vérifié : AUCUN boost temporaire de pièces dans le jeu (rien à exclure de la production de référence).
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
