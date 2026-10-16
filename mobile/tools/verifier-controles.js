@@ -236,8 +236,10 @@ const SABOTAGES = [
     remplace("  { defaites: 3, baisse: 0.20 },", "  { defaites: 5, baisse: 0.20 },")],
   ['auditVerrouAventure', F.aventure, "le lancement du combat ne vérifie plus le verrou (on joue le niveau 26 en Ascension 0)",
     remplace("            if (levelPreview > niveauMaxAscension) { setLevelPreview(null); montrerVerrouAscension(); return; }\n", "")],
-  ['auditVerrouAventure', F.logique, "le garde-fou « 3 étoiles » retiré (défi impossible si tout est déjà étoilé)",
-    remplace("  if (q.metric === 'threeStarLevel' && q.mode === 'delta' && plusRienAEtoiler(stats)) return 1;\n", "")],
+  // 18/10 : sabotage « garde-fou 3 étoiles retiré » RETIRÉ — plus de verrou d'Aventure (décision de l'auteur), le garde-fou
+  // ne se déclenche plus jamais : l'enlever ne change rien, aucun contrôle ne peut (ni ne doit) le voir. À sa place :
+  ['auditVerrouAventure', F.logique, "un verrou d'Aventure revient (le « +5 niveaux » le dépasserait : œuf bloqué)",
+    remplace("export function niveauMaxAventure(ascensionCount) { // eslint-disable-line no-unused-vars\n  return Infinity;", "export function niveauMaxAventure(ascensionCount) { // eslint-disable-line no-unused-vars\n  return 25 + 40 * (ascensionCount || 0);")],
   ['auditBoutonAscension', F.ecran, "l'Ascension de nouveau achetable n'importe quand (œufs perdus)",
     remplace("  const ascensionReady = seuilAscensionAtteint && defiAscensionEnCours;", "  const ascensionReady = seuilAscensionAtteint;")],
   ['auditBoutonAscension', F.ecran, "l'Ascension achetable sur un défi DÉJÀ réussi (un groupe entier sauté)",
@@ -643,7 +645,7 @@ const SABOTAGES = [
   ['auditPacteEnergie', F.combat, "le Pacte du joueur repasse à ×2", remplace('  pacteMultJoueur: 1.5,', '  pacteMultJoueur: 2,')],
   ['auditPacteEnergie', F.combat, "le Pacte du joueur ne coûte plus que 15 %", remplace('  pacteCoutPvJoueur: 0.30,', '  pacteCoutPvJoueur: 0.15,')],
   ['auditPacteEnergie', F.combat, "les ennemis prennent le Pacte réduit du joueur", remplace('const r = lancerSort(sort, avecMana, idx, joueurs, cible, 1, null, true);', 'const r = lancerSort(sort, avecMana, idx, joueurs, cible);')],
-  ['auditPacteEnergie', F.combat, "l'énergie max retombe à 5", remplace('export const ENERGY_MAX = 7;', 'export const ENERGY_MAX = 5;')],
+  ['auditPacteEnergie', F.combat, "l'énergie max retombe à 5", remplace("export const ENERGY_MAX = 8; // 18/10 : choix de l'auteur (était 7)", 'export const ENERGY_MAX = 5;')],
   ['auditPacteEnergie', F.combat, "la carte du Pacte réécrit ses chiffres en dur",
     remplace("SORTS.pacte.desc = `×${String(EFFETS.pacteMultJoueur).replace('.', ',')} · coûte ${Math.round(EFFETS.pacteCoutPvJoueur * 100)} % de PV`;", "SORTS.pacte.desc = '×2 · coûte 15 % de PV';")],
   // 17/10 (nuit) : combats 4 et 5 adoucis dès l'étape 11 (choix de l'auteur).

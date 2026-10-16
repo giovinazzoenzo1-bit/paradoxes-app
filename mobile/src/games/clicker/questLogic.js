@@ -1755,11 +1755,14 @@ export function niveauxAventureDesOeufs() {
   }
   return niveauxDesOeufsCache;
 }
-export function niveauMaxAventure(ascensionCount) {
-  const a = Math.max(0, Math.floor(Number(ascensionCount) || 0));
-  if (a >= OEUFS_PAR_GROUPE.length) return Infinity;
-  const dernierOeuf = OEUFS_PAR_GROUPE.slice(0, a + 1).reduce((x, y) => x + y, 0);
-  return niveauxAventureDesOeufs()[dernierOeuf - 1];
+// ⚠️ 18/10 — DÉCISION DE L'AUTEUR : PLUS DE VERROU de fin d'Ascension en Aventure. Posé le 26/09 parce qu'un joueur
+// à 2 créatures se faisait écraser au niveau 26 ; depuis le 11/10, le calculateur de l'Aventure règle chaque fenêtre
+// sur la photo du deck, ce danger n'existe plus. Et le verrou créait un BLOCAGE (trouvé au calculateur de défis) :
+// « Termine le chapitre… » vaut « actuel + 5 » (cibleEtatAdaptee) et dépassait le verrou pour un joueur à 4 étapes
+// ou moins → œuf bloqué, plus d'Ascension. La fonction reste (lue par les 3 entrées de la carte et le garde-fou
+// « 3 étoiles ») : elle rend Infinity, rien ne bloque. Ne PAS remettre de verrou sans plafonner aussi le « +5 ».
+export function niveauMaxAventure(ascensionCount) { // eslint-disable-line no-unused-vars
+  return Infinity;
 }
 // Tous les niveaux jouables (jusqu'au verrou) sont-ils déjà à 3 étoiles ?
 // `troisEtoilesJusquA` : plus long préfixe 1, 2, 3… à 3 étoiles, publié par

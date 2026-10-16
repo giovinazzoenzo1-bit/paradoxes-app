@@ -3921,8 +3921,8 @@ function auditVerrouAventure() {
   const fautes = [];
   const doit = (ok, probleme) => { if (!ok) fautes.push({ probleme }); };
   // (1)
-  P.REGLAGES.finsAventure.forEach((fin, a) => doit(Q.niveauMaxAventure(a) === fin, 'Ascension ' + a + ' : fin du jeu ' + Q.niveauMaxAventure(a) + ' ≠ simulateur ' + fin));
-  doit(Q.niveauMaxAventure(D.OEUFS_PAR_GROUPE.length) === Infinity, 'après les Ascensions écrites, un verrou subsiste');
+  // 18/10 — DÉCISION DE L'AUTEUR : aucun verrou de fin d'Ascension (le « +5 niveaux » des défis le dépassait → œuf bloqué).
+  for (let a = 0; a <= D.OEUFS_PAR_GROUPE.length; a++) doit(Q.niveauMaxAventure(a) === Infinity, 'Ascension ' + a + ' : un verrou d\'Aventure est revenu (' + Q.niveauMaxAventure(a) + ') — décision de l\'auteur du 18/10 : aucun');
   // (2) aucun défi « Atteins le niveau N » au-delà de la fin de son Ascension
   let k = 0;
   D.OEUFS_PAR_GROUPE.forEach((n, a) => {
@@ -3931,10 +3931,10 @@ function auditVerrouAventure() {
     });
   });
   // (3) garde-fou « 3 étoiles » : sur un VRAI défi, tout étoilé jusqu'au verrou → réussi
+  // 18/10 : sans verrou, il reste toujours des niveaux neufs à étoiler — le garde-fou ne doit JAMAIS valider d'office.
   const etoile = [].concat(...D.DEFIS_ECRITS).find((d) => d.metric === 'threeStarLevel' && d.mode === 'delta');
   const base = { threeStarLevel: 5, ascension: 0, troisEtoilesJusquA: 25 };
-  doit(etoile && Q.questProgress(etoile.id, { ...base }, { ...base }) === 1, '« 3 étoiles » peut rester coincé quand tout est déjà étoilé jusqu\'au verrou');
-  doit(etoile && Q.questProgress(etoile.id, { ...base, troisEtoilesJusquA: 10 }, { ...base, troisEtoilesJusquA: 10 }) === 0, 'le garde-fou « 3 étoiles » se déclenche alors qu\'il reste des niveaux à étoiler');
+  doit(etoile && Q.questProgress(etoile.id, { ...base, troisEtoilesJusquA: 1e6 }, { ...base, troisEtoilesJusquA: 1e6 }) === 0, 'le garde-fou « 3 étoiles » valide d\'office alors qu\'il n\'y a plus de verrou');
   // (4) verrou aux 3 entrées, sur le compteur d'Ascensions réel
   const Av = lire('src/screens/games/AdventureScreen.js');
   doit(Av.includes('niveauMaxAscension={niveauMaxAventure(ascensionCount)}'), "le plafond n'est pas calculé sur le compteur d'Ascensions réel");
@@ -5871,9 +5871,9 @@ function auditPacteEnergie() {
   if (K.SORTS.pacte.desc !== '×1,5 · coûte 30 % de PV') pb.push(`carte du Pacte en combat : « ${K.SORTS.pacte.desc} » (doit lire les règles du joueur)`);
   const guide = JSON.stringify([K.texteSort('pacte', true), K.texteSort('pacte', false)]);
   if (!guide.includes('×1,5') || !guide.includes('30 %')) pb.push('guide du Pacte : chiffres absents ou faux (' + guide.slice(0, 80) + ')');
-  if (K.ENERGY_MAX !== 7) pb.push(`énergie max ${K.ENERGY_MAX} (choix de l'auteur : 7)`);
+  if (K.ENERGY_MAX !== 8) pb.push(`énergie max ${K.ENERGY_MAX} (choix de l'auteur du 18/10 : 8)`);
   const t0 = 1e12;
-  if (K.computeEnergyRegen(0, t0, t0 + 10 * K.ENERGY_REGEN_MS).energy !== 7) pb.push('recharge : le plafond de 7 énergies n\'est pas tenu');
+  if (K.computeEnergyRegen(0, t0, t0 + 10 * K.ENERGY_REGEN_MS).energy !== 8) pb.push('recharge : le plafond de 8 énergies n\'est pas tenu');
   return pb;
 }
 module.exports.auditPacteEnergie = auditPacteEnergie;

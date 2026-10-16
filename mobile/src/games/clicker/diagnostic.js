@@ -33,6 +33,8 @@ export const EMAIL_SIGNALEMENT = 'giovinazzoenzo1@gmail.com';
 export const DIAGNOSTIC_INSTANTANE_KEY = 'diagnostic:instantane';
 // 17/10 (auteur) : mesures de jeu pour le rapport (temps, rythme de tap, Transe, défis chronométrés…), écrites par l'écran de jeu.
 export const MESURES_JEU_KEY = 'diagnostic:mesures:v1';
+// 18/10 (section 5) : le chrono des défis s'arrêtait après l'œuf 1 sans erreur visible — la dernière erreur du chrono est gardée ici.
+export const MESURES_ERREUR_KEY = 'diagnostic:mesures:erreur:v1';
 export const DIAGNOSTIC_ERREUR_KEY = 'diagnostic:derniereErreur';
 
 // Un défi sans AUCUN progrès pendant trois heures de jeu ACTIF (appli
@@ -175,6 +177,11 @@ export function construireRapport({ instantane, derniereErreur, appareil, build,
     lignes.push('- Défi en cours : ' + (m.defiLabel || m.defiId || '?') + ' depuis ' + duree((m.tempsJeuSec || 0) - (m.defiDebut || 0)));
     lignes.push('- Temps réel des derniers défis :');
     (Array.isArray(m.historique) ? m.historique : []).forEach((h) => lignes.push('  · ' + (h.label || h.id) + ' : ' + duree(h.sec)));
+    // 18/10 (diagnostic, section 5) : le rapport ne chronométrait que l'œuf 1. Fraîcheur des mesures, passages du chrono
+    // (heure · défi quitté → défi suivant, ∅ = aucun) et dernière erreur : la cause se lit sur une seule capture.
+    lignes.push('- Mesures enregistrées il y a : ' + (Number.isFinite(m.ageSec) ? duree(m.ageSec) : '?'));
+    (Array.isArray(m.suivi) ? m.suivi : []).forEach((x) => lignes.push('  ↪ ' + (x.h || '?') + ' · ' + (x.de || '∅') + ' → ' + (x.vers || '∅')));
+    if (m.erreurChrono) lignes.push('- Erreur du chrono : ' + m.erreurChrono);
   }
   if (derniereErreur && derniereErreur.message) {
     lignes.push('');

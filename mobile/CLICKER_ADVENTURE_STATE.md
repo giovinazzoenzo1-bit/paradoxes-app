@@ -4000,6 +4000,169 @@ reproduit les 32 h) — défi i+1 commence quand i est rempli — puis chercher 
 compter 12 taps/s au maximum. Défaut du rapport à corriger : « Défi en cours : ? » (nom manquant, chrono reparti trop tôt).
 
 
+## 18/10 — CALCULATEUR DE DÉFIS v2.3 : FAIT (branche `calculateur-defis-v23`, HORS DU JEU, rien d'appliqué)
+
+OÙ : sur la branche seulement — `mobile/tools/calculateur-defis-v23.js` (joueur + recherche des cibles, ~6 s),
+`calculateur-defis-v23.json` (résultats), `doc-defis-v23.js` (HTML du Google Doc), et un crochet optionnel
+`options.defis` dans `simulerGroupe` (audit-quetes.js). Mode par défaut IDENTIQUE À L'OCTET (empreinte SHA-256 des
+sorties A0-A6 × 4 cadences × avec / sans pauses, avant / après). verifier-defis : 120 contrôles verts (18/10).
+MODÈLE : le joueur des 32 h fait les défis dans l'ordre, à 7 taps/s ; Transe 60 % des taps = ×2,47 (≈ l'ancien
+facteurJoueurReel 2,48 !) ; critiques aux vrais niveaux ; pouvoirs du deck par Monte-Carlo des œufs (×1,19 avec 1
+créature → ×3,54 deck mythique) ; 8 s par défi (lire, valider, menu) CALÉ sur l'œuf 1 (5,8 min ; 6,3 mesurés) ;
+Aventure à l'énergie (attente HORS LIGNE comptée à part). VALIDATION : A0, 6 œufs = 79 min actives (chronos de
+l'auteur du 24/09, énergie de dev : 78 min).
+RÉSULTATS : aujourd'hui 28,1 h actives (+88,8 h d'attente d'énergie) ; 132 défis sur 322 INSTANTANÉS (≤ 15 s) ;
+25 ABUSÉS (> 3 × le temps visé) : cible dorée 40 à 64 (45 min à 1,2 h), « Achète 1 niveau » d'un palier déjà
+monté par l'économie (1,1 à 1,8 h : règle du total « jamais moins de 1 », au prix d'un niveau élevé).
+Cibles v2.3 (temps visé = durée actuelle de l'Ascension ÷ œufs ÷ 8) : 25,0 h actives au lieu de 32 h (les défis
+inchangés sont courts) ; pièces ×10 à ×60 000 aux A2-A5 : la production croît EXPONENTIELLEMENT quand un groupe dure
+plus longtemps que son seuil → appliquer v2.3 = recalculer seuils et prix (AJUSTEMENT_ASCENSION). DÉCISION ATTENDUE.
+⚠️ PIÈGES : (1) un joueur qui achète à volonté Faveur / Dégâts critiques (PRIX FIXES) fait exploser l'économie
+(A5 : 6e11 pièces par défi) — le joueur des 32 h ne les achète que pendant un défi de critiques, s'il le raccourcit ;
+(2) défi de critiques à 0 % de chance (Faveur remise à 0 par l'Ascension) = bloqué → Faveur forcée ;
+(3) œuf 1 de l'A0 = tutoriel de l'auteur, jamais recalé ; (4) le connecteur Google DRIVE ne modifie PAS le contenu
+d'un Doc existant (titre seulement) : garder le même lien exige le connecteur Google DOCS.
+NON MODÉLISÉ : éclosion / Gardien / incubation, Griffes des défis du jour, bonus de pièces des pouvoirs (< 3 %).
+GOOGLE DOC (nouveau, choix de l'auteur) : « Paradox — Défis des œufs : temps réels et cibles v2.3 »
+(id 1D3arEJqo_PQ8xueCcHJNV2A0gK3SV70laJ0eeeewgao), généré par `doc-defis-v23.js`, créé par Drive en HTML (balises de fin
+de cellule omises : converties correctement, vérifié). Résultats finaux : 28 h actives aujourd'hui, 119 défis
+instantanés, 25 abusés, v2.3 30 h ; « plancher du jeu » sur 10 défis de revenu/s (+20 % à l'apparition). ⚠️ Corrigé
+en route : la cible relevée À L'APPARITION (cibleEtatAdaptee, appliquée par l'écran, PAS par resolveQuestTarget) et
+l'arrondi des taps « au total » (compteur à vie). Le document « œuf par œuf » de l'auteur (🔴 achat · 🟢 Aventure ·
+⚪ Clicker, une créature par œuf) a été VÉRIFIÉ conforme au jeu (322 / 322) et sa légende reprise dans le Doc.
+VALIDATION (rapport de l'auteur, 16/10, build f7ce531, A0 œuf 2) : il joue « normalement / bien » à 16,5 taps/s (2,4 × la
+référence de 7 de la décision A), Transe 64 % des taps, ~4 s par défi. Rejoué à SON rythme (TAPS=16.5 PART_TRANSE=0.64
+SEC_DEFI=4) : 7 premiers défis 3,4 min prévus contre 3,2 min mesurés (+6 %) ; 5 sur 7 à 1-4 s près ; écarts : 1er défi
+(démarrage, 12 s contre 18 s) et cible dorée (hasard 45-90 s : 108 s contre 91 s). 8 min de jeu actif pour ~2 h d'appli
+ouverte (7 079 s) : attente d'énergie probable au chapitre 1 (le calculateur prévoit +54 min). ⚠️ Rapport COUPÉ après le
+7e défi (« … » en plein mot) : temps de l'œuf 2 manquants.
+PRÉCISION DE L'AUTEUR : le rapport ne chronomètre QUE l'œuf 1 (pas une coupure du message) ; œuf 2 terminé en ~2 min.
+Calculateur à son rythme : 1,6 min pour les 7 défis clicker de l'œuf 2 (cohérent) ; son Aventure du chapitre 1 est
+bien plus rapide que le modèle (55 s par combat, joueur moyen : 8,7 combats). ⚠️ BUG DU RAPPORT (déjà vu : « Défi en
+cours : ? ») : les défis après l'œuf 1 ne sont pas enregistrés. Cause NON trouvée à la lecture (defiCourantRef suit
+currentChallengeId) → section 5 : afficher la valeur dans le jeu avant tout correctif. En attente du go de l'auteur.
+
+## 18/10 — RAPPORT : LE CHRONO DES DÉFIS S'ARRÊTE APRÈS L'ŒUF 1 → AFFICHAGE POSÉ (section 5), cause à lire sur la capture
+
+SYMPTÔME (rapport de l'auteur, build f7ce531) : « Temps réel des derniers défis » = l'œuf 1 seulement ; « Défi en cours :
+? depuis 0 min 15 s » ; 8 min de jeu actif et 3 944 taps (≈ l'œuf 1) alors que les défis de l'œuf 2 sont faits (partie
+« Défis en cours », lue EN DIRECT). Indice : tout ce qui vient de la clé diagnostic:mesures:v1 semble FIGÉ à la fin de
+l'œuf 1 → hypothèse n° 1 : les sauvegardes (toutes les 15 s) se sont arrêtées au passage œuf 1 → œuf 2 (défi courant =
+aucun). Cause NON visible à la lecture (une seule ouverture : pas de remontage).
+POSÉ (rien d'autre changé) : le tic de mesure est protégé (try/catch : une erreur est GARDÉE dans
+diagnostic:mesures:erreur:v1 au lieu d'arrêter le chrono en silence) ; heure de chaque sauvegarde (sauveA) ; 12 derniers
+passages du chrono (heure · défi quitté → défi suivant, ∅ = aucun). Le rapport affiche « Mesures enregistrées il y a… »,
+les passages « ↪ », et « Erreur du chrono » s'il y en a une.
+LECTURE PRÉVUE : « il y a » grand + erreur → l'erreur est la cause ; « il y a » grand sans erreur → l'intervalle s'arrête
+(démontage, minuteurs) ; « il y a » < 15 s mais aucun passage vers l'œuf 2 → le défi courant reste ∅ (choix du défi).
+Laisser l'affichage en place jusqu'à confirmation. Contrôles : 120 verts, 261 sabotages prouvés, taps 20/20, Exploration OK.
+
+## 18/10 — CALCULATEUR DE DÉFIS EN JEU (« comme l'Aventure ») : DÉCISIONS DE L'AUTEUR — rien codé
+
+ACCORDÉ (18/10) : (1) la règle « une cible ne dépend jamais du joueur » est LEVÉE pour les défis d'achat, de pièces et de
+revenu/s — comme l'Aventure ; (2) rythme de référence FIXE (pas le rythme mesuré du joueur : le joueur rapide va plus
+vite) ; (3) seuil d'Ascension DÉDUIT de la chaîne de défis — « ne pas hésiter à les rendre plus chères ».
+PRINCIPE : à l'apparition de chaque défi (= fin du précédent), cible figée = items dont le coût CUMULÉ (prix réel, niveau
+par niveau) vaut le budget = pièces en poche (hors ligne compris : ses gains sont déjà en poche) + production de référence
+× temps visé. Une seule fonction pour l'écran ET le simulateur ; contrôle « chaque défi ≈ temps visé ±20 %, jamais
+impossible, jamais né accompli ». Payeur : avantage explicite à définir (comme l'Aventure).
+POUVOIRS DU DECK (proposition de l'auteur) : un chiffre de référence plutôt qu'un calcul, +1 tap/s par créature
+(0 → 7, 1 → 8, 2 → 9, 3 → 10). MESURÉ (Monte-Carlo des œufs, pouvoirs du jeu) : juste à 7 % près aux œufs 1-4, puis trop
+bas de 19 % (œuf 7), 28 % (14), 43 % (21), 60 % (34) — les raretés hautes ont des pouvoirs ×6 à ×18. Équivalent mesuré :
+A0 7 / 8 / 10 / 11 · A1 13 · A2 15 · A3 20 · A4-A5 25 taps/s. ⚠️ Ce bonus vaut pour le REVENU seulement : les défis qui
+COMPTENT des taps (total, d'affilée) ou des critiques gardent 7 taps/s réels, sinon cibles gonflées jusqu'à ×3,5.
+À DÉCIDER : table étendue (recommandée) ou +1 par créature plafonné à 10.
+SUITE (crainte de l'auteur : « 3 légendaires à l'A3 bousillent le calcul ») → un % PAR CRÉATURE, lu sur le deck
+(mesuré avec les vraies règles : activé 5 s après être prêt, un seul pouvoir à la fois) : commune +22 % · peu commune
++24 % · rare +23 % · épique +48 % · légendaire +81 % · mythique +93 % · « remise » (Ventis, Glyphon) +0 % du revenu du
+tap ; on ADDITIONNE les 3 créatures : exact à 4,2 % près (pire cas : 3 basses raretés, pouvoirs qui se chevauchent).
+Roster : 2 légendaires seulement (Solstral, Tartaroth) → « 3 légendaires » impossible ; deck maximal = 2 légendaires +
+Arcanis = ×3,55 (≈ 25 taps/s équivalents). Les créatures « passif » (Caraploof, Luxorbe, Aquamira, Zephyrion, 4 rares,
+Voltarel) multiplient aussi le passif pendant leur pouvoir : 2e petit % à part. ANTI-TRICHE : prendre les 3 MEILLEURES
+créatures POSSÉDÉES, pas le deck du moment (sinon : 3 communes au moment de la photo, puis retour des légendaires).
+Seuil d'Ascension à caler sur un deck MALCHANCEUX (sinon fin de groupe longue à farmer pour lui).
+HORS LIGNE (crainte de l'auteur : « le défi demande 50 000 pièces, je me déconnecte et je les ai sans jouer ») — MESURÉ
+au joueur de référence : hors ligne = 25 % du passif pendant 2 h max, et le passif ne pèse que 0 à 9 % de la production
+(le tap, avec Transe / critiques / pouvoirs, fait le reste) → 2 h hors ligne couvrent en médiane 23 % d'un défi à l'A0,
+1 à 5 % ensuite ; pire cas 56 % (A2) ; 0 défi sur 322 rempli. Remplir un défi hors ligne demanderait 4 à 10 absences de
+2 h. DÉCISION PROPOSÉE : pas de règle spéciale dans le jeu ; un CONTRÔLE « 2 h hors ligne < 100 % d'un défi » (crie si un
+jour le passif ou le Veilleur est renforcé).
+POINTS OUVERTS (revue « qu'a-t-on oublié », 18/10) — à trancher AVANT de coder :
+🟥 (1) les récompenses en pièces (Offrande : 1 Diamant = un tiers de la prochaine amélioration ; cible dorée ; hors
+ligne) tombent dans la poche → le défi suivant les ABSORBE (le payeur perd son Diamant) → reco : poche comptée mais
+PLAFONNÉE (ex. 2 min de production) ; (2) budget < prix d'UN item (vécu v2.3 : « Achète 1 niveau de Volonté du
+Paradoxe » = 1,8 h) → reco : 1 minimum + contrôle qui le signale ; (3) prérequis (palier verrouillé, surprime avant
+l'heure) et plafonds (Sanctuaire / Veilleur 50, Faveur inutile au-delà de 30 %) dans le calcul, sinon défi impossible ;
+(4) DEUX joueurs de référence dans le jeu : l'étoile « Conseillé » (conseilBoutique : 6,7 taps/s, Transe au plafond ×3)
+≠ calculateur (7 taps/s, Transe ×2,47, critiques, pouvoirs) → une seule définition partagée, et l'étoile pointe sur
+l'item du défi en cours.
+🟨 (5) « Active N pouvoirs » : rythme selon les créatures (recharge 60 à 270 s) → même table par créature ; (6) éclosion
+(10 min × 1,194 par créature, jusqu'à 16 h, 1 tap = 1 s) et Gardien (10 min si défaite) hors du temps de l'œuf : vérifier
+s'ils bloquent l'œuf suivant ; (7) temps RÉEL : 28 h actives mais ~89 h d'attente d'énergie (Aventure) ; (8) arrondi :
+jamais vers une cible déjà atteinte (vécu : 100 500 → 100 000) ; (9) avantage du payeur à définir.
+Vérifié : AUCUN boost temporaire de pièces dans le jeu (rien à exclure de la production de référence).
+RÉPONSES DE L'AUTEUR (18/10) : (3) plafonds OK ; (5) pouvoirs pour « Active N pouvoirs » OK ; (6) l'éclosion BLOQUE
+l'œuf suivant = bug à corriger plus tard (À FAIRE) ; (1)+(9) le payeur DOIT être avantagé (« sinon ils demanderont un
+remboursement ») → proposé : PIÈCES PROTÉGÉES — les pièces d'Offrande (payées en Diamants) ne comptent pas dans la
+poche de la photo (compteur consommé quand il dépense) ; la poche reste comptée pour le reste (sinon épargner rendrait
+les défis d'achat instantanés : avec des cibles calculées sur SA production, ne pas investir ne coûte rien).
+(7) « pourquoi autant d'énergie ? » → MESURÉ : 227 étapes (dernier défi : chapitre 23, niveau 7 = verrou A5) à ~1,5
+combat par étape (crans 95/85/70/60/45 %) = 350 combats = 117 h de recharge (3 par heure ; barre de 7 = 140 min),
+pour ~28 h de clicker → ~91 h d'attente quoi qu'il fasse (combattre dès que la barre est pleine ne change RIEN :
+351 combats, 91 h). Seul levier fort : la vitesse de recharge (20 → 5 min par énergie ≈ aligne l'Aventure sur le clicker).
+⚠️ TROU DU JEU (trouvé en simulant un joueur qui combat dès que la barre est pleine) : cibleEtatAdaptee donne
+« actuel + 5 » aux défis « Termine le chapitre… » SANS plafond au verrou de fin d'Ascension (le Sanctuaire et le
+Veilleur sont plafonnés) → un joueur à 4 étapes ou moins du verrou reçoit une cible inatteignable → œuf bloqué, plus
+d'Ascension (simulé : A5, cible 229 > verrou 227). Correctif proposé : plafonner au verrou (1 ligne) + un contrôle.
+
+## 18/10 — VERROU D'AVENTURE RETIRÉ + ÉNERGIE MAX 8 (décisions de l'auteur) — PUBLIÉ
+
+CAUSE : le verrou de fin d'Ascension (26/09 : 25/60/101/144/185/227) et le « +5 niveaux » des défis « Termine le
+chapitre… » (cibleEtatAdaptee) se contredisaient : un joueur à 4 étapes ou moins du verrou recevait une cible
+INATTEIGNABLE → œuf et Ascension bloqués (trouvé au calculateur de défis, joueur qui combat dès que sa barre est pleine).
+DÉCISION DE L'AUTEUR : retirer le verrou — sa raison du 26/09 (2 créatures écrasées au niveau 26) n'existe plus depuis
+le calculateur de l'Aventure (11/10 : chaque fenêtre réglée sur la photo du deck). `niveauMaxAventure` rend Infinity
+(fonction gardée : 3 entrées de la carte et garde-fou « 3 étoiles », désormais sans effet). ⚠️ Ne PAS remettre de verrou
+sans plafonner aussi le « +5 ». À revérifier si la branche « niveaux réels » (ennemis niveau = étape) est fusionnée.
+ÉNERGIE MAX 7 → 8 (recharge inchangée, 20 min : l'attente pousse vers les Diamants, choix assumé de l'auteur).
+CONTRÔLES : auditVerrouAventure vérifie maintenant « aucun verrou, à aucune Ascension » et que le garde-fou « 3 étoiles »
+ne valide jamais d'office ; sabotage « garde-fou retiré » RETIRÉ (sans objet), remplacé par « un verrou revient » ;
+auditPacteEnergie lit 8. Suite verte, 261 sabotages prouvés, taps 20/20, Exploration OK.
+NOTE : l'auteur pensait le dernier défi d'Aventure au niveau 205 ; le jeu dit 227 (défi 314, œuf 39, « chapitre 23,
+niveau 7 »).
+
+## 18/10 — CALCULATEUR DE DÉFIS EN JEU : TEMPS VISÉ EN MARCHES TOUS LES 3 ŒUFS (décision de l'auteur) — rien codé
+
+« À partir de l'œuf 3 la difficulté monte d'un cran, pareil à 6, 9… de 3 en 3 » (il a écrit « 11 », lu 12). PAS par
+Ascension : par Ascension, les premiers œufs de chaque groupe seraient « faciles » à ses yeux, et la règle actuelle
+(durée du groupe ÷ œufs ÷ 8) REDESCEND même de l'A1 à l'A2 (4,6 → 4,5 min par défi). Rappel : avec le calculateur, le
+bonus d'Ascension ne rend plus un défi facile (cible recalculée sur la production réelle) — la difficulté, c'est le
+temps visé. MESURÉ (tous les défis à ce temps) : départ 3 min, +0,5 min par marche → œuf 40 à 9,5 min ; par Ascension
+2,8 / 3,6 / 5,1 / 6,2 / 7,3 / 8,4 h = 33,5 h (actuel 32,1 h) ; +0,75 min → œuf 40 à 12,75 min, 42,2 h (« Ascensions
+plus chères »). À CHOISIR par l'auteur.
+CHOIX DE L'AUTEUR (18/10) : +0,75 min par marche (« le jeu le plus long possible, mais pas lassant ») → 3 min par
+défi aux œufs 1-2, puis +0,75 aux œufs 3, 6, 9, 12… → 12,75 min à l'œuf 40 ; ≈ 42 h à 7 taps/s (≈ 2 × moins vite chez
+lui). Garde-fous anti-lassitude à mesurer : aucun défi > 2 × son temps visé ; rythme court / long dans l'œuf (option).
+
+### 📋 CAHIER DES CHARGES COMPLET — calculateur de défis EN JEU (tout décidé le 18/10, RIEN codé)
+1. QUAND : à l'apparition de chaque défi (= fin du précédent) ; cible FIGÉE ensuite.
+2. QUELS DÉFIS : achats, pièces (« Obtiens », « Mets de côté »), revenu/s → calculés. Cible dorée et « Active N
+   pouvoirs » → temps visé ÷ rythme d'apparition (pouvoirs : recharges des créatures). Taps au total et critiques →
+   7 taps/s RÉELS. Inchangés : records (Transe, taps d'affilée), Aventure (son calculateur), Ascension.
+3. BUDGET = poche (hors ligne compris) SAUF les pièces protégées (Offrande payée en Diamants : avantage du payeur)
+   + production de référence × temps visé.
+4. PRODUCTION DE RÉFÉRENCE (une seule fonction, partagée avec l'étoile « Conseillé » du Grimoire) : 7 taps/s fixes ×
+   valeur du tap (Pacte, paliers, reliques) × Transe ×2,47 × critiques réels × (1 + % des 3 MEILLEURES créatures
+   possédées : commune 22, peu commune 24, rare 23, épique 48, légendaire 81, mythique 93, remise 0) × Sanctuaire /
+   Ascension ; + passif (× petit % des créatures « passif »).
+5. CIBLE = items dont le coût CUMULÉ (prix réel, prérequis compris, plafonds respectés) = budget ; au moins 1 ;
+   arrondi VERS LE HAUT, jamais une cible déjà atteinte.
+6. TEMPS VISÉ = marches de 3 œufs : 3 min + 0,75 min par marche (œuf 40 : 12,75 min).
+7. SEUIL D'ASCENSION = pièces gagnées à la fin de la chaîne ÷ 0,9, calé sur un deck MALCHANCEUX ; plus cher accepté.
+8. CONTRÔLES : chaque défi ≈ temps visé ±20 % au simulateur ; jamais impossible ni né accompli ; 2 h hors ligne < 100 %
+   d'un défi ; « 1 item > 2 × budget » listé (on change l'item à la main, validé par l'auteur) ; ~6 contrôles de
+   l'ancienne règle « cible fixe » à réécrire. Construire sur une BRANCHE et mesurer avant d'appliquer.
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
