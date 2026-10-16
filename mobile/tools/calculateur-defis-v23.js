@@ -296,19 +296,12 @@ function creerJoueur(a, V, depart, opts = {}) {
   };
   const terminer = (t) => {
     const c = J.courant;
-    J.resultats.push({ ...c, finT: t, actif: t - c.debutT, mur: V.mur - c.debutMur, attente: (V.mur - c.debutMur) - (t - c.debutT) });
+    let cout = 0;
+    if (ACHATS(c.m)) for (let l = c.base; l < c.base + c.cible; l++) cout += Q.coutNiveauAchat(c.m, l, a);
+    J.resultats.push({ ...c, cout, finT: t, actif: t - c.debutT, mur: V.mur - c.debutMur, attente: (V.mur - c.debutMur) - (t - c.debutT) });
     J.i += 1; J.courant = null;
   };
   J.bloque = (t) => { J.bloqueA = { i: J.i, t }; J.fini = true; };
-  // Achats « économiques » que le joueur des défis voit en plus (voir audit-quetes.js).
-  J.optionsEco = (s) => {
-    const o = [
-      { quoi: 'critLevel', champ: 'critLevel', cout: Q.coutNiveauAchat('critLevel', s.critLevel || 0, a), appliquer: (x) => { x.critLevel = (x.critLevel || 0) + 1; } },
-      { quoi: 'critDamageLevel', champ: 'critDamageLevel', cout: Q.coutNiveauAchat('critDamageLevel', s.critDamageLevel || 0, a), appliquer: (x) => { x.critDamageLevel = (x.critDamageLevel || 0) + 1; } },
-    ];
-    if ((s.sanctuaryLevel || 0) < C.SANCTUARY_MAX_LEVEL) o.push({ quoi: 'sanctuaryLevel', champ: 'sanctuaryLevel', cout: C.sanctuaryUpgradeCost(s.sanctuaryLevel || 0), appliquer: (x) => { x.sanctuaryLevel = (x.sanctuaryLevel || 0) + 1; } });
-    return o.filter((x) => Number.isFinite(x.cout) && x.cout > 0);
-  };
   J.decider = (t, s, r, v) => {
     for (let garde = 0; garde < 1000; garde++) {
       if (!J.courant) {
@@ -331,9 +324,15 @@ function creerJoueur(a, V, depart, opts = {}) {
     if (m === 'ascension') return { achat: v, horizon: r > 0 ? Math.max(1e-6, (C.ascensionThreshold(a) - s.totalEarned) / r) : Infinity };
     if (DUREE_FIXE.includes(m)) return { achat: SANS_ACHAT.includes(m) ? null : v, horizon: Math.max(1e-6, c.duree - c.ecoule) };
     if (m === 'totalCrits') {
-      const p = chanceCrit(s);
-      if (p <= 0) return { achat: achatDe('critLevel', s), horizon: Infinity }; // 0 % de critique : la Faveur d'abord
-      return { achat: v, horizon: Math.max(1e-6, (c.cible - c.crits) / (taps * p)) };
+      // Le joueur des 32 h n'achète pas la Faveur de lui-même : pendant ce défi, il en prend un niveau
+      // tant que le temps gagné dépasse le temps de le payer (et d'office à 0 % de critique).
+      const p = chanceCrit(s), reste = c.cible - c.crits;
+      const f = achatDe('critLevel', s);
+      const p2 = chanceCrit({ ...s, critLevel: (s.critLevel || 0) + 1 });
+      const gagne = p > 0 ? reste / (taps * p) - reste / (taps * p2) : Infinity;
+      const prix = r > 0 ? Math.max(0, f.cout - s.coins) / r : Infinity;
+      if (p <= 0 || (p2 > p && gagne > prix)) return { achat: f, horizon: p > 0 ? Math.max(1e-6, reste / (taps * p)) : Infinity };
+      return { achat: v, horizon: Math.max(1e-6, reste / (taps * p)) };
     }
     if (m === 'totalTaps') return { achat: v, horizon: Math.max(1e-6, (c.cible - V.taps) / taps) };
     if (m === 'offering') {
@@ -384,4 +383,97 @@ function jouer(a, V, photo, opts = {}) {
   return { J, V: Vc, sim: r };
 }
 
-module.exports = { HYP, TRANSE, POUVOIRS, facteurCrit, chanceCrit, statsDeck, defisDuGroupe, etatVieInitial, jouer, creerJoueur };
+
+// ---- RECHERCHE DES CIBLES v2.3 -------------------------------------------
+// Temps visé PAR DÉFI (décision A : durées gardées, 32 h) = durée ACTUELLE du groupe (simulerGroupe, joueur
+// de référence à 4 taps/s, temps actif) ÷ œufs ÷ 8 — la règle « temps de l'œuf ÷ 8 » du cahier des charges v2.
+// Recalés : pièces, de côté, revenu/s, taps, critiques, cible dorée, pouvoirs, achats. INCHANGÉS : Aventure,
+// records (Transe, taps d'affilée), Ascension, Sanctuaire / Veilleur, Offrande, cibles de 1.
+const RECALES = ['totalEarned', 'coins', 'passiveIncome', 'totalTaps', 'totalCrits', 'goldenClaimed', 'powerActivated'];
+const CONTINUS = ['totalEarned', 'coins', 'passiveIncome', 'totalTaps', 'totalCrits'];
+const PREMIER_OEUF = new Set(D.DEFIS_ECRITS[0].map((q) => q.id)); // tutoriel fixé par l'auteur (wiki, 20-21/09)
+const recale = (q) => (q.target || 0) > 1 && !PREMIER_OEUF.has(q.id) && (ACHATS(q.metric) || RECALES.includes(q.metric));
+const joli = (x) => (x >= 1000 ? Number(x.toPrecision(2)) : Math.max(1, Math.round(x)));
+function tempsVise(a) {
+  return A.simulerGroupe(a, 4).tActif / (D.OEUFS_PAR_GROUPE[a] * 8);
+}
+// Joue UN défi depuis la photo de son apparition, avec la cible écrite x ; rend { r, photoFin }.
+function jouerUn(a, photo, i, x) {
+  const q = defisDuGroupe(a)[i].q;
+  const avant = q.target;
+  if (x !== undefined) q.target = x;
+  try {
+    const r = jouer(a, null, photo, { depuis: i, arreterApres: i });
+    // Bloqué (cible inatteignable en 400 h de jeu actif) : temps infini, jamais retenu par la recherche.
+    return { r: r.J.resultats[0] || { actif: Infinity, attente: 0, label: q.label(q.target), id: q.id, m: q.metric },
+      photoFin: r.J.photoFin, bloque: r.J.bloqueA };
+  } finally { if (x !== undefined) q.target = avant; }
+}
+function chercher(a, photo, i, tau) {
+  const q = defisDuGroupe(a)[i].q;
+  const cache = {};
+  const f = (x) => (cache[x] !== undefined ? cache[x] : (cache[x] = jouerUn(a, photo, i, x).r.actif));
+  if (CONTINUS.includes(q.metric)) {
+    let lo = 1, hi = Math.max(2, q.target);
+    if (f(joli(lo)) >= tau) return { x: q.target, note: 'plancher du jeu' };
+    for (let k = 0; k < 40 && f(joli(hi)) < tau; k++) { lo = hi; hi *= 4; }
+    for (let k = 0; k < 24; k++) { const mid = Math.sqrt(lo * hi); if (f(joli(mid)) >= tau) hi = mid; else lo = mid; }
+    const a1 = joli(lo), b1 = joli(hi);
+    return { x: Math.abs(f(a1) - tau) <= Math.abs(f(b1) - tau) ? a1 : b1 };
+  }
+  if (f(1) >= tau) return { x: 1 };
+  let lo = 1, hi = Math.max(2, q.target);
+  for (let k = 0; k < 30 && f(hi) < tau; k++) { lo = hi; hi *= 2; }
+  while (hi - lo > 1) { const mid = Math.floor((lo + hi) / 2); if (f(mid) >= tau) hi = mid; else lo = mid; }
+  return { x: Math.abs(f(lo) - tau) <= Math.abs(f(hi) - tau) ? lo : hi };
+}
+// Chaîne v2.3 d'un groupe : défi par défi, la cible choisie reste écrite pour la suite (règle du total).
+function chaineV23(a, vie) {
+  const tau = tempsVise(a);
+  const liste = defisDuGroupe(a);
+  let photo = jouer(a, vie, null, { arreterApres: -1 }).J.photoFin;
+  const lignes = [];
+  for (let i = 0; i < liste.length; i++) {
+    const q = liste[i].q;
+    let note = '';
+    if (recale(q)) {
+      const c = chercher(a, photo, i, tau);
+      q.target = c.x; note = c.note || '';
+    }
+    const u = jouerUn(a, photo, i);
+    lignes.push({ ...u.r, ecriteV23: q.target, note, bloque: !!u.bloque });
+    if (u.bloque) break;
+    photo = u.photoFin;
+  }
+  return { lignes, tau, vie: photo.V };
+}
+// Toute la partie : chaîne « aujourd'hui » (cibles écrites), puis chaîne v2.3. Les cibles d'origine sont
+// RESTAURÉES à la fin (rien n'est écrit : seul l'objet chargé en mémoire est modifié pendant le calcul).
+function calculer() {
+  const origine = D.DEFIS_ECRITS.flat().map((q) => q.target);
+  try {
+    const aujourdhui = []; let vie = etatVieInitial();
+    for (let a = 0; a < 6; a++) { const r = jouer(a, vie, null, {}); aujourdhui.push(r.J.resultats); vie = r.V; }
+    const v23 = []; vie = etatVieInitial();
+    for (let a = 0; a < 6; a++) { const r = chaineV23(a, vie); v23.push(r); vie = r.vie; }
+    return { aujourdhui, v23 };
+  } finally {
+    D.DEFIS_ECRITS.flat().forEach((q, k) => { q.target = origine[k]; });
+  }
+}
+
+module.exports = { HYP, TRANSE, POUVOIRS, facteurCrit, chanceCrit, statsDeck, defisDuGroupe, etatVieInitial, jouer, creerJoueur, tempsVise, calculer };
+
+if (require.main === module) {
+  const t0 = Date.now();
+  const R = calculer();
+  const sortie = process.argv.includes('--json') ? process.argv[process.argv.indexOf('--json') + 1] : null;
+  if (sortie) fs.writeFileSync(sortie, JSON.stringify({ HYP, TRANSE, date: new Date().toISOString(), ...R }));
+  const h = (x) => (x / 3600).toFixed(2).replace('.', ',') + ' h';
+  for (let a = 0; a < 6; a++) {
+    const auj = R.aujourdhui[a], v = R.v23[a];
+    const act = (L) => L.reduce((t, x) => t + x.actif, 0), att = (L) => L.reduce((t, x) => t + x.attente, 0);
+    console.log(`A${a} · visé ${(v.tau / 60).toFixed(1)} min/défi · aujourd'hui ${h(act(auj))} (+${h(att(auj))} d'énergie) · v2.3 ${h(act(v.lignes))} (+${h(att(v.lignes))})${v.lignes.some((x) => x.bloque) ? ' · BLOQUÉ' : ''}`);
+  }
+  console.log(`(${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+}

@@ -2369,16 +2369,6 @@ function simulerGroupe(ascension, tapsParSec, options) {
       s.autoClickers = sauve.ac; s.tapUpgrades = sauve.tu; s.tapPower = sauve.tp;
       o.score = o.gain > 0 ? Math.max(0, (o.cout - s.coins) / r) + o.cout / o.gain : Infinity;
     });
-    // v2.3 : le joueur des défis voit AUSSI les achats dont il modélise l'effet (Faveur, Dégâts critiques,
-    // Sanctuaire — l'étoile « Conseillé » du Grimoire les propose) ; même score que les autres.
-    if (J && J.optionsEco) J.optionsEco(s).forEach((o) => {
-      const avant = s[o.champ];
-      s[o.champ] = (avant || 0) + 1;
-      o.gain = rev() - r;
-      s[o.champ] = avant;
-      o.score = o.gain > 0 ? Math.max(0, (o.cout - s.coins) / r) + o.cout / o.gain : Infinity;
-      options.push(o);
-    });
     options.sort((x, y) => x.score - y.score);
     const v = options[0];
     // ⚠️ v2.3 — le joueur des défis décide de CE pas : l'achat au meilleur rapport (v), un achat
