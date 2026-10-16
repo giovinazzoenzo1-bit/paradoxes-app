@@ -13,7 +13,7 @@
 // plus pour envoyer un mail.
 import { Linking, Share, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { lienMailto, construireRapport, sujetRapport, MESURES_JEU_KEY } from './games/clicker/diagnostic';
+import { lienMailto, construireRapport, sujetRapport, MESURES_JEU_KEY, MESURES_ERREUR_KEY } from './games/clicker/diagnostic';
 import { BUILD_SHA, BUILD_TIME } from './version';
 
 export function descriptionAppareil() {
@@ -42,6 +42,12 @@ export async function envoyerRapport({ instantane, derniereErreur } = {}) {
   // 17/10 : mesures de jeu (écrites par l'écran de jeu toutes les 15 s) — jamais bloquant si elles manquent.
   let mesures = null;
   try { mesures = JSON.parse((await AsyncStorage.getItem(MESURES_JEU_KEY)) || 'null'); } catch (e) { mesures = null; }
+  // 18/10 (diagnostic du chrono des défis, section 5) : âge de la dernière sauvegarde et dernière erreur du chrono.
+  try {
+    if (mesures && Number(mesures.sauveA) > 0) mesures.ageSec = Math.max(0, Math.round((Date.now() - Number(mesures.sauveA)) / 1000));
+    const err = JSON.parse((await AsyncStorage.getItem(MESURES_ERREUR_KEY)) || 'null');
+    if (mesures && err && err.msg) mesures.erreurChrono = String(err.msg) + ' (' + String(err.h || '?') + ')';
+  } catch (e) { /* jamais bloquant */ }
   const corps = construireRapport({ instantane, derniereErreur, appareil: descriptionAppareil(), build, mesures });
   const sujet = sujetRapport(instantane && instantane.problemes, build);
   try {

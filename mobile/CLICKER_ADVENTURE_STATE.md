@@ -4042,6 +4042,21 @@ bien plus rapide que le modèle (55 s par combat, joueur moyen : 8,7 combats). �
 cours : ? ») : les défis après l'œuf 1 ne sont pas enregistrés. Cause NON trouvée à la lecture (defiCourantRef suit
 currentChallengeId) → section 5 : afficher la valeur dans le jeu avant tout correctif. En attente du go de l'auteur.
 
+## 18/10 — RAPPORT : LE CHRONO DES DÉFIS S'ARRÊTE APRÈS L'ŒUF 1 → AFFICHAGE POSÉ (section 5), cause à lire sur la capture
+
+SYMPTÔME (rapport de l'auteur, build f7ce531) : « Temps réel des derniers défis » = l'œuf 1 seulement ; « Défi en cours :
+? depuis 0 min 15 s » ; 8 min de jeu actif et 3 944 taps (≈ l'œuf 1) alors que les défis de l'œuf 2 sont faits (partie
+« Défis en cours », lue EN DIRECT). Indice : tout ce qui vient de la clé diagnostic:mesures:v1 semble FIGÉ à la fin de
+l'œuf 1 → hypothèse n° 1 : les sauvegardes (toutes les 15 s) se sont arrêtées au passage œuf 1 → œuf 2 (défi courant =
+aucun). Cause NON visible à la lecture (une seule ouverture : pas de remontage).
+POSÉ (rien d'autre changé) : le tic de mesure est protégé (try/catch : une erreur est GARDÉE dans
+diagnostic:mesures:erreur:v1 au lieu d'arrêter le chrono en silence) ; heure de chaque sauvegarde (sauveA) ; 12 derniers
+passages du chrono (heure · défi quitté → défi suivant, ∅ = aucun). Le rapport affiche « Mesures enregistrées il y a… »,
+les passages « ↪ », et « Erreur du chrono » s'il y en a une.
+LECTURE PRÉVUE : « il y a » grand + erreur → l'erreur est la cause ; « il y a » grand sans erreur → l'intervalle s'arrête
+(démontage, minuteurs) ; « il y a » < 15 s mais aucun passage vers l'œuf 2 → le défi courant reste ∅ (choix du défi).
+Laisser l'affichage en place jusqu'à confirmation. Contrôles : 120 verts, 261 sabotages prouvés, taps 20/20, Exploration OK.
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).

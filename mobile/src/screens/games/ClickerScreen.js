@@ -129,7 +129,7 @@ import {
 } from '../../games/clicker/questLogic';
 import { articleDuDefiAchat } from '../../games/clicker/grimoireChapitres';
 // Signalement des blocages — voir `games/clicker/diagnostic.js`.
-import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY, MESURES_JEU_KEY } from '../../games/clicker/diagnostic';
+import { detecterBlocages, suivreStagnation, DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY, MESURES_JEU_KEY, MESURES_ERREUR_KEY } from '../../games/clicker/diagnostic';
 import { envoyerRapport } from '../../signalement';
 import {
   combatStatsForCreatureTyped,
@@ -3519,17 +3519,23 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       m.sessions += 1;
       mesuresChargeesRef.current = true;
     }).catch(() => { mesuresChargeesRef.current = true; });
-    const id = setInterval(() => {
+    // 18/10 (diagnostic, section 5) : le rapport ne chronométrait que l'œuf 1 (« Défi en cours : ? »), cause invisible à la
+    // lecture. Le tic est protégé : une erreur est GARDÉE pour le rapport au lieu d'arrêter le chrono en silence.
+    const heure = () => new Date().toISOString().slice(11, 19);
+    const id = setInterval(() => { try {
       const m = mesuresRef.current;
       m.tempsJeuSec += 1;
       m.revenuPassif = passiveIncomeRef.current || 0;
       const d = defiCourantRef.current;
       if (mesuresChargeesRef.current && d.id !== m.defiId) {
         if (m.defiId) m.historique = [...m.historique, { id: m.defiId, label: m.defiLabel, sec: Math.round(m.tempsJeuSec - m.defiDebut) }].slice(-25);
+        m.suivi = [...(Array.isArray(m.suivi) ? m.suivi : []), { h: heure(), de: m.defiId, vers: d.id }].slice(-12);
         m.defiId = d.id; m.defiLabel = d.label; m.defiDebut = m.tempsJeuSec;
       }
-      if (mesuresChargeesRef.current && m.tempsJeuSec % 15 === 0) AsyncStorage.setItem(MESURES_JEU_KEY, JSON.stringify(m)).catch(() => {});
-    }, 1000);
+      if (mesuresChargeesRef.current && m.tempsJeuSec % 15 === 0) { m.sauveA = Date.now(); AsyncStorage.setItem(MESURES_JEU_KEY, JSON.stringify(m)).catch(() => {}); }
+    } catch (e) {
+      try { AsyncStorage.setItem(MESURES_ERREUR_KEY, JSON.stringify({ h: heure(), msg: String((e && e.message) || e) })).catch(() => {}); } catch (e2) { /* rien */ }
+    } }, 1000);
     return () => { vivant = false; clearInterval(id); };
   }, []);
   useEffect(() => {
