@@ -53,7 +53,9 @@ export const DAILY_QUEST_POOL = [
   { id: 'equip1rune', desc: 'Équipe 1 rune sur une créature', event: 'runeEquipped', target: 1, reward: 30 },
   { id: 'buyRune1', desc: 'Achète 1 rune', event: 'runeBought', target: 1, reward: 25 },
   { id: 'fuseRune1', desc: 'Fusionne 2 runes en 1', event: 'runeFused', target: 1, reward: 35 },
-  { id: 'summon3', desc: 'Invoque 3 créatures', event: 'summon', target: 3, reward: 30 , diamonds: 1 },
+  // ⚠️ « Invoque des créatures » était illogique (signalé par l'auteur) : le bouton Invoquer est réservé aux tests, les
+  // créatures viennent des ŒUFS. Identifiants gardés (sauvegardes du jour), sujet remplacé.
+  { id: 'summon3', desc: 'Active 5 pouvoirs de créature', event: 'powerActivated', target: 5, reward: 30 , diamonds: 1 },
   { id: 'crit10', desc: 'Obtiens 10 coups critiques', event: 'crit', target: 10, reward: 30 , diamonds: 1 },
   // ⚠️ Compteur de TAPS — le seul défi qui ne dépend d'AUCUNE ressource :
   // ni énergie, ni Griffes, ni pièces, ni pitié du hasard. Toujours
@@ -182,7 +184,7 @@ export const WEEKLY_QUEST_POOL = [
   // production hebdomadaire ET une chance parfaite au tirage.
   { id: 'w_fuseRune4',    desc: 'Fusionne 4 fois des runes',    event: 'runeFused', target: 4, reward: 160, diamonds: 3 },
   { id: 'w_equipRune15',  desc: 'Équipe 15 runes',              event: 'runeEquipped', target: 15, reward: 190 },
-  { id: 'w_summon40',     desc: 'Invoque 40 créatures',         event: 'summon', target: 40, reward: 205 },
+  { id: 'w_summon40',     desc: 'Fais 1 Ascension',             event: 'ascension', target: 1, reward: 205 }, // remplace « Invoque 40 créatures »
   { id: 'w_earn250k',     desc: `Gagne ${fmtPieces(250000 * COIN_SCALE)} pièces`, event: 'coinsEarned', target: 250000 * COIN_SCALE, reward: 125, diamonds: 3 },
   { id: 'w_feed30',       desc: 'Nourris 30 fois une créature', event: 'creatureFed', target: 30, reward: 190 },
   { id: 'w_offering10',   desc: 'Fais 10 Offrandes',            event: 'offering', target: 10, reward: 260 },
@@ -275,7 +277,7 @@ export const ACHIEVEMENTS = [
   // les paliers doivent suivre la même courbe, sinon les trois derniers
   // tomberaient le même jour.
   { id: 'a_coins',   desc: 'Gagner des pièces',            stat: 'coinsEarned',     tiers: [50000, 1000000, 25000000, 500000000, 10000000000].map((t) => t * COIN_SCALE) },
-  { id: 'a_summon',  desc: 'Invoquer des créatures',       stat: 'summon',          tiers: [10, 50, 150, 400, 1000] },
+  { id: 'a_summon',  desc: 'Gagner des combats en Aventure', stat: 'battleWon',     tiers: [10, 50, 200, 600, 1500] }, // remplace « Invoquer des créatures »
   { id: 'a_fuse',    desc: 'Fusionner des runes',          stat: 'runeFused',       tiers: [3, 15, 50, 150, 400] },
   { id: 'a_feed',    desc: 'Nourrir des créatures',        stat: 'creatureFed',     tiers: [10, 50, 200, 600, 1500] },
   { id: 'a_power',   desc: 'Activer des pouvoirs',         stat: 'powerActivated',  tiers: [25, 150, 600, 2000, 5000] },
@@ -330,12 +332,14 @@ export const ACHIEVEMENT_MAX_TIER = 5;
 //                perdu entre-temps.
 export const DAILY_CALENDAR = [
   { day: 1, type: 'griffes',  amount: 40,  icon: '🐾', label: '40 Griffes' }, // 11/10 (soir) : remis comme avant (malentendu)
-  { day: 2, type: 'appCoins', amount: 25,  icon: '💎', label: '25 Diamants' },
-  { day: 3, type: 'creature', rarity: 'rare', icon: '🥚', label: 'Créature Rare' },
+  // Demandes de l'auteur : Diamants 25 → 10 et 50 → 25 ; jour 3 = Tap ×2 pendant 2 min, jour 7 = Tap ×2 pendant 5 min (à la
+  // place de la Créature Rare et du bon de skin). `boostTap` est appliqué par l'écran principal (handleClaimCalendar).
+  { day: 2, type: 'appCoins', amount: 10,  icon: '💎', label: '10 Diamants' },
+  { day: 3, type: 'boostTap', minutes: 2, icon: '⚡', label: 'Tap ×2 · 2 min' },
   { day: 4, type: 'griffes',  amount: 80,  icon: '🐾', label: '80 Griffes' },
-  { day: 5, type: 'appCoins', amount: 50,  icon: '💎', label: '50 Diamants' },
+  { day: 5, type: 'appCoins', amount: 25,  icon: '💎', label: '25 Diamants' },
   { day: 6, type: 'griffes',  amount: 150, icon: '🐾', label: '150 Griffes' },
-  { day: 7, type: 'skin',     amount: 1,   icon: '🎨', label: 'Skin aléatoire' },
+  { day: 7, type: 'boostTap', minutes: 5, icon: '⚡', label: 'Tap ×2 · 5 min' },
 ];
 
 // Le jour du calendrier (1-7) pour un streak donne. Le streak continue

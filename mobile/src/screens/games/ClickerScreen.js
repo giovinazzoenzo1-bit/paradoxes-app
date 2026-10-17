@@ -1234,6 +1234,29 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     return () => loop.stop();
   }, [incubatingEgg, ambientFx]);
 
+  // Demande de l'auteur : l'icône de l'incubateur VIBRE quand un œuf y est prêt (il ne l'avait pas vu et l'a perdu). Toujours
+  // active, même sans les animations d'ambiance : c'est un signal, pas un décor.
+  const incubatorShake = useRef(new Animated.Value(0)).current;
+  const incubateurPret = !!incubatingEgg && incubatorIsReady(incubatingEgg);
+  useEffect(() => {
+    if (!incubateurPret) {
+      incubatorShake.setValue(0);
+      return undefined;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(incubatorShake, { toValue: 1, duration: 70, useNativeDriver: true }),
+        Animated.timing(incubatorShake, { toValue: -1, duration: 140, useNativeDriver: true }),
+        Animated.timing(incubatorShake, { toValue: 1, duration: 140, useNativeDriver: true }),
+        Animated.timing(incubatorShake, { toValue: -1, duration: 140, useNativeDriver: true }),
+        Animated.timing(incubatorShake, { toValue: 0, duration: 70, useNativeDriver: true }),
+        Animated.delay(900),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [incubateurPret]);
+
   const giftGlowPulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     // Reglage "Animations d'ambiance" : coupe reellement la boucle au
@@ -2835,6 +2858,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (!got) return;
     if (got.type === 'appCoins') spawnPopup(`+${got.amount} 💎`, 110, 60);
     else if (got.type === 'griffes') spawnPopup(`+${got.amount} 🐾`, 110, 60);
+    else if (got.type === 'boostTap') {
+      // Calendrier (demande de l'auteur) : Tap ×2, comme la pub — HORS de la photo des défis (même bonus `boostTapJusqua`) ;
+      // un bonus déjà en cours est prolongé, pas écrasé.
+      const fin = Math.max(Date.now(), boostTapJusquaRef.current) + (Number(got.minutes) || 0) * 60 * 1000;
+      boostTapJusquaRef.current = fin;
+      setBoostTapJusqua(fin);
+      spawnPopup(`⚡ ${got.label}`, 110, 60);
+    }
     // 27/09 : plus de fenêtre blanche (créature, skin) — l'effet doré du
     // calendrier l'annonce.
   };
@@ -4261,6 +4292,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   {
                     transform: [
                       { scale: incubatorPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] }) },
+                      { rotate: incubatorShake.interpolate({ inputRange: [-1, 1], outputRange: ['-14deg', '14deg'] }) },
                     ],
                   },
                 ]}
@@ -4972,6 +5004,7 @@ const CAL_ICONES = {
   appCoins: CRISTAL,
   creature: require('../../../assets/calendrier/icone-oeuf.png'),
   skin: require('../../../assets/calendrier/icone-palette.png'),
+  boostTap: ICONES_PUB.tapx2, // jours 3 et 7 : Tap ×2 (demande de l'auteur)
 };
 function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim, onClose, vibrations = true }) {
   // ⚠️ Hook AVANT l'arrêt anticipé (ordre des hooks constant d'un rendu à
@@ -4986,8 +5019,9 @@ function DailyCalendarModal({ calendar, currentDay, alreadyClaimedToday, onClaim
     vibrerSucces(vibrations);
     jouerSon('recompense', sons !== false);
     if (d) {
-      const special = d.type === 'creature' || d.type === 'skin';
-      const sous = d.type === 'creature' ? "Elle t'attend dans ta Collection" : d.type === 'skin' ? 'Les skins arrivent bientôt' : null;
+      const special = d.type === 'creature' || d.type === 'skin' || d.type === 'boostTap';
+      const sous = d.type === 'creature' ? "Elle t'attend dans ta Collection" : d.type === 'skin' ? 'Les skins arrivent bientôt'
+        : d.type === 'boostTap' ? 'Tes taps rapportent le double' : null;
       const id = Date.now();
       setEffet({ id, texte: special ? `${d.label} !` : `+${d.label}`, sousTexte: sous });
       setTimeout(() => setEffet((e) => (e && e.id === id ? null : e)), 1400);

@@ -2051,12 +2051,13 @@ export const OFFRANDE_APPCOINS_COST = 1;
 // Retenu : une FRACTION DE LA PROCHAINE AMÉLIORATION. C'est la seule
 // ancre qui suit la courbe des coûts par construction, et elle se lit
 // simplement : « 1 Diamant = un tiers de ta prochaine amélioration ».
-export const OFFRANDE_UPGRADE_FRACTION = 0.3;
+// ⚠️ Gains −30 % (demande de l'auteur : « les offrandes sont trop cheater ») : 0,3 → 0,21 de la prochaine amélioration, plancher 25 → 18.
+export const OFFRANDE_UPGRADE_FRACTION = 0.21;
 
 export function offrandeReward(tapPower) {
   // Plancher : même au tout début, une Offrande doit donner de quoi se
   // sentir, sinon elle est un piège.
-  return Math.max(25 * COIN_SCALE, Math.round(tapPowerCost(tapPower) * OFFRANDE_UPGRADE_FRACTION));
+  return Math.max(18 * COIN_SCALE, Math.round(tapPowerCost(tapPower) * OFFRANDE_UPGRADE_FRACTION));
 }
 
 // ---- Défis et œuf : déplacés dans `questLogic.js` (14/09) ----

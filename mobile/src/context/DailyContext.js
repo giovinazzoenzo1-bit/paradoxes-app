@@ -397,7 +397,8 @@ export function DailyProvider({ children }) {
     if (r.diamants > 0) await addPending(PENDING_DIAMONDS_KEY, r.diamants);
     r.journal.forEach(([source, g, id]) => noterGriffes(source, g, { id })); // journal des Griffes (11/10)
     let calendrier = null;
-    if (r.calendrier && (r.calendrier.type !== 'appCoins' || typeof addAppCoins === 'function')) calendrier = await claimStreak(addAppCoins);
+    // Tap ×2 du calendrier : seulement depuis l'écran principal, qui l'applique (pris ici, il serait perdu).
+    if (r.calendrier && r.calendrier.type !== 'boostTap' && (r.calendrier.type !== 'appCoins' || typeof addAppCoins === 'function')) calendrier = await claimStreak(addAppCoins);
     const griffesCalendrier = calendrier && calendrier.type === 'griffes' ? Number(calendrier.amount) || 0 : 0;
     return { griffes: r.griffes + griffesCalendrier, diamants: r.diamants, calendrier,
       nb: r.quetes.length + r.hebdos.length + Object.keys(r.succes).length + (calendrier ? 1 : 0) };

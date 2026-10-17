@@ -5456,7 +5456,7 @@ function auditToutRecuperer() {
   if (dejaPris.griffes !== 0 || dejaPris.calendrier) pb.push('des récompenses déjà prises seraient payées une 2e fois');
   const D = fs.readFileSync(path.join(__dirname, '../src/context/DailyContext.js'), 'utf8');
   if (!D.includes('const claimAll = useCallback(async (addAppCoins = null) => {') || !D.includes('setAchievementsClaimed((prev) => ({ ...prev, ...r.succes }));')
-    || !D.includes("if (r.calendrier && (r.calendrier.type !== 'appCoins' || typeof addAppCoins === 'function'))")) pb.push('claimAll : incomplet (succès d\'un bloc, calendrier en pièces protégé)');
+    || !D.includes("if (r.calendrier && r.calendrier.type !== 'boostTap' && (r.calendrier.type !== 'appCoins' || typeof addAppCoins === 'function'))")) pb.push('claimAll : incomplet (succès d\'un bloc, calendrier en pièces protégé)');
   const P = fs.readFileSync(path.join(__dirname, '../src/screens/ProgresScreen.js'), 'utf8');
   if (!P.includes('onPress={toutRecuperer}') || !P.includes('const r = await claimAll(null);')) pb.push("écran Progrès : plus de bouton « Tout récupérer »");
   const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
