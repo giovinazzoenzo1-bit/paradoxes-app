@@ -1407,11 +1407,35 @@ module.exports.auditTamponsAscension = auditTamponsAscension;
 // payer le premier exemplaire de chaque générateur en tapant. Il doit
 // être le MÊME partout : c'est la définition d'une boutique qui garde
 // sa valeur.
+// ⚠️⚠️ 17/10 — PARCOURS DE RÉFÉRENCE partagé par les contrôles d'économie. Depuis le CALCULATEUR DE DÉFIS (18/10), les cibles
+// ÉCRITES ne sont plus ce que le joueur reçoit : elles sont recalculées à l'apparition (budget = poche + production de
+// référence × temps visé), basculées si trop grosses (basculeAchat), et les seuils sont déduits de la chaîne (n°7). Les
+// contrôles qui rejouaient les cibles écrites avec l'ancien simulateur mesuraient un jeu qui n'existe plus (10 h au lieu de
+// 2,8 h à l'A0). Ils gardent leur INTENTION, mesurée ici : le joueur du calculateur (outil v2.3 réaligné, deck type) qui fait
+// les défis dans l'ordre, avec les photos de chaque défi à son apparition.
+let PARCOURS_REF = null;
+function parcoursReference() {
+  if (PARCOURS_REF) return PARCOURS_REF;
+  const T = require('./calculateur-defis-v23.js');
+  let vie = T.etatVieInitial();
+  const groupes = [];
+  for (let a = 0; a < 6; a++) { const r = T.jouer(a, vie, null, { photos: true }); vie = r.V; groupes.push({ a, r, T }); }
+  PARCOURS_REF = groupes;
+  return groupes;
+}
+module.exports.parcoursReference = parcoursReference;
+const CALC = () => load('calculDefis');
+
 function auditPrixParAscension(tolerance = 0.15) {
   const fautes = [];
   const TAPS = 4;
   C.AUTOCLICKERS.forEach((g) => {
-    const temps = [0, 1, 2, 3, 4, 5].map((a) => {
+    // 17/10 (CHANTIER_ECONOMIE 2.2, décision de l'auteur) : AVANT son Ascension, un objet coûte un PLANCHER voulu (60 % / 3 × le
+    // seuil) — on mesure donc la valeur de la boutique à partir de l'Ascension qui l'ouvre.
+    const ouvre = Math.max(0, C.GENERATEUR_ASCENSION[g.id] || 0);
+    const ascensions = [0, 1, 2, 3, 4, 5].filter((a) => a >= ouvre);
+    if (ascensions.length < 2) return;
+    const temps = ascensions.map((a) => {
       const revenu = C.tapDamage(1) * TAPS * C.ascensionSpeedMultiplier(a);
       // ⚠️ On mesure la valeur de BASE de la boutique : la hausse VOULUE
       // de 35 % sur les premiers exemplaires des générateurs qu'une
@@ -1425,16 +1449,15 @@ function auditPrixParAscension(tolerance = 0.15) {
       // retire du calcul, comme la majoration — ce contrôle surveille des
       // prix qui ne SUIVRAIENT PLUS l'Ascension, pas une calibration.
       // La surprime « avant son heure » (21/09) est délibérée aussi.
-      return C.autoClickerCost(g, 0, a) / majoration / C.ajustementAscension(a)
-        / C.surprimeGenerateur(g, a) / revenu;
+      return C.autoClickerCost(g, 0, a) / majoration / C.ajustementAscension(a) / revenu;
     });
     const min = Math.min(...temps);
     const max = Math.max(...temps);
     if (max > min * (1 + tolerance)) {
       fautes.push({
         article: g.name,
-        secondesA0: Math.round(temps[0]),
-        secondesA5: Math.round(temps[5]),
+        ['secondesA' + ascensions[0]]: Math.round(temps[0]),
+        secondesA5: Math.round(temps[temps.length - 1]),
       });
     }
   });
@@ -1738,60 +1761,31 @@ module.exports.auditAchatsColles = auditAchatsColles;
 // exemplaire soit bon marché. Un palier de tap coûte 45 % de plus par
 // niveau : le 19e vaut mécaniquement une fortune, et c'est le prix du
 // choix du joueur, pas un défaut de calibrage.
-function auditPlafondAchats(partMax = 0.75) {
+// ⚠️ 17/10 — Même intention (un joueur EN AVANCE n'est jamais bloqué), nouveau garant : la BASCULE (calculDefis.basculeAchat,
+// règle de l'auteur). Sur la photo de chaque défi d'achat du parcours de référence, le joueur a SUR-INVESTI l'objet écrit
+// (+50 % d'exemplaires, +4 niveaux pour un palier) ; le défi doit alors coûter au plus son budget (temps visé tenu).
+function auditPlafondAchats(partMax = 1.0) {
   const fautes = [];
-  // ⚠️ On parcourt les défis ÉCRITS, pas les anciens modèles : ce sont
-  // eux que le joueur reçoit. Le contrôle testait encore `QUEST_SEQUENCE`
-  // après la bascule et mesurait donc des défis qui n'existent plus.
-  let D;
-  try { D = load('defisEcrits'); } catch (e) { return []; }
-  [0, 1, 2, 3, 4, 5].forEach((groupe) => {
-    (oeufsDe(D, groupe).flat()).forEach((q) => {
-      if (q.mode !== 'delta') return;
-      const s = etatInitial();
-      s.ascension = groupe;
-      const m = q.metric || '';
-      if (!m.startsWith('auto:') && !m.startsWith('tapUpgrade:')) return;
-      const estAuto = m.startsWith('auto:');
-      const item = estAuto ? C.AUTOCLICKERS.find((x) => x.id === m.slice(5))
-        : C.TAP_UPGRADES.find((x) => x.id === m.slice(11));
-      if (!item) return;
-      // ⚠️ Joueur en avance, mais RÉALISTE : la moitié de plus que le
-      // plafond. Tester trois fois le plafond n'avait pas de sens — le
-      // prix monte de 25 % par exemplaire, donc le 48e Esprit coûte
-      // 66 000 fois le premier et aucun joueur n'y arrive à l'Ascension
-      // 0. Un contrôle doit décrire une situation ATTEIGNABLE, sinon il
-      // refuse des réglages corrects.
-      // ⚠️ L'AVANCE RÉALISTE DÉPEND DE LA PENTE DU PRIX. Un générateur
-      // monte de 25 % par exemplaire, un palier de tap de 45 % : à
-      // plafond égal, le joueur peut aller bien plus loin sur le
-      // premier que sur le second. Tester la même avance sur les deux
-      // refusait des réglages corrects.
-      const plafond = Q.plafondAchatsGroupe(m, s);
-      // ⚠️ LA PENTE EST LUE, plus écrite en dur (24/09). Le 1,15 des
-      // paliers valait pour une croissance de 1,45 : à ×2,5 un seul
-      // niveau au-delà du plafond coûte 2,5× tout le dernier palier
-      // demandé, et le joueur « en avance » de 15 % possédait 118 % du
-      // seuil sur un seul article — situation inatteignable, le contrôle
-      // refusait des réglages corrects. L'avance en niveaux se réduit avec
-      // la pente : 1 + 0,15 × 0,45 / (croissance − 1), soit 1,15 à ×1,45
-      // (la valeur historique) et 1,045 à ×2,5 (« possède le total du
-      // groupe », et le défi lui demande le niveau suivant).
-      const avanceTap = 1 + 0.15 * (0.45 / (Math.max(1.01, item.growth || 1.6) - 1));
-      const possede = Math.round(plafond * (estAuto ? 1.5 : avanceTap));
-      if (estAuto) s.autoClickers[item.id] = possede;
-      else s.tapUpgrades[item.id] = possede;
-      const cible = Q.resolveQuestTarget(q, s);
+  const CD = CALC();
+  parcoursReference().forEach(({ a, r, T }) => {
+    r.J.resultats.forEach((x, i) => {
+      const q = Q.findQuest(x.id);
+      const m = (q && q.metric) || '';
+      if (!q || q.mode !== 'delta' || (!m.startsWith('auto:') && !m.startsWith('tapUpgrade:'))) return;
+      const ph = r.J.photos[i]; if (!ph) return;
+      const s = JSON.parse(JSON.stringify(ph.s));
+      if (m.startsWith('auto:')) { const id = m.slice(5); s.autoClickers[id] = Math.ceil(((s.autoClickers || {})[id] || 0) * 1.5) + 2; }
+      else { const id = m.slice(11); s.tapUpgrades[id] = ((s.tapUpgrades || {})[id] || 0) + 4; }
+      const st = T.statsJeu(a, s, ph.V);
+      const ctx = { oeuf: x.oeuf, creatures: T.idsPossedes(x.oeuf - 1), protegees: 0 };
+      const objet = CD.basculeAchat(q, st, ctx) || m;
+      const cible = CD.cibleCalculee(q, st, { ...ctx, objet });
+      const budget = (st.coins || 0) + CD.productionReference(st, ctx.creatures) * CD.tempsViseOeuf(x.oeuf);
       let cout = 0;
-      for (let n = possede; n < possede + cible; n++) {
-        cout += estAuto ? C.autoClickerCost(item, n, groupe)
-          : C.tapUpgradeCost(item, n, groupe);
-      }
-      const seuil = C.ascensionThreshold(groupe);
-      if (cout > seuil * partMax) {
-        fautes.push({ id: q.id, groupe, article: item.name, cible,
-          part: Math.round(100 * cout / seuil) });
-      }
+      const niv0 = objet.startsWith('auto:') ? ((st.autoClickers || {})[objet.slice(5)] || 0)
+        : objet.startsWith('tapUpgrade:') ? ((st.tapUpgrades || {})[objet.slice(11)] || 0) : (st.tapPower || 1);
+      for (let k = 0; k < (cible || 1); k++) cout += Q.coutNiveauAchat(objet, niv0 + k, a);
+      if (cout > budget * partMax * 1.0001) fautes.push({ id: x.id, groupe: a, ecrit: m, objet, cible, part: Math.round(100 * cout / budget) });
     });
   });
   return fautes;
@@ -1892,53 +1886,25 @@ module.exports.auditDefisEcrits = auditDefisEcrits;
 // ⚠️ Le coût dépend de ce que le joueur POSSÈDE DÉJÀ : acheter le 10e
 // exemplaire coûte plus cher que le 3e. On rejoue donc le groupe en
 // tenant le compte, au lieu de comparer des prix unitaires.
-function auditCoutCroissant(tolerance = 0.5) {
-  let D;
-  try { D = load('defisEcrits'); } catch (e) { return []; }
+// ⚠️ 17/10 — L'intention d'origine (un défi d'achat ne devient jamais dérisoire) mesurée au parcours. « Le coût ne redescend
+// jamais » ne tient plus avec le calculateur : le budget compte la POCHE, qui retombe après un achat (budget ÷ 2), et un palier
+// (×2,5 par niveau) ne remplit son budget qu'à 29 % au pire (1 niveau quand 2 dépassent). Mesuré au 1er essai : Poing de Granit
+// à 25 % du coût du défi d'avant, sans aucun mur. Règle : un défi d'achat demande au moins le QUART de son budget (poche +
+// production de référence × temps visé). Hors Sanctuaire / Veilleur (niveau ÉCRIT par l'auteur) et Faveur (plafonnée à 30 %).
+function auditCoutCroissant(tolerance = 0.25) {
   const fautes = [];
-  const NIVEAUX = ['tapPower', 'critLevel', 'critDamageLevel',
-    'sanctuaryLevel', 'veilleurLevel'];
-  for (let groupe = 0; groupe < 6; groupe++) {
-    const possede = {};
-    let precedent = null;
-    let numero = numeroAvant(D, groupe);
-    for (let e = 0; e < Q.tailleGroupe(groupe); e++) {
-      const oeuf = D.DEFIS_ECRITS[Q.debutGroupe(groupe) + e] || [];
-      oeuf.forEach((q) => {
-        numero += 1;
-        const m = q.metric || '';
-        const estAuto = m.startsWith('auto:');
-        const estTap = m.startsWith('tapUpgrade:');
-        if (!estAuto && !estTap && !NIVEAUX.includes(m)) return;
-        const item = estAuto ? C.AUTOCLICKERS.find((x) => x.id === m.slice(5))
-          : estTap ? C.TAP_UPGRADES.find((x) => x.id === m.slice(11)) : null;
-        // ⚠️ Niveau de départ réel : le Pacte repart de 1, pas de 0.
-        const deja = possede[m] !== undefined ? possede[m] : Q.niveauDeBase(m);
-        // En mode delta la cible est un NOMBRE D'ACHATS ; en absolu,
-        // c'est un niveau à atteindre depuis ce qu'on a déjà.
-        const aAcheter = q.mode === 'delta' ? q.target : Math.max(0, q.target - deja);
-        let cout = 0;
-        for (let n = deja; n < deja + aAcheter; n++) {
-          // ⚠️ LA fonction de coût du moteur, pas une copie.
-          if (m === 'sanctuaryLevel') cout += C.sanctuaryUpgradeCost(n);
-          else if (m === 'veilleurLevel') cout += C.veilleurUpgradeCost(n);
-          else cout += Q.coutNiveauAchat(m, n, groupe);
-        }
-        possede[m] = deja + aAcheter;
-        if (cout <= 0) return;
-        // ⚠️ L'ŒUF 1 DE L'ASCENSION 0 EST EXEMPTÉ. C'est le tutoriel, et
-        // l'auteur y a fixé chaque défi à sa place (« 2 = Pacte, 4 =
-        // Faveur 7 »). L'ordre des coûts y cède à l'ordre pédagogique.
-        const tutoriel = groupe === 0 && e === 0;
-        if (!tutoriel && precedent && cout < precedent.cout * (1 - tolerance)) {
-          fautes.push({ groupe, defi: numero, texte: q.label(q.target),
-            cout: Math.round(cout), avant: precedent.defi,
-            coutAvant: Math.round(precedent.cout) });
-        }
-        precedent = { defi: numero, cout };
-      });
-    }
-  }
+  const CD = CALC();
+  const HORS = ['sanctuaryLevel', 'veilleurLevel', 'critLevel'];
+  parcoursReference().forEach(({ a, r, T }) => {
+    r.J.resultats.forEach((x, i) => {
+      if (!(x.cout > 0) || HORS.includes(x.m)) return;
+      const ph = r.J.photos[i]; if (!ph) return;
+      const st = T.statsJeu(a, ph.s, ph.V);
+      const budget = (st.coins || 0) + CD.productionReference(st, T.idsPossedes(x.oeuf - 1)) * CD.tempsViseOeuf(x.oeuf);
+      const part = x.cout / budget;
+      if (part < tolerance) fautes.push({ groupe: a, defi: x.id, texte: x.label, partDuBudget: Math.round(100 * part) });
+    });
+  });
   return fautes;
 }
 module.exports.auditCoutCroissant = auditCoutCroissant;
@@ -1965,38 +1931,18 @@ module.exports.auditCoutCroissant = auditCoutCroissant;
 // sur 3,14 M, soit ~15 min à son rythme. L'A1 n'a pas encore de chrono.
 // Des bornes et non une exemption : une dérive se voit encore.
 const BUDGET_DECALAGE = { 0: [0.35, 0.55], 1: [0.22, 0.40] };
-function auditBudgetGroupe(min = 0.80, max = 1.00) {
-  let D;
-  try { D = load('defisEcrits'); } catch (e) { return []; }
-  const NIV = ['tapPower', 'critLevel', 'critDamageLevel',
-    'sanctuaryLevel', 'veilleurLevel'];
+// ⚠️ 17/10 — Règle de l'auteur (n°7) : le SEUIL est déduit de la chaîne de défis (pièces gagnées en fin de chaîne + 10 min de
+// production, deck malchanceux). Au parcours (deck type) : les pièces gagnées en fin de chaîne valent 80 à 160 % du seuil, et
+// l'attente du seuil en fin d'Ascension ne dépasse pas 20 min. Outil de recalcul : tools/mesure-seuils.js.
+function auditBudgetGroupe(min = 0.80, max = 1.60, attenteMaxMin = 20) {
   const fautes = [];
-  for (let g = 0; g < 6; g++) {
-    const possede = {};
-    let total = 0;
-    for (let e = 0; e < Q.tailleGroupe(g); e++) {
-      (D.DEFIS_ECRITS[Q.debutGroupe(g) + e] || []).forEach((q) => {
-        const m = q.metric || '';
-        // ⚠️ LA fonction de coût du moteur — jamais une copie. Un contrôle
-        // qui calcule ses coûts à sa façon mesure autre chose que le jeu.
-        if (!NIV.includes(m) && !m.startsWith('auto:') && !m.startsWith('tapUpgrade:')) return;
-        const deja = possede[m] !== undefined ? possede[m] : Q.niveauDeBase(m);
-        const n = q.mode === 'delta' ? q.target : Math.max(0, q.target - deja);
-        for (let i = deja; i < deja + n; i++) {
-          total += (m === 'sanctuaryLevel') ? C.sanctuaryUpgradeCost(i)
-            : (m === 'veilleurLevel') ? C.veilleurUpgradeCost(i)
-            : Q.coutNiveauAchat(m, i, g);
-        }
-        possede[m] = deja + n;
-      });
-    }
-    const part = total / C.ascensionThreshold(g);
-    const [bas, haut] = BUDGET_DECALAGE[g] || [min, max];
-    if (part < bas || part > haut) {
-      fautes.push({ groupe: g, part: Math.round(part * 100),
-        farmFinal: Math.round((1 - part) * 100) });
-    }
-  }
+  parcoursReference().forEach(({ a, r }) => {
+    const seuil = C.ascensionThreshold(a);
+    const part = (r.J.gagneChaine || 0) / seuil;
+    const asc = r.J.resultats.find((x) => x.m === 'ascension');
+    const attente = asc ? asc.actif / 60 : 0;
+    if (part < min || part > max || attente > attenteMaxMin) fautes.push({ groupe: a, part: Math.round(100 * part), attenteMin: +attente.toFixed(1) });
+  });
   return fautes;
 }
 module.exports.auditBudgetGroupe = auditBudgetGroupe;
@@ -2507,49 +2453,17 @@ module.exports.auditHorsLigne = auditHorsLigne;
 // ⚠️ La métrique est LUE dans la simulation (`jalons`), jamais estimée à
 // part : un contrôle qui mesure avec son propre instrument ne contrôle
 // que lui-même.
+// ⚠️ 17/10 — Même intention, au parcours : chaque défi CALCULÉ se fait en au plus 2 × son temps visé (mesuré : aucun au-delà
+// de 1,5 × depuis l'arrondi des défis de revenu/s et la bascule). Les défis non calculés ont leurs propres contrôles.
 function auditFaisableAuMoment(marge = 1.0) {
-  let D;
-  try { D = load('defisEcrits'); } catch (e) { return []; }
   const fautes = [];
-  const sims = {};
-  D.DEFIS_ECRITS.forEach((oeuf, i) => {
-    const g = Q.groupeDeOeuf(i);
-    const e = Q.rangDansGroupe(i);
-    if (g > 5) return;
-    const r = sims[g] || (sims[g] = simulerGroupe(g));
-    if (!r.jalons || !r.jalons.length) return;
-    // Fin de l'œuf e = début de l'œuf e + 1, en temps de jeu.
-    const tFin = ((e + 1) / Q.tailleGroupe(g)) * r.heures * 3600;
-    let etat = r.jalons[0];
-    r.jalons.forEach((j) => { if (j.t <= tFin) etat = j; });
-    // ⚠️ Le simulateur optimise le REVENU, pas les défis : en début de
-    // groupe il achète du tap et laisse le passif à zéro. Un joueur qui
-    // SUIT le défi achèterait quelques générateurs. On retient donc le
-    // plus grand de deux : le passif simulé, ou celui de trois
-    // exemplaires du générateur le moins cher — ce qu'un joueur obtient
-    // pour presque rien s'il le décide.
-    // ⚠️ Le générateur le MOINS CHER, pas le plus productif sous un seuil
-    // de coût. Filtrer « moins de 5 % du seuil » laissait passer des
-    // paliers hauts aux dernières Ascensions, dont le seuil est énorme :
-    // le contrôle retenait le Colosse de Pierre (198 000/s) comme
-    // référence « bon marché » à l'Ascension 4, et acceptait donc un défi
-    // à 29 000/s tombé à un moment où le joueur n'a rien.
-    let moinsCher = null;
-    C.AUTOCLICKERS.forEach((it) => {
-      const cout = [0, 1, 2].reduce((acc, n) => acc + C.autoClickerCost(it, n, g), 0);
-      if (!moinsCher || cout < moinsCher.cout) moinsCher = { it, cout };
-    });
-    const bonMarche = moinsCher ? C.passiveRate({
-      autoClickers: { [moinsCher.it.id]: 3 }, upgradeLevels: {},
-      sanctuaryLevel: 0, essence: 0, ascensionCount: g }) : 0;
-    oeuf.forEach((q) => {
-      if (q.metric !== 'passiveIncome') return;
-      const atteint = Math.max(etat ? etat.passif : 0, bonMarche);
-      if (q.target > atteint * marge) {
-        fautes.push({ defi: q.id, oeuf: i + 1, texte: q.label(q.target),
-          demande: q.target, aCeMoment: Math.round(atteint),
-          ecart: +(q.target / Math.max(1, atteint)).toFixed(1) });
-      }
+  const CD = CALC();
+  parcoursReference().forEach(({ a, r, T }) => {
+    r.J.resultats.forEach((x) => {
+      if (!CD.estCalcule({ metric: x.m, mode: x.mode })) return;
+      const tau = CD.tempsViseOeuf(x.oeuf);
+      const reel = Math.max(0, x.actif - T.HYP.secParDefi);
+      if (reel > (1 + marge) * tau) fautes.push({ defi: x.id, oeuf: x.oeuf, texte: x.label, minutes: +(reel / 60).toFixed(1), vise: +(tau / 60).toFixed(1) });
     });
   });
   return fautes;
@@ -2571,29 +2485,19 @@ module.exports.auditFaisableAuMoment = auditFaisableAuMoment;
 // 5. Quarante cibles d'état ont dû être recalculées après coup.
 // Tolérance large (÷2, ×2) : l'arrondi et le « +15 % mini entre deux »
 // écartent déjà les cibles de l'étalon exact.
+// ⚠️ 17/10 — L'étalon « 94 s de production » a été remplacé par le TEMPS VISÉ du calculateur (décision de l'auteur, 18/10) :
+// « Mets N de côté » = poche + production × temps visé. Au parcours : il se fait en ½ à 2 × son temps visé (A0 exemptée :
+// tutoriel réglé à la main).
 function auditCoteEtalon(secondes = 94, min = 0.5, max = 2.0) {
-  let D;
-  try { D = load('defisEcrits'); } catch (e) { return []; }
   const fautes = [];
-  const sims = {};
-  D.DEFIS_ECRITS.forEach((oeuf, i) => {
-    const g = Q.groupeDeOeuf(i);
-    const e = Q.rangDansGroupe(i);
-    // L'A0 est le tutoriel réglé à la main avec l'auteur : exempté.
-    if (g < 1 || g > 5) return;
-    const r = sims[g] || (sims[g] = simulerGroupe(g));
-    if (!r.jalons || !r.jalons.length) return;
-    const tFin = ((e + 1) / Q.tailleGroupe(g)) * r.heures * 3600;
-    let etat = r.jalons[0];
-    r.jalons.forEach((j) => { if (j.t <= tFin) etat = j; });
-    const etalon = secondes * Math.max(1, etat.production || 0);
-    oeuf.forEach((q) => {
-      if (q.metric !== 'coins' || q.mode !== 'absolute') return;
-      const ratio = q.target / etalon;
-      if (ratio < min || ratio > max) {
-        fautes.push({ defi: q.id, oeuf: i + 1, ecrit: q.target,
-          etalon: Math.round(etalon), ratio: +ratio.toFixed(2) });
-      }
+  const CD = CALC();
+  parcoursReference().forEach(({ a, r, T }) => {
+    if (a === 0) return;
+    r.J.resultats.forEach((x) => {
+      if (x.m !== 'coins' || !CD.estCalcule({ metric: x.m, mode: x.mode })) return;
+      const tau = CD.tempsViseOeuf(x.oeuf);
+      const ratio = Math.max(0, x.actif - T.HYP.secParDefi) / tau;
+      if (ratio < min || ratio > max) fautes.push({ defi: x.id, oeuf: x.oeuf, texte: x.label, ratio: +ratio.toFixed(2) });
     });
   });
   return fautes;
@@ -2954,11 +2858,15 @@ module.exports.auditCibleMonte = auditCibleMonte;
 // C'est l'effet direct de « les paliers sont la cause des gros scores dès
 // le début » — pas une dérive. Les groupes 1 à 5 sont compensés et
 // gardent leur durée.
-const DUREES_CIBLES = [3.0, 3.9, 4.3, 6.2, 6.8, 8.1];
+// ⚠️ 17/10 — Durées de jeu ACTIF du joueur du calculateur (parcours de référence, deck type), mesurées après le chantier
+// économie : 2.1/2.2, seuils déduits de la chaîne, défis 2.3/2.4, arrondi des défis de revenu/s, bascule. Total 31,1 h (35,4 h
+// avant : la différence = les murs retirés). Allonger le jeu = monter le TEMPS VISÉ (calculDefis), décision de l'auteur.
+const DUREES_CIBLES = [2.8, 3.75, 4.9, 5.7, 6.5, 7.45];
 function auditDureeCible(tolerance = 0.15) {
   const fautes = [];
+  const P = parcoursReference();
   DUREES_CIBLES.forEach((cibleH, g) => {
-    const h = simulerGroupe(g).heures;
+    const h = P[g].r.J.resultats.reduce((t, x) => t + x.actif, 0) / 3600;
     if (Math.abs(h - cibleH) > cibleH * tolerance) {
       fautes.push({ groupe: g, heures: +h.toFixed(1), cible: cibleH,
         ecart: Math.round(100 * (h - cibleH) / cibleH) + ' %' });
@@ -3729,7 +3637,8 @@ function auditPacks() {
   if (!(L2.taillePackGriffes([69, 70, 74]) > L2.taillePackGriffes([50, 52, 54]))) fautes.push({ probleme: 'le pack ne suit plus le niveau du deck' });
   if (JSON.stringify(L2.niveauxDuDeck([{ id: 'a', level: 62 }, { id: 'b', level: 60 }, { id: 'c', level: 66 }], ['a', null, 'c'])) !== '[62,66]') fautes.push({ probleme: 'niveauxDuDeck lit mal le deck' });
   for (let a = 0; a <= 5; a++) {
-    const seuil = L2.ascensionThreshold(a), p = [0, 1, 2, 3, 4].map((n) => L2.griffesCoinCost(n, a));
+    // 17/10 (décision de l'auteur « go coefficient ») : le prix suit seuil × coefficient (×1 → A2, ×½ A3, ×¼ A4+) — même TEMPS.
+    const seuil = L2.ascensionThreshold(a) * L2.coefficientPrixSeuil(a), p = [0, 1, 2, 3, 4].map((n) => L2.griffesCoinCost(n, a));
     if (p[0] + p[1] + p[2] > 0.5 * seuil) fautes.push({ ascension: a, probleme: 'les 3 packs normaux coûtent plus de la moitié du seuil' });
     if (p[0] + p[1] + p[2] < 0.2 * seuil) fautes.push({ ascension: a, probleme: 'les 3 packs normaux coûtent moins de 20 % du seuil (on en achèterait des dizaines)' });
     if (p[3] < 2.5 * p[0]) fautes.push({ ascension: a, probleme: 'le 4e pack n\'est pas un vrai effort' });
@@ -4113,7 +4022,7 @@ function auditGrimoireComplet() {
   const G = require('../src/games/clicker/grimoireChapitres.js');
   const L = require('../src/games/clicker/clickerLogic.js');
   const pb = [];
-  const attendus = ['pacte', 'faveur', 'critDamage', 'sanctuaire', 'veilleur',
+  const attendus = ['pacte', 'faveur', 'critDamage', 'sanctuaire', 'veilleur', ...L.LEGENDAIRES.map((x) => x.id), // 17/10
     ...L.TAP_UPGRADES.map((u) => u.id), ...L.AUTOCLICKERS.map((c) => c.id), ...L.UPGRADE_ITEMS.map((i) => 'relique:' + i.id)];
   const vus = new Map();
   G.CHAPITRES_GRIMOIRE.forEach((c) => c.ids().forEach((id) => vus.set(id, (vus.get(id) || []).concat(c.cle))));
@@ -5941,7 +5850,7 @@ function auditDefisLueur() {
   // 17/10 (2e version) : la lueur suit le DÉFI DE L'ŒUF EN COURS (currentChallengeId), pas les défis du jour (questIds) — la 1re
   // version lisait questIds : aucune lueur chez l'auteur. Chemin des données prouvé sur l'œuf 2 (1er défi : Esprit Frappeur).
   const iCur = Cl.indexOf('const currentChallengeId = activeQuestIds.find('), iCible = Cl.indexOf('const cibleDefiAchat = currentChallengeId');
-  if (iCur < 0 || iCible < iCur || !Cl.includes('articleDuDefiAchat(metriqueDuDefi(findQuest(currentChallengeId), { ascension: ascensionCount }))'))
+  if (iCur < 0 || iCible < iCur || !Cl.includes('articleDuDefiAchat(metriqueDuDefi(findQuest(currentChallengeId), { ascension: ascensionCount, objetsDefis: objetsDesDefis(questBaselines) }))'))
     pb.push("la lueur ne suit plus le défi de l'œuf en cours (currentChallengeId) — elle lirait par exemple les défis du jour");
   const art2 = G.articleDuDefiAchat(Q.metriqueDuDefi(D.DEFIS_ECRITS[1][0], { ascension: 0 }));
   if (art2 !== 'esprit') pb.push(`œuf 2, 1er défi : article éclairé « ${art2} » (Esprit Frappeur attendu)`);
@@ -6079,7 +5988,7 @@ function auditFaussePub() {
   const L = load('clickerLogic');
   if (L.PUB_BOOST_TAP_MULT !== 2 || L.PUB_BOOST_TAP_SEC !== 120) pb.push(`Tap ×${L.PUB_BOOST_TAP_MULT} pendant ${L.PUB_BOOST_TAP_SEC} s (choix de l'auteur : ×2 pendant 120 s)`);
   const Cl = lire('src/screens/games/ClickerScreen.js');
-  if (!Cl.includes('const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult * boostPub));')) pb.push("le Tap ×2 de la pub n'est plus appliqué au tap");
+  if (!Cl.includes('const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult * legendaireMult * boostPub));')) pb.push("le Tap ×2 de la pub n'est plus appliqué au tap");
   if (!Cl.includes('<FaussePub visible={pubTap}')) pb.push("la pub « Tap ×2 » n'est plus proposée sur l'écran principal");
   if (lire('src/games/clicker/calculDefis.js').includes('boostTap')) pb.push('la photo des défis lit le bonus de la pub (il doit rester une récompense)');
   const Av = lire('src/screens/games/AdventureScreen.js');
@@ -6104,7 +6013,7 @@ function auditPubsAuteur() {
   if (!Pub.includes('disabled={!fini}')) pb.push('la fausse pub peut se fermer avant la fin');
   if (C.PUB_BOOST_TAP_MULT !== 2 || C.PUB_BOOST_TAP_SEC !== 120) pb.push(`pub Tap : ×${C.PUB_BOOST_TAP_MULT} pendant ${C.PUB_BOOST_TAP_SEC} s (auteur : ×2 pendant 120 s)`);
   const Cl = lire('screens/games/ClickerScreen.js');
-  if (!Cl.includes('const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult * boostPub));')) pb.push("le bonus de la pub n'est plus appliqué au gain du tap");
+  if (!Cl.includes('const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult * legendaireMult * boostPub));')) pb.push("le bonus de la pub n'est plus appliqué au gain du tap");
   if (!Cl.includes('<FaussePub visible={pubTap} recompense="Tap ×2 pendant 2 min" onFin={finPubTap} />')) pb.push("l'écran de pub « Tap ×2 » a disparu");
   const Av = lire('screens/games/AdventureScreen.js');
   if (!Av.includes('const finPubPoudre = () => { setPubPoudre(false); setPoudre((p) => p + 1); };')) pb.push("la pub des Runes ne donne plus sa poudre");

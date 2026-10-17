@@ -531,7 +531,7 @@ function calculer() {
   }
 }
 
-module.exports = { IDS, idsPossedes, suiteCreatures, HYP, TRANSE, POUVOIRS, facteurCrit, chanceCrit, statsDeck, defisDuGroupe, etatVieInitial, jouer, creerJoueur, tempsVise, tempsViseOeuf, calculer };
+module.exports = { statsJeu, IDS, idsPossedes, suiteCreatures, HYP, TRANSE, POUVOIRS, facteurCrit, chanceCrit, statsDeck, defisDuGroupe, etatVieInitial, jouer, creerJoueur, tempsVise, tempsViseOeuf, calculer };
 
 if (require.main === module) {
   const t0 = Date.now();

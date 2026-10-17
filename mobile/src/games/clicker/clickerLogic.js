@@ -2296,7 +2296,7 @@ export const PREMIERS_EXEMPLAIRES_MAJORATION = 0.35;
 // 17/10 (CHANTIER_ECONOMIE 2.3) : suit les NOUVEAUX défis d'achat (chaque Ascension achète ses objets).
 export const GENERATEURS_MAJORES_PAR_ASCENSION = [
   ['esprit', 'main'],                   // A0
-  ['automate', 'colonie'],              // A1
+  ['esprit', 'main', 'automate', 'colonie'], // A1 (œuf 1 : échauffement Esprit / Main)
   ['main', 'titan', 'golem'],           // A2
   ['golem', 'dragonnet', 'phenix'],     // A3
   ['phenix', 'leviathan', 'gardien'],   // A4
