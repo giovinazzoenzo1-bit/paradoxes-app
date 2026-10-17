@@ -1444,7 +1444,9 @@ export function coreUpgradeRequirement(id) {
 // A0) : la surprime lit le seuil de l'A1 — `auditPoigneA0` garde le ratio.
 export const TAP_UPGRADES = [
   // 17/10 (auteur) : Poigne Ancienne +1,5 tap par niveau (avant +1) ; prix ×1,5 = MÊME prix par point de tap qu'avant (cohérent).
-  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1.5, cost: 11960, growth: 1.45 },
+  // 17/10 (CHANTIER_ECONOMIE 2.1) : la Poigne devient un objet de l'A0 → plus de surprime à l'A0 ; prix de base ×1,926 (l'ancienne
+  // surprime √(seuil A1 / seuil A0)) pour que son prix À L'A0 ne bouge pas (32 253 au niveau 1, règle d'auditPoigneA0).
+  { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1.5, cost: 23037, growth: 1.45 },
   { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2, cost: 2237, growth: 2.5 },
   { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 4, cost: 17330, growth: 2.5 },
   { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 8, cost: 27729, growth: 2.5 },
@@ -1490,24 +1492,37 @@ export function normalizeTapUpgrades(value) {
 //
 // ⚠️ Ascension de chaque palier lue dans le fichier des défis ;
 // `auditMajorationPrix` vérifie qu'elle y correspond toujours.
+// 17/10 (CHANTIER_ECONOMIE 2.1, règle de l'auteur) : 2 paliers + 2 générateurs PAR Ascension ; la Poigne fait partie de l'A0.
 export const PALIER_TAP_ASCENSION = {
-  tap1: 1, tap2: 1, tap3: 2, tap4: 2, tap5: 3,
-  tap6: 3, tap7: 4, tap8: 4, tap9: 5, tap10: 5,
+  tap1: 0, tap2: 1, tap3: 1, tap4: 2, tap5: 2,
+  tap6: 3, tap7: 3, tap8: 4, tap9: 4, tap10: 5,
 };
-export function surprimeAvantLHeure(item, ascensionCount = 0) {
+// ⚠️ 17/10 (CHANTIER_ECONOMIE 2.2, décision de l'auteur) — la surprime « racine de l'écart de seuil » ne faisait que ×2
+// (mesuré : à l'A2, le joueur de référence possédait TOUS les paliers jusqu'à Volonté, niveau 9). Remplacée par un
+// PLANCHER : objet d'une Ascension FUTURE = visible, jamais grisé, juste très cher —
+//   Ascension suivante : niveau 1 ≥ 60 % du seuil en cours, niveau 2 > 100 % (×2,5 par niveau : jamais atteignable) ;
+//   2 Ascensions plus loin ou plus : ≥ 3 × le seuil en cours.
+// À l'Ascension qui l'ouvre : prix NORMAL. ⚠️ BRANCHE DE MESURE : la surprime ne s'applique plus (rend 1) ;
+// à supprimer avec ses 2 lecteurs d'audit-quetes.js quand la règle sera validée.
+export const AVANT_LHEURE_SUIVANTE = 0.6;
+export const AVANT_LHEURE_PLUS_LOIN = 3;
+export const AVANT_LHEURE_PENTE = 2.5;
+export function plancherAvantLHeure(g, ascensionCount, niveau) {
   const a = Math.max(0, Math.floor(ascensionCount || 0));
-  const g = PALIER_TAP_ASCENSION[item && item.id];
-  if (g === undefined || a >= g) return 1;
-  const r = Math.sqrt(ascensionThreshold(g) / ascensionThreshold(a));
-  return Number.isFinite(r) && r > 1 ? r : 1;
+  if (g === undefined || a >= g) return 0;
+  const part = g === a + 1 ? AVANT_LHEURE_SUIVANTE : AVANT_LHEURE_PLUS_LOIN;
+  return part * ascensionThreshold(a) * Math.pow(AVANT_LHEURE_PENTE, Math.max(0, Math.floor(niveau || 0)));
+}
+export function surprimeAvantLHeure() {
+  return 1;
 }
 
 export function tapUpgradeCost(item, level, ascensionCount = 0) {
   // Même règle que les générateurs : voir `autoClickerCost`.
-  return Math.round(item.cost * COIN_SCALE * UPGRADE_COST_MULT
+  const normal = item.cost * COIN_SCALE * UPGRADE_COST_MULT
     * Math.pow(item.growth || 1.6, level)
-    * prixMultiplicateurAscension(ascensionCount)
-    * surprimeAvantLHeure(item, ascensionCount));
+    * prixMultiplicateurAscension(ascensionCount);
+  return Math.round(Math.max(normal, plancherAvantLHeure(PALIER_TAP_ASCENSION[item && item.id], ascensionCount, level)));
 }
 
 // Le palier `index` est ouvert si le PRÉCÉDENT a atteint le niveau 5
@@ -2223,17 +2238,15 @@ export function generateurMajore(id, ascensionCount = 0) {
 // modèle que les paliers : jamais fermé, mais la racine de l'écart de
 // seuil en plus avant l'Ascension qui le demande. Les générateurs qu'aucun
 // défi ne demande encore (contenu futur) sont rattachés au-delà de l'A5.
+// 17/10 (CHANTIER_ECONOMIE 2.1) : tout décalé d'un cran — l'A1 ouvre Automate et Colonie.
 export const GENERATEUR_ASCENSION = {
-  esprit: 0, main: 0, automate: 2, colonie: 2, titan: 3, golem: 3,
-  dragonnet: 4, phenix: 4, leviathan: 5, gardien: 5,
-  titanfoudre: 6, colosse: 6, oracle: 7, seigneurombres: 7, etoilefilante: 8,
+  esprit: 0, main: 0, automate: 1, colonie: 1, titan: 2, golem: 2,
+  dragonnet: 3, phenix: 3, leviathan: 4, gardien: 4,
+  titanfoudre: 5, colosse: 5, oracle: 6, seigneurombres: 6, etoilefilante: 7,
 };
-export function surprimeGenerateur(clicker, ascensionCount = 0) {
-  const a = Math.max(0, Math.floor(ascensionCount || 0));
-  const g = GENERATEUR_ASCENSION[clicker && clicker.id];
-  if (g === undefined || a >= g) return 1;
-  const r = Math.sqrt(ascensionThreshold(g) / ascensionThreshold(a));
-  return Number.isFinite(r) && r > 1 ? r : 1;
+// 17/10 (2.2) : même plancher que les paliers (plancherAvantLHeure) ; la surprime « racine » ne s'applique plus.
+export function surprimeGenerateur() {
+  return 1;
 }
 
 export function autoClickerCost(clicker, ownedCount, ascensionCount = 0) {
@@ -2242,11 +2255,13 @@ export function autoClickerCost(clicker, ownedCount, ascensionCount = 0) {
     * prixMultiplicateurAscension(ascensionCount)
     * surprimeGenerateur(clicker, ascensionCount);
   const courbe = (k) => base * Math.pow(AUTOCLICKER_COST_GROWTH, k);
-  if (!generateurMajore(clicker.id, ascensionCount)) return Math.round(courbe(n));
+  if (!generateurMajore(clicker.id, ascensionCount)) {
+    return Math.round(Math.max(courbe(n), plancherAvantLHeure(GENERATEUR_ASCENSION[clicker && clicker.id], ascensionCount, n)));
+  }
   const majore = (k) => courbe(k) * (1 + PREMIERS_EXEMPLAIRES_MAJORATION);
   let cout = n < PREMIERS_EXEMPLAIRES_NB ? majore(n) : courbe(n);
   if (n === PREMIERS_EXEMPLAIRES_NB) cout = Math.max(cout, majore(n - 1));
-  return Math.round(cout);
+  return Math.round(Math.max(cout, plancherAvantLHeure(GENERATEUR_ASCENSION[clicker && clicker.id], ascensionCount, n)));
 }
 
 // Revenu total/s de tous les générateurs possédés.
