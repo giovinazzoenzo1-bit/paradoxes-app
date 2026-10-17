@@ -4217,6 +4217,24 @@ laissait le fond de 2 images (tapx2, sac : magenta plus sombre) → détourées 
 coffre (88) garde une lueur rose à droite (à refaire avant de l'utiliser) ; le 79 avait une flamme parasite dessous
 (coupée). À générer : 87, 89, 90, 91, 92.
 
+## 18/10 — OBJETS PAR ASCENSION + PRIX « AVANT L'HEURE » + DÉFIS D'ACHAT : DÉCISIONS DE L'AUTEUR — RIEN CODÉ
+
+CONSTAT (mesuré) : la surprime « avant l'heure » (racine de l'écart de seuil, 6cd2719) ne fait que ×2 pour l'Ascension
+suivante : niveau 1 vu une Ascension trop tôt = 0,0 à 2,3 % du seuil (Gantelet à l'A0 : 6 032 = 0,2 %) ; générateurs
+0,2 à 20 %. Le joueur de référence finit l'A0 avec Gantelet niveau 5 et 2 niveaux de Sceau de Puissance (objet A2).
+DÉCISIONS : (1) RÈGLE DE L'AUTEUR « 2 paliers de tap + 2 générateurs PAR Ascension » ; la Poigne Ancienne fait partie de
+l'A0 (comme la Main Spectrale). Aujourd'hui l'A1 n'ouvre AUCUN générateur → tout décaler d'un cran (proposé) :
+A0 Poigne · Esprit, Main | A1 Gantelet, Sceau · Automate, Colonie | A2 Poing, Éclat · Titan, Golem | A3 Coeur, Griffe ·
+Dragon, Phénix | A4 Serment, Fracture · Léviathan, Gardien | A5 Volonté (+1 palier à créer) · Héraut, Colosse.
+(2) Objet d'une Ascension FUTURE : visible, jamais grisé, juste très cher — Ascension suivante : niveau 1 ≥ 60 % du
+seuil actuel (farm énorme en fin de groupe), niveau 2 jamais ; 2 Ascensions ou plus : ≥ 3 × le seuil. À l'Ascension
+qui l'ouvre : PAS de baisse brutale, c'est le bonus d'Ascension qui le rend abordable (sinon chiffres exorbitants).
+(3) Les défis d'achat de chaque Ascension portent sur SES objets (A1 : « améliorer Gantelet et le suivant », plus une
+avalanche de Pacte). (4) Sanctuaire / Veilleur : « un chacun qui demande de les MAXER vers le début, et basta » → libère
+des places pour des défis liés à l'Ascension (lecture à confirmer : 1 en tout, à l'A0 ? ou 1 par Ascension ?).
+PLAN : branche → règle des prix + nouvelle répartition → MESURER (achats, durées, chiffres A1/A2) → réécrire les défis
+d'achat A1-A5 → contrôles (ordre des coûts, budget, majoration…) → publier. Grosse refonte : NOUVELLE conversation.
+
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 
 L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieurs coupures, erreurs de fatigue).
