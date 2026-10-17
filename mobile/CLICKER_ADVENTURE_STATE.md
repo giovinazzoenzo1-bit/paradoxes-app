@@ -4232,6 +4232,10 @@ qui l'ouvre : PAS de baisse brutale, c'est le bonus d'Ascension qui le rend abor
 (3) Les défis d'achat de chaque Ascension portent sur SES objets (A1 : « améliorer Gantelet et le suivant », plus une
 avalanche de Pacte). (4) Sanctuaire / Veilleur : « un chacun qui demande de les MAXER vers le début, et basta » → libère
 des places pour des défis liés à l'Ascension (lecture à confirmer : 1 en tout, à l'A0 ? ou 1 par Ascension ?).
+⚠️ SUITE : CAHIER DES CHARGES COMPLET ET À JOUR dans `mobile/CHANTIER_ECONOMIE.md` (Sanctuaire / Veilleur : 42 / 40 à
+l'A0 puis 50 dès l'A1, un défi chacun par Ascension ; NOUVEAUX objets v2 : Faveur v2 0,05 % + 0,025 %/niveau → coup ×10
+avec animation BLEUE, Dégâts critiques v2, Sanctuaire v2, Veilleur v2 moins forts et plus chers, niveaux limités par
+Ascension ; propositions chiffrées à valider). À LIRE EN ENTIER au début de la conversation suivante.
 PLAN : branche → règle des prix + nouvelle répartition → MESURER (achats, durées, chiffres A1/A2) → réécrire les défis
 d'achat A1-A5 → contrôles (ordre des coûts, budget, majoration…) → publier. Grosse refonte : NOUVELLE conversation.
 

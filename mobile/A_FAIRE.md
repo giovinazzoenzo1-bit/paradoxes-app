@@ -5,7 +5,7 @@
 > Une ligne par demande, avec la date. On raye quand c'est fait.
 
 ## Équilibrage
-- [ ] 18/10 — **Objets par Ascension** (2 paliers + 2 générateurs chacune, Poigne en A0), prix « avant l'heure » à 60 % du seuil (niveau 2 jamais), défis d'achat sur les objets de l'Ascension, Sanctuaire / Veilleur « maxés une fois ». Décisions dans CLICKER_ADVENTURE_STATE (18/10). Mesurer avant d'appliquer.
+- [ ] 18/10 — ⚠️ TOUT est dans `mobile/CHANTIER_ECONOMIE.md` (objets par Ascension, prix avant l'heure, défis d'achat, Sanctuaire / Veilleur, objets v2, propositions à valider). — **Objets par Ascension** (2 paliers + 2 générateurs chacune, Poigne en A0), prix « avant l'heure » à 60 % du seuil (niveau 2 jamais), défis d'achat sur les objets de l'Ascension, Sanctuaire / Veilleur « maxés une fois ». Décisions dans CLICKER_ADVENTURE_STATE (18/10). Mesurer avant d'appliquer.
 - [ ] 18/10 — Idée de l'auteur (rétention) : quelques défis sous forme de **mini-jeux de clic**, plus tard (casser la monotonie des défis de 10 à 19 min).
 - [x] 18/10 — FAIT (verrou retiré, décision de l'auteur) — 🟥 **Trou du jeu** : défi « Termine le chapitre… » = actuel + 5 SANS plafond au verrou de fin d'Ascension → œuf bloqué si le joueur est à 4 étapes ou moins du verrou. Plafonner (1 ligne, comme Sanctuaire / Veilleur) + contrôle. Attend le go de l'auteur.
 - [ ] 18/10 — Bug (auteur) : un œuf en train d'éclore BLOQUE l'œuf suivant. Plus tard.
