@@ -4305,6 +4305,22 @@ prouvés (6 passes : 0 25 · 25 55 · 55 85 · 85 115 · 115 150 · 150 400), ta
 **Reste** : le joueur de l'outil n'achète pas les légendaires (seuils un peu bas pour qui les achète : voulu, prudent) ;
 l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours retiré au sort : moteur 64).
 
+## OBJETS « ENTRE-DEUX » + SÉRIES DE TAPS (décisions de l'auteur, même conversation) — PUBLIÉ
+
+- **Séries de taps** : 350 à l'œuf 3, montée régulière jusqu'à 980 à l'œuf 26, puis 980 (avant : 140 → plafond 400).
+  Limite d'auditEmballement = 980 (règle de l'auteur). Une « pause » = plus de 1,2 s sans taper (TRANSE_WINDOW_MS).
+- **1 palier + 1 générateur de plus par Ascension, A0 comprise** (12 objets), glissés ENTRE les deux objets de leur
+  Ascension : bonus / revenu et prix = moyennes géométriques des voisins (Mitaine : même prix par point de tap que la
+  Poigne). La puissance en FIN d'Ascension ne change pas — MESURÉ : 31,4 h actives (médiane de 20 decks), 0 défi
+  > 1,5 × son temps visé, 0 achat avant l'heure ; seuils recalculés (11,7 M · 50 M · 3,5 Md · 89 Md · 3 240 Md · 74 200 Md).
+- ⚠️ L'ORDRE de TAP_UPGRADES est la chaîne de déblocage : un palier « entre-deux » devient le prérequis du suivant (Gantelet
+  attend la Mitaine 5). `tapUpgradeUnlocked` : un palier DÉJÀ possédé reste ouvert (sauvegardes d'avant l'insertion).
+- **Défis** : chaque Ascension demande ses 3 paliers et ses 3 générateurs. A0 (tutoriel) : Pacte gardé à l'œuf 5 (Pacte 10
+  avant la Poigne, auditPrerequisTenus), Poigne à l'œuf 6, Mitaine à la place des Dégâts critiques de l'œuf 6.
+- **Piège de mesure corrigé** : un défi d'achat se mesure à ce que le joueur PAIE, prérequis compris (`depense` de l'outil) —
+  « Achète 1 niveau de Gantelet » coûtait d'abord la Mitaine 5 (99,8 % du budget) ; sans ça, auditCoutCroissant criait à tort.
+- Icônes : prompts Gemini 98 à 109 (`design/a-integrer/02-boutique/PROMPTS-ENTRE-DEUX.md`) ; en attendant, l'emoji s'affiche.
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
