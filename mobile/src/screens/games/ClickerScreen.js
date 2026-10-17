@@ -127,7 +127,7 @@ import {
   estEtatAdapte,
   metriqueDuDefi,
 } from '../../games/clicker/questLogic';
-import { cibleCalculee, estCalcule, oeufDuDefi } from '../../games/clicker/calculDefis';
+import { cibleCalculee, estCalcule, oeufDuDefi, basculeAchat } from '../../games/clicker/calculDefis';
 import FaussePub from '../../components/FaussePub';
 import { ICONES_PUB } from '../../components/iconesPubs';
 import { PUB_BOOST_TAP_MULT, PUB_BOOST_TAP_SEC } from '../../games/clicker/clickerLogic';
@@ -366,6 +366,13 @@ function formatNum(n) {
   // qu'un nombre à rallonge.
   if (v >= 999.95) return n.toExponential(1).replace('e+', 'e');
   return v.toFixed(tier === 1 ? 1 : 2) + NUM_SUFFIXES[tier];
+}
+
+// 17/10 — objets de BASCULE figés dans les photos des défis (calculDefis.basculeAchat) : { idDuDéfi: métrique }.
+function objetsDesDefis(bases) {
+  const out = {};
+  Object.keys(bases || {}).forEach((id) => { const b = bases[id]; if (b && b.objetBascule) out[id] = b.objetBascule; });
+  return out;
 }
 
 export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
@@ -2841,6 +2848,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // `maxCombo` est en centièmes côté défi (x2,5 → 25) pour rester un
   // entier affichable dans la barre segmentée.
   const questStats = {
+    objetsDefis: objetsDesDefis(questBaselines), // 17/10 : objets de BASCULE figés (calculDefis.basculeAchat)
     maxCombo: Math.round(maxCombo * 10),
     maxTapStreak,
     totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower,
@@ -3116,7 +3124,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // chapitre ou flèche vers la bonne page, puis l'article). ⚠️ 1re version (même jour) : elle lisait `questIds` = les DÉFIS DU JOUR
   // (DailyContext, pickDailyQuests) — jamais un achat → aucune lueur chez l'auteur. Ici : currentChallengeId (défis de l'œuf).
   const cibleDefiAchat = currentChallengeId
-    ? articleDuDefiAchat(metriqueDuDefi(findQuest(currentChallengeId), { ascension: ascensionCount }))
+    ? articleDuDefiAchat(metriqueDuDefi(findQuest(currentChallengeId), { ascension: ascensionCount, objetsDefis: objetsDesDefis(questBaselines) }))
     : null;
   // Réussi mais pas encore validé : le panneau devient un bouton vert.
   const currentChallengeReussi = !!currentChallengeId && isQuestDone(currentChallengeId);
@@ -3378,8 +3386,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (!loaded || !currentChallengeId) return;
     if (questBaselinesRef.current[currentChallengeId]) return;
     const instantane = buildQuestStatsSnapshot();
+    // ⚠️ 17/10 — BASCULE (calculDefis.basculeAchat) : décidée ICI, à l'apparition, et FIGÉE dans la photo du défi (sa base) —
+    // la base est déjà sauvegardée et remise à zéro aux bons moments ; recalculée à chaque rendu, l'objet pourrait changer
+    // en plein défi. `questStats.objetsDefis` la rend visible à metriqueDuDefi (progrès, libellé, lueur du Grimoire).
+    const qBascule = findQuest(currentChallengeId);
+    const objetBascule = qBascule && estCalcule(qBascule)
+      ? basculeAchat(qBascule, instantane, { oeuf: oeufDuDefi(qBascule.id), creatures: (ownedRef.current || []).map((o) => o.id),
+        protegees: Math.min(piecesProtegeesRef.current || 0, coinsRef.current || 0) })
+      : null;
+    const photo = objetBascule ? { ...instantane, objetBascule } : instantane;
     setQuestBaselines((prev) => (
-      prev[currentChallengeId] ? prev : { ...prev, [currentChallengeId]: instantane }
+      prev[currentChallengeId] ? prev : { ...prev, [currentChallengeId]: photo }
     ));
     // ⚠️⚠️ UN DÉFI À PAS RELATIF SE CALCULE QUAND IL COMMENCE, PAS AU
     // TIRAGE DE L'ŒUF.
@@ -3458,7 +3475,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       const protegees = Math.min(piecesProtegeesRef.current || 0, coinsRef.current || 0);
       piecesProtegeesRef.current = protegees;
       AsyncStorage.setItem(PIECES_PROTEGEES_KEY, String(protegees)).catch(() => {});
-      const cibleCalc = cibleCalculee(q, instantane, { oeuf: oeufDuDefi(q.id), creatures: (ownedRef.current || []).map((o) => o.id), protegees });
+      const cibleCalc = cibleCalculee(q, instantane, { oeuf: oeufDuDefi(q.id), creatures: (ownedRef.current || []).map((o) => o.id), protegees,
+        objet: objetBascule || undefined });
       if (Number.isInteger(cibleCalc) && cibleCalc >= 1) setQuestTargets((prev) => ({ ...prev, [currentChallengeId]: cibleCalc }));
     }
   }, [currentChallengeId, loaded]);

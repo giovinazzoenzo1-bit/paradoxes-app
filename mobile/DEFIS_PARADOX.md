@@ -103,11 +103,11 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 
 ### ŒUF 7  →  Glyphon
 ```diff
-- 50. ⚙️ Achète 4 Automates Runiques
+- 50. 👻 Achète 4 Esprits Frappeurs
 + 51. ⚔️ Termine le chapitre 4, niveau 1
 + 52. ✨ Active 13 fois un pouvoir
   53. ⭐ Touche 7 fois la cible dorée
-- 54. ⚙️ Achète 3 Colonies de Familiers
+- 54. ⚙️ Achète 3 Mains Spectrales
   55. 💰 Mets 45 000 pièces de côté
 + 56. 🐣 Monte une créature au niveau 6
 - 57. 🏛️ Monte le Sanctuaire au niveau 50
@@ -256,7 +256,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 - 148. 🪄 Achète 4 niveaux de Poing de Granit
 + 149. 🗡️ Gagne 5 combats en Aventure
   150. 🔥 Enchaîne 400 taps sans pause
-- 151. ✊ Achète 4 niveaux de Éclat Primordial
+- 151. ⚙️ Achète 4 Golems de Cristal
   152. 💰 Mets 4,4 millions de pièces de côté
   153. ⚙️ Atteins 200 pièces par seconde
   154. 🌟 Fais ta 3e Ascension
@@ -344,7 +344,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 - 204. ⚙️ Achète 9 Phénix Renaissants
 + 205. ⚔️ Termine le chapitre 15, niveau 4
   206. ⭐ Touche 29 fois la cible dorée
-- 207. 🪄 Achète 4 niveaux de Coeur de Supernova
+- 207. ⚙️ Achète 4 Phénix Renaissants
   208. ⚙️ Atteins 160 000 pièces par seconde
   209. 💰 Mets 130 millions de pièces de côté
   210. 🌟 Fais ta 4e Ascension
@@ -509,7 +509,7 @@ _**6 / 6 / 7 / 7 / 7 / 7 œufs** par Ascension (A0 à A5), 8 défis par œuf —
 - 309. 🪄 Achète 4 niveaux de Volonté du Paradoxe
 + 310. ✨ Active 27 fois un pouvoir
   311. ⚙️ Atteins 1,1 million pièces par seconde
-- 312. 👑 Achète 4 niveaux de Couronne de l’Origine
+- 312. 🗻 Achète 4 Colosses de Pierre
   313. 💰 Mets 2,2 milliards de pièces de côté
 + 314. ⚔️ Termine le chapitre 23, niveau 7
 ```

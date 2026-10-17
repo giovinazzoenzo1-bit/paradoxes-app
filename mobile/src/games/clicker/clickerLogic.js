@@ -1810,17 +1810,18 @@ export const ASCENSION_THRESHOLDS = [
   // de 20 suites d'œufs), point fixe avec le plancher avant l'heure. OUTIL : mobile/tools/mesure-seuils.js — à RELANCER
   // dès que les défis, les prix ou les objets changent (la chaîne change). A6-A9 : même hausse que l'A5 (continuité).
   // Avant : 3,1 M · 11,6 M · 186 M · 13,1 Md · 60 Md · 370 Md (effectifs, ajustement compris).
-  // 2e calcul (17/10) : après la réécriture des défis d'achat (2.3) et l'arrondi des défis de revenu/s (calculDefis.arrondiGain).
+  // 3e calcul (17/10) : après la réécriture des défis d'achat (2.3), l'arrondi des défis de revenu/s (calculDefis.arrondiGain)
+  // et la BASCULE automatique des achats trop gros (calculDefis.basculeAchat).
   10900000,              // A0 — effectif 1.09e+07
-  76700000,              // A1 — effectif 6.66e+07
-  16000000000,           // A2 — effectif 2.99e+09
-  136000000000,          // A3 — effectif 8.4e+10
+  71400000,              // A1 — effectif 6.2e+07
+  13100000000,           // A2 — effectif 2.45e+09
+  126000000000,          // A3 — effectif 7.79e+10
   3120000000000,         // A4 — effectif 2.15e+12
-  105000000000000,       // A5 — effectif 7.56e+13
-  472000000000000,       // A6
-  2370000000000000,      // A7
-  13000000000000000,     // A8
-  77900000000000000,     // A9
+  85500000000000,        // A5 — effectif 6.16e+13
+  384000000000000,       // A6
+  1930000000000000,      // A7
+  10600000000000000,     // A8
+  63400000000000000,     // A9
 ];
 
 // Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.

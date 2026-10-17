@@ -320,7 +320,9 @@ function creerJoueur(a, V, depart, opts = {}) {
     V.creatures = oeuf - 1;
     if (opts.photos) J.photos[J.i] = { s: copie(s), t, V: copie(V) };
     const st = statsJeu(a, s, V);
-    const m = Q.metriqueDuDefi(q, st);
+    // 17/10 — BASCULE du jeu (calculDefis.basculeAchat), décidée à l'apparition comme à l'écran.
+    const objetBascule = CD.basculeAchat(q, st, { oeuf, creatures: idsPossedes(V.creatures), protegees: 0 });
+    const m = objetBascule || Q.metriqueDuDefi(q, st);
     // Comme l'écran à l'apparition du défi (ClickerScreen, effet sur currentChallengeId) : cible résolue, puis
     // défi d'ÉTAT relevé (cibleEtatAdaptee : +20 % de passif, +5 min de production, +5 niveaux, +2) et achat
     // ramené à ce qui manque (cibleAchatCumulee). ⚠️ Oublié dans le 1er essai : « de côté » et revenu/s trop courts.
@@ -333,10 +335,10 @@ function creerJoueur(a, V, depart, opts = {}) {
     if (m === 'advLevelReached' && HYP.plafondVerrou) cible = Math.min(cible, cap);
     // 17/10 — RÉALIGNÉ : le CALCULATEUR DU JEU passe en DERNIER, comme à l'écran (ClickerScreen, effet d'apparition) ;
     // achats, pièces, revenu/s, cible dorée, pouvoirs, taps, critiques → cible calculée sur la photo, figée.
-    const cc = CD.cibleCalculee(q, st, { oeuf, creatures: idsPossedes(V.creatures), protegees: 0 });
+    const cc = CD.cibleCalculee(q, st, { oeuf, creatures: idsPossedes(V.creatures), protegees: 0, objet: objetBascule || undefined });
     if (Number.isInteger(cc) && cc >= 1) cible = cc;
     const c = { id: q.id, m, mode: q.mode, ecrite: q.target, cible, oeuf, oeufDuGroupe, debutT: t, debutMur: V.mur,
-      base: q.mode === 'delta' ? valeur(m, s) : 0, crits: 0, ecoule: 0, duree: 0, label: q.label(cible),
+      base: q.mode === 'delta' ? valeur(m, s) : 0, crits: 0, ecoule: 0, duree: 0, label: Q.libelleDuDefi(q, m)(cible, m),
       prelude: HYP.secParDefi };
     if (m === 'goldenClaimed') c.duree = residuDoree() + Math.max(0, cible - 1) * pDoree();
     if (m === 'maxTapStreak') c.duree = cible / taps;

@@ -13,6 +13,7 @@ import { valeurTap, revenuPassif } from './conseilBoutique';
 import {
   CREATURES, powerForCreature, rechargePouvoirMs, AUTOCLICKERS, autoClickerCost, TAP_UPGRADES,
   tapUpgradeUnlocked, critChance, upgradeBonuses, GOLDEN_MIN_INTERVAL_SEC, GOLDEN_MAX_INTERVAL_SEC,
+  PALIER_TAP_ASCENSION, GENERATEUR_ASCENSION,
 } from './clickerLogic';
 
 // ---- Joueur de référence (décisions de l'auteur, 18/10) ----------------
@@ -137,6 +138,58 @@ function niveauxPayables(m, e, asc, budget) {
   if (m === 'critLevel') n = Math.min(n, Math.max(1, plafondFaveur(e) - niveauDe(m, e)));
   return Math.max(1, n);
 }
+// Prix d'UN niveau de plus, prérequis compris (un palier verrouillé demande d'abord le Pacte ou le palier d'avant).
+function coutUnNiveau(m, e0, asc) {
+  const e = { ...e0, tapUpgrades: { ...(e0.tapUpgrades || {}) }, autoClickers: { ...(e0.autoClickers || {}) } };
+  let cout = 0;
+  if (m.startsWith('tapUpgrade:')) {
+    const idx = TAP_UPGRADES.findIndex((u) => u.id === m.slice(11));
+    if (idx < 0) return Infinity;
+    for (let g = 0; g < 400 && !tapUpgradeUnlocked(idx, e.tapPower, e.tapUpgrades); g++) {
+      let k = 0;
+      while (k <= idx && tapUpgradeUnlocked(k, e.tapPower, e.tapUpgrades)) k += 1;
+      if (k === 0) { cout += coutNiveauAchat('tapPower', e.tapPower, asc); e.tapPower += 1; }
+      else { const id = TAP_UPGRADES[k - 1].id; cout += coutNiveauAchat('tapUpgrade:' + id, e.tapUpgrades[id] || 0, asc); e.tapUpgrades[id] = (e.tapUpgrades[id] || 0) + 1; }
+    }
+  }
+  return cout + coutNiveauAchat(m, niveauDe(m, e), asc);
+}
+// ⚠️⚠️ 17/10 — BASCULE (règle de l'auteur : « le calculateur est fait pour ne pas bloquer le joueur ; si la demande est trop
+// grosse, il faut basculer sur un objet plus petit, qui demande le bon temps de farm »). MESURÉ avant : en fin d'Ascension,
+// un niveau de palier (×2,5 par niveau) dépassait seul le budget → « Achète 1 niveau » en 22 à 31 min au lieu de 9 à 14.
+// Si UN niveau de l'objet écrit coûte plus que le budget du défi, le défi vise un autre objet : même famille de la même
+// Ascension d'abord (palier ↔ palier, générateur ↔ générateur), puis l'autre famille, puis l'Ascension d'avant, puis le
+// Pacte — le PLUS CHER dont un niveau tient dans le budget (le plus proche de la demande). Décidé à l'apparition et FIGÉ
+// dans la photo du défi (ClickerScreen : questBaselines[id].objetBascule → stats.objetsDefis → metriqueDuDefi).
+export function basculeAchat(q, stats, ctx) {
+  try {
+    if (!q || q.mode !== 'delta' || q.metriqueParGroupe) return null;
+    const m = q.metric || '';
+    if (!m.startsWith('auto:') && !m.startsWith('tapUpgrade:')) return null;
+    const s = stats || {};
+    const c = ctx || {};
+    const asc = s.ascension || 0;
+    const tau = tempsViseOeuf(c.oeuf || oeufDuDefi(q.id) || 1);
+    const poche = Math.max(0, (s.coins || 0) - Math.max(0, c.protegees || 0));
+    const budget = poche + productionReference(s, c.creatures) * tau;
+    const e = etatDe(s);
+    if (coutUnNiveau(m, e, asc) <= budget) return null;
+    const objets = (a, famille) => (famille === 'tap'
+      ? TAP_UPGRADES.filter((u) => PALIER_TAP_ASCENSION[u.id] === a).map((u) => 'tapUpgrade:' + u.id)
+      : AUTOCLICKERS.filter((g) => GENERATEUR_ASCENSION[g.id] === a).map((g) => 'auto:' + g.id));
+    const fam = m.startsWith('auto:') ? 'auto' : 'tap';
+    const autre = fam === 'auto' ? 'tap' : 'auto';
+    const rangs = [objets(asc, fam), objets(asc, autre), objets(asc - 1, fam), objets(asc - 1, autre), ['tapPower']];
+    for (const rang of rangs) {
+      const ok = rang.filter((x) => x !== m).map((x) => ({ x, c: coutUnNiveau(x, e, asc) }))
+        .filter((o) => o.c > 0 && o.c <= budget).sort((u, v) => v.c - u.c);
+      if (ok.length) return ok[0].x;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
 // Revenu passif atteint en dépensant le budget au meilleur rapport passif / prix.
 function passifAtteint(e, asc, budget) {
   let reste = budget;
@@ -165,7 +218,7 @@ export function cibleCalculee(q, stats, ctx) {
     if (!estCalcule(q)) return null;
     const s = stats || {};
     const c = ctx || {};
-    const m = q.metric;
+    const m = c.objet || q.metric; // objet de BASCULE (basculeAchat) s'il y en a un
     const asc = s.ascension || 0;
     const tau = tempsViseOeuf(c.oeuf || oeufDuDefi(q.id) || 1);
     const prod = productionReference(s, c.creatures);

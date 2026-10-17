@@ -432,6 +432,9 @@ const RESET_ON_DRAW_METRICS = ['maxTranseHoldSec', 'maxCombo', 'maxTapStreak'];
 // brut renverrait `undefined` pour ces défis — ils viseraient le vide.
 export function metriqueDuDefi(quest, stats) {
   if (!quest) return null;
+  // 17/10 — objet de BASCULE (calculDefis.basculeAchat), figé dans la photo du défi à son apparition.
+  const bascule = stats && stats.objetsDefis && quest.id ? stats.objetsDefis[quest.id] : null;
+  if (bascule) return bascule;
   if (quest.metriqueParGroupe) {
     const groupe = Math.max(0, Math.floor((stats && stats.ascension) || 0));
     return quest.metriqueParGroupe(groupe) || quest.metric || null;
@@ -1228,6 +1231,14 @@ export function validateQuests(publishedMetrics = []) {
 // Le joueur voyait un défi et une jauge qui ne parlaient pas du même
 // objectif.
 
+// 17/10 — un défi BASCULÉ sur un autre objet prend le libellé d'un défi écrit qui vise cet objet (mêmes mots, mêmes pluriels).
+export function libelleDuDefi(q, m) {
+  if (q && m && q.metric && m !== q.metric && !q.metriqueParGroupe) {
+    const modele = DEFIS_ECRITS.flat().find((x) => x && x.metric === m && x.mode === 'delta' && typeof x.label === 'function');
+    if (modele) return modele.label;
+  }
+  return q.label;
+}
 export function questLabel(questId, target, stats = {}, targets = {}) {
   const q = findQuest(questId);
   if (!q) return '';
@@ -1237,7 +1248,8 @@ export function questLabel(questId, target, stats = {}, targets = {}) {
   // ⚠️ Le libellé reçoit la métrique RÉSOLUE en 2e argument : les défis
   // dont l'article change selon le groupe doivent pouvoir le NOMMER.
   // Sans ça ils afficheraient « Possède 10 » sans dire quoi.
-  return q.label(t || 1, metriqueDuDefi(q, stats));
+  const m = metriqueDuDefi(q, stats);
+  return libelleDuDefi(q, m)(t || 1, m);
 }
 
 export function questDetail(questId, stats, baseline = {}, targets = {}) {
@@ -1255,7 +1267,7 @@ export function questDetail(questId, stats, baseline = {}, targets = {}) {
     // ⚠️ `questLabel` le faisait déjà ; c'est `questDetail`, l'autre
     // chemin d'affichage, qui l'avait manqué. Toute nouvelle fonction
     // qui construit un libellé doit passer `metriqueDuDefi(q, stats)`.
-    label: q.label(target, metriqueDuDefi(q, stats)),
+    label: libelleDuDefi(q, metriqueDuDefi(q, stats))(target, metriqueDuDefi(q, stats)),
     progress,
     target,
     current: Math.min(target, Math.floor(progress * target + 1e-9)),
