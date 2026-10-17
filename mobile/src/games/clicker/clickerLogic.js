@@ -1258,10 +1258,19 @@ export function taillePackGriffes(niveauxDeck) {
   for (let k = 0; k < PACK_PIECES_NIVEAUX; k++) t += levelUpCost({ rarity: 'commun' }, moy + k);
   return Math.max(1, Math.round(t));
 }
+// 17/10 (CHANTIER_ECONOMIE, décision de l'auteur « go coefficient ») : un prix en % du SEUIL coûte bien plus de TEMPS aux
+// A3-A5 — MESURÉ avec les seuils déduits de la chaîne : 1 % du seuil = 0,6 min de jeu en fin d'A1, 1,9 min à l'A3, 5,3 min à
+// l'A5 (le 1er pack aurait coûté 53 min de jeu à l'A5). Coefficient par Ascension : ×1 jusqu'à l'A2, ×½ à l'A3, ×¼ dès l'A4.
+// Appliqué aux packs de Griffes en pièces et aux objets v2 (prix en % du seuil).
+export const COEF_PRIX_SEUIL = [1, 1, 1, 0.5, 0.25];
+export function coefficientPrixSeuil(ascensionCount) {
+  const a = Math.max(0, Math.floor(Number(ascensionCount) || 0));
+  return COEF_PRIX_SEUIL[Math.min(a, COEF_PRIX_SEUIL.length - 1)];
+}
 export function griffesCoinCost(purchases, ascensionCount) {
   const n = Math.max(0, Math.floor(Number(purchases) || 0));
   const f = GRIFFES_PACK_FRACTIONS[Math.min(n, GRIFFES_PACK_FRACTIONS.length - 1)];
-  return Math.round(ascensionThreshold(ascensionCount) * f);
+  return Math.round(ascensionThreshold(ascensionCount) * f * coefficientPrixSeuil(ascensionCount));
 }
 
 export function veilleurMaxed(level) {
