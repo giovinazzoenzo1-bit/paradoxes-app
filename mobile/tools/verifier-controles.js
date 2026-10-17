@@ -574,8 +574,8 @@ const SABOTAGES = [
     surDefi((b) => b.metric === 'offering', cible(30))],
   ['auditModes', F.defis, "« gagne 7 de revenu par seconde EN PLUS » : métrique d'état en delta",
     surDefi((b) => b.metric === 'passiveIncome', (b) => b.replace("mode: 'absolute'", "mode: 'delta'"))],
-  ['auditEmballement', F.defis, '900 taps d\'affilée : au-delà de la limite humaine (règle de l\'auteur : 400)',
-    surDefi((b) => b.metric === 'maxTapStreak', cible(900))],
+  ['auditEmballement', F.defis, '1 500 taps d\'affilée : au-delà de la limite de l\'auteur (980 à l\'œuf 26)',
+    surDefi((b) => b.metric === 'maxTapStreak', cible(1500))],
   ['auditFamilles', F.defis, "deux défis d'économie dans le même œuf",
     surDefi((b) => b.metric === 'goldenClaimed' && b.g === 0 && b.e === 1, (b) => b.replace("metric: 'goldenClaimed'", "metric: 'coins'"))],
   ['auditDependanceCreature', F.defis, "un défi qui vise une amélioration de créature (famille supprimée)",
@@ -587,7 +587,7 @@ const SABOTAGES = [
   ['auditCibleMonte', F.defis, "« Enchaîne 140 taps » puis « Enchaîne 120 taps » (bug réel, défis 15 et 35)",
     // Le PREMIER défi de taps de l'A0 passe au-dessus du second : la
     // cible redescend, exactement comme 140 puis 120.
-    surDefi((b) => b.metric === 'maxTapStreak' && b.g === 0, cible(300))],
+    surDefi((b) => b.metric === 'maxTapStreak' && b.g === 0, cible(500))],
   // ⚠️ Pas « le seuil −40 % » : dans une économie qui accélère, les
   // derniers 40 % du seuil se gagnent vite, et la durée ne bouge que de
   // ~10 % — dans la marge. Le sabotage était trop faible, pas le contrôle.

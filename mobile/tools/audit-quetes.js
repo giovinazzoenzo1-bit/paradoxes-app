@@ -814,10 +814,10 @@ function auditEmballement() {
   // Les défis de PERFORMANCE ont une limite humaine : au-delà, le défi
   // n'est plus difficile, il est impossible. Limites posées par l'auteur
   // ou mesurées sur le jeu actuel :
-  //   - taps d'affilée : 400 au maximum (règle de l'auteur, 20/09) ;
+  //   - taps d'affilée : 980 au maximum (règle de l'auteur : 350 à l'œuf 3, 980 à l'œuf 26 ; avant : 400, 20/09) ;
   //   - Transe tenue : 180 s ;
   //   - multiplicateur de Transe : x5,0 (stocké 50).
-  const LIMITES = { maxTapStreak: 400, maxTranseHoldSec: 180, maxCombo: 50 };
+  const LIMITES = { maxTapStreak: 980, maxTranseHoldSec: 180, maxCombo: 50 };
   const fautes = [];
   load('defisEcrits').DEFIS_ECRITS.flat().forEach((q) => {
     const lim = LIMITES[q.metric];
