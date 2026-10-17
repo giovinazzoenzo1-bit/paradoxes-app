@@ -4207,6 +4207,15 @@ PUB_BOOST_TAP_SEC 120, multiplie le gain du tap, bouton caché pendant le bonus 
 compte depuis l'APPARITION du défi (le défi 22 était validé d'office par une rune achetée plus tôt dans le cycle).
 ⚠️ La note « aucun boost temporaire de pièces » du calculateur n'est plus vraie : le Tap ×2 en est un, exclu exprès.
 CONTRÔLE auditFaussePub + 3 sabotages (pub à 5 s, Tap ×2 non appliqué, rune de nouveau validable d'office).
+LOGOS DES PUBS (18/10) : prompts Gemini 78 à 92 dans design/a-integrer/18-pubs/PROMPTS.md (règles de la maison :
+fond magenta #FF00FF, pas de texte SAUF le « x2 » des 79 et 85, demandé par l'auteur ; 79, 80, 84, 85 refaits « plus
+simples »). 10 logos reçus (78 à 86, 88), détourés et réduits à 192 px dans mobile/assets/pubs/, index unique
+src/components/iconesPubs.js (ICONES_PUB). En jeu : le badge 78 remplace 📺 sur Tap ×2 (avec le logo x2 + « 2 min »),
++1 poudre (Runes, avec le logo poudre), +1 énergie (Aventure, avec l'éclair), vidéo d'œuf, gains hors ligne, et dans
+l'écran de la fausse pub. Restent en emoji : textes de l'incubateur et de l'aide du combat. ⚠️ Détourage : detourer.py
+laissait le fond de 2 images (tapx2, sac : magenta plus sombre) → détourées à la couleur médiane du bord ; le logo du
+coffre (88) garde une lueur rose à droite (à refaire avant de l'utiliser) ; le 79 avait une flamme parasite dessous
+(coupée). À générer : 87, 89, 90, 91, 92.
 
 ## 🔁 PASSATION — FIN DE LA CONVERSATION DU 16/10 (À LIRE EN PREMIER dans la conversation suivante)
 

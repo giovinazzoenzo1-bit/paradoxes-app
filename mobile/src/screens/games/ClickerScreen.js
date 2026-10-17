@@ -129,6 +129,7 @@ import {
 } from '../../games/clicker/questLogic';
 import { cibleCalculee, estCalcule, oeufDuDefi } from '../../games/clicker/calculDefis';
 import FaussePub from '../../components/FaussePub';
+import { ICONES_PUB } from '../../components/iconesPubs';
 import { PUB_BOOST_TAP_MULT, PUB_BOOST_TAP_SEC } from '../../games/clicker/clickerLogic';
 import { articleDuDefiAchat } from '../../games/clicker/grimoireChapitres';
 // Signalement des blocages — voir `games/clicker/diagnostic.js`.
@@ -4323,7 +4324,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 </View>
               ) : (
                 <TouchableOpacity onPress={() => setPubTap(true)} style={styles.pubTap} accessibilityLabel="Regarder une pub pour doubler les taps">
-                  <Text style={styles.pubTapTexte}>📺 Tap ×2 · 2 min</Text>
+                  <View style={styles.pubTapLigne}>
+                    <Image source={ICONES_PUB.badge} style={styles.pubTapBadge} resizeMode="contain" />
+                    <Image source={ICONES_PUB.tapx2} style={styles.pubTapIcone} resizeMode="contain" />
+                    <Text style={styles.pubTapTexte}>2 min</Text>
+                  </View>
                 </TouchableOpacity>
               )}
               <FaussePub visible={pubTap} recompense="Tap ×2 pendant 2 min" onFin={finPubTap} />
@@ -4342,7 +4347,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                     <ActivityIndicator size="small" color={COLORS.neonCyan} />
                   ) : (
                     <>
-                      <Text style={styles.eggVideoBtnIcon}>📺</Text>
+                      <Image source={ICONES_PUB.badge} style={styles.eggVideoBtnImage} resizeMode="contain" />
                       <Text style={styles.eggVideoBtnText}>
                         -{Math.round(VIDEO_REDUCTION_RATIO * 100)}%
                       </Text>
@@ -4782,7 +4787,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   ) : (
                     <>
                       <View style={styles.offlineAdIcon}>
-                        <Text style={styles.offlineAdIconText}>📺</Text>
+                        <Image source={ICONES_PUB.badge} style={styles.offlineAdIconImage} resizeMode="contain" />
                       </View>
                       <Text style={styles.offlineAdBtnText}>Double en regardant une pub</Text>
                       {/* Chevron DESSINÉ, pas une flèche de police : deux
@@ -6205,6 +6210,11 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 const styles = StyleSheet.create({
   pubTap: { position: 'absolute', top: 8, right: 8, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14, backgroundColor: 'rgba(43,35,66,0.9)', borderWidth: 1, borderColor: '#f2c94c', zIndex: 5 },
   pubTapTexte: { color: '#f2c94c', fontSize: 13, fontWeight: '700' },
+  pubTapLigne: { flexDirection: 'row', alignItems: 'center' },
+  pubTapBadge: { width: 18, height: 17, marginRight: 4 },
+  pubTapIcone: { width: 40, height: 20, marginRight: 4 },
+  eggVideoBtnImage: { width: 22, height: 21 },
+  offlineAdIconImage: { width: 15, height: 14 },
   // Menu « Gardien de l'œuf » (08/10)
   menuGardienChance: { color: '#FFE08A', fontSize: 22, fontWeight: '900', textAlign: 'center', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   menuGardienPlan: { alignItems: 'center' },

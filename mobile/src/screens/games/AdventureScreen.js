@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { DIAMOND_OFFERS } from './DiamondShop';
 import FaussePub from '../../components/FaussePub';
+import { ICONES_PUB } from '../../components/iconesPubs';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { elementTheme } from './elementThemes';
@@ -3573,7 +3574,11 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
           )}
           {onPubPoudre && (
             <TouchableOpacity onPress={onPubPoudre} style={styles.pubPoudre} accessibilityLabel="Regarder une pub pour une poudre runique">
-              <Text style={styles.pubPoudreTexte}>📺 Pub : +1 ✨ poudre</Text>
+              <View style={styles.pubPoudreLigne}>
+                <Image source={ICONES_PUB.badge} style={styles.pubPoudreBadge} resizeMode="contain" />
+                <Image source={ICONES_PUB.poudre} style={styles.pubPoudreIcone} resizeMode="contain" />
+                <Text style={styles.pubPoudreTexte}>+1 poudre</Text>
+              </View>
             </TouchableOpacity>
           )}
 
@@ -3789,7 +3794,7 @@ function FighterSelectOverlay({ levelNumber, attentePhoto = false, owned, deck, 
         <View style={[styles.apercuRecharges, { left: rectCombattre.left + rectCombattre.width + 10, top: rectCombattre.top, height: rectCombattre.height }]}>
           {onWatchAdForEnergy && adsLeft > 0 && (
             <TouchableOpacity style={[styles.buyEnergyBtn, styles.adEnergyBtn, adLoading && styles.actionBtnDisabledAdv]} onPress={onWatchAdForEnergy} disabled={adLoading}>
-              {adLoading ? <ActivityIndicator size="small" color="#241a00" /> : (<><Text style={styles.buyEnergyIcon}>📺</Text><Text style={styles.adEnergyCost}>+1</Text></>)}
+              {adLoading ? <ActivityIndicator size="small" color="#241a00" /> : (<><Image source={ICONES_PUB.badge} style={styles.buyEnergyBadge} resizeMode="contain" /><Text style={styles.adEnergyCost}>+1</Text><Image source={ICONES_PUB.energie} style={styles.buyEnergyEclair} resizeMode="contain" /></>)}
             </TouchableOpacity>
           )}
           {onBuyEnergy && (
@@ -4121,6 +4126,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#7fdcff',
   },
   buyEnergyIcon: { fontSize: 16 },
+  buyEnergyBadge: { width: 18, height: 17, marginRight: 3 },
+  buyEnergyEclair: { width: 11, height: 16, marginLeft: 2 },
+  pubPoudreLigne: { flexDirection: 'row', alignItems: 'center' },
+  pubPoudreBadge: { width: 18, height: 17, marginRight: 4 },
+  pubPoudreIcone: { width: 18, height: 18, marginRight: 4 },
   buyEnergyCost: { color: '#7fdcff', fontSize: 12, fontWeight: '900', marginTop: 1 },
   energyCostText: { color: COLORS.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 10, marginBottom: 4 },
   fighterPick: {

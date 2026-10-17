@@ -2,7 +2,8 @@
 // pub ; la durée empêche les testeurs d'en abuser. La récompense n'est donnée qu'en touchant « Récupérer ».
 // Utilisée par : +1 poudre runique (menu des Runes) et Tap ×2 pendant 2 min (écran principal du clicker).
 import React, { useEffect, useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { ICONES_PUB } from './iconesPubs';
 
 export const DUREE_FAUSSE_PUB_SEC = 15;
 
@@ -24,7 +25,7 @@ export default function FaussePub({ visible = false, recompense = '', onFin }) {
     <Modal visible={!!visible} animationType="fade" transparent={false} onRequestClose={() => {}}>
       <View style={st.fond}>
         <Text style={st.titre}>Publicité</Text>
-        <Text style={st.image}>🎬</Text>
+        <Image source={ICONES_PUB.badge} style={st.image} resizeMode="contain" />
         <Text style={st.texte}>Ta récompense : {recompense}</Text>
         <View style={st.barre}>
           <View style={[st.plein, { width: `${Math.round((1 - reste / DUREE_FAUSSE_PUB_SEC) * 100)}%` }]} />
@@ -41,7 +42,7 @@ export default function FaussePub({ visible = false, recompense = '', onFin }) {
 const st = StyleSheet.create({
   fond: { flex: 1, backgroundColor: '#0b0b14', alignItems: 'center', justifyContent: 'center', padding: 24 },
   titre: { color: '#9aa0b5', fontSize: 14, letterSpacing: 2, marginBottom: 12 },
-  image: { fontSize: 96, marginBottom: 16 },
+  image: { width: 128, height: 120, marginBottom: 16 },
   texte: { color: '#ffffff', fontSize: 18, textAlign: 'center', marginVertical: 8 },
   barre: { width: '80%', height: 10, borderRadius: 5, backgroundColor: '#2a2a3a', overflow: 'hidden', marginVertical: 12 },
   plein: { height: 10, backgroundColor: '#f2c94c' },
