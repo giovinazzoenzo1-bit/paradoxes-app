@@ -4321,6 +4321,21 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   « Achète 1 niveau de Gantelet » coûtait d'abord la Mitaine 5 (99,8 % du budget) ; sans ça, auditCoutCroissant criait à tort.
 - Icônes : prompts Gemini 98 à 109 (`design/a-integrer/02-boutique/PROMPTS-ENTRE-DEUX.md`) ; en attendant, l'emoji s'affiche.
 
+## ÉCLOSION, INCUBATEUR, OFFRANDES, CALENDRIER, DÉFIS DU JOUR (demandes de l'auteur) — PUBLIÉ
+
+- **Bug réel « œuf 4 sans temps d'éclosion, Gardien direct »** (corrigé par une copie relancée, reprise après vérification :
+  verrou de plus de 9 min, aucun processus, commit LOCAL jamais poussé) : « Mettre en incubation » ne vidait pas le nid et
+  le passage en éclosion gardait ce minuteur périmé (`prev ||`) → nid vidé, minuteur toujours neuf (auditEclosionFraiche).
+  ⚠️ Leçon : un commit d'une autre copie dans le dépôt LOCAL n'est pas publié — comparer `git log -1` à `origin/main`.
+- **Incubateur** : l'icône VIBRE (rotation ±14°) dès qu'un œuf y est prêt, même sans animations d'ambiance.
+- **Offrandes −30 %** : 0,21 de la prochaine amélioration de Pacte (avant 0,3), plancher 18 (avant 25).
+- **Calendrier** : Diamants 25 → 10 (jour 2) et 50 → 25 (jour 5) ; jour 3 = Tap ×2 pendant 2 min, jour 7 = Tap ×2 pendant 5 min
+  (type `boostTap`, appliqué par l'écran principal via `boostTapJusqua`, comme la pub : HORS de la photo des défis ; un bonus
+  en cours est prolongé). « Tout récupérer » ne le prend JAMAIS (l'écran Progrès ne peut pas l'appliquer : il serait perdu).
+  La Créature Rare (jour 3) et le bon de skin (jour 7) ont disparu du calendrier.
+- **Défis illogiques** : « Invoque des créatures » (bouton Invoquer réservé aux tests) → jour : « Active 5 pouvoirs de
+  créature » ; semaine : « Fais 1 Ascension » ; succès : « Gagner des combats en Aventure ». Identifiants gardés (sauvegardes).
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
