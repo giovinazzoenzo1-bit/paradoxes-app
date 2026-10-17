@@ -4,7 +4,7 @@ Pour les boutons « 📺 » du jeu (fausse pub de 15 s). Déposer ici, DANS L'OR
 
 Lien : https://github.com/giovinazzoenzo1-bit/paradoxes-app/upload/main/design/a-integrer/18-pubs
 
-**Mode d'emploi** : NOUVELLE conversation Gemini. Au prompt 78, joindre une capture de l'écran principal du jeu (référence de style). Puis 79 à 92 dans la MÊME conversation. Le « ×2 » et le « +1 » sont écrits par le code : jamais de texte dans l'image.
+**Mode d'emploi** : NOUVELLE conversation Gemini. Au prompt 78, joindre une capture de l'écran principal du jeu (référence de style). Puis 79 à 92 dans la MÊME conversation. Pas de texte dans l'image, SAUF le « x2 » des prompts 79 et 85 (demande de l'auteur, 18/10 : icônes simples et claires).
 
 **78. Badge « Pub » (sur tous les boutons de pub)**
 
@@ -12,16 +12,16 @@ Lien : https://github.com/giovinazzoenzo1-bit/paradoxes-app/upload/main/design/a
 The image I'm sending is a screenshot of my mobile game: it is the STYLE REFERENCE. Draw a small game icon meaning 'watch an ad': a little enchanted screen in a frame of weathered warm brown wood with a bit of bright green moss on one corner, its dark screen showing a big golden play triangle in the middle. Style: hand-painted fantasy mobile game UI asset, cozy magical forest theme, weathered warm brown wood, bright green moss, gold accents, soft painterly shading, clean crisp edges, high detail, same art style as the reference screenshot. One single isolated object. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
 
-**79. Tap ×2 (écran principal) — EN JEU**
+**79. Tap ×2 — EN JEU (refait le 18/10 : plus simple)**
 
 ```
-In the same style as the previous image, draw ONLY one small game icon: a golden fingertip tapping down onto a small round wooden button, with two concentric golden impact rings and a few tiny gold sparks around the point of contact, alone. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
+In the same style as the previous image, draw ONLY one small, very simple game icon: a round golden target (bullseye) with the text 'x2' written next to it in big bold white letters with a thick dark outline. The only text is 'x2', no other text. Keep it very simple and readable at a small size: few details, bold clear shapes, thick dark outline. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
 
-**80. +1 poudre runique (menu des Runes) — EN JEU**
+**80. +1 poudre runique — EN JEU (refait le 18/10 : plus simple)**
 
 ```
-In the same style as the previous image, draw ONLY one small game icon: a small carved stone bowl filled with a heap of shimmering arcane rune dust in pale cyan and silver, a few tiny sparkles floating just above it, a faint rune glyph carved on the side of the bowl, alone. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
+In the same style as the previous image, draw ONLY one small, very simple game icon: a small heap of bright light-blue magic dust with three big four-pointed sparkle stars above it. No text, no letters, no numbers. Keep it very simple and readable at a small size: few details, bold clear shapes, thick dark outline. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
 
 **81. +1 énergie (Aventure) — EN JEU (aujourd'hui « 📺 +1 »)**
@@ -42,16 +42,16 @@ In the same style as the previous image, draw ONLY one small game icon: a cream 
 In the same style as the previous image, draw ONLY one small game icon: two small animal paw prints in warm orange-brown with a darker outline, slightly overlapping, alone. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
 
-**84. +Diamants (plus tard)**
+**84. +Diamants (plus tard, refait le 18/10 : plus simple)**
 
 ```
-In the same style as the previous image, draw ONLY one small game icon: a small cluster of three faceted cyan-blue crystals growing from a tiny mossy stone, alone. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
+In the same style as the previous image, draw ONLY one small, very simple game icon: one single big cut diamond gem in bright cyan-blue, classic diamond shape with a flat top and a pointed bottom, a few white highlights on its facets. No text, no letters, no numbers. Keep it very simple and readable at a small size: few details, bold clear shapes, thick dark outline. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
 
-**85. Gains hors ligne ×2 (plus tard)**
+**85. Gains hors ligne ×2 (plus tard, refait le 18/10 : plus simple)**
 
 ```
-In the same style as the previous image, draw ONLY one small game icon: a pale golden crescent moon resting on a small pile of shiny gold coins, alone. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No text, no letters, no numbers. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
+In the same style as the previous image, draw ONLY one small, very simple game icon: a pale golden crescent moon next to one shiny gold coin, with the text 'x2' written next to them in big bold white letters with a thick dark outline. The only text is 'x2', no other text. Keep it very simple and readable at a small size: few details, bold clear shapes, thick dark outline. Square 1:1 image. Centered and fully visible with empty space around it, same style, on a perfectly flat, uniform, pure magenta background (#FF00FF), no gradient, no texture. No drop shadow, no glow and no light around the object. Never use pink, purple or magenta on the object itself.
 ```
 
 **86. Sac de pièces bonus (plus tard)**
