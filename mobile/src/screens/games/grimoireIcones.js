@@ -51,6 +51,7 @@ export const ICONES = {
   'seigneurombres': require('../../../assets/grimoire/icones/seigneurombres.png'),
   'tap1': require('../../../assets/grimoire/icones/tap1.png'),
   'tap10': require('../../../assets/grimoire/icones/tap10.png'),
+  'tap11': require('../../../assets/grimoire/icones/tap11.png'),
   'tap2': require('../../../assets/grimoire/icones/tap2.png'),
   'tap3': require('../../../assets/grimoire/icones/tap3.png'),
   'tap4': require('../../../assets/grimoire/icones/tap4.png'),

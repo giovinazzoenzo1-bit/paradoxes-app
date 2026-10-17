@@ -1465,6 +1465,9 @@ export const TAP_UPGRADES = [
   { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 128, cost: 40763, growth: 2.5 },
   { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 256, cost: 24845, growth: 2.5 },
   { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 512, cost: 39753, growth: 2.5 },
+  // 17/10 (CHANTIER_ECONOMIE 2.1 + proposition 6, validées par l'auteur) : 2e palier de l'A5. Bonus ×2 de Volonté, prix ×2
+  // (même prix par point de tap), même pente. Icône Gemini n° 93.
+  { id: 'tap11', name: 'Couronne de l\u2019Origine', emoji: '👑', bonus: 1024, cost: 79506, growth: 2.5 },
 ];
 
 // ⚠️ Même correction : à 10 x LEVEL_SPLIT = 50, les 10 paliers de tap ne
@@ -1504,7 +1507,7 @@ export function normalizeTapUpgrades(value) {
 // 17/10 (CHANTIER_ECONOMIE 2.1, règle de l'auteur) : 2 paliers + 2 générateurs PAR Ascension ; la Poigne fait partie de l'A0.
 export const PALIER_TAP_ASCENSION = {
   tap1: 0, tap2: 1, tap3: 1, tap4: 2, tap5: 2,
-  tap6: 3, tap7: 3, tap8: 4, tap9: 4, tap10: 5,
+  tap6: 3, tap7: 3, tap8: 4, tap9: 4, tap10: 5, tap11: 5,
 };
 // ⚠️ 17/10 (CHANTIER_ECONOMIE 2.2, décision de l'auteur) — la surprime « racine de l'écart de seuil » ne faisait que ×2
 // (mesuré : à l'A2, le joueur de référence possédait TOUS les paliers jusqu'à Volonté, niveau 9). Remplacée par un
@@ -1807,16 +1810,17 @@ export const ASCENSION_THRESHOLDS = [
   // de 20 suites d'œufs), point fixe avec le plancher avant l'heure. OUTIL : mobile/tools/mesure-seuils.js — à RELANCER
   // dès que les défis, les prix ou les objets changent (la chaîne change). A6-A9 : même hausse que l'A5 (continuité).
   // Avant : 3,1 M · 11,6 M · 186 M · 13,1 Md · 60 Md · 370 Md (effectifs, ajustement compris).
-  10600000,              // A0 — effectif 1.06e+07
-  81400000,              // A1 — effectif 7.07e+07
-  12400000000,           // A2 — effectif 2.32e+09
-  135000000000,          // A3 — effectif 8.34e+10
-  3810000000000,         // A4 — effectif 2.63e+12
-  70500000000000,        // A5 — effectif 5.08e+13
-  317000000000000,       // A6
-  1590000000000000,      // A7
-  8720000000000000,      // A8
-  52300000000000000,     // A9
+  // 2e calcul (17/10) : après la réécriture des défis d'achat (2.3) et l'arrondi des défis de revenu/s (calculDefis.arrondiGain).
+  10900000,              // A0 — effectif 1.09e+07
+  76700000,              // A1 — effectif 6.66e+07
+  16000000000,           // A2 — effectif 2.99e+09
+  136000000000,          // A3 — effectif 8.4e+10
+  3120000000000,         // A4 — effectif 2.15e+12
+  105000000000000,       // A5 — effectif 7.56e+13
+  472000000000000,       // A6
+  2370000000000000,      // A7
+  13000000000000000,     // A8
+  77900000000000000,     // A9
 ];
 
 // Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.
@@ -2234,13 +2238,14 @@ export function prixMultiplicateurAscension(ascensionCount) {
 // prix qui redescend ressemble à un bug : le 4e est aligné sur le 3e.
 export const PREMIERS_EXEMPLAIRES_NB = 3;
 export const PREMIERS_EXEMPLAIRES_MAJORATION = 0.35;
+// 17/10 (CHANTIER_ECONOMIE 2.3) : suit les NOUVEAUX défis d'achat (chaque Ascension achète ses objets).
 export const GENERATEURS_MAJORES_PAR_ASCENSION = [
-  ['esprit', 'main'],                 // A0
-  ['esprit', 'main'],                 // A1
-  ['main', 'automate', 'colonie'],    // A2
-  ['colonie', 'titan', 'golem'],      // A3
-  ['phenix', 'dragonnet', 'golem'],   // A4
-  ['phenix', 'leviathan', 'gardien'], // A5 — et au-delà, qui rejoue l'A5
+  ['esprit', 'main'],                   // A0
+  ['automate', 'colonie'],              // A1
+  ['main', 'titan', 'golem'],           // A2
+  ['golem', 'dragonnet', 'phenix'],     // A3
+  ['phenix', 'leviathan', 'gardien'],   // A4
+  ['gardien', 'titanfoudre', 'colosse'], // A5 — et au-delà, qui rejoue l'A5
 ];
 
 export function generateurMajore(id, ascensionCount = 0) {

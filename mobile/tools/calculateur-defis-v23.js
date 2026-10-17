@@ -252,11 +252,14 @@ function creerJoueur(a, V, depart, opts = {}) {
   // boutique — avec un prix plancher « avant l'heure » fixe (3 × le seuil), le Colosse (objet de l'A5) devenait le
   // meilleur rapport à l'A0 : « Atteins 47 pièces par seconde » en 141 min au lieu de 5. Un joueur (et le calculateur
   // du jeu, passifAtteint) achète parmi ce qu'il peut PAYER : ici, ce qu'il paie en 2 min de production au plus.
-  const achatPassif = (s, c) => {
+  const achatPassif = (s, c, r, prolonge) => {
     const p0 = passifBase(s); let best = null;
     // Budget du DÉFI, comme le calculateur du jeu (passifAtteint) : poche + production de référence × temps visé, à
     // l'apparition ; moins ce que le joueur y a déjà dépensé. (2 min de production : trop court aux A3-A5, mesuré.)
-    const budget = Math.max(0, (c && c.budgetPassif || 0) - (c && c.depensePassif || 0));
+    // ⚠️ 17/10 : budget ÉPUISÉ mais cible pas atteinte (arrondi vers le haut, + 10 % au plus) → le joueur continue au MEILLEUR
+    // rapport parmi ce que 2 min de plus lui paient. (Viser le moins cher faisait de faux murs : 987 min à l'œuf 40.)
+    const budget = prolonge ? (s.coins || 0) + 120 * Math.max(0, r || 0)
+      : Math.max(0, (c && c.budgetPassif || 0) - (c && c.depensePassif || 0));
     let moinsCher = null; // rien de payable en 2 min : le joueur vise le MOINS CHER (sinon : « bloqué » à tort)
     C.AUTOCLICKERS.forEach((g) => {
       const n = (s.autoClickers || {})[g.id] || 0;
@@ -267,6 +270,7 @@ function creerJoueur(a, V, depart, opts = {}) {
       if (score > 0 && (!best || score > best.score)) best = { score, quoi: 'auto:' + g.id, cout,
         appliquer: (x) => { x.autoClickers = { ...(x.autoClickers || {}), [g.id]: n + 1 }; } };
     });
+    if (!best && !prolonge) return achatPassif(s, c, r, true);
     if (!best && moinsCher) {
       const { g, n, cout } = moinsCher;
       best = { score: 0, quoi: 'auto:' + g.id, cout, appliquer: (x) => { x.autoClickers = { ...(x.autoClickers || {}), [g.id]: n + 1 }; } };
@@ -369,7 +373,7 @@ function creerJoueur(a, V, depart, opts = {}) {
     if (HYP.combatDesQuePlein && !AVENTURE.includes(m) && !DUREE_FIXE.includes(m) && m !== 'totalCrits' && m !== 'totalTaps'
       && V.energie >= K.ENERGY_MAX - 1e-9 && V.av.n < cap) return { achat: null, horizon: HYP.secParCombat, combat: true };
     if (ACHATS(m) || m === 'sanctuaryLevel' || m === 'veilleurLevel') return { achat: achatDe(m, s), horizon: Infinity };
-    if (m === 'passiveIncome') return { achat: achatPassif(s, c), horizon: Infinity };
+    if (m === 'passiveIncome') return { achat: achatPassif(s, c, r), horizon: Infinity };
     if (m === 'coins') return { achat: null, horizon: r > 0 ? Math.max(1e-6, (c.cible - s.coins) / r) : Infinity };
     if (m === 'totalEarned') return { achat: v, horizon: r > 0 ? Math.max(1e-6, (c.base + c.cible - s.totalEarned) / r) : Infinity };
     if (m === 'ascension') return { achat: v, horizon: r > 0 ? Math.max(1e-6, (C.ascensionThreshold(a) - s.totalEarned) / r) : Infinity };

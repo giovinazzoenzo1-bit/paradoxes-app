@@ -91,6 +91,17 @@ export function joliHaut(x) {
   return Math.ceil(v / p) * p;
 }
 
+// Cible ABSOLUE arrondie vers le haut, mais au pas qui ne dépasse pas 10 % du GAIN demandé (jamais en dessous du calcul).
+// ⚠️ 17/10 — MESURÉ : aux A4-A5, le passif ne pèse que 0,4 % de la production ; un défi « Atteins X pièces par seconde » ne
+// demandait que +1 % de passif (635 855 → 641 833) et l'arrondi à 2 chiffres (650 000) en exigeait le DOUBLE, au-delà du budget :
+// 161 min au lieu de 12,5. Même piège que les taps « au total » (ceaee8c). Les jolis nombres restent quand ils coûtent ≤ 10 %.
+export function arrondiGain(vise, acquis) {
+  const gain = Math.max(1, vise - acquis);
+  const joli = joliHaut(vise);
+  if (joli - vise <= 0.1 * gain) return joli;
+  const pas = Math.max(1, Math.pow(10, Math.floor(Math.log10(0.1 * gain))));
+  return Math.ceil(vise / pas) * pas;
+}
 const niveauDe = (m, e) => {
   if (m.startsWith('auto:')) return e.autoClickers[m.slice(5)] || 0;
   if (m.startsWith('tapUpgrade:')) return e.tapUpgrades[m.slice(11)] || 0;
@@ -166,7 +177,7 @@ export function cibleCalculee(q, stats, ctx) {
     else if (m === 'coins' && q.mode === 'absolute') cible = joliHaut((s.coins || 0) + prod * tau);
     else if (m === 'passiveIncome' && q.mode === 'absolute') {
       const actuel = revenuPassif(etatDe(s));
-      cible = joliHaut(Math.max(actuel + 1, passifAtteint(etatDe(s), asc, budget)));
+      cible = arrondiGain(Math.max(actuel + 1, passifAtteint(etatDe(s), asc, budget)), actuel);
     } else if (m === 'goldenClaimed' && q.mode === 'delta') {
       const a = GOLDEN_MIN_INTERVAL_SEC, b = GOLDEN_MAX_INTERVAL_SEC, moy = (a + b) / 2;
       const premier = ((a * a + a * b + b * b) / 3) / (2 * moy); // attente moyenne de la 1re cible (35 s)
