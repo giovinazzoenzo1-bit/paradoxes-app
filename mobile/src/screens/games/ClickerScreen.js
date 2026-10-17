@@ -4386,17 +4386,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 <OfferingBubble key={o.id} target={o} onClaim={() => claimOffering(o.id)} />
               ))}
               {ritualTarget && <RitualBubble target={ritualTarget} onClaim={claimRitual} />}
+              {/* Demande de l'auteur : bouton plus petit, collé au bord droit, sans « 2 min », le logo « pub » AU-DESSUS du
+                  logo x2. Pendant le bonus, même petit bouton : logo x2 et secondes restantes. */}
               {Date.now() < boostTapJusqua ? (
                 <View style={[styles.pubTap, { pointerEvents: 'none' }]}>
-                  <Text style={styles.pubTapTexte}>⚡ Tap ×2 · {Math.max(0, Math.ceil((boostTapJusqua - Date.now()) / 1000))} s</Text>
+                  <Image source={ICONES_PUB.tapx2} style={styles.pubTapIcone} resizeMode="contain" />
+                  <Text style={styles.pubTapTexte}>{Math.max(0, Math.ceil((boostTapJusqua - Date.now()) / 1000))} s</Text>
                 </View>
               ) : (
                 <TouchableOpacity onPress={() => setPubTap(true)} style={styles.pubTap} accessibilityLabel="Regarder une pub pour doubler les taps">
-                  <View style={styles.pubTapLigne}>
-                    <Image source={ICONES_PUB.badge} style={styles.pubTapBadge} resizeMode="contain" />
-                    <Image source={ICONES_PUB.tapx2} style={styles.pubTapIcone} resizeMode="contain" />
-                    <Text style={styles.pubTapTexte}>2 min</Text>
-                  </View>
+                  <Image source={ICONES_PUB.badge} style={styles.pubTapBadge} resizeMode="contain" />
+                  <Image source={ICONES_PUB.tapx2} style={styles.pubTapIcone} resizeMode="contain" />
                 </TouchableOpacity>
               )}
               <FaussePub visible={pubTap} recompense="Tap ×2 pendant 2 min" onFin={finPubTap} />
@@ -6281,11 +6281,11 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 }
 
 const styles = StyleSheet.create({
-  pubTap: { position: 'absolute', top: 8, right: 8, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14, backgroundColor: 'rgba(43,35,66,0.9)', borderWidth: 1, borderColor: '#f2c94c', zIndex: 5 },
-  pubTapTexte: { color: '#f2c94c', fontSize: 13, fontWeight: '700' },
-  pubTapLigne: { flexDirection: 'row', alignItems: 'center' },
-  pubTapBadge: { width: 18, height: 17, marginRight: 4 },
-  pubTapIcone: { width: 40, height: 20, marginRight: 4 },
+  // Bouton « Tap ×2 » (demande de l'auteur) : petit, collé au bord droit, logo « pub » au-dessus du logo x2, sans « 2 min ».
+  pubTap: { position: 'absolute', top: 8, right: 2, paddingVertical: 4, paddingHorizontal: 4, borderRadius: 10, alignItems: 'center', backgroundColor: 'rgba(43,35,66,0.9)', borderWidth: 1, borderColor: '#f2c94c', zIndex: 5 },
+  pubTapTexte: { color: '#f2c94c', fontSize: 10, fontWeight: '700', marginTop: 1 },
+  pubTapBadge: { width: 16, height: 15, marginBottom: 2 },
+  pubTapIcone: { width: 30, height: 15 },
   eggVideoBtnImage: { width: 22, height: 21 },
   offlineAdIconImage: { width: 15, height: 14 },
   // Menu « Gardien de l'œuf » (08/10)
