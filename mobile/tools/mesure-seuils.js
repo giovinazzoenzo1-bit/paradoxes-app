@@ -17,7 +17,9 @@ const C = A.C;
 const N = Number(process.env.DECKS || 20);
 const ITER = Number(process.env.ITER || 4);
 const CENTILE = 0.1; // deck malchanceux
-const PART = 0.9;    // le deck malchanceux a gagné 90 % du seuil en fin de chaîne
+// Marge (décision de l'auteur, 17/10 : « + 10 min » au lieu de « ÷ 0,9 ») : le deck malchanceux farme 10 min de sa production
+// de fin de chaîne. MESURÉ avec ÷ 0,9 : aux A4-A5 tous les decks se valent (même trio en tête) → TOUT le monde farmait 35 à 59 min.
+const MARGE_SEC = Number(process.env.MARGE_MIN || 10) * 60;
 const suites = Array.from({ length: N }, (_, k) => T.suiteCreatures(20261018 + 7919 * k));
 const poserDeck = (k) => { T.IDS.splice(0, T.IDS.length, ...suites[k]); };
 const centile = (xs, p) => { const s = xs.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
@@ -35,8 +37,8 @@ function mesurer() {
       const suivi = [];
       for (let it = 0; it < ITER; it++) {
         C.ASCENSION_THRESHOLDS[a] = seuil / aj;
-        const gagnes = vies.map((v, k) => { poserDeck(k); return T.jouer(a, v, null, {}).J.gagneChaine; });
-        const cible = centile(gagnes, CENTILE) / PART;
+        const gagnes = vies.map((v, k) => { poserDeck(k); const J = T.jouer(a, v, null, {}).J; return J.gagneChaine + MARGE_SEC * J.prodFin; });
+        const cible = centile(gagnes, CENTILE);
         suivi.push(cible);
         seuil = it === ITER - 1 ? cible : Math.sqrt(seuil * cible); // amorti : sinon le point fixe oscille
       }
@@ -51,7 +53,15 @@ function mesurer() {
         C.TAP_UPGRADES.forEach((u) => { if (((s.tapUpgrades || {})[u.id] || 0) > 0 && C.PALIER_TAP_ASCENSION[u.id] > a) enAvance[u.name] = (enAvance[u.name] || 0) + 1; });
         C.AUTOCLICKERS.forEach((g) => { if (((s.autoClickers || {})[g.id] || 0) > 0 && C.GENERATEUR_ASCENSION[g.id] > a) enAvance[g.name] = (enAvance[g.name] || 0) + 1; });
       });
-      lignes.push({ a, actuel, seuil, rapport: seuil / actuel, suivi, actifMedianH: mediane(actifs),
+      const farm = {};
+      [0.5, 0.75, 1].forEach((f) => {
+        const mins = runs.map((r) => {
+          const fin = r.J.resultats.reduce((t, x) => t + x.actif, 0); const j = r.sim.jalons.filter((x) => x.t <= f * fin).pop();
+          return j && j.production > 0 ? seuil / j.production / 60 : Infinity;
+        });
+        farm[f] = mediane(mins); // minutes de production pour 100 % du seuil (× la part voulue)
+      });
+      lignes.push({ a, actuel, seuil, farm, rapport: seuil / actuel, suivi, actifMedianH: mediane(actifs),
         fermeMaxMin: Math.max(...fermes), fermeMedianMin: mediane(fermes), enAvance, decks: N });
     }
   } finally {
@@ -71,6 +81,7 @@ if (require.main === module) {
   L.forEach((l) => {
     const av = Object.entries(l.enAvance).map(([n, c]) => `${n} (${c}/${l.decks})`).join(', ') || 'rien';
     console.log(`A${l.a} · seuil ${f(l.actuel)} → ${f(l.seuil)} (×${l.rapport.toFixed(1)}) · itérations ${l.suivi.map(f).join(' → ')}`);
+    console.log(`   1 % du seuil = ${(l.farm[0.5] / 100).toFixed(1)} min de production à mi-chaîne, ${(l.farm[0.75] / 100).toFixed(1)} min aux 3/4, ${(l.farm[1] / 100).toFixed(1)} min en fin`);
     console.log(`   actif médian ${l.actifMedianH.toFixed(2)} h · attente du seuil : médiane ${l.fermeMedianMin.toFixed(1)} min, pire ${l.fermeMaxMin.toFixed(1)} min · avant l'heure : ${av}`);
   });
   console.log(`(${((Date.now() - t0) / 1000).toFixed(0)} s)`);

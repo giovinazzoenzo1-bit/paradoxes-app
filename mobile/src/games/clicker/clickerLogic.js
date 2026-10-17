@@ -1790,16 +1790,24 @@ export const ASCENSION_THRESHOLDS = [
   // termine le contenu pendant A5. Les valeurs suivantes existent pour
   // que le barème reste défini, et devront être remesurées le jour où
   // des créatures seront ajoutées.
-  3137106,               // A0  — 2,8 h
-  13408541,              // A1  — 3,5 h
-  995947312,             // A2  — 5 h
-  21121441694,           // A3  — 6,5 h
-  87521678741,           // A4  — 8 h
-  514427993542,          // A5  — 10 h · fin de la collection
-  2313168989082,         // A6
-  11563836966150,        // A7
-  63598844337173,        // A8
-  381590556048967,       // A9
+  // ⚠️⚠️ 17/10 — SEUILS DÉDUITS DE LA CHAÎNE DE DÉFIS (CHANTIER_ECONOMIE n°7, décision de l'auteur). MESURÉ : depuis le
+  // calculateur de défis (18/10), le joueur gagnait 4,5 × (A0) à 243 × (A2) l'ancien seuil avant la fin de sa chaîne :
+  // le seuil ne freinait plus personne, et tout ce qui se règle « en % du seuil » (plancher avant l'heure, packs de
+  // Griffes, prix des v2) était faux d'autant. RÈGLE : seuil = pièces gagnées en fin de chaîne + 10 min de production
+  // (décision de l'auteur, au lieu de « ÷ 0,9 » : 35 à 59 min de farm pour tous aux A4-A5), deck MALCHANCEUX (10e centile
+  // de 20 suites d'œufs), point fixe avec le plancher avant l'heure. OUTIL : mobile/tools/mesure-seuils.js — à RELANCER
+  // dès que les défis, les prix ou les objets changent (la chaîne change). A6-A9 : même hausse que l'A5 (continuité).
+  // Avant : 3,1 M · 11,6 M · 186 M · 13,1 Md · 60 Md · 370 Md (effectifs, ajustement compris).
+  10600000,              // A0 — effectif 1.06e+07
+  81400000,              // A1 — effectif 7.07e+07
+  12400000000,           // A2 — effectif 2.32e+09
+  135000000000,          // A3 — effectif 8.34e+10
+  3810000000000,         // A4 — effectif 2.63e+12
+  70500000000000,        // A5 — effectif 5.08e+13
+  317000000000000,       // A6
+  1590000000000000,      // A7
+  8720000000000000,      // A8
+  52300000000000000,     // A9
 ];
 
 // Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.

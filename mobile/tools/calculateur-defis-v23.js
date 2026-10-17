@@ -339,7 +339,8 @@ function creerJoueur(a, V, depart, opts = {}) {
     if (m === 'maxTranseHoldSec') c.duree = (1 - HYP.partTranse) * TRANSE.montee + 1 / taps + cible;
     if (m === 'powerActivated') c.duree = pouvoirs().parSec > 0 ? Math.max(0, cible - 0.5) / pouvoirs().parSec : Infinity;
     J.courant = c;
-    if (m === 'ascension') J.gagneChaine = s.totalEarned; // 17/10 : pièces gagnées en fin de chaîne (seuils déduits)
+    // 17/10 : pièces gagnées en fin de chaîne et production de référence à ce moment (seuils déduits de la chaîne).
+    if (m === 'ascension') { J.gagneChaine = s.totalEarned; J.prodFin = CD.productionReference(st, idsPossedes(V.creatures)); }
     if (m === 'passiveIncome') { c.budgetPassif = (s.coins || 0) + CD.productionReference(st, idsPossedes(V.creatures)) * CD.tempsViseOeuf(oeuf); c.depensePassif = 0; }
   };
   const terminer = (t) => {

@@ -106,6 +106,28 @@ La Poigne Ancienne fait partie de l'A0, comme la Main Spectrale. Tout se décale
 
 ---
 
+## 3 bis. DÉCISIONS DE L'AUTEUR (17/10) — remplacent les PROPOSITIONS de la section 3
+
+- **Seuils d'abord (n°7)** : MESURÉ — depuis le calculateur de défis, le joueur gagnait 4,5 × (A0) à 243 × (A2) l'ancien seuil
+  avant la fin de sa chaîne → le seuil ne freinait plus personne et tout « % du seuil » était faux. Seuil = pièces gagnées en fin
+  de chaîne **+ 10 min de production** (pas « ÷ 0,9 » : 35 à 59 min de farm pour tous aux A4-A5), deck malchanceux (10e centile,
+  20 suites d'œufs), point fixe avec le plancher 2.2. Outil `mobile/tools/mesure-seuils.js` — À RELANCER après chaque changement
+  de défis, de prix ou d'objets. Remarque de l'auteur : on ne peut de toute façon pas ascensionner sans le défi de fin d'Ascension.
+- **Conflit 2.2 tranché** : « niveau 1 ≥ 60 % du seuil avant l'heure » GARDÉ ; à l'Ascension qui l'ouvre, le prix redevient NORMAL
+  (la règle « pas de baisse brutale » est levée : sinon l'objet coûtait 28 % du seuil au niveau 1, ses défis devenaient infaisables).
+- **1** plafond v2 : A1 2 · A2 5 · A3 8 · A4 11 · A5 14 (+3 par Ascension), niveaux PERMANENTS (jamais remis à zéro).
+- **2** « **critique légendaire** » : tirage séparé, il S'AJOUTE au critique normal (multiplie le coup, critique compris),
+  animation BLEUE différente du critique normal.
+- **3** Dégâts v2 : ×10, puis +2 par niveau. Le critique légendaire DOIT entrer dans `calculDefis.productionReference`
+  (espérance p × (mult − 1)) — sinon les défis deviennent trop faciles.
+- **4** Sanctuaire v2 : **+0,2 %** de production par niveau. Veilleur v2 GARDÉ : +0,2 % de gains hors ligne par niveau.
+- **5** Prix des v2 : idée de l'auteur « 4 à 8 % du seuil », achetables du milieu à la fin de chaque Ascension — MESURE et
+  proposition dans la conversation du 17/10 (en attente de réponse).
+- **6** 11e palier : **Couronne de l'Origine** 👑, bonus 1 024, prix ×2 Volonté (79 506 de base), ×2,5 par niveau.
+- **8** Logos : prompts Gemini 93 à 97 dans `design/a-integrer/02-boutique/PROMPTS-V2.md`.
+- « Atteins X pièces par seconde » : DOIT être calculé par le calculateur (il l'est) — la cible sort 3 à 8 × trop longue aux
+  A3-A5 (mesuré) : cause à trouver avec les défis bloquants (section 7).
+
 ## 4. Ordre de travail (chaque étape MESURÉE avant la suivante)
 
 1. Branche à part. Répartition 2.1 + prix 2.2 → **mesurer** au simulateur (outil v2.3 réaligné sur `calculDefis`) : ce que le joueur achète à chaque Ascension, durée des groupes, taille des cibles en pièces à l'A1 et à l'A2. Montrer les chiffres à l'auteur.
