@@ -68,6 +68,7 @@ const CONTROLES = [
   ['auditSoutienEquipe', "combat : toute l'équipe participe (soutien = moitié d'une attaque normale), dans le vrai combat ET la simulation (09/10)"],
   ['auditJournalDev', "journal des combats pour Claude : verdicts, coups, sorts, spéciaux, équipe, résultat ; bouton d'envoi dans le menu dev (08/10)"],
   ['auditMesuresRapport', "demande de l'auteur (17/10) : « Signaler un problème » donne le temps de jeu, les taps/s (moyen, en Transe) et le temps réel de chaque défi"],
+  ['auditLegendaires', "objets légendaires (17/10) : plafond, prix, critique légendaire, permanence, calculateur"],
   ['auditPubsAuteur', "demandes de l'auteur (18/10) : « Achète une rune » compte depuis l'apparition du défi ; fausse pub de 15 s → +1 poudre runique (Runes) et Tap ×2 pendant 2 min (écran principal)"],
   ['auditFaussePub', "demande de l'auteur (18/10) : fausse pub de 15 s (récompense au bout seulement) — +1 poudre au menu des Runes, Tap ×2 pendant 2 min ignoré par les défis ; « Achète une rune » compte depuis l'apparition du défi"],
   ['auditCalculateurDefis', "demande de l'auteur (18/10) : calculateur de défis en jeu — temps visés 5 / 7 / 10 min (+0,75 tous les 3 œufs), pouvoirs par rareté, pièces protégées (Offrande), cibles jamais nées accomplies"],

@@ -1461,9 +1461,44 @@ function auditPrixParAscension(tolerance = 0.15) {
       });
     }
   });
+  // 17/10 (2.2) : au parcours de référence, le joueur ne possède JAMAIS un objet d'une Ascension future en la quittant.
+  parcoursReference().forEach(({ a, r }) => {
+    const s2 = r.sim.etat;
+    C.TAP_UPGRADES.forEach((u) => { if (((s2.tapUpgrades || {})[u.id] || 0) > 0 && (C.PALIER_TAP_ASCENSION[u.id] || 0) > a) fautes.push({ article: u.name, ascension: a, probleme: 'acheté avant son Ascension' }); });
+    C.AUTOCLICKERS.forEach((g) => { if (((s2.autoClickers || {})[g.id] || 0) > 0 && (C.GENERATEUR_ASCENSION[g.id] || 0) > a) fautes.push({ article: g.name, ascension: a, probleme: 'acheté avant son Ascension' }); });
+  });
   return fautes;
 }
 module.exports.auditPrixParAscension = auditPrixParAscension;
+
+// ---- OBJETS LÉGENDAIRES : les décisions de l'auteur (17/10) tiennent ----
+// Plafond 2 à l'A1 puis +3 ; prix 4/6/8 % du seuil × coefficient selon le rang dans l'Ascension ; critique légendaire 0,05 %
+// + 0,025 %/nv, ×10 + 2/nv, il MULTIPLIE le coup ; +0,2 %/nv (Sanctuaire, Veilleur) ; niveaux PERMANENTS (l'Ascension ne remet
+// à zéro que le rang des prix) ; le calculateur de défis compte le critique légendaire (« sinon les défis deviennent trop faciles »).
+function auditLegendaires() {
+  const fs = require('fs');
+  const lire = (f) => fs.readFileSync(require('path').join(__dirname, '../src', f), 'utf8');
+  const pb = [];
+  if ([0, 1, 2, 3, 4, 5, 6].map((a) => C.plafondLegendaire(a)).join() !== '0,2,5,8,11,14,17') pb.push('plafond par Ascension ≠ 0, 2, 5, 8, 11, 14, 17');
+  [1, 3, 5].forEach((a) => {
+    const parts = [0, 1, 2].map((r) => C.prixLegendaire(r, a) / (C.ascensionThreshold(a) * C.coefficientPrixSeuil(a)));
+    if (parts.map((x) => x.toFixed(3)).join() !== '0.040,0.060,0.080') pb.push(`prix à l'A${a} ≠ 4 / 6 / 8 % du seuil × coefficient`);
+  });
+  if (Math.abs(C.chanceLegendaire(1) - 0.0005) > 1e-12 || Math.abs(C.chanceLegendaire(14) - 0.00375) > 1e-12) pb.push('chance du critique légendaire ≠ 0,05 % + 0,025 % par niveau');
+  if (C.multiplicateurLegendaire(0) !== 10 || C.multiplicateurLegendaire(14) !== 38) pb.push('force du critique légendaire ≠ ×10 + 2 par niveau');
+  if (C.SANCTUAIRE_V2_PAR_NIVEAU !== 0.002 || C.VEILLEUR_V2_PAR_NIVEAU !== 0.002) pb.push('Sanctuaire / Veilleur légendaires ≠ +0,2 % par niveau');
+  const CD = CALC();
+  const st = { ascension: 5, tapPower: 30, coins: 0, legendaires: { faveurV2: 14, critDamageV2: 14 } };
+  const avec = CD.productionReference(st, []), sans = CD.productionReference({ ...st, legendaires: {} }, []);
+  if (!(avec > sans * 1.12)) pb.push('le calculateur de défis ne compte plus le critique légendaire (production de référence)');
+  const Cl = lire('screens/games/ClickerScreen.js');
+  const i = Cl.indexOf('const confirmAscension'), bloc = i >= 0 ? Cl.slice(i, i + 9000) : '';
+  if (!bloc.includes('setLegendairesAsc({})') || /setLegendaires\(\{\}\)/.test(bloc)) pb.push("l'Ascension doit remettre à zéro le rang des prix, JAMAIS les niveaux légendaires");
+  if (!Cl.includes('critMult * legendaireMult * boostPub')) pb.push('le critique légendaire ne multiplie plus le gain du tap');
+  if (!Cl.includes('legendaires: legendairesRef.current,       // 17/10 : permanents')) pb.push('les niveaux légendaires ne sont plus sauvegardés');
+  return pb;
+}
+module.exports.auditLegendaires = auditLegendaires;
 
 // ---- Défis INFAISABLES, mesurés sur la vraie progression ------------
 //

@@ -106,6 +106,11 @@ La Poigne Ancienne fait partie de l'A0, comme la Main Spectrale. Tout se décale
 
 ---
 
+## ✅ ÉTAT : CHANTIER CODÉ, CONTRÔLÉ ET PUBLIÉ — détail et causes dans CLICKER_ADVENTURE_STATE.md (« CHANTIER ÉCONOMIE »).
+- 5 (prix des légendaires) : tranché — 4 / 6 / 8 % du seuil puis +2 points, × coefficient (×1 → A2, ×½ A3, ×¼ A4+), « go coefficient ».
+- Les 3 défis bloquants (section 7) : réglés — arrondi des défis de revenu/s + BASCULE automatique des achats trop gros.
+- Noms retenus : Faveur / Dégâts / Sanctuaire / Veilleur légendaires ; critique légendaire (popup bleue).
+
 ## 3 bis. DÉCISIONS DE L'AUTEUR (17/10) — remplacent les PROPOSITIONS de la section 3
 
 - **Seuils d'abord (n°7)** : MESURÉ — depuis le calculateur de défis, le joueur gagnait 4,5 × (A0) à 243 × (A2) l'ancien seuil

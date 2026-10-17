@@ -483,6 +483,8 @@ Quatre barèmes qui ne peuvent PAS bouger séparément :
 | **Prix de boutique** | montent avec le bonus (`prixMultiplicateurAscension`) |
 | **Rendements** | x5 par palier, prix PROPORTIONNELS au rendement |
 
+⚠️ **REMPLACÉ (chantier économie, décision 2.1 de l'auteur) : 2 paliers + 2 générateurs par Ascension, seuils DÉDUITS DE LA
+CHAÎNE de défis — voir l'entrée « CHANTIER ÉCONOMIE ».** Ancienne règle, pour mémoire :
 ⚠️ **UN seul nouveau palier par Ascension.** Avec deux, la boutique
 demandait x25 de rendement par groupe quand le seuil ne monte que de x5
 à x8 : les paliers s'éloignaient 3 à 5 fois plus vite que le pouvoir
@@ -4247,6 +4249,61 @@ L'auteur ouvre une NOUVELLE conversation (celle-ci était surchargée : plusieur
 (boss ×2) ; défis du jour médian = 1 niveau, semaine médiane = 3 (au prorata de la récompense écrite) ; pack en pièces =
 2 niveaux de la créature MOYENNE ; ultime du joueur ×1,5 (ennemis ×2) ; MAITRISE_MAX 1,4 ; chance affichée en mots
 (Facile / Moyen / Compliqué / Extrême) ; « 🎁 Tout récupérer » ; rune de résilience visible ; cadre lumineux sur ta case.
+
+## CHANTIER ÉCONOMIE (conversation suivant le cahier des charges 1ef43c3) — CODÉ, CONTRÔLÉ, PUBLIÉ
+
+⚠️ Les commentaires du code datés « 17/10 » = cette conversation (horloge du bac à sable ; les entrées précédentes disaient 18/10).
+Décisions de l'auteur : `CHANTIER_ECONOMIE.md` section 3 bis. Ce qui a été fait, et POURQUOI :
+
+**1. Les seuils d'Ascension étaient PÉRIMÉS depuis le calculateur de défis (cause réelle, mesurée).** Les cibles calculées suivent
+la production du joueur : il gagnait 4,5 × (A0) à 243 × (A2) l'ancien seuil avant la fin de sa chaîne. Le seuil ne freinait plus
+personne, et TOUT ce qui se règle « en % du seuil » (plancher avant l'heure, packs de Griffes, prix des légendaires) était faux
+d'autant. Règle de l'auteur : seuil = pièces gagnées en fin de chaîne **+ 10 min de production** (pas « ÷ 0,9 » : mesuré, 35 à
+59 min de farm pour TOUS aux A4-A5, où les decks se valent), deck MALCHANCEUX (10e centile de 20 suites d'œufs), point fixe avec
+le plancher. Seuils effectifs : 10,9 M · 62 M · 2,45 Md · 78 Md · 2 150 Md · 61 600 Md (A0 → A5).
+⚠️ **À RELANCER dès que les défis, les prix ou les objets changent** : `NODE_PATH=<babel> node mobile/tools/mesure-seuils.js`
+(~100 s), puis écrire la table (3 chiffres significatifs, A6-A9 suivent l'A5). Contrôle : auditBudgetGroupe (80-160 %, attente ≤ 20 min).
+
+**2. Répartition 2.1 + plancher 2.2** : 2 paliers + 2 générateurs par Ascension (Poigne à l'A0, prix de base ×1,926 pour garder son
+prix à l'A0), Couronne de l'Origine (tap11, A5). Avant son Ascension : niveau 1 ≥ 60 % du seuil (Ascension suivante), 3 × au-delà,
+×2,5 par niveau (`plancherAvantLHeure`) ; à l'ouverture, prix NORMAL (conflit 2.2 tranché par l'auteur). MESURÉ avant : à l'A2 le
+joueur possédait TOUS les paliers jusqu'à Volonté nv 9 (la surprime « racine » ne faisait que ×2). Après : 0 achat avant l'heure.
+
+**3. Défis d'achat 2.3 / 2.4** : chaque Ascension achète SES objets (règle de décalage d'un cran ; œuf 1 de l'A1 en échauffement
+Esprit / Main — MESURÉ : l'Automate y prenait 50 min au lieu de 6). Sanctuaire / Veilleur au niveau 50 dès l'A1. Moteur 64.
+
+**4. Murs « Atteins X pièces par seconde » (cause réelle)** : aux A4-A5 le passif pèse 0,4 % de la production ; le budget n'achète
+que +1 % de passif et l'arrondi à 2 chiffres en exigeait le double → 161 min au lieu de 12,5. `calculDefis.arrondiGain` : arrondi
+vers le haut au pas ≤ 10 % du GAIN (même piège que les taps « au total », ceaee8c).
+
+**5. BASCULE (règle de l'auteur : « le calculateur est fait pour ne pas bloquer le joueur »)** : si UN niveau de l'objet écrit coûte
+plus que le budget du défi, le défi vise un objet plus petit (même famille de l'Ascension, puis l'autre famille, puis l'Ascension
+d'avant, puis le Pacte ; le plus cher qui tient). `calculDefis.basculeAchat`, décidée à l'apparition et FIGÉE dans la photo du défi
+(`questBaselines[id].objetBascule` → `questStats.objetsDefis` → `metriqueDuDefi`) ; libellé repris d'un défi écrit qui vise cet
+objet (`libelleDuDefi`). Avant : « Achète 1 niveau » en 22 à 31 min au lieu de 9 à 14. Après : 0 défi > 1,5 × son temps visé.
+
+**6. Objets LÉGENDAIRES (v2)** : Faveur / Dégâts / Sanctuaire / Veilleur légendaires, sous leur original. Niveaux PERMANENTS
+(l'Ascension ne remet que `legendairesAsc`, le rang des prix), plafond 2 à l'A1 puis +3, prix 4/6/8 % du seuil puis +2 points ×
+coefficient. Critique LÉGENDAIRE : tirage à part, MULTIPLIE le coup (critique compris), popup bleue « ✦ LÉGENDAIRE », compte comme
+un critique ; espérance dans `valeurTap` → le calculateur en tient compte (demande de l'auteur). Contrôle : auditLegendaires.
+
+**7. Coefficient de prix par Ascension** (×1 → A2, ×½ A3, ×¼ A4+) sur tout prix en % du seuil (packs de Griffes, légendaires) :
+MESURÉ, 1 % du seuil = 0,6 min de jeu en fin d'A1 mais 5,3 min à l'A5.
+
+**8. Instrument** : `mobile/tools/calculateur-defis-v23.js` RÉALIGNÉ sur calculDefis (cibles, temps visé, bascule, créatures à
+graine) ; `mesure-economie.js` (achats par Ascension, durées, défis hors temps visé) ; `mesure-seuils.js`. Pièges de l'instrument
+corrigés : le joueur de revenu/s visait le meilleur rapport de TOUTE la boutique (Colosse à l'A0 : faux murs de 2 à 11 h), puis
+« le moins cher » une fois le budget épuisé (987 min) → il suit le budget du calculateur, puis le meilleur rapport sur 2 min.
+
+**9. Contrôles** : les contrôles d'économie qui rejouaient les cibles ÉCRITES avec l'ancien simulateur (10 h au lieu de 2,8 h à
+l'A0) gardent leur intention, mesurée sur un PARCOURS DE RÉFÉRENCE partagé (`parcoursReference`, joueur du calculateur, deck type) ;
+leurs sabotages visent le nouveau garant (bascule coupée, arrondi remis à 2 chiffres, temps visé ÷ 2…). 124 verts, 274 sabotages
+prouvés (6 passes : 0 25 · 25 55 · 55 85 · 85 115 · 115 150 · 150 400), taps 20/20, Exploration OK.
+
+**Résultat (deck type)** : 31,1 h de jeu actif (35,4 h avant — la différence = les murs retirés), 0 achat avant l'heure, 0 défi
+> 1,5 × son temps visé, attente du seuil 0 à 10 min. ⚠️ Allonger le jeu = monter le TEMPS VISÉ (calculDefis.tempsViseOeuf), pas les prix.
+**Reste** : le joueur de l'outil n'achète pas les légendaires (seuils un peu bas pour qui les achète : voulu, prudent) ;
+l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours retiré au sort : moteur 64).
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
