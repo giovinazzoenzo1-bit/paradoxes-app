@@ -2365,6 +2365,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   };
   const startEggIncubation = () => {
     if (incubatingEgg) return;
+    // L'œuf du nid part dans l'incubateur (avec son propre minuteur) : le nid est VIDÉ, sinon son ancien minuteur servait
+    // à l'œuf suivant (« Gardien direct », bug signalé par l'auteur).
+    mainEggRef.current = null;
+    setMainEgg(null);
     setIncubatingEgg(avecPhotoGardien(startIncubation(owned.length), owned, deck, ascensionCount, budgetGardienRef.current, plafondGardienRef.current, maitriseRef.current));
     startNewEggCycle();
     setIncubatorOpen(true);
@@ -3558,7 +3562,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         // Le minuteur naît en même temps que la phase, et UNIQUEMENT
         // ici : le créer dans un effet séparé le ferait repartir de zéro
         // à chaque rendu tant que la phase reste 'hatching'.
-        setMainEgg((prev) => prev || avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current, ascensionCountRef.current, budgetGardienRef.current, plafondGardienRef.current, maitriseRef.current));
+        // ⚠️ BUG RÉEL (signalé par l'auteur) : « l'œuf 4 n'a pas eu de temps d'éclosion, le Gardien est apparu direct ».
+        // `prev ||` gardait un minuteur RESTÉ d'un œuf précédent (mis en incubation sans vider le nid) : son heure de fin était
+        // passée → œuf « prêt » tout de suite, avec la photo du Gardien d'un AUTRE œuf. On passe ici seulement de « collecte »
+        // à « éclosion » : tout minuteur existant est périmé → un œuf neuf = un minuteur neuf (contrôle auditEclosionFraiche).
+        setMainEgg(() => avecPhotoGardien(startIncubation(ownedRef.current.length), ownedRef.current, deckRef.current, ascensionCountRef.current, budgetGardienRef.current, plafondGardienRef.current, maitriseRef.current));
         
         return 'hatching';
       });

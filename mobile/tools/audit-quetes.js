@@ -1500,6 +1500,20 @@ function auditLegendaires() {
 }
 module.exports.auditLegendaires = auditLegendaires;
 
+// ---- ÉCLOSION : un œuf neuf = un minuteur neuf (bug réel signalé par l'auteur) ----
+// « L'œuf 4 n'a pas eu de temps d'éclosion, le Gardien est apparu direct » : « Mettre en incubation » ne vidait pas le nid, et
+// le passage en éclosion gardait ce minuteur périmé (`prev ||`) → œuf prêt tout de suite, Gardien d'un autre œuf.
+function auditEclosionFraiche() {
+  const Cl = require('fs').readFileSync(require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  const pb = [];
+  if (/setMainEgg\(\(prev\) => prev \|\| avecPhotoGardien\(startIncubation/.test(Cl)) pb.push("le passage en éclosion réutilise un ancien minuteur (`prev ||`)");
+  if (!Cl.includes('setMainEgg(() => avecPhotoGardien(startIncubation(')) pb.push("le passage en éclosion ne crée plus un minuteur neuf");
+  const i = Cl.indexOf('const startEggIncubation = () => {'), bloc = i >= 0 ? Cl.slice(i, i + 700) : '';
+  if (!bloc.includes('setMainEgg(null);')) pb.push("« Mettre en incubation » ne vide plus le nid : son minuteur servirait à l'œuf suivant");
+  return pb;
+}
+module.exports.auditEclosionFraiche = auditEclosionFraiche;
+
 // ---- Défis INFAISABLES, mesurés sur la vraie progression ------------
 //
 // ⚠️ Ce contrôle remplace celui de `verif-exhaustive.js`, qui partait
