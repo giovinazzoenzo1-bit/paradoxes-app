@@ -895,7 +895,8 @@ export const QUEST_POOL = [
 // 63 (26/09) : les 28 défis d'Aventure recalculés — règle de l'auteur (+5 par
 // défi, +6 juste après « Gagne 4 combats » ou plus, les victoires faisant
 // avancer d'autant) ; fin des 10 cibles doublées par ajouter-defis.py.
-export const QUEST_ENGINE_VERSION = 65; // séries de taps : 350 à l'œuf 3 → 980 à l'œuf 26 (auteur)
+export const QUEST_ENGINE_VERSION = 66; // objets « entre-deux » : chaque Ascension demande ses 3 paliers et ses 3 générateurs
+// 65 : séries de taps : 350 à l'œuf 3 → 980 à l'œuf 26 (auteur)
 // 64 : // 17/10 : défis d'achat 2.3 (objets de chaque Ascension), Sanctuaire / Veilleur 50 dès l'A1
 
 function empreinteDefis() {

@@ -1510,15 +1510,25 @@ export const TAP_UPGRADES = [
   // 17/10 (CHANTIER_ECONOMIE 2.1) : la Poigne devient un objet de l'A0 → plus de surprime à l'A0 ; prix de base ×1,926 (l'ancienne
   // surprime √(seuil A1 / seuil A0)) pour que son prix À L'A0 ne bouge pas (32 253 au niveau 1, règle d'auditPoigneA0).
   { id: 'tap1', name: 'Poigne Ancienne', emoji: '✊', bonus: 1.5, cost: 23037, growth: 1.45 },
+// ⚠️ OBJETS « ENTRE-DEUX » (décision de l'auteur) : 1 palier de plus par Ascension, glissé ENTRE les deux paliers de son
+// Ascension (bonus = moyenne géométrique des voisins, prix = moyenne géométrique des prix de base des voisins). La puissance
+// en FIN d'Ascension ne change pas. À l'A0 (Mitaine) : même prix par point de tap que la Poigne (règle d'auditPoigneA0).
+// ⚠️ L'ORDRE du tableau est la chaîne de déblocage (un palier s'ouvre quand le précédent atteint le niveau 5).
+  { id: 'tap1b', name: 'Mitaine de Cuir', emoji: '🧤', bonus: 1.7, cost: 26109, growth: 2.5 },
   { id: 'tap2', name: 'Gantelet d\u2019Obsidienne', emoji: '🪄', bonus: 2, cost: 2237, growth: 2.5 },
+  { id: 'tap2b', name: 'Anneau de Fer', emoji: '💍', bonus: 2.8, cost: 6226, growth: 2.5 },
   { id: 'tap3', name: 'Sceau de Puissance', emoji: '🔱', bonus: 4, cost: 17330, growth: 2.5 },
   { id: 'tap4', name: 'Poing de Granit', emoji: '🗿', bonus: 8, cost: 27729, growth: 2.5 },
+  { id: 'tap4b', name: 'Marteau des Forges', emoji: '🔨', bonus: 11, cost: 37798, growth: 2.5 },
   { id: 'tap5', name: 'Éclat Primordial', emoji: '💠', bonus: 16, cost: 51523, growth: 2.5 },
   { id: 'tap6', name: 'Coeur de Supernova', emoji: '🌟', bonus: 32, cost: 82442, growth: 2.5 },
+  { id: 'tap6b', name: 'Épée Astrale', emoji: '🗡️', bonus: 45, cost: 45825, growth: 2.5 },
   { id: 'tap7', name: 'Griffe du Vide', emoji: '🕳️', bonus: 64, cost: 25472, growth: 2.5 },
   { id: 'tap8', name: 'Serment Éternel', emoji: '♾️', bonus: 128, cost: 40763, growth: 2.5 },
+  { id: 'tap8b', name: 'Sablier Brisé', emoji: '⏳', bonus: 180, cost: 31824, growth: 2.5 },
   { id: 'tap9', name: 'Fracture du Réel', emoji: '⚡', bonus: 256, cost: 24845, growth: 2.5 },
   { id: 'tap10', name: 'Volonté du Paradoxe', emoji: '🌌', bonus: 512, cost: 39753, growth: 2.5 },
+  { id: 'tap10b', name: 'Œil du Cosmos', emoji: '👁️', bonus: 720, cost: 56219, growth: 2.5 },
   // 17/10 (CHANTIER_ECONOMIE 2.1 + proposition 6, validées par l'auteur) : 2e palier de l'A5. Bonus ×2 de Volonté, prix ×2
   // (même prix par point de tap), même pente. Icône Gemini n° 93.
   { id: 'tap11', name: 'Couronne de l\u2019Origine', emoji: '👑', bonus: 1024, cost: 79506, growth: 2.5 },
@@ -1562,6 +1572,7 @@ export function normalizeTapUpgrades(value) {
 export const PALIER_TAP_ASCENSION = {
   tap1: 0, tap2: 1, tap3: 1, tap4: 2, tap5: 2,
   tap6: 3, tap7: 3, tap8: 4, tap9: 4, tap10: 5, tap11: 5,
+  tap1b: 0, tap2b: 1, tap4b: 2, tap6b: 3, tap8b: 4, tap10b: 5, // entre-deux (décision de l'auteur)
 };
 // ⚠️ 17/10 (CHANTIER_ECONOMIE 2.2, décision de l'auteur) — la surprime « racine de l'écart de seuil » ne faisait que ×2
 // (mesuré : à l'A2, le joueur de référence possédait TOUS les paliers jusqu'à Volonté, niveau 9). Remplacée par un
@@ -1597,6 +1608,9 @@ export function tapUpgradeCost(item, level, ascensionCount = 0) {
 // : le joueur sait toujours exactement quoi monter pour ouvrir la suite.
 export function tapUpgradeUnlocked(index, tapPowerLevel, levels) {
   const map = normalizeTapUpgrades(levels);
+  // Un palier DÉJÀ possédé reste ouvert : les paliers « entre-deux » se sont glissés dans la chaîne (une sauvegarde qui a
+  // des niveaux de Sceau sans l'Anneau, nouveau, ne doit pas voir son Sceau se refermer).
+  if (TAP_UPGRADES[index] && (map[TAP_UPGRADES[index].id] || 0) > 0) return true;
   if (index === 0) return (tapPowerLevel || 0) >= TAP_UPGRADE_FIRST_PACTE_LEVEL;
   const prev = TAP_UPGRADES[index - 1];
   return (map[prev.id] || 0) >= TAP_UPGRADE_UNLOCK_LEVEL;
@@ -1866,16 +1880,17 @@ export const ASCENSION_THRESHOLDS = [
   // Avant : 3,1 M · 11,6 M · 186 M · 13,1 Md · 60 Md · 370 Md (effectifs, ajustement compris).
   // 3e calcul (17/10) : après la réécriture des défis d'achat (2.3), l'arrondi des défis de revenu/s (calculDefis.arrondiGain)
   // et la BASCULE automatique des achats trop gros (calculDefis.basculeAchat).
-  10900000,              // A0 — effectif 1.09e+07
-  71400000,              // A1 — effectif 6.2e+07
-  13100000000,           // A2 — effectif 2.45e+09
-  126000000000,          // A3 — effectif 7.79e+10
-  3120000000000,         // A4 — effectif 2.15e+12
-  85500000000000,        // A5 — effectif 6.16e+13
-  384000000000000,       // A6
-  1930000000000000,      // A7
-  10600000000000000,     // A8
-  63400000000000000,     // A9
+  // 4e calcul : après les 12 objets « entre-deux » (1 palier + 1 générateur de plus par Ascension, décision de l'auteur).
+  11700000,              // A0 — effectif 1.17e+07
+  57700000,              // A1 — effectif 5.01e+07
+  18900000000,           // A2 — effectif 3.53e+09
+  144000000000,          // A3 — effectif 8.9e+10
+  4700000000000,         // A4 — effectif 3.24e+12
+  103000000000000,       // A5 — effectif 7.42e+13
+  463000000000000,       // A6
+  2330000000000000,      // A7
+  12800000000000000,     // A8
+  76400000000000000,     // A9
 ];
 
 // Rapport appliqué au-delà de la table, mesuré sur ses derniers termes.
@@ -2181,16 +2196,24 @@ export const CAPTURE_TAPS_REQUIRED = 200;
 // hors course — voir `auditPrixParAscension`.
 export const AUTOCLICKERS = [
   { id: 'esprit', name: 'Esprit Frappeur', emoji: '👻', baseCost: 700, baseIncome: 0.6, tier: 1 },
+  // ⚠️ GÉNÉRATEURS « ENTRE-DEUX » (décision de l'auteur) : 1 de plus par Ascension, revenu et prix = moyennes géométriques
+  // de ses deux voisins de la même Ascension. Révélation dans la boutique : par prix réel (aucune chaîne à casser).
+  { id: 'feufollet', name: 'Feu Follet', emoji: '🕯️', baseCost: 1121, baseIncome: 0.93, tier: 1 },
   { id: 'main', name: 'Main Spectrale', emoji: '🖐️', baseCost: 1795, baseIncome: 1.44, tier: 1 },
   { id: 'automate', name: 'Automate Runique', emoji: '⚙️', baseCost: 61085, baseIncome: 3.46, tier: 1 },
+  { id: 'chouette', name: 'Chouette Savante', emoji: '🦉', baseCost: 97679, baseIncome: 5.36, tier: 1 },
   { id: 'colonie', name: 'Colonie de Familiers', emoji: '🦊', baseCost: 156197, baseIncome: 8.29, tier: 1 },
   { id: 'titan', name: 'Titan Mécanique', emoji: '🗿', baseCost: 617748, baseIncome: 19.9, tier: 1 },
+  { id: 'gargouille', name: 'Gargouille Antique', emoji: '🦇', baseCost: 1452400, baseIncome: 30.8, tier: 2 },
   { id: 'golem', name: 'Golem de Cristal', emoji: '💎', baseCost: 3414717, baseIncome: 47.8, tier: 2 },
   { id: 'dragonnet', name: 'Dragon Miniature', emoji: '🐉', baseCost: 1237724, baseIncome: 115, tier: 2 },
+  { id: 'hydre', name: 'Hydre des Marais', emoji: '🐍', baseCost: 1258580, baseIncome: 177.8, tier: 2 },
   { id: 'phenix', name: 'Phénix Renaissant', emoji: '🔥', baseCost: 1279784, baseIncome: 275, tier: 2 },
   { id: 'leviathan', name: 'Léviathan des Abysses', emoji: '🐋', baseCost: 3894055, baseIncome: 660, tier: 2 },
+  { id: 'sphinx', name: 'Sphinx Doré', emoji: '🦁', baseCost: 6396400, baseIncome: 1024, tier: 2 },
   { id: 'gardien', name: 'Gardien Céleste', emoji: '👼', baseCost: 10506866, baseIncome: 1590, tier: 2 },
   { id: 'titanfoudre', name: 'Héraut d\u2019Orage', emoji: '⚡', baseCost: 1979613, baseIncome: 3800, tier: 3 },
+  { id: 'chimere', name: 'Chimère Ardente', emoji: '🐲', baseCost: 3247400, baseIncome: 5890, tier: 3 },
   { id: 'colosse', name: 'Colosse de Pierre', emoji: '🗻', baseCost: 5327033, baseIncome: 9130, tier: 3 },
   { id: 'oracle', name: 'Oracle Ancien', emoji: '🔯', baseCost: 109699553, baseIncome: 21900, tier: 3 },
   { id: 'seigneurombres', name: 'Seigneur des Ombres', emoji: '🌑', baseCost: 295096806, baseIncome: 52600, tier: 3 },
@@ -2295,12 +2318,12 @@ export const PREMIERS_EXEMPLAIRES_NB = 3;
 export const PREMIERS_EXEMPLAIRES_MAJORATION = 0.35;
 // 17/10 (CHANTIER_ECONOMIE 2.3) : suit les NOUVEAUX défis d'achat (chaque Ascension achète ses objets).
 export const GENERATEURS_MAJORES_PAR_ASCENSION = [
-  ['esprit', 'main'],                   // A0
-  ['esprit', 'main', 'automate', 'colonie'], // A1 (œuf 1 : échauffement Esprit / Main)
-  ['main', 'titan', 'golem'],           // A2
-  ['golem', 'dragonnet', 'phenix'],     // A3
-  ['phenix', 'leviathan', 'gardien'],   // A4
-  ['gardien', 'titanfoudre', 'colosse'], // A5 — et au-delà, qui rejoue l'A5
+  ['esprit', 'main', 'feufollet'],      // A0
+  ['esprit', 'main', 'automate', 'colonie', 'chouette'], // A1 (œuf 1 : échauffement Esprit / Main)
+  ['main', 'titan', 'golem', 'gargouille'], // A2
+  ['golem', 'dragonnet', 'phenix', 'hydre'], // A3
+  ['phenix', 'leviathan', 'gardien', 'sphinx'], // A4
+  ['gardien', 'titanfoudre', 'colosse', 'chimere'], // A5 — et au-delà, qui rejoue l'A5
 ];
 
 export function generateurMajore(id, ascensionCount = 0) {
@@ -2318,6 +2341,7 @@ export function generateurMajore(id, ascensionCount = 0) {
 // 17/10 (CHANTIER_ECONOMIE 2.1) : tout décalé d'un cran — l'A1 ouvre Automate et Colonie.
 export const GENERATEUR_ASCENSION = {
   esprit: 0, main: 0, automate: 1, colonie: 1, titan: 2, golem: 2,
+  feufollet: 0, chouette: 1, gargouille: 2, hydre: 3, sphinx: 4, chimere: 5, // entre-deux (décision de l'auteur)
   dragonnet: 3, phenix: 3, leviathan: 4, gardien: 4,
   titanfoudre: 5, colosse: 5, oracle: 6, seigneurombres: 6, etoilefilante: 7,
 };

@@ -426,7 +426,13 @@ function creerJoueur(a, V, depart, opts = {}) {
       if (d.action === 'rune') { V.av.poudre -= K.POUDRE_PRIX.unite; V.runes += 1; }
     }
   };
-  J.achete = (achat) => { const c = J.courant; if (c && c.m === 'passiveIncome' && achat && String(achat.quoi).startsWith('auto:')) c.depensePassif += achat.cout; };
+  J.achete = (achat) => {
+    const c = J.courant;
+    if (!c || !achat) return;
+    // Tout ce que le joueur PAIE pendant le défi (prérequis compris : Mitaine 5 avant le 1er Gantelet).
+    c.depense = (c.depense || 0) + (achat.cout || 0);
+    if (c.m === 'passiveIncome' && String(achat.quoi).startsWith('auto:')) c.depensePassif += achat.cout;
+  };
   return J;
 }
 

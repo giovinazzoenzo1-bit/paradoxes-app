@@ -602,7 +602,7 @@ const SABOTAGES = [
   ['auditDureeCible', F.calcul, 'le temps visé des défis divisé par 2 : tout le jeu se boucle deux fois trop vite',
     remplace('  return 300 + 45 * Math.floor((n - 3) / 3);', '  return 150 + 22 * Math.floor((n - 3) / 3);')],
   ['auditMajorationPrix', F.clicker, "la Main de l'A0 n'est plus majorée alors que ses défis la demandent",
-    remplace("  ['esprit', 'main'],                   // A0", "  ['esprit'],                           // A0")],
+    remplace("  ['esprit', 'main', 'feufollet'],      // A0", "  ['esprit', 'feufollet'],              // A0")],
   ['auditMajorationPrix', F.clicker, "un palier de tap rattaché à une Ascension plus tardive que ses défis (surprime au mauvais moment)",
     remplace('  tap1: 0, tap2: 1, tap3: 1,', '  tap1: 0, tap2: 3, tap3: 1,')],
   ['auditCibleEtat', F.ecran, "les défis d'état ne se recalculent plus à leur apparition (« Atteins 2/s » quand tu en produis 27)",

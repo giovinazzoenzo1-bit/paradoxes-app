@@ -1936,7 +1936,9 @@ function auditCoutCroissant(tolerance = 0.25) {
       const ph = r.J.photos[i]; if (!ph) return;
       const st = T.statsJeu(a, ph.s, ph.V);
       const budget = (st.coins || 0) + CD.productionReference(st, T.idsPossedes(x.oeuf - 1)) * CD.tempsViseOeuf(x.oeuf);
-      const part = x.cout / budget;
+      // Ce que le joueur PAIE pour ce défi, prérequis compris (MESURÉ : « Achète 1 niveau de Gantelet » coûtait d'abord la
+      // Mitaine au niveau 5 — 99,8 % du budget — mais le seul niveau de Gantelet en valait 0,2 %).
+      const part = Math.max(x.cout, x.depense || 0) / budget;
       if (part < tolerance) fautes.push({ groupe: a, defi: x.id, texte: x.label, partDuBudget: Math.round(100 * part) });
     });
   });
