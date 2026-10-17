@@ -993,7 +993,7 @@ export function totalPassiveIncome(ownedCreatures) {
 // Une seule fonction sert maintenant aux trois usages.
 export function passiveRate({
   autoClickers, upgradeLevels, sanctuaryLevel, essence, ascensionCount,
-  powerBoost = 1, offline = false, veilleurLevel = 0,
+  powerBoost = 1, offline = false, veilleurLevel = 0, legendaires = null,
 }) {
   const b = upgradeBonuses(upgradeLevels || {});
   const base = totalAutoClickIncome(autoClickers || {});
@@ -1002,11 +1002,12 @@ export function passiveRate({
     * (1 + b.coinPct)
     * sanctuaryMultiplier(sanctuaryLevel || 0)
     * essenceBonusMultiplier(essence || 0)
-    * ascensionPassiveMultiplier(ascensionCount || 0);
+    * ascensionPassiveMultiplier(ascensionCount || 0)
+    * multiplicateurSanctuaireV2(legendaires); // 17/10 : Sanctuaire légendaire (permanent)
   // Hors ligne : le bonus du Veilleur s'applique, le pouvoir TEMPORAIRE
   // d'une créature non — il expire pendant l'absence.
   return offline
-    ? commun * veilleurOfflineMultiplier(veilleurLevel || 0)
+    ? commun * veilleurOfflineMultiplier(veilleurLevel || 0) * multiplicateurVeilleurV2(legendaires)
     : commun * powerBoost;
 }
 
@@ -1267,6 +1268,59 @@ export function coefficientPrixSeuil(ascensionCount) {
   const a = Math.max(0, Math.floor(Number(ascensionCount) || 0));
   return COEF_PRIX_SEUIL[Math.min(a, COEF_PRIX_SEUIL.length - 1)];
 }
+// ════════════════════════════════════════════════════════════════════
+//  OBJETS LÉGENDAIRES (« v2 ») — CHANTIER_ECONOMIE, décisions de l'auteur du 17/10
+// ════════════════════════════════════════════════════════════════════
+// La version légendaire de 4 objets, rangée SOUS l'original dans le Grimoire.
+//  · Niveaux PERMANENTS : l'Ascension ne les remet JAMAIS à zéro (seul le compteur d'achats de l'Ascension repart à 0).
+//  · PLAFONNÉS par Ascension : 2 à l'A1, puis +3 par Ascension (A2 5, A3 8, A4 11, A5 14…). Rien à l'A0.
+//  · Prix : un % du SEUIL de l'Ascension en cours selon le rang de l'achat DANS l'Ascension — 4 %, 6 %, 8 %, puis +2 points
+//    (rattrapage) — × le coefficient de prix (×1 → A2, ×½ A3, ×¼ A4+). Mesuré : 3 à 19 min de jeu par niveau, achetables
+//    du milieu à la fin de chaque Ascension (souhait de l'auteur).
+//  · Faveur légendaire : chance de CRITIQUE LÉGENDAIRE 0,05 %, +0,025 % par niveau ; tirage À PART du critique normal ; il
+//    MULTIPLIE le coup (critique compris) ; animation BLEUE ; il compte comme un coup critique pour les défis.
+//  · Dégâts légendaires : le critique légendaire fait ×10, puis +2 par niveau (×12, ×14…). S'ouvre avec 1 niveau de Faveur légendaire.
+//  · Sanctuaire légendaire : +0,2 % de TOUTE la production par niveau. Veilleur légendaire : +0,2 % des gains hors ligne par niveau.
+export const LEGENDAIRES = [
+  { id: 'faveurV2', nom: 'Faveur légendaire', emoji: '🧚', original: 'faveur' },
+  { id: 'critDamageV2', nom: 'Dégâts légendaires', emoji: '💠', original: 'critDamage', requiert: 'faveurV2' },
+  { id: 'sanctuaireV2', nom: 'Sanctuaire légendaire', emoji: '🏯', original: 'sanctuaire' },
+  { id: 'veilleurV2', nom: 'Veilleur légendaire', emoji: '🏮', original: 'veilleur' },
+];
+export const LEGENDAIRE_PRIX_PARTS = [0.04, 0.06, 0.08];
+export const LEGENDAIRE_PRIX_RATTRAPAGE = 0.02;
+export function plafondLegendaire(ascensionCount) {
+  const a = Math.max(0, Math.floor(Number(ascensionCount) || 0));
+  return a >= 1 ? 2 + 3 * (a - 1) : 0;
+}
+// rang = nombre de niveaux de CET objet déjà achetés pendant l'Ascension en cours (0 = le 1er achat).
+export function prixLegendaire(rang, ascensionCount) {
+  const k = Math.max(0, Math.floor(Number(rang) || 0));
+  const n = LEGENDAIRE_PRIX_PARTS.length;
+  const part = k < n ? LEGENDAIRE_PRIX_PARTS[k] : LEGENDAIRE_PRIX_PARTS[n - 1] + LEGENDAIRE_PRIX_RATTRAPAGE * (k - n + 1);
+  return Math.round(ascensionThreshold(ascensionCount) * part * coefficientPrixSeuil(ascensionCount));
+}
+export function chanceLegendaire(niveauFaveurV2) {
+  const n = Math.max(0, Math.floor(Number(niveauFaveurV2) || 0));
+  return n > 0 ? 0.0005 + 0.00025 * (n - 1) : 0;
+}
+export function multiplicateurLegendaire(niveauDegatsV2) {
+  return 10 + 2 * Math.max(0, Math.floor(Number(niveauDegatsV2) || 0));
+}
+export const SANCTUAIRE_V2_PAR_NIVEAU = 0.002;
+export const VEILLEUR_V2_PAR_NIVEAU = 0.002;
+export function multiplicateurSanctuaireV2(legendaires) {
+  return 1 + SANCTUAIRE_V2_PAR_NIVEAU * Math.max(0, Math.floor(Number((legendaires || {}).sanctuaireV2) || 0));
+}
+export function multiplicateurVeilleurV2(legendaires) {
+  return 1 + VEILLEUR_V2_PAR_NIVEAU * Math.max(0, Math.floor(Number((legendaires || {}).veilleurV2) || 0));
+}
+// Espérance du critique légendaire sur un tap (calculateur de défis, conseils, vrai gain) : 1 + p × (M − 1).
+export function esperanceLegendaire(legendaires) {
+  const l = legendaires || {};
+  return 1 + chanceLegendaire(l.faveurV2) * (multiplicateurLegendaire(l.critDamageV2) - 1);
+}
+
 export function griffesCoinCost(purchases, ascensionCount) {
   const n = Math.max(0, Math.floor(Number(purchases) || 0));
   const f = GRIFFES_PACK_FRACTIONS[Math.min(n, GRIFFES_PACK_FRACTIONS.length - 1)];

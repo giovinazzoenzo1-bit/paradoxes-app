@@ -70,6 +70,7 @@ import {
   sanctuaryMultiplier,
   sanctuaryUpgradeCost,
   veilleurOfflineMultiplier,
+  LEGENDAIRES, plafondLegendaire, prixLegendaire, chanceLegendaire, multiplicateurLegendaire, multiplicateurSanctuaireV2,
   veilleurUpgradeCost,
   ascensionThreshold,
   essenceBonusMultiplier,
@@ -992,6 +993,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // (plus d'état combatComingSoonOpen — remplacé par la vraie navigation
   // vers AdventureScreen, voir plus bas)
   const [sanctuaryLevel, setSanctuaryLevel] = useState(0);
+  // 17/10 — OBJETS LÉGENDAIRES (clickerLogic.LEGENDAIRES) : niveaux PERMANENTS (jamais remis à zéro par l'Ascension) et
+  // achats de l'Ascension en cours (rang du prix, remis à zéro à chaque Ascension).
+  const [legendaires, setLegendaires] = useState({});
+  const [legendairesAsc, setLegendairesAsc] = useState({});
   const [veilleurLevel, setVeilleurLevel] = useState(0);
   const [essence, setEssence] = useState(0); // bonus permanent d'Ascension, survit aux resets
   const [lastRitualAt, setLastRitualAt] = useState(0);
@@ -1056,6 +1061,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   upgradeLevelsRef.current = upgradeLevels;
   const sanctuaryLevelRef = useRef(0);
   sanctuaryLevelRef.current = sanctuaryLevel;
+  const legendairesRef = useRef({});
+  legendairesRef.current = legendaires;
+  const legendairesAscRef = useRef({});
+  legendairesAscRef.current = legendairesAsc;
   const veilleurLevelRef = useRef(0);
   veilleurLevelRef.current = veilleurLevel;
   const essenceRef = useRef(0);
@@ -1307,6 +1316,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             ascensionCount: ascensionAuChargement,
             offline: true,
             veilleurLevel: savedVeilleur,
+            legendaires: saved.legendaires || null, // 17/10 : Sanctuaire et Veilleur légendaires
           });
           // ⚠️ Hors ligne : production des AUTOCLICKERS seule, à 25 %,
           // plafonnée à 2 h — le calcul standard des idle games. Le tap
@@ -1365,6 +1375,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setUpgradeLevels(normalizeUpgradeLevels(saved.upgradeLevels || saved.purchasedUpgradeIds || {}));
           setSanctuaryLevel(saved.sanctuaryLevel || 0);
           setVeilleurLevel(savedVeilleur);
+          setLegendaires(saved.legendaires || {});
+          setLegendairesAsc(saved.legendairesAsc || {});
           setEssence(saved.essence || 0);
           setLastRitualAt(saved.lastRitualAt || 0);
           setTotalSummons(saved.totalSummons || 0);
@@ -1700,7 +1712,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     }, 600);
   }, [
     coins, totalEarned, tapPower, owned, deck, critLevel, critDamageLevel, tapUpgrades, autoClickers, upgradeLevels, sanctuaryLevel,
-    veilleurLevel, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
+    veilleurLevel, legendaires, legendairesAsc, essence, lastRitualAt, totalSummons, totalCrits, goldenClaimed, maxCombo, maxTranseHoldSec,
     activeQuestIds, questTargets, questBaseline, questBaselines, devCompletedIds, devReopenedIds, latchedQuestIds, validatedQuestIds, sequenceIndex, eggPhase, hatchTaps, captureTaps, loaded,
   ]);
 
@@ -1729,6 +1741,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     upgradeLevels: upgradeLevelsRef.current,
     sanctuaryLevel: sanctuaryLevelRef.current,
     veilleurLevel: veilleurLevelRef.current,
+    legendaires: legendairesRef.current,       // 17/10 : permanents
+    legendairesAsc: legendairesAscRef.current, // 17/10 : achats de l'Ascension en cours
     essence: essenceRef.current,
     lastRitualAt: lastRitualAtRef.current,
     totalSummons: totalSummonsRef.current,
@@ -1834,6 +1848,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // repart d'une économie à zéro.
     const multiplier =
       sanctuaryMultiplier(sanctuaryLevelRef.current) *
+      multiplicateurSanctuaireV2(legendairesRef.current) * // 17/10 : Sanctuaire légendaire
       essenceBonusMultiplier(essenceRef.current) *
       ascensionSpeedMultiplier(ascensionCountRef.current) *
       upgradeCoinMult;
@@ -1860,6 +1875,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         autoClickers: autoClickersRef.current,
         upgradeLevels: upgradeLevelsRef.current,
         sanctuaryLevel: sanctuaryLevelRef.current,
+        legendaires: legendairesRef.current,
         essence: essenceRef.current,
         ascensionCount: ascensionCountRef.current,
         powerBoost: activePowerRef.current && activePowerRef.current.effectType === 'passive_boost' ? activePowerRef.current.effectValue : 1,
@@ -2027,6 +2043,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       if (vibrationsRef.current) Vibration.vibrate(12);
     }
 
+    // ⚠️ 17/10 — CRITIQUE LÉGENDAIRE (Faveur légendaire) : tirage À PART du critique normal, il MULTIPLIE le coup (critique
+    // compris), animation BLEUE ; il compte comme un coup critique pour les défis (une seule fois s'il tombe avec un critique).
+    const legendaire = Math.random() < chanceLegendaire(legendairesRef.current.faveurV2);
+    if (legendaire) {
+      if (!isCrit) {
+        totalCritsRef.current += 1;
+        setTotalCrits(totalCritsRef.current);
+        trackEvent('crit', 1);
+      }
+      jouerSonLimite('crit', sonsJeuRef.current, 400);
+      if (vibrationsRef.current) Vibration.vibrate(35);
+    }
+    const legendaireMult = legendaire ? multiplicateurLegendaire(legendairesRef.current.critDamageV2) : 1;
     const powerMult = activePowerRef.current ? activePowerRef.current.tapMultiplier : 1;
     const critMult = isCrit ? critMultiplier(critDamageLevelRef.current) * (1 + upgradeBonus.critMultPct) : 1;
     // `tapPower` est le NIVEAU du Pacte, pas les dégâts : il faut passer
@@ -2035,7 +2064,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const effectiveTapPower =
       tapDamage(tapPowerRef.current) + upgradeBonus.tapFlat + tapUpgradeBonus(tapUpgradesRef.current);
     const boostPub = now < boostTapJusquaRef.current ? PUB_BOOST_TAP_MULT : 1; // pub « Tap ×2 » (18/10)
-    const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult * boostPub));
+    const gain = Math.max(1, Math.round(effectiveTapPower * powerMult * newTranseMult * critMult * legendaireMult * boostPub));
     // 17/10 : mesures — taps, rythme réel (écarts < 1,5 s), taps en Transe, pièces par tap, plus longue Transe.
     {
       const m = mesuresRef.current;
@@ -2051,7 +2080,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     }
     const finalGain = Math.round(gainCoins(gain));
     Animated.sequence([
-      Animated.timing(tapScale, { toValue: isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
+      Animated.timing(tapScale, { toValue: legendaire ? 0.72 : isCrit ? 0.8 : 0.88, duration: 60, useNativeDriver: true }),
       Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start();
     const x = evt.nativeEvent.locationX || 60;
@@ -2059,12 +2088,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // 27/09 : pendant un pouvoir, la créature FRAPPE l'œuf à chaque tap : son
     // bond (pilote natif, aucun état) + l'impact à la couleur de son élément.
     const pouvoirEnCours = activePowerRef.current && now <= activePowerRef.current.expiresAt && activePowerRef.current.creatureId ? activePowerRef.current : null;
-    spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit, true, pouvoirEnCours ? couleurElementDe(pouvoirEnCours.creatureId) : null);
+    if (legendaire) spawnPopup(`+${finalGain} ✦ LÉGENDAIRE`, x, y, 'legendaire', true, null);
+    else spawnPopup(`+${finalGain}${isCrit ? ' 💥' : ''}`, x, y, isCrit, true, pouvoirEnCours ? couleurElementDe(pouvoirEnCours.creatureId) : null);
     if (pouvoirEnCours) lancerAttaque(attaque);
     // 27/09 : un critique fait trembler l'œuf — la SECOUSSE SEULE. ⚠️ Ne pas
     // appeler handleEggTap ici : pendant l'éclosion, chaque appel retire 1 s
     // au minuteur (un critique en aurait retiré 2).
-    if (isCrit) {
+    if (isCrit || legendaire) {
       eggShake.stopAnimation(() => {
         eggShake.setValue(0);
         Animated.sequence([
@@ -2557,6 +2587,23 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setSanctuaryLevel((l) => l + k);
   };
 
+  // 17/10 — OBJETS LÉGENDAIRES : plafond de l'Ascension, prix selon le rang de l'achat DANS l'Ascension (clickerLogic).
+  const buyLegendaire = (id, n) => {
+    const d = LEGENDAIRES.find((x) => x.id === id);
+    if (!d) return;
+    const leg = legendairesRef.current || {};
+    if (d.requiert && !((leg[d.requiert] || 0) > 0)) return;
+    const a = ascensionCountRef.current;
+    const plafond = plafondLegendaire(a);
+    const niveau = leg[id] || 0;
+    const rang = (legendairesAscRef.current || {})[id] || 0;
+    const { k, total } = coutGroupe(quantiteAchat(n), rang, (r) => prixLegendaire(r, a), (r) => niveau + (r - rang) >= plafond);
+    if (!k) return;
+    payerGroupe(total);
+    setLegendaires((prev) => ({ ...prev, [id]: (prev[id] || 0) + k }));
+    setLegendairesAsc((prev) => ({ ...prev, [id]: (prev[id] || 0) + k }));
+  };
+
   const buyVeilleur = (n) => {
     if (!coreUpgradeUnlocked('veilleur', coreStateRef())) return;
     const { k, total } = coutGroupe(quantiteAchat(n), veilleurLevelRef.current, (l) => veilleurUpgradeCost(l), (l) => veilleurMaxed(l));
@@ -2678,6 +2725,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             setUpgradeLevels({});
             setSanctuaryLevel(0);
             setVeilleurLevel(0);
+            setLegendairesAsc({}); // 17/10 : les niveaux LÉGENDAIRES restent ; seul le rang des prix repart à 0
             setActivePower(null);
             setPendingDiscount(null);
             // Créatures, deck et progression d'Aventure sont CONSERVÉS.
@@ -2712,7 +2760,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // trois formules différentes coexistaient et le « +N/s » affiché ne
   // correspondait à aucun gain réel.
   const passiveIncome = passiveRate({
-    autoClickers, upgradeLevels, sanctuaryLevel, essence, ascensionCount,
+    autoClickers, upgradeLevels, sanctuaryLevel, essence, ascensionCount, legendaires,
     powerBoost: activePower && activePower.effectType === 'passive_boost' ? activePower.effectValue : 1,
   });
   // ⚠️⚠️ PASSIF DE BASE, sans pouvoir actif (24/09). Bug pressenti par
@@ -2722,7 +2770,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // deviendrait irréalisable une fois le pouvoir retombé. Les cibles
   // adaptatives lisent CE passif-là, jamais le boosté.
   const passiveIncomeBase = passiveRate({
-    autoClickers, upgradeLevels, sanctuaryLevel, essence, ascensionCount, powerBoost: 1,
+    autoClickers, upgradeLevels, sanctuaryLevel, essence, ascensionCount, powerBoost: 1, legendaires,
   });
   // Ref tenue à jour : `buyWithDiamonds` est asynchrone et lirait
   // sinon une valeur figée au montage.
@@ -2849,6 +2897,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // entier affichable dans la barre segmentée.
   const questStats = {
     objetsDefis: objetsDesDefis(questBaselines), // 17/10 : objets de BASCULE figés (calculDefis.basculeAchat)
+    legendaires, // 17/10 : critique et Sanctuaire légendaires (production de référence du calculateur)
     maxCombo: Math.round(maxCombo * 10),
     maxTapStreak,
     totalSummons, totalCrits, goldenClaimed, totalEarned, maxCreatureLevel, tapPower,
@@ -3623,6 +3672,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     upgradeLevels: upgradeLevelsRef.current,
     sanctuaryLevel: sanctuaryLevelRef.current,
     veilleurLevel: veilleurLevelRef.current,
+    legendaires: legendairesRef.current,
     critLevel: critLevelRef.current,
     critDamageLevel: critDamageLevelRef.current,
     tapUpgrades: tapUpgradesRef.current,
@@ -4457,6 +4507,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           critLevel={critLevel}
           sanctuaryLevel={sanctuaryLevel}
           veilleurLevel={veilleurLevel}
+          legendaires={legendaires}
+          legendairesAsc={legendairesAsc}
           autoClickers={autoClickers}
           upgradeLevels={upgradeLevels}
           applyDiscount={applyDiscount}
@@ -4468,6 +4520,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           tapUpgrades={tapUpgrades}
           onBuySanctuary={buySanctuary}
           onBuyVeilleur={buyVeilleur}
+          onBuyLegendaire={buyLegendaire}
           onBuyAutoClicker={buyAutoClicker}
           griffesCoinBuys={griffesCoinBuys}
           owned={owned}
@@ -5770,15 +5823,17 @@ function TapEffect({ x, y, text, crit, tap, teinte }) {
     a.start();
     return () => a.stop();
   }, []);
-  const couleur = crit ? '#FF8A3D' : (teinte || '#FFD54A');
-  const anneau = crit ? 74 : 54;
-  const loin = crit ? 1.6 : 1;
+  // 17/10 : crit === 'legendaire' → critique LÉGENDAIRE (bleu, plus grand, plus loin).
+  const leg = crit === 'legendaire';
+  const couleur = leg ? '#4FC3FF' : crit ? '#FF8A3D' : (teinte || '#FFD54A');
+  const anneau = leg ? 112 : crit ? 74 : 54;
+  const loin = leg ? 2.4 : crit ? 1.6 : 1;
   return (
     <View style={[styles.tapEffet, { left: x - 100, top: y - 100, pointerEvents: 'none' }]}>
       {tap && (
         <Animated.View style={[styles.tapFlash, {
           width: anneau * 0.7, height: anneau * 0.7, borderRadius: anneau * 0.35, marginLeft: -anneau * 0.35, marginTop: -anneau * 0.35,
-          backgroundColor: crit ? 'rgba(255,170,90,0.85)' : 'rgba(255,236,150,0.8)',
+          backgroundColor: leg ? 'rgba(110,200,255,0.9)' : crit ? 'rgba(255,170,90,0.85)' : 'rgba(255,236,150,0.8)',
           opacity: t.interpolate({ inputRange: [0, 0.35, 1], outputRange: [1, 0, 0] }),
           transform: [{ scale: t.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0.4, 1.2, 1.2] }) }],
         }]} />
@@ -5787,12 +5842,12 @@ function TapEffect({ x, y, text, crit, tap, teinte }) {
         <Animated.View style={[styles.tapAnneau, {
           width: anneau, height: anneau, borderRadius: anneau / 2, marginLeft: -anneau / 2, marginTop: -anneau / 2, borderColor: couleur,
           opacity: t.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.95, 0.35, 0] }),
-          transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.25, crit ? 1.9 : 1.45] }) }],
+          transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.25, leg ? 2.6 : crit ? 1.9 : 1.45] }) }],
         }]} />
       )}
       {tap && TAP_ETINCELLES.map((e, i) => (
         <Animated.View key={i} style={[styles.tapEtincelle, {
-          backgroundColor: i % 2 ? '#FFF3B0' : couleur,
+          backgroundColor: i % 2 ? (leg ? '#E3F6FF' : '#FFF3B0') : couleur,
           opacity: t.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 0.8, 0] }),
           transform: [
             { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(e.angle) * e.portee * loin] }) },
@@ -5801,11 +5856,11 @@ function TapEffect({ x, y, text, crit, tap, teinte }) {
           ],
         }]} />
       ))}
-      <Animated.Text style={[styles.tapTexte, crit && styles.tapTexteCrit, {
+      <Animated.Text style={[styles.tapTexte, crit && styles.tapTexteCrit, leg && styles.tapTexteLegendaire, {
         opacity: t.interpolate({ inputRange: [0, 0.75, 1], outputRange: [1, 1, 0] }),
         transform: [
           { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [-14, -58] }) },
-          { scale: t.interpolate({ inputRange: [0, 0.15, 0.3, 1], outputRange: [0.5, crit ? 1.35 : 1.2, 1, 1] }) },
+          { scale: t.interpolate({ inputRange: [0, 0.15, 0.3, 1], outputRange: [0.5, leg ? 1.6 : crit ? 1.35 : 1.2, 1, 1] }) },
         ],
       }]}>
         {text}
@@ -6943,6 +6998,7 @@ const styles = StyleSheet.create({
   tapEtincelle: { position: 'absolute', left: 100, top: 100, width: 8, height: 8, borderRadius: 4, marginLeft: -4, marginTop: -4 },
   tapTexte: { position: 'absolute', left: 20, top: 100, width: 160, textAlign: 'center', color: '#FFD54A', fontSize: 18, fontWeight: '900', textShadowColor: 'rgba(40,20,0,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
   tapTexteCrit: { color: '#FF8A3D', fontSize: 24 },
+  tapTexteLegendaire: { color: '#4FC3FF', fontSize: 27, textShadowColor: '#0B3D91', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } }, // 17/10 : critique LÉGENDAIRE
   // 27/09 : plus de rond autour des bulles → icônes un peu plus grandes.
   bulleIcone: { width: 50, height: 50 },
   // Calendrier du thème forêt (27/09).

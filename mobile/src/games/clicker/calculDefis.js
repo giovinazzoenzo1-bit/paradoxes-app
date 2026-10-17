@@ -13,7 +13,7 @@ import { valeurTap, revenuPassif } from './conseilBoutique';
 import {
   CREATURES, powerForCreature, rechargePouvoirMs, AUTOCLICKERS, autoClickerCost, TAP_UPGRADES,
   tapUpgradeUnlocked, critChance, upgradeBonuses, GOLDEN_MIN_INTERVAL_SEC, GOLDEN_MAX_INTERVAL_SEC,
-  PALIER_TAP_ASCENSION, GENERATEUR_ASCENSION,
+  PALIER_TAP_ASCENSION, GENERATEUR_ASCENSION, chanceLegendaire,
 } from './clickerLogic';
 
 // ---- Joueur de référence (décisions de l'auteur, 18/10) ----------------
@@ -68,6 +68,7 @@ function etatDe(stats) {
     tapPower: s.tapPower || 1, critLevel: s.critLevel || 0, critDamageLevel: s.critDamageLevel || 0,
     upgradeLevels: s.upgradeLevels || {}, tapUpgrades: { ...(s.tapUpgrades || {}) }, autoClickers: { ...(s.autoClickers || {}) },
     sanctuaryLevel: s.sanctuaryLevel || 0, essence: s.essence || 0, ascensionCount: s.ascension || 0,
+    legendaires: s.legendaires || {}, // 17/10 : critique légendaire + Sanctuaire légendaire dans la production de référence
   };
 }
 // Production de référence, en pièces par seconde.
@@ -242,7 +243,10 @@ export function cibleCalculee(q, stats, ctx) {
       cible = Math.ceil(((s.totalTaps || 0) + TAPS_REF * tau) / 100) * 100;
     } else if (m === 'totalCrits' && q.mode === 'delta') {
       const ub = upgradeBonuses(s.upgradeLevels || {});
-      const p = Math.min(1, critChance(s.critLevel || 0) + (ub.critChancePct || 0));
+      const pN = Math.min(1, critChance(s.critLevel || 0) + (ub.critChancePct || 0));
+      // 17/10 : un critique LÉGENDAIRE compte aussi (tirage à part : un tap est compté s'il est l'un OU l'autre).
+      const pL = chanceLegendaire((s.legendaires || {}).faveurV2);
+      const p = pN + pL - pN * pL;
       cible = p > 0 ? Math.max(1, Math.round(TAPS_REF * tau * p)) : null;
     }
     if (cible === null) return null;

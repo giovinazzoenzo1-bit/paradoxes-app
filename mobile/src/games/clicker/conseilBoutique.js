@@ -14,6 +14,7 @@
 import {
   tapDamage, tapUpgradeBonus, upgradeBonuses, critChance, critMultiplier, transeMultiplier,
   sanctuaryMultiplier, essenceBonusMultiplier, ascensionSpeedMultiplier, passiveRate,
+  esperanceLegendaire, multiplicateurSanctuaireV2,
 } from './clickerLogic.js';
 
 export const TAPS_PAR_SECONDE_REF = 1000 / 150;
@@ -27,15 +28,17 @@ export function valeurTap(e) {
   const critM = critMultiplier(e.critDamageLevel || 0) * (1 + (ub.critMultPct || 0));
   const tapFixe = tapDamage(e.tapPower || 1) + (ub.tapFlat || 0) + tapUpgradeBonus(e.tapUpgrades || {});
   const gain = sanctuaryMultiplier(e.sanctuaryLevel || 0) * essenceBonusMultiplier(e.essence || 0)
-    * ascensionSpeedMultiplier(e.ascensionCount || 0) * (1 + (ub.coinPct || 0));
-  return tapFixe * ((1 - p) + p * critM) * gain;
+    * ascensionSpeedMultiplier(e.ascensionCount || 0) * (1 + (ub.coinPct || 0))
+    * multiplicateurSanctuaireV2(e.legendaires); // 17/10 : Sanctuaire légendaire
+  // 17/10 : critique LÉGENDAIRE — il multiplie le coup, critique compris → espérance 1 + p × (M − 1).
+  return tapFixe * ((1 - p) + p * critM) * esperanceLegendaire(e.legendaires) * gain;
 }
 
 // Revenu PASSIF par seconde (auto-clics…) : la valeur affichée « ⚙️ /s ».
 export function revenuPassif(e) {
   return passiveRate({
     autoClickers: e.autoClickers || {}, upgradeLevels: e.upgradeLevels || {}, sanctuaryLevel: e.sanctuaryLevel || 0,
-    essence: e.essence || 0, ascensionCount: e.ascensionCount || 0, powerBoost: 1,
+    essence: e.essence || 0, ascensionCount: e.ascensionCount || 0, powerBoost: 1, legendaires: e.legendaires || null,
   });
 }
 

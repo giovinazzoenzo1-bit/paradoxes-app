@@ -252,7 +252,8 @@ function Grimoire(props) {
   chapRef.current = chapitres;
   const dansLeLivre = new Set(chapitres.flatMap((c) => c.ids()));
   const etatJeu = { tapPower: props.tapPower, critLevel: props.critLevel, critDamageLevel: props.critDamageLevel, sanctuaryLevel: props.sanctuaryLevel,
-    autoClickers: props.autoClickers, upgradeLevels: props.upgradeLevels, tapUpgrades: props.tapUpgrades, ascensionCount: props.ascensionCount, essence: props.essence };
+    autoClickers: props.autoClickers, upgradeLevels: props.upgradeLevels, tapUpgrades: props.tapUpgrades, ascensionCount: props.ascensionCount, essence: props.essence,
+    legendaires: props.legendaires || {} }; // 17/10 : vrai gain et conseil des objets légendaires
   const candidats = noeuds.filter((n) => n.delta && n.etat === 'achetable' && dansLeLivre.has(n.id)).map((n) => ({ id: n.id, delta: n.delta, prix: n.prix }));
   etatRef.current = etatJeu;
   const signature = JSON.stringify([etatJeu, candidats.map((c) => c.id)]);

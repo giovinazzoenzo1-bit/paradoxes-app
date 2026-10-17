@@ -14,6 +14,8 @@ import {
   ascensionThreshold, OFFRANDE_APPCOINS_COST, SANCTUARY_MAX_LEVEL, VEILLEUR_MAX_LEVEL,
   coreUpgradeRequirement, critChance, critMultiplier, offrandeReward, SANCTUARY_BONUS_PER_LEVEL, VEILLEUR_BONUS_PER_LEVEL,
   TAP_UPGRADE_UNLOCK_LEVEL, TAP_UPGRADE_FIRST_PACTE_LEVEL, CORE_UNLOCKS,
+  LEGENDAIRES, plafondLegendaire, prixLegendaire, chanceLegendaire, multiplicateurLegendaire,
+  SANCTUAIRE_V2_PAR_NIVEAU, VEILLEUR_V2_PAR_NIVEAU,
 } from './clickerLogic.js';
 import { reliquesParFamille, FAMILLES_RELIQUES, autoClicsParPalier, PALIERS_AUTO } from './boutiqueFamilles.js';
 
@@ -91,18 +93,55 @@ function construireNoeuds(p) {
   });
 
   // ── CRITIQUES : Faveur des Esprits (chance) → Dégâts critiques (force)
+  // 17/10 — OBJETS LÉGENDAIRES (clickerLogic.LEGENDAIRES) : sous leur original, niveaux permanents, plafond par Ascension,
+  // prix selon le rang de l'achat dans l'Ascension. Verrouillés à l'A0 (« s'ouvre à ta 1re Ascension »).
+  const ajouterLegendaire = (id) => {
+    const d = LEGENDAIRES.find((x) => x.id === id);
+    const leg = p.legendaires || {};
+    const niveau = leg[id] || 0;
+    const rang = (p.legendairesAsc || {})[id] || 0;
+    const plafond = plafondLegendaire(p.ascensionCount);
+    const prix = remise(prixLegendaire(rang, p.ascensionCount));
+    const manque = d.requiert && !((leg[d.requiert] || 0) > 0) ? LEGENDAIRES.find((x) => x.id === d.requiert) : null;
+    const verrou = plafond === 0 || !!manque;
+    const max = !verrou && niveau >= plafond;
+    const effet = {
+      faveurV2: `+${nb((chanceLegendaire(niveau + 1) - chanceLegendaire(niveau)) * 100, 3)} % légendaire / nv`,
+      critDamageV2: `+${nb(multiplicateurLegendaire(niveau + 1) - multiplicateurLegendaire(niveau), 0)} force légendaire / nv`,
+      sanctuaireV2: `+${nb(SANCTUAIRE_V2_PAR_NIVEAU * 100, 1)} % production / nv`,
+      veilleurV2: `+${nb(VEILLEUR_V2_PAR_NIVEAU * 100, 1)} % hors-ligne / nv`,
+    }[id];
+    const actuel = {
+      faveurV2: `${nb(chanceLegendaire(niveau) * 100, 3)} % de chance de critique LÉGENDAIRE (×${multiplicateurLegendaire(leg.critDamageV2)}, en plus du critique normal).`,
+      critDamageV2: `Le critique légendaire fait ×${multiplicateurLegendaire(niveau)}.`,
+      sanctuaireV2: `+${nb(SANCTUAIRE_V2_PAR_NIVEAU * 100 * niveau, 1)} % sur TOUTE ta production.`,
+      veilleurV2: `+${nb(VEILLEUR_V2_PAR_NIVEAU * 100 * niveau, 1)} % sur tes gains hors ligne.`,
+    }[id];
+    const condition = plafond === 0 ? '🔒 Ascension 1' : manque ? `🔒 ${manque.nom} 1` : null;
+    ajouter({ id, emoji: d.emoji, nom: d.nom, niveau: `${niveau}/${plafond}`, prix, etat: etat(verrou, max, prix, p.coins),
+      gain: condition || (max ? `max de l'Ascension` : effet),
+      onPress: verrou || max ? null : (q) => p.onBuyLegendaire(id, q),
+      cout: (j) => prixLegendaire(rang + j, p.ascensionCount), estMax: (j) => niveau + j >= plafond,
+      delta: { legendaires: id }, allume: niveau > 0,
+      detail: plafond === 0 ? '🔒 S\'ouvre à ta 1re Ascension. Ses niveaux ne seront jamais remis à zéro.'
+        : manque ? `🔒 Achète d'abord 1 niveau de ${manque.nom}.`
+        : `${actuel} Permanent : l'Ascension ne le remet jamais à zéro. Jusqu'au niveau ${plafond} à cette Ascension${max ? ' — atteint : +3 niveaux à la prochaine' : ''}.` });
+  };
+
   const prixFaveur = remise(critUpgradeCost(p.critLevel));
   const okFaveur = debloque('faveur');
   ajouter({ id: 'faveur', emoji: '✨', nom: 'Faveur des Esprits', niveau: `nv ${p.critLevel}`,
     gain: okFaveur ? `+${nb((critChance(p.critLevel + 1) - critChance(p.critLevel)) * 100)} % crit / nv` : progres('faveur'),
     prix: prixFaveur, etat: etat(!okFaveur, false, prixFaveur, p.coins), onPress: p.onBuyCrit, cout: (j) => critUpgradeCost(p.critLevel + j), delta: { critLevel: 1 }, allume: p.critLevel > 0,
     detail: okFaveur ? `${nb(critChance(p.critLevel) * 100)} % de chance de coup critique.` : exigence('faveur') });
+  ajouterLegendaire('faveurV2');
   const prixCrit = remise(critDamageUpgradeCost(p.critDamageLevel));
   const okCrit = debloque('critDamage');
   ajouter({ id: 'critDamage', emoji: '💥', nom: 'Dégâts critiques', niveau: `nv ${p.critDamageLevel}`,
     gain: okCrit ? `+${nb(critMultiplier(p.critDamageLevel + 1) - critMultiplier(p.critDamageLevel), 1)} force crit / nv` : progres('critDamage'),
     prix: prixCrit, etat: etat(!okCrit, false, prixCrit, p.coins), onPress: p.onBuyCritDamage, cout: (j) => critDamageUpgradeCost(p.critDamageLevel + j), delta: { critDamageLevel: 1 }, allume: p.critDamageLevel > 0,
     detail: okCrit ? `Coup critique ×${nb(critMultiplier(p.critDamageLevel), 1)}.` : exigence('critDamage') });
+  ajouterLegendaire('critDamageV2');
 
   // ── PASSIF : Sanctuaire → Veilleur
   const maxS = sanctuaryMaxed(p.sanctuaryLevel); const prixS = remise(sanctuaryUpgradeCost(p.sanctuaryLevel)); const okS = debloque('sanctuaire');
@@ -110,11 +149,13 @@ function construireNoeuds(p) {
     gain: okS ? `+${nb(SANCTUARY_BONUS_PER_LEVEL * 100, 1)} % production / nv` : progres('sanctuaire'),
     prix: prixS, etat: etat(!okS, maxS, prixS, p.coins), onPress: p.onBuySanctuary, cout: (j) => sanctuaryUpgradeCost(p.sanctuaryLevel + j), estMax: (j) => sanctuaryMaxed(p.sanctuaryLevel + j), delta: { sanctuaryLevel: 1 }, allume: p.sanctuaryLevel > 0,
     detail: okS ? 'Augmente TOUTE ta production (tap + passif).' : exigence('sanctuaire') });
+  ajouterLegendaire('sanctuaireV2');
   const maxV = veilleurMaxed(p.veilleurLevel); const prixV = remise(veilleurUpgradeCost(p.veilleurLevel)); const okV = debloque('veilleur');
   ajouter({ id: 'veilleur', emoji: '🌙', nom: 'Veilleur', niveau: `${p.veilleurLevel}/${VEILLEUR_MAX_LEVEL}`,
     gain: okV ? `+${nb(VEILLEUR_BONUS_PER_LEVEL * 100, 1)} % hors-ligne / nv` : progres('veilleur'),
     prix: prixV, etat: etat(!okV, maxV, prixV, p.coins), onPress: p.onBuyVeilleur, cout: (j) => veilleurUpgradeCost(p.veilleurLevel + j), estMax: (j) => veilleurMaxed(p.veilleurLevel + j), allume: p.veilleurLevel > 0,
     detail: okV ? 'Augmente tes gains quand tu ne joues pas.' : exigence('veilleur') });
+  ajouterLegendaire('veilleurV2');
 
   // ── AUTO-CLICS : UNE seule file, dans l'ORDRE DES PRIX RÉELS de
   // l'Ascension en cours (1er achat), révélée 2 par 2 : les possédés, le

@@ -13,11 +13,11 @@ export const CHAPITRES_GRIMOIRE = [
   { cle: 'tap', titre: 'Force du tap', intro: 'Chaque tap rapporte plus de pièces.',
     ids: () => ['pacte', ...TAP_UPGRADES.map((u) => u.id)] },
   { cle: 'critiques', titre: 'Critiques', intro: 'Des coups critiques plus fréquents et plus forts.',
-    ids: () => ['faveur', 'critDamage'] },
+    ids: () => ['faveur', 'faveurV2', 'critDamage', 'critDamageV2'] }, // 17/10 : légendaires sous leur original
   { cle: 'auto', titre: 'Auto-clics', intro: 'Des esprits qui récoltent pour toi, même sans taper.',
     ids: () => { const r = autoClicsParPalier(); return PALIERS_AUTO.flatMap((t) => (r[t] || []).map((c) => c.id)); } },
   { cle: 'sanctuaire', titre: 'Sanctuaire', intro: 'Toute ta production, et tes gains hors-ligne.',
-    ids: () => ['sanctuaire', 'veilleur'] },
+    ids: () => ['sanctuaire', 'sanctuaireV2', 'veilleur', 'veilleurV2'] },
   { cle: 'reliques', titre: 'Reliques', intro: 'Les pouvoirs de tes créatures. Chaque relique s\'ouvre avec sa créature.',
     ids: () => { const r = reliquesParFamille(); return FAMILLES_RELIQUES.flatMap((f) => (r[f] || []).map((i) => 'relique:' + i.id)); } },
 ];
