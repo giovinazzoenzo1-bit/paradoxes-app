@@ -34,6 +34,8 @@ const { spawnSync } = require('child_process');
 
 const RACINE = path.join(__dirname, '..');
 const F = {
+  miniJeux: path.join(RACINE, 'src/games/clicker/miniJeux.js'),
+  chasse: path.join(RACINE, 'src/screens/games/ChasseLueurs.js'),
   defis: path.join(RACINE, 'src/games/clicker/defisEcrits.js'),
   logique: path.join(RACINE, 'src/games/clicker/questLogic.js'),
   clicker: path.join(RACINE, 'src/games/clicker/clickerLogic.js'),
@@ -172,6 +174,12 @@ const SABOTAGES = [
     remplace('    tapsParSec: rythmeRef.current,', '    tapsParSecOublie: rythmeRef.current,')],
   ['auditRythmeJoueur', F.clicker, 'la porte d\'Ascension remise à l\'échelle du joueur de référence : le joueur lent farme à chaque fin d\'Ascension',
     remplace('export const PORTE_ASCENSION_PART = [0.452, 0.386, 0.548, 0.478, 0.508, 0.463];', 'export const PORTE_ASCENSION_PART = [1, 1, 1, 1, 1, 1];')],
+  ['auditChasseLueurs', F.miniJeux, 'le tirage des récompenses change (règle de l\'auteur : 80 % Griffes, 15 % Tap ×2, 5 % Diamants)',
+    remplace('export const MINI_JEU_TIRAGE = { griffes: 0.80, boostTap: 0.15, diamants: 0.05 };', 'export const MINI_JEU_TIRAGE = { griffes: 0.50, boostTap: 0.45, diamants: 0.05 };')],
+  ['auditChasseLueurs', F.miniJeux, 'un mini-jeu paie en pièces (les défis « Obtiens N pièces » et la porte seraient faussés)',
+    remplace('  return { type: \'diamants\', amount: MINI_JEU_DIAMANTS };', '  return { type: \'pieces\', amount: 100000 };')],
+  ['auditChasseLueurs', F.chasse, 'une lueur ratée n\'affiche plus « PERDU »',
+    remplace('<Text style={styles.perdu}>PERDU</Text>', '<Text style={styles.perdu}>Dommage</Text>')],
   ['auditLegendaires', F.ecran, "les niveaux légendaires remis à zéro par l'Ascension (décision de l'auteur : permanents)",
     remplace('            setLegendairesAsc({}); // 17/10', '            setLegendaires({}); setLegendairesAsc({}); // 17/10')],
   ['auditLegendaires', F.calcul, "le critique légendaire oublié par le calculateur de défis (l'auteur : sinon les défis deviennent trop faciles)",

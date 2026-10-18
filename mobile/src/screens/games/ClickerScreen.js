@@ -279,6 +279,9 @@ import { jouerSon, jouerSonLimite, SON_CREATURE } from './sonsBoutique';
 import { useMusique, MusiqueActive } from './musique';
 import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
+import ChasseLueurs from './ChasseLueurs';
+import { tirerRecompenseMiniJeu, LUEUR_ERRANTE_INTERVALLE_MS, LUEUR_ERRANTE_PREMIERE_MS, LUEUR_ERRANTE_VIE_MS } from '../../games/clicker/miniJeux';
+const LUEUR_ERRANTE_IMG = require('../../../assets/fenetres/lueur-cyan.png');
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
@@ -607,6 +610,37 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       noterGriffes('shop-pieces', taille); // journal des Griffes (11/10)
     } catch (e) { /* écriture impossible : on ne bloque pas l'écran */ }
     spawnPopup(`+${taille} 🐾`, 110, 60, true);
+  };
+
+  // ✨ Chasse aux Lueurs : la récompense (règle de l'auteur pour TOUS les mini-jeux) — 80 % les Griffes d'un niveau de sa
+  // meilleure créature, 15 % Tap ×2 (2 min, prolonge un bonus en cours), 5 % Diamants. Jamais de pièces.
+  const ouvrirChasse = () => {
+    setLueurErrante(null);
+    prochaineLueurRef.current = Date.now() + LUEUR_ERRANTE_INTERVALLE_MS;
+    jouerSon('bulle-apparition', sonsJeuRef.current);
+    setChasseOuverte(true);
+  };
+  const recompenserMiniJeu = () => {
+    const r = tirerRecompenseMiniJeu(ownedRef.current);
+    if (r.type === 'griffes') {
+      (async () => {
+        try {
+          const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+          const pending = raw ? parseInt(raw, 10) || 0 : 0;
+          await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String(pending + r.amount));
+          noterGriffes('mini-jeu', r.amount);
+        } catch (e) { /* écriture impossible : on ne bloque pas l'écran */ }
+      })();
+      return { texte: `+${r.amount} 🐾 Griffes` };
+    }
+    if (r.type === 'boostTap') {
+      const fin = Math.max(Date.now(), boostTapJusquaRef.current) + r.minutes * 60 * 1000;
+      boostTapJusquaRef.current = fin;
+      setBoostTapJusqua(fin);
+      return { texte: `⚡ Tap ×2 · ${r.minutes} min` };
+    }
+    if (typeof addSharedCoins === 'function') addSharedCoins(r.amount);
+    return { texte: `+${r.amount} 💎 Diamants` };
   };
 
   const spawnBoss = () => {
@@ -975,6 +1009,36 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // pendant le bonus). La photo des défis ne lit pas ce bonus : c'est la récompense de la pub.
   const [pubTap, setPubTap] = useState(false);
   const [boostTapJusqua, setBoostTapJusqua] = useState(0);
+  // ✨ CHASSE AUX LUEURS (mini-jeu de l'auteur) : une lueur errante passe toutes les 30 min ; la toucher lance le jeu.
+  const [lueurErrante, setLueurErrante] = useState(null); // { x, y, jusqua }
+  const [chasseOuverte, setChasseOuverte] = useState(false);
+  const chasseOuverteRef = useRef(false);
+  chasseOuverteRef.current = chasseOuverte;
+  const prochaineLueurRef = useRef(Date.now() + LUEUR_ERRANTE_PREMIERE_MS);
+  const lueurPulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const id = setInterval(() => {
+      const t = Date.now();
+      setLueurErrante((l) => {
+        if (l && t > l.jusqua) { prochaineLueurRef.current = t + LUEUR_ERRANTE_INTERVALLE_MS; return null; } // ignorée : elle s'en va
+        if (!l && !chasseOuverteRef.current && t >= prochaineLueurRef.current) {
+          const { width, height } = Dimensions.get('window');
+          return { x: 30 + Math.random() * Math.max(1, width - 130), y: 220 + Math.random() * Math.max(1, height * 0.3), jusqua: t + LUEUR_ERRANTE_VIE_MS };
+        }
+        return l;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (!lueurErrante) { lueurPulse.setValue(0); return undefined; }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(lueurPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      Animated.timing(lueurPulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [!!lueurErrante]);
   const boostTapJusquaRef = useRef(0);
   const finPubTap = () => {
     setPubTap(false);
@@ -1405,6 +1469,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setVeilleurLevel(savedVeilleur);
           setLegendaires(saved.legendaires || {});
           rythmeRef.current = Number(saved.rythmeTaps) > 0 ? Number(saved.rythmeTaps) : TAPS_REF;
+          if (Number(saved.prochaineLueur) > 0) prochaineLueurRef.current = Number(saved.prochaineLueur);
           mesuresRef.current.rythmeCalcul = rythmeRef.current;
           setLegendairesAsc(saved.legendairesAsc || {});
           setEssence(saved.essence || 0);
@@ -1773,6 +1838,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     veilleurLevel: veilleurLevelRef.current,
     legendaires: legendairesRef.current,       // 17/10 : permanents
     rythmeTaps: rythmeRef.current,             // rythme du joueur pour le calculateur (fenêtres de 500 taps)
+    prochaineLueur: prochaineLueurRef.current, // prochaine lueur errante (Chasse aux Lueurs)
     legendairesAsc: legendairesAscRef.current, // 17/10 : achats de l'Ascension en cours
     essence: essenceRef.current,
     lastRitualAt: lastRitualAtRef.current,
@@ -4116,6 +4182,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       )}
       {view === 'tap' && (
         <>
+          {lueurErrante && !chasseOuverte ? (
+            <TouchableOpacity style={[styles.lueurErrante, { left: lueurErrante.x, top: lueurErrante.y }]} onPress={ouvrirChasse}
+              accessibilityLabel="Lueur errante : lance la Chasse aux Lueurs">
+              <Animated.Image source={LUEUR_ERRANTE_IMG} resizeMode="contain" style={[styles.lueurErranteImg, {
+                opacity: lueurPulse.interpolate({ inputRange: [0, 1], outputRange: [0.65, 1] }),
+                transform: [{ translateY: lueurPulse.interpolate({ inputRange: [0, 1], outputRange: [0, -10] }) },
+                  { scale: lueurPulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) }] }]} />
+            </TouchableOpacity>
+          ) : null}
 
           {/* ⚠️ Bandeaux EMPILÉS dans une colonne, et non posés chacun à
               la même position absolue — c'est ce qui les faisait se
@@ -4621,6 +4696,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {/* (06/10) L'ancienne fiche verticale n'est plus ouverte : une créature choisie ici
           ouvre la NOUVELLE fiche de l'Exploration (voir ficheAventure). */}
 
+      <ChasseLueurs visible={chasseOuverte} sons={sonsJeuRef.current} vibrations={vibrationsRef.current}
+        onGagne={recompenserMiniJeu} onFermer={() => setChasseOuverte(false)} />
       {calendarOpen && (
         <DailyCalendarModal
           calendar={calendar}
@@ -7064,6 +7141,8 @@ const styles = StyleSheet.create({
   tapEtincelle: { position: 'absolute', left: 100, top: 100, width: 8, height: 8, borderRadius: 4, marginLeft: -4, marginTop: -4 },
   tapTexte: { position: 'absolute', left: 20, top: 100, width: 160, textAlign: 'center', color: '#FFD54A', fontSize: 18, fontWeight: '900', textShadowColor: 'rgba(40,20,0,0.95)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
   tapTexteCrit: { color: '#FF8A3D', fontSize: 24 },
+  lueurErrante: { position: 'absolute', width: 72, height: 72, zIndex: 8 }, // Chasse aux Lueurs : au-dessus de la zone de tap
+  lueurErranteImg: { width: 72, height: 72 },
   tapTexteLegendaire: { color: '#4FC3FF', fontSize: 27, textShadowColor: '#0B3D91', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } }, // 17/10 : critique LÉGENDAIRE
   // 27/09 : plus de rond autour des bulles → icônes un peu plus grandes.
   bulleIcone: { width: 50, height: 50 },

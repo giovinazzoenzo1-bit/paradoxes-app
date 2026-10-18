@@ -1533,6 +1533,31 @@ function auditRythmeJoueur(ecart = 0.15, attenteMaxMin = 20) {
 }
 module.exports.auditRythmeJoueur = auditRythmeJoueur;
 
+// ---- ✨ CHASSE AUX LUEURS (mini-jeu de l'auteur) : ses règles tiennent ----
+// 15 lueurs, de 1,4 s à 0,8 s ; récompense de TOUT mini-jeu : 80 % les Griffes d'un niveau de la meilleure créature, 15 %
+// Tap ×2, 5 % Diamants — JAMAIS de pièces ; une ratée : « PERDU » en rouge 1 s, son de défaite ; branché sur l'écran principal.
+function auditChasseLueurs() {
+  const fs = require('fs');
+  const lire = (f) => fs.readFileSync(require('path').join(__dirname, '../src', f), 'utf8');
+  const M = load('miniJeux');
+  const pb = [];
+  if (M.LUEURS_NB !== 15) pb.push('il ne faut plus 15 lueurs');
+  if (M.dureeLueur(0) !== 1400 || M.dureeLueur(14) !== 800 || !(M.dureeLueur(7) < M.dureeLueur(6))) pb.push('les lueurs ne vont plus de 1,4 s à 0,8 s');
+  let graine = 12345; const alea = () => { graine = (graine * 1103515245 + 12345) % 2147483648; return graine / 2147483648; };
+  const n = {}; for (let k = 0; k < 20000; k++) { const t = M.tirerRecompenseMiniJeu([], alea).type; n[t] = (n[t] || 0) + 1; }
+  if (Object.keys(n).some((t) => !['griffes', 'boostTap', 'diamants'].includes(t))) pb.push('un mini-jeu paie autre chose que Griffes, Tap ×2 ou Diamants : ' + Object.keys(n).join(', '));
+  const part = (t) => (n[t] || 0) / 20000;
+  if (Math.abs(part('griffes') - 0.80) > 0.015 || Math.abs(part('boostTap') - 0.15) > 0.015 || Math.abs(part('diamants') - 0.05) > 0.01) pb.push('tirage ≠ 80 / 15 / 5 %');
+  const def = C.CREATURES.find((c) => c.rarity === 'rare') || C.CREATURES[0];
+  if (M.griffesMeilleureCreature([{ id: C.CREATURES[0].id, level: 3 }, { id: def.id, level: 40 }]) !== Math.round(C.levelUpCost(def, 40))) pb.push('les Griffes ne valent plus UN niveau de la meilleure créature');
+  const J = lire('screens/games/ChasseLueurs.js'), Cl = lire('screens/games/ClickerScreen.js');
+  if (!J.includes('<Text style={styles.perdu}>PERDU</Text>') || !J.includes("jouerSon('defaite', sons)") || !J.includes('PERDU_MS')) pb.push('une ratée doit afficher « PERDU » 1 s avec le son de défaite');
+  if (!J.includes('DECOMPTE[decompte]')) pb.push('plus de décompte 3, 2, 1');
+  if (!Cl.includes('<ChasseLueurs visible={chasseOuverte}') || !Cl.includes('tirerRecompenseMiniJeu(ownedRef.current)')) pb.push('la Chasse aux Lueurs n\'est plus branchée sur l\'écran principal');
+  return pb;
+}
+module.exports.auditChasseLueurs = auditChasseLueurs;
+
 // ---- ÉCLOSION : un œuf neuf = un minuteur neuf (bug réel signalé par l'auteur) ----
 // « L'œuf 4 n'a pas eu de temps d'éclosion, le Gardien est apparu direct » : « Mettre en incubation » ne vidait pas le nid, et
 // le passage en éclosion gardait ce minuteur périmé (`prev ||`) → œuf prêt tout de suite, Gardien d'un autre œuf.
