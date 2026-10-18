@@ -60,6 +60,7 @@ export const MINI_JEUX = [
   { id: 'roue', titre: '🌀 Roue des runes', tuto: 'Tape quand la rune dorée passe sur la flèche.' },
   { id: 'coffre', titre: '🔐 Coffre à broches', tuto: "Arrête l'aiguille dans la zone verte pour lever chaque broche." },
   { id: 'spores', titre: '✨ Pluie de spores', tuto: "Touche chaque spore avant qu'elle n'atteigne le nid." },
+  { id: 'rituel', titre: "🔮 Rituel de l'Œuf", tuto: "Retiens l'ordre des symboles qui s'allument, puis touche-les dans le même ordre." },
 ];
 export function miniJeu(id) { return MINI_JEUX.find((j) => j.id === id) || MINI_JEUX[0]; }
 // Le mini-jeu qui surgit est tiré au hasard.
@@ -150,4 +151,24 @@ export function sporeIntervalle(i) {
 export function sporeChute(i) {
   const k = Math.max(0, Math.min(SPORES_NB - 1, Math.floor(Number(i) || 0)));
   return Math.round(3200 + (2000 - 3200) * (k / (SPORES_NB - 1)));
+}
+
+// 🔮 RITUEL DE L'ŒUF (plan de l'auteur, étape 5, idées Gemini n° 2 et 7) : 6 symboles d'éléments tournent lentement autour de
+// l'œuf ; une suite s'allume, symbole après symbole ; la refaire dans le même ordre. 3 manches : 3, 4 puis 5 symboles, montrés
+// de plus en plus vite (0,7 → 0,6 → 0,5 s chacun). Un mauvais symbole = perdu. Jamais deux fois le même d'affilée.
+export const RITUEL_SYMBOLES = ['feu', 'eau', 'foudre', 'lumiere', 'tenebres', 'magie'];
+export const RITUEL_LONGUEURS = [3, 4, 5];
+export const RITUEL_PAS_MS = [700, 600, 500];
+export const RITUEL_TOURS = RITUEL_LONGUEURS.length;
+export const RITUEL_ROTATION_MS = 24000; // un tour complet de l'anneau : les symboles bougent (règle de l'auteur)
+export function rituelLongueur(i) { return RITUEL_LONGUEURS[Math.max(0, Math.min(RITUEL_TOURS - 1, Math.floor(Number(i) || 0)))]; }
+export function rituelPas(i) { return RITUEL_PAS_MS[Math.max(0, Math.min(RITUEL_TOURS - 1, Math.floor(Number(i) || 0)))]; }
+export function sequenceRituel(n, aleatoire = Math.random) {
+  const out = [];
+  for (let k = 0; k < n; k++) {
+    let s = Math.floor(aleatoire() * RITUEL_SYMBOLES.length);
+    if (k > 0 && s === out[k - 1]) s = (s + 1 + Math.floor(aleatoire() * (RITUEL_SYMBOLES.length - 1))) % RITUEL_SYMBOLES.length;
+    out.push(s);
+  }
+  return out;
 }

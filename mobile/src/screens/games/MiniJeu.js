@@ -11,6 +11,7 @@ import {
   ROUE_RUNES, ROUE_TOURS, roueVitesse, roueAligne, ROUE_PASSAGES_MAX,
   COFFRE_BROCHES, coffreLargeur, coffrePeriode, coffreAiguille, coffreDansZone, COFFRE_CYCLES_MAX,
   SPORES_NB, SPORE_SOL, sporeIntervalle, sporeChute,
+  RITUEL_SYMBOLES, RITUEL_TOURS, rituelLongueur, rituelPas, sequenceRituel, RITUEL_ROTATION_MS,
 } from '../../games/clicker/miniJeux';
 import { jouerSon } from './sonsBoutique';
 
@@ -19,6 +20,11 @@ const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
 const OEUF = require('../../../assets/egg/egg-0-endormi.png');
 const OEUF_LUMINEUX = require('../../../assets/egg/egg-3-lumineux.png');
 const COFFRE = require('../../../assets/pubs/coffre.png');
+const SYMBOLES = {
+  feu: require('../../../assets/combat/effets/feu.png'), eau: require('../../../assets/combat/effets/eau.png'),
+  foudre: require('../../../assets/combat/effets/foudre.png'), lumiere: require('../../../assets/combat/effets/lumiere.png'),
+  tenebres: require('../../../assets/combat/effets/tenebres.png'), magie: require('../../../assets/combat/effets/magie.png'),
+};
 const RUNES = ['affinite', 'arcane', 'butin', 'celerite', 'dexterite', 'force', 'resilience', 'vitalite'].map((n) => ({
   affinite: require('../../../assets/icons/runes/affinite.png'), arcane: require('../../../assets/icons/runes/arcane.png'),
   butin: require('../../../assets/icons/runes/butin.png'), celerite: require('../../../assets/icons/runes/celerite.png'),
@@ -30,23 +36,23 @@ const TAILLE = 88;
 // ✨ LUEUR BIEN VISIBLE (demande de l'auteur : « on ne la voit pas assez » sur le décor) : le halo, un cœur blanc lumineux et
 // un anneau de couleur, qui pulsent. couleur : 'cyan' ou 'or'.
 function LueurVisible({ couleur = 'cyan', taille = TAILLE }) {
+  // ⚠️ L'auteur : l'anneau et le cœur blanc donnaient « des ronds, pas des lueurs ». Désormais le MÊME halo empilé 3 fois
+  // (grand qui respire, moyen, petit) : le centre devient très lumineux, les bords restent doux.
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const b = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1, duration: 380, useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 0, duration: 380, useNativeDriver: true })]));
+      Animated.timing(pulse, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 420, useNativeDriver: true })]));
     b.start();
     return () => b.stop();
   }, []);
-  const or = couleur === 'or', teinte = or ? '#FFC21A' : '#3FD9FF';
-  const echelle = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.1] });
+  const src = couleur === 'or' ? LUEUR_OR : LUEUR;
   return (
     <View style={{ width: taille, height: taille, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.Image source={or ? LUEUR_OR : LUEUR} resizeMode="contain" style={{ position: 'absolute', width: taille * 1.25, height: taille * 1.25, transform: [{ scale: echelle }] }} />
-      <Animated.View style={{ position: 'absolute', width: taille * 0.62, height: taille * 0.62, borderRadius: taille, borderWidth: 3, borderColor: teinte,
-        opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }), transform: [{ scale: echelle }] }} />
-      <View style={{ width: taille * 0.3, height: taille * 0.3, borderRadius: taille, backgroundColor: or ? '#FFF6CC' : '#E8FBFF',
-        shadowColor: teinte, shadowOpacity: 1, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8 }} />
+      <Animated.Image source={src} resizeMode="contain" style={{ position: 'absolute', width: taille * 1.6, height: taille * 1.6, opacity: 0.9,
+        transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.15] }) }] }} />
+      <Image source={src} resizeMode="contain" style={{ position: 'absolute', width: taille * 1.05, height: taille * 1.05 }} />
+      <Image source={src} resizeMode="contain" style={{ position: 'absolute', width: taille * 0.6, height: taille * 0.6 }} />
     </View>
   );
 }
@@ -237,7 +243,8 @@ function JeuBonneteau({ zone, sons, onRate, onReussi }) {
   }, [tour]);
   const toucher = (k) => {
     if (etape !== 'choix') return;
-    if (k !== lueurDans.current) { onRate(); return; }
+    // Mauvais œuf : on MONTRE d'abord où était la lueur (0,9 s), puis « PERDU » (l'auteur : « pas de lueur en 3e manche »).
+    if (k !== lueurDans.current) { setEtape('revele'); jouerSon('rate', sons); minuteur.current = setTimeout(onRate, 900); return; }
     setEtape('revele');
     jouerSon('bulle-eclatee', sons);
     minuteur.current = setTimeout(() => { if (tour + 1 >= BONNETEAU_TOURS) onReussi(); else setTour(tour + 1); }, 700);
@@ -391,6 +398,71 @@ function JeuSpores({ zone, sons, onRate, onReussi }) {
   ));
 }
 
+// 🔮 RITUEL DE L'ŒUF : 6 symboles tournent lentement autour de l'œuf ; une suite s'allume ; la refaire dans l'ordre.
+const RITUEL_R = 128, SYM_L = 86, SYM_H = 64;
+function JeuRituel({ sons, onRate, onReussi }) {
+  const [tour, setTour] = useState(0);
+  const [etape, setEtape] = useState('montre'); // montre → joue
+  const [allume, setAllume] = useState(null);   // symbole allumé (rendu)
+  const sequence = useRef([]), pos = useRef(0), minuteurs = useRef([]);
+  const tourne = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const b = Animated.loop(Animated.timing(tourne, { toValue: 1, duration: RITUEL_ROTATION_MS, easing: Easing.linear, useNativeDriver: true }));
+    b.start();
+    return () => b.stop();
+  }, []);
+  const nettoyer = () => { minuteurs.current.forEach(clearTimeout); minuteurs.current = []; };
+  const plus = (ms, f) => minuteurs.current.push(setTimeout(f, ms));
+  useEffect(() => {
+    const n = rituelLongueur(tour), pas = rituelPas(tour);
+    sequence.current = sequenceRituel(n);
+    pos.current = 0;
+    setEtape('montre');
+    setAllume(null);
+    sequence.current.forEach((sym, j) => {
+      plus(600 + j * pas, () => { setAllume(sym); jouerSon('bouton', sons); });
+      plus(600 + j * pas + pas * 0.7, () => setAllume(null));
+    });
+    plus(600 + n * pas + 150, () => setEtape('joue'));
+    return nettoyer;
+  }, [tour]);
+  const toucher = (k) => {
+    if (etape !== 'joue') return;
+    if (k !== sequence.current[pos.current]) { onRate(); return; }
+    jouerSon('bulle-eclatee', sons);
+    setAllume(k);
+    plus(220, () => setAllume(null));
+    pos.current += 1;
+    if (pos.current >= sequence.current.length) {
+      setEtape('montre');
+      plus(650, () => { if (tour + 1 >= RITUEL_TOURS) onReussi(); else setTour(tour + 1); });
+    }
+  };
+  const angle = tourne.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const contre = tourne.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] });
+  return (
+    <View style={styles.rituelZone}>
+      <Image source={OEUF_LUMINEUX} style={styles.rituelOeuf} resizeMode="contain" />
+      <Animated.View style={[styles.rituelAnneau, { transform: [{ rotate: angle }] }]}>
+        {RITUEL_SYMBOLES.map((nom, k) => {
+          const a = (k / RITUEL_SYMBOLES.length) * Math.PI * 2;
+          const x = RITUEL_R + Math.sin(a) * RITUEL_R - SYM_L / 2, y = RITUEL_R - Math.cos(a) * RITUEL_R - SYM_H / 2;
+          const on = allume === k;
+          return (
+            <Animated.View key={nom} style={[styles.rituelSymbole, { left: x, top: y, transform: [{ rotate: contre }, { scale: on ? 1.35 : 1 }] }]}>
+              {on ? <View style={styles.rituelHalo}><LueurVisible couleur="or" taille={SYM_L} /></View> : null}
+              <TouchableOpacity activeOpacity={0.7} onPressIn={() => toucher(k)}>
+                <Image source={SYMBOLES[nom]} style={[styles.rituelImage, !on && styles.rituelEteint]} resizeMode="contain" />
+              </TouchableOpacity>
+            </Animated.View>
+          );
+        })}
+      </Animated.View>
+      <Text style={styles.rituelEtat}>{etape === 'joue' ? 'À toi !' : 'Regarde…'}</Text>
+    </View>
+  );
+}
+
 // 🎆 Feux d'artifice autour du gain (demande de l'auteur) : 3 gerbes de 12 étincelles, décalées dans le temps.
 const COULEURS_FEU = ['#FFD54A', '#7fd8ff', '#ff8a3d', '#b6ff7a', '#ffffff'];
 function Gerbe({ x, y, retard }) {
@@ -466,7 +538,7 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
 
   if (!visible) return null;
   const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau
-    : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : jeu === 'spores' ? JeuSpores : JeuChasse;
+    : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : jeu === 'spores' ? JeuSpores : jeu === 'rituel' ? JeuRituel : JeuChasse;
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={() => { nettoyer(); if (onFermer) onFermer(); }}>
       <Animated.View style={[styles.fond, { transform: [{ translateX: tremble }] }]}
@@ -518,6 +590,14 @@ const styles = StyleSheet.create({
   roueZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   coffreZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   spore: { position: 'absolute', width: SPORE_T, height: SPORE_T },
+  rituelZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  rituelOeuf: { position: 'absolute', width: 130, height: 130 },
+  rituelAnneau: { width: RITUEL_R * 2, height: RITUEL_R * 2 },
+  rituelSymbole: { position: 'absolute', width: SYM_L, height: SYM_H, alignItems: 'center', justifyContent: 'center' },
+  rituelImage: { width: SYM_L, height: SYM_H },
+  rituelEteint: { opacity: 0.55 },
+  rituelHalo: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  rituelEtat: { position: 'absolute', bottom: '18%', color: '#fff', fontSize: 22, fontWeight: '900', textShadowColor: '#000', textShadowRadius: 8 },
   coffreImage: { width: 170, height: 170 },
   coffreBroches: { flexDirection: 'row', marginTop: 6, marginBottom: 18 },
   coffreBroche: { width: 46, height: 46, borderRadius: 23, marginHorizontal: 8, alignItems: 'center', justifyContent: 'center',

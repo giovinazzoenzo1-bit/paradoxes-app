@@ -1553,7 +1553,10 @@ function auditChasseLueurs() {
   const def = C.CREATURES.find((c) => c.rarity === 'rare') || C.CREATURES[0];
   if (M.griffesMeilleureCreature([{ id: C.CREATURES[0].id, level: 3 }, { id: def.id, level: 40 }]) !== Math.round(C.levelUpCost(def, 40))) pb.push('les Griffes ne valent plus UN niveau de la meilleure créature');
   // Les 3 mini-jeux (demande de l'auteur) : un TUTO d'une seule phrase pendant le décompte ; Lueur dorée et Battement de Transe.
-  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe,bonneteau,roue,coffre,spores') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Transe, Bonneteau, Roue, Coffre, Spores');
+  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe,bonneteau,roue,coffre,spores,rituel') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Transe, Bonneteau, Roue, Coffre, Spores, Rituel');
+  // Rituel de l'Œuf (étape 5) : 6 symboles, suites de 3 / 4 / 5, montrées de plus en plus vite, jamais deux fois le même d'affilée.
+  if (M.RITUEL_SYMBOLES.length !== 6 || M.RITUEL_LONGUEURS.join() !== '3,4,5' || !(M.rituelPas(0) > M.rituelPas(2))) pb.push('Rituel : 6 symboles, suites de 3, 4 puis 5, de plus en plus vite');
+  { let doublon = false; for (let k = 0; k < 300; k++) { const sq = M.sequenceRituel(5); if (sq.some((x, j) => j > 0 && x === sq[j - 1])) doublon = true; } if (doublon) pb.push('Rituel : le même symbole deux fois d\'affilée'); }
   // Pluie de spores (étape 4) : 18 spores, de plus en plus serrées (0,9 → 0,45 s) et rapides (3,2 → 2 s de chute).
   if (M.SPORES_NB !== 18 || M.sporeIntervalle(0) !== 900 || M.sporeIntervalle(17) !== 450 || M.sporeChute(0) !== 3200 || M.sporeChute(17) !== 2000
     || !(M.SPORE_SOL > 0.5 && M.SPORE_SOL < 0.9)) pb.push('Pluie de spores : 18 spores, de 0,9 à 0,45 s d\'écart, de 3,2 à 2 s de chute, vers le nid');
@@ -1583,6 +1586,10 @@ function auditChasseLueurs() {
   if (!J.includes("(etape === 'montre' || etape === 'revele') && k === lueur ? (") || !J.includes('setLueur(lueurDans.current);')) pb.push('Bonneteau : la lueur montrée peut ne plus être sous le bon œuf');
   // Demandes de l'auteur : des lueurs bien visibles, la Transe sur l'œuf, la flèche de la Roue en bas.
   if ((J.match(/<LueurVisible /g) || []).length < 4 || !J.includes('source={OEUF_LUMINEUX}') || !J.includes("<Text style={styles.roueFleche}>▲</Text>")) pb.push('lueurs visibles, œuf de la Transe ou flèche de la Roue en bas : un réglage de l\'auteur a disparu');
+  // L'auteur : la lueur visible doit rester une LUEUR (halo empilé), pas « des ronds » (anneau, cœur plein).
+  { const i = J.indexOf('function LueurVisible('), corps = i >= 0 ? J.slice(i, J.indexOf('\n}\n', i)) : ''; if (!corps || /borderWidth|backgroundColor/.test(corps)) pb.push('la lueur visible redevient un rond (anneau ou cœur plein)'); }
+  // Bonneteau : un mauvais œuf MONTRE où était la lueur avant « PERDU » (l'auteur ne la voyait pas en 3e manche).
+  if (!J.includes("if (k !== lueurDans.current) { setEtape('revele'); jouerSon('rate', sons); minuteur.current = setTimeout(onRate, 900); return; }")) pb.push('Bonneteau : un mauvais choix ne montre plus où était la lueur');
   // Demandes de l'auteur : pas de fond noir ; à la victoire, le son de victoire, des feux d'artifice et le gain en élastique.
   if (!J.includes("fond: { flex: 1, backgroundColor: 'transparent' }")) pb.push('un fond noir est revenu pendant les mini-jeux');
   if (!J.includes("jouerSon('victoire', sons)") || !J.includes('<FeuxArtifice />') || !J.includes('Animated.spring(arrivee')) pb.push('la victoire n\'a plus son son, ses feux d\'artifice ou son gain élastique');
