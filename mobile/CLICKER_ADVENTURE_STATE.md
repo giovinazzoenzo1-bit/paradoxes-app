@@ -4395,6 +4395,12 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   3 broches ; tap hors zone ou 4 allers-retours sans tap = perdu.
 - ✅ Étape 4 **✨ Pluie de spores** : 18 spores (cyan, une sur trois dorée) tombent vers le nid de l'écran principal
   (`SPORE_SOL` = 70 % de la hauteur), écart 0,9 → 0,45 s, chute 3,2 → 2 s ; une seule touche le nid = perdu (≈ 14 s de jeu).
+- **Retours de l'auteur** : `LueurVisible` = le MÊME halo empilé 3 fois (l'anneau et le cœur plein donnaient « des ronds,
+  pas des lueurs ») ; Bonneteau : un mauvais œuf MONTRE d'abord où était la lueur (0,9 s) puis PERDU — sans ça, perdre en
+  3e manche donnait l'impression « pas de lueur ». ⚠️ Banc : les CLICS ne déclenchent pas les boutons des mini-jeux (fenêtre
+  Modal du web) ; viewport sans isMobile pour des coordonnées justes ; reconstruire la scène avant de la rejouer.
+- ✅ Étape 5 **🔮 Rituel de l'Œuf** : 6 symboles d'éléments (images des effets de combat) tournent lentement autour de l'œuf
+  (24 s par tour, restent droits) ; suites de 3 / 4 / 5 montrées à 0,7 / 0,6 / 0,5 s ; un mauvais symbole = perdu.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
 - ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
