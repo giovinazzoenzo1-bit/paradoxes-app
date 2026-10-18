@@ -8,9 +8,12 @@
 // 5 % Diamants. JAMAIS de pièces (les défis « Obtiens N pièces » et la porte d'Ascension resteraient faussés).
 import { CREATURES, levelUpCost } from './clickerLogic';
 
-export const LUEURS_NB = 15;
-export const LUEUR_DUREE_DEBUT_MS = 1400; // la 1re lueur
-export const LUEUR_DUREE_FIN_MS = 800;    // la 15e (à régler après les essais de l'auteur)
+// Demande de l'auteur (après essai) : 20 lueurs, et chacune s'éteint 0,01 s plus vite (1,4 → 1,39 s ; 0,8 → 0,79 s).
+export const LUEURS_NB = 20;
+export const LUEUR_DUREE_DEBUT_MS = 1390; // la 1re lueur
+export const LUEUR_DUREE_FIN_MS = 790;    // la 20e
+// Demande de l'auteur : les lumières BOUGENT dans tous les mini-jeux (jamais statiques) — dérive en ligne droite.
+export const LUEUR_DERIVE_PX = 140;      // distance parcourue au plus pendant sa vie
 export const LUEUR_ERRANTE_INTERVALLE_MS = 30 * 60 * 1000;
 export const LUEUR_ERRANTE_PREMIERE_MS = 5 * 60 * 1000; // première partie : 5 min après l'arrivée, pour la découvrir
 export const LUEUR_ERRANTE_VIE_MS = 60 * 1000;           // ignorée 60 s : elle s'en va
@@ -48,7 +51,7 @@ export function tirerRecompenseMiniJeu(owned, aleatoire = Math.random) {
 
 // ════════ Les mini-jeux et leur TUTO d'une seule phrase, affiché pendant le décompte (demande de l'auteur) ════════
 export const MINI_JEUX = [
-  { id: 'chasse', titre: '✨ Chasse aux Lueurs', tuto: "Touche les 15 lueurs avant qu'elles s'éteignent." },
+  { id: 'chasse', titre: '✨ Chasse aux Lueurs', tuto: "Touche les 20 lueurs avant qu'elles s'éteignent." },
   { id: 'doree', titre: '🎯 Lueur dorée', tuto: 'Touche seulement la lueur dorée, jamais les bleues.' },
   { id: 'transe', titre: '🥁 Battement de Transe', tuto: "Tape quand l'anneau touche le cercle, 3 ratés et c'est perdu." },
 ];

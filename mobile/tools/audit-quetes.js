@@ -1541,8 +1541,10 @@ function auditChasseLueurs() {
   const lire = (f) => fs.readFileSync(require('path').join(__dirname, '../src', f), 'utf8');
   const M = load('miniJeux');
   const pb = [];
-  if (M.LUEURS_NB !== 15) pb.push('il ne faut plus 15 lueurs');
-  if (M.dureeLueur(0) !== 1400 || M.dureeLueur(14) !== 800 || !(M.dureeLueur(7) < M.dureeLueur(6))) pb.push('les lueurs ne vont plus de 1,4 s à 0,8 s');
+  // Après essai de l'auteur : 20 lueurs, 0,01 s plus vite (1,39 s → 0,79 s), et elles BOUGENT.
+  if (M.LUEURS_NB !== 20) pb.push('il ne faut plus 20 lueurs');
+  if (M.dureeLueur(0) !== 1390 || M.dureeLueur(19) !== 790 || !(M.dureeLueur(10) < M.dureeLueur(9))) pb.push('les lueurs ne vont plus de 1,39 s à 0,79 s');
+  if (!(M.LUEUR_DERIVE_PX > 0)) pb.push('les lueurs ne bougent plus');
   let graine = 12345; const alea = () => { graine = (graine * 1103515245 + 12345) % 2147483648; return graine / 2147483648; };
   const n = {}; for (let k = 0; k < 20000; k++) { const t = M.tirerRecompenseMiniJeu([], alea).type; n[t] = (n[t] || 0) + 1; }
   if (Object.keys(n).some((t) => !['griffes', 'boostTap', 'diamants'].includes(t))) pb.push('un mini-jeu paie autre chose que Griffes, Tap ×2 ou Diamants : ' + Object.keys(n).join(', '));
@@ -1558,6 +1560,10 @@ function auditChasseLueurs() {
   const vus = new Set(); for (let k = 0; k < 300; k++) vus.add(M.choisirMiniJeu()); if (vus.size !== 3) pb.push('la lueur errante ne lance plus les 3 mini-jeux');
   const J = lire('screens/games/MiniJeu.js'), Cl = lire('screens/games/ClickerScreen.js');
   if (!J.includes('<Text style={styles.consigne}>{def.tuto}</Text>')) pb.push('plus de tuto pendant le décompte');
+  // Demandes de l'auteur : pas de fond noir ; à la victoire, le son de victoire, des feux d'artifice et le gain en élastique.
+  if (!J.includes("fond: { flex: 1, backgroundColor: 'transparent' }")) pb.push('un fond noir est revenu pendant les mini-jeux');
+  if (!J.includes("jouerSon('victoire', sons)") || !J.includes('<FeuxArtifice />') || !J.includes('Animated.spring(arrivee')) pb.push('la victoire n\'a plus son son, ses feux d\'artifice ou son gain élastique');
+  if (!J.includes('...bouge.getTranslateTransform()') || !J.includes('transform: l.v.getTranslateTransform()') || !J.includes('setPlace({')) pb.push('une lumière de mini-jeu est redevenue statique');
   if (!J.includes('<Text style={styles.perdu}>PERDU</Text>') || !J.includes("jouerSon('defaite', sons)") || !J.includes('PERDU_MS')) pb.push('une ratée doit afficher « PERDU » 1 s avec le son de défaite');
   if (!J.includes('DECOMPTE[decompte]')) pb.push('plus de décompte 3, 2, 1');
   if (!Cl.includes('<MiniJeu jeu={miniJeuOuvert}') || !Cl.includes('tirerRecompenseMiniJeu(ownedRef.current)') || !Cl.includes('setMiniJeuOuvert(choisirMiniJeu())')) pb.push('les mini-jeux ne sont plus branchés sur l\'écran principal');
