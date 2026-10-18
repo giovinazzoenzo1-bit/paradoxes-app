@@ -4346,6 +4346,20 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   il tape à 11,3 taps/s (référence 7) et le seuil ne bloque de toute façon pas (le défi d'Ascension arrive à l'œuf 6) ;
   le régler sur son rythme (~30 M) ferait farmer ~1 h 55 au joueur de référence en fin d'A0 (production de fin 2 905/s).
 
+## CALCULATEUR AU RYTHME DU JOUEUR (décision de l'auteur : « que les défis durent le même temps pour tous ») — PUBLIÉ
+
+- **Avant** (rythme FIXE 7 taps/s), MESURÉ : 50,1 h de jeu actif à 4 taps/s, 31,2 h à 7, 24,5 h à 11, 20,7 h à 16,5.
+  **Après** : 32,3 h · 30,7 h · 30,4 h · 30,5 h. Un autoclick reçoit des cibles à SA vitesse : aucun avantage à tricher.
+- Mesure (ClickerScreen) : fenêtres de 500 taps, pauses de plus de 1,2 s exclues ; `calculDefis.majRythme` : MONTE tout de suite,
+  DESCEND d'au plus 10 % par fenêtre (taper lentement exprès coûte plus que ça ne rapporte), plancher 4, départ 7, garde-fou 60.
+  Sauvegardé (`rythmeTaps`), écrit dans la photo des défis (`tapsParSec`) et dans « Signaler un problème ». La cible reste FIGÉE.
+- ⚠️ **PORTE d'Ascension ≠ ÉCHELLE DES PRIX** : `seuilAscension` (pièces à gagner) est calculée pour le joueur LENT (4 taps/s,
+  10e centile + 10 min, `TAPS=4 PORTE=1 mesure-seuils.js`), sinon il farmait ~1 h par Ascension ; `ascensionThreshold` reste
+  l'échelle du joueur de référence pour les packs, les légendaires, l'avant-l'heure, le hors-ligne et l'Essence.
+- Piège d'instrument corrigé : l'outil attendait l'échelle des prix au lieu de la porte (faux « 26 à 30 min d'attente »).
+- Contrôle auditRythmeJoueur (+ 4 pièges). ⚠️ verifier-controles : la dernière tranche dépasse 300 s → passes 0 25 · 25 55 ·
+  55 85 · 85 115 · 115 150 · 150 200 · 200 250 · 250 400 (281 pièges).
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
