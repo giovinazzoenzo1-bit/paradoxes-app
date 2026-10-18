@@ -4379,6 +4379,12 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - **🥚 Bonneteau d'œufs** (demande de l'auteur : 3 manches, de facile à difficile) : la lueur se montre sous un œuf soulevé
   (1,2 s), puis 3 / 5 / 8 échanges en arc de 0,48 / 0,34 / 0,23 s ; mauvais œuf = PERDU. Banc : `ATTENTE_MS=3700` pour
   capturer un mini-jeu après son décompte.
+- **Déclenchement (décision de l'auteur) : le joueur ne CHOISIT pas.** Un mini-jeu au hasard SURGIT tout seul toutes les
+  10 min (`MINI_JEU_INTERVALLE_MS`), seulement sur l'écran principal sans autre fenêtre (`peutPopperRef` : combat, Gardien,
+  incubateur, calendrier, Ascension, hors ligne, pub, choix de créature, menu 🛠️), jamais dans les 2 min qui suivent
+  l'ouverture. La lueur errante (à toucher, toutes les 30 min) est RETIRÉE ; clé de sauvegarde `prochaineLueur` gardée.
+- Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
+  6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
 - ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
   `menuDevOuvert`, `lancerMiniJeuDev`) qui lance un mini-jeu 3 s après le choix.
   Contrôle auditChasseLueurs + 3 pièges. Durées des lueurs à régler après les essais de l'auteur (LUEUR_DUREE_FIN_MS).
