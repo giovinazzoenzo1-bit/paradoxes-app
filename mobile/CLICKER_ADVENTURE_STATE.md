@@ -4336,6 +4336,16 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - **Défis illogiques** : « Invoque des créatures » (bouton Invoquer réservé aux tests) → jour : « Active 5 pouvoirs de
   créature » ; semaine : « Fais 1 Ascension » ; succès : « Gagner des combats en Aventure ». Identifiants gardés (sauvegardes).
 
+## PACKS DE GRIFFES EN PIÈCES (demande de l'auteur, bloqué en Aventure) — PUBLIÉ
+
+- Prix : 5 / 10 / 20 / 40 % du seuil (avant 10 / 15 / 20 / 60 %), × le coefficient par Ascension ; toujours 4 packs maximum.
+  Intention de l'auteur : le 1er « assez facile mais pas trop », le 3e « compliqué mais faisable », le 4e « presque impossible ».
+- Taille : AU MOINS 100 Griffes (`PACK_PIECES_PLANCHER`), sinon 2 niveaux de la créature moyenne (124 au niveau 50, 650 au 70).
+  Mesuré avant : 11 à 47 Griffes jusqu'au niveau 30.
+- Seuil d'Ascension : l'auteur l'avait « validé » à l'œuf 5 (17,6 M gagnés pour 11,7 M). NON relevé, recommandation donnée :
+  il tape à 11,3 taps/s (référence 7) et le seuil ne bloque de toute façon pas (le défi d'Ascension arrive à l'œuf 6) ;
+  le régler sur son rythme (~30 M) ferait farmer ~1 h 55 au joueur de référence en fin d'A0 (production de fin 2 905/s).
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
