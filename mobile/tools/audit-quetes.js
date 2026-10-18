@@ -1413,15 +1413,20 @@ module.exports.auditTamponsAscension = auditTamponsAscension;
 // contrôles qui rejouaient les cibles écrites avec l'ancien simulateur mesuraient un jeu qui n'existe plus (10 h au lieu de
 // 2,8 h à l'A0). Ils gardent leur INTENTION, mesurée ici : le joueur du calculateur (outil v2.3 réaligné, deck type) qui fait
 // les défis dans l'ordre, avec les photos de chaque défi à son apparition.
-let PARCOURS_REF = null;
-function parcoursReference() {
-  if (PARCOURS_REF) return PARCOURS_REF;
+// Le rythme du joueur simulé se choisit (calculateur au rythme du JOUEUR) : un parcours par rythme, gardé en cache.
+const PARCOURS_REF = {};
+function parcoursReference(rythme = 7) {
+  if (PARCOURS_REF[rythme]) return PARCOURS_REF[rythme];
   const T = require('./calculateur-defis-v23.js');
-  let vie = T.etatVieInitial();
-  const groupes = [];
-  for (let a = 0; a < 6; a++) { const r = T.jouer(a, vie, null, { photos: true }); vie = r.V; groupes.push({ a, r, T }); }
-  PARCOURS_REF = groupes;
-  return groupes;
+  const avant = T.HYP.tapsParSec;
+  T.HYP.tapsParSec = rythme;
+  try {
+    let vie = T.etatVieInitial();
+    const groupes = [];
+    for (let a = 0; a < 6; a++) { const r = T.jouer(a, vie, null, { photos: true }); vie = r.V; groupes.push({ a, r, T }); }
+    PARCOURS_REF[rythme] = groupes;
+    return groupes;
+  } finally { T.HYP.tapsParSec = avant; }
 }
 module.exports.parcoursReference = parcoursReference;
 const CALC = () => load('calculDefis');
@@ -1499,6 +1504,34 @@ function auditLegendaires() {
   return pb;
 }
 module.exports.auditLegendaires = auditLegendaires;
+
+// ---- CALCULATEUR AU RYTHME DU JOUEUR (décision de l'auteur : « que les défis durent le même temps pour tous ») ----
+// Règle du rythme (monte tout de suite, descend d'au plus 10 % par fenêtre de 500 taps, plancher 4, départ 7), photo des
+// défis qui le porte, et le RÉSULTAT : à 4 et à 11 taps/s, le jeu dure comme à 7 (±15 %), et le joueur lent attend au plus
+// 20 min la porte d'Ascension (seuilAscension, calculée pour lui). MESURÉ avant : 50,1 h à 4 taps/s, 24,5 h à 11.
+function auditRythmeJoueur(ecart = 0.15, attenteMaxMin = 20) {
+  const fs = require('fs');
+  const CD = CALC();
+  const pb = [];
+  if (CD.majRythme(7, 500, 500 / 11) !== 11) pb.push('le rythme ne monte plus tout de suite');
+  if (Math.abs(CD.majRythme(10, 500, 500 / 5) - 9) > 1e-9) pb.push('le rythme baisse de plus de 10 % par fenêtre de 500 taps');
+  if (CD.majRythme(4.2, 500, 500 / 1) !== 4) pb.push('le rythme passe sous le plancher de 4 taps/s');
+  if (CD.rythmeDe({}) !== 7) pb.push('un joueur sans mesure ne démarre plus à 7 taps/s');
+  const st = { ascension: 2, tapPower: 40, coins: 0, tapUpgrades: { tap1: 10, tap2: 8 } };
+  if (!(CD.productionReference({ ...st, tapsParSec: 14 }, []) > 1.8 * CD.productionReference({ ...st, tapsParSec: 7 }, []))) pb.push('le calculateur ne lit plus le rythme du joueur');
+  const Cl = fs.readFileSync(require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if (!Cl.includes('    tapsParSec: rythmeRef.current,')) pb.push('la photo des défis ne porte plus le rythme du joueur');
+  if (!Cl.includes('rythmeRef.current = majRythme(rythmeRef.current, r.taps, r.sec);')) pb.push('le jeu ne mesure plus le rythme tous les 500 taps');
+  const duree = (P) => P.reduce((t, g) => t + g.r.J.resultats.reduce((u, x) => u + x.actif, 0), 0) / 3600;
+  const d7 = duree(parcoursReference(7));
+  [4, 11].forEach((v) => {
+    const P = parcoursReference(v); const d = duree(P);
+    if (Math.abs(d / d7 - 1) > ecart) pb.push(`à ${v} taps/s le jeu dure ${d.toFixed(1)} h contre ${d7.toFixed(1)} h à 7`);
+    if (v === 4) P.forEach(({ a, r }) => { const x = r.J.resultats.find((y) => y.m === 'ascension'); if (x && x.actif / 60 > attenteMaxMin) pb.push(`A${a} : le joueur lent attend ${(x.actif / 60).toFixed(0)} min la porte d'Ascension`); });
+  });
+  return pb;
+}
+module.exports.auditRythmeJoueur = auditRythmeJoueur;
 
 // ---- ÉCLOSION : un œuf neuf = un minuteur neuf (bug réel signalé par l'auteur) ----
 // « L'œuf 4 n'a pas eu de temps d'éclosion, le Gardien est apparu direct » : « Mettre en incubation » ne vidait pas le nid, et
