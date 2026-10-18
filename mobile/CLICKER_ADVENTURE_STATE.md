@@ -4393,6 +4393,8 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   le RENDU affiche vit dans un ÉTAT ; une référence ne sert qu'aux gestes. (Au banc, les taps des mini-jeux ne passent pas.)
 - ✅ Étape 3 **🔐 Coffre à broches** : aiguille en aller-retour (1,6 → 1,25 → 1 s), zone verte 22 → 15 → 10 % de la jauge,
   3 broches ; tap hors zone ou 4 allers-retours sans tap = perdu.
+- ✅ Étape 4 **✨ Pluie de spores** : 18 spores (cyan, une sur trois dorée) tombent vers le nid de l'écran principal
+  (`SPORE_SOL` = 70 % de la hauteur), écart 0,9 → 0,45 s, chute 3,2 → 2 s ; une seule touche le nid = perdu (≈ 14 s de jeu).
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
 - ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
