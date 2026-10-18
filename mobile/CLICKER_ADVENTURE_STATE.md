@@ -4360,6 +4360,17 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - Contrôle auditRythmeJoueur (+ 4 pièges). ⚠️ verifier-controles : la dernière tranche dépasse 300 s → passes 0 25 · 25 55 ·
   55 85 · 85 115 · 115 150 · 150 200 · 200 250 · 250 400 (281 pièges).
 
+## ✨ MINI-JEU « CHASSE AUX LUEURS » (idée de l'auteur) — PUBLIÉ
+
+- Une lueur errante passe sur l'écran principal toutes les 30 min (la 1re 5 min après l'arrivée ; ignorée 60 s, elle s'en va ;
+  `prochaineLueur` sauvegardée). La toucher : fenêtre plein écran (Modal : aucun tap n'atteint l'œuf, les défis ni le rythme),
+  titre « ✨ Chasse aux Lueurs », consigne, décompte 3-2-1-GO, puis 15 lueurs, une à la fois, de 1,4 s à 0,8 s. Pas de compteur
+  (demande de l'auteur). Une ratée : « PERDU » en rouge 1 s, écran qui tremble, son `defaite`, vibration.
+- **Récompense de TOUT mini-jeu (règle de l'auteur)** : 80 % les Griffes d'UN niveau de la meilleure créature (celle dont le
+  prochain niveau coûte le plus), 15 % Tap ×2 pendant 2 min (prolonge un bonus en cours), 5 % 3 Diamants. JAMAIS de pièces.
+- Fichiers : `games/clicker/miniJeux.js` (logique), `screens/games/ChasseLueurs.js` (écran), scène de banc `mini-jeux.jsx`.
+  Contrôle auditChasseLueurs + 3 pièges. Durées des lueurs à régler après les essais de l'auteur (LUEUR_DUREE_FIN_MS).
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
