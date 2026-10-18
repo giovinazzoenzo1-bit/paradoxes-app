@@ -179,6 +179,7 @@ function statsJeu(a, s, V) {
   const base = C.passiveRate({ autoClickers: s.autoClickers, upgradeLevels: s.upgradeLevels,
     sanctuaryLevel: s.sanctuaryLevel, essence: s.essence, ascensionCount: a });
   return {
+    tapsParSec: HYP.tapsParSec, // rythme du joueur simulé (le calculateur du jeu le lit sur la photo)
     ascension: a, tapPower: s.tapPower, critLevel: s.critLevel, critDamageLevel: s.critDamageLevel,
     autoClickers: s.autoClickers, tapUpgrades: s.tapUpgrades, upgradeLevels: s.upgradeLevels,
     sanctuaryLevel: s.sanctuaryLevel, veilleurLevel: s.veilleurLevel, coins: s.coins, totalEarned: s.totalEarned,

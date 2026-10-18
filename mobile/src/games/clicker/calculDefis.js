@@ -17,7 +17,28 @@ import {
 } from './clickerLogic';
 
 // ---- Joueur de référence (décisions de l'auteur, 18/10) ----------------
-export const TAPS_REF = 7;            // rythme FIXE (le joueur rapide va plus vite : le talent reste récompensé)
+export const TAPS_REF = 7;            // rythme de DÉPART (joueur qui n'a pas encore 500 taps mesurés) et du joueur de référence
+// ⚠️⚠️ RYTHME DU JOUEUR (décision de l'auteur : « que les défis durent le même temps pour tous », lents, rapides et autoclicks).
+// Avant, le rythme était FIXE (7 taps/s) — MESURÉ : 50 h de jeu à 4 taps/s, 31 h à 7, 20,7 h à 16,5 ; le joueur lent
+// abandonne, l'autoclick fonce. Désormais la photo du défi porte `tapsParSec`, le rythme MESURÉ du joueur (moyenne des 500
+// derniers taps, pauses de plus de 1,2 s exclues) : il MONTE tout de suite, il DESCEND d'au plus 10 % par fenêtre de 500 taps
+// (taper lentement exprès pour avoir de petites cibles coûte plus qu'il ne rapporte), jamais sous 4 taps/s. La cible reste
+// FIGÉE à l'apparition du défi. Les seuils d'Ascension sont calculés au plancher (4 taps/s) : personne ne farme à la fin.
+export const RYTHME_FENETRE_TAPS = 500;
+export const RYTHME_PLANCHER = 4;
+export const RYTHME_PLAFOND = 60;      // garde-fou (aucun humain ; un autoclick plus rapide reste à 60)
+export const RYTHME_BAISSE_MAX = 0.10;
+export function majRythme(actuel, taps, secondes) {
+  const a = Number.isFinite(actuel) && actuel > 0 ? actuel : TAPS_REF;
+  if (!(taps > 0) || !(secondes > 0)) return a;
+  const mesure = Math.min(RYTHME_PLAFOND, taps / secondes);
+  const nouveau = mesure >= a ? mesure : Math.max(mesure, a * (1 - RYTHME_BAISSE_MAX));
+  return Math.max(RYTHME_PLANCHER, Math.round(nouveau * 100) / 100);
+}
+export function rythmeDe(stats) {
+  const v = Number(stats && stats.tapsParSec);
+  return Number.isFinite(v) && v > 0 ? Math.min(RYTHME_PLAFOND, Math.max(RYTHME_PLANCHER, v)) : TAPS_REF;
+}
 export const TRANSE_MOYENNE = 2.47;   // 60 % des taps en Transe (rapport de l'auteur) → multiplicateur moyen
 export const DELAI_POUVOIR_SEC = 5;   // un pouvoir prêt est activé ~5 s plus tard
 
@@ -75,7 +96,7 @@ function etatDe(stats) {
 export function productionReference(stats, idsCreatures) {
   const e = etatDe(stats);
   const b = bonusPouvoirs(idsCreatures);
-  return TAPS_REF * valeurTap(e) * TRANSE_MOYENNE * (1 + b.tap) + revenuPassif(e) * (1 + b.passif);
+  return rythmeDe(stats) * valeurTap(e) * TRANSE_MOYENNE * (1 + b.tap) + revenuPassif(e) * (1 + b.passif);
 }
 
 // ---- Quels défis sont calculés -----------------------------------------
@@ -240,14 +261,14 @@ export function cibleCalculee(q, stats, ctx) {
       const r = bonusPouvoirs(c.creatures).parSec;
       cible = r > 0 ? Math.max(1, Math.round(tau * r)) : null;
     } else if (m === 'totalTaps' && q.mode === 'absolute') {
-      cible = Math.ceil(((s.totalTaps || 0) + TAPS_REF * tau) / 100) * 100;
+      cible = Math.ceil(((s.totalTaps || 0) + rythmeDe(s) * tau) / 100) * 100;
     } else if (m === 'totalCrits' && q.mode === 'delta') {
       const ub = upgradeBonuses(s.upgradeLevels || {});
       const pN = Math.min(1, critChance(s.critLevel || 0) + (ub.critChancePct || 0));
       // 17/10 : un critique LÉGENDAIRE compte aussi (tirage à part : un tap est compté s'il est l'un OU l'autre).
       const pL = chanceLegendaire((s.legendaires || {}).faveurV2);
       const p = pN + pL - pN * pL;
-      cible = p > 0 ? Math.max(1, Math.round(TAPS_REF * tau * p)) : null;
+      cible = p > 0 ? Math.max(1, Math.round(rythmeDe(s) * tau * p)) : null;
     }
     if (cible === null) return null;
     cible = Math.floor(cible);

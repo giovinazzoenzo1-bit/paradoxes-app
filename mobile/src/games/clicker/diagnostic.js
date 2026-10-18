@@ -169,6 +169,7 @@ export function construireRapport({ instantane, derniereErreur, appareil, build,
     lignes.push('');
     lignes.push('Mesures de jeu :');
     lignes.push('- Temps de jeu actif : ' + duree(m.tempsJeuSec) + ' · ouvertures : ' + (m.sessions || 0) + ' · par ouverture : ' + duree((m.tempsJeuSec || 0) / Math.max(1, m.sessions || 1)));
+    if (m.rythmeCalcul > 0) lignes.push('- Rythme retenu par le calculateur de défis : ' + Number(m.rythmeCalcul).toFixed(1).replace('.', ',') + ' taps/s (fenêtres de 500 taps)');
     lignes.push('- Taps : ' + (m.taps || 0) + ' · rythme moyen : ' + (m.tapsActifsSec > 0 ? (m.taps / m.tapsActifsSec).toFixed(1).replace('.', ',') : '?') + ' taps/s · en Transe : ' + (m.transeSec > 0 ? (m.tapsTranse / m.transeSec).toFixed(1).replace('.', ',') : '?') + ' taps/s');
     lignes.push('- Transe : ' + (m.transes || 0) + ' fois · durée moyenne : ' + (m.transes ? Math.round(m.transeSec / m.transes) : 0) + ' s · record : ' + Math.round(m.transeMax || 0) + ' s');
     lignes.push('- Pièces par tap (moyenne) : ' + (m.taps ? Math.round(m.piecesTaps / m.taps) : 0) + ' · revenu passif : ' + nombre(m.revenuPassif || 0) + ' /s');

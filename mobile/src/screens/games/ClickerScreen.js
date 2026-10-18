@@ -71,6 +71,7 @@ import {
   sanctuaryUpgradeCost,
   veilleurOfflineMultiplier,
   LEGENDAIRES, plafondLegendaire, prixLegendaire, chanceLegendaire, multiplicateurLegendaire, multiplicateurSanctuaireV2,
+  TRANSE_WINDOW_MS,
   veilleurUpgradeCost,
   ascensionThreshold,
   essenceBonusMultiplier,
@@ -129,7 +130,7 @@ import {
   metriqueDuDefi,
   oeufDuDefiAscension,
 } from '../../games/clicker/questLogic';
-import { cibleCalculee, estCalcule, oeufDuDefi, basculeAchat } from '../../games/clicker/calculDefis';
+import { cibleCalculee, estCalcule, oeufDuDefi, basculeAchat, majRythme, RYTHME_FENETRE_TAPS, TAPS_REF } from '../../games/clicker/calculDefis';
 import FaussePub from '../../components/FaussePub';
 import { ICONES_PUB } from '../../components/iconesPubs';
 import { PUB_BOOST_TAP_MULT, PUB_BOOST_TAP_SEC } from '../../games/clicker/clickerLogic';
@@ -432,6 +433,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Défi tout juste validé, à annoncer au joueur. `null` = rien à montrer.
   const [offlineReport, setOfflineReport] = useState(null);
   // 17/10 (auteur : mesures du rapport « Signaler un problème », test manuel du calculateur de défis) — compteurs de jeu.
+  // Rythme du JOUEUR pour le calculateur de défis (décision de l'auteur) : fenêtres de 500 taps, pauses > 1,2 s exclues.
+  const rythmeRef = useRef(TAPS_REF);
+  const rythmeFenetreRef = useRef({ taps: 0, sec: 0, dernier: 0 });
   const mesuresRef = useRef({ tempsJeuSec: 0, sessions: 0, taps: 0, tapsActifsSec: 0, tapsTranse: 0, transeSec: 0, transes: 0, transeMax: 0, transeDebut: 0, dernierTap: 0, piecesTaps: 0, doreesApparues: 0, doreesTouchees: 0, horsLigneRetours: 0, horsLignePieces: 0, revenuPassif: 0, defiId: null, defiLabel: null, defiDebut: 0, historique: [] });
   const mesuresChargeesRef = useRef(false);
   const defiCourantRef = useRef({ id: null, label: null });
@@ -1400,6 +1404,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setSanctuaryLevel(saved.sanctuaryLevel || 0);
           setVeilleurLevel(savedVeilleur);
           setLegendaires(saved.legendaires || {});
+          rythmeRef.current = Number(saved.rythmeTaps) > 0 ? Number(saved.rythmeTaps) : TAPS_REF;
+          mesuresRef.current.rythmeCalcul = rythmeRef.current;
           setLegendairesAsc(saved.legendairesAsc || {});
           setEssence(saved.essence || 0);
           setLastRitualAt(saved.lastRitualAt || 0);
@@ -1766,6 +1772,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     sanctuaryLevel: sanctuaryLevelRef.current,
     veilleurLevel: veilleurLevelRef.current,
     legendaires: legendairesRef.current,       // 17/10 : permanents
+    rythmeTaps: rythmeRef.current,             // rythme du joueur pour le calculateur (fenêtres de 500 taps)
     legendairesAsc: legendairesAscRef.current, // 17/10 : achats de l'Ascension en cours
     essence: essenceRef.current,
     lastRitualAt: lastRitualAtRef.current,
@@ -2101,6 +2108,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       }
       if (newTranseMult >= 2.5 && m.transeDebut) m.transeMax = Math.max(m.transeMax, (now - m.transeDebut) / 1000);
       m.dernierTap = now;
+    }
+    // Rythme du calculateur : chaque tap compte (même ceux d'un lot au même instant) ; le temps ne compte que les écarts
+    // d'au plus 1,2 s (au-delà, c'est une pause). Tous les 500 taps : nouveau rythme (monte vite, descend lentement).
+    {
+      const r = rythmeFenetreRef.current;
+      const ecartR = now - (r.dernier || 0);
+      if (r.dernier && ecartR >= 0 && ecartR <= TRANSE_WINDOW_MS) { r.taps += 1; r.sec += ecartR / 1000; }
+      r.dernier = now;
+      if (r.taps >= RYTHME_FENETRE_TAPS) {
+        rythmeRef.current = majRythme(rythmeRef.current, r.taps, r.sec);
+        mesuresRef.current.rythmeCalcul = rythmeRef.current; // visible dans « Signaler un problème »
+        r.taps = 0; r.sec = 0;
+      }
     }
     const finalGain = Math.round(gainCoins(gain));
     Animated.sequence([
@@ -3700,6 +3720,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, []);
 
   const buildQuestStatsSnapshot = () => ({
+    tapsParSec: rythmeRef.current, // rythme du JOUEUR : le calculateur dimensionne ses cibles dessus (même durée pour tous)
     totalEarned: totalEarnedRef.current,
     coins: coinsRef.current,
     // ⚠️ Passif de BASE, sans pouvoir actif : c'est sur cette photo que la
