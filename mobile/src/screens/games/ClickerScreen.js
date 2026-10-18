@@ -71,7 +71,7 @@ import {
   sanctuaryUpgradeCost,
   veilleurOfflineMultiplier,
   LEGENDAIRES, plafondLegendaire, prixLegendaire, chanceLegendaire, multiplicateurLegendaire, multiplicateurSanctuaireV2,
-  TRANSE_WINDOW_MS,
+  TRANSE_WINDOW_MS, seuilAscension,
   veilleurUpgradeCost,
   ascensionThreshold,
   essenceBonusMultiplier,
@@ -2676,7 +2676,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // mais directement par le SEUIL.
   // Seuil de pièces atteint. ⚠️ Ce n'est plus suffisant (26/09) : voir
   // `ascensionReady`, défini après le défi en cours.
-  const seuilAscensionAtteint = totalEarned >= ascensionThreshold(ascensionCount);
+  const seuilAscensionAtteint = totalEarned >= seuilAscension(ascensionCount); // PORTE (joueur lent), pas l'échelle des prix
   // ⚠️ Le panneau d'Ascension n'est PLUS une `Alert` système : elle
   // impose son apparence iOS/Android et jurait avec le reste du jeu. Il
   // s'affiche maintenant sur le parchemin illustré (`ascension-panel`),
@@ -3294,7 +3294,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         const asc = ascensionCountRef.current || 0;
         const etat = {
           coins: coinsRef.current, totalEarned: totalEarnedRef.current,
-          seuil: ascensionThreshold(asc), defis, suivi: diagSuiviRef.current,
+          seuil: seuilAscension(asc), defis, suivi: diagSuiviRef.current,
         };
         const problemes = detecterBlocages(etat);
         const instantane = { ...etat, ascension: asc, oeuf: sequenceIndexRef.current,
@@ -5295,10 +5295,10 @@ function ShopView({
                 {ascensionReady
                   ? `Remet ton économie à zéro · tu gardes créatures et Aventure · +${ascensionGriffesReward(ascensionCount + 1)} Griffes et production x${ascensionSpeedMultiplier(ascensionCount + 1).toFixed(2)}`
                   : !defiAscensionEnCours
-                    ? (totalEarned >= ascensionThreshold(ascensionCount) // panneau à part : pas de seuilAscensionAtteint ici
+                    ? (totalEarned >= seuilAscension(ascensionCount) // panneau à part : pas de seuilAscensionAtteint ici
                       ? `Seuil atteint ✓ — l'Ascension s'ouvre avec son défi (œuf ${oeufDuDefiAscension(ascensionCount)})`
                       : `🔒 Débloquée par le défi « Fais ta ${ascensionCount + 1}${ascensionCount === 0 ? 're' : 'e'} Ascension » : termine d'abord les défis de tes œufs`)
-                    : `Gagne encore ${formatNum(ascensionThreshold(ascensionCount) - totalEarned)} pièces au total pour débloquer`}
+                    : `Gagne encore ${formatNum(seuilAscension(ascensionCount) - totalEarned)} pièces au total pour débloquer`}
               </Text>
             </TouchableOpacity>
 

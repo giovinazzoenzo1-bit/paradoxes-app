@@ -20,6 +20,9 @@ const CENTILE = 0.1; // deck malchanceux
 // Marge (décision de l'auteur, 17/10 : « + 10 min » au lieu de « ÷ 0,9 ») : le deck malchanceux farme 10 min de sa production
 // de fin de chaîne. MESURÉ avec ÷ 0,9 : aux A4-A5 tous les decks se valent (même trio en tête) → TOUT le monde farmait 35 à 59 min.
 const MARGE_SEC = Number(process.env.MARGE_MIN || 10) * 60;
+// PORTE=1 (avec TAPS=4) : calcule la PORTE de l'Ascension du joueur LENT (clickerLogic.PORTE_ASCENSION_PART) SANS toucher
+// l'échelle des prix (ascensionThreshold) : une seule passe, prix de référence. Afficher : part = porte ÷ ascensionThreshold.
+const PORTE = process.env.PORTE === '1';
 const suites = Array.from({ length: N }, (_, k) => T.suiteCreatures(20261018 + 7919 * k));
 const poserDeck = (k) => { T.IDS.splice(0, T.IDS.length, ...suites[k]); };
 const centile = (xs, p) => { const s = xs.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
@@ -35,14 +38,14 @@ function mesurer() {
       const actuel = C.ascensionThreshold(a);
       let seuil = actuel;
       const suivi = [];
-      for (let it = 0; it < ITER; it++) {
-        C.ASCENSION_THRESHOLDS[a] = seuil / aj;
+      for (let it = 0; it < (PORTE ? 1 : ITER); it++) {
+        if (!PORTE) C.ASCENSION_THRESHOLDS[a] = seuil / aj;
         const gagnes = vies.map((v, k) => { poserDeck(k); const J = T.jouer(a, v, null, {}).J; return J.gagneChaine + MARGE_SEC * J.prodFin; });
         const cible = centile(gagnes, CENTILE);
         suivi.push(cible);
-        seuil = it === ITER - 1 ? cible : Math.sqrt(seuil * cible); // amorti : sinon le point fixe oscille
+        seuil = PORTE || it === ITER - 1 ? cible : Math.sqrt(seuil * cible); // amorti : sinon le point fixe oscille
       }
-      C.ASCENSION_THRESHOLDS[a] = seuil / aj;
+      if (!PORTE) C.ASCENSION_THRESHOLDS[a] = seuil / aj;
       const runs = vies.map((v, k) => { poserDeck(k); return T.jouer(a, v, null, {}); });
       vies = runs.map((r) => r.V);
       const actifs = runs.map((r) => r.J.resultats.reduce((t, x) => t + x.actif, 0) / 3600);

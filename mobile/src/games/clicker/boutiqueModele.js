@@ -11,7 +11,7 @@ import {
   veilleurUpgradeCost, veilleurMaxed, tapUpgradeCost, tapUpgradeUnlocked, upgradeItemCost,
   autoClickerCost, griffesCoinCost, taillePackGriffes, coreUpgradeUnlocked, ascensionSpeedMultiplier,
   achatsGriffesPiecesRestants, GRIFFES_PIECES_MAX_PAR_ASCENSION,
-  ascensionThreshold, OFFRANDE_APPCOINS_COST, SANCTUARY_MAX_LEVEL, VEILLEUR_MAX_LEVEL,
+  ascensionThreshold, seuilAscension, OFFRANDE_APPCOINS_COST, SANCTUARY_MAX_LEVEL, VEILLEUR_MAX_LEVEL,
   coreUpgradeRequirement, critChance, critMultiplier, offrandeReward, SANCTUARY_BONUS_PER_LEVEL, VEILLEUR_BONUS_PER_LEVEL,
   TAP_UPGRADE_UNLOCK_LEVEL, TAP_UPGRADE_FIRST_PACTE_LEVEL, CORE_UNLOCKS,
   LEGENDAIRES, plafondLegendaire, prixLegendaire, chanceLegendaire, multiplicateurLegendaire,
@@ -46,7 +46,7 @@ function construireNoeuds(p) {
   };
 
   // ── Centre : Ascension, Griffes (gauche), Offrande (droite)
-  const seuil = ascensionThreshold(p.ascensionCount);
+  const seuil = seuilAscension(p.ascensionCount); // PORTE de l'Ascension (joueur lent), pas l'échelle des prix
   ajouter({
     id: 'ascension', taille: 150, emoji: '🌟', nom: 'Ascension',
     niveau: p.ascensionCount > 0 ? `×${ascensionSpeedMultiplier(p.ascensionCount).toFixed(2)}` : '',

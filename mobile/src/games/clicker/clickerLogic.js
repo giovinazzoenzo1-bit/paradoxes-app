@@ -1912,6 +1912,20 @@ export function ascensionThreshold(ascensionCount) {
 
 export const ASCENSION_MIN_LIFETIME_EARNED = ASCENSION_FIRST_THRESHOLD;
 
+// ⚠️⚠️ PORTE de l'Ascension ≠ ÉCHELLE DES PRIX (calculateur au rythme du joueur, décision de l'auteur).
+// `ascensionThreshold` reste l'échelle du joueur de RÉFÉRENCE (7 taps/s) : packs de Griffes, objets légendaires, prix « avant
+// l'heure », plafond hors ligne et Essence s'y mesurent (sinon tous deux fois moins chers). La PORTE (pièces gagnées à atteindre)
+// est calculée pour le joueur LENT (4 taps/s, plancher du calculateur) : avec des cibles à SON rythme, il gagne deux fois moins
+// de pièces par défi ; à l'ancienne porte, il aurait farmé ~1 h à chaque fin d'Ascension. MESURÉ (mesure-seuils.js, TAPS=4
+// PORTE=1, 20 suites d'œufs, 10e centile). À RELANCER avec les seuils : part = porte ÷ ascensionThreshold.
+// Marge de 10 min (règle de l'auteur). Mesure : `TAPS=4 PORTE=1 mesure-seuils.js`. ⚠️ Une attente de 26 à 30 min aux A3-A4 venait
+// de l'INSTRUMENT (il attendait l'échelle des prix au lieu de la porte), pas du jeu : corrigé dans calculateur-defis-v23.js.
+export const PORTE_ASCENSION_PART = [0.452, 0.386, 0.548, 0.478, 0.508, 0.463];
+export function seuilAscension(ascensionCount) {
+  const n = Number.isFinite(ascensionCount) ? Math.max(0, Math.floor(ascensionCount)) : 0;
+  return Math.round(ascensionThreshold(n) * PORTE_ASCENSION_PART[Math.min(n, PORTE_ASCENSION_PART.length - 1)]);
+}
+
 export function ascensionEssenceGain(totalCoinsEarnedLifetime, ascensionCount = 0) {
   const threshold = ascensionThreshold(ascensionCount);
   if (totalCoinsEarnedLifetime < threshold) return 0;

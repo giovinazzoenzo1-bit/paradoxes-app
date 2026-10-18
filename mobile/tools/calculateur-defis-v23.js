@@ -223,7 +223,7 @@ function creerJoueur(a, V, depart, opts = {}) {
       case 'maxCreatureLevel': return V.av.meilleure;
       case 'runeBought': return V.runes;
       case 'offering': return V.offrandes;
-      case 'ascension': return s.totalEarned >= C.ascensionThreshold(a) ? a + 1 : a;
+      case 'ascension': return s.totalEarned >= C.seuilAscension(a) ? a + 1 : a; // la PORTE (joueur lent)
       default: return 0;
     }
   };
@@ -303,7 +303,7 @@ function creerJoueur(a, V, depart, opts = {}) {
   };
   const fait = (c, s) => {
     const m = c.m;
-    if (m === 'ascension') return s.totalEarned >= C.ascensionThreshold(a) * (1 - 1e-12);
+    if (m === 'ascension') return s.totalEarned >= C.seuilAscension(a) * (1 - 1e-12);
     if (DUREE_FIXE.includes(m)) return c.ecoule >= c.duree - 1e-9;
     if (m === 'totalCrits') return c.crits >= c.cible - 1e-9;
     const v = valeur(m, s);
@@ -379,7 +379,7 @@ function creerJoueur(a, V, depart, opts = {}) {
     if (m === 'passiveIncome') return { achat: achatPassif(s, c, r), horizon: Infinity };
     if (m === 'coins') return { achat: null, horizon: r > 0 ? Math.max(1e-6, (c.cible - s.coins) / r) : Infinity };
     if (m === 'totalEarned') return { achat: v, horizon: r > 0 ? Math.max(1e-6, (c.base + c.cible - s.totalEarned) / r) : Infinity };
-    if (m === 'ascension') return { achat: v, horizon: r > 0 ? Math.max(1e-6, (C.ascensionThreshold(a) - s.totalEarned) / r) : Infinity };
+    if (m === 'ascension') return { achat: v, horizon: r > 0 ? Math.max(1e-6, (C.seuilAscension(a) - s.totalEarned) / r) : Infinity };
     if (DUREE_FIXE.includes(m)) return { achat: SANS_ACHAT.includes(m) ? null : v, horizon: Math.max(1e-6, c.duree - c.ecoule) };
     if (m === 'totalCrits') {
       // Le joueur des 32 h n'achète pas la Faveur de lui-même : pendant ce défi, il en prend un niveau
