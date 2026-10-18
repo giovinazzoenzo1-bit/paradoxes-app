@@ -171,6 +171,13 @@ export function tailleGroupe(groupe) {
 }
 export function debutGroupe(groupe) { return debutDans(OEUFS_PAR_GROUPE, groupe); }
 export function groupeDeOeuf(index) { return groupeDans(OEUFS_PAR_GROUPE, index); }
+// Numéro (1, 2, 3… sur toute la partie) de l'œuf qui porte le défi « Fais ta Nᵉ Ascension » de cette Ascension.
+export function oeufDuDefiAscension(ascension) {
+  const g = Math.max(0, Math.floor(Number(ascension) || 0));
+  const debut = debutGroupe(g), n = tailleGroupe(g);
+  for (let k = debut; k < debut + n; k++) if ((DEFIS_ECRITS[k] || []).some((q) => q && q.metric === 'ascension')) return k + 1;
+  return debut + n;
+}
 export function rangDansGroupe(index) {
   return Math.max(0, Math.floor(Number(index) || 0)) - debutGroupe(groupeDeOeuf(index));
 }

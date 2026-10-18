@@ -410,7 +410,8 @@ function Grimoire(props) {
   // Sous 10 % : une décimale (« 0,4 % » plutôt qu'un « 0 % » qui décourage).
   const ascPct = asc ? (asc.progres || 0) * 100 : 0;
   const ascPctTexte = ascPct < 10 ? Number(ascPct.toFixed(1)).toString().replace('.', ',') : String(Math.floor(ascPct));
-  const ascStatut = !asc ? '' : ascPrete ? 'PRÊTE !' : ascBloqueeDefi ? '🔒 DÉFI' : `${ascPctTexte} %`;
+  // Seuil atteint avant le défi d'Ascension : « SEUIL ✓ » (demande de l'auteur ; la fiche dit dans quel œuf arrive le défi).
+  const ascStatut = !asc ? '' : ascPrete ? 'PRÊTE !' : ascBloqueeDefi ? 'SEUIL ✓' : `${ascPctTexte} %`;
   const impulsion = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!ascPrete) { impulsion.setValue(0); return undefined; }

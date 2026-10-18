@@ -17,6 +17,7 @@ import {
   LEGENDAIRES, plafondLegendaire, prixLegendaire, chanceLegendaire, multiplicateurLegendaire,
   SANCTUAIRE_V2_PAR_NIVEAU, VEILLEUR_V2_PAR_NIVEAU,
 } from './clickerLogic.js';
+import { oeufDuDefiAscension } from './questLogic.js';
 import { reliquesParFamille, FAMILLES_RELIQUES, autoClicsParPalier, PALIERS_AUTO } from './boutiqueFamilles.js';
 
 // ── Le modèle : chaque élément avec son prix, son état, son GAIN, son achat ──
@@ -55,7 +56,10 @@ function construireNoeuds(p) {
     detail: p.ascensionReady
       ? 'Remet ton économie à zéro — tu gardes tes créatures et l\'Aventure.'
       : !p.defiAscensionEnCours
-        ? `Débloquée par le défi « Fais ta ${p.ascensionCount + 1}${p.ascensionCount === 0 ? 're' : 'e'} Ascension ».`
+        // Demande de l'auteur : un seuil atteint AVANT le défi ne doit pas avoir l'air d'une Ascension « validée ».
+        ? ((p.totalEarned || 0) >= seuil
+          ? `Seuil atteint ✓ — l'Ascension s'ouvre avec son défi (œuf ${oeufDuDefiAscension(p.ascensionCount)}).`
+          : `Débloquée par le défi « Fais ta ${p.ascensionCount + 1}${p.ascensionCount === 0 ? 're' : 'e'} Ascension » (œuf ${oeufDuDefiAscension(p.ascensionCount)}).`)
         : `Gagne encore ${f(Math.max(0, seuil - (p.totalEarned || 0)))} pièces au total pour débloquer.`,
   });
   const prixGriffes = griffesCoinCost(p.griffesCoinBuys, p.ascensionCount);

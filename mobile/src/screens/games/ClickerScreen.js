@@ -127,6 +127,7 @@ import {
   cibleEtatAdaptee,
   estEtatAdapte,
   metriqueDuDefi,
+  oeufDuDefiAscension,
 } from '../../games/clicker/questLogic';
 import { cibleCalculee, estCalcule, oeufDuDefi, basculeAchat } from '../../games/clicker/calculDefis';
 import FaussePub from '../../components/FaussePub';
@@ -5273,7 +5274,9 @@ function ShopView({
                 {ascensionReady
                   ? `Remet ton économie à zéro · tu gardes créatures et Aventure · +${ascensionGriffesReward(ascensionCount + 1)} Griffes et production x${ascensionSpeedMultiplier(ascensionCount + 1).toFixed(2)}`
                   : !defiAscensionEnCours
-                    ? `🔒 Débloquée par le défi « Fais ta ${ascensionCount + 1}${ascensionCount === 0 ? 're' : 'e'} Ascension » : termine d'abord les défis de tes œufs`
+                    ? (totalEarned >= ascensionThreshold(ascensionCount) // panneau à part : pas de seuilAscensionAtteint ici
+                      ? `Seuil atteint ✓ — l'Ascension s'ouvre avec son défi (œuf ${oeufDuDefiAscension(ascensionCount)})`
+                      : `🔒 Débloquée par le défi « Fais ta ${ascensionCount + 1}${ascensionCount === 0 ? 're' : 'e'} Ascension » : termine d'abord les défis de tes œufs`)
                     : `Gagne encore ${formatNum(ascensionThreshold(ascensionCount) - totalEarned)} pièces au total pour débloquer`}
               </Text>
             </TouchableOpacity>
