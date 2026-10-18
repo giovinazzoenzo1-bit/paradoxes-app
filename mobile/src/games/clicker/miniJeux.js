@@ -14,9 +14,11 @@ export const LUEUR_DUREE_DEBUT_MS = 1390; // la 1re lueur
 export const LUEUR_DUREE_FIN_MS = 790;    // la 20e
 // Demande de l'auteur : les lumières BOUGENT dans tous les mini-jeux (jamais statiques) — dérive en ligne droite.
 export const LUEUR_DERIVE_PX = 140;      // distance parcourue au plus pendant sa vie
-export const LUEUR_ERRANTE_INTERVALLE_MS = 30 * 60 * 1000;
-export const LUEUR_ERRANTE_PREMIERE_MS = 5 * 60 * 1000; // première partie : 5 min après l'arrivée, pour la découvrir
-export const LUEUR_ERRANTE_VIE_MS = 60 * 1000;           // ignorée 60 s : elle s'en va
+// ⚠️ Décision de l'auteur : le joueur ne CHOISIT pas ses mini-jeux — un mini-jeu au hasard SURGIT tout seul toutes les 10 min
+// sur l'écran principal (s'il est ailleurs ou dans une fenêtre, le mini-jeu attend son retour), jamais dans les 2 min qui
+// suivent l'ouverture de l'appli. (Avant : une lueur errante toutes les 30 min, à toucher pour jouer.)
+export const MINI_JEU_INTERVALLE_MS = 10 * 60 * 1000;
+export const MINI_JEU_DELAI_OUVERTURE_MS = 2 * 60 * 1000;
 export const PERDU_MS = 1000;
 export const DECOMPTE = ['3', '2', '1', 'GO !'];
 export const DECOMPTE_PAS_MS = 700;
@@ -57,7 +59,7 @@ export const MINI_JEUX = [
   { id: 'bonneteau', titre: "🥚 Bonneteau d'œufs", tuto: "Suis l'œuf qui cache la lueur, puis touche-le." },
 ];
 export function miniJeu(id) { return MINI_JEUX.find((j) => j.id === id) || MINI_JEUX[0]; }
-// La lueur errante lance l'un des mini-jeux au hasard (variété ; même fréquence qu'avant).
+// Le mini-jeu qui surgit est tiré au hasard.
 export function choisirMiniJeu(aleatoire = Math.random) {
   return MINI_JEUX[Math.min(MINI_JEUX.length - 1, Math.floor(aleatoire() * MINI_JEUX.length))].id;
 }

@@ -1561,7 +1561,10 @@ function auditChasseLueurs() {
   M.MINI_JEUX.forEach((j) => { const fins = (j.tuto.match(/[.!?]/g) || []).length; if (!j.tuto || fins !== 1 || !/[.!?]$/.test(j.tuto)) pb.push(`tuto de « ${j.titre} » : il faut UNE seule phrase`); });
   if (M.DOREE_TOURS !== 10 || M.doreeNbLueurs(0) !== 3 || M.doreeNbLueurs(9) !== 7 || M.doreeDuree(0) !== 1600 || M.doreeDuree(9) !== 1000) pb.push('Lueur dorée : 10 tours, de 3 lueurs en 1,6 s à 7 lueurs en 1 s');
   if (M.TRANSE_TEMPS !== 16 || M.TRANSE_FENETRE_MS !== 150 || M.TRANSE_RATES_MAX !== 3 || M.transeIntervalle(0) !== 700 || M.transeIntervalle(15) !== 500) pb.push('Battement de Transe : 16 temps, ± 150 ms, 3 ratés, de 0,7 s à 0,5 s');
-  const vus = new Set(); for (let k = 0; k < 400; k++) vus.add(M.choisirMiniJeu()); if (vus.size !== M.MINI_JEUX.length) pb.push('la lueur errante ne lance plus tous les mini-jeux');
+  const vus = new Set(); for (let k = 0; k < 400; k++) vus.add(M.choisirMiniJeu()); if (vus.size !== M.MINI_JEUX.length) pb.push('le tirage ne lance plus tous les mini-jeux');
+  // Décision de l'auteur : le joueur ne choisit pas — un mini-jeu SURGIT toutes les 10 min, seulement sur l'écran principal
+  // sans autre fenêtre, jamais dans les 2 min qui suivent l'ouverture de l'appli.
+  if (M.MINI_JEU_INTERVALLE_MS !== 10 * 60 * 1000 || M.MINI_JEU_DELAI_OUVERTURE_MS !== 2 * 60 * 1000) pb.push('un mini-jeu ne surgit plus toutes les 10 min (2 min de répit à l\'ouverture)');
   const J = lire('screens/games/MiniJeu.js'), Cl = lire('screens/games/ClickerScreen.js');
   if (!J.includes('<Text style={styles.consigne}>{def.tuto}</Text>')) pb.push('plus de tuto pendant le décompte');
   // Demandes de l'auteur : pas de fond noir ; à la victoire, le son de victoire, des feux d'artifice et le gain en élastique.
@@ -1571,6 +1574,7 @@ function auditChasseLueurs() {
   if (!J.includes('<Text style={styles.perdu}>PERDU</Text>') || !J.includes("jouerSon('defaite', sons)") || !J.includes('PERDU_MS')) pb.push('une ratée doit afficher « PERDU » 1 s avec le son de défaite');
   if (!J.includes('DECOMPTE[decompte]')) pb.push('plus de décompte 3, 2, 1');
   if (!Cl.includes('<MiniJeu jeu={miniJeuOuvert}') || !Cl.includes('tirerRecompenseMiniJeu(ownedRef.current)') || !Cl.includes('setMiniJeuOuvert(choisirMiniJeu())')) pb.push('les mini-jeux ne sont plus branchés sur l\'écran principal');
+  if (!Cl.includes("peutPopperRef.current = view === 'tap' && !incubatorOpen") || !Cl.includes('if (miniJeuOuvertRef.current || !peutPopperRef.current || t < prochainMiniJeuRef.current) return;')) pb.push('un mini-jeu pourrait surgir par-dessus une autre fenêtre');
   return pb;
 }
 module.exports.auditChasseLueurs = auditChasseLueurs;
