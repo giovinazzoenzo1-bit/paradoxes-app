@@ -4685,11 +4685,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         <View style={styles.devMenu}>
           <Text style={styles.devMenuTitre}>🛠️ Menu développeur (à retirer)</Text>
           <Text style={styles.devMenuNote}>Le mini-jeu démarre 3 s après le choix.</Text>
-          {MINI_JEUX.map((j) => (
-            <TouchableOpacity key={j.id} style={styles.devMenuLigne} onPress={() => lancerMiniJeuDev(j.id)}>
-              <Text style={styles.devMenuLigneTexte}>{j.titre}</Text>
-            </TouchableOpacity>
-          ))}
+          {/* Demande de l'auteur : on ne voyait pas le bas du menu → plus haut, et la liste défile si elle dépasse. */}
+          <ScrollView style={styles.devMenuListe}>
+            {MINI_JEUX.map((j) => (
+              <TouchableOpacity key={j.id} style={styles.devMenuLigne} onPress={() => lancerMiniJeuDev(j.id)}>
+                <Text style={styles.devMenuLigneTexte}>{j.titre}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
           <TouchableOpacity style={styles.devMenuLigne} onPress={() => setMenuDevOuvert(false)}>
             <Text style={styles.devMenuLigneTexte}>Fermer</Text>
           </TouchableOpacity>
@@ -6865,12 +6868,13 @@ const styles = StyleSheet.create({
   },
   devMenuBtnTexte: { fontSize: 16 },
   devMenu: {
-    position: 'absolute', left: 30, right: 30, top: SCREEN_H * 0.3, zIndex: 50, padding: 16, borderRadius: 12,
+    position: 'absolute', left: 30, right: 30, top: SCREEN_H * 0.07, maxHeight: SCREEN_H * 0.82, zIndex: 50, padding: 16, borderRadius: 12,
     backgroundColor: 'rgba(20,16,32,0.96)', borderWidth: 1, borderColor: '#888',
   },
   devMenuTitre: { color: '#fff', fontSize: 16, fontWeight: '800', marginBottom: 4 },
   devMenuNote: { color: '#bbb', fontSize: 12, marginBottom: 10 },
-  devMenuLigne: { paddingVertical: 12, paddingHorizontal: 10, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 8 },
+  devMenuListe: { maxHeight: SCREEN_H * 0.62 },
+  devMenuLigne: { paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 6 },
   devMenuLigneTexte: { color: '#fff', fontSize: 15, fontWeight: '700' },
   incubatorBtn: {
     position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * (0.334 - TOP_BLOCK_SHIFT) + 144, zIndex: 3,

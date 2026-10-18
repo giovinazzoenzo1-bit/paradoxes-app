@@ -4411,6 +4411,16 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   `menuDevOuvert`, `lancerMiniJeuDev`) qui lance un mini-jeu 3 s après le choix.
   Contrôle auditChasseLueurs + 3 pièges. Durées des lueurs à régler après les essais de l'auteur (LUEUR_DUREE_FIN_MS).
 
+## ⚠️ L'AUTEUR JOUE SUR L'APK (pas sur Expo Go) — leçon du 18/10 au soir
+
+- L'APK (`build-apk.yml`, `expo-updates` injecté au build) TÉLÉCHARGE une mise à jour en arrière-plan pendant que le jeu
+  est ouvert, et l'installe au LANCEMENT SUIVANT. Fermé trop tôt : rien ne s'installe, l'ancienne version reste.
+- 18/10 : l'APK restait sur 20h13 alors que 20h35 et 20h57 étaient publiées sans erreur (vérifié par l'API GitHub :
+  `actions/runs`, accessible avec le jeton). Résolu par un NOUVEL APK (pousser `mobile/BUILD_APK`), installé PAR-DESSUS
+  l'ancien — jamais désinstaller : la partie serait perdue.
+- Conseil à donner : ouvrir le jeu, le laisser 1 minute sur l'écran principal, le fermer complètement, le rouvrir ;
+  vérifier la date dans les Options. Sinon : nouvel APK.
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
