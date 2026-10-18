@@ -279,8 +279,8 @@ import { jouerSon, jouerSonLimite, SON_CREATURE } from './sonsBoutique';
 import { useMusique, MusiqueActive } from './musique';
 import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
-import ChasseLueurs from './ChasseLueurs';
-import { tirerRecompenseMiniJeu, LUEUR_ERRANTE_INTERVALLE_MS, LUEUR_ERRANTE_PREMIERE_MS, LUEUR_ERRANTE_VIE_MS } from '../../games/clicker/miniJeux';
+import MiniJeu from './MiniJeu';
+import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, LUEUR_ERRANTE_INTERVALLE_MS, LUEUR_ERRANTE_PREMIERE_MS, LUEUR_ERRANTE_VIE_MS } from '../../games/clicker/miniJeux';
 const LUEUR_ERRANTE_IMG = require('../../../assets/fenetres/lueur-cyan.png');
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
 
@@ -618,7 +618,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setLueurErrante(null);
     prochaineLueurRef.current = Date.now() + LUEUR_ERRANTE_INTERVALLE_MS;
     jouerSon('bulle-apparition', sonsJeuRef.current);
-    setChasseOuverte(true);
+    setMiniJeuOuvert(choisirMiniJeu()); // un des mini-jeux, au hasard
   };
   const recompenserMiniJeu = () => {
     const r = tirerRecompenseMiniJeu(ownedRef.current);
@@ -1011,15 +1011,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [boostTapJusqua, setBoostTapJusqua] = useState(0);
   // ✨ CHASSE AUX LUEURS (mini-jeu de l'auteur) : une lueur errante passe toutes les 30 min ; la toucher lance le jeu.
   const [lueurErrante, setLueurErrante] = useState(null); // { x, y, jusqua }
-  const [chasseOuverte, setChasseOuverte] = useState(false);
+  const [miniJeuOuvert, setMiniJeuOuvert] = useState(null); // id du mini-jeu ouvert ('chasse', 'doree', 'transe')
   // ⚠️ MENU DÉVELOPPEUR (demande de l'auteur, À RETIRER avant la sortie) : lance un mini-jeu 3 s après le choix.
   const [menuDevOuvert, setMenuDevOuvert] = useState(false);
-  const lancerMiniJeuDev = () => {
+  const lancerMiniJeuDev = (id) => {
     setMenuDevOuvert(false);
-    setTimeout(() => setChasseOuverte(true), 3000);
+    setTimeout(() => setMiniJeuOuvert(id), 3000);
   };
-  const chasseOuverteRef = useRef(false);
-  chasseOuverteRef.current = chasseOuverte;
+  const miniJeuOuvertRef = useRef(null);
+  miniJeuOuvertRef.current = miniJeuOuvert;
   const prochaineLueurRef = useRef(Date.now() + LUEUR_ERRANTE_PREMIERE_MS);
   const lueurPulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -1027,7 +1027,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       const t = Date.now();
       setLueurErrante((l) => {
         if (l && t > l.jusqua) { prochaineLueurRef.current = t + LUEUR_ERRANTE_INTERVALLE_MS; return null; } // ignorée : elle s'en va
-        if (!l && !chasseOuverteRef.current && t >= prochaineLueurRef.current) {
+        if (!l && !miniJeuOuvertRef.current && t >= prochaineLueurRef.current) {
           const { width, height } = Dimensions.get('window');
           return { x: 30 + Math.random() * Math.max(1, width - 130), y: 220 + Math.random() * Math.max(1, height * 0.3), jusqua: t + LUEUR_ERRANTE_VIE_MS };
         }
@@ -4188,7 +4188,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       )}
       {view === 'tap' && (
         <>
-          {lueurErrante && !chasseOuverte ? (
+          {lueurErrante && !miniJeuOuvert ? (
             <TouchableOpacity style={[styles.lueurErrante, { left: lueurErrante.x, top: lueurErrante.y }]} onPress={ouvrirChasse}
               accessibilityLabel="Lueur errante : lance la Chasse aux Lueurs">
               <Animated.Image source={LUEUR_ERRANTE_IMG} resizeMode="contain" style={[styles.lueurErranteImg, {
@@ -4710,16 +4710,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         <View style={styles.devMenu}>
           <Text style={styles.devMenuTitre}>🛠️ Menu développeur (à retirer)</Text>
           <Text style={styles.devMenuNote}>Le mini-jeu démarre 3 s après le choix.</Text>
-          <TouchableOpacity style={styles.devMenuLigne} onPress={lancerMiniJeuDev}>
-            <Text style={styles.devMenuLigneTexte}>✨ Chasse aux Lueurs</Text>
-          </TouchableOpacity>
+          {MINI_JEUX.map((j) => (
+            <TouchableOpacity key={j.id} style={styles.devMenuLigne} onPress={() => lancerMiniJeuDev(j.id)}>
+              <Text style={styles.devMenuLigneTexte}>{j.titre}</Text>
+            </TouchableOpacity>
+          ))}
           <TouchableOpacity style={styles.devMenuLigne} onPress={() => setMenuDevOuvert(false)}>
             <Text style={styles.devMenuLigneTexte}>Fermer</Text>
           </TouchableOpacity>
         </View>
       )}
-      <ChasseLueurs visible={chasseOuverte} sons={sonsJeuRef.current} vibrations={vibrationsRef.current}
-        onGagne={recompenserMiniJeu} onFermer={() => setChasseOuverte(false)} />
+      <MiniJeu jeu={miniJeuOuvert} sons={sonsJeuRef.current} vibrations={vibrationsRef.current}
+        onGagne={recompenserMiniJeu} onFermer={() => setMiniJeuOuvert(null)} />
       {calendarOpen && (
         <DailyCalendarModal
           calendar={calendar}

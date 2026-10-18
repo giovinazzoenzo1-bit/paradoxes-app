@@ -45,3 +45,34 @@ export function tirerRecompenseMiniJeu(owned, aleatoire = Math.random) {
   if (x < MINI_JEU_TIRAGE.griffes + MINI_JEU_TIRAGE.boostTap) return { type: 'boostTap', minutes: MINI_JEU_BOOST_MIN };
   return { type: 'diamants', amount: MINI_JEU_DIAMANTS };
 }
+
+// ════════ Les mini-jeux et leur TUTO d'une seule phrase, affiché pendant le décompte (demande de l'auteur) ════════
+export const MINI_JEUX = [
+  { id: 'chasse', titre: '✨ Chasse aux Lueurs', tuto: "Touche les 15 lueurs avant qu'elles s'éteignent." },
+  { id: 'doree', titre: '🎯 Lueur dorée', tuto: 'Touche seulement la lueur dorée, jamais les bleues.' },
+  { id: 'transe', titre: '🥁 Battement de Transe', tuto: "Tape quand l'anneau touche le cercle, 3 ratés et c'est perdu." },
+];
+export function miniJeu(id) { return MINI_JEUX.find((j) => j.id === id) || MINI_JEUX[0]; }
+// La lueur errante lance l'un des mini-jeux au hasard (variété ; même fréquence qu'avant).
+export function choisirMiniJeu(aleatoire = Math.random) {
+  return MINI_JEUX[Math.min(MINI_JEUX.length - 1, Math.floor(aleatoire() * MINI_JEUX.length))].id;
+}
+
+// 🎯 LUEUR DORÉE : 10 tours ; à chaque tour, des lueurs bleues (pièges) et UNE dorée. Toucher une bleue, ou laisser passer le
+// temps : perdu. De 3 lueurs et 1,6 s au 1er tour, à 7 lueurs et 1 s au 10e.
+export const DOREE_TOURS = 10;
+export function doreeNbLueurs(i) { return 3 + Math.floor(Math.max(0, Math.min(DOREE_TOURS - 1, Number(i) || 0)) / 2); }
+export function doreeDuree(i) {
+  const k = Math.max(0, Math.min(DOREE_TOURS - 1, Math.floor(Number(i) || 0)));
+  return Math.round(1600 + (1000 - 1600) * (k / (DOREE_TOURS - 1)));
+}
+
+// 🥁 BATTEMENT DE TRANSE : 16 temps ; un anneau se resserre sur le cercle, il faut taper quand il le touche (± 150 ms).
+// Un temps manqué, ou un tap à contretemps, compte un raté ; 3 ratés : perdu. Le tempo accélère : 0,7 s → 0,5 s par temps.
+export const TRANSE_TEMPS = 16;
+export const TRANSE_FENETRE_MS = 150;
+export const TRANSE_RATES_MAX = 3;
+export function transeIntervalle(i) {
+  const k = Math.max(0, Math.min(TRANSE_TEMPS - 1, Math.floor(Number(i) || 0)));
+  return Math.round(700 + (500 - 700) * (k / (TRANSE_TEMPS - 1)));
+}

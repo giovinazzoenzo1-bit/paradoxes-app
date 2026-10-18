@@ -35,7 +35,7 @@ const { spawnSync } = require('child_process');
 const RACINE = path.join(__dirname, '..');
 const F = {
   miniJeux: path.join(RACINE, 'src/games/clicker/miniJeux.js'),
-  chasse: path.join(RACINE, 'src/screens/games/ChasseLueurs.js'),
+  chasse: path.join(RACINE, 'src/screens/games/MiniJeu.js'),
   defis: path.join(RACINE, 'src/games/clicker/defisEcrits.js'),
   logique: path.join(RACINE, 'src/games/clicker/questLogic.js'),
   clicker: path.join(RACINE, 'src/games/clicker/clickerLogic.js'),
@@ -178,6 +178,10 @@ const SABOTAGES = [
     remplace('export const MINI_JEU_TIRAGE = { griffes: 0.80, boostTap: 0.15, diamants: 0.05 };', 'export const MINI_JEU_TIRAGE = { griffes: 0.50, boostTap: 0.45, diamants: 0.05 };')],
   ['auditChasseLueurs', F.miniJeux, 'un mini-jeu paie en pièces (les défis « Obtiens N pièces » et la porte seraient faussés)',
     remplace('  return { type: \'diamants\', amount: MINI_JEU_DIAMANTS };', '  return { type: \'pieces\', amount: 100000 };')],
+  ['auditChasseLueurs', F.chasse, 'plus de tuto d\'une phrase pendant le décompte (demande de l\'auteur)',
+    remplace('            <Text style={styles.consigne}>{def.tuto}</Text>\n', '')],
+  ['auditChasseLueurs', F.miniJeux, 'Battement de Transe : 5 ratés permis au lieu de 3',
+    remplace('export const TRANSE_RATES_MAX = 3;', 'export const TRANSE_RATES_MAX = 5;')],
   ['auditChasseLueurs', F.chasse, 'une lueur ratée n\'affiche plus « PERDU »',
     remplace('<Text style={styles.perdu}>PERDU</Text>', '<Text style={styles.perdu}>Dommage</Text>')],
   ['auditLegendaires', F.ecran, "les niveaux légendaires remis à zéro par l'Ascension (décision de l'auteur : permanents)",
