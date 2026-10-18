@@ -3682,8 +3682,9 @@ function auditPacks() {
   // (avant : 50 + 38 par Ascension → 126 à l'A2, quand un niveau coûtait ~310).
   const cout = (n) => L2.levelUpCost({ rarity: 'commun' }, n);
   for (const [deck, moy] of [[[], 1], [[10, 12, 14], 12], [[69, 70, 74], 71], [[80, 82, 85], 82]]) {
-    const t = L2.taillePackGriffes(deck), attendu = Math.round(cout(moy) + cout(moy + 1));
-    if (t !== attendu) fautes.push({ deck: deck.join('/'), probleme: 'taille du pack ≠ 2 niveaux de la créature moyenne', attendu, trouve: t });
+    // Plancher de 100 Griffes (demande de l'auteur : « remets 100 Griffes »).
+    const t = L2.taillePackGriffes(deck), attendu = Math.max(L2.PACK_PIECES_PLANCHER, Math.round(cout(moy) + cout(moy + 1)));
+    if (t !== attendu) fautes.push({ deck: deck.join('/'), probleme: 'taille du pack ≠ 2 niveaux de la créature moyenne (au moins 100)', attendu, trouve: t });
   }
   if (!(L2.taillePackGriffes([69, 70, 74]) > L2.taillePackGriffes([50, 52, 54]))) fautes.push({ probleme: 'le pack ne suit plus le niveau du deck' });
   if (JSON.stringify(L2.niveauxDuDeck([{ id: 'a', level: 62 }, { id: 'b', level: 60 }, { id: 'c', level: 66 }], ['a', null, 'c'])) !== '[62,66]') fautes.push({ probleme: 'niveauxDuDeck lit mal le deck' });

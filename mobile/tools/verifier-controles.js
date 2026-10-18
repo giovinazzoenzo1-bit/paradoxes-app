@@ -220,8 +220,10 @@ const SABOTAGES = [
     remplace('            setGriffesCoinBuys(0);\n', '')],
   ['auditPacks', F.clicker, 'la taille du pack ne grandit plus avec l\'Ascension',
     remplace("  for (let k = 0; k < PACK_PIECES_NIVEAUX; k++) t += levelUpCost({ rarity: 'commun' }, moy + k);", '  t = 126;')], // 16/10 : pack = 2 niveaux
+  ['auditPacks', F.clicker, "le plancher de 100 Griffes retiré (demande de l'auteur : « remets 100 Griffes »)",
+    remplace('  return Math.max(PACK_PIECES_PLANCHER, Math.round(t));', '  return Math.max(1, Math.round(t));')],
   ['auditPacks', F.clicker, 'les packs redeviennent quasi gratuits (le « 90 packs à l\'A3 » revient)',
-    remplace('export const GRIFFES_PACK_FRACTIONS = [0.10, 0.15, 0.20, 0.60, 3.0];', 'export const GRIFFES_PACK_FRACTIONS = [0.001, 0.001, 0.001, 0.001, 0.001];')],
+    remplace('export const GRIFFES_PACK_FRACTIONS = [0.05, 0.10, 0.20, 0.40, 3.0];', 'export const GRIFFES_PACK_FRACTIONS = [0.001, 0.001, 0.001, 0.001, 0.001];')],
   ['auditDefisAventure', F.defis, "la cible doublée de l'A1 œuf 5 revient (chapitre 12 au lieu de 6)",
     remplace("id: 'a1e5_plusC', icon: '⚔️', metric: 'advLevelReached',\n      target: 51,", "id: 'a1e5_plusC', icon: '⚔️', metric: 'advLevelReached',\n      target: 120,")],
   ['auditValidation', F.ecran, "le défi passe tout seul au suivant (plus de validation)",

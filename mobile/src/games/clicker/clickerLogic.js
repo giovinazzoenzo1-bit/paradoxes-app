@@ -1233,7 +1233,9 @@ export const GRIFFES_COIN_STEP = 10000 * COIN_SCALE;
 // Désormais : un pourcentage du SEUIL de l'Ascension en cours, qui monte à
 // chaque pack ; `purchases` = packs achetés DANS CETTE Ascension (remis à
 // zéro à chaque Ascension, ClickerScreen). Taille : 100 + 75 par Ascension.
-export const GRIFFES_PACK_FRACTIONS = [0.10, 0.15, 0.20, 0.60, 3.0]; // 1er, 2e, 3e, 4e (acharné), 5e et plus
+// ⚠️ Demande de l'auteur (bloqué en Aventure) : packs plus faciles — le 1er « assez facile mais pas trop », le 3e « compliqué
+// mais faisable », le 4e « presque impossible » à 40 % du seuil (avant 10 / 15 / 20 / 60 %). × le coefficient par Ascension.
+export const GRIFFES_PACK_FRACTIONS = [0.05, 0.10, 0.20, 0.40, 3.0]; // 1er, 2e, 3e, 4e (acharné), 5e et plus
 // Plafond FERME (06/10, décision de l'auteur) : 4 packs de Griffes en PIÈCES par Ascension
 // (le compteur repart à zéro à chaque Ascension) ; les DIAMANTS n'ont pas de limite. Le prix
 // montait déjà par paliers (le 5e coûtait 3 seuils d'Ascension) : le plafond l'officialise.
@@ -1246,6 +1248,9 @@ export function achatsGriffesPiecesRestants(purchases) {
 // → 126 à l'A2, quand un niveau coûtait ~310 (« l'achat ne sert à rien »). Le PRIX en pièces ne change pas (part du seuil
 // d'Ascension, 4 packs par Ascension). GRIFFES_COIN_PACK (ci-dessus) n'est plus qu'un souvenir de l'ancienne taille.
 export const PACK_PIECES_NIVEAUX = 2;
+// Demande de l'auteur : « remets 100 Griffes » — 2 niveaux de la créature moyenne ne donnaient que 11 à 47 Griffes jusqu'au
+// niveau 30 (mesuré). Le pack vaut donc AU MOINS 100 Griffes, et suit toujours le deck au-delà (124 au niveau 50, 650 au 70).
+export const PACK_PIECES_PLANCHER = 100;
 // Niveaux des créatures du deck (owned = [{ id, level }], deck = [id | null × 3]) — même lecture en Aventure et au Clicker.
 export function niveauxDuDeck(owned, deck) {
   const parId = {};
@@ -1257,7 +1262,7 @@ export function taillePackGriffes(niveauxDeck) {
   const moy = l.length ? Math.max(1, Math.floor(l.reduce((a, b) => a + b, 0) / l.length)) : 1;
   let t = 0;
   for (let k = 0; k < PACK_PIECES_NIVEAUX; k++) t += levelUpCost({ rarity: 'commun' }, moy + k);
-  return Math.max(1, Math.round(t));
+  return Math.max(PACK_PIECES_PLANCHER, Math.round(t));
 }
 // 17/10 (CHANTIER_ECONOMIE, décision de l'auteur « go coefficient ») : un prix en % du SEUIL coûte bien plus de TEMPS aux
 // A3-A5 — MESURÉ avec les seuils déduits de la chaîne : 1 % du seuil = 0,6 min de jeu en fin d'A1, 1,9 min à l'A3, 5,3 min à
