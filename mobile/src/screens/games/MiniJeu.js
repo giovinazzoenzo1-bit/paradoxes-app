@@ -12,6 +12,7 @@ import {
   COFFRE_BROCHES, coffreLargeur, coffrePeriode, coffreAiguille, coffreDansZone, COFFRE_CYCLES_MAX,
   SPORES_NB, SPORE_SOL, sporeIntervalle, sporeChute,
   RITUEL_SYMBOLES, RITUEL_TOURS, rituelLongueur, rituelPas, sequenceRituel, RITUEL_ROTATION_MS,
+  PILLEURS_NB, PILLEURS_BUISSONS, pilleurDuree, pilleurIntervalle, planPilleurs,
 } from '../../games/clicker/miniJeux';
 import { jouerSon } from './sonsBoutique';
 
@@ -20,6 +21,9 @@ const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
 const OEUF = require('../../../assets/egg/egg-0-endormi.png');
 const OEUF_LUMINEUX = require('../../../assets/egg/egg-3-lumineux.png');
 const COFFRE = require('../../../assets/pubs/coffre.png');
+const PILLEUR = require('../../../assets/minijeux/pilleur.png');
+const PILLEUR_TOUCHE = require('../../../assets/minijeux/pilleur-touche.png');
+const BUISSON = require('../../../assets/minijeux/buisson.png');
 const SYMBOLES = {
   feu: require('../../../assets/combat/effets/feu.png'), eau: require('../../../assets/combat/effets/eau.png'),
   foudre: require('../../../assets/combat/effets/foudre.png'), lumiere: require('../../../assets/combat/effets/lumiere.png'),
@@ -463,6 +467,69 @@ function JeuRituel({ sons, onRate, onReussi }) {
   );
 }
 
+// 🦹 PILLEURS ENCAPUCHONNÉS : ils surgissent de derrière 5 buissons (le pilleur glisse dans une fenêtre qui le cache, le buisson
+// est dessiné PAR-DESSUS) ; les lueurs sont des leurres.
+const BUISSONS_PLACES = [[0.2, 0.36], [0.5, 0.29], [0.8, 0.36], [0.32, 0.58], [0.68, 0.58]];
+const PIL_L = 104, PIL_H = 112, BUI_L = 128, BUI_H = 110;
+function JeuPilleurs({ zone, sons, onRate, onReussi }) {
+  const [occ, setOcc] = useState(() => Array(PILLEURS_BUISSONS).fill(null)); // { id, type, v, touche } par buisson
+  const occRef = useRef(Array(PILLEURS_BUISSONS).fill(null)), minuteurs = useRef([]), fini = useRef(false), touches = useRef(0);
+  const w = zone.w || 360, h = zone.h || 640;
+  const plus = (ms, f) => minuteurs.current.push(setTimeout(f, ms));
+  const poser = (b, o) => { occRef.current[b] = o; setOcc([...occRef.current]); };
+  const sortir = (e, id) => {
+    if (fini.current) return;
+    const libres = occRef.current.map((o, b) => (o ? -1 : b)).filter((b) => b >= 0);
+    if (!libres.length) { plus(150, () => sortir(e, id)); return; } // tous occupés : un instant plus tard
+    const b = libres[Math.floor(Math.random() * libres.length)];
+    const v = new Animated.Value(0), o = { id, type: e.type, v, touche: false };
+    poser(b, o);
+    Animated.timing(v, { toValue: 1, duration: 140, useNativeDriver: true }).start();
+    plus(140 + pilleurDuree(e.rang), () => {
+      if (fini.current || occRef.current[b] !== o || o.touche) return;
+      Animated.timing(v, { toValue: 0, duration: 140, useNativeDriver: true }).start(() => {
+        if (fini.current || occRef.current[b] !== o) return;
+        poser(b, null);
+        if (o.type === 'pilleur') { fini.current = true; onRate(); } // il a replongé avec son butin
+      });
+    });
+  };
+  useEffect(() => {
+    let t = 300;
+    planPilleurs().forEach((e, id) => { plus(t, () => sortir(e, id)); t += pilleurIntervalle(e.rang); });
+    return () => { fini.current = true; minuteurs.current.forEach(clearTimeout); };
+  }, []);
+  const toucher = (b) => {
+    const o = occRef.current[b];
+    if (fini.current || !o || o.touche) return;
+    if (o.type === 'leurre') { fini.current = true; onRate(); return; } // une lueur : piège
+    o.touche = true;
+    setOcc([...occRef.current]);
+    jouerSon('impact-parfait', sons);
+    touches.current += 1;
+    if (touches.current >= PILLEURS_NB) { fini.current = true; plus(250, onReussi); return; }
+    plus(260, () => Animated.timing(o.v, { toValue: 0, duration: 120, useNativeDriver: true }).start(() => { if (occRef.current[b] === o) poser(b, null); }));
+  };
+  return BUISSONS_PLACES.map(([fx, fy], b) => {
+    const o = occ[b], cx = fx * w, cy = fy * h;
+    return (
+      <View key={b} style={[styles.pilBloc, { left: cx - BUI_L / 2, top: cy - PIL_H }]}>
+        <View style={styles.pilFenetre}>
+          {o ? (
+            <Animated.View style={{ transform: [{ translateY: o.v.interpolate({ inputRange: [0, 1], outputRange: [PIL_H, 0] }) }] }}>
+              <TouchableOpacity activeOpacity={0.8} onPressIn={() => toucher(b)} style={styles.pilToucher}>
+                {o.type === 'leurre' ? <LueurVisible couleur="cyan" taille={80} />
+                  : <Image source={o.touche ? PILLEUR_TOUCHE : PILLEUR} style={styles.pilImage} resizeMode="contain" />}
+              </TouchableOpacity>
+            </Animated.View>
+          ) : null}
+        </View>
+        <Image source={BUISSON} style={styles.pilBuisson} resizeMode="contain" />
+      </View>
+    );
+  });
+}
+
 // 🎆 Feux d'artifice autour du gain (demande de l'auteur) : 3 gerbes de 12 étincelles, décalées dans le temps.
 const COULEURS_FEU = ['#FFD54A', '#7fd8ff', '#ff8a3d', '#b6ff7a', '#ffffff'];
 function Gerbe({ x, y, retard }) {
@@ -538,7 +605,8 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
 
   if (!visible) return null;
   const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau
-    : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : jeu === 'spores' ? JeuSpores : jeu === 'rituel' ? JeuRituel : JeuChasse;
+    : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : jeu === 'spores' ? JeuSpores : jeu === 'rituel' ? JeuRituel
+    : jeu === 'pilleurs' ? JeuPilleurs : JeuChasse;
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={() => { nettoyer(); if (onFermer) onFermer(); }}>
       <Animated.View style={[styles.fond, { transform: [{ translateX: tremble }] }]}
@@ -591,6 +659,11 @@ const styles = StyleSheet.create({
   coffreZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   spore: { position: 'absolute', width: SPORE_T, height: SPORE_T },
   rituelZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  pilBloc: { position: 'absolute', width: BUI_L, height: PIL_H + BUI_H * 0.55 },
+  pilFenetre: { position: 'absolute', left: (BUI_L - PIL_L) / 2, top: 0, width: PIL_L, height: PIL_H + 8, overflow: 'hidden', alignItems: 'center' },
+  pilToucher: { width: PIL_L, height: PIL_H, alignItems: 'center', justifyContent: 'center' },
+  pilImage: { width: PIL_L, height: PIL_H },
+  pilBuisson: { position: 'absolute', left: 0, top: PIL_H - BUI_H * 0.45, width: BUI_L, height: BUI_H },
   rituelOeuf: { position: 'absolute', width: 130, height: 130 },
   rituelAnneau: { width: RITUEL_R * 2, height: RITUEL_R * 2 },
   rituelSymbole: { position: 'absolute', width: SYM_L, height: SYM_H, alignItems: 'center', justifyContent: 'center' },

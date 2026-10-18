@@ -61,6 +61,7 @@ export const MINI_JEUX = [
   { id: 'coffre', titre: '🔐 Coffre à broches', tuto: "Arrête l'aiguille dans la zone verte pour lever chaque broche." },
   { id: 'spores', titre: '✨ Pluie de spores', tuto: "Touche chaque spore avant qu'elle n'atteigne le nid." },
   { id: 'rituel', titre: "🔮 Rituel de l'Œuf", tuto: "Retiens l'ordre des symboles qui s'allument, puis touche-les dans le même ordre." },
+  { id: 'pilleurs', titre: '🦹 Pilleurs encapuchonnés', tuto: "Touche les pilleurs avant qu'ils replongent, jamais les lueurs." },
 ];
 export function miniJeu(id) { return MINI_JEUX.find((j) => j.id === id) || MINI_JEUX[0]; }
 // Le mini-jeu qui surgit est tiré au hasard.
@@ -169,6 +170,32 @@ export function sequenceRituel(n, aleatoire = Math.random) {
     let s = Math.floor(aleatoire() * RITUEL_SYMBOLES.length);
     if (k > 0 && s === out[k - 1]) s = (s + 1 + Math.floor(aleatoire() * (RITUEL_SYMBOLES.length - 1))) % RITUEL_SYMBOLES.length;
     out.push(s);
+  }
+  return out;
+}
+
+// 🦹 PILLEURS ENCAPUCHONNÉS (plan de l'auteur, étape 6, idée Gemini n° 8, monstre à cagoule de l'auteur — images 110 à 112) :
+// des pilleurs surgissent de 5 buissons et y replongent ; les toucher avant. Des LUEURS (leurres, ~20 % des sorties) surgissent
+// aussi : ne jamais les toucher. 15 pilleurs ; de plus en plus brefs (1,3 → 0,75 s) et rapprochés (0,9 → 0,5 s). Un pilleur
+// qui replonge sans être touché, ou une lueur touchée : perdu.
+export const PILLEURS_NB = 15;
+export const PILLEURS_BUISSONS = 5;
+export const PILLEUR_LEURRE_PART = 0.2;
+export function pilleurDuree(i) {
+  const k = Math.max(0, Math.min(PILLEURS_NB - 1, Math.floor(Number(i) || 0)));
+  return Math.round(1300 + (750 - 1300) * (k / (PILLEURS_NB - 1)));
+}
+export function pilleurIntervalle(i) {
+  const k = Math.max(0, Math.min(PILLEURS_NB - 1, Math.floor(Number(i) || 0)));
+  return Math.round(900 + (500 - 900) * (k / (PILLEURS_NB - 1)));
+}
+// Plan des sorties : les 15 pilleurs dans l'ordre (rang = leur difficulté), des leurres mêlés, jamais deux d'affilée.
+export function planPilleurs(aleatoire = Math.random) {
+  const out = [];
+  let rang = 0, dernierLeurre = false;
+  while (rang < PILLEURS_NB) {
+    if (rang > 0 && !dernierLeurre && aleatoire() < PILLEUR_LEURRE_PART) { out.push({ type: 'leurre', rang: rang - 1 }); dernierLeurre = true; }
+    else { out.push({ type: 'pilleur', rang }); rang += 1; dernierLeurre = false; }
   }
   return out;
 }

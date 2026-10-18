@@ -188,6 +188,8 @@ const SABOTAGES = [
     remplace('export const MINI_JEU_INTERVALLE_MS = 10 * 60 * 1000;', 'export const MINI_JEU_INTERVALLE_MS = 60 * 1000;')],
   ['auditChasseLueurs', F.ecran, 'un mini-jeu surgit même par-dessus une autre fenêtre',
     remplace('      if (miniJeuOuvertRef.current || !peutPopperRef.current || t < prochainMiniJeuRef.current) return;', '      if (miniJeuOuvertRef.current || t < prochainMiniJeuRef.current) return;')],
+  ['auditChasseLueurs', F.miniJeux, 'Pilleurs : 2 pilleurs seulement (gagné d\'avance)',
+    remplace('export const PILLEURS_NB = 15;', 'export const PILLEURS_NB = 2;')],
   ['auditChasseLueurs', F.miniJeux, 'Rituel : des suites d\'un seul symbole (gagné d\'avance)',
     remplace('export const RITUEL_LONGUEURS = [3, 4, 5];', 'export const RITUEL_LONGUEURS = [1, 1, 1];')],
   ['auditChasseLueurs', F.chasse, 'Bonneteau : un mauvais choix passe direct à « PERDU » sans montrer la lueur',
