@@ -57,6 +57,7 @@ export const MINI_JEUX = [
   { id: 'doree', titre: '🎯 Lueur dorée', tuto: 'Touche seulement la lueur dorée, jamais les bleues.' },
   { id: 'transe', titre: '🥁 Battement de Transe', tuto: "Tape quand l'anneau touche le cercle, 3 ratés et c'est perdu." },
   { id: 'bonneteau', titre: "🥚 Bonneteau d'œufs", tuto: "Suis l'œuf qui cache la lueur, puis touche-le." },
+  { id: 'roue', titre: '🌀 Roue des runes', tuto: 'Tape quand la rune dorée passe sous la flèche.' },
 ];
 export function miniJeu(id) { return MINI_JEUX.find((j) => j.id === id) || MINI_JEUX[0]; }
 // Le mini-jeu qui surgit est tiré au hasard.
@@ -100,4 +101,19 @@ export function melangeBonneteau(n, aleatoire = Math.random) {
     out.push([a, b]);
   }
   return out;
+}
+
+// 🌀 ROUE DES RUNES (plan de l'auteur, étape 2) : les 8 runes du jeu tournent en roue, une seule est dorée ; taper quand elle
+// passe sous la flèche (en haut). 5 réussites, de plus en plus vite, sens alterné ; un tap à côté = perdu ; la rune dorée
+// passe 3 fois sans tap = perdu (pas d'attente infinie). Tolérance ± 22° : ± 0,18 s au 1er tour, ± 0,07 s au 5e.
+export const ROUE_RUNES = 8;
+export const ROUE_TOURS = 5;
+export const ROUE_VITESSES = [120, 160, 200, 250, 300]; // degrés par seconde
+export const ROUE_TOLERANCE_DEG = 22;
+export const ROUE_PASSAGES_MAX = 3;
+export function roueVitesse(i) { return ROUE_VITESSES[Math.max(0, Math.min(ROUE_TOURS - 1, Math.floor(Number(i) || 0)))]; }
+// Angle de la roue (degrés, sens horaire depuis le haut) → la rune dorée est-elle sous la flèche ?
+export function roueAligne(angleRoueDeg, indexDoree) {
+  const a = (((Number(angleRoueDeg) || 0) + (360 / ROUE_RUNES) * (Number(indexDoree) || 0)) % 360 + 360) % 360;
+  return Math.min(a, 360 - a) <= ROUE_TOLERANCE_DEG;
 }

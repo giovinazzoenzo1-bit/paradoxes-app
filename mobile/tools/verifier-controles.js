@@ -188,6 +188,8 @@ const SABOTAGES = [
     remplace('export const MINI_JEU_INTERVALLE_MS = 10 * 60 * 1000;', 'export const MINI_JEU_INTERVALLE_MS = 60 * 1000;')],
   ['auditChasseLueurs', F.ecran, 'un mini-jeu surgit même par-dessus une autre fenêtre',
     remplace('      if (miniJeuOuvertRef.current || !peutPopperRef.current || t < prochainMiniJeuRef.current) return;', '      if (miniJeuOuvertRef.current || t < prochainMiniJeuRef.current) return;')],
+  ['auditChasseLueurs', F.miniJeux, 'Roue des runes : tolérance de 60° (on gagne sans viser)',
+    remplace('export const ROUE_TOLERANCE_DEG = 22;', 'export const ROUE_TOLERANCE_DEG = 60;')],
   ['auditChasseLueurs', F.miniJeux, 'Bonneteau : 5 manches au lieu de 3 (demande de l\'auteur)',
     remplace('export const BONNETEAU_TOURS = 3;', 'export const BONNETEAU_TOURS = 5;')],
   ['auditChasseLueurs', F.miniJeux, 'Battement de Transe : 5 ratés permis au lieu de 3',

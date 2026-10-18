@@ -1553,7 +1553,11 @@ function auditChasseLueurs() {
   const def = C.CREATURES.find((c) => c.rarity === 'rare') || C.CREATURES[0];
   if (M.griffesMeilleureCreature([{ id: C.CREATURES[0].id, level: 3 }, { id: def.id, level: 40 }]) !== Math.round(C.levelUpCost(def, 40))) pb.push('les Griffes ne valent plus UN niveau de la meilleure créature');
   // Les 3 mini-jeux (demande de l'auteur) : un TUTO d'une seule phrase pendant le décompte ; Lueur dorée et Battement de Transe.
-  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe,bonneteau') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Battement de Transe, Bonneteau');
+  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe,bonneteau,roue') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Battement de Transe, Bonneteau, Roue des runes');
+  // Roue des runes (étape 2 du plan de l'auteur) : 5 réussites, vitesse croissante, ± 22°, 3 passages au plus par tour.
+  if (M.ROUE_TOURS !== 5 || M.ROUE_TOLERANCE_DEG !== 22 || M.ROUE_PASSAGES_MAX !== 3 || M.ROUE_RUNES !== 8
+    || !M.ROUE_VITESSES.every((v, k) => k === 0 || v > M.ROUE_VITESSES[k - 1])) pb.push('Roue des runes : 5 tours de plus en plus vite, ± 22°, 3 passages');
+  if (!M.roueAligne(0, 0) || !M.roueAligne(-20, 0) || M.roueAligne(30, 0) || !M.roueAligne(-90, 2)) pb.push('Roue des runes : la rune dorée sous la flèche est mal calculée');
   // Bonneteau (demande de l'auteur) : 3 manches, de facile à difficile — plus d'échanges, chacun plus rapide.
   if (M.BONNETEAU_TOURS !== 3 || !(M.bonneteauEchanges(0) < M.bonneteauEchanges(1) && M.bonneteauEchanges(1) < M.bonneteauEchanges(2))
     || !(M.bonneteauDuree(0) > M.bonneteauDuree(1) && M.bonneteauDuree(1) > M.bonneteauDuree(2))) pb.push('Bonneteau : 3 manches, de facile à difficile');

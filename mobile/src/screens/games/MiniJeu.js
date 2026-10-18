@@ -3,17 +3,24 @@
 // Déroulé commun (demandes de l'auteur) : titre + TUTO d'une seule phrase pendant le décompte 3, 2, 1 → le jeu → une ratée :
 // « PERDU » en rouge 1 s, écran qui tremble, son de défaite → réussi : une lueur dorée révèle la récompense.
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, Image, Animated, StyleSheet, Vibration } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, Image, Animated, StyleSheet, Vibration, Easing } from 'react-native';
 import {
   miniJeu, LUEURS_NB, dureeLueur, PERDU_MS, DECOMPTE, DECOMPTE_PAS_MS, LUEUR_DERIVE_PX,
   DOREE_TOURS, doreeNbLueurs, doreeDuree, TRANSE_TEMPS, TRANSE_FENETRE_MS, TRANSE_RATES_MAX, transeIntervalle,
   BONNETEAU_TOURS, bonneteauEchanges, bonneteauDuree, BONNETEAU_MONTRE_MS, melangeBonneteau,
+  ROUE_RUNES, ROUE_TOURS, roueVitesse, roueAligne, ROUE_PASSAGES_MAX,
 } from '../../games/clicker/miniJeux';
 import { jouerSon } from './sonsBoutique';
 
 const LUEUR = require('../../../assets/fenetres/lueur-cyan.png');
 const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
 const OEUF = require('../../../assets/egg/egg-0-endormi.png');
+const RUNES = ['affinite', 'arcane', 'butin', 'celerite', 'dexterite', 'force', 'resilience', 'vitalite'].map((n) => ({
+  affinite: require('../../../assets/icons/runes/affinite.png'), arcane: require('../../../assets/icons/runes/arcane.png'),
+  butin: require('../../../assets/icons/runes/butin.png'), celerite: require('../../../assets/icons/runes/celerite.png'),
+  dexterite: require('../../../assets/icons/runes/dexterite.png'), force: require('../../../assets/icons/runes/force.png'),
+  resilience: require('../../../assets/icons/runes/resilience.png'), vitalite: require('../../../assets/icons/runes/vitalite.png'),
+}[n]));
 const TAILLE = 88;
 
 // Position au hasard dans la zone de jeu (marges : titre en haut, bas de l'écran libre).
@@ -211,6 +218,56 @@ function JeuBonneteau({ zone, sons, onRate, onReussi }) {
   ));
 }
 
+// 🌀 ROUE DES RUNES : la roue tourne, une rune est dorée ; taper (n'importe où) quand elle passe sous la flèche.
+const ROUE_R = 112, RUNE_T = 54;
+function JeuRoue({ sons, onRate, onReussi }) {
+  const [tour, setTour] = useState(0);
+  const [doree, setDoree] = useState(() => Math.floor(Math.random() * ROUE_RUNES));
+  const [depart, setDepart] = useState(0);   // angle (degrés) au début du tour : la roue ne saute jamais
+  const rot = useRef(new Animated.Value(0)).current;
+  const debut = useRef(0), sens = useRef(1), angle0 = useRef(0), boucle = useRef(null), minuteur = useRef(null);
+  const angleMaintenant = () => angle0.current + sens.current * roueVitesse(tour) * ((Date.now() - debut.current) / 1000);
+  useEffect(() => {
+    const v = roueVitesse(tour), periode = 360 / v * 1000;
+    sens.current = tour % 2 === 0 ? 1 : -1;  // sens alterné à chaque tour
+    angle0.current = depart;
+    debut.current = Date.now();
+    rot.setValue(0);
+    boucle.current = Animated.loop(Animated.timing(rot, { toValue: 1, duration: periode, easing: Easing.linear, useNativeDriver: true }));
+    boucle.current.start();
+    minuteur.current = setTimeout(onRate, periode * ROUE_PASSAGES_MAX); // la rune passe 3 fois sans tap : perdu
+    return () => { clearTimeout(minuteur.current); if (boucle.current) boucle.current.stop(); };
+  }, [tour]);
+  const toucher = () => {
+    const a = angleMaintenant();
+    if (!roueAligne(a, doree)) { onRate(); return; }
+    jouerSon('impact-parfait', sons);
+    clearTimeout(minuteur.current);
+    if (tour + 1 >= ROUE_TOURS) { onReussi(); return; }
+    setDepart(((a % 360) + 360) % 360);
+    setDoree((doree + 2 + Math.floor(Math.random() * (ROUE_RUNES - 3))) % ROUE_RUNES); // jamais la même, jamais la voisine
+    setTour(tour + 1);
+  };
+  const fin = depart + (tour % 2 === 0 ? 360 : -360);
+  return (
+    <TouchableOpacity activeOpacity={1} onPressIn={toucher} style={styles.roueZone}>
+      <Text style={styles.roueFleche}>▼</Text>
+      <Animated.View style={[styles.roue, { transform: [{ rotate: rot.interpolate({ inputRange: [0, 1], outputRange: [depart + 'deg', fin + 'deg'] }) }] }]}>
+        {RUNES.map((src, k) => {
+          const a = (k * 360 / ROUE_RUNES) * Math.PI / 180;
+          const x = ROUE_R + Math.sin(a) * ROUE_R - RUNE_T / 2, y = ROUE_R - Math.cos(a) * ROUE_R - RUNE_T / 2;
+          return (
+            <View key={k} style={[styles.roueRune, { left: x, top: y }]}>
+              {k === doree ? <Image source={LUEUR_OR} style={styles.roueHalo} resizeMode="contain" /> : null}
+              <Image source={src} style={[styles.roueImage, k !== doree && styles.roueEteinte]} resizeMode="contain" />
+            </View>
+          );
+        })}
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
 // 🎆 Feux d'artifice autour du gain (demande de l'auteur) : 3 gerbes de 12 étincelles, décalées dans le temps.
 const COULEURS_FEU = ['#FFD54A', '#7fd8ff', '#ff8a3d', '#b6ff7a', '#ffffff'];
 function Gerbe({ x, y, retard }) {
@@ -285,7 +342,8 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
   };
 
   if (!visible) return null;
-  const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau : JeuChasse;
+  const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau
+    : jeu === 'roue' ? JeuRoue : JeuChasse;
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={() => { nettoyer(); if (onFermer) onFermer(); }}>
       <Animated.View style={[styles.fond, { transform: [{ translateX: tremble }] }]}
@@ -334,6 +392,13 @@ const styles = StyleSheet.create({
   transeCroix: { color: '#ff3b3b', fontSize: 30, fontWeight: '900', marginHorizontal: 8, textShadowColor: '#000', textShadowRadius: 6 },
   transePlace: { position: 'absolute', width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
   feux: { position: 'absolute', top: '22%', left: '50%', marginLeft: -165, width: 330, height: 380 },
+  roueZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  roueFleche: { color: '#FFD54A', fontSize: 38, fontWeight: '900', marginBottom: 6, textShadowColor: '#000', textShadowRadius: 8 },
+  roue: { width: ROUE_R * 2, height: ROUE_R * 2 },
+  roueRune: { position: 'absolute', width: RUNE_T, height: RUNE_T, alignItems: 'center', justifyContent: 'center' },
+  roueImage: { width: RUNE_T, height: RUNE_T },
+  roueEteinte: { opacity: 0.55 },
+  roueHalo: { position: 'absolute', width: RUNE_T * 1.9, height: RUNE_T * 1.9 },
   oeufPlace: { position: 'absolute', left: 0, top: 0, width: OEUF_L, height: OEUF_H, alignItems: 'center', justifyContent: 'flex-end' },
   oeufImage: { width: OEUF_L, height: OEUF_H },
   oeufSouleve: { transform: [{ translateY: -38 }] }, // l'œuf se soulève : on voit la lueur dessous
