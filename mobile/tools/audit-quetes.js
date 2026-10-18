@@ -1553,7 +1553,10 @@ function auditChasseLueurs() {
   const def = C.CREATURES.find((c) => c.rarity === 'rare') || C.CREATURES[0];
   if (M.griffesMeilleureCreature([{ id: C.CREATURES[0].id, level: 3 }, { id: def.id, level: 40 }]) !== Math.round(C.levelUpCost(def, 40))) pb.push('les Griffes ne valent plus UN niveau de la meilleure créature');
   // Les 3 mini-jeux (demande de l'auteur) : un TUTO d'une seule phrase pendant le décompte ; Lueur dorée et Battement de Transe.
-  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe,bonneteau,roue,coffre') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Battement de Transe, Bonneteau, Roue, Coffre');
+  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe,bonneteau,roue,coffre,spores') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Transe, Bonneteau, Roue, Coffre, Spores');
+  // Pluie de spores (étape 4) : 18 spores, de plus en plus serrées (0,9 → 0,45 s) et rapides (3,2 → 2 s de chute).
+  if (M.SPORES_NB !== 18 || M.sporeIntervalle(0) !== 900 || M.sporeIntervalle(17) !== 450 || M.sporeChute(0) !== 3200 || M.sporeChute(17) !== 2000
+    || !(M.SPORE_SOL > 0.5 && M.SPORE_SOL < 0.9)) pb.push('Pluie de spores : 18 spores, de 0,9 à 0,45 s d\'écart, de 3,2 à 2 s de chute, vers le nid');
   // Coffre à broches (étape 3) : 3 broches, zone qui rétrécit, aiguille qui accélère, aller-retour régulier.
   if (M.COFFRE_BROCHES !== 3 || !(M.coffreLargeur(0) > M.coffreLargeur(1) && M.coffreLargeur(1) > M.coffreLargeur(2)) || !(M.coffrePeriode(0) > M.coffrePeriode(2))
     || M.coffreLargeur(0) > 0.3) pb.push('Coffre : 3 broches, zone de plus en plus étroite (au plus 30 %), aiguille de plus en plus rapide');

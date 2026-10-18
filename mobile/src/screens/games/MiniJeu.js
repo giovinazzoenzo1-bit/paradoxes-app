@@ -10,6 +10,7 @@ import {
   BONNETEAU_TOURS, bonneteauEchanges, bonneteauDuree, BONNETEAU_MONTRE_MS, melangeBonneteau,
   ROUE_RUNES, ROUE_TOURS, roueVitesse, roueAligne, ROUE_PASSAGES_MAX,
   COFFRE_BROCHES, coffreLargeur, coffrePeriode, coffreAiguille, coffreDansZone, COFFRE_CYCLES_MAX,
+  SPORES_NB, SPORE_SOL, sporeIntervalle, sporeChute,
 } from '../../games/clicker/miniJeux';
 import { jouerSon } from './sonsBoutique';
 
@@ -348,6 +349,48 @@ function JeuCoffre({ sons, onRate, onReussi }) {
   );
 }
 
+// ✨ PLUIE DE SPORES : elles tombent vers le nid (le vrai, visible derrière : la fenêtre est transparente) ; les toucher toutes.
+const SPORE_T = 66;
+function JeuSpores({ zone, sons, onRate, onReussi }) {
+  const [spores, setSpores] = useState([]); // { id, x, chute (Animated.Value), couleur }
+  const touchees = useRef(0), minuteurs = useRef([]), anims = useRef({}), fini = useRef(false);
+  const w = zone.w || 360, h = zone.h || 640, ySol = h * SPORE_SOL - SPORE_T / 2;
+  useEffect(() => {
+    let t = 0;
+    for (let i = 0; i < SPORES_NB; i++) {
+      t += sporeIntervalle(i);
+      minuteurs.current.push(setTimeout(() => {
+        if (fini.current) return;
+        const chute = new Animated.Value(0), id = i;
+        const x = 24 + Math.random() * Math.max(1, w - SPORE_T - 48);
+        setSpores((l) => [...l, { id, x, chute, couleur: i % 3 === 2 ? 'or' : 'cyan' }]);
+        const a = Animated.timing(chute, { toValue: 1, duration: sporeChute(i), easing: Easing.linear, useNativeDriver: true });
+        anims.current[id] = a;
+        a.start(({ finished }) => { if (finished && !fini.current) { fini.current = true; onRate(); } }); // elle a touché le nid
+      }, t));
+    }
+    return () => { fini.current = true; minuteurs.current.forEach(clearTimeout); Object.values(anims.current).forEach((a) => a.stop()); };
+  }, []);
+  const toucher = (id) => {
+    if (fini.current) return;
+    const a = anims.current[id];
+    if (a) { delete anims.current[id]; a.stop(); }
+    setSpores((l) => l.filter((sp) => sp.id !== id));
+    jouerSon('bulle-eclatee', sons);
+    touchees.current += 1;
+    if (touchees.current >= SPORES_NB) { fini.current = true; onReussi(); }
+  };
+  return spores.map((sp) => (
+    <Animated.View key={sp.id} style={[styles.spore, { left: sp.x, top: 80, transform: [
+      { translateY: sp.chute.interpolate({ inputRange: [0, 1], outputRange: [0, ySol - 80] }) },
+      { translateX: sp.chute.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, 14, 0, -14, 0] }) }] }]}>
+      <TouchableOpacity activeOpacity={0.6} onPressIn={() => toucher(sp.id)}>
+        <LueurVisible couleur={sp.couleur} taille={SPORE_T} />
+      </TouchableOpacity>
+    </Animated.View>
+  ));
+}
+
 // 🎆 Feux d'artifice autour du gain (demande de l'auteur) : 3 gerbes de 12 étincelles, décalées dans le temps.
 const COULEURS_FEU = ['#FFD54A', '#7fd8ff', '#ff8a3d', '#b6ff7a', '#ffffff'];
 function Gerbe({ x, y, retard }) {
@@ -423,7 +466,7 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
 
   if (!visible) return null;
   const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau
-    : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : JeuChasse;
+    : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : jeu === 'spores' ? JeuSpores : JeuChasse;
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={() => { nettoyer(); if (onFermer) onFermer(); }}>
       <Animated.View style={[styles.fond, { transform: [{ translateX: tremble }] }]}
@@ -474,6 +517,7 @@ const styles = StyleSheet.create({
   feux: { position: 'absolute', top: '22%', left: '50%', marginLeft: -165, width: 330, height: 380 },
   roueZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   coffreZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  spore: { position: 'absolute', width: SPORE_T, height: SPORE_T },
   coffreImage: { width: 170, height: 170 },
   coffreBroches: { flexDirection: 'row', marginTop: 6, marginBottom: 18 },
   coffreBroche: { width: 46, height: 46, borderRadius: 23, marginHorizontal: 8, alignItems: 'center', justifyContent: 'center',

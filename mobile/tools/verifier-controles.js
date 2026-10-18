@@ -188,6 +188,8 @@ const SABOTAGES = [
     remplace('export const MINI_JEU_INTERVALLE_MS = 10 * 60 * 1000;', 'export const MINI_JEU_INTERVALLE_MS = 60 * 1000;')],
   ['auditChasseLueurs', F.ecran, 'un mini-jeu surgit même par-dessus une autre fenêtre',
     remplace('      if (miniJeuOuvertRef.current || !peutPopperRef.current || t < prochainMiniJeuRef.current) return;', '      if (miniJeuOuvertRef.current || t < prochainMiniJeuRef.current) return;')],
+  ['auditChasseLueurs', F.miniJeux, 'Pluie de spores : 3 spores seulement (gagné d\'avance)',
+    remplace('export const SPORES_NB = 18;', 'export const SPORES_NB = 3;')],
   ['auditChasseLueurs', F.miniJeux, 'Coffre : zone verte sur toute la jauge (on gagne sans viser)',
     remplace('export const COFFRE_LARGEURS = [0.22, 0.15, 0.10];', 'export const COFFRE_LARGEURS = [1, 1, 1];')],
   ['auditChasseLueurs', F.chasse, 'Bonneteau : le rendu relit la référence (la lueur montrée sous le mauvais œuf, bug de l\'auteur)',

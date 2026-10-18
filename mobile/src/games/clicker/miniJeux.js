@@ -59,6 +59,7 @@ export const MINI_JEUX = [
   { id: 'bonneteau', titre: "🥚 Bonneteau d'œufs", tuto: "Suis l'œuf qui cache la lueur, puis touche-le." },
   { id: 'roue', titre: '🌀 Roue des runes', tuto: 'Tape quand la rune dorée passe sur la flèche.' },
   { id: 'coffre', titre: '🔐 Coffre à broches', tuto: "Arrête l'aiguille dans la zone verte pour lever chaque broche." },
+  { id: 'spores', titre: '✨ Pluie de spores', tuto: "Touche chaque spore avant qu'elle n'atteigne le nid." },
 ];
 export function miniJeu(id) { return MINI_JEUX.find((j) => j.id === id) || MINI_JEUX[0]; }
 // Le mini-jeu qui surgit est tiré au hasard.
@@ -136,3 +137,17 @@ export function coffreAiguille(ms, periodeMs) {
   return f < 0.5 ? f * 2 : 2 - f * 2;
 }
 export function coffreDansZone(pos, centre, largeur) { return Math.abs(pos - centre) <= largeur / 2; }
+
+// ✨ PLUIE DE SPORES (plan de l'auteur, étape 4, idée Gemini n° 10) : des spores lumineuses tombent vers le nid de l'écran
+// principal ; les toucher toutes avant qu'elles l'atteignent. 18 spores ; elles arrivent de plus en plus serrées
+// (0,9 → 0,45 s entre deux) et tombent de plus en plus vite (3,2 → 2 s de chute). Une seule touche le nid : perdu.
+export const SPORES_NB = 18;
+export const SPORE_SOL = 0.7; // hauteur (part de l'écran) où commence le nid
+export function sporeIntervalle(i) {
+  const k = Math.max(0, Math.min(SPORES_NB - 1, Math.floor(Number(i) || 0)));
+  return Math.round(900 + (450 - 900) * (k / (SPORES_NB - 1)));
+}
+export function sporeChute(i) {
+  const k = Math.max(0, Math.min(SPORES_NB - 1, Math.floor(Number(i) || 0)));
+  return Math.round(3200 + (2000 - 3200) * (k / (SPORES_NB - 1)));
+}
