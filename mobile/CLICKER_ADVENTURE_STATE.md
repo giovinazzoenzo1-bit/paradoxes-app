@@ -4383,6 +4383,9 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   10 min (`MINI_JEU_INTERVALLE_MS`), seulement sur l'écran principal sans autre fenêtre (`peutPopperRef` : combat, Gardien,
   incubateur, calendrier, Ascension, hors ligne, pub, choix de créature, menu 🛠️), jamais dans les 2 min qui suivent
   l'ouverture. La lueur errante (à toucher, toutes les 30 min) est RETIRÉE ; clé de sauvegarde `prochaineLueur` gardée.
+- ✅ Étape 2 **🌀 Roue des runes** : les 8 runes du jeu en roue, une dorée (halo d'or) ; taper n'importe où quand elle passe
+  sous la flèche ▼ ; 5 réussites à 120 / 160 / 200 / 250 / 300 °/s, sens alterné, ± 22° (± 0,18 s → ± 0,07 s) ; 3 passages
+  sans tap ou un tap à côté = perdu. L'angle se CALCULE au temps (roueAligne), il ne se lit pas sur l'animation.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
 - ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
