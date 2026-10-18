@@ -4376,6 +4376,9 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   (dérive de 70 à 140 px pendant leur vie) ; Transe : le cercle change de place à chaque temps ; Chasse : 20 lueurs, 1,39 → 0,79 s ;
   victoire = son `victoire` + feux d'artifice (3 gerbes) + gain qui « arrive sur le joueur » en élastique (Animated.spring).
   ⚠️ `pointerEvents` dans le STYLE (auditPointerEventsStyle : la propriété est ignorée sur téléphone depuis le SDK 57).
+- **🥚 Bonneteau d'œufs** (demande de l'auteur : 3 manches, de facile à difficile) : la lueur se montre sous un œuf soulevé
+  (1,2 s), puis 3 / 5 / 8 échanges en arc de 0,48 / 0,34 / 0,23 s ; mauvais œuf = PERDU. Banc : `ATTENTE_MS=3700` pour
+  capturer un mini-jeu après son décompte.
 - ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
   `menuDevOuvert`, `lancerMiniJeuDev`) qui lance un mini-jeu 3 s après le choix.
   Contrôle auditChasseLueurs + 3 pièges. Durées des lueurs à régler après les essais de l'auteur (LUEUR_DUREE_FIN_MS).
