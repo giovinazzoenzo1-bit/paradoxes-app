@@ -1553,11 +1553,15 @@ function auditChasseLueurs() {
   const def = C.CREATURES.find((c) => c.rarity === 'rare') || C.CREATURES[0];
   if (M.griffesMeilleureCreature([{ id: C.CREATURES[0].id, level: 3 }, { id: def.id, level: 40 }]) !== Math.round(C.levelUpCost(def, 40))) pb.push('les Griffes ne valent plus UN niveau de la meilleure créature');
   // Les 3 mini-jeux (demande de l'auteur) : un TUTO d'une seule phrase pendant le décompte ; Lueur dorée et Battement de Transe.
-  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Battement de Transe');
+  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe,bonneteau') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Battement de Transe, Bonneteau');
+  // Bonneteau (demande de l'auteur) : 3 manches, de facile à difficile — plus d'échanges, chacun plus rapide.
+  if (M.BONNETEAU_TOURS !== 3 || !(M.bonneteauEchanges(0) < M.bonneteauEchanges(1) && M.bonneteauEchanges(1) < M.bonneteauEchanges(2))
+    || !(M.bonneteauDuree(0) > M.bonneteauDuree(1) && M.bonneteauDuree(1) > M.bonneteauDuree(2))) pb.push('Bonneteau : 3 manches, de facile à difficile');
+  if (M.melangeBonneteau(50).some(([a, b]) => a === b || a < 0 || a > 2 || b < 0 || b > 2)) pb.push('Bonneteau : un échange se fait entre deux places différentes');
   M.MINI_JEUX.forEach((j) => { const fins = (j.tuto.match(/[.!?]/g) || []).length; if (!j.tuto || fins !== 1 || !/[.!?]$/.test(j.tuto)) pb.push(`tuto de « ${j.titre} » : il faut UNE seule phrase`); });
   if (M.DOREE_TOURS !== 10 || M.doreeNbLueurs(0) !== 3 || M.doreeNbLueurs(9) !== 7 || M.doreeDuree(0) !== 1600 || M.doreeDuree(9) !== 1000) pb.push('Lueur dorée : 10 tours, de 3 lueurs en 1,6 s à 7 lueurs en 1 s');
   if (M.TRANSE_TEMPS !== 16 || M.TRANSE_FENETRE_MS !== 150 || M.TRANSE_RATES_MAX !== 3 || M.transeIntervalle(0) !== 700 || M.transeIntervalle(15) !== 500) pb.push('Battement de Transe : 16 temps, ± 150 ms, 3 ratés, de 0,7 s à 0,5 s');
-  const vus = new Set(); for (let k = 0; k < 300; k++) vus.add(M.choisirMiniJeu()); if (vus.size !== 3) pb.push('la lueur errante ne lance plus les 3 mini-jeux');
+  const vus = new Set(); for (let k = 0; k < 400; k++) vus.add(M.choisirMiniJeu()); if (vus.size !== M.MINI_JEUX.length) pb.push('la lueur errante ne lance plus tous les mini-jeux');
   const J = lire('screens/games/MiniJeu.js'), Cl = lire('screens/games/ClickerScreen.js');
   if (!J.includes('<Text style={styles.consigne}>{def.tuto}</Text>')) pb.push('plus de tuto pendant le décompte');
   // Demandes de l'auteur : pas de fond noir ; à la victoire, le son de victoire, des feux d'artifice et le gain en élastique.

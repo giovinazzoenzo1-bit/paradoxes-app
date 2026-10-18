@@ -54,6 +54,7 @@ export const MINI_JEUX = [
   { id: 'chasse', titre: '✨ Chasse aux Lueurs', tuto: "Touche les 20 lueurs avant qu'elles s'éteignent." },
   { id: 'doree', titre: '🎯 Lueur dorée', tuto: 'Touche seulement la lueur dorée, jamais les bleues.' },
   { id: 'transe', titre: '🥁 Battement de Transe', tuto: "Tape quand l'anneau touche le cercle, 3 ratés et c'est perdu." },
+  { id: 'bonneteau', titre: "🥚 Bonneteau d'œufs", tuto: "Suis l'œuf qui cache la lueur, puis touche-le." },
 ];
 export function miniJeu(id) { return MINI_JEUX.find((j) => j.id === id) || MINI_JEUX[0]; }
 // La lueur errante lance l'un des mini-jeux au hasard (variété ; même fréquence qu'avant).
@@ -78,4 +79,23 @@ export const TRANSE_RATES_MAX = 3;
 export function transeIntervalle(i) {
   const k = Math.max(0, Math.min(TRANSE_TEMPS - 1, Math.floor(Number(i) || 0)));
   return Math.round(700 + (500 - 700) * (k / (TRANSE_TEMPS - 1)));
+}
+
+// 🥚 BONNETEAU D'ŒUFS (demande de l'auteur : 3 manches, de facile à difficile) : la lueur se montre sous un des 3 œufs, puis
+// ils se mélangent ; toucher le bon œuf. Un mauvais œuf : perdu. Manche 1 : 3 échanges lents ; 2 : 5 ; 3 : 8 rapides.
+export const BONNETEAU_TOURS = 3;
+export const BONNETEAU_ECHANGES = [3, 5, 8];
+export const BONNETEAU_DUREES_MS = [480, 340, 230]; // durée d'UN échange
+export const BONNETEAU_MONTRE_MS = 1200;           // la lueur se montre avant le mélange
+export function bonneteauEchanges(i) { return BONNETEAU_ECHANGES[Math.max(0, Math.min(BONNETEAU_TOURS - 1, Math.floor(Number(i) || 0)))]; }
+export function bonneteauDuree(i) { return BONNETEAU_DUREES_MS[Math.max(0, Math.min(BONNETEAU_TOURS - 1, Math.floor(Number(i) || 0)))]; }
+// Une suite d'échanges entre deux PLACES différentes (0, 1, 2).
+export function melangeBonneteau(n, aleatoire = Math.random) {
+  const out = [];
+  for (let k = 0; k < n; k++) {
+    const a = Math.floor(aleatoire() * 3);
+    const b = (a + 1 + Math.floor(aleatoire() * 2)) % 3;
+    out.push([a, b]);
+  }
+  return out;
 }

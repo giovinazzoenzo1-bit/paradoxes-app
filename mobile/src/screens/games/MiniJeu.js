@@ -7,11 +7,13 @@ import { Modal, View, Text, TouchableOpacity, Image, Animated, StyleSheet, Vibra
 import {
   miniJeu, LUEURS_NB, dureeLueur, PERDU_MS, DECOMPTE, DECOMPTE_PAS_MS, LUEUR_DERIVE_PX,
   DOREE_TOURS, doreeNbLueurs, doreeDuree, TRANSE_TEMPS, TRANSE_FENETRE_MS, TRANSE_RATES_MAX, transeIntervalle,
+  BONNETEAU_TOURS, bonneteauEchanges, bonneteauDuree, BONNETEAU_MONTRE_MS, melangeBonneteau,
 } from '../../games/clicker/miniJeux';
 import { jouerSon } from './sonsBoutique';
 
 const LUEUR = require('../../../assets/fenetres/lueur-cyan.png');
 const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
+const OEUF = require('../../../assets/egg/egg-0-endormi.png');
 const TAILLE = 88;
 
 // Position au hasard dans la zone de jeu (marges : titre en haut, bas de l'écran libre).
@@ -156,6 +158,59 @@ function JeuTranse({ zone, sons, onRate, onReussi }) {
   );
 }
 
+// 🥚 BONNETEAU D'ŒUFS : la lueur se montre sous un œuf, les 3 œufs se mélangent, toucher le bon. 3 manches.
+const OEUF_L = 120, OEUF_H = 150; // assez grands pour viser au doigt (l'image a des marges)
+function JeuBonneteau({ zone, sons, onRate, onReussi }) {
+  const [tour, setTour] = useState(0);
+  const [etape, setEtape] = useState('montre'); // montre → melange → choix → revele
+  const lueurDans = useRef(1);                 // l'ŒUF (0, 1, 2) qui cache la lueur
+  const placeDe = useRef([0, 1, 2]);            // place (0 gauche, 1 milieu, 2 droite) de chaque œuf
+  const xy = useRef([0, 1, 2].map(() => new Animated.ValueXY({ x: 0, y: 0 }))).current;
+  const minuteur = useRef(null);
+  const w = zone.w || 360, h = zone.h || 640;
+  const xPlace = (p) => w / 2 - OEUF_L / 2 + (p - 1) * Math.min(120, (w - OEUF_L - 30) / 2);
+  const yBase = h * 0.42;
+  useEffect(() => {
+    placeDe.current = [0, 1, 2];
+    lueurDans.current = Math.floor(Math.random() * 3);
+    xy.forEach((v, k) => v.setValue({ x: xPlace(k), y: yBase }));
+    setEtape('montre');
+    minuteur.current = setTimeout(() => {
+      setEtape('melange');
+      const echanges = melangeBonneteau(bonneteauEchanges(tour)), d = bonneteauDuree(tour);
+      const etapes = echanges.map(([pa, pb]) => () => {
+        const ea = placeDe.current.indexOf(pa), eb = placeDe.current.indexOf(pb);
+        placeDe.current[ea] = pb; placeDe.current[eb] = pa;
+        return Animated.parallel([
+          Animated.timing(xy[ea], { toValue: { x: xPlace(pb), y: yBase }, duration: d, useNativeDriver: true }),
+          Animated.sequence([Animated.timing(xy[eb], { toValue: { x: (xPlace(pa) + xPlace(pb)) / 2, y: yBase - 46 }, duration: d / 2, useNativeDriver: true }),
+            Animated.timing(xy[eb], { toValue: { x: xPlace(pa), y: yBase }, duration: d / 2, useNativeDriver: true })]),
+        ]);
+      });
+      const jouer = (k) => { if (k >= etapes.length) { setEtape('choix'); return; } etapes[k]().start(() => jouer(k + 1)); };
+      jouer(0);
+    }, BONNETEAU_MONTRE_MS);
+    return () => clearTimeout(minuteur.current);
+  }, [tour]);
+  const toucher = (k) => {
+    if (etape !== 'choix') return;
+    if (k !== lueurDans.current) { onRate(); return; }
+    setEtape('revele');
+    jouerSon('bulle-eclatee', sons);
+    minuteur.current = setTimeout(() => { if (tour + 1 >= BONNETEAU_TOURS) onReussi(); else setTour(tour + 1); }, 700);
+  };
+  return [0, 1, 2].map((k) => (
+    <Animated.View key={tour + '-' + k} style={[styles.oeufPlace, { transform: xy[k].getTranslateTransform() }]}>
+      {(etape === 'montre' || etape === 'revele') && k === lueurDans.current ? (
+        <Image source={LUEUR_OR} style={styles.oeufLueur} resizeMode="contain" />
+      ) : null}
+      <TouchableOpacity activeOpacity={0.7} onPressIn={() => toucher(k)}>
+        <Image source={OEUF} style={[styles.oeufImage, (etape === 'montre' || etape === 'revele') && k === lueurDans.current && styles.oeufSouleve]} resizeMode="contain" />
+      </TouchableOpacity>
+    </Animated.View>
+  ));
+}
+
 // 🎆 Feux d'artifice autour du gain (demande de l'auteur) : 3 gerbes de 12 étincelles, décalées dans le temps.
 const COULEURS_FEU = ['#FFD54A', '#7fd8ff', '#ff8a3d', '#b6ff7a', '#ffffff'];
 function Gerbe({ x, y, retard }) {
@@ -230,7 +285,7 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
   };
 
   if (!visible) return null;
-  const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : JeuChasse;
+  const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau : JeuChasse;
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={() => { nettoyer(); if (onFermer) onFermer(); }}>
       <Animated.View style={[styles.fond, { transform: [{ translateX: tremble }] }]}
@@ -279,6 +334,10 @@ const styles = StyleSheet.create({
   transeCroix: { color: '#ff3b3b', fontSize: 30, fontWeight: '900', marginHorizontal: 8, textShadowColor: '#000', textShadowRadius: 6 },
   transePlace: { position: 'absolute', width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
   feux: { position: 'absolute', top: '22%', left: '50%', marginLeft: -165, width: 330, height: 380 },
+  oeufPlace: { position: 'absolute', left: 0, top: 0, width: OEUF_L, height: OEUF_H, alignItems: 'center', justifyContent: 'flex-end' },
+  oeufImage: { width: OEUF_L, height: OEUF_H },
+  oeufSouleve: { transform: [{ translateY: -38 }] }, // l'œuf se soulève : on voit la lueur dessous
+  oeufLueur: { position: 'absolute', bottom: -6, width: 70, height: 70 },
   etincelle: { position: 'absolute', width: 8, height: 8, borderRadius: 4 },
   transeAnneau: { position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 5, borderColor: '#7fd8ff' },
   transeCercle: { width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(127,216,255,0.25)', borderWidth: 3, borderColor: '#bfefff' },

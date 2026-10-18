@@ -184,6 +184,8 @@ const SABOTAGES = [
     remplace("  fond: { flex: 1, backgroundColor: 'transparent' }", "  fond: { flex: 1, backgroundColor: 'rgba(8,6,20,0.86)' }")],
   ['auditChasseLueurs', F.chasse, 'la victoire perd son son de victoire',
     remplace("jouerSon('victoire', sons)", "jouerSon('recompense', sons)")],
+  ['auditChasseLueurs', F.miniJeux, 'Bonneteau : 5 manches au lieu de 3 (demande de l\'auteur)',
+    remplace('export const BONNETEAU_TOURS = 3;', 'export const BONNETEAU_TOURS = 5;')],
   ['auditChasseLueurs', F.miniJeux, 'Battement de Transe : 5 ratés permis au lieu de 3',
     remplace('export const TRANSE_RATES_MAX = 3;', 'export const TRANSE_RATES_MAX = 5;')],
   ['auditChasseLueurs', F.chasse, 'une lueur ratée n\'affiche plus « PERDU »',

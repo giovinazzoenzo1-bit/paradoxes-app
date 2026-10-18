@@ -11,7 +11,7 @@ for (const scene of process.argv.slice(2)) {
   p.on('pageerror', (e) => erreurs.push(e.message));
   await p.setViewport({ width: largeur, height: hauteur, deviceScaleFactor: 1 });
   await p.goto('file://' + path.join(ICI, 'out/index.html') + '?scene=' + scene);
-  await new Promise((r) => setTimeout(r, 1500));
+  await new Promise((r) => setTimeout(r, Number(process.env.ATTENTE_MS || 1500))); // ATTENTE_MS : voir un mini-jeu après son décompte
   const deborde = await p.evaluate(() => { const els = [...document.querySelectorAll('div')]; return Math.max(...els.map((e) => e.scrollHeight - e.clientHeight)); });
   await p.screenshot({ path: path.join(ICI, 'out', scene + '.png') });
   console.log(scene + ' : capture OK · plus grand débordement vertical ' + deborde + ' px' + (erreurs.length ? ' · ERREURS : ' + erreurs.join(' | ').slice(0, 300) : ''));
