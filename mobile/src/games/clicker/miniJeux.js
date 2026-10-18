@@ -57,7 +57,8 @@ export const MINI_JEUX = [
   { id: 'doree', titre: '🎯 Lueur dorée', tuto: 'Touche seulement la lueur dorée, jamais les bleues.' },
   { id: 'transe', titre: '🥁 Battement de Transe', tuto: "Tape quand l'anneau touche le cercle, 3 ratés et c'est perdu." },
   { id: 'bonneteau', titre: "🥚 Bonneteau d'œufs", tuto: "Suis l'œuf qui cache la lueur, puis touche-le." },
-  { id: 'roue', titre: '🌀 Roue des runes', tuto: 'Tape quand la rune dorée passe sous la flèche.' },
+  { id: 'roue', titre: '🌀 Roue des runes', tuto: 'Tape quand la rune dorée passe sur la flèche.' },
+  { id: 'coffre', titre: '🔐 Coffre à broches', tuto: "Arrête l'aiguille dans la zone verte pour lever chaque broche." },
 ];
 export function miniJeu(id) { return MINI_JEUX.find((j) => j.id === id) || MINI_JEUX[0]; }
 // Le mini-jeu qui surgit est tiré au hasard.
@@ -112,8 +113,26 @@ export const ROUE_VITESSES = [120, 160, 200, 250, 300]; // degrés par seconde
 export const ROUE_TOLERANCE_DEG = 22;
 export const ROUE_PASSAGES_MAX = 3;
 export function roueVitesse(i) { return ROUE_VITESSES[Math.max(0, Math.min(ROUE_TOURS - 1, Math.floor(Number(i) || 0)))]; }
-// Angle de la roue (degrés, sens horaire depuis le haut) → la rune dorée est-elle sous la flèche ?
+// Angle de la roue (degrés, sens horaire depuis le haut) → la rune dorée est-elle au-dessus de la flèche, EN BAS de la roue
+// (demande de l'auteur : la flèche en bas) ? En bas = 180°.
+export const ROUE_FLECHE_DEG = 180;
 export function roueAligne(angleRoueDeg, indexDoree) {
-  const a = (((Number(angleRoueDeg) || 0) + (360 / ROUE_RUNES) * (Number(indexDoree) || 0)) % 360 + 360) % 360;
+  const a = (((Number(angleRoueDeg) || 0) + (360 / ROUE_RUNES) * (Number(indexDoree) || 0) - ROUE_FLECHE_DEG) % 360 + 360) % 360;
   return Math.min(a, 360 - a) <= ROUE_TOLERANCE_DEG;
 }
+
+// 🔐 COFFRE À BROCHES (plan de l'auteur, étape 3) : une aiguille fait l'aller-retour sur une jauge ; taper quand elle est
+// dans la zone verte lève une broche. 3 broches ; à chaque broche la zone rétrécit et l'aiguille accélère ; un tap hors de la
+// zone = perdu ; 4 allers-retours sans tap = perdu. Position calculée au TEMPS (pas lue sur l'animation).
+export const COFFRE_BROCHES = 3;
+export const COFFRE_LARGEURS = [0.22, 0.15, 0.10];  // part de la jauge
+export const COFFRE_PERIODES_MS = [1600, 1250, 1000]; // un aller-retour complet
+export const COFFRE_CYCLES_MAX = 4;
+export function coffreLargeur(i) { return COFFRE_LARGEURS[Math.max(0, Math.min(COFFRE_BROCHES - 1, Math.floor(Number(i) || 0)))]; }
+export function coffrePeriode(i) { return COFFRE_PERIODES_MS[Math.max(0, Math.min(COFFRE_BROCHES - 1, Math.floor(Number(i) || 0)))]; }
+// Position de l'aiguille (0 = gauche, 1 = droite) après `ms` millisecondes : aller-retour régulier.
+export function coffreAiguille(ms, periodeMs) {
+  const f = (((Number(ms) || 0) / periodeMs) % 1 + 1) % 1;
+  return f < 0.5 ? f * 2 : 2 - f * 2;
+}
+export function coffreDansZone(pos, centre, largeur) { return Math.abs(pos - centre) <= largeur / 2; }

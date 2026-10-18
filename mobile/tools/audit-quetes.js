@@ -1553,11 +1553,16 @@ function auditChasseLueurs() {
   const def = C.CREATURES.find((c) => c.rarity === 'rare') || C.CREATURES[0];
   if (M.griffesMeilleureCreature([{ id: C.CREATURES[0].id, level: 3 }, { id: def.id, level: 40 }]) !== Math.round(C.levelUpCost(def, 40))) pb.push('les Griffes ne valent plus UN niveau de la meilleure créature');
   // Les 3 mini-jeux (demande de l'auteur) : un TUTO d'une seule phrase pendant le décompte ; Lueur dorée et Battement de Transe.
-  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe,bonneteau,roue') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Battement de Transe, Bonneteau, Roue des runes');
+  if (M.MINI_JEUX.map((j) => j.id).join() !== 'chasse,doree,transe,bonneteau,roue,coffre') pb.push('les mini-jeux ne sont plus Chasse, Lueur dorée, Battement de Transe, Bonneteau, Roue, Coffre');
+  // Coffre à broches (étape 3) : 3 broches, zone qui rétrécit, aiguille qui accélère, aller-retour régulier.
+  if (M.COFFRE_BROCHES !== 3 || !(M.coffreLargeur(0) > M.coffreLargeur(1) && M.coffreLargeur(1) > M.coffreLargeur(2)) || !(M.coffrePeriode(0) > M.coffrePeriode(2))
+    || M.coffreLargeur(0) > 0.3) pb.push('Coffre : 3 broches, zone de plus en plus étroite (au plus 30 %), aiguille de plus en plus rapide');
+  if (M.coffreAiguille(0, 1600) !== 0 || M.coffreAiguille(800, 1600) !== 1 || M.coffreAiguille(400, 1600) !== 0.5 || !M.coffreDansZone(0.5, 0.55, 0.15) || M.coffreDansZone(0.4, 0.55, 0.15)) pb.push('Coffre : aiguille ou zone verte mal calculées');
   // Roue des runes (étape 2 du plan de l'auteur) : 5 réussites, vitesse croissante, ± 22°, 3 passages au plus par tour.
   if (M.ROUE_TOURS !== 5 || M.ROUE_TOLERANCE_DEG !== 22 || M.ROUE_PASSAGES_MAX !== 3 || M.ROUE_RUNES !== 8
     || !M.ROUE_VITESSES.every((v, k) => k === 0 || v > M.ROUE_VITESSES[k - 1])) pb.push('Roue des runes : 5 tours de plus en plus vite, ± 22°, 3 passages');
-  if (!M.roueAligne(0, 0) || !M.roueAligne(-20, 0) || M.roueAligne(30, 0) || !M.roueAligne(-90, 2)) pb.push('Roue des runes : la rune dorée sous la flèche est mal calculée');
+  // Flèche EN BAS (demande de l'auteur) : la rune dorée doit passer à 180°.
+  if (!M.roueAligne(180, 0) || !M.roueAligne(160, 0) || M.roueAligne(0, 0) || M.roueAligne(150, 0) || !M.roueAligne(0, 4)) pb.push('Roue des runes : la rune dorée sur la flèche (en bas) est mal calculée');
   // Bonneteau (demande de l'auteur) : 3 manches, de facile à difficile — plus d'échanges, chacun plus rapide.
   if (M.BONNETEAU_TOURS !== 3 || !(M.bonneteauEchanges(0) < M.bonneteauEchanges(1) && M.bonneteauEchanges(1) < M.bonneteauEchanges(2))
     || !(M.bonneteauDuree(0) > M.bonneteauDuree(1) && M.bonneteauDuree(1) > M.bonneteauDuree(2))) pb.push('Bonneteau : 3 manches, de facile à difficile');
@@ -1571,6 +1576,10 @@ function auditChasseLueurs() {
   if (M.MINI_JEU_INTERVALLE_MS !== 10 * 60 * 1000 || M.MINI_JEU_DELAI_OUVERTURE_MS !== 2 * 60 * 1000) pb.push('un mini-jeu ne surgit plus toutes les 10 min (2 min de répit à l\'ouverture)');
   const J = lire('screens/games/MiniJeu.js'), Cl = lire('screens/games/ClickerScreen.js');
   if (!J.includes('<Text style={styles.consigne}>{def.tuto}</Text>')) pb.push('plus de tuto pendant le décompte');
+  // Bug réel du Bonneteau (reproduit au banc) : le RENDU doit lire l'ÉTAT de la lueur, pas la référence changée dans l'effet.
+  if (!J.includes("(etape === 'montre' || etape === 'revele') && k === lueur ? (") || !J.includes('setLueur(lueurDans.current);')) pb.push('Bonneteau : la lueur montrée peut ne plus être sous le bon œuf');
+  // Demandes de l'auteur : des lueurs bien visibles, la Transe sur l'œuf, la flèche de la Roue en bas.
+  if ((J.match(/<LueurVisible /g) || []).length < 4 || !J.includes('source={OEUF_LUMINEUX}') || !J.includes("<Text style={styles.roueFleche}>▲</Text>")) pb.push('lueurs visibles, œuf de la Transe ou flèche de la Roue en bas : un réglage de l\'auteur a disparu');
   // Demandes de l'auteur : pas de fond noir ; à la victoire, le son de victoire, des feux d'artifice et le gain en élastique.
   if (!J.includes("fond: { flex: 1, backgroundColor: 'transparent' }")) pb.push('un fond noir est revenu pendant les mini-jeux');
   if (!J.includes("jouerSon('victoire', sons)") || !J.includes('<FeuxArtifice />') || !J.includes('Animated.spring(arrivee')) pb.push('la victoire n\'a plus son son, ses feux d\'artifice ou son gain élastique');

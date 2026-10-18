@@ -9,12 +9,15 @@ import {
   DOREE_TOURS, doreeNbLueurs, doreeDuree, TRANSE_TEMPS, TRANSE_FENETRE_MS, TRANSE_RATES_MAX, transeIntervalle,
   BONNETEAU_TOURS, bonneteauEchanges, bonneteauDuree, BONNETEAU_MONTRE_MS, melangeBonneteau,
   ROUE_RUNES, ROUE_TOURS, roueVitesse, roueAligne, ROUE_PASSAGES_MAX,
+  COFFRE_BROCHES, coffreLargeur, coffrePeriode, coffreAiguille, coffreDansZone, COFFRE_CYCLES_MAX,
 } from '../../games/clicker/miniJeux';
 import { jouerSon } from './sonsBoutique';
 
 const LUEUR = require('../../../assets/fenetres/lueur-cyan.png');
 const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
 const OEUF = require('../../../assets/egg/egg-0-endormi.png');
+const OEUF_LUMINEUX = require('../../../assets/egg/egg-3-lumineux.png');
+const COFFRE = require('../../../assets/pubs/coffre.png');
 const RUNES = ['affinite', 'arcane', 'butin', 'celerite', 'dexterite', 'force', 'resilience', 'vitalite'].map((n) => ({
   affinite: require('../../../assets/icons/runes/affinite.png'), arcane: require('../../../assets/icons/runes/arcane.png'),
   butin: require('../../../assets/icons/runes/butin.png'), celerite: require('../../../assets/icons/runes/celerite.png'),
@@ -22,6 +25,30 @@ const RUNES = ['affinite', 'arcane', 'butin', 'celerite', 'dexterite', 'force', 
   resilience: require('../../../assets/icons/runes/resilience.png'), vitalite: require('../../../assets/icons/runes/vitalite.png'),
 }[n]));
 const TAILLE = 88;
+
+// ✨ LUEUR BIEN VISIBLE (demande de l'auteur : « on ne la voit pas assez » sur le décor) : le halo, un cœur blanc lumineux et
+// un anneau de couleur, qui pulsent. couleur : 'cyan' ou 'or'.
+function LueurVisible({ couleur = 'cyan', taille = TAILLE }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const b = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 380, useNativeDriver: true })]));
+    b.start();
+    return () => b.stop();
+  }, []);
+  const or = couleur === 'or', teinte = or ? '#FFC21A' : '#3FD9FF';
+  const echelle = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.1] });
+  return (
+    <View style={{ width: taille, height: taille, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.Image source={or ? LUEUR_OR : LUEUR} resizeMode="contain" style={{ position: 'absolute', width: taille * 1.25, height: taille * 1.25, transform: [{ scale: echelle }] }} />
+      <Animated.View style={{ position: 'absolute', width: taille * 0.62, height: taille * 0.62, borderRadius: taille, borderWidth: 3, borderColor: teinte,
+        opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }), transform: [{ scale: echelle }] }} />
+      <View style={{ width: taille * 0.3, height: taille * 0.3, borderRadius: taille, backgroundColor: or ? '#FFF6CC' : '#E8FBFF',
+        shadowColor: teinte, shadowOpacity: 1, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8 }} />
+    </View>
+  );
+}
 
 // Position au hasard dans la zone de jeu (marges : titre en haut, bas de l'écran libre).
 function auHasard(zone) {
@@ -62,7 +89,7 @@ function JeuChasse({ zone, sons, onRate, onReussi }) {
     <Animated.View style={[styles.lueur, { left: pos.x, top: pos.y, opacity: eteinte,
       transform: [...bouge.getTranslateTransform(), { scale: eteinte.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }) }] }]}>
       <TouchableOpacity activeOpacity={0.6} onPressIn={toucher} style={styles.toucher}>
-        <Image source={LUEUR} style={styles.image} resizeMode="contain" />
+        <LueurVisible couleur="cyan" />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -97,7 +124,7 @@ function JeuDoree({ zone, sons, onRate, onReussi }) {
   return lueurs.map((l, k) => (
     <Animated.View key={tour + '-' + k} style={[styles.lueur, { left: l.x, top: l.y, transform: l.v.getTranslateTransform() }]}>
       <TouchableOpacity activeOpacity={0.6} onPressIn={() => toucher(l)} style={styles.toucher}>
-        <Image source={l.doree ? LUEUR_OR : LUEUR} style={styles.image} resizeMode="contain" />
+        {l.doree ? <LueurVisible couleur="or" /> : <Image source={LUEUR} style={[styles.image, { opacity: 0.8 }]} resizeMode="contain" />}
       </TouchableOpacity>
     </Animated.View>
   ));
@@ -159,7 +186,9 @@ function JeuTranse({ zone, sons, onRate, onReussi }) {
         <Animated.View style={[styles.transeAnneau, {
           transform: [{ scale: anneau.interpolate({ inputRange: [0, 1], outputRange: [2.4, 1] }) }],
           opacity: anneau.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }) }]} />
-        <View style={[styles.transeCercle, eclair === 'ok' && styles.transeOk, eclair === 'rate' && styles.transeRate]} />
+        <View style={[styles.transeCercle, eclair === 'ok' && styles.transeOk, eclair === 'rate' && styles.transeRate]}>
+          <Image source={OEUF_LUMINEUX} style={styles.transeOeuf} resizeMode="contain" />
+        </View>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -170,7 +199,12 @@ const OEUF_L = 120, OEUF_H = 150; // assez grands pour viser au doigt (l'image a
 function JeuBonneteau({ zone, sons, onRate, onReussi }) {
   const [tour, setTour] = useState(0);
   const [etape, setEtape] = useState('montre'); // montre → melange → choix → revele
-  const lueurDans = useRef(1);                 // l'ŒUF (0, 1, 2) qui cache la lueur
+  // ⚠️ BUG RÉEL (signalé par l'auteur, reproduit au banc) : l'œuf de la lueur vivait dans une RÉFÉRENCE changée dans
+  // l'effet ; au 1er tour setEtape('montre') ne changeait rien (déjà 'montre') → aucun rendu → la lueur se montrait sous
+  // l'œuf 1 (valeur de départ) alors que la réponse était un autre œuf. Désormais un ÉTAT (le rendu le lit) + la référence
+  // (les gestes la lisent), posés ensemble.
+  const lueurDans = useRef(1);                 // l'ŒUF (0, 1, 2) qui cache la lueur — pour les gestes
+  const [lueur, setLueur] = useState(1);       // le même — pour le RENDU
   const placeDe = useRef([0, 1, 2]);            // place (0 gauche, 1 milieu, 2 droite) de chaque œuf
   const xy = useRef([0, 1, 2].map(() => new Animated.ValueXY({ x: 0, y: 0 }))).current;
   const minuteur = useRef(null);
@@ -180,6 +214,7 @@ function JeuBonneteau({ zone, sons, onRate, onReussi }) {
   useEffect(() => {
     placeDe.current = [0, 1, 2];
     lueurDans.current = Math.floor(Math.random() * 3);
+    setLueur(lueurDans.current);
     xy.forEach((v, k) => v.setValue({ x: xPlace(k), y: yBase }));
     setEtape('montre');
     minuteur.current = setTimeout(() => {
@@ -208,11 +243,11 @@ function JeuBonneteau({ zone, sons, onRate, onReussi }) {
   };
   return [0, 1, 2].map((k) => (
     <Animated.View key={tour + '-' + k} style={[styles.oeufPlace, { transform: xy[k].getTranslateTransform() }]}>
-      {(etape === 'montre' || etape === 'revele') && k === lueurDans.current ? (
-        <Image source={LUEUR_OR} style={styles.oeufLueur} resizeMode="contain" />
+      {(etape === 'montre' || etape === 'revele') && k === lueur ? (
+        <View style={styles.oeufLueur}><LueurVisible couleur="or" taille={76} /></View>
       ) : null}
       <TouchableOpacity activeOpacity={0.7} onPressIn={() => toucher(k)}>
-        <Image source={OEUF} style={[styles.oeufImage, (etape === 'montre' || etape === 'revele') && k === lueurDans.current && styles.oeufSouleve]} resizeMode="contain" />
+        <Image source={OEUF} style={[styles.oeufImage, (etape === 'montre' || etape === 'revele') && k === lueur && styles.oeufSouleve]} resizeMode="contain" />
       </TouchableOpacity>
     </Animated.View>
   ));
@@ -251,19 +286,64 @@ function JeuRoue({ sons, onRate, onReussi }) {
   const fin = depart + (tour % 2 === 0 ? 360 : -360);
   return (
     <TouchableOpacity activeOpacity={1} onPressIn={toucher} style={styles.roueZone}>
-      <Text style={styles.roueFleche}>▼</Text>
       <Animated.View style={[styles.roue, { transform: [{ rotate: rot.interpolate({ inputRange: [0, 1], outputRange: [depart + 'deg', fin + 'deg'] }) }] }]}>
         {RUNES.map((src, k) => {
           const a = (k * 360 / ROUE_RUNES) * Math.PI / 180;
           const x = ROUE_R + Math.sin(a) * ROUE_R - RUNE_T / 2, y = ROUE_R - Math.cos(a) * ROUE_R - RUNE_T / 2;
           return (
             <View key={k} style={[styles.roueRune, { left: x, top: y }]}>
-              {k === doree ? <Image source={LUEUR_OR} style={styles.roueHalo} resizeMode="contain" /> : null}
+              {k === doree ? <View style={styles.roueHalo}><LueurVisible couleur="or" taille={RUNE_T * 1.7} /></View> : null}
               <Image source={src} style={[styles.roueImage, k !== doree && styles.roueEteinte]} resizeMode="contain" />
             </View>
           );
         })}
       </Animated.View>
+      <Text style={styles.roueFleche}>▲</Text>
+    </TouchableOpacity>
+  );
+}
+
+// 🔐 COFFRE À BROCHES : l'aiguille fait l'aller-retour ; taper (n'importe où) quand elle est dans la zone verte.
+const JAUGE_L = 280;
+function JeuCoffre({ sons, onRate, onReussi }) {
+  const [broche, setBroche] = useState(0);
+  const [centre, setCentre] = useState(() => 0.25 + Math.random() * 0.5);
+  const aiguille = useRef(new Animated.Value(0)).current;
+  const debut = useRef(0), boucle = useRef(null), minuteur = useRef(null);
+  useEffect(() => {
+    const per = coffrePeriode(broche);
+    debut.current = Date.now();
+    aiguille.setValue(0);
+    boucle.current = Animated.loop(Animated.sequence([
+      Animated.timing(aiguille, { toValue: 1, duration: per / 2, easing: Easing.linear, useNativeDriver: true }),
+      Animated.timing(aiguille, { toValue: 0, duration: per / 2, easing: Easing.linear, useNativeDriver: true })]));
+    boucle.current.start();
+    minuteur.current = setTimeout(onRate, per * COFFRE_CYCLES_MAX); // 4 allers-retours sans tap : perdu
+    return () => { clearTimeout(minuteur.current); if (boucle.current) boucle.current.stop(); };
+  }, [broche]);
+  const toucher = () => {
+    const pos = coffreAiguille(Date.now() - debut.current, coffrePeriode(broche));
+    if (!coffreDansZone(pos, centre, coffreLargeur(broche))) { onRate(); return; }
+    jouerSon('impact-parfait', sons);
+    clearTimeout(minuteur.current);
+    if (broche + 1 >= COFFRE_BROCHES) { onReussi(); return; }
+    const l = coffreLargeur(broche + 1);
+    setCentre(l / 2 + 0.06 + Math.random() * (1 - l - 0.12));
+    setBroche(broche + 1);
+  };
+  const larg = coffreLargeur(broche) * JAUGE_L;
+  return (
+    <TouchableOpacity activeOpacity={1} onPressIn={toucher} style={styles.coffreZone}>
+      <Image source={COFFRE} style={styles.coffreImage} resizeMode="contain" />
+      <View style={styles.coffreBroches}>
+        {Array.from({ length: COFFRE_BROCHES }).map((_, k) => (
+          <View key={k} style={[styles.coffreBroche, k < broche && styles.coffreBrocheLevee]}><Text style={styles.coffreBrocheTexte}>{k < broche ? '🔓' : '🔒'}</Text></View>
+        ))}
+      </View>
+      <View style={styles.coffreJauge}>
+        <View style={[styles.coffreVert, { left: centre * JAUGE_L - larg / 2, width: larg }]} />
+        <Animated.View style={[styles.coffreAiguille, { transform: [{ translateX: aiguille.interpolate({ inputRange: [0, 1], outputRange: [0, JAUGE_L] }) }] }]} />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -343,7 +423,7 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
 
   if (!visible) return null;
   const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau
-    : jeu === 'roue' ? JeuRoue : JeuChasse;
+    : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : JeuChasse;
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={() => { nettoyer(); if (onFermer) onFermer(); }}>
       <Animated.View style={[styles.fond, { transform: [{ translateX: tremble }] }]}
@@ -393,19 +473,37 @@ const styles = StyleSheet.create({
   transePlace: { position: 'absolute', width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
   feux: { position: 'absolute', top: '22%', left: '50%', marginLeft: -165, width: 330, height: 380 },
   roueZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  roueFleche: { color: '#FFD54A', fontSize: 38, fontWeight: '900', marginBottom: 6, textShadowColor: '#000', textShadowRadius: 8 },
+  coffreZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  coffreImage: { width: 170, height: 170 },
+  coffreBroches: { flexDirection: 'row', marginTop: 6, marginBottom: 18 },
+  coffreBroche: { width: 46, height: 46, borderRadius: 23, marginHorizontal: 8, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)', borderWidth: 2, borderColor: '#8a7a5a' },
+  coffreBrocheLevee: { backgroundColor: 'rgba(255,200,40,0.45)', borderColor: '#FFD54A' },
+  coffreBrocheTexte: { fontSize: 22 },
+  coffreJauge: { width: JAUGE_L + 14, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 2, borderColor: '#FFD54A',
+    paddingHorizontal: 7, justifyContent: 'center' },
+  coffreVert: { position: 'absolute', top: 5, bottom: 5, borderRadius: 8, backgroundColor: '#3BE07A', marginLeft: 7,
+    shadowColor: '#3BE07A', shadowOpacity: 1, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+  coffreAiguille: { position: 'absolute', left: 4, top: -6, width: 6, height: 42, borderRadius: 3, backgroundColor: '#ffffff',
+    shadowColor: '#000', shadowOpacity: 0.8, shadowRadius: 3, shadowOffset: { width: 0, height: 0 } },
+  roueFleche: { color: '#FFD54A', fontSize: 44, fontWeight: '900', marginTop: 4, textShadowColor: '#000', textShadowRadius: 8 }, // EN BAS (demande de l'auteur)
   roue: { width: ROUE_R * 2, height: ROUE_R * 2 },
   roueRune: { position: 'absolute', width: RUNE_T, height: RUNE_T, alignItems: 'center', justifyContent: 'center' },
   roueImage: { width: RUNE_T, height: RUNE_T },
-  roueEteinte: { opacity: 0.55 },
-  roueHalo: { position: 'absolute', width: RUNE_T * 1.9, height: RUNE_T * 1.9 },
+  roueEteinte: { opacity: 0.45 },
+  roueHalo: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   oeufPlace: { position: 'absolute', left: 0, top: 0, width: OEUF_L, height: OEUF_H, alignItems: 'center', justifyContent: 'flex-end' },
   oeufImage: { width: OEUF_L, height: OEUF_H },
   oeufSouleve: { transform: [{ translateY: -38 }] }, // l'œuf se soulève : on voit la lueur dessous
-  oeufLueur: { position: 'absolute', bottom: -6, width: 70, height: 70 },
+  oeufLueur: { position: 'absolute', bottom: -4, alignItems: 'center', justifyContent: 'center' },
   etincelle: { position: 'absolute', width: 8, height: 8, borderRadius: 4 },
-  transeAnneau: { position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 5, borderColor: '#7fd8ff' },
-  transeCercle: { width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(127,216,255,0.25)', borderWidth: 3, borderColor: '#bfefff' },
-  transeOk: { backgroundColor: 'rgba(80,220,120,0.55)' },
-  transeRate: { backgroundColor: 'rgba(255,60,60,0.55)' },
+  // Demande de l'auteur : des ronds « en rapport avec le jeu » — l'ŒUF lumineux au centre (la Transe se joue sur l'œuf) et un
+  // anneau d'énergie doré qui se resserre sur lui.
+  transeAnneau: { position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 6, borderColor: '#FFD54A',
+    shadowColor: '#FFB300', shadowOpacity: 1, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } },
+  transeCercle: { width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,213,74,0.18)', borderWidth: 3, borderColor: '#FFE9A6',
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  transeOeuf: { width: 118, height: 118 },
+  transeOk: { backgroundColor: 'rgba(80,220,120,0.55)', borderColor: '#7CFF9E' },
+  transeRate: { backgroundColor: 'rgba(255,60,60,0.55)', borderColor: '#FF6B6B' },
 });
