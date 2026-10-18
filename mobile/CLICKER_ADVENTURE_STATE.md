@@ -4369,6 +4369,8 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - **Récompense de TOUT mini-jeu (règle de l'auteur)** : 80 % les Griffes d'UN niveau de la meilleure créature (celle dont le
   prochain niveau coûte le plus), 15 % Tap ×2 pendant 2 min (prolonge un bonus en cours), 5 % 3 Diamants. JAMAIS de pièces.
 - Fichiers : `games/clicker/miniJeux.js` (logique), `screens/games/ChasseLueurs.js` (écran), scène de banc `mini-jeux.jsx`.
+- ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
+  `menuDevOuvert`, `lancerMiniJeuDev`) qui lance un mini-jeu 3 s après le choix.
   Contrôle auditChasseLueurs + 3 pièges. Durées des lueurs à régler après les essais de l'auteur (LUEUR_DUREE_FIN_MS).
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
