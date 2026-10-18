@@ -4386,6 +4386,13 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - ✅ Étape 2 **🌀 Roue des runes** : les 8 runes du jeu en roue, une dorée (halo d'or) ; taper n'importe où quand elle passe
   sous la flèche ▼ ; 5 réussites à 120 / 160 / 200 / 250 / 300 °/s, sens alterné, ± 22° (± 0,18 s → ± 0,07 s) ; 3 passages
   sans tap ou un tap à côté = perdu. L'angle se CALCULE au temps (roueAligne), il ne se lit pas sur l'animation.
+- **Retouches de l'auteur** : lueurs bien visibles (`LueurVisible` : halo, cœur blanc, anneau, pulsation) ; Transe : l'œuf
+  lumineux dans un anneau doré ; Roue : flèche EN BAS (`ROUE_FLECHE_DEG = 180`). ⚠️ **BUG RÉEL du Bonneteau** (reproduit au
+  banc, `&hasard=0`) : le rendu lisait l'œuf de la lueur dans une RÉFÉRENCE changée dans l'effet ; au 1er tour
+  `setEtape('montre')` ne changeait rien → aucun rendu → lueur montrée sous l'œuf de départ, pas sous le bon. Règle : ce que
+  le RENDU affiche vit dans un ÉTAT ; une référence ne sert qu'aux gestes. (Au banc, les taps des mini-jeux ne passent pas.)
+- ✅ Étape 3 **🔐 Coffre à broches** : aiguille en aller-retour (1,6 → 1,25 → 1 s), zone verte 22 → 15 → 10 % de la jauge,
+  3 broches ; tap hors zone ou 4 allers-retours sans tap = perdu.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
 - ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
