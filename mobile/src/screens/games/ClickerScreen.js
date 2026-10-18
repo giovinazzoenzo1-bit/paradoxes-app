@@ -1012,6 +1012,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // ✨ CHASSE AUX LUEURS (mini-jeu de l'auteur) : une lueur errante passe toutes les 30 min ; la toucher lance le jeu.
   const [lueurErrante, setLueurErrante] = useState(null); // { x, y, jusqua }
   const [chasseOuverte, setChasseOuverte] = useState(false);
+  // ⚠️ MENU DÉVELOPPEUR (demande de l'auteur, À RETIRER avant la sortie) : lance un mini-jeu 3 s après le choix.
+  const [menuDevOuvert, setMenuDevOuvert] = useState(false);
+  const lancerMiniJeuDev = () => {
+    setMenuDevOuvert(false);
+    setTimeout(() => setChasseOuverte(true), 3000);
+  };
   const chasseOuverteRef = useRef(false);
   chasseOuverteRef.current = chasseOuverte;
   const prochaineLueurRef = useRef(Date.now() + LUEUR_ERRANTE_PREMIERE_MS);
@@ -4398,6 +4404,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               </Animated.View>
               {incubatingEgg && incubatorIsReady(incubatingEgg) && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
+            {/* ⚠️ MENU DÉVELOPPEUR — À RETIRER avant la sortie (demande de l'auteur) : sous l'incubateur. */}
+            <TouchableOpacity style={styles.devMenuBtn} onPress={() => setMenuDevOuvert(true)} accessibilityLabel="Menu développeur">
+              <Text style={styles.devMenuBtnTexte}>🛠️</Text>
+            </TouchableOpacity>
 
             <ImageBackground
               source={require('../../../assets/menu/cadre-deck.png')}
@@ -4696,6 +4706,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {/* (06/10) L'ancienne fiche verticale n'est plus ouverte : une créature choisie ici
           ouvre la NOUVELLE fiche de l'Exploration (voir ficheAventure). */}
 
+      {menuDevOuvert && (
+        <View style={styles.devMenu}>
+          <Text style={styles.devMenuTitre}>🛠️ Menu développeur (à retirer)</Text>
+          <Text style={styles.devMenuNote}>Le mini-jeu démarre 3 s après le choix.</Text>
+          <TouchableOpacity style={styles.devMenuLigne} onPress={lancerMiniJeuDev}>
+            <Text style={styles.devMenuLigneTexte}>✨ Chasse aux Lueurs</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.devMenuLigne} onPress={() => setMenuDevOuvert(false)}>
+            <Text style={styles.devMenuLigneTexte}>Fermer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <ChasseLueurs visible={chasseOuverte} sons={sonsJeuRef.current} vibrations={vibrationsRef.current}
         onGagne={recompenserMiniJeu} onFermer={() => setChasseOuverte(false)} />
       {calendarOpen && (
@@ -6859,6 +6881,20 @@ const styles = StyleSheet.create({
   // 3e bouton de la colonne de gauche : même `left` que le cadeau,
   // `top` = celui du cadeau + 144 (2 x 72). Dérivé de la même formule
   // pour que les trois restent solidaires.
+  // ⚠️ Menu développeur (À RETIRER) : petit bouton sous l'incubateur, fenêtre volontairement simple.
+  devMenuBtn: {
+    position: 'absolute', left: SCREEN_W * 0.015 + 15, top: SCREEN_H * (0.334 - TOP_BLOCK_SHIFT) + 210, zIndex: 3,
+    width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  devMenuBtnTexte: { fontSize: 16 },
+  devMenu: {
+    position: 'absolute', left: 30, right: 30, top: SCREEN_H * 0.3, zIndex: 50, padding: 16, borderRadius: 12,
+    backgroundColor: 'rgba(20,16,32,0.96)', borderWidth: 1, borderColor: '#888',
+  },
+  devMenuTitre: { color: '#fff', fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  devMenuNote: { color: '#bbb', fontSize: 12, marginBottom: 10 },
+  devMenuLigne: { paddingVertical: 12, paddingHorizontal: 10, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 8 },
+  devMenuLigneTexte: { color: '#fff', fontSize: 15, fontWeight: '700' },
   incubatorBtn: {
     position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * (0.334 - TOP_BLOCK_SHIFT) + 144, zIndex: 3,
     width: 62, height: 62,
