@@ -4372,6 +4372,10 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - **3 mini-jeux** (écran commun `screens/games/MiniJeu.js`) : ✨ Chasse aux Lueurs ; 🎯 Lueur dorée (10 tours, 3 → 7 lueurs,
   1,6 → 1 s, une bleue touchée = perdu) ; 🥁 Battement de Transe (16 temps, ± 150 ms, 3 ratés, 0,7 → 0,5 s par temps). Chacun
   affiche un TUTO d'une seule phrase pendant le décompte (demande de l'auteur). La lueur errante lance l'un des 3 au hasard.
+- **Après essai de l'auteur** : PAS de fond noir (fenêtre transparente, textes lisibles par leur ombre) ; les lumières BOUGENT
+  (dérive de 70 à 140 px pendant leur vie) ; Transe : le cercle change de place à chaque temps ; Chasse : 20 lueurs, 1,39 → 0,79 s ;
+  victoire = son `victoire` + feux d'artifice (3 gerbes) + gain qui « arrive sur le joueur » en élastique (Animated.spring).
+  ⚠️ `pointerEvents` dans le STYLE (auditPointerEventsStyle : la propriété est ignorée sur téléphone depuis le SDK 57).
 - ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
   `menuDevOuvert`, `lancerMiniJeuDev`) qui lance un mini-jeu 3 s après le choix.
   Contrôle auditChasseLueurs + 3 pièges. Durées des lueurs à régler après les essais de l'auteur (LUEUR_DUREE_FIN_MS).
