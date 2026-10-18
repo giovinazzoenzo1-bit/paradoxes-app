@@ -4401,6 +4401,10 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   Modal du web) ; viewport sans isMobile pour des coordonnées justes ; reconstruire la scène avant de la rejouer.
 - ✅ Étape 5 **🔮 Rituel de l'Œuf** : 6 symboles d'éléments (images des effets de combat) tournent lentement autour de l'œuf
   (24 s par tour, restent droits) ; suites de 3 / 4 / 5 montrées à 0,7 / 0,6 / 0,5 s ; un mauvais symbole = perdu.
+- ✅ Étape 6 **🦹 Pilleurs encapuchonnés** (images Gemini 110 à 112 détourées dans `assets/minijeux/`) : 5 buissons ; le
+  pilleur glisse dans une fenêtre qui le cache, le buisson est dessiné PAR-DESSUS ; 15 pilleurs de 1,3 à 0,75 s, écarts
+  0,9 → 0,5 s ; ~20 % de lueurs-leurres, jamais deux d'affilée ; pilleur raté ou lueur touchée = perdu.
+- Reste l'étape 7 : réglages après les essais de l'auteur, puis retrait du menu 🛠️.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
 - ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
