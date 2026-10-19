@@ -19,6 +19,10 @@ import { requireOptionalNativeModule } from 'expo-modules-core';
 // vie), traités : silences coupés, volume perçu harmonisé, micro-fondus, MP3 mono 96 kb/s
 // (350 Ko en tout). « page » et « achat » remplacent les 2 sons synthétisés du 27/09.
 const SONS = {
+  // Rituel de l'Œuf (demande de l'auteur : « un son différent par bouton, style jeu de musique ») : do ré mi sol la do.
+  'note-1': require('../../../assets/sons/note-1.mp3'), 'note-2': require('../../../assets/sons/note-2.mp3'),
+  'note-3': require('../../../assets/sons/note-3.mp3'), 'note-4': require('../../../assets/sons/note-4.mp3'),
+  'note-5': require('../../../assets/sons/note-5.mp3'), 'note-6': require('../../../assets/sons/note-6.mp3'),
   'impact-normal': require('../../../assets/sons/impact-normal.mp3'),
   'impact-parfait': require('../../../assets/sons/impact-parfait.mp3'),
   'rate': require('../../../assets/sons/rate.mp3'),

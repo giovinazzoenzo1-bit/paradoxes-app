@@ -59,7 +59,7 @@ export const MINI_JEUX = [
   { id: 'bonneteau', titre: "🥚 Bonneteau d'œufs", tuto: "Suis l'œuf qui cache la lueur, puis touche-le." },
   { id: 'roue', titre: '🌀 Roue des runes', tuto: 'Tape quand la rune dorée passe sur la flèche.' },
   { id: 'coffre', titre: '🔐 Coffre à broches', tuto: "Arrête l'aiguille dans la zone verte pour lever chaque broche." },
-  { id: 'spores', titre: '✨ Pluie de spores', tuto: "Touche chaque spore avant qu'elle n'atteigne le nid." },
+  { id: 'spores', titre: '✨ Pluie de spores', tuto: 'Touche les spores dorées, chacune vaut 1 Griffe.' },
   { id: 'rituel', titre: "🔮 Rituel de l'Œuf", tuto: "Retiens l'ordre des symboles qui s'allument, puis touche-les dans le même ordre." },
   { id: 'pilleurs', titre: '🦹 Pilleurs encapuchonnés', tuto: "Touche les pilleurs avant qu'ils replongent, jamais les lueurs." },
 ];
@@ -140,18 +140,30 @@ export function coffreAiguille(ms, periodeMs) {
 }
 export function coffreDansZone(pos, centre, largeur) { return Math.abs(pos - centre) <= largeur / 2; }
 
-// ✨ PLUIE DE SPORES (plan de l'auteur, étape 4, idée Gemini n° 10) : des spores lumineuses tombent vers le nid de l'écran
-// principal ; les toucher toutes avant qu'elles l'atteignent. 18 spores ; elles arrivent de plus en plus serrées
-// (0,9 → 0,45 s entre deux) et tombent de plus en plus vite (3,2 → 2 s de chute). Une seule touche le nid : perdu.
-export const SPORES_NB = 18;
+// ✨ PLUIE DE SPORES (demandes de l'auteur, après essai) : SEULES les spores DORÉES comptent — 15, chacune vaut 1 Griffe,
+// et c'est TOUTE la récompense (pas de tirage 80/15/5 en plus). Beaucoup plus de spores bleues (3 par dorée), qui ne font
+// rien. De plus en plus vite : 0,45 → 0,2 s entre deux spores, 3 → 1,2 s de chute. Aucune dorée attrapée : perdu.
+export const SPORES_DOREES = 15;
+export const SPORES_BLEUES_PAR_DOREE = 3;
+export const SPORES_TOTAL = SPORES_DOREES * (1 + SPORES_BLEUES_PAR_DOREE);
+export const SPORES_NB = SPORES_TOTAL; // (ancien nom, gardé)
 export const SPORE_SOL = 0.7; // hauteur (part de l'écran) où commence le nid
 export function sporeIntervalle(i) {
-  const k = Math.max(0, Math.min(SPORES_NB - 1, Math.floor(Number(i) || 0)));
-  return Math.round(900 + (450 - 900) * (k / (SPORES_NB - 1)));
+  const k = Math.max(0, Math.min(SPORES_TOTAL - 1, Math.floor(Number(i) || 0)));
+  return Math.round(450 + (200 - 450) * (k / (SPORES_TOTAL - 1)));
 }
 export function sporeChute(i) {
-  const k = Math.max(0, Math.min(SPORES_NB - 1, Math.floor(Number(i) || 0)));
-  return Math.round(3200 + (2000 - 3200) * (k / (SPORES_NB - 1)));
+  const k = Math.max(0, Math.min(SPORES_TOTAL - 1, Math.floor(Number(i) || 0)));
+  return Math.round(3000 + (1200 - 3000) * (k / (SPORES_TOTAL - 1)));
+}
+// Une dorée par paquet de 4, à une place au hasard : elles restent bien réparties sur toute la partie.
+export function planSpores(aleatoire = Math.random) {
+  const out = [];
+  for (let b = 0; b < SPORES_DOREES; b++) {
+    const ou = Math.floor(aleatoire() * (1 + SPORES_BLEUES_PAR_DOREE));
+    for (let k = 0; k <= SPORES_BLEUES_PAR_DOREE; k++) out.push(k === ou ? 'or' : 'bleue');
+  }
+  return out;
 }
 
 // 🔮 RITUEL DE L'ŒUF (plan de l'auteur, étape 5, idées Gemini n° 2 et 7) : 6 symboles d'éléments tournent lentement autour de
@@ -162,6 +174,11 @@ export const RITUEL_LONGUEURS = [3, 4, 5];
 export const RITUEL_PAS_MS = [700, 600, 500];
 export const RITUEL_TOURS = RITUEL_LONGUEURS.length;
 export const RITUEL_ROTATION_MS = 24000; // un tour complet de l'anneau : les symboles bougent (règle de l'auteur)
+// Demande de l'auteur : le Rituel se joue AUTOUR de l'œuf de l'écran principal (visible derrière, la fenêtre est transparente).
+// Centre de l'œuf = milieu de sa zone de tap (ClickerScreen : TAP_ZONE_TOP 0,429 + TAP_ZONE_H 0,419 / 2).
+export const OEUF_CENTRE_Y = 0.429 + 0.419 / 2;
+// Une NOTE par symbole (demande de l'auteur : « style jeu de musique ») : gamme pentatonique, toujours harmonieuse.
+export const RITUEL_NOTES = ['note-1', 'note-2', 'note-3', 'note-4', 'note-5', 'note-6'];
 export function rituelLongueur(i) { return RITUEL_LONGUEURS[Math.max(0, Math.min(RITUEL_TOURS - 1, Math.floor(Number(i) || 0)))]; }
 export function rituelPas(i) { return RITUEL_PAS_MS[Math.max(0, Math.min(RITUEL_TOURS - 1, Math.floor(Number(i) || 0)))]; }
 export function sequenceRituel(n, aleatoire = Math.random) {
@@ -181,6 +198,8 @@ export function sequenceRituel(n, aleatoire = Math.random) {
 export const PILLEURS_NB = 15;
 export const PILLEURS_BUISSONS = 5;
 export const PILLEUR_LEURRE_PART = 0.2;
+// Demande de l'auteur : les buissons du bas posés PILE au-dessus de la barre du bas (≈ 100 px de haut, ancrée en bas).
+export const BARRE_BAS_H = 100;
 export function pilleurDuree(i) {
   const k = Math.max(0, Math.min(PILLEURS_NB - 1, Math.floor(Number(i) || 0)));
   return Math.round(1300 + (750 - 1300) * (k / (PILLEURS_NB - 1)));

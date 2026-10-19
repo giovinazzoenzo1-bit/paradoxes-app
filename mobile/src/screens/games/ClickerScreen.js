@@ -613,8 +613,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
 
   // ✨ Chasse aux Lueurs : la récompense (règle de l'auteur pour TOUS les mini-jeux) — 80 % les Griffes d'un niveau de sa
   // meilleure créature, 15 % Tap ×2 (2 min, prolonge un bonus en cours), 5 % Diamants. Jamais de pièces.
-  const recompenserMiniJeu = () => {
-    const r = tirerRecompenseMiniJeu(ownedRef.current);
+  const recompenserMiniJeu = (resultat) => {
+    // Pluie de spores (demande de l'auteur) : ses Griffes (1 par spore dorée) SONT la récompense, sans tirage en plus.
+    const r = resultat && resultat.griffes > 0 ? { type: 'griffes', amount: Math.floor(resultat.griffes) } : tirerRecompenseMiniJeu(ownedRef.current);
     if (r.type === 'griffes') {
       (async () => {
         try {

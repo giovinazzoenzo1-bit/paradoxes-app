@@ -10,9 +10,9 @@ import {
   BONNETEAU_TOURS, bonneteauEchanges, bonneteauDuree, BONNETEAU_MONTRE_MS, melangeBonneteau,
   ROUE_RUNES, ROUE_TOURS, roueVitesse, roueAligne, ROUE_PASSAGES_MAX,
   COFFRE_BROCHES, coffreLargeur, coffrePeriode, coffreAiguille, coffreDansZone, COFFRE_CYCLES_MAX,
-  SPORES_NB, SPORE_SOL, sporeIntervalle, sporeChute,
-  RITUEL_SYMBOLES, RITUEL_TOURS, rituelLongueur, rituelPas, sequenceRituel, RITUEL_ROTATION_MS,
-  PILLEURS_NB, PILLEURS_BUISSONS, pilleurDuree, pilleurIntervalle, planPilleurs,
+  SPORES_TOTAL, SPORE_SOL, sporeIntervalle, sporeChute, planSpores,
+  RITUEL_SYMBOLES, RITUEL_TOURS, rituelLongueur, rituelPas, sequenceRituel, RITUEL_ROTATION_MS, OEUF_CENTRE_Y, RITUEL_NOTES,
+  PILLEURS_NB, PILLEURS_BUISSONS, pilleurDuree, pilleurIntervalle, planPilleurs, BARRE_BAS_H,
 } from '../../games/clicker/miniJeux';
 import { jouerSon } from './sonsBoutique';
 
@@ -360,51 +360,58 @@ function JeuCoffre({ sons, onRate, onReussi }) {
   );
 }
 
-// ✨ PLUIE DE SPORES : elles tombent vers le nid (le vrai, visible derrière : la fenêtre est transparente) ; les toucher toutes.
+// ✨ PLUIE DE SPORES : elles tombent vers le nid (le vrai, visible derrière). Seules les DORÉES se touchent (+1 Griffe
+// chacune, toute la récompense) ; les bleues sont des leurres qui ne réagissent pas (le doigt passe au travers).
 const SPORE_T = 66;
 function JeuSpores({ zone, sons, onRate, onReussi }) {
   const [spores, setSpores] = useState([]); // { id, x, chute (Animated.Value), couleur }
-  const touchees = useRef(0), minuteurs = useRef([]), anims = useRef({}), fini = useRef(false);
+  const attrapees = useRef(0), restantes = useRef(SPORES_TOTAL), minuteurs = useRef([]), anims = useRef({}), fini = useRef(false);
   const w = zone.w || 360, h = zone.h || 640, ySol = h * SPORE_SOL - SPORE_T / 2;
+  const finir = () => {
+    if (fini.current) return;
+    fini.current = true;
+    if (attrapees.current > 0) onReussi({ griffes: attrapees.current }); else onRate();
+  };
+  const partie = () => { restantes.current -= 1; if (restantes.current <= 0) finir(); };
   useEffect(() => {
     let t = 0;
-    for (let i = 0; i < SPORES_NB; i++) {
+    planSpores().forEach((couleur, i) => {
       t += sporeIntervalle(i);
       minuteurs.current.push(setTimeout(() => {
         if (fini.current) return;
         const chute = new Animated.Value(0), id = i;
         const x = 24 + Math.random() * Math.max(1, w - SPORE_T - 48);
-        setSpores((l) => [...l, { id, x, chute, couleur: i % 3 === 2 ? 'or' : 'cyan' }]);
+        setSpores((l) => [...l, { id, x, chute, couleur }]);
         const a = Animated.timing(chute, { toValue: 1, duration: sporeChute(i), easing: Easing.linear, useNativeDriver: true });
         anims.current[id] = a;
-        a.start(({ finished }) => { if (finished && !fini.current) { fini.current = true; onRate(); } }); // elle a touché le nid
+        a.start(({ finished }) => { if (!finished) return; setSpores((l) => l.filter((sp) => sp.id !== id)); partie(); });
       }, t));
-    }
+    });
     return () => { fini.current = true; minuteurs.current.forEach(clearTimeout); Object.values(anims.current).forEach((a) => a.stop()); };
   }, []);
-  const toucher = (id) => {
-    if (fini.current) return;
-    const a = anims.current[id];
-    if (a) { delete anims.current[id]; a.stop(); }
-    setSpores((l) => l.filter((sp) => sp.id !== id));
+  const toucher = (sp) => {
+    if (fini.current || sp.couleur !== 'or') return;
+    const a = anims.current[sp.id];
+    if (a) { delete anims.current[sp.id]; a.stop(); }
+    setSpores((l) => l.filter((x) => x.id !== sp.id));
     jouerSon('bulle-eclatee', sons);
-    touchees.current += 1;
-    if (touchees.current >= SPORES_NB) { fini.current = true; onReussi(); }
+    attrapees.current += 1;
+    partie();
   };
   return spores.map((sp) => (
-    <Animated.View key={sp.id} style={[styles.spore, { left: sp.x, top: 80, transform: [
+    <Animated.View key={sp.id} style={[styles.spore, sp.couleur !== 'or' && { pointerEvents: 'none' }, { left: sp.x, top: 80, transform: [
       { translateY: sp.chute.interpolate({ inputRange: [0, 1], outputRange: [0, ySol - 80] }) },
       { translateX: sp.chute.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, 14, 0, -14, 0] }) }] }]}>
-      <TouchableOpacity activeOpacity={0.6} onPressIn={() => toucher(sp.id)}>
-        <LueurVisible couleur={sp.couleur} taille={SPORE_T} />
+      <TouchableOpacity activeOpacity={0.6} onPressIn={() => toucher(sp)}>
+        <LueurVisible couleur={sp.couleur === 'or' ? 'or' : 'cyan'} taille={SPORE_T} />
       </TouchableOpacity>
     </Animated.View>
   ));
 }
 
 // 🔮 RITUEL DE L'ŒUF : 6 symboles tournent lentement autour de l'œuf ; une suite s'allume ; la refaire dans l'ordre.
-const RITUEL_R = 128, SYM_L = 86, SYM_H = 64;
-function JeuRituel({ sons, onRate, onReussi }) {
+const RITUEL_R = 150, SYM_L = 86, SYM_H = 64;
+function JeuRituel({ zone, sons, onRate, onReussi }) {
   const [tour, setTour] = useState(0);
   const [etape, setEtape] = useState('montre'); // montre → joue
   const [allume, setAllume] = useState(null);   // symbole allumé (rendu)
@@ -424,7 +431,7 @@ function JeuRituel({ sons, onRate, onReussi }) {
     setEtape('montre');
     setAllume(null);
     sequence.current.forEach((sym, j) => {
-      plus(600 + j * pas, () => { setAllume(sym); jouerSon('bouton', sons); });
+      plus(600 + j * pas, () => { setAllume(sym); jouerSon(RITUEL_NOTES[sym], sons); }); // sa note
       plus(600 + j * pas + pas * 0.7, () => setAllume(null));
     });
     plus(600 + n * pas + 150, () => setEtape('joue'));
@@ -433,7 +440,7 @@ function JeuRituel({ sons, onRate, onReussi }) {
   const toucher = (k) => {
     if (etape !== 'joue') return;
     if (k !== sequence.current[pos.current]) { onRate(); return; }
-    jouerSon('bulle-eclatee', sons);
+    jouerSon(RITUEL_NOTES[k], sons); // la note du symbole touché
     setAllume(k);
     plus(220, () => setAllume(null));
     pos.current += 1;
@@ -442,15 +449,17 @@ function JeuRituel({ sons, onRate, onReussi }) {
       plus(650, () => { if (tour + 1 >= RITUEL_TOURS) onReussi(); else setTour(tour + 1); });
     }
   };
+  const w = zone.w || 360, h = zone.h || 640;
+  const R = Math.min(RITUEL_R, (w - SYM_L) / 2 - 4); // l'anneau tient dans l'écran
+  const cy = h * OEUF_CENTRE_Y; // centre de l'ŒUF de l'écran principal (demande de l'auteur)
   const angle = tourne.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const contre = tourne.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] });
   return (
     <View style={styles.rituelZone}>
-      <Image source={OEUF_LUMINEUX} style={styles.rituelOeuf} resizeMode="contain" />
-      <Animated.View style={[styles.rituelAnneau, { transform: [{ rotate: angle }] }]}>
+      <Animated.View style={[styles.rituelAnneau, { width: R * 2, height: R * 2, left: w / 2 - R, top: cy - R, transform: [{ rotate: angle }] }]}>
         {RITUEL_SYMBOLES.map((nom, k) => {
           const a = (k / RITUEL_SYMBOLES.length) * Math.PI * 2;
-          const x = RITUEL_R + Math.sin(a) * RITUEL_R - SYM_L / 2, y = RITUEL_R - Math.cos(a) * RITUEL_R - SYM_H / 2;
+          const x = R + Math.sin(a) * R - SYM_L / 2, y = R - Math.cos(a) * R - SYM_H / 2;
           const on = allume === k;
           return (
             <Animated.View key={nom} style={[styles.rituelSymbole, { left: x, top: y, transform: [{ rotate: contre }, { scale: on ? 1.35 : 1 }] }]}>
@@ -462,14 +471,16 @@ function JeuRituel({ sons, onRate, onReussi }) {
           );
         })}
       </Animated.View>
-      <Text style={styles.rituelEtat}>{etape === 'joue' ? 'À toi !' : 'Regarde…'}</Text>
+      <Text style={[styles.rituelEtat, { top: Math.max(90, cy - R - SYM_H - 40) }]}>{etape === 'joue' ? 'À toi !' : 'Regarde…'}</Text>
     </View>
   );
 }
 
 // 🦹 PILLEURS ENCAPUCHONNÉS : ils surgissent de derrière 5 buissons (le pilleur glisse dans une fenêtre qui le cache, le buisson
 // est dessiné PAR-DESSUS) ; les lueurs sont des leurres.
-const BUISSONS_PLACES = [[0.2, 0.36], [0.5, 0.29], [0.8, 0.36], [0.32, 0.58], [0.68, 0.58]];
+// Rangée du haut : parts de l'écran ; rangée du BAS : posée pile au-dessus de la barre du bas (demande de l'auteur).
+const BUISSONS_HAUT = [[0.2, 0.36], [0.5, 0.29], [0.8, 0.36]];
+const BUISSONS_BAS_X = [0.2, 0.8];
 const PIL_L = 104, PIL_H = 112, BUI_L = 128, BUI_H = 110;
 function JeuPilleurs({ zone, sons, onRate, onReussi }) {
   const [occ, setOcc] = useState(() => Array(PILLEURS_BUISSONS).fill(null)); // { id, type, v, touche } par buisson
@@ -510,22 +521,26 @@ function JeuPilleurs({ zone, sons, onRate, onReussi }) {
     if (touches.current >= PILLEURS_NB) { fini.current = true; plus(250, onReussi); return; }
     plus(260, () => Animated.timing(o.v, { toValue: 0, duration: 120, useNativeDriver: true }).start(() => { if (occRef.current[b] === o) poser(b, null); }));
   };
-  return BUISSONS_PLACES.map(([fx, fy], b) => {
-    const o = occ[b], cx = fx * w, cy = fy * h;
+  const yBas = h - BARRE_BAS_H - BUI_H * 0.55; // bas du buisson = haut de la barre du bas
+  const places = [...BUISSONS_HAUT.map(([fx, fy]) => [fx * w, fy * h]), ...BUISSONS_BAS_X.map((fx) => [fx * w, yBas])];
+  // ⚠️ L'auteur : « on appuie dessus et ça ne marche pas parfois » — le buisson (dessiné par-dessus) cachait le bas du
+  // pilleur et prenait le doigt. TOUT le bloc (pilleur + buisson) se touche désormais.
+  return places.map(([cx, cy], b) => {
+    const o = occ[b];
     return (
-      <View key={b} style={[styles.pilBloc, { left: cx - BUI_L / 2, top: cy - PIL_H }]}>
+      <TouchableOpacity key={b} activeOpacity={1} onPressIn={() => toucher(b)} style={[styles.pilBloc, { left: cx - BUI_L / 2, top: cy - PIL_H }]}>
         <View style={styles.pilFenetre}>
           {o ? (
             <Animated.View style={{ transform: [{ translateY: o.v.interpolate({ inputRange: [0, 1], outputRange: [PIL_H, 0] }) }] }}>
-              <TouchableOpacity activeOpacity={0.8} onPressIn={() => toucher(b)} style={styles.pilToucher}>
+              <View style={styles.pilToucher}>
                 {o.type === 'leurre' ? <LueurVisible couleur="cyan" taille={80} />
                   : <Image source={o.touche ? PILLEUR_TOUCHE : PILLEUR} style={styles.pilImage} resizeMode="contain" />}
-              </TouchableOpacity>
+              </View>
             </Animated.View>
           ) : null}
         </View>
         <Image source={BUISSON} style={styles.pilBuisson} resizeMode="contain" />
-      </View>
+      </TouchableOpacity>
     );
   });
 }
@@ -591,11 +606,11 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
     Animated.sequence([10, -10, 8, -8, 5, -5, 0].map((v) => Animated.timing(tremble, { toValue: v, duration: 45, useNativeDriver: true }))).start();
     minuteur.current = setTimeout(() => onFermer && onFermer(), PERDU_MS);
   };
-  const gagner = () => {
+  const gagner = (resultat) => {
     if (fini.current) return;
     fini.current = true;
     nettoyer();
-    setRecompense(onGagne ? onGagne() : null);
+    setRecompense(onGagne ? onGagne(resultat) : null); // resultat : ex. { griffes: 7 } (Pluie de spores)
     setPhase('gagne');
     jouerSon('victoire', sons); // demande de l'auteur : le son de VICTOIRE
     arrivee.setValue(0);
@@ -658,19 +673,18 @@ const styles = StyleSheet.create({
   roueZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   coffreZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   spore: { position: 'absolute', width: SPORE_T, height: SPORE_T },
-  rituelZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  rituelZone: { flex: 1 },
   pilBloc: { position: 'absolute', width: BUI_L, height: PIL_H + BUI_H * 0.55 },
   pilFenetre: { position: 'absolute', left: (BUI_L - PIL_L) / 2, top: 0, width: PIL_L, height: PIL_H + 8, overflow: 'hidden', alignItems: 'center' },
   pilToucher: { width: PIL_L, height: PIL_H, alignItems: 'center', justifyContent: 'center' },
   pilImage: { width: PIL_L, height: PIL_H },
   pilBuisson: { position: 'absolute', left: 0, top: PIL_H - BUI_H * 0.45, width: BUI_L, height: BUI_H },
-  rituelOeuf: { position: 'absolute', width: 130, height: 130 },
-  rituelAnneau: { width: RITUEL_R * 2, height: RITUEL_R * 2 },
+  rituelAnneau: { position: 'absolute' },
   rituelSymbole: { position: 'absolute', width: SYM_L, height: SYM_H, alignItems: 'center', justifyContent: 'center' },
   rituelImage: { width: SYM_L, height: SYM_H },
   rituelEteint: { opacity: 0.55 },
   rituelHalo: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  rituelEtat: { position: 'absolute', bottom: '18%', color: '#fff', fontSize: 22, fontWeight: '900', textShadowColor: '#000', textShadowRadius: 8 },
+  rituelEtat: { position: 'absolute', left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: 22, fontWeight: '900', textShadowColor: '#000', textShadowRadius: 8 },
   coffreImage: { width: 170, height: 170 },
   coffreBroches: { flexDirection: 'row', marginTop: 6, marginBottom: 18 },
   coffreBroche: { width: 46, height: 46, borderRadius: 23, marginHorizontal: 8, alignItems: 'center', justifyContent: 'center',
