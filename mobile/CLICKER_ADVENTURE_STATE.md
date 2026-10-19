@@ -4418,6 +4418,11 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - Reste l'étape 7 : réglages après les essais de l'auteur, puis retrait du menu 🛠️.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
+- **RÈGLES D'ARRIVÉE (auteur, 18/10 au soir)** : un mini-jeu ne surgit JAMAIS pendant un défi de continuité
+  (`MINI_JEU_DEFIS_CONTINUS` : série de taps, Transe tenue, combo), ni en plein élan (aucun tap depuis 2 s exigé), ni si le
+  joueur est absent (un tap depuis moins de 60 s exigé), ni sur une cible dorée / créature à attraper / bulle de pub, ni
+  par-dessus une fenêtre (`peutPopperRef`, calculé APRÈS `currentChallengeId`) ; 2 min de répit à l'ouverture ET au retour
+  d'arrière-plan (AppState). Aucune cible dorée pendant un mini-jeu, la suivante attend 3 s après sa fin.
 - ⚠️ **MENU DÉVELOPPEUR À RETIRER avant la sortie** (demande de l'auteur) : bouton 🛠️ sous l'incubateur (`devMenuBtn`,
   `menuDevOuvert`, `lancerMiniJeuDev`) qui lance un mini-jeu 3 s après le choix.
   Contrôle auditChasseLueurs + 3 pièges. Durées des lueurs à régler après les essais de l'auteur (LUEUR_DUREE_FIN_MS).
