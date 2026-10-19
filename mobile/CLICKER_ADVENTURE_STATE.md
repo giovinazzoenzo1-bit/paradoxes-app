@@ -4410,6 +4410,11 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   pile au-dessus de la barre du bas (`BARRE_BAS_H` 100 px) ; ✨ Spores : 15 DORÉES = 1 Griffe chacune, et c'est TOUTE la
   récompense (`onReussi({ griffes })` → `recompenserMiniJeu(resultat)`, pas de tirage 80/15/5), 3 bleues par dorée qui ne
   réagissent pas, 0,45 → 0,2 s d'écart et 3 → 1,2 s de chute ; aucune dorée = perdu.
+- **Retours suivants** : Pilleurs — la disposition d'ORIGINE descendue d'un bloc (l'auteur voulait « juste baisser le
+  tout », pas réarranger) ; Spores — 0,325 → 0,15 s d'écart et 2,1 → 0,9 s de chute, « +1 » doré à chaque dorée (hauteur
+  calculée au temps) ; Coffre — la jauge de l'AVENTURE (planche `exploration/plaque-titre.png`, sillon, zone dorée,
+  aiguille : copie des styles de CombatScreen), plus de coffre derrière ; Roue — centrée sur l'œuf (R 130), flèche sous la
+  rune du bas. Prochain chantier de l'auteur : visuels des mini-jeux, et leur arrivée PENDANT que le joueur tape.
 - Reste l'étape 7 : réglages après les essais de l'auteur, puis retrait du menu 🛠️.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
