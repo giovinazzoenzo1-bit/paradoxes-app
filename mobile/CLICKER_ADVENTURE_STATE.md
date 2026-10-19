@@ -4415,6 +4415,12 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   calculée au temps) ; Coffre — la jauge de l'AVENTURE (planche `exploration/plaque-titre.png`, sillon, zone dorée,
   aiguille : copie des styles de CombatScreen), plus de coffre derrière ; Roue — centrée sur l'œuf (R 130), flèche sous la
   rune du bas. Prochain chantier de l'auteur : visuels des mini-jeux, et leur arrivée PENDANT que le joueur tape.
+- **Règles d'ARRIVÉE (auteur, 18/10 au soir)** — `miniJeux.js` + `peutPopperRef` + minuterie : jamais pendant un défi de
+  CONTINUITÉ (`MINI_JEU_DEFIS_CONTINUS` : série de taps, Transe tenue, combo) ; jamais en plein élan (aucun tap depuis 2 s) ;
+  jamais si le joueur est absent (aucun tap depuis 60 s) ; jamais avec une cible dorée, une créature à attraper ou la bulle
+  de pub à l'écran ; jamais par-dessus une fenêtre (boss + annonce + résultat, Gardien + confirmation, incubateur,
+  calendrier, boutique de Diamants, Ascension, hors ligne, pub, choix / fiche / gain de créature, pouvoir, menu 🛠️) ;
+  2 min de répit à l'ouverture ET au retour d'arrière-plan (AppState). Aucune cible dorée pendant un mini-jeu (+3 s après).
 - Reste l'étape 7 : réglages après les essais de l'auteur, puis retrait du menu 🛠️.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
