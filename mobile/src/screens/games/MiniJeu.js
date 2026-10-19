@@ -20,7 +20,8 @@ const LUEUR = require('../../../assets/fenetres/lueur-cyan.png');
 const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
 const OEUF = require('../../../assets/egg/egg-0-endormi.png');
 const OEUF_LUMINEUX = require('../../../assets/egg/egg-3-lumineux.png');
-const COFFRE = require('../../../assets/pubs/coffre.png');
+// Coffre à broches : la jauge de l'AVENTURE (demande de l'auteur : « la même barre, même style ») — mêmes images.
+const JAUGE_PLANCHE = require('../../../assets/exploration/plaque-titre.png');
 const PILLEUR = require('../../../assets/minijeux/pilleur.png');
 const PILLEUR_TOUCHE = require('../../../assets/minijeux/pilleur-touche.png');
 const BUISSON = require('../../../assets/minijeux/buisson.png');
@@ -266,8 +267,8 @@ function JeuBonneteau({ zone, sons, onRate, onReussi }) {
 }
 
 // 🌀 ROUE DES RUNES : la roue tourne, une rune est dorée ; taper (n'importe où) quand elle passe sous la flèche.
-const ROUE_R = 112, RUNE_T = 54;
-function JeuRoue({ sons, onRate, onReussi }) {
+const RUNE_T = 54;
+function JeuRoue({ zone, sons, onRate, onReussi }) {
   const [tour, setTour] = useState(0);
   const [doree, setDoree] = useState(() => Math.floor(Math.random() * ROUE_RUNES));
   const [depart, setDepart] = useState(0);   // angle (degrés) au début du tour : la roue ne saute jamais
@@ -296,12 +297,14 @@ function JeuRoue({ sons, onRate, onReussi }) {
     setTour(tour + 1);
   };
   const fin = depart + (tour % 2 === 0 ? 360 : -360);
+  // L'auteur : la roue au milieu de l'ŒUF, « que les runes gravitent autour » (l'œuf est visible derrière).
+  const w = zone.w || 360, h = zone.h || 640, R = Math.min(130, (w - RUNE_T) / 2 - 4), cy = h * OEUF_CENTRE_Y;
   return (
     <TouchableOpacity activeOpacity={1} onPressIn={toucher} style={styles.roueZone}>
-      <Animated.View style={[styles.roue, { transform: [{ rotate: rot.interpolate({ inputRange: [0, 1], outputRange: [depart + 'deg', fin + 'deg'] }) }] }]}>
+      <Animated.View style={[styles.roue, { width: R * 2, height: R * 2, left: w / 2 - R, top: cy - R, transform: [{ rotate: rot.interpolate({ inputRange: [0, 1], outputRange: [depart + 'deg', fin + 'deg'] }) }] }]}>
         {RUNES.map((src, k) => {
           const a = (k * 360 / ROUE_RUNES) * Math.PI / 180;
-          const x = ROUE_R + Math.sin(a) * ROUE_R - RUNE_T / 2, y = ROUE_R - Math.cos(a) * ROUE_R - RUNE_T / 2;
+          const x = R + Math.sin(a) * R - RUNE_T / 2, y = R - Math.cos(a) * R - RUNE_T / 2;
           return (
             <View key={k} style={[styles.roueRune, { left: x, top: y }]}>
               {k === doree ? <View style={styles.roueHalo}><LueurVisible couleur="or" taille={RUNE_T * 1.7} /></View> : null}
@@ -310,14 +313,13 @@ function JeuRoue({ sons, onRate, onReussi }) {
           );
         })}
       </Animated.View>
-      <Text style={styles.roueFleche}>▲</Text>
+      <Text style={[styles.roueFleche, { top: cy + R + RUNE_T / 2 - 4 }]}>▲</Text>
     </TouchableOpacity>
   );
 }
 
 // 🔐 COFFRE À BROCHES : l'aiguille fait l'aller-retour ; taper (n'importe où) quand elle est dans la zone verte.
-const JAUGE_L = 280;
-function JeuCoffre({ sons, onRate, onReussi }) {
+function JeuCoffre({ zone, sons, onRate, onReussi }) {
   const [broche, setBroche] = useState(0);
   const [centre, setCentre] = useState(() => 0.25 + Math.random() * 0.5);
   const aiguille = useRef(new Animated.Value(0)).current;
@@ -343,18 +345,26 @@ function JeuCoffre({ sons, onRate, onReussi }) {
     setCentre(l / 2 + 0.06 + Math.random() * (1 - l - 0.12));
     setBroche(broche + 1);
   };
-  const larg = coffreLargeur(broche) * JAUGE_L;
+  // Dimensions de la jauge de frappe de l'Aventure (CombatScreen, JaugeFrappe) : planche en cadre, sillon intérieur.
+  const W = Math.min(340, (zone.w || 360) - 36), H = Math.round(W * 0.15), insX = W * 0.085, insY = H * 0.27;
+  const sw = W - 2 * insX, sh = H - 2 * insY, haut = 9, zoneP = coffreLargeur(broche) * sw, cxz = centre * sw;
   return (
     <TouchableOpacity activeOpacity={1} onPressIn={toucher} style={styles.coffreZone}>
-      <Image source={COFFRE} style={styles.coffreImage} resizeMode="contain" />
       <View style={styles.coffreBroches}>
         {Array.from({ length: COFFRE_BROCHES }).map((_, k) => (
           <View key={k} style={[styles.coffreBroche, k < broche && styles.coffreBrocheLevee]}><Text style={styles.coffreBrocheTexte}>{k < broche ? '🔓' : '🔒'}</Text></View>
         ))}
       </View>
-      <View style={styles.coffreJauge}>
-        <View style={[styles.coffreVert, { left: centre * JAUGE_L - larg / 2, width: larg }]} />
-        <Animated.View style={[styles.coffreAiguille, { transform: [{ translateX: aiguille.interpolate({ inputRange: [0, 1], outputRange: [0, JAUGE_L] }) }] }]} />
+      <View style={{ width: W, height: H + 2 * haut }}>
+        <Image source={JAUGE_PLANCHE} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: 0, top: haut, width: W, height: H }} />
+        <Image source={LUEUR_OR} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', left: insX + cxz - zoneP * 1.8, top: haut + insY - sh * 0.9, width: zoneP * 3.6, height: sh * 2.8, opacity: 0.6 }} />
+        <View style={[styles.jaugeSillon, { left: insX, top: haut + insY, width: sw, height: sh, borderRadius: sh / 2 }]}>
+          <View style={[styles.jaugeParfait, { left: cxz - zoneP / 2, width: zoneP }]}><View style={styles.jaugeParfaitReflet} /></View>
+        </View>
+        <Animated.View style={[styles.jaugeAiguille, { left: insX - 4, top: haut + insY - 6, height: sh + 12,
+          transform: [{ translateX: aiguille.interpolate({ inputRange: [0, 1], outputRange: [0, sw] }) }] }]}>
+          <View style={styles.jaugeAiguilleTete} />
+        </Animated.View>
       </View>
     </TouchableOpacity>
   );
@@ -364,7 +374,8 @@ function JeuCoffre({ sons, onRate, onReussi }) {
 // chacune, toute la récompense) ; les bleues sont des leurres qui ne réagissent pas (le doigt passe au travers).
 const SPORE_T = 66;
 function JeuSpores({ zone, sons, onRate, onReussi }) {
-  const [spores, setSpores] = useState([]); // { id, x, chute (Animated.Value), couleur }
+  const [spores, setSpores] = useState([]); // { id, x, chute (Animated.Value), couleur, debut, duree }
+  const [plusUn, setPlusUn] = useState([]);  // les « +1 » qui montent (demande de l'auteur)
   const attrapees = useRef(0), restantes = useRef(SPORES_TOTAL), minuteurs = useRef([]), anims = useRef({}), fini = useRef(false);
   const w = zone.w || 360, h = zone.h || 640, ySol = h * SPORE_SOL - SPORE_T / 2;
   const finir = () => {
@@ -381,7 +392,7 @@ function JeuSpores({ zone, sons, onRate, onReussi }) {
         if (fini.current) return;
         const chute = new Animated.Value(0), id = i;
         const x = 24 + Math.random() * Math.max(1, w - SPORE_T - 48);
-        setSpores((l) => [...l, { id, x, chute, couleur }]);
+        setSpores((l) => [...l, { id, x, chute, couleur, debut: Date.now(), duree: sporeChute(i) }]);
         const a = Animated.timing(chute, { toValue: 1, duration: sporeChute(i), easing: Easing.linear, useNativeDriver: true });
         anims.current[id] = a;
         a.start(({ finished }) => { if (!finished) return; setSpores((l) => l.filter((sp) => sp.id !== id)); partie(); });
@@ -395,10 +406,15 @@ function JeuSpores({ zone, sons, onRate, onReussi }) {
     if (a) { delete anims.current[sp.id]; a.stop(); }
     setSpores((l) => l.filter((x) => x.id !== sp.id));
     jouerSon('bulle-eclatee', sons);
+    // « +1 » là où la spore a été touchée (sa hauteur se CALCULE au temps : l'animation tourne côté natif).
+    const f = Math.min(1, (Date.now() - sp.debut) / sp.duree), monte = new Animated.Value(0);
+    const p = { id: sp.id, x: sp.x + SPORE_T / 2 - 20, y: 80 + f * (ySol - 80), monte };
+    setPlusUn((l) => [...l, p]);
+    Animated.timing(monte, { toValue: 1, duration: 750, useNativeDriver: true }).start(() => setPlusUn((l) => l.filter((q) => q !== p)));
     attrapees.current += 1;
     partie();
   };
-  return spores.map((sp) => (
+  return [...spores.map((sp) => (
     <Animated.View key={sp.id} style={[styles.spore, sp.couleur !== 'or' && { pointerEvents: 'none' }, { left: sp.x, top: 80, transform: [
       { translateY: sp.chute.interpolate({ inputRange: [0, 1], outputRange: [0, ySol - 80] }) },
       { translateX: sp.chute.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, 14, 0, -14, 0] }) }] }]}>
@@ -406,7 +422,10 @@ function JeuSpores({ zone, sons, onRate, onReussi }) {
         <LueurVisible couleur={sp.couleur === 'or' ? 'or' : 'cyan'} taille={SPORE_T} />
       </TouchableOpacity>
     </Animated.View>
-  ));
+  )), ...plusUn.map((p) => (
+    <Animated.Text key={'p' + p.id} style={[styles.plusUn, { left: p.x, top: p.y, opacity: p.monte.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }),
+      transform: [{ translateY: p.monte.interpolate({ inputRange: [0, 1], outputRange: [0, -46] }) }, { scale: p.monte.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.6, 1.25, 1] }) }] }]}>+1</Animated.Text>
+  ))];
 }
 
 // 🔮 RITUEL DE L'ŒUF : 6 symboles tournent lentement autour de l'œuf ; une suite s'allume ; la refaire dans l'ordre.
@@ -478,9 +497,10 @@ function JeuRituel({ zone, sons, onRate, onReussi }) {
 
 // 🦹 PILLEURS ENCAPUCHONNÉS : ils surgissent de derrière 5 buissons (le pilleur glisse dans une fenêtre qui le cache, le buisson
 // est dessiné PAR-DESSUS) ; les lueurs sont des leurres.
-// Rangée du haut : parts de l'écran ; rangée du BAS : posée pile au-dessus de la barre du bas (demande de l'auteur).
-const BUISSONS_HAUT = [[0.2, 0.36], [0.5, 0.29], [0.8, 0.36]];
-const BUISSONS_BAS_X = [0.2, 0.8];
+// L'auteur : « je voulais juste que tu baisses le tout » — la disposition d'ORIGINE (haut 0,36 / 0,29 / 0,36, bas 0,58 en
+// x 0,32 et 0,68), descendue d'un bloc pour que la rangée du bas tienne pile au-dessus de la barre du bas.
+// [x en part de largeur, décalage vertical en part de hauteur par rapport à la rangée du bas]
+const BUISSONS = [[0.2, -0.22], [0.5, -0.29], [0.8, -0.22], [0.32, 0], [0.68, 0]];
 const PIL_L = 104, PIL_H = 112, BUI_L = 128, BUI_H = 110;
 function JeuPilleurs({ zone, sons, onRate, onReussi }) {
   const [occ, setOcc] = useState(() => Array(PILLEURS_BUISSONS).fill(null)); // { id, type, v, touche } par buisson
@@ -522,7 +542,7 @@ function JeuPilleurs({ zone, sons, onRate, onReussi }) {
     plus(260, () => Animated.timing(o.v, { toValue: 0, duration: 120, useNativeDriver: true }).start(() => { if (occRef.current[b] === o) poser(b, null); }));
   };
   const yBas = h - BARRE_BAS_H - BUI_H * 0.55; // bas du buisson = haut de la barre du bas
-  const places = [...BUISSONS_HAUT.map(([fx, fy]) => [fx * w, fy * h]), ...BUISSONS_BAS_X.map((fx) => [fx * w, yBas])];
+  const places = BUISSONS.map(([fx, dy]) => [fx * w, yBas + dy * h]);
   // ⚠️ L'auteur : « on appuie dessus et ça ne marche pas parfois » — le buisson (dessiné par-dessus) cachait le bas du
   // pilleur et prenait le doigt. TOUT le bloc (pilleur + buisson) se touche désormais.
   return places.map(([cx, cy], b) => {
@@ -670,9 +690,10 @@ const styles = StyleSheet.create({
   transeCroix: { color: '#ff3b3b', fontSize: 30, fontWeight: '900', marginHorizontal: 8, textShadowColor: '#000', textShadowRadius: 6 },
   transePlace: { position: 'absolute', width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
   feux: { position: 'absolute', top: '22%', left: '50%', marginLeft: -165, width: 330, height: 380 },
-  roueZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  roueZone: { flex: 1 },
   coffreZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   spore: { position: 'absolute', width: SPORE_T, height: SPORE_T },
+  plusUn: { position: 'absolute', width: 40, textAlign: 'center', color: '#FFD54A', fontSize: 24, fontWeight: '900', textShadowColor: '#000', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 } },
   rituelZone: { flex: 1 },
   pilBloc: { position: 'absolute', width: BUI_L, height: PIL_H + BUI_H * 0.55 },
   pilFenetre: { position: 'absolute', left: (BUI_L - PIL_L) / 2, top: 0, width: PIL_L, height: PIL_H + 8, overflow: 'hidden', alignItems: 'center' },
@@ -685,20 +706,19 @@ const styles = StyleSheet.create({
   rituelEteint: { opacity: 0.55 },
   rituelHalo: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   rituelEtat: { position: 'absolute', left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: 22, fontWeight: '900', textShadowColor: '#000', textShadowRadius: 8 },
-  coffreImage: { width: 170, height: 170 },
   coffreBroches: { flexDirection: 'row', marginTop: 6, marginBottom: 18 },
   coffreBroche: { width: 46, height: 46, borderRadius: 23, marginHorizontal: 8, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.55)', borderWidth: 2, borderColor: '#8a7a5a' },
   coffreBrocheLevee: { backgroundColor: 'rgba(255,200,40,0.45)', borderColor: '#FFD54A' },
   coffreBrocheTexte: { fontSize: 22 },
-  coffreJauge: { width: JAUGE_L + 14, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 2, borderColor: '#FFD54A',
-    paddingHorizontal: 7, justifyContent: 'center' },
-  coffreVert: { position: 'absolute', top: 5, bottom: 5, borderRadius: 8, backgroundColor: '#3BE07A', marginLeft: 7,
-    shadowColor: '#3BE07A', shadowOpacity: 1, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
-  coffreAiguille: { position: 'absolute', left: 4, top: -6, width: 6, height: 42, borderRadius: 3, backgroundColor: '#ffffff',
-    shadowColor: '#000', shadowOpacity: 0.8, shadowRadius: 3, shadowOffset: { width: 0, height: 0 } },
-  roueFleche: { color: '#FFD54A', fontSize: 44, fontWeight: '900', marginTop: 4, textShadowColor: '#000', textShadowRadius: 8 }, // EN BAS (demande de l'auteur)
-  roue: { width: ROUE_R * 2, height: ROUE_R * 2 },
+  // Styles de la jauge de frappe de l'Aventure (copie conforme de CombatScreen).
+  jaugeSillon: { position: 'absolute', backgroundColor: 'rgba(26,13,4,0.92)', borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.6)', overflow: 'hidden' },
+  jaugeParfait: { position: 'absolute', top: 0, bottom: 0, backgroundColor: '#ffcf3a', borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#fff3b0' },
+  jaugeParfaitReflet: { position: 'absolute', left: 0, right: 0, top: 0, height: '45%', backgroundColor: 'rgba(255,255,255,0.38)' },
+  jaugeAiguille: { position: 'absolute', width: 8, borderRadius: 4, backgroundColor: '#fff8e1', borderWidth: 1.5, borderColor: '#9a6516', alignItems: 'center' },
+  jaugeAiguilleTete: { position: 'absolute', top: -8, width: 12, height: 12, backgroundColor: '#ffd54a', borderWidth: 1.5, borderColor: '#8a5a12', transform: [{ rotate: '45deg' }] },
+  roueFleche: { position: 'absolute', left: 0, right: 0, textAlign: 'center', color: '#FFD54A', fontSize: 40, fontWeight: '900', textShadowColor: '#000', textShadowRadius: 8 }, // EN BAS (demande de l'auteur)
+  roue: { position: 'absolute' },
   roueRune: { position: 'absolute', width: RUNE_T, height: RUNE_T, alignItems: 'center', justifyContent: 'center' },
   roueImage: { width: RUNE_T, height: RUNE_T },
   roueEteinte: { opacity: 0.45 },

@@ -1563,9 +1563,9 @@ function auditChasseLueurs() {
   if (M.RITUEL_SYMBOLES.length !== 6 || M.RITUEL_LONGUEURS.join() !== '3,4,5' || !(M.rituelPas(0) > M.rituelPas(2))) pb.push('Rituel : 6 symboles, suites de 3, 4 puis 5, de plus en plus vite');
   { let doublon = false; for (let k = 0; k < 300; k++) { const sq = M.sequenceRituel(5); if (sq.some((x, j) => j > 0 && x === sq[j - 1])) doublon = true; } if (doublon) pb.push('Rituel : le même symbole deux fois d\'affilée'); }
   // Pluie de spores (après essai de l'auteur) : 15 DORÉES (1 Griffe chacune = toute la récompense), 3 bleues par dorée qui
-  // ne réagissent pas, de plus en plus vite (0,45 → 0,2 s d'écart, 3 → 1,2 s de chute).
-  if (M.SPORES_DOREES !== 15 || M.SPORES_BLEUES_PAR_DOREE !== 3 || M.sporeIntervalle(0) !== 450 || M.sporeIntervalle(M.SPORES_TOTAL - 1) !== 200
-    || M.sporeChute(0) !== 3000 || M.sporeChute(M.SPORES_TOTAL - 1) !== 1200 || !(M.SPORE_SOL > 0.5 && M.SPORE_SOL < 0.9)) pb.push('Pluie de spores : 15 dorées, 3 bleues par dorée, de plus en plus vite');
+  // ne réagissent pas ; « commence à la vitesse du milieu, encore plus vite à la fin » : 0,325 → 0,15 s d'écart, 2,1 → 0,9 s.
+  if (M.SPORES_DOREES !== 15 || M.SPORES_BLEUES_PAR_DOREE !== 3 || M.sporeIntervalle(0) !== 325 || M.sporeIntervalle(M.SPORES_TOTAL - 1) !== 150
+    || M.sporeChute(0) !== 2100 || M.sporeChute(M.SPORES_TOTAL - 1) !== 900 || !(M.SPORE_SOL > 0.5 && M.SPORE_SOL < 0.9)) pb.push('Pluie de spores : 15 dorées, 3 bleues par dorée, de plus en plus vite');
   { const pl = M.planSpores(); if (pl.length !== M.SPORES_TOTAL || pl.filter((c) => c === 'or').length !== M.SPORES_DOREES) pb.push('Pluie de spores : le plan n\'a pas ses 15 dorées'); }
   // Coffre à broches (étape 3) : 3 broches, zone qui rétrécit, aiguille qui accélère, aller-retour régulier.
   if (M.COFFRE_BROCHES !== 3 || !(M.coffreLargeur(0) > M.coffreLargeur(1) && M.coffreLargeur(1) > M.coffreLargeur(2)) || !(M.coffrePeriode(0) > M.coffrePeriode(2))
@@ -1595,11 +1595,17 @@ function auditChasseLueurs() {
   if (Math.abs(M.OEUF_CENTRE_Y - 0.6385) > 1e-9 || !J.includes('const cy = h * OEUF_CENTRE_Y;') || !J.includes('jouerSon(RITUEL_NOTES[k], sons);') || !J.includes('jouerSon(RITUEL_NOTES[sym], sons);')
     || M.RITUEL_NOTES.length !== 6 || M.RITUEL_NOTES.some((n) => !fs.existsSync(require('path').join(__dirname, '../assets/sons', n + '.mp3')))
     || !lire('screens/games/sonsBoutique.js').includes("'note-6': require(")) pb.push('Rituel : plus centré sur l\'œuf, ou plus une note par symbole');
-  if (!J.includes('<TouchableOpacity key={b} activeOpacity={1} onPressIn={() => toucher(b)} style={[styles.pilBloc') || !J.includes('const yBas = h - BARRE_BAS_H - BUI_H * 0.55;')) pb.push('Pilleurs : le bloc entier ne se touche plus, ou les buissons du bas ne sont plus sur la barre du bas');
+  if (!J.includes('<TouchableOpacity key={b} activeOpacity={1} onPressIn={() => toucher(b)} style={[styles.pilBloc') || !J.includes('const yBas = h - BARRE_BAS_H - BUI_H * 0.55;')
+    || !J.includes('const BUISSONS = [[0.2, -0.22], [0.5, -0.29], [0.8, -0.22], [0.32, 0], [0.68, 0]];')) pb.push('Pilleurs : le bloc entier ne se touche plus, ou la disposition d\'origine (descendue sur la barre du bas) a changé');
+  // Retours suivants de l'auteur : « +1 » sur chaque spore dorée ; Coffre = la jauge de l'Aventure, sans coffre derrière ;
+  // Roue au milieu de l'œuf (les runes gravitent autour).
+  if (!J.includes('>+1</Animated.Text>')) pb.push('Pluie de spores : plus de « +1 » sur les dorées touchées');
+  if (!J.includes("const JAUGE_PLANCHE = require('../../../assets/exploration/plaque-titre.png');") || J.includes('assets/pubs/coffre.png')) pb.push('Coffre : ce n\'est plus la jauge de l\'Aventure, ou le coffre est revenu derrière');
+  if (!J.includes('R = Math.min(130, (w - RUNE_T) / 2 - 4), cy = h * OEUF_CENTRE_Y;')) pb.push('Roue des runes : plus centrée sur l\'œuf');
   // Bug réel du Bonneteau (reproduit au banc) : le RENDU doit lire l'ÉTAT de la lueur, pas la référence changée dans l'effet.
   if (!J.includes("(etape === 'montre' || etape === 'revele') && k === lueur ? (") || !J.includes('setLueur(lueurDans.current);')) pb.push('Bonneteau : la lueur montrée peut ne plus être sous le bon œuf');
   // Demandes de l'auteur : des lueurs bien visibles, la Transe sur l'œuf, la flèche de la Roue en bas.
-  if ((J.match(/<LueurVisible /g) || []).length < 4 || !J.includes('source={OEUF_LUMINEUX}') || !J.includes("<Text style={styles.roueFleche}>▲</Text>")) pb.push('lueurs visibles, œuf de la Transe ou flèche de la Roue en bas : un réglage de l\'auteur a disparu');
+  if ((J.match(/<LueurVisible /g) || []).length < 4 || !J.includes('source={OEUF_LUMINEUX}') || !J.includes("<Text style={[styles.roueFleche, { top: cy + R + RUNE_T / 2 - 4 }]}>▲</Text>")) pb.push('lueurs visibles, œuf de la Transe ou flèche de la Roue en bas : un réglage de l\'auteur a disparu');
   // L'auteur : la lueur visible doit rester une LUEUR (halo empilé), pas « des ronds » (anneau, cœur plein).
   { const i = J.indexOf('function LueurVisible('), corps = i >= 0 ? J.slice(i, J.indexOf('\n}\n', i)) : ''; if (!corps || /borderWidth|backgroundColor/.test(corps)) pb.push('la lueur visible redevient un rond (anneau ou cœur plein)'); }
   // Bonneteau : un mauvais œuf MONTRE où était la lueur avant « PERDU » (l'auteur ne la voyait pas en 3e manche).

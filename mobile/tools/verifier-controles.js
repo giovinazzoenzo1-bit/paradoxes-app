@@ -194,6 +194,8 @@ const SABOTAGES = [
     remplace('export const RITUEL_LONGUEURS = [3, 4, 5];', 'export const RITUEL_LONGUEURS = [1, 1, 1];')],
   ['auditChasseLueurs', F.chasse, 'Bonneteau : un mauvais choix passe direct à « PERDU » sans montrer la lueur',
     remplace("if (k !== lueurDans.current) { setEtape('revele'); jouerSon('rate', sons); minuteur.current = setTimeout(onRate, 900); return; }", "if (k !== lueurDans.current) { onRate(); return; }")],
+  ['auditChasseLueurs', F.chasse, 'Coffre : la jauge perd le style de l\'Aventure (l\'auteur : « la même barre, même style »)',
+    remplace("const JAUGE_PLANCHE = require('../../../assets/exploration/plaque-titre.png');", "const JAUGE_PLANCHE = require('../../../assets/pubs/coffre.png');")],
   ['auditChasseLueurs', F.miniJeux, 'Pluie de spores : 2 dorées seulement',
     remplace('export const SPORES_DOREES = 15;', 'export const SPORES_DOREES = 2;')],
   ['auditChasseLueurs', F.chasse, 'Rituel : le même son pour tous les symboles (l\'auteur veut une note par symbole)',

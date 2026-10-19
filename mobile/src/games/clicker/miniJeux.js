@@ -142,7 +142,8 @@ export function coffreDansZone(pos, centre, largeur) { return Math.abs(pos - cen
 
 // ✨ PLUIE DE SPORES (demandes de l'auteur, après essai) : SEULES les spores DORÉES comptent — 15, chacune vaut 1 Griffe,
 // et c'est TOUTE la récompense (pas de tirage 80/15/5 en plus). Beaucoup plus de spores bleues (3 par dorée), qui ne font
-// rien. De plus en plus vite : 0,45 → 0,2 s entre deux spores, 3 → 1,2 s de chute. Aucune dorée attrapée : perdu.
+// rien. De plus en plus vite — l'auteur : « commence à la vitesse du milieu, et encore plus vite à la fin » : 0,325 → 0,15 s
+// entre deux spores, 2,1 → 0,9 s de chute (avant : 0,45 → 0,2 s et 3 → 1,2 s). Aucune dorée attrapée : perdu.
 export const SPORES_DOREES = 15;
 export const SPORES_BLEUES_PAR_DOREE = 3;
 export const SPORES_TOTAL = SPORES_DOREES * (1 + SPORES_BLEUES_PAR_DOREE);
@@ -150,11 +151,11 @@ export const SPORES_NB = SPORES_TOTAL; // (ancien nom, gardé)
 export const SPORE_SOL = 0.7; // hauteur (part de l'écran) où commence le nid
 export function sporeIntervalle(i) {
   const k = Math.max(0, Math.min(SPORES_TOTAL - 1, Math.floor(Number(i) || 0)));
-  return Math.round(450 + (200 - 450) * (k / (SPORES_TOTAL - 1)));
+  return Math.round(325 + (150 - 325) * (k / (SPORES_TOTAL - 1)));
 }
 export function sporeChute(i) {
   const k = Math.max(0, Math.min(SPORES_TOTAL - 1, Math.floor(Number(i) || 0)));
-  return Math.round(3000 + (1200 - 3000) * (k / (SPORES_TOTAL - 1)));
+  return Math.round(2100 + (900 - 2100) * (k / (SPORES_TOTAL - 1)));
 }
 // Une dorée par paquet de 4, à une place au hasard : elles restent bien réparties sur toute la partie.
 export function planSpores(aleatoire = Math.random) {
