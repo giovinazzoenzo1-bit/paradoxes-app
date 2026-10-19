@@ -1618,6 +1618,13 @@ function auditChasseLueurs() {
   if (!J.includes('DECOMPTE[decompte]')) pb.push('plus de décompte 3, 2, 1');
   if (!Cl.includes('<MiniJeu jeu={miniJeuOuvert}') || !Cl.includes('tirerRecompenseMiniJeu(ownedRef.current)') || !Cl.includes('setMiniJeuOuvert(choisirMiniJeu())')) pb.push('les mini-jeux ne sont plus branchés sur l\'écran principal');
   if (!Cl.includes("peutPopperRef.current = view === 'tap' && !incubatorOpen") || !Cl.includes('if (miniJeuOuvertRef.current || !peutPopperRef.current || t < prochainMiniJeuRef.current) return;')) pb.push('un mini-jeu pourrait surgir par-dessus une autre fenêtre');
+  // Règles d'arrivée de l'auteur (18/10 au soir) : jamais pendant un défi de continuité, jamais en plein élan (pause de 2 s),
+  // jamais si le joueur est absent (60 s), jamais sur une cible dorée / créature / bulle de pub ; aucune cible dorée pendant
+  // un mini-jeu ; 2 min de répit au retour d'arrière-plan.
+  if (['maxTapStreak', 'maxTranseHoldSec', 'maxCombo'].some((m) => !M.MINI_JEU_DEFIS_CONTINUS.includes(m)) || !Cl.includes('&& !MINI_JEU_DEFIS_CONTINUS.includes(metriqueEnCours);')) pb.push('un mini-jeu peut surgir pendant un défi de série de taps, de Transe ou de combo');
+  if (M.MINI_JEU_PAUSE_MS !== 2000 || M.MINI_JEU_PRESENCE_MS !== 60000 || !Cl.includes('if (depuisTap < MINI_JEU_PAUSE_MS || depuisTap > MINI_JEU_PRESENCE_MS) return;')) pb.push('un mini-jeu peut surgir en plein élan, ou quand le joueur est absent');
+  if (!Cl.includes('now >= nextGoldenAtRef.current && !miniJeuOuvertRef.current) {') || !Cl.includes('&& !goldenTarget && !spawnedCreature && !ritualTarget')) pb.push('cible dorée et mini-jeu peuvent se chevaucher');
+  if (!Cl.includes("if (etat === 'active') prochainMiniJeuRef.current = Math.max(prochainMiniJeuRef.current, Date.now() + MINI_JEU_DELAI_OUVERTURE_MS);")) pb.push('plus de répit au retour d\'arrière-plan : un mini-jeu en retard surgirait aussitôt');
   return pb;
 }
 module.exports.auditChasseLueurs = auditChasseLueurs;

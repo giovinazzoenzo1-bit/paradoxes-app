@@ -5,7 +5,7 @@
 // l'appli (économie propre à ce jeu, comme les autres).
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { noterToucher, noterTap, noterImage, noterRendu } from '../../games/clicker/diagnosticTaps';
-import { Easing, View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator } from 'react-native';
+import { Easing, View, Text, TouchableOpacity, StyleSheet, Animated, FlatList, Alert, ScrollView, Image, ImageBackground, Dimensions, Vibration, ActivityIndicator, AppState } from 'react-native';
 import BackButton from '../../components/BackButton';
 import CreatureArt from '../../components/CreatureArt';
 import { FenetreBois, BoutonBois, BoutonLarge, largeurInterieureFenetre, COURONNE, CRISTAL, SABLIER, LueurPouvoir, EffetRecompense, vibrerSucces } from './fenetreBois';
@@ -280,7 +280,8 @@ import { useMusique, MusiqueActive } from './musique';
 import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
-import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_MS, MINI_JEU_DELAI_OUVERTURE_MS } from '../../games/clicker/miniJeux';
+import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_MS, MINI_JEU_DELAI_OUVERTURE_MS,
+  MINI_JEU_DEFIS_CONTINUS, MINI_JEU_PAUSE_MS, MINI_JEU_PRESENCE_MS } from '../../games/clicker/miniJeux';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
@@ -1020,10 +1021,20 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const id = setInterval(() => {
       const t = Date.now();
       if (miniJeuOuvertRef.current || !peutPopperRef.current || t < prochainMiniJeuRef.current) return;
+      // Le joueur doit être LÀ (un tap depuis moins de 60 s) mais EN PAUSE (aucun tap depuis 2 s) : jamais en plein élan.
+      const depuisTap = t - lastTapTimeRef.current;
+      if (depuisTap < MINI_JEU_PAUSE_MS || depuisTap > MINI_JEU_PRESENCE_MS) return;
       prochainMiniJeuRef.current = t + MINI_JEU_INTERVALLE_MS;
       setMiniJeuOuvert(choisirMiniJeu()); // un des mini-jeux, au hasard
     }, 1000);
     return () => clearInterval(id);
+  }, []);
+  // Retour d'arrière-plan : 2 min de répit, comme à l'ouverture (sinon un mini-jeu en retard surgirait aussitôt).
+  useEffect(() => {
+    const abo = AppState.addEventListener('change', (etat) => {
+      if (etat === 'active') prochainMiniJeuRef.current = Math.max(prochainMiniJeuRef.current, Date.now() + MINI_JEU_DELAI_OUVERTURE_MS);
+    });
+    return () => abo.remove();
   }, []);
   const boostTapJusquaRef = useRef(0);
   const finPubTap = () => {
@@ -2001,7 +2012,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       if (goldenTargetRef.current && now > goldenTargetRef.current.expiresAt) {
         setGoldenTarget(null);
         nextGoldenAtRef.current = now + nextGoldenDelaySec() * 1000;
-      } else if (!goldenTargetRef.current && viewRef.current === 'tap' && now >= nextGoldenAtRef.current) {
+      } else if (!goldenTargetRef.current && viewRef.current === 'tap' && now >= nextGoldenAtRef.current && !miniJeuOuvertRef.current) {
+        // ↑ jamais pendant un mini-jeu (règle de l'auteur)
         const pos = randomRingPosition();
         mesuresRef.current.doreesApparues += 1;
         setGoldenTarget({ expiresAt: now + GOLDEN_VISIBLE_SEC * 1000, leftPct: pos.leftPct, topPct: pos.topPct });
@@ -2735,10 +2747,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // s'affiche maintenant sur le parchemin illustré (`ascension-panel`),
   // rendu plus bas.
   const [ascensionPrompt, setAscensionPrompt] = useState(null);
-  // Un mini-jeu ne surgit que sur l'écran principal, sans aucune autre fenêtre ouverte (combat, Gardien, incubateur,
-  // calendrier, Ascension, retour hors ligne, pub, choix de créature, menu développeur).
-  peutPopperRef.current = view === 'tap' && !incubatorOpen && !calendarOpen && !menuDevOuvert && !ascensionPrompt && !boss
-    && !guardianFight && !resultatGardien && !offlineReport && !pubTap && pickerSlot === null;
 
   const doAscension = () => {
     if (!ascensionReady) return;
@@ -3282,6 +3290,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // vient justement de supprimer. Vaut `null` quand les 4 sont finies
   // (l'affichage bascule alors sur la barre d'éclosion).
   const currentChallengeId = activeQuestIds.find((id) => !isQuestValidated(id)) || null;
+  // ⚠️ Un mini-jeu ne surgit que sur l'écran principal, SANS aucune fenêtre ouverte (combat, annonce et résultat du boss,
+  // Gardien et sa confirmation, incubateur, calendrier, boutique de Diamants, Ascension, retour hors ligne, pub, choix ou
+  // fiche de créature, créature gagnée, pouvoir en cours, menu développeur), SANS cible dorée / créature à attraper / bulle
+  // de pub à l'écran, et JAMAIS pendant un défi de continuité (série de taps, Transe tenue, combo) — règles de l'auteur.
+  // (La pause du joueur et sa présence sont vérifiées par la minuterie.)
+  const metriqueEnCours = currentChallengeId ? ((findQuest(currentChallengeId) || {}).metric || null) : null;
+  peutPopperRef.current = view === 'tap' && !incubatorOpen && !calendarOpen && !diamondShopOpen && !menuDevOuvert && !ascensionPrompt
+    && !boss && !bossAnnonce && !bossResult && !guardianFight && !resultatGardien && !confirmGardien && !offlineReport && !pubTap
+    && pickerSlot === null && !selectedCreature && !ficheAventure && !rewardCreature && !powerCast
+    && !goldenTarget && !spawnedCreature && !ritualTarget
+    && !MINI_JEU_DEFIS_CONTINUS.includes(metriqueEnCours);
   // 17/10 (demande de l'auteur) : LUEUR du Grimoire = l'article du DÉFI DE L'ŒUF EN COURS quand c'est un achat (marque-page du bon
   // chapitre ou flèche vers la bonne page, puis l'article). ⚠️ 1re version (même jour) : elle lisait `questIds` = les DÉFIS DU JOUR
   // (DailyContext, pickDailyQuests) — jamais un achat → aucune lueur chez l'auteur. Ici : currentChallengeId (défis de l'œuf).
@@ -4700,7 +4719,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         </View>
       )}
       <MiniJeu jeu={miniJeuOuvert} sons={sonsJeuRef.current} vibrations={vibrationsRef.current}
-        onGagne={recompenserMiniJeu} onFermer={() => setMiniJeuOuvert(null)} />
+        onGagne={recompenserMiniJeu} onFermer={() => {
+          // La cible dorée suivante attend 3 s après la fin du mini-jeu (pas de surprise au retour).
+          nextGoldenAtRef.current = Math.max(nextGoldenAtRef.current, Date.now() + 3000);
+          setMiniJeuOuvert(null);
+        }} />
       {calendarOpen && (
         <DailyCalendarModal
           calendar={calendar}
