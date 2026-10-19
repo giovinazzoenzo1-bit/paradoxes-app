@@ -4404,6 +4404,12 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - ✅ Étape 6 **🦹 Pilleurs encapuchonnés** (images Gemini 110 à 112 détourées dans `assets/minijeux/`) : 5 buissons ; le
   pilleur glisse dans une fenêtre qui le cache, le buisson est dessiné PAR-DESSUS ; 15 pilleurs de 1,3 à 0,75 s, écarts
   0,9 → 0,5 s ; ~20 % de lueurs-leurres, jamais deux d'affilée ; pilleur raté ou lueur touchée = perdu.
+- **Retours de l'auteur (18/10, soir)** : 🔮 Rituel autour de l'ŒUF de l'écran principal (`OEUF_CENTRE_Y` = 0,6385 de la
+  hauteur, milieu de sa zone de tap), une NOTE par symbole (`assets/sons/note-1..6.mp3`, do ré mi sol la do, créées par
+  synthèse) ; 🦹 Pilleurs : TOUT le bloc se touche (le buisson, dessiné par-dessus, prenait le doigt), buissons du bas
+  pile au-dessus de la barre du bas (`BARRE_BAS_H` 100 px) ; ✨ Spores : 15 DORÉES = 1 Griffe chacune, et c'est TOUTE la
+  récompense (`onReussi({ griffes })` → `recompenserMiniJeu(resultat)`, pas de tirage 80/15/5), 3 bleues par dorée qui ne
+  réagissent pas, 0,45 → 0,2 s d'écart et 3 → 1,2 s de chute ; aucune dorée = perdu.
 - Reste l'étape 7 : réglages après les essais de l'auteur, puis retrait du menu 🛠️.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
