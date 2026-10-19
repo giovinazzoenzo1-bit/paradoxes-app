@@ -18,16 +18,15 @@ export const LUEUR_DERIVE_PX = 140;      // distance parcourue au plus pendant s
 // sur l'écran principal (s'il est ailleurs ou dans une fenêtre, le mini-jeu attend son retour), jamais dans les 2 min qui
 // suivent l'ouverture de l'appli. (Avant : une lueur errante toutes les 30 min, à toucher pour jouer.)
 export const MINI_JEU_INTERVALLE_MS = 10 * 60 * 1000;
-export const MINI_JEU_DELAI_OUVERTURE_MS = 2 * 60 * 1000;
+export const MINI_JEU_DELAI_OUVERTURE_MS = 4 * 60 * 1000; // l'auteur : « même 4 min de repos » (avant : 2 min)
 // ⚠️ RÈGLES D'ARRIVÉE (décisions de l'auteur, 18/10 au soir) — un mini-jeu ne coupe JAMAIS le joueur :
 //  - pas pendant un défi qui demande de la CONTINUITÉ (série de taps, Transe tenue, combo) : il attend la fin du défi ;
-//  - pas pendant que le joueur TAPE : il attend une pause d'au moins 2 s (la Transe est alors retombée) ;
+//  - (l'auteur : couper une Transe pour gagner d'autres récompenses « ce n'est pas grave » → pas d'attente de pause) ;
 //  - pas si le joueur est ABSENT (aucun tap depuis 60 s) : il raterait le jeu sans le voir ;
 //  - pas pendant qu'une cible dorée, une créature à attraper ou la bulle de pub est à l'écran (il la perdrait) ;
-//  - pas dans les 2 min qui suivent l'ouverture de l'appli NI son retour d'arrière-plan.
+//  - pas dans les 4 min qui suivent l'ouverture de l'appli NI son retour d'arrière-plan.
 // Et pendant un mini-jeu, aucune cible dorée n'apparaît (la suivante attend 3 s après la fin du mini-jeu).
 export const MINI_JEU_DEFIS_CONTINUS = ['maxTapStreak', 'maxTranseHoldSec', 'maxCombo'];
-export const MINI_JEU_PAUSE_MS = 2000;
 export const MINI_JEU_PRESENCE_MS = 60 * 1000;
 export const PERDU_MS = 1000;
 export const DECOMPTE = ['3', '2', '1', 'GO !'];

@@ -1586,7 +1586,7 @@ function auditChasseLueurs() {
   const vus = new Set(); for (let k = 0; k < 400; k++) vus.add(M.choisirMiniJeu()); if (vus.size !== M.MINI_JEUX.length) pb.push('le tirage ne lance plus tous les mini-jeux');
   // Décision de l'auteur : le joueur ne choisit pas — un mini-jeu SURGIT toutes les 10 min, seulement sur l'écran principal
   // sans autre fenêtre, jamais dans les 2 min qui suivent l'ouverture de l'appli.
-  if (M.MINI_JEU_INTERVALLE_MS !== 10 * 60 * 1000 || M.MINI_JEU_DELAI_OUVERTURE_MS !== 2 * 60 * 1000) pb.push('un mini-jeu ne surgit plus toutes les 10 min (2 min de répit à l\'ouverture)');
+  if (M.MINI_JEU_INTERVALLE_MS !== 10 * 60 * 1000 || M.MINI_JEU_DELAI_OUVERTURE_MS !== 4 * 60 * 1000) pb.push('un mini-jeu ne surgit plus toutes les 10 min (4 min de répit à l\'ouverture, demande de l\'auteur)');
   const J = lire('screens/games/MiniJeu.js'), Cl = lire('screens/games/ClickerScreen.js');
   if (!J.includes('<Text style={styles.consigne}>{def.tuto}</Text>')) pb.push('plus de tuto pendant le décompte');
   // Demandes de l'auteur (après essai) : Spores — les Griffes des dorées SONT la récompense ; Rituel — autour de l'œuf, une note
@@ -1618,11 +1618,12 @@ function auditChasseLueurs() {
   if (!J.includes('DECOMPTE[decompte]')) pb.push('plus de décompte 3, 2, 1');
   if (!Cl.includes('<MiniJeu jeu={miniJeuOuvert}') || !Cl.includes('tirerRecompenseMiniJeu(ownedRef.current)') || !Cl.includes('setMiniJeuOuvert(choisirMiniJeu())')) pb.push('les mini-jeux ne sont plus branchés sur l\'écran principal');
   if (!Cl.includes("peutPopperRef.current = view === 'tap' && !incubatorOpen") || !Cl.includes('if (miniJeuOuvertRef.current || !peutPopperRef.current || t < prochainMiniJeuRef.current) return;')) pb.push('un mini-jeu pourrait surgir par-dessus une autre fenêtre');
-  // Règles d'arrivée de l'auteur (18/10 au soir) : jamais pendant un défi de continuité, jamais en plein élan (pause de 2 s),
-  // jamais si le joueur est absent (60 s), jamais sur une cible dorée / créature / bulle de pub ; aucune cible dorée pendant
-  // un mini-jeu ; 2 min de répit au retour d'arrière-plan.
+  // Règles d'arrivée de l'auteur (18/10 au soir) : jamais pendant un défi de continuité, jamais si le joueur est absent
+  // (60 s), jamais sur une cible dorée / créature / bulle de pub ; aucune cible dorée pendant un mini-jeu ; 4 min de répit
+  // à l'ouverture et au retour d'arrière-plan.
   if (['maxTapStreak', 'maxTranseHoldSec', 'maxCombo'].some((m) => !M.MINI_JEU_DEFIS_CONTINUS.includes(m)) || !Cl.includes('&& !MINI_JEU_DEFIS_CONTINUS.includes(metriqueEnCours);')) pb.push('un mini-jeu peut surgir pendant un défi de série de taps, de Transe ou de combo');
-  if (M.MINI_JEU_PAUSE_MS !== 2000 || M.MINI_JEU_PRESENCE_MS !== 60000 || !Cl.includes('if (depuisTap < MINI_JEU_PAUSE_MS || depuisTap > MINI_JEU_PRESENCE_MS) return;')) pb.push('un mini-jeu peut surgir en plein élan, ou quand le joueur est absent');
+  // (L'auteur a levé la règle de la pause : couper une Transe « n'est pas grave ».)
+  if (M.MINI_JEU_PRESENCE_MS !== 60000 || !Cl.includes('if (depuisTap > MINI_JEU_PRESENCE_MS) return;')) pb.push('un mini-jeu peut surgir quand le joueur est absent');
   if (!Cl.includes('now >= nextGoldenAtRef.current && !miniJeuOuvertRef.current) {') || !Cl.includes('&& !goldenTarget && !spawnedCreature && !ritualTarget')) pb.push('cible dorée et mini-jeu peuvent se chevaucher');
   if (!Cl.includes("if (etat === 'active') prochainMiniJeuRef.current = Math.max(prochainMiniJeuRef.current, Date.now() + MINI_JEU_DELAI_OUVERTURE_MS);")) pb.push('plus de répit au retour d\'arrière-plan : un mini-jeu en retard surgirait aussitôt');
   return pb;

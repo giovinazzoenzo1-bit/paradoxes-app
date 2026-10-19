@@ -281,7 +281,7 @@ import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_MS, MINI_JEU_DELAI_OUVERTURE_MS,
-  MINI_JEU_DEFIS_CONTINUS, MINI_JEU_PAUSE_MS, MINI_JEU_PRESENCE_MS } from '../../games/clicker/miniJeux';
+  MINI_JEU_DEFIS_CONTINUS, MINI_JEU_PRESENCE_MS } from '../../games/clicker/miniJeux';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
@@ -1021,15 +1021,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const id = setInterval(() => {
       const t = Date.now();
       if (miniJeuOuvertRef.current || !peutPopperRef.current || t < prochainMiniJeuRef.current) return;
-      // Le joueur doit être LÀ (un tap depuis moins de 60 s) mais EN PAUSE (aucun tap depuis 2 s) : jamais en plein élan.
+      // Le joueur doit être LÀ (un tap depuis moins de 60 s). Il peut taper : couper une Transe « n'est pas grave » (auteur).
       const depuisTap = t - lastTapTimeRef.current;
-      if (depuisTap < MINI_JEU_PAUSE_MS || depuisTap > MINI_JEU_PRESENCE_MS) return;
+      if (depuisTap > MINI_JEU_PRESENCE_MS) return;
       prochainMiniJeuRef.current = t + MINI_JEU_INTERVALLE_MS;
       setMiniJeuOuvert(choisirMiniJeu()); // un des mini-jeux, au hasard
     }, 1000);
     return () => clearInterval(id);
   }, []);
-  // Retour d'arrière-plan : 2 min de répit, comme à l'ouverture (sinon un mini-jeu en retard surgirait aussitôt).
+  // Retour d'arrière-plan : 4 min de répit, comme à l'ouverture (sinon un mini-jeu en retard surgirait aussitôt).
   useEffect(() => {
     const abo = AppState.addEventListener('change', (etat) => {
       if (etat === 'active') prochainMiniJeuRef.current = Math.max(prochainMiniJeuRef.current, Date.now() + MINI_JEU_DELAI_OUVERTURE_MS);
@@ -1466,7 +1466,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           setVeilleurLevel(savedVeilleur);
           setLegendaires(saved.legendaires || {});
           rythmeRef.current = Number(saved.rythmeTaps) > 0 ? Number(saved.rythmeTaps) : TAPS_REF;
-          // Jamais dans les 2 min qui suivent l'ouverture : un mini-jeu en retard attend un peu.
+          // Jamais dans les 4 min qui suivent l'ouverture : un mini-jeu en retard attend un peu.
           prochainMiniJeuRef.current = Math.max(Number(saved.prochaineLueur) || 0, Date.now() + MINI_JEU_DELAI_OUVERTURE_MS);
           mesuresRef.current.rythmeCalcul = rythmeRef.current;
           setLegendairesAsc(saved.legendairesAsc || {});
@@ -3294,7 +3294,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Gardien et sa confirmation, incubateur, calendrier, boutique de Diamants, Ascension, retour hors ligne, pub, choix ou
   // fiche de créature, créature gagnée, pouvoir en cours, menu développeur), SANS cible dorée / créature à attraper / bulle
   // de pub à l'écran, et JAMAIS pendant un défi de continuité (série de taps, Transe tenue, combo) — règles de l'auteur.
-  // (La pause du joueur et sa présence sont vérifiées par la minuterie.)
+  // (La présence du joueur est vérifiée par la minuterie.)
   const metriqueEnCours = currentChallengeId ? ((findQuest(currentChallengeId) || {}).metric || null) : null;
   peutPopperRef.current = view === 'tap' && !incubatorOpen && !calendarOpen && !diamondShopOpen && !menuDevOuvert && !ascensionPrompt
     && !boss && !bossAnnonce && !bossResult && !guardianFight && !resultatGardien && !confirmGardien && !offlineReport && !pubTap
