@@ -1513,7 +1513,10 @@ function auditRythmeJoueur(ecart = 0.15, attenteMaxMin = 20) {
   const fs = require('fs');
   const CD = CALC();
   const pb = [];
-  if (CD.majRythme(7, 500, 500 / 11) !== 11) pb.push('le rythme ne monte plus tout de suite');
+  // Bug réel du 20/10 (une rafale à 15,5 taps/s gonflait tous les défis suivants) : le rythme MONTE de 30 % de l'écart par
+  // fenêtre, ne dépasse pas 1,3 fois la moyenne de la partie, et n'est pas mesuré pendant un défi de continuité.
+  if (CD.majRythme(7, 500, 500 / 11) !== 8.2) pb.push('le rythme ne monte plus de 30 % de l\'écart par fenêtre');
+  if (CD.majRythme(15.5, 500, 500 / 8.9, 8.9) !== 11.57) pb.push('le rythme n\'est plus plafonné à 1,3 fois la moyenne de la partie');
   if (Math.abs(CD.majRythme(10, 500, 500 / 5) - 9) > 1e-9) pb.push('le rythme baisse de plus de 10 % par fenêtre de 500 taps');
   if (CD.majRythme(4.2, 500, 500 / 1) !== 4) pb.push('le rythme passe sous le plancher de 4 taps/s');
   if (CD.rythmeDe({}) !== 7) pb.push('un joueur sans mesure ne démarre plus à 7 taps/s');
@@ -1521,7 +1524,8 @@ function auditRythmeJoueur(ecart = 0.15, attenteMaxMin = 20) {
   if (!(CD.productionReference({ ...st, tapsParSec: 14 }, []) > 1.8 * CD.productionReference({ ...st, tapsParSec: 7 }, []))) pb.push('le calculateur ne lit plus le rythme du joueur');
   const Cl = fs.readFileSync(require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
   if (!Cl.includes('    tapsParSec: rythmeRef.current,')) pb.push('la photo des défis ne porte plus le rythme du joueur');
-  if (!Cl.includes('rythmeRef.current = majRythme(rythmeRef.current, r.taps, r.sec);')) pb.push('le jeu ne mesure plus le rythme tous les 500 taps');
+  if (!Cl.includes('rythmeRef.current = majRythme(rythmeRef.current, r.taps, r.sec, moyenne);')) pb.push('le jeu ne mesure plus le rythme tous les 500 taps');
+  if (!Cl.includes('const rafaleVoulue = MINI_JEU_DEFIS_CONTINUS.includes(metriqueEnCoursRef.current);') || !Cl.includes('if (!rafaleVoulue && r.dernier')) pb.push('les rafales d\'un défi de continuité gonflent de nouveau le rythme');
   const duree = (P) => P.reduce((t, g) => t + g.r.J.resultats.reduce((u, x) => u + x.actif, 0), 0) / 3600;
   const d7 = duree(parcoursReference(7));
   [4, 11].forEach((v) => {

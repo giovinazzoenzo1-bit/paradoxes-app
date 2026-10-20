@@ -438,6 +438,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // 17/10 (auteur : mesures du rapport « Signaler un problème », test manuel du calculateur de défis) — compteurs de jeu.
   // Rythme du JOUEUR pour le calculateur de défis (décision de l'auteur) : fenêtres de 500 taps, pauses > 1,2 s exclues.
   const rythmeRef = useRef(TAPS_REF);
+  const metriqueEnCoursRef = useRef(null); // métrique du défi d'œuf en cours (écrite au rendu)
   const rythmeFenetreRef = useRef({ taps: 0, sec: 0, dernier: 0 });
   const mesuresRef = useRef({ tempsJeuSec: 0, sessions: 0, taps: 0, tapsActifsSec: 0, tapsTranse: 0, transeSec: 0, transes: 0, transeMax: 0, transeDebut: 0, dernierTap: 0, piecesTaps: 0, doreesApparues: 0, doreesTouchees: 0, horsLigneRetours: 0, horsLignePieces: 0, revenuPassif: 0, defiId: null, defiLabel: null, defiDebut: 0, historique: [] });
   const mesuresChargeesRef = useRef(false);
@@ -2179,10 +2180,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     {
       const r = rythmeFenetreRef.current;
       const ecartR = now - (r.dernier || 0);
-      if (r.dernier && ecartR >= 0 && ecartR <= TRANSE_WINDOW_MS) { r.taps += 1; r.sec += ecartR / 1000; }
+      // Pas pendant un défi de CONTINUITÉ (série de taps, Transe tenue, combo) : on y tape en rafale exprès, ce n'est pas le
+      // rythme de tous les jours (bug réel du 20/10 : une rafale à 15,5 taps/s avait gonflé tous les défis suivants).
+      const rafaleVoulue = MINI_JEU_DEFIS_CONTINUS.includes(metriqueEnCoursRef.current);
+      if (!rafaleVoulue && r.dernier && ecartR >= 0 && ecartR <= TRANSE_WINDOW_MS) { r.taps += 1; r.sec += ecartR / 1000; }
       r.dernier = now;
       if (r.taps >= RYTHME_FENETRE_TAPS) {
-        rythmeRef.current = majRythme(rythmeRef.current, r.taps, r.sec);
+        const mm = mesuresRef.current;
+        const moyenne = mm && mm.taps >= 1000 && mm.tapsActifsSec > 0 ? mm.taps / mm.tapsActifsSec : null; // moyenne de la partie
+        rythmeRef.current = majRythme(rythmeRef.current, r.taps, r.sec, moyenne);
         mesuresRef.current.rythmeCalcul = rythmeRef.current; // visible dans « Signaler un problème »
         r.taps = 0; r.sec = 0;
       }
@@ -3296,6 +3302,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // de pub à l'écran, et JAMAIS pendant un défi de continuité (série de taps, Transe tenue, combo) — règles de l'auteur.
   // (La présence du joueur est vérifiée par la minuterie.)
   const metriqueEnCours = currentChallengeId ? ((findQuest(currentChallengeId) || {}).metric || null) : null;
+  metriqueEnCoursRef.current = metriqueEnCours; // lu par le tap (mesure du rythme)
   peutPopperRef.current = view === 'tap' && !incubatorOpen && !calendarOpen && !diamondShopOpen && !menuDevOuvert && !ascensionPrompt
     && !boss && !bossAnnonce && !bossResult && !guardianFight && !resultatGardien && !confirmGardien && !offlineReport && !pubTap
     && pickerSlot === null && !selectedCreature && !ficheAventure && !rewardCreature && !powerCast

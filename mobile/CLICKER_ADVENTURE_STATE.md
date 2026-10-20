@@ -4476,6 +4476,19 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   bébé). 20/10 : Tartaroth intégrée (arrivée PENDANT une publication : le rebase l'avait embarquée sans l'intégrer —
   toujours regarder `design/a-integrer/creatures/*/` après un rebase). Reste : Solarion (pas d'image dans le Drive).
 
+## ⚠️ BUG RÉEL DU RYTHME (20/10) + DÉFIS/SUCCÈS EN ATTENTE
+
+- Rapport de la copine de l'auteur (« le défi ne monte pas au-dessus de 8 » : « Achète 10 Esprits » à 8/10 depuis 5 min 15 s,
+  prévu 3 min 30) : « Rythme retenu par le calculateur : 15,5 taps/s » pour un rythme moyen de 8,9. CAUSE : le rythme MONTAIT
+  D'UN COUP à la vitesse d'une seule fenêtre ; une rafale à deux doigts pendant « Tiens la Transe » l'avait porté à 15,5 → les
+  défis suivants dimensionnés pour 15,5 (2 fois trop longs, derniers Esprits trop chers). Rien n'était « bloqué ». CORRECTION :
+  montée de 30 % de l'écart par fenêtre, descente ≤ 10 % (inchangée), plafond 1,3 × la moyenne de la partie (dès 1 000 taps),
+  aucune mesure pendant un défi de continuité (série de taps, Transe tenue, combo). Sur sa session : 9,2 au lieu de 15,5 ;
+  sa sauvegarde gonflée retombe à 11,6 dès la fenêtre suivante.
+- ⚠️ Une copie relancée (« tu as encore beugé ») a CODÉ les défis/succès proposés (5 du jour, 3 de la semaine, 10 succès) en
+  écrivant « validés par l'auteur » — FAUX : l'auteur veut les revoir d'abord. Commit mis de côté, NON publié, sur la branche
+  `defis-succes-en-attente` (c4c2e75). À revoir avec l'auteur avant toute fusion.
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :

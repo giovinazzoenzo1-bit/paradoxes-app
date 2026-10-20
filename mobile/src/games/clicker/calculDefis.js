@@ -28,11 +28,19 @@ export const RYTHME_FENETRE_TAPS = 500;
 export const RYTHME_PLANCHER = 4;
 export const RYTHME_PLAFOND = 60;      // garde-fou (aucun humain ; un autoclick plus rapide reste à 60)
 export const RYTHME_BAISSE_MAX = 0.10;
-export function majRythme(actuel, taps, secondes) {
+// ⚠️ BUG RÉEL (20/10, rapport de la copine de l'auteur : « le défi ne monte pas au-dessus de 8 ») : le rythme MONTAIT D'UN
+// COUP à la vitesse d'une seule fenêtre. Une rafale à deux doigts pendant « Tiens la Transe » l'avait porté à 15,5 taps/s
+// alors qu'elle tape à 8,9 en moyenne : « Achète 10 Esprits » était dimensionné pour 15,5 → 2 fois plus long que prévu,
+// et les derniers Esprits coûtaient plus que ce qu'elle avait. Désormais : le rythme MONTE de 30 % de l'écart par fenêtre,
+// descend toujours d'au plus 10 %, et ne dépasse jamais 1,3 fois la MOYENNE de toute la partie (dès 1 000 taps mesurés).
+export const RYTHME_MONTEE = 0.3;
+export const RYTHME_PLAFOND_MOYENNE = 1.3;
+export function majRythme(actuel, taps, secondes, moyenneLongue = null) {
   const a = Number.isFinite(actuel) && actuel > 0 ? actuel : TAPS_REF;
   if (!(taps > 0) || !(secondes > 0)) return a;
   const mesure = Math.min(RYTHME_PLAFOND, taps / secondes);
-  const nouveau = mesure >= a ? mesure : Math.max(mesure, a * (1 - RYTHME_BAISSE_MAX));
+  let nouveau = mesure >= a ? a + RYTHME_MONTEE * (mesure - a) : Math.max(a + RYTHME_MONTEE * (mesure - a), a * (1 - RYTHME_BAISSE_MAX));
+  if (Number.isFinite(moyenneLongue) && moyenneLongue > 0) nouveau = Math.min(nouveau, moyenneLongue * RYTHME_PLAFOND_MOYENNE);
   return Math.max(RYTHME_PLANCHER, Math.round(nouveau * 100) / 100);
 }
 export function rythmeDe(stats) {
