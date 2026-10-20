@@ -4432,8 +4432,9 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   par-dessus le VRAI écran principal (lisibilité, placement) ; les temps de capture y sont approximatifs (démarrage lent).
 - **Décor ÉPURÉ** (demande de l'auteur) : pendant un mini-jeu, le fond (`menu/fond.jpg`, taille EXPLICITE — règle
   auditImagesTailleExplicite), le grand nid et l'œuf du stade en cours (`oeufSource`) à LEUR place exacte, sans boutons ni
-  panneaux. ⚠️ L'œuf de l'écran principal est décalé de 13 px à droite (`DECALAGE_OEUF_X`) : `OEUF_DECALAGE_X` doit rester
-  égal (contrôlé) ; Rituel, Roue et onde visent ce vrai centre. Bouton « pub ×2 » : à DROITE DU DECK, sorti de la zone de
+  panneaux. ⚠️ L'œuf de l'écran principal est décalé de 13 px à droite (`DECALAGE_OEUF_X`, voulu le 06/09) ; dans le décor
+  épuré l'auteur les veut CENTRÉS (capture du 19/10, mesuré : centre à 575 px sur 1080 = les 13 dp) → `OEUF_DECALAGE_X = 0`
+  (contrôlé) ; Rituel, Roue et onde visent ce centre. Bouton « pub ×2 » : à DROITE DU DECK, sorti de la zone de
   l'œuf (hors de son conteneur, un bouton ne reçoit plus le doigt sur Android). Tuto du Coffre : « zone jaune ».
 - Reste l'étape 7 : réglages après les essais de l'auteur, puis retrait du menu 🛠️.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·

@@ -187,8 +187,11 @@ export const RITUEL_ROTATION_MS = 24000; // un tour complet de l'anneau : les sy
 // Demande de l'auteur : le Rituel se joue AUTOUR de l'œuf de l'écran principal (visible derrière, la fenêtre est transparente).
 // Centre de l'œuf = milieu de sa zone de tap (ClickerScreen : TAP_ZONE_TOP 0,429 + TAP_ZONE_H 0,419 / 2).
 export const OEUF_CENTRE_Y = 0.429 + 0.419 / 2;
-// L'œuf (et son nid) sont décalés à droite de 13 px sur l'écran principal (ClickerScreen : DECALAGE_OEUF_X) — même valeur ici.
-export const OEUF_DECALAGE_X = 13;
+// ⚠️ Sur l'écran principal, l'œuf et son nid sont décalés de 13 px à droite (ClickerScreen : DECALAGE_OEUF_X, voulu le 06/09
+// à côté de la colonne de boutons). Dans le décor ÉPURÉ des mini-jeux, l'auteur les veut CENTRÉS (capture du 19/10 : « l'œuf
+// et le nid ne sont pas centrés » — mesuré : centre à 575 px sur 1080, soit les 13 dp du décalage) → 0 ici. Rituel, Roue et
+// onde de lumière visent ce même centre.
+export const OEUF_DECALAGE_X = 0;
 // Taille de l'œuf sur l'écran principal (ClickerScreen : EGG_BUTTON = min(350, TAP_ZONE_H - 4), EGG_SIZE = EGG_BUTTON - 25).
 export function tailleOeuf(hauteurEcran) { return Math.min(350, (Number(hauteurEcran) || 640) * 0.419 - 4) - 25; }
 // Une NOTE par symbole (demande de l'auteur : « style jeu de musique ») : gamme pentatonique, toujours harmonieuse.
