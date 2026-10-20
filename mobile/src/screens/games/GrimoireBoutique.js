@@ -111,17 +111,22 @@ function badge(niveau) {
 // 17/10 (auteur : « une lueur comme à l'arrière des créatures en Aventure ») : la MÊME image que le combat (lueur-or.png),
 // au lieu du cadre jaune carré de la 1re version.
 const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
-function LueurDefi({ style, fort = false }) {
+// `calme` (marque-page, 20/10) : la lueur RESPIRE en opacité seulement, sans grossir — sur iPhone, la version qui grossissait
+// donnait l'impression que le marque-page VIBRAIT (photo de l'auteur).
+function LueurDefi({ style, fort = false, calme = false }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    const d = calme ? 1000 : 700;
     const b = Animated.loop(Animated.sequence([
-      Animated.timing(v, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(v, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(v, { toValue: 1, duration: d, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(v, { toValue: 0, duration: d, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ]));
     b.start();
     return () => b.stop();
   }, []);
-  const st = [styles.lueurDefi, style, { pointerEvents: 'none', opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }), transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.08] }) }] }];
+  const st = [styles.lueurDefi, style, calme
+    ? { pointerEvents: 'none', opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }
+    : { pointerEvents: 'none', opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }), transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.08] }) }] }];
   // `fort` (marque-page, flèche) : deux couches — sur le fond sombre de la forêt, une seule couche se voyait à peine (VU au banc).
   return fort ? <>
     <Animated.Image source={LUEUR_OR} resizeMethod="scale" resizeMode="stretch" style={st} />
@@ -449,6 +454,14 @@ function Grimoire(props) {
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(3,10,12,0.35)' }]} />
       </ImageBackground>
 
+      {/* ⚠️ BUG iPhone (photo de l'auteur, 20/10) : un marque-page « vibrait » et se dessinait PAR-DESSUS la page (le rouge du
+          chapitre ouvert jusqu'au titre, l'orange guidé en fantôme translucide). Désormais : (1) la lueur du chapitre guidé est
+          un calque À PART, derrière tous les marque-pages, qui ne descend pas sur la page et ne grossit plus ; (2) chaque
+          marque-page est COUPÉ au bord de la page (overflow hidden) : rien ne peut plus se dessiner sur la page. */}
+      {ouvert && guide && guide.c !== posVue.c ? (
+        <LueurDefi fort calme style={{ left: LIVRE_X + Math.round(LIVRE_L * (0.2 + (guide.c * 0.6) / (chapitres.length - 1))) - ONGLET_L * 1.1,
+          top: LIVRE_Y - 44 - 30, width: ONGLET_L * 2.2, height: 76 }} />
+      ) : null}
       {/* Marque-pages sur la tranche HAUTE (icône du chapitre) ; celui du
           chapitre ouvert dépasse davantage. */}
       {chapitres.map((c, i) => {
@@ -456,8 +469,7 @@ function Grimoire(props) {
         const x = LIVRE_X + Math.round(LIVRE_L * (0.2 + (i * 0.6) / (chapitres.length - 1))) - ONGLET_L / 2;
         if (!ouvert) return null;
         return (
-          <Animated.View key={c.cle} style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0), opacity: apparition }]}>
-          {guide && guide.c === i && guide.c !== posVue.c ? <LueurDefi fort style={{ left: -ONGLET_L * 0.7, top: -ONGLET_H * 0.5, width: ONGLET_L * 2.4, height: ONGLET_H * 2 }} /> : null}
+          <Animated.View key={c.cle} style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0), height: 44 + (actif ? 10 : 0) + 6, overflow: 'hidden', opacity: apparition }]}>
           <TouchableOpacity activeOpacity={0.8} onPress={() => (i !== cActif ? tourner({ c: i, p: 0 }, i > cActif ? 1 : -1) : null)}
             style={{ position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: ONGLET_H, alignItems: 'center' }}>
             <Image source={c.marque} resizeMode="stretch" style={[styles.ongletImg, { transform: [{ scaleY: -1 }] }]} />

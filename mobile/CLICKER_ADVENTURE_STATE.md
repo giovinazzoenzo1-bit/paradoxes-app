@@ -4505,6 +4505,18 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   compteur estimé à la fin de l'A0 atteint (`dailyLogic.SUCCES_FIN_A0`) → 875 Griffes. Tout NOUVEAU succès doit y avoir son
   estimation (auditGriffesBonus le refuse sinon). Contrôle auditCompteursDefis : chaque événement est compté dans le jeu.
 
+## 📱 BUGS iPHONE (photo de l'auteur, 20/10)
+
+- Grimoire : les marque-pages « vibraient » et se dessinaient PAR-DESSUS la page (le rouge du chapitre ouvert jusqu'au titre,
+  l'orange du chapitre guidé en fantôme translucide). Non reproduit au banc (web) : correction défensive — la lueur du chapitre
+  guidé est un calque À PART derrière tous les marque-pages, qui ne descend pas sur la page et respire en opacité seulement
+  (`LueurDefi calme`, plus de grossissement) ; chaque marque-page est COUPÉ au bord de la page (`overflow: 'hidden'`, hauteur
+  = partie visible + 6 px). À confirmer sur l'iPhone.
+- Incubateur : la lueur d'un œuf en incubation était une OMBRE colorée (shadowRadius 16) — à peine visible sur iPhone, absente
+  sur Android. Désormais une IMAGE (`lueur-or.png`, 2 couches, 132 px pour un bouton de 62) qui respire avec l'icône.
+- Banc : `menu&incubation=1` précharge un œuf dans le faux stockage (`window.__memoireBanc`, PAS localStorage) ;
+  `grimoire&cible=<id>` éclaire l'article d'un défi d'achat (ex. `critDamage`).
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :

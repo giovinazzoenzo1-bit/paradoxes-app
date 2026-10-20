@@ -298,6 +298,7 @@ import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/Fenetr
 // geste, ET sur `adventure:state` en même temps : les deux progressions
 // se répondent (les défis d'œuf lisent le niveau d'Aventure).
 export const STORAGE_KEY = 'clicker:state:v2';
+const LUEUR_OR_INCUBATEUR = require('../../../assets/grimoire/lueur-or.png');
 // Copie de la dernière sauvegarde brute quand un chargement échoue —
 // restaurable depuis Options (voir OptionsScreen.js).
 export const BACKUP_KEY = 'clicker:state:v2:backup';
@@ -4402,10 +4403,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 cadeau (même `left`, `top` + 144) : les trois restent
                 donc solidaires quoi qu'il arrive à TOP_BLOCK_SHIFT. */}
             <TouchableOpacity style={styles.incubatorBtn} onPress={() => setIncubatorOpen(true)}>
+              {/* Œuf dans l'incubateur : une LUEUR DORÉE (image, deux couches) qui respire avec l'icône. ⚠️ Avant : une ombre
+                  colorée — sur iPhone elle restait à peine visible (photo de l'auteur, 20/10), et Android ne la dessinait pas. */}
+              {incubatingEgg ? [0, 1].map((k) => (
+                <Animated.Image key={k} source={LUEUR_OR_INCUBATEUR} resizeMode="contain" style={[styles.incubatorLueur, { pointerEvents: 'none',
+                  opacity: incubatorPulse.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }),
+                  transform: [{ scale: incubatorPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] }]} />
+              )) : null}
               <Animated.View
                 style={[
                   styles.incubatorBtnInner,
-                  incubatingEgg && styles.incubatorBtnActive,
                   {
                     transform: [
                       { scale: incubatorPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] }) },
@@ -6934,12 +6941,8 @@ const styles = StyleSheet.create({
     width: 52, height: 52, borderRadius: 26,
     alignItems: 'center', justifyContent: 'center',
   },
-  // Lueur seule : ni fond ni bordure (le cercle vert était de trop),
-  // uniquement l'ombre colorée qui diffuse autour de l'icône.
-  incubatorBtnActive: {
-    shadowColor: COLORS.good, shadowOpacity: 1, shadowRadius: 16,
-    shadowOffset: { width: 0, height: 0 }, elevation: 12,
-  },
+  // La lueur de l'œuf en incubation : une image (même rendu sur iPhone et Android), 2 fois la taille du bouton.
+  incubatorLueur: { position: 'absolute', width: 132, height: 132, left: (62 - 132) / 2, top: (62 - 132) / 2 },
   incubatorBtnIcon: { fontSize: 28 },
 
   // Bouton vidéo à droite de l'œuf, pendant l'éclosion. Centré

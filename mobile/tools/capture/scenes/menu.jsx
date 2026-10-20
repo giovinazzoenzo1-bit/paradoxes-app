@@ -14,6 +14,10 @@ if (window.location.search.includes('toutes=1')) {
   window.__memoireBanc['clicker:dev:unlockAll'] = '1';
 }
 const rien = () => {};
+// « ?incubation=1 » : un œuf dans l'incubateur (lueur du bouton de l'incubateur).
+if (new URLSearchParams(window.location.search).get('incubation') === '1') {
+  try { window.__memoireBanc['clicker:incubator:v1'] = (JSON.stringify({ incubating: { startedAt: Date.now(), totalMs: 3600000, endsAt: Date.now() + 3600000, tapsUsed: 0, videosUsed: 0 }, main: null })); } catch (e) {}
+}
 createRoot(document.getElementById('root')).render(
   <>
 

@@ -6084,7 +6084,12 @@ function auditDefisLueur() {
   const art2 = G.articleDuDefiAchat(Q.metriqueDuDefi(D.DEFIS_ECRITS[1][0], { ascension: 0 }));
   if (art2 !== 'esprit') pb.push(`œuf 2, 1er défi : article éclairé « ${art2} » (Esprit Frappeur attendu)`);
   if (!Gr.includes('defi={!!props.cibleDefi && id === props.cibleDefi}')) pb.push("Grimoire : l'article du défi n'est plus éclairé");
-  if (!Gr.includes('guide.c === i && guide.c !== posVue.c ? <LueurDefi')) pb.push('Grimoire : le marque-page du bon chapitre n\'est plus éclairé');
+  // Bug iPhone du 20/10 (photo de l'auteur : marque-pages qui « vibrent » et se dessinent sur la page) : la lueur du chapitre
+  // guidé est un calque à part, calme (opacité seule) ; chaque marque-page est coupé au bord de la page.
+  if (!Gr.includes('{ouvert && guide && guide.c !== posVue.c ? (\n        <LueurDefi fort calme')) pb.push('Grimoire : le marque-page du bon chapitre n\'est plus éclairé (ou sa lueur grossit de nouveau)');
+  if (!Gr.includes("height: 44 + (actif ? 10 : 0) + 6, overflow: 'hidden', opacity: apparition")) pb.push('Grimoire : les marque-pages ne sont plus coupés au bord de la page (iPhone : ils se dessinent dessus)');
+  { const Cl = require('fs').readFileSync(require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+    if (!Cl.includes('source={LUEUR_OR_INCUBATEUR}') || Cl.includes('incubatorBtnActive')) pb.push('incubateur : plus de lueur dorée (image) quand un œuf incube — l\'ombre seule est trop faible sur iPhone'); }
   if (!Gr.includes("guideFleche === 'suivante' ? <LueurDefi") || !Gr.includes("guideFleche === 'precedente' ? <LueurDefi")) pb.push('Grimoire : la flèche vers la bonne page n\'est plus éclairée');
   if (!/lueurDefi:.*position: 'absolute'/.test(Gr) || !Gr.includes("{ pointerEvents: 'none', opacity: v.interpolate")) pb.push('Grimoire : la lueur doit être posée par-dessus sans capter les touchers (pointerEvents dans le style)');
   // 17/10 (2e retour de l'auteur) : la lueur = l'IMAGE de lueur du combat (lueur-or.png), pas un cadre jaune carré.
