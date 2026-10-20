@@ -15,6 +15,7 @@ import {
   PILLEURS_NB, PILLEURS_BUISSONS, pilleurDuree, pilleurIntervalle, planPilleurs, BARRE_BAS_H,
 } from '../../games/clicker/miniJeux';
 import { jouerSon } from './sonsBoutique';
+import { FenetreBois } from './fenetreBois';
 
 const LUEUR = require('../../../assets/fenetres/lueur-cyan.png');
 const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
@@ -37,7 +38,6 @@ const RUNES = ['affinite', 'arcane', 'butin', 'celerite', 'dexterite', 'force', 
   resilience: require('../../../assets/icons/runes/resilience.png'), vitalite: require('../../../assets/icons/runes/vitalite.png'),
 }[n]));
 const TAILLE = 88;
-const BANDEAU_HAUT = 64;           // le bandeau du titre, sous la barre d'état
 const INTRO_DEBUT_DECOMPTE_MS = 1000; // le « 3 » arrive après l'onde et le bandeau
 
 // ✨ LUEUR BIEN VISIBLE (demande de l'auteur : « on ne la voit pas assez » sur le décor) : le halo, un cœur blanc lumineux et
@@ -616,6 +616,7 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
     setPhase('intro'); setDecompte(-1); setRecompense(null);
     [onde, onde2, bandeau, tutoFondu, chiffre].forEach((v) => v.setValue(0));
     jouerSon('magie', sons);
+    if (vibrations) Vibration.vibrate(40); // demande de l'auteur : une petite vibration avec le premier son
     Animated.timing(onde, { toValue: 1, duration: 950, useNativeDriver: true }).start();
     Animated.sequence([Animated.delay(170), Animated.timing(onde2, { toValue: 1, duration: 950, useNativeDriver: true })]).start();
     Animated.sequence([Animated.delay(300), Animated.spring(bandeau, { toValue: 1, friction: 5, tension: 70, useNativeDriver: true })]).start();
@@ -659,7 +660,7 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
   };
 
   if (!visible) return null;
-  const bw = Math.min(340, (zone.w || 360) - 30), bh = Math.round(bw * 0.24); // le bandeau en bois du titre
+  const lc = Math.min(330, (zone.w || 360) - 36); // largeur de la fenêtre en bois de l'arrivée
   const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau
     : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : jeu === 'spores' ? JeuSpores : jeu === 'rituel' ? JeuRituel
     : jeu === 'pilleurs' ? JeuPilleurs : JeuChasse;
@@ -674,19 +675,28 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
                 opacity: v.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.95, 0] }),
                 transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 9] }) }] }]} />
             ))}
-            <Animated.View style={[styles.bandeau, { width: bw, height: bh, left: ((zone.w || 360) - bw) / 2,
-              transform: [{ translateY: bandeau.interpolate({ inputRange: [0, 1, 2], outputRange: [-240, 0, -280] }) }] }]}>
-              <Image source={JAUGE_PLANCHE} resizeMethod="scale" resizeMode="stretch" style={styles.bandeauPlanche} />
-              <Text style={styles.titre} numberOfLines={1} adjustsFontSizeToFit>{def.titre}</Text>
-            </Animated.View>
-            <Animated.View style={[styles.tutoBloc, { top: BANDEAU_HAUT + bh + 14, opacity: tutoFondu }]}>
+            {/* L'auteur : le bandeau était mal cadré et le tuto illisible (en blanc, sur le panneau des défis). Désormais la
+                FENÊTRE EN BOIS du jeu (comme les victoires et l'incubateur) : le titre dans sa bannière, le tuto et le
+                décompte SUR le bois, au centre ; elle tombe avec un rebond et repart au « GO ! ». */}
+            <Animated.View style={[styles.introCarte, { top: (zone.h || 640) * 0.22,
+              transform: [{ translateY: bandeau.interpolate({ inputRange: [0, 1, 2], outputRange: [-(zone.h || 640), 0, -(zone.h || 640)] }) }] }]}>
+              <FenetreBois titre={def.titre} largeur={lc}>
+                <Animated.View style={{ opacity: tutoFondu }}>
             <Text style={styles.consigne}>{def.tuto}</Text>
+                </Animated.View>
+                <View style={styles.decompteCase}>
+                  {decompte >= 0 && decompte < DECOMPTE.length - 1 ? (
+                    <Animated.Text style={[styles.decompte, { opacity: chiffre, transform: [{ scale: chiffre.interpolate({ inputRange: [0, 1], outputRange: [1.9, 1] }) }] }]}>{DECOMPTE[decompte]}</Animated.Text>
+                  ) : null}
+                </View>
+              </FenetreBois>
             </Animated.View>
-            {decompte >= 0 ? (
-              <Animated.Text style={[styles.decompte, decompte === DECOMPTE.length - 1 && styles.go, { opacity: chiffre,
-                transform: [{ scale: chiffre.interpolate({ inputRange: [0, 1], outputRange: [1.9, 1] }) }] }]}>{DECOMPTE[decompte]}</Animated.Text>
+            {decompte === DECOMPTE.length - 1 ? (
+              <>
+                <Animated.Text style={[styles.go, { opacity: chiffre, transform: [{ scale: chiffre.interpolate({ inputRange: [0, 1], outputRange: [1.9, 1] }) }] }]}>{DECOMPTE[decompte]}</Animated.Text>
+                <View style={[styles.feux, { pointerEvents: 'none' }]}><Gerbe x={165} y={175} retard={0} /></View>
+              </>
             ) : null}
-            {decompte === DECOMPTE.length - 1 ? <View style={[styles.feux, { pointerEvents: 'none' }]}><Gerbe x={165} y={175} retard={0} /></View> : null}
           </View>
         )}
         {phase === 'jeu' && <Jeu zone={zone} sons={sons} onRate={perdre} onReussi={gagner} />}
@@ -713,14 +723,14 @@ const styles = StyleSheet.create({
   fond: { flex: 1, backgroundColor: 'transparent' }, // demande de l'auteur : PAS de fond noir pendant les mini-jeux
   intro: { flex: 1 },
   onde: { position: 'absolute', width: 120, height: 120 },
-  bandeau: { position: 'absolute', top: BANDEAU_HAUT, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26 },
-  bandeauPlanche: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
-  tutoBloc: { position: 'absolute', left: 22, right: 22 },
-  go: { color: '#FFD54A', fontSize: 80 },
+  introCarte: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  decompteCase: { height: 76, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  go: { position: 'absolute', left: 0, right: 0, top: '38%', textAlign: 'center', color: '#FFD54A', fontSize: 84, fontWeight: '900',
+    textShadowColor: '#3a2200', textShadowRadius: 12, textShadowOffset: { width: 0, height: 3 } },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   titre: { color: '#FFF3D6', fontSize: 24, fontWeight: '900', textAlign: 'center', textShadowColor: '#2a1606', textShadowRadius: 6, textShadowOffset: { width: 0, height: 2 } },
-  consigne: { color: '#ffffff', fontSize: 16, marginTop: 12, textAlign: 'center', fontWeight: '700', textShadowColor: '#000', textShadowRadius: 8, textShadowOffset: { width: 0, height: 1 } },
-  decompte: { position: 'absolute', left: 0, right: 0, top: '38%', textAlign: 'center', color: '#ffffff', fontSize: 72, fontWeight: '900', textShadowColor: '#000', textShadowRadius: 12, textShadowOffset: { width: 0, height: 2 } },
+  consigne: { color: '#FFF3D6', fontSize: 16, lineHeight: 22, textAlign: 'center', fontWeight: '800', textShadowColor: '#2a1606', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } }, // sur le bois
+  decompte: { textAlign: 'center', color: '#FFD54A', fontSize: 58, fontWeight: '900', textShadowColor: '#2a1606', textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } },
   lueur: { position: 'absolute', width: TAILLE, height: TAILLE },
   toucher: { width: TAILLE, height: TAILLE },
   image: { width: TAILLE, height: TAILLE },

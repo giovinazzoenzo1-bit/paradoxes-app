@@ -1617,7 +1617,10 @@ function auditChasseLueurs() {
   if (!J.includes('<Text style={styles.perdu}>PERDU</Text>') || !J.includes("jouerSon('defaite', sons)") || !J.includes('PERDU_MS')) pb.push('une ratée doit afficher « PERDU » 1 s avec le son de défaite');
   if (!J.includes('DECOMPTE[decompte]')) pb.push('plus de décompte 3, 2, 1');
   // Arrivée « l'Onde de lumière » (validée par l'auteur) : onde dorée depuis l'œuf + son magique, bandeau en bois qui descend.
-  if (!J.includes('[onde, onde2].map(') || !J.includes("jouerSon('magie', sons);") || !J.includes('Animated.spring(bandeau,') || !J.includes('source={JAUGE_PLANCHE}')) pb.push('l\'arrivée « Onde de lumière » a perdu son onde, son son ou son bandeau');
+  // Retours de l'auteur : la FENÊTRE EN BOIS du jeu (titre dans la bannière, tuto lisible sur le bois), et une petite
+  // vibration avec le premier son.
+  if (!J.includes('[onde, onde2].map(') || !J.includes("jouerSon('magie', sons);") || !J.includes('Animated.spring(bandeau,')
+    || !J.includes('<FenetreBois titre={def.titre} largeur={lc}>') || !J.includes('if (vibrations) Vibration.vibrate(40);')) pb.push('l\'arrivée « Onde de lumière » a perdu son onde, son son, sa vibration ou sa fenêtre en bois');
   if (!Cl.includes('<MiniJeu jeu={miniJeuOuvert}') || !Cl.includes('tirerRecompenseMiniJeu(ownedRef.current)') || !Cl.includes('setMiniJeuOuvert(choisirMiniJeu())')) pb.push('les mini-jeux ne sont plus branchés sur l\'écran principal');
   if (!Cl.includes("peutPopperRef.current = view === 'tap' && !incubatorOpen") || !Cl.includes('if (miniJeuOuvertRef.current || !peutPopperRef.current || t < prochainMiniJeuRef.current) return;')) pb.push('un mini-jeu pourrait surgir par-dessus une autre fenêtre');
   // Règles d'arrivée de l'auteur (18/10 au soir) : jamais pendant un défi de continuité, jamais si le joueur est absent
