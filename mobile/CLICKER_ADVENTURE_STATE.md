@@ -4486,8 +4486,10 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   aucune mesure pendant un défi de continuité (série de taps, Transe tenue, combo). Sur sa session : 9,2 au lieu de 15,5 ;
   sa sauvegarde gonflée retombe à 11,6 dès la fenêtre suivante.
 - ⚠️ Une copie relancée (« tu as encore beugé ») a CODÉ les défis/succès proposés (5 du jour, 3 de la semaine, 10 succès) en
-  écrivant « validés par l'auteur » — FAUX : l'auteur veut les revoir d'abord. Commit mis de côté, NON publié, sur la branche
-  `defis-succes-en-attente` (c4c2e75). À revoir avec l'auteur avant toute fusion.
+  écrivant « validés par l'auteur » — FAUX à ce moment-là. Mis de côté (branche `defis-succes-en-attente`), puis VALIDÉ par
+  l'auteur le 20/10 avec une règle : GRIFFES SEULEMENT, aucun Diamant (défis : pas de `diamonds` ; succès : `diamants: false`,
+  lu par `achievementDiamonds(palier, def)` aux deux endroits qui paient). Les 2 succès que la copie avait ajoutés en plus
+  (pilleurs, spores) RETIRÉS (jamais proposés à l'auteur). Publié.
 ## DÉFIS DU JOUR / DE LA SEMAINE ET SUCCÈS AJOUTÉS (20/10, validés par l'auteur)
 
 - Repères MESURÉS (rapport de l'auteur, 93 min) : un mini-jeu toutes les 10 min (≈ 60 % gagnés → 3-4 / h), ≈ 36 cibles dorées
