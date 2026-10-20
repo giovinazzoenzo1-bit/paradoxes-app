@@ -73,8 +73,16 @@ def integrer(cid):
     ims = [Image.open(f).convert('RGBA') for f in src]
     surfaces = [(np.asarray(im)[..., 3] > 30).mean() for im in ims]
     ordre = sorted(range(3), key=lambda i: surfaces[i])
+    # 20/10 : quand les NOMS numérotent les stades (« p1 / p2 / p3 », « stage 1-3 ») et que la surface les contredit, le NOM
+    # l'emporte — Arcanis : le stade 2, plus élancé, couvrait MOINS de surface que le stade 1 (45,7 % contre 48,2 %) et
+    # passait bébé. (La surface reste la règle quand les noms ne disent rien.)
+    nums = [re.search(r'(?:p|stage)\s*([123])\D*$', os.path.splitext(os.path.basename(f))[0], re.I) for f in src]
+    if all(nums) and sorted(int(m.group(1)) for m in nums) == [1, 2, 3]:
+        par_nom = sorted(range(3), key=lambda i: int(nums[i].group(1)))
+        if par_nom != ordre: print(f'{cid} : la surface contredit les noms → ordre des NOMS gardé')
+        ordre = par_nom
     dest = os.path.join(RACINE, f'mobile/assets/creatures/{cid}'); os.makedirs(dest, exist_ok=True)
-    print(f'{cid} : ordre par surface → ' + ' < '.join(f"{os.path.basename(src[i])} ({surfaces[i]*100:.1f} %)" for i in ordre))
+    print(f'{cid} : ordre → ' + ' < '.join(f"{os.path.basename(src[i])} ({surfaces[i]*100:.1f} %)" for i in ordre))
     for st, i in enumerate(ordre):
         out = os.path.join(dest, f'stage-{st}.png')
         print(f'   stage-{st} : {compresser(mettre_au_format(ims[i], CIBLES[st]), out)} · {os.path.getsize(out)//1024} Ko')

@@ -57,6 +57,51 @@ const CREATURE_ART = {
     require('../../assets/creatures/terracroc/stage-1.png'),
     require('../../assets/creatures/terracroc/stage-2.png'),
   ],
+  abyssorax: [
+    require('../../assets/creatures/abyssorax/stage-0.png'),
+    require('../../assets/creatures/abyssorax/stage-1.png'),
+    require('../../assets/creatures/abyssorax/stage-2.png'),
+  ],
+  aquamira: [
+    require('../../assets/creatures/aquamira/stage-0.png'),
+    require('../../assets/creatures/aquamira/stage-1.png'),
+    require('../../assets/creatures/aquamira/stage-2.png'),
+  ],
+  arcanis: [
+    require('../../assets/creatures/arcanis/stage-0.png'),
+    require('../../assets/creatures/arcanis/stage-1.png'),
+    require('../../assets/creatures/arcanis/stage-2.png'),
+  ],
+  braiserose: [
+    require('../../assets/creatures/braiserose/stage-0.png'),
+    require('../../assets/creatures/braiserose/stage-1.png'),
+    require('../../assets/creatures/braiserose/stage-2.png'),
+  ],
+  brontobloc: [
+    require('../../assets/creatures/brontobloc/stage-0.png'),
+    require('../../assets/creatures/brontobloc/stage-1.png'),
+    require('../../assets/creatures/brontobloc/stage-2.png'),
+  ],
+  nocturis: [
+    require('../../assets/creatures/nocturis/stage-0.png'),
+    require('../../assets/creatures/nocturis/stage-1.png'),
+    require('../../assets/creatures/nocturis/stage-2.png'),
+  ],
+  racinea: [
+    require('../../assets/creatures/racinea/stage-0.png'),
+    require('../../assets/creatures/racinea/stage-1.png'),
+    require('../../assets/creatures/racinea/stage-2.png'),
+  ],
+  runicor: [
+    require('../../assets/creatures/runicor/stage-0.png'),
+    require('../../assets/creatures/runicor/stage-1.png'),
+    require('../../assets/creatures/runicor/stage-2.png'),
+  ],
+  zephyrion: [
+    require('../../assets/creatures/zephyrion/stage-0.png'),
+    require('../../assets/creatures/zephyrion/stage-1.png'),
+    require('../../assets/creatures/zephyrion/stage-2.png'),
+  ],
   // Le Gardien : une seule apparence. `creatureArtSource` ramène tout
   // palier demandé au dernier disponible, donc une entrée suffit.
   gardien: [
