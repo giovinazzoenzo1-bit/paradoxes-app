@@ -4473,7 +4473,8 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   dossier de Tartaroth : rangées par leur NOM). 20/10 : Abyssorax, Aquamira, Arcanis, Braiserose, Brontobloc, Nocturis,
   Racinea, Runicor, Zephyrion intégrés. ⚠️ `integrer-creature.py` : quand les NOMS numérotent les stades (p1-3, stage 1-3)
   et que la surface les contredit, le NOM l'emporte (Arcanis : stade 2 plus élancé, MOINS de surface que le stade 1 → passait
-  bébé). Restent : Tartaroth (pas encore déposée) et Solarion (pas d'image dans le Drive).
+  bébé). 20/10 : Tartaroth intégrée (arrivée PENDANT une publication : le rebase l'avait embarquée sans l'intégrer —
+  toujours regarder `design/a-integrer/creatures/*/` après un rebase). Reste : Solarion (pas d'image dans le Drive).
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
