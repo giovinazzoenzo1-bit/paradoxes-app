@@ -4426,7 +4426,10 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - **Arrivée « l'Onde de lumière »** (validée par l'auteur, « on teste ») : son `magie`, 2 ondes dorées (halo `lueur-or`
   agrandi ×9 et effacé) qui partent de l'œuf, bandeau en bois (`plaque-titre.png`) qui descend avec rebond (titre), tuto en
   fondu, 3-2-1 en zoom à partir de 1 s avec un tic (`bouton`), « GO ! » doré + gerbe d'étincelles (`special`), le bandeau
-  remonte ; le jeu démarre à ≈ 3,6 s.
+  remonte ; le jeu démarre à ≈ 3,6 s. Retours de l'auteur : bandeau mal cadré et tuto blanc illisible sur le panneau des
+  défis → la FENÊTRE EN BOIS du jeu (`FenetreBois` : titre dans la bannière verte, tuto crème et décompte doré SUR le bois),
+  à 22 % de la hauteur ; petite vibration (40 ms) avec le premier son. Banc : scène `mini-jeux-decor.jsx` = un mini-jeu
+  par-dessus le VRAI écran principal (lisibilité, placement) ; les temps de capture y sont approximatifs (démarrage lent).
 - Reste l'étape 7 : réglages après les essais de l'auteur, puis retrait du menu 🛠️.
 - Plan de l'auteur, dans l'ordre : 2 🌀 Roue des runes · 3 🔐 Coffre à broches · 4 ✨ Pluie de spores · 5 🔮 Rituel de l'Œuf ·
   6 🦹 Pilleurs encapuchonnés (images Gemini 110 à 112 : pilleur qui surgit, pilleur touché, buisson) · 7 réglages et retrait du 🛠️.
