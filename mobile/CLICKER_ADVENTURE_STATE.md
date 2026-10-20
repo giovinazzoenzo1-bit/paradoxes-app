@@ -4458,6 +4458,20 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - Conseil à donner : ouvrir le jeu, le laisser 1 minute sur l'écran principal, le fermer complètement, le rouvrir ;
   vérifier la date dans les Options. Sinon : nouvel APK.
 
+## CRÉATURES DU FRÈRE (19-20/10) — illustrations des 14 créatures sans image
+
+- Drive du frère (dossier partagé, un sous-dossier par créature, 3 images « p1 / p2 / p3 » ou « stage1-3 »). 14 créatures
+  n'avaient AUCUNE image en jeu : Abyssorax, Aquamira, Arcanis, Braiserose, Brontobloc, Cumulox, Nocturis, Racinea, Runicor,
+  Solstral, Tartaroth, Terracroc, Voltarel, Zephyrion (Solarion : rien dans le Drive). ⚠️ Le Drive ne transfère que de petits
+  fichiers : l'auteur dépose les originaux dans `design/a-integrer/creatures/<id>/` (GitHub), puis
+  `python3 mobile/tools/integrer-creature.py <id> …` (ordre par surface, 512 px, palette si écart visible ≤ 3, branchement
+  CreatureArt + cadrage).
+- Pourquoi 2-3 Mo au lieu de 88 Ko : 1254 px (au lieu de 1024) et le dessin remplit 47 à 75 % de l'image (avant ~25 %),
+  textures riches ; fond DÉJÀ transparent (rien à détourer). En jeu : 39 à 124 Ko (palette) ; Voltarel en PNG plein (dégradés :
+  écart visible 3,1-3,7) 158 / 282 / 398 Ko.
+- 20/10, TEST de l'auteur : Cumulox, Solstral, Voltarel, Terracroc intégrés (les images de Terracroc étaient déposées dans le
+  dossier de Tartaroth : rangées par leur NOM). Restent 10 créatures à déposer.
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
