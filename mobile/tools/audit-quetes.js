@@ -1643,6 +1643,25 @@ function auditChasseLueurs() {
 }
 module.exports.auditChasseLueurs = auditChasseLueurs;
 
+// ---- COMPTEURS des défis et succès (20/10, validés par l'auteur) : chaque événement d'un défi du jour, de la semaine ou d'un
+// succès est vraiment COMPTÉ quelque part dans le jeu (sinon le défi ne bouge jamais).
+function auditCompteursDefis() {
+  const fs = require('fs'), path = require('path');
+  const D = load('dailyLogic');
+  const lireTout = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? lireTout(path.join(dir, e.name)) : (e.name.endsWith('.js') ? [fs.readFileSync(path.join(dir, e.name), 'utf8')] : []));
+  const code = lireTout(path.join(__dirname, '../src')).join('\n');
+  const pb = [];
+  const evenements = new Set([...D.DAILY_QUEST_POOL.map((q) => q.event), ...D.WEEKLY_QUEST_POOL.map((q) => q.event), ...D.ACHIEVEMENTS.map((a) => a.stat)]);
+  evenements.forEach((ev) => {
+    const compte = code.includes("trackEvent('" + ev + "'") || code.includes("trackMax('" + ev + "'") || code.includes("onCompte('" + ev + "'");
+    if (!compte) pb.push(ev + ' : aucun compteur dans le jeu (le défi ou le succès ne bougerait jamais)');
+  });
+  const Cl = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if (!Cl.includes('onCompte={(ev, n) => trackEvent(ev, n || 1)}')) pb.push('les mini-jeux ne transmettent plus leurs compteurs (pilleurs, spores dorées)');
+  return pb;
+}
+module.exports.auditCompteursDefis = auditCompteursDefis;
+
 // ---- ÉCLOSION : un œuf neuf = un minuteur neuf (bug réel signalé par l'auteur) ----
 // « L'œuf 4 n'a pas eu de temps d'éclosion, le Gardien est apparu direct » : « Mettre en incubation » ne vidait pas le nid, et
 // le passage en éclosion gardait ce minuteur périmé (`prev ||`) → œuf prêt tout de suite, Gardien d'un autre œuf.
@@ -3450,7 +3469,15 @@ function auditGriffesBonus() {
   const D = load('dailyLogic');
   const fautes = [];
   const r = D.ACHIEVEMENT_TIER_REWARDS;
-  const a0 = D.ACHIEVEMENTS.length * (r[0] + r[1]);
+  // Les anciens succès : paliers 1 et 2 sur l'A0 (hypothèse d'origine) ; les NOUVEAUX (20/10) : les paliers que leur compteur
+  // estimé à la fin de l'A0 atteint (D.SUCCES_FIN_A0, tiré des mesures) — un nouveau succès sans estimation est REFUSÉ.
+  let a0 = 0;
+  D.ACHIEVEMENTS.forEach((a) => {
+    if (!(a.stat in D.SUCCES_FIN_A0)) { a0 += r[0] + r[1]; return; }
+    a.tiers.forEach((t, k) => { if (D.SUCCES_FIN_A0[a.stat] >= t) a0 += r[k]; });
+  });
+  const anciens = ['advLevelReached', 'crit', 'coinsEarned', 'battleWon', 'runeFused', 'creatureFed', 'powerActivated', 'offering', 'ascension', 'eggHatched', 'hatchVideo', 'starsEarned', 'threeStarLevel'];
+  D.ACHIEVEMENTS.filter((a) => !anciens.includes(a.stat) && !(a.stat in D.SUCCES_FIN_A0)).forEach((a) => fautes.push({ succes: a.id, probleme: 'nouveau succès sans estimation de fin d\'A0 (SUCCES_FIN_A0)' }));
   if (a0 > 1000) fautes.push({ probleme: 'succès de l\'A0 : ' + a0 + ' Griffes (plafond 1 000)' });
   D.WEEKLY_QUEST_POOL.filter((q) => q.reward > 300).forEach((q) => fautes.push({ hebdo: q.id, griffes: q.reward }));
   (D.DAILY_QUEST_POOL || []).filter((q) => q.reward > 100).forEach((q) => fautes.push({ quotidien: q.id, griffes: q.reward }));

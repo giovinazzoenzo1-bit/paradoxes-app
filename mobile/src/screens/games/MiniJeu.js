@@ -378,7 +378,7 @@ function JeuCoffre({ zone, sons, onRate, onReussi }) {
 // ✨ PLUIE DE SPORES : elles tombent vers le nid (le vrai, visible derrière). Seules les DORÉES se touchent (+1 Griffe
 // chacune, toute la récompense) ; les bleues sont des leurres qui ne réagissent pas (le doigt passe au travers).
 const SPORE_T = 66;
-function JeuSpores({ zone, sons, onRate, onReussi }) {
+function JeuSpores({ zone, sons, onRate, onReussi, onCompte }) {
   const [spores, setSpores] = useState([]); // { id, x, chute (Animated.Value), couleur, debut, duree }
   const [plusUn, setPlusUn] = useState([]);  // les « +1 » qui montent (demande de l'auteur)
   const attrapees = useRef(0), restantes = useRef(SPORES_TOTAL), minuteurs = useRef([]), anims = useRef({}), fini = useRef(false);
@@ -417,6 +417,7 @@ function JeuSpores({ zone, sons, onRate, onReussi }) {
     setPlusUn((l) => [...l, p]);
     Animated.timing(monte, { toValue: 1, duration: 750, useNativeDriver: true }).start(() => setPlusUn((l) => l.filter((q) => q !== p)));
     attrapees.current += 1;
+    onCompte('sporeDoree'); // succès « Attraper des spores dorées »
     partie();
   };
   return [...spores.map((sp) => (
@@ -507,7 +508,7 @@ function JeuRituel({ zone, sons, onRate, onReussi }) {
 // [x en part de largeur, décalage vertical en part de hauteur par rapport à la rangée du bas]
 const BUISSONS = [[0.2, -0.22], [0.5, -0.29], [0.8, -0.22], [0.32, 0], [0.68, 0]];
 const PIL_L = 104, PIL_H = 112, BUI_L = 128, BUI_H = 110;
-function JeuPilleurs({ zone, sons, onRate, onReussi }) {
+function JeuPilleurs({ zone, sons, onRate, onReussi, onCompte }) {
   const [occ, setOcc] = useState(() => Array(PILLEURS_BUISSONS).fill(null)); // { id, type, v, touche } par buisson
   const occRef = useRef(Array(PILLEURS_BUISSONS).fill(null)), minuteurs = useRef([]), fini = useRef(false), touches = useRef(0);
   const w = zone.w || 360, h = zone.h || 640;
@@ -542,6 +543,7 @@ function JeuPilleurs({ zone, sons, onRate, onReussi }) {
     o.touche = true;
     setOcc([...occRef.current]);
     jouerSon('impact-parfait', sons);
+    onCompte('pilleurTouche'); // succès « Attraper des pilleurs encapuchonnés »
     touches.current += 1;
     if (touches.current >= PILLEURS_NB) { fini.current = true; plus(250, onReussi); return; }
     plus(260, () => Animated.timing(o.v, { toValue: 0, duration: 120, useNativeDriver: true }).start(() => { if (occRef.current[b] === o) poser(b, null); }));
@@ -595,7 +597,7 @@ function FeuxArtifice() {
   );
 }
 
-export default function MiniJeu({ jeu, oeufSource = null, sons = true, vibrations = true, onGagne, onFermer }) {
+export default function MiniJeu({ jeu, oeufSource = null, sons = true, vibrations = true, onGagne, onCompte, onFermer }) {
   const visible = !!jeu;
   const def = miniJeu(jeu);
   const [phase, setPhase] = useState('intro'); // intro → jeu → perdu | gagne
@@ -715,7 +717,7 @@ export default function MiniJeu({ jeu, oeufSource = null, sons = true, vibration
             ) : null}
           </View>
         )}
-        {phase === 'jeu' && <Jeu zone={zone} sons={sons} onRate={perdre} onReussi={gagner} />}
+        {phase === 'jeu' && <Jeu zone={zone} sons={sons} onRate={perdre} onReussi={gagner} onCompte={onCompte || (() => {})} />}
         {phase === 'perdu' && (
           <View style={styles.centre}><Text style={styles.perdu}>PERDU</Text></View>
         )}

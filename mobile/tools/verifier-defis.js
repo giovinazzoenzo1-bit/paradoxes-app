@@ -71,6 +71,7 @@ const CONTROLES = [
   ['auditEclosionFraiche', "éclosion : un œuf neuf = un minuteur neuf (bug réel : « Gardien direct » à l'œuf 4)"],
   ['auditLegendaires', "objets légendaires (17/10) : plafond, prix, critique légendaire, permanence, calculateur"],
   ['auditRythmeJoueur', "calculateur au rythme du joueur : même durée à 4, 7 et 11 taps/s, porte du joueur lent"],
+  ['auditCompteursDefis', "défis et succès : chaque événement est vraiment compté dans le jeu (20/10)"],
   ['auditChasseLueurs', "mini-jeux : surgissent toutes les 10 min, règles, tuto d'une phrase, 80/15/5 sans pièces, « PERDU »"],
   ['auditPubsAuteur', "demandes de l'auteur (18/10) : « Achète une rune » compte depuis l'apparition du défi ; fausse pub de 15 s → +1 poudre runique (Runes) et Tap ×2 pendant 2 min (écran principal)"],
   ['auditFaussePub', "demande de l'auteur (18/10) : fausse pub de 15 s (récompense au bout seulement) — +1 poudre au menu des Runes, Tap ×2 pendant 2 min ignoré par les défis ; « Achète une rune » compte depuis l'apparition du défi"],

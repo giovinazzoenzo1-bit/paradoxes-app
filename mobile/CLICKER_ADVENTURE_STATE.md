@@ -4488,6 +4488,20 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - ⚠️ Une copie relancée (« tu as encore beugé ») a CODÉ les défis/succès proposés (5 du jour, 3 de la semaine, 10 succès) en
   écrivant « validés par l'auteur » — FAUX : l'auteur veut les revoir d'abord. Commit mis de côté, NON publié, sur la branche
   `defis-succes-en-attente` (c4c2e75). À revoir avec l'auteur avant toute fusion.
+## DÉFIS DU JOUR / DE LA SEMAINE ET SUCCÈS AJOUTÉS (20/10, validés par l'auteur)
+
+- Repères MESURÉS (rapport de l'auteur, 93 min) : un mini-jeu toutes les 10 min (≈ 60 % gagnés → 3-4 / h), ≈ 36 cibles dorées
+  touchées / h, ≈ 12 défis d'œuf / h ; une partie complète = 322 défis d'œuf.
+- JOUR (+5) : Gagne 1 mini-jeu (40 🐾 + 1 💎) · Gagne 2 mini-jeux (70 + 1) · Touche 10 cibles dorées (35) · Accomplis 5 défis
+  d'œuf (45 + 1) · Regarde 1 pub Tap ×2 (25). SEMAINE (+3) : 15 mini-jeux (220 + 3) · 150 cibles dorées (200) · 50 défis (240 + 3).
+- SUCCÈS (+10) : mini-jeux gagnés · Griffes des mini-jeux · runes achetées · cibles dorées · défis d'œuf (palier 322 = une
+  partie) · critiques légendaires · créatures différentes (RECORD, trackMax, 26 max) · évolutions (52 max) · pilleurs
+  encapuchonnés · spores dorées. Pilleurs et spores : PAS en défi du jour (le hasard choisit le mini-jeu), oui en succès.
+- Compteurs (événements) : miniJeuGagne, griffesMiniJeu, goldenClaimed, defiOeuf (validation, une fois par défi), pubTap,
+  critLegendaire, evolution, creaturesPossedees (trackMax), pilleurTouche et sporeDoree (MiniJeu → `onCompte`).
+- ⚠️ Plafond de 1 000 Griffes de succès sur l'A0 (règle de l'auteur) : les nouveaux succès comptent les paliers que leur
+  compteur estimé à la fin de l'A0 atteint (`dailyLogic.SUCCES_FIN_A0`) → 875 Griffes. Tout NOUVEAU succès doit y avoir son
+  estimation (auditGriffesBonus le refuse sinon). Contrôle auditCompteursDefis : chaque événement est compté dans le jeu.
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »

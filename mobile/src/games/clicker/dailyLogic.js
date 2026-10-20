@@ -78,6 +78,13 @@ export const DAILY_QUEST_POOL = [
   // rejouer un niveau déjà à 3 étoiles ne rapporte rien, sinon le défi
   // serait validable en boucle sur le premier niveau.
   { id: 'stars3', desc: 'Gagne 3 étoiles en Aventure', event: 'starsEarned', target: 3, reward: 40 },
+  // 20/10 (validés par l'auteur) — repères MESURÉS sur son rapport de 93 min : un mini-jeu toutes les 10 min (≈ 60 % gagnés →
+  // 3-4 par heure), ≈ 36 cibles dorées touchées par heure, ≈ 12 défis d'œuf accomplis par heure.
+  { id: 'miniJeu1', desc: 'Gagne 1 mini-jeu', event: 'miniJeuGagne', target: 1, reward: 40, diamonds: 1 },
+  { id: 'miniJeu2', desc: 'Gagne 2 mini-jeux', event: 'miniJeuGagne', target: 2, reward: 70, diamonds: 1 },
+  { id: 'dorees10', desc: 'Touche 10 cibles dorées', event: 'goldenClaimed', target: 10, reward: 35 },
+  { id: 'defis5', desc: "Accomplis 5 défis d'œuf", event: 'defiOeuf', target: 5, reward: 45, diamonds: 1 },
+  { id: 'pubTap1', desc: 'Regarde 1 pub Tap ×2', event: 'pubTap', target: 1, reward: 25 },
   { id: 'perfect1', desc: 'Termine un niveau avec 3 étoiles', event: 'threeStarLevel', target: 1, reward: 45 },
 ];
 
@@ -197,6 +204,10 @@ export const WEEKLY_QUEST_POOL = [
   { id: 'w_hatchTap3600', desc: "Gagne 3 600 secondes d'éclosion en tapant", event: 'hatchSecondsSaved', target: 3600, reward: 150, diamonds: 3 },
   { id: 'w_stars20',   desc: 'Gagne 20 étoiles en Aventure',            event: 'starsEarned',    target: 20, reward: 245 },
   { id: 'w_perfect6',  desc: 'Termine 6 niveaux avec 3 étoiles',        event: 'threeStarLevel', target: 6,  reward: 260 },
+  // 20/10 (validés par l'auteur) : ≈ 4 h de jeu dans la semaine chacun.
+  { id: 'w_miniJeu15', desc: 'Gagne 15 mini-jeux', event: 'miniJeuGagne', target: 15, reward: 220, diamonds: 3 },
+  { id: 'w_dorees150', desc: 'Touche 150 cibles dorées', event: 'goldenClaimed', target: 150, reward: 200 },
+  { id: 'w_defis50', desc: "Accomplis 50 défis d'œuf", event: 'defiOeuf', target: 50, reward: 240, diamonds: 3 },
 ];
 
 // 6 par semaine (au lieu de 3) : sur 10 défis disponibles, en tirer 6
@@ -260,6 +271,15 @@ export function weeklyQuestDef(questId) {
 // Les diamants des succès ne changent pas.
 // 11/10 (soir) : REMIS comme avant — l'auteur parlait des gains des ÉTAPES, pas des succès (malentendu du ×0,25).
 export const ACHIEVEMENT_TIER_REWARDS = [15, 40, 100, 250, 600];
+// 20/10 — Compteurs des NOUVEAUX succès à la fin de l'A0, pour le plafond de 1 000 Griffes de succès sur l'A0 (règle de
+// l'auteur). Les 13 anciens succès comptent toujours leurs paliers 1 ET 2 (hypothèse prudente d'origine). MESURÉ / estimé :
+// A0 ≈ 2,7 h de jeu actif → ≈ 16 mini-jeux, ≈ 10 gagnés (60 %), ≈ 300 Griffes (20-30 par victoire au début), ≈ 97 cibles
+// dorées (36 / h), 49 défis d'œuf (l'A0 entier), 0 critique légendaire (objets légendaires dès l'A1), ≈ 8 créatures, ≈ 3
+// évolutions, ≈ 19 pilleurs et ≈ 19 spores dorées (un mini-jeu sur 9 chacun), ≈ 8 runes achetées.
+export const SUCCES_FIN_A0 = {
+  miniJeuGagne: 10, griffesMiniJeu: 300, runeBought: 8, goldenClaimed: 97, defiOeuf: 49, critLegendaire: 0,
+  creaturesPossedees: 8, evolution: 3, pilleurTouche: 19, sporeDoree: 19,
+};
 // Diamants par palier de succès, versés UNE SEULE FOIS chacun.
 export const ACHIEVEMENT_TIER_DIAMONDS = [2, 5, 10, 20, 40];
 export function achievementDiamonds(tierIndex) {
@@ -293,6 +313,18 @@ export const ACHIEVEMENTS = [
   // Plafond à 120 : il y a 40 niveaux, donc 120 étoiles au maximum
   // absolu. Le dernier palier demande la perfection sur TOUTE la carte.
   { id: 'a_perfect',   desc: 'Terminer des niveaux avec 3 étoiles',   stat: 'threeStarLevel', tiers: [1, 5, 15, 30, 40] },
+  // 20/10 (validés par l'auteur). Palier 322 des défis d'œuf = une partie complète (A0 → A5) ; 26 créatures ; 52 évolutions
+  // (26 × 2). Pilleurs et spores : PAS en défi du jour (le hasard choisit le mini-jeu), oui en succès (il s'équilibre).
+  { id: 'a_miniJeux', desc: 'Gagner des mini-jeux', stat: 'miniJeuGagne', tiers: [5, 25, 100, 300, 800] },
+  { id: 'a_griffesMJ', desc: 'Gagner des Griffes aux mini-jeux', stat: 'griffesMiniJeu', tiers: [100, 500, 2000, 8000, 25000] },
+  { id: 'a_runes', desc: 'Acheter des runes', stat: 'runeBought', tiers: [10, 50, 150, 400, 1000] },
+  { id: 'a_dorees', desc: 'Toucher des cibles dorées', stat: 'goldenClaimed', tiers: [25, 150, 600, 2000, 6000] },
+  { id: 'a_defisOeuf', desc: "Accomplir des défis d'œuf", stat: 'defiOeuf', tiers: [25, 100, 322, 650, 1000] },
+  { id: 'a_legendaires', desc: 'Réussir des critiques légendaires', stat: 'critLegendaire', tiers: [5, 25, 100, 400, 1500] },
+  { id: 'a_collection', desc: 'Posséder des créatures différentes', stat: 'creaturesPossedees', mode: 'max', tiers: [3, 8, 15, 20, 26] },
+  { id: 'a_evolutions', desc: 'Faire évoluer des créatures', stat: 'evolution', tiers: [1, 5, 15, 30, 52] },
+  { id: 'a_pilleurs', desc: 'Attraper des pilleurs encapuchonnés', stat: 'pilleurTouche', tiers: [15, 75, 300, 1000, 3000] },
+  { id: 'a_spores', desc: 'Attraper des spores dorées', stat: 'sporeDoree', tiers: [15, 75, 300, 1000, 3000] },
 ];
 
 export function achievementDef(id) {

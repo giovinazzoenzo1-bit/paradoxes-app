@@ -618,6 +618,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const recompenserMiniJeu = (resultat) => {
     // Pluie de spores (demande de l'auteur) : ses Griffes (1 par spore dorée) SONT la récompense, sans tirage en plus.
     const r = resultat && resultat.griffes > 0 ? { type: 'griffes', amount: Math.floor(resultat.griffes) } : tirerRecompenseMiniJeu(ownedRef.current);
+    trackEvent('miniJeuGagne'); // défis et succès « Gagner des mini-jeux »
+    if (r.type === 'griffes') trackEvent('griffesMiniJeu', r.amount); // succès « Gagner des Griffes aux mini-jeux »
     if (r.type === 'griffes') {
       (async () => {
         try {
@@ -740,7 +742,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const vibrationsRef = useRef(vibrations);
   vibrationsRef.current = vibrations;
   const {
-    trackEvent, lifetimeStats, loaded: dailyLoaded,
+    trackEvent, trackMax, lifetimeStats, loaded: dailyLoaded,
     calendar, calendarDay, streakClaimedDate, date: today, claimStreak,
     questIds, questProgress, questClaimed, griffesARecuperer,
     noterNiveauxDeck,
@@ -786,6 +788,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [totalEarned, setTotalEarned] = useState(0); // cumul jamais décroissant, pour l'Ascension
   const [tapPower, setTapPower] = useState(1);
   const [owned, setOwned] = useState([]); // [{id, level}]
+  // Succès « Posséder des créatures différentes » (20/10, validé par l'auteur) : un RECORD (trackMax), jamais un cumul.
+  useEffect(() => {
+    if (dailyLoaded && owned.length) trackMax('creaturesPossedees', new Set(owned.map((o) => o.id)).size);
+  }, [owned.length, dailyLoaded]);
 
 
   // Geste/bouton retour d'Android. Depuis Shop/Collection il ramène au
@@ -1040,6 +1046,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const boostTapJusquaRef = useRef(0);
   const finPubTap = () => {
     setPubTap(false);
+    trackEvent('pubTap'); // défi du jour « Regarde 1 pub Tap ×2 »
     const fin = Date.now() + PUB_BOOST_TAP_SEC * 1000;
     boostTapJusquaRef.current = fin;
     setBoostTapJusqua(fin);
@@ -2153,6 +2160,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       if (vibrationsRef.current) Vibration.vibrate(35);
     }
     const legendaireMult = legendaire ? multiplicateurLegendaire(legendairesRef.current.critDamageV2) : 1;
+    if (legendaire) trackEvent('critLegendaire'); // succès « Réussir des critiques légendaires » (rare : pas de surcoût)
     const powerMult = activePowerRef.current ? activePowerRef.current.tapMultiplier : 1;
     const critMult = isCrit ? critMultiplier(critDamageLevelRef.current) * (1 + upgradeBonus.critMultPct) : 1;
     // `tapPower` est le NIVEAU du Pacte, pas les dégâts : il faut passer
@@ -3329,6 +3337,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     const id = currentChallengeId;
     if (!id || !isQuestDone(id)) return;
     jouerSon('defi-valide', sonsJeuRef.current); // défi validé (07/10)
+    if (!validatedQuestIds.includes(id)) trackEvent('defiOeuf'); // défis et succès « Accomplir des défis d'œuf »
     setValidatedQuestIds((prev) => {
       if (prev.includes(id)) return prev;
       const suivant = [...prev, id];
@@ -3993,6 +4002,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const claimGolden = () => {
     if (!goldenTargetRef.current) return;
     jouerSon('etoile-doree-recolte', sonsJeuRef.current); // l'étoile dorée récoltée (07/10)
+    trackEvent('goldenClaimed'); // défis et succès « Toucher des cibles dorées »
     const bonus = Math.round(gainCoins(goldenBonus(tapPowerRef.current)));
     spawnPopup(`+${bonus} ✨`, 110, 60, true);
     setGoldenTarget(null);
@@ -4062,6 +4072,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // débité les Griffes de son côté ; ici on ne fait que persister le
   // nouveau palier sur la collection du clicker).
   const handleEvolveCreature = (creatureId, newTier) => {
+    const avant = (owned.find((o) => o.id === creatureId) || {}).evolutionTier || 0;
+    if (newTier > avant) trackEvent('evolution', newTier - avant); // succès « Faire évoluer des créatures »
     setOwned((prev) => prev.map((o) => (o.id === creatureId ? { ...o, evolutionTier: newTier } : o)));
   };
 
@@ -4727,7 +4739,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       )}
       <MiniJeu jeu={miniJeuOuvert} sons={sonsJeuRef.current} vibrations={vibrationsRef.current}
         oeufSource={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
-        onGagne={recompenserMiniJeu} onFermer={() => {
+        onGagne={recompenserMiniJeu} onCompte={(ev, n) => trackEvent(ev, n || 1)} onFermer={() => {
           // La cible dorée suivante attend 3 s après la fin du mini-jeu (pas de surprise au retour).
           nextGoldenAtRef.current = Math.max(nextGoldenAtRef.current, Date.now() + 3000);
           setMiniJeuOuvert(null);
