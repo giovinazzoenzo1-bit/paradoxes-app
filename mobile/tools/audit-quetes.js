@@ -6087,7 +6087,8 @@ function auditDefisLueur() {
   // Bug iPhone du 20/10 (photo de l'auteur : marque-pages qui « vibrent » et se dessinent sur la page) : la lueur du chapitre
   // guidé est un calque à part, calme (opacité seule) ; chaque marque-page est coupé au bord de la page.
   if (!Gr.includes('{ouvert && guide && guide.c !== posVue.c ? (\n        <LueurDefi fort calme')) pb.push('Grimoire : le marque-page du bon chapitre n\'est plus éclairé (ou sa lueur grossit de nouveau)');
-  if (!Gr.includes("height: 44 + (actif ? 10 : 0) + 6, overflow: 'hidden', opacity: apparition")) pb.push('Grimoire : les marque-pages ne sont plus coupés au bord de la page (iPhone : ils se dessinent dessus)');
+  // 2ᵉ photo iPhone : coupés trop haut (+6 px), ils s'arrêtaient au-dessus du papier → chacun descend 4 px SOUS son papier.
+  if (!Gr.includes("height: 44 + (actif ? 10 : 0) + Math.round(LIVRE_H * (PAPIER_SOUS_ONGLET[i] ?? 0.05)) + 4, overflow: 'hidden', opacity: apparition") || !Gr.includes('const PAPIER_SOUS_ONGLET = [0.022, 0.022, 0.044, 0.007, 0.018];')) pb.push('Grimoire : les marque-pages ne sont plus coupés juste sous le papier (iPhone : dessinés dessus, ou pas insérés)');
   { const Cl = require('fs').readFileSync(require('path').join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
     if (!Cl.includes('source={LUEUR_OR_INCUBATEUR}') || Cl.includes('incubatorBtnActive')) pb.push('incubateur : plus de lueur dorée (image) quand un œuf incube — l\'ombre seule est trop faible sur iPhone'); }
   if (!Gr.includes("guideFleche === 'suivante' ? <LueurDefi") || !Gr.includes("guideFleche === 'precedente' ? <LueurDefi")) pb.push('Grimoire : la flèche vers la bonne page n\'est plus éclairée');

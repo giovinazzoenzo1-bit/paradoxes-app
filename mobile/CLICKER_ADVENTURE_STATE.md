@@ -4510,8 +4510,10 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - Grimoire : les marque-pages « vibraient » et se dessinaient PAR-DESSUS la page (le rouge du chapitre ouvert jusqu'au titre,
   l'orange du chapitre guidé en fantôme translucide). Non reproduit au banc (web) : correction défensive — la lueur du chapitre
   guidé est un calque À PART derrière tous les marque-pages, qui ne descend pas sur la page et respire en opacité seulement
-  (`LueurDefi calme`, plus de grossissement) ; chaque marque-page est COUPÉ au bord de la page (`overflow: 'hidden'`, hauteur
-  = partie visible + 6 px). À confirmer sur l'iPhone.
+  (`LueurDefi calme`, plus de grossissement) ; chaque marque-page est COUPÉ sous le bord de la page (`overflow: 'hidden'`).
+  2ᵉ photo : coupés tous à +6 px, ils s'arrêtaient AU-DESSUS du papier par endroits (« pas insérés ») — le bord haut du livre
+  ONDULE : MESURÉ sur livre.png, le papier commence entre 0,7 % et 4,4 % de la hauteur du livre selon le marque-page (le plus
+  bas au dos) → `PAPIER_SOUS_ONGLET` : chacun descend 4 px sous SON papier. Vérifié au banc en 390 et 430 px de large.
 - Incubateur : la lueur d'un œuf en incubation était une OMBRE colorée (shadowRadius 16) — à peine visible sur iPhone, absente
   sur Android. Désormais une IMAGE (`lueur-or.png`, 2 couches, 132 px pour un bouton de 62) qui respire avec l'icône.
 - Banc : `menu&incubation=1` précharge un œuf dans le faux stockage (`window.__memoireBanc`, PAS localStorage) ;

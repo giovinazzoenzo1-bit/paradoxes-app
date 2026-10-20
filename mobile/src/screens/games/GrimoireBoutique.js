@@ -57,6 +57,11 @@ const MODE_L = Math.min(34, Math.floor((LIBRE_L - 6) / 3));
 const MEDAILLON = 30;
 const ONGLET_L = 46;
 const ONGLET_H = Math.round((ONGLET_L * 243) / 110);
+// Où le PAPIER commence sous chaque marque-page (le bord haut du livre ONDULE), en part de la hauteur du livre — MESURÉ sur
+// livre.png (20/10) : au dos (3ᵉ marque-page), le papier commence 4,4 % plus bas qu'en haut de l'image. ⚠️ 1re correction
+// iPhone (même jour) : coupés tous à +6 px, les marque-pages s'arrêtaient AU-DESSUS du papier par endroits (photo de
+// l'auteur : « pas insérés dans le livre ») — chacun descend maintenant jusqu'à 4 px SOUS son papier.
+const PAPIER_SOUS_ONGLET = [0.022, 0.022, 0.044, 0.007, 0.018];
 // Lettres à empattements du système (aucune police à charger).
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const DUREE_OUVERTURE = 450; // 17/10 (auteur : « fais ouvrir le livre de tap plus vite ») : avant 900
@@ -469,7 +474,7 @@ function Grimoire(props) {
         const x = LIVRE_X + Math.round(LIVRE_L * (0.2 + (i * 0.6) / (chapitres.length - 1))) - ONGLET_L / 2;
         if (!ouvert) return null;
         return (
-          <Animated.View key={c.cle} style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0), height: 44 + (actif ? 10 : 0) + 6, overflow: 'hidden', opacity: apparition }]}>
+          <Animated.View key={c.cle} style={[styles.onglet, { left: x, top: LIVRE_Y - 44 - (actif ? 10 : 0), height: 44 + (actif ? 10 : 0) + Math.round(LIVRE_H * (PAPIER_SOUS_ONGLET[i] ?? 0.05)) + 4, overflow: 'hidden', opacity: apparition }]}>
           <TouchableOpacity activeOpacity={0.8} onPress={() => (i !== cActif ? tourner({ c: i, p: 0 }, i > cActif ? 1 : -1) : null)}
             style={{ position: 'absolute', left: 0, top: 0, width: ONGLET_L, height: ONGLET_H, alignItems: 'center' }}>
             <Image source={c.marque} resizeMode="stretch" style={[styles.ongletImg, { transform: [{ scaleY: -1 }] }]} />
