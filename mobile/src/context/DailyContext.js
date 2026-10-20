@@ -340,7 +340,7 @@ export function DailyProvider({ children }) {
     await addPending(PENDING_GRIFFES_KEY, reward);
     noterGriffes('succes', reward, { id }); // journal des Griffes (11/10)
     // Le palier RÉCLAMÉ est `claimed` (0 pour le premier), pas le suivant.
-    await addPending(PENDING_DIAMONDS_KEY, achievementDiamonds(claimed));
+    await addPending(PENDING_DIAMONDS_KEY, achievementDiamonds(claimed, def)); // 0 pour les succès « Griffes seulement »
     return reward;
   }, [achievementsClaimed]);
 

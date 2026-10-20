@@ -186,6 +186,8 @@ const SABOTAGES = [
     remplace("  fond: { flex: 1, backgroundColor: 'transparent' }", "  fond: { flex: 1, backgroundColor: 'rgba(8,6,20,0.86)' }")],
   ['auditChasseLueurs', F.chasse, 'la victoire perd son son de victoire',
     remplace("jouerSon('victoire', sons)", "jouerSon('recompense', sons)")],
+  ['auditCompteursDefis', F.daily, 'un succès du 20/10 redonne des Diamants (l\'auteur : Griffes seulement)',
+    remplace("stat: 'miniJeuGagne', tiers: [5, 25, 100, 300, 800], diamants: false },", "stat: 'miniJeuGagne', tiers: [5, 25, 100, 300, 800] },")],
   ['auditCompteursDefis', F.ecran, 'une victoire de mini-jeu n\'est plus comptée (les défis « Gagne N mini-jeux » ne bougeraient plus)',
     remplace("    trackEvent('miniJeuGagne'); // défis et succès « Gagner des mini-jeux »\n", '')],
   ['auditCompteursDefis', F.ecran, 'les cibles dorées touchées ne sont plus comptées',

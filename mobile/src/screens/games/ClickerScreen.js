@@ -4739,7 +4739,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       )}
       <MiniJeu jeu={miniJeuOuvert} sons={sonsJeuRef.current} vibrations={vibrationsRef.current}
         oeufSource={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
-        onGagne={recompenserMiniJeu} onCompte={(ev, n) => trackEvent(ev, n || 1)} onFermer={() => {
+        onGagne={recompenserMiniJeu} onFermer={() => {
           // La cible dorée suivante attend 3 s après la fin du mini-jeu (pas de surprise au retour).
           nextGoldenAtRef.current = Math.max(nextGoldenAtRef.current, Date.now() + 3000);
           setMiniJeuOuvert(null);

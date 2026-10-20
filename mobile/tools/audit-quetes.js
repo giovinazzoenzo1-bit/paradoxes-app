@@ -1657,7 +1657,14 @@ function auditCompteursDefis() {
     if (!compte) pb.push(ev + ' : aucun compteur dans le jeu (le défi ou le succès ne bougerait jamais)');
   });
   const Cl = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
-  if (!Cl.includes('onCompte={(ev, n) => trackEvent(ev, n || 1)}')) pb.push('les mini-jeux ne transmettent plus leurs compteurs (pilleurs, spores dorées)');
+  // Règle de l'auteur : les défis et succès du 20/10 ne donnent QUE des Griffes.
+  const nouveauxJour = ['miniJeu1', 'miniJeu2', 'dorees10', 'defis5', 'pubTap1', 'w_miniJeu15', 'w_dorees150', 'w_defis50'];
+  [...D.DAILY_QUEST_POOL, ...D.WEEKLY_QUEST_POOL].filter((q) => nouveauxJour.includes(q.id)).forEach((q) => { if (q.diamonds) pb.push(q.id + ' : donne des Diamants (l\'auteur : Griffes seulement)'); });
+  if (nouveauxJour.some((id) => ![...D.DAILY_QUEST_POOL, ...D.WEEKLY_QUEST_POOL].some((q) => q.id === id))) pb.push('un défi du 20/10 a disparu');
+  const nouveauxSucces = ['a_miniJeux', 'a_griffesMJ', 'a_runes', 'a_dorees', 'a_defisOeuf', 'a_legendaires', 'a_collection', 'a_evolutions'];
+  nouveauxSucces.forEach((id) => { const a = D.ACHIEVEMENTS.find((x) => x.id === id); if (!a) pb.push(id + ' : succès disparu'); else if (D.achievementDiamonds(0, a) !== 0 || D.achievementDiamonds(4, a) !== 0) pb.push(id + ' : donne des Diamants (l\'auteur : Griffes seulement)'); });
+  if (D.achievementDiamonds(0, D.ACHIEVEMENTS.find((x) => x.id === 'a_crit')) !== 2) pb.push('les anciens succès ne donnent plus leurs Diamants');
+  if (!fs.readFileSync(path.join(__dirname, '../src/context/DailyContext.js'), 'utf8').includes('achievementDiamonds(claimed, def)')) pb.push('la réclamation d\'un succès ignore la règle « Griffes seulement »');
   return pb;
 }
 module.exports.auditCompteursDefis = auditCompteursDefis;
