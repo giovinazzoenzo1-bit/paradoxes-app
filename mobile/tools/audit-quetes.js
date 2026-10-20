@@ -1605,7 +1605,7 @@ function auditChasseLueurs() {
   // Bug réel du Bonneteau (reproduit au banc) : le RENDU doit lire l'ÉTAT de la lueur, pas la référence changée dans l'effet.
   if (!J.includes("(etape === 'montre' || etape === 'revele') && k === lueur ? (") || !J.includes('setLueur(lueurDans.current);')) pb.push('Bonneteau : la lueur montrée peut ne plus être sous le bon œuf');
   // Demandes de l'auteur : des lueurs bien visibles, la Transe sur l'œuf, la flèche de la Roue en bas.
-  if ((J.match(/<LueurVisible /g) || []).length < 4 || !J.includes('source={OEUF_LUMINEUX}') || !J.includes("<Text style={[styles.roueFleche, { top: cy + R + RUNE_T / 2 - 4 }]}>▲</Text>")) pb.push('lueurs visibles, œuf de la Transe ou flèche de la Roue en bas : un réglage de l\'auteur a disparu');
+  if ((J.match(/<LueurVisible /g) || []).length < 4 || !J.includes('source={OEUF_LUMINEUX}') || !J.includes("<Text style={[styles.roueFleche, { top: cy + R + RUNE_T / 2 - 4, transform: [{ translateX: OEUF_DECALAGE_X }] }]}>▲</Text>")) pb.push('lueurs visibles, œuf de la Transe ou flèche de la Roue en bas : un réglage de l\'auteur a disparu');
   // L'auteur : la lueur visible doit rester une LUEUR (halo empilé), pas « des ronds » (anneau, cœur plein).
   { const i = J.indexOf('function LueurVisible('), corps = i >= 0 ? J.slice(i, J.indexOf('\n}\n', i)) : ''; if (!corps || /borderWidth|backgroundColor/.test(corps)) pb.push('la lueur visible redevient un rond (anneau ou cœur plein)'); }
   // Bonneteau : un mauvais œuf MONTRE où était la lueur avant « PERDU » (l'auteur ne la voyait pas en 3e manche).
@@ -1616,6 +1616,11 @@ function auditChasseLueurs() {
   if (!J.includes('...bouge.getTranslateTransform()') || !J.includes('transform: l.v.getTranslateTransform()') || !J.includes('setPlace({')) pb.push('une lumière de mini-jeu est redevenue statique');
   if (!J.includes('<Text style={styles.perdu}>PERDU</Text>') || !J.includes("jouerSon('defaite', sons)") || !J.includes('PERDU_MS')) pb.push('une ratée doit afficher « PERDU » 1 s avec le son de défaite');
   if (!J.includes('DECOMPTE[decompte]')) pb.push('plus de décompte 3, 2, 1');
+  // Décor ÉPURÉ (demande de l'auteur) : le fond, le nid et l'œuf de l'écran principal, à LEUR place (même décalage de
+  // l'œuf : 13 px), sans boutons ni panneaux.
+  { const dx = (Cl.match(/const DECALAGE_OEUF_X = (\d+);/) || [])[1];
+    if (!J.includes('<Image source={FOND_MENU} resizeMode="cover"') || !J.includes('source={oeufSource}') || !Cl.includes('oeufSource={EGG_IMAGES[')
+      || String(M.OEUF_DECALAGE_X) !== String(dx)) pb.push('le décor épuré des mini-jeux a disparu, ou l\'œuf n\'y est plus à sa place'); }
   // Arrivée « l'Onde de lumière » (validée par l'auteur) : onde dorée depuis l'œuf + son magique, bandeau en bois qui descend.
   // Retours de l'auteur : la FENÊTRE EN BOIS du jeu (titre dans la bannière, tuto lisible sur le bois), et une petite
   // vibration avec le premier son.

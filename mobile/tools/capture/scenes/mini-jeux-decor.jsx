@@ -12,6 +12,6 @@ const rien = () => {};
 createRoot(document.getElementById('root')).render(
   <SafeAreaProvider><CoinsProvider><DailyProvider><SettingsProvider>
     <ClickerScreen onOpenOptions={rien} onOpenQuests={rien} />
-    <MiniJeu jeu={jeu} sons={false} vibrations={false} onGagne={() => ({ texte: '+23 🐾 Griffes' })} onFermer={rien} />
+    <MiniJeu jeu={jeu} oeufSource={require('../../../assets/egg/egg-0-endormi.png')} sons={false} vibrations={false} onGagne={() => ({ texte: '+23 🐾 Griffes' })} onFermer={rien} />
   </SettingsProvider></DailyProvider></CoinsProvider></SafeAreaProvider>,
 );

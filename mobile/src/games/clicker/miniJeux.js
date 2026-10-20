@@ -67,7 +67,7 @@ export const MINI_JEUX = [
   { id: 'transe', titre: '🥁 Battement de Transe', tuto: "Tape quand l'anneau touche le cercle, 3 ratés et c'est perdu." },
   { id: 'bonneteau', titre: "🥚 Bonneteau d'œufs", tuto: "Suis l'œuf qui cache la lueur, puis touche-le." },
   { id: 'roue', titre: '🌀 Roue des runes', tuto: 'Tape quand la rune dorée passe sur la flèche.' },
-  { id: 'coffre', titre: '🔐 Coffre à broches', tuto: "Arrête l'aiguille dans la zone verte pour lever chaque broche." },
+  { id: 'coffre', titre: '🔐 Coffre à broches', tuto: "Arrête l'aiguille dans la zone jaune pour lever chaque broche." }, // jaune : la jauge de l'Aventure
   { id: 'spores', titre: '✨ Pluie de spores', tuto: 'Touche les spores dorées, chacune vaut 1 Griffe.' },
   { id: 'rituel', titre: "🔮 Rituel de l'Œuf", tuto: "Retiens l'ordre des symboles qui s'allument, puis touche-les dans le même ordre." },
   { id: 'pilleurs', titre: '🦹 Pilleurs encapuchonnés', tuto: "Touche les pilleurs avant qu'ils replongent, jamais les lueurs." },
@@ -187,6 +187,10 @@ export const RITUEL_ROTATION_MS = 24000; // un tour complet de l'anneau : les sy
 // Demande de l'auteur : le Rituel se joue AUTOUR de l'œuf de l'écran principal (visible derrière, la fenêtre est transparente).
 // Centre de l'œuf = milieu de sa zone de tap (ClickerScreen : TAP_ZONE_TOP 0,429 + TAP_ZONE_H 0,419 / 2).
 export const OEUF_CENTRE_Y = 0.429 + 0.419 / 2;
+// L'œuf (et son nid) sont décalés à droite de 13 px sur l'écran principal (ClickerScreen : DECALAGE_OEUF_X) — même valeur ici.
+export const OEUF_DECALAGE_X = 13;
+// Taille de l'œuf sur l'écran principal (ClickerScreen : EGG_BUTTON = min(350, TAP_ZONE_H - 4), EGG_SIZE = EGG_BUTTON - 25).
+export function tailleOeuf(hauteurEcran) { return Math.min(350, (Number(hauteurEcran) || 640) * 0.419 - 4) - 25; }
 // Une NOTE par symbole (demande de l'auteur : « style jeu de musique ») : gamme pentatonique, toujours harmonieuse.
 export const RITUEL_NOTES = ['note-1', 'note-2', 'note-3', 'note-4', 'note-5', 'note-6'];
 export function rituelLongueur(i) { return RITUEL_LONGUEURS[Math.max(0, Math.min(RITUEL_TOURS - 1, Math.floor(Number(i) || 0)))]; }

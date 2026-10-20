@@ -220,6 +220,8 @@ const SABOTAGES = [
     remplace('export const TRANSE_RATES_MAX = 3;', 'export const TRANSE_RATES_MAX = 5;')],
   ['auditChasseLueurs', F.chasse, 'l\'arrivée perd son onde de lumière (validée par l\'auteur)',
     remplace('            {[onde, onde2].map((v, k) => (', '            {[].map((v, k) => (')],
+  ['auditChasseLueurs', F.chasse, 'le décor épuré disparaît : les boutons de l\'écran principal reviennent derrière le mini-jeu',
+    remplace('<Image source={FOND_MENU} resizeMode="cover"', '<Image source={null} resizeMode="cover"')],
   ['auditChasseLueurs', F.chasse, 'l\'arrivée perd sa petite vibration (demande de l\'auteur)',
     remplace('    if (vibrations) Vibration.vibrate(40); // demande de l\'auteur : une petite vibration avec le premier son\n', '')],
   ['auditChasseLueurs', F.chasse, 'une lueur ratée n\'affiche plus « PERDU »',

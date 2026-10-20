@@ -11,7 +11,7 @@ import {
   ROUE_RUNES, ROUE_TOURS, roueVitesse, roueAligne, ROUE_PASSAGES_MAX,
   COFFRE_BROCHES, coffreLargeur, coffrePeriode, coffreAiguille, coffreDansZone, COFFRE_CYCLES_MAX,
   SPORES_TOTAL, SPORE_SOL, sporeIntervalle, sporeChute, planSpores,
-  RITUEL_SYMBOLES, RITUEL_TOURS, rituelLongueur, rituelPas, sequenceRituel, RITUEL_ROTATION_MS, OEUF_CENTRE_Y, RITUEL_NOTES,
+  RITUEL_SYMBOLES, RITUEL_TOURS, rituelLongueur, rituelPas, sequenceRituel, RITUEL_ROTATION_MS, OEUF_CENTRE_Y, RITUEL_NOTES, OEUF_DECALAGE_X, tailleOeuf,
   PILLEURS_NB, PILLEURS_BUISSONS, pilleurDuree, pilleurIntervalle, planPilleurs, BARRE_BAS_H,
 } from '../../games/clicker/miniJeux';
 import { jouerSon } from './sonsBoutique';
@@ -20,6 +20,9 @@ import { FenetreBois } from './fenetreBois';
 const LUEUR = require('../../../assets/fenetres/lueur-cyan.png');
 const LUEUR_OR = require('../../../assets/grimoire/lueur-or.png');
 const OEUF = require('../../../assets/egg/egg-0-endormi.png');
+// Fond « épuré » (demande de l'auteur) : le décor de l'écran principal et l'œuf à sa place, SANS les boutons et panneaux.
+const FOND_MENU = require('../../../assets/menu/fond.jpg');
+const GRAND_NID = require('../../../assets/menu/grand-nid.png');
 const OEUF_LUMINEUX = require('../../../assets/egg/egg-3-lumineux.png');
 // Coffre à broches : la jauge de l'AVENTURE (demande de l'auteur : « la même barre, même style ») — mêmes images.
 const JAUGE_PLANCHE = require('../../../assets/exploration/plaque-titre.png');
@@ -303,7 +306,7 @@ function JeuRoue({ zone, sons, onRate, onReussi }) {
   const w = zone.w || 360, h = zone.h || 640, R = Math.min(130, (w - RUNE_T) / 2 - 4), cy = h * OEUF_CENTRE_Y;
   return (
     <TouchableOpacity activeOpacity={1} onPressIn={toucher} style={styles.roueZone}>
-      <Animated.View style={[styles.roue, { width: R * 2, height: R * 2, left: w / 2 - R, top: cy - R, transform: [{ rotate: rot.interpolate({ inputRange: [0, 1], outputRange: [depart + 'deg', fin + 'deg'] }) }] }]}>
+      <Animated.View style={[styles.roue, { width: R * 2, height: R * 2, left: w / 2 + OEUF_DECALAGE_X - R, top: cy - R, transform: [{ rotate: rot.interpolate({ inputRange: [0, 1], outputRange: [depart + 'deg', fin + 'deg'] }) }] }]}>
         {RUNES.map((src, k) => {
           const a = (k * 360 / ROUE_RUNES) * Math.PI / 180;
           const x = R + Math.sin(a) * R - RUNE_T / 2, y = R - Math.cos(a) * R - RUNE_T / 2;
@@ -315,7 +318,7 @@ function JeuRoue({ zone, sons, onRate, onReussi }) {
           );
         })}
       </Animated.View>
-      <Text style={[styles.roueFleche, { top: cy + R + RUNE_T / 2 - 4 }]}>▲</Text>
+      <Text style={[styles.roueFleche, { top: cy + R + RUNE_T / 2 - 4, transform: [{ translateX: OEUF_DECALAGE_X }] }]}>▲</Text>
     </TouchableOpacity>
   );
 }
@@ -477,7 +480,7 @@ function JeuRituel({ zone, sons, onRate, onReussi }) {
   const contre = tourne.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] });
   return (
     <View style={styles.rituelZone}>
-      <Animated.View style={[styles.rituelAnneau, { width: R * 2, height: R * 2, left: w / 2 - R, top: cy - R, transform: [{ rotate: angle }] }]}>
+      <Animated.View style={[styles.rituelAnneau, { width: R * 2, height: R * 2, left: w / 2 + OEUF_DECALAGE_X - R, top: cy - R, transform: [{ rotate: angle }] }]}>
         {RITUEL_SYMBOLES.map((nom, k) => {
           const a = (k / RITUEL_SYMBOLES.length) * Math.PI * 2;
           const x = R + Math.sin(a) * R - SYM_L / 2, y = R - Math.cos(a) * R - SYM_H / 2;
@@ -592,7 +595,7 @@ function FeuxArtifice() {
   );
 }
 
-export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, onFermer }) {
+export default function MiniJeu({ jeu, oeufSource = null, sons = true, vibrations = true, onGagne, onFermer }) {
   const visible = !!jeu;
   const def = miniJeu(jeu);
   const [phase, setPhase] = useState('intro'); // intro → jeu → perdu | gagne
@@ -600,6 +603,7 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
   const [recompense, setRecompense] = useState(null);
   const [zone, setZone] = useState({ w: 0, h: 0 });
   const tremble = useRef(new Animated.Value(0)).current;
+  const fondEpure = useRef(new Animated.Value(0)).current; // le décor épuré apparaît en fondu
   // ✨ ARRIVÉE « l'Onde de lumière » (validée par l'auteur) : une onde dorée part de l'œuf (son magique), un bandeau en bois
   // descend avec le titre, le tuto apparaît, 3-2-1 en zoom avec un tic, « GO ! » éclate en étincelles, le bandeau remonte.
   const onde = useRef(new Animated.Value(0)).current, onde2 = useRef(new Animated.Value(0)).current;
@@ -614,7 +618,8 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
     if (!visible) return undefined;
     fini.current = false;
     setPhase('intro'); setDecompte(-1); setRecompense(null);
-    [onde, onde2, bandeau, tutoFondu, chiffre].forEach((v) => v.setValue(0));
+    [onde, onde2, bandeau, tutoFondu, chiffre, fondEpure].forEach((v) => v.setValue(0));
+    Animated.timing(fondEpure, { toValue: 1, duration: 350, useNativeDriver: true }).start();
     jouerSon('magie', sons);
     if (vibrations) Vibration.vibrate(40); // demande de l'auteur : une petite vibration avec le premier son
     Animated.timing(onde, { toValue: 1, duration: 950, useNativeDriver: true }).start();
@@ -661,6 +666,8 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
 
   if (!visible) return null;
   const lc = Math.min(330, (zone.w || 360) - 36); // largeur de la fenêtre en bois de l'arrivée
+  // L'œuf de l'écran principal : centre (décalé de 13 px à droite comme là-bas) et taille.
+  const eggX = (zone.w || 360) / 2 + OEUF_DECALAGE_X, eggY = (zone.h || 640) * OEUF_CENTRE_Y, eggT = tailleOeuf(zone.h || 640);
   const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau
     : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : jeu === 'spores' ? JeuSpores : jeu === 'rituel' ? JeuRituel
     : jeu === 'pilleurs' ? JeuPilleurs : JeuChasse;
@@ -668,10 +675,19 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
     <Modal transparent animationType="fade" visible={visible} onRequestClose={() => { nettoyer(); if (onFermer) onFermer(); }}>
       <Animated.View style={[styles.fond, { transform: [{ translateX: tremble }] }]}
         onLayout={(e) => setZone({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+        {/* Décor ÉPURÉ (demande de l'auteur) : le fond de l'écran principal, le nid et l'œuf à LEUR place exacte — sans boutons
+            ni panneaux : « l'impression d'un jeu épuré ». */}
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: fondEpure, pointerEvents: 'none' }]}>
+          {/* Taille EXPLICITE (règle auditImagesTailleExplicite : en absoluteFill seul, une image garde sa taille d'origine sur téléphone). */}
+          <Image source={FOND_MENU} resizeMode="cover" style={{ position: 'absolute', left: 0, top: 0, width: zone.w || 360, height: zone.h || 640 }} />
+          <Image source={GRAND_NID} resizeMode="contain" style={{ position: 'absolute', width: eggT, height: Math.round(eggT * 394 / 720),
+            left: eggX - eggT / 2, top: eggY - Math.round(eggT * 0.032) }} />
+          {oeufSource ? <Image source={oeufSource} resizeMode="contain" style={{ position: 'absolute', width: eggT, height: eggT, left: eggX - eggT / 2, top: eggY - eggT / 2 }} /> : null}
+        </Animated.View>
         {phase === 'intro' && (
           <View style={styles.intro}>
             {[onde, onde2].map((v, k) => (
-              <Animated.Image key={k} source={LUEUR_OR} resizeMode="contain" style={[styles.onde, { left: (zone.w || 360) / 2 - 60, top: (zone.h || 640) * OEUF_CENTRE_Y - 60,
+              <Animated.Image key={k} source={LUEUR_OR} resizeMode="contain" style={[styles.onde, { left: eggX - 60, top: eggY - 60,
                 opacity: v.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.95, 0] }),
                 transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 9] }) }] }]} />
             ))}

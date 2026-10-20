@@ -4399,6 +4399,19 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               </Animated.View>
               {incubatingEgg && incubatorIsReady(incubatingEgg) && <View style={styles.calBtnDot} />}
             </TouchableOpacity>
+            {/* Demande de l'auteur : le bouton « pub ×2 » à DROITE DU DECK, à hauteur de son milieu (sorti de la zone de l'œuf :
+                hors de son conteneur, un bouton ne recevrait plus le doigt sur Android). */}
+            {Date.now() < boostTapJusqua ? (
+              <View style={[styles.pubTap, { pointerEvents: 'none' }]}>
+                <Image source={ICONES_PUB.tapx2} style={styles.pubTapIcone} resizeMode="contain" />
+                <Text style={styles.pubTapTexte}>{Math.max(0, Math.ceil((boostTapJusqua - Date.now()) / 1000))} s</Text>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => setPubTap(true)} style={styles.pubTap} accessibilityLabel="Regarder une pub pour doubler les taps">
+                <Image source={ICONES_PUB.badge} style={styles.pubTapBadge} resizeMode="contain" />
+                <Image source={ICONES_PUB.tapx2} style={styles.pubTapIcone} resizeMode="contain" />
+              </TouchableOpacity>
+            )}
             {/* ⚠️ MENU DÉVELOPPEUR — À RETIRER avant la sortie (demande de l'auteur) : sous l'incubateur. */}
             <TouchableOpacity style={styles.devMenuBtn} onPress={() => setMenuDevOuvert(true)} accessibilityLabel="Menu développeur">
               <Text style={styles.devMenuBtnTexte}>🛠️</Text>
@@ -4528,19 +4541,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 <OfferingBubble key={o.id} target={o} onClaim={() => claimOffering(o.id)} />
               ))}
               {ritualTarget && <RitualBubble target={ritualTarget} onClaim={claimRitual} />}
-              {/* Demande de l'auteur : bouton plus petit, collé au bord droit, sans « 2 min », le logo « pub » AU-DESSUS du
-                  logo x2. Pendant le bonus, même petit bouton : logo x2 et secondes restantes. */}
-              {Date.now() < boostTapJusqua ? (
-                <View style={[styles.pubTap, { pointerEvents: 'none' }]}>
-                  <Image source={ICONES_PUB.tapx2} style={styles.pubTapIcone} resizeMode="contain" />
-                  <Text style={styles.pubTapTexte}>{Math.max(0, Math.ceil((boostTapJusqua - Date.now()) / 1000))} s</Text>
-                </View>
-              ) : (
-                <TouchableOpacity onPress={() => setPubTap(true)} style={styles.pubTap} accessibilityLabel="Regarder une pub pour doubler les taps">
-                  <Image source={ICONES_PUB.badge} style={styles.pubTapBadge} resizeMode="contain" />
-                  <Image source={ICONES_PUB.tapx2} style={styles.pubTapIcone} resizeMode="contain" />
-                </TouchableOpacity>
-              )}
               <FaussePub visible={pubTap} recompense="Tap ×2 pendant 2 min" onFin={finPubTap} />
 
               {/* Bouton vidéo à DROITE de l'œuf, seulement pendant
@@ -4719,6 +4719,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         </View>
       )}
       <MiniJeu jeu={miniJeuOuvert} sons={sonsJeuRef.current} vibrations={vibrationsRef.current}
+        oeufSource={EGG_IMAGES[Math.min(EGG_IMAGES.length - 1, Math.max(0, eggStageIndex))]}
         onGagne={recompenserMiniJeu} onFermer={() => {
           // La cible dorée suivante attend 3 s après la fin du mini-jeu (pas de surprise au retour).
           nextGoldenAtRef.current = Math.max(nextGoldenAtRef.current, Date.now() + 3000);
@@ -6451,7 +6452,9 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 
 const styles = StyleSheet.create({
   // Bouton « Tap ×2 » (demande de l'auteur) : petit, collé au bord droit, logo « pub » au-dessus du logo x2, sans « 2 min ».
-  pubTap: { position: 'absolute', top: 8, right: 2, paddingVertical: 4, paddingHorizontal: 4, borderRadius: 10, alignItems: 'center', backgroundColor: 'rgba(43,35,66,0.9)', borderWidth: 1, borderColor: '#f2c94c', zIndex: 5 },
+  // À droite du deck (demande de l'auteur) : même calcul que le haut du deck (powerBannerStack) — milieu du deck, moins la
+  // moitié du bouton.
+  pubTap: { position: 'absolute', top: SCREEN_H * (0.357 - TOP_BLOCK_SHIFT) - 32 + SCREEN_W * 0.55 * (329 / 800) / 2 - 25, right: 6, paddingVertical: 4, paddingHorizontal: 4, borderRadius: 10, alignItems: 'center', backgroundColor: 'rgba(43,35,66,0.9)', borderWidth: 1, borderColor: '#f2c94c', zIndex: 5 },
   pubTapTexte: { color: '#f2c94c', fontSize: 10, fontWeight: '700', marginTop: 1 },
   pubTapBadge: { width: 16, height: 15, marginBottom: 2 },
   pubTapIcone: { width: 30, height: 15 },
