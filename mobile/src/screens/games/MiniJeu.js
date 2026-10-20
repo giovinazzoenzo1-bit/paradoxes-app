@@ -37,6 +37,8 @@ const RUNES = ['affinite', 'arcane', 'butin', 'celerite', 'dexterite', 'force', 
   resilience: require('../../../assets/icons/runes/resilience.png'), vitalite: require('../../../assets/icons/runes/vitalite.png'),
 }[n]));
 const TAILLE = 88;
+const BANDEAU_HAUT = 64;           // le bandeau du titre, sous la barre d'état
+const INTRO_DEBUT_DECOMPTE_MS = 1000; // le « 3 » arrive après l'onde et le bandeau
 
 // ✨ LUEUR BIEN VISIBLE (demande de l'auteur : « on ne la voit pas assez » sur le décor) : le halo, un cœur blanc lumineux et
 // un anneau de couleur, qui pulsent. couleur : 'cyan' ou 'or'.
@@ -594,10 +596,15 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
   const visible = !!jeu;
   const def = miniJeu(jeu);
   const [phase, setPhase] = useState('intro'); // intro → jeu → perdu | gagne
-  const [decompte, setDecompte] = useState(0);
+  const [decompte, setDecompte] = useState(-1); // -1 : pas encore de chiffre (l'onde et le bandeau arrivent)
   const [recompense, setRecompense] = useState(null);
   const [zone, setZone] = useState({ w: 0, h: 0 });
   const tremble = useRef(new Animated.Value(0)).current;
+  // ✨ ARRIVÉE « l'Onde de lumière » (validée par l'auteur) : une onde dorée part de l'œuf (son magique), un bandeau en bois
+  // descend avec le titre, le tuto apparaît, 3-2-1 en zoom avec un tic, « GO ! » éclate en étincelles, le bandeau remonte.
+  const onde = useRef(new Animated.Value(0)).current, onde2 = useRef(new Animated.Value(0)).current;
+  const bandeau = useRef(new Animated.Value(0)).current; // 0 caché en haut · 1 en place · 2 reparti
+  const tutoFondu = useRef(new Animated.Value(0)).current, chiffre = useRef(new Animated.Value(0)).current;
   const arrivee = useRef(new Animated.Value(0)).current; // le gain « arrive sur le joueur » (de loin, en élastique)
   const minuteur = useRef(null);
   const fini = useRef(false);
@@ -606,14 +613,27 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
   useEffect(() => {
     if (!visible) return undefined;
     fini.current = false;
-    setPhase('intro'); setDecompte(0); setRecompense(null);
-    let k = 0;
-    const suivant = () => {
-      k += 1;
-      if (k < DECOMPTE.length) { setDecompte(k); minuteur.current = setTimeout(suivant, DECOMPTE_PAS_MS); } else setPhase('jeu');
+    setPhase('intro'); setDecompte(-1); setRecompense(null);
+    [onde, onde2, bandeau, tutoFondu, chiffre].forEach((v) => v.setValue(0));
+    jouerSon('magie', sons);
+    Animated.timing(onde, { toValue: 1, duration: 950, useNativeDriver: true }).start();
+    Animated.sequence([Animated.delay(170), Animated.timing(onde2, { toValue: 1, duration: 950, useNativeDriver: true })]).start();
+    Animated.sequence([Animated.delay(300), Animated.spring(bandeau, { toValue: 1, friction: 5, tension: 70, useNativeDriver: true })]).start();
+    Animated.sequence([Animated.delay(600), Animated.timing(tutoFondu, { toValue: 1, duration: 400, useNativeDriver: true })]).start();
+    const montrer = (k) => {
+      setDecompte(k);
+      chiffre.setValue(0);
+      Animated.timing(chiffre, { toValue: 1, duration: 280, easing: Easing.out(Easing.back(2)), useNativeDriver: true }).start();
+      const go = k === DECOMPTE.length - 1;
+      jouerSon(go ? 'special' : 'bouton', sons);
+      if (go) { // le bandeau remonte, le tuto s'efface
+        Animated.timing(bandeau, { toValue: 2, duration: 380, useNativeDriver: true }).start();
+        Animated.timing(tutoFondu, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+      }
     };
-    minuteur.current = setTimeout(suivant, DECOMPTE_PAS_MS * 1.5);
-    return nettoyer;
+    const ids = DECOMPTE.map((_, k) => setTimeout(() => montrer(k), INTRO_DEBUT_DECOMPTE_MS + k * DECOMPTE_PAS_MS));
+    ids.push(setTimeout(() => setPhase('jeu'), INTRO_DEBUT_DECOMPTE_MS + (DECOMPTE.length - 1) * DECOMPTE_PAS_MS + 520));
+    return () => { ids.forEach(clearTimeout); nettoyer(); };
   }, [visible, jeu]);
 
   const perdre = () => {
@@ -639,6 +659,7 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
   };
 
   if (!visible) return null;
+  const bw = Math.min(340, (zone.w || 360) - 30), bh = Math.round(bw * 0.24); // le bandeau en bois du titre
   const Jeu = jeu === 'doree' ? JeuDoree : jeu === 'transe' ? JeuTranse : jeu === 'bonneteau' ? JeuBonneteau
     : jeu === 'roue' ? JeuRoue : jeu === 'coffre' ? JeuCoffre : jeu === 'spores' ? JeuSpores : jeu === 'rituel' ? JeuRituel
     : jeu === 'pilleurs' ? JeuPilleurs : JeuChasse;
@@ -647,10 +668,25 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
       <Animated.View style={[styles.fond, { transform: [{ translateX: tremble }] }]}
         onLayout={(e) => setZone({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         {phase === 'intro' && (
-          <View style={styles.centre}>
-            <Text style={styles.titre}>{def.titre}</Text>
+          <View style={styles.intro}>
+            {[onde, onde2].map((v, k) => (
+              <Animated.Image key={k} source={LUEUR_OR} resizeMode="contain" style={[styles.onde, { left: (zone.w || 360) / 2 - 60, top: (zone.h || 640) * OEUF_CENTRE_Y - 60,
+                opacity: v.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.95, 0] }),
+                transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 9] }) }] }]} />
+            ))}
+            <Animated.View style={[styles.bandeau, { width: bw, height: bh, left: ((zone.w || 360) - bw) / 2,
+              transform: [{ translateY: bandeau.interpolate({ inputRange: [0, 1, 2], outputRange: [-240, 0, -280] }) }] }]}>
+              <Image source={JAUGE_PLANCHE} resizeMethod="scale" resizeMode="stretch" style={styles.bandeauPlanche} />
+              <Text style={styles.titre} numberOfLines={1} adjustsFontSizeToFit>{def.titre}</Text>
+            </Animated.View>
+            <Animated.View style={[styles.tutoBloc, { top: BANDEAU_HAUT + bh + 14, opacity: tutoFondu }]}>
             <Text style={styles.consigne}>{def.tuto}</Text>
-            <Text style={styles.decompte}>{DECOMPTE[decompte]}</Text>
+            </Animated.View>
+            {decompte >= 0 ? (
+              <Animated.Text style={[styles.decompte, decompte === DECOMPTE.length - 1 && styles.go, { opacity: chiffre,
+                transform: [{ scale: chiffre.interpolate({ inputRange: [0, 1], outputRange: [1.9, 1] }) }] }]}>{DECOMPTE[decompte]}</Animated.Text>
+            ) : null}
+            {decompte === DECOMPTE.length - 1 ? <View style={[styles.feux, { pointerEvents: 'none' }]}><Gerbe x={165} y={175} retard={0} /></View> : null}
           </View>
         )}
         {phase === 'jeu' && <Jeu zone={zone} sons={sons} onRate={perdre} onReussi={gagner} />}
@@ -675,10 +711,16 @@ export default function MiniJeu({ jeu, sons = true, vibrations = true, onGagne, 
 
 const styles = StyleSheet.create({
   fond: { flex: 1, backgroundColor: 'transparent' }, // demande de l'auteur : PAS de fond noir pendant les mini-jeux
+  intro: { flex: 1 },
+  onde: { position: 'absolute', width: 120, height: 120 },
+  bandeau: { position: 'absolute', top: BANDEAU_HAUT, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26 },
+  bandeauPlanche: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
+  tutoBloc: { position: 'absolute', left: 22, right: 22 },
+  go: { color: '#FFD54A', fontSize: 80 },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  titre: { color: '#bfefff', fontSize: 30, fontWeight: '800', textAlign: 'center', textShadowColor: '#000', textShadowRadius: 10, textShadowOffset: { width: 0, height: 2 } },
+  titre: { color: '#FFF3D6', fontSize: 24, fontWeight: '900', textAlign: 'center', textShadowColor: '#2a1606', textShadowRadius: 6, textShadowOffset: { width: 0, height: 2 } },
   consigne: { color: '#ffffff', fontSize: 16, marginTop: 12, textAlign: 'center', fontWeight: '700', textShadowColor: '#000', textShadowRadius: 8, textShadowOffset: { width: 0, height: 1 } },
-  decompte: { color: '#ffffff', fontSize: 64, fontWeight: '900', marginTop: 34, textShadowColor: '#000', textShadowRadius: 12, textShadowOffset: { width: 0, height: 2 } },
+  decompte: { position: 'absolute', left: 0, right: 0, top: '38%', textAlign: 'center', color: '#ffffff', fontSize: 72, fontWeight: '900', textShadowColor: '#000', textShadowRadius: 12, textShadowOffset: { width: 0, height: 2 } },
   lueur: { position: 'absolute', width: TAILLE, height: TAILLE },
   toucher: { width: TAILLE, height: TAILLE },
   image: { width: TAILLE, height: TAILLE },

@@ -218,6 +218,8 @@ const SABOTAGES = [
     remplace('export const BONNETEAU_TOURS = 3;', 'export const BONNETEAU_TOURS = 5;')],
   ['auditChasseLueurs', F.miniJeux, 'Battement de Transe : 5 ratés permis au lieu de 3',
     remplace('export const TRANSE_RATES_MAX = 3;', 'export const TRANSE_RATES_MAX = 5;')],
+  ['auditChasseLueurs', F.chasse, 'l\'arrivée perd son onde de lumière (validée par l\'auteur)',
+    remplace('            {[onde, onde2].map((v, k) => (', '            {[].map((v, k) => (')],
   ['auditChasseLueurs', F.chasse, 'une lueur ratée n\'affiche plus « PERDU »',
     remplace('<Text style={styles.perdu}>PERDU</Text>', '<Text style={styles.perdu}>Dommage</Text>')],
   ['auditLegendaires', F.ecran, "les niveaux légendaires remis à zéro par l'Ascension (décision de l'auteur : permanents)",
