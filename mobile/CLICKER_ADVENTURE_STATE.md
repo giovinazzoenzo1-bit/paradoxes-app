@@ -4470,7 +4470,11 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   textures riches ; fond DÉJÀ transparent (rien à détourer). En jeu : 39 à 124 Ko (palette) ; Voltarel en PNG plein (dégradés :
   écart visible 3,1-3,7) 158 / 282 / 398 Ko.
 - 20/10, TEST de l'auteur : Cumulox, Solstral, Voltarel, Terracroc intégrés (les images de Terracroc étaient déposées dans le
-  dossier de Tartaroth : rangées par leur NOM). 20/10 : Abyssorax, Aquamira, Arcanis, Braiserose, Brontobloc, Nocturis,
+  dossier de Tartaroth : rangées par leur NOM). 20/10 (soir) : SOLARION intégrée (dernière) → les 26 créatures ont leurs
+  3 stades (contrôle `auditIllustrationsFrere`). MINI-BOSS : BRISECORNE (minotaure à hache, dessin du frère) remplace
+  l'illustration du Gardien (`MINI_BOSS_ART`, 512 px, même remplissage 92 % que le Gardien, 126 Ko) ; son nom dans
+  l'annonce et la fenêtre de fin. COMBATS : créatures +25 % (`SPRITE_BASE` 104 → 130, Gardien 177 → 221) — vérifié au
+  banc (Aventure et Gardien, 844 × 390) : rien ne touche les barres. Banc : `combat-niveaux&gardien=1`. 20/10 : Abyssorax, Aquamira, Arcanis, Braiserose, Brontobloc, Nocturis,
   Racinea, Runicor, Zephyrion intégrés. ⚠️ `integrer-creature.py` : quand les NOMS numérotent les stades (p1-3, stage 1-3)
   et que la surface les contredit, le NOM l'emporte (Arcanis : stade 2 plus élancé, MOINS de surface que le stade 1 → passait
   bébé). 20/10 : Tartaroth intégrée (arrivée PENDANT une publication : le rebase l'avait embarquée sans l'intégrer —

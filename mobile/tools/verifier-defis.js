@@ -116,6 +116,7 @@ const CONTROLES = [
   ['auditDefiTapsLibre', "combat : rien au-dessus de la zone du défi de taps ne capte le toucher (03/10)"],
   ['auditCadrageCreatures', "créatures illustrées : 3 stades présents et cadrage généré pour chacune (03/10)"],
   ['auditImagesTailleExplicite', "images : jamais une <Image> en absoluteFill sans largeur/hauteur — taille d'origine sur téléphone (13/09, 03/10)"],
+  ['auditIllustrationsFrere', "illustrations : les 26 créatures ont leurs 3 stades, le mini-boss est Brisecorne, combattants +25 % (20/10)"],
   ['auditHubExploration', "exploration : le hub « Ponton céleste » garde toutes ses actions et ses pièces (03/10)"],
   ['auditAlbumComplet', "collection : l'album montre chaque créature une fois, 4 cartes max par page, un ruban par élément (02/10)"],
   ['auditRafaleArretee', "boutique : toute rafale d'achats (appui maintenu) s'arrête au relâcher, en tournant la page et au démontage (02/10)"],

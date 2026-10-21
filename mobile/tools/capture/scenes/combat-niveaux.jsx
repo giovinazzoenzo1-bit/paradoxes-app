@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SettingsProvider } from '../../../src/context/SettingsContext';
 import CombatScreen from '../../../src/screens/games/CombatScreen.js';
 import { CREATURES } from '../../../src/games/clicker/clickerLogic';
+import { GUARDIAN_CREATURE as GARDIEN } from '../../../src/games/clicker/combatLogic';
 // Banc (10/10, niveaux réels) : le combat d'une étape, pour VOIR les étiquettes « Niv. », la forme
 // évoluée des ennemis, le bandeau 👑 / ⭐ et les PV en format court. ?scene=n110 → étape 110.
 const n = Number((new URLSearchParams(location.search).get('scene') || 'n110').slice(1)) || 110;
@@ -14,6 +15,8 @@ const team = [
   { creature: c('terracroc'), ownedLevel: niv, evolutionTier: niv >= 50 ? 2 : niv >= 25 ? 1 : 0, equippedRunes: [] },
   { creature: c('racinea'), ownedLevel: niv, evolutionTier: niv >= 50 ? 2 : niv >= 25 ? 1 : 0, equippedRunes: [] },
 ];
+// « &gardien=1 » : le combat du Gardien (adversaire unique, en GRAND).
+const gardien = new URLSearchParams(location.search).get('gardien') === '1';
 createRoot(document.getElementById('root')).render(
-  <SafeAreaProvider><SettingsProvider><CombatScreen team={team} levelNumber={n} onFinish={() => {}} /></SettingsProvider></SafeAreaProvider>,
+  <SafeAreaProvider><SettingsProvider><CombatScreen team={team} levelNumber={n} onFinish={() => {}} opponentOverride={gardien ? [GARDIEN] : undefined} /></SettingsProvider></SafeAreaProvider>,
 );

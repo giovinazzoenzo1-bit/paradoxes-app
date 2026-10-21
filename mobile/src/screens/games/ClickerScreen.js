@@ -257,14 +257,14 @@ const EGG_SIZE = EGG_BUTTON - 25;
 // même index). `require` doit recevoir un chemin STATIQUE — Metro
 // résout les images au moment du bundling, pas à l'exécution, donc un
 // tableau construit avec un chemin dynamique ne fonctionnerait pas.
-// Le mini-boss réutilise l'illustration du Gardien : c'est la seule
-// figure « adversaire » du jeu, en créer une autre n'apporterait rien.
+// Le mini-boss a SON illustration depuis le 20/10 : Brisecorne, dessiné par le frère de l'auteur (avant : celle du Gardien,
+// qui se confondait avec le vrai Gardien).
 // Panneau illustré du dialogue d'Ascension. Le texte est écrit PAR
 // DESSUS en code : les valeurs (Griffes, multiplicateur) changent à
 // chaque Ascension, une image avec le texte incrusté mentirait.
 const ASCENSION_PANEL = require('../../../assets/icons/ascension-panel.png');
 
-const GUARDIAN_ART = require('../../../assets/creatures/gardien/gardien.png');
+const MINI_BOSS_ART = require('../../../assets/creatures/brisecorne/brisecorne.png');
 
 const EGG_IMAGES = [
   require('../../../assets/egg/egg-0-endormi.png'),
@@ -4515,7 +4515,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                     )}
                     {boss ? (
                       <Image
-                        source={GUARDIAN_ART}
+                        source={MINI_BOSS_ART}
                         style={styles.eggImage}
                         resizeMode="contain"
                       />
@@ -4773,7 +4773,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {boss && <MusiqueActive nom="boss" actif={musique} />}
       {bossAnnonce !== null && view === 'tap' && (
         <View style={[styles.bossAnnonce, { pointerEvents: 'none' }]}>
-          <Text style={styles.bossAnnonceTitre}>⚠️ Attention, boss en approche</Text>
+          <Text style={styles.bossAnnonceTitre}>⚠️ Attention, Brisecorne approche</Text>
           <Text style={styles.bossAnnonceChiffre}>{bossAnnonce}</Text>
         </View>
       )}
@@ -4797,7 +4797,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {bossResult && !resultatGardien && !rewardCreature && (
         <View style={styles.detailOverlay}>
           {/* 27/09 : fenêtre du thème forêt (demande de l'auteur). */}
-          <FenetreBois titre={bossResult.failed ? 'Le boss s\'échappe !' : 'Boss vaincu !'}>
+          <FenetreBois titre={bossResult.failed ? 'Brisecorne s\'échappe !' : 'Brisecorne vaincu !'}>
             {bossResult.failed
               ? <Text style={styles.fenetreEmoji}>💨</Text>
               : <Image source={COURONNE} style={styles.fenetreCouronne} resizeMode="contain" />}

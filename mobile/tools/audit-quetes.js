@@ -4511,6 +4511,29 @@ function auditImagesTailleExplicite() {
 }
 module.exports.auditImagesTailleExplicite = auditImagesTailleExplicite;
 
+// 20/10 : les illustrations du frère de l'auteur — TOUTES les créatures ont leur image (Solarion était la dernière), le
+// mini-boss a la sienne (Brisecorne, plus celle du Gardien), et les combattants sont agrandis de 25 % (demande de l'auteur).
+function auditIllustrationsFrere() {
+  const fs = require('fs'); const path = require('path');
+  const pb = [];
+  const C = load('clickerLogic');
+  const art = fs.readFileSync(path.join(__dirname, '../src/components/CreatureArt.js'), 'utf8');
+  for (const c of C.CREATURES) {
+    for (let st = 0; st < 3; st++) {
+      const f = `assets/creatures/${c.id}/stage-${st}.png`;
+      if (!art.includes(`'../../${f}'`)) pb.push(`${c.id} : stade ${st} pas branché dans CreatureArt`);
+      if (!fs.existsSync(path.join(__dirname, '..', f))) pb.push(`${c.id} : ${f} manquant`);
+    }
+  }
+  const Cl = fs.readFileSync(path.join(__dirname, '../src/screens/games/ClickerScreen.js'), 'utf8');
+  if (!Cl.includes("const MINI_BOSS_ART = require('../../../assets/creatures/brisecorne/brisecorne.png');") || !Cl.includes('source={MINI_BOSS_ART}')) pb.push('le mini-boss n\'affiche plus Brisecorne');
+  if (!fs.existsSync(path.join(__dirname, '../assets/creatures/brisecorne/brisecorne.png'))) pb.push('image de Brisecorne manquante');
+  const Co = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
+  if (!/const SPRITE_BASE = 130;/.test(Co)) pb.push('combattants : plus à 130 (l\'auteur les voulait 25 % plus grands, avant 104)');
+  return pb;
+}
+module.exports.auditIllustrationsFrere = auditIllustrationsFrere;
+
 // ── Illustrations de créatures : fichiers ET cadrage (03/10) ──────────────
 // Chaque créature branchée dans CreatureArt doit avoir ses 3 stades (fichiers
 // présents) et son CADRAGE (cadrageCreatures.js, généré) : sans lui, l'Album et

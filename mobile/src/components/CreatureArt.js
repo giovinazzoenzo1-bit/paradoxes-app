@@ -107,6 +107,11 @@ const CREATURE_ART = {
     require('../../assets/creatures/tartaroth/stage-1.png'),
     require('../../assets/creatures/tartaroth/stage-2.png'),
   ],
+  solarion: [
+    require('../../assets/creatures/solarion/stage-0.png'),
+    require('../../assets/creatures/solarion/stage-1.png'),
+    require('../../assets/creatures/solarion/stage-2.png'),
+  ],
   // Le Gardien : une seule apparence. `creatureArtSource` ramène tout
   // palier demandé au dernier disponible, donc une entrée suffit.
   gardien: [

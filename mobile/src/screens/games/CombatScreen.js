@@ -446,7 +446,7 @@ const OPPONENT_SLOTS = [
 // Agrandi de 74 à 104 (12/09) : les illustrations de créatures
 // paraissaient minuscules sur le décor, qui occupe tout l'écran. Les
 // emplacements ayant été remontés, la place existe.
-const SPRITE_BASE = 104;
+const SPRITE_BASE = 130; // 20/10 (demande de l'auteur) : +25 % pour toutes les créatures en combat (avant 104)
 
 
 // `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
