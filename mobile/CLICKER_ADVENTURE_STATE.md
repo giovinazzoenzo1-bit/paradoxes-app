@@ -4473,8 +4473,11 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   dossier de Tartaroth : rangées par leur NOM). 20/10 (soir) : SOLARION intégrée (dernière) → les 26 créatures ont leurs
   3 stades (contrôle `auditIllustrationsFrere`). MINI-BOSS : BRISECORNE (minotaure à hache, dessin du frère) remplace
   l'illustration du Gardien (`MINI_BOSS_ART`, 512 px, même remplissage 92 % que le Gardien, 126 Ko) ; son nom dans
-  l'annonce et la fenêtre de fin. COMBATS : créatures +25 % (`SPRITE_BASE` 104 → 130, Gardien 177 → 221) — vérifié au
-  banc (Aventure et Gardien, 844 × 390) : rien ne touche les barres. Banc : `combat-niveaux&gardien=1`. 20/10 : Abyssorax, Aquamira, Arcanis, Braiserose, Brontobloc, Nocturis,
+  l'annonce et la fenêtre de fin. COMBATS : créatures +25 % (130), puis l'auteur « elles n'ont pas bougé, je les veux plus
+  grosses » → `SPRITE_BASE` 160 (+54 % sur 104), Gardien `GARDIEN_TAILLE` 1,4 (224 ; à 1,7 il mordait sur le bandeau et les
+  cartes). Vie + bouclier du Gardien EN HAUT À DROITE dans le bandeau (un panneau large comme les 3 cases adverses,
+  manche, repère de mi-vie) ; l'ancienne barre pleine largeur ne garde que le bouton de test, sans fond. Vérifié au banc en
+  844 × 390 et 800 × 360. Banc : `combat-niveaux&gardien=1`. 20/10 : Abyssorax, Aquamira, Arcanis, Braiserose, Brontobloc, Nocturis,
   Racinea, Runicor, Zephyrion intégrés. ⚠️ `integrer-creature.py` : quand les NOMS numérotent les stades (p1-3, stage 1-3)
   et que la surface les contredit, le NOM l'emporte (Arcanis : stade 2 plus élancé, MOINS de surface que le stade 1 → passait
   bébé). 20/10 : Tartaroth intégrée (arrivée PENDANT une publication : le rebase l'avait embarquée sans l'intégrer —

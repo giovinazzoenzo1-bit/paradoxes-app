@@ -446,7 +446,11 @@ const OPPONENT_SLOTS = [
 // Agrandi de 74 à 104 (12/09) : les illustrations de créatures
 // paraissaient minuscules sur le décor, qui occupe tout l'écran. Les
 // emplacements ayant été remontés, la place existe.
-const SPRITE_BASE = 130; // 20/10 (demande de l'auteur) : +25 % pour toutes les créatures en combat (avant 104)
+// 20/10 (demande de l'auteur) : +25 % (130) puis, « elles n'ont pas bougé, je les veux plus grosses », +54 % : 160 (avant 104).
+// Vérifié au banc en 844 × 390 et 800 × 360 : la créature de devant touche juste le haut des cartes d'attaque.
+const SPRITE_BASE = 160;
+// Le Gardien : 1,4 × 160 = 224 (à 1,7 il mordrait sur le bandeau et sur les cartes d'attaque).
+const GARDIEN_TAILLE = 1.4;
 
 
 // `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
@@ -737,7 +741,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
   };
   const centreSprite = (cote, index) => {
     if (cote === 'adversaire') {
-      const slot = isBoss ? { x: 0.72, y: 0.53, size: 1.7 } : OPPONENT_SLOTS[index];
+      const slot = isBoss ? { x: 0.72, y: 0.53, size: GARDIEN_TAILLE } : OPPONENT_SLOTS[index];
       return slot ? { x: slot.x * W, y: slot.y * H, taille: SPRITE_BASE * slot.size } : null;
     }
     const actif = activeIndexRef.current;
@@ -1700,21 +1704,8 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           vraiment toute la largeur, indépendamment de la mise en page
           du combat. */}
       {isBoss && opponents[0] && (
-        <View style={[styles.bossBarWrap, { top: bandeauH + 2, paddingLeft: insets.left + 10, paddingRight: insets.right + 10 }]}>
-          <View style={styles.bossBarHeader}>
-            <Text style={styles.bossBarName}>🐯 GARDIEN</Text>
-            <Text style={styles.bossBarPhase}>Manche {bossPhase}/2</Text>
-          </View>
-          <View style={styles.bossHpTrack}>
-            <View style={[styles.bossHpFill, { width: `${Math.max(0, (pvAffiche('o', 0, opponents[0].hp) / opponents[0].stats.hp) * 100)}%` }]} />
-            {/* Repère de mi-parcours : montre où s'arrête la manche 1. */}
-            {bossPhase === 1 && <View style={styles.bossHpHalfMark} />}
-          </View>
-          <View style={styles.bossShieldTrack}>
-            <View style={[styles.bossShieldFill, {
-              width: `${Math.max(0, (bossShield / Math.max(1, Math.round(opponents[0].stats.hp * GUARDIAN_SHIELD_RATIO))) * 100)}%`,
-            }]} />
-          </View>
+        <View style={[styles.bossBarWrap, { top: bandeauH + 2, paddingLeft: insets.left + 10, paddingRight: insets.right + 10, pointerEvents: 'box-none' }]}>
+          {/* Vie et bouclier du Gardien : désormais EN HAUT À DROITE, dans le bandeau (demande de l'auteur, 20/10). */}
           {/* ⚠️ OUTIL DE TEST — gagne le combat immédiatement.
               Le combat de Gardien est le passage le plus long de la
               boucle d'œuf : sans ce raccourci, vérifier un défi situé
@@ -1767,7 +1758,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           // Le boss est plus imposant : emplacement recentré et agrandi
           // de 70 %, pour qu'il pèse à l'écran au lieu de ressembler à
           // une créature ordinaire.
-          slot: isBoss ? { x: 0.72, y: 0.53, size: 1.7 } : OPPONENT_SLOTS[i],
+          slot: isBoss ? { x: 0.72, y: 0.53, size: GARDIEN_TAILLE } : OPPONENT_SLOTS[i],
           creatureId: o.creature.id, stageIndex: stadeVisuel(o.evolutionTier || 0),
           emoji: d.emoji, name: d.name,
           hp: pvAffiche('o', i, o.hp), hpMax: o.stats.hp, fainted,
@@ -1813,6 +1804,38 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
             {switchMessage || `Au tour de ${activeFighter.creature.stages[stadeVisuel(activeFighter.evolutionTier)].name} !`}
           </Text>
         </View>
+        {/* 20/10 (demande de l'auteur) : la vie et le bouclier du Gardien EN HAUT À DROITE, comme les autres adversaires —
+            un seul panneau, large comme les 3 cases adverses (avant : une barre sur toute la largeur, sous le bandeau). */}
+        {isBoss && opponents[0] && (() => {
+          const o = opponents[0]; const hp = pvAffiche('o', 0, o.hp); const hpMax = o.stats.hp;
+          const bouclierMax = Math.max(1, Math.round(hpMax * GUARDIAN_SHIELD_RATIO));
+          const gauche = largeurBandeau * 0.635; const larg = largeurBandeau * 0.236 + PW; const marge = larg * 0.05;
+          const choix = phase === 'choosing' && hp > 0;
+          return (
+            <TouchableOpacity key="gardien" activeOpacity={0.8} disabled={!choix} onPress={() => chooseTarget(0)}
+              style={{ position: 'absolute', left: gauche, top: PT, width: larg, height: PH, pointerEvents: choix ? 'auto' : 'none' }}>
+              <Image source={COMBAT_IMG.panneau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: PH * 0.1, marginHorizontal: marge }}>
+                <Text style={[styles.panneauNom, { fontSize: Math.max(8, Math.round(PH * 0.2)) }]} numberOfLines={1}>🐯 Gardien</Text>
+                <Text style={[styles.panneauNom, styles.gardienManche, { fontSize: Math.max(8, Math.round(PH * 0.18)) }]} numberOfLines={1}>Manche {bossPhase}/2</Text>
+              </View>
+              <View style={[styles.panneauVie, { height: Math.max(10, Math.round(PH * 0.24)), marginHorizontal: marge }]}>
+                <View style={[styles.panneauVieFond, styles.gardienVieFond, { width: `${Math.max(0, Math.min(1, hp / hpMax)) * 100}%` }]} />
+                {/* Repère de mi-parcours : où s'arrête la manche 1. */}
+                {bossPhase === 1 && <View style={styles.bossHpHalfMark} />}
+                <Text style={[styles.panneauVieTexte, { fontSize: Math.max(8, Math.round(PH * 0.18)) }]} numberOfLines={1}>{nombreCourt(hp)} / {nombreCourt(hpMax)}</Text>
+              </View>
+              <View style={[styles.panneauMana, styles.gardienBouclier, { height: Math.max(5, Math.round(PH * 0.11)), marginHorizontal: marge }]}>
+                <View style={[styles.panneauManaFond, styles.gardienBouclierFond, { width: `${Math.max(0, Math.min(1, bossShield / bouclierMax)) * 100}%` }]} />
+              </View>
+              {o.niveau != null && (
+                <View style={[styles.panneauNiveau, { right: -PH * 0.1, top: -PH * 0.16, paddingHorizontal: Math.round(PH * 0.08), borderRadius: Math.round(PH * 0.14) }]}>
+                  <Text style={[styles.panneauNiveauTexte, { fontSize: Math.max(8, Math.round(PH * 0.17)) }]} numberOfLines={1}>Niv. {o.niveau}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })()}
         {!isBoss && opponents.map((o, i) => {
           const d = o.creature.stages[stadeVisuel(o.evolutionTier || 0)] || o.creature.stages[0]; const ko = pvAffiche('o', i, o.hp) <= 0;
           return panneauCombattant({
@@ -2546,10 +2569,11 @@ const styles = StyleSheet.create({
   // Posée en ABSOLU en haut : elle doit occuper toute la largeur, quelle
   // que soit la mise en page du terrain. Mesuré : le bloc fait 55 dp de
   // haut et le sprite agrandi commence à 82 dp, donc aucun chevauchement.
+  // 20/10 : ne porte plus que le bouton de test (la vie du Gardien est dans le bandeau) → plus de fond sombre, et il ne
+  // capte que son bouton (box-none posé au rendu).
   bossBarWrap: {
     position: 'absolute', left: 0, right: 0, top: 0, zIndex: 12,
-    paddingTop: 6, paddingBottom: 6,
-    backgroundColor: 'rgba(6,10,18,0.55)',
+    paddingTop: 0, paddingBottom: 0,
   },
   bossBarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
   bossBarName: { color: '#ffcf3f', fontSize: 12, fontWeight: '900', letterSpacing: 1 },
@@ -2560,7 +2584,7 @@ const styles = StyleSheet.create({
   },
   bossHpFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#FF5252' },
   // Repère à 50 % : le joueur voit où s'arrête la manche 1.
-  bossHpHalfMark: { position: 'absolute', left: '50%', top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.75)' },
+  bossHpHalfMark: { position: 'absolute', left: '50%', top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.45)' }, // sous le texte « PV / PV max »
   devWinBtn: {
     alignSelf: 'center', marginTop: 8,
     paddingVertical: 5, paddingHorizontal: 14,
@@ -2573,6 +2597,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(90,209,255,0.35)', overflow: 'hidden',
   },
   bossShieldFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#5ad1ff' },
+  // Panneau du Gardien dans le bandeau : vie rouge, bouclier bleu ciel (les couleurs de l'ancienne barre).
+  gardienManche: { color: '#ffcf3f' },
+  gardienVieFond: { backgroundColor: '#FF5252' },
+  gardienBouclier: { marginTop: 2 },
+  gardienBouclierFond: { backgroundColor: '#5ad1ff' },
 
   // Centré verticalement : l'animation est haute, un ancrage à 38 %
   // l'aurait fait déborder en bas.

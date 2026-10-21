@@ -4529,7 +4529,10 @@ function auditIllustrationsFrere() {
   if (!Cl.includes("const MINI_BOSS_ART = require('../../../assets/creatures/brisecorne/brisecorne.png');") || !Cl.includes('source={MINI_BOSS_ART}')) pb.push('le mini-boss n\'affiche plus Brisecorne');
   if (!fs.existsSync(path.join(__dirname, '../assets/creatures/brisecorne/brisecorne.png'))) pb.push('image de Brisecorne manquante');
   const Co = fs.readFileSync(path.join(__dirname, '../src/screens/games/CombatScreen.js'), 'utf8');
-  if (!/const SPRITE_BASE = 130;/.test(Co)) pb.push('combattants : plus à 130 (l\'auteur les voulait 25 % plus grands, avant 104)');
+  // « Elles n'ont pas bougé, je les veux plus grosses » : 160 (+54 % sur les 104 d'origine), le Gardien à 1,4 × 160 = 224.
+  if (!/const SPRITE_BASE = 160;/.test(Co) || !/const GARDIEN_TAILLE = 1\.4;/.test(Co)) pb.push('combattants : plus à 160 (Gardien 1,4) — l\'auteur les voulait nettement plus gros');
+  // Vie et bouclier du Gardien EN HAUT À DROITE, dans le bandeau, comme les autres adversaires (20/10).
+  if (!Co.includes('{isBoss && opponents[0] && (() => {') || !Co.includes('width: `${Math.max(0, Math.min(1, bossShield / bouclierMax)) * 100}%`') || Co.includes('🐯 GARDIEN</Text>')) pb.push('combat du Gardien : sa vie et son bouclier ne sont plus en haut à droite');
   // Icône de l'appli (20/10, photo de l'auteur) : 1024 × 1024, SANS transparence (iOS la refuse), et l'icône adaptative Android.
   const app = JSON.parse(fs.readFileSync(path.join(__dirname, '../app.json'), 'utf8')).expo;
   if (app.icon !== './assets/icon.png' || !app.android || !app.android.adaptiveIcon || app.android.adaptiveIcon.foregroundImage !== './assets/adaptive-icon.png') pb.push('app.json ne pointe plus vers l\'icône de l\'appli');
