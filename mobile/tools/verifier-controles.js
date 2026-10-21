@@ -628,7 +628,8 @@ const SABOTAGES = [
   ['auditImagesTailleExplicite', F.aventure, "style nommé qui remplit son parent sans largeur/hauteur (4 bords à 0) : même plaque géante",
     remplace("  hubPleineImage: { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' },", "  hubPleineImage: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 },")],
   ['auditHubExploration', F.aventure, "gemme des Runes débranchée dans le hub : les Runes deviendraient inaccessibles",
-    remplace('<TouchableOpacity onPress={() => setRunesOpen(true)} activeOpacity={0.8} style={[R(HUB.runes, \'droite\')', '<TouchableOpacity onPress={() => {}} activeOpacity={0.8} style={[R(HUB.runes, \'droite\')')],
+    // 21/10 : le bouton marque aussi le conseil « runes » du tutoriel — repère mis à jour (piège devenu aveugle).
+    remplace("<TouchableOpacity onPress={() => { if (etapeHub === 'runes') setTuto(vuEtape(tuto, 'runes')); setRunesOpen(true); }} activeOpacity={0.8} style={[R(HUB.runes, 'droite')", "<TouchableOpacity onPress={() => {}} activeOpacity={0.8} style={[R(HUB.runes, 'droite')")],
   ['auditAlbumComplet', F.album, "élément « Magie » retiré de la liste : ses créatures disparaîtraient de l'album sans bruit",
     remplace("'Lumière', 'Ténèbres', 'Magie'];", "'Lumière', 'Ténèbres'];")],
   ['auditRafaleArretee', F.grimoireEcran, "bouton de prix sans arrêt au relâcher : la rafale viderait les pièces",
