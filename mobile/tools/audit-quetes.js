@@ -4551,6 +4551,59 @@ function auditIllustrationsFrere() {
 }
 module.exports.auditIllustrationsFrere = auditIllustrationsFrere;
 
+// 🎓 TUTORIEL (21/10, validé par l'auteur) : un REPÈRE (rond qui tourne / carré qui respire, étoiles à part) + UNE phrase +
+// une toute petite croix ; une seule fois par joueur (mémoire à part : pas de retour après une Ascension) ; jamais bloquant.
+function auditTutoriel() {
+  const fs = require('fs'); const path = require('path');
+  const pb = [];
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  // La logique, chargée avec un faux stockage.
+  const code = babel.transformSync(lire('src/games/clicker/tutoriel.js'), { presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]], filename: 'tutoriel.js' }).code;
+  const T = { exports: {} };
+  new Function('require', 'module', 'exports', code)(() => ({ __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), T, T.exports);
+  const t = T.exports;
+  const attendues = ['taper', 'boutique', 'defi', 'doree', 'transe', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension', 'pacte', 'sceau',
+    'combat', 'runes', 'acheterRune', 'equiperRune', 'attaque', 'jauge', 'gardien'];
+  for (const id of attendues) {
+    const e = t.ETAPES[id];
+    if (!e) { pb.push('conseil manquant : ' + id); continue; }
+    if (!['rond', 'carre'].includes(e.forme)) pb.push(id + ' : repère inconnu « ' + e.forme + ' »');
+    // UNE phrase : pas de point (ni !, ?) au milieu du texte.
+    if (/[.!?]\s+\S/.test(e.texte.trim())) pb.push(id + ' : plus d\'une phrase (« ' + e.texte + ' »)');
+  }
+  if (t.CLE_TUTO !== 'tuto:v2') pb.push('le tuto n\'a plus sa mémoire à part (tuto:v2)');
+  if (t.TAPS_CONSEIL_TAPER !== 10 || t.POUDRE_CONSEIL_RUNES !== 3) pb.push('règles du tuto changées (10 taps, 3 poudres runiques — demande de l\'auteur)');
+  const tu = { vus: ['taper'], passe: false, decide: true };
+  if (t.choisirEtape({ taper: true, boutique: true }, tu, t.ORDRE_ECRAN) !== 'boutique') pb.push('un conseil déjà vu revient');
+  if (t.choisirEtape({ taper: true }, { vus: [], passe: true, decide: true }, t.ORDRE_ECRAN) !== null) pb.push('un tuto passé affiche encore des conseils');
+  if (t.choisirEtape({ taper: true }, { vus: [], passe: false, decide: false }, t.ORDRE_ECRAN) !== null) pb.push('un conseil s\'affiche avant la règle des anciens joueurs');
+  if (!t.estVeteran({ creatures: 1 }) || !t.estVeteran({ ascensions: 1 }) || t.estVeteran({})) pb.push('règle des anciens joueurs cassée');
+  // Le tuto ne doit JAMAIS être remis à zéro par une Ascension ou une réinitialisation de partie (sauf « Revoir les conseils »).
+  const Cl = lire('src/screens/games/ClickerScreen.js');
+  if (/removeItem\([^)]*tuto/i.test(Cl) || /CLE_TUTO/.test(Cl)) pb.push('l\'écran principal efface la mémoire du tuto (il reviendrait après une Ascension)');
+  // ⚠️ Le guide : AUCUN conteneur plein écran (leçon du 20/10 : il avalait les taps sur l'œuf) ; la bulle laisse passer le doigt,
+  // seule la croix le prend.
+  const G = lire('src/components/GuideTuto.js').replace(/\/\/[^\n]*/g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+  if (G.includes('StyleSheet.absoluteFill') || /flex:\s*1/.test(G)) pb.push('le guide du tuto a un conteneur plein écran (il avalerait les taps)');
+  if (!G.includes("pointerEvents: 'box-none'") || !G.includes("styles.texte, { pointerEvents: 'none' }") || !G.includes('onPress={onFermer}')) pb.push('la bulle du tuto capte le doigt, ou n\'a plus sa petite croix');
+  if (!G.includes("outputRange: ['0deg', '360deg']") || !G.includes('<CadreTuto l={boite.l} h={boite.h} />')) pb.push('le rond ne tourne plus, ou le carré a disparu');
+  // Les étoiles ne tournent PAS avec le rond (demande de l'auteur) : elles ne sont pas dans l'élément qui tourne.
+  const iRond = G.indexOf("source={IMG.rond}"), iEtoile = G.indexOf("source={IMG.etoile}");
+  if (iRond < 0 || iEtoile < 0 || G.slice(iRond, iEtoile).includes('</Animated.View>') === false && G.slice(iRond, iEtoile).includes('<Animated.Image source={IMG.etoile}')) pb.push('les étoiles tournent avec le rond');
+  // Branchements.
+  if (!Cl.includes('<GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme}') || !Cl.includes("if (etapeTutoRef.current === 'taper') { tapsTutoRef.current += 1;")) pb.push('écran principal : le tuto n\'est plus branché');
+  const Gr = lire('src/screens/games/GrimoireBoutique.js');
+  if (!Gr.includes("refPrix={id === 'pacte' ?") || !Gr.includes("idsVus.includes('pacte')")) pb.push('Grimoire : le rond du Pacte ne vise plus l\'article « pacte » (son vrai nom)');
+  const Co = lire('src/screens/games/CombatScreen.js');
+  if (!Co.includes("phase === 'choosing' && !estVu(tuto, 'attaque') ? 'attaque'") || !Co.includes("phase === 'tapping' && !estVu(tuto, 'jauge') ? 'jauge'")) pb.push('combat : les conseils attaque / jauge ont disparu');
+  const Av = lire('src/screens/games/AdventureScreen.js');
+  if (!Av.includes("poudre >= POUDRE_CONSEIL_RUNES && ownedRunes.length === 0 ? 'runes'") || !Av.includes("nbRunes === 0 && poudre >= POUDRE_PRIX.unite && !estVu(tuto, 'acheterRune') ? 'acheterRune'")) pb.push('Aventure : les conseils des runes ont disparu');
+  if (!lire('src/screens/OptionsScreen.js').includes('🎓 Revoir les conseils')) pb.push('Options : plus de « Revoir les conseils »');
+  for (const f of ['rond', 'etoile', 'coin-hg', 'bande-h', 'encoche-h']) if (!fs.existsSync(path.join(__dirname, '../assets/tuto/' + f + '.png'))) pb.push('image du tuto manquante : ' + f);
+  return pb;
+}
+module.exports.auditTutoriel = auditTutoriel;
+
 // ── Illustrations de créatures : fichiers ET cadrage (03/10) ──────────────
 // Chaque créature branchée dans CreatureArt doit avoir ses 3 stades (fichiers
 // présents) et son CADRAGE (cadrageCreatures.js, généré) : sans lui, l'Album et

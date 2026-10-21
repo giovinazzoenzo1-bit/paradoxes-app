@@ -280,6 +280,9 @@ import { useMusique, MusiqueActive } from './musique';
 import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
+import GuideTuto from '../../components/GuideTuto';
+import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, DUREE_CONSEIL_INFO_MS, lireTuto, ecrireTuto, abonnerTuto, estVu, choisirEtape, vuEtape,
+  estVeteran, mesurerCible } from '../../games/clicker/tutoriel';
 import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_MS, MINI_JEU_DELAI_OUVERTURE_MS,
   MINI_JEU_DEFIS_CONTINUS, MINI_JEU_PRESENCE_MS } from '../../games/clicker/miniJeux';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
@@ -785,6 +788,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   ascensionCountRef.current = ascensionCount;
 
   const [loaded, setLoaded] = useState(false);
+  // 🎓 TUTORIEL (21/10, validé par l'auteur) — logique dans games/clicker/tutoriel.js, dessin dans components/GuideTuto.js.
+  const [tuto, setTuto] = useState(null); // null tant que sa mémoire n'est pas lue
+  const tutoRef = useRef(null); tutoRef.current = tuto;
+  useEffect(() => { lireTuto().then(setTuto); return abonnerTuto(setTuto); }, []);
+  const vuTuto = (id) => { const n = vuEtape(tutoRef.current, id); if (n && n !== tutoRef.current) setTuto(n); };
+  const ciblesTutoRef = useRef({});   // éléments montrés par le tuto (mesurés dans la fenêtre)
+  const racineTutoRef = useRef(null); // repère (0, 0) de l'écran
+  const etapeTutoRef = useRef(null);  // conseil affiché (lu par le tap)
+  const tapsTutoRef = useRef(0);
+  const [rectTuto, setRectTuto] = useState(null);
   const [coins, setCoins] = useState(0);
   const [totalEarned, setTotalEarned] = useState(0); // cumul jamais décroissant, pour l'Ascension
   const [tapPower, setTapPower] = useState(1);
@@ -2282,6 +2295,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const viderTapsRef = useRef(viderTaps); viderTapsRef.current = viderTaps;
   const handleTap = (evt) => {
     const ne = (evt && evt.nativeEvent) || {};
+    // 🎓 « Clique ici pour gagner des pièces » s'en va après 10 taps.
+    if (etapeTutoRef.current === 'taper') { tapsTutoRef.current += 1; if (tapsTutoRef.current >= TAPS_CONSEIL_TAPER) vuTuto('taper'); }
     fileTaps.current.push([{ nativeEvent: { locationX: ne.locationX, locationY: ne.locationY, pageX: ne.pageX, pageY: ne.pageY } }, Date.now()]);
     if (minuteurTaps.current) return;
     const attente = FENETRE_TAPS - (Date.now() - dernierLotTaps.current);
@@ -3334,6 +3349,76 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const defiAscensionEnCours = !!currentChallengeId && !currentChallengeReussi
     && (findQuest(currentChallengeId) || {}).metric === 'ascension';
   const ascensionReady = seuilAscensionAtteint && defiAscensionEnCours;
+  // 🎓 TUTORIEL — un conseil à la fois, sur l'écran principal SANS fenêtre ouverte, dans l'ordre ORDRE_ECRAN.
+  const conseilPossible = view === 'tap' && !incubatorOpen && !calendarOpen && !diamondShopOpen && !menuDevOuvert && !ascensionPrompt
+    && !boss && !bossAnnonce && !bossResult && !guardianFight && !resultatGardien && !confirmGardien && !offlineReport && !pubTap
+    && pickerSlot === null && !selectedCreature && !ficheAventure && !rewardCreature && !powerCast && !miniJeuOuvert;
+  const condTuto = {
+    taper: true,
+    boutique: estVu(tuto, 'taper') && coins >= applyDiscount(tapPowerCost(tapPower)) && !estVu(tuto, 'pacte'),
+    defi: estVu(tuto, 'pacte') && !!currentChallengeId,
+    doree: !!goldenTarget,
+    transe: comboCount > 1,
+    creature: owned.length > 0,
+    aventure: estVu(tuto, 'creature') && owned.length > 0,
+    incubateur: !!incubatingEgg,
+    calendrier: streakClaimedDate !== today,
+    ascension: !!ascensionReady && !estVu(tuto, 'sceau'),
+  };
+  const etapeEcran = loaded && conseilPossible ? choisirEtape(condTuto, tuto, ORDRE_ECRAN) : null;
+  etapeTutoRef.current = etapeEcran;
+  // Ancien joueur (déjà une créature ou une Ascension) au PREMIER chargement : pas de conseils du début. Décidé UNE fois.
+  useEffect(() => {
+    if (!loaded || !tuto || tuto.decide) return;
+    ecrireTuto(estVeteran({ creatures: owned.length, ascensions: ascensionCount }) ? { ...tuto, passe: true, decide: true } : { ...tuto, decide: true });
+  }, [loaded, tuto]);
+  // Où est la cible du conseil : mesurée dans la fenêtre (rien à recalculer à la main), puis suivie toutes les 0,6 s.
+  const CLE_CIBLE_TUTO = { taper: 'oeuf', boutique: 'boutique', ascension: 'boutique', doree: 'doree', transe: 'transe', creature: 'deck',
+    aventure: 'exploration', incubateur: 'incubateur', calendrier: 'calendrier' };
+  useEffect(() => {
+    setRectTuto(null);
+    if (!etapeEcran) return undefined;
+    const mesure = () => {
+      if (etapeEcran === 'defi') {
+        // Le panneau du défi : même calcul que son style (challengeCard).
+        const l = SCREEN_W * 0.88;
+        setRectTuto({ x: Math.round(SCREEN_W * 0.061), y: Math.round(SCREEN_H * (0.157 - TOP_BLOCK_SHIFT) - 13), l: Math.round(l), h: Math.round(l / CHALLENGE_CARD_ASPECT_RATIO) });
+        return;
+      }
+      mesurerCible(racineTutoRef.current, ciblesTutoRef.current[CLE_CIBLE_TUTO[etapeEcran]], (r0) => {
+        // L'œuf VISIBLE ne remplit pas son carré : le rond entoure son corps (56 % du carré), pas toute la zone.
+        const r = etapeEcran === 'taper' ? { x: r0.x + r0.l * 0.22, y: r0.y + r0.h * 0.22, l: r0.l * 0.56, h: r0.h * 0.56 } : r0;
+        setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r));
+      });
+    };
+    const t0 = setTimeout(mesure, 80); const iv = setInterval(mesure, 600);
+    return () => { clearTimeout(t0); clearInterval(iv); };
+  }, [etapeEcran]);
+  // Fins de conseil : ce que le conseil montre a été fait (boutique ouverte, cible touchée, Transe finie…).
+  const etapeAfficheeRef = useRef(null); const defiTutoRef = useRef(null);
+  useEffect(() => {
+    const avant = etapeAfficheeRef.current;
+    if (avant && avant !== etapeEcran) {
+      if ((avant === 'doree' || avant === 'transe') && !condTuto[avant]) vuTuto(avant);
+      if ((avant === 'boutique' || avant === 'ascension') && view === 'shop') vuTuto(avant);
+      if (avant === 'aventure' && view === 'adventure') vuTuto('aventure');
+      if (avant === 'incubateur' && incubatorOpen) vuTuto('incubateur');
+      if (avant === 'calendrier' && calendarOpen) vuTuto('calendrier');
+    }
+    if (etapeEcran === 'defi' && avant !== 'defi' && !defiTutoRef.current) defiTutoRef.current = currentChallengeId;
+    if (etapeEcran !== 'taper') tapsTutoRef.current = 0;
+    etapeAfficheeRef.current = etapeEcran;
+  });
+  // « Accomplis ce défi » : vu dès que CE défi est accompli (le défi en cours change).
+  useEffect(() => {
+    if (defiTutoRef.current && currentChallengeId !== defiTutoRef.current) { defiTutoRef.current = null; vuTuto('defi'); }
+  }, [currentChallengeId]);
+  // « Ta première créature » ne demande rien : il s'en va seul.
+  useEffect(() => {
+    if (etapeEcran !== 'creature') return undefined;
+    const t = setTimeout(() => vuTuto('creature'), DUREE_CONSEIL_INFO_MS);
+    return () => clearTimeout(t);
+  }, [etapeEcran]);
   const validerDefi = () => {
     const id = currentChallengeId;
     if (!id || !isQuestDone(id)) return;
@@ -4360,7 +4445,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 fixées en % du plein écran — plus de rangée flex ni
                 d'espaceur, chaque bloc est indépendant et ne peut plus
                 dériver de l'autre. */}
-            <TouchableOpacity style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
+            <TouchableOpacity ref={(r) => { ciblesTutoRef.current.calendrier = r; }} style={styles.calBtn} onPress={() => setCalendarOpen(true)}>
               {/* 27/09 : la lueur rouge était PEINTE dans l'ancienne image ; elle
                   est désormais faite par le jeu, et seulement quand la
                   récompense du jour est à prendre (comme la pastille). */}
@@ -4402,7 +4487,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 cadeau et les quêtes. Sa position dérive de celle du
                 cadeau (même `left`, `top` + 144) : les trois restent
                 donc solidaires quoi qu'il arrive à TOP_BLOCK_SHIFT. */}
-            <TouchableOpacity style={styles.incubatorBtn} onPress={() => setIncubatorOpen(true)}>
+            <TouchableOpacity ref={(r) => { ciblesTutoRef.current.incubateur = r; }} style={styles.incubatorBtn} onPress={() => setIncubatorOpen(true)}>
               {/* Œuf dans l'incubateur : une LUEUR DORÉE (image, deux couches) qui respire avec l'icône. ⚠️ Avant : une ombre
                   colorée — sur iPhone elle restait à peine visible (photo de l'auteur, 20/10), et Android ne la dessinait pas. */}
               {incubatingEgg ? [0, 1].map((k) => (
@@ -4449,6 +4534,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               resizeMode="stretch"
             >
               <DeckRow deck={deck} owned={owned} onSlotPress={pressDeckSlot} onSlotLongPress={setPickerSlot} recharges={recharges} />
+              {/* 🎓 Repère du tuto (« ta créature rejoint ton équipe ici ») : le cadre du deck, sans capter le doigt. */}
+              <View ref={(r) => { ciblesTutoRef.current.deck = r; }} collapsable={false} style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]} />
             </ImageBackground>
 
             {/* 27/09 : flash de l'élément sur TOUT l'écran, sous l'œuf et les
@@ -4481,6 +4568,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                   {activePower && activePower.creatureId && <PowerAura couleur={couleurElementDe(activePower.creatureId)} />}
                   <Image source={require('../../../assets/menu/grand-nid.png')} style={styles.eggNest} resizeMode="contain" />
                   <Animated.View
+                    ref={(r) => { ciblesTutoRef.current.oeuf = r; }}
                     style={[
                       styles.tapButton,
                       {
@@ -4560,7 +4648,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               {spawnedCreature && <SpawnedCreatureBubble spawned={spawnedCreature} onClaim={claimPower} />}
     
 
-          {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} />}
+          {goldenTarget && <GoldenTargetBubble target={goldenTarget} onClaim={claimGolden} refCible={(r) => { ciblesTutoRef.current.doree = r; }} />}
               {/* Diamants d'Offrande : autant que d'Offrandes faites, ils
                   ne disparaissent jamais tant qu'on ne les ramasse pas. */}
               {pendingOfferings.map((o) => (
@@ -4643,7 +4731,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
                 <BoutonBois couleur="bleu" largeur={Math.round(SCREEN_W * 0.74)} hauteur={52} texte="Mettre en incubation" onPress={startEggIncubation} />
               )}
               {comboCount > 1 ? (
-                <Text style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
+                <Text ref={(r) => { ciblesTutoRef.current.transe = r; }} style={styles.comboText}>🔥 Transe x{transeMultiplier(comboCount).toFixed(2)} ({comboCount} taps)</Text>
               ) : (
                 <Text style={styles.tapHint}>
                   {eggPhase === 'hatching'
@@ -4960,7 +5048,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         onAdventurePress={() => setView('adventure')}
         ownedCount={owned.length}
         totalCreatures={CREATURES.length}
+        refBoutique={(r) => { ciblesTutoRef.current.boutique = r; }}
+        refExploration={(r) => { ciblesTutoRef.current.exploration = r; }}
       />
+      {/* 🎓 Repère (0, 0) de l'écran pour mesurer les cibles, puis le guide du conseil en cours (tout en dernier : au-dessus
+          de tout). ⚠️ Le guide n'a AUCUN conteneur plein écran : seule sa petite croix capte le doigt. */}
+      <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
+      {etapeEcran && rectTuto ? (
+        <GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme} texte={ETAPES[etapeEcran].texte} ecran={{ l: SCREEN_W, h: SCREEN_H }}
+          onFermer={() => vuTuto(etapeEcran)} />
+      ) : null}
       {/* ⚠️ Ces deux fenêtres vivent À LA RACINE de l'écran, PAS dans
           `tapZone`. Placées dedans, leur `position: absolute` était
           bornée par ce conteneur : le voile ne couvrait qu'une partie de
@@ -6065,7 +6162,7 @@ function TapEffect({ x, y, text, crit, tap, teinte }) {
   );
 }
 
-function GoldenTargetBubble({ target, onClaim }) {
+function GoldenTargetBubble({ target, onClaim, refCible }) {
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -6085,7 +6182,7 @@ function GoldenTargetBubble({ target, onClaim }) {
       style={[styles.spawnBubbleWrap, { left: `${target.leftPct}%`, top: `${target.topPct}%` }]}
       hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
     >
-      <Animated.View style={[styles.goldenBubble, { transform: [{ scale: pulse }] }]}>
+      <Animated.View ref={refCible} style={[styles.goldenBubble, { transform: [{ scale: pulse }] }]}>
         <Image source={require('../../../assets/menu/gland-dore.png')} style={styles.bulleIcone} resizeMode="contain" />
       </Animated.View>
     </TouchableOpacity>
@@ -6439,7 +6536,7 @@ function GuardianBattle({ team, level, onFinish, eggNumber = 0, calibrage = null
   );
 }
 
-function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures }) {
+function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures, refBoutique, refExploration }) {
   // Composant separe : il lui faut SON propre appel, `insets` de
   // ClickerScreen n'est pas dans sa portee.
   const insets = useSafeAreaInsets();
@@ -6453,7 +6550,7 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
           tout début du projet. */}
       <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('shop')}>
         <ImageBackground source={require('../../../assets/menu/cadre-nav.png')} resizeMode="contain" style={[styles.navBox, view === 'shop' && styles.navBoxActive]}>
-          <Image source={require('../../../assets/menu/icone-boutique.png')} style={styles.navBoxImage} resizeMode="contain" />
+          <Image ref={refBoutique} source={require('../../../assets/menu/icone-boutique.png')} style={styles.navBoxImage} resizeMode="contain" />
         </ImageBackground>
         <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>SHOP</Text>
       </TouchableOpacity>
@@ -6468,7 +6565,7 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
 
       <TouchableOpacity style={styles.bottomBarItem} onPress={onAdventurePress}>
         <ImageBackground source={require('../../../assets/menu/cadre-nav.png')} resizeMode="contain" style={styles.navBox}>
-          <Image source={require('../../../assets/menu/icone-exploration.png')} style={styles.navBoxImage} resizeMode="contain" />
+          <Image ref={refExploration} source={require('../../../assets/menu/icone-exploration.png')} style={styles.navBoxImage} resizeMode="contain" />
         </ImageBackground>
         <Text style={styles.bottomBarLabel}>EXPLORATION</Text>
       </TouchableOpacity>

@@ -10,6 +10,8 @@
 // intégré dans ce projet). Pas d'animation pour l'instant, on garde les
 // emojis actuels comme "skins". Croix pour quitter en haut à gauche.
 import React, { useState, useRef, useEffect } from 'react';
+import GuideTuto from '../../components/GuideTuto';
+import { ETAPES, DUREE_CONSEIL_INFO_MS, lireTuto, abonnerTuto, estVu, tutoActif, vuEtape, mesurerCible } from '../../games/clicker/tutoriel';
 import {
   View, Text, TouchableOpacity, StyleSheet, Animated, Alert, useWindowDimensions, ImageBackground, Image, ScrollView, Easing, Platform } from 'react-native';
 import { requireOptionalNativeModule } from 'expo-modules-core';
@@ -607,6 +609,12 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
   const [targetIndex, setTargetIndex] = useState(0);
 
   const [phase, setPhase] = useState('choosing'); // 'choosing' | 'tapping' | 'done'
+  // 🎓 TUTORIEL du combat (21/10) : au 1ᵉʳ combat, le CARRÉ sur les attaques (« Choisis une attaque »), puis sur la jauge
+  // (« Touche quand l'aiguille est dans l'or ») ; au 1ᵉʳ Gardien, le carré sur sa barre (« Brise d'abord son bouclier »).
+  const [tuto, setTuto] = useState(null);
+  useEffect(() => { lireTuto().then(setTuto); return abonnerTuto(setTuto); }, []);
+  const ciblesTutoRef = useRef({}); const racineTutoRef = useRef(null);
+  const [rectTuto, setRectTuto] = useState(null);
   const [selectedSkill, setSelectedSkill] = useState(null);
   // 14/10 : l'allié CHOISI pour Bouclier / Soin / Boost (on le touche) — une lueur l'entoure pendant la jauge.
   const [allyTarget, setAllyTarget] = useState(null);
@@ -1682,6 +1690,50 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     );
   };
 
+  const etapeCombat = !tutoActif(tuto) ? null
+    : phase === 'choosing' && isBoss && !estVu(tuto, 'gardien') ? 'gardien'
+    : phase === 'choosing' && !estVu(tuto, 'attaque') ? 'attaque'
+    : phase === 'tapping' && !estVu(tuto, 'jauge') ? 'jauge' : null;
+  useEffect(() => {
+    setRectTuto(null);
+    if (!etapeCombat) return undefined;
+    const cle = { gardien: 'gardien', jauge: 'jauge' }[etapeCombat];
+    const garder = (r) => setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r));
+    const mesure = () => {
+      if (etapeCombat === 'attaque') {
+        // Le carré entoure l'ENSEMBLE des cartes (au banc, la barre entière faisait toute la largeur : le carré n'était qu'un trait).
+        const cartes = (ciblesTutoRef.current.cartes || []).filter(Boolean); const rects = [];
+        cartes.forEach((c) => mesurerCible(racineTutoRef.current, c, (r) => {
+          rects.push(r);
+          if (rects.length === cartes.length) {
+            const x0 = Math.min(...rects.map((q) => q.x)), y0 = Math.min(...rects.map((q) => q.y));
+            const x1 = Math.max(...rects.map((q) => q.x + q.l)), y1 = Math.max(...rects.map((q) => q.y + q.h));
+            garder({ x: x0, y: y0, l: x1 - x0, h: y1 - y0 });
+          }
+        }));
+        return;
+      }
+      mesurerCible(racineTutoRef.current, ciblesTutoRef.current[cle], garder);
+    };
+    const t0 = setTimeout(mesure, 120); const iv = setInterval(mesure, 600);
+    return () => { clearTimeout(t0); clearInterval(iv); };
+  }, [etapeCombat]);
+  // Fins : attaque choisie (phase « tapping »), jauge jouée (fin du « tapping »), conseil du Gardien après 7 s ou au 1ᵉʳ coup.
+  const etapeCombatAvantRef = useRef(null);
+  useEffect(() => {
+    const avant = etapeCombatAvantRef.current;
+    if (avant && avant !== etapeCombat) {
+      if ((avant === 'attaque' || avant === 'gardien') && phase === 'tapping') setTuto((t) => vuEtape(t, avant));
+      if (avant === 'jauge' && phase !== 'tapping') setTuto((t) => vuEtape(t, 'jauge'));
+    }
+    etapeCombatAvantRef.current = etapeCombat;
+  });
+  useEffect(() => {
+    if (etapeCombat !== 'gardien') return undefined;
+    const t = setTimeout(() => setTuto((x) => vuEtape(x, 'gardien')), DUREE_CONSEIL_INFO_MS);
+    return () => clearTimeout(t);
+  }, [etapeCombat]);
+
   return (
     <Animated.View style={[styles.screen, { marginTop: -insets.top, transform: [{ translateX: secousse }] }]}>
       <StatusBar hidden />
@@ -1857,7 +1909,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           const gauche = largeurBandeau * 0.635; const larg = largeurBandeau * 0.236 + PW; const marge = larg * 0.05;
           const choix = phase === 'choosing' && hp > 0;
           return (
-            <TouchableOpacity key="gardien" activeOpacity={0.8} disabled={!choix} onPress={() => chooseTarget(0)}
+            <TouchableOpacity ref={(r) => { ciblesTutoRef.current.gardien = r; }} key="gardien" activeOpacity={0.8} disabled={!choix} onPress={() => chooseTarget(0)}
               style={{ position: 'absolute', left: gauche, top: PT, width: larg, height: PH, pointerEvents: choix ? 'auto' : 'none' }}>
               <Image source={COMBAT_IMG.panneau} resizeMethod="scale" resizeMode="stretch" style={styles.pleineImage} />
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: PH * 0.1, marginHorizontal: marge }}>
@@ -1906,7 +1958,9 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         {phase === 'tapping' && (
           <View style={{ alignItems: 'center', pointerEvents: 'none' }}>
             <Text style={styles.chosenSkillLabel}>{selectedSkill?.name}</Text>
-            <JaugeFrappe jauge={jauge} largeur={Math.round(Math.min(W * 0.55, 440))} />
+            <View ref={(r) => { ciblesTutoRef.current.jauge = r; }} collapsable={false}>
+              <JaugeFrappe jauge={jauge} largeur={Math.round(Math.min(W * 0.55, 440))} />
+            </View>
             <Text style={styles.jaugeConsigne}>Touche quand l'aiguille est dans l'or !</Text>
           </View>
         )}
@@ -1998,6 +2052,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
                 // Carte d'attaque (03/10) : bois si jouable, pierre grise si le mana manque.
                 <TouchableOpacity
                   key={skill.id}
+                  ref={(r) => { (ciblesTutoRef.current.cartes = ciblesTutoRef.current.cartes || [])[idx] = r; }}
                   style={[styles.carteAttaque, { width: CW, height: CH, marginTop: CH * 0.2 }]}
                   activeOpacity={0.85}
                   onPress={() => { setSkillInfo({ ...skill, fromRight: arr.length - 1 - idx }); chooseSkill(skill, false); }}
@@ -2034,6 +2089,13 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           </View>
         </View>
       )}
+      {/* 🎓 Repère (0, 0) du combat et guide du conseil (aucun conteneur plein écran : seule la croix capte le doigt — le défi
+          de taps compte partout, il ne doit rien perdre). */}
+      <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
+      {etapeCombat && rectTuto ? (
+        <GuideTuto rect={rectTuto} forme={ETAPES[etapeCombat].forme} texte={ETAPES[etapeCombat].texte} ecran={{ l: W, h: H }} zIndex={80}
+          onFermer={() => setTuto((t) => vuEtape(t, etapeCombat))} />
+      ) : null}
     </Animated.View>
   );
 }

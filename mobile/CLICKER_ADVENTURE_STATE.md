@@ -4537,6 +4537,29 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   (`mobile/BUILD_APK` poussé le 20/10) ; aucune mise à jour à distance ne la change. Sur iPhone via Expo Go : icône d'Expo Go
   tant qu'il n'y a pas de vraie version iOS (compte Apple Developer). Brisecorne : textes validés par l'auteur.
 
+## 🎓 TUTORIEL (21/10, validé par l'auteur après ses précisions)
+
+- Principe : à certains moments (pas tout de suite), un REPÈRE montre où agir — le ROND doré (image Gemini 110) qui TOURNE,
+  ou le CARRÉ doré (112) qui RESPIRE — avec 2 ÉTOILES (111) qui scintillent À PART (elles ne tournent pas avec le rond) et
+  une lueur dorée ; UNE phrase dans une bulle, une TOUTE PETITE croix en haut à droite qui ferme le conseil (jamais bloquant).
+- `games/clicker/tutoriel.js` : ETAPES (19 conseils, une phrase chacun — contrôlé), ORDRE_ECRAN, mémoire À PART
+  (`tuto:v2`, jamais effacée par une Ascension), règle des anciens joueurs (créature ou Ascension au 1ᵉʳ chargement → pas
+  de conseils ; « 🎓 Revoir les conseils » dans les Options remet tout à zéro), `mesurerCible` (cible et racine mesurées
+  dans la fenêtre, puis soustraites — suivi toutes les 0,6 s).
+- `components/GuideTuto.js` : ⚠️ AUCUN conteneur plein écran (leçon de la copie du 20/10 : il avalait les taps sur
+  l'œuf) ; tout est transparent au doigt SAUF la croix. Rond : taille selon la SURFACE de la cible (√(l×h) × 1,5, entre 64
+  et 210 — avant, un long bouton avait un anneau démesuré). Espace insécable avant « ! ? : ; ». Carré : remonté en 12
+  morceaux (coins, bandes, encoches) tirés du HAUT de l'image Gemini (le bas était teinté de rose et contenait un morceau
+  de capture du jeu) → s'étire sans déformer.
+- Branchements : écran principal (œuf « Clique ici pour gagner des pièces » ×10 taps, boutique quand le Pacte est
+  achetable, défi, cible dorée, Transe, 1ʳᵉ créature → deck, Exploration, incubateur, calendrier, Ascension prête) ; Grimoire
+  (prix du Pacte — ⚠️ son article s'appelle `pacte`, PAS `tapPower` : 1re version, le rond n'apparaissait jamais ; sceau
+  d'Ascension) ; combat (carré sur l'ENSEMBLE des cartes — la barre entière faisait toute la largeur —, puis sur la jauge ;
+  1ᵉʳ Gardien : sa barre) ; Aventure (rond sur COMBAT au 1ᵉʳ combat ; sur RUNES dès la 3ᵉ poudre) ; écran des runes (« 1
+  rune », puis INVENTAIRE pour l'équiper).
+- Banc : `menu&tuto=1&vus=…`, `grimoire&tuto=1&vus=…`, `combat-niveaux&tuto=1`, exploration `?tuto=1&poudre=3` ; la
+  sonde des taps accepte `PARAMS_SCENE=?tuto=1` (20/20 avec le conseil de l'œuf affiché). Contrôle `auditTutoriel` + 4 pièges.
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :

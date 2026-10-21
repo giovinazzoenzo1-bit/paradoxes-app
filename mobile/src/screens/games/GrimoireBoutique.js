@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import GuideTuto from '../../components/GuideTuto';
+import { ETAPES, lireTuto, abonnerTuto, estVu, tutoActif, vuEtape, mesurerCible } from '../../games/clicker/tutoriel';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanResponder, Animated, Easing, StyleSheet, Dimensions, Platform } from 'react-native';
 import { CHAPITRES_GRIMOIRE } from '../../games/clicker/grimoireChapitres';
@@ -30,7 +32,7 @@ import { jouerSon } from './sonsBoutique';
 // construireNoeuds (games/clicker/boutiqueModele.js, pur) ; fiche : ficheElement.js.
 // ⚠️ Tailles et positions en NOMBRES (règle du 27/09).
 
-const { width: ECRAN_L } = Dimensions.get('window');
+const { width: ECRAN_L, height: ECRAN_H } = Dimensions.get('window');
 // ×1,22 : assez grand pour les zones d'écriture, et la place SOUS le livre
 // pour Griffes, le sceau de l'Ascension et Offrande (retour de l'auteur).
 const LIVRE_L = Math.round(ECRAN_L * 1.22);
@@ -139,7 +141,7 @@ function LueurDefi({ style, fort = false, calme = false }) {
   </> : <Animated.Image source={LUEUR_OR} resizeMethod="scale" resizeMode="stretch" style={st} />;
 }
 
-function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, onRelacher, offre, conseil, nouveau, defi = false }) {
+function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, onRelacher, offre, conseil, nouveau, defi = false, refPrix }) {
   const verrou = n.etat === 'verrouille';
   const o = offre || { q: 1, total: n.prix, ok: n.etat === 'achetable' };
   const ok = o.ok;
@@ -166,7 +168,7 @@ function Entree({ n, largeur, hauteur, formatNum, onFiche, onAcheter, onRelacher
           n.etat === 'max' ? <Text style={styles.max}>⭐ MAX</Text> : (
             // ⚠️ Achat AU CONTACT (onPressIn), comme la zone de tap : un
             // TouchableOpacity / onPress jette les taps rapides (auditZoneTapAuContact).
-            <Pressable onPressIn={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)} onPressOut={onRelacher}
+            <Pressable ref={refPrix} onPressIn={(e) => onAcheter(n.id, e.nativeEvent.pageX, e.nativeEvent.pageY)} onPressOut={onRelacher}
               style={({ pressed }) => [styles.prix, ok ? styles.prixOk : styles.prixCher, conseil && ok && styles.prixConseil, pressed && { opacity: 0.75 }]} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
               <Image source={n.devise === 'diamants' ? ICONES.diamant : ICONES.piece} resizeMode="contain" style={styles.prixIcone} />
               <Text style={[styles.prixTexte, !ok && styles.prixTexteCher]} numberOfLines={1}>{o.q > 1 ? `×${o.q} ` : ''}{formatNum(o.total)}</Text>
@@ -377,7 +379,7 @@ function Grimoire(props) {
     const h = Math.floor(z.h / PAR_PAGE);
     return (
       <View style={boite}>
-        {page.ids.map((id) => (parId[id] ? <Entree key={id} defi={!!props.cibleDefi && id === props.cibleDefi} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={presser} onRelacher={arreterRafale} offre={offre(parId[id])} conseil={id === conseilId} nouveau={estNouveau(id)} /> : null))}
+        {page.ids.map((id) => (parId[id] ? <Entree key={id} refPrix={id === 'pacte' ? (r) => { prixPacteRef.current = r; } : undefined} defi={!!props.cibleDefi && id === props.cibleDefi} n={parId[id]} largeur={z.l} hauteur={h} formatNum={formatNum} onFiche={setFicheId} onAcheter={presser} onRelacher={arreterRafale} offre={offre(parId[id])} conseil={id === conseilId} nouveau={estNouveau(id)} /> : null))}
       </View>
     );
   };
@@ -442,6 +444,31 @@ function Grimoire(props) {
     return () => b.stop();
   }, []);
   const cActif = (tour ? tour.vers : position).c;
+  // 🎓 TUTORIEL (21/10) : « Clique ici pour acheter le Pacte » (rond sur son prix, après « ouvre la boutique ») et « Clique ici
+  // ⚠️ L'article du Pacte s'appelle 'pacte' dans le Grimoire (boutiqueModele), PAS 'tapPower' (le nom de son niveau) :
+  // 1re version du 21/10, au banc → le rond n'apparaissait jamais.
+  // pour faire ta première Ascension » (rond sur le sceau, quand elle est prête). Voir games/clicker/tutoriel.js.
+  const [tuto, setTuto] = useState(null);
+  useEffect(() => { lireTuto().then(setTuto); return abonnerTuto(setTuto); }, []);
+  const prixPacteRef = useRef(null); const racineTutoRef = useRef(null);
+  const [rectTuto, setRectTuto] = useState(null);
+  const pVue = planche(position); const idsVus = [...((pVue[0] && pVue[0].ids) || []), ...((pVue[1] && pVue[1].ids) || [])];
+  const etapeGrimoire = !tutoActif(tuto) || !ouvert || tour || ficheId ? null
+    : ascPrete && !estVu(tuto, 'sceau') ? 'sceau'
+    : estVu(tuto, 'boutique') && !estVu(tuto, 'pacte') && idsVus.includes('pacte') ? 'pacte' : null;
+  useEffect(() => {
+    setRectTuto(null);
+    if (!etapeGrimoire) return undefined;
+    const mesure = () => {
+      if (etapeGrimoire === 'sceau') { setRectTuto({ x: Math.round(ECRAN_L / 2 - 41), y: SOUS_LIVRE_Y, l: 82, h: 82 }); return; } // même place que le sceau
+      mesurerCible(racineTutoRef.current, prixPacteRef.current, (r) => setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r)));
+    };
+    const t0 = setTimeout(mesure, 120); const iv = setInterval(mesure, 600);
+    return () => { clearTimeout(t0); clearInterval(iv); };
+  }, [etapeGrimoire, position.c, position.p]);
+  // Le Pacte acheté : conseil vu.
+  const pacteDepartRef = useRef(props.tapPower);
+  useEffect(() => { if (props.tapPower > pacteDepartRef.current && tuto && !estVu(tuto, 'pacte')) setTuto(vuEtape(tuto, 'pacte')); }, [props.tapPower]);
   // 17/10 : où se trouve l'article du défi d'achat en cours (chapitre, double page) — pour les lueurs de navigation.
   const guide = (() => {
     if (!props.cibleDefi) return null;
@@ -545,7 +572,7 @@ function Grimoire(props) {
       {asc ? (
         <Animated.View style={{ position: 'absolute', left: Math.round(ECRAN_L / 2 - 41), top: SOUS_LIVRE_Y, width: 82, height: 82,
           transform: [{ scale: impulsion.interpolate({ inputRange: [0, 1], outputRange: [1, 1.09] }) }] }}>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => setFicheId('ascension')} style={[styles.ascension, { left: 0, top: 0 }]}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => { setFicheId('ascension'); if (etapeGrimoire === 'sceau') setTuto(vuEtape(tuto, 'sceau')); }} style={[styles.ascension, { left: 0, top: 0 }]}>
             <Image source={IMG.sceauAscension} resizeMode="contain" style={styles.ascensionImg} />
             <Text style={styles.ascensionTexte}>ASCENSION</Text>
             {/* Le multiplicateur actuel reste dans la fiche ; ici, où tu en es. */}
@@ -594,6 +621,12 @@ function Grimoire(props) {
       ) : null}
 
       <FicheElement fiche={ficheId && parId[ficheId] ? { ...parId[ficheId], icone: ICONES[ficheId], detail: (parId[ficheId].detail || '') + (ficheId === conseilId ? '\n⭐ Conseillé : c\'est l\'achat qui rapporte le plus de pièces pour son prix.' : '') } : null} onFermer={() => setFicheId(null)} onAcheter={(id) => acheter(id)} onAscend={props.onAscend} formatNum={formatNum} />
+      {/* 🎓 Repère (0, 0) du Grimoire et guide du conseil (aucun conteneur plein écran : seule la croix capte le doigt). */}
+      <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
+      {etapeGrimoire && rectTuto ? (
+        <GuideTuto rect={rectTuto} forme={ETAPES[etapeGrimoire].forme} texte={ETAPES[etapeGrimoire].texte} ecran={{ l: ECRAN_L, h: ECRAN_H }}
+          onFermer={() => setTuto(vuEtape(tuto, etapeGrimoire))} />
+      ) : null}
     </View>
   );
 }

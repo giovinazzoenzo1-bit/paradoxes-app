@@ -18,6 +18,10 @@ const rien = () => {};
 if (new URLSearchParams(window.location.search).get('incubation') === '1') {
   try { window.__memoireBanc['clicker:incubator:v1'] = (JSON.stringify({ incubating: { startedAt: Date.now(), totalMs: 3600000, endsAt: Date.now() + 3600000, tapsUsed: 0, videosUsed: 0 }, main: null })); } catch (e) {}
 }
+// « ?tuto=1 » : les conseils du tutoriel ACTIFS depuis le début (sinon : ancien joueur → aucun conseil).
+if (new URLSearchParams(window.location.search).get('tuto') === '1') {
+  try { window.__memoireBanc['tuto:v2'] = JSON.stringify({ vus: (new URLSearchParams(window.location.search).get('vus') || '').split(',').filter(Boolean), passe: false, decide: true }); } catch (e) {}
+}
 createRoot(document.getElementById('root')).render(
   <>
 

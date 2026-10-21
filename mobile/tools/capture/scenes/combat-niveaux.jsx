@@ -17,6 +17,10 @@ const team = [
 ];
 // « &gardien=1 » : le combat du Gardien (adversaire unique, en GRAND).
 const gardien = new URLSearchParams(location.search).get('gardien') === '1';
+// « &tuto=1&vus=… » : conseils du tutoriel actifs dans le combat.
+if (new URLSearchParams(location.search).get('tuto') === '1') {
+  try { window.__memoireBanc['tuto:v2'] = JSON.stringify({ vus: (new URLSearchParams(location.search).get('vus') || '').split(',').filter(Boolean), passe: false, decide: true }); } catch (e) {}
+}
 createRoot(document.getElementById('root')).render(
   <SafeAreaProvider><SettingsProvider><CombatScreen team={team} levelNumber={n} onFinish={() => {}} opponentOverride={gardien ? [GARDIEN] : undefined} /></SettingsProvider></SafeAreaProvider>,
 );

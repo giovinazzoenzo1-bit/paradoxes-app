@@ -3,6 +3,8 @@
 // (carte des chapitres/niveaux, structure visuelle seulement, le vrai
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import GuideTuto from '../../components/GuideTuto';
+import { ETAPES, POUDRE_CONSEIL_RUNES, lireTuto, abonnerTuto, estVu, tutoActif, vuEtape, mesurerCible } from '../../games/clicker/tutoriel';
 import {
   View,
   Text,
@@ -10,6 +12,7 @@ import {
   StyleSheet,
   ScrollView,
   useWindowDimensions,
+  Dimensions,
   Image,
   ImageBackground,
   Animated,
@@ -689,6 +692,10 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // Runes possédées : [{ id, type, level }] — id unique généré à l'achat/
   // la fusion, type = l'une des 4 clés de RUNE_TYPES, level 1 à 5.
   const [ownedRunes, setOwnedRunes] = useState([]);
+  // 🎓 TUTORIEL de l'Aventure (21/10) : « Clique ici pour lancer ton premier combat » (rond sur COMBAT) et, dès la 3ᵉ poudre
+  // runique, « clique ici pour les runes » (rond sur RUNES). ⚠️ Hooks déclarés ICI, avant les retours anticipés de l'écran.
+  const [tuto, setTuto] = useState(null);
+  useEffect(() => { lireTuto().then(setTuto); return abonnerTuto(setTuto); }, []);
   // Offre spéciale du jour : { date, type, purchased }. Stockée dans sa
   // PROPRE clé — une offre ratée ne doit pas pouvoir corrompre la
   // sauvegarde d'Aventure. Une date différente au chargement retire un
@@ -1419,6 +1426,11 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const fond = cadres ? cadres.fond : { x: 0, y: 0, l: 0, h: 0 };
   const ui = cadres ? cadres.ui : { l: 0, h: 0 };
   const ecran = cadres || { w: 0, h: 0 };
+  // 🎓 Étape du hub : 1ᵉʳ combat (rien de gagné, au moins une créature placée), puis les runes (3ᵉ poudre, aucune rune).
+  const deckPlace = (deck || []).some(Boolean);
+  const etapeHub = !tutoActif(tuto) ? null
+    : !estVu(tuto, 'combat') && currentUnlockedLevel <= 1 && deckPlace ? 'combat'
+    : !estVu(tuto, 'runes') && poudre >= POUDRE_CONSEIL_RUNES && ownedRunes.length === 0 ? 'runes' : null;
   // Interface : fractions de la maquette, accrochées à un bord (x : gauche/centre/droite ; y : haut/bas).
   const R = (f, ax = 'centre', ay = 'haut') => {
     const l = (f[2] - f[0]) * ui.l; const hh = (f[3] - f[1]) * ui.h;
@@ -1431,6 +1443,9 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const police = (k) => Math.max(8, Math.round(ui.h * k));
   // Même hauteur, même centre, largeur à la proportion réelle de la pièce.
   const auRapport = (r, rapport) => { const l = r.height * rapport; return { ...r, left: r.left + (r.width - l) / 2, width: l }; };
+  // 🎓 Le rond du conseil du hub : exactement là où sont dessinés COMBAT et RUNES (rien sans cadres mesurés).
+  const rHub = !cadres || !etapeHub ? null : etapeHub === 'combat' ? auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat) : R(HUB.runes, 'droite');
+  const rectHub = rHub ? { x: rHub.left, y: rHub.top, l: rHub.width, h: rHub.height } : null;
   // Même LARGEUR (celle de la maquette : elle règle l'espacement), même centre, hauteur à la proportion.
   const auRapportL = (r, rapport) => { const hh = r.width / rapport; return { ...r, top: r.top + (r.height - hh) / 2, height: hh }; };
   // Puissance AFFICHÉE (08/10) : la même partout, elle monte à chaque niveau ; la COULEUR reste
@@ -1464,7 +1479,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
               <Image source={HUB_IMG.plus} resizeMethod="scale" resizeMode="contain" style={{ width: ui.h * 0.05, height: ui.h * 0.05 }} />
             </TouchableOpacity>
           </CapsuleBois>
-          <TouchableOpacity onPress={() => setRunesOpen(true)} activeOpacity={0.8} style={[R(HUB.runes, 'droite'), { alignItems: 'center', justifyContent: 'center' }]}>
+          <TouchableOpacity onPress={() => { if (etapeHub === 'runes') setTuto(vuEtape(tuto, 'runes')); setRunesOpen(true); }} activeOpacity={0.8} style={[R(HUB.runes, 'droite'), { alignItems: 'center', justifyContent: 'center' }]}>
             <Image source={GLOW_CYAN} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', width: '190%', height: '190%' }} />
             <Image source={RUNES_GEM} resizeMethod="scale" resizeMode="contain" style={{ width: '100%', height: '100%' }} />
           </TouchableOpacity>
@@ -1519,7 +1534,12 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
           })}
 
           {/* ── COMBAT : il SCINTILLE un peu (lueur qui respire + étincelles), voir BoutonCombat. */}
-          <BoutonCombat rect={auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat)} rectLueur={R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05], 'centre', 'bas')} onPress={() => setChapterMapOpen(true)} />
+          <BoutonCombat rect={auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat)} rectLueur={R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05], 'centre', 'bas')} onPress={() => { if (etapeHub === 'combat') setTuto(vuEtape(tuto, 'combat')); setChapterMapOpen(true); }} />
+          {/* 🎓 Conseil du hub (rond sur COMBAT ou sur RUNES) : positions CALCULÉES comme les boutons eux-mêmes. */}
+          {etapeHub && rectHub ? (
+            <GuideTuto rect={rectHub} forme={ETAPES[etapeHub].forme} texte={ETAPES[etapeHub].texte} ecran={{ l: ecran.w, h: ecran.h }}
+              onFermer={() => setTuto(vuEtape(tuto, etapeHub))} />
+          ) : null}
         </>
       )}
 
@@ -3361,7 +3381,7 @@ function ForgePanel({ width, onAutoFuse }) {
   );
 }
 
-function RuneShopPanel({ width, poudre, specialOffer, onBuyRandom, onBuyPack, onBuySpecial, freeRuneDraw = false, onUseFreeDraw }) {
+function RuneShopPanel({ width, poudre, specialOffer, onBuyRandom, onBuyPack, onBuySpecial, freeRuneDraw = false, onUseFreeDraw, refUnite }) {
   const H = width / SHOP_PANEL_RATIO;
   const slotTop = SHOP_SLOT_Y.top * H;
   const slotH = (SHOP_SLOT_Y.bottom - SHOP_SLOT_Y.top) * H;
@@ -3447,6 +3467,7 @@ function RuneShopPanel({ width, poudre, specialOffer, onBuyRandom, onBuyPack, on
         return (
           <React.Fragment key={o.key}>
             <TouchableOpacity
+              ref={o.key === 'random' ? refUnite : undefined}
               style={{
                 position: 'absolute', left, width: w, top: slotTop, height: slotH,
                 alignItems: 'center', justifyContent: 'center',
@@ -3533,6 +3554,26 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
     if (got && got.length) setReveal(got);
   };
   const [rightBox, setRightBox] = useState({ w: 0, h: 0 });
+  // 🎓 TUTORIEL des runes (21/10) : avec de quoi en fabriquer une (3 poudres) et aucune rune, le CARRÉ sur « 1 rune » ;
+  // la 1re rune obtenue et pas encore équipée, le CARRÉ sur INVENTAIRE (« clique ici pour l'équiper »).
+  const [tuto, setTuto] = useState(null);
+  useEffect(() => { lireTuto().then(setTuto); return abonnerTuto(setTuto); }, []);
+  const ciblesTutoRef = useRef({}); const racineTutoRef = useRef(null);
+  const [rectTuto, setRectTuto] = useState(null);
+  const nbRunes = (ownedRunes || []).length; const runeEquipee = (ownedRunes || []).some((r) => r && r.equippedCreatureId);
+  const etapeRunes = !tutoActif(tuto) || inventoryOpen || reveal ? null
+    : nbRunes === 0 && poudre >= POUDRE_PRIX.unite && !estVu(tuto, 'acheterRune') ? 'acheterRune'
+    : nbRunes > 0 && !runeEquipee && !estVu(tuto, 'equiperRune') ? 'equiperRune' : null;
+  useEffect(() => {
+    setRectTuto(null);
+    if (!etapeRunes) return undefined;
+    const mesure = () => mesurerCible(racineTutoRef.current, ciblesTutoRef.current[etapeRunes === 'acheterRune' ? 'unite' : 'inventaire'],
+      (r) => setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r)));
+    const t0 = setTimeout(mesure, 150); const iv = setInterval(mesure, 600);
+    return () => { clearTimeout(t0); clearInterval(iv); };
+  }, [etapeRunes, shopW]);
+  // La 1re rune achetée : « fabrique ta première rune » est vu.
+  useEffect(() => { if (nbRunes > 0 && tutoActif(tuto) && !estVu(tuto, 'acheterRune')) setTuto(vuEtape(tuto, 'acheterRune')); }, [nbRunes]);
   // La collection est passée en SURCOUCHE (13/09) : l'atelier est seul
   // dans sa colonne et peut donc la remplir.
   const forgeMaxH = rightBox.h * 0.95;
@@ -3570,6 +3611,7 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
               onBuySpecial={withReveal(onBuySpecial)}
               freeRuneDraw={freeRuneDraw}
               onUseFreeDraw={onUseFreeDraw ? withReveal(onUseFreeDraw) : undefined}
+              refUnite={(r) => { ciblesTutoRef.current.unite = r; }}
             />
           )}
           {onPubPoudre && (
@@ -3587,8 +3629,9 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
               l'inverse, sinon le cadre se déforme. */}
           {shopW > 0 && (
             <TouchableOpacity
+              ref={(r) => { ciblesTutoRef.current.inventaire = r; }}
               style={styles.invOpenBtn}
-              onPress={() => setInventoryOpen(true)}
+              onPress={() => { if (etapeRunes === 'equiperRune') setTuto(vuEtape(tuto, 'equiperRune')); setInventoryOpen(true); }}
               activeOpacity={0.8}
             >
               {/* ImageBackground et NON <Image style={absoluteFill}> :
@@ -3626,6 +3669,12 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
       {/* Rendu EN DERNIER : la révélation doit passer au-dessus de tout,
           l'ordre des frères décide de l'empilement. */}
       {reveal && <RuneReveal runes={reveal} onClose={() => setReveal(null)} />}
+      {/* 🎓 Repère (0, 0) de l'écran des runes et guide du conseil (seule la croix capte le doigt). */}
+      <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
+      {etapeRunes && rectTuto ? (
+        <GuideTuto rect={rectTuto} forme={ETAPES[etapeRunes].forme} texte={ETAPES[etapeRunes].texte} ecran={{ l: Dimensions.get('window').width, h: Dimensions.get('window').height }}
+          onFermer={() => setTuto(vuEtape(tuto, etapeRunes))} />
+      ) : null}
     </ImageBackground>
   );
 }

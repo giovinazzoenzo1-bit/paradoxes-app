@@ -12,6 +12,7 @@ import { DEV_ADD_GRIFFES_KEY, DEV_REFILL_ENERGY_KEY, DEV_RESET_GRIFFES_KEY } fro
 import { CREATURES } from '../games/clicker/clickerLogic';
 import { COLORS } from './games/clickerTheme';
 import { BUILD_SHA, BUILD_TIME } from '../version';
+import { ecrireTuto, TUTO_REVOIR } from '../games/clicker/tutoriel';
 // Signalement d'un problème — voir `games/clicker/diagnostic.js`.
 import { DIAGNOSTIC_INSTANTANE_KEY, DIAGNOSTIC_ERREUR_KEY } from '../games/clicker/diagnostic';
 import { envoyerRapport } from '../signalement';
@@ -322,6 +323,9 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
           {/* ⚠️ Toujours disponible, même sans problème détecté : le joueur
               peut signaler ce que le détecteur ne sait pas voir. */}
           <BoutonLarge couleur="vert" largeur={INTERIEUR} hauteur={70} texte="🐞 Signaler un problème" sousTexte="Envoie un rapport au créateur du jeu" onPress={signalerProbleme} />
+          {/* 🎓 Tutoriel : les conseils reviennent, chacun au bon moment (c'est aussi ainsi que l'auteur les teste). */}
+          <BoutonLarge couleur="vert" largeur={INTERIEUR} hauteur={70} texte="🎓 Revoir les conseils" sousTexte="Les conseils du début reviendront au bon moment"
+            onPress={() => { ecrireTuto(TUTO_REVOIR); Alert.alert('Conseils', 'Les conseils du début réapparaîtront, chacun au bon moment.'); }} />
 
           <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Réinitialisation</Text>
           <BoutonLarge couleur="rouge" largeur={INTERIEUR} hauteur={54} texte="🐾 Réinitialiser Élevage" onPress={resetClicker} />

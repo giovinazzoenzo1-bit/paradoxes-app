@@ -10,6 +10,10 @@ const f = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? (n / 1e3).t
 const tries = [...AUTOCLICKERS].sort((a, b) => a.baseCost - b.baseCost);
 // « ?cible=tapPower » : l'article du défi d'achat en cours (lueur de guidage sur le marque-page de son chapitre).
 const cible = new URLSearchParams(window.location.search).get('cible') || null;
+// « &tuto=1&vus=taper,boutique » : conseils du tutoriel actifs, certains déjà vus (ex. : le conseil du Pacte).
+if (new URLSearchParams(window.location.search).get('tuto') === '1') {
+  try { window.__memoireBanc['tuto:v2'] = JSON.stringify({ vus: (new URLSearchParams(window.location.search).get('vus') || '').split(',').filter(Boolean), passe: false, decide: true }); } catch (e) {}
+}
 createRoot(document.getElementById('root')).render(
   <SettingsProvider>
     <View style={{ flex: 1, backgroundColor: '#000' }}>

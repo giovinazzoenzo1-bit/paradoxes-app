@@ -11,7 +11,8 @@ const p = await b.newPage();
 // TACTILE (comme un téléphone) : le jeu reçoit alors la position du doigt
 // (locationX/Y) — à la souris, il ne la reçoit pas et place le « +X » ailleurs.
 await p.setViewport({ width: 390, height: 844, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
-await p.goto('file://' + path.join(ICI, 'out/index.html'));
+// PARAMS_SCENE (ex. « ?tuto=1 ») : la même sonde avec un conseil du tutoriel affiché — il ne doit RIEN avaler.
+await p.goto('file://' + path.join(ICI, 'out/index.html') + (process.env.PARAMS_SCENE || ''));
 await new Promise((r) => setTimeout(r, 2500));
 await p.evaluate(() => {
   window.__plus = 0;
