@@ -1,2 +1,3 @@
-Sun Oct 18 19:35:17 UTC 2026
-Build demandé (18/10, soir) : l'APK de l'auteur restait sur la mise à jour de 20h13 malgré deux redémarrages (publications de 20h35 et 20h57 réussies côté robot) — nouvel APK avec le code à jour embarqué.
+Tue Oct 20 2026
+Build demandé (20/10) : NOUVELLE ICÔNE de l'appli (photo de l'auteur : le dragon de cristal sur fond de lave) —
+une icône est une ressource NATIVE : seule un nouvel APK la change (une mise à jour à distance ne peut pas).

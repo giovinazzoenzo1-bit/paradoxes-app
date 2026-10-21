@@ -4523,6 +4523,14 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - Banc : `menu&incubation=1` précharge un œuf dans le faux stockage (`window.__memoireBanc`, PAS localStorage) ;
   `grimoire&cible=<id>` éclaire l'article d'un défi d'achat (ex. `critDamage`).
 
+## 🖼️ ICÔNE DE L'APPLI (20/10)
+
+- Photo de l'auteur (dragon de cristal sur fond de lave, 1543 × 1740) : `assets/icon.png` (iPhone : carré de 1300 px centré
+  sur la tête → 1024, SANS transparence) et `assets/adaptive-icon.png` (Android : toute la largeur, car seule la zone centrale de
+  66 % se voit sous le masque). Contrôlé (1024 × 1024, sans alpha, app.json). ⚠️ Une icône est NATIVE : un nouvel APK
+  (`mobile/BUILD_APK` poussé le 20/10) ; aucune mise à jour à distance ne la change. Sur iPhone via Expo Go : icône d'Expo Go
+  tant qu'il n'y a pas de vraie version iOS (compte Apple Developer). Brisecorne : textes validés par l'auteur.
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
