@@ -40,6 +40,8 @@ const BG_IMG = require('../../../assets/combat/battlefield.jpg');
 // Attaques sur des cartes (bois ; pierre grise si le mana manque), étiquette sur
 // la planche de l'aperçu. Pièces de Gemini élargies en 9 morceaux (coins gardés).
 // L'AFFICHAGE seul change : la logique du combat est intacte.
+// Lueur bleue de la bulle de bouclier du Gardien (même image que les fenêtres « cyan »).
+const LUEUR_BOUCLIER = require('../../../assets/fenetres/lueur-cyan.png');
 const COMBAT_IMG = {
   bandeau: require('../../../assets/combat/bandeau.png'),
   panneau: require('../../../assets/combat/panneau.png'),
@@ -430,7 +432,7 @@ function FloatingDamage({ amount, color, taille = null, pop = false }) {
 // Places sur le terrain (03/10) : celles de la maquette « Le bandeau de combat » —
 // tout entre le bandeau (en haut) et les cartes (en bas) ; l'actif devant.
 const PLAYER_SLOTS = [
-  { x: 0.20, y: 0.60, size: 1.0 },
+  { x: 0.20, y: 0.58, size: 1.0 }, // 20/10 : 0,60 → 0,58 (à 180, les pieds mordaient les cartes d'attaque)
   { x: 0.31, y: 0.50, size: 0.78 },
   { x: 0.40, y: 0.47, size: 0.68 },
 ];
@@ -439,18 +441,20 @@ const PLAYER_SLOTS = [
 // Remontés le 12/09 : avec les boutons d'attaque en carrés de 86dp en
 // bas de l'écran, les emplacements bas (y 0,60) passaient derrière eux.
 const OPPONENT_SLOTS = [
-  { x: 0.70, y: 0.57, size: 1.0 },
+  { x: 0.70, y: 0.555, size: 1.0 }, // 20/10 : 0,57 → 0,555 (même raison)
   { x: 0.82, y: 0.46, size: 0.78 },
-  { x: 0.89, y: 0.62, size: 0.85 },
+  { x: 0.89, y: 0.60, size: 0.85 }, // 20/10 : 0,62 → 0,60 (même raison)
 ];
 // Agrandi de 74 à 104 (12/09) : les illustrations de créatures
 // paraissaient minuscules sur le décor, qui occupe tout l'écran. Les
 // emplacements ayant été remontés, la place existe.
 // 20/10 (demande de l'auteur) : +25 % (130) puis, « elles n'ont pas bougé, je les veux plus grosses », +54 % : 160 (avant 104).
 // Vérifié au banc en 844 × 390 et 800 × 360 : la créature de devant touche juste le haut des cartes d'attaque.
-const SPRITE_BASE = 160;
-// Le Gardien : 1,4 × 160 = 224 (à 1,7 il mordrait sur le bandeau et sur les cartes d'attaque).
-const GARDIEN_TAILLE = 1.4;
+// 20/10 (soir) : « encore un peu plus grosses » → 180 (+73 % sur 104).
+const SPRITE_BASE = 180;
+// Le Gardien : 1,33 × 180 = 240 — sa vie étant passée dans le bandeau, il gagne un peu de place (à 1,7 il mordrait sur le
+// bandeau et sur les cartes d'attaque).
+const GARDIEN_TAILLE = 1.33;
 
 
 // `opponentOverride` : impose l'équipe adverse au lieu de la tirer du
@@ -520,6 +524,28 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
   // de rendu, un état React y serait en retard d'un tour.
   const bossShieldRef = useRef(0);
   bossShieldRef.current = bossShield;
+  // 🛡️ BULLE DE BOUCLIER sur le Gardien (demande de l'auteur, 20/10 : « au 2ᵉ bouclier on ne comprend pas, ça passe
+  // directement au bouclier ») : une bulle BLEUE l'entoure tant que son bouclier tient — elle surgit avec un rebond quand le
+  // bouclier arrive (début du combat, relève de la manche 2) et s'efface quand il se brise ; elle respire doucement.
+  const bulleBouclier = useRef(new Animated.Value(0)).current;
+  const pulseBouclier = useRef(new Animated.Value(0)).current;
+  const avaitBouclierRef = useRef(false);
+  useEffect(() => {
+    if (!isBoss) return;
+    const a = bossShield > 0;
+    if (a && !avaitBouclierRef.current) { bulleBouclier.setValue(0); Animated.spring(bulleBouclier, { toValue: 1, friction: 4, tension: 55, useNativeDriver: true }).start(); }
+    else if (!a && avaitBouclierRef.current) Animated.timing(bulleBouclier, { toValue: 0, duration: 320, useNativeDriver: true }).start();
+    avaitBouclierRef.current = a;
+  }, [isBoss, bossShield > 0]);
+  useEffect(() => {
+    if (!isBoss) return undefined;
+    const b = Animated.loop(Animated.sequence([
+      Animated.timing(pulseBouclier, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(pulseBouclier, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    b.start();
+    return () => b.stop();
+  }, [isBoss]);
   const bossPhaseRef = useRef(1);
   bossPhaseRef.current = bossPhase;
 
@@ -1533,7 +1559,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
   // Cartes d'attaque (maquette : ~25,5 % de large) ; étiquette sur la planche de l'aperçu.
   const CW = Math.round(uiL * 0.25); const CH = Math.round(CW / 2.61);
 
-  const renderSprite = ({ sansJauges = false, adversaire = false, key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, floatVerdict = null, lunging, lungeDir, lungeDx = 0, lungeDy = 0, elemColor , etats = null, etatsCote = 'droite' }) => {
+  const renderSprite = ({ sansJauges = false, adversaire = false, bouclier = false, key, slot, creatureId, stageIndex, emoji, name, hp, hpMax, mana, manaMax, fainted, ring, onPress, disabled, hpColor, floatDamage, floatVerdict = null, lunging, lungeDir, lungeDx = 0, lungeDy = 0, elemColor , etats = null, etatsCote = 'droite' }) => {
     const fs = Math.round(SPRITE_BASE * slot.size);
     const boxW = Math.round(fs * 1.7);
     const left = slot.x * W - boxW / 2;
@@ -1594,6 +1620,13 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
             {/* 27/09 (demande de l'auteur) : les ADVERSAIRES regardent vers la
                 gauche, vers nos créatures — miroir sur l'IMAGE seule (ni le
                 nom ni les PV), à l'intérieur du bond (mouvement inchangé). */}
+            {bouclier ? (
+              <Animated.View style={{ pointerEvents: 'none', position: 'absolute', left: -fs * 0.25, top: -fs * 0.25, width: fs * 1.5, height: fs * 1.5,
+                opacity: bulleBouclier.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }) }}>
+                <Animated.Image source={LUEUR_BOUCLIER} resizeMethod="scale" resizeMode="stretch" style={{ width: fs * 1.5, height: fs * 1.5,
+                  opacity: pulseBouclier.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0.85] }) }} />
+              </Animated.View>
+            ) : null}
             <CreatureArt
               creatureId={creatureId}
               stageIndex={stageIndex}
@@ -1602,6 +1635,16 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
               style={adversaire ? MIROIR : null}
               emojiStyle={[{ fontSize: fs, lineHeight: fs + 12 }, adversaire ? MIROIR : null]}
             />
+            {/* Devant : le BORD de la bulle et un voile bleu très léger (la lueur, elle, est DERRIÈRE la créature : au banc, posée
+                devant, elle teintait tout le Gardien en bleu). */}
+            {bouclier ? (
+              <Animated.View style={{ pointerEvents: 'none', position: 'absolute', left: -fs * 0.06, top: -fs * 0.06, width: fs * 1.12, height: fs * 1.12,
+                opacity: bulleBouclier.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
+                transform: [{ scale: bulleBouclier.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }) }] }}>
+                <View style={[styles.bulleBouclier, { width: fs * 1.12, height: fs * 1.12, borderRadius: fs * 0.56 }]} />
+                <View style={[styles.bulleBouclierReflet, { left: fs * 0.04, top: fs * 0.04, width: fs * 1.04, height: fs * 1.04, borderRadius: fs * 0.52 }]} />
+              </Animated.View>
+            ) : null}
             {/* Éclat blanc de la silhouette, au coup (03/10) — seulement si illustrée (un emoji ne se teinte pas). */}
             {floatDamage != null && hasCreatureArt(creatureId) && (
               <EclatSilhouette key={`${key}-eclat-${roundKey}`} creatureId={creatureId} stageIndex={stageIndex} emoji={emoji} size={fs} style={adversaire ? MIROIR : null} />
@@ -1742,7 +1785,7 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
           transform: [{ scale: phaseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) }],
         }]}>
           <Text style={styles.phaseBreakText}>LE GARDIEN SE RELÈVE</Text>
-          <Text style={styles.phaseBreakSub}>Il récupère ses forces</Text>
+          <Text style={styles.phaseBreakSub}>Il récupère ses forces et un nouveau bouclier 🛡️</Text>
         </Animated.View>
       )}
 
@@ -1755,6 +1798,8 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
         const fainted = pvAffiche('o', i, o.hp) <= 0;
         return renderSprite({
           key: `o${i}`, sansJauges: true,
+          // 🛡️ Le Gardien porte sa bulle de bouclier (visible tant que le bouclier tient).
+          bouclier: isBoss && i === 0 && !fainted,
           // Le boss est plus imposant : emplacement recentré et agrandi
           // de 70 %, pour qu'il pèse à l'écran au lieu de ressembler à
           // une créature ordinaire.
@@ -2584,7 +2629,13 @@ const styles = StyleSheet.create({
   },
   bossHpFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#FF5252' },
   // Repère à 50 % : le joueur voit où s'arrête la manche 1.
-  bossHpHalfMark: { position: 'absolute', left: '50%', top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(255,255,255,0.45)' }, // sous le texte « PV / PV max »
+  // Repère de mi-vie = là où le Gardien se relève AVEC SON 2ᵉ BOUCLIER : trait BLEU, plus large (demande de l'auteur, 20/10),
+  // liseré sombre pour ressortir sur le rouge.
+  bossHpHalfMark: { position: 'absolute', left: '50%', top: 0, bottom: 0, width: 5, marginLeft: -2.5, backgroundColor: '#5ad1ff',
+    borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(0,25,50,0.7)' },
+  // Bulle de bouclier du Gardien : bord bleu lumineux, voile bleu léger, reflet intérieur.
+  bulleBouclier: { position: 'absolute', left: 0, top: 0, borderWidth: 3, borderColor: 'rgba(140,225,255,0.95)', backgroundColor: 'rgba(90,200,255,0.07)' },
+  bulleBouclierReflet: { position: 'absolute', borderWidth: 1.5, borderColor: 'rgba(210,245,255,0.55)' },
   devWinBtn: {
     alignSelf: 'center', marginTop: 8,
     paddingVertical: 5, paddingHorizontal: 14,

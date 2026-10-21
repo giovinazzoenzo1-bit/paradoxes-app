@@ -4477,7 +4477,10 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   grosses » → `SPRITE_BASE` 160 (+54 % sur 104), Gardien `GARDIEN_TAILLE` 1,4 (224 ; à 1,7 il mordait sur le bandeau et les
   cartes). Vie + bouclier du Gardien EN HAUT À DROITE dans le bandeau (un panneau large comme les 3 cases adverses,
   manche, repère de mi-vie) ; l'ancienne barre pleine largeur ne garde que le bouton de test, sans fond. Vérifié au banc en
-  844 × 390 et 800 × 360. Banc : `combat-niveaux&gardien=1`. 20/10 : Abyssorax, Aquamira, Arcanis, Braiserose, Brontobloc, Nocturis,
+  844 × 390 et 800 × 360. Banc : `combat-niveaux&gardien=1`. Puis (même soir) : créatures 180 (+73 %), Gardien 1,33 (240),
+  créatures de devant remontées de 2 % (pieds sur les cartes) ; BULLE DE BOUCLIER bleue sur le Gardien tant que son bouclier
+  tient (surgit avec un rebond, respire, s'efface quand il casse ; lueur DERRIÈRE la créature — devant, elle le teintait tout
+  en bleu) ; repère de mi-vie = trait BLEU de 5 px ; « Il récupère ses forces et un nouveau bouclier 🛡️ ». 20/10 : Abyssorax, Aquamira, Arcanis, Braiserose, Brontobloc, Nocturis,
   Racinea, Runicor, Zephyrion intégrés. ⚠️ `integrer-creature.py` : quand les NOMS numérotent les stades (p1-3, stage 1-3)
   et que la surface les contredit, le NOM l'emporte (Arcanis : stade 2 plus élancé, MOINS de surface que le stade 1 → passait
   bébé). 20/10 : Tartaroth intégrée (arrivée PENDANT une publication : le rebase l'avait embarquée sans l'intégrer —
