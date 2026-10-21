@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GuideTuto from '../../components/GuideTuto';
-import { ETAPES, lireTuto, abonnerTuto, estVu, tutoActif, vuEtape, mesurerCible } from '../../games/clicker/tutoriel';
+import { ETAPES, PACTE_CONSEIL_NIVEAUX, lireTuto, abonnerTuto, ecrireTuto, estVu, tutoActif, vuEtape, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanResponder, Animated, Easing, StyleSheet, Dimensions, Platform } from 'react-native';
 import { CHAPITRES_GRIMOIRE } from '../../games/clicker/grimoireChapitres';
@@ -466,9 +466,15 @@ function Grimoire(props) {
     const t0 = setTimeout(mesure, 120); const iv = setInterval(mesure, 600);
     return () => { clearTimeout(t0); clearInterval(iv); };
   }, [etapeGrimoire, position.c, position.p]);
-  // Le Pacte acheté : conseil vu.
-  const pacteDepartRef = useRef(props.tapPower);
-  useEffect(() => { if (props.tapPower > pacteDepartRef.current && tuto && !estVu(tuto, 'pacte')) setTuto(vuEtape(tuto, 'pacte')); }, [props.tapPower]);
+  // 21/10 (auteur) : 3 NIVEAUX de Pacte avant la suite. Le niveau de départ est gardé DANS la mémoire du tuto (`pacteDepart`) :
+  // on peut sortir de la boutique entre deux achats sans recommencer le compte.
+  useEffect(() => {
+    if (etapeGrimoire === 'pacte' && tuto && tuto.pacteDepart == null) ecrireTuto({ ...tuto, pacteDepart: props.tapPower });
+  }, [etapeGrimoire]);
+  const pactesAchetes = tuto && tuto.pacteDepart != null ? Math.max(0, props.tapPower - tuto.pacteDepart) : 0;
+  useEffect(() => {
+    if (tuto && tutoActif(tuto) && !estVu(tuto, 'pacte') && tuto.pacteDepart != null && pactesAchetes >= PACTE_CONSEIL_NIVEAUX) setTuto(vuEtape(tuto, 'pacte'));
+  }, [pactesAchetes]);
   // 17/10 : où se trouve l'article du défi d'achat en cours (chapitre, double page) — pour les lueurs de navigation.
   const guide = (() => {
     if (!props.cibleDefi) return null;
@@ -624,7 +630,8 @@ function Grimoire(props) {
       {/* 🎓 Repère (0, 0) du Grimoire et guide du conseil (aucun conteneur plein écran : seule la croix capte le doigt). */}
       <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
       {etapeGrimoire && rectTuto ? (
-        <GuideTuto rect={rectTuto} forme={ETAPES[etapeGrimoire].forme} texte={ETAPES[etapeGrimoire].texte} ecran={{ l: ECRAN_L, h: ECRAN_H }}
+        <GuideTuto rect={rectTuto} forme={ETAPES[etapeGrimoire].forme} ecran={{ l: ECRAN_L, h: ECRAN_H }}
+          texte={etapeGrimoire === 'pacte' ? avecCompteur(ETAPES.pacte.texte, pactesAchetes, PACTE_CONSEIL_NIVEAUX) : ETAPES[etapeGrimoire].texte}
           onFermer={() => setTuto(vuEtape(tuto, etapeGrimoire))} />
       ) : null}
     </View>

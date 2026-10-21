@@ -17,14 +17,16 @@ export const ETAPES = {
   boutique: { texte: 'Clique ici pour ouvrir la boutique.', forme: 'rond' },
   defi: { texte: 'Accomplis ce défi pour faire avancer ton œuf.', forme: 'carre' },
   doree: { texte: 'Touche-la vite pour un bonus !', forme: 'rond' },
-  transe: { texte: "Tape sans t'arrêter : tes pièces sont multipliées !", forme: 'carre' },
+  // 21/10 (auteur) : un vrai PALIER — rester 15 s en Transe (de quoi s'offrir 3 niveaux de Pacte ensuite).
+  transe: { texte: "Tape sans t'arrêter : reste en Transe 15 secondes !", forme: 'rond' },
   creature: { texte: 'Ta première créature rejoint ton équipe ici !', forme: 'carre' }, // UNE phrase (le contrôle l'a vu)
   aventure: { texte: "Clique ici pour l'envoyer au combat !", forme: 'rond' },
   incubateur: { texte: 'Ton œuf éclot ici, tout seul.', forme: 'rond' },
   calendrier: { texte: "Ton cadeau du jour t'attend ici !", forme: 'rond' },
   ascension: { texte: 'Ta première Ascension est prête : ouvre la boutique !', forme: 'rond' },
   // Grimoire (boutique)
-  pacte: { texte: 'Clique ici pour acheter le Pacte et gagner encore plus de pièces !', forme: 'rond' },
+  // 21/10 (auteur) : 3 niveaux de Pacte avant de passer à la suite.
+  pacte: { texte: 'Clique ici pour acheter 3 niveaux de Pacte et gagner encore plus de pièces !', forme: 'rond' },
   sceau: { texte: 'Clique ici pour faire ta première Ascension !', forme: 'rond' },
   // Aventure
   combat: { texte: 'Clique ici pour lancer ton premier combat !', forme: 'rond' },
@@ -38,9 +40,19 @@ export const ETAPES = {
 };
 
 // Ordre de priorité de l'écran principal : UN conseil à la fois.
-export const ORDRE_ECRAN = ['taper', 'boutique', 'defi', 'doree', 'transe', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension'];
-// « Clique ici pour gagner des pièces » s'en va tout seul après ce nombre de taps.
-export const TAPS_CONSEIL_TAPER = 10;
+// 21/10 (auteur) : l'œuf (100 taps), PUIS la Transe (15 s), PUIS la boutique et le Pacte (3 niveaux), PUIS le défi…
+export const ORDRE_ECRAN = ['taper', 'transe', 'boutique', 'defi', 'doree', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension'];
+// « Clique ici pour gagner des pièces » : 100 taps sur l'œuf avant le conseil suivant (auteur, 21/10 ; avant : 10).
+export const TAPS_CONSEIL_TAPER = 100;
+// « Reste en Transe » : 15 secondes d'affilée (auteur, 21/10).
+export const TRANSE_CONSEIL_SEC = 15;
+// « Achète le Pacte » : 3 niveaux avant de passer à la suite (auteur, 21/10).
+export const PACTE_CONSEIL_NIVEAUX = 3;
+// La progression DANS la phrase, avant son « ! » final (« … pièces (37/100) ! ») : toujours une seule phrase.
+export function avecCompteur(texte, n, total) {
+  const t = String(texte || ''); const c = ` (${Math.max(0, Math.min(total, Math.floor(n)))}/${total})`;
+  return / !$/.test(t) ? t.replace(/ !$/, c + ' !') : t + c;
+}
 // Les conseils qui ne demandent rien (« ta créature est ici ») s'en vont seuls après ce temps.
 export const DUREE_CONSEIL_INFO_MS = 7000;
 // Les runes s'expliquent quand le joueur a de quoi en fabriquer une (sa 3ᵉ poudre runique, demande de l'auteur).

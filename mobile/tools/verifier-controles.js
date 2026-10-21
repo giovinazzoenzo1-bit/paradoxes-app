@@ -611,6 +611,8 @@ const SABOTAGES = [
     remplace("refPrix={id === 'pacte' ?", "refPrix={id === 'tapPower' ?")],
   ['auditTutoriel', path.join(RACINE, 'src/games/clicker/tutoriel.js'), "les runes s'expliquent dès la 1re poudre (l'auteur : à la 3ᵉ)",
     remplace('export const POUDRE_CONSEIL_RUNES = 3;', 'export const POUDRE_CONSEIL_RUNES = 1;')],
+  ['auditTutoriel', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "la boutique arrive avant les 15 s de Transe (l'auteur : la Transe d'abord)",
+    remplace("boutique: estVu(tuto, 'transe') &&", "boutique: estVu(tuto, 'taper') &&")],
   ['auditTutoriel', path.join(RACINE, 'src/components/GuideTuto.js'), "le rond redevient une Animated.Image (sur téléphone : impossible de taper à l'intérieur, bug du 21/10)",
     remplace('<Image source={IMG.rond} resizeMethod="scale"', '<Animated.Image source={IMG.rond} resizeMethod="scale"')],
   ['auditTutoriel', path.join(RACINE, 'src/components/GuideTuto.js'), "la petite croix ne ferme plus le conseil",

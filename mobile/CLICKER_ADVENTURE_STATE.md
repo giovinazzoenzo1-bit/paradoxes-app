@@ -4566,6 +4566,10 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   du jeu portent `pointerEvents` sur une ligne : à revoir une par une si un « on ne peut pas toucher » revient.
 - Rond AMINCI (demande de l'auteur) sans nouvelle image : la bande resserrée vers son milieu à 40 % de son épaisseur
   (rééchantillonnage radial : contour et reflets gardés).
+- 21/10 (auteur) : DÉBUT GUIDÉ — 100 taps sur l'œuf (compteur « (37/100) » dans la phrase), PUIS « reste en Transe 15
+  secondes » (rond sur l'œuf, chrono de la Transe EN COURS : elle casse → zéro), PUIS la boutique, PUIS 3 NIVEAUX de Pacte
+  (niveau de départ gardé dans la mémoire du tuto, `pacteDepart` : on peut sortir de la boutique entre deux achats), PUIS le
+  défi. Les 15 s de Transe donnent de quoi s'offrir les 3 Pactes. Compteurs via `avecCompteur` (toujours une seule phrase).
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »

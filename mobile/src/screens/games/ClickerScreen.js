@@ -281,8 +281,8 @@ import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import GuideTuto from '../../components/GuideTuto';
-import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, DUREE_CONSEIL_INFO_MS, lireTuto, ecrireTuto, abonnerTuto, estVu, choisirEtape, vuEtape,
-  estVeteran, mesurerCible } from '../../games/clicker/tutoriel';
+import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, lireTuto, ecrireTuto, abonnerTuto, estVu, choisirEtape, vuEtape,
+  estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
 import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_MS, MINI_JEU_DELAI_OUVERTURE_MS,
   MINI_JEU_DEFIS_CONTINUS, MINI_JEU_PRESENCE_MS } from '../../games/clicker/miniJeux';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
@@ -3355,10 +3355,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     && pickerSlot === null && !selectedCreature && !ficheAventure && !rewardCreature && !powerCast && !miniJeuOuvert;
   const condTuto = {
     taper: true,
-    boutique: estVu(tuto, 'taper') && coins >= applyDiscount(tapPowerCost(tapPower)) && !estVu(tuto, 'pacte'),
+    boutique: estVu(tuto, 'transe') && coins >= applyDiscount(tapPowerCost(tapPower)) && !estVu(tuto, 'pacte'),
     defi: estVu(tuto, 'pacte') && !!currentChallengeId,
     doree: !!goldenTarget,
-    transe: comboCount > 1,
+    transe: estVu(tuto, 'taper'), // 21/10 (auteur) : après les 100 taps, tenir la Transe 15 s
     creature: owned.length > 0,
     aventure: estVu(tuto, 'creature') && owned.length > 0,
     incubateur: !!incubatingEgg,
@@ -3373,7 +3373,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     ecrireTuto(estVeteran({ creatures: owned.length, ascensions: ascensionCount }) ? { ...tuto, passe: true, decide: true } : { ...tuto, decide: true });
   }, [loaded, tuto]);
   // Où est la cible du conseil : mesurée dans la fenêtre (rien à recalculer à la main), puis suivie toutes les 0,6 s.
-  const CLE_CIBLE_TUTO = { taper: 'oeuf', boutique: 'boutique', ascension: 'boutique', doree: 'doree', transe: 'transe', creature: 'deck',
+  const CLE_CIBLE_TUTO = { taper: 'oeuf', boutique: 'boutique', ascension: 'boutique', doree: 'doree', transe: 'oeuf', creature: 'deck',
     aventure: 'exploration', incubateur: 'incubateur', calendrier: 'calendrier' };
   useEffect(() => {
     setRectTuto(null);
@@ -3387,7 +3387,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       }
       mesurerCible(racineTutoRef.current, ciblesTutoRef.current[CLE_CIBLE_TUTO[etapeEcran]], (r0) => {
         // L'œuf VISIBLE ne remplit pas son carré : le rond entoure son corps (56 % du carré), pas toute la zone.
-        const r = etapeEcran === 'taper' ? { x: r0.x + r0.l * 0.22, y: r0.y + r0.h * 0.22, l: r0.l * 0.56, h: r0.h * 0.56 } : r0;
+        const r = etapeEcran === 'taper' || etapeEcran === 'transe' ? { x: r0.x + r0.l * 0.22, y: r0.y + r0.h * 0.22, l: r0.l * 0.56, h: r0.h * 0.56 } : r0;
         setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r));
       });
     };
@@ -3399,7 +3399,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   useEffect(() => {
     const avant = etapeAfficheeRef.current;
     if (avant && avant !== etapeEcran) {
-      if ((avant === 'doree' || avant === 'transe') && !condTuto[avant]) vuTuto(avant);
+      if (avant === 'doree' && !condTuto[avant]) vuTuto(avant);
       if ((avant === 'boutique' || avant === 'ascension') && view === 'shop') vuTuto(avant);
       if (avant === 'aventure' && view === 'adventure') vuTuto('aventure');
       if (avant === 'incubateur' && incubatorOpen) vuTuto('incubateur');
@@ -3413,6 +3413,22 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   useEffect(() => {
     if (defiTutoRef.current && currentChallengeId !== defiTutoRef.current) { defiTutoRef.current = null; vuTuto('defi'); }
   }, [currentChallengeId]);
+  // « Reste en Transe 15 secondes » : chrono de la Transe EN COURS (taps sans pause) ; elle casse → on repart de zéro.
+  const comboTutoRef = useRef(0); comboTutoRef.current = comboCount;
+  const transeTutoDebutRef = useRef(null);
+  const [transeTutoSec, setTranseTutoSec] = useState(0);
+  useEffect(() => {
+    if (etapeEcran !== 'transe') { transeTutoDebutRef.current = null; return undefined; }
+    const id = setInterval(() => {
+      const now = Date.now();
+      if (!(comboTutoRef.current > 1 && transeStillActive(lastTapTimeRef.current, now))) { transeTutoDebutRef.current = null; setTranseTutoSec(0); return; }
+      if (transeTutoDebutRef.current === null) transeTutoDebutRef.current = now;
+      const sec = (now - transeTutoDebutRef.current) / 1000;
+      setTranseTutoSec(Math.floor(sec));
+      if (sec >= TRANSE_CONSEIL_SEC) vuTuto('transe');
+    }, 250);
+    return () => clearInterval(id);
+  }, [etapeEcran]);
   // « Ta première créature » ne demande rien : il s'en va seul.
   useEffect(() => {
     if (etapeEcran !== 'creature') return undefined;
@@ -5059,7 +5075,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           de tout). ⚠️ Le guide n'a AUCUN conteneur plein écran : seule sa petite croix capte le doigt. */}
       <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
       {etapeEcran && rectTuto ? (
-        <GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme} texte={ETAPES[etapeEcran].texte} ecran={{ l: SCREEN_W, h: SCREEN_H }}
+        <GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme} ecran={{ l: SCREEN_W, h: SCREEN_H }}
+          texte={etapeEcran === 'taper' ? avecCompteur(ETAPES.taper.texte, tapsTutoRef.current, TAPS_CONSEIL_TAPER)
+            : etapeEcran === 'transe' ? avecCompteur(ETAPES.transe.texte, transeTutoSec, TRANSE_CONSEIL_SEC) : ETAPES[etapeEcran].texte}
           onFermer={() => vuTuto(etapeEcran)} />
       ) : null}
       {/* ⚠️ Ces deux fenêtres vivent À LA RACINE de l'écran, PAS dans

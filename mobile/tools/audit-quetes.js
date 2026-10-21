@@ -4572,7 +4572,10 @@ function auditTutoriel() {
     if (/[.!?]\s+\S/.test(e.texte.trim())) pb.push(id + ' : plus d\'une phrase (« ' + e.texte + ' »)');
   }
   if (t.CLE_TUTO !== 'tuto:v2') pb.push('le tuto n\'a plus sa mémoire à part (tuto:v2)');
-  if (t.TAPS_CONSEIL_TAPER !== 10 || t.POUDRE_CONSEIL_RUNES !== 3) pb.push('règles du tuto changées (10 taps, 3 poudres runiques — demande de l\'auteur)');
+  // 21/10 (auteur) : 100 taps sur l'œuf, PUIS 15 s de Transe, PUIS 3 niveaux de Pacte ; les runes à la 3ᵉ poudre.
+  if (t.TAPS_CONSEIL_TAPER !== 100 || t.TRANSE_CONSEIL_SEC !== 15 || t.PACTE_CONSEIL_NIVEAUX !== 3 || t.POUDRE_CONSEIL_RUNES !== 3) pb.push('règles du tuto changées (100 taps, 15 s de Transe, 3 Pactes, 3 poudres — demandes de l\'auteur)');
+  if (t.ORDRE_ECRAN.slice(0, 4).join(',') !== 'taper,transe,boutique,defi') pb.push('ordre du début du tuto changé (œuf, Transe, boutique, défi)');
+  if (t.avecCompteur('Clique ici pour gagner des pièces !', 37, 100) !== 'Clique ici pour gagner des pièces (37/100) !') pb.push('le compteur du tuto n\'est plus dans la phrase, avant son « ! »');
   const tu = { vus: ['taper'], passe: false, decide: true };
   if (t.choisirEtape({ taper: true, boutique: true }, tu, t.ORDRE_ECRAN) !== 'boutique') pb.push('un conseil déjà vu revient');
   if (t.choisirEtape({ taper: true }, { vus: [], passe: true, decide: true }, t.ORDRE_ECRAN) !== null) pb.push('un tuto passé affiche encore des conseils');
@@ -4599,6 +4602,8 @@ function auditTutoriel() {
   if (!Cl.includes('<GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme}') || !Cl.includes("if (etapeTutoRef.current === 'taper') { tapsTutoRef.current += 1;")) pb.push('écran principal : le tuto n\'est plus branché');
   const Gr = lire('src/screens/games/GrimoireBoutique.js');
   if (!Gr.includes("refPrix={id === 'pacte' ?") || !Gr.includes("idsVus.includes('pacte')")) pb.push('Grimoire : le rond du Pacte ne vise plus l\'article « pacte » (son vrai nom)');
+  if (!Gr.includes('pactesAchetes >= PACTE_CONSEIL_NIVEAUX') || !Gr.includes('ecrireTuto({ ...tuto, pacteDepart: props.tapPower })')) pb.push('Grimoire : le conseil du Pacte ne demande plus 3 niveaux (gardés entre deux visites)');
+  if (!Cl.includes("transe: estVu(tuto, 'taper'),") || !Cl.includes("boutique: estVu(tuto, 'transe') &&") || !Cl.includes("if (sec >= TRANSE_CONSEIL_SEC) vuTuto('transe');")) pb.push('écran principal : la Transe de 15 s n\'est plus entre l\'œuf et la boutique');
   const Co = lire('src/screens/games/CombatScreen.js');
   if (!Co.includes("phase === 'choosing' && !estVu(tuto, 'attaque') ? 'attaque'") || !Co.includes("phase === 'tapping' && !estVu(tuto, 'jauge') ? 'jauge'")) pb.push('combat : les conseils attaque / jauge ont disparu');
   const Av = lire('src/screens/games/AdventureScreen.js');
