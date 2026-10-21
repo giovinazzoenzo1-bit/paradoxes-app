@@ -4490,10 +4490,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
             <TouchableOpacity ref={(r) => { ciblesTutoRef.current.incubateur = r; }} style={styles.incubatorBtn} onPress={() => setIncubatorOpen(true)}>
               {/* Œuf dans l'incubateur : une LUEUR DORÉE (image, deux couches) qui respire avec l'icône. ⚠️ Avant : une ombre
                   colorée — sur iPhone elle restait à peine visible (photo de l'auteur, 20/10), et Android ne la dessinait pas. */}
+              {/* ⚠️ Dans une VUE transparente au doigt : sur téléphone, une image ignore `pointerEvents` (bug du rond du tuto,
+                  21/10) — cette lueur déborde du bouton et aurait pu prendre le doigt au calendrier ou au 🛠️. */}
               {incubatingEgg ? [0, 1].map((k) => (
-                <Animated.Image key={k} source={LUEUR_OR_INCUBATEUR} resizeMode="contain" style={[styles.incubatorLueur, { pointerEvents: 'none',
+                <Animated.View key={k} style={[styles.incubatorLueur, { pointerEvents: 'none',
                   opacity: incubatorPulse.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }),
-                  transform: [{ scale: incubatorPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] }]} />
+                  transform: [{ scale: incubatorPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] }]}>
+                  <Image source={LUEUR_OR_INCUBATEUR} resizeMode="contain" style={{ width: 132, height: 132 }} />
+                </Animated.View>
               )) : null}
               <Animated.View
                 style={[

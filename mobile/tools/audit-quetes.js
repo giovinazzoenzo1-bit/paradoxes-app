@@ -4585,11 +4585,16 @@ function auditTutoriel() {
   // seule la croix le prend.
   const G = lire('src/components/GuideTuto.js').replace(/\/\/[^\n]*/g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
   if (G.includes('StyleSheet.absoluteFill') || /flex:\s*1/.test(G)) pb.push('le guide du tuto a un conteneur plein écran (il avalerait les taps)');
-  if (!G.includes("pointerEvents: 'box-none'") || !G.includes("styles.texte, { pointerEvents: 'none' }") || !G.includes('onPress={onFermer}')) pb.push('la bulle du tuto capte le doigt, ou n\'a plus sa petite croix');
+  if (!G.includes("pointerEvents: 'box-none'") || !G.includes("<View style={{ pointerEvents: 'none' }}>\n          <Text style={styles.texte}>") || !G.includes('onPress={onFermer}')) pb.push('la bulle du tuto capte le doigt, ou n\'a plus sa petite croix');
+  // ⚠️ Bug réel du 21/10 (APK : « on ne peut pas cliquer à l'intérieur du rond ») : sur téléphone, une IMAGE ignore `pointerEvents`
+  // (le banc web, lui, le respecte). Toute image du guide est DANS une vue transparente au doigt — aucune Animated.Image.
+  if (G.includes('Animated.Image') || !G.includes("const deco = (style, enfant, key) => <Animated.View key={key} style={[{ position: 'absolute', zIndex, pointerEvents: 'none' }, style]}>{enfant}</Animated.View>;")) pb.push('une image du guide du tuto n\'est plus dans une vue transparente au doigt (sur téléphone, elle bloque les taps)');
+  if (!Cl.includes('<Image source={LUEUR_OR_INCUBATEUR} resizeMode="contain" style={{ width: 132, height: 132 }} />')) pb.push('la lueur de l\'incubateur n\'est plus dans une vue transparente au doigt');
   if (!G.includes("outputRange: ['0deg', '360deg']") || !G.includes('<CadreTuto l={boite.l} h={boite.h} />')) pb.push('le rond ne tourne plus, ou le carré a disparu');
   // Les étoiles ne tournent PAS avec le rond (demande de l'auteur) : elles ne sont pas dans l'élément qui tourne.
-  const iRond = G.indexOf("source={IMG.rond}"), iEtoile = G.indexOf("source={IMG.etoile}");
-  if (iRond < 0 || iEtoile < 0 || G.slice(iRond, iEtoile).includes('</Animated.View>') === false && G.slice(iRond, iEtoile).includes('<Animated.Image source={IMG.etoile}')) pb.push('les étoiles tournent avec le rond');
+  const iEt = G.indexOf("source={IMG.etoile}");
+  const blocEtoiles = iEt >= 0 ? G.slice(G.lastIndexOf('{deco(', iEt), G.indexOf("'etoile2')", iEt)) : '';
+  if (iEt < 0 || blocEtoiles.includes('rotate') || !G.includes("source={IMG.rond}")) pb.push('les étoiles tournent avec le rond');
   // Branchements.
   if (!Cl.includes('<GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme}') || !Cl.includes("if (etapeTutoRef.current === 'taper') { tapsTutoRef.current += 1;")) pb.push('écran principal : le tuto n\'est plus branché');
   const Gr = lire('src/screens/games/GrimoireBoutique.js');

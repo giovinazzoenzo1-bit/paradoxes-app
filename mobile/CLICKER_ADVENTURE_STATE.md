@@ -4559,6 +4559,13 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   rune », puis INVENTAIRE pour l'équiper).
 - Banc : `menu&tuto=1&vus=…`, `grimoire&tuto=1&vus=…`, `combat-niveaux&tuto=1`, exploration `?tuto=1&poudre=3` ; la
   sonde des taps accepte `PARAMS_SCENE=?tuto=1` (20/20 avec le conseil de l'œuf affiché). Contrôle `auditTutoriel` + 4 pièges.
+- ⚠️ BUG RÉEL (21/10, APK : « on ne peut pas cliquer à l'intérieur du rond ») : sur TÉLÉPHONE, `pointerEvents` n'est respecté
+  que par les VUES — une IMAGE (Image, Animated.Image) l'ignore et prend le doigt. Le banc web, lui, le respecte (20/20 au banc,
+  0 sur l'APK) : il ne PEUT PAS voir ce bug. Règle : toute image décorative posée par-dessus quelque chose de touchable va DANS
+  une vue `pointerEvents: 'none'` (le guide : `deco(...)` ; la lueur de l'incubateur aussi). Contrôlé + piège. 16 autres images
+  du jeu portent `pointerEvents` sur une ligne : à revoir une par une si un « on ne peut pas toucher » revient.
+- Rond AMINCI (demande de l'auteur) sans nouvelle image : la bande resserrée vers son milieu à 40 % de son épaisseur
+  (rééchantillonnage radial : contour et reflets gardés).
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »

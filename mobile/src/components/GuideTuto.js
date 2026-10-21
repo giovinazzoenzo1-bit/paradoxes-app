@@ -1,5 +1,6 @@
 // 🎓 GUIDE DU TUTORIEL (21/10, demande de l'auteur) : un REPÈRE autour de ce qu'il faut toucher, et UNE phrase.
-//  - ROND doré (image Gemini 110) qui TOURNE doucement ; CARRÉ doré (image 112, remonté en 12 morceaux pour s'étirer sans
+//  - ROND doré (image Gemini 110, AMINCI à 40 % de son épaisseur le 21/10 — demande de l'auteur : la bande resserrée vers son
+//    milieu, contour et reflets gardés) qui TOURNE doucement ; CARRÉ doré (image 112, remonté en 12 morceaux pour s'étirer sans
 //    déformer ses coins) qui RESPIRE ;
 //  - deux ÉTOILES (image 111) en haut à droite, qui scintillent chacune à leur rythme et NE tournent PAS avec le rond ;
 //  - une lueur dorée derrière (ajoutée par le jeu, comme convenu) ;
@@ -100,35 +101,38 @@ export default function GuideTuto({ rect, forme = 'rond', texte, onFermer, ecran
   // Les étoiles SUR le rond, en haut à droite (comme le dessin de l'auteur) ; au coin haut-droit du carré.
   const etoiles = forme === 'rond' ? { x: cx + 0.707 * (D / 2), y: cy - 0.707 * (D / 2) } : { x: boite.x + boite.l, y: boite.y };
 
+  // ⚠️ BUG RÉEL (21/10, auteur : « on ne peut pas cliquer à l'intérieur du rond ») : sur TÉLÉPHONE, `pointerEvents` n'est
+  // respecté que par les VUES — une IMAGE l'ignore et prend le doigt (le banc web, lui, le respecte : 20/20 au banc, 0 sur
+  // l'APK). Chaque image décorative est donc posée DANS une vue transparente au doigt ; le texte aussi.
+  const deco = (style, enfant, key) => <Animated.View key={key} style={[{ position: 'absolute', zIndex, pointerEvents: 'none' }, style]}>{enfant}</Animated.View>;
   return (
     <>
       {/* Lueur dorée derrière le repère. */}
-      <Animated.Image source={IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ position: 'absolute', zIndex, pointerEvents: 'none',
-        left: boite.x - boite.l * 0.25, top: boite.y - boite.h * 0.25, width: boite.l * 1.5, height: boite.h * 1.5,
-        opacity: Animated.multiply(apparition, respire.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.6] })) }} />
-      {forme === 'rond' ? (
-        <Animated.Image source={IMG.rond} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', zIndex, pointerEvents: 'none',
-          left: boite.x, top: boite.y, width: boite.l, height: boite.h, opacity: apparition,
-          transform: [{ rotate: tour.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }} />
-      ) : (
-        <Animated.View style={{ position: 'absolute', zIndex, pointerEvents: 'none', left: boite.x, top: boite.y, width: boite.l, height: boite.h,
-          opacity: apparition, transform: [{ scale: respire.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) }] }}>
-          <CadreTuto l={boite.l} h={boite.h} />
-        </Animated.View>
-      )}
+      {deco({ left: boite.x - boite.l * 0.25, top: boite.y - boite.h * 0.25, width: boite.l * 1.5, height: boite.h * 1.5,
+        opacity: Animated.multiply(apparition, respire.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.6] })) },
+        <Image source={IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ width: boite.l * 1.5, height: boite.h * 1.5 }} />, 'lueur')}
+      {forme === 'rond'
+        ? deco({ left: boite.x, top: boite.y, width: boite.l, height: boite.h, opacity: apparition,
+          transform: [{ rotate: tour.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] },
+          <Image source={IMG.rond} resizeMethod="scale" resizeMode="contain" style={{ width: boite.l, height: boite.h }} />, 'rond')
+        : deco({ left: boite.x, top: boite.y, width: boite.l, height: boite.h, opacity: apparition,
+          transform: [{ scale: respire.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) }] },
+          <CadreTuto l={boite.l} h={boite.h} />, 'carre')}
       {/* Les étoiles : à part du rond (elles ne tournent pas avec lui), chacune son rythme. */}
-      <Animated.Image source={IMG.etoile} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', zIndex, pointerEvents: 'none',
-        left: etoiles.x - 16, top: etoiles.y - 14, width: 28, height: 28,
+      {deco({ left: etoiles.x - 16, top: etoiles.y - 14, width: 28, height: 28,
         opacity: Animated.multiply(apparition, scint1.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] })),
-        transform: [{ scale: scint1.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1.15] }) }] }} />
-      <Animated.Image source={IMG.etoile} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', zIndex, pointerEvents: 'none',
-        left: etoiles.x + 6, top: etoiles.y + 8, width: 17, height: 17,
+        transform: [{ scale: scint1.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1.15] }) }] },
+        <Image source={IMG.etoile} resizeMethod="scale" resizeMode="contain" style={{ width: 28, height: 28 }} />, 'etoile1')}
+      {deco({ left: etoiles.x + 6, top: etoiles.y + 8, width: 17, height: 17,
         opacity: Animated.multiply(apparition, scint2.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] })),
-        transform: [{ scale: scint2.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.2] }) }] }} />
-      {/* La bulle : transparente au toucher, sauf la petite croix. */}
+        transform: [{ scale: scint2.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.2] }) }] },
+        <Image source={IMG.etoile} resizeMethod="scale" resizeMode="contain" style={{ width: 17, height: 17 }} />, 'etoile2')}
+      {/* La bulle : transparente au toucher, sauf la petite croix (le texte est dans une VUE transparente au doigt). */}
       <Animated.View style={[styles.bulle, { zIndex, left: bulleLeft, top: bulleTop, width: BL, minHeight: BH, opacity: apparition, pointerEvents: 'box-none' }]}>
         {/* Espace INSÉCABLE avant « ! ? : ; » : au banc, le « ! » partait seul à la ligne. */}
-        <Text style={[styles.texte, { pointerEvents: 'none' }]}>{String(texte || '').replace(/ ([!?:;])/g, '\u00A0$1')}</Text>
+        <View style={{ pointerEvents: 'none' }}>
+          <Text style={styles.texte}>{String(texte || '').replace(/ ([!?:;])/g, '\u00A0$1')}</Text>
+        </View>
         <TouchableOpacity onPress={onFermer} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={styles.croix} accessibilityLabel="Fermer le conseil">
           <Text style={styles.croixTexte}>✕</Text>
         </TouchableOpacity>
