@@ -615,6 +615,8 @@ const SABOTAGES = [
     remplace("boutique: estVu(tuto, 'transe') &&", "boutique: estVu(tuto, 'taper') &&")],
   ['auditTutoriel', path.join(RACINE, 'src/components/GuideTuto.js'), "le rond redevient une Animated.Image (sur téléphone : impossible de taper à l'intérieur, bug du 21/10)",
     remplace('<Image source={IMG.rond} resizeMethod="scale"', '<Animated.Image source={IMG.rond} resizeMethod="scale"')],
+  ['auditTutoriel', path.join(RACINE, 'src/components/GuideTuto.js'), "la bulle du tuto reprend le doigt (posée sur le nid, elle avalait les taps — sonde du 21/10)",
+    remplace("minHeight: BH, opacity: apparition, pointerEvents: 'none' }]}>", "minHeight: BH, opacity: apparition, pointerEvents: 'auto' }]}>")],
   ['auditTutoriel', path.join(RACINE, 'src/components/GuideTuto.js'), "la petite croix ne ferme plus le conseil",
     remplace('onPress={onFermer}', 'onPress={() => {}}')],
   ['auditIllustrationsFrere', path.join(RACINE, 'src/components/CreatureArt.js'), "Solarion perd son image (retour à l'emoji)",

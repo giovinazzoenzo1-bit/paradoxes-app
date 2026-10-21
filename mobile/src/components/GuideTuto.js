@@ -94,7 +94,11 @@ export default function GuideTuto({ rect, forme = 'rond', texte, onFermer, ecran
     ? { x: cx - D / 2, y: cy - D / 2, l: D, h: D }
     : { x: rect.x - M, y: rect.y - M, l: rect.l + 2 * M, h: rect.h + 2 * M };
   // La bulle : sous le repère s'il y a la place, sinon au-dessus ; jamais hors de l'écran.
-  const BL = Math.min(ecran.l - 24, 320); const BH = 60;
+  // Hauteur de la bulle selon le nombre de lignes (≈ 35 caractères par ligne à 320 de large) : placée au-dessus, elle ne
+  // déborde ainsi jamais sur sa cible.
+  const BL = Math.min(ecran.l - 24, 320);
+  const lignes = Math.max(1, Math.ceil(String(texte || '').length / Math.max(18, Math.floor((BL - 38) / 8.2))));
+  const BH = Math.max(60, 24 + lignes * 19);
   const enBas = place === 'bas' || (place === 'auto' && boite.y + boite.h + 14 + BH < ecran.h - 8);
   const bulleTop = enBas ? boite.y + boite.h + 12 : Math.max(8, boite.y - 12 - BH);
   const bulleLeft = Math.max(12, Math.min(ecran.l - 12 - BL, cx - BL / 2));
@@ -127,16 +131,17 @@ export default function GuideTuto({ rect, forme = 'rond', texte, onFermer, ecran
         opacity: Animated.multiply(apparition, scint2.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] })),
         transform: [{ scale: scint2.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.2] }) }] },
         <Image source={IMG.etoile} resizeMethod="scale" resizeMode="contain" style={{ width: 17, height: 17 }} />, 'etoile2')}
-      {/* La bulle : transparente au toucher, sauf la petite croix (le texte est dans une VUE transparente au doigt). */}
-      <Animated.View style={[styles.bulle, { zIndex, left: bulleLeft, top: bulleTop, width: BL, minHeight: BH, opacity: apparition, pointerEvents: 'box-none' }]}>
+      {/* ⚠️ La bulle est ENTIÈREMENT transparente au doigt (`none`) et la croix est un bouton À PART posé sur son coin.
+          1re version : une bulle `box-none` — au banc, `box-none` n'était pas appliqué et la bulle, posée sur le nid, y prenait
+          les taps (sonde : nid 0/20 pendant les 100 taps du 1er conseil). `none` marche partout. */}
+      <Animated.View style={[styles.bulle, { zIndex, left: bulleLeft, top: bulleTop, width: BL, minHeight: BH, opacity: apparition, pointerEvents: 'none' }]}>
         {/* Espace INSÉCABLE avant « ! ? : ; » : au banc, le « ! » partait seul à la ligne. */}
-        <View style={{ pointerEvents: 'none' }}>
-          <Text style={styles.texte}>{String(texte || '').replace(/ ([!?:;])/g, '\u00A0$1')}</Text>
-        </View>
-        <TouchableOpacity onPress={onFermer} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={styles.croix} accessibilityLabel="Fermer le conseil">
-          <Text style={styles.croixTexte}>✕</Text>
-        </TouchableOpacity>
+        <Text style={styles.texte}>{String(texte || '').replace(/ ([!?:;])/g, '\u00A0$1')}</Text>
       </Animated.View>
+      <TouchableOpacity onPress={onFermer} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityLabel="Fermer le conseil"
+        style={[styles.croix, { zIndex: zIndex + 1, left: bulleLeft + BL - 22, top: bulleTop + 3 }]}>
+        <Text style={styles.croixTexte}>✕</Text>
+      </TouchableOpacity>
     </>
   );
 }
@@ -145,6 +150,6 @@ const styles = StyleSheet.create({
   bulle: { position: 'absolute', justifyContent: 'center', paddingVertical: 10, paddingLeft: 14, paddingRight: 24, borderRadius: 14,
     backgroundColor: 'rgba(28,16,6,0.92)', borderWidth: 2, borderColor: '#e8b33a' },
   texte: { color: '#FFF3D6', fontSize: 14, lineHeight: 19, fontWeight: '800', textAlign: 'center' },
-  croix: { position: 'absolute', right: 3, top: 2, width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
+  croix: { position: 'absolute', width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
   croixTexte: { color: 'rgba(255,243,214,0.75)', fontSize: 11, fontWeight: '900' },
 });

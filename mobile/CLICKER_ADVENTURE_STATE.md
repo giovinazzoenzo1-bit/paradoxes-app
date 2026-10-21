@@ -4570,6 +4570,9 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   secondes » (rond sur l'œuf, chrono de la Transe EN COURS : elle casse → zéro), PUIS la boutique, PUIS 3 NIVEAUX de Pacte
   (niveau de départ gardé dans la mémoire du tuto, `pacteDepart` : on peut sortir de la boutique entre deux achats), PUIS le
   défi. Les 15 s de Transe donnent de quoi s'offrir les 3 Pactes. Compteurs via `avecCompteur` (toujours une seule phrase).
+- ⚠️ Avec les 100 taps, la bulle reste longtemps posée sur le NID : en `box-none`, elle y prenait les taps (sonde : nid
+  0/20, bas de l'œuf 11/20 — au banc `box-none` n'est pas appliqué). La bulle est désormais ENTIÈREMENT `none` et la croix
+  est un bouton À PART posé sur son coin ; hauteur de bulle selon le nombre de lignes. Sonde avec conseil : 5/5.
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »

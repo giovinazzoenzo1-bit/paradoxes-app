@@ -4588,7 +4588,9 @@ function auditTutoriel() {
   // seule la croix le prend.
   const G = lire('src/components/GuideTuto.js').replace(/\/\/[^\n]*/g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
   if (G.includes('StyleSheet.absoluteFill') || /flex:\s*1/.test(G)) pb.push('le guide du tuto a un conteneur plein écran (il avalerait les taps)');
-  if (!G.includes("pointerEvents: 'box-none'") || !G.includes("<View style={{ pointerEvents: 'none' }}>\n          <Text style={styles.texte}>") || !G.includes('onPress={onFermer}')) pb.push('la bulle du tuto capte le doigt, ou n\'a plus sa petite croix');
+  // La bulle : ENTIÈREMENT transparente au doigt ; la croix est un bouton à part (21/10 : une bulle `box-none` prenait les taps
+  // sur le nid pendant les 100 taps du 1er conseil — sonde : nid 0/20).
+  if (!G.includes("minHeight: BH, opacity: apparition, pointerEvents: 'none' }]}>") || G.includes("'box-none'") || !G.includes('onPress={onFermer}')) pb.push('la bulle du tuto capte le doigt, ou n\'a plus sa petite croix');
   // ⚠️ Bug réel du 21/10 (APK : « on ne peut pas cliquer à l'intérieur du rond ») : sur téléphone, une IMAGE ignore `pointerEvents`
   // (le banc web, lui, le respecte). Toute image du guide est DANS une vue transparente au doigt — aucune Animated.Image.
   if (G.includes('Animated.Image') || !G.includes("const deco = (style, enfant, key) => <Animated.View key={key} style={[{ position: 'absolute', zIndex, pointerEvents: 'none' }, style]}>{enfant}</Animated.View>;")) pb.push('une image du guide du tuto n\'est plus dans une vue transparente au doigt (sur téléphone, elle bloque les taps)');
