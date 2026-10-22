@@ -42,7 +42,13 @@ export const ETAPES = {
   monter: { texte: 'Améliore toujours tes créatures avec tes Griffes pour gagner tes combats !', forme: 'carre' },
   runes: { texte: 'Tu as assez de poudre : clique ici pour les runes !', forme: 'rond' },
   acheterRune: { texte: 'Clique ici pour fabriquer ta première rune !', forme: 'carre' },
-  equiperRune: { texte: "Clique ici pour l'équiper sur une créature !", forme: 'carre' },
+  // 21/10 (auteur) : l'INVENTAIRE ne permet pas d'équiper — il montre les runes et leurs infos. Pour équiper : retour au
+  // deck de l'Aventure → la créature → l'onglet Runes de sa fiche → un emplacement libre.
+  infoRunes: { texte: 'Tes runes et leurs infos se trouvent ici !', forme: 'carre' },
+  retourRunes: { texte: 'Reviens à ton équipe pour équiper ta rune !', forme: 'rond' },
+  creatureRune: { texte: 'Clique sur ta créature pour lui équiper ta rune !', forme: 'rond' },
+  ongletRunes: { texte: "Ouvre l'onglet Runes de ta créature !", forme: 'carre' },
+  poserRune: { texte: 'Clique sur un emplacement libre pour y poser ta rune !', forme: 'carre' },
   // Combat
   attaque: { texte: 'Choisis une attaque.', forme: 'carre' },
   // 21/10 (auteur) : après l'attaque, désigner la cible ; puis expliquer la vie des ennemis (bandeau du haut).

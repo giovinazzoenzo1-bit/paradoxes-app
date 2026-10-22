@@ -4563,7 +4563,7 @@ function auditTutoriel() {
   new Function('require', 'module', 'exports', code)(() => ({ __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), T, T.exports);
   const t = T.exports;
   const attendues = ['taper', 'boutique', 'defi', 'doree', 'eclosion', 'eclosionIncub', 'miniBoss', 'miniJeux', 'ameliorer', 'monter', 'cible', 'vie', 'transe', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension', 'pacte', 'sceau',
-    'combat', 'runes', 'acheterRune', 'equiperRune', 'attaque', 'jauge', 'gardien'];
+    'combat', 'runes', 'acheterRune', 'infoRunes', 'retourRunes', 'creatureRune', 'ongletRunes', 'poserRune', 'attaque', 'jauge', 'gardien'];
   for (const id of attendues) {
     const e = t.ETAPES[id];
     if (!e) { pb.push('conseil manquant : ' + id); continue; }
@@ -4636,6 +4636,10 @@ function auditTutoriel() {
   const Av = lire('src/screens/games/AdventureScreen.js');
   if (!Av.includes("poudre >= POUDRE_CONSEIL_RUNES && ownedRunes.length === 0 ? 'runes'") || !Av.includes("nbRunes === 0 && poudre >= POUDRE_PRIX.unite && !estVu(tuto, 'acheterRune') ? 'acheterRune'")) pb.push('Aventure : les conseils des runes ont disparu');
   if (!lire('src/screens/OptionsScreen.js').includes('🎓 Revoir les conseils')) pb.push('Options : plus de « Revoir les conseils »');
+  // 21/10 (auteur) : l'INVENTAIRE montre les runes (infos) ; on équipe depuis la FICHE de la créature → RETOUR, la créature au
+  // deck, l'onglet Runes, un emplacement libre.
+  if (!Av.includes("nbRunes > 0 && !runeEquipee && !estVu(tuto, 'retourRunes') ? 'retourRunes'") || !Av.includes("? 'creatureRune'")
+    || !Av.includes("etape = onglet === 'runes' ? 'poserRune' : 'ongletRunes';") || !/infos/.test(t.ETAPES.infoRunes.texte)) pb.push('la chaîne du tuto des runes (infos, retour, créature, onglet, emplacement) est cassée');
   for (const f of ['rond', 'etoile', 'coin-hg', 'bande-h', 'encoche-h']) if (!fs.existsSync(path.join(__dirname, '../assets/tuto/' + f + '.png'))) pb.push('image du tuto manquante : ' + f);
   return pb;
 }

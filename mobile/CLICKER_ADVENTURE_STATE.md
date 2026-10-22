@@ -4608,6 +4608,11 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   composant, aucun hook après un retour anticipé — il crie sur la version fautive) + test `tools/capture/finir-combat.mjs`
   (combat du Gardien joué jusqu'au bout, échec à la moindre erreur) À LANCER À CHAQUE PUBLICATION, avec la sonde des taps
   et l'Exploration. Reproduit au banc : ancienne version → erreur #300 ; nouvelle → aucune.
+- RUNES (auteur, 21/10) : l'INVENTAIRE n'équipe PAS (il montre les runes et leurs infos) → chaîne refaite : « 1 rune » →
+  INVENTAIRE (« tes runes et leurs infos se trouvent ici ») → RETOUR de l'écran des runes → la créature au deck (hub) →
+  l'onglet Runes de sa fiche → un emplacement libre (vu quand une rune y est posée). Positions de la fiche CALCULÉES comme
+  ses éléments (onglet : FICHE.onglets[2] ; emplacement : tuile(0, 0, true)). ⚠️ `verifier-portee` a attrapé un `onglet` lu
+  avant sa déclaration (écran blanc) : effet replacé après `useState('stats')`.
 - Conseil « vie des ennemis » (combat) qui restait TOUT LE TEMPS : délai de 7 s remis à zéro à chaque tour (il s'éteint
   pendant le tour ennemi et se rallume) → il s'en va dès que le joueur agit. La « case jaune autour de la vie de notre
   créature » N'EST PAS le tuto : c'est l'indicateur du tour (cadre doré), demandé par l'auteur le 15/10.

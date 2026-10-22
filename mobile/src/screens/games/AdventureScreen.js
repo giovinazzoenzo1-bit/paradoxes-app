@@ -1447,6 +1447,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const etapeHub = !tutoActif(tuto) ? null
     : !estVu(tuto, 'combat') && currentUnlockedLevel <= 1 && deckPlace ? 'combat'
     : !estVu(tuto, 'ameliorer') && estVu(tuto, 'combat') && peutAmeliorer ? 'ameliorer'
+    : !estVu(tuto, 'creatureRune') && estVu(tuto, 'retourRunes') && deckPlace && ownedRunes.length > 0 && !ownedRunes.some((r) => r.equippedCreatureId) ? 'creatureRune'
     : !estVu(tuto, 'runes') && runesOuvertes && poudre >= POUDRE_CONSEIL_RUNES && ownedRunes.length === 0 ? 'runes' : null;
   // Interface : fractions de la maquette, accrochées à un bord (x : gauche/centre/droite ; y : haut/bas).
   const R = (f, ax = 'centre', ay = 'haut') => {
@@ -1461,7 +1462,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // Même hauteur, même centre, largeur à la proportion réelle de la pièce.
   const auRapport = (r, rapport) => { const l = r.height * rapport; return { ...r, left: r.left + (r.width - l) / 2, width: l }; };
   // 🎓 Le rond du conseil du hub : exactement là où sont dessinés COMBAT et RUNES (rien sans cadres mesurés).
-  const rHub = !cadres || !etapeHub || etapeHub === 'ameliorer' ? null : etapeHub === 'combat' ? auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat) : R(HUB.runes, 'droite');
+  const rHub = !cadres || !etapeHub || etapeHub === 'ameliorer' || etapeHub === 'creatureRune' ? null : etapeHub === 'combat' ? auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat) : R(HUB.runes, 'droite');
   const cibleAm = {}; // rempli au dessin des pilotis : la zone de la créature à améliorer
   const recupererToutHub = async () => {
     if (recupHub === 'en cours') return;
@@ -1554,7 +1555,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
                 )}
                 {/* Zone tactile : la créature et son pilotis (fiche, ou sélecteur si vide). */}
                 {creature && id === idAmeliorer && !cibleAm.r ? ((cibleAm.r = { x: cx - lp / 2, y: dessus - ch * 1.05, l: lp, h: ch * 1.05 }), null) : null}
-                <TouchableOpacity activeOpacity={0.85} onPress={() => { if (creature && etapeHub === 'ameliorer' && id === idAmeliorer) setTuto(vuEtape(tuto, 'ameliorer')); (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i)); }}
+                <TouchableOpacity activeOpacity={0.85} onPress={() => { if (creature && (etapeHub === 'ameliorer' || etapeHub === 'creatureRune') && id === idAmeliorer) setTuto(vuEtape(tuto, etapeHub)); (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i)); }}
                   style={{ position: 'absolute', left: cx - lp / 2, top: dessus - ch * 1.05, width: lp, height: ch * 1.05 + (HUB.changer.y0 - HUB.dessus) * fond.h }} />
                 <TouchableOpacity activeOpacity={0.8} onPress={() => setDeckPickerSlot(i)}
                   style={{ position: 'absolute', left: cx - cl / 2, top: chY, width: cl, height: chH }}>
@@ -2002,6 +2003,13 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
   const niveauDepartTutoRef = useRef(owned ? owned.level : 0);
   useEffect(() => { if (owned && owned.level > niveauDepartTutoRef.current && tutoActif(tutoFiche) && !estVu(tutoFiche, 'monter')) setTutoFiche(vuEtape(tutoFiche, 'monter')); }, [owned ? owned.level : 0]);
   const [onglet, setOnglet] = useState('stats');
+  // Rune : l'onglet Runes ouvert, puis une rune posée sur cette créature → conseils vus.
+  const nbRunesEquipeesFiche = ownedRunes.filter((r) => r.equippedCreatureId === (creature && creature.id)).length;
+  useEffect(() => {
+    if (!tutoActif(tutoFiche) || !estVu(tutoFiche, 'creatureRune')) return;
+    if (onglet === 'runes' && !estVu(tutoFiche, 'ongletRunes')) setTutoFiche(vuEtape(tutoFiche, 'ongletRunes'));
+    if (nbRunesEquipeesFiche > 0 && !estVu(tutoFiche, 'poserRune')) setTutoFiche(vuEtape(tutoFiche, 'poserRune'));
+  }, [onglet, nbRunesEquipeesFiche, tutoFiche]);
   // La créature pousse son cri à l'ouverture de sa fiche (07/10).
   const { sons: sonsFiche } = useSettings();
   useEffect(() => { jouerSon(SON_CREATURE[creature.element] || 'creature-magie', sonsFiche !== false); }, []);
@@ -2166,11 +2174,18 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
       />
     )}
     {/* 🎓 « Améliore toujours tes créatures » : carré sur le médaillon de niveau (position calculée comme le médaillon). */}
-    {tutoActif(tutoFiche) && estVu(tutoFiche, 'ameliorer') && !estVu(tutoFiche, 'monter') && !auPlafond && owned && griffes >= levelUpCost(creature, owned.level) ? (() => {
-      const m = R(FICHE.medaillon, 'droite');
-      return <GuideTuto rect={{ x: m.left, y: m.top, l: m.width, h: m.height }} forme={ETAPES.monter.forme} texte={ETAPES.monter.texte}
-        ecran={{ l: Dimensions.get('window').width, h: Dimensions.get('window').height }} onFermer={() => setTutoFiche(vuEtape(tutoFiche, 'monter'))} zIndex={90} />;
-    })() : null}
+    {(() => {
+      // 🎓 Fiche : d'abord la RUNE si le joueur vient pour elle (onglet Runes, puis un emplacement libre), sinon « améliore
+      // toujours tes créatures » (médaillon de niveau). Positions calculées comme les éléments eux-mêmes.
+      if (!tutoActif(tutoFiche)) return null;
+      const fluxRune = estVu(tutoFiche, 'creatureRune') && !estVu(tutoFiche, 'poserRune') && equippedRunes.length === 0 && ownedRunes.some((r) => !r.equippedCreatureId) && runePickerSlot === null;
+      let etape = null; let m = null;
+      if (fluxRune) { etape = onglet === 'runes' ? 'poserRune' : 'ongletRunes'; m = onglet === 'runes' ? tuile(0, 0, true) : R([FICHE.onglets[2][0], FICHE.ongletsY[0], FICHE.onglets[2][1], FICHE.ongletsY[1]], 'droite'); }
+      else if (estVu(tutoFiche, 'ameliorer') && !estVu(tutoFiche, 'monter') && !auPlafond && owned && griffes >= levelUpCost(creature, owned.level)) { etape = 'monter'; m = R(FICHE.medaillon, 'droite'); }
+      if (!etape || !m) return null;
+      return <GuideTuto rect={{ x: m.left, y: m.top, l: m.width, h: m.height }} forme={ETAPES[etape].forme} texte={ETAPES[etape].texte}
+        ecran={{ l: Dimensions.get('window').width, h: Dimensions.get('window').height }} onFermer={() => setTutoFiche(vuEtape(tutoFiche, etape))} zIndex={90} />;
+    })()}
     </>
   );
 }
@@ -3622,11 +3637,12 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
   const nbRunes = (ownedRunes || []).length; const runeEquipee = (ownedRunes || []).some((r) => r && r.equippedCreatureId);
   const etapeRunes = !tutoActif(tuto) || inventoryOpen || reveal ? null
     : nbRunes === 0 && poudre >= POUDRE_PRIX.unite && !estVu(tuto, 'acheterRune') ? 'acheterRune'
-    : nbRunes > 0 && !runeEquipee && !estVu(tuto, 'equiperRune') ? 'equiperRune' : null;
+    : nbRunes > 0 && !runeEquipee && !estVu(tuto, 'infoRunes') ? 'infoRunes'
+    : nbRunes > 0 && !runeEquipee && !estVu(tuto, 'retourRunes') ? 'retourRunes' : null;
   useEffect(() => {
     setRectTuto(null);
     if (!etapeRunes) return undefined;
-    const mesure = () => mesurerCible(racineTutoRef.current, ciblesTutoRef.current[etapeRunes === 'acheterRune' ? 'unite' : 'inventaire'],
+    const mesure = () => mesurerCible(racineTutoRef.current, ciblesTutoRef.current[{ acheterRune: 'unite', infoRunes: 'inventaire', retourRunes: 'retour' }[etapeRunes]],
       (r) => setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r)));
     const t0 = setTimeout(mesure, 150); const iv = setInterval(mesure, 600);
     return () => { clearTimeout(t0); clearInterval(iv); };
@@ -3647,7 +3663,9 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
           solde était auparavant un texte centré sans bouton — le joueur
           voyait le prix d'une rune sans pouvoir recharger sur place. */}
       <View style={styles.header}>
-        <BackButton onPress={onBack} />
+        <View ref={(r) => { ciblesTutoRef.current.retour = r; }} collapsable={false}>
+          <BackButton onPress={() => { if (etapeRunes === 'retourRunes') setTuto(vuEtape(tuto, 'retourRunes')); onBack(); }} />
+        </View>
         <Text style={styles.title}><Image source={RUNES_GEM} style={styles.inlineCurrencyIconTitle} resizeMode="contain" /> Runes</Text>
         <View style={styles.headerSpacer} />
         <CurrencyCounter currency="poudre" amount={poudre} />
@@ -3690,7 +3708,7 @@ function RunesScreen({ poudre, ownedRunes, onBuyRune, onBuyPack, onBuySpecial, f
             <TouchableOpacity
               ref={(r) => { ciblesTutoRef.current.inventaire = r; }}
               style={styles.invOpenBtn}
-              onPress={() => { if (etapeRunes === 'equiperRune') setTuto(vuEtape(tuto, 'equiperRune')); setInventoryOpen(true); }}
+              onPress={() => { if (etapeRunes === 'infoRunes') setTuto(vuEtape(tuto, 'infoRunes')); setInventoryOpen(true); }}
               activeOpacity={0.8}
             >
               {/* ImageBackground et NON <Image style={absoluteFill}> :

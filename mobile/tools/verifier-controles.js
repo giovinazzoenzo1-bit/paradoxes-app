@@ -607,6 +607,8 @@ const SABOTAGES = [
     remplace('  luxorbe: {', '  luxorbe_retire: {')],
   ['auditTutoriel', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "le conseil « vie des ennemis » revient à chaque tour (bug du 21/10)",
     remplace("      if (avant === 'vie' && (armedSkill || phase !== 'choosing')) setTuto((t) => vuEtape(t, 'vie'));\n", '')],
+  ['auditTutoriel', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "le tuto n'emmène plus jusqu'à l'onglet Runes de la créature",
+    remplace("etape = onglet === 'runes' ? 'poserRune' : 'ongletRunes';", 'etape = null;')],
   ['auditHooksAvantRetour', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "un hook revient après le retour anticipé de fin de combat (plantage du 21/10)",
     remplace("  if (phase === 'done') {\n", "  if (phase === 'done' && skipResultScreen) return null;\n  useEffect(() => {}, []);\n  if (phase === 'done') {\n")],
   ['auditTutoriel', path.join(RACINE, 'src/components/GuideTuto.js'), "le guide du tuto reçoit un conteneur plein écran (il avalerait les taps sur l'œuf, bug du 20/10)",
