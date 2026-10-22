@@ -2,12 +2,17 @@
 // pub ; la durée empêche les testeurs d'en abuser. La récompense n'est donnée qu'en touchant « Récupérer ».
 // Utilisée par : +1 poudre runique (menu des Runes) et Tap ×2 pendant 2 min (écran principal du clicker).
 import React, { useEffect, useState } from 'react';
+import { droitsAchats } from '../games/clicker/achats';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { ICONES_PUB } from './iconesPubs';
 
 export const DUREE_FAUSSE_PUB_SEC = 15;
 
 export default function FaussePub({ visible = false, recompense = '', onFin }) {
+  // 💳 « Sans pubs » (achat, 22/10) : la récompense est donnée TOUT DE SUITE, sans montrer la pub. Point de passage unique
+  // des pubs du jeu (Tap ×2, poudre runique) — la vraie régie pub passera aussi par ici.
+  const sansPubs = droitsAchats().sansPubs;
+  useEffect(() => { if (visible && sansPubs && onFin) onFin(); }, [visible, sansPubs]);
   const [reste, setReste] = useState(DUREE_FAUSSE_PUB_SEC);
   useEffect(() => {
     if (!visible) return undefined;
@@ -21,6 +26,7 @@ export default function FaussePub({ visible = false, recompense = '', onFin }) {
     return () => clearInterval(id);
   }, [visible]);
   const fini = reste <= 0;
+  if (sansPubs) return null; // (après tous les hooks) rien à montrer : la récompense est déjà donnée
   return (
     <Modal visible={!!visible} animationType="fade" transparent={false} onRequestClose={() => {}}>
       <View style={st.fond}>

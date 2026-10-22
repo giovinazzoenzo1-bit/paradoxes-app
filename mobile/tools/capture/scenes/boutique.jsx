@@ -8,7 +8,8 @@ createRoot(document.getElementById('root')).render(
   <>
 
   <ImageBackground source={require('../../../assets/menu/fond.jpg')} style={{ flex: 1 }} resizeMode="cover">
-    <DiamondShop diamonds={11} onBuy={async () => null} onBack={() => {}} incubatingEgg={null} />
+    <DiamondShop diamonds={11} onBuy={async () => null} onBack={() => {}} incubatingEgg={null}
+      droits={{ sansPubs: false, doubleur: false, passActif: false, passJusqua: 0, demarrageAchete: false }} onAcheterProduit={async () => '+80 💎'} />
   </ImageBackground>
     <HoteDialogue />
   </>,

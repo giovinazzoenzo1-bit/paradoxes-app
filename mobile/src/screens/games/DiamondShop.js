@@ -4,6 +4,7 @@ import { COLORS } from './clickerTheme';
 import { GrandPanneau, largeurInterieure, CRISTAL, EffetRecompense, vibrerSucces } from './fenetreBois';
 import { useSettings } from '../../context/SettingsContext';
 import { afficherDialogue } from '../../components/DialogueJeu';
+import { PRODUITS, achetable, MODE_ACHATS } from '../../games/clicker/achats';
 
 // 27/09 : Boutique du thème forêt (pièces Gemini 37-44 de l'auteur, kit
 // partagé fenetreBois). Tailles en NOMBRES (règle du 27/09).
@@ -77,10 +78,50 @@ export const DIAMOND_OFFERS = [
   },
 ];
 
-export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg }) {
+// 💳 22/10 : la boutique propose aussi les ACHATS EN ARGENT RÉEL (pack de démarrage, avantages, packs de Diamants) — en MODE
+// TEST tant que RevenueCat n'est pas branché (confirmation « mode test », aucun paiement).
+export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, droits = null, onAcheterProduit = null }) {
   const [busy, setBusy] = useState(null);
   const [effet, setEffet] = useState(null);
   const { vibrations } = useSettings();
+
+  const handleAcheter = (p) => {
+    if (busy || !achetable(p.id) || !onAcheterProduit) return;
+    afficherDialogue(`${p.icone} ${p.titre}`, MODE_ACHATS === 'test' ? `Mode test : simuler l'achat pour ${p.prix} ? Aucun paiement réel.` : `Acheter pour ${p.prix} ?`, [
+      { texte: 'Annuler', style: 'annuler' },
+      { texte: `Acheter · ${p.prix}`, style: 'principal', onPress: async () => {
+        setBusy(p.id); const label = await onAcheterProduit(p.id); setBusy(null);
+        if (label) { vibrerSucces(vibrations); const id = Date.now(); setEffet({ id, texte: 'Merci !', sousTexte: label }); setTimeout(() => setEffet((e) => (e && e.id === id ? null : e)), 1600); }
+      } },
+    ]);
+  };
+  const statut = (p) => {
+    if (p.droit === 'pass' && droits && droits.passActif) { const d = new Date(droits.passJusqua); return `Actif jusqu'au ${d.getDate()}/${d.getMonth() + 1} · renouveler ajoute 30 jours`; }
+    return p.desc;
+  };
+  const ligneArgent = (p) => {
+    const ok = achetable(p.id);
+    return (
+      <View key={p.id} style={styles.offerRow}>
+        <Image source={PLANCHE} resizeMode="stretch" style={styles.offerPlanche} />
+        <View style={styles.offerIconWrap}><Text style={styles.offerIcon}>{p.icone}</Text></View>
+        <View style={styles.offerMiddle}>
+          <Text style={styles.offerTitle}>{p.titre}</Text>
+          <Text style={styles.offerDesc} numberOfLines={2}>{statut(p)}</Text>
+        </View>
+        <TouchableOpacity style={[styles.buyBtn, !ok && styles.buyBtnDisabled]} onPress={() => handleAcheter(p)} disabled={!ok || busy === p.id}>
+          <Image source={BOUTON_PRIX} resizeMode="stretch" style={styles.buyBtnImage} />
+          <View style={styles.buyBtnLigne}><Text style={styles.buyBtnText}>{ok ? p.prix : 'Possédé'}</Text></View>
+        </TouchableOpacity>
+        {p.badge && ok ? (
+          <View style={styles.ruban}>
+            <Image source={RUBAN} resizeMode="contain" style={styles.rubanImage} />
+            <Text style={styles.rubanTexte} numberOfLines={2}>{p.badge}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
   const handleBuy = async (offer) => {
     if (busy || diamonds < offer.cost) return;
@@ -117,6 +158,17 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg }) 
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
+          {onAcheterProduit ? (
+            <>
+              {MODE_ACHATS === 'test' ? <Text style={styles.bandeauTest}>🧪 Mode test : aucun paiement réel</Text> : null}
+              {[['bienvenue', '🎁 Offre de bienvenue'], ['avantage', '⭐ Avantages'], ['diamants', '💎 Diamants']].map(([fam, titre]) => {
+                const items = PRODUITS.filter((p) => p.famille === fam && (fam !== 'bienvenue' || achetable(p.id)));
+                if (!items.length) return null;
+                return (<View key={fam}><Text style={styles.sectionTitre}>{titre}</Text>{items.map(ligneArgent)}</View>);
+              })}
+              <Text style={styles.sectionTitre}>✨ Dépense tes Diamants</Text>
+            </>
+          ) : null}
           {DIAMOND_OFFERS.map((offer) => {
             const affordable = diamonds >= offer.cost;
             return (
@@ -167,6 +219,8 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg }) 
 }
 
 const styles = StyleSheet.create({
+  bandeauTest: { color: '#ffcf3f', fontSize: 12, fontWeight: '800', textAlign: 'center', marginTop: 4, marginBottom: 2 },
+  sectionTitre: { color: '#FFF3D6', fontSize: 15, fontWeight: '900', marginTop: 10, marginBottom: 2, marginLeft: 6, textShadowColor: '#000', textShadowRadius: 4 },
   backdrop: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 30,
     backgroundColor: 'rgba(0,0,0,0.62)',

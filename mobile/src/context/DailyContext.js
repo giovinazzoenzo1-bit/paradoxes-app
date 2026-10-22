@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { noterGriffes } from '../screens/games/journalGriffes';
+// 💳 Pass des Défis (achat, 22/10) : récompenses ×2 sur les défis du jour et de la semaine tant qu'il est actif.
+import { multiplicateurDefis } from '../games/clicker/achats';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { recompenseQuete } from '../games/clicker/combatLogic';
 import { todayKey, pickDailyQuests, questDef, nextStreak, streakReward, calendarRewardForStreak, calendarDayForStreak, DAILY_CALENDAR,
@@ -288,7 +290,7 @@ export function DailyProvider({ children }) {
     if (progress < def.target) return false;
     setQuestClaimed((prev) => ({ ...prev, [questId]: true }));
     // 16/10 (choix de l'auteur) : en niveaux de ta MEILLEURE créature (avant : selon le niveau d'Aventure).
-    const griffes = recompenseDefi(def.reward, 'jour', niveauxDeckRef.current);
+    const griffes = recompenseDefi(def.reward, 'jour', niveauxDeckRef.current) * multiplicateurDefis();
     await addPending(PENDING_GRIFFES_KEY, griffes);
     noterGriffes('defi-jour', griffes, { id: questId }); // journal des Griffes (11/10)
     await addPending(PENDING_DIAMONDS_KEY, def.diamonds);
@@ -306,7 +308,7 @@ export function DailyProvider({ children }) {
     if (progress < def.target) return false;
     setWeeklyClaimed((prev) => ({ ...prev, [questId]: true }));
     // 16/10 (choix de l'auteur) : en niveaux de ta MEILLEURE créature (avant : selon le niveau d'Aventure).
-    const griffes = recompenseDefi(def.reward, 'semaine', niveauxDeckRef.current);
+    const griffes = recompenseDefi(def.reward, 'semaine', niveauxDeckRef.current) * multiplicateurDefis();
     await addPending(PENDING_GRIFFES_KEY, griffes);
     noterGriffes('defi-semaine', griffes, { id: questId }); // journal des Griffes (11/10)
     await addPending(PENDING_DIAMONDS_KEY, def.diamonds);
@@ -389,7 +391,7 @@ export function DailyProvider({ children }) {
       questIds: questIdsRef.current, questProgress: questProgressRef.current, questClaimed: questClaimedRef.current,
       weeklyIds: weeklyIdsRef.current, weeklyProgress: weeklyProgressRef.current, weeklyClaimed: weeklyClaimedRef.current,
       achievementsClaimed, lifetimeStats: lifetimeStatsRef.current, streak: streakRef.current, streakClaimedDate: streakClaimedDateRef.current, date,
-    }, (base, _niv, type) => recompenseDefi(base, type, niveauxDeckRef.current)); // 16/10 : défis en niveaux
+    }, (base, _niv, type) => recompenseDefi(base, type, niveauxDeckRef.current) * (type === 'jour' || type === 'semaine' ? multiplicateurDefis() : 1)); // 16/10 : défis en niveaux ; Pass ×2
     if (r.quetes.length) setQuestClaimed((prev) => { const n = { ...prev }; r.quetes.forEach((id) => { n[id] = true; }); return n; });
     if (r.hebdos.length) setWeeklyClaimed((prev) => { const n = { ...prev }; r.hebdos.forEach((id) => { n[id] = true; }); return n; });
     if (Object.keys(r.succes).length) setAchievementsClaimed((prev) => ({ ...prev, ...r.succes }));
@@ -406,7 +408,7 @@ export function DailyProvider({ children }) {
 
   // (08/10) Le « A » du budget du Gardien : tout ce qui est réclamable maintenant.
 
-  const griffesARecuperer = useMemo(() => griffesRecuperables({ questIds, questProgress, questClaimed, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, lifetimeStats, streak, streakClaimedDate, date }, (base, _niv, type) => recompenseDefi(base, type, niveauxDeck)), [niveauxDeck, questIds, questProgress, questClaimed, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, lifetimeStats, streak, streakClaimedDate, date]);
+  const griffesARecuperer = useMemo(() => griffesRecuperables({ questIds, questProgress, questClaimed, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, lifetimeStats, streak, streakClaimedDate, date }, (base, _niv, type) => recompenseDefi(base, type, niveauxDeck) * (type === 'jour' || type === 'semaine' ? multiplicateurDefis() : 1)), [niveauxDeck, questIds, questProgress, questClaimed, weeklyIds, weeklyProgress, weeklyClaimed, achievementsClaimed, lifetimeStats, streak, streakClaimedDate, date]);
 
   const value = {
     loaded, date, questIds, questProgress, questClaimed, streak, streakClaimedDate, lifetimeStats,

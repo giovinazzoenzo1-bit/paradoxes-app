@@ -4623,6 +4623,21 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   Rattrapé par `git status` (fichier modifié hors commit) et remis par `git checkout`. Règle : TOUJOURS `pgrep -x node`
   vide avant de lancer une passe, et `git status` vide après.
 
+## 💳 ACHATS EN ARGENT RÉEL (22/10, catalogue validé par l'auteur) — MODE TEST
+
+- `games/clicker/achats.js` : catalogue (pack_demarrage 1,99 € = 500 💎 + 2 000 Griffes, une fois ; sans_pubs 4,99 € ;
+  doubleur 7,99 € = pièces ×2 pour toujours ; pass_mensuel 4,99 € = défis du jour/semaine ×2 pendant 30 jours, un
+  renouvellement S'AJOUTE ; 6 packs de Diamants 0,99 → 99,99 €, bonus croissant 0 → +50 %). Droits dans une mémoire À PART
+  (`achats:v1`, jamais effacée par une Ascension). `MODE_ACHATS = 'test'` : achat simulé après une confirmation « mode test »
+  (aucun débit). LE JOUR J : passer à 'revenuecat' et écrire `acheter()` avec RevenueCat (même retour { ok, produit }).
+- Branchements : Doubleur au point UNIQUE des gains (`gainCoins`) ; Pass dans DailyContext (un par un, « tout récupérer » ET
+  l'affichage des Griffes à récupérer) ; Sans pubs dans `FaussePub` (récompense tout de suite, rien d'affiché) — la vraie
+  régie pub devra passer par le même endroit ; contenu (Diamants partagés, Griffes en attente) crédité par
+  `acheterArgentReel` (ClickerScreen) ; boutique : sections Bienvenue / Avantages / Diamants au-dessus des achats en
+  Diamants, « Possédé » pour un achat unique déjà fait. Contrôle `auditAchats` + 3 pièges.
+- À FAIRE (lot 2) : pack de démarrage proposé après la 1re éclosion, offres limitées 24 h (après Ascension, combat perdu,
+  nouveau chapitre), puis RevenueCat + vraie régie pub quand l'auteur aura les comptes.
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :

@@ -281,6 +281,7 @@ import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import GuideTuto from '../../components/GuideTuto';
+import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat } from '../../games/clicker/achats';
 import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, DOREE_TUTO_DELAI_MS, DOREE_TUTO_POS, MINI_BOSS_TUTO_DELAI_MS,
   TAPS_CONSEIL_INCUBATEUR, DUREE_CONSEIL_LONG_MS, DUREE_CONSEIL_ECLOSION_MS, lireTuto, ecrireTuto,
   abonnerTuto, estVu, tutoActif, choisirEtape, vuEtape, estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
@@ -793,6 +794,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const [tuto, setTuto] = useState(null); // null tant que sa mémoire n'est pas lue
   const tutoRef = useRef(null); tutoRef.current = tuto;
   useEffect(() => { lireTuto().then(setTuto); return abonnerTuto(setTuto); }, []);
+  // 💳 Achats (22/10) : droits lus au démarrage (Sans pubs, Doubleur, Pass), suivis à chaque achat.
+  const [droits, setDroits] = useState(droitsAchats());
+  useEffect(() => { chargerAchats().then(setDroits); return abonnerAchats(setDroits); }, []);
   const vuTuto = (id) => { const n = vuEtape(tutoRef.current, id); if (n && n !== tutoRef.current) setTuto(n); };
   const ciblesTutoRef = useRef({});   // éléments montrés par le tuto (mesurés dans la fenêtre)
   const racineTutoRef = useRef(null); // repère (0, 0) de l'écran
@@ -1971,7 +1975,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       essenceBonusMultiplier(essenceRef.current) *
       ascensionSpeedMultiplier(ascensionCountRef.current) *
       upgradeCoinMult;
-    const amount = rawAmount * multiplier;
+    // 💳 Doubleur (achat, 22/10) : TOUTES les pièces ×2 — appliqué ici, au point de passage unique des gains.
+    const amount = rawAmount * multiplier * multiplicateurPieces();
     // Accumule au lieu de declencher un rendu : voir l'intervalle de
     // vidage plus bas. Le montant retourne reste exact pour l'appelant.
     pendingGainRef.current += amount;
@@ -2454,6 +2459,21 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Achat en Diamants. Chaque offre s'appuie sur un mécanisme existant
   // (clé de Griffes en attente, drapeau de recharge d'énergie, minuteur
   // de l'incubateur) — rien de neuf à maintenir.
+  // 💳 Achat en ARGENT RÉEL (mode test tant que RevenueCat n'est pas branché) : droits enregistrés par achats.js, contenu
+  // crédité ici (Diamants partagés ; Griffes en attente comme le pack de Griffes de la boutique). Renvoie le texte affiché.
+  const acheterArgentReel = async (id) => {
+    const r = await acheterAchat(id);
+    if (!r.ok) return null;
+    const c = (r.produit && r.produit.contenu) || {};
+    if (c.diamants) await addSharedCoins(c.diamants);
+    if (c.griffes) {
+      const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
+      await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String((raw ? parseInt(raw, 10) || 0 : 0) + c.griffes));
+      noterGriffes('achat', c.griffes, { id });
+    }
+    const morceaux = [c.diamants ? `+${c.diamants} 💎` : null, c.griffes ? `+${c.griffes} Griffes (en Exploration)` : null].filter(Boolean);
+    return morceaux.length ? morceaux.join(' · ') : r.produit.titre;
+  };
   const buyWithDiamonds = async (offer) => {
     const ok = await spendSharedCoins(offer.cost);
     if (!ok) return null;
@@ -4997,6 +5017,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           incubatingEgg={incubatingEgg}
           onBuy={buyWithDiamonds}
           onBack={() => setDiamondShopOpen(false)}
+          droits={droits}
+          onAcheterProduit={acheterArgentReel}
         />
       )}
 

@@ -3964,7 +3964,8 @@ function auditQuetesNiveau() {
   for (let n = 1; n <= 150; n++) { const v = D.recompenseDefi(245, 'semaine', [n]), att = (245 / D.BASE_MEDIANE_SEMAINE) * 3 * cout(n); if (Math.abs(v - att) > 1) { fautes.push({ niveau: n, probleme: 'la récompense ne vaut plus son nombre de niveaux' }); break; } }
   const Dc = lire('src/context/DailyContext.js'), Pr = lire('src/screens/ProgresScreen.js');
   const Av = lire('src/screens/games/AdventureScreen.js'), Ck = lire('src/screens/games/ClickerScreen.js');
-  doit(Dc.includes("const griffes = recompenseDefi(def.reward, 'jour', niveauxDeckRef.current);") && Dc.includes("const griffes = recompenseDefi(def.reward, 'semaine', niveauxDeckRef.current);"), 'une réclamation ne paie plus en niveaux de la meilleure créature');
+  // (22/10 : × multiplicateurDefis() = le Pass des Défis payé ; ×1 sans lui — contrôlé par auditAchats.)
+  doit(Dc.includes("const griffes = recompenseDefi(def.reward, 'jour', niveauxDeckRef.current) * multiplicateurDefis();") && Dc.includes("const griffes = recompenseDefi(def.reward, 'semaine', niveauxDeckRef.current) * multiplicateurDefis();"), 'une réclamation ne paie plus en niveaux de la meilleure créature');
   doit(Dc.includes('(base, _niv, type) => recompenseDefi(base, type, niveauxDeckRef.current)') && Dc.includes('(base, _niv, type) => recompenseDefi(base, type, niveauxDeck)'), '« Tout récupérer » ou le total du calculateur ne suit plus la règle en niveaux');
   doit(!/addPending\(PENDING_GRIFFES_KEY, def\.reward\)/.test(Dc), 'une quête crédite encore def.reward brute');
   doit(Pr.includes("recompenseDefi(def.reward, 'jour', niveauxDeck)") && Pr.includes("recompenseDefi(def.reward, 'semaine', niveauxDeck)"), "l'écran Progrès n'affiche pas la vraie récompense");
@@ -4675,6 +4676,49 @@ function auditHooksAvantRetour() {
   return pb;
 }
 module.exports.auditHooksAvantRetour = auditHooksAvantRetour;
+
+// 💳 ACHATS (22/10, catalogue validé par l'auteur) : en MODE TEST tant que RevenueCat n'est pas branché ; les droits (Sans pubs,
+// Doubleur, Pass, Pack de démarrage) vivent dans une mémoire À PART et s'appliquent aux bons endroits du jeu.
+function auditAchats() {
+  const fs = require('fs'); const path = require('path');
+  const pb = [];
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const code = babel.transformSync(lire('src/games/clicker/achats.js'), { presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]], filename: 'achats.js' }).code;
+  const M = { exports: {} };
+  new Function('require', 'module', 'exports', code)(() => ({ __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), M, M.exports);
+  const a = M.exports;
+  if (a.MODE_ACHATS !== 'test' && a.MODE_ACHATS !== 'revenuecat') pb.push('mode d\'achat inconnu');
+  if (a.CLE_ACHATS !== 'achats:v1') pb.push('les achats n\'ont plus leur mémoire à part (achats:v1)');
+  const ids = a.PRODUITS.map((p) => p.id);
+  for (const id of ['pack_demarrage', 'sans_pubs', 'doubleur', 'pass_mensuel', 'diamants_80', 'diamants_450', 'diamants_950', 'diamants_2000', 'diamants_5500', 'diamants_12000']) if (!ids.includes(id)) pb.push('produit manquant : ' + id);
+  if (new Set(ids).size !== ids.length) pb.push('deux produits portent le même identifiant');
+  for (const p of a.PRODUITS) if (!/^\d+,\d{2} €$/.test(p.prix)) pb.push(p.id + ' : prix illisible « ' + p.prix + ' »');
+  // Les packs de Diamants : plus cher → plus de Diamants par euro (bonus croissant).
+  const parEuro = a.PRODUITS.filter((p) => p.famille === 'diamants').map((p) => p.contenu.diamants / parseFloat(p.prix.replace(',', '.')));
+  if (parEuro.some((v, i) => i > 0 && v < parEuro[i - 1])) pb.push('packs de Diamants : un plus gros pack donne moins par euro');
+  // Les droits.
+  const t0 = 1e12; let e = { sansPubs: false, doubleur: false, passJusqua: 0, demarrageAchete: false, journal: [] };
+  e = a.appliquerDroits(e, 'pack_demarrage', t0); if (!e.demarrageAchete) pb.push('pack de démarrage : pas marqué acheté (il serait rachetable)');
+  e = a.appliquerDroits(e, 'sans_pubs', t0); if (!e.sansPubs) pb.push('Sans pubs : droit non donné');
+  e = a.appliquerDroits(e, 'doubleur', t0); if (!e.doubleur) pb.push('Doubleur : droit non donné');
+  e = a.appliquerDroits(e, 'pass_mensuel', t0); const j30 = 30 * 86400 * 1000;
+  if (e.passJusqua !== t0 + j30) pb.push('Pass : pas 30 jours');
+  e = a.appliquerDroits(e, 'pass_mensuel', t0 + 1000); if (e.passJusqua !== t0 + 2 * j30) pb.push('Pass : un renouvellement ne s\'ajoute pas au mois en cours');
+  if (a.DOUBLEUR_MULT !== 2 || a.PASS_MULT_DEFIS !== 2) pb.push('Doubleur ou Pass n\'est plus ×2');
+  // Branchements.
+  const Cl = lire('src/screens/games/ClickerScreen.js');
+  if (!Cl.includes('const amount = rawAmount * multiplier * multiplicateurPieces();')) pb.push('le Doubleur ne s\'applique plus au point unique des gains de pièces');
+  if (!Cl.includes('onAcheterProduit={acheterArgentReel}') || !Cl.includes('if (c.diamants) await addSharedCoins(c.diamants);')) pb.push('la boutique n\'achète plus, ou ne crédite plus les Diamants');
+  if (/removeItem\([^)]*achats/i.test(Cl)) pb.push('l\'écran principal efface les achats');
+  const D = lire('src/context/DailyContext.js');
+  if ((D.match(/multiplicateurDefis\(\)/g) || []).length < 4) pb.push('le Pass ne double plus toutes les récompenses des défis (un par un, tout récupérer, affichage)');
+  const P = lire('src/components/FaussePub.js');
+  if (!P.includes('useEffect(() => { if (visible && sansPubs && onFin) onFin(); }, [visible, sansPubs]);') || !P.includes('if (sansPubs) return null;')) pb.push('Sans pubs : la pub s\'affiche encore');
+  const S = lire('src/screens/games/DiamondShop.js');
+  if (!S.includes("Mode test : aucun paiement réel") || !S.includes('disabled={!ok || busy === p.id}')) pb.push('boutique : plus de bandeau « mode test » ou un « une seule fois » rachetable');
+  return pb;
+}
+module.exports.auditAchats = auditAchats;
 
 // ── Illustrations de créatures : fichiers ET cadrage (03/10) ──────────────
 // Chaque créature branchée dans CreatureArt doit avoir ses 3 stades (fichiers

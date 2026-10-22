@@ -116,6 +116,7 @@ const CONTROLES = [
   ['auditDefiTapsLibre', "combat : rien au-dessus de la zone du défi de taps ne capte le toucher (03/10)"],
   ['auditCadrageCreatures', "créatures illustrées : 3 stades présents et cadrage généré pour chacune (03/10)"],
   ['auditImagesTailleExplicite', "images : jamais une <Image> en absoluteFill sans largeur/hauteur — taille d'origine sur téléphone (13/09, 03/10)"],
+  ['auditAchats', "achats : catalogue, droits (Sans pubs, Doubleur, Pass, Pack), mode test, branchements (22/10)"],
   ['auditHooksAvantRetour', "composants : aucun hook après un retour anticipé (plantage de fin de combat du 21/10)"],
   ['auditTutoriel', "tutoriel : repère + une phrase + petite croix, une fois par joueur, jamais bloquant (aucun conteneur plein écran)"],
   ['auditIllustrationsFrere', "illustrations : les 26 créatures ont leurs 3 stades, le mini-boss est Brisecorne, combattants +25 % (20/10)"],
