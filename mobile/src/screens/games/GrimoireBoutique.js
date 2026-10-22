@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GuideTuto from '../../components/GuideTuto';
-import { ETAPES, PACTE_CONSEIL_NIVEAUX, lireTuto, abonnerTuto, ecrireTuto, estVu, tutoActif, vuEtape, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
+import { ETAPES, PACTE_CONSEIL_NIVEAUX, lireTuto, abonnerTuto, ecrireTuto, estVu, tutoActif, vuEtape, marquerVu, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanResponder, Animated, Easing, StyleSheet, Dimensions, Platform } from 'react-native';
 import { CHAPITRES_GRIMOIRE } from '../../games/clicker/grimoireChapitres';
@@ -473,7 +473,10 @@ function Grimoire(props) {
   }, [etapeGrimoire]);
   const pactesAchetes = tuto && tuto.pacteDepart != null ? Math.max(0, props.tapPower - tuto.pacteDepart) : 0;
   useEffect(() => {
-    if (tuto && tutoActif(tuto) && !estVu(tuto, 'pacte') && tuto.pacteDepart != null && pactesAchetes >= PACTE_CONSEIL_NIVEAUX) setTuto(vuEtape(tuto, 'pacte'));
+    // Fin datée : la 1re cible dorée du tuto arrive 10 s plus tard (écran principal).
+    if (tuto && tutoActif(tuto) && !estVu(tuto, 'pacte') && tuto.pacteDepart != null && pactesAchetes >= PACTE_CONSEIL_NIVEAUX) {
+      const n = { ...marquerVu(tuto, 'pacte'), pacteFiniA: Date.now() }; ecrireTuto(n); setTuto(n);
+    }
   }, [pactesAchetes]);
   // 17/10 : où se trouve l'article du défi d'achat en cours (chapitre, double page) — pour les lueurs de navigation.
   const guide = (() => {

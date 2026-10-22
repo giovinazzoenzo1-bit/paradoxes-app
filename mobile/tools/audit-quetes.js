@@ -4562,7 +4562,7 @@ function auditTutoriel() {
   const T = { exports: {} };
   new Function('require', 'module', 'exports', code)(() => ({ __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), T, T.exports);
   const t = T.exports;
-  const attendues = ['taper', 'boutique', 'defi', 'doree', 'transe', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension', 'pacte', 'sceau',
+  const attendues = ['taper', 'boutique', 'defi', 'doree', 'eclosion', 'transe', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension', 'pacte', 'sceau',
     'combat', 'runes', 'acheterRune', 'equiperRune', 'attaque', 'jauge', 'gardien'];
   for (const id of attendues) {
     const e = t.ETAPES[id];
@@ -4574,7 +4574,11 @@ function auditTutoriel() {
   if (t.CLE_TUTO !== 'tuto:v2') pb.push('le tuto n\'a plus sa mémoire à part (tuto:v2)');
   // 21/10 (auteur) : 100 taps sur l'œuf, PUIS 15 s de Transe, PUIS 3 niveaux de Pacte ; les runes à la 3ᵉ poudre.
   if (t.TAPS_CONSEIL_TAPER !== 100 || t.TRANSE_CONSEIL_SEC !== 15 || t.PACTE_CONSEIL_NIVEAUX !== 3 || t.POUDRE_CONSEIL_RUNES !== 3) pb.push('règles du tuto changées (100 taps, 15 s de Transe, 3 Pactes, 3 poudres — demandes de l\'auteur)');
-  if (t.ORDRE_ECRAN.slice(0, 4).join(',') !== 'taper,transe,boutique,defi') pb.push('ordre du début du tuto changé (œuf, Transe, boutique, défi)');
+  if (t.ORDRE_ECRAN.slice(0, 5).join(',') !== 'taper,transe,boutique,doree,defi') pb.push('ordre du début du tuto changé (œuf, Transe, boutique, cible dorée, défi)');
+  // 21/10 (auteur) : 1re cible dorée 10 s après le Pacte, figée en haut à droite de l'œuf ; runes après 3 combats gagnés ;
+  // ni Collection ni Exploration sans première créature ; l'éclosion explique « 1 tap = 1 seconde ».
+  if (t.DOREE_TUTO_DELAI_MS !== 10000 || !t.DOREE_TUTO_POS || t.DOREE_TUTO_POS.leftPct !== 75 || t.DOREE_TUTO_POS.topPct !== 25 || t.RUNES_COMBATS_GAGNES !== 3) pb.push('règles de la cible dorée du tuto ou du déblocage des runes changées');
+  if (!/1 seconde/.test(t.ETAPES.eclosion.texte)) pb.push('le conseil d\'éclosion ne dit plus « 1 tap = 1 seconde »');
   if (t.avecCompteur('Clique ici pour gagner des pièces !', 37, 100) !== 'Clique ici pour gagner des pièces (37/100) !') pb.push('le compteur du tuto n\'est plus dans la phrase, avant son « ! »');
   const tu = { vus: ['taper'], passe: false, decide: true };
   if (t.choisirEtape({ taper: true, boutique: true }, tu, t.ORDRE_ECRAN) !== 'boutique') pb.push('un conseil déjà vu revient');
@@ -4606,6 +4610,10 @@ function auditTutoriel() {
   if (!Gr.includes("refPrix={id === 'pacte' ?") || !Gr.includes("idsVus.includes('pacte')")) pb.push('Grimoire : le rond du Pacte ne vise plus l\'article « pacte » (son vrai nom)');
   if (!Gr.includes('pactesAchetes >= PACTE_CONSEIL_NIVEAUX') || !Gr.includes('ecrireTuto({ ...tuto, pacteDepart: props.tapPower })')) pb.push('Grimoire : le conseil du Pacte ne demande plus 3 niveaux (gardés entre deux visites)');
   if (!Cl.includes("transe: estVu(tuto, 'taper'),") || !Cl.includes("boutique: estVu(tuto, 'transe') &&") || !Cl.includes("if (sec >= TRANSE_CONSEIL_SEC) vuTuto('transe');")) pb.push('écran principal : la Transe de 15 s n\'est plus entre l\'œuf et la boutique');
+  if (!Cl.includes('expiresAt: now + 10 * 365 * 86400 * 1000, leftPct: DOREE_TUTO_POS.leftPct') || !Cl.includes('tuD.pacteFiniA && now >= tuD.pacteFiniA + DOREE_TUTO_DELAI_MS') || !Cl.includes('if (vibrationsRef.current) Vibration.vibrate(400);')) pb.push('la 1re cible dorée du tuto n\'est plus figée, datée ou annoncée par une vibration');
+  if (!Cl.includes("onPress={() => (verrou ? bloque(\"l'Exploration\") : onAdventurePress())}") || !Cl.includes("onPress={() => (verrou ? bloque('la Collection') : setView('collection'))}")) pb.push('Collection ou Exploration ouvertes sans première créature');
+  { const Av0 = lire('src/screens/games/AdventureScreen.js');
+    if (!Av0.includes('  const runesOuvertes = currentUnlockedLevel > RUNES_COMBATS_GAGNES;') || !Av0.includes('setPoudre(POUDRE_CONSEIL_RUNES);')) pb.push('Aventure : runes ouvertes avant 3 combats, ou poudre du tuto non offerte'); }
   const Co = lire('src/screens/games/CombatScreen.js');
   if (!Co.includes("phase === 'choosing' && !estVu(tuto, 'attaque') ? 'attaque'") || !Co.includes("phase === 'tapping' && !estVu(tuto, 'jauge') ? 'jauge'")) pb.push('combat : les conseils attaque / jauge ont disparu');
   const Av = lire('src/screens/games/AdventureScreen.js');

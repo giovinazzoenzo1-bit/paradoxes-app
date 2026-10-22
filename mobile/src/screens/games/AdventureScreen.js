@@ -4,7 +4,7 @@
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import GuideTuto from '../../components/GuideTuto';
-import { ETAPES, POUDRE_CONSEIL_RUNES, lireTuto, abonnerTuto, estVu, tutoActif, vuEtape, mesurerCible } from '../../games/clicker/tutoriel';
+import { ETAPES, POUDRE_CONSEIL_RUNES, RUNES_COMBATS_GAGNES, lireTuto, abonnerTuto, ecrireTuto, estVu, tutoActif, vuEtape, mesurerCible } from '../../games/clicker/tutoriel';
 import {
   View,
   Text,
@@ -696,6 +696,16 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // runique, « clique ici pour les runes » (rond sur RUNES). ⚠️ Hooks déclarés ICI, avant les retours anticipés de l'écran.
   const [tuto, setTuto] = useState(null);
   useEffect(() => { lireTuto().then(setTuto); return abonnerTuto(setTuto); }, []);
+  // 21/10 (auteur) : les RUNES s'ouvrent après le 3ᵉ combat GAGNÉ (niveau débloqué ≥ 4), pour tout le monde. Pour le joueur
+  // guidé, le tuto complète alors sa poudre jusqu'à 3 : il peut acheter sa première rune tout de suite (une seule fois).
+  const runesOuvertes = currentUnlockedLevel > RUNES_COMBATS_GAGNES;
+  useEffect(() => {
+    if (!tuto || !tutoActif(tuto) || estVu(tuto, 'runes') || tuto.poudreOfferte) return;
+    if (runesOuvertes && ownedRunes.length === 0 && poudre < POUDRE_CONSEIL_RUNES) {
+      setPoudre(POUDRE_CONSEIL_RUNES);
+      ecrireTuto({ ...tuto, poudreOfferte: true });
+    }
+  }, [tuto, runesOuvertes, poudre, ownedRunes.length]);
   // Offre spéciale du jour : { date, type, purchased }. Stockée dans sa
   // PROPRE clé — une offre ratée ne doit pas pouvoir corrompre la
   // sauvegarde d'Aventure. Une date différente au chargement retire un
@@ -1430,7 +1440,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const deckPlace = (deck || []).some(Boolean);
   const etapeHub = !tutoActif(tuto) ? null
     : !estVu(tuto, 'combat') && currentUnlockedLevel <= 1 && deckPlace ? 'combat'
-    : !estVu(tuto, 'runes') && poudre >= POUDRE_CONSEIL_RUNES && ownedRunes.length === 0 ? 'runes' : null;
+    : !estVu(tuto, 'runes') && runesOuvertes && poudre >= POUDRE_CONSEIL_RUNES && ownedRunes.length === 0 ? 'runes' : null;
   // Interface : fractions de la maquette, accrochées à un bord (x : gauche/centre/droite ; y : haut/bas).
   const R = (f, ax = 'centre', ay = 'haut') => {
     const l = (f[2] - f[0]) * ui.l; const hh = (f[3] - f[1]) * ui.h;
@@ -1479,7 +1489,11 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
               <Image source={HUB_IMG.plus} resizeMethod="scale" resizeMode="contain" style={{ width: ui.h * 0.05, height: ui.h * 0.05 }} />
             </TouchableOpacity>
           </CapsuleBois>
-          <TouchableOpacity onPress={() => { if (etapeHub === 'runes') setTuto(vuEtape(tuto, 'runes')); setRunesOpen(true); }} activeOpacity={0.8} style={[R(HUB.runes, 'droite'), { alignItems: 'center', justifyContent: 'center' }]}>
+          <TouchableOpacity onPress={() => {
+            if (!runesOuvertes) { Alert.alert('🔒 Runes', `Gagne ${RUNES_COMBATS_GAGNES} combats pour débloquer les runes.`); return; }
+            if (etapeHub === 'runes') setTuto(vuEtape(tuto, 'runes')); setRunesOpen(true);
+          }} activeOpacity={0.8} style={[R(HUB.runes, 'droite'), { alignItems: 'center', justifyContent: 'center', opacity: runesOuvertes ? 1 : 0.55 }]}>
+            {!runesOuvertes ? <Text style={{ position: 'absolute', zIndex: 2, fontSize: 18, textShadowColor: '#000', textShadowRadius: 4, pointerEvents: 'none' }}>🔒</Text> : null}
             <Image source={GLOW_CYAN} resizeMethod="scale" resizeMode="contain" style={{ position: 'absolute', width: '190%', height: '190%' }} />
             <Image source={RUNES_GEM} resizeMethod="scale" resizeMode="contain" style={{ width: '100%', height: '100%' }} />
           </TouchableOpacity>

@@ -16,7 +16,10 @@ export const ETAPES = {
   taper: { texte: 'Clique ici pour gagner des pièces !', forme: 'rond' },
   boutique: { texte: 'Clique ici pour ouvrir la boutique.', forme: 'rond' },
   defi: { texte: 'Accomplis ce défi pour faire avancer ton œuf.', forme: 'carre' },
-  doree: { texte: 'Touche-la vite pour un bonus !', forme: 'rond' },
+  // 21/10 (auteur) : la 1re cible dorée arrive 10 s après le Pacte, FIGÉE en haut à droite de l'œuf (elle n'expire pas).
+  doree: { texte: 'Une cible dorée : touche-la pour un bonus !', forme: 'rond' },
+  // 21/10 (auteur) : l'œuf qui éclot — chaque tap retire 1 seconde (incubatorLogic : TAP_REDUCTION_MS = 1000).
+  eclosion: { texte: 'Ton œuf éclot : chaque tap retire 1 seconde !', forme: 'rond' },
   // 21/10 (auteur) : un vrai PALIER — rester 15 s en Transe (de quoi s'offrir 3 niveaux de Pacte ensuite).
   transe: { texte: "Tape sans t'arrêter : reste en Transe 15 secondes !", forme: 'rond' },
   creature: { texte: 'Ta première créature rejoint ton équipe ici !', forme: 'carre' }, // UNE phrase (le contrôle l'a vu)
@@ -41,13 +44,19 @@ export const ETAPES = {
 
 // Ordre de priorité de l'écran principal : UN conseil à la fois.
 // 21/10 (auteur) : l'œuf (100 taps), PUIS la Transe (15 s), PUIS la boutique et le Pacte (3 niveaux), PUIS le défi…
-export const ORDRE_ECRAN = ['taper', 'transe', 'boutique', 'defi', 'doree', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension'];
+// La cible dorée passe AVANT le défi : elle n'existe que pendant son conseil (sinon le carré du défi la cacherait).
+export const ORDRE_ECRAN = ['taper', 'transe', 'boutique', 'doree', 'defi', 'eclosion', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension'];
 // « Clique ici pour gagner des pièces » : 100 taps sur l'œuf avant le conseil suivant (auteur, 21/10 ; avant : 10).
 export const TAPS_CONSEIL_TAPER = 100;
 // « Reste en Transe » : 15 secondes d'affilée (auteur, 21/10).
 export const TRANSE_CONSEIL_SEC = 15;
 // « Achète le Pacte » : 3 niveaux avant de passer à la suite (auteur, 21/10).
 export const PACTE_CONSEIL_NIVEAUX = 3;
+// La 1re cible dorée : 10 s après la fin du conseil du Pacte, en haut à droite de l'œuf (en % de la zone de l'œuf).
+export const DOREE_TUTO_DELAI_MS = 10 * 1000;
+export const DOREE_TUTO_POS = { leftPct: 75, topPct: 25 };
+// Les runes s'ouvrent après le 3ᵉ combat GAGNÉ (auteur, 21/10) : niveau débloqué ≥ 4.
+export const RUNES_COMBATS_GAGNES = 3;
 // La progression DANS la phrase, avant son « ! » final (« … pièces (37/100) ! ») : toujours une seule phrase.
 export function avecCompteur(texte, n, total) {
   const t = String(texte || ''); const c = ` (${Math.max(0, Math.min(total, Math.floor(n)))}/${total})`;

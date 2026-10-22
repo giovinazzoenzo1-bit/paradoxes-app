@@ -281,8 +281,8 @@ import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import GuideTuto from '../../components/GuideTuto';
-import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, lireTuto, ecrireTuto, abonnerTuto, estVu, choisirEtape, vuEtape,
-  estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
+import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, DOREE_TUTO_DELAI_MS, DOREE_TUTO_POS, lireTuto, ecrireTuto,
+  abonnerTuto, estVu, tutoActif, choisirEtape, vuEtape, estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
 import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_MS, MINI_JEU_DELAI_OUVERTURE_MS,
   MINI_JEU_DEFIS_CONTINUS, MINI_JEU_PRESENCE_MS } from '../../games/clicker/miniJeux';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
@@ -2031,7 +2031,20 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         setComboCount(0);
       }
 
-      if (goldenTargetRef.current && now > goldenTargetRef.current.expiresAt) {
+      // 🎓 TUTO (21/10, auteur) : tant que la 1re cible dorée n'a pas été touchée, AUCUNE cible au hasard ; la 1re arrive
+      // 10 s après la fin du conseil du Pacte, avec une vibration, FIGÉE (elle n'expire pas) et TOUJOURS en haut à droite de
+      // l'œuf — le joueur a le temps de lire, et le rond du tuto ne se trompe jamais de place.
+      const tuD = tutoRef.current;
+      const doreeDuTuto = !!tuD && tutoActif(tuD) && !estVu(tuD, 'doree');
+      if (doreeDuTuto) {
+        if (!goldenTargetRef.current && estVu(tuD, 'pacte') && tuD.pacteFiniA && now >= tuD.pacteFiniA + DOREE_TUTO_DELAI_MS
+          && viewRef.current === 'tap' && !miniJeuOuvertRef.current) {
+          mesuresRef.current.doreesApparues += 1;
+          setGoldenTarget({ expiresAt: now + 10 * 365 * 86400 * 1000, leftPct: DOREE_TUTO_POS.leftPct, topPct: DOREE_TUTO_POS.topPct, tuto: true });
+          if (vibrationsRef.current) Vibration.vibrate(400);
+          jouerSon('etoile-doree-apparition', sonsJeuRef.current);
+        }
+      } else if (goldenTargetRef.current && now > goldenTargetRef.current.expiresAt) {
         setGoldenTarget(null);
         nextGoldenAtRef.current = now + nextGoldenDelaySec() * 1000;
       } else if (!goldenTargetRef.current && viewRef.current === 'tap' && now >= nextGoldenAtRef.current && !miniJeuOuvertRef.current) {
@@ -3358,6 +3371,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     boutique: estVu(tuto, 'transe') && coins >= applyDiscount(tapPowerCost(tapPower)) && !estVu(tuto, 'pacte'),
     defi: estVu(tuto, 'pacte') && !!currentChallengeId,
     doree: !!goldenTarget,
+    eclosion: !!mainEgg, // l'œuf du menu principal éclot (minuteur) : 1 tap = 1 seconde
     transe: estVu(tuto, 'taper'), // 21/10 (auteur) : après les 100 taps, tenir la Transe 15 s
     creature: owned.length > 0,
     aventure: estVu(tuto, 'creature') && owned.length > 0,
@@ -3373,7 +3387,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     ecrireTuto(estVeteran({ creatures: owned.length, ascensions: ascensionCount }) ? { ...tuto, passe: true, decide: true } : { ...tuto, decide: true });
   }, [loaded, tuto]);
   // Où est la cible du conseil : mesurée dans la fenêtre (rien à recalculer à la main), puis suivie toutes les 0,6 s.
-  const CLE_CIBLE_TUTO = { taper: 'oeuf', boutique: 'boutique', ascension: 'boutique', doree: 'doree', transe: 'oeuf', creature: 'deck',
+  const CLE_CIBLE_TUTO = { taper: 'oeuf', boutique: 'boutique', ascension: 'boutique', doree: 'doree', transe: 'oeuf', eclosion: 'oeuf', creature: 'deck',
     aventure: 'exploration', incubateur: 'incubateur', calendrier: 'calendrier' };
   useEffect(() => {
     setRectTuto(null);
@@ -3387,7 +3401,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       }
       mesurerCible(racineTutoRef.current, ciblesTutoRef.current[CLE_CIBLE_TUTO[etapeEcran]], (r0) => {
         // L'œuf VISIBLE ne remplit pas son carré : le rond entoure son corps (56 % du carré), pas toute la zone.
-        const r = etapeEcran === 'taper' || etapeEcran === 'transe' ? { x: r0.x + r0.l * 0.22, y: r0.y + r0.h * 0.22, l: r0.l * 0.56, h: r0.h * 0.56 } : r0;
+        const r = ['taper', 'transe', 'eclosion'].includes(etapeEcran) ? { x: r0.x + r0.l * 0.22, y: r0.y + r0.h * 0.22, l: r0.l * 0.56, h: r0.h * 0.56 } : r0;
         setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r));
       });
     };
@@ -3399,7 +3413,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   useEffect(() => {
     const avant = etapeAfficheeRef.current;
     if (avant && avant !== etapeEcran) {
-      if (avant === 'doree' && !condTuto[avant]) vuTuto(avant);
+      if ((avant === 'doree' || avant === 'eclosion') && !condTuto[avant]) vuTuto(avant); // cible touchée / œuf éclos
       if ((avant === 'boutique' || avant === 'ascension') && view === 'shop') vuTuto(avant);
       if (avant === 'aventure' && view === 'adventure') vuTuto('aventure');
       if (avant === 'incubateur' && incubatorOpen) vuTuto('incubateur');
@@ -6559,6 +6573,10 @@ function GuardianBattle({ team, level, onFinish, eggNumber = 0, calibrage = null
 }
 
 function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures, refBoutique, refExploration }) {
+  // 21/10 (auteur) : SANS sa première créature, le joueur n'a accès ni à la Collection ni à l'Exploration (cadenas) ;
+  // dès qu'elle éclot, le tuto reprend (« Ta première créature… », puis EXPLORATION).
+  const verrou = ownedCount === 0;
+  const bloque = (quoi) => Alert.alert('🔒 Pas encore', `Fais éclore ta première créature pour ouvrir ${quoi}.`);
   // Composant separe : il lui faut SON propre appel, `insets` de
   // ClickerScreen n'est pas dans sa portee.
   const insets = useSafeAreaInsets();
@@ -6577,17 +6595,18 @@ function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatu
         <Text style={[styles.bottomBarLabel, view === 'shop' && styles.bottomBarLabelActive]}>SHOP</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.bottomBarItem} onPress={() => setView('collection')}>
+      <TouchableOpacity style={styles.bottomBarItem} onPress={() => (verrou ? bloque('la Collection') : setView('collection'))}>
         <ImageBackground source={require('../../../assets/menu/cadre-nav.png')} resizeMode="contain" style={[styles.navBox, view === 'collection' && styles.navBoxActive]}>
-          <Image source={require('../../../assets/menu/icone-collection.png')} style={styles.navBoxImage} resizeMode="contain" />
-          <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{ownedCount}</Text></View>
+          <Image source={require('../../../assets/menu/icone-collection.png')} style={[styles.navBoxImage, verrou && styles.navBoxVerrou]} resizeMode="contain" />
+          {verrou ? <Text style={styles.navCadenas}>🔒</Text> : <View style={styles.bottomBarBadge}><Text style={styles.bottomBarBadgeText}>{ownedCount}</Text></View>}
         </ImageBackground>
         <Text style={[styles.bottomBarLabel, view === 'collection' && styles.bottomBarLabelActive]}>COLLECTION</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.bottomBarItem} onPress={onAdventurePress}>
+      <TouchableOpacity style={styles.bottomBarItem} onPress={() => (verrou ? bloque("l'Exploration") : onAdventurePress())}>
         <ImageBackground source={require('../../../assets/menu/cadre-nav.png')} resizeMode="contain" style={styles.navBox}>
-          <Image ref={refExploration} source={require('../../../assets/menu/icone-exploration.png')} style={styles.navBoxImage} resizeMode="contain" />
+          <Image ref={refExploration} source={require('../../../assets/menu/icone-exploration.png')} style={[styles.navBoxImage, verrou && styles.navBoxVerrou]} resizeMode="contain" />
+          {verrou ? <Text style={styles.navCadenas}>🔒</Text> : null}
         </ImageBackground>
         <Text style={styles.bottomBarLabel}>EXPLORATION</Text>
       </TouchableOpacity>
@@ -6803,6 +6822,9 @@ const styles = StyleSheet.create({
   },
   bossAnnonceTitre: { color: '#ffb199', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 },
   bossAnnonceChiffre: { color: '#ff5a3c', fontSize: 56, fontWeight: '900', marginTop: 2 },
+  // Barre du bas sans créature : icône éteinte + cadenas (auteur, 21/10).
+  navBoxVerrou: { opacity: 0.4 },
+  navCadenas: { position: 'absolute', fontSize: 20, textShadowColor: '#000', textShadowRadius: 4 },
   devToolsRow: {
     position: 'absolute', left: 0, right: 0, top: SCREEN_H * (0.303 - TOP_BLOCK_SHIFT) - 13, zIndex: 3,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,

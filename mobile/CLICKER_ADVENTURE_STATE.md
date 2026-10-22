@@ -4573,6 +4573,14 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - ⚠️ Avec les 100 taps, la bulle reste longtemps posée sur le NID : en `box-none`, elle y prenait les taps (sonde : nid
   0/20, bas de l'œuf 11/20 — au banc `box-none` n'est pas appliqué). La bulle est désormais ENTIÈREMENT `none` et la croix
   est un bouton À PART posé sur son coin ; hauteur de bulle selon le nombre de lignes. Sonde avec conseil : 5/5.
+- 21/10 (auteur, LOT 1 de la suite du tuto) : 1re CIBLE DORÉE du tuto 10 s après la fin du Pacte (`pacteFiniA`), vibration,
+  FIGÉE (n'expire pas) et TOUJOURS en haut à droite de l'œuf (75 % / 25 %) ; aucune cible au hasard avant elle ; elle passe
+  AVANT le défi dans l'ordre. ÉCLOSION de l'œuf du menu principal : « chaque tap retire 1 seconde » (vérifié :
+  TAP_REDUCTION_MS = 1000). Sans 1re créature : COLLECTION et EXPLORATION sous cadenas (pour tous). RUNES sous cadenas
+  jusqu'au 3ᵉ combat gagné (niveau débloqué ≥ 4, pour tous) ; au déblocage, le joueur guidé reçoit de quoi faire 3 poudres
+  (`poudreOfferte`, une fois). LOT 2 À FAIRE : conseil d'éclosion dans l'incubateur, 1er mini-boss provoqué + conseil
+  au-dessus de lui, conseil des mini-jeux après ses Diamants, amélioration des créatures aux Griffes (« toujours les
+  améliorer »), bouton « 🎁 Griffes à récupérer » dans le menu du deck de l'Exploration.
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
