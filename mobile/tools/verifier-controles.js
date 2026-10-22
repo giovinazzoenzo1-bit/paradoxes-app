@@ -605,6 +605,8 @@ const SABOTAGES = [
     remplace("{phase === 'tapping' && (\n          <View style={{ alignItems: 'center', pointerEvents: 'none' }}>", "{phase === 'tapping' && (\n          <View style={{ alignItems: 'center' }}>")],
   ['auditCadrageCreatures', F.cadrage, "cadrage de Luxorbe absent (table non régénérée) : elle serait mal cadrée dans l'Album et l'Exploration",
     remplace('  luxorbe: {', '  luxorbe_retire: {')],
+  ['auditHooksAvantRetour', path.join(RACINE, 'src/screens/games/CombatScreen.js'), "un hook revient après le retour anticipé de fin de combat (plantage du 21/10)",
+    remplace("  if (phase === 'done') {\n", "  if (phase === 'done' && skipResultScreen) return null;\n  useEffect(() => {}, []);\n  if (phase === 'done') {\n")],
   ['auditTutoriel', path.join(RACINE, 'src/components/GuideTuto.js'), "le guide du tuto reçoit un conteneur plein écran (il avalerait les taps sur l'œuf, bug du 20/10)",
     remplace("  return (\n    <>\n      {/* Lueur dorée derrière le repère. */}", "  return (\n    <View style={StyleSheet.absoluteFill}>\n      {/* Lueur dorée derrière le repère. */}")],
   ['auditTutoriel', path.join(RACINE, 'src/screens/games/GrimoireBoutique.js'), "le rond du Pacte vise de nouveau « tapPower » (il n'apparaissait jamais)",

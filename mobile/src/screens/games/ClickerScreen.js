@@ -3405,7 +3405,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       }
       mesurerCible(racineTutoRef.current, ciblesTutoRef.current[CLE_CIBLE_TUTO[etapeEcran]], (r0) => {
         // L'œuf VISIBLE ne remplit pas son carré : le rond entoure son corps (56 % du carré), pas toute la zone.
-        const r = ['taper', 'transe', 'eclosion', 'miniBoss', 'miniJeux'].includes(etapeEcran) ? { x: r0.x + r0.l * 0.22, y: r0.y + r0.h * 0.22, l: r0.l * 0.56, h: r0.h * 0.56 } : r0;
+        // Éclosion (capture de l'auteur, 21/10) : le compte à rebours sous l'œuf chevauchait le rond → rond plus serré, un peu
+        // remonté, et la bulle AU-DESSUS (en bas, elle cachait les boutons d'éclosion).
+        const r = etapeEcran === 'eclosion' ? { x: r0.x + r0.l * 0.27, y: r0.y + r0.h * 0.2, l: r0.l * 0.46, h: r0.h * 0.46 }
+          : ['taper', 'transe', 'miniBoss', 'miniJeux'].includes(etapeEcran) ? { x: r0.x + r0.l * 0.22, y: r0.y + r0.h * 0.22, l: r0.l * 0.56, h: r0.h * 0.56 } : r0;
         setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r));
       });
     };
@@ -5146,7 +5149,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       )}
       <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
       {etapeEcran && rectTuto ? (
-        <GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme} ecran={{ l: SCREEN_W, h: SCREEN_H }} place={etapeEcran === 'miniBoss' ? 'haut' : 'auto'}
+        <GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme} ecran={{ l: SCREEN_W, h: SCREEN_H }} place={etapeEcran === 'miniBoss' || etapeEcran === 'eclosion' ? 'haut' : 'auto'}
           texte={etapeEcran === 'taper' ? avecCompteur(ETAPES.taper.texte, tapsTutoRef.current, TAPS_CONSEIL_TAPER)
             : etapeEcran === 'transe' ? avecCompteur(ETAPES.transe.texte, transeTutoSec, TRANSE_CONSEIL_SEC) : ETAPES[etapeEcran].texte}
           onFermer={() => {

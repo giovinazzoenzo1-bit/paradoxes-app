@@ -1471,6 +1471,89 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     ]);
   };
 
+  // ⚠️ BUG RÉEL (21/10, APK : « Rendered fewer hooks than expected » à la FIN de chaque combat) : ces hooks du tuto étaient
+  // déclarés APRÈS le retour anticipé de fin de combat (`phase === 'done'`) — à la dernière image, React en trouvait moins
+  // et l'appli plantait. Tout hook doit être AVANT le moindre retour anticipé (contrôle auditHooksAvantRetour).
+  // 21/10 (auteur) : attaque → CIBLE (« touche une créature ennemie ») → jauge → la VIE des ennemis (bandeau du haut).
+  const etapeCombat = !tutoActif(tuto) ? null
+    : phase === 'choosing' && isBoss && !estVu(tuto, 'gardien') ? 'gardien'
+    : phase === 'choosing' && !armedSkill && !estVu(tuto, 'attaque') ? 'attaque'
+    : phase === 'choosing' && armedSkill && !estSurAllie(armedSkill) && !estVu(tuto, 'cible') ? 'cible'
+    : phase === 'tapping' && !estVu(tuto, 'jauge') ? 'jauge'
+    : phase === 'choosing' && !isBoss && !armedSkill && estVu(tuto, 'jauge') && !estVu(tuto, 'vie') ? 'vie' : null;
+  useEffect(() => {
+    setRectTuto(null);
+    if (!etapeCombat) return undefined;
+    const cle = { gardien: 'gardien', jauge: 'jauge' }[etapeCombat];
+    const garder = (r) => setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r));
+    const mesure = () => {
+      if (etapeCombat === 'cible') {
+        // Les créatures ennemies EN VIE sur le terrain : même calcul que leur dessin (emplacement × taille).
+        const rects = opponents.map((o, i) => {
+          if (pvAffiche('o', i, o.hp) <= 0) return null;
+          const sl = isBoss ? { x: 0.72, y: 0.53, size: GARDIEN_TAILLE } : OPPONENT_SLOTS[i]; if (!sl) return null;
+          const fs = Math.round(SPRITE_BASE * sl.size); return { x: sl.x * W - fs / 2, y: sl.y * H - 10 - fs / 2, l: fs, h: fs };
+        }).filter(Boolean);
+        if (rects.length) {
+          const x0 = Math.min(...rects.map((q) => q.x)), y0 = Math.min(...rects.map((q) => q.y));
+          const x1 = Math.max(...rects.map((q) => q.x + q.l)), y1 = Math.max(...rects.map((q) => q.y + q.h));
+          garder({ x: Math.round(Math.max(4, x0)), y: Math.round(Math.max(4, y0)), l: Math.round(Math.min(W - 4, x1) - Math.max(4, x0)), h: Math.round(y1 - Math.max(4, y0)) });
+        }
+        return;
+      }
+      if (etapeCombat === 'vie') {
+        // Les panneaux des ennemis dans le bandeau du haut (leur vie).
+        const ps = (ciblesTutoRef.current.panneaux || []).filter(Boolean); const rects = [];
+        ps.forEach((c) => mesurerCible(racineTutoRef.current, c, (r) => {
+          rects.push(r);
+          if (rects.length === ps.length) {
+            const x0 = Math.min(...rects.map((q) => q.x)), y0 = Math.min(...rects.map((q) => q.y));
+            const x1 = Math.max(...rects.map((q) => q.x + q.l)), y1 = Math.max(...rects.map((q) => q.y + q.h));
+            garder({ x: x0, y: y0, l: x1 - x0, h: y1 - y0 });
+          }
+        }));
+        return;
+      }
+      if (etapeCombat === 'attaque') {
+        // Le carré entoure l'ENSEMBLE des cartes (au banc, la barre entière faisait toute la largeur : le carré n'était qu'un trait).
+        const cartes = (ciblesTutoRef.current.cartes || []).filter(Boolean); const rects = [];
+        cartes.forEach((c) => mesurerCible(racineTutoRef.current, c, (r) => {
+          rects.push(r);
+          if (rects.length === cartes.length) {
+            const x0 = Math.min(...rects.map((q) => q.x)), y0 = Math.min(...rects.map((q) => q.y));
+            const x1 = Math.max(...rects.map((q) => q.x + q.l)), y1 = Math.max(...rects.map((q) => q.y + q.h));
+            garder({ x: x0, y: y0, l: x1 - x0, h: y1 - y0 });
+          }
+        }));
+        return;
+      }
+      mesurerCible(racineTutoRef.current, ciblesTutoRef.current[cle], garder);
+    };
+    const t0 = setTimeout(mesure, 120); const iv = setInterval(mesure, 600);
+    return () => { clearTimeout(t0); clearInterval(iv); };
+  }, [etapeCombat]);
+  // Fins : attaque choisie (phase « tapping »), jauge jouée (fin du « tapping »), conseil du Gardien après 7 s ou au 1ᵉʳ coup.
+  const etapeCombatAvantRef = useRef(null);
+  useEffect(() => {
+    const avant = etapeCombatAvantRef.current;
+    if (avant && avant !== etapeCombat) {
+      if ((avant === 'attaque' || avant === 'gardien') && (phase === 'tapping' || armedSkill)) setTuto((t) => vuEtape(t, avant)); // attaque choisie
+      if (avant === 'cible' && phase === 'tapping') setTuto((t) => vuEtape(t, 'cible')); // cible touchée
+      if (avant === 'jauge' && phase !== 'tapping') setTuto((t) => vuEtape(t, 'jauge'));
+    }
+    etapeCombatAvantRef.current = etapeCombat;
+  });
+  useEffect(() => {
+    if (etapeCombat !== 'vie') return undefined;
+    const t = setTimeout(() => setTuto((x) => vuEtape(x, 'vie')), DUREE_CONSEIL_INFO_MS);
+    return () => clearTimeout(t);
+  }, [etapeCombat]);
+  useEffect(() => {
+    if (etapeCombat !== 'gardien') return undefined;
+    const t = setTimeout(() => setTuto((x) => vuEtape(x, 'gardien')), DUREE_CONSEIL_INFO_MS);
+    return () => clearTimeout(t);
+  }, [etapeCombat]);
+
   if (phase === 'done') {
     // L'effet ci-dessus a déjà rendu la main : on n'affiche rien plutôt
     // qu'un récapitulatif qui clignoterait une frame.
@@ -1689,86 +1772,6 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
       </TouchableOpacity>
     );
   };
-
-  // 21/10 (auteur) : attaque → CIBLE (« touche une créature ennemie ») → jauge → la VIE des ennemis (bandeau du haut).
-  const etapeCombat = !tutoActif(tuto) ? null
-    : phase === 'choosing' && isBoss && !estVu(tuto, 'gardien') ? 'gardien'
-    : phase === 'choosing' && !armedSkill && !estVu(tuto, 'attaque') ? 'attaque'
-    : phase === 'choosing' && armedSkill && !estSurAllie(armedSkill) && !estVu(tuto, 'cible') ? 'cible'
-    : phase === 'tapping' && !estVu(tuto, 'jauge') ? 'jauge'
-    : phase === 'choosing' && !isBoss && !armedSkill && estVu(tuto, 'jauge') && !estVu(tuto, 'vie') ? 'vie' : null;
-  useEffect(() => {
-    setRectTuto(null);
-    if (!etapeCombat) return undefined;
-    const cle = { gardien: 'gardien', jauge: 'jauge' }[etapeCombat];
-    const garder = (r) => setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r));
-    const mesure = () => {
-      if (etapeCombat === 'cible') {
-        // Les créatures ennemies EN VIE sur le terrain : même calcul que leur dessin (emplacement × taille).
-        const rects = opponents.map((o, i) => {
-          if (pvAffiche('o', i, o.hp) <= 0) return null;
-          const sl = isBoss ? { x: 0.72, y: 0.53, size: GARDIEN_TAILLE } : OPPONENT_SLOTS[i]; if (!sl) return null;
-          const fs = Math.round(SPRITE_BASE * sl.size); return { x: sl.x * W - fs / 2, y: sl.y * H - 10 - fs / 2, l: fs, h: fs };
-        }).filter(Boolean);
-        if (rects.length) {
-          const x0 = Math.min(...rects.map((q) => q.x)), y0 = Math.min(...rects.map((q) => q.y));
-          const x1 = Math.max(...rects.map((q) => q.x + q.l)), y1 = Math.max(...rects.map((q) => q.y + q.h));
-          garder({ x: Math.round(Math.max(4, x0)), y: Math.round(Math.max(4, y0)), l: Math.round(Math.min(W - 4, x1) - Math.max(4, x0)), h: Math.round(y1 - Math.max(4, y0)) });
-        }
-        return;
-      }
-      if (etapeCombat === 'vie') {
-        // Les panneaux des ennemis dans le bandeau du haut (leur vie).
-        const ps = (ciblesTutoRef.current.panneaux || []).filter(Boolean); const rects = [];
-        ps.forEach((c) => mesurerCible(racineTutoRef.current, c, (r) => {
-          rects.push(r);
-          if (rects.length === ps.length) {
-            const x0 = Math.min(...rects.map((q) => q.x)), y0 = Math.min(...rects.map((q) => q.y));
-            const x1 = Math.max(...rects.map((q) => q.x + q.l)), y1 = Math.max(...rects.map((q) => q.y + q.h));
-            garder({ x: x0, y: y0, l: x1 - x0, h: y1 - y0 });
-          }
-        }));
-        return;
-      }
-      if (etapeCombat === 'attaque') {
-        // Le carré entoure l'ENSEMBLE des cartes (au banc, la barre entière faisait toute la largeur : le carré n'était qu'un trait).
-        const cartes = (ciblesTutoRef.current.cartes || []).filter(Boolean); const rects = [];
-        cartes.forEach((c) => mesurerCible(racineTutoRef.current, c, (r) => {
-          rects.push(r);
-          if (rects.length === cartes.length) {
-            const x0 = Math.min(...rects.map((q) => q.x)), y0 = Math.min(...rects.map((q) => q.y));
-            const x1 = Math.max(...rects.map((q) => q.x + q.l)), y1 = Math.max(...rects.map((q) => q.y + q.h));
-            garder({ x: x0, y: y0, l: x1 - x0, h: y1 - y0 });
-          }
-        }));
-        return;
-      }
-      mesurerCible(racineTutoRef.current, ciblesTutoRef.current[cle], garder);
-    };
-    const t0 = setTimeout(mesure, 120); const iv = setInterval(mesure, 600);
-    return () => { clearTimeout(t0); clearInterval(iv); };
-  }, [etapeCombat]);
-  // Fins : attaque choisie (phase « tapping »), jauge jouée (fin du « tapping »), conseil du Gardien après 7 s ou au 1ᵉʳ coup.
-  const etapeCombatAvantRef = useRef(null);
-  useEffect(() => {
-    const avant = etapeCombatAvantRef.current;
-    if (avant && avant !== etapeCombat) {
-      if ((avant === 'attaque' || avant === 'gardien') && (phase === 'tapping' || armedSkill)) setTuto((t) => vuEtape(t, avant)); // attaque choisie
-      if (avant === 'cible' && phase === 'tapping') setTuto((t) => vuEtape(t, 'cible')); // cible touchée
-      if (avant === 'jauge' && phase !== 'tapping') setTuto((t) => vuEtape(t, 'jauge'));
-    }
-    etapeCombatAvantRef.current = etapeCombat;
-  });
-  useEffect(() => {
-    if (etapeCombat !== 'vie') return undefined;
-    const t = setTimeout(() => setTuto((x) => vuEtape(x, 'vie')), DUREE_CONSEIL_INFO_MS);
-    return () => clearTimeout(t);
-  }, [etapeCombat]);
-  useEffect(() => {
-    if (etapeCombat !== 'gardien') return undefined;
-    const t = setTimeout(() => setTuto((x) => vuEtape(x, 'gardien')), DUREE_CONSEIL_INFO_MS);
-    return () => clearTimeout(t);
-  }, [etapeCombat]);
 
   return (
     <Animated.View style={[styles.screen, { marginTop: -insets.top, transform: [{ translateX: secousse }] }]}>

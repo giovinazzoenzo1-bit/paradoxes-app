@@ -4624,7 +4624,7 @@ function auditTutoriel() {
   if (!Cl.includes("tuto.bossLance || estVu(tuto, 'miniBoss') || !tuto.eclosA || mainEgg) return undefined;") || !Cl.includes('ecrireTuto({ ...tu, eclosA: Date.now() })')
     || t.DUREE_CONSEIL_ECLOSION_MS !== 10000) pb.push('le mini-boss du tuto peut arriver pendant le compte à rebours, ou le conseil d\'éclosion dure plus de 10 s');
   if (!lire('src/screens/games/AdventureScreen.js').includes('if (!runesOuvertes) { setVerrouRunes(true); return; }') || lire('src/screens/games/AdventureScreen.js').includes("Alert.alert('🔒 Runes'")) pb.push('le cadenas des Runes n\'est plus une fenêtre du jeu');
-  if (!Cl.includes("annoncerBoss(); }, Math.max(1000, tuto.eclosA + MINI_BOSS_TUTO_DELAI_MS - Date.now()));") || !Cl.includes("place={etapeEcran === 'miniBoss' ? 'haut' : 'auto'}")
+  if (!Cl.includes("annoncerBoss(); }, Math.max(1000, tuto.eclosA + MINI_BOSS_TUTO_DELAI_MS - Date.now()));") || !Cl.includes("place={etapeEcran === 'miniBoss' || etapeEcran === 'eclosion' ? 'haut' : 'auto'}")
     || !Cl.includes("miniJeux: estVu(tuto, 'miniBoss') && !bossResult,") || !Cl.includes('conseil={conseilIncub ? ETAPES.eclosionIncub.texte : null}')) pb.push('écran principal : mini-boss du tuto, conseil des mini-jeux ou de l\'incubateur débranché');
   if (!Cl.includes("onPress={() => (verrou ? bloque(\"l'Exploration\") : onAdventurePress())}") || !Cl.includes("onPress={() => (verrou ? bloque('la Collection') : setView('collection'))}")) pb.push('Collection ou Exploration ouvertes sans première créature');
   { const Av0 = lire('src/screens/games/AdventureScreen.js');
@@ -4639,6 +4639,37 @@ function auditTutoriel() {
   return pb;
 }
 module.exports.auditTutoriel = auditTutoriel;
+
+// ⚠️ BUG RÉEL du 21/10 (APK : « Rendered fewer hooks than expected » à la fin de CHAQUE combat) : des hooks du tuto déclarés
+// APRÈS le retour anticipé de fin de combat. Règle de React : AUCUN hook après un retour anticipé. Ce contrôle lit chaque
+// composant (fonction à majuscule) des écrans et composants, et crie dès qu'un hook suit un « if (…) return » de 1er niveau.
+function auditHooksAvantRetour() {
+  const fs = require('fs'); const path = require('path');
+  const pb = [];
+  for (const d of ['../src/screens/games', '../src/screens', '../src/components']) {
+    for (const f of fs.readdirSync(path.join(__dirname, d)).filter((x) => x.endsWith('.js'))) {
+      const t = fs.readFileSync(path.join(__dirname, d, f), 'utf8').split('\n');
+      for (let i = 0; i < t.length; i++) {
+        const m = /^(export default )?function ([A-Z]\w*)\(/.exec(t[i]); if (!m) continue;
+        let retour = null;
+        for (let j = i + 1; j < t.length && !/^}/.test(t[j]); j++) {
+          const l = t[j];
+          if (retour === null && /^  if \(.*\)\s*return\b/.test(l)) retour = j;
+          if (retour === null && /^  if \(.*\{\s*$/.test(l)) {
+            for (let k = j + 1; k < t.length && !/^  \}/.test(t[k]); k++) if (/^    return\b/.test(t[k])) { retour = j; break; }
+          }
+          if (/^  return\b/.test(l)) break; // le rendu principal : la suite n'est plus du corps de 1er niveau
+          if (retour !== null && /^  (const |let )?[^=(]*=?\s*use[A-Z]\w*\(|^  use[A-Z]\w*\(/.test(l)) {
+            pb.push(`${f} : ${m[2]} déclare un hook ligne ${j + 1} APRÈS un retour anticipé (ligne ${retour + 1}) — plantage « Rendered fewer hooks »`);
+            break;
+          }
+        }
+      }
+    }
+  }
+  return pb;
+}
+module.exports.auditHooksAvantRetour = auditHooksAvantRetour;
 
 // ── Illustrations de créatures : fichiers ET cadrage (03/10) ──────────────
 // Chaque créature branchée dans CreatureArt doit avoir ses 3 stades (fichiers

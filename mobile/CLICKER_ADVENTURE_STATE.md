@@ -4600,6 +4600,16 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   l'attaque, CARRÉ sur les créatures ennemies (« touche une créature ennemie ») ; après la jauge, carré sur la VIE des ennemis
   (bandeau du haut) ; Gardien : « sa barre de vie : bouclier bleu, puis vie rouge ». Cadenas des Runes : FenetreJeu (la
   fenêtre de l'Aventure). En attente des captures de l'auteur : bug « après le 1er combat en Exploration » (ses écrans 2-3).
+- 🚨 BUG RÉEL GRAVE (21/10, captures de l'auteur : « Rendered fewer hooks than expected » à la FIN DE CHAQUE COMBAT) : les
+  hooks du tuto du combat étaient déclarés APRÈS le retour anticipé de fin de combat (`if (phase === 'done')`). À la dernière
+  image, React trouvait moins de hooks → plantage, pour TOUS les joueurs, depuis le tuto du combat. Déplacés AVANT. Pourquoi
+  personne ne l'a vu : aucun test n'allait au bout d'un combat, et le banc tourne en React de PRODUCTION (message abrégé
+  « Minified React error #300 », que mes filtres ne reconnaissaient pas). Désormais : contrôle `auditHooksAvantRetour` (tout
+  composant, aucun hook après un retour anticipé — il crie sur la version fautive) + test `tools/capture/finir-combat.mjs`
+  (combat du Gardien joué jusqu'au bout, échec à la moindre erreur) À LANCER À CHAQUE PUBLICATION, avec la sonde des taps
+  et l'Exploration. Reproduit au banc : ancienne version → erreur #300 ; nouvelle → aucune.
+- Éclosion (capture de l'auteur) : le compte à rebours sous l'œuf chevauchait le rond → rond plus serré et remonté, bulle
+  au-dessus (en bas, elle cachait les boutons d'éclosion).
 - ⚠️ PIÈGE DE MÉTHODE (21/10) : une passe de `verifier-controles` restée EN COURS (réponse coupée) + une nouvelle passe lancée
   par-dessus = deux sabotages simultanés → un piège est resté ÉCRIT dans AdventureScreen.js (PanneauRetour en absoluteFill).
   Rattrapé par `git status` (fichier modifié hors commit) et remis par `git checkout`. Règle : TOUJOURS `pgrep -x node`
