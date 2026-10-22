@@ -4631,6 +4631,7 @@ function auditTutoriel() {
     if (!Av0.includes('  const runesOuvertes = currentUnlockedLevel > RUNES_COMBATS_GAGNES;') || !Av0.includes('setPoudre(POUDRE_CONSEIL_RUNES);')) pb.push('Aventure : runes ouvertes avant 3 combats, ou poudre du tuto non offerte'); }
   const Co = lire('src/screens/games/CombatScreen.js');
   if (!Co.includes("phase === 'choosing' && !armedSkill && !estVu(tuto, 'attaque') ? 'attaque'") || !Co.includes("phase === 'tapping' && !estVu(tuto, 'jauge') ? 'jauge'")
+    || !Co.includes("if (avant === 'vie' && (armedSkill || phase !== 'choosing')) setTuto((t) => vuEtape(t, 'vie'));")
     || !Co.includes("phase === 'choosing' && armedSkill && !estSurAllie(armedSkill) && !estVu(tuto, 'cible') ? 'cible'") || !Co.includes("estVu(tuto, 'jauge') && !estVu(tuto, 'vie') ? 'vie'")) pb.push('combat : les conseils attaque / cible / jauge / vie ont disparu');
   const Av = lire('src/screens/games/AdventureScreen.js');
   if (!Av.includes("poudre >= POUDRE_CONSEIL_RUNES && ownedRunes.length === 0 ? 'runes'") || !Av.includes("nbRunes === 0 && poudre >= POUDRE_PRIX.unite && !estVu(tuto, 'acheterRune') ? 'acheterRune'")) pb.push('Aventure : les conseils des runes ont disparu');

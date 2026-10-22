@@ -1539,6 +1539,9 @@ export default function CombatScreen({ team, levelNumber, onFinish: onFinishPare
     if (avant && avant !== etapeCombat) {
       if ((avant === 'attaque' || avant === 'gardien') && (phase === 'tapping' || armedSkill)) setTuto((t) => vuEtape(t, avant)); // attaque choisie
       if (avant === 'cible' && phase === 'tapping') setTuto((t) => vuEtape(t, 'cible')); // cible touchée
+      // ⚠️ BUG RÉEL (21/10, auteur : « le tuto sur la vie de l'ennemi reste tout le temps ») : il ne partait qu'après 7 s d'affilée,
+      // or chaque tour joué le cache puis le rallume — le délai repartait à zéro à chaque tour. Il s'en va dès que le joueur AGIT.
+      if (avant === 'vie' && (armedSkill || phase !== 'choosing')) setTuto((t) => vuEtape(t, 'vie'));
       if (avant === 'jauge' && phase !== 'tapping') setTuto((t) => vuEtape(t, 'jauge'));
     }
     etapeCombatAvantRef.current = etapeCombat;

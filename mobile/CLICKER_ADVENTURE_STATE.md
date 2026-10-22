@@ -4608,6 +4608,9 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   composant, aucun hook après un retour anticipé — il crie sur la version fautive) + test `tools/capture/finir-combat.mjs`
   (combat du Gardien joué jusqu'au bout, échec à la moindre erreur) À LANCER À CHAQUE PUBLICATION, avec la sonde des taps
   et l'Exploration. Reproduit au banc : ancienne version → erreur #300 ; nouvelle → aucune.
+- Conseil « vie des ennemis » (combat) qui restait TOUT LE TEMPS : délai de 7 s remis à zéro à chaque tour (il s'éteint
+  pendant le tour ennemi et se rallume) → il s'en va dès que le joueur agit. La « case jaune autour de la vie de notre
+  créature » N'EST PAS le tuto : c'est l'indicateur du tour (cadre doré), demandé par l'auteur le 15/10.
 - Éclosion (capture de l'auteur) : le compte à rebours sous l'œuf chevauchait le rond → rond plus serré et remonté, bulle
   au-dessus (en bas, elle cachait les boutons d'éclosion).
 - ⚠️ PIÈGE DE MÉTHODE (21/10) : une passe de `verifier-controles` restée EN COURS (réponse coupée) + une nouvelle passe lancée
