@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Animated, Dimensions } from 'react-native';
+import GuideTuto from '../../components/GuideTuto';
+import { mesurerCible } from '../../games/clicker/tutoriel';
 import { COLORS } from './clickerTheme';
 import { FenetreBois, BoutonBois, SABLIER } from './fenetreBois';
 import {
@@ -16,7 +18,18 @@ const EGG_IMG = require('../../../assets/egg/egg-2-fissure.png');
 // Le gardien d'œuf (combat à la fin du minuteur) n'est PAS dans cette
 // version : ici l'éclosion donne directement la créature. Il viendra
 // s'intercaler entre « minuteur à zéro » et « éclosion ».
-export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBack, guardianRequired, guardianInfo = null, onAffronterGardien = null }) {
+// 🎓 `conseil` (lot 2 du tuto, 21/10) : la phrase « Tape l'œuf : chaque tap retire 1 seconde d'éclosion ! », avec le rond
+// autour de l'œuf ; `onFermerConseil` = la petite croix. Tout le reste (compte des taps) est géré par l'écran principal.
+export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBack, guardianRequired, guardianInfo = null, onAffronterGardien = null, conseil = null, onFermerConseil = null }) {
+  const oeufTutoRef = useRef(null); const racineTutoRef = useRef(null);
+  const [rectTuto, setRectTuto] = useState(null);
+  useEffect(() => {
+    setRectTuto(null);
+    if (!conseil) return undefined;
+    const mesure = () => mesurerCible(racineTutoRef.current, oeufTutoRef.current, (r) => setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r)));
+    const t0 = setTimeout(mesure, 150); const iv = setInterval(mesure, 700);
+    return () => { clearTimeout(t0); clearInterval(iv); };
+  }, [conseil]);
   // Ré-affichage chaque seconde. Le minuteur lui-même ne dépend PAS de
   // ce timer : tout est calculé depuis l'horodatage de fin, donc fermer
   // l'appli ne fait rien perdre. Ce tick ne sert qu'à rafraîchir
@@ -90,6 +103,7 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
                   grandes marges transparentes), taper juste à côté doit
                   compter. */}
               <TouchableOpacity
+                ref={oeufTutoRef}
                 activeOpacity={0.85}
                 onPress={() => { doShake(); (ready ? onHatch : onTap)(); }}
                 style={styles.eggWrap}
@@ -169,6 +183,12 @@ export default function IncubatorPanel({ egg, onTap, onWatchVideo, onHatch, onBa
           )}
         </View>
       </FenetreBois>
+      {/* 🎓 Repère (0, 0) du panneau et conseil (seule sa petite croix capte le doigt : l'œuf se tape à travers). */}
+      <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
+      {conseil && rectTuto ? (
+        <GuideTuto rect={{ x: rectTuto.x + rectTuto.l * 0.15, y: rectTuto.y + rectTuto.h * 0.15, l: rectTuto.l * 0.7, h: rectTuto.h * 0.7 }} forme="rond" texte={conseil}
+          ecran={{ l: Dimensions.get('window').width, h: Dimensions.get('window').height }} onFermer={onFermerConseil || (() => {})} zIndex={90} />
+      ) : null}
     </View>
   );
 }

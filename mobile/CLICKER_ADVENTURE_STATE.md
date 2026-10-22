@@ -4578,9 +4578,14 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   AVANT le défi dans l'ordre. ÉCLOSION de l'œuf du menu principal : « chaque tap retire 1 seconde » (vérifié :
   TAP_REDUCTION_MS = 1000). Sans 1re créature : COLLECTION et EXPLORATION sous cadenas (pour tous). RUNES sous cadenas
   jusqu'au 3ᵉ combat gagné (niveau débloqué ≥ 4, pour tous) ; au déblocage, le joueur guidé reçoit de quoi faire 3 poudres
-  (`poudreOfferte`, une fois). LOT 2 À FAIRE : conseil d'éclosion dans l'incubateur, 1er mini-boss provoqué + conseil
-  au-dessus de lui, conseil des mini-jeux après ses Diamants, amélioration des créatures aux Griffes (« toujours les
-  améliorer »), bouton « 🎁 Griffes à récupérer » dans le menu du deck de l'Exploration.
+  (`poudreOfferte`, une fois).
+- LOT 2 (21/10) : œuf de l'INCUBATEUR (rond dans son panneau, « chaque tap retire 1 seconde », 5 taps) ; 1er MINI-BOSS
+  PROVOQUÉ 20 s après l'éclosion (`bossLance`, une fois, via `annoncerBoss`), conseil AU-DESSUS de lui pendant le combat
+  (`etapeBoss`, place 'haut') ; puis, fenêtre de ses Diamants fermée, conseil MINI-JEUX (bulle seule, forme 'info', 9 s) ;
+  AMÉLIORATION : après le 1er combat, dès que la 1re créature du deck peut monter, rond sur elle au hub, puis carré sur le
+  médaillon de niveau de sa fiche (« Améliore toujours tes créatures… », vu au 1er niveau gagné) ; pilule « 🎁 X Griffes à
+  récupérer » aussi dans le HUB (menu du deck), comme sur la carte. Vérifié au banc : rond sur la créature + pilule ;
+  mini-boss provoqué avec son conseil au-dessus.
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »

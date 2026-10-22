@@ -31,7 +31,8 @@ if (window.location.search.includes('runes=1') && window.__memoireBanc['adventur
 // « &tuto=1&vus=… » : conseils du tutoriel actifs ; « &poudre=3 » : 3 poudres runiques (conseil des runes).
 { const q = new URLSearchParams(window.location.search);
   if (q.get('tuto') === '1') window.__memoireBanc['tuto:v2'] = JSON.stringify({ vus: (q.get('vus') || '').split(',').filter(Boolean), passe: false, decide: true });
-  if (q.get('poudre')) { const st = JSON.parse(window.__memoireBanc['adventure:state:v2'] || '{"currentUnlockedLevel":1,"ownedRunes":[],"energy":5}'); st.poudre = Number(q.get('poudre')); window.__memoireBanc['adventure:state:v2'] = JSON.stringify(st); } }
+  if (q.get('poudre')) { const st = JSON.parse(window.__memoireBanc['adventure:state:v2'] || '{"currentUnlockedLevel":1,"ownedRunes":[],"energy":5}'); st.poudre = Number(q.get('poudre')); window.__memoireBanc['adventure:state:v2'] = JSON.stringify(st); }
+  if (q.get('griffes')) { const st = JSON.parse(window.__memoireBanc['adventure:state:v2'] || '{"currentUnlockedLevel":1,"ownedRunes":[],"energy":5}'); st.griffes = Number(q.get('griffes')); window.__memoireBanc['adventure:state:v2'] = JSON.stringify(st); } }
 const rien = () => {};
 createRoot(document.getElementById('root')).render(
   <>

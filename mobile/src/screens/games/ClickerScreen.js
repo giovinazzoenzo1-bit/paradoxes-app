@@ -281,7 +281,8 @@ import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import GuideTuto from '../../components/GuideTuto';
-import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, DOREE_TUTO_DELAI_MS, DOREE_TUTO_POS, lireTuto, ecrireTuto,
+import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, DOREE_TUTO_DELAI_MS, DOREE_TUTO_POS, MINI_BOSS_TUTO_DELAI_MS,
+  TAPS_CONSEIL_INCUBATEUR, DUREE_CONSEIL_LONG_MS, lireTuto, ecrireTuto,
   abonnerTuto, estVu, tutoActif, choisirEtape, vuEtape, estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
 import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_MS, MINI_JEU_DELAI_OUVERTURE_MS,
   MINI_JEU_DEFIS_CONTINUS, MINI_JEU_PRESENCE_MS } from '../../games/clicker/miniJeux';
@@ -3372,6 +3373,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     defi: estVu(tuto, 'pacte') && !!currentChallengeId,
     doree: !!goldenTarget,
     eclosion: !!mainEgg, // l'œuf du menu principal éclot (minuteur) : 1 tap = 1 seconde
+    miniJeux: estVu(tuto, 'miniBoss') && !bossResult, // après Brisecorne ET la fenêtre de ses Diamants fermée
     transe: estVu(tuto, 'taper'), // 21/10 (auteur) : après les 100 taps, tenir la Transe 15 s
     creature: owned.length > 0,
     aventure: estVu(tuto, 'creature') && owned.length > 0,
@@ -3379,7 +3381,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     calendrier: streakClaimedDate !== today,
     ascension: !!ascensionReady && !estVu(tuto, 'sceau'),
   };
-  const etapeEcran = loaded && conseilPossible ? choisirEtape(condTuto, tuto, ORDRE_ECRAN) : null;
+  const etapeEcranSeule = loaded && conseilPossible ? choisirEtape(condTuto, tuto, ORDRE_ECRAN) : null;
+  // 🎓 Le 1er mini-boss (lot 2) : son conseil s'affiche PENDANT son combat, au-dessus de lui.
+  const etapeBoss = loaded && tutoActif(tuto) && boss && view === 'tap' && !estVu(tuto, 'miniBoss') ? 'miniBoss' : null;
+  const etapeEcran = etapeBoss || etapeEcranSeule;
   etapeTutoRef.current = etapeEcran;
   // Ancien joueur (déjà une créature ou une Ascension) au PREMIER chargement : pas de conseils du début. Décidé UNE fois.
   useEffect(() => {
@@ -3387,7 +3392,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     ecrireTuto(estVeteran({ creatures: owned.length, ascensions: ascensionCount }) ? { ...tuto, passe: true, decide: true } : { ...tuto, decide: true });
   }, [loaded, tuto]);
   // Où est la cible du conseil : mesurée dans la fenêtre (rien à recalculer à la main), puis suivie toutes les 0,6 s.
-  const CLE_CIBLE_TUTO = { taper: 'oeuf', boutique: 'boutique', ascension: 'boutique', doree: 'doree', transe: 'oeuf', eclosion: 'oeuf', creature: 'deck',
+  const CLE_CIBLE_TUTO = { taper: 'oeuf', boutique: 'boutique', ascension: 'boutique', doree: 'doree', transe: 'oeuf', eclosion: 'oeuf', miniBoss: 'oeuf', miniJeux: 'oeuf', creature: 'deck',
     aventure: 'exploration', incubateur: 'incubateur', calendrier: 'calendrier' };
   useEffect(() => {
     setRectTuto(null);
@@ -3401,7 +3406,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       }
       mesurerCible(racineTutoRef.current, ciblesTutoRef.current[CLE_CIBLE_TUTO[etapeEcran]], (r0) => {
         // L'œuf VISIBLE ne remplit pas son carré : le rond entoure son corps (56 % du carré), pas toute la zone.
-        const r = ['taper', 'transe', 'eclosion'].includes(etapeEcran) ? { x: r0.x + r0.l * 0.22, y: r0.y + r0.h * 0.22, l: r0.l * 0.56, h: r0.h * 0.56 } : r0;
+        const r = ['taper', 'transe', 'eclosion', 'miniBoss', 'miniJeux'].includes(etapeEcran) ? { x: r0.x + r0.l * 0.22, y: r0.y + r0.h * 0.22, l: r0.l * 0.56, h: r0.h * 0.56 } : r0;
         setRectTuto((p) => (p && p.x === r.x && p.y === r.y && p.l === r.l && p.h === r.h ? p : r));
       });
     };
@@ -3410,10 +3415,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, [etapeEcran]);
   // Fins de conseil : ce que le conseil montre a été fait (boutique ouverte, cible touchée, Transe finie…).
   const etapeAfficheeRef = useRef(null); const defiTutoRef = useRef(null);
+  // 🎓 L'œuf de l'INCUBATEUR (lot 2) : « chaque tap retire 1 seconde », 5 taps puis le conseil s'en va.
+  const conseilIncub = !!tuto && tutoActif(tuto) && !!incubatingEgg && !estVu(tuto, 'eclosionIncub');
+  const tapsIncubTutoRef = useRef(0);
   useEffect(() => {
     const avant = etapeAfficheeRef.current;
     if (avant && avant !== etapeEcran) {
       if ((avant === 'doree' || avant === 'eclosion') && !condTuto[avant]) vuTuto(avant); // cible touchée / œuf éclos
+      if (avant === 'miniBoss' && !boss) vuTuto('miniBoss'); // Brisecorne vaincu (ou enfui)
       if ((avant === 'boutique' || avant === 'ascension') && view === 'shop') vuTuto(avant);
       if (avant === 'aventure' && view === 'adventure') vuTuto('aventure');
       if (avant === 'incubateur' && incubatorOpen) vuTuto('incubateur');
@@ -3442,6 +3451,18 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       if (sec >= TRANSE_CONSEIL_SEC) vuTuto('transe');
     }, 250);
     return () => clearInterval(id);
+  }, [etapeEcran]);
+  // 🎓 Le 1er MINI-BOSS est PROVOQUÉ par le tuto « un peu après » l'éclosion (auteur) : 20 s sur l'écran principal, une fois.
+  useEffect(() => {
+    if (!loaded || !tuto || !tutoActif(tuto) || tuto.bossLance || estVu(tuto, 'miniBoss') || owned.length === 0 || !estVu(tuto, 'eclosion')) return undefined;
+    if (view !== 'tap' || boss !== null || bossAnnonce !== null || guardianFight) return undefined;
+    const t = setTimeout(() => { ecrireTuto({ ...tutoRef.current, bossLance: true }); annoncerBoss(); }, MINI_BOSS_TUTO_DELAI_MS);
+    return () => clearTimeout(t);
+  }, [loaded, tuto, owned.length, view, boss, bossAnnonce, guardianFight]);
+  useEffect(() => {
+    if (etapeEcran !== 'miniJeux') return undefined;
+    const t = setTimeout(() => vuTuto('miniJeux'), DUREE_CONSEIL_LONG_MS);
+    return () => clearTimeout(t);
   }, [etapeEcran]);
   // « Ta première créature » ne demande rien : il s'en va seul.
   useEffect(() => {
@@ -4960,7 +4981,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           egg={incubatingEgg}
           guardianRequired={guardianRequired(owned.length)}
           guardianInfo={ligneGardien(incubatingEgg, 'incub')}
-          onTap={incubatorTap}
+          onTap={() => {
+            incubatorTap();
+            if (conseilIncub) { tapsIncubTutoRef.current += 1; if (tapsIncubTutoRef.current >= TAPS_CONSEIL_INCUBATEUR) vuTuto('eclosionIncub'); }
+          }}
+          conseil={conseilIncub ? ETAPES.eclosionIncub.texte : null}
+          onFermerConseil={() => vuTuto('eclosionIncub')}
           onWatchVideo={incubatorVideo}
           onHatch={hatchIncubatedEgg}
           onAffronterGardien={() => setConfirmGardien('incub')}
@@ -5089,7 +5115,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           de tout). ⚠️ Le guide n'a AUCUN conteneur plein écran : seule sa petite croix capte le doigt. */}
       <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
       {etapeEcran && rectTuto ? (
-        <GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme} ecran={{ l: SCREEN_W, h: SCREEN_H }}
+        <GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme} ecran={{ l: SCREEN_W, h: SCREEN_H }} place={etapeEcran === 'miniBoss' ? 'haut' : 'auto'}
           texte={etapeEcran === 'taper' ? avecCompteur(ETAPES.taper.texte, tapsTutoRef.current, TAPS_CONSEIL_TAPER)
             : etapeEcran === 'transe' ? avecCompteur(ETAPES.transe.texte, transeTutoSec, TRANSE_CONSEIL_SEC) : ETAPES[etapeEcran].texte}
           onFermer={() => vuTuto(etapeEcran)} />

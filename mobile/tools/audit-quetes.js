@@ -4562,12 +4562,12 @@ function auditTutoriel() {
   const T = { exports: {} };
   new Function('require', 'module', 'exports', code)(() => ({ __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), T, T.exports);
   const t = T.exports;
-  const attendues = ['taper', 'boutique', 'defi', 'doree', 'eclosion', 'transe', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension', 'pacte', 'sceau',
+  const attendues = ['taper', 'boutique', 'defi', 'doree', 'eclosion', 'eclosionIncub', 'miniBoss', 'miniJeux', 'ameliorer', 'monter', 'transe', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension', 'pacte', 'sceau',
     'combat', 'runes', 'acheterRune', 'equiperRune', 'attaque', 'jauge', 'gardien'];
   for (const id of attendues) {
     const e = t.ETAPES[id];
     if (!e) { pb.push('conseil manquant : ' + id); continue; }
-    if (!['rond', 'carre'].includes(e.forme)) pb.push(id + ' : repère inconnu « ' + e.forme + ' »');
+    if (!['rond', 'carre', 'info'].includes(e.forme)) pb.push(id + ' : repère inconnu « ' + e.forme + ' »');
     // UNE phrase : pas de point (ni !, ?) au milieu du texte.
     if (/[.!?]\s+\S/.test(e.texte.trim())) pb.push(id + ' : plus d\'une phrase (« ' + e.texte + ' »)');
   }
@@ -4578,7 +4578,10 @@ function auditTutoriel() {
   // 21/10 (auteur) : 1re cible dorée 10 s après le Pacte, figée en haut à droite de l'œuf ; runes après 3 combats gagnés ;
   // ni Collection ni Exploration sans première créature ; l'éclosion explique « 1 tap = 1 seconde ».
   if (t.DOREE_TUTO_DELAI_MS !== 10000 || !t.DOREE_TUTO_POS || t.DOREE_TUTO_POS.leftPct !== 75 || t.DOREE_TUTO_POS.topPct !== 25 || t.RUNES_COMBATS_GAGNES !== 3) pb.push('règles de la cible dorée du tuto ou du déblocage des runes changées');
-  if (!/1 seconde/.test(t.ETAPES.eclosion.texte)) pb.push('le conseil d\'éclosion ne dit plus « 1 tap = 1 seconde »');
+  if (!/1 seconde/.test(t.ETAPES.eclosion.texte) || !/1 seconde/.test(t.ETAPES.eclosionIncub.texte)) pb.push('un conseil d\'éclosion ne dit plus « 1 tap = 1 seconde »');
+  // Lot 2 (21/10, auteur) : 1er mini-boss PROVOQUÉ 20 s après l'éclosion, conseil au-dessus de lui ; mini-jeux après ses Diamants ;
+  // « améliore toujours tes créatures » ; pilule des Griffes à récupérer dans le menu du deck.
+  if (t.MINI_BOSS_TUTO_DELAI_MS !== 20000 || t.TAPS_CONSEIL_INCUBATEUR !== 5 || !/toujours/.test(t.ETAPES.monter.texte) || !/actif et réactif/.test(t.ETAPES.miniJeux.texte)) pb.push('règles du lot 2 du tuto changées');
   if (t.avecCompteur('Clique ici pour gagner des pièces !', 37, 100) !== 'Clique ici pour gagner des pièces (37/100) !') pb.push('le compteur du tuto n\'est plus dans la phrase, avant son « ! »');
   const tu = { vus: ['taper'], passe: false, decide: true };
   if (t.choisirEtape({ taper: true, boutique: true }, tu, t.ORDRE_ECRAN) !== 'boutique') pb.push('un conseil déjà vu revient');
@@ -4611,6 +4614,8 @@ function auditTutoriel() {
   if (!Gr.includes('pactesAchetes >= PACTE_CONSEIL_NIVEAUX') || !Gr.includes('ecrireTuto({ ...tuto, pacteDepart: props.tapPower })')) pb.push('Grimoire : le conseil du Pacte ne demande plus 3 niveaux (gardés entre deux visites)');
   if (!Cl.includes("transe: estVu(tuto, 'taper'),") || !Cl.includes("boutique: estVu(tuto, 'transe') &&") || !Cl.includes("if (sec >= TRANSE_CONSEIL_SEC) vuTuto('transe');")) pb.push('écran principal : la Transe de 15 s n\'est plus entre l\'œuf et la boutique');
   if (!Cl.includes('expiresAt: now + 10 * 365 * 86400 * 1000, leftPct: DOREE_TUTO_POS.leftPct') || !Cl.includes('tuD.pacteFiniA && now >= tuD.pacteFiniA + DOREE_TUTO_DELAI_MS') || !Cl.includes('if (vibrationsRef.current) Vibration.vibrate(400);')) pb.push('la 1re cible dorée du tuto n\'est plus figée, datée ou annoncée par une vibration');
+  if (!Cl.includes("setTimeout(() => { ecrireTuto({ ...tutoRef.current, bossLance: true }); annoncerBoss(); }, MINI_BOSS_TUTO_DELAI_MS);") || !Cl.includes("place={etapeEcran === 'miniBoss' ? 'haut' : 'auto'}")
+    || !Cl.includes("miniJeux: estVu(tuto, 'miniBoss') && !bossResult,") || !Cl.includes('conseil={conseilIncub ? ETAPES.eclosionIncub.texte : null}')) pb.push('écran principal : mini-boss du tuto, conseil des mini-jeux ou de l\'incubateur débranché');
   if (!Cl.includes("onPress={() => (verrou ? bloque(\"l'Exploration\") : onAdventurePress())}") || !Cl.includes("onPress={() => (verrou ? bloque('la Collection') : setView('collection'))}")) pb.push('Collection ou Exploration ouvertes sans première créature');
   { const Av0 = lire('src/screens/games/AdventureScreen.js');
     if (!Av0.includes('  const runesOuvertes = currentUnlockedLevel > RUNES_COMBATS_GAGNES;') || !Av0.includes('setPoudre(POUDRE_CONSEIL_RUNES);')) pb.push('Aventure : runes ouvertes avant 3 combats, ou poudre du tuto non offerte'); }

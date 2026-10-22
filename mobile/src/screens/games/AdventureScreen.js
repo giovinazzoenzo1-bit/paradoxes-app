@@ -664,7 +664,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     };
   }, []);
 
-  const { trackEvent, trackMax, griffesARecuperer, noterNiveauxDeck } = useDaily();
+  const { trackEvent, trackMax, griffesARecuperer, noterNiveauxDeck, claimAll } = useDaily();
   // 16/10 : les défis paient en niveaux de ta MEILLEURE créature — le contexte des défis reçoit les niveaux du deck.
   useEffect(() => { noterNiveauxDeck(niveauxDuDeck(owned, deck)); }, [owned, deck, noterNiveauxDeck]);
   const [detailCreatureId, setDetailCreatureId] = useState(ficheInitiale);
@@ -699,6 +699,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // 21/10 (auteur) : les RUNES s'ouvrent après le 3ᵉ combat GAGNÉ (niveau débloqué ≥ 4), pour tout le monde. Pour le joueur
   // guidé, le tuto complète alors sa poudre jusqu'à 3 : il peut acheter sa première rune tout de suite (une seule fois).
   const runesOuvertes = currentUnlockedLevel > RUNES_COMBATS_GAGNES;
+  // 21/10 (auteur) : la pilule « 🎁 X Griffes à récupérer » aussi dans le menu du DECK (le hub), comme sur la carte.
+  const [recupHub, setRecupHub] = useState(null); // null | 'en cours' | message
   useEffect(() => {
     if (!tuto || !tutoActif(tuto) || estVu(tuto, 'runes') || tuto.poudreOfferte) return;
     if (runesOuvertes && ownedRunes.length === 0 && poudre < POUDRE_CONSEIL_RUNES) {
@@ -1438,8 +1440,12 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const ecran = cadres || { w: 0, h: 0 };
   // 🎓 Étape du hub : 1ᵉʳ combat (rien de gagné, au moins une créature placée), puis les runes (3ᵉ poudre, aucune rune).
   const deckPlace = (deck || []).some(Boolean);
+  const idAmeliorer = (deck || []).find(Boolean) || null;
+  const ownAm = idAmeliorer ? ownedMap[idAmeliorer] : null; const crAm = idAmeliorer ? CREATURES.find((c) => c.id === idAmeliorer) : null;
+  const peutAmeliorer = !!(ownAm && crAm && ownAm.level < niveauMaxEquipe(niveauxEquipe) && griffes >= levelUpCost(crAm, ownAm.level));
   const etapeHub = !tutoActif(tuto) ? null
     : !estVu(tuto, 'combat') && currentUnlockedLevel <= 1 && deckPlace ? 'combat'
+    : !estVu(tuto, 'ameliorer') && estVu(tuto, 'combat') && peutAmeliorer ? 'ameliorer'
     : !estVu(tuto, 'runes') && runesOuvertes && poudre >= POUDRE_CONSEIL_RUNES && ownedRunes.length === 0 ? 'runes' : null;
   // Interface : fractions de la maquette, accrochées à un bord (x : gauche/centre/droite ; y : haut/bas).
   const R = (f, ax = 'centre', ay = 'haut') => {
@@ -1454,7 +1460,16 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   // Même hauteur, même centre, largeur à la proportion réelle de la pièce.
   const auRapport = (r, rapport) => { const l = r.height * rapport; return { ...r, left: r.left + (r.width - l) / 2, width: l }; };
   // 🎓 Le rond du conseil du hub : exactement là où sont dessinés COMBAT et RUNES (rien sans cadres mesurés).
-  const rHub = !cadres || !etapeHub ? null : etapeHub === 'combat' ? auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat) : R(HUB.runes, 'droite');
+  const rHub = !cadres || !etapeHub || etapeHub === 'ameliorer' ? null : etapeHub === 'combat' ? auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat) : R(HUB.runes, 'droite');
+  const cibleAm = {}; // rempli au dessin des pilotis : la zone de la créature à améliorer
+  const recupererToutHub = async () => {
+    if (recupHub === 'en cours') return;
+    setRecupHub('en cours'); let message = null;
+    try { const r = await claimAll(null); await encaisserGriffesEnAttente(); message = r && r.griffes > 0 ? `✅ +${r.griffes} Griffes` : null; } catch (e) { message = null; }
+    setRecupHub(message);
+    if (message) setTimeout(() => setRecupHub((x) => (x === message ? null : x)), 1800);
+  };
+
   const rectHub = rHub ? { x: rHub.left, y: rHub.top, l: rHub.width, h: rHub.height } : null;
   // Même LARGEUR (celle de la maquette : elle règle l'espacement), même centre, hauteur à la proportion.
   const auRapportL = (r, rapport) => { const hh = r.width / rapport; return { ...r, top: r.top + (r.height - hh) / 2, height: hh }; };
@@ -1537,7 +1552,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
                   </>
                 )}
                 {/* Zone tactile : la créature et son pilotis (fiche, ou sélecteur si vide). */}
-                <TouchableOpacity activeOpacity={0.85} onPress={() => (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i))}
+                {creature && id === idAmeliorer && !cibleAm.r ? ((cibleAm.r = { x: cx - lp / 2, y: dessus - ch * 1.05, l: lp, h: ch * 1.05 }), null) : null}
+                <TouchableOpacity activeOpacity={0.85} onPress={() => { if (creature && etapeHub === 'ameliorer' && id === idAmeliorer) setTuto(vuEtape(tuto, 'ameliorer')); (creature ? setDetailCreatureId(id) : setDeckPickerSlot(i)); }}
                   style={{ position: 'absolute', left: cx - lp / 2, top: dessus - ch * 1.05, width: lp, height: ch * 1.05 + (HUB.changer.y0 - HUB.dessus) * fond.h }} />
                 <TouchableOpacity activeOpacity={0.8} onPress={() => setDeckPickerSlot(i)}
                   style={{ position: 'absolute', left: cx - cl / 2, top: chY, width: cl, height: chH }}>
@@ -1550,8 +1566,16 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
           {/* ── COMBAT : il SCINTILLE un peu (lueur qui respire + étincelles), voir BoutonCombat. */}
           <BoutonCombat rect={auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat)} rectLueur={R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05], 'centre', 'bas')} onPress={() => { if (etapeHub === 'combat') setTuto(vuEtape(tuto, 'combat')); setChapterMapOpen(true); }} />
           {/* 🎓 Conseil du hub (rond sur COMBAT ou sur RUNES) : positions CALCULÉES comme les boutons eux-mêmes. */}
-          {etapeHub && rectHub ? (
-            <GuideTuto rect={rectHub} forme={ETAPES[etapeHub].forme} texte={ETAPES[etapeHub].texte} ecran={{ l: ecran.w, h: ecran.h }}
+          {/* La pilule des Griffes à récupérer (comme sur la carte), sous le titre. */}
+          {(griffesARecuperer > 0 || (recupHub && recupHub !== 'en cours')) && (
+            <TouchableOpacity style={styles.recupererPilule} onPress={recupererToutHub} disabled={!!recupHub} activeOpacity={0.85}>
+              <CapsuleBois>
+                <Text style={styles.recupererTexte} numberOfLines={1}>{recupHub && recupHub !== 'en cours' ? recupHub : `🎁 ${griffesARecuperer} Griffes à récupérer`}</Text>
+              </CapsuleBois>
+            </TouchableOpacity>
+          )}
+          {etapeHub && (rectHub || cibleAm.r) ? (
+            <GuideTuto rect={rectHub || cibleAm.r} forme={ETAPES[etapeHub].forme} texte={ETAPES[etapeHub].texte} ecran={{ l: ecran.w, h: ecran.h }}
               onFermer={() => setTuto(vuEtape(tuto, etapeHub))} />
           ) : null}
         </>
@@ -1962,6 +1986,12 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
   // (09/10) Niveau maximum atteint : le médaillon l'annonce, la note dit comment aller plus loin.
   const auPlafond = niveauMax != null && owned && owned.level >= niveauMax;
   const [runePickerSlot, setRunePickerSlot] = useState(null);
+  // 🎓 TUTO (lot 2, 21/10) : après « clique sur ta créature », le CARRÉ sur le médaillon de niveau : « Améliore toujours tes
+  // créatures avec tes Griffes… » — vu au 1er niveau gagné (ou à la croix).
+  const [tutoFiche, setTutoFiche] = useState(null);
+  useEffect(() => { lireTuto().then(setTutoFiche); return abonnerTuto(setTutoFiche); }, []);
+  const niveauDepartTutoRef = useRef(owned ? owned.level : 0);
+  useEffect(() => { if (owned && owned.level > niveauDepartTutoRef.current && tutoActif(tutoFiche) && !estVu(tutoFiche, 'monter')) setTutoFiche(vuEtape(tutoFiche, 'monter')); }, [owned ? owned.level : 0]);
   const [onglet, setOnglet] = useState('stats');
   // La créature pousse son cri à l'ouverture de sa fiche (07/10).
   const { sons: sonsFiche } = useSettings();
@@ -2126,6 +2156,12 @@ function CreatureDetailScreen({ creature, owned, griffes, onEvolve, onLevelUp, o
         onClose={() => setRunePickerSlot(null)}
       />
     )}
+    {/* 🎓 « Améliore toujours tes créatures » : carré sur le médaillon de niveau (position calculée comme le médaillon). */}
+    {tutoActif(tutoFiche) && estVu(tutoFiche, 'ameliorer') && !estVu(tutoFiche, 'monter') && !auPlafond && owned && griffes >= levelUpCost(creature, owned.level) ? (() => {
+      const m = R(FICHE.medaillon, 'droite');
+      return <GuideTuto rect={{ x: m.left, y: m.top, l: m.width, h: m.height }} forme={ETAPES.monter.forme} texte={ETAPES.monter.texte}
+        ecran={{ l: Dimensions.get('window').width, h: Dimensions.get('window').height }} onFermer={() => setTutoFiche(vuEtape(tutoFiche, 'monter'))} zIndex={90} />;
+    })() : null}
     </>
   );
 }

@@ -20,6 +20,11 @@ export const ETAPES = {
   doree: { texte: 'Une cible dorée : touche-la pour un bonus !', forme: 'rond' },
   // 21/10 (auteur) : l'œuf qui éclot — chaque tap retire 1 seconde (incubatorLogic : TAP_REDUCTION_MS = 1000).
   eclosion: { texte: 'Ton œuf éclot : chaque tap retire 1 seconde !', forme: 'rond' },
+  // Lot 2 (21/10, auteur) : l'œuf de l'INCUBATEUR, le 1er mini-boss (provoqué après l'éclosion, conseil au-dessus de lui),
+  // les mini-jeux (après le mini-boss et ses Diamants), l'amélioration des créatures avec les Griffes.
+  eclosionIncub: { texte: "Tape l'œuf : chaque tap retire 1 seconde d'éclosion !", forme: 'rond' },
+  miniBoss: { texte: 'Brisecorne attaque : tape-le vite pour le vaincre !', forme: 'rond' },
+  miniJeux: { texte: 'Des mini-jeux surgissent souvent : reste actif et réactif pour les gagner !', forme: 'info' },
   // 21/10 (auteur) : un vrai PALIER — rester 15 s en Transe (de quoi s'offrir 3 niveaux de Pacte ensuite).
   transe: { texte: "Tape sans t'arrêter : reste en Transe 15 secondes !", forme: 'rond' },
   creature: { texte: 'Ta première créature rejoint ton équipe ici !', forme: 'carre' }, // UNE phrase (le contrôle l'a vu)
@@ -33,6 +38,8 @@ export const ETAPES = {
   sceau: { texte: 'Clique ici pour faire ta première Ascension !', forme: 'rond' },
   // Aventure
   combat: { texte: 'Clique ici pour lancer ton premier combat !', forme: 'rond' },
+  ameliorer: { texte: "Clique sur ta créature pour l'améliorer !", forme: 'rond' },
+  monter: { texte: 'Améliore toujours tes créatures avec tes Griffes pour gagner tes combats !', forme: 'carre' },
   runes: { texte: 'Tu as assez de poudre : clique ici pour les runes !', forme: 'rond' },
   acheterRune: { texte: 'Clique ici pour fabriquer ta première rune !', forme: 'carre' },
   equiperRune: { texte: "Clique ici pour l'équiper sur une créature !", forme: 'carre' },
@@ -45,7 +52,7 @@ export const ETAPES = {
 // Ordre de priorité de l'écran principal : UN conseil à la fois.
 // 21/10 (auteur) : l'œuf (100 taps), PUIS la Transe (15 s), PUIS la boutique et le Pacte (3 niveaux), PUIS le défi…
 // La cible dorée passe AVANT le défi : elle n'existe que pendant son conseil (sinon le carré du défi la cacherait).
-export const ORDRE_ECRAN = ['taper', 'transe', 'boutique', 'doree', 'defi', 'eclosion', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension'];
+export const ORDRE_ECRAN = ['taper', 'transe', 'boutique', 'doree', 'defi', 'eclosion', 'creature', 'miniJeux', 'aventure', 'incubateur', 'calendrier', 'ascension'];
 // « Clique ici pour gagner des pièces » : 100 taps sur l'œuf avant le conseil suivant (auteur, 21/10 ; avant : 10).
 export const TAPS_CONSEIL_TAPER = 100;
 // « Reste en Transe » : 15 secondes d'affilée (auteur, 21/10).
@@ -57,6 +64,12 @@ export const DOREE_TUTO_DELAI_MS = 10 * 1000;
 export const DOREE_TUTO_POS = { leftPct: 75, topPct: 25 };
 // Les runes s'ouvrent après le 3ᵉ combat GAGNÉ (auteur, 21/10) : niveau débloqué ≥ 4.
 export const RUNES_COMBATS_GAGNES = 3;
+// Le 1er mini-boss est PROVOQUÉ « un peu après » l'éclosion de la 1re créature (auteur) : 20 s sur l'écran principal.
+export const MINI_BOSS_TUTO_DELAI_MS = 20 * 1000;
+// L'œuf de l'incubateur : le conseil s'en va après 5 taps (le joueur a compris « 1 tap = 1 seconde »).
+export const TAPS_CONSEIL_INCUBATEUR = 5;
+// Les conseils sans geste à faire (mini-jeux) s'en vont seuls après ce temps.
+export const DUREE_CONSEIL_LONG_MS = 9000;
 // La progression DANS la phrase, avant son « ! » final (« … pièces (37/100) ! ») : toujours une seule phrase.
 export function avecCompteur(texte, n, total) {
   const t = String(texte || ''); const c = ` (${Math.max(0, Math.min(total, Math.floor(n)))}/${total})`;

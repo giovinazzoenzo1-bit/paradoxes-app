@@ -69,6 +69,7 @@ function boucle(v, duree, retard = 0) {
 }
 
 // rect : { x, y, l, h } dans le repère du parent ; ecran : { l, h } ; place : 'auto' | 'haut' | 'bas' (bulle).
+// forme 'info' (lot 2) : AUCUN repère ni étoile, seulement la bulle près de `rect` (conseil sans geste à faire).
 export default function GuideTuto({ rect, forme = 'rond', texte, onFermer, ecran, place = 'auto', zIndex = 60 }) {
   const tour = useRef(new Animated.Value(0)).current;
   const scint1 = useRef(new Animated.Value(0)).current;
@@ -112,10 +113,10 @@ export default function GuideTuto({ rect, forme = 'rond', texte, onFermer, ecran
   return (
     <>
       {/* Lueur dorée derrière le repère. */}
-      {deco({ left: boite.x - boite.l * 0.25, top: boite.y - boite.h * 0.25, width: boite.l * 1.5, height: boite.h * 1.5,
+      {forme !== 'info' && deco({ left: boite.x - boite.l * 0.25, top: boite.y - boite.h * 0.25, width: boite.l * 1.5, height: boite.h * 1.5,
         opacity: Animated.multiply(apparition, respire.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.6] })) },
         <Image source={IMG.lueur} resizeMethod="scale" resizeMode="stretch" style={{ width: boite.l * 1.5, height: boite.h * 1.5 }} />, 'lueur')}
-      {forme === 'rond'
+      {forme === 'info' ? null : forme === 'rond'
         ? deco({ left: boite.x, top: boite.y, width: boite.l, height: boite.h, opacity: apparition,
           transform: [{ rotate: tour.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] },
           <Image source={IMG.rond} resizeMethod="scale" resizeMode="contain" style={{ width: boite.l, height: boite.h }} />, 'rond')
@@ -123,11 +124,11 @@ export default function GuideTuto({ rect, forme = 'rond', texte, onFermer, ecran
           transform: [{ scale: respire.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) }] },
           <CadreTuto l={boite.l} h={boite.h} />, 'carre')}
       {/* Les étoiles : à part du rond (elles ne tournent pas avec lui), chacune son rythme. */}
-      {deco({ left: etoiles.x - 16, top: etoiles.y - 14, width: 28, height: 28,
+      {forme !== 'info' && deco({ left: etoiles.x - 16, top: etoiles.y - 14, width: 28, height: 28,
         opacity: Animated.multiply(apparition, scint1.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] })),
         transform: [{ scale: scint1.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1.15] }) }] },
         <Image source={IMG.etoile} resizeMethod="scale" resizeMode="contain" style={{ width: 28, height: 28 }} />, 'etoile1')}
-      {deco({ left: etoiles.x + 6, top: etoiles.y + 8, width: 17, height: 17,
+      {forme !== 'info' && deco({ left: etoiles.x + 6, top: etoiles.y + 8, width: 17, height: 17,
         opacity: Animated.multiply(apparition, scint2.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] })),
         transform: [{ scale: scint2.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.2] }) }] },
         <Image source={IMG.etoile} resizeMethod="scale" resizeMode="contain" style={{ width: 17, height: 17 }} />, 'etoile2')}
