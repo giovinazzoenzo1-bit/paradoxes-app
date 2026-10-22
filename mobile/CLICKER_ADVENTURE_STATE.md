@@ -4586,6 +4586,14 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   médaillon de niveau de sa fiche (« Améliore toujours tes créatures… », vu au 1er niveau gagné) ; pilule « 🎁 X Griffes à
   récupérer » aussi dans le HUB (menu du deck), comme sur la carte. Vérifié au banc : rond sur la créature + pilule ;
   mini-boss provoqué avec son conseil au-dessus.
+- ⚠️ BUG RÉEL (21/10, auteur : « plus aucune cible dorée depuis la mise à jour ») : le lot 1 BLOQUAIT toute cible au hasard
+  jusqu'à celle du tuto, datée par la fin du conseil du Pacte — conseil fermé à la croix → jamais daté → plus AUCUNE cible.
+  Nouveau choix de l'auteur : la cible du tuto arrive 5 s après le DÉFI « Touche N fois la cible dorée » (défi 5 du 1er œuf,
+  `defiDoreeDepuisRef`), figée en haut à droite de l'œuf, vibration ; RIEN n'est bloqué ; la croix la rend normale (elle
+  expire). Même famille vérifiée : le mini-boss provoqué dépendait du conseil d'ÉCLOSION (jamais vu si l'œuf éclot pendant
+  que le joueur est ailleurs) → dépend maintenant de la 1re créature ; les mini-jeux n'étaient bloqués par rien. RÈGLE : un
+  conseil ne doit JAMAIS conditionner une mécanique du jeu à un autre conseil « vu ». Cadenas Collection / Exploration : fenêtre
+  en bois du jeu (« 🔒 Pas encore », « Compris »), le conseil du tuto se cache pendant qu'elle est ouverte.
 - ⚠️ PIÈGE DE MÉTHODE (21/10) : une passe de `verifier-controles` restée EN COURS (réponse coupée) + une nouvelle passe lancée
   par-dessus = deux sabotages simultanés → un piège est resté ÉCRIT dans AdventureScreen.js (PanneauRetour en absoluteFill).
   Rattrapé par `git status` (fichier modifié hors commit) et remis par `git checkout`. Règle : TOUJOURS `pgrep -x node`

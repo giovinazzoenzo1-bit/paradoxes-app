@@ -617,6 +617,8 @@ const SABOTAGES = [
     remplace('  const runesOuvertes = currentUnlockedLevel > RUNES_COMBATS_GAGNES;', '  const runesOuvertes = true;')],
   ['auditTutoriel', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "l'Exploration s'ouvre sans première créature",
     remplace("onPress={() => (verrou ? bloque(\"l'Exploration\") : onAdventurePress())}", 'onPress={onAdventurePress}')],
+  ['auditTutoriel', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "la cible dorée du tuto ne vient plus au défi « cible dorée »",
+    remplace("defiDoreeDepuisRef.current = m === 'goldenClaimed'", "defiDoreeDepuisRef.current = m === 'jamais'")],
   ['auditTutoriel', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "le 1er mini-boss n'est plus provoqué par le tuto",
     remplace('ecrireTuto({ ...tutoRef.current, bossLance: true }); annoncerBoss();', 'ecrireTuto({ ...tutoRef.current, bossLance: true });')],
   ['auditTutoriel', path.join(RACINE, 'src/screens/games/ClickerScreen.js'), "la boutique arrive avant les 15 s de Transe (l'auteur : la Transe d'abord)",

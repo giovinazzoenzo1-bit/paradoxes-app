@@ -59,8 +59,12 @@ export const TAPS_CONSEIL_TAPER = 100;
 export const TRANSE_CONSEIL_SEC = 15;
 // « Achète le Pacte » : 3 niveaux avant de passer à la suite (auteur, 21/10).
 export const PACTE_CONSEIL_NIVEAUX = 3;
-// La 1re cible dorée : 10 s après la fin du conseil du Pacte, en haut à droite de l'œuf (en % de la zone de l'œuf).
-export const DOREE_TUTO_DELAI_MS = 10 * 1000;
+// La 1re cible dorée du tuto — l'auteur a changé d'avis (21/10, soir) : 5 s après l'arrivée du DÉFI « Touche N fois la cible
+// dorée » (le défi 5 du 1er œuf), une cible apparaît EXCEPTIONNELLEMENT, figée, en haut à droite de l'œuf (en % de sa zone).
+// ⚠️ BUG RÉEL de la version d'avant (« plus aucune cible dorée depuis la mise à jour ») : elle BLOQUAIT toute cible au
+// hasard jusqu'à celle du tuto, datée par la fin du conseil du Pacte — conseil fermé à la croix → jamais daté → plus
+// AUCUNE cible, pour toujours. Désormais rien n'est bloqué : la cible du tuto s'ajoute, c'est tout.
+export const DOREE_TUTO_DELAI_MS = 5 * 1000;
 export const DOREE_TUTO_POS = { leftPct: 75, topPct: 25 };
 // Les runes s'ouvrent après le 3ᵉ combat GAGNÉ (auteur, 21/10) : niveau débloqué ≥ 4.
 export const RUNES_COMBATS_GAGNES = 3;

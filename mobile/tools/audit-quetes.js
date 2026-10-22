@@ -4577,7 +4577,7 @@ function auditTutoriel() {
   if (t.ORDRE_ECRAN.slice(0, 5).join(',') !== 'taper,transe,boutique,doree,defi') pb.push('ordre du début du tuto changé (œuf, Transe, boutique, cible dorée, défi)');
   // 21/10 (auteur) : 1re cible dorée 10 s après le Pacte, figée en haut à droite de l'œuf ; runes après 3 combats gagnés ;
   // ni Collection ni Exploration sans première créature ; l'éclosion explique « 1 tap = 1 seconde ».
-  if (t.DOREE_TUTO_DELAI_MS !== 10000 || !t.DOREE_TUTO_POS || t.DOREE_TUTO_POS.leftPct !== 75 || t.DOREE_TUTO_POS.topPct !== 25 || t.RUNES_COMBATS_GAGNES !== 3) pb.push('règles de la cible dorée du tuto ou du déblocage des runes changées');
+  if (t.DOREE_TUTO_DELAI_MS !== 5000 || !t.DOREE_TUTO_POS || t.DOREE_TUTO_POS.leftPct !== 75 || t.DOREE_TUTO_POS.topPct !== 25 || t.RUNES_COMBATS_GAGNES !== 3) pb.push('règles de la cible dorée du tuto ou du déblocage des runes changées');
   if (!/1 seconde/.test(t.ETAPES.eclosion.texte) || !/1 seconde/.test(t.ETAPES.eclosionIncub.texte)) pb.push('un conseil d\'éclosion ne dit plus « 1 tap = 1 seconde »');
   // Lot 2 (21/10, auteur) : 1er mini-boss PROVOQUÉ 20 s après l'éclosion, conseil au-dessus de lui ; mini-jeux après ses Diamants ;
   // « améliore toujours tes créatures » ; pilule des Griffes à récupérer dans le menu du deck.
@@ -4613,7 +4613,13 @@ function auditTutoriel() {
   if (!Gr.includes("refPrix={id === 'pacte' ?") || !Gr.includes("idsVus.includes('pacte')")) pb.push('Grimoire : le rond du Pacte ne vise plus l\'article « pacte » (son vrai nom)');
   if (!Gr.includes('pactesAchetes >= PACTE_CONSEIL_NIVEAUX') || !Gr.includes('ecrireTuto({ ...tuto, pacteDepart: props.tapPower })')) pb.push('Grimoire : le conseil du Pacte ne demande plus 3 niveaux (gardés entre deux visites)');
   if (!Cl.includes("transe: estVu(tuto, 'taper'),") || !Cl.includes("boutique: estVu(tuto, 'transe') &&") || !Cl.includes("if (sec >= TRANSE_CONSEIL_SEC) vuTuto('transe');")) pb.push('écran principal : la Transe de 15 s n\'est plus entre l\'œuf et la boutique');
-  if (!Cl.includes('expiresAt: now + 10 * 365 * 86400 * 1000, leftPct: DOREE_TUTO_POS.leftPct') || !Cl.includes('tuD.pacteFiniA && now >= tuD.pacteFiniA + DOREE_TUTO_DELAI_MS') || !Cl.includes('if (vibrationsRef.current) Vibration.vibrate(400);')) pb.push('la 1re cible dorée du tuto n\'est plus figée, datée ou annoncée par une vibration');
+  // 21/10 (soir) : la cible du tuto arrive 5 s après le DÉFI « cible dorée » (défi 5 du 1er œuf), figée ; ⚠️ BUG RÉEL d'avant :
+  // un blocage de TOUTES les cibles jusqu'à celle du tuto (jamais datée si le conseil du Pacte était fermé) → plus aucune cible.
+  if (!Cl.includes('expiresAt: now + 10 * 365 * 86400 * 1000, leftPct: DOREE_TUTO_POS.leftPct') || !Cl.includes("defiDoreeDepuisRef.current = m === 'goldenClaimed'")
+    || !Cl.includes('now >= defiDoreeDepuisRef.current + DOREE_TUTO_DELAI_MS') || !Cl.includes('if (vibrationsRef.current) Vibration.vibrate(400);')) pb.push('la cible dorée du tuto n\'arrive plus 5 s après le défi « cible dorée », figée et annoncée par une vibration');
+  if (Cl.includes('doreeDuTuto') || Cl.includes('pacteFiniA')) pb.push('le tuto bloque de nouveau les cibles dorées au hasard (bug du 21/10 : plus aucune cible)');
+  if (/bossLance \|\| estVu\(tuto, 'miniBoss'\) \|\| owned\.length === 0 \|\| !estVu\(tuto, 'eclosion'\)/.test(Cl)) pb.push('le mini-boss du tuto dépend de nouveau du conseil d\'éclosion (il pourrait ne jamais venir)');
+  if (!Cl.includes('onBloque={(quoi) => setVerrouMsg(quoi)}') || !Cl.includes('<FenetreBois titre="🔒 Pas encore">') || Cl.includes("Alert.alert('🔒 Pas encore'")) pb.push('le cadenas de la Collection / Exploration n\'est plus une fenêtre du jeu');
   if (!Cl.includes("setTimeout(() => { ecrireTuto({ ...tutoRef.current, bossLance: true }); annoncerBoss(); }, MINI_BOSS_TUTO_DELAI_MS);") || !Cl.includes("place={etapeEcran === 'miniBoss' ? 'haut' : 'auto'}")
     || !Cl.includes("miniJeux: estVu(tuto, 'miniBoss') && !bossResult,") || !Cl.includes('conseil={conseilIncub ? ETAPES.eclosionIncub.texte : null}')) pb.push('écran principal : mini-boss du tuto, conseil des mini-jeux ou de l\'incubateur débranché');
   if (!Cl.includes("onPress={() => (verrou ? bloque(\"l'Exploration\") : onAdventurePress())}") || !Cl.includes("onPress={() => (verrou ? bloque('la Collection') : setView('collection'))}")) pb.push('Collection ou Exploration ouvertes sans première créature');

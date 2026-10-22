@@ -799,6 +799,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const etapeTutoRef = useRef(null);  // conseil affiché (lu par le tap)
   const tapsTutoRef = useRef(0);
   const [rectTuto, setRectTuto] = useState(null);
+  const [verrouMsg, setVerrouMsg] = useState(null); // « la Collection » / « l'Exploration » : fenêtre du cadenas
   const [coins, setCoins] = useState(0);
   const [totalEarned, setTotalEarned] = useState(0); // cumul jamais décroissant, pour l'Ascension
   const [tapPower, setTapPower] = useState(1);
@@ -2032,19 +2033,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         setComboCount(0);
       }
 
-      // 🎓 TUTO (21/10, auteur) : tant que la 1re cible dorée n'a pas été touchée, AUCUNE cible au hasard ; la 1re arrive
-      // 10 s après la fin du conseil du Pacte, avec une vibration, FIGÉE (elle n'expire pas) et TOUJOURS en haut à droite de
-      // l'œuf — le joueur a le temps de lire, et le rond du tuto ne se trompe jamais de place.
+      // 🎓 TUTO (21/10, soir — voir tutoriel.js : l'ancienne version BLOQUAIT toutes les cibles) : 5 s après l'arrivée du défi
+      // « Touche N fois la cible dorée », UNE cible exceptionnelle, figée, en haut à droite de l'œuf, annoncée par une vibration.
       const tuD = tutoRef.current;
-      const doreeDuTuto = !!tuD && tutoActif(tuD) && !estVu(tuD, 'doree');
-      if (doreeDuTuto) {
-        if (!goldenTargetRef.current && estVu(tuD, 'pacte') && tuD.pacteFiniA && now >= tuD.pacteFiniA + DOREE_TUTO_DELAI_MS
-          && viewRef.current === 'tap' && !miniJeuOuvertRef.current) {
-          mesuresRef.current.doreesApparues += 1;
-          setGoldenTarget({ expiresAt: now + 10 * 365 * 86400 * 1000, leftPct: DOREE_TUTO_POS.leftPct, topPct: DOREE_TUTO_POS.topPct, tuto: true });
-          if (vibrationsRef.current) Vibration.vibrate(400);
-          jouerSon('etoile-doree-apparition', sonsJeuRef.current);
-        }
+      const doreeTutoDue = !!tuD && tutoActif(tuD) && !estVu(tuD, 'doree') && defiDoreeDepuisRef.current !== null
+        && now >= defiDoreeDepuisRef.current + DOREE_TUTO_DELAI_MS && viewRef.current === 'tap' && !miniJeuOuvertRef.current;
+      if (doreeTutoDue) {
+        defiDoreeDepuisRef.current = null; // une seule fois
+        mesuresRef.current.doreesApparues += 1;
+        setGoldenTarget({ expiresAt: now + 10 * 365 * 86400 * 1000, leftPct: DOREE_TUTO_POS.leftPct, topPct: DOREE_TUTO_POS.topPct, tuto: true });
+        if (vibrationsRef.current) Vibration.vibrate(400);
+        jouerSon('etoile-doree-apparition', sonsJeuRef.current);
       } else if (goldenTargetRef.current && now > goldenTargetRef.current.expiresAt) {
         setGoldenTarget(null);
         nextGoldenAtRef.current = now + nextGoldenDelaySec() * 1000;
@@ -3366,12 +3365,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // 🎓 TUTORIEL — un conseil à la fois, sur l'écran principal SANS fenêtre ouverte, dans l'ordre ORDRE_ECRAN.
   const conseilPossible = view === 'tap' && !incubatorOpen && !calendarOpen && !diamondShopOpen && !menuDevOuvert && !ascensionPrompt
     && !boss && !bossAnnonce && !bossResult && !guardianFight && !resultatGardien && !confirmGardien && !offlineReport && !pubTap
-    && pickerSlot === null && !selectedCreature && !ficheAventure && !rewardCreature && !powerCast && !miniJeuOuvert;
+    && pickerSlot === null && !selectedCreature && !ficheAventure && !rewardCreature && !powerCast && !miniJeuOuvert && !verrouMsg;
   const condTuto = {
     taper: true,
     boutique: estVu(tuto, 'transe') && coins >= applyDiscount(tapPowerCost(tapPower)) && !estVu(tuto, 'pacte'),
     defi: estVu(tuto, 'pacte') && !!currentChallengeId,
-    doree: !!goldenTarget,
+    doree: !!goldenTarget && !!goldenTarget.tuto, // seulement LA cible du tuto (défi « cible dorée »)
     eclosion: !!mainEgg, // l'œuf du menu principal éclot (minuteur) : 1 tap = 1 seconde
     miniJeux: estVu(tuto, 'miniBoss') && !bossResult, // après Brisecorne ET la fenêtre de ses Diamants fermée
     transe: estVu(tuto, 'taper'), // 21/10 (auteur) : après les 100 taps, tenir la Transe 15 s
@@ -3432,6 +3431,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (etapeEcran !== 'taper') tapsTutoRef.current = 0;
     etapeAfficheeRef.current = etapeEcran;
   });
+  // 🎓 Le défi « Touche N fois la cible dorée » arrive : la cible du tuto apparaîtra 5 s plus tard (minuterie des cibles).
+  const defiDoreeDepuisRef = useRef(null);
+  useEffect(() => {
+    const m = currentChallengeId ? ((findQuest(currentChallengeId) || {}).metric || null) : null;
+    defiDoreeDepuisRef.current = m === 'goldenClaimed' && tutoActif(tutoRef.current) && !estVu(tutoRef.current, 'doree') ? Date.now() : null;
+  }, [currentChallengeId, tuto && tuto.decide]);
   // « Accomplis ce défi » : vu dès que CE défi est accompli (le défi en cours change).
   useEffect(() => {
     if (defiTutoRef.current && currentChallengeId !== defiTutoRef.current) { defiTutoRef.current = null; vuTuto('defi'); }
@@ -3454,7 +3459,9 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, [etapeEcran]);
   // 🎓 Le 1er MINI-BOSS est PROVOQUÉ par le tuto « un peu après » l'éclosion (auteur) : 20 s sur l'écran principal, une fois.
   useEffect(() => {
-    if (!loaded || !tuto || !tutoActif(tuto) || tuto.bossLance || estVu(tuto, 'miniBoss') || owned.length === 0 || !estVu(tuto, 'eclosion')) return undefined;
+    // ⚠️ Dépend de la 1re créature, PAS du conseil d'éclosion : si l'œuf éclot pendant que le joueur est ailleurs, ce conseil
+    // n'est jamais vu — le mini-boss ne serait jamais venu (même famille de bug que la cible dorée du 21/10).
+    if (!loaded || !tuto || !tutoActif(tuto) || tuto.bossLance || estVu(tuto, 'miniBoss') || owned.length === 0) return undefined;
     if (view !== 'tap' || boss !== null || bossAnnonce !== null || guardianFight) return undefined;
     const t = setTimeout(() => { ecrireTuto({ ...tutoRef.current, bossLance: true }); annoncerBoss(); }, MINI_BOSS_TUTO_DELAI_MS);
     return () => clearTimeout(t);
@@ -5109,16 +5116,29 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         ownedCount={owned.length}
         totalCreatures={CREATURES.length}
         refBoutique={(r) => { ciblesTutoRef.current.boutique = r; }}
+        onBloque={(quoi) => setVerrouMsg(quoi)}
         refExploration={(r) => { ciblesTutoRef.current.exploration = r; }}
       />
       {/* 🎓 Repère (0, 0) de l'écran pour mesurer les cibles, puis le guide du conseil en cours (tout en dernier : au-dessus
           de tout). ⚠️ Le guide n'a AUCUN conteneur plein écran : seule sa petite croix capte le doigt. */}
+      {/* 🔒 Collection / Exploration sans 1re créature : la fenêtre en bois du jeu (comme le résultat du mini-boss). */}
+      {verrouMsg && (
+        <View style={styles.detailOverlay}>
+          <FenetreBois titre="🔒 Pas encore">
+            <Text style={styles.verrouTexte}>Fais éclore ta première créature pour ouvrir {verrouMsg}.</Text>
+            <BoutonBois texte="Compris" onPress={() => setVerrouMsg(null)} />
+          </FenetreBois>
+        </View>
+      )}
       <View ref={racineTutoRef} collapsable={false} style={{ position: 'absolute', left: 0, top: 0, width: 1, height: 1, pointerEvents: 'none' }} />
       {etapeEcran && rectTuto ? (
         <GuideTuto rect={rectTuto} forme={ETAPES[etapeEcran].forme} ecran={{ l: SCREEN_W, h: SCREEN_H }} place={etapeEcran === 'miniBoss' ? 'haut' : 'auto'}
           texte={etapeEcran === 'taper' ? avecCompteur(ETAPES.taper.texte, tapsTutoRef.current, TAPS_CONSEIL_TAPER)
             : etapeEcran === 'transe' ? avecCompteur(ETAPES.transe.texte, transeTutoSec, TRANSE_CONSEIL_SEC) : ETAPES[etapeEcran].texte}
-          onFermer={() => vuTuto(etapeEcran)} />
+          onFermer={() => {
+            if (etapeEcran === 'doree') setGoldenTarget((g) => (g && g.tuto ? { ...g, tuto: false, expiresAt: Date.now() + GOLDEN_VISIBLE_SEC * 1000 } : g));
+            vuTuto(etapeEcran);
+          }} />
       ) : null}
       {/* ⚠️ Ces deux fenêtres vivent À LA RACINE de l'écran, PAS dans
           `tapZone`. Placées dedans, leur `position: absolute` était
@@ -6598,11 +6618,11 @@ function GuardianBattle({ team, level, onFinish, eggNumber = 0, calibrage = null
   );
 }
 
-function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures, refBoutique, refExploration }) {
+function BottomTabBar({ view, setView, onAdventurePress, ownedCount, totalCreatures, refBoutique, refExploration, onBloque = null }) {
   // 21/10 (auteur) : SANS sa première créature, le joueur n'a accès ni à la Collection ni à l'Exploration (cadenas) ;
   // dès qu'elle éclot, le tuto reprend (« Ta première créature… », puis EXPLORATION).
   const verrou = ownedCount === 0;
-  const bloque = (quoi) => Alert.alert('🔒 Pas encore', `Fais éclore ta première créature pour ouvrir ${quoi}.`);
+  const bloque = (quoi) => (onBloque ? onBloque(quoi) : null); // fenêtre en bois du jeu (demande de l'auteur)
   // Composant separe : il lui faut SON propre appel, `insets` de
   // ClickerScreen n'est pas dans sa portee.
   const insets = useSafeAreaInsets();
@@ -6850,6 +6870,7 @@ const styles = StyleSheet.create({
   bossAnnonceChiffre: { color: '#ff5a3c', fontSize: 56, fontWeight: '900', marginTop: 2 },
   // Barre du bas sans créature : icône éteinte + cadenas (auteur, 21/10).
   navBoxVerrou: { opacity: 0.4 },
+  verrouTexte: { color: '#FFF3D6', fontSize: 16, fontWeight: '800', textAlign: 'center', marginVertical: 14, lineHeight: 22 },
   navCadenas: { position: 'absolute', fontSize: 20, textShadowColor: '#000', textShadowRadius: 4 },
   devToolsRow: {
     position: 'absolute', left: 0, right: 0, top: SCREEN_H * (0.303 - TOP_BLOCK_SHIFT) - 13, zIndex: 3,
