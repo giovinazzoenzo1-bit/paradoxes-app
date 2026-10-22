@@ -282,7 +282,7 @@ import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import GuideTuto from '../../components/GuideTuto';
 import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, DOREE_TUTO_DELAI_MS, DOREE_TUTO_POS, MINI_BOSS_TUTO_DELAI_MS,
-  TAPS_CONSEIL_INCUBATEUR, DUREE_CONSEIL_LONG_MS, lireTuto, ecrireTuto,
+  TAPS_CONSEIL_INCUBATEUR, DUREE_CONSEIL_LONG_MS, DUREE_CONSEIL_ECLOSION_MS, lireTuto, ecrireTuto,
   abonnerTuto, estVu, tutoActif, choisirEtape, vuEtape, estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
 import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_MS, MINI_JEU_DELAI_OUVERTURE_MS,
   MINI_JEU_DEFIS_CONTINUS, MINI_JEU_PRESENCE_MS } from '../../games/clicker/miniJeux';
@@ -3459,13 +3459,27 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   }, [etapeEcran]);
   // 🎓 Le 1er MINI-BOSS est PROVOQUÉ par le tuto « un peu après » l'éclosion (auteur) : 20 s sur l'écran principal, une fois.
   useEffect(() => {
-    // ⚠️ Dépend de la 1re créature, PAS du conseil d'éclosion : si l'œuf éclot pendant que le joueur est ailleurs, ce conseil
-    // n'est jamais vu — le mini-boss ne serait jamais venu (même famille de bug que la cible dorée du 21/10).
-    if (!loaded || !tuto || !tutoActif(tuto) || tuto.bossLance || estVu(tuto, 'miniBoss') || owned.length === 0) return undefined;
+    // ⚠️ Compté depuis la VRAIE éclosion (`eclosA`, posé quand l'œuf du menu principal disparaît — quel que soit l'écran) et
+    // jamais pendant un compte à rebours d'éclosion (bug du 21/10 : il arrivait en plein compte à rebours). Ne dépend d'aucun
+    // autre conseil « vu » (même famille de bug que la cible dorée).
+    if (!loaded || !tuto || !tutoActif(tuto) || tuto.bossLance || estVu(tuto, 'miniBoss') || !tuto.eclosA || mainEgg) return undefined;
     if (view !== 'tap' || boss !== null || bossAnnonce !== null || guardianFight) return undefined;
-    const t = setTimeout(() => { ecrireTuto({ ...tutoRef.current, bossLance: true }); annoncerBoss(); }, MINI_BOSS_TUTO_DELAI_MS);
+    const t = setTimeout(() => { ecrireTuto({ ...tutoRef.current, bossLance: true }); annoncerBoss(); }, Math.max(1000, tuto.eclosA + MINI_BOSS_TUTO_DELAI_MS - Date.now()));
     return () => clearTimeout(t);
-  }, [loaded, tuto, owned.length, view, boss, bossAnnonce, guardianFight]);
+  }, [loaded, tuto, mainEgg, view, boss, bossAnnonce, guardianFight]);
+  // La vraie éclosion : l'œuf du menu principal disparaît → datée dans la mémoire du tuto (une fois).
+  const oeufAvantTutoRef = useRef(mainEgg);
+  useEffect(() => {
+    const tu = tutoRef.current;
+    if (oeufAvantTutoRef.current && !mainEgg && tu && tutoActif(tu) && !tu.eclosA && !estVu(tu, 'miniBoss')) ecrireTuto({ ...tu, eclosA: Date.now() });
+    oeufAvantTutoRef.current = mainEgg;
+  }, [mainEgg]);
+  // « Ton œuf éclot » : 10 s au plus (le compte à rebours chevauchait le rond — auteur, 21/10).
+  useEffect(() => {
+    if (etapeEcran !== 'eclosion') return undefined;
+    const t = setTimeout(() => vuTuto('eclosion'), DUREE_CONSEIL_ECLOSION_MS);
+    return () => clearTimeout(t);
+  }, [etapeEcran]);
   useEffect(() => {
     if (etapeEcran !== 'miniJeux') return undefined;
     const t = setTimeout(() => vuTuto('miniJeux'), DUREE_CONSEIL_LONG_MS);

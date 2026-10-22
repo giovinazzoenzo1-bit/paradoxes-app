@@ -701,6 +701,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
   const runesOuvertes = currentUnlockedLevel > RUNES_COMBATS_GAGNES;
   // 21/10 (auteur) : la pilule « 🎁 X Griffes à récupérer » aussi dans le menu du DECK (le hub), comme sur la carte.
   const [recupHub, setRecupHub] = useState(null); // null | 'en cours' | message
+  const [verrouRunes, setVerrouRunes] = useState(false); // fenêtre en bois du cadenas des Runes (auteur, 21/10)
   useEffect(() => {
     if (!tuto || !tutoActif(tuto) || estVu(tuto, 'runes') || tuto.poudreOfferte) return;
     if (runesOuvertes && ownedRunes.length === 0 && poudre < POUDRE_CONSEIL_RUNES) {
@@ -1505,7 +1506,7 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
             </TouchableOpacity>
           </CapsuleBois>
           <TouchableOpacity onPress={() => {
-            if (!runesOuvertes) { Alert.alert('🔒 Runes', `Gagne ${RUNES_COMBATS_GAGNES} combats pour débloquer les runes.`); return; }
+            if (!runesOuvertes) { setVerrouRunes(true); return; } // fenêtre du jeu, comme la Collection / l'Exploration
             if (etapeHub === 'runes') setTuto(vuEtape(tuto, 'runes')); setRunesOpen(true);
           }} activeOpacity={0.8} style={[R(HUB.runes, 'droite'), { alignItems: 'center', justifyContent: 'center', opacity: runesOuvertes ? 1 : 0.55 }]}>
             {!runesOuvertes ? <Text style={{ position: 'absolute', zIndex: 2, fontSize: 18, textShadowColor: '#000', textShadowRadius: 4, pointerEvents: 'none' }}>🔒</Text> : null}
@@ -1566,6 +1567,14 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
           {/* ── COMBAT : il SCINTILLE un peu (lueur qui respire + étincelles), voir BoutonCombat. */}
           <BoutonCombat rect={auRapport(R(HUB.combat, 'centre', 'bas'), HUB_RAPPORT_PIECE.combat)} rectLueur={R([HUB.combat[0] - 0.045, HUB.combat[1] - 0.07, HUB.combat[2] + 0.045, HUB.combat[3] + 0.05], 'centre', 'bas')} onPress={() => { if (etapeHub === 'combat') setTuto(vuEtape(tuto, 'combat')); setChapterMapOpen(true); }} />
           {/* 🎓 Conseil du hub (rond sur COMBAT ou sur RUNES) : positions CALCULÉES comme les boutons eux-mêmes. */}
+          {/* 🔒 Runes avant le 3ᵉ combat gagné : la fenêtre en bois du jeu. */}
+          {/* (La fenêtre de jeu de l'Aventure, FenetreJeu, comme ses autres fenêtres.) */}
+          {verrouRunes && (
+            <FenetreJeu titre="🔒 Pas encore" onFermer={() => setVerrouRunes(false)} toucherFondFerme piece="panneau" zIndex={100}>
+              <Text style={styles.verrouTexte}>{`Gagne ${RUNES_COMBATS_GAGNES} combats pour débloquer les runes.`}</Text>
+              <BoutonBois texte="Compris" onPress={() => setVerrouRunes(false)} />
+            </FenetreJeu>
+          )}
           {/* La pilule des Griffes à récupérer (comme sur la carte), sous le titre. */}
           {(griffesARecuperer > 0 || (recupHub && recupHub !== 'en cours')) && (
             <TouchableOpacity style={styles.recupererPilule} onPress={recupererToutHub} disabled={!!recupHub} activeOpacity={0.85}>
@@ -4167,6 +4176,7 @@ const styles = StyleSheet.create({
   starRowEmpty: { tintColor: '#4a3a1c', opacity: 0.85 },
 
   elemHelpBtn: { marginRight: 8 },
+  verrouTexte: { color: '#FFF3D6', fontSize: 16, fontWeight: '800', textAlign: 'center', marginVertical: 12, lineHeight: 22 },
   recupererPilule: { position: 'absolute', top: 58, alignSelf: 'center', zIndex: 30 }, // 15/10 : sous l'en-tête de la carte
   recupererTexte: { color: '#8df08d', fontSize: 13, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },
   elemHelpBtnText: { color: '#ffd96a', fontSize: 12, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3 },

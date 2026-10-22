@@ -45,8 +45,11 @@ export const ETAPES = {
   equiperRune: { texte: "Clique ici pour l'équiper sur une créature !", forme: 'carre' },
   // Combat
   attaque: { texte: 'Choisis une attaque.', forme: 'carre' },
+  // 21/10 (auteur) : après l'attaque, désigner la cible ; puis expliquer la vie des ennemis (bandeau du haut).
+  cible: { texte: "Touche maintenant une créature ennemie pour l'attaquer !", forme: 'carre' },
+  vie: { texte: 'En haut, la vie des ennemis : vide-la pour gagner le combat !', forme: 'carre' },
   jauge: { texte: "Touche quand l'aiguille est dans l'or !", forme: 'carre' },
-  gardien: { texte: "Brise d'abord son bouclier bleu, puis sa vie.", forme: 'carre' },
+  gardien: { texte: "Sa barre de vie : brise d'abord son bouclier bleu, puis sa vie rouge !", forme: 'carre' },
 };
 
 // Ordre de priorité de l'écran principal : UN conseil à la fois.
@@ -69,7 +72,11 @@ export const DOREE_TUTO_POS = { leftPct: 75, topPct: 25 };
 // Les runes s'ouvrent après le 3ᵉ combat GAGNÉ (auteur, 21/10) : niveau débloqué ≥ 4.
 export const RUNES_COMBATS_GAGNES = 3;
 // Le 1er mini-boss est PROVOQUÉ « un peu après » l'éclosion de la 1re créature (auteur) : 20 s sur l'écran principal.
+// ⚠️ BUG RÉEL (21/10, auteur) : compté depuis la 1re créature possédée, il arrivait PENDANT le compte à rebours de l'éclosion.
+// Désormais compté depuis la VRAIE éclosion (l'œuf du menu principal disparaît : `eclosA` dans la mémoire du tuto).
 export const MINI_BOSS_TUTO_DELAI_MS = 20 * 1000;
+// « Ton œuf éclot » : 10 s au plus (auteur, 21/10 — le compte à rebours chevauchait le rond).
+export const DUREE_CONSEIL_ECLOSION_MS = 10 * 1000;
 // L'œuf de l'incubateur : le conseil s'en va après 5 taps (le joueur a compris « 1 tap = 1 seconde »).
 export const TAPS_CONSEIL_INCUBATEUR = 5;
 // Les conseils sans geste à faire (mini-jeux) s'en vont seuls après ce temps.

@@ -4562,7 +4562,7 @@ function auditTutoriel() {
   const T = { exports: {} };
   new Function('require', 'module', 'exports', code)(() => ({ __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), T, T.exports);
   const t = T.exports;
-  const attendues = ['taper', 'boutique', 'defi', 'doree', 'eclosion', 'eclosionIncub', 'miniBoss', 'miniJeux', 'ameliorer', 'monter', 'transe', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension', 'pacte', 'sceau',
+  const attendues = ['taper', 'boutique', 'defi', 'doree', 'eclosion', 'eclosionIncub', 'miniBoss', 'miniJeux', 'ameliorer', 'monter', 'cible', 'vie', 'transe', 'creature', 'aventure', 'incubateur', 'calendrier', 'ascension', 'pacte', 'sceau',
     'combat', 'runes', 'acheterRune', 'equiperRune', 'attaque', 'jauge', 'gardien'];
   for (const id of attendues) {
     const e = t.ETAPES[id];
@@ -4620,13 +4620,18 @@ function auditTutoriel() {
   if (Cl.includes('doreeDuTuto') || Cl.includes('pacteFiniA')) pb.push('le tuto bloque de nouveau les cibles dorées au hasard (bug du 21/10 : plus aucune cible)');
   if (/bossLance \|\| estVu\(tuto, 'miniBoss'\) \|\| owned\.length === 0 \|\| !estVu\(tuto, 'eclosion'\)/.test(Cl)) pb.push('le mini-boss du tuto dépend de nouveau du conseil d\'éclosion (il pourrait ne jamais venir)');
   if (!Cl.includes('onBloque={(quoi) => setVerrouMsg(quoi)}') || !Cl.includes('<FenetreBois titre="🔒 Pas encore">') || Cl.includes("Alert.alert('🔒 Pas encore'")) pb.push('le cadenas de la Collection / Exploration n\'est plus une fenêtre du jeu');
-  if (!Cl.includes("setTimeout(() => { ecrireTuto({ ...tutoRef.current, bossLance: true }); annoncerBoss(); }, MINI_BOSS_TUTO_DELAI_MS);") || !Cl.includes("place={etapeEcran === 'miniBoss' ? 'haut' : 'auto'}")
+  // Bug réel du 21/10 : le mini-boss arrivait PENDANT le compte à rebours d'éclosion → compté depuis la vraie éclosion (eclosA).
+  if (!Cl.includes("tuto.bossLance || estVu(tuto, 'miniBoss') || !tuto.eclosA || mainEgg) return undefined;") || !Cl.includes('ecrireTuto({ ...tu, eclosA: Date.now() })')
+    || t.DUREE_CONSEIL_ECLOSION_MS !== 10000) pb.push('le mini-boss du tuto peut arriver pendant le compte à rebours, ou le conseil d\'éclosion dure plus de 10 s');
+  if (!lire('src/screens/games/AdventureScreen.js').includes('if (!runesOuvertes) { setVerrouRunes(true); return; }') || lire('src/screens/games/AdventureScreen.js').includes("Alert.alert('🔒 Runes'")) pb.push('le cadenas des Runes n\'est plus une fenêtre du jeu');
+  if (!Cl.includes("annoncerBoss(); }, Math.max(1000, tuto.eclosA + MINI_BOSS_TUTO_DELAI_MS - Date.now()));") || !Cl.includes("place={etapeEcran === 'miniBoss' ? 'haut' : 'auto'}")
     || !Cl.includes("miniJeux: estVu(tuto, 'miniBoss') && !bossResult,") || !Cl.includes('conseil={conseilIncub ? ETAPES.eclosionIncub.texte : null}')) pb.push('écran principal : mini-boss du tuto, conseil des mini-jeux ou de l\'incubateur débranché');
   if (!Cl.includes("onPress={() => (verrou ? bloque(\"l'Exploration\") : onAdventurePress())}") || !Cl.includes("onPress={() => (verrou ? bloque('la Collection') : setView('collection'))}")) pb.push('Collection ou Exploration ouvertes sans première créature');
   { const Av0 = lire('src/screens/games/AdventureScreen.js');
     if (!Av0.includes('  const runesOuvertes = currentUnlockedLevel > RUNES_COMBATS_GAGNES;') || !Av0.includes('setPoudre(POUDRE_CONSEIL_RUNES);')) pb.push('Aventure : runes ouvertes avant 3 combats, ou poudre du tuto non offerte'); }
   const Co = lire('src/screens/games/CombatScreen.js');
-  if (!Co.includes("phase === 'choosing' && !estVu(tuto, 'attaque') ? 'attaque'") || !Co.includes("phase === 'tapping' && !estVu(tuto, 'jauge') ? 'jauge'")) pb.push('combat : les conseils attaque / jauge ont disparu');
+  if (!Co.includes("phase === 'choosing' && !armedSkill && !estVu(tuto, 'attaque') ? 'attaque'") || !Co.includes("phase === 'tapping' && !estVu(tuto, 'jauge') ? 'jauge'")
+    || !Co.includes("phase === 'choosing' && armedSkill && !estSurAllie(armedSkill) && !estVu(tuto, 'cible') ? 'cible'") || !Co.includes("estVu(tuto, 'jauge') && !estVu(tuto, 'vie') ? 'vie'")) pb.push('combat : les conseils attaque / cible / jauge / vie ont disparu');
   const Av = lire('src/screens/games/AdventureScreen.js');
   if (!Av.includes("poudre >= POUDRE_CONSEIL_RUNES && ownedRunes.length === 0 ? 'runes'") || !Av.includes("nbRunes === 0 && poudre >= POUDRE_PRIX.unite && !estVu(tuto, 'acheterRune') ? 'acheterRune'")) pb.push('Aventure : les conseils des runes ont disparu');
   if (!lire('src/screens/OptionsScreen.js').includes('🎓 Revoir les conseils')) pb.push('Options : plus de « Revoir les conseils »');

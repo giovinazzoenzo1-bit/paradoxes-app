@@ -4594,6 +4594,12 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   que le joueur est ailleurs) → dépend maintenant de la 1re créature ; les mini-jeux n'étaient bloqués par rien. RÈGLE : un
   conseil ne doit JAMAIS conditionner une mécanique du jeu à un autre conseil « vu ». Cadenas Collection / Exploration : fenêtre
   en bois du jeu (« 🔒 Pas encore », « Compris »), le conseil du tuto se cache pendant qu'elle est ouverte.
+- 21/10 (soir, retours de l'auteur) : ⚠️ BUG RÉEL — le mini-boss du tuto arrivait en plein COMPTE À REBOURS d'éclosion
+  (compté depuis « une créature possédée ») → compté depuis la VRAIE éclosion (`eclosA` : l'œuf du menu principal disparaît),
+  jamais tant qu'un œuf éclot. Conseil d'éclosion : 10 s au plus (le compte à rebours chevauchait le rond). Combat : après
+  l'attaque, CARRÉ sur les créatures ennemies (« touche une créature ennemie ») ; après la jauge, carré sur la VIE des ennemis
+  (bandeau du haut) ; Gardien : « sa barre de vie : bouclier bleu, puis vie rouge ». Cadenas des Runes : FenetreJeu (la
+  fenêtre de l'Aventure). En attente des captures de l'auteur : bug « après le 1er combat en Exploration » (ses écrans 2-3).
 - ⚠️ PIÈGE DE MÉTHODE (21/10) : une passe de `verifier-controles` restée EN COURS (réponse coupée) + une nouvelle passe lancée
   par-dessus = deux sabotages simultanés → un piège est resté ÉCRIT dans AdventureScreen.js (PanneauRetour en absoluteFill).
   Rattrapé par `git status` (fichier modifié hors commit) et remis par `git checkout`. Règle : TOUJOURS `pgrep -x node`
