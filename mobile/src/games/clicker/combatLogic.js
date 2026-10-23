@@ -1941,9 +1941,30 @@ export const MONTEE_MAX_RECALCUL = 3;
 // un RECALCUL en cours de fenêtre part de l'étape en cours). membresDeck : le deck dans l'ordre (creature, ownedLevel,
 // evolutionTier, equippedRunes) ; griffesEnPoche : comptées comme dépensées (équitablement, palier de dizaine compris) ;
 // options.maitrise : l'indice de maîtrise du joueur (0 = joueur de référence).
+// 💳 22/10 (règle de l'auteur) : options.griffesPayees = les Griffes ACHETÉES encore « hors photo » (achats.js). La photo fait
+// comme si elles n'existaient pas : retirées d'abord de la poche, puis des niveaux du deck (les plus chers d'abord) — dépensées
+// ou non, c'est pareil. Les ennemis sont calés sur l'équipe « sans l'achat » ; la progression GRATUITE compte normalement.
+// ⚠️ À 0 (tous les joueurs sans achat), AUCUNE ligne de calcul ne change — prouvé par l'empreinte de 400 photos (auditAvantageAchat).
+export function deckSansGriffesPayees(membres, griffes) {
+  let reste = Math.max(0, Number(griffes) || 0);
+  const m = (membres || []).map((x) => ({ ...x }));
+  for (let garde = 0; garde < 2000 && reste > 0; garde++) {
+    let iMax = -1, coutMax = 0;
+    m.forEach((x, i) => { if (x.ownedLevel > 1) { const c = levelUpCost(x.creature, x.ownedLevel - 1); if (c > coutMax) { coutMax = c; iMax = i; } } });
+    if (iMax < 0 || coutMax > reste) break; // plus rien à retirer, ou le dernier niveau coûte plus que le reste
+    m[iMax].ownedLevel -= 1; reste -= coutMax;
+  }
+  return m;
+}
 export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 0, options = {}) {
   const niveaux = {};
   let budget = Math.max(0, Number(griffesEnPoche) || 0);
+  const payees = Math.max(0, Number(options.griffesPayees) || 0);
+  if (payees > 0) { // (sinon : rien ne change)
+    const deLaPoche = Math.min(budget, payees);
+    budget -= deLaPoche;
+    membresDeck = deckSansGriffesPayees(membresDeck, payees - deLaPoche);
+  }
   const fin = options.fin || (debutFenetre(fenetreDe(debut)) + TAILLE_FENETRE - 1);
   for (let n = debut; n <= fin; n++) {
     const nbJ = Math.max(1, Math.min((membresDeck || []).length, combattantsPourEtape(n)));

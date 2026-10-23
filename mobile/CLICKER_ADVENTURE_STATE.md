@@ -4643,7 +4643,17 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   défis ; mesuré : 18 niveaux = 332 Griffes au niv. 10, 1 085 au 41, 4 758 au 60), pièces = minutes de revenu passif crédité
   DIRECT ; calculé AVANT l'achat (le ×2 de la 1re fois se lit avant d'être consommé). Calculateur de Griffes : à l'étape 40,
   le joueur gratuit a son deck au niv. ~41 face à des ennemis niv. ~57 — c'est le manque que comblent les packs.
-- À FAIRE : œuf doré (rareté garantie), tirelire, VIP hebdo ; puis les moments où chaque offre surgit ; puis RevenueCat +
+- 22/10 — AVANTAGE DES GRIFFES PAYÉES (règles de l'auteur) : sans lui, la photo des fenêtres ABSORBAIT l'achat (les ennemis
+  montaient d'autant). Désormais `photoFenetre(…, { griffesPayees })` retire les Griffes achetées (poche d'abord, puis les
+  niveaux du deck les plus chers — dépensées ou non, c'est pareil) pendant 3 combats par euro (5 min / achat, 300 max au total
+  ≈ 100 €) ; chaque combat d'Aventure joué en retire un ; ensuite ½ à la fenêtre suivante, tout à celle d'après. SEUL effet :
+  le niveau des ennemis à la photo. Compteur dans `achats:v1` (pas dans la sauvegarde d'Aventure). La chance affichée
+  (Facile…) vient d'une VRAIE simulation de l'équipe réelle → elle reste vraie toute seule (et montre l'effet de l'achat).
+  NON-RÉGRESSION PROUVÉE : 400 photos variées, sans achat, identiques avant / après (0 différence). Calculateur
+  `tools/calculateur-avantage-achat.js` : MESURÉ — sans achat 71 % au 1er essai ; pendant l'avantage 82-87 % (0,99 €),
+  94-100 % (2,99 €), ~100 % dès 4,99 € → intensité à faire valider par l'auteur. Œuf payant : REFUSÉ par l'auteur (à revoir
+  avec les données, après les nouvelles créatures).
+- À FAIRE : tirelire, VIP hebdo ; puis les moments où chaque offre surgit ; puis RevenueCat +
   Firebase (Crashlytics) + AppLovin MAX quand l'auteur aura les comptes (un seul nouvel APK).
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)

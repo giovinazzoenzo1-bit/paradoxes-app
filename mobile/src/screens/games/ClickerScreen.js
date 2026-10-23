@@ -281,7 +281,7 @@ import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import GuideTuto from '../../components/GuideTuto';
-import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat, contenuReel } from '../../games/clicker/achats';
+import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat, contenuReel, noterAvantageGriffes } from '../../games/clicker/achats';
 import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, DOREE_TUTO_DELAI_MS, DOREE_TUTO_POS, MINI_BOSS_TUTO_DELAI_MS,
   TAPS_CONSEIL_INCUBATEUR, DUREE_CONSEIL_LONG_MS, DUREE_CONSEIL_ECLOSION_MS, lireTuto, ecrireTuto,
   abonnerTuto, estVu, tutoActif, choisirEtape, vuEtape, estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
@@ -2476,6 +2476,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
       await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String((raw ? parseInt(raw, 10) || 0 : 0) + c.griffes));
       noterGriffes('achat', c.griffes, { id });
+      await noterAvantageGriffes(id, c.griffes); // 22/10 : ces Griffes restent « hors photo » de l'Aventure un temps (3 combats / €)
     }
     // Pièces : crédit DIRECT (jamais gainCoins, qui les re-multiplierait — règle du 19/09).
     if (c.pieces) pendingGainRef.current += c.pieces;

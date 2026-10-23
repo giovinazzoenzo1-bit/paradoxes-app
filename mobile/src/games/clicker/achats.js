@@ -54,7 +54,8 @@ export const PRODUITS = [
 export function produit(id) { return PRODUITS.find((p) => p.id === id) || null; }
 
 // ── Droits (mémoire à part de la partie : une Ascension ou une remise à zéro ne les efface JAMAIS) ──
-const ETAT_VIDE = { sansPubs: false, doubleur: false, passJusqua: 0, demarrageAchete: false, affaireJour: null, premiersAchats: {}, journal: [] };
+const ETAT_VIDE = { sansPubs: false, doubleur: false, passJusqua: 0, demarrageAchete: false, affaireJour: null, premiersAchats: {}, journal: [],
+  avantage: { griffes: 0, combats: 0, fenetreFin: null } };
 let etat = { ...ETAT_VIDE };
 const abonnes = new Set();
 export function abonnerAchats(fn) { abonnes.add(fn); return () => abonnes.delete(fn); }
@@ -113,6 +114,51 @@ export function contenuReel(id, ctx, maintenant = Date.now()) {
   if (base.niveaux) r.griffes = (r.griffes || 0) + Math.max(base.niveaux * 10, griffesPourNiveaux(ctx, base.niveaux));
   if (base.minutesPieces) r.pieces = Math.max(1000, Math.round(((ctx && ctx.passifParSec) || 0) * 60 * base.minutesPieces));
   return r;
+}
+
+// ── 💳 AVANTAGE DES GRIFFES PAYÉES (22/10, règles de l'auteur) ──
+// Les Griffes ACHETÉES restent « hors photo » (combatLogic.photoFenetre, options.griffesPayees) pendant un nombre de combats
+// d'Aventure proportionnel au prix : 3 par euro, 5 au moins par achat, 300 au plus au total (≈ 100 € d'achats). Chaque combat
+// joué (gagné ou perdu) en retire un. À 0 : les Griffes reviennent EN DOUCEUR — moitié à la fenêtre (5 étapes) suivante,
+// tout à celle d'après — pour éviter un mur de difficulté. Seul effet : le niveau des ennemis à la photo. Rien d'autre.
+export const COMBATS_PAR_EURO = 3;
+export const COMBATS_MIN_ACHAT = 5;
+export const COMBATS_MAX_TOTAL = 300;
+export function prixEnEuros(p) { return parseFloat(String((p && p.prix) || '0').replace(',', '.')) || 0; }
+export function combatsPourPrix(euros) { return Math.max(COMBATS_MIN_ACHAT, Math.round(euros * COMBATS_PAR_EURO)); }
+// Pur (testable) : l'avantage après un achat contenant `griffes` Griffes, payé `euros`.
+export function avantageApresAchat(av, euros, griffes) {
+  const a = av || { griffes: 0, combats: 0, fenetreFin: null };
+  if (!(griffes > 0)) return a;
+  return { griffes: (a.griffes || 0) + griffes, combats: Math.min(COMBATS_MAX_TOTAL, (a.combats || 0) + combatsPourPrix(euros)), fenetreFin: null };
+}
+// Pur : un combat d'Aventure joué dans la fenêtre `fenetre` (le dernier combat note la fenêtre de fin).
+export function avantageApresCombat(av, fenetre) {
+  const a = av || { griffes: 0, combats: 0, fenetreFin: null };
+  if (!(a.combats > 0)) return a;
+  const combats = a.combats - 1;
+  return { ...a, combats, fenetreFin: combats === 0 ? fenetre : a.fenetreFin };
+}
+// Pur : les Griffes à garder hors de la photo de la fenêtre `k` (tout pendant l'avantage, ½ juste après, puis 0).
+export function griffesHorsPhoto(av, k) {
+  const a = av || {}; const g = Math.max(0, a.griffes || 0);
+  if (!g) return 0;
+  if (a.combats > 0) return g;
+  if (a.fenetreFin == null) return 0;
+  if (k <= a.fenetreFin) return g; // la fenêtre où l'avantage s'est terminé : sa photo était déjà prise avec l'avantage
+  if (k === a.fenetreFin + 1) return Math.round(g / 2);
+  return 0;
+}
+export function griffesPayeesPourFenetre(k) { return griffesHorsPhoto(etat.avantage, k); }
+export function combatsAvantage() { return Math.max(0, (etat.avantage && etat.avantage.combats) || 0); }
+async function sauver() { try { await AsyncStorage.setItem(CLE_ACHATS, JSON.stringify(etat)); } catch (e) { /* la session garde l'état */ } }
+export async function noterAvantageGriffes(id, griffes) {
+  const a = avantageApresAchat(etat.avantage, prixEnEuros(produit(id)), griffes);
+  if (a === etat.avantage) return; etat = { ...etat, avantage: a }; await sauver();
+}
+export async function compterCombatAvantage(fenetre) {
+  const a = avantageApresCombat(etat.avantage, fenetre);
+  if (a === etat.avantage) return; etat = { ...etat, avantage: a }; await sauver();
 }
 
 // ── Le fournisseur de paiement ──

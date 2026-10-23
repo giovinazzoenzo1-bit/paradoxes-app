@@ -4,6 +4,7 @@
 // combat derrière chaque niveau arrive à l'étape 5).
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import GuideTuto from '../../components/GuideTuto';
+import { griffesPayeesPourFenetre, compterCombatAvantage } from '../../games/clicker/achats';
 import { ETAPES, POUDRE_CONSEIL_RUNES, RUNES_COMBATS_GAGNES, lireTuto, abonnerTuto, ecrireTuto, estVu, tutoActif, vuEtape, mesurerCible } from '../../games/clicker/tutoriel';
 import {
   View,
@@ -870,7 +871,8 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
       // étapes gagnées restent comptées (photoFenetre).
       const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;
       const aff = {}; // 12/10 : ennemis d'entraînement de la photo (étape → facteur)
-      const niveaux = photoFenetre(depart, membres, budget, av, { maitrise, affaiblissements: aff });
+      // 💳 22/10 : les Griffes ACHETÉES encore dans leur avantage restent hors de la photo (0 sans achat : rien ne change).
+      const niveaux = photoFenetre(depart, membres, budget, av, { maitrise, affaiblissements: aff, griffesPayees: griffesPayeesPourFenetre(k) });
       const difficultes = {};
       for (let n = d0; n < d0 + TAILLE_FENETRE; n++) difficultes[n] = difficulteEtape(n, av);
       setFenetres((prev) => {
@@ -2848,6 +2850,7 @@ function ChapterMapScreen({ onEncaisserGriffes = null, poudre = 0, ascensionCoun
           // l'indice de maîtrise — que si l'aperçu a mesuré CE niveau (un 0 % mesuré sur le repli gonflait la maîtrise).
           const nivCombat = activeBattle.niveauEnnemis != null ? activeBattle.niveauEnnemis : niveauEnnemi(lvJ);
           const apercuValide = !!derniereMesureApercu && derniereMesureApercu.niveau === lvJ && derniereMesureApercu.niveauEnnemis === nivCombat;
+          compterCombatAvantage(fenetreDe(lvJ)); // 💳 22/10 : chaque combat joué (gagné ou perdu) use l'avantage des Griffes payées
           finCombat(outcome, { etoiles: stars || 0, griffes, poudre, essai: (defaitesDeSuite[lvJ] || 0) + 1, premiereVictoire: lvJ === currentUnlockedLevel,
             niveauEnnemis: nivCombat, ascension: ascensionCount,
             puissance: apercuValide ? derniereMesureApercu.puissance : null,

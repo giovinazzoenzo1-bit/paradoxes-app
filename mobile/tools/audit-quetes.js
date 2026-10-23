@@ -4731,6 +4731,49 @@ function auditAchats() {
 }
 module.exports.auditAchats = auditAchats;
 
+// 💳 AVANTAGE DES GRIFFES PAYÉES (22/10, règles de l'auteur) : pendant 3 combats par euro (5 min, 300 max), les Griffes
+// achetées restent HORS de la photo de la fenêtre (ennemis calés sur l'équipe « sans l'achat »), dépensées ou non ; retour
+// en douceur (½ puis tout). ⚠️ Sans achat (0), la photo est STRICTEMENT celle d'avant (prouvé sur 400 photos le 22/10).
+function auditAvantageAchat() {
+  const fs = require('fs'); const path = require('path');
+  const pb = [];
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const C = load('combatLogic'); const K = load('clickerLogic');
+  const code = babel.transformSync(lire('src/games/clicker/achats.js'), { presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]], filename: 'achats.js' }).code;
+  const M = { exports: {} };
+  new Function('require', 'module', 'exports', code)((m) => (/clickerLogic/.test(m) ? K : { __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), M, M.exports);
+  const a = M.exports;
+  // Compteur.
+  if (a.combatsPourPrix(0.99) !== 5 || a.combatsPourPrix(4.99) !== 15 || a.combatsPourPrix(19.99) !== 60) pb.push('combats d\'avantage : plus 3 par euro (5 au moins)');
+  let av = { griffes: 0, combats: 0, fenetreFin: null };
+  for (let i = 0; i < 10; i++) av = a.avantageApresAchat(av, 99.99, 1000);
+  if (av.combats !== 300) pb.push('avantage : le plafond de 300 combats ne tient plus');
+  av = a.avantageApresAchat({ griffes: 0, combats: 0, fenetreFin: null }, 0.99, 500);
+  for (let i = 0; i < 5; i++) av = a.avantageApresCombat(av, 7);
+  if (av.combats !== 0 || av.fenetreFin !== 7) pb.push('avantage : un combat joué ne le décompte plus, ou la fenêtre de fin n\'est pas notée');
+  if (a.griffesHorsPhoto(av, 7) !== 500 || a.griffesHorsPhoto(av, 8) !== 250 || a.griffesHorsPhoto(av, 9) !== 0) pb.push('avantage : le retour en douceur (tout, ½, 0) est cassé');
+  if (a.griffesHorsPhoto({ griffes: 500, combats: 3, fenetreFin: null }, 20) !== 500) pb.push('avantage : les Griffes payées ne sont plus hors photo pendant l\'avantage');
+  // La photo.
+  const deck = K.CREATURES.filter((c) => c.rarity === 'rare').slice(0, 3).map((creature) => ({ creature, ownedLevel: 30, evolutionTier: 1, equippedRunes: [] }));
+  const G = 800; const apres = C.deckApresEffortEquitable(deck, G, Infinity, { evolutions: true }).membres;
+  const libre = C.photoFenetre(31, deck, 0, 0, {}), absorbe = C.photoFenetre(31, apres, 0, 0, {}), avec = C.photoFenetre(31, apres, 0, 0, { griffesPayees: G });
+  const zero = C.photoFenetre(31, apres, 300, 1, { griffesPayees: 0 }), sansOpt = C.photoFenetre(31, apres, 300, 1, {});
+  if (JSON.stringify(zero) !== JSON.stringify(sansOpt)) pb.push('SANS achat, la photo n\'est plus identique (non-régression cassée)');
+  const ecart = Math.max(...Object.keys(libre).map((n) => Math.abs(avec[n] - libre[n])));
+  if (ecart > 2) pb.push(`avec l'avantage, les ennemis ne sont plus calés sur l'équipe « sans l'achat » (écart ${ecart} niveaux)`);
+  if (!(Object.keys(libre).some((n) => absorbe[n] > libre[n]))) pb.push('contrôle aveugle : sans avantage, l\'achat devrait faire monter les ennemis');
+  // Dépensées OU en poche : même photo (la poche est retirée d'abord).
+  const enPoche = C.photoFenetre(31, deck, G, 0, { griffesPayees: G });
+  if (Math.max(...Object.keys(libre).map((n) => Math.abs(enPoche[n] - libre[n]))) > 0) pb.push('Griffes payées gardées en poche : pas retirées de la photo');
+  // Branchements.
+  const Av = lire('src/screens/games/AdventureScreen.js'), Cl = lire('src/screens/games/ClickerScreen.js');
+  if (!Av.includes('griffesPayees: griffesPayeesPourFenetre(k) });') || !Av.includes('compterCombatAvantage(fenetreDe(lvJ));')) pb.push('Aventure : la photo ne reçoit plus les Griffes payées, ou les combats ne décomptent plus l\'avantage');
+  if (!Cl.includes('await noterAvantageGriffes(id, c.griffes);')) pb.push('un achat de Griffes ne crée plus d\'avantage');
+  if (!fs.existsSync(path.join(__dirname, 'calculateur-avantage-achat.js'))) pb.push('le calculateur de l\'avantage a disparu');
+  return pb;
+}
+module.exports.auditAvantageAchat = auditAvantageAchat;
+
 // ── Illustrations de créatures : fichiers ET cadrage (03/10) ──────────────
 // Chaque créature branchée dans CreatureArt doit avoir ses 3 stades (fichiers
 // présents) et son CADRAGE (cadrageCreatures.js, généré) : sans lui, l'Album et
@@ -5606,7 +5649,7 @@ function auditFenetres() {
   const fs = require('fs'), path = require('path');
   const Av = fs.readFileSync(path.join(__dirname, '../src/screens/games/AdventureScreen.js'), 'utf8');
   // 11/10 (spec de l'auteur) : poche + récupérables (défis, succès, calendrier) + file d'attente.
-  if (!Av.includes('const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise, affaiblissements: aff });'))
+  if (!Av.includes('const budget = k === 0 ? 0 : Math.max(0, griffes) + Math.max(0, griffesARecuperer || 0) + enAttente;') || !Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise, affaiblissements: aff, griffesPayees: griffesPayeesPourFenetre(k) });'))
     pb.push('la photo ne compte plus toutes les Griffes du joueur (poche, récupérables, file d\'attente)');
   if (!Av.includes('definirNiveauxJoueur(niv, dif, aff);')) pb.push("l'écran ne pose plus les niveaux du joueur (les ennemis reviennent à la table)");
   if (!/JSON\.stringify\(\{[^)]*fenetres, avantage \}\)/.test(Av)) pb.push("les photos et l'avantage ne sont plus sauvegardés");
@@ -5615,7 +5658,7 @@ function auditFenetres() {
   // 12/10 (choix de l'auteur) : INDICE DE MAÎTRISE (remplace la précision), recalcul SANS ÉCRASEMENT, aperçu, Gardien.
   if (!Av.includes("maitrise = maitriseDesCombats((await lireJournalCombats()).filter((c) => c && c.chanceAnnoncee != null && (c.issue === 'win' || c.issue === 'lose'))"))
     pb.push("la photo ne lit plus l'indice de maîtrise (15 derniers combats : vrais résultats contre chances annoncées)");
-  if (!Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise, affaiblissements: aff });')) pb.push("la photo n'applique plus l'indice de maîtrise");
+  if (!Av.includes('const niveaux = photoFenetre(depart, membres, budget, av, { maitrise, affaiblissements: aff, griffesPayees: griffesPayeesPourFenetre(k) });')) pb.push("la photo n'applique plus l'indice de maîtrise");
   if (!Av.includes('const recalcul = !!photo && membres.length > nbPhoto;')) pb.push("plus de recalcul quand une créature rejoint le deck en cours de fenêtre");
   if (!Av.includes('nv[depart] = Math.min(nv[depart], ancien.niveaux[depart] + MONTEE_MAX_RECALCUL);')) pb.push("recalcul avec ÉCRASEMENT : l'étape en cours peut de nouveau bondir (rapport du 12/10 : niveau 9 → 28, 5 %)");
   if (K.MONTEE_MAX_RECALCUL !== 3) pb.push('montée max au recalcul : 3 niveaux (décision du 12/10)');
