@@ -609,6 +609,8 @@ const SABOTAGES = [
     remplace("      if (avant === 'vie' && (armedSkill || phase !== 'choosing')) setTuto((t) => vuEtape(t, 'vie'));\n", '')],
   ['auditTutoriel', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "le tuto n'emmène plus jusqu'à l'onglet Runes de la créature",
     remplace("etape = onglet === 'runes' ? 'poserRune' : 'ongletRunes';", 'etape = null;')],
+  ['auditAchats', F.ecran, "les pièces d'un pack passent par gainCoins (re-multipliées, règle du 19/09)",
+    remplace('if (c.pieces) pendingGainRef.current += c.pieces;', 'if (c.pieces) gainCoins(c.pieces);')],
   ['auditAchats', F.ecran, "le Doubleur payé ne double plus les pièces",
     remplace('const amount = rawAmount * multiplier * multiplicateurPieces();', 'const amount = rawAmount * multiplier;')],
   ['auditAchats', path.join(RACINE, 'src/games/clicker/achats.js'), "un Pass renouvelé écrase le mois déjà payé",

@@ -11,6 +11,7 @@
 //  - diamants_* : packs de Diamants, bonus croissant.
 //  (6ᵉ famille : les offres limitées de 24 h — à venir, même mécanique.)
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { levelUpCost } from './clickerLogic';
 
 export const MODE_ACHATS = 'test'; // 'revenuecat' quand les comptes seront branchés
 export const CLE_ACHATS = 'achats:v1';
@@ -27,6 +28,22 @@ export const PRODUITS = [
     desc: 'Toutes tes pièces doublées, pour toujours', droit: 'doubleur', badge: 'Le plus rentable' },
   { id: 'pass_mensuel', famille: 'avantage', unique: false, prix: '4,99 €', icone: '📜', titre: 'Pass des Défis (30 jours)',
     desc: 'Récompenses ×2 sur les défis du jour et de la semaine', droit: 'pass' },
+  // ── 22/10 (auteur : « on peut tout ajouter », calculé sur la progression) — tout dans la boutique pour l'instant ; les
+  // moments où ils surgiront seront décidés ensuite. Contenu ADAPTATIF : `niveaux` = les Griffes de N niveaux de TA
+  // meilleure créature à partir de son niveau actuel (même unité que les défis) ; `minutesPieces` = N minutes de ton revenu
+  // passif (crédité DIRECT, jamais via gainCoins : il ne doit pas être re-multiplié — règle du 19/09).
+  { id: 'pack_progression', famille: 'offres', prix: '2,99 €', icone: '🥚', titre: 'Pack de progression',
+    desc: 'Tous les 3 œufs · Griffes de 12 niveaux + 150 💎 + 1 h de pièces', contenu: { niveaux: 12, diamants: 150, minutesPieces: 60 } },
+  { id: 'pack_ascension', famille: 'offres', prix: '4,99 €', icone: '🌟', titre: "Pack d'Ascension",
+    desc: 'Après chaque Ascension · Griffes de 25 niveaux + 400 💎 + 4 h de pièces', contenu: { niveaux: 25, diamants: 400, minutesPieces: 240 }, badge: 'Repars fort' },
+  { id: 'pack_gardien', famille: 'offres', prix: '2,99 €', icone: '🐯', titre: 'Pack du Gardien',
+    desc: 'Pour battre le Gardien · Griffes de 10 niveaux + 200 💎', contenu: { niveaux: 10, diamants: 200 } },
+  { id: 'affaire_jour', famille: 'offres', prix: '0,99 €', icone: '⏰', titre: 'Affaire du jour', unParJour: true,
+    desc: 'Change chaque jour · une fois par jour', variantes: [{ diamants: 150 }, { niveaux: 6 }, { minutesPieces: 60, diamants: 50 }] },
+  { id: 'griffes_3', famille: 'griffes', prix: '0,99 €', icone: '🐾', titre: 'Griffes · 3 niveaux', desc: '3 niveaux de ta meilleure créature', contenu: { niveaux: 3 } },
+  { id: 'griffes_18', famille: 'griffes', prix: '4,99 €', icone: '🐾', titre: 'Griffes · 18 niveaux', desc: '18 niveaux de ta meilleure créature', contenu: { niveaux: 18 } },
+  { id: 'griffes_40', famille: 'griffes', prix: '9,99 €', icone: '🐾', titre: 'Griffes · 40 niveaux', desc: '40 niveaux de ta meilleure créature', contenu: { niveaux: 40 }, badge: 'Populaire' },
+  { id: 'griffes_90', famille: 'griffes', prix: '19,99 €', icone: '🐾', titre: 'Griffes · 90 niveaux', desc: '90 niveaux de ta meilleure créature', contenu: { niveaux: 90 }, badge: 'Meilleure valeur' },
   { id: 'diamants_80', famille: 'diamants', prix: '0,99 €', icone: '💎', titre: '80 Diamants', desc: 'Une poignée', contenu: { diamants: 80 } },
   { id: 'diamants_450', famille: 'diamants', prix: '4,99 €', icone: '💎', titre: '450 Diamants', desc: '+12 % offerts', contenu: { diamants: 450 } },
   { id: 'diamants_950', famille: 'diamants', prix: '9,99 €', icone: '💎', titre: '950 Diamants', desc: '+19 % offerts', contenu: { diamants: 950 }, badge: 'Populaire' },
@@ -37,7 +54,7 @@ export const PRODUITS = [
 export function produit(id) { return PRODUITS.find((p) => p.id === id) || null; }
 
 // ── Droits (mémoire à part de la partie : une Ascension ou une remise à zéro ne les efface JAMAIS) ──
-const ETAT_VIDE = { sansPubs: false, doubleur: false, passJusqua: 0, demarrageAchete: false, journal: [] };
+const ETAT_VIDE = { sansPubs: false, doubleur: false, passJusqua: 0, demarrageAchete: false, affaireJour: null, premiersAchats: {}, journal: [] };
 let etat = { ...ETAT_VIDE };
 const abonnes = new Set();
 export function abonnerAchats(fn) { abonnes.add(fn); return () => abonnes.delete(fn); }
@@ -55,8 +72,12 @@ export function multiplicateurPieces() { return etat.doubleur ? DOUBLEUR_MULT : 
 export function multiplicateurDefis() { return (etat.passJusqua || 0) > Date.now() ? PASS_MULT_DEFIS : 1; }
 
 // Un produit peut-il être acheté (les « une seule fois » déjà pris ne le peuvent plus) ?
-export function achetable(id) {
+export function jourCle(maintenant = Date.now()) { const d = new Date(maintenant); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; }
+// « Premier achat ×2 » : chaque pack de Diamants donne le DOUBLE la toute première fois.
+export function premierAchatDouble(id) { const p = produit(id); return !!p && p.famille === 'diamants' && !(etat.premiersAchats || {})[id]; }
+export function achetable(id, maintenant = Date.now()) {
   const p = produit(id); if (!p) return false;
+  if (p.unParJour) return etat.affaireJour !== jourCle(maintenant);
   if (p.id === 'pack_demarrage') return !etat.demarrageAchete;
   if (p.droit === 'sansPubs') return !etat.sansPubs;
   if (p.droit === 'doubleur') return !etat.doubleur;
@@ -71,7 +92,27 @@ export function appliquerDroits(e, id, maintenant = Date.now()) {
   if (p.droit === 'sansPubs') n.sansPubs = true;
   if (p.droit === 'doubleur') n.doubleur = true;
   if (p.droit === 'pass') n.passJusqua = Math.max(maintenant, e.passJusqua || 0) + PASS_JOURS * 86400 * 1000; // s'ajoute s'il est encore actif
+  if (p.unParJour) n.affaireJour = jourCle(maintenant);
+  if (p.famille === 'diamants') n.premiersAchats = { ...(e.premiersAchats || {}), [id]: true };
   return n;
+}
+
+// ── Contenu ADAPTATIF (22/10) : ce que donne VRAIMENT un produit pour CE joueur, maintenant ──
+// ctx = { creature (def de sa meilleure créature), niveau (son niveau), passifParSec }.
+export function griffesPourNiveaux(ctx, n) {
+  if (!ctx || !ctx.creature || !(n > 0)) return 0;
+  let s = 0; for (let k = 0; k < n; k++) s += levelUpCost(ctx.creature, Math.max(1, ctx.niveau || 1) + k);
+  return Math.round(s);
+}
+export function contenuReel(id, ctx, maintenant = Date.now()) {
+  const p = produit(id); if (!p) return {};
+  const base = p.variantes ? p.variantes[Math.floor(maintenant / 86400000) % p.variantes.length] : (p.contenu || {});
+  const r = {};
+  if (base.diamants) r.diamants = base.diamants * (premierAchatDouble(id) ? 2 : 1);
+  if (base.griffes) r.griffes = base.griffes;
+  if (base.niveaux) r.griffes = (r.griffes || 0) + Math.max(base.niveaux * 10, griffesPourNiveaux(ctx, base.niveaux));
+  if (base.minutesPieces) r.pieces = Math.max(1000, Math.round(((ctx && ctx.passifParSec) || 0) * 60 * base.minutesPieces));
+  return r;
 }
 
 // ── Le fournisseur de paiement ──

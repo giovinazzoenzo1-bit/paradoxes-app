@@ -4685,12 +4685,13 @@ function auditAchats() {
   const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   const code = babel.transformSync(lire('src/games/clicker/achats.js'), { presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]], filename: 'achats.js' }).code;
   const M = { exports: {} };
-  new Function('require', 'module', 'exports', code)(() => ({ __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), M, M.exports);
+  const C = load('clickerLogic');
+  new Function('require', 'module', 'exports', code)((m) => (/clickerLogic/.test(m) ? C : { __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), M, M.exports);
   const a = M.exports;
   if (a.MODE_ACHATS !== 'test' && a.MODE_ACHATS !== 'revenuecat') pb.push('mode d\'achat inconnu');
   if (a.CLE_ACHATS !== 'achats:v1') pb.push('les achats n\'ont plus leur mémoire à part (achats:v1)');
   const ids = a.PRODUITS.map((p) => p.id);
-  for (const id of ['pack_demarrage', 'sans_pubs', 'doubleur', 'pass_mensuel', 'diamants_80', 'diamants_450', 'diamants_950', 'diamants_2000', 'diamants_5500', 'diamants_12000']) if (!ids.includes(id)) pb.push('produit manquant : ' + id);
+  for (const id of ['pack_demarrage', 'pack_progression', 'pack_ascension', 'pack_gardien', 'affaire_jour', 'griffes_3', 'griffes_18', 'griffes_40', 'griffes_90', 'sans_pubs', 'doubleur', 'pass_mensuel', 'diamants_80', 'diamants_450', 'diamants_950', 'diamants_2000', 'diamants_5500', 'diamants_12000']) if (!ids.includes(id)) pb.push('produit manquant : ' + id);
   if (new Set(ids).size !== ids.length) pb.push('deux produits portent le même identifiant');
   for (const p of a.PRODUITS) if (!/^\d+,\d{2} €$/.test(p.prix)) pb.push(p.id + ' : prix illisible « ' + p.prix + ' »');
   // Les packs de Diamants : plus cher → plus de Diamants par euro (bonus croissant).
@@ -4705,6 +4706,16 @@ function auditAchats() {
   if (e.passJusqua !== t0 + j30) pb.push('Pass : pas 30 jours');
   e = a.appliquerDroits(e, 'pass_mensuel', t0 + 1000); if (e.passJusqua !== t0 + 2 * j30) pb.push('Pass : un renouvellement ne s\'ajoute pas au mois en cours');
   if (a.DOUBLEUR_MULT !== 2 || a.PASS_MULT_DEFIS !== 2) pb.push('Doubleur ou Pass n\'est plus ×2');
+  // Contenu ADAPTATIF (22/10) : Griffes = N niveaux de la meilleure créature (plus elle est haute, plus il y en a), pièces =
+  // minutes de revenu passif, Diamants ×2 la 1re fois ; affaire du jour : une fois par jour.
+  const cr = C.CREATURES[0];
+  const g10 = a.contenuReel('griffes_18', { creature: cr, niveau: 10, passifParSec: 100 }).griffes, g40 = a.contenuReel('griffes_18', { creature: cr, niveau: 40, passifParSec: 100 }).griffes;
+  if (!(g40 > g10) || g10 !== a.griffesPourNiveaux({ creature: cr, niveau: 10 }, 18)) pb.push('packs de Griffes : plus en niveaux de la meilleure créature');
+  if (a.contenuReel('pack_progression', { creature: cr, niveau: 10, passifParSec: 100 }).pieces !== 100 * 60 * 60) pb.push('pack de progression : plus 1 h de revenu passif en pièces');
+  if (a.contenuReel('diamants_80', null).diamants !== 160) pb.push('premier achat d\'un pack de Diamants : plus doublé');
+  const ej = a.appliquerDroits({ journal: [] }, 'affaire_jour', 1e12); if (ej.affaireJour !== a.jourCle(1e12)) pb.push('affaire du jour : rachetable le même jour');
+  const Cl0 = lire('src/screens/games/ClickerScreen.js');
+  if (!Cl0.includes('const c = contenuReel(id, ctxAchats());\n    const r = await acheterAchat(id);') || !Cl0.includes('if (c.pieces) pendingGainRef.current += c.pieces;')) pb.push('le contenu n\'est plus calculé AVANT l\'achat (×2 de la 1re fois perdu) ou les pièces ne sont plus créditées en direct');
   // Branchements.
   const Cl = lire('src/screens/games/ClickerScreen.js');
   if (!Cl.includes('const amount = rawAmount * multiplier * multiplicateurPieces();')) pb.push('le Doubleur ne s\'applique plus au point unique des gains de pièces');

@@ -4,7 +4,7 @@ import { COLORS } from './clickerTheme';
 import { GrandPanneau, largeurInterieure, CRISTAL, EffetRecompense, vibrerSucces } from './fenetreBois';
 import { useSettings } from '../../context/SettingsContext';
 import { afficherDialogue } from '../../components/DialogueJeu';
-import { PRODUITS, achetable, MODE_ACHATS } from '../../games/clicker/achats';
+import { PRODUITS, achetable, MODE_ACHATS, premierAchatDouble } from '../../games/clicker/achats';
 
 // 27/09 : Boutique du thème forêt (pièces Gemini 37-44 de l'auteur, kit
 // partagé fenetreBois). Tailles en NOMBRES (règle du 27/09).
@@ -80,7 +80,7 @@ export const DIAMOND_OFFERS = [
 
 // 💳 22/10 : la boutique propose aussi les ACHATS EN ARGENT RÉEL (pack de démarrage, avantages, packs de Diamants) — en MODE
 // TEST tant que RevenueCat n'est pas branché (confirmation « mode test », aucun paiement).
-export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, droits = null, onAcheterProduit = null }) {
+export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, droits = null, onAcheterProduit = null, apercuContenu = null, formatNum = (n) => String(n) }) {
   const [busy, setBusy] = useState(null);
   const [effet, setEffet] = useState(null);
   const { vibrations } = useSettings();
@@ -97,7 +97,10 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, dr
   };
   const statut = (p) => {
     if (p.droit === 'pass' && droits && droits.passActif) { const d = new Date(droits.passJusqua); return `Actif jusqu'au ${d.getDate()}/${d.getMonth() + 1} · renouveler ajoute 30 jours`; }
-    return p.desc;
+    // Contenu RÉEL pour ce joueur (Griffes selon sa meilleure créature, pièces selon son revenu, Diamants ×2 la 1re fois).
+    const c = apercuContenu ? apercuContenu(p.id) : null;
+    const reel = c ? [c.griffes ? `${formatNum(c.griffes)} Griffes` : null, c.diamants ? `${c.diamants} 💎` : null, c.pieces ? `${formatNum(c.pieces)} pièces` : null].filter(Boolean).join(' + ') : '';
+    return p.famille === 'avantage' || p.famille === 'bienvenue' ? p.desc : (reel ? `${reel}${p.famille === 'offres' ? ` · ${p.desc.split(' · ')[0]}` : ''}` : p.desc);
   };
   const ligneArgent = (p) => {
     const ok = achetable(p.id);
@@ -113,10 +116,10 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, dr
           <Image source={BOUTON_PRIX} resizeMode="stretch" style={styles.buyBtnImage} />
           <View style={styles.buyBtnLigne}><Text style={styles.buyBtnText}>{ok ? p.prix : 'Possédé'}</Text></View>
         </TouchableOpacity>
-        {p.badge && ok ? (
+        {(premierAchatDouble(p.id) || p.badge) && ok ? (
           <View style={styles.ruban}>
             <Image source={RUBAN} resizeMode="contain" style={styles.rubanImage} />
-            <Text style={styles.rubanTexte} numberOfLines={2}>{p.badge}</Text>
+            <Text style={styles.rubanTexte} numberOfLines={2}>{premierAchatDouble(p.id) ? '×2 la 1re fois' : p.badge}</Text>
           </View>
         ) : null}
       </View>
@@ -161,7 +164,7 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, dr
           {onAcheterProduit ? (
             <>
               {MODE_ACHATS === 'test' ? <Text style={styles.bandeauTest}>🧪 Mode test : aucun paiement réel</Text> : null}
-              {[['bienvenue', '🎁 Offre de bienvenue'], ['avantage', '⭐ Avantages'], ['diamants', '💎 Diamants']].map(([fam, titre]) => {
+              {[['bienvenue', '🎁 Offre de bienvenue'], ['offres', '🎯 Offres'], ['avantage', '⭐ Avantages'], ['griffes', '🐾 Griffes'], ['diamants', '💎 Diamants']].map(([fam, titre]) => {
                 const items = PRODUITS.filter((p) => p.famille === fam && (fam !== 'bienvenue' || achetable(p.id)));
                 if (!items.length) return null;
                 return (<View key={fam}><Text style={styles.sectionTitre}>{titre}</Text>{items.map(ligneArgent)}</View>);

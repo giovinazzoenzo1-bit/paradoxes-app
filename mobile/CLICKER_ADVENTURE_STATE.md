@@ -4635,8 +4635,16 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   régie pub devra passer par le même endroit ; contenu (Diamants partagés, Griffes en attente) crédité par
   `acheterArgentReel` (ClickerScreen) ; boutique : sections Bienvenue / Avantages / Diamants au-dessus des achats en
   Diamants, « Possédé » pour un achat unique déjà fait. Contrôle `auditAchats` + 3 pièges.
-- À FAIRE (lot 2) : pack de démarrage proposé après la 1re éclosion, offres limitées 24 h (après Ascension, combat perdu,
-  nouveau chapitre), puis RevenueCat + vraie régie pub quand l'auteur aura les comptes.
+- 22/10 (auteur : « on peut tout ajouter » ; TOUT dans la boutique pour l'instant, les moments où ça surgira seront décidés
+  après) : pack_progression 2,99 € (« tous les 3 œufs » : Griffes de 12 niveaux + 150 💎 + 1 h de pièces), pack_ascension
+  4,99 € (25 niveaux + 400 💎 + 4 h), pack_gardien 2,99 € (10 niveaux + 200 💎), affaire_jour 0,99 € (une fois par jour, 3
+  variantes qui tournent), griffes_3 / 18 / 40 / 90 (0,99 → 19,99 €), « premier achat ×2 » sur chaque pack de Diamants.
+  CONTENU ADAPTATIF (`contenuReel`) : Griffes = N niveaux de la MEILLEURE créature depuis son niveau (même unité que les
+  défis ; mesuré : 18 niveaux = 332 Griffes au niv. 10, 1 085 au 41, 4 758 au 60), pièces = minutes de revenu passif crédité
+  DIRECT ; calculé AVANT l'achat (le ×2 de la 1re fois se lit avant d'être consommé). Calculateur de Griffes : à l'étape 40,
+  le joueur gratuit a son deck au niv. ~41 face à des ennemis niv. ~57 — c'est le manque que comblent les packs.
+- À FAIRE : œuf doré (rareté garantie), tirelire, VIP hebdo ; puis les moments où chaque offre surgit ; puis RevenueCat +
+  Firebase (Crashlytics) + AppLovin MAX quand l'auteur aura les comptes (un seul nouvel APK).
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »

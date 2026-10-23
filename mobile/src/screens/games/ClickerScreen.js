@@ -281,7 +281,7 @@ import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import GuideTuto from '../../components/GuideTuto';
-import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat } from '../../games/clicker/achats';
+import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat, contenuReel } from '../../games/clicker/achats';
 import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, DOREE_TUTO_DELAI_MS, DOREE_TUTO_POS, MINI_BOSS_TUTO_DELAI_MS,
   TAPS_CONSEIL_INCUBATEUR, DUREE_CONSEIL_LONG_MS, DUREE_CONSEIL_ECLOSION_MS, lireTuto, ecrireTuto,
   abonnerTuto, estVu, tutoActif, choisirEtape, vuEtape, estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
@@ -2461,17 +2461,25 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // de l'incubateur) — rien de neuf à maintenir.
   // 💳 Achat en ARGENT RÉEL (mode test tant que RevenueCat n'est pas branché) : droits enregistrés par achats.js, contenu
   // crédité ici (Diamants partagés ; Griffes en attente comme le pack de Griffes de la boutique). Renvoie le texte affiché.
+  // Contexte du contenu ADAPTATIF : la meilleure créature (niveau) et le revenu passif — calculé AVANT l'achat (le « premier
+  // achat ×2 » d'un pack de Diamants se lit avant d'être consommé).
+  const ctxAchats = () => {
+    const meilleure = (owned || []).reduce((m, o) => (o && (!m || (o.level || 1) > (m.level || 1)) ? o : m), null);
+    return { creature: meilleure ? CREATURES.find((c) => c.id === meilleure.id) : null, niveau: meilleure ? meilleure.level || 1 : 1, passifParSec: passiveIncomeRef.current || 0 };
+  };
   const acheterArgentReel = async (id) => {
+    const c = contenuReel(id, ctxAchats());
     const r = await acheterAchat(id);
     if (!r.ok) return null;
-    const c = (r.produit && r.produit.contenu) || {};
     if (c.diamants) await addSharedCoins(c.diamants);
     if (c.griffes) {
       const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
       await AsyncStorage.setItem(PENDING_GRIFFES_KEY, String((raw ? parseInt(raw, 10) || 0 : 0) + c.griffes));
       noterGriffes('achat', c.griffes, { id });
     }
-    const morceaux = [c.diamants ? `+${c.diamants} 💎` : null, c.griffes ? `+${c.griffes} Griffes (en Exploration)` : null].filter(Boolean);
+    // Pièces : crédit DIRECT (jamais gainCoins, qui les re-multiplierait — règle du 19/09).
+    if (c.pieces) pendingGainRef.current += c.pieces;
+    const morceaux = [c.diamants ? `+${c.diamants} 💎` : null, c.griffes ? `+${c.griffes} Griffes (en Exploration)` : null, c.pieces ? `+${formatNum(c.pieces)} pièces` : null].filter(Boolean);
     return morceaux.length ? morceaux.join(' · ') : r.produit.titre;
   };
   const buyWithDiamonds = async (offer) => {
@@ -5019,6 +5027,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           onBack={() => setDiamondShopOpen(false)}
           droits={droits}
           onAcheterProduit={acheterArgentReel}
+          apercuContenu={(id) => contenuReel(id, ctxAchats())}
+          formatNum={formatNum}
         />
       )}
 
