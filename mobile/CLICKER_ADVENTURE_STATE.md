@@ -4656,6 +4656,11 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   pour tout le reste ; les étapes à 95 % (cran 1) ne reçoivent rien. Non-régression re-prouvée (400 photos sans achat).
   « ×2 » du premier achat de Diamants : UNE SEULE FOIS EN TOUT (précision de l'auteur), plus par pack. Œuf payant : REFUSÉ par l'auteur (à revoir
   avec les données, après les nouvelles créatures).
+- 22/10 — ANIMATIONS (demande de l'auteur) : `components/OffreSurgissante.js` (fenêtre en bois qui tombe avec rebond, rayons
+  dorés qui tournent, reflet qui balaie, ruban qui claque, prix qui pulse, minuterie `finA`) — testable par 🛠️ « 💳 Offre qui
+  surgit (test) » (5 offres en boucle) ; `components/FeteAchat.js` (éclat doré, objets 💎 🐾 🪙 qui jaillissent puis volent vers
+  le compteur, « Merci ! ») après tout achat en argent réel (boutique et offre). Emojis en attendant les 18 images Gemini
+  (prompts donnés à l'auteur, dossier `design/a-integrer/20-boutique/`). Banc : scène `offre` (&fete=1).
 - À FAIRE : tirelire, VIP hebdo ; puis les moments où chaque offre surgit ; puis RevenueCat +
   Firebase (Crashlytics) + AppLovin MAX quand l'auteur aura les comptes (un seul nouvel APK).
 

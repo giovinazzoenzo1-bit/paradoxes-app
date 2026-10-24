@@ -5,6 +5,7 @@ import { GrandPanneau, largeurInterieure, CRISTAL, EffetRecompense, vibrerSucces
 import { useSettings } from '../../context/SettingsContext';
 import { afficherDialogue } from '../../components/DialogueJeu';
 import { PRODUITS, achetable, MODE_ACHATS, premierAchatDouble } from '../../games/clicker/achats';
+import FeteAchat, { objetsDeFete } from '../../components/FeteAchat';
 
 // 27/09 : Boutique du thème forêt (pièces Gemini 37-44 de l'auteur, kit
 // partagé fenetreBois). Tailles en NOMBRES (règle du 27/09).
@@ -83,6 +84,7 @@ export const DIAMOND_OFFERS = [
 export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, droits = null, onAcheterProduit = null, apercuContenu = null, formatNum = (n) => String(n) }) {
   const [busy, setBusy] = useState(null);
   const [effet, setEffet] = useState(null);
+  const [fete, setFete] = useState(null); // 22/10 : la fête d'un achat en argent réel
   const { vibrations } = useSettings();
 
   const handleAcheter = (p) => {
@@ -90,7 +92,9 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, dr
     afficherDialogue(`${p.icone} ${p.titre}`, MODE_ACHATS === 'test' ? `Mode test : simuler l'achat pour ${p.prix} ? Aucun paiement réel.` : `Acheter pour ${p.prix} ?`, [
       { texte: 'Annuler', style: 'annuler' },
       { texte: `Acheter · ${p.prix}`, style: 'principal', onPress: async () => {
+        const c = apercuContenu ? apercuContenu(p.id) : {}; // avant l'achat (le ×2 de la 1re fois)
         setBusy(p.id); const label = await onAcheterProduit(p.id); setBusy(null);
+        if (label) setFete({ id: Date.now(), objets: objetsDeFete(c, p.famille), sous: label });
         if (label) { vibrerSucces(vibrations); const id = Date.now(); setEffet({ id, texte: 'Merci !', sousTexte: label }); setTimeout(() => setEffet((e) => (e && e.id === id ? null : e)), 1600); }
       } },
     ]);
@@ -217,6 +221,7 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, dr
         </ScrollView>
       </GrandPanneau>
       {effet && <EffetRecompense key={effet.id} texte={effet.texte} sousTexte={effet.sousTexte} />}
+      {fete && <FeteAchat key={fete.id} objets={fete.objets} sousTexte={fete.sous} cible={{ x: Dimensions.get('window').width / 2, y: 165 }} onFin={() => setFete(null)} />}
     </View>
   );
 }

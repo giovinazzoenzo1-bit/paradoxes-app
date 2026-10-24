@@ -4729,6 +4729,11 @@ function auditAchats() {
   if (!P.includes('useEffect(() => { if (visible && sansPubs && onFin) onFin(); }, [visible, sansPubs]);') || !P.includes('if (sansPubs) return null;')) pb.push('Sans pubs : la pub s\'affiche encore');
   const S = lire('src/screens/games/DiamondShop.js');
   if (!S.includes("Mode test : aucun paiement réel") || !S.includes('disabled={!ok || busy === p.id}')) pb.push('boutique : plus de bandeau « mode test » ou un « une seule fois » rachetable');
+  // 22/10 (auteur : « des animations ») : la fête après un achat (boutique ET offre qui surgit), l'offre qui surgit testable (🛠️).
+  if (!S.includes('{fete && <FeteAchat key={fete.id}') || !Cl.includes('{fete && <FeteAchat key={fete.id}') || !Cl.includes('💳 Offre qui surgit (test)') || !Cl.includes('<OffreSurgissante produit={p}')) pb.push('animations des achats débranchées (fête ou offre qui surgit)');
+  const Fa = lire('src/components/FeteAchat.js'), Os = lire('src/components/OffreSurgissante.js');
+  if (!Fa.includes("<View style={[StyleSheet.absoluteFill, { zIndex: 200, pointerEvents: 'none' }]}>") || /<Image[^>]*\/>\s*\n\s*<\/Animated\.Image/.test(Fa)) pb.push('la fête d\'achat peut prendre le doigt');
+  if (!Os.includes("if (!produit) return null;") || !Os.includes('finA ? <Text style={styles.minuterie}>')) pb.push('l\'offre qui surgit a perdu sa minuterie ou sa garde');
   return pb;
 }
 module.exports.auditAchats = auditAchats;

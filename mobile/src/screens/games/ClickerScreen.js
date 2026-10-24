@@ -281,7 +281,9 @@ import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import GuideTuto from '../../components/GuideTuto';
-import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat, contenuReel, noterAvantageGriffes } from '../../games/clicker/achats';
+import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat, contenuReel, noterAvantageGriffes, produit as produitAchat, MODE_ACHATS } from '../../games/clicker/achats';
+import OffreSurgissante from '../../components/OffreSurgissante';
+import FeteAchat, { objetsDeFete } from '../../components/FeteAchat';
 import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, DOREE_TUTO_DELAI_MS, DOREE_TUTO_POS, MINI_BOSS_TUTO_DELAI_MS,
   TAPS_CONSEIL_INCUBATEUR, DUREE_CONSEIL_LONG_MS, DUREE_CONSEIL_ECLOSION_MS, lireTuto, ecrireTuto,
   abonnerTuto, estVu, tutoActif, choisirEtape, vuEtape, estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
@@ -804,6 +806,10 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const tapsTutoRef = useRef(0);
   const [rectTuto, setRectTuto] = useState(null);
   const [verrouMsg, setVerrouMsg] = useState(null); // « la Collection » / « l'Exploration » : fenêtre du cadenas
+  // 💥 Offre qui surgit (test via 🛠️ pour l'instant) et fête après un achat (22/10).
+  const [offreTest, setOffreTest] = useState(null); // { id, finA }
+  const [fete, setFete] = useState(null); // { id, objets, sous }
+  const offreTestIndexRef = useRef(0);
   const [coins, setCoins] = useState(0);
   const [totalEarned, setTotalEarned] = useState(0); // cumul jamais décroissant, pour l'Ascension
   const [tapPower, setTapPower] = useState(1);
@@ -4935,6 +4941,15 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               </TouchableOpacity>
             ))}
           </ScrollView>
+          {/* 22/10 : tester l'offre qui surgit (les moments réels seront décidés plus tard). */}
+          <TouchableOpacity style={styles.devMenuLigne} onPress={() => {
+            const ids = ['pack_ascension', 'pack_progression', 'affaire_jour', 'pack_demarrage', 'pack_gardien'];
+            const id = ids[offreTestIndexRef.current++ % ids.length];
+            setMenuDevOuvert(false);
+            setOffreTest({ id, finA: Date.now() + 24 * 3600 * 1000 });
+          }}>
+            <Text style={styles.devMenuLigneTexte}>💳 Offre qui surgit (test)</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.devMenuLigne} onPress={() => setMenuDevOuvert(false)}>
             <Text style={styles.devMenuLigneTexte}>Fermer</Text>
           </TouchableOpacity>
@@ -5171,6 +5186,23 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       />
       {/* 🎓 Repère (0, 0) de l'écran pour mesurer les cibles, puis le guide du conseil en cours (tout en dernier : au-dessus
           de tout). ⚠️ Le guide n'a AUCUN conteneur plein écran : seule sa petite croix capte le doigt. */}
+      {/* 💥 L'offre qui surgit, puis la fête de l'achat (22/10). */}
+      {offreTest && (() => {
+        const p = produitAchat(offreTest.id); const c = contenuReel(offreTest.id, ctxAchats());
+        const txt = [c.griffes ? `${formatNum(c.griffes)} Griffes` : null, c.diamants ? `${c.diamants} 💎` : null, c.pieces ? `${formatNum(c.pieces)} pièces` : null].filter(Boolean).join(' + ');
+        return (
+          <OffreSurgissante produit={p} contenuTexte={txt} finA={offreTest.finA} onFermer={() => setOffreTest(null)}
+            onAcheter={() => afficherDialogue(`${p.icone} ${p.titre}`, MODE_ACHATS === 'test' ? `Mode test : simuler l'achat pour ${p.prix} ? Aucun paiement réel.` : `Acheter pour ${p.prix} ?`, [
+              { texte: 'Annuler', style: 'annuler' },
+              { texte: `Acheter · ${p.prix}`, style: 'principal', onPress: async () => {
+                const label = await acheterArgentReel(offreTest.id);
+                setOffreTest(null);
+                if (label) setFete({ id: Date.now(), objets: objetsDeFete(c, p.famille), sous: label });
+              } },
+            ])} />
+        );
+      })()}
+      {fete && <FeteAchat key={fete.id} objets={fete.objets} sousTexte={fete.sous} onFin={() => setFete(null)} />}
       {/* 🔒 Collection / Exploration sans 1re créature : la fenêtre en bois du jeu (comme le résultat du mini-boss). */}
       {verrouMsg && (
         <View style={styles.detailOverlay}>
