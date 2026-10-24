@@ -6,6 +6,7 @@ import { useSettings } from '../../context/SettingsContext';
 import { afficherDialogue } from '../../components/DialogueJeu';
 import { PRODUITS, achetable, MODE_ACHATS, premierAchatDouble } from '../../games/clicker/achats';
 import FeteAchat, { objetsDeFete } from '../../components/FeteAchat';
+import { IMAGES_ACHATS } from '../../components/imagesAchats';
 
 // 27/09 : Boutique du thème forêt (pièces Gemini 37-44 de l'auteur, kit
 // partagé fenetreBois). Tailles en NOMBRES (règle du 27/09).
@@ -111,7 +112,10 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, dr
     return (
       <View key={p.id} style={styles.offerRow}>
         <Image source={PLANCHE} resizeMode="stretch" style={styles.offerPlanche} />
-        <View style={styles.offerIconWrap}><Text style={styles.offerIcon}>{p.icone}</Text></View>
+        {/* 22/10 : l'image Gemini du produit (dans une vue sans doigt — une image l'ignore sur téléphone), sinon son emoji. */}
+        <View style={styles.offerIconWrap}>{IMAGES_ACHATS[p.id]
+          ? <View style={{ pointerEvents: 'none' }}><Image source={IMAGES_ACHATS[p.id]} resizeMode="contain" style={styles.offerIconImage} /></View>
+          : <Text style={styles.offerIcon}>{p.icone}</Text>}</View>
         <View style={styles.offerMiddle}>
           <Text style={styles.offerTitle}>{p.titre}</Text>
           <Text style={styles.offerDesc} numberOfLines={2}>{statut(p)}</Text>
@@ -227,6 +231,7 @@ export default function DiamondShop({ diamonds, onBuy, onBack, incubatingEgg, dr
 }
 
 const styles = StyleSheet.create({
+  offerIconImage: { width: 44, height: 44 },
   bandeauTest: { color: '#ffcf3f', fontSize: 12, fontWeight: '800', textAlign: 'center', marginTop: 4, marginBottom: 2 },
   sectionTitre: { color: '#FFF3D6', fontSize: 15, fontWeight: '900', marginTop: 10, marginBottom: 2, marginLeft: 6, textShadowColor: '#000', textShadowRadius: 4 },
   backdrop: {

@@ -4661,6 +4661,10 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   surgit (test) » (5 offres en boucle) ; `components/FeteAchat.js` (éclat doré, objets 💎 🐾 🪙 qui jaillissent puis volent vers
   le compteur, « Merci ! ») après tout achat en argent réel (boutique et offre). Emojis en attendant les 18 images Gemini
   (prompts donnés à l'auteur, dossier `design/a-integrer/20-boutique/`). Banc : scène `offre` (&fete=1).
+- 22/10 — IMAGES DES PRODUITS : 18 images Gemini (déposées par l'auteur dans `design/a-integrer/02-boutique/`, dans l'ordre
+  des prompts) détourées vers `assets/boutique/*.png` (256 px ; magenta mesuré aux coins de chaque image ; halo rose ET aura
+  pastel RELIÉE AU FOND retirés — jamais l'objet ; 1,5 Mo au total). `components/imagesAchats.js` : produit → image ; boutique
+  (lignes) et offre qui surgit. L'auteur doute des griffes : à juger en jeu.
 - À FAIRE : tirelire, VIP hebdo ; puis les moments où chaque offre surgit ; puis RevenueCat +
   Firebase (Crashlytics) + AppLovin MAX quand l'auteur aura les comptes (un seul nouvel APK).
 

@@ -4731,6 +4731,13 @@ function auditAchats() {
   if (!S.includes("Mode test : aucun paiement réel") || !S.includes('disabled={!ok || busy === p.id}')) pb.push('boutique : plus de bandeau « mode test » ou un « une seule fois » rachetable');
   // 22/10 (auteur : « des animations ») : la fête après un achat (boutique ET offre qui surgit), l'offre qui surgit testable (🛠️).
   if (!S.includes('{fete && <FeteAchat key={fete.id}') || !Cl.includes('{fete && <FeteAchat key={fete.id}') || !Cl.includes('💳 Offre qui surgit (test)') || !Cl.includes('<OffreSurgissante produit={p}')) pb.push('animations des achats débranchées (fête ou offre qui surgit)');
+  // 22/10 : chaque produit a son image Gemini (fichier présent), affichée dans une vue sans doigt.
+  const Im = lire('src/components/imagesAchats.js');
+  for (const p of a.PRODUITS) {
+    const m = new RegExp(p.id + ": require\\('\\.\\./\\.\\./(assets/boutique/[\\w-]+\\.png)'\\)").exec(Im);
+    if (!m) pb.push(p.id + ' : plus d\'image dans la boutique'); else if (!fs.existsSync(path.join(__dirname, '..', m[1]))) pb.push(p.id + ' : image introuvable ' + m[1]);
+  }
+  if (!S.includes("? <View style={{ pointerEvents: 'none' }}><Image source={IMAGES_ACHATS[p.id]}")) pb.push('boutique : l\'image d\'un produit n\'est plus dans une vue sans doigt');
   const Fa = lire('src/components/FeteAchat.js'), Os = lire('src/components/OffreSurgissante.js');
   if (!Fa.includes("<View style={[StyleSheet.absoluteFill, { zIndex: 200, pointerEvents: 'none' }]}>") || /<Image[^>]*\/>\s*\n\s*<\/Animated\.Image/.test(Fa)) pb.push('la fête d\'achat peut prendre le doigt');
   if (!Os.includes("if (!produit) return null;") || !Os.includes('finA ? <Text style={styles.minuterie}>')) pb.push('l\'offre qui surgit a perdu sa minuterie ou sa garde');

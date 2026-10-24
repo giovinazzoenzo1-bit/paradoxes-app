@@ -609,6 +609,8 @@ const SABOTAGES = [
     remplace("      if (avant === 'vie' && (armedSkill || phase !== 'choosing')) setTuto((t) => vuEtape(t, 'vie'));\n", '')],
   ['auditTutoriel', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "le tuto n'emmène plus jusqu'à l'onglet Runes de la créature",
     remplace("etape = onglet === 'runes' ? 'poserRune' : 'ongletRunes';", 'etape = null;')],
+  ['auditAchats', path.join(RACINE, 'src/components/imagesAchats.js'), "un produit perd son image",
+    remplace("  griffes_40: require('../../assets/boutique/griffes-3.png'),\n", '')],
   ['auditAchats', path.join(RACINE, 'src/screens/games/DiamondShop.js'), "plus de fête après un achat dans la boutique",
     remplace("      {fete && <FeteAchat key={fete.id}", "      {false && <FeteAchat key={fete.id}")],
   ['auditAvantageAchat', path.join(RACINE, 'src/games/clicker/combatLogic.js'), "l'avantage n'est plus plafonné à 90 % (100 % dès 4,99 €)",

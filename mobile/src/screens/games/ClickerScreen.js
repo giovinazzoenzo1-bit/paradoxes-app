@@ -284,6 +284,7 @@ import GuideTuto from '../../components/GuideTuto';
 import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat, contenuReel, noterAvantageGriffes, produit as produitAchat, MODE_ACHATS } from '../../games/clicker/achats';
 import OffreSurgissante from '../../components/OffreSurgissante';
 import FeteAchat, { objetsDeFete } from '../../components/FeteAchat';
+import { IMAGES_ACHATS } from '../../components/imagesAchats';
 import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONSEIL_INFO_MS, DOREE_TUTO_DELAI_MS, DOREE_TUTO_POS, MINI_BOSS_TUTO_DELAI_MS,
   TAPS_CONSEIL_INCUBATEUR, DUREE_CONSEIL_LONG_MS, DUREE_CONSEIL_ECLOSION_MS, lireTuto, ecrireTuto,
   abonnerTuto, estVu, tutoActif, choisirEtape, vuEtape, estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
@@ -5191,7 +5192,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
         const p = produitAchat(offreTest.id); const c = contenuReel(offreTest.id, ctxAchats());
         const txt = [c.griffes ? `${formatNum(c.griffes)} Griffes` : null, c.diamants ? `${c.diamants} 💎` : null, c.pieces ? `${formatNum(c.pieces)} pièces` : null].filter(Boolean).join(' + ');
         return (
-          <OffreSurgissante produit={p} contenuTexte={txt} finA={offreTest.finA} onFermer={() => setOffreTest(null)}
+          <OffreSurgissante produit={p} image={IMAGES_ACHATS[offreTest.id] || null} contenuTexte={txt} finA={offreTest.finA} onFermer={() => setOffreTest(null)}
             onAcheter={() => afficherDialogue(`${p.icone} ${p.titre}`, MODE_ACHATS === 'test' ? `Mode test : simuler l'achat pour ${p.prix} ? Aucun paiement réel.` : `Acheter pour ${p.prix} ?`, [
               { texte: 'Annuler', style: 'annuler' },
               { texte: `Acheter · ${p.prix}`, style: 'principal', onPress: async () => {
