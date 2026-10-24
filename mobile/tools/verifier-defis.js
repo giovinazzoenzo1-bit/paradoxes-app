@@ -111,7 +111,7 @@ const CONTROLES = [
   ['auditRuneArcane', "Rune d'Arcane : mana au départ (même règle écran et simulation, plafond), anciennes Dextérités converties (03/10)"],
   ['auditRiposteTourDeRole', "combat : les adversaires ripostent à tour de rôle (jeu ET simulation), PV retirés à l'impact (03/10)"],
   ['auditTransitionCombat', "combat : la suite (tour suivant, victoire, défaite) s'applique après les animations, une seule fois, et ne peut JAMAIS figer (01/09, 03/10)"],
-  ['auditEffetsCombat', "combat : effets d'impact transparents au toucher, vibration sans plantage, expo-haptics à la version d'Expo 57 (03/10)"],
+  ['auditEffetsCombat', "combat : effets d'impact transparents au toucher, vibration sans plantage, expo-haptics à la version d'Expo (03/10, suit le SDK depuis le 24/10)"],
   ['auditJaugeFrappe', "combat : jauge de frappe — zone dorée par rareté, verdicts, même formule dessin/verdict, tap au début du toucher (03/10)"],
   ['auditDefiTapsLibre', "combat : rien au-dessus de la zone du défi de taps ne capte le toucher (03/10)"],
   ['auditCadrageCreatures', "créatures illustrées : 3 stades présents et cadrage généré pour chacune (03/10)"],

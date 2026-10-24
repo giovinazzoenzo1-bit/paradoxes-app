@@ -23,7 +23,7 @@ jobs:
       - name: Installe Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22  # 24/10 : React Native 0.88 (SDK 58) exige Node ≥ 22.13
 
       # `npm ci` + pas de `expo install --fix` : mêmes raisons que dans
       # mobile-publish.yml. Les versions sont figées pour correspondre

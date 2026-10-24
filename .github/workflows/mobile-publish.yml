@@ -23,7 +23,7 @@ jobs:
       - name: Installe Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22  # 24/10 : React Native 0.88 (SDK 58) exige Node ≥ 22.13
 
       # `npm ci` (et non `npm install`) : installe EXACTEMENT le
       # package-lock.json du dépôt, sans jamais remonter un patch.
@@ -82,11 +82,11 @@ jobs:
         # configuration qui marche, et aurait pu pousser à « réparer »
         # app.json en cassant tout.
         #
-        # app.json DOIT garder runtimeVersion: "57.0.0" — SANS le préfixe
+        # app.json DOIT garder runtimeVersion: "58.0.0" (SDK 58 depuis le 24/10 ; "57.0.0" avant) — SANS le préfixe
         # `exposdk:`, et le projet DOIT rester sans expo-updates. Les deux
         # ensemble, pas l'un ou l'autre (voir 24ba5c0 du 03/09) :
-        #  - `exposdk:57.0.0` : Expo Go fait split('.')[0] dessus, obtient
-        #    « exposdk:57 » qui n'égale jamais « 57 », et marque toutes les
+        #  - `exposdk:58.0.0` : Expo Go fait split('.')[0] dessus, obtient
+        #    « exposdk:58 » qui n'égale jamais « 58 », et marque toutes les
         #    updates incompatibles (bug expo/expo#46846).
         #  - expo-updates installé sans updates.url : bloque le démarrage
         #    sur « Checking for new update » à l'infini.
@@ -137,6 +137,9 @@ jobs:
           if [ -z "$PID" ]; then
             PID=$(node -e "try{const a=require('./app.json');console.log(a.expo.extra.eas.projectId||'')}catch(e){console.log('')}" 2>/dev/null || true)
           fi
+          # 24/10 (SDK 58) : la version du lien est LUE dans app.json — un numéro écrit en dur aurait été oublié à la
+          # prochaine montée de SDK (le lien aurait pointé vers l'ancienne version).
+          RV=$(node -e "try{console.log(require('./app.json').expo.runtimeVersion||'')}catch(e){console.log('')}" 2>/dev/null || true)
           # Affiché AUSSI dans les logs, pas seulement dans le résumé :
           # l'appli mobile GitHub n'affiche pas les résumés de job, seuls
           # les logs y sont lisibles. Sans ça, le lien est invisible pour
@@ -144,7 +147,7 @@ jobs:
           echo "=================================================="
           echo "LIEN A OUVRIR DANS EXPO GO :"
           if [ -n "$PID" ]; then
-            echo "exp://u.expo.dev/$PID?channel-name=main&runtime-version=57.0.0"
+            echo "exp://u.expo.dev/$PID?channel-name=main&runtime-version=$RV"
           else
             echo "(projectId introuvable — voir expo.dev)"
           fi
@@ -156,7 +159,7 @@ jobs:
               echo "Lien à ouvrir sur le téléphone (marche même si le compte Expo n'est pas membre du projet) :"
               echo ""
               echo '```'
-              echo "exp://u.expo.dev/$PID?channel-name=main&runtime-version=57.0.0"
+              echo "exp://u.expo.dev/$PID?channel-name=main&runtime-version=$RV"
               echo '```'
             else
               echo ""

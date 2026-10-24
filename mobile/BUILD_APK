@@ -1,3 +1,7 @@
 Tue Oct 20 2026
 Build demandé (20/10) : NOUVELLE ICÔNE de l'appli (photo de l'auteur : le dragon de cristal sur fond de lave) —
 une icône est une ressource NATIVE : seule un nouvel APK la change (une mise à jour à distance ne peut pas).
+
+Sat Oct 24 2026
+Build demandé (24/10) : MONTÉE EN SDK 58 (React Native 0.88). L'ancien APK (SDK 57) ne reçoit plus les mises à jour
+(runtimeVersion 58.0.0) : il garde sa dernière version jusqu'à l'installation de ce nouvel APK.

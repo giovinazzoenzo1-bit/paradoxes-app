@@ -128,6 +128,21 @@ Ce que l'outil NE voit PAS :
 
 ## 2. Les pièges qui bloquent le démarrage
 
+**🆕 SDK 58 depuis le 24/10** (Expo Go 58 sur l'App Store ne lit plus que le SDK 58 ; demande de l'auteur : « aucun souci
+cette fois »). Fait ainsi, dans cet ordre, à refaire pareil au prochain SDK :
+1. Lire le changelog officiel (API retirées : InteractionManager, `Touchable`, `Modal animated`, props de StatusBar ;
+   aucune n'est utilisée par le jeu) et vérifier DANS LES PAQUETS 58 chaque fonction native appelée (setVisibilityAsync,
+   lockAsync, createAudioPlayer + play/seekTo/volume/loop, setAudioModeAsync, haptics, StatusBar hidden) : toutes là.
+2. Versions EXACTES = `bundledNativeModules.json` d'expo 58.0.19 (ce qu'embarque Expo Go 58) ; `package-lock.json`
+   regénéré (le robot fait `npm ci`).
+3. `runtimeVersion: "58.0.0"` (TOUJOURS sans `exposdk:`, TOUJOURS sans expo-updates dans le projet).
+4. Robots : Node 22 (React Native 0.88 exige ≥ 22.13) ; lien Expo Go avec la version LUE dans app.json.
+5. PREUVE dans le bac à sable, exactement comme le robot : `npm ci` puis `npx expo export --platform android` ET `ios` →
+   les deux paquets se fabriquent (1 263 modules) ; `expo install --check` : à jour.
+6. Nouvel APK demandé (BUILD_APK) : l'ancien APK (57) garde sa dernière version 57 jusqu'à l'installation du nouveau.
+⚠️ Le lien Expo Go CHANGE (`runtime-version=58.0.0`) : le prendre dans les logs du robot. Un Expo Go 57 ouvre encore
+la dernière version 57 (figée).
+
 **expo-updates et runtimeVersion.** `app.json` garde
 `runtimeVersion: "57.0.0"` **sans** préfixe `exposdk:`, et le projet
 reste **sans** `expo-updates`. Les deux ensemble (commit `24ba5c0`) :

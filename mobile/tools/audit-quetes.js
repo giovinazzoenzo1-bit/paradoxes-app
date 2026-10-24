@@ -4914,7 +4914,9 @@ function auditEffetsCombat() {
   const vib = s.slice(s.indexOf('function vibrer('), s.indexOf('\n}\n', s.indexOf('function vibrer(')));
   if (!/try \{/.test(vib) || !/catch \(e\)/.test(vib) || !/\.catch\(\(\) => \{\}\)/.test(vib)) pb.push('la vibration peut planter (try/catch ou .catch de la promesse absents)');
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
-  if (!/^~?57\./.test((pkg.dependencies || {})['expo-haptics'] || '')) pb.push("expo-haptics absent ou pas à la version d'Expo 57");
+  // 24/10 (SDK 58) : la version d'expo-haptics doit suivre CELLE D'EXPO (lue dans package.json, plus jamais « 57 » en dur).
+  { const sdk = (/(\d+)\./.exec((pkg.dependencies || {}).expo || '') || [])[1];
+    if (!sdk || !new RegExp('^~?' + sdk + '\\.').test((pkg.dependencies || {})['expo-haptics'] || '')) pb.push(`expo-haptics absent ou pas à la version d'Expo (${sdk})`); }
   return pb;
 }
 module.exports.auditEffetsCombat = auditEffetsCombat;
