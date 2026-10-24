@@ -4651,7 +4651,10 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   (Facile…) vient d'une VRAIE simulation de l'équipe réelle → elle reste vraie toute seule (et montre l'effet de l'achat).
   NON-RÉGRESSION PROUVÉE : 400 photos variées, sans achat, identiques avant / après (0 différence). Calculateur
   `tools/calculateur-avantage-achat.js` : MESURÉ — sans achat 71 % au 1er essai ; pendant l'avantage 82-87 % (0,99 €),
-  94-100 % (2,99 €), ~100 % dès 4,99 € → intensité à faire valider par l'auteur. Œuf payant : REFUSÉ par l'auteur (à revoir
+  94-100 % (2,99 €), ~100 % dès 4,99 € → l'auteur a validé un PLAFOND À 90 % (`AVANTAGE_CHANCE_MAX`,
+  `puissanceAvantagePlafonnee`, la même fonction dans la photo et le calculateur) : mesuré ensuite 81-86 % (0,99 €), 90-91 %
+  pour tout le reste ; les étapes à 95 % (cran 1) ne reçoivent rien. Non-régression re-prouvée (400 photos sans achat).
+  « ×2 » du premier achat de Diamants : UNE SEULE FOIS EN TOUT (précision de l'auteur), plus par pack. Œuf payant : REFUSÉ par l'auteur (à revoir
   avec les données, après les nouvelles créatures).
 - À FAIRE : tirelire, VIP hebdo ; puis les moments où chaque offre surgit ; puis RevenueCat +
   Firebase (Crashlytics) + AppLovin MAX quand l'auteur aura les comptes (un seul nouvel APK).

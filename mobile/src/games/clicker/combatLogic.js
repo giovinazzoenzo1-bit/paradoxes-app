@@ -1956,10 +1956,21 @@ export function deckSansGriffesPayees(membres, griffes) {
   }
   return m;
 }
+// 22/10 (choix de l'auteur, mesuré au calculateur : sans plafond, 100 % de victoires dès 4,99 €) : l'avantage est PLAFONNÉ à
+// 90 % — la photo ne met hors calcul que les Griffes payées nécessaires pour viser 90 % (courbe mesurée de la configuration).
+// Les étapes dont la cible dépasse déjà 90 % (cran 1 : 95 %) ne reçoivent aucun avantage.
+export const AVANTAGE_CHANCE_MAX = 0.9;
+export function puissanceAvantagePlafonnee(pReel, pRef, cible, pente) {
+  if (!(pReel > 0) || !(pRef > 0) || !(pente > 0)) return pRef;
+  const lg = (p) => Math.log(p / (1 - p));
+  const dMax = Math.max(0, (lg(AVANTAGE_CHANCE_MAX) - lg(Math.min(0.999, Math.max(0.001, cible)))) / pente);
+  return Math.max(pRef, pReel * Math.exp(-dMax));
+}
 export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 0, options = {}) {
   const niveaux = {};
   let budget = Math.max(0, Number(griffesEnPoche) || 0);
   const payees = Math.max(0, Number(options.griffesPayees) || 0);
+  const membresReels = membresDeck; let budgetReel = budget; // l'équipe VRAIE (pour le plafond de 90 %)
   if (payees > 0) { // (sinon : rien ne change)
     const deLaPoche = Math.min(budget, payees);
     budget -= deLaPoche;
@@ -1972,7 +1983,13 @@ export function photoFenetre(debut, membresDeck, griffesEnPoche = 0, avantage = 
     const apres = deckApresEffortEquitable(membres, budget, Infinity, { evolutions: true }); // 14/10 : évolutions comprises
     const fMaitrise = facteurMaitrise(options.maitrise, nbJ, opponentTeamForLevel(n).length);
     const fElements = facteurElements(apres.membres, equipeEnnemie(n), nbJ); // 12/10
-    const r = niveauEtAffaiblissement(n, puissanceAffichee(apres.membres) * fMaitrise * fElements / (n === 1 ? MARGE_PREMIER_COMBAT : 1), difficulteEtape(n, avantage), nbJ);
+    let pDeck = puissanceAffichee(apres.membres);
+    if (payees > 0) { // plafond de 90 % : jamais plus d'avantage que ce qu'il faut pour 90 % de victoires
+      const apresReel = deckApresEffortEquitable(membresReels.slice(0, nbJ), budgetReel, Infinity, { evolutions: true });
+      pDeck = puissanceAvantagePlafonnee(puissanceAffichee(apresReel.membres), pDeck, cibleDifficulte(n, difficulteEtape(n, avantage)), penteDifficulte(nbJ, opponentTeamForLevel(n).length));
+      budgetReel += primeVictoire(n, apresReel.membres.map((m) => m.ownedLevel));
+    }
+    const r = niveauEtAffaiblissement(n, pDeck * fMaitrise * fElements / (n === 1 ? MARGE_PREMIER_COMBAT : 1), difficulteEtape(n, avantage), nbJ);
     niveaux[n] = r.niveau;
     // 12/10 : l'ennemi d'entraînement, rendu dans options.affaiblissements (effacé si l'étape n'en a plus besoin).
     if (options.affaiblissements) { if (r.affaiblissement < 1) options.affaiblissements[n] = r.affaiblissement; else delete options.affaiblissements[n]; }

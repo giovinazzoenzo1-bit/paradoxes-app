@@ -4712,7 +4712,9 @@ function auditAchats() {
   const g10 = a.contenuReel('griffes_18', { creature: cr, niveau: 10, passifParSec: 100 }).griffes, g40 = a.contenuReel('griffes_18', { creature: cr, niveau: 40, passifParSec: 100 }).griffes;
   if (!(g40 > g10) || g10 !== a.griffesPourNiveaux({ creature: cr, niveau: 10 }, 18)) pb.push('packs de Griffes : plus en niveaux de la meilleure créature');
   if (a.contenuReel('pack_progression', { creature: cr, niveau: 10, passifParSec: 100 }).pieces !== 100 * 60 * 60) pb.push('pack de progression : plus 1 h de revenu passif en pièces');
-  if (a.contenuReel('diamants_80', null).diamants !== 160) pb.push('premier achat d\'un pack de Diamants : plus doublé');
+  if (a.contenuReel('diamants_80', null).diamants !== 160 || a.contenuReel('diamants_950', null).diamants !== 1900) pb.push('premier achat de Diamants : plus doublé');
+  // Une seule fois EN TOUT (précision de l'auteur, 22/10) : après n'importe quel pack de Diamants, plus aucun ×2.
+  if (!/return !Object\.keys\(etat\.premiersAchats \|\| \{\}\)\.some\(\(k\) => \{ const q = produit\(k\); return q && q\.famille === 'diamants'; \}\);/.test(lire('src/games/clicker/achats.js'))) pb.push('le ×2 du premier achat redevient « par pack » au lieu d\'une seule fois en tout');
   const ej = a.appliquerDroits({ journal: [] }, 'affaire_jour', 1e12); if (ej.affaireJour !== a.jourCle(1e12)) pb.push('affaire du jour : rachetable le même jour');
   const Cl0 = lire('src/screens/games/ClickerScreen.js');
   if (!Cl0.includes('const c = contenuReel(id, ctxAchats());\n    const r = await acheterAchat(id);') || !Cl0.includes('if (c.pieces) pendingGainRef.current += c.pieces;')) pb.push('le contenu n\'est plus calculé AVANT l\'achat (×2 de la 1re fois perdu) ou les pièces ne sont plus créditées en direct');
@@ -4753,18 +4755,26 @@ function auditAvantageAchat() {
   if (av.combats !== 0 || av.fenetreFin !== 7) pb.push('avantage : un combat joué ne le décompte plus, ou la fenêtre de fin n\'est pas notée');
   if (a.griffesHorsPhoto(av, 7) !== 500 || a.griffesHorsPhoto(av, 8) !== 250 || a.griffesHorsPhoto(av, 9) !== 0) pb.push('avantage : le retour en douceur (tout, ½, 0) est cassé');
   if (a.griffesHorsPhoto({ griffes: 500, combats: 3, fenetreFin: null }, 20) !== 500) pb.push('avantage : les Griffes payées ne sont plus hors photo pendant l\'avantage');
+  // PLAFOND 90 % (22/10, choix de l'auteur ; sans lui : 100 % de victoires dès 4,99 €, mesuré).
+  { const lg = (p) => Math.log(p / (1 - p)); const sig = (z) => 1 / (1 + Math.exp(-z));
+    const pRef = C.puissanceAvantagePlafonnee(1000, 400, 0.7, 18.4); const ch = sig(lg(0.7) + 18.4 * Math.log(1000 / pRef));
+    if (C.AVANTAGE_CHANCE_MAX !== 0.9 || Math.abs(ch - 0.9) > 0.005) pb.push(`avantage : plus plafonné à 90 % (calculé : ${Math.round(ch * 100)} %)`);
+    if (C.puissanceAvantagePlafonnee(1000, 400, 0.95, 18.4) !== 1000) pb.push('avantage : une étape déjà au-dessus de 90 % reçoit encore un avantage'); }
   // La photo.
   const deck = K.CREATURES.filter((c) => c.rarity === 'rare').slice(0, 3).map((creature) => ({ creature, ownedLevel: 30, evolutionTier: 1, equippedRunes: [] }));
   const G = 800; const apres = C.deckApresEffortEquitable(deck, G, Infinity, { evolutions: true }).membres;
   const libre = C.photoFenetre(31, deck, 0, 0, {}), absorbe = C.photoFenetre(31, apres, 0, 0, {}), avec = C.photoFenetre(31, apres, 0, 0, { griffesPayees: G });
   const zero = C.photoFenetre(31, apres, 300, 1, { griffesPayees: 0 }), sansOpt = C.photoFenetre(31, apres, 300, 1, {});
   if (JSON.stringify(zero) !== JSON.stringify(sansOpt)) pb.push('SANS achat, la photo n\'est plus identique (non-régression cassée)');
-  const ecart = Math.max(...Object.keys(libre).map((n) => Math.abs(avec[n] - libre[n])));
-  if (ecart > 2) pb.push(`avec l'avantage, les ennemis ne sont plus calés sur l'équipe « sans l'achat » (écart ${ecart} niveaux)`);
+  // Avec le plafond de 90 % : les ennemis restent ENTRE ceux de l'équipe sans achat et ceux qui absorberaient l'achat, et
+  // plus bas que l'absorption sur au moins une étape (sinon l'avantage n'existe plus).
+  const ns = Object.keys(libre);
+  if (ns.some((n) => avec[n] < libre[n] - 1 || avec[n] > absorbe[n])) pb.push('avec l\'avantage, les ennemis sortent de la fourchette « sans achat » / « achat absorbé »');
+  if (!ns.some((n) => avec[n] < absorbe[n])) pb.push('avec l\'avantage, les ennemis absorbent tout l\'achat (aucun avantage)');
   if (!(Object.keys(libre).some((n) => absorbe[n] > libre[n]))) pb.push('contrôle aveugle : sans avantage, l\'achat devrait faire monter les ennemis');
   // Dépensées OU en poche : même photo (la poche est retirée d'abord).
   const enPoche = C.photoFenetre(31, deck, G, 0, { griffesPayees: G });
-  if (Math.max(...Object.keys(libre).map((n) => Math.abs(enPoche[n] - libre[n]))) > 0) pb.push('Griffes payées gardées en poche : pas retirées de la photo');
+  if (JSON.stringify(enPoche) !== JSON.stringify(avec)) pb.push('Griffes payées gardées en poche ou dépensées : la photo n\'est plus la même');
   // Branchements.
   const Av = lire('src/screens/games/AdventureScreen.js'), Cl = lire('src/screens/games/ClickerScreen.js');
   if (!Av.includes('griffesPayees: griffesPayeesPourFenetre(k) });') || !Av.includes('compterCombatAvantage(fenetreDe(lvJ));')) pb.push('Aventure : la photo ne reçoit plus les Griffes payées, ou les combats ne décomptent plus l\'avantage');
@@ -5715,7 +5725,8 @@ function auditFenetres() {
     pb.push("facteur d'éléments : le désavantage (Feu contre Eau) ou l'avantage n'est plus compté");
   if (Math.abs(K.facteurElements([m1('glyphon')], [m1('glyphon')], 1) - 1) > 1e-9 || K.EXPOSANT_ELEMENTS !== 0.5) pb.push("facteur d'éléments : Magie doit rester neutre ; exposant 0,5 (mesuré)");
   const srcCombat = fs.readFileSync(path.join(__dirname, '../src/games/clicker/combatLogic.js'), 'utf8');
-  if (!srcCombat.includes('puissanceAffichee(apres.membres) * fMaitrise * fElements')) pb.push("la photo n'applique plus le facteur d'éléments");
+  // (22/10 : la puissance passe par `pDeck` — plafond de l'avantage payé ; = puissanceAffichee(apres.membres) sans achat)
+  if (!srcCombat.includes('let pDeck = puissanceAffichee(apres.membres);') || !srcCombat.includes('pDeck * fMaitrise * fElements')) pb.push("la photo n'applique plus le facteur d'éléments");
   // 12/10 (choix de l'auteur) : ENNEMI D'ENTRAÎNEMENT — 1er combat garanti avec n'importe quelle créature de départ (avant :
   // 41 à 89 %), Gardien jamais adouci, affiché « entraînement », transmis par l'écran et le joueur simulé.
   {

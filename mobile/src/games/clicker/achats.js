@@ -74,8 +74,12 @@ export function multiplicateurDefis() { return (etat.passJusqua || 0) > Date.now
 
 // Un produit peut-il être acheté (les « une seule fois » déjà pris ne le peuvent plus) ?
 export function jourCle(maintenant = Date.now()) { const d = new Date(maintenant); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; }
-// « Premier achat ×2 » : chaque pack de Diamants donne le DOUBLE la toute première fois.
-export function premierAchatDouble(id) { const p = produit(id); return !!p && p.famille === 'diamants' && !(etat.premiersAchats || {})[id]; }
+// « Premier achat ×2 » (22/10, précision de l'auteur) : UNE SEULE FOIS EN TOUT — le tout premier pack de Diamants acheté, quel
+// qu'il soit, donne le double ; ensuite plus aucun (le ruban disparaît de tous les packs).
+export function premierAchatDouble(id) {
+  const p = produit(id); if (!p || p.famille !== 'diamants') return false;
+  return !Object.keys(etat.premiersAchats || {}).some((k) => { const q = produit(k); return q && q.famille === 'diamants'; });
+}
 export function achetable(id, maintenant = Date.now()) {
   const p = produit(id); if (!p) return false;
   if (p.unParJour) return etat.affaireJour !== jourCle(maintenant);

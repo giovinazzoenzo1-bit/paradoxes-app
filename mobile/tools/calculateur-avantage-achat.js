@@ -1,7 +1,8 @@
 // CALCULATEUR DE L'AVANTAGE DES GRIFFES PAYÉES (22/10, règles de l'auteur) — « si un joueur paie des Griffes, l'Aventure doit
 // être plus facile pendant un nombre de combats proportionnel au prix ».
 // Règle du jeu (combatLogic.photoFenetre, options.griffesPayees) : les Griffes ACHETÉES restent hors de la photo de la fenêtre
-// pendant 3 combats par euro (5 au moins, 300 au plus au total) ; ensuite moitié à la fenêtre suivante, tout à celle d'après.
+// pendant 3 combats par euro (5 au moins, 300 au plus au total) ; ensuite moitié à la fenêtre suivante, tout à celle d'après ;
+// PLAFONNÉ à 90 % de victoires (22/10, choix de l'auteur).
 // Ce calculateur NE TOUCHE PAS AU JEU : il lit ses fonctions (photo, coût des niveaux, dépense équitable, pentes mesurées) et
 // donne, pour chaque pack et à plusieurs moments du jeu, la chance de victoire au 1er essai SANS achat (= la cible du jeu,
 // l'achat serait absorbé) et AVEC l'avantage, avec la courbe du jeu (même calcul que « chance si tu dépenses tes Griffes »).
@@ -31,8 +32,11 @@ function chanceMoyenne(debut, deckReel, deckRef) {
     const nbJ = Math.max(1, Math.min(deckReel.length, C.combattantsPourEtape(n)));
     const nbE = C.opponentTeamForLevel(n).length;
     const cible = C.cibleDifficulte(n, C.difficulteEtape(n, 0));
-    const pReel = C.puissanceAffichee(deckReel.slice(0, nbJ)), pRef = C.puissanceAffichee(deckRef.slice(0, nbJ));
-    s += sig(logit(cible) + C.penteDifficulte(nbJ, nbE) * Math.log(pReel / pRef));
+    const pente = C.penteDifficulte(nbJ, nbE);
+    const pReel = C.puissanceAffichee(deckReel.slice(0, nbJ));
+    // Le PLAFOND du jeu (22/10 : 90 %) : la même fonction que la photo.
+    const pRef = C.puissanceAvantagePlafonnee(pReel, C.puissanceAffichee(deckRef.slice(0, nbJ)), cible, pente);
+    s += sig(logit(cible) + pente * Math.log(pReel / pRef));
   }
   return s / C.TAILLE_FENETRE;
 }

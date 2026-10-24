@@ -609,6 +609,8 @@ const SABOTAGES = [
     remplace("      if (avant === 'vie' && (armedSkill || phase !== 'choosing')) setTuto((t) => vuEtape(t, 'vie'));\n", '')],
   ['auditTutoriel', path.join(RACINE, 'src/screens/games/AdventureScreen.js'), "le tuto n'emmène plus jusqu'à l'onglet Runes de la créature",
     remplace("etape = onglet === 'runes' ? 'poserRune' : 'ongletRunes';", 'etape = null;')],
+  ['auditAvantageAchat', path.join(RACINE, 'src/games/clicker/combatLogic.js'), "l'avantage n'est plus plafonné à 90 % (100 % dès 4,99 €)",
+    remplace('  return Math.max(pRef, pReel * Math.exp(-dMax));\n}', '  return pRef;\n}')],
   ['auditAvantageAchat', path.join(RACINE, 'src/games/clicker/combatLogic.js'), "les Griffes payées ne sont plus retirées de la photo (achat absorbé)",
     remplace('    membresDeck = deckSansGriffesPayees(membresDeck, payees - deLaPoche);\n', '')],
   ['auditAvantageAchat', path.join(RACINE, 'src/games/clicker/achats.js'), "plus de retour en douceur (mur de difficulté à la fin de l'avantage)",
