@@ -5,3 +5,7 @@ une icône est une ressource NATIVE : seule un nouvel APK la change (une mise à
 Sat Oct 24 2026
 Build demandé (24/10) : MONTÉE EN SDK 58 (React Native 0.88). L'ancien APK (SDK 57) ne reçoit plus les mises à jour
 (runtimeVersion 58.0.0) : il garde sa dernière version jusqu'à l'installation de ce nouvel APK.
+
+Sat Oct 24 2026
+Build demandé (24/10, soir) : le jeu s'appelle OVYRA. Nouvel identifiant com.ovyra.game (avant app.paradox.mobile) :
+c'est une NOUVELLE appli sur le téléphone (l'ancienne reste installée et continue de recevoir les mises à jour).

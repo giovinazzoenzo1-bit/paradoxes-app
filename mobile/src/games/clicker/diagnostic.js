@@ -140,7 +140,7 @@ export function construireRapport({ instantane, derniereErreur, appareil, build,
   const i = instantane || {};
   const b = build || {};
   const lignes = [];
-  lignes.push('Paradox — rapport de problème');
+  lignes.push('Ovyra — rapport de problème');
   lignes.push('Build : ' + (b.sha || '?') + ' (' + (b.time || '?') + ')');
   if (appareil) lignes.push('Appareil : ' + appareil);
   lignes.push('Instantané : ' + (i.at ? new Date(i.at).toISOString() : 'aucun'));
@@ -217,5 +217,5 @@ export function lienMailto(sujet, corps, destinataire = EMAIL_SIGNALEMENT) {
 export function sujetRapport(problemes, build) {
   const p = Array.isArray(problemes) && problemes.length ? problemes[0].code : 'manuel';
   const sha = (build && build.sha) || '?';
-  return 'Paradox — problème [' + p + '] — build ' + sha;
+  return 'Ovyra — problème [' + p + '] — build ' + sha;
 }

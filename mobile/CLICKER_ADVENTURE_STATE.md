@@ -128,6 +128,13 @@ Ce que l'outil NE voit PAS :
 
 ## 2. Les pièges qui bloquent le démarrage
 
+**🆕 LE JEU S'APPELLE OVYRA (24/10, choix de l'auteur)** — « Paradox » était une autre idée d'appli. Nom affiché `Ovyra`,
+identifiant `com.ovyra.game` (Android ET iPhone ; avant `app.paradox.mobile`). Le slug Expo `paradox-1` et le compte
+`paradoxes-app1` NE CHANGENT PAS (ils portent le projet EAS et ses mises à jour : invisibles des joueurs). L'ancien APK
+(app.paradox.mobile) reste installé à part et reçoit toujours les mises à jour ; le nouvel APK est une appli distincte
+(parties séparées). Firebase / stores : TOUJOURS avec `com.ovyra.game`. Marque « Ovyra » : une marque de montres existe
+(classe 14) — l'auteur vérifie les classes 9/28/41. « Volonté du Paradoxe » (palier du Pacte) garde son nom (lore).
+
 **🆕 SDK 58 depuis le 24/10** (Expo Go 58 sur l'App Store ne lit plus que le SDK 58 ; demande de l'auteur : « aucun souci
 cette fois »). Fait ainsi, dans cet ordre, à refaire pareil au prochain SDK :
 1. Lire le changelog officiel (API retirées : InteractionManager, `Touchable`, `Modal animated`, props de StatusBar ;

@@ -205,7 +205,7 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
       const economie = await lireJournalGriffes();
       const parSource = {};
       economie.forEach((x) => { parSource[x.source] = (parSource[x.source] || 0) + (x.montant || 0); });
-      const rapport = { quoi: 'Données de combat Paradox (à coller à Claude)', version: 2, date: new Date().toISOString(),
+      const rapport = { quoi: 'Données de combat Ovyra (à coller à Claude)', version: 2, date: new Date().toISOString(),
         resume: { combats: combats.length, gardiens: g.length, annonceMoyenne: g.length ? Math.round(g.reduce((t, x) => t + x.chance, 0) / g.length) : null,
           gardiensGagnes: g.filter((x) => x.gagne).length, verdicts: total, griffesParSource: parSource },
         gardiens, combats, economie };
@@ -331,7 +331,7 @@ export default function OptionsScreen({ onBack, onAfterReset, onFullReset }) {
           <BoutonLarge couleur="rouge" largeur={INTERIEUR} hauteur={54} texte="🐾 Réinitialiser Élevage" onPress={resetClicker} />
           <BoutonLarge couleur="rouge" largeur={INTERIEUR} hauteur={54} texte="🗑️ Réinitialiser toute l'appli" onPress={resetWholeApp} />
 
-          <Text style={styles.version}>Paradox — version de test</Text>
+          <Text style={styles.version}>Ovyra — version de test</Text>
           {/* ⚠️ Date du dernier envoi, écrite par le robot de publication.
               Sans elle, impossible de distinguer « le défi est faux » de
               « mon téléphone n'a pas la mise à jour » — confusion qui a
