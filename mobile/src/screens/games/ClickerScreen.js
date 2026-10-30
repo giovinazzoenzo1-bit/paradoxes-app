@@ -281,7 +281,7 @@ import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
 import MiniJeu from './MiniJeu';
 import GuideTuto from '../../components/GuideTuto';
-import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat, contenuReel, noterAvantageGriffes, produit as produitAchat, MODE_ACHATS } from '../../games/clicker/achats';
+import { chargerAchats, abonnerAchats, droitsAchats, multiplicateurPieces, acheter as acheterAchat, contenuReel, noterAvantageGriffes, produit as produitAchat, MODE_ACHATS, achetable as achetableAchat } from '../../games/clicker/achats';
 import OffreSurgissante from '../../components/OffreSurgissante';
 import FeteAchat, { objetsDeFete } from '../../components/FeteAchat';
 import { IMAGES_ACHATS } from '../../components/imagesAchats';
@@ -290,6 +290,8 @@ import { ETAPES, ORDRE_ECRAN, TAPS_CONSEIL_TAPER, TRANSE_CONSEIL_SEC, DUREE_CONS
   abonnerTuto, estVu, tutoActif, choisirEtape, vuEtape, estVeteran, mesurerCible, avecCompteur } from '../../games/clicker/tutoriel';
 import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_MS, MINI_JEU_DELAI_OUVERTURE_MS,
   MINI_JEU_DEFIS_CONTINUS, MINI_JEU_PRESENCE_MS } from '../../games/clicker/miniJeux';
+import { chargerOffres, noterMoment, noterOeufEclos, offreAMontrer, noterOffreMontree, noterIssueOffre, compterSecondeActive, offreDuMoment,
+  CALME_MINI_JEU_MS, PRESENCE_MOMENT_MS } from '../../games/clicker/offresMoments';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
@@ -807,8 +809,11 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   const tapsTutoRef = useRef(0);
   const [rectTuto, setRectTuto] = useState(null);
   const [verrouMsg, setVerrouMsg] = useState(null); // « la Collection » / « l'Exploration » : fenêtre du cadenas
-  // 💥 Offre qui surgit (test via 🛠️ pour l'instant) et fête après un achat (22/10).
-  const [offreTest, setOffreTest] = useState(null); // { id, finA }
+  // 💥 Offre qui surgit et fête après un achat (22/10). 30/10 : les MOMENTS de l'auteur (offresMoments.js) — 1 par jour au plus, au
+  // 1er moment calme de l'écran principal ; le menu 🛠️ montre chaque moment tel qu'un joueur le verrait.
+  const [offre, setOffre] = useState(null); // { moment, id, info, a, accroche, finA, test? }
+  const offreRef = useRef(null);
+  offreRef.current = offre;
   const [fete, setFete] = useState(null); // { id, objets, sous }
   const offreTestIndexRef = useRef(0);
   const [coins, setCoins] = useState(0);
@@ -1070,6 +1075,37 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     });
     return () => abo.remove();
   }, []);
+  // 💳 30/10 — MOMENTS DES OFFRES (choix de l'auteur ; règles et moments dans offresMoments.js). Une offre surgit au 1er moment
+  // calme : écran principal sans fenêtre (peutPopperRef, comme les mini-jeux), aucun conseil du tuto affiché, 4 min de répit à
+  // l'ouverture et au retour d'arrière-plan, jamais à moins d'1 min d'un mini-jeu (avant ou après), le joueur LÀ (un tap depuis
+  // moins de 60 s, ou un moment de moins de 2 min : il vient de perdre, d'ascensionner…). 1 par jour au plus : le jour est pris
+  // dès qu'elle surgit.
+  const offreRepitRef = useRef(Date.now() + MINI_JEU_DELAI_OUVERTURE_MS);
+  const ctxOffresRef = useRef(null); // { achetable, gardienBloque, etapeGagnee } — rempli à chaque rendu, plus bas
+  useEffect(() => { chargerOffres(); }, []);
+  useEffect(() => {
+    const id = setInterval(() => {
+      const t = Date.now();
+      if (AppState.currentState === 'active') compterSecondeActive(t); // temps de jeu du jour (l'affaire du jour)
+      if (offreRef.current || miniJeuOuvertRef.current || !peutPopperRef.current || etapeTutoRef.current) return;
+      if (t < offreRepitRef.current || prochainMiniJeuRef.current - t < CALME_MINI_JEU_MS) return;
+      const choix = ctxOffresRef.current ? offreAMontrer(ctxOffresRef.current, t) : null;
+      if (!choix) return;
+      const present = t - lastTapTimeRef.current <= MINI_JEU_PRESENCE_MS || (choix.a && t - choix.a <= PRESENCE_MOMENT_MS);
+      if (!present) return;
+      noterOffreMontree(choix, ctxOffresRef.current, t); // le jour est pris TOUT DE SUITE (plafond tenu même si l'appli se ferme)
+      setOffre(choix);
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    const abo = AppState.addEventListener('change', (e) => {
+      if (e === 'active') offreRepitRef.current = Math.max(offreRepitRef.current, Date.now() + MINI_JEU_DELAI_OUVERTURE_MS);
+    });
+    return () => abo.remove();
+  }, []);
+  // Un mini-jeu se termine : 1 min de calme avant une offre (l'inverse : fermerOffre repousse le mini-jeu).
+  useEffect(() => { if (!miniJeuOuvert) offreRepitRef.current = Math.max(offreRepitRef.current, Date.now() + CALME_MINI_JEU_MS); }, [miniJeuOuvert]);
   const boostTapJusquaRef = useRef(0);
   const finPubTap = () => {
     setPubTap(false);
@@ -2396,6 +2432,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     // moins de 3) ; 60 % si légendaire, 45 % si mythique.
     addCreatureToOwned(creature, niveauDeNaissance(ownedRef.current.map((o) => o.level), creature.rarity));
     trackEvent('eggHatched', 1);
+    noterOeufEclos(); // 💳 30/10 : tous les 3 œufs, le moment du Pack de progression
     setRewardCreature(creature);
   };
 
@@ -2461,6 +2498,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     } else {
       setIncubatingEgg((prev) => applyGuardianDefeat(prev));
     }
+    // 💳 30/10 : une défaite contre le Gardien ouvre le moment du Pack du Gardien (tant qu'un Gardien bloque un œuf).
+    if (outcome !== 'win') noterMoment('gardien');
   };
 
   // Achat en Diamants. Chaque offre s'appuie sur un mécanisme existant
@@ -2489,6 +2528,14 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (c.pieces) pendingGainRef.current += c.pieces;
     const morceaux = [c.diamants ? `+${c.diamants} 💎` : null, c.griffes ? `+${c.griffes} Griffes (en Exploration)` : null, c.pieces ? `+${formatNum(c.pieces)} pièces` : null].filter(Boolean);
     return morceaux.length ? morceaux.join(' · ') : r.produit.titre;
+  };
+  // 💳 30/10 : fermer l'offre qui surgit (« Plus tard », croix, ou après l'achat) — issue notée pour les données ; aucun
+  // mini-jeu dans la minute qui suit.
+  const fermerOffre = (issue) => {
+    const o = offreRef.current;
+    if (o && !o.test) noterIssueOffre(issue);
+    setOffre(null);
+    prochainMiniJeuRef.current = Math.max(prochainMiniJeuRef.current, Date.now() + CALME_MINI_JEU_MS);
   };
   const buyWithDiamonds = async (offer) => {
     const ok = await spendSharedCoins(offer.cost);
@@ -2843,6 +2890,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     (async () => {
           {
             trackEvent('ascension', 1);
+            noterMoment('ascension'); // 💳 30/10 : le moment du Pack d'Ascension
             // ⚠️⚠️ L'ASCENSION DOIT RETIRER LES DÉFIS DE L'ŒUF EN COURS.
             //
             // Sans ça, le joueur garde les défis calibrés pour le groupe
@@ -3376,11 +3424,22 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // (La présence du joueur est vérifiée par la minuterie.)
   const metriqueEnCours = currentChallengeId ? ((findQuest(currentChallengeId) || {}).metric || null) : null;
   metriqueEnCoursRef.current = metriqueEnCours; // lu par le tap (mesure du rythme)
+  // 💳 30/10 : ni par-dessus une offre qui surgit, la fête d'un achat ou le cadenas « Pas encore » (mini-jeux ET offres).
   peutPopperRef.current = view === 'tap' && !incubatorOpen && !calendarOpen && !diamondShopOpen && !menuDevOuvert && !ascensionPrompt
     && !boss && !bossAnnonce && !bossResult && !guardianFight && !resultatGardien && !confirmGardien && !offlineReport && !pubTap
     && pickerSlot === null && !selectedCreature && !ficheAventure && !rewardCreature && !powerCast
-    && !goldenTarget && !spawnedCreature && !ritualTarget
+    && !goldenTarget && !spawnedCreature && !ritualTarget && !offre && !fete && !verrouMsg
     && !MINI_JEU_DEFIS_CONTINUS.includes(metriqueEnCours);
+  // 💳 30/10 : ce que la minuterie des offres doit savoir — achetable (achats.js), un Gardien bloque-t-il un œuf (défaite =
+  // `retryAt`, l'œuf disparaît quand il est battu), étapes d'Exploration gagnées (le 🐾 s'efface une fois l'étape gagnée).
+  const etapeAventureGagnee = (lifetimeStats || {}).advLevelReached || 0;
+  ctxOffresRef.current = {
+    achetable: (id) => achetableAchat(id),
+    gardienBloque: !!((mainEgg && mainEgg.retryAt) || (incubatingEgg && incubatingEgg.retryAt)),
+    etapeGagnee: (n) => etapeAventureGagnee >= n,
+  };
+  // 🎁 1re victoire en Exploration : le moment du Pack de démarrage (il ne s'ouvre qu'UNE fois en tout, offresMoments).
+  useEffect(() => { if (etapeAventureGagnee >= 1) noterMoment('demarrage'); }, [etapeAventureGagnee]);
   // 17/10 (demande de l'auteur) : LUEUR du Grimoire = l'article du DÉFI DE L'ŒUF EN COURS quand c'est un achat (marque-page du bon
   // chapitre ou flèche vers la bonne page, puis l'article). ⚠️ 1re version (même jour) : elle lisait `questIds` = les DÉFIS DU JOUR
   // (DailyContext, pickDailyQuests) — jamais un achat → aucune lueur chez l'auteur. Ici : currentChallengeId (défis de l'œuf).
@@ -3401,7 +3460,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // 🎓 TUTORIEL — un conseil à la fois, sur l'écran principal SANS fenêtre ouverte, dans l'ordre ORDRE_ECRAN.
   const conseilPossible = view === 'tap' && !incubatorOpen && !calendarOpen && !diamondShopOpen && !menuDevOuvert && !ascensionPrompt
     && !boss && !bossAnnonce && !bossResult && !guardianFight && !resultatGardien && !confirmGardien && !offlineReport && !pubTap
-    && pickerSlot === null && !selectedCreature && !ficheAventure && !rewardCreature && !powerCast && !miniJeuOuvert && !verrouMsg;
+    && pickerSlot === null && !selectedCreature && !ficheAventure && !rewardCreature && !powerCast && !miniJeuOuvert && !verrouMsg && !offre;
   const condTuto = {
     taper: true,
     boutique: estVu(tuto, 'transe') && coins >= applyDiscount(tapPowerCost(tapPower)) && !estVu(tuto, 'pacte'),
@@ -4942,12 +5001,12 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          {/* 22/10 : tester l'offre qui surgit (les moments réels seront décidés plus tard). */}
+          {/* 💳 Tester l'offre qui surgit : chaque MOMENT de l'auteur (30/10) tel qu'un joueur le verrait (sans prendre le jour). */}
           <TouchableOpacity style={styles.devMenuLigne} onPress={() => {
-            const ids = ['pack_ascension', 'pack_progression', 'affaire_jour', 'pack_demarrage', 'pack_gardien'];
-            const id = ids[offreTestIndexRef.current++ % ids.length];
+            const moments = ['demarrage', 'ascension', 'gardien', 'bloque', 'oeufs', 'pubs', 'affaire'];
+            const m = moments[offreTestIndexRef.current++ % moments.length];
             setMenuDevOuvert(false);
-            setOffreTest({ id, finA: Date.now() + 24 * 3600 * 1000 });
+            setOffre({ ...offreDuMoment(m, m === 'bloque' ? { etape: 23 } : null, Date.now()), test: true });
           }}>
             <Text style={styles.devMenuLigneTexte}>💳 Offre qui surgit (test)</Text>
           </TouchableOpacity>
@@ -5188,16 +5247,16 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {/* 🎓 Repère (0, 0) de l'écran pour mesurer les cibles, puis le guide du conseil en cours (tout en dernier : au-dessus
           de tout). ⚠️ Le guide n'a AUCUN conteneur plein écran : seule sa petite croix capte le doigt. */}
       {/* 💥 L'offre qui surgit, puis la fête de l'achat (22/10). */}
-      {offreTest && (() => {
-        const p = produitAchat(offreTest.id); const c = contenuReel(offreTest.id, ctxAchats());
+      {offre && (() => {
+        const p = produitAchat(offre.id); const c = contenuReel(offre.id, ctxAchats());
         const txt = [c.griffes ? `${formatNum(c.griffes)} Griffes` : null, c.diamants ? `${c.diamants} 💎` : null, c.pieces ? `${formatNum(c.pieces)} pièces` : null].filter(Boolean).join(' + ');
         return (
-          <OffreSurgissante produit={p} image={IMAGES_ACHATS[offreTest.id] || null} contenuTexte={txt} finA={offreTest.finA} onFermer={() => setOffreTest(null)}
+          <OffreSurgissante produit={p} image={IMAGES_ACHATS[offre.id] || null} contenuTexte={txt} finA={offre.finA} accroche={offre.accroche} onFermer={() => fermerOffre('ferme')}
             onAcheter={() => afficherDialogue(`${p.icone} ${p.titre}`, MODE_ACHATS === 'test' ? `Mode test : simuler l'achat pour ${p.prix} ? Aucun paiement réel.` : `Acheter pour ${p.prix} ?`, [
               { texte: 'Annuler', style: 'annuler' },
               { texte: `Acheter · ${p.prix}`, style: 'principal', onPress: async () => {
-                const label = await acheterArgentReel(offreTest.id);
-                setOffreTest(null);
+                const label = await acheterArgentReel(offre.id);
+                fermerOffre(label ? 'achat' : 'ferme');
                 if (label) setFete({ id: Date.now(), objets: objetsDeFete(c, p.famille), sous: label });
               } },
             ])} />

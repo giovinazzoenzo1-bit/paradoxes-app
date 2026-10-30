@@ -1,5 +1,5 @@
-// 💥 L'OFFRE QUI SURGIT (22/10, demande de l'auteur : « les animations, celles qui popent à l'écran parfois »). Pour l'instant
-// testable depuis le menu 🛠️ ; les MOMENTS où elle surgira seront décidés plus tard avec l'auteur.
+// 💥 L'OFFRE QUI SURGIT (22/10, demande de l'auteur : « les animations, celles qui popent à l'écran parfois »). Testable
+// depuis le menu 🛠️ ; les MOMENTS où elle surgit (choix de l'auteur, 30/10) : games/clicker/offresMoments.js.
 // La fenêtre en bois du jeu TOMBE avec un rebond ; derrière l'objet, des RAYONS dorés tournent ; un REFLET balaie l'objet ; le
 // RUBAN (« ×6 de valeur »…) claque à l'arrivée ; le PRIX pulse ; une MINUTERIE pour les offres limitées (`finA`).
 // L'icône est un emoji en attendant les images Gemini (prop `image` : elle prendra sa place).
@@ -16,7 +16,8 @@ function resteTexte(ms) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`;
 }
 
-export default function OffreSurgissante({ produit, contenuTexte = '', image = null, finA = null, onAcheter, onFermer }) {
+// 30/10 : `accroche` = la phrase du MOMENT (« Le Gardien te résiste ? »…), au-dessus du contenu (offresMoments.accrocheDuMoment).
+export default function OffreSurgissante({ produit, contenuTexte = '', image = null, finA = null, accroche = '', onAcheter, onFermer }) {
   const { height: H } = Dimensions.get('window');
   const chute = useRef(new Animated.Value(0)).current;
   const tour = useRef(new Animated.Value(0)).current;
@@ -65,6 +66,7 @@ export default function OffreSurgissante({ produit, contenuTexte = '', image = n
                 </Animated.View>
               ) : null}
             </View>
+            {accroche ? <Text style={styles.accroche}>{accroche}</Text> : null}
             <Text style={styles.contenu}>{contenuTexte || produit.desc}</Text>
             {finA ? <Text style={styles.minuterie}>⏳ Plus que {resteTexte(finA - maintenant)}</Text> : null}
             <Animated.View style={{ alignSelf: 'center', marginTop: 8, transform: [{ scale: pouls.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] }) }] }}>
@@ -84,6 +86,7 @@ const styles = StyleSheet.create({
   fond: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center' },
   ruban: { position: 'absolute', right: 2, top: 4, backgroundColor: '#c0392b', borderRadius: 6, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 2, borderColor: '#ffd36b' },
   rubanTexte: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  accroche: { color: '#ffd66b', fontSize: 14, fontWeight: '900', textAlign: 'center', marginTop: 2, paddingHorizontal: 10 },
   contenu: { color: '#fff3d6', fontSize: 15, fontWeight: '800', textAlign: 'center', marginTop: 4, paddingHorizontal: 10 },
   minuterie: { color: '#ffcf3f', fontSize: 14, fontWeight: '900', textAlign: 'center', marginTop: 6 },
   plusTard: { color: '#dccbaa', fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' },

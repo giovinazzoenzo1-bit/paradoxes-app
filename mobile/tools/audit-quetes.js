@@ -4745,6 +4745,103 @@ function auditAchats() {
 }
 module.exports.auditAchats = auditAchats;
 
+// 💳 MOMENTS DES OFFRES QUI SURGISSENT (30/10, proposition lancée par l'auteur : « continue ») : 1 par jour au plus ; priorités
+// 🎁 démarrage > 🌟 Ascension > 🐯 Gardien > 🐾 bloqué > 🥚 3 œufs > 🚫 3e pub du jour, puis ⏰ affaire du jour en secours (15 min) ; un moment attend le lendemain s'il est
+// encore d'actualité, puis s'efface ; jamais une offre non achetable ; PAS DE FAUSSE URGENCE (minuterie seulement pour l'affaire
+// du jour, qui change vraiment à minuit du téléphone) ; branchements (écran principal, Aventure, fenêtre de l'offre).
+function auditOffresMoments() {
+  const fs = require('fs'); const path = require('path');
+  const pb = [];
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const compiler = (f, req) => {
+    const code = babel.transformSync(lire(f), { presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]], filename: path.basename(f) }).code;
+    const M = { exports: {} }; new Function('require', 'module', 'exports', code)(req, M, M.exports); return M.exports;
+  };
+  const stockage = () => ({ __esModule: true, default: { getItem: async () => null, setItem: async () => {} } });
+  const O = compiler('src/games/clicker/offresMoments.js', stockage);
+  const C = load('clickerLogic');
+  const A = compiler('src/games/clicker/achats.js', (m) => (/clickerLogic/.test(m) ? C : stockage()));
+  // Les 7 moments de la proposition du 30/10, tels quels (l'auteur : « continue »).
+  if (JSON.stringify(O.PRIORITE) !== JSON.stringify(['demarrage', 'ascension', 'gardien', 'bloque', 'oeufs', 'pubs'])) pb.push('priorités des moments changées : ' + JSON.stringify(O.PRIORITE));
+  const attendu = { demarrage: 'pack_demarrage', ascension: 'pack_ascension', gardien: 'pack_gardien', bloque: 'griffes_3', oeufs: 'pack_progression', pubs: 'sans_pubs', affaire: 'affaire_jour' };
+  if (JSON.stringify(O.PRODUIT_DU_MOMENT) !== JSON.stringify(attendu)) pb.push('un moment ne propose plus le produit choisi par l\'auteur');
+  for (const id of Object.values(O.PRODUIT_DU_MOMENT)) if (!A.produit(id)) pb.push('produit inconnu du catalogue : ' + id);
+  if (O.OEUFS_PAR_OFFRE !== 3 || O.DEFAITES_BLOQUE !== 3 || O.AFFAIRE_APRES_SEC !== 900 || O.PUBS_PAR_OFFRE !== 3) pb.push('seuils des moments changés (3 œufs, 3 défaites, 3 pubs, 15 min)');
+  if (O.CLE_OFFRES !== 'offres:v1') pb.push('les offres n\'ont plus leur mémoire à part (offres:v1)');
+  const J = 86400000; const t0 = new Date(2026, 9, 30, 10, 0, 0).getTime();
+  const ctx = { achetable: () => true, gardienBloque: true, etapeGagnee: (n) => n <= 20 };
+  const vide = () => JSON.parse(JSON.stringify(O.ETAT_OFFRES_VIDE));
+  // 1 par jour + priorités : les 5 moments le même jour → le 🎁 ; rien d'autre ce jour-là ; le lendemain, le suivant.
+  let e = vide();
+  for (const m of ['pubs', 'oeufs', 'bloque', 'gardien', 'ascension', 'demarrage']) e = O.noterMomentPur(e, m, m === 'bloque' ? { etape: 23 } : null, t0);
+  const ordre = [];
+  for (let k = 0; k < 6; k++) {
+    const t = t0 + k * J + 3600e3; const c = O.choisirOffre(e, ctx, t);
+    if (c) { ordre.push(c.moment); e = O.apresAffichagePur(e, c, ctx, t); if (O.choisirOffre(e, ctx, t + 60e3)) pb.push('2 offres le même jour (plafond de l\'auteur : 1 par jour)'); }
+  }
+  if (ordre[0] !== 'demarrage' || ordre[1] !== 'ascension') pb.push('ordre des offres faux : ' + ordre.join(' > '));
+  // Un moment attend le LENDEMAIN seulement (le 🎁 n'expire pas) : jour 1 🎁, jour 2 🌟, les 3 autres sont périmés au jour 3.
+  if (ordre.length !== 2) pb.push('un moment survit au-delà du lendemain (ou s\'efface trop tôt) : ' + ordre.join(' > '));
+  // D'actualité : le 🐯 tant qu'un Gardien bloque ; le 🐾 tant que l'étape n'est pas gagnée ; jamais une offre non achetable.
+  const g = O.noterMomentPur(vide(), 'gardien', null, t0);
+  if (O.choisirOffre(g, { ...ctx, gardienBloque: false }, t0) || !O.choisirOffre(g, ctx, t0)) pb.push('Pack du Gardien : montré sans Gardien qui bloque (ou jamais)');
+  const b = O.noterMomentPur(vide(), 'bloque', { etape: 23 }, t0);
+  if (O.choisirOffre(b, { ...ctx, etapeGagnee: (n) => n <= 23 }, t0) || (O.choisirOffre(b, ctx, t0) || {}).accroche !== 'Bloqué à l\'étape 23 ?') pb.push('offre « bloqué » : montrée pour une étape déjà gagnée, ou sans son étape');
+  if (O.choisirOffre(g, { ...ctx, achetable: () => false }, t0)) pb.push('une offre non achetable est montrée');
+  // 🎁 une seule fois en tout, et il attend (pas d'expiration) tant qu'il est achetable.
+  const d = O.noterMomentPur(vide(), 'demarrage', null, t0);
+  if (Object.keys(O.noterMomentPur({ ...d, attente: {} }, 'demarrage', null, t0 + J).attente).length) pb.push('Pack de démarrage : il peut s\'ouvrir plusieurs fois');
+  if ((O.choisirOffre(d, ctx, t0 + 10 * J) || {}).moment !== 'demarrage') pb.push('Pack de démarrage : il expire avant d\'avoir été vu');
+  // 🥚 tous les 3 œufs.
+  let o = vide(); for (let k = 0; k < 2; k++) o = O.noterOeufPur(o, t0);
+  if (o.attente.oeufs) pb.push('Pack de progression : avant le 3e œuf');
+  o = O.noterOeufPur(o, t0); if (!o.attente.oeufs) pb.push('Pack de progression : pas au 3e œuf');
+  // 🚫 la 3e pub REGARDÉE du jour (pas avant), compteur remis à zéro le lendemain ; jamais si Sans pubs est déjà possédé.
+  let pu = vide(); pu = O.noterPubPur(O.noterPubPur(pu, t0), t0 + 60e3);
+  if (pu.attente.pubs) pb.push('Sans pubs : avant la 3e pub du jour');
+  pu = O.noterPubPur(pu, t0 + 120e3);
+  if (!pu.attente.pubs || (O.choisirOffre(pu, ctx, t0 + 130e3) || {}).accroche !== "3 pubs regardées aujourd'hui") pb.push('Sans pubs : pas à la 3e pub du jour (ou sans sa phrase)');
+  if (O.choisirOffre(pu, { ...ctx, achetable: (id) => id !== 'sans_pubs' }, t0 + 130e3)) pb.push('Sans pubs proposé à qui le possède déjà');
+  let pv = O.noterPubPur(O.noterPubPur(vide(), t0), t0 + 60e3); pv = O.noterPubPur(pv, t0 + J);
+  if (pv.attente.pubs || pv.pubsDuJour !== 1) pb.push('pubs : le compteur du jour n\'est pas remis à zéro le lendemain');
+  // ⏰ en secours : 15 min de jeu dans la journée, jamais le jour d'une autre offre ; remis à zéro le lendemain.
+  const a899 = O.compterSecondesPur(vide(), 899, t0), a900 = O.compterSecondesPur(vide(), 900, t0);
+  if (O.choisirOffre(a899, ctx, t0) || (O.choisirOffre(a900, ctx, t0) || {}).moment !== 'affaire') pb.push('affaire du jour : pas après 15 min de jeu pile');
+  if (O.choisirOffre({ ...a900, jourMontre: O.jourDe(t0) }, ctx, t0)) pb.push('affaire du jour : en plus d\'une autre offre le même jour');
+  if (O.compterSecondesPur(a900, 1, t0 + J).secondesActives !== 1) pb.push('le temps de jeu du jour n\'est pas remis à zéro le lendemain');
+  // PAS DE FAUSSE URGENCE : minuterie seulement pour l'affaire du jour, jusqu'à minuit du téléphone (et sa variante change alors).
+  for (const m of [...O.PRIORITE]) if (O.offreDuMoment(m, null, t0).finA != null) pb.push('fausse urgence : minuterie sur une offre qui reste en boutique (' + m + ')');
+  const minuit = new Date(2026, 9, 31, 0, 0, 0).getTime();
+  if (O.offreDuMoment('affaire', null, t0).finA !== minuit) pb.push('affaire du jour : la minuterie ne finit pas à minuit du téléphone');
+  if (A.jourNumero(minuit - 1) === A.jourNumero(minuit) || A.jourNumero(minuit) !== A.jourNumero(minuit + 20 * 3600e3)) pb.push('affaire du jour : la variante ne change pas à minuit du téléphone (la minuterie mentirait)');
+  if (!lire('src/games/clicker/achats.js').includes('p.variantes[jourNumero(maintenant) % p.variantes.length]')) pb.push('affaire du jour : la variante ne suit plus le jour du téléphone');
+  // Branchements.
+  const Cl = lire('src/screens/games/ClickerScreen.js'), Av = lire('src/screens/games/AdventureScreen.js'), Os = lire('src/components/OffreSurgissante.js');
+  const doit = [
+    ['noterOeufEclos(); // 💳 30/10', 'éclosion non comptée (Pack de progression)'],
+    ["    if (outcome !== 'win') noterMoment('gardien');", 'défaite contre le Gardien non notée'],
+    ["noterMoment('ascension'); // 💳 30/10", 'Ascension non notée'],
+    ["useEffect(() => { if (etapeAventureGagnee >= 1) noterMoment('demarrage'); }, [etapeAventureGagnee]);", '1re victoire en Exploration non notée (Pack de démarrage)'],
+    ['if (offreRef.current || miniJeuOuvertRef.current || !peutPopperRef.current || etapeTutoRef.current) return;', 'une offre peut surgir par-dessus une fenêtre, un mini-jeu ou un conseil du tuto'],
+    ['if (t < offreRepitRef.current || prochainMiniJeuRef.current - t < CALME_MINI_JEU_MS) return;', 'plus de répit (ouverture, mini-jeu juste avant ou juste après)'],
+    ['const present = t - lastTapTimeRef.current <= MINI_JEU_PRESENCE_MS || (choix.a && t - choix.a <= PRESENCE_MOMENT_MS);', 'une offre peut surgir quand le joueur est absent'],
+    ['noterOffreMontree(choix, ctxOffresRef.current, t);', 'le jour n\'est plus pris quand l\'offre surgit (plafond)'],
+    ['&& !ritualTarget && !offre && !fete && !verrouMsg', 'un mini-jeu peut surgir par-dessus une offre'],
+    ['&& !miniJeuOuvert && !verrouMsg && !offre;', 'un conseil du tuto peut s\'afficher sous une offre'],
+    ['gardienBloque: !!((mainEgg && mainEgg.retryAt) || (incubatingEgg && incubatingEgg.retryAt)),', 'le Pack du Gardien ne sait plus si un Gardien bloque'],
+    ['finA={offre.finA} accroche={offre.accroche}', 'l\'offre n\'affiche plus la minuterie et la phrase du moment'],
+    ["if (e === 'active') offreRepitRef.current = Math.max(offreRepitRef.current, Date.now() + MINI_JEU_DELAI_OUVERTURE_MS);", 'plus de répit au retour d\'arrière-plan pour les offres'],
+  ];
+  for (const [t, msg] of doit) if (!Cl.includes(t)) pb.push(msg);
+  if (/finA: Date\.now\(\)/.test(Cl)) pb.push('fausse urgence : une minuterie écrite à la main dans l\'écran principal');
+  if (!Av.includes("if ((defaitesDeSuite[levelNumber] || 0) + 1 === DEFAITES_BLOQUE) noterMoment('bloque', { etape: levelNumber });")) pb.push('Exploration : 3 défaites de suite ne sont plus notées (offre « bloqué »)');
+  const Fp = lire('src/components/FaussePub.js');
+  if (!Fp.includes('onPress={() => { if (fini && onFin) { noterPubVue(); onFin(); } }}') || (Fp.match(/noterPubVue\(\)/g) || []).length !== 1) pb.push('pubs : la pub regardée jusqu\'au bout n\'est plus comptée (ou comptée ailleurs : Sans pubs saute la pub)');
+  if (!Os.includes("accroche = '', onAcheter, onFermer }) {") || !Os.includes('{accroche ? <Text style={styles.accroche}>{accroche}</Text> : null}')) pb.push('la fenêtre de l\'offre n\'affiche plus la phrase du moment');
+  return pb;
+}
+module.exports.auditOffresMoments = auditOffresMoments;
+
 // 💳 AVANTAGE DES GRIFFES PAYÉES (22/10, règles de l'auteur) : pendant 3 combats par euro (5 min, 300 max), les Griffes
 // achetées restent HORS de la photo de la fenêtre (ennemis calés sur l'équipe « sans l'achat »), dépensées ou non ; retour
 // en douceur (½ puis tout). ⚠️ Sans achat (0), la photo est STRICTEMENT celle d'avant (prouvé sur 400 photos le 22/10).

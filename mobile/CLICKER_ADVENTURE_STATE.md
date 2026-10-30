@@ -4687,8 +4687,44 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   des prompts) détourées vers `assets/boutique/*.png` (256 px ; magenta mesuré aux coins de chaque image ; halo rose ET aura
   pastel RELIÉE AU FOND retirés — jamais l'objet ; 1,5 Mo au total). `components/imagesAchats.js` : produit → image ; boutique
   (lignes) et offre qui surgit. L'auteur doute des griffes : à juger en jeu.
-- À FAIRE : tirelire, VIP hebdo ; puis les moments où chaque offre surgit ; puis RevenueCat +
+- À FAIRE : tirelire, VIP hebdo ; (moments où chaque offre surgit : FAIT le 30/10, section suivante) ; puis RevenueCat +
   Firebase (Crashlytics) + AppLovin MAX quand l'auteur aura les comptes (un seul nouvel APK).
+
+## 💳 MOMENTS DES OFFRES QUI SURGISSENT (30/10) — PUBLIÉ
+
+- ORIGINE : proposition de Claude (règles + 7 moments) ; le sélecteur à cocher ne s'affichait pas chez l'auteur, il a répondu
+  « continue » → les 7 moments TELS QUELS. ⚠️ Une 1re copie (réponse coupée) avait écrit « Sans pubs NON retenu par
+  l'auteur » : FAUX, aucune réponse de l'auteur — rétabli. RÈGLE : « choix de l'auteur » seulement sur une réponse ÉCRITE de
+  l'auteur ; un « continue » vaut la proposition telle quelle.
+- RÈGLES : 1 offre par jour au plus (jour du téléphone) ; écran principal seulement, au 1er moment calme (peutPopperRef,
+  aucun conseil du tuto, 4 min de répit à l'ouverture et au retour d'arrière-plan, jamais à moins d'1 min d'un mini-jeu dans
+  les deux sens, joueur présent : tap < 60 s ou moment < 2 min) ; jamais un produit non achetable ; un moment non montré
+  attend le LENDEMAIN s'il est encore d'actualité (🐯 tant qu'un Gardien bloque un œuf, 🐾 tant que l'étape n'est pas gagnée),
+  puis s'efface — sauf le 🎁, qui attend tant qu'il est achetable ; « Plus tard » ferme, l'offre reste en boutique.
+- MOMENTS (priorité) : 🎁 1re victoire en Exploration → pack_demarrage (une fois en tout) · 🌟 Ascension → pack_ascension ·
+  🐯 défaite contre le Gardien → pack_gardien · 🐾 3 défaites de suite sur une étape → griffes_3 · 🥚 tous les 3 œufs éclos →
+  pack_progression · 🚫 3e pub REGARDÉE du jour → sans_pubs · ⏰ en secours, après 15 min de jeu dans la journée → affaire_jour.
+- ⚠️ PAS DE FAUSSE URGENCE : minuterie (`finA`) SEULEMENT pour l'affaire du jour, qui expire vraiment à minuit. Un compte à
+  rebours sur une offre qui reste en boutique = pratique commerciale trompeuse (UE ; Code de la consommation L121-4).
+  BUG ÉVITÉ : la variante de l'affaire du jour changeait à minuit UTC (1 à 2 h après minuit en France) → alignée sur le jour du
+  téléphone (`achats.jourNumero`), sinon « Change à minuit » mentait.
+- CODE : `games/clicker/offresMoments.js` (tout ce qui décide est PUR ; mémoire À PART `offres:v1`, jamais effacée par une
+  Ascension ; journal des 30 dernières offres : moment, produit, issue achat / fermée = données pour régler la suite) ;
+  minuterie des offres dans ClickerScreen, à côté de celle des mini-jeux. Déclencheurs : `noterMoment('ascension')`
+  (confirmAscension), `noterMoment('gardien')` (défaite), `noterOeufEclos()` (grantHatchedCreature), effet sur
+  advLevelReached ≥ 1 (🎁), `AdventureScreen.noterDefaite` (🐾, à la 3e), FaussePub « Récupérer » (🚫 ; jamais quand Sans pubs
+  saute la pub). Les « pubs » d'énergie, de vidéo d'œuf et du hors-ligne ne passent PAS par FaussePub (chargements simulés,
+  sans écran de pub) : non comptées. Enveloppes asynchrones dans un try : une erreur ne remonte jamais au jeu.
+- OffreSurgissante : prop `accroche` (phrase du moment). Mini-jeux et conseils du tuto ne surgissent plus par-dessus une
+  offre, la fête d'un achat ou le cadenas « Pas encore ».
+- 🛠️ « 💳 Offre qui surgit (test) » : les 7 moments tour à tour, sans prendre le jour. Banc : `offre&moment=bloque` (ou
+  gardien, pubs, affaire…), vu en 390 × 844.
+- CONTRÔLE auditOffresMoments + 8 pièges → 134 contrôles, 353 pièges prouvés ; taps 20/20 (normal et ?tuto=1) ;
+  Exploration OK ; fin de combat OK.
+- REPRISE (même jour) : une copie coupée avait écrit tout le chantier (verrou de 13 min, rien poussé) ; une de ses passes de
+  pièges tournait encore → ATTENDUE, jamais tuée ; travail relu en entier, attribution fausse corrigée, puis rituel complet.
+- PLUS TARD (avec les données) : offres DANS l'Exploration (énergie vide → Diamants ; ⚠️ un Modal sans
+  `supportedOrientations` repasse en portrait sur iPhone) ; bonus exclusif à durée limitée (vraie urgence) ; RevenueCat.
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
@@ -4727,8 +4763,9 @@ Le sandbox repart à zéro à chaque conversation : rien de /home/claude ni de /
 2. Compilation de tout le code (depuis la racine du dépôt) : node mobile/tools/compiler-tout.js → « 73 fichiers, 0 en erreur ».
 3. Portée : node mobile/tools/verifier-portee.js → « aucun nom inconnu » (noms inconnus, lecture avant déclaration = écran
    blanc sur Hermes, commentaire « // » qui avale la fin d'une ligne — jeu ET outils).
-4. Suite : timeout 295 node mobile/tools/verifier-defis.js → « RIEN DE CASSÉ » (110 contrôles au 16/10).
+4. Suite : timeout 295 node mobile/tools/verifier-defis.js → « RIEN DE CASSÉ » (110 contrôles au 16/10 ; 134 au 30/10, ~45 s).
 5. Sabotages : timeout 285 node mobile/tools/verifier-controles.js A B en 5 passes : 0 71 · 71 106 · 106 142 · 142 190 · 190 <total> (235 au 17/10).
+   30/10 : 353 pièges → 0 80 · 80 140 · 140 210 · 210 280 · 280 (fin) — 118 à 234 s chacune (la 1re est la plus lourde).
    AVANT chaque passe : `pgrep -a -x node | grep -c verifier` = 0 et `git status --short` vide. UNE passe à la fois.
 6. Sonde des taps : mkdir -p /tmp/cap && cp mobile/tools/capture/package.json /tmp/cap/ && (cd /tmp/cap && npm i) ; puis
    cd mobile/tools/capture && ln -sfn /tmp/cap/node_modules node_modules && EMULE_TOUCHER=1 node build.mjs scenes/menu.jsx

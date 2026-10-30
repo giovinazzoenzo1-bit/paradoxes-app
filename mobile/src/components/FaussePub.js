@@ -3,6 +3,7 @@
 // Utilisée par : +1 poudre runique (menu des Runes) et Tap ×2 pendant 2 min (écran principal du clicker).
 import React, { useEffect, useState } from 'react';
 import { droitsAchats } from '../games/clicker/achats';
+import { noterPubVue } from '../games/clicker/offresMoments';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { ICONES_PUB } from './iconesPubs';
 
@@ -37,7 +38,8 @@ export default function FaussePub({ visible = false, recompense = '', onFin }) {
           <View style={[st.plein, { width: `${Math.round((1 - reste / DUREE_FAUSSE_PUB_SEC) * 100)}%` }]} />
         </View>
         <Text style={st.texte}>{fini ? 'Merci !' : `Récompense dans ${reste} s`}</Text>
-        <TouchableOpacity disabled={!fini} onPress={() => { if (fini && onFin) onFin(); }} style={[st.bouton, !fini && st.boutonOff]}>
+        {/* 💳 30/10 : une pub regardée JUSQU'AU BOUT est comptée ici (la 3e du jour ouvre le moment « Sans pubs », offresMoments). */}
+        <TouchableOpacity disabled={!fini} onPress={() => { if (fini && onFin) { noterPubVue(); onFin(); } }} style={[st.bouton, !fini && st.boutonOff]}>
           <Text style={st.boutonTexte}>{fini ? 'Récupérer' : '…'}</Text>
         </TouchableOpacity>
       </View>

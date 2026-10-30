@@ -74,6 +74,8 @@ export function multiplicateurDefis() { return (etat.passJusqua || 0) > Date.now
 
 // Un produit peut-il être acheté (les « une seule fois » déjà pris ne le peuvent plus) ?
 export function jourCle(maintenant = Date.now()) { const d = new Date(maintenant); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; }
+// Numéro du jour LOCAL (change à minuit du téléphone) — la rotation des variantes de l'affaire du jour (30/10).
+export function jourNumero(maintenant = Date.now()) { const d = new Date(maintenant); return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000); }
 // « Premier achat ×2 » (22/10, précision de l'auteur) : UNE SEULE FOIS EN TOUT — le tout premier pack de Diamants acheté, quel
 // qu'il soit, donne le double ; ensuite plus aucun (le ruban disparaît de tous les packs).
 export function premierAchatDouble(id) {
@@ -111,7 +113,9 @@ export function griffesPourNiveaux(ctx, n) {
 }
 export function contenuReel(id, ctx, maintenant = Date.now()) {
   const p = produit(id); if (!p) return {};
-  const base = p.variantes ? p.variantes[Math.floor(maintenant / 86400000) % p.variantes.length] : (p.contenu || {});
+  // 30/10 : la variante change à MINUIT DU TÉLÉPHONE (jour local), comme l'achat « une fois par jour » (jourCle) — l'offre qui
+  // surgit annonce « Change à minuit » avec sa minuterie : elle doit dire vrai (avant : minuit UTC, 1 à 2 h plus tard en France).
+  const base = p.variantes ? p.variantes[jourNumero(maintenant) % p.variantes.length] : (p.contenu || {});
   const r = {};
   if (base.diamants) r.diamants = base.diamants * (premierAchatDouble(id) ? 2 : 1);
   if (base.griffes) r.griffes = base.griffes;

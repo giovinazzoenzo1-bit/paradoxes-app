@@ -383,6 +383,7 @@ import { jouerSon, SON_CREATURE } from './sonsBoutique';
 import { useMusique } from './musique';
 import { finCombat, lireJournalCombats } from './journalCombat';
 import { noterGriffes } from './journalGriffes';
+import { noterMoment, DEFAITES_BLOQUE } from '../../games/clicker/offresMoments';
 import { FenetreJeu, BoutonBois } from '../../components/FenetreJeu';
 import {
   CREATURES,
@@ -1014,6 +1015,9 @@ export default function AdventureScreen({ ficheInitiale = null, onFermerFicheIni
     const moi = puissanceDuDeckAventure(deck, owned);
     if (moi >= FILET_SEUIL_ANTI_TRICHE * meilleurePuissancePossible(owned)) {
       setDefaitesDeSuite((d) => ({ ...d, [levelNumber]: (d[levelNumber] || 0) + 1 }));
+      // 💳 30/10 (moments des offres, choix de l'auteur) : à la 3e défaite de suite sur l'étape, le moment « bloqué » s'ouvre ;
+      // l'offre surgira sur l'écran principal, au 1er moment calme (offresMoments.js).
+      if ((defaitesDeSuite[levelNumber] || 0) + 1 === DEFAITES_BLOQUE) noterMoment('bloque', { etape: levelNumber });
     }
   };
   const messageGriffesRef = useRef(null);
