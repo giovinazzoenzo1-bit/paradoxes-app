@@ -16,8 +16,22 @@ import {
   TAP_UPGRADE_UNLOCK_LEVEL, TAP_UPGRADE_FIRST_PACTE_LEVEL, CORE_UNLOCKS,
   LEGENDAIRES, plafondLegendaire, prixLegendaire, chanceLegendaire, multiplicateurLegendaire,
   SANCTUAIRE_V2_PAR_NIVEAU, VEILLEUR_V2_PAR_NIVEAU,
+  COIN_SCALE,
 } from './clickerLogic.js';
 import { oeufDuDefiAscension } from './questLogic.js';
+
+// 💎 30/10 (demande de l'auteur) — UN DIAMANT EN PIÈCES : le taux UNIQUE du jeu, celui de la « Bourse de pièces » (10 💎 = 10 min
+// de revenu passif, 500 pièces au moins) → 1 💎 = 1 min de revenu passif (50 pièces au moins). Sert à la Bourse ET au complément
+// en Diamants quand les pièces manquent pour un achat du Grimoire (jamais deux taux : l'un serait toujours plus avantageux).
+export const PIECES_MIN_PAR_DIAMANT = 50 * COIN_SCALE;
+export function piecesParDiamant(passifParSec) { return Math.max(PIECES_MIN_PAR_DIAMANT, Math.round((Number(passifParSec) || 0) * 60)); }
+// Les Diamants pour couvrir ce qui MANQUE (arrondi au-dessus : au moins 1 dès qu'il manque une pièce).
+export function diamantsPourPieces(manque, passifParSec) { return manque > 0 ? Math.max(1, Math.ceil(manque / piecesParDiamant(passifParSec))) : 0; }
+// Ce qu'on peut compléter en Diamants : un élément payé en PIÈCES, trop cher (ni verrouillé, ni au max) ; jamais l'Ascension,
+// l'Offrande (payée en Diamants) ni les Griffes contre pièces (la boutique de Diamants les vend déjà à son propre prix).
+export function completableEnDiamants(n) {
+  return !!n && n.etat === 'cher' && n.devise !== 'diamants' && n.prix != null && !!n.onPress && n.id !== 'ascension' && n.id !== 'griffes' && n.id !== 'offrande';
+}
 import { reliquesParFamille, FAMILLES_RELIQUES, autoClicsParPalier, PALIERS_AUTO } from './boutiqueFamilles.js';
 
 // ── Le modèle : chaque élément avec son prix, son état, son GAIN, son achat ──

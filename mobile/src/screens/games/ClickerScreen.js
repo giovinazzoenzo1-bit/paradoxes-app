@@ -293,6 +293,7 @@ import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_
 import { chargerOffres, noterMoment, noterOeufEclos, offreAMontrer, noterOffreMontree, noterIssueOffre, compterSecondeActive, offreDuMoment,
   CALME_MINI_JEU_MS, PRESENCE_MOMENT_MS } from '../../games/clicker/offresMoments';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
+import { piecesParDiamant, diamantsPourPieces } from '../../games/clicker/boutiqueModele';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
 //
@@ -2537,13 +2538,26 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     setOffre(null);
     prochainMiniJeuRef.current = Math.max(prochainMiniJeuRef.current, Date.now() + CALME_MINI_JEU_MS);
   };
+  // 💎 30/10 (demande de l'auteur) : compléter en Diamants les pièces qui MANQUENT pour un achat du Grimoire, au taux unique
+  // (1 💎 = 1 min de revenu passif, comme la Bourse). `total` = prix de l'achat ; le manque est recalculé ICI, au moment de
+  // payer (les pièces n'ont pu que monter depuis la question : jamais plus de Diamants que ceux annoncés). Crédit DIRECT
+  // (comme la Bourse : `gainCoins` multiplierait) et coinsRef TOUT DE SUITE : l'achat qui suit (coutGroupe) le lit aussitôt.
+  const completerPiecesEnDiamants = async (total) => {
+    const manque = Math.max(0, Math.ceil(total - coinsRef.current));
+    if (!manque) return true;
+    const ok = await spendSharedCoins(diamantsPourPieces(manque, passiveIncomeRef.current));
+    if (!ok) return false;
+    coinsRef.current += manque;
+    setCoins((c) => c + manque);
+    return true;
+  };
   const buyWithDiamonds = async (offer) => {
     const ok = await spendSharedCoins(offer.cost);
     if (!ok) return null;
     if (offer.id === 'coins') {
       // Calé sur le revenu du joueur plutôt qu'un montant fixe : 1 000
       // pièces est énorme au début et dérisoire plus tard.
-      const amount = Math.max(500 * COIN_SCALE, Math.round(passiveIncomeRef.current * 600));
+      const amount = 10 * piecesParDiamant(passiveIncomeRef.current); // 30/10 : LE taux unique (boutiqueModele), 10 💎 = 10 min
       // ⚠️⚠️ CRÉDIT DIRECT, SANS PASSER PAR `gainCoins`.
       //
       // `gainCoins` applique tous les multiplicateurs globaux, dont le
@@ -4933,6 +4947,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           cibleDefi={cibleDefiAchat}
           coins={coins}
           sharedCoins={sharedCoins}
+          diamantsPourManque={(manque) => diamantsPourPieces(manque, passiveIncomeRef.current)}
+          onCompleterEnDiamants={completerPiecesEnDiamants}
           tapPower={tapPower}
           critLevel={critLevel}
           sanctuaryLevel={sanctuaryLevel}

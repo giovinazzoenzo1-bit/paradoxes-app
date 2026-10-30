@@ -6,7 +6,8 @@ import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanRes
 import { CHAPITRES_GRIMOIRE } from '../../games/clicker/grimoireChapitres';
 import { useSettings } from '../../context/SettingsContext';
 import { vibrerSucces, CRISTAL, CYAN_CHAMPIGNON } from './fenetreBois';
-import { construireNoeuds } from '../../games/clicker/boutiqueModele';
+import { construireNoeuds, completableEnDiamants } from '../../games/clicker/boutiqueModele';
+import { afficherDialogue } from '../../components/DialogueJeu';
 import { FicheElement } from './ficheElement';
 import BackButton from '../../components/BackButton';
 import { ICONES } from './grimoireIcones';
@@ -297,12 +298,19 @@ function Grimoire(props) {
   const effetAnim = useRef(new Animated.Value(0)).current;
   // rang 0 = 1er toucher (pas abordable → fiche) ; rang ≥ 1 = achat de rafale
   // (pas abordable → la rafale s'arrête, sans ouvrir de fiche). Renvoie true si acheté.
-  const acheterUne = (id, x, y, rang) => {
+  // `force` (30/10) : achat juste après un complément en Diamants — les pièces viennent d'être créditées (l'écran les lit dans
+  // coinsRef), le `ok` calculé sur le rendu d'avant serait faux.
+  const acheterUne = (id, x, y, rang, force = false) => {
     const n = frais.current[id];
     if (!n) return false;
     if (id === 'ascension' || !n.onPress) { if (!rang) setFicheId(id); return false; }
     const o = offreRef.current(n);
-    if (!o.ok) { if (!rang) setFicheId(id); return false; }
+    if (!o.ok && !force) {
+      // 💎 30/10 (demande de l'auteur) : pas assez de pièces → proposer de compléter EN DIAMANTS ce qui manque (1er toucher
+      // seulement ; une rafale qui tombe à court s'arrête sans rien demander). Sinon (verrouillé, max…) : la fiche, comme avant.
+      if (!rang) { if (completableEnDiamants(n) && props.onCompleterEnDiamants && o.total > pieces) proposerDiamants(id, o, x, y); else setFicheId(id); }
+      return false;
+    }
     // Le VRAI gain de cet achat, dans sa bonne unité (« +20/tap », « +3,5/s »),
     // calculé AVANT l'achat (l'état changera au rendu suivant) avec les
     // formules du jeu (conseilBoutique). Sans effet mesurable : « +q ».
@@ -329,6 +337,24 @@ function Grimoire(props) {
     return true;
   };
   const acheter = useCallback((id, x, y) => { acheterUne(id, x, y, 0); }, []);
+  // 💎 La question (30/10) : le manque en pièces, son prix en Diamants (taux unique, boutiqueModele), le solde du joueur.
+  const proposerDiamants = (id, o, x, y) => {
+    const manque = Math.ceil(o.total - pieces);
+    const n = props.diamantsPourManque ? props.diamantsPourManque(manque) : 0;
+    const solde = props.sharedCoins || 0;
+    if (!n) return;
+    if (solde < n) {
+      afficherDialogue('💎 Pas assez de pièces', `Il manque ${fmtRef.current(manque)} pièces, soit ${n} 💎 — tu en as ${solde}.`, [{ texte: 'OK', style: 'principal' }]);
+      return;
+    }
+    afficherDialogue('💎 Pas assez de pièces', `Il manque ${fmtRef.current(manque)} pièces. Les compléter avec ${n} 💎 ?`, [
+      { texte: 'Annuler', style: 'annuler' },
+      { texte: `Compléter · ${n} 💎`, style: 'principal', onPress: async () => {
+        const ok = await props.onCompleterEnDiamants(o.total);
+        if (ok) acheterUne(id, x, y, 0, true);
+      } },
+    ]);
+  };
   // ── Appui MAINTENU = achats en rafale : 1er achat au contact, puis, après
   // 0,38 s doigt posé, un achat toutes les 0,11 s jusqu'au relâcher (ou plus
   // assez). Chaque achat relit l'élément et l'offre FRAIS (refs).

@@ -4749,8 +4749,16 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   auditOffresMoments → « AVEUGLE ». RÈGLE : un piège se range sous le contrôle qui CONTIENT la vérification.
 - Banc : `offre&moment=…` affiche le contenu RÉEL (contenuReel), comme le jeu. 134 contrôles ; 360 pièges prouvés ; taps 20/20
   (normal et ?tuto=1) ; Exploration OK ; fin de combat OK.
-- ENSUITE (demande de l'auteur) : payer en Diamants ce qui MANQUE quand les pièces ne suffisent pas (Grimoire) ; taux = celui
-  de la « Bourse de pièces » (10 💎 = 10 min de revenu passif → 1 💎 = 1 min).
+- FAIT ENSUITE (même soir, publié) — COMPLÉTER EN DIAMANTS (demande de l'auteur : « si le joueur n'a pas assez de pièces, on lui
+  propose de payer en Diamants ») : dans le Grimoire, toucher le prix d'un élément trop cher (ou « Acheter » dans sa fiche)
+  → « Il manque X pièces. Les compléter avec N 💎 ? » ; on ne paie QUE le manque, au taux UNIQUE de la Bourse
+  (`boutiqueModele.piecesParDiamant` : 1 💎 = 1 min de revenu passif, 50 pièces au moins ; la Bourse l'utilise aussi : jamais
+  deux taux). Le manque est recalculé AU MOMENT DE PAYER (les pièces n'ont pu que monter : jamais plus que le prix annoncé) ;
+  crédit DIRECT + coinsRef tout de suite (l'achat qui suit lit coinsRef ; `gainCoins` multiplierait) ; achat « forcé » juste
+  après (le `ok` du rendu d'avant serait faux). Pas assez de Diamants → « tu en as M », rien d'autre. Jamais pour l'Offrande
+  (payée en Diamants), les Griffes contre pièces (la boutique de Diamants les vend à son prix) ni l'Ascension. Une rafale
+  (doigt maintenu) qui tombe à court s'arrête sans question. Contrôle auditCompleterDiamants + 5 pièges ; banc :
+  `grimoire&pieces=900` (touchée sur le prix du Pacte → la question s'affiche, HoteDialogue monté dans la scène).
 
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
@@ -4793,6 +4801,8 @@ Le sandbox repart à zéro à chaque conversation : rien de /home/claude ni de /
 5. Sabotages : timeout 285 node mobile/tools/verifier-controles.js A B en 5 passes : 0 71 · 71 106 · 106 142 · 142 190 · 190 <total> (235 au 17/10).
    30/10 : 353 pièges → 0 80 · 80 140 · 140 210 · 210 280 · 280 (fin) — 118 à 234 s chacune (la 1re est la plus lourde).
    30/10 (soir) : 360 pièges → 0 80 · 80 145 · 145 215 · 215 290 · 290 (fin) — 122 à 210 s chacune.
+   30/10 (nuit) : 365 pièges → 0 80 · 80 145 · 145 215 · 215 295 · 295 (fin) — 131 à 212 s chacune. ⚠️ Sonde des taps :
+   timeout 120 au moins (à 40 s elle est coupée après 3 zones sur 5 : faux « 3/5 » vu le 30/10).
    AVANT chaque passe : `pgrep -a -x node | grep -c verifier` = 0 et `git status --short` vide. UNE passe à la fois.
 6. Sonde des taps : mkdir -p /tmp/cap && cp mobile/tools/capture/package.json /tmp/cap/ && (cd /tmp/cap && npm i) ; puis
    cd mobile/tools/capture && ln -sfn /tmp/cap/node_modules node_modules && EMULE_TOUCHER=1 node build.mjs scenes/menu.jsx

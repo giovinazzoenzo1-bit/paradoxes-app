@@ -4878,6 +4878,32 @@ function auditOffresMoments() {
 }
 module.exports.auditOffresMoments = auditOffresMoments;
 
+// 💎 COMPLÉTER EN DIAMANTS (30/10, demande de l'auteur : « si le joueur n'a pas assez de pièces, on lui propose de payer en
+// Diamants ») : le MANQUE seulement, au taux UNIQUE de la Bourse (1 💎 = 1 min de revenu passif, 50 pièces au moins), recalculé
+// au moment de payer, crédit direct (jamais gainCoins) ; jamais l'Offrande, les Griffes contre pièces ni l'Ascension.
+function auditCompleterDiamants() {
+  const fs = require('fs'); const path = require('path');
+  const pb = [];
+  const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const B = load('boutiqueModele'), C = load('clickerLogic');
+  if (B.piecesParDiamant(0) !== 50 * C.COIN_SCALE || B.piecesParDiamant(10) !== 600 || B.piecesParDiamant(1000) !== 60000) pb.push('taux Diamant → pièces changé (1 💎 = 1 min de revenu passif, 50 au moins)');
+  if (B.diamantsPourPieces(0, 10) !== 0 || B.diamantsPourPieces(1, 0) !== 1 || B.diamantsPourPieces(600, 10) !== 1 || B.diamantsPourPieces(601, 10) !== 2) pb.push('Diamants pour un manque : arrondi faux (au-dessus, 1 au moins)');
+  const f = () => {};
+  const ok = (n) => B.completableEnDiamants({ id: 'pacte', etat: 'cher', prix: 100, onPress: f, ...n });
+  if (!ok({}) || ok({ etat: 'achetable' }) || ok({ etat: 'verrouille' }) || ok({ etat: 'max' })) pb.push('complément proposé au mauvais moment (seulement « trop cher »)');
+  if (ok({ id: 'offrande', devise: 'diamants' }) || ok({ devise: 'diamants' }) || ok({ id: 'griffes' }) || ok({ id: 'ascension' })) pb.push('complément proposé pour l\'Offrande, les Griffes contre pièces ou l\'Ascension');
+  const Cl = lire('src/screens/games/ClickerScreen.js'), G = lire('src/screens/games/GrimoireBoutique.js');
+  if (!Cl.includes('const amount = 10 * piecesParDiamant(passiveIncomeRef.current);')) pb.push('la Bourse de pièces a son propre taux (deux taux : l\'un serait toujours plus avantageux)');
+  const i = Cl.indexOf('const completerPiecesEnDiamants = async (total) => {'); const corps = i < 0 ? '' : Cl.slice(i, Cl.indexOf('\n  };', i));
+  if (!corps.includes('const manque = Math.max(0, Math.ceil(total - coinsRef.current));')) pb.push('le complément ne paie plus seulement ce qui MANQUE, au moment de payer');
+  if (!corps.includes('await spendSharedCoins(diamantsPourPieces(manque, passiveIncomeRef.current))') || !corps.includes('coinsRef.current += manque;') || !corps.includes('setCoins((c) => c + manque);') || /gainCoins/.test(corps)) pb.push('le complément ne dépense pas les Diamants ou ne crédite pas les pièces directement (gainCoins multiplierait)');
+  if (!Cl.includes('onCompleterEnDiamants={completerPiecesEnDiamants}') || !Cl.includes('diamantsPourManque={(manque) => diamantsPourPieces(manque, passiveIncomeRef.current)}')) pb.push('le Grimoire ne reçoit plus le complément en Diamants');
+  if (!G.includes('if (!rang) { if (completableEnDiamants(n) && props.onCompleterEnDiamants && o.total > pieces) proposerDiamants(id, o, x, y); else setFicheId(id); }')) pb.push('trop cher : le Grimoire ne propose plus de compléter en Diamants');
+  if (!G.includes('if (!o.ok && !force) {') || !G.includes('if (ok) acheterUne(id, x, y, 0, true);') || !G.includes('const ok = await props.onCompleterEnDiamants(o.total);')) pb.push('après le complément, l\'achat ne se fait pas (ok d\'avant le crédit)');
+  return pb;
+}
+module.exports.auditCompleterDiamants = auditCompleterDiamants;
+
 // 💳 AVANTAGE DES GRIFFES PAYÉES (22/10, règles de l'auteur) : pendant 3 combats par euro (5 min, 300 max), les Griffes
 // achetées restent HORS de la photo de la fenêtre (ennemis calés sur l'équipe « sans l'achat »), dépensées ou non ; retour
 // en douceur (½ puis tout). ⚠️ Sans achat (0), la photo est STRICTEMENT celle d'avant (prouvé sur 400 photos le 22/10).

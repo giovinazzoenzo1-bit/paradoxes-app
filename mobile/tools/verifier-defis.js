@@ -118,6 +118,7 @@ const CONTROLES = [
   ['auditImagesTailleExplicite', "images : jamais une <Image> en absoluteFill sans largeur/hauteur — taille d'origine sur téléphone (13/09, 03/10)"],
   ['auditAchats', "achats : catalogue, droits (Sans pubs, Doubleur, Pass, Pack), mode test, branchements (22/10)"],
   ['auditAvantageAchat', "avantage des Griffes payées : hors photo N combats (3/€), retour ½ puis tout, sans achat = photo identique (22/10)"],
+  ['auditCompleterDiamants', "Grimoire : trop cher → compléter en Diamants le manque seulement, au taux unique de la Bourse, crédit direct (30/10)"],
   ['auditOffresMoments', "offres qui surgissent : 1 par jour, priorités et moments de l'auteur, d'actualité ou effacés, minuterie seulement si l'offre expire, branchements (30/10)"],
   ['auditHooksAvantRetour', "composants : aucun hook après un retour anticipé (plantage de fin de combat du 21/10)"],
   ['auditTutoriel', "tutoriel : repère + une phrase + petite croix, une fois par joueur, jamais bloquant (aucun conteneur plein écran)"],
