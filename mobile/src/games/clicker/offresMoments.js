@@ -18,7 +18,7 @@
 //  🎁 demarrage : 1re victoire en Exploration → Pack de démarrage (s'ouvre UNE fois en tout ; attend tant qu'il est achetable)
 //  🌟 ascension : juste après une Ascension → Pack d'Ascension
 //  🐯 gardien   : défaite contre le Gardien → Pack du Gardien (tant qu'un Gardien bloque encore un œuf)
-//  🐾 bloque    : 3 défaites de suite sur une même étape → Griffes · 3 niveaux (tant que l'étape n'est pas gagnée) ;
+//  🐾 bloque    : 3 défaites de suite sur une même étape → Poignée de Griffes (tant que l'étape n'est pas gagnée) ;
 //                 l'offre surgit au retour sur l'écran principal
 //  🥚 oeufs     : tous les 3 œufs éclos → Pack de progression
 //  🚫 pubs      : 3e pub REGARDÉE dans la journée (écran de pub de 15 s : Tap ×2, poudre — FaussePub) → Sans pubs
@@ -60,13 +60,10 @@ export const ETAT_OFFRES_VIDE = {
   journal: [],         // 30 dernières offres montrées { m, id, a, issue } — données pour la suite
 };
 
-export function accrocheDuMoment(m, info) {
+// 30/10 (auteur : « ne mets pas "3 vidéos regardées aujourd'hui" ou ce genre de trucs ») : AUCUNE phrase sur ce que le joueur a
+// fait (pubs, œufs, défaites, Gardien, Ascension). Seulement ce qui décrit L'OFFRE : bienvenue (une fois) et affaire (minuit).
+export function accrocheDuMoment(m) {
   if (m === 'demarrage') return 'Offre de bienvenue · une seule fois';
-  if (m === 'ascension') return 'Nouvelle Ascension : repars fort';
-  if (m === 'gardien') return 'Le Gardien te résiste ?';
-  if (m === 'bloque') return `Bloqué à l'étape ${(info && info.etape) || '?'} ?`;
-  if (m === 'oeufs') return '3 œufs de plus : garde le rythme';
-  if (m === 'pubs') return "3 pubs regardées aujourd'hui";
   if (m === 'affaire') return 'Change à minuit';
   return '';
 }

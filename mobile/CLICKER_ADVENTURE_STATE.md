@@ -4726,6 +4726,32 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
 - PLUS TARD (avec les données) : offres DANS l'Exploration (énergie vide → Diamants ; ⚠️ un Modal sans
   `supportedOrientations` repasse en portrait sur iPhone) ; bonus exclusif à durée limitée (vraie urgence) ; RevenueCat.
 
+## 💎 30/10 (suite) — DIAMANTS CALÉS SUR LE GRATUIT, GRIFFES SANS « NIVEAUX », 🛠️ VISIBLE — PUBLIÉ
+
+- DEMANDE (auteur) : « les achats donnent beaucoup trop de Diamants, il faudrait bien les caler » (il estimait 21/jour au boss
+  + quelques-uns). MESURÉ avec les règles du jeu (auditAchats le refait à chaque contrôle) : AU PLUS ≈ 29 💎/jour (boss du tap
+  21 au plafond, calendrier 5, défi du jour 1, défis de la semaine 0,9, mini-jeux ≈ 1 par heure) ; ≈ 18 pour un joueur
+  moyen ; + 1 001 💎 de succès, une seule fois en tout.
+- RÈGLE : 0,99 € = UNE journée max de Diamants gratuits. Packs : 30 / 170 / 360 / 760 / 2 080 / 4 550 💎 (avant 80 / 450 /
+  950 / 2 000 / 5 500 / 12 000) ; bonus par euro inchangés (+12 … +50 %, le contrôle vérifie que chaque « +X % offerts » et
+  chaque titre disent vrai). Offres ÷ 2,67 : démarrage 160 💎 + 2 000 Griffes (ruban « ×6 de valeur » vérifié, Griffes au
+  prix de la boutique de Diamants), Ascension 150, Gardien 75, progression 55, affaire du jour 55 (ou 60 min de pièces + 20) ;
+  jamais plus de 2 fois le taux de base. « Premier achat ×2 » gardé. ⚠️ IDENTIFIANTS INCHANGÉS (ceux des stores) : le chiffre
+  de `diamants_80` n'est plus la quantité.
+- GRIFFES (auteur : « ne mets pas "N niveaux" ») : Poignée / Sac / Coffre / Trésor de Griffes ; le joueur voit la QUANTITÉ
+  réelle (contenuReel). Contrôle : aucun titre ni description de produit ne contient « niveau ».
+- PHRASES DES MOMENTS (auteur : « ne mets pas "3 vidéos regardées aujourd'hui" ou ce genre de trucs ») : plus RIEN sur ce que le
+  joueur a fait ; restent « Offre de bienvenue · une seule fois » et « Change à minuit » (ce que dit l'offre).
+- 🛠️ INTROUVABLE (auteur : « je ne vois pas l'outil de test des animations ») : CAUSE = un 🛠️ gris sur un rond sombre, sur la
+  forêt sombre — invisible. Bouton doré 40 × 40 cerclé de blanc (même place, sous l'incubateur) ; « 🎬 Animations d'achat
+  (test) » EN HAUT du menu.
+- PIÈGE AVEUGLE (corrigé avant publication) : le piège du 🛠️ était rangé sous auditAchats alors que la vérification vit dans
+  auditOffresMoments → « AVEUGLE ». RÈGLE : un piège se range sous le contrôle qui CONTIENT la vérification.
+- Banc : `offre&moment=…` affiche le contenu RÉEL (contenuReel), comme le jeu. 134 contrôles ; 360 pièges prouvés ; taps 20/20
+  (normal et ?tuto=1) ; Exploration OK ; fin de combat OK.
+- ENSUITE (demande de l'auteur) : payer en Diamants ce qui MANQUE quand les pièces ne suffisent pas (Grimoire) ; taux = celui
+  de la « Bourse de pièces » (10 💎 = 10 min de revenu passif → 1 💎 = 1 min).
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :
@@ -4766,6 +4792,7 @@ Le sandbox repart à zéro à chaque conversation : rien de /home/claude ni de /
 4. Suite : timeout 295 node mobile/tools/verifier-defis.js → « RIEN DE CASSÉ » (110 contrôles au 16/10 ; 134 au 30/10, ~45 s).
 5. Sabotages : timeout 285 node mobile/tools/verifier-controles.js A B en 5 passes : 0 71 · 71 106 · 106 142 · 142 190 · 190 <total> (235 au 17/10).
    30/10 : 353 pièges → 0 80 · 80 140 · 140 210 · 210 280 · 280 (fin) — 118 à 234 s chacune (la 1re est la plus lourde).
+   30/10 (soir) : 360 pièges → 0 80 · 80 145 · 145 215 · 215 290 · 290 (fin) — 122 à 210 s chacune.
    AVANT chaque passe : `pgrep -a -x node | grep -c verifier` = 0 et `git status --short` vide. UNE passe à la fois.
 6. Sonde des taps : mkdir -p /tmp/cap && cp mobile/tools/capture/package.json /tmp/cap/ && (cd /tmp/cap && npm i) ; puis
    cd mobile/tools/capture && ln -sfn /tmp/cap/node_modules node_modules && EMULE_TOUCHER=1 node build.mjs scenes/menu.jsx

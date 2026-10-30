@@ -4682,6 +4682,7 @@ module.exports.auditHooksAvantRetour = auditHooksAvantRetour;
 function auditAchats() {
   const fs = require('fs'); const path = require('path');
   const pb = [];
+  const prixEuros = (p) => parseFloat(String(p.prix).replace(',', '.'));
   const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   const code = babel.transformSync(lire('src/games/clicker/achats.js'), { presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]], filename: 'achats.js' }).code;
   const M = { exports: {} };
@@ -4712,7 +4713,34 @@ function auditAchats() {
   const g10 = a.contenuReel('griffes_18', { creature: cr, niveau: 10, passifParSec: 100 }).griffes, g40 = a.contenuReel('griffes_18', { creature: cr, niveau: 40, passifParSec: 100 }).griffes;
   if (!(g40 > g10) || g10 !== a.griffesPourNiveaux({ creature: cr, niveau: 10 }, 18)) pb.push('packs de Griffes : plus en niveaux de la meilleure créature');
   if (a.contenuReel('pack_progression', { creature: cr, niveau: 10, passifParSec: 100 }).pieces !== 100 * 60 * 60) pb.push('pack de progression : plus 1 h de revenu passif en pièces');
-  if (a.contenuReel('diamants_80', null).diamants !== 160 || a.contenuReel('diamants_950', null).diamants !== 1900) pb.push('premier achat de Diamants : plus doublé');
+  if (a.contenuReel('diamants_80', null).diamants !== 60 || a.contenuReel('diamants_950', null).diamants !== 720) pb.push('premier achat de Diamants : plus doublé');
+  // 💎 30/10 (auteur : « les achats donnent beaucoup trop de Diamants ») : 0,99 € = UNE journée MAX de Diamants gratuits, mesurée
+  // ICI avec les règles du jeu (boss du tap au plafond, défi du jour, défis de la semaine, calendrier, 1 h de mini-jeux).
+  const Dq = load('dailyLogic'), Tb = load('tapBossLogic'), Mj = load('miniJeux');
+  const jk = (k) => Dq.todayKey(new Date(2026, 9, 1 + k));
+  let dq = 0; for (let k = 0; k < 364; k++) dq += Dq.pickDailyQuests(jk(k)).reduce((t, id) => t + ((Dq.questDef(id) || {}).diamonds || 0), 0);
+  let dh = 0; for (let s = 0; s < 52; s++) dh += Dq.pickWeeklyQuests(Dq.weekKey(new Date(2026, 9, 1 + 7 * s))).reduce((t, id) => t + ((Dq.weeklyQuestDef(id) || {}).diamonds || 0), 0);
+  const cal = Dq.DAILY_CALENDAR.filter((c) => c.type === 'appCoins').reduce((t, c) => t + c.amount, 0);
+  const maxJour = Tb.TAP_BOSS_DAILY_DIAMOND_CAP + dq / 364 + dh / 52 / 7 + cal / 7 + 6 * Mj.MINI_JEU_TIRAGE.diamants * Mj.MINI_JEU_DIAMANTS;
+  const base = a.produit('diamants_80');
+  if (!(base.contenu.diamants >= 0.85 * maxJour && base.contenu.diamants <= 1.15 * maxJour)) pb.push('0,99 € ne vaut plus une journée max de Diamants gratuits : ' + base.contenu.diamants + ' 💎 pour ' + maxJour.toFixed(1) + ' 💎 gratuits par jour au plus');
+  const tauxBase = base.contenu.diamants / prixEuros(base);
+  for (const p of a.PRODUITS.filter((q) => q.famille === 'diamants')) {
+    const n = p.contenu.diamants;
+    if (p.titre !== n.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ') + ' Diamants') pb.push(p.id + ' : le titre « ' + p.titre + ' » ne dit pas ce qu\'il donne (' + n + ' 💎)');
+    const m = /^\+(\d+) % offerts$/.exec(p.desc);
+    if (m && Math.abs(Math.round(100 * (n / prixEuros(p) / tauxBase - 1)) - Number(m[1])) > 1) pb.push(p.id + ' : annonce « ' + p.desc + ' » mais donne ' + Math.round(100 * (n / prixEuros(p) / tauxBase - 1)) + ' % de plus par euro');
+  }
+  // Les offres suivent le même calage (÷ 2,67 le 30/10) : jamais plus de 2 fois le taux de base en Diamants par euro (l'affaire
+  // du jour en est la meilleure : ≈ 1,8) ; le pack de démarrage, lui, doit dire VRAI sur son ruban « ×6 de valeur » (Griffes
+  // comptées au prix de la boutique de Diamants : 250 Griffes = 25 💎).
+  for (const p of a.PRODUITS.filter((q) => q.famille === 'offres')) {
+    for (const v of (p.variantes || [p.contenu || {}])) if ((v.diamants || 0) / prixEuros(p) > 2 * tauxBase) pb.push(p.id + ' : ' + v.diamants + ' 💎 pour ' + p.prix + ' (plus de 2 fois le taux de base)');
+  }
+  const dem = a.produit('pack_demarrage'); const valeurDem = (dem.contenu.diamants + dem.contenu.griffes * 25 / 250) / (prixEuros(dem) * tauxBase);
+  if (!(valeurDem >= 5 && valeurDem <= 7) || dem.badge !== '×6 de valeur') pb.push('pack de démarrage : vaut ×' + valeurDem.toFixed(1) + ' le taux de base, le ruban dit « ' + dem.badge + ' »');
+  // 30/10 (auteur) : jamais « N niveaux » affiché pour des Griffes.
+  for (const p of a.PRODUITS) if (/niveaux?/i.test(p.titre + ' ' + (p.desc || ''))) pb.push(p.id + ' : affiche des « niveaux » (« ' + p.titre + ' · ' + p.desc + ' »)');
   // Une seule fois EN TOUT (précision de l'auteur, 22/10) : après n'importe quel pack de Diamants, plus aucun ×2.
   if (!/return !Object\.keys\(etat\.premiersAchats \|\| \{\}\)\.some\(\(k\) => \{ const q = produit\(k\); return q && q\.famille === 'diamants'; \}\);/.test(lire('src/games/clicker/achats.js'))) pb.push('le ×2 du premier achat redevient « par pack » au lieu d\'une seule fois en tout');
   const ej = a.appliquerDroits({ journal: [] }, 'affaire_jour', 1e12); if (ej.affaireJour !== a.jourCle(1e12)) pb.push('affaire du jour : rachetable le même jour');
@@ -4730,7 +4758,7 @@ function auditAchats() {
   const S = lire('src/screens/games/DiamondShop.js');
   if (!S.includes("Mode test : aucun paiement réel") || !S.includes('disabled={!ok || busy === p.id}')) pb.push('boutique : plus de bandeau « mode test » ou un « une seule fois » rachetable');
   // 22/10 (auteur : « des animations ») : la fête après un achat (boutique ET offre qui surgit), l'offre qui surgit testable (🛠️).
-  if (!S.includes('{fete && <FeteAchat key={fete.id}') || !Cl.includes('{fete && <FeteAchat key={fete.id}') || !Cl.includes('💳 Offre qui surgit (test)') || !Cl.includes('<OffreSurgissante produit={p}')) pb.push('animations des achats débranchées (fête ou offre qui surgit)');
+  if (!S.includes('{fete && <FeteAchat key={fete.id}') || !Cl.includes('{fete && <FeteAchat key={fete.id}') || !Cl.includes("🎬 Animations d'achat (test)") || !Cl.includes('<OffreSurgissante produit={p}')) pb.push('animations des achats débranchées (fête ou offre qui surgit)');
   // 22/10 : chaque produit a son image Gemini (fichier présent), affichée dans une vue sans doigt.
   const Im = lire('src/components/imagesAchats.js');
   for (const p of a.PRODUITS) {
@@ -4786,7 +4814,12 @@ function auditOffresMoments() {
   const g = O.noterMomentPur(vide(), 'gardien', null, t0);
   if (O.choisirOffre(g, { ...ctx, gardienBloque: false }, t0) || !O.choisirOffre(g, ctx, t0)) pb.push('Pack du Gardien : montré sans Gardien qui bloque (ou jamais)');
   const b = O.noterMomentPur(vide(), 'bloque', { etape: 23 }, t0);
-  if (O.choisirOffre(b, { ...ctx, etapeGagnee: (n) => n <= 23 }, t0) || (O.choisirOffre(b, ctx, t0) || {}).accroche !== 'Bloqué à l\'étape 23 ?') pb.push('offre « bloqué » : montrée pour une étape déjà gagnée, ou sans son étape');
+  if (O.choisirOffre(b, { ...ctx, etapeGagnee: (n) => n <= 23 }, t0) || (O.choisirOffre(b, ctx, t0) || {}).moment !== 'bloque') pb.push('offre « bloqué » : montrée pour une étape déjà gagnée, ou jamais');
+  // 30/10 (auteur) : AUCUNE phrase sur ce que le joueur a fait — seulement bienvenue et affaire du jour (ce que dit l'offre).
+  for (const m of [...O.PRIORITE, 'affaire']) {
+    const voulu = m === 'demarrage' ? 'Offre de bienvenue · une seule fois' : m === 'affaire' ? 'Change à minuit' : '';
+    if (O.accrocheDuMoment(m, { etape: 23, pubs: 3, oeufs: 3 }) !== voulu) pb.push('phrase du moment « ' + m + ' » : « ' + O.accrocheDuMoment(m, { etape: 23 }) + ' » (l\'auteur : rien sur ce que le joueur a fait)');
+  }
   if (O.choisirOffre(g, { ...ctx, achetable: () => false }, t0)) pb.push('une offre non achetable est montrée');
   // 🎁 une seule fois en tout, et il attend (pas d'expiration) tant qu'il est achetable.
   const d = O.noterMomentPur(vide(), 'demarrage', null, t0);
@@ -4800,7 +4833,7 @@ function auditOffresMoments() {
   let pu = vide(); pu = O.noterPubPur(O.noterPubPur(pu, t0), t0 + 60e3);
   if (pu.attente.pubs) pb.push('Sans pubs : avant la 3e pub du jour');
   pu = O.noterPubPur(pu, t0 + 120e3);
-  if (!pu.attente.pubs || (O.choisirOffre(pu, ctx, t0 + 130e3) || {}).accroche !== "3 pubs regardées aujourd'hui") pb.push('Sans pubs : pas à la 3e pub du jour (ou sans sa phrase)');
+  if (!pu.attente.pubs || (O.choisirOffre(pu, ctx, t0 + 130e3) || {}).moment !== 'pubs') pb.push('Sans pubs : pas à la 3e pub du jour');
   if (O.choisirOffre(pu, { ...ctx, achetable: (id) => id !== 'sans_pubs' }, t0 + 130e3)) pb.push('Sans pubs proposé à qui le possède déjà');
   let pv = O.noterPubPur(O.noterPubPur(vide(), t0), t0 + 60e3); pv = O.noterPubPur(pv, t0 + J);
   if (pv.attente.pubs || pv.pubsDuJour !== 1) pb.push('pubs : le compteur du jour n\'est pas remis à zéro le lendemain');
@@ -4837,6 +4870,9 @@ function auditOffresMoments() {
   if (!Av.includes("if ((defaitesDeSuite[levelNumber] || 0) + 1 === DEFAITES_BLOQUE) noterMoment('bloque', { etape: levelNumber });")) pb.push('Exploration : 3 défaites de suite ne sont plus notées (offre « bloqué »)');
   const Fp = lire('src/components/FaussePub.js');
   if (!Fp.includes('onPress={() => { if (fini && onFin) { noterPubVue(); onFin(); } }}') || (Fp.match(/noterPubVue\(\)/g) || []).length !== 1) pb.push('pubs : la pub regardée jusqu\'au bout n\'est plus comptée (ou comptée ailleurs : Sans pubs saute la pub)');
+  if (!Cl.includes("width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f2c94c', borderWidth: 2, borderColor: '#ffffff',")) pb.push('le bouton 🛠️ redevient sombre (l\'auteur ne le voyait pas)');
+  const iMenu = Cl.indexOf('<Text style={styles.devMenuTitre}>'), iAnim = Cl.indexOf("🎬 Animations d'achat (test)"), iListe = Cl.indexOf('<ScrollView style={styles.devMenuListe}>');
+  if (!(iMenu > 0 && iAnim > iMenu && iAnim < iListe)) pb.push('le test des animations n\'est plus EN HAUT du menu 🛠️ (avant la liste des mini-jeux)');
   if (!Os.includes("accroche = '', onAcheter, onFermer }) {") || !Os.includes('{accroche ? <Text style={styles.accroche}>{accroche}</Text> : null}')) pb.push('la fenêtre de l\'offre n\'affiche plus la phrase du moment');
   return pb;
 }

@@ -4992,7 +4992,17 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       {menuDevOuvert && (
         <View style={styles.devMenu}>
           <Text style={styles.devMenuTitre}>🛠️ Menu développeur (à retirer)</Text>
-          <Text style={styles.devMenuNote}>Le mini-jeu démarre 3 s après le choix.</Text>
+          {/* 💳 30/10 (auteur : « je ne vois pas l'outil de test des animations ») : EN HAUT du menu, sous son nom. Chaque MOMENT tel
+              qu'un joueur le verrait (sans prendre le jour) ; « Acheter » (mode test) joue la fête de l'achat. */}
+          <TouchableOpacity style={[styles.devMenuLigne, styles.devMenuLigneAnim]} onPress={() => {
+            const moments = ['demarrage', 'ascension', 'gardien', 'bloque', 'oeufs', 'pubs', 'affaire'];
+            const m = moments[offreTestIndexRef.current++ % moments.length];
+            setMenuDevOuvert(false);
+            setOffre({ ...offreDuMoment(m, m === 'bloque' ? { etape: 23 } : null, Date.now()), test: true });
+          }}>
+            <Text style={styles.devMenuLigneTexte}>🎬 Animations d'achat (test)</Text>
+          </TouchableOpacity>
+          <Text style={styles.devMenuNote}>Mini-jeux : il démarre 3 s après le choix.</Text>
           {/* Demande de l'auteur : on ne voyait pas le bas du menu → plus haut, et la liste défile si elle dépasse. */}
           <ScrollView style={styles.devMenuListe}>
             {MINI_JEUX.map((j) => (
@@ -5001,15 +5011,6 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          {/* 💳 Tester l'offre qui surgit : chaque MOMENT de l'auteur (30/10) tel qu'un joueur le verrait (sans prendre le jour). */}
-          <TouchableOpacity style={styles.devMenuLigne} onPress={() => {
-            const moments = ['demarrage', 'ascension', 'gardien', 'bloque', 'oeufs', 'pubs', 'affaire'];
-            const m = moments[offreTestIndexRef.current++ % moments.length];
-            setMenuDevOuvert(false);
-            setOffre({ ...offreDuMoment(m, m === 'bloque' ? { etape: 23 } : null, Date.now()), test: true });
-          }}>
-            <Text style={styles.devMenuLigneTexte}>💳 Offre qui surgit (test)</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={styles.devMenuLigne} onPress={() => setMenuDevOuvert(false)}>
             <Text style={styles.devMenuLigneTexte}>Fermer</Text>
           </TouchableOpacity>
@@ -7247,9 +7248,10 @@ const styles = StyleSheet.create({
   // ⚠️ Menu développeur (À RETIRER) : petit bouton sous l'incubateur, fenêtre volontairement simple.
   devMenuBtn: {
     position: 'absolute', left: SCREEN_W * 0.015 + 15, top: SCREEN_H * (0.334 - TOP_BLOCK_SHIFT) + 210, zIndex: 3,
-    width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)',
+    // 30/10 : bien visible (l'auteur ne le trouvait pas : 🛠️ gris sur rond sombre, sur la forêt sombre) — doré, cerclé de blanc.
+    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f2c94c', borderWidth: 2, borderColor: '#ffffff',
   },
-  devMenuBtnTexte: { fontSize: 16 },
+  devMenuBtnTexte: { fontSize: 20 },
   devMenu: {
     position: 'absolute', left: 30, right: 30, top: SCREEN_H * 0.07, maxHeight: SCREEN_H * 0.82, zIndex: 50, padding: 16, borderRadius: 12,
     backgroundColor: 'rgba(20,16,32,0.96)', borderWidth: 1, borderColor: '#888',
@@ -7259,6 +7261,7 @@ const styles = StyleSheet.create({
   devMenuListe: { maxHeight: SCREEN_H * 0.62 },
   devMenuLigne: { paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 6 },
   devMenuLigneTexte: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  devMenuLigneAnim: { backgroundColor: 'rgba(242,201,76,0.28)', borderWidth: 1, borderColor: '#f2c94c', marginBottom: 8 },
   incubatorBtn: {
     position: 'absolute', left: SCREEN_W * 0.015, top: SCREEN_H * (0.334 - TOP_BLOCK_SHIFT) + 144, zIndex: 3,
     width: 62, height: 62,

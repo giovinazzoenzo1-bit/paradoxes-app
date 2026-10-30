@@ -19,9 +19,16 @@ export const PASS_JOURS = 30;
 export const PASS_MULT_DEFIS = 2;
 export const DOUBLEUR_MULT = 2;
 
+// 💎 30/10 — DIAMANTS CALÉS SUR LE GRATUIT (demande de l'auteur : « les achats donnent beaucoup trop de Diamants »).
+// MESURÉ avec les règles du jeu (auditAchats le recalcule) : un joueur gagne AU PLUS ≈ 29 💎 par jour (boss du tap 21 au
+// plafond, calendrier 5, défi du jour 1, défis de la semaine 0,9, mini-jeux ≈ 1 par heure) ; ≈ 18 💎 pour un joueur moyen ;
+// + 1 001 💎 de succès, une fois en tout. RÈGLE : 0,99 € = UNE journée max de Diamants gratuits (30 💎) ; les gros packs
+// gardent leur bonus (+12 % … +50 % par euro). Tout a été divisé par ≈ 2,67 (80 → 30 💎 ; packs et affaire du jour idem).
+// ⚠️ Les IDENTIFIANTS ne bougent pas (ce seront ceux des stores) : le chiffre de `diamants_80` n'est plus la quantité.
+// 30/10 (auteur) : jamais « N niveaux » affiché pour des Griffes — le joueur voit la QUANTITÉ réelle (contenuReel).
 export const PRODUITS = [
   { id: 'pack_demarrage', famille: 'bienvenue', unique: true, prix: '1,99 €', icone: '🎁', titre: 'Pack de démarrage',
-    desc: '500 Diamants + 2 000 Griffes · une seule fois', contenu: { diamants: 500, griffes: 2000 }, badge: '×6 de valeur' },
+    desc: '160 Diamants + 2 000 Griffes · une seule fois', contenu: { diamants: 160, griffes: 2000 }, badge: '×6 de valeur' },
   { id: 'sans_pubs', famille: 'avantage', unique: true, prix: '4,99 €', icone: '🚫', titre: 'Sans pubs',
     desc: 'Tous les bonus des pubs, sans les regarder', droit: 'sansPubs' },
   { id: 'doubleur', famille: 'avantage', unique: true, prix: '7,99 €', icone: '🪙', titre: 'Pièces ×2',
@@ -33,23 +40,23 @@ export const PRODUITS = [
   // meilleure créature à partir de son niveau actuel (même unité que les défis) ; `minutesPieces` = N minutes de ton revenu
   // passif (crédité DIRECT, jamais via gainCoins : il ne doit pas être re-multiplié — règle du 19/09).
   { id: 'pack_progression', famille: 'offres', prix: '2,99 €', icone: '🥚', titre: 'Pack de progression',
-    desc: 'Tous les 3 œufs · Griffes de 12 niveaux + 150 💎 + 1 h de pièces', contenu: { niveaux: 12, diamants: 150, minutesPieces: 60 } },
+    desc: 'Tous les 3 œufs · Griffes + 55 💎 + 1 h de pièces', contenu: { niveaux: 12, diamants: 55, minutesPieces: 60 } },
   { id: 'pack_ascension', famille: 'offres', prix: '4,99 €', icone: '🌟', titre: "Pack d'Ascension",
-    desc: 'Après chaque Ascension · Griffes de 25 niveaux + 400 💎 + 4 h de pièces', contenu: { niveaux: 25, diamants: 400, minutesPieces: 240 }, badge: 'Repars fort' },
+    desc: 'Après chaque Ascension · Griffes + 150 💎 + 4 h de pièces', contenu: { niveaux: 25, diamants: 150, minutesPieces: 240 }, badge: 'Repars fort' },
   { id: 'pack_gardien', famille: 'offres', prix: '2,99 €', icone: '🐯', titre: 'Pack du Gardien',
-    desc: 'Pour battre le Gardien · Griffes de 10 niveaux + 200 💎', contenu: { niveaux: 10, diamants: 200 } },
+    desc: 'Pour battre le Gardien · Griffes + 75 💎', contenu: { niveaux: 10, diamants: 75 } },
   { id: 'affaire_jour', famille: 'offres', prix: '0,99 €', icone: '⏰', titre: 'Affaire du jour', unParJour: true,
-    desc: 'Change chaque jour · une fois par jour', variantes: [{ diamants: 150 }, { niveaux: 6 }, { minutesPieces: 60, diamants: 50 }] },
-  { id: 'griffes_3', famille: 'griffes', prix: '0,99 €', icone: '🐾', titre: 'Griffes · 3 niveaux', desc: '3 niveaux de ta meilleure créature', contenu: { niveaux: 3 } },
-  { id: 'griffes_18', famille: 'griffes', prix: '4,99 €', icone: '🐾', titre: 'Griffes · 18 niveaux', desc: '18 niveaux de ta meilleure créature', contenu: { niveaux: 18 } },
-  { id: 'griffes_40', famille: 'griffes', prix: '9,99 €', icone: '🐾', titre: 'Griffes · 40 niveaux', desc: '40 niveaux de ta meilleure créature', contenu: { niveaux: 40 }, badge: 'Populaire' },
-  { id: 'griffes_90', famille: 'griffes', prix: '19,99 €', icone: '🐾', titre: 'Griffes · 90 niveaux', desc: '90 niveaux de ta meilleure créature', contenu: { niveaux: 90 }, badge: 'Meilleure valeur' },
-  { id: 'diamants_80', famille: 'diamants', prix: '0,99 €', icone: '💎', titre: '80 Diamants', desc: 'Une poignée', contenu: { diamants: 80 } },
-  { id: 'diamants_450', famille: 'diamants', prix: '4,99 €', icone: '💎', titre: '450 Diamants', desc: '+12 % offerts', contenu: { diamants: 450 } },
-  { id: 'diamants_950', famille: 'diamants', prix: '9,99 €', icone: '💎', titre: '950 Diamants', desc: '+19 % offerts', contenu: { diamants: 950 }, badge: 'Populaire' },
-  { id: 'diamants_2000', famille: 'diamants', prix: '19,99 €', icone: '💎', titre: '2 000 Diamants', desc: '+25 % offerts', contenu: { diamants: 2000 } },
-  { id: 'diamants_5500', famille: 'diamants', prix: '49,99 €', icone: '💎', titre: '5 500 Diamants', desc: '+37 % offerts', contenu: { diamants: 5500 } },
-  { id: 'diamants_12000', famille: 'diamants', prix: '99,99 €', icone: '💎', titre: '12 000 Diamants', desc: '+50 % offerts', contenu: { diamants: 12000 }, badge: 'Meilleure valeur' },
+    desc: 'Change chaque jour · une fois par jour', variantes: [{ diamants: 55 }, { niveaux: 6 }, { minutesPieces: 60, diamants: 20 }] },
+  { id: 'griffes_3', famille: 'griffes', prix: '0,99 €', icone: '🐾', titre: 'Poignée de Griffes', desc: 'Des Griffes pour ta meilleure créature', contenu: { niveaux: 3 } },
+  { id: 'griffes_18', famille: 'griffes', prix: '4,99 €', icone: '🐾', titre: 'Sac de Griffes', desc: 'Des Griffes pour ta meilleure créature', contenu: { niveaux: 18 } },
+  { id: 'griffes_40', famille: 'griffes', prix: '9,99 €', icone: '🐾', titre: 'Coffre de Griffes', desc: 'Des Griffes pour ta meilleure créature', contenu: { niveaux: 40 }, badge: 'Populaire' },
+  { id: 'griffes_90', famille: 'griffes', prix: '19,99 €', icone: '🐾', titre: 'Trésor de Griffes', desc: 'Des Griffes pour ta meilleure créature', contenu: { niveaux: 90 }, badge: 'Meilleure valeur' },
+  { id: 'diamants_80', famille: 'diamants', prix: '0,99 €', icone: '💎', titre: '30 Diamants', desc: 'Une poignée', contenu: { diamants: 30 } },
+  { id: 'diamants_450', famille: 'diamants', prix: '4,99 €', icone: '💎', titre: '170 Diamants', desc: '+12 % offerts', contenu: { diamants: 170 } },
+  { id: 'diamants_950', famille: 'diamants', prix: '9,99 €', icone: '💎', titre: '360 Diamants', desc: '+19 % offerts', contenu: { diamants: 360 }, badge: 'Populaire' },
+  { id: 'diamants_2000', famille: 'diamants', prix: '19,99 €', icone: '💎', titre: '760 Diamants', desc: '+25 % offerts', contenu: { diamants: 760 } },
+  { id: 'diamants_5500', famille: 'diamants', prix: '49,99 €', icone: '💎', titre: '2 080 Diamants', desc: '+37 % offerts', contenu: { diamants: 2080 } },
+  { id: 'diamants_12000', famille: 'diamants', prix: '99,99 €', icone: '💎', titre: '4 550 Diamants', desc: '+50 % offerts', contenu: { diamants: 4550 }, badge: 'Meilleure valeur' },
 ];
 export function produit(id) { return PRODUITS.find((p) => p.id === id) || null; }
 
