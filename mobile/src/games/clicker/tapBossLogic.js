@@ -8,7 +8,10 @@
 
 export const TAP_BOSS_STORAGE_KEY = 'clicker:tapBoss:v1';
 
-export const TAP_BOSS_TAPS_REQUIRED = 200;
+// 31/10 (auteur : « trop facile pour les gains de Diamants ») : 250 PV au lieu de 200, SANS toucher au temps ni aux gains.
+// MESURÉ : à 7 taps/s (joueur de référence) 35,7 s → 2 💎 au lieu de 3 ; à 9 taps/s 27,8 s → 3 💎 ; il faut 4,2 taps/s au
+// moins pour le battre en 60 s (à 4 taps/s : raté, 0 💎 — avant 1 💎) ; 8,4 taps/s pour les 3 💎.
+export const TAP_BOSS_TAPS_REQUIRED = 250;
 export const TAP_BOSS_TIME_LIMIT_MS = 60 * 1000;
 
 // Apparition : mesurée en JEU ACTIF (pas en temps réel — sinon le boss

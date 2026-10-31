@@ -2454,7 +2454,7 @@ function simulerGroupe(ascension, tapsParSec, options) {
   const s = etatInitial();
   s.ascension = a;
   s.tapPower = 1;
-  s.coins = 0;
+  s.coins = (options && options.piecesDepart) || 0; // 31/10 : pièces offertes au départ (mesure du Pack d'Ascension) ; 0 par défaut
   s.totalEarned = 0;
   // v2.3 : reprise d'un état photographié à l'apparition d'un défi (recherche de sa cible).
   if (J && options.depart) Object.assign(s, JSON.parse(JSON.stringify(options.depart.s)));
@@ -4745,7 +4745,7 @@ function auditAchats() {
   if (!/return !Object\.keys\(etat\.premiersAchats \|\| \{\}\)\.some\(\(k\) => \{ const q = produit\(k\); return q && q\.famille === 'diamants'; \}\);/.test(lire('src/games/clicker/achats.js'))) pb.push('le ×2 du premier achat redevient « par pack » au lieu d\'une seule fois en tout');
   const ej = a.appliquerDroits({ journal: [] }, 'affaire_jour', 1e12); if (ej.affaireJour !== a.jourCle(1e12)) pb.push('affaire du jour : rachetable le même jour');
   const Cl0 = lire('src/screens/games/ClickerScreen.js');
-  if (!Cl0.includes('const c = contenuReel(id, ctxAchats());\n    const r = await acheterAchat(id);') || !Cl0.includes('if (c.pieces) pendingGainRef.current += c.pieces;')) pb.push('le contenu n\'est plus calculé AVANT l\'achat (×2 de la 1re fois perdu) ou les pièces ne sont plus créditées en direct');
+  if (!Cl0.includes('const c = contenuReel(id, ctxAchats());\n    const r = await acheterAchat(id);') || !Cl0.includes('if (c.pieces) { pendingGainRef.current += c.pieces; protegerPieces(c.pieces); }')) pb.push('le contenu n\'est plus calculé AVANT l\'achat (×2 de la 1re fois perdu) ou les pièces ne sont plus créditées en direct');
   // Branchements.
   const Cl = lire('src/screens/games/ClickerScreen.js');
   if (!Cl.includes('const amount = rawAmount * multiplier * multiplicateurPieces();')) pb.push('le Doubleur ne s\'applique plus au point unique des gains de pièces');
@@ -4877,6 +4877,69 @@ function auditOffresMoments() {
   return pb;
 }
 module.exports.auditOffresMoments = auditOffresMoments;
+
+// 👹 MINI-BOSS (31/10, auteur : « augmente à 250 PV sans toucher au temps/gains ») : 250 PV ; 60 s ; 3/2/1 💎 à 30/45/60 s ;
+// plafond 21 💎/jour ; 2 par heure ; 2 min puis 20 min de jeu actif entre deux apparitions.
+function auditMiniBoss() {
+  const pb = [];
+  const T = load('tapBossLogic');
+  if (T.TAP_BOSS_TAPS_REQUIRED !== 250) pb.push('mini-boss : ' + T.TAP_BOSS_TAPS_REQUIRED + ' PV (l\'auteur : 250)');
+  if (T.TAP_BOSS_TIME_LIMIT_MS !== 60000 || JSON.stringify(T.TAP_BOSS_TIERS) !== JSON.stringify([{ maxMs: 30000, diamonds: 3 }, { maxMs: 45000, diamonds: 2 }, { maxMs: 60000, diamonds: 1 }])) pb.push('mini-boss : temps ou gains changés (l\'auteur : ne pas y toucher)');
+  if (T.TAP_BOSS_DAILY_DIAMOND_CAP !== 21 || T.TAP_BOSS_MAX_PER_HOUR !== 2 || T.TAP_BOSS_FIRST_GAP_MS !== 120000 || T.TAP_BOSS_NEXT_GAP_MS !== 1200000) pb.push('mini-boss : plafond ou apparitions changés');
+  return pb;
+}
+module.exports.auditMiniBoss = auditMiniBoss;
+
+// 💎 BONUS DU MOMENT (31/10, demande de l'auteur) : boutique de Diamants → « Tap ×2 · 5 min » (20 💎) et « Grimoire −20 % ·
+// 5 min » (20 💎) ; ils PROLONGENT un bonus en cours ; la remise vaut pour CHAQUE niveau acheté (×1, ×10, MAX), affichée =
+// payée (même fonction, même ordre) ; les deux survivent à la fermeture de l'appli.
+function auditBonusDuMoment() {
+  const fs = require('fs'); const path = require('path');
+  const pb = []; const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const B = load('boutiqueModele');
+  if (B.REMISE_MOMENT_PART !== 0.2 || B.BOOST_MOMENT_MIN !== 5) pb.push('bonus du moment : −20 % et 5 min changés');
+  const Ds = lire('src/screens/games/DiamondShop.js');
+  const bloc = (id) => { const i = Ds.indexOf("id: '" + id + "'"); return i < 0 ? '' : Ds.slice(i, Ds.indexOf('}', i)); };
+  if (!/title: 'Tap ×2 · 5 min'/.test(bloc('tapx2')) || !/cost: 20,/.test(bloc('tapx2'))) pb.push('boutique de Diamants : « Tap ×2 · 5 min » à 20 💎 absent ou à un autre prix');
+  if (!/title: 'Grimoire −20 % · 5 min'/.test(bloc('remise')) || !/cost: 20,/.test(bloc('remise'))) pb.push('boutique de Diamants : « Grimoire −20 % · 5 min » à 20 💎 absent ou à un autre prix');
+  const Cl = lire('src/screens/games/ClickerScreen.js');
+  if (!Cl.includes('const fin = Math.max(Date.now(), boostTapJusquaRef.current) + BOOST_MOMENT_MIN * 60 * 1000;') || !Cl.includes('const fin = Math.max(Date.now(), remiseMomentJusquaRef.current) + BOOST_MOMENT_MIN * 60 * 1000;')) pb.push('bonus du moment : un achat écrase le bonus en cours au lieu de le prolonger');
+  if (!Cl.includes('const remiseMoment = (c) => (Date.now() < remiseMomentJusquaRef.current ? Math.max(1, Math.round(c * (1 - REMISE_MOMENT_PART))) : c);')) pb.push('remise du moment : la fonction a changé');
+  if (!Cl.includes('const c = k === 0 ? applyDiscount(remiseMoment(brut)) : remiseMoment(brut);')) pb.push('remise du moment : pas sur CHAQUE niveau acheté (coutGroupe), ou pas dans le même ordre que l\'affichage');
+  if (!Cl.includes('remiseMoment={remiseMoment}') || !Cl.includes('remiseMomentJusqua={remiseMomentJusqua}')) pb.push('le Grimoire ne reçoit plus la remise du moment');
+  if (!Cl.includes("AsyncStorage.getItem(BOOSTS_MOMENT_KEY)") || !Cl.includes('    if (!boostsRelusRef.current) return;\n') || !Cl.includes('JSON.stringify({ tap: boostTapJusqua, remise: remiseMomentJusqua })')) pb.push('bonus du moment : perdus à la fermeture (ou écrasés au démarrage avant d\'être relus)');
+  const M = lire('src/games/clicker/boutiqueModele.js');
+  const nPrix = (M.match(/remise\(brut\(/g) || []).length, nCout = (M.match(/cout: \(j\) => brut\(/g) || []).length, nCoutNu = (M.match(/cout: \(j\) => (?!brut\()/g) || []).length;
+  if (nPrix !== 9 || nCout !== 9 || nCoutNu !== 0) pb.push('Grimoire : la remise du moment manque sur ' + (9 - nPrix) + ' prix et ' + (9 - nCout + nCoutNu) + ' coûts (prix affiché ≠ prix payé)');
+  const G = lire('src/screens/games/GrimoireBoutique.js');
+  if (!G.includes('🏷️ −{Math.round(REMISE_MOMENT_PART * 100)} %')) pb.push('Grimoire : la remise en cours n\'est plus affichée');
+  return pb;
+}
+module.exports.auditBonusDuMoment = auditBonusDuMoment;
+
+// 💰 PIÈCES ACHETÉES (31/10, remarque de l'auteur sur le calculateur de défis) : argent réel, Bourse et complément en Diamants
+// sont PROTÉGÉES (hors de la photo des défis) comme l'Offrande ; le Pack d'Ascension donne 10 % du seuil de l'Ascension en cours.
+function auditPiecesAchetees() {
+  const fs = require('fs'); const path = require('path');
+  const pb = []; const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const Cl = lire('src/screens/games/ClickerScreen.js');
+  if (!Cl.includes('if (c.pieces) { pendingGainRef.current += c.pieces; protegerPieces(c.pieces); }')) pb.push('pièces des packs (argent réel) : plus protégées — le calculateur de défis les compterait');
+  if (!Cl.includes('      protegerPieces(amount); // 31/10')) pb.push('Bourse de pièces : plus protégée');
+  if (!Cl.includes('    protegerPieces(manque); // 31/10')) pb.push('complément en Diamants : plus protégé');
+  if (!Cl.includes('piecesProtegeesRef.current += Math.max(0, Math.round(Number(n) || 0));') || !Cl.includes('const protegees = Math.min(piecesProtegeesRef.current || 0, coinsRef.current || 0);')) pb.push('pièces protégées : le mécanisme a changé');
+  // achats.js importe AsyncStorage : chargé comme dans auditAchats (bouchon de stockage, clickerLogic réel).
+  const L = load('clickerLogic'); const M = { exports: {} };
+  const code = babel.transformSync(lire('src/games/clicker/achats.js'), { presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]], filename: 'achats.js' }).code;
+  new Function('require', 'module', 'exports', code)((m) => (/clickerLogic/.test(m) ? L : { __esModule: true, default: { getItem: async () => null, setItem: async () => {} } }), M, M.exports);
+  const a = M.exports;
+  for (const asc of [0, 1, 2, 3]) {
+    const pcs = a.contenuReel('pack_ascension', { ascension: asc, passifParSec: 0 }).pieces;
+    if (pcs !== Math.max(1000, Math.round(0.10 * L.seuilAscension(asc)))) pb.push('Pack d\'Ascension (A' + asc + ') : ' + pcs + ' pièces, au lieu de 10 % du seuil (' + Math.round(0.10 * L.seuilAscension(asc)) + ')');
+  }
+  if (/\d+ h de pièces/.test(a.produit('pack_ascension').desc)) pb.push('Pack d\'Ascension : la description promet encore « N h de pièces »');
+  return pb;
+}
+module.exports.auditPiecesAchetees = auditPiecesAchetees;
 
 // 💎 COMPLÉTER EN DIAMANTS (30/10, demande de l'auteur : « si le joueur n'a pas assez de pièces, on lui propose de payer en
 // Diamants ») : le MANQUE seulement, au taux UNIQUE de la Bourse (1 💎 = 1 min de revenu passif, 50 pièces au moins), recalculé

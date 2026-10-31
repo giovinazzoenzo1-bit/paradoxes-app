@@ -7,6 +7,7 @@ import { afficherDialogue } from '../../components/DialogueJeu';
 import { PRODUITS, achetable, MODE_ACHATS, premierAchatDouble } from '../../games/clicker/achats';
 import FeteAchat, { objetsDeFete } from '../../components/FeteAchat';
 import { IMAGES_ACHATS } from '../../components/imagesAchats';
+import { ICONES_PUB } from '../../components/iconesPubs';
 
 // 27/09 : Boutique du thème forêt (pièces Gemini 37-44 de l'auteur, kit
 // partagé fenetreBois). Tailles en NOMBRES (règle du 27/09).
@@ -28,6 +29,7 @@ const ICONES = {
   energy: require('../../../assets/boutique/icone-energie.png'),
   elixir: require('../../../assets/boutique/icone-elixir.png'),
   hatch: require('../../../assets/boutique/icone-eclosion.png'),
+  tapx2: ICONES_PUB.tapx2, // 31/10 : la même icône que le Tap ×2 des pubs et du calendrier
 };
 
 // Boutique de Diamants (11/09) — premier écran où dépenser la monnaie
@@ -45,6 +47,21 @@ export const DIAMOND_OFFERS = [
     title: 'Bourse de pièces',
     desc: "L'équivalent d'environ 10 minutes de revenu passif",
     cost: 10,
+  },
+  // 💎 31/10 (demande de l'auteur) : bonus du moment, 5 min, qui prolongent un bonus en cours.
+  {
+    id: 'tapx2',
+    icon: '⚡',
+    title: 'Tap ×2 · 5 min',
+    desc: 'Tes taps rapportent le double pendant 5 minutes',
+    cost: 20,
+  },
+  {
+    id: 'remise',
+    icon: '🏷️',
+    title: 'Grimoire −20 % · 5 min',
+    desc: 'Tous les achats du Grimoire à −20 % pendant 5 minutes',
+    cost: 20,
   },
   {
     id: 'griffes',

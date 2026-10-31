@@ -11,7 +11,7 @@
 //  - diamants_* : packs de Diamants, bonus croissant.
 //  (6ᵉ famille : les offres limitées de 24 h — à venir, même mécanique.)
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { levelUpCost } from './clickerLogic';
+import { levelUpCost, seuilAscension } from './clickerLogic';
 
 export const MODE_ACHATS = 'test'; // 'revenuecat' quand les comptes seront branchés
 export const CLE_ACHATS = 'achats:v1';
@@ -42,7 +42,11 @@ export const PRODUITS = [
   { id: 'pack_progression', famille: 'offres', prix: '2,99 €', icone: '🥚', titre: 'Pack de progression',
     desc: 'Tous les 3 œufs · Griffes + 55 💎 + 1 h de pièces', contenu: { niveaux: 12, diamants: 55, minutesPieces: 60 } },
   { id: 'pack_ascension', famille: 'offres', prix: '4,99 €', icone: '🌟', titre: "Pack d'Ascension",
-    desc: 'Après chaque Ascension · Griffes + 150 💎 + 4 h de pièces', contenu: { niveaux: 25, diamants: 150, minutesPieces: 240 }, badge: 'Repars fort' },
+    // 31/10 (auteur : « 1K pièces, c'est trop peu même pour la 1re Ascension ») : « 4 h de revenu » valait 1 000 pièces juste
+    // APRÈS une Ascension (revenu remis à zéro). Désormais 10 % du SEUIL de l'Ascension en cours. MESURÉ (simulerGroupe, 7 taps/s) :
+    // A1 1,9 M pièces → −41 min sur 6,4 h ; A2 194 M → −1 h 30 sur 23,5 h ; A3 4,3 Md → −5 h 20 sur 50 h. Pièces PROTÉGÉES
+    // (le calculateur de défis ne les compte pas : l'achat reste un vrai coup de pouce).
+    desc: 'Après chaque Ascension · Griffes + 150 💎 + 10 % de ton Ascension en pièces', contenu: { niveaux: 25, diamants: 150, partSeuil: 0.10 }, badge: 'Repars fort' },
   { id: 'pack_gardien', famille: 'offres', prix: '2,99 €', icone: '🐯', titre: 'Pack du Gardien',
     desc: 'Pour battre le Gardien · Griffes + 75 💎', contenu: { niveaux: 10, diamants: 75 } },
   { id: 'affaire_jour', famille: 'offres', prix: '0,99 €', icone: '⏰', titre: 'Affaire du jour', unParJour: true,
@@ -128,6 +132,7 @@ export function contenuReel(id, ctx, maintenant = Date.now()) {
   if (base.griffes) r.griffes = base.griffes;
   if (base.niveaux) r.griffes = (r.griffes || 0) + Math.max(base.niveaux * 10, griffesPourNiveaux(ctx, base.niveaux));
   if (base.minutesPieces) r.pieces = Math.max(1000, Math.round(((ctx && ctx.passifParSec) || 0) * 60 * base.minutesPieces));
+  if (base.partSeuil) r.pieces = Math.max(1000, Math.round(base.partSeuil * seuilAscension((ctx && ctx.ascension) || 0)));
   return r;
 }
 

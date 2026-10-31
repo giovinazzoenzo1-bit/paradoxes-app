@@ -293,7 +293,7 @@ import { tirerRecompenseMiniJeu, choisirMiniJeu, MINI_JEUX, MINI_JEU_INTERVALLE_
 import { chargerOffres, noterMoment, noterOeufEclos, offreAMontrer, noterOffreMontree, noterIssueOffre, compterSecondeActive, offreDuMoment,
   CALME_MINI_JEU_MS, PRESENCE_MOMENT_MS } from '../../games/clicker/offresMoments';
 import { FenetreJeu, BoutonBois as BoutonBoisJeu } from '../../components/FenetreJeu';
-import { piecesParDiamant, diamantsPourPieces } from '../../games/clicker/boutiqueModele';
+import { piecesParDiamant, diamantsPourPieces, REMISE_MOMENT_PART, BOOST_MOMENT_MIN } from '../../games/clicker/boutiqueModele';
 
 // ⚠️ v2 : REMISE À ZÉRO VOULUE de la refonte d'équilibrage.
 //
@@ -1044,6 +1044,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // pendant le bonus). La photo des défis ne lit pas ce bonus : c'est la récompense de la pub.
   const [pubTap, setPubTap] = useState(false);
   const [boostTapJusqua, setBoostTapJusqua] = useState(0);
+  // 💎 31/10 (demande de l'auteur) : REMISE DU MOMENT achetée en Diamants — −20 % sur tous les achats du Grimoire, 5 min.
+  const [remiseMomentJusqua, setRemiseMomentJusqua] = useState(0);
   // 🎮 MINI-JEUX (décision de l'auteur) : un mini-jeu au hasard SURGIT tout seul toutes les 10 min sur l'écran principal,
   // quand aucune autre fenêtre n'est ouverte (`peutPopperRef`, calculé plus bas) ; sinon il attend le retour du joueur.
   const [miniJeuOuvert, setMiniJeuOuvert] = useState(null); // id du mini-jeu ouvert ('chasse', 'doree', 'transe', 'bonneteau')
@@ -1108,6 +1110,25 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // Un mini-jeu se termine : 1 min de calme avant une offre (l'inverse : fermerOffre repousse le mini-jeu).
   useEffect(() => { if (!miniJeuOuvert) offreRepitRef.current = Math.max(offreRepitRef.current, Date.now() + CALME_MINI_JEU_MS); }, [miniJeuOuvert]);
   const boostTapJusquaRef = useRef(0);
+  const remiseMomentJusquaRef = useRef(0);
+  // Le prix BRUT d'un niveau pendant la remise du moment — LA fonction de l'affichage (Grimoire) ET de l'achat (coutGroupe).
+  const remiseMoment = (c) => (Date.now() < remiseMomentJusquaRef.current ? Math.max(1, Math.round(c * (1 - REMISE_MOMENT_PART))) : c);
+  // 31/10 : les bonus du moment (Tap ×2, remise) SURVIVENT à la fermeture de l'appli (un bonus payé en Diamants ne se perd pas
+  // parce qu'on quitte le jeu) : relus au démarrage (le plus tardif gagne), puis sauvés à chaque changement — jamais avant
+  // la relecture (sinon le 0 du démarrage écraserait le bonus sauvé).
+  const BOOSTS_MOMENT_KEY = 'clicker:boostsMoment:v1';
+  const boostsRelusRef = useRef(false);
+  useEffect(() => {
+    AsyncStorage.getItem(BOOSTS_MOMENT_KEY).then((v) => {
+      const b = JSON.parse(v || '{}') || {}; const t = Date.now();
+      if (Number(b.tap) > t && Number(b.tap) > boostTapJusquaRef.current) { boostTapJusquaRef.current = Number(b.tap); setBoostTapJusqua(Number(b.tap)); }
+      if (Number(b.remise) > t && Number(b.remise) > remiseMomentJusquaRef.current) { remiseMomentJusquaRef.current = Number(b.remise); setRemiseMomentJusqua(Number(b.remise)); }
+    }).catch(() => {}).finally(() => { boostsRelusRef.current = true; });
+  }, []);
+  useEffect(() => {
+    if (!boostsRelusRef.current) return;
+    AsyncStorage.setItem(BOOSTS_MOMENT_KEY, JSON.stringify({ tap: boostTapJusqua, remise: remiseMomentJusqua })).catch(() => {});
+  }, [boostTapJusqua, remiseMomentJusqua]);
   const finPubTap = () => {
     setPubTap(false);
     trackEvent('pubTap'); // défi du jour « Regarde 1 pub Tap ×2 »
@@ -1119,6 +1140,13 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // la poche de la photo des défis ; bornées à la poche à chaque photo (les dépenser les consomme).
   const PIECES_PROTEGEES_KEY = 'clicker:piecesProtegees:v1';
   const piecesProtegeesRef = useRef(0);
+  // 31/10 (remarque de l'auteur : « le calculateur de défis ne prend pas en compte l'argent acheté ») : TOUTES les pièces
+  // ACHETÉES — argent réel (packs), Bourse et complément en Diamants — sont protégées comme celles de l'Offrande : la photo des
+  // défis ne les compte pas, l'achat reste un vrai coup de pouce (sinon les défis suivants grossiraient d'autant).
+  const protegerPieces = (n) => {
+    piecesProtegeesRef.current += Math.max(0, Math.round(Number(n) || 0));
+    AsyncStorage.setItem(PIECES_PROTEGEES_KEY, String(piecesProtegeesRef.current)).catch(() => {});
+  };
   useEffect(() => {
     AsyncStorage.getItem(PIECES_PROTEGEES_KEY).then((v) => { piecesProtegeesRef.current = Math.max(0, Number(v) || 0); }).catch(() => {});
   }, []);
@@ -2512,7 +2540,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
   // achat ×2 » d'un pack de Diamants se lit avant d'être consommé).
   const ctxAchats = () => {
     const meilleure = (owned || []).reduce((m, o) => (o && (!m || (o.level || 1) > (m.level || 1)) ? o : m), null);
-    return { creature: meilleure ? CREATURES.find((c) => c.id === meilleure.id) : null, niveau: meilleure ? meilleure.level || 1 : 1, passifParSec: passiveIncomeRef.current || 0 };
+    return { creature: meilleure ? CREATURES.find((c) => c.id === meilleure.id) : null, niveau: meilleure ? meilleure.level || 1 : 1, passifParSec: passiveIncomeRef.current || 0, ascension: ascensionCountRef.current || 0 };
   };
   const acheterArgentReel = async (id) => {
     const c = contenuReel(id, ctxAchats());
@@ -2526,7 +2554,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       await noterAvantageGriffes(id, c.griffes); // 22/10 : ces Griffes restent « hors photo » de l'Aventure un temps (3 combats / €)
     }
     // Pièces : crédit DIRECT (jamais gainCoins, qui les re-multiplierait — règle du 19/09).
-    if (c.pieces) pendingGainRef.current += c.pieces;
+    if (c.pieces) { pendingGainRef.current += c.pieces; protegerPieces(c.pieces); }
     const morceaux = [c.diamants ? `+${c.diamants} 💎` : null, c.griffes ? `+${c.griffes} Griffes (en Exploration)` : null, c.pieces ? `+${formatNum(c.pieces)} pièces` : null].filter(Boolean);
     return morceaux.length ? morceaux.join(' · ') : r.produit.titre;
   };
@@ -2549,6 +2577,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     if (!ok) return false;
     coinsRef.current += manque;
     setCoins((c) => c + manque);
+    protegerPieces(manque); // 31/10 : achetées (Diamants) → hors de la photo des défis
     return true;
   };
   const buyWithDiamonds = async (offer) => {
@@ -2574,7 +2603,22 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
       // calendrier, compensations) : `gainCoins` est réservé à ce que le
       // joueur PRODUIT, jamais à ce qu'on lui donne.
       pendingGainRef.current += amount;
+      protegerPieces(amount); // 31/10 : achetées (Diamants) → hors de la photo des défis
       return `+${formatNum(amount)} pièces`;
+    }
+    // 💎 31/10 (demande de l'auteur) : bonus du moment, 5 min — ils PROLONGENT un bonus en cours (jamais ×4, jamais remise sur
+    // remise). Le Tap ×2 est celui des pubs (`boostTapJusqua`, hors de la photo des défis).
+    if (offer.id === 'tapx2') {
+      const fin = Math.max(Date.now(), boostTapJusquaRef.current) + BOOST_MOMENT_MIN * 60 * 1000;
+      boostTapJusquaRef.current = fin;
+      setBoostTapJusqua(fin);
+      return `⚡ Tap ×2 · ${BOOST_MOMENT_MIN} min`;
+    }
+    if (offer.id === 'remise') {
+      const fin = Math.max(Date.now(), remiseMomentJusquaRef.current) + BOOST_MOMENT_MIN * 60 * 1000;
+      remiseMomentJusquaRef.current = fin;
+      setRemiseMomentJusqua(fin);
+      return `🏷️ Grimoire −${Math.round(REMISE_MOMENT_PART * 100)} % · ${BOOST_MOMENT_MIN} min`;
     }
     if (offer.id === 'griffes') {
       const raw = await AsyncStorage.getItem(PENDING_GRIFFES_KEY);
@@ -2750,7 +2794,7 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
     let total = 0; let k = 0;
     while (k < n && !(estMax && estMax(niveau + k))) {
       const brut = prixBrut(niveau + k);
-      const c = k === 0 ? applyDiscount(brut) : brut;
+      const c = k === 0 ? applyDiscount(remiseMoment(brut)) : remiseMoment(brut); // 31/10 : remise du moment sur CHAQUE niveau
       if (!Number.isFinite(c) || coinsRef.current < total + c) break;
       total += c; k += 1;
     }
@@ -4948,6 +4992,8 @@ export default function ClickerScreen({ onBack, onOpenOptions, onOpenQuests }) {
           coins={coins}
           sharedCoins={sharedCoins}
           diamantsPourManque={(manque) => diamantsPourPieces(manque, passiveIncomeRef.current)}
+          remiseMoment={remiseMoment}
+          remiseMomentJusqua={remiseMomentJusqua}
           onCompleterEnDiamants={completerPiecesEnDiamants}
           tapPower={tapPower}
           critLevel={critLevel}

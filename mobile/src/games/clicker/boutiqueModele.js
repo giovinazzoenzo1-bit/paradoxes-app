@@ -29,6 +29,10 @@ export function piecesParDiamant(passifParSec) { return Math.max(PIECES_MIN_PAR_
 export function diamantsPourPieces(manque, passifParSec) { return manque > 0 ? Math.max(1, Math.ceil(manque / piecesParDiamant(passifParSec))) : 0; }
 // Ce qu'on peut compléter en Diamants : un élément payé en PIÈCES, trop cher (ni verrouillé, ni au max) ; jamais l'Ascension,
 // l'Offrande (payée en Diamants) ni les Griffes contre pièces (la boutique de Diamants les vend déjà à son propre prix).
+// 💎 31/10 (demande de l'auteur) — BONUS DU MOMENT de la boutique de Diamants (20 💎 chacun) : Tap ×2 et remise du Grimoire,
+// 5 minutes, qui PROLONGENT un bonus en cours (jamais ×4, jamais remise sur remise).
+export const REMISE_MOMENT_PART = 0.2;
+export const BOOST_MOMENT_MIN = 5;
 export function completableEnDiamants(n) {
   return !!n && n.etat === 'cher' && n.devise !== 'diamants' && n.prix != null && !!n.onPress && n.id !== 'ascension' && n.id !== 'griffes' && n.id !== 'offrande';
 }
@@ -44,6 +48,9 @@ function construireNoeuds(p) {
   const f = p.formatNum || ((n) => String(Math.round(n)));
   const nb = (x, d = 2) => Number(x.toFixed(d)).toString().replace('.', ',');
   const remise = p.applyDiscount || ((c) => c);
+  // 31/10 : REMISE DU MOMENT (−20 % · 5 min) sur le prix BRUT de CHAQUE niveau, AVANT la remise d'un seul achat (`remise`) —
+  // même ordre que l'écran (coutGroupe) : le prix affiché est le prix payé, à la pièce près, en ×1, ×10 et MAX.
+  const brut = p.remiseMoment || ((c) => c);
   const coreState = { tapPower: p.tapPower, critLevel: p.critLevel, critDamageLevel: p.critDamageLevel, sanctuaryLevel: p.sanctuaryLevel };
   const debloque = (id) => coreUpgradeUnlocked(id, coreState);
   const etat = (verrou, max, prix, solde) => (verrou ? 'verrouille' : max ? 'max' : solde >= prix ? 'achetable' : 'cher');
@@ -90,23 +97,23 @@ function construireNoeuds(p) {
 
   // ── PUISSANCE DE TAP : Pacte → les 10 améliorations en UNE chaîne (chacune
   // s'ouvre au niveau 5 de la précédente : la branche montre la dépendance).
-  const prixPacte = remise(tapPowerCost(p.tapPower));
+  const prixPacte = remise(brut(tapPowerCost(p.tapPower)));
   ajouter({ id: 'pacte', emoji: '🔗', nom: 'Pacte', niveau: `${p.tapPower}`,
-    gain: `+${nb(TAP_DAMAGE_PER_LEVEL, 1)} / tap / nv`, prix: prixPacte, etat: etat(false, false, prixPacte, p.coins), onPress: p.onBuyTapPower, cout: (j) => tapPowerCost(p.tapPower + j), delta: { tapPower: 1 }, allume: p.tapPower > 1,
+    gain: `+${nb(TAP_DAMAGE_PER_LEVEL, 1)} / tap / nv`, prix: prixPacte, etat: etat(false, false, prixPacte, p.coins), onPress: p.onBuyTapPower, cout: (j) => brut(tapPowerCost(p.tapPower + j)), delta: { tapPower: 1 }, allume: p.tapPower > 1,
     detail: `+${nb(TAP_DAMAGE_PER_LEVEL, 1)} pièce par tap à chaque niveau.` });
   let prochainVerrou = false;
   TAP_UPGRADES.forEach((item, i) => {
     const niveau = (p.tapUpgrades && p.tapUpgrades[item.id]) || 0;
     const ouvert = tapUpgradeUnlocked(i, p.tapPower, p.tapUpgrades);
     if (!ouvert) { if (prochainVerrou) return; prochainVerrou = true; } // seul le PROCHAIN verrou est montré
-    const prix = remise(tapUpgradeCost(item, niveau, p.ascensionCount));
+    const prix = remise(brut(tapUpgradeCost(item, niveau, p.ascensionCount)));
     const avant = i > 0 ? ((p.tapUpgrades && p.tapUpgrades[TAP_UPGRADES[i - 1].id]) || 0) : 0;
     const condition = i === 0 ? `🔒 Pacte ${Math.min(p.tapPower, TAP_UPGRADE_FIRST_PACTE_LEVEL)}/${TAP_UPGRADE_FIRST_PACTE_LEVEL}` : `🔒 ${TAP_UPGRADES[i - 1].name} ${Math.min(avant, TAP_UPGRADE_UNLOCK_LEVEL)}/${TAP_UPGRADE_UNLOCK_LEVEL}`;
     ajouter({ id: item.id,
       emoji: item.emoji, nom: item.name, niveau: `nv ${niveau}`, prix, etat: etat(!ouvert, false, prix, p.coins),
       // 17/10 : bonus à virgule (Poigne +1,5) — formatNum arrondissait à « +1 » ; sous 1 000, `nb` écrit « 1,5 ».
       gain: ouvert ? `+${(item.bonus < 1000 ? nb(item.bonus, 1) : f(item.bonus))} / tap / nv` : condition,
-      onPress: (q) => p.onBuyTapUpgrade(item.id, q), cout: (j) => tapUpgradeCost(item, niveau + j, p.ascensionCount), delta: { tapUpgrades: item.id }, allume: niveau > 0,
+      onPress: (q) => p.onBuyTapUpgrade(item.id, q), cout: (j) => brut(tapUpgradeCost(item, niveau + j, p.ascensionCount)), delta: { tapUpgrades: item.id }, allume: niveau > 0,
       detail: ouvert ? `+${(item.bonus < 1000 ? nb(item.bonus, 1) : f(item.bonus))} par tap et par niveau${niveau > 0 ? ` · actuellement +${(item.bonus * niveau < 1000 ? nb(item.bonus * niveau, 1) : f(item.bonus * niveau))}` : ''}.` : condition });
   });
 
@@ -119,7 +126,7 @@ function construireNoeuds(p) {
     const niveau = leg[id] || 0;
     const rang = (p.legendairesAsc || {})[id] || 0;
     const plafond = plafondLegendaire(p.ascensionCount);
-    const prix = remise(prixLegendaire(rang, p.ascensionCount));
+    const prix = remise(brut(prixLegendaire(rang, p.ascensionCount)));
     const manque = d.requiert && !((leg[d.requiert] || 0) > 0) ? LEGENDAIRES.find((x) => x.id === d.requiert) : null;
     const verrou = plafond === 0 || !!manque;
     const max = !verrou && niveau >= plafond;
@@ -139,39 +146,39 @@ function construireNoeuds(p) {
     ajouter({ id, emoji: d.emoji, nom: d.nom, niveau: `${niveau}/${plafond}`, prix, etat: etat(verrou, max, prix, p.coins),
       gain: condition || (max ? `max de l'Ascension` : effet),
       onPress: verrou || max ? null : (q) => p.onBuyLegendaire(id, q),
-      cout: (j) => prixLegendaire(rang + j, p.ascensionCount), estMax: (j) => niveau + j >= plafond,
+      cout: (j) => brut(prixLegendaire(rang + j, p.ascensionCount)), estMax: (j) => niveau + j >= plafond,
       delta: { legendaires: id }, allume: niveau > 0,
       detail: plafond === 0 ? '🔒 S\'ouvre à ta 1re Ascension. Ses niveaux ne seront jamais remis à zéro.'
         : manque ? `🔒 Achète d'abord 1 niveau de ${manque.nom}.`
         : `${actuel} Permanent : l'Ascension ne le remet jamais à zéro. Jusqu'au niveau ${plafond} à cette Ascension${max ? ' — atteint : +3 niveaux à la prochaine' : ''}.` });
   };
 
-  const prixFaveur = remise(critUpgradeCost(p.critLevel));
+  const prixFaveur = remise(brut(critUpgradeCost(p.critLevel)));
   const okFaveur = debloque('faveur');
   ajouter({ id: 'faveur', emoji: '✨', nom: 'Faveur des Esprits', niveau: `nv ${p.critLevel}`,
     gain: okFaveur ? `+${nb((critChance(p.critLevel + 1) - critChance(p.critLevel)) * 100)} % crit / nv` : progres('faveur'),
-    prix: prixFaveur, etat: etat(!okFaveur, false, prixFaveur, p.coins), onPress: p.onBuyCrit, cout: (j) => critUpgradeCost(p.critLevel + j), delta: { critLevel: 1 }, allume: p.critLevel > 0,
+    prix: prixFaveur, etat: etat(!okFaveur, false, prixFaveur, p.coins), onPress: p.onBuyCrit, cout: (j) => brut(critUpgradeCost(p.critLevel + j)), delta: { critLevel: 1 }, allume: p.critLevel > 0,
     detail: okFaveur ? `${nb(critChance(p.critLevel) * 100)} % de chance de coup critique.` : exigence('faveur') });
   ajouterLegendaire('faveurV2');
-  const prixCrit = remise(critDamageUpgradeCost(p.critDamageLevel));
+  const prixCrit = remise(brut(critDamageUpgradeCost(p.critDamageLevel)));
   const okCrit = debloque('critDamage');
   ajouter({ id: 'critDamage', emoji: '💥', nom: 'Dégâts critiques', niveau: `nv ${p.critDamageLevel}`,
     gain: okCrit ? `+${nb(critMultiplier(p.critDamageLevel + 1) - critMultiplier(p.critDamageLevel), 1)} force crit / nv` : progres('critDamage'),
-    prix: prixCrit, etat: etat(!okCrit, false, prixCrit, p.coins), onPress: p.onBuyCritDamage, cout: (j) => critDamageUpgradeCost(p.critDamageLevel + j), delta: { critDamageLevel: 1 }, allume: p.critDamageLevel > 0,
+    prix: prixCrit, etat: etat(!okCrit, false, prixCrit, p.coins), onPress: p.onBuyCritDamage, cout: (j) => brut(critDamageUpgradeCost(p.critDamageLevel + j)), delta: { critDamageLevel: 1 }, allume: p.critDamageLevel > 0,
     detail: okCrit ? `Coup critique ×${nb(critMultiplier(p.critDamageLevel), 1)}.` : exigence('critDamage') });
   ajouterLegendaire('critDamageV2');
 
   // ── PASSIF : Sanctuaire → Veilleur
-  const maxS = sanctuaryMaxed(p.sanctuaryLevel); const prixS = remise(sanctuaryUpgradeCost(p.sanctuaryLevel)); const okS = debloque('sanctuaire');
+  const maxS = sanctuaryMaxed(p.sanctuaryLevel); const prixS = remise(brut(sanctuaryUpgradeCost(p.sanctuaryLevel))); const okS = debloque('sanctuaire');
   ajouter({ id: 'sanctuaire', emoji: '🏛️', nom: 'Sanctuaire', niveau: `${p.sanctuaryLevel}/${SANCTUARY_MAX_LEVEL}`,
     gain: okS ? `+${nb(SANCTUARY_BONUS_PER_LEVEL * 100, 1)} % production / nv` : progres('sanctuaire'),
-    prix: prixS, etat: etat(!okS, maxS, prixS, p.coins), onPress: p.onBuySanctuary, cout: (j) => sanctuaryUpgradeCost(p.sanctuaryLevel + j), estMax: (j) => sanctuaryMaxed(p.sanctuaryLevel + j), delta: { sanctuaryLevel: 1 }, allume: p.sanctuaryLevel > 0,
+    prix: prixS, etat: etat(!okS, maxS, prixS, p.coins), onPress: p.onBuySanctuary, cout: (j) => brut(sanctuaryUpgradeCost(p.sanctuaryLevel + j)), estMax: (j) => sanctuaryMaxed(p.sanctuaryLevel + j), delta: { sanctuaryLevel: 1 }, allume: p.sanctuaryLevel > 0,
     detail: okS ? 'Augmente TOUTE ta production (tap + passif).' : exigence('sanctuaire') });
   ajouterLegendaire('sanctuaireV2');
-  const maxV = veilleurMaxed(p.veilleurLevel); const prixV = remise(veilleurUpgradeCost(p.veilleurLevel)); const okV = debloque('veilleur');
+  const maxV = veilleurMaxed(p.veilleurLevel); const prixV = remise(brut(veilleurUpgradeCost(p.veilleurLevel))); const okV = debloque('veilleur');
   ajouter({ id: 'veilleur', emoji: '🌙', nom: 'Veilleur', niveau: `${p.veilleurLevel}/${VEILLEUR_MAX_LEVEL}`,
     gain: okV ? `+${nb(VEILLEUR_BONUS_PER_LEVEL * 100, 1)} % hors-ligne / nv` : progres('veilleur'),
-    prix: prixV, etat: etat(!okV, maxV, prixV, p.coins), onPress: p.onBuyVeilleur, cout: (j) => veilleurUpgradeCost(p.veilleurLevel + j), estMax: (j) => veilleurMaxed(p.veilleurLevel + j), allume: p.veilleurLevel > 0,
+    prix: prixV, etat: etat(!okV, maxV, prixV, p.coins), onPress: p.onBuyVeilleur, cout: (j) => brut(veilleurUpgradeCost(p.veilleurLevel + j)), estMax: (j) => veilleurMaxed(p.veilleurLevel + j), allume: p.veilleurLevel > 0,
     detail: okV ? 'Augmente tes gains quand tu ne joues pas.' : exigence('veilleur') });
   ajouterLegendaire('veilleurV2');
 
@@ -190,11 +197,11 @@ function construireNoeuds(p) {
     const possede = (p.autoClickers && p.autoClickers[c.id]) || 0;
     const mystere = ordre === dernier + 2 && possede === 0;
     const precedent = ordre > 0 ? file[ordre - 1] : null;
-    const prix = remise(autoClickerCost(c, possede, p.ascensionCount));
+    const prix = remise(brut(autoClickerCost(c, possede, p.ascensionCount)));
     ajouter({ id: c.id, ordre,
       emoji: c.emoji, nom: c.name, niveau: possede > 0 ? `×${possede}` : '', prix, etat: etat(mystere, false, prix, p.coins),
       gain: mystere ? `🔒 achète ${precedent.name}` : `+${nb(c.baseIncome, 1)} /s chacun`,
-      onPress: (q) => p.onBuyAutoClicker(c.id, q), cout: (j) => autoClickerCost(c, possede + j, p.ascensionCount), delta: { autoClickers: c.id }, allume: possede > 0,
+      onPress: (q) => p.onBuyAutoClicker(c.id, q), cout: (j) => brut(autoClickerCost(c, possede + j, p.ascensionCount)), delta: { autoClickers: c.id }, allume: possede > 0,
       detail: mystere ? `🔒 Achète d'abord ${precedent.name}.` : `Possédé : ${possede} · +${nb(c.baseIncome, 1)}/s chacun.` });
   });
 
@@ -210,13 +217,13 @@ function construireNoeuds(p) {
       const nomCreature = creature ? creature.stages[0].name : '???';
       const ok = possedees.has(item.creatureId);
       const niveau = (p.upgradeLevels && p.upgradeLevels[item.id]) || 0;
-      const prix = remise(upgradeItemCost(item, niveau));
+      const prix = remise(brut(upgradeItemCost(item, niveau)));
       ajouter({ id: 'relique:' + item.id, taille: 70,
         emoji: item.emoji, nom: item.name, niveau: `nv ${niveau}`, prix, etat: etat(!ok, false, prix, p.coins),
         // Court (« Nécessite Zephyrion » était coupé sur les pages du grimoire) ;
         // la phrase complète reste dans la fiche.
         gain: ok ? `${describeUpgradeEffect(item)} / nv` : `🔒 ${nomCreature}`,
-        onPress: (q) => p.onBuyUpgradeItem(item.id, q), cout: (j) => upgradeItemCost(item, niveau + j), delta: { upgradeLevels: item.id }, allume: niveau > 0,
+        onPress: (q) => p.onBuyUpgradeItem(item.id, q), cout: (j) => brut(upgradeItemCost(item, niveau + j)), delta: { upgradeLevels: item.id }, allume: niveau > 0,
         detail: ok ? `Relique de ${nomCreature} : ${describeUpgradeEffect(item)} par niveau.` : `🔒 Obtiens ${nomCreature} pour débloquer cette relique.` });
     });
   });

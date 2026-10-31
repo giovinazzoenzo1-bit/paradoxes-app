@@ -4760,6 +4760,34 @@ l'auteur teste en jeu (seuil de sa sauvegarde en cours relevé, œuf en cours re
   (doigt maintenu) qui tombe à court s'arrête sans question. Contrôle auditCompleterDiamants + 5 pièges ; banc :
   `grimoire&pieces=900` (touchée sur le prix du Pacte → la question s'affiche, HoteDialogue monté dans la scène).
 
+## 💎 31/10 — MINI-BOSS 250 PV, BONUS DU MOMENT, PIÈCES ACHETÉES PROTÉGÉES, PACK D'ASCENSION — PUBLIÉ
+
+- 👹 MINI-BOSS (auteur : « trop facile pour les gains de Diamants… augmente à 250 PV sans toucher au temps/gains ») :
+  TAP_BOSS_TAPS_REQUIRED 200 → 250 ; 60 s, paliers 30/45/60 s → 3/2/1 💎, plafond 21/jour, 2 par heure : INCHANGÉS (contrôle
+  auditMiniBoss). MESURÉ : 7 taps/s → 35,7 s → 2 💎 (avant 3) ; 9 taps/s → 3 💎 ; 4,2 taps/s au moins pour le battre ;
+  ⚠️ à 4 taps/s (joueur lent à la main) : RATÉ, 0 💎 (avant 1) — signalé à l'auteur, sa décision. Le plafond de 21 💎 reste
+  atteignable mais demande ≈ 5 h de jeu à 7 taps/s (≈ 3,5 h avant).
+- 💎 BONUS DU MOMENT (boutique de Diamants, demande de l'auteur) : « Tap ×2 · 5 min » (20 💎, le même Tap ×2 que les pubs,
+  hors de la photo des défis) et « Grimoire −20 % · 5 min » (20 💎). Ils PROLONGENT un bonus en cours (jamais ×4, jamais remise
+  sur remise). La remise vaut pour CHAQUE niveau (×1, ×10, MAX) : `remiseMoment` (ClickerScreen) s'applique au prix BRUT de
+  chaque niveau, AVANT la remise d'un seul achat (`applyDiscount`), dans coutGroupe ET dans boutiqueModele (`brut(…)` sur les
+  9 prix et les 9 coûts) → prix affiché = prix payé, même ordre d'arrondi. Le Grimoire affiche « 🏷️ −20 % · m:ss » (3e ligne
+  de l'en-tête, tic d'une seconde). Les deux bonus sont SAUVÉS (`clicker:boostsMoment:v1`) et relus au démarrage — jamais
+  sauvés avant la relecture (le 0 du démarrage effacerait un bonus payé). Contrôle auditBonusDuMoment.
+- 💰 PIÈCES ACHETÉES PROTÉGÉES (remarque de l'auteur : « le calculateur de défis ne prend pas en compte l'argent acheté ») :
+  seules les pièces d'Offrande étaient hors de la photo des défis ; les packs (argent réel), la Bourse et le complément en
+  Diamants l'étaient PAS → la photo les comptait et les défis suivants grossissaient d'autant (l'achat s'annulait).
+  `protegerPieces(n)` sur ces trois chemins. Contrôle auditPiecesAchetees.
+- 🌟 PACK D'ASCENSION (auteur : « 1K pièces, trop peu même pour la 1re Ascension ») : CAUSE = « 4 h de revenu » calculé juste
+  APRÈS l'Ascension (revenu remis à zéro) → le plancher de 1 000. Désormais 10 % du SEUIL de l'Ascension en cours
+  (`partSeuil`, ctxAchats.ascension). MESURÉ (simulerGroupe, option `piecesDepart` ajoutée pour ça, 7 taps/s) : A1 1,9 M →
+  −41 min sur 6,4 h ; A2 194 M → −1 h 30 sur 23,5 h ; A3 4,3 Md → −5 h 20 sur 50 h (2 % et 5 % mesurés aussi : −14/−27 min en
+  A1). Pièces protégées (ci-dessus).
+- Banc : boutique au contenu d'A1 (`ascension: 1`) ; `grimoire&remise=1` (remise en cours). 138 contrôles ; 375 pièges
+  (0 80 · 80 145 · 145 215 · 215 295 · 295 fin, 136 à 233 s) ; taps 20/20 (normal et tuto) ; Exploration et fin de combat OK.
+- REPRISE (même jour) : réponse coupée PENDANT la passe 80-145 → la passe tournait encore : ATTENDUE jusqu'à « Fichiers
+  intacts », jamais tuée ; verrou repris avec la même étiquette ; passes suivantes refaites une à une.
+
 ### 🐛 BUGS OUVERTS (signalés par l'auteur, rapport du 14/10 13:40, étapes 72 à 86)
 1. ✅ CORRIGÉ le 17/10 (voir la section « JE GAGNE TOUT À PARTIR DE L'ÉTAPE 80 » plus haut). « À partir de l'étape 80 je gagne tous mes combats, même en Extrême ; étape 97 ; 3 200 Griffes non dépensées. »
    PISTES (diagnostic en lecture seule, non corrigé) :

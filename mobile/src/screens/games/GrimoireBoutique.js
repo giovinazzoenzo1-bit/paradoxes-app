@@ -6,7 +6,7 @@ import { View, Text, Image, ImageBackground, TouchableOpacity, Pressable, PanRes
 import { CHAPITRES_GRIMOIRE } from '../../games/clicker/grimoireChapitres';
 import { useSettings } from '../../context/SettingsContext';
 import { vibrerSucces, CRISTAL, CYAN_CHAMPIGNON } from './fenetreBois';
-import { construireNoeuds, completableEnDiamants } from '../../games/clicker/boutiqueModele';
+import { construireNoeuds, completableEnDiamants, REMISE_MOMENT_PART } from '../../games/clicker/boutiqueModele';
 import { afficherDialogue } from '../../components/DialogueJeu';
 import { FicheElement } from './ficheElement';
 import BackButton from '../../components/BackButton';
@@ -215,6 +215,14 @@ function Grimoire(props) {
   // Gains lisibles : 1 décimale sous 10 (« 0,6 »), entier sous 1 000, puis K/M…
   const fmtGain = (x) => (x >= 1000 ? formatNum(x) : x >= 10 ? String(Math.round(x)) : Number(x.toFixed(1)).toString().replace('.', ','));
   const fmtRef = useRef(fmtGain); fmtRef.current = fmtGain;
+  // 💎 31/10 : remise du moment — une seconde de plus à chaque tic tant qu'elle court (les prix reviennent à la fin, à l'heure).
+  const resteRemise = Math.max(0, (props.remiseMomentJusqua || 0) - Date.now());
+  const [, setTicRemise] = useState(0);
+  useEffect(() => {
+    if (!((props.remiseMomentJusqua || 0) > Date.now())) return undefined;
+    const id = setInterval(() => setTicRemise((x) => x + 1), 1000);
+    return () => clearInterval(id);
+  }, [props.remiseMomentJusqua]);
   const vib = useRef(vibrations); vib.current = vibrations;
   const [ficheId, setFicheId] = useState(null);
   // « Nouveau ! » : éléments débloqués jamais encore affichés (mémoire sur le
@@ -628,6 +636,11 @@ function Grimoire(props) {
         {/* Deux lignes : entre RETOUR et les soldes, il n'y a que ~125 points. */}
         <Text style={styles.gainsTexte} numberOfLines={1}>👆 {fmtGain(gains.tap)} /tap</Text>
         <Text style={styles.gainsTexte} numberOfLines={1}>⚙️ {fmtGain(gains.passif)} /s</Text>
+        {resteRemise > 0 ? (
+          <Text style={[styles.gainsTexte, styles.gainsRemise]} numberOfLines={1}>
+            🏷️ −{Math.round(REMISE_MOMENT_PART * 100)} % · {Math.floor(resteRemise / 60000)}:{String(Math.floor((resteRemise % 60000) / 1000)).padStart(2, '0')}
+          </Text>
+        ) : null}
       </View>
       {/* En-tête : RETOUR et les soldes, en DEUX éléments séparés — ⚠️ pas de
           bande pleine largeur « transparente au toucher » : elle recouvrait le
@@ -746,6 +759,7 @@ const styles = StyleSheet.create({
   modeTexteActif: { color: '#3b2208' },
   gains: { position: 'absolute', top: 79, left: LIBRE_G, width: LIBRE_L, height: 32, borderRadius: 9, backgroundColor: 'rgba(20,12,4,0.72)', borderWidth: 1, borderColor: 'rgba(232,184,74,0.55)', alignItems: 'center', justifyContent: 'center' },
   gainsTexte: { color: '#fff1cf', fontSize: 10, fontWeight: '800', lineHeight: 13, includeFontPadding: false },
+  gainsRemise: { color: '#f2c94c', fontWeight: '800' }, // 31/10 : la remise du moment
   silhouette: { tintColor: '#24170c', opacity: 0.9 },
   cadenas: { position: 'absolute', right: -3, bottom: -3, width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(246,234,204,0.95)', alignItems: 'center', justifyContent: 'center' },
   cadenasTexte: { fontSize: 8, includeFontPadding: false },
